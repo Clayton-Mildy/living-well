@@ -1,0 +1,51 @@
+// Dishes and allergens: every dish with its allergen tags and whether they have been checked; add, edit, delete.
+import { useMemo, useState } from 'react';
+import { live } from '@cp/shared';
+import { COURSES, dishesByCourse, type Course } from '@cp/shared/rules/kitchenOps';
+import { Button, Card, CardHead, Icon, Pager, Segmented, TextField, usePaged, FONT_BODY } from '../../components/ui';
+import { useT } from '../../lib/i18n';
+import { useClub } from '../../store/replica';
+import { DishDialog, allergenText } from './dish';
+import { Pill } from './parts';
+
+export function DishesCard() {
+  const t = useT();
+  const s = useClub();
+  const [course, setCourse] = useState<Course>('lunch');
+  const [open, setOpen] = useState<string | 'new' | null>(null);
+  const [q, setQ] = useState('');
+  const all = useMemo(() => live(s.dishes), [s.dishes]);
+  const needle = q.trim().toLocaleLowerCase();
+  const inCourse = useMemo(() => dishesByCourse(s, course), [s.dishes, course]); // eslint-disable-line react-hooks/exhaustive-deps
+  const dishes = useMemo(() => inCourse.filter((d) => !needle || d.name.toLocaleLowerCase().includes(needle)), [inCourse, needle]);
+  const paged = usePaged(dishes, 10, `${course}|${needle}`); // another course or a new search starts again on page 1
+  const toCheck = all.filter((d) => !d.reviewedAt).length;
+  return (
+    <Card>
+      <CardHead title={t('kitchen.dishes.title')} meta={toCheck ? t('kitchen.dishes.toCheck', { n: toCheck }) : t('kitchen.dishes.allChecked')} />
+      <div style={{ padding: '0 20px 12px' }}>
+        <Segmented<Course> label={t('kitchen.dishes.title')} value={course} onChange={setCourse} items={COURSES.map((c) => ({ value: c, label: t('kitchen.course.' + c), count: all.filter((d) => d.course === c).length }))} />
+      </div>
+      <div style={{ padding: '0 20px 12px' }}>
+        <TextField label={t('kitchen.dishes.search')} value={q} onChange={setQ} inputMode="search" />
+      </div>
+      {paged.rows.map((d) => (
+        <button key={d.id} type="button" onClick={() => setOpen(d.id)} className="h-row" data-testid="dish-row"
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', minHeight: 60, border: 'none', borderTop: '1px solid #EFECEA', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
+            <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{allergenText(t, d)}</span>
+          </div>
+          {d.reviewedAt ? <Icon name="verified" size={22} fill={1} color="#3D6B4F" /> : <Pill icon="help" fg="#7A5510" bg="#F6ECD6" label={t('kitchen.notChecked')} />}
+          <Icon name="chevron_right" size={22} color="#6A6967" />
+        </button>
+      ))}
+      {!dishes.length ? <div style={{ padding: '14px 20px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967' }}>{t(needle ? 'common.noResults' : 'kitchen.dishes.none')}</div> : null}
+      <div style={{ padding: paged.pages > 1 ? '8px 20px' : 0, borderTop: paged.pages > 1 ? '1px solid #EFECEA' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.dishes.title')} /></div>
+      <div style={{ padding: '14px 20px 18px', borderTop: '1px solid #EFECEA' }}>
+        <Button variant="secondary" size={44} icon="add" onClick={() => setOpen('new')}>{t('kitchen.dishes.add')}</Button>
+      </div>
+      <DishDialog open={open !== null} dishId={open && open !== 'new' ? open : undefined} preset={{ course }} onClose={() => setOpen(null)} />
+    </Card>
+  );
+}

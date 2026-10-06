@@ -1,0 +1,26 @@
+// reviews strings (EN): management's approval queue.
+export const reviews = {
+  sub: 'Changes to customer details made by other staff wait here for your approval.', tabPending: 'To approve', tabApplied: 'Applied, review', tabHistory: 'History',
+  appliedSub: 'These health changes are already in effect. Acknowledge them once you have looked, or revert them.', waiting: 'Waiting', appliedChip: 'Applied',
+  approve: 'Approve', approveAnyway: 'Approve anyway', reject: 'Reject', acknowledge: 'Acknowledge', revert: 'Revert', revertAnyway: 'Revert anyway',
+  approved: 'Approved. The submitter is told.', approvedCreate: 'Approved. The new member is active.', rejected: 'Rejected. The submitter is told.', acknowledged: 'Acknowledged.', reverted: 'Reverted. The previous values are back.',
+  noteFrom: 'Note from {n}', reviewerNote: 'Review note', nonePending: 'Nothing to approve', nonePendingSub: 'New members and changes sent by other staff appear here.',
+  noneApplied: 'Nothing to review', noneAppliedSub: 'Health changes made by nurses and teachers appear here after they are applied.', noneHistory: 'No handled requests yet',
+  historySub: 'Requests that were handled', details: 'Details', sentBy: 'sent by {n}', rejectSub: 'The submitter sees your note. Nothing changes in the record.', rejectNote: 'Why is it not approved?',
+  revertSub: 'The previous values come back and the submitter is told.', revertNote: 'Note for the submitter (optional)', was: 'Was', proposed: 'Proposed', now: 'Now', removed: 'Removed', declined: 'Declined',
+  'status.pending': 'Pending', 'status.approved': 'Approved', 'status.rejected': 'Rejected', 'status.withdrawn': 'Withdrawn', 'status.superseded': 'Replaced by a newer request',
+  'status.acknowledged': 'Acknowledged', 'status.reverted': 'Reverted',
+  'title.members.create': 'New member', 'title.enquiry.convert': 'Lead joining', 'title.members.updateDetails': 'Details', 'title.members.setDocuments': 'Documents', 'title.members.setConsent': 'Consent', 'title.members.changePlan': 'Plan change',
+  'title.planChange.apply': 'Apply plan request', 'title.planChange.decline': 'Decline plan request', 'title.document.upload': 'Document uploaded by the family', 'title.members.setAllergies': 'Allergies',
+  'title.members.setMeds': 'Medicines', 'title.members.setCareInstructions': 'Care instructions', 'title.members.setHealth': 'Health record', 'title.members.setCognitive': 'Cognitive status',
+  'title.family.addContact': 'New family contact', 'title.family.linkContact': 'Link a family contact', 'title.family.updateContact': 'Family contact details', 'title.family.unlinkContact': 'Remove a family contact',
+  'title.family.setPrimary': 'Primary billing contact', 'title.family.setAppAccess': 'App access',
+  // photos waiting for approval
+  tabPhotos: 'Photos', photosSub: 'Photos taken by the team stay hidden from families until you approve them.', photosWaitingOne: '1 photo waiting', photosWaitingN: '{n} photos waiting',
+  selectAll: 'Select all ({n})', clearSelection: 'Clear selection', selectedN: '{n} selected', approvePhotos: 'Approve ({n})', rejectPhotos: 'Reject ({n})', noSelection: 'Select the photos to approve or reject.',
+  notifyFamilies: 'Notify families', notifyFamiliesSub: 'The families of the people in the photos get an update.', photosApprovedOne: 'Photo approved.', photosApprovedN: '{n} photos approved.',
+  photosApprovedToldOne: 'Photo approved. The family is told.', photosApprovedToldN: '{n} photos approved. Families are told.', photosRejectedOne: 'Photo rejected.', photosRejectedN: '{n} photos rejected.',
+  rejectPhotosTitleOne: 'Reject this photo', rejectPhotosTitleN: 'Reject {n} photos', rejectPhotosSub: 'Rejected photos are never shown to families. The person who took them is told, with your reason.', rejectPhotosReason: 'Why are they not approved?',
+  nonePhotos: 'No photos to approve', nonePhotosSub: 'Photos taken by the team appear here before families can see them.', 'photoKind.solo': 'Photo', 'photoKind.group': 'Group photo', 'photoKind.lunch': 'Lunch photo', 'photoKind.arrival': 'Arrival photo',
+  photoBy: 'by {n}', selectPhoto: 'Select the photo of {n}', openPhoto: 'Open the photo of {n}', photosPager: 'Photo pages', pagerPending: 'Requests to approve pages', pagerApplied: 'Applied requests pages', pagerHistory: 'History pages',
+};

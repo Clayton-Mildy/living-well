@@ -1,0 +1,45 @@
+// members strings (EN): the members list, the add dialog, and the text the member actions write (activity feed, notifications, errors).
+export const members = {
+  // list
+  eyebrow: '{n} active members', eyebrowPending: '{n} pending approval', add: 'Add member', searchPh: 'Search by name, family or phone', searchLabel: 'Search members', filter: 'Filter members',
+  'f.active': 'Active', 'f.in': 'In the club', 'f.att': 'Needs attention', 'f.flex': 'Flex', 'f.gold': 'Gold', 'f.ended': 'Ended',
+  planGold: 'Gold', planFlex: 'Flex {n}/{q}', planFlexTip: 'Flex plan: {n} of {q} visits used this month', planGoldTip: 'Gold plan: unlimited visits', newTag: 'new member', paymentOverdue: 'Payment overdue', endingOn: 'ends {d}',
+  lastVisit: 'Last visit {d}', neverVisited: 'No visits yet', pagerLabel: 'Members pages',
+  'st.ended': 'Membership ended {d}', 'st.upcoming': 'Starts {d}', 'st.home': 'Gone home at {t}',
+  'st.in': 'In the club since {t}', 'st.off': 'Not in yet today', 'st.usually': 'Usually arrives around {t}', noMatch: 'No members match', noMatchSub: 'Try another name, family name, phone number or filter.',
+  // add dialog
+  newMember: 'New member', addTitle: 'Add a member', create: 'Create member', addNote: 'Same fields as the online form. The family can still send the form later to add documents.',
+  addNoteReview: 'Same fields as the online form. A new member goes to management for approval; the family can sign in once it is approved.',
+  added: '{n} added as a member.', sentForReview: 'New member sent for approval. The family can sign in once management approves.',
+  dobHint: 'We work out the age from the date of birth.', startHint: 'The first club day. After that the member can come on any open day.',
+  contactMode: 'Family contact', newContact: 'New contact', existingContact: 'Existing contact', pickContact: 'Choose a contact', pickContactPh: 'Choose…',
+  // activity feed (member History and Live today)
+  'feed.created': '{name} added as a member', 'feed.details': '{name}: details updated', 'feed.docs': '{name}: documents updated', 'feed.docRequested': '{name}: document requested from the family',
+  'feed.docUploaded': '{name}: document uploaded by the family', 'feed.consent': '{name}: consent updated', 'feed.plan': '{name}: plan changed', 'feed.planApplied': '{name}: plan request applied',
+  'feed.planDeclined': '{name}: plan request declined', 'feed.allergies': '{name}: allergies updated', 'feed.meds': '{name}: medicines updated', 'feed.care': '{name}: care instructions updated',
+  'feed.health': '{name}: health record updated', 'feed.cognitive': '{name}: cognitive status updated', 'feed.ending': '{name}: last club day set', 'feed.endingCancelled': '{name}: ending cancelled',
+  'feed.reactivated': '{name}: membership reactivated', 'feed.noteShared': '{name}: note shared with family', 'feed.noteStaff': '{name}: staff-only note added', 'feed.noteEdited': '{name}: note edited',
+  'feed.noteDeleted': '{name}: note deleted', 'feed.contactAdded': '{name}: {who} added as a family contact', 'feed.contactLinked': '{name}: {who} linked as a family contact',
+  'feed.contactUpdated': '{name}: {who} updated', 'feed.contactUnlinked': '{name}: {who} removed from the family contacts', 'feed.primaryChanged': '{name}: {who} is now the primary billing contact',
+  'feed.appAccessOn': '{name}: {who} invited to the app', 'feed.appAccessOff': '{name}: app access revoked for {who}',
+  // notifications (updates)
+  'notif.welcome': 'Welcome to CitraPremier. {name}’s membership starts on {date}.', 'notif.docRequested': 'The club asked you to upload a document for {name}.',
+  'notif.allergies': '{who} updated the allergies of {name}.', 'notif.meds': '{who} updated the medicines of {name}.', 'notif.care': '{who} updated the care instructions of {name}.',
+  'notif.health': '{who} updated the health record of {name}.', 'notif.planApplied': '{name}’s plan change was applied from {date}.', 'notif.planDeclined': '{name}’s plan change request was not applied.',
+  'notif.ending': '{name}’s membership ends on {date}.', 'notif.reactivated': '{name}’s membership is active again from {date}.', 'notif.contactAdded': 'You are now a family contact for {name}.',
+  'notif.appInvite': 'You can now use the CitraPremier app for {name}.',
+  // errors
+  'err.nameRequired': 'Please enter the full name.', 'err.dobRequired': 'Please enter the date of birth.', 'err.dobInvalid': 'Check the date of birth. We work out the age from it.',
+  'err.arrivalInvalid': 'Check the usual arrival time, for example 10:00.', 'err.arrivalHours': 'The usual arrival must be between {open} and {close}.', 'err.planInvalid': 'Choose a plan.',
+  'err.startInvalid': 'Pick an open club day, today or later.', 'err.contactRequired': 'Please enter the contact’s name.',
+  'err.phoneRequired': 'Please enter a mobile number.', 'err.phoneInvalid': 'That mobile number doesn’t look right. Use +62… or 08….',
+  'err.phoneInUse': 'That mobile number already belongs to someone. Link the existing contact instead.', 'err.consentRequired': 'Consent to the use of information is required.',
+  'err.medNameRequired': 'Add the medicine’s name.', 'err.nannyNameRequired': 'Add the nanny’s name.', 'err.spouseInvalid': 'Choose a member who can be a spouse.',
+  'err.contactNotFound': 'That contact was not found.', 'err.contactPending': 'This contact is still waiting for approval.', 'err.notLinked': 'This contact is not linked to the member.',
+  'err.alreadyLinked': 'This contact is already linked to the member.', 'err.lastContact': 'A member needs at least one family contact.', 'err.memberEnded': 'This membership has ended. The record is read-only.',
+  'err.noNanny': 'This member has no nanny on file.', 'err.alreadyOnFile': 'That document is already on file.', 'err.requestNotPending': 'That request was already handled.',
+  'err.effectiveInvalid': 'Pick a date from today onwards.', 'err.lastDayRequired': 'Pick the last club day.', 'err.lastDayInvalid': 'That date is not valid.',
+  'err.lastDayPast': 'The last day can’t be in the past.', 'err.lastDayBeforeStart': 'The last day is before the membership started.', 'err.reasonRequired': 'Choose a reason.',
+  'err.alreadyEnded': 'This membership has already ended.', 'err.alreadyEnding': 'A last day is already set. Cancel it first to choose another.', 'err.notEnding': 'No last day is set.',
+  'err.notEnded': 'This membership is still active.',
+};

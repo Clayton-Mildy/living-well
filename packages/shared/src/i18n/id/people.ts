@@ -1,0 +1,36 @@
+// people strings (ID).
+import type { Same } from '../ns';
+import type { people as EN } from '../en/people';
+
+export const people: Same<typeof EN> = {
+  eyebrow: 'Data staf', add: 'Tambah staf', mgmtOnly: 'Hanya manajemen. Kontrak, gaji, data bank, dan catatan disiplin disembunyikan dari peran lain.', empty: 'Belum ada staf.',
+  inactive: 'Nonaktif', tab_profile: 'Profil', tab_contract: 'Kontrak dan KTP', tab_pay: 'Gaji dan bank', tab_notes: 'Catatan dan penilaian', tab_att: 'Kehadiran',
+  appOn: 'Akses aplikasi aktif', appOff: 'Tanpa akses aplikasi', endsToday: 'Kontrak berakhir hari ini', endsIn: 'Kontrak berakhir dalam {n} hari', endsInOne: 'Kontrak berakhir dalam {n} hari', endedAgo: 'Kontrak berakhir {n} hari lalu', endedAgoOne: 'Kontrak berakhir {n} hari lalu',
+  fRole: 'Peran', fApp: 'Akses aplikasi', fClub: 'Klub', fKnown: 'Nama panggilan', fSupervisor: 'Penyelia', fRated: 'Dinilai keluarga', fContract: 'Kontrak', contract_pkwtt: 'Tetap (PKWTT)', contract_pkwt: 'Kontrak waktu tertentu (PKWT)',
+  fStart: 'Mulai', fEnd: 'Berakhir', noEnd: 'Tanpa tanggal berakhir', fKtp: 'Nomor KTP', fKtpFile: 'KTP tersimpan', onFile: 'Tersimpan', missing: 'Belum ada', missingLc: 'belum ada', fSalary: 'Gaji bulanan',
+  fAllowance: 'Tunjangan transport', fBank: 'Bank', fAccount: 'Nomor rekening', fPaidOn: 'Dibayar pada', paidOn: 'Tanggal 25 setiap bulan', fTitle: 'Jabatan',
+  toggleApp: 'Boleh masuk ke aplikasi', toggleAppSub: 'Masuk dengan nama pengguna dan kata sandi. Nama penggunanya dibuatkan otomatis.', toggleAppReq: 'Masuk dengan nama pengguna dan kata sandi. Layar utamanya menjadi Permintaan.',
+  pgStaff: 'Halaman staf', pgNotes: 'Halaman catatan', pgDays: 'Halaman kehadiran', fUsername: 'Nama pengguna', usernameNone: 'Dibuat saat akses aplikasi aktif', usernameHint: 'Dibuat otomatis dari nama depannya. Tidak bisa diubah.',
+  resetPw: 'Atur ulang kata sandi', resetTitle: 'Atur ulang kata sandi {name}?', resetText: '{name} masuk lagi dengan kata sandi bawaan. Minta beliau menggantinya setelah masuk.',
+  resetDone: 'Kata sandi {name} kembali ke bawaan: {password}',
+  appGranted: '{name} sekarang bisa masuk.', appRevoked: '{name} tidak bisa lagi masuk.',
+  warnToday: 'Kontrak ini berakhir hari ini. Perpanjang atau rencanakan tanggal berhentinya.', warnSoon: 'Kontrak ini berakhir dalam {n} hari, pada {date}. Perpanjang atau rencanakan tanggal berhentinya.', warnSoonOne: 'Kontrak ini berakhir dalam {n} hari, pada {date}. Perpanjang atau rencanakan tanggal berhentinya.', warnEnded: 'Kontrak ini berakhir pada {date}.',
+  docContract: 'Kontrak bertanda tangan', docKtp: 'KTP', docOpened: '{doc} dibuka (demo).', docAsk: 'Minta {name} mengunggahnya.', showPay: 'Tampilkan nominal dan nomor rekening', hidePay: 'Sembunyikan nominal dan nomor rekening',
+  notesTitle: 'Catatan dan peringatan', nk_warning: 'Peringatan', nk_note: 'Catatan', nk_praise: 'Pujian', noneOnFile: 'Belum ada.', addNote: 'Tambah catatan', noteText: 'Apa yang terjadi',
+  notePh: 'Tulis apa yang terjadi dan apa yang disepakati.', addNoteBtn: 'Tambah catatan', noteAdded: 'Catatan ditambahkan.', deleteNote: 'Hapus catatan', deleteNoteTitle: 'Hapus catatan ini?',
+  deleteNoteText: 'Catatan dihapus dari data. Tindakan ini dicatat dengan nama Anda.', noteDeleted: 'Catatan dihapus.',
+  ratings: 'Penilaian keluarga', ratingN: 'Dari {n} penilaian keluarga di survei', ratingNOne: 'Dari {n} penilaian keluarga di survei', ratingsShort: '{n} penilaian', ratingsShortOne: '{n} penilaian', noRatingsYet: 'Belum ada penilaian dari keluarga.', noRating: 'Tidak dinilai keluarga; peran ini jarang berhubungan dengan mereka.',
+  attTitle: 'Masuk dan pulang', attHint: 'ketuk hari untuk mengubah', attWorked: 'Hari kerja', attHours: 'Jam', attLeave: 'Hari cuti', attSick: 'Hari sakit', clockIn: 'Masuk sekarang', clockOut: 'Pulang sekarang',
+  clockedIn: 'Masuk pukul {time}.', clockedOut: 'Pulang pukul {time}.', tk_worked: 'Bekerja', tk_leave: 'Cuti', tk_sick: 'Sakit', tk_off: 'Libur', stillIn: 'masih bekerja',
+  stillInHint: 'Kosongkan selama mereka masih bekerja.', noEntry: 'Belum ada catatan', attNone: 'Tidak ada hari untuk ditampilkan.', clockInL: 'Jam masuk', clockOutL: 'Jam pulang', timeSaved: 'Hari tersimpan.', timeRemoved: 'Catatan dihapus.',
+  editEyebrow: 'Ubah data staf', addEyebrow: 'Staf baru', secProfile: 'Profil', secContract: 'Kontrak dan KTP', secPay: 'Gaji dan bank', knownHint: 'Panggilan di tim, misalnya Dinar.',
+  ktpLast4: 'KTP, 4 digit terakhir', ktpSub: 'Salinan KTP ada di berkasnya.', signedSub: 'Kedua pihak sudah menandatangani.', ratedSub: 'Keluarga dapat menilai mereka di survei.', supervisorSub: 'Dapat menyetujui permintaan dapur dan tim.',
+  added: '{name} ditambahkan ke tim.', saved: 'Data staf tersimpan.', deactivate: 'Nonaktifkan', deactivateTitle: 'Nonaktifkan {name}?',
+  deactivateText: 'Mereka tidak bisa lagi masuk dan dikeluarkan dari daftar aktif. Data dan riwayatnya tetap ada, dan Anda bisa mengaktifkannya kembali kapan saja.', deactivated: '{name} dinonaktifkan.',
+  reactivate: 'Aktifkan kembali', reactivated: '{name} aktif kembali.',
+  'err.phoneTaken': 'Nomor ponsel itu sudah dipakai orang lain.', 'err.endRequired': 'Kontrak waktu tertentu perlu tanggal berakhir.', 'err.endBeforeStart': 'Tanggal berakhir harus setelah tanggal mulai.',
+  'err.ownRole': 'Anda tidak bisa mengubah peran Anda sendiri.', 'err.selfDeactivate': 'Anda tidak bisa menonaktifkan diri sendiri.', 'err.selfAccess': 'Anda tidak bisa mematikan akses Anda sendiri.',
+  'err.inactive': 'Aktifkan orang ini terlebih dahulu.', 'err.phoneRequired': 'Tambahkan nomor ponsel terlebih dahulu.', 'err.futureDate': 'Waktu itu belum terjadi.', 'err.timeOrder': 'Jam pulang harus setelah jam masuk.',
+  'feed.added': '{name} ditambahkan ke tim', 'feed.updated': 'Data staf diperbarui · {name}', 'feed.deactivated': '{name} dinonaktifkan', 'feed.reactivated': '{name} diaktifkan kembali',
+  'feed.accessOn': 'Akses aplikasi aktif · {name}', 'feed.accessOff': 'Akses aplikasi mati · {name}',
+};

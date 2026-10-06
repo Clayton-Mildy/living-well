@@ -1,0 +1,27 @@
+{
+  "name": "@cp/server",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch --clear-screen=false src/index.ts",
+    "start": "tsx src/index.ts",
+    "db:setup": "tsx src/db/setup.ts",
+    "db:reset": "tsx src/db/setup.ts --reset",
+    "typecheck": "tsc -p tsconfig.json"
+  },
+  "dependencies": {
+    "@cp/shared": "workspace:*",
+    "@hono/node-server": "^2.1.3",
+    "dotenv": "^18.0.5",
+    "drizzle-orm": "^0.45.3",
+    "hono": "^4.13.13",
+    "immer": "^11.1.21",
+    "postgres": "^3.4.9",
+    "zod": "^4.6.5"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.4",
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15"
+  }
+}

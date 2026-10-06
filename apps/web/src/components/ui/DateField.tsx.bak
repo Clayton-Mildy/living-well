@@ -1,0 +1,207 @@
+// DateField / MonthField: custom calendar popovers (month grid, previous/next month, month and year pickers, today).
+// Replace every <input type="date"> and <input type="month">. Values are 'YYYY-MM-DD' and 'YYYY-MM' ('' = empty).
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as RKE } from 'react';
+import { addMonths } from '@cp/shared';
+import { useFmt, useT } from '../../lib/i18n';
+import { useNow } from '../../lib/clock';
+import { FONT_SMALL, Icon } from './index';
+import { FieldFrame, PopLayer, triggerStyle, useFieldIds } from './field';
+import { clampDate, dateAllowed, monthAllowed, monthGrid, shiftMonth, stepDate, withMonth, yearAllowed, yearPageStart, type ISODate, type YM } from './dates';
+
+type View = 'day' | 'month' | 'year';
+interface CalProps {
+  mode: 'date' | 'month';
+  value: string;
+  min?: string;
+  max?: string;
+  disabledDate?: (d: ISODate) => boolean;
+  today: ISODate;
+  clearable?: boolean;
+  onPick: (v: string) => void;
+}
+
+const navBtn = (disabled?: boolean) => ({ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#B5B0AC' : '#282828', flex: 'none' as const, padding: 0 });
+const cellBase = { height: 44, minWidth: 0, borderRadius: 999, border: '1px solid transparent', background: 'transparent', fontSize: 16, fontFamily: 'Inter', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: '#282828', cursor: 'pointer' } as const;
+
+function Calendar({ mode, value, min, max, disabledDate, today, clearable, onPick }: CalProps) {
+  const t = useT();
+  const { lang, fd } = useFmt();
+  const [cursor, setCursor] = useState<ISODate>(() => clampDate(mode === 'month' ? `${(value || today).slice(0, 7)}-01` : value || today, min && mode === 'month' ? `${min.slice(0, 7)}-01` : min, max && mode === 'month' ? `${max.slice(0, 7)}-28` : max));
+  const [view, setView] = useState<View>(mode === 'month' ? 'month' : 'day');
+  const [pageStart, setPageStart] = useState(() => yearPageStart(+cursor.slice(0, 4)));
+  const grid = useRef<HTMLDivElement>(null);
+  const ym: YM = cursor.slice(0, 7);
+  const year = +cursor.slice(0, 4);
+  const sel = mode === 'month' ? value.slice(0, 7) : value;
+  const allowed = (d: ISODate) => dateAllowed(d, { min, max, disabledDate });
+
+  // focus the highlighted day when the day view opens and after a keyboard move (not when the prev/next buttons are used)
+  const wantFocus = useRef(true);
+  useEffect(() => {
+    if (view === 'day' && wantFocus.current) { grid.current?.querySelector<HTMLElement>(`[data-date="${cursor}"]`)?.focus({ preventScroll: true }); wantFocus.current = false; }
+  }, [cursor, view]);
+  useEffect(() => {
+    if (view === 'month' || view === 'year') grid.current?.querySelector<HTMLElement>('[aria-pressed="true"], [data-first]')?.focus({ preventScroll: true });
+  }, [view]);
+
+  const onGridKey = (e: RKE<HTMLDivElement>) => {
+    const next = stepDate(cursor, e.key, e.shiftKey);
+    if (!next) return;
+    e.preventDefault();
+    if ((min && next < min) || (max && next > max)) return;
+    wantFocus.current = true;
+    setCursor(next);
+  };
+  const monthName = (m: YM, o: 'long' | 'short' = 'long') => fd(`${m}-01`, { month: o });
+  const longDate = (d: ISODate) => fd(d, { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' }).replace(/,/g, '');
+
+  const head = (title: string, prev: () => void, next: () => void, prevLabel: string, nextLabel: string, prevOff: boolean, nextOff: boolean, onTitle?: () => void, titleLabel?: string) => (
+    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 4, marginBottom: 4 }}>
+      <button type="button" aria-label={prevLabel} aria-disabled={prevOff || undefined} onClick={prevOff ? undefined : prev} className="h-cream" style={navBtn(prevOff)}><Icon name="chevron_left" size={24} /></button>
+      {onTitle ? (
+        <button type="button" onClick={onTitle} aria-label={titleLabel ? `${title}, ${titleLabel}` : undefined} className="h-cream" data-cal-title style={{ height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: 'transparent', fontSize: 17, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
+          {title}<Icon name="arrow_drop_down" size={22} />
+        </button>
+      ) : <span style={{ fontSize: 17, fontWeight: 600 }}>{title}</span>}
+      <button type="button" aria-label={nextLabel} aria-disabled={nextOff || undefined} onClick={nextOff ? undefined : next} className="h-cream" style={navBtn(nextOff)}><Icon name="chevron_right" size={24} /></button>
+    </div>
+  );
+
+  let body;
+  if (view === 'day') {
+    const weeks = monthGrid(ym);
+    const prevOff = !!min && addMonths(ym, -1) < min.slice(0, 7);
+    const nextOff = !!max && addMonths(ym, 1) > max.slice(0, 7);
+    const names = Array.from({ length: 7 }, (_, i) => `2026-10-${String(5 + i).padStart(2, '0')}`); // 5 Oct 2026 is a Monday
+    body = (
+      <>
+        {head(`${monthName(ym)} ${year}`, () => setCursor(clampDate(shiftMonth(cursor, -1), min, max)), () => setCursor(clampDate(shiftMonth(cursor, 1), min, max)), t('common.prevMonth'), t('common.nextMonth'), prevOff, nextOff, () => setView('month'), t('common.chooseMonth'))}
+        <div ref={grid} role="grid" aria-label={`${monthName(ym)} ${year}`} onKeyDown={onGridKey} data-month={ym}>
+          <div role="row" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)' }}>
+            {names.map((d) => <span key={d} role="columnheader" aria-label={fd(d, { weekday: 'long' })} style={{ textAlign: 'center', fontSize: FONT_SMALL, color: '#6A6967', fontWeight: 500, padding: '6px 0' }}>{fd(d, { weekday: 'short' }).replace(/\.$/, '')}</span>)}
+          </div>
+          {weeks.map((w, wi) => (
+            <div key={wi} role="row" style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 2 }}>
+              {w.map((d, di) => {
+                if (!d) return <span key={di} role="gridcell" aria-hidden="true" />;
+                const on = d === sel, ok = allowed(d), isToday = d === today;
+                return (
+                  <span key={d} role="gridcell" aria-selected={on}>
+                    <button type="button" data-date={d} tabIndex={d === cursor ? 0 : -1} aria-label={longDate(d)} aria-disabled={!ok || undefined} aria-current={isToday ? 'date' : undefined}
+                      onClick={() => { if (ok) onPick(d); }} className={on || !ok ? undefined : 'h-cream'}
+                      style={{ ...cellBase, width: '100%', background: on ? '#75624B' : undefined, color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#282828', fontWeight: on || isToday ? 600 : 400, border: isToday && !on ? '1px solid #75624B' : '1px solid transparent', cursor: ok ? 'pointer' : 'not-allowed', textDecoration: !ok && !on ? 'line-through' : undefined }}>
+                      {+d.slice(8, 10)}
+                    </button>
+                  </span>
+                );
+              })}
+            </div>
+          ))}
+        </div>
+      </>
+    );
+  } else if (view === 'month') {
+    const prevOff = !!min && year - 1 < +min.slice(0, 4);
+    const nextOff = !!max && year + 1 > +max.slice(0, 4);
+    body = (
+      <>
+        {head(String(year), () => setCursor(withMonth(cursor, `${year - 1}-${cursor.slice(5, 7)}`)), () => setCursor(withMonth(cursor, `${year + 1}-${cursor.slice(5, 7)}`)), t('common.prevYear'), t('common.nextYear'), prevOff, nextOff, () => { setPageStart(yearPageStart(year)); setView('year'); }, t('common.chooseYear'))}
+        <div ref={grid} role="group" aria-label={t('common.chooseMonth')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {Array.from({ length: 12 }, (_, i) => {
+            const m: YM = `${year}-${String(i + 1).padStart(2, '0')}`;
+            const ok = monthAllowed(m, min, max);
+            const on = m === (mode === 'month' ? sel : ym);
+            const isNow = m === today.slice(0, 7);
+            return (
+              <button key={m} type="button" aria-label={`${monthName(m)} ${year}`} aria-pressed={on} aria-disabled={!ok || undefined} data-first={i === 0 ? '' : undefined}
+                onClick={() => { if (!ok) return; if (mode === 'month') onPick(m); else { wantFocus.current = true; setCursor(clampDate(withMonth(cursor, m), min, max)); setView('day'); } }} className={on || !ok ? undefined : 'h-cream'}
+                style={{ ...cellBase, height: 48, borderRadius: 16, background: on ? '#75624B' : undefined, color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#282828', fontWeight: on || isNow ? 600 : 400, border: isNow && !on ? '1px solid #75624B' : '1px solid transparent', cursor: ok ? 'pointer' : 'not-allowed' }}>
+                {monthName(m, 'short').replace(/\.$/, '')}
+              </button>
+            );
+          })}
+        </div>
+      </>
+    );
+  } else {
+    const prevOff = !!min && pageStart - 1 < +min.slice(0, 4);
+    const nextOff = !!max && pageStart + 12 > +max.slice(0, 4);
+    body = (
+      <>
+        {head(`${pageStart} – ${pageStart + 11}`, () => setPageStart(pageStart - 12), () => setPageStart(pageStart + 12), t('common.prevYears'), t('common.nextYears'), prevOff, nextOff)}
+        <div ref={grid} role="group" aria-label={t('common.chooseYear')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6 }}>
+          {Array.from({ length: 12 }, (_, i) => {
+            const y = pageStart + i;
+            const ok = yearAllowed(y, min, max);
+            const on = y === year;
+            return (
+              <button key={y} type="button" aria-label={String(y)} aria-pressed={on} aria-disabled={!ok || undefined} data-first={i === 0 ? '' : undefined}
+                onClick={() => { if (!ok) return; setCursor(clampDate(withMonth(cursor, `${y}-${cursor.slice(5, 7)}`), min, max)); setView('month'); }} className={on || !ok ? undefined : 'h-cream'}
+                style={{ ...cellBase, height: 48, borderRadius: 16, background: on ? '#75624B' : undefined, color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#282828', fontWeight: on || y === +today.slice(0, 4) ? 600 : 400, cursor: ok ? 'pointer' : 'not-allowed' }}>{y}</button>
+            );
+          })}
+        </div>
+      </>
+    );
+  }
+
+  const todayOk = mode === 'month' ? monthAllowed(today.slice(0, 7), min, max) : allowed(today);
+  return (
+    <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }} lang={lang}>
+      {body}
+      {mode === 'date' || clearable ? (
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #EFECEA', marginTop: 4 }}>
+          {mode === 'date' ? (
+            <button type="button" aria-disabled={!todayOk || undefined} onClick={() => { if (todayOk) onPick(today); }} className="h-cream"
+              style={{ height: 44, padding: '0 16px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: 15, fontWeight: 500, cursor: todayOk ? 'pointer' : 'not-allowed', opacity: todayOk ? 1 : 0.5, fontFamily: 'Inter' }}>{t('common.today')}</button>
+          ) : <span />}
+          {clearable && value ? (
+            <button type="button" onClick={() => onPick('')} className="h-cream" style={{ height: 44, padding: '0 16px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: 15, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.clear')}</button>
+          ) : null}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+interface FieldBase { label?: string; error?: string | false; placeholder?: string; disabled?: boolean; ariaLabel?: string; hint?: string; clearable?: boolean; id?: string }
+
+function PickerField({ mode, value, onChange, min, max, disabledDate, label, error, placeholder, disabled, ariaLabel, hint, clearable, id }: FieldBase & {
+  mode: 'date' | 'month'; value: string; onChange: (v: string) => void; min?: string; max?: string; disabledDate?: (d: ISODate) => boolean;
+}) {
+  const t = useT();
+  const { fd, fmonth } = useFmt();
+  const { today } = useNow();
+  const ids = useFieldIds(id);
+  const trigger = useRef<HTMLButtonElement>(null);
+  const [open, setOpen] = useState(false);
+  const title = label || ariaLabel || (mode === 'date' ? t('common.pickDate') : t('common.pickMonth'));
+  const text = useMemo(() => (!value ? '' : mode === 'date' ? fd(value, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).replace(/,/g, '') : fmonth(value, true)), [value, mode, fd, fmonth]);
+  return (
+    <FieldFrame ids={ids} label={label} error={error} hint={hint}>
+      <button ref={trigger} id={ids.trigger} type="button" aria-haspopup="dialog" aria-expanded={open} aria-labelledby={label ? `${ids.label} ${ids.value}` : undefined} aria-label={label ? undefined : `${title}${text ? ', ' + text : ''}`}
+        aria-describedby={error || hint ? ids.msg : undefined} aria-invalid={error ? true : undefined} disabled={disabled} onClick={() => setOpen((o) => !o)}
+        onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); } }} style={triggerStyle({ error: !!error, disabled, open })}>
+        <Icon name={mode === 'date' ? 'calendar_month' : 'calendar_view_month'} size={22} color="#6A6967" />
+        <span id={ids.value} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: text ? undefined : '#6A6967' }}>{text || placeholder || (mode === 'date' ? t('common.pickDate') : t('common.pickMonth'))}</span>
+        <Icon name="expand_more" size={22} color="#6A6967" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
+      </button>
+      <PopLayer open={open} onClose={() => setOpen(false)} anchorRef={trigger} title={title} minWidth={330} maxHeight={480}>
+        <Calendar mode={mode} value={value} min={min} max={max} disabledDate={disabledDate} today={today} clearable={clearable} onPick={(v) => { setOpen(false); onChange(v); }} />
+      </PopLayer>
+    </FieldFrame>
+  );
+}
+
+/** Pick a day. `value` is 'YYYY-MM-DD' or ''. `min`/`max` are inclusive 'YYYY-MM-DD'; `disabledDate` greys out single days. */
+export function DateField({ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id }: FieldBase & {
+  value: string; onChange: (v: string) => void; min?: string; max?: string; disabledDate?: (d: ISODate) => boolean;
+}) {
+  return <PickerField mode="date" {...{ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id }} />;
+}
+/** Pick a month. `value`, `min` and `max` are 'YYYY-MM'. */
+export function MonthField({ label, value, onChange, min, max, error, placeholder, disabled, ariaLabel, hint, clearable, id }: FieldBase & {
+  value: string; onChange: (v: string) => void; min?: string; max?: string;
+}) {
+  return <PickerField mode="month" {...{ label, value, onChange, min, max, error, placeholder, disabled, ariaLabel, hint, clearable, id }} />;
+}
