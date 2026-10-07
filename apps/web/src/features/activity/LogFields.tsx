@@ -17,8 +17,8 @@ export const sameLog = (a: LogEntry, b: LogEntry) => LOG_ROWS.every((r) => a[r.k
 /** The `log.save` input for an entry. */
 export const logInput = (memberId: string, date: string, e: LogEntry) => ({ memberId, date, mood: e.mood, lunch: e.lunch, joined: e.joined, communicative: e.communicative, content: e.content, note: e.note, staffNote: e.staffNote });
 
-const NORMAL_CHIP = { bg: '#E6EFE8', fg: '#3D6B4F', bd: '1px solid #3D6B4F' };
-const inputStyle = { height: 52, border: '1px solid #8A755B', borderRadius: 16, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#282828', outline: 'none', width: '100%', minWidth: 0 } as const;
+const NORMAL_CHIP = { bg: '#E3EFE6', fg: '#3D6B4F', bd: '1px solid #3D6B4F' };
+const inputStyle = { height: 52, border: '1px solid #DDD1C2', borderRadius: 12, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', width: '100%', minWidth: 0 } as const;
 
 export function LogFieldsForm({ e, onChange }: { e: LogEntry; onChange: (patch: Partial<LogEntry>) => void }) {
   const t = useT();
@@ -31,7 +31,7 @@ export function LogFieldsForm({ e, onChange }: { e: LogEntry; onChange: (patch: 
             {r.opts.map((v) => {
               const sel = e[r.k] === v;
               const c = v === NORMAL_LOG[r.k] && sel ? NORMAL_CHIP : chipStyle(sel, false);
-              return <button key={v} type="button" aria-pressed={sel} className="cp-chip" onClick={() => onChange({ [r.k]: v } as Partial<LogEntry>)} style={{ height: 44, padding: '0 16px', borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t(`activity.opt.${r.k}.${v}`)}</button>;
+              return <button key={v} type="button" aria-pressed={sel} className="cp-chip" onClick={() => onChange({ [r.k]: v } as Partial<LogEntry>)} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t(`activity.opt.${r.k}.${v}`)}</button>;
             })}
           </div>
         </div>

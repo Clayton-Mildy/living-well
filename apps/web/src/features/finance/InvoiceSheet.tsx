@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { actorName, fmtPhone, isPrimaryFor, memberName, rp, sortBy, live, type Bank, type Invoice } from '@cp/shared';
 import { BANKS, bankVa, groupVa, invoicePeriod, invoiceView, paymentView, refundsOfInvoice } from '@cp/shared/rules/finance';
-import { Avatar, Button, Chip, Drawer, Eyebrow, Icon, Note, Sheet, StatusBadge, TextField, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Avatar, Button, Chip, Drawer, Eyebrow, Icon, Note, Sheet, StatusBadge, TextField, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -30,7 +30,7 @@ export function InvoiceSheet({ invoiceId, open, onClose, audience }: { invoiceId
   if (audience === 'staff' && !isPhone) {
     return (
       <Drawer open onClose={onClose} label={title} width={480}>
-        <h2 style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{title}</h2>
+        <h2 style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C' }}>{title}</h2>
         {body}
       </Drawer>
     );
@@ -42,12 +42,12 @@ const Section = ({ label, meta, children }: { label: ReactNode; meta?: ReactNode
   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
       <span style={caps}>{label}</span>
-      {meta ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{meta}</span> : null}
+      {meta ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{meta}</span> : null}
     </div>
     {children}
   </div>
 );
-const panel = { border: '1px solid #DBD7D6', borderRadius: 20, padding: 16, display: 'flex', flexDirection: 'column', gap: 12 } as const;
+const panel = { borderTop: '1px solid #F0EAE1', paddingTop: 14, display: 'flex', flexDirection: 'column', gap: 12 } as const;
 
 function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staff' | 'family'; onClose: () => void }) {
   const s = useClub();
@@ -103,7 +103,7 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
         <Avatar name={m ? memberName(m) : inv.memberId} tone={m?.photoTone} src={memberPhoto(m)} size={48} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{m ? memberName(m) : inv.memberId}</span>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{inv.number} · {fmonth(invoicePeriod(inv), true)}</span>
+          <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{inv.number} · {fmonth(invoicePeriod(inv), true)}</span>
         </div>
         <StatusBadge kind={v.status} />
       </div>
@@ -111,9 +111,9 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
       <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span style={caps}>{inv.voided ? t('finance.inv.voidedOn', { date: fdy(inv.voided.at.slice(0, 10)) }) : statusDate}</span>
-          <span style={{ fontSize: 28, lineHeight: '34px', letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums', textDecoration: inv.voided ? 'line-through' : undefined }}>{rp(v.total)}</span>
-          {!inv.voided && v.paid > 0 && v.balance > 0 ? <span style={{ fontSize: 16, color: '#6A6967', lineHeight: 1.4 }}>{t('finance.inv.balanceLeft', { paid: rp(v.paid), balance: rp(v.balance) })}</span> : null}
-          {inv.releasedEarly && staff ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('finance.inv.releasedEarly', { date: fds(inv.issueDate) })}</span> : <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('finance.inv.issued', { date: fds(inv.issueDate) })}</span>}
+          <span style={{ fontSize: 32, lineHeight: '38px', fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums', textDecoration: inv.voided ? 'line-through' : undefined }}>{rp(v.total)}</span>
+          {!inv.voided && v.paid > 0 && v.balance > 0 ? <span style={{ fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.inv.balanceLeft', { paid: rp(v.paid), balance: rp(v.balance) })}</span> : null}
+          {inv.releasedEarly && staff ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.inv.releasedEarly', { date: fds(inv.issueDate) })}</span> : <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.inv.issued', { date: fds(inv.issueDate) })}</span>}
         </div>
         {staff && payerName ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-end', minWidth: 0 }}>
@@ -131,15 +131,15 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
       <Section label={t('finance.inv.lines')}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {inv.lines.map((l) => (
-            <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderTop: '1px solid #EFECEA', fontSize: 16, lineHeight: 1.4 }}>
+            <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderTop: '1px solid #F0EAE1', fontSize: 16, lineHeight: 1.4 }}>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                 <span>{lineLabel(t, fmonth, l)}</span>
-                {l.dates?.length ? <span style={{ fontSize: FONT_BODY, color: '#6A6967' }}>{l.dates.map(fds).join(' · ')}</span> : null}
+                {l.dates?.length ? <span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{l.dates.map(fds).join(' · ')}</span> : null}
               </span>
               <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: l.amount < 0 ? '#3D6B4F' : undefined }}>{money(l.amount)}</span>
             </div>
           ))}
-          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0 2px', borderTop: '1px solid #DBD7D6', fontSize: 16, fontWeight: 600, lineHeight: 1.4 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0 2px', borderTop: '1px solid #E4DACD', fontSize: 16, fontWeight: 600, lineHeight: 1.4 }}>
             <span>{t('finance.inv.total')}</span><span style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(v.total)}</span>
           </div>
           {v.paid > 0 && !inv.voided ? (
@@ -183,20 +183,20 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
               const a = pv.allocations.find((x) => x.invoiceId === inv.id)!;
               const rf = pv.refunds.filter((r) => r.invoiceId === inv.id);
               return (
-                <div key={pv.p.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 0', borderTop: '1px solid #EFECEA' }}>
+                <div key={pv.p.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 0', borderTop: '1px solid #F0EAE1' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
                     <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <span style={{ fontSize: 16, lineHeight: 1.4 }}>{methodLabel(t, pv.p)}{pv.p.foreign ? ` · ${pv.p.foreign.ccy} ${pv.p.foreign.amount}` : ''}</span>
-                      <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{fds(pv.p.receivedOn)}{pv.p.receivedAt ? `, ${pv.p.receivedAt}` : ''}{pv.p.ref ? ` · ${t('finance.pay.ref', { ref: pv.p.ref })}` : ''}</span>
+                      <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{fds(pv.p.receivedOn)}{pv.p.receivedAt ? `, ${pv.p.receivedAt}` : ''}{pv.p.ref ? ` · ${t('finance.pay.ref', { ref: pv.p.ref })}` : ''}</span>
                     </div>
                     <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(a.amount)}</span>
                     {canAct ? <Badge kind={pv.p.xero === 'synced' ? 'paid' : 'pending'} label={t(pv.p.xero === 'synced' ? 'finance.xero.synced' : 'finance.xero.pending')} /> : null}
                     {canAct && a.refundable > 0 && refundFor !== pv.p.id ? (
-                      <button type="button" onClick={() => setRefundFor(pv.p.id)} style={{ height: 44, padding: '0 12px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4 }}>{t('finance.pay.refund')}</button>
+                      <button type="button" onClick={() => setRefundFor(pv.p.id)} style={{ height: 44, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4 }}>{t('finance.pay.refund')}</button>
                     ) : null}
                   </div>
                   {rf.map((r) => (
-                    <span key={r.id} style={{ fontSize: FONT_BODY, color: '#AF4B2F', lineHeight: 1.4 }}>
+                    <span key={r.id} style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}>
                       {t('finance.pay.refundedLine', { amount: rp(r.amount), date: fds(r.createdAt.slice(0, 10)), reason: r.reason || t('finance.pay.noReason') })}{r.creditNote ? ` · ${t('finance.pay.creditNoteTag')}` : ''}
                     </span>
                   ))}
@@ -237,12 +237,12 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
       {canAct ? (
         <Section label={t('finance.inv.callNotes')} meta={lastReminder ? t('finance.bill.lastReminder', { when: stampOf(lastReminder.at, fds) }) : undefined}>
           {timeline.map((c, i) => (
-            <div key={i} style={{ padding: '10px 12px', borderRadius: 14, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 16, lineHeight: '22px' }}>{c.text}</span>
-              <span style={{ fontSize: FONT_SMALL, color: '#6A6967', lineHeight: 1.4 }}>{actorName(s, c.by)} · {stampOf(c.at, fds)}</span>
+            <div key={i} style={{ paddingLeft: 12, borderLeft: '2px solid #E6DDD1', display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 15, lineHeight: '21px' }}>{c.text}</span>
+              <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{actorName(s, c.by)} · {stampOf(c.at, fds)}</span>
             </div>
           ))}
-          {!timeline.length ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('finance.inv.noNotes')}</span> : null}
+          {!timeline.length ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.inv.noNotes')}</span> : null}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 220px', minWidth: 0 }}><TextField value={note} onChange={setNote} placeholder={t('finance.bill.notePlaceholder')} name="invoice-call-note" onEnter={saveNote} /></div>
             <Button variant="secondary" size={48} onClick={saveNote} style={{ padding: '0 18px' }}>{t('finance.bill.saveNote')}</Button>
@@ -265,12 +265,12 @@ function BankPicker({ bank, onBank, label }: { bank: Bank; onBank: (b: Bank) => 
 }
 function VaBox({ label, va, onCopy, copyLabel, big }: { label: string; va: string; onCopy: () => void; copyLabel: string; big?: boolean }) {
   return (
-    <div style={{ padding: big ? 16 : 14, borderRadius: 18, background: '#F4F0EE', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+    <div style={{ padding: big ? 16 : 14, borderRadius: 14, background: '#FBF8F4', border: '1px solid #EFE7DC', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
       <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 4 }}>
         <span style={caps}>{label}</span>
         <span data-testid="va-number" style={{ fontSize: big ? 24 : 20, letterSpacing: '1px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{va}</span>
       </div>
-      <button type="button" onClick={onCopy} style={{ height: 44, padding: '0 16px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+      <button type="button" onClick={onCopy} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
         <Icon name="content_copy" size={18} />{copyLabel}
       </button>
     </div>

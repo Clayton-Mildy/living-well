@@ -2,7 +2,7 @@
 // nurse health updates and kitchen replies, billing, profile links, Indonesian, every viewport.
 // Isolated env: pnpm e2e:env lobby 8802 5202 && E2E_BASE_URL=http://localhost:5202 pnpm exec playwright test e2e/chat.spec.ts
 import { test, expect, type APIRequestContext, type Browser, type Page, type TestInfo } from '@playwright/test';
-import { resetDemo, signIn, watchConsole, isPhone, assertNoHorizontalScroll } from './helpers';
+import { resetDemo, signIn, watchConsole, isPhone, uiZoom, assertNoHorizontalScroll } from './helpers';
 import { pickOption } from './kit';
 
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
@@ -137,7 +137,7 @@ test('s1 starts a new message to Laras: member, then contact, then the lobby tea
   await expect(sheet.getByText('About which member?')).toBeVisible();
   const search = sheet.getByLabel('Search members');
   await expect(search).toBeFocused();
-  expect((await search.boundingBox())?.height).toBeGreaterThan(48);
+  expect(((await search.boundingBox())?.height ?? 0) / (await uiZoom(page))).toBeGreaterThan(48); // CSS px: the page is zoomed
   await search.fill('zzz');
   await expect(sheet.getByText('No members match.')).toBeVisible();
   await search.fill('laras'); // finds the member through the family contact
@@ -443,7 +443,7 @@ test('a long conversation opens on its newest messages; "Show earlier messages" 
 test('the new-message member picker is paged and a search goes back to page 1', async ({ page, request }) => {
   for (let i = 0; i < 12; i++) {
     const nn = String(i).padStart(2, '0');
-    const r = await as(request, 's9', 'members.create', { title: 'Opa', name: `Pager Test${nn}`, dob: '1945-03-02', usualArrival: '11:00', plan: 'gold', start: '2026-10-21', contact: { name: `Pager Family${nn}`, phone: `+62 812 9000 00${nn}`, relation: 'daughter', primary: true }, consent: { data: true, face: true } }, `m-${i}`);
+    const r = await as(request, 's9', 'members.create', { title: 'Opa', name: `Pager Test${nn}`, dob: '1945-03-02', usualArrival: '11:00', plan: 'gold', start: '2026-10-21', contact: { name: `Pager Family${nn}`, phone: `+62 812 9000 00${nn}`, relation: 'daughter', primary: true }, formMediaId: 'md_e2eregistrationform0001', formFileName: 'registration-form.jpg', consent: { data: true, face: true } }, `m-${i}`);
     expect(r.ok(), await r.text()).toBeTruthy();
   }
   await signIn(page, 's1', '/chat');

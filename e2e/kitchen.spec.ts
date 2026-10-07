@@ -38,7 +38,6 @@ test.describe('menu of the day', () => {
     // the club is drop-in: only members who have checked in count (Hendra, Tjahjadi, Bambang), plus the booked trial guest
     await expect(page.getByTestId('covers')).toHaveText('4 covers so far · lunch 12:00');
     await expect(page.getByTestId('covers-split')).toHaveText('3 in the club + 1 guest');
-    if (!isPhone(page)) await expect(page.getByText('Members drop in on any open day, so this updates live as they check in.')).toBeVisible(); // a phone drops this helper line
     await expect(page.getByText('Sop ikan kakap, Nasi merah, Tumis buncis wortel, Pepaya')).toBeVisible();
     await expect(page.getByText('Soft option: Bubur ikan')).toBeVisible();
     // the conflict: seafood covers fish
@@ -183,7 +182,6 @@ test.describe('menu of the day', () => {
     const c = watchConsole(page);
     await signIn(page, 's3');
     await expect(page.getByTestId('lunch-photo')).toHaveCount(0);
-    if (!isPhone(page)) await expect(page.getByText('Management approves it before families see it')).toBeVisible(); // a phone drops this helper line
     await page.getByRole('button', { name: /Add a photo of today.s lunch/ }).click();
     await takePhotoWithFile(page);
     await expect(toast(page)).toContainText('Photo sent to management. Families see it once it is approved.');
@@ -236,7 +234,6 @@ test.describe('menu of the day', () => {
     await signIn(page, 's9', '/menu');
     const notify = page.getByRole('switch', { name: /Notify families/ });
     await expect(notify).toHaveAttribute('aria-checked', 'true');
-    if (!isPhone(page)) await expect(page.getByText('Families see it on their Today page')).toBeVisible(); // a phone drops this helper line
     const laras = await another(browser, info, 'fm10_0', '/today');
     await expect(laras.page.getByTestId('lunch-photo')).toHaveCount(0);
     // toggle off: the photo is shown to families, but nobody is told
@@ -548,12 +545,13 @@ test.describe('weekly menu plan and dishes', () => {
     await picker.getByRole('checkbox', { name: /Klepon/ }).click();
     await picker.getByRole('button', { name: 'Done' }).click();
     await page.getByRole('dialog', { name: 'Change one date' }).getByRole('button', { name: 'Save for this date' }).click();
-    const row = page.getByTestId('override-row');
+    // the seed already lists a pending one-off change two weeks ahead; ours is the one on Thu 22 Oct
+    const row = page.getByTestId('override-row').filter({ hasText: 'Thu 22 Oct' });
     await expect(row).toHaveCount(1);
-    await expect(row).toContainText('Thu 22 Oct');
+    await expect(row.getByTestId('approval-mark')).toContainText('Pending approval'); // a kitchen change waits for management
     await expect(row).toContainText('Afternoon tea: Kacang hijau, Klepon'.replace('Kacang hijau', 'Bubur kacang hijau'));
     await row.getByRole('button', { name: 'Remove' }).click();
-    await expect(page.getByTestId('override-row')).toHaveCount(0);
+    await expect(page.getByTestId('override-row').filter({ hasText: 'Thu 22 Oct' })).toHaveCount(0);
   });
 
   test('closed days and past days cannot be picked in the one-date editor, with no crash', async ({ page }) => {
@@ -611,7 +609,6 @@ test.describe('planning other weeks', () => {
     await expect(page.getByTestId('plan-day-3')).not.toContainText('TODAY'); // Wednesday 28 Oct is not today
     await expect(page.getByTestId('plan-day-5')).toContainText('Closed'); // closed for training
     await expect(page.getByTestId('plan-day-4')).not.toContainText('Closed');
-    await expect(page.getByText(/starts on its Monday and repeats every week/)).toBeVisible();
     // the menu is the one in force: Thursday's semur is there
     await expect(page.getByTestId('plan-4-lunch')).toContainText('Semur tahu tempe');
     await next(page).click();
@@ -619,7 +616,6 @@ test.describe('planning other weeks', () => {
     await prev(page).click();
     await prev(page).click();
     await expect(week(page)).toContainText('This week');
-    await expect(page.getByText(/starts on its Monday and repeats every week/)).toHaveCount(0);
   });
 
   test('plan next week: publish from its Monday; this week stays as it was; families are told by default', async ({ page, browser }, info) => {
@@ -657,7 +653,7 @@ test.describe('planning other weeks', () => {
     await expect(toast(page)).toContainText('Weekly menu published from Mon 26 Oct');
     await expect(page.getByText('Unpublished changes: 1')).toHaveCount(0);
     const st = await stateOf(page, 's3');
-    const live = Object.values<{ effectiveFrom: string; deletedAt?: string; days: Record<string, { lunch: string[] }> }>(st.menuVersions).filter((v) => !v.deletedAt && v.effectiveFrom === NEXT);
+    const live = Object.values<{ id: string; effectiveFrom: string; deletedAt?: string; days: Record<string, { lunch: string[] }> }>(st.menuVersions).filter((v) => !v.deletedAt && v.effectiveFrom === NEXT);
     expect(live).toHaveLength(1);
     expect(live[0].days['4'].lunch).toContain('dish-ayam-bakar');
     expect(live[0].days['4'].lunch).not.toContain('dish-semur-tahu');
@@ -666,7 +662,13 @@ test.describe('planning other weeks', () => {
     await prev(page).click();
     await expect(page.getByTestId('plan-4-lunch')).toContainText('Semur tahu tempe');
     await expect(page.getByText('Another weekly menu is already scheduled from Mon 26 Oct')).toBeVisible();
-    // Laras (the family) was told
+    // a kitchen menu waits for management: Laras is not told yet, and still sees the old menu
+    await expect(toast(page)).toContainText('Waiting for management approval.');
+    expect(await notes(page, 'fm10_0', 'kitchen.notif.menuPublished')).toHaveLength(0);
+    expect(Object.values<{ effectiveFrom: string; deletedAt?: string }>((await stateOf(page, 'fm10_0')).menuVersions).filter((v) => !v.deletedAt && v.effectiveFrom === NEXT)).toHaveLength(0);
+    // management approves it (s9): the menu is live and Laras (the family) is told
+    const r = await act(page, 's9', 'approval.approve', { type: 'menu', ids: [live[0].id] });
+    expect(r.ok(), await r.text()).toBeTruthy();
     expect(await notes(page, 'fm10_0', 'kitchen.notif.menuPublished')).toHaveLength(1);
     await laras.page.getByRole('button', { name: /Notifications/ }).first().click();
     const panel = laras.page.getByRole('dialog', { name: 'Notifications' });
@@ -728,7 +730,6 @@ test.describe('planning other weeks', () => {
     await expect(page.getByTestId('plan-date-1')).toHaveText('19 Okt');
     await page.getByRole('button', { name: 'Minggu depan', exact: true }).click();
     await expect(page.getByTestId('plan-week')).toContainText('Minggu depan');
-    await expect(page.getByText(/berlaku mulai hari Seninnya dan berulang setiap minggu/)).toBeVisible();
     await page.getByTestId('plan-4-lunch').getByRole('button', { name: /Hapus Semur tahu tempe/ }).click();
     await page.getByRole('button', { name: 'Terbitkan menu' }).first().click();
     const dlg = page.getByRole('dialog', { name: 'Terbitkan menu mingguan' });

@@ -38,16 +38,14 @@ export function MemberDialog({ p, kind, familyId, onClose }: Props) {
 // ---------- shared footer ----------
 function Footer({ onClose, label, onSave, busy, danger, t }: { onClose: () => void; label: string; onSave: () => void; busy?: boolean; danger?: boolean; t: P['t'] }) {
   return (
-    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', position: 'sticky', bottom: -28, margin: '0 -28px -28px', padding: '16px 28px 24px', background: '#FFFFFF', borderTop: '1px solid #EFECEA' }}>
+    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', position: 'sticky', bottom: -28, margin: '0 -28px -28px', padding: '16px 28px 24px', background: '#FFFFFF', borderTop: '1px solid #F0EAE1' }}>
       <Button variant="secondary" size={48} onClick={onClose}>{t('common.cancel')}</Button>
       <Button variant={danger ? 'danger' : 'primary'} size={48} disabled={busy} onClick={onSave}>{label}</Button>
     </div>
   );
 }
-const GateNote = ({ p, flagged }: { p: P; flagged?: boolean }) => (
-  <Note icon={p.mgmt ? 'history' : flagged ? 'fact_check' : 'hourglass_top'}>{p.mgmt ? p.t('common.changesLogged') : flagged ? p.t('profile.noteFlagged') : p.t('profile.noteGated')}</Note>
-);
-const MgmtNote = ({ p, v, set }: { p: P; v: string; set: (v: string) => void }) => (p.mgmt ? null : <TextField label={p.t('profile.noteForMgmt')} value={v} onChange={set} multiline rows={2} hint={p.t('profile.noteForMgmtHint')} />);
+const GateNote = ({ p, flagged }: { p: P; flagged?: boolean }) => (p.mgmt ? null : <Note icon={flagged ? 'fact_check' : 'hourglass_top'}>{flagged ? p.t('profile.noteFlagged') : p.t('profile.noteGated')}</Note>);
+const MgmtNote = ({ p, v, set }: { p: P; v: string; set: (v: string) => void }) => (p.mgmt ? null : <TextField label={p.t('profile.noteForMgmt')} value={v} onChange={set} multiline rows={2} />);
 
 // ---------- details ----------
 function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
@@ -89,7 +87,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
         <TitleName d={d} set={set} t={t} errors={{ name: errName }} />
         <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} />
         <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} name="address" />
-        <OptionalTime label={t('profile.f.usualOpt')} value={d.usual} onChange={(v) => set({ usual: v })} min={hours.open} max={hours.last} hint={t('profile.usualHint')} t={t} />
+        <OptionalTime label={t('profile.f.usualOpt')} value={d.usual} onChange={(v) => set({ usual: v })} min={hours.open} max={hours.last} t={t} />
         <SelectField label={t('profile.f.spouse')} value={d.spouseId} onChange={(v) => set({ spouseId: v })} placeholder={t('profile.noSpouse')} options={members.map((x) => ({ value: x.id, label: memberName(x) }))} />
       </PeSection>
       <PeSection label={t('profile.sec.nanny')}>
@@ -148,7 +146,7 @@ function HealthForm({ p, onClose }: { p: P; onClose: () => void }) {
       <PeSection label={t('profile.sec.allergies')}>
         <AllergyFields d={d} set={set} t={t} />
       </PeSection>
-      <PeSection label={<>{t('profile.careInstructions')}<StaffOnlyTag /></>} hint={t('profile.careHint')}>
+      <PeSection label={<>{t('profile.careInstructions')}<StaffOnlyTag /></>}>
         <TextField label={<span className="sr-only">{t('profile.careInstructions')}</span>} value={d.care} onChange={(v) => set({ care: v })} multiline rows={4} name="care" />
       </PeSection>
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={t('common.saveChanges')} />
@@ -173,7 +171,7 @@ function CognitiveForm({ p, onClose }: { p: P; onClose: () => void }) {
     <>
       <GateNote p={p} flagged />
       <PeSection label={t('profile.cognitive')}>
-        <TextField label={t('profile.cognitiveLabel')} value={v} onChange={setV} multiline rows={3} name="cognitive" hint={t('profile.cognitiveHint')} />
+        <TextField label={t('profile.cognitiveLabel')} value={v} onChange={setV} multiline rows={3} name="cognitive" />
       </PeSection>
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={t('common.saveChanges')} />
     </>
@@ -203,8 +201,8 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
       <GateNote p={p} />
       <PeSection label={t('profile.sec.plan')}>
         <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={[{ value: 'flex', label: `${t('profile.planFlex')} · ${rp(price.flex)}` }, { value: 'gold', label: `${t('profile.planGold')} · ${rp(price.gold)}` }]} />
-        <div style={{ fontSize: 16, lineHeight: '22px', color: '#6A6967' }}>{d.plan === 'flex' ? t('profile.planNoteFlex', { q: s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold')}</div>
-        <DateField label={t('profile.effective')} value={d.effective} onChange={(v) => set({ effective: v })} min={today} error={errEff} hint={t('profile.effectiveHint')} />
+        <div style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{d.plan === 'flex' ? t('profile.planNoteFlex', { q: s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold')}</div>
+        <DateField label={t('profile.effective')} value={d.effective} onChange={(v) => set({ effective: v })} min={today} error={errEff} />
       </PeSection>
       <MgmtNote p={p} v={d.note} set={(v) => set({ note: v })} />
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={p.mgmt ? t('common.saveChanges') : t('common.submitReview')} />
@@ -326,15 +324,14 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
           </>
         )}
         <RelationChips value={d.rel} onChange={(v) => set({ rel: v })} t={t} />
-        <Toggle on={d.primary} disabled={edit && link!.primary} onClick={() => set({ primary: !d.primary })} label={t('profile.primaryBilling')} sub={edit && link!.primary ? t('profile.primaryAlready') : t('profile.primaryBillingSub')} />
-        <Toggle on={d.appAccess} onClick={() => set({ appAccess: !d.appAccess })} label={t('profile.appAccess')} sub={d.appAccess ? t('profile.appAccessOn') : t('profile.appAccessOff')} />
-        {edit && d.appAccess && !link!.appAccess ? <Note icon="chat">{t('profile.inviteDemo')}</Note> : null}
+        <Toggle on={d.primary} disabled={edit && link!.primary} onClick={() => set({ primary: !d.primary })} label={t('profile.primaryBilling')} sub={edit && link!.primary ? t('profile.primaryAlready') : undefined} />
+        <Toggle on={d.appAccess} onClick={() => set({ appAccess: !d.appAccess })} label={t('profile.appAccess')} />
       </PeSection>
       <MgmtNote p={p} v={d.note} set={(v) => set({ note: v })} />
       {edit ? (
         <div>
-          <Button variant="ghost" size={44} icon="person_remove" disabled={only} onClick={() => setStep('remove')} style={{ color: '#AF4B2F' }}>{t('profile.removeContact')}</Button>
-          {only ? <div style={{ fontSize: 14, color: '#6A6967', marginTop: 4 }}>{t('members.err.lastContact')}</div> : null}
+          <Button variant="ghost" size={44} icon="person_remove" disabled={only} onClick={() => setStep('remove')} style={{ color: '#9A3D24' }}>{t('profile.removeContact')}</Button>
+          {only ? <div style={{ fontSize: 14, color: '#5E5852', marginTop: 4 }}>{t('members.err.lastContact')}</div> : null}
         </div>
       ) : null}
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={edit ? (p.mgmt ? t('common.saveChanges') : t('common.submitReview')) : t('profile.addContactBtn')} />
@@ -374,7 +371,7 @@ function EndForm({ p, onClose }: { p: P; onClose: () => void }) {
         <ChipGroup label={<span className="sr-only">{t('common.reason')}</span>} value={d.reason} onChange={(v) => set({ reason: v as EndReason })} options={END_REASONS.map((r) => ({ value: r, label: endReasonLabel(t, r) }))} />
         {tried && !d.reason ? <Note tone="rust" icon="error">{t('members.err.reasonRequired')}</Note> : null}
       </PeSection>
-      <PeSection label={t('profile.lastClubDay')} hint={t('profile.lastDayHint')}>
+      <PeSection label={t('profile.lastClubDay')}>
         <ChipGroup label={<span className="sr-only">{t('profile.lastClubDay')}</span>} value={d.last} onChange={(v) => set({ last: v as string })} options={quick.map((x) => ({ value: x, label: x === today ? t('common.today') : fmt.fds(x) }))} />
         <DateField label={t('profile.otherDate')} value={d.last} onChange={(v) => set({ last: v })} min={today} disabledDate={(x) => !isOpen(s, x)} error={errLast} />
         <TextField label={t('profile.endNoteLabel')} value={d.note} onChange={(v) => set({ note: v })} multiline rows={2} />
@@ -408,7 +405,6 @@ function ReactivateForm({ p, onClose }: { p: P; onClose: () => void }) {
   };
   return (
     <>
-      <Note icon="person_check">{t('profile.reactivateNote')}</Note>
       <PeSection label={t('profile.f.start')}>
         <DateField label={t('profile.f.start')} value={start} onChange={setStart} min={today} disabledDate={(x) => !isOpen(s, x)} error={err} />
       </PeSection>

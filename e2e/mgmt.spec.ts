@@ -264,7 +264,6 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   const c = watchConsole(page);
   await signIn(page, 's9', '/hr');
   await expect(page.getByRole('heading', { name: 'People', level: 1 })).toBeVisible();
-  if (!isPhone(page)) await expect(page.getByText('Management only. Contracts, salaries, bank details and disciplinary notes are hidden from every other role.')).toBeVisible(); // a phone drops the helper note
   await expect(page.locator('[data-staff]')).toHaveCount(8); // eight a page, ten people
   await goToPage(page, 2, 'Staff pages');
   await expect(page.locator('[data-staff]')).toHaveCount(2);
@@ -338,7 +337,6 @@ test('people: give housekeeping (s4) app access and she signs in to Requests; sw
   await expect(page.getByText('No app access').first()).toBeVisible();
   const sw = page.getByRole('switch', { name: /Can sign in to the app/ });
   await expect(sw).toHaveAttribute('aria-checked', 'false');
-  await expect(page.getByText('Requests becomes their home screen.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reset password' })).toHaveCount(0); // no account, nothing to reset
   await sw.click();
   await expect(toast(page, 'Siti Aminah can now sign in.')).toBeVisible();
@@ -375,7 +373,6 @@ test('people: each staff member shows a read-only username; management resets a 
   await expect(page.getByText('Username', { exact: true })).toBeVisible();
   await expect(page.getByText('caca', { exact: true })).toBeVisible();
   await expect(page.getByLabel('Username')).toHaveCount(0); // never an input: the username cannot change
-  await expect(page.getByText('Set automatically from their first name. It cannot be changed.')).toBeVisible();
   // Caca changes her own password (through the account route), so the default no longer works
   const login = (password: string) => request.post('/api/login', { data: { username: 'caca', password } });
   const own = await login('citra123');
@@ -717,10 +714,6 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   await expect(flex).toHaveValue('5.500.000');
   await expect(page.getByText('Sample price')).toHaveCount(3);
   // Flex is a number of visits a month, counted from check-ins; there is nothing about booked days or leave
-  if (!isPhone(page)) { // a phone drops the plan descriptions
-    await expect(page.getByText('10 visits a month. A visit counts when the member checks in.')).toBeVisible();
-    await expect(page.getByText('Charged for each Flex visit beyond 10 in a month.')).toBeVisible();
-  }
   await expect(page.getByText('On next month’s invoice')).toBeVisible();
   await expect(page.getByLabel('Flex visits per month')).toHaveValue('10');
   await expect(page.getByLabel(/Leave days/)).toHaveCount(0);
@@ -874,9 +867,9 @@ test('Indonesian: every management screen is translated, with no raw keys and no
   const checks: [string, string, RegExp[]][] = [
     ['/broadcast', 'Siaran', [/Templat WhatsApp/, /Keluarga · 6/, /Kirim ke 6 orang/]],
     ['/venue', 'Pemesanan venue', [/Acara luar/, /Pemesanan baru/, /Terkonfirmasi · di kalender/]],
-    ['/hr', 'SDM', isPhone(page) ? [/Data staf/, /Tambah staf/] : [/Data staf/, /Tambah staf/, /Hanya manajemen/]], // a phone drops the management-only note
+    ['/hr', 'SDM', [/Data staf/, /Tambah staf/]],
     ['/surveys', 'Survei', [/Keluarga · kepuasan/, /Tingkat respons/, /Survei sebelumnya/, /Siapa yang menerima/, /Semua keluarga yang memakai aplikasi/, /Dikirim ke 6 keluarga/]],
-    ['/plans', 'Paket dan harga', [/Pengaturan klub/, /Pratinjau tagihan berikutnya/, /Harga contoh/, ...(isPhone(page) ? [] : [/10 kunjungan sebulan\./]), /Kunjungan Flex per bulan/]],
+    ['/plans', 'Paket dan harga', [/Pengaturan klub/, /Pratinjau tagihan berikutnya/, /Harga contoh/, /Kunjungan Flex per bulan/]],
     ['/enquiries', 'Calon anggota', [/Calon baru/, /Percobaan terjadwal/]],
   ];
   for (const [path, heading, texts] of checks) {

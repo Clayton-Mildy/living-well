@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, flexMonth, type ClubState } from '../index';
 import { comingUp, familyRequests, invoicePreview, liveToday, nextRunPeriod, overviewStats, venueLists } from './mgmt';
-import { bookableDays, bookingDayCheck, enquiriesByStage, formBadge, formErrors, openEnquiries, sanitizeForm, splitName, startMondays } from './enquiries';
+import { bookableDays, bookingDayCheck, enquiriesByStage, openEnquiries, paperFormDoc, splitName, startMondays } from './enquiries';
 
 const T = '2026-10-21';
 const { citra: s, adina } = buildSeed();
@@ -13,7 +13,7 @@ describe('overview numbers come from the data', () => {
   it('CitraPremier on the demo morning', () => {
     const o = overviewStats(s, T);
     expect(o).toMatchObject({
-      members: 5, staff: 10, inClub: 3, goneHome: 0, visits: 3, extraVisits: 0, checks: 1, flagged: 0, overdue: 1, enquiries: 4, reviews: 1, photos: 0, logsSaved: 0, logsTotal: 3, lunchPhoto: false,
+      members: 5, staff: 10, inClub: 3, goneHome: 0, visits: 3, extraVisits: 0, checks: 1, flagged: 0, overdue: 1, enquiries: 4, reviews: 6, photos: 0, logsSaved: 0, logsTotal: 3, lunchPhoto: false,
       payments: 0, stock: 3, venues: 2, samplePrices: true,
     });
     expect(o.survey).toEqual({ avg: 4.7, n: 3 });
@@ -131,14 +131,12 @@ describe('enquiry rules', () => {
     expect(bookableDays(s, '2026-10-28', 3)).toEqual(['2026-10-28', '2026-11-02', '2026-11-03']); // 29 outing, 30 closed
     expect(startMondays(s, T, 3)).toEqual(['2026-10-26', '2026-11-02', '2026-11-09']);
   });
-  it('form helpers', () => {
+  it('name splitting and the paper registration form document', () => {
     expect(splitName('Siu Lan Tjandra')).toEqual({ first: 'Siu Lan', last: 'Tjandra' });
     expect(splitName('Lina')).toEqual({ first: 'Lina', last: 'Lina' });
-    expect(formBadge(s.formRequests['fr-e1'])).toBe('ready');
-    expect(formBadge(s.formRequests['fr-e5'])).toBe('sent');
-    expect(formBadge(undefined)).toBeNull();
-    expect(formErrors({}, T).map((e) => e.key)).toEqual(['name', 'dob', 'contactName', 'phone', 'nanny', 'mobility', 'consent', 'signature']);
-    expect(formErrors(s.formRequests['fr-e1'].data!, T)).toEqual([]);
-    expect(sanitizeForm({ meds: [{ name: '', dose: '5' }, { name: 'Amlodipine', dose: '5 mg', timing: 'weird' }] }).meds).toEqual([{ name: 'Amlodipine', dose: '5 mg', timing: 'asPrescribed' }]);
+    expect(paperFormDoc('m47', { mediaId: 'md_abcdefgh01', fileName: 'form.pdf' }, T, 'staff:s1')).toEqual({
+      id: 'm47-doc-form', type: 'membershipForm', status: 'onFile', mediaId: 'md_abcdefgh01', fileName: 'form.pdf', on: T, via: 'staff', by: 'staff:s1',
+    });
   });
+
 });

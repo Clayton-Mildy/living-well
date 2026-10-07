@@ -38,7 +38,7 @@ export function ProfilePhotoField({ name, tone, value, onChange, size = 72 }: { 
 }
 
 /** Tapping the avatar on the profile: change the picture right away (the front desk's change goes to management first, like other details). */
-export function ProfilePhotoSheet({ m, mgmt, open, onClose }: { m: Member; mgmt: boolean; open: boolean; onClose: () => void }) {
+export function ProfilePhotoSheet({ m, open, onClose }: { m: Member; open: boolean; onClose: () => void }) {
   const t = useT();
   const act = useAct();
   const [busy, setBusy] = useState(false);
@@ -53,7 +53,6 @@ export function ProfilePhotoSheet({ m, mgmt, open, onClose }: { m: Member; mgmt:
     <Sheet open={open} onClose={onClose} title={t('profile.photoTitle')} maxWidth={480}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <ProfilePhotoField name={memberName(m)} tone={m.photoTone} value={m.photoMediaId ?? null} onChange={(id) => void set(id)} size={96} />
-        {!mgmt ? <div className="cp-desc" style={{ fontSize: 15, lineHeight: 1.4, color: '#6A6967' }}>{t('profile.photoReviewNote')}</div> : null}
       </div>
     </Sheet>
   );

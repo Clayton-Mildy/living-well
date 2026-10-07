@@ -12,8 +12,8 @@ if [ "${1:-}" = "stop" ]; then
 fi
 NAME="$1"; API="$2"; WEB="$3"
 export DATABASE_URL="postgres://localhost:5434/citrapremier_e2e_${NAME}"
-cd "$ROOT/apps/server" && DATABASE_URL="$DATABASE_URL" npx tsx src/db/setup.ts --reset > "/tmp/cp-e2e-${NAME}-setup.log" 2>&1
-( cd "$ROOT/apps/server" && CP_TRUST_USER_HEADER=1 SERVE_WEB=0 API_PORT="$API" DATABASE_URL="$DATABASE_URL" nohup npx tsx src/index.ts > "/tmp/cp-e2e-${NAME}-api.log" 2>&1 & echo $! >> "/tmp/cp-e2e-${NAME}.pids" )
+cd "$ROOT/apps/server" && CP_SEED_SMALL=1 DATABASE_URL="$DATABASE_URL" npx tsx src/db/setup.ts --reset > "/tmp/cp-e2e-${NAME}-setup.log" 2>&1
+( cd "$ROOT/apps/server" && CP_SEED_SMALL=1 CP_TRUST_USER_HEADER=1 SERVE_WEB=0 API_PORT="$API" DATABASE_URL="$DATABASE_URL" nohup npx tsx src/index.ts > "/tmp/cp-e2e-${NAME}-api.log" 2>&1 & echo $! >> "/tmp/cp-e2e-${NAME}.pids" )
 ( cd "$ROOT/apps/web" && API_PORT="$API" WEB_PORT="$WEB" nohup npx vite > "/tmp/cp-e2e-${NAME}-web.log" 2>&1 & echo $! >> "/tmp/cp-e2e-${NAME}.pids" )
 for i in $(seq 1 60); do curl -sf "http://localhost:${WEB}/api/health" > /dev/null && break; sleep 1; done
 curl -sf "http://localhost:${WEB}/api/health" > /dev/null && echo "ready: http://localhost:${WEB} (api ${API}, db citrapremier_e2e_${NAME})" || { echo "failed to start; see /tmp/cp-e2e-${NAME}-*.log"; exit 1; }

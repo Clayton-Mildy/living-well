@@ -5,18 +5,21 @@
 import { useState } from 'react';
 import { addDays, actorName, attId, live, memberShort, messagesOf, sortBy, staffCall, type Attendance, type DailyLog, type Reading } from '@cp/shared';
 import { NORMAL_LOG, logDates, logDeviations } from '@cp/shared/rules/activity';
-import { Button, FONT_BODY, FONT_SMALL, Icon, Pager, SectionLabel, StaffOnlyTag, StatusBadge, usePaged } from '../../../components/ui';
+import { logForFamily, readingForFamily } from '@cp/shared/rules/approvals';
+import { PendingMark } from '../../../components/PendingMark';
+import { Button, FONT_BODY, Icon, Pager, StaffOnlyTag, StatusBadge, usePaged } from '../../../components/ui';
 import { CHECK_KEY } from '../../health/ReadingCard';
 import { LogFieldsForm, logInput, sameLog, type LogEntry } from '../../activity/LogFields';
-import { cardStyle, cogText, listCardStyle, logNote } from '../lib';
-import { ListHead, PendingBanner } from './parts';
+import { cardStyle, cogText, HAIR, listCardStyle, logNote } from '../lib';
+import { Block, ListHead, PendingBanner } from './parts';
 import type { P } from './types';
 
 const DAYS_PER_PAGE = 7;
 export function CareTab({ p }: { p: P }) {
   const { s, m, t, fmt, today } = p;
-  const logs = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && (l.status === 'saved' || !p.family)), (l) => l.date, -1);
-  const readings = sortBy(live(s.readings).filter((r) => r.memberId === m.id && !r.voided), (r) => r.time);
+  // entries by staff wait for management's approval: families get only approved ones (their snapshot has none; this guards the full state), staff see them marked
+  const logs = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && (l.status === 'saved' || !p.family)).map((l) => (p.family ? logForFamily(l) : l)).filter((l): l is DailyLog => !!l), (l) => l.date, -1);
+  const readings = sortBy(live(s.readings).filter((r) => r.memberId === m.id && !r.voided).map((r) => (p.family ? readingForFamily(r) : r)).filter((r): r is Reading => !!r), (r) => r.time);
   const visits = live(s.attendance).filter((a) => a.memberId === m.id && !!a.checkIn);
   const days = Array.from(new Set([...logs.map((l) => l.date), ...readings.map((r) => r.date), ...visits.map((a) => a.date)])).filter((d) => d <= today).sort().reverse();
   const paged = usePaged(days, DAYS_PER_PAGE, m.id);
@@ -38,27 +41,25 @@ export function CareTab({ p }: { p: P }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
       <PendingBanner p={p} tab="care" />
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: 16, alignItems: 'start' }}>
-        <div style={{ ...cardStyle, gap: 8 }}>
-          <SectionLabel>{t('profile.cognitive')}</SectionLabel>
-          <div style={{ fontSize: 22, lineHeight: '30px', letterSpacing: '-0.3px' }}>{cogText(t, cog.summary)}</div>
-          <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>
+      <div style={{ ...cardStyle, gap: 18, maxWidth: 760 }}>
+        <Block first title={t('profile.cognitive')} gap={6}>
+          <div style={{ fontSize: 22, lineHeight: '30px', letterSpacing: '-0.3px', color: '#2B231C' }}>{cogText(t, cog.summary)}</div>
+          <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>
             {cog.reviewedOn ? t('profile.reviewedBy', { n: reviewer || t('profile.theTeam'), d: fmt.fdy(cog.reviewedOn) }) : t('profile.notReviewed')}
           </div>
-        </div>
-        <div style={{ ...cardStyle, gap: 10 }}>
-          <SectionLabel>{t('profile.moodTitle')}</SectionLabel>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+        </Block>
+        <Block title={t('profile.moodTitle')} gap={8}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px' }}>
             {moods.map((c) => (
-              <span key={c.label} style={{ minHeight: 32, maxWidth: '100%', padding: '4px 12px', borderRadius: 999, background: '#F4F0EE', fontSize: FONT_BODY, display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
+              <span key={c.label} style={{ fontSize: 15, display: 'inline-flex', alignItems: 'baseline', gap: 6, lineHeight: 1.3 }}>
                 {c.label}
-                <strong style={{ fontWeight: 600 }}>{c.n}</strong>
+                <span style={{ fontWeight: 500 }}>{c.n}</span>
               </span>
             ))}
-            {!moods.length ? <span style={{ fontSize: FONT_BODY, color: '#6A6967' }}>{t('profile.noLogsYet')}</span> : null}
+            {!moods.length ? <span style={{ fontSize: 14, color: '#6B6259' }}>{t('profile.noLogsYet')}</span> : null}
           </div>
-          <div style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6A6967' }}>{behaviour}</div>
-        </div>
+          <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{behaviour}</div>
+        </Block>
       </div>
       <div style={listCardStyle} data-testid="care-days">
         <ListHead title={t('profile.byDay')} />
@@ -66,18 +67,18 @@ export function CareTab({ p }: { p: P }) {
           <DayCard key={d} p={p} date={d} log={logs.find((l) => l.date === d)} readings={readings.filter((r) => r.date === d)} visit={visits.find((a) => a.date === d)}
             comments={(id) => comments(id)} canEdit={editable.has(d)} />
         ))}
-        {!days.length ? <div style={{ padding: '14px 20px 20px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967', lineHeight: 1.4 }}>{t('profile.noLogsYet')}</div> : null}
-        {paged.pages > 1 ? <div style={{ padding: '12px 20px 16px', borderTop: '1px solid #EFECEA' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('profile.pagerCare')} /></div> : null}
+        {!days.length ? <div style={{ padding: '14px 0 20px', borderTop: HAIR, fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noLogsYet')}</div> : null}
+        {paged.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('profile.pagerCare')} /></div> : null}
       </div>
     </div>
   );
 }
 
 type Comment = { id: string; who: string; text: string; at: string };
-const smallCaps = { fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6A6967', lineHeight: '18px' } as const;
+const smallCaps = { fontSize: 12, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' } as const;
 
 /** Every number of a reading, in the station's words. */
-function values(r: Reading, t: P['t']): string {
+export function values(r: Reading, t: P['t']): string {
   return [
     r.sys != null && r.dia != null ? `${t('health.bp')} ${r.sys}/${r.dia}` : '',
     r.pulse != null ? `${t('health.pulse')} ${r.pulse}` : '',
@@ -119,36 +120,37 @@ function DayCard({ p, date, log, readings, visit, comments, canEdit }: { p: P; d
     [log.content === 'normal' ? 'mood' : 'mood_bad', t('profile.content_' + log.content)],
   ] : [];
   return (
-    <div data-testid="care-day" data-date={date} style={{ display: 'flex', flexDirection: p.isPhone ? 'column' : 'row', gap: p.isPhone ? 10 : 16, padding: p.isPhone ? '14px' : '16px 20px', borderTop: '1px solid #EFECEA' }}>
+    <div data-testid="care-day" data-date={date} style={{ display: 'flex', flexDirection: p.isPhone ? 'column' : 'row', gap: p.isPhone ? 10 : 16, padding: p.isPhone ? '18px 0' : '20px 0', borderTop: HAIR }}>
       {p.isPhone ? null : (
         <div style={{ width: 56, flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-          <span style={{ fontSize: FONT_SMALL, textTransform: 'uppercase', letterSpacing: '1px', color: '#6A6967', lineHeight: '18px' }}>{date === today ? t('common.today') : fmt.fd(date, { weekday: 'short' })}</span>
+          <span style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px', color: '#6B6259', lineHeight: '18px' }}>{date === today ? t('common.today') : fmt.fd(date, { weekday: 'short' })}</span>
           <span style={{ fontSize: 24, lineHeight: '30px', fontWeight: 300 }}>{fmt.fd(date, { day: 'numeric' })}</span>
-          <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{fmt.fd(date, { month: 'short' })}</span>
+          <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{fmt.fd(date, { month: 'short' })}</span>
         </div>
       )}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {p.isPhone ? <div style={{ fontSize: 17, fontWeight: 600, lineHeight: 1.3 }}>{date === today ? `${t('common.today')} · ` : ''}{fmt.fd(date, { weekday: 'short', day: 'numeric', month: 'short' })}</div> : null}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: visit ? '#282828' : '#6A6967', lineHeight: 1.4 }}>
+        {p.isPhone ? <div style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{date === today ? `${t('common.today')} · ` : ''}{fmt.fd(date, { weekday: 'short', day: 'numeric', month: 'short' })}</div> : null}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: visit ? '#24201C' : '#5E5852', lineHeight: 1.4 }}>
           <Icon name={visit ? 'how_to_reg' : 'event_busy'} size={18} color="#75624B" />{where}
         </div>
         {/* health */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span style={smallCaps}>{t('profile.healthHead')}</span>
           {readings.length ? readings.map((r) => (
-            <div key={r.id} data-testid="care-reading" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 10px', borderRadius: 14, background: '#FBFAF9', border: '1px solid #EFECEA' }}>
+            <div key={r.id} data-testid="care-reading" style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '4px 0' }}>
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t(CHECK_KEY[r.kind])} · {r.time}</span>
-                <span style={{ fontSize: FONT_BODY, color: '#282828', lineHeight: 1.4 }}>{values(r, t)}</span>
-                {r.note ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{r.note}</span> : null}
+                {!p.family ? <PendingMark row={r} /> : null}
+                <span style={{ fontSize: FONT_BODY, color: '#24201C', lineHeight: 1.4 }}>{values(r, t)}</span>
+                {r.note ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{r.note}</span> : null}
               </span>
               <StatusBadge kind={r.status} small />
             </div>
-          )) : <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('profile.noReadingsDay')}</span>}
+          )) : <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('profile.noReadingsDay')}</span>}
         </div>
         {/* daily log */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={smallCaps}>{t('profile.logHead')}</span>
+          <span style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}><span style={smallCaps}>{t('profile.logHead')}</span>{!p.family ? <PendingMark row={log} /> : null}</span>
           {editing ? (
             <>
               <LogFieldsForm e={e} onChange={(patch) => setDraft({ ...e, ...patch })} />
@@ -159,31 +161,31 @@ function DayCard({ p, date, log, readings, visit, comments, canEdit }: { p: P; d
             </>
           ) : log ? (
             <>
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
                 {chips.map(([icon, label]) => (
-                  <span key={icon + label} style={{ minHeight: 28, maxWidth: '100%', padding: '3px 10px', borderRadius: 999, background: '#F4F0EE', fontSize: FONT_SMALL, display: 'inline-flex', alignItems: 'center', gap: 4, lineHeight: 1.3 }}>
-                    <Icon name={icon} size={16} color="#75624B" />
+                  <span key={icon + label} style={{ fontSize: 14, color: '#6B6259', display: 'inline-flex', alignItems: 'center', gap: 5, lineHeight: 1.3 }}>
+                    <Icon name={icon} size={17} color="#75624B" />
                     {label}
                   </span>
                 ))}
-                {log.status === 'draft' ? <span style={{ height: 28, padding: '0 10px', borderRadius: 999, background: '#F6ECD6', color: '#7A5510', fontSize: FONT_SMALL, fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>{t('profile.draft')}</span> : null}
+                {log.status === 'draft' ? <span style={{ height: 26, padding: '0 10px', borderRadius: 8, background: '#F6ECD6', color: '#7A5510', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>{t('profile.draft')}</span> : null}
               </div>
-              <div style={{ fontSize: 16, lineHeight: '22px', textWrap: 'pretty' }}>{logNote(s, t, p.lang, m, log)}</div>
+              <div style={{ fontSize: 15, lineHeight: '23px', textWrap: 'pretty' }}>{logNote(s, t, p.lang, m, log)}</div>
               {!p.family && log.staffNote ? (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 16, lineHeight: '22px', padding: '10px 12px', borderRadius: 14, background: '#F4F0EE' }}>
+                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 15, lineHeight: '22px', padding: '10px 14px', borderRadius: 10, background: '#F3EEE8' }}>
                   <Icon name="lock" size={18} color="#75624B" style={{ marginTop: 2 }} />
                   <span style={{ flex: 1, minWidth: 0 }}><StaffOnlyTag /> {log.staffNote}</span>
                 </div>
               ) : null}
               {cs.map((c) => (
-                <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 16, lineHeight: '22px', padding: '10px 12px', borderRadius: 14, background: '#FBF8F4', border: '1px solid #EFECEA' }}>
+                <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 15, lineHeight: '22px', padding: '2px 0' }}>
                   <Icon name="chat_bubble" size={18} color="#75624B" style={{ marginTop: 2 }} />
-                  <span style={{ flex: 1, minWidth: 0 }}><strong style={{ fontWeight: 600 }}>{c.who}</strong> · <span style={{ color: '#6A6967', fontSize: FONT_BODY }}>{c.at.slice(11, 16)}</span><br />{c.text}</span>
+                  <span style={{ flex: 1, minWidth: 0 }}><strong style={{ fontWeight: 500 }}>{c.who}</strong> · <span style={{ color: '#5E5852', fontSize: FONT_BODY }}>{c.at.slice(11, 16)}</span><br />{c.text}</span>
                 </div>
               ))}
-              <div style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{t('profile.loggedBy', { n: staffCall(s.staff[log.by]) || actorName(s, log.createdBy) || t('profile.theTeam') })}</div>
+              <div style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.loggedBy', { n: staffCall(s.staff[log.by]) || actorName(s, log.createdBy) || t('profile.theTeam') })}</div>
             </>
-          ) : <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('profile.noLogDay')}</span>}
+          ) : <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('profile.noLogDay')}</span>}
           {canEdit && !editing ? (
             <div><Button variant="secondary" size={44} icon="edit_note" onClick={() => setOpen(true)}>{log ? t('profile.logEdit') : t('profile.logWrite')}</Button></div>
           ) : null}

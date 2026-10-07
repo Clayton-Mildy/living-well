@@ -3,13 +3,13 @@
 import { useNavigate } from 'react-router-dom';
 import { contactsOfMember, fmtPhone, live, memberAge, memberName, pron, sortBy, todayReading, attOf, type ClubState, type Member } from '@cp/shared';
 import { visitInfo } from '@cp/shared/rules/lobby';
-import { Button, Drawer, FONT_BODY, FONT_SMALL, Icon, StaffOnlyTag } from '../../components/ui';
+import { Button, Drawer, FONT_BODY, Icon, StaffOnlyTag } from '../../components/ui';
 import { useT, type TFn } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { CallLink, FlagChip, MemberAvatar, ReadingBadge, Stack, cap, memberFlags, relText } from './parts';
 
-const label = { fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase' as const, fontWeight: 500, lineHeight: '18px' };
+const label = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase' as const, fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };
 
 export interface DrawerActions {
   onCheckIn(id: string): void;
@@ -47,21 +47,21 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
 
   return (
     <Drawer open onClose={onClose} label={memberName(m)}
-      footer={primary ? <button type="button" onClick={primary.run} className="dh17" style={{ width: '100%', height: 56, borderRadius: 999, border: 'none', background: '#75624B', color: '#FFFFFF', fontSize: 17, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{primary.text}</button> : undefined}>
-      <Stack gap={22}>
+      footer={primary ? <button type="button" onClick={primary.run} className="h-bronze" style={{ width: '100%', height: 52, borderRadius: 999, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{primary.text}</button> : undefined}>
+      <Stack gap={26}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <MemberAvatar m={m} size={80} font={28} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: 28, lineHeight: '34px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{memberName(m)}</h2>
-            <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{`${memberAge(m, today) ?? ''} · ${visitLine(t, s, m, today)}`}</span>
+            <h2 style={{ margin: 0, fontSize: 28, lineHeight: '34px', fontWeight: 400, letterSpacing: '-0.8px', color: '#2B231C' }}>{memberName(m)}</h2>
+            <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{`${memberAge(m, today) ?? ''} · ${visitLine(t, s, m, today)}`}</span>
           </div>
         </div>
-        <button type="button" onClick={() => { onClose(); navigate(`/members/${m.id}`); }} style={{ alignSelf: 'flex-start', height: 44, padding: '0 18px 0 14px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
-          <Icon name="person" size={20} />
+        <button type="button" onClick={() => { onClose(); navigate(`/members/${m.id}`); }} className="h-cream" style={{ alignSelf: 'flex-start', height: 40, padding: '0 18px 0 14px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
+          <Icon name="person" size={19} weight={300} />
           {t('lobby.openProfile')}
         </button>
 
-        <div style={{ padding: '14px 16px', borderRadius: 18, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ padding: '14px 16px', borderRadius: 12, background: '#F3EEE8', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span style={label}>{t('lobby.todayL')}</span>
           <span style={{ fontSize: 16, lineHeight: 1.4 }}>{todayText}</span>
           {arr ? <ReadingBadge t={t} r={arr} /> : null}
@@ -106,19 +106,19 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
         <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span style={{ ...label, paddingBottom: 6 }}>{t('lobby.familyC')}</span>
           {contacts.map(({ link, contact }) => (
-            <div key={contact.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid #EFECEA' }}>
+            <div key={contact.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1' }}>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{contact.name}</span>
-                <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{`${cap(relText(t, link.relation))}${link.primary ? ' · ' + t('lobby.primaryBilling') : ''} · ${fmtPhone(contact.phone)}`}</span>
+                <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{`${cap(relText(t, link.relation))}${link.primary ? ' · ' + t('lobby.primaryBilling') : ''} · ${fmtPhone(contact.phone)}`}</span>
               </div>
               <CallLink t={t} name={contact.name} phone={contact.phone} />
             </div>
           ))}
           {m.nanny ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid #EFECEA' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1' }}>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{m.nanny.name}</span>
-                <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{`${t('lobby.nanny')}${m.nanny.phone ? ' · ' + fmtPhone(m.nanny.phone) : ''}`}</span>
+                <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{`${t('lobby.nanny')}${m.nanny.phone ? ' · ' + fmtPhone(m.nanny.phone) : ''}`}</span>
               </div>
               {m.nanny.phone ? <CallLink t={t} name={m.nanny.name} phone={m.nanny.phone} /> : null}
             </div>

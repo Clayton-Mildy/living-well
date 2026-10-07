@@ -31,7 +31,7 @@ export function BudgetForm({ onSent }: { onSent?: () => void }) {
     if (r.ok) { setItem(''); setAmt(''); onSent?.(); }
   };
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12, animation: 'cpUp .2s ease-out' }}>
+    <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 20, boxShadow: '0 1px 2px rgba(60,40,20,.04), 0 18px 40px rgba(60,40,20,.07)', padding: '20px clamp(18px, 3vw, 32px) 24px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'cpUp .2s ease-out' }}>
       <span style={cardLabel}>{t('requests.budget.card')}</span>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="group" aria-label={t('requests.budget.section')}>
         {secs.map((x) => <ChoiceChip key={x.id} label={sectionName(s, x.id, lang)} selected={sectionId === x.id} onClick={() => setPicked(x.id)} />)}

@@ -111,7 +111,6 @@ test('change your password in the Account sheet: wrong current, mismatch, too sh
   const username = sheet.getByLabel('Username');
   await expect(username).toHaveValue('daniel');
   await expect(username).toHaveAttribute('readonly', '');
-  await expect(sheet).toContainText('can’t be changed');
   const cur = sheet.getByLabel('Current password', { exact: true });
   const nw = sheet.getByLabel('New password', { exact: true });
   const cf = sheet.getByLabel('Confirm new password', { exact: true });
@@ -246,7 +245,6 @@ test('Indonesian: the sign-in page and the account sheet have no raw keys', asyn
   await expect(sheet.getByRole('button', { name: 'Ubah kata sandi' })).toBeVisible();
   await expect(sheet.getByLabel('Nama pengguna')).toHaveValue('caca');
   await expect(sheet.getByLabel('Kata sandi saat ini', { exact: true })).toBeVisible();
-  await expect(sheet).toContainText('tidak dapat diubah');
   expect(await sheet.innerText()).not.toMatch(RAW);
   c.assertClean();
 });

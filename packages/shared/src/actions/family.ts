@@ -7,7 +7,7 @@ import { defineAction, hasRole, isFamily, DomainError, type ActionDef, type Ctx 
 import { shortOf } from './helpers';
 import { isPendingRow, linksOfMember, memberShort } from '../rules/core';
 import { DOC_TYPES, RELATIONS, SIM_FILE, docIdFor, firstWord, isPhone, lastContactId, lastLinkId, nextContactId, nextLinkId } from '../rules/members';
-import { editable, makePrimary, obj, oneOf, phoneTaken, txt } from './members';
+import { editable, makePrimary, mediaIdOf, obj, oneOf, phoneTaken, txt } from './members';
 
 const frontDesk = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'lobby', 'mgmt');
 const badCode = (code: string) => new DomainError(code);
@@ -211,15 +211,15 @@ export const familyActions: ActionDef[] = [
   }),
 
   // ----- the family uploads a document: simulated file pick, then it waits for review -----
-  defineAction<{ memberId: string; type: DocType; fileName?: string }>({
+  defineAction<{ memberId: string; type: DocType; fileName?: string; mediaId?: string }>({
     name: 'document.upload',
     can: (u, i) => isFamily(u) && u.kind === 'family' && u.memberIds.includes(i.memberId),
-    parse: (raw) => { const o = obj(raw); const type = oneOf(o.type, DOC_TYPES); return { memberId: txt(o.memberId, 60), type, fileName: txt(o.fileName, 120) || SIM_FILE[type] }; },
+    parse: (raw) => { const o = obj(raw); const type = oneOf(o.type, DOC_TYPES); const mediaId = mediaIdOf(o.mediaId); return { memberId: txt(o.memberId, 60), type, fileName: txt(o.fileName, 120) || SIM_FILE[type], ...(mediaId ? { mediaId } : {}) }; },
     review: { policy: 'gate', section: 'docsConsent', op: 'update', target: (i) => ({ type: 'document', id: i.memberId, memberId: i.memberId }) },
     run(d, input, ctx) {
       const m = editable(d, input.memberId, ctx);
       if (input.type === 'nannyKtp' && !m.nanny) ctx.fail('members.err.noNanny');
-      const doc: MemberDocument = { id: docIdFor(m.id, input.type), type: input.type, status: 'onFile', fileName: input.fileName || SIM_FILE[input.type], on: ctx.today, via: 'family', by: ctx.actor };
+      const doc: MemberDocument = { id: docIdFor(m.id, input.type), type: input.type, status: 'onFile', fileName: input.fileName || SIM_FILE[input.type], ...(input.mediaId ? { mediaId: input.mediaId } : {}), on: ctx.today, via: 'family', by: ctx.actor };
       const i = m.documents.findIndex((q) => q.type === input.type);
       if (i >= 0) m.documents[i] = doc; else m.documents.push(doc);
       feed(ctx, d, m.id, 'upload_file', 'docUploaded', { type: input.type, by: ctx.actor });

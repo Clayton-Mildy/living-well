@@ -76,7 +76,7 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
         <Avatar name={name0} size={52} />
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
           <span style={{ fontSize: 18, fontWeight: 500 }}>{name0}</span>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967' }}>{roleLabel} · {s.club.name}</span>
+          <span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{roleLabel} · {s.club.name}</span>
         </div>
         <SignOutButton />
       </div>
@@ -89,12 +89,11 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
       <form onSubmit={(e) => void changePassword(e)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
           <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('login.username')}</span>
-          <span style={{ display: 'flex', alignItems: 'center', height: 52, border: '1px solid #DBD7D6', borderRadius: 16, background: '#F4F0EE', paddingRight: 14 }}>
+          <span style={{ display: 'flex', alignItems: 'center', height: 52, border: '1px solid #EFE7DC', borderRadius: 10, background: '#F5F5F3', paddingRight: 14 }}>
             <input readOnly value={stateUsername || fetched || ''} name="username" autoComplete="username" aria-readonly="true" data-testid="account-username"
-              style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#282828' }} />
-            <Icon name="lock" size={20} color="#6A6967" />
+              style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C' }} />
+            <Icon name="lock" size={20} color="#5E5852" />
           </span>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('login.usernameFixed')}</span>
         </label>
         <PasswordField label={t('login.currentPassword')} value={current} onChange={(v) => { setCurrent(v); clearErr('current'); }} autoComplete="current-password" error={pwErr.current || false} />
         <PasswordField label={t('login.newPassword')} value={next} onChange={(v) => { setNext(v); clearErr('next'); }} autoComplete="new-password" error={pwErr.next || false} hint={t('login.passwordHint', { n: MIN_PASSWORD })} />

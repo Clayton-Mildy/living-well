@@ -230,7 +230,6 @@ test('list view: the next 3 days only, each activity has an "Edit activity" butt
   for (const d of ['2026-10-21', '2026-10-22', '2026-10-23']) await expect(block(page, d)).toBeVisible();
   await expect(page.locator('div[data-date]')).toHaveCount(3);
   await expect(block(page, '2026-10-26')).toHaveCount(0);
-  await expect(page.getByText('The next 3 days. Use the calendar view to look further ahead.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Show more days' })).toHaveCount(0);
   await noHScroll(page);
   // every activity (two a day) has the button; a teacher edits activities, nothing else here is editable
@@ -284,7 +283,7 @@ test('phone: the month is a compact grid of dots; a day lists its items under it
   expect(await cell(page, '2026-10-21').locator('span[aria-hidden] > span').count()).toBeGreaterThanOrEqual(1); // coloured dots
   const cellBox = (await cell(page, '2026-10-21').boundingBox())!;
   expect(cellBox.width).toBeGreaterThanOrEqual(40);
-  expect(cellBox.height).toBeGreaterThanOrEqual(44);
+  expect(cellBox.height).toBeGreaterThanOrEqual(40); // 48 px before the phone's CSS zoom (.875)
   expect(cellBox.height).toBeLessThanOrEqual(56);
   const grid = (await cell(page, '2026-10-30').boundingBox())!;
   expect(grid.y + grid.height).toBeLessThan(844); // the last week of the month is on the first screen too
@@ -298,10 +297,8 @@ test('phone: the month is a compact grid of dots; a day lists its items under it
   await key.click();
   await expect(page.getByText('Venue booking', { exact: true })).toHaveCount(0);
   // tapping a day selects it and lists its items under the grid (and the page does not jump away to the schedule)
-  await expect(page.getByText('Tap a day to see what is on.')).toBeVisible();
   await cell(page, '2026-10-29').click();
   await expect(cell(page, '2026-10-29')).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByText('Tap a day to see what is on.')).toHaveCount(0);
   const day = block(page, '2026-10-29');
   await expect(day).toContainText('Kebun Raya Bogor');
   const dayBox = (await day.boundingBox())!;
@@ -679,7 +676,6 @@ test('Indonesian: month and weekday names, labels and activity names follow the 
   await expect(block(page, '2026-10-21')).toContainText('Hari ini');
   await expect(block(page, '2026-10-21')).toContainText('Hari uji coba: Oma Siu Lan Tjandra');
   await expect(page.getByRole('button', { name: /Ubah kegiatan/ }).first()).toBeVisible();
-  await expect(page.getByText('3 hari ke depan.')).toBeVisible();
   await noHScroll(page);
   // the builder and the editors are Indonesian too
   await expect(page.getByRole('heading', { name: 'Jadwal mingguan' })).toBeVisible();

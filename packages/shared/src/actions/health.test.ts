@@ -14,17 +14,31 @@ const nurse = user('s8');
 const flags = { noteKeys: [], shared: false, tellFamily: false, recheck: false, deferMonthly: false, source: 'device' as const };
 const arrival = (memberId: string, v: Partial<ReadingSaveInput> = {}): ReadingSaveInput => ({ memberId, kind: 'arrival', sys: 128, dia: 80, pulse: 74, spo2: 97, temp: 36.6, ...flags, ...v });
 const save = (s: ClubState, input: ReadingSaveInput, hm = '10:05', who = nurse, id = 'm' + Math.random().toString(36).slice(2, 8)) => execute(s, 'reading.save', input, who, at(hm), id);
+let apN = 0;
+/** management approves readings (the family hears about them only then) */
+const approve = (s: ClubState, ids: string[], hm = '10:05') => execute(s, 'approval.approve', { type: 'readings', ids }, user('s9'), at(hm), `ap${++apN}`);
 const tweak = (s: ClubState, fn: (d: ClubState) => void) => produce(s, fn);
 const kinds = (s: ClubState, hm: string) => stationQueue(s, T, toMin(hm)).todo.map((x) => `${x.kind}:${x.personId}`);
 
 describe('reading.save', () => {
-  it('Hendra arrival 164/98: Alert, real author, re-check in 15 min, family told in their language', () => {
-    const r = save(seed, arrival('m2', { sys: 164, dia: 98, pulse: 84, spo2: 96, temp: 36.7, noteKeys: ['rested'], note: '  sat down first ', tellFamily: true, recheck: true }));
-    const row = r.state.readings[r.result.readingId as string];
-    expect(row).toMatchObject({ kind: 'arrival', memberId: 'm2', date: T, time: '10:05', status: 'alert', takenBy: 's8', noteKeys: ['rested'], note: 'sat down first', shared: true, source: 'device' });
-    expect(row.familyTold).toEqual({ at: `${T}T10:05`, by: 's8', familyIds: ['fm2_0', 'fm2_1'] });
-    expect(r.state.attendance[`${T}:m2`].recheckDueAt).toBe('10:20');
-    expect(r.result).toMatchObject({ status: 'alert', told: ['Cynthia', 'Stephanie'], deferred: false, recheckAt: '10:20' });
+  it('Hendra arrival 164/98: Alert, real author, re-check in 15 min; the nurse and management hear at once, the family when management approves', () => {
+    const r0 = save(seed, arrival('m2', { sys: 164, dia: 98, pulse: 84, spo2: 96, temp: 36.7, noteKeys: ['rested'], note: '  sat down first ', tellFamily: true, recheck: true }));
+    const id = r0.result.readingId as string;
+    expect(r0.state.readings[id]).toMatchObject({ kind: 'arrival', memberId: 'm2', date: T, time: '10:05', status: 'alert', takenBy: 's8', noteKeys: ['rested'], note: 'sat down first', source: 'device', approval: { status: 'pending', by: 'staff:s8' } });
+    expect(r0.state.attendance[`${T}:m2`].recheckDueAt).toBe('10:20');
+    expect(r0.result).toMatchObject({ status: 'alert', told: [], deferred: false, recheckAt: '10:20', pending: true });
+    // staff alerts stay immediate; nothing reaches the family yet
+    expect(updatesFor(r0.state, nurse).some((n) => n.kind === 'health.notif.alert')).toBe(true);
+    expect(actionItems(r0.state, user('s9'), T, toMin('10:05')).some((i) => i.id === 'alert:' + id)).toBe(true);
+    expect(live(r0.state.messages).filter((m) => m.kind === 'healthAlert' && m.at.startsWith(T))).toHaveLength(0);
+    expect(unreadUpdates(r0.state, user('fm2_0')).some((n) => n.kind === 'health.notif.fam.alert')).toBe(false);
+    expect(r0.state.readings[id].familyTold).toBeUndefined();
+    // management approves: the nurse's message and the bell update go out, in the nurse's name
+    const r = execute(r0.state, 'approval.approve', { type: 'readings', ids: [id] }, user('s9'), at('10:30'), 'ap1');
+    const row = r.state.readings[id];
+    expect(row.approval).toMatchObject({ status: 'approved', decidedBy: 'staff:s9' });
+    expect(row).toMatchObject({ shared: true });
+    expect(row.familyTold).toEqual({ at: `${T}T10:30`, by: 's8', familyIds: ['fm2_0', 'fm2_1'] });
     // a nurse-thread message for each contact (Cynthia reads Indonesian), marked unread for the family
     const sent = live(r.state.messages).filter((m) => m.kind === 'healthAlert' && m.at.startsWith(T));
     expect(sent).toHaveLength(2);
@@ -35,11 +49,8 @@ describe('reading.save', () => {
     expect(cynthia.text).toContain('164/98 mmHg');
     expect(cynthia.text).toContain('10:20');
     expect(cynthia.ref).toEqual({ type: 'reading', id: row.id });
-    // updates: the family bell, the nurses; management gets the derived "Needs action" item
     expect(unreadUpdates(r.state, user('fm2_0')).some((n) => n.kind === 'health.notif.fam.alert' && n.severity === 'urgent')).toBe(true);
-    expect(updatesFor(r.state, nurse).some((n) => n.kind === 'health.notif.alert')).toBe(true);
-    expect(actionItems(r.state, user('s9'), T, toMin('10:05')).some((i) => i.id === 'alert:' + row.id)).toBe(true);
-    expect(Object.values(r.state.activity).some((a) => a.key === 'health.feed.alertTold' && a.memberId === 'm2' && a.params.value === '164/98')).toBe(true);
+    expect(Object.values(r0.state.activity).some((a) => a.key === 'health.feed.alert' && a.memberId === 'm2' && a.params.value === '164/98')).toBe(true);
   });
 
   it('takes the numbers at the top level or inside a `values` object', () => {
@@ -184,14 +195,18 @@ describe('reading.save', () => {
   });
 
   it('shared notes notify the family; telling the family without a flagged result still posts a plain message', () => {
-    const r = save(seed, arrival('m10', { kind: 'recheck', shared: true }), '10:05');
+    const r0 = save(seed, arrival('m10', { kind: 'recheck', shared: true }), '10:05');
+    expect(unreadUpdates(r0.state, user('fm10_0')).some((x) => x.kind.startsWith('health.notif.fam.'))).toBe(false); // waits for approval
+    const r = approve(r0.state, [r0.result.readingId as string]);
     const n = unreadUpdates(r.state, user('fm10_0')).find((x) => x.kind.startsWith('health.notif.fam.'));
     expect(n).toMatchObject({ kind: 'health.notif.fam.normal', link: '/health', memberId: 'm10', severity: 'info' });
-    const t = save(seed, arrival('m2', { tellFamily: true }));
+    const t0 = save(seed, arrival('m2', { tellFamily: true }));
+    expect(live(t0.state.messages).filter((m) => m.at === `${T}T10:05`)).toHaveLength(0);
+    const t = approve(t0.state, [t0.result.readingId as string]);
     const msg = live(t.state.messages).filter((m) => m.at === `${T}T10:05`);
     expect(msg).toHaveLength(2);
     expect(msg.every((m) => m.kind === 'healthAlert')).toBe(true); // the chat shows every nurse update with the "Health update" header
-    expect(Object.values(t.state.activity).some((a) => a.key === 'health.feed.normalTold')).toBe(true);
+    expect(Object.values(t.state.activity).some((a) => a.key === 'health.feed.normal')).toBe(true); // the feed line is written when the nurse saves it
   });
 
   it('nobody is told when no contact has health alerts on', () => {
@@ -333,8 +348,9 @@ describe('reading.void', () => {
     expect(kinds(v.state, '10:06')).toEqual(['arrival:m20', 'arrival:m2']);
   });
   it('takes back a re-check it asked for, and tells a family that was told', () => {
-    const r = save(seed, arrival('m2', { sys: 164, dia: 98, tellFamily: true, recheck: true }));
-    const v = execute(r.state, 'reading.void', { readingId: r.result.readingId as string, reason: 'wrongPerson' }, nurse, at('10:12'), 'v1');
+    const r0 = save(seed, arrival('m2', { sys: 164, dia: 98, tellFamily: true, recheck: true }));
+    const r = approve(r0.state, [r0.result.readingId as string]); // told once approved
+    const v = execute(r.state, 'reading.void', { readingId: r0.result.readingId as string, reason: 'wrongPerson' }, nurse, at('10:12'), 'v1');
     expect(v.state.attendance[`${T}:m2`].recheckDueAt).toBeUndefined();
     const fixes = live(v.state.messages).filter((m) => m.at === `${T}T10:12`);
     expect(fixes).toHaveLength(2);

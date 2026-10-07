@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { actorName, live, rp, sortBy, type Receipt, type VendorInvoice } from '@cp/shared';
 import { activeSections, receiptOfRequest, receiptsList, sectionName, vendorInvoicesList } from '@cp/shared/rules/finance';
-import { Button, CameraCapture, Card, CardHead, Chip, DateField, EmptyState, Icon, PageHead, PhotoImg, Pin, Select, TextField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, CameraCapture, Chip, DateField, EmptyState, Icon, PageHead, PhotoImg, Pin, Select, TextField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { ApiError } from '../../lib/api';
@@ -14,7 +14,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { digits, matches } from './lib';
-import { Badge, ConfirmDialog, FormOverlay, PagerBar, RpField, SearchField, dangerStrip, fieldLabel, inputBox } from './parts';
+import { Badge, ConfirmDialog, FormOverlay, HAIR, Hero, HeroHead, PagerBar, RpField, SearchField, dangerStrip, fieldLabel, hrow, inputBox, rowSub, rowTitle } from './parts';
 
 const PAPER = 'linear-gradient(160deg, #FBF8F4 0%, #EFE7DD 55%, #DCCFC0 100%)';
 const noteName = (date: string) => `nota_${date.slice(8)}${date.slice(5, 7)}.jpg`;
@@ -41,27 +41,27 @@ export function Receipts() {
 
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 20, maxWidth: 1100 }}>
-        <PageHead eyebrow={t('finance.rc.eyebrow')} title={t('nav.receipts')} />
+      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 'clamp(18px, 2.8vw, 36px)', maxWidth: 1180 }}>
+        <PageHead title={t('nav.receipts')} />
         {!snapping && !isPhone ? (
-          <Button size={56} icon="photo_camera" onClick={() => setSnapping(true)} style={{ alignSelf: 'flex-start', padding: '0 26px 0 20px' }}>{t('finance.rc.snap')}</Button>
+          <Button size={48} icon="photo_camera" onClick={() => setSnapping(true)} style={{ alignSelf: 'flex-start', padding: '0 22px 0 18px' }}>{t('finance.rc.snap')}</Button>
         ) : null}
         {snapping ? <SnapPanel today={today} onClose={() => setSnapping(false)} /> : null}
 
         <SearchField value={q} onChange={setQ} label={t('finance.rc.search')} placeholder={t('finance.rc.search')} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,380px),1fr))', gap: 16, alignItems: 'start' }}>
-          <Card>
-            <CardHead title={t('nav.receipts')} meta={t('finance.rc.listMeta')} />
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,380px),1fr))', gap: 'clamp(16px, 2.4vw, 32px)', alignItems: 'start' }}>
+          <Hero>
+            <HeroHead title={t('nav.receipts')} />
             {rPaged.rows.map((r) => <ReceiptRow key={r.id} r={r} canApprove={canApprove} onEdit={() => setEditReceipt(r)} />)}
-            {!rHits.length ? <div style={{ borderTop: '1px solid #EFECEA' }}><EmptyState icon={q ? 'search_off' : 'receipt_long'} title={q ? t('common.noResults') : t('finance.rc.empty')} /></div> : null}
+            {!rHits.length ? <div style={{ borderTop: HAIR }}><EmptyState icon={q ? 'search_off' : 'receipt_long'} title={q ? t('common.noResults') : t('finance.rc.empty')} /></div> : null}
             <PagerBar paged={rPaged} label={t('nav.receipts')} />
-          </Card>
-          <Card>
-            <CardHead title={t('finance.rc.vendorTitle')} meta={t('finance.rc.vendorMeta')} right={canApprove ? <Button variant="secondary" size={44} icon="add" onClick={() => setVendorForm('new')} style={{ padding: '0 16px' }}>{t('finance.rc.addVendor')}</Button> : undefined} />
+          </Hero>
+          <Hero>
+            <HeroHead title={t('finance.rc.vendorTitle')} right={canApprove ? <Button variant="secondary" size={44} icon="add" onClick={() => setVendorForm('new')} style={{ padding: '0 16px' }}>{t('finance.rc.addVendor')}</Button> : undefined} />
             {vPaged.rows.map((v) => <VendorRow key={v.id} v={v} canApprove={canApprove} onEdit={() => setVendorForm(v)} />)}
-            {!vHits.length ? <div style={{ borderTop: '1px solid #EFECEA' }}><EmptyState icon={q ? 'search_off' : 'request_quote'} title={q ? t('common.noResults') : t('finance.rc.vendorEmpty')} /></div> : null}
+            {!vHits.length ? <div style={{ borderTop: HAIR }}><EmptyState icon={q ? 'search_off' : 'request_quote'} title={q ? t('common.noResults') : t('finance.rc.vendorEmpty')} /></div> : null}
             <PagerBar paged={vPaged} label={t('finance.rc.vendorTitle')} />
-          </Card>
+          </Hero>
         </div>
       </div>
       {isPhone && !snapping ? <Pin icon="photo_camera" label={t('finance.rc.snap')} onClick={() => setSnapping(true)} /> : null}
@@ -88,7 +88,7 @@ function ReceiptFields({ v, set, selfId }: { v: Fields; set: (p: Partial<Fields>
       <div role="group" aria-label={t('finance.rc.suppliers')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {suppliers.map((d) => (
           <button key={d.id} type="button" className="cp-chip" onClick={() => set({ supplier: d.name, directoryId: d.id })} aria-pressed={v.directoryId === d.id}
-            style={{ height: 44, padding: '0 12px', borderRadius: 999, border: v.directoryId === d.id ? '1px solid #282828' : '1px solid #CAB8A2', background: v.directoryId === d.id ? '#282828' : '#FFFFFF', color: v.directoryId === d.id ? '#FFFFFF' : '#282828', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
+            style={{ height: 44, padding: '0 12px', borderRadius: 12, border: v.directoryId === d.id ? '1px solid #24201C' : '1px solid #DCD3C8', background: v.directoryId === d.id ? '#24201C' : '#FFFFFF', color: v.directoryId === d.id ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
         ))}
       </div>
       <RpField label={t('finance.rc.amount')} ariaLabel={t('finance.rc.amount')} value={v.amount} onChange={(x) => set({ amount: x })} />
@@ -101,7 +101,6 @@ function ReceiptFields({ v, set, selfId }: { v: Fields; set: (p: Partial<Fields>
               <Chip key={b.id} size={40} selected={v.requestId === b.id} onClick={() => set(v.requestId === b.id ? { requestId: undefined } : { requestId: b.id, amount: v.amount || String(b.amount) })}>{b.item} · {rp(b.amount)}</Chip>
             ))}
           </div>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('finance.rc.settlesHint')}</span>
         </div>
       ) : null}
       <DateField label={t('finance.rc.date')} value={v.date} onChange={(x) => set({ date: x })} max={today} error={v.date > today ? t('finance.err.futureDate') : undefined} />
@@ -139,17 +138,17 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
     if (r.ok) onClose();
   };
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '18px 20px', display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-start', animation: 'cpUp .2s ease-out' }}>
+    <Hero visible style={{ padding: '22px clamp(18px, 3vw, 36px)', display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', animation: 'cpUp .2s ease-out' }}>
       {!snapped ? (
-        <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 18, border: 'none', background: '#2E2924', color: '#F4F0EE', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 14, border: 'none', background: '#2E2924', color: '#F3EEE8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="receipt_long" size={40} color="#CAB8A2" />
           <span style={{ fontSize: 16, lineHeight: 1.4 }}>{uploading ? t('common.processing') : t('finance.rc.tap')}</span>
         </button>
       ) : (
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-        <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: '100%', aspectRatio: '3/4', borderRadius: 18, background: PAPER, border: '1px solid #DBD7D6', position: 'relative', overflow: 'hidden' }}>
+        <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: '100%', aspectRatio: '3/4', borderRadius: 14, background: PAPER, border: '1px solid #E4DACD', position: 'relative', overflow: 'hidden' }}>
           <PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} />
-          <span style={{ position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 999, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+          <span style={{ position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
             <Icon name="check_circle" size={17} color="#3D6B4F" />{file}
           </span>
         </div>
@@ -164,7 +163,7 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
           <Button size={48} disabled={!ok} onClick={send} style={{ flex: 1 }}>{t('finance.rc.send')}</Button>
         </div>
       </div>
-    </div>
+    </Hero>
   );
 }
 
@@ -209,12 +208,12 @@ function ReceiptRow({ r, canApprove, onEdit }: { r: Receipt; canApprove: boolean
     if (x.ok) { setRejecting(false); setNote(''); }
   };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 20px', borderTop: '1px solid #EFECEA', minHeight: 64 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <span aria-hidden="true" style={{ width: 40, height: 52, borderRadius: 8, background: PAPER, border: '1px solid #DBD7D6', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
+    <div style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px 14px', flexWrap: 'wrap' }}>
+        <span aria-hidden="true" style={{ width: 40, height: 52, borderRadius: 8, background: PAPER, border: '1px solid #E4DACD', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
         <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{r.supplier} · {rp(r.amount)}</span>
-          <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{sectionName(s, r.sectionId, lang)} · {actorName(s, `staff:${r.by}`)} · {r.date === today ? t('common.today').toLowerCase() : fds(r.date)}</span>
+          <span style={rowTitle}>{r.supplier} · {rp(r.amount)}</span>
+          <span style={rowSub}>{sectionName(s, r.sectionId, lang)} · {actorName(s, `staff:${r.by}`)} · {r.date === today ? t('common.today').toLowerCase() : fds(r.date)}</span>
         </div>
         {badge}
         {(submitted && canApprove) || canEdit || (mine && submitted) ? (
@@ -223,15 +222,15 @@ function ReceiptRow({ r, canApprove, onEdit }: { r: Receipt; canApprove: boolean
           {(mine && submitted) || canApprove ? <TextBtn onClick={() => setConfirmVoid(true)} label={`${t('finance.rc.void')} ${r.supplier}`}>{t('finance.rc.void')}</TextBtn> : null}
           {submitted && canApprove ? (
             <>
-              <TextBtn color="#AF4B2F" onClick={() => setRejecting(!rejecting)} label={`${t('finance.budget.reject')} ${r.supplier}`}>{t('finance.budget.reject')}</TextBtn>
+              <TextBtn color="#9A3D24" onClick={() => setRejecting(!rejecting)} label={`${t('finance.budget.reject')} ${r.supplier}`}>{t('finance.budget.reject')}</TextBtn>
               <button type="button" onClick={() => act('receipt.approve', { id: r.id }, { ok: t('finance.toast.receiptApproved', { supplier: r.supplier }) })} aria-label={`${t('finance.budget.approve')} ${r.supplier}`}
-                style={{ height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: '#75624B', color: '#FFFFFF', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('finance.budget.approve')}</button>
+                style={{ height: 40, padding: '0 18px', borderRadius: 12, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('finance.budget.approve')}</button>
             </>
           ) : null}
         </div>
         ) : null}
       </div>
-      {r.status === 'rejected' && r.note ? <span style={{ fontSize: FONT_BODY, color: '#AF4B2F', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
+      {r.status === 'rejected' && r.note ? <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
       {rejecting ? (
         <div style={dangerStrip}>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
@@ -260,11 +259,11 @@ function VendorRow({ v, canApprove, onEdit }: { v: VendorInvoice; canApprove: bo
     if (x.ok) { setRejecting(false); setNote(''); }
   };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 20px', borderTop: '1px solid #EFECEA', minHeight: 64 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{v.supplier} · {v.number}</span>
-          <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{rp(v.amount)} · {t('finance.rc.due', { date: fds(v.due) })} · {sectionName(s, v.sectionId, lang)}</span>
+    <div style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '8px 14px', flexWrap: 'wrap' }}>
+        <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={rowTitle}>{v.supplier} · {v.number}</span>
+          <span style={rowSub}>{rp(v.amount)} · {t('finance.rc.due', { date: fds(v.due) })} · {sectionName(s, v.sectionId, lang)}</span>
         </div>
         {badge}
         {canApprove ? (
@@ -273,19 +272,19 @@ function VendorRow({ v, canApprove, onEdit }: { v: VendorInvoice; canApprove: bo
           {v.status !== 'paid' ? <TextBtn onClick={() => setConfirmDel(true)} label={`${t('common.delete')} ${v.number}`}>{t('common.delete')}</TextBtn> : null}
           {v.status === 'toApprove' ? (
             <>
-              <TextBtn color="#AF4B2F" onClick={() => setRejecting(!rejecting)} label={`${t('finance.budget.reject')} ${v.number}`}>{t('finance.budget.reject')}</TextBtn>
+              <TextBtn color="#9A3D24" onClick={() => setRejecting(!rejecting)} label={`${t('finance.budget.reject')} ${v.number}`}>{t('finance.budget.reject')}</TextBtn>
               <button type="button" onClick={() => act('vendorInvoice.approve', { id: v.id }, { ok: t('finance.toast.vendorApproved', { supplier: v.supplier }) })} aria-label={`${t('finance.budget.approve')} ${v.number}`}
-                style={{ height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: '#75624B', color: '#FFFFFF', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('finance.budget.approve')}</button>
+                style={{ height: 40, padding: '0 18px', borderRadius: 12, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('finance.budget.approve')}</button>
             </>
           ) : null}
           {v.status === 'approved' ? (
             <button type="button" onClick={() => act('vendorInvoice.markPaid', { id: v.id }, { ok: t('finance.toast.vendorPaid', { supplier: v.supplier }) })} aria-label={`${t('finance.rc.markPaid')} ${v.number}`}
-              style={{ height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: '#75624B', color: '#FFFFFF', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('finance.rc.markPaid')}</button>
+              style={{ height: 40, padding: '0 18px', borderRadius: 12, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('finance.rc.markPaid')}</button>
           ) : null}
         </div>
         ) : null}
       </div>
-      {v.status === 'rejected' && v.note ? <span style={{ fontSize: FONT_BODY, color: '#AF4B2F', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: v.note })}</span> : null}
+      {v.status === 'rejected' && v.note ? <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: v.note })}</span> : null}
       {rejecting ? (
         <div style={dangerStrip}>
           <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
@@ -329,7 +328,7 @@ function VendorForm({ value, onClose }: { value: null | 'new' | VendorInvoice; o
       <div role="group" aria-label={t('finance.rc.suppliers')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {suppliers.map((d) => (
           <button key={d.id} type="button" className="cp-chip" aria-pressed={v.directoryId === d.id} onClick={() => set({ supplier: d.name, directoryId: d.id })}
-            style={{ height: 44, padding: '0 12px', borderRadius: 999, border: v.directoryId === d.id ? '1px solid #282828' : '1px solid #CAB8A2', background: v.directoryId === d.id ? '#282828' : '#FFFFFF', color: v.directoryId === d.id ? '#FFFFFF' : '#282828', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
+            style={{ height: 44, padding: '0 12px', borderRadius: 12, border: v.directoryId === d.id ? '1px solid #24201C' : '1px solid #DCD3C8', background: v.directoryId === d.id ? '#24201C' : '#FFFFFF', color: v.directoryId === d.id ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
         ))}
       </div>
       <TextField label={t('finance.rc.number')} value={v.number} onChange={(x) => set({ number: x })} maxLength={60} />
@@ -341,5 +340,5 @@ function VendorForm({ value, onClose }: { value: null | 'new' | VendorInvoice; o
 }
 
 const TextBtn = ({ children, onClick, color = '#75624B', label }: { children: React.ReactNode; onClick: () => void; color?: string; label?: string }) => (
-  <button type="button" onClick={onClick} aria-label={label} style={{ height: 44, padding: '0 10px', borderRadius: 999, border: 'none', background: 'transparent', color, fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{children}</button>
+  <button type="button" onClick={onClick} aria-label={label} style={{ height: 40, padding: '0 8px', borderRadius: 12, border: 'none', background: 'transparent', color, fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{children}</button>
 );

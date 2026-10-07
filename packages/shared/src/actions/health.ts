@@ -13,6 +13,8 @@ import {
   MONTHLY_FIELDS, READING_FIELDS, VITAL_FIELDS, alertRecipients, headlineValue, inRange, monthlyNeeds, readingSummary, roundField, stationQueue, type ReadingField,
 } from '../rules/healthStation';
 import { translate } from '../i18n';
+import { READING_KEYS } from '../rules/approvals';
+import { markPending, needsApproval, priorOf } from './approvalGate';
 import { toHM, toMin } from '../util';
 
 export type ReadingKind = Reading['kind'];
@@ -77,26 +79,46 @@ function checkBp(v: NumericValues) {
 const FAMILY_KIND: Record<Health, string> = { normal: 'health.notif.fam.normal', watch: 'health.notif.fam.watch', alert: 'health.notif.fam.alert' };
 const severityOf = (h: Health) => (h === 'alert' ? 'urgent' : h === 'watch' ? 'attention' : 'info') as 'urgent' | 'attention' | 'info';
 
-/** Tell the family now: a message in each contact's own language, plus an update in their bell. */
-function tellFamily(d: Draft<ClubState>, ctx: Ctx, m: Member, row: Draft<Reading>, shown: Partial<Reading>, overall: Health, recheckAt: HM | undefined): string[] {
+/** Tell the family now: a message in each contact's own language, plus an update in their bell. `nurse` is who took the reading (not necessarily who approved it). */
+function tellFamily(d: Draft<ClubState>, ctx: Ctx, m: Member, row: Draft<Reading>, shown: Partial<Reading>, overall: Health, recheckAt: HM | undefined, nurse: { name: string; id: string }): string[] {
   const s = d as unknown as ClubState;
-  const nurse = nameOfUser(ctx.user);
   const ids: string[] = [];
   const names: string[] = [];
   for (const { contact } of alertRecipients(s, m.id)) {
     const tt = (k: string, p?: Record<string, string | number>) => translate(contact.lang || 'en', k, p);
     const next = overall === 'normal' ? '' : recheckAt ? tt('health.msg.nextRecheck', { t: recheckAt }) : tt('health.msg.nextNone');
-    const text = tt('health.msg.' + overall, { f: contact.firstName, name: memberShort(m), nurse, check: tt(CHECK_KEY[row.kind]), time: row.time, value: readingSummary(shown), next }).trim();
-    postMessage(d, ctx, { memberId: m.id, familyId: contact.id, topic: 'nurse', text, kind: 'healthAlert', ref: { type: 'reading', id: row.id } });
+    const text = tt('health.msg.' + overall, { f: contact.firstName, name: memberShort(m), nurse: nurse.name, check: tt(CHECK_KEY[row.kind]), time: row.time, value: readingSummary(shown), next }).trim();
+    postMessage(d, ctx, { memberId: m.id, familyId: contact.id, topic: 'nurse', text, kind: 'healthAlert', ref: { type: 'reading', id: row.id }, from: row.createdBy });
     ids.push(contact.id);
     names.push(contact.firstName);
   }
   if (ids.length) {
-    row.familyTold = { at: ctx.nowDT, by: ctx.user.id, familyIds: ids };
+    row.familyTold = { at: ctx.nowDT, by: nurse.id, familyIds: ids };
     row.shared = true;
   }
   return names;
 }
+
+/**
+ * Everything the family hears about a reading: the chat message (tell family), and the bell update (shared or told). For a nurse's reading this runs when
+ * management approves it; for management's own reading, at once. Returns the first names told.
+ */
+export function noticeFamilies(d: Draft<ClubState>, ctx: Ctx, row: Draft<Reading>, o: { tell: boolean; share: boolean; overall: Health; recheckAt?: HM; companion?: Reading }): string[] {
+  if (!row.memberId) return [];
+  const m = d.members[row.memberId];
+  if (!m) return [];
+  const s = d as unknown as ClubState;
+  const shown: Partial<Reading> = { ...row, ...(o.companion ? pick(o.companion as NumericValues, MONTHLY_FIELDS) : {}) };
+  const nurse = { id: row.takenBy, name: d.staff[row.takenBy] ? nameOfStaff(d.staff[row.takenBy]) : nameOfUser(ctx.user) };
+  const told = o.tell ? tellFamily(d, ctx, m, row, shown, o.overall, o.recheckAt, nurse) : [];
+  if (o.share || told.length) {
+    row.shared = true;
+    const ids = alertRecipients(s, m.id).map((x) => x.contact.id);
+    if (ids.length) ctx.notify({ toUsers: ids, kind: FAMILY_KIND[o.overall], params: { name: memberShort(m), time: row.time, value: readingSummary(shown) }, link: told.length ? '/chat' : '/health', memberId: m.id, severity: severityOf(o.overall), ref: { type: 'reading', id: row.id } });
+  }
+  return told;
+}
+const nameOfStaff = (x: { knownAs?: string; name: string }) => x.knownAs || x.name;
 
 export const healthActions: ActionDef[] = [
   // ---------- save a reading ----------
@@ -183,22 +205,22 @@ export const healthActions: ActionDef[] = [
         if (a?.checkIn) { if (deferred) a.monthlyDeferred = true; else if (input.kind === 'monthly') a.monthlyDeferred = false; }
       }
 
-      // family
+      // family: a reading by the nurse waits for management's approval, and so does everything the family would hear about it
+      // (management's own reading tells them at once). Staff alerts below are never held back.
+      const gated = !!m && needsApproval(ctx);
       const shown: Partial<Reading> = { ...main, ...(companion ? pick(companion as NumericValues, MONTHLY_FIELDS) : {}) };
       let told: string[] = [];
-      if (m && input.tellFamily) told = tellFamily(d, ctx, m, row, shown, overall, recheckAt);
-      if (m && (input.shared || told.length)) {
-        row.shared = true;
-        const ids = alertRecipients(s, m.id).map((x) => x.contact.id);
-        if (ids.length) ctx.notify({ toUsers: ids, kind: FAMILY_KIND[overall], params: { name: memberShort(m), time: main.time, value: readingSummary(shown) }, link: told.length ? '/chat' : '/health', memberId: m.id, severity: severityOf(overall), ref: { type: 'reading', id: main.id } });
-      }
+      if (gated) {
+        markPending(row, ctx, undefined, { tell: input.tellFamily, share: input.shared || input.tellFamily, overall, ...(recheckAt ? { recheckAt } : {}), ...(companion ? { companionId: companion.id } : {}) });
+        if (companion) { markPending(d.readings[companion.id], ctx, undefined); d.readings[companion.id].approval!.companionOf = row.id; }
+      } else if (m && (input.tellFamily || input.shared)) told = noticeFamilies(d, ctx, row, { tell: input.tellFamily, share: input.shared, overall, recheckAt, companion });
       // the nurses and management hear about Alerts (management also gets the derived "Needs action" item)
       if (overall === 'alert') {
         if (m) ctx.notify({ toRoles: ['nurse'], kind: 'health.notif.alert', params: { name: memberShort(m), value: headlineValue(shown) }, link: `/readings?member=${m.id}`, memberId: m.id, severity: 'urgent', ref: { type: 'reading', id: main.id } });
         else ctx.notify({ toRoles: ['nurse', 'mgmt'], kind: 'health.notif.guestAlert', params: { name: guest!.name, value: headlineValue(shown) }, link: '/today', severity: 'urgent', ref: { type: 'reading', id: main.id } });
       }
       ctx.feed({ icon: 'monitor_heart', key: `health.feed.${overall}${told.length ? 'Told' : ''}`, params: { name: m ? shortOf(d, m.id) : guest!.name, value: headlineValue(shown) }, ...(m ? { memberId: m.id } : {}) });
-      Object.assign(ctx.result, { readingId: main.id, ...(companion ? { monthlyId: companion.id } : {}), status: overall, told, deferred, ...(recheckAt ? { recheckAt } : {}) });
+      Object.assign(ctx.result, { readingId: main.id, ...(companion ? { monthlyId: companion.id } : {}), status: overall, told, deferred, ...(gated ? { pending: true } : {}), ...(recheckAt ? { recheckAt } : {}) });
     },
   }),
 
@@ -223,6 +245,9 @@ export const healthActions: ActionDef[] = [
       const r = d.readings[input.readingId];
       if (!r || r.deletedAt) ctx.fail('err.notFound');
       if (r.voided) ctx.fail('health.err.alreadyVoided');
+      // a correction by the nurse waits for approval; families keep seeing the approved values until then
+      const gated = !!r.memberId && needsApproval(ctx);
+      const before = gated ? priorOf(r, READING_KEYS) : undefined;
       const row = r as unknown as Record<ReadingField, number | undefined>;
       const from: Record<string, number | null> = {};
       const fields: string[] = [];
@@ -240,9 +265,10 @@ export const healthActions: ActionDef[] = [
       r.status = evaluateReading(r, prevWeight, limitsOf(d as unknown as ClubState));
       if (r.source === 'device') r.source = 'mixed';
       r.edits.push({ at: ctx.nowDT, by: ctx.user.id, fields, reason: input.reason, ...(input.note ? { note: input.note } : {}), from });
+      if (gated) markPending(r, ctx, before);
       const name = r.memberId ? shortOf(d, r.memberId) : d.guestVisits[r.guestId || '']?.name || '';
       ctx.feed({ icon: 'edit', key: 'health.feed.edited', params: { name }, ...(r.memberId ? { memberId: r.memberId } : {}) });
-      Object.assign(ctx.result, { readingId: r.id, status: r.status });
+      Object.assign(ctx.result, { readingId: r.id, status: r.status, ...(gated ? { pending: true } : {}) });
     },
   }),
 

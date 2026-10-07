@@ -31,6 +31,14 @@ test.beforeEach(async ({ request }) => { await resetDemo(request); });
 const act = (page: Page, userId: string, name: string, input: unknown) =>
   page.request.post('/api/actions/' + name, { headers: { 'x-user-id': userId }, data: { mutationId: 'e2e-' + Math.random().toString(36).slice(2), club: 'citra', input } });
 const stateOf = async (page: Page, userId: string) => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': userId } })).json()).state;
+/** Management (s9) approves what the nurse saved: only then do the family messages go out. */
+async function approveReadings(page: Page, memberId: string) {
+  const s = await stateOf(page, 's9');
+  const ids = Object.values<any>(s.readings).filter((r) => r.memberId === memberId && r.date === T && r.approval?.status === 'pending' && !r.approval.companionOf).map((r) => r.id);
+  expect(ids.length).toBeGreaterThan(0);
+  const r = await act(page, 's9', 'approval.approve', { type: 'readings', ids });
+  expect(r.ok(), await r.text()).toBeTruthy();
+}
 const setClock = (page: Page, hm: string) => page.request.post('/api/demo/clock', { data: { hm } });
 /** The lobby checks someone in. A check-in records who and when; nothing about who brought them. */
 async function checkIn(page: Page, memberId: string) {
@@ -59,7 +67,7 @@ async function addMembers(page: Page, n = 12) {
     const nn = String(i).padStart(2, '0');
     const r = await page.request.post('/api/actions/members.create', {
       headers: { 'x-user-id': 's9' },
-      data: { mutationId: `e2e-health-m${i}`, club: 'citra', input: { title: 'Opa', name: `Pager Test${nn}`, dob: '1945-03-02', usualArrival: '11:00', plan: 'gold', start: T, contact: { name: `Pager Family${nn}`, phone: `+62 812 9100 00${nn}`, relation: 'daughter', primary: true }, consent: { data: true, face: true } } },
+      data: { mutationId: `e2e-health-m${i}`, club: 'citra', input: { title: 'Opa', name: `Pager Test${nn}`, dob: '1945-03-02', usualArrival: '11:00', plan: 'gold', start: T, contact: { name: `Pager Family${nn}`, phone: `+62 812 9100 00${nn}`, relation: 'daughter', primary: true }, formMediaId: 'md_e2eregistrationform0001', formFileName: 'registration-form.jpg', consent: { data: true, face: true } } },
     });
     expect(r.ok(), await r.text()).toBeTruthy();
   }
@@ -212,7 +220,6 @@ test('search by name or family name, and pages: ten at a time, a search goes bac
   await search.fill('zzz');
   await expect(rows).toHaveCount(0);
   await expect(page.getByText('No matches')).toBeVisible();
-  await expect(page.getByText('Check the spelling, or search by first or family name.')).toBeVisible();
   await page.getByRole('button', { name: 'Clear' }).click();
   await expect(rows).toHaveCount(10);
   await expect(search).toHaveValue('');
@@ -302,7 +309,13 @@ test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-che
   await expect(saveBtn(page)).not.toHaveAttribute('aria-disabled', 'true');
   await assertNoHorizontalScroll(page);
   await saveBtn(page).click(); // "Save and next": Tjahjadi is still waiting for his arrival check
-  await expect(toast(page, /Saved for Opa Hendra: 164\/98, Alert\. Cynthia and Stephanie got a message\./)).toBeVisible();
+  // the nurse's reading waits for management: the family is not told yet
+  await expect(toast(page, /Saved for Opa Hendra: 164\/98, Alert\. Waiting for management approval\./)).toBeVisible();
+  const pre = await stateOf(page, 'fm2_0');
+  expect(Object.values<any>(pre.readings).filter((r) => r.memberId === 'm2' && r.date === T)).toHaveLength(0);
+  expect(Object.values<any>(pre.notifications).some((n) => n.kind === 'health.notif.fam.alert')).toBe(false);
+  expect(Object.values<any>((await stateOf(page, 's8')).readings).find((r) => r.memberId === 'm2' && r.date === T).approval).toMatchObject({ status: 'pending' });
+  await approveReadings(page, 'm2');
 
   // server state: the reading, the re-check time, the messages
   const s = await stateOf(page, 's8');
@@ -605,7 +618,7 @@ test('deep link ?member=m1&demo=high: opens Oma Lina, runs Read PC-303 once (152
   await expect(saveBtn(page)).not.toHaveAttribute('aria-disabled', 'true');
   await expect(page.getByRole('button', { name: 'Save and next', exact: true })).toBeVisible();
   await saveBtn(page).click();
-  await expect(toast(page, /Saved for Oma Lina: 152\/94, Watch\. Maria and Daniel got a message\./)).toBeVisible();
+  await expect(toast(page, /Saved for Oma Lina: 152\/94, Watch\..*Waiting for management approval\./)).toBeVisible();
   const s = await stateOf(page, 's8');
   expect(Object.values<any>(s.readings).find((x) => x.memberId === 'm1' && x.kind === 'arrival' && x.date === T)).toMatchObject({ sys: 152, dia: 94, pulse: 82, spo2: 97, temp: 36.6, status: 'watch', source: 'device' });
   await page.reload(); // no second automatic reading
@@ -798,7 +811,6 @@ test('Readings: a member’s record day by day, back in time: the arrows go to t
   await expect(fieldText(page, /^Reading day,/)).toContainText('Sat 17 Oct 2026');
   await expect(hist.getByTestId('history-empty')).toContainText('No readings on Sat 17 Oct.');
   await expect(hist.getByTestId('reading-card')).toHaveCount(0);
-  await expect(hist.getByText('Use the arrows to jump to the nearest day with readings.')).toBeVisible();
   await page.getByRole('button', { name: 'Earlier reading day' }).click(); // from a day without readings: the nearest before
   await expect(fieldText(page, /^Reading day,/)).toContainText('Fri 16 Oct 2026');
   await pickDate(page, /^Reading day,/, '2026-10-17');
@@ -929,7 +941,8 @@ test('Indonesian: the list, the chips, the result banner, the dialogs and the re
   if (!isPhone(page)) await expect(page.getByText('Papan angka · Sis')).toBeVisible();
   await assertNoRawKeys(page);
   await saveBtn(page).click();
-  await expect(toast(page, /Tersimpan untuk Opa Hendra: 164\/98, Waspada\. Cynthia dan Stephanie sudah dikabari\./)).toBeVisible();
+  await expect(toast(page, /Tersimpan untuk Opa Hendra: 164\/98, Waspada\. Menunggu persetujuan manajemen\./)).toBeVisible();
+  await approveReadings(page, 'm2'); // management approves: only then is the family told
   await backToList(page, 'Cek kesehatan');
   await assertNoRawKeys(page);
   // today's readings, edit and remove, clear a reminder
@@ -942,7 +955,6 @@ test('Indonesian: the list, the chips, the result banner, the dialogs and the re
   await card.getByRole('button', { name: 'Ubah hasil ukur' }).click();
   const ed = page.getByRole('dialog', { name: 'Ubah hasil ukur' });
   await expect(ed.getByRole('button', { name: 'Salah ketik' })).toBeVisible();
-  await expect(ed.getByText('Angka lama tetap tercatat dengan nama Anda dan alasannya.')).toBeVisible();
   await assertNoRawKeys(page);
   await ed.getByRole('button', { name: 'Batal' }).click();
   await card.getByRole('button', { name: 'Hapus hasil ukur' }).click();
@@ -979,7 +991,6 @@ test('Indonesian: the list, the chips, the result banner, the dialogs and the re
   await assertNoRawKeys(page);
   await pickDate(page, /^Hari,/, '2026-10-17');
   await expect(page.getByText('Tidak ada hasil ukur pada Sab 17 Okt.')).toBeVisible();
-  await expect(page.getByText('Pilih tanggal lain, atau mundur satu hari.')).toBeVisible();
   await assertNoRawKeys(page);
   await assertNoHorizontalScroll(page);
   c.assertClean();

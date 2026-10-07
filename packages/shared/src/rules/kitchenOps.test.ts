@@ -131,6 +131,7 @@ describe('menu template helpers', () => {
   });
   it('overrides from a date on ignore the past and days that only hold a photo or plans', () => {
     const s = produce(seed(), (d) => {
+      for (const k of Object.keys(d.dayMenus)) if (d.dayMenus[k].approval) delete d.dayMenus[k]; // the seed's override that waits for approval
       d.dayMenus['2026-10-20'] = { id: '2026-10-20', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: '2026-10-20', lunch: ['dish-rawon'], allergyPlans: [] };
       d.dayMenus[T] = { id: T, clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: T, photoIds: ['p-x'], allergyPlans: [] };
       d.dayMenus['2026-10-23'] = { id: '2026-10-23', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: '2026-10-23', tea: ['dish-klepon'], allergyPlans: [] };

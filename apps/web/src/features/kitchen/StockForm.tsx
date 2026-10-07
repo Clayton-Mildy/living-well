@@ -44,7 +44,7 @@ export function StockForm({ defaultArea, onSent, prefill, title }: { defaultArea
     if (r.ok) { setItem(''); setQty(''); setUnit('pcs'); onSent?.(); }
   };
   return (
-    <div className="cp-card-pad" style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="cp-card-pad" style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={cardLabel}>{title ?? t('kitchen.stock.new')}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('kitchen.stock.item')} aria-label={t('kitchen.stock.item')} maxLength={80} style={{ ...bronzeInput, flex: '2 1 220px' }} />
@@ -55,7 +55,7 @@ export function StockForm({ defaultArea, onSent, prefill, title }: { defaultArea
       <div className={isPhone ? 'scroll-x' : undefined} style={{ display: 'flex', flexWrap: isPhone ? 'nowrap' : 'wrap', gap: 6, ...(isPhone ? { margin: '0 -16px', padding: '0 16px', scrollbarWidth: 'none' } : {}) }} role="group" aria-label={t('kitchen.stock.unit')}>
         {KNOWN_UNITS.map((u) => (
           <button key={u} type="button" aria-pressed={unit === u} onClick={() => setUnit(u)}
-            style={{ height: isPhone ? 38 : 44, flex: 'none', padding: '0 14px', borderRadius: 999, border: unit === u ? '1px solid #282828' : '1px solid #CAB8A2', background: unit === u ? '#282828' : '#FFFFFF', color: unit === u ? '#FFFFFF' : '#282828', fontSize: 'max(14px, var(--cp-body, 0px))', cursor: 'pointer', fontFamily: 'Inter' }}>
+            style={{ height: isPhone ? 38 : 44, flex: 'none', padding: '0 14px', borderRadius: 12, border: unit === u ? '1px solid #24201C' : '1px solid #DCD3C8', background: unit === u ? '#24201C' : '#FFFFFF', color: unit === u ? '#FFFFFF' : '#24201C', fontSize: 'max(14px, var(--cp-body, 0px))', cursor: 'pointer', fontFamily: 'Inter' }}>
             {t('kitchen.unit.' + u)}
           </button>
         ))}

@@ -66,30 +66,30 @@ export function Select<T extends string>({ label, value, onChange, options, plac
         aria-labelledby={labelled} aria-label={label ? undefined : title} aria-describedby={described} aria-invalid={error ? true : undefined}
         disabled={disabled} onClick={() => (open ? setOpen(false) : openIt())} onKeyDown={onTriggerKey}
         style={triggerStyle({ error: !!error, disabled, open })}>
-        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selected ? undefined : '#6A6967' }}>{selected ? selected.label : placeholder || t('common.pickOne')}</span>
-        <Icon name="expand_more" size={22} color="#6A6967" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: selected ? undefined : '#5E5852' }}>{selected ? selected.label : placeholder || t('common.pickOne')}</span>
+        <Icon name="expand_more" size={22} color="#5E5852" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
       </button>
       <PopLayer open={open} onClose={() => setOpen(false)} anchorRef={trigger} title={title} menu minWidth={220} maxHeight={showSearch ? 380 : 320}>
         {showSearch ? (
-          <div style={{ padding: 10, borderBottom: '1px solid #EFECEA', position: 'relative', flex: 'none' }}>
-            <Icon name="search" size={20} color="#6A6967" style={{ position: 'absolute', left: 24, top: 23 }} />
+          <div style={{ padding: 10, borderBottom: '1px solid #F0EAE1', position: 'relative', flex: 'none' }}>
+            <Icon name="search" size={20} color="#5E5852" style={{ position: 'absolute', left: 24, top: 23 }} />
             <input ref={searchRef} type="search" value={query} onChange={(e) => setQuery(e.target.value)} onKeyDown={onListKey} placeholder={t('common.searchHere')} aria-label={t('common.search')}
               aria-controls={ids.list} aria-activedescendant={shown[active] ? `${ids.list}-${active}` : undefined} autoComplete="off"
-              style={{ width: '100%', height: 44, borderRadius: 12, border: '1px solid #8A755B', padding: '0 12px 0 38px', fontSize: 16, fontFamily: 'Inter', outline: 'none', background: '#FFFFFF', color: '#282828' }} />
+              style={{ width: '100%', height: 44, borderRadius: 8, border: '1px solid #DDD1C2', padding: '0 12px 0 38px', fontSize: 16, fontFamily: 'Inter', outline: 'none', background: '#FFFFFF', color: '#24201C' }} />
           </div>
         ) : null}
         <div ref={listRef} id={ids.list} role="listbox" aria-label={title} tabIndex={showSearch ? -1 : 0} onKeyDown={showSearch ? undefined : onListKey}
           aria-activedescendant={!showSearch && shown[active] ? `${ids.list}-${active}` : undefined} style={{ overflowY: 'auto', padding: 6, outline: 'none', minHeight: 0 }}>
-          {shown.length === 0 ? <div role="status" style={{ padding: '14px 12px', fontSize: FONT_BODY, color: '#6A6967' }}>{t('common.noResults')}</div> : null}
+          {shown.length === 0 ? <div role="status" style={{ padding: '14px 12px', fontSize: FONT_BODY, color: '#5E5852' }}>{t('common.noResults')}</div> : null}
           {shown.map((o, i) => {
             const sel = o.value === value;
             return (
               <div key={o.value} id={`${ids.list}-${i}`} data-idx={i} role="option" aria-selected={sel} aria-label={o.label} aria-describedby={o.hint ? `${ids.list}-${i}-h` : undefined}
                 onMouseDown={(e) => e.preventDefault()} onMouseMove={() => { if (active !== i) setActive(i); }} onClick={() => pick(o)}
-                style={{ minHeight: 48, padding: '8px 12px', borderRadius: 12, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: i === active ? '#F4F0EE' : 'transparent', fontSize: 16, fontWeight: sel ? 600 : 400 }}>
+                style={{ minHeight: 48, padding: '8px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', background: i === active ? '#F3EEE8' : 'transparent', fontSize: 16, fontWeight: sel ? 600 : 400 }}>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <span style={{ lineHeight: 1.35 }}>{o.label}</span>
-                  {o.hint ? <span id={`${ids.list}-${i}-h`} style={{ fontSize: FONT_SMALL, fontWeight: 400, color: '#6A6967', lineHeight: 1.35 }}>{o.hint}</span> : null}
+                  {o.hint ? <span id={`${ids.list}-${i}-h`} style={{ fontSize: FONT_SMALL, fontWeight: 400, color: '#5E5852', lineHeight: 1.35 }}>{o.hint}</span> : null}
                 </span>
                 {sel ? <Icon name="check" size={20} color="#75624B" /> : null}
               </div>

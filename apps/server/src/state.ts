@@ -21,13 +21,13 @@ export async function boot() {
   await runMigrations();
   clubs = await loadAll();
   if (!Object.keys(clubs).length) {
-    await replaceAll(buildSeed(demoDate(), demoNowMin()));
+    await replaceAll(buildSeed(demoDate(), demoNowMin(), { roster: process.env.CP_SEED_SMALL !== '1' }));
     clubs = await loadAll();
   }
   await loadClock();
   // a demo left from an earlier day starts fresh on today's date (the seed is built around the demo day)
   if (clockInfo().today !== demoDate()) {
-    await replaceAll(buildSeed(demoDate(), demoNowMin()));
+    await replaceAll(buildSeed(demoDate(), demoNowMin(), { roster: process.env.CP_SEED_SMALL !== '1' }));
     clubs = await loadAll();
     await resetClock();
     console.log(`New demo day ${demoDate()}: demo data reset.`);
@@ -112,7 +112,7 @@ let resetting: Promise<void> | null = null;
 export function resetDemo(): Promise<void> {
   resetting ??= (async () => {
     try {
-      await replaceAll(buildSeed(demoDate(), demoNowMin()));
+      await replaceAll(buildSeed(demoDate(), demoNowMin(), { roster: process.env.CP_SEED_SMALL !== '1' }));
       clubs = await loadAll();
       const clock = await resetClock();
       broadcastAll({ type: 'reset' });

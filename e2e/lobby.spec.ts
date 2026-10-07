@@ -1,20 +1,20 @@
-// Lobby for a drop-in day club. A Check in | Check out switch sits at the top of Arrivals:
-//   Check in  = the check-in list (members not in yet, with search) on top, the door-camera simulation, then "Also today";
-//   Check out = a searchable list of the members in the club (each with Check out), "Gone home", then "Also today".
-// The In the club / Gone home tiles drive the switch. Also: the Flex extra-day note (visit 11 of 10), undo, the departure check,
+// Lobby for a drop-in day club (Prototype v3). Three number tabs sit at the top of Arrivals:
+//   Not in yet  = the check-in list (members not in yet, with search), "Also today" under it, the door camera in the side rail;
+//   In the club = a searchable list of the members in the club (each with Check out), "Also today" under it;
+//   Gone home   = who has left today. Also: the Flex extra-day note (visit 11 of 10), undo, the departure check,
 // the member drawer, trial and visit guests, the guided-demo deep link, Indonesian, every viewport.
 // Nobody is "expected" and nobody is recorded as bringing or collecting.
 // Isolated env: pnpm e2e:env lobby 8802 5202 && E2E_BASE_URL=http://localhost:5202 pnpm exec playwright test e2e/lobby.spec.ts
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
-import { resetDemo, signIn, watchConsole, isPhone, assertNoHorizontalScroll } from './helpers';
+import { resetDemo, signIn, watchConsole, isPhone, uiZoom, assertNoHorizontalScroll } from './helpers';
 
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
 
+/** The big number on a tab (In the club / Gone home). */
 const tile = (page: Page, key: 'inClub' | 'goneHome') => page.getByTestId(`tile-${key}`);
-/** Tablet and laptop: tap the tile. A phone has no tiles (the Check in / Check out switch shows the counts, so the tiles are hidden): switch to Check out and scroll to the list. */
+/** Open the In the club or Gone home tab and bring its list into view. */
 async function openTile(page: Page, key: 'inClub' | 'goneHome') {
-  if (!isPhone(page)) { await tile(page, key).click(); return; }
-  await page.getByRole('tab', { name: /^Check out/ }).click();
+  await page.getByRole('tab', { name: key === 'goneHome' ? /^Gone home/ : /^Check out/ }).click();
   await (key === 'goneHome' ? goneHomeList(page) : inClubList(page)).scrollIntoViewIfNeeded();
 }
 const toast = (page: Page, re: RegExp) => page.getByText(re).first();
@@ -33,8 +33,8 @@ const rowOf = (page: Page, name: string) => page.getByRole('button', { name: new
 const openRow = (page: Page, name: string) => page.getByRole('button', { name: new RegExp(`^${name}\\b`) });
 /** Wait for the icon font: while it loads, icon names render as wide text and can make a nowrap row overflow for a moment. */
 const fontsReady = (page: Page) => page.evaluate(() => document.fonts.ready.then(() => true));
-/** The two columns (camera | lists) sit side by side from this content width; below it they stack and a manual pick confirms in a bottom sheet. */
-const wideLayout = (page: Page) => (page.viewportSize()?.width || 1440) >= 934 + 248 + 72;
+/** Tablet and laptop: the list and the camera rail sit side by side; a phone stacks them and a manual pick confirms in a bottom sheet. */
+const wideLayout = (page: Page) => (page.viewportSize()?.width || 1440) >= 768;
 /** Raw i18n keys that leaked into the UI (no namespace.key text should ever be visible). */
 const RAW_KEY = /\b(?:lobby|chat|common|status|err|nav|roles|shell|notif|feed|family|health|review|inv)\.[A-Za-z][A-Za-z0-9.]*/;
 const GENERIC_KEY = /\b[a-z]+\.[a-zA-Z]+\b/;
@@ -42,12 +42,12 @@ const EXTRA_NOTE = 'Visit 11 of 10 this month: an extra day, Rp 650.000 on next 
 /** Words of the old planned-visit domain: none of them may show on the lobby. */
 const OLD_DOMAIN = /expected|to arrive|walk-in|brought by|collected by|running late|absent today|not coming today|escort|booked for today/i;
 
-test('the drop-in board: Check in mode by default, the check-in list on top with the camera, "Also today" below it; nobody is "expected"', async ({ page }) => {
+test('the drop-in board: Not in yet by default, the check-in list on top with the camera, "Also today" below it; nobody is "expected"', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's1');
   await expect(page.getByRole('heading', { name: 'Arrivals', level: 1 })).toBeVisible();
   await expect(page.getByText('Wednesday 21 October', { exact: true })).toBeVisible();
-  await expect(page.getByText(isPhone(page) ? 'Club open' : 'Club open · Mon–Fri 08:30–16:30')).toBeVisible(); // a phone shortens the pill and puts the time in the eyebrow
+  await expect(page.getByText('Club open until 16:30')).toBeVisible();
   await expect(page.getByText(/^\d\d:\d\d$/).first()).toBeVisible();
   await expect(tile(page, 'inClub')).toHaveText('3');
   await expect(tile(page, 'goneHome')).toHaveText('0');
@@ -70,26 +70,20 @@ test('the drop-in board: Check in mode by default, the check-in list on top with
   await expect(faceCard(page)).toBeVisible();
   await expect(inClubList(page)).toHaveCount(0);
   await expect(goneHomeList(page)).toHaveCount(0);
-  // order: the switch is at the top, the check-in list comes before "Also today"
+  // order: the number tabs are at the top, the check-in list comes before "Also today", on every width
   await fontsReady(page);
   const sw = await modeTab(page, 'in').boundingBox();
   const listBox = await list.boundingBox();
   const alsoBox = await alsoToday(page).boundingBox();
-  if (isPhone(page)) {
-    await expect(page.getByRole('group', { name: 'Today at the club' })).toBeHidden(); // a phone has no count tiles: the switch shows the counts
-    expect(sw!.y).toBeLessThan(listBox!.y);
-  } else {
-    const counts = await page.getByRole('group', { name: 'Today at the club' }).boundingBox();
-    expect(sw!.y).toBeLessThan(counts!.y);
-    expect(counts!.y).toBeLessThan(listBox!.y);
-  }
+  expect(sw!.y).toBeLessThan(listBox!.y);
   expect(alsoBox!.y).toBeGreaterThan(listBox!.y + listBox!.height - 1); // Also today is BELOW the check-in list
+  expect(Math.abs(alsoBox!.x - listBox!.x)).toBeLessThan(40); // …in the same column
   await expect(alsoToday(page).getByText('Trial day: Oma Siu Lan Tjandra')).toBeVisible();
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
 
-test('Check out mode: the camera goes, a searchable list of members in the club with Check out buttons shows, Gone home stays visible, Also today stays below', async ({ page }) => {
+test('In the club: the camera goes, a searchable list of members in the club with Check out buttons shows, Also today stays below; Gone home is its own tab', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's1');
   await checkOutMode(page);
@@ -104,12 +98,10 @@ test('Check out mode: the camera goes, a searchable list of members in the club 
     await expect(inClub.getByRole('button', { name: `Check out: ${n}` })).toHaveText('Check out');
   }
   await expect(inClub.getByRole('button', { name: /^Check in:/ })).toHaveCount(0); // nobody here can be checked in
-  // Gone home stays visible: nobody has gone home yet
-  await expect(goneHomeList(page).getByRole('heading', { name: 'Gone home', level: 2 })).toBeVisible();
-  await expect(goneHomeList(page).getByText('Nobody has gone home yet')).toBeVisible();
+  await expect(goneHomeList(page)).toHaveCount(0); // Gone home is its own tab
   // search by name, by family contact, by phone
   const search = inClub.getByLabel('Search by name, family or phone');
-  expect((await search.boundingBox())?.height).toBeGreaterThan(48);
+  expect((await search.boundingBox())?.height).toBeGreaterThan(30); // an underline search, not squashed
   await search.fill('zzz');
   await expect(inClub.getByText('Nobody in the club matches “zzz”.')).toBeVisible();
   await search.fill('hendra');
@@ -127,6 +119,10 @@ test('Check out mode: the camera goes, a searchable list of members in the club 
   const alsoBox = await alsoToday(page).boundingBox();
   expect(alsoBox!.y).toBeGreaterThan(listBox!.y + listBox!.height - 1);
   await assertNoHorizontalScroll(page);
+  // Gone home: nobody has gone home yet
+  await openTile(page, 'goneHome');
+  await expect(goneHomeList(page).getByRole('heading', { name: 'Gone home', level: 2 })).toBeVisible();
+  await expect(goneHomeList(page).getByText('Nobody has gone home yet')).toBeVisible();
   // back to Check in: the camera and the check-in list return, the check-out lists go
   await checkInMode(page);
   await expect(faceCard(page)).toBeVisible();
@@ -154,7 +150,6 @@ test('Simulate next arrival picks Oma Lina; her 11th visit is an extra day, said
   const c = watchConsole(page);
   await signIn(page, 's1');
   await expect(faceCard(page).getByText('Standing by')).toBeVisible();
-  await expect(page.getByText('Demo only: stands in for the door camera.')).toBeVisible();
   await page.getByRole('button', { name: 'Simulate next arrival' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Recognising…' })).toBeVisible();
   await expect(faceCard(page).getByText('98% match')).toBeVisible();
@@ -200,15 +195,15 @@ test('management and finance are told about the extra day; the family only gets 
   expect((await notes('f1')).filter((n) => n.kind === 'notif.checkedIn')).toHaveLength(1);
 });
 
-test('check in by name from the list: Opa Budi (Gold, unlimited) confirms next to the list (a bottom sheet on narrow screens), no escort, no extra-day note', async ({ page }) => {
+test('check in by name from the list: Opa Budi (Gold, unlimited) confirms in a dialog (a bottom sheet on phones), never in the face camera card; no escort, no extra-day note', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's1');
   await rowOf(page, 'Opa Budi Wijaya').click();
   const confirm = page.getByRole('button', { name: 'Confirm check-in' });
   await expect(confirm).toBeVisible();
   await expect(confirm).toBeInViewport(); // never off-screen
-  if (wideLayout(page)) await expect(faceCard(page).getByText('Picked from the list')).toBeVisible();
-  else await expect(page.getByRole('dialog', { name: 'Check in' })).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Check in' })).toBeVisible();
+  await expect(faceCard(page).getByRole('button', { name: 'Confirm check-in' })).toHaveCount(0); // a manual pick is not a face match
   await expect(page.getByText('Gold · unlimited days')).toBeVisible();
   await expect(page.getByText(/an extra day/)).toHaveCount(0);
   await expect(page.getByRole('radio')).toHaveCount(0);
@@ -225,10 +220,10 @@ test('check in by name from the list: Opa Budi (Gold, unlimited) confirms next t
   c.assertClean();
 });
 
-test('"Not this person" cancels a manual check-in without changing anything', async ({ page }) => {
+test('Cancel closes a manual check-in without changing anything', async ({ page }) => {
   await signIn(page, 's1');
   await rowOf(page, 'Opa Budi Wijaya').click();
-  await page.getByRole('button', { name: 'Not this person' }).click();
+  await page.getByRole('dialog', { name: 'Check in' }).getByRole('button', { name: 'Cancel' }).click();
   await expect(page.getByRole('button', { name: 'Confirm check-in' })).toHaveCount(0);
   await expect(tile(page, 'inClub')).toHaveText('3');
   await expect(rowOf(page, 'Opa Budi Wijaya')).toHaveText('Check in');
@@ -239,7 +234,7 @@ test('search the check-in list by name, family or phone, then check in; undo fro
   await signIn(page, 's1');
   const list = manualList(page);
   const search = list.getByLabel('Search by name, family or phone');
-  expect((await search.boundingBox())?.height).toBeGreaterThan(48); // the 52px input, not squashed
+  expect((await search.boundingBox())?.height).toBeGreaterThan(30); // an underline search, not squashed
   await search.fill('zzz');
   await expect(list.getByText('No member matches “zzz”.')).toBeVisible();
   await search.fill('maria'); // a family member's name finds both of her relatives
@@ -275,7 +270,7 @@ async function addMembers(request: APIRequestContext, n: number) {
     const nn = String(i).padStart(2, '0');
     const r = await request.post('/api/actions/members.create', {
       headers: { 'x-user-id': 's9' },
-      data: { mutationId: `e2e-pager-${i}`, club: 'citra', input: { title: 'Opa', name: `Pager Test${nn}`, dob: '1945-03-02', usualArrival: `11:${String(10 + i).padStart(2, '0')}`, plan: 'gold', start: '2026-10-21', contact: { name: `Pager Family${nn}`, phone: `+62 812 9000 00${nn}`, relation: 'daughter', primary: true }, consent: { data: true, face: true } } },
+      data: { mutationId: `e2e-pager-${i}`, club: 'citra', input: { title: 'Opa', name: `Pager Test${nn}`, dob: '1945-03-02', usualArrival: `11:${String(10 + i).padStart(2, '0')}`, plan: 'gold', start: '2026-10-21', contact: { name: `Pager Family${nn}`, phone: `+62 812 9000 00${nn}`, relation: 'daughter', primary: true }, formMediaId: 'md_e2eregistrationform0001', formFileName: 'registration-form.jpg', consent: { data: true, face: true } } },
     });
     expect(r.ok(), await r.text()).toBeTruthy();
   }
@@ -323,6 +318,7 @@ test('long lists are paged: the check-in list, the check-out list and Gone home 
   const gonePager = gone.getByRole('navigation', { name: 'Pages of Gone home' });
   await gonePager.getByRole('button', { name: 'Next page' }).click();
   await expect(gone.getByRole('button', { name: /^Opa Pager Test\d\d/ })).toHaveCount(1);
+  await openTile(page, 'inClub');
   await expect(inClubList(page).getByRole('navigation')).toHaveCount(0); // four in the club: one page
   await assertNoHorizontalScroll(page);
   c.assertClean();
@@ -335,9 +331,12 @@ test('face opt-out: once management records it, Simulate skips Oma Lina and she 
   await page.getByRole('button', { name: 'Simulate next arrival' }).click();
   await expect(faceCard(page).getByText('98% match')).toBeVisible();
   await expect(faceCard(page).getByText('Opa Budi Wijaya')).toBeVisible(); // not Oma Lina
+  // "Not this person" asks who it really is: pick Oma Lina, then confirm as a manual check-in
   await page.getByRole('button', { name: 'Not this person' }).click();
-  await rowOf(page, 'Oma Lina Wijaya').click();
-  await page.getByRole('button', { name: 'Confirm check-in' }).click();
+  const who = page.getByRole('dialog', { name: 'Who is this?' });
+  await expect(who.getByRole('button', { name: /Opa Budi Wijaya/ })).toHaveCount(0); // the wrong match is not offered
+  await who.getByRole('button', { name: /Oma Lina Wijaya/ }).click();
+  await page.getByRole('dialog', { name: 'Check in' }).getByRole('button', { name: 'Confirm check-in' }).click();
   await expect(toast(page, /Oma Lina checked in at \d\d:\d\d\./)).toBeVisible();
   await expect(tile(page, 'inClub')).toHaveText('4');
 });
@@ -370,9 +369,9 @@ test('check out Opa Hendra: send to the health station, then one confirmation; u
   await expect(tile(page, 'inClub')).toHaveText('2');
   await expect(tile(page, 'goneHome')).toHaveText('1');
   await expect(inClubList(page).getByRole('button', { name: /Opa Hendra/ })).toHaveCount(0); // off the check-out list…
-  await expect(goneHomeList(page).getByRole('button', { name: /^Opa Hendra Gunawan/ })).toContainText(/Arrived 09:40 · left \d\d:\d\d/); // …and on Gone home
   await openTile(page, 'goneHome');
   await expect(goneHomeList(page)).toBeInViewport();
+  await expect(goneHomeList(page).getByRole('button', { name: /^Opa Hendra Gunawan/ })).toContainText(/Arrived 09:40 · left \d\d:\d\d/); // …and on Gone home
   await expect(openRow(page, 'Opa Hendra Gunawan')).toContainText(/Arrived 09:40 · left \d\d:\d\d/);
   // undo the check-out from the drawer
   await openRow(page, 'Opa Hendra Gunawan').click();
@@ -483,28 +482,24 @@ test('"Also today" rows are tappable: the guest’s enquiry and unread messages'
   await expect(page).toHaveURL(/\/chat$/);
 });
 
-test('the tiles drive the switch: In the club and Gone home open Check out and bring their list into view; the layout follows the width', async ({ page }) => {
+test('the number tabs pick the list: In the club and Gone home bring their list into view; the layout follows the width', async ({ page }) => {
   await signIn(page, 's1');
   await fontsReady(page);
-  // check-in layout: wide = camera left, lists right; narrow = the check-in list on top, the camera under it
+  // Not in yet: wide = the list left, the camera rail right; narrow = the check-in list, "Also today", then the camera
   const cam = await faceCard(page).boundingBox();
   const list = await manualList(page).boundingBox();
   if (wideLayout(page)) {
-    expect(list!.x).toBeGreaterThan(cam!.x + cam!.width - 1); // camera on the left, the list on the right
+    expect(cam!.x).toBeGreaterThan(list!.x + list!.width - 1); // the list on the left, the camera on the right
   } else {
     expect(cam!.y).toBeGreaterThan(list!.y + list!.height - 1); // stacked: the check-in list first, then the camera
     expect(Math.abs(list!.x - cam!.x)).toBeLessThan(40);
   }
   await expect(modeTab(page, 'in')).toHaveAttribute('aria-selected', 'true');
   await openTile(page, 'goneHome');
-  await expect(modeTab(page, 'out')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: /^Gone home/ })).toHaveAttribute('aria-selected', 'true');
   await expect(modeTab(page, 'in')).toHaveAttribute('aria-selected', 'false');
   await expect(faceCard(page)).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Gone home', level: 2 })).toBeInViewport();
-  const gone = await goneHomeList(page).boundingBox();
-  const inClub = await inClubList(page).boundingBox();
-  if (wideLayout(page)) expect(inClub!.x).toBeGreaterThan(gone!.x + gone!.width - 1); // Gone home beside the check-out list
-  else expect(gone!.y).toBeGreaterThan(inClub!.y + inClub!.height - 1); // stacked: the check-out list, then Gone home
   await checkInMode(page);
   await expect(faceCard(page)).toBeVisible();
   await openTile(page, 'inClub');
@@ -538,12 +533,11 @@ test('Indonesian: the board, check-in list, drawer, check-out and the extra-day 
   const c = watchConsole(page);
   await signIn(page, 's1', '/today', 'id');
   await expect(page.getByRole('heading', { name: 'Kedatangan', level: 1 })).toBeVisible();
-  await expect(page.getByText(isPhone(page) ? 'Klub buka' : 'Klub buka · Sen–Jum 08:30–16:30')).toBeVisible();
+  await expect(page.getByText('Klub buka sampai 16:30')).toBeVisible();
   await expect(page.getByText('Perkiraan 10:05', { exact: true }).first()).toBeVisible();
   await expect(page.getByRole('region', { name: 'Check-in anggota' })).toBeVisible();
   await expect(page.getByRole('tab', { name: /^Check-in/ })).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByRole('tablist', { name: 'Check-in atau check-out' })).toBeVisible();
-  await expect(page.getByRole('group', { name: 'Kehadiran hari ini' })).toBeVisible({ visible: !isPhone(page) }); // a phone hides the count tiles
   const text = async () => (await page.locator('body').innerText());
   let t = await text();
   expect(t).not.toMatch(RAW_KEY);
@@ -555,16 +549,21 @@ test('Indonesian: the board, check-in list, drawer, check-out and the extra-day 
   await expect(page.getByText('Gold · hari tanpa batas')).toBeVisible();
   t = await text();
   expect(t).not.toMatch(RAW_KEY);
-  await page.getByRole('button', { name: 'Bukan orang ini' }).click();
+  await page.getByRole('dialog').getByRole('button', { name: 'Batal' }).click(); // a manual pick cancels; only a face match says "Bukan orang ini"
   await page.getByRole('button', { name: 'Simulasikan kedatangan berikutnya' }).click();
   await expect(page.getByText('Kunjungan ke-11 dari 10 bulan ini: hari tambahan, Rp 650.000 di tagihan bulan depan.')).toBeVisible();
   t = await text();
   expect(t).not.toMatch(RAW_KEY);
   await page.getByRole('button', { name: 'Bukan orang ini' }).click();
+  await expect(page.getByRole('dialog', { name: 'Siapa ini?' })).toBeVisible();
+  expect(await text()).not.toMatch(RAW_KEY);
+  await page.getByRole('button', { name: 'Bukan siapa-siapa: tutup' }).click();
   await page.getByRole('tab', { name: /^Check-out/ }).click(); // Check-out mode: the members in the club, and Sudah pulang
   await expect(page.getByRole('region', { name: 'Di klub' })).toBeVisible();
+  await page.getByRole('tab', { name: /Sudah pulang/ }).click(); // the number tabs pick one list at a time
   await expect(page.getByRole('region', { name: 'Sudah pulang' }).getByText('Belum ada yang pulang')).toBeVisible();
-  if (!isPhone(page)) await expect(page.getByText('Cari anggota yang akan pulang lalu ketuk Check-out.')).toBeVisible(); // a phone drops the list hints
+  await page.getByRole('tab', { name: /Di klub/ }).click();
+  await expect(page.getByRole('region', { name: 'Di klub' })).toBeVisible();
   await page.getByRole('region', { name: 'Di klub' }).getByLabel('Cari nama, keluarga, atau nomor telepon').fill('zzz');
   await expect(page.getByText('Tidak ada anggota di klub yang cocok dengan “zzz”.')).toBeVisible();
   await page.getByRole('region', { name: 'Di klub' }).getByLabel('Cari nama, keluarga, atau nomor telepon').fill('');
@@ -613,7 +612,7 @@ test('layout: the board fits the screen with its confirm, drawer and dialog open
   await rowOf(page, 'Opa Budi Wijaya').click();
   await expect(page.getByRole('button', { name: 'Confirm check-in' })).toBeVisible();
   await assertNoHorizontalScroll(page);
-  await page.getByRole('button', { name: 'Not this person' }).click();
+  await page.getByRole('dialog', { name: 'Check in' }).getByRole('button', { name: 'Cancel' }).click();
   await checkOutMode(page);
   await assertNoHorizontalScroll(page);
   await openRow(page, 'Bapak Bambang Purnomo').click();
@@ -623,7 +622,7 @@ test('layout: the board fits the screen with its confirm, drawer and dialog open
   const box = await drawer.boundingBox();
   expect(box!.x + box!.width).toBeLessThanOrEqual((page.viewportSize()?.width || 1440) + 1);
   if (isPhone(page)) expect(box!.width).toBeGreaterThanOrEqual((page.viewportSize()?.width || 390) - 2);
-  else expect(Math.round(box!.width)).toBe(440);
+  else expect(Math.round(box!.width / (await uiZoom(page)))).toBe(440); // CSS px: the page is zoomed
   await assertNoHorizontalScroll(page);
   await page.keyboard.press('Escape');
   await rowOf(page, 'Opa Hendra Gunawan').click();

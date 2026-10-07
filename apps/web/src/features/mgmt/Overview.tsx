@@ -5,12 +5,12 @@ import { useNavigate } from 'react-router-dom';
 import { actorName, memberName, type Enquiry } from '@cp/shared';
 import { comingUp, familyRequests, liveToday, overviewStats, type ComingUpItem, type FamilyRequest } from '@cp/shared/rules/mgmt';
 import { openEnquiries } from '@cp/shared/rules/enquiries';
-import { Avatar, EmptyState, FONT_SMALL } from '../../components/ui';
+import { Avatar, EmptyState, PageHead } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { nextText } from '../enquiries/text';
-import { Page, ListCard, LightRow, IconBox, labelStyle, tn } from './common';
+import { Page, ListCard, LightRow, IconBox, DotText, tn } from './common';
 import { memberPhoto } from '../../lib/media';
 
 interface Tile { key: string; label: string; value: string; icon: string; to: string; badge?: { icon: string; fg: string; bg: string; label: string } }
@@ -33,10 +33,10 @@ export function Overview() {
     { key: 'visits', label: t('mgmt.tileVisits'), value: String(st.visits), icon: 'event_available', to: '/arrivals' },
     { key: 'extra', label: t('mgmt.tileExtra'), value: String(st.extraVisits), icon: 'add_circle', to: '/billing', badge: st.extraVisits ? { icon: 'payments', fg: '#7A5510', bg: '#F6ECD6', label: t('mgmt.plNextInvoice') } : undefined },
     { key: 'review', label: t('mgmt.tileReview'), value: String(st.reviews), icon: 'fact_check', to: '/reviews' },
-    { key: 'checks', label: t('nav.health'), value: String(st.checks), icon: 'monitor_heart', to: '/hchecks', badge: st.flagged ? { icon: 'visibility', fg: '#7A5510', bg: '#F6ECD6', label: t('mgmt.toWatch', { n: st.flagged }) } : { icon: 'check_circle', fg: '#3D6B4F', bg: '#E6EFE8', label: t('mgmt.allNormal') } },
-    { key: 'overdue', label: t('mgmt.tileOverdue'), value: String(st.overdue), icon: 'receipt_long', to: '/billing', badge: { icon: 'error', fg: '#FFFFFF', bg: '#AF4B2F', label: t('status.overdue') } },
+    { key: 'checks', label: t('nav.health'), value: String(st.checks), icon: 'monitor_heart', to: '/hchecks', badge: st.flagged ? { icon: 'visibility', fg: '#7A5510', bg: '#F6ECD6', label: t('mgmt.toWatch', { n: st.flagged }) } : { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6', label: t('mgmt.allNormal') } },
+    { key: 'overdue', label: t('mgmt.tileOverdue'), value: String(st.overdue), icon: 'receipt_long', to: '/billing', badge: { icon: 'error', fg: '#FFFFFF', bg: '#9A3D24', label: t('status.overdue') } },
     { key: 'enq', label: t('nav.enquiries'), value: String(st.enquiries), icon: 'contact_phone', to: '/enquiries' },
-    { key: 'survey', label: t('mgmt.tileSurvey'), value: st.survey ? `${st.survey.avg.toFixed(1)} / 5` : t('mgmt.noAnswers'), icon: 'rate_review', to: '/surveys', badge: st.survey ? { icon: 'check_circle', fg: '#3D6B4F', bg: '#E6EFE8', label: tn(t, 'mgmt.nAnswers', st.survey.n) } : undefined },
+    { key: 'survey', label: t('mgmt.tileSurvey'), value: st.survey ? `${st.survey.avg.toFixed(1)} / 5` : t('mgmt.noAnswers'), icon: 'rate_review', to: '/surveys', badge: st.survey ? { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6', label: tn(t, 'mgmt.nAnswers', st.survey.n) } : undefined },
     { key: 'photos', label: t('mgmt.tilePhotos'), value: String(st.photos), icon: 'photo_camera', to: '/camera?tab=library' },
     { key: 'logs', label: t('mgmt.tileLogs'), value: `${st.logsSaved} / ${st.logsTotal}`, icon: 'edit_note', to: '/log' },
     { key: 'lunch', label: t('mgmt.tileLunch'), value: st.lunchPhoto ? t('mgmt.posted') : t('mgmt.notYet'), icon: 'restaurant', to: '/menu' },
@@ -44,7 +44,7 @@ export function Overview() {
     { key: 'unread', label: t('mgmt.tileUnread'), value: String(st.unread), icon: 'chat', to: '/chat' },
     { key: 'stock', label: t('mgmt.tileStock'), value: String(st.stock), icon: 'inventory_2', to: '/stock' },
     { key: 'venue', label: t('mgmt.tileVenue'), value: String(st.venues), icon: 'storefront', to: '/venue' },
-    { key: 'plans', label: t('nav.plans'), value: st.samplePrices ? t('mgmt.sample') : t('mgmt.priceSet'), icon: 'sell', to: '/plans', badge: st.samplePrices ? { icon: 'visibility', fg: '#7A5510', bg: '#F6ECD6', label: t('mgmt.samplePrices') } : { icon: 'check_circle', fg: '#3D6B4F', bg: '#E6EFE8', label: t('mgmt.clubPrices') } },
+    { key: 'plans', label: t('nav.plans'), value: st.samplePrices ? t('mgmt.sample') : t('mgmt.priceSet'), icon: 'sell', to: '/plans', badge: st.samplePrices ? { icon: 'visibility', fg: '#7A5510', bg: '#F6ECD6', label: t('mgmt.samplePrices') } : { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6', label: t('mgmt.clubPrices') } },
   ];
 
   const who = (a: string) => (a === 'system' ? t('mgmt.whoSystem') : a === 'doorCamera' ? t('mgmt.whoDoor') : actorName(s, a));
@@ -55,33 +55,25 @@ export function Overview() {
 
   return (
     <Page gap={22}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ ...labelStyle, color: '#6A6967' }}>{fdl(today)}</div>
-        <h1 style={{ margin: 0, fontSize: 36, lineHeight: '44px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('nav.overview')}</h1>
-        {empty ? <div style={{ fontSize: 16, lineHeight: '24px' }}>{t('mgmt.emptyClub', { club: s.club.fullName })}</div> : null}
-      </div>
+      <PageHead eyebrow={fdl(today)} title={t('nav.overview')} />
+      {empty ? <div style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>{t('mgmt.emptyClub', { club: s.club.fullName })}</div> : null}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 'clamp(14px, 2.4vw, 32px) clamp(14px, 2.4vw, 32px)' }}>
         {tiles.map((x) => (
-          <button key={x.key} type="button" className="dh30" data-tile={x.key} onClick={() => navigate(x.to)}
-            style={{ minHeight: 104, minWidth: 0, padding: '16px 18px', borderRadius: 20, border: '1px solid #DBD7D6', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, color: '#282828', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>
-              <IconBox name={x.icon} size={20} color="#75624B" />
+          <button key={x.key} type="button" data-tile={x.key} onClick={() => navigate(x.to)}
+            style={{ minWidth: 0, padding: '0 0 12px', border: 'none', borderBottom: '2px solid #E6DDD1', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, color: '#24201C', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
+            <span data-testid={`tile-${x.key}`} style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{x.value}</span>
+            <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, lineHeight: 1.3, color: '#6B6259' }}>
+              <IconBox name={x.icon} size={16} color="#75624B" />
               {x.label}
             </span>
-            <span data-testid={`tile-${x.key}`} style={{ fontSize: 32, lineHeight: '36px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{x.value}</span>
-            {x.badge ? (
-              <span style={{ minHeight: 28, maxWidth: '100%', padding: '3px 10px 3px 6px', borderRadius: 999, background: x.badge.bg, color: x.badge.fg, fontSize: FONT_SMALL, fontWeight: 600, lineHeight: '18px', display: 'inline-flex', alignItems: 'center', gap: 4 }}>
-                <IconBox name={x.badge.icon} size={18} fill={1} />
-                {x.badge.label}
-              </span>
-            ) : null}
+            {x.badge ? <span style={{ fontSize: 13, lineHeight: '18px' }}><DotText color={x.badge.fg === '#FFFFFF' ? '#9A3D24' : x.badge.fg}>{x.badge.label}</DotText></span> : null}
           </button>
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(300px,1fr))', gap: 16, alignItems: 'start' }}>
-        <ListCard id="ov-live" title={t('mgmt.listLive')} meta={live.length ? t('mgmt.newestFirst') : t('mgmt.liveEmptyMeta')} headPad="16px 20px">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,340px),1fr))', gap: 'clamp(16px, 2.4vw, 32px)', alignItems: 'start' }}>
+        <ListCard id="ov-live" title={t('mgmt.listLive')}>
           {live.length ? live.map((a) => (
             <Fragment key={a.id}>
               <LightRow icon={a.icon} title={t(a.key, a.params)} sub={`${a.at.slice(11, 16)} · ${who(a.actor)}`} onClick={a.memberId && s.members[a.memberId] ? () => navigate(`/members/${a.memberId}`) : undefined} />
@@ -89,7 +81,7 @@ export function Overview() {
           )) : <EmptyState icon="bolt" title={t('mgmt.liveEmpty')} />}
         </ListCard>
 
-        <ListCard id="ov-up" title={t('mgmt.listUp')} headPad="16px 20px">
+        <ListCard id="ov-up" title={t('mgmt.listUp')} >
           {up.length ? up.map((x) => (
             <Fragment key={x.id}>
               <LightRow icon={UP_ICON[x.kind]} title={upTitle(t, lang, x)} sub={fds(x.date) + (x.time ? ' · ' + x.time : '')} onClick={() => navigate('/calendar')} />
@@ -97,19 +89,19 @@ export function Overview() {
           )) : <EmptyState icon="event" title={t('mgmt.upEmpty')} />}
         </ListCard>
 
-        <ListCard id="ov-req" title={t('mgmt.listReq')} meta={t('mgmt.noApproval')} headPad="16px 20px">
+        <ListCard id="ov-req" title={t('mgmt.listReq')}>
           {reqs.length ? reqs.map((r) => {
             const m = s.members[r.memberId];
             if (!m) return null;
             return (
               <Fragment key={r.id}>
-                <LightRow avatar={<Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={40} />} title={memberName(m)} sub={reqText(t, fds, r)} onClick={() => navigate(`/members/${m.id}/plan`)} />
+                <LightRow avatar={<Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={46} />} title={memberName(m)} sub={reqText(t, fds, r)} onClick={() => navigate(`/members/${m.id}/plan`)} />
               </Fragment>
             );
           }) : <EmptyState icon="inbox" title={t('mgmt.reqEmpty')} />}
         </ListCard>
 
-        <ListCard id="ov-enq" title={t('nav.enquiries')} headPad="16px 20px">
+        <ListCard id="ov-enq" title={t('nav.enquiries')} >
           {enqs.length ? enqs.map((e) => (
             <Fragment key={e.id}>
               <LightRow icon={STAGE_ICON[e.stage]} title={`${e.senior.title} ${e.senior.name}`} sub={`${e.contact.name} · ${nextText(t, fds, e)}`} right={t('enq.stage.' + e.stage)} onClick={() => navigate('/enquiries')} />

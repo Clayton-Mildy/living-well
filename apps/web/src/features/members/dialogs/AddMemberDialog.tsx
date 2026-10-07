@@ -1,4 +1,4 @@
-// "Add a member" (design OvPe, mode add): same fields as the online form, with validation (name, date of birth, contact name and mobile,
+// "Add a member" (design OvPe, mode add): the details come from the signed paper registration form, which must be attached (photo or PDF), with validation (name, date of birth, contact name and mobile,
 // consent to data use; the usual arrival time is optional and informational, since members drop in on any open day). Non-management staff
 // send it for review; the family contact can sign in once management approves.
 import { useMemo, useState } from 'react';
@@ -13,6 +13,7 @@ import { useNow } from '../../../lib/clock';
 import { useMe } from '../../../lib/me';
 import { docLabel } from '../lib';
 import { ProfilePhotoField } from '../ProfilePhoto';
+import { PaperFormField, type PaperFile } from '../PaperForm';
 import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, PeSection, OptionalTime, RelationChips, SelectField, TitleName, YesNo, joinDrugs, useDraft, type MedRow } from './forms';
 
 interface AddDraft {
@@ -20,7 +21,7 @@ interface AddDraft {
   contactMode: 'new' | 'existing'; existingId: string; contact: string; rel: Relation; phone: string; primary: boolean;
   plan: Plan; start: string;
   conditions: string[]; diabetic: boolean; meds: MedRow[]; food: FoodAllergen[]; foodOther: string; drug: string[]; drugOther: string; mobility: Mobility | 'none'; diet: Diet[]; care: string;
-  docs: DocType[]; consentData: boolean; consentFace: boolean; note: string;
+  docs: DocType[]; form: PaperFile | null; consentData: boolean; consentFace: boolean; note: string;
 }
 
 export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -37,7 +38,7 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
   const [d, set] = useDraft<AddDraft>(() => ({
     title: 'Oma', name: '', dob: '', address: '', usual: '', nanny: false, nannyName: '', spouseId: '', photo: '',
     contactMode: 'new', existingId: '', contact: '', rel: 'daughter', phone: '', primary: true, plan: 'flex', start: firstDay,
-    conditions: [], diabetic: false, meds: [], food: [], foodOther: '', drug: [], drugOther: '', mobility: 'none', diet: [], care: '', docs: [], consentData: false, consentFace: true, note: '',
+    conditions: [], diabetic: false, meds: [], food: [], foodOther: '', drug: [], drugOther: '', mobility: 'none', diet: [], care: '', docs: [], form: null, consentData: false, consentFace: true, note: '',
   }));
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -53,7 +54,7 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
       conditions: d.conditions, diabetic: d.diabetic, food: d.food, foodOther: d.foodOther.trim(), drugs: joinDrugs(d), mobility: d.mobility === 'none' ? null : d.mobility, diet: d.diet,
       meds: d.meds.filter((x) => x.name.trim()).map((x) => ({ name: x.name.trim(), dose: x.dose.trim(), timing: x.timing })),
     },
-    careInstructions: d.care.trim(), docs: d.docs.filter((x) => x !== 'nannyKtp' || d.nanny), consent: { data: d.consentData, face: d.consentFace }, ...(d.note.trim() ? { note: d.note.trim() } : {}),
+    careInstructions: d.care.trim(), docs: d.docs.filter((x) => (x !== 'nannyKtp' || d.nanny) && x !== 'membershipForm'), formMediaId: d.form?.mediaId ?? '', formFileName: d.form?.fileName ?? '', consent: { data: d.consentData, face: d.consentFace }, ...(d.note.trim() ? { note: d.note.trim() } : {}),
   });
   const issues: FieldIssue[] = validateNewMember(input(), today).concat(d.contactMode === 'existing' && !d.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []);
   const err = (...fields: string[]) => (tried ? (() => { const i = issues.find((x) => fields.includes(x.field)); return i ? t(i.code, i.params) : ''; })() : '');
@@ -74,14 +75,14 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
     <Dialog open={open} onClose={onClose} eyebrow={t('members.newMember')} title={t('members.addTitle')}
       footer={<><Button variant="secondary" size={48} onClick={onClose}>{t('common.cancel')}</Button><Button size={48} disabled={busy} onClick={submit}>{t('members.create')}</Button></>}>
       <DialogBody>
-      <Note>{mgmt ? t('members.addNote') : t('members.addNoteReview')}</Note>
+      {mgmt ? null : <Note>{t('members.addNoteReview')}</Note>}
       {tried && issues.length ? <Note tone="rust" icon="error">{t('err.invalid')}</Note> : null}
       <PeSection label={t('profile.sec.details')}>
         <ProfilePhotoField name={d.name ? `${d.title} ${d.name}` : '?'} value={d.photo || null} onChange={(id) => set({ photo: id || '' })} />
         <TitleName d={d} set={set} t={t} errors={{ name: err('name') }} />
-        <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} error={err('dob')} hint={t('members.dobHint')} />
+        <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} error={err('dob')} />
         <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} />
-        <OptionalTime label={t('profile.f.usualOpt')} value={d.usual} onChange={(v) => set({ usual: v })} min={hours.open} max={hours.last} error={err('usualArrival')} hint={t('profile.usualHint')} t={t} />
+        <OptionalTime label={t('profile.f.usualOpt')} value={d.usual} onChange={(v) => set({ usual: v })} min={hours.open} max={hours.last} error={err('usualArrival')} t={t} />
         <YesNo label={t('profile.comesWithNanny')} value={d.nanny} onChange={(v) => set({ nanny: v })} t={t} />
         {d.nanny ? <TextField label={t('profile.nannyName')} value={d.nannyName} onChange={(v) => set({ nannyName: v })} error={err('nannyName')} /> : null}
         <SelectField label={t('profile.f.spouse')} value={d.spouseId} onChange={(v) => set({ spouseId: v })} placeholder={t('profile.noSpouse')} options={members.map((m) => ({ value: m.id, label: memberName(m) }))} />
@@ -99,12 +100,12 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
           </>
         )}
         <RelationChips value={d.rel} onChange={(v) => set({ rel: v })} t={t} />
-        <Toggle on={d.primary} onClick={() => set({ primary: !d.primary })} label={t('profile.primaryBilling')} sub={t('profile.primaryBillingSub')} />
+        <Toggle on={d.primary} onClick={() => set({ primary: !d.primary })} label={t('profile.primaryBilling')} />
       </PeSection>
       <PeSection label={t('profile.sec.plan')}>
         <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={[{ value: 'flex', label: `${t('profile.planFlex')} · ${rp(price.flex)}` }, { value: 'gold', label: `${t('profile.planGold')} · ${rp(price.gold)}` }]} />
-        <div style={{ fontSize: 16, lineHeight: '22px', color: '#6A6967' }}>{d.plan === 'flex' ? t('profile.planNoteFlex', { q: s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold')}</div>
-        <DateField label={t('profile.f.start')} value={d.start} onChange={(v) => set({ start: v })} min={today} disabledDate={(x) => !isWeekday(x) || !isOpen(s, x)} error={err('start')} hint={t('members.startHint')} />
+        <div style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{d.plan === 'flex' ? t('profile.planNoteFlex', { q: s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold')}</div>
+        <DateField label={t('profile.f.start')} value={d.start} onChange={(v) => set({ start: v })} min={today} disabledDate={(x) => !isWeekday(x) || !isOpen(s, x)} error={err('start')} />
       </PeSection>
       <PeSection label={t('profile.sec.health')}>
         <HealthFields d={d} set={set} t={t} />
@@ -115,15 +116,18 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
         <AllergyFields d={d} set={set} t={t} />
         <TextField label={t('profile.careInstructions')} value={d.care} onChange={(v) => set({ care: v })} multiline rows={3} hint={t('profile.careHint')} />
       </PeSection>
-      <PeSection label={t('profile.sec.docsNow')} hint={t('profile.docsNowSub')}>
-        <ChipGroup label={t('profile.docsReceived')} multi value={d.docs} onChange={(v) => set({ docs: v as DocType[] })} options={DOC_TYPES.filter((x) => x !== 'nannyKtp' || d.nanny).map((x) => ({ value: x, label: docLabel(t, x) }))} />
+      <PeSection label={t('profile.paperTitle')}>
+        <PaperFormField value={d.form} onChange={(f) => set({ form: f })} error={err('form')} />
+      </PeSection>
+      <PeSection label={t('profile.sec.docsNow')}>
+        <ChipGroup label={t('profile.docsReceived')} multi value={d.docs} onChange={(v) => set({ docs: v as DocType[] })} options={DOC_TYPES.filter((x) => x !== 'membershipForm' && (x !== 'nannyKtp' || d.nanny)).map((x) => ({ value: x, label: docLabel(t, x) }))} />
       </PeSection>
       <PeSection label={t('profile.consentTitle')}>
         <Toggle on={d.consentData} onClick={() => set({ consentData: !d.consentData })} label={t('profile.consent.data')} sub={t('profile.consentSub.data')} />
         {err('consentData') ? <Note tone="rust" icon="error">{err('consentData')}</Note> : null}
         <Toggle on={d.consentFace} onClick={() => set({ consentFace: !d.consentFace })} label={t('profile.consent.face')} sub={t('profile.consentSub.face')} />
       </PeSection>
-      {!mgmt ? <TextField label={t('profile.noteForMgmt')} value={d.note} onChange={(v) => set({ note: v })} multiline rows={2} hint={t('profile.noteForMgmtHint')} /> : null}
+      {!mgmt ? <TextField label={t('profile.noteForMgmt')} value={d.note} onChange={(v) => set({ note: v })} multiline rows={2} /> : null}
       </DialogBody>
     </Dialog>
   );

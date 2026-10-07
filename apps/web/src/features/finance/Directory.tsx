@@ -3,15 +3,14 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fmtPhone, live, sortBy, type DirectoryContact } from '@cp/shared';
-import { Button, Card, Chip, EmptyState, FilterChips, Icon, IconButton, PageHead, TextField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Chip, EmptyState, FilterChips, Icon, IconButton, PageHead, TextField, Toggle, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { matches } from './lib';
-import { ConfirmDialog, FormOverlay, PagerBar, SearchField, fieldLabel } from './parts';
-import { Badge } from './parts';
+import { ConfirmDialog, Dot, FormOverlay, Hero, HeroHead, PagerBar, SearchField, fieldLabel, hrow, rowSub, rowTitle } from './parts';
 
 type Filter = 'all' | 'supplier' | 'doctor' | 'service' | 'public' | 'internal';
 const FILTERS: Filter[] = ['all', 'supplier', 'doctor', 'service', 'public', 'internal'];
@@ -49,68 +48,75 @@ export function Directory() {
   };
 
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 18, maxWidth: 900 }}>
+    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(18px, 2.8vw, 28px)', maxWidth: 960 }}>
       {fam ? (
-        <button type="button" onClick={() => navigate('/today')} style={{ alignSelf: 'flex-start', height: 44, padding: '0 16px 0 10px', margin: '-6px 0 -8px -10px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" onClick={() => navigate('/today')} style={{ alignSelf: 'flex-start', height: 44, padding: '0 16px 0 10px', margin: '-6px 0 -8px -10px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="arrow_back" size={20} color="#75624B" />{t('common.today')}
         </button>
       ) : null}
       <PageHead eyebrow={t('nav.contacts')} title={fam ? t('finance.dir.famTitle') : t('nav.directory')}
         right={canEdit ? <Button size={48} icon="add" onClick={() => setForm('new')} style={{ padding: '0 20px' }}>{t('finance.dir.add')}</Button> : undefined} />
       {fam ? (
-        <div style={{ fontSize: isPhone ? 15 : 16, lineHeight: '22px' }}>
+        <div style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>
           {t('finance.dir.famSub')} <a href={telOf(emergency)} style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{emergency}</a>
         </div>
-      ) : <div className="cp-desc" style={{ fontSize: 16, lineHeight: '22px' }}>{t('finance.dir.sub')}</div>}
+      ) : null}
       {!fam ? <FilterChips label={t('finance.dir.filter')} value={f} onChange={setF} options={FILTERS.map((k) => ({ value: k, label: t('finance.dir.f_' + k), count: count(k) }))} /> : null}
       {!fam || all.filter((d) => d.public).length > 6 ? <SearchField value={q} onChange={setQ} label={t('finance.dir.search')} placeholder={t('finance.dir.search')} /> : null}
 
-      <Card>
-        {paged.rows.map((d, i) => (
-          <div key={d.id} style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 8 : 12, flexWrap: 'wrap', padding: isPhone ? '8px 14px' : '12px 20px', borderBottom: i < paged.rows.length - 1 || paged.pages > 1 ? '1px solid #EFECEA' : 'none', minHeight: isPhone ? 56 : 68 }}>
-            <span aria-hidden="true" style={{ width: isPhone ? 36 : 40, height: isPhone ? 36 : 40, borderRadius: 999, background: '#F4F0EE', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={20} /></span>
-            <div style={{ flex: `1 1 ${!fam && canEdit ? 160 : 220}px`, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, ...(isPhone ? { order: 1 } : {}) }}>
-              <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
-              <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('finance.kind.' + d.kind)} · {what(d)}</span>
-            </div>
-            {isPhone && !fam && canEdit ? <span aria-hidden="true" style={{ order: 3, flex: '1 1 100%', height: 0 }} /> : null}
-            <a href={telOf(d.phone)} aria-label={`${t('common.call')} ${d.name}`} style={{ ...(isPhone ? { order: 4 } : {}), minHeight: isPhone ? 38 : 44, padding: '0 14px', borderRadius: 999, border: '1px solid #DBD7D6', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textDecoration: 'none', color: '#282828' }}>
-              <Icon name="call" size={18} />{fmtPhone(d.phone)}
+      <Hero>
+        <HeroHead title={t('nav.directory')} meta={q && hits.length !== all.length ? t('finance.bill.matches', { n: hits.length, of: all.length }) : undefined} />
+        {paged.rows.map((d) => {
+          const toggle = () => act('directory.togglePublic', { id: d.id }, { ok: t(d.public ? 'finance.toast.nowInternal' : 'finance.toast.nowPublic', { name: d.name }) });
+          const manage = !fam && canEdit;
+          const call = (
+            <a href={telOf(d.phone)} aria-label={`${t('common.call')} ${d.name}`} className="h-cream" style={{ height: 40, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 14, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textDecoration: 'none', color: '#24201C', flex: 'none' }}>
+              <Icon name="call" size={18} weight={300} />{fmtPhone(d.phone)}
             </a>
-            {!fam && isPhone && canEdit ? null : !fam ? (d.public ? <span style={isPhone ? { order: 5 } : undefined}><Badge kind="paid" label={t('finance.dir.public')} /></span> : (
-              <span style={{ ...(isPhone ? { order: 5 } : {}), height: 28, padding: '0 10px 0 6px', borderRadius: 999, background: '#E8E1D8', color: '#282828', fontSize: 'max(13px, var(--cp-small, 0px))', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', whiteSpace: 'nowrap' }}>
-                <Icon name="lock" size={17} fill={1} />{t('finance.dir.internal')}
-              </span>
-            )) : null}
-            {!fam && canEdit ? (
-              isPhone ? (
-                // phone: edit and delete sit beside the name; the phone, the badge and the public switch share the second line
-                <>
-                  <span style={{ order: 2, display: 'inline-flex', alignItems: 'center', gap: 0, flex: 'none' }}>
-                    <IconButton icon="edit" label={`${t('common.edit')} ${d.name}`} bordered={false} size={40} onClick={() => setForm(d)} />
-                    <IconButton icon="delete" label={`${t('common.delete')} ${d.name}`} bordered={false} size={40} onClick={() => setDel(d)} />
-                  </span>
-                  <button type="button" aria-label={`${d.public ? t('finance.dir.makeInternal') : t('finance.dir.makePublic')}: ${d.name}`} onClick={() => act('directory.togglePublic', { id: d.id }, { ok: t(d.public ? 'finance.toast.nowInternal' : 'finance.toast.nowPublic', { name: d.name }) })}
-                    style={{ order: 6, marginLeft: 'auto', height: 38, padding: '0 8px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
-                    {d.public ? t('finance.dir.makeInternal') : t('finance.dir.makePublic')}
-                  </button>
-                </>
-              ) : (
-              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, flex: 'none' }}>
-                <button type="button" aria-label={`${d.public ? t('finance.dir.makeInternal') : t('finance.dir.makePublic')}: ${d.name}`} onClick={() => act('directory.togglePublic', { id: d.id }, { ok: t(d.public ? 'finance.toast.nowInternal' : 'finance.toast.nowPublic', { name: d.name }) })}
-                  style={{ height: 44, padding: '0 12px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
-                  {d.public ? t('finance.dir.makeInternal') : t('finance.dir.makePublic')}
-                </button>
-                <IconButton icon="edit" label={`${t('common.edit')} ${d.name}`} bordered={false} onClick={() => setForm(d)} />
-                <IconButton icon="delete" label={`${t('common.delete')} ${d.name}`} bordered={false} onClick={() => setDel(d)} />
-              </span>
-              )
-            ) : null}
-          </div>
-        ))}
+          );
+          const vis = !fam ? (d.public ? <Dot color="#3D6B4F">{t('finance.dir.public')}</Dot> : <Dot color="#8A8078">{t('finance.dir.internal')}</Dot>) : null;
+          const toggleBtn = manage ? (
+            <button type="button" aria-label={`${d.public ? t('finance.dir.makeInternal') : t('finance.dir.makePublic')}: ${d.name}`} onClick={toggle}
+              style={{ height: 40, padding: '0 6px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+              {d.public ? t('finance.dir.makeInternal') : t('finance.dir.makePublic')}
+            </button>
+          ) : null;
+          const icons = manage ? (
+            <span style={{ display: 'inline-flex', alignItems: 'center', flex: 'none' }}>
+              <IconButton icon="edit" label={`${t('common.edit')} ${d.name}`} bordered={false} size={40} color="#6B6259" onClick={() => setForm(d)} />
+              <IconButton icon="delete" label={`${t('common.delete')} ${d.name}`} bordered={false} size={40} color="#6B6259" onClick={() => setDel(d)} />
+            </span>
+          ) : null;
+          return (
+            <div key={d.id} style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16 }}>
+                <span aria-hidden="true" style={{ width: isPhone ? 40 : 46, height: isPhone ? 40 : 46, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6E5A43', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={isPhone ? 20 : 22} weight={300} /></span>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={rowTitle}>{d.name}</span>
+                  <span style={rowSub}>{t('finance.kind.' + d.kind)} · {what(d)}</span>
+                </div>
+                {isPhone ? icons : (
+                  <>
+                    {vis}
+                    {call}
+                    {toggleBtn}
+                    {icons}
+                  </>
+                )}
+              </div>
+              {isPhone ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', paddingLeft: 52 }}>
+                  {call}
+                  {vis}
+                  <span style={{ marginLeft: 'auto' }}>{toggleBtn}</span>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
         {!hits.length ? <EmptyState icon={q ? 'search_off' : 'contacts'} title={q ? t('common.noResults') : t('finance.dir.empty')} /> : null}
         <PagerBar paged={paged} label={t('nav.directory')} />
-      </Card>
+      </Hero>
 
       <ContactForm value={form} onClose={() => setForm(null)} />
       <ConfirmDialog open={!!del} onClose={() => setDel(null)} title={t('finance.dir.deleteTitle')} body={t('finance.dir.deleteBody', { name: del?.name || '' })} confirmLabel={t('common.delete')} onConfirm={remove} />
@@ -149,9 +155,9 @@ function ContactForm({ value, onClose }: { value: null | 'new' | DirectoryContac
       </div>
       <TextField label={t('common.name')} value={v.name} onChange={(x) => set({ name: x })} maxLength={120} />
       <TextField label={t('finance.dir.what')} value={v.what} onChange={(x) => set({ what: x })} maxLength={160} placeholder={t('finance.dir.whatEx')} />
-      <TextField label={t('finance.dir.whatId')} value={v.whatId} onChange={(x) => set({ whatId: x })} maxLength={160} hint={t('finance.dir.whatIdHint')} />
+      <TextField label={t('finance.dir.whatId')} value={v.whatId} onChange={(x) => set({ whatId: x })} maxLength={160} />
       <TextField label={t('common.phone')} value={v.phone} onChange={(x) => set({ phone: x })} inputMode="tel" type="tel" error={v.phone && !phoneOk ? t('finance.dir.phoneBad') : undefined} />
-      <Toggle on={v.pub} onClick={() => set({ pub: !v.pub })} label={t('finance.dir.visibleToFamilies')} sub={t('finance.dir.visibleHelp')} />
+      <Toggle on={v.pub} onClick={() => set({ pub: !v.pub })} label={t('finance.dir.visibleToFamilies')} />
     </FormOverlay>
   );
 }

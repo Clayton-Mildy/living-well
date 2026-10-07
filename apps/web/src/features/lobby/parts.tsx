@@ -22,8 +22,8 @@ export function Field({ label, value, onChange, hint, autoFocus, inputMode, maxL
     <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
       {label ? <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{label}</span> : null}
       <input ref={ref} value={value} onChange={(e) => onChange(e.target.value)} inputMode={inputMode} maxLength={maxLength} placeholder={placeholder}
-        style={{ height: 52, flex: 'none', border: '1px solid #8A755B', borderRadius: 16, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#282828', outline: 'none', width: '100%', minWidth: 0 }} />
-      {hint ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{hint}</span> : null}
+        style={{ height: 52, flex: 'none', border: '1px solid #DDD1C2', borderRadius: 12, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', width: '100%', minWidth: 0 }} />
+      {hint ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{hint}</span> : null}
     </label>
   );
 }
@@ -53,8 +53,8 @@ const MOBILITY_ICON = { walkingStick: 'elderly', walker: 'assist_walker', wheelc
 export const drugLabel = (t: TFn, d: DrugAllergy) => (d.startsWith('other:') ? d.slice(6) : t('lobby.drug.' + d));
 /** `food` = false leaves out food allergies and diets (the Arrivals list rows: the kitchen has them). */
 export function memberFlags(t: TFn, m: Member, full = false, food = true): Flag[] {
-  const rust = { bg: '#F7E4DD', ic: '#AF4B2F' };
-  const linen = { bg: '#E8E1D8', ic: '#282828' };
+  const rust = { bg: '#F9E3DB', ic: '#9A3D24' };
+  const linen = { bg: '#F3EEE8', ic: '#24201C' };
   const out: Flag[] = food ? m.health.food.map((a) => ({ icon: 'no_food', label: t('lobby.food.' + a), ...rust })) : [];
   if (food && m.health.foodOther) out.push({ icon: 'no_food', label: m.health.foodOther, ...rust });
   if (m.health.mobility) out.push({ icon: MOBILITY_ICON[m.health.mobility], label: t('lobby.mobility.' + m.health.mobility), ...linen });
@@ -66,11 +66,30 @@ export function memberFlags(t: TFn, m: Member, full = false, food = true): Flag[
   }
   return out;
 }
+/** The safety-critical allergies (food and drug) of a member as one line ("Shellfish allergy, Penicillin allergy"), or '' when none.
+ *  This is the only care tag a list row shows (v3 quiet rows); the member drawer lists every tag. */
+export function allergyLine(t: TFn, m: Member): string {
+  const parts = [
+    ...m.health.food.map((a) => t('lobby.drugAllergy', { d: t('lobby.food.' + a) })),
+    ...(m.health.foodOther ? [t('lobby.drugAllergy', { d: m.health.foodOther })] : []),
+    ...m.health.drugs.map((d) => t('lobby.drugAllergy', { d: drugLabel(t, d) })),
+  ];
+  return parts.join(', ');
+}
+/** v3 inline status item: a 6px dot plus 14px/500 text (rust allergy, sage / ochre status). */
+export function DotItem({ color, children }: { color: string; children: ReactNode }) {
+  return (
+    <span style={{ color, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+      <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: color, flex: 'none' }} />
+      {children}
+    </span>
+  );
+}
 /** `card` = the design's 32px chip (camera card, drawer); `row` = the 28px chip inside list rows. */
 export function FlagChip({ f, size = 'card' }: { f: Flag; size?: 'card' | 'row' }) {
   const row = size === 'row';
   return (
-    <span style={{ height: row ? 28 : 32, padding: row ? '0 10px' : '0 12px', borderRadius: 999, background: f.bg, color: '#282828', fontSize: row ? FONT_SMALL : FONT_BODY, display: 'inline-flex', alignItems: 'center', gap: row ? 4 : 6, whiteSpace: 'nowrap' }}>
+    <span style={{ minHeight: row ? 28 : 32, padding: row ? '4px 10px' : '5px 12px', borderRadius: 10, background: f.bg, color: '#24201C', fontSize: row ? FONT_SMALL : FONT_BODY, lineHeight: 1.3, display: 'inline-flex', alignItems: 'center', gap: row ? 4 : 6, maxWidth: '100%', boxSizing: 'border-box' }}>
       <Icon name={f.icon} size={row ? 16 : 18} color={f.ic} />
       {f.label}
     </span>
@@ -81,14 +100,14 @@ export function FlagChip({ f, size = 'card' }: { f: Flag; size?: 'card' | 'row' 
 export function ReadingBadge({ t, r }: { t: TFn; r: Reading }) {
   const b = BADGE[r.status];
   return (
-    <span style={{ alignSelf: 'flex-start', marginTop: 4, height: 30, padding: '0 12px 0 8px', borderRadius: 999, background: b[2], color: b[1], fontSize: FONT_BODY, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+    <span style={{ alignSelf: 'flex-start', marginTop: 4, height: 30, padding: '0 12px 0 8px', borderRadius: 8, background: b[2], color: b[1], fontSize: FONT_BODY, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
       <Icon name={b[0]} size={18} fill={1} />
       {r.sys != null ? `${t('status.' + r.status)} · ${r.sys}/${r.dia}` : t('status.' + r.status)}
     </span>
   );
 }
 
-const callStyle: CSSProperties = { width: 44, height: 44, borderRadius: 999, border: '1px solid #DBD7D6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', textDecoration: 'none', flex: 'none', background: '#FFFFFF' };
+const callStyle: CSSProperties = { width: 44, height: 44, borderRadius: 999, border: '1px solid #E4DACD', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', textDecoration: 'none', flex: 'none', background: '#FFFFFF' };
 /** A real tel: link (44px round button) for any phone number we show. */
 export function CallLink({ t, name, phone }: { t: TFn; name: string; phone: string }) {
   return (

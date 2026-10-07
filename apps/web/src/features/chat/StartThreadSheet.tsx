@@ -3,7 +3,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { approvedMembers, contactsOfMember, isPendingRow, memberName, memberShort, sortBy, type ThreadTopic } from '@cp/shared';
 import { topicsOf } from '@cp/shared/rules/chat';
-import { Avatar, Button, ChipGroup, FONT_BODY, FONT_SMALL, Icon, Note, Pager, Sheet, TextField, usePaged } from '../../components/ui';
+import { Avatar, Button, ChipGroup, FONT_BODY, Icon, Note, Pager, Sheet, TextField, usePaged } from '../../components/ui';
 import { useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useAct } from '../../lib/act';
@@ -13,7 +13,7 @@ import { memberPhoto } from '../../lib/media';
 
 /** Members per page in the member picker. */
 export const MEMBERS_PER_PAGE = 8;
-const label = { fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase' as const, fontWeight: 500, lineHeight: '18px' };
+const label = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase' as const, fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };
 const cap = (s: string) => (s ? s.charAt(0).toUpperCase() + s.slice(1) : s);
 const norm = (v: string) => v.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 
@@ -63,13 +63,12 @@ function Body({ memberId, onClose }: { memberId?: string; onClose: () => void })
   return (
     <Sheet open onClose={onClose} title={t('chat.startTitle')}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18, flex: 'none' }}>
-      <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('chat.startSub')}</div>
       {!topics.length ? <Note tone="ochre" icon="info">{t('chat.noTopic')}</Note> : null}
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
         <span style={label}>{t('chat.stepMember')}</span>
         {member ? (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 18, background: '#F4F0EE' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', borderRadius: 12, background: '#F3EEE8' }}>
             <Avatar name={memberName(member)} tone={member.photoTone} src={memberPhoto(member)} size={44} />
             <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 500, lineHeight: 1.35 }}>{memberName(member)}</span>
             {!memberId ? <Button variant="secondary" size={44} onClick={() => { setMid(null); setFid(null); }}>{t('chat.change')}</Button> : null}
@@ -77,17 +76,17 @@ function Body({ memberId, onClose }: { memberId?: string; onClose: () => void })
         ) : (
           <>
             <Field label={t('chat.searchMember')} value={q} onChange={setQ} autoFocus inputMode="search" />
-            <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #DBD7D6', borderRadius: 20, overflow: 'hidden' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #EFE7DC', borderRadius: 14, overflow: 'hidden' }}>
               {paged.rows.map((m, i) => (
                 <button key={m.id} type="button" onClick={() => { setMid(m.id); setFid(null); }} className="h-row"
-                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px', minHeight: 64, border: 'none', borderTop: i ? '1px solid #EFECEA' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
+                  style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '10px 16px', minHeight: 64, border: 'none', borderTop: i ? '1px solid #F0EAE1' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                   <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={44} />
                   <span style={{ flex: 1, minWidth: 0, fontSize: 17, fontWeight: 500, lineHeight: 1.35 }}>{memberName(m)}</span>
-                  <Icon name="chevron_right" size={22} color="#6A6967" />
+                  <Icon name="chevron_right" size={22} color="#5E5852" />
                 </button>
               ))}
-              {!matches.length ? <div style={{ padding: '20px 16px', fontSize: 16, color: '#6A6967', textAlign: 'center' }}>{t('chat.noMembers')}</div> : null}
-              {paged.pages > 1 ? <div style={{ borderTop: '1px solid #EFECEA' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('chat.pagerMembers')} /></div> : null}
+              {!matches.length ? <div style={{ padding: '20px 16px', fontSize: 16, color: '#5E5852', textAlign: 'center' }}>{t('chat.noMembers')}</div> : null}
+              {paged.pages > 1 ? <div style={{ borderTop: '1px solid #F0EAE1' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('chat.pagerMembers')} /></div> : null}
             </div>
           </>
         )}
@@ -102,11 +101,11 @@ function Body({ memberId, onClose }: { memberId?: string; onClose: () => void })
                 const sel = contactId === contact.id;
                 return (
                   <button key={contact.id} type="button" role="radio" aria-checked={sel} onClick={() => setFid(contact.id)}
-                    style={{ minHeight: 60, padding: '10px 16px', borderRadius: 18, border: sel ? '2px solid #75624B' : '1px solid #DBD7D6', background: sel ? '#F4F0EE' : '#FFFFFF', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', color: '#282828', textAlign: 'left', fontFamily: 'Inter' }}>
+                    style={{ minHeight: 60, padding: '10px 16px', borderRadius: 14, border: sel ? '2px solid #24201C' : '1px solid #EFE7DC', background: sel ? '#FBF8F4' : '#FFFFFF', display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
                     <Icon name={sel ? 'radio_button_checked' : 'radio_button_unchecked'} size={24} color="#75624B" fill={sel ? 1 : 0} />
                     <span style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{contact.name}</span>
-                      <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{`${cap(relText(t, link.relation))}${link.primary ? ' · ' + t('chat.primaryTag') : ''}`}</span>
+                      <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{`${cap(relText(t, link.relation))}${link.primary ? ' · ' + t('chat.primaryTag') : ''}`}</span>
                     </span>
                   </button>
                 );

@@ -4,7 +4,7 @@ import type { family as EN } from '../en/family';
 export const family: Same<typeof EN> = {
   // ----- headings, plan and billing words from the design -----
   goodMorning: 'Selamat pagi, {n}', goodAfternoon: 'Selamat siang, {n}', todayAtClub: 'Hari ini di klub', now: 'SEKARANG', photos: 'Foto', notesTeam: 'Dari tim', used: 'Terpakai', payVA: 'Bayar via virtual account',
-  messageClub: 'Kirim pesan ke klub', bank: 'Bank', vaNumber: 'Virtual account', autoConfirm: 'Pembayaran dikonfirmasi otomatis, biasanya dalam beberapa menit. Kuitansi dikirim lewat WhatsApp.',
+  messageClub: 'Kirim pesan ke klub', bank: 'Bank', vaNumber: 'Virtual account', autoConfirm: 'Dikonfirmasi otomatis, biasanya dalam beberapa menit.',
   simPay: 'Demo: simulasikan pembayaran diterima', invL: 'Tagihan {p}', dueOn: 'Jatuh tempo {d} · virtual account DOKU', paidOn: 'Dibayar {d} · kuitansi terkirim', billingBy: '{n} mengurus tagihan untuk {m}.',
   sharedNote: 'Catatan dari klub: {n}', sPay: 'Bayar via virtual account', paidT: 'Pembayaran diterima. Kuitansi dikirim ke {n} lewat WhatsApp.', copied: 'Nomor virtual account disalin.', mood_cheerful: 'Ceria',
   mood_calm: 'Tenang', mood_quiet: 'Pendiam', mood_agitated: 'Gelisah', lunch_all: 'Makan siang habis', lunch_most: 'Makan siang hampir habis', lunch_half: 'Makan siang setengah', lunch_little: 'Makan sedikit',
@@ -56,8 +56,8 @@ export const family: Same<typeof EN> = {
   invOpen: 'Tagihan terbuka', invOpenSub: '{n} untuk dibayar · jatuh tempo terlama {d}', invOverdueSub: 'Terlambat sejak {d}', invNone: 'Belum ada tagihan', invNoneSub: 'Tagihan pertama terbit pada tanggal {d} ({date}).',
   invAllPaid: 'Semua lunas', invAllPaidSub: 'Tidak ada yang perlu dibayar saat ini.', partPaid: 'Dibayar sebagian · {a} dari {t}', seeBilling: 'Lihat semua tagihan', viewDetails: 'Rincian', payOne: 'Bayar tagihan ini',
   billEyebrowMulti: 'Satu tagihan per orang tua', billTotal: 'Total yang harus dibayar', billTotalSub: '{n} terbuka · {o} terlambat', billTotalSubOk: '{n} terbuka', payTogether: 'Bayar semuanya sekaligus',
-  payTogetherNote: '{list}. Satu transfer melunasi semua tagihan.', comboVa: 'Virtual account gabungan · DOKU', history: 'Riwayat', histDue: '{no} · jatuh tempo {d}', histPaid: '{no} · dibayar {d}',
-  payerNote: '{n} mengurus tagihan, jadi tombol pembayaran muncul di ponselnya. Anda tetap bisa melihat semua tagihan di sini.', viewInvoice: 'Buka tagihan {no}', payTotal: 'Total',
+  payTogetherNote: '{list}', comboVa: 'Virtual account gabungan · DOKU', history: 'Riwayat', histDue: '{no} · jatuh tempo {d}', histPaid: '{no} · dibayar {d}',
+  payerNote: '{n} mengurus tagihan.', viewInvoice: 'Buka tagihan {no}', payTotal: 'Total',
 
   // ----- sheet: lunch feedback -----
   fbTitle: 'Masukan untuk makan siang', fbMember: 'Untuk siapa?', fbDay: 'Hari apa?', fbDish: 'Hidangan yang mana?', fbWhole: 'Seluruh hidangan', fbText: 'Apa yang ingin Anda sampaikan ke dapur?',

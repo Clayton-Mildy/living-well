@@ -443,7 +443,14 @@ test('Daily log: save Bambang as quiet / ate most, then everyone else as normal'
   await expect(page.getByText('Saved · Quiet, Ate most')).toBeVisible();
   const s = await snapshot(page, 's5');
   expect(s.dailyLogs['log-m10-2026-10-21']).toMatchObject({ mood: 'quiet', lunch: 'most', note: 'Quiet but enjoyed the tea.', status: 'saved', by: 's5' });
-  // the family sees it, and was told once
+  // a teacher's log waits for management: the family sees nothing and is not told yet
+  await expect(page.getByRole('status')).toContainText('Waiting for management approval.');
+  expect(s.dailyLogs['log-m10-2026-10-21'].approval).toMatchObject({ status: 'pending' });
+  const before = await snapshot(page, 'fm10_0');
+  expect(before.dailyLogs['log-m10-2026-10-21']).toBeUndefined();
+  expect(Object.values(before.notifications).filter((n) => n.kind === 'activity.notif.logSaved')).toHaveLength(0);
+  // management approves: the family sees it, and is told once
+  await actAs(page, 's9', 'approval.approve', { type: 'logs', ids: ['log-m10-2026-10-21'] }, 'e2e-ap-log-m10');
   const fam = await snapshot(page, 'fm10_0');
   expect(fam.dailyLogs['log-m10-2026-10-21']).toMatchObject({ mood: 'quiet', lunch: 'most' });
   expect(Object.values(fam.notifications).filter((n) => n.kind === 'activity.notif.logSaved')).toHaveLength(1);
@@ -484,6 +491,10 @@ test('Daily log: edit yesterday’s log (the last 7 days are editable)', async (
   const l = s.dailyLogs['log-m2-2026-10-20'];
   expect(l).toMatchObject({ mood: 'cheerful', lunch: 'half', note: 'Late edit from the notes.' });
   expect((l.edits as { by: string }[]).map((e) => e.by)).toEqual(['s5']);
+  // the edit waits for management; the family hears "updated" once it is approved
+  expect(l.approval).toMatchObject({ status: 'pending' });
+  expect(Object.values((await snapshot(page, 'fm2_0')).notifications).some((n) => n.kind === 'activity.notif.logUpdated')).toBe(false);
+  await actAs(page, 's9', 'approval.approve', { type: 'logs', ids: ['log-m2-2026-10-20'] }, 'e2e-ap-log-m2');
   expect(Object.values((await snapshot(page, 'fm2_0')).notifications).some((n) => n.kind === 'activity.notif.logUpdated')).toBe(true);
   // today is unaffected, and the window ends 7 days back
   await days.getByRole('button', { name: 'Today' }).click();

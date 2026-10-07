@@ -244,8 +244,7 @@ test.describe('payments', () => {
     await toast(page, 'Refund of Rp 1.000.000 recorded and sent to Xero.');
     await expect(page.getByText(/Refunded Rp 1\.000\.000 · .* · Absent all month/)).toBeVisible();
     await expect(page.getByText('Rp 14.000.000').first()).toBeVisible(); // refunds are not in the totals
-    if (isPhone(page)) await expect(page.getByTestId('pay-tile-refunds')).toContainText('Rp 1.000.000'); // a phone shows only the amount
-    else await expect(page.getByText(/Rp 1\.000\.000 · sent to Xero as credit notes/)).toBeVisible();
+    await expect(page.getByTestId('pay-tile-refunds')).toContainText('Rp 1.000.000'); // the tile shows the amount only
 
     // Hendra: a refund with a credit note keeps his invoice settled
     await page.getByRole('button', { name: /^Refund Opa Hendra Gunawan INV-2610-002/ }).click();

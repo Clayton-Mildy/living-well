@@ -9,6 +9,8 @@ import type {
 import { e164, toMin } from '../util';
 import { defineAction, hasRole, isMgmt, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
 import { requireMember, shortOf, familyUserIds } from './helpers';
+import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
+import { NOTE_KEYS } from '../rules/approvals';
 import { currentMembership, isOpen, isPendingRow, membershipStatus, memberShort, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
 import { paidOn } from '../rules/billing';
 import {
@@ -151,7 +153,9 @@ function parseNewMember(raw: unknown): NewMemberInput {
       mobility: MOBILITIES.includes(h.mobility as Mobility) ? (h.mobility as Mobility) : null, diet: enumList(h.diet, DIETS), meds: parseMeds(h.meds).map(({ name, dose, timing }) => ({ name, dose, timing })),
     },
     careInstructions: txt(o.careInstructions, 1000),
-    docs: enumList(o.docs, DOC_TYPES),
+    docs: enumList(o.docs, DOC_TYPES).filter((x) => x !== 'membershipForm'), // the signed registration form is attached below, never just ticked
+    formMediaId: mediaIdOf(o.formMediaId) ?? '',
+    formFileName: txt(o.formFileName, 120) || 'registration-form',
     consent: { data: cons.data === true, face: cons.face !== false },
     ...optionalNote(o),
   };
@@ -161,7 +165,7 @@ function parseNewMember(raw: unknown): NewMemberInput {
 }
 
 /** An uploaded media id (`md_…` from POST /api/media), or undefined when none was given. */
-function mediaIdOf(v: unknown): string | undefined {
+export function mediaIdOf(v: unknown): string | undefined {
   if (v === undefined || v === null || v === '') return undefined;
   const id = txt(v, 80);
   if (!/^md_[A-Za-z0-9_-]{8,}$/.test(id)) bad('err.invalid');
@@ -231,6 +235,8 @@ export const membersActions: ActionDef[] = [
         { kind: 'face', granted: input.consent.face, by: ctx.actor, byName, at: ctx.nowDT, via: 'staff' },
       ];
       const documents: MemberDocument[] = input.docs.filter((t) => t !== 'nannyKtp' || input.nanny).map((type) => ({ id: docIdFor(id, type), type, status: 'onFile', fileName: SIM_FILE[type], on: ctx.today, via: 'staff', by: ctx.actor }));
+      // the signed paper registration form: the uploaded photo or PDF
+      documents.push({ id: docIdFor(id, 'membershipForm'), type: 'membershipForm', status: 'onFile', mediaId: input.formMediaId, fileName: input.formFileName, on: ctx.today, via: 'staff', by: ctx.actor });
       d.members[id] = {
         id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, title: input.title, firstName, lastName, gender: genderOf(input.title), dob: input.dob, ageYears: null,
         address: input.address || null, photoTone: (num - 1) % 5, ...(input.photoMediaId ? { photoMediaId: input.photoMediaId } : {}), memberships: [{ start: input.start }], plans: [{ from: input.start, plan: input.plan, by: ctx.actor }],
@@ -292,12 +298,12 @@ export const membersActions: ActionDef[] = [
       feed(ctx, d, m.id, 'edit', 'details', { fields: fields.join(','), by: ctx.actor });
     },
   }),
-  defineAction<{ memberId: string; docs: { type: DocType; fileName: string | null }[]; note?: string }>({
+  defineAction<{ memberId: string; docs: { type: DocType; fileName: string | null; mediaId?: string }[]; note?: string }>({
     name: 'members.setDocuments',
     can: (u) => frontDesk(u),
     parse: (raw) => {
       const o = obj(raw);
-      const docs = (Array.isArray(o.docs) ? o.docs : []).slice(0, 8).map((x) => { const r = obj(x); return { type: oneOf(r.type, DOC_TYPES), fileName: r.fileName === null ? null : txt(r.fileName, 120) || bad('err.invalid') }; });
+      const docs = (Array.isArray(o.docs) ? o.docs : []).slice(0, 8).map((x) => { const r = obj(x); const mediaId = mediaIdOf(r.mediaId); return { type: oneOf(r.type, DOC_TYPES), fileName: r.fileName === null ? null : txt(r.fileName, 120) || bad('err.invalid'), ...(mediaId ? { mediaId } : {}) }; });
       if (!docs.length) bad('err.noChanges');
       return { memberId: txt(o.memberId, 60), docs, ...optionalNote(o) };
     },
@@ -309,7 +315,7 @@ export const membersActions: ActionDef[] = [
         if (x.type === 'nannyKtp' && !m.nanny) ctx.fail('members.err.noNanny');
         const i = m.documents.findIndex((q) => q.type === x.type);
         if (x.fileName === null) { if (i >= 0) { m.documents.splice(i, 1); types.push(x.type); } continue; }
-        const doc: MemberDocument = { id: docIdFor(m.id, x.type), type: x.type, status: 'onFile', fileName: x.fileName, on: ctx.today, via: 'staff', by: ctx.actor };
+        const doc: MemberDocument = { id: docIdFor(m.id, x.type), type: x.type, status: 'onFile', fileName: x.fileName, ...(x.mediaId ? { mediaId: x.mediaId } : {}), on: ctx.today, via: 'staff', by: ctx.actor };
         if (i >= 0) m.documents[i] = doc; else m.documents.push(doc);
         types.push(x.type);
       }
@@ -589,9 +595,13 @@ export const membersActions: ActionDef[] = [
     run(d, input, ctx) {
       const m = editable(d, input.memberId, ctx);
       const id = ctx.id('note');
-      if (input.visibility === 'family' && input.pinned) for (const n of Object.values(d.memberNotes)) if (n.memberId === m.id && n.visibility === 'family' && n.pinned) n.pinned = false;
+      // a family-visible note by anyone but management waits for approval (families don't see it, and the note it would replace as the pinned one stays pinned until then)
+      const gated = input.visibility === 'family' && needsApproval(ctx);
+      if (input.visibility === 'family' && input.pinned && !gated) for (const n of Object.values(d.memberNotes)) if (n.memberId === m.id && n.visibility === 'family' && n.pinned) n.pinned = false;
       d.memberNotes[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: m.id, visibility: input.visibility, text: input.text, on: ctx.today, ...(input.visibility === 'family' && input.pinned ? { pinned: true } : {}) };
+      if (gated) markPending(d.memberNotes[id], ctx, undefined);
       ctx.result.noteId = id;
+      ctx.result.pending = gated;
       feed(ctx, d, m.id, input.visibility === 'family' ? 'group' : 'lock', input.visibility === 'family' ? 'noteShared' : 'noteStaff');
     },
   }),
@@ -609,15 +619,24 @@ export const membersActions: ActionDef[] = [
       const n = d.memberNotes[input.noteId];
       if (!n || n.deletedAt) ctx.fail('err.notFound');
       editable(d, n.memberId, ctx);
+      const gated = n.visibility === 'family' && needsApproval(ctx);
+      const before = n.visibility === 'family' ? priorOf(n, NOTE_KEYS) : undefined;
       let changed = false;
       if (input.text !== undefined && input.text !== n.text) { n.text = input.text; changed = true; }
       if (input.pinned !== undefined && n.visibility === 'family' && !!n.pinned !== input.pinned) {
-        if (input.pinned) for (const o of Object.values(d.memberNotes)) if (o.memberId === n.memberId && o.visibility === 'family' && o.pinned && o.id !== n.id) o.pinned = false;
+        if (input.pinned && !gated) for (const o of Object.values(d.memberNotes)) if (o.memberId === n.memberId && o.visibility === 'family' && o.pinned && o.id !== n.id) o.pinned = false;
         n.pinned = input.pinned || undefined;
         changed = true;
       }
       if (!changed) ctx.fail('err.noChanges');
       n.editedAt = ctx.nowDT; n.editedBy = ctx.actor;
+      if (gated) markPending(n, ctx, before);
+      else if (n.visibility === 'family') {
+        // management's edit approves the note; the pinned one it replaces steps aside
+        if (n.approval?.status === 'pending' && n.pinned) for (const o of Object.values(d.memberNotes)) if (o.memberId === n.memberId && o.visibility === 'family' && o.pinned && o.id !== n.id) o.pinned = false;
+        clearApproval(n);
+      }
+      ctx.result.pending = gated;
       feed(ctx, d, n.memberId, 'edit_note', 'noteEdited');
     },
   }),

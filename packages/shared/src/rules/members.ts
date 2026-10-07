@@ -5,7 +5,7 @@ import type {
   ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument,
   Mobility, MedTiming, Photo, Plan, Reading, Relation, Row, Title, YM,
 } from '../types';
-import { addDays, addMonths, ageOn, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
+import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
 import { currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
 import { invoiceStatus, invoicesOf, nextInvoiceNumber, priceOn, balanceOf } from './billing';
@@ -126,6 +126,21 @@ export const isNewMember = (m: Member, today: ISODate) => {
 };
 export const isEndedMember = (m: Member, today: ISODate) => membershipStatus(m, today) === 'ended';
 
+// ---------- subscription period ----------
+// Subscriptions are month to month: each month's end the family continues, upgrades, downgrades or freezes. So a running membership "renews" at the
+// end of the current month; a membership with a last day "ends" then (or "ended" when that day has passed).
+export type SubEndKind = 'renews' | 'ends' | 'ended';
+/** When the current subscription started (the current membership's first day). */
+export const subStart = (m: Member): ISODate | undefined => currentMembership(m)?.start;
+/** The end of the current subscription period: its last day when set, otherwise the last day of this month (of the start month when it has not started yet). */
+export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKind } | undefined {
+  const cur = currentMembership(m);
+  if (!cur) return undefined;
+  if (cur.lastDay) return { on: cur.lastDay, kind: cur.lastDay < today ? 'ended' : 'ends' };
+  const p = ym(cur.start > today ? cur.start : today);
+  return { on: `${p}-${String(daysInMonth(p)).padStart(2, '0')}`, kind: 'renews' };
+}
+
 // ---------- list rows, filters, search ----------
 export type MemberFilter = 'active' | 'in' | 'att' | 'flex' | 'gold' | 'ended';
 export const MEMBER_FILTERS: MemberFilter[] = ['active', 'in', 'att', 'flex', 'gold', 'ended'];
@@ -135,6 +150,9 @@ export interface MemberRow {
   pending: boolean;
   ended: boolean;
   endsOn?: ISODate;
+  /** current subscription start and period end (undefined for a pending new member) */
+  subStart?: ISODate;
+  subEnd?: { on: ISODate; kind: SubEndKind };
   isNew: boolean;
   plan: Plan;
   lr?: Reading;
@@ -158,7 +176,7 @@ export function memberRows(s: ClubState, today: ISODate): MemberRow[] {
   ).map((m) => {
     const lr = latestBp(s, m.id);
     const pending = isPendingRow(m);
-    return { m, st: memberStatus(s, m, today), pending, ended: !pending && isEndedMember(m, today), endsOn: pending ? undefined : endingOn(m, today), isNew: isNewMember(m, today), plan: planOn(m, today).plan, lr, hs: lr && lr.status !== 'normal' ? lr.status : null, od: overdue.has(m.id), ...(last[m.id] ? { lastVisit: last[m.id] } : {}) };
+    return { m, st: memberStatus(s, m, today), pending, ended: !pending && isEndedMember(m, today), endsOn: pending ? undefined : endingOn(m, today), ...(pending ? {} : { subStart: subStart(m), subEnd: subEnd(m, today) }), isNew: isNewMember(m, today), plan: planOn(m, today).plan, lr, hs: lr && lr.status !== 'normal' ? lr.status : null, od: overdue.has(m.id), ...(last[m.id] ? { lastVisit: last[m.id] } : {}) };
   });
 }
 export const FILTERS: Record<MemberFilter, (r: MemberRow) => boolean> = {
@@ -169,7 +187,21 @@ export const FILTERS: Record<MemberFilter, (r: MemberRow) => boolean> = {
   gold: (r) => !r.ended && r.plan === 'gold',
   ended: (r) => r.ended,
 };
-export const filterCounts = (rows: MemberRow[]) => Object.fromEntries(MEMBER_FILTERS.map((f) => [f, rows.filter(FILTERS[f]).length])) as Record<MemberFilter, number>;
+export type MemberSort = 'name' | 'startNew' | 'startOld' | 'endSoon';
+export const MEMBER_SORTS: MemberSort[] = ['name', 'startNew', 'startOld', 'endSoon'];
+/** Sort list rows (rows arrive by name; ties and rows without dates, e.g. pending ones, keep that order, dateless last). */
+export function sortMemberRows(rows: MemberRow[], by: MemberSort): MemberRow[] {
+  if (by === 'name') return rows;
+  const key = (r: MemberRow) => (by === 'endSoon' ? r.subEnd?.on : r.subStart);
+  const dir = by === 'startNew' ? -1 : 1;
+  return rows.map((r, i) => ({ r, i, k: key(r) })).sort((a, b) => {
+    if (a.k === b.k) return a.i - b.i;
+    if (a.k === undefined) return 1;
+    if (b.k === undefined) return -1;
+    return a.k < b.k ? -dir : dir;
+  }).map((x) => x.r);
+}
+export const filterCounts =(rows: MemberRow[]) => Object.fromEntries(MEMBER_FILTERS.map((f) => [f, rows.filter(FILTERS[f]).length])) as Record<MemberFilter, number>;
 
 const digitsVariants = (q: string): string[] => {
   const d = q.replace(/\D/g, '');
@@ -293,6 +325,9 @@ export interface NewMemberInput {
   health: { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[]; meds: { name: string; dose: string; timing: MedTiming }[] };
   careInstructions: string;
   docs: DocType[];
+  /** The signed paper registration form (photo or PDF uploaded first, POST /api/media): required. */
+  formMediaId: string;
+  formFileName: string;
   consent: { data: boolean; face: boolean };
   note?: string;
 }
@@ -316,6 +351,7 @@ export function validateNewMember(d: Partial<NewMemberInput>, today?: ISODate): 
     if (!c.phone || !c.phone.trim()) bad('phone', 'phoneRequired');
     else if (!isPhone(e164(c.phone))) bad('phone', 'phoneInvalid');
   }
+  if (!d.formMediaId) bad('form', 'formRequired');
   if (!d.consent?.data) bad('consentData', 'consentRequired');
   for (const med of d.health?.meds || []) if (!med.name?.trim()) { bad('meds', 'medNameRequired'); break; }
   if (d.nanny && !d.nanny.name?.trim()) bad('nannyName', 'nannyNameRequired');

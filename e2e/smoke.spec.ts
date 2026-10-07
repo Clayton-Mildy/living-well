@@ -94,13 +94,13 @@ for (const lang of ['en', 'id'] as const) {
   }
 }
 
-// pages outside the app shell: the public membership form and the design system
+// pages outside the app shell: the design system (registration is on paper, so there is no public form)
 for (const lang of ['en', 'id'] as const) {
-  test(`${lang} public form and design system`, async ({ page }, info) => {
+  test(`${lang} design system`, async ({ page }, info) => {
     const c = watchConsole(page);
     const problems: string[] = [];
     await signIn(page, 's9', '/today', lang);
-    for (const path of ['/design-system', '/form/f7e1a2']) {
+    for (const path of ['/design-system']) {
       await page.goto(path);
       await settled(page);
       await expect(page.locator('h1, h2').first()).toBeVisible();

@@ -5,7 +5,7 @@
 import { type KeyboardEvent as RKE } from 'react';
 import { lastBefore, limitsOf, type ClubState } from '@cp/shared';
 import { lastOfKind } from '@cp/shared/rules/healthStation';
-import { Icon, TextField, FONT_BODY } from '../../components/ui';
+import { Icon, TextField } from '../../components/ui';
 import { useT, type TFn } from '../../lib/i18n';
 import type { DeviceKind } from './device';
 import { FIELD, FORM_GROUPS, GROUPS, canSave, effTell, evalDraft, flagged, groupStatus, partialGroups, press, typeText, type Draft, type FieldKey, type GroupDef } from './form';
@@ -60,7 +60,7 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
   if (ev.st.glu && ev.st.glu !== 'normal') probs.push(`${t('health.glucose')} ${draft.v.glu} mg/dL.`);
   if (ev.st.wt && ev.st.wt !== 'normal') probs.push(`${t('health.weight')} ${draft.v.wt} kg.`);
   const bannerText = overall === 'normal' ? t('health.allNormal') : `${probs.join(' ')} ${overall === 'alert' ? t('health.alertCall') : t('health.watchCall')}`;
-  const banner = overall === 'alert' ? { bg: '#FBEDE8', bd: '1px solid #AF4B2F' } : overall === 'watch' ? { bg: '#FBF5E8', bd: '1px solid #E3CF9F' } : { bg: '#FFFFFF', bd: '1px solid #DBD7D6' };
+  const banner = overall === 'alert' ? { bg: '#FBEDE8', bd: '1px solid #9A3D24' } : overall === 'watch' ? { bg: '#FBF5E8', bd: '1px solid #E3CF9F' } : { bg: '#FBFAF8', bd: '1px solid #EFE7DC' };
 
   const sh = isPhone ? 'Short' : '';
   const why = draft.meas ? t('health.whyWaiting' + sh)
@@ -81,47 +81,46 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
       onField={(k) => { onManual(); patch((d) => ({ ...d, field: k })); }} onFocus={onManual}
       onType={(k, raw) => patch((d) => typeText(d, k, raw))} onRead={() => g.device && onMeasure([g.device])} onStop={onManual} />
   );
-  const saveBg = ok && !busy ? '#75624B' : '#E8E1D8';
-  const saveFg = ok && !busy ? '#FFFFFF' : '#6A6967';
+  const saveBg = ok && !busy ? '#24201C' : '#EDE5DA';
+  const saveFg = ok && !busy ? '#FFFFFF' : '#8A8078';
 
   return (
     <>
-      <div style={{ padding: isPhone ? '14px 16px 18px' : '20px 24px', display: 'flex', flexWrap: 'wrap', gap: 20 }}>
-        <div style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ padding: isPhone ? '14px 16px 16px' : '20px clamp(18px, 2.4vw, 28px)', display: 'flex', flexWrap: 'wrap', gap: 'clamp(16px, 2vw, 24px)' }}>
+        <div style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 14 }}>
           {FORM_GROUPS.map(panel)}
         </div>
         {!isPhone ? (
-          <div style={{ flex: '0 0 222px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={smallCaps()}>{t('health.keypad', { f: FIELD[field].key ? t(FIELD[field].key!) : FIELD[field].label })}</div>
-            <div style={{ fontSize: 'max(13px, var(--cp-body, 0px))', lineHeight: '18px', color: '#6A6967' }}>{t('health.keypadNote')}</div>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 8 }}>
+          <div style={{ flex: '0 0 222px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ ...smallCaps('2px'), color: '#6E5A43' }}>{t('health.keypad', { f: FIELD[field].key ? t(FIELD[field].key!) : FIELD[field].label })}</div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 6 }}>
               {KEYS.map((k) => (
                 <button key={k} type="button" className="dh23 da24" aria-label={k === 'back' ? t('common.delete') : k} onClick={() => key(k)}
-                  style={{ height: 60, borderRadius: 16, border: 'none', background: '#F4F0EE', color: '#282828', fontSize: 24, fontWeight: 400, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>
-                  {k === 'back' ? <Icon name="backspace" size={24} /> : k}
+                  style={{ height: 54, borderRadius: 8, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 22, fontWeight: 400, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>
+                  {k === 'back' ? <Icon name="backspace" size={22} weight={300} /> : k}
                 </button>
               ))}
             </div>
           </div>
         ) : null}
       </div>
-      <div style={{ padding: isPhone ? '0 16px 20px' : '0 24px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ padding: isPhone ? '0 16px 16px' : '0 clamp(18px, 2.4vw, 28px) 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         {overall ? (
           <>
-            <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, background: banner.bg, border: banner.bd }}>
+            <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 12, background: banner.bg, border: banner.bd }}>
               <Badge kind={overall} size={32} />
-              <span style={{ fontSize: 16, lineHeight: '22px', color: '#282828' }}>{bannerText}</span>
+              <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C' }}>{bannerText}</span>
             </div>
             {isFlagged && who.kind === 'member' && recipients.length ? (
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 <PillSwitch on={tell} label={t('health.tellFam', { n: joinNames(recipients, t('common.and')) })} onClick={() => patch((d) => ({ ...d, tell: !tell }))} />
               </div>
             ) : null}
-            {isFlagged && who.kind === 'member' && !recipients.length ? <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('health.noFamily', { n: who.short })}</div> : null}
+            {isFlagged && who.kind === 'member' && !recipients.length ? <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('health.noFamily', { n: who.short })}</div> : null}
           </>
         ) : null}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={smallCaps('1.5px')}>{t('health.quickNotes')}</div>
+          <div style={{ ...smallCaps('2px'), color: '#6E5A43' }}>{t('health.quickNotes')}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {QUICK.map((k) => (
               <NoteChip key={k} on={draft.notes.includes(k)} onClick={() => patch((d) => ({ ...d, notes: d.notes.includes(k) ? d.notes.filter((x) => x !== k) : [...d.notes, k] }))}>{t('health.note.' + k)}</NoteChip>
@@ -129,24 +128,24 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
           </div>
           <TextField label={t('common.note')} value={draft.note} onChange={(v) => patch((d) => ({ ...d, note: v }))} placeholder={t('health.notePh')} multiline rows={2} maxLength={280} />
           <button type="button" role="switch" aria-checked={draft.share} onClick={() => patch((d) => ({ ...d, share: !d.share }))}
-            style={{ alignSelf: 'flex-start', height: 44, padding: '0 4px', border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: '#282828', fontSize: 16, fontFamily: 'Inter' }}>
-            <span style={{ width: 44, height: 26, borderRadius: 999, background: draft.share ? '#75624B' : '#6A6967', position: 'relative', flex: 'none' }}>
+            style={{ alignSelf: 'flex-start', height: 44, padding: '0 4px', border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: '#24201C', fontSize: 15, fontFamily: 'Inter' }}>
+            <span style={{ width: 44, height: 26, borderRadius: 999, background: draft.share ? '#24201C' : '#B9AA97', position: 'relative', flex: 'none' }}>
               <span style={{ position: 'absolute', top: 3, left: draft.share ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
             </span>
             {t('health.shareNotes')}
           </button>
         </div>
       </div>
-      <div style={{ position: 'sticky', bottom: 0, zIndex: 2, padding: `12px ${isPhone ? 16 : DEMO_CLEAR}px calc(14px + env(safe-area-inset-bottom, 0px)) 16px`, borderTop: '1px solid #EFECEA', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px 12px', background: '#FBFAF9' }}>
+      <div style={{ position: 'sticky', bottom: 0, zIndex: 2, padding: `12px ${isPhone ? 16 : DEMO_CLEAR}px calc(14px + env(safe-area-inset-bottom, 0px)) ${isPhone ? 16 : 'clamp(18px, 2.4vw, 28px)'}`, borderTop: '1px solid #F0EAE1', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px 12px', background: '#FFFFFF', borderRadius: '0 0 24px 24px' }}>
         {why ? (
-          <div role="status" style={{ flexBasis: '100%', display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: FONT_BODY, lineHeight: 1.4, color: '#282828', paddingLeft: isPhone ? 46 : 0 }}>
-            <Icon name="info" size={20} color="#7A5510" />
+          <div role="status" style={{ flexBasis: '100%', display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.4, color: '#24201C', paddingLeft: isPhone ? 46 : 0 }}>
+            <Icon name="info" size={19} weight={300} color="#7A5510" />
             <span>{why}</span>
           </div>
         ) : null}
-        <button type="button" onClick={onClose} style={{ whiteSpace: 'nowrap', height: 48, padding: '0 10px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.close')}</button>
-        <button type="button" onClick={() => ok && onSave()} aria-disabled={!ok || busy} style={{ whiteSpace: 'nowrap', height: 56, padding: '0 22px', borderRadius: 999, border: 'none', background: saveBg, color: saveFg, fontSize: 17, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, cursor: ok ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
-          <Icon name="check" size={22} />
+        <button type="button" onClick={onClose} style={{ whiteSpace: 'nowrap', height: 44, padding: '0 10px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 15, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.close')}</button>
+        <button type="button" onClick={() => ok && onSave()} aria-disabled={!ok || busy} style={{ whiteSpace: 'nowrap', height: 48, padding: '0 22px', borderRadius: 12, border: 'none', background: saveBg, color: saveFg, fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, cursor: ok ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
+          <Icon name="check" size={20} weight={300} />
           {hasNext ? t('health.saveNext') : t('health.saveOnly')}
         </button>
       </div>
@@ -162,23 +161,23 @@ function GroupPanel({ g, t, draft, field, ev, last, isPhone, onField, onFocus, o
   const st = groupStatus(g.id, ev);
   const measuring = draft.meas === g.device;
   return (
-    <div style={{ padding: 14, borderRadius: 20, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 12 }} data-group={g.id} data-waiting={measuring || undefined} data-has={g.fields.some((k) => (draft.v[k] ?? '') !== '') || undefined}>
+    <div style={{ padding: isPhone ? 12 : 14, borderRadius: 12, background: measuring ? '#FBF8F4' : '#FFFFFF', border: measuring ? '1px solid #2B231C' : '1px solid #EFE7DC', display: 'flex', flexDirection: 'column', gap: 10 }} data-group={g.id} data-waiting={measuring || undefined} data-has={g.fields.some((k) => (draft.v[k] ?? '') !== '') || undefined}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <Icon name={g.icon} size={22} color="#75624B" />
+        <Icon name={g.icon} size={21} weight={300} color="#75624B" />
         <span style={{ flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t(g.titleKey)}</span>
-          <span style={{ fontSize: 'max(13px, var(--cp-small, 0px))', color: '#282828', lineHeight: 1.4 }}>{last}</span>
+          <span style={{ fontSize: 'max(13px, var(--cp-small, 0px))', color: '#6B6259', lineHeight: 1.4 }}>{last}</span>
         </span>
-        {st ? <Badge kind={st} size={32} /> : null}
+        {st ? <Badge kind={st} size={28} /> : null}
         {g.device ? (
           <button type="button" onClick={() => (measuring ? onStop() : !draft.meas && onRead())} aria-disabled={!!draft.meas && !measuring} aria-label={measuring ? t('health.stopWaitingL') : undefined}
-            style={{ height: isPhone ? 38 : 44, padding: isPhone ? '0 12px' : '0 16px', borderRadius: 999, border: 'none', background: measuring ? '#8A755B' : draft.meas ? '#B9AA97' : '#75624B', color: '#FFFFFF', fontSize: isPhone ? 15 : 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: draft.meas && !measuring ? 'wait' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
-            <span style={{ display: 'inline-flex', animation: measuring ? 'cpPulse 1.2s ease-in-out infinite' : undefined }}><Icon name={measuring ? 'bluetooth_searching' : 'bluetooth'} size={isPhone ? 18 : 20} /></span>
+            style={{ height: 38, padding: '0 14px', borderRadius: 12, border: 'none', background: measuring ? '#24201C' : draft.meas ? '#EDE5DA' : '#2B231C', color: draft.meas && !measuring ? '#8A8078' : '#F7F3EE', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: draft.meas && !measuring ? 'wait' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+            <span style={{ display: 'inline-flex', animation: measuring ? 'cpPulse 1.2s ease-in-out infinite' : undefined }}><Icon name={measuring ? 'bluetooth_searching' : 'bluetooth'} size={18} /></span>
             {measuring ? t('health.waiting') : t('health.readDevice')}
           </button>
         ) : (
-          <span style={{ height: 36, padding: '0 14px 0 10px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #DBD7D6', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-            <Icon name="dialpad" size={18} color="#75624B" />
+          <span style={{ height: 32, padding: '0 12px 0 8px', borderRadius: 8, background: '#F3EEE8', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', color: '#24201C' }}>
+            <Icon name="dialpad" size={17} weight={300} color="#75624B" />
             {t('health.byHand')}
           </span>
         )}
@@ -190,28 +189,28 @@ function GroupPanel({ g, t, draft, field, ev, last, isPhone, onField, onFocus, o
           const bad = ev.invalid.includes(k);
           if (isPhone) {
             return (
-              <label key={k} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '10px 12px', borderRadius: 16, background: '#FFFFFF', border: bad ? '2px solid #AF4B2F' : '1px solid #8A755B' }}>
-                <span style={{ fontSize: 'max(13px, var(--cp-small, 0px))', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px' }}>{label}</span>
+              <label key={k} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 12px', borderRadius: 8, background: '#FFFFFF', border: bad ? '2px solid #9A3D24' : '1px solid #DDD1C2' }}>
+                <span style={{ fontSize: 'max(12px, var(--cp-small, 0px))', letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 600, lineHeight: '16px', color: '#5E5852' }}>{label}</span>
                 <input value={draft.v[k] ?? ''} onFocus={onFocus} onChange={(e) => onType(k, e.target.value)} inputMode="decimal" aria-label={label} placeholder="—" aria-invalid={bad || undefined}
-                  style={{ width: '100%', minWidth: 0, border: 'none', outline: 'none', background: 'transparent', padding: 0, fontSize: 30, lineHeight: '38px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter', color: '#282828' }} />
-                <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{f.unit}</span>
+                  style={{ width: '100%', minWidth: 0, border: 'none', outline: 'none', background: 'transparent', padding: 0, fontSize: 26, lineHeight: '32px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter', color: '#24201C' }} />
+                <span style={{ fontSize: 'max(12px, var(--cp-small, 0px))', color: '#6B6259', lineHeight: 1.3 }}>{f.unit}</span>
               </label>
             );
           }
           const focused = field === k;
           return (
             <button key={k} type="button" onClick={() => onField(k)} onKeyDown={onKey} aria-pressed={focused} aria-invalid={bad || undefined}
-              style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '10px 12px', borderRadius: 16, background: '#FFFFFF', border: bad ? '2px solid #AF4B2F' : focused ? '2px solid #75624B' : '1px solid #DBD7D6', boxShadow: focused ? '0 0 0 3px #E8E1D8' : 'none', cursor: 'pointer', color: '#282828', textAlign: 'left', fontFamily: 'Inter' }}>
-              <span style={{ fontSize: 'max(13px, var(--cp-small, 0px))', letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px' }}>{label}</span>
-              <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 0 }}>
-                <span style={{ fontSize: 34, lineHeight: '40px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{draft.v[k] || '—'}</span>
-                <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{f.unit}</span>
+              style={{ flex: '1 1 0', minWidth: 0, minHeight: 76, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4, padding: focused || bad ? '7px 9px' : '8px 10px', borderRadius: 8, background: '#FFFFFF', border: bad ? '2px solid #9A3D24' : focused ? '2px solid #2B231C' : '1px solid #DDD1C2', cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
+              <span style={{ fontSize: 'max(12px, var(--cp-small, 0px))', letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 600, lineHeight: '16px', color: '#5E5852' }}>{label}</span>
+              <span style={{ fontSize: 28, lineHeight: '32px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>
+                {draft.v[k] || '—'}
+                <span style={{ fontSize: 'max(12px, var(--cp-small, 0px))', fontWeight: 400, letterSpacing: 0, color: '#6B6259', marginLeft: 4 }}>{f.unit}</span>
               </span>
             </button>
           );
         })}
       </div>
-      {g.fields.some((k) => ev.invalid.includes(k)) ? <span role="alert" style={{ fontSize: FONT_BODY, color: '#AF4B2F', lineHeight: 1.4 }}>{t('health.whyRange')}</span> : null}
+      {g.fields.some((k) => ev.invalid.includes(k)) ? <span role="alert" style={{ fontSize: 14, color: '#9A3D24', lineHeight: 1.4 }}>{t('health.whyRange')}</span> : null}
     </div>
   );
 }

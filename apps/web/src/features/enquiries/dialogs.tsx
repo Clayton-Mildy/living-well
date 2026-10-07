@@ -1,26 +1,24 @@
-// Lead dialogs (design OvEnq + new ones): new / edit lead, book a visit, book a trial, review the family's form, join as a member,
-// mark lost, and the form link (copy, simulated WhatsApp, fill as family).
-import { useEffect, useMemo, useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+// Lead dialogs (design OvEnq + new ones): new / edit lead, book a visit, book a trial, join as a member (plan, first day and the signed paper
+// registration form), and mark lost. Registration is on paper: staff type the key details in and attach a photo or PDF of the signed form.
+import { useMemo, useState, type ReactNode } from 'react';
 import {
   addDays, dayStatus, fmtPhone, priceOn, rp, toHM, toMin, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Plan, type Relation, type Title,
 } from '@cp/shared';
 import {
-  ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookableDays, bookingDayCheck, enquiryForm, formLink, isOpenStage, openGuest, seniorName, startMondays,
+  ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookableDays, bookingDayCheck, openGuest, seniorName, startMondays,
 } from '@cp/shared/rules/enquiries';
-import { Button, DateField, Dialog, Icon, Note, SectionLabel, TextField, TimeField, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, DateField, Dialog, Icon, Note, SectionLabel, TextField, TimeField, FONT_SMALL } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
-import { say } from '../../store/ui';
 import { tn } from '../mgmt/common';
-import { SignatureView } from './SignaturePad';
+import { PaperFormField, type PaperFile } from '../members/PaperForm';
 
 export type Dlg =
   | { mode: 'new' }
-  | { mode: 'edit' | 'visit' | 'trial' | 'review' | 'join' | 'lost' | 'link'; id: string };
+  | { mode: 'edit' | 'visit' | 'trial' | 'join' | 'lost'; id: string };
 
 const row: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8 };
 
@@ -28,8 +26,8 @@ const row: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8 };
 export function StackChip({ label, sub, selected, off, onClick }: { label: ReactNode; sub?: ReactNode; selected?: boolean; off?: boolean; onClick: () => void }) {
   return (
     <button type="button" role="radio" aria-checked={!!selected} aria-disabled={off || undefined} onClick={() => { if (!off) onClick(); }}
-      style={{ minHeight: 52, minWidth: 88, padding: '6px 14px', borderRadius: 16, border: selected ? '1px solid #282828' : off ? '1px solid #EFECEA' : '1px solid #CAB8A2', background: selected ? '#282828' : off ? '#F4F0EE' : '#FFFFFF', color: selected ? '#FFFFFF' : off ? '#6A6967' : '#282828', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
-      <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4, whiteSpace: 'nowrap' }}>{label}</span>
+      style={{ minHeight: 52, minWidth: 88, padding: '6px 14px', borderRadius: 10, border: selected ? '1px solid #24201C' : off ? '1px solid #F0EAE1' : '1px solid #DCD3C8', background: selected ? '#24201C' : off ? '#F3EEE8' : '#FFFFFF', color: selected ? '#FFFFFF' : off ? '#5E5852' : '#24201C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
+      <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.4, whiteSpace: 'nowrap' }}>{label}</span>
       {sub ? <span style={{ fontSize: FONT_SMALL, lineHeight: 1.4 }}>{sub}</span> : null}
     </button>
   );
@@ -38,7 +36,7 @@ export function StackChip({ label, sub, selected, off, onClick }: { label: React
 function Pick({ selected, onClick, children, off }: { selected?: boolean; onClick: () => void; children: ReactNode; off?: boolean }) {
   return (
     <button type="button" aria-pressed={!!selected} aria-disabled={off || undefined} onClick={() => { if (!off) onClick(); }}
-      style={{ height: 44, padding: '0 16px', borderRadius: 999, border: selected ? '1px solid #282828' : off ? '1px solid #EFECEA' : '1px solid #CAB8A2', background: selected ? '#282828' : off ? '#F4F0EE' : '#FFFFFF', color: selected ? '#FFFFFF' : off ? '#6A6967' : '#282828', fontSize: 16, fontWeight: 500, cursor: off ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter' }}>
+      style={{ height: 44, padding: '0 16px', borderRadius: 12, border: selected ? '1px solid #24201C' : off ? '1px solid #F0EAE1' : '1px solid #DCD3C8', background: selected ? '#24201C' : off ? '#F3EEE8' : '#FFFFFF', color: selected ? '#FFFFFF' : off ? '#8A8078' : '#24201C', fontSize: 15, fontWeight: 500, cursor: off ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter' }}>
       {selected ? <Icon name="check" size={18} /> : null}
       {children}
     </button>
@@ -56,8 +54,8 @@ function Rows({ rows }: { rows: [ReactNode, ReactNode][] }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {rows.map(([k, v], i) => (
-        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderTop: '1px solid #EFECEA', fontSize: 16, lineHeight: '22px' }}>
-          <span style={{ color: '#6A6967', flex: 'none' }}>{k}</span>
+        <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 15, lineHeight: '22px' }}>
+          <span style={{ color: '#6B6259', flex: 'none' }}>{k}</span>
           <span style={{ textAlign: 'right', overflowWrap: 'anywhere' }}>{v}</span>
         </div>
       ))}
@@ -71,10 +69,8 @@ export function EnquiryDialogs({ dlg, onClose }: { dlg: Dlg | null; onClose: () 
   if (dlg.mode === 'new') return <LeadDialog key={key} onClose={onClose} />;
   if (dlg.mode === 'edit') return <LeadDialog key={key} id={dlg.id} onClose={onClose} />;
   if (dlg.mode === 'visit' || dlg.mode === 'trial') return <BookDialog key={key} kind={dlg.mode} id={dlg.id} onClose={onClose} />;
-  if (dlg.mode === 'review') return <ReviewDialog key={key} id={dlg.id} onClose={onClose} />;
   if (dlg.mode === 'join') return <JoinDialog key={key} id={dlg.id} onClose={onClose} />;
-  if (dlg.mode === 'lost') return <LostDialog key={key} id={dlg.id} onClose={onClose} />;
-  return <LinkDialog key={key} id={dlg.id} onClose={onClose} />;
+  return <LostDialog key={key} id={dlg.id} onClose={onClose} />;
 }
 
 // ---------- new / edit lead ----------
@@ -177,7 +173,7 @@ function DayTime({ kind, date, time, onDate, onTime }: { kind: 'visit' | 'trial'
           <TimeField label={t('enq.otherTime')} value={time} onChange={onTime} min={date === today && now > open ? now : open} max={toHM(toMin(close) - 1)} />
         </Sec>
       ) : null}
-      {check && !check.ok ? <div role="alert" style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 16, background: '#F7E4DD', color: '#AF4B2F', fontSize: 16, lineHeight: '22px' }}><Icon name="error" size={20} fill={1} /><span>{t(check.code, check.params)}</span></div> : null}
+      {check && !check.ok ? <div role="alert" style={{ display: 'flex', gap: 10, padding: '12px 14px', borderRadius: 12, background: '#F9E3DB', color: '#9A3D24', fontSize: 16, lineHeight: '22px' }}><Icon name="error" size={20} fill={1} /><span>{t(check.code, check.params)}</span></div> : null}
     </>
   );
 }
@@ -192,14 +188,12 @@ function BookDialog({ kind, id, onClose }: { kind: 'visit' | 'trial'; id: string
   const existing = e ? openGuest(s, id, kind) : undefined;
   // a lead can have a visit or trial written in its next step without a guest row yet: start from that day and time
   const planned = e?.next && e.next.kind === kind && e.next.date ? { date: e.next.date, time: e.next.time ?? '' } : undefined;
-  const form = e ? enquiryForm(s, e) : undefined;
-  const fd = form && (form.status === 'submitted' || form.status === 'approved') ? form.data : undefined;
   const [date, setDate] = useState(existing?.date ?? planned?.date ?? '');
   const [time, setTime] = useState(kind === 'visit' ? existing?.time ?? planned?.time ?? '' : '');
-  const [food, setFood] = useState<FoodAllergen[] | null>(existing ? existing.food : fd ? fd.food : null);
-  const [drugs] = useState<DrugAllergy[]>(existing?.drugs ?? fd?.drugs ?? []);
-  const [mob, setMob] = useState<Mobility | null>(existing?.mobility ?? fd?.mobility ?? null);
-  const [diet, setDiet] = useState<Diet[]>(existing?.diet ?? fd?.diet ?? []);
+  const [food, setFood] = useState<FoodAllergen[] | null>(existing ? existing.food : null);
+  const [drugs] = useState<DrugAllergy[]>(existing?.drugs ?? []);
+  const [mob, setMob] = useState<Mobility | null>(existing?.mobility ?? null);
+  const [diet, setDiet] = useState<Diet[]>(existing?.diet ?? []);
   const [busy, setBusy] = useState(false);
   if (!e) return null;
   // a trial is a day pass (lunch and the health check included): a day is all it needs. A visit needs a day and a time.
@@ -220,19 +214,16 @@ function BookDialog({ kind, id, onClose }: { kind: 'visit' | 'trial'; id: string
   return (
     <Dialog open onClose={onClose} eyebrow={label} title={seniorName(e)} maxWidth={600}
       footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={book} disabled={!ok || busy}>{ok ? t(kind === 'visit' ? 'enq.bookVisitFor' : 'enq.bookTrialFor', { date: fds(date), time }) : t(kind === 'visit' ? 'enq.pickDayTime' : 'enq.pickADay')}</Button></>}>
-      <div style={{ fontSize: 16, lineHeight: '22px', padding: '12px 14px', borderRadius: 16, background: '#F4F0EE' }}>{kind === 'visit' ? t('enq.visitText', { contact: e.contact.name }) : t('enq.trialText', { contact: e.contact.name })}</div>
+      <div style={{ fontSize: 15, lineHeight: '22px', padding: '12px 14px', borderRadius: 10, background: '#F3EEE8' }}>{kind === 'visit' ? t('enq.visitText', { contact: e.contact.name }) : t('enq.trialText', { contact: e.contact.name })}</div>
       <DayTime kind={kind} date={date} time={time} onDate={setDate} onTime={setTime} />
       {kind === 'trial' ? (
         <>
-          <Note tone="cream" icon="restaurant">{t('enq.trialPass')}</Note>
-          {fd ? <Note tone="sage" icon="assignment_turned_in">{t('enq.prefilled')}</Note> : null}
           <Sec label={t('enq.foodAllergies')}>
             <div style={row}>
               <Pick selected={food === null} onClick={() => setFood(null)}>{t('enq.notKnown')}</Pick>
               <Pick selected={food !== null && food.length === 0} onClick={() => setFood([])}>{t('common.none')}</Pick>
               {FOODS.map((x) => <Pick key={x} selected={!!food?.includes(x)} onClick={() => setFood(food?.includes(x) ? food.filter((y) => y !== x) : [...(food || []), x])}>{t('form.food_' + x)}</Pick>)}
             </div>
-            <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('enq.foodHint')}</span>
           </Sec>
           <Sec label={t('enq.mobility')}>
             <div style={row} role="radiogroup" aria-label={t('enq.mobility')}>
@@ -286,111 +277,10 @@ function JoinPick({ pick }: { pick: ReturnType<typeof useJoinPick> }) {
   );
 }
 /** What the footer button of the join step says: management creates the member, everyone else sends it to management. */
-const joinLabel = (t: ReturnType<typeof useT>, role: string | null, plan: Plan, approving: boolean) =>
-  t(role === 'mgmt' ? (approving ? 'enq.rv_createBtn' : 'enq.createMember') : approving ? 'enq.rv_sendBtn' : 'enq.sendForApproval', { plan: t('mgmt.plan_' + plan) });
+const joinLabel = (t: ReturnType<typeof useT>, role: string | null, plan: Plan) =>
+  t(role === 'mgmt' ? 'enq.createMember' : 'enq.sendForApproval', { plan: t('mgmt.plan_' + plan) });
 
-// ---------- review the family's form: step 1 the form, step 2 plan and first day (approving a lead's form joins them) ----------
-function ReviewDialog({ id, onClose }: { id: string; onClose: () => void }) {
-  const t = useT();
-  const { fdy, fds } = useFmt();
-  const s = useClub();
-  const act = useAct();
-  const navigate = useNavigate();
-  const { role } = useMe();
-  const e = s.enquiries[id];
-  const f = e ? enquiryForm(s, e) : undefined;
-  const d = f?.data;
-  const [returning, setReturning] = useState(false);
-  const [note, setNote] = useState('');
-  const [step, setStep] = useState<'form' | 'join'>('form');
-  const [busy, setBusy] = useState(false);
-  const pick = useJoinPick();
-  if (!e || !f || !d) return null;
-  const ready = f.status === 'submitted';
-  const member = e.stage === 'joined' && e.memberId ? s.members[e.memberId] : undefined;
-  const pending = !!member && member.review?.status === 'pending';
-  // a form that was approved before joining existed is never a dead end: the lead can still be joined from it
-  const canJoin = ready || (f.status === 'approved' && isOpenStage(e.stage));
-  const contactFirst = d.contact.name.split(' ')[0];
-  const doc = (label: string, has: boolean) => (
-    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <div style={{ aspectRatio: '4/3', borderRadius: 12, background: has ? 'linear-gradient(135deg, #FBF8F4 0%, #EADFD3 60%, #DCCFC0 100%)' : '#F6F5F5', border: has ? '1px solid #DBD7D6' : '1px dashed #CAB8A2' }} />
-      <span style={{ fontSize: FONT_SMALL, lineHeight: '18px' }}>{label + (has ? '' : ` · ${t('enq.rv_missing')}`)}</span>
-    </div>
-  );
-  const list = (a: string[]) => (a.length ? a.join(', ') : t('common.none'));
-  const food = [...d.food.map((x) => t('form.food_' + x)), ...(d.foodOther ? [d.foodOther] : [])];
-  const drugs = d.drugs.map((x) => (x.startsWith('other:') ? x.slice(6) : t('form.drug_' + x)));
-  const join = async () => {
-    if (!pick.startOk || busy) return;
-    setBusy(true);
-    try {
-      const r = await act('enquiry.convert', { enquiryId: id, plan: pick.plan, start: pick.start }, { ok: t('enq.joined', { name: seniorName(e), date: fds(pick.start), contact: contactFirst }), reviewText: t('enq.joinSent', { name: seniorName(e) }) });
-      if (r.ok) onClose();
-    } finally { setBusy(false); }
-  };
-  const sendBack = async () => {
-    const r = await act('form.return', { formId: f.id, note: note.trim() }, { ok: t('enq.formReturned', { name: contactFirst }) });
-    if (r.ok) onClose();
-  };
-  const title = `${d.title} ${d.name}`;
-  if (step === 'join') {
-    return (
-      <Dialog open onClose={onClose} eyebrow={t('enq.rv_step2')} title={title} maxWidth={600}
-        footer={<><Button variant="secondary" onClick={() => setStep('form')}>{t('enq.rv_backForm')}</Button><Button icon="check" onClick={join} disabled={!pick.startOk || busy}>{joinLabel(t, role, pick.plan, ready)}</Button></>}>
-        <Note tone="sage" icon="task_alt">{t('enq.rv_joinIntro', { name: title, contact: contactFirst })}</Note>
-        <JoinPick pick={pick} />
-        {role !== 'mgmt' ? <Note tone="ochre" icon="hourglass_top">{t('enq.joinReviewNote')}</Note> : null}
-      </Dialog>
-    );
-  }
-  return (
-    <Dialog open onClose={onClose} eyebrow={t(ready ? 'enq.rv_eyebrow' : 'enq.rv_eyebrowDone', { date: f.submittedAt ? `${fds(f.submittedAt.slice(0, 10))}, ${f.submittedAt.slice(11, 16)}` : '' })} title={title} maxWidth={640}
-      footer={ready ? (returning ? (
-        <><Button variant="secondary" onClick={() => setReturning(false)}>{t('common.back')}</Button><Button disabled={!note.trim()} onClick={sendBack}>{t('enq.rv_sendBack')}</Button></>
-      ) : (
-        <><Button variant="secondary" icon="undo" onClick={() => setReturning(true)}>{t('enq.rv_return')}</Button><Button icon="check" onClick={() => setStep('join')}>{t('enq.rv_approveJoin')}</Button></>
-      )) : (
-        <>
-          <Button variant="secondary" onClick={onClose}>{t('common.close')}</Button>
-          {canJoin ? <Button onClick={() => setStep('join')}>{t('enq.join')}</Button> : null}
-          {member && !pending ? <Button onClick={() => { onClose(); navigate(`/members/${member.id}`); }}>{t('enq.openProfile')}</Button> : null}
-        </>
-      )}>
-      {!ready ? <Note tone={pending ? 'ochre' : 'sage'} icon={pending ? 'hourglass_top' : 'check_circle'}>{member ? (pending ? t('enq.rv_joinedPending') : t('enq.rv_joinedNote', { name: title })) : t('enq.rv_approvedNote')}</Note> : null}
-      {f.returnNote && ready ? <Note tone="ochre" icon="undo">{f.returnNote}</Note> : null}
-      <Sec label={t('enq.rv_details')}>
-        <Rows rows={[[t('enq.rv_dob'), d.dob ? fdy(d.dob) : '—'], [t('enq.rv_address'), d.address || '—'], [t('enq.rv_by'), `${d.contact.name} · ${t('enq.rel_' + d.contact.relation).toLowerCase()}`], [t('common.phone'), fmtPhone(d.contact.phone)]]} />
-      </Sec>
-      <Sec label={t('enq.rv_docs')}>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))', gap: 10 }}>
-          {doc('KTP', d.docs.ktp)}
-          {doc(d.nanny ? t('enq.rv_nannyKtp', { name: d.nanny.name }) : t('enq.rv_noNanny'), d.nanny ? d.docs.nannyKtp : true)}
-          {doc(t('enq.rv_healthPhoto'), d.docs.healthInfo)}
-          {doc(t('enq.rv_signature'), !!d.signature)}
-        </div>
-      </Sec>
-      <Sec label={t('enq.rv_health')}>
-        <Rows rows={[
-          [t('enq.rv_conditions'), list(d.conditions)], [t('enq.rv_meds'), d.meds.length ? d.meds.map((m) => `${m.name} ${m.dose}`.trim() + ` (${t('form.timing_' + m.timing).toLowerCase()})`).join(', ') : t('common.none')],
-          [t('enq.rv_food'), list(food)], [t('enq.rv_drugs'), list(drugs)], [t('enq.rv_mobility'), d.mobility ? t('form.mob_' + d.mobility) : t('form.mob_none')], [t('enq.rv_diet'), list(d.diet.map((x) => t('form.diet_' + x)))],
-        ]} />
-      </Sec>
-      <Sec label={t('enq.rv_consent')}>
-        <Rows rows={[[t('enq.rv_consentData'), d.consent.data ? t('enq.rv_agreed') : t('enq.rv_notGiven')], [t('enq.rv_consentFace'), d.consent.face ? t('enq.rv_agreed') : t('enq.rv_declined')]]} />
-      </Sec>
-      {d.signature ? (
-        <Sec label={t('enq.rv_signature')}>
-          <SignatureView path={d.signature.svgPath} />
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{d.signature.by}{d.signature.at ? ` · ${fds(d.signature.at.slice(0, 10))}, ${d.signature.at.slice(11, 16)}` : ''}</span>
-        </Sec>
-      ) : null}
-      {returning ? <TextField label={t('enq.rv_note')} multiline rows={3} value={note} onChange={setNote} autoFocus hint={t('enq.rv_noteHint', { name: contactFirst })} /> : null}
-    </Dialog>
-  );
-}
-
-// ---------- join as a member (a lead without a form, or one that is not ready to review) ----------
+// ---------- join as a member: plan, first day and the signed paper registration form ----------
 function JoinDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const t = useT();
   const { fds } = useFmt();
@@ -399,33 +289,26 @@ function JoinDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const { role } = useMe();
   const e = s.enquiries[id];
   const pick = useJoinPick();
+  const [paper, setPaper] = useState<PaperFile | null>(null);
   const [busy, setBusy] = useState(false);
   if (!e) return null;
-  const form = enquiryForm(s, e);
-  const fd = form && (form.status === 'submitted' || form.status === 'approved') ? form.data : undefined;
-  const docs = fd ? [fd.docs.ktp && 'KTP', fd.nanny && fd.docs.nannyKtp && t('enq.jn_nannyKtp'), fd.docs.healthInfo && t('enq.jn_healthPhoto'), fd.signature && t('enq.jn_signedForm')].filter(Boolean).join(', ') : '';
-  const allergies = fd ? [...fd.food.map((x) => t('form.food_' + x)), ...(fd.foodOther ? [fd.foodOther] : []), ...fd.drugs.map((x) => (x.startsWith('other:') ? x.slice(6) : t('form.drug_' + x)))] : [];
-  const rows: [string, string][] = fd
-    ? [
-        [t('enq.jn_member'), `${fd.title} ${fd.name}`], [t('enq.jn_contact'), `${fd.contact.name} · ${fmtPhone(fd.contact.phone)}`], [t('enq.rv_dob'), fd.dob || '—'], [t('enq.jn_allergies'), allergies.length ? allergies.join(', ') : t('common.none')],
-        [t('enq.rv_mobility'), fd.mobility ? t('form.mob_' + fd.mobility) : t('form.mob_none')], [t('enq.rv_diet'), fd.diet.length ? fd.diet.map((x) => t('form.diet_' + x)).join(', ') : t('common.none')],
-        [t('enq.rv_meds'), fd.meds.length ? fd.meds.map((m) => m.name).join(', ') : t('common.none')], [t('enq.jn_docs'), docs || '—'], [t('enq.rv_consentFace'), fd.consent.face ? t('enq.rv_agreed') : t('enq.rv_declined')],
-      ]
-    : [[t('enq.jn_member'), seniorName(e)], [t('enq.jn_contact'), `${e.contact.name} · ${fmtPhone(e.contact.phone)}`]];
+  const rows: [string, string][] = [[t('enq.jn_member'), seniorName(e)], [t('enq.jn_contact'), `${e.contact.name} · ${fmtPhone(e.contact.phone)}`]];
   const go = async () => {
-    if (!pick.startOk || busy) return;
+    if (!pick.startOk || !paper || busy) return;
     setBusy(true);
     try {
-      const r = await act('enquiry.convert', { enquiryId: id, plan: pick.plan, start: pick.start }, { ok: t('enq.joined', { name: seniorName(e), date: fds(pick.start), contact: (fd?.contact.name ?? e.contact.name).split(' ')[0] }), reviewText: t('enq.joinSent', { name: seniorName(e) }) });
+      const r = await act('enquiry.convert', { enquiryId: id, plan: pick.plan, start: pick.start, formMediaId: paper.mediaId, formFileName: paper.fileName }, { ok: t('enq.joined', { name: seniorName(e), date: fds(pick.start), contact: e.contact.name.split(' ')[0] }), reviewText: t('enq.joinSent', { name: seniorName(e) }) });
       if (r.ok) onClose();
     } finally { setBusy(false); }
   };
   return (
-    <Dialog open onClose={onClose} eyebrow={t('enq.jn_eyebrow')} title={fd ? `${fd.title} ${fd.name}` : seniorName(e)} maxWidth={600}
-      footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={go} disabled={!pick.startOk || busy}>{joinLabel(t, role, pick.plan, false)}</Button></>}>
-      <Sec label={fd ? t('enq.jn_fromForm') : t('enq.jn_fromEnquiry')}>
+    <Dialog open onClose={onClose} eyebrow={t('enq.jn_eyebrow')} title={seniorName(e)} maxWidth={600}
+      footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={go} disabled={!pick.startOk || !paper || busy}>{joinLabel(t, role, pick.plan)}</Button></>}>
+      <Sec label={t('enq.jn_fromEnquiry')}>
         <Rows rows={rows} />
-        <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6A6967' }}>{fd ? t('enq.jn_noRetype') : t('enq.jn_noForm')}</span>
+      </Sec>
+      <Sec label={t('profile.paperTitle')}>
+        <PaperFormField value={paper} onChange={setPaper} />
       </Sec>
       <JoinPick pick={pick} />
       {role !== 'mgmt' ? <Note tone="ochre" icon="hourglass_top">{t('enq.joinReviewNote')}</Note> : null}
@@ -456,50 +339,6 @@ function LostDialog({ id, onClose }: { id: string; onClose: () => void }) {
         </div>
       </Sec>
       <TextField label={t('common.note')} multiline rows={2} value={note} onChange={setNote} />
-    </Dialog>
-  );
-}
-
-// ---------- the form link ----------
-export function formUrl(token: string) {
-  return `${window.location.origin}${formLink(token)}`;
-}
-function LinkDialog({ id, onClose }: { id: string; onClose: () => void }) {
-  const t = useT();
-  const s = useClub();
-  const navigate = useNavigate();
-  const e = s.enquiries[id];
-  const f = e ? enquiryForm(s, e) : undefined;
-  const [copied, setCopied] = useState(false);
-  useEffect(() => { if (!copied) return; const x = setTimeout(() => setCopied(false), 2500); return () => clearTimeout(x); }, [copied]);
-  if (!e || !f) return null;
-  const url = formUrl(f.token);
-  const copy = async () => {
-    try { await navigator.clipboard.writeText(url); } catch {
-      const el = document.createElement('textarea');
-      el.value = url;
-      document.body.appendChild(el);
-      el.select();
-      try { document.execCommand('copy'); } catch { /* ignore */ }
-      document.body.removeChild(el);
-    }
-    setCopied(true);
-    say(t('enq.copied'));
-  };
-  return (
-    <Dialog open onClose={onClose} eyebrow={t('enq.linkEyebrow')} title={e.contact.name} maxWidth={560}
-      footer={<><Button variant="ghost" onClick={() => { onClose(); navigate(formLink(f.token)); }}>{t('enq.fillAsFamily')}</Button><Button variant="secondary" onClick={onClose}>{t('common.close')}</Button></>}>
-      <div style={{ fontSize: 16, lineHeight: '22px', padding: '12px 14px', borderRadius: 16, background: '#F4F0EE' }}>{t('enq.linkSent', { contact: e.contact.name, phone: fmtPhone(f.sentTo) })}</div>
-      <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('enq.linkLabel')}</span>
-        <input readOnly value={url} onFocus={(ev) => ev.currentTarget.select()} aria-label={t('enq.linkLabel')} data-testid="form-link"
-          style={{ height: 52, border: '1px solid #8A755B', borderRadius: 16, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#282828', outline: 'none', width: '100%', minWidth: 0 }} />
-      </label>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Button icon={copied ? 'check' : 'content_copy'} onClick={copy}>{copied ? t('enq.copied') : t('enq.copyLink')}</Button>
-        <Button variant="secondary" icon="send" onClick={() => say(t('enq.waSent', { contact: e.contact.name.split(' ')[0] }))}>{t('enq.sendWa')}</Button>
-      </div>
-      <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('enq.linkNote')}</span>
     </Dialog>
   );
 }

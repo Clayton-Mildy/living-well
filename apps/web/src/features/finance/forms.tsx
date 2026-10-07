@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { balanceOf, memberShort, rp, sortBy, type Invoice } from '@cp/shared';
 import { invoicePeriod, invoiceViews, type PaymentView } from '@cp/shared/rules/finance';
-import { Button, Chip, Note, TextField, Toggle, chipStyle, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, Chip, Note, TextField, Toggle, FONT_BODY } from '../../components/ui';
 import { useAct } from '../../lib/act';
 import { useFmt, useT } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -58,18 +58,18 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span style={fieldLabel}>{t('finance.pay.invoice')}</span>
           <SearchField value={q} onChange={setQ} label={t('finance.pay.findInvoice')} placeholder={t('finance.pay.findInvoice')} />
-          <div role="radiogroup" aria-label={t('finance.pay.invoice')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8, maxHeight: 264, overflowY: 'auto', padding: 2 }}>
+          <div role="radiogroup" aria-label={t('finance.pay.invoice')} style={{ display: 'flex', flexDirection: 'column', maxHeight: 264, overflowY: 'auto', borderTop: '1px solid #F0EAE1' }}>
             {shown.map((v) => {
-              const c = chipStyle(v.inv.id === invId, false);
+              const on = v.inv.id === invId;
               return (
-                <button key={v.inv.id} type="button" role="radio" aria-checked={v.inv.id === invId} onClick={() => choose(v.inv.id)}
-                  style={{ minHeight: 52, minWidth: 96, padding: '6px 14px', borderRadius: 16, border: c.bd, background: c.bg, color: c.fg, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: 'pointer', fontFamily: 'Inter' }}>
-                  <span style={{ fontSize: 16, fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.4 }}>{v.member ? memberShort(v.member) : v.inv.memberId} · {fmonth(invoicePeriod(v.inv))}</span>
-                  <span style={{ fontSize: FONT_SMALL, whiteSpace: 'nowrap', lineHeight: 1.4 }}>{rp(v.balance)}</span>
+                <button key={v.inv.id} type="button" role="radio" aria-checked={on} onClick={() => choose(v.inv.id)}
+                  style={{ minHeight: 48, padding: '8px 12px', border: 'none', borderBottom: '1px solid #F0EAE1', background: on ? '#FBF8F4' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : undefined, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left', color: '#24201C' }}>
+                  <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.35 }}>{v.member ? memberShort(v.member) : v.inv.memberId} · {fmonth(invoicePeriod(v.inv))}</span>
+                  <span style={{ fontSize: 14, color: '#6B6259', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{rp(v.balance)}</span>
                 </button>
               );
             })}
-            {!shown.length ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4, padding: '8px 4px' }}>{open.length ? t('common.noResults') : t('finance.pay.nothingOpen')}</span> : null}
+            {!shown.length ? <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4, padding: '12px 4px' }}>{open.length ? t('common.noResults') : t('finance.pay.nothingOpen')}</span> : null}
           </div>
         </div>
       ) : null}
@@ -92,7 +92,7 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
         </div>
       ) : null}
       <TextField label={t('finance.pay.reference')} value={ref} onChange={setRef} placeholder={needsRef ? t('finance.pay.refPlaceholder') : t('finance.pay.refOptional')} />
-      <Button size={48} disabled={!ok} onClick={submit} full style={{ height: 52 }}>{t('finance.pay.record')}</Button>
+      <Button size={48} disabled={!ok} onClick={submit} full>{t('finance.pay.record')}</Button>
     </div>
   );
 }

@@ -11,6 +11,7 @@ import { liveSurvey, responsesOf, surveyStats } from './surveys';
 import { staffUnreadCount } from './messages';
 import { openEnquiries } from './enquiries';
 import { lunchPhotoIds } from './kitchen';
+import { approvalTotal, pendingItems } from './approvals';
 
 // ---------- venue ----------
 export const WHOLE_CLUB_ID = 'room-whole';
@@ -242,7 +243,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
     flagged: checks.filter((r) => r.status !== 'normal').length,
     overdue: live(s.invoices).filter((i) => invoiceStatus(s, i, today) === 'overdue').length,
     enquiries: openEnquiries(s).length,
-    reviews: live(s.changeRequests).filter((c) => c.status === 'pending').length,
+    reviews: approvalTotal(s) - pendingItems(s, 'stock').length, // waiting in Approvals (stock has its own tile)
     survey: st && st.overallN ? { avg: st.overall, n: st.overallN } : null,
     photos: live(s.photos).filter((p) => p.date === today && p.visibility === 'visible' && p.kind !== 'arrival').length,
     logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved').length,

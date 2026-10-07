@@ -333,18 +333,6 @@ describe('actions', () => {
   });
 });
 
-describe('public membership form', () => {
-  it('opens by token without sign-in; unknown tokens 404', async () => {
-    const r = await app.request('/api/form/f7e1a2');
-    expect(r.status).toBe(200);
-    expect((await j(r)).target.senior.name).toBe('Siu Lan Tjandra');
-    expect((await app.request('/api/form/nope')).status).toBe(404);
-  });
-  it('only allows form.* actions publicly', async () => {
-    expect((await app.request('/api/form/f7e1a2/approve', json({ input: {} }))).status).toBe(403);
-  });
-});
-
 describe('demo accounts', () => {
   it('lists staff and family demo accounts', async () => {
     const r = await j(await app.request('/api/demo/accounts'));
@@ -409,6 +397,33 @@ describe('media (photos)', () => {
   it('404s for an unknown or malformed id', async () => {
     expect((await app.request('/api/media/md_doesnotexistdoesnotexist')).status).toBe(404);
     expect((await app.request('/api/media/..%2f..%2fetc')).status).toBe(404);
+  });
+});
+
+describe('media (PDF documents)', () => {
+  const pdf = (n = 0) => Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(n, 0x20), Buffer.from('\n%%EOF')]);
+  it('stores a PDF and serves it back inline as application/pdf', async () => {
+    const up = await app.request('/api/media', json({ mime: 'application/pdf', data: pdf(200).toString('base64') }, 's1'));
+    expect(up.status).toBe(201);
+    const { id } = await j(up);
+    const got = await app.request(`/api/media/${id}`);
+    expect(got.status).toBe(200);
+    expect(got.headers.get('content-type')).toBe('application/pdf');
+    expect(got.headers.get('content-disposition')).toBe('inline');
+    expect(Buffer.from(await got.arrayBuffer()).subarray(0, 5).toString()).toBe('%PDF-');
+  });
+  it('checks the file really is a PDF, in both directions', async () => {
+    const text = Buffer.from('hello, this is not a pdf').toString('base64');
+    expect((await app.request('/api/media', json({ mime: 'application/pdf', data: text }, 's1'))).status).toBe(415);
+    expect((await app.request('/api/media', json({ mime: 'application/pdf', data: 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==' }, 's1'))).status).toBe(415);
+    expect((await app.request('/api/media', json({ mime: 'image/png', data: pdf(50).toString('base64') }, 's1'))).status).toBe(415);
+    expect((await app.request('/api/media', json({ mime: 'application/pdf', data: pdf(50).toString('base64') }))).status).toBe(401);
+  });
+  it('allows a PDF up to 10 MB (images stay at 5 MB) and refuses more', async () => {
+    expect((await app.request('/api/media', json({ mime: 'application/pdf', data: pdf(6 * 1024 * 1024).toString('base64') }, 's1'))).status).toBe(201);
+    const r = await app.request('/api/media', json({ mime: 'application/pdf', data: pdf(10 * 1024 * 1024).toString('base64') }, 's1'));
+    expect(r.status).toBe(413);
+    expect((await j(r)).code).toBe('common.docTooBig');
   });
 });
 

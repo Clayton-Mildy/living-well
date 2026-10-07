@@ -3,39 +3,39 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { DIETS, FOODS, MED_TIMINGS, MOBILITIES, RELATIONS, TITLES } from '@cp/shared/rules/members';
 import type { Diet, DrugAllergy, FoodAllergen, MedTiming, Mobility, Relation, Title } from '@cp/shared';
-import { Button, ChipGroup, FONT_BODY, FONT_SMALL, Icon, IconButton, Select, TimeField, Toggle } from '../../../components/ui';
+import { Button, ChipGroup, FONT_BODY, Icon, IconButton, Select, TimeField, Toggle } from '../../../components/ui';
 import type { TFn } from '../../../lib/i18n';
 import { dietLabel, foodLabel, mobLabel, relLabel, timingLabel } from '../lib';
 
 /**
- * Same field as the shared TextField (design input: 52px, 16px radius, #8A755B border) with one fix: the shared primitive gives a
+ * Same field as the shared TextField (prototype v3 input: 52px, 14px radius, #DDD1C2 border) with one fix: the shared primitive gives a
  * single-line input `flex: 1` inside a column label, which collapses it to its text height (22px). Here it keeps its 52px.
  */
 export function TextField({ label, value, onChange, placeholder, inputMode, type = 'text', error, hint, multiline, rows = 3, autoFocus, name, maxLength }: {
   label?: ReactNode; value: string; onChange: (v: string) => void; placeholder?: string; inputMode?: 'text' | 'tel' | 'numeric' | 'decimal' | 'email' | 'search'; type?: string;
   error?: string | false; hint?: ReactNode; multiline?: boolean; rows?: number; autoFocus?: boolean; name?: string; maxLength?: number;
 }) {
-  const common: CSSProperties = { border: error ? '2px solid #AF4B2F' : '1px solid #8A755B', borderRadius: 16, background: '#FFFFFF', padding: multiline ? '12px 14px' : '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#282828', outline: 'none', width: '100%', minWidth: 0 };
+  const common: CSSProperties = { border: error ? '2px solid #9A3D24' : '1px solid #DDD1C2', borderRadius: 10, background: '#FFFFFF', padding: multiline ? '12px 14px' : '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', width: '100%', minWidth: 0 };
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-      {label ? <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{label}</span> : null}
+      {label ? <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: '#4A4038' }}>{label}</span> : null}
       {multiline ? (
         <textarea name={name} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={rows} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} style={{ ...common, resize: 'vertical', lineHeight: '22px' }} />
       ) : (
-        <input name={name} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} inputMode={inputMode} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} style={{ ...common, height: 52, flex: 'none' }} />
+        <input name={name} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} inputMode={inputMode} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} style={{ ...common, height: 'var(--cp-field-h, 52px)', flex: 'none' }} />
       )}
-      {error ? <span role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: '#AF4B2F', lineHeight: 1.4 }}><Icon name="error" size={18} fill={1} />{error}</span> : hint ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{hint}</span> : null}
+      {error ? <span role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}><Icon name="error" size={18} fill={1} />{error}</span> : hint ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{hint}</span> : null}
     </label>
   );
 }
 
 /** The overlay primitive is a flex column that lets children shrink when the content is taller than the dialog (inputs get squashed). One wrapper that never shrinks keeps every control at its full height; the dialog scrolls instead. */
-export const DialogBody = ({ children }: { children: ReactNode }) => <div style={{ display: 'flex', flexDirection: 'column', gap: 20, flexShrink: 0 }}>{children}</div>;
+export const DialogBody = ({ children }: { children: ReactNode }) => <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flexShrink: 0 }}>{children}</div>;
 
 export const PeSection = ({ label, children, hint }: { label: ReactNode; children: ReactNode; hint?: ReactNode }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: 4 }}>
-    <div style={{ fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 600, color: '#75624B', lineHeight: '18px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{label}</div>
-    {hint ? <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4, marginTop: -6 }}>{hint}</div> : null}
+  <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 22, borderTop: '1px solid #F0EAE1' }} data-pe-section>
+    <div style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{label}</div>
+    {hint ? <div style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4, marginTop: -8 }}>{hint}</div> : null}
     {children}
   </div>
 );
@@ -49,7 +49,7 @@ export function OptionalTime({ label, value, onChange, min, max, error, hint, t 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'stretch' }}>
       <TimeField label={label} value={value} onChange={onChange} min={min} max={max} error={error} hint={hint} />
-      {value ? <button type="button" onClick={() => onChange('')} className="h-cream" style={{ alignSelf: 'flex-start', height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.clear')}</button> : null}
+      {value ? <button type="button" onClick={() => onChange('')} className="h-cream" style={{ alignSelf: 'flex-start', height: 44, padding: '0 14px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.clear')}</button> : null}
     </div>
   );
 }
@@ -63,7 +63,7 @@ export function MedsEditor({ rows, onChange, t, showErrors }: { rows: MedRow[]; 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       {rows.map((r, i) => (
-        <div key={r.key} role="group" aria-label={t('profile.medN', { n: i + 1 })} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: 12, borderRadius: 16, border: '1px solid #DBD7D6' }}>
+        <div key={r.key} role="group" aria-label={t('profile.medN', { n: i + 1 })} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '0 0 14px', borderBottom: '1px solid #F0EAE1' }}>
           <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
             <div style={{ flex: 2, minWidth: 0 }}><TextField label={t('profile.medName')} value={r.name} onChange={(v) => set(i, { name: v })} error={showErrors && !r.name.trim() ? t('members.err.medNameRequired') : false} /></div>
             <div style={{ flex: 1, minWidth: 0 }}><TextField label={t('profile.medDose')} value={r.dose} onChange={(v) => set(i, { dose: v })} placeholder="5 mg" /></div>
@@ -114,9 +114,9 @@ export function ConditionsEditor({ value, onChange, t }: { value: string[]; onCh
   };
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} role="group" aria-label={t('profile.f.conditions')}>
-      <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('profile.f.conditions')}</span>
+      <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: '#4A4038' }}>{t('profile.f.conditions')}</span>
       {value.map((c, i) => (
-        <div key={c + i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 6px 8px 14px', borderRadius: 16, border: '1px solid #DBD7D6' }}>
+        <div key={c + i} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 0', borderBottom: '1px solid #F0EAE1' }}>
           <Icon name="clinical_notes" size={20} color="#75624B" />
           <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: 1.4 }}>{c}</span>
           <IconButton icon="close" bordered={false} label={t('profile.removeCondition', { c })} onClick={() => onChange(value.filter((_, j) => j !== i))} />
@@ -124,8 +124,8 @@ export function ConditionsEditor({ value, onChange, t }: { value: string[]; onCh
       ))}
       <div style={{ display: 'flex', gap: 8 }}>
         <input value={draft} onChange={(e) => setDraft(e.target.value)} onBlur={add} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); add(); } }} placeholder={t('profile.conditionsPh')} aria-label={t('profile.addCondition')}
-          style={{ flex: 1, minWidth: 0, height: 52, border: '1px solid #8A755B', borderRadius: 16, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#282828', outline: 'none' }} />
-        <button type="button" onClick={add} className="h-cream" style={{ height: 52, padding: '0 18px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.add')}</button>
+          style={{ flex: 1, minWidth: 0, height: 52, border: '1px solid #DDD1C2', borderRadius: 10, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none' }} />
+        <button type="button" onClick={add} className="h-cream" style={{ height: 52, padding: '0 18px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.add')}</button>
       </div>
     </div>
   );
@@ -135,7 +135,7 @@ export function HealthFields({ d, set, t }: { d: HealthDraft; set: (p: Partial<H
   return (
     <>
       <ConditionsEditor value={d.conditions} onChange={(v) => set({ conditions: v })} t={t} />
-      <Toggle on={d.diabetic} onClick={() => set({ diabetic: !d.diabetic })} label={t('profile.diabetic')} sub={t('profile.diabeticSub')} />
+      <Toggle on={d.diabetic} onClick={() => set({ diabetic: !d.diabetic })} label={t('profile.diabetic')} />
       <ChipGroup label={t('profile.f.mobility')} value={d.mobility} onChange={(v) => set({ mobility: v as Mobility | 'none' })} options={[{ value: 'none' as const, label: mobLabel(t, null) }, ...MOBILITIES.map((x) => ({ value: x as Mobility | 'none', label: mobLabel(t, x) }))]} />
       <ChipGroup label={t('profile.f.diet')} multi value={d.diet} onChange={(v) => set({ diet: v as Diet[] })} options={DIETS.map((x) => ({ value: x, label: dietLabel(t, x) }))} />
     </>

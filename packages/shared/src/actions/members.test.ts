@@ -17,10 +17,22 @@ const newMember = (over: Record<string, unknown> = {}) => ({
   title: 'Oma', name: 'Siti Rahma', dob: '1946-03-12', address: 'Jl. Test 1', usualArrival: '10:00', plan: 'flex', start: '2026-10-26',
   contact: { name: 'Rudi Rahma', phone: '0812 5550 1234', relation: 'son', primary: true },
   health: { conditions: ['High blood pressure'], food: ['shellfish'], meds: [{ name: 'Amlodipine', dose: '5 mg', timing: 'morningHome' }] },
-  docs: ['ktp'], consent: { data: true, face: true }, ...over,
+  docs: ['ktp'], formMediaId: 'md_testregistrationform01', formFileName: 'registration-form.jpg', consent: { data: true, face: true }, ...over,
 });
 
 describe('members.create', () => {
+  it('requires the signed paper registration form and stores it as the member\'s membershipForm document', () => {
+    const c = seed();
+    const bad = (over: Record<string, unknown>) => () => run(c.citra, 'members.create', newMember(over), who(c, 's9'));
+    expect(bad({ formMediaId: '' })).toThrow('members.err.formRequired');
+    expect(bad({ formMediaId: undefined })).toThrow('members.err.formRequired');
+    expect(bad({ formMediaId: 'not-an-id' })).toThrow('err.invalid');
+    const r = run(c.citra, 'members.create', newMember({ docs: ['ktp', 'membershipForm'], formFileName: 'form.pdf' }), who(c, 's9'));
+    const docs = r.state.members[r.result.memberId as string].documents;
+    expect(docs.filter((d) => d.type === 'membershipForm')).toHaveLength(1); // ticking it is not the same as attaching it
+    expect(docs.find((d) => d.type === 'membershipForm')).toMatchObject({ status: 'onFile', mediaId: 'md_testregistrationform01', fileName: 'form.pdf', via: 'staff', by: 'staff:s9' });
+    expect(docs.find((d) => d.type === 'ktp')?.mediaId).toBeUndefined(); // other documents are only ticked, as before
+  });
   it('lobby: gated. member, contact and link are pending; no bookings; the login is blocked', () => {
     const c = seed();
     const r = run(c.citra, 'members.create', newMember(), who(c, 's1'));
@@ -83,7 +95,7 @@ describe('members.create', () => {
     expect(r.state.members[id].review).toBeUndefined();
     expect(Object.values(r.state.notifications).some((n) => n.kind === 'members.notif.welcome')).toBe(true);
     expect(findByPhone({ citra: r.state }, '0812 5550 1234').ok).toBe(true);
-    expect(Object.keys(r.state.changeRequests).length).toBe(1); // only the seeded one
+    expect(Object.keys(r.state.changeRequests).length).toBe(2); // only the seeded ones
   });
 
   it('only the front desk may add members', () => {
@@ -238,6 +250,21 @@ describe('documents, consent and plan (gated)', () => {
     expect(() => run(c.citra, 'members.setDocuments', { memberId: 'm46', docs: [{ type: 'nannyKtp', fileName: 'x.jpg' }] }, who(c, 's9'))).toThrow('members.err.noNanny');
   });
 
+  it('setDocuments keeps the uploaded file: Replace swaps the media id; a seed document without one is a paper copy', () => {
+    const c = seed();
+    expect(c.citra.members.m46.documents.find((d) => d.type === 'membershipForm')).toMatchObject({ status: 'onFile', via: 'staff' });
+    expect(c.citra.members.m46.documents.find((d) => d.type === 'membershipForm')?.mediaId).toBeUndefined();
+    const r = run(c.citra, 'members.setDocuments', { memberId: 'm46', docs: [{ type: 'membershipForm', fileName: 'scan.pdf', mediaId: 'md_testregistrationform02' }] }, who(c, 's9'));
+    expect(r.state.members.m46.documents.find((d) => d.type === 'membershipForm')).toMatchObject({ status: 'onFile', fileName: 'scan.pdf', mediaId: 'md_testregistrationform02', by: 'staff:s9' });
+    expect(() => run(c.citra, 'members.setDocuments', { memberId: 'm46', docs: [{ type: 'membershipForm', fileName: 'x.pdf', mediaId: 'bad id' }] }, who(c, 's9'))).toThrow('err.invalid');
+    // front desk: gated like any document change (the file id travels in the request)
+    const g = run(c.citra, 'members.setDocuments', { memberId: 'm46', docs: [{ type: 'healthInfo', fileName: 'obat.jpg', mediaId: 'md_testregistrationform03' }] }, who(c, 's1'));
+    expect(g.reviewed).toBe('gate');
+    expect(g.state.members.m46.documents.find((d) => d.type === 'healthInfo')?.mediaId).toBeUndefined();
+    const a = run(g.state, 'review.approve', { crId: g.result.changeRequestId }, who(c, 's9'));
+    expect(a.state.members.m46.documents.find((d) => d.type === 'healthInfo')).toMatchObject({ status: 'onFile', mediaId: 'md_testregistrationform03' });
+  });
+
   it('setConsent: stored with who and when; the face opt-out drops the stored face', () => {
     const c = seed();
     const r = run(c.citra, 'members.setConsent', { memberId: 'm1', face: false }, who(c, 's9'));
@@ -339,7 +366,7 @@ describe('health edits: applied now, reviewed afterwards', () => {
     const c = seed();
     const r = run(c.citra, 'members.setAllergies', { memberId: 'm1', food: [], foodOther: '', drugs: [] }, who(c, 's9'));
     expect(r.reviewed).toBeUndefined();
-    expect(Object.keys(r.state.changeRequests)).toEqual(['cr-seed-1']);
+    expect(Object.keys(r.state.changeRequests)).toEqual(['cr-seed-1', 'cr-seed-2']);
     expect(() => run(c.citra, 'members.setAllergies', { memberId: 'm1', food: [], foodOther: '', drugs: [] }, who(c, 's1'))).toThrow('err.forbidden');
     expect(() => run(c.citra, 'members.setMeds', { memberId: 'm1', meds: [] }, who(c, 's5'))).toThrow('err.forbidden');
   });
@@ -521,15 +548,23 @@ describe('notes', () => {
     expect(() => run(d.state, 'note.edit', { noteId: id, text: 'again' }, who(c, 's1'))).toThrow('err.notFound');
   });
 
-  it('one shared note is pinned for the family; a new shared note takes over', () => {
+  it('one shared note is pinned for the family; a new shared note takes over (a teacher\'s once management approves it)', () => {
     const c = seed();
     const a = run(c.citra, 'note.add', { memberId: 'm1', visibility: 'family', text: 'Loves the garden walk' }, who(c, 's5'));
+    const id = a.result.noteId as string;
     const pinned = (s: ClubState) => live(s.memberNotes).filter((n) => n.memberId === 'm1' && n.visibility === 'family' && n.pinned).map((n) => n.id);
-    expect(pinned(a.state)).toEqual([a.result.noteId]);
-    const b = run(a.state, 'note.edit', { noteId: 'n-m1-1', pinned: true }, who(c, 's9'));
+    expect(a.state.memberNotes[id].approval).toMatchObject({ status: 'pending', by: 'staff:s5' });
+    expect(pinned(a.state)).toEqual(['n-m1-1', id]); // the note it replaces stays pinned until the new one is approved
+    const ap = run(a.state, 'approval.approve', { type: 'logs', ids: [id] }, who(c, 's9'));
+    expect(pinned(ap.state)).toEqual([id]);
+    const b = run(ap.state, 'note.edit', { noteId: 'n-m1-1', pinned: true }, who(c, 's9'));
     expect(pinned(b.state)).toEqual(['n-m1-1']);
     const staff = run(b.state, 'note.add', { memberId: 'm1', visibility: 'staff', text: 'Private' }, who(c, 's5'));
     expect(pinned(staff.state)).toEqual(['n-m1-1']);
+    expect(staff.state.memberNotes[staff.result.noteId as string].approval).toBeUndefined(); // staff-only notes need no approval
+    // management's own shared note takes over at once
+    const m = run(staff.state, 'note.add', { memberId: 'm1', visibility: 'family', text: 'From management' }, who(c, 's9'));
+    expect(pinned(m.state)).toEqual([m.result.noteId]);
   });
 });
 

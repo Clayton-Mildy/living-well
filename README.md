@@ -11,7 +11,7 @@ Requirements: Node 22, pnpm 10, PostgreSQL 17. On this Mac that's the Homebrew i
 
 ```bash
 pnpm install
-pnpm db:setup          # creates the citrapremier database, runs migrations, seeds the 5-member demo
+pnpm db:setup          # creates the citrapremier database, runs migrations, seeds the demo club (45 members)
 pnpm dev               # API on :8787, web on :5173 → open http://localhost:5173
 ```
 
@@ -54,6 +54,7 @@ scripts/review.sh stop
   - Earlier in a month, her extra day is last month's 11th visit, on this month's invoice.
   - Today's lunch is always the fish soup, so Bambang's seafood allergy shows.
 - **Pinning the date:** set `CP_DEMO_DATE=2026-10-21` to pin the demo to a fixed date. The tests do this; it is the date the seed was written for.
+- **Club size:** the demo club has 45 members: the 5 hand-made ones below, who carry the scripted stories, plus 40 background members (`packages/shared/src/seed/roster.ts`). Set `CP_SEED_SMALL=1` on the API (and on `pnpm db:setup`) to seed only the 5; the e2e scripts do this.
 
 ## Demo script: "Oma Lina's day"
 Open the **Demo** pill (bottom right) and run the guided steps in order.
@@ -72,7 +73,7 @@ Open the **Demo** pill (bottom right) and run the guided steps in order.
 | Live | Overview | Management sees the live feed and everything waiting |
 | Live | Pricing | Set the Flex price |
 
-The Demo pill can also switch account, open the family membership form, and show the design system.
+The Demo pill can also switch account and show the design system. Registration is on paper: joining a lead or adding a member needs a photo or PDF of the signed paper form.
 
 ### Cast (seed data)
 - **Members:**

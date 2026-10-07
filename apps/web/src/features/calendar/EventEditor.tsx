@@ -81,7 +81,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
         </>
       ) : (
         <>
-          {event ? <Button variant="ghost" style={{ marginRight: 'auto', color: '#AF4B2F' }} onClick={() => setConfirmDel(true)}>{t('common.delete')}</Button> : null}
+          {event ? <Button variant="ghost" style={{ marginRight: 'auto', color: '#9A3D24' }} onClick={() => setConfirmDel(true)}>{t('common.delete')}</Button> : null}
           <Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
           <Button disabled={busy} onClick={save}>{t('common.save')}</Button>
         </>
@@ -89,7 +89,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
       {confirmDel ? (
         <>
           <Note tone="rust" icon="warning">{t('cal.deleteWarn', { date: fdl(event?.date ?? d0) })}</Note>
-          <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} sub={t('cal.notifySub')} />
+          <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />
           {err ? <Note tone="rust" icon="error">{err}</Note> : null}
         </>
       ) : (
@@ -101,7 +101,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
             </div>
           </div>
           <TextField label={t('cal.titleEn')} value={title} onChange={setTitle} maxLength={120} error={tried && errors.title} placeholder={t('cal.titleEnPh')} />
-          <TextField label={t('cal.titleId')} value={titleId} onChange={setTitleId} maxLength={120} hint={t('cal.titleIdHint')} />
+          <TextField label={t('cal.titleId')} value={titleId} onChange={setTitleId} maxLength={120} />
           <DateField label={t('cal.date')} value={d0} min={event?.date && event.date < today ? event.date : today} onChange={setD0} error={tried && errors.date} />
           <Toggle on={multi} onClick={() => { setMulti(!multi); if (!multi && !d1) setD1(d0); }} label={t('cal.multiDay')} />
           {multi ? <DateField label={t('cal.until')} value={d1} min={d0} onChange={setD1} error={tried && errors.end} /> : null}
@@ -112,7 +112,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
             </div>
           ) : null}
           {err ? <Note tone="rust" icon="error">{err}</Note> : null}
-          <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} sub={t('cal.notifySub')} />
+          <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />
         </>
       )}
     </Dialog>

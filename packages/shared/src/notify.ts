@@ -6,6 +6,7 @@ import { live, sortBy, toMin, addDays, ym } from './util';
 import { lobbyGroups, guestsOn } from './rules/attendance';
 import { todayReading, validReadings } from './rules/health';
 import { pendingPhotos } from './rules/members';
+import { pendingItems } from './rules/approvals';
 import { conflictsOn } from './rules/kitchen';
 import { invoiceStatus, runDone } from './rules/billing';
 import { staffThreads, staffUnread, familyThreads, familyUnread } from './rules/messages';
@@ -54,6 +55,11 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
     // photos by non-management staff wait for approval before families see them
     const waiting = pendingPhotos(s);
     if (waiting.length) add({ id: 'photos:pending', kind: 'notif.act.photosReview', params: { n: waiting.length }, link: '/reviews?tab=photos', severity: 'attention', at: waiting[0].createdAt });
+    // what the team enters waits for approval before families see it: one item per type, however many entries
+    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu']] as const) {
+      const items = pendingItems(s, type);
+      if (items.length) add({ id: `approvals:${type}`, kind, params: { n: items.length }, link: `/reviews?tab=${type}`, severity: 'attention', at: items[0].at });
+    }
     for (const c of live(s.changeRequests)) {
       if (c.status !== 'pending') continue;
       add({ id: 'cr:' + c.id, kind: c.kind === 'approval' ? 'notif.act.review' : 'notif.act.reviewFlagged', params: { section: c.section, name: c.target.memberId && s.members[c.target.memberId] ? memberShort(s.members[c.target.memberId]) : '' }, link: '/reviews', severity: 'attention', at: c.createdAt, memberId: c.target.memberId });
@@ -85,10 +91,6 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
     }
   }
   if (role === 'lobby' || role === 'mgmt') {
-    for (const f of live(s.formRequests).filter((x) => x.status === 'submitted' && x.target.type === 'enquiry')) {
-      const e = s.enquiries[f.target.id];
-      add({ id: 'form:' + f.id, kind: 'notif.act.formReady', params: { name: e ? `${e.senior.title} ${e.senior.name}` : '' }, link: `/enquiries?review=${f.target.id}`, severity: 'attention', at: f.submittedAt || f.createdAt });
-    }
     // a trial has no booked time (the guest can come any time the club is open); a visit is due half an hour before its time
     for (const g of guestsOn(s, today).filter((x) => x.status === 'booked' && !x.checkIn && toMin(x.time || s.club.settings.open) - 30 <= nowMin))
       add({ id: 'guest:' + g.id, kind: g.kind === 'trial' ? (g.time ? 'notif.act.guestTrial' : 'notif.act.guestTrialDay') : 'notif.act.guestVisit', params: { name: g.name, time: g.time || '' }, link: linkTo(role, 'arrivals'), severity: 'attention', at: `${today}T${g.time || s.club.settings.open}` });

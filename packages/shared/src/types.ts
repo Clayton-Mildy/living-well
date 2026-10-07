@@ -41,6 +41,30 @@ export interface ReviewMark {
   crId: string;
 }
 
+/**
+ * Management approval of what non-management staff enter (daily logs and family notes, health readings, the kitchen menu).
+ * A row without the mark is approved (management's own entries, and everything from before). Families see only approved content:
+ * while an edit of an approved entry waits, `prev` holds what they keep seeing (see rules/approvals.ts, project.ts).
+ */
+export interface Approval {
+  status: 'pending' | 'approved' | 'rejected';
+  /** who entered or last changed it */
+  by: Actor;
+  at: DT;
+  /** the last approved content, kept while an edit waits (and after the edit was rejected); absent for a brand-new entry */
+  prev?: Record<string, unknown>;
+  /** what a rejected edit proposed (the row itself is back to `prev`), for the history */
+  proposed?: Record<string, unknown>;
+  decidedBy?: Actor;
+  decidedAt?: DT;
+  /** the reason of a rejection */
+  reason?: string;
+  /** a monthly reading saved together with another reading: it is decided with that one and not listed on its own */
+  companionOf?: string;
+  /** family notices that go out once management approves */
+  defer?: { tell?: boolean; share?: boolean; overall?: Health; recheckAt?: HM; companionId?: string; notify?: boolean };
+}
+
 export interface ClubSettings {
   open: HM; // 08:30
   close: HM; // 16:30
@@ -135,6 +159,8 @@ export interface MemberDocument {
   on?: ISODate;
   via?: 'form' | 'staff' | 'family';
   by?: Actor;
+  /** The uploaded photo or PDF (POST /api/media). Without one, a document on file is a paper copy kept at the club. */
+  mediaId?: string;
 }
 
 export interface Member extends Row {
@@ -181,6 +207,7 @@ export interface MemberNote extends Row {
   pinned?: boolean;
   editedAt?: DT;
   editedBy?: Actor;
+  approval?: Approval;
 }
 
 export interface PlanChangeRequest extends Row {
@@ -283,6 +310,7 @@ export interface Reading extends Row {
   familyTold?: { at: DT; by: string; familyIds: string[] };
   edits: { at: DT; by: string; fields: string[]; reason?: string; note?: string; from?: Record<string, number | null> }[];
   voided?: { at: DT; by: string; reason: 'wrongPerson' | 'deviceError' | 'duplicate' | 'other'; note?: string };
+  approval?: Approval;
 }
 
 export interface DailyLog extends Row {
@@ -298,6 +326,7 @@ export interface DailyLog extends Row {
   status: 'draft' | 'saved';
   by: string; // staff id
   edits: { at: DT; by: string }[];
+  approval?: Approval;
 }
 
 export interface Photo extends Row {
@@ -358,44 +387,11 @@ export interface Enquiry extends Row {
   next?: { kind: 'callBack' | 'sendPrices' | 'visit' | 'trial' | 'followUp' | 'starts' | 'custom'; date?: ISODate; time?: HM; text?: string };
   notes?: string;
   lost?: { reason: LostReason; note?: string; prevStage?: Enquiry['stage'] };
-  formToken?: string;
   memberId?: string;
   archivedAt?: DT;
   /** Set while a gated conversion is pending (enquiry.convert): where the lead goes back to if management rejects. */
   prevStage?: Enquiry['stage'];
   prevNext?: Enquiry['next'];
-}
-
-export interface MembershipForm {
-  title: Title;
-  name: string;
-  dob: ISODate | '';
-  address: string;
-  contact: { name: string; relation: Relation; phone: string };
-  nanny: { name: string } | null;
-  docs: { ktp: boolean; nannyKtp: boolean; healthInfo: boolean };
-  conditions: string[];
-  meds: { name: string; dose: string; timing: MedTiming }[];
-  food: FoodAllergen[];
-  foodOther?: string;
-  drugs: DrugAllergy[];
-  mobility: Mobility | null;
-  diet: Diet[];
-  consent: { data: boolean; face: boolean };
-  signature: { svgPath: string; at: DT; by: string } | null;
-}
-
-export interface FormRequest extends Row {
-  token: string;
-  target: { type: 'enquiry' | 'member'; id: string };
-  sentTo: string; // phone
-  status: 'sent' | 'opened' | 'draft' | 'submitted' | 'approved' | 'returned';
-  step?: number;
-  draft?: Partial<MembershipForm>;
-  data?: MembershipForm;
-  submittedAt?: DT;
-  reviewedBy?: Actor;
-  returnNote?: string;
 }
 
 export interface CalendarEvent extends Row {
@@ -478,6 +474,7 @@ export interface MenuVersion extends Row {
   status: 'draft' | 'published';
   days: Record<Weekday, MenuDay>;
   publishedBy?: Actor;
+  approval?: Approval;
 }
 
 export interface AllergyPlan {
@@ -499,6 +496,8 @@ export interface DayMenu extends Row {
   /** @deprecated single lunch photo: use photoIds */
   photoId?: string;
   allergyPlans: AllergyPlan[];
+  /** approval of the lunch / soft / tea override (families keep seeing `prev` until it is approved) */
+  approval?: Approval;
 }
 
 export interface StockRequest extends Row {
@@ -819,7 +818,6 @@ export interface ClubState {
   messages: Record<string, Message>;
   feedback: Record<string, Feedback>;
   enquiries: Record<string, Enquiry>;
-  formRequests: Record<string, FormRequest>;
   calendarEvents: Record<string, CalendarEvent>;
   venueBookings: Record<string, VenueBooking>;
   rooms: Record<string, Room>;
@@ -855,7 +853,7 @@ export interface ClubState {
 export const COLLECTIONS = [
   'prices', 'members', 'memberNotes', 'planChangeRequests', 'familyContacts', 'familyLinks',
   'attendance', 'guestVisits', 'readings', 'dailyLogs', 'photos', 'threads', 'messages', 'feedback', 'enquiries',
-  'formRequests', 'calendarEvents', 'venueBookings', 'rooms', 'activities', 'scheduleVersions', 'dishes', 'menuVersions',
+  'calendarEvents', 'venueBookings', 'rooms', 'activities', 'scheduleVersions', 'dishes', 'menuVersions',
   'dayMenus', 'stockRequests', 'budgetSections', 'budgetRequests', 'budgetAdjustments', 'receipts', 'vendorInvoices',
   'invoices', 'payments', 'refunds', 'pendingCharges', 'invoiceRuns', 'directory', 'staff', 'hrNotes', 'staffTime',
   'surveys', 'surveyResponses', 'broadcasts', 'changeRequests', 'notifications', 'activity',

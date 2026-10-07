@@ -1,18 +1,21 @@
-// Photos and short videos from the camera or an upload: validate, store (base64 in the server-only `media` table) and read back.
+// Photos, short videos and PDFs (the paper registration form) from the camera or an upload: validate, store (base64 in the server-only `media` table) and read back.
 import { randomBytes } from 'node:crypto';
 import { eq } from 'drizzle-orm';
 import { db } from './db/client';
 import { media } from './db/schema';
 
-/** Images: 5 MB (the client shrinks photos to 1600px first). Videos: 25 MB (a 15 s phone clip). */
+/** Images: 5 MB (the client shrinks photos to 1600px first). Videos: 25 MB (a 15 s phone clip). PDFs: 10 MB (a scanned registration form). */
 export const MAX_MEDIA_BYTES = 5 * 1024 * 1024;
 export const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
+export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 export const IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export const VIDEO_MIME = ['video/webm', 'video/mp4'] as const;
-export const MEDIA_MIME = [...IMAGE_MIME, ...VIDEO_MIME] as const;
+export const PDF_MIME = ['application/pdf'] as const;
+export const MEDIA_MIME = [...IMAGE_MIME, ...VIDEO_MIME, ...PDF_MIME] as const;
 export type MediaMime = (typeof MEDIA_MIME)[number];
 export const isVideoMime = (m: string) => (VIDEO_MIME as readonly string[]).includes(m);
-const limitFor = (mime: string) => (isVideoMime(mime) ? MAX_VIDEO_BYTES : MAX_MEDIA_BYTES);
+export const isPdfMime = (m: string) => m === 'application/pdf';
+const limitFor = (mime: string) => (isVideoMime(mime) ? MAX_VIDEO_BYTES : isPdfMime(mime) ? MAX_PDF_BYTES : MAX_MEDIA_BYTES);
 
 /** What the bytes really are (the first bytes of a JPEG, PNG or WebP), whatever the caller claims. */
 export function sniffImage(b: Uint8Array): MediaMime | null {
@@ -28,17 +31,23 @@ export function sniffVideo(b: Uint8Array): 'video/webm' | 'video/mp4' | null {
   if (b.length >= 12 && b[4] === 0x66 && b[5] === 0x74 && b[6] === 0x79 && b[7] === 0x70) return 'video/mp4';
   return null;
 }
-/** What the bytes really are, image or video. */
-export const sniffMedia = (b: Uint8Array): MediaMime | null => sniffImage(b) ?? sniffVideo(b);
+/** A PDF starts with `%PDF-` (some writers put up to 1 KB of junk before it, which readers accept). */
+export function sniffPdf(b: Uint8Array): 'application/pdf' | null {
+  const end = Math.min(b.length - 4, 1024);
+  for (let i = 0; i < end; i++) if (b[i] === 0x25 && b[i + 1] === 0x50 && b[i + 2] === 0x44 && b[i + 3] === 0x46 && b[i + 4] === 0x2d) return 'application/pdf';
+  return null;
+}
+/** What the bytes really are, image, video or PDF. */
+export const sniffMedia = (b: Uint8Array): MediaMime | null => sniffImage(b) ?? sniffVideo(b) ?? sniffPdf(b);
 
 export type MediaCheck = { ok: true; mime: MediaMime; bytes: Buffer } | { ok: false; status: 413 | 415 | 400; code: string };
-/** Check an upload `{ mime, data }` (data = base64, or a data: URL): an allowed type, really that image or video, and within its limit (images 5 MB, videos 25 MB). */
+/** Check an upload `{ mime, data }` (data = base64, or a data: URL): an allowed type, really that image, video or PDF, and within its limit (images 5 MB, videos 25 MB, PDFs 10 MB). */
 export function checkUpload(body: { mime?: unknown; data?: unknown }): MediaCheck {
   const mime = typeof body.mime === 'string' ? body.mime.toLowerCase() : '';
   if (typeof body.data !== 'string' || !body.data) return { ok: false, status: 400, code: 'common.mediaFailed' };
   const video = mime.startsWith('video/');
-  const badType = video ? 'ds.videoType' : 'common.mediaType';
-  const tooBig = video ? 'ds.videoTooBig' : 'common.mediaTooBig';
+  const badType = video ? 'ds.videoType' : isPdfMime(mime) ? 'common.docType' : 'common.mediaType';
+  const tooBig = video ? 'ds.videoTooBig' : isPdfMime(mime) ? 'common.docTooBig' : 'common.mediaTooBig';
   if (!(MEDIA_MIME as readonly string[]).includes(mime)) return { ok: false, status: 415, code: badType };
   const max = limitFor(mime);
   const b64 = body.data.replace(/^data:[^,]*,/, '');

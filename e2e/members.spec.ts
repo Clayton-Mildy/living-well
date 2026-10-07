@@ -11,7 +11,7 @@ import { TINY_PNG, goToPage, pickDate, pickOption, takePhotoWithFile } from './k
 /** A members filter with its count: chips on tablet and laptop, one dropdown on a phone (its options carry the counts). */
 async function expectFilter(page: Page, name: string) {
   if (isPhone(page)) {
-    await page.getByRole('combobox').click();
+    await page.getByRole('combobox', { name: /^(Filter members|Saring anggota)$/ }).click();
     await expect(page.getByRole('option', { name })).toBeVisible();
     await page.keyboard.press('Escape');
   } else await expect(page.getByRole('button', { name })).toBeVisible();
@@ -46,7 +46,7 @@ const doAct = (request: APIRequestContext, user: string, name: string, input: un
   request.post(`/api/actions/${name}`, { headers: { 'x-user-id': user }, data: { mutationId: id, club: 'citra', input } });
 const newMemberInput = (name: string, phone: string) => ({
   title: 'Oma', name, dob: '1945-05-05', address: '', usualArrival: '', nanny: null, spouseId: null, plan: 'flex', start: '2026-10-26',
-  contact: { name: `Family of ${name}`, phone, relation: 'daughter', primary: true }, health: {}, careInstructions: '', docs: [], consent: { data: true, face: true },
+  contact: { name: `Family of ${name}`, phone, relation: 'daughter', primary: true }, health: {}, careInstructions: '', docs: [], formMediaId: 'md_e2eregistrationform0001', formFileName: 'registration-form.jpg', consent: { data: true, face: true },
 });
 /** More members than one page of the list (created as management: active at once; as the lobby: waiting for approval). */
 async function addMembers(request: APIRequestContext, n: number, as = 's9') {
@@ -78,7 +78,7 @@ test('members list: compact rows (name, status, plan), search finds family names
   await expectFilter(page, 'Needs attention · 2');
   await expectFilter(page, 'Gold · 3');
   if (isPhone(page)) {
-    await page.getByRole('combobox').click();
+    await page.getByRole('combobox', { name: 'Filter members' }).click();
     await expect(page.getByRole('option', { name: 'Ended · 0' })).toBeVisible();
     await expect(page.getByRole('option')).toHaveCount(6); // no "On leave" filter
     await page.keyboard.press('Escape');
@@ -89,6 +89,8 @@ test('members list: compact rows (name, status, plan), search finds family names
   // compact rows: avatar, name, status ("in the club" or the last visit) and the plan chip; the detail lives on the profile
   await expect(page.locator('[data-member="m1"]')).toContainText('Last visit Tue 20 Oct');
   await expect(page.locator('[data-member="m1"]')).toContainText('Flex 10/10');
+  await expect(page.locator('[data-member="m1"]')).toContainText('Since 3 Mar 2025'); // subscription start and the end of the current month
+  await expect(page.locator('[data-member="m1"]')).toContainText('Renews 31 Oct');
   await expect(page.locator('[data-member="m10"]')).toContainText('In the club since 09:48');
   await expect(page.locator('[data-member="m10"]')).toContainText('Flex 8/10');
   await expect(page.locator('[data-member="m10"]')).not.toContainText(/Usually arrives|Last visit/);
@@ -119,6 +121,12 @@ test('members list: compact rows (name, status, plan), search finds family names
     await expect(page.locator('[data-member]')).toHaveCount(2);
     await page.getByRole('button', { name: /^Active/ }).click();
   }
+  // sort by the subscription start: newest first and oldest first put different members on top
+  await pickOption(page, 'Sort members', 'Start date, newest');
+  const newest = await page.locator('[data-member]').first().getAttribute('data-member');
+  await pickOption(page, 'Sort members', 'Start date, oldest');
+  expect(await page.locator('[data-member]').first().getAttribute('data-member')).not.toBe(newest);
+  await pickOption(page, 'Sort members', 'Name');
   await noHScroll(page);
   await expect(main(page)).not.toContainText(RAW_KEY);
   await page.locator('[data-member="m1"]').click();
@@ -175,7 +183,6 @@ test('attendance: a visits calendar for any month; no booking, leave or absence 
   // Flex: 10 visits a month, counted from check-ins. Lina has used all 10 by the 20th.
   await expect(page.getByText('Visits used in October')).toBeVisible();
   await expect(page.getByText('10/10')).toBeVisible();
-  await expect(page.getByText('Flex plan · 10 visits included')).toBeVisible();
   await expect(page.getByText('Visits left')).toBeVisible();
   await expect(page.getByText('Extra days in October')).toBeVisible();
   await expect(page.getByText('Nothing extra so far')).toBeVisible();
@@ -207,7 +214,6 @@ test('attendance: a visits calendar for any month; no booking, leave or absence 
   // Gold is unlimited: visits are counted, never limited
   await page.goto('/members/m46/att');
   await expect(page.getByText('Gold plan · no limit')).toBeVisible();
-  await expect(page.getByText('Gold has no limit', { exact: false })).toBeVisible();
   await expect(page.getByText('Visits used in October')).toHaveCount(0);
   await expect(page.locator('[data-visit="extra"]')).toHaveCount(0);
   await noHScroll(page);
@@ -290,7 +296,7 @@ test('edit details: a pending-review chip shows the proposal, values stay; manag
 test('reviews: the seeded request shows who, when, section and old → new; reject needs a note; withdraw clears the chip', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/reviews');
-  await expect(page.getByRole('heading', { name: 'Reviews', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Approvals', level: 1 })).toBeVisible();
   const card = page.locator('[data-cr="cr-seed-1"]');
   await expect(card).toContainText('Bapak Bambang Purnomo');
   await expect(card).toContainText('Caca');
@@ -357,14 +363,14 @@ test('nurse changes an allergy: applies at once, appears under Applied review; m
   await expect(page.getByText('Kiwi').first()).toBeVisible();
   await expect(page.getByRole('group', { name: 'Pending review' }).first()).toContainText('Applied');
   await signIn(page, 's9', '/reviews');
-  await page.getByRole('tab', { name: /Applied, review/ }).click();
-  const card = page.locator('[data-cr]').first();
+  await page.getByRole('tab', { name: /^Profile/ }).click(); // applied health edits sit in the Profile tab next to the requests
+  const card = page.locator('[data-cr]').filter({ hasText: 'Food allergies' });
   await expect(card).toContainText('Oma Lina Wijaya');
   await expect(card).toContainText('Food allergies');
   await expect(card).toContainText('Peanuts');
   await expect(card).toContainText('Dewi');
   await card.getByRole('button', { name: 'Acknowledge' }).click();
-  await expect(page.locator('[data-cr]')).toHaveCount(0);
+  await expect(card).toHaveCount(0);
   c.assertClean();
 });
 
@@ -394,6 +400,7 @@ test('lobby adds a new member: pending approval; management approves; the new co
   await expect(d).toContainText('Flex includes 10 visits a month');
   await d.getByRole('button', { name: 'Create member' }).click(); // empty form: validation messages
   await expect(d).toContainText('Please enter the full name.');
+  await expect(d).toContainText('Attach the signed registration form.');
   await expect(d).not.toContainText('usual arrival');
   await expect(d).toContainText('Please enter the date of birth.');
   await expect(d).toContainText('Consent to the use of information is required.');
@@ -402,6 +409,10 @@ test('lobby adds a new member: pending approval; management approves; the new co
   await d.getByRole('textbox', { name: /^Name/ }).fill('Rudi Rahma');
   await d.getByLabel('Mobile (WhatsApp)').fill('0813 4000 7777');
   await d.getByRole('switch', { name: /Use of information/ }).click();
+  await d.getByRole('button', { name: 'Create member' }).click();
+  await expect(d).toContainText('Attach the signed registration form.'); // registration is on paper: the signed form is required
+  await d.getByTestId('doc-file').setInputFiles({ name: 'registration-form.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await expect(d).toContainText('Attached: registration-form.pdf');
   await d.getByRole('button', { name: 'Create member' }).click();
   await expect(page).toHaveURL(/\/members\/m47$/);
   await expect(page.getByRole('heading', { name: 'Oma Siti Rahma', level: 1 })).toBeVisible();
@@ -466,7 +477,7 @@ test('end membership with a future last day, then cancel the ending', async ({ p
   await expect(page.getByText(/Ending Wed 28 Oct/)).toBeVisible();
   // still listed as active until the last day
   await page.goto('/members');
-  await expect(page.locator('[data-member="m1"]')).toContainText('ends');
+  await expect(page.locator('[data-member="m1"]')).toContainText('Ends 28 Oct');
   await expectFilter(page, 'Active · 5');
   await page.goto('/members/m1');
   await page.getByRole('button', { name: 'Cancel ending' }).click();
@@ -558,18 +569,29 @@ test('edit bar: lock note for roles that cannot edit; family contact edit for th
   await expect(page.getByText('Daniel Wijaya').first()).toBeVisible();
 });
 
-test('documents: upload, request from the family, send the form link', async ({ page }) => {
+// a real (tiny) PDF and a PNG (TINY_PNG): documents are uploaded to /api/media, which checks the file signature
+const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF');
+
+test('documents: upload a PDF or a photo (paper registration), view it, request from the family; no online form link', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/members/m46/docs');
   await expect(page.getByText('Missing').first()).toBeVisible().catch(() => undefined);
   await page.getByRole('button', { name: 'Remind the family' }).click(); // the seed already asked for the health-info photo
   await expect(toast(page)).toContainText('WhatsApp');
-  await page.getByTestId('doc-file').last().setInputFiles({ name: 'ringkasan-dokter.pdf', mimeType: 'application/pdf', buffer: Buffer.from('demo') });
+  await expect(page.getByText('Paper copy on file').first()).toBeVisible(); // seed documents have no upload, only the paper copy
+  await expect(page.getByRole('button', { name: 'View' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Send form link' })).toHaveCount(0);
+  await page.getByTestId('doc-file').last().setInputFiles({ name: 'ringkasan-dokter.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(page.getByText('ringkasan-dokter.pdf')).toBeVisible();
   await expect(page.getByText(/Health-info photo/).first()).toBeVisible();
+  // View opens a PDF in a new tab, served from /api/media (headless Chromium does not render the PDF, so watch the request)
+  const asked = page.context().waitForEvent('request', (r) => /\/api\/media\/md_/.test(r.url()));
+  const [popup] = await Promise.all([page.waitForEvent('popup'), page.getByRole('button', { name: 'View' }).click()]);
+  await asked;
+  await popup.close();
   // lobby upload is reviewed
   await signIn(page, 's1', '/members/m1/docs');
-  await page.getByTestId('doc-file').first().setInputFiles({ name: 'ktp-baru.jpg', mimeType: 'image/jpeg', buffer: Buffer.from('demo') });
+  await page.getByTestId('doc-file').first().setInputFiles({ name: 'ktp-baru.jpg', mimeType: 'image/png', buffer: TINY_PNG });
   await expect(page.getByRole('group', { name: 'Pending review' })).toContainText('ktp-baru.jpg');
   c.assertClean();
 });
@@ -614,7 +636,7 @@ test('family audience: no staff-only fields, no history, no edit bars; visits in
   await expect(fh.locator('[data-visit="visit"]')).toHaveCount(10);
   // an upload is gated: it waits for review and the family sees the chip
   await page.getByRole('tab', { name: 'Documents' }).click();
-  await page.getByTestId('doc-file').first().setInputFiles({ name: 'ktp-baru.pdf', mimeType: 'application/pdf', buffer: Buffer.from('demo') });
+  await page.getByTestId('doc-file').first().setInputFiles({ name: 'ktp-baru.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(page.getByRole('group', { name: 'Pending review' })).toContainText('ktp-baru.pdf');
   await expect(fh.getByRole('button', { name: /^Request from family/ })).toHaveCount(0);
   await expect(fh.getByRole('button', { name: 'Send form link' })).toHaveCount(0);
@@ -633,7 +655,7 @@ test('family audience: no staff-only fields, no history, no edit bars; visits in
 test('a lead that joins: Reviews summarises the new member and History shows how the record started', async ({ page, request }) => {
   const c = watchConsole(page);
   // the lobby converts a lead (the enquiries screen belongs to another area; the action is the contract)
-  const r = await request.post('/api/actions/enquiry.convert', { headers: { 'x-user-id': 's1' }, data: { mutationId: 'e2e-members-conv', club: 'citra', input: { enquiryId: 'e3', plan: 'flex', start: '2026-10-26' } } });
+  const r = await request.post('/api/actions/enquiry.convert', { headers: { 'x-user-id': 's1' }, data: { mutationId: 'e2e-members-conv', club: 'citra', input: { enquiryId: 'e3', plan: 'flex', start: '2026-10-26', formMediaId: 'md_e2eregistrationform0001', formFileName: 'registration-form.jpg' } } });
   expect(r.ok()).toBeTruthy();
   const id = String((await r.json()).result.memberId);
   await signIn(page, 's1', '/members');
@@ -812,7 +834,7 @@ test('reviews → Photos: a page holds twelve; "Select all" covers every page; a
   await signIn(page, 's9', '/reviews');
   await page.getByRole('tab', { name: /^Photos/ }).click();
   await expect(page.locator('[data-photo-review]')).toHaveCount(12);
-  await goToPage(page, 2, 'Photo pages');
+  await goToPage(page, 2, 'Approval pages');
   await expect(page.locator('[data-photo-review]')).toHaveCount(1);
   await page.getByRole('button', { name: 'Select all (13)' }).click();
   await expect(page.getByText('13 selected')).toBeVisible();
@@ -826,14 +848,14 @@ test('reviews → Photos: a page holds twelve; "Select all" covers every page; a
 
 test('reviews: requests to approve are paged (five a page)', async ({ page, request }) => {
   const c = watchConsole(page);
-  await addMembers(request, 6, 's1'); // the lobby's new members each wait for approval; with the seeded request that makes seven
+  await addMembers(request, 6, 's1'); // the lobby's new members each wait for approval; with the two seeded requests that makes eight
   await signIn(page, 's9', '/reviews');
   await expect(page.locator('[data-cr]')).toHaveCount(5);
-  await goToPage(page, 2, 'Requests to approve pages');
-  await expect(page.locator('[data-cr]')).toHaveCount(2);
-  // approving one on the last page keeps the paging right: seven requests become six, and the last page holds one
+  await goToPage(page, 2, 'Approval pages');
+  await expect(page.locator('[data-cr]')).toHaveCount(3);
+  // approving one on the last page keeps the paging right: eight requests become seven, and the last page holds two
   await page.locator('[data-cr]').first().getByRole('button', { name: 'Approve' }).click();
-  await expect(page.locator('[data-cr]')).toHaveCount(1);
+  await expect(page.locator('[data-cr]')).toHaveCount(2);
   await noHScroll(page);
   c.assertClean();
 });
@@ -907,7 +929,7 @@ test('Indonesian: no raw keys on the list, profile tabs and reviews', async ({ p
   await expect(dialog(page)).not.toContainText(RAW_KEY);
   await page.keyboard.press('Escape');
   await signIn(page, 's9', '/reviews', 'id');
-  await expect(page.getByRole('heading', { name: 'Tinjauan', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Persetujuan', level: 1 })).toBeVisible();
   await expect(main(page)).toContainText('Jam kedatangan biasa');
   await expect(main(page)).not.toContainText(RAW_KEY);
   // the Photos section: counts, select, notify switch, reject dialog

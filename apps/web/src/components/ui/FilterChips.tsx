@@ -15,7 +15,7 @@ export function FilterChips<V extends string>({ label, options, value, onChange,
         const on = o.value === value;
         return (
           <button key={o.value} type="button" aria-pressed={on} onClick={() => onChange(o.value)} className="cp-chip"
-            style={{ height: 44, padding: '0 16px', borderRadius: 999, border: on ? '1px solid #282828' : '1px solid #CAB8A2', background: on ? '#282828' : '#FFFFFF', color: on ? '#FFFFFF' : '#282828', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+            style={{ height: 38, padding: '0 15px', borderRadius: 12, border: on ? '1px solid #24201C' : '1px solid #DCD3C8', background: on ? '#24201C' : '#FFFFFF', color: on ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
             {text(o)}
           </button>
         );

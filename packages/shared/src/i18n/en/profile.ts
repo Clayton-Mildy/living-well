@@ -63,13 +63,13 @@ export const profile = {
   prevMonth: 'Previous month', nextMonth: 'Next month', thisMonth: 'Back to this month',
   // documents and consent
   'docTitle.ktp': '{n}’s ID card (KTP)', 'docTitle.nannyKtp': 'Nanny’s ID card (KTP)', 'docTitle.membershipForm': 'Signed membership form', 'docTitle.healthInfo': 'Health-info photo', 'docTitle.other': 'Other document',
-  'docMeta.ktp': 'Not uploaded yet', 'docMeta.nannyKtp': '{n}’s ID card · not uploaded yet', 'docMeta.noNanny': 'No nanny registered', 'docMeta.form': 'E-signature and consents · not signed yet',
+  'docMeta.ktp': 'Not uploaded yet', 'docMeta.nannyKtp': '{n}’s ID card · not uploaded yet', 'docMeta.noNanny': 'No nanny registered', 'docMeta.form': 'Signed paper form · not attached yet',
   'docMeta.health': 'Doctor’s summary or medicine list · not uploaded yet',
   'doc.ktp': 'ID card (KTP)', 'doc.nannyKtp': 'Nanny’s KTP', 'doc.membershipForm': 'Signed membership form', 'doc.healthInfo': 'Health-info photo', 'doc.other': 'Other document',
   docOnFile: 'On file', docMissing: 'Missing', docRequested: 'Requested', docPending: 'Pending review', uploadedMeta: 'Added {d} · by {w} · {v}', requestedMeta: 'Requested {d}',
-  via_form: 'online form', via_staff: 'by the club', via_family: 'by the family', view: 'View', docOpened: '{d} opened.', upload: 'Upload', replace: 'Replace', requestFamily: 'Request from family',
-  linkCopied: 'Link copied.', remind: 'Remind the family', sendFormLink: 'Send form link', docSaved: 'Document saved.', docAsked: 'Request sent to {n} on WhatsApp (demo).', formSent: 'Form link sent to {n} on WhatsApp (demo).',
-  uploadSent: 'Sent for review. The club will check the document soon.', uploadDemo: 'Demo: files are not uploaded. Only the file name is saved.',
+  via_form: 'online form', via_staff: 'by the club', via_family: 'by the family', view: 'View', upload: 'Upload', replace: 'Replace', requestFamily: 'Request from family',
+  remind: 'Remind the family', docSaved: 'Document saved.', docAsked: 'Request sent to {n} on WhatsApp (demo).', 
+  uploadSent: 'Sent for review. The club will check the document soon.', 
   consentTitle: 'Consent', consentMeta: 'Who agreed, and when', 'consent.data': 'Use of information', 'consent.face': 'Face recognition at the door',
   'consentSub.data': 'Required to care for the member at the club.', 'consentSub.face': 'If off, the lobby checks in by name instead.', consentBy: 'Recorded by {n} · {d} · {v}',
   cvia_form: 'online form', cvia_staff: 'by staff', cvia_paper: 'paper form', consentGranted: 'Agreed', consentOptOut: 'Opted out', consentNone: 'No consent recorded yet.', nannyNote: 'Nanny: {n} · {p}',
@@ -145,4 +145,8 @@ export const profile = {
   'f.photo': 'Profile photo', photoOld: 'Current photo', photoNew: 'New photo',
   byDay: 'Day by day', dayInOut: 'In the club {a}–{b}', dayIn: 'In the club since {a}', dayAway: 'Not in the club', healthHead: 'Health', logHead: 'Daily log',
   noReadingsDay: 'No health check this day.', noLogDay: 'No daily log this day.',
+  // paper registration form (attach, view)
+  paperTitle: 'Signed registration form', paperHint: 'Take a photo of the signed paper form, or choose a photo or PDF (up to 10 MB). Required.',
+  paperPhoto: 'Take photo', paperFile: 'Choose file', paperRemove: 'Remove', paperUploading: 'Uploading…', paperAttached: 'Attached: {f}', paperRequired: 'Attach the signed registration form.',
+  paperFailed: 'The file could not be uploaded. Please try again.', paperCopyOnFile: 'Paper copy on file', paperOpenNew: 'Open in a new tab',
 };

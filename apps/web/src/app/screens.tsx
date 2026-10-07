@@ -52,5 +52,4 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   fbill: L(family, 'FamilyBilling'),
 };
 export const MemberProfileScreen = L(members, 'MemberProfile');
-export const MembershipFormScreen = L(enquiries, 'MembershipForm');
 export const DesignSystemScreen = lazy(() => import('../features/demo/DesignSystem').then((m) => ({ default: m.DesignSystem })));

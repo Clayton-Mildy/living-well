@@ -2,7 +2,7 @@
 // Reuses the kitchen stock form and the finance actions; housekeeping and driver land here as their home screen.
 import { useState } from 'react';
 import { defaultAreaFor } from '@cp/shared/rules/kitchenOps';
-import { PageHead, Icon, FONT_BODY } from '../../components/ui';
+import { PageHead, Icon } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
@@ -19,25 +19,31 @@ export function Requests() {
   const { device, isPhone } = useDevice();
   const { role } = useMe();
   const [open, setOpen] = useState<Panel | null>(null);
-  const tiles: { id: Panel; icon: string; title: string; sub: string; enabled: boolean }[] = [
-    { id: 'stock', icon: 'inventory_2', title: t('requests.stock.title'), sub: t('requests.stock.sub'), enabled: true },
-    { id: 'budget', icon: 'pie_chart', title: t('requests.budget.title'), sub: t('requests.budget.sub'), enabled: hasAction('budget.request') },
-    { id: 'receipt', icon: 'photo_camera', title: t('requests.receipt.title'), sub: t('requests.receipt.sub'), enabled: hasAction('receipt.add') },
+  const tiles: { id: Panel; icon: string; title: string; enabled: boolean }[] = [
+    { id: 'stock', icon: 'inventory_2', title: t('requests.stock.title'), enabled: true },
+    { id: 'budget', icon: 'pie_chart', title: t('requests.budget.title'), enabled: hasAction('budget.request') },
+    { id: 'receipt', icon: 'photo_camera', title: t('requests.receipt.title'), enabled: hasAction('receipt.add') },
   ];
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 18, maxWidth: 900 }}>
+    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 'clamp(18px, 2.8vw, 32px)', maxWidth: 900 }}>
       <PageHead eyebrow={t('requests.eyebrow')} title={t('requests.title')} />
-      <div className="cp-tiles cp-tiles3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,160px),1fr))', gap: 12 }} role="group" aria-label={t('requests.new')}>
-        {tiles.map((x) => (
-          <button key={x.id} type="button" className={`${x.enabled ? 'dh30 ' : ''}cp-tile cp-tile-stack`} data-testid={`tile-${x.id}`} aria-expanded={open === x.id} aria-disabled={!x.enabled || undefined} onClick={() => x.enabled && setOpen(open === x.id ? null : x.id)}
-            style={{ minHeight: 104, padding: '16px 18px', borderRadius: 20, border: open === x.id ? '2px solid #75624B' : '1px solid #DBD7D6', background: x.enabled ? '#FFFFFF' : '#F4F0EE', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, color: x.enabled ? '#282828' : '#6A6967', textAlign: 'left', cursor: x.enabled ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>
-              <Icon name={x.icon} size={20} color="#75624B" />
-              {x.title}
-            </span>
-            <span className="cp-hide-phone" style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{x.enabled ? x.sub : t('requests.soon')}</span>
-          </button>
-        ))}
+      <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(3, minmax(0, 1fr))' : 'repeat(auto-fit,minmax(220px,1fr))', gap: isPhone ? 8 : 14 }} role="group" aria-label={t('requests.new')}>
+        {tiles.map((x) => {
+          const on = open === x.id;
+          return (
+            <button key={x.id} type="button" className={x.enabled ? 'dh30' : undefined} data-testid={`tile-${x.id}`} aria-expanded={on} aria-disabled={!x.enabled || undefined} onClick={() => x.enabled && setOpen(on ? null : x.id)}
+              style={{ display: 'flex', flexDirection: isPhone ? 'column' : 'row', alignItems: 'center', justifyContent: isPhone ? 'center' : undefined, gap: isPhone ? 8 : 14, padding: isPhone ? '14px 6px' : '14px 18px', minHeight: isPhone ? 84 : 76, borderRadius: 14, border: on ? '1px solid #24201C' : '1px solid #EFE7DC', background: !x.enabled ? '#F3EEE8' : on ? '#FBF8F4' : '#FFFFFF', boxShadow: x.enabled ? 'var(--card-shadow)' : undefined, color: x.enabled ? '#24201C' : '#6B6259', textAlign: isPhone ? 'center' : 'left', cursor: x.enabled ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
+              <span aria-hidden="true" style={{ width: isPhone ? 36 : 42, height: isPhone ? 36 : 42, borderRadius: 999, background: '#F3EEE8', color: '#6E5A43', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                <Icon name={x.icon} size={isPhone ? 20 : 22} weight={300} />
+              </span>
+              <span style={{ flex: isPhone ? undefined : 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: isPhone ? 14 : 16, fontWeight: 500, lineHeight: 1.3 }}>{x.title}</span>
+                {x.enabled ? null : <span className="cp-hide-phone" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('requests.soon')}</span>}
+              </span>
+              {isPhone ? null : <Icon name={on ? 'remove' : 'add'} size={20} color="#6E5A43" />}
+            </button>
+          );
+        })}
       </div>
       {open === 'stock' ? <StockForm defaultArea={defaultAreaFor(role)} onSent={() => setOpen(null)} /> : null}
       {open === 'budget' ? <BudgetForm onSent={() => setOpen(null)} /> : null}

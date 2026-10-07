@@ -60,7 +60,7 @@ export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: b
     </>
   ) : (
     <>
-      {dish ? <Button variant="ghost" style={{ marginRight: 'auto', color: '#AF4B2F' }} onClick={() => setAskDelete(true)}>{t('kitchen.dish.delete')}</Button> : null}
+      {dish ? <Button variant="ghost" style={{ marginRight: 'auto', color: '#9A3D24' }} onClick={() => setAskDelete(true)}>{t('kitchen.dish.delete')}</Button> : null}
       <Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
       <Button onClick={save} disabled={!ok || busy}>{t('kitchen.dish.save')}</Button>
     </>
@@ -70,7 +70,7 @@ export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: b
       <TextField label={t('kitchen.dish.name')} value={name} onChange={setName} placeholder={t('kitchen.dish.namePh')} maxLength={60} autoFocus={!dish} onEnter={save} />
       <ChipGroup<Course> label={t('kitchen.dish.course')} value={course} onChange={(v) => setCourse(v as Course)} options={COURSES.map((c) => ({ value: c, label: t('kitchen.course.' + c) }))} />
       <ChipGroup<DishAllergen> label={t('kitchen.dish.contains')} multi value={allergens} onChange={(v) => { setAllergens(v as DishAllergen[]); setChecked(true); }} options={DISH_ALLERGENS.map((a) => ({ value: a, label: t('kitchen.allergen.' + a) }))} />
-      <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4, marginTop: -8 }}>{t('kitchen.dish.containsHint')}</span>
+      <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4, marginTop: -8 }}>{t('kitchen.dish.containsHint')}</span>
       <ChipGroup<Dish['tags'][number]> label={t('kitchen.dish.tags')} multi value={tags} onChange={(v) => setTags(v as Dish['tags'])} options={DISH_TAGS.map((x) => ({ value: x, label: t('kitchen.tag.' + x) }))} />
       {alreadyChecked && dish?.reviewedAt ? (
         <Note tone="sage" icon="verified">{t('kitchen.dish.checkedBy', { name: actorName(s, dish.reviewedBy ? `staff:${dish.reviewedBy}` : undefined) || '—', date: fdy(dish.reviewedAt.slice(0, 10)) })}</Note>
@@ -101,24 +101,24 @@ export function DishPicker({ open, onClose, title, course, picked, onToggle, onC
     <>
       <Sheet open={open && !creating} onClose={onClose} title={title} footer={<Button full style={{ flex: 'none' }} onClick={onClose}>{t('common.done')}</Button>}>
         <TextField label={t('kitchen.picker.search')} value={q} onChange={setQ} placeholder={t('kitchen.picker.ph')} inputMode="search" autoFocus />
-        <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #DBD7D6', borderRadius: 20, overflow: 'hidden', flexShrink: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #E4DACD', borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
           {shown.map((d, k) => {
             const on = picked.includes(d.id);
             return (
               <button key={d.id} type="button" role="checkbox" aria-checked={on} onClick={() => onToggle(d.id)} className="h-row"
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: k ? '1px solid #EFECEA' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter', width: '100%' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: k ? '1px solid #F0EAE1' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
                 <Icon name={on ? 'check_circle' : 'radio_button_unchecked'} size={24} fill={on ? 1 : 0} color={on ? '#3D6B4F' : '#8A755B'} />
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
-                  <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{allergenText(t, d)}{d.reviewedAt ? '' : ' · ' + t('kitchen.notChecked')}</span>
-                  {affectedNames(d) ? <span style={{ fontSize: FONT_BODY, color: '#AF4B2F', lineHeight: 1.4, fontWeight: 500 }}>{t('kitchen.picker.affects', { names: affectedNames(d) })}</span> : null}
+                  <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{allergenText(t, d)}{d.reviewedAt ? '' : ' · ' + t('kitchen.notChecked')}</span>
+                  {affectedNames(d) ? <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4, fontWeight: 500 }}>{t('kitchen.picker.affects', { names: affectedNames(d) })}</span> : null}
                 </span>
               </button>
             );
           })}
-          {!shown.length ? <div style={{ padding: '16px 14px', fontSize: 16, color: '#6A6967' }}>{t('kitchen.picker.none')}</div> : null}
+          {!shown.length ? <div style={{ padding: '16px 14px', fontSize: 16, color: '#5E5852' }}>{t('kitchen.picker.none')}</div> : null}
           {needle && !exact ? (
-            <button type="button" onClick={() => setCreating(true)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: '1px solid #EFECEA', background: '#FBFAF9', textAlign: 'left', cursor: 'pointer', color: '#75624B', fontFamily: 'Inter', fontSize: 16, fontWeight: 500, width: '100%' }}>
+            <button type="button" onClick={() => setCreating(true)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: '1px solid #F0EAE1', background: '#FBF8F4', textAlign: 'left', cursor: 'pointer', color: '#75624B', fontFamily: 'Inter', fontSize: 16, fontWeight: 500, width: '100%' }}>
               <Icon name="add_circle" size={24} />
               {t('kitchen.picker.create', { name: q.trim() })}
             </button>
@@ -138,8 +138,8 @@ export function DishField({ label, course, ids, onRemove, onAdd, flex, testId }:
   const { today } = useNow();
   return (
     <div role="group" aria-label={label} data-testid={testId} style={{ flex, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-      <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{label}</span>
-      <div style={{ minHeight: 48, border: '1px solid #DBD7D6', borderRadius: 14, padding: 6, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', background: '#FFFFFF' }}>
+      <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{label}</span>
+      <div style={{ minHeight: 48, border: '1px solid #E4DACD', borderRadius: 10, padding: 6, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', background: '#FFFFFF' }}>
         {ids.map((id) => {
           const d = s.dishes[id];
           if (!d || d.deletedAt) return null;
@@ -147,16 +147,16 @@ export function DishField({ label, course, ids, onRemove, onAdd, flex, testId }:
           const name = t('kitchen.plan.remove', { name: d.name }) + (hit ? `. ${t('kitchen.plan.affects', { names: hit })}` : '');
           return (
             <button key={id} type="button" onClick={() => onRemove(id)} aria-label={name} title={name} data-clash={hit ? 'yes' : undefined} className="h-cream"
-              style={{ minHeight: 44, padding: '0 10px 0 14px', borderRadius: 999, border: 'none', background: '#F4F0EE', color: '#282828', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+              style={{ minHeight: 44, padding: '0 10px 0 14px', borderRadius: 12, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
               <span>{d.name}</span>
-              {hit ? <Icon name="no_food" size={17} fill={1} color="#AF4B2F" style={{ marginLeft: 2 }} /> : null}
+              {hit ? <Icon name="no_food" size={17} fill={1} color="#9A3D24" style={{ marginLeft: 2 }} /> : null}
               {!d.reviewedAt ? <Icon name="help" size={17} fill={1} color="#7A5510" style={{ marginLeft: 2 }} /> : null}
-              <Icon name="close" size={18} color="#6A6967" />
+              <Icon name="close" size={18} color="#5E5852" />
             </button>
           );
         })}
         <button type="button" onClick={onAdd} aria-label={t('kitchen.plan.addTo', { course: t('kitchen.course.' + course) })} className="h-cream"
-          style={{ minHeight: 44, padding: '0 14px 0 10px', borderRadius: 999, border: '1px dashed #CAB8A2', background: '#FFFFFF', color: '#75624B', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontFamily: 'Inter' }}>
+          style={{ minHeight: 44, padding: '0 14px 0 10px', borderRadius: 12, border: '1px dashed #CAB8A2', background: '#FFFFFF', color: '#75624B', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="add" size={20} />
           {t('kitchen.plan.add')}
         </button>

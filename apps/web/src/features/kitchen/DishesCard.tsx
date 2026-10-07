@@ -6,7 +6,7 @@ import { Button, Card, CardHead, Icon, Pager, Segmented, TextField, usePaged, FO
 import { useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { DishDialog, allergenText } from './dish';
-import { Pill } from './parts';
+import { StatusDot } from './parts';
 
 export function DishesCard() {
   const t = useT();
@@ -23,26 +23,26 @@ export function DishesCard() {
   return (
     <Card>
       <CardHead title={t('kitchen.dishes.title')} meta={toCheck ? t('kitchen.dishes.toCheck', { n: toCheck }) : t('kitchen.dishes.allChecked')} />
-      <div style={{ padding: '0 20px 12px' }}>
+      <div style={{ padding: '0 22px 12px' }}>
         <Segmented<Course> label={t('kitchen.dishes.title')} value={course} onChange={setCourse} items={COURSES.map((c) => ({ value: c, label: t('kitchen.course.' + c), count: all.filter((d) => d.course === c).length }))} />
       </div>
-      <div style={{ padding: '0 20px 12px' }}>
+      <div style={{ padding: '0 22px 12px' }}>
         <TextField label={t('kitchen.dishes.search')} value={q} onChange={setQ} inputMode="search" />
       </div>
       {paged.rows.map((d) => (
         <button key={d.id} type="button" onClick={() => setOpen(d.id)} className="h-row" data-testid="dish-row"
-          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', minHeight: 60, border: 'none', borderTop: '1px solid #EFECEA', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 22px', minHeight: 60, border: 'none', borderTop: '1px solid #F0EAE1', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
-            <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{allergenText(t, d)}</span>
+            <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{allergenText(t, d)}</span>
           </div>
-          {d.reviewedAt ? <Icon name="verified" size={22} fill={1} color="#3D6B4F" /> : <Pill icon="help" fg="#7A5510" bg="#F6ECD6" label={t('kitchen.notChecked')} />}
-          <Icon name="chevron_right" size={22} color="#6A6967" />
+          {d.reviewedAt ? <Icon name="verified" size={22} fill={1} color="#3D6B4F" /> : <StatusDot color="#7A5510">{t('kitchen.notChecked')}</StatusDot>}
+          <Icon name="chevron_right" size={22} color="#5E5852" />
         </button>
       ))}
-      {!dishes.length ? <div style={{ padding: '14px 20px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967' }}>{t(needle ? 'common.noResults' : 'kitchen.dishes.none')}</div> : null}
-      <div style={{ padding: paged.pages > 1 ? '8px 20px' : 0, borderTop: paged.pages > 1 ? '1px solid #EFECEA' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.dishes.title')} /></div>
-      <div style={{ padding: '14px 20px 18px', borderTop: '1px solid #EFECEA' }}>
+      {!dishes.length ? <div style={{ padding: '16px 22px', borderTop: '1px solid #F0EAE1', fontSize: 16, color: '#6B6259' }}>{t(needle ? 'common.noResults' : 'kitchen.dishes.none')}</div> : null}
+      <div style={{ padding: paged.pages > 1 ? '8px 22px' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.dishes.title')} /></div>
+      <div style={{ padding: '16px 22px 20px', borderTop: '1px solid #F0EAE1' }}>
         <Button variant="secondary" size={44} icon="add" onClick={() => setOpen('new')}>{t('kitchen.dishes.add')}</Button>
       </div>
       <DishDialog open={open !== null} dishId={open && open !== 'new' ? open : undefined} preset={{ course }} onClose={() => setOpen(null)} />

@@ -10,12 +10,12 @@ import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { AlternativeSheet } from './ConflictsPanel';
-import { FilterChip, OutlineButton, Pill, PillButton, TextButton } from './parts';
+import { FilterChip, OutlineButton, PillButton, StatusDot, TextButton } from './parts';
 
-const PRESENCE: Record<NonNullable<OnFileRow['presence']>, { icon: string; fg: string; bg: string; key: string }> = {
-  in: { icon: 'how_to_reg', fg: '#3D6B4F', bg: '#E6EFE8', key: 'kitchen.onfile.in' },
-  gone: { icon: 'home', fg: '#6A6967', bg: '#EFECEA', key: 'kitchen.onfile.gone' },
-  notYet: { icon: 'schedule', fg: '#282828', bg: '#E8E1D8', key: 'kitchen.onfile.notYet' },
+const PRESENCE: Record<NonNullable<OnFileRow['presence']>, { fg: string; key: string }> = {
+  in: { fg: '#3D6B4F', key: 'kitchen.onfile.in' },
+  gone: { fg: '#6B6259', key: 'kitchen.onfile.gone' },
+  notYet: { fg: '#8A8078', key: 'kitchen.onfile.notYet' },
 };
 
 export function AllergiesOnFile() {
@@ -39,8 +39,7 @@ export function AllergiesOnFile() {
   return (
     <Card>
       <CardHead title={t('kitchen.onfile.title')} meta={t('kitchen.onfile.meta', { n: rows.length })} />
-      <div style={{ padding: '0 20px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('kitchen.onfile.sub')}</span>
+      <div style={{ padding: '0 22px 14px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="group" aria-label={t('kitchen.onfile.day')}>
           {days.map((d) => <FilterChip key={d} selected={d === date} onClick={() => setPicked(d)} label={d === today ? t('common.today') : fds(d)} />)}
         </div>
@@ -50,42 +49,42 @@ export function AllergiesOnFile() {
         const pill = r.presence ? PRESENCE[r.presence] : null;
         const meta = [r.food.length ? t('kitchen.onfile.on', { list: r.food.map((a) => t('kitchen.food.' + a)).join(', ') }) : '', r.other ? t('kitchen.onfile.other', { text: r.other }) : ''].filter(Boolean).join(' · ');
         return (
-          <div key={r.m.id} data-testid="onfile-row" data-member={r.m.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: '10px 12px', padding: '14px 20px', borderTop: '1px solid #EFECEA' }}>
-            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F4F0EE', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="no_food" size={20} color="#75624B" /></span>
+          <div key={r.m.id} data-testid="onfile-row" data-member={r.m.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: '10px 14px', margin: '0 22px', padding: '16px 0', borderTop: '1px solid #F0EAE1' }}>
+            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="no_food" size={20} color="#75624B" /></span>
             <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{memberShort(r.m)}</span>
-                <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{meta}</span>
+                <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{memberShort(r.m)}</span>
+                <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{meta}</span>
               </div>
               {r.clashes.length ? (
                 <>
                   {!here ? <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', fontWeight: 600, color: '#7A5510', lineHeight: 1.4 }}>{t(date === today ? 'kitchen.onfile.ifToday' : 'kitchen.onfile.ifDay')}</span> : null}
                   {r.clashes.map((c) => (
                     <div key={c.dish.id} data-testid="onfile-clash" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                      <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: c.resolved ? '#3D6B4F' : '#AF4B2F', fontWeight: 500 }}>{t('kitchen.onfile.clash', { dish: c.dish.name, allergen: t('kitchen.allergen.' + c.allergen).toLocaleLowerCase() })}</span>
+                      <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: c.resolved ? '#3D6B4F' : '#9A3D24', fontWeight: 500 }}>{t('kitchen.onfile.clash', { dish: c.dish.name, allergen: t('kitchen.allergen.' + c.allergen).toLocaleLowerCase() })}</span>
                       {c.plan ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>{t('kitchen.conflicts.serving', { alt: c.plan.alternative, by: actorName(s, c.plan.by), time: c.plan.at.slice(11, 16) })}</span> : null}
                       {!here ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
                           {c.plan ? (
                             <>
                               <OutlineButton icon="edit" onClick={() => setPick(c)}>{t('kitchen.conflicts.change')}</OutlineButton>
-                              <TextButton color="#AF4B2F" onClick={() => void undo(c)}>{t('kitchen.conflicts.undo')}</TextButton>
+                              <TextButton color="#9A3D24" onClick={() => void undo(c)}>{t('kitchen.conflicts.undo')}</TextButton>
                             </>
                           ) : <PillButton height={44} pad="0 18px" icon="check" onClick={() => setPick(c)}>{t('kitchen.onfile.prepare')}</PillButton>}
                         </div>
                       ) : null}
                     </div>
                   ))}
-                  {here ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('kitchen.onfile.here')}</span> : null}
+                  {here ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.onfile.here')}</span> : null}
                 </>
               ) : <span style={{ fontSize: FONT_BODY, color: '#3D6B4F', lineHeight: 1.4 }}>{t('kitchen.onfile.clear')}</span>}
             </div>
-            {pill ? <Pill icon={pill.icon} fg={pill.fg} bg={pill.bg} label={t(pill.key)} /> : null}
+            {pill ? <StatusDot color={pill.fg}>{t(pill.key)}</StatusDot> : null}
           </div>
         );
       })}
-      {!rows.length ? <div style={{ padding: '14px 20px 20px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967', lineHeight: '22px' }}>{t('kitchen.onfile.empty')}</div> : null}
-      <div style={{ padding: paged.pages > 1 ? '8px 20px 12px' : 0, borderTop: paged.pages > 1 ? '1px solid #EFECEA' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.onfile.title')} /></div>
+      {!rows.length ? <div style={{ margin: '0 22px', padding: '18px 0 22px', borderTop: '1px solid #F0EAE1', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.onfile.empty')}</div> : null}
+      <div style={{ margin: '0 22px', padding: paged.pages > 1 ? '8px 0 12px' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.onfile.title')} /></div>
       <AlternativeSheet conflict={pick} date={date} onClose={() => setPick(null)} />
     </Card>
   );

@@ -3,12 +3,12 @@
 import { Fragment, useMemo, useState } from 'react';
 import { addDays, dow, type Broadcast as BroadcastRow } from '@cp/shared';
 import { AUDIENCES, audienceRecipients, broadcastRecipients, renderTemplate, scheduledBroadcasts, type AudienceKey } from '@cp/shared/rules/mgmt';
-import { Button, Chip, DateField, Dialog, Note, Pager, SectionLabel, Select, TextField, TimeField, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Chip, DateField, Dialog, Note, PageHead, Pager, SectionLabel, Select, TextField, TimeField, usePaged, FONT_BODY } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
-import { BadgePill, ListCard, Page, labelStyle, chipRow, tn } from './common';
+import { BadgePill, ListCard, Page, HPAD, heroCard, labelStyle, chipRow, splitRow, tn } from './common';
 
 type TplRow = { id: string; key: BroadcastRow['template']; title: string; text: string };
 const DEFAULT_EN: Record<string, { title: string; text: string }> = {
@@ -100,20 +100,17 @@ export function Broadcast() {
 
   return (
     <Page gap={18}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ ...labelStyle, color: '#6A6967' }}>{t('mgmt.bcEyebrow')}</div>
-        <h1 style={{ margin: 0, fontSize: 36, lineHeight: '44px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('nav.broadcast')}</h1>
-      </div>
+      <PageHead eyebrow={t('mgmt.bcEyebrow')} title={t('nav.broadcast')} />
 
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
-        <div style={{ flex: '1 1 420px', minWidth: 0, background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div style={{ ...splitRow, gap: 'clamp(20px, 3.4vw, 44px)' }}>
+        <div style={{ ...heroCard, flex: '1 1 440px', minWidth: 0, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 18 }}>
           {editing ? <Note tone="ochre" icon="edit">{t('mgmt.bcEditing')}</Note> : null}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionLabel>{t('mgmt.audience')}</SectionLabel>
             <div style={chipRow}>
               {AUDIENCES.map((a) => <Chip key={a} selected={aud.includes(a)} onClick={() => toggleAud(a)}>{`${t('mgmt.aud_' + a)} · ${counts[a]}`}</Chip>)}
             </div>
-            {!recipients.length ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('mgmt.noRecipients')}</span> : null}
+            {!recipients.length ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('mgmt.noRecipients')}</span> : null}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionLabel>{t('mgmt.template')}</SectionLabel>
@@ -125,7 +122,7 @@ export function Broadcast() {
           <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={labelStyle}>{t('mgmt.message')}</span>
             <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={tpl && ['update', 'closure', 'event'].includes(tpl.key) ? t('mgmt.ph_' + tpl.key) : t('mgmt.ph_custom')}
-              style={{ minHeight: 96, resize: 'vertical', border: '1px solid #8A755B', borderRadius: 16, padding: '12px 14px', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#282828', outline: 'none', background: '#FFFFFF' }} />
+              style={{ minHeight: 96, resize: 'vertical', border: '1px solid #DDD1C2', borderRadius: 10, padding: '12px 14px', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#24201C', outline: 'none', background: '#FFFFFF' }} />
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionLabel>{t('mgmt.when')}</SectionLabel>
@@ -147,24 +144,24 @@ export function Broadcast() {
           </div>
         </div>
 
-        <div style={{ flex: '0 1 360px', minWidth: 280, display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>
+        <aside style={{ flex: '0 1 340px', minWidth: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4 }}>
             {previewTo ? t('mgmt.previewFor', { name: previewTo.name, tpl: tpl ? tplTitle(tpl) : '' }) : t('mgmt.previewNobody')}
           </span>
           {recipients.length > 1 ? (
             <Select label={t('mgmt.previewPick')} value={previewTo?.key ?? ''} onChange={setPreviewKey} searchable
               options={recipients.map((r) => ({ value: r.key, label: `${r.name} · ${t('mgmt.aud_' + r.audience)}` }))} />
           ) : null}
-          <div style={{ borderRadius: 24, background: '#E8E1D8', padding: '20px 16px', display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <div style={{ maxWidth: '92%', background: '#FFFFFF', borderRadius: '4px 18px 18px 18px', padding: '12px 14px 8px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 1px 2px rgba(40,30,20,0.1)' }}>
-              <span style={{ fontSize: FONT_BODY, fontWeight: 600, color: '#75624B', lineHeight: 1.4 }}>CitraPremier</span>
-              <span data-testid="bc-preview" style={{ fontSize: 16, lineHeight: '22px', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{bubble}</span>
-              <span style={{ alignSelf: 'flex-end', fontSize: 12, color: '#6A6967' }}>{now}</span>
-              <div style={{ borderTop: '1px solid #EFECEA', paddingTop: 8, textAlign: 'center', fontSize: 16, fontWeight: 500, color: '#75624B', lineHeight: 1.4 }}>{t('mgmt.openApp')}</div>
+          <div style={{ borderRadius: 14, background: '#E6DDD1', padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+            <div style={{ maxWidth: '92%', background: '#FFFFFF', borderRadius: 10, padding: '12px 14px 8px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 1px 2px rgba(40,30,20,0.1)' }}>
+              <span style={{ fontSize: 12, fontWeight: 600, color: '#3D6B4F', lineHeight: 1.4 }}>CitraPremier</span>
+              <span data-testid="bc-preview" style={{ fontSize: 15, lineHeight: 1.45, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{bubble}</span>
+              <span style={{ alignSelf: 'flex-end', fontSize: 12, color: '#5E5852' }}>{now}</span>
+              <div style={{ borderTop: '1px solid #F0EAE1', paddingTop: 8, textAlign: 'center', fontSize: 14, fontWeight: 500, color: '#75624B', lineHeight: 1.4 }}>{t('mgmt.openApp')}</div>
             </div>
           </div>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('mgmt.simNote')}</span>
-        </div>
+          <span style={{ fontSize: 12, color: '#6B6259', lineHeight: 1.4 }}>{t('mgmt.simNote')}</span>
+        </aside>
       </div>
 
       <ListCard title={t('mgmt.sentAndScheduled')}>
@@ -174,10 +171,10 @@ export function Broadcast() {
           const sub = `${b.audiences.map((a) => t('mgmt.aud_' + a)).join(', ')} · ${tn(t, 'mgmt.nPeople', b.recipients)} · ${b.status === 'scheduled' ? t('mgmt.scheduledFor', { when: whenText(b.sendAt) }) : b.status === 'sent' ? t('mgmt.sentOn', { when: whenText(b.sentAt || b.sendAt) }) : t('mgmt.wasFor', { when: whenText(b.sendAt) })}`;
           return (
             <Fragment key={b.id}>
-              <div data-bc={b.status} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 20px', borderTop: '1px solid #EFECEA', minHeight: 64 }}>
-                <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                  <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{title}</span>
-                  <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{sub}</span>
+              <div data-bc={b.status} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '16px 0', borderTop: '1px solid #F0EAE1', minHeight: 64 }}>
+                <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                  <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{title}</span>
+                  <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span>
                 </div>
                 {b.status === 'scheduled' ? (
                   <>
@@ -189,7 +186,7 @@ export function Broadcast() {
               </div>
             </Fragment>
           );
-        }) : <div style={{ padding: '12px 20px 18px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967' }}>{t('mgmt.bcEmpty')}</div>}
+        }) : <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('mgmt.bcEmpty')}</div>}
         <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('mgmt.pgBroadcasts')} />
       </ListCard>
       <TemplatesDialog open={tplOpen} onClose={() => setTplOpen(false)} tpls={tpls} tplTitle={tplTitle} tplText={tplText} />
@@ -233,10 +230,10 @@ function TemplatesDialog({ open, onClose, tpls, tplTitle, tplText }: { open: boo
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {paged.rows.map((x) => (
-            <div key={x.id} style={{ border: '1px solid #DBD7D6', borderRadius: 16, padding: '12px 14px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div key={x.id} style={{ borderTop: '1px solid #F0EAE1', padding: '14px 0 4px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500 }}>{tplTitle(x)}</span>
-                <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: '20px', overflowWrap: 'anywhere' }}>{tplText(x)}</span>
+                <span style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px', overflowWrap: 'anywhere' }}>{tplText(x)}</span>
               </div>
               <Button size={44} variant="secondary" onClick={() => setForm({ id: x.id, key: x.key, title: tplTitle(x), text: tplText(x) })}>{t('common.edit')}</Button>
             </div>

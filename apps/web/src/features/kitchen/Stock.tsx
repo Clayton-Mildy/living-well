@@ -3,13 +3,13 @@
 import { useMemo, useState } from 'react';
 import { actorName, type StockRequest } from '@cp/shared';
 import { STOCK_AREAS, canApproveStock, canEditStock, canReceiveStock } from '@cp/shared/rules/kitchenOps';
-import { Button, Dialog, EmptyState, PageHead, Pager, Segmented, Select, TextField, ChipGroup, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Dialog, EmptyState, PageHead, Pager, Select, TextField, ChipGroup, usePaged, FONT_BODY } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
-import { ConfirmDialog, FilterChip, OutlineButton, PillButton, StockBadge, TextButton, useResetOn } from './parts';
+import { ConfirmDialog, FilterChip, NumTabs, OutlineButton, PillButton, StockBadge, TextButton, useResetOn } from './parts';
 import { StockForm, areaLabel, parseQty, unitLabel, useQty, type StockPrefill } from './StockForm';
 import { useStockList } from './vals';
 
@@ -41,8 +41,8 @@ export function Stock() {
   const who = (id: string | undefined) => (id ? actorName(s, id) : '');
 
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 18, maxWidth: 900 }}>
-      <PageHead eyebrow={t('kitchen.stock.eyebrow')} title={t('kitchen.stock.title')} />
+    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 'clamp(16px, 2.4vw, 28px)', maxWidth: 900 }}>
+      <PageHead title={t('kitchen.stock.title')} />
       <StockForm defaultArea={role === 'kitchen' || role === 'mgmt' ? 'kitchen' : 'housekeeping'} prefill={prefill} />
 
       {isPhone ? (
@@ -60,44 +60,44 @@ export function Stock() {
               <FilterChip key={a} selected={area === a} onClick={() => setArea(a)} label={`${a === 'all' ? t('common.all') : areaLabel(t, a)} · ${areaCount(a)}`} />
             ))}
           </div>
-          <Segmented<StatusFilter> label={t('kitchen.stock.filterStatus')} value={status} onChange={setStatus}
-            items={[{ value: 'all', label: t('common.all'), count: statusCount('all') }, ...STATUSES.map((st) => ({ value: st as StatusFilter, label: t('kitchen.stock.s_' + st), count: statusCount(st) }))]} />
+          <NumTabs<StatusFilter> label={t('kitchen.stock.filterStatus')} value={status} onChange={setStatus} maxWidth={760}
+            items={[{ value: 'all', label: t('common.all'), n: statusCount('all') }, ...STATUSES.map((st) => ({ value: st as StatusFilter, label: t('kitchen.stock.s_' + st), n: statusCount(st) }))]} />
         </>
       )}
 
-      <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, overflow: 'hidden' }}>
+      <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
         {paged.rows.map((k) => {
           const mine = canEditStock(user, k);
           const approve = canApproveStock(user, k);
           const receive = canReceiveStock(user, k);
           const decided = k.status === 'approved' || k.status === 'received' ? t('kitchen.stock.approvedBy', { name: who(k.decidedBy) }) : k.status === 'rejected' ? t('kitchen.stock.declinedBy', { name: who(k.decidedBy) }) : '';
           return (
-            <div key={k.id} data-testid="stock-row" data-id={k.id} data-status={k.status} style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 8 : 12, flexWrap: 'wrap', padding: isPhone ? '10px 14px' : '14px 20px', borderTop: '1px solid #EFECEA', minHeight: isPhone ? 56 : 68 }}>
+            <div key={k.id} data-testid="stock-row" data-id={k.id} data-status={k.status} style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 8 : 12, flexWrap: 'wrap', padding: isPhone ? '10px 16px' : '14px 22px', borderTop: '1px solid #F0EAE1', minHeight: isPhone ? 56 : 68 }}>
               <div style={{ flex: '1 1 240px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{k.item} · {fmtQty(k.qty)} {unitLabel(t, k.unit)}</span>
-                <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{areaLabel(t, k.area)} · {who(k.requestedBy)} · {fds(k.createdAt.slice(0, 10))}{decided ? ' · ' + decided : ''}</span>
+                <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{areaLabel(t, k.area)} · {who(k.requestedBy)} · {fds(k.createdAt.slice(0, 10))}{decided ? ' · ' + decided : ''}</span>
                 {k.status === 'rejected' && k.note ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>“{k.note}”</span> : null}
               </div>
               <StockBadge status={k.status} />
               {approve ? (
                 <>
-                  <TextButton color="#AF4B2F" onClick={() => setDecline(k)}>{t('kitchen.stock.decline')}</TextButton>
+                  <TextButton color="#9A3D24" onClick={() => setDecline(k)}>{t('kitchen.stock.decline')}</TextButton>
                   <PillButton height={44} pad="0 16px" onClick={() => void act('stock.approve', { id: k.id }, { ok: t('kitchen.stock.approvedToast', { item: k.item, name: who(k.requestedBy) }) })}>{t('kitchen.stock.approve')}</PillButton>
                 </>
               ) : null}
               {mine ? (
                 <>
                   <OutlineButton icon="edit" onClick={() => setEdit(k)}>{t('common.edit')}</OutlineButton>
-                  <TextButton color="#AF4B2F" onClick={() => setCancel(k)}>{t('kitchen.stock.cancel')}</TextButton>
+                  <TextButton color="#9A3D24" onClick={() => setCancel(k)}>{t('kitchen.stock.cancel')}</TextButton>
                 </>
               ) : null}
-              {k.status === 'requested' && !approve ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('kitchen.stock.waiting')}</span> : null}
+              {k.status === 'requested' && !approve ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.stock.waiting')}</span> : null}
               {receive ? <OutlineButton onClick={() => void act('stock.receive', { id: k.id }, { ok: t('kitchen.stock.receivedToast', { item: k.item }) })}>{t('kitchen.stock.receive')}</OutlineButton> : null}
               {k.status === 'rejected' && k.requestedBy === user.id ? <TextButton onClick={() => { setPrefill({ item: k.item, qty: k.qty, unit: k.unit, area: k.area }); document.getElementById('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }}>{t('kitchen.stock.again')}</TextButton> : null}
             </div>
           );
         })}
-        {!rows.length ? <EmptyState icon="inventory_2" title={t('kitchen.stock.empty')} sub={t('kitchen.stock.emptySub')} /> : null}
+        {!rows.length ? <EmptyState icon="inventory_2" title={t('kitchen.stock.empty')} /> : null}
       </div>
       <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.stock.title')} />
 
@@ -123,7 +123,7 @@ function DeclineDialog({ k, onClose }: { k: StockRequest | null; onClose: () => 
     <Dialog open={!!k} onClose={() => { setNote(''); onClose(); }} eyebrow={k?.item} title={t('kitchen.stock.declineTitle')} maxWidth={520}
       footer={<><Button variant="secondary" onClick={() => { setNote(''); onClose(); }}>{t('common.cancel')}</Button><Button variant="danger" onClick={go} disabled={!ok}>{t('kitchen.stock.decline')}</Button></>}>
       <TextField label={t('kitchen.stock.declineWhy')} value={note} onChange={setNote} multiline rows={3} maxLength={240} autoFocus placeholder={t('kitchen.stock.declinePh')} />
-      <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('kitchen.stock.declineKept')}</span>
+      <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.stock.declineKept')}</span>
     </Dialog>
   );
 }

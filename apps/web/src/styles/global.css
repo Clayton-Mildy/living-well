@@ -1,8 +1,9 @@
 /* Global styles ported from the design's <helmet> (CitraPremier App.dc.html) + tokens from Design System.dc.html. */
 :root {
-  --page: #F6F5F5; --cream: #F4F0EE; --linen: #E8E1D8; --sand: #CAB8A2; --border: #DBD7D6; --hairline: #EFECEA;
-  --bronze-head: #9A836C; --bronze: #8A755B; --bronze-700: #75624B; --bronze-800: #5E4E3B; --ink: #282828; --slate: #6A6967; --rust: #AF4B2F;
-  --sage: #3D6B4F; --sage-bg: #E6EFE8; --ochre: #7A5510; --ochre-bg: #F6ECD6; --rust-bg: #F7E4DD;
+  --page: #F5F5F3; --cream: #F3EEE8; --linen: #E8E1D8; --sand: #CAB8A2; --border: #E4DACD; --hairline: #F0EAE1;
+  --bronze-head: #2B231C; --ink-deep: #2B231C; --eyebrow: #6E5A43; --card-bd: #EFE7DC; --row-line: #F0EAE1; --field-bd: #DDD1C2;
+  --card-shadow: 0 1px 2px rgba(60,40,20,.04), 0 14px 34px rgba(60,40,20,.06); --bronze: #8A755B; --bronze-700: #75624B; --bronze-800: #5E4E3B; --ink: #24201C; --slate: #5E5852; --rust: #9A3D24;
+  --sage: #3D6B4F; --sage-bg: #E3EFE6; --ochre: #7A5510; --ochre-bg: #F6ECD6; --rust-bg: #F9E3DB;
   --cp-body: 0px; --cp-small: 0px;
 }
 /* phone text sizes, also for overlays rendered in a portal outside the shell */
@@ -15,7 +16,7 @@
   .cp-btn { height: 42px !important; padding: 0 18px !important; font-size: 15px !important; gap: 6px !important; }
   .cp-btn.cp-btn-56 { height: 46px !important; font-size: 16px !important; }
   .cp-chip { height: 36px !important; padding: 0 12px !important; font-size: 14px !important; }
-  #main h1 { font-size: 28px !important; line-height: 34px !important; }
+  #main h1 { font-size: 30px !important; line-height: 1.1 !important; letter-spacing: -0.8px !important; }
   .cp-desc { display: none !important; }
   /* list rows and headers a little tighter */
   .cp-row { min-height: 56px !important; padding-top: 9px !important; padding-bottom: 9px !important; }
@@ -27,7 +28,7 @@
   .cp-ml-title { font-size: 22px !important; line-height: 28px !important; }
   /* stat tiles: two per row, short */
   .cp-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; gap: 8px !important; }
-  .cp-tile { min-height: 0 !important; padding: 10px 12px !important; gap: 4px !important; border-radius: 16px !important; }
+  .cp-tile { min-height: 0 !important; padding: 10px 12px !important; gap: 4px !important; border-radius: 12px !important; }
   .cp-tile-n { font-size: 26px !important; line-height: 30px !important; }
   .cp-tiles3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
   .cp-tile-stack { align-items: center !important; text-align: center !important; justify-content: center !important; }
@@ -40,10 +41,14 @@
   /* phone only: hide helper paragraphs / the second half of a header */
   .cp-hide-phone { display: none !important; }
 }
+/* KC round 5: the whole UI was too big (they ran the laptop at 80% browser zoom). Scale everything once here:
+   80% on tablet/laptop, 87.5% on phone (16px text -> 14px). Coordinates read from the DOM go through uiZoom(). */
+html { zoom: 0.8; }
+@media (max-width: 767.98px) { html { zoom: 0.875; } }
 html, body { margin: 0; height: 100%; background: var(--page); color: var(--ink); font-family: Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
 #root { height: 100%; }
 a { color: #75624B; text-decoration: underline; text-underline-offset: 3px; }
-a:hover { color: #282828; }
+a:hover { color: #24201C; }
 * { box-sizing: border-box; }
 button { font-family: Inter, system-ui, sans-serif; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid #75624B; outline-offset: 2px; }
@@ -58,10 +63,16 @@ input, textarea, select { font-family: Inter, system-ui, sans-serif; }
 @keyframes cpShimmer { 0% { background-position: -400px 0; } 100% { background-position: 400px 0; } }
 @keyframes cpSlideL { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; } }
-/* shared hover helpers used by primitives */
-.h-cream:hover { background: #F4F0EE !important; }
-.h-bronze:hover { background: #5E4E3B !important; }
-.h-row:hover { background: #FBFAF9 !important; }
-.h-border:hover { border-color: #8A755B !important; }
-.h-border7:hover { border-color: #75624B !important; }
-.h-ink:hover { color: #282828 !important; }
+/* shared hover helpers used by primitives. KC round 5: hovers are soft neutral tints, never bronze */
+.h-cream:hover { background: #F7F6F3 !important; }
+.h-bronze:hover { background: #3A322A !important; }
+.h-row:hover { background: #FAF9F7 !important; }
+.h-border:hover { border-color: #D4CCC1 !important; }
+.h-border7:hover { border-color: #D4CCC1 !important; }
+.h-ink:hover { color: #24201C !important; }
+/* rows whose content sits flush with the card's padding: the highlight reaches past the avatar and chevron, rounded, so it never looks cut */
+.cp-bleed { position: relative; isolation: isolate; }
+.cp-bleed:hover { background: transparent !important; }
+.cp-bleed::before { content: ''; position: absolute; inset: 3px -14px; border-radius: 10px; background: transparent; transition: background .15s ease; z-index: -1; pointer-events: none; }
+.cp-bleed:hover::before { background: #F8F7F4; }
+button, a { transition: background-color .15s ease, border-color .15s ease, color .15s ease; }

@@ -8,7 +8,14 @@ import { balanceOf, invoiceStatus, invoicesOf, priceOn, type InvoiceStatus } fro
 import { menuOn, sessionsOn, type SessionSlot } from './kitchen';
 import { todayReading } from './health';
 import { threadFor } from './messages';
+import { logForFamily, noteForFamily, readingForFamily } from './approvals';
 import { addMonths, live, sortBy, toHM, toMin, ym } from '../util';
+
+/** A reading the family may see: one that waits for management's approval is left out (a family's projection never holds one; this guards the full state). */
+const famReading = (s: ClubState, memberId: string, today: ISODate, kind: Reading['kind']): Reading | undefined => {
+  const r = todayReading(s, memberId, today, kind);
+  return (r && readingForFamily(r)) || undefined;
+};
 
 /** Lunch and afternoon tea times on the family timeline (the design's fixed club routine). */
 export const LUNCH_AT: HM = '12:00';
@@ -186,8 +193,8 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
     if (a?.checkIn) items.push({ id: 'arrival', kind: 'arrival', state: 'done', time: a.checkIn.at, att: a });
     // a reading belongs to a visit: if the check-in was undone, the day is empty again
     const visiting = st.kind === 'here' || st.kind === 'home';
-    const arr = visiting ? todayReading(s, m.id, today, 'arrival') : undefined;
-    const mon = visiting ? todayReading(s, m.id, today, 'monthly') : undefined;
+    const arr = visiting ? famReading(s, m.id, today, 'arrival') : undefined;
+    const mon = visiting ? famReading(s, m.id, today, 'monthly') : undefined;
     if (arr) items.push({ id: 'health', kind: 'health', state: 'done', time: arr.time, arrival: arr, monthly: mon });
     else if (st.kind === 'here') items.push({ id: 'health', kind: 'health', state: 'up', time: '' });
   }
@@ -203,7 +210,7 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
 
   if (single) {
     const { a, st } = single;
-    if (a?.checkOut) items.push({ id: 'home', kind: 'home', state: 'done', time: a.checkOut.at, att: a, departure: todayReading(s, single.m.id, today, 'departure') });
+    if (a?.checkOut) items.push({ id: 'home', kind: 'home', state: 'done', time: a.checkOut.at, att: a, departure: famReading(s, single.m.id, today, 'departure') });
     else if (st.kind === 'here') items.push({ id: 'home', kind: 'home', state: 'up', time: homeTime(s) });
   }
   return items;
@@ -212,7 +219,7 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
 // ---------- lunch ----------
 /** Dish ids a member is served at lunch (soft diet gets the soft option). */
 export function servedLunch(s: ClubState, m: Member, date: ISODate): string[] {
-  const menu = menuOn(s, date);
+  const menu = menuOn(s, date, { approvedOnly: true }); // a menu the kitchen published waits for management's approval
   if (!menu) return [];
   return m.health.diet.includes('softFood') ? menu.soft : menu.lunch;
 }
@@ -221,13 +228,13 @@ export const dishNamesOf = (s: ClubState, ids: string[]) => ids.map((id) => s.di
 // ---------- notes ----------
 /** The note the club shares with the family: pinned first, else the latest family-visible note. */
 export function sharedNoteOf(s: ClubState, memberId: string): MemberNote | undefined {
-  const notes = live(s.memberNotes).filter((n) => n.memberId === memberId && n.visibility === 'family');
+  const notes = live(s.memberNotes).filter((n) => n.memberId === memberId && n.visibility === 'family').map(noteForFamily).filter((n): n is MemberNote => !!n);
   return sortBy(notes, (n) => (n.pinned ? '1' : '0') + n.on, -1)[0];
 }
 
 // ---------- the daily log and comments ----------
 export const latestLog = (s: ClubState, memberId: string, today: ISODate): DailyLog | undefined =>
-  sortBy(live(s.dailyLogs).filter((l) => l.memberId === memberId && l.status === 'saved' && l.date <= today), (l) => l.date).pop();
+  sortBy(live(s.dailyLogs).filter((l) => l.memberId === memberId && l.status === 'saved' && l.date <= today).map(logForFamily).filter((l): l is DailyLog => !!l), (l) => l.date).pop();
 /** The family's care thread for a member. */
 export const careThread = (s: ClubState, familyId: string, memberId: string): Thread | undefined => threadFor(s, memberId, familyId, 'care');
 /**

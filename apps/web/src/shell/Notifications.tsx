@@ -14,7 +14,7 @@ import { say } from '../store/ui';
 const KIND_ICON: Record<string, string> = {
   'notif.act.review': 'fact_check', 'notif.act.reviewFlagged': 'fact_check', 'notif.act.alertReading': 'warning', 'notif.act.contract': 'badge', 'notif.act.complaint': 'forum',
   'notif.act.overdue': 'error', 'notif.act.budgetApprove': 'pie_chart', 'notif.act.receiptApprove': 'receipt_long', 'notif.act.vendorApprove': 'request_quote', 'notif.act.invoiceRun': 'event_repeat',
-  'notif.act.stockApprove': 'inventory_2', 'notif.act.formReady': 'assignment_turned_in', 'notif.act.guestTrial': 'waving_hand', 'notif.act.guestTrialDay': 'waving_hand', 'notif.act.guestVisit': 'meeting_room', 'notif.act.readyCheckout': 'home',
+  'notif.act.stockApprove': 'inventory_2', 'notif.act.guestTrial': 'waving_hand', 'notif.act.guestTrialDay': 'waving_hand', 'notif.act.guestVisit': 'meeting_room', 'notif.act.readyCheckout': 'home',
   'notif.act.queue': 'monitor_heart', 'notif.act.logs': 'edit_note', 'notif.act.allergen': 'no_food', 'notif.act.unread': 'chat', 'notif.act.invoiceDue': 'receipt_long', 'notif.act.invoiceOverdue': 'error',
   'notif.act.survey': 'rate_review', 'notif.act.docRequested': 'upload_file', 'notif.checkedIn': 'how_to_reg', 'notif.checkedOut': 'home', 'notif.newPhotos': 'photo_library', 'notif.logSaved': 'edit_note',
   'notif.paymentReceived': 'payments', 'notif.reviewApproved': 'task_alt', 'notif.reviewRejected': 'block', 'notif.reviewReverted': 'undo', 'notif.reviewSubmitted': 'fact_check', 'notif.reviewFlagged': 'fact_check',
@@ -54,9 +54,9 @@ export function NotificationBell({ onClick }: { onClick: () => void }) {
     for (const i of urgent) if (!seen.current.has(i.id)) { seen.current.add(i.id); say(t(i.kind, i.params), { tone: 'urgent', icon: iconFor(i.kind, 'warning') }); }
   }, [items, t]);
   return (
-    <button type="button" onClick={onClick} aria-label={t('shell.bell', { n: count })} className="h-cream" style={{ position: 'relative', width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', color: '#282828' }}>
-      <Icon name="notifications" size={24} fill={count ? 1 : 0} color={count ? '#75624B' : '#282828'} />
-      {count ? <span style={{ position: 'absolute', top: 4, right: 2, minWidth: 20, height: 20, padding: '0 5px', borderRadius: 999, background: items.some((i) => i.severity === 'urgent') ? '#AF4B2F' : '#75624B', color: '#FFFFFF', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #F6F5F5' }}>{count > 99 ? '99+' : count}</span> : null}
+    <button type="button" onClick={onClick} aria-label={t('shell.bell', { n: count })} className="h-cream" style={{ position: 'relative', width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', color: '#24201C' }}>
+      <Icon name="notifications" size={22} color="#24201C" />
+      {count ? <span style={{ position: 'absolute', top: 5, right: 4, minWidth: 18, height: 18, padding: '0 5px', borderRadius: 8, background: items.some((i) => i.severity === 'urgent') ? '#9A3D24' : '#2B231C', color: '#FFFFFF', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #FFFFFF' }}>{count > 99 ? '99+' : count}</span> : null}
     </button>
   );
 }
@@ -86,14 +86,14 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
       <Segmented label={t('shell.notifications')} value={tab} onChange={setTab} items={[{ value: 'action', label: t('shell.needsAction'), count: items.length }, { value: 'updates', label: t('shell.updates'), count: unread }]} />
       {tab === 'action' ? (
         items.length ? (
-          <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #DBD7D6', borderRadius: 20, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #E4DACD', borderRadius: 14, overflow: 'hidden' }}>
             {pagedItems.rows.map((i, k) => (
-              <button key={i.id} type="button" onClick={() => openLink(i.link)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', minHeight: 60, border: 'none', borderTop: k ? '1px solid #EFECEA' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
-                <span style={{ width: 40, height: 40, borderRadius: 999, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: i.severity === 'urgent' ? '#AF4B2F' : '#F6ECD6', color: i.severity === 'urgent' ? '#FFFFFF' : '#7A5510' }}>
+              <button key={i.id} type="button" onClick={() => openLink(i.link)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', minHeight: 60, border: 'none', borderTop: k ? '1px solid #F0EAE1' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+                <span style={{ width: 40, height: 40, borderRadius: 999, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: i.severity === 'urgent' ? '#9A3D24' : '#F6ECD6', color: i.severity === 'urgent' ? '#FFFFFF' : '#7A5510' }}>
                   <Icon name={iconFor(i.kind, 'priority_high')} size={22} fill={1} />
                 </span>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px' }}>{t(i.kind, { ...i.params, section: i.params.section ? t('review.' + i.params.section) : undefined })}</span>
-                <Icon name="chevron_right" size={22} color="#6A6967" />
+                <Icon name="chevron_right" size={22} color="#5E5852" />
               </button>
             ))}
             <Pager page={pagedItems.page} pages={pagedItems.pages} onPage={pagedItems.setPage} label={t('shell.needsAction')} />
@@ -102,17 +102,17 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
       ) : updates.length ? (
         <>
           {unread ? <div><Button variant="ghost" size={44} onClick={() => act('notifications.readAll', {}, { silent: true })}>{t('shell.markAllRead')}</Button></div> : null}
-          <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #DBD7D6', borderRadius: 20, overflow: 'hidden' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #E4DACD', borderRadius: 14, overflow: 'hidden' }}>
             {pagedUpdates.rows.map((n, k) => {
               const isUnread = !!user && !n.readBy.includes(user.id);
               return (
-                <button key={n.id} type="button" onClick={() => openLink(n.link, n.id)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', minHeight: 60, border: 'none', borderTop: k ? '1px solid #EFECEA' : 'none', background: isUnread ? '#FBF8F4' : '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
-                  <span style={{ width: 40, height: 40, borderRadius: 999, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F4F0EE', color: '#75624B' }}><Icon name={iconFor(n.kind, 'notifications')} size={22} /></span>
+                <button key={n.id} type="button" onClick={() => openLink(n.link, n.id)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', minHeight: 60, border: 'none', borderTop: k ? '1px solid #F0EAE1' : 'none', background: isUnread ? '#FBF8F4' : '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+                  <span style={{ width: 40, height: 40, borderRadius: 999, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#F3EEE8', color: '#75624B' }}><Icon name={iconFor(n.kind, 'notifications')} size={22} /></span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: isUnread ? 500 : 400 }}>{t(n.kind, { ...n.params, section: n.params.section ? t('review.' + n.params.section) : undefined })}</span>
-                    <span style={{ fontSize: FONT_BODY, color: '#6A6967' }}>{when(n.createdAt)}</span>
+                    <span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{when(n.createdAt)}</span>
                   </span>
-                  {isUnread ? <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: '#75624B', flex: 'none' }} /> : null}
+                  {isUnread ? <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: '#24201C', flex: 'none' }} /> : null}
                 </button>
               );
             })}
@@ -126,7 +126,7 @@ export function NotificationPanel({ open, onClose }: { open: boolean; onClose: (
     <Sheet open={open} onClose={onClose} title={t('shell.notifications')}>{body}</Sheet>
   ) : (
     <Drawer open={open} onClose={onClose} label={t('shell.notifications')} width={420}>
-      <h2 style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('shell.notifications')}</h2>
+      <h2 style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C' }}>{t('shell.notifications')}</h2>
       {body}
     </Drawer>
   );

@@ -232,7 +232,6 @@ test('Both mode follows the lobby: Oma Lina at the club since, Opa Budi not; the
   await expect(lina).toContainText(/At the club since \d\d:\d\d/);
   await expect(lina).toContainText('Health check coming up with Ns. Dewi.');
   await expect(budi).toContainText('Not at the club right now');
-  await expect(budi).toContainText('The nurse checks blood pressure when they arrive.'); // he may still drop in
   // she goes home: the day for her says so, with the real times
   expect((await api(request, 's1', 'attendance.checkOut', { memberId: 'm1' })).ok()).toBe(true);
   await expect(lina).toContainText(/Went home at \d\d:\d\d/);

@@ -1,4 +1,4 @@
-// Router: public routes (login, membership form, design system) + signed-in app with role-guarded nav keys.
+// Router: public routes (login, design system) + signed-in app with role-guarded nav keys.
 import { Suspense, useEffect, type ReactNode } from 'react';
 import { createBrowserRouter, Navigate, RouterProvider, useParams } from 'react-router-dom';
 import { RouteError } from './RouteError';
@@ -8,7 +8,7 @@ import { useMe } from '../lib/me';
 import { AppShell } from '../shell/AppShell';
 import { Login } from '../features/auth/Login';
 import { PageSkeleton, EmptyState, Button } from '../components/ui';
-import { SCREENS, MemberProfileScreen, MembershipFormScreen, DesignSystemScreen } from './screens';
+import { SCREENS, MemberProfileScreen, DesignSystemScreen } from './screens';
 import { screenFor } from './nav';
 import { useT } from '../lib/i18n';
 import { routerRef } from './routerRef';
@@ -47,7 +47,6 @@ function LoginRoute() {
 }
 const router = createBrowserRouter([
   { path: '/login', element: <LoginRoute />, errorElement: <RouteError /> },
-  { path: '/form/:token', element: <Suspense fallback={<PageSkeleton />}><MembershipFormScreen /></Suspense>, errorElement: <RouteError /> },
   { path: '/design-system', element: <Suspense fallback={<PageSkeleton />}><DesignSystemScreen /></Suspense>, errorElement: <RouteError /> },
   {
     path: '/',

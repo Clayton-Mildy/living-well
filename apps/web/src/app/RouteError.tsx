@@ -23,9 +23,9 @@ export function RouteError() {
   const stale = STALE.test(String(err?.message || err || ''));
   useEffect(() => { if (stale) reloadForNewVersion(); }, [stale]);
   return (
-    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, textAlign: 'center', background: '#F6F5F5', fontFamily: 'Inter' }}>
-      <div style={{ fontSize: 24, color: '#9A836C' }}>{stale ? t('common.updating') : t('common.somethingWrong')}</div>
-      <button type="button" onClick={() => window.location.reload()} style={{ height: 44, padding: '0 20px', borderRadius: 999, border: 'none', background: '#75624B', color: '#FFFFFF', fontSize: 16, fontFamily: 'Inter', cursor: 'pointer' }}>{t('common.reload')}</button>
+    <div style={{ minHeight: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 16, padding: 24, textAlign: 'center', background: '#F5F5F3', fontFamily: 'Inter' }}>
+      <div style={{ fontSize: 24, color: '#2B231C' }}>{stale ? t('common.updating') : t('common.somethingWrong')}</div>
+      <button type="button" onClick={() => window.location.reload()} style={{ height: 44, padding: '0 20px', borderRadius: 12, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 16, fontFamily: 'Inter', cursor: 'pointer' }}>{t('common.reload')}</button>
     </div>
   );
 }

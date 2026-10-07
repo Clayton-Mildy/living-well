@@ -24,12 +24,12 @@ export function KitchenFeedback() {
   const open = list.filter((f) => f.status === 'open').length;
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 18, maxWidth: 860 }}>
+      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 16, maxWidth: 780 }}>
         <PageHead eyebrow={t('kitchen.fb.open', { n: open })} title={t('kitchen.fb.title')}
           right={!isPhone ? <Button icon="call" onClick={() => setLogOpen(true)}>{t('kitchen.log.open')}</Button> : undefined} />
         {paged.rows.map((f) => <FeedbackCard key={f.id} f={f} />)}
         <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.fb.title')} />
-        {!list.length ? <EmptyState icon="forum" title={t('kitchen.fb.empty')} sub={t('kitchen.fb.emptySub')} /> : null}
+        {!list.length ? <EmptyState icon="forum" title={t('kitchen.fb.empty')} /> : null}
       </div>
       {isPhone ? <Pin icon="call" label={t('kitchen.log.open')} onClick={() => setLogOpen(true)} /> : null}
       <LogFeedbackSheet open={logOpen} onClose={() => setLogOpen(false)} />
@@ -75,16 +75,16 @@ function FeedbackCard({ f }: { f: Feedback }) {
   const setStatus = (status: Feedback['status'], msg: string) => act('feedback.setStatus', { feedbackId: f.id, status }, { ok: msg });
   const metaOf = (x: { from: string; at: string }) => `${actorName(s, x.from)} · ${x.at.slice(0, 10) === today ? t('common.today') : fds(x.at.slice(0, 10))}, ${x.at.slice(11, 16)}`;
   return (
-    <div data-testid="feedback-card" data-status={f.status} className="cp-card-pad" style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '18px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div data-testid="feedback-card" data-status={f.status} className="cp-card-pad" style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={44} /> : null}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{m ? memberName(m) : '—'}</span>
-          <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{from}</span>
+          <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{m ? memberName(m) : '—'}</span>
+          <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{from}</span>
         </div>
         <FeedbackBadge status={f.status} />
       </div>
-      <span style={{ alignSelf: 'flex-start', minHeight: 28, padding: '4px 12px 4px 8px', borderRadius: 999, background: '#F4F0EE', fontSize: FONT_SMALL, display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+      <span style={{ alignSelf: 'flex-start', fontSize: FONT_SMALL, color: '#6B6259', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         <Icon name="restaurant" size={16} color="#75624B" />
         {f.dish ? t('kitchen.fb.dishLine', { dish: f.dish, day }) : t('kitchen.fb.dayOnly', { day })}
       </span>
@@ -93,9 +93,9 @@ function FeedbackCard({ f }: { f: Feedback }) {
       {convo.map((x) => {
         const mine = x.from.startsWith('staff:');
         return (
-          <div key={x.id} data-testid={mine ? 'reply' : 'family-followup'} style={{ padding: '12px 14px', borderRadius: 16, background: mine ? '#F4F0EE' : '#FFFFFF', border: mine ? undefined : '1px solid #DBD7D6', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div key={x.id} data-testid={mine ? 'reply' : 'family-followup'} style={{ padding: '12px 16px', borderRadius: 12, background: mine ? '#EAF1EC' : '#F3EEE8', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ fontSize: 16, lineHeight: '22px' }}>{x.text}</span>
-            <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{metaOf(x)}</span>
+            <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{metaOf(x)}</span>
           </div>
         );
       })}
@@ -116,8 +116,8 @@ function FeedbackCard({ f }: { f: Feedback }) {
         {f.status === 'answered' && lastStaff && !editing ? <OutlineButton icon="edit" onClick={() => { setEditing(true); setDraft(lastStaff.text); }}>{t('kitchen.fb.editReply')}</OutlineButton> : null}
         {f.status !== 'open' ? <TextButton onClick={() => setStatus('open', t('kitchen.fb.reopened'))}>{t('kitchen.fb.reopen')}</TextButton> : null}
         {f.status === 'open' && !target ? <OutlineButton icon="check" onClick={() => setStatus('answered', t('kitchen.fb.markedAnswered'))}>{t('kitchen.fb.markAnswered')}</OutlineButton> : null}
-        {f.status === 'open' ? <TextButton onClick={() => setStatus('closed', t('kitchen.fb.closed'))} color="#6A6967">{t('kitchen.fb.close')}</TextButton> : null}
-        {f.status === 'answered' ? <TextButton onClick={() => setStatus('closed', t('kitchen.fb.closed'))} color="#6A6967">{t('kitchen.fb.close')}</TextButton> : null}
+        {f.status === 'open' ? <TextButton onClick={() => setStatus('closed', t('kitchen.fb.closed'))} color="#5E5852">{t('kitchen.fb.close')}</TextButton> : null}
+        {f.status === 'answered' ? <TextButton onClick={() => setStatus('closed', t('kitchen.fb.closed'))} color="#5E5852">{t('kitchen.fb.close')}</TextButton> : null}
       </div>
     </div>
   );

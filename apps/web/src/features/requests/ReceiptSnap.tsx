@@ -40,16 +40,15 @@ export function ReceiptSnap({ onDone }: { onDone: () => void }) {
     if (r.ok) onDone();
   };
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '18px 20px', display: 'flex', flexWrap: 'wrap', gap: 18, alignItems: 'flex-start', animation: 'cpUp .2s ease-out' }}>
+    <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 20, boxShadow: '0 1px 2px rgba(60,40,20,.04), 0 18px 40px rgba(60,40,20,.07)', padding: '22px clamp(18px, 3vw, 32px)', display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', animation: 'cpUp .2s ease-out' }}>
       {!snapped ? (
-        <button type="button" onClick={() => setSnapped(true)} data-testid="snap-photo" style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 18, border: 'none', background: '#2E2924', color: '#F4F0EE', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" onClick={() => setSnapped(true)} data-testid="snap-photo" style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 14, border: 'none', background: '#2E2924', color: '#F3EEE8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="receipt_long" size={40} color="#CAB8A2" />
           <span style={{ fontSize: 16, lineHeight: 1.4 }}>{t('requests.snap.tap')}</span>
-          <span style={{ fontSize: FONT_SMALL, color: '#CAB8A2', lineHeight: 1.4 }}>{t('requests.snap.demo')}</span>
         </button>
       ) : (
-        <div role="img" aria-label={t('requests.snap.photoAlt')} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 18, background: PAPER, border: '1px solid #DBD7D6', position: 'relative' }}>
-          <span style={{ position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 999, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+        <div role="img" aria-label={t('requests.snap.photoAlt')} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 14, background: PAPER, border: '1px solid #E4DACD', position: 'relative' }}>
+          <span style={{ position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
             <Icon name="check_circle" size={17} color="#3D6B4F" />{fileName}
           </span>
         </div>
@@ -62,7 +61,7 @@ export function ReceiptSnap({ onDone }: { onDone: () => void }) {
         {suppliers.length ? (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="group" aria-label={t('requests.snap.suppliers')}>
             {suppliers.map((q) => (
-              <button key={q.id} type="button" onClick={() => setSupplier(q.name)} className="h-cream" style={{ height: 44, padding: '0 12px', borderRadius: 999, border: '1px solid #CAB8A2', background: q.name === supplier.trim() ? '#F4F0EE' : '#FFFFFF', color: '#282828', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{q.name}</button>
+              <button key={q.id} type="button" onClick={() => setSupplier(q.name)} className="h-cream" style={{ height: 44, padding: '0 12px', borderRadius: 12, border: '1px solid #DCD3C8', background: q.name === supplier.trim() ? '#F3EEE8' : '#FFFFFF', color: '#24201C', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{q.name}</button>
             ))}
           </div>
         ) : null}
@@ -78,7 +77,7 @@ export function ReceiptSnap({ onDone }: { onDone: () => void }) {
         </div>
         {!secs.length ? <Note tone="ochre" icon="info">{t('requests.budget.noSections')}</Note> : null}
         <div style={{ display: 'flex', gap: 8 }}>
-          <button type="button" onClick={onDone} className="h-cream" style={{ height: 48, padding: '0 18px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('common.cancel')}</button>
+          <button type="button" onClick={onDone} className="h-cream" style={{ height: 48, padding: '0 18px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('common.cancel')}</button>
           <PillButton on={ok && !busy} onClick={send} grow>{t('requests.snap.send')}</PillButton>
         </div>
       </div>

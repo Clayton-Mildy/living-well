@@ -3,22 +3,21 @@ import type { CSSProperties } from 'react';
 import { addDays, staffCall, type ClubState, type Lang } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
 import { eventTitle, type DayInfo, type DayItem, type CalKind } from '@cp/shared/rules/calendar';
-import { Icon } from '../../components/ui';
 import { fd, type TFn } from '../../lib/i18n';
 
 export const KIND: Record<CalKind, { icon: string; bg: string; fg: string; dot: string }> = {
-  closed: { icon: 'event_busy', bg: '#EFECEA', fg: '#6A6967', dot: '#6A6967' },
-  holiday: { icon: 'flag', bg: '#F7E4DD', fg: '#AF4B2F', dot: '#AF4B2F' },
-  outing: { icon: 'directions_bus', bg: '#E6EFE8', fg: '#3D6B4F', dot: '#3D6B4F' },
+  closed: { icon: 'event_busy', bg: '#F0EAE1', fg: '#5E5852', dot: '#5E5852' },
+  holiday: { icon: 'flag', bg: '#F9E3DB', fg: '#9A3D24', dot: '#9A3D24' },
+  outing: { icon: 'directions_bus', bg: '#E3EFE6', fg: '#3D6B4F', dot: '#3D6B4F' },
   venue: { icon: 'storefront', bg: '#F6ECD6', fg: '#7A5510', dot: '#7A5510' },
-  activity: { icon: 'interests', bg: '#F4F0EE', fg: '#75624B', dot: '#8A755B' },
-  guest: { icon: 'waving_hand', bg: '#E8E1D8', fg: '#282828', dot: '#75624B' },
+  activity: { icon: 'interests', bg: '#F3EEE8', fg: '#75624B', dot: '#8A755B' },
+  guest: { icon: 'waving_hand', bg: '#E8E1D8', fg: '#24201C', dot: '#75624B' },
 };
 const STATE = {
-  open: { icon: 'storefront', bg: '#E6EFE8', fg: '#3D6B4F' },
-  closed: { icon: 'event_busy', bg: '#EFECEA', fg: '#6A6967' },
-  holiday: { icon: 'flag', bg: '#F7E4DD', fg: '#AF4B2F' },
-  weekend: { icon: 'event_busy', bg: '#EFECEA', fg: '#6A6967' },
+  open: { icon: 'storefront', bg: '#E3EFE6', fg: '#2F5A40' },
+  closed: { icon: 'event_busy', bg: '#F0EAE1', fg: '#6B6259' },
+  holiday: { icon: 'flag', bg: '#F9E3DB', fg: '#9A3D24' },
+  weekend: { icon: 'event_busy', bg: '#F0EAE1', fg: '#6B6259' },
 } as const;
 
 /** Weekday names from Intl (so Monday is "Mon" / "Sen"): 0 = Sunday … 6 = Saturday. 1 January 2001 was a Monday, used only as a reference week. */
@@ -31,8 +30,8 @@ export function dayState(t: TFn, info: Pick<DayInfo, 'state'>, hours: { open: st
   return { ...st, label };
 }
 export const StatePill = ({ st }: { st: ReturnType<typeof dayState> }) => (
-  <span style={{ height: 30, padding: '0 12px 0 8px', borderRadius: 999, background: st.bg, color: st.fg, fontSize: 'max(13px, var(--cp-small, 0px))', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-    <Icon name={st.icon} size={18} fill={1} />
+  <span style={{ color: st.fg, fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+    <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: st.fg, flex: 'none' }} />
     {st.label}
   </span>
 );
@@ -71,4 +70,4 @@ export function itemText(s: Pick<ClubState, 'rooms' | 'staff' | 'activities'>, i
   return { title, sub, icon, bg: k.bg, fg: k.fg, time: it.time ?? (it.kind === 'guest' ? '' : t('cal.allDay')) };
 }
 
-export const smallCaps: CSSProperties = { fontSize: 'max(13px, var(--cp-small, 0px))', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px' };
+export const smallCaps: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };

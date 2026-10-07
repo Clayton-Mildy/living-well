@@ -6,12 +6,12 @@ import { allowedKeys } from '../../app/nav';
 import { useMe } from '../../lib/me';
 import { addDays, isPendingRow, live, memberShort } from '@cp/shared';
 import { libraryPhotos, photoActivities, photoDays, type PhotoFilter } from '@cp/shared/rules/activity';
-import { Button, Card, DateField, EmptyState, Eyebrow, FilterChips, PageHead, Pager, Segmented, Select, usePaged } from '../../components/ui';
+import { Button, Card, DateField, EmptyState, Eyebrow, FilterChips, PageHead, Pager, Select, usePaged } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
-import { PhotoTile, activityLabel, plural } from './lib';
+import { NumTabs, PhotoTile, activityLabel, plural } from './lib';
 import { PhotoViewer } from './PhotoViewer';
 
 const DAYS_PER_PAGE = 5;
@@ -22,7 +22,7 @@ export function PhotoLibrary() {
   const navigate = useNavigate();
   const { role } = useMe();
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 18, maxWidth: 1100 }}>
+    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)', maxWidth: 1100 }}>
       <PhotoLibraryBody title={<PageHead title={t('activity.libraryTitle')} size={36} right={role && allowedKeys(role).has('camera') ? <Button size={44} icon="photo_camera" onClick={() => navigate('/camera')}>{t('activity.openCamera')}</Button> : null} />} />
     </div>
   );
@@ -57,13 +57,13 @@ export function PhotoLibraryBody({ title }: { title?: ReactNode }) {
 
   const chip = (label: string, on: boolean, onClick: () => void) => {
     const sel = on;
-    return <button key={label} type="button" className="cp-chip" aria-pressed={sel} onClick={onClick} style={{ height: 44, padding: '0 16px', borderRadius: 999, border: sel ? '1px solid #282828' : '1px solid #CAB8A2', background: sel ? '#282828' : '#FFFFFF', color: sel ? '#FFFFFF' : '#282828', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{label}</button>;
+    return <button key={label} type="button" className="cp-chip" aria-pressed={sel} onClick={onClick} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: sel ? '1px solid #24201C' : '1px solid #DCD3C8', background: sel ? '#24201C' : '#FFFFFF', color: sel ? '#FFFFFF' : '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{label}</button>;
   };
   return (
     <>
       {title}
       <Eyebrow>{summary}</Eyebrow>
-      <Card pad={isPhone ? 12 : 16} style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 10 : 14 }}>
+      <Card pad={isPhone ? 16 : 22} style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 16 }}>
         <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(2,minmax(0,1fr))' : 'repeat(auto-fit,minmax(200px,1fr))', gap: isPhone ? 8 : 12 }}>
           <Select label={t('activity.fMember')} value={f.memberId || ''} onChange={(v) => patch({ memberId: v || undefined })} searchable
             options={[{ value: '', label: t('activity.allMembers') }, ...members.map((m) => ({ value: m.id, label: memberShort(m) }))]} />
@@ -86,23 +86,23 @@ export function PhotoLibraryBody({ title }: { title?: ReactNode }) {
             {chip(t('activity.allTime'), !f.from && !f.to, () => range(undefined, undefined))}
           </div>
         )}
-        <div style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', justifyContent: 'space-between' }}>
-          <Segmented label={t('activity.fVisibility')} value={f.visibility || 'all'} onChange={(v) => patch({ visibility: v })}
-            items={[{ value: 'all', label: t('common.all'), count: all.length }, { value: 'visible', label: t('activity.visible'), count: all.length - hiddenN - pendingN }, { value: 'hidden', label: t('activity.hidden'), count: hiddenN }, { value: 'pending', label: t('activity.pendingFilter'), count: pendingN }]} />
+        <div style={{ display: 'flex', gap: 12, alignItems: 'flex-end', flexWrap: 'wrap', justifyContent: 'space-between' }}>
+          <NumTabs label={t('activity.fVisibility')} value={f.visibility || 'all'} onChange={(v) => patch({ visibility: v })} maxWidth={560}
+            items={[{ value: 'all', label: t('common.all'), n: all.length }, { value: 'visible', label: t('activity.visible'), n: all.length - hiddenN - pendingN }, { value: 'hidden', label: t('activity.hidden'), n: hiddenN }, { value: 'pending', label: t('activity.pendingFilter'), n: pendingN }]} />
           {active ? <Button variant="ghost" size={44} onClick={() => setF({ visibility: 'all' })}>{t('activity.clearFilters')}</Button> : null}
         </div>
       </Card>
 
       {paged.rows.map((d) => (
-        <Card key={d.date} pad={16} style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <Card key={d.date} pad={isPhone ? 16 : 22} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-            <span style={{ fontSize: 20, lineHeight: '28px', letterSpacing: '-0.3px' }}>{d.date === today ? t('common.today') : fdl(d.date)}</span>
-            <span style={{ fontSize: 16, color: '#6A6967', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{plural(t, 'activity.photosCount', d.count)}</span>
+            <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C' }}>{d.date === today ? t('common.today') : fdl(d.date)}</span>
+            <span style={{ fontSize: 14, color: '#6B6259', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{plural(t, 'activity.photosCount', d.count)}</span>
           </div>
           {d.groups.map((g) => (
             <div key={g.activity} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-              <span style={{ fontSize: 16, color: '#6A6967', lineHeight: 1.4 }}>{activityLabel(s, g.activity, t, lang)}</span>
-              <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(3,minmax(0,1fr))' : 'repeat(auto-fill,minmax(120px,1fr))', gap: 6 }}>
+              <span style={{ fontSize: 14, fontWeight: 500, color: '#6E5A43', lineHeight: 1.4 }}>{activityLabel(s, g.activity, t, lang)}</span>
+              <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(3,minmax(0,1fr))' : 'repeat(auto-fill,minmax(120px,1fr))', gap: 8 }}>
                 {g.photos.map((p) => {
                   const who = p.memberIds.map((id) => (s.members[id] ? memberShort(s.members[id]) : '')).filter(Boolean).join(', ');
                   const aria = [activityLabel(s, g.activity, t, lang), p.time, who, p.media === 'video' ? t('activity.video') : '', p.visibility === 'hidden' ? t('activity.hidden') : p.visibility === 'pending' ? t('activity.pendingTag') : ''].filter(Boolean).join(', ');
@@ -116,7 +116,7 @@ export function PhotoLibraryBody({ title }: { title?: ReactNode }) {
       <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('activity.libPager')} />
       {!days.length ? (
         <Card>
-          <EmptyState icon="photo_library" title={all.length ? t('activity.noMatch') : t('activity.noPhotos')} sub={all.length ? t('activity.noMatchSub') : t('activity.noPhotosSub')}
+          <EmptyState icon="photo_library" title={all.length ? t('activity.noMatch') : t('activity.noPhotos')}
             action={active ? <Button variant="secondary" onClick={() => setF({ visibility: 'all' })}>{t('activity.clearFilters')}</Button> : undefined} />
         </Card>
       ) : null}

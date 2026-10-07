@@ -1,11 +1,10 @@
 // "From the team": the latest daily log, the family's comments on it (posted to the care thread) and staff replies.
 import { useState, type CSSProperties } from 'react';
-import { actorName, initials, memberShort, sessionsOn, staffCall, type DailyLog, type Member } from '@cp/shared';
+import { actorName, memberShort, sessionsOn, staffCall, type DailyLog, type Member } from '@cp/shared';
 import { activityLabel, careThread, latestLog, logComments } from '@cp/shared/rules/family';
-import { Button, FONT_BODY, Icon } from '../../components/ui';
 import { useAct } from '../../lib/act';
 import { useFamilyCtx } from './useFamily';
-import { H2, fcard } from './parts';
+import { H2, fcard, linkBtn } from './parts';
 
 /** The log text, its comments and the comment box (no card around it, so Both mode can place it inside each parent's card). */
 export function LogBlock({ m, log }: { m: Member; log: DailyLog }) {
@@ -13,8 +12,7 @@ export function LogBlock({ m, log }: { m: Member; log: DailyLog }) {
   const act = useAct();
   const [draft, setDraft] = useState('');
   const [busy, setBusy] = useState(false);
-  const author = s.staff[log.by];
-  const authorCall = staffCall(author) || t('family.theLobby');
+  const authorCall = staffCall(s.staff[log.by]) || t('family.theLobby');
   const thread = user ? careThread(s, user.id, m.id) : undefined;
   const comments = logComments(s, thread, log.id);
   const first = sessionsOn(s, log.date).find((x) => x.cell)?.cell;
@@ -31,31 +29,22 @@ export function LogBlock({ m, log }: { m: Member; log: DailyLog }) {
     setBusy(false);
     if (r.ok) setDraft('');
   };
-  const chips = [{ icon: 'sentiment_satisfied', label: t('family.mood_' + log.mood) }, { icon: 'restaurant', label: t('family.lunch_' + log.lunch) }];
+  const meta = [authorCall, fmt.fdl(log.date), mood, t('family.lunch_' + log.lunch).toLowerCase()].join(' · ');
+  const can = !!draft.trim() && !busy;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }} data-testid="team-log" data-member={m.id}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <div aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: '#E8E1D8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: FONT_BODY, fontWeight: 500, whiteSpace: 'nowrap', flex: 'none' }}>{initials(author?.name || authorCall)}</div>
-        <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{authorCall} · {fmt.fds(log.date)}</span>
-      </div>
-      <p style={{ margin: 0, fontSize: 16, lineHeight: '24px', textWrap: 'pretty' } as CSSProperties}>{log.note || fallback}</p>
+      <p style={{ margin: 0, fontSize: 'clamp(19px, 4.8vw, 24px)', lineHeight: 1.4, fontWeight: 300, letterSpacing: '-0.3px', color: '#2B231C', textWrap: 'pretty' } as CSSProperties}>{'\u201C'}{log.note || fallback}{'\u201D'}</p>
+      <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{meta}</span>
       {comments.map((c) => (
-        <div key={c.id} data-testid="log-comment" style={{ padding: '10px 12px', borderRadius: 14, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 16, lineHeight: '22px', overflowWrap: 'anywhere' }}>{c.text}</span>
-          <span style={{ fontSize: `max(13px, var(--cp-body, 0px))`, color: '#6A6967', lineHeight: 1.4 }}>{actorName(s, c.from)} · {when(c.at)}</span>
+        <div key={c.id} data-testid="log-comment" style={{ paddingLeft: 12, borderLeft: '2px solid #E6DDD1', display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontSize: 15, lineHeight: '21px', overflowWrap: 'anywhere' }}>{c.text}</span>
+          <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{actorName(s, c.from)} · {when(c.at)}</span>
         </div>
       ))}
-      <div style={{ display: 'flex', gap: 8 }}>
+      <div style={{ display: 'flex', gap: 10, alignItems: 'center', borderBottom: '1px solid #DDD1C2', padding: '2px 0' }}>
         <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void send(); }} placeholder={t('family.logCommentPh')} aria-label={`${t('family.commentLabel')} · ${n}`} maxLength={500}
-          style={{ flex: 1, minWidth: 0, height: 48, border: '1px solid #8A755B', borderRadius: 14, padding: '0 12px', fontSize: 16, fontFamily: 'Inter', color: '#282828', outline: 'none', background: '#FFFFFF' }} />
-        <Button variant="secondary" size={48} disabled={!draft.trim() || busy} onClick={send} style={{ padding: '0 16px' }}>{t('family.logSend')}</Button>
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        {chips.map((c) => (
-          <span key={c.icon} style={{ height: 32, padding: '0 12px', borderRadius: 999, background: '#F4F0EE', color: '#282828', fontSize: FONT_BODY, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-            <Icon name={c.icon} size={18} color="#75624B" />{c.label}
-          </span>
-        ))}
+          style={{ flex: 1, minWidth: 0, height: 44, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#24201C', padding: 0 }} />
+        <button type="button" onClick={send} aria-disabled={!can || undefined} style={{ ...linkBtn, color: can ? '#75624B' : '#B5A998', cursor: can ? 'pointer' : 'default' }}>{t('family.logSend')}</button>
       </div>
     </div>
   );

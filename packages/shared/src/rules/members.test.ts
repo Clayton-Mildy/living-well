@@ -5,8 +5,9 @@ import { addMonths } from '../util';
 import {
   DOC_TYPES, billedExtraDates, docIdFor, endingOn, faceConsent, faceReady, finalInvoiceFor, finalInvoiceLines, firstOfNextMonth, formatVa, genderOf, isHM, isISO, isPhone, isNewMember, lastContactId, lastLinkId, lastMemberId,
   matchesQuery, memberStatus, nextContactId, nextLinkId, nextMemberId, nextMonday, openBalance, plainName, splitName, tabForSection, unbilledExtraMonths, validateNewMember,
-  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind,
+  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows,
 } from './members';
+import type { MemberRow } from './members';
 
 const T = '2026-10-21';
 const T2 = '2026-10-22';
@@ -188,16 +189,17 @@ describe('reviews', () => {
     expect(pendingReviewsFor(s, 'm10').map((c) => c.id)).toEqual(['cr-seed-1']);
     expect(pendingReviewsFor(s, 'm1')).toEqual([]);
     expect(allPendingReviews(s)).toHaveLength(1);
-    expect(appliedReviews(s)).toEqual([]);
+    expect(appliedReviews(s).map((c) => c.id)).toEqual(['cr-seed-2']); // the nurse's care change that was applied at once
     expect(handledReviews(s)).toEqual([]);
   });
 });
 
 describe('validateNewMember', () => {
-  const ok = { name: 'Siti Rahma', dob: '1946-03-12', usualArrival: '10:00', plan: 'flex' as const, start: '2026-10-26', contact: { name: 'Rudi', phone: '+6281340007777', relation: 'son' as const, primary: true }, consent: { data: true, face: true } };
+  const ok = { name: 'Siti Rahma', dob: '1946-03-12', usualArrival: '10:00', plan: 'flex' as const, start: '2026-10-26', contact: { name: 'Rudi', phone: '+6281340007777', relation: 'son' as const, primary: true }, formMediaId: 'md_testregistrationform01', consent: { data: true, face: true } };
   it('accepts a complete form and reports each field when it is not', () => {
     expect(validateNewMember(ok, T)).toEqual([]);
-    expect(validateNewMember({}, T).map((i) => i.field).sort()).toEqual(['consentData', 'contact', 'dob', 'name', 'plan', 'start']); // the usual arrival is optional
+    expect(validateNewMember({}, T).map((i) => i.field).sort()).toEqual(['consentData', 'contact', 'dob', 'form', 'name', 'plan', 'start']); // the usual arrival is optional; the signed paper form is required
+    expect(validateNewMember({ ...ok, formMediaId: '' }, T)[0]).toMatchObject({ field: 'form', code: 'members.err.formRequired' });
     expect(validateNewMember({ ...ok, name: 'A' }, T)[0]).toEqual({ field: 'name', code: 'members.err.nameRequired', params: undefined });
     expect(validateNewMember({ ...ok, dob: '2015-01-01' }, T)[0].code).toBe('members.err.dobInvalid'); // age 11
     expect(validateNewMember({ ...ok, usualArrival: '' }, T)).toEqual([]);
@@ -264,5 +266,53 @@ describe('photo review', () => {
     expect(photoReviewKind({ kind: 'group' })).toBe('group');
     expect(photoReviewKind({ kind: 'arrival' })).toBe('arrival');
     expect(photoReviewKind({ kind: 'solo' })).toBe('solo');
+  });
+});
+
+describe('subscription start and end (month to month)', () => {
+  const mem = (memberships: Member['memberships']): Member => ({ ...seed().members.m1, memberships });
+  it('subStart is the current membership start', () => {
+    expect(subStart(mem([{ start: '2025-03-12' }]))).toBe('2025-03-12');
+    expect(subStart(mem([{ start: '2024-01-02', lastDay: '2024-06-30' }, { start: '2025-02-03' }]))).toBe('2025-02-03');
+  });
+  it('a running membership renews at the end of this month', () => {
+    expect(subEnd(mem([{ start: '2025-03-12' }]), '2026-10-21')).toEqual({ on: '2026-10-31', kind: 'renews' });
+    expect(subEnd(mem([{ start: '2025-03-12' }]), '2026-02-10')).toEqual({ on: '2026-02-28', kind: 'renews' });
+    expect(subEnd(mem([{ start: '2025-03-12' }]), '2028-02-10')).toEqual({ on: '2028-02-29', kind: 'renews' });
+  });
+  it('a membership that starts later renews at the end of its start month', () => {
+    expect(subEnd(mem([{ start: '2026-11-04' }]), '2026-10-21')).toEqual({ on: '2026-11-30', kind: 'renews' });
+  });
+  it('an ending membership ends on its last day (today included), an ended one has ended', () => {
+    expect(subEnd(mem([{ start: '2025-03-12', lastDay: '2026-10-28' }]), '2026-10-21')).toEqual({ on: '2026-10-28', kind: 'ends' });
+    expect(subEnd(mem([{ start: '2025-03-12', lastDay: '2026-10-21' }]), '2026-10-21')).toEqual({ on: '2026-10-21', kind: 'ends' });
+    expect(subEnd(mem([{ start: '2025-03-12', lastDay: '2026-09-30' }]), '2026-10-21')).toEqual({ on: '2026-09-30', kind: 'ended' });
+  });
+  it('memberRows carries both and sortMemberRows orders by them, name first, dateless last', () => {
+    const rows = memberRows(seed(), T);
+    for (const r of rows) {
+      if (r.pending) { expect(r.subStart).toBeUndefined(); continue; }
+      expect(r.subStart).toBe(subStart(r.m));
+      expect(r.subEnd).toEqual(subEnd(r.m, T));
+    }
+    expect(sortMemberRows(rows, 'name')).toBe(rows);
+    const dated = rows.filter((r) => r.subStart);
+    const asc = sortMemberRows(rows, 'startOld');
+    const desc = sortMemberRows(rows, 'startNew');
+    expect(asc).toHaveLength(rows.length);
+    const sa = asc.map((r) => r.subStart).filter(Boolean) as string[];
+    expect(sa).toEqual([...sa].sort());
+    expect(sa).toHaveLength(dated.length);
+    const sd = desc.map((r) => r.subStart).filter(Boolean) as string[];
+    expect(sd).toEqual([...sa].reverse());
+    const se = sortMemberRows(rows, 'endSoon').map((r) => r.subEnd?.on).filter(Boolean) as string[];
+    expect(se).toEqual([...se].sort());
+  });
+  it('dateless rows go last and ties keep the name order', () => {
+    const base = memberRows(seed(), T)[0];
+    const mk = (id: string, start?: string): MemberRow => ({ ...base, m: { ...base.m, id }, subStart: start, subEnd: undefined });
+    const out = sortMemberRows([mk('a'), mk('b', '2025-01-01'), mk('c', '2025-01-01'), mk('d', '2024-01-01')], 'startOld');
+    expect(out.map((r) => r.m.id)).toEqual(['d', 'b', 'c', 'a']);
+    expect(sortMemberRows([mk('a'), mk('b', '2025-01-01'), mk('c', '2025-01-01'), mk('d', '2026-01-01')], 'startNew').map((r) => r.m.id)).toEqual(['d', 'b', 'c', 'a']);
   });
 });

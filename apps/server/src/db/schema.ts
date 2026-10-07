@@ -27,7 +27,7 @@ export const tables = Object.fromEntries(COLLECTIONS.map((c) => [c, entityTable(
 // named exports so drizzle-kit picks every table up
 export const prices = tables.prices, members = tables.members, memberNotes = tables.memberNotes, planChangeRequests = tables.planChangeRequests, familyContacts = tables.familyContacts,
   familyLinks = tables.familyLinks, attendance = tables.attendance, guestVisits = tables.guestVisits, readings = tables.readings,
-  dailyLogs = tables.dailyLogs, photos = tables.photos, threads = tables.threads, messages = tables.messages, feedback = tables.feedback, enquiries = tables.enquiries, formRequests = tables.formRequests,
+  dailyLogs = tables.dailyLogs, photos = tables.photos, threads = tables.threads, messages = tables.messages, feedback = tables.feedback, enquiries = tables.enquiries,
   calendarEvents = tables.calendarEvents, venueBookings = tables.venueBookings, rooms = tables.rooms, activities = tables.activities, scheduleVersions = tables.scheduleVersions, dishes = tables.dishes,
   menuVersions = tables.menuVersions, dayMenus = tables.dayMenus, stockRequests = tables.stockRequests, budgetSections = tables.budgetSections, budgetRequests = tables.budgetRequests,
   budgetAdjustments = tables.budgetAdjustments, receipts = tables.receipts, vendorInvoices = tables.vendorInvoices, invoices = tables.invoices, payments = tables.payments, refunds = tables.refunds,

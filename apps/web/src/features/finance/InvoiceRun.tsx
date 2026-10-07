@@ -52,7 +52,7 @@ export function InvoiceRunSheet({ open, onClose }: { open: boolean; onClose: () 
   );
 
   return (
-    <FormOverlay open={open} onClose={onClose} title={t('finance.run.title')} eyebrow={t('finance.run.eyebrow')} maxWidth={720} footer={footer}>
+    <FormOverlay open={open} onClose={onClose} title={t('finance.run.title')} maxWidth={720} footer={footer}>
       <div role="radiogroup" aria-label={t('finance.run.period')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {periods.map((p) => (
           <Chip key={p} selected={p === period} icon={p !== period && runDone(s, p) ? 'task_alt' : undefined} onClick={() => setPeriod(p)}>{fmonth(p, true)}</Chip>
@@ -60,23 +60,23 @@ export function InvoiceRunSheet({ open, onClose }: { open: boolean; onClose: () 
       </div>
       <Summary plan={plan} />
       {n ? (
-        <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #DBD7D6', borderRadius: 20, overflow: 'hidden' }}>
-          {paged.rows.map((r, i) => (
-            <div key={r.member.id} style={{ padding: '12px 16px', borderTop: i ? '1px solid #EFECEA' : 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {paged.rows.map((r) => (
+            <div key={r.member.id} style={{ padding: '14px 0', borderTop: '1px solid #F0EAE1', display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Avatar name={memberName(r.member)} tone={r.member.photoTone} src={memberPhoto(r.member)} size={40} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{memberName(r.member)}</span>
-                  <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('finance.run.billTo', { name: s.familyContacts[r.payerId]?.name || '' })}</span>
+                  <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.run.billTo', { name: s.familyContacts[r.payerId]?.name || '' })}</span>
                 </div>
-                <span style={{ fontSize: 16, fontWeight: 600, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(r.total)}</span>
+                <span style={{ fontSize: 17, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(r.total)}</span>
               </div>
               <div style={{ paddingLeft: 52, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 {r.lines.map((l) => (
                   <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, fontSize: FONT_BODY, lineHeight: 1.4 }}>
                     <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
                       <span>{lineLabel(t, fmonth, l)}</span>
-                      {l.dates?.length ? <span style={{ fontSize: FONT_SMALL, color: '#6A6967' }}>{l.dates.map(fds).join(' · ')}</span> : null}
+                      {l.dates?.length ? <span style={{ fontSize: FONT_SMALL, color: '#5E5852' }}>{l.dates.map(fds).join(' · ')}</span> : null}
                     </span>
                     <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', color: l.amount < 0 ? '#3D6B4F' : undefined }}>{money(l.amount)}</span>
                   </div>
@@ -95,8 +95,8 @@ export function InvoiceRunSheet({ open, onClose }: { open: boolean; onClose: () 
           {noPayer.map((r) => memberName(r.member)).join(', ')}. {t('finance.run.noPayerHelp')}
         </Note>
       ) : null}
-      {nothing.length && !plan.done ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('finance.run.nothingFor', { names: nothing.map((r) => memberName(r.member)).join(', ') })}</span> : null}
-      {n ? <span style={{ ...caps, color: '#6A6967' }}>{t('finance.run.total', { n, total: rp(plan.total) })}</span> : null}
+      {nothing.length && !plan.done ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.run.nothingFor', { names: nothing.map((r) => memberName(r.member)).join(', ') })}</span> : null}
+      {n ? <span style={{ ...caps, color: '#5E5852' }}>{t('finance.run.total', { n, total: rp(plan.total) })}</span> : null}
     </FormOverlay>
   );
 }

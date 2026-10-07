@@ -151,7 +151,7 @@ export function CameraCapture({ open, onClose, onCapture, facing = 'environment'
   const stopRecording = () => { clearInterval(tick.current); const r = recorder.current; if (r && r.state !== 'inactive') r.stop(); };
 
   const round = { width: 56, height: 56, borderRadius: 999, border: '1px solid rgba(255,255,255,0.35)', background: 'rgba(255,255,255,0.12)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0, flex: 'none' } as const;
-  const pill = (primary: boolean) => ({ height: 52, padding: '0 24px', borderRadius: 999, border: primary ? 'none' : '1px solid rgba(255,255,255,0.45)', background: primary ? '#FFFFFF' : 'transparent', color: primary ? '#282828' : '#FFFFFF', fontSize: 17, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter' }) as const;
+  const pill = (primary: boolean) => ({ height: 52, padding: '0 24px', borderRadius: 12, border: primary ? 'none' : '1px solid rgba(255,255,255,0.45)', background: primary ? '#FFFFFF' : 'transparent', color: primary ? '#24201C' : '#FFFFFF', fontSize: 17, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter' }) as const;
   const picker = (
     <input ref={file} type="file" accept={video_ ? 'video/*' : 'image/jpeg,image/png,image/webp,image/*'} aria-hidden="true" className="sr-only" tabIndex={-1} onChange={(e) => void onFile(e.target.files?.[0])} />
   );
@@ -172,7 +172,7 @@ export function CameraCapture({ open, onClose, onCapture, facing = 'environment'
         ) : null}
         {stage === 'starting' ? <div role="status" style={{ position: 'absolute', fontSize: FONT_BODY, color: '#E8E1D8' }}>{t('common.cameraStarting')}</div> : null}
         {stage === 'recording' ? (
-          <div role="timer" aria-label={t('ds.recordingTime', { s: Math.floor(secs), max: MAX_VIDEO_SEC })} style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', height: 36, padding: '0 14px', borderRadius: 999, background: 'rgba(0,0,0,0.55)', color: '#FFFFFF', fontSize: 17, fontWeight: 600, fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
+          <div role="timer" aria-label={t('ds.recordingTime', { s: Math.floor(secs), max: MAX_VIDEO_SEC })} style={{ position: 'absolute', top: 12, left: '50%', transform: 'translateX(-50%)', height: 36, padding: '0 14px', borderRadius: 12, background: 'rgba(0,0,0,0.55)', color: '#FFFFFF', fontSize: 17, fontWeight: 600, fontVariantNumeric: 'tabular-nums', display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}>
             <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 999, background: '#E5484D' }} />{clock(secs)} / {clock(MAX_VIDEO_SEC)}
           </div>
         ) : null}
@@ -188,7 +188,7 @@ export function CameraCapture({ open, onClose, onCapture, facing = 'environment'
           </div>
         ) : null}
         {busy ? <div role="status" style={{ position: 'absolute', bottom: 16, fontSize: FONT_BODY, color: '#E8E1D8' }}>{t(video_ ? 'ds.processingVideo' : 'common.processing')}</div> : null}
-        {err ? <div role="alert" style={{ position: 'absolute', bottom: 16, padding: '8px 14px', borderRadius: 12, background: '#F7E4DD', color: '#AF4B2F', fontSize: FONT_BODY }}>{err}</div> : null}
+        {err ? <div role="alert" style={{ position: 'absolute', bottom: 16, padding: '8px 14px', borderRadius: 8, background: '#F9E3DB', color: '#9A3D24', fontSize: FONT_BODY }}>{err}</div> : null}
       </div>
       <div style={{ flex: 'none', padding: '16px 16px calc(20px + env(safe-area-inset-bottom, 0px))', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 16, minHeight: 104 }}>
         {stage === 'review' ? (

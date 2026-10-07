@@ -130,19 +130,7 @@ export const photoActions = [
         if (p.visibility === 'pending' && !p.deletedAt) todo.push(p); // one that somebody else already handled is skipped
       }
       if (!todo.length) ctx.fail('activity.err.notPending');
-      const notify = input.notify !== false;
-      const forFamilies: { photo: { id: string; media: 'photo' | 'video' }; memberIds: string[] }[] = [];
-      for (const p of todo) {
-        p.visibility = 'visible';
-        p.approved = { at: ctx.nowDT, by: ctx.user.id };
-        if (p.kind === 'lunch') {
-          if (notify) announceLunchPhoto(d, ctx, p.id); // the kitchen tells the families of the people who had lunch
-          continue;
-        }
-        feedFor(d, ctx, p);
-        if (notify) forFamilies.push({ photo: { id: p.id, media: p.media }, memberIds: p.memberIds.slice() });
-      }
-      notifyNewPhotos(d, ctx, forFamilies);
+      approvePhotoRows(d, ctx, todo, input.notify !== false);
       ctx.result.approved = todo.length;
       ctx.result.photoIds = todo.map((p) => p.id);
       ctx.result.skipped = uniq(input.photoIds).length - todo.length;
@@ -161,23 +149,42 @@ export const photoActions = [
         if (p.visibility === 'pending' && !p.deletedAt) todo.push(p);
       }
       if (!todo.length) ctx.fail('activity.err.notPending');
-      const reason = plainReason(input.reason) || input.reason;
-      // a rejected photo is a soft delete with the reason kept: it leaves every list, and teachers cannot bring it back
-      for (const p of todo) {
-        p.visibility = 'removed';
-        p.moderated = { at: ctx.nowDT, by: ctx.user.id, reason };
-        p.deletedAt = ctx.nowDT;
-      }
-      // each teacher hears once, with the reason
-      const byTaker = new Map<string, Draft<Photo>[]>();
-      for (const p of todo) if (p.takenBy !== ctx.user.id && d.staff[p.takenBy] && !d.staff[p.takenBy].deletedAt) (byTaker.get(p.takenBy) || byTaker.set(p.takenBy, []).get(p.takenBy)!).push(p);
-      for (const [who, ps] of byTaker) {
-        const ids = uniq(ps.flatMap((p) => p.memberIds));
-        ctx.notify({ toUsers: [who], kind: ps.length === 1 ? 'activity.notif.photoRejected' : 'activity.notif.photosRejected', params: { name: namesOf(d, ids), n: ps.length, reason }, link: '/camera?tab=library', memberId: ids[0], ref: { type: 'photo', id: ps[0].id } });
-      }
+      rejectPhotoRows(d, ctx, todo, input.reason);
       ctx.result.rejected = todo.length;
       ctx.result.photoIds = todo.map((p) => p.id);
       ctx.result.skipped = uniq(input.photoIds).length - todo.length;
     },
   }),
 ];
+
+/** Approve pending photos (the Approvals hub and photo.approve): visible to families, who are told unless `notify` is off. */
+export function approvePhotoRows(d: Draft<ClubState>, ctx: Ctx, todo: Draft<Photo>[], notify: boolean) {
+  const forFamilies: { photo: { id: string; media: 'photo' | 'video' }; memberIds: string[] }[] = [];
+  for (const p of todo) {
+    p.visibility = 'visible';
+    p.approved = { at: ctx.nowDT, by: ctx.user.id };
+    if (p.kind === 'lunch') {
+      if (notify) announceLunchPhoto(d, ctx, p.id); // the kitchen tells the families of the people who had lunch
+      continue;
+    }
+    feedFor(d, ctx, p);
+    if (notify) forFamilies.push({ photo: { id: p.id, media: p.media }, memberIds: p.memberIds.slice() });
+  }
+  notifyNewPhotos(d, ctx, forFamilies);
+}
+
+/** Reject pending photos with a reason: a soft delete the teachers cannot undo; each teacher hears once. */
+export function rejectPhotoRows(d: Draft<ClubState>, ctx: Ctx, todo: Draft<Photo>[], rawReason: string) {
+  const reason = plainReason(rawReason) || rawReason;
+  for (const p of todo) {
+    p.visibility = 'removed';
+    p.moderated = { at: ctx.nowDT, by: ctx.user.id, reason };
+    p.deletedAt = ctx.nowDT;
+  }
+  const byTaker = new Map<string, Draft<Photo>[]>();
+  for (const p of todo) if (p.takenBy !== ctx.user.id && d.staff[p.takenBy] && !d.staff[p.takenBy].deletedAt) (byTaker.get(p.takenBy) || byTaker.set(p.takenBy, []).get(p.takenBy)!).push(p);
+  for (const [who, ps] of byTaker) {
+    const ids = uniq(ps.flatMap((p) => p.memberIds));
+    ctx.notify({ toUsers: [who], kind: ps.length === 1 ? 'activity.notif.photoRejected' : 'activity.notif.photosRejected', params: { name: namesOf(d, ids), n: ps.length, reason }, link: '/camera?tab=library', memberId: ids[0], ref: { type: 'photo', id: ps[0].id } });
+  }
+}

@@ -10,6 +10,7 @@ export const lobby = {
   primaryBilling: 'Primary billing contact',
   tCheckedIn: '{n} checked in at {t}. {f} got a message.', tCheckedOut: '{n} checked out at {t}. Family told.', nurseQ: '{n} sent to the health station.',
   openProfile: 'Open full profile', todayCounts: 'Today at the club', modeAria: 'Check in or check out', clubOpen: 'Club open',
+  notInYet: 'Not in yet', openUntil: 'Club open until {t}', whoTitle: 'Who is this?', whoNobody: 'Nobody: dismiss', whoNone: 'No member matches “{q}”.',
 
   // header and club-open pill
   opensAt: 'Opens at {t}', closedNow: 'Closed for today', todayL: 'Today',

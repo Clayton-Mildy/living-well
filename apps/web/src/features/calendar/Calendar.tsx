@@ -67,19 +67,19 @@ export function Calendar() {
   const tab = (v: View, icon: string, label: string) => {
     const on = view === v;
     return (
-      <button key={v} type="button" role="tab" aria-selected={on} onClick={() => setView(v)} style={{ height: 44, padding: isPhone ? '0 14px 0 10px' : '0 18px 0 14px', borderRadius: 999, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.12)' : 'none', color: '#282828', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
-        <Icon name={icon} size={20} />{label}
+      <button key={v} type="button" role="tab" aria-selected={on} onClick={() => setView(v)} style={{ height: 38, padding: isPhone ? '0 14px 0 10px' : '0 18px 0 14px', borderRadius: 999, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: on ? 600 : 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+        <Icon name={icon} size={18} />{label}
       </button>
     );
   };
 
-  const tabs = <div role="tablist" aria-label={t('cal.view')} style={{ display: 'flex', padding: 4, borderRadius: 999, background: '#F4F0EE' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>;
+  const tabs = <div role="tablist" aria-label={t('cal.view')} style={{ display: 'flex', padding: 4, borderRadius: 999, background: '#EDE5DA', alignSelf: 'flex-start' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>;
 
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 20, maxWidth: 1240 }}>
+      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(18px, 2.8vw, 32px)', maxWidth: 1240 }}>
         {family ? (
-          <button type="button" onClick={() => navigate('/today')} style={{ alignSelf: 'flex-start', height: 44, padding: '0 16px 0 10px', margin: isPhone ? '-6px 0 -10px -10px' : '-6px 0 -8px -10px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
+          <button type="button" onClick={() => navigate('/today')} style={{ alignSelf: 'flex-start', height: 44, padding: '0 16px 0 10px', margin: isPhone ? '-6px 0 -10px -10px' : '-6px 0 -8px -10px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
             <Icon name="arrow_back" size={20} />{t('common.today')}
           </button>
         ) : null}
@@ -102,7 +102,6 @@ export function Calendar() {
             {days.map((d) => <DayBlock key={d.date} s={s} info={d} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} />)}
             <div style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 10 : 12, flexWrap: 'wrap' }}>
               <Button variant="secondary" size={isPhone ? 44 : 48} icon="calendar_month" onClick={() => setView('month')}>{t('cal.seeMonth')}</Button>
-              <span style={{ fontSize: 'max(14px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{t('cal.nextDaysNote')}</span>
             </div>
           </div>
         ) : (
@@ -111,11 +110,11 @@ export function Calendar() {
               <PhoneMonth month={month} onMonth={(m) => { setMonth(m); setSel(null); }} today={today} sel={sel} info={info} hours={hours} legend={legend}
                 onSelect={(d, on) => { setSel(on ? null : d); if (canBuild) openWeek(d, false); }} />
             ) : (
-            <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '20px clamp(16px, 2.4vw, 28px) 24px', display: 'flex', flexDirection: 'column', gap: 14 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <button type="button" onClick={() => { setMonth(addMonths(month, -1)); setSel(null); }} aria-label={t('cal.prevMonth')} style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DBD7D6', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#282828', padding: 0 }}><Icon name="chevron_left" size={22} /></button>
-                <h2 style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C', minWidth: 200, textAlign: 'center' }}>{fmonth(month, true)}</h2>
-                <button type="button" onClick={() => { setMonth(addMonths(month, 1)); setSel(null); }} aria-label={t('cal.nextMonth')} style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DBD7D6', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#282828', padding: 0 }}><Icon name="chevron_right" size={22} /></button>
+                <button type="button" onClick={() => { setMonth(addMonths(month, -1)); setSel(null); }} aria-label={t('cal.prevMonth')} style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#24201C', padding: 0 }}><Icon name="chevron_left" size={22} /></button>
+                <h2 style={{ margin: 0, fontSize: 24, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', minWidth: 200, textAlign: 'center' }}>{fmonth(month, true)}</h2>
+                <button type="button" onClick={() => { setMonth(addMonths(month, 1)); setSel(null); }} aria-label={t('cal.nextMonth')} style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#24201C', padding: 0 }}><Icon name="chevron_right" size={22} /></button>
                 {month !== ym(today) ? <Button variant="ghost" size={44} onClick={() => { setMonth(ym(today)); setSel(null); }}>{t('cal.thisMonth')}</Button> : null}
                 <div style={{ flex: 1 }} />
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 14px', fontSize: 'max(14px, var(--cp-body, 0px))', lineHeight: 1.4 }}>
@@ -123,7 +122,7 @@ export function Calendar() {
                 </div>
               </div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 6 }}>
-                {MON_FIRST.map((w) => <div key={w} style={{ fontSize: 'max(13px, var(--cp-small, 0px))', fontWeight: 500, textAlign: 'center', padding: '4px 0', lineHeight: 1.4 }}>{weekdayName(lang, w, 'short')}</div>)}
+                {MON_FIRST.map((w) => <div key={w} style={{ fontSize: 12, fontWeight: 600, color: '#6B6259', textAlign: 'center', padding: '4px 0', lineHeight: 1.4 }}>{weekdayName(lang, w, 'short')}</div>)}
                 {cells.map((d, i) => {
                   if (!d) return <div key={'b' + i} aria-hidden="true" />;
                   const x = info(d);
@@ -132,18 +131,17 @@ export function Calendar() {
                   const isToday = d === today;
                   const shut = !x.open;
                   const hol = x.state === 'holiday';
-                  const lines = x.items.filter((it) => it.kind !== 'closed' && it.kind !== 'holiday').slice(0, 3).map((it) => ({ dot: KIND[it.kind].dot, text: itemText(s, it, t, lang, x.weekend).title.split(' with ')[0].split(':')[0], key: it.key }));
+                  const lines = x.items.filter((it) => it.kind !== 'closed' && it.kind !== 'holiday').slice(0, 3).map((it) => ({ dot: KIND[it.kind].dot, bg: KIND[it.kind].bg, fg: KIND[it.kind].fg, text: itemText(s, it, t, lang, x.weekend).title.split(' with ')[0].split(':')[0], key: it.key }));
                   return (
                     <button key={d} type="button" onClick={() => { setSel(on ? null : d); if (canBuild) openWeek(d); }} aria-label={`${fdl(d)} · ${st.label}`} aria-pressed={on} data-date={d}
-                      style={{ minHeight: 100, padding: 8, borderRadius: 14, border: isToday ? '2px solid #282828' : shut ? '1px solid #EFECEA' : '1px solid #DBD7D6', background: hol ? '#FBEDE8' : shut ? '#F6F5F5' : '#FFFFFF', boxShadow: on ? '0 0 0 3px #75624B' : 'none', display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', gap: 4, textAlign: 'left', cursor: 'pointer', color: '#282828', minWidth: 0, overflow: 'hidden', fontFamily: 'Inter' }}>
+                      style={{ minHeight: 100, padding: 8, borderRadius: 8, border: isToday ? '2px solid #3D6B4F' : shut ? '1px solid #F0EAE1' : '1px solid #E9E1D6', background: isToday ? '#EAF1EC' : hol ? '#FBEDE8' : shut ? '#F5F5F3' : '#FFFFFF', opacity: shut && !hol && !isToday ? 0.6 : 1, boxShadow: on ? '0 0 0 3px #24201C' : 'none', display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', gap: 4, textAlign: 'left', cursor: 'pointer', color: '#24201C', minWidth: 0, overflow: 'hidden', fontFamily: 'Inter' }}>
                       <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4, minWidth: 0 }}>
-                        <span style={{ fontSize: 16, fontWeight: 600, color: shut ? '#6A6967' : '#282828', lineHeight: 1.4 }}>{Number(d.slice(8))}</span>
-                        <span style={{ fontSize: 12, color: '#6A6967', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hol ? t('cal.holiday') : x.weekend ? '' : shut ? t('cal.closedShort') : ''}</span>
+                        <span style={{ fontSize: 15, fontWeight: isToday ? 700 : 500, color: isToday ? '#2F5A40' : shut ? '#6B6259' : '#24201C', lineHeight: 1.4 }}>{Number(d.slice(8))}</span>
+                        <span style={{ fontSize: 12, color: '#5E5852', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hol ? t('cal.holiday') : x.weekend ? '' : shut ? t('cal.closedShort') : ''}</span>
                       </span>
                       {lines.map((l) => (
                         <Fragment key={l.key}>
-                          <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 12, lineHeight: '16px', minWidth: 0 }}>
-                            <span style={{ width: 8, height: 8, borderRadius: 999, background: l.dot, flex: 'none' }} />
+                          <span style={{ display: 'flex', alignItems: 'center', fontSize: 12, lineHeight: '16px', minWidth: 0, padding: '2px 6px', borderRadius: 6, background: l.bg, color: l.fg, fontWeight: 500 }}>
                             <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{l.text}</span>
                           </span>
                         </Fragment>
@@ -154,7 +152,6 @@ export function Calendar() {
               </div>
             </div>
             )}
-            {isPhone && !selInfo ? <div role="status" style={{ fontSize: 'max(14px, var(--cp-body, 0px))', lineHeight: 1.4, color: '#6A6967', textAlign: 'center', padding: '2px 8px' }}>{t('cal.tapDay')}</div> : null}
             {selInfo ? <DayBlock s={s} info={selInfo} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} /> : null}
             {(isMgmt && selInfo && selInfo.date >= today) || (isPhone && canBuild && selInfo) ? (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>

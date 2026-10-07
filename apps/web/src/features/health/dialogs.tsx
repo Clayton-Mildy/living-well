@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { memberName, type Reading, type QueueKind } from '@cp/shared';
 import { READING_FIELDS, READING_RANGES, inRange, type ReadingField } from '@cp/shared/rules/healthStation';
 import type { DismissReason, EditReason, VoidReason } from '@cp/shared/actions/health';
-import { Button, ChipGroup, Dialog, Note, TextField, Toggle, FONT_BODY } from '../../components/ui';
+import { Button, ChipGroup, Dialog, Note, TextField, Toggle } from '../../components/ui';
 import { useAct } from '../../lib/act';
 import { useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
@@ -59,7 +59,6 @@ export function EditReadingDialog({ readingId, onClose }: { readingId: string; o
       </div>
       <ChipGroup label={t('health.editWhy')} value={reason} onChange={(v) => setReason(v as EditReason)} options={(['typo', 'deviceError', 'remeasured', 'other'] as EditReason[]).map((k) => ({ value: k, label: t('health.er.' + k) }))} />
       <TextField label={t('common.note')} value={note} onChange={setNote} multiline rows={2} maxLength={280} placeholder={t('health.notePh')} />
-      <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('health.editHint')}</div>
     </Dialog>
   );
 }
@@ -112,7 +111,6 @@ export function DismissDialog({ personId, kind, guest, name, onClose, onDone }: 
   return (
     <Dialog open onClose={onClose} title={t('health.dismissTitle', { n: name })} maxWidth={520}
       footer={footerBtns(t('common.cancel'), onClose, <Button variant="danger" size={48} disabled={!reason || busy} onClick={go}>{t('health.dismissConfirm')}</Button>)}>
-      <div style={{ fontSize: 16, lineHeight: '22px' }}>{t('health.dismissSub')}</div>
       <ChipGroup label={t('common.reason')} value={reason} onChange={(v) => setReason(v as DismissReason)} options={(['declined', 'notNeeded', 'leftEarly', 'other'] as DismissReason[]).map((k) => ({ value: k, label: t('health.dr.' + k) }))} />
     </Dialog>
   );

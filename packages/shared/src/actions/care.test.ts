@@ -13,6 +13,9 @@ const fails = (s: ClubState, name: string, input: unknown, uid: string, code: st
   throw new Error(`expected ${name} to fail with ${code}`);
 };
 const base = { mood: 'calm', lunch: 'all', joined: 'yes', communicative: 'normal', content: 'normal', note: '' };
+let apN = 0;
+/** management approves logs / notes (families hear about them only then) */
+const approve = (s: ClubState, ids: string[], clk = clock) => execute(s, 'approval.approve', { type: 'logs', ids }, as(s, 's9'), clk, `ap${++apN}`);
 const note = (s: ClubState, kind: string) => live(s.notifications).filter((x) => x.kind === kind);
 
 describe('log.save', () => {
@@ -22,7 +25,13 @@ describe('log.save', () => {
     const l = r.state.dailyLogs['log-m10-2026-10-21'];
     expect(l).toMatchObject({ memberId: 'm10', date: '2026-10-21', mood: 'quiet', lunch: 'most', joined: 'satOut', communicative: 'withdrawn', content: 'low', note: 'Quiet morning, enjoyed the tea.', staffNote: 'Watch his appetite.', status: 'saved', by: 's5', edits: [], createdBy: 'staff:s5' });
     expect(r.result).toMatchObject({ logId: 'log-m10-2026-10-21', edited: false });
-    const ns = note(r.state, 'activity.notif.logSaved').filter((x) => x.createdAt === '2026-10-21T10:00');
+    // a teacher's log waits for approval: families neither see it nor hear about it
+    expect(l.approval).toMatchObject({ status: 'pending', by: 'staff:s5' });
+    expect(r.result.pending).toBe(true);
+    expect(note(r.state, 'activity.notif.logSaved').filter((x) => x.createdAt === '2026-10-21T10:00')).toHaveLength(0);
+    const ap = approve(r.state, ['log-m10-2026-10-21']);
+    expect(ap.state.dailyLogs['log-m10-2026-10-21'].approval).toMatchObject({ status: 'approved', decidedBy: 'staff:s9' });
+    const ns = note(ap.state, 'activity.notif.logSaved').filter((x) => x.createdAt === '2026-10-21T10:00');
     expect(ns).toHaveLength(1);
     expect(ns[0]).toMatchObject({ toUsers: ['fm10_0'], memberId: 'm10', link: '/today', ref: { type: 'dailyLog', id: 'log-m10-2026-10-21' } });
     expect(Object.values(r.state.activity).some((a) => a.key === 'activity.feed.log' && a.memberId === 'm10')).toBe(true);
@@ -44,12 +53,14 @@ describe('log.save', () => {
   it('records edits and uses the "updated" notification the second time', () => {
     let s = step(fresh(), 'log.save', { memberId: 'm20', date: '2026-10-21', ...base }, 's5');
     expect(s.dailyLogs['log-m20-2026-10-21'].edits).toEqual([]);
+    s = approve(s, ['log-m20-2026-10-21']).state; // management has approved it: families have seen it
     const r = run(s, 'log.save', { memberId: 'm20', date: '2026-10-21', ...base, mood: 'cheerful', note: 'Sang along.' }, 's9', { today: '2026-10-21', nowMin: 640 });
     s = r.state;
     expect(r.result.edited).toBe(true);
     expect(s.dailyLogs['log-m20-2026-10-21']).toMatchObject({ mood: 'cheerful', note: 'Sang along.', by: 's5' });
     expect(s.dailyLogs['log-m20-2026-10-21'].edits).toEqual([{ at: '2026-10-21T10:40', by: 's9' }]);
-    expect(note(s, 'activity.notif.logUpdated')).toHaveLength(1);
+    expect(note(s, 'activity.notif.logUpdated')).toHaveLength(1); // management's own edit is approved at once
+    expect(s.dailyLogs['log-m20-2026-10-21'].approval).toBeUndefined();
     // a blank staff note clears it; omitting it keeps it
     s = step(s, 'log.save', { memberId: 'm20', date: '2026-10-21', ...base, staffNote: 'Internal' }, 's5');
     expect(s.dailyLogs['log-m20-2026-10-21'].staffNote).toBe('Internal');
@@ -131,6 +142,8 @@ describe('log.saveAllNormal', () => {
     expect(s.dailyLogs['log-m20-2026-10-21']).toMatchObject({ mood: 'calm', by: 's5' });
     expect(s.dailyLogs['log-m1-2026-10-21']).toBeUndefined(); // not here yet
     expect(s.dailyLogs['log-m46-2026-10-21']).toBeUndefined();
+    expect(note(s, 'activity.notif.logSaved').filter((x) => x.createdAt === '2026-10-21T10:00')).toHaveLength(0); // all three wait for approval
+    s = approve(s, ['log-m10-2026-10-21', 'log-m2-2026-10-21', 'log-m20-2026-10-21']).state;
     expect(note(s, 'activity.notif.logSaved').filter((x) => x.createdAt === '2026-10-21T10:00')).toHaveLength(3); // Bambang's save + 2 bulk
     fails(s, 'log.saveAllNormal', { date: '2026-10-21' }, 's5', 'activity.err.nothingToLog');
   });

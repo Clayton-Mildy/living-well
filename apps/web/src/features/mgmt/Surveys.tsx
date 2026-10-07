@@ -7,12 +7,12 @@ import {
   type CustomResult, type Survey, type SurveyCustomQuestion, type SurveyQuestionKind,
 } from '@cp/shared';
 import { appFamilies, recommendPct, resolveSurveyAudience, surveyMembers, teamCandidates, type SurveyAudience } from '@cp/shared/rules/mgmt';
-import { Button, Chip, Dialog, Icon, IconButton, Note, Pager, SectionLabel, Select, TextField, Toggle, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, Chip, Dialog, Icon, IconButton, Note, PageHead, Pager, SectionLabel, Select, TextField, Toggle, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
-import { BadgePill, IconBox, ListCard, Page, Pill, TONE, labelStyle, chipRow, tn, wrapChip } from './common';
+import { BadgePill, HPAD, IconBox, ListCard, Page, Pill, TONE, heroCard, labelStyle, chipRow, tn, wrapChip } from './common';
 
 const QUESTIONS = SURVEY_BUILTINS;
 /** Who the survey goes to as picked on screen: all three lists are kept so switching the choice does not lose what was picked. */
@@ -79,20 +79,17 @@ export function Surveys() {
 
   return (
     <Page gap={18}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <span style={labelStyle}>{t('mgmt.svEyebrow')}</span>
-        <h1 style={{ margin: 0, fontSize: 36, lineHeight: '44px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('nav.surveys')}</h1>
-      </div>
+      <PageHead eyebrow={t('mgmt.svEyebrow')} title={t('nav.surveys')} />
 
       {lv && liveStats ? (
-        <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', gap: 16 }}>
+        <div style={{ ...heroCard, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 18 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
               <span style={labelStyle}>{t('mgmt.svLiveSent', { date: fds(lv.sentOn) })}</span>
-              <span style={{ fontSize: 24, lineHeight: '32px', letterSpacing: '-0.5px', color: '#9A836C' }}>{lv.title}</span>
-              <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: '#6A6967' }}>{t('mgmt.svSentTo')}: {audienceText(t, lv, lv.recipients.length)}</span>
+              <span style={{ fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C' }}>{lv.title}</span>
+              <span style={{ fontSize: 14, lineHeight: 1.4, color: '#6B6259' }}>{t('mgmt.svSentTo')}: {audienceText(t, lv, lv.recipients.length)}</span>
             </div>
-            <span style={{ height: 30, padding: '0 12px 0 8px', borderRadius: 999, background: TONE.sage.bg, color: TONE.sage.fg, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+            <span style={{ height: 26, padding: '0 12px', borderRadius: 8, background: TONE.sage.bg, color: TONE.sage.fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
               {tn(t, 'mgmt.svRespOf', liveStats.recipients, { n: liveStats.answered, total: liveStats.recipients })}
             </span>
           </div>
@@ -106,11 +103,11 @@ export function Surveys() {
         </div>
       ) : null}
 
-      <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: 20, display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 760 }}>
+      <div style={{ ...heroCard, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 16, maxWidth: 760 }}>
         <span style={labelStyle}>{f.id ? t('mgmt.svEditDraft') : t('mgmt.svNew')}</span>
         <TextField label={t('mgmt.svTitle')} value={f.title} onChange={(v) => setF({ ...f, title: v })} placeholder={t('mgmt.svTitlePh')} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{t('mgmt.svQuestions')}</span>
+          <span style={{ fontSize: 15, lineHeight: '22px', fontWeight: 500 }}>{t('mgmt.svQuestions')}</span>
           <div style={chipRow}>
             {QUESTIONS.map((k) => <Chip key={k} selected={f.questions.includes(k)} onClick={() => toggleQ(k)} size={44} style={wrapChip}>{q(k)}</Chip>)}
           </div>
@@ -123,13 +120,13 @@ export function Surveys() {
                 <Chip key={x.id} selected={f.team.includes(x.id)} onClick={() => setF({ ...f, team: f.team.includes(x.id) ? f.team.filter((y) => y !== x.id) : [...f.team, x.id] })} style={wrapChip}>{`${staffCall(x)} · ${t('roles.' + x.role)}`}</Chip>
               ))}
             </div>
-            {!f.team.length ? <span style={{ fontSize: 14, color: '#AF4B2F', lineHeight: '20px' }} role="alert">{t('mgmt.err.teamRequired')}</span> : <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{t('mgmt.svTeamHint')}</span>}
+            {!f.team.length ? <span style={{ fontSize: 14, color: '#9A3D24', lineHeight: '20px' }} role="alert">{t('mgmt.err.teamRequired')}</span> : null}
           </div>
         ) : null}
         <CustomQuestions list={f.custom} onChange={(custom) => setF({ ...f, custom })} />
-        {asksNothing ? <span style={{ fontSize: 14, color: '#AF4B2F', lineHeight: '20px' }} role="alert">{t('mgmt.err.noQuestions')}</span> : null}
+        {asksNothing ? <span style={{ fontSize: 14, color: '#9A3D24', lineHeight: '20px' }} role="alert">{t('mgmt.err.noQuestions')}</span> : null}
         <AudiencePicker value={f.aud} onChange={(aud) => setF({ ...f, aud })} count={recipients.length} />
-        <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{t('mgmt.svHint')}</span>
+        <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{t('mgmt.svHint')}</span>
         {!anyFamily ? <Note icon="info">{t('mgmt.svNoFamilies')}</Note> : !recipients.length ? <Note icon="info">{t('mgmt.svNoneChosen')}</Note> : null}
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Button size={56} full disabled={!ok || !recipients.length || busy} onClick={sendNow}>{tn(t, 'mgmt.svSendTo', recipients.length)}</Button>
@@ -142,11 +139,11 @@ export function Surveys() {
         <ListCard title={t('mgmt.svDrafts')}>
           {draftsPaged.rows.map((x) => (
             <Fragment key={x.id}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 20px', borderTop: '1px solid #EFECEA' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '16px 0', borderTop: '1px solid #F0EAE1' }}>
                 <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{x.title}</span>
-                  <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{[...x.questions.map(q), ...(x.custom?.length ? [tn(t, 'mgmt.svCustomCount', x.custom.length)] : [])].join(' · ')}</span>
-                  <span data-draft-audience={x.id} style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{audienceText(t, x, resolveSurveyAudience(s, x.audience, today).length)}</span>
+                  <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{[...x.questions.map(q), ...(x.custom?.length ? [tn(t, 'mgmt.svCustomCount', x.custom.length)] : [])].join(' · ')}</span>
+                  <span data-draft-audience={x.id} style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{audienceText(t, x, resolveSurveyAudience(s, x.audience, today).length)}</span>
                 </div>
                 <Button size={44} variant="secondary" icon="edit" onClick={() => edit(x)}>{t('common.edit')}</Button>
                 <Button size={44} variant="secondary" icon="delete" onClick={() => act('survey.delete', { surveyId: x.id }, { ok: t('mgmt.svDeleted') })}>{t('common.delete')}</Button>
@@ -164,13 +161,14 @@ export function Surveys() {
             const rec = recommendPct(s, x);
             return (
               <Fragment key={x.id}>
-                <button type="button" className="h-row" data-survey={x.id} onClick={() => setDetail(x.id)}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 20px', minHeight: 64, border: 'none', borderTop: '1px solid #EFECEA', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
-                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{x.title}</span>
-                    <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{rec === null ? tn(t, 'mgmt.svPastPlain', st.answered, { date: fds(x.sentOn) }) : tn(t, 'mgmt.svPastSub', st.answered, { date: fds(x.sentOn), rec })}</span>
+                <button type="button" data-survey={x.id} onClick={() => setDetail(x.id)}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, padding: '16px 0', minHeight: 64, border: 'none', borderTop: '1px solid #F0EAE1', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                    <span style={{ fontSize: 17, lineHeight: '22px', fontWeight: 500 }}>{x.title}</span>
+                    <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{rec === null ? tn(t, 'mgmt.svPastPlain', st.answered, { date: fds(x.sentOn) }) : tn(t, 'mgmt.svPastSub', st.answered, { date: fds(x.sentOn), rec })}</span>
                   </div>
-                  <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{st.overallN ? `${st.overall.toFixed(1)} / 5` : '—'}</span>
+                  <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{st.overallN ? `${st.overall.toFixed(1)} / 5` : '—'}</span>
+                  <Icon name="chevron_right" size={20} color="#8A8078" />
                 </button>
               </Fragment>
             );
@@ -195,12 +193,12 @@ function Tiles({ s, sv }: { s: ReturnType<typeof useClub>; sv: Survey }) {
     { label: t('mgmt.svRate'), value: `${st.rate}%`, sub: tn(t, 'mgmt.svRateSub', st.recipients, { n: st.answered, total: st.recipients }) },
   ];
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: 10 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(tiles.length, 3)}, minmax(0, 1fr))`, gap: 'clamp(10px, 2.4vw, 32px)', maxWidth: 640 }}>
       {tiles.map((x) => (
-        <div key={x.label} style={{ padding: '14px 16px', borderRadius: 18, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 4 }}>
-          <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{x.label}</span>
-          <span style={{ fontSize: 30, lineHeight: '36px', fontWeight: 300, fontVariantNumeric: 'tabular-nums' }}>{x.value}</span>
-          <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{x.sub}</span>
+        <div key={x.label} style={{ padding: '0 0 12px', borderBottom: '2px solid #E6DDD1', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+          <span style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>{x.value}</span>
+          <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{x.label}</span>
+          <span style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259' }}>{x.sub}</span>
         </div>
       ))}
     </div>
@@ -216,13 +214,13 @@ function TeamBars({ sv, staffName, staffRole }: { sv: Survey; staffName: (id: st
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <span style={labelStyle}>{t('mgmt.svTeamRatings')}</span>
       {st.team.map((r) => (
-        <div key={r.staffId} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '10px 0', borderBottom: '1px solid #EFECEA' }}>
+        <div key={r.staffId} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 0', borderTop: '1px solid #F0EAE1' }}>
           <div style={{ flex: '1 1 160px', display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{staffName(r.staffId)}</span>
-            <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{staffRole(r.staffId)} · {r.n ? tn(t, 'mgmt.svRatings', r.n) : t('mgmt.svNoRatings')}</span>
+            <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{staffRole(r.staffId)} · {r.n ? tn(t, 'mgmt.svRatings', r.n) : t('mgmt.svNoRatings')}</span>
           </div>
-          <div style={{ flex: '0 1 140px', height: 8, borderRadius: 999, background: '#EFECEA', overflow: 'hidden' }} role="img" aria-label={r.n ? `${r.avg.toFixed(1)} / 5` : '—'}>
-            <div style={{ height: '100%', width: r.n ? `${Math.round((r.avg / 5) * 100)}%` : '0%', background: '#75624B' }} />
+          <div style={{ flex: '0 1 140px', height: 8, borderRadius: 999, background: '#F0EAE1', overflow: 'hidden' }} role="img" aria-label={r.n ? `${r.avg.toFixed(1)} / 5` : '—'}>
+            <div style={{ height: '100%', width: r.n ? `${Math.round((r.avg / 5) * 100)}%` : '0%', background: '#3D6B4F' }} />
           </div>
           <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.n ? `${r.avg.toFixed(1)} / 5` : '—'}</span>
         </div>
@@ -243,9 +241,9 @@ function Comments({ sv, max }: { sv: Survey; max?: number }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <span style={labelStyle}>{t('mgmt.svComments')}</span>
       {paged.rows.map((c) => (
-        <div key={c.id} style={{ padding: '10px 12px', borderRadius: 14, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 16, lineHeight: '24px', overflowWrap: 'anywhere' }}>“{c.comment}”</span>
-          <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{s.familyContacts[c.familyId]?.name || c.familyId} · {fds(c.on)}</span>
+        <div key={c.id} style={{ padding: '10px 14px', borderRadius: 10, background: '#F5F5F3', display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={{ fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>“{c.comment}”</span>
+          <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{s.familyContacts[c.familyId]?.name || c.familyId} · {fds(c.on)}</span>
         </div>
       ))}
       <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('mgmt.pgComments')} />
@@ -269,9 +267,9 @@ function SurveyDetail({ id, onClose, staffName, staffRole }: { id: string | null
         <>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <BadgePill kind={sv.status === 'live' ? 'pending' : 'paid'} label={sv.status === 'live' ? t('mgmt.svLive') : t('mgmt.svClosedBadge', { date: sv.closedOn ? fdy(sv.closedOn) : '' })} />
-            <Pill icon="groups" fg="#282828" bg="#E8E1D8" label={tn(t, 'mgmt.svRespOf', st.recipients, { n: st.answered, total: st.recipients })} />
+            <Pill icon="groups" fg="#24201C" bg="#E8E1D8" label={tn(t, 'mgmt.svRespOf', st.recipients, { n: st.answered, total: st.recipients })} />
           </div>
-          <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: '#6A6967' }}>{t('mgmt.svSentTo')}: {audienceText(t, sv, sv.recipients.length)}</span>
+          <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: '#5E5852' }}>{t('mgmt.svSentTo')}: {audienceText(t, sv, sv.recipients.length)}</span>
           <Tiles s={s} sv={sv} />
           <TeamBars sv={sv} staffName={staffName} staffRole={staffRole} />
           <CustomResults sv={sv} />
@@ -283,10 +281,10 @@ function SurveyDetail({ id, onClose, staffName, staffRole }: { id: string | null
               const members = live(s.familyLinks).filter((l) => l.familyId === fid && l.primary && s.members[l.memberId]).map((l) => memberShort(s.members[l.memberId]));
               const r = st.responses.find((x) => x.familyId === fid);
               return (
-                <div key={fid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderBottom: '1px solid #EFECEA' }}>
+                <div key={fid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderBottom: '1px solid #F0EAE1' }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                     <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{c?.name || fid}</span>
-                    <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{members.join(', ')}</span>
+                    <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{members.join(', ')}</span>
                   </div>
                   {answered.has(fid) ? <BadgePill kind="paid" label={r && r.overall > 0 ? `${t('mgmt.svAnswered')} · ${r.overall}/5` : t('mgmt.svAnswered')} /> : <BadgePill kind="pending" label={t('mgmt.svWaiting')} />}
                 </div>
@@ -347,7 +345,7 @@ function AudiencePicker({ value, onChange, count }: { value: AudDraft; onChange:
           <Chip key={m} selected={mode === m} onClick={() => setMode(m)} style={wrapChip}>{t('mgmt.svAud_' + m)}</Chip>
         ))}
       </div>
-      <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{t('mgmt.svAudHint_' + mode)}</span>
+      <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{t('mgmt.svAudHint_' + mode)}</span>
       {mode !== 'all' ? (
         <>
           <TextField label={t(mode === 'members' ? 'mgmt.svSearchMembers' : 'mgmt.svSearchContacts')} value={q} onChange={setQ} type="search" inputMode="search" />
@@ -356,10 +354,10 @@ function AudiencePicker({ value, onChange, count }: { value: AudDraft; onChange:
             {shown.length ? <Button size={44} variant="secondary" disabled={allShown} onClick={() => setPicked([...new Set([...picked, ...shown.map((x) => x.id)])])}>{t('mgmt.svSelectResults')}</Button> : null}
             {picked.length ? <Button size={44} variant="ghost" onClick={() => setPicked([])}>{t('mgmt.svClearPicked')}</Button> : null}
           </div>
-          <div style={{ border: '1px solid #DBD7D6', borderRadius: 16, overflow: 'hidden', background: '#FFFFFF' }}>
+          <div style={{ border: '1px solid #EFE7DC', borderRadius: 12, overflow: 'hidden', background: '#FFFFFF' }}>
             {shown.length ? paged.rows.map((x, i) => (
               <PickRow key={x.id} item={x} checked={picked.includes(x.id)} first={i === 0} onToggle={() => toggle(x.id)} />
-            )) : <div style={{ padding: '14px 16px', fontSize: 16, lineHeight: 1.4, color: '#6A6967' }}>{t('mgmt.svNoMatch')}</div>}
+            )) : <div style={{ padding: '14px 16px', fontSize: 16, lineHeight: 1.4, color: '#5E5852' }}>{t('mgmt.svNoMatch')}</div>}
           </div>
           <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('mgmt.pgPick')} />
         </>
@@ -371,11 +369,11 @@ function AudiencePicker({ value, onChange, count }: { value: AudDraft; onChange:
 function PickRow({ item, checked, first, onToggle }: { item: PickItem; checked: boolean; first: boolean; onToggle: () => void }) {
   return (
     <button type="button" role="checkbox" aria-checked={checked} data-pick={item.id} onClick={onToggle} className="h-row"
-      style={{ width: '100%', minHeight: 56, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', border: 'none', borderTop: first ? 'none' : '1px solid #EFECEA', background: checked ? '#F4F0EE' : '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
-      <Icon name={checked ? 'check_box' : 'check_box_outline_blank'} size={24} color={checked ? '#75624B' : '#6A6967'} fill={checked ? 1 : 0} />
+      style={{ width: '100%', minHeight: 56, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', border: 'none', borderTop: first ? 'none' : '1px solid #F0EAE1', background: checked ? '#FBF8F4' : '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+      <Icon name={checked ? 'check_box' : 'check_box_outline_blank'} size={24} color={checked ? '#75624B' : '#5E5852'} fill={checked ? 1 : 0} />
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{item.title}</span>
-        {item.sub ? <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6A6967', overflowWrap: 'anywhere' }}>{item.sub}</span> : null}
+        {item.sub ? <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#5E5852', overflowWrap: 'anywhere' }}>{item.sub}</span> : null}
       </span>
     </button>
   );
@@ -405,16 +403,16 @@ function CustomQuestions({ list, onChange }: { list: SurveyCustomQuestion[]; onC
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-testid="survey-custom">
       <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{t('mgmt.svCustom')}</span>
-      <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{list.length ? t('mgmt.svCustomHint') : t('mgmt.svCustomNone')}</span>
+      {list.length ? null : <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{t('mgmt.svCustomNone')}</span>}
       {list.map((q, i) => (
-        <div key={q.id} data-custom-q={q.id} style={{ border: '1px solid #DBD7D6', borderRadius: 16, padding: 12, display: 'flex', alignItems: 'flex-start', gap: 12, background: '#FFFFFF' }}>
+        <div key={q.id} data-custom-q={q.id} style={{ border: '1px solid #EFE7DC', borderRadius: 12, padding: 12, display: 'flex', alignItems: 'flex-start', gap: 12, background: '#FFFFFF' }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ display: 'flex', alignItems: 'center', gap: '2px 8px', flexWrap: 'wrap', fontSize: FONT_SMALL, lineHeight: '20px', color: '#6A6967' }}>
+            <span style={{ display: 'flex', alignItems: 'center', gap: '2px 8px', flexWrap: 'wrap', fontSize: FONT_SMALL, lineHeight: '20px', color: '#5E5852' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBox name={KIND_ICON[q.kind]} size={18} />{t('mgmt.svQKind_' + q.kind)}</span>
-              <span style={{ height: 22, padding: '0 8px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', fontWeight: 600, background: q.required ? '#F7E4DD' : '#F4F0EE', color: q.required ? '#AF4B2F' : '#6A6967' }}>{q.required ? t('mgmt.svQReqTag') : t('mgmt.svQOptTag')}</span>
+              <span style={{ height: 22, padding: '0 8px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', fontWeight: 600, background: q.required ? '#F9E3DB' : '#F3EEE8', color: q.required ? '#9A3D24' : '#5E5852' }}>{q.required ? t('mgmt.svQReqTag') : t('mgmt.svQOptTag')}</span>
             </span>
             <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{q.text}</span>
-            {q.kind === 'choice' ? <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6A6967', overflowWrap: 'anywhere' }}>{(q.options ?? []).join(' · ')}</span> : null}
+            {q.kind === 'choice' ? <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#5E5852', overflowWrap: 'anywhere' }}>{(q.options ?? []).join(' · ')}</span> : null}
           </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 44px)', gap: 8, flex: 'none' }}>
             {i > 0 ? <IconButton icon="arrow_upward" label={`${t('mgmt.svQUp')}: ${q.text}`} onClick={() => move(i, -1)} /> : <span aria-hidden="true" />}
@@ -426,7 +424,7 @@ function CustomQuestions({ list, onChange }: { list: SurveyCustomQuestion[]; onC
       ))}
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         <Button size={44} variant="secondary" icon="add" disabled={full} onClick={() => setDlg({ q: null })}>{t('mgmt.svAddQ')}</Button>
-        {full ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{t('mgmt.svQLimit', { n: SURVEY_LIMITS.custom })}</span> : null}
+        {full ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{t('mgmt.svQLimit', { n: SURVEY_LIMITS.custom })}</span> : null}
       </div>
       {dlg ? <QuestionDialog key={dlg.q?.id ?? 'new'} initial={dlg.q} onSave={save} onClose={() => setDlg(null)} /> : null}
     </div>
@@ -458,7 +456,7 @@ function QuestionDialog({ initial, onSave, onClose }: { initial: SurveyCustomQue
         <TextField label={t('mgmt.svQOptions')} value={opts} onChange={setOpts} multiline rows={4} placeholder={t('mgmt.svQOptionsPh')} error={optErr}
           hint={`${tn(t, 'mgmt.svQOptionsN', options.length)} · ${t('mgmt.svQOptionsHint')}`} />
       ) : null}
-      <Toggle on={required} onClick={() => setRequired(!required)} label={t('mgmt.svQRequired')} sub={t('mgmt.svQRequiredSub')} />
+      <Toggle on={required} onClick={() => setRequired(!required)} label={t('mgmt.svQRequired')} />
     </Dialog>
   );
 }
@@ -480,12 +478,12 @@ function ResultBlock({ r }: { r: CustomResult }) {
   const t = useT();
   const q = r.q;
   return (
-    <div data-result={q.id} style={{ padding: '14px 16px', borderRadius: 18, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div data-result={q.id} style={{ padding: '14px 16px', borderRadius: 12, background: '#F5F5F3', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{q.text}</span>
-        <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{t('mgmt.svQKind_' + q.kind)} · {tn(t, 'mgmt.svAnswers', r.n)}{q.required ? ` · ${t('mgmt.svQReqTag')}` : ''}</span>
+        <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{t('mgmt.svQKind_' + q.kind)} · {tn(t, 'mgmt.svAnswers', r.n)}{q.required ? ` · ${t('mgmt.svQReqTag')}` : ''}</span>
       </div>
-      {r.n === 0 ? <span style={{ fontSize: 16, lineHeight: '22px', color: '#6A6967' }}>{t('mgmt.svResNone')}</span> : null}
+      {r.n === 0 ? <span style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{t('mgmt.svResNone')}</span> : null}
       {r.n > 0 && q.kind === 'rating' ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Icon name="star" size={24} fill={1} color="#75624B" />
@@ -508,7 +506,7 @@ function ResultBlock({ r }: { r: CustomResult }) {
 function Bar({ pct, label, grow }: { pct: number; label: string; grow?: boolean }) {
   return (
     <div style={{ flex: grow ? 1 : 'none', width: grow ? undefined : '100%', minWidth: 60, height: 8, borderRadius: 999, background: '#E3DCD3', overflow: 'hidden' }} role="img" aria-label={label}>
-      <div style={{ height: '100%', width: `${pct}%`, background: '#75624B' }} />
+      <div style={{ height: '100%', width: `${pct}%`, background: '#3D6B4F' }} />
     </div>
   );
 }
@@ -533,9 +531,9 @@ function TextAnswers({ r }: { r: CustomResult }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {paged.rows.map((a) => (
-        <div key={a.id} style={{ padding: '10px 12px', borderRadius: 14, background: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div key={a.id} style={{ padding: '10px 12px', borderRadius: 10, background: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 16, lineHeight: '24px', overflowWrap: 'anywhere' }}>“{a.text}”</span>
-          <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{s.familyContacts[a.familyId]?.name || a.familyId} · {fds(a.on)}</span>
+          <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{s.familyContacts[a.familyId]?.name || a.familyId} · {fds(a.on)}</span>
         </div>
       ))}
       <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('mgmt.pgTextAnswers')} />

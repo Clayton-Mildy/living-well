@@ -18,7 +18,7 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
   if (!m) return null;
 
   const dep = departureStatus(s, m.id, today, nowMin);
-  const box = dep.kind === 'done' ? { bg: '#E6EFE8', fg: '#3D6B4F', icon: 'check_circle' } : { bg: '#F6ECD6', fg: '#7A5510', icon: 'visibility' };
+  const box = dep.kind === 'done' ? { bg: '#EAF1EC', fg: '#2F5A40', icon: 'check_circle' } : { bg: '#F6ECD6', fg: '#7A5510', icon: 'visibility' };
   const depText = dep.kind === 'done'
     ? `${t('lobby.depDone', { t: dep.reading.time })}${dep.reading.sys != null ? ` ${dep.reading.sys}/${dep.reading.dia}.` : ''}`
     : dep.kind === 'waiting' ? t('lobby.depWaiting') : t('lobby.depMissing');
@@ -29,24 +29,24 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
     if (ok) onClose();
   };
   return (
-    <Dialog open onClose={onClose} title={`${t('lobby.checkOut')} · ${memberShort(m)}`} maxWidth={560}>
+    <Dialog open onClose={onClose} title={`${t('lobby.checkOut')} · ${memberShort(m)}`} maxWidth={520}>
       <Stack gap={20}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-          <MemberAvatar m={m} size={56} font={20} />
-          <div role="status" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: '14px 16px', borderRadius: 18, background: box.bg, flexWrap: 'wrap' }}>
-            <Icon name={box.icon} size={24} color={box.fg} fill={1} />
-            <span style={{ flex: '1 1 160px', fontSize: 16, lineHeight: '22px', color: '#282828' }}>{depText}</span>
+          <MemberAvatar m={m} size={46} font={15} />
+          <div role="status" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 10, padding: '12px 14px', borderRadius: 12, background: box.bg, flexWrap: 'wrap' }}>
+            <Icon name={box.icon} size={22} color={box.fg} fill={1} />
+            <span style={{ flex: '1 1 160px', fontSize: 15, lineHeight: '21px', color: '#24201C' }}>{depText}</span>
             {dep.kind === 'missing' ? (
-              <button type="button" onClick={() => void onAskDeparture(m.id)} style={{ height: 44, padding: '0 14px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: 'max(14px, var(--cp-body, 0px))', fontWeight: 500, cursor: 'pointer', flex: 'none', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+              <button type="button" className="h-cream" onClick={() => void onAskDeparture(m.id)} style={{ height: 40, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', flex: 'none', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
                 {t('lobby.sendNurse')}
               </button>
             ) : null}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <button type="button" onClick={onClose} style={{ height: 52, padding: '0 22px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>
-          <button type="button" className={busy ? undefined : 'dh83'} onClick={busy ? undefined : () => void confirm()} aria-disabled={busy || undefined}
-            style={{ height: 52, padding: '0 24px', borderRadius: 999, border: 'none', background: busy ? '#E8E1D8' : '#75624B', color: busy ? '#6A6967' : '#FFFFFF', fontSize: 16, fontWeight: 500, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
+          <button type="button" className="h-cream" onClick={onClose} style={{ height: 48, padding: '0 22px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>
+          <button type="button" className={busy ? undefined : 'h-bronze'} onClick={busy ? undefined : () => void confirm()} aria-disabled={busy || undefined}
+            style={{ height: 48, padding: '0 24px', borderRadius: 12, border: 'none', background: busy ? '#EDE5DA' : '#24201C', color: busy ? '#8A8078' : '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
             {t('lobby.coConfirm')}
           </button>
         </div>

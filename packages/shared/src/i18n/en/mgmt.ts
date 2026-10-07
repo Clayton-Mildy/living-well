@@ -4,7 +4,7 @@ export const mgmt = {
   tileInClubNow: 'In the club now', tileGoneHome: 'Gone home', tileVisits: 'Visits today', tileExtra: 'Extra visits this month', tileReview: 'To review', toWatch: '{n} to watch', allNormal: 'All normal', tileOverdue: 'Overdue invoices', tileSurvey: 'Survey · overall', noAnswers: 'No answers yet', nAnswers: '{n} answers', nAnswersOne: '{n} answer',
   tilePhotos: 'Photos sent today', tileLogs: 'Daily logs saved', tileLunch: 'Lunch photo', posted: 'Posted', notYet: 'Not yet', tilePayments: 'Payments today', tileUnread: 'Unread messages',
   tileStock: 'Stock to approve', tileVenue: 'Venue bookings ahead', sample: 'Sample', priceSet: 'Set', samplePrices: 'Sample prices', clubPrices: 'Club prices',
-  emptyClub: '{club} has no members or staff yet. Anything you add here stays separate from your other clubhouses.',
+  emptyClub: '{club} has no members or staff yet.',
   listLive: 'Live today', newestFirst: 'newest first', liveEmptyMeta: 'actions appear here as they happen', liveEmpty: 'Nothing has happened yet today.', whoSystem: 'Automatic', whoDoor: 'Door camera',
   listUp: 'Coming up', upEmpty: 'Nothing planned yet.', upVenue: 'Private event: {org}', upTrial: 'Trial day: {name}', upVisit: 'Visit: {name}',
   listReq: 'Requests from families', noApproval: 'no approval needed', reqEmpty: 'No requests from families right now.',

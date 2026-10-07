@@ -10,8 +10,9 @@ import { Parser } from 'htmlparser2';
 import { DomHandler } from 'domhandler';
 
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const src = readFileSync(join(root, 'design/CitraPremier App.dc.html'), 'utf8');
-const outDir = join(root, 'design/generated');
+const inName = process.argv[2] || 'CitraPremier App.dc.html';
+const src = readFileSync(join(root, 'design', inName), 'utf8');
+const outDir = join(root, 'design', process.argv[3] || 'generated');
 mkdirSync(outDir, { recursive: true });
 
 const open = src.indexOf('<x-dc>') + '<x-dc>'.length;

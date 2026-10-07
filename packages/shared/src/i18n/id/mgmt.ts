@@ -7,7 +7,7 @@ export const mgmt: Same<typeof EN> = {
   tileInClubNow: 'Di klub sekarang', tileGoneHome: 'Sudah pulang', tileVisits: 'Kunjungan hari ini', tileExtra: 'Kunjungan tambahan bulan ini', tileReview: 'Perlu ditinjau', toWatch: '{n} perlu dipantau', allNormal: 'Semua normal', tileOverdue: 'Tagihan terlambat', tileSurvey: 'Survei · keseluruhan', noAnswers: 'Belum ada jawaban', nAnswers: '{n} jawaban', nAnswersOne: '{n} jawaban',
   tilePhotos: 'Foto terkirim hari ini', tileLogs: 'Catatan harian tersimpan', tileLunch: 'Foto makan siang', posted: 'Sudah diposting', notYet: 'Belum', tilePayments: 'Pembayaran hari ini', tileUnread: 'Pesan belum dibaca',
   tileStock: 'Stok menunggu persetujuan', tileVenue: 'Pemesanan venue mendatang', sample: 'Contoh', priceSet: 'Sudah diatur', samplePrices: 'Harga contoh', clubPrices: 'Harga klub',
-  emptyClub: '{club} belum punya anggota atau staf. Apa pun yang Anda tambahkan di sini terpisah dari klub Anda yang lain.',
+  emptyClub: '{club} belum punya anggota atau staf.',
   listLive: 'Terjadi hari ini', newestFirst: 'terbaru di atas', liveEmptyMeta: 'kegiatan muncul di sini saat terjadi', liveEmpty: 'Belum ada kegiatan hari ini.', whoSystem: 'Otomatis', whoDoor: 'Kamera pintu',
   listUp: 'Segera hadir', upEmpty: 'Belum ada rencana.', upVenue: 'Acara pribadi: {org}', upTrial: 'Hari percobaan: {name}', upVisit: 'Kunjungan: {name}',
   listReq: 'Permintaan dari keluarga', noApproval: 'tidak perlu persetujuan', reqEmpty: 'Belum ada permintaan dari keluarga.',

@@ -1,7 +1,7 @@
 // Staff log meal feedback received by phone (feedback.log): who it is about, which meal, what was said.
 import { useMemo, useState } from 'react';
 import { activeOn, listMembers, memberName, menuOn } from '@cp/shared';
-import { Avatar, Button, Chip, DateField, Icon, Note, Pager, Sheet, TextField, usePaged, FONT_BODY } from '../../components/ui';
+import { Avatar, Button, Chip, DateField, Icon, Note, Pager, Sheet, TextField, usePaged } from '../../components/ui';
 import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -43,9 +43,8 @@ export function LogFeedbackSheet({ open, onClose, memberId: preset }: { open: bo
   return (
     <Sheet open={open} onClose={onClose} title={t('kitchen.log.title')}
       footer={<Button full style={{ flex: 'none' }} onClick={save} disabled={!ok || busy} icon="call">{t('kitchen.log.save')}</Button>}>
-      <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4, marginTop: -8 }}>{t('kitchen.log.sub')}</span>
       {picked ? (
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', border: '1px solid #DBD7D6', borderRadius: 16 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', border: '1px solid #E4DACD', borderRadius: 12 }}>
           <Avatar name={memberName(picked)} tone={picked.photoTone} src={memberPhoto(picked)} size={40} />
           <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>{memberName(picked)}</span>
           {!preset ? <Button variant="ghost" size={44} onClick={() => setMemberId(null)}>{t('kitchen.log.change')}</Button> : null}
@@ -53,16 +52,16 @@ export function LogFeedbackSheet({ open, onClose, memberId: preset }: { open: bo
       ) : (
         <>
           <TextField label={t('kitchen.log.who')} value={q} onChange={setQ} placeholder={t('kitchen.log.whoPh')} inputMode="search" />
-          <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #DBD7D6', borderRadius: 20, overflow: 'hidden', flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #E4DACD', borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
             {shown.map((m, k) => (
               <button key={m.id} type="button" onClick={() => setMemberId(m.id)} className="h-row"
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', minHeight: 56, border: 'none', borderTop: k ? '1px solid #EFECEA' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter', width: '100%' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', minHeight: 56, border: 'none', borderTop: k ? '1px solid #F0EAE1' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
                 <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={40} />
                 <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>{memberName(m)}</span>
-                <Icon name="chevron_right" size={22} color="#6A6967" />
+                <Icon name="chevron_right" size={22} color="#5E5852" />
               </button>
             ))}
-            {!shown.length ? <div style={{ padding: '14px', fontSize: 16, color: '#6A6967' }}>{t('common.noResults')}</div> : null}
+            {!shown.length ? <div style={{ padding: '14px', fontSize: 16, color: '#5E5852' }}>{t('common.noResults')}</div> : null}
           </div>
           <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.log.pages')} />
         </>

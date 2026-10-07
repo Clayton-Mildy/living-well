@@ -1,3 +1,2 @@
-// Enquiries board and the public membership form (/form/:token).
+// Enquiries board.
 export { Enquiries } from './Enquiries';
-export { MembershipForm } from './MembershipForm';

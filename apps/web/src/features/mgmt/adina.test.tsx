@@ -51,7 +51,7 @@ describe('Adina, an empty clubhouse', () => {
   it('overview: zeros, no leftovers, empty lists', async () => {
     openClub('adina');
     await show(<Overview />);
-    expect(body()).toContain('Adina Seniors Clubhouse has no members or staff yet. Anything you add here stays separate from your other clubhouses.');
+    expect(body()).toContain('Adina Seniors Clubhouse has no members or staff yet.');
     for (const k of ['inClub', 'goneHome', 'visits', 'extra', 'review', 'checks', 'overdue', 'enq', 'photos', 'pay', 'unread', 'stock', 'venue']) expect(tile(k), k).toBe('0');
     expect(tile('logs')).toBe('0 / 0');
     expect(tile('survey')).toBe('No answers yet');
@@ -65,7 +65,7 @@ describe('Adina, an empty clubhouse', () => {
     expect(body()).not.toMatch(/Expected|To arrive|expected/);
     expect(tile('enq')).toBe('4');
     expect([tile('review'), tile('checks'), tile('overdue'), tile('survey'), tile('photos'), tile('logs'), tile('lunch'), tile('pay'), tile('stock'), tile('venue'), tile('plans')])
-      .toEqual(['1', '1', '1', '4.7 / 5', '0', '0 / 3', 'Not yet', '0', '3', '2', 'Sample']);
+      .toEqual(['6', '1', '1', '4.7 / 5', '0', '0 / 3', 'Not yet', '0', '3', '2', 'Sample']);
     expect(host?.querySelector('[data-tile="checks"]')?.textContent).toContain('All normal');
     expect(host?.querySelector('[data-tile="survey"]')?.textContent).toContain('3 answers');
     // Live today: today's activity, newest first

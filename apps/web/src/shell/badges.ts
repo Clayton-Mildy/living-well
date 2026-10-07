@@ -1,7 +1,7 @@
 // Nav badge counts per role (shown in the sidebar and the phone bottom bar).
 import { useMemo } from 'react';
 import { familyUnreadCount, staffUnreadCount, live, type Role } from '@cp/shared';
-import { pendingPhotoCount } from '@cp/shared/rules/members';
+import { approvalTotal } from '@cp/shared/rules/approvals';
 import { useClub } from '../store/replica';
 import { useNow } from '../lib/clock';
 import { useMe } from '../lib/me';
@@ -14,9 +14,7 @@ export function useNavCounts(): Record<string, number> {
     if (!s || !role || !id) return {};
     const out: Record<string, number> = {};
     out.chat = role === 'family' ? familyUnreadCount(s, id) : staffUnreadCount(s, role as Role);
-    const ready = live(s.formRequests).filter((f) => f.status === 'submitted').length;
-    if (role === 'lobby' || role === 'mgmt') out.enquiries = ready;
-    if (role === 'mgmt') out.reviews = live(s.changeRequests).filter((c) => c.status === 'pending').length + pendingPhotoCount(s);
+    if (role === 'mgmt') out.reviews = approvalTotal(s); // everything waiting in Approvals: profile changes, care log, readings, photos, menu, stock
     const approver = role === 'mgmt' || role === 'finance' || (user?.kind === 'staff' && user.staff.supervisor);
     if (approver) out.stock = live(s.stockRequests).filter((k) => k.status === 'requested' && (role !== 'kitchen' || k.area === 'kitchen')).length;
     if (role === 'mgmt' || role === 'finance') {

@@ -1,6 +1,7 @@
 // Action registry. Each feature area exports its actions; all are registered here (client and server).
 import { registerActions } from './framework';
 import { reviewActions } from './review';
+import { approvalActions } from './approvals';
 import { sessionActions } from './session';
 import { attendanceActions } from './attendance';
 import { healthActions } from './health';
@@ -23,7 +24,7 @@ import { planRequestActions } from './planRequests';
 import { accountActions } from './accounts';
 
 registerActions([
-  ...reviewActions, ...sessionActions, ...attendanceActions, ...healthActions, ...membersActions, ...familyActions,
+  ...reviewActions, ...approvalActions, ...sessionActions, ...attendanceActions, ...healthActions, ...membersActions, ...familyActions,
   ...careActions, ...photoActions, ...messagesActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...accountActions,
 ] as never);
 

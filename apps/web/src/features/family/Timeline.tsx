@@ -3,14 +3,14 @@
 import { Fragment, type ReactNode } from 'react';
 import { firstOfRole, lunchSafety, memberShort, staffCall, visibleLunchPhotos, type Member, type Photo } from '@cp/shared';
 import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, type TlItem, type TlState } from '@cp/shared/rules/family';
-import { Button, EmptyState, FONT_BODY, Icon, PhotoImg } from '../../components/ui';
+import { Button, EmptyState, Icon, PhotoImg } from '../../components/ui';
 import { useFamilyCtx } from './useFamily';
 import { H2, HealthPill, fcard } from './parts';
 
 const DOT: Record<TlState, { dotBg: string; dotBd: string; dotFg: string; fill: 0 | 1 }> = {
-  done: { dotBg: '#E8E1D8', dotBd: 'none', dotFg: '#75624B', fill: 1 },
-  now: { dotBg: '#75624B', dotBd: 'none', dotFg: '#FFFFFF', fill: 1 },
-  up: { dotBg: '#FFFFFF', dotBd: '1.5px solid #CAB8A2', dotFg: '#8A755B', fill: 0 },
+  done: { dotBg: '#F3EEE8', dotBd: 'none', dotFg: '#6E5A43', fill: 0 },
+  now: { dotBg: '#2B231C', dotBd: 'none', dotFg: '#FFFFFF', fill: 1 },
+  up: { dotBg: '#FFFFFF', dotBd: '1.5px solid #DCD3C8', dotFg: '#8A8078', fill: 0 },
 };
 
 interface Props {
@@ -23,8 +23,6 @@ interface Props {
 export function Timeline({ members, onFeedback, onOpenPhoto }: Props) {
   const { s, t, fmt, now, pron } = useFamilyCtx();
   const { today, nowMin } = now;
-  const names = members.map((m) => memberShort(m));
-  const joined = names.join(` ${t('common.and')} `);
   const states = members.map((m) => dayStateOf(s, m, today));
   // members drop in on any open day, so the programme shows whether or not anyone has arrived; only a closed day or an ended membership has none
   const showTimeline = states.some((x) => x.kind === 'away' || x.kind === 'here' || x.kind === 'home');
@@ -41,12 +39,11 @@ export function Timeline({ members, onFeedback, onOpenPhoto }: Props) {
     } else if (first.kind === 'ended') {
       icon = 'archive';
       title = t('family.stEnded', { d: fmt.fds(first.lastDay) });
-      sub = t('family.endedSub', { n: joined, d: fmt.fdy(first.lastDay) });
     } else if (first.kind === 'upcoming') {
       title = t('family.stUpcoming', { d: fmt.fds(first.start) });
     }
     return (
-      <div style={fcard('20px 18px 8px', 14)} data-testid="timeline-empty">
+      <div style={fcard('', 14)} data-testid="timeline-empty">
         <H2>{t('family.todayAtClub')}</H2>
         <EmptyState icon={icon} title={title} sub={sub} />
       </div>
@@ -117,7 +114,7 @@ export function Timeline({ members, onFeedback, onOpenPhoto }: Props) {
 
   const views = items.map((it) => ({ it, v: view(it) }));
   return (
-    <div style={fcard('20px 18px 8px', 14)} data-testid="timeline">
+    <div style={fcard('', 10)} data-testid="timeline">
       <H2>{t('family.todayAtClub')}</H2>
       <ol style={{ display: 'flex', flexDirection: 'column', listStyle: 'none', margin: 0, padding: 0 }}>
         {views.map(({ it, v }, i) => {
@@ -125,20 +122,20 @@ export function Timeline({ members, onFeedback, onOpenPhoto }: Props) {
           const last = i === views.length - 1;
           return (
             <Fragment key={it.id}>
-              <li style={{ display: 'flex', gap: 12 }} data-tl={it.id} data-state={it.state}>
-                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 'none', width: 36 }}>
-                  <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: d.dotBg, border: d.dotBd, color: d.dotFg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-                    <Icon name={v.icon} size={19} fill={d.fill} color={d.dotFg} />
+              <li style={{ display: 'flex', gap: 14 }} data-tl={it.id} data-state={it.state}>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 'none', width: 34 }}>
+                  <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 999, background: d.dotBg, border: d.dotBd, color: d.dotFg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                    <Icon name={v.icon} size={18} fill={d.fill} weight={300} color={d.dotFg} />
                   </span>
-                  <span style={{ flex: 1, width: 2, minHeight: 12, background: last ? 'transparent' : '#E8E1D8' }} />
+                  <span style={{ flex: 1, width: 2, minHeight: 12, background: last ? 'transparent' : '#F0EAE1' }} />
                 </div>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, padding: '6px 0 18px' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ fontSize: FONT_BODY, fontVariantNumeric: 'tabular-nums', color: '#6A6967', lineHeight: 1.4 }}>{v.time}</span>
-                    {it.state === 'now' ? <span style={{ height: 22, padding: '0 8px', borderRadius: 999, background: '#75624B', color: '#FFFFFF', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center' }}>{t('family.now')}</span> : null}
+                    <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', color: '#6B6259', lineHeight: 1.4 }}>{v.time}</span>
+                    {it.state === 'now' ? <span style={{ height: 22, padding: '0 8px', borderRadius: 8, background: '#2B231C', color: '#FFFFFF', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center' }}>{t('family.now')}</span> : null}
                   </div>
-                  <span style={{ fontSize: 16, fontWeight: 500, color: '#282828', lineHeight: 1.4 }}>{v.title}</span>
-                  {v.detail ? <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6A6967' }}>{v.detail}</span> : null}
+                  <span style={{ fontSize: 16, fontWeight: 500, color: '#24201C', lineHeight: 1.4 }}>{v.title}</span>
+                  {v.detail ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{v.detail}</span> : null}
                   {v.badge}
                   {v.extra}
                 </div>
@@ -155,11 +152,11 @@ export function Timeline({ members, onFeedback, onOpenPhoto }: Props) {
 function LunchPhotos({ photos, caption, alt, onOpen }: { photos: Photo[]; caption: string; alt: (p: Photo) => string; onOpen: (p: Photo, all: Photo[]) => void }) {
   return (
     <div data-testid="lunch-photos" style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 6, alignSelf: 'flex-start', maxWidth: '100%' }}>
-      <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#282828' }}>{caption}{photos.length === 1 ? ` · ${photos[0].time}` : ''}</span>
+      <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{caption}{photos.length === 1 ? ` · ${photos[0].time}` : ''}</span>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
         {photos.map((p) => (
           <button key={p.id} type="button" onClick={() => onOpen(p, photos)} aria-label={alt(p)} data-testid="lunch-photo" data-photo-id={p.id}
-            style={{ position: 'relative', width: 72, height: 72, borderRadius: 14, border: 'none', padding: 0, overflow: 'hidden', cursor: 'pointer', background: '#F4F0EE', flex: 'none' }}>
+            style={{ position: 'relative', width: 72, height: 72, borderRadius: 10, border: 'none', padding: 0, overflow: 'hidden', cursor: 'pointer', background: '#F3EEE8', flex: 'none' }}>
             <PhotoImg photo={p} />
           </button>
         ))}

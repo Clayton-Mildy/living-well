@@ -54,7 +54,7 @@ function Lists({ which }: { which: 'in' | 'out' }) {
   const g = lobbyGroups(s, T);
   const members = g.inClub.length + g.goneHome.length + g.others.length;
   return which === 'in' ? (
-    <MemberList t={t} listId="checkin" title={t('lobby.checkInTitle')} hint={t('lobby.manualHint')} rows={manualCandidates(s, T, query)} total={g.others.length} query={query} onQuery={setQuery}
+    <MemberList t={t} listId="checkin" title={t('lobby.checkInTitle')} rows={manualCandidates(s, T, query)} total={g.others.length} query={query} onQuery={setQuery}
       empty={{ icon: 'task_alt', title: t(members === 0 ? 'lobby.noMembers' : 'lobby.allIn') }} noMatch={(q) => t('lobby.noMatch', { q })} onOpen={() => undefined} onCheckIn={(id) => picked.push(id)} />
   ) : (
     <>
@@ -251,38 +251,61 @@ describe('Also today: guests', () => {
   });
 });
 
-describe('Check in | Check out switch', () => {
+describe('number tabs: Not in yet / In the club / Gone home', () => {
   function Switch() {
     const t = useT();
     const [mode, setMode] = useState<Mode>('in');
-    return <ModeToggle t={t} mode={mode} counts={{ in: 2, out: 3 }} onChange={setMode} />;
+    return <ModeToggle t={t} mode={mode} counts={{ in: 2, out: 3, gone: 1 }} onChange={setMode} />;
   }
   const tabs = () => Array.from(host!.querySelectorAll('[role="tab"]')) as HTMLButtonElement[];
-  /** The tab's text without its icon ligature ("login" / "logout"). */
-  const label = (b: HTMLElement) => (b.textContent || '').replace(/^(login|logout)/, '');
-  it('has two tabs with their counts; the selected one is the only tab stop', async () => {
+  const selected = () => tabs().map((b) => b.getAttribute('aria-selected'));
+  it('has three tabs with their numbers; the selected one is the only tab stop; the names keep "Check in" / "Check out"', async () => {
     openClub(0);
     await show(<Switch />);
-    expect(tabs().map((b) => [label(b), b.getAttribute('aria-selected'), b.tabIndex])).toEqual([['Check in2', 'true', 0], ['Check out3', 'false', -1]]);
+    expect(tabs().map((b) => [b.getAttribute('aria-label'), b.getAttribute('aria-selected'), b.tabIndex])).toEqual([
+      ['Check in · Not in yet (2)', 'true', 0], ['Check out · In the club (3)', 'false', -1], ['Gone home (1)', 'false', -1]]);
+    expect(tabs().map((b) => b.querySelector('[data-testid^="tile-"]')?.textContent)).toEqual(['2', '3', '1']);
     expect(host!.querySelector('[role="tablist"]')?.getAttribute('aria-label')).toBe('Check in or check out');
   });
   it('clicking a tab selects it; the arrow keys move between the tabs and focus follows', async () => {
     openClub(0);
     await show(<Switch />);
     await act(async () => { tabs()[1].click(); });
-    expect(tabs().map((b) => b.getAttribute('aria-selected'))).toEqual(['false', 'true']);
+    expect(selected()).toEqual(['false', 'true', 'false']);
     tabs()[1].focus();
-    await act(async () => { tabs()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })); });
-    expect(tabs().map((b) => b.getAttribute('aria-selected'))).toEqual(['true', 'false']);
-    expect(document.activeElement).toBe(tabs()[0]);
-    await act(async () => { tabs()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })); });
-    expect(tabs()[1].getAttribute('aria-selected')).toBe('true');
+    await act(async () => { tabs()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowRight', bubbles: true })); });
+    expect(selected()).toEqual(['false', 'false', 'true']);
+    expect(document.activeElement).toBe(tabs()[2]);
+    await act(async () => { tabs()[2].dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft', bubbles: true })); });
+    expect(selected()).toEqual(['false', 'true', 'false']);
     expect(document.activeElement).toBe(tabs()[1]);
+    await act(async () => { tabs()[1].dispatchEvent(new KeyboardEvent('keydown', { key: 'Home', bubbles: true })); });
+    expect(selected()).toEqual(['true', 'false', 'false']);
+    await act(async () => { tabs()[0].dispatchEvent(new KeyboardEvent('keydown', { key: 'End', bubbles: true })); });
+    expect(selected()).toEqual(['false', 'false', 'true']);
+    expect(document.activeElement).toBe(tabs()[2]);
   });
   it('speaks Indonesian', async () => {
     openClub(0, 'id');
     await show(<Switch />);
-    expect(tabs().map(label)).toEqual(['Check-in2', 'Check-out3']);
+    expect(tabs().map((b) => b.getAttribute('aria-label'))).toEqual(['Check-in · Belum masuk (2)', 'Check-out · Di klub (3)', 'Sudah pulang (1)']);
     expect(host!.querySelector('[role="tablist"]')?.getAttribute('aria-label')).toBe('Check-in atau check-out');
+  });
+});
+
+describe('quiet rows', () => {
+  it('a row shows the name, one sub line and one button: no walking-stick / diet tags (they are in the drawer); an allergy shows as a dot item', async () => {
+    openClub(0);
+    await show(<Lists which="out" />);
+    const text = host!.textContent || '';
+    expect(text).not.toMatch(/Walker|Walking stick|Wheelchair|Soft food|Low salt/);
+    const row = host!.querySelector('button[aria-label="Check out: Opa Hendra Gunawan"]')!.parentElement!;
+    expect(row.querySelectorAll('button')).toHaveLength(2); // the name button (opens the drawer) and the one pill button
+  });
+  it('the check-in list shows an allergy as a dot item (Oma Lina: shellfish)', async () => {
+    openClub(0);
+    await show(<Lists which="in" />);
+    const lina = host!.querySelector('button[aria-label="Check in: Oma Lina Wijaya"]')!.parentElement!;
+    expect(lina.textContent).toMatch(/allergy/);
   });
 });

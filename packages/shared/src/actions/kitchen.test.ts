@@ -15,6 +15,8 @@ let n = 0;
 const seed = () => buildSeed().citra;
 const usr = (s: ClubState, id: string) => getUser({ [s.clubId]: s }, id)!;
 const run = (s: ClubState, name: string, input: unknown, uid: string, c: { today: string; nowMin: number } = clock) => execute(s, name, input, usr(s, uid), c, 'm' + ++n);
+/** management approves what the kitchen published or changed (families see and hear about it only then) */
+const approveMenu = (s: ClubState, ids: string[]) => run(s, 'approval.approve', { type: 'menu', ids }, 's9');
 const thursdayLunch = (s: ClubState) => templateOn(s, T).days[4].lunch;
 const familyOf = (s: ClubState, memberId: string) => live(s.familyLinks).filter((l) => l.memberId === memberId && l.appAccess).map((l) => l.familyId).sort();
 
@@ -250,21 +252,57 @@ describe('weekly menu', () => {
     expect(menuOn(r.state, '2026-10-29')!.lunch).toContain('dish-ayam-bakar');
     expect(menuOn(r.state, '2026-10-15')!.lunch).not.toContain('dish-ayam-bakar'); // last Thursday: history unchanged
     expect(menuOn(r.state, T)!.lunch).toEqual(menuOn(s, T)!.lunch);
-    expect(r.state.menuVersions[r.result.versionId as string]).toMatchObject({ status: 'published', effectiveFrom: T, publishedBy: 'staff:s3' });
+    expect(r.state.menuVersions[r.result.versionId as string]).toMatchObject({ status: 'published', effectiveFrom: T, publishedBy: 'staff:s3', approval: { status: 'pending', by: 'staff:s3' } });
     expect(Object.values(r.state.activity).some((a) => a.key === 'kitchen.feed.menuPublished' && a.params.from === T)).toBe(true);
+  });
+  it('the kitchen\'s published menu waits for management: families see the last approved menu until then', () => {
+    const s = seed();
+    const lunch = [...thursdayLunch(s), 'dish-ayam-bakar'];
+    const r = run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch) }, 's3');
+    const id = r.result.versionId as string;
+    expect(r.result.pending).toBe(true);
+    // the club's own screens follow it at once; the old version is not replaced yet
+    expect(menuOn(r.state, '2026-10-22')!.lunch).toContain('dish-ayam-bakar');
+    expect(r.state.menuVersions['menu-2024-07'].deletedAt).toBeUndefined();
+    // families get the approved menu only
+    const fam = projectForFamily(r.state, 'fm10_0');
+    expect(fam.menuVersions[id]).toBeUndefined();
+    expect(menuOn(fam, '2026-10-22')!.lunch).not.toContain('dish-ayam-bakar');
+    expect(menuOn(r.state, '2026-10-22', { approvedOnly: true })!.lunch).not.toContain('dish-ayam-bakar'); // the client rule guards a full state too
+    expect(Object.values(r.state.notifications).some((x) => x.kind === 'kitchen.notif.menuPublished')).toBe(false);
+    // approval: the version replaces the old one, families see it and are told
+    const ok = approveMenu(r.state, [id]);
+    expect(ok.state.menuVersions[id].approval).toMatchObject({ status: 'approved', decidedBy: 'staff:s9' });
+    expect(ok.state.menuVersions['menu-2024-07'].deletedAt).toBeUndefined(); // earlier versions stay as history; only the same date or later ones give way
+    expect(projectForFamily(ok.state, 'fm10_0').menuVersions[id]).toBeDefined();
+    expect(menuOn(projectForFamily(ok.state, 'fm10_0'), '2026-10-22')!.lunch).toContain('dish-ayam-bakar');
+    expect(Object.values(ok.state.notifications).filter((x) => x.kind === 'kitchen.notif.menuPublished')).toHaveLength(1);
+    // rejection: the version is gone, the old menu carries on, the kitchen hears why
+    const no = run(r.state, 'approval.reject', { type: 'menu', ids: [id], reason: 'Too much fried food' }, 's9');
+    expect(no.state.menuVersions[id]).toMatchObject({ deletedAt: expect.any(String), approval: { status: 'rejected', reason: 'Too much fried food' } });
+    expect(menuOn(no.state, '2026-10-22')!.lunch).toEqual(menuOn(s, '2026-10-22')!.lunch);
+    expect(unreadUpdates(no.state, usr(no.state, 's3')).some((x) => x.kind === 'approvals.notif.rejected.menu' && x.params.reason === 'Too much fried food')).toBe(true);
+    expect(() => run(r.state, 'approval.reject', { type: 'menu', ids: [id], reason: '  ' }, 's9')).toThrow('err.noteRequired');
+    // management's own publish is approved at once
+    const mg = run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch) }, 's9');
+    expect(mg.state.menuVersions[mg.result.versionId as string].approval).toBeUndefined();
   });
   it('the notify toggle: publishing tells the families of the active members, once each; off tells nobody', () => {
     const s = seed();
     const menuNotes = (st: ClubState) => Object.values(st.notifications).filter((x) => x.kind === 'kitchen.notif.menuPublished');
     const lunch = [...thursdayLunch(s), 'dish-ayam-bakar'];
-    const on = run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch) }, 's3');
+    const on0 = run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch) }, 's3');
+    expect(menuNotes(on0.state)).toHaveLength(0); // the kitchen's notice waits for approval
+    const on = approveMenu(on0.state, [on0.result.versionId as string]);
     const [note] = menuNotes(on.state);
     expect(note).toMatchObject({ link: '/today', params: { date: T } });
     expect(note.toUsers.length).toBeGreaterThan(3);
     expect(new Set(note.toUsers).size).toBe(note.toUsers.length);
     expect(note.toUsers).toContain('fm10_0');
-    expect(menuNotes(run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch), notify: true }, 's3').state)).toHaveLength(1);
-    expect(menuNotes(run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch), notify: false }, 's3').state)).toHaveLength(0);
+    expect(menuNotes(run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch), notify: true }, 's9').state)).toHaveLength(1); // management: at once
+    expect(menuNotes(run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch), notify: false }, 's9').state)).toHaveLength(0);
+    const off = run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch), notify: false }, 's3');
+    expect(menuNotes(approveMenu(off.state, [off.result.versionId as string]).state)).toHaveLength(0); // approving tells nobody when the kitchen turned it off
     expect(() => run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch), notify: 'yes' }, 's3')).toThrow('err.invalid');
     // the family sees it in their updates
     expect(updatesFor(on.state, usr(on.state, 'fm10_0')).some((x) => x.kind === 'kitchen.notif.menuPublished')).toBe(true);
@@ -278,7 +316,7 @@ describe('weekly menu', () => {
     expect(menuOn(r.state, '2026-10-29')!.lunch).toContain('dish-ayam-bakar'); // Thursday next week
     expect(menuOn(r.state, '2026-11-05')!.lunch).toContain('dish-ayam-bakar'); // and the week after, until another menu starts
     expect(r.state.menuVersions[r.result.versionId as string].effectiveFrom).toBe(MON);
-    expect(Object.values(r.state.notifications).find((x) => x.kind === 'kitchen.notif.menuPublished')!.params.date).toBe(MON);
+    expect(Object.values(approveMenu(r.state, [r.result.versionId as string]).state.notifications).find((x) => x.kind === 'kitchen.notif.menuPublished')!.params.date).toBe(MON);
     // changing only next week's Tuesday in a version already scheduled for that Monday replaces it
     const again = run(r.state, 'menu.publish', { effectiveFrom: MON, days: withLunch(s, ['dish-rawon']) }, 's3');
     expect(live(again.state.menuVersions).filter((v) => v.effectiveFrom === MON)).toHaveLength(1);

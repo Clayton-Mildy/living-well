@@ -3,7 +3,8 @@
 // booking, leave or absence actions here.
 import { useState, type CSSProperties } from 'react';
 import { addMonths, currentMembership, daysInMonth, dayStatus, dow, flexMonth, priceOn, rp, ym, attOf } from '@cp/shared';
-import { Button, FONT_BODY, FONT_SMALL, Icon } from '../../../components/ui';
+import { Button, FONT_BODY, Icon } from '../../../components/ui';
+import { cardStyle, HAIR } from '../lib';
 import type { P } from './types';
 
 interface Cell { day: string; label: string; bg: string; bd: string; fg: string; vis: 'visible' | 'hidden'; extra?: boolean; full?: string }
@@ -23,69 +24,69 @@ export function AttendanceTab({ p }: { p: P }) {
   const extraSet = new Set(fm.extraDates);
 
   const cells: Cell[] = [];
-  for (let i = 0; i < lead; i++) cells.push({ day: '', label: '', bg: 'transparent', bd: 'none', fg: '#282828', vis: 'hidden' });
+  for (let i = 0; i < lead; i++) cells.push({ day: '', label: '', bg: 'transparent', bd: 'none', fg: '#24201C', vis: 'hidden' });
   for (let i = 1; i <= dim; i++) {
     const d = `${month}-${String(i).padStart(2, '0')}`;
     const w = dow(d);
     const ds = dayStatus(s, d);
     const a = attOf(s, d, m.id);
     const member = d >= cur.start && (!cur.lastDay || d <= cur.lastDay);
-    let c: Cell = { day: String(i), label: '', bg: '#FFFFFF', bd: '1px solid #EFECEA', fg: '#282828', vis: 'visible' };
+    let c: Cell = { day: String(i), label: '', bg: '#FFFFFF', bd: '1px solid #F0EAE1', fg: '#24201C', vis: 'visible' };
     if (a?.checkIn) {
       const extra = extraSet.has(d);
       c = extra
-        ? { ...c, bg: '#282828', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.extra'), extra: true, full: `${t('profile.cal.in', { t: a.checkIn.at })} · ${t('profile.cal.extra')}` }
+        ? { ...c, bg: '#24201C', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.extra'), extra: true, full: `${t('profile.cal.in', { t: a.checkIn.at })} · ${t('profile.cal.extra')}` }
         : { ...c, bg: '#75624B', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.in', { t: a.checkIn.at }), full: t('profile.cal.in', { t: a.checkIn.at }) };
-    } else if (w === 0 || w === 6) c = { ...c, bg: '#F6F5F5', bd: 'none', fg: '#6A6967' };
-    else if (!ds.open) c = { ...c, bg: '#EFECEA', bd: 'none', fg: '#6A6967', label: ds.reason === 'holiday' ? t('profile.cal.holiday') : t('profile.cal.closed') };
-    else if (!member) c = { ...c, bg: '#F6F5F5', bd: 'none', fg: '#6A6967', label: cur.lastDay && d > cur.lastDay ? t('profile.cal.ended') : '' };
+    } else if (w === 0 || w === 6) c = { ...c, bg: '#F5F5F3', bd: 'none', fg: '#5E5852' };
+    else if (!ds.open) c = { ...c, bg: '#F0EAE1', bd: 'none', fg: '#5E5852', label: ds.reason === 'holiday' ? t('profile.cal.holiday') : t('profile.cal.closed') };
+    else if (!member) c = { ...c, bg: '#F5F5F3', bd: 'none', fg: '#5E5852', label: cur.lastDay && d > cur.lastDay ? t('profile.cal.ended') : '' };
     else if (d === today) c = { ...c, label: t('common.today') };
-    if (d === today) c.bd = '2px solid #282828';
+    if (d === today) c.bd = '2px solid #24201C';
     cells.push(c);
   }
-  const usualTile = { label: t('profile.f.usual'), value: m.usualArrival || '—', sub: t('profile.tile.usualSub') };
+  const usualTile = { label: t('profile.f.usual'), value: m.usualArrival || '—' };
   const tiles = gold
     ? [
         { label: t('profile.tile.visitsIn', { m: monthName }), value: String(fm.used), sub: t('profile.tile.goldNoLimit') },
         usualTile,
       ]
     : [
-        { label: t('profile.tile.used', { m: monthName }), value: `${usedShown}/${quota}`, sub: t('profile.tile.quota', { q: quota }) },
+        { label: t('profile.tile.used', { m: monthName }), value: `${usedShown}/${quota}` },
         { label: t('profile.tile.left'), value: String(fm.left ?? 0), sub: t('profile.tile.extra', { p: rp(price) }) },
         { label: t('profile.tile.extraDays', { m: monthName }), value: String(fm.extra), sub: fm.extra ? t('profile.tile.extraBill', { p: rp(fm.extra * price) }) : t('profile.tile.extraNone') },
         usualTile,
       ];
   const legend = [
     { bg: '#75624B', bd: 'none', label: t('profile.legend.visited') },
-    ...(gold ? [] : [{ bg: '#282828', bd: 'none', label: t('profile.legend.extra') }]),
-    { bg: '#EFECEA', bd: 'none', label: t('profile.legend.closed') },
+    ...(gold ? [] : [{ bg: '#24201C', bd: 'none', label: t('profile.legend.extra') }]),
+    { bg: '#F0EAE1', bd: 'none', label: t('profile.legend.closed') },
   ];
   const dows = Array.from({ length: 7 }, (_, i) => fmt.fd(`2024-01-0${i + 1}`, { weekday: 'short' }));
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 12 }}>
+    <div style={{ ...cardStyle, gap: 22, maxWidth: 980 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(150px,1fr))', gap: '18px 24px' }}>
         {tiles.map((x, i) => (
-          <div key={i} style={{ padding: '16px 18px', borderRadius: 20, background: '#FFFFFF', border: '1px solid #DBD7D6', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{x.label}</span>
-            <span style={{ fontSize: 32, lineHeight: '36px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{x.value}</span>
-            <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{x.sub}</span>
+          <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+            <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{x.label}</span>
+            <span style={{ fontSize: 'clamp(30px, 3.6vw, 40px)', lineHeight: 1.1, fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px', color: '#24201C' }}>{x.value}</span>
+            {'sub' in x ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{x.sub}</span> : null}
           </div>
         ))}
       </div>
-      <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ borderTop: HAIR, paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <button type="button" onClick={() => setMonth(addMonths(month, -1))} aria-label={t('profile.prevMonth')} className="h-cream" style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DBD7D6', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#282828' }}><Icon name="chevron_left" size={22} /></button>
-          <h2 style={{ margin: 0, fontSize: 24, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C', textAlign: 'center' }}>{fmt.fmonth(month, true)}</h2>
-          <button type="button" onClick={() => setMonth(addMonths(month, 1))} aria-label={t('profile.nextMonth')} className="h-cream" style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DBD7D6', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#282828' }}><Icon name="chevron_right" size={22} /></button>
+          <button type="button" onClick={() => setMonth(addMonths(month, -1))} aria-label={t('profile.prevMonth')} className="h-cream" style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#24201C' }}><Icon name="chevron_left" size={22} /></button>
+          <h2 style={{ margin: 0, fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', textAlign: 'center' }}>{fmt.fmonth(month, true)}</h2>
+          <button type="button" onClick={() => setMonth(addMonths(month, 1))} aria-label={t('profile.nextMonth')} className="h-cream" style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#24201C' }}><Icon name="chevron_right" size={22} /></button>
         </div>
         {month !== ym(today) ? <div><Button variant="ghost" size={44} onClick={() => setMonth(ym(today))}>{t('profile.thisMonth')}</Button></div> : null}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 6 }}>
-          {dows.map((w, i) => <div key={i} style={{ fontSize: FONT_SMALL, fontWeight: 500, textAlign: 'center', padding: '4px 0', lineHeight: 1.4 }}>{w}</div>)}
+          {dows.map((w, i) => <div key={i} style={{ fontSize: 12, fontWeight: 500, textAlign: 'center', padding: '4px 0', lineHeight: 1.4, color: '#6B6259', letterSpacing: '1px', textTransform: 'uppercase' }}>{w}</div>)}
           {cells.map((c, i) => {
-            const st: CSSProperties = { minHeight: 64, borderRadius: 12, padding: '6px 8px', background: c.bg, border: c.bd, color: c.fg, display: 'flex', flexDirection: 'column', gap: 2, visibility: c.vis, minWidth: 0, overflow: 'hidden', textAlign: 'left', fontFamily: 'Inter' };
+            const st: CSSProperties = { minHeight: 60, borderRadius: 8, padding: '6px 8px', background: c.bg, border: c.bd, color: c.fg, display: 'flex', flexDirection: 'column', gap: 2, visibility: c.vis, minWidth: 0, overflow: 'hidden', textAlign: 'left', fontFamily: 'Inter' };
             return (
               <div key={i} style={st} title={c.full} data-visit={c.full ? (c.extra ? 'extra' : 'visit') : undefined}>
-                <span style={{ fontSize: FONT_BODY, fontWeight: 600, lineHeight: 1.4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
+                <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
                   {c.day}
                   {c.extra ? <Icon name="paid" size={14} fill={1} /> : null}
                 </span>
@@ -94,10 +95,9 @@ export function AttendanceTab({ p }: { p: P }) {
             );
           })}
         </div>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 18px', fontSize: FONT_BODY, lineHeight: 1.4 }}>
-          {legend.map((l) => <span key={l.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 14, height: 14, borderRadius: 4, background: l.bg, border: l.bd }} />{l.label}</span>)}
+        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px 18px', fontSize: 13, lineHeight: 1.4, color: '#6B6259' }}>
+          {legend.map((l) => <span key={l.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><span style={{ width: 12, height: 12, borderRadius: 4, background: l.bg, border: l.bd }} />{l.label}</span>)}
         </div>
-        <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{gold ? t('profile.cal.noteGold') : t('profile.cal.noteFlex', { q: quota, p: rp(price) })}</div>
       </div>
     </div>
   );

@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync, readdirSync, statSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { en, id } from '../i18n';
-import { ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TIMINGS } from './enquiries';
+import { ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES } from './enquiries';
 import { AUDIENCES, CONTRACTS, HR_NOTE_KINDS, TIME_KINDS } from './mgmt';
 
 const root = resolve(__dirname, '../../../..');
@@ -15,14 +15,12 @@ const files = [
   join(root, 'packages/shared/src/rules/mgmt.ts'), join(root, 'packages/shared/src/rules/enquiries.ts'),
 ].filter((f) => /\.(ts|tsx)$/.test(f) && !f.endsWith('.test.ts'));
 
-const ACTIONS = new Set(['form.send', 'form.open', 'form.saveDraft', 'form.submit', 'form.approve', 'form.return', 'form.applyMember']);
 const dynamic = (prefix: string, values: readonly (string | number)[]) => values.map((v) => prefix + v);
 const FAMILIES = [
   ...dynamic('enq.stage.', ['new', 'visit', 'trial', 'joined', 'lost']), ...dynamic('enq.next.', ['none', 'callBack', 'sendPrices', 'visit', 'trial', 'followUp', 'starts', 'custom']),
   ...dynamic('enq.lost.', LOST_REASONS), ...dynamic('enq.src_', ENQ_SOURCES), ...dynamic('enq.rel_', ALL_RELATIONS),
-  ...dynamic('enq.form_', ['sent', 'opened', 'draft', 'ready', 'returned', 'approved']), ...dynamic('enq.feed.moved_', ['new', 'visit', 'trial']),
-  ...dynamic('form.food_', FOODS), ...dynamic('form.drug_', DRUGS), ...dynamic('form.mob_', [...MOBILITIES, 'none']), ...dynamic('form.diet_', DIETS), ...dynamic('form.timing_', TIMINGS),
-  ...dynamic('form.err.', ['name', 'dob', 'contactName', 'phone', 'nanny', 'nannyName', 'mobility', 'consent', 'signature', 'locked']),
+  ...dynamic('enq.feed.moved_', ['new', 'visit', 'trial']),
+  ...dynamic('form.food_', FOODS), ...dynamic('form.drug_', DRUGS), ...dynamic('form.mob_', [...MOBILITIES, 'none']), ...dynamic('form.diet_', DIETS),
   ...dynamic('mgmt.aud_', AUDIENCES), ...dynamic('mgmt.ph_', ['update', 'closure', 'event', 'custom']), ...dynamic('mgmt.plan_', ['flex', 'gold']), ...dynamic('mgmt.st_', ['sent', 'scheduled', 'cancelled']),
   ...dynamic('mgmt.svq_', ['overall', 'team', 'recommend', 'comment']), ...dynamic('mgmt.tplText_', ['update', 'closure', 'event']), ...dynamic('mgmt.tplTitle_', ['update', 'closure', 'event', 'custom']),
   ...dynamic('mgmt.notif.bc_', ['update', 'closure', 'event', 'custom']),
@@ -35,7 +33,7 @@ describe('i18n coverage for management and enquiries', () => {
   const used = new Set<string>(FAMILIES);
   for (const f of files) {
     const src = readFileSync(f, 'utf8');
-    for (const m of src.matchAll(/['"`]((?:mgmt|people|enq|form)\.[A-Za-z0-9_.]*[A-Za-z0-9])['"`]/g)) if (!ACTIONS.has(m[1])) used.add(m[1]);
+    for (const m of src.matchAll(/['"`]((?:mgmt|people|enq|form)\.[A-Za-z0-9_.]*[A-Za-z0-9])['"`]/g)) used.add(m[1]);
   }
   it('finds the keys', () => expect(used.size).toBeGreaterThan(200));
   it('every key exists in English', () => {

@@ -15,10 +15,17 @@ export function useFieldIds(idProp?: string) {
 }
 
 /** The design's 52px field box (bronze border, 16px radius); `error` swaps in the rust border. */
+/** The page's CSS zoom (global.css scales the whole UI); 1 where unsupported. */
+export function uiZoom(): number {
+  if (typeof document === 'undefined') return 1;
+  const z = parseFloat(getComputedStyle(document.documentElement).zoom || '1');
+  return Number.isFinite(z) && z > 0 ? z : 1;
+}
+
 export function triggerStyle(o: { error?: boolean; disabled?: boolean; open?: boolean }): CSSProperties {
   return {
-    width: '100%', minWidth: 0, height: 'var(--cp-field-h, 52px)', padding: '0 14px', borderRadius: 16, background: o.disabled ? '#F4F0EE' : '#FFFFFF', color: o.disabled ? '#6A6967' : '#282828',
-    border: o.error ? '2px solid #AF4B2F' : o.open ? '2px solid #75624B' : '1px solid #8A755B', fontFamily: 'Inter', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10,
+    width: '100%', minWidth: 0, height: 'var(--cp-field-h, 52px)', padding: '0 14px', borderRadius: 14, background: o.disabled ? '#F3EEE8' : '#FFFFFF', color: o.disabled ? '#5E5852' : '#24201C',
+    border: o.error ? '2px solid #9A3D24' : o.open ? '2px solid #24201C' : '1px solid #DDD1C2', fontFamily: 'Inter', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10,
     textAlign: 'left', cursor: o.disabled ? 'not-allowed' : 'pointer', ...(o.open || o.error ? { padding: '0 13px' } : {}),
   };
 }
@@ -26,10 +33,10 @@ export function triggerStyle(o: { error?: boolean; disabled?: boolean; open?: bo
 export function FieldFrame({ ids, label, error, hint, children }: { ids: ReturnType<typeof useFieldIds>; label?: ReactNode; error?: ReactNode; hint?: ReactNode; children: ReactNode }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
-      {label ? <label id={ids.label} htmlFor={ids.trigger} style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{label}</label> : null}
+      {label ? <label id={ids.label} htmlFor={ids.trigger} style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: '#4A4038' }}>{label}</label> : null}
       {children}
-      {error ? <span id={ids.msg} role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: '#AF4B2F', lineHeight: 1.4 }}><Icon name="error" size={18} fill={1} />{error}</span>
-        : hint ? <span id={ids.msg} style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{hint}</span> : null}
+      {error ? <span id={ids.msg} role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}><Icon name="error" size={18} fill={1} />{error}</span>
+        : hint ? <span id={ids.msg} style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{hint}</span> : null}
     </div>
   );
 }
@@ -60,8 +67,11 @@ export function PopLayer({ open, onClose, anchorRef, title, children, minWidth =
     const place = () => {
       const a = anchorRef.current;
       if (!a) return;
-      const r = a.getBoundingClientRect();
-      const vw = window.innerWidth, vh = window.innerHeight;
+      // the page is CSS-zoomed (global.css): rects come back in screen px, styles are applied in page px
+      const z = uiZoom();
+      const b = a.getBoundingClientRect();
+      const r = { left: b.left / z, top: b.top / z, bottom: b.bottom / z, width: b.width / z };
+      const vw = window.innerWidth / z, vh = window.innerHeight / z;
       const width = Math.min(Math.max(r.width, minWidth), vw - 16);
       const left = Math.min(Math.max(8, r.left), vw - width - 8);
       const below = vh - r.bottom - 12, above = r.top - 12;
@@ -112,10 +122,10 @@ export function PopLayer({ open, onClose, anchorRef, title, children, minWidth =
       <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
         <div onClick={() => close.current()} style={{ position: 'absolute', inset: 0, background: 'rgba(40,40,40,0.36)' }} />
         <div ref={panel} role="dialog" aria-modal="true" aria-label={title} onKeyDown={onKeyDown}
-          style={{ position: 'relative', width: '100%', maxWidth: 600, maxHeight: '86%', display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: '28px 28px 0 0', padding: '10px 16px calc(16px + env(safe-area-inset-bottom, 0px))', animation: 'cpUp .22s ease-out', gap: 12 }}>
-          <div style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 999, background: '#DBD7D6', flex: 'none' }} />
+          style={{ position: 'relative', width: '100%', maxWidth: 600, maxHeight: '86%', display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: '20px 20px 0 0', padding: '10px 16px calc(16px + env(safe-area-inset-bottom, 0px))', animation: 'cpUp .22s ease-out', gap: 12 }}>
+          <div style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 999, background: '#E4DACD', flex: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flex: 'none' }}>
-            <h2 style={{ margin: 0, fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.4px', color: '#9A836C', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h2>
+            <h2 style={{ margin: 0, fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.4px', color: '#2B231C', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h2>
             <IconButton icon="close" label={t('common.close')} onClick={() => close.current()} />
           </div>
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>{children}</div>
@@ -128,7 +138,7 @@ export function PopLayer({ open, onClose, anchorRef, title, children, minWidth =
     <>
       <div onClick={() => close.current()} style={{ position: 'fixed', inset: 0, zIndex: 69, background: 'transparent' }} />
       <div ref={panel} onKeyDown={onKeyDown} role={menu ? undefined : 'dialog'} aria-label={menu ? undefined : title}
-        style={{ position: 'fixed', zIndex: 70, ...(pos || { left: -9999, top: 0, width: minWidth }), display: 'flex', flexDirection: 'column', background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 16, boxShadow: '0 12px 32px rgba(40,30,20,0.16)', overflow: 'hidden' }}>
+        style={{ position: 'fixed', zIndex: 70, ...(pos || { left: -9999, top: 0, width: minWidth }), display: 'flex', flexDirection: 'column', background: '#FFFFFF', border: '1px solid #E4DACD', borderRadius: 16, boxShadow: '0 12px 32px rgba(40,30,20,0.16)', overflow: 'hidden' }}>
         <div ref={inner} style={{ minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>{children}</div>
       </div>
     </>,

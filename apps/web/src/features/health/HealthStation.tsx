@@ -9,7 +9,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { dayStatus, lastBefore, limitsOf, nextOpenDay, type Health, type QueueKind } from '@cp/shared';
 import { alertRecipients, filterRows, headlineValue, inClubCount, rowName, stationRows, suggestKind, type StationRow } from '@cp/shared/rules/healthStation';
-import { Button, Eyebrow, Icon, IconButton, PageHead, Pager, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Eyebrow, Icon, IconButton, PageHead, Pager, usePaged, uiZoom, FONT_BODY } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -151,7 +151,7 @@ export function HealthStation() {
     const el = detailRef.current;
     const main = el?.closest('main');
     if (!pick || !el || !main || isPhone) return;
-    const top = el.getBoundingClientRect().top - main.getBoundingClientRect().top;
+    const top = (el.getBoundingClientRect().top - main.getBoundingClientRect().top) / uiZoom(); // screen px -> page px (the UI is CSS-zoomed)
     if (top < 0 || (stacked && top > 0)) main.scrollTo({ top: main.scrollTop + top - (stacked ? 12 : 0) });
   }, [pick]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -189,20 +189,20 @@ export function HealthStation() {
   const pos = cur ? list.findIndex((r) => r.key === cur.key) : -1;
 
   const listCard = (
-    <div data-testid="station-list" style={{ flex: stacked ? '1 1 100%' : '0 1 330px', minWidth: 290, background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, overflow: 'hidden' }}>
-      <div style={{ padding: '16px 16px 12px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div data-testid="station-list" style={{ flex: stacked ? '1 1 100%' : '0 1 330px', minWidth: 290, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+      <div style={{ padding: '14px 16px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <SearchBox value={q} onChange={setQ} label={t('health.searchL')} placeholder={t('health.searchPh')} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: FONT_BODY, color: '#282828', fontWeight: 500, lineHeight: 1.4 }}>{t('health.inClubN', { n: inClub })}</span>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{q.trim() ? t('health.foundN', { n: list.length }) : t('health.membersN', { n: rows.filter((r) => r.person.type === 'member').length })}</span>
+          <span style={{ fontSize: 14, color: '#24201C', fontWeight: 500, lineHeight: 1.4 }}>{t('health.inClubN', { n: inClub })}</span>
+          <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{q.trim() ? t('health.foundN', { n: list.length }) : t('health.membersN', { n: rows.filter((r) => r.person.type === 'member').length })}</span>
         </div>
       </div>
       {closed ? (
-        <div role="status" style={{ padding: '12px 16px', borderTop: '1px solid #EFECEA', background: '#FBF5E8', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div role="status" style={{ padding: '12px 16px', borderTop: '1px solid #F0EAE1', background: '#FBF5E8', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
           <Icon name="event_busy" size={22} color="#7A5510" />
           <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t('common.clubClosed')}</span>
-            <span style={{ fontSize: FONT_BODY, color: '#282828', lineHeight: '20px' }}>{t(closedReason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })}</span>
+            <span style={{ fontSize: FONT_BODY, color: '#24201C', lineHeight: '20px' }}>{t(closedReason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })}</span>
           </span>
         </div>
       ) : null}
@@ -212,9 +212,9 @@ export function HealthStation() {
         return (
           <div key={r.key}>
             {head ? (
-              <div style={{ padding: '10px 16px 8px', borderTop: '1px solid #EFECEA', background: '#FBFAF9', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-                <Eyebrow color="#282828">{t(g === 'in' ? 'health.grpIn' : 'health.grpOther')}</Eyebrow>
-                <span style={{ fontSize: FONT_BODY, color: '#6A6967' }}>{groupCount[g]}</span>
+              <div style={{ padding: '12px 16px 8px', borderTop: '1px solid #F0EAE1', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+                <Eyebrow>{t(g === 'in' ? 'health.grpIn' : 'health.grpOther')}</Eyebrow>
+                <span style={{ fontSize: 14, color: '#6B6259' }}>{groupCount[g]}</span>
               </div>
             ) : null}
             <ListRow r={r} on={cur?.key === r.key} today={today} t={t} fds={fds} onClick={() => choose(r.key)} />
@@ -222,9 +222,9 @@ export function HealthStation() {
         );
       })}
       {!list.length ? (
-        <EmptyBlock icon={q.trim() ? 'search_off' : 'groups'} title={q.trim() ? t('common.noResults') : t('health.listEmpty')} sub={q.trim() ? t('health.noMatchSub') : undefined} />
+        <EmptyBlock icon={q.trim() ? 'search_off' : 'groups'} title={q.trim() ? t('common.noResults') : t('health.listEmpty')} />
       ) : null}
-      <div style={{ borderTop: list.length ? '1px solid #EFECEA' : undefined }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} /></div>
+      <div style={{ borderTop: list.length ? '1px solid #F0EAE1' : undefined }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} /></div>
     </div>
   );
 
@@ -233,8 +233,8 @@ export function HealthStation() {
     <>
       <DetailHead who={who} row={cur} s={s} today={today} t={t} isPhone={isPhone} />
       {cur.today.length ? (
-        <div data-testid="today-block" style={{ padding: '16px 24px', display: 'flex', flexDirection: 'column', gap: 10, borderBottom: '1px solid #EFECEA' }}>
-          <span style={smallCaps('1.5px')}>{t('health.todayHead', { n: cur.today.length })}</span>
+        <div data-testid="today-block" style={{ padding: isPhone ? '14px 16px 6px' : '16px 24px 8px', display: 'flex', flexDirection: 'column', gap: 4, borderBottom: '1px solid #F0EAE1' }}>
+          <span style={{ ...smallCaps('2px'), color: '#6E5A43' }}>{t('health.todayHead', { n: cur.today.length })}</span>
           {cur.today.map((r) => <ReadingCard key={r.id} r={r} s={s} t={t} onEdit={() => setDlg({ t: 'edit', id: r.id })} onVoid={() => setDlg({ t: 'void', id: r.id })} />)}
         </div>
       ) : null}
@@ -247,23 +247,25 @@ export function HealthStation() {
   );
 
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 22 }}>
-      <PageHead size={40} eyebrow={`${t('health.healthStation')} · ${fdl(today)}`} title={t('health.healthChecks')}
-        right={(
-          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            {isPhone ? <IconButton icon="tune" label={t('health.limitsTitle')} size={36} onClick={() => setLimits(true)} />
-              : <Button variant="secondary" size={44} icon="tune" label={t('health.limitsTitle')} onClick={() => setLimits(true)}>{t('health.limitsBtn')}</Button>}
-            <span style={{ height: isPhone ? 30 : 36, padding: isPhone ? '0 12px 0 8px' : '0 14px 0 10px', borderRadius: 999, background: '#FFFFFF', border: '1px solid #DBD7D6', fontSize: isPhone ? 14 : FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
-              <Icon name="bluetooth_connected" size={isPhone ? 18 : 20} color="#3D6B4F" />
-              {t('health.device')} · {t('health.connected')}
-            </span>
-            <span style={{ fontSize: isPhone ? 24 : 32, lineHeight: isPhone ? '30px' : '36px', fontWeight: isPhone ? 400 : 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px', paddingLeft: isPhone ? 0 : 8 }}>{now}</span>
-          </div>
-        )} />
-      <div ref={bodyRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 20, alignItems: 'flex-start' }}>
+    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 'clamp(18px, 2.8vw, 32px)' }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 6 : 10 }}>
+        <PageHead size={40} eyebrow={`${t('health.healthStation')} · ${fdl(today)}`} title={t('health.healthChecks')}
+          right={(
+            <div style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 10 : 16, flexWrap: 'wrap' }}>
+              {isPhone ? <IconButton icon="tune" label={t('health.limitsTitle')} size={36} onClick={() => setLimits(true)} />
+                : <Button variant="secondary" size={44} icon="tune" label={t('health.limitsTitle')} onClick={() => setLimits(true)}>{t('health.limitsBtn')}</Button>}
+              <span style={{ fontSize: isPhone ? 24 : 48, lineHeight: 1.05, fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: isPhone ? '-0.5px' : '-1.5px', color: '#2B231C' }}>{now}</span>
+            </div>
+          )} />
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>
+          <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: '#3D6B4F', flex: 'none' }} />
+          <span>{t('health.device')} · {t('health.connected')}</span>
+        </span>
+      </div>
+      <div ref={bodyRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(14px, 2vw, 24px)', alignItems: 'flex-start' }}>
         {listCard}
         {!isPhone ? (
-          <div ref={detailRef} style={{ flex: '1 1 520px', minWidth: 0, background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, overflowX: 'clip', overflowY: 'visible' }}>{detail}</div>
+          <div ref={detailRef} style={{ flex: '1 1 520px', minWidth: 0, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflowX: 'clip', overflowY: 'visible' }}>{detail}</div>
         ) : null}
       </div>
       {isPhone ? (
@@ -278,12 +280,12 @@ export function HealthStation() {
 
 function EmptyBlock({ icon, title, sub, big }: { icon: string; title: string; sub?: string; big?: boolean }) {
   return (
-    <div style={{ padding: big ? '80px 24px' : '36px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center', borderTop: big ? undefined : '1px solid #EFECEA' }}>
-      <div style={{ width: big ? 72 : 64, height: big ? 72 : 64, borderRadius: 999, background: '#F4F0EE', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name={icon} size={big ? 34 : 30} color="#8A755B" />
+    <div style={{ padding: big ? '80px 24px' : '36px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center', borderTop: big ? undefined : '1px solid #F0EAE1' }}>
+      <div style={{ width: big ? 72 : 64, height: big ? 72 : 64, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={big ? 34 : 30} weight={300} color="#6E5A43" />
       </div>
-      <div style={{ fontSize: big ? 20 : 18 }}>{title}</div>
-      {sub ? <div style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6A6967' }}>{sub}</div> : null}
+      <div style={{ fontSize: big ? 20 : 18, fontWeight: 400, color: '#2B231C' }}>{title}</div>
+      {sub ? <div style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6B6259' }}>{sub}</div> : null}
     </div>
   );
 }
@@ -298,15 +300,15 @@ function ListRow({ r, on, today, t, fds, onClick }: { r: StationRow; on: boolean
     : t('health.noReadingsYet');
   return (
     <button type="button" className="dh22" onClick={onClick} aria-current={on ? 'true' : undefined} data-testid="station-row" data-person={r.personId} data-presence={r.presence}
-      style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'flex-start', padding: isPhone ? '10px 14px' : '14px 16px', minHeight: isPhone ? 60 : 76, border: 'none', borderTop: '1px solid #EFECEA', background: on ? '#F4F0EE' : '#FFFFFF', boxShadow: on ? 'inset 0 0 0 2px #75624B' : 'none', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
-      <Av name={w.name} tone={w.tone} src={w.photo} size={isPhone ? 38 : 44} font={isPhone ? 14 : 16} />
-      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 2 : 4 }}>
+      style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'center', padding: isPhone ? '10px 14px' : '12px 16px', minHeight: isPhone ? 60 : 70, border: 'none', borderTop: '1px solid #F0EAE1', background: on ? '#FBF8F4' : '#FFFFFF', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+      <Av name={w.name} tone={w.tone} src={w.photo} size={isPhone ? 40 : 44} font={isPhone ? 14 : 16} />
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
           <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{rowName(r)}</span>
-          {meta ? <span style={{ fontSize: 'max(13px, var(--cp-small, 0px))', color: '#6A6967', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{meta}</span> : null}
+          {meta ? <span style={{ fontSize: 'max(13px, var(--cp-small, 0px))', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{meta}</span> : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-          <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6A6967' }}>{last}</span>
+          <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{last}</span>
           {r.last ? <Badge kind={r.last.status} icon={17} /> : null}
         </div>
       </div>

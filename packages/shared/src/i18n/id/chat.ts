@@ -5,7 +5,7 @@ export const chat: Same<typeof EN> = {
   eyebrowStaff: 'Keluarga · WhatsApp', eyebrowFamily: 'Bersama klub', newMessage: 'Pesan baru', filterTeam: 'Saring menurut tim', both: 'Keduanya', member: 'Anggota',
   'topic.lobby': 'Lobi', 'topic.nurse': 'Perawat', 'topic.care': 'Tim aktivitas', 'topic.kitchen': 'Dapur', 'topic.billing': 'Tagihan',
   'teamSub.lobby': '{name} dan tim resepsionis', 'teamSub.nurse': 'Perawat klub', 'teamSub.care': 'Para pengajar aktivitas', 'teamSub.kitchen': 'Tim dapur', 'teamSub.billing': 'Tim keuangan',
-  about: 'Tentang {n} · {team}', aboutReplies: 'Tentang {m} · biasanya membalas dalam satu jam', relOf: '{rel} dari {m}', you: 'Anda', youColon: 'Anda: ', startConv: 'Mulai percakapan', unreadAria: 'Belum dibaca',
+  about: 'Tentang {n} · {team}', aboutReplies: 'Tentang {m}', relOf: '{rel} dari {m}', you: 'Anda', youColon: 'Anda: ', startConv: 'Mulai percakapan', unreadAria: 'Belum dibaca',
   openProfile: 'Buka profil {n}', backAria: 'Kembali ke percakapan', placeholder: 'Tulis pesan', messageAria: 'Pesan', logAria: 'Pesan dalam percakapan ini', sendAria: 'Kirim', threadAria: 'Percakapan dengan {name}',
   pick: 'Pilih percakapan', pickSub: 'Ketuk percakapan di sebelah kiri untuk membaca dan membalas.', none: 'Belum ada percakapan', noneSub: 'Pesan dari keluarga muncul di sini. Gunakan Pesan baru untuk memulai.',
   noneFamily: 'Belum ada percakapan', noneFamilySub: 'Kirim pesan ke klub kapan saja. Biasanya kami membalas dalam satu jam.', emptyThread: 'Belum ada pesan. Sapa kami di bawah.',

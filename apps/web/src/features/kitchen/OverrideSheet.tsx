@@ -3,6 +3,8 @@ import { useState } from 'react';
 import { dayStatus, menuOn } from '@cp/shared';
 import { COURSES, sameIds, type Course } from '@cp/shared/rules/kitchenOps';
 import { Button, DateField, Sheet, Note, FONT_BODY } from '../../components/ui';
+import { PendingMark } from '../../components/PendingMark';
+import { useMe } from '../../lib/me';
 import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -15,6 +17,7 @@ export function OverrideSheet({ open, onClose, initialDate }: { open: boolean; o
   const s = useClub();
   const act = useAct();
   const { today } = useNow();
+  const { role } = useMe();
   const [date, setDate] = useState(initialDate);
   const [edits, setEdits] = useState<Partial<Record<Course, string[]>>>({});
   const [picker, setPicker] = useState<Course | null>(null);
@@ -45,7 +48,8 @@ export function OverrideSheet({ open, onClose, initialDate }: { open: boolean; o
     <>
       <Sheet open={open && !picker} onClose={onClose} title={t('kitchen.override.title')}
         footer={<Button full style={{ flex: 'none' }} onClick={save} disabled={!changed.length || busy || !!error}>{t('kitchen.override.save')}</Button>}>
-        <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4, marginTop: -8 }}>{t('kitchen.override.sub')}</span>
+        {role !== 'mgmt' ? <Note tone="ochre" icon="hourglass_top">{t('approvals.menuNeeds')}</Note> : null}
+        <PendingMark row={row} />
         <DateField label={t('common.date')} value={date} onChange={(v) => { setDate(v); setEdits({}); }} min={today} disabledDate={(d) => !dayStatus(s, d).open} error={error} />
         {menu ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>

@@ -1,10 +1,29 @@
 // Family projection: what a family user's browser receives (their members only; no staff-only fields).
 import type { ClubState, Member } from './types';
 import { COLLECTIONS } from './types';
-import { live, uniq } from './util';
+import { live, sortBy, uniq } from './util';
+import { approvedDayMenu, logForFamily, menuVersionForFamily, noteForFamily, readingForFamily } from './rules/approvals';
 import { isPendingRow } from './rules/core';
 
 const pick = <T extends { id: string }>(rows: T[]) => Object.fromEntries(rows.map((r) => [r.id, r])) as Record<string, T>;
+const present = <T>(x: T | null): x is T => x !== null;
+
+/**
+ * A change by staff that was applied at once (allergies, medicines, care) and still waits for management's review is not shown to the family:
+ * they keep seeing the values from before it, until it is acknowledged (or it was reverted).
+ */
+function heldBack(s: ClubState, m: Member): Member {
+  const flags = sortBy(live(s.changeRequests).filter((c) => c.kind === 'postReview' && c.status === 'pending' && c.target.type === 'member' && c.target.id === m.id), (c) => c.createdAt + c.id);
+  if (!flags.length) return m;
+  const out = { ...m } as unknown as Record<string, unknown>;
+  const done = new Set<string>();
+  for (const c of flags) for (const ch of c.changes) {
+    if (done.has(ch.field)) continue; // the oldest waiting change holds the value the family last saw
+    done.add(ch.field);
+    if (ch.from === undefined || ch.from === null) delete out[ch.field]; else out[ch.field] = JSON.parse(JSON.stringify(ch.from));
+  }
+  return out as unknown as Member;
+}
 
 export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const out = { clubId: s.clubId, rev: s.rev, club: s.club } as ClubState;
@@ -12,7 +31,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const links = live(s.familyLinks).filter((l) => l.familyId === familyId && !isPendingRow(l) && l.appAccess);
   const mids = uniq(links.map((l) => l.memberId));
   const strip = (m: Member): Member => ({ ...m, care: { instructions: '', by: m.care.by, at: m.care.at }, sim: { ...m.sim, script: undefined } });
-  out.members = pick(mids.map((id) => s.members[id]).filter(Boolean).map(strip));
+  out.members = pick(mids.map((id) => s.members[id]).filter(Boolean).map((m) => strip(heldBack(s, m))));
   // co-tagged members in photos: short name stubs only
   const photos = live(s.photos).filter((p) => p.visibility === 'visible' && p.memberIds.some((id) => mids.includes(id)));
   for (const p of photos) for (const id of p.memberIds) if (!out.members[id] && s.members[id]) {
@@ -28,10 +47,11 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   // sign-in names: a family user sees only their own, never another contact's or a staff member's
   out.familyContacts = pick(uniq(householdLinks.map((l) => l.familyId)).map((id) => s.familyContacts[id]).filter(Boolean).map((c) => (c.id === familyId ? c : { ...c, username: undefined })));
   const mine = <T extends { memberId?: string | null }>(rows: T[]) => rows.filter((r) => r.memberId && mids.includes(r.memberId));
-  out.memberNotes = pick(mine(live(s.memberNotes)).filter((n) => n.visibility === 'family'));
+  out.memberNotes = pick(mine(live(s.memberNotes)).filter((n) => n.visibility === 'family').map(noteForFamily).filter(present));
   out.attendance = pick(mine(live(s.attendance)));
-  out.readings = pick(mine(live(s.readings)).filter((r) => !r.voided));
-  out.dailyLogs = pick(mine(live(s.dailyLogs)).filter((l) => l.status === 'saved').map((l) => ({ ...l, staffNote: undefined })));
+  out.readings = pick(mine(live(s.readings)).filter((r) => !r.voided).map(readingForFamily).filter(present));
+  // daily logs, family notes and readings by staff wait for approval: a new entry is left out, an edit shows the last approved values
+  out.dailyLogs = pick(mine(live(s.dailyLogs)).filter((l) => l.status === 'saved').map(logForFamily).filter(present).map((l) => ({ ...l, staffNote: undefined, approval: undefined })));
   out.planChangeRequests = pick(mine(live(s.planChangeRequests)));
   const invoices = mine(live(s.invoices)).map((i) => ({ ...i, xero: 'synced' as const, callNotes: [] }));
   out.invoices = pick(invoices);
@@ -47,9 +67,9 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   out.activities = pick(live(s.activities));
   out.scheduleVersions = pick(live(s.scheduleVersions).filter((v) => v.status === 'published'));
   out.dishes = pick(live(s.dishes));
-  out.menuVersions = pick(live(s.menuVersions).filter((v) => v.status === 'published'));
+  out.menuVersions = pick(live(s.menuVersions).filter((v) => v.status === 'published').map(menuVersionForFamily).filter(present));
   // allergy alternatives: only the family's own members
-  out.dayMenus = pick(live(s.dayMenus).map((d) => ({ ...d, allergyPlans: d.allergyPlans.filter((p) => mids.some((id) => p.person === `member:${id}`)) })));
+  out.dayMenus = pick(live(s.dayMenus).map(approvedDayMenu).map((d) => ({ ...d, approval: undefined, allergyPlans: d.allergyPlans.filter((p) => mids.some((id) => p.person === `member:${id}`)) })));
   out.directory = pick(live(s.directory).filter((d) => d.public));
   out.prices = pick(live(s.prices));
   out.staff = pick(live(s.staff).map((x) => ({ ...x, username: undefined, phone: '', hr: { ...x.hr, salary: 0, allowance: 0, account: '', ktpLast4: '' } })));

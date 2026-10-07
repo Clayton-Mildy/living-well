@@ -3,12 +3,12 @@
 import { Fragment, useState } from 'react';
 import { dayStatus, fmtN, fmtPhone, parseN, rp, type Room, type VenueBooking } from '@cp/shared';
 import { VENUE_EARLIEST, VENUE_LATEST, checkVenueSlot, venueLists, venueRooms } from '@cp/shared/rules/mgmt';
-import { Button, Chip, DateField, Dialog, Icon, Note, Pager, SectionLabel, TextField, TimeField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, Chip, DateField, Dialog, Icon, Note, PageHead, Pager, SectionLabel, TextField, TimeField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
-import { BadgePill, ListCard, Page, labelStyle, chipRow } from './common';
+import { BadgePill, HPAD, ListCard, Page, heroCard, labelStyle, chipRow } from './common';
 
 interface VForm { org: string; contactName: string; phone: string; guests: string; roomId: string; date: string; from: string; to: string; price: string; deposit: string }
 const SLOTS: [string, string][] = [['08:00', '12:00'], ['13:00', '17:00'], ['17:00', '21:00']];
@@ -46,22 +46,22 @@ export function Venue() {
     const money = [v.price ? t('mgmt.vnPrice', { n: rp(v.price) }) : '', v.deposit ? t('mgmt.vnDeposit', { n: rp(v.deposit) }) : '', v.invoiceRef ? t('mgmt.vnInvoice', { ref: v.invoiceRef }) : ''].filter(Boolean).join(' · ');
     return (
       <Fragment key={v.id}>
-        <div data-venue={v.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, flexWrap: 'wrap', padding: '14px 20px', borderTop: '1px solid #EFECEA', opacity: v.status === 'cancelled' ? 0.7 : 1 }}>
-          <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F6ECD6', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#7A5510', flex: 'none' }}><Icon name="storefront" size={20} /></span>
+        <div data-venue={v.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', padding: '18px 0', borderTop: '1px solid #F0EAE1', opacity: v.status === 'cancelled' ? 0.7 : 1 }}>
+          <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', flex: 'none' }}><Icon name="storefront" size={21} /></span>
           <div style={{ flex: '1 1 260px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{v.org}</span>
-            <span style={{ fontSize: FONT_BODY, color: '#282828', lineHeight: 1.4 }}>{t('mgmt.vnSub', { date: fdl(v.date), from: v.from, to: v.to, n: v.guests, room: roomName(s.rooms[v.roomId], lang) })}</span>
-            <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{v.contactName}{v.phone ? ' · ' + fmtPhone(v.phone) : ''}</span>
-            {money ? <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{money}</span> : null}
-            {v.review ? <span style={{ fontSize: FONT_BODY, lineHeight: '20px', paddingTop: 4 }}>“{v.review.text || t('mgmt.vnNoText')}”</span> : null}
+            <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{v.org}</span>
+            <span style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{t('mgmt.vnSub', { date: fdl(v.date), from: v.from, to: v.to, n: v.guests, room: roomName(s.rooms[v.roomId], lang) })}</span>
+            <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{v.contactName}{v.phone ? ' · ' + fmtPhone(v.phone) : ''}</span>
+            {money ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{money}</span> : null}
+            {v.review ? <span style={{ fontSize: 14, lineHeight: '20px', paddingTop: 4 }}>“{v.review.text || t('mgmt.vnNoText')}”</span> : null}
           </div>
           {badge}
           {v.status === 'confirmed' ? (
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: '1 1 100%', paddingLeft: 62 }}>
+              {v.price && !v.invoiceRef ? <Button size={44} icon="receipt_long" onClick={() => act('venue.createInvoice', { venueId: v.id }, { ok: (r) => t('mgmt.vnInvoiced', { ref: String(r.invoiceRef ?? '') }) })}>{t('mgmt.vnCreateInvoice')}</Button> : null}
+              {done && !v.review && !v.reviewAskedAt ? <Button size={44} variant={v.price && !v.invoiceRef ? 'secondary' : 'primary'} icon="send" onClick={() => act('venue.askReview', { venueId: v.id }, { ok: t('mgmt.vnAskedToast', { name: v.contactName }) })}>{t('mgmt.vnSendReview')}</Button> : null}
               <Button size={44} variant="secondary" icon="edit" onClick={() => setEdit(v)}>{t('common.edit')}</Button>
               {!isPast ? <Button size={44} variant="secondary" icon="event_busy" onClick={() => setCancel(v)}>{t('mgmt.vnCancel')}</Button> : null}
-              {v.price && !v.invoiceRef ? <Button size={44} variant="secondary" icon="receipt_long" onClick={() => act('venue.createInvoice', { venueId: v.id }, { ok: (r) => t('mgmt.vnInvoiced', { ref: String(r.invoiceRef ?? '') }) })}>{t('mgmt.vnCreateInvoice')}</Button> : null}
-              {done && !v.review && !v.reviewAskedAt ? <Button size={44} variant="secondary" icon="send" onClick={() => act('venue.askReview', { venueId: v.id }, { ok: t('mgmt.vnAskedToast', { name: v.contactName }) })}>{t('mgmt.vnSendReview')}</Button> : null}
               {(done || v.date <= today) && !v.review ? <Button size={44} variant="secondary" icon="rate_review" onClick={() => setReview(v)}>{t('mgmt.vnRecordReview')}</Button> : null}
             </div>
           ) : null}
@@ -72,16 +72,10 @@ export function Venue() {
 
   return (
     <Page max={1000} gap={18}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ ...labelStyle, color: '#6A6967' }}>{t('mgmt.vnEyebrow')}</div>
-          <h1 style={{ margin: 0, fontSize: 36, lineHeight: '44px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('mgmt.vnTitle')}</h1>
-        </div>
-        {!open ? <Button size={48} icon="add" style={{ height: 52 }} onClick={() => { setForm(blank(rooms)); setOpen(true); }}>{t('mgmt.vnNew')}</Button> : null}
-      </div>
+      <PageHead eyebrow={t('mgmt.vnEyebrow')} title={t('mgmt.vnTitle')} right={!open ? <Button size={48} icon="add" onClick={() => { setForm(blank(rooms)); setOpen(true); }}>{t('mgmt.vnNew')}</Button> : undefined} />
 
       {open ? (
-        <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '20px 22px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'cpUp .2s ease-out' }}>
+        <div style={{ ...heroCard, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 16, animation: 'cpUp .2s ease-out' }}>
           <span style={labelStyle}>{t('mgmt.vnBooking')}</span>
           <VenueForm value={form} onChange={setForm} rooms={rooms} />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
@@ -91,12 +85,12 @@ export function Venue() {
         </div>
       ) : null}
 
-      <ListCard title={t('mgmt.vnUpcoming')} meta={t('mgmt.vnOnCalendar')}>
-        {upcoming.length ? upPaged.rows.map(row) : <div style={{ padding: '12px 20px 18px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967' }}>{t('mgmt.vnNone')}</div>}
+      <ListCard title={t('mgmt.vnUpcoming')}>
+        {upcoming.length ? upPaged.rows.map(row) : <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('mgmt.vnNone')}</div>}
         <Pager page={upPaged.page} pages={upPaged.pages} onPage={upPaged.setPage} label={t('mgmt.pgUpcoming')} />
       </ListCard>
       {past.length ? (
-        <ListCard title={t('mgmt.vnPast')} meta={t('mgmt.vnPastMeta')}>
+        <ListCard title={t('mgmt.vnPast')}>
           {pastPaged.rows.map(row)}
           <Pager page={pastPaged.page} pages={pastPaged.pages} onPage={pastPaged.setPage} label={t('mgmt.pgPast')} />
         </ListCard>
@@ -166,7 +160,7 @@ function VenueForm({ value: f, onChange, rooms, ignoreId }: { value: VForm; onCh
             const off = !slotOk(a, b);
             return (
               <button key={a} type="button" className="cp-chip" aria-pressed={sel} aria-disabled={off || undefined} onClick={() => { if (!off || sel) set({ from: a, to: b }); }}
-                style={{ minHeight: 52, minWidth: 96, padding: '6px 14px', borderRadius: 16, border: sel ? '1px solid #282828' : off ? '1px solid #EFECEA' : '1px solid #CAB8A2', background: sel ? '#282828' : off ? '#F4F0EE' : '#FFFFFF', color: sel ? '#FFFFFF' : off ? '#6A6967' : '#282828', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
+                style={{ minHeight: 52, minWidth: 96, padding: '6px 14px', borderRadius: 12, border: sel ? '1px solid #24201C' : off ? '1px solid #F0EAE1' : '1px solid #DCD3C8', background: sel ? '#24201C' : off ? '#F3EEE8' : '#FFFFFF', color: sel ? '#FFFFFF' : off ? '#5E5852' : '#24201C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
                 <span style={{ fontSize: 16, fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.4 }}>{a}–{b}</span>
                 <span style={{ fontSize: FONT_SMALL, whiteSpace: 'nowrap', lineHeight: 1.4 }}>{slotSub(a, b)}</span>
               </button>
@@ -186,8 +180,7 @@ function VenueForm({ value: f, onChange, rooms, ignoreId }: { value: VForm; onCh
         <TextField label={t('mgmt.vnPriceL')} prefix="Rp" value={f.price} onChange={(v) => set({ price: fmtN(v) })} inputMode="numeric" hint={t('mgmt.vnOptional')} />
         <TextField label={t('mgmt.vnDepositL')} prefix="Rp" value={f.deposit} onChange={(v) => set({ deposit: fmtN(v) })} inputMode="numeric" hint={t('mgmt.vnOptional')} />
       </div>
-      {check && !check.ok ? <div role="alert" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 16, background: '#F7E4DD', color: '#AF4B2F', fontSize: 16, lineHeight: '22px' }}><Icon name="error" size={20} fill={1} /><span data-testid="venue-error">{t(check.code, { ...(check.params || {}) })}</span></div> : null}
-      <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('mgmt.vnHint', { close: s.club.settings.close })}</div>
+      {check && !check.ok ? <div role="alert" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 12, background: '#F9E3DB', color: '#9A3D24', fontSize: 16, lineHeight: '22px' }}><Icon name="error" size={20} fill={1} /><span data-testid="venue-error">{t(check.code, { ...(check.params || {}) })}</span></div> : null}
     </>
   );
 }
@@ -239,7 +232,7 @@ function ReviewDialog({ v, onClose }: { v: VenueBooking | null; onClose: () => v
         <div style={chipRow} role="radiogroup" aria-label={t('mgmt.vnStars')}>
           {[1, 2, 3, 4, 5].map((n) => (
             <button key={n} type="button" role="radio" aria-checked={stars === n} aria-label={t('mgmt.vnStarsOf', { n })} onClick={() => setStars(n)}
-              style={{ width: 52, height: 52, borderRadius: 999, border: stars === n ? '1px solid #75624B' : '1px solid #DBD7D6', background: stars === n ? '#F4F0EE' : '#FFFFFF', color: stars === n ? '#75624B' : '#8A755B', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', fontFamily: 'Inter', fontSize: 16, fontWeight: 600 }}>
+              style={{ width: 52, height: 52, borderRadius: 999, border: stars === n ? '1px solid #75624B' : '1px solid #E4DACD', background: stars === n ? '#F3EEE8' : '#FFFFFF', color: stars === n ? '#75624B' : '#8A755B', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', fontFamily: 'Inter', fontSize: 16, fontWeight: 600 }}>
               {n}<Icon name="star" size={18} fill={stars >= n ? 1 : 0} />
             </button>
           ))}

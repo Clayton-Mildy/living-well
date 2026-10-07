@@ -11,6 +11,7 @@ export const lobby: Same<typeof EN> = {
   primaryBilling: 'Kontak tagihan utama',
   tCheckedIn: '{n} check-in pukul {t}. {f} sudah dikabari.', tCheckedOut: '{n} check-out pukul {t}. Keluarga sudah dikabari.', nurseQ: '{n} diarahkan ke pos kesehatan.',
   openProfile: 'Buka profil lengkap', todayCounts: 'Kehadiran hari ini', modeAria: 'Check-in atau check-out', clubOpen: 'Klub buka',
+  notInYet: 'Belum masuk', openUntil: 'Klub buka sampai {t}', whoTitle: 'Siapa ini?', whoNobody: 'Bukan siapa-siapa: tutup', whoNone: 'Tidak ada anggota yang cocok dengan “{q}”.',
 
   opensAt: 'Buka pukul {t}', closedNow: 'Tutup untuk hari ini', todayL: 'Hari ini',
   noneByFace: 'Semua yang belum masuk di-check-in dengan nama.', faceCard: 'Kamera check-in wajah',

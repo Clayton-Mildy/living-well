@@ -11,6 +11,7 @@ import { COLLECTIONS } from '../types';
 import type { CollectionName } from '../types';
 import { addDays, addMonths, daysBetween, dow, rng, toHM, toMin, ym, DEMO_TODAY, DEMO_START_MIN, isWeekday, e164 } from '../util';
 import { evaluateReading } from '../rules/health';
+import { addRoster } from './roster';
 
 type Coll<K extends keyof ClubState> = ClubState[K];
 
@@ -170,7 +171,7 @@ const weekdaysIn = (from: ISODate, to: ISODate) => { const out: ISODate[] = []; 
 /** n days spread evenly over a list, always keeping the first and the last. */
 const spread = (days: ISODate[], n: number) => (n >= days.length ? days.slice() : Array.from({ length: n }, (_, i) => days[Math.round((i * (days.length - 1)) / Math.max(1, n - 1))]));
 
-export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_START_MIN): ClubState {
+export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_START_MIN, opts: { roster?: boolean } = {}): ClubState {
   const C = 'citra';
   const T = anchor;
   /** today's events exist only once their time has passed (the demo clock is real time; 09:58 for the tests) */
@@ -242,12 +243,12 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
       health: { conditions: c.conditions, diabetic: c.diabetic, food: c.food, drugs: [], mobility: c.mobility, diet: c.diet, meds: c.meds.map(([name, dose, timing], i) => ({ id: `${c.id}-med${i + 1}`, name, dose, timing })),
         cognitive: { summary: c.cognitive, reviewedBy: 's8', reviewedOn: sh('2026-10-01') } },
       care: { instructions: c.id === 'm2' ? c.care.replace('14 Oct', dm(HENDRA_DAY)) : c.care, by: 'staff:s8', at: `${HENDRA_DAY}T10:45` },
-      consents: [{ kind: 'data', granted: true, by: `family:${PRIMARY[c.id]}`, byName: FAMILY.find((f) => f[0] === PRIMARY[c.id])![1], at: c.start + 'T09:00', via: 'form' }, { kind: 'face', granted: true, by: `family:${PRIMARY[c.id]}`, byName: FAMILY.find((f) => f[0] === PRIMARY[c.id])![1], at: c.start + 'T09:00', via: 'form' }],
+      consents: [{ kind: 'data', granted: true, by: `family:${PRIMARY[c.id]}`, byName: FAMILY.find((f) => f[0] === PRIMARY[c.id])![1], at: c.start + 'T09:00', via: 'paper' }, { kind: 'face', granted: true, by: `family:${PRIMARY[c.id]}`, byName: FAMILY.find((f) => f[0] === PRIMARY[c.id])![1], at: c.start + 'T09:00', via: 'paper' }],
       documents: [
-        { id: `${c.id}-doc-ktp`, type: 'ktp', status: 'onFile', fileName: 'ktp.jpg', on: c.start, via: 'form', by: `family:${PRIMARY[c.id]}` },
-        ...(c.nanny ? [{ id: `${c.id}-doc-nktp`, type: 'nannyKtp' as const, status: 'onFile' as const, fileName: 'ktp-nanny.jpg', on: c.start, via: 'form' as const, by: `family:${PRIMARY[c.id]}` as Actor }] : []),
-        { id: `${c.id}-doc-form`, type: 'membershipForm', status: 'onFile', fileName: 'membership-form.pdf', on: c.start, via: 'form', by: `family:${PRIMARY[c.id]}` },
-        c.healthInfo ? { id: `${c.id}-doc-health`, type: 'healthInfo', status: 'onFile', fileName: 'health-info.jpg', on: c.start, via: 'form', by: `family:${PRIMARY[c.id]}` } : { id: `${c.id}-doc-health`, type: 'healthInfo', status: 'requested', on: sh('2026-10-12'), by: 'staff:s1' },
+        { id: `${c.id}-doc-ktp`, type: 'ktp', status: 'onFile', fileName: 'ktp.jpg', on: c.start, via: 'staff', by: `family:${PRIMARY[c.id]}` },
+        ...(c.nanny ? [{ id: `${c.id}-doc-nktp`, type: 'nannyKtp' as const, status: 'onFile' as const, fileName: 'ktp-nanny.jpg', on: c.start, via: 'staff' as const, by: `family:${PRIMARY[c.id]}` as Actor }] : []),
+        { id: `${c.id}-doc-form`, type: 'membershipForm', status: 'onFile', fileName: 'membership-form.pdf', on: c.start, via: 'staff', by: `family:${PRIMARY[c.id]}` },
+        c.healthInfo ? { id: `${c.id}-doc-health`, type: 'healthInfo', status: 'onFile', fileName: 'health-info.jpg', on: c.start, via: 'staff', by: `family:${PRIMARY[c.id]}` } : { id: `${c.id}-doc-health`, type: 'healthInfo', status: 'requested', on: sh('2026-10-12'), by: 'staff:s1' },
       ],
       face: { enrolled: true, at: c.start + 'T10:00' }, billing: { va: VA(c.idx) }, sim: c.sim,
     };
@@ -423,18 +424,13 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   fb('c2', 'm2', 'fm2_0', lastFri, 'Gado-gado', 'Papa would like a vegetarian option on Fridays.', `${lastFri}T08:15`, ['Thank you. From next Friday there is a tempeh and vegetable option next to the gado-gado.', `${lastFri}T14:10`]);
   if (done('07:55')) fb('c3', 'm20', 'fm20_0', T, 'Sop ikan kakap', 'Last time Papa found a small bone in the fish soup. Please check before serving.', `${T}T07:55`);
 
-  // enquiries, form requests, guest visits
-  put('enquiries', { ...base(C, 'e1', at('2026-10-08T11:00'), 'staff:s1'), senior: { title: 'Oma', name: 'Siu Lan Tjandra' }, contact: { name: 'Melinda Tjandra', relation: 'daughter', phone: e164('+62 812-7781-2290') }, source: 'referral', stage: 'trial', next: { kind: 'trial', date: T }, formToken: 'f7e1a2' });
-  put('formRequests', { ...base(C, 'fr-e1', at('2026-10-12T10:00'), 'staff:s1'), token: 'f7e1a2', target: { type: 'enquiry', id: 'e1' }, sentTo: e164('+62 812-7781-2290'), status: 'submitted', submittedAt: at('2026-10-19T20:14'),
-    data: { title: 'Oma', name: 'Siu Lan Tjandra', dob: '1944-02-14', address: 'Jl. Kemang Selatan VIII no. 21, Jakarta Selatan', contact: { name: 'Melinda Tjandra', relation: 'daughter', phone: e164('+62 812-7781-2290') }, nanny: { name: 'Mbak Wati' },
-      docs: { ktp: true, nannyKtp: true, healthInfo: true }, conditions: ['High blood pressure'], meds: [{ name: 'Amlodipine', dose: '5 mg', timing: 'morningHome' }], food: ['shellfish'], drugs: ['penicillin'], mobility: 'walkingStick', diet: [],
-      consent: { data: true, face: true }, signature: { svgPath: 'M10 40 C 30 10, 50 10, 70 40 S 110 70, 130 40', at: at('2026-10-19T20:14'), by: 'Melinda Tjandra' } } });
+  // enquiries and guest visits
+  put('enquiries', { ...base(C, 'e1', at('2026-10-08T11:00'), 'staff:s1'), senior: { title: 'Oma', name: 'Siu Lan Tjandra' }, contact: { name: 'Melinda Tjandra', relation: 'daughter', phone: e164('+62 812-7781-2290') }, source: 'referral', stage: 'trial', next: { kind: 'trial', date: T } });
   put('guestVisits', { ...base(C, 'g-e1', at('2026-10-12T10:05'), 'staff:s1'), enquiryId: 'e1', kind: 'trial', date: T, name: 'Oma Siu Lan Tjandra', escortName: 'Melinda Tjandra', lunch: true, healthCheck: true, food: ['shellfish'], drugs: ['penicillin'], mobility: 'walkingStick', diet: [], status: 'booked' });
   put('enquiries', { ...base(C, 'e2', at('2026-10-17T15:00'), 'staff:s1'), senior: { title: 'Bapak', name: 'Yusuf Hamid' }, contact: { name: 'Ilham Hamid', relation: 'son', phone: e164('+62 813-5520-1874') }, source: 'instagram', stage: 'visit', next: { kind: 'visit', date: T, time: '14:00' } });
   put('guestVisits', { ...base(C, 'g-e2', at('2026-10-17T15:05'), 'staff:s1'), enquiryId: 'e2', kind: 'visit', date: T, time: '14:00', name: 'Bapak Yusuf Hamid', escortName: 'Ilham Hamid', lunch: false, healthCheck: false, food: null, drugs: [], mobility: null, diet: [], status: 'booked' });
   put('enquiries', { ...base(C, 'e3', at('2026-10-20T09:30'), 'staff:s1'), senior: { title: 'Oma', name: 'Ellen Sutanto' }, contact: { name: 'Kevin Sutanto', relation: 'grandson', phone: e164('+62 811-9034-2215') }, source: 'website', stage: 'new', next: { kind: 'callBack', date: op('2026-10-22') } });
-  put('enquiries', { ...base(C, 'e5', at('2026-10-13T10:00'), 'staff:s1'), senior: { title: 'Opa', name: 'Leo Gunadi' }, contact: { name: 'Felicia Gunadi', relation: 'daughter', phone: e164('+62 812-4410-7781') }, source: 'referral', stage: 'visit', next: { kind: 'visit', date: op('2026-10-23'), time: '11:00' }, formToken: 'b4c9e5' });
-  put('formRequests', { ...base(C, 'fr-e5', at('2026-10-16T10:00'), 'staff:s1'), token: 'b4c9e5', target: { type: 'enquiry', id: 'e5' }, sentTo: e164('+62 812-4410-7781'), status: 'sent' });
+  put('enquiries', { ...base(C, 'e5', at('2026-10-13T10:00'), 'staff:s1'), senior: { title: 'Opa', name: 'Leo Gunadi' }, contact: { name: 'Felicia Gunadi', relation: 'daughter', phone: e164('+62 812-4410-7781') }, source: 'referral', stage: 'visit', next: { kind: 'visit', date: op('2026-10-23'), time: '11:00' } });
   put('enquiries', { ...base(C, 'e9', at('2026-09-28T10:00'), 'staff:s1'), senior: { title: 'Ibu', name: 'Nyoman Sari' }, contact: { name: 'Made Arya', relation: 'son', phone: e164('+62 812-8831-2201') }, source: 'referral', stage: 'lost', lost: { reason: 'otherPlace', note: 'Chose a place closer to family in Bali', prevStage: 'visit' } });
 
   // calendar & venue bookings
@@ -508,6 +504,35 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   if (done('09:05')) put('changeRequests', { ...base(C, 'cr-seed-1', `${T}T09:05`, 'staff:s1'), kind: 'approval', op: 'update', action: 'members.updateDetails', input: { memberId: 'm10', patch: { usualArrival: '09:30' } }, section: 'details',
     target: { type: 'member', id: 'm10', memberId: 'm10' }, changes: [{ field: 'usualArrival', from: '09:48', to: '09:30' }], status: 'pending', submittedBy: 'staff:s1', note: 'Laras says Papa will come earlier from next week.' } satisfies ChangeRequest);
 
+  // Round 5: a few things the team entered that wait for management's approval (families don't see them until then)
+  {
+    const lastDay = PAST[PAST.length - 1];
+    const log = s.dailyLogs[`log-m46-${lastDay}`];
+    if (log) { // an edit of an approved log: the family keeps seeing the earlier values
+      const prev = { mood: log.mood, lunch: log.lunch, joined: log.joined, communicative: log.communicative, content: log.content, note: log.note };
+      Object.assign(log, { mood: 'cheerful', lunch: 'all', note: 'Joined the angklung group and finished all of his lunch.', edits: [{ at: `${lastDay}T15:40`, by: 's5' }], by: 's5' });
+      log.approval = { status: 'pending', by: 'staff:s5', at: `${lastDay}T15:40`, prev };
+    }
+    const noteRow = { ...base(C, 'n-m2-3', `${lastDay}T15:30`, 'staff:s5'), memberId: 'm2', visibility: 'family' as const, text: 'Beat the volunteers at chess today and taught two of them a new opening.', on: lastDay, pinned: false, approval: { status: 'pending' as const, by: 'staff:s5' as Actor, at: `${lastDay}T15:30` } };
+    put('memberNotes', noteRow satisfies MemberNote);
+    const rd = Object.values(s.readings).find((x) => x.memberId === 'm46' && x.date === lastDay && x.kind === 'arrival');
+    if (rd) rd.approval = { status: 'pending', by: 'staff:s8', at: `${lastDay}T${toHM(toMin(rd.time) + 2)}`, defer: { tell: false, share: false, overall: rd.status } };
+    const planned = openOn(addDays(T, 14)); // a lunch the kitchen plans two weeks ahead
+    const base4 = MENU_DAYS[dow(planned) as Weekday]?.lunch;
+    if (base4 && !s.dayMenus[planned]) {
+      const swap = base4[base4.length - 1] === 'dish-jeruk' ? 'dish-melon' : 'dish-jeruk';
+      put('dayMenus', { ...base(C, planned, `${T}T08:10`, 'staff:s3'), date: planned, lunch: [...base4.slice(0, -1), swap], allergyPlans: [], approval: { status: 'pending', by: 'staff:s3', at: `${T}T08:10`, prev: {} } });
+    }
+    // allergy and care edits by the nurse are applied at once and reviewed afterwards (families see the earlier care values until management has looked)
+    const m2 = s.members['m2'];
+    if (m2 && done('08:50')) {
+      const from = JSON.parse(JSON.stringify(m2.care));
+      m2.care = { instructions: `${from.instructions} Offer a short rest after the morning exercise.`, by: 'staff:s8', at: `${T}T08:50` };
+      put('changeRequests', { ...base(C, 'cr-seed-2', `${T}T08:50`, 'staff:s8'), kind: 'postReview', op: 'update', action: 'members.setCareInstructions', input: { memberId: 'm2', text: m2.care.instructions }, section: 'care',
+        target: { type: 'member', id: 'm2', memberId: 'm2' }, changes: [{ field: 'care', from, to: JSON.parse(JSON.stringify(m2.care)) }], status: 'pending', submittedBy: 'staff:s8' } satisfies ChangeRequest);
+    }
+  }
+
   // a few stored "updates" so the bell's Updates tab isn't empty
   const notif = (id: string, at: DT, toUsers: string[], toRoles: StaffRole[], kind: string, params: Record<string, string | number>, link: string, memberId?: string) =>
     put('notifications', { ...base(C, id, at), toUsers, toRoles, kind, params, severity: 'info', action: false, link, memberId, readBy: [] } satisfies Notification);
@@ -516,6 +541,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   notif('nt-3', `${bambangPaid.on}T11:20`, [], ['finance', 'mgmt'], 'notif.paymentReceived', { name: 'Laras Saputra', amount: 5500000, invoice: invNo(bambangPaid.period, CAST.find((c) => c.id === 'm10')!) }, '/payments', 'm10');
   if (done('09:40')) notif('nt-4', `${T}T09:40`, ['fm2_0', 'fm2_1'], [], 'notif.checkedIn', { name: 'Opa Hendra', time: '09:40' }, '/today', 'm2');
   if (done('09:48')) notif('nt-5', `${T}T09:48`, ['fm10_0'], [], 'notif.checkedIn', { name: 'Bapak Bambang', time: '09:48' }, '/today', 'm10');
+  if (opts.roster) addRoster(s, T, nowMin); // 40 more members (roster.ts); off by default so the tests keep the 5-member world
   return s;
 }
 
@@ -527,7 +553,7 @@ export function buildAdina(): ClubState {
 }
 
 /** Full seed: one ClubState per clubhouse. */
-export function buildSeed(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_START_MIN): Record<string, ClubState> {
-  return { citra: buildCitra(anchor, nowMin), adina: buildAdina() };
+export function buildSeed(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_START_MIN, opts: { roster?: boolean } = {}): Record<string, ClubState> {
+  return { citra: buildCitra(anchor, nowMin, opts), adina: buildAdina() };
 }
 export type { Coll };

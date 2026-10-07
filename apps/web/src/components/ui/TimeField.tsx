@@ -28,7 +28,7 @@ function Column({ label, items, selected, onPick }: { label: string; items: { n:
         return (
           <div key={x.n} role="option" aria-selected={on} aria-disabled={!x.ok || undefined} tabIndex={on || i === firstTab ? 0 : -1} data-v={p2(x.n)}
             onClick={() => { if (x.ok) onPick(x.n); }} onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && x.ok) { e.preventDefault(); onPick(x.n); } }} className={on || !x.ok ? undefined : 'h-cream'}
-            style={{ minHeight: 44, flex: 'none', borderRadius: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontVariantNumeric: 'tabular-nums', cursor: x.ok ? 'pointer' : 'not-allowed', background: on ? '#75624B' : undefined, color: on ? '#FFFFFF' : x.ok ? '#282828' : '#B5B0AC', fontWeight: on ? 600 : 400 }}>
+            style={{ minHeight: 44, flex: 'none', borderRadius: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 17, fontVariantNumeric: 'tabular-nums', cursor: x.ok ? 'pointer' : 'not-allowed', background: on ? '#75624B' : undefined, color: on ? '#FFFFFF' : x.ok ? '#24201C' : '#B5B0AC', fontWeight: on ? 600 : 400 }}>
             {p2(x.n)}
           </div>
         );
@@ -70,9 +70,9 @@ export function TimeField({ label, value, onChange, min, max, step = 5, error, p
       <button ref={trigger} id={ids.trigger} type="button" aria-haspopup="dialog" aria-expanded={open} aria-labelledby={label ? `${ids.label} ${ids.value}` : undefined} aria-label={label ? undefined : `${title}${has ? ', ' + value : ''}`}
         aria-describedby={error || hint ? ids.msg : undefined} aria-invalid={error ? true : undefined} disabled={disabled} onClick={() => setOpen((o) => !o)}
         onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); } }} style={triggerStyle({ error: !!error, disabled, open })}>
-        <Icon name="schedule" size={22} color="#6A6967" />
-        <span id={ids.value} style={{ flex: 1, minWidth: 0, fontVariantNumeric: 'tabular-nums', color: has ? undefined : '#6A6967' }}>{has ? value : placeholder || t('common.pickTime')}</span>
-        <Icon name="expand_more" size={22} color="#6A6967" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
+        <Icon name="schedule" size={22} color="#5E5852" />
+        <span id={ids.value} style={{ flex: 1, minWidth: 0, fontVariantNumeric: 'tabular-nums', color: has ? undefined : '#5E5852' }}>{has ? value : placeholder || t('common.pickTime')}</span>
+        <Icon name="expand_more" size={22} color="#5E5852" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
       </button>
       <PopLayer open={open} onClose={() => setOpen(false)} anchorRef={trigger} title={title} minWidth={240} maxHeight={380}>
         <div style={{ display: 'flex', gap: 8, padding: 8 }}>
@@ -81,9 +81,9 @@ export function TimeField({ label, value, onChange, min, max, step = 5, error, p
         </div>
         <div style={{ padding: '4px 12px 12px', display: 'flex', justifyContent: clearable && has ? 'space-between' : 'flex-end', gap: 8 }}>
           {clearable && has ? (
-            <button type="button" onClick={() => { onChange(''); setOpen(false); }} className="h-cream" style={{ height: 44, padding: '0 16px', borderRadius: 999, border: 'none', background: 'transparent', color: '#75624B', fontSize: 15, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.clear')}</button>
+            <button type="button" onClick={() => { onChange(''); setOpen(false); }} className="h-cream" style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 15, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.clear')}</button>
           ) : null}
-          <button type="button" onClick={() => setOpen(false)} className="h-bronze" style={{ height: 44, padding: '0 22px', borderRadius: 999, border: 'none', background: '#75624B', color: '#FFFFFF', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.done')}</button>
+          <button type="button" onClick={() => setOpen(false)} className="h-bronze" style={{ height: 44, padding: '0 22px', borderRadius: 12, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.done')}</button>
         </div>
       </PopLayer>
     </FieldFrame>

@@ -1,5 +1,5 @@
-// The enquiries board in a club with many leads: search by the senior's or the contact's name, paged columns, the review dialog where
-// Approve goes straight on to Join (plan and first day), and the trial dialog (a day pass: a day only). Rendered against the seed with extra leads,
+// The enquiries board in a club with many leads: search by the senior's or the contact's name, paged columns, the Join dialog (plan, first day
+// and the signed paper registration form, which is required), and the trial dialog (a day pass: a day only). Rendered against the seed with extra leads,
 // because the browser tests only reach the few leads the seed has.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -103,45 +103,53 @@ describe('lead search', () => {
   });
 });
 
-describe('approve means join', () => {
-  it('Review form: Approve and join goes on to the plan and first day in the same dialog (management creates the member)', async () => {
+describe('joining needs the signed paper registration form', () => {
+  it('there is no online form on a lead: no Send form, Review form or form link, only Join', async () => {
     openClub('mgmt');
     await show(<Enquiries />);
-    const e1 = document.querySelector<HTMLElement>('[data-lead="e1"]')!;
-    expect(button('Join', e1)).toBeUndefined(); // no separate Join next to a form that waits for review
-    expect(button('Review form', e1)).toBeTruthy();
-    await click(button('Review form', e1));
-    const d = dialog()!;
-    expect(d.textContent).toContain('Step 1 of 2');
-    expect(button('Approve form', d)).toBeUndefined();
-    await click(button('Approve and join', d));
-    expect(dialog()!.textContent).toContain('Step 2 of 2 · Plan and first day');
-    expect(dialog()!.textContent).toContain('This creates the member record and Melinda’s family login.');
-    expect(dialog()!.textContent).not.toContain('Your request goes to management');
-    expect(button('Approve and create member · Flex', dialog()!)).toBeTruthy();
-    await click(Array.from(dialog()!.querySelectorAll<HTMLElement>('[role="radio"]')).find((r) => /^Gold/.test(r.textContent ?? '')));
-    expect(button('Approve and create member · Gold', dialog()!)).toBeTruthy();
-    await click(button('Back to the form', dialog()!));
-    expect(dialog()!.textContent).toContain('Step 1 of 2');
+    for (const id of ['e1', 'e2', 'e3', 'e5']) {
+      const card = document.querySelector<HTMLElement>(`[data-lead="${id}"]`)!;
+      for (const gone of ['Send form link', 'Review form', 'View form', 'Form link', 'Fill as family (demo)']) expect(button(gone, card), `${gone} on ${id}`).toBeUndefined();
+      expect(card.textContent).not.toMatch(/Form (sent|opened|in progress|ready)/);
+    }
+    expect(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!)).toBeTruthy(); // the trial lead
   });
-  it('front desk: the same flow, but it says the request goes to management', async () => {
+  it('the Join button stays off until a form is attached (management creates the member)', async () => {
+    openClub('mgmt');
+    await show(<Enquiries />);
+    await click(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
+    const d = dialog()!;
+    expect(d.textContent).toContain('Signed registration form');
+    expect(d.querySelector('[data-testid="paper-form"]')).toBeTruthy();
+    expect(button('Take photo', d)).toBeTruthy();
+    expect(button('Choose file', d)).toBeTruthy();
+    expect(d.querySelector('input[type="file"]')?.getAttribute('accept')).toContain('application/pdf');
+    expect(d.textContent).not.toContain('Your request goes to management');
+    const create = button('Create member · Flex', d)!;
+    expect(create).toBeTruthy();
+    expect(create.getAttribute('aria-disabled')).toBe('true'); // no form attached yet
+    await click(Array.from(d.querySelectorAll<HTMLElement>('[role="radio"]')).find((r) => /^Gold/.test(r.textContent ?? '')));
+    expect(button('Create member · Gold', d)).toBeTruthy();
+    expect(button('Create member · Gold', d)!.getAttribute('aria-disabled')).toBe('true');
+  });
+  it('front desk: the same dialog, but it says the request goes to management', async () => {
     openClub('lobby');
     await show(<Enquiries />);
-    await click(button('Review form', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
-    await click(button('Approve and join', dialog()!));
+    await click(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
     expect(dialog()!.textContent).toContain('Your request goes to management.');
-    expect(button('Approve and send to management · Flex', dialog()!)).toBeTruthy();
-    expect(button(/^Approve and create member/, dialog()!)).toBeUndefined();
+    expect(button('Send to management · Flex', dialog()!)).toBeTruthy();
+    expect(button(/^Create member/, dialog()!)).toBeUndefined();
   });
-  it('a deep link (?review=e1) opens the form for review; Indonesian has no raw keys', async () => {
+  it('moving a lead to Joined opens the same dialog; Indonesian has no raw keys', async () => {
     openClub('mgmt', 0, 'id');
-    await show(<Enquiries />, '/enquiries?review=e1');
+    await show(<Enquiries />);
+    await click(button('Bergabung', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
     const d = dialog()!;
-    expect(d.textContent).toContain('Langkah 1 dari 2');
-    await click(button('Setujui dan gabungkan', d));
-    expect(dialog()!.textContent).toContain('Langkah 2 dari 2 · Paket dan hari pertama');
-    expect(button('Setujui dan buat anggota · Flex', dialog()!)).toBeTruthy();
-    expect(document.body.textContent).not.toMatch(/\b(?:enq|mgmt|form)\.[A-Za-z]/);
+    expect(d.textContent).toContain('Formulir pendaftaran bertanda tangan');
+    expect(button('Ambil foto', d)).toBeTruthy();
+    expect(button('Pilih berkas', d)).toBeTruthy();
+    expect(button('Buat anggota · Flex', d)).toBeTruthy();
+    expect(document.body.textContent).not.toMatch(/\b(?:enq|mgmt|form|profile)\.[A-Za-z]/);
   });
 });
 
@@ -152,7 +160,6 @@ describe('a trial is a day pass', () => {
     const e2 = document.querySelector<HTMLElement>('[data-lead="e2"]')!;
     await click(button('Book trial', e2));
     const d = dialog()!;
-    expect(d.textContent).toContain('Lunch and a health check are included.');
     expect(d.textContent).not.toMatch(/Another time|Trial lunch|Health check/);
     expect(d.querySelectorAll('[role="switch"]')).toHaveLength(0);
     expect(button('Pick a day', d)).toBeTruthy();

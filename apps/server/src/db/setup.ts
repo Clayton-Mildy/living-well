@@ -40,9 +40,9 @@ async function main() {
   const { resetClock, demoDate, demoNowMin } = await import('../clock');
   const have = await db.select({ id: clubs.id }).from(clubs);
   if (reset || !have.length) {
-    await replaceAll(buildSeed(demoDate(), demoNowMin()));
+    await replaceAll(buildSeed(demoDate(), demoNowMin(), { roster: process.env.CP_SEED_SMALL !== '1' }));
     await resetClock();
-    console.log(`Seeded ${dbName}: 5 members at CitraPremier, Adina empty. Demo day ${demoDate()}, from now.`);
+    console.log(`Seeded ${dbName}: ${process.env.CP_SEED_SMALL === '1' ? 5 : 45} members at CitraPremier, Adina empty. Demo day ${demoDate()}, from now.`);
   } else console.log(`${dbName} already has data (use pnpm db:reset to re-seed).`);
   await sql.end();
 }

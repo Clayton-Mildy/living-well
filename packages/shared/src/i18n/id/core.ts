@@ -21,7 +21,7 @@ export const common: Same<typeof EN.common> = {
   camera: 'Kamera', cameraStarting: 'Menyalakan kamera…', cameraDenied: 'Akses kamera diblokir. Izinkan di pengaturan peramban Anda, atau pilih foto.',
   cameraNone: 'Kamera tidak ditemukan. Pilih foto saja.', takePhoto: 'Ambil foto', retake: 'Ulangi', usePhoto: 'Pakai foto', choosePhoto: 'Pilih foto',
   uploadInstead: 'Unggah foto', switchCamera: 'Ganti kamera', photoPreview: 'Pratinjau foto', processing: 'Menyiapkan foto…',
-  mediaType: 'Gunakan foto JPEG, PNG, atau WebP.', mediaTooBig: 'Foto terlalu besar (maks. 5 MB).', mediaFailed: 'Foto tidak dapat diunggah.',
+  mediaType: 'Gunakan foto JPEG, PNG, atau WebP.', mediaTooBig: 'Foto terlalu besar (maks. 5 MB).', mediaFailed: 'Foto tidak dapat diunggah.', docTooBig: 'Berkas terlalu besar (maks. 10 MB).', docType: 'Gunakan foto atau berkas PDF.',
 };
 export const status: Same<typeof EN.status> = {
   normal: 'Normal', watch: 'Pantau', alert: 'Waspada', paid: 'Lunas', outstanding: 'Belum dibayar', overdue: 'Terlambat', pending: 'Belum dicek', partial: 'Dibayar sebagian', void: 'Dibatalkan',
@@ -31,11 +31,11 @@ export const nav: Same<typeof EN.nav> = {
   arrivals: 'Kedatangan', enquiries: 'Calon anggota', messages: 'Pesan', members: 'Anggota', health: 'Cek kesehatan', readings: 'Hasil ukur', today: 'Hari ini', camera: 'Kamera', log: 'Catatan harian',
   menu: 'Menu', feedback: 'Masukan', stock: 'Stok', billing: 'Tagihan', payments: 'Pembayaran', budget: 'Anggaran', receipts: 'Kuitansi', overview: 'Ringkasan', broadcast: 'Siaran',
   calendar: 'Kalender dan jadwal', calShort: 'Kalender', people: 'SDM', photos: 'Foto', healthF: 'Kesehatan', venue: 'Venue', more: 'Lainnya', directory: 'Direktori', contacts: 'Kontak',
-  surveys: 'Survei', plans: 'Paket dan harga', reviews: 'Tinjauan', requests: 'Permintaan',
+  surveys: 'Survei', plans: 'Paket dan harga', reviews: 'Persetujuan', requests: 'Permintaan',
   g_front: 'Resepsionis', g_care: 'Perawatan', g_kitchen: 'Dapur', g_finance: 'Keuangan', g_club: 'Klub', allModules: 'Semua modul',
   s_overview: 'Beranda', s_arrivals: 'Datang', s_enquiries: 'Calon', s_messages: 'Pesan', s_members: 'Anggota', s_health: 'Cek', s_readings: 'Tren', s_today: 'Hari ini', s_camera: 'Kamera',
   s_log: 'Catatan', s_menu: 'Menu', s_feedback: 'Masukan', s_stock: 'Stok', s_billing: 'Tagihan', s_payments: 'Bayar', s_budget: 'Anggaran', s_receipts: 'Kuitansi', s_directory: 'Kontak',
-  s_calendar: 'Kalender', s_calShort: 'Kalender', s_photos: 'Foto', s_healthF: 'Kesehatan', s_more: 'Lainnya', s_requests: 'Permintaan', s_reviews: 'Tinjauan', s_contacts: 'Kontak',
+  s_calendar: 'Kalender', s_calShort: 'Kalender', s_photos: 'Foto', s_healthF: 'Kesehatan', s_more: 'Lainnya', s_requests: 'Permintaan', s_reviews: 'Persetujuan', s_contacts: 'Kontak',
 };
 export const roles: Same<typeof EN.roles> = {
   lobby: 'Lobi', nurse: 'Perawat', activity: 'Pengajar aktivitas', kitchen: 'Dapur & F&B', finance: 'Keuangan', mgmt: 'Manajemen', family: 'Keluarga', housekeeping: 'Kebersihan', driver: 'Sopir',
@@ -47,7 +47,7 @@ export const login: Same<typeof EN.login> = {
   username: 'Nama pengguna', password: 'Kata sandi', showPassword: 'Tampilkan kata sandi', hidePassword: 'Sembunyikan kata sandi',
   errEmpty: 'Masukkan nama pengguna dan kata sandi Anda.', errInvalid: 'Nama pengguna atau kata sandi salah. Periksa keduanya, lalu coba lagi.',
   pending: 'Akses Anda menunggu persetujuan klub. Kami akan mengabari lewat WhatsApp.', noAccess: 'Akun ini belum punya akses aplikasi. Minta klub mengaktifkannya.',
-  forgot: 'Lupa kata sandi? Minta manajer klub untuk mengatur ulang.', demoHint: 'Demo: nama pengguna adalah nama depan Anda dengan huruf kecil, dan kata sandinya {pw}.',
+  forgot: 'Lupa kata sandi? Minta manajer klub untuk mengatur ulang.', demoHint: 'Demo: nama depan huruf kecil · kata sandi {pw}',
   demoAccounts: 'Akun demo', demoAccountsSub: 'Ketuk akun untuk masuk tanpa kata sandi.', tagline: 'Menambah tahun dalam hidup, dan hidup dalam setiap tahun.',
   philosophy: 'Lebih banyak keramahan, bukan rumah sakit', photoPh: 'Foto: anggota bersama keluarga di ruang taman', footer: 'Klub Living Well Seniors Communities · buka Senin sampai Jumat, 08.30–16.30', photoAlt: 'Seorang anggota bersama putrinya, tersenyum bersama',
   club: 'CitraPremier | Premium Seniors Club',
@@ -70,7 +70,7 @@ export const notif: Same<typeof EN.notif> = {
   'act.review': 'Perubahan untuk ditinjau: {name} · {section}', 'act.reviewFlagged': 'Perubahan kesehatan sudah berlaku, mohon ditinjau: {name} · {section}', 'act.alertReading': 'Hasil ukur waspada: {name} · {value}',
   'act.contract': 'Kontrak berakhir {date}: {name}', 'act.complaint': 'Masukan makanan terbuka: {name} · {dish}', 'act.overdue': 'Tagihan terlambat: {name} · {number}', 'act.budgetApprove': 'Permintaan anggaran untuk disetujui: {item}',
   'act.receiptApprove': 'Kuitansi untuk disetujui: {supplier}', 'act.vendorApprove': 'Tagihan pemasok untuk disetujui: {supplier}', 'act.invoiceRun': 'Penerbitan tagihan {month} sudah waktunya', 'act.stockApprove': 'Permintaan stok untuk disetujui: {item} ({qty})',
-  'act.planRequest': '{name}: keluarga minta pindah ke paket {plan} mulai {date}', 'act.formReady': 'Formulir keanggotaan siap: tinjau dan sambut {name}', 'act.guestTrial': 'Tamu uji coba datang {time}: {name}', 'act.guestTrialDay': 'Hari uji coba hari ini: {name}', 'act.photosReview': 'Foto menunggu persetujuan Anda: {n}', 'act.guestVisit': 'Kunjungan pukul {time}: {name}', 'act.readyCheckout': 'Cek pulang selesai: {name} siap pulang',
+  'act.planRequest': '{name}: keluarga minta pindah ke paket {plan} mulai {date}', 'act.guestTrial': 'Tamu uji coba datang {time}: {name}', 'act.guestTrialDay': 'Hari uji coba hari ini: {name}', 'act.photosReview': 'Foto menunggu persetujuan Anda: {n}', 'act.approvalsLogs': 'Catatan harian dan catatan menunggu persetujuan: {n}', 'act.approvalsReadings': 'Hasil ukur kesehatan menunggu persetujuan: {n}', 'act.approvalsMenu': 'Perubahan menu menunggu persetujuan: {n}', 'act.guestVisit': 'Kunjungan pukul {time}: {name}', 'act.readyCheckout': 'Cek pulang selesai: {name} siap pulang',
   'act.queue': '{n} menunggu di pos kesehatan', 'act.logs': '{n} catatan harian belum ditulis', 'act.allergen': 'Bentrok alergi saat makan siang: {name} · {dish}', 'act.unread': '{n} percakapan belum dibaca',
   'act.invoiceDue': 'Tagihan untuk dibayar: {name} · {number}', 'act.invoiceOverdue': 'Tagihan terlambat: {name} · {number}', 'act.survey': 'Ceritakan pengalaman Anda: {title}', 'act.docRequested': 'Dokumen diminta untuk {name}',
 };
@@ -90,7 +90,7 @@ export const review: Same<typeof EN.review> = {
   newMember: 'Anggota baru', conversion: 'Calon bergabung', details: 'Data diri', plan: 'Paket', docsConsent: 'Dokumen dan persetujuan', family: 'Kontak keluarga', allergies: 'Alergi', medicines: 'Obat', care: 'Petunjuk perawatan',
 };
 export const demo: Same<typeof EN.demo> = {
-  pill: 'Demo', title: 'Alat demo', guided: 'Demo terpandu', guidedTitle: 'Hari Oma Lina', progress: '{n} dari {total} langkah selesai', switchAccount: 'Ganti akun', openForm: 'Formulir keanggotaan keluarga',
+  pill: 'Demo', title: 'Alat demo', guided: 'Demo terpandu', guidedTitle: 'Hari Oma Lina', progress: '{n} dari {total} langkah selesai', switchAccount: 'Ganti akun', 
   's1.title': 'Check-in wajah di pintu', 's1.sub': 'Oma Lina datang. Kamera pintu mengenalinya, lobi mengonfirmasi, dan Maria serta Daniel langsung dikabari. Ini kunjungan ke-11 di bulan Oktober, jadi dihitung sebagai hari tambahan.', 's1.run': 'Buka lobi',
   's2.title': 'Cek kesehatan: tensi sedikit tinggi', 's2.sub': 'Ns. Dewi membaca PC-303: 152/94. Ia mencatat lengan kanan, membagikannya ke keluarga, dan menjadwalkan cek ulang.', 's2.run': 'Buka pos kesehatan',
   's3.title': 'Foto sendiri dan foto bersama', 's3.sub': 'Dinar memotret saat keroncong. Ega menyetujuinya di Tinjauan, lalu setiap keluarga hanya melihat anggotanya sendiri.', 's3.run': 'Ambil foto',

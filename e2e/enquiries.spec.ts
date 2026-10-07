@@ -1,10 +1,10 @@
-// Enquiries and the public membership form: the board on every viewport (paged columns), new / edit / archive / restore, visits and trials with a picked day and time,
-// Move to and drag, lost and reopen, the form link, the family's form end to end with no sign-in (drafts, uploads, signature, Spouse), staff review / return,
-// Approve = Join in one flow (plan and first day; management creates the member and the family login, other staff send it for approval), Indonesian.
+// Enquiries: the board on every viewport (paged columns), new / edit / archive / restore, visits and trials with a picked day and time,
+// Move to and drag, lost and reopen, joining with the signed paper registration form attached (a PDF or a photo; plan and first day; management creates the member
+// and the family login, other staff send it for approval), no online form, Indonesian.
 // Isolated env: E2E_NAME=mgmt E2E_PORT=8881 scripts/e2e-all.sh 1 "phone laptop" mgmt enquiries
-import { test, expect, type Browser, type Page } from '@playwright/test';
+import { test, expect, type Browser, type Locator, type Page } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, isPhone, assertNoHorizontalScroll } from './helpers';
-import { fieldText, goToPage, pickDate, pickOption, pickTime } from './kit';
+import { TINY_PNG, fieldText, goToPage, pickDate, pickOption, pickTime } from './kit';
 
 test.beforeEach(async ({ request }) => { boardLang = 'en'; await resetDemo(request); });
 
@@ -70,42 +70,41 @@ test('board: five stages with the right leads, cards that read in words, and a d
   await signIn(page, 's9', '/enquiries');
   await expect(page.getByRole('heading', { name: 'Enquiries', level: 1 })).toBeVisible();
   await expect(page.getByText('Wednesday 21 October', { exact: true })).toBeVisible();
-  if (!isPhone(page)) await expect(page.getByText(/^Move a card with its button, or drag it\./)).toBeVisible(); // a phone has no intro line
   await expect.poll(() => counts(page)).toEqual({ new: 1, visit: 2, trial: 1, joined: 0, lost: 1 });
   if (!isPhone(page)) {
     await expect(page.locator('[data-stage="joined"]')).toContainText('Drop a card here');
-    await expect(page.locator('[data-stage="trial"]')).toContainText('Booked at least 1 day ahead');
   } else {
     await pickStage(page, 'joined');
     await expect(page.getByText('Nobody at this stage.')).toBeVisible();
   }
 
-  // trial today, the family's form is waiting for review
+  // trial today
   await openStage(page, 'trial');
   const e1 = lead(page, 'e1');
   await expect(e1).toContainText('Oma Siu Lan Tjandra');
   await expect(e1).toContainText('Melinda Tjandra · daughter');
   await expect(e1).toContainText('Referral');
-  await expect(e1).toContainText('Form ready to review');
   await expect(e1).toContainText(/Trial day Wed 21 Oct/);
-  // approving the form is the join, so there is no separate Join button next to a form that waits for review
-  for (const b of ['Review form', 'Change day', 'Lost']) await expect(e1.getByRole('button', { name: b, exact: true }).first()).toBeVisible();
-  await expect(e1.getByRole('button', { name: 'Join', exact: true })).toHaveCount(0);
+  // registration is on paper: no online form on the card, joining asks for the signed paper form
+  for (const b of ['Join', 'Change day', 'Lost']) await expect(e1.getByRole('button', { name: b, exact: true }).first()).toBeVisible();
+  for (const b of ['Review form', 'Send form link', 'Form link']) await expect(e1.getByRole('button', { name: b, exact: true })).toHaveCount(0);
+  await expect(e1).not.toContainText(/Form (sent|ready)/);
   await expect(e1.getByRole('button', { name: 'Edit lead' })).toBeVisible();
 
-  // two visits: one has a form link out, the other has none yet
+  // two visits
   await openStage(page, 'visit');
   await expect(lead(page, 'e2')).toContainText('Bapak Yusuf Hamid');
   await expect(lead(page, 'e2')).toContainText('Ilham Hamid · son');
   await expect(lead(page, 'e2')).toContainText('Instagram');
   await expect(lead(page, 'e2')).toContainText('Visit Wed 21 Oct, 14:00');
-  await expect(lead(page, 'e2').getByRole('button', { name: 'Send form link' })).toBeVisible();
+  await expect(lead(page, 'e2').getByRole('button', { name: 'Send form link' })).toHaveCount(0);
   await expect(lead(page, 'e2').getByRole('button', { name: 'Book trial' })).toBeVisible();
+  await expect(lead(page, 'e2').getByRole('button', { name: 'Join', exact: true })).toBeVisible();
   await expect(lead(page, 'e5')).toContainText('Opa Leo Gunadi');
   await expect(lead(page, 'e5')).toContainText('Visit Fri 23 Oct, 11:00');
-  await expect(lead(page, 'e5')).toContainText('Form sent');
-  for (const b of ['Book trial', 'Form link', 'Fill as family (demo)', 'Change time']) await expect(lead(page, 'e5').getByRole('button', { name: b, exact: true })).toBeVisible();
-  await expect(lead(page, 'e5').getByRole('button', { name: 'Send form link' })).toHaveCount(0);
+  await expect(lead(page, 'e5')).not.toContainText('Form sent');
+  for (const b of ['Book trial', 'Change time']) await expect(lead(page, 'e5').getByRole('button', { name: b, exact: true })).toBeVisible();
+  for (const b of ['Form link', 'Fill as family (demo)', 'Send form link']) await expect(lead(page, 'e5').getByRole('button', { name: b, exact: true })).toHaveCount(0);
 
   await openStage(page, 'new');
   await expect(lead(page, 'e3')).toContainText('Oma Ellen Sutanto');
@@ -276,7 +275,6 @@ test('trial: a day pass booked at least a day ahead on an open day (no time, lun
   await expect(d.getByRole('radio', { name: /^Wed 21 Oct/ })).toHaveCount(0); // today is not offered
   await expect(d.getByRole('radio', { name: /^Thu 22 Oct Tomorrow/ })).toBeVisible();
   // a trial has a day and nothing else to pick: no time, no lunch or health check switches (they are always included)
-  await expect(d.getByText('Lunch and a health check are included.')).toBeVisible();
   await expect(d.getByText('Time', { exact: true })).toHaveCount(0);
   await expect(d.getByRole('radio', { name: '10:00', exact: true })).toHaveCount(0);
   await expect(d.getByRole('switch')).toHaveCount(0);
@@ -392,299 +390,38 @@ test('drag: a card dropped on another column moves it (wide screens)', async ({ 
   c.assertClean();
 });
 
-// ---------------------------------------------------------------- the form link
-test('form link: send it, copy it, send it on WhatsApp (demo); the family opening it is seen on the card; staff can fill it as the family', async ({ page }) => {
-  const c = watchConsole(page);
-  await signIn(page, 's9', '/enquiries');
-  await openStage(page, 'new');
-  await lead(page, 'e3').getByRole('button', { name: 'Send form link' }).click();
-  await expect(toast(page, 'Membership form link ready for Kevin Sutanto.')).toBeVisible();
-  const d = page.getByRole('dialog', { name: 'Kevin Sutanto' });
-  await expect(d.getByText('Link sent to Kevin Sutanto on WhatsApp (+62 811-9034-2215) (demo).')).toBeVisible();
-  const url = await d.getByTestId('form-link').inputValue();
-  expect(url).toMatch(/\/form\/[0-9a-f]{8}$/);
-  await d.getByRole('button', { name: 'Copy link' }).click();
-  await expect(toast(page, 'Link copied.')).toBeVisible();
-  await d.getByRole('button', { name: 'Send on WhatsApp (demo)' }).click();
-  await expect(toast(page, 'Sent to Kevin on WhatsApp (demo).')).toBeVisible();
-  await d.getByRole('button', { name: 'Close', exact: true }).last().click();
-  await expect(lead(page, 'e3')).toContainText('Form sent');
-  await expect(lead(page, 'e3').getByRole('button', { name: 'Send form link' })).toHaveCount(0);
+// ---------------------------------------------------------------- joining: the signed paper registration form is attached
+/** A real (tiny) PDF: /api/media checks the file signature. */
+const PDF = Buffer.from('%PDF-1.4\n1 0 obj<<>>endobj\ntrailer<<>>\n%%EOF');
+/** Attach the signed paper registration form in the open dialog (a file; the camera button takes a photo instead) and wait for the upload. */
+async function attachForm(dlg: Locator, file: { name: string; mimeType: string; buffer: Buffer } = { name: 'registration-form.pdf', mimeType: 'application/pdf', buffer: PDF }, shownAs = file.name) {
+  await dlg.getByTestId('doc-file').setInputFiles(file);
+  await expect(dlg.getByText(`Attached: ${shownAs}`)).toBeVisible(); // a photo is stored as a JPEG, so its name ends in .jpg
+}
 
-  // the family opens the link on their own phone: no sign-in, and the card says so
-  const fam = await otherSession(page.context().browser()!);
-  const opened = fam.page.waitForResponse((r) => /\/api\/form\/[^/]+\/open$/.test(r.url()));
-  await fam.page.goto(new URL(url).pathname);
-  await expect(fam.page.getByRole('heading', { name: 'About the member', level: 1 })).toBeVisible();
-  await expect(fam.page.getByText('Kevin, CitraPremier sent you this form for Oma Ellen.')).toBeVisible();
-  expect((await opened).ok()).toBeTruthy();
-  await fam.ctx.close();
-  await page.reload();
-  await openStage(page, 'new');
-  await expect(lead(page, 'e3')).toContainText('Form opened');
-
-  // staff can also fill it as the family (demo): the same form, with a way back
-  await lead(page, 'e3').getByRole('button', { name: 'Fill as family (demo)' }).click();
-  await expect(page).toHaveURL(/\/form\/[0-9a-f]{8}$/);
-  await expect(page.getByRole('heading', { name: 'About the member', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: 'Close form' }).click();
-  await expect(page).toHaveURL(/\/enquiries$/);
-  c.assertClean();
-});
-
-// ---------------------------------------------------------------- the family's form, end to end
-test('the family fills in the form from the link with no sign-in: seven steps, a saved draft, uploads, signature, Spouse; staff review and approve it', async ({ page, browser }) => {
-  test.setTimeout(150_000);
-  const c = watchConsole(page);
-  const next = page.getByTestId('form-next');
-  const h1 = (n: string) => page.getByRole('heading', { name: n, level: 1 });
-  await page.goto('/form/b4c9e5');
-
-  // 1 · details: the name and the contact are known from the enquiry
-  await expect(h1('About the member')).toBeVisible();
-  await expect(page.getByRole('img', { name: /CitraPremier/ })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'EN', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(page.getByText('Felicia, CitraPremier sent you this form for Opa Leo.')).toBeVisible();
-  await expect(page.getByText('Step 1 of 7', { exact: true })).toBeVisible();
-  await expect(page.getByLabel(/^Full name/)).toHaveValue('Leo Gunadi');
-  await expect(page.getByLabel(/^Your name/)).toHaveValue('Felicia Gunadi');
-  await assertNoHorizontalScroll(page);
-  await next.click({ force: true }); // date of birth is missing
-  await expect(page.getByText('Pick a valid date of birth.').first()).toBeVisible();
-  await expect(h1('About the member')).toBeVisible();
-  await pickDate(page, /^Date of birth/, '1948-03-12');
-  await expect(fieldText(page, /^Date of birth/)).toContainText('12 Mar 1948');
-  await page.getByLabel(/^Home address/).fill('Jl. Melati 12, Bogor');
-  await page.getByRole('radio', { name: 'Spouse', exact: true }).click();
-  await expect(page.getByRole('radio', { name: 'Spouse', exact: true })).toHaveAttribute('aria-checked', 'true');
-  await next.click();
-
-  // what they typed is kept: closing the page and coming back resumes at the same step
-  await expect(h1('ID card (KTP)')).toBeVisible();
-  await expect(page.getByText('Draft saved')).toBeVisible();
-  await page.reload();
-  await expect(h1('ID card (KTP)')).toBeVisible();
-  await page.getByRole('button', { name: 'Back', exact: true }).click();
-  await expect(fieldText(page, /^Date of birth/)).toContainText('12 Mar 1948');
-  await expect(page.getByLabel(/^Home address/)).toHaveValue('Jl. Melati 12, Bogor');
-  await expect(page.getByRole('radio', { name: 'Spouse', exact: true })).toHaveAttribute('aria-checked', 'true');
-  await next.click();
-
-  // 2 · KTP: a simulated upload
-  await page.getByRole('button', { name: /Take a photo of the KTP/ }).click();
-  await expect(page.getByText('KTP_front.jpg')).toBeVisible();
-  await expect(page.getByText('Uploaded · tap to remove')).toBeVisible();
-  await next.click();
-
-  // 3 · nanny: the question has to be answered
-  await expect(h1('Nanny or carer')).toBeVisible();
-  await next.click({ force: true });
-  await expect(page.getByText('Please pick one.')).toBeVisible();
-  await page.getByRole('radio', { name: 'Yes', exact: true }).click();
-  await page.getByLabel(/^Nanny.s name/).fill('Sari Dewi');
-  await page.getByRole('button', { name: /nanny.s KTP/ }).click();
-  await expect(page.getByText('KTP_nanny.jpg')).toBeVisible();
-  await next.click();
-
-  // 4 · health: photo, conditions, medicines with when they are taken
-  await expect(h1('Health information')).toBeVisible();
-  await page.getByRole('button', { name: /Photo of his health information/ }).click();
-  await expect(page.getByText('health_summary.jpg')).toBeVisible();
-  await page.getByLabel(/^Health conditions/).fill('High blood pressure, diabetes');
-  await page.getByRole('button', { name: 'Amlodipine 5 mg', exact: true }).click();
-  await expect(page.getByRole('radio', { name: 'Morning, at home', exact: true })).toHaveAttribute('aria-checked', 'true');
-  await page.getByLabel('Another medicine', { exact: true }).fill('Vitamin B12 500 mcg');
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await expect(page.getByText('Vitamin B12 500 mcg')).toBeVisible();
-  await next.click();
-
-  // 5 · allergies and mobility
-  await expect(h1('Allergies and mobility')).toBeVisible();
-  await next.click({ force: true }); // a mobility choice is needed (None counts)
-  await expect(page.getByText('Please pick one.')).toBeVisible();
-  await page.getByRole('button', { name: 'Peanuts', exact: true }).click();
-  await page.getByLabel('Another food allergy', { exact: true }).fill('Kiwi');
-  await page.getByRole('button', { name: 'Penicillin', exact: true }).click();
-  await page.getByLabel('Another medicine allergy', { exact: true }).fill('Latex');
-  await page.getByRole('button', { name: 'Add', exact: true }).click();
-  await page.getByRole('radio', { name: 'Walking stick', exact: true }).click();
-  await page.getByRole('button', { name: 'Low salt', exact: true }).click();
-  await next.click();
-
-  // 6 · consent and signature
-  await expect(h1('Sign and consent')).toBeVisible();
-  await next.click({ force: true });
-  await expect(page.getByText('The use of information must be agreed to continue.')).toBeVisible();
-  await expect(page.getByText('Please sign above.')).toBeVisible();
-  await page.getByRole('switch', { name: /Use of his information/ }).click();
-  await expect(page.getByRole('switch', { name: /Use of his information/ })).toHaveAttribute('aria-checked', 'true');
-  await expect(page.getByRole('switch', { name: /Face recognition at the door/ })).toHaveAttribute('aria-checked', 'false');
-  const pad = page.getByTestId('signature-pad');
-  await pad.scrollIntoViewIfNeeded();
-  const box = (await pad.boundingBox())!;
-  await page.mouse.move(box.x + 40, box.y + 110);
-  await page.mouse.down();
-  await page.mouse.move(box.x + 110, box.y + 40, { steps: 6 });
-  await page.mouse.move(box.x + 180, box.y + 130, { steps: 6 });
-  await page.mouse.move(box.x + 250, box.y + 60, { steps: 6 });
-  await page.mouse.up();
-  await expect(page.getByRole('button', { name: 'Clear', exact: true })).toBeEnabled();
-  await next.click();
-
-  // 7 · check and send: everything is listed, and Edit jumps back to a section
-  await expect(h1('Check and send')).toBeVisible();
-  await expect(page.getByText('Opa Leo Gunadi', { exact: true })).toBeVisible();
-  await expect(page.getByText('Felicia Gunadi · spouse')).toBeVisible();
-  await expect(page.getByText('Peanuts, Kiwi')).toBeVisible();
-  await expect(page.getByText('Penicillin, Latex')).toBeVisible();
-  await expect(page.getByText('Signed', { exact: true })).toBeVisible();
-  await expect(page.getByText('No · checked in by name')).toBeVisible();
-  await page.getByRole('button', { name: 'Edit: Allergies and mobility' }).click();
-  await expect(h1('Allergies and mobility')).toBeVisible();
-  await page.getByRole('button', { name: 'Soft food', exact: true }).click();
-  await next.click();
-  await next.click();
-  await expect(h1('Check and send')).toBeVisible();
-  await expect(page.getByText('Low salt, Soft food')).toBeVisible();
-  await assertNoHorizontalScroll(page);
-  await next.click();
-  await expect(page.getByTestId('form-done')).toHaveText('Thank you, Felicia');
-  await expect(page.getByText(/The club team will review the form before Opa Leo.s visit/)).toBeVisible();
-  await expect(page.getByRole('button', { name: /Back to the staff view/ })).toHaveCount(0); // not signed in
-  // the link now only shows that it was sent
-  await page.goto('/form/b4c9e5');
-  await expect(page.getByTestId('form-done')).toBeVisible();
-  c.assertClean();
-
-  // staff: the card says the form is ready; the review shows everything the family entered
-  const staff = await otherSession(browser);
-  const sp = staff.page;
-  const sc = watchConsole(sp);
-  await signIn(sp, 's9', '/enquiries');
-  await openStage(sp, 'visit');
-  await expect(lead(sp, 'e5')).toContainText('Form ready to review');
-  await lead(sp, 'e5').getByRole('button', { name: 'Review form' }).click();
-  const rv = sp.getByRole('dialog', { name: 'Opa Leo Gunadi' });
-  await expect(rv.getByText(/^Step 1 of 2 · Online form · sent /)).toBeVisible();
-  for (const text of ['12 March 1948', 'Jl. Melati 12, Bogor', 'Felicia Gunadi · spouse', 'High blood pressure, diabetes', 'Amlodipine 5 mg (morning, at home), Vitamin B12 500 mcg (as prescribed)', 'Peanuts, Kiwi', 'Penicillin, Latex', 'Walking stick', 'Low salt, Soft food', 'Declined · lobby checks in by name']) {
-    await expect(rv.getByText(text, { exact: true }), text).toBeVisible();
-  }
-  await expect(rv.getByText('Nanny’s KTP · Sari Dewi')).toBeVisible();
-  await expect(rv.getByRole('img').first()).toBeVisible(); // the signature
-  // approving the form is the join: the same dialog goes on to the plan and the first day
-  await rv.getByRole('button', { name: 'Approve and join' }).click();
-  await expect(rv.getByText('Step 2 of 2 · Plan and first day')).toBeVisible();
-  await expect(rv.getByText('Approving the form joins Opa Leo Gunadi as a member. Pick a plan and a first day. This creates the member record and Felicia’s family login.')).toBeVisible();
-  await rv.getByRole('radio', { name: /^Gold/ }).click();
-  await rv.getByRole('radio', { name: /^Mon 2 Nov/ }).click();
-  await rv.getByRole('button', { name: 'Approve and create member · Gold' }).click();
-  await expect(toast(sp, 'Opa Leo Gunadi is now a member, starting Mon 2 Nov. A family login was created for Felicia.')).toBeVisible();
-  // no dead end: the lead is a member, not an "approved" card
-  await openStage(sp, 'joined');
-  await expect(lead(sp, 'e5')).toContainText('Opa Leo Gunadi');
-  await expect(lead(sp, 'e5')).toContainText('Starts Mon 2 Nov');
-  await expect(lead(sp, 'e5')).not.toContainText('Form approved');
-  await expect(lead(sp, 'e5')).not.toContainText('Pending approval');
-  await expect(lead(sp, 'e5').getByRole('button', { name: 'Open profile' })).toBeVisible();
-  await expect(lead(sp, 'e5').getByRole('button', { name: 'Review form' })).toHaveCount(0);
-  const snap = await snapshot(sp);
-  const gunadi = (Object.values(snap.members) as { id: string; lastName: string; plans: { plan: string; from: string }[] }[]).find((x) => x.lastName === 'Gunadi')!;
-  expect(gunadi.plans[0]).toMatchObject({ plan: 'gold', from: '2026-11-02' });
-  const felicia = (Object.values(snap.familyContacts) as { id: string; name: string; activatedAt?: string }[]).find((x) => x.name === 'Felicia Gunadi')!;
-  expect(felicia.activatedAt).toBeTruthy();
-  expect((Object.values(snap.familyLinks) as { familyId: string; memberId: string; appAccess: boolean; primary: boolean }[]).find((l) => l.familyId === felicia.id)).toMatchObject({ memberId: gunadi.id, appAccess: true, primary: true });
-  expect(snap.formRequests['fr-e5'].status).toBe('approved');
-  // her login exists: the username is her first name and the default password works
-  await expect.poll(async () => ((await snapshot(sp)).familyContacts[felicia.id] as { username?: string }).username).toBe('felicia');
-  expect((await sp.request.post('/api/login', { data: { username: 'felicia', password: 'citra123' } })).ok()).toBeTruthy();
-  // the family, opening the link later, is thanked and sees it was approved
-  await page.goto('/form/b4c9e5');
-  await expect(page.getByText('The club has approved this form. Thank you.')).toBeVisible();
-  sc.assertClean();
-  await staff.ctx.close();
-});
-
-// ---------------------------------------------------------------- return for changes
-test('review: a form can be sent back with a note; the family sees it, fixes it and sends it again', async ({ page, browser }) => {
-  test.setTimeout(90_000);
-  const staff = await otherSession(browser);
-  const sp = staff.page;
-  const sc = watchConsole(sp);
-  await signIn(sp, 's9', '/enquiries');
-  await openStage(sp, 'trial');
-  await lead(sp, 'e1').getByRole('button', { name: 'Review form' }).click();
-  const rv = sp.getByRole('dialog', { name: 'Oma Siu Lan Tjandra' });
-  await expect(rv.getByText('Mbak Wati', { exact: false })).toBeVisible();
-  await rv.getByRole('button', { name: 'Return for changes' }).click();
-  await expect(rv.getByRole('button', { name: 'Send back' })).toBeDisabled(); // a note is needed
-  await rv.getByLabel(/^What should the family change/).fill('Please add the doctor’s summary photo.');
-  await rv.getByRole('button', { name: 'Send back' }).click();
-  await expect(toast(sp, 'Returned. Melinda got your note on WhatsApp (demo).')).toBeVisible();
-  await expect(lead(sp, 'e1')).toContainText('Returned for changes');
-  await expect(lead(sp, 'e1').getByRole('button', { name: 'Review form' })).toHaveCount(0);
-
-  // the family opens the same link: the note is on top, everything they entered is still there
-  const c = watchConsole(page);
-  await page.goto('/form/f7e1a2');
-  await expect(page.getByText('The club asked for a change: Please add the doctor’s summary photo.')).toBeVisible();
-  await expect(page.getByRole('heading', { name: 'Check and send', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: 'Edit: Documents' }).click();
-  await expect(page.getByRole('heading', { name: 'ID card (KTP)', level: 1 })).toBeVisible();
-  await page.getByTestId('form-next').click(); // Nanny
-  await page.getByTestId('form-next').click(); // Health
-  await expect(page.getByRole('heading', { name: 'Health information', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: 'Aspirin 80 mg', exact: true }).click();
-  for (let i = 0; i < 3; i++) await page.getByTestId('form-next').click(); // Allergies, Consent, Check
-  await expect(page.getByRole('heading', { name: 'Check and send', level: 1 })).toBeVisible();
-  await page.getByTestId('form-next').click();
-  await expect(page.getByTestId('form-done')).toHaveText('Thank you, Melinda');
-  c.assertClean();
-
-  // staff see the form ready again, with the change in it
-  await sp.reload();
-  await openStage(sp, 'trial');
-  await expect(lead(sp, 'e1')).toContainText('Form ready to review');
-  await lead(sp, 'e1').getByRole('button', { name: 'Review form' }).click();
-  await expect(sp.getByRole('dialog', { name: 'Oma Siu Lan Tjandra' }).getByText('Amlodipine 5 mg (morning, at home), Aspirin 80 mg (morning, at home)', { exact: true })).toBeVisible();
-  sc.assertClean();
-  await staff.ctx.close();
-});
-
-// ---------------------------------------------------------------- joining
-test('join: management approves the form and joins the lead in one flow (plan, first day), with everything copied across', async ({ page }) => {
+test('join: the details come from the paper form, the signed form is attached (PDF), management creates the member (plan, first day)', async ({ page }) => {
   test.setTimeout(120_000);
   const c = watchConsole(page);
   await signIn(page, 's9', '/enquiries');
-  // the family's form for Opa Leo, sent through the public link (the screens for it are covered above)
-  const data = {
-    title: 'Opa', name: 'Leo Gunadi', dob: '1948-03-12', address: 'Jl. Melati 12, Bogor', contact: { name: 'Felicia Gunadi', relation: 'spouse', phone: '+6281244107781' }, nanny: null,
-    docs: { ktp: true, nannyKtp: false, healthInfo: true }, conditions: ['High blood pressure'], meds: [{ name: 'Amlodipine', dose: '5 mg', timing: 'morningHome' }], food: ['peanuts'], drugs: ['penicillin'], mobility: 'walkingStick', diet: ['lowSalt'],
-    consent: { data: true, face: false }, signature: { svgPath: 'M10 40 L 60 10 L 110 70', at: '', by: '' },
-  };
-  const sub = await page.request.post('/api/form/b4c9e5/submit', { data: { input: { data }, mutationId: 'e2e-form-submit-1' } });
-  expect(sub.ok()).toBeTruthy();
-  await page.reload();
   await openStage(page, 'visit');
-  // a trial first: the health details come from the form that is waiting for review
+  // a trial first (the booking has no online-form prefill any more)
   await lead(page, 'e5').getByRole('button', { name: 'Book trial' }).click();
   const t = page.getByRole('dialog', { name: 'Opa Leo Gunadi' });
-  await expect(t.getByText('Health details are filled in from the family’s form.')).toBeVisible();
-  await expect(t.getByRole('button', { name: 'Peanuts', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(t.getByRole('button', { name: 'Walking stick', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(t.getByText('Health details are filled in from the family’s form.')).toHaveCount(0);
   await t.getByRole('radio', { name: /^Fri 23 Oct/ }).click();
   await t.getByRole('button', { name: 'Book trial · Fri 23 Oct', exact: true }).click();
   await expect(toast(page, /Trial booked for Opa Leo Gunadi: Fri 23 Oct\./)).toBeVisible();
 
-  // Review form -> Approve and join: the details are the form's, nothing is typed again
+  // Join: key details typed in from the paper, plan and first day, and the signed form must be attached
   await openStage(page, 'trial');
-  await expect(lead(page, 'e5').getByRole('button', { name: 'Join', exact: true })).toHaveCount(0);
-  await lead(page, 'e5').getByRole('button', { name: 'Review form' }).click();
+  await lead(page, 'e5').getByRole('button', { name: 'Join', exact: true }).click();
   const j = page.getByRole('dialog', { name: 'Opa Leo Gunadi' });
-  await expect(j.getByText('Peanuts', { exact: true })).toBeVisible();
-  await expect(j.getByText('Penicillin', { exact: true })).toBeVisible();
-  await j.getByRole('button', { name: 'Approve and join' }).click();
-  await expect(j.getByText('Step 2 of 2 · Plan and first day')).toBeVisible();
+  await expect(j.getByText('Signed registration form').first()).toBeVisible();
+  await expect(j.getByRole('button', { name: 'Take photo' })).toBeVisible();
+  await expect(j.getByRole('button', { name: 'Choose file' })).toBeVisible();
   await expect(j.getByText('Your request goes to management.', { exact: false })).toHaveCount(0); // management creates it directly
+  // no form, no member: the button stays off
+  await expect(j.getByRole('button', { name: 'Create member · Flex' })).toHaveAttribute('aria-disabled', 'true');
   // members come on any open day: a plan and a start date are all that is asked (no usual days, no transport, no escort)
   await expect(j.getByRole('radio', { name: /^Flex.*10 visits a month/ })).toHaveAttribute('aria-checked', 'true');
   await expect(j.getByRole('radio', { name: /^Gold.*unlimited/ })).toBeVisible();
@@ -695,62 +432,91 @@ test('join: management approves the form and joins the lead in one flow (plan, f
   for (const iso of ['2026-10-24', '2026-10-30']) await expect(page.locator(`[data-date="${iso}"]`), iso).toHaveAttribute('aria-disabled', 'true');
   await page.locator('[data-date="2026-10-27"]').click();
   await expect(j.getByRole('radio', { name: /^Mon 26 Oct/ })).toHaveAttribute('aria-checked', 'false'); // the calendar day replaced the Monday chip
-  // back to the form and forward again keeps the choice
-  await j.getByRole('button', { name: 'Back to the form' }).click();
-  await expect(j.getByText(/^Step 1 of 2/)).toBeVisible();
-  await j.getByRole('button', { name: 'Approve and join' }).click();
+  await attachForm(j);
+  await expect(j.getByRole('button', { name: 'Create member · Flex' })).not.toHaveAttribute('aria-disabled', 'true');
   await j.getByRole('radio', { name: /^Gold/ }).click();
   await j.getByRole('radio', { name: /^Mon 2 Nov/ }).click();
-  await j.getByRole('button', { name: 'Approve and create member · Gold' }).click();
+  await j.getByRole('button', { name: 'Create member · Gold' }).click();
   await expect(toast(page, 'Opa Leo Gunadi is now a member, starting Mon 2 Nov. A family login was created for Felicia.')).toBeVisible();
   await expect.poll(() => counts(page)).toEqual({ new: 1, visit: 1, trial: 1, joined: 1, lost: 1 }); // Opa Leo left Visit, passed through Trial and is now a member
   await openStage(page, 'joined');
   await expect(lead(page, 'e5')).toContainText('Opa Leo Gunadi');
+  await expect(lead(page, 'e5')).toContainText('Registration form attached');
   await expect(lead(page, 'e5')).not.toContainText('Pending approval');
   await expect(lead(page, 'e5').getByRole('button', { name: 'Open profile' })).toBeVisible();
   await expect(lead(page, 'e5').getByRole('button', { name: 'Move to' })).toHaveCount(0); // a member cannot be moved back
   if (isPhone(page)) await expect(lead(page, 'e5').locator('[data-move]')).toHaveCount(0);
 
   const state = await snapshot(page);
-  const m = (Object.values(state.members) as { id: string; lastName: string; dob: string; address: string; usualArrival: string; health: { food: string[]; drugs: string[]; mobility: string; diet: string[]; meds: { name: string }[] }; consents: { kind: string; granted: boolean }[]; plans: { plan: string; from: string; usualDays?: unknown }[]; review?: unknown }[]).find((x) => x.lastName === 'Gunadi')!;
-  expect(m).toMatchObject({ dob: '1948-03-12', address: 'Jl. Melati 12, Bogor', health: { food: ['peanuts'], drugs: ['penicillin'], mobility: 'walkingStick', diet: ['lowSalt'] } });
+  const m = (Object.values(state.members) as { id: string; lastName: string; usualArrival: string; plans: { plan: string; from: string }[]; review?: unknown; documents: { type: string; status: string; mediaId?: string; fileName?: string; via?: string }[] }[]).find((x) => x.lastName === 'Gunadi')!;
   expect(m.plans[0]).toMatchObject({ plan: 'gold', from: '2026-11-02' });
   expect(m).toMatchObject({ usualArrival: '10:00' });
   expect(m).not.toHaveProperty('escortDefaults');
   expect(m).not.toHaveProperty('transport');
   expect(m.plans[0]).not.toHaveProperty('usualDays');
-  expect(m.consents.map((x) => [x.kind, x.granted])).toEqual([['data', true], ['face', false]]);
+  expect(m.documents.find((x) => x.type === 'membershipForm')).toMatchObject({ status: 'onFile', fileName: 'registration-form.pdf', via: 'staff' });
+  expect(m.documents.find((x) => x.type === 'membershipForm')?.mediaId).toMatch(/^md_/);
   expect(m.review).toBeUndefined(); // created by management, so no approval is needed
+  expect(state).not.toHaveProperty('formRequests');
+  // the member's Documents tab opens the uploaded PDF in a new tab
   await lead(page, 'e5').getByRole('button', { name: 'Open profile' }).click();
   await expect(page).toHaveURL(new RegExp(`/members/${m.id}$`));
+  await page.goto(`/members/${m.id}/docs`);
+  // a PDF opens in a new tab (noopener, so the popup's own url is not readable): record what window.open is asked to open
+  await page.evaluate(() => { (window as unknown as { __opened: string[] }).__opened = []; window.open = ((u?: string | URL) => { (window as unknown as { __opened: string[] }).__opened.push(String(u)); return null; }) as typeof window.open; });
+  await page.getByRole('button', { name: 'View' }).click();
+  await expect.poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toEqual([`/api/media/${m.documents.find((x) => x.type === 'membershipForm')!.mediaId}`]);
   c.assertClean();
 });
 
-test('join by other staff goes to management for approval (Approve and join in one flow); the lead shows Pending approval until they approve', async ({ page, browser }) => {
+test('join with a photo of the form: a photo goes through the same upload; the card then shows the registration form is attached', async ({ page }) => {
+  test.setTimeout(90_000);
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/enquiries');
+  // e3 is a new lead: Move to Joined opens the same Join dialog
+  await moveCard(page, 'e3', 'new', 'joined', 'Oma Ellen Sutanto');
+  const j = page.getByRole('dialog', { name: 'Oma Ellen Sutanto' });
+  await expect(j.getByText('From the enquiry')).toBeVisible();
+  await expect(j.getByRole('button', { name: 'Create member · Flex' })).toHaveAttribute('aria-disabled', 'true');
+  await attachForm(j, { name: 'ellen-form.png', mimeType: 'image/png', buffer: TINY_PNG }, 'ellen-form.jpg');
+  await j.getByRole('button', { name: 'Create member · Flex' }).click();
+  await expect(toast(page, 'Oma Ellen Sutanto is now a member, starting Mon 26 Oct. A family login was created for Kevin.')).toBeVisible();
+  await expect.poll(() => counts(page)).toMatchObject({ new: 0, joined: 1 });
+  await openStage(page, 'joined');
+  await expect(lead(page, 'e3')).toContainText('Starts Mon 26 Oct');
+  await expect(lead(page, 'e3')).toContainText('Registration form attached');
+  await expect(lead(page, 'e3').getByRole('button', { name: 'Open profile' })).toBeVisible();
+  // the photo is stored as a JPEG named after the file
+  const m = (Object.values((await snapshot(page)).members) as { lastName: string; documents: { type: string; fileName?: string; mediaId?: string }[] }[]).find((x) => x.lastName === 'Sutanto')!;
+  expect(m.documents.find((x) => x.type === 'membershipForm')).toMatchObject({ fileName: 'ellen-form.jpg' });
+  c.assertClean();
+});
+
+test('join by other staff goes to management for approval; the lead shows Pending approval until they approve', async ({ page, browser }) => {
   test.setTimeout(90_000);
   const c = watchConsole(page);
   await signIn(page, 's1', '/enquiries'); // front desk
   await openStage(page, 'trial');
-  await lead(page, 'e1').getByRole('button', { name: 'Review form' }).click();
+  await lead(page, 'e1').getByRole('button', { name: 'Join', exact: true }).click();
   const j = page.getByRole('dialog', { name: 'Oma Siu Lan Tjandra' });
-  await j.getByRole('button', { name: 'Approve and join' }).click();
   await expect(j.getByText('Your request goes to management. The member becomes active, and the family can sign in, once they approve.')).toBeVisible();
-  await j.getByRole('button', { name: 'Approve and send to management · Flex' }).click();
+  await expect(j.getByRole('button', { name: 'Send to management · Flex' })).toHaveAttribute('aria-disabled', 'true'); // no form attached yet
+  await attachForm(j);
+  await j.getByRole('button', { name: 'Send to management · Flex' }).click();
   await expect(toast(page, 'Oma Siu Lan Tjandra is waiting for management approval. The family can sign in once it is approved.')).toBeVisible();
   await expect.poll(() => counts(page)).toMatchObject({ trial: 0, joined: 1 });
   await openStage(page, 'joined');
   await expect(lead(page, 'e1')).toContainText('Pending approval');
-  await expect(lead(page, 'e1')).not.toContainText('Form approved');
 
   // management sees one more thing to review, and the new member is not active yet
   const mg = await otherSession(browser);
   await signIn(mg.page, 's9', '/enquiries');
   const before = await snapshot(mg.page);
-  const cr = (Object.values(before.changeRequests) as { id: string; action: string; status: string }[]).find((x) => x.action === 'enquiry.convert')!;
+  const cr = (Object.values(before.changeRequests) as { id: string; action: string; status: string; input: { formMediaId?: string } }[]).find((x) => x.action === 'enquiry.convert')!;
   expect(cr.status).toBe('pending');
+  expect(cr.input.formMediaId).toMatch(/^md_/); // management reviews with the file attached
   expect(Object.values(before.members as Record<string, { lastName: string; review?: { status: string } }>).find((x) => x.lastName === 'Tjandra')!.review?.status).toBe('pending');
-  expect(before.formRequests['fr-e1'].status).toBe('approved'); // approving and joining are one step
-  // the lead card says what is happening instead of showing an approved form with no member
+  // the lead card says what is happening
   await openStage(mg.page, 'joined');
   await expect(lead(mg.page, 'e1')).toContainText('Pending approval');
   // approving it (the Reviews screen does this call)
@@ -766,54 +532,42 @@ test('join by other staff goes to management for approval (Approve and join in o
   c.assertClean();
 });
 
-test('a join that management does not approve puts the lead back, and its form is ready to review again', async ({ page, browser }) => {
+test('a join that management does not approve puts the lead back where it was', async ({ page, browser }) => {
   test.setTimeout(90_000);
   const c = watchConsole(page);
   await signIn(page, 's1', '/enquiries');
   await openStage(page, 'trial');
-  await lead(page, 'e1').getByRole('button', { name: 'Review form' }).click();
+  await lead(page, 'e1').getByRole('button', { name: 'Join', exact: true }).click();
   const j = page.getByRole('dialog', { name: 'Oma Siu Lan Tjandra' });
-  await j.getByRole('button', { name: 'Approve and join' }).click();
-  await j.getByRole('button', { name: 'Approve and send to management · Flex' }).click();
+  await attachForm(j);
+  await j.getByRole('button', { name: 'Send to management · Flex' }).click();
   await expect.poll(() => counts(page)).toMatchObject({ trial: 0, joined: 1 });
   const mg = await otherSession(browser);
   await signIn(mg.page, 's9', '/enquiries');
   const cr = (Object.values((await snapshot(mg.page)).changeRequests) as { id: string; action: string }[]).find((x) => x.action === 'enquiry.convert')!;
   expect((await act(mg.page, 'review.reject', { crId: cr.id, note: 'Waiting for the deposit' })).ok()).toBeTruthy();
   await mg.ctx.close();
-  // back in Trial with a form that is ready to review, not an approved form without a member
+  // back in Trial, ready to be joined again
   await page.reload();
   await expect.poll(() => counts(page)).toMatchObject({ trial: 1, joined: 0 });
   await openStage(page, 'trial');
-  await expect(lead(page, 'e1')).toContainText('Form ready to review');
-  await expect(lead(page, 'e1')).not.toContainText('Form approved');
-  await expect(lead(page, 'e1').getByRole('button', { name: 'Review form' })).toBeVisible();
-  expect((await snapshot(page)).formRequests['fr-e1'].status).toBe('submitted');
+  await expect(lead(page, 'e1').getByRole('button', { name: 'Join', exact: true })).toBeVisible();
   c.assertClean();
 });
 
-test('join without a form: the lead joins with its own details; moving a card with a ready form to Joined opens the review first', async ({ page }) => {
-  test.setTimeout(90_000);
-  const c = watchConsole(page);
+test('registration is on paper only: no online form route, no form endpoints, and joining through the API needs the signed form', async ({ page }) => {
   await signIn(page, 's9', '/enquiries');
-  // e1's form is waiting: Move to Joined goes through Approve and join
-  await moveCard(page, 'e1', 'trial', 'joined', 'Oma Siu Lan Tjandra');
-  const rv = page.getByRole('dialog', { name: 'Oma Siu Lan Tjandra' });
-  await expect(rv.getByRole('button', { name: 'Approve and join' })).toBeVisible();
-  await page.keyboard.press('Escape'); // not now
-  // e3 has no form: the plain Join dialog (plan and first day), then the member exists
-  await moveCard(page, 'e3', 'new', 'joined', 'Oma Ellen Sutanto');
-  const j = page.getByRole('dialog', { name: 'Oma Ellen Sutanto' });
-  await expect(j.getByText('From the enquiry')).toBeVisible();
-  await expect(j.getByText('No online form yet.', { exact: false })).toBeVisible();
-  await j.getByRole('button', { name: 'Create member · Flex' }).click();
-  await expect(toast(page, 'Oma Ellen Sutanto is now a member, starting Mon 26 Oct. A family login was created for Kevin.')).toBeVisible();
-  await expect.poll(() => counts(page)).toMatchObject({ new: 0, joined: 1 });
-  await openStage(page, 'joined');
-  await expect(lead(page, 'e3')).toContainText('Starts Mon 26 Oct');
-  await expect(lead(page, 'e3').getByRole('button', { name: 'Open profile' })).toBeVisible();
-  c.assertClean();
+  // the old public link goes nowhere (a signed-in user lands back on Today)
+  await page.goto('/form/b4c9e5');
+  await expect(page).toHaveURL(/\/today$/);
+  expect((await page.request.get('/api/form/b4c9e5')).status()).toBe(404);
+  expect((await page.request.post('/api/form/b4c9e5/submit', { data: { input: {}, mutationId: 'e2e-form-gone' } })).status()).toBe(404);
+  const noForm = await act(page, 'enquiry.convert', { enquiryId: 'e1', plan: 'flex', start: '2026-10-26' });
+  expect(noForm.status()).toBe(422);
+  expect((await noForm.json()).code).toBe('enq.err.formRequired');
+  expect((await snapshot(page)).enquiries.e1.stage).toBe('trial');
 });
+
 
 // ---------------------------------------------------------------- search
 test('search: by the senior’s name or the contact’s name; it narrows every stage, works with paging and starts over on a new search', async ({ page }) => {
@@ -880,41 +634,6 @@ test('a column that grows is paged; the phone list too', async ({ page }) => {
   c.assertClean();
 });
 
-// ---------------------------------------------------------------- the public form: links that do not work, other languages, small screens
-test('form: a wrong link says so; the language toggle translates every step of the form; nothing overflows a small screen', async ({ page }) => {
-  test.setTimeout(90_000);
-  await page.goto('/form/zzzzzzzz');
-  await expect(page.getByRole('heading', { name: /This link doesn.t work/ })).toBeVisible();
-  await expect(page.getByText('The form link may be old or mistyped. Ask the club to send you a new one.')).toBeVisible();
-
-  // a complete draft saved through the same public route the form uses, so every step can be walked through in Indonesian
-  const draft = {
-    title: 'Opa', name: 'Leo Gunadi', dob: '1948-03-12', address: 'Jl. Melati 12, Bogor', contact: { name: 'Felicia Gunadi', relation: 'spouse', phone: '+6281244107781' }, nanny: { name: 'Sari Dewi' },
-    docs: { ktp: true, nannyKtp: true, healthInfo: true }, conditions: ['High blood pressure'], meds: [{ name: 'Amlodipine', dose: '5 mg', timing: 'morningHome' }], food: ['peanuts'], drugs: ['penicillin'],
-    mobility: 'walkingStick', diet: ['lowSalt'], consent: { data: true, face: true }, signature: { svgPath: 'M10 40 L 60 10 L 110 70', at: '', by: '' },
-  };
-  const saved = await page.request.post('/api/form/b4c9e5/saveDraft', { data: { input: { step: 0, draft }, mutationId: 'e2e-form-draft-1' } });
-  expect(saved.ok()).toBeTruthy();
-  const c = watchConsole(page);
-  await page.goto('/form/b4c9e5');
-  await expect(page.getByRole('heading', { name: 'About the member', level: 1 })).toBeVisible();
-  await page.getByRole('button', { name: 'ID', exact: true }).click();
-  const titles = ['Tentang anggota', 'Kartu identitas (KTP)', 'Pengasuh atau pendamping', 'Informasi kesehatan', 'Alergi dan alat bantu jalan', 'Tanda tangan dan persetujuan', 'Periksa dan kirim'];
-  for (let i = 0; i < 7; i++) {
-    await expect(page.getByRole('heading', { name: titles[i], level: 1 })).toBeVisible();
-    await expect(page.getByText(`Langkah ${i + 1} dari 7`, { exact: true })).toBeVisible();
-    await noRawKeys(page);
-    await assertNoHorizontalScroll(page);
-    if (i === 0) await expect(page.getByRole('radio', { name: 'Pasangan', exact: true })).toHaveAttribute('aria-checked', 'true'); // Spouse
-    if (i < 6) await page.getByTestId('form-next').click();
-  }
-  await expect(page.getByTestId('form-next')).toHaveText('Kirim ke CitraPremier');
-  await page.getByRole('button', { name: 'EN', exact: true }).click();
-  await expect(page.getByRole('heading', { name: 'Check and send', level: 1 })).toBeVisible();
-  await expect(page.getByTestId('form-next')).toHaveText('Send to CitraPremier');
-  c.assertClean();
-});
-
 // ---------------------------------------------------------------- Indonesian, board and dialogs
 test('Indonesian: the board, its dialogs and the stage names are translated, with no raw keys and no sideways scroll', async ({ page }) => {
   test.setTimeout(90_000);
@@ -929,15 +648,13 @@ test('Indonesian: the board, its dialogs and the stage names are translated, wit
   await assertNoHorizontalScroll(page);
 
   await openStage(page, 'trial');
-  await expect(lead(page, 'e1')).toContainText('Formulir siap ditinjau');
   await expect(lead(page, 'e1')).toContainText('Hari percobaan');
-  await lead(page, 'e1').getByRole('button', { name: 'Tinjau formulir' }).click();
+  await lead(page, 'e1').getByRole('button', { name: 'Bergabung', exact: true }).first().click(); // the action comes first; on a phone the Move-to chip for the stage Bergabung has the same name
   const rv = page.getByRole('dialog', { name: 'Oma Siu Lan Tjandra' });
-  await expect(rv.getByText(/^Langkah 1 dari 2 · Formulir daring/)).toBeVisible();
-  await noRawKeys(page);
-  await rv.getByRole('button', { name: 'Setujui dan gabungkan' }).click(); // Approve and join: step two
-  await expect(rv.getByText('Langkah 2 dari 2 · Paket dan hari pertama')).toBeVisible();
-  await expect(rv.getByRole('button', { name: 'Setujui dan buat anggota · Flex' })).toBeVisible();
+  await expect(rv.getByText('Formulir pendaftaran bertanda tangan').first()).toBeVisible();
+  await expect(rv.getByRole('button', { name: 'Ambil foto' })).toBeVisible();
+  await expect(rv.getByRole('button', { name: 'Pilih berkas' })).toBeVisible();
+  await expect(rv.getByRole('button', { name: 'Buat anggota · Flex' })).toBeVisible();
   await noRawKeys(page);
   await assertNoHorizontalScroll(page);
   await page.keyboard.press('Escape');

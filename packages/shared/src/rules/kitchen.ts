@@ -3,6 +3,7 @@ import type { ClubState, ISODate, Dish, DishAllergen, FoodAllergen, Member, Gues
 import { dayStatus } from './core';
 import { lobbyGroups, guestsOn } from './attendance';
 import { dow, live, sortBy, uniq } from '../util';
+import { approvedDayMenu, menuVersionForFamily } from './approvals';
 
 // ---------- versions ----------
 export function scheduleVersionFor(s: ClubState, date: ISODate): ScheduleVersion | undefined {
@@ -22,16 +23,21 @@ export function sessionsOn(s: ClubState, date: ISODate): SessionSlot[] {
   const day = v.days[dow(date) as Weekday];
   return (['10:30', '13:30'] as Slot[]).map((slot) => ({ slot, cell: day?.[slot] ?? null }));
 }
-export function menuVersionFor(s: ClubState, date: ISODate): MenuVersion | undefined {
-  const pub = live(s.menuVersions).filter((v) => v.status === 'published' && v.effectiveFrom <= date);
-  return sortBy(pub, (v) => v.effectiveFrom).pop();
+/**
+ * The weekly menu version in force on a date. A version the kitchen published waits for management's approval; the club's own screens already
+ * follow it, families see only approved ones (`approvedOnly`, and the family projection leaves the rest out).
+ */
+export function menuVersionFor(s: ClubState, date: ISODate, opts: { approvedOnly?: boolean } = {}): MenuVersion | undefined {
+  const pub = live(s.menuVersions).filter((v) => v.status === 'published' && v.effectiveFrom <= date && (!opts.approvedOnly || menuVersionForFamily(v)) && v.approval?.status !== 'rejected');
+  return sortBy(pub, (v) => v.effectiveFrom + v.createdAt).pop();
 }
 /** Dish ids served on a date: per-date override, else the version in force; nothing on closed days. */
-export function menuOn(s: ClubState, date: ISODate): MenuDay | null {
+export function menuOn(s: ClubState, date: ISODate, opts: { approvedOnly?: boolean } = {}): MenuDay | null {
   if (!dayStatus(s, date).open) return null;
-  const v = menuVersionFor(s, date);
+  const v = menuVersionFor(s, date, opts);
   const base: MenuDay = v?.days[dow(date) as Weekday] || { lunch: [], soft: [], tea: [] };
-  const o = s.dayMenus[date];
+  const row = s.dayMenus[date];
+  const o = row && opts.approvedOnly ? approvedDayMenu(row) : row;
   return { lunch: o?.lunch ?? base.lunch, soft: o?.soft ?? base.soft, tea: o?.tea ?? base.tea };
 }
 export const dishNames = (s: ClubState, ids: string[]) => ids.map((id) => s.dishes[id]?.name).filter(Boolean).join(', ');

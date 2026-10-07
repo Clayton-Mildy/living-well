@@ -158,14 +158,14 @@ describe('family.unlinkContact', () => {
 describe('document.upload (family)', () => {
   it('gated: the file waits for review; approval stores it as added by the family', () => {
     const c = seed();
-    const r = run(c.citra, 'document.upload', { memberId: 'm46', type: 'healthInfo', fileName: 'ringkasan.pdf' }, who(c, 'f1'));
+    const r = run(c.citra, 'document.upload', { memberId: 'm46', type: 'healthInfo', fileName: 'ringkasan.pdf', mediaId: 'md_testfamilyupload001' }, who(c, 'f1'));
     expect(r.reviewed).toBe('gate');
     expect(r.state.members.m46.documents.find((d) => d.type === 'healthInfo')?.status).toBe('requested');
     const cr = r.state.changeRequests[r.result.changeRequestId as string];
     expect(cr).toMatchObject({ section: 'docsConsent', target: { type: 'document', id: 'm46', memberId: 'm46' }, submittedBy: 'family:f1' });
     expect(Object.values(r.state.notifications).some((n) => n.kind === 'notif.reviewSubmitted' && n.toRoles.includes('mgmt'))).toBe(true);
     const a = run(r.state, 'review.approve', { crId: cr.id }, who(c, 's9'));
-    expect(a.state.members.m46.documents.find((d) => d.type === 'healthInfo')).toMatchObject({ status: 'onFile', fileName: 'ringkasan.pdf', via: 'family', by: 'family:f1' });
+    expect(a.state.members.m46.documents.find((d) => d.type === 'healthInfo')).toMatchObject({ status: 'onFile', fileName: 'ringkasan.pdf', mediaId: 'md_testfamilyupload001', via: 'family', by: 'family:f1' });
     expect(Object.values(a.state.notifications).some((n) => n.kind === 'notif.reviewApproved' && n.toUsers.includes('f1'))).toBe(true);
   });
 

@@ -4,12 +4,13 @@ export const members = {
   eyebrow: '{n} active members', eyebrowPending: '{n} pending approval', add: 'Add member', searchPh: 'Search by name, family or phone', searchLabel: 'Search members', filter: 'Filter members',
   'f.active': 'Active', 'f.in': 'In the club', 'f.att': 'Needs attention', 'f.flex': 'Flex', 'f.gold': 'Gold', 'f.ended': 'Ended',
   planGold: 'Gold', planFlex: 'Flex {n}/{q}', planFlexTip: 'Flex plan: {n} of {q} visits used this month', planGoldTip: 'Gold plan: unlimited visits', newTag: 'new member', paymentOverdue: 'Payment overdue', endingOn: 'ends {d}',
+  since: 'Since {d}', renews: 'Renews {d}', endsOn: 'Ends {d}', endedOn: 'Ended {d}', sortLabel: 'Sort members', 'sort.name': 'Name', 'sort.startNew': 'Start date, newest', 'sort.startOld': 'Start date, oldest', 'sort.endSoon': 'End date, soonest',
   lastVisit: 'Last visit {d}', neverVisited: 'No visits yet', pagerLabel: 'Members pages',
   'st.ended': 'Membership ended {d}', 'st.upcoming': 'Starts {d}', 'st.home': 'Gone home at {t}',
   'st.in': 'In the club since {t}', 'st.off': 'Not in yet today', 'st.usually': 'Usually arrives around {t}', noMatch: 'No members match', noMatchSub: 'Try another name, family name, phone number or filter.',
   // add dialog
-  newMember: 'New member', addTitle: 'Add a member', create: 'Create member', addNote: 'Same fields as the online form. The family can still send the form later to add documents.',
-  addNoteReview: 'Same fields as the online form. A new member goes to management for approval; the family can sign in once it is approved.',
+  newMember: 'New member', addTitle: 'Add a member', create: 'Create member', addNote: 'Type the details from the signed paper registration form, then attach a photo or PDF of it.',
+  addNoteReview: 'A new member goes to management for approval. The family can sign in once it is approved.',
   added: '{n} added as a member.', sentForReview: 'New member sent for approval. The family can sign in once management approves.',
   dobHint: 'We work out the age from the date of birth.', startHint: 'The first club day. After that the member can come on any open day.',
   contactMode: 'Family contact', newContact: 'New contact', existingContact: 'Existing contact', pickContact: 'Choose a contact', pickContactPh: 'Choose…',
@@ -42,4 +43,5 @@ export const members = {
   'err.lastDayPast': 'The last day can’t be in the past.', 'err.lastDayBeforeStart': 'The last day is before the membership started.', 'err.reasonRequired': 'Choose a reason.',
   'err.alreadyEnded': 'This membership has already ended.', 'err.alreadyEnding': 'A last day is already set. Cancel it first to choose another.', 'err.notEnding': 'No last day is set.',
   'err.notEnded': 'This membership is still active.',
+  'err.formRequired': 'Attach the signed registration form.',
 };

@@ -5,10 +5,10 @@ import {
   currentMembership, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, memberShort,
 } from '@cp/shared';
 import { formatVa, openBalance } from '@cp/shared/rules/members';
-import { Button, FONT_BODY, FONT_SMALL, Icon, Pager, Sheet, StatusBadge, TextField, Note, usePaged } from '../../../components/ui';
+import { Button, Icon, Pager, SectionLabel, Sheet, StatusBadge, TextField, Note, usePaged } from '../../../components/ui';
 import { say } from '../../../store/ui';
 import { InvoiceSheet } from '../../finance/InvoiceSheet';
-import { cardStyle, endReasonLabel, listCardStyle } from '../lib';
+import { cardStyle, endReasonLabel, HAIR, listCardStyle } from '../lib';
 import { planText } from '../reviewDiff';
 import { Fact, ListHead, PendingBanner } from './parts';
 import type { P } from './types';
@@ -56,10 +56,10 @@ export function PlanTab({ p }: { p: P }) {
           </div>
         </Note>
       ) : null}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,340px),1fr))', gap: 16, alignItems: 'start' }}>
-        <div style={{ ...cardStyle, gap: 10 }}>
-          <div style={{ fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px' }}>{t('profile.planCard')}</div>
-          <div style={{ fontSize: 28, lineHeight: '36px', letterSpacing: '-0.5px', color: '#9A836C' }}>{plan.plan === 'flex' ? t('profile.planFlexTitle', { q: s.club.settings.flexQuota }) : t('profile.planGoldTitle')}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(18px, 3vw, 36px)', alignItems: 'flex-start' }}>
+        <div style={{ ...cardStyle, flex: '1 1 380px', minWidth: 0, gap: 8 }}>
+          <SectionLabel>{t('profile.planCard')}</SectionLabel>
+          <div style={{ fontSize: 26, lineHeight: '34px', letterSpacing: '-0.5px', color: '#2B231C' }}>{plan.plan === 'flex' ? t('profile.planFlexTitle', { q: s.club.settings.flexQuota }) : t('profile.planGoldTitle')}</div>
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             <Fact k={t('profile.fee')} first>{rp(price[plan.plan])}</Fact>
             <Fact k={t('profile.visits')}>{plan.plan === 'flex' ? t('profile.visitsFlex', { q: s.club.settings.flexQuota }) : t('profile.visitsGold')}</Fact>
@@ -76,17 +76,17 @@ export function PlanTab({ p }: { p: P }) {
             {cur.lastDay ? <Fact k={t('profile.membership')}>{life === 'ended' ? t('profile.endedOn', { d: fmt.fdy(cur.lastDay) }) : t('profile.endsOn', { d: fmt.fdy(cur.lastDay) })}{cur.endReason ? ` · ${endReasonLabel(t, cur.endReason)}` : ''}</Fact> : null}
           </div>
         </div>
-        <div style={listCardStyle}>
-          <ListHead title={t('profile.invoices')} meta={p.family ? t('profile.invoicesMetaFamily') : t('profile.invoicesMeta')} />
+        <div style={{ ...listCardStyle, flex: '1 1 420px', minWidth: 0 }}>
+          <ListHead title={t('profile.invoices')} />
           {pagedInv.rows.map((i) => {
             const st = invoiceStatus(s, i, today);
             const titleText = i.kind === 'final' ? t('profile.finalInvoice') : i.period ? fmt.fmonth(i.period, true) : i.number;
             const subText = `${i.number} · ${st === 'paid' ? t('profile.paidOn', { d: fmt.fds(paidDate(s, i.id) || i.issueDate) }) : t('profile.dueOn', { d: fmt.fds(i.dueDate) })}${p.family ? '' : ' · ' + xeroLabel(i.xero)}`;
             return (
-              <button key={i.id} type="button" onClick={() => setInv(i.id)} className="h-row" aria-label={`${titleText} ${i.number}`} style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '8px 12px', alignItems: 'center', padding: '12px 20px', border: 'none', borderTop: '1px solid #EFECEA', background: '#FFFFFF', minHeight: 64, textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
+              <button key={i.id} type="button" onClick={() => setInv(i.id)} className="h-row cp-bleed" aria-label={`${titleText} ${i.number}`} style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '8px 12px', alignItems: 'center', padding: '14px 0', border: 'none', borderTop: HAIR, background: '#FFFFFF', minHeight: 64, textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <div style={{ flex: '1 1 150px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{titleText}</span>
-                  <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{subText}</span>
+                  <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{subText}</span>
                 </div>
                 {/* the amount, the status and the chevron stay together; on a narrow phone they drop under the title instead of squeezing it */}
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flex: 'none', marginLeft: 'auto' }}>
@@ -97,9 +97,8 @@ export function PlanTab({ p }: { p: P }) {
               </button>
             );
           })}
-          {!invoices.length ? <div style={{ padding: '14px 20px 20px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967', lineHeight: 1.4 }}>{t('profile.noInvoices')}</div> : null}
-          {pagedInv.pages > 1 ? <div style={{ padding: '12px 20px 16px', borderTop: '1px solid #EFECEA' }}><Pager page={pagedInv.page} pages={pagedInv.pages} onPage={pagedInv.setPage} label={t('profile.pagerInvoices')} /></div> : null}
-          {invoices.length && balance > 0 ? <div style={{ padding: '12px 20px 16px', borderTop: '1px solid #EFECEA', fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('profile.openStayPayable')}</div> : null}
+          {!invoices.length ? <div style={{ padding: '14px 0 20px', borderTop: HAIR, fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noInvoices')}</div> : null}
+          {pagedInv.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={pagedInv.page} pages={pagedInv.pages} onPage={pagedInv.setPage} label={t('profile.pagerInvoices')} /></div> : null}
         </div>
       </div>
       {inv ? <InvoiceSheet invoiceId={inv} open onClose={() => setInv(null)} audience={p.family ? 'family' : 'staff'} /> : null}

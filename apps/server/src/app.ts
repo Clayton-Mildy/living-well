@@ -1,5 +1,5 @@
 // CitraPremier API app (routes). index.ts boots and listens; tests import this.
-// CitraPremier API: sign-in (username + password), snapshots, actions, live events (SSE), demo clock/reset, public membership form.
+// CitraPremier API: sign-in (username + password), snapshots, actions, live events (SSE), demo clock/reset.
 import 'dotenv/config';
 import { Hono } from 'hono';
 
@@ -8,8 +8,8 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
-import { DomainError, projectForFamily, canAccessClub, systemUser, live } from '@cp/shared';
-import { getClub, getClubs, runAction, subscribe, resetDemo, broadcastAll } from './state';
+import { DomainError, projectForFamily, canAccessClub, live } from '@cp/shared';
+import { getClub, runAction, subscribe, resetDemo, broadcastAll } from './state';
 import { clockInfo, setClock } from './clock';
 import { authUser, publicUser, registerAuthRoutes } from './routes/auth';
 import { byteRange, checkUpload, loadMedia, saveMedia } from './media';
@@ -124,49 +124,6 @@ app.post('/api/demo/clock', async (c) => {
   const clock = await setClock(hm, !!allowBack);
   broadcastAll({ type: 'clock', clock });
   return c.json(clock);
-});
-
-// public membership form (opened from a link; no sign-in)
-const PUBLIC_FORM_ACTIONS = new Set(['form.open', 'form.saveDraft', 'form.submit']);
-function findForm(token: string) {
-  for (const s of Object.values(getClubs())) {
-    const f = live(s.formRequests).find((x) => x.token === token);
-    if (f) return { s, f };
-  }
-  return null;
-}
-app.get('/api/form/:token', (c) => {
-  const hit = findForm(c.req.param('token'));
-  if (!hit) return c.json({ code: 'err.notFound' }, 404);
-  const { s, f } = hit;
-  // anyone holding the link sees this: only what the form pre-fills (no staff notes, care instructions, billing or review data)
-  let target: unknown;
-  if (f.target.type === 'enquiry') {
-    const e = s.enquiries[f.target.id];
-    target = e && { id: e.id, senior: e.senior, contact: e.contact };
-  } else {
-    const m = s.members[f.target.id];
-    target = m && {
-      id: m.id, title: m.title, firstName: m.firstName, lastName: m.lastName, gender: m.gender, dob: m.dob, address: m.address, nanny: m.nanny,
-      health: { conditions: m.health.conditions, meds: m.health.meds, food: m.health.food, foodOther: m.health.foodOther, drugs: m.health.drugs, mobility: m.health.mobility, diet: m.health.diet },
-      documents: m.documents.map((d) => ({ id: d.id, type: d.type, status: d.status })), consents: m.consents.map((x) => ({ kind: x.kind, granted: x.granted })),
-    };
-  }
-  return c.json({ clubId: s.clubId, club: { name: s.club.name, fullName: s.club.fullName }, form: f, target, clock: clockInfo() });
-});
-app.post('/api/form/:token/:action', async (c) => {
-  const token = c.req.param('token');
-  const name = `form.${c.req.param('action')}`;
-  if (!PUBLIC_FORM_ACTIONS.has(name)) return c.json({ code: 'err.forbidden' }, 403);
-  const hit = findForm(token);
-  if (!hit) return c.json({ code: 'err.notFound' }, 404);
-  const { input, mutationId } = await c.req.json<{ input: Record<string, unknown>; mutationId?: string }>();
-  try {
-    const r = await runAction(hit.s.clubId, name, { ...input, token }, systemUser(hit.s.clubId), mutationId || `f${Date.now().toString(36)}`);
-    return c.json({ rev: r.rev, result: r.result });
-  } catch (e) {
-    return c.json(errBody(e), e instanceof DomainError ? 422 : 500);
-  }
 });
 
 // Production / tunnel mode: serve the built web app from the same origin as the API (single port for cloudflared).

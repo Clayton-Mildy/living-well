@@ -33,7 +33,7 @@ export function Pager({ page, pages, onPage, label }: { page: number; pages: num
   const t = useT();
   const { isPhone } = useDevice();
   if (pages <= 1) return null;
-  const btn = (disabled: boolean) => ({ width: 44, height: 44, borderRadius: 999, border: '1px solid #DBD7D6', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#B5B0AC' : '#282828', flex: 'none' as const, padding: 0 });
+  const btn = (disabled: boolean) => ({ width: 44, height: 44, borderRadius: 12, border: '1px solid #E4DACD', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#B5B0AC' : '#24201C', flex: 'none' as const, padding: 0 });
   const prevOff = page <= 1, nextOff = page >= pages;
   return (
     <nav aria-label={label || t('common.pages')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 16px', flexWrap: 'wrap' }}>
@@ -43,10 +43,10 @@ export function Pager({ page, pages, onPage, label }: { page: number; pages: num
       ) : (
         <>
           {pageWindow(page, pages).map((p, i) => p === '…'
-            ? <span key={`e${i}`} aria-hidden="true" style={{ width: 24, textAlign: 'center', color: '#6A6967' }}>…</span>
+            ? <span key={`e${i}`} aria-hidden="true" style={{ width: 24, textAlign: 'center', color: '#5E5852' }}>…</span>
             : (
               <button key={p} type="button" aria-label={t('common.pageGo', { n: p })} aria-current={p === page ? 'page' : undefined} onClick={() => onPage(p)} className={p === page ? undefined : 'h-cream'}
-                style={{ minWidth: 44, height: 44, padding: '0 8px', borderRadius: 999, border: p === page ? '1px solid #75624B' : '1px solid transparent', background: p === page ? '#75624B' : 'transparent', color: p === page ? '#FFFFFF' : '#282828', fontSize: FONT_BODY, fontWeight: p === page ? 600 : 500, cursor: 'pointer', fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter' }}>{p}</button>
+                style={{ minWidth: 44, height: 44, padding: '0 8px', borderRadius: 12, border: p === page ? '1px solid #24201C' : '1px solid transparent', background: p === page ? '#24201C' : 'transparent', color: p === page ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, fontWeight: p === page ? 600 : 500, cursor: 'pointer', fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter' }}>{p}</button>
             ))}
           <span className="sr-only" aria-live="polite">{t('common.pageOf', { page, pages })}</span>
         </>

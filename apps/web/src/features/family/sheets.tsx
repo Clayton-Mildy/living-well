@@ -3,7 +3,7 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { liveSurvey, answeredBy, customOf, memberShort, menuOn, missingRequired, rp, staffCall, type Bank, type ISODate, type SurveyAnswer } from '@cp/shared';
 import { BANKS, combinedVa, dishNamesOf, invoiceRows, isOpenStatus, servedLunch } from '@cp/shared/rules/family';
-import { Avatar, Button, Sheet, TextField, chipStyle, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Avatar, Button, Sheet, TextField, chipStyle, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
@@ -31,8 +31,8 @@ function FSheet({ onClose, title, children }: { onClose: () => void; title: stri
     </Sheet>
   );
 }
-const capStyle: CSSProperties = { fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px' };
-const NoteBox = ({ children }: { children: ReactNode }) => <div style={{ padding: '14px 16px', borderRadius: 16, background: '#F4F0EE', fontSize: 16, lineHeight: '22px' }}>{children}</div>;
+const capStyle: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };
+const NoteBox = ({ children }: { children: ReactNode }) => <div style={{ paddingLeft: 14, borderLeft: '2px solid #E6DDD1', fontSize: 15, lineHeight: '22px', color: '#5E5852' }}>{children}</div>;
 
 /** "For Oma Lina": who the sheet is about (families with two parents, and staff acting on a family's behalf). */
 function ForMember({ memberId }: { memberId: string }) {
@@ -43,7 +43,7 @@ function ForMember({ memberId }: { memberId: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: -6 }}>
       <Avatar name={`${m.title} ${m.firstName} ${m.lastName}`} tone={m.photoTone} src={memberPhoto(m)} size={36} />
-      <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('family.forMember', { n: memberShort(m) })}</span>
+      <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('family.forMember', { n: memberShort(m) })}</span>
     </div>
   );
 }
@@ -89,7 +89,7 @@ function PayInner({ invoiceIds, onClose }: { invoiceIds: string[]; onClose: () =
               </div>
             ))}
             {rows.length > 1 ? (
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, paddingTop: 8, borderTop: '1px solid #EFECEA' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, paddingTop: 8, borderTop: '1px solid #F0EAE1' }}>
                 <span style={{ fontSize: 16, fontWeight: 500 }}>{t('family.payTotal')}</span>
                 <span style={{ fontSize: 26, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>{rp(total)}</span>
               </div>
@@ -99,10 +99,10 @@ function PayInner({ invoiceIds, onClose }: { invoiceIds: string[]; onClose: () =
           <div role="radiogroup" aria-label={t('family.bank')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {BANKS.map((b) => {
               const c = chipStyle(bank === b, false);
-              return <button key={b} type="button" role="radio" aria-checked={bank === b} onClick={() => setBank(b)} style={{ height: 44, padding: '0 18px', borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{b}</button>;
+              return <button key={b} type="button" role="radio" aria-checked={bank === b} onClick={() => setBank(b)} style={{ height: 44, padding: '0 18px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 600, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{b}</button>;
             })}
           </div>
-          <div style={{ padding: 16, borderRadius: 18, background: '#F4F0EE', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ padding: 16, borderRadius: 14, background: '#FBF8F4', border: '1px solid #EFE7DC', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
               <span style={capStyle}>{t('family.vaNumber')} · DOKU</span>
               <span style={{ fontSize: 24, letterSpacing: '1px', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }} data-testid="va-number">{va}</span>
@@ -112,7 +112,7 @@ function PayInner({ invoiceIds, onClose }: { invoiceIds: string[]; onClose: () =
           <div style={{ fontSize: 16, lineHeight: '22px' }}>{t('family.autoConfirm')}</div>
           <button type="button" onClick={simulate} disabled={busy} style={{ height: 48, borderRadius: 999, border: '1px dashed #8A755B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('family.simPay')}</button>
         </>
-      ) : <NoteBox>{t('family.invAllPaidSub')}</NoteBox>}
+      ) : <NoteBox>{t('family.invAllPaid')}</NoteBox>}
     </FSheet>
   );
 }
@@ -163,10 +163,10 @@ function SurveyInner({ onClose }: { onClose: () => void }) {
             const st = s.staff[id];
             if (!st) return null;
             return (
-              <div key={id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 12px', padding: '10px 0', borderBottom: '1px solid #EFECEA' }}>
+              <div key={id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '8px 12px', padding: '10px 0', borderBottom: '1px solid #F0EAE1' }}>
                 <div style={{ flex: '1 1 140px', display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{staffCall(st)}</span>
-                  <span style={{ fontSize: 14, lineHeight: '20px', color: '#6A6967' }}>{st.title}</span>
+                  <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{st.title}</span>
                 </div>
                 <Stars value={team[id] || 0} onChange={(n) => setTeam((x) => ({ ...x, [id]: n }))} size="small" group={staffCall(st)} />
               </div>
@@ -188,7 +188,7 @@ function SurveyInner({ onClose }: { onClose: () => void }) {
       {custom.map((q) => <SurveyQuestion key={q.id} q={q} value={answers[q.id]} onChange={(v) => setAnswer(q.id, v)} />)}
       {asks('comment') ? <TextField label={t('family.surveyCmt')} value={comment} onChange={setComment} multiline rows={3} placeholder={t('common.optional')} maxLength={1000} /> : null}
       <div style={{ position: 'sticky', bottom: 0, paddingTop: 8, background: 'linear-gradient(to top, #FFFFFF 70%, rgba(255,255,255,0))', display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {!ready && custom.some((q) => q.required) ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: '#6A6967' }}>{t('family.surveyNeed')}</span> : null}
+        {!ready && custom.some((q) => q.required) ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: '#5E5852' }}>{t('family.surveyNeed')}</span> : null}
         <Button size={56} full disabled={!ok || busy} onClick={send}>{t('family.surveySend')}</Button>
       </div>
     </FSheet>
@@ -218,7 +218,7 @@ function FeedbackInner({ memberIds, onClose }: { memberIds: string[]; onClose: (
   }, [s, memberId, today]);
   const dishes = useMemo(() => {
     if (!m) return [];
-    const menu = menuOn(s, mealDate);
+    const menu = menuOn(s, mealDate, { approvedOnly: true }); // what families may see: a menu waiting for approval is left out
     return menu ? Array.from(new Set(dishNamesOf(s, [...servedLunch(s, m, mealDate), ...menu.tea]))) : [];
   }, [s, m, mealDate]);
   if (!m) return null;
@@ -227,7 +227,7 @@ function FeedbackInner({ memberIds, onClose }: { memberIds: string[]; onClose: (
   const ok = text.trim().length > 0;
   const chip = (sel: boolean, label: string, onClick: () => void, key: string) => {
     const c = chipStyle(sel, false);
-    return <button key={key} type="button" role="radio" aria-checked={sel} onClick={onClick} style={{ height: 44, padding: '0 16px', borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{label}</button>;
+    return <button key={key} type="button" role="radio" aria-checked={sel} onClick={onClick} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{label}</button>;
   };
   const send = async () => {
     if (!ok || busy) return;

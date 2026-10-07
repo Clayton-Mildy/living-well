@@ -8,6 +8,8 @@ export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 /** Videos are sent as they were recorded: up to 25 MB and 15 seconds (the server checks the size and the file signature). */
 export const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
 export const MAX_VIDEO_SEC = 15;
+/** A PDF (a scanned paper form) is sent as it is: up to 10 MB. */
+export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
 /** The URL of an uploaded photo (a long random id, so the link itself is the key). */
 export const mediaUrl = (id: string) => `/api/media/${encodeURIComponent(id)}`;
@@ -118,4 +120,24 @@ export async function uploadMedia(blob: Blob): Promise<string> {
   if (jpeg.size > MAX_UPLOAD_BYTES) throw new ApiError(413, 'common.mediaTooBig');
   const { id } = await api<{ id: string }>('/api/media', { body: { mime: 'image/jpeg', data: await toBase64(jpeg) } });
   return id;
+}
+
+/** Is this file (or blob) a PDF? Looks at the type, then at the name when the browser gave no type. */
+export const isPdfFile = (b: Blob, name = '') => { const t = b.type.toLowerCase(); return t === 'application/pdf' || ((!t || t === 'application/octet-stream') && /\.pdf$/i.test(name)); };
+/** Is a stored document file name a PDF? (Documents keep the file name, so the viewer knows whether to open the file in a new tab.) */
+export const isPdfName = (name?: string) => !!name && /\.pdf$/i.test(name);
+
+/**
+ * Upload a document: a photo from the camera or a file (shrunk to a JPEG like any photo), or a PDF as it is (up to 10 MB).
+ * Resolves with the `mediaId` and the file name to store on the document. Rejects with an ApiError whose `code` is an i18n key.
+ */
+export async function uploadDocument(blob: Blob, name = ''): Promise<{ mediaId: string; fileName: string }> {
+  if (isPdfFile(blob, name)) {
+    if (blob.size > MAX_PDF_BYTES) throw new ApiError(413, 'common.docTooBig');
+    const { id } = await api<{ id: string }>('/api/media', { body: { mime: 'application/pdf', data: await toBase64(blob) } });
+    return { mediaId: id, fileName: name || 'document.pdf' };
+  }
+  const mediaId = await uploadMedia(blob);
+  const base = (name || 'photo').replace(/\.[A-Za-z0-9]{1,5}$/, '');
+  return { mediaId, fileName: `${base}.jpg` };
 }

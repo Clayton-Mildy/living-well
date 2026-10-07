@@ -1,15 +1,13 @@
-// Arrivals board (design ScrLobby) for a drop-in club: members come on any open day, so nothing is "expected".
-// A Check in | Check out switch at the top picks what the desk is doing:
-//   Check in  = the check-in list (members not in yet, with their usual arrival time, and a search) and the face camera card;
-//   Check out = a searchable list of the members in the club, each with Check out, and the "Gone home" list.
-// The In the club / Gone home tiles show the day's counts and jump to the check-out mode. "Also today" (trial and visit guests,
-// unread messages) sits below the list in both modes. A check-in toast carries Undo; a visit that is an extra Flex day says so
-// before it is confirmed and in the toast. On narrow screens a manual check-in is confirmed in a bottom sheet.
+// Arrivals board (Prototype v3 ScrArrivals) for a drop-in club: members come on any open day, so nothing is "expected".
+// Three number tabs pick the list: Not in yet (the check-in list, with the face camera card in the side rail), In the club (the check-out list)
+// and Gone home. One hero card shows the selected list with an underline search, with "Also today" (trial and visit guests, unread messages)
+// right below it; on the check-in tab a side rail carries the face camera. A check-in toast carries Undo; a visit that is an extra Flex day says so before it is
+// confirmed and in the toast. When the rail drops below the list (narrow screens) a manual check-in is confirmed in a bottom sheet instead.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { dayStatus, famNames, lobbyGroups, memberShort, nextOpenDay, priceOn, rp, toMin, type GuestVisit } from '@cp/shared';
 import { checkoutCandidates, faceRecognisable, goneHomeRows, manualCandidates, nextFaceArrival, visitInfo } from '@cp/shared/rules/lobby';
-import { EmptyState, FONT_BODY, FONT_SMALL, Icon, Note, Sheet } from '../../components/ui';
+import { Dialog, EmptyState, Eyebrow, Note, Sheet } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -23,14 +21,12 @@ import { FaceCard, MatchedPanel, SCAN_MS, type Scan } from './FaceCard';
 import { MemberDrawer, visitLine } from './MemberDrawer';
 import { MemberList } from './MemberList';
 import { ModeToggle, PANEL_ID, TAB_ID, type Mode } from './ModeToggle';
-import { localHours, memberFlags } from './parts';
+import { memberFlags } from './parts';
 import { useAtLeast } from './useAtLeast';
+import { WhoPicker } from './WhoPicker';
 
-type Tile = 'inClub' | 'goneHome';
-/** The day's counts. Tapping one switches to Check out and brings that list into view. */
-const TILES: [Tile, string, string][] = [['inClub', 'how_to_reg', 'lobby.tileIn'], ['goneHome', 'home', 'lobby.tileGone']];
-/** Width at which the design's two columns (430 + gap 24 + 480) sit side by side instead of wrapping. */
-const TWO_COLUMNS = 934;
+/** Width of the tab panel at which the list (440) and the rail (300) sit side by side with their gap (24–56); below it the rail drops under the list. */
+const TWO_COLUMNS = 800;
 /** Smooth scrolling unless the viewer asked for less motion. */
 const scrollBehavior = (): ScrollBehavior => (window.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ? 'auto' : 'smooth');
 /** A price that never breaks across two lines ('Rp' / '650.000'). */
@@ -52,13 +48,12 @@ export function Arrivals() {
   const [mode, setMode] = useState<Mode>('in');
   const [scan, setScan] = useState<Scan>({ state: 'idle' });
   const [busy, setBusy] = useState(false);
+  const [whoFor, setWhoFor] = useState<string | null>(null); // "Not this person" on a face match: pick who it really is
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [coId, setCoId] = useState<string | null>(null);
   const [query, setQuery] = useState(''); // the check-in list's search
-  const [outQuery, setOutQuery] = useState(''); // the check-out list's search (it also narrows "Gone home")
+  const [outQuery, setOutQuery] = useState(''); // the search of the In the club and Gone home lists (shared: switching between the two keeps it)
   const columnsRef = useRef<HTMLDivElement>(null);
-  const mainRef = useRef<HTMLDivElement>(null);
-  const goneRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<HTMLDivElement>(null);
   const { wide: twoColumns } = useAtLeast(columnsRef, TWO_COLUMNS);
 
@@ -171,131 +166,104 @@ export function Arrivals() {
   // ----- header -----
   const settings = s.club.settings;
   const openNow = status.open && nowMin >= toMin(settings.open) && nowMin < toMin(settings.close);
-  const pill = !status.open ? { text: t('common.clubClosed'), short: t('common.clubClosed'), icon: 'event_busy', bg: '#EFECEA', fg: '#6A6967' }
-    : openNow ? { text: `${t('lobby.clubOpen')} · ${localHours(settings.hoursLabel, lang)}`, short: t('lobby.clubOpen'), icon: 'storefront', bg: '#E6EFE8', fg: '#3D6B4F' }
-    : nowMin < toMin(settings.open) ? { text: t('lobby.opensAt', { t: settings.open }), short: t('lobby.opensAt', { t: settings.open }), icon: 'schedule', bg: '#E8E1D8', fg: '#282828' }
-    : { text: t('lobby.closedNow'), short: t('lobby.closedNow'), icon: 'bedtime', bg: '#E8E1D8', fg: '#282828' };
+  const hdr = !status.open ? { text: t('common.clubClosed'), dot: '#A89C8E' }
+    : openNow ? { text: t('lobby.openUntil', { t: settings.close }), dot: '#3F7A55' }
+    : nowMin < toMin(settings.open) ? { text: t('lobby.opensAt', { t: settings.open }), dot: '#C9A35A' }
+    : { text: t('lobby.closedNow'), dot: '#A89C8E' };
 
-  const sheetMode = scan.state === 'matched' && scan.manual && !twoColumns;
-  // A scan (or a pick from the list) shows in the camera card: bring that card fully into view if it is cut off. In the
-  // stacked layout the camera sits below the check-in list, so this also follows the scan as it starts.
+  // A pick from the list is a manual check-in, not a face match (KC): it confirms in its own dialog (a bottom sheet on phones),
+  // never inside the face camera card.
+  const sheetMode = scan.state === 'matched' && !!scan.manual;
+  // A scan (or a pick from the list) shows in the camera card: bring that card fully into view if it is cut off. When the rail is
+  // stacked under the list, this also follows the scan as it starts.
   const scanKey = scan.state === 'idle' ? '' : `${scan.state}:${scan.id}`;
   useEffect(() => {
     if (!scanKey || sheetMode || mode !== 'in') return;
     cameraRef.current?.scrollIntoView?.({ block: 'nearest', behavior: scrollBehavior() });
   }, [scanKey, sheetMode, mode]);
   const pickMode = (m: Mode) => {
-    if (m === 'out') rejectScan(); // the camera card is hidden in check-out mode: drop any scan in progress
+    if (m !== 'in') rejectScan(); // the camera card only exists on the Not in yet tab: drop any scan in progress
     setMode(m);
-  };
-  /** A tile: switch to Check out and, when the lists sit below the tiles, bring the tile's list into view. */
-  const pickTile = (k: Tile) => {
-    pickMode('out');
-    requestAnimationFrame(() => (k === 'goneHome' ? goneRef : mainRef).current?.scrollIntoView?.({ behavior: scrollBehavior(), block: 'start' }));
   };
 
   const visit = scanMember ? visitInfo(s, scanMember, today) : null;
   const matchedPanel = scanMember ? (
-    <MatchedPanel t={t} m={scanMember} plan={visitLine(t, s, scanMember, today)} flags={memberFlags(t, scanMember, true)} busy={busy} onConfirm={() => void confirmScan()} onReject={rejectScan}>
+    <MatchedPanel t={t} m={scanMember} plan={visitLine(t, s, scanMember, today)} flags={memberFlags(t, scanMember, true)} busy={busy} onConfirm={() => void confirmScan()}
+      rejectLabel={scan.state === 'matched' && scan.manual ? t('common.cancel') : undefined}
+      onReject={scan.state === 'matched' && !scan.manual ? () => { const wrong = scan.id; rejectScan(); setWhoFor(wrong); } : rejectScan}>
       {visit?.extra ? <Note tone="ochre" icon="payments">{t('lobby.extraVisit', { n: visit.n, q: visit.quota ?? 0, p: price(priceOn(s, today).extra) })}</Note> : null}
     </MatchedPanel>
   ) : null;
-  const column = { display: 'flex', flexDirection: 'column', gap: 20 } as const;
 
-  // ----- the lists -----
+  // ----- the lists (one hero card, picked by the number tabs) -----
   const members = groups.inClub.length + groups.goneHome.length + groups.others.length;
-  const checkInList = (
-    <MemberList t={t} listId="checkin" title={t('lobby.checkInTitle')} hint={t('lobby.manualHint')} hintIcon="touch_app" rows={manualCandidates(s, today, query)} total={groups.others.length}
+  const list = mode === 'in' ? (
+    <MemberList t={t} listId="checkin" title={t('lobby.checkInTitle')} rows={manualCandidates(s, today, query)} total={groups.others.length}
       query={query} onQuery={setQuery} empty={{ icon: 'task_alt', title: t(members === 0 ? 'lobby.noMembers' : 'lobby.allIn') }} noMatch={(q) => t('lobby.noMatch', { q })}
       selectedId={scan.state === 'matched' && scan.manual ? scan.id : undefined} onOpen={setDrawerId} onCheckIn={startManual} />
-  );
-  const checkOutList = (
-    <MemberList t={t} listId="inclub" title={t('lobby.inClub')} hint={t('lobby.checkOutHint')} hintIcon="logout" rows={checkoutCandidates(s, today, outQuery)} total={groups.inClub.length}
-      query={outQuery} onQuery={setOutQuery} empty={{ icon: 'chair', title: t('lobby.emptyIn'), sub: t('lobby.emptyInSub') }} noMatch={(q) => t('lobby.noMatchIn', { q })}
+  ) : mode === 'out' ? (
+    <MemberList t={t} listId="inclub" title={t('lobby.inClub')} rows={checkoutCandidates(s, today, outQuery)} total={groups.inClub.length}
+      query={outQuery} onQuery={setOutQuery} empty={{ icon: 'chair', title: t('lobby.emptyIn') }} noMatch={(q) => t('lobby.noMatchIn', { q })}
       onOpen={setDrawerId} onCheckOut={setCoId} />
-  );
-  const goneHomeList = (
-    <MemberList t={t} listId="gonehome" title={t('lobby.goneHome')} hint={t('lobby.goneHint')} hintIcon="home" rows={goneHomeRows(s, today, outQuery)} total={groups.goneHome.length}
-      query={outQuery} empty={{ icon: 'home', title: t('lobby.emptyOut'), sub: t('lobby.emptyOutSub') }} noMatch={(q) => t('lobby.noMatchGone', { q })} onOpen={setDrawerId} />
+  ) : (
+    <MemberList t={t} listId="gonehome" title={t('lobby.goneHome')} rows={goneHomeRows(s, today, outQuery)} total={groups.goneHome.length}
+      query={outQuery} onQuery={setOutQuery} empty={{ icon: 'home', title: t('lobby.emptyOut') }} noMatch={(q) => t('lobby.noMatchGone', { q })}
+      onOpen={setDrawerId} onUndoOut={(id) => void undoOut(id)} />
   );
   const camera = (
     <div ref={cameraRef} style={{ scrollMarginBottom: 16 }}>
       <FaceCard t={t} scan={sheetMode ? { state: 'idle' } : scan} member={scanMember} onSimulate={simulate} matched={matchedPanel} />
     </div>
   );
-  // main = the list the desk works from (check-in or check-out); side = what goes with it (the camera, or who has gone home).
-  const main = <div ref={mainRef} style={{ scrollMarginTop: 12 }}>{mode === 'in' ? checkInList : checkOutList}</div>;
-  const side = mode === 'in' ? camera : <div ref={goneRef} style={{ scrollMarginTop: 12 }}>{goneHomeList}</div>;
-  const also = <AlsoToday role={role || 'lobby'} guest={guest} />;
+  const gap = 'clamp(18px, 2.8vw, 36px)';
 
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 24 }}>
-        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: isPhone ? 10 : 16, flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, ...(isPhone ? { flex: '1 1 100%' } : {}) }}>
-            {/* phone: the time sits in the eyebrow, so the club-open pill and the title share one line */}
-            <div className={isPhone ? 'cp-eyebrow1' : undefined} style={{ fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6A6967', lineHeight: '18px' }}>
+      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : gap }}>
+        <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, ...(isPhone ? { flex: '1 1 100%' } : {}) }}>
+            {/* phone: the time sits in the eyebrow (the big clock is for wider screens) */}
+            <Eyebrow className={isPhone ? 'cp-eyebrow1' : undefined}>
               {isPhone ? <><span>{fdl(today)}</span> · <span style={{ fontVariantNumeric: 'tabular-nums' }}>{now}</span></> : fdl(today)}
+            </Eyebrow>
+            <h1 style={{ margin: 0, fontSize: 'clamp(32px, 3.6vw, 48px)', lineHeight: 1.05, fontWeight: 400, letterSpacing: '-1.2px', color: '#2B231C' }}>{t('lobby.arrivals')}</h1>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>
+              <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: hdr.dot, flex: 'none' }} />
+              {hdr.text}
             </div>
-            {isPhone ? (
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
-                <h1 style={{ margin: 0, fontSize: 40, lineHeight: '48px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('lobby.arrivals')}</h1>
-                <span title={pill.text} style={{ height: 30, padding: '0 12px 0 8px', borderRadius: 999, background: pill.bg, color: pill.fg, fontSize: 14, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}>
-                  <Icon name={pill.icon} size={18} fill={1} />
-                  {pill.short}
-                </span>
-              </div>
-            ) : <h1 style={{ margin: 0, fontSize: 40, lineHeight: '48px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('lobby.arrivals')}</h1>}
           </div>
-          {isPhone ? null : (
-            <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '8px 16px' }}>
-              <span style={{ minHeight: 36, padding: '4px 14px 4px 10px', borderRadius: 999, background: pill.bg, color: pill.fg, fontSize: FONT_BODY, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, maxWidth: '100%', lineHeight: 1.3 }}>
-                <Icon name={pill.icon} size={20} fill={1} />
-                {pill.text}
-              </span>
-              <div style={{ fontSize: 44, lineHeight: '48px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{now}</div>
-            </div>
-          )}
+          {isPhone ? null : <div style={{ fontSize: 48, lineHeight: 1, fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1.5px', color: '#2B231C' }}>{now}</div>}
         </div>
 
         {!status.open ? (
-          <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24 }}>
+          <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 20, boxShadow: 'var(--card-shadow)' }}>
             <EmptyState icon="event_busy" title={status.event ? (lang === 'id' && status.event.titleId ? status.event.titleId : status.event.title) : t('common.clubClosed')}
               sub={t(status.reason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })} />
           </div>
         ) : (
           <>
-            <ModeToggle t={t} mode={mode} counts={{ in: groups.others.length, out: groups.inClub.length }} onChange={pickMode} />
+            <ModeToggle t={t} mode={mode} counts={{ in: groups.others.length, out: groups.inClub.length, gone: groups.goneHome.length }} onChange={pickMode} />
 
-            {/* phone: the Check in / Check out switch already shows the two counts, so the tiles go */}
-            <div className="cp-hide-phone" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 12, maxWidth: 560 }} role="group" aria-label={t('lobby.todayCounts')}>
-              {TILES.map(([k, icon, hintKey]) => (
-                <button key={k} type="button" className="dh15" onClick={() => pickTile(k)} aria-label={`${t('lobby.' + k)}: ${groups[k].length}. ${t(hintKey)}`} data-tile={k}
-                  style={{ minHeight: 96, padding: '16px 18px', borderRadius: 20, border: '1px solid #DBD7D6', background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, cursor: 'pointer', color: '#282828', textAlign: 'left', fontFamily: 'Inter' }}>
-                  <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>
-                    <Icon name={icon} size={20} color="#75624B" />
-                    {t('lobby.' + k)}
-                  </span>
-                  <span data-testid={`tile-${k}`} style={{ fontSize: 36, lineHeight: '40px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{groups[k].length}</span>
-                </button>
-              ))}
-            </div>
-
-            <div ref={columnsRef} id={PANEL_ID} role="tabpanel" aria-labelledby={TAB_ID(mode)} style={{ display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start' }}>
-              {twoColumns ? (
-                <>
-                  <div style={{ flex: '0 1 430px', minWidth: 300, ...column }}>{side}</div>
-                  <div style={{ flex: '1 1 480px', minWidth: 0, ...column }}>{main}{also}</div>
-                </>
-              ) : (
-                <div style={{ flex: '1 1 100%', minWidth: 0, ...column }}>{main}{side}{also}</div>
-              )}
+            <div ref={columnsRef} id={PANEL_ID} role="tabpanel" aria-labelledby={TAB_ID(mode)} style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(24px, 4vw, 56px)', alignItems: 'flex-start' }}>
+              {/* KC: "Also today" sits below the check-in list on every width; the rail only carries the face camera */}
+              <div style={{ flex: '1 1 440px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'clamp(24px, 3vw, 36px)' }}>
+                {list}
+                <AlsoToday role={role || 'lobby'} guest={guest} />
+              </div>
+              {mode === 'in' ? (
+                <aside style={{ flex: twoColumns ? '0 1 300px' : '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'clamp(24px, 3vw, 32px)' }}>
+                  {camera}
+                </aside>
+              ) : null}
             </div>
           </>
         )}
       </div>
 
-      {sheetMode && scanMember ? <Sheet open onClose={rejectScan} title={t('lobby.checkIn')}>{matchedPanel}</Sheet> : null}
+      <WhoPicker open={whoFor !== null} phone={isPhone} today={today} exclude={whoFor ?? undefined} onClose={() => setWhoFor(null)} onPick={(id) => { setWhoFor(null); startManual(id); }} />
+      {sheetMode && scanMember ? (isPhone
+        ? <Sheet open onClose={rejectScan} title={t('lobby.checkIn')}>{matchedPanel}</Sheet>
+        : <Dialog open onClose={rejectScan} title={t('lobby.checkIn')} maxWidth={480}>{matchedPanel}</Dialog>) : null}
       <MemberDrawer memberId={drawerId} onClose={() => setDrawerId(null)} actions={{
         onCheckIn: startManual,
         onCheckOut: (id) => { setDrawerId(null); setCoId(id); },

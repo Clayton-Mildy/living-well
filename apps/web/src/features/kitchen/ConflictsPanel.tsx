@@ -11,7 +11,7 @@ import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { DishDialog } from './dish';
-import { OutlineButton, Pill, PillButton, TextButton, useResetOn } from './parts';
+import { OutlineButton, PillButton, StatusDot, TextButton, useResetOn } from './parts';
 
 type Conflicts = { conflicts: KitchenConflict[]; unknownGuests: UnknownGuest[]; unreviewed: Dish[]; covers: { total: number }; today: string };
 
@@ -29,24 +29,24 @@ export function ConflictsPanel({ vals }: { vals: Conflicts }) {
   const undo = async (c: KitchenConflict) => { await act('allergyPlan.clear', { date: vals.today, person: c.person, dishId: c.dish.id }, { ok: t('kitchen.conflicts.cleared', { name: c.name }) }); };
   return (
     <Card>
-      <CardHead title={t('kitchen.conflicts.title')} meta={vals.conflicts.length ? t('kitchen.conflicts.meta', { todo, done }) : t('kitchen.conflicts.metaNone')} />
+      <CardHead title={t('kitchen.conflicts.title')} meta={vals.conflicts.length ? t('kitchen.conflicts.meta', { todo, done }) : undefined} />
       {paged.rows.map((c) => {
         const plan = c.plan;
         return (
-          <div key={c.person + c.dish.id} data-testid="conflict-row" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 12px', padding: '14px 20px', borderTop: '1px solid #EFECEA' }}>
-            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: c.resolved ? '#E6EFE8' : '#AF4B2F', color: c.resolved ? '#3D6B4F' : '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+          <div key={c.person + c.dish.id} data-testid="conflict-row" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 12px', margin: '0 22px', padding: '16px 0', borderTop: '1px solid #F0EAE1' }}>
+            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: c.resolved ? '#E3EFE6' : '#F9E3DB', color: c.resolved ? '#3D6B4F' : '#9A3D24', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
               <Icon name={c.resolved ? 'check_circle' : 'no_food'} size={22} fill={1} />
             </span>
             <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{c.name}{c.diner.type === 'guest' ? <span style={{ fontWeight: 400, color: '#6A6967' }}> · {t('kitchen.conflicts.guest')}</span> : null}</span>
-              <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('kitchen.conflicts.line', { allergy: t('kitchen.food.' + c.allergy).toLocaleLowerCase(), dish: c.dish.name, allergen: t('kitchen.allergen.' + c.allergen).toLocaleLowerCase() })}</span>
+              <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{c.name}{c.diner.type === 'guest' ? <span style={{ fontWeight: 400, color: '#5E5852' }}> · {t('kitchen.conflicts.guest')}</span> : null}</span>
+              <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.conflicts.line', { allergy: t('kitchen.food.' + c.allergy).toLocaleLowerCase(), dish: c.dish.name, allergen: t('kitchen.allergen.' + c.allergen).toLocaleLowerCase() })}</span>
               {plan ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>{t('kitchen.conflicts.serving', { alt: plan.alternative, by: actorName(s, plan.by), time: plan.at.slice(11, 16) })}</span> : null}
             </div>
-            {c.resolved ? <Pill icon="check_circle" fg="#3D6B4F" bg="#E6EFE8" label={t('kitchen.conflicts.prepared')} /> : <Pill icon="warning" fg="#FFFFFF" bg="#AF4B2F" label={t('kitchen.conflicts.needs')} />}
+            {c.resolved ? <StatusDot color="#3D6B4F">{t('kitchen.conflicts.prepared')}</StatusDot> : <StatusDot color="#A2452B">{t('kitchen.conflicts.needs')}</StatusDot>}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: isPhone ? '1 1 100%' : 'none', justifyContent: 'flex-end' }}>
               {c.resolved ? (
                 <>
-                  <TextButton onClick={() => undo(c)} color="#AF4B2F">{t('kitchen.conflicts.undo')}</TextButton>
+                  <TextButton onClick={() => undo(c)} color="#9A3D24">{t('kitchen.conflicts.undo')}</TextButton>
                   <OutlineButton onClick={() => setPick(c)} icon="edit">{t('kitchen.conflicts.change')}</OutlineButton>
                 </>
               ) : (
@@ -56,24 +56,24 @@ export function ConflictsPanel({ vals }: { vals: Conflicts }) {
           </div>
         );
       })}
-      <div style={{ padding: paged.pages > 1 ? '8px 20px' : 0, borderTop: paged.pages > 1 ? '1px solid #EFECEA' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.conflicts.title')} /></div>
+      <div style={{ margin: '0 22px', padding: paged.pages > 1 ? '8px 0' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.conflicts.title')} /></div>
       {vals.unknownGuests.map((u) => (
-        <div key={u.guest.id} data-testid="unknown-guest-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 12px', padding: '14px 20px', borderTop: '1px solid #EFECEA' }}>
+        <div key={u.guest.id} data-testid="unknown-guest-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 12px', margin: '0 22px', padding: '16px 0', borderTop: '1px solid #F0EAE1' }}>
           <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F6ECD6', color: '#7A5510', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="help" size={22} fill={1} /></span>
           <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{u.guest.name}<span style={{ fontWeight: 400, color: '#6A6967' }}> · {t('kitchen.conflicts.guest')}</span></span>
-            <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('kitchen.conflicts.unknown', { who: u.escort })}</span>
+            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{u.guest.name}<span style={{ fontWeight: 400, color: '#5E5852' }}> · {t('kitchen.conflicts.guest')}</span></span>
+            <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.conflicts.unknown', { who: u.escort })}</span>
           </div>
-          <Pill icon="help" fg="#7A5510" bg="#F6ECD6" label={t('kitchen.conflicts.ask', { who: u.escort })} />
+          <StatusDot color="#7A5510">{t('kitchen.conflicts.ask', { who: u.escort })}</StatusDot>
           {u.phone ? (
-            <a href={`tel:${u.phone}`} className="h-cream" style={{ height: 44, padding: '0 16px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
+            <a href={`tel:${u.phone}`} className="h-cream" style={{ height: 44, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
               <Icon name="call" size={18} />{t('common.call')}
             </a>
           ) : null}
         </div>
       ))}
       {clear || vals.unreviewed.length ? (
-        <div style={{ padding: '14px 20px 18px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: vals.conflicts.length || vals.unknownGuests.length ? '1px solid #EFECEA' : undefined }}>
+        <div style={{ margin: '0 22px', padding: '16px 0 20px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: vals.conflicts.length || vals.unknownGuests.length ? '1px solid #F0EAE1' : undefined }}>
           {clear ? <Note tone={vals.covers.total ? 'sage' : 'cream'} icon={vals.covers.total ? 'verified_user' : 'hourglass_empty'}>{vals.covers.total ? t('kitchen.conflicts.clear', { n: vals.covers.total }) : t('kitchen.conflicts.nobody')}</Note> : null}
           {vals.unreviewed.length ? (
             <Note tone="ochre" icon="help">
@@ -132,7 +132,7 @@ export function AlternativeSheet({ conflict, date, onClose }: { conflict: Kitche
               </div>
             </div>
           ) : null}
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{conflict.diner.type === 'member' ? t('kitchen.alt.tellsFamily') : t('kitchen.alt.guestNote')}</span>
+          <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{conflict.diner.type === 'member' ? t('kitchen.alt.tellsFamily') : t('kitchen.alt.guestNote')}</span>
         </>
       ) : null}
     </Sheet>

@@ -18,7 +18,7 @@ export const common = {
   camera: 'Camera', cameraStarting: 'Starting the camera…', cameraDenied: 'Camera access is blocked. Allow it in your browser settings, or choose a photo instead.',
   cameraNone: 'No camera was found here. Choose a photo instead.', takePhoto: 'Take photo', retake: 'Retake', usePhoto: 'Use photo', choosePhoto: 'Choose a photo',
   uploadInstead: 'Upload a photo', switchCamera: 'Switch camera', photoPreview: 'Preview of the photo', processing: 'Preparing the photo…',
-  mediaType: 'Please use a JPEG, PNG or WebP photo.', mediaTooBig: 'That photo is too large (max 5 MB).', mediaFailed: 'The photo could not be uploaded.',
+  mediaType: 'Please use a JPEG, PNG or WebP photo.', mediaTooBig: 'That photo is too large (max 5 MB).', mediaFailed: 'The photo could not be uploaded.', docTooBig: 'That file is too large (max 10 MB).', docType: 'Please use a photo or a PDF file.',
 };
 export const status = {
   normal: 'Normal', watch: 'Watch', alert: 'Alert', paid: 'Paid', outstanding: 'Outstanding', overdue: 'Overdue', pending: 'Check pending', partial: 'Part paid', void: 'Void',
@@ -28,12 +28,12 @@ export const nav = {
   arrivals: 'Arrivals', enquiries: 'Enquiries', messages: 'Messages', members: 'Members', health: 'Health checks', readings: 'Readings', today: 'Today', camera: 'Camera', log: 'Daily log',
   menu: 'Menu', feedback: 'Feedback', stock: 'Stock', billing: 'Billing', payments: 'Payments', budget: 'Budget', receipts: 'Receipts', overview: 'Overview', broadcast: 'Broadcast',
   calendar: 'Calendar and schedule', calShort: 'Calendar', people: 'People', photos: 'Photos', healthF: 'Health', venue: 'Venue', more: 'More', directory: 'Directory', contacts: 'Contacts',
-  surveys: 'Surveys', plans: 'Plans and pricing', reviews: 'Reviews', requests: 'Requests',
+  surveys: 'Surveys', plans: 'Plans and pricing', reviews: 'Approvals', requests: 'Requests',
   g_front: 'Front desk', g_care: 'Care', g_kitchen: 'Kitchen', g_finance: 'Finance', g_club: 'Club', allModules: 'All modules',
   // short labels for the phone bottom bar
   s_overview: 'Home', s_arrivals: 'Arrivals', s_enquiries: 'Leads', s_messages: 'Chat', s_members: 'Members', s_health: 'Checks', s_readings: 'Trends', s_today: 'Today', s_camera: 'Camera',
   s_log: 'Log', s_menu: 'Menu', s_feedback: 'Feedback', s_stock: 'Stock', s_billing: 'Bills', s_payments: 'Pay', s_budget: 'Budget', s_receipts: 'Receipts', s_directory: 'Contacts',
-  s_calendar: 'Calendar', s_calShort: 'Calendar', s_photos: 'Photos', s_healthF: 'Health', s_more: 'More', s_requests: 'Requests', s_reviews: 'Reviews', s_contacts: 'Contacts',
+  s_calendar: 'Calendar', s_calShort: 'Calendar', s_photos: 'Photos', s_healthF: 'Health', s_more: 'More', s_requests: 'Requests', s_reviews: 'Approvals', s_contacts: 'Contacts',
 };
 export const roles = {
   lobby: 'Lobby', nurse: 'Nurse', activity: 'Activity teacher', kitchen: 'Kitchen & F&B', finance: 'Finance', mgmt: 'Management', family: 'Family', housekeeping: 'Housekeeping', driver: 'Driver',
@@ -45,7 +45,7 @@ export const login = {
   username: 'Username', password: 'Password', showPassword: 'Show password', hidePassword: 'Hide password',
   errEmpty: 'Enter your username and password.', errInvalid: 'That username or password is not right. Check both and try again.',
   pending: 'Your access is waiting for the club’s approval. We’ll let you know on WhatsApp.', noAccess: 'This account has no app access yet. Ask the club to switch it on.',
-  forgot: 'Forgot your password? Ask the club manager to reset it.', demoHint: 'Demo: your username is your first name in lowercase, and the password is {pw}.',
+  forgot: 'Forgot your password? Ask the club manager to reset it.', demoHint: 'Demo: first name in lowercase · password {pw}',
   demoAccounts: 'Demo accounts', demoAccountsSub: 'Tap an account to sign in without a password.', tagline: 'Adding years to life, and life to years.',
   philosophy: 'More hospitality, less hospital', photoPh: 'Photo: members with family in the garden room', footer: 'A Living Well Seniors Communities clubhouse · open Monday to Friday, 08:30–16:30', photoAlt: 'A member and her daughter, smiling together',
   club: 'CitraPremier | Premium Seniors Club',
@@ -71,7 +71,7 @@ export const notif = {
   'act.review': 'Change to review: {name} · {section}', 'act.reviewFlagged': 'Health change applied, please review: {name} · {section}', 'act.alertReading': 'Alert reading: {name} · {value}',
   'act.contract': 'Contract ends {date}: {name}', 'act.complaint': 'Open meal feedback: {name} · {dish}', 'act.overdue': 'Overdue invoice: {name} · {number}', 'act.budgetApprove': 'Budget request to approve: {item}',
   'act.receiptApprove': 'Receipt to approve: {supplier}', 'act.vendorApprove': 'Vendor invoice to approve: {supplier}', 'act.invoiceRun': 'Invoice run for {month} is due', 'act.stockApprove': 'Stock request to approve: {item} ({qty})',
-  'act.planRequest': '{name}: the family asks to switch to {plan} from {date}', 'act.formReady': 'Membership form ready: review it and welcome {name}', 'act.guestTrial': 'Trial guest arriving {time}: {name}', 'act.guestTrialDay': 'Trial day today: {name}', 'act.photosReview': 'Photos waiting for your approval: {n}', 'act.guestVisit': 'Visit at {time}: {name}', 'act.readyCheckout': 'Departure check done: {name} is ready to go home',
+  'act.planRequest': '{name}: the family asks to switch to {plan} from {date}', 'act.guestTrial': 'Trial guest arriving {time}: {name}', 'act.guestTrialDay': 'Trial day today: {name}', 'act.photosReview': 'Photos waiting for your approval: {n}', 'act.approvalsLogs': 'Daily logs and notes waiting for approval: {n}', 'act.approvalsReadings': 'Health readings waiting for approval: {n}', 'act.approvalsMenu': 'Menu changes waiting for approval: {n}', 'act.guestVisit': 'Visit at {time}: {name}', 'act.readyCheckout': 'Departure check done: {name} is ready to go home',
   'act.queue': '{n} waiting at the health station', 'act.logs': '{n} daily logs still to write', 'act.allergen': 'Allergy clash at lunch: {name} · {dish}', 'act.unread': '{n} unread conversations',
   'act.invoiceDue': 'Invoice to pay: {name} · {number}', 'act.invoiceOverdue': 'Overdue invoice: {name} · {number}', 'act.survey': 'Tell us how we are doing: {title}', 'act.docRequested': 'Document requested for {name}',
 };
@@ -91,7 +91,7 @@ export const review = {
   newMember: 'New member', conversion: 'Lead joining', details: 'Details', plan: 'Plan', docsConsent: 'Documents and consent', family: 'Family contacts', allergies: 'Allergies', medicines: 'Medicines', care: 'Care instructions',
 };
 export const demo = {
-  pill: 'Demo', title: 'Demo tools', guided: 'Guided demo', guidedTitle: 'Oma Lina’s day', progress: '{n} of {total} steps done', switchAccount: 'Switch account', openForm: 'Family membership form',
+  pill: 'Demo', title: 'Demo tools', guided: 'Guided demo', guidedTitle: 'Oma Lina’s day', progress: '{n} of {total} steps done', switchAccount: 'Switch account', 
   's1.title': 'Face check-in at the door', 's1.sub': 'Oma Lina drops in. The door camera recognises her, the lobby confirms, and Maria and Daniel get a message. It is her 11th visit in October, so it counts as an extra day.', 's1.run': 'Show the lobby',
   's2.title': 'Health check: blood pressure a little high', 's2.sub': 'Ns. Dewi reads the PC-303: 152/94. She notes the right arm, shares it with the family and plans a re-check.', 's2.run': 'Open the health station',
   's3.title': 'Solo and group photos', 's3.sub': 'Dinar takes photos at keroncong. Ega approves them in Reviews, then each family sees only their own member.', 's3.run': 'Take the photos',

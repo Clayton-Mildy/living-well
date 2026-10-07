@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { actorName, fmtPhone, memberName, memberShort, rp, runDone, ym } from '@cp/shared';
 import { billingBoard, invoicePeriod, nextRunPeriod, runPlan, type InvoiceView } from '@cp/shared/rules/finance';
-import { Avatar, Button, Card, CardHead, EmptyState, Icon, PageHead, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Avatar, Button, EmptyState, Eyebrow, Icon, PageHead, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -13,7 +13,7 @@ import { useClub } from '../../store/replica';
 import { InvoiceRunSheet } from './InvoiceRun';
 import { InvoiceSheet } from './InvoiceSheet';
 import { matches, ordinal, stampOf } from './lib';
-import { Badge, PagerBar, SearchField } from './parts';
+import { Badge, HAIR, Hero, HeroHead, NumberTabs, PagerBar, SearchField, rowSub, rowTitle } from './parts';
 import { memberPhoto } from '../../lib/media';
 
 type Filter = 'all' | 'paid' | 'due' | 'overdue' | 'xero';
@@ -24,7 +24,7 @@ export function Billing() {
   const t = useT();
   const { lang, fd, fmonth, fdy } = useFmt();
   const { today } = useNow();
-  const { device, isPhone } = useDevice();
+  const { device, isPhone, isLaptop } = useDevice();
   const [sp, setSp] = useSearchParams();
   const f: Filter = FILTERS.includes(sp.get('f') as Filter) ? (sp.get('f') as Filter) : 'all';
   const [q, setQ] = useState('');
@@ -47,50 +47,59 @@ export function Billing() {
   const lists: { key: Exclude<Filter, 'all'>; title: string; meta: string; rows: InvoiceView[] }[] = [];
   const add = (key: Exclude<Filter, 'all'>, title: string, meta: string, rows: InvoiceView[]) => lists.push({ key, title, meta, rows });
   const dueMeta = t('finance.bill.dueMeta', { n: board.due.length, total: rp(board.sums.due) });
-  if (f === 'all' || f === 'overdue') if (board.overdue.length || f === 'overdue') add('overdue', t('status.overdue'), t('finance.bill.overdueMeta'), board.overdue);
+  if (f === 'all' || f === 'overdue') if (board.overdue.length || f === 'overdue') add('overdue', t('status.overdue'), '', board.overdue);
   if (f === 'all' || f === 'due') add('due', t('finance.bill.dueTitle', { day: dueDay }), dueMeta, board.due);
-  if (f === 'paid') add('paid', t('finance.bill.tilePaid', { month: fmonth(board.month) }), t('finance.bill.paidMeta', { total: rp(board.sums.paid) }), board.paid);
-  if (f === 'xero') add('xero', t('finance.bill.tileXero'), t('finance.bill.xeroMeta'), board.xero);
+  if (f === 'paid') add('paid', t('finance.bill.tilePaid', { month: fmonth(board.month) }), '', board.paid);
+  if (f === 'xero') add('xero', t('finance.bill.tileXero'), '', board.xero);
 
   const nextPeriod = nextRunPeriod(s, today);
   const planNext = useMemo(() => runPlan(s, nextPeriod, today), [s, nextPeriod, today]);
   const runDue = +today.slice(8) >= s.club.settings.issueDay && !runDone(s, ym(today));
   const lastRun = [...Object.values(s.invoiceRuns)].filter((r) => !r.deletedAt).sort((a, b) => (a.issueDate < b.issueDate ? 1 : -1))[0];
 
-  return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 20, maxWidth: 1100 }}>
-      <PageHead eyebrow={t('finance.bill.eyebrow', { issue: ordinal(lang, s.club.settings.issueDay), due: dueDay })} title={t('nav.billing')} />
-      <div className="cp-desc" style={{ fontSize: 16, lineHeight: '22px', maxWidth: 700 }}>{t('finance.bill.blurb')}</div>
-
-      <div className="cp-tiles" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(200px,1fr))', gap: 12 }}>
-        {tiles.map((x) => (
-          <button key={x.key} type="button" className="dh52 cp-tile" aria-pressed={f === x.key} onClick={() => setFilter(x.key)}
-            style={{ minHeight: 104, padding: '16px 18px', borderRadius: 20, border: f === x.key ? '1px solid #75624B' : '1px solid #DBD7D6', boxShadow: f === x.key ? '0 0 0 1px #75624B' : undefined, background: '#FFFFFF', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8, color: '#282828', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{x.label}</span>
-            <span className="cp-tile-n" style={{ fontSize: 32, lineHeight: '36px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{x.value}</span>
-            <Badge kind={x.badge} label={rp(x.sum)} />
-          </button>
-        ))}
+  const runBlock = (
+    <>
+      <Eyebrow>{t('finance.run.title')}</Eyebrow>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <span style={{ fontSize: 19, lineHeight: 1.3, fontWeight: 500, color: '#2B231C' }}>{runDue ? t('finance.run.due', { month: fmonth(nextPeriod, true) }) : t('finance.run.next', { month: fmonth(nextPeriod, true) })}</span>
+        <span className="cp-hide-phone" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>
+          {t('finance.run.cardSub', { n: planNext.issue.length, total: rp(planNext.total), date: fdy(planNext.dueDate) })}
+          {lastRun ? ` · ${t('finance.run.last', { month: fmonth(lastRun.period), n: lastRun.invoiceIds.length })}` : ''}
+        </span>
       </div>
+    </>
+  );
+  const runBtn = <Button icon="event_repeat" size={48} onClick={() => setRunOpen(true)}>{t('finance.run.open')}</Button>;
 
-      <Card pad={isPhone ? '12px 16px' : '18px 20px'} shadow={runDue}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-          <div style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
-            <span style={{ fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px' }}>{t('finance.run.title')}</span>
-            <span style={{ fontSize: 20, lineHeight: '28px', letterSpacing: '-0.3px' }}>{runDue ? t('finance.run.due', { month: fmonth(nextPeriod, true) }) : t('finance.run.next', { month: fmonth(nextPeriod, true) })}</span>
-            <span className="cp-hide-phone" style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>
-              {t('finance.run.cardSub', { n: planNext.issue.length, total: rp(planNext.total), date: fdy(planNext.dueDate) })}
-              {lastRun ? ` · ${t('finance.run.last', { month: fmonth(lastRun.period), n: lastRun.invoiceIds.length })}` : ''}
-            </span>
-          </div>
-          <Button icon="event_repeat" onClick={() => setRunOpen(true)}>{t('finance.run.open')}</Button>
+  return (
+    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 'clamp(18px, 2.8vw, 36px)', maxWidth: 1180 }}>
+      <PageHead eyebrow={t('finance.bill.eyebrow', { issue: ordinal(lang, s.club.settings.issueDay), due: dueDay })} title={t('nav.billing')} />
+
+      <NumberTabs cols={isPhone ? 2 : 4} maxWidth={isPhone ? 480 : 820} items={tiles.map((x) => ({
+        key: x.key, label: x.label, value: x.value, sub: rp(x.sum), subColor: x.key === 'overdue' && x.value ? '#9A3D24' : undefined, selected: f === x.key, onClick: () => setFilter(x.key),
+      }))} />
+
+      {!isLaptop ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', borderTop: '1px solid #E6DDD1', borderBottom: '1px solid #E6DDD1', padding: isPhone ? '12px 0' : '16px 0' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: '1 1 240px' }}>{runBlock}</div>
+          {runBtn}
         </div>
-      </Card>
+      ) : null}
 
-      <SearchField value={q} onChange={setQ} label={t('finance.bill.search')} placeholder={t('finance.bill.search')} />
-      {lists.map((l) => (
-        <InvoiceList key={l.key} id={l.key} title={l.title} meta={l.meta} rows={l.rows} q={q} openRow={openRow} setOpenRow={setOpenRow} onOpenInvoice={setSheetId} />
-      ))}
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(24px, 4vw, 56px)', alignItems: 'flex-start' }}>
+        <div style={{ flex: '1 1 440px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 24 }}>
+          <SearchField value={q} onChange={setQ} label={t('finance.bill.search')} placeholder={t('finance.bill.search')} />
+          {lists.map((l) => (
+            <InvoiceList key={l.key} id={l.key} title={l.title} meta={l.meta} rows={l.rows} q={q} openRow={openRow} setOpenRow={setOpenRow} onOpenInvoice={setSheetId} />
+          ))}
+        </div>
+        {isLaptop ? (
+          <aside style={{ flex: '0 1 300px', width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
+            {runBlock}
+            <div><Button icon="event_repeat" size={48} onClick={() => setRunOpen(true)}>{t('finance.run.open')}</Button></div>
+          </aside>
+        ) : null}
+      </div>
 
       <InvoiceRunSheet open={runOpen} onClose={closeRun} />
       {sheetId ? <InvoiceSheet invoiceId={sheetId} open onClose={() => setSheetId(null)} audience="staff" /> : null}
@@ -108,14 +117,14 @@ function InvoiceList({ id, title, meta, rows, q, openRow, setOpenRow, onOpenInvo
   );
   const paged = usePaged(hits, 15, q + id);
   return (
-    <Card>
-      <CardHead title={title} meta={q && hits.length !== rows.length ? t('finance.bill.matches', { n: hits.length, of: rows.length }) : meta} />
+    <Hero>
+      <HeroHead title={id === 'overdue' ? <span style={{ color: '#9A3D24' }}>{title}</span> : title} meta={q && hits.length !== rows.length ? t('finance.bill.matches', { n: hits.length, of: rows.length }) : meta || undefined} />
       {paged.rows.map((v) => (
         <InvoiceRow key={v.inv.id} v={v} list={id} open={openRow === `${id}:${v.inv.id}`} onToggle={() => setOpenRow(openRow === `${id}:${v.inv.id}` ? null : `${id}:${v.inv.id}`)} onOpenInvoice={() => onOpenInvoice(v.inv.id)} />
       ))}
-      {!hits.length ? <div style={{ borderTop: '1px solid #EFECEA' }}><EmptyState icon={q ? 'search_off' : 'task_alt'} title={q ? t('common.noResults') : t('finance.bill.emptyList')} /></div> : null}
+      {!hits.length ? <div style={{ borderTop: HAIR }}><EmptyState icon={q ? 'search_off' : 'task_alt'} title={q ? t('common.noResults') : t('finance.bill.emptyList')} /></div> : null}
       <PagerBar paged={paged} label={title} />
-    </Card>
+    </Hero>
   );
 }
 
@@ -134,7 +143,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice }: { v: InvoiceView
     v.status === 'overdue' ? <Badge kind="overdue" label={t(v.late === 1 ? 'finance.bill.dayLate' : 'finance.bill.daysLate', { n: v.late })} />
     : v.status === 'partial' ? <Badge kind="partial" label={t('status.partial')} />
     : v.status === 'paid' ? <Badge kind={list === 'xero' ? 'pending' : 'paid'} label={t(list === 'xero' ? 'finance.xero.pending' : 'status.paid')} />
-    : <Badge kind="outstanding" label={t('finance.bill.due', { date: fds(inv.dueDate) })} />;
+    : <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.3, whiteSpace: 'nowrap' }}>{t('finance.bill.due', { date: fds(inv.dueDate) })}</span>;
   const timeline = [
     ...inv.callNotes.map((c) => ({ at: c.at, by: c.by, text: c.text })),
     ...inv.reminders.map((r) => ({ at: r.at, by: r.by, text: t('finance.bill.reminderSent') })),
@@ -147,37 +156,44 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice }: { v: InvoiceView
     if (r.ok) setNote('');
   };
   const remind = () => act('invoice.remind', { invoiceId: inv.id }, { ok: (r) => t('finance.toast.reminder', { name: String(r.to || payer?.name || '') }) });
+  const small: React.CSSProperties = { fontSize: 14, color: '#6B6259', lineHeight: 1.4 };
   return (
-    <div style={{ borderTop: '1px solid #EFECEA' }}>
-      <button type="button" className="dh53" onClick={onToggle} aria-expanded={open} aria-label={`${name}, ${inv.number}`}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: isPhone ? '4px 10px' : 12, flexWrap: 'wrap', padding: isPhone ? '9px 14px' : '12px 20px', minHeight: isPhone ? 56 : 68, border: 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
-        {isPhone ? null : <Avatar name={name} tone={member?.photoTone} src={memberPhoto(member)} size={44} />}
-        <span style={{ flex: isPhone ? '1 1 100%' : '1 1 260px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{name}</span>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{sub}</span>
+    <div style={{ borderTop: HAIR, ...(open ? { background: '#FBF8F4', margin: '0 calc(var(--hp) * -1)', padding: '0 var(--hp)', boxShadow: 'inset 3px 0 0 #2B231C' } : null) }}>
+      <button type="button" onClick={onToggle} aria-expanded={open} aria-label={`${name}, ${inv.number}`}
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16, padding: 'clamp(13px, 2.2vw, 18px) 0', minHeight: isPhone ? 60 : 78, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+        {isPhone ? null : <Avatar name={name} tone={member?.photoTone} src={memberPhoto(member)} size={46} />}
+        <span style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <span style={rowTitle}>{name}</span>
+          <span style={rowSub}>{sub}</span>
         </span>
-        <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{rp(list === 'paid' || list === 'xero' ? v.total : v.balance)}</span>
-        {badge}
-        <Icon name="expand_more" size={22} color="#75624B" style={{ transform: open ? 'rotate(180deg)' : undefined }} />
+        <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flex: 'none' }}>
+          <span style={{ fontSize: 17, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{rp(list === 'paid' || list === 'xero' ? v.total : v.balance)}</span>
+          {badge}
+        </span>
+        <Icon name="expand_more" size={22} color="#6E5A43" style={{ transform: open ? 'rotate(180deg)' : undefined, flex: 'none' }} />
       </button>
       {open ? (
-        <div style={{ padding: '0 20px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          {timeline.map((c, i) => (
-            <div key={i} style={{ padding: '10px 12px', borderRadius: 14, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 16, lineHeight: '22px' }}>{c.text}</span>
-              <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{actorName(s, c.by)} · {stampOf(c.at, fds)}</span>
+        <div style={{ padding: '0 0 18px', display: 'flex', flexDirection: 'column', gap: 14, paddingLeft: isPhone ? 0 : 62 }}>
+          {timeline.length ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {timeline.map((c, i) => (
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 12, borderLeft: '2px solid #E6DDD1' }}>
+                  <span style={{ fontSize: 15, lineHeight: '21px' }}>{c.text}</span>
+                  <span style={small}>{actorName(s, c.by)} · {stampOf(c.at, fds)}</span>
+                </div>
+              ))}
             </div>
-          ))}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          ) : null}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void saveNote(); }} placeholder={t('finance.bill.notePlaceholder')} aria-label={t('finance.bill.callNote')}
-              style={{ flex: '1 1 280px', minWidth: 0, height: 52, border: '1px solid #8A755B', borderRadius: 16, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#282828', outline: 'none' }} />
-            <Button variant="secondary" size={48} onClick={saveNote} style={{ padding: '0 18px' }}>{t('finance.bill.saveNote')}</Button>
-            {canRemind ? <Button size={48} onClick={remind} style={{ padding: '0 20px' }}>{t('finance.bill.sendReminder')}</Button> : null}
+              style={{ flex: '1 1 240px', minWidth: 0, height: 44, border: 'none', borderBottom: '1px solid #DDD1C2', borderRadius: 0, background: 'transparent', padding: '0 2px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none' }} />
+            <Button variant="secondary" size={44} onClick={saveNote} style={{ padding: '0 18px' }}>{t('finance.bill.saveNote')}</Button>
+            {canRemind ? <Button size={44} onClick={remind} style={{ padding: '0 20px' }}>{t('finance.bill.sendReminder')}</Button> : null}
           </div>
-          {last ? <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{t('finance.bill.lastReminder', { when: stampOf(last.at, fds) })}</span> : null}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button variant="quiet" size={44} icon="receipt_long" onClick={onOpenInvoice} style={{ padding: '0 16px' }}>{t('finance.bill.openInvoice')}</Button>
-            {member ? <Button variant="quiet" size={44} icon="person" onClick={() => navigate(`/members/${member.id}/plan`)} style={{ padding: '0 16px' }}>{t('finance.bill.openProfile')}</Button> : null}
+          {last ? <span style={small}>{t('finance.bill.lastReminder', { when: stampOf(last.at, fds) })}</span> : null}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <Button variant="secondary" size={44} icon="receipt_long" onClick={onOpenInvoice} style={{ padding: '0 16px' }}>{t('finance.bill.openInvoice')}</Button>
+            {member ? <Button variant="secondary" size={44} icon="person" onClick={() => navigate(`/members/${member.id}/plan`)} style={{ padding: '0 16px' }}>{t('finance.bill.openProfile')}</Button> : null}
           </div>
         </div>
       ) : null}

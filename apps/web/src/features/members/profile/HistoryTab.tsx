@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { actorName, hasKey, sortBy } from '@cp/shared';
 import type { ActivityEntry } from '@cp/shared';
-import { FONT_BODY, Icon, Pager, Segmented, usePaged } from '../../../components/ui';
-import { docLabel, listCardStyle, whenText } from '../lib';
+import { Icon, Pager, Segmented, usePaged } from '../../../components/ui';
+import { docLabel, HAIR, listCardStyle, whenText } from '../lib';
 import { ListHead } from './parts';
 import type { P } from './types';
 
@@ -45,33 +45,33 @@ export function HistoryTab({ p }: { p: P }) {
     return by && by !== a.actor ? `${doer} · ${t('profile.approvedBy', { n: actorName(s, a.actor) })}` : doer;
   };
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 14, maxWidth: 860 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 860 }}>
       <Segmented label={t('profile.tab.history')} value={mode} onChange={setMode} items={[{ value: 'changes', label: t('profile.history.changes') }, { value: 'all', label: t('profile.history.all') }]} />
       <div style={listCardStyle}>
-        <ListHead title={t('profile.history.title')} meta={t('profile.history.sub')} />
-        {paged.rows.map((a) => {
+        <ListHead title={t('profile.history.title')} />
+        {paged.rows.map((a, ai) => {
           const d = detail(a);
           return (
-            <div key={a.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 20px', borderTop: '1px solid #EFECEA' }}>
+            <div key={a.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 0', borderTop: ai ? HAIR : 'none' }}>
               <Icon name={a.icon || 'history'} size={20} color="#75624B" style={{ paddingTop: 1 }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                <span style={{ fontSize: 16, lineHeight: '22px' }}>{text(a)}</span>
-                {d ? <span style={{ fontSize: FONT_BODY, color: '#282828', lineHeight: 1.4 }}>{d}</span> : null}
-                <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{who(a)} · {whenText(fmt.fds, today, a.at, t)}</span>
+                <span style={{ fontSize: 15, lineHeight: '22px' }}>{text(a)}</span>
+                {d ? <span style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{d}</span> : null}
+                <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{who(a)} · {whenText(fmt.fds, today, a.at, t)}</span>
               </div>
             </div>
           );
         })}
         {!hasCreated && mode === 'changes' ? (
-          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '12px 20px', borderTop: '1px solid #EFECEA' }}>
+          <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 0', borderTop: paged.rows.length ? HAIR : 'none' }}>
             <Icon name="person_add" size={20} color="#75624B" style={{ paddingTop: 1 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 16, lineHeight: '22px' }}>{t('profile.history.recordCreated')}</span>
-              <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{actorName(s, m.createdBy)} · {whenText(fmt.fds, today, m.createdAt, t)}</span>
+              <span style={{ fontSize: 15, lineHeight: '22px' }}>{t('profile.history.recordCreated')}</span>
+              <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{actorName(s, m.createdBy)} · {whenText(fmt.fds, today, m.createdAt, t)}</span>
             </div>
           </div>
         ) : null}
-        {paged.pages > 1 ? <div style={{ padding: '12px 20px 16px', borderTop: '1px solid #EFECEA' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('profile.pagerHistory')} /></div> : null}
+        {paged.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('profile.pagerHistory')} /></div> : null}
       </div>
     </div>
   );

@@ -133,29 +133,29 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
         </div>
         <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 8px' }}>
           <button type="button" onClick={() => go(-1)} aria-label={t('activity.prevPhoto')} style={{ ...ctl, visibility: n > 1 ? 'visible' : 'hidden' }}><Icon name="chevron_left" size={24} /></button>
-          <div style={{ flex: 1, maxWidth: 640, aspectRatio: '4/5', maxHeight: '100%', borderRadius: 18, background: '#E8E1D8', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#75624B' }}>
+          <div style={{ flex: 1, maxWidth: 640, aspectRatio: '4/5', maxHeight: '100%', borderRadius: 14, background: '#E8E1D8', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#75624B' }}>
             <span style={{ position: 'absolute', inset: 0 }}><PhotoImg photo={p} alt={caption} controls={real} /></span>
-            <span style={{ position: 'relative', marginTop: 'auto', marginBottom: real ? 64 : 16, pointerEvents: real ? 'none' : undefined, height: 30, padding: '0 12px', borderRadius: 999, background: '#FFFFFF', fontSize: FONT_BODY, color: '#282828', display: 'flex', alignItems: 'center' }}>{isVideo ? t('activity.videoFrom') : t('activity.photoFrom')}{' '}{by}</span>
+            <span style={{ position: 'relative', marginTop: 'auto', marginBottom: real ? 64 : 16, pointerEvents: real ? 'none' : undefined, height: 30, padding: '0 12px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_BODY, color: '#24201C', display: 'flex', alignItems: 'center' }}>{isVideo ? t('activity.videoFrom') : t('activity.photoFrom')}{' '}{by}</span>
             {real ? (
-              <span style={{ position: 'absolute', top: 12, left: 12, height: 30, padding: '0 12px', borderRadius: 999, background: '#282828', color: '#FFFFFF', fontSize: 14, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', pointerEvents: 'none' }}>{p.durationSec ? t('activity.videoLabel', { d: fmtDuration(p.durationSec) }) : t('activity.video')}</span>
+              <span style={{ position: 'absolute', top: 12, left: 12, height: 30, padding: '0 12px', borderRadius: 8, background: '#24201C', color: '#FFFFFF', fontSize: 14, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', pointerEvents: 'none' }}>{p.durationSec ? t('activity.videoLabel', { d: fmtDuration(p.durationSec) }) : t('activity.video')}</span>
             ) : isVideo ? (
               <>
                 <button type="button" onClick={() => toggle(p)} aria-label={live1 ? t('activity.pause') : t('activity.play')} style={{ position: 'absolute', top: '50%', left: '50%', transform: 'translate(-50%,-50%)', width: 76, height: 76, borderRadius: 999, border: 'none', background: 'rgba(40,40,40,0.6)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
                   <Icon name={live1 ? 'pause' : 'play_arrow'} size={44} fill={1} color="#FFFFFF" />
                 </button>
-                <span style={{ position: 'absolute', top: 12, left: 12, height: 30, padding: '0 12px', borderRadius: 999, background: '#282828', color: '#FFFFFF', fontSize: 14, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
+                <span style={{ position: 'absolute', top: 12, left: 12, height: 30, padding: '0 12px', borderRadius: 8, background: '#24201C', color: '#FFFFFF', fontSize: 14, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap' }}>
                   {live1 ? t('activity.playingLabel', { d: fmtDuration(p.durationSec) }) : t('activity.videoLabel', { d: fmtDuration(p.durationSec) })}
                 </span>
                 {live1 ? <div key={'pg' + playKey} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 6, background: '#FFFFFF', transformOrigin: 'left center', animation: `cpProg ${p.durationSec || 10}s linear forwards` }} /> : null}
               </>
             ) : null}
             {!family && hidden ? (
-              <span style={{ position: 'absolute', top: 12, right: 12, height: 30, padding: '0 12px 0 8px', borderRadius: 999, background: '#282828', color: '#FFFFFF', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+              <span style={{ position: 'absolute', top: 12, right: 12, height: 30, padding: '0 12px 0 8px', borderRadius: 8, background: '#24201C', color: '#FFFFFF', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                 <Icon name="visibility_off" size={18} fill={1} />{t('activity.hiddenBadge')}
               </span>
             ) : null}
             {!family && pending ? (
-              <span style={{ position: 'absolute', top: 12, right: 12, height: 30, padding: '0 12px 0 8px', borderRadius: 999, background: '#F6ECD6', color: '#7A5510', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+              <span style={{ position: 'absolute', top: 12, right: 12, height: 30, padding: '0 12px 0 8px', borderRadius: 8, background: '#F6ECD6', color: '#7A5510', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                 <Icon name="hourglass_top" size={18} fill={1} />{t('activity.pendingBadge')}
               </span>
             ) : null}
@@ -171,7 +171,7 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
           </div>
           {family ? (
             <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => flash(t('activity.savedPhoto'))} style={{ flex: 1, height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#282828', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
+              <button type="button" onClick={() => flash(t('activity.savedPhoto'))} style={{ flex: 1, height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
                 <Icon name="download" size={20} />{t('common.save')}
               </button>
               <button type="button" onClick={() => flash(t('activity.sharedPhoto'))} style={{ flex: 1, height: 48, borderRadius: 999, border: '1px solid #FFFFFF', background: 'transparent', color: '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
@@ -182,7 +182,7 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {pending && canReview ? (
                 <>
-                  <button type="button" onClick={() => setSheet('approve')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#E6EFE8', color: '#3D6B4F', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <button type="button" onClick={() => setSheet('approve')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#E3EFE6', color: '#3D6B4F', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                     <Icon name="check_circle" size={20} fill={1} />{t('activity.approve')}
                   </button>
                   <button type="button" onClick={() => setSheet('reject')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: '1px solid #FFFFFF', background: 'transparent', color: '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
@@ -190,7 +190,7 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
                   </button>
                 </>
               ) : null}
-              <button type="button" onClick={() => setSheet('tags')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#282828', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button type="button" onClick={() => setSheet('tags')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 <Icon name="sell" size={20} />{t('activity.editTags')}
               </button>
               {!pending ? (
@@ -198,7 +198,7 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
                   <Icon name={hidden ? 'visibility' : 'visibility_off'} size={20} />{hidden ? t('activity.showToFamilies') : t('activity.hideFromFamilies')}
                 </button>
               ) : null}
-              <button type="button" onClick={() => setSheet('remove')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#F7E4DD', color: '#AF4B2F', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+              <button type="button" onClick={() => setSheet('remove')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#F9E3DB', color: '#9A3D24', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                 <Icon name="delete" size={20} />{t('activity.removePhoto')}
               </button>
             </div>
@@ -219,10 +219,10 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
         </>
       ) : null}
       {toast ? (
-        <div role="status" aria-live="polite" key={toast.id} style={{ position: 'fixed', left: '50%', top: 76, transform: 'translateX(-50%)', zIndex: 80, width: 'max-content', maxWidth: 'calc(100% - 32px)', padding: '14px 20px', borderRadius: 20, background: toast.tone === 'error' ? '#AF4B2F' : '#282828', border: '1px solid rgba(255,255,255,0.28)', color: '#FFFFFF', fontSize: 16, lineHeight: '22px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.35)', animation: 'cpUp .22s ease-out' }}>
+        <div role="status" aria-live="polite" key={toast.id} style={{ position: 'fixed', left: '50%', top: 76, transform: 'translateX(-50%)', zIndex: 80, width: 'max-content', maxWidth: 'calc(100% - 32px)', padding: '14px 20px', borderRadius: 14, background: toast.tone === 'error' ? '#9A3D24' : '#24201C', border: '1px solid rgba(255,255,255,0.28)', color: '#FFFFFF', fontSize: 16, lineHeight: '22px', display: 'flex', alignItems: 'center', gap: 10, boxShadow: '0 12px 32px rgba(0,0,0,0.35)', animation: 'cpUp .22s ease-out' }}>
           <Icon name={toast.tone === 'error' ? 'error' : 'check_circle'} size={22} fill={1} color={toast.tone === 'error' ? '#FFFFFF' : '#CAB8A2'} />
           <span style={{ flex: 1 }}>{toast.text}</span>
-          {toast.action ? <button type="button" onClick={() => { toast.action!.run(); setToast(null); }} style={{ marginLeft: 6, height: 36, padding: '0 14px', borderRadius: 999, border: '1px solid rgba(255,255,255,0.5)', background: 'transparent', color: '#FFFFFF', fontWeight: 600, fontSize: 15, cursor: 'pointer', fontFamily: 'Inter' }}>{toast.action.label}</button> : null}
+          {toast.action ? <button type="button" onClick={() => { toast.action!.run(); setToast(null); }} style={{ marginLeft: 6, height: 36, padding: '0 14px', borderRadius: 12, border: '1px solid rgba(255,255,255,0.5)', background: 'transparent', color: '#FFFFFF', fontWeight: 600, fontSize: 15, cursor: 'pointer', fontFamily: 'Inter' }}>{toast.action.label}</button> : null}
         </div>
       ) : null}
     </>,
@@ -246,7 +246,6 @@ function TagsSheet({ open, onClose, photo, flash }: { open: boolean; onClose: ()
   };
   return (
     <Sheet open={open} onClose={onClose} title={t('activity.tagsTitle')}>
-      <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('activity.tagsHint')}</div>
       <MemberPicker members={members} value={sel} onChange={setSel} selectedLabel={t('activity.tagsTitle')} emptyLabel={t('activity.nobodyAdded')} />
       {!sel.length ? <Note tone="ochre" icon="info">{t('activity.tagsNone')}</Note> : null}
       {err ? <Note tone="rust" icon="error">{err}</Note> : null}
@@ -279,7 +278,7 @@ function ReasonSheet({ kind, open, onClose, photo, flash, removed }: { kind: 'hi
   const hint = kind === 'hide' ? t('activity.hideHint') : kind === 'reject' ? t('activity.rejectHint') : t('activity.removeHint');
   const body = (
     <>
-      <div style={{ fontSize: FONT_BODY, color: '#282828', lineHeight: 1.4 }}>{hint}</div>
+      <div style={{ fontSize: FONT_BODY, color: '#24201C', lineHeight: 1.4 }}>{hint}</div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('activity.reasonLabel')}</span>
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="group" aria-label={t('activity.reasonLabel')}>
@@ -314,8 +313,8 @@ function ApproveSheet({ open, onClose, photo, flash }: { open: boolean; onClose:
   };
   return (
     <Sheet open={open} onClose={onClose} title={t('activity.approveTitle')}>
-      <div style={{ fontSize: FONT_BODY, color: '#282828', lineHeight: 1.4 }}>{t('activity.approveHint')}</div>
-      <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('activity.notifyFamilies')} sub={t('activity.notifyFamiliesSub')} />
+      <div style={{ fontSize: FONT_BODY, color: '#24201C', lineHeight: 1.4 }}>{t('activity.approveHint')}</div>
+      <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('activity.notifyFamilies')} />
       {err ? <Note tone="rust" icon="error">{err}</Note> : null}
       <Button full disabled={busy} onClick={submit}>{t('activity.confirmApprove')}</Button>
     </Sheet>

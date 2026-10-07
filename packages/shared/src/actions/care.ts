@@ -11,6 +11,8 @@ import { NORMAL_LOG, attendedOn, logDateOk, logId, logOf } from '../rules/activi
 import { fmtDMY } from '../rules/calendar';
 import { attId } from '../rules/attendance';
 import { uniq } from '../util';
+import { LOG_KEYS, approvedVersion } from '../rules/approvals';
+import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 
 const logWriters = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'activity', 'nurse', 'mgmt');
 const photoWriters = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'activity', 'mgmt');
@@ -42,13 +44,21 @@ export type LogInput = z.infer<typeof logSchema>;
 /** "unsettled" is the label of the stored mood 'agitated'; accept either spelling. */
 const withMood = (raw: unknown) => (raw && typeof raw === 'object' && (raw as { mood?: unknown }).mood === 'unsettled' ? { ...(raw as object), mood: 'agitated' } : raw);
 
-/** Create or update the log row. Returns whether it was an edit of an already saved log. */
+/**
+ * Create or update the log row. Returns whether it was an edit of an already saved log.
+ * A log written by anyone but management waits for approval: families neither see it nor hear about it until management approves
+ * (an edit of an approved log keeps showing the last approved values). Management's own logs are approved at once.
+ */
 function writeLog(d: Draft<ClubState>, ctx: Ctx, i: LogInput): 'created' | 'edited' {
   const id = logId(i.memberId, i.date);
   const prev = d.dailyLogs[id];
+  const gated = needsApproval(ctx);
   let kind: 'created' | 'edited' = 'created';
+  let before: Record<string, unknown> | undefined;
+  let seen = false; // the family has (had) an approved version of this log
   if (prev && !prev.deletedAt) {
     kind = prev.status === 'saved' ? 'edited' : 'created';
+    if (prev.status === 'saved') { before = priorOf(prev, LOG_KEYS); seen = approvedVersion(prev, LOG_KEYS) !== null; }
     prev.mood = i.mood;
     prev.lunch = i.lunch;
     prev.joined = i.joined;
@@ -66,9 +76,14 @@ function writeLog(d: Draft<ClubState>, ctx: Ctx, i: LogInput): 'created' | 'edit
     };
     d.dailyLogs[id] = row;
   }
+  const row = d.dailyLogs[id];
   const name = shortOf(d, i.memberId);
-  const to = familyUserIds(d, i.memberId);
-  if (to.length) ctx.notify({ toUsers: to, kind: kind === 'edited' ? 'activity.notif.logUpdated' : 'activity.notif.logSaved', params: { name }, link: '/today', memberId: i.memberId, ref: { type: 'dailyLog', id } });
+  if (gated) markPending(row, ctx, before);
+  else {
+    clearApproval(row);
+    const to = familyUserIds(d, i.memberId);
+    if (to.length) ctx.notify({ toUsers: to, kind: seen ? 'activity.notif.logUpdated' : 'activity.notif.logSaved', params: { name }, link: '/today', memberId: i.memberId, ref: { type: 'dailyLog', id } });
+  }
   ctx.feed({ icon: 'edit_note', key: kind === 'edited' ? 'activity.feed.logEdited' : 'activity.feed.log', params: { name, date: fmtDMY(i.date) }, memberId: i.memberId });
   return kind;
 }
@@ -99,6 +114,7 @@ export const careActions = [
       const kind = writeLog(d, ctx, input);
       ctx.result.logId = logId(input.memberId, input.date);
       ctx.result.edited = kind === 'edited';
+      ctx.result.pending = needsApproval(ctx);
     },
   }),
   defineAction<{ date: ISODate }>({
@@ -118,6 +134,7 @@ export const careActions = [
       for (const m of todo) writeLog(d, ctx, { memberId: m.id, date, ...NORMAL_LOG, note: '' });
       ctx.result.saved = todo.length;
       ctx.result.memberIds = todo.map((m) => m.id);
+      ctx.result.pending = needsApproval(ctx);
     },
   }),
 

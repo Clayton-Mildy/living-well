@@ -127,14 +127,14 @@ export function nurseQueue(s: ClubState, date: ISODate, nowMin: number): NurseQu
 
 /** Badge key + colours shared by health and payment statuses (design BADGE table). */
 export const BADGE = {
-  normal: ['check_circle', '#3D6B4F', '#E6EFE8'],
+  normal: ['check_circle', '#3D6B4F', '#E3EFE6'],
   watch: ['visibility', '#7A5510', '#F6ECD6'],
-  alert: ['warning', '#FFFFFF', '#AF4B2F'],
-  paid: ['check_circle', '#3D6B4F', '#E6EFE8'],
-  outstanding: ['schedule', '#282828', '#E8E1D8'],
-  partial: ['hourglass_top', '#282828', '#E8E1D8'],
-  overdue: ['error', '#FFFFFF', '#AF4B2F'],
-  pending: ['schedule', '#282828', '#E8E1D8'],
-  void: ['block', '#6A6967', '#EFECEA'],
+  alert: ['warning', '#FFFFFF', '#9A3D24'],
+  paid: ['check_circle', '#3D6B4F', '#E3EFE6'],
+  outstanding: ['schedule', '#24201C', '#E8E1D8'],
+  partial: ['hourglass_top', '#24201C', '#E8E1D8'],
+  overdue: ['error', '#FFFFFF', '#9A3D24'],
+  pending: ['schedule', '#24201C', '#E8E1D8'],
+  void: ['block', '#5E5852', '#F0EAE1'],
 } as const;
 export type BadgeKey = keyof typeof BADGE;

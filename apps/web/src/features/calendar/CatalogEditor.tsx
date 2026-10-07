@@ -51,11 +51,11 @@ export function CatalogEditor({ open, onClose }: { open: boolean; onClose: () =>
   };
 
   const row = (key: string, icon: string, title: string, sub: string, extra: ReactNode, onEdit: () => void, editLabel: string) => (
-    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px', borderTop: '1px solid #EFECEA', minHeight: 64 }}>
-      <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F4F0EE', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={icon} size={20} /></span>
+    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px', borderTop: '1px solid #F0EAE1', minHeight: 64 }}>
+      <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={icon} size={20} /></span>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{title}</span>
-        <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: '20px' }}>{sub}</span>
+        <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: '20px' }}>{sub}</span>
       </div>
       {extra}
       <IconButton icon="edit" label={editLabel} onClick={onEdit} />
@@ -68,14 +68,14 @@ export function CatalogEditor({ open, onClose }: { open: boolean; onClose: () =>
       {form ? (
         <>
           <TextField label={t('cal.nameEn')} value={form.name} onChange={(v) => set({ name: v })} maxLength={80} error={tried && !form.name.trim() && t('cal.errName')} />
-          <TextField label={t('cal.nameId')} value={form.nameId} onChange={(v) => set({ nameId: v })} maxLength={80} hint={t('cal.nameIdHint')} />
+          <TextField label={t('cal.nameId')} value={form.nameId} onChange={(v) => set({ nameId: v })} maxLength={80} />
           {form.type === 'activity' ? (
             <>
               <div role="group" aria-label={t('cal.icon')} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                 <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('cal.icon')}</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {ICONS.map((i) => (
-                    <button key={i} type="button" aria-pressed={form.icon === i} aria-label={t('cal.icon_' + i)} title={t('cal.icon_' + i)} onClick={() => set({ icon: i })} style={{ width: 44, height: 44, borderRadius: 999, border: form.icon === i ? '1px solid #282828' : '1px solid #CAB8A2', background: form.icon === i ? '#282828' : '#FFFFFF', color: form.icon === i ? '#FFFFFF' : '#282828', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                    <button key={i} type="button" aria-pressed={form.icon === i} aria-label={t('cal.icon_' + i)} title={t('cal.icon_' + i)} onClick={() => set({ icon: i })} style={{ width: 44, height: 44, borderRadius: 999, border: form.icon === i ? '1px solid #24201C' : '1px solid #DCD3C8', background: form.icon === i ? '#24201C' : '#FFFFFF', color: form.icon === i ? '#FFFFFF' : '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
                       <Icon name={i} size={22} />
                     </button>
                   ))}
@@ -84,9 +84,9 @@ export function CatalogEditor({ open, onClose }: { open: boolean; onClose: () =>
               <Select label={t('cal.room')} value={form.roomId} onChange={(v) => set({ roomId: v })} error={tried && roomMissing && !form.roomId && t('cal.errRoom')}
                 options={[...rooms.map((r) => ({ value: r.id, label: roomName(r, lang) })), { value: OTHER, label: t('cal.roomOther') }]} />
               {form.roomId === OTHER ? <TextField label={t('cal.roomOtherLabel')} value={form.roomOther} onChange={(v) => set({ roomOther: v })} maxLength={80} placeholder={t('cal.roomOtherPh')} error={tried && !form.roomOther.trim() && t('cal.errRoom')} /> : null}
-              <Toggle on={form.active} onClick={() => set({ active: !form.active })} label={t('cal.active')} sub={t('cal.activeSub')} />
+              <Toggle on={form.active} onClick={() => set({ active: !form.active })} label={t('cal.active')} />
             </>
-          ) : <Toggle on={form.venue} onClick={() => set({ venue: !form.venue })} label={t('cal.venueRoom')} sub={t('cal.venueRoomSub')} />}
+          ) : <Toggle on={form.venue} onClick={() => set({ venue: !form.venue })} label={t('cal.venueRoom')} />}
           {err ? <Note tone="rust" icon="error">{err}</Note> : null}
         </>
       ) : (

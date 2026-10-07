@@ -16,6 +16,7 @@ import { form } from './form';
 import { cal } from './cal';
 import { requests } from './requests';
 import { reviews } from './reviews';
+import { approvals } from './approvals';
 import { people } from './people';
 import { ds } from './ds';
 
@@ -47,6 +48,7 @@ export const id = {
   ...ns('cal', cal),
   ...ns('requests', requests),
   ...ns('reviews', reviews),
+  ...ns('approvals', approvals),
   ...ns('people', people),
   ...ns('ds', ds),
 };

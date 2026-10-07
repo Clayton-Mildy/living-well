@@ -33,6 +33,8 @@ export function watchConsole(page: Page, allow?: RegExp) {
   page.on('pageerror', (e) => errors.push(String(e)));
   return { assertClean: () => expect(errors, errors.join('\n')).toEqual([]) };
 }
+/** The page's CSS zoom (global.css scales the UI: .8 laptop, .875 phone); boundingBox() returns screen px, so divide by this to compare with CSS px. */
+export const uiZoom = (page: Page) => page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).zoom || '1'));
 export const isPhone = (page: Page) => (page.viewportSize()?.width || 1440) < 768;
 /** No horizontal page scroll (layout fits the viewport). */
 export async function assertNoHorizontalScroll(page: Page) {

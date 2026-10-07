@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { memberShort, type ThreadTopic } from '@cp/shared';
 import { familyChoices, familyRows, resolveMemberSel, resolveRow, staffRows, topicsOf } from '@cp/shared/rules/chat';
-import { Button, Card, EmptyState, FilterChips, FONT_BODY, FONT_SMALL, Pager, chipStyle, usePaged } from '../../components/ui';
+import { Button, Card, EmptyState, FilterChips, PageHead, Pager, chipStyle, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -100,35 +100,32 @@ export function Chat({ audience }: { audience: 'staff' | 'family' }) {
 
   return (
     <div style={{ padding: padFor(device), paddingBottom: isPhone ? 64 : 84, display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 18, height: '100%', minHeight: (isPhone ? 680 : 600) + (switcher ? 70 : 0) }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', flex: 'none' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6A6967', lineHeight: '18px' }}>{t(audience === 'staff' ? 'chat.eyebrowStaff' : 'chat.eyebrowFamily')}</div>
-          <h1 style={{ margin: 0, fontSize: 36, lineHeight: '44px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('nav.messages')}</h1>
-        </div>
-        {audience === 'staff' ? (
+      <div style={{ flex: 'none' }}>
+      <PageHead eyebrow={t(audience === 'staff' ? 'chat.eyebrowStaff' : 'chat.eyebrowFamily')} title={t('nav.messages')}
+        right={audience === 'staff' ? (
           <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', alignItems: 'center' }}>
             {topics.length > 1 && !isPhone ? (['all', ...topics] as Team[]).map((k) => {
               const c = chipStyle(team === k);
               return (
-                <button key={k} type="button" aria-pressed={team === k} onClick={() => pickTeam(k)} style={{ height: 44, padding: '0 16px', borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+                <button key={k} type="button" aria-pressed={team === k} onClick={() => pickTeam(k)} style={{ height: 40, padding: '0 16px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
                   {k === 'all' ? t('common.all') : t('chat.topic.' + k)}
                 </button>
               );
             }) : null}
             {topics.length ? <Button size={44} icon="add_comment" onClick={() => setStartOpen(true)}>{t('chat.newMessage')}</Button> : null}
           </div>
-        ) : null}
+        ) : undefined} />
       </div>
       {audience === 'staff' && isPhone && topics.length > 1 ? (
         <FilterChips label={t('chat.filterTeam')} value={team} onChange={pickTeam} options={(['all', ...topics] as Team[]).map((k) => ({ value: k, label: k === 'all' ? t('common.all') : t('chat.topic.' + k) }))} style={{ flex: 'none' }} />
       ) : null}
       {switcher ? (
-        <div role="tablist" aria-label={t('chat.member')} style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 999, background: '#F4F0EE', flex: 'none', width: '100%', maxWidth: 520 }}>
+        <div role="tablist" aria-label={t('chat.member')} style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 999, background: '#EDE5DA', flex: 'none', width: '100%', maxWidth: 520 }}>
           {[...family.choices.map((m) => [m, memberShort(s.members[m])] as const), ['both', t('chat.both')] as const].map(([k, label]) => {
             const on = memberSel === k;
             return (
               <button key={k} type="button" role="tab" aria-selected={on} onClick={() => pickMember(k)}
-                style={{ flex: 1, minWidth: 0, height: 44, borderRadius: 999, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.12)' : 'none', color: '#282828', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'Inter' }}>
+                style={{ flex: 1, minWidth: 0, height: 40, borderRadius: 999, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: '#24201C', fontSize: 15, fontWeight: on ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'Inter' }}>
                 {label}
               </button>
             );
@@ -136,16 +133,16 @@ export function Chat({ audience }: { audience: 'staff' | 'family' }) {
         </div>
       ) : null}
 
-      <div ref={paneRef} style={{ flex: 1, minHeight: 0, display: 'flex', gap: 16, alignItems: 'stretch' }}>
+      <div ref={paneRef} style={{ flex: 1, minHeight: 0, display: 'flex', gap: 'clamp(12px, 2vw, 20px)', alignItems: 'stretch' }}>
         {showList ? (
-          <div style={{ flex: twoPanes ? '0 1 360px' : '1 1 auto', minWidth: twoPanes ? 280 : 0, background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, overflowY: 'auto', alignSelf: twoPanes ? 'stretch' : 'flex-start', maxHeight: '100%' }} role="group" aria-label={t('nav.messages')}>
+          <div style={{ flex: twoPanes ? '0 1 360px' : '1 1 auto', minWidth: twoPanes ? 280 : 0, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflowY: 'auto', alignSelf: twoPanes ? 'stretch' : 'flex-start', maxHeight: '100%' }} role="group" aria-label={t('nav.messages')}>
             {rows.length ? (
               <>
                 <ThreadList t={t} s={s} rows={paged.rows} selKey={selRow?.key} audience={audience} meId={id} today={today} fds={fds} onPick={setSel} />
                 <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('chat.pagerThreads')} />
               </>
             ) : (
-              <EmptyState icon="forum" title={t(audience === 'staff' ? 'chat.none' : 'chat.noneFamily')} sub={t(audience === 'staff' ? 'chat.noneSub' : 'chat.noneFamilySub')} />
+              <EmptyState icon="forum" title={t(audience === 'staff' ? 'chat.none' : 'chat.noneFamily')} />
             )}
           </div>
         ) : null}
@@ -153,7 +150,7 @@ export function Chat({ audience }: { audience: 'staff' | 'family' }) {
           <ThreadPanel key={selRow.key} t={t} s={s} row={selRow} audience={audience} meId={id} today={today} fds={fds} singlePane={!twoPanes} onBack={() => setSel(null)} onSend={send} onAbout={about} />
         ) : twoPanes && !rows.length ? (
           <Card style={{ flex: '1 1 440px', minWidth: 0 }}>
-            <EmptyState icon="chat" title={t('chat.pick')} sub={t('chat.pickSub')} />
+            <EmptyState icon="chat" title={t('chat.pick')} />
           </Card>
         ) : null}
       </div>

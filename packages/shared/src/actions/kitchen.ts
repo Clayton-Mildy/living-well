@@ -15,6 +15,8 @@ import {
   canApproveStock, canEditStock, canReceiveStock, canRequestStock, diffTemplates, dishUsage, menuAudience, potentialConflicts, replyTarget, sameIds, templateOn,
 } from '../rules/kitchenOps';
 import { dow, live, uniq } from '../util';
+import { DAYMENU_KEYS, isWaiting, snapshotOf } from '../rules/approvals';
+import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 
 const asState = (d: Draft<ClubState>) => d as unknown as ClubState;
 const kitchenOrMgmt = (u: User) => hasRole(u, 'kitchen', 'mgmt');
@@ -74,7 +76,7 @@ function ensureDayMenu(d: Draft<ClubState>, date: ISODate, ctx: Ctx) {
   return d.dayMenus[date];
 }
 /** A day's row with nothing left in it (no override, no lunch photo, no allergy plan) is dropped. */
-const isEmptyDay = (row: Draft<ClubState>['dayMenus'][string]) => !row.lunch && !row.soft && !row.tea && !row.photoIds?.length && !row.allergyPlans.length;
+const isEmptyDay = (row: Draft<ClubState>['dayMenus'][string]) => !row.lunch && !row.soft && !row.tea && !row.photoIds?.length && !row.allergyPlans.length && !row.approval; // a decided or waiting override keeps its row (the history)
 const sameSet = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 // ---------- dishes ----------
@@ -162,16 +164,23 @@ const menuActions: ActionDef[] = [
       if (i.effectiveFrom < ctx.today) ctx.fail('kitchen.err.pastDate'); // published history never changes
       for (const w of WEEKDAYS) for (const c of COURSES) checkDishes(d, i.days[w][c], c, ctx);
       const st = asState(d);
+      const gated = needsApproval(ctx);
       const replaced = live(st.menuVersions).filter((v) => v.status === 'published' && v.effectiveFrom >= i.effectiveFrom);
       if (!diffTemplates(templateOn(st, i.effectiveFrom).days, i.days).length && !replaced.some((v) => v.effectiveFrom > i.effectiveFrom)) ctx.fail('err.noChanges');
-      // a version for the same date (or later ones) is replaced by this one; earlier versions stay as history
-      for (const v of replaced) d.menuVersions[v.id].deletedAt = ctx.nowDT;
+      // management's version replaces the ones for the same date (or later) at once; earlier versions stay as history.
+      // The kitchen's version waits for approval: it only supersedes versions that are still waiting, and replaces the approved ones when it is approved.
+      for (const v of replaced) if (!gated || isWaiting(v)) d.menuVersions[v.id].deletedAt = ctx.nowDT;
       const id = ctx.id('mv');
       d.menuVersions[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, effectiveFrom: i.effectiveFrom, status: 'published', days: i.days, publishedBy: ctx.actor };
       ctx.result.versionId = id;
-      if (i.notify) {
-        const families = menuAudience(st, i.effectiveFrom > ctx.today ? i.effectiveFrom : ctx.today);
-        if (families.length) ctx.notify({ toUsers: families, kind: 'kitchen.notif.menuPublished', params: { date: i.effectiveFrom }, link: '/today' });
+      if (gated) {
+        markPending(d.menuVersions[id], ctx, undefined, { notify: i.notify });
+        ctx.result.pending = true;
+      } else {
+        if (i.notify) {
+          const families = menuAudience(st, i.effectiveFrom > ctx.today ? i.effectiveFrom : ctx.today);
+          if (families.length) ctx.notify({ toUsers: families, kind: 'kitchen.notif.menuPublished', params: { date: i.effectiveFrom }, link: '/today' });
+        }
       }
       ctx.feed({ icon: 'restaurant_menu', key: 'kitchen.feed.menuPublished', params: { from: i.effectiveFrom } });
     },
@@ -189,6 +198,9 @@ const menuActions: ActionDef[] = [
       if (!dayStatus(st, i.date).open) ctx.fail('err.closedDay');
       const base = templateOn(st, i.date).days[dow(i.date) as Weekday];
       const row = ensureDayMenu(d, i.date, ctx);
+      // the kitchen's override waits for approval: families keep seeing the menu as it was until then
+      const gated = needsApproval(ctx);
+      const before = gated ? priorOf(row, DAYMENU_KEYS) : undefined;
       let changed = false;
       for (const c of COURSES) {
         const v = i[c];
@@ -201,6 +213,11 @@ const menuActions: ActionDef[] = [
         if (!row[c] || !sameIds(row[c]!, v)) { row[c] = v; changed = true; }
       }
       if (!changed) ctx.fail('err.noChanges');
+      if (gated) {
+        // back to the values families already see: nothing is left to approve
+        if (before && JSON.stringify(snapshotOf(row, DAYMENU_KEYS)) === JSON.stringify(before)) clearApproval(row);
+        else { markPending(row, ctx, before); ctx.result.pending = true; }
+      } else if (row.approval) clearApproval(row);
       if (isEmptyDay(row)) delete d.dayMenus[i.date];
       ctx.feed({ icon: 'restaurant_menu', key: 'kitchen.feed.menuChanged', params: { date: i.date } });
     },
@@ -389,6 +406,24 @@ const stockRow = (d: Draft<ClubState>, id: string, ctx: Ctx) => {
 const stockParts = (r: Raw) => ({ item: line(r.item, 80), qty: posNumber(r.qty, 100000), unit: line(r.unit, 24), area: oneOf(r.area, STOCK_AREAS), sectionId: line(r.sectionId, 60) });
 const requesterLink = (d: Draft<ClubState>, k: StockRequest) => (['kitchen', 'mgmt'].includes(d.staff[k.requestedBy]?.role ?? '') ? '/stock' : '/requests');
 
+/** Approve a requested stock item (stock.approve and the Approvals hub). */
+export function approveStockRow(d: Draft<ClubState>, ctx: Ctx, k: Draft<StockRequest>) {
+  k.status = 'approved';
+  k.decidedBy = ctx.actor;
+  k.decidedAt = ctx.nowDT;
+  ctx.notify({ toUsers: [k.requestedBy], kind: 'kitchen.notif.stockApproved', params: { item: k.item, qty: `${k.qty} ${k.unit}` }, link: requesterLink(d, k), ref: { type: 'stockRequest', id: k.id } });
+  ctx.feed({ icon: 'task_alt', key: 'kitchen.feed.stockApproved', params: { item: k.item } });
+}
+/** Decline a requested stock item with a reason (stock.reject and the Approvals hub). */
+export function rejectStockRow(d: Draft<ClubState>, ctx: Ctx, k: Draft<StockRequest>, note: string) {
+  k.status = 'rejected'; // kept as Declined, with the reason
+  k.decidedBy = ctx.actor;
+  k.decidedAt = ctx.nowDT;
+  k.note = note;
+  ctx.notify({ toUsers: [k.requestedBy], kind: 'kitchen.notif.stockDeclined', params: { item: k.item, note }, link: requesterLink(d, k), severity: 'attention', ref: { type: 'stockRequest', id: k.id } });
+  ctx.feed({ icon: 'block', key: 'kitchen.feed.stockDeclined', params: { item: k.item } });
+}
+
 const stockActions: ActionDef[] = [
   defineAction<StockInput>({
     name: 'stock.request',
@@ -444,11 +479,7 @@ const stockActions: ActionDef[] = [
     run(d, i, ctx) {
       const k = stockRow(d, i.id, ctx);
       if (k.status !== 'requested') ctx.fail('kitchen.err.alreadyDecided');
-      k.status = 'approved';
-      k.decidedBy = ctx.actor;
-      k.decidedAt = ctx.nowDT;
-      ctx.notify({ toUsers: [k.requestedBy], kind: 'kitchen.notif.stockApproved', params: { item: k.item, qty: `${k.qty} ${k.unit}` }, link: requesterLink(d, k), ref: { type: 'stockRequest', id: k.id } });
-      ctx.feed({ icon: 'task_alt', key: 'kitchen.feed.stockApproved', params: { item: k.item } });
+      approveStockRow(d, ctx, k);
     },
   }),
   defineAction<{ id: string; note: string }>({
@@ -462,12 +493,7 @@ const stockActions: ActionDef[] = [
     run(d, i, ctx) {
       const k = stockRow(d, i.id, ctx);
       if (k.status !== 'requested') ctx.fail('kitchen.err.alreadyDecided');
-      k.status = 'rejected'; // kept as Declined, with the reason
-      k.decidedBy = ctx.actor;
-      k.decidedAt = ctx.nowDT;
-      k.note = i.note;
-      ctx.notify({ toUsers: [k.requestedBy], kind: 'kitchen.notif.stockDeclined', params: { item: k.item, note: i.note }, link: requesterLink(d, k), severity: 'attention', ref: { type: 'stockRequest', id: k.id } });
-      ctx.feed({ icon: 'block', key: 'kitchen.feed.stockDeclined', params: { item: k.item } });
+      rejectStockRow(d, ctx, k, i.note);
     },
   }),
   defineAction<{ id: string }>({

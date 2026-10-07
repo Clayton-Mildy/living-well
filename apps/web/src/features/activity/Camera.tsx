@@ -6,7 +6,7 @@ import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { famNames, memberName, memberShort, primaryContact, type Photo } from '@cp/shared';
 import { curAct, faceTagging, inClubMembers, photoCountByMember, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, activityName, roomName } from '@cp/shared/rules/activity';
-import { Button, CameraCapture, Icon, Pager, Pin, PhotoImg, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
+import { Button, CameraCapture, Icon, PageHead, Pager, Pin, PhotoImg, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useLang, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -22,7 +22,7 @@ import { PhotoLibraryBody } from './PhotoLibrary';
 import { PhotoViewer } from './PhotoViewer';
 
 const corner = (pos: CSSProperties): CSSProperties => ({ position: 'absolute', width: 32, height: 32, ...pos });
-const label: CSSProperties = { fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px' };
+const label: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };
 
 type Capture = null | { kind: 'group'; media: 'photo' | 'video' } | { kind: 'solo'; id: string; media: 'photo' | 'video' };
 type GroupDraft = { media: 'photo' | 'video'; blob: Blob | null; durationSec?: number; pick: string[] };
@@ -113,17 +113,14 @@ export function Camera() {
 
   const header = (
     <>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-        <div style={{ fontSize: FONT_SMALL, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6A6967', lineHeight: '18px' }}>{tab === 'camera' ? nowAct : fdl(today)}</div>
-        <h1 style={{ margin: 0, fontSize: 34, lineHeight: '42px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('nav.camera')}</h1>
-      </div>
+      <PageHead eyebrow={tab === 'camera' ? nowAct : fdl(today)} title={t('nav.camera')} />
       <Segmented label={t('nav.camera')} value={tab} onChange={(v) => setParams(v === 'library' ? { tab: 'library' } : {}, { replace: true })} items={[{ value: 'camera', label: t('nav.camera') }, { value: 'library', label: t('activity.library') }]} />
     </>
   );
 
   if (tab === 'library') {
     return (
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 1100 }}>
+      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 'clamp(16px, 2.4vw, 28px)', maxWidth: 1100 }}>
         {header}
         <PhotoLibraryBody />
       </div>
@@ -133,28 +130,27 @@ export function Camera() {
   const takeLabel = t('activity.takeGroup');
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 760 }}>
+      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 'clamp(16px, 2.4vw, 24px)', maxWidth: 760 }}>
         {header}
-        {!can ? <div style={{ padding: '32px 20px', borderRadius: 22, background: '#FFFFFF', border: '1px solid #DBD7D6', textAlign: 'center', fontSize: 16, color: '#6A6967', lineHeight: 1.4 }}>{t('activity.nobodyYet')}</div> : null}
-        <div style={{ position: 'relative', aspectRatio: '4/3', maxHeight: 300, width: '100%', borderRadius: 22, background: '#2E2924', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#F4F0EE', textAlign: 'center', padding: 24 }}>
+        {!can ? <div style={{ padding: '32px 20px', borderRadius: 16, background: '#FFFFFF', border: '1px solid #EFE7DC', boxShadow: 'var(--card-shadow)', textAlign: 'center', fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{t('activity.nobodyYet')}</div> : null}
+        <div style={{ position: 'relative', aspectRatio: '4/3', maxHeight: 300, width: '100%', borderRadius: 16, background: '#2E2924', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, color: '#F3EEE8', textAlign: 'center', padding: 24 }}>
           <div style={corner({ top: 18, left: 18, borderTop: '2px solid #CAB8A2', borderLeft: '2px solid #CAB8A2', borderTopLeftRadius: 10 })} />
           <div style={corner({ top: 18, right: 18, borderTop: '2px solid #CAB8A2', borderRight: '2px solid #CAB8A2', borderTopRightRadius: 10 })} />
           <div style={corner({ bottom: 18, left: 18, borderBottom: '2px solid #CAB8A2', borderLeft: '2px solid #CAB8A2', borderBottomLeftRadius: 10 })} />
           <div style={corner({ bottom: 18, right: 18, borderBottom: '2px solid #CAB8A2', borderRight: '2px solid #CAB8A2', borderBottomRightRadius: 10 })} />
           <Icon name="groups" size={44} color="#CAB8A2" />
           <span style={{ fontSize: 18 }}>{t('activity.groupPhoto')}</span>
-          <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#E8E1D8', maxWidth: 300 }}>{t('activity.viewfinderNote')}</span>
         </div>
 
         {!isPhone ? (
-          <button type="button" className={can ? 'dh46' : undefined} aria-disabled={!can} onClick={() => can && setCap({ kind: 'group', media: 'photo' })} style={{ height: 60, borderRadius: 999, border: 'none', background: can ? '#75624B' : '#E8E1D8', color: can ? '#FFFFFF' : '#6A6967', fontSize: 17, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: can ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
+          <button type="button" className={can ? 'dh46' : undefined} aria-disabled={!can} onClick={() => can && setCap({ kind: 'group', media: 'photo' })} style={{ height: 56, borderRadius: 999, border: 'none', background: can ? '#24201C' : '#E8E1D8', color: can ? '#FFFFFF' : '#5E5852', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: can ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
             <Icon name="photo_camera" size={24} />{takeLabel}
           </button>
         ) : null}
-        <button type="button" aria-disabled={!can} onClick={() => can && setCap({ kind: 'group', media: 'video' })} style={{ height: 52, borderRadius: 999, border: can ? '1px solid #75624B' : '1px solid #DBD7D6', background: '#FFFFFF', color: can ? '#75624B' : '#6A6967', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: can ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
-          <Icon name="videocam" size={22} color={can ? '#75624B' : '#6A6967'} />{t('activity.recordGroupVideo')}
+        <button type="button" aria-disabled={!can} onClick={() => can && setCap({ kind: 'group', media: 'video' })} style={{ height: 52, borderRadius: 999, border: can ? '1px solid #DCD3C8' : '1px solid #E4DACD', background: '#FFFFFF', color: can ? '#24201C' : '#5E5852', fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: can ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
+          <Icon name="videocam" size={22} color={can ? '#24201C' : '#5E5852'} />{t('activity.recordGroupVideo')}
         </button>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: FONT_BODY, lineHeight: '20px', color: '#282828' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: FONT_BODY, lineHeight: '20px', color: '#24201C' }}>
           <Icon name={review ? 'hourglass_top' : 'lock'} size={20} color="#75624B" />{t(review ? 'activity.privacyNoteReview' : 'activity.privacyNote')}
         </div>
 
@@ -163,11 +159,11 @@ export function Camera() {
             <div style={label}>{t('activity.sentToday')}</div>
             <div className="scroll-x" style={{ display: 'flex', gap: 8, overflowX: 'auto', paddingBottom: 4 }}>
               {sent.slice(0, 8).map((p) => (
-                <button key={p.id} type="button" onClick={() => setViewer(p.id)} aria-label={`${p.time}, ${caption(p)}`} data-photo-id={p.id} style={{ flex: 'none', width: 132, display: 'flex', flexDirection: 'column', gap: 4, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
-                  <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '1', borderRadius: 14, overflow: 'hidden', background: '#E8E1D8' }}>
+                <button key={p.id} type="button" onClick={() => setViewer(p.id)} aria-label={`${p.time}, ${caption(p)}`} data-photo-id={p.id} style={{ flex: 'none', width: 132, display: 'flex', flexDirection: 'column', gap: 4, background: 'none', border: 'none', padding: 0, textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+                  <span style={{ position: 'relative', display: 'block', width: '100%', aspectRatio: '1', borderRadius: 10, overflow: 'hidden', background: '#E8E1D8' }}>
                     <span aria-hidden="true" style={{ position: 'absolute', inset: 0 }}><PhotoImg photo={p} /></span>
-                    <span style={{ position: 'absolute', left: 6, bottom: 6, height: 22, padding: '0 7px', borderRadius: 999, background: '#FFFFFF', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center' }}>{p.time}</span>
-                    {p.visibility === 'pending' ? <span style={{ position: 'absolute', left: 6, top: 6, height: 22, padding: '0 7px 0 5px', borderRadius: 999, background: '#F6ECD6', color: '#7A5510', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}><Icon name="hourglass_top" size={14} fill={1} />{t('activity.pendingTag')}</span> : null}
+                    <span style={{ position: 'absolute', left: 6, bottom: 6, height: 22, padding: '0 7px', borderRadius: 8, background: '#FFFFFF', fontSize: 12, fontWeight: 500, display: 'flex', alignItems: 'center' }}>{p.time}</span>
+                    {p.visibility === 'pending' ? <span style={{ position: 'absolute', left: 6, top: 6, height: 22, padding: '0 7px 0 5px', borderRadius: 8, background: '#F6ECD6', color: '#7A5510', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}><Icon name="hourglass_top" size={14} fill={1} />{t('activity.pendingTag')}</span> : null}
                   </span>
                   <span style={{ fontSize: FONT_SMALL, lineHeight: '18px' }}>{caption(p).replace(t('activity.pendingTag') + ' · ', '')}</span>
                 </button>
@@ -176,9 +172,9 @@ export function Camera() {
           </div>
         ) : null}
 
-        <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 22, overflow: 'hidden' }}>
-          <div style={{ padding: '14px 16px 8px', ...label }}>{t('activity.soloTitle')}</div>
-          <div style={{ padding: '0 16px 12px' }}>
+        <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px 8px', ...label }}>{t('activity.soloTitle')}</div>
+          <div style={{ padding: '0 22px 12px' }}>
             <TextField label={t('activity.searchMember')} value={q} onChange={setQ} placeholder={t('activity.searchMemberPh')} inputMode="search" />
           </div>
           {paged.rows.map((m) => {
@@ -187,25 +183,25 @@ export function Camera() {
             const mine = busy === m.id;
             const sub = mine ? t('activity.uploading') : [n ? '' : t('activity.noPhotosToday'), tag !== 'on' ? t('activity.byNameOnly') : ''].filter(Boolean).join(' · ');
             return (
-              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 12px 10px 16px', borderTop: '1px solid #EFECEA', minHeight: 68 }}>
+              <div key={m.id} style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 22px', padding: '12px 0', borderTop: '1px solid #F0EAE1', minHeight: 68 }}>
                 <Av m={m} size={44} fs={16} />
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
                     <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, minWidth: 0 }}>{memberName(m)}</span>
-                    {n ? <span data-today-count={n} style={{ flex: 'none', height: 22, padding: '0 8px', borderRadius: 999, background: '#E6EFE8', color: '#3D6B4F', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>{t('activity.nToday', { n })}</span> : null}
+                    {n ? <span data-today-count={n} style={{ flex: 'none', color: '#3D6B4F', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#3D6B4F' }} />{t('activity.nToday', { n })}</span> : null}
                   </span>
-                  {sub ? <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{sub}</span> : null}
+                  {sub ? <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6B6259', lineHeight: 1.4 }}>{sub}</span> : null}
                 </span>
-                <button type="button" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'video' })} aria-disabled={!!busy} aria-label={t('activity.videoOf', { name: memberShort(m) })} style={{ width: 48, height: 48, borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none' }}>
+                <button type="button" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'video' })} aria-disabled={!!busy} aria-label={t('activity.videoOf', { name: memberShort(m) })} style={{ width: 48, height: 48, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none' }}>
                   <Icon name="videocam" size={22} color="#75624B" />
                 </button>
-                <button type="button" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'photo' })} aria-disabled={!!busy} aria-label={t('activity.photoOf', { name: memberShort(m) })} style={{ height: 48, padding: '0 16px 0 12px', borderRadius: 999, border: '1px solid #75624B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flex: 'none', fontFamily: 'Inter' }}>
+                <button type="button" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'photo' })} aria-disabled={!!busy} aria-label={t('activity.photoOf', { name: memberShort(m) })} style={{ height: 48, padding: '0 16px 0 12px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flex: 'none', fontFamily: 'Inter' }}>
                   <Icon name="photo_camera" size={20} />{t('activity.photo')}
                 </button>
               </div>
             );
           })}
-          {!found.length ? <div role="status" style={{ padding: '14px 16px 18px', borderTop: '1px solid #EFECEA', fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{here.length ? t('activity.noMemberMatch', { q: q.trim() }) : t('activity.nobodyYet')}</div> : null}
+          {!found.length ? <div role="status" style={{ margin: '0 22px', padding: '16px 0 20px', borderTop: '1px solid #F0EAE1', fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{here.length ? t('activity.noMemberMatch', { q: q.trim() }) : t('activity.nobodyYet')}</div> : null}
           <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('activity.memberPager')} />
         </div>
       </div>
@@ -213,7 +209,7 @@ export function Camera() {
       <CameraCapture open={!!cap} onClose={() => setCap(null)} onCapture={onCapture} facing="environment" mode={cap?.media === 'video' ? 'video' : 'photo'} />
       <Sheet open={!!group} onClose={() => !busy && setGroup(null)} title={t(group?.media === 'video' ? 'activity.whoVideo' : 'activity.whoPhoto')}
         footer={(
-          <div style={{ position: 'sticky', bottom: -32, margin: '0 -20px -32px', padding: '12px 20px 28px', background: '#FFFFFF', borderTop: '1px solid #EFECEA', display: 'flex', gap: 8 }}>
+          <div style={{ position: 'sticky', bottom: -32, margin: '0 -20px -32px', padding: '12px 20px 28px', background: '#FFFFFF', borderTop: '1px solid #F0EAE1', display: 'flex', gap: 8 }}>
             <Button variant="secondary" onClick={() => setGroup(null)} disabled={!!busy}>{t('common.cancel')}</Button>
             <Button full disabled={!pick.length || !!busy} onClick={() => void sendGroup()}>
               {busy === 'group' ? t('activity.uploading') : !pick.length ? t('activity.pickWho') : review ? t('activity.sendForReview') : plural(t, 'activity.sendTo', households(pick))}
@@ -221,9 +217,8 @@ export function Camera() {
           </div>
         )}>
         {preview ? (group?.media === 'video'
-          ? <video src={preview} controls playsInline preload="metadata" aria-label={t('ds.videoPreview')} style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 16, background: '#000000' }} />
-          : <img src={preview} alt={t('common.photoPreview')} style={{ width: '100%', maxHeight: 140, objectFit: 'cover', borderRadius: 16, background: '#E8E1D8' }} />) : null}
-        <div style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('activity.facesHint')}</div>
+          ? <video src={preview} controls playsInline preload="metadata" aria-label={t('ds.videoPreview')} style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 12, background: '#000000' }} />
+          : <img src={preview} alt={t('common.photoPreview')} style={{ width: '100%', maxHeight: 140, objectFit: 'cover', borderRadius: 12, background: '#E8E1D8' }} />) : null}
         <MemberPicker members={here} value={pick} onChange={(ids) => setGroup((g) => (g ? { ...g, pick: ids } : g))} suggested={sug}
           selectedLabel={t(group?.media === 'video' ? 'activity.inThisVideo' : 'activity.inThisPhoto')} emptyLabel={t('activity.nobodyAdded')}
           sub={(m) => { const tag = faceTagging(m); return tag === 'on' ? t('activity.suggested') : t(tag === 'optOut' ? 'activity.faceOptOut' : 'activity.faceNotEnrolled'); }} />

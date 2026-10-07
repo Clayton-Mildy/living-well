@@ -52,7 +52,9 @@ export const DEMO_STEPS: DemoStep[] = [
   { id: 'log', time: '13:15', titleKey: 'demo.s5.title', subKey: 'demo.s5.sub', runLabelKey: 'demo.s5.run', done: (s) => !!logToday(s),
     async run() {
       await ensureCheckedIn(); await demo.setClock('13:15'); await demo.signInAs('s5'); demo.go('/log');
-      await demo.act('log.save', { memberId: 'm1', date: today(), mood: 'cheerful', lunch: 'half', joined: 'yes', communicative: 'normal', content: 'normal', note: 'Oma Lina sang Bengawan Solo again at keroncong and asked for an extra cup of teh melati. She ate about half of her lunch.' });
+      const r = await demo.act('log.save', { memberId: 'm1', date: today(), mood: 'cheerful', lunch: 'half', joined: 'yes', communicative: 'normal', content: 'normal', note: 'Oma Lina sang Bengawan Solo again at keroncong and asked for an extra cup of teh melati. She ate about half of her lunch.' });
+      // Dinar's log waits for management; Ega approves it and the family is told
+      if (r?.logId) { await demo.sleep(900); await demo.signInAs('s9'); demo.go('/reviews?tab=logs'); await demo.sleep(900); await demo.act('approval.approve', { type: 'logs', ids: [r.logId as string] }); }
     } },
   { id: 'home', time: '15:45', titleKey: 'demo.s6.title', subKey: 'demo.s6.sub', runLabelKey: 'demo.s6.run', done: (s) => !!att(s)?.checkOut,
     async run() {
@@ -60,7 +62,8 @@ export const DEMO_STEPS: DemoStep[] = [
       const s = demo.state();
       if (s && !live(s.readings).some((r) => r.memberId === 'm1' && r.date === T(s) && r.kind === 'departure' && !r.voided)) {
         await demo.signInAs('s8');
-        await demo.act('reading.save', { memberId: 'm1', kind: 'departure', sys: 134, dia: 84, pulse: 76, noteKeys: [], shared: true, tellFamily: false, recheck: false, deferMonthly: false, source: 'device' });
+        const r = await demo.act('reading.save', { memberId: 'm1', kind: 'departure', sys: 134, dia: 84, pulse: 76, noteKeys: [], shared: true, tellFamily: false, recheck: false, deferMonthly: false, source: 'device' });
+        if (r?.readingId) { await demo.signInAs('s9'); await demo.act('approval.approve', { type: 'readings', ids: [r.readingId as string] }); } // the nurse's reading waits for management before the family hears
       }
       await demo.signInAs('s1');
       await demo.act('attendance.checkOut', { memberId: 'm1' });

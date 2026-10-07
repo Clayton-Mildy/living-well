@@ -6,7 +6,7 @@ import { useResetOn } from '../../lib/useResetOn';
 import { useSearchParams } from 'react-router-dom';
 import { addMonths, e164, fmtN, fmtPhone, live, parseN, rp, translate, ym, type Bank, type Staff, type StaffHr, type StaffRole, type StaffTime } from '@cp/shared';
 import { BANKS, CONTRACTS, HR_NOTE_KINDS, STAFF_ROLES, TIME_KINDS, contractState, hoursLabel, minutesBetween, staffList, staffRating, staffTimeFor } from '@cp/shared/rules/mgmt';
-import { Avatar, Button, Chip, DateField, Dialog, EmptyState, Icon, IconButton, InfoChip, Note, Pager, SectionLabel, TextField, TimeField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { Avatar, Button, Chip, DateField, Dialog, EmptyState, Icon, IconButton, InfoChip, Note, PageHead, Pager, SectionLabel, TextField, TimeField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -44,19 +44,9 @@ export function People() {
 
   return (
     <Page max={1180}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-          <div style={{ ...labelStyle, color: '#6A6967' }}>{t('people.eyebrow')}</div>
-          <h1 style={{ margin: 0, fontSize: 36, lineHeight: '44px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C' }}>{t('nav.people')}</h1>
-        </div>
-        <Button icon="person_add" onClick={() => setAdding(true)}>{t('people.add')}</Button>
-      </div>
-      <div className="cp-hide-phone" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '12px 16px', borderRadius: 16, background: '#282828', color: '#FFFFFF', fontSize: 16, lineHeight: '22px' }}>
-        <Icon name="lock" size={22} color="#CAB8A2" />
-        <span>{t('people.mgmtOnly')}</span>
-      </div>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
-        <div style={{ flex: isPhone ? '1 1 100%' : '0 1 320px', minWidth: isPhone ? 0 : 260, background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, overflow: 'hidden' }}>
+      <PageHead eyebrow={t('people.eyebrow')} title={t('nav.people')} right={<Button size={isPhone ? 44 : 48} icon="person_add" onClick={() => setAdding(true)}>{t('people.add')}</Button>} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(16px, 2.4vw, 32px)', alignItems: 'flex-start' }}>
+        <div style={{ flex: isPhone ? '1 1 100%' : '0 1 340px', minWidth: isPhone ? 0 : 260, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
           {list.length ? paged.rows.map((x) => <StaffRow key={x.id} staff={x} selected={!isPhone && x.id === selId} onClick={() => pick(x.id)} />) : <EmptyState icon="badge" title={t('people.empty')} />}
           <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('people.pgStaff')} />
         </div>
@@ -74,14 +64,14 @@ function StaffRow({ staff: x, selected, onClick }: { staff: Staff; selected: boo
   const c = contractState(x.hr, today);
   return (
     <button type="button" className="dh56" data-staff={x.id} onClick={onClick} aria-current={selected || undefined}
-      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 64, border: 'none', borderBottom: '1px solid #EFECEA', background: selected ? '#F4F0EE' : '#FFFFFF', boxShadow: selected ? 'inset 3px 0 0 #75624B' : 'none', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter', opacity: x.active ? 1 : 0.7 }}>
+      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 64, border: 'none', borderBottom: '1px solid #F0EAE1', borderLeft: `3px solid ${selected ? '#2B231C' : 'transparent'}`, background: selected ? '#FBF8F4' : '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', opacity: x.active ? 1 : 0.7 }}>
       <Avatar name={x.name} size={40} />
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{x.name}</span>
-        <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{titleOf(t, x)}{!x.active ? ` · ${t('people.inactive')}` : ''}</span>
+        <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)}{!x.active ? ` · ${t('people.inactive')}` : ''}</span>
       </span>
-      {x.active && (c.kind === 'soon' || c.kind === 'ended') ? <Icon name="schedule" size={22} color={c.kind === 'ended' ? '#AF4B2F' : '#7A5510'} fill={1} /> : null}
-      <Icon name="chevron_right" size={22} color="#6A6967" />
+      {x.active && (c.kind === 'soon' || c.kind === 'ended') ? <Icon name="schedule" size={22} color={c.kind === 'ended' ? '#9A3D24' : '#7A5510'} fill={1} /> : null}
+      <Icon name="chevron_right" size={20} color="#8A8078" />
     </button>
   );
 }
@@ -122,8 +112,8 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
         <Avatar name={x.name} size={64} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '1 1 200px', minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: 28, lineHeight: '36px', fontWeight: 400, letterSpacing: '-0.5px', color: '#9A836C', overflowWrap: 'anywhere' }}>{x.name}</h2>
-          <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{titleOf(t, x)} · {fmtPhone(x.phone)}</span>
+          <h2 style={{ margin: 0, fontSize: 'clamp(22px, 2.2vw, 26px)', lineHeight: 1.2, fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', overflowWrap: 'anywhere' }}>{x.name}</h2>
+          <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)} · {fmtPhone(x.phone)}</span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <Button size={44} variant="secondary" icon="edit" onClick={() => setEditing(true)}>{t('common.edit')}</Button>
@@ -138,10 +128,10 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
         {c.kind === 'soon' ? <InfoChip icon="schedule" label={c.days === 0 ? t('people.endsToday') : tn(t, 'people.endsIn', c.days)} tone="ochre" /> : null}
         {c.kind === 'ended' ? <InfoChip icon="event_busy" label={tn(t, 'people.endedAgo', c.days)} tone="rust" /> : null}
       </div>
-      <div role="tablist" aria-label={t('nav.people')} style={{ display: 'flex', flexWrap: 'wrap', gap: 4, padding: 4, borderRadius: 24, background: '#F4F0EE' }}>
+      <div role="tablist" aria-label={t('nav.people')} style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 999, background: '#EDE5DA', overflowX: 'auto', scrollbarWidth: 'none', maxWidth: '100%', alignSelf: 'flex-start' }}>
         {TABS.map((k) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
-            style={{ flex: 'none', height: 44, padding: '0 16px', borderRadius: 999, border: 'none', background: tab === k ? '#FFFFFF' : 'transparent', boxShadow: tab === k ? '0 1px 3px rgba(40,30,20,0.12)' : 'none', color: '#282828', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('people.tab_' + k)}</button>
+            style={{ flex: 'none', height: 36, padding: '0 14px', borderRadius: 12, border: 'none', background: tab === k ? '#FFFFFF' : 'transparent', boxShadow: tab === k ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: tab === k ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('people.tab_' + k)}</button>
         ))}
       </div>
 
@@ -152,12 +142,11 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
             [t('people.fApp'), x.appAccess ? t('common.yes') : t('common.no')], [t('people.fClub'), s.club.name],
             [t('people.fKnown'), x.knownAs || x.name.split(' ')[0]], [t('people.fSupervisor'), x.supervisor ? t('common.yes') : t('common.no')], [t('people.fRated'), x.rateable ? t('common.yes') : t('common.no')],
           ]} />
-          <Toggle on={x.appAccess} disabled={!x.active || x.id === meId} label={t('people.toggleApp')} sub={x.role === 'housekeeping' || x.role === 'driver' ? t('people.toggleAppReq') : t('people.toggleAppSub')}
+          <Toggle on={x.appAccess} disabled={!x.active || x.id === meId} label={t('people.toggleApp')}
             onClick={() => act('staff.setAppAccess', { staffId: x.id, on: !x.appAccess }, { ok: x.appAccess ? t('people.appRevoked', { name: x.name }) : t('people.appGranted', { name: x.name }) })} />
           {x.appAccess ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
               <Button size={44} variant="secondary" icon="lock_reset" onClick={() => setReset(true)}>{t('people.resetPw')}</Button>
-              <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{t('people.usernameHint')}</span>
             </div>
           ) : null}
         </>
@@ -174,8 +163,8 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
             {([[t('people.docContract'), h.signed], [t('people.docKtp'), h.ktpOnFile]] as [string, boolean][]).map(([label, has]) => (
               <button key={label} type="button" onClick={() => say(has ? t('people.docOpened', { doc: label }) : t('people.docAsk', { name: x.name.split(' ')[0] }))}
-                style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', color: '#282828', fontFamily: 'Inter' }}>
-                <span style={{ width: '100%', aspectRatio: '4/3', borderRadius: 16, background: has ? 'linear-gradient(135deg, #FBF8F4 0%, #EADFD3 60%, #DCCFC0 100%)' : '#F6F5F5', border: has ? '1px solid #DBD7D6' : '1px dashed #CAB8A2' }} />
+                style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', color: '#24201C', fontFamily: 'Inter' }}>
+                <span style={{ width: '100%', aspectRatio: '4/3', borderRadius: 12, background: has ? 'linear-gradient(135deg, #FBF8F4 0%, #EADFD3 60%, #DCCFC0 100%)' : '#F5F5F3', border: has ? '1px solid #E4DACD' : '1px dashed #CAB8A2' }} />
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{label + (has ? '' : ` · ${t('people.missingLc')}`)}</span>
               </button>
             ))}
@@ -211,7 +200,7 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
 
 function Facts({ rows }: { rows: [string, string][] }) {
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '8px 20px' }}>
+    <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '6px clamp(18px, 3vw, 28px)' }}>
       {rows.map(([k, v], i) => <Fact key={k} k={k} v={v} last={i === rows.length - 1} />)}
     </div>
   );
@@ -234,26 +223,26 @@ function NotesTab({ staff: x }: { staff: Staff }) {
     if (r.ok) setText('');
   };
   const who = (a: string) => (a.startsWith('staff:') ? s.staff[a.slice(6)]?.knownAs || s.staff[a.slice(6)]?.name || '' : '');
-  const KC = { warning: { icon: 'warning', fg: '#7A5510', bg: '#F6ECD6' }, note: { icon: 'sticky_note_2', fg: '#282828', bg: '#E8E1D8' }, praise: { icon: 'favorite', fg: '#3D6B4F', bg: '#E6EFE8' } } as const;
+  const KC = { warning: { icon: 'warning', fg: '#7A5510', bg: '#F6ECD6' }, note: { icon: 'sticky_note_2', fg: '#24201C', bg: '#E8E1D8' }, praise: { icon: 'favorite', fg: '#3D6B4F', bg: '#E3EFE6' } } as const;
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,280px),1fr))', gap: 16, alignItems: 'start' }}>
       <ListCard title={t('people.notesTitle')}>
         {notesPaged.rows.map((n) => (
           <Fragment key={n.id}>
-            <div style={{ padding: '12px 20px', borderTop: '1px solid #EFECEA', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ padding: '14px 0', borderTop: '1px solid #F0EAE1', display: 'flex', flexDirection: 'column', gap: 4 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 999, background: KC[n.kind].bg, color: KC[n.kind].fg, fontSize: 'max(13px, var(--cp-small, 0px))', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name={KC[n.kind].icon} size={17} fill={1} />{t('people.nk_' + n.kind)}</span>
+                <span style={{ height: 24, padding: '0 10px 0 6px', borderRadius: 8, background: KC[n.kind].bg, color: KC[n.kind].fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name={KC[n.kind].icon} size={16} fill={1} />{t('people.nk_' + n.kind)}</span>
                 <span style={{ flex: 1 }} />
                 <IconButton icon="delete" label={t('people.deleteNote')} bordered={false} onClick={() => setDel(n.id)} />
               </div>
-              <span style={{ fontSize: 16, lineHeight: '22px', overflowWrap: 'anywhere' }}>{n.text}</span>
-              <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{[who(n.createdBy), fds(n.on)].filter(Boolean).join(' · ')}</span>
+              <span style={{ fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>{n.text}</span>
+              <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[who(n.createdBy), fds(n.on)].filter(Boolean).join(' · ')}</span>
             </div>
           </Fragment>
         ))}
-        {!notes.length ? <div style={{ padding: '12px 20px 18px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967' }}>{t('people.noneOnFile')}</div> : null}
+        {!notes.length ? <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('people.noneOnFile')}</div> : null}
         <Pager page={notesPaged.page} pages={notesPaged.pages} onPage={notesPaged.setPage} label={t('people.pgNotes')} />
-        <div style={{ padding: '14px 20px 18px', borderTop: '1px solid #EFECEA', display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ padding: '16px 0 14px', borderTop: '1px solid #F0EAE1', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <SectionLabel>{t('people.addNote')}</SectionLabel>
           <div style={chipRow} role="radiogroup" aria-label={t('people.addNote')}>
             {HR_NOTE_KINDS.map((k) => <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>{t('people.nk_' + k)}</Chip>)}
@@ -262,23 +251,23 @@ function NotesTab({ staff: x }: { staff: Staff }) {
           <div><Button size={44} disabled={!text.trim()} onClick={add}>{t('people.addNoteBtn')}</Button></div>
         </div>
       </ListCard>
-      <div style={{ background: '#FFFFFF', border: '1px solid #DBD7D6', borderRadius: 24, padding: '16px 20px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px clamp(18px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={labelStyle}>{t('people.ratings')}</span>
         {rating ? (
           <>
             <span style={{ fontSize: 32, lineHeight: '40px', fontWeight: 300, fontVariantNumeric: 'tabular-nums' }}>{rating.avg.toFixed(1)} / 5</span>
             {x.hr.quote ? <span style={{ fontSize: 16, lineHeight: '22px' }}>“{x.hr.quote}”</span> : null}
-            <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6A6967', lineHeight: 1.4 }}>{tn(t, 'people.ratingN', rating.n)}</span>
+            <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{tn(t, 'people.ratingN', rating.n)}</span>
             <div style={{ display: 'flex', flexDirection: 'column', marginTop: 6 }}>
               {rating.surveys.map((r) => (
-                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderTop: '1px solid #EFECEA', fontSize: 16 }}>
+                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 15 }}>
                   <span>{r.title}</span>
                   <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.avg.toFixed(1)} · {tn(t, 'people.ratingsShort', r.n)}</span>
                 </div>
               ))}
             </div>
           </>
-        ) : <span style={{ fontSize: 16, color: '#6A6967', lineHeight: 1.4 }}>{x.rateable ? t('people.noRatingsYet') : t('people.noRating')}</span>}
+        ) : <span style={{ fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{x.rateable ? t('people.noRatingsYet') : t('people.noRating')}</span>}
       </div>
       <Dialog open={!!del} onClose={() => setDel(null)} title={t('people.deleteNoteTitle')} maxWidth={480}
         footer={<><Button variant="secondary" onClick={() => setDel(null)}>{t('common.cancel')}</Button><Button variant="danger" onClick={async () => { if (!del) return; const r = await act('hrNote.delete', { noteId: del }, { ok: t('people.noteDeleted') }); if (r.ok) setDel(null); }}>{t('common.delete')}</Button></>}>
@@ -313,17 +302,17 @@ function AttendanceTab({ staff: x }: { staff: Staff }) {
   const clockIn = () => act('staffTime.upsert', { staffId: x.id, date: today, kind: 'worked', from: now }, { ok: t('people.clockedIn', { time: now }) });
   const clockOut = () => act('staffTime.upsert', { staffId: x.id, date: today, kind: 'worked', from: todayRow?.from, to: now }, { ok: t('people.clockedOut', { time: now }) });
   const tile = (label: string, value: string) => (
-    <div style={{ padding: '14px 16px', borderRadius: 18, background: '#F4F0EE', display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{label}</span>
-      <span style={{ fontSize: 30, lineHeight: '36px', fontWeight: 300, fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+    <div style={{ padding: '0 0 10px', borderBottom: '2px solid #E6DDD1', display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <span style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      <span style={{ fontSize: 13, fontWeight: 500, color: '#6B6259' }}>{label}</span>
     </div>
   );
-  const KC: Record<string, { icon: string; fg: string; bg: string }> = { worked: { icon: 'check_circle', fg: '#3D6B4F', bg: '#E6EFE8' }, leave: { icon: 'beach_access', fg: '#7A5510', bg: '#F6ECD6' }, sick: { icon: 'sick', fg: '#7A5510', bg: '#F6ECD6' }, off: { icon: 'event_busy', fg: '#6A6967', bg: '#EFECEA' } };
+  const KC: Record<string, { icon: string; fg: string; bg: string }> = { worked: { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6' }, leave: { icon: 'beach_access', fg: '#7A5510', bg: '#F6ECD6' }, sick: { icon: 'sick', fg: '#7A5510', bg: '#F6ECD6' }, off: { icon: 'event_busy', fg: '#5E5852', bg: '#F0EAE1' } };
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         <IconButton icon="chevron_left" label={t('common.previous')} onClick={() => setMonth(addMonths(month, -1))} />
-        <span style={{ fontSize: 20, minWidth: 140, textAlign: 'center', letterSpacing: '-0.3px' }}>{fmonth(month, true)}</span>
+        <span style={{ fontSize: 19, fontWeight: 500, minWidth: 140, textAlign: 'center', letterSpacing: '-0.3px' }}>{fmonth(month, true)}</span>
         <IconButton icon="chevron_right" label={t('common.next')} onClick={() => setMonth(addMonths(month, 1))} style={{ opacity: month >= cur ? 0.4 : 1 }} />
         <span style={{ flex: 1 }} />
         {month === cur && x.active ? (
@@ -331,32 +320,32 @@ function AttendanceTab({ staff: x }: { staff: Staff }) {
             : !todayRow.to ? <Button size={44} icon="logout" onClick={clockOut}>{t('people.clockOut')}</Button> : null
         ) : null}
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 10 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 'clamp(12px, 2vw, 28px)' }}>
         {tile(t('people.attWorked'), String(data.worked))}
         {tile(t('people.attHours'), hoursLabel(data.minutes))}
         {tile(t('people.attLeave'), String(data.leave))}
         {tile(t('people.attSick'), String(data.sick))}
       </div>
-      <ListCard title={t('people.attTitle')} meta={t('people.attHint')}>
+      <ListCard title={t('people.attTitle')}>
         {days.length ? daysPaged.rows.map((date) => {
           const r = byDate.get(date);
           const k = r ? KC[r.kind] : null;
           const mins = r ? minutesBetween(r.from, r.to) : 0;
           return (
             <Fragment key={date}>
-              <button type="button" className="h-row" data-att={date} onClick={() => setDlg({ date, row: r })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 20px', minHeight: 56, border: 'none', borderTop: '1px solid #EFECEA', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#282828', fontFamily: 'Inter' }}>
+              <button type="button" data-att={date} onClick={() => setDlg({ date, row: r })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', minHeight: 56, border: 'none', borderTop: '1px solid #F0EAE1', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500 }}>{fds(date)}</span>
                 {r && k ? (
                   <>
-                    <span style={{ fontSize: FONT_BODY, color: '#6A6967', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.kind === 'worked' ? `${r.from || '—'} – ${r.to || t('people.stillIn')}${mins ? ` · ${hoursLabel(mins)}` : ''}` : ''}</span>
-                    <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 999, background: k.bg, color: k.fg, fontSize: 'max(13px, var(--cp-small, 0px))', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}><Icon name={k.icon} size={17} fill={1} />{t('people.tk_' + r.kind)}</span>
+                    <span style={{ fontSize: FONT_BODY, color: '#5E5852', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.kind === 'worked' ? `${r.from || '—'} – ${r.to || t('people.stillIn')}${mins ? ` · ${hoursLabel(mins)}` : ''}` : ''}</span>
+                    <span style={{ height: 24, padding: '0 10px 0 6px', borderRadius: 8, background: k.bg, color: k.fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}><Icon name={k.icon} size={16} fill={1} />{t('people.tk_' + r.kind)}</span>
                   </>
-                ) : <span style={{ fontSize: FONT_BODY, color: '#6A6967' }}>{t('people.noEntry')}</span>}
+                ) : <span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{t('people.noEntry')}</span>}
                 <Icon name="edit" size={20} color="#75624B" />
               </button>
             </Fragment>
           );
-        }) : <div style={{ padding: '12px 20px 18px', borderTop: '1px solid #EFECEA', fontSize: 16, color: '#6A6967' }}>{t('people.attNone')}</div>}
+        }) : <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('people.attNone')}</div>}
         <Pager page={daysPaged.page} pages={daysPaged.pages} onPage={daysPaged.setPage} label={t('people.pgDays')} />
       </ListCard>
       {dlg ? <TimeDialog staff={x} date={dlg.date} row={dlg.row} onClose={() => setDlg(null)} /> : null}
@@ -390,7 +379,7 @@ function TimeDialog({ staff: x, date, row, onClose }: { staff: Staff; date: stri
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
           <TimeField label={t('people.clockInL')} value={from} onChange={setFrom} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-            <div style={{ width: '100%' }}><TimeField label={t('people.clockOutL')} value={to} onChange={setTo} min={from || undefined} error={to && to <= from ? t('people.err.timeOrder') : false} hint={to ? undefined : t('people.stillInHint')} /></div>
+            <div style={{ width: '100%' }}><TimeField label={t('people.clockOutL')} value={to} onChange={setTo} min={from || undefined} error={to && to <= from ? t('people.err.timeOrder') : false} /></div>
             {to ? <Button size={44} variant="ghost" onClick={() => setTo('')}>{t('people.stillIn')}</Button> : null}
           </div>
         </div>
@@ -454,7 +443,7 @@ function StaffDialog({ open, onClose, staff, onSaved }: { open: boolean; onClose
       <SectionLabel>{t('people.secProfile')}</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>
         <TextField label={t('common.name')} value={f.name} onChange={(v) => set({ name: v })} error={show('name') && t('err.invalid')} />
-        <TextField label={t('people.fKnown')} value={f.knownAs} onChange={(v) => set({ knownAs: v })} hint={t('people.knownHint')} />
+        <TextField label={t('people.fKnown')} value={f.knownAs} onChange={(v) => set({ knownAs: v })} />
         <TextField label={t('people.fTitle')} value={f.title} onChange={(v) => set({ title: v })} error={show('title') && t('err.invalid')} />
         <TextField label={t('common.phone')} value={f.phone} onChange={(v) => set({ phone: v })} inputMode="tel" error={show('phone') && t('err.invalid')} />
       </div>
@@ -465,9 +454,9 @@ function StaffDialog({ open, onClose, staff, onSaved }: { open: boolean; onClose
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
-        <Toggle on={f.rateable} onClick={() => set({ rateable: !f.rateable })} label={t('people.fRated')} sub={t('people.ratedSub')} />
-        <Toggle on={f.supervisor} onClick={() => set({ supervisor: !f.supervisor })} label={t('people.fSupervisor')} sub={t('people.supervisorSub')} />
-        {!staff ? <Toggle on={f.appAccess} onClick={() => set({ appAccess: !f.appAccess })} label={t('people.toggleApp')} sub={f.role === 'housekeeping' || f.role === 'driver' ? t('people.toggleAppReq') : t('people.toggleAppSub')} /> : null}
+        <Toggle on={f.rateable} onClick={() => set({ rateable: !f.rateable })} label={t('people.fRated')} />
+        <Toggle on={f.supervisor} onClick={() => set({ supervisor: !f.supervisor })} label={t('people.fSupervisor')} />
+        {!staff ? <Toggle on={f.appAccess} onClick={() => set({ appAccess: !f.appAccess })} label={t('people.toggleApp')} /> : null}
       </div>
       <SectionLabel>{t('people.secContract')}</SectionLabel>
       <div style={chipRow} role="radiogroup" aria-label={t('people.fContract')}>
@@ -479,8 +468,8 @@ function StaffDialog({ open, onClose, staff, onSaved }: { open: boolean; onClose
         <TextField label={t('people.ktpLast4')} value={f.ktpLast4} onChange={(v) => set({ ktpLast4: v.replace(/\D/g, '').slice(0, 4) })} inputMode="numeric" error={show('ktp') && t('err.invalid')} />
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>
-        <Toggle on={f.signed} onClick={() => set({ signed: !f.signed })} label={t('people.docContract')} sub={t('people.signedSub')} />
-        <Toggle on={f.ktpOnFile} onClick={() => set({ ktpOnFile: !f.ktpOnFile })} label={t('people.fKtpFile')} sub={t('people.ktpSub')} />
+        <Toggle on={f.signed} onClick={() => set({ signed: !f.signed })} label={t('people.docContract')} />
+        <Toggle on={f.ktpOnFile} onClick={() => set({ ktpOnFile: !f.ktpOnFile })} label={t('people.fKtpFile')} />
       </div>
       <SectionLabel>{t('people.secPay')}</SectionLabel>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(220px,1fr))', gap: 10 }}>

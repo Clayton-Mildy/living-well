@@ -3,7 +3,7 @@ export const chat = {
   eyebrowStaff: 'Families · WhatsApp', eyebrowFamily: 'With the club', newMessage: 'New message', filterTeam: 'Filter by team', both: 'Both', member: 'Member',
   'topic.lobby': 'Lobby', 'topic.nurse': 'Nurse', 'topic.care': 'Activity team', 'topic.kitchen': 'Kitchen', 'topic.billing': 'Billing',
   'teamSub.lobby': '{name} and the front desk', 'teamSub.nurse': 'The club nurse', 'teamSub.care': 'The activity teachers', 'teamSub.kitchen': 'The kitchen team', 'teamSub.billing': 'The finance team',
-  about: 'About {n} · {team}', aboutReplies: 'About {m} · usually replies within the hour', relOf: '{rel} of {m}', you: 'You', youColon: 'You: ', startConv: 'Start a conversation', unreadAria: 'Unread',
+  about: 'About {n} · {team}', aboutReplies: 'About {m}', relOf: '{rel} of {m}', you: 'You', youColon: 'You: ', startConv: 'Start a conversation', unreadAria: 'Unread',
   openProfile: 'Open {n}’s profile', backAria: 'Back to conversations', placeholder: 'Write a message', messageAria: 'Message', logAria: 'Messages in this conversation', sendAria: 'Send', threadAria: 'Conversation with {name}',
   pick: 'Choose a conversation', pickSub: 'Tap a conversation on the left to read and reply.', none: 'No conversations yet', noneSub: 'Messages from families show up here. Use New message to start one.',
   noneFamily: 'No conversations yet', noneFamilySub: 'Message the club any time. We usually reply within the hour.', emptyThread: 'No messages yet. Say hello below.',

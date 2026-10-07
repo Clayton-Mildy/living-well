@@ -36,7 +36,7 @@ for g in $(seq 0 $((N - 1))); do
   [ -z "${GROUP[$g]:-}" ] && continue
   port=$((PORT0 + g)); PORTS+=("$port")
   lsof -ti "tcp:$port" -sTCP:LISTEN | xargs kill 2>/dev/null || true
-  CP_DEMO_DATE="${CP_DEMO_DATE:-2026-10-21}" CP_TRUST_USER_HEADER=1 WEB_DIST="$PWD/$OUT/web" MIGRATIONS_DIR="$PWD/$OUT/drizzle" API_PORT="$port" DATABASE_URL="postgres://localhost:5434/citrapremier_e2e_${NAME}$g" \
+  CP_DEMO_DATE="${CP_DEMO_DATE:-2026-10-21}" CP_SEED_SMALL=1 CP_TRUST_USER_HEADER=1 WEB_DIST="$PWD/$OUT/web" MIGRATIONS_DIR="$PWD/$OUT/drizzle" API_PORT="$port" DATABASE_URL="postgres://localhost:5434/citrapremier_e2e_${NAME}$g" \
     nohup node "$OUT/api.mjs" >"$OUT/api-$g.log" 2>&1 &
   PIDS+=("$!")
 done

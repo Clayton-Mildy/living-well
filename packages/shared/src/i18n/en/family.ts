@@ -2,7 +2,7 @@
 export const family = {
   // ----- headings, plan and billing words from the design -----
   goodMorning: 'Good morning, {n}', goodAfternoon: 'Good afternoon, {n}', todayAtClub: 'Today at the club', now: 'NOW', photos: 'Photos', notesTeam: 'From the team', used: 'Used', payVA: 'Pay by virtual account',
-  messageClub: 'Message the club', bank: 'Bank', vaNumber: 'Virtual account', autoConfirm: 'Payment is confirmed automatically, usually within a few minutes. The receipt arrives on WhatsApp.',
+  messageClub: 'Message the club', bank: 'Bank', vaNumber: 'Virtual account', autoConfirm: 'Confirmed automatically, usually within a few minutes.',
   simPay: 'Demo: simulate payment received', invL: '{p} invoice', dueOn: 'Due {d} · DOKU virtual account', paidOn: 'Paid {d} · receipt sent', billingBy: '{n} looks after billing for {m}.',
   sharedNote: 'Shared note from the club: {n}', sPay: 'Pay by virtual account', paidT: 'Payment received. Receipt sent to {n} on WhatsApp.', copied: 'Virtual account number copied.', mood_cheerful: 'Cheerful', mood_calm: 'Calm',
   mood_quiet: 'Quiet', mood_agitated: 'Unsettled', lunch_all: 'Ate all of lunch', lunch_most: 'Ate most of lunch', lunch_half: 'Ate half of lunch', lunch_little: 'Ate a little', calmDay: '{n} had a calm day and joined {a}.',
@@ -52,9 +52,9 @@ export const family = {
   // ----- invoice card and billing -----
   invOpen: 'Open invoices', invOpenSub: '{n} to pay · oldest due {d}', invOverdueSub: 'Overdue since {d}', invNone: 'No invoice yet', invNoneSub: 'The first invoice arrives on the {od} ({date}).', invAllPaid: 'All paid',
   invAllPaidSub: 'There is nothing to pay right now.', partPaid: 'Part paid · {a} of {t}', seeBilling: 'See all invoices', viewDetails: 'Details', payOne: 'Pay this invoice', billEyebrowMulti: 'One invoice per parent',
-  billTotal: 'Total to pay', billTotalSub: '{n} open · {o} overdue', billTotalSubOk: '{n} open', payTogether: 'Pay all together', payTogetherNote: '{list}. One transfer settles every invoice.',
+  billTotal: 'Total to pay', billTotalSub: '{n} open · {o} overdue', billTotalSubOk: '{n} open', payTogether: 'Pay all together', payTogetherNote: '{list}',
   comboVa: 'Combined virtual account · DOKU', history: 'History', histDue: '{no} · due {d}', histPaid: '{no} · paid {d}',
-  payerNote: '{n} looks after billing, so payment buttons appear on their phone. You can still see every invoice here.', viewInvoice: 'Open invoice {no}', payTotal: 'Total',
+  payerNote: '{n} looks after billing.', viewInvoice: 'Open invoice {no}', payTotal: 'Total',
 
   // ----- sheet: lunch feedback -----
   fbTitle: 'Feedback on lunch', fbMember: 'For whom?', fbDay: 'Which day?', fbDish: 'Which dish?', fbWhole: 'The whole meal', fbText: 'What would you like the kitchen to know?', fbPh: 'Tell us what went well or what to change',

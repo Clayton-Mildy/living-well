@@ -66,21 +66,20 @@ export function LimitsSheet({ open, onClose }: { open: boolean; onClose: () => v
         </div>
       )}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
-        <div className="cp-desc" style={{ fontSize: FONT_BODY, lineHeight: 1.45, color: '#282828' }}>{t('health.limitsNote')}</div>
         {SECTIONS.map((sec) => (
           <section key={sec.title} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div style={smallCaps('1.5px')}>{t(sec.title)}</div>
+            <div style={{ ...smallCaps('2px'), color: '#6E5A43' }}>{t(sec.title)}</div>
             {sec.keys.map((k) => {
               const cmp = LIMIT_CMP[k];
               const unit = UNIT[k] ?? sec.unit;
               return (
-                <div key={k} data-limit={k} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 12, borderRadius: 16, background: '#F4F0EE' }}>
-                  <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t('health.lim.' + k)} <span style={{ color: '#6A6967', fontWeight: 400 }}>· {unit}</span></span>
+                <div key={k} data-limit={k} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 12, borderRadius: 12, background: '#FFFFFF', border: '1px solid #E4DACD' }}>
+                  <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t('health.lim.' + k)} <span style={{ color: '#6B6259', fontWeight: 400 }}>· {unit}</span></span>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <div style={{ flex: '1 1 0', minWidth: 0 }}><TextField label={t('health.limW.' + cmp)} value={d[k].watch} onChange={(v) => set(k, 'watch', v)} inputMode="decimal" placeholder="—" /></div>
                     <div style={{ flex: '1 1 0', minWidth: 0 }}><TextField label={t('health.limA.' + cmp)} value={d[k].alert} onChange={(v) => set(k, 'alert', v)} inputMode="decimal" placeholder="—" /></div>
                   </div>
-                  {errs[k] ? <span role="alert" style={{ fontSize: FONT_BODY, color: '#AF4B2F', lineHeight: 1.4 }}>{errs[k]}</span> : null}
+                  {errs[k] ? <span role="alert" style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}>{errs[k]}</span> : null}
                 </div>
               );
             })}

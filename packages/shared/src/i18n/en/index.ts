@@ -16,6 +16,7 @@ import { form } from './form';
 import { cal } from './cal';
 import { requests } from './requests';
 import { reviews } from './reviews';
+import { approvals } from './approvals';
 import { people } from './people';
 import { ds } from './ds';
 
@@ -47,7 +48,8 @@ export const en = {
   ...ns('cal', cal),
   ...ns('requests', requests),
   ...ns('reviews', reviews),
+  ...ns('approvals', approvals),
   ...ns('people', people),
   ...ns('ds', ds),
 };
-export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, chat, finance, mgmt, enq, form, cal, requests, reviews, people, ds };
+export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, chat, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds };

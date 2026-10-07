@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import { fmtN, live, parseN, rp, type BudgetRequest, type Receipt, type StockRequest } from '@cp/shared';
 import { canEditStock, canReceiveStock } from '@cp/shared/rules/kitchenOps';
-import { Button, Card, CardHead, ChipGroup, Dialog, EmptyState, Icon, Pager, TextField, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, ChipGroup, Dialog, EmptyState, Icon, Pager, TextField, usePaged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -11,6 +11,7 @@ import { useClub } from '../../store/replica';
 import { BadgePill, ConfirmDialog, OutlineButton, StockBadge, TextButton, useResetOn } from '../kitchen/parts';
 import { StockEditDialog } from '../kitchen/Stock';
 import { areaLabel, unitLabel, useQty } from '../kitchen/StockForm';
+import { Hero, HeroHead, hrow, rowSub, rowTitle } from '../finance/parts';
 import { budgetCancelInput, budgetEditInput, hasAction, receiptEditInput, receiptVoidInput, sectionName, sectionsOf } from './finance';
 
 type Mine =
@@ -70,21 +71,21 @@ export function MyRequests() {
   };
   const note = (x: Mine) => (x.type === 'stock' && x.k.status === 'rejected' && x.k.note ? x.k.note : x.type === 'budget' && x.b.status === 'rejected' && x.b.note ? x.b.note : x.type === 'receipt' && x.r.status === 'rejected' && x.r.note ? x.r.note : '');
   return (
-    <Card>
-      <CardHead title={t('requests.mine.title')} meta={waiting ? t('requests.mine.waiting', { n: waiting }) : undefined} />
+    <Hero>
+      <HeroHead title={t('requests.mine.title')} meta={waiting ? t('requests.mine.waiting', { n: waiting }) : undefined} />
       {paged.rows.map((x) => (
-        <div key={x.type + x.id} data-testid="my-request" data-type={x.type} data-open={x.open ? 'yes' : 'no'} style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 8 : 12, flexWrap: 'wrap', padding: isPhone ? '9px 14px' : '12px 20px', borderTop: '1px solid #EFECEA', minHeight: isPhone ? 56 : 64 }}>
-          <span aria-hidden="true" className="cp-hide-phone" style={{ width: 40, height: 40, borderRadius: 999, background: '#F4F0EE', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={iconOf(x)} size={20} color="#75624B" /></span>
-          <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{titleOf(x)}</span>
-            <span style={{ fontSize: FONT_BODY, color: '#6A6967', lineHeight: 1.4 }}>{subOf(x)}</span>
-            {note(x) ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>“{note(x)}”</span> : null}
+        <div key={x.type + x.id} data-testid="my-request" data-type={x.type} data-open={x.open ? 'yes' : 'no'} style={{ ...hrow, display: 'flex', alignItems: 'center', gap: isPhone ? 8 : 14, flexWrap: 'wrap' }}>
+          <span aria-hidden="true" className="cp-hide-phone" style={{ width: 46, height: 46, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={iconOf(x)} size={21} weight={300} color="#6E5A43" /></span>
+          <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <span style={rowTitle}>{titleOf(x)}</span>
+            <span style={rowSub}>{subOf(x)}</span>
+            {note(x) ? <span style={{ fontSize: 14, lineHeight: 1.4, color: '#9A3D24' }}>“{note(x)}”</span> : null}
           </div>
           {badge(x)}
           {x.type === 'stock' && canEditStock(user, x.k) ? (
             <>
               <OutlineButton icon="edit" onClick={() => setEditStock(x.k)}>{t('common.edit')}</OutlineButton>
-              <TextButton color="#AF4B2F" onClick={() => setCancel(x)}>{t('requests.mine.cancel')}</TextButton>
+              <TextButton color="#9A3D24" onClick={() => setCancel(x)}>{t('requests.mine.cancel')}</TextButton>
             </>
           ) : null}
           {x.type === 'stock' && canReceiveStock(user, x.k) ? (
@@ -93,25 +94,25 @@ export function MyRequests() {
           {x.type === 'budget' && x.open ? (
             <>
               {hasAction('budget.edit') ? <OutlineButton icon="edit" onClick={() => setEditBudget(x.b)}>{t('common.edit')}</OutlineButton> : null}
-              {hasAction('budget.cancel') ? <TextButton color="#AF4B2F" onClick={() => setCancel(x)}>{t('requests.mine.cancel')}</TextButton> : null}
+              {hasAction('budget.cancel') ? <TextButton color="#9A3D24" onClick={() => setCancel(x)}>{t('requests.mine.cancel')}</TextButton> : null}
             </>
           ) : null}
           {x.type === 'receipt' && x.open ? (
             <>
               {hasAction('receipt.edit') ? <OutlineButton icon="edit" onClick={() => setEditReceipt(x.r)}>{t(x.r.status === 'rejected' ? 'requests.mine.fixSend' : 'common.edit')}</OutlineButton> : null}
-              {hasAction('receipt.void') && x.r.status === 'submitted' ? <TextButton color="#AF4B2F" onClick={() => setCancel(x)}>{t('requests.mine.cancel')}</TextButton> : null}
+              {hasAction('receipt.void') && x.r.status === 'submitted' ? <TextButton color="#9A3D24" onClick={() => setCancel(x)}>{t('requests.mine.cancel')}</TextButton> : null}
             </>
           ) : null}
         </div>
       ))}
-      {!rows.length ? <EmptyState icon="inbox" title={t('requests.mine.empty')} sub={t('requests.mine.emptySub')} /> : null}
-      <div style={{ padding: paged.pages > 1 ? '8px 20px 12px' : 0, borderTop: paged.pages > 1 ? '1px solid #EFECEA' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.mine.title')} /></div>
+      {!rows.length ? <EmptyState icon="inbox" title={t('requests.mine.empty')} /> : null}
+      <div style={{ padding: paged.pages > 1 ? '8px 0 4px' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.mine.title')} /></div>
 
       <StockEditDialog k={editStock} onClose={() => setEditStock(null)} />
       <BudgetEditDialog b={editBudget} onClose={() => setEditBudget(null)} />
       <ReceiptEditDialog r={editReceipt} onClose={() => setEditReceipt(null)} />
       <ConfirmDialog open={!!cancel} onClose={() => setCancel(null)} title={t('requests.mine.cancelTitle')} body={cancel ? t('requests.mine.cancelAsk', { what: titleOf(cancel) }) : null} confirmLabel={t('requests.mine.cancel')} cancelLabel={t('requests.mine.keep')} onConfirm={doCancel} />
-    </Card>
+    </Hero>
   );
 }
 
