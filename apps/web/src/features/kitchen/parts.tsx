@@ -133,3 +133,47 @@ export function ConfirmDialog({ open, onClose, title, body, confirmLabel, cancel
     </Dialog>
   );
 }
+
+/** Round 6 (phone, native look): a small pill for row actions: 34px, a press fade. `ink` is the main action, `outline` a secondary one, `quiet` / `danger` a text-only one. */
+export function RowPill({ children, onClick, icon, tone = 'outline', label, disabled }: { children: ReactNode; onClick?: () => void; icon?: string; tone?: 'ink' | 'outline' | 'quiet' | 'danger'; label?: string; disabled?: boolean }) {
+  const v: Record<string, CSSProperties> = {
+    ink: { background: disabled ? '#E8E1D8' : '#24201C', color: disabled ? '#5E5852' : '#FFFFFF', border: 'none' },
+    outline: { background: '#FFFFFF', color: '#24201C', border: '1px solid #DCD3C8' },
+    quiet: { background: 'transparent', color: '#75624B', border: 'none' },
+    danger: { background: 'transparent', color: '#9A3D24', border: 'none' },
+  };
+  return (
+    <button type="button" onClick={onClick} aria-label={label} aria-disabled={disabled || undefined} className="cp-press"
+      style={{ height: 34, padding: tone === 'quiet' || tone === 'danger' ? '0 8px' : '0 14px', borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'Inter', flex: 'none', ...v[tone] }}>
+      {icon ? <Icon name={icon} size={17} /> : null}
+      {children}
+    </button>
+  );
+}
+/** Round 6 (phone): an iOS segmented control (a grey track, a white thumb). `role` "tab" = tablist with aria-selected; "group" = pressed buttons. An item may carry a count. */
+export function PhoneSeg<V extends string>({ items, value, onChange, label, role = 'tab' }: { items: { value: V; label: ReactNode; count?: number }[]; value: V; onChange: (v: V) => void; label: string; role?: 'tab' | 'group' }) {
+  return (
+    <div role={role === 'tab' ? 'tablist' : 'group'} aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>
+      {items.map((it) => {
+        const on = it.value === value;
+        return (
+          <button key={it.value} type="button" role={role === 'tab' ? 'tab' : undefined} aria-selected={role === 'tab' ? on : undefined} aria-pressed={role === 'group' ? on : undefined} onClick={() => onChange(it.value)}
+            style={{ minWidth: 0, height: 36, padding: '0 6px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, transition: 'background-color .15s' }}>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.label}</span>
+            {it.count !== undefined ? <span style={{ fontVariantNumeric: 'tabular-nums', color: on ? '#1E1A16' : '#8A8078' }}>{it.count}</span> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+/** Round 6 (phone): the iOS grey search bar (#EAE6E0, radius 11, 40px) with a search icon. */
+export function PhoneSearch({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0' }}>
+      <Icon name="search" size={19} color="#6B6259" />
+      <input value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} inputMode="search" placeholder={placeholder} autoComplete="off"
+        style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16' }} />
+    </label>
+  );
+}

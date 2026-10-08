@@ -67,7 +67,7 @@ Open the **Demo** pill (bottom right) and run the guided steps in order.
 | 12:02 | Lunch photo | Kitchen posts lunch; Bambang's fish allergy has an alternative |
 | 13:15 | Daily log | "Ate half of lunch" feeds Maria's Today page |
 | 15:45 | Home time | Departure BP, check-out, family told |
-| 17:10 | Maria's Today | Comment on the log; message to the lobby |
+| 17:10 | Maria's Today | The team's log and photos; "WhatsApp the club" opens the front desk |
 | 17:15 | Extra visit | Flex includes 10 visits a month; today's 11th visit shows on Maria's plan card |
 | 15 Nov | Invoice | Issued early with the extra day, paid by DOKU VA, synced to Xero (demo) |
 | Live | Overview | Management sees the live feed and everything waiting |
@@ -125,6 +125,23 @@ KC's additions:
 - a small seed, a real database, the brand logo, full Indonesian.
 
 The full list is in the approved plan; `docs/BUILD_GUIDE.md` describes the architecture.
+
+## Round 7 (KC, 2026-10-08)
+- **Renewals** (`/renewals`, front desk and management): the month-end follow-up of every member for the coming month (continue, upgrade, downgrade, leave, stop, no answer, call back). Caca records the answer; a change waits in **Approvals → Renewals** for Ega, then applies from the 1st. Leave keeps its 14-day notice rule.
+- **Charts you can hover or tap** (`components/ui/TrendChart.tsx`) show the date and value. The member Health tab has a trend with 1M / 3M / 6M / All and lists **every** reading by month.
+- **One-day activity changes:** on the calendar, "Edit activity" → **Just this day** (today included) changes one session without touching the weekly plan. Teachers and families are told. Stored in `scheduleDays`.
+- **Guest hosts** (`/guests`, management; finance sees what to pay): outside teachers and entertainers booked for a session. They show as the session's host in the calendar, on the teacher's Today and in the family timeline. The fee becomes a vendor invoice as soon as the guest is booked, so finance can pay before or after the session. "Mark as done" records that it took place, and cancelling withdraws an unpaid invoice (a paid one is flagged for finance).
+- **Surveys:** templates, drafts, a **Log** of every survey sent (responses and history), one live family survey plus one live venue survey.
+- **Venue rating link:** "Ask for rating" on a past booking gives a no-login page at `/rate/<token>` (EN/ID). Answers land in Surveys and on the booking.
+- **Daily log in rounds:** Lunch (one tap: all / most / half / little / none), each activity session (joined / sat out), then Mood & notes. Families hear about a log once its Mood & notes round is approved.
+- **Family app:** Today is a **day story** you can browse back through (day strip and calendar), and **Memories** (`/memories`) recaps each month.
+- **Visit insights** (`/insights`, management): overall, by plan, per person and Flex quota use, with busiest days and hours.
+- **Tasks** (`/tasks`, every staff role): a tracker of each role's **general duties**, worked out from the data, e.g. a picture of every activity session, the lunch and afternoon-tea photos, the lunch round, arrival checks and everyone checked out. A late duty puts a reminder in that person's bell. Ega's **Team** view scores any day, week or month per role. Under **Manage** she can switch a duty off or change its time, and add her own tasks (daily, weekly or monthly, some needing a photo).
+- **Charts and insights** take a custom From / To date range as well as 1M / 3M / 6M / All.
+- **Survey templates:** the Venue rating template is built in, so its questions can change but it can't be deleted.
+- **Demo photos:** 32 free Unsplash photos (`apps/web/public/demo/`, sources in `SOURCES.md`) of activity sessions, food and club moments. They're scenes only: no member's profile picture is a stranger's face.
+- **Daily report** (`/report`, management; `?date=YYYY-MM-DD`, `&view=members`): one page for what was done on any day, today live. A date control (‹ previous open day, date picker, next ›, Today), one summary line ("18 came · 2 trials · 16 lunches · 31 checks · 24 photos") and two views. **Summary**: who came (times, plan, Flex visit n of the quota, extra-day dot, trials and guests), the activities (teacher or guest host, one-day changes with their note, joined and sat-out names, pictures), lunch and tea (menu, allergy alternatives, photos, how much each ate, who ate little), health checks (Watch and Alert with values), mood and the notes written, each role's duty score. **By member**: a row per member with in–out, lunch, activities, mood and the arrival blood pressure (a table on wide screens). Entries still waiting for approval show the usual pending marker. Rules are `rules/dailyReport.ts`; it reads existing helpers and stores nothing.
+- **Seed history:** about 6 months of visits, health readings, daily logs and paid invoices for all 45 members (`seed/history.ts`). Round-7 seed data is in `seed/r7/`.
 
 ## Architecture
 ```

@@ -4,13 +4,14 @@
 import { useMemo, useState } from 'react';
 import { actorName, memberShort, nextOpenDay } from '@cp/shared';
 import { allergiesOnFile, type KitchenConflict, type OnFileRow } from '@cp/shared/rules/kitchenOps';
-import { Card, CardHead, Icon, Pager, usePaged, FONT_BODY } from '../../components/ui';
+import { Card, CardHead, Group, Icon, Pager, usePaged, FONT_BODY } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { AlternativeSheet } from './ConflictsPanel';
-import { FilterChip, OutlineButton, PillButton, StatusDot, TextButton } from './parts';
+import { FilterChip, OutlineButton, PillButton, RowPill, StatusDot, TextButton } from './parts';
 
 const PRESENCE: Record<NonNullable<OnFileRow['presence']>, { fg: string; key: string }> = {
   in: { fg: '#3D6B4F', key: 'kitchen.onfile.in' },
@@ -18,11 +19,12 @@ const PRESENCE: Record<NonNullable<OnFileRow['presence']>, { fg: string; key: st
   notYet: { fg: '#8A8078', key: 'kitchen.onfile.notYet' },
 };
 
-export function AllergiesOnFile() {
+export function AllergiesOnFile({ readOnly = false }: { readOnly?: boolean } = {}) {
   const t = useT();
   const { fds } = useFmt();
   const s = useClub();
   const act = useAct();
+  const { isPhone } = useDevice();
   const { today } = useNow();
   const [picked, setPicked] = useState<string | null>(null);
   const [pick, setPick] = useState<KitchenConflict | null>(null);
@@ -36,6 +38,62 @@ export function AllergiesOnFile() {
   const rows = useMemo(() => allergiesOnFile(s, date, today), [s, date, today]);
   const paged = usePaged(rows, 6, date); // another day starts again on page 1
   const undo = (c: KitchenConflict) => act('allergyPlan.clear', { date, person: c.person, dishId: c.dish.id }, { ok: t('kitchen.conflicts.cleared', { name: c.name }) });
+  // round 6, phone: one flat iOS group (title outside): the day chips in one scrolling line, then the people as rows with small pill actions
+  if (isPhone) {
+    return (
+      <>
+        <Group title={t('kitchen.onfile.title')} meta={t('kitchen.onfile.meta', { n: rows.length })} pad="0 16px" gap={0}>
+          <div className="cp-tabrow" role="group" aria-label={t('kitchen.onfile.day')} style={{ display: 'flex', gap: 6, padding: '12px 0', margin: '0 -16px', paddingLeft: 16, paddingRight: 16 }}>
+            {days.map((d) => <FilterChip key={d} selected={d === date} onClick={() => setPicked(d)} label={d === today ? t('common.today') : fds(d)} />)}
+          </div>
+          {paged.rows.map((r) => {
+            const here = r.presence === 'in' || r.presence === 'gone';
+            const pill = r.presence ? PRESENCE[r.presence] : null;
+            const meta = [r.food.length ? t('kitchen.onfile.on', { list: r.food.map((a) => t('kitchen.food.' + a)).join(', ') }) : '', r.other ? t('kitchen.onfile.other', { text: r.other }) : ''].filter(Boolean).join(' · ');
+            return (
+              <div key={r.m.id} data-testid="onfile-row" data-member={r.m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: '1px solid #EFEAE3' }}>
+                <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="no_food" size={19} color="#75624B" /></span>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
+                      <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{memberShort(r.m)}</span>
+                      <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{meta}</span>
+                    </div>
+                    {pill ? <StatusDot color={pill.fg}>{t(pill.key)}</StatusDot> : null}
+                  </div>
+                  {r.clashes.length ? (
+                    <>
+                      {!here ? <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', fontWeight: 600, color: '#7A5510', lineHeight: 1.4 }}>{t(date === today ? 'kitchen.onfile.ifToday' : 'kitchen.onfile.ifDay')}</span> : null}
+                      {r.clashes.map((c) => (
+                        <div key={c.dish.id} data-testid="onfile-clash" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                          <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: c.resolved ? '#3D6B4F' : '#9A3D24', fontWeight: 500 }}>{t('kitchen.onfile.clash', { dish: c.dish.name, allergen: t('kitchen.allergen.' + c.allergen).toLocaleLowerCase() })}</span>
+                          {c.plan ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>{t('kitchen.conflicts.serving', { alt: c.plan.alternative, by: actorName(s, c.plan.by), time: c.plan.at.slice(11, 16) })}</span> : null}
+                          {!here && !readOnly ? (
+                            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center' }}>
+                              {c.plan ? (
+                                <>
+                                  <RowPill icon="edit" onClick={() => setPick(c)}>{t('kitchen.conflicts.change')}</RowPill>
+                                  <RowPill tone="danger" onClick={() => void undo(c)}>{t('kitchen.conflicts.undo')}</RowPill>
+                                </>
+                              ) : <RowPill tone="ink" icon="check" onClick={() => setPick(c)}>{t('kitchen.onfile.prepare')}</RowPill>}
+                            </div>
+                          ) : null}
+                        </div>
+                      ))}
+                      {here ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.onfile.here')}</span> : null}
+                    </>
+                  ) : <span style={{ fontSize: FONT_BODY, color: '#3D6B4F', lineHeight: 1.4 }}>{t('kitchen.onfile.clear')}</span>}
+                </div>
+              </div>
+            );
+          })}
+          {!rows.length ? <div style={{ padding: '16px 0 18px', borderTop: '1px solid #EFEAE3', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.onfile.empty')}</div> : null}
+          {paged.pages > 1 ? <div style={{ borderTop: '1px solid #EFEAE3' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.onfile.title')} /></div> : null}
+        </Group>
+        <AlternativeSheet conflict={pick} date={date} onClose={() => setPick(null)} />
+      </>
+    );
+  }
   return (
     <Card>
       <CardHead title={t('kitchen.onfile.title')} meta={t('kitchen.onfile.meta', { n: rows.length })} />
@@ -63,7 +121,7 @@ export function AllergiesOnFile() {
                     <div key={c.dish.id} data-testid="onfile-clash" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <span style={{ fontSize: FONT_BODY, lineHeight: 1.4, color: c.resolved ? '#3D6B4F' : '#9A3D24', fontWeight: 500 }}>{t('kitchen.onfile.clash', { dish: c.dish.name, allergen: t('kitchen.allergen.' + c.allergen).toLocaleLowerCase() })}</span>
                       {c.plan ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>{t('kitchen.conflicts.serving', { alt: c.plan.alternative, by: actorName(s, c.plan.by), time: c.plan.at.slice(11, 16) })}</span> : null}
-                      {!here ? (
+                      {!here && !readOnly ? (
                         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, alignItems: 'center' }}>
                           {c.plan ? (
                             <>

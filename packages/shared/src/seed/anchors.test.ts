@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   actionItems, addDays, addMonths, buildSeed, conflictsOn, demoDateFor, extraDaysFor, flexMonth, getUser, invoiceStatus, isWeekday, lobbyGroups,
-  live, projectForFamily, wouldBeExtra, ym, dayStatus, type ClubState,
+  live, membershipStatus, projectForFamily, stopsDue, suspensions, wouldBeExtra, ym, dayStatus, type ClubState,
 } from '../index';
 import { stationQueue } from '../rules/healthStation';
 
@@ -16,8 +16,11 @@ describe('seed around any demo day', () => {
     // nobody visits on a weekend or after today
     for (const a of live(s.attendance)) {
       expect(isWeekday(a.date), `attendance on ${a.date}`).toBe(true);
+      expect(dayStatus(s, a.date).open, `the club was closed on ${a.date}`).toBe(true); // no visit on a public holiday either
       expect(a.date <= T).toBe(true);
     }
+    // six months of history: the five have visits from about 6 months back
+    expect(live(s.attendance).map((a) => a.date).sort()[0] <= addDays(T, -170)).toBe(true);
     // the club is open; the three regulars are in; Lina and Budi can drop in
     expect(dayStatus(s, T).open).toBe(true);
     const g = lobbyGroups(s, T);
@@ -32,10 +35,18 @@ describe('seed around any demo day', () => {
     // Bambang stays under his 10 visits and clashes with the fish soup
     expect(wouldBeExtra(s, s.members.m10, T)).toBe(false);
     expect(conflictsOn(s, T).map((c) => `${c.diner.id}:${c.dish.id}`)).toContain('m10:dish-sop-ikan');
-    // billing: two runs, exactly one overdue invoice (Tjahjadi), no due date on a weekend
-    expect(live(s.invoiceRuns)).toHaveLength(2);
+    // billing: a run for every month of the history, all paid but the two latest (issued on the 21st, due on the 28th), exactly one overdue invoice (Tjahjadi:
+    // the family told finance, so the terms hold him, from the 1st after its due month, but do not stop the membership), no due date on a weekend
+    const runs = live(s.invoiceRuns).sort((a, b) => (a.period < b.period ? -1 : 1));
+    const cur = +T.slice(8) >= 21 ? month : addMonths(month, -1);
+    expect(runs.slice(-2).map((r) => r.period)).toEqual([addMonths(cur, -1), cur]);
+    expect(runs.length).toBeGreaterThanOrEqual(4);
+    for (const run of runs.slice(0, -2)) for (const id of run.invoiceIds) expect(invoiceStatus(s, s.invoices[id], T), id).toBe('paid');
     const overdue = live(s.invoices).filter((i) => invoiceStatus(s, i, T) === 'overdue');
     expect(overdue.map((i) => i.memberId)).toEqual(['m20']);
+    expect(Object.keys(suspensions(s, T)).every((id) => id === 'm20')).toBe(true);
+    expect(stopsDue(s, T)).toEqual([]);
+    for (const m of ['m1', 'm46', 'm2', 'm20', 'm10']) expect(membershipStatus(s.members[m], T)).toBe('active');
     for (const i of live(s.invoices)) expect(isWeekday(i.dueDate)).toBe(true);
     // the calendar and leads look ahead, on open days
     for (const e of live(s.calendarEvents).filter((x) => x.kind !== 'holiday')) { expect(e.date > T).toBe(true); expect(isWeekday(e.date)).toBe(true); }

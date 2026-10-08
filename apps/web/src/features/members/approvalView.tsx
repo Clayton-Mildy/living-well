@@ -1,16 +1,16 @@
 // What one entry waiting for approval looks like in the Approvals screen: a short summary line and the full view (old → new for edits).
 // Pure view-model: the screen renders the pieces. Profile changes use describeCr (reviewDiff.ts).
-import { memberName, type ClubState, type DailyLog, type MemberNote, type Reading } from '@cp/shared';
-import type { ApprovalItem, HistoryItem } from '@cp/shared/rules/approvals';
-import { DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approvals';
+import { memberName, memberShort, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type Slot } from '@cp/shared';
+import type { ApprovalItem, ApprovalType, HistoryItem } from '@cp/shared/rules/approvals';
+import { APPROVAL_TYPES, DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approvals';
 import { diffTemplates, templateOn, weekDate, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
 import type { TFn } from '../../lib/i18n';
-import { LOG_ROWS } from '../activity/LogFields';
+import { activityName, roundsOf } from '@cp/shared/rules/activity';
 import { CHECK_KEY } from '../health/ReadingCard';
 import { values as readingValues } from './profile/CareTab';
 import { describeCr, type Described, type DiffRow } from './reviewDiff';
 
-interface Fmt { fdy: (d: string) => string; fds: (d: string) => string; fd: (d: string, o: Intl.DateTimeFormatOptions) => string }
+interface Fmt { fdy: (d: string) => string; fds: (d: string) => string; fd: (d: string, o: Intl.DateTimeFormatOptions) => string; lang?: Lang }
 type Entry = Pick<ApprovalItem, 'id' | 'sub' | 'memberId'>;
 
 export interface ItemView {
@@ -32,10 +32,21 @@ const dishList = (s: ClubState, ids: string[] | undefined, t: TFn) => (ids && id
 function logView(s: ClubState, l: DailyLog, t: TFn, fmt: Fmt): ItemView {
   const prev = l.approval?.prev as Partial<DailyLog> | undefined;
   const mem = (k: string, o: Partial<DailyLog> | undefined) => (o && (o as Record<string, unknown>)[k] !== undefined ? t(`activity.opt.${k}.${(o as Record<string, string>)[k]}`) : undefined);
-  const rows: DiffRow[] = LOG_ROWS.map((r) => ({ label: t('activity.row.' + r.k), ...(prev ? { from: mem(r.k, prev) } : {}), to: mem(r.k, l) }));
+  // KC round 7: a log is filled in rounds (lunch, each session, mood and notes): one row per part that is marked now or was before
+  const rounds = roundsOf(s, l.date);
+  const slots = Array.from(new Set([...Object.keys(l.sessions ?? {}), ...Object.keys(prev?.sessions ?? {})])).sort() as Slot[];
+  const sessionName = (slot: Slot) => `${slot} · ${activityName(rounds.find((r) => r.id === slot)?.session?.activity, fmt.lang ?? 'en') || t('activity.row.joined')}`;
+  const side = (o: Partial<DailyLog> | undefined, slot: Slot) => (o?.sessions?.[slot] ? t(`activity.opt.session.${o.sessions[slot]}`) : undefined);
+  const part = (label: string, from: string | undefined, to: string | undefined): DiffRow[] => (from === undefined && to === undefined ? [] : [{ label, ...(prev ? { from: from ?? dash } : {}), to: to ?? dash }]);
+  const legacyJoined = !l.sessions && !prev?.sessions ? part(t('activity.row.joined'), mem('joined', prev), mem('joined', l)) : [];
+  const rows: DiffRow[] = [
+    ...part(t('activity.row.mood'), mem('mood', prev), mem('mood', l)), ...part(t('activity.row.lunch'), mem('lunch', prev), mem('lunch', l)),
+    ...slots.flatMap((slot) => part(sessionName(slot), side(prev, slot), side(l, slot))), ...legacyJoined,
+    ...part(t('activity.row.communicative'), mem('communicative', prev), mem('communicative', l)), ...part(t('activity.row.content'), mem('content', prev), mem('content', l)),
+  ];
   rows.push({ label: t('approvals.noteLabel'), ...(prev ? { from: prev.note || dash } : {}), to: l.note || dash });
-  const mood = t(`activity.opt.mood.${l.mood}`);
-  const summary = `${fmt.fds(l.date)} · ${mood} · ${t(`activity.opt.lunch.${l.lunch}`)}${l.note ? ` · ${l.note}` : ''}`;
+  const sessionBits = slots.filter((slot) => l.sessions?.[slot]).map((slot) => `${activityName(rounds.find((r) => r.id === slot)?.session?.activity, fmt.lang ?? 'en') || slot} ${t(`activity.opt.session.${l.sessions![slot]}`).toLowerCase()}`);
+  const summary = [fmt.fds(l.date), mem('mood', l), mem('lunch', l), ...sessionBits, l.note].filter(Boolean).join(' · ');
   return { who: s.members[l.memberId] ? memberName(s.members[l.memberId]) : '', kind: t('approvals.kind.log'), summary, detail: { title: t('approvals.kind.log'), rows: prev ? rows : [], summary: prev ? [] : rows }, edit: !!prev };
 }
 function noteView(s: ClubState, n: MemberNote, t: TFn): ItemView {
@@ -95,6 +106,27 @@ function stockView(s: ClubState, id: string, t: TFn): ItemView {
   return { who: '', kind: t('approvals.kind.stock'), summary, detail: { title: summary, rows: [], summary: rows }, edit: false };
 }
 
+/** KC round 7: a renewal change recorded by the front desk: what the family decided, from which month, with the reason for a stop and the note. */
+function renewalView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
+  const f = s.followUps?.[id];
+  const blank = { who: '', kind: t('approvals.kind.renewal'), summary: '', detail: { title: '', rows: [], summary: [] }, edit: false };
+  if (!f?.outcome) return blank;
+  const m = s.members[f.memberId];
+  const monthName = (x: string) => fmt.fd(`${x}-01`, { month: 'long' });
+  const summary = f.outcome === 'upgrade' ? t('approvals.sum.renewalUpgrade', { month: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) })
+    : f.outcome === 'downgrade' ? t('approvals.sum.renewalDowngrade', { month: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) })
+    : f.outcome === 'leave' ? t('approvals.sum.renewalLeave', { months: (f.leaveMonths ?? []).map(monthName).join(', ') })
+    : f.outcome === 'stop' ? t('approvals.sum.renewalStop', { date: fmt.fds(f.lastDay ?? '') })
+    : t(`renewals.outcome.${f.outcome}`);
+  const rows: DiffRow[] = [
+    { label: t('approvals.renewalChange'), to: summary },
+    { label: t('approvals.renewalMonth'), to: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) },
+    ...(f.outcome === 'stop' ? [{ label: t('approvals.renewalReason'), to: t(`profile.endReason.${f.endReason ?? 'familyDecision'}`) }] : []),
+    ...(f.note ? [{ label: t('common.note'), to: f.note }] : []),
+  ];
+  return { who: m ? memberName(m) : '', kind: t('approvals.kind.renewal'), summary: f.note ? `${summary} · ${f.note}` : summary, detail: { title: t('approvals.kind.renewal'), rows: [], summary: rows }, edit: false };
+}
+
 /** The view of one entry: pending (ApprovalItem) or handled (HistoryItem). Profile changes are described by describeCr. */
 export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
   switch (it.sub) {
@@ -104,6 +136,7 @@ export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
     case 'version': return versionView(s, it.id, t, fmt);
     case 'dayMenu': return dayMenuView(s, it.id, t, fmt);
     case 'stock': return stockView(s, it.id, t);
+    case 'renewal': return renewalView(s, it.id, t, fmt);
     case 'cr': case 'flag': {
       const cr = s.changeRequests[it.id];
       if (cr) {
@@ -118,3 +151,30 @@ export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
   return { who: '', kind: t('approvals.kind.' + it.sub), summary: '', detail: { title: '', rows: [], summary: [] }, edit: false };
 }
 export type { HistoryItem };
+
+// ---------- KC round 6: the per-person view of Approvals ----------
+export interface PersonGroup { memberId: string; items: ApprovalItem[] }
+/** Everything waiting, grouped by the member it is about: profile changes, care logs and notes, health readings and solo photos.
+ *  Group photos, activity pictures (of a session, no members) and other multi-member photos get their own section ("Group & activity photos"); menu and stock are not about a member, so they go to "Other". */
+export function groupByPerson(s: ClubState, items: Record<ApprovalType, ApprovalItem[]>): { people: PersonGroup[]; groupPhotos: ApprovalItem[]; other: ApprovalItem[] } {
+  const by = new Map<string, ApprovalItem[]>();
+  const groupPhotos: ApprovalItem[] = [];
+  const other: ApprovalItem[] = [];
+  for (const type of APPROVAL_TYPES) {
+    for (const it of items[type] || []) {
+      if (type === 'menu' || type === 'stock') { other.push(it); continue; }
+      let mid = it.memberId;
+      if (type === 'photos') {
+        const ph = s.photos[it.id];
+        mid = ph && ph.kind === 'solo' && ph.memberIds.length === 1 ? ph.memberIds[0] : undefined;
+        if (!mid) { groupPhotos.push(it); continue; }
+      }
+      if (type === 'profile' && !mid) mid = s.changeRequests[it.id]?.target.memberId;
+      if (!mid || !s.members[mid]) { other.push(it); continue; }
+      by.set(mid, [...(by.get(mid) || []), it]);
+    }
+  }
+  const people = [...by].map(([memberId, list]) => ({ memberId, items: list }))
+    .sort((a, b) => (s.members[a.memberId].firstName || '').localeCompare(s.members[b.memberId].firstName || '') || memberShort(s.members[a.memberId]).localeCompare(memberShort(s.members[b.memberId]))); // by first name, not by title (Bapak / Ibu / Oma)
+  return { people, groupPhotos, other };
+}

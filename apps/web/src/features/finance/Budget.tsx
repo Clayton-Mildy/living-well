@@ -3,7 +3,7 @@
 import { useMemo, useState } from 'react';
 import { actorName, rp, weekStart, addDays, type BudgetRequest, type BudgetSection } from '@cp/shared';
 import { activeSections, budgetRange, budgetWeekOf, receiptOfRequest, sectionName } from '@cp/shared/rules/finance';
-import { Button, Chip, DateField, Eyebrow, IconButton, PageHead, Select, TextField, FONT_BODY, Note } from '../../components/ui';
+import { Button, Chip, DateField, Eyebrow, IconButton, PageHead, Pin, Select, TextField, FONT_BODY, Note } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -11,7 +11,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { digits } from './lib';
-import { AmberPill, Badge, FormOverlay, HAIR, Hero, RpField, dangerStrip, inputBox } from './parts';
+import { AmberPill, Badge, FormOverlay, HAIR, Hero, PGroup, PillBtn, RpField, dangerStrip, inputBox, prow } from './parts';
 
 export function Budget() {
   const s = useClub();
@@ -47,32 +47,70 @@ export function Budget() {
     if (r.ok) { setItem(''); setAmt(''); }
   };
 
+  const requestBody = (
+    <>
+      <Select label={t('finance.budget.section')} value={chosen} onChange={setSec} options={sections.map((x) => ({ value: x.id, label: sectionName(s, x.id, lang) }))} />
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('finance.budget.itemPlaceholder')} aria-label={t('finance.budget.item')} maxLength={120} style={{ ...inputBox, flex: '2 1 240px' }} />
+        <div style={{ flex: '1 1 140px', minWidth: 0 }}><RpField value={amt} onChange={setAmt} ariaLabel={t('finance.budget.amount')} placeholder={t('finance.budget.amountPlaceholder')} /></div>
+        <Button size={56} disabled={!ok} onClick={send} full={isPhone} style={{ padding: '0 24px' }}>{t('finance.budget.send')}</Button>
+      </div>
+    </>
+  );
+  const weekNav = (
+    <>
+      <IconButton icon="chevron_left" label={t('finance.budget.prevWeek')} bordered={!isPhone} size={isPhone ? 40 : 44} onClick={() => step(-1)} style={ws <= range.first ? { opacity: 0.4, pointerEvents: 'none' } : undefined} />
+      <span role="status" aria-live="polite" data-testid="budget-week" style={{ minWidth: isPhone ? 0 : 200, flex: isPhone ? 1 : undefined, textAlign: 'center', fontSize: 17, fontWeight: 500, lineHeight: 1.4, color: '#2B231C' }}>{fds(ws)} – {fds(we)}</span>
+      <IconButton icon="chevron_right" label={t('finance.budget.nextWeek')} bordered={!isPhone} size={isPhone ? 40 : 44} onClick={() => step(1)} style={ws >= range.last ? { opacity: 0.4, pointerEvents: 'none' } : undefined} />
+    </>
+  );
+  const weekJump = <div style={{ flex: isPhone ? '1 1 100%' : '0 1 230px', minWidth: isPhone ? 0 : 190 }}><DateField ariaLabel={t('finance.budget.jump')} value={ws} min={range.first} max={addDays(range.last, 6)} onChange={(d) => { if (d) setWeek(weekStart(d)); }} /></div>;
+
+  if (isPhone) {
+    // round 6, phone: the week switcher is one flat group, each section a grouped list (name over the group), the request form its own group; "Add a section" is the pinned pill
+    return (
+      <>
+        <div className="cp-native" style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 18 }}>
+          <PageHead eyebrow={`${t('finance.budget.weekOf', { date: fds(ws) })} · ${when}`} title={t('nav.budget')} />
+
+          <PGroup pad="6px 8px 8px" gap={6}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>{weekNav}</div>
+            {ws !== cur ? <div><Chip icon="today" onClick={() => setWeek(cur)}>{t('finance.budget.thisWeek')}</Chip></div> : null}
+            {weekJump}
+          </PGroup>
+
+          {sections.map((x) => <SectionCard key={`${x.id}:${ws}`} section={x} ws={ws} canSet={canSet} meId={meId || ''} lang={lang} onRename={() => setRenaming(x)} />)}
+          {!sections.length ? <Note tone="cream" icon="pie_chart">{t('finance.budget.noSections')}</Note> : null}
+
+          <PGroup title={t('finance.budget.requestTitle')} gap={12}>{requestBody}</PGroup>
+
+          <AddSectionDialog open={addOpen} onClose={() => setAddOpen(false)} />
+          <RenameDialog section={renaming} onClose={() => setRenaming(null)} />
+        </div>
+        {canSet ? <Pin icon="add" label={t('finance.budget.addSection')} onClick={() => setAddOpen(true)} /> : null}
+      </>
+    );
+  }
+
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 'clamp(18px, 2.8vw, 36px)', maxWidth: 1180 }}>
+    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 'clamp(18px, 2.8vw, 36px)' }}>
       <PageHead eyebrow={`${t('finance.budget.weekOf', { date: fds(ws) })} · ${when}`} title={t('nav.budget')}
         right={canSet ? <Button variant="secondary" size={48} icon="add" onClick={() => setAddOpen(true)} style={{ padding: '0 18px' }}>{t('finance.budget.addSection')}</Button> : undefined} />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <IconButton icon="chevron_left" label={t('finance.budget.prevWeek')} onClick={() => step(-1)} style={ws <= range.first ? { opacity: 0.4, pointerEvents: 'none' } : undefined} />
-        <span role="status" aria-live="polite" data-testid="budget-week" style={{ minWidth: isPhone ? 0 : 200, flex: isPhone ? 1 : undefined, textAlign: 'center', fontSize: 17, fontWeight: 500, lineHeight: 1.4, color: '#2B231C' }}>{fds(ws)} – {fds(we)}</span>
-        <IconButton icon="chevron_right" label={t('finance.budget.nextWeek')} onClick={() => step(1)} style={ws >= range.last ? { opacity: 0.4, pointerEvents: 'none' } : undefined} />
+        {weekNav}
         {ws !== cur ? <Chip icon="today" onClick={() => setWeek(cur)}>{t('finance.budget.thisWeek')}</Chip> : null}
-        <div style={{ flex: isPhone ? '1 1 100%' : '0 1 230px', minWidth: isPhone ? 0 : 190 }}><DateField ariaLabel={t('finance.budget.jump')} value={ws} min={range.first} max={addDays(range.last, 6)} onChange={(d) => { if (d) setWeek(weekStart(d)); }} /></div>
+        {weekJump}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)', alignItems: 'start' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 'clamp(16px, 2.4vw, 28px)', alignItems: 'start' }}>
         {sections.map((x) => <SectionCard key={`${x.id}:${ws}`} section={x} ws={ws} canSet={canSet} meId={meId || ''} lang={lang} onRename={() => setRenaming(x)} />)}
       </div>
       {!sections.length ? <Note tone="cream" icon="pie_chart">{t('finance.budget.noSections')}</Note> : null}
 
       <Hero visible style={{ maxWidth: 760, padding: '18px 22px 22px', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <Eyebrow>{t('finance.budget.requestTitle')}</Eyebrow>
-        <Select label={t('finance.budget.section')} value={chosen} onChange={setSec} options={sections.map((x) => ({ value: x.id, label: sectionName(s, x.id, lang) }))} />
-        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('finance.budget.itemPlaceholder')} aria-label={t('finance.budget.item')} maxLength={120} style={{ ...inputBox, flex: '2 1 240px' }} />
-          <div style={{ flex: '1 1 140px', minWidth: 0 }}><RpField value={amt} onChange={setAmt} ariaLabel={t('finance.budget.amount')} placeholder={t('finance.budget.amountPlaceholder')} /></div>
-          <Button size={56} disabled={!ok} onClick={send} style={{ padding: '0 24px' }}>{t('finance.budget.send')}</Button>
-        </div>
+        {requestBody}
       </Hero>
 
       <AddSectionDialog open={addOpen} onClose={() => setAddOpen(false)} />
@@ -87,6 +125,7 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
   const act = useAct();
   const { fds } = useFmt();
   const { today } = useNow();
+  const { isPhone } = useDevice();
   const w = useMemo(() => budgetWeekOf(s, section.id, ws), [s, section.id, ws]);
   const editable = canSet && ws >= weekStart(today); // past weeks are history: read only
   const [limit, setLimit] = useState(String(w.limit));
@@ -107,6 +146,75 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
       if (r.ok) { setRejecting(null); setNote(''); }
     }
   };
+  // round 6, phone: the section is one grouped list: its name (and how many wait) over the group, the limit, progress and totals on top, then one quiet row per request
+  if (isPhone) {
+    const name = sectionName(s, section.id, lang);
+    return (
+      <PGroup title={name} meta={w.pending.length ? <Badge kind="watch" label={t('finance.budget.waiting', { n: w.pending.length })} /> : undefined} pad={0} gap={0}>
+        <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+              {editable ? (
+                <>
+                  <RpField label={t('finance.budget.weekly')} ariaLabel={`${t('finance.budget.weekly')} ${name}`} value={limit} onChange={setLimit} size={18} />
+                  {dirty ? (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+                      <PillBtn tone="primary" onClick={saveLimit}>{t('finance.budget.saveLimit', { date: fds(ws) })}</PillBtn>
+                      <PillBtn onClick={() => setLimit(String(w.limit))}>{t('common.cancel')}</PillBtn>
+                    </div>
+                  ) : null}
+                </>
+              ) : (
+                <span style={{ fontSize: 18, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{t('finance.budget.weekRp', { amount: rp(w.limit) })}</span>
+              )}
+            </div>
+            {canSet ? <IconButton icon="edit" label={t('finance.budget.rename', { name })} bordered={false} size={40} color="#6B6259" onClick={onRename} /> : null}
+          </div>
+          <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={name} style={{ height: 8, borderRadius: 999, background: '#F0EAE1', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${pct}%`, background: pct >= 90 ? '#9A3D24' : pct >= 75 ? '#7A5510' : '#75624B', borderRadius: 999 }} />
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 14, lineHeight: 1.4, fontVariantNumeric: 'tabular-nums' }}>
+            <span>{t('finance.budget.spent', { amount: rp(w.spent) })}{w.committed > 0 ? ` · ${t('finance.budget.committed', { amount: rp(w.committed) })}` : ''}</span>
+            <span style={{ color: w.left < 0 ? '#9A3D24' : '#2F5A40', fontWeight: 500 }}>{w.left < 0 ? t('finance.budget.over', { amount: rp(-w.left) }) : t('finance.budget.left', { amount: rp(w.left) })}</span>
+          </div>
+        </div>
+        {reqs.map((r) => {
+          const mine = r.requestedBy === meId;
+          const pending = r.status === 'pending';
+          const receipt = receiptOfRequest(s, r.id);
+          return (
+            <div key={r.id} style={{ ...prow(false), display: 'flex', flexDirection: 'column', gap: 6 }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 10 }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35 }}>{r.item} · {rp(r.amount)}</span>
+                  <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{actorName(s, `staff:${r.requestedBy}`)} · {fds(r.createdAt.slice(0, 10))}</span>
+                </div>
+                <span style={{ paddingTop: 2 }}>{pending ? <Badge kind="pending" label={t('finance.budget.badgeWaiting')} /> : r.status === 'approved' ? <Badge kind="paid" label={receipt ? t('finance.budget.badgeReceipt') : t('status.approved')} /> : <Badge kind="overdue" label={t('status.rejected')} />}</span>
+              </div>
+              {pending && (mine || canSet) ? (
+                <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                  {mine ? <PillBtn onClick={() => setEditing(r)}>{t('common.edit')}</PillBtn> : null}
+                  {mine ? <PillBtn onClick={() => act('budget.cancel', { id: r.id }, { ok: t('finance.toast.cancelled') })}>{t('finance.budget.cancelRequest')}</PillBtn> : null}
+                  {canSet ? <PillBtn tone="danger" onClick={() => { setRejecting(rejecting === r.id ? null : r.id); setNote(''); }}>{t('finance.budget.reject')}</PillBtn> : null}
+                  {canSet ? <PillBtn tone="primary" label={`${t('finance.budget.approve')} ${r.item}`} onClick={() => decide(r.id, 'approve')}>{t('finance.budget.approve')}</PillBtn> : null}
+                </div>
+              ) : null}
+              {r.status === 'rejected' && r.note ? <span style={{ fontSize: 14, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
+              {rejecting === r.id ? (
+                <div style={dangerStrip}>
+                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
+                  <Button variant="secondary" size={48} onClick={() => setRejecting(null)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
+                  <Button variant="danger" size={48} disabled={!note.trim()} onClick={() => decide(r.id, 'reject')} style={{ padding: '0 20px' }}>{t('finance.budget.rejectConfirm')}</Button>
+                </div>
+              ) : null}
+            </div>
+          );
+        })}
+        {!reqs.length ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, padding: '12px 16px 14px', backgroundImage: 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>{t('finance.budget.noRequests')}</span> : null}
+        <EditRequest request={editing} onClose={() => setEditing(null)} />
+      </PGroup>
+    );
+  }
   return (
     <Hero visible style={{ borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px clamp(16px, 2vw, 22px) 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>

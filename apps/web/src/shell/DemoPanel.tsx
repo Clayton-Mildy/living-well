@@ -7,6 +7,7 @@ import { useNow } from '../lib/clock';
 import { useClub } from '../store/replica';
 import { useSession, signInDemo } from '../store/session';
 import { api } from '../lib/api';
+import { memberPhoto } from '../lib/media';
 import { say } from '../store/ui';
 import { DEMO_STEPS } from '../features/demo/steps';
 
@@ -89,7 +90,7 @@ function DemoPanel({ open, onClose, phone }: { open: boolean; onClose: () => voi
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {pagedAccounts.rows.map((a) => (
           <button key={a.id} type="button" onClick={async () => { await signInAs(a.id); onClose(); navigate('/today'); }} className="h-border" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', minHeight: 56, borderRadius: 12, border: a.id === me ? '2px solid #75624B' : '1px solid #E4DACD', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', color: '#24201C' }}>
-            <Avatar name={a.name} size={38} />
+            <Avatar name={a.name} size={38} src={a.kind === 'staff' ? memberPhoto(s?.staff[a.id]) : undefined} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}><span style={{ fontSize: 16, fontWeight: 500 }}>{a.name}</span><span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{a.role}</span></span>
           </button>
         ))}

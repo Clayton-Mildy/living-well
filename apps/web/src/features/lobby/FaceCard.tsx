@@ -2,7 +2,8 @@
 // MatchedPanel (name, visit line, care flags, extra-day note, confirm) is shared with the bottom sheet that confirms a manual check-in on narrow screens.
 import type { ReactNode } from 'react';
 import { memberName, type Member } from '@cp/shared';
-import { Eyebrow, Icon } from '../../components/ui';
+import { Eyebrow, GROUP_HEAD, Icon } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import type { TFn } from '../../lib/i18n';
 import { FlagChip, MemberAvatar, type Flag } from './parts';
 
@@ -48,14 +49,17 @@ export function FaceCard({ t, scan, member, onSimulate, matched }: { t: TFn; sca
   const manual = scan.state === 'matched' && scan.manual;
   const pill = scanning ? { text: t('lobby.recognising'), icon: 'center_focus_strong', bg: '#FFFFFF', fg: '#24201C' } : manual ? { text: t('lobby.manual'), icon: 'touch_app', bg: '#E3EFE6', fg: '#3D6B4F' } : { text: t('lobby.match', { n: 98 }), icon: 'verified', bg: '#E3EFE6', fg: '#3D6B4F' };
   const line = '2px solid #CAB8A2';
+  // round 6, phone: an iOS grouped section, the title and the Live pill sit over the group, not inside it
+  const { isPhone } = useDevice();
   return (
-    <section aria-label={t('lobby.faceCard')} style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--card-shadow)', minWidth: 0 }}>
-      <div style={{ padding: '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+    <section aria-label={t('lobby.faceCard')} style={isPhone ? { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 } : { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--card-shadow)', minWidth: 0 }}>
+      <div style={{ padding: isPhone ? '0 4px 0 16px' : '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-          <Eyebrow>{t('lobby.faceCheckin')}</Eyebrow>
+          {isPhone ? <h2 style={GROUP_HEAD}>{t('lobby.faceCheckin')}</h2> : <Eyebrow>{t('lobby.faceCheckin')}</Eyebrow>}
         </div>
         <span style={{ height: 28, padding: '0 11px', borderRadius: 8, background: '#F3EEE8', fontSize: 13, fontWeight: 500, color: '#24201C', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flex: 'none' }}>{pulse(7, '#3D6B4F')}{t('lobby.live')}</span>
       </div>
+      <div style={isPhone ? { background: '#FFFFFF', borderRadius: 14, overflow: 'hidden', paddingTop: 16 } : { display: 'contents' }}>
       <div style={{ position: 'relative', margin: '0 16px', height: idle ? 176 : 214, borderRadius: 14, background: '#2E2924', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {corner({ top: 16, left: 16 }, { borderTop: line, borderLeft: line }, { borderTopLeftRadius: 10 })}
         {corner({ top: 16, right: 16 }, { borderTop: line, borderRight: line }, { borderTopRightRadius: 10 })}
@@ -79,7 +83,7 @@ export function FaceCard({ t, scan, member, onSimulate, matched }: { t: TFn; sca
           </>
         ) : null}
       </div>
-      <div style={{ padding: '14px 20px 20px' }}>
+      <div style={{ padding: isPhone ? '14px 16px 16px' : '14px 20px 20px' }}>
         {idle ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <button type="button" className="h-cream" onClick={onSimulate} style={{ height: 44, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter' }}>
@@ -90,6 +94,7 @@ export function FaceCard({ t, scan, member, onSimulate, matched }: { t: TFn; sca
         ) : null}
         {scanning ? <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, fontSize: 16 }}>{pulse(12, '#75624B')}{t('lobby.recognising')}</div> : null}
         {scan.state === 'matched' ? matched : null}
+      </div>
       </div>
     </section>
   );

@@ -9,9 +9,10 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 import { DomainError, projectForFamily, canAccessClub, live } from '@cp/shared';
-import { getClub, runAction, subscribe, resetDemo, broadcastAll } from './state';
+import { getClub, runAction, subscribe, resetDemo, broadcastAll, runJobsNow } from './state';
 import { clockInfo, setClock } from './clock';
 import { authUser, publicUser, registerAuthRoutes } from './routes/auth';
+import { registerPublicRoutes } from './routes/public';
 import { byteRange, checkUpload, loadMedia, saveMedia } from './media';
 
 export const app = new Hono();
@@ -22,6 +23,8 @@ app.get('/api/clock', (c) => c.json(clockInfo()));
 
 // sign-in, session token, account (routes/auth.ts)
 registerAuthRoutes(app);
+// the renter's rating page (no sign-in; routes/public.ts)
+registerPublicRoutes(app);
 
 app.get('/api/snapshot', (c) => {
   const u = authUser(c);
@@ -120,9 +123,10 @@ app.get('/api/demo/accounts', (c) => {
 });
 app.post('/api/demo/reset', async (c) => { await resetDemo(); return c.json({ ok: true, clock: clockInfo() }); });
 app.post('/api/demo/clock', async (c) => {
-  const { hm, allowBack } = await c.req.json<{ hm: string; allowBack?: boolean }>();
-  const clock = await setClock(hm, !!allowBack);
+  const { hm, allowBack, date } = await c.req.json<{ hm: string; allowBack?: boolean; date?: string }>();
+  const clock = await setClock(hm, !!allowBack, date);
   broadcastAll({ type: 'clock', clock });
+  if (date) await runJobsNow(); // a new day: the scheduled work of that day (the unpaid-invoice hold and stop, the invoice run) happens now, not within the next 15 s
   return c.json(clock);
 });
 
@@ -132,6 +136,7 @@ if (process.env.SERVE_WEB !== '0' && existsSync(join(webDist, 'index.html'))) {
   const root = relative(process.cwd(), webDist) || '.';
   const indexHtml = readFileSync(join(webDist, 'index.html'), 'utf8');
   app.use('/assets/*', serveStatic({ root, onFound: (_p, c) => { c.header('Cache-Control', 'public, max-age=31536000, immutable'); } }));
+  app.use('/demo/*', serveStatic({ root, onFound: (_p, c) => { c.header('Cache-Control', 'public, max-age=604800'); } })); // KC round 7: the seed's demo pictures (apps/web/public/demo)
   app.use('*', serveStatic({ root }));
   app.get('*', (c) => (c.req.path.startsWith('/api/') ? c.json({ code: 'err.notFound' }, 404) : c.html(indexHtml)));
   console.log('Serving web app from ' + webDist);

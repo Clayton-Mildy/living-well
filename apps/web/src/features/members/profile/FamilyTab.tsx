@@ -1,19 +1,17 @@
 // Family tab (design ScrProfile family): contacts with real app-access tags, `tel:` links, who is the primary billing contact for
 // this member, each contact's sign-in username (read-only; a family member sees only their own), management's "Reset password",
-// "Message family" and (lobby, management) edit / add / link / remove contacts.
+// "Message on WhatsApp" (a wa.me link per contact: the club talks to families on WhatsApp, there is no in-app inbox) and (lobby, management) edit / add / link / remove contacts.
 import { useState } from 'react';
-import { contactsOfMember, fmtPhone, hasKey, isPendingRow, linksOfFamily, memberShort, type FamilyContact, type Member } from '@cp/shared';
+import { contactsOfMember, fmtPhone, hasKey, isPendingRow, linksOfFamily, memberShort, waUrl, type FamilyContact, type Member } from '@cp/shared';
 import { Avatar, Button, Icon, Sheet } from '../../../components/ui';
 import { api, ApiError } from '../../../lib/api';
 import { say } from '../../../store/ui';
-import { StartThreadSheet } from '../../chat/StartThreadSheet';
-import { HAIR, listCardStyle, relLabel } from '../lib';
-import { ListHead, PendingBanner, Tag28 } from './parts';
+import { HAIR, relLabel } from '../lib';
+import { ListCard, PendingBanner, Tag28 } from './parts';
 import type { P } from './types';
 
 export function FamilyTab({ p }: { p: P }) {
   const { s, m, t } = p;
-  const [msg, setMsg] = useState(false);
   const [reset, setReset] = useState<FamilyContact | null>(null);
   const [busy, setBusy] = useState(false);
   const rows = contactsOfMember(s, m.id);
@@ -33,11 +31,11 @@ export function FamilyTab({ p }: { p: P }) {
     }
   };
   const other = (familyId: string): Member[] => linksOfFamily(s, familyId).filter((l) => l.memberId !== m.id && !isPendingRow(l) && s.members[l.memberId] && !s.members[l.memberId].deletedAt).map((l) => s.members[l.memberId]);
+  const ph = p.isPhone; // round 6, phone (staff and family): the list card is an iOS grouped section
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(18px, 2.8vw, 28px)', maxWidth: 860 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 14 : 'clamp(18px, 2.8vw, 28px)', maxWidth: 860 }}>
       <PendingBanner p={p} tab="family" />
-      <div style={listCardStyle}>
-        <ListHead title={t('profile.familyTitle')} />
+      <ListCard phone={ph} title={t('profile.familyTitle')}>
         {rows.map(({ link, contact }, idx) => {
           const pending = isPendingRow(link) || isPendingRow(contact);
           const access = link.appAccess && !pending;
@@ -58,6 +56,12 @@ export function FamilyTab({ p }: { p: P }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                 {canEdit && !pending ? <Button variant="secondary" size={44} icon="edit" onClick={() => p.open('contact', { familyId: contact.id })} label={t('profile.editContact', { n: contact.name })}>{t('common.edit')}</Button> : null}
                 {canReset && !pending && contact.username ? <Button variant="secondary" size={44} icon="lock_reset" onClick={() => setReset(contact)} label={t('profile.resetPasswordFor', { n: contact.name })}>{t('profile.resetPassword')}</Button> : null}
+                {!p.family && !pending && waUrl(contact.phone) ? (
+                  <a href={waUrl(contact.phone)} target="_blank" rel="noopener" data-testid="wa-link" aria-label={`${t('profile.messageFamily')} · ${contact.name}`} className="h-cream cp-press"
+                    style={{ height: 40, padding: '0 14px', borderRadius: 10, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontFamily: 'Inter', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
+                    <Icon name="chat" size={19} weight={300} />{t('profile.messageFamily')}
+                  </a>
+                ) : null}
                 <a href={`tel:${contact.phone}`} aria-label={t('profile.callName', { n: contact.name })} style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DCD3C8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', textDecoration: 'none', flex: 'none' }}>
                   <Icon name="call" size={20} />
                 </a>
@@ -65,13 +69,7 @@ export function FamilyTab({ p }: { p: P }) {
             </div>
           );
         })}
-      </div>
-      {!p.family ? (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          <Button variant="secondary" size={44} icon="chat" onClick={() => setMsg(true)}>{t('profile.messageFamily')}</Button>
-        </div>
-      ) : null}
-      <StartThreadSheet memberId={m.id} open={msg} onClose={() => setMsg(false)} />
+      </ListCard>
       <Sheet open={!!reset} onClose={() => setReset(null)} title={t('profile.resetTitle')}
         footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" onClick={() => setReset(null)}>{t('common.cancel')}</Button><Button icon="lock_reset" disabled={busy} onClick={doReset}>{t('profile.resetPassword')}</Button></div>}>
         <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('profile.resetSub', { n: reset?.name || '' })}</div>

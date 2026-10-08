@@ -31,7 +31,7 @@ test.beforeEach(async ({ request }) => { await resetDemo(request); });
 const act = (page: Page, userId: string, name: string, input: unknown) =>
   page.request.post('/api/actions/' + name, { headers: { 'x-user-id': userId }, data: { mutationId: 'e2e-' + Math.random().toString(36).slice(2), club: 'citra', input } });
 const stateOf = async (page: Page, userId: string) => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': userId } })).json()).state;
-/** Management (s9) approves what the nurse saved: only then do the family messages go out. */
+/** Management (s9) approves what the nurse saved: only then is the family told. */
 async function approveReadings(page: Page, memberId: string) {
   const s = await stateOf(page, 's9');
   const ids = Object.values<any>(s.readings).filter((r) => r.memberId === memberId && r.date === T && r.approval?.status === 'pending' && !r.approval.companionOf).map((r) => r.id);
@@ -280,7 +280,7 @@ test('the header links open the Trends screen on that member, and the member’s
 });
 
 // ---------- the reading form ----------
-test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-check switch), save: the row shows the reading, Cynthia has a nurse message', async ({ page, browser }, info) => {
+test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-check switch), save: the row shows the reading, Cynthia’s bell has the update (no Messages)', async ({ page, browser }, info) => {
   const c = watchConsole(page);
   await signIn(page, 's8');
   await openPerson(page, 'Opa Hendra');
@@ -323,15 +323,12 @@ test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-che
   expect(rd).toMatchObject({ kind: 'arrival', sys: 164, dia: 98, pulse: 84, status: 'alert', takenBy: 's8', createdBy: 'staff:s8', noteKeys: ['rested'], note: 'Sat down first, felt fine', shared: true });
   expect(rd.familyTold.familyIds).toEqual(['fm2_0', 'fm2_1']);
   expect(s.attendance[`${T}:m2`].recheckDueAt).toBeUndefined();
-  const th = Object.values<any>(s.threads).find((x) => x.familyId === 'fm2_0' && x.topic === 'nurse');
-  const msgs = Object.values<any>(s.messages).filter((m) => m.threadId === th.id).sort((a, b) => a.seq - b.seq);
-  expect(msgs.length).toBe(3);
-  expect(msgs[2]).toMatchObject({ kind: 'healthAlert', from: 'staff:s8', ref: { type: 'reading', id: rd.id } });
-  expect(msgs[2].text).toContain('164/98');
-  expect(th.familyReadSeq).toBe(2); // unread for Cynthia
+  // Messages is gone: nothing is posted, the club tells the family on WhatsApp (simulated) and the update is in their bell, linking to Health
+  expect(Object.keys(s.threads)).toHaveLength(0);
+  expect(Object.keys(s.messages)).toHaveLength(0);
   const fam = await stateOf(page, 'fm2_0'); // what Cynthia’s own app receives
-  expect(Object.values<any>(fam.messages).some((m) => m.threadId === th.id && m.seq === 3)).toBe(true);
-  expect(Object.values<any>(fam.notifications).some((n) => n.kind === 'health.notif.fam.alert' && n.severity === 'urgent')).toBe(true);
+  expect(Object.values<any>(fam.notifications).find((n) => n.kind === 'health.notif.fam.alert' && n.severity === 'urgent')).toMatchObject({ link: '/health', memberId: 'm2' });
+  expect(Object.keys(fam.messages)).toHaveLength(0);
 
   // "Save and next" moved on to the next person with something due: Tjahjadi
   if (isPhone(page)) await expect(page.getByRole('dialog', { name: 'Opa Tjahjadi Lim' })).toBeVisible();
@@ -361,6 +358,18 @@ test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-che
   await mgmt.page.getByRole('button', { name: /Notifications/ }).first().click();
   await expect(mgmt.page.getByRole('dialog', { name: 'Notifications' }).getByText('Alert reading: Opa Hendra · 164/98')).toBeVisible();
   await mgmt.close();
+
+  // Cynthia's own device: the update is in her bell (no "check your messages"), and it opens her Health tab
+  const cyn = await another(browser, info, 'fm2_0', '/today');
+  await cyn.page.getByRole('button', { name: /Notifications/ }).first().click();
+  const bell = cyn.page.getByRole('dialog', { name: 'Notifications' });
+  await bell.getByRole('tab', { name: /Updates/ }).click();
+  const update = bell.getByRole('button', { name: /Above the alert line; the nurse is looking after it\./ });
+  await expect(update).toBeVisible();
+  await expect(update).not.toContainText(/messages/i);
+  await update.click();
+  await expect(cyn.page).toHaveURL(/\/health$/);
+  await cyn.close();
 });
 
 test('monthly values given with the vitals are saved as a monthly row and judged on their own (glucose 196 is Watch); both are in today’s readings', async ({ page }) => {
@@ -702,6 +711,90 @@ test('Limits: the nurse changes when a reading is Watch; a reading saved after t
   c.assertClean();
 });
 
+test('Own limits: the nurse gives a member their own limits on the profile; a reading that is Normal for the club is Watch for them; "Use club limits" restores it', async ({ page, browser }, info) => {
+  const c = watchConsole(page);
+  const bpBadge = () => group(page, 'bp').getByTestId('status-badge');
+  /** open the member in the station and type a 128/78/72 reading (typing stops the wait for the PC-303) */
+  const typeBp = async (id: string, name: string) => {
+    await page.goto('/today?member=' + id);
+    await expect(page.getByRole('heading', { level: 2, name })).toBeVisible();
+    await typeValue(page, 'bp', 'sys', '128');
+    await typeValue(page, 'bp', 'dia', '78');
+    await typeValue(page, 'bp', 'pulse', '72');
+  };
+  await signIn(page, 's8', '/today?member=m2');
+  // the seed's one example: Opa Hendra has his own upper-number limits, and the station says so
+  await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra Gunawan' })).toBeVisible();
+  await expect(page.getByTestId('own-limits')).toHaveText(/Own limits/);
+
+  // Opa Tjahjadi follows the club: 128/78 is Normal
+  await typeBp('m20', 'Opa Tjahjadi Lim');
+  await expect(page.getByTestId('own-limits')).toHaveCount(0);
+  await expect(bpBadge()).toHaveAttribute('data-status', 'normal');
+
+  // his profile: "Limits for Opa Tjahjadi", all the club's; the nurse edits
+  await page.goto('/members/m20/health');
+  await expect(page.getByText('Limits for Opa Tjahjadi', { exact: true })).toBeVisible();
+  await expect(page.getByText('Opa Tjahjadi follows the club’s limits.')).toBeVisible();
+  await page.getByRole('button', { name: 'Edit limits' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Limits for Opa Tjahjadi' });
+  const sys = sheet.locator('[data-limit="sysHigh"]');
+  await expect(sys.getByRole('textbox', { name: 'Watch from' })).toHaveValue('140'); // the club's number to start from
+  await expect(sheet.getByRole('button', { name: 'Save' })).toHaveAttribute('aria-disabled', 'true'); // nothing changed yet
+  await sys.getByRole('textbox', { name: 'Watch from' }).fill('125');
+  await sys.getByRole('textbox', { name: 'Alert from' }).fill('120');
+  await expect(sheet.getByText('Alert must be past Watch.')).toBeVisible(); // the same checks as the club's limits
+  await sys.getByRole('textbox', { name: 'Alert from' }).fill('150');
+  await expect(sys.getByTestId('limit-own')).toBeVisible();
+  await expect(sheet.locator('[data-limit="pulseHigh"]').getByTestId('limit-own')).toHaveCount(0);
+  await sheet.getByRole('button', { name: 'Save' }).click();
+  await expect(sheet).toHaveCount(0);
+  await expect(toast(page, /Limits saved for Opa Tjahjadi/)).toBeVisible();
+  // the section marks what is his own and what is the club's
+  const own = page.locator('[data-limit="sysHigh"][data-own="yes"]');
+  await expect(own).toContainText('Watch from 125 · Alert from 150');
+  await expect(own).toContainText('Own');
+  await page.getByRole('button', { name: /^Show club limits \(10\)$/ }).click();
+  await expect(page.locator('[data-limit="pulseHigh"][data-own="no"]')).toContainText('Watch above 100 · Alert above 120');
+  await expect(page.locator('[data-limit="pulseHigh"][data-own="no"]')).toContainText('Club');
+  const st = await stateOf(page, 's8');
+  expect(st.members.m20.limits).toEqual({ sysHigh: { watch: 125, alert: 150 } });
+  expect(st.club.settings.limits?.sysHigh?.watch).not.toBe(125); // the club's own limits are left alone
+
+  // the same reading is Watch for him now, and the station says why
+  await typeBp('m20', 'Opa Tjahjadi Lim');
+  await expect(page.getByTestId('own-limits')).toHaveText(/Own limits/);
+  await expect(bpBadge()).toHaveAttribute('data-status', 'watch');
+
+  // "Use club limits" puts him back
+  await page.goto('/members/m20/health');
+  await page.getByRole('button', { name: 'Use club limits' }).click();
+  await expect(toast(page, /Opa Tjahjadi now follows the club limits\./)).toBeVisible();
+  await expect(page.getByText('Opa Tjahjadi follows the club’s limits.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Use club limits' })).toHaveCount(0);
+  expect((await stateOf(page, 's8')).members.m20.limits).toBeUndefined();
+  await typeBp('m20', 'Opa Tjahjadi Lim');
+  await expect(page.getByTestId('own-limits')).toHaveCount(0);
+  await expect(bpBadge()).toHaveAttribute('data-status', 'normal');
+  c.assertClean();
+
+  // only the nurse and management change them: the front desk sees the section, without the buttons
+  const desk = await another(browser, info, 's1', '/members/m20/health');
+  await expect(desk.page.getByText('Limits for Opa Tjahjadi', { exact: true })).toBeVisible();
+  await expect(desk.page.getByRole('button', { name: 'Edit limits' })).toHaveCount(0);
+  await desk.close();
+  const mgmt = await another(browser, info, 's9', '/members/m20/health');
+  await expect(mgmt.page.getByRole('button', { name: 'Edit limits' })).toBeVisible();
+  await mgmt.close();
+  // Indonesian
+  const id = await another(browser, info, 's8', '/members/m2/health', 'id');
+  await expect(id.page.getByText('Batas untuk Opa Hendra', { exact: true })).toBeVisible();
+  await expect(id.page.locator('[data-limit="sysHigh"][data-own="yes"]')).toContainText('Pantau mulai 135 · Waspada mulai 155');
+  await expect(id.page.getByRole('button', { name: 'Ubah batas' })).toBeVisible();
+  await assertNoRawKeys(id.page);
+  await id.close();
+});
+
 // ---------- Readings: trends ----------
 test('Readings: filters and search, the member’s six chart cards; phone: a full-screen sheet', async ({ page }) => {
   const c = watchConsole(page);
@@ -758,6 +851,10 @@ test('Readings: filters and search, the member’s six chart cards; phone: a ful
   await expect(view.getByRole('heading', { level: 2, name: 'Opa Hendra Gunawan' })).toBeVisible();
   await expect(view.getByText('84 · High blood pressure')).toBeVisible();
   await expect(view.locator('[data-chart]')).toHaveCount(6);
+  // KC round 7: the readings open on the last week (1W); the checks below look at three months
+  const rangeTabs = view.getByRole('tablist', { name: 'Time range' });
+  await expect(rangeTabs.getByRole('tab', { name: '1W' })).toHaveAttribute('aria-selected', 'true');
+  await rangeTabs.getByRole('tab', { name: '3M' }).click();
   for (const [id, title] of [['bp', 'Blood pressure'], ['pulse', 'Pulse'], ['spo2', 'SpO₂'], ['temp', 'Temperature'], ['glucose', 'Glucose'], ['weight', 'Weight']] as const) {
     const card = view.locator(`[data-chart="${id}"]`);
     await expect(card.getByText(title, { exact: true })).toBeVisible();
@@ -766,8 +863,20 @@ test('Readings: filters and search, the member’s six chart cards; phone: a ful
   const bp = view.locator('[data-chart="bp"]');
   await expect(bp.getByText('Solid line: arrival · dashed: departure · shaded: normal range')).toBeVisible();
   await expect(bp.getByText(/\w{3} \d+ \w+ – \w{3} \d+ \w+/)).toBeVisible(); // the date range comes from the readings, not from a fixed month
-  await expect(view.locator('[data-chart="glucose"]').getByText('Since September · shaded: 70–180')).toBeVisible();
-  await expect(view.locator('[data-chart="weight"]').getByText('Since September · watch on a 3 kg change')).toBeVisible();
+  // at 3M, "Since" is the month of the first reading inside the range (the demo day is 21 Oct, so 3M starts 23 Jul), not of the first reading ever
+  await expect(view.locator('[data-chart="glucose"]').getByText('Since August · shaded: 70–180')).toBeVisible();
+  await expect(view.locator('[data-chart="weight"]').getByText('Since August · watch on a 3 kg change')).toBeVisible();
+  // Custom opens a From and a To date on one row (no sideways scroll); All goes back to the whole history
+  await rangeTabs.getByRole('tab', { name: 'Custom' }).click();
+  const custom = view.getByTestId('range-custom');
+  await expect(custom.getByRole('button')).toHaveCount(2);
+  await expect(custom.getByRole('button', { name: /^From/ })).toBeVisible();
+  await expect(custom.getByRole('button', { name: /^To/ })).toBeVisible();
+  await assertNoHorizontalScroll(page);
+  await rangeTabs.getByRole('tab', { name: 'All', exact: true }).click();
+  await expect(custom).toHaveCount(0);
+  await expect(view.locator('[data-chart="glucose"]').getByText('Since April · shaded: 70–180')).toBeVisible();
+  await expect(view.locator('[data-chart="weight"]').getByText('Since April · watch on a 3 kg change')).toBeVisible();
   await expect(view.getByText('History', { exact: true })).toBeVisible();
   await assertNoHorizontalScroll(page);
   c.assertClean();
@@ -960,7 +1069,7 @@ test('Indonesian: the list, the chips, the result banner, the dialogs and the re
   await card.getByRole('button', { name: 'Hapus hasil ukur' }).click();
   const vd = page.getByRole('dialog', { name: 'Hapus hasil ukur ini?' });
   await expect(vd.getByRole('button', { name: 'Salah orang' })).toBeVisible();
-  await expect(vd.getByText('Keluarga sudah dikabari soal hasil ukur ini. Mereka akan menerima pesan koreksi.')).toBeVisible();
+  await expect(vd.getByText('Keluarga sudah dikabari soal hasil ukur ini. Koreksinya dikirim lewat WhatsApp (demo).')).toBeVisible();
   await assertNoRawKeys(page);
   await vd.getByRole('button', { name: 'Batal' }).click();
   await backToList(page, 'Cek kesehatan');
@@ -977,7 +1086,8 @@ test('Indonesian: the list, the chips, the result banner, the dialogs and the re
   await expect(page.getByRole('group', { name: 'Filter' }).getByRole('button', { name: 'Pantau · 1' })).toBeVisible();
   await readingRow(page, 'Opa Hendra').click();
   const view = isPhone(page) ? page.getByRole('dialog', { name: 'Opa Hendra Gunawan' }) : page.locator('#main');
-  await expect(view.getByText('Sejak September · area berwarna: 70–180')).toBeVisible();
+  await view.getByRole('tablist', { name: 'Rentang waktu' }).getByRole('tab', { name: '3B' }).click(); // the default is 1 minggu
+  await expect(view.getByText('Sejak Agustus · area berwarna: 70–180')).toBeVisible();
   await expect(view.getByText('Riwayat', { exact: true })).toBeVisible();
   await expect(view.getByText(/Hari hasil ukur \d+ dari \d+/)).toBeVisible();
   await expect(view.getByRole('button', { name: 'Buka rekam kesehatan' })).toBeVisible();

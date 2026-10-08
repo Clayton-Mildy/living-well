@@ -5,17 +5,17 @@ import { useMemo, useState } from 'react';
 import { ALLERGY_COVERS, actorName } from '@cp/shared';
 import { dishesByCourse, type KitchenConflict, type UnknownGuest } from '@cp/shared/rules/kitchenOps';
 import type { Dish } from '@cp/shared';
-import { Button, Card, CardHead, Chip, Icon, Note, Pager, Sheet, TextField, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Card, CardHead, Chip, Group, Icon, Note, Pager, Sheet, TextField, usePaged, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { DishDialog } from './dish';
-import { OutlineButton, PillButton, StatusDot, TextButton, useResetOn } from './parts';
+import { OutlineButton, PillButton, RowPill, StatusDot, TextButton, useResetOn } from './parts';
 
 type Conflicts = { conflicts: KitchenConflict[]; unknownGuests: UnknownGuest[]; unreviewed: Dish[]; covers: { total: number }; today: string };
 
-export function ConflictsPanel({ vals }: { vals: Conflicts }) {
+export function ConflictsPanel({ vals, readOnly = false }: { vals: Conflicts; readOnly?: boolean }) {
   const t = useT();
   const s = useClub();
   const act = useAct();
@@ -27,6 +27,77 @@ export function ConflictsPanel({ vals }: { vals: Conflicts }) {
   const done = vals.conflicts.length - todo;
   const clear = !vals.conflicts.length && !vals.unknownGuests.length;
   const undo = async (c: KitchenConflict) => { await act('allergyPlan.clear', { date: vals.today, person: c.person, dishId: c.dish.id }, { ok: t('kitchen.conflicts.cleared', { name: c.name }) }); };
+  // round 6, phone: the same rows inside one flat iOS group (title outside), a hairline between rows, small pill actions
+  if (isPhone) {
+    const first = (i: number) => i === 0;
+    return (
+      <>
+        <Group title={t('kitchen.conflicts.title')} meta={vals.conflicts.length ? t('kitchen.conflicts.meta', { todo, done }) : undefined} pad="0 16px" gap={0}>
+          {paged.rows.map((c, i) => {
+            const plan = c.plan;
+            return (
+              <div key={c.person + c.dish.id} data-testid="conflict-row" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: first(i) ? 'none' : '1px solid #EFEAE3' }}>
+                <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: c.resolved ? '#E3EFE6' : '#F9E3DB', color: c.resolved ? '#3D6B4F' : '#9A3D24', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+                  <Icon name={c.resolved ? 'check_circle' : 'no_food'} size={21} fill={1} />
+                </span>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{c.name}{c.diner.type === 'guest' ? <span style={{ fontWeight: 400, color: '#5E5852' }}> · {t('kitchen.conflicts.guest')}</span> : null}</span>
+                  <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.conflicts.line', { allergy: t('kitchen.food.' + c.allergy).toLocaleLowerCase(), dish: c.dish.name, allergen: t('kitchen.allergen.' + c.allergen).toLocaleLowerCase() })}</span>
+                  {plan ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>{t('kitchen.conflicts.serving', { alt: plan.alternative, by: actorName(s, plan.by), time: plan.at.slice(11, 16) })}</span> : null}
+                  <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 8px', marginTop: 6 }}>
+                    {c.resolved ? <StatusDot color="#3D6B4F">{t('kitchen.conflicts.prepared')}</StatusDot> : <StatusDot color="#A2452B">{t('kitchen.conflicts.needs')}</StatusDot>}
+                    <span style={{ flex: 1 }} />
+                    {readOnly ? null : c.resolved ? (
+                      <>
+                        <RowPill tone="danger" onClick={() => undo(c)}>{t('kitchen.conflicts.undo')}</RowPill>
+                        <RowPill icon="edit" onClick={() => setPick(c)}>{t('kitchen.conflicts.change')}</RowPill>
+                      </>
+                    ) : <RowPill tone="ink" icon="check" onClick={() => setPick(c)}>{t('kitchen.conflicts.markPrepared')}</RowPill>}
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+          {paged.pages > 1 ? <div style={{ borderTop: '1px solid #EFEAE3' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.conflicts.title')} /></div> : null}
+          {vals.unknownGuests.map((u, i) => (
+            <div key={u.guest.id} data-testid="unknown-guest-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: first(i + paged.rows.length) ? 'none' : '1px solid #EFEAE3' }}>
+              <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: '#F6ECD6', color: '#7A5510', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="help" size={21} fill={1} /></span>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{u.guest.name}<span style={{ fontWeight: 400, color: '#5E5852' }}> · {t('kitchen.conflicts.guest')}</span></span>
+                <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.conflicts.unknown', { who: u.escort })}</span>
+                <div style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '6px 8px', marginTop: 6 }}>
+                  <StatusDot color="#7A5510">{t('kitchen.conflicts.ask', { who: u.escort })}</StatusDot>
+                  <span style={{ flex: 1 }} />
+                  {u.phone ? (
+                    <a href={`tel:${u.phone}`} className="cp-press" style={{ height: 34, padding: '0 14px', borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
+                      <Icon name="call" size={17} />{t('common.call')}
+                    </a>
+                  ) : null}
+                </div>
+              </div>
+            </div>
+          ))}
+          {clear || vals.unreviewed.length ? (
+            <div style={{ padding: '12px 0 14px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: vals.conflicts.length || vals.unknownGuests.length ? '1px solid #EFEAE3' : undefined }}>
+              {clear ? <Note tone={vals.covers.total ? 'sage' : 'cream'} icon={vals.covers.total ? 'verified_user' : 'hourglass_empty'}>{vals.covers.total ? t('kitchen.conflicts.clear', { n: vals.covers.total }) : t('kitchen.conflicts.nobody')}</Note> : null}
+              {vals.unreviewed.length ? (
+                <Note tone="ochre" icon="help">
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <span>{t('kitchen.conflicts.unreviewed', { names: vals.unreviewed.map((d) => d.name).join(', ') })}</span>
+                    {readOnly ? null : (<div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                      {vals.unreviewed.map((d) => <RowPill key={d.id} icon="fact_check" onClick={() => setDishId(d.id)}>{t('kitchen.conflicts.check', { name: d.name })}</RowPill>)}
+                    </div>)}
+                  </div>
+                </Note>
+              ) : null}
+            </div>
+          ) : null}
+        </Group>
+        <AlternativeSheet conflict={pick} date={vals.today} onClose={() => setPick(null)} />
+        <DishDialog open={!!dishId} dishId={dishId ?? undefined} onClose={() => setDishId(null)} />
+      </>
+    );
+  }
   return (
     <Card>
       <CardHead title={t('kitchen.conflicts.title')} meta={vals.conflicts.length ? t('kitchen.conflicts.meta', { todo, done }) : undefined} />
@@ -43,7 +114,7 @@ export function ConflictsPanel({ vals }: { vals: Conflicts }) {
               {plan ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>{t('kitchen.conflicts.serving', { alt: plan.alternative, by: actorName(s, plan.by), time: plan.at.slice(11, 16) })}</span> : null}
             </div>
             {c.resolved ? <StatusDot color="#3D6B4F">{t('kitchen.conflicts.prepared')}</StatusDot> : <StatusDot color="#A2452B">{t('kitchen.conflicts.needs')}</StatusDot>}
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: isPhone ? '1 1 100%' : 'none', justifyContent: 'flex-end' }}>
+            {readOnly ? null : (<div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: isPhone ? '1 1 100%' : 'none', justifyContent: 'flex-end' }}>
               {c.resolved ? (
                 <>
                   <TextButton onClick={() => undo(c)} color="#9A3D24">{t('kitchen.conflicts.undo')}</TextButton>
@@ -52,7 +123,7 @@ export function ConflictsPanel({ vals }: { vals: Conflicts }) {
               ) : (
                 <PillButton height={isPhone ? 48 : 44} pad="0 18px" icon="check" grow={isPhone} onClick={() => setPick(c)}>{t('kitchen.conflicts.markPrepared')}</PillButton>
               )}
-            </div>
+            </div>)}
           </div>
         );
       })}
@@ -79,9 +150,9 @@ export function ConflictsPanel({ vals }: { vals: Conflicts }) {
             <Note tone="ochre" icon="help">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <span>{t('kitchen.conflicts.unreviewed', { names: vals.unreviewed.map((d) => d.name).join(', ') })}</span>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+                {readOnly ? null : (<div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                   {vals.unreviewed.map((d) => <OutlineButton key={d.id} onClick={() => setDishId(d.id)} icon="fact_check">{t('kitchen.conflicts.check', { name: d.name })}</OutlineButton>)}
-                </div>
+                </div>)}
               </div>
             </Note>
           ) : null}

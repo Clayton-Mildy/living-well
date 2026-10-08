@@ -9,7 +9,6 @@ import { membersActions } from './members';
 import { familyActions } from './family';
 import { careActions } from './care';
 import { photoActions } from './photos';
-import { messagesActions } from './messages';
 import { kitchenActions } from './kitchen';
 import { requestsActions } from './requests';
 import { financeActions } from './finance';
@@ -21,14 +20,19 @@ import { scheduleActions } from './schedule';
 import { directoryActions } from './directory';
 import { peopleActions } from './people';
 import { planRequestActions } from './planRequests';
+import { membershipActions } from './membership';
 import { accountActions } from './accounts';
+import { renewalActions } from './renewals';
+import { guestActions } from './guests';
+import { taskActions } from './tasks';
 
 registerActions([
   ...reviewActions, ...approvalActions, ...sessionActions, ...attendanceActions, ...healthActions, ...membersActions, ...familyActions,
-  ...careActions, ...photoActions, ...messagesActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...accountActions,
+  ...careActions, ...photoActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...membershipActions, ...accountActions,
+  ...renewalActions, ...guestActions, ...taskActions,
 ] as never);
 
 export * from './framework';
 export { registerJob } from './jobs';
 export { accountRows, findAccount, accessState, accountsNeedingUsername, usernameBase, USERNAME_RE, DEFAULT_PASSWORD, MIN_PASSWORD, MAX_PASSWORD, type AccountRef } from './accounts';
-export { ensureAttendance, familyUserIds, shortOf, requireMember, postMessage } from './helpers';
+export { ensureAttendance, familyUserIds, shortOf, requireMember } from './helpers';

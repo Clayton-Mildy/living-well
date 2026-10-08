@@ -35,7 +35,7 @@ export const cal: Same<typeof EN> = {
   // catalog
   catalog: 'Katalog', catalogTitle: 'Aktivitas dan ruangan', catalogSaved: 'Tersimpan di katalog.', activities: 'Aktivitas', rooms: 'Ruangan', addActivity: 'Tambah aktivitas', addRoom: 'Tambah ruangan',
   editActivity: 'Ubah aktivitas', editRoom: 'Ubah ruangan', editItem: 'Ubah {name}', inactive: 'Nonaktif', nameEn: 'Nama', nameId: 'Nama dalam Bahasa Indonesia', nameIdHint: 'Opsional. Tampil dalam mode Bahasa Indonesia.',
-  icon: 'Ikon', active: 'Aktif', activeSub: 'Tampil di daftar aktivitas penyusun jadwal.', venueRoom: 'Bisa dipesan sebagai tempat acara', venueRoomSub: 'Tampil di layar pemesanan tempat.',
+  photo: 'Foto', photoHint: 'Tampil di Hari ini guru dan di linimasa keluarga.', icon: 'Ikon', active: 'Aktif', activeSub: 'Tampil di daftar aktivitas penyusun jadwal.', venueRoom: 'Bisa dipesan sebagai tempat acara', venueRoomSub: 'Tampil di layar pemesanan tempat.',
   icon_music_note: 'Musik', icon_palette: 'Melukis', icon_self_improvement: 'Peregangan', icon_yard: 'Berkebun', icon_extension: 'Teka-teki', icon_style: 'Kartu', icon_skillet: 'Memasak', icon_menu_book: 'Membaca',
   icon_interests: 'Umum', icon_sports_esports: 'Permainan', icon_theater_comedy: 'Teater', icon_brush: 'Kerajinan', icon_local_florist: 'Bunga', icon_fitness_center: 'Olahraga', icon_celebration: 'Pesta', icon_directions_walk: 'Jalan kaki',
   // notifications, feed and errors (schedule.ts)
@@ -64,4 +64,19 @@ export const cal: Same<typeof EN> = {
   eventSavedQuiet: 'Kalender diperbarui. Tidak ada yang dikabari.', eventDeletedQuiet: 'Acara dihapus. Tidak ada yang dikabari.', publishedToastQuiet: 'Jadwal dipublikasikan mulai {date}. Tidak ada yang dikabari; hari ini tidak berubah.',
   editFromWeek: 'Minggu ini sudah berjalan, jadi yang ditampilkan minggu {date}. Perubahan berlaku mulai di sana.',
   trialSub: 'Makan siang dan pemeriksaan kesehatan',
+  // round 7: change one session for one day only (management), shown to staff as "Changed"
+  editChoiceTitle: 'Ubah {title}', addSession: 'Tambah sesi', addSessionAria: 'Tambah sesi pukul {slot}', justThisDay: 'Hanya satu hari', justThisDaySub: 'Hanya {date}', weeklyPlan: 'Ubah jadwal mingguan', weeklyPlanSub: 'Berlaku mulai minggu depan',
+  noSession: 'Tidak ada sesi', dayTitle: '{date} · {slot}', dayWeekly: 'Jadwal mingguan: {what}', dayWeeklyNone: 'Jadwal mingguan: tidak ada sesi', dayGuest: '{name} dijadwalkan sebagai tamu untuk sesi ini.',
+  dayNote: 'Catatan untuk hari itu', dayNotePh: 'Mengapa? Contoh: Kak Dimas sakit', dayTell: 'Kabari guru dan keluarga', daySave: 'Simpan untuk hari ini', dayBack: 'Kembali ke jadwal mingguan',
+  daySaved: 'Diubah untuk {date}. Guru dan keluarga dikabari.', daySavedQuiet: 'Diubah untuk {date}. Tidak ada yang dikabari.', dayBackDone: 'Kembali ke jadwal mingguan pada {date}.',
+  changedNote: 'Diubah · {note}', changedToday: 'Diubah hari ini: {note}', changedTodayPlain: 'Diubah hari ini',
+  weekStartedHint: 'Untuk satu hari saja, gunakan Ubah kegiatan pada hari itu.',
+  guestBook: 'Jadwalkan pengisi acara tamu', guestBookSub: 'Orang dari luar yang memandu sesi ini', guestOpen: 'Pengisi acara tamu terjadwal',
+  'err.pastDay': 'Hanya hari ini dan hari berikutnya yang bisa diubah.', 'err.dayClosed': 'Klub tutup pada hari itu.', 'err.dayOuting': 'Hari itu ada jalan-jalan, jadi tidak ada sesi di klub.',
+  'notif.dayChanged': 'Pada {date}, kegiatan pukul {slot} diganti menjadi {name}.', 'notif.dayNoSession': 'Pada {date} tidak ada kegiatan pukul {slot}.',
+  'notif.dayBack': 'Pada {date}, kegiatan pukul {slot} kembali ke jadwal biasa.', 'notif.dayBackAll': 'Pada {date}, semua kegiatan kembali ke jadwal biasa.',
+  'feed.dayChanged': 'Kegiatan diubah untuk {date} · {slot}: {name}', 'feed.dayNoSession': 'Tidak ada kegiatan pada {date} · {slot}',
+  'feed.dayBack': 'Kembali ke jadwal mingguan · {date} {slot}', 'feed.dayBackAll': 'Kembali ke jadwal mingguan · {date}',
+  // round 7: family Today notice for a closure or holiday in the next 7 days
+  famClosureLabel: 'Penutupan mendatang', famClosedOn: 'Klub tutup pada {d}', famClosedRange: 'Klub tutup {a} sampai {b}',
 };

@@ -1,13 +1,16 @@
 // Documents tab: one row per document (on file / missing / requested / pending review) with Upload or Replace (a photo or a file, uploaded to /api/media)
 // and View (an image in a viewer, a PDF in a new tab), the date and who added it, request-from-family, plus the consent record (who and when).
 // Registration is on paper, so the signed registration form is a photo or scan of the paper; seed members show "Paper copy on file".
+// Next to it, "Print application form" prints the brochure's four-page form with the member's answers already filled in, ready to sign.
 import { actorName, fmtPhone, primaryContact, type DocType } from '@cp/shared';
 import { consentOf, docOf, documentTypes } from '@cp/shared/rules/members';
+import { applicationDataOf } from '@cp/shared/rules/applicationForm';
 import { Icon, IconButton, StatusBadge } from '../../../components/ui';
 import { useT } from '../../../lib/i18n';
-import { HAIR, listCardStyle, pillBtn } from '../lib';
+import { HAIR, pillBtn } from '../lib';
 import { DocView, useDocPicker, type PaperFile } from '../PaperForm';
-import { ListHead, PendingBanner } from './parts';
+import { useApplicationForm } from '../ApplicationForm';
+import { ListCard, PendingBanner } from './parts';
 import type { P } from './types';
 
 const PHOTO_NAME: Record<DocType, string> = { ktp: 'ktp', nannyKtp: 'ktp-nanny', membershipForm: 'registration-form', healthInfo: 'health-info', other: 'document' };
@@ -45,11 +48,12 @@ export function DocsTab({ p }: { p: P }) {
   const title = (type: DocType) => (type === 'ktp' ? t('profile.docTitle.ktp', { n: m.firstName }) : type === 'nannyKtp' ? t('profile.docTitle.nannyKtp') : t('profile.docTitle.' + type));
   const consents = (['data', 'face'] as const).map((k) => ({ k, c: consentOf(m, k) }));
   const DOC_ICON: Record<DocType, string> = { ktp: 'badge', nannyKtp: 'badge', membershipForm: 'description', healthInfo: 'medical_information', other: 'draft' };
+  const ph = p.isPhone; // round 6, phone (staff and family): each list card is an iOS grouped section
+  const printer = useApplicationForm();
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(18px, 2.8vw, 28px)', maxWidth: 900 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 14 : 'clamp(18px, 2.8vw, 28px)', maxWidth: 900 }}>
       <PendingBanner p={p} tab="docs" />
-      <div style={listCardStyle}>
-        <ListHead title={t('profile.tab.docs')} />
+      <ListCard phone={ph} title={t('profile.tab.docs')}>
         {types.map((type, idx) => {
           const doc = docOf(m, type);
           const has = doc?.status === 'onFile';
@@ -72,6 +76,7 @@ export function DocsTab({ p }: { p: P }) {
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {type === 'membershipForm' && !p.family ? <button type="button" className="h-cream" onClick={() => printer.open(applicationDataOf(s, m.id, today))} style={pillBtn}><Icon name="print" size={18} />{t('form.printAction')}</button> : null}
                 {has && doc?.mediaId ? <DocView doc={doc} title={title(type)}>{(open) => <button type="button" className="h-cream" onClick={open} style={pillBtn}>{t('profile.view')}</button>}</DocView> : null}
                 {canUpload && !(type === 'nannyKtp' && !m.nanny) ? <UploadControls label={has ? t('profile.replace') : t('profile.upload')} name={PHOTO_NAME[type]} onFile={(f) => upload(type, f)} /> : null}
                 {frontDesk && !has && !(type === 'nannyKtp' && !m.nanny) ? <button type="button" className="h-cream" onClick={() => ask(type)} style={pillBtn}>{requested ? t('profile.remind') : t('profile.requestFamily')}</button> : null}
@@ -79,9 +84,8 @@ export function DocsTab({ p }: { p: P }) {
             </div>
           );
         })}
-      </div>
-      <div style={listCardStyle}>
-        <ListHead title={t('profile.consentTitle')} />
+      </ListCard>
+      <ListCard phone={ph} title={t('profile.consentTitle')}>
         {consents.map(({ k, c }, idx) => (
           <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '16px 0', borderTop: idx ? HAIR : 'none', flexWrap: 'wrap' }}>
             <div style={{ flex: '1 1 240px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -92,8 +96,9 @@ export function DocsTab({ p }: { p: P }) {
             {c ? (c.granted ? <StatusBadge kind="paid" label={t('profile.consentGranted')} small /> : <StatusBadge kind="void" label={t('profile.consentOptOut')} small />) : <StatusBadge kind="pending" label={t('profile.docMissing')} small />}
           </div>
         ))}
-        {m.nanny ? <div style={{ padding: '14px 0 18px', borderTop: HAIR, fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.nannyNote', { n: m.nanny.name, p: m.nanny.phone ? fmtPhone(m.nanny.phone) : t('common.notSet') })}</div> : null}
-      </div>
+        {m.nanny ? <div style={{ padding: ph ? '14px 0' : '14px 0 18px', borderTop: HAIR, fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.nannyNote', { n: m.nanny.name, p: m.nanny.phone ? fmtPhone(m.nanny.phone) : t('common.notSet') })}</div> : null}
+      </ListCard>
+      {printer.node}
     </div>
   );
 }

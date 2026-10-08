@@ -153,7 +153,7 @@ describe('joining needs the signed paper registration form', () => {
   });
 });
 
-describe('a trial is a day pass', () => {
+describe('a trial is 2 days in a row, no time, no lunch or health check switches', () => {
   it('book a trial: a day and the allergies only; no time, no lunch or health check switches', async () => {
     openClub('mgmt');
     await show(<Enquiries />);
@@ -165,7 +165,7 @@ describe('a trial is a day pass', () => {
     expect(button('Pick a day', d)).toBeTruthy();
     const day = Array.from(d.querySelectorAll<HTMLElement>('[role="radio"]')).find((r) => /^Thu 22 Oct/.test(r.textContent ?? ''));
     await click(day);
-    expect(button('Book trial · Thu 22 Oct', d)).toBeTruthy(); // enabled with a day alone
+    expect(button('Book trial · Thu 22 Oct and Fri 23 Oct · Rp 450.000', d)).toBeTruthy(); // enabled with a day alone: 2 days in a row, with the trial price
   });
   it('book a visit: it still needs a time', async () => {
     openClub('mgmt');

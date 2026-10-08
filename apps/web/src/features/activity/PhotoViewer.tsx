@@ -13,7 +13,7 @@ import { useMe } from '../../lib/me';
 import { useAct } from '../../lib/act';
 import { say } from '../../store/ui';
 import { MemberPicker } from './MemberPicker';
-import { PHOTO_REASONS, photoCaption, reasonText } from './lib';
+import { PHOTO_REASONS, isCatalogPhoto, photoCaption, reasonText } from './lib';
 
 type Sheets = null | 'tags' | 'hide' | 'remove' | 'approve' | 'reject';
 const ctl = { width: 44, height: 44, borderRadius: 999, border: 'none', background: 'rgba(255,255,255,0.12)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 } as const;
@@ -30,8 +30,9 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
   const canReview = !family && role === 'mgmt';
 
   // follow the live rows; families only ever see visible photos that are still in their data
+  // an activity's catalog picture (catalogPhoto) has no row of its own: it just opens, with no actions
   const list = useMemo(
-    () => photos.map((p) => s.photos[p.id] ?? p).filter((p) => (family ? !!s.photos[p.id] && p.visibility === 'visible' && !p.deletedAt : p.visibility !== 'removed' && !p.deletedAt)),
+    () => photos.map((p) => s.photos[p.id] ?? p).filter((p) => isCatalogPhoto(p) || (family ? !!s.photos[p.id] && p.visibility === 'visible' && !p.deletedAt : p.visibility !== 'removed' && !p.deletedAt)),
     [photos, s.photos, family],
   );
   const [idx, setIdx] = useState(() => Math.max(0, list.findIndex((p) => p.id === startId)));
@@ -101,6 +102,7 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
   };
 
   if (!p) return null;
+  const plain = isCatalogPhoto(p);
   const isVideo = p.media === 'video';
   const real = isVideo && !!p.mediaId; // a recorded or uploaded clip plays in a real <video controls>; seed videos without a file keep the simulated player
   const live1 = playing === p.id;
@@ -135,7 +137,7 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
           <button type="button" onClick={() => go(-1)} aria-label={t('activity.prevPhoto')} style={{ ...ctl, visibility: n > 1 ? 'visible' : 'hidden' }}><Icon name="chevron_left" size={24} /></button>
           <div style={{ flex: 1, maxWidth: 640, aspectRatio: '4/5', maxHeight: '100%', borderRadius: 14, background: '#E8E1D8', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#75624B' }}>
             <span style={{ position: 'absolute', inset: 0 }}><PhotoImg photo={p} alt={caption} controls={real} /></span>
-            <span style={{ position: 'relative', marginTop: 'auto', marginBottom: real ? 64 : 16, pointerEvents: real ? 'none' : undefined, height: 30, padding: '0 12px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_BODY, color: '#24201C', display: 'flex', alignItems: 'center' }}>{isVideo ? t('activity.videoFrom') : t('activity.photoFrom')}{' '}{by}</span>
+            {plain ? null : <span style={{ position: 'relative', marginTop: 'auto', marginBottom: real ? 64 : 16, pointerEvents: real ? 'none' : undefined, height: 30, padding: '0 12px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_BODY, color: '#24201C', display: 'flex', alignItems: 'center' }}>{isVideo ? t('activity.videoFrom') : t('activity.photoFrom')}{' '}{by}</span>}
             {real ? (
               <span style={{ position: 'absolute', top: 12, left: 12, height: 30, padding: '0 12px', borderRadius: 8, background: '#24201C', color: '#FFFFFF', fontSize: 14, display: 'flex', alignItems: 'center', whiteSpace: 'nowrap', pointerEvents: 'none' }}>{p.durationSec ? t('activity.videoLabel', { d: fmtDuration(p.durationSec) }) : t('activity.video')}</span>
             ) : isVideo ? (
@@ -165,11 +167,11 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
         <div style={{ padding: '16px 20px 28px', display: 'flex', flexDirection: 'column', gap: 12, maxHeight: '48%', overflowY: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ fontSize: 18 }}>{caption}</span>
-            <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{meta}</span>
+            {plain ? null : <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{meta}</span>}
             {!family && pending ? <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{t('activity.pendingMeta', { name: by })}</span> : null}
             {!family && hidden && p.moderated ? <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{t('activity.hiddenBy', { name: modBy || t('activity.theClub') })}{p.moderated.reason ? ' · ' + reasonText(p.moderated.reason, t) : ''}</span> : null}
           </div>
-          {family ? (
+          {plain ? null : family ? (
             <div style={{ display: 'flex', gap: 8 }}>
               <button type="button" onClick={() => flash(t('activity.savedPhoto'))} style={{ flex: 1, height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
                 <Icon name="download" size={20} />{t('common.save')}
@@ -190,9 +192,11 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
                   </button>
                 </>
               ) : null}
-              <button type="button" onClick={() => setSheet('tags')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                <Icon name="sell" size={20} />{t('activity.editTags')}
-              </button>
+              {p.kind === 'activity' ? null : ( // an activity picture is of the session: it has no member tags
+                <button type="button" onClick={() => setSheet('tags')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
+                  <Icon name="sell" size={20} />{t('activity.editTags')}
+                </button>
+              )}
               {!pending ? (
                 <button type="button" onClick={() => (hidden ? void restore(p.id, t('activity.shownToast')) : setSheet('hide'))} style={{ flex: '1 1 180px', height: 48, borderRadius: 999, border: '1px solid #FFFFFF', background: 'transparent', color: '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <Icon name={hidden ? 'visibility' : 'visibility_off'} size={20} />{hidden ? t('activity.showToFamilies') : t('activity.hideFromFamilies')}

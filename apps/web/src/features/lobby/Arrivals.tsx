@@ -1,6 +1,6 @@
 // Arrivals board (Prototype v3 ScrArrivals) for a drop-in club: members come on any open day, so nothing is "expected".
 // Three number tabs pick the list: Not in yet (the check-in list, with the face camera card in the side rail), In the club (the check-out list)
-// and Gone home. One hero card shows the selected list with an underline search, with "Also today" (trial and visit guests, unread messages)
+// and Gone home. One hero card shows the selected list with an underline search, with "Also today" (trial and visit guests)
 // right below it; on the check-in tab a side rail carries the face camera. A check-in toast carries Undo; a visit that is an extra Flex day says so before it is
 // confirmed and in the toast. When the rail drops below the list (narrow screens) a manual check-in is confirmed in a bottom sheet instead.
 import { useCallback, useEffect, useRef, useState } from 'react';
@@ -11,7 +11,6 @@ import { Dialog, EmptyState, Eyebrow, Note, Sheet } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
-import { useMe } from '../../lib/me';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
@@ -37,7 +36,6 @@ export function Arrivals() {
   const lang = useLang();
   const { fdl } = useFmt();
   const { device, isPhone } = useDevice();
-  const { role } = useMe();
   const s = useClub();
   const { today, nowMin, now } = useNow();
   const act = useAct();
@@ -219,7 +217,7 @@ export function Arrivals() {
 
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : gap }}>
+      <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : gap }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, ...(isPhone ? { flex: '1 1 100%' } : {}) }}>
             {/* phone: the time sits in the eyebrow (the big clock is for wider screens) */}
@@ -242,19 +240,18 @@ export function Arrivals() {
           </div>
         ) : (
           <>
-            <ModeToggle t={t} mode={mode} counts={{ in: groups.others.length, out: groups.inClub.length, gone: groups.goneHome.length }} onChange={pickMode} />
+            <ModeToggle t={t} mode={mode} counts={{ in: groups.others.length, out: groups.inClub.length, gone: groups.goneHome.length }} onChange={pickMode} phone={isPhone} />
 
             <div ref={columnsRef} id={PANEL_ID} role="tabpanel" aria-labelledby={TAB_ID(mode)} style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(24px, 4vw, 56px)', alignItems: 'flex-start' }}>
-              {/* KC: "Also today" sits below the check-in list on every width; the rail only carries the face camera */}
-              <div style={{ flex: '1 1 440px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'clamp(24px, 3vw, 36px)' }}>
+              <div style={{ flex: '1 1 440px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 22 : 'clamp(24px, 3vw, 36px)' }}>
                 {list}
-                <AlsoToday role={role || 'lobby'} guest={guest} />
               </div>
-              {mode === 'in' ? (
-                <aside style={{ flex: twoColumns ? '0 1 300px' : '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 'clamp(24px, 3vw, 32px)' }}>
-                  {camera}
-                </aside>
-              ) : null}
+              {/* KC round 6: "Also today" sits in the rail ABOVE the face camera (on every tab; the camera is only on Not in yet).
+                  When the rail drops under the list (phones, narrow screens) the order is list, Also today, camera. */}
+              <aside style={{ flex: twoColumns ? '0 1 300px' : '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 22 : 'clamp(24px, 3vw, 32px)' }}>
+                <AlsoToday guest={guest} />
+                {mode === 'in' ? camera : null}
+              </aside>
             </div>
           </>
         )}

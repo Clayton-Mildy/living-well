@@ -11,12 +11,16 @@ const members = () => import('../features/members');
 const activity = () => import('../features/activity');
 const calendar = () => import('../features/calendar');
 const kitchen = () => import('../features/kitchen');
-const chat = () => import('../features/chat');
 const requests = () => import('../features/requests');
 const finance = () => import('../features/finance');
 const mgmt = () => import('../features/mgmt');
 const enquiries = () => import('../features/enquiries');
 const family = () => import('../features/family');
+const renewals = () => import('../features/renewals');
+const tasks = () => import('../features/tasks');
+const guests = () => import('../features/guests');
+const insights = () => import('../features/insights');
+const report = () => import('../features/report');
 
 export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   arrivals: L(lobby, 'Arrivals'),
@@ -32,7 +36,6 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   kmenu: L(kitchen, 'KitchenMenu'),
   kfeed: L(kitchen, 'KitchenFeedback'),
   kstock: L(kitchen, 'Stock'),
-  chat: L(chat, 'Messages'),
   requests: L(requests, 'Requests'),
   fin: L(finance, 'Billing'),
   pay: L(finance, 'Payments'),
@@ -50,6 +53,13 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   fphotos: L(family, 'FamilyPhotos'),
   familyHealth: L(family, 'FamilyHealth'),
   fbill: L(family, 'FamilyBilling'),
+  // KC round 7
+  renewals: L(renewals, 'Renewals'),
+  tasks: L(tasks, 'Tasks'),
+  guests: L(guests, 'Guests'),
+  insights: L(insights, 'Insights'),
+  fmemories: L(family, 'FamilyMemories'),
+  report: L(report, 'DailyReport'),
 };
 export const MemberProfileScreen = L(members, 'MemberProfile');
 export const DesignSystemScreen = lazy(() => import('../features/demo/DesignSystem').then((m) => ({ default: m.DesignSystem })));

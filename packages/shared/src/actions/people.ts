@@ -5,6 +5,7 @@ import { defineAction, isMgmt, type Ctx } from './framework';
 import { BANKS, CONTRACTS, HR_NOTE_KINDS, STAFF_ROLES, TIME_KINDS, staffTimeId } from '../rules/mgmt';
 import { bad, bool, hm, int, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { live } from '../util';
+import { mediaIdOf } from './members';
 
 const mgmtOnly = (u: User) => isMgmt(u);
 const id80 = (v: unknown, field: string) => str(v, 80, { required: true, field });
@@ -41,7 +42,7 @@ const parseHr = (v: unknown): HrIn => {
   return out;
 };
 interface CreateIn { name: string; knownAs?: string; role: StaffRole; title: string; phone: string; supervisor?: boolean; rateable?: boolean; appAccess?: boolean; hr: HrIn }
-interface UpdateIn { staffId: string; name?: string; knownAs?: string | null; role?: StaffRole; title?: string; phone?: string; supervisor?: boolean; rateable?: boolean; hr: HrIn }
+interface UpdateIn { staffId: string; name?: string; knownAs?: string | null; role?: StaffRole; title?: string; phone?: string; supervisor?: boolean; rateable?: boolean; /** round 7: the profile picture (an uploaded media id); null removes it */ photoMediaId?: string | null; hr: HrIn }
 
 /** A phone number may sign in as only one person: staff and family contacts share the login lookup. */
 function phoneTaken(d: Draft<ClubState>, ph: string, exceptStaffId?: string) {
@@ -103,6 +104,7 @@ export const peopleActions = [
         ...(o.phone !== undefined ? { phone: phone(o.phone, 'phone') } : {}),
         ...(o.supervisor !== undefined ? { supervisor: bool(o.supervisor) } : {}),
         ...(o.rateable !== undefined ? { rateable: bool(o.rateable) } : {}),
+        ...(o.photoMediaId !== undefined ? { photoMediaId: mediaIdOf(o.photoMediaId) ?? null } : {}),
         hr: parseHr(o.hr),
       };
     },
@@ -117,6 +119,7 @@ export const peopleActions = [
       if (i.phone) st.phone = i.phone;
       if (i.supervisor !== undefined) st.supervisor = i.supervisor;
       if (i.rateable !== undefined) st.rateable = i.rateable;
+      if (i.photoMediaId !== undefined) { if (i.photoMediaId) st.photoMediaId = i.photoMediaId; else delete st.photoMediaId; }
       Object.assign(st.hr, i.hr);
       if (i.hr.quote === '') delete st.hr.quote;
       checkContract(st.hr as StaffHr, ctx);

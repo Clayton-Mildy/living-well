@@ -7,6 +7,7 @@ export const members: Same<typeof EN> = {
   planGold: 'Gold', planFlex: 'Flex {n}/{q}', planFlexTip: 'Paket Flex: {n} dari {q} kunjungan terpakai bulan ini', planGoldTip: 'Paket Gold: kunjungan tanpa batas', newTag: 'anggota baru', paymentOverdue: 'Pembayaran terlambat', endingOn: 'berakhir {d}',
   since: 'Sejak {d}', renews: 'Perpanjangan {d}', endsOn: 'Berakhir {d}', endedOn: 'Berakhir {d}', sortLabel: 'Urutkan anggota', 'sort.name': 'Nama', 'sort.startNew': 'Tanggal mulai, terbaru', 'sort.startOld': 'Tanggal mulai, terlama', 'sort.endSoon': 'Tanggal berakhir, terdekat',
   lastVisit: 'Kunjungan terakhir {d}', neverVisited: 'Belum pernah datang', pagerLabel: 'Halaman anggota',
+  noContact: 'Belum ada kontak keluarga',
   'st.ended': 'Keanggotaan berakhir {d}', 'st.upcoming': 'Mulai {d}', 'st.home': 'Sudah pulang pukul {t}',
   'st.in': 'Di klub sejak {t}', 'st.off': 'Belum datang hari ini', 'st.usually': 'Biasanya tiba sekitar {t}', noMatch: 'Tidak ada anggota yang cocok', noMatchSub: 'Coba nama, nama keluarga, nomor ponsel, atau filter lain.',
   newMember: 'Anggota baru', addTitle: 'Tambah anggota', create: 'Buat anggota', addNote: 'Ketik data dari formulir pendaftaran kertas yang sudah ditandatangani, lalu lampirkan foto atau PDF-nya.',
@@ -41,4 +42,6 @@ export const members: Same<typeof EN> = {
   'err.alreadyEnded': 'Keanggotaan ini sudah berakhir.', 'err.alreadyEnding': 'Hari terakhir sudah ditetapkan. Batalkan dulu untuk memilih tanggal lain.', 'err.notEnding': 'Belum ada hari terakhir yang ditetapkan.',
   'err.notEnded': 'Keanggotaan ini masih aktif.',
   'err.formRequired': 'Lampirkan formulir pendaftaran bertanda tangan.',
+  'err.emailInvalid': 'Alamat email itu tampaknya tidak benar.', 'err.regPhoneInvalid': 'Nomor telepon itu tampaknya tidak benar. Gunakan +62… atau 08….',
+  'err.postcodeInvalid': 'Kodepos terdiri dari 5 angka.', 'err.rtRwInvalid': 'Periksa RT/RW, misalnya 004/002.',
 };

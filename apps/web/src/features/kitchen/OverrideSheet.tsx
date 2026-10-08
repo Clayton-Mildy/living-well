@@ -55,7 +55,7 @@ export function OverrideSheet({ open, onClose, initialDate }: { open: boolean; o
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             {COURSES.map((c) => (
               <div key={c} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <DishField label={t('kitchen.course.' + c)} course={c} ids={cur(c)} flex="1 1 auto" onRemove={(id) => setCourse(c, cur(c).filter((x) => x !== id))} onAdd={() => setPicker(c)} testId={'override-' + c} />
+                <DishField label={t('kitchen.course.' + c)} course={c} ids={cur(c)} flex="1 1 auto" onRemove={(id) => setCourse(c, cur(c).filter((x) => x !== id))} onAdd={() => setPicker(c)} testId={'override-' + c} date={date} />
                 {row?.[c] && !edits[c] ? <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ fontSize: FONT_BODY, color: '#7A5510' }}>{t('kitchen.override.isChanged')}</span><TextButton onClick={() => reset(c)}>{t('kitchen.override.backToWeekly')}</TextButton></div> : null}
               </div>
             ))}
@@ -63,7 +63,7 @@ export function OverrideSheet({ open, onClose, initialDate }: { open: boolean; o
         ) : error ? <Note tone="cream" icon="event_busy">{error}</Note> : null}
       </Sheet>
       {picker ? (
-        <DishPicker open onClose={() => setPicker(null)} title={t('kitchen.picker.title', { course: t('kitchen.course.' + picker) })} course={picker} picked={cur(picker)}
+        <DishPicker open onClose={() => setPicker(null)} title={t('kitchen.picker.title', { course: t('kitchen.course.' + picker) })} course={picker} picked={cur(picker)} date={validDate ? date : undefined}
           onToggle={(id) => setCourse(picker, cur(picker).includes(id) ? cur(picker).filter((x) => x !== id) : [...cur(picker), id])}
           onCreated={(id) => setCourse(picker, [...cur(picker), id])} />
       ) : null}

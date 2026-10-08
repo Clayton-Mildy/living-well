@@ -1,11 +1,13 @@
 // Pick people with a search and a short list, not a wall of everyone: the chosen ones sit on top as removable chips,
 // a search box finds the rest, and the matches are paged. Used for the group photo and for editing a photo's tags.
+// Round 6 (phone): the grey iOS search bar and a flat list with inset hairlines and a press tint (no bordered box).
 import { useMemo, useState, type ReactNode } from 'react';
 import { memberName, memberShort, type Member } from '@cp/shared';
 import { searchMembers } from '@cp/shared/rules/activity';
 import { Icon, Pager, TextField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useT } from '../../lib/i18n';
-import { Av } from './lib';
+import { useDevice } from '../../hooks/useDevice';
+import { Av, SearchBar, rowLine } from './lib';
 
 export function MemberPicker({ members, value, onChange, suggested = [], sub, selectedLabel, emptyLabel, pageSize = 5 }: {
   members: Member[];
@@ -20,6 +22,7 @@ export function MemberPicker({ members, value, onChange, suggested = [], sub, se
   pageSize?: number;
 }) {
   const t = useT();
+  const { isPhone } = useDevice();
   const [q, setQ] = useState('');
   const found = useMemo(() => searchMembers(members, q), [members, q]);
   const paged = usePaged(found, pageSize, q);
@@ -51,15 +54,17 @@ export function MemberPicker({ members, value, onChange, suggested = [], sub, se
           </div>
         ) : null}
       </div>
-      <TextField label={t('activity.searchMember')} value={q} onChange={setQ} placeholder={t('activity.searchMemberPh')} inputMode="search" />
+      {isPhone
+        ? <SearchBar value={q} onChange={setQ} label={t('activity.searchMember')} placeholder={t('activity.searchMemberPh')} />
+        : <TextField label={t('activity.searchMember')} value={q} onChange={setQ} placeholder={t('activity.searchMemberPh')} inputMode="search" />}
       {found.length ? (
-        <div style={{ border: '1px solid #E4DACD', borderRadius: 14, overflow: 'hidden' }}>
+        <div style={{ border: isPhone ? 'none' : '1px solid #E4DACD', borderRadius: 14, overflow: 'hidden' }}>
           <ul style={{ margin: 0, padding: 0, listStyle: 'none' }}>
             {paged.rows.map((m, i) => {
               const on = value.includes(m.id);
               return (
-                <li key={m.id} style={{ borderTop: i ? '1px solid #F0EAE1' : 'none' }}>
-                  <button type="button" aria-pressed={on} aria-label={`${memberName(m)}`} onClick={() => toggle(m.id)} className="h-row" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '8px 14px', minHeight: 56, border: 'none', background: on ? '#F3EEE8' : '#FFFFFF', cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
+                <li key={m.id} style={isPhone ? { background: '#FFFFFF', ...rowLine(i === 0, 62) } : { borderTop: i ? '1px solid #F0EAE1' : 'none' }}>
+                  <button type="button" aria-pressed={on} aria-label={`${memberName(m)}`} onClick={() => toggle(m.id)} className={isPhone ? 'cp-tap-self' : 'h-row'} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: isPhone ? '8px 12px 8px 14px' : '8px 14px', minHeight: 56, border: 'none', background: on ? '#F3EEE8' : '#FFFFFF', cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
                     <Av m={m} size={36} fs={FONT_SMALL} />
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                       <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memberName(m)}</span>

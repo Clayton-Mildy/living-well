@@ -1,12 +1,11 @@
 // Lobby selectors for a drop-in club (members come on any open day; nothing is "expected"):
 // face-recognition opt-out, which member "Simulate next arrival" picks, the manual check-in search, the Flex visit line,
-// departure-check status, and the "Also today" list (trial/visit guests and unread messages).
+// departure-check status, and the "Also today" list (trial/visit guests).
 // Pure functions over ClubState (also called with an immer draft inside actions).
-import type { ClubState, GuestVisit, HM, ISODate, Member, Message, Reading, Role, Thread } from '../types';
+import type { ClubState, GuestVisit, HM, ISODate, Member, Reading } from '../types';
 import { contactsOfMember, dayStatus, memberName, planOn } from './core';
 import { attOf, flexQuota, guestsOn, lobbyGroups, visitsInMonth, wouldBeExtra, type BoardRow } from './attendance';
 import { todayReading } from './health';
-import { messagesOf, staffThreads, staffUnread } from './messages';
 import { sortBy, toMin, ym } from '../util';
 
 // ---------- face recognition ----------
@@ -89,16 +88,9 @@ export function departureStatus(s: ClubState, memberId: string, date: ISODate, n
 // ---------- "Also today" ----------
 export interface AlsoToday {
   guests: GuestVisit[]; // trial and visit guests (booked, in, out, no-show): trials (no time, they come from opening) first, then by time
-  unread: { threads: Thread[]; latest?: { thread: Thread; message: Message } };
 }
-export function alsoToday(s: ClubState, date: ISODate, role: Role): AlsoToday {
-  const unreadThreads = staffThreads(s, role).filter((t) => staffUnread(s, t) > 0);
-  let latest: { thread: Thread; message: Message } | undefined;
-  for (const t of unreadThreads) {
-    const msg = messagesOf(s, t.id).filter((x) => x.seq > t.staffReadSeq && x.from.startsWith('family:')).pop();
-    if (msg && (!latest || msg.at > latest.message.at)) latest = { thread: t, message: msg };
-  }
+export function alsoToday(s: ClubState, date: ISODate): AlsoToday {
   // a trial pass has no time (its guest comes from opening, with lunch and a nurse check), so guests without a time go first
   const guests = sortBy(guestsOn(s, date), (g) => `${g.time || '00:00'}|${g.kind === 'trial' ? 0 : 1}|${g.name}`);
-  return { guests, unread: { threads: unreadThreads, latest } };
+  return { guests };
 }

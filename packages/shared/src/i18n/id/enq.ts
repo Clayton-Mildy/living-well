@@ -26,14 +26,15 @@ export const enq: Same<typeof EN> = {
   // ----- kunjungan dan percobaan -----
   visitTitle: 'Jadwalkan kunjungan', visitChange: 'Ubah kunjungan', trialTitle: 'Jadwalkan hari percobaan', trialChange: 'Ubah hari percobaan',
   visitText: '{contact} menerima rinciannya lewat WhatsApp (demo).',
-  trialText: 'Pesan paling lambat sehari sebelumnya. {contact} menerima konfirmasi WhatsApp (demo).',
-  pickDay: 'Hari', otherDate: 'Tanggal lain', pickTime: 'Jam', otherTime: 'Jam lain', pickDayTime: 'Pilih hari dan jam', bookVisitFor: 'Jadwalkan kunjungan · {date}, {time}', bookTrialFor: 'Jadwalkan percobaan · {date}', pickADay: 'Pilih hari', trialPass: 'Makan siang dan cek kesehatan sudah termasuk.',
-  visitBooked: 'Kunjungan untuk {name} dijadwalkan: {date}, {time}. {contact} sudah menerima rinciannya lewat WhatsApp (demo).', trialBooked: 'Percobaan untuk {name} dijadwalkan: {date}. {contact} sudah menerima rinciannya lewat WhatsApp (demo).',
+  trialText: 'Percobaan berlangsung 2 hari berturut-turut, {price}. Pesan paling lambat sehari sebelumnya. {contact} menerima konfirmasi WhatsApp (demo).',
+  pickDay: 'Hari', otherDate: 'Tanggal lain', pickTime: 'Jam', otherTime: 'Jam lain', pickDayTime: 'Pilih hari dan jam', bookVisitFor: 'Jadwalkan kunjungan · {date}, {time}', bookTrialFor: 'Jadwalkan percobaan · {date} dan {date2} · {price}', pickADay: 'Pilih hari', trialPass: 'Dua hari berturut-turut, dengan makan siang dan cek kesehatan setiap hari.', trialDays: '{a} dan {b}', trialPrice: 'Biaya percobaan {price}, dibayar di meja depan.',
+  visitBooked: 'Kunjungan untuk {name} dijadwalkan: {date}, {time}. {contact} sudah menerima rinciannya lewat WhatsApp (demo).', trialBooked: 'Percobaan untuk {name} dijadwalkan: {date} dan {date2} ({price}). {contact} sudah menerima rinciannya lewat WhatsApp (demo).',
   foodAllergies: 'Alergi makanan', notKnown: 'Belum diketahui', foodHint: 'Jika belum tahu, dapur diminta mencari tahu sebelum makan siang.',
   mobility: 'Alat bantu jalan', diet: 'Pola makan',
 
   // ----- bergabung -----
   jn_eyebrow: 'Bergabung sebagai anggota', jn_fromEnquiry: 'Dari data calon', jn_member: 'Anggota', jn_contact: 'Penanggung tagihan', jn_allergies: 'Alergi',
+  jn_regFee: 'Biaya pendaftaran ({price}, sekali saja) ada di invoice pertama.', jn_fromTrial: 'Alergi dan kebutuhan dari hari percobaan sudah terisi.',
   plan: 'Paket', jn_visits: '{n} kunjungan sebulan', jn_visitsOne: '{n} kunjungan sebulan', start: 'Mulai',
   createMember: 'Buat anggota · {plan}', sendForApproval: 'Kirim ke manajemen · {plan}', joinReviewNote: 'Permintaan Anda diteruskan ke manajemen. Anggota menjadi aktif, dan keluarga bisa masuk, setelah manajemen menyetujui.',
   joined: '{name} kini menjadi anggota, mulai {date}. Akun masuk keluarga dibuat untuk {contact}.', joinSent: '{name} menunggu persetujuan manajemen. Keluarga bisa masuk setelah disetujui.',

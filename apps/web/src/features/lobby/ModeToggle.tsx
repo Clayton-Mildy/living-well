@@ -15,7 +15,7 @@ const LABEL: Record<Mode, string> = { in: 'lobby.notInYet', out: 'lobby.inClub',
 const VERB: Record<Mode, string | null> = { in: 'lobby.checkIn', out: 'lobby.checkOut', gone: null };
 const TILE_ID: Record<Mode, string> = { in: 'tile-notIn', out: 'tile-inClub', gone: 'tile-goneHome' };
 
-export function ModeToggle({ t, mode, counts, onChange }: { t: TFn; mode: Mode; counts: Record<Mode, number>; onChange: (m: Mode) => void }) {
+export function ModeToggle({ t, mode, counts, onChange, phone }: { t: TFn; mode: Mode; counts: Record<Mode, number>; onChange: (m: Mode) => void; phone?: boolean }) {
   const refs = useRef<Record<Mode, HTMLButtonElement | null>>({ in: null, out: null, gone: null });
   const move = (e: KeyboardEvent<HTMLButtonElement>) => {
     const i = ORDER.indexOf(mode);
@@ -28,6 +28,26 @@ export function ModeToggle({ t, mode, counts, onChange }: { t: TFn; mode: Mode; 
     onChange(next);
     refs.current[next]?.focus();
   };
+  // round 6, phone: an iOS segmented control ("Not in yet 37 | In the club 5 | Gone home 0") instead of the big number tiles
+  if (phone) {
+    return (
+      <div role="tablist" aria-label={t('lobby.modeAria')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>
+        {ORDER.map((k) => {
+          const on = k === mode;
+          const label = t(LABEL[k]);
+          const verb = VERB[k];
+          return (
+            <button key={k} ref={(el) => { refs.current[k] = el; }} type="button" role="tab" id={TAB_ID(k)} aria-selected={on} aria-controls={PANEL_ID} tabIndex={on ? 0 : -1}
+              aria-label={`${verb ? `${t(verb)} · ` : ''}${label} (${counts[k]})`} onClick={() => onChange(k)} onKeyDown={move} data-mode={k}
+              style={{ minWidth: 0, height: 38, padding: '0 6px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', transition: 'background-color .15s' }}>
+              <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
+              <span data-testid={TILE_ID[k]} style={{ flex: 'none', fontVariantNumeric: 'tabular-nums', color: on ? '#1E1A16' : '#8A8078' }}>{counts[k]}</span>
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div role="tablist" aria-label={t('lobby.modeAria')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 'clamp(8px, 2vw, 32px)', maxWidth: 640 }}>
       {ORDER.map((k) => {

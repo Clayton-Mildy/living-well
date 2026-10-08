@@ -10,7 +10,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { PaymentForm, RefundForm } from './forms';
 import { matches, methodLabel } from './lib';
-import { Badge, HAIR, Hero, HeroHead, NumberTabs, PagerBar, SearchField, hrow, rowSub, rowTitle } from './parts';
+import { Badge, HAIR, Hero, HeroHead, NumberTabs, PGroup, PagerBar, PillBtn, SearchField, hrow, prow, rowSub, rowTitle } from './parts';
 
 export function Payments() {
   const s = useClub();
@@ -37,13 +37,25 @@ export function Payments() {
   const sync = () => act('xero.sync', {}, { ok: t('finance.toast.xeroSynced') });
 
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 'clamp(18px, 2.8vw, 36px)', maxWidth: 1180 }}>
+    <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 18 : 'clamp(18px, 2.8vw, 36px)' }}>
       <PageHead eyebrow={t('finance.pay.eyebrow')} title={t('nav.payments')}
-        right={<Button variant="secondary" size={48} icon="sync" onClick={sync} style={{ padding: '0 18px' }}>{t('finance.pay.sync')}</Button>} />
+        right={<Button variant="secondary" size={isPhone ? 44 : 48} icon="sync" onClick={sync} style={{ padding: '0 18px' }}>{t('finance.pay.sync')}</Button>} />
 
       <NumberTabs cols={isPhone ? 2 : 4} maxWidth={isPhone ? 480 : 820}
         items={tiles.map((x) => ({ key: x.id, testId: `pay-tile-${x.id}`, label: x.label, value: x.value, sub: (isPhone ? x.short ?? x.sub : x.sub) || undefined }))} />
 
+      {isPhone ? (
+        // round 6, phone: the search bar on its own, the payments as a grouped list, the manual-payment form as its own group
+        <>
+          <SearchField value={q} onChange={setQ} label={t('finance.pay.search')} placeholder={t('finance.pay.search')} />
+          <PGroup title={t('finance.pay.listTitle')} meta={q && hits.length !== board.rows.length ? t('finance.bill.matches', { n: hits.length, of: board.rows.length }) : undefined} pad={0} gap={0}>
+            {paged.rows.map((r, i) => <PaymentRow key={r.p.id} pv={r} first={i === 0} refunding={refundFor === r.p.id} onRefund={() => setRefundFor(r.p.id)} onClose={() => setRefundFor(null)} />)}
+            {!hits.length ? <EmptyState icon={q ? 'search_off' : 'payments'} title={q ? t('common.noResults') : t('finance.pay.empty')} /> : null}
+            <PagerBar paged={paged} label={t('finance.pay.listTitle')} />
+          </PGroup>
+          <PGroup title={t('finance.pay.manualTitle')}><PaymentForm /></PGroup>
+        </>
+      ) : (
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(24px, 4vw, 56px)', alignItems: 'flex-start' }}>
         <Hero style={{ flex: '1 1 480px' }}>
           <HeroHead title={t('finance.pay.listTitle')} right={<SearchField value={q} onChange={setQ} label={t('finance.pay.search')} placeholder={t('finance.pay.search')} width="min(240px, 100%)" />} />
@@ -57,14 +69,16 @@ export function Payments() {
           <PaymentForm />
         </Hero>
       </div>
+      )}
     </div>
   );
 }
 
-function PaymentRow({ pv, refunding, onRefund, onClose }: { pv: PaymentView; refunding: boolean; onRefund: () => void; onClose: () => void }) {
+function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentView; refunding: boolean; onRefund: () => void; onClose: () => void; first?: boolean }) {
   const t = useT();
   const { fds, fmonth } = useFmt();
   const { today } = useNow();
+  const { isPhone } = useDevice();
   const { p, member } = pv;
   const periods = Array.from(new Set(pv.allocations.map((a) => (a.invoice ? fmonth(invoicePeriod(a.invoice), true) : '')).filter(Boolean)));
   const numbers = pv.allocations.map((a) => a.invoiceId);
@@ -75,6 +89,33 @@ function PaymentRow({ pv, refunding, onRefund, onClose }: { pv: PaymentView; ref
     p.ref ? t('finance.pay.ref', { ref: p.ref }) : '',
     pv.credit > 0 && numbers.length ? t('finance.pay.creditPart', { amount: rp(pv.credit) }) : '',
   ].filter(Boolean).join(' · ');
+  // round 6, phone: name and amount, the what-it-paid line, then the date, a quiet Xero status and a Refund pill
+  if (isPhone) {
+    return (
+      <div style={{ ...prow(first), display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+          <span style={{ ...rowTitle, fontSize: 16, minWidth: 0 }}>{member ? memberName(member) : p.memberId}</span>
+          <span style={{ fontSize: 16, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, textAlign: 'right' }}>{p.foreign ? `${p.foreign.ccy} ${p.foreign.amount} · ` : ''}{rp(p.amount)}</span>
+        </div>
+        <span style={{ ...rowSub, fontSize: 13 }}>{sub}</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', minHeight: 24 }}>
+          <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{p.receivedOn === today ? t('common.today') : fds(p.receivedOn)}{p.receivedAt ? `, ${p.receivedAt}` : ''}</span>
+          {p.xero === 'synced' ? <Badge kind="paid" label={t('finance.xero.synced')} /> : <Badge kind="pending" label={t('finance.xero.pending')} />}
+          {pv.refundable > 0 && !refunding ? (
+            <span style={{ marginLeft: 'auto' }}>
+              <PillBtn label={`${t('finance.pay.refund')} ${member ? memberName(member) : ''} ${numbers.join(' ')}`.trim()} onClick={onRefund}>{t('finance.pay.refund')}</PillBtn>
+            </span>
+          ) : null}
+        </div>
+        {pv.refunds.map((r) => (
+          <span key={r.id} style={{ fontSize: 13, color: '#9A3D24', lineHeight: 1.4 }}>
+            {t('finance.pay.refundedLine', { amount: rp(r.amount), date: fds(r.createdAt.slice(0, 10)), reason: r.reason || t('finance.pay.noReason') })}{r.creditNote ? ` · ${t('finance.pay.creditNoteTag')}` : ''}
+          </span>
+        ))}
+        {refunding ? <RefundForm pv={pv} onClose={onClose} /> : null}
+      </div>
+    );
+  }
   return (
     <div style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px 14px', flexWrap: 'wrap' }}>

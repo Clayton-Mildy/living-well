@@ -48,7 +48,10 @@ describe('activity and calendar translations', () => {
   it('the dynamic keys the code builds all exist', () => {
     const need: string[] = [];
     for (const k of ['calm', 'cheerful', 'quiet', 'agitated']) need.push('activity.opt.mood.' + k);
-    for (const k of ['all', 'most', 'half', 'little']) need.push('activity.opt.lunch.' + k);
+    for (const k of ['all', 'most', 'half', 'little', 'none']) need.push('activity.opt.lunch.' + k, 'activity.lunchShort.' + k);
+    for (const k of ['joined', 'satOut']) need.push('activity.opt.session.' + k);
+    for (const k of ['lunch', 'session', 'mood']) need.push('activity.round.' + k, 'activity.restWhat.' + k, 'activity.notif.act.' + k);
+    for (const k of ['markLunch', 'markSession', 'markMood']) need.push('activity.feed.' + k);
     for (const k of ['yes', 'satOut']) need.push('activity.opt.joined.' + k);
     for (const k of ['normal', 'withdrawn']) need.push('activity.opt.communicative.' + k);
     for (const k of ['normal', 'low']) need.push('activity.opt.content.' + k);
@@ -57,12 +60,12 @@ describe('activity and calendar translations', () => {
     for (const k of ['closed', 'holiday', 'outing']) need.push('cal.t_' + k, 'cal.notif.added_' + k, 'cal.notif.changed_' + k, 'cal.notif.removed_' + k, 'cal.feed.added_' + k, 'cal.feed.changed_' + k, 'cal.feed.removed_' + k);
     for (const k of ['music_note', 'palette', 'self_improvement', 'yard', 'extension', 'style', 'skillet', 'menu_book', 'interests', 'sports_esports', 'theater_comedy', 'brush', 'local_florist', 'fitness_center', 'celebration', 'directions_walk']) need.push('cal.icon_' + k);
     for (const k of ['activity.nowAt', 'activity.nextAt', 'activity.lastAt', 'activity.lunch', 'activity.tea', 'cal.errTitle']) need.push(k);
-    for (const base of ['activity.nInClub', 'activity.sentGroupPhoto', 'activity.sentGroupVideo', 'activity.sendTo', 'activity.photosToday', 'activity.photosCount', 'activity.hiddenCount', 'activity.commentsN', 'activity.bulkSaved', 'activity.pendingCount', 'cal.changesPending'])
+    for (const base of ['activity.nInClub', 'activity.sentGroupPhoto', 'activity.sentGroupVideo', 'activity.sendTo', 'activity.photosToday', 'activity.photosCount', 'activity.hiddenCount', 'activity.bulkSaved', 'activity.restMarked', 'activity.markRestTitle', 'activity.pendingCount', 'activity.picCount', 'cal.changesPending'])
       need.push(base + '_one', base + '_other');
     // kinds, feed keys and error codes the actions emit
-    for (const k of ['logSaved', 'logUpdated', 'newPhoto', 'newVideo', 'newPhotos', 'newMedia', 'photoRejected', 'photosRejected']) need.push('activity.notif.' + k);
-    for (const k of ['log', 'logEdited', 'photo', 'video', 'groupPhoto', 'groupVideo', 'photoHidden', 'photoRestored', 'photoRemoved']) need.push('activity.feed.' + k);
-    for (const k of ['dateRange', 'notAttended', 'nothingToLog', 'soloOne', 'alreadyHidden', 'notHidden', 'photoPending', 'notPending']) need.push('activity.err.' + k);
+    for (const k of ['logSaved', 'logUpdated', 'newPhoto', 'newVideo', 'newPhotos', 'newMedia', 'photoRejected', 'photosRejected', 'activityPhotoRejected', 'activityPhotosRejected']) need.push('activity.notif.' + k);
+    for (const k of ['log', 'logEdited', 'photo', 'video', 'groupPhoto', 'groupVideo', 'photoHidden', 'photoRestored', 'photoRemoved', 'activityPhoto']) need.push('activity.feed.' + k);
+    for (const k of ['noSession', 'dateRange', 'notAttended', 'nothingToLog', 'soloOne', 'alreadyHidden', 'notHidden', 'photoPending', 'notPending', 'picDate', 'picSession']) need.push('activity.err.' + k);
     need.push('cal.notif.schedulePublished');
     need.push('cal.feed.schedulePublished');
     for (const k of ['badActivity', 'badRoom', 'badTeacher', 'inactiveActivity', 'inactiveTeacher', 'noTeacher', 'futureOnly', 'noDraft', 'pastDate', 'endBeforeStart', 'rangeTooLong', 'timeBoth', 'timeOrder', 'pastEvent', 'dupName']) need.push('cal.err.' + k);

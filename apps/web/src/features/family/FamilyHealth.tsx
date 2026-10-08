@@ -17,7 +17,7 @@ export function FamilyHealth() {
     <div data-testid="family-health" data-member-id={memberId}>
       {multi ? (
         <div style={{ padding: famPad(isPhone), paddingBottom: 0, maxWidth: 680, margin: '0 auto', width: '100%' }}>
-          <FamSwitch label={t('family.switcher')} value={memberId} onChange={setSel} items={choices.map((id) => ({ key: id, label: memberShort(s.members[id]) }))} />
+          <FamSwitch segmented={isPhone} label={t('family.switcher')} value={memberId} onChange={setSel} items={choices.map((id) => ({ key: id, label: memberShort(s.members[id]) }))} />
         </div>
       ) : null}
       <MemberProfile key={memberId} memberId={memberId} audience="family" />

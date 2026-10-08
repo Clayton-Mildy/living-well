@@ -8,7 +8,7 @@
 //    month as billed, so a run released early (before the month is over) would lose every extra visit that comes after it.
 import type { Bank, ClubState, DT, FamilyContact, Invoice, InvoiceLine, ISODate, Member, Payment, Receipt, Refund, SectionId, YM } from '../types';
 import { addDays, addMonths, daysInMonth, diffDays, live, sortBy, sum, toMin, weekStart, ym } from '../util';
-import { accountCredit, balanceOf, dueDateFor, invoiceStatus, invoiceTotal, paidDate, paidOn, priceOn, runDone, runPreview, type InvoiceStatus, type RunPreviewRow } from './billing';
+import { accountCredit, balanceOf, dueDateFor, invoiceStatus, invoiceTotal, issueDateOf, paidDate, paidOn, priceOn, runDone, runPreview, type InvoiceStatus, type RunPreviewRow } from './billing';
 import { extraDaysFor } from './attendance';
 import { weeklyLimit } from './budget';
 import { nextOpenDay, primaryContact } from './core';
@@ -70,7 +70,7 @@ export interface BillingBoard {
   due: InvoiceView[];
   overdue: InvoiceView[];
   xero: InvoiceView[];
-  /** the earliest due date among the invoices still to come (tile label: "due 27 Oct") */
+  /** the earliest due date among the invoices still to come (tile label: "due 28 Oct") */
   nextDue: ISODate | null;
   sums: { paid: number; due: number; overdue: number; xero: number };
 }
@@ -164,7 +164,7 @@ export interface RunPlan {
   /** rows left out: no billing contact, or nothing to bill */
   skipped: RunPreviewRow[];
   total: number;
-  /** the usual issue date for the period (the 15th) */
+  /** the usual issue date for the period (the 21st) */
   usualDate: ISODate;
   issueDate: ISODate;
   dueDate: ISODate;
@@ -175,7 +175,7 @@ export interface RunPlan {
   /** an early run: this month is not over yet, so its extra days so far are on the invoices and the rest follow on a later one */
   partialMonth: YM | null;
 }
-export const runUsualDate = (s: ClubState, period: YM): ISODate => `${period}-${String(s.club.settings.issueDay).padStart(2, '0')}`;
+export const runUsualDate = (s: ClubState, period: YM): ISODate => issueDateOf(s, period);
 /** Extra-day dates already on invoices that are not void. */
 export const billedExtraDates = (s: ClubState, memberId: string): Set<ISODate> =>
   new Set(live(s.invoices).filter((i) => i.memberId === memberId && !i.voided).flatMap((i) => i.lines.filter((l) => l.kind === 'extraDay').flatMap((l) => l.dates || [])));
@@ -183,7 +183,7 @@ export const billedExtraDates = (s: ClubState, memberId: string): Set<ISODate> =
 export const EXTRA_LOOKBACK = 3;
 /** One "Extra days" line per month that still has unbilled extra dates, oldest first. */
 export function extraLinesFor(s: ClubState, m: Member, period: YM, today: ISODate): InvoiceLine[] {
-  const price = priceOn(s, `${period}-15`);
+  const price = priceOn(s, issueDateOf(s, period));
   const billed = billedExtraDates(s, m.id);
   const out: InvoiceLine[] = [];
   for (let k = EXTRA_LOOKBACK; k >= 1; k--) {

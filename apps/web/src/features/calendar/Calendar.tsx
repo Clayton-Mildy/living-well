@@ -1,18 +1,21 @@
-// Calendar (design ScrCal): list and month views with a day detail, a management events editor, and the weekly schedule builder for activity and management.
+// Calendar (design ScrCal): list and month views with a day detail, and management's events editor and weekly schedule builder (activity teachers only view it).
 // The list shows the next 3 days; clicking a date in the month opens that week in the weekly schedule. Families see the same calendar read-only
 // (venue bookings never show the client). Weekday names, month names and labels follow the language.
+// Round 6 (phone, native look): an iOS segmented List | Calendar switch, days as grouped lists, "Add event" as the Pin pill, actions as list rows.
 import { Fragment, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addDays, addMonths, dow, ym, type CalendarEvent, type ISODate, type Slot, type Weekday } from '@cp/shared';
-import { dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, type CalKind, type DayItem } from '@cp/shared/rules/calendar';
-import { Button, Icon, PageHead } from '../../components/ui';
+import { dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, type CalKind } from '@cp/shared/rules/calendar';
+import { Button, Icon, PageHead, Pin } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
+import { rowLine } from '../activity/lib';
 import { DayBlock } from './DayBlock';
+import { DaySheet, EditChoice } from './DaySheet';
 import { EventEditor } from './EventEditor';
 import { ScheduleBuilder, type CellRequest } from './ScheduleBuilder';
 import { PhoneMonth } from './PhoneMonth';
@@ -32,7 +35,7 @@ export function Calendar() {
   const family = role === 'family';
   const audience = family ? 'family' : 'staff';
   const isMgmt = role === 'mgmt';
-  const canBuild = role === 'mgmt' || role === 'activity';
+  const canBuild = role === 'mgmt'; // KC round 6: activity teachers see the schedule but cannot change it
   const [view, setView] = useState<View>('list');
   const [month, setMonth] = useState(() => ym(today));
   const [sel, setSel] = useState<string | null>(null);
@@ -41,6 +44,9 @@ export function Calendar() {
   const [req, setReq] = useState<CellRequest | null>(null);
   const builderRef = useRef<HTMLDivElement>(null);
   const [editor, setEditor] = useState<null | { event?: CalendarEvent; date?: string }>(null);
+  // round 7: "Edit activity" on a day asks what to change; "Just this day" opens the one-day sheet for that slot
+  const [choice, setChoice] = useState<null | { date: ISODate; slot: Slot }>(null);
+  const [daySlot, setDaySlot] = useState<null | { date: ISODate; slot: Slot }>(null);
   const hours = { open: s.club.settings.open, close: s.club.settings.close };
 
   const days = useMemo(() => nextDays(s, today, LIST_DAYS, audience), [s, today, audience]);
@@ -51,46 +57,65 @@ export function Calendar() {
   const showBuilder = () => requestAnimationFrame(() => builderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
   /** A date in the month: that week opens in the weekly schedule (a Saturday or Sunday opens the week it ends). */
   const openWeek = (date: ISODate, scroll = true) => { setWeek(mondayOf(date)); setFocus(date); setReq(null); if (scroll) showBuilder(); };
-  /** "Edit activity" on a day's item: that week, with the slot's editor open. A week that has started can't change, so the first week that can is shown. */
-  const editActivity = (it: DayItem, date: ISODate) => {
+  /** "Change the weekly plan": that week, with the slot's editor open. A week that has started can't change, so the first week that can is shown. */
+  const editWeekly = (slot: Slot, date: ISODate) => {
     const wk = mondayOf(date);
     const target = weekEditable(wk, today) ? wk : nextMonday(today);
     if (target !== wk) say(t('cal.editFromWeek', { date: fdl(target) }), { icon: 'info' });
     const w = dow(date) as Weekday;
     setWeek(target);
     setFocus(addDays(target, w - 1));
-    setReq({ w, slot: (it.time || '10:30') as Slot, n: Date.now() });
+    setReq({ w, slot, n: Date.now() });
     showBuilder();
   };
+  /** "Edit activity" on a day's session (or an empty slot): choose between this day only and the weekly plan. */
+  const editActivity = (slot: Slot, date: ISODate) => setChoice({ date, slot });
   const legend: [CalKind, string][] = [['activity', t('cal.k_activity')], ['outing', t('cal.k_outing')], ['venue', t(family ? 'cal.k_private' : 'cal.k_venue')], ...(family ? [] : ([['guest', t('cal.k_guest')]] as [CalKind, string][])), ['holiday', t('cal.k_holiday')], ['closed', t('cal.k_closed')]];
 
   const tab = (v: View, icon: string, label: string) => {
     const on = view === v;
+    // round 6, phone: a segmented thumb (36px, radius 9) instead of the round pills
+    if (isPhone) return (
+      <button key={v} type="button" role="tab" aria-selected={on} onClick={() => setView(v)} style={{ minWidth: 0, height: 36, padding: '0 8px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: on ? '#1E1A16' : '#5E5852', fontSize: 14, fontWeight: on ? 600 : 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter', transition: 'background-color .15s' }}>
+        <Icon name={icon} size={18} />{label}
+      </button>
+    );
     return (
-      <button key={v} type="button" role="tab" aria-selected={on} onClick={() => setView(v)} style={{ height: 38, padding: isPhone ? '0 14px 0 10px' : '0 18px 0 14px', borderRadius: 999, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: on ? 600 : 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+      <button key={v} type="button" role="tab" aria-selected={on} onClick={() => setView(v)} style={{ height: 38, padding: '0 18px 0 14px', borderRadius: 999, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: on ? 600 : 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
         <Icon name={icon} size={18} />{label}
       </button>
     );
   };
 
-  const tabs = <div role="tablist" aria-label={t('cal.view')} style={{ display: 'flex', padding: 4, borderRadius: 999, background: '#EDE5DA', alignSelf: 'flex-start' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>;
+  const tabs = isPhone
+    ? <div role="tablist" aria-label={t('cal.view')} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>
+    : <div role="tablist" aria-label={t('cal.view')} style={{ display: 'flex', padding: 4, borderRadius: 999, background: '#EDE5DA', alignSelf: 'flex-start' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>;
+  /** round 6, phone: tappable list rows in one flat group (a tinted icon tile, the label, a chevron); the hairline starts at the label */
+  const linkRows = (rows: { icon: string; label: string; run: () => void }[]) => (
+    <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' }}>
+      {rows.map((r, i) => (
+        <button key={r.label} type="button" className="cp-tap-self" onClick={r.run} style={{ width: '100%', minHeight: 50, padding: '6px 10px 6px 16px', border: 'none', backgroundColor: '#FFFFFF', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left', ...rowLine(i === 0, 58) }}>
+          <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: 8, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={r.icon} size={18} /></span>
+          <span style={{ flex: 1, minWidth: 0 }}>{r.label}</span>
+          <Icon name="chevron_right" size={22} color="#A89C8E" />
+        </button>
+      ))}
+    </div>
+  );
 
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(18px, 2.8vw, 32px)', maxWidth: 1240 }}>
+      <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(18px, 2.8vw, 32px)' }}>
         {family ? (
           <button type="button" onClick={() => navigate('/today')} style={{ alignSelf: 'flex-start', height: 44, padding: '0 16px 0 10px', margin: isPhone ? '-6px 0 -10px -10px' : '-6px 0 -8px -10px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
             <Icon name="arrow_back" size={20} />{t('common.today')}
           </button>
         ) : null}
         {isPhone ? (
-          // phone: a compact header; the view tabs and the small "Add event" button share one row (no full-width pin over the grid)
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          // round 6, phone: a compact header, the List | Calendar switch as a full-width segmented control ("Add event" is the Pin pill below)
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <PageHead size={28} eyebrow={t('cal.openHours', hours)} title={family ? t('cal.titleFamily') : t('nav.calendar')} />
-            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-              {tabs}
-              {isMgmt ? <span style={{ marginLeft: 'auto' }}><Button size={44} icon="add" style={{ padding: '0 14px 0 10px' }} onClick={() => setEditor({ date: sel || today })}>{t('cal.addEvent')}</Button></span> : null}
-            </div>
+            {tabs}
           </div>
         ) : (
           <PageHead size={40} eyebrow={t('cal.openHours', hours)} title={family ? t('cal.titleFamily') : t('nav.calendar')} right={tabs} />
@@ -98,11 +123,13 @@ export function Calendar() {
         {isMgmt && !isPhone ? <div><Button icon="add" onClick={() => setEditor({ date: sel || today })}>{t('cal.addEvent')}</Button></div> : null}
 
         {view === 'list' ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 10 : 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 12 }}>
             {days.map((d) => <DayBlock key={d.date} s={s} info={d} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} />)}
-            <div style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 10 : 12, flexWrap: 'wrap' }}>
-              <Button variant="secondary" size={isPhone ? 44 : 48} icon="calendar_month" onClick={() => setView('month')}>{t('cal.seeMonth')}</Button>
-            </div>
+            {isPhone ? linkRows([{ icon: 'calendar_month', label: t('cal.seeMonth'), run: () => setView('month') }]) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+                <Button variant="secondary" size={48} icon="calendar_month" onClick={() => setView('month')}>{t('cal.seeMonth')}</Button>
+              </div>
+            )}
           </div>
         ) : (
           <>
@@ -153,18 +180,28 @@ export function Calendar() {
             </div>
             )}
             {selInfo ? <DayBlock s={s} info={selInfo} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} /> : null}
-            {(isMgmt && selInfo && selInfo.date >= today) || (isPhone && canBuild && selInfo) ? (
+            {(isMgmt && selInfo && selInfo.date >= today) || (isPhone && canBuild && selInfo) ? (isPhone ? linkRows([
+              ...(isMgmt && selInfo && selInfo.date >= today ? [{ icon: 'add', label: t('cal.addEventOn', { date: fdl(selInfo.date) }), run: () => setEditor({ date: selInfo.date }) }] : []),
+              ...(canBuild && selInfo ? [{ icon: 'event_note', label: t('cal.openWeek'), run: () => openWeek(selInfo.date) }] : []),
+            ]) : (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {isMgmt && selInfo && selInfo.date >= today ? <Button variant="secondary" size={isPhone ? 44 : 48} icon="add" onClick={() => setEditor({ date: selInfo.date })}>{t('cal.addEventOn', { date: fdl(selInfo.date) })}</Button> : null}
-                {isPhone && canBuild && selInfo ? <Button variant="secondary" size={44} icon="event_note" onClick={() => openWeek(selInfo.date)}>{t('cal.openWeek')}</Button> : null}
+                {isMgmt && selInfo && selInfo.date >= today ? <Button variant="secondary" size={48} icon="add" onClick={() => setEditor({ date: selInfo.date })}>{t('cal.addEventOn', { date: fdl(selInfo.date) })}</Button> : null}
               </div>
-            ) : null}
+            )) : null}
           </>
         )}
 
         {canBuild ? <div ref={builderRef} style={{ scrollMarginTop: 12 }}><ScheduleBuilder week={week} onWeek={(m) => { setWeek(m); setFocus(null); setReq(null); }} focusDate={focus} request={req} /></div> : null}
       </div>
+      {isMgmt && isPhone ? <Pin icon="add" label={t('cal.addEvent')} onClick={() => setEditor({ date: sel || today })} /> : null}
       {isMgmt ? <EventEditor open={!!editor} onClose={() => setEditor(null)} event={editor?.event} date={editor?.date} /> : null}
+      {canBuild ? (
+        <>
+          <EditChoice open={!!choice} onClose={() => setChoice(null)} date={choice?.date ?? today} slot={choice?.slot ?? '10:30'}
+            onDay={() => { setDaySlot(choice); setChoice(null); }} onWeekly={() => { if (choice) editWeekly(choice.slot, choice.date); setChoice(null); }} />
+          <DaySheet open={!!daySlot} onClose={() => setDaySlot(null)} date={daySlot?.date ?? today} slot={daySlot?.slot ?? '10:30'} />
+        </>
+      ) : null}
     </>
   );
 }

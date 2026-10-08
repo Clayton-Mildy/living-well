@@ -6,19 +6,21 @@ import { useResetOn } from '../../lib/useResetOn';
 import { useSearchParams } from 'react-router-dom';
 import { addMonths, e164, fmtN, fmtPhone, live, parseN, rp, translate, ym, type Bank, type Staff, type StaffHr, type StaffRole, type StaffTime } from '@cp/shared';
 import { BANKS, CONTRACTS, HR_NOTE_KINDS, STAFF_ROLES, TIME_KINDS, contractState, hoursLabel, minutesBetween, staffList, staffRating, staffTimeFor } from '@cp/shared/rules/mgmt';
-import { Avatar, Button, Chip, DateField, Dialog, EmptyState, Icon, IconButton, InfoChip, Note, PageHead, Pager, SectionLabel, TextField, TimeField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { Avatar, Button, Chip, DateField, Dialog, EmptyState, Group, Icon, IconButton, InfoChip, Note, PageHead, Pager, Pin, SectionLabel, Sheet, TextField, TimeField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { api, ApiError } from '../../lib/api';
+import { memberPhoto } from '../../lib/media';
+import { ProfilePhotoField } from '../members/ProfilePhoto';
 import { useMe } from '../../lib/me';
 import { say } from '../../store/ui';
 
 /** Job titles are free text; one that is just the English role name is shown in the reader's language. */
 const titleOf = (t: (k: string) => string, x: Pick<Staff, 'title' | 'role'>) => (x.title === translate('en', `roles.${x.role}`) ? t(`roles.${x.role}`) : x.title);
 import { useClub } from '../../store/replica';
-import { Fact, ListCard, Page, PushPanel, labelStyle, chipRow, tn } from './common';
+import { Fact, ListCard, Page, PillBtn, PushPanel, SegTabs, SwitchRow, groupCard, labelStyle, chipRow, tn } from './common';
 
 type Tab = 'profile' | 'contract' | 'pay' | 'notes' | 'att';
 const TABS: Tab[] = ['profile', 'contract', 'pay', 'notes', 'att'];
@@ -43,29 +45,38 @@ export function People() {
   const detail = sel ? <StaffDetail key={sel.id} staff={sel} /> : null;
 
   return (
+    <>
     <Page max={1180}>
-      <PageHead eyebrow={t('people.eyebrow')} title={t('nav.people')} right={<Button size={isPhone ? 44 : 48} icon="person_add" onClick={() => setAdding(true)}>{t('people.add')}</Button>} />
+      <PageHead eyebrow={t('people.eyebrow')} title={t('nav.people')} right={isPhone ? undefined : <Button size={48} icon="person_add" onClick={() => setAdding(true)}>{t('people.add')}</Button>} />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(16px, 2.4vw, 32px)', alignItems: 'flex-start' }}>
-        <div style={{ flex: isPhone ? '1 1 100%' : '0 1 340px', minWidth: isPhone ? 0 : 260, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
-          {list.length ? paged.rows.map((x) => <StaffRow key={x.id} staff={x} selected={!isPhone && x.id === selId} onClick={() => pick(x.id)} />) : <EmptyState icon="badge" title={t('people.empty')} />}
+        {/* round 6, phone: a flat iOS group (no border or shadow) with inset hairlines */}
+        <div style={isPhone ? { flex: '1 1 100%', minWidth: 0, ...groupCard } : { flex: '0 1 340px', minWidth: 260, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+          {list.length ? paged.rows.map((x, i) => <StaffRow key={x.id} staff={x} first={i === 0} selected={!isPhone && x.id === selId} onClick={() => pick(x.id)} />) : <EmptyState icon="badge" title={t('people.empty')} />}
           <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('people.pgStaff')} />
         </div>
         {!isPhone ? <div style={{ flex: '1 1 520px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 14 }}>{detail}</div> : null}
       </div>
-      {isPhone ? <PushPanel open={!!sel} onBack={() => pick('')} backLabel={t('nav.people')} title={sel?.name}><div style={{ padding: '16px 16px 28px', display: 'flex', flexDirection: 'column', gap: 14 }}>{detail}</div></PushPanel> : null}
+      {isPhone ? <PushPanel open={!!sel} onBack={() => pick('')} backLabel={t('nav.people')} title={sel?.name}><div style={{ padding: '4px 16px 28px', display: 'flex', flexDirection: 'column', gap: 18 }}>{detail}</div></PushPanel> : null}
       <StaffDialog open={adding} onClose={() => setAdding(false)} onSaved={(id) => { setAdding(false); if (id) pick(id); }} />
     </Page>
+    {isPhone ? <Pin icon="person_add" label={t('people.add')} onClick={() => setAdding(true)} /> : null}
+    </>
   );
 }
 
-function StaffRow({ staff: x, selected, onClick }: { staff: Staff; selected: boolean; onClick: () => void }) {
+function StaffRow({ staff: x, selected, first, onClick }: { staff: Staff; selected: boolean; first?: boolean; onClick: () => void }) {
   const t = useT();
+  const { isPhone } = useDevice();
   const { today } = useNow();
   const c = contractState(x.hr, today);
+  // round 6, phone: an iOS grouped row: a hairline that starts at the name (not under the avatar), a tint while pressed
+  const look: React.CSSProperties = isPhone
+    ? { border: 'none', background: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 68px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', transition: 'background-color .15s' }
+    : { border: 'none', borderBottom: '1px solid #F0EAE1', borderLeft: `3px solid ${selected ? '#2B231C' : 'transparent'}`, background: selected ? '#FBF8F4' : '#FFFFFF' };
   return (
-    <button type="button" className="dh56" data-staff={x.id} onClick={onClick} aria-current={selected || undefined}
-      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 64, border: 'none', borderBottom: '1px solid #F0EAE1', borderLeft: `3px solid ${selected ? '#2B231C' : 'transparent'}`, background: selected ? '#FBF8F4' : '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', opacity: x.active ? 1 : 0.7 }}>
-      <Avatar name={x.name} size={40} />
+    <button type="button" className={isPhone ? 'cp-tap-self' : 'dh56'} data-staff={x.id} onClick={onClick} aria-current={selected || undefined}
+      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: isPhone ? 60 : 64, ...look, textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', opacity: x.active ? 1 : 0.7 }}>
+      <Avatar name={x.name} size={40} src={memberPhoto(x)} />
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{x.name}</span>
         <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)}{!x.active ? ` · ${t('people.inactive')}` : ''}</span>
@@ -79,6 +90,7 @@ function StaffRow({ staff: x, selected, onClick }: { staff: Staff; selected: boo
 // ---------- detail ----------
 function StaffDetail({ staff: x }: { staff: Staff }) {
   const t = useT();
+  const { isPhone } = useDevice();
   const { fdy } = useFmt();
   const s = useClub();
   const act = useAct();
@@ -89,6 +101,7 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
   const [editing, setEditing] = useState(false);
   const [off, setOff] = useState(false);
   const [reset, setReset] = useState(false);
+  const [photo, setPhoto] = useState(false);
   const [resetBusy, setResetBusy] = useState(false);
   const c = contractState(x.hr, today);
   const h = x.hr;
@@ -107,10 +120,64 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
     } finally { setResetBusy(false); }
   };
 
+  // round 7: management takes or chooses the staff member's photo by tapping the avatar (a small camera badge says so)
+  const avatar = (size: number) => (
+    <button type="button" className="cp-press" data-testid="staff-avatar" onClick={() => setPhoto(true)} aria-label={t('people.photoAria', { name: x.name })} title={t('people.photoAria', { name: x.name })}
+      style={{ position: 'relative', width: size, height: size, padding: 0, border: 'none', borderRadius: 999, background: 'transparent', cursor: 'pointer', flex: 'none' }}>
+      <Avatar name={x.name} size={size} src={memberPhoto(x)} />
+      <span aria-hidden="true" style={{ position: 'absolute', right: -2, bottom: -2, width: size > 70 ? 28 : 24, height: size > 70 ? 28 : 24, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #F5F5F3' }}><Icon name="photo_camera" size={size > 70 ? 15 : 13} /></span>
+    </button>
+  );
+
+  const profileRows: [string, string][] = [
+    [t('people.fRole'), roleOk(x.role)], [t('common.phone'), fmtPhone(x.phone)], [t('people.fUsername'), x.username || t('people.usernameNone')],
+    [t('people.fApp'), x.appAccess ? t('common.yes') : t('common.no')], [t('people.fClub'), s.club.name],
+    [t('people.fKnown'), x.knownAs || x.name.split(' ')[0]], [t('people.fSupervisor'), x.supervisor ? t('common.yes') : t('common.no')], [t('people.fRated'), x.rateable ? t('common.yes') : t('common.no')],
+  ];
+  const contractRows: [string, string][] = [
+    [t('people.fContract'), t('people.contract_' + h.contract)], [t('people.fStart'), fdy(h.start)], [t('people.fEnd'), h.end ? fdy(h.end) : t('people.noEnd')],
+    [t('people.fKtp'), h.ktpLast4 ? `•••• •••• •••• ${h.ktpLast4}` : '—'], [t('people.fKtpFile'), h.ktpOnFile ? t('people.onFile') : t('people.missing')],
+  ];
+  const payRows: [string, string][] = [
+    [t('people.fSalary'), reveal ? rp(h.salary) : 'Rp ••••••••'], [t('people.fAllowance'), reveal ? rp(h.allowance) : 'Rp ••••••'], [t('people.fBank'), h.bank],
+    [t('people.fAccount'), h.account ? (reveal ? h.account.replace(/(\d{4})(?=\d)/g, '$1 ') : `${mask('')} ${h.account.slice(-2)}`) : '—'], [t('people.fPaidOn'), t('people.paidOn')],
+  ];
+  const toggleApp = () => act('staff.setAppAccess', { staffId: x.id, on: !x.appAccess }, { ok: x.appAccess ? t('people.appRevoked', { name: x.name }) : t('people.appGranted', { name: x.name }) });
+  const contractNotes = (
+    <>
+      {c.kind === 'soon' ? <Note tone="ochre" icon="schedule">{c.days === 0 ? t('people.warnToday') : tn(t, 'people.warnSoon', c.days, { date: fdy(h.end!) })}</Note> : null}
+      {c.kind === 'ended' ? <Note tone="rust" icon="event_busy">{t('people.warnEnded', { date: fdy(h.end!) })}</Note> : null}
+    </>
+  );
+  const docTiles = (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
+      {([[t('people.docContract'), h.signed], [t('people.docKtp'), h.ktpOnFile]] as [string, boolean][]).map(([label, has]) => (
+        <button key={label} type="button" onClick={() => say(has ? t('people.docOpened', { doc: label }) : t('people.docAsk', { name: x.name.split(' ')[0] }))}
+          style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', color: '#24201C', fontFamily: 'Inter' }}>
+          <span style={{ width: '100%', aspectRatio: '4/3', borderRadius: 12, background: has ? 'linear-gradient(135deg, #FBF8F4 0%, #EADFD3 60%, #DCCFC0 100%)' : '#F5F5F3', border: has ? '1px solid #E4DACD' : '1px dashed #CAB8A2' }} />
+          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{label + (has ? '' : ` · ${t('people.missingLc')}`)}</span>
+        </button>
+      ))}
+    </div>
+  );
+
   return (
     <>
+      {isPhone ? (
+        // round 6, phone: a contact-card header (centred photo, name, one line), then the two actions as small pills
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, paddingTop: 2 }}>
+          {avatar(84)}
+          <h2 style={{ margin: '6px 0 0', fontSize: 24, lineHeight: 1.2, fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', overflowWrap: 'anywhere' }}>{x.name}</h2>
+          <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)} · {fmtPhone(x.phone)}</span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', paddingTop: 8 }}>
+            <PillBtn icon="edit" onClick={() => setEditing(true)}>{t('common.edit')}</PillBtn>
+            {x.active ? <PillBtn icon="person_off" onClick={() => setOff(true)} disabled={x.id === meId}>{t('people.deactivate')}</PillBtn>
+              : <PillBtn tone="primary" icon="person_check" onClick={() => act('staff.reactivate', { staffId: x.id }, { ok: t('people.reactivated', { name: x.name }) })}>{t('people.reactivate')}</PillBtn>}
+          </div>
+        </div>
+      ) : (
       <div style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-        <Avatar name={x.name} size={64} />
+        {avatar(64)}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: '1 1 200px', minWidth: 0 }}>
           <h2 style={{ margin: 0, fontSize: 'clamp(22px, 2.2vw, 26px)', lineHeight: 1.2, fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', overflowWrap: 'anywhere' }}>{x.name}</h2>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)} · {fmtPhone(x.phone)}</span>
@@ -121,64 +188,65 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
             : <Button size={44} icon="person_check" onClick={() => act('staff.reactivate', { staffId: x.id }, { ok: t('people.reactivated', { name: x.name }) })}>{t('people.reactivate')}</Button>}
         </div>
       </div>
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      )}
+      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: isPhone ? 'center' : undefined }}>
         <InfoChip icon="badge" label={roleOk(x.role)} tone="cream" />
         {!x.active ? <InfoChip icon="person_off" label={t('people.inactive')} tone="rust" /> : null}
         {x.appAccess ? <InfoChip icon="smartphone" label={t('people.appOn')} tone="sage" /> : <InfoChip icon="phonelink_erase" label={t('people.appOff')} tone="linen" />}
         {c.kind === 'soon' ? <InfoChip icon="schedule" label={c.days === 0 ? t('people.endsToday') : tn(t, 'people.endsIn', c.days)} tone="ochre" /> : null}
         {c.kind === 'ended' ? <InfoChip icon="event_busy" label={tn(t, 'people.endedAgo', c.days)} tone="rust" /> : null}
       </div>
+      {isPhone ? <SegTabs scroll label={t('nav.people')} value={tab} onChange={setTab} items={TABS.map((k) => ({ value: k, label: t('people.tab_' + k) }))} /> : (
       <div role="tablist" aria-label={t('nav.people')} style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 999, background: '#EDE5DA', overflowX: 'auto', scrollbarWidth: 'none', maxWidth: '100%', alignSelf: 'flex-start' }}>
         {TABS.map((k) => (
           <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
             style={{ flex: 'none', height: 36, padding: '0 14px', borderRadius: 12, border: 'none', background: tab === k ? '#FFFFFF' : 'transparent', boxShadow: tab === k ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: tab === k ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('people.tab_' + k)}</button>
         ))}
       </div>
+      )}
 
       {tab === 'profile' ? (
+        isPhone ? (
+          <>
+            <Facts title={t('people.tab_profile')} rows={profileRows} />
+            <Group pad="0 16px" gap={0}>
+              <SwitchRow on={x.appAccess} disabled={!x.active || x.id === meId} label={t('people.toggleApp')} onClick={toggleApp} />
+              {x.appAccess ? <div style={{ padding: '6px 0 12px', borderTop: '1px solid #F0EAE1', display: 'flex' }}><PillBtn icon="lock_reset" onClick={() => setReset(true)}>{t('people.resetPw')}</PillBtn></div> : null}
+            </Group>
+          </>
+        ) : (
         <>
-          <Facts rows={[
-            [t('people.fRole'), roleOk(x.role)], [t('common.phone'), fmtPhone(x.phone)], [t('people.fUsername'), x.username || t('people.usernameNone')],
-            [t('people.fApp'), x.appAccess ? t('common.yes') : t('common.no')], [t('people.fClub'), s.club.name],
-            [t('people.fKnown'), x.knownAs || x.name.split(' ')[0]], [t('people.fSupervisor'), x.supervisor ? t('common.yes') : t('common.no')], [t('people.fRated'), x.rateable ? t('common.yes') : t('common.no')],
-          ]} />
-          <Toggle on={x.appAccess} disabled={!x.active || x.id === meId} label={t('people.toggleApp')}
-            onClick={() => act('staff.setAppAccess', { staffId: x.id, on: !x.appAccess }, { ok: x.appAccess ? t('people.appRevoked', { name: x.name }) : t('people.appGranted', { name: x.name }) })} />
+          <Facts rows={profileRows} />
+          <Toggle on={x.appAccess} disabled={!x.active || x.id === meId} label={t('people.toggleApp')} onClick={toggleApp} />
           {x.appAccess ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
               <Button size={44} variant="secondary" icon="lock_reset" onClick={() => setReset(true)}>{t('people.resetPw')}</Button>
             </div>
           ) : null}
         </>
+        )
       ) : null}
 
       {tab === 'contract' ? (
+        isPhone ? (
+          <>
+            <Facts title={t('people.tab_contract')} rows={contractRows} />
+            {contractNotes}
+            <Group pad={14}>{docTiles}</Group>
+          </>
+        ) : (
         <>
-          <Facts rows={[
-            [t('people.fContract'), t('people.contract_' + h.contract)], [t('people.fStart'), fdy(h.start)], [t('people.fEnd'), h.end ? fdy(h.end) : t('people.noEnd')],
-            [t('people.fKtp'), h.ktpLast4 ? `•••• •••• •••• ${h.ktpLast4}` : '—'], [t('people.fKtpFile'), h.ktpOnFile ? t('people.onFile') : t('people.missing')],
-          ]} />
-          {c.kind === 'soon' ? <Note tone="ochre" icon="schedule">{c.days === 0 ? t('people.warnToday') : tn(t, 'people.warnSoon', c.days, { date: fdy(h.end!) })}</Note> : null}
-          {c.kind === 'ended' ? <Note tone="rust" icon="event_busy">{t('people.warnEnded', { date: fdy(h.end!) })}</Note> : null}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(180px,1fr))', gap: 12 }}>
-            {([[t('people.docContract'), h.signed], [t('people.docKtp'), h.ktpOnFile]] as [string, boolean][]).map(([label, has]) => (
-              <button key={label} type="button" onClick={() => say(has ? t('people.docOpened', { doc: label }) : t('people.docAsk', { name: x.name.split(' ')[0] }))}
-                style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', color: '#24201C', fontFamily: 'Inter' }}>
-                <span style={{ width: '100%', aspectRatio: '4/3', borderRadius: 12, background: has ? 'linear-gradient(135deg, #FBF8F4 0%, #EADFD3 60%, #DCCFC0 100%)' : '#F5F5F3', border: has ? '1px solid #E4DACD' : '1px dashed #CAB8A2' }} />
-                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{label + (has ? '' : ` · ${t('people.missingLc')}`)}</span>
-              </button>
-            ))}
-          </div>
+          <Facts rows={contractRows} />
+          {contractNotes}
+          {docTiles}
         </>
+        )
       ) : null}
 
       {tab === 'pay' ? (
         <>
-          <div><Button variant="secondary" icon={reveal ? 'visibility_off' : 'visibility'} onClick={() => setReveal(!reveal)}>{reveal ? t('people.hidePay') : t('people.showPay')}</Button></div>
-          <Facts rows={[
-            [t('people.fSalary'), reveal ? rp(h.salary) : 'Rp ••••••••'], [t('people.fAllowance'), reveal ? rp(h.allowance) : 'Rp ••••••'], [t('people.fBank'), h.bank],
-            [t('people.fAccount'), h.account ? (reveal ? h.account.replace(/(\d{4})(?=\d)/g, '$1 ') : `${mask('')} ${h.account.slice(-2)}`) : '—'], [t('people.fPaidOn'), t('people.paidOn')],
-          ]} />
+          <div>{isPhone ? <PillBtn icon={reveal ? 'visibility_off' : 'visibility'} onClick={() => setReveal(!reveal)}>{reveal ? t('people.hidePay') : t('people.showPay')}</PillBtn> : <Button variant="secondary" icon={reveal ? 'visibility_off' : 'visibility'} onClick={() => setReveal(!reveal)}>{reveal ? t('people.hidePay') : t('people.showPay')}</Button>}</div>
+          <Facts title={isPhone ? t('people.tab_pay') : undefined} rows={payRows} />
         </>
       ) : null}
 
@@ -186,6 +254,7 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
       {tab === 'att' ? <AttendanceTab staff={x} /> : null}
 
       <StaffDialog open={editing} onClose={() => setEditing(false)} staff={x} onSaved={() => setEditing(false)} />
+      <StaffPhoto staff={x} open={photo} onClose={() => setPhoto(false)} />
       <Dialog open={reset} onClose={() => setReset(false)} eyebrow={x.username || undefined} title={t('people.resetTitle', { name: x.name })} maxWidth={480}
         footer={<><Button variant="secondary" onClick={() => setReset(false)}>{t('common.cancel')}</Button><Button onClick={doReset} disabled={resetBusy}>{t('people.resetPw')}</Button></>}>
         <div style={{ fontSize: 16, lineHeight: '24px' }}>{t('people.resetText', { name: x.knownAs || x.name.split(' ')[0] })}</div>
@@ -198,7 +267,28 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
   );
 }
 
-function Facts({ rows }: { rows: [string, string][] }) {
+/** Take or choose a photo for a staff member, change it or remove it (the same camera-or-file flow as a member's profile picture). */
+function StaffPhoto({ staff: x, open, onClose }: { staff: Staff; open: boolean; onClose: () => void }) {
+  const t = useT();
+  const act = useAct();
+  const { isPhone } = useDevice();
+  const [busy, setBusy] = useState(false);
+  if (!open) return null;
+  const save = async (id: string | null) => {
+    if (busy) return;
+    setBusy(true);
+    const r = await act('staff.update', { staffId: x.id, photoMediaId: id }, { ok: id ? t('people.photoSet', { name: x.name }) : t('people.photoRemoved', { name: x.name }) });
+    setBusy(false);
+    if (r.ok) onClose();
+  };
+  const body = <ProfilePhotoField name={x.name} value={x.photoMediaId ?? null} onChange={(id) => void save(id)} size={96} />;
+  return isPhone ? <Sheet open onClose={onClose} title={t('profile.photoTitle')} maxWidth={480}>{body}</Sheet> : <Dialog open onClose={onClose} title={t('profile.photoTitle')} maxWidth={480}>{body}</Dialog>;
+}
+
+function Facts({ rows, title }: { rows: [string, string][]; title?: string }) {
+  const { isPhone } = useDevice();
+  // round 6, phone: the facts are one flat group under a small header (the tab's name)
+  if (isPhone) return <Group title={title} pad="0 16px" gap={0}>{rows.map(([k, v], i) => <Fact key={k} k={k} v={v} last={i === rows.length - 1} />)}</Group>;
   return (
     <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '6px clamp(18px, 3vw, 28px)' }}>
       {rows.map(([k, v], i) => <Fact key={k} k={k} v={v} last={i === rows.length - 1} />)}
@@ -209,6 +299,7 @@ function Facts({ rows }: { rows: [string, string][] }) {
 // ---------- notes and warnings, ratings ----------
 function NotesTab({ staff: x }: { staff: Staff }) {
   const t = useT();
+  const { isPhone } = useDevice();
   const { fds } = useFmt();
   const s = useClub();
   const act = useAct();
@@ -224,55 +315,80 @@ function NotesTab({ staff: x }: { staff: Staff }) {
   };
   const who = (a: string) => (a.startsWith('staff:') ? s.staff[a.slice(6)]?.knownAs || s.staff[a.slice(6)]?.name || '' : '');
   const KC = { warning: { icon: 'warning', fg: '#7A5510', bg: '#F6ECD6' }, note: { icon: 'sticky_note_2', fg: '#24201C', bg: '#E8E1D8' }, praise: { icon: 'favorite', fg: '#3D6B4F', bg: '#E3EFE6' } } as const;
+  const noteRows = (
+    <>
+      {notesPaged.rows.map((n) => (
+        <Fragment key={n.id}>
+          <div style={{ padding: '14px 0', borderTop: '1px solid #F0EAE1', display: 'flex', flexDirection: 'column', gap: 4 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ height: 24, padding: '0 10px 0 6px', borderRadius: 8, background: KC[n.kind].bg, color: KC[n.kind].fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name={KC[n.kind].icon} size={16} fill={1} />{t('people.nk_' + n.kind)}</span>
+              <span style={{ flex: 1 }} />
+              <IconButton icon="delete" label={t('people.deleteNote')} bordered={false} onClick={() => setDel(n.id)} />
+            </div>
+            <span style={{ fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>{n.text}</span>
+            <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[who(n.createdBy), fds(n.on)].filter(Boolean).join(' · ')}</span>
+          </div>
+        </Fragment>
+      ))}
+      {!notes.length ? <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('people.noneOnFile')}</div> : null}
+      <Pager page={notesPaged.page} pages={notesPaged.pages} onPage={notesPaged.setPage} label={t('people.pgNotes')} />
+    </>
+  );
+  const addBody = (
+    <>
+      <div style={chipRow} role="radiogroup" aria-label={t('people.addNote')}>
+        {HR_NOTE_KINDS.map((k) => <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>{t('people.nk_' + k)}</Chip>)}
+      </div>
+      <TextField multiline rows={3} value={text} onChange={setText} placeholder={t('people.notePh')} label={t('people.noteText')} />
+      <div><Button size={44} disabled={!text.trim()} onClick={add}>{t('people.addNoteBtn')}</Button></div>
+    </>
+  );
+  const ratingBody = rating ? (
+    <>
+      <span style={{ fontSize: 32, lineHeight: '40px', fontWeight: 300, fontVariantNumeric: 'tabular-nums' }}>{rating.avg.toFixed(1)} / 5</span>
+      {x.hr.quote ? <span style={{ fontSize: 16, lineHeight: '22px' }}>“{x.hr.quote}”</span> : null}
+      <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{tn(t, 'people.ratingN', rating.n)}</span>
+      <div style={{ display: 'flex', flexDirection: 'column', marginTop: 6 }}>
+        {rating.surveys.map((r) => (
+          <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 15 }}>
+            <span>{r.title}</span>
+            <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.avg.toFixed(1)} · {tn(t, 'people.ratingsShort', r.n)}</span>
+          </div>
+        ))}
+      </div>
+    </>
+  ) : <span style={{ fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{x.rateable ? t('people.noRatingsYet') : t('people.noRating')}</span>;
+  const delDialog = (
+    <Dialog open={!!del} onClose={() => setDel(null)} title={t('people.deleteNoteTitle')} maxWidth={480}
+      footer={<><Button variant="secondary" onClick={() => setDel(null)}>{t('common.cancel')}</Button><Button variant="danger" onClick={async () => { if (!del) return; const r = await act('hrNote.delete', { noteId: del }, { ok: t('people.noteDeleted') }); if (r.ok) setDel(null); }}>{t('common.delete')}</Button></>}>
+      <div style={{ fontSize: 16, lineHeight: '24px' }}>{t('people.deleteNoteText')}</div>
+    </Dialog>
+  );
+  // round 6, phone: three groups under small headers (notes, add a note, ratings) instead of two cards with eyebrows
+  if (isPhone) {
+    return (
+      <>
+        <ListCard title={t('people.notesTitle')}>{noteRows}</ListCard>
+        <Group title={t('people.addNote')} gap={10}>{addBody}</Group>
+        <Group title={t('people.ratings')} gap={6}>{ratingBody}</Group>
+        {delDialog}
+      </>
+    );
+  }
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,280px),1fr))', gap: 16, alignItems: 'start' }}>
       <ListCard title={t('people.notesTitle')}>
-        {notesPaged.rows.map((n) => (
-          <Fragment key={n.id}>
-            <div style={{ padding: '14px 0', borderTop: '1px solid #F0EAE1', display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ height: 24, padding: '0 10px 0 6px', borderRadius: 8, background: KC[n.kind].bg, color: KC[n.kind].fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name={KC[n.kind].icon} size={16} fill={1} />{t('people.nk_' + n.kind)}</span>
-                <span style={{ flex: 1 }} />
-                <IconButton icon="delete" label={t('people.deleteNote')} bordered={false} onClick={() => setDel(n.id)} />
-              </div>
-              <span style={{ fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>{n.text}</span>
-              <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[who(n.createdBy), fds(n.on)].filter(Boolean).join(' · ')}</span>
-            </div>
-          </Fragment>
-        ))}
-        {!notes.length ? <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('people.noneOnFile')}</div> : null}
-        <Pager page={notesPaged.page} pages={notesPaged.pages} onPage={notesPaged.setPage} label={t('people.pgNotes')} />
+        {noteRows}
         <div style={{ padding: '16px 0 14px', borderTop: '1px solid #F0EAE1', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <SectionLabel>{t('people.addNote')}</SectionLabel>
-          <div style={chipRow} role="radiogroup" aria-label={t('people.addNote')}>
-            {HR_NOTE_KINDS.map((k) => <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>{t('people.nk_' + k)}</Chip>)}
-          </div>
-          <TextField multiline rows={3} value={text} onChange={setText} placeholder={t('people.notePh')} label={t('people.noteText')} />
-          <div><Button size={44} disabled={!text.trim()} onClick={add}>{t('people.addNoteBtn')}</Button></div>
+          {addBody}
         </div>
       </ListCard>
       <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px clamp(18px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={labelStyle}>{t('people.ratings')}</span>
-        {rating ? (
-          <>
-            <span style={{ fontSize: 32, lineHeight: '40px', fontWeight: 300, fontVariantNumeric: 'tabular-nums' }}>{rating.avg.toFixed(1)} / 5</span>
-            {x.hr.quote ? <span style={{ fontSize: 16, lineHeight: '22px' }}>“{x.hr.quote}”</span> : null}
-            <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{tn(t, 'people.ratingN', rating.n)}</span>
-            <div style={{ display: 'flex', flexDirection: 'column', marginTop: 6 }}>
-              {rating.surveys.map((r) => (
-                <div key={r.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 15 }}>
-                  <span>{r.title}</span>
-                  <span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.avg.toFixed(1)} · {tn(t, 'people.ratingsShort', r.n)}</span>
-                </div>
-              ))}
-            </div>
-          </>
-        ) : <span style={{ fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{x.rateable ? t('people.noRatingsYet') : t('people.noRating')}</span>}
+        {ratingBody}
       </div>
-      <Dialog open={!!del} onClose={() => setDel(null)} title={t('people.deleteNoteTitle')} maxWidth={480}
-        footer={<><Button variant="secondary" onClick={() => setDel(null)}>{t('common.cancel')}</Button><Button variant="danger" onClick={async () => { if (!del) return; const r = await act('hrNote.delete', { noteId: del }, { ok: t('people.noteDeleted') }); if (r.ok) setDel(null); }}>{t('common.delete')}</Button></>}>
-        <div style={{ fontSize: 16, lineHeight: '24px' }}>{t('people.deleteNoteText')}</div>
-      </Dialog>
+      {delDialog}
     </div>
   );
 }
@@ -280,6 +396,7 @@ function NotesTab({ staff: x }: { staff: Staff }) {
 // ---------- attendance (staff time) ----------
 function AttendanceTab({ staff: x }: { staff: Staff }) {
   const t = useT();
+  const { isPhone } = useDevice();
   const { fds, fmonth } = useFmt();
   const s = useClub();
   const act = useAct();
@@ -301,7 +418,12 @@ function AttendanceTab({ staff: x }: { staff: Staff }) {
   const daysPaged = usePaged(days, 10, month);
   const clockIn = () => act('staffTime.upsert', { staffId: x.id, date: today, kind: 'worked', from: now }, { ok: t('people.clockedIn', { time: now }) });
   const clockOut = () => act('staffTime.upsert', { staffId: x.id, date: today, kind: 'worked', from: todayRow?.from, to: now }, { ok: t('people.clockedOut', { time: now }) });
-  const tile = (label: string, value: string) => (
+  const tile = (label: string, value: string) => isPhone ? (
+    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span style={{ fontSize: 28, lineHeight: '32px', fontWeight: 300, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
+      <span style={{ fontSize: 13, fontWeight: 500, color: '#6B6259' }}>{label}</span>
+    </div>
+  ) : (
     <div style={{ padding: '0 0 10px', borderBottom: '2px solid #E6DDD1', display: 'flex', flexDirection: 'column', gap: 4 }}>
       <span style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
       <span style={{ fontSize: 13, fontWeight: 500, color: '#6B6259' }}>{label}</span>
@@ -320,12 +442,24 @@ function AttendanceTab({ staff: x }: { staff: Staff }) {
             : !todayRow.to ? <Button size={44} icon="logout" onClick={clockOut}>{t('people.clockOut')}</Button> : null
         ) : null}
       </div>
+      {isPhone ? (
+        // round 6, phone: the four numbers are one flat group, two by two (not four underlined tiles)
+        <Group pad="14px 16px" gap={0}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '14px 16px' }}>
+            {tile(t('people.attWorked'), String(data.worked))}
+            {tile(t('people.attHours'), hoursLabel(data.minutes))}
+            {tile(t('people.attLeave'), String(data.leave))}
+            {tile(t('people.attSick'), String(data.sick))}
+          </div>
+        </Group>
+      ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 'clamp(12px, 2vw, 28px)' }}>
         {tile(t('people.attWorked'), String(data.worked))}
         {tile(t('people.attHours'), hoursLabel(data.minutes))}
         {tile(t('people.attLeave'), String(data.leave))}
         {tile(t('people.attSick'), String(data.sick))}
       </div>
+      )}
       <ListCard title={t('people.attTitle')}>
         {days.length ? daysPaged.rows.map((date) => {
           const r = byDate.get(date);
@@ -333,7 +467,7 @@ function AttendanceTab({ staff: x }: { staff: Staff }) {
           const mins = r ? minutesBetween(r.from, r.to) : 0;
           return (
             <Fragment key={date}>
-              <button type="button" data-att={date} onClick={() => setDlg({ date, row: r })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', minHeight: 56, border: 'none', borderTop: '1px solid #F0EAE1', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+              <button type="button" data-att={date} className={isPhone ? 'cp-press' : undefined} onClick={() => setDlg({ date, row: r })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', minHeight: 56, border: 'none', borderTop: '1px solid #F0EAE1', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500 }}>{fds(date)}</span>
                 {r && k ? (
                   <>

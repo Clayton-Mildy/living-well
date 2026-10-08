@@ -173,20 +173,16 @@ describe('departure status', () => {
   });
 });
 
-describe('also today (guests and unread messages only)', () => {
-  it('trial and visit guests booked for the date, and unread messages for the role', () => {
-    const a = alsoToday(base, T, 'lobby');
-    expect(Object.keys(a).sort()).toEqual(['guests', 'unread']); // no away, late or absent rows: nobody is expected
+describe('also today (guests only)', () => {
+  it('trial and visit guests booked for the date', () => {
+    const a = alsoToday(base, T);
+    expect(Object.keys(a).sort()).toEqual(['guests']); // no away, late or absent rows: nobody is expected
     expect(a.guests.map((g) => [g.id, g.kind, g.time])).toEqual([['g-e1', 'trial', undefined], ['g-e2', 'visit', '14:00']]); // the trial is a day pass with no time
-    expect(a.unread.threads.map((t) => t.id).sort()).toEqual(['t1', 't2']);
-    expect(a.unread.latest?.thread.id).toBe('t2'); // the 07:40 message today is the newest unread
-    expect(a.unread.latest?.message.text).toContain('dentist');
-    expect(alsoToday(base, T, 'nurse').unread.threads).toEqual([]);
   });
   it('a cancelled guest visit is not listed; a no-show stays listed; another date lists its own guests', () => {
     const s = produce(base, (d) => { d.guestVisits['g-e1'].status = 'cancelled'; d.guestVisits['g-e2'].status = 'noShow'; });
-    expect(alsoToday(s, T, 'lobby').guests.map((g) => [g.id, g.status])).toEqual([['g-e2', 'noShow']]);
-    expect(alsoToday(base, '2026-10-22', 'lobby').guests).toEqual([]);
+    expect(alsoToday(s, T).guests.map((g) => [g.id, g.status])).toEqual([['g-e2', 'noShow']]);
+    expect(alsoToday(base, '2026-10-22').guests).toEqual([]);
   });
   it('a trial guest has no time (lunch and a nurse check come with the pass): trials without a time are listed first, then visits by time', () => {
     const visit = JSON.parse(JSON.stringify(base.guestVisits['g-e2']));
@@ -196,12 +192,11 @@ describe('also today (guests and unread messages only)', () => {
       d.guestVisits['g-e1'].healthCheck = true;
       d.guestVisits['gz'] = { ...visit, id: 'gz', name: 'Ibu Early', time: '09:00' };
     });
-    expect(alsoToday(s, T, 'lobby').guests.map((g) => [g.id, g.time])).toEqual([['g-e1', undefined], ['gz', '09:00'], ['g-e2', '14:00']]);
-    expect(() => alsoToday(s, T, 'mgmt')).not.toThrow();
+    expect(alsoToday(s, T).guests.map((g) => [g.id, g.time])).toEqual([['g-e1', undefined], ['gz', '09:00'], ['g-e2', '14:00']]);
   });
   it('guests are not members: checking one in does not touch the member lists', () => {
     const s = run(base, 'guest.checkIn', { guestId: 'g-e1' }, 's1');
     expect(lobbyGroups(s, T).inClub.map((r) => r.m.id)).toEqual(['m10', 'm2', 'm20']);
-    expect(alsoToday(s, T, 'lobby').guests.find((g) => g.id === 'g-e1')?.checkIn?.at).toBe('10:00');
+    expect(alsoToday(s, T).guests.find((g) => g.id === 'g-e1')?.checkIn?.at).toBe('10:00');
   });
 });

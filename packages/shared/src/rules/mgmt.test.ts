@@ -13,14 +13,15 @@ describe('overview numbers come from the data', () => {
   it('CitraPremier on the demo morning', () => {
     const o = overviewStats(s, T);
     expect(o).toMatchObject({
-      members: 5, staff: 10, inClub: 3, goneHome: 0, visits: 3, extraVisits: 0, checks: 1, flagged: 0, overdue: 1, enquiries: 4, reviews: 6, photos: 0, logsSaved: 0, logsTotal: 3, lunchPhoto: false,
-      payments: 0, stock: 3, venues: 2, samplePrices: true,
+      members: 5, staff: 10, inClub: 3, goneHome: 0, visits: 3, extraVisits: 0, checks: 1, flagged: 0, overdue: 1, enquiries: 4, reviews: 7, photos: 0, // reviews: round 7 adds a renewal change waiting
+      logsSaved: 0, logsTotal: 3, lunchPhoto: false,
+      payments: 2, stock: 3, venues: 2, samplePrices: true, // Hendra and Bambang paid this morning (invoice day); only the extra-day price is still a sample
     });
     expect(o.survey).toEqual({ avg: 4.7, n: 3 });
-    expect(o.unread).toBe(2);
+    expect(o).not.toHaveProperty('unread'); // Messages is gone
   });
   it('an empty clubhouse is all zeros, not made-up numbers', () => {
-    expect(overviewStats(adina, T)).toMatchObject({ members: 0, staff: 0, inClub: 0, goneHome: 0, visits: 0, extraVisits: 0, checks: 0, flagged: 0, overdue: 0, enquiries: 0, reviews: 0, photos: 0, logsSaved: 0, logsTotal: 0, payments: 0, unread: 0, stock: 0, venues: 0, survey: null });
+    expect(overviewStats(adina, T)).toMatchObject({ members: 0, staff: 0, inClub: 0, goneHome: 0, visits: 0, extraVisits: 0, checks: 0, flagged: 0, overdue: 0, enquiries: 0, reviews: 0, photos: 0, logsSaved: 0, logsTotal: 0, payments: 0, stock: 0, venues: 0, survey: null });
     expect(liveToday(adina, T)).toEqual([]);
     expect(comingUp(adina, T)).toEqual([]);
     expect(familyRequests(adina, T)).toEqual([]);
@@ -28,8 +29,8 @@ describe('overview numbers come from the data', () => {
   });
   it('payments today are payments received today', () => {
     const paid = { ...s, payments: { ...s.payments, px: { ...s.payments['pay-INV-2610-002'], id: 'px', receivedOn: T } } };
-    expect(overviewStats(paid, T).payments).toBe(1);
-    expect(overviewStats(s, '2026-10-16').payments).toBe(1); // INV-2610-002 was paid on the 16th
+    expect(overviewStats(paid, T).payments).toBe(3);
+    expect(overviewStats(s, '2026-10-20').payments).toBe(0); // INV-2610-002 was paid this morning, on the 21st
   });
   it('nobody is "expected": the tiles count who is in, who went home and who visited today', () => {
     const o = overviewStats(s, T);
@@ -81,7 +82,7 @@ describe('overview numbers come from the data', () => {
   it('venue lists split upcoming and past', () => {
     const v = venueLists(s, T, '10:00');
     expect(v.upcoming.map((x) => x.id)).toEqual(['v1', 'v2']);
-    expect(v.past.map((x) => x.id)).toEqual(['v4']);
+    expect(v.past.map((x) => x.id)).toEqual(['v4', 'vr3', 'vr2', 'vr1', 'vr4']); // v4 and the renters' bookings of round 7 (seed/r7/surveys.ts)
   });
 });
 
@@ -89,31 +90,31 @@ describe('pricing preview', () => {
   it('next invoice for a member, with saved or unsaved prices, and the family it is paid with', () => {
     expect(nextRunPeriod(s, T)).toBe('2026-11');
     const p = invoicePreview(s, 'm1', null, T)!;
-    expect(p).toMatchObject({ period: '2026-11', issueDate: '2026-11-15', total: 5500000 });
+    expect(p).toMatchObject({ period: '2026-11', issueDate: '2026-11-21', total: 2700000 });
     expect(p.lines.map((l) => l.kind)).toEqual(['plan']);
     expect(p.payer?.name).toBe('Maria Wijaya');
-    expect(p.others.map((o) => [o.member.id, o.total])).toEqual([['m46', 9500000]]);
+    expect(p.others.map((o) => [o.member.id, o.total])).toEqual([['m46', 3950000]]);
     const draft = invoicePreview(s, 'm1', { flex: 6000000, gold: 10000000, extra: 700000, from: T }, T)!;
     expect(draft.total).toBe(6000000);
     expect(draft.others[0].total).toBe(10000000);
     // a price that starts after the next run does not change it
-    expect(invoicePreview(s, 'm1', { flex: 6000000, gold: 10000000, extra: 700000, from: '2026-12-01' }, T)!.total).toBe(5500000);
+    expect(invoicePreview(s, 'm1', { flex: 6000000, gold: 10000000, extra: 700000, from: '2026-12-01' }, T)!.total).toBe(2700000);
     expect(invoicePreview(s, 'nope', null, T)).toBeNull();
   });
   it('an extra visit this month shows on the next invoice at the extra-day price, with the unsaved price when typing', () => {
     expect(invoicePreview(s, 'm1', null, T)!.lines.map((l) => l.kind)).toEqual(['plan']); // 10 of 10 visits so far: nothing extra
     const lina = checkIn(s, 'm1');
     const p = invoicePreview(lina, 'm1', null, T)!;
-    expect(p.lines.map((l) => [l.kind, l.qty, l.amount])).toEqual([['plan', 1, 5500000], ['extraDay', 1, 650000]]);
+    expect(p.lines.map((l) => [l.kind, l.qty, l.amount])).toEqual([['plan', 1, 2700000], ['extraDay', 1, 650000]]);
     expect(p.lines[1]).toMatchObject({ label: 'inv.line.extra', params: { month: '2026-10', n: 1 }, dates: [T] });
-    expect(p.total).toBe(6150000);
+    expect(p.total).toBe(3350000);
     expect(invoicePreview(lina, 'm1', { flex: 6000000, gold: 10000000, extra: 700000, from: T }, T)!.total).toBe(6700000);
     // the typed (unsaved) Flex visits rule is part of the preview too: 11 visits a month makes her 11th an ordinary visit, 8 makes three of them extra
-    const typed = (flexQuota: number) => invoicePreview(lina, 'm1', { flex: 5500000, gold: 9500000, extra: 650000, from: T, flexQuota }, T)!;
+    const typed = (flexQuota: number) => invoicePreview(lina, 'm1', { flex: 2700000, gold: 3950000, extra: 650000, from: T, flexQuota }, T)!;
     expect(typed(11).lines.map((l) => l.kind)).toEqual(['plan']);
-    expect(typed(11).total).toBe(5500000);
+    expect(typed(11).total).toBe(2700000);
     expect(typed(8).lines.map((l) => [l.kind, l.qty])).toEqual([['plan', 1], ['extraDay', 3]]);
-    expect(typed(8).total).toBe(5500000 + 3 * 650000);
+    expect(typed(8).total).toBe(2700000 + 3 * 650000);
     expect(lina.club.settings.flexQuota).toBe(10); // nothing saved by previewing
   });
 });

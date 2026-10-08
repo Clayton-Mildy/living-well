@@ -3,12 +3,13 @@
 import { Fragment, useMemo, useState } from 'react';
 import { addDays, dow, type Broadcast as BroadcastRow } from '@cp/shared';
 import { AUDIENCES, audienceRecipients, broadcastRecipients, renderTemplate, scheduledBroadcasts, type AudienceKey } from '@cp/shared/rules/mgmt';
-import { Button, Chip, DateField, Dialog, Note, PageHead, Pager, SectionLabel, Select, TextField, TimeField, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Chip, DateField, Dialog, Group, Note, PageHead, Pager, SectionLabel, Select, TextField, TimeField, usePaged, FONT_BODY } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
-import { BadgePill, ListCard, Page, HPAD, heroCard, labelStyle, chipRow, splitRow, tn } from './common';
+import { BadgePill, ListCard, Page, PillBtn, HPAD, heroCard, labelStyle, chipRow, splitRow, tn } from './common';
 
 type TplRow = { id: string; key: BroadcastRow['template']; title: string; text: string };
 const DEFAULT_EN: Record<string, { title: string; text: string }> = {
@@ -20,6 +21,7 @@ type When = 'now' | 'tom' | 'fri' | 'custom';
 
 export function Broadcast() {
   const t = useT();
+  const { isPhone } = useDevice();
   const { fds } = useFmt();
   const s = useClub();
   const { today, now } = useNow();
@@ -98,77 +100,140 @@ export function Broadcast() {
   const toggleAud = (a: AudienceKey) => setAud(aud.includes(a) ? aud.filter((x) => x !== a) : [...aud, a]);
   const bubble = tpl ? renderTemplate(tplText(tpl), previewTo?.firstName ?? '…', msg) : '';
 
+  // the section bodies are built once and shared by the wide card and the phone groups
+  const chipSize = isPhone ? 40 : 44;
+  const audBody = (
+    <>
+      <div style={chipRow}>
+        {AUDIENCES.map((a) => <Chip key={a} size={chipSize} selected={aud.includes(a)} onClick={() => toggleAud(a)}>{`${t('mgmt.aud_' + a)} · ${counts[a]}`}</Chip>)}
+      </div>
+      {!recipients.length ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('mgmt.noRecipients')}</span> : null}
+    </>
+  );
+  const tplBody = (
+    <div style={chipRow}>
+      {tpls.map((x) => <Chip key={x.id} size={chipSize} selected={tpl?.id === x.id} onClick={() => setTplId(x.id)}>{tplTitle(x)}</Chip>)}
+      <Chip size={chipSize} icon="edit" onClick={() => setTplOpen(true)}>{t('mgmt.editTemplates')}</Chip>
+    </div>
+  );
+  const msgPh = tpl && ['update', 'closure', 'event'].includes(tpl.key) ? t('mgmt.ph_' + tpl.key) : t('mgmt.ph_custom');
+  const whenBody = (
+    <>
+      <div style={chipRow}>
+        {whenOptions.map((o) => <Chip key={o.k} size={chipSize} selected={when === o.k} onClick={() => setWhen(o.k)}>{o.label}</Chip>)}
+      </div>
+      {when === 'custom' ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 10 }}>
+          <DateField label={t('common.date')} value={cDate} min={today} onChange={setCDate} error={cDate && customBad ? t('mgmt.err.pastTime') : false} />
+          <TimeField label={t('common.time')} value={cTime} onChange={setCTime} />
+        </div>
+      ) : null}
+    </>
+  );
+  const sendBtns = (
+    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+      <Button size={56} full disabled={!ok || busy} onClick={send}>
+        {editing ? t('common.saveChanges') : when === 'now' ? tn(t, 'mgmt.sendTo', recipients.length) : tn(t, 'mgmt.scheduleFor', recipients.length)}
+      </Button>
+      {editing ? <Button size={56} variant="secondary" onClick={reset}>{t('mgmt.stopEditing')}</Button> : null}
+    </div>
+  );
+  const previewText = previewTo ? t('mgmt.previewFor', { name: previewTo.name, tpl: tpl ? tplTitle(tpl) : '' }) : t('mgmt.previewNobody');
+  const previewPick = recipients.length > 1 ? (
+    <Select label={t('mgmt.previewPick')} value={previewTo?.key ?? ''} onChange={setPreviewKey} searchable
+      options={recipients.map((r) => ({ value: r.key, label: `${r.name} · ${t('mgmt.aud_' + r.audience)}` }))} />
+  ) : null;
+  const bubbleBox = (
+    <div style={{ borderRadius: 14, background: '#E6DDD1', padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+      <div style={{ maxWidth: '92%', background: '#FFFFFF', borderRadius: 10, padding: '12px 14px 8px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 1px 2px rgba(40,30,20,0.1)' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#3D6B4F', lineHeight: 1.4 }}>CitraPremier</span>
+        <span data-testid="bc-preview" style={{ fontSize: 15, lineHeight: 1.45, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{bubble}</span>
+        <span style={{ alignSelf: 'flex-end', fontSize: 12, color: '#5E5852' }}>{now}</span>
+        <div style={{ borderTop: '1px solid #F0EAE1', paddingTop: 8, textAlign: 'center', fontSize: 14, fontWeight: 500, color: '#75624B', lineHeight: 1.4 }}>{t('mgmt.openApp')}</div>
+      </div>
+    </div>
+  );
+  const editNote = editing ? <Note tone="ochre" icon="edit">{t('mgmt.bcEditing')}</Note> : null;
+
   return (
     <Page gap={18}>
       <PageHead eyebrow={t('mgmt.bcEyebrow')} title={t('nav.broadcast')} />
 
+      {isPhone ? (
+        // round 6, phone: one group per step (audience, template, message, preview, when), then the send button
+        <>
+          {editNote}
+          <Group title={t('mgmt.audience')} gap={8}>{audBody}</Group>
+          <Group title={t('mgmt.template')} gap={8}>{tplBody}</Group>
+          <Group title={t('mgmt.message')} pad="4px 16px">
+            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} aria-label={t('mgmt.message')} placeholder={msgPh}
+              style={{ minHeight: 96, resize: 'vertical', border: 'none', padding: '10px 0', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#24201C', outline: 'none', background: 'transparent' }} />
+          </Group>
+          <Group gap={10}>
+            <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4 }}>{previewText}</span>
+            {previewPick}
+            {bubbleBox}
+            <span style={{ fontSize: 12, color: '#6B6259', lineHeight: 1.4 }}>{t('mgmt.simNote')}</span>
+          </Group>
+          <Group title={t('mgmt.when')} gap={8}>{whenBody}</Group>
+          {sendBtns}
+        </>
+      ) : (
       <div style={{ ...splitRow, gap: 'clamp(20px, 3.4vw, 44px)' }}>
         <div style={{ ...heroCard, flex: '1 1 440px', minWidth: 0, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 18 }}>
-          {editing ? <Note tone="ochre" icon="edit">{t('mgmt.bcEditing')}</Note> : null}
+          {editNote}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionLabel>{t('mgmt.audience')}</SectionLabel>
-            <div style={chipRow}>
-              {AUDIENCES.map((a) => <Chip key={a} selected={aud.includes(a)} onClick={() => toggleAud(a)}>{`${t('mgmt.aud_' + a)} · ${counts[a]}`}</Chip>)}
-            </div>
-            {!recipients.length ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('mgmt.noRecipients')}</span> : null}
+            {audBody}
           </div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionLabel>{t('mgmt.template')}</SectionLabel>
-            <div style={chipRow}>
-              {tpls.map((x) => <Chip key={x.id} selected={tpl?.id === x.id} onClick={() => setTplId(x.id)}>{tplTitle(x)}</Chip>)}
-              <Chip icon="edit" onClick={() => setTplOpen(true)}>{t('mgmt.editTemplates')}</Chip>
-            </div>
+            {tplBody}
           </div>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={labelStyle}>{t('mgmt.message')}</span>
-            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={tpl && ['update', 'closure', 'event'].includes(tpl.key) ? t('mgmt.ph_' + tpl.key) : t('mgmt.ph_custom')}
+            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={msgPh}
               style={{ minHeight: 96, resize: 'vertical', border: '1px solid #DDD1C2', borderRadius: 10, padding: '12px 14px', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#24201C', outline: 'none', background: '#FFFFFF' }} />
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionLabel>{t('mgmt.when')}</SectionLabel>
-            <div style={chipRow}>
-              {whenOptions.map((o) => <Chip key={o.k} selected={when === o.k} onClick={() => setWhen(o.k)}>{o.label}</Chip>)}
-            </div>
-            {when === 'custom' ? (
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 10 }}>
-                <DateField label={t('common.date')} value={cDate} min={today} onChange={setCDate} error={cDate && customBad ? t('mgmt.err.pastTime') : false} />
-                <TimeField label={t('common.time')} value={cTime} onChange={setCTime} />
-              </div>
-            ) : null}
+            {whenBody}
           </div>
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <Button size={56} full disabled={!ok || busy} onClick={send}>
-              {editing ? t('common.saveChanges') : when === 'now' ? tn(t, 'mgmt.sendTo', recipients.length) : tn(t, 'mgmt.scheduleFor', recipients.length)}
-            </Button>
-            {editing ? <Button size={56} variant="secondary" onClick={reset}>{t('mgmt.stopEditing')}</Button> : null}
-          </div>
+          {sendBtns}
         </div>
 
         <aside style={{ flex: '0 1 340px', minWidth: 0, width: '100%', display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4 }}>
-            {previewTo ? t('mgmt.previewFor', { name: previewTo.name, tpl: tpl ? tplTitle(tpl) : '' }) : t('mgmt.previewNobody')}
-          </span>
-          {recipients.length > 1 ? (
-            <Select label={t('mgmt.previewPick')} value={previewTo?.key ?? ''} onChange={setPreviewKey} searchable
-              options={recipients.map((r) => ({ value: r.key, label: `${r.name} · ${t('mgmt.aud_' + r.audience)}` }))} />
-          ) : null}
-          <div style={{ borderRadius: 14, background: '#E6DDD1', padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-            <div style={{ maxWidth: '92%', background: '#FFFFFF', borderRadius: 10, padding: '12px 14px 8px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 1px 2px rgba(40,30,20,0.1)' }}>
-              <span style={{ fontSize: 12, fontWeight: 600, color: '#3D6B4F', lineHeight: 1.4 }}>CitraPremier</span>
-              <span data-testid="bc-preview" style={{ fontSize: 15, lineHeight: 1.45, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{bubble}</span>
-              <span style={{ alignSelf: 'flex-end', fontSize: 12, color: '#5E5852' }}>{now}</span>
-              <div style={{ borderTop: '1px solid #F0EAE1', paddingTop: 8, textAlign: 'center', fontSize: 14, fontWeight: 500, color: '#75624B', lineHeight: 1.4 }}>{t('mgmt.openApp')}</div>
-            </div>
-          </div>
+          <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4 }}>{previewText}</span>
+          {previewPick}
+          {bubbleBox}
           <span style={{ fontSize: 12, color: '#6B6259', lineHeight: 1.4 }}>{t('mgmt.simNote')}</span>
         </aside>
       </div>
+      )}
 
       <ListCard title={t('mgmt.sentAndScheduled')}>
         {rows.length ? paged.rows.map((b) => {
           const tp = tpls.find((x) => x.key === b.template);
           const title = `${tp ? tplTitle(tp) : t('mgmt.tplTitle_custom')}: ${b.message}`;
           const sub = `${b.audiences.map((a) => t('mgmt.aud_' + a)).join(', ')} · ${tn(t, 'mgmt.nPeople', b.recipients)} · ${b.status === 'scheduled' ? t('mgmt.scheduledFor', { when: whenText(b.sendAt) }) : b.status === 'sent' ? t('mgmt.sentOn', { when: whenText(b.sentAt || b.sendAt) }) : t('mgmt.wasFor', { when: whenText(b.sendAt) })}`;
+          if (isPhone) {
+            // round 6, phone: the message and its status on one line, one meta line, then small pill actions for a scheduled one
+            return (
+              <div key={b.id} data-bc={b.status} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 0', borderTop: '1px solid #F0EAE1' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{title}</span>
+                  <BadgePill kind={b.status === 'sent' ? 'paid' : b.status === 'scheduled' ? 'pending' : 'void'} label={t('mgmt.st_' + b.status)} />
+                </div>
+                <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span>
+                {b.status === 'scheduled' ? (
+                  <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 2 }}>
+                    <PillBtn icon="edit" onClick={() => edit(b)}>{t('common.edit')}</PillBtn>
+                    <PillBtn icon="cancel_schedule_send" onClick={() => cancel(b)}>{t('mgmt.cancelSend')}</PillBtn>
+                  </div>
+                ) : null}
+              </div>
+            );
+          }
           return (
             <Fragment key={b.id}>
               <div data-bc={b.status} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '16px 0', borderTop: '1px solid #F0EAE1', minHeight: 64 }}>

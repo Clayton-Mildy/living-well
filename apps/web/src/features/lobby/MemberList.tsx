@@ -2,7 +2,8 @@
 // The title is an eyebrow on the left and an underline search on the right; the rows sit inside the card's padding with inset hairlines
 // (a page of PAGE_SIZE at a time, with a pager), then the empty / no-match states.
 import type { BoardRow } from '@cp/shared';
-import { Icon, Pager, usePaged } from '../../components/ui';
+import { GROUP_HEAD, Icon, Pager, usePaged } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import type { TFn } from '../../lib/i18n';
 import { MemberRow } from './MemberRow';
 
@@ -34,15 +35,61 @@ export function MemberList({ t, title, rows, total, query, onQuery, empty, noMat
 }) {
   const searching = !!query.trim();
   const paged = usePaged(rows, PAGE_SIZE, query.trim());
+  const { isPhone } = useDevice();
+  const count = (
+    <span data-testid={`count-${listId}`} className={searching ? undefined : 'sr-only'} style={{ fontSize: isPhone ? 13 : 14, color: '#6B6259', lineHeight: 1.3, flex: 'none', fontVariantNumeric: 'tabular-nums' }}>
+      {searching ? t('lobby.countOf', { n: rows.length, total }) : total}
+    </span>
+  );
+  const body = (hair: string, pad: string) => (
+    <>
+      {paged.rows.map((r, i) => (
+        <MemberRow key={r.m.id} r={r} first={i === 0} selected={selectedId === r.m.id} onOpen={() => onOpen(r.m.id)} onCheckIn={() => onCheckIn?.(r.m.id)} onCheckOut={() => onCheckOut?.(r.m.id)} onUndoOut={onUndoOut ? () => onUndoOut(r.m.id) : undefined} />
+      ))}
+      {!rows.length ? (
+        total === 0 || !searching ? (
+          <div style={{ padding: pad, borderTop: hair, display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div style={{ fontSize: isPhone ? 17 : 20, fontWeight: 300, lineHeight: 1.3, color: '#6B6259' }}>{empty.title}</div>
+          </div>
+        ) : (
+          <div style={{ padding: pad, borderTop: hair, fontSize: 16, color: '#6B6259', lineHeight: 1.4 }}>{noMatch(query.trim())}</div>
+        )
+      ) : null}
+      {paged.pages > 1 ? (
+        <div style={{ borderTop: '1px solid #F0EAE1' }}>
+          <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('lobby.pagerAria', { list: title })} />
+        </div>
+      ) : null}
+    </>
+  );
+  // round 6, phone: an iOS grouped list. A grey search bar on its own, the title as a small header over the group, then a flat white group.
+  if (isPhone) {
+    return (
+      <section aria-label={title} data-list={listId} style={{ '--hp': '16px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 } as React.CSSProperties}>
+        {onQuery ? (
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', marginBottom: 10, borderRadius: 11, background: '#EAE6E0' }}>
+            <Icon name="search" size={19} color="#6B6259" />
+            <input value={query} aria-label={t('lobby.searchMember')} onChange={(e) => onQuery(e.target.value)} inputMode="search" placeholder={t('common.search')} autoComplete="off"
+              style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16' }} />
+          </label>
+        ) : null}
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10, padding: '0 16px' }}>
+          <h2 style={GROUP_HEAD}>{title}</h2>
+          {count}
+        </div>
+        <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' }}>
+          {body('none', '20px 16px')}
+        </div>
+      </section>
+    );
+  }
   return (
     <section aria-label={title} data-list={listId} style={{ '--hp': 'clamp(18px, 3vw, 36px)', background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 20, boxShadow: '0 1px 2px rgba(60,40,20,.04), 0 18px 40px rgba(60,40,20,.07)', padding: '8px var(--hp) 12px', minWidth: 0 } as React.CSSProperties}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 0 10px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minWidth: 0 }}>
           <h2 style={{ margin: 0, fontSize: 12, lineHeight: '18px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 auto' }}>{title}</h2>
           {/* the count of the whole list; it is shown only while searching ("3 of 20"), the tab above already carries the number */}
-          <span data-testid={`count-${listId}`} className={searching ? undefined : 'sr-only'} style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.3, flex: 'none', fontVariantNumeric: 'tabular-nums' }}>
-            {searching ? t('lobby.countOf', { n: rows.length, total }) : total}
-          </span>
+          {count}
         </div>
         {onQuery ? (
           <label style={{ display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid #DDD1C2', padding: '2px 2px', width: 'min(220px, 42%)', flex: 'none', minHeight: 44 }}>
@@ -52,23 +99,7 @@ export function MemberList({ t, title, rows, total, query, onQuery, empty, noMat
           </label>
         ) : null}
       </div>
-      {paged.rows.map((r) => (
-        <MemberRow key={r.m.id} r={r} selected={selectedId === r.m.id} onOpen={() => onOpen(r.m.id)} onCheckIn={() => onCheckIn?.(r.m.id)} onCheckOut={() => onCheckOut?.(r.m.id)} onUndoOut={onUndoOut ? () => onUndoOut(r.m.id) : undefined} />
-      ))}
-      {!rows.length ? (
-        total === 0 || !searching ? (
-          <div style={{ padding: '28px 0', borderTop: '1px solid #F0EAE1', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <div style={{ fontSize: 20, fontWeight: 300, lineHeight: 1.3, color: '#6B6259' }}>{empty.title}</div>
-          </div>
-        ) : (
-          <div style={{ padding: '28px 0', borderTop: '1px solid #F0EAE1', fontSize: 16, color: '#6B6259', lineHeight: 1.4 }}>{noMatch(query.trim())}</div>
-        )
-      ) : null}
-      {paged.pages > 1 ? (
-        <div style={{ borderTop: '1px solid #F0EAE1' }}>
-          <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('lobby.pagerAria', { list: title })} />
-        </div>
-      ) : null}
+      {body('1px solid #F0EAE1', '28px 0')}
     </section>
   );
 }

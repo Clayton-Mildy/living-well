@@ -1,12 +1,14 @@
-// The plan card (Flex visits bar with extra visits, or Gold) and the invoice card (open invoices, empty state).
+// The plan card (Flex visits bar with extra visits, or Gold), shown in family Billing. Invoices have their own list there.
 import { useState } from 'react';
-import { isPrimaryFor, memberShort, paidDate, priceOn, rp, type Member } from '@cp/shared';
+import { isPrimaryFor, memberShort, priceOn, rp, suspensionOf, type Member } from '@cp/shared';
 import { pendingPlanRequest, planName } from '@cp/shared/actions/planRequests';
-import { billingContactOf, historyRows, invoiceRows, nextIssueDate, openInvoiceRows, openTotal, planSummary } from '@cp/shared/rules/family';
-import { Button, Icon, Sheet, StatusBadge } from '../../components/ui';
+import { planSummary } from '@cp/shared/rules/family';
+import { Button, Group, Icon, Sheet } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useFamilyCtx } from './useFamily';
-import { Cap, fcard, heroBlock, linkBtn } from './parts';
+import { useLeaveUi } from './LeaveSection';
+import { Cap, fcard } from './parts';
 
 interface PlanProps {
   m: Member;
@@ -16,9 +18,13 @@ interface PlanProps {
 export function PlanCard({ m, showName }: PlanProps) {
   const { s, t, fmt, now, user } = useFamilyCtx();
   const act = useAct();
+  const { isPhone } = useDevice();
   const [ask, setAsk] = useState(false);
   const p = planSummary(s, m, now.today);
   const flex = p.plan === 'flex';
+  // KC round 6: leave (cuti) and an unpaid invoice (the brochure's terms): the billing contact asks for leave beside "Ask to switch plan"
+  const leave = useLeaveUi({ s, m, today: now.today, t, fmt, act, canEdit: !!user && isPrimaryFor(s, user.id, m.id) });
+  const hold = suspensionOf(s, m.id, now.today);
   const month = fmt.fmonth(p.month);
   const invoiceMonth = fmt.fmonth(p.invoiceMonth);
   const prefix = showName ? `${memberShort(m)} · ` : '';
@@ -26,12 +32,8 @@ export function PlanCard({ m, showName }: PlanProps) {
   const title = flex ? t('family.visitsUsed', { n: p.used, q: p.quota ?? 0, m: month }) : t('family.goldTitle');
   const segs = flex ? Array.from({ length: Math.max(1, p.quota ?? 0) }, (_, i) => i < p.used) : [];
   const text = { fontSize: 15, lineHeight: '22px', color: '#5E5852' } as const;
-  return (
-    <div style={fcard('', 14)} data-testid="plan-card" data-member={m.id}>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <Cap>{prefix}{label}</Cap>
-        <div style={{ fontSize: 22, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.4px', color: '#2B231C' }}>{title}</div>
-      </div>
+  const rest = (
+    <>
       {flex ? (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: `repeat(${segs.length},minmax(0,1fr))`, gap: 4 }} role="img" aria-label={title}>
@@ -48,7 +50,33 @@ export function PlanCard({ m, showName }: PlanProps) {
       ) : (
         <div style={text}>{t('family.goldVisits', { n: p.used, m: month })}</div>
       )}
-      {p.ended ? <div style={text}>{t('family.endedPlan')}</div> : planRequest()}
+      {hold ? (
+        <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, ...text, color: '#9A3D24' }} data-testid="plan-hold">
+          <Icon name="pause_circle" size={20} fill={1} color="#9A3D24" style={{ marginTop: 1 }} />
+          <span>{t(hold.told ? 'family.onHoldTold' : 'family.onHold', { no: hold.number, a: rp(hold.balance), n: memberShort(m), d: fmt.fds(hold.stopOn) })}</span>
+        </div>
+      ) : null}
+      {p.ended ? <div style={text}>{t('family.endedPlan')}</div> : <>{leave.rows}{planRequest()}{leave.sheet}</>}
+    </>
+  );
+  // round 6, phone: the plan is one thing, so one flat group with its label outside (like the iPhone Settings), not a shadowed card
+  if (isPhone) {
+    return (
+      <div data-testid="plan-card" data-member={m.id}>
+        <Group title={`${prefix}${label}`} gap={14}>
+          <div style={{ fontSize: 22, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.4px', color: '#2B231C' }}>{title}</div>
+          {rest}
+        </Group>
+      </div>
+    );
+  }
+  return (
+    <div style={fcard('', 14)} data-testid="plan-card" data-member={m.id}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <Cap>{prefix}{label}</Cap>
+        <div style={{ fontSize: 22, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.4px', color: '#2B231C' }}>{title}</div>
+      </div>
+      {rest}
     </div>
   );
   // the primary contact can ask to switch plan from the 1st of next month; finance or management confirms it
@@ -59,7 +87,10 @@ export function PlanCard({ m, showName }: PlanProps) {
       return (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-testid="plan-request">
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 15, lineHeight: '22px' }}><Icon name="hourglass_top" size={20} color="#7A5510" />{t('family.planAsked', { plan: planName(pending.to), d: fmt.fds(pending.from) })}</div>
-          {pending.createdBy === `family:${user.id}` ? <div><Button variant="ghost" size={44} onClick={() => act('planChange.withdraw', { requestId: pending.id }, { ok: t('family.planWithdrawn') })}>{t('family.planWithdraw')}</Button></div> : null}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {pending.createdBy === `family:${user.id}` ? <Button variant="ghost" size={44} onClick={() => act('planChange.withdraw', { requestId: pending.id }, { ok: t('family.planWithdrawn') })}>{t('family.planWithdraw')}</Button> : null}
+            {leave.button}
+          </div>
         </div>
       );
     }
@@ -68,7 +99,10 @@ export function PlanCard({ m, showName }: PlanProps) {
     const price = priceOn(s, next);
     return (
       <>
-        <div><Button variant="secondary" size={44} icon="sell" onClick={() => setAsk(true)}>{flex ? t('family.planAskGold') : t('family.planAskFlex')}</Button></div>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button variant="secondary" size={44} icon="sell" onClick={() => setAsk(true)}>{flex ? t('family.planAskGold') : t('family.planAskFlex')}</Button>
+          {leave.button}
+        </div>
         <Sheet open={ask} onClose={() => setAsk(false)} title={t('family.planAskTitle', { name: memberShort(m), plan: planName(to) })}
           footer={<Button size={56} full onClick={async () => { const r = await act('planChange.request', { memberId: m.id, to }, { ok: t('family.planAskSent') }); if (r.ok) setAsk(false); }}>{t('family.planAskSend')}</Button>}>
           <div style={{ fontSize: 15, lineHeight: '24px' }}>{to === 'gold'
@@ -78,69 +112,4 @@ export function PlanCard({ m, showName }: PlanProps) {
       </>
     );
   }
-}
-
-interface InvProps {
-  m: Member;
-  showName: boolean;
-  /** Both mode: the pay button lives on the parent's own card. */
-  noPay?: boolean;
-  onPay: (ids: string[]) => void;
-  onDetails: (invoiceId: string) => void;
-  onBilling: () => void;
-  /** Sits inside the member card (hairline above, no card of its own). */
-  bare?: boolean;
-}
-export function InvoiceCard({ m, showName, noPay, onPay, onDetails, onBilling, bare }: InvProps) {
-  const { s, t, fmt, now, user } = useFamilyCtx();
-  const { today } = now;
-  const prefix = showName ? `${memberShort(m)} · ` : '';
-  const rows = invoiceRows(s, [m.id], today);
-  const open = openInvoiceRows(rows);
-  const primary = !!user && isPrimaryFor(s, user.id, m.id);
-  const contact = billingContactOf(s, m.id);
-
-  const wrap = (extra: object) => (bare ? { ...heroBlock, ...extra } : fcard('', 12, extra));
-  // ----- no invoice yet: never crash -----
-  if (!rows.length) {
-    const day = s.club.settings.issueDay;
-    const od = fmt.lang === 'en' ? `${day}${day % 10 === 1 && day !== 11 ? 'st' : day % 10 === 2 && day !== 12 ? 'nd' : day % 10 === 3 && day !== 13 ? 'rd' : 'th'}` : String(day);
-    return (
-      <div style={wrap({})} data-testid="invoice-card" data-empty="1">
-        <Cap>{prefix}{t('nav.billing')}</Cap>
-        <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 300, letterSpacing: '-0.3px', color: '#2B231C' }}>{t('family.invNone')}</span>
-        <span className="cp-hide-phone" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('family.invNoneSub', { od, d: day, date: fmt.fdy(nextIssueDate(s, today)) })}</span>
-      </div>
-    );
-  }
-
-  const latest = open.length ? open[0] : historyRows(rows)[0];
-  const overdue = open.filter((r) => r.status === 'overdue');
-  const single = open.length === 1;
-  const badge = overdue.length ? 'overdue' : open.some((r) => r.status === 'partial') ? 'partial' : open.length ? 'outstanding' : 'paid';
-  const label = open.length > 1 ? t('family.invOpen') : t('family.invL', { p: fmt.fmonth(latest.period, true) });
-  const amount = open.length ? openTotal(open) : latest.total;
-  const sub = !open.length ? t('family.paidOn', { d: fmt.fds(paidDate(s, latest.inv.id) || latest.inv.issueDate) })
-    : overdue.length ? t('family.invOverdueSub', { d: fmt.fds(overdue[0].inv.dueDate) })
-    : single ? (latest.status === 'partial' ? t('family.partPaid', { a: rp(latest.paid), t: rp(latest.total) }) : t('family.dueOn', { d: fmt.fds(latest.inv.dueDate) }))
-    : t('family.invOpenSub', { n: open.length, d: fmt.fds(open[0].inv.dueDate) });
-  const canPay = open.length > 0 && primary && !noPay;
-  return (
-    <div style={wrap({})} data-testid="invoice-card" data-member={m.id} data-open={open.length}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '12px 16px', flexWrap: 'wrap' }}>
-        <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-          <Cap>{prefix}{label}</Cap>
-          <div style={{ fontSize: 'clamp(26px, 6vw, 30px)', lineHeight: 1.15, fontWeight: 300, letterSpacing: '-0.6px', fontVariantNumeric: 'tabular-nums', color: '#1E1A16' }}>{rp(amount)}</div>
-          <div style={{ fontSize: 14, color: badge === 'overdue' ? '#9A3D24' : '#6B6259', lineHeight: 1.4 }}>{sub}</div>
-        </div>
-        {badge !== 'outstanding' ? <StatusBadge kind={badge} /> : null}
-      </div>
-      {canPay ? <Button size={56} full icon="account_balance" onClick={() => onPay(open.map((r) => r.inv.id))}>{t('family.payVA')}</Button> : null}
-      {open.length && !primary ? <div style={{ fontSize: 15, lineHeight: '22px', color: '#5E5852' }}>{t('family.billingBy', { n: contact?.name || '', m: memberShort(m) })}</div> : null}
-      <div style={{ display: 'flex', gap: 'clamp(12px, 4vw, 24px)', flexWrap: 'wrap', margin: '-6px 0 -6px -4px' }}>
-        {single || !open.length ? <button type="button" onClick={() => onDetails(latest.inv.id)} style={linkBtn}>{t('family.viewDetails')}</button> : null}
-        <button type="button" onClick={onBilling} style={linkBtn}>{t('family.seeBilling')}</button>
-      </div>
-    </div>
-  );
 }

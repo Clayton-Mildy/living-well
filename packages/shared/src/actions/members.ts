@@ -4,7 +4,7 @@
 import type { Draft } from 'immer';
 import type {
   Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan,
-  PlanEntry, ReviewSection, Title, EndReason, Consent,
+  PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration,
 } from '../types';
 import { e164, toMin } from '../util';
 import { defineAction, hasRole, isMgmt, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
@@ -13,11 +13,13 @@ import { clearApproval, markPending, needsApproval, priorOf } from './approvalGa
 import { NOTE_KEYS } from '../rules/approvals';
 import { currentMembership, isOpen, isPendingRow, membershipStatus, memberShort, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
 import { paidOn } from '../rules/billing';
+import { cleanRegistration, validateRegistration } from '../rules/applicationForm';
 import {
   DEFAULT_SIM, DIETS, DOC_TYPES, END_REASONS, FOODS, MED_TIMINGS, MOBILITIES, RELATIONS, SIM_FILE, TITLES, docIdFor,
   finalInvoiceFor, firstOfNextMonth, firstWord, genderOf, isHM, isISO, nextContactId, nextMemberId, lastMemberId, nextMemberNumber, splitName,
   validateNewMember, vaFor, consentOf, type NewMemberInput,
 } from '../rules/members';
+import type { LeadHealth } from '../rules/enquiries';
 
 // ---------- shared helpers (family.ts reuses them) ----------
 const bad = (code: string, params?: Record<string, string | number>): never => { throw new DomainError(code, params); };
@@ -129,14 +131,34 @@ const parseMeds = (v: unknown): { id?: string; name: string; dose: string; timin
     return { ...(typeof o.id === 'string' && o.id ? { id: o.id } : {}), name, dose: txt(o.dose, 60), timing: MED_TIMINGS.includes(o.timing as MedTiming) ? (o.timing as MedTiming) : 'asPrescribed', ...(txt(o.note, 160) ? { note: txt(o.note, 160) } : {}) };
   });
 
-function parseNewMember(raw: unknown): NewMemberInput {
+/** Conditions, allergies, mobility and diet as Add member sends them (no medicines): also used when a lead joins. */
+export function parseHealthBasics(v: unknown): LeadHealth {
+  const h = obj(v ?? {});
+  return {
+    conditions: strList(h.conditions), diabetic: !!h.diabetic, food: enumList(h.food, FOODS), foodOther: txt(h.foodOther, 80), drugs: parseDrugs(h.drugs),
+    mobility: MOBILITIES.includes(h.mobility as Mobility) ? (h.mobility as Mobility) : null, diet: enumList(h.diet, DIETS),
+  };
+}
+
+/** The new-member input plus the extra answers of the paper application form (Panggilan, RT/RW, phones, the care questions, the ID ticks). */
+export type NewMemberFull = NewMemberInput & { registration?: MemberRegistration };
+/** The answers of the application form, cleaned and checked; undefined when none were given. */
+export function parseRegistration(v: unknown): MemberRegistration | undefined {
+  const reg = cleanRegistration(v);
+  const issues = validateRegistration(reg);
+  if (issues.length) bad(issues[0].code, issues[0].params);
+  return reg;
+}
+
+function parseNewMember(raw: unknown): NewMemberFull {
   const o = obj(raw);
   const h = obj(o.health ?? {});
   const c = obj(o.contact ?? {});
   const cons = obj(o.consent ?? {});
   const plan: Plan = o.plan === 'gold' ? 'gold' : 'flex';
   const photo = mediaIdOf(o.photoMediaId);
-  const input: NewMemberInput = {
+  const registration = parseRegistration(o.registration);
+  const input: NewMemberFull = {
     ...(photo ? { photoMediaId: photo } : {}),
     title: oneOf(o.title, TITLES),
     name: txt(o.name, 80),
@@ -157,6 +179,7 @@ function parseNewMember(raw: unknown): NewMemberInput {
     formMediaId: mediaIdOf(o.formMediaId) ?? '',
     formFileName: txt(o.formFileName, 120) || 'registration-form',
     consent: { data: cons.data === true, face: cons.face !== false },
+    ...(registration ? { registration } : {}),
     ...optionalNote(o),
   };
   const issues = validateNewMember(input); // clock-dependent checks run in `run`
@@ -176,6 +199,7 @@ export function mediaIdOf(v: unknown): string | undefined {
 export interface DetailsPatch {
   title?: Title; name?: string; dob?: ISODate; address?: string; /** '' clears it */ usualArrival?: HM | ''; nanny?: { name: string; phone?: string } | null; spouseId?: string | null;
   /** the profile picture; null removes it */ photoMediaId?: string | null;
+  /** the answers of the paper application form, all of them as they should be now; null clears them */ registration?: MemberRegistration | null;
 }
 function parseDetailsPatch(raw: unknown): DetailsPatch {
   const p = obj(raw);
@@ -188,6 +212,7 @@ function parseDetailsPatch(raw: unknown): DetailsPatch {
   if (p.nanny !== undefined) out.nanny = parseNanny(p.nanny);
   if (p.spouseId !== undefined) out.spouseId = p.spouseId === null || p.spouseId === '' ? null : txt(p.spouseId, 60);
   if (p.photoMediaId !== undefined) out.photoMediaId = mediaIdOf(p.photoMediaId) ?? null;
+  if (p.registration !== undefined) out.registration = p.registration === null ? null : (parseRegistration(p.registration) ?? null);
   return out;
 }
 /** Arrival time must fall inside the club's opening hours. */
@@ -202,7 +227,7 @@ const target = (memberId: string) => ({ type: 'member' as const, id: memberId, m
 
 export const membersActions: ActionDef[] = [
   // ----- create -----
-  defineAction<NewMemberInput>({
+  defineAction<NewMemberFull>({
     name: 'members.create',
     can: (u) => frontDesk(u),
     parse: (raw) => parseNewMember(raw),
@@ -246,6 +271,7 @@ export const membersActions: ActionDef[] = [
           mobility: input.health.mobility, diet: input.health.diet, meds: input.health.meds.map((x, i) => ({ id: `${id}-med${i + 1}`, ...x })), cognitive: { summary: '' },
         },
         care: { instructions: input.careInstructions, by: ctx.actor, at: ctx.nowDT }, consents, documents, face: { enrolled: false }, billing: { va: vaFor(num - 1) }, sim: { ...DEFAULT_SIM },
+        ...(input.registration ? { registration: input.registration } : {}),
       };
       ctx.result.memberId = id;
       ctx.result.familyId = familyId;
@@ -293,6 +319,10 @@ export const membersActions: ActionDef[] = [
       if (p.photoMediaId !== undefined && (p.photoMediaId || undefined) !== m.photoMediaId) {
         if (p.photoMediaId) m.photoMediaId = p.photoMediaId; else delete m.photoMediaId;
         fields.push('photo');
+      }
+      if (p.registration !== undefined && !sameJson(cleanRegistration(p.registration), cleanRegistration(m.registration))) {
+        if (p.registration) m.registration = { ...p.registration, ...(p.registration.ids ? { ids: { ...p.registration.ids } } : {}) }; else delete m.registration;
+        fields.push('registration');
       }
       if (!fields.length) ctx.fail('err.noChanges');
       feed(ctx, d, m.id, 'edit', 'details', { fields: fields.join(','), by: ctx.actor });
@@ -530,22 +560,7 @@ export const membersActions: ActionDef[] = [
       if (input.lastDay < ctx.today) ctx.fail('members.err.lastDayPast');
       if (input.lastDay < cur.start) ctx.fail('members.err.lastDayBeforeStart');
       if (!isOpen(d as unknown as ClubState, input.lastDay)) ctx.fail('err.closedDay');
-      cur.lastDay = input.lastDay;
-      cur.endReason = input.reason;
-      if (input.note) cur.endNote = txt(input.note, 400);
-      cur.endedBy = ctx.actor;
-      cur.endedAt = ctx.nowDT;
-      for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending') { r.status = 'declined'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }
-      // final invoice: only extra days that were never billed (open invoices stay payable as they are)
-      const inv = finalInvoiceFor(d as unknown as ClubState, m as Member, input.lastDay, ctx.today);
-      if (inv) {
-        const row: Invoice = { id: inv.number, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...inv };
-        d.invoices[row.id] = row;
-        ctx.result.finalInvoice = { number: inv.number, total: inv.lines.reduce((t, l) => t + l.amount, 0) };
-      }
-      const p = primaryContact(d as unknown as ClubState, m.id);
-      if (p) ctx.notify({ toUsers: [p.id], kind: 'members.notif.ending', params: { name: memberShort(m), date: dmy(input.lastDay) }, link: '/today', memberId: m.id });
-      feed(ctx, d, m.id, 'archive', 'ending', { reason: input.reason, date: input.lastDay });
+      applyEnding(d, m, { lastDay: input.lastDay, reason: input.reason, note: input.note }, ctx);
     },
   }),
   defineAction<{ memberId: string }>({
@@ -653,6 +668,28 @@ export const membersActions: ActionDef[] = [
     },
   }),
 ];
+
+/** Ending a membership once the last day is checked: the last day and reason on the membership, the family's open plan requests declined, a final invoice for extra days
+ *  never billed, the contact told, the feed. Used by members.end and by the renewals follow-up (actions/renewals.ts). */
+export function applyEnding(d: Draft<ClubState>, m: Draft<Member>, input: { lastDay: ISODate; reason: EndReason; note?: string }, ctx: Ctx) {
+  const cur = currentMembership(m);
+  cur.lastDay = input.lastDay;
+  cur.endReason = input.reason;
+  if (input.note) cur.endNote = txt(input.note, 400);
+  cur.endedBy = ctx.actor;
+  cur.endedAt = ctx.nowDT;
+  for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending') { r.status = 'declined'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }
+  // final invoice: only extra days that were never billed (open invoices stay payable as they are)
+  const inv = finalInvoiceFor(d as unknown as ClubState, m as Member, input.lastDay, ctx.today);
+  if (inv) {
+    const row: Invoice = { id: inv.number, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...inv };
+    d.invoices[row.id] = row;
+    ctx.result.finalInvoice = { number: inv.number, total: inv.lines.reduce((t, l) => t + l.amount, 0) };
+  }
+  const p = primaryContact(d as unknown as ClubState, m.id);
+  if (p) ctx.notify({ toUsers: [p.id], kind: 'members.notif.ending', params: { name: memberShort(m), date: dmy(input.lastDay) }, link: '/today', memberId: m.id });
+  feed(ctx, d, m.id, 'archive', 'ending', { reason: input.reason, date: input.lastDay });
+}
 
 /** Insert a plan entry keeping the list ordered by date; scheduled changes on or after the new date are replaced. */
 export function addPlanEntry(m: Draft<Member>, entry: PlanEntry, today: ISODate) {

@@ -21,3 +21,20 @@ export function PhotoImg({ photo, size, alt = '', radius, style, controls = fals
   if (photo.mediaId && !broken) return <img src={mediaUrl(photo.mediaId)} alt={alt} loading="lazy" decoding="async" onError={() => setBroken(true)} style={box} />;
   return <span role={alt ? 'img' : undefined} aria-label={alt || undefined} aria-hidden={alt ? undefined : true} style={box} />;
 }
+
+/** KC round 6: a short row of thumbnails (the photos of one activity session). Tapping one opens it; after `max`, the last tile says "+N". */
+export function PhotoThumbs({ photos, onOpen, alt, max = 4, size = 60 }: { photos: Photo[]; onOpen: (p: Photo) => void; alt: (p: Photo) => string; max?: number; size?: number }) {
+  const shown = photos.slice(0, max);
+  const more = photos.length - shown.length;
+  return (
+    <div data-testid="session-photos" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
+      {shown.map((p, i) => (
+        <button key={p.id} type="button" onClick={() => onOpen(p)} aria-label={alt(p)} data-photo-id={p.id} className="cp-press"
+          style={{ position: 'relative', width: size, height: size, borderRadius: 10, border: 'none', padding: 0, overflow: 'hidden', cursor: 'pointer', background: '#F3EEE8', flex: 'none' }}>
+          <PhotoImg photo={p} />
+          {i === shown.length - 1 && more > 0 ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'rgba(36,32,28,0.55)', color: '#FFFFFF', fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+{more}</span> : null}
+        </button>
+      ))}
+    </div>
+  );
+}

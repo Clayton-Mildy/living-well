@@ -4,11 +4,11 @@ import { useState } from 'react';
 import { actorName, hasKey, sortBy } from '@cp/shared';
 import type { ActivityEntry } from '@cp/shared';
 import { Icon, Pager, Segmented, usePaged } from '../../../components/ui';
-import { docLabel, HAIR, listCardStyle, whenText } from '../lib';
-import { ListHead } from './parts';
+import { docLabel, HAIR, whenText } from '../lib';
+import { ListCard } from './parts';
 import type { P } from './types';
 
-const OPERATIONAL = ['feed.checked', 'feed.reading', 'lobby.', 'health.', 'activity.', 'kitchen.', 'chat.', 'finance.', 'requests.', 'cal.', 'people.', 'family.'];
+const OPERATIONAL = ['feed.checked', 'feed.reading', 'lobby.', 'health.', 'activity.', 'kitchen.', 'finance.', 'requests.', 'cal.', 'people.', 'family.'];
 const isChange = (key: string) => !OPERATIONAL.some((k) => key.startsWith(k));
 const FIELD_KEY: Record<string, string> = { title: 'title', name: 'name', dob: 'dob', address: 'address', usualArrival: 'usual', nanny: 'nanny', spouseId: 'spouse' };
 
@@ -44,11 +44,11 @@ export function HistoryTab({ p }: { p: P }) {
     const doer = actorName(s, by || a.actor);
     return by && by !== a.actor ? `${doer} · ${t('profile.approvedBy', { n: actorName(s, a.actor) })}` : doer;
   };
+  const ph = p.isPhone && !p.family; // round 6, phone: the list card is an iOS grouped section
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 18, maxWidth: 860 }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 14 : 18, maxWidth: 860 }}>
       <Segmented label={t('profile.tab.history')} value={mode} onChange={setMode} items={[{ value: 'changes', label: t('profile.history.changes') }, { value: 'all', label: t('profile.history.all') }]} />
-      <div style={listCardStyle}>
-        <ListHead title={t('profile.history.title')} />
+      <ListCard phone={ph} title={t('profile.history.title')}>
         {paged.rows.map((a, ai) => {
           const d = detail(a);
           return (
@@ -72,7 +72,7 @@ export function HistoryTab({ p }: { p: P }) {
           </div>
         ) : null}
         {paged.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('profile.pagerHistory')} /></div> : null}
-      </div>
+      </ListCard>
     </div>
   );
 }

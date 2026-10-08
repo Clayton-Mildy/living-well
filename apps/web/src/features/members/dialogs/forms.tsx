@@ -2,8 +2,9 @@
 // that the add dialog and the edit dialogs share.
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import { DIETS, FOODS, MED_TIMINGS, MOBILITIES, RELATIONS, TITLES } from '@cp/shared/rules/members';
-import type { Diet, DrugAllergy, FoodAllergen, MedTiming, Mobility, Relation, Title } from '@cp/shared';
-import { Button, ChipGroup, FONT_BODY, Icon, IconButton, Select, TimeField, Toggle } from '../../../components/ui';
+import type { Diet, DrugAllergy, FoodAllergen, MedTiming, MemberRegistration, Mobility, Relation, Title } from '@cp/shared';
+import { MARITALS, REG_IDS, cleanRegistration, type Marital } from '@cp/shared/rules/applicationForm';
+import { Button, Chip, ChipGroup, FONT_BODY, GROUP_HEAD, Icon, IconButton, Select, TimeField, Toggle } from '../../../components/ui';
 import type { TFn } from '../../../lib/i18n';
 import { dietLabel, foodLabel, mobLabel, relLabel, timingLabel } from '../lib';
 
@@ -32,7 +33,15 @@ export function TextField({ label, value, onChange, placeholder, inputMode, type
 /** The overlay primitive is a flex column that lets children shrink when the content is taller than the dialog (inputs get squashed). One wrapper that never shrinks keeps every control at its full height; the dialog scrolls instead. */
 export const DialogBody = ({ children }: { children: ReactNode }) => <div style={{ display: 'flex', flexDirection: 'column', gap: 24, flexShrink: 0 }}>{children}</div>;
 
-export const PeSection = ({ label, children, hint }: { label: ReactNode; children: ReactNode; hint?: ReactNode }) => (
+export const PeSection = ({ label, children, hint, native }: { label: ReactNode; children: ReactNode; hint?: ReactNode; /** round 6, phone: an iOS grouped section (small grey header over a flat white group), for a form on a PhoneScreen */ native?: boolean }) => native ? (
+  <section style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }} data-pe-section>
+    <div style={{ ...GROUP_HEAD, padding: '0 16px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', whiteSpace: 'normal', overflow: 'visible' }}>{label}</div>
+    <div style={{ background: '#FFFFFF', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      {hint ? <div style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{hint}</div> : null}
+      {children}
+    </div>
+  </section>
+) : (
   <div style={{ display: 'flex', flexDirection: 'column', gap: 14, paddingTop: 22, borderTop: '1px solid #F0EAE1' }} data-pe-section>
     <div style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>{label}</div>
     {hint ? <div style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4, marginTop: -8 }}>{hint}</div> : null}
@@ -149,4 +158,59 @@ export function YesNo({ label, value, onChange, t }: { label: ReactNode; value: 
 export function useDraft<T extends object>(init: () => T) {
   const [d, setD] = useState<T>(init);
   return [d, (p: Partial<T>) => setD((x) => ({ ...x, ...p }))] as const;
+}
+
+// ---------- the paper application form's extra answers (Panggilan, status, RT/RW, phones, the care questions, the IDs received) ----------
+type YN = boolean | null;
+export type RegId = (typeof REG_IDS)[number];
+export interface RegDraft { nickname: string; marital: Marital | ''; rtRw: string; city: string; postcode: string; phone: string; mobile: string; email: string; comm: YN; self: YN; bath: YN; dementiaNote: string; ids: RegId[] }
+export const regDraftOf = (r?: MemberRegistration): RegDraft => ({
+  nickname: r?.nickname || '', marital: r?.marital || '', rtRw: r?.rtRw || '', city: r?.city || '', postcode: r?.postcode || '', phone: r?.phone || '', mobile: r?.mobile || '', email: r?.email || '',
+  comm: r?.commDifficulty ?? null, self: r?.selfCare ?? null, bath: r?.bathroomHelp ?? null, dementiaNote: r?.dementiaNote || '', ids: REG_IDS.filter((k) => r?.ids?.[k]),
+});
+/** The draft as the answers that are saved (empty ones left out; undefined when nothing is filled in). */
+export const regOfDraft = (d: RegDraft): MemberRegistration | undefined => cleanRegistration({
+  nickname: d.nickname, marital: d.marital, rtRw: d.rtRw, city: d.city, postcode: d.postcode, phone: d.phone, mobile: d.mobile, email: d.email,
+  commDifficulty: d.comm ?? undefined, selfCare: d.self ?? undefined, bathroomHelp: d.bath ?? undefined, dementiaNote: d.dementiaNote, ids: Object.fromEntries(d.ids.map((k) => [k, true])),
+});
+type RegSet = (p: Partial<RegDraft>) => void;
+/** Panggilan, status, RT/RW, city, postcode, phones, email. `err(...fields)` gives the message for a field that has one. */
+export function RegPersonalFields({ d, set, t, err }: { d: RegDraft; set: RegSet; t: TFn; err: (...f: string[]) => string }) {
+  return (
+    <>
+      <TextField label={t('profile.f.nickname')} value={d.nickname} onChange={(v) => set({ nickname: v })} name="nickname" maxLength={40} />
+      <ChipGroup label={t('profile.f.marital')} value={d.marital || null} onChange={(v) => set({ marital: v === d.marital ? '' : (v as Marital) })} options={MARITALS.map((x) => ({ value: x, label: t('profile.marital.' + x) }))} />
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 12 }}>
+        <TextField label={t('profile.f.rtRw')} value={d.rtRw} onChange={(v) => set({ rtRw: v })} name="rtRw" placeholder="004/002" error={err('rtRw')} maxLength={12} />
+        <TextField label={t('profile.f.postcode')} value={d.postcode} onChange={(v) => set({ postcode: v })} name="postcode" inputMode="numeric" error={err('postcode')} maxLength={10} />
+      </div>
+      <TextField label={t('profile.f.city')} value={d.city} onChange={(v) => set({ city: v })} name="city" maxLength={60} />
+      <TextField label={t('profile.f.memberMobile')} value={d.mobile} onChange={(v) => set({ mobile: v })} name="mobile" inputMode="tel" placeholder="+62" error={err('regMobile')} />
+      <TextField label={t('profile.f.homePhone')} value={d.phone} onChange={(v) => set({ phone: v })} name="homePhone" inputMode="tel" placeholder="+62 21" error={err('regPhone')} />
+      <TextField label={t('profile.f.email')} value={d.email} onChange={(v) => set({ email: v })} name="email" type="email" inputMode="email" error={err('email')} maxLength={100} />
+    </>
+  );
+}
+/** Yes / no, and still unanswered until one is tapped (tap the chosen one again to clear it). */
+function YesNoOpen({ label, value, onChange, t }: { label: string; value: YN; onChange: (v: YN) => void; t: TFn }) {
+  return (
+    <div role="group" aria-label={label} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
+      <span style={{ flex: 1, minWidth: 0, fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{label}</span>
+      <div style={{ display: 'flex', gap: 6, flex: 'none' }}>
+        {([true, false] as const).map((v) => <Chip key={String(v)} size={36} selected={value === v} onClick={() => onChange(value === v ? null : v)}>{v ? t('common.yes') : t('common.no')}</Chip>)}
+      </div>
+    </div>
+  );
+}
+/** The three care questions, the dementia note and the identity documents received. */
+export function RegCareFields({ d, set, t }: { d: RegDraft; set: RegSet; t: TFn }) {
+  return (
+    <>
+      <YesNoOpen label={t('profile.q.comm')} value={d.comm} onChange={(v) => set({ comm: v })} t={t} />
+      <YesNoOpen label={t('profile.q.self')} value={d.self} onChange={(v) => set({ self: v })} t={t} />
+      <YesNoOpen label={t('profile.q.bath')} value={d.bath} onChange={(v) => set({ bath: v })} t={t} />
+      <TextField label={t('profile.f.dementiaNote')} value={d.dementiaNote} onChange={(v) => set({ dementiaNote: v })} multiline rows={2} name="dementiaNote" maxLength={300} />
+      <ChipGroup label={t('profile.f.idsReceived')} multi value={d.ids} onChange={(v) => set({ ids: v as RegId[] })} options={REG_IDS.map((x) => ({ value: x, label: t('profile.ids.' + x) }))} />
+    </>
+  );
 }

@@ -8,7 +8,7 @@ export const health = {
   quickNotes: 'Quick notes', keypad: 'Keypad · {f}', device: 'LEPU PC-303', readDevice: 'Read PC-303', keypadNote: 'Values from the LEPU PC-303 fill in on their own. The keypad is the fallback, and is how weight and grip go in.',
   vitals: 'Oxygen and temperature', gluMonthly: 'Glucose', wtGrip: 'Weight and grip',
   lastL: 'Last {v} · {d}', lastToday: 'Today {t} · {v}', fromDevices: 'Read meter & scale',
-  readingAt: 'Reading at {t}', savedBy: 'Saved at {t} by {n}', tellFam: 'Tell {n} now', recheck15: 'Re-check in {m} minutes', saved: 'Saved for {n}: {v}, {s}.', famTold: ' {f} got a message.',
+  readingAt: 'Reading at {t}', savedBy: 'Saved at {t} by {n}', tellFam: 'Tell {n} now', recheck15: 'Re-check in {m} minutes', saved: 'Saved for {n}: {v}, {s}.', famTold: ' {f} was told on WhatsApp (demo).',
   'note.rested': 'Rested 5 minutes first', 'note.medsTaken': 'Took morning medicine at home', 'note.dizzy': 'Feeling dizzy', 'note.headache': 'Headache', 'note.rightArm': 'Measured on right arm',
   healthD: 'Blood pressure {b} · SpO₂ {o}%',
 
@@ -33,7 +33,7 @@ export const health = {
   // the form
   byHand: 'Enter by hand', optionalTag: 'Optional', monthlyLater: 'Do monthly later', monthlyNow: 'Do them now',
   monthlyHead: 'Monthly checks · optional', monthlyLaterNote: 'Glucose and weight stay due. They show as a reminder on the member’s row.',
-  whyMissingShort: 'Still needed: {g}.', whyRangeShort: 'Check the highlighted values.', whyMonthlyShort: 'Enter at least one value.', 
+  whyMissingShort: 'Still needed: {g}.', whyRangeShort: 'Check the highlighted values.', whyMonthlyShort: 'Enter at least one value.',
   whyMeasuring: 'Waiting for the PC-303 reading…', whyMissing: 'Still needed: {g}. Tap Read PC-303 or type the values in.', whyMonthly: 'Enter at least one value.',
   whyRange: 'Check the highlighted values: they look too high or too low to be right.', rangeHint: 'Between {lo} and {hi}', notePh: 'Add a short note for the record (optional)',
   noFamily: 'No family contact receives health messages for {n}.',
@@ -45,7 +45,7 @@ export const health = {
   editTitle: 'Edit reading', editWhy: 'Why are you changing it?', editSave: 'Save correction', editHint: 'The old values stay in the audit trail with your name and the reason.', edited: 'Reading corrected.',
   'er.typo': 'Typing mistake', 'er.deviceError': 'Device gave a wrong value', 'er.remeasured': 'Measured again', 'er.other': 'Other',
   voidTitle: 'Remove this reading?', voidSub: 'It stays in the audit trail but no longer counts for status, trends or alerts.', voidMonthly: 'Also remove the glucose and weight saved with it',
-  voidFamily: 'The family was told about this reading. They will get a correction message.', voidConfirm: 'Remove reading', voided: 'Reading removed.',
+  voidFamily: 'The family was told about this reading. They will get the correction on WhatsApp (demo).', voidConfirm: 'Remove reading', voided: 'Reading removed.',
   'vr.wrongPerson': 'Wrong person', 'vr.deviceError': 'Device error', 'vr.duplicate': 'Duplicate', 'vr.other': 'Other',
 
   // clear a reminder
@@ -61,15 +61,10 @@ export const health = {
   'err.range.spo2': 'SpO₂ must be between 50 and 100 %.', 'err.range.temp': 'Temperature must be between 30 and 43 °C.', 'err.range.glucose': 'Glucose must be between 20 and 700 mg/dL.',
   'err.range.weight': 'Weight must be between 20 and 250 kg.', 'err.range.grip': 'Grip must be between 1 and 99 kg.',
 
-  // messages and updates to the family (written in each contact’s language)
-  'msg.normal': 'Hello {f}, a health update for {name} from {nurse}. {check} at {time}: {value}. All in the normal range.',
-  'msg.watch': 'Hello {f}, a health update for {name} from {nurse}. {check} at {time}: {value}. This is a little outside the usual range, so we are keeping an eye on it. {next}',
-  'msg.alert': 'Hello {f}, an important health update for {name} from {nurse}. {check} at {time}: {value}. This is above our alert line, so we are looking after it now. {next}',
-  'msg.nextRecheck': 'We will re-check at {t} and keep you posted.', 'msg.nextNone': 'We will let you know if anything changes.',
-  'msg.void': 'Correction from {nurse}: the {check} reading for {name} at {time} was recorded by mistake. Please disregard it.',
+  // updates to the family’s bell (the club tells them on WhatsApp; simulated in the demo)
   'notif.fam.normal': '{name}: health check at {time}, {value}. All in the normal range.',
   'notif.fam.watch': '{name}: health check at {time}, {value}. A little outside the usual range; the nurse is keeping an eye on it.',
-  'notif.fam.alert': '{name}: health check at {time}, {value}. Above the alert line; the nurse is looking after it. Please check your messages.',
+  'notif.fam.alert': '{name}: health check at {time}, {value}. Above the alert line; the nurse is looking after it.',
   'notif.fam.void': 'Correction: a reading shared about {name} was recorded by mistake.', 'notif.alert': 'Alert reading: {name} · {value}', 'notif.guestAlert': 'Alert reading for {name} (guest): {value}',
   'feed.normal': '{name} · {value} · Normal', 'feed.watch': '{name} · {value} · Watch', 'feed.alert': '{name} · {value} · Alert',
   'feed.normalTold': '{name} · {value} · Normal · family told', 'feed.watchTold': '{name} · {value} · Watch · family told', 'feed.alertTold': '{name} · {value} · Alert · family told',
@@ -82,6 +77,10 @@ export const health = {
   histDayL: 'Reading day', histEarlier: 'Earlier reading day', histLater: 'Later reading day', histLatest: 'Latest', histPos: 'Reading day {i} of {n}', histEmpty: 'No readings on {d}.', histEmptySub: 'Use the arrows to jump to the nearest day with readings.', histNone: 'No readings yet.', trendsSearchPh: 'Search by name or family name', cSpo2: 'SpO₂', cTemp: 'Temperature', noReadingsYet: 'No readings yet', history: 'History',
   lgBp: 'Solid line: arrival · dashed: departure · shaded: normal range', lgPulse: 'Arrival · shaded: {lo}–{hi}', lgSpo2: 'Arrival · watch under {w}, alert under {a}',
   lgTemp: 'Arrival · watch from {w}, alert from {a}', lgGlu: 'Since {m} · shaded: {lo}–{hi}', lgWt: 'Since {m} · watch on a {w} kg change',
+  // trend charts (KC round 7): hover or tap a chart to read the date and value; the range over which to look
+  rangeL: 'Time range', 'range.1w': '1W', 'range.1m': '1M', 'range.3m': '3M', 'range.6m': '6M', 'range.all': 'All', 'range.custom': 'Custom', rangeFrom: 'From', rangeTo: 'To',
+  readingsIn: '{n} readings from {a} to {b}', readingsInOne: '1 reading from {a} to {b}',
+  trendOf: 'Trend of {n}', latestOn: 'Latest: {d}', noInRange: 'No readings in this range',
   // device waiting, one complete measurement is enough
   waiting: 'Waiting…', stopWaitingL: 'Stop waiting for the PC-303 and type instead',
   whyWaiting: 'Waiting for the PC-303. Tap a box to type the numbers instead.', whyWaitingShort: 'Waiting for the PC-303. Tap a box to type.',
@@ -95,4 +94,9 @@ export const health = {
   'lim.pulseHigh': 'Pulse high', 'lim.pulseLow': 'Pulse low', 'lim.spo2Low': 'Oxygen (SpO₂) low', 'lim.tempHigh': 'Temperature high', 'lim.tempLow': 'Temperature low',
   'lim.gluHigh': 'Glucose high', 'lim.gluLow': 'Glucose low', 'lim.weightChange': 'Weight change since last month',
   'err.limitRange': 'A limit is outside the usual range.', 'err.limitOrder': 'Alert must be past Watch, and each line needs Watch or Alert.', 'feed.limits': '{name} changed the Watch and Alert limits',
+  // a member's own limits (KC round 7): the station note, the member's limits sheet, the feed
+  ownLimits: 'Own limits', ownLimitsTip: 'Graded with {n}’s own limits: {k}.',
+  limitsForTitle: 'Limits for {n}', limMemberNote: 'Change a line to give {n} their own limit. Lines you leave follow the club.', limOwn: 'Own', limOwnCount: 'Members with their own limits: {n}',
+  limResetClub: 'Reset to club limits', limSavedMember: 'Limits saved for {n}. Their readings are graded again.', limClearedMember: '{n} now follows the club limits.',
+  'feed.memberLimits': '{name} set own Watch and Alert limits for {member}', 'feed.memberLimitsClear': '{name} put {member} back on the club limits',
 };

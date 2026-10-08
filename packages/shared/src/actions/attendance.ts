@@ -8,9 +8,10 @@ import { DomainError, defineAction, hasRole, type Ctx } from './framework';
 import { ensureAttendance, familyUserIds, shortOf, requireMember } from './helpers';
 import { activeOn, dayStatus, isPendingRow } from '../rules/core';
 import { attId } from '../rules/attendance';
-import { priceOn } from '../rules/billing';
+import { priceOn, suspensionOf } from '../rules/billing';
+import { onLeaveOn } from '../rules/leave';
 import { faceOptedOut, visitInfo } from '../rules/lobby';
-import { rp } from '../util';
+import { rp, ym } from '../util';
 
 const lobbyOrMgmt = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'lobby', 'mgmt');
 const bad = () => new DomainError('err.invalid');
@@ -55,6 +56,10 @@ export const attendanceActions = [
       const m = requireMember(d, input.memberId, ctx);
       if (isPendingRow(m)) ctx.fail('err.memberPending');
       if (!activeOn(m as Member, ctx.today)) ctx.fail('err.memberNotActive');
+      // KC round 6 (the brochure's terms): an unpaid invoice past the 1st puts the membership on hold until it is paid, and a month of leave is not a visiting month
+      const hold = suspensionOf(d as ClubState, m.id, ctx.today);
+      if (hold) ctx.fail('err.suspended', { name: shortOf(d, m.id), number: hold.number, amount: rp(hold.balance) });
+      if (onLeaveOn(m as Member, ctx.today)) ctx.fail('err.onLeave', { name: shortOf(d, m.id), month: ym(ctx.today) });
       if (!dayStatus(d as ClubState, ctx.today).open) ctx.fail('err.closedDay');
       if (d.attendance[attId(ctx.today, m.id)]?.checkIn) ctx.fail('err.alreadyCheckedIn');
       if (input.method === 'face' && faceOptedOut(m as Member)) ctx.fail('lobby.err.faceOptOut', { name: shortOf(d, m.id) });

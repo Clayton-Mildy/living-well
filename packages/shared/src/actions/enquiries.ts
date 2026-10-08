@@ -5,9 +5,11 @@ import type { ClubState, DrugAllergy, Enquiry, FamilyContact, FoodAllergen, Gues
 import { defineAction, hasRole, DomainError, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
+import { FEE_DEFAULTS, priceOn } from '../rules/billing';
 import {
-  ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, type EnqStage,
+  ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
 } from '../rules/enquiries';
+import { parseHealthBasics, parseRegistration } from './members';
 import { arr, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { e164, live, sortBy } from '../util';
 
@@ -66,6 +68,15 @@ function upsertGuest(d: Draft<ClubState>, ctx: Ctx, e: Draft<Enquiry>, kind: 'vi
   }
   return g;
 }
+/** The second day of a trial (a trial is 2 consecutive days): a copy of the first day's row on the next open day, kept in step with it. */
+function upsertSecondDay(d: Draft<ClubState>, first: Draft<GuestVisit>, date: string) {
+  const id = `${first.id}-2`;
+  const row = d.guestVisits[id];
+  if (!row || row.deletedAt || row.checkIn || row.status !== 'booked') {
+    d.guestVisits[id] = { ...JSON.parse(JSON.stringify(first)), id, date, status: 'booked' };
+    delete d.guestVisits[id].checkIn; delete d.guestVisits[id].checkOut;
+  } else Object.assign(row, JSON.parse(JSON.stringify(first)), { id, date, status: 'booked' });
+}
 /** What the lead's next step is, from the visit or trial still booked (else a generic step for its stage). */
 function nextFor(d: Draft<ClubState>, stage: EnqStage, enquiryId: string, today: string): Enquiry['next'] {
   const kind = stage === 'trial' ? 'trial' : 'visit';
@@ -78,7 +89,7 @@ function nextFor(d: Draft<ClubState>, stage: EnqStage, enquiryId: string, today:
 interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; notes?: string; next?: Enquiry['next'] }
 interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; notes?: string; next?: Enquiry['next'] | null }
 /** `formMediaId` and `formFileName`: the signed paper registration form, uploaded first (POST /api/media). */
-interface ConvertIn { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string }
+interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string }
 
 /** After a lead becomes a member (immediately for management, on approval for lobby): welcome message, visits closed. Members come on any open day, so nothing is booked. */
 function finishJoin(d: Draft<ClubState>, memberId: string, input: ConvertIn, ctx: Ctx) {
@@ -187,14 +198,20 @@ export const enquiriesActions = [
       if (e.stage === 'lost') ctx.fail('enq.err.notOpen');
       const chk = bookingDayCheck(S(d), 'trial', i.date, undefined, ctx.today, ctx.now);
       if (!chk.ok) ctx.fail(chk.code, chk.params);
-      upsertGuest(d, ctx, e, 'trial', { date: i.date, food: i.food, drugs: i.drugs, mobility: i.mobility, diet: i.diet });
+      // the brochure's trial: 2 consecutive open days (day 1 is the row the lead keeps; day 2 follows it)
+      const [day1, day2] = trialDays(S(d), i.date);
+      const g1 = upsertGuest(d, ctx, e, 'trial', { date: day1, food: i.food, drugs: i.drugs, mobility: i.mobility, diet: i.diet });
+      upsertSecondDay(d, g1, day2);
       e.stage = 'trial';
-      e.next = { kind: 'trial', date: i.date };
+      e.next = { kind: 'trial', date: day1 };
       const name = seniorName(e);
-      ctx.feed({ icon: 'waving_hand', key: 'enq.feed.trialBooked', params: { name, date: dm(i.date) } });
+      const days = `${dm(day1)} + ${dm(day2)}`;
+      ctx.result.days = [day1, day2];
+      ctx.result.price = priceOn(S(d), day1).trial ?? FEE_DEFAULTS.trial;
+      ctx.feed({ icon: 'waving_hand', key: 'enq.feed.trialBooked', params: { name, date: days } });
       const kind = i.food === null ? 'enq.notif.trialLunchUnknown' : i.food.length ? 'enq.notif.trialLunchAllergy' : 'enq.notif.trialLunch';
-      ctx.notify({ toRoles: ['kitchen'], kind, params: { name, date: dm(i.date) }, link: '/today', severity: kind === 'enq.notif.trialLunch' ? 'info' : 'attention' });
-      ctx.notify({ toRoles: ['nurse'], kind: 'enq.notif.trialHealth', params: { name, date: dm(i.date) }, link: '/today' });
+      ctx.notify({ toRoles: ['kitchen'], kind, params: { name, date: days }, link: '/today', severity: kind === 'enq.notif.trialLunch' ? 'info' : 'attention' });
+      ctx.notify({ toRoles: ['nurse'], kind: 'enq.notif.trialHealth', params: { name, date: days }, link: '/today' });
     },
   }),
   defineAction<{ enquiryId: string; reason: (typeof LOST_REASONS)[number]; note: string }>({
@@ -269,7 +286,14 @@ export const enquiriesActions = [
       const mediaId = typeof o.formMediaId === 'string' ? o.formMediaId.trim() : '';
       if (!mediaId) throw new DomainError('enq.err.formRequired');
       if (!/^md_[A-Za-z0-9_-]{8,}$/.test(mediaId)) throw new DomainError('err.invalid');
-      return { enquiryId: id60(o.enquiryId, 'enquiryId'), plan, start: isoDate(o.start, 'start'), formMediaId: mediaId, formFileName: str(o.formFileName, 120) || 'registration-form' };
+      // KC round 6: the application form's answers, typed in when joining (optional), so the printed form and the profile have them
+      const dob = o.dob ? isoDate(o.dob, 'dob') : '';
+      const address = str(o.address, 200);
+      const registration = parseRegistration(o.registration);
+      return {
+        enquiryId: id60(o.enquiryId, 'enquiryId'), plan, start: isoDate(o.start, 'start'), formMediaId: mediaId, formFileName: str(o.formFileName, 120) || 'registration-form',
+        ...(dob ? { dob } : {}), ...(address ? { address } : {}), ...(o.health !== undefined ? { health: parseHealthBasics(o.health) } : {}), ...(registration ? { registration } : {}),
+      };
     },
     run(d, i, ctx) {
       const s = S(d);
@@ -278,6 +302,7 @@ export const enquiriesActions = [
       if (e.stage === 'lost' || e.archivedAt) ctx.fail('enq.err.notOpen');
       if (i.start < ctx.today) ctx.fail('enq.err.startPast');
       if (!dayStatus(s, i.start).open) ctx.fail('err.closedDay');
+      if (i.dob && i.dob > ctx.today) ctx.fail('members.err.dobInvalid');
       const memberId = nextNumId(d.members, 'm');
       const num = Number(memberId.slice(1));
       const ph = e164(e.contact.phone);
@@ -286,7 +311,7 @@ export const enquiriesActions = [
       const gate = ctx.review === 'gate';
       d.members[memberId] = memberFromLead({
         id: memberId, contactId, enquiry: e as unknown as Enquiry, plan: i.plan, start: i.start, today: ctx.today, nowDT: ctx.nowDT, actor: ctx.actor, vaIndex: num, photoTone: num % 5,
-        form: { mediaId: i.formMediaId, fileName: i.formFileName },
+        form: { mediaId: i.formMediaId, fileName: i.formFileName }, details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration },
       });
       if (!existing) d.familyContacts[contactId] = contactFromLead({ id: contactId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor, activated: !gate });
       const link = linkFromLead({ contactId, memberId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor });

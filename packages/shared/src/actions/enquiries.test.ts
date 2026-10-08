@@ -111,7 +111,7 @@ describe('visits and trials', () => {
     expect(r.state.guestVisits[Object.keys(r.state.guestVisits).find((k) => k.startsWith('g-e3'))!].date).toBe('2027-02-05');
     fails(s, 'enquiry.bookVisit', { enquiryId: 'e3', date: '2027-02-02', time: '10:00' }, 's1', 'enq.err.past', later);
   });
-  it('a trial is a day pass: a day only, lunch and the health check always included, the kitchen and the nurse are told', () => {
+  it('a trial is 2 consecutive days (Rp 450.000): no time, lunch and the health check always included, the kitchen and the nurse are told', () => {
     const s = seed().citra;
     const trial = { enquiryId: 'e5', date: '2026-10-22', food: ['peanuts'], drugs: [], mobility: 'walker', diet: ['softFood'] };
     const r = run(s, 'enquiry.bookTrial', trial, 's1');
@@ -120,11 +120,16 @@ describe('visits and trials', () => {
     const g = guestsOn(r.state, '2026-10-22').find((x) => x.kind === 'trial')!;
     expect(g).toMatchObject({ lunch: true, healthCheck: true, food: ['peanuts'], mobility: 'walker', diet: ['softFood'], name: 'Opa Leo Gunadi', status: 'booked', date: '2026-10-22' });
     expect(g).not.toHaveProperty('time');
+    // the second day follows (the next open day) with the same details; the price is the trial fee of the price list
+    expect(r.result).toMatchObject({ days: ['2026-10-22', '2026-10-23'], price: 450000 });
+    const g2 = guestsOn(r.state, '2026-10-23').find((x) => x.kind === 'trial')!;
+    expect(g2).toMatchObject({ id: `${g.id}-2`, enquiryId: 'e5', lunch: true, healthCheck: true, food: ['peanuts'], status: 'booked', date: '2026-10-23' });
+    expect(g2).not.toHaveProperty('time');
     const kitchen = user({ citra: r.state }, 's3');
     const nurse = user({ citra: r.state }, 's8');
-    expect(updatesFor(r.state, kitchen).some((x) => x.kind === 'enq.notif.trialLunchAllergy' && x.params.date === '22/10' && !('time' in x.params))).toBe(true);
+    expect(updatesFor(r.state, kitchen).some((x) => x.kind === 'enq.notif.trialLunchAllergy' && x.params.date === '22/10 + 23/10' && !('time' in x.params))).toBe(true);
     expect(updatesFor(r.state, nurse).some((x) => x.kind === 'enq.notif.trialHealth')).toBe(true);
-    expect(Object.values(r.state.activity).some((a) => a.key === 'enq.feed.trialBooked' && a.params.date === '22/10' && !('time' in a.params))).toBe(true);
+    expect(Object.values(r.state.activity).some((a) => a.key === 'enq.feed.trialBooked' && a.params.date === '22/10 + 23/10' && !('time' in a.params))).toBe(true);
     // unknown allergies: the kitchen is asked to find out; the nurse is told in every case
     const unknown = run(s, 'enquiry.bookTrial', { ...trial, food: null }, 's9');
     expect(updatesFor(unknown.state, kitchen).some((x) => x.kind === 'enq.notif.trialLunchUnknown')).toBe(true);
@@ -142,10 +147,14 @@ describe('visits and trials', () => {
     expect(mg).toHaveLength(1);
     expect(mg[0].id).toBe(g.id);
     expect(mg[0]).not.toHaveProperty('time');
+    // and the second day moves with it (Friday 23 → Monday 26)
+    expect(guestsOn(moved.state, '2026-10-26').filter((x) => x.kind === 'trial').map((x) => x.id)).toEqual([`${g.id}-2`]);
+    expect(guestsOn(moved.state, '2026-10-23').filter((x) => x.kind === 'trial')).toHaveLength(1);
     // a trial still needs a day's notice and an open day; it needs no time, so no hours check
     fails(s, 'enquiry.bookTrial', { ...trial, date: T }, 's1', 'enq.err.tooSoon');
     fails(s, 'enquiry.bookTrial', { ...trial, date: '2026-12-25' }, 's1', 'err.closedDay');
     fails(s, 'enquiry.bookTrial', { ...trial, date: '2026-10-29' }, 's1', 'enq.err.outing');
+    fails(s, 'enquiry.bookTrial', { ...trial, date: '2026-10-28' }, 's1', 'enq.err.outing'); // the second day is the outing
     fails(s, 'enquiry.bookTrial', { ...trial, date: '2026-10-25' }, 's1', 'err.closedDay');
     fails(s, 'enquiry.bookTrial', { ...trial, date: undefined }, 's1', 'err.invalid');
     fails(s, 'enquiry.bookTrial', { ...trial, food: ['kryptonite'] }, 's1', 'err.invalid');
@@ -211,6 +220,16 @@ describe('joining a lead (registration is on paper)', () => {
     // the trial that no longer happens is closed
     expect(r.state.guestVisits['g-e1'].status).toBe('cancelled');
     fails(r.state, 'enquiry.convert', input, 's9', 'enq.err.alreadyMember');
+  });
+  it('KC round 6: the application form answers typed in when joining land on the member (date of birth, address, health basics, the form answers)', () => {
+    const s = seed().citra;
+    const reg = { nickname: 'Oma Siu', marital: 'widowed', city: 'Jakarta Barat', selfCare: true, ids: { guarantor: true } };
+    const health = { conditions: ['High blood pressure'], diabetic: true, food: ['shellfish'], foodOther: 'Durian', drugs: ['penicillin', 'other:Codeine'], mobility: 'walker', diet: ['lowSalt'] };
+    const m = run(s, 'enquiry.convert', { ...input, dob: '1944-05-02', address: 'Jl. Kenanga 3', health, registration: reg }, 's9').state.members.m47;
+    expect(m).toMatchObject({ dob: '1944-05-02', address: 'Jl. Kenanga 3', registration: reg });
+    expect(m.health).toMatchObject({ conditions: ['High blood pressure'], diabetic: true, food: ['shellfish'], foodOther: 'Durian', drugs: ['penicillin', 'other:Codeine'], mobility: 'walker', diet: ['lowSalt'], meds: [] });
+    fails(s, 'enquiry.convert', { ...input, dob: '2026-11-01' }, 's9', 'members.err.dobInvalid'); // not born yet
+    fails(s, 'enquiry.convert', { ...input, registration: { email: 'not an email' } }, 's9', 'members.err.emailInvalid');
   });
   it('lobby joining is a gated create: pending until management approves; then the contact signs in', () => {
     const s = seed().citra;

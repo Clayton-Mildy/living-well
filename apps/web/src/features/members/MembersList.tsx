@@ -1,11 +1,11 @@
 // Members list (design ScrMembers): search (names, family names, phone numbers), six filter chips with counts, one compact row per member
-// (avatar, name, status, plan chip) so many members fit at a glance, paged. "Add member" (the floating pin on phones).
+// (avatar, name, status, plan chip) and the primary family contact with a one-tap call, so many members fit at a glance, paged. "Add member" (the floating pin on phones).
 // Pending new members are listed as "Pending approval". The details (age, mobility, allergies, medicines) live on the profile.
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { flexMonth, memberName, initials, ym } from '@cp/shared';
+import { contactsOfMember, flexMonth, fmtPhone, isPendingRow, memberName, initials, ym } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
-import { FilterChips, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
+import { FilterChips, Group, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
@@ -13,7 +13,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
-import { rowStatusText, STATUS_STYLE } from './lib';
+import { relLabel, rowStatusText, STATUS_STYLE } from './lib';
 
 const PAGE_SIZE = 10;
 
@@ -62,15 +62,114 @@ export function MembersList() {
   const marks = (r: MemberRow) => {
     const out: { label: string; short: string; dot: string; fg: string }[] = [];
     if (clinical && r.hs && r.lr) out.push(r.hs === 'alert' ? { label: `${t('status.alert')} · BP ${r.lr.sys}/${r.lr.dia}`, short: `BP ${r.lr.sys}/${r.lr.dia}`, dot: '#9A3D24', fg: '#9A3D24' } : { label: `${t('status.watch')} · BP ${r.lr.sys}/${r.lr.dia}`, short: `BP ${r.lr.sys}/${r.lr.dia}`, dot: '#7A5510', fg: '#7A5510' });
-    if (r.od) out.push({ label: t('members.paymentOverdue'), short: t('members.paymentOverdue'), dot: '#9A3D24', fg: '#9A3D24' });
+    // KC round 6 (the brochure's terms): an unpaid invoice past the 1st puts the membership on hold ("Suspended · unpaid" says more than "Payment overdue", so it replaces it); a month of leave
+    if (r.sus) out.push({ label: t('status.suspended'), short: t('status.suspended'), dot: '#9A3D24', fg: '#9A3D24' });
+    else if (r.od) out.push({ label: t('members.paymentOverdue'), short: t('members.paymentOverdue'), dot: '#9A3D24', fg: '#9A3D24' });
+    if (r.leave) { const l = t('status.onLeave', { month: fmt.fd(`${r.leave}-01`, { month: 'short' }) }); out.push({ label: l, short: l, dot: '#7A5510', fg: '#7A5510' }); }
     return out;
   };
-  const markEls = (r: MemberRow) => marks(r).map((a, j) => (
-    <span key={j} role="img" aria-label={a.label} title={a.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: 500, color: a.fg, whiteSpace: 'nowrap', flex: 'none' }}>
+  const markEls = (r: MemberRow, fs = 14) => marks(r).map((a, j) => (
+    <span key={j} role="img" aria-label={a.label} title={a.label} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: fs, fontWeight: 500, color: a.fg, whiteSpace: 'nowrap', flex: 'none' }}>
       <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: a.dot }} />
       <span aria-hidden="true">{a.short}</span>
     </span>
   ));
+
+  /** round 7: the member's family contact to call when something happens: the primary one (an approved link first) with their relation and number. */
+  const contactOf = (memberId: string) => {
+    const cs = contactsOfMember(s, memberId);
+    return cs.find((x) => !isPendingRow(x.link) && !isPendingRow(x.contact)) ?? cs[0];
+  };
+  /** "Maria Wijaya · Daughter · +62 812-1090-4471" on one line (the name shortens first, the number never does), or a quiet note when nobody is on file. */
+  const contactLine = (r: MemberRow, fs: number) => {
+    const c = contactOf(r.m.id);
+    if (!c) return <span data-testid="member-contact" style={{ fontSize: fs, color: '#8A8078' }}>{t('members.noContact')}</span>;
+    return (
+      <span data-testid="member-contact" style={{ display: 'flex', alignItems: 'baseline', gap: 6, minWidth: 0, fontSize: fs, lineHeight: fs >= 14 ? '20px' : '19px', color: '#4A4038' }}>
+        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{c.contact.name} · {relLabel(t, c.link.relation)}</span>
+        <span style={{ flex: 'none', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>· {fmtPhone(c.contact.phone)}</span>
+      </span>
+    );
+  };
+  /** a round call button beside the row (a link, so it never opens the profile) */
+  const callBtn = (r: MemberRow, size: number) => {
+    const c = contactOf(r.m.id);
+    if (!c) return null;
+    return (
+      <a href={`tel:${c.contact.phone}`} data-testid="member-call" aria-label={`${t('common.call')} ${c.contact.name}`} className={isPhone ? 'cp-press' : 'h-cream'}
+        style={{ width: size, height: size, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flex: 'none' }}>
+        <Icon name="call" size={size >= 40 ? 21 : 19} />
+      </a>
+    );
+  };
+
+  // round 6, phone: an iOS grouped list. The grey search bar, the filter and sort dropdowns, then one flat white group of quiet rows (avatar with a presence dot,
+  // name + plan, ONE meta line with the subscription start and end, a chevron). The status text ("In the club since…", "Last visit…") stays in the row but is
+  // hidden on phones except for the states that need to be seen (pending approval, starts later); the profile has the rest.
+  if (isPhone) {
+    return (
+      <>
+        <div className="cp-native" style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 14 }}>
+          <PageHead size={40} eyebrow={`${t('members.eyebrow', { n: counts.active })}${pendingN ? ' · ' + t('members.eyebrowPending', { n: pendingN }) : ''}`} title={t('nav.members')} />
+          <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0' }}>
+            <Icon name="search" size={19} color="#6B6259" />
+            <input value={q} onChange={(e) => setQ(e.target.value)} inputMode="search" autoComplete="off" placeholder={t('members.searchPh')} aria-label={t('members.searchLabel')} style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', height: '100%', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16', background: 'transparent' }} />
+          </label>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+            <FilterChips label={t('members.filter')} value={f} onChange={setF} style={{ flex: '1 1 0', minWidth: 0 }} options={MEMBER_FILTERS.map((k) => ({ value: k, label: t('members.f.' + k), count: counts[k] }))} />
+            <div style={{ flex: '1 1 0', minWidth: 0 }}>{sortEl}</div>
+          </div>
+          <Group pad={0} gap={0}>
+            {paged.rows.map((r, i) => {
+              const tone = TONES[r.m.photoTone % 5];
+              const st = STATUS_STYLE[r.st.key];
+              const pc = planText(r);
+              const sd = subDates(r);
+              const showSt = r.st.key === 'pending' || r.st.key === 'upcoming';
+              const dot = r.st.key === 'in' ? '#3D6B4F' : r.st.key === 'pending' ? '#7A5510' : '';
+              const stText = rowStatusText(t, r.st, r.lastVisit, fmt.fds);
+              return (
+                // round 7: the row is a div; the profile opens from its main button, the family contact has its own call button before the chevron
+                <div key={r.m.id} className="cp-tap" data-member={r.m.id}
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', minHeight: 62, backgroundColor: '#FFFFFF', backgroundImage: i ? 'linear-gradient(#EFEAE3, #EFEAE3)' : 'none', backgroundSize: 'calc(100% - 70px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', color: '#24201C', fontFamily: 'Inter', transition: 'background-color .15s' }}>
+                  <button type="button" className="cp-tap-target" onClick={() => open(r)}
+                    style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+                  <span style={{ position: 'relative', width: 42, height: 42, flex: 'none' }}>
+                    <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px #E4DACD' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
+                    {dot ? <span aria-hidden="true" style={{ position: 'absolute', right: -2, bottom: -2, width: 13, height: 13, borderRadius: 999, background: dot, border: '2px solid #FFFFFF' }} /> : null}
+                  </span>
+                  <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                    <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{memberName(r.m)}</span>
+                      <span title={pc.tip} style={{ flex: 'none', fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{pc.text}</span>
+                    </span>
+                    {contactLine(r, 13)}
+                    <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0 6px', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>
+                      <span className={showSt ? undefined : 'cp-hide-phone'} style={showSt && r.st.key === 'pending' ? { color: st.fg, fontWeight: 500 } : undefined}>{stText}{showSt && sd.length ? ' ·' : ''}</span>
+                      {sd.length && !r.sus ? <span data-sub-dates="">{sd.join(' · ')}</span> : null /* on hold: the status needs the line (the dates are on the profile) */}
+                      {markEls(r, 13).map((el, j) => <span key={j} style={{ marginLeft: 6, display: 'inline-flex' }}>{el}</span>)}
+                    </span>
+                  </span>
+                  </button>
+                  {callBtn(r, 38)}
+                  <span aria-hidden="true" onClick={() => open(r)} style={{ display: 'flex', flex: 'none', cursor: 'pointer' }}><Icon name="chevron_right" size={22} color="#C2B8AB" /></span>
+                </div>
+              );
+            })}
+            {!visible.length ? (
+              <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
+                <div style={{ width: 52, height: 52, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="person_search" size={26} color="#8A755B" /></div>
+                <div style={{ fontSize: 18, letterSpacing: '-0.3px' }}>{t('members.noMatch')}</div>
+              </div>
+            ) : null}
+          </Group>
+          {paged.pages > 1 ? <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('members.pagerLabel')} /> : null}
+        </div>
+        {canAdd ? <Pin icon="person_add" label={t('members.add')} onClick={() => setAdding(true)} /> : null}
+        {adding ? <AddMemberDialog open onClose={() => setAdding(false)} /> : null}
+      </>
+    );
+  }
 
   return (
     <>
@@ -105,8 +204,11 @@ export function MembersList() {
             const mk = markEls(r);
             const sd = subDates(r);
             return (
-              <button key={r.m.id} type="button" className="dh34 cp-bleed" onClick={() => open(r)} data-member={r.m.id}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16, padding: isPhone ? '10px 0' : '14px 0', minHeight: 72, border: 'none', borderTop: i ? '1px solid #F0EAE1' : 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+              // round 7: the row is a div; the profile opens from its main button, the family contact (name, relation, number) and its call button sit on the right
+              <div key={r.m.id} className="dh34 cp-bleed" data-member={r.m.id}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, minHeight: 72, borderTop: i ? '1px solid #F0EAE1' : 'none', background: 'transparent', color: '#24201C', fontFamily: 'Inter' }}>
+                <button type="button" onClick={() => open(r)}
+                  style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500, flex: 'none', boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px #E4DACD' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{memberName(r.m)}</span>
@@ -130,8 +232,11 @@ export function MembersList() {
                     {sd.map((x) => <span key={x}>{x}</span>)}
                   </span>
                 )}
-                <Icon name="chevron_right" size={22} color="#75624B" style={{ flex: 'none' }} />
-              </button>
+                <span style={{ flex: '0 1 230px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>{contactLine(r, 14)}</span>
+                </button>
+                {callBtn(r, 40)}
+                <span aria-hidden="true" onClick={() => open(r)} style={{ display: 'flex', flex: 'none', cursor: 'pointer' }}><Icon name="chevron_right" size={22} color="#75624B" /></span>
+              </div>
             );
           })}
           {!visible.length ? (

@@ -100,7 +100,8 @@ test('members list: compact rows (name, status, plan), search finds family names
   for (const id of ['m1', 'm2', 'm10', 'm20', 'm46']) expect((await page.locator(`[data-member="${id}"]`).boundingBox())!.height, id).toBeLessThanOrEqual(isPhone(page) ? 104 : 80); // a compact row
   // what needs a look is an icon, with the reading or the reason as its name
   await expect(page.locator('[data-member="m2"]').getByRole('img', { name: /^Watch · BP \d+\/\d+$/ })).toBeVisible();
-  await expect(page.locator('[data-member="m20"]').getByRole('img', { name: 'Payment overdue' })).toBeVisible();
+  // Tjahjadi's overdue invoice has put his membership on hold (the brochure's terms): "Suspended · unpaid" says more than "Payment overdue"
+  await expect(page.locator('[data-member="m20"]').getByRole('img', { name: 'Suspended · unpaid' })).toBeVisible();
   await expect(page.locator('[data-member="m1"]').getByRole('img')).toHaveCount(0);
   await expect(page.getByRole('navigation', { name: 'Members pages' })).toHaveCount(0); // five members: one page
   await expect(main(page)).not.toContainText(RETIRED);
@@ -134,6 +135,37 @@ test('members list: compact rows (name, status, plan), search finds family names
   c.assertClean();
 });
 
+test('members list: every row shows the primary family contact (name, relation, number) with a call link that does not open the profile', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's1', '/members');
+  await expect(page.locator('[data-member]')).toHaveCount(5);
+  const CONTACTS: [string, string, string, string][] = [
+    ['m1', 'Maria Wijaya · Daughter', '+62 812-1090-4471', 'tel:+6281210904471'],
+    ['m46', 'Maria Wijaya · Daughter', '+62 812-1090-4471', 'tel:+6281210904471'],
+    ['m2', 'Cynthia Gunawan · Daughter', '+62 815-1294-4718', 'tel:+6281512944718'],
+    ['m10', 'Laras Saputra · Daughter', '+62 816-1436-6582', 'tel:+6281614366582'],
+    ['m20', 'Yohana Lim · Daughter', '+62 814-2182-3624', 'tel:+6281421823624'],
+  ];
+  for (const [id, who, number, href] of CONTACTS) {
+    const row = page.locator(`[data-member="${id}"]`);
+    await expect(row.getByTestId('member-contact'), id).toContainText(who);
+    await expect(row.getByTestId('member-contact'), id).toContainText(number);
+    await expect(row.getByRole('link', { name: `Call ${who.split(' · ')[0]}` }), id).toHaveAttribute('href', href);
+    const call = await row.getByTestId('member-call').boundingBox();
+    expect(call!.width, `${id}: a round call button`).toBeGreaterThanOrEqual(30);
+  }
+  // the call link is its own control: tapping it never opens the profile (the browser's own phone-app handoff is stopped here)
+  await page.evaluate(() => document.addEventListener('click', (e) => { if ((e.target as Element).closest('a[href^="tel:"]')) e.preventDefault(); }, true));
+  await page.locator('[data-member="m2"]').getByRole('link', { name: 'Call Cynthia Gunawan' }).click();
+  await expect(page).toHaveURL(/\/members$/);
+  await expect(page.getByTestId('member-contact').first()).toBeVisible();
+  // the rest of the row still opens it
+  await page.locator('[data-member="m2"]').getByRole('button', { name: /Hendra/ }).click();
+  await expect(page).toHaveURL(/\/members\/m2$/);
+  await noHScroll(page);
+  c.assertClean();
+});
+
 test("Lina's profile: every tab renders, back returns to the list", async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's1', '/members');
@@ -164,9 +196,17 @@ test("Lina's profile: every tab renders, back returns to the list", async ({ pag
   await page.getByRole('tab', { name: 'Family' }).click();
   await expect(page.getByText('Maria Wijaya')).toBeVisible();
   await expect(page.locator('a[href^="tel:"]').first()).toBeVisible();
+  // "Message on WhatsApp" is a wa.me link per contact (digits of the E.164 number, no +), opened in a new tab: there is no in-app Messages
+  await expect(page.getByTestId('wa-link')).toHaveCount(2);
+  const maria = page.getByRole('link', { name: /Message on WhatsApp · Maria Wijaya/ });
+  await expect(maria).toHaveAttribute('href', 'https://wa.me/6281210904471');
+  await expect(maria).toHaveAttribute('target', '_blank');
+  await expect(maria).toHaveAttribute('rel', /noopener/);
+  await expect(page.getByRole('link', { name: /Message on WhatsApp · Daniel Wijaya/ })).toHaveAttribute('href', 'https://wa.me/6281388201156');
+  await expect(page.getByRole('button', { name: 'Message family' })).toHaveCount(0);
   await expect(page.getByText('Uses the app').first()).toBeVisible();
   await page.getByRole('tab', { name: 'Plan and billing' }).click();
-  await expect(page.getByText('Rp 5.500.000').first()).toBeVisible();
+  await expect(page.getByText('Rp 2.700.000').first()).toBeVisible();
   await page.getByRole('tab', { name: 'Documents' }).click();
   await expect(page.getByText('Use of information')).toBeVisible();
   await expect(page.getByText('Face recognition at the door')).toBeVisible();
@@ -192,8 +232,13 @@ test('attendance: a visits calendar for any month; no booking, leave or absence 
   // any month can be browsed
   await page.getByRole('button', { name: 'Previous month' }).click();
   await expect(page.getByRole('heading', { name: 'September 2026' })).toBeVisible();
-  await expect(page.locator('[data-visit="visit"]')).toHaveCount(3);
-  await expect(page.getByText('3/10')).toBeVisible();
+  // the seed holds about 6 months of visits: the month shows exactly the check-ins the server has for September (Flex never goes above its 10)
+  const sept = Object.values((await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's9' } })).json()).state.attendance as Record<string, { memberId: string; date: string; checkIn?: string }>)
+    .filter((a) => a.memberId === 'm1' && a.date.startsWith('2026-09') && a.checkIn).length;
+  expect(sept).toBeGreaterThanOrEqual(3);
+  expect(sept).toBeLessThanOrEqual(10);
+  await expect(page.locator('[data-visit="visit"]')).toHaveCount(sept);
+  await expect(page.getByText(`${sept}/10`)).toBeVisible();
   await page.getByRole('button', { name: 'Back to this month' }).click();
   await expect(page.getByRole('heading', { name: 'October 2026' })).toBeVisible();
   await page.getByRole('button', { name: 'Next month' }).click();
@@ -616,13 +661,14 @@ test('family audience: no staff-only fields, no history, no edit bars; visits in
   await expect(fh.getByText(/Reviewed by Ns. Dewi/)).toBeVisible();
   await page.getByRole('tab', { name: 'Plan and billing' }).click();
   await expect(fh.getByText(/Xero/)).toHaveCount(0);
-  await expect(fh.getByText('Rp 5.500.000').first()).toBeVisible();
+  await expect(fh.getByText('Rp 2.700.000').first()).toBeVisible();
   await expect(fh.getByRole('button', { name: 'Change plan' })).toHaveCount(0);
   await page.getByRole('tab', { name: 'Notes' }).click();
   await expect(fh.getByText('Loves keroncong')).toBeVisible();
   await expect(fh.getByText('Mbak Sari waits in the lounge')).toHaveCount(0); // a staff-only note
   await expect(fh.getByLabel('Note', { exact: true })).toHaveCount(0);
   await page.getByRole('tab', { name: 'Family' }).click();
+  await expect(fh.getByRole('link', { name: /Message on WhatsApp/ })).toHaveCount(0); // staff only
   await expect(fh.getByRole('button', { name: 'Message family' })).toHaveCount(0);
   await expect(fh.locator('a[href^="tel:"]').first()).toBeVisible();
   // the plan card counts visits; there is nothing to book and no leave to take
@@ -720,7 +766,7 @@ test('photos tab: Take photo uses the camera flow; a teacher’s photo waits for
   // the family's own data does not hold it
   const snap = await familySnapshot(request, 'f1');
   expect(Object.values(snap.photos).filter((p) => p.visibility === 'pending')).toHaveLength(0);
-  expect(Object.values(snap.photos).filter((p) => p.mediaId)).toHaveLength(0);
+  expect(Object.values(snap.photos).filter((p) => p.mediaId && !p.mediaId.startsWith('md_demo_'))).toHaveLength(0); // round 7: the seed's demo scenes have images; no uploaded photo reaches the family
   await signIn(page, 'f1', '/health?tab=photos');
   const fh = page.getByTestId('family-health');
   await expect(fh.locator('[data-photo]').first()).toBeVisible();
@@ -736,7 +782,7 @@ test('photos tab: Take photo uses the camera flow; a teacher’s photo waits for
   await expect(toast(page)).toContainText('Photo saved.');
   await expect(page.locator('[data-photo][data-visibility="visible"] img[src^="/api/media/"]')).toHaveCount(1);
   await expect(page.locator('[data-photo][data-visibility="pending"]')).toHaveCount(1); // the teacher's one still waits
-  expect(Object.values((await familySnapshot(request, 'f1')).photos).filter((p) => p.mediaId)).toHaveLength(1);
+  expect(Object.values((await familySnapshot(request, 'f1')).photos).filter((p) => p.mediaId && !p.mediaId.startsWith('md_demo_'))).toHaveLength(1); // round 7: the seed's demo scenes also have images
   c.assertClean();
 });
 
@@ -805,6 +851,39 @@ test('reviews → Photos: select, approve with the notify switch on or off, reje
   await page.goto('/members/m1/photos');
   await expect(page.locator(`[data-photo="${a}"]`)).toHaveAttribute('data-visibility', 'visible');
   await expect(page.locator(`[data-photo="${g}"]`)).toHaveCount(0);
+  c.assertClean();
+});
+
+test('reviews → Photos: an activity picture is labelled as one, and in the per-person view it sits under "Group & activity photos"', async ({ page, request }) => {
+  const c = watchConsole(page);
+  const media = await uploadPng(request, 's5');
+  const act1 = await doAct(request, 's5', 'photo.addActivity', { date: '2026-10-21', activity: 'Keroncong sing-along', mediaId: media }, 'e2e-ap-1');
+  const act2 = await doAct(request, 's5', 'photo.addActivity', { date: '2026-10-21', activity: 'Batik painting' }, 'e2e-ap-2');
+  expect(act1.ok() && act2.ok()).toBe(true);
+  const a = String((await act1.json()).result.photoId), b = String((await act2.json()).result.photoId);
+  const solo = await takePhoto(request, 's5', 'm1', 'e2e-ap-solo');
+  await signIn(page, 's9', '/reviews?tab=photos');
+  await expect(page.locator('[data-photo-review]')).toHaveCount(3);
+  const ta = page.locator(`[data-photo-review="${a}"]`);
+  await expect(ta).toContainText('Keroncong sing-along');
+  await expect(ta).toContainText('Activity picture');
+  await expect(ta).toContainText('by Dinar');
+  await expect(ta.locator('img[src^="/api/media/"]')).toBeVisible();
+  await expect(page.locator(`[data-photo-review="${solo}"]`)).toContainText('Lina');
+  await noHScroll(page);
+  // per person: Oma Lina's own photo goes under her name, the activity pictures under the group section
+  await page.goto('/reviews?tab=photos&view=person');
+  const section = page.locator('[data-person="group-photos"]');
+  await expect(section).toContainText('Group & activity photos');
+  await expect(section.locator(`[data-person-item="${a}"]`)).toContainText('Activity picture · Keroncong sing-along');
+  await expect(section.locator(`[data-person-item="${b}"]`)).toContainText('Activity picture · Batik painting');
+  await expect(page.locator(`[data-person-item="${solo}"]`).locator('xpath=ancestor::section[@data-person="m1"]')).toHaveCount(1);
+  await expect(section.locator(`[data-person-item="${solo}"]`)).toHaveCount(0);
+  await noHScroll(page);
+  // approve one from there; the family of a member who came sees it
+  await section.locator(`[data-person-item="${a}"]`).getByRole('button', { name: 'Approve' }).click();
+  await expect(section.locator(`[data-person-item="${a}"]`)).toHaveCount(0);
+  expect(Object.keys((await familySnapshot(request, 'fm10_0')).photos)).toContain(a);
   c.assertClean();
 });
 
@@ -1034,5 +1113,188 @@ test('profile photo: the front desk’s new photo waits for management', async (
   const st = async () => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's9' } })).json()).state;
   await expect.poll(async () => Object.values((await st()).changeRequests as Record<string, { status: string; target: { memberId: string }; section: string }>).some((r) => r.status === 'pending' && r.target.memberId === 'm1' && r.section === 'details')).toBe(true);
   expect((await st()).members.m1.photoMediaId).toBeUndefined(); // not until approved
+  c.assertClean();
+});
+
+// ---------------------------------------------------------------- the Membership Application Form (brochure): typed in, printed, signed on paper, scanned back
+/** The four printed pages of the open application form, and one typed-in value on a page. */
+const formPages = (page: Page) => page.getByTestId('application-form').getByTestId('form-page');
+const formValue = (page: Page, n: number, field: string) => formPages(page).nth(n - 1).locator(`[data-field="${field}"]`);
+/** window.print() only counts the call here (a headless browser has no print dialog). */
+const countPrints = (page: Page) => page.evaluate(() => { const w = window as unknown as { __prints: number }; w.__prints = 0; window.print = () => { w.__prints += 1; }; });
+const printed = (page: Page) => page.evaluate(() => (window as unknown as { __prints: number }).__prints);
+/** One of the care questions in a dialog: the chip group under its label. */
+const askChip = (d: ReturnType<typeof dialog>, q: string, answer: string) => d.getByText(q, { exact: true }).locator('xpath=..').getByRole('button', { name: answer, exact: true });
+
+test('application form: add a member with the new answers, print the form to sign (4 pages), attach the signed scan; the answers show on the profile', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/members');
+  await page.getByRole('button', { name: 'Add member' }).click();
+  const d = dialog(page);
+  await d.getByLabel('Full name, as on the KTP').fill('Siti Rahma');
+  await pickDate(page, 'Date of birth', '1946-03-12');
+  await d.getByLabel('Nickname (Panggilan)').fill('Oma Siti');
+  await d.getByRole('button', { name: 'Widowed', exact: true }).click();
+  await d.getByLabel('RT/RW').fill('004/002');
+  await d.getByLabel('Postcode').fill('12730');
+  await d.getByLabel('City').fill('Jakarta Selatan');
+  await d.getByLabel('Member’s mobile').fill('0812 5550 1234');
+  await d.getByLabel('Home phone').fill('021 7199 2210');
+  await d.getByLabel('Email').fill('rudi.rahma@example.com');
+  await askChip(d, 'Difficulty communicating?', 'Yes').click();
+  await askChip(d, 'Can do activities and eat alone?', 'Yes').click();
+  await askChip(d, 'Needs help in the bathroom?', 'No').click();
+  await d.getByLabel('Dementia notes (affect the monthly fee)').fill('Forgets names');
+  await d.getByRole('button', { name: 'Responsible family member', exact: true }).click();
+  await d.getByRole('button', { name: /^Gold/ }).click();
+  await d.getByRole('textbox', { name: /^Name/ }).fill('Rudi Rahma');
+  await d.getByLabel('Mobile (WhatsApp)').fill('0813 4000 7777');
+  // a bad email is caught before the member is created
+  await d.getByLabel('Email').fill('not-an-email');
+  await d.getByRole('button', { name: 'Create member' }).click();
+  await expect(d).toContainText('That email address doesn’t look right.');
+  await d.getByLabel('Email').fill('rudi.rahma@example.com');
+  // print the form to sign: the four brochure pages with the typed answers on their lines, before the member is saved
+  await countPrints(page);
+  await d.getByRole('button', { name: 'Print the form to sign' }).click();
+  await expect(page.getByTestId('application-form')).toBeVisible();
+  await expect(formPages(page)).toHaveCount(4);
+  for (const n of [1, 2, 3, 4]) await expect(formPages(page).nth(n - 1).locator('img.cp-print-bg')).toHaveAttribute('src', `/forms/application-${n}.jpg`);
+  await expect(formValue(page, 1, 'name')).toHaveText('Siti Rahma');
+  await expect(formValue(page, 1, 'nickname')).toHaveText('Oma Siti');
+  await expect(formValue(page, 1, 'registrationFee')).toContainText('Gold');
+  await expect(formValue(page, 1, 'marital')).toHaveText('Janda');
+  await expect(formValue(page, 1, 'dobAge')).toContainText('12 Maret 1946');
+  await expect(formValue(page, 1, 'q1')).toHaveText('Ya');
+  await expect(formValue(page, 1, 'q3')).toHaveText('Tidak');
+  await expect(formValue(page, 1, 'dementia')).toContainText('Forgets names');
+  await expect(formValue(page, 1, 'kin')).toHaveText('Rudi Rahma');
+  await expect(formValue(page, 1, 'kinRelation')).toHaveText('Putri');
+  await expect(formValue(page, 1, 'idGuarantor')).toBeVisible(); // the tick next to "(berikan tanda)"
+  await expect(formValue(page, 1, 'idMember')).toHaveCount(0);
+  await expect(formValue(page, 1, 'signer')).toHaveText('Rudi Rahma');
+  await expect(formValue(page, 4, 'saya')).toHaveText('Rudi Rahma');
+  const box = (await formPages(page).first().boundingBox())!;
+  expect(box.width / box.height).toBeCloseTo(210 / 297, 2); // an A4 sheet
+  await page.getByTestId('application-form').getByRole('button', { name: 'Print', exact: true }).click();
+  expect(await printed(page)).toBe(1);
+  await page.keyboard.press('Escape'); // closes the printed form only; the member form stays open with what was typed
+  await expect(page.getByTestId('application-form')).toHaveCount(0);
+  await expect(d).toBeVisible();
+  await expect(d.getByLabel('Nickname (Panggilan)')).toHaveValue('Oma Siti');
+  // the signed form is scanned and attached as before (still required)
+  await d.getByRole('switch', { name: /Use of information/ }).click();
+  await d.getByRole('button', { name: 'Create member' }).click();
+  await expect(d).toContainText('Attach the signed registration form.');
+  await d.getByTestId('doc-file').setInputFiles({ name: 'signed-form.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await expect(d).toContainText('Attached: signed-form.pdf');
+  await d.getByRole('button', { name: 'Create member' }).click();
+  await expect(page).toHaveURL(/\/members\/m47$/);
+  // the answers are on the profile's Overview; the signed scan is in Documents, next to the print button
+  const personal = page.getByText('Personal details').locator('xpath=ancestor::*[self::section or self::div][1]').last();
+  await expect(main(page)).toContainText('Oma Siti');
+  await expect(main(page)).toContainText('Widowed');
+  await expect(main(page)).toContainText('RT/RW 004/002 · Jakarta Selatan · 12730');
+  await expect(main(page)).toContainText('+62 812-5550-1234 · +62 21 7199 2210');
+  await expect(main(page)).toContainText('rudi.rahma@example.com');
+  await expect(main(page)).toContainText('Hard to communicate · Yes');
+  await expect(main(page)).toContainText('Needs bathroom help · No');
+  await expect(main(page)).toContainText('Forgets names');
+  await expect(main(page)).toContainText('Responsible family member');
+  void personal;
+  await page.goto('/members/m47/docs');
+  await expect(main(page)).toContainText('signed-form.pdf');
+  await page.getByRole('button', { name: 'Print application form' }).click();
+  await expect(formPages(page)).toHaveCount(4);
+  await expect(formValue(page, 1, 'name')).toHaveText('Siti Rahma');
+  await expect(formValue(page, 1, 'nickname')).toHaveText('Oma Siti');
+  await expect(formValue(page, 1, 'signer')).toHaveText('Rudi Rahma');
+  c.assertClean();
+});
+
+test('application form: Oma Lina’s Documents tab prints the four pages, signed for by Maria Wijaya', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's1', '/members/m1/docs');
+  await expect(page.getByTestId('application-form')).toHaveCount(0);
+  await page.getByRole('button', { name: 'Print application form' }).click();
+  await expect(formPages(page)).toHaveCount(4);
+  await expect(formValue(page, 1, 'name')).toHaveText('Lina Wijaya');
+  await expect(formValue(page, 1, 'nickname')).toHaveText('Oma Lina');
+  await expect(formValue(page, 1, 'registrationFee')).toContainText('Flex');
+  await expect(formValue(page, 1, 'monthlyFee')).toContainText('Rp');
+  await expect(formValue(page, 1, 'marital')).toHaveText('Menikah');
+  await expect(formValue(page, 1, 'rtRw')).toHaveText('004/002');
+  await expect(formValue(page, 1, 'email')).toHaveText('maria.wijaya@example.com');
+  await expect(formValue(page, 1, 'q1')).toHaveText('Tidak');
+  await expect(formValue(page, 1, 'q2')).toHaveText('Ya');
+  await expect(formValue(page, 1, 'carer')).toHaveText('Ya');
+  await expect(formValue(page, 1, 'carerName')).toHaveText('Mbak Sari');
+  await expect(formValue(page, 1, 'allergy')).toHaveText('Ya');
+  await expect(formValue(page, 1, 'kin')).toHaveText('Maria Wijaya');
+  await expect(formValue(page, 1, 'kinPhone')).toHaveText('+62 812-1090-4471');
+  for (const k of ['idGuarantor', 'idMember', 'idCarer']) await expect(formValue(page, 1, k)).toBeVisible();
+  // the signer is the billing contact on every page that has a place for the name
+  await expect(formValue(page, 1, 'signer')).toHaveText('Maria Wijaya');
+  await expect(formValue(page, 3, 'signer')).toHaveText('Maria Wijaya');
+  await expect(formValue(page, 4, 'saya')).toHaveText('Maria Wijaya');
+  await expect(formValue(page, 4, 'signer')).toHaveText('Maria Wijaya');
+  await expect(formValue(page, 1, 'date')).toHaveText('21 Oktober 2026');
+  await expect(formPages(page).nth(1).locator('[data-field]')).toHaveCount(0); // page 2 is terms only: the initials stay blank for the pen
+  // print CSS: one A4 sheet per page and the app chrome is hidden
+  await page.emulateMedia({ media: 'print' });
+  await expect(page.locator('#root')).toBeHidden();
+  const sheet = await formPages(page).first().evaluate((el) => { const r = el.getBoundingClientRect(); return { w: r.width, h: r.height }; });
+  expect(sheet.w / sheet.h).toBeCloseTo(210 / 297, 2);
+  if (!isPhone(page)) {
+    const pdf = await page.pdf({ preferCSSPageSize: true });
+    expect((pdf.toString('latin1').match(/\/Type\s*\/Page\b(?!s)/g) || []).length).toBe(4);
+  }
+  await page.emulateMedia({ media: 'screen' });
+  await page.getByRole('button', { name: 'Close' }).click();
+  await expect(page.getByTestId('application-form')).toHaveCount(0);
+  c.assertClean();
+});
+
+test('application form: Edit details changes the answers; they show on Overview; the front desk’s change goes to review', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/members/m1');
+  await expect(main(page)).toContainText('Oma Lina');
+  await expect(main(page)).toContainText('RT/RW 004/002 · Jakarta Selatan · 12730');
+  await page.getByRole('button', { name: /Edit details/ }).first().click();
+  const d = dialog(page);
+  await expect(d.getByLabel('Nickname (Panggilan)')).toHaveValue('Oma Lina');
+  await d.getByLabel('Nickname (Panggilan)').fill('Oma Lin');
+  await d.getByRole('button', { name: 'Widowed', exact: true }).click();
+  await d.getByLabel('Home phone').fill('021 5550 9988');
+  await d.getByLabel('Postcode').fill('12');
+  await d.getByRole('button', { name: 'Save changes' }).click();
+  await expect(d).toContainText('A postcode has 5 digits.');
+  await d.getByLabel('Postcode').fill('12731');
+  await askChip(d, 'Difficulty communicating?', 'Yes').click();
+  await d.getByLabel('Dementia notes (affect the monthly fee)').fill('Repeats questions');
+  await d.getByRole('button', { name: 'Save changes' }).click();
+  await expect(dialog(page)).toHaveCount(0);
+  await expect(main(page)).toContainText('Oma Lin');
+  await expect(main(page)).toContainText('Widowed');
+  await expect(main(page)).toContainText('+62 812-1090-4471 · +62 21 5550 9988');
+  await expect(main(page)).toContainText('12731');
+  await expect(main(page)).toContainText('Hard to communicate · Yes');
+  await expect(main(page)).toContainText('Repeats questions');
+  // the front desk's change waits for management, which sees the old and the new answer
+  await signIn(page, 's1', '/members/m2');
+  await page.getByRole('button', { name: /Edit details/ }).first().click();
+  await dialog(page).getByLabel('Nickname (Panggilan)').fill('Opa H');
+  await dialog(page).getByRole('button', { name: 'Submit for review' }).click();
+  await expect(dialog(page)).toHaveCount(0);
+  await expect(main(page)).toContainText('Opa Hendra'); // still the old answer
+  await signIn(page, 's9', '/reviews');
+  const card = page.getByRole('group', { name: /^Details .*Hendra/ });
+  await expect(card).toContainText('Nickname (Panggilan)');
+  await expect(card).toContainText('Opa Hendra');
+  await expect(card).toContainText('Opa H');
+  await card.getByRole('button', { name: 'Approve' }).click();
+  await expect(card).toHaveCount(0);
+  await page.goto('/members/m2');
+  await expect(main(page)).toContainText('Opa H');
   c.assertClean();
 });

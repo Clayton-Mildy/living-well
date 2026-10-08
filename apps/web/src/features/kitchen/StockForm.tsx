@@ -2,7 +2,7 @@
 import { useState } from 'react';
 import type { StockRequest } from '@cp/shared';
 import { KNOWN_UNITS, STOCK_AREAS, defaultSectionFor } from '@cp/shared/rules/kitchenOps';
-import { Note } from '../../components/ui';
+import { GROUP_HEAD, Note } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useLang, type TFn } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -43,6 +43,38 @@ export function StockForm({ defaultArea, onSent, prefill, title }: { defaultArea
     setBusy(false);
     if (r.ok) { setItem(''); setQty(''); setUnit('pcs'); onSent?.(); }
   };
+  // round 6, phone: the title sits outside a flat white group; item, then quantity | unit as plain rows with hairlines, soft pill chips, and a full-width send pill
+  if (isPhone) {
+    const line: React.CSSProperties = { ...bronzeInput, height: 50, border: 'none', borderRadius: 0, padding: '0 16px', background: 'transparent', width: '100%' };
+    const chip = (on: boolean): React.CSSProperties => ({ height: 36, flex: 'none', padding: '0 14px', borderRadius: 999, border: 'none', background: on ? '#24201C' : '#F3EEE8', color: on ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', whiteSpace: 'nowrap' });
+    return (
+      <section style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+        <div style={{ padding: '0 16px' }}><div style={GROUP_HEAD}>{title ?? t('kitchen.stock.new')}</div></div>
+        <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+          <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('kitchen.stock.item')} aria-label={t('kitchen.stock.item')} maxLength={80} style={line} />
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid #EFEAE3' }}>
+            <input value={qty} onChange={(e) => setQty(e.target.value)} placeholder={t('kitchen.stock.qty')} aria-label={t('kitchen.stock.qty')} inputMode="decimal" maxLength={8} style={line} />
+            <input value={unitLabel(t, unit)} onChange={(e) => setUnit(e.target.value)} placeholder={t('kitchen.stock.unit')} aria-label={t('kitchen.stock.unit')} maxLength={24} style={{ ...line, borderLeft: '1px solid #EFEAE3' }} />
+          </div>
+          <div className="scroll-x" style={{ display: 'flex', gap: 6, padding: '10px 16px', borderTop: '1px solid #EFEAE3', scrollbarWidth: 'none' }} role="group" aria-label={t('kitchen.stock.unit')}>
+            {KNOWN_UNITS.map((u) => (
+              <button key={u} type="button" className="cp-press" aria-pressed={unit === u} onClick={() => setUnit(u)} style={chip(unit === u)}>{t('kitchen.unit.' + u)}</button>
+            ))}
+          </div>
+          <div className="scroll-x" style={{ display: 'flex', gap: 6, padding: '10px 16px', borderTop: '1px solid #EFEAE3', scrollbarWidth: 'none' }} role="group" aria-label={t('kitchen.stock.area')}>
+            {STOCK_AREAS.map((a) => (
+              <button key={a} type="button" className="cp-press" aria-pressed={area === a} onClick={() => setArea(a)} style={chip(area === a)}>{areaLabel(t, a)}</button>
+            ))}
+          </div>
+          {/* a grid, not a flex column: a growing flex item in a column collapses to its text height */}
+          <div style={{ padding: '4px 16px 16px', display: 'grid', gap: 10 }}>
+            <PillButton on={ok && !busy} onClick={send} height={50}>{t('kitchen.stock.send')}</PillButton>
+            {!sectionId ? <Note tone="ochre" icon="info">{t('kitchen.stock.noSection')}</Note> : null}
+          </div>
+        </div>
+      </section>
+    );
+  }
   return (
     <div className="cp-card-pad" style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={cardLabel}>{title ?? t('kitchen.stock.new')}</div>

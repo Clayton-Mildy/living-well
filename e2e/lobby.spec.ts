@@ -1,6 +1,6 @@
 // Lobby for a drop-in day club (Prototype v3). Three number tabs sit at the top of Arrivals:
-//   Not in yet  = the check-in list (members not in yet, with search), "Also today" under it, the door camera in the side rail;
-//   In the club = a searchable list of the members in the club (each with Check out), "Also today" under it;
+//   Not in yet  = the check-in list (members not in yet, with search); the side rail has "Also today", then the door camera (KC round 6);
+//   In the club = a searchable list of the members in the club (each with Check out), "Also today" in the rail;
 //   Gone home   = who has left today. Also: the Flex extra-day note (visit 11 of 10), undo, the departure check,
 // the member drawer, trial and visit guests, the guided-demo deep link, Indonesian, every viewport.
 // Nobody is "expected" and nobody is recorded as bringing or collecting.
@@ -42,7 +42,17 @@ const EXTRA_NOTE = 'Visit 11 of 10 this month: an extra day, Rp 650.000 on next 
 /** Words of the old planned-visit domain: none of them may show on the lobby. */
 const OLD_DOMAIN = /expected|to arrive|walk-in|brought by|collected by|running late|absent today|not coming today|escort|booked for today/i;
 
-test('the drop-in board: Not in yet by default, the check-in list on top with the camera, "Also today" below it; nobody is "expected"', async ({ page }) => {
+test('the front desk knows today’s menu (KC round 6): lunch, the soft version and afternoon tea in "Also today"', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's1');
+  const menu = page.getByTestId('lobby-menu');
+  await expect(menu).toContainText('Menu today');
+  await expect(menu).toContainText('Sop ikan kakap'); // Wednesday's lunch
+  await expect(menu).toContainText(/Afternoon tea/);
+  c.assertClean();
+});
+
+test('the drop-in board: Not in yet by default, the check-in list on top, "Also today" above the camera in the rail; nobody is "expected"', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's1');
   await expect(page.getByRole('heading', { name: 'Arrivals', level: 1 })).toBeVisible();
@@ -70,14 +80,18 @@ test('the drop-in board: Not in yet by default, the check-in list on top with th
   await expect(faceCard(page)).toBeVisible();
   await expect(inClubList(page)).toHaveCount(0);
   await expect(goneHomeList(page)).toHaveCount(0);
-  // order: the number tabs are at the top, the check-in list comes before "Also today", on every width
+  // order (KC round 6): the number tabs are at the top; "Also today" sits in the rail ABOVE the face camera. Wide: the rail is beside the list;
+  // narrow (the rail drops under the list): list, then Also today, then the camera
   await fontsReady(page);
   const sw = await modeTab(page, 'in').boundingBox();
   const listBox = await list.boundingBox();
   const alsoBox = await alsoToday(page).boundingBox();
+  const camBox = await faceCard(page).boundingBox();
   expect(sw!.y).toBeLessThan(listBox!.y);
-  expect(alsoBox!.y).toBeGreaterThan(listBox!.y + listBox!.height - 1); // Also today is BELOW the check-in list
-  expect(Math.abs(alsoBox!.x - listBox!.x)).toBeLessThan(40); // …in the same column
+  expect(alsoBox!.y + alsoBox!.height).toBeLessThanOrEqual(camBox!.y + 1); // Also today is ABOVE the face camera
+  expect(Math.abs(alsoBox!.x - camBox!.x)).toBeLessThan(40); // …in the same rail
+  const beside = alsoBox!.x > listBox!.x + listBox!.width - 1;
+  if (!beside) expect(alsoBox!.y).toBeGreaterThan(listBox!.y + listBox!.height - 1); // stacked: under the list
   await expect(alsoToday(page).getByText('Trial day: Oma Siu Lan Tjandra')).toBeVisible();
   await assertNoHorizontalScroll(page);
   c.assertClean();
@@ -113,11 +127,11 @@ test('In the club: the camera goes, a searchable list of members in the club wit
   await expect(inClub.getByRole('button', { name: /^Check out: / })).toHaveCount(1);
   await search.fill('');
   await expect(inClub.getByRole('button', { name: /^Check out: / })).toHaveCount(3);
-  // "Also today" is still there (guests are checked out from it) and below the list
+  // "Also today" is still there (guests are checked out from it): in the rail beside the list (wide) or under it (narrow)
   await fontsReady(page);
   const listBox = await inClub.boundingBox();
   const alsoBox = await alsoToday(page).boundingBox();
-  expect(alsoBox!.y).toBeGreaterThan(listBox!.y + listBox!.height - 1);
+  expect(alsoBox!.x > listBox!.x + listBox!.width - 1 || alsoBox!.y > listBox!.y + listBox!.height - 1).toBe(true);
   await assertNoHorizontalScroll(page);
   // Gone home: nobody has gone home yet
   await openTile(page, 'goneHome');
@@ -470,16 +484,16 @@ test('guests in "Also today": check in the trial guest (she joins the nurse queu
   c.assertClean();
 });
 
-test('"Also today" rows are tappable: the guest’s enquiry and unread messages', async ({ page }) => {
+test('"Also today" lists the guests only, and a guest title opens its enquiry; there are no unread messages', async ({ page }) => {
   await signIn(page, 's1');
   const also = alsoToday(page);
   await also.getByRole('button', { name: /Trial day: Oma Siu Lan Tjandra/ }).click();
   await expect(page).toHaveURL(/\/enquiries$/);
   await page.goBack();
-  await expect(also.getByText('2 unread messages from families')).toBeVisible();
-  await expect(also.getByText(/Papa has a dentist appointment Friday, he will leave at 14:00\./)).toBeVisible();
-  await also.getByRole('button', { name: /2 unread messages from families/ }).click();
-  await expect(page).toHaveURL(/\/chat$/);
+  await expect(also.getByRole('button', { name: /Trial day: Oma Siu Lan Tjandra/ })).toBeVisible();
+  await expect(also.getByRole('button', { name: /Visit: Bapak Yusuf Hamid/ })).toBeVisible();
+  await expect(also).not.toContainText(/unread|dentist/i);
+  await expect(page.locator('[data-nav-key="chat"]')).toHaveCount(0);
 });
 
 test('the number tabs pick the list: In the club and Gone home bring their list into view; the layout follows the width', async ({ page }) => {
@@ -575,7 +589,8 @@ test('Indonesian: the board, check-in list, drawer, check-out and the extra-day 
   t = await text();
   expect(t).not.toMatch(RAW_KEY);
   expect(t).toContain('Petunjuk perawatan');
-  await page.getByRole('button', { name: 'Tutup' }).click();
+  // the drawer closes with ✕ on wider screens; on a phone it is a pushed screen with "‹ Kedatangan"
+  await page.getByRole('dialog', { name: 'Opa Hendra Gunawan' }).getByRole('button', { name: /^(Tutup|Kedatangan)$/ }).click();
   await page.getByRole('button', { name: /^Check-out: Opa Hendra/ }).click();
   await expect(page.getByRole('dialog', { name: 'Check-out · Opa Hendra' })).toBeVisible();
   t = await text();

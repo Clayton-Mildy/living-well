@@ -1,8 +1,8 @@
 // Enquiries (leads): stages, visit/trial day rules, and the lead -> member mapping.
 // Registration is on paper: staff type the key details from the signed paper form and attach a photo or PDF of it when the lead joins.
 import type {
-  Actor, ClubState, Consent, DT, Diet, Enquiry, FamilyContact, FamilyLink, FoodAllergen, GuestVisit, HM, ISODate, Member, MemberDocument,
-  Mobility, Plan, Relation, Title,
+  Actor, ClubState, Consent, DT, Diet, DrugAllergy, Enquiry, FamilyContact, FamilyLink, FoodAllergen, GuestVisit, HM, ISODate, Member, MemberDocument,
+  MemberRegistration, Mobility, Plan, Relation, Title,
 } from '../types';
 import { dow, e164, live, sortBy, toMin } from '../util';
 import { dayStatus, nextOpenDay } from './core';
@@ -45,6 +45,8 @@ export const guestsOfEnquiry = (s: ClubState, enquiryId: string) => sortBy(live(
 export const openGuest = (s: ClubState, enquiryId: string, kind: GuestVisit['kind']) =>
   live(s.guestVisits).find((g) => g.enquiryId === enquiryId && g.kind === kind && g.status === 'booked' && !g.checkIn);
 
+/** A trial is 2 consecutive open days (the brochure: "Dua (2) hari berturut"): the day chosen and the next open day. */
+export const trialDays = (s: ClubState, date: ISODate): [ISODate, ISODate] => [date, nextOpenDay(s, date)];
 export type DayCheck = { ok: true } | { ok: false; code: string; params?: Record<string, string | number> };
 /**
  * Can a visit be booked on `date` at `time`, or a trial on `date`? Trials need a day's notice and have no time (a trial is a day pass with lunch and the health check);
@@ -56,7 +58,11 @@ export function bookingDayCheck(s: ClubState, kind: 'visit' | 'trial', date: ISO
   const st = dayStatus(s, date);
   if (!st.open) return { ok: false, code: 'err.closedDay' };
   if (st.outing) return { ok: false, code: 'enq.err.outing' };
-  if (kind === 'trial') return { ok: true };
+  if (kind === 'trial') {
+    // the second day must be a normal club day too: members are away on an outing
+    const second = dayStatus(s, trialDays(s, date)[1]);
+    return second.open && second.outing ? { ok: false, code: 'enq.err.outing' } : { ok: true };
+  }
   const { open, close } = s.club.settings;
   if (!time || toMin(time) < toMin(open) || toMin(time) >= toMin(close)) return { ok: false, code: 'enq.err.hours', params: { open, close } };
   return { ok: true };
@@ -98,11 +104,16 @@ export const paperFormDoc = (memberId: string, f: PaperForm, on: ISODate, by: Ac
 /** Does this member document have an uploaded file behind it (rather than a paper copy kept at the club)? */
 export const docHasFile = (d: Pick<MemberDocument, 'mediaId'> | undefined | null) => !!d?.mediaId;
 
+/** Health basics typed in when a lead joins (Add member's fields, without medicines: the nurse adds those). */
+export interface LeadHealth { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[] }
+/** What the Join dialog types in from the paper application form (KC round 6). All optional: a plan, a first day and the signed form are enough. */
+export interface LeadDetails { dob?: ISODate; address?: string; health?: LeadHealth; registration?: MemberRegistration }
 export interface LeadMemberArgs {
   id: string;
   contactId: string;
   enquiry: Enquiry;
   form: PaperForm;
+  details?: LeadDetails;
   plan: Plan;
   start: ISODate;
   today: ISODate;
@@ -122,16 +133,19 @@ export function memberFromLead(a: LeadMemberArgs): Member {
     { id: `${a.id}-doc-health`, type: 'healthInfo', status: 'requested', on: a.today, by: a.actor },
   ];
   const consents: Consent[] = [];
+  const x = a.details ?? {};
+  const h = x.health;
   return {
     id: a.id, clubId: a.enquiry.clubId, createdAt: a.nowDT, createdBy: a.actor,
-    title, firstName: first, lastName: last, gender: isFemaleTitle(title) ? 'f' : 'm', dob: null, ageYears: null, address: null, photoTone: a.photoTone,
+    title, firstName: first, lastName: last, gender: isFemaleTitle(title) ? 'f' : 'm', dob: x.dob || null, ageYears: null, address: x.address || null, photoTone: a.photoTone,
     memberships: [{ start: a.start }], plans: [{ from: a.start, plan: a.plan, by: a.actor }], usualArrival: '10:00', nanny: null, spouseId: null,
     health: {
-      conditions: [], diabetic: false, food: [], drugs: [], mobility: null, diet: [], meds: [], cognitive: { summary: '' },
+      conditions: h?.conditions ?? [], diabetic: !!h?.diabetic, food: h?.food ?? [], ...(h?.foodOther ? { foodOther: h.foodOther } : {}), drugs: h?.drugs ?? [], mobility: h?.mobility ?? null, diet: h?.diet ?? [], meds: [], cognitive: { summary: '' },
     },
     care: { instructions: '', by: a.actor, at: a.nowDT }, consents, documents, face: { enrolled: false },
     billing: { va: '8808' + String(1203440000 + a.vaIndex * 7919).padStart(12, '0') },
     sim: { sys: 128, dia: 80, pulse: 74, spo2: 97, glucose: 110, weight: 58, temp: 36.6, grip: 18 },
+    ...(x.registration ? { registration: x.registration } : {}),
   };
 }
 export function contactFromLead(a: { id: string; enquiry: Enquiry; nowDT: DT; actor: Actor; activated: boolean }): FamilyContact {

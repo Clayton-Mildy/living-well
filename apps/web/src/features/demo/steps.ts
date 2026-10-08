@@ -69,19 +69,13 @@ export const DEMO_STEPS: DemoStep[] = [
       await demo.act('attendance.checkOut', { memberId: 'm1' });
       demo.go('/today');
     } },
-  { id: 'maria', time: '17:10', titleKey: 'demo.s7.title', subKey: 'demo.s7.sub', runLabelKey: 'demo.s7.run', done: (s) => live(s.messages).some((m) => m.from === 'family:f1' && m.at.startsWith(T(s))),
-    async run() {
-      await demo.setClock('17:10'); await demo.signInAs('f1'); demo.go('/today');
-      await demo.sleep(900);
-      const s = demo.state();
-      const log = s && logToday(s);
-      if (log) await demo.act('message.send', { memberId: 'm1', topic: 'care', text: 'Thank you Dinar, Mama is still humming Bengawan Solo at home!', ref: { type: 'dailyLog', id: log.id } });
-      await demo.act('message.send', { memberId: 'm1', topic: 'lobby', text: 'Mama left her reading glasses on the lunch table. Could you keep them at the lobby?' });
-    } },
+  // Maria reads the day on her Today page (the team's log and photos); families answer the club on WhatsApp, there is no in-app messaging
+  { id: 'maria', time: '17:10', titleKey: 'demo.s7.title', subKey: 'demo.s7.sub', runLabelKey: 'demo.s7.run', done: () => seen('maria'),
+    async run() { markSeen('maria'); await demo.setClock('17:10'); await demo.signInAs('f1'); demo.go('/today'); } },
   // Flex is 10 visits a month: today's visit is Oma Lina's 11th in October, so it is an extra day on November's invoice
   { id: 'extra', time: '17:15', titleKey: 'demo.s8.title', subKey: 'demo.s8.sub', runLabelKey: 'demo.s8.run', done: (s) => seen('extra') && !!att(s)?.checkIn,
     async run() { await ensureCheckedIn(); markSeen('extra'); await demo.signInAs('f1'); demo.go('/today?member=m1'); } },
-  { id: 'invoice', time: '15 Nov', titleKey: 'demo.s9.title', subKey: 'demo.s9.sub', runLabelKey: 'demo.s9.run',
+  { id: 'invoice', time: '21 Nov', titleKey: 'demo.s9.title', subKey: 'demo.s9.sub', runLabelKey: 'demo.s9.run',
     done: (s) => live(s.invoices).some((i) => i.memberId === 'm1' && i.period === '2026-11' && live(s.payments).some((p) => p.allocations.some((a) => a.invoiceId === i.id))),
     async run() {
       await demo.signInAs('s10');
@@ -96,6 +90,6 @@ export const DEMO_STEPS: DemoStep[] = [
     alt: { labelKey: 'demo.s9.alt', async run() { await demo.signInAs('s10'); demo.go('/payments'); } } },
   { id: 'overview', time: 'Live', titleKey: 'demo.s10.title', subKey: 'demo.s10.sub', runLabelKey: 'demo.s10.run', done: () => seen('overview'),
     async run() { markSeen('overview'); await demo.signInAs('s9'); demo.go('/today'); } },
-  { id: 'price', time: 'Live', titleKey: 'demo.s11.title', subKey: 'demo.s11.sub', runLabelKey: 'demo.s11.run', done: (s) => live(s.prices).some((p) => !p.sample.flex),
+  { id: 'price', time: 'Live', titleKey: 'demo.s11.title', subKey: 'demo.s11.sub', runLabelKey: 'demo.s11.run', done: (s) => live(s.prices).some((p) => !p.sample.extra),
     async run() { await demo.signInAs('s9'); demo.go('/plans'); } },
 ];

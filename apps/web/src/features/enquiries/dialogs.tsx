@@ -2,10 +2,11 @@
 // registration form), and mark lost. Registration is on paper: staff type the key details in and attach a photo or PDF of the signed form.
 import { useMemo, useState, type ReactNode } from 'react';
 import {
-  addDays, dayStatus, fmtPhone, priceOn, rp, toHM, toMin, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Plan, type Relation, type Title,
+  addDays, dayStatus, feeOf, fmtPhone, live, priceOn, rp, sortBy, toHM, toMin, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Plan, type Relation, type Title,
 } from '@cp/shared';
+import { applicationDataFromInput, validateRegistration, type ApplicationInput } from '@cp/shared/rules/applicationForm';
 import {
-  ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookableDays, bookingDayCheck, openGuest, seniorName, startMondays,
+  ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookableDays, bookingDayCheck, openGuest, seniorName, startMondays, trialDays,
 } from '@cp/shared/rules/enquiries';
 import { Button, DateField, Dialog, Icon, Note, SectionLabel, TextField, TimeField, FONT_SMALL } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
@@ -15,6 +16,8 @@ import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { tn } from '../mgmt/common';
 import { PaperFormField, type PaperFile } from '../members/PaperForm';
+import { useApplicationForm } from '../members/ApplicationForm';
+import { AllergyFields, HealthFields, RegCareFields, RegPersonalFields, joinDrugs, regDraftOf, regOfDraft, splitDrugs, useDraft, type AllergyDraft, type HealthDraft, type RegDraft } from '../members/dialogs/forms';
 
 export type Dlg =
   | { mode: 'new' }
@@ -149,7 +152,8 @@ function DayTime({ kind, date, time, onDate, onTime }: { kind: 'visit' | 'trial'
   const { fds } = useFmt();
   const s = useClub();
   const { today, now } = useNow();
-  const days = bookableDays(s, kind === 'trial' ? addDays(today, 1) : today, 8);
+  // a trial is 2 days in a row, so a start day whose second day is an outing is left out
+  const days = bookableDays(s, kind === 'trial' ? addDays(today, 1) : today, kind === 'trial' ? 12 : 8).filter((d) => kind !== 'trial' || bookingDayCheck(s, 'trial', d, undefined, today, now).ok).slice(0, 8);
   const { open, close } = s.club.settings;
   const times = TIMES.filter((x) => toMin(x) >= toMin(open) && toMin(x) < toMin(close) && !(date === today && x < now));
   const check = date && (kind === 'trial' || time) ? bookingDayCheck(s, kind, date, kind === 'trial' ? undefined : time, today, now) : null;
@@ -203,19 +207,22 @@ function BookDialog({ kind, id, onClose }: { kind: 'visit' | 'trial'; id: string
     if (!ok || busy) return;
     setBusy(true);
     try {
-      const ok2 = t(kind === 'visit' ? 'enq.visitBooked' : 'enq.trialBooked', { name: seniorName(e), date: fds(date), time, contact: e.contact.name.split(' ')[0] });
+      const ok2 = t(kind === 'visit' ? 'enq.visitBooked' : 'enq.trialBooked', { name: seniorName(e), date: fds(date), date2: date ? fds(trialDays(s, date)[1]) : '', price: trialPrice, time, contact: e.contact.name.split(' ')[0] });
       const r = kind === 'visit'
         ? await act('enquiry.bookVisit', { enquiryId: id, date, time }, { ok: ok2 })
         : await act('enquiry.bookTrial', { enquiryId: id, date, food, drugs, mobility: mob, diet }, { ok: ok2 });
       if (r.ok) onClose();
     } finally { setBusy(false); }
   };
+  const trialPrice = rp(feeOf(priceOn(s, today), 'trial')); // KC round 6 (the brochure): 2 days in a row for one fee, paid at the front desk
+  const second = kind === 'trial' && date ? trialDays(s, date)[1] : '';
   const label = existing || planned ? (kind === 'visit' ? t('enq.visitChange') : t('enq.trialChange')) : kind === 'visit' ? t('enq.visitTitle') : t('enq.trialTitle');
   return (
     <Dialog open onClose={onClose} eyebrow={label} title={seniorName(e)} maxWidth={600}
-      footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={book} disabled={!ok || busy}>{ok ? t(kind === 'visit' ? 'enq.bookVisitFor' : 'enq.bookTrialFor', { date: fds(date), time }) : t(kind === 'visit' ? 'enq.pickDayTime' : 'enq.pickADay')}</Button></>}>
-      <div style={{ fontSize: 15, lineHeight: '22px', padding: '12px 14px', borderRadius: 10, background: '#F3EEE8' }}>{kind === 'visit' ? t('enq.visitText', { contact: e.contact.name }) : t('enq.trialText', { contact: e.contact.name })}</div>
+      footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={book} disabled={!ok || busy}>{ok ? t(kind === 'visit' ? 'enq.bookVisitFor' : 'enq.bookTrialFor', { date: fds(date), date2: second ? fds(second) : '', price: trialPrice, time }) : t(kind === 'visit' ? 'enq.pickDayTime' : 'enq.pickADay')}</Button></>}>
+      <div style={{ fontSize: 15, lineHeight: '22px', padding: '12px 14px', borderRadius: 10, background: '#F3EEE8' }}>{kind === 'visit' ? t('enq.visitText', { contact: e.contact.name }) : t('enq.trialText', { contact: e.contact.name, price: trialPrice })}</div>
       <DayTime kind={kind} date={date} time={time} onDate={setDate} onTime={setTime} />
+      {second && ok ? <div data-testid="trial-days" style={{ fontSize: 15, lineHeight: '22px', padding: '12px 14px', borderRadius: 10, background: '#E3EFE6', color: '#2F5A40', display: 'flex', flexDirection: 'column', gap: 2 }}><span style={{ fontWeight: 600 }}>{t('enq.trialDays', { a: fds(date), b: fds(second) })} · {trialPrice}</span><span>{t('enq.trialPass')} {t('enq.trialPrice', { price: trialPrice })}</span></div> : null}
       {kind === 'trial' ? (
         <>
           <Sec label={t('enq.foodAllergies')}>
@@ -267,6 +274,7 @@ function JoinPick({ pick }: { pick: ReturnType<typeof useJoinPick> }) {
           <StackChip selected={plan === 'gold'} label={t('mgmt.plan_gold')} sub={`${rp(price.gold)} · ${t('mgmt.plUnlimited').toLowerCase()}`} onClick={() => setPlan('gold')} />
         </div>
       </Sec>
+      <div data-testid="join-reg-fee" style={{ fontSize: 14, lineHeight: '21px', padding: '10px 14px', borderRadius: 10, background: '#F3EEE8' }}>{t('enq.jn_regFee', { price: rp(feeOf(price, 'registration')) })}</div>
       <Sec label={t('enq.start')}>
         <div style={row} role="radiogroup" aria-label={t('enq.start')}>
           {mondays.map((m) => <StackChip key={m} selected={start === m} label={fds(m).replace(/,/g, '')} onClick={() => setStart(m)} />)}
@@ -280,39 +288,81 @@ function JoinPick({ pick }: { pick: ReturnType<typeof useJoinPick> }) {
 const joinLabel = (t: ReturnType<typeof useT>, role: string | null, plan: Plan) =>
   t(role === 'mgmt' ? 'enq.createMember' : 'enq.sendForApproval', { plan: t('mgmt.plan_' + plan) });
 
-// ---------- join as a member: plan, first day and the signed paper registration form ----------
+// ---------- join as a member: plan, first day, the application form's answers and the signed paper registration form ----------
+// KC round 6: the same questions as Add member, so "Print the form to sign" prints the brochure's application form filled in;
+// allergies and needs start from the trial day. Medicines are left to the nurse.
+type JoinDraft = HealthDraft & AllergyDraft & { dob: string; address: string; reg: RegDraft };
 function JoinDialog({ id, onClose }: { id: string; onClose: () => void }) {
   const t = useT();
   const { fds } = useFmt();
   const s = useClub();
   const act = useAct();
   const { role } = useMe();
+  const { today } = useNow();
   const e = s.enquiries[id];
   const pick = useJoinPick();
+  const printer = useApplicationForm();
+  const trial = useMemo(() => sortBy(live(s.guestVisits).filter((g) => g.enquiryId === id && g.kind === 'trial'), (g) => g.date).pop(), [s.guestVisits, id]);
+  const [d, set] = useDraft<JoinDraft>(() => ({
+    dob: '', address: '', conditions: [], diabetic: false, mobility: trial?.mobility ?? 'none', diet: trial?.diet ?? [], food: trial?.food ?? [], foodOther: '', ...splitDrugs(trial?.drugs ?? []), reg: regDraftOf(),
+  }));
+  const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
   const [paper, setPaper] = useState<PaperFile | null>(null);
   const [busy, setBusy] = useState(false);
+  const [tried, setTried] = useState(false);
   if (!e) return null;
+  const reg = regOfDraft(d.reg);
+  const issues = validateRegistration(reg);
+  const err = (...fields: string[]) => (tried ? (() => { const i = issues.find((x) => fields.includes(x.field)); return i ? t(i.code, i.params) : ''; })() : '');
+  const health = { conditions: d.conditions, diabetic: d.diabetic, food: d.food, foodOther: d.foodOther.trim(), drugs: joinDrugs(d), mobility: d.mobility === 'none' ? null : d.mobility, diet: d.diet };
+  const formInput = (): ApplicationInput => ({
+    title: e.senior.title, name: e.senior.name, dob: d.dob, address: d.address.trim(), plan: pick.plan, nanny: null,
+    contact: { name: e.contact.name, phone: e.contact.phone, relation: e.contact.relation, primary: true }, health, ...(reg ? { registration: reg } : {}),
+  });
   const rows: [string, string][] = [[t('enq.jn_member'), seniorName(e)], [t('enq.jn_contact'), `${e.contact.name} · ${fmtPhone(e.contact.phone)}`]];
   const go = async () => {
-    if (!pick.startOk || !paper || busy) return;
+    setTried(true);
+    if (!pick.startOk || !paper || busy || issues.length) return;
     setBusy(true);
     try {
-      const r = await act('enquiry.convert', { enquiryId: id, plan: pick.plan, start: pick.start, formMediaId: paper.mediaId, formFileName: paper.fileName }, { ok: t('enq.joined', { name: seniorName(e), date: fds(pick.start), contact: e.contact.name.split(' ')[0] }), reviewText: t('enq.joinSent', { name: seniorName(e) }) });
+      const input = {
+        enquiryId: id, plan: pick.plan, start: pick.start, formMediaId: paper.mediaId, formFileName: paper.fileName,
+        ...(d.dob ? { dob: d.dob } : {}), ...(d.address.trim() ? { address: d.address.trim() } : {}), health, ...(reg ? { registration: reg } : {}),
+      };
+      const r = await act('enquiry.convert', input, { ok: t('enq.joined', { name: seniorName(e), date: fds(pick.start), contact: e.contact.name.split(' ')[0] }), reviewText: t('enq.joinSent', { name: seniorName(e) }) });
       if (r.ok) onClose();
     } finally { setBusy(false); }
   };
   return (
-    <Dialog open onClose={onClose} eyebrow={t('enq.jn_eyebrow')} title={seniorName(e)} maxWidth={600}
-      footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={go} disabled={!pick.startOk || !paper || busy}>{joinLabel(t, role, pick.plan)}</Button></>}>
-      <Sec label={t('enq.jn_fromEnquiry')}>
-        <Rows rows={rows} />
-      </Sec>
-      <Sec label={t('profile.paperTitle')}>
-        <PaperFormField value={paper} onChange={setPaper} />
-      </Sec>
-      <JoinPick pick={pick} />
-      {role !== 'mgmt' ? <Note tone="ochre" icon="hourglass_top">{t('enq.joinReviewNote')}</Note> : null}
-    </Dialog>
+    <>
+      <Dialog open onClose={onClose} eyebrow={t('enq.jn_eyebrow')} title={seniorName(e)} maxWidth={600}
+        footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={go} disabled={!pick.startOk || !paper || busy}>{joinLabel(t, role, pick.plan)}</Button></>}>
+        <Sec label={t('enq.jn_fromEnquiry')}>
+          <Rows rows={rows} />
+        </Sec>
+        <JoinPick pick={pick} />
+        <Sec label={t('profile.sec.regPersonal')}>
+          <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} />
+          <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} />
+          <RegPersonalFields d={d.reg} set={setReg} t={t} err={err} />
+        </Sec>
+        <Sec label={t('profile.sec.health')}>
+          {trial ? <Note tone="cream" icon="info">{t('enq.jn_fromTrial')}</Note> : null}
+          <HealthFields d={d} set={set} t={t} />
+          <AllergyFields d={d} set={set} t={t} />
+        </Sec>
+        <Sec label={t('profile.sec.regCare')}>
+          <RegCareFields d={d.reg} set={setReg} t={t} />
+        </Sec>
+        <Sec label={t('profile.paperTitle')}>
+          <div><Button variant="secondary" size={44} icon="print" onClick={() => printer.open(applicationDataFromInput(s, formInput(), today))}>{t('form.printToSign')}</Button></div>
+          <PaperFormField value={paper} onChange={setPaper} />
+        </Sec>
+        {tried && issues.length ? <Note tone="rust" icon="error">{t('err.invalid')}</Note> : null}
+        {role !== 'mgmt' ? <Note tone="ochre" icon="hourglass_top">{t('enq.joinReviewNote')}</Note> : null}
+      </Dialog>
+      {printer.node}
+    </>
   );
 }
 

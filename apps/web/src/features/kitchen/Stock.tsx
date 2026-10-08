@@ -3,13 +3,13 @@
 import { useMemo, useState } from 'react';
 import { actorName, type StockRequest } from '@cp/shared';
 import { STOCK_AREAS, canApproveStock, canEditStock, canReceiveStock } from '@cp/shared/rules/kitchenOps';
-import { Button, Dialog, EmptyState, PageHead, Pager, Select, TextField, ChipGroup, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Dialog, EmptyState, Group, PageHead, Pager, Select, TextField, ChipGroup, usePaged, FONT_BODY } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
-import { ConfirmDialog, FilterChip, NumTabs, OutlineButton, PillButton, StockBadge, TextButton, useResetOn } from './parts';
+import { ConfirmDialog, FilterChip, NumTabs, OutlineButton, PillButton, RowPill, StockBadge, TextButton, useResetOn } from './parts';
 import { StockForm, areaLabel, parseQty, unitLabel, useQty, type StockPrefill } from './StockForm';
 import { useStockList } from './vals';
 
@@ -41,7 +41,7 @@ export function Stock() {
   const who = (id: string | undefined) => (id ? actorName(s, id) : '');
 
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 'clamp(16px, 2.4vw, 28px)', maxWidth: 900 }}>
+    <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)' }}>
       <PageHead title={t('kitchen.stock.title')} />
       <StockForm defaultArea={role === 'kitchen' || role === 'mgmt' ? 'kitchen' : 'housekeeping'} prefill={prefill} />
 
@@ -65,6 +65,51 @@ export function Stock() {
         </>
       )}
 
+      {isPhone ? (
+        // round 6, phone: one flat group of requests (item and status on top, one meta line, small pill actions under it)
+        <Group pad="0 16px" gap={0}>
+          {paged.rows.map((k, i) => {
+            const mine = canEditStock(user, k);
+            const approve = canApproveStock(user, k);
+            const receive = canReceiveStock(user, k);
+            const decided = k.status === 'approved' || k.status === 'received' ? t('kitchen.stock.approvedBy', { name: who(k.decidedBy) }) : k.status === 'rejected' ? t('kitchen.stock.declinedBy', { name: who(k.decidedBy) }) : '';
+            const waiting = k.status === 'requested' && !approve;
+            const again = k.status === 'rejected' && k.requestedBy === user.id;
+            return (
+              <div key={k.id} data-testid="stock-row" data-id={k.id} data-status={k.status} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 0', borderTop: i === 0 ? 'none' : '1px solid #EFEAE3' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
+                  <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                    <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{k.item} · {fmtQty(k.qty)} {unitLabel(t, k.unit)}</span>
+                    <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{areaLabel(t, k.area)} · {who(k.requestedBy)} · {fds(k.createdAt.slice(0, 10))}{decided ? ' · ' + decided : ''}</span>
+                    {k.status === 'rejected' && k.note ? <span style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>“{k.note}”</span> : null}
+                  </div>
+                  <StockBadge status={k.status} />
+                </div>
+                {approve || mine || waiting || receive || again ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                    {approve ? (
+                      <>
+                        <RowPill tone="ink" onClick={() => void act('stock.approve', { id: k.id }, { ok: t('kitchen.stock.approvedToast', { item: k.item, name: who(k.requestedBy) }) })}>{t('kitchen.stock.approve')}</RowPill>
+                        <RowPill tone="danger" onClick={() => setDecline(k)}>{t('kitchen.stock.decline')}</RowPill>
+                      </>
+                    ) : null}
+                    {mine ? (
+                      <>
+                        <RowPill icon="edit" onClick={() => setEdit(k)}>{t('common.edit')}</RowPill>
+                        <RowPill tone="danger" onClick={() => setCancel(k)}>{t('kitchen.stock.cancel')}</RowPill>
+                      </>
+                    ) : null}
+                    {waiting ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.stock.waiting')}</span> : null}
+                    {receive ? <RowPill onClick={() => void act('stock.receive', { id: k.id }, { ok: t('kitchen.stock.receivedToast', { item: k.item }) })}>{t('kitchen.stock.receive')}</RowPill> : null}
+                    {again ? <RowPill tone="quiet" onClick={() => { setPrefill({ item: k.item, qty: k.qty, unit: k.unit, area: k.area }); document.getElementById('main')?.scrollTo({ top: 0, behavior: 'smooth' }); }}>{t('kitchen.stock.again')}</RowPill> : null}
+                  </div>
+                ) : null}
+              </div>
+            );
+          })}
+          {!rows.length ? <EmptyState icon="inventory_2" title={t('kitchen.stock.empty')} /> : null}
+        </Group>
+      ) : (
       <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
         {paged.rows.map((k) => {
           const mine = canEditStock(user, k);
@@ -99,6 +144,7 @@ export function Stock() {
         })}
         {!rows.length ? <EmptyState icon="inventory_2" title={t('kitchen.stock.empty')} /> : null}
       </div>
+      )}
       <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.stock.title')} />
 
       <DeclineDialog k={decline} onClose={() => setDecline(null)} />
@@ -109,7 +155,7 @@ export function Stock() {
   );
 }
 
-function DeclineDialog({ k, onClose }: { k: StockRequest | null; onClose: () => void }) {
+export function DeclineDialog({ k, onClose }: { k: StockRequest | null; onClose: () => void }) {
   const t = useT();
   const act = useAct();
   const [note, setNote] = useState('');

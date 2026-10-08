@@ -15,17 +15,22 @@ const KIND_ICON: Record<string, string> = {
   'notif.act.review': 'fact_check', 'notif.act.reviewFlagged': 'fact_check', 'notif.act.alertReading': 'warning', 'notif.act.contract': 'badge', 'notif.act.complaint': 'forum',
   'notif.act.overdue': 'error', 'notif.act.budgetApprove': 'pie_chart', 'notif.act.receiptApprove': 'receipt_long', 'notif.act.vendorApprove': 'request_quote', 'notif.act.invoiceRun': 'event_repeat',
   'notif.act.stockApprove': 'inventory_2', 'notif.act.guestTrial': 'waving_hand', 'notif.act.guestTrialDay': 'waving_hand', 'notif.act.guestVisit': 'meeting_room', 'notif.act.readyCheckout': 'home',
-  'notif.act.queue': 'monitor_heart', 'notif.act.logs': 'edit_note', 'notif.act.allergen': 'no_food', 'notif.act.unread': 'chat', 'notif.act.invoiceDue': 'receipt_long', 'notif.act.invoiceOverdue': 'error',
+  'notif.act.queue': 'monitor_heart', 'notif.act.logs': 'edit_note', 'notif.act.allergen': 'no_food', 'notif.act.invoiceDue': 'receipt_long', 'notif.act.invoiceOverdue': 'error',
   'notif.act.survey': 'rate_review', 'notif.act.docRequested': 'upload_file', 'notif.checkedIn': 'how_to_reg', 'notif.checkedOut': 'home', 'notif.newPhotos': 'photo_library', 'notif.logSaved': 'edit_note',
   'notif.paymentReceived': 'payments', 'notif.reviewApproved': 'task_alt', 'notif.reviewRejected': 'block', 'notif.reviewReverted': 'undo', 'notif.reviewSubmitted': 'fact_check', 'notif.reviewFlagged': 'fact_check',
   'lobby.notif.extraVisit': 'payments', 'notif.act.planRequest': 'sell', 'notif.act.photosReview': 'photo_library', 'kitchen.notif.feedbackNew': 'forum', 'kitchen.notif.feedbackReply': 'forum', 'health.notif.alert': 'warning', 'health.notif.guestAlert': 'warning', 'kitchen.notif.lunchPhoto': 'photo_camera', 'kitchen.notif.alternative': 'no_food',
   'kitchen.notif.stockApproved': 'task_alt', 'kitchen.notif.stockDeclined': 'block', 'finance.notif.paid': 'payments', 'enq.notif.newLead': 'person_add', 'mgmt.notif.broadcastSent': 'campaign',
   'cal.notif.schedulePublished': 'calendar_month', 'members.notif.welcome': 'waving_hand',
+  // KC round 7
+  'renewals.notif.act.followUp': 'event_repeat', 'renewals.notif.act.approve': 'fact_check', 'renewals.notif.plan': 'sell', 'renewals.notif.leave': 'beach_access', 'renewals.notif.leave2': 'beach_access',
+  'activity.notif.act.lunch': 'restaurant', 'activity.notif.act.session': 'groups', 'activity.notif.act.mood': 'edit_note',
+  'guests.notif.booked': 'co_present', 'guests.notif.toPay': 'request_quote', 'guests.notif.paidCancelled': 'currency_exchange', 'mgmt.notif.venueRated': 'star',
 };
 // kinds without their own icon fall back to their area's icon
 const AREA_ICON: Record<string, string> = {
   family: 'family_restroom', lobby: 'how_to_reg', health: 'monitor_heart', members: 'person', care: 'edit_note', activity: 'photo_library', cal: 'calendar_month',
-  kitchen: 'restaurant', chat: 'chat', finance: 'payments', mgmt: 'campaign', enq: 'contact_phone', people: 'badge', requests: 'add_shopping_cart',
+  kitchen: 'restaurant', finance: 'payments', mgmt: 'campaign', enq: 'contact_phone', people: 'badge', requests: 'add_shopping_cart',
+  renewals: 'event_repeat', guests: 'co_present', tasks: 'checklist',
 };
 const PER_PAGE = 10;
 export const iconFor = (kind: string, fallback: string) => KIND_ICON[kind] || AREA_ICON[kind.split('.')[0]] || fallback;
@@ -43,7 +48,8 @@ export function useBell() {
   }, [s, user, today, nowMin]);
 }
 
-export function NotificationBell({ onClick }: { onClick: () => void }) {
+/** `row` (KC round 6, tablet and laptop sidebar): a labelled row under the logo, like the menu items, so the logo keeps its full size. */
+export function NotificationBell({ onClick, variant = 'icon' }: { onClick: () => void; variant?: 'icon' | 'row' }) {
   const t = useT();
   const { count, items } = useBell();
   // urgent items arriving live also pop a toast
@@ -53,6 +59,17 @@ export function NotificationBell({ onClick }: { onClick: () => void }) {
     if (seen.current === null) { seen.current = new Set(urgent.map((i) => i.id)); return; }
     for (const i of urgent) if (!seen.current.has(i.id)) { seen.current.add(i.id); say(t(i.kind, i.params), { tone: 'urgent', icon: iconFor(i.kind, 'warning') }); }
   }, [items, t]);
+  const urgent = items.some((i) => i.severity === 'urgent');
+  if (variant === 'row') {
+    return (
+      <button type="button" onClick={onClick} aria-label={t('shell.bell', { n: count })} className="dh57"
+        style={{ height: 42, padding: '0 12px', borderRadius: 8, border: 'none', background: 'transparent', color: '#4A4038', fontSize: 15, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', width: '100%', flex: 'none' }}>
+        <Icon name="notifications" size={21} color="#6B6259" />
+        <span style={{ flex: 1, minWidth: 0 }}>{t('shell.notifications')}</span>
+        {count ? <span style={{ minWidth: 22, height: 22, padding: '0 7px', borderRadius: 8, background: urgent ? '#9A3D24' : '#2B231C', color: '#FFFFFF', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center', fontVariantNumeric: 'tabular-nums' }}>{count > 99 ? '99+' : count}</span> : null}
+      </button>
+    );
+  }
   return (
     <button type="button" onClick={onClick} aria-label={t('shell.bell', { n: count })} className="h-cream" style={{ position: 'relative', width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', color: '#24201C' }}>
       <Icon name="notifications" size={22} color="#24201C" />

@@ -1,7 +1,7 @@
 // Small pieces shared by the finance screens, with the design's exact values.
 import { type CSSProperties, type ReactNode } from 'react';
 import { BADGE, fmtN, type BadgeKey } from '@cp/shared';
-import { Button, Dialog, Eyebrow, FONT_BODY, FONT_SMALL, Icon, Pager, Sheet, type Paged } from '../../components/ui';
+import { Button, Dialog, Eyebrow, FONT_BODY, FONT_SMALL, GROUP_HEAD, Icon, Pager, Sheet, type Paged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { digits } from './lib';
@@ -17,7 +17,13 @@ export function FinBadge({ icon, fg, bg, label }: { icon: string; fg: string; bg
 }
 /** Badge from the shared table (paid / outstanding / overdue / pending / partial / void). */
 export function Badge({ kind, label }: { kind: BadgeKey; label: ReactNode }) {
+  const { isPhone } = useDevice();
   const b = BADGE[kind];
+  // round 6, phone: a quiet status (a dot and text in the status colour) instead of a chip
+  if (isPhone) {
+    const c = kind === 'overdue' || kind === 'alert' ? b[2] : kind === 'paid' || kind === 'normal' ? b[1] : kind === 'watch' || kind === 'partial' ? '#8A6216' : '#5E5852';
+    return <span style={{ fontSize: 13, lineHeight: 1.3, whiteSpace: 'nowrap', flex: 'none' }}><Dot color={c} weight={kind === 'overdue' ? 600 : 500}>{label}</Dot></span>;
+  }
   return <FinBadge icon={b[0]} fg={b[1]} bg={b[2]} label={label} />;
 }
 /** Amber "N waiting" pill (design: Budget card header). */
@@ -32,6 +38,17 @@ export const caps: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTra
 
 /** Prototype v3 search: an underline, a light icon, a borderless input (a "searchbox"). `width` for the in-card header variant. */
 export function SearchField({ value, onChange, label, placeholder, width }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string; width?: string }) {
+  const { isPhone } = useDevice();
+  // round 6, phone: the grey iOS search bar (as on Arrivals)
+  if (isPhone) {
+    return (
+      <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0', width: '100%', minWidth: 0 }}>
+        <Icon name="search" size={19} color="#6B6259" style={{ flex: 'none' }} />
+        <input type="search" value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} aria-label={label} autoComplete="off"
+          style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16', padding: 0 }} />
+      </label>
+    );
+  }
   return (
     <label style={{ display: 'flex', alignItems: 'center', gap: 8, borderBottom: '1px solid #DDD1C2', padding: '8px 2px', width: width || '100%', maxWidth: width ? '100%' : 520, minWidth: 0 }}>
       <Icon name="search" size={19} color="#6B6259" style={{ flex: 'none' }} />
@@ -81,6 +98,32 @@ export interface NumberTab { key: string; label: ReactNode; value: ReactNode; su
 /** Prototype v3 number tabs: a big light number over a label, a 2px line (ink when selected). The label comes first in the DOM (reads "Overdue 1"), the number first on screen. */
 export function NumberTabs({ items, cols, maxWidth = 640, label }: { items: NumberTab[]; cols?: number; maxWidth?: number; label?: string }) {
   const any = items.some((x) => x.selected);
+  const { isPhone } = useDevice();
+  // round 6, phone: no KPI tiles; one flat white group, a 2-column grid split by hairlines (label over a modest count and the amount). Filters stay buttons.
+  if (isPhone) {
+    return (
+      <PGroup pad={0} gap={0}>
+        <div role="group" aria-label={label} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 1, background: '#EFEAE3' }}>
+          {items.map((x) => {
+            const style: CSSProperties = { display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2, padding: '10px 14px', minHeight: 62, border: 'none', background: x.selected ? '#F7F3EE' : '#FFFFFF', boxShadow: x.selected ? 'inset 3px 0 0 #2B231C' : undefined, textAlign: 'left', fontFamily: 'Inter', color: '#1E1A16', minWidth: 0, cursor: x.onClick ? 'pointer' : 'default' };
+            const body = (
+              <>
+                <span style={{ maxWidth: '100%', fontSize: 13, fontWeight: x.selected ? 600 : 400, color: x.selected ? '#1E1A16' : '#6B6259', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.label}</span>
+                <span style={{ maxWidth: '100%', display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
+                  <span style={{ fontSize: 20, lineHeight: 1.2, fontWeight: 400, fontVariantNumeric: 'tabular-nums', color: '#1E1A16' }}>{x.value}</span>
+                  {x.sub ? <span style={{ fontSize: 13, color: x.subColor || '#6B6259', fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{x.sub}</span> : null}
+                </span>
+              </>
+            );
+            return x.onClick
+              ? <button key={x.key} type="button" className="cp-tap-self" aria-pressed={!!x.selected} aria-label={x.ariaLabel} onClick={x.onClick} data-testid={x.testId} style={style}>{body}</button>
+              : <div key={x.key} data-testid={x.testId} style={style}>{body}</div>;
+          })}
+          {items.length % 2 ? <div aria-hidden="true" style={{ background: '#FFFFFF' }} /> : null}
+        </div>
+      </PGroup>
+    );
+  }
   return (
     <div role="group" aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${cols || items.length}, minmax(0, 1fr))`, gap: 'clamp(10px, 2.4vw, 32px)', maxWidth, width: '100%' }}>
       {items.map((x) => {
@@ -159,3 +202,51 @@ export function ConfirmDialog({ open, onClose, title, body, confirmLabel, onConf
 
 /** Inline panel for refunds and rejections (design: rust-tinted strip under the row). */
 export const dangerStrip: CSSProperties = { display: 'flex', gap: 8, flexWrap: 'wrap', padding: 10, borderRadius: 12, background: '#FBEDE8' };
+
+// ---------- round 6, phone: native building blocks (iOS grouped sections) ----------
+/** round 6, phone: like the kit's Group (small grey header OUTSIDE a flat white group), but the header is a plain div, not an h2: the finance and request screens keep their one heading (tests and screen readers find "Payments" once).
+ *  `meta` is an element or text on the right of the header; `pad` / `gap` as in Group (list groups: pad 0, rows carry their own padding). */
+export function PGroup({ title, meta, children, label, pad = '14px 16px', gap = 10 }: { title?: ReactNode; meta?: ReactNode; children: ReactNode; label?: string; pad?: number | string; gap?: number }) {
+  return (
+    <section aria-label={label} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+      {title || meta ? (
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0 16px', minHeight: 18 }}>
+          <div style={GROUP_HEAD}>{title}</div>
+          {meta ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px', flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 8 }}>{meta}</span> : null}
+        </div>
+      ) : null}
+      <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden', padding: pad, display: 'flex', flexDirection: 'column', gap }}>{children}</div>
+    </section>
+  );
+}
+/** round 6, phone: a list row inside a PGroup with pad 0: 16px sides, a hairline inset 16px from the left (none on the first row). */
+export const prow = (first?: boolean, extra?: CSSProperties): CSSProperties => ({
+  padding: '11px 16px', backgroundColor: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', ...extra,
+});
+/** round 6, phone: a 34px pill button for a row action (primary = ink, danger = rust text, plain = white with a hairline border). */
+export function PillBtn({ children, onClick, label, tone = 'plain', icon, disabled }: { children: ReactNode; onClick?: () => void; label?: string; tone?: 'plain' | 'primary' | 'danger'; icon?: string; disabled?: boolean }) {
+  const c = disabled ? { bg: '#EDE5DA', fg: '#8A8078', bd: '#EDE5DA' } : tone === 'primary' ? { bg: '#24201C', fg: '#FFFFFF', bd: '#24201C' } : tone === 'danger' ? { bg: '#FFFFFF', fg: '#9A3D24', bd: '#E8CFC6' } : { bg: '#FFFFFF', fg: '#24201C', bd: '#DCD3C8' };
+  return (
+    <button type="button" className="cp-press" onClick={disabled ? undefined : onClick} aria-label={label} aria-disabled={disabled || undefined}
+      style={{ height: 34, padding: '0 14px', borderRadius: 999, border: `1px solid ${c.bd}`, background: c.bg, color: c.fg, fontSize: 14, fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', flex: 'none', fontFamily: 'Inter', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5 }}>
+      {icon ? <Icon name={icon} size={17} weight={300} /> : null}
+      {children}
+    </button>
+  );
+}
+/** round 6, phone: an iOS segmented control over aria-pressed buttons (#EAE6E0 track, white thumb). For up to about 4 choices. */
+export function Segmented<T extends string>({ options, value, onChange, label }: { options: { value: T; label: ReactNode }[]; value: T | undefined; onChange: (v: T) => void; label?: string }) {
+  return (
+    <div role="group" aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${options.length}, minmax(0, 1fr))`, gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <button key={o.value} type="button" aria-pressed={on} onClick={() => onChange(o.value)} className="cp-press"
+            style={{ minWidth: 0, height: 36, padding: '0 6px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', transition: 'background-color .15s' }}>{o.label}</button>
+        );
+      })}
+    </div>
+  );
+}
+/** round 6, phone: a grey rounded field (no border) for the form fields that sit inside a flat group. */
+export const phoneField: CSSProperties = { height: 44, border: 'none', borderRadius: 11, background: '#F3F0EB', padding: '0 12px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', minWidth: 0 };

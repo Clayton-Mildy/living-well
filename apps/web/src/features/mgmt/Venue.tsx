@@ -1,14 +1,18 @@
 // Venue bookings (design ScrVenue): book any future date with a time range (clash-checked), price and deposit; edit, cancel,
-// ask for a review, record a review, create the invoice (simulated).
+// create the invoice (simulated). KC round 7: after the event, "Ask for rating" sends the renter a no-login rating link (WhatsApp, simulated);
+// the page can copy or open that link, and shows the rating that came back, with a link to the answers in Surveys. A rating can still be entered by hand.
 import { Fragment, useState } from 'react';
-import { dayStatus, fmtN, fmtPhone, parseN, rp, type Room, type VenueBooking } from '@cp/shared';
+import { useNavigate } from 'react-router-dom';
+import { dayStatus, fmtN, fmtPhone, parseN, ratePath, ratingLinkOf, rp, venueResponseOf, type Room, type VenueBooking } from '@cp/shared';
 import { VENUE_EARLIEST, VENUE_LATEST, checkVenueSlot, venueLists, venueRooms } from '@cp/shared/rules/mgmt';
-import { Button, Chip, DateField, Dialog, Icon, Note, PageHead, Pager, SectionLabel, TextField, TimeField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, Chip, DateField, Dialog, Group, Icon, Note, PageHead, Pager, Pin, SectionLabel, TextField, TimeField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
-import { BadgePill, HPAD, ListCard, Page, heroCard, labelStyle, chipRow } from './common';
+import { say } from '../../store/ui';
+import { BadgePill, HPAD, ListCard, Page, PillBtn, heroCard, labelStyle, chipRow } from './common';
 
 interface VForm { org: string; contactName: string; phone: string; guests: string; roomId: string; date: string; from: string; to: string; price: string; deposit: string }
 const SLOTS: [string, string][] = [['08:00', '12:00'], ['13:00', '17:00'], ['17:00', '21:00']];
@@ -16,8 +20,33 @@ const blank = (rooms: Room[]): VForm => ({ org: '', contactName: '', phone: '', 
 const fromBooking = (v: VenueBooking): VForm => ({ org: v.org, contactName: v.contactName, phone: v.phone ? fmtPhone(v.phone) : '', guests: String(v.guests), roomId: v.roomId, date: v.date, from: v.from, to: v.to, price: v.price ? fmtN(v.price) : '', deposit: v.deposit ? fmtN(v.deposit) : '' });
 export const roomName = (r: Room | undefined, lang: string) => (r ? (lang === 'id' && r.nameId ? r.nameId : r.name) : '');
 
+/** One action under a booking: a small pill on phones, a button on wider screens. */
+interface Act { key: string; icon: string; label: string; run: () => void; primary?: boolean }
+
+/** The rating a booking got (stars, what they wrote, who from, a link to the answers) or, when the link is out, that it is waiting. */
+function RatingLine({ v }: { v: VenueBooking }) {
+  const t = useT();
+  const s = useClub();
+  const navigate = useNavigate();
+  const resp = venueResponseOf(s, v.id);
+  if (!v.review) return null;
+  return (
+    <div data-rating={v.id} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 4 }}>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 14, lineHeight: '20px' }}>
+        {v.review.stars > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontWeight: 500 }}><Icon name="star" size={16} fill={1} color="#75624B" />{v.review.stars}/5</span> : null}
+        <span style={{ overflowWrap: 'anywhere' }}>“{v.review.text || t('mgmt.vnNoText')}”</span>
+      </span>
+      <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13, lineHeight: '18px', color: '#6B6259' }}>
+        {resp ? t('mgmt.vnRatingFrom', { name: resp.respondentName || v.contactName }) : t('mgmt.vnEnteredByHand')}
+        {resp ? <button type="button" onClick={() => navigate(`/surveys?survey=${resp.surveyId}&tab=responses`)} style={{ border: 'none', background: 'transparent', padding: 0, color: '#75624B', fontSize: 13, fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'Inter' }}>{t('mgmt.vnViewAnswers')}</button> : null}
+      </span>
+    </div>
+  );
+}
+
 export function Venue() {
   const t = useT();
+  const { isPhone } = useDevice();
   const lang = useLang();
   const { fdl, fds } = useFmt();
   const s = useClub();
@@ -37,6 +66,10 @@ export function Venue() {
     const r = await act('venue.book', payload(form), { ok: t('mgmt.vnBooked', { date: fds(form.date), time: `${form.from}–${form.to}` }) });
     if (r.ok) { setOpen(false); setForm(blank(rooms)); }
   };
+  const rateUrl = (token: string) => `${window.location.origin}${ratePath(token)}`;
+  const copyLink = async (token: string) => {
+    try { await navigator.clipboard.writeText(rateUrl(token)); say(t('mgmt.vnLinkCopied')); } catch { say(t('mgmt.vnLinkManual', { url: rateUrl(token) })); }
+  };
   const row = (v: VenueBooking) => {
     const isPast = v.status === 'cancelled' || v.date < today || (v.date === today && v.to <= now);
     const done = v.status === 'confirmed' && isPast;
@@ -44,6 +77,48 @@ export function Venue() {
       : done ? (v.review ? <BadgePill kind="paid" label={t('mgmt.vnReviewed', { n: v.review.stars })} /> : v.reviewAskedAt ? <BadgePill kind="pending" label={t('mgmt.vnAsked')} /> : <BadgePill kind="outstanding" label={t('mgmt.vnDone')} />)
       : <BadgePill kind="paid" label={t('mgmt.vnConfirmed')} />;
     const money = [v.price ? t('mgmt.vnPrice', { n: rp(v.price) }) : '', v.deposit ? t('mgmt.vnDeposit', { n: rp(v.deposit) }) : '', v.invoiceRef ? t('mgmt.vnInvoice', { ref: v.invoiceRef }) : ''].filter(Boolean).join(' · ');
+    const needInvoice = !!(v.price && !v.invoiceRef);
+    const link = ratingLinkOf(s, v.ratingToken);
+    const ask = () => act('venue.askReview', { venueId: v.id }, { ok: t('mgmt.vnRatingSent', { name: v.contactName }) });
+    const acts: Act[] = [];
+    if (v.status === 'confirmed') {
+      if (needInvoice) acts.push({ key: 'invoice', icon: 'receipt_long', label: t('mgmt.vnCreateInvoice'), primary: true, run: () => { void act('venue.createInvoice', { venueId: v.id }, { ok: (r) => t('mgmt.vnInvoiced', { ref: String(r.invoiceRef ?? '') }) }); } });
+      if (done && !v.review && !v.ratingToken) acts.push({ key: 'ask', icon: 'send', label: t('mgmt.vnAskRating'), primary: !needInvoice, run: () => { void ask(); } });
+      if (done && !v.review && v.ratingToken) {
+        acts.push({ key: 'copy', icon: 'content_copy', label: t('mgmt.vnCopyLink'), run: () => { void copyLink(v.ratingToken!); } });
+        acts.push({ key: 'open', icon: 'open_in_new', label: t('mgmt.vnOpenLink'), run: () => { window.open(rateUrl(v.ratingToken!), '_blank', 'noopener'); } });
+        if (link?.state === 'closed') acts.push({ key: 'again', icon: 'send', label: t('mgmt.vnSendAgain'), run: () => { void ask(); } });
+      }
+      acts.push({ key: 'edit', icon: 'edit', label: t('common.edit'), run: () => setEdit(v) });
+      if (!isPast) acts.push({ key: 'cancel', icon: 'event_busy', label: t('mgmt.vnCancel'), run: () => setCancel(v) });
+      if ((done || v.date <= today) && !v.review) acts.push({ key: 'hand', icon: 'rate_review', label: t('mgmt.vnEnterByHand'), run: () => setReview(v) });
+    }
+    // a link out and not answered: waiting for the renter, or (the survey was replaced or closed) it needs sending again
+    const linkNote = done && !v.review && v.ratingToken ? (link?.state === 'closed' ? t('mgmt.vnLinkClosed') : t('mgmt.vnWaiting', { name: v.contactName })) : '';
+    if (isPhone) {
+      // round 6, phone: a grouped row (icon, the booking's lines, status), then small pill actions under it
+      return (
+        <div key={v.id} data-venue={v.id} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 0', borderTop: '1px solid #F0EAE1', opacity: v.status === 'cancelled' ? 0.7 : 1 }}>
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', flex: 'none' }}><Icon name="storefront" size={20} /></span>
+            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{v.org}</span>
+              <span style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{t('mgmt.vnSub', { date: fdl(v.date), from: v.from, to: v.to, n: v.guests, room: roomName(s.rooms[v.roomId], lang) })}</span>
+              <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{v.contactName}{v.phone ? ' · ' + fmtPhone(v.phone) : ''}</span>
+              {money ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{money}</span> : null}
+              <RatingLine v={v} />
+              {linkNote ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px', paddingTop: 2 }}>{linkNote}</span> : null}
+              <span style={{ alignSelf: 'flex-start', paddingTop: 4 }}>{badge}</span>
+            </div>
+          </div>
+          {acts.length ? (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingLeft: 52 }}>
+              {acts.map((a) => <PillBtn key={a.key} tone={a.primary ? 'primary' : 'secondary'} icon={a.icon} onClick={a.run}>{a.label}</PillBtn>)}
+            </div>
+          ) : null}
+        </div>
+      );
+    }
     return (
       <Fragment key={v.id}>
         <div data-venue={v.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', padding: '18px 0', borderTop: '1px solid #F0EAE1', opacity: v.status === 'cancelled' ? 0.7 : 1 }}>
@@ -53,16 +128,13 @@ export function Venue() {
             <span style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{t('mgmt.vnSub', { date: fdl(v.date), from: v.from, to: v.to, n: v.guests, room: roomName(s.rooms[v.roomId], lang) })}</span>
             <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{v.contactName}{v.phone ? ' · ' + fmtPhone(v.phone) : ''}</span>
             {money ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{money}</span> : null}
-            {v.review ? <span style={{ fontSize: 14, lineHeight: '20px', paddingTop: 4 }}>“{v.review.text || t('mgmt.vnNoText')}”</span> : null}
+            <RatingLine v={v} />
+            {linkNote ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px', paddingTop: 2 }}>{linkNote}</span> : null}
           </div>
           {badge}
-          {v.status === 'confirmed' ? (
+          {acts.length ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', flex: '1 1 100%', paddingLeft: 62 }}>
-              {v.price && !v.invoiceRef ? <Button size={44} icon="receipt_long" onClick={() => act('venue.createInvoice', { venueId: v.id }, { ok: (r) => t('mgmt.vnInvoiced', { ref: String(r.invoiceRef ?? '') }) })}>{t('mgmt.vnCreateInvoice')}</Button> : null}
-              {done && !v.review && !v.reviewAskedAt ? <Button size={44} variant={v.price && !v.invoiceRef ? 'secondary' : 'primary'} icon="send" onClick={() => act('venue.askReview', { venueId: v.id }, { ok: t('mgmt.vnAskedToast', { name: v.contactName }) })}>{t('mgmt.vnSendReview')}</Button> : null}
-              <Button size={44} variant="secondary" icon="edit" onClick={() => setEdit(v)}>{t('common.edit')}</Button>
-              {!isPast ? <Button size={44} variant="secondary" icon="event_busy" onClick={() => setCancel(v)}>{t('mgmt.vnCancel')}</Button> : null}
-              {(done || v.date <= today) && !v.review ? <Button size={44} variant="secondary" icon="rate_review" onClick={() => setReview(v)}>{t('mgmt.vnRecordReview')}</Button> : null}
+              {acts.map((a) => <Button key={a.key} size={44} variant={a.primary ? 'primary' : 'secondary'} icon={a.icon} onClick={a.run}>{a.label}</Button>)}
             </div>
           ) : null}
         </div>
@@ -70,11 +142,22 @@ export function Venue() {
     );
   };
 
+  const startNew = () => { setForm(blank(rooms)); setOpen(true); };
   return (
+    <>
     <Page max={1000} gap={18}>
-      <PageHead eyebrow={t('mgmt.vnEyebrow')} title={t('mgmt.vnTitle')} right={!open ? <Button size={48} icon="add" onClick={() => { setForm(blank(rooms)); setOpen(true); }}>{t('mgmt.vnNew')}</Button> : undefined} />
+      <PageHead eyebrow={t('mgmt.vnEyebrow')} title={t('mgmt.vnTitle')} right={!open && !isPhone ? <Button size={48} icon="add" onClick={startNew}>{t('mgmt.vnNew')}</Button> : undefined} />
 
-      {open ? (
+      {open ? (isPhone ? (
+        // round 6, phone: the booking form is one thing: one flat group under its header, the two actions below it
+        <>
+          <Group title={t('mgmt.vnBooking')} gap={16}><VenueForm value={form} onChange={setForm} rooms={rooms} /></Group>
+          <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
+            <Button variant="secondary" onClick={() => setOpen(false)}>{t('common.cancel')}</Button>
+            <FormSubmit value={form} onClick={book}>{t('mgmt.vnConfirm')}</FormSubmit>
+          </div>
+        </>
+      ) : (
         <div style={{ ...heroCard, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 16, animation: 'cpUp .2s ease-out' }}>
           <span style={labelStyle}>{t('mgmt.vnBooking')}</span>
           <VenueForm value={form} onChange={setForm} rooms={rooms} />
@@ -83,7 +166,7 @@ export function Venue() {
             <FormSubmit value={form} onClick={book}>{t('mgmt.vnConfirm')}</FormSubmit>
           </div>
         </div>
-      ) : null}
+      )) : null}
 
       <ListCard title={t('mgmt.vnUpcoming')}>
         {upcoming.length ? upPaged.rows.map(row) : <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('mgmt.vnNone')}</div>}
@@ -105,6 +188,8 @@ export function Venue() {
       </Dialog>
       <ReviewDialog v={review} onClose={() => setReview(null)} />
     </Page>
+    {isPhone && !open ? <Pin icon="add" label={t('mgmt.vnNew')} onClick={startNew} /> : null}
+    </>
   );
 }
 

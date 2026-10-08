@@ -52,7 +52,7 @@ describe('Adina, an empty clubhouse', () => {
     openClub('adina');
     await show(<Overview />);
     expect(body()).toContain('Adina Seniors Clubhouse has no members or staff yet.');
-    for (const k of ['inClub', 'goneHome', 'visits', 'extra', 'review', 'checks', 'overdue', 'enq', 'photos', 'pay', 'unread', 'stock', 'venue']) expect(tile(k), k).toBe('0');
+    for (const k of ['inClub', 'goneHome', 'visits', 'extra', 'review', 'checks', 'overdue', 'enq', 'photos', 'pay', 'stock', 'venue']) expect(tile(k), k).toBe('0');
     expect(tile('logs')).toBe('0 / 0');
     expect(tile('survey')).toBe('No answers yet');
     for (const s of ['Nothing has happened yet today.', 'Nothing planned yet.', 'No requests from families right now.', 'No open enquiries.']) expect(body()).toContain(s);
@@ -65,7 +65,7 @@ describe('Adina, an empty clubhouse', () => {
     expect(body()).not.toMatch(/Expected|To arrive|expected/);
     expect(tile('enq')).toBe('4');
     expect([tile('review'), tile('checks'), tile('overdue'), tile('survey'), tile('photos'), tile('logs'), tile('lunch'), tile('pay'), tile('stock'), tile('venue'), tile('plans')])
-      .toEqual(['6', '1', '1', '4.7 / 5', '0', '0 / 3', 'Not yet', '0', '3', '2', 'Sample']);
+      .toEqual(['7', '1', '1', '4.7 / 5', '0', '0 / 3', 'Not yet', '2', '3', '2', 'Sample']); // Hendra and Bambang paid this morning (invoice day)
     expect(host?.querySelector('[data-tile="checks"]')?.textContent).toContain('All normal');
     expect(host?.querySelector('[data-tile="survey"]')?.textContent).toContain('3 answers');
     // Live today: today's activity, newest first
@@ -95,11 +95,11 @@ describe('Adina, an empty clubhouse', () => {
     expect(body()).toContain('Nobody to message yet in this selection.');
     expect(body()).toContain('No broadcasts yet.');
     await show(<Surveys />);
-    expect(body()).toContain('No family has the app yet, so there is nobody to send to.');
+    expect(body()).toContain('No survey is live.'); // round 7: the page opens on Live; the editor (and its "nobody to send to" note) is behind New survey
     expect(body()).not.toContain('Earlier surveys');
     await show(<Plans />);
     expect(body()).toContain('No members yet, so there is nothing to preview.');
-    expect((host?.querySelector('input[aria-label="Flex price in rupiah"]') as HTMLInputElement).value).toBe('5.500.000');
+    expect((host?.querySelector('input[aria-label="Flex price in rupiah"]') as HTMLInputElement).value).toBe('2.700.000');
     await show(<Enquiries />);
     expect(host?.querySelector('h1')?.textContent).toBe('Enquiries');
     expect(body().split('Drop a card here').length - 1).toBe(5);

@@ -12,10 +12,11 @@
 //  - unknownAllergyGuests(): guests whose allergies are not known ("ask <escort>"); conflictsOn() skips them silently.
 //  - dietaryRows(): dietaryGroups() plus free-text "other" food allergies, typed and ordered for the screen.
 //  - membersAffectedBy(): which active members a dish would clash with (planning hints in the menu editor).
+//  - dishAllergyReach() / allergyReachOf(): how many members are allergic to a dish and how many of those usually come on the planned weekday.
 //  - template helpers for the weekly menu editor (version in force, scheduled versions, per-date overrides, diffs, the menu of a chosen week).
 //  - menuAudience(): the families told when a weekly menu is published.
-//  - stock permissions shared by the actions and the screens, and feedback thread helpers.
-import type { ClubState, Dish, DishAllergen, Feedback, FoodAllergen, GuestVisit, ISODate, Member, MenuDay, MenuVersion, Message, StockRequest, User, Weekday } from '../types';
+//  - stock permissions shared by the actions and the screens, and the feedback helpers.
+import type { ClubState, Dish, DishAllergen, Feedback, FoodAllergen, GuestVisit, ISODate, Member, MenuDay, MenuVersion, StockRequest, User, Weekday } from '../types';
 import { conflictsOn, dietaryGroups, dinersOn, memberConflictsOn, menuOn, menuVersionFor, ALLERGY_COVERS, type Conflict, type Diner } from './kitchen';
 import { attOf, isCheckedIn } from './attendance';
 import { activeOn, contactsOfMember, isPendingRow, memberShort } from './core';
@@ -101,6 +102,45 @@ export function membersAffectedBy(s: ClubState, dish: Pick<Dish, 'allergens' | '
     if ((dish.course === 'lunch' && soft) || (dish.course === 'soft' && !soft)) return false;
     return m.health.food.some((a) => dish.allergens.some((x) => ALLERGY_COVERS[a]?.includes(x)));
   });
+}
+
+/** Weeks of history that say who "usually comes" on a weekday, and how many of those days they must have come on. */
+export const USUAL_WEEKS = 4;
+export const USUAL_MIN = 2;
+/** The last `weeks` dates that fall on the same weekday as `date`, strictly before `today`, newest first. */
+export function lastSameWeekdays(date: ISODate, today: ISODate, weeks = USUAL_WEEKS): ISODate[] {
+  let d = addDays(today, -1);
+  for (let i = 0; i < 7 && dow(d) !== dow(date); i++) d = addDays(d, -1);
+  return Array.from({ length: weeks }, (_, i) => addDays(d, -7 * i));
+}
+/** Whether a member usually comes on the weekday of `date`: checked in on at least 2 of its last 4 occurrences before `today`. */
+export const usuallyComes = (s: ClubState, memberId: string, date: ISODate, today: ISODate): boolean =>
+  lastSameWeekdays(date, today).filter((d) => isCheckedIn(s, d, memberId)).length >= USUAL_MIN;
+
+export interface AllergyReach {
+  /** active members (on `date`, else today) whose food allergy the dish meets: a lunch dish reaches those on the regular lunch, a soft dish those on soft food, tea everyone */
+  allergic: Member[];
+  /** the dish's allergens that meet at least one of them, in the dish's order */
+  allergens: DishAllergen[];
+  /** the club weekday of `date` (1 = Monday); undefined when no date was given or it is a weekend */
+  weekday?: Weekday;
+  /** of the allergic members, those who usually come on `weekday` (empty without a weekday) */
+  usual: Member[];
+}
+/**
+ * How far a dish's allergens reach among the members: how many are allergic to something in it and, for a planned weekday or date,
+ * how many of those usually come that weekday. Free-text "other" allergies are not matched. `today` anchors the attendance history.
+ */
+export function allergyReachOf(s: ClubState, dish: Pick<Dish, 'allergens' | 'course'>, today: ISODate, date?: ISODate): AllergyReach {
+  const allergic = membersAffectedBy(s, dish, date ?? today);
+  const allergens = dish.allergens.filter((a) => allergic.some((m) => m.health.food.some((f) => ALLERGY_COVERS[f]?.includes(a))));
+  const weekday = date && dow(date) >= 1 && dow(date) <= 5 ? (dow(date) as Weekday) : undefined;
+  return { allergic, allergens, weekday, usual: weekday && date ? allergic.filter((m) => usuallyComes(s, m.id, date, today)) : [] };
+}
+/** The reach of a dish on the menu list, by id (nothing for an unknown or deleted dish). */
+export function dishAllergyReach(s: ClubState, dishId: string, today: ISODate, date?: ISODate): AllergyReach {
+  const dish = s.dishes[dishId];
+  return dish && !dish.deletedAt ? allergyReachOf(s, dish, today, date) : { allergic: [], allergens: [], usual: [] };
 }
 
 export interface UnknownGuest {
@@ -286,8 +326,8 @@ export function defaultAreaFor(role: string | null | undefined): StockRequest['a
 
 // ---------- feedback ----------
 export const FEEDBACK_ORDER: Record<Feedback['status'], number> = { open: 0, answered: 1, closed: 2 };
-export const feedbackThread = (s: ClubState, fb: Feedback): Message[] =>
-  fb.threadId ? sortBy(live(s.messages).filter((m) => m.threadId === fb.threadId), (m) => m.seq) : [];
+/** The kitchen's replies to a piece of feedback, oldest first. */
+export const feedbackReplies = (fb: Pick<Feedback, 'replies'>) => fb.replies ?? [];
 /** Open first, then newest meal date, then newest first. */
 export const sortFeedback = (rows: Feedback[]) => sortBy(sortBy(sortBy(rows, (f) => f.createdAt, -1), (f) => f.mealDate, -1), (f) => FEEDBACK_ORDER[f.status]);
 /** The family contact who receives a reply: the one who wrote, else the member's first contact with app access (primary first). */

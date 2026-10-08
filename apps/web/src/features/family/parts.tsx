@@ -34,7 +34,23 @@ export const Small = ({ children, style }: { children: ReactNode; style?: CSSPro
 );
 
 /** Quiet member tabs: text with a 2px underline (design: tablist aria-label="Parent"). */
-export function FamSwitch({ items, value, onChange, label }: { items: { key: string; label: string }[]; value: string; onChange: (k: string) => void; label: string }) {
+export function FamSwitch({ items, value, onChange, label, segmented }: { items: { key: string; label: string }[]; value: string; onChange: (k: string) => void; label: string; segmented?: boolean }) {
+  // round 6, phone: an iOS segmented control instead of the underline tabs
+  if (segmented) {
+    return (
+      <div role="tablist" aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>
+        {items.map((b) => {
+          const sel = b.key === value;
+          return (
+            <button key={b.key} type="button" role="tab" aria-selected={sel} onClick={() => onChange(b.key)}
+              style={{ minWidth: 0, height: 36, padding: '0 6px', borderRadius: 9, border: 'none', background: sel ? '#FFFFFF' : 'transparent', boxShadow: sel ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', fontSize: 15, fontWeight: sel ? 600 : 500, color: sel ? '#1E1A16' : '#5E5852', cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'Inter', transition: 'background-color .15s' }}>
+              {b.label}
+            </button>
+          );
+        })}
+      </div>
+    );
+  }
   return (
     <div role="tablist" aria-label={label} style={{ display: 'flex', gap: 'clamp(20px, 6vw, 28px)', borderBottom: '1px solid #E6DDD1', overflowX: 'auto', scrollbarWidth: 'none' }}>
       {items.map((b) => {
@@ -87,7 +103,7 @@ export function PhotoGrid({ photos, onOpen, label, size = 'md' }: { photos: Phot
   return (
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 6 }}>
       {photos.map((p) => (
-        <button key={p.id} type="button" onClick={() => onOpen(p)} aria-label={label(p)} data-photo-id={p.id}
+        <button key={p.id} type="button" onClick={() => onOpen(p)} aria-label={label(p)} data-photo-id={p.id} className="cp-press"
           style={{ aspectRatio: '1', borderRadius: 10, border: 'none', background: photoBg(p.tone), position: 'relative', cursor: 'pointer', padding: 0, overflow: 'hidden' }}>
           <span style={{ position: 'absolute', left: 6, bottom: 6, height: sm ? 22 : 24, padding: sm ? '0 7px' : '0 8px', borderRadius: 999, background: '#FFFFFF', color: '#24201C', fontSize: sm ? 12 : 13, fontWeight: 500, display: 'flex', alignItems: 'center', fontVariantNumeric: 'tabular-nums' }}>{p.time}</span>
           {p.media === 'video' ? (

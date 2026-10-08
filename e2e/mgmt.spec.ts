@@ -1,19 +1,29 @@
 // Management: broadcast, venue, people (staff records, usernames, reset password), surveys (choose recipients), plans and pricing, Indonesian, every viewport.
 // (The Overview is no longer a screen: management lands on Arrivals. Its numbers are covered by unit and component tests.)
 // Isolated env: E2E_NAME=mgmt E2E_PORT=8881 scripts/e2e-all.sh 1 "phone laptop" mgmt enquiries
-import { test, expect, type Browser, type Page } from '@playwright/test';
+import { test, expect, type Browser, type Locator, type Page } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, isPhone, assertNoHorizontalScroll } from './helpers';
-import { goToPage, pickDate, pickOption, pickTime } from './kit';
+import { goToPage, pickDate, pickOption, pickTime, takePhotoWithFile } from './kit';
 
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
 
 const toast = (page: Page, re: RegExp | string) => page.getByRole('status').filter({ hasText: re }).first();
 /** Raw i18n keys of this area that leaked into the UI. */
 const RAW_KEY = /\b(?:mgmt|people|enq|form)\.[A-Za-z][A-Za-z0-9_.]*/;
-const noRawKeys = async (page: Page) => {
+const noRawKeys = async (page: Page, re: RegExp = RAW_KEY) => {
   const text = await page.locator('body').innerText();
-  expect(text.match(RAW_KEY)?.[0] ?? null, 'raw i18n key on screen').toBeNull();
+  expect(text.match(re)?.[0] ?? null, 'raw i18n key on screen').toBeNull();
 };
+/** Round 7 screens (Renewals, Tasks, Guests, Insights) and the survey overlays: their raw keys too. */
+const RAW_KEY_R7 = /\b(?:mgmt|people|enq|form|nav|renewals|tasks|guests|insights|rate|common)\.[A-Za-z][A-Za-z0-9_.]*/;
+/** An opened overlay (a pushed screen on phones, a dialog elsewhere) must not scroll sideways: neither it nor its scroller. */
+async function overlayFits(page: Page) {
+  const over = await page.evaluate(() => {
+    const dlgs = [...document.querySelectorAll('[role="dialog"]')];
+    return dlgs.flatMap((d) => [d, ...Array.from(d.children)]).filter((el) => ['auto', 'scroll'].includes(getComputedStyle(el).overflowX) && el.scrollWidth - el.clientWidth > 1).length;
+  });
+  expect(over, 'an overlay scrolls sideways').toBe(0);
+}
 /** A second, separate browser session (own storage) with the same viewport as this test. */
 async function otherSession(browser: Browser) {
   const u = test.info().project.use;
@@ -29,6 +39,11 @@ async function staffRow(page: Page, id: string) {
   }
   throw new Error(`no row for ${id}`);
 }
+/** Leave a survey opened in full: the back button on a phone (a pushed screen), Close on wider screens (a dialog). */
+const closeDetail = (page: Page, dlg: Locator, names: [string, string] | string = ['Surveys', 'Close']) => {
+  const [back, close] = typeof names === 'string' ? [names, 'Tutup'] : names;
+  return (isPhone(page) ? dlg.getByRole('button', { name: back, exact: true }) : dlg.getByRole('button', { name: close, exact: true }).last()).click();
+};
 const SCREENS: [string, string][] = [['/today', 'Arrivals'], ['/broadcast', 'Broadcast'], ['/venue', 'Venue bookings'], ['/hr', 'People'], ['/surveys', 'Surveys'], ['/plans', 'Plans and pricing'], ['/enquiries', 'Enquiries']];
 
 // ---------------------------------------------------------------- landing
@@ -135,32 +150,50 @@ test('venue: book any future date with a time range, price and deposit; a clash 
   c.assertClean();
 });
 
-test('venue: after the event, ask for a review and record it', async ({ page, request }) => {
+test('venue: after the event, ask for a rating (a link to the renter) and enter one by hand', async ({ page, request }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/venue');
-  const past = page.locator('[data-venue="v4"]'); // Rotary breakfast, 17 Oct, already reviewed in the seed
-  await expect(past).toContainText('Reviewed 5/5');
+  const past = page.locator('[data-venue="v4"]'); // Rotary breakfast, 17 Oct, rated 5/5 in the seed (entered by hand)
+  await expect(past).toContainText('Rated 5/5');
   await expect(past).toContainText('Spotless rooms');
-  await expect(past.getByRole('button', { name: 'Record review' })).toHaveCount(0);
-  // an evening event today; once the demo clock passes its end the event is done and can be reviewed
+  await expect(past).toContainText('Entered by hand');
+  await expect(past.getByRole('button', { name: 'Enter by hand' })).toHaveCount(0);
+  await expect(past.getByRole('button', { name: 'Ask for rating' })).toHaveCount(0);
+  // the seed also has renters who answered through their link (with a way to the answers) and one finished event nobody asked yet
+  await expect(page.locator('[data-venue="vr1"]')).toContainText('Rated by Ratna Dewi through the link');
+  await expect(page.locator('[data-venue="vr1"]').getByRole('button', { name: 'View answers' })).toBeVisible();
+  await expect(page.locator('[data-venue="vr3"]')).toContainText('Rating link sent');
+  await expect(page.locator('[data-venue="vr3"]')).toContainText('Waiting for Ibu Siska Lestari to rate.');
+  await expect(page.locator('[data-venue="vr3"]').getByRole('button', { name: 'Copy link' })).toBeVisible();
+  await expect(page.locator('[data-venue="vr3"]').getByRole('button', { name: 'Open link' })).toBeVisible();
+  await expect(page.locator('[data-venue="vr4"]')).toContainText('Event done');
+  await expect(page.locator('[data-venue="vr4"]').getByRole('button', { name: 'Ask for rating' })).toBeVisible();
+  // an evening event today; once the demo clock passes its end the event is done and can be rated
   const r = await request.post('/api/actions/venue.book', { headers: { 'x-user-id': 's9' }, data: { mutationId: 'e2e-v', input: { org: 'Evening choir', contactName: 'Bu Lusi', phone: '', guests: 20, roomId: 'room-lounge', date: '2026-10-21', from: '17:00', to: '20:00' } } });
   expect(r.ok()).toBeTruthy();
   const row = page.locator('[data-venue="v5"]');
   await expect(row).toContainText('Confirmed · on calendar');
-  await expect(row.getByRole('button', { name: 'Send review link' })).toHaveCount(0); // not over yet
+  await expect(row.getByRole('button', { name: 'Ask for rating' })).toHaveCount(0); // not over yet
   expect((await request.post('/api/demo/clock', { data: { hm: '20:30' } })).ok()).toBeTruthy();
   await expect(row).toContainText('Event done');
-  await row.getByRole('button', { name: 'Send review link' }).click();
-  await expect(toast(page, 'Review link sent to Bu Lusi on WhatsApp (demo).')).toBeVisible();
-  await expect(row).toContainText('Review link sent');
-  await row.getByRole('button', { name: 'Record review' }).click();
-  const dlg = page.getByRole('dialog', { name: 'Record review' });
+  await row.getByRole('button', { name: 'Ask for rating' }).click();
+  await expect(toast(page, 'Rating link sent to Bu Lusi on WhatsApp (demo).')).toBeVisible();
+  await expect(row).toContainText('Rating link sent');
+  await expect(row).toContainText('Waiting for Bu Lusi to rate.');
+  await expect(row.getByRole('button', { name: 'Ask for rating' })).toHaveCount(0); // the link is out: copy or open it instead
+  await expect(row.getByRole('button', { name: 'Copy link' })).toBeVisible();
+  await expect(row.getByRole('button', { name: 'Open link' })).toBeVisible();
+  // the renter does not answer: enter the rating by hand
+  await row.getByRole('button', { name: 'Enter by hand' }).click();
+  const dlg = page.getByRole('dialog', { name: 'Enter rating by hand' });
   await dlg.getByRole('radio', { name: '4 of 5' }).click();
   await dlg.getByLabel('What they said').fill('Lovely room, thank you');
   await dlg.getByRole('button', { name: 'Save' }).click();
   await expect(toast(page, 'Review recorded.')).toBeVisible();
-  await expect(row).toContainText('Reviewed 4/5');
+  await expect(row).toContainText('Rated 4/5');
   await expect(row).toContainText('Lovely room, thank you');
+  await expect(row).toContainText('Entered by hand');
+  await expect(row.getByRole('button', { name: 'Enter by hand' })).toHaveCount(0);
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
@@ -366,6 +399,41 @@ test('people: give housekeeping (s4) app access and she signs in to Requests; sw
   c.assertClean();
 });
 
+test('people: management takes a photo for a staff member; it shows in the list, the detail, her own header and account sheet; it can be removed', async ({ page, browser }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/hr?staff=s1');
+  await expect(page.getByRole('heading', { name: 'Caca', level: 2 })).toBeVisible();
+  const photoOf = async () => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's9' } })).json()).state.staff.s1.photoMediaId as string | undefined;
+  expect(await photoOf()).toBeUndefined();
+  const bg = (loc: ReturnType<Page['locator']>) => loc.evaluate((el) => getComputedStyle(el).backgroundImage);
+  await page.getByTestId('staff-avatar').click();
+  const dlg = page.getByRole('dialog', { name: 'Profile photo' });
+  await dlg.getByRole('button', { name: 'Take or choose a photo' }).click();
+  await takePhotoWithFile(page); // no camera in the test browser: the file picker, then "Use photo"
+  await expect(toast(page, 'New photo for Caca.')).toBeVisible();
+  await expect(dlg).toHaveCount(0);
+  await expect.poll(photoOf).toMatch(/^md_/);
+  // the detail and the list row draw it
+  await expect.poll(() => bg(page.getByTestId('staff-avatar').locator('div').first())).toContain('/api/media/');
+  await expect.poll(() => bg(page.locator('[data-staff="s1"] > div').first())).toContain('/api/media/');
+  // Caca's own screens: the header avatar (phone) or the account card (laptop), and the account sheet
+  const own = await otherSession(browser);
+  await signIn(own.page, 's1', '/today');
+  const acct = own.page.getByRole('button', { name: 'Account', exact: true });
+  await expect.poll(() => bg(acct.locator('div').first())).toContain('/api/media/');
+  await acct.click();
+  await expect.poll(() => bg(own.page.getByRole('dialog', { name: 'Account' }).locator('div[aria-hidden="true"]').first())).toContain('/api/media/');
+  await own.ctx.close();
+  // change it, then remove it
+  await page.getByTestId('staff-avatar').click();
+  await page.getByRole('dialog', { name: 'Profile photo' }).getByRole('button', { name: 'Remove photo' }).click();
+  await expect(toast(page, 'Photo removed for Caca.')).toBeVisible();
+  await expect.poll(photoOf).toBeUndefined();
+  await expect.poll(() => bg(page.getByTestId('staff-avatar').locator('div').first())).toBe('none');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+});
+
 test('people: each staff member shows a read-only username; management resets a password to the default', async ({ page, request }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/hr?staff=s1');
@@ -477,28 +545,50 @@ test('surveys: open a closed survey in full; create, edit as a draft and send a 
   const c = watchConsole(page);
   await signIn(page, 's9', '/surveys');
   await expect(page.getByRole('heading', { name: 'Surveys', level: 1 })).toBeVisible();
-  // the live survey: ratings per person, response rate by family (never over 100%)
-  await expect(page.getByText('October check-in').first()).toBeVisible();
-  await expect(page.getByText('3 of 4 families').first()).toBeVisible();
-  await expect(page.getByText('75%')).toBeVisible();
-  await expect(page.getByText('Caca', { exact: true })).toBeVisible();
-  // closed survey in detail
+  // Live: one family survey and one venue survey run together. A card is the title and everything under it.
+  const card = (title: string) => page.getByText(title, { exact: true }).locator('xpath=..');
+  const oct = card('October check-in');
+  await expect(oct).toContainText('Sent to: All families with the app · 4 families');
+  await expect(oct).toContainText('3 of 4 answered'); // response rate by family (never over 100%)
+  await expect(oct).toContainText('75%');
+  await expect(card('Venue rating')).toContainText('rating links sent');
+  // the live survey in full: ratings per person
+  await oct.getByRole('button', { name: 'See details' }).click();
+  const live = page.getByRole('dialog', { name: 'October check-in' });
+  await expect(live).toBeVisible();
+  await expect(live.getByText('Caca', { exact: true })).toBeVisible();
+  await closeDetail(page, live);
+
+  // a closed survey is in the Log, and opens in full: Summary, Responses, History
+  await page.getByRole('tab', { name: 'Log' }).click();
   await page.locator('[data-survey="sv0"]').click();
   const dlg = page.getByRole('dialog', { name: 'September check-in' });
   await expect(dlg).toBeVisible();
   await expect(dlg.getByText('Closed 19 October 2026')).toBeVisible();
-  await expect(dlg.getByText('3 of 4 families').first()).toBeVisible();
+  await expect(dlg.getByText('3 of 4 answered').first()).toBeVisible();
   await expect(dlg.getByText('Would recommend')).toBeVisible();
   await expect(dlg.getByText('Team ratings · shown in People')).toBeVisible();
   await expect(dlg.getByText('Caca', { exact: true })).toBeVisible();
-  await expect(dlg.getByText('Answered · 5/5').first()).toBeVisible();
+  await dlg.getByRole('tab', { name: 'Responses' }).click();
+  await expect(dlg.locator('[data-response]').first()).toContainText('5/5');
   await expect(dlg.getByText('Not yet')).toBeVisible(); // Maria has not answered it
-  await dlg.getByRole('button', { name: 'Close', exact: true }).last().click();
+  await dlg.getByRole('tab', { name: 'History' }).click();
+  await expect(dlg.locator('[data-log="created"]')).toBeVisible();
+  await expect(dlg.locator('[data-log="sent"]')).toBeVisible();
+  await expect(dlg.locator('[data-log="closed"]')).toContainText('Closed when a newer survey was sent');
+  await closeDetail(page, dlg);
 
-  // new survey: team picked from staff, who gets it chosen, saved as a draft, edited, then sent
-  await page.getByLabel('Title').fill('November check-in');
-  await page.getByRole('button', { name: 'Anything we could do better?' }).click(); // off
-  await page.getByRole('button', { name: /^Chef Agus · / }).click(); // take Chef Agus out of the team
+  // new survey: the picker offers a blank survey for families or renters, and the templates
+  await page.getByRole('button', { name: 'New survey' }).click();
+  const pick = page.getByRole('dialog', { name: 'New survey' });
+  for (const id of ['blank-family', 'blank-venue', 'st1', 'st2', 'st3', 'st4']) await expect(pick.locator(`[data-pick-survey="${id}"]`)).toBeVisible();
+  await pick.locator('[data-pick-survey="blank-family"]').click();
+  // team picked from staff, who gets it chosen, saved as a draft, edited, then sent
+  const ed = page.getByRole('dialog', { name: 'New survey' });
+  await ed.getByLabel('Title').fill('November check-in');
+  await ed.getByRole('button', { name: 'Anything we could do better?' }).click(); // off
+  await ed.getByRole('button', { name: /^Chef Agus · / }).click(); // take Chef Agus out of the team
+  await expect(ed.getByText('Sending closes “October check-in”, the family survey that is live now.')).toBeVisible();
   const count = page.getByTestId('survey-count');
   const picked = page.getByTestId('survey-picked');
   await expect(count).toHaveText('Goes to 6 families'); // every family with the app is the default
@@ -538,40 +628,65 @@ test('surveys: open a closed survey in full; create, edit as a draft and send a 
   await expect(count).toHaveText('Goes to 4 families'); // switching back kept the member picks
   await page.getByRole('button', { name: 'Save draft' }).click();
   await expect(toast(page, 'Draft saved. Edit it before sending.')).toBeVisible();
-  await expect(page.getByText('Drafts', { exact: true })).toBeVisible();
-  await expect(page.getByText('November check-in').first()).toBeVisible();
-  await expect(page.locator('[data-draft-audience]')).toContainText('Families of 2 members · 4 families');
+  // it lands in Drafts (the tab counts it), with its kind, its questions and who gets it
+  await expect(page.getByRole('tab', { name: /^Drafts/ })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: /^Drafts/ })).toContainText('1');
+  const draft = page.locator('[data-draft]').filter({ hasText: 'November check-in' });
+  await expect(draft).toHaveCount(1);
+  await expect(page.locator('[data-draft-audience]')).toContainText('Families · 3 questions · Families of 2 members · 4 families');
   // the draft can be edited: its audience comes back, and it can change
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
-  await expect(page.getByLabel('Title')).toHaveValue('November check-in');
+  await draft.click();
+  const again = page.getByRole('dialog', { name: 'Edit draft' });
+  await expect(again.getByLabel('Title')).toHaveValue('November check-in');
   await expect(count).toHaveText('Goes to 4 families');
   await expect(picked).toHaveText('2 members chosen');
-  await page.getByLabel('Title').fill('November check-in 2026');
+  await again.getByLabel('Title').fill('November check-in 2026');
   await page.getByRole('button', { name: 'Send to 4 families' }).click();
   await expect(toast(page, 'Survey sent to 4 families on WhatsApp (demo), with a link into the app.')).toBeVisible();
+  // Live: the new family survey replaced October; the venue survey is still live (sending closes only the same kind)
+  await expect(page.getByRole('tab', { name: /^Live/ })).toHaveAttribute('aria-selected', 'true');
+  const nov = card('November check-in 2026');
   await expect(page.getByText('Live · sent Wed 21 Oct')).toBeVisible();
-  await expect(page.getByText('Sent to: Families of 2 members · 4 families')).toBeVisible();
-  await expect(page.getByText('November check-in 2026').first()).toBeVisible();
-  await expect(page.getByText('0 of 4 families').first()).toBeVisible();
-  // October is now an earlier survey
+  await expect(nov).toContainText('Sent to: Families of 2 members · 4 families');
+  await expect(nov).toContainText('0 of 4 answered');
+  await expect(card('Venue rating')).toBeVisible();
+  await expect(page.getByText('October check-in', { exact: true })).toHaveCount(0);
+  // October is now in the Log, closed because a newer survey was sent
+  await page.getByRole('tab', { name: 'Log' }).click();
   await expect(page.locator('[data-survey="sv1"]')).toContainText('October check-in');
+  await page.locator('[data-survey="sv1"]').click();
+  const old = page.getByRole('dialog', { name: 'October check-in' });
+  await expect(old.getByText('Closed 21 October 2026')).toBeVisible();
+  await old.getByRole('tab', { name: 'History' }).click();
+  await expect(old.locator('[data-log="closed"]').first()).toContainText('Closed when a newer survey was sent');
+  await closeDetail(page, old);
+  await page.getByRole('tab', { name: /^Live/ }).click();
   // a family sees it and answers once
   const r = await page.request.post('/api/actions/survey.answer', { headers: { 'x-user-id': 'f1' }, data: { mutationId: 'e2e-sv-1', input: { surveyId: 'sv2', overall: 5, team: { s1: 5 }, recommend: true, comment: 'Lovely' } } });
   expect(r.ok()).toBeTruthy();
-  const again = await page.request.post('/api/actions/survey.answer', { headers: { 'x-user-id': 'f1' }, data: { mutationId: 'e2e-sv-2', input: { surveyId: 'sv2', overall: 4 } } });
-  expect(again.status()).toBe(422);
+  const second = await page.request.post('/api/actions/survey.answer', { headers: { 'x-user-id': 'f1' }, data: { mutationId: 'e2e-sv-2', input: { surveyId: 'sv2', overall: 4 } } });
+  expect(second.status()).toBe(422);
   // a family that was not chosen has nothing to answer
   const notChosen = await page.request.post('/api/actions/survey.answer', { headers: { 'x-user-id': 'fm20_0' }, data: { mutationId: 'e2e-sv-3', input: { surveyId: 'sv2', overall: 4 } } });
   expect(notChosen.status()).toBe(403);
-  await expect(page.getByText('1 of 4 families').first()).toBeVisible();
+  await expect(nov).toContainText('1 of 4 answered');
   // the answer is counted: overall, recommend and the rating for Caca (the comment question was switched off, so nothing is kept for it)
-  await expect(page.getByText('1 answer', { exact: true }).first()).toBeVisible();
-  await expect(page.getByText('5.0 / 5').first()).toBeVisible();
-  await expect(page.getByText('Lobby · 1 rating')).toBeVisible();
-  await expect(page.getByText('Lovely')).toHaveCount(0);
+  await expect(nov).toContainText('1 answer');
+  await expect(nov).toContainText('5.0 / 5');
+  await nov.getByRole('button', { name: 'See details' }).click();
+  const full = page.getByRole('dialog', { name: 'November check-in 2026' });
+  await expect(full.getByText('Lobby · 1 rating')).toBeVisible();
+  await expect(full.getByText('Lovely')).toHaveCount(0);
+  await full.getByRole('tab', { name: 'Responses' }).click();
+  await expect(full.locator('[data-response]')).toHaveCount(1);
+  await expect(full.locator('[data-response]')).toContainText('Maria Wijaya');
+  await expect(full.getByText('Waiting for 3')).toBeVisible();
+  await closeDetail(page, full);
   // close it
-  await page.getByRole('button', { name: 'Close survey' }).click();
+  await nov.getByRole('button', { name: 'Close survey' }).click();
   await expect(toast(page, 'November check-in 2026 is closed.')).toBeVisible();
+  await expect(page.getByText('November check-in 2026', { exact: true })).toHaveCount(0);
+  await page.getByRole('tab', { name: 'Log' }).click();
   await expect(page.locator('[data-survey="sv2"]')).toBeVisible();
   await assertNoHorizontalScroll(page);
   c.assertClean();
@@ -582,9 +697,12 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
   const c = watchConsole(page);
   const shot = async (p: Page, name: string, el?: ReturnType<Page['locator']>) => { if (process.env.E2E_SHOTS) await (el ?? p).screenshot({ path: `artifacts/shots/${test.info().project.name}-${name}.png` }); };
   await signIn(page, 's9', '/surveys');
-  await page.getByLabel('Title').fill('Menu check');
+  await page.getByRole('button', { name: 'New survey' }).click();
+  await page.getByRole('dialog', { name: 'New survey' }).locator('[data-pick-survey="blank-family"]').click();
+  const ed = page.getByRole('dialog', { name: 'New survey' });
+  await ed.getByLabel('Title').fill('Menu check');
   // the presets are optional now: keep only "Overall"
-  for (const name of ['Rate the team', 'Would you recommend us?', 'Anything we could do better?']) await page.getByRole('button', { name }).click();
+  for (const name of ['Rate the team', 'Would you recommend us?', 'Anything we could do better?']) await ed.getByRole('button', { name }).click();
   const section = page.getByTestId('survey-custom');
   const rows = page.locator('[data-custom-q]');
   const dlg = page.getByRole('dialog', { name: /^(New|Edit) question$/ });
@@ -644,8 +762,9 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
   // saved as a draft, edited again (the questions come back in order), then sent
   await page.getByRole('button', { name: 'Save draft' }).click();
   await expect(toast(page, 'Draft saved. Edit it before sending.')).toBeVisible();
-  await expect(page.locator('[data-draft-audience]').locator('xpath=..')).toContainText('4 questions of your own');
-  await page.getByRole('button', { name: 'Edit', exact: true }).click();
+  await expect(page.locator('[data-draft-audience]')).toContainText('5 questions'); // Overall and the four of your own
+  await page.locator('[data-draft]').filter({ hasText: 'Menu check' }).click();
+  await expect(page.getByRole('dialog', { name: 'Edit draft' })).toBeVisible();
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(1)).toContainText('Which evening suits the family?');
   await page.getByRole('button', { name: 'Send to 6 families' }).click();
@@ -676,9 +795,10 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
   for (const [uid, q1, q2, q3, q4] of rest) expect((await send(uid, { answers: { q1, q2, q3, q4 } }, uid)).ok()).toBeTruthy();
 
   // management: a summary per question
-  await page.getByRole('button', { name: 'See details' }).click();
+  await page.getByRole('tab', { name: /^Live/ }).click();
+  await page.getByText('Menu check', { exact: true }).locator('xpath=..').getByRole('button', { name: 'See details' }).click();
   const detail = page.getByRole('dialog', { name: 'Menu check' });
-  await expect(detail.getByText('6 of 6 families').first()).toBeVisible();
+  await expect(detail.getByText('6 of 6 answered').first()).toBeVisible();
   const res = detail.getByTestId('survey-results');
   await expect(res.locator('[data-result="q1"]')).toContainText('4.3 / 5'); // 4, 5, 3, 4, 5, 5
   await expect(res.locator('[data-result="q1"]')).toContainText('6 answers');
@@ -699,8 +819,12 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
   await expect(text.getByText(/“.+”/)).toHaveCount(1);
   await expect(text.getByText('“More soto please”')).toBeVisible();
   await shot(page, 'results', res);
-  await expect(detail.getByText('Answered · 5/5').first()).toBeVisible(); // Maria's overall rating still shows per family
-  await detail.getByRole('button', { name: 'Close', exact: true }).last().click();
+  await detail.getByRole('tab', { name: 'Responses' }).click(); // Maria's overall rating and her own answers show per family
+  const maria = detail.locator('[data-response]').filter({ hasText: 'Maria Wijaya' });
+  await expect(maria).toContainText('5/5');
+  await expect(maria).toContainText('Which evening suits the family? · Saturday');
+  await expect(maria).toContainText('More soto please');
+  await closeDetail(page, detail);
   await expect(page.getByText('Live · sent Wed 21 Oct')).toBeVisible();
   await fam.ctx.close();
   c.assertClean();
@@ -711,16 +835,16 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   await signIn(page, 's9', '/plans');
   await expect(page.getByRole('heading', { name: 'Plans and pricing', level: 1 })).toBeVisible();
   const flex = page.getByLabel('Flex price in rupiah');
-  await expect(flex).toHaveValue('5.500.000');
-  await expect(page.getByText('Sample price')).toHaveCount(3);
+  await expect(flex).toHaveValue('2.700.000');
+  await expect(page.getByText('Sample price')).toHaveCount(1); // only the extra-day price is not in the brochure
   // Flex is a number of visits a month, counted from check-ins; there is nothing about booked days or leave
   await expect(page.getByText('On next month’s invoice')).toBeVisible();
   await expect(page.getByLabel('Flex visits per month')).toHaveValue('10');
   await expect(page.getByLabel(/Leave days/)).toHaveCount(0);
-  await expect(page.getByText(/leave|booked by|club days/i)).toHaveCount(0);
+  await expect(page.getByText(/leave days|booked by|club days/i)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 5.500.000'); // Oma Lina, 15 November: 10 visits in October, so nothing extra
-  await expect(page.getByText('Oma Lina Wijaya · invoice of 15 November')).toBeVisible();
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 2.700.000'); // Oma Lina, 21 November: 10 visits in October, so nothing extra
+  await expect(page.getByText('Oma Lina Wijaya · invoice of 21 November')).toBeVisible();
 
   // typing changes nothing until Save; the preview shows what it would be
   await flex.fill('6000000');
@@ -728,11 +852,11 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 6.000.000');
   await expect(page.getByText('Showing what you typed. Not saved yet.')).toBeVisible();
   await page.reload();
-  await expect(page.getByLabel('Flex price in rupiah')).toHaveValue('5.500.000');
+  await expect(page.getByLabel('Flex price in rupiah')).toHaveValue('2.700.000');
   // Cancel throws the edit away
   await page.getByLabel('Flex price in rupiah').fill('7000000');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
-  await expect(page.getByLabel('Flex price in rupiah')).toHaveValue('5.500.000');
+  await expect(page.getByLabel('Flex price in rupiah')).toHaveValue('2.700.000');
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
 
   // validation
@@ -751,7 +875,7 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0); // saved: the bar is gone (the toast only lasts a few seconds, too short to rely on when the machine is busy)
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
-  await expect(page.getByText('Sample price')).toHaveCount(1); // only Gold is still a sample; Flex and Extra day are now the club's own
+  await expect(page.getByText('Sample price')).toHaveCount(0); // Flex and Gold come from the brochure and the extra day is now the club's own
   await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 6.000.000');
   await page.reload();
   await expect(page.getByLabel('Flex price in rupiah')).toHaveValue('6.000.000');
@@ -774,20 +898,20 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
 
   // preview for another member: Opa Budi is Gold
   await pickOption(page, 'Preview for', 'Opa Budi Wijaya');
-  await expect(page.getByText('Opa Budi Wijaya · invoice of 15 November')).toBeVisible();
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 9.500.000');
+  await expect(page.getByText('Opa Budi Wijaya · invoice of 21 November')).toBeVisible();
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 3.950.000');
   await assertNoHorizontalScroll(page);
 
   // the notify toggle: finance was told about the first change; with the toggle off the next change is silent
   const priceNotes = async () => Object.values((await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's10' } })).json()).state.notifications as Record<string, { kind: string }>).filter((n) => n.kind === 'mgmt.notif.pricesChanged').length;
   expect(await priceNotes()).toBe(1);
-  await page.getByLabel('Gold price in rupiah').fill('9600000');
+  await page.getByLabel('Gold price in rupiah').fill('4000000');
   await page.getByRole('switch', { name: 'Notify the team' }).click();
   await expect(page.getByRole('switch', { name: 'Notify the team' })).toHaveAttribute('aria-checked', 'false');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
   await page.reload();
-  await expect(page.getByLabel('Gold price in rupiah')).toHaveValue('9.600.000');
+  await expect(page.getByLabel('Gold price in rupiah')).toHaveValue('4.000.000');
   expect(await priceNotes()).toBe(1); // no new notification
   c.assertClean();
 });
@@ -798,18 +922,18 @@ test('plans: an extra visit from a check-in is on the member’s next invoice at
   const r = await request.post('/api/actions/attendance.checkIn', { headers: { 'x-user-id': 's1' }, data: { mutationId: 'e2e-lina-11', input: { memberId: 'm1', method: 'manual' } } });
   expect(r.ok()).toBeTruthy();
   await signIn(page, 's9', '/plans');
-  await expect(page.getByText('Oma Lina Wijaya · invoice of 15 November')).toBeVisible();
+  await expect(page.getByText('Oma Lina Wijaya · invoice of 21 November')).toBeVisible();
   await expect(page.getByText('Extra days · October (1)')).toBeVisible();
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 6.150.000'); // Flex 5.500.000 + 1 extra day at 650.000
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 3.350.000'); // Flex 2.700.000 + 1 extra day at 650.000
   await page.getByLabel('Extra day price in rupiah').fill('700000');
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 6.200.000');
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 3.400.000');
   await page.getByLabel('Flex visits per month').fill('11');
   await expect(page.getByText('Extra days · October')).toHaveCount(0); // with 11 visits a month, her 11th is not extra
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 5.500.000');
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 2.700.000');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByText('Extra days · October (1)')).toBeVisible();
   await pickOption(page, 'Preview for', 'Opa Budi Wijaya'); // Gold: unlimited, never extra
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 9.500.000');
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 3.950.000');
   await expect(page.getByText(/Extra days/)).toHaveCount(0);
   await assertNoHorizontalScroll(page);
   c.assertClean();
@@ -868,7 +992,7 @@ test('Indonesian: every management screen is translated, with no raw keys and no
     ['/broadcast', 'Siaran', [/Templat WhatsApp/, /Keluarga · 6/, /Kirim ke 6 orang/]],
     ['/venue', 'Pemesanan venue', [/Acara luar/, /Pemesanan baru/, /Terkonfirmasi · di kalender/]],
     ['/hr', 'SDM', [/Data staf/, /Tambah staf/]],
-    ['/surveys', 'Survei', [/Keluarga · kepuasan/, /Tingkat respons/, /Survei sebelumnya/, /Siapa yang menerima/, /Semua keluarga yang memakai aplikasi/, /Dikirim ke 6 keluarga/]],
+    ['/surveys', 'Survei', [/Tingkat respons/, /Dikirim ke: Semua keluarga yang memakai aplikasi · 4 keluarga/, /Penyewa venue/, /3 tautan penilaian terkirim/, /Berjalan · dikirim/]],
     ['/plans', 'Paket dan harga', [/Pengaturan klub/, /Pratinjau tagihan berikutnya/, /Harga contoh/, /Kunjungan Flex per bulan/]],
     ['/enquiries', 'Calon anggota', [/Calon baru/, /Percobaan terjadwal/]],
   ];
@@ -879,6 +1003,60 @@ test('Indonesian: every management screen is translated, with no raw keys and no
     await noRawKeys(page);
     await assertNoHorizontalScroll(page);
   }
+  // Surveys, round 7: the tabs, the Log, the picker, the editor and a survey in full
+  await page.goto('/surveys');
+  for (const tab of ['Aktif', 'Draf', 'Templat', 'Riwayat']) await expect(page.getByRole('tab', { name: new RegExp(`^${tab}`) })).toBeVisible();
+  await page.getByRole('tab', { name: 'Templat' }).click();
+  await expect(page.getByText('Monthly family satisfaction')).toBeVisible();
+  await expect(page.getByText(/Keluarga · \d+ pertanyaan/).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Templat baru' })).toBeVisible();
+  await page.getByRole('tab', { name: 'Riwayat' }).click();
+  await expect(page.getByText('Semua survei yang pernah dikirim')).toBeVisible();
+  await expect(page.getByText(/Terkirim 4 · 3 menjawab · 75%/).first()).toBeVisible();
+  await noRawKeys(page, RAW_KEY_R7);
+  await page.locator('[data-survey="sv0"]').click();
+  const sv0 = page.getByRole('dialog', { name: 'September check-in' });
+  await expect(sv0.getByRole('tab', { name: 'Ringkasan' })).toBeVisible();
+  await expect(sv0.getByText('Penilaian tim · tampil di SDM')).toBeVisible();
+  await expect(sv0.getByText(/Ditutup 19 Oktober 2026/)).toBeVisible();
+  await sv0.getByRole('tab', { name: 'Jawaban' }).click();
+  await expect(sv0.getByText('Menunggu 1')).toBeVisible();
+  await sv0.getByRole('tab', { name: 'Riwayat' }).click();
+  await expect(sv0.getByText('Ditutup saat survei yang lebih baru dikirim')).toBeVisible();
+  await noRawKeys(page, RAW_KEY_R7);
+  await overlayFits(page);
+  await closeDetail(page, sv0, 'Survei');
+  await page.getByRole('button', { name: 'Survei baru' }).click();
+  const pick = page.getByRole('dialog', { name: 'Survei baru' });
+  await expect(pick.getByText('Mulai dari kosong')).toBeVisible();
+  await expect(pick.getByText('Survei keluarga kosong')).toBeVisible();
+  await expect(pick.getByText('Dari templat')).toBeVisible();
+  await noRawKeys(page, RAW_KEY_R7);
+  await pick.locator('[data-pick-survey="blank-family"]').click();
+  const ed = page.getByRole('dialog', { name: 'Survei baru' });
+  await expect(ed.getByText('Siapa yang menerima')).toBeVisible();
+  await expect(ed.getByText('Dikirim ke 6 keluarga')).toBeVisible();
+  await expect(ed.getByRole('button', { name: 'Kirim ke 6 keluarga' })).toBeVisible();
+  await expect(ed.getByRole('button', { name: 'Simpan draf' })).toBeVisible();
+  await expect(ed.getByRole('button', { name: 'Simpan sebagai templat' })).toBeVisible();
+  await noRawKeys(page, RAW_KEY_R7);
+  await overlayFits(page);
+  await ed.getByRole('button', { name: 'Tambah pertanyaan' }).click();
+  await expect(page.getByRole('dialog', { name: 'Pertanyaan baru' })).toBeVisible();
+  await noRawKeys(page, RAW_KEY_R7);
+  await overlayFits(page);
+  // the new screens of round 7, as management sees them
+  for (const [path, heading] of [['/renewals', 'Perpanjangan'], ['/tasks', 'Tugas'], ['/guests', 'Pengisi acara'], ['/insights', 'Insight kunjungan']]) {
+    await page.goto(path);
+    await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
+    await noRawKeys(page, RAW_KEY_R7);
+    await assertNoHorizontalScroll(page);
+  }
+  await page.goto('/venue');
+  await expect(page.getByRole('heading', { name: 'Pemesanan venue', level: 1 })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Minta penilaian' }).first()).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Salin tautan' }).first()).toBeVisible();
+  await noRawKeys(page, RAW_KEY_R7);
   // dialogs in Indonesian too
   await page.goto('/venue');
   await page.getByRole('button', { name: 'Pemesanan baru' }).click();

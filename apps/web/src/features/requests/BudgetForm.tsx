@@ -6,7 +6,9 @@ import { useAct } from '../../lib/act';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { Note } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import { ChoiceChip, PillButton, bronzeInput, cardLabel } from '../kitchen/parts';
+import { PGroup, Segmented, phoneField } from '../finance/parts';
 import { budgetRequestInput, defaultSectionId, sectionName, sectionsOf } from './finance';
 
 export function BudgetForm({ onSent }: { onSent?: () => void }) {
@@ -15,6 +17,7 @@ export function BudgetForm({ onSent }: { onSent?: () => void }) {
   const s = useClub();
   const act = useAct();
   const { role } = useMe();
+  const { isPhone } = useDevice();
   const secs = sectionsOf(s);
   const [picked, setPicked] = useState<string | null>(null);
   const [item, setItem] = useState('');
@@ -30,6 +33,23 @@ export function BudgetForm({ onSent }: { onSent?: () => void }) {
     setBusy(false);
     if (r.ok) { setItem(''); setAmt(''); onSent?.(); }
   };
+  // round 6, phone: a flat group; up to four sections are an iOS segmented control, the fields are grey and stacked, the send button is full width
+  if (isPhone) {
+    const opts = secs.map((x) => ({ value: x.id, label: sectionName(s, x.id, lang) }));
+    return (
+      <PGroup title={t('requests.budget.card')} gap={12}>
+        {secs.length <= 4 ? <Segmented label={t('requests.budget.section')} options={opts} value={sectionId} onChange={setPicked} /> : (
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="group" aria-label={t('requests.budget.section')}>
+            {secs.map((x) => <ChoiceChip key={x.id} label={sectionName(s, x.id, lang)} selected={sectionId === x.id} onClick={() => setPicked(x.id)} />)}
+          </div>
+        )}
+        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('requests.budget.item')} aria-label={t('requests.budget.itemLabel')} maxLength={80} style={phoneField} />
+        <input value={amt} onChange={(e) => setAmt(fmtN(e.target.value))} placeholder={t('requests.budget.amount')} aria-label={t('requests.budget.amountLabel')} inputMode="numeric" style={phoneField} />
+        <PillButton height={48} on={ok && !busy} onClick={send}>{t('requests.budget.send')}</PillButton>
+        {!secs.length ? <Note tone="ochre" icon="info">{t('requests.budget.noSections')}</Note> : null}
+      </PGroup>
+    );
+  }
   return (
     <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 20, boxShadow: '0 1px 2px rgba(60,40,20,.04), 0 18px 40px rgba(60,40,20,.07)', padding: '20px clamp(18px, 3vw, 32px) 24px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'cpUp .2s ease-out' }}>
       <span style={cardLabel}>{t('requests.budget.card')}</span>

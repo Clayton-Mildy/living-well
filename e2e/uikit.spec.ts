@@ -206,8 +206,9 @@ test.describe('DateField', () => {
 });
 
 test.describe('Pager', () => {
-  test('24 payments make two pages: next, previous, numbered pages; a search starts again on page 1', async ({ page }) => {
+  test('payments are paged 15 at a time: next, previous, numbered pages, the last page; a search starts again on page 1', async ({ page }) => {
     const c = watchConsole(page);
+    // 18 new cash payments sit on top of the seeded history (about 6 months of paid invoices), newest first
     for (let i = 1; i <= 18; i++) {
       const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', ref: `T${i}`, invoiceId: 'INV-2610-046' });
       expect(r.ok()).toBeTruthy();
@@ -219,24 +220,29 @@ test.describe('Pager', () => {
     const next = nav.getByRole('button', { name: 'Next page' });
     await expect(rows).toHaveCount(15);
     await expect(prev).toHaveAttribute('aria-disabled', 'true');
-    if (isPhone(page)) await expect(nav).toContainText('Page 1 of 2');
+    const pages = Number(((await nav.textContent()) ?? '').match(/Page 1 of (\d+)/)?.[1]);
+    expect(pages).toBeGreaterThanOrEqual(2); // 18 new + the seeded payments: more than one page, however much history the seed holds
+    if (isPhone(page)) await expect(nav).toContainText(`Page 1 of ${pages}`);
     else await expect(nav.getByRole('button', { name: 'Page 1' })).toHaveAttribute('aria-current', 'page');
     await assertNoHorizontalScroll(page);
 
     await next.click();
-    await expect(rows).toHaveCount(3); // the 9 oldest rows: 3 of them are cash, 6 are the seeded payments
-    await expect(next).toHaveAttribute('aria-disabled', 'true');
-    await expect(page.getByText('Opa Hendra Gunawan').first()).toBeVisible();
+    await expect(rows).toHaveCount(3); // the 3 oldest of the new cash rows; the rest of page 2 is the seeded history
+    await expect(prev).not.toHaveAttribute('aria-disabled', 'true');
     await prev.click();
     await expect(rows).toHaveCount(15);
     await goToPage(page, 2, 'Payments as they arrive: pages');
     await expect(rows).toHaveCount(3);
+    await goToPage(page, pages, 'Payments as they arrive: pages'); // the last page: older seeded payments, and nowhere further to go
+    await expect(rows).toHaveCount(pages === 2 ? 3 : 0);
+    await expect(next).toHaveAttribute('aria-disabled', 'true');
+    await expect(page.getByText(/^INV-\d{4}-\d{3}( · |$)/).first()).toBeVisible(); // seeded payments of earlier months
 
     await page.getByRole('searchbox', { name: 'Search by member, invoice, reference or bank' }).fill('T7');
     await expect(rows).toHaveCount(1); // one hit, so one page: the pager is gone and the list is back at the start
     await expect(nav).toHaveCount(0);
     await page.getByRole('searchbox', { name: 'Search by member, invoice, reference or bank' }).fill('');
-    await expect(rows).toHaveCount(15); // page 1 again, not page 2
+    await expect(rows).toHaveCount(15); // page 1 again, not the last page
     c.assertClean();
   });
 

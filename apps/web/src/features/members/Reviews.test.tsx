@@ -44,8 +44,8 @@ describe('Approvals', () => {
   it('has a tab for every kind with its count, and opens on the first one with something waiting', async () => {
     openClub();
     await show(<Reviews />);
-    const labels = Array.from(document.querySelectorAll('[role="tab"]')).map((t) => t.textContent);
-    expect(labels).toEqual(['Profile · 2', 'Care log · 2', 'Health · 1', 'Photos · 0', 'Menu · 1', 'Stock · 3', 'History']);
+    const labels = Array.from(document.querySelectorAll('[role="tablist"][aria-label="Approval types"] [role="tab"]')).map((t) => t.textContent);
+    expect(labels).toEqual(['Profile · 2', 'Care log · 2', 'Health · 1', 'Photos · 0', 'Menu · 1', 'Stock · 3', 'Renewals · 1', 'History']);
     expect(tab(/^Profile/)?.getAttribute('aria-selected')).toBe('true');
     expect(document.querySelectorAll('[data-cr]')).toHaveLength(2); // a change to approve and a health edit applied at once
     expect(document.body.textContent).toContain('Acknowledge');
@@ -108,7 +108,7 @@ describe('Approvals', () => {
     await click(Array.from(edit.querySelectorAll('button')).find((b) => /View$/.test(b.textContent || '')));
     expect(edit.textContent).toContain('Mood');
     await click(tab(/^History/));
-    expect(document.body.textContent).toContain('Stock request'); // the seeded, already approved stock requests
+    expect(document.body.textContent).toMatch(/Approved · Ega/); // handled entries (round 7: the seed's recent photo approvals come first, the older stock requests further back)
     expect(document.querySelectorAll('[data-approval]')).toHaveLength(0);
   });
 });
@@ -125,5 +125,23 @@ describe('the marker staff see on their own entries', () => {
     </div>);
     const marks = Array.from(document.querySelectorAll('[data-testid="approval-mark"]')).map((m) => m.textContent);
     expect(marks).toEqual(['Pending approval', 'Pending approval · edit', 'Rejected: Wrong day']);
+  });
+  it('per person (KC round 6): one card per member with everything about them, group photos and "Other" apart, and Approve all', async () => {
+    openClub();
+    try { localStorage.removeItem('cp.approvals.mode'); } catch { /* none */ }
+    await show(<Reviews />);
+    const modes = Array.from(document.querySelectorAll('[role="tablist"][aria-label="Show approvals"] [role="tab"]')).map((t) => t.textContent);
+    expect(modes).toEqual(['Per item', 'Per person']);
+    await act(async () => { (document.querySelector('[data-mode="person"]') as HTMLButtonElement).click(); });
+    expect(document.querySelector('[data-testid="approvals-by-person"]')).not.toBeNull();
+    expect(document.querySelector('[role="tablist"][aria-label="Approval types"]')).toBeNull(); // the type tabs belong to "Per item"
+    const cards = Array.from(document.querySelectorAll('[data-person]')).filter((c) => !['group-photos', 'other'].includes(c.getAttribute('data-person') || ''));
+    expect(cards.length).toBeGreaterThan(0);
+    expect(document.querySelector('[data-person="other"]')?.textContent).toContain('Other · menu and stock');
+    const first = cards[0] as HTMLElement;
+    const allBtn = Array.from(first.querySelectorAll('button')).find((b) => /Approve all \(\d+\)$/.test(b.textContent || ''))!; // the icon's ligature text comes first
+    expect(allBtn).toBeTruthy();
+    await act(async () => { allBtn.click(); });
+    expect(actMock.mock.calls.map((c) => c[0]).some((n) => ['review.approve', 'review.acknowledge', 'approval.approve', 'photo.approve'].includes(n))).toBe(true);
   });
 });

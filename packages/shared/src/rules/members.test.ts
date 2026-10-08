@@ -172,9 +172,9 @@ describe('final invoice maths', () => {
   });
   it('the open balance sums open invoices only', () => {
     const s = seed();
-    expect(openBalance(s, 'm1', T)).toBe(5500000);
+    expect(openBalance(s, 'm1', T)).toBe(2700000);
     expect(openBalance(s, 'm2', T)).toBe(0);
-    expect(openBalance(s, 'm20', T)).toBe(9500000 * 2); // the overdue September invoice and October's
+    expect(openBalance(s, 'm20', T)).toBe(3950000 * 2); // the overdue September invoice and October's
   });
 });
 
@@ -266,6 +266,7 @@ describe('photo review', () => {
     expect(photoReviewKind({ kind: 'group' })).toBe('group');
     expect(photoReviewKind({ kind: 'arrival' })).toBe('arrival');
     expect(photoReviewKind({ kind: 'solo' })).toBe('solo');
+    expect(photoReviewKind({ kind: 'activity' })).toBe('activity'); // KC round 7: a picture of a session, no members
   });
 });
 

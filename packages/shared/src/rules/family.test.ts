@@ -1,10 +1,12 @@
 // Family selectors for a drop-in club: switcher, the member's day, plan card (Flex visits, Gold), timeline, lunch line, photos, invoices, comments.
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, projectForFamily, lunchSafety, flexQuota, type ClubState, type Message } from '../index';
+import { buildSeed, execute, getUser, projectForFamily, lunchSafety, flexQuota, type ClubState } from '../index';
 import {
-  BANKS, combinedVa, dayStateOf, extraPriceFor, familyMembers, familyPhotoDays, healthMemberOf, historyRows, homeTime, invoiceRows, isFamilyPhoto, logComments, mayStillCome, nextIssueDate,
-  openInvoiceRows, openTotal, photoActivityLabel, photosInOrder, planSummary, resolveSel, selWho, servedLunch, sharedNoteOf, timelineOf, vaFor, billingContactOf, latestLog, careThread, dishNamesOf,
+  BANKS, combinedVa, dayStateOf, extraPriceFor, familyMembers, familyPhotoDays, healthMemberOf, historyRows, homeTime, invoiceRows, isFamilyPhoto, mayStillCome, nextIssueDate,
+  openInvoiceRows, openTotal, photoActivityLabel, photosInOrder, planSummary, resolveSel, selWho, servedLunch, sharedNoteOf, timelineOf, vaFor, billingContactOf, latestLog, dishNamesOf,
+  bestPhotoOf, dayStory, dayStrip, familyPhotosOn, logOn, monthRecap, recapMonths, storyNowMin, tookPart, visitDays, END_OF_DAY,
 } from './family';
+import { dow } from '../util';
 
 const T = '2026-10-21';
 const NOW = 598; // 09:58
@@ -236,23 +238,6 @@ describe('notes, logs and comments', () => {
     expect(latestLog(s, 'm1', T)?.date).toBe('2026-10-20');
     expect(latestLog(s, 'm1', '2026-10-15')?.date).toBe('2026-10-14');
   });
-  it('comments under a log are the family’s messages that reference it plus the staff replies after them', () => {
-    const s = seed();
-    const log = latestLog(s, 'm1', T)!;
-    const th = { id: 'th1', clubId: 'citra', createdAt: '', createdBy: 'family:f1' as const, memberId: 'm1', familyId: 'f1', topic: 'care' as const, lastSeq: 5, staffReadSeq: 0, familyReadSeq: 0 };
-    const msg = (seq: number, from: Message['from'], text: string, ref?: Message['ref'], kind: Message['kind'] = 'text'): Message => ({ id: 'm' + seq, clubId: 'citra', createdAt: '', createdBy: from, threadId: 'th1', seq, from, at: `2026-10-20T1${seq}:00`, text, kind, ...(ref ? { ref } : {}) });
-    const c = { ...s, threads: { th1: th }, messages: Object.fromEntries([
-      msg(1, 'family:f1', 'Thank you Dinar!', { type: 'dailyLog', id: log.id }),
-      msg(2, 'staff:s5', 'She loved it.'),
-      msg(3, 'staff:s5', 'Autoreply', undefined, 'autoAck'),
-      msg(4, 'family:f1', 'Unrelated question about Friday'),
-      msg(5, 'staff:s1', 'Answer about Friday'),
-    ].map((m) => [m.id, m])) } as ClubState;
-    expect(careThread(c, 'f1', 'm1')?.id).toBe('th1');
-    expect(logComments(c, careThread(c, 'f1', 'm1'), log.id).map((m) => m.text)).toEqual(['Thank you Dinar!', 'She loved it.']);
-    expect(logComments(c, careThread(c, 'f1', 'm1'), 'another-log')).toEqual([]);
-    expect(logComments(c, undefined, log.id)).toEqual([]);
-  });
 });
 
 describe('photos', () => {
@@ -264,8 +249,8 @@ describe('photos', () => {
     for (const d of days) {
       expect(d.count).toBe(d.sets.reduce((t, x) => t + x.photos.length, 0));
       const kinds = d.sets.map((x) => x.kind);
-      expect(kinds.indexOf('group')).toBeGreaterThanOrEqual(kinds.includes('solo') ? kinds.indexOf('solo') : 0);
-      expect(d.sets.flatMap((x) => x.photos).every(isFamilyPhoto)).toBe(true);
+      if (kinds.includes('group')) expect(kinds.indexOf('group')).toBeGreaterThanOrEqual(kinds.includes('solo') ? kinds.indexOf('solo') : 0);
+      expect(d.sets.flatMap((x) => x.photos).every((p) => isFamilyPhoto(p) || p.kind === 'activity')).toBe(true); // member photos, and a day's approved activity pictures
     }
     const hidden = seed();
     const first = days[0].sets[0].photos[0];
@@ -293,6 +278,27 @@ describe('photos', () => {
     const p = projectForFamily(s, 'f1');
     expect(photosInOrder(familyPhotoDays(p, ['m1', 'm46'])).map((x) => x.id)).toEqual(photosInOrder(familyPhotoDays(s, ['m1', 'm46'])).map((x) => x.id));
   });
+  it('KC round 7: a day’s activity pictures come after the member photos, one set per activity, only for days one of the members came', () => {
+    const s0 = seed();
+    const put = (s: ClubState, id: string, date: string, activity: string, visibility: 'visible' | 'pending' | 'hidden' = 'visible') => {
+      s.photos[id] = { id, clubId: s.clubId, createdAt: `${date}T10:50`, createdBy: 'staff:s5', date, time: '10:50', kind: 'activity', media: 'photo', activity, memberIds: [], tone: 1, takenBy: 's5', visibility };
+    };
+    const s = seed();
+    expect(s0.attendance[`${T}:m10`]?.checkIn).toBeTruthy(); // Bambang came today; Oma Lina did not
+    expect(s0.attendance[`${T}:m1`]?.checkIn).toBeUndefined();
+    put(s, 'a1', T, 'Keroncong sing-along'); put(s, 'a2', T, 'Batik painting'); put(s, 'a3', T, 'Keroncong sing-along'); put(s, 'a4', T, 'Batik painting', 'pending'); put(s, 'a5', T, 'Batik painting', 'hidden');
+    const bambang = familyPhotoDays(s, ['m10']).find((d) => d.date === T)!;
+    const sets = bambang.sets.filter((x) => x.kind === 'activity');
+    expect(sets.map((x) => [x.activity, x.photos.map((p) => p.id)])).toEqual([['Keroncong sing-along', ['a1', 'a3']], ['Batik painting', ['a2']]]);
+    expect(bambang.sets.map((x) => x.kind).slice(-2)).toEqual(['activity', 'activity']); // after the solo and group photos
+    expect(bambang.count).toBe(bambang.sets.reduce((t, x) => t + x.photos.length, 0));
+    expect(familyPhotoDays(s, ['m1']).find((d) => d.date === T)?.sets.filter((x) => x.kind === 'activity') ?? []).toEqual([]); // Oma Lina did not come
+    // Both mode: one of the two coming is enough
+    expect(familyPhotoDays(s, ['m1', 'm10']).find((d) => d.date === T)?.sets.filter((x) => x.kind === 'activity')).toHaveLength(2);
+    // the projection holds what the lists need
+    const proj = projectForFamily(s, 'fm10_0');
+    expect(photosInOrder(familyPhotoDays(proj, ['m10'])).map((p) => p.id)).toEqual(photosInOrder(familyPhotoDays(s, ['m10'])).map((p) => p.id));
+  });
   it('Indonesian activity names come from the catalogue', () => {
     const s = seed();
     expect(photoActivityLabel(s, 'Keroncong sing-along', 'id')).toBe('Bernyanyi keroncong');
@@ -302,30 +308,30 @@ describe('photos', () => {
 });
 
 describe('invoices', () => {
-  it('Yohana: the overdue September invoice and October are both open, oldest first, with a total', () => {
+  it('Yohana: the overdue September invoice and October (issued today, due on the 28th) are both open, oldest first, with a total', () => {
     const s = seed();
     const rows = invoiceRows(s, ['m20'], T);
     const open = openInvoiceRows(rows);
     expect(open.map((r) => [r.inv.number, r.status])).toEqual([['INV-2609-020', 'overdue'], ['INV-2610-020', 'outstanding']]);
-    expect(openTotal(open)).toBe(19000000);
-    expect(open[0]).toMatchObject({ balance: 9500000, paid: 0, period: '2026-09' });
-    expect(historyRows(rows).map((r) => r.inv.number)).toEqual(['INV-2610-020', 'INV-2609-020']);
+    expect(openTotal(open)).toBe(7900000);
+    expect(open[0]).toMatchObject({ balance: 3950000, paid: 0, period: '2026-09' });
+    expect(historyRows(rows).map((r) => r.inv.number).slice(0, 2)).toEqual(['INV-2610-020', 'INV-2609-020']); // newest first (the seed holds six months of invoices)
   });
   it('Maria: September is paid, October is open for both parents', () => {
     const s = seed();
     const open = openInvoiceRows(invoiceRows(s, ['m1', 'm46'], T));
     expect(open.map((r) => r.inv.number).sort()).toEqual(['INV-2610-001', 'INV-2610-046']);
     expect(open.every((r) => r.status === 'outstanding')).toBe(true);
-    expect(openTotal(open)).toBe(5500000 + 9500000);
+    expect(openTotal(open)).toBe(2700000 + 3950000);
   });
   it('a member with no invoice gives an empty list and the next run date', () => {
     const s = seed();
     s.invoices = {};
     expect(invoiceRows(s, ['m1'], T)).toEqual([]);
-    expect(nextIssueDate(s, T)).toBe('2026-11-15');
-    expect(nextIssueDate(s, '2026-11-03')).toBe('2026-11-15');
-    expect(nextIssueDate(s, '2026-11-15')).toBe('2026-12-15');
-    expect(nextIssueDate(s, '2026-12-20')).toBe('2027-01-15');
+    expect(nextIssueDate(s, T)).toBe('2026-11-21'); // today is the 21st: the next one is next month's
+    expect(nextIssueDate(s, '2026-11-03')).toBe('2026-11-21');
+    expect(nextIssueDate(s, '2026-11-21')).toBe('2026-12-21');
+    expect(nextIssueDate(s, '2026-12-20')).toBe('2026-12-21');
   });
   it('who looks after billing', () => {
     const s = seed();
@@ -343,5 +349,239 @@ describe('invoices', () => {
     expect(combinedVa([a, b], 'BNI').startsWith('8492 ')).toBe(true);
     expect(combinedVa([], 'BCA')).toBe('');
     expect(BANKS).toEqual(['BCA', 'Mandiri', 'BNI', 'BRI', 'Permata']);
+  });
+});
+
+// ---------------------------------------------------------------- KC round 7: the day story and the month's memories
+describe('visitDays and the day strip', () => {
+  it('lists the days a member checked in, oldest first, up to the given day; a day without a check-in is not a visit', () => {
+    const s = seed();
+    const days = visitDays(s, 'm1', T);
+    expect(days.length).toBeGreaterThan(5);
+    expect(days).toEqual([...days].sort());
+    expect(days.every((d) => d <= T && !!s.attendance[`${d}:m1`]?.checkIn)).toBe(true);
+    expect(days).not.toContain(T); // Oma Lina has not come today
+    expect(visitDays(s, 'm10', T)).toContain(T); // Bambang is in the club
+    expect(visitDays(s, 'm1', '2026-10-14').every((d) => d <= '2026-10-14')).toBe(true);
+    // undoing a check-in removes the visit
+    const u = as(s, 's1', 'attendance.undoCheckIn', { memberId: 'm10' }, 'u1');
+    expect(visitDays(u.state, 'm10', T)).not.toContain(T);
+  });
+  it('the strip ends with today even when the member has not come, and carries each day’s cover picture', () => {
+    const s = seed();
+    const strip = dayStrip(s, ['m1'], T);
+    expect(strip[strip.length - 1]).toMatchObject({ date: T, visited: false });
+    expect(strip.slice(0, -1).every((d) => d.visited)).toBe(true);
+    expect(strip.some((d) => d.photo && d.count > 0)).toBe(true);
+    expect(dayStrip(s, ['m10'], T).at(-1)).toMatchObject({ date: T, visited: true });
+    // Both mode: the union of their visit days, once each
+    const both = dayStrip(s, ['m1', 'm10'], T).map((d) => d.date);
+    expect(new Set(both).size).toBe(both.length);
+    expect(dayStrip(s, ['m1'], T, 3)).toHaveLength(4); // the last 3 visits and today
+  });
+});
+
+describe('dayStory: a past day, today, a day she did not come, and what waits for approval', () => {
+  const logDay = (s: ClubState) => Object.values(s.dailyLogs).find((l) => l.memberId === 'm1' && /Bengawan Solo/.test(l.note))!.date;
+  it('a past day reads at the end of the day: arrival and home, the mood and note, every step done, the day’s pictures', () => {
+    const s = seed();
+    const d = logDay(s);
+    expect(storyNowMin(d, T, 600)).toBe(END_OF_DAY);
+    expect(storyNowMin(T, T, 600)).toBe(600);
+    const st = dayStory(s, s.members.m1, d, END_OF_DAY);
+    expect(st).toMatchObject({ date: d, visited: true, state: { kind: 'home' } });
+    expect(st.arrivedAt).toBe(s.attendance[`${d}:m1`].checkIn!.at);
+    expect(st.leftAt).toBe(s.attendance[`${d}:m1`].checkOut!.at);
+    expect(st.log).toMatchObject({ mood: 'cheerful', lunch: 'all' });
+    expect(st.log!.note).toMatch(/Bengawan Solo/);
+    expect(st.items.every((i) => i.state === 'done')).toBe(true);
+    expect(st.sessions.length).toBeGreaterThan(0);
+    expect(st.sessions.every((x) => x.state === 'done')).toBe(true);
+    expect(st.sessions[0].took).toBe('joined'); // no session was marked: the day’s answer applies
+    expect(st.lunch).toMatchObject({ amount: 'all' });
+    expect(st.lunch!.dishes.length).toBeGreaterThan(0);
+    expect(st.arrival).toBeTruthy();
+    expect(st.departure).toBeTruthy();
+    expect(st.photos.length).toBeGreaterThan(0);
+    expect(st.hero).toBeTruthy();
+    expect(st.lastVisit! < d).toBe(true);
+  });
+  it('a past day with no recorded check-out has no "home time to come"', () => {
+    const s = seed();
+    const d = logDay(s);
+    delete s.attendance[`${d}:m1`].checkOut;
+    const st = dayStory(s, s.members.m1, d, END_OF_DAY);
+    expect(st.state).toMatchObject({ kind: 'here' });
+    expect(st.leftAt).toBeNull();
+    expect(st.items.some((i) => i.kind === 'home')).toBe(false);
+    expect(st.items.every((i) => i.state === 'done')).toBe(true);
+    expect(dayStory(s, s.members.m10, T, NOW).items.some((i) => i.kind === 'home' && i.state === 'up')).toBe(true); // today it is still to come
+  });
+  it('today follows the clock: Bambang is in the club, his first session is still to come at 09:58 and running at 11:00', () => {
+    const s = seed();
+    const early = dayStory(s, s.members.m10, T, NOW);
+    expect(early).toMatchObject({ visited: true, arrivedAt: '09:48', leftAt: null, state: { kind: 'here', since: '09:48' } });
+    expect(early.sessions[0].state).toBe('up');
+    expect(early.log).toBeNull(); // no log yet today
+    expect(early.sessions[0].took).toBeNull();
+    expect(early.lunch!.amount).toBeNull();
+    expect(dayStory(s, s.members.m10, T, 11 * 60).sessions[0].state).toBe('now');
+    expect(early.arrival).toMatchObject({ sys: 122, dia: 73 }); // his arrival reading this morning
+    expect(early.departure).toBeNull();
+  });
+  it('a day she did not come: a gentle state with what was on, and none of her pictures, readings or answers', () => {
+    const s = seed();
+    const missed = Array.from({ length: 28 }, (_, i) => `2026-10-${String(i + 1).padStart(2, '0')}`).filter((d) => d < T && [1, 2, 3, 4, 5].includes(dow(d)) && !s.attendance[`${d}:m1`]?.checkIn).pop()!;
+    expect(missed).toBeTruthy();
+    const st = dayStory(s, s.members.m1, missed, END_OF_DAY);
+    expect(st).toMatchObject({ visited: false, arrivedAt: null, leftAt: null, log: null, arrival: null, departure: null, hero: null });
+    expect(st.state.kind).toBe('away');
+    expect(st.sessions.length).toBeGreaterThan(0); // the programme of the day
+    expect(st.sessions.every((x) => x.took === null && x.photos.length === 0)).toBe(true);
+    expect(st.lunch!.dishes.length).toBeGreaterThan(0);
+    expect(st.lunch!.amount).toBeNull();
+    expect(st.photos).toEqual([]);
+    // a closed day has no programme at all
+    const sat = dayStory(s, s.members.m1, '2026-10-17', END_OF_DAY);
+    expect(sat.state).toMatchObject({ kind: 'closed', reason: 'weekend' });
+    expect(sat.items).toEqual([]);
+    expect(sat.sessions).toEqual([]);
+  });
+  it('a log that waits for approval is not shown; an edit shows the last approved values; the same holds on a family’s projection', () => {
+    const s = seed();
+    const d = logDay(s);
+    const row = Object.values(s.dailyLogs).find((l) => l.memberId === 'm1' && l.date === d)!;
+    row.approval = { status: 'pending', by: 'staff:s5', at: `${d}T15:30` };
+    expect(logOn(s, 'm1', d)).toBeNull();
+    expect(dayStory(s, s.members.m1, d, END_OF_DAY).log).toBeNull();
+    expect(dayStory(s, s.members.m1, d, END_OF_DAY).lunch!.amount).toBeNull();
+    expect(dayStory(projectForFamily(s, 'f1'), s.members.m1, d, END_OF_DAY).log).toBeNull();
+    row.approval = { status: 'pending', by: 'staff:s5', at: `${d}T15:30`, prev: { mood: 'calm', lunch: 'half', joined: 'yes', note: 'A quiet, easy day.' } };
+    row.mood = 'agitated'; row.note = 'something staff changed';
+    const st = dayStory(s, s.members.m1, d, END_OF_DAY);
+    expect(st.log).toMatchObject({ mood: 'calm', note: 'A quiet, easy day.' });
+    expect(st.lunch!.amount).toBe('half');
+    expect(monthRecap(s, s.members.m1, d.slice(0, 7)).quotes.map((q) => q.text)).not.toContain('something staff changed');
+  });
+  it('per session: a guest host (name and what they do), joined or sat out, and that session’s approved pictures; fees and phones never reach a family', () => {
+    const s = seed();
+    s.guestSessions = {}; s.guestHosts = {}; // the seed has guests of its own: start clean
+    for (const p of Object.values(s.photos)) if (p.kind === 'activity') delete p.mediaId; // the seed's session pictures are real demo images: here sp1 must be the only real one
+    const d = Object.values(s.dailyLogs).find((l) => l.memberId === 'm1' && /Bengawan Solo/.test(l.note))!.date;
+    const base = { clubId: s.clubId, createdAt: `${d}T08:00`, createdBy: 'staff:s9' as const };
+    s.guestHosts.gh1 = { ...base, id: 'gh1', name: 'Bu Ratna', kind: 'teacher', what: 'Angklung teacher', phone: '+62 811 0000 1111', fee: 750000, bank: { bank: 'BCA', account: '123', holder: 'Ratna' }, note: 'pays by transfer', active: true };
+    const first = dayStory(s, s.members.m1, d, END_OF_DAY).sessions[0];
+    s.guestSessions.gs1 = { ...base, id: 'gs1', hostId: 'gh1', date: d, slot: first.slot, activityId: first.activityId, fee: 750000, status: 'booked', note: 'invoice later', vendorInvoiceId: 'vi1' };
+    Object.values(s.dailyLogs).find((l) => l.memberId === 'm1' && l.date === d)!.sessions = { [first.slot]: 'satOut', '13:30': 'joined' };
+    const act = s.activities[first.activityId];
+    s.photos.sp1 = { id: 'sp1', clubId: s.clubId, createdAt: `${d}T11:00`, createdBy: 'staff:s5', date: d, time: '11:00', kind: 'activity', media: 'photo', activity: act.name, memberIds: [], tone: 1, takenBy: 's5', visibility: 'visible', mediaId: 'img1' };
+    s.photos.sp2 = { ...s.photos.sp1, id: 'sp2', visibility: 'pending' };
+    const st = dayStory(s, s.members.m1, d, END_OF_DAY);
+    expect(st.sessions[0]).toMatchObject({ slot: first.slot, took: 'satOut', guest: { name: 'Bu Ratna', what: 'Angklung teacher', kind: 'teacher' } });
+    expect(st.sessions[0].photos.map((p) => p.id)).toContain('sp1');
+    expect(st.sessions[0].photos.map((p) => p.id)).not.toContain('sp2'); // the pending one is not for families
+    expect(st.sessions[0].photos.every((p) => p.visibility === 'visible' && p.kind === 'activity' && p.activity === act.name)).toBe(true);
+    expect(st.sessions[1]?.took ?? 'joined').toBe('joined');
+    expect(st.sessions[1]?.guest ?? null).toBeNull();
+    expect(bestPhotoOf(s, ['m1'], d)?.id).toBe('sp1'); // the only real image of the day is the cover
+    const proj = projectForFamily(s, 'f1');
+    expect(proj.guestHosts.gh1).toMatchObject({ name: 'Bu Ratna', what: 'Angklung teacher', phone: '', fee: 0 });
+    expect(proj.guestHosts.gh1.bank).toBeUndefined();
+    expect(proj.guestHosts.gh1.note).toBeUndefined();
+    expect(proj.guestSessions.gs1).toMatchObject({ fee: 0 });
+    expect(proj.guestSessions.gs1.note).toBeUndefined();
+    expect(proj.guestSessions.gs1.vendorInvoiceId).toBeUndefined();
+    expect(dayStory(proj, s.members.m1, d, END_OF_DAY).sessions[0].guest?.name).toBe('Bu Ratna');
+    // a cancelled booking is not shown at all
+    s.guestSessions.gs1.status = 'cancelled';
+    expect(dayStory(s, s.members.m1, d, END_OF_DAY).sessions[0].guest).toBeNull();
+    expect(projectForFamily(s, 'f1').guestSessions.gs1).toBeUndefined();
+    expect(projectForFamily(s, 'f1').guestHosts.gh1).toBeUndefined();
+  });
+  it('tookPart: the mark for a session, else the whole day’s answer when nothing was marked', () => {
+    const s = seed();
+    const log = Object.values(s.dailyLogs).find((l) => l.memberId === 'm1')!;
+    expect(tookPart(null, '10:30')).toBeNull();
+    expect(tookPart({ ...log, joined: 'yes', sessions: undefined }, '10:30')).toBe('joined');
+    expect(tookPart({ ...log, joined: 'satOut', sessions: undefined }, '13:30')).toBe('satOut');
+    expect(tookPart({ ...log, joined: 'yes', sessions: { '10:30': 'satOut' } }, '10:30')).toBe('satOut');
+    expect(tookPart({ ...log, joined: 'yes', sessions: { '10:30': 'satOut' } }, '13:30')).toBeNull();
+  });
+  it('bestPhotoOf: a real image over a placeholder, her own photo over a group photo, never a video; null when there is none', () => {
+    const s = seed();
+    const d = logDay(s);
+    const solo = (id: string, o: Partial<ClubState['photos'][string]>): ClubState['photos'][string] => ({ id, clubId: s.clubId, createdAt: `${d}T11:00`, createdBy: 'staff:s5', date: d, time: '11:00', kind: 'solo', media: 'photo', activity: 'Batik painting', memberIds: ['m1'], tone: 0, takenBy: 's5', visibility: 'visible', ...o });
+    expect(familyPhotosOn(s, ['m1'], d).length).toBeGreaterThan(0);
+    // the seed: a session picture is a real demo scene and is the cover; her solo and group photos stay placeholders (no real face on a made-up member)
+    expect(bestPhotoOf(s, ['m1'], d)?.mediaId).toMatch(/^md_demo_/);
+    expect(familyPhotosOn(s, ['m1'], d).filter((p) => p.kind === 'solo' || p.kind === 'group').every((p) => !p.mediaId)).toBe(true);
+    for (const p of Object.values(s.photos)) if (p.kind === 'activity') delete p.mediaId; // from here every seeded photo is a placeholder
+    const placeholder = bestPhotoOf(s, ['m1'], d)!;
+    expect(placeholder.mediaId).toBeUndefined();
+    s.photos.v1 = solo('v1', { media: 'video', mediaId: 'vid', durationSec: 9 });
+    expect(bestPhotoOf(s, ['m1'], d)?.id).not.toBe('v1');
+    s.photos.g1 = solo('g1', { kind: 'group', memberIds: ['m1', 'm46'], mediaId: 'img-g' });
+    expect(bestPhotoOf(s, ['m1'], d)?.id).toBe('g1'); // a real group photo beats placeholders
+    s.photos.s1 = solo('s1', { mediaId: 'img-s' });
+    expect(bestPhotoOf(s, ['m1'], d)?.id).toBe('s1'); // and her own real photo beats that
+    s.photos.s1.visibility = 'pending';
+    expect(bestPhotoOf(s, ['m1'], d)?.id).toBe('g1');
+    expect(bestPhotoOf(s, ['m1'], '2026-10-17')).toBeNull();
+  });
+});
+
+describe('monthRecap and recapMonths', () => {
+  it('counts the month’s visits, sessions joined, photos and appetite from what the family may see, with warm quotes from the team', () => {
+    const s = seed();
+    const lina = s.members.m1;
+    const month = '2026-10';
+    const r = monthRecap(s, lina, month);
+    expect(r.visits).toEqual(visitDays(s, 'm1', T).filter((d) => d.startsWith(month)));
+    expect(r.moods.map((m) => m.date)).toEqual(r.visits);
+    expect(r.moods.every((m) => m.mood === null || ['cheerful', 'calm', 'quiet', 'agitated'].includes(m.mood as string))).toBe(true);
+    expect(r.joined).toBeGreaterThan(0);
+    expect(r.favourites.length).toBeGreaterThan(0);
+    expect(r.favourites.length).toBeLessThanOrEqual(3);
+    expect(r.favourites.map((f) => f.times)).toEqual([...r.favourites.map((f) => f.times)].sort((a, b) => b - a));
+    expect(r.favourites.reduce((n, f) => n + f.times, 0)).toBeLessThanOrEqual(r.joined);
+    expect(r.lunch.of).toBeGreaterThan(0);
+    expect(r.lunch.finished).toBeLessThanOrEqual(r.lunch.of);
+    expect(r.photos).toBeGreaterThan(0);
+    expect(r.best.length).toBeLessThanOrEqual(6);
+    expect(r.best.filter((p) => p.mediaId).length).toBeGreaterThan(0); // the collage uses the real session pictures ...
+    const real = r.best.map((p) => p.mediaId).filter(Boolean);
+    expect(new Set(real).size).toBe(real.length); // ... and never the same picture twice
+    expect(r.quotes.some((q) => /Bengawan Solo/.test(q.text))).toBe(true);
+    expect(r.quotes.length).toBeLessThanOrEqual(3);
+    expect(r.quotes.map((q) => q.date)).toEqual([...r.quotes.map((q) => q.date)].sort());
+    // the family’s projection gives the same recap
+    const p = projectForFamily(s, 'f1');
+    expect(monthRecap(p, p.members.m1, month)).toEqual(r);
+  });
+  it('a quiet or unsettled day’s note is not a memory, and sat-out sessions are not counted', () => {
+    const s = seed();
+    const d = Object.values(s.dailyLogs).find((l) => l.memberId === 'm1' && /Bengawan Solo/.test(l.note))!.date;
+    const log = Object.values(s.dailyLogs).find((l) => l.memberId === 'm1' && l.date === d)!;
+    const before = monthRecap(s, s.members.m1, d.slice(0, 7));
+    log.mood = 'quiet'; log.joined = 'satOut'; log.sessions = undefined; // the whole day's answer applies
+    const after = monthRecap(s, s.members.m1, d.slice(0, 7));
+    expect(after.quotes.some((q) => /Bengawan Solo/.test(q.text))).toBe(false);
+    expect(after.joined).toBeLessThan(before.joined);
+    expect(after.moods.find((m) => m.date === d)?.mood).toBe('quiet');
+  });
+  it('a month with no visits is empty, not an error', () => {
+    const s = seed();
+    const r = monthRecap(s, s.members.m1, '2020-01');
+    expect(r).toMatchObject({ visits: [], moods: [], joined: 0, photos: 0, best: [], favourites: [], lunch: { finished: 0, of: 0 }, quotes: [] });
+  });
+  it('the months on offer: this month back to the membership start, at most six', () => {
+    const s = seed();
+    const lina = s.members.m1; // member since 2025-03-03
+    expect(recapMonths(lina, T)).toEqual(['2026-10', '2026-09', '2026-08', '2026-07', '2026-06', '2026-05']);
+    const fresh = { ...lina, memberships: [{ ...lina.memberships[0], start: '2026-09-01' }] };
+    expect(recapMonths(fresh, T)).toEqual(['2026-10', '2026-09']);
+    const ended = { ...lina, memberships: [{ ...lina.memberships[0], lastDay: '2026-08-14' }] };
+    expect(recapMonths(ended, T)[0]).toBe('2026-08');
+    expect(recapMonths(ended, T)).toHaveLength(6);
   });
 });

@@ -32,7 +32,10 @@ export const prices = tables.prices, members = tables.members, memberNotes = tab
   menuVersions = tables.menuVersions, dayMenus = tables.dayMenus, stockRequests = tables.stockRequests, budgetSections = tables.budgetSections, budgetRequests = tables.budgetRequests,
   budgetAdjustments = tables.budgetAdjustments, receipts = tables.receipts, vendorInvoices = tables.vendorInvoices, invoices = tables.invoices, payments = tables.payments, refunds = tables.refunds,
   pendingCharges = tables.pendingCharges, invoiceRuns = tables.invoiceRuns, directory = tables.directory, staff = tables.staff, hrNotes = tables.hrNotes, staffTime = tables.staffTime,
-  surveys = tables.surveys, surveyResponses = tables.surveyResponses, broadcasts = tables.broadcasts, changeRequests = tables.changeRequests, notifications = tables.notifications, activity = tables.activity;
+  surveys = tables.surveys, surveyResponses = tables.surveyResponses, broadcasts = tables.broadcasts, changeRequests = tables.changeRequests, notifications = tables.notifications, activity = tables.activity,
+  // KC round 7
+  followUps = tables.followUps, scheduleDays = tables.scheduleDays, guestHosts = tables.guestHosts, guestSessions = tables.guestSessions, surveyTemplates = tables.surveyTemplates,
+  taskTemplates = tables.taskTemplates, taskDone = tables.taskDone;
 
 export const clubs = pgTable('clubs', {
   id: text('id').primaryKey(),

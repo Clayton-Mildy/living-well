@@ -5,10 +5,9 @@ import type {
 import { addDays, addMonths, diffDays, live, sortBy, sum, toMin, ym } from '../util';
 import { approvedMembers, contactsOfMember, dayStatus, membershipStatus, primaryContact, isPendingRow } from './core';
 import { flexMonth, lobbyGroups } from './attendance';
-import { invoiceStatus, priceOn, runDone, runLinesFor } from './billing';
+import { feeOf, invoiceStatus, priceOn, runDone, runLinesFor } from './billing';
 import { validReadings } from './health';
 import { liveSurvey, responsesOf, surveyStats } from './surveys';
-import { staffUnreadCount } from './messages';
 import { openEnquiries } from './enquiries';
 import { lunchPhotoIds } from './kitchen';
 import { approvalTotal, pendingItems } from './approvals';
@@ -131,7 +130,7 @@ export function surveyMembers(s: ClubState, today: ISODate): Member[] {
 export const teamCandidates = (s: ClubState): Staff[] =>
   sortBy(live(s.staff).filter((x) => x.active), (x) => (x.rateable ? '0' : '1') + x.name);
 export function recommendPct(s: ClubState, sv: Survey): number | null {
-  const rs = responsesOf(s, sv.id).filter((r) => sv.recipients.includes(r.familyId) && r.recommend !== null);
+  const rs = surveyStats(s, sv).responses.filter((r) => r.recommend !== null);
   return rs.length ? Math.round((rs.filter((r) => r.recommend === true).length / rs.length) * 100) : null;
 }
 export interface StaffRating { avg: number; n: number; surveys: { id: string; title: string; avg: number; n: number }[] }
@@ -223,7 +222,7 @@ export function familyRequests(s: ClubState, today: ISODate, limit = 8): FamilyR
 }
 export interface OverviewStats {
   members: number; staff: number; inClub: number; goneHome: number; visits: number; extraVisits: number; checks: number; flagged: number; overdue: number; enquiries: number; reviews: number;
-  survey: { avg: number; n: number } | null; photos: number; logsSaved: number; logsTotal: number; lunchPhoto: boolean; payments: number; unread: number; stock: number; venues: number; samplePrices: boolean;
+  survey: { avg: number; n: number } | null; photos: number; logsSaved: number; logsTotal: number; lunchPhoto: boolean; payments: number; stock: number; venues: number; samplePrices: boolean;
 }
 /** Every number on the overview tiles, computed from the club's own data (an empty clubhouse gives zeros). */
 export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
@@ -246,11 +245,10 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
     reviews: approvalTotal(s) - pendingItems(s, 'stock').length, // waiting in Approvals (stock has its own tile)
     survey: st && st.overallN ? { avg: st.overall, n: st.overallN } : null,
     photos: live(s.photos).filter((p) => p.date === today && p.visibility === 'visible' && p.kind !== 'arrival').length,
-    logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved').length,
+    logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved' && l.mood !== undefined).length, // round 7: complete once the Mood & notes round is in
     logsTotal: g.inClub.length + g.goneHome.length, // a log for everyone who visited today
     lunchPhoto: lunchPhotoIds(s, today).length > 0,
     payments: live(s.payments).filter((p) => p.receivedOn === today).length,
-    unread: staffUnreadCount(s, 'mgmt'),
     stock: live(s.stockRequests).filter((k) => k.status === 'requested').length,
     venues: live(s.venueBookings).filter((v) => v.status === 'confirmed' && v.date >= today).length,
     samplePrices: !!price && Object.values(price.sample).some(Boolean),
@@ -259,7 +257,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
 
 // ---------- plans and pricing ----------
 /** Prices (and the Flex visits rule) as typed on the Plans screen but not saved yet. */
-export interface PriceDraft { flex: number; gold: number; extra: number; from: ISODate; flexQuota?: number }
+export interface PriceDraft { flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; from: ISODate; flexQuota?: number }
 /** The period the next invoice run bills: this month's if it hasn't run yet, else next month's. */
 export const nextRunPeriod = (s: ClubState, today: ISODate): YM => (runDone(s, ym(today)) ? addMonths(ym(today), 1) : ym(today));
 export interface InvoicePreview { period: YM; issueDate: ISODate; member: Member; payer?: FamilyContact; lines: InvoiceLine[]; total: number; others: { member: Member; total: number }[] }
@@ -271,7 +269,7 @@ export function invoicePreview(s: ClubState, memberId: string, draft: PriceDraft
   const st: ClubState = draft
     ? {
         ...s,
-        prices: { ...s.prices, __draft: { id: '__draft', clubId: s.clubId, createdAt: '', createdBy: 'system', from: draft.from, flex: draft.flex, gold: draft.gold, extra: draft.extra, sample: { flex: false, gold: false, extra: false } } },
+        prices: { ...s.prices, __draft: { id: '__draft', clubId: s.clubId, createdAt: '', createdBy: 'system', from: draft.from, flex: draft.flex, gold: draft.gold, extra: draft.extra, registration: draft.registration ?? feeOf(priceOn(s, draft.from), 'registration'), trial: draft.trial ?? feeOf(priceOn(s, draft.from), 'trial'), leave: draft.leave ?? feeOf(priceOn(s, draft.from), 'leave'), sample: { flex: false, gold: false, extra: false } } },
         club: draft.flexQuota ? { ...s.club, settings: { ...s.club.settings, flexQuota: draft.flexQuota } } : s.club,
       }
     : s;

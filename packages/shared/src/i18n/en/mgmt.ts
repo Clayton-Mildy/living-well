@@ -2,7 +2,7 @@
 export const mgmt = {
   // ----- overview -----
   tileInClubNow: 'In the club now', tileGoneHome: 'Gone home', tileVisits: 'Visits today', tileExtra: 'Extra visits this month', tileReview: 'To review', toWatch: '{n} to watch', allNormal: 'All normal', tileOverdue: 'Overdue invoices', tileSurvey: 'Survey · overall', noAnswers: 'No answers yet', nAnswers: '{n} answers', nAnswersOne: '{n} answer',
-  tilePhotos: 'Photos sent today', tileLogs: 'Daily logs saved', tileLunch: 'Lunch photo', posted: 'Posted', notYet: 'Not yet', tilePayments: 'Payments today', tileUnread: 'Unread messages',
+  tilePhotos: 'Photos sent today', tileLogs: 'Daily logs saved', tileLunch: 'Lunch photo', posted: 'Posted', notYet: 'Not yet', tilePayments: 'Payments today',
   tileStock: 'Stock to approve', tileVenue: 'Venue bookings ahead', sample: 'Sample', priceSet: 'Set', samplePrices: 'Sample prices', clubPrices: 'Club prices',
   emptyClub: '{club} has no members or staff yet.',
   listLive: 'Live today', newestFirst: 'newest first', liveEmptyMeta: 'actions appear here as they happen', liveEmpty: 'Nothing has happened yet today.', whoSystem: 'Automatic', whoDoor: 'Door camera',
@@ -35,13 +35,13 @@ export const mgmt = {
   vnHint: 'The booking blocks the club calendar for that time. On club days, outside events happen after {close}.', vnConfirm: 'Confirm booking',
   vnBooked: 'Booked. {date}, {time} is now blocked on the club calendar.', vnUpcoming: 'Upcoming', vnOnCalendar: 'on the club calendar', vnNone: 'No upcoming bookings.', vnPast: 'Past and cancelled',
   vnPastMeta: 'send the guest a review link afterwards', vnSub: '{date} · {from}–{to} · {n} guests · {room}', vnPrice: 'Price {n}', vnDeposit: 'Deposit {n}', vnInvoice: 'Invoice {ref}',
-  vnConfirmed: 'Confirmed · on calendar', vnDone: 'Event done', vnAsked: 'Review link sent', vnReviewed: 'Reviewed {n}/5', vnCancel: 'Cancel booking', vnCancelTitle: 'Cancel this booking?',
+  vnConfirmed: 'Confirmed · on calendar', vnDone: 'Event done', vnAsked: 'Rating link sent', vnReviewed: 'Rated {n}/5', vnCancel: 'Cancel booking', vnCancelTitle: 'Cancel this booking?',
   vnCancelText: '{org} on {date}. The room and the time become free again.', vnKeep: 'Keep booking', vnCancelled: 'Booking cancelled. The time is free again.', vnCreateInvoice: 'Create invoice',
-  vnInvoiced: 'Invoice {ref} created (demo) and sent to finance.', vnSendReview: 'Send review link', vnAskedToast: 'Review link sent to {name} on WhatsApp (demo).', vnRecordReview: 'Record review',
+  vnInvoiced: 'Invoice {ref} created (demo) and sent to finance.', vnSendReview: 'Send review link', vnAskedToast: 'Review link sent to {name} on WhatsApp (demo).', vnRecordReview: 'Enter rating by hand',
   vnStars: 'Rating', vnStarsOf: '{n} of 5', vnReviewText: 'What they said', vnReviewSaved: 'Review recorded.', vnNoText: 'No comment', vnUpdated: 'Booking updated.',
 
   // ----- surveys -----
-  svEyebrow: 'Families · satisfaction', svLiveSent: 'Live · sent {date}', svRespOf: '{n} of {total} families', svRespOfOne: '{n} of {total} family', svOverall: 'Overall', svAnswers: '{n} answers', svAnswersOne: '{n} answer', svRecommend: 'Would recommend',
+  svEyebrow: 'Satisfaction', svLiveSent: 'Live · sent {date}', svRespOf: '{n} of {total} families', svRespOfOne: '{n} of {total} family', svOverall: 'Overall', svAnswers: '{n} answers', svAnswersOne: '{n} answer', svRecommend: 'Would recommend',
   svOfAnswered: 'of families who answered', svRate: 'Response rate', svRateSub: '{n} of {total} families', svRateSubOne: '{n} of {total} family', svTeamRatings: 'Team ratings · shown in People', svRatings: '{n} ratings', svRatingsOne: '{n} rating',
   svNoRatings: 'no ratings yet', svComments: 'Comments', svDetails: 'See details', svClose: 'Close survey', svClosed: '{title} is closed.', svNew: 'New survey', svEditDraft: 'Edit draft',
   svTitle: 'Title', svTitlePh: 'e.g. November check-in', svQuestions: 'Questions', svq_overall: 'Overall satisfaction, 1 to 5', svq_team: 'Rate the team', svq_recommend: 'Would you recommend us?',
@@ -91,7 +91,7 @@ export const mgmt = {
   'err.venueOuting': 'That day is an outing, so the club cannot take a booking.', 'err.venueClosed': 'The club is closed that day for its own reasons, so it cannot take a booking.',
   'err.venuePast': 'That time has already passed.', 'err.venueTimes': 'The end time must be after the start time.', 'err.venueLate': 'Events must fall between {from} and {to}.',
   'err.venueRoom': 'Choose a room that can be booked for events.', 'err.venueCancelled': 'That booking is cancelled.', 'err.venueDone': 'That event has already happened.',
-  'err.venueNotDone': 'The event has not happened yet.', 'err.venueReviewed': 'This event already has a review.', 'err.venueAsked': 'A review link was already sent.',
+  'err.venueNotDone': 'The event has not happened yet.', 'err.venueReviewed': 'This event already has a review.', 'err.venueAsked': 'A review link was already sent.', 'err.svTplBuiltIn': 'The venue rating template is built in: you can change its questions, but it can’t be deleted.', svTplBuiltIn: 'Built in',
   'err.venuePrice': 'Add a price first.', 'err.venueInvoiced': 'This booking already has an invoice.', 'err.noRecipients': 'There is nobody to send to.', 'err.pastTime': 'Choose a time after now.',
   'err.notScheduled': 'This message was already sent or cancelled.', 'err.tplMsg': 'The text needs {msg} so that your message goes in.', 'err.tplBuiltIn': 'The built-in templates can be edited but not removed.',
   'err.teamRequired': 'Pick at least one team member to rate.', 'err.notDraft': 'Only a draft survey can be changed.', 'err.notLive': 'This survey is not open.',
@@ -110,4 +110,36 @@ export const mgmt = {
   // ----- notifications (updates) -----
   'notif.bc_update': 'Club update: {text}', 'notif.bc_closure': 'The club is closed on {text}.', 'notif.bc_event': 'You are invited: {text}', 'notif.bc_custom': '{text}',
   'notif.broadcastSent': 'Broadcast sent to {n} people.', 'notif.venueInvoice': 'Venue invoice {ref} for {org}: {amount}.', 'notif.pricesChanged': 'Prices changed from {date}. Check the next invoice run.',
+
+  // ----- KC round 6: the brochure's other fees on Plans -----
+  plan_registration: 'Registration', plan_trial: 'Trial', plan_leave: 'Leave (cuti)', perOnce: 'One time', perTrial: 'For 2 days in a row',
+  plRegWhen: 'Charged', plRegWhenV: 'On the first invoice', plRegAgain: 'Again after', plRegAgainV: 'A stop for an unpaid invoice',
+  plTrialDays: 'Length', plTrialDaysV: '2 days in a row', plTrialCollect: 'Collected', plTrialCollectV: 'At the front desk',
+  plLeaveBilled: 'Billed', plLeaveBilledV: 'Instead of the plan', plLeaveAsk: 'Asked', plLeaveAskV: '14 days before the month ends',
+
+  // ----- KC round 7: survey templates, the survey log, venue surveys and the renter's rating link -----
+  svTabLive: 'Live', svTabDrafts: 'Drafts', svTabTemplates: 'Templates', svTabLog: 'Log', svKind_family: 'Families', svKind_venue: 'Venue renters',
+  svLiveNone: 'No survey is live.', svLinksSent: '{n} rating links sent', svLinksSentOne: '{n} rating link sent', svAnsweredOf: '{n} of {total} answered', svOfAnsweredV: 'of renters who answered',
+  svDraftsNone: 'No drafts.', svQuestionsN: '{n} questions', svQuestionsNOne: '{n} question', svSentOn: 'Sent {date}',
+  svTemplates: 'Templates', svTplNone: 'No templates yet.', svTplNew: 'New template', svTplUse: 'Use', svTplEdit: 'Edit template', svTplSave: 'Save template', svTplSaved: 'Template saved.', svTplDeleted: 'Template deleted.',
+  svTplDelete: 'Delete template', svTplDeleteText: 'Delete “{title}”? Surveys already made from it keep their questions.', svTplSaveAs: 'Save as template', svTplName: 'Template name',
+  svPickScratch: 'Start from scratch', svPickTemplates: 'From a template', svPickBlankFamily: 'Blank family survey', svPickFamilySub: 'For families with the app', svPickBlankVenue: 'Blank venue survey', svPickVenueSub: 'For people who rented the venue',
+  svTitlePhV: 'e.g. Venue rating', svGoLive: 'Make it live', svLiveToast: '{title} is live. Renters answer through their rating link.',
+  svReplaces: 'Sending closes “{title}”, the family survey that is live now.', svReplacesV: 'Making it live closes “{title}”, the venue survey that is live now.',
+  svFilterKind: 'Kind', svFilterAll: 'All', svLogTitle: 'Every survey sent', svLogCount: '{n} surveys', svLogCountOne: '{n} survey', svLogMeta: 'Sent {sent} · {answered} answered · {rate}%', svLogNow: 'now', svLogNone: 'No survey has been sent yet.',
+  svDet_summary: 'Summary', svDet_responses: 'Responses', svDet_history: 'History', svReopen: 'Reopen', svReopened: '{title} is live again.', svWaitingFor: 'Waiting for {n}', svWaitingForOne: 'Waiting for {n}',
+  svLog_created: 'Created by {who}', svLog_createdFrom: 'Created from “{tpl}” by {who}', svLog_edited: 'Edited by {who}', svLog_sent: 'Sent to {n} families by {who}', svLog_sentOne: 'Sent to {n} family by {who}', svLog_sentV: 'Made live by {who}',
+  svLog_closed: 'Closed by {who}', svLog_closedReplaced: 'Closed when a newer survey was sent', svLog_reopened: 'Reopened by {who}',
+  // venue: ask for a rating through a link
+  vnAskRating: 'Ask for rating', vnSendAgain: 'Send again', vnCopyLink: 'Copy link', vnOpenLink: 'Open link', vnLinkCopied: 'Rating link copied.', vnLinkManual: 'Copy the link from here: {url}',
+  vnRatingSent: 'Rating link sent to {name} on WhatsApp (demo).', vnWaiting: 'Waiting for {name} to rate.', vnEnterByHand: 'Enter by hand', vnRatingFrom: 'Rated by {name} through the link', vnEnteredByHand: 'Entered by hand', vnViewAnswers: 'View answers', vnLinkClosed: 'That survey is closed. Send the link again to move it to the live one.',
+  // the public rating page (/rate/:token)
+  rtTab: 'Rate your event', rtHello: 'How was your event at CitraPremier?', rtQOverall: 'How was your event overall?', rtQRecommend: 'Would you recommend CitraPremier to others?', rtQComment: 'Anything else you would like to tell us?',
+  rtName: 'Your name', rtSend: 'Send my rating', rtNeedHint: 'Give the stars and answer the questions marked Required to send.', rtNeed: 'Please answer the questions marked Required.', rtError: 'We could not send your rating. Please try again.',
+  rtThanksTitle: 'Thank you, {name}', rtThanksAnon: 'Thank you', rtThanksText: 'Your rating went to the CitraPremier team. We read every answer.', rtAlreadyTitle: 'Already sent', rtAlreadyText: 'You have already sent your rating for this event. Thank you.',
+  rtClosedTitle: 'This rating is closed', rtClosedText: 'The team is no longer collecting ratings for this event. Thank you for choosing CitraPremier.', rtBadTitle: 'This link is not valid',
+  rtBadText: 'Please check the message you received, or ask the CitraPremier team to send the link again.', rtNetTitle: 'We could not load this page', rtNetText: 'Check your connection and try again.', rtFooter: 'CitraPremier · a day club for seniors, Jakarta',
+  'err.venueNeedsOverall': 'A venue survey has to ask for the overall rating.', 'err.notClosed': 'Only a closed survey can be reopened.',
+  'feed.surveyLive': 'Survey live · {title}', 'feed.surveyReopened': 'Survey reopened · {title}', 'feed.venueRated': 'Venue rated · {org} · {stars}/5',
+  'notif.venueRated': '{org} rated their event {stars}/5 through the rating link.',
 };

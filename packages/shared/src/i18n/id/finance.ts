@@ -162,4 +162,13 @@ export const finance: Same<typeof EN> = {
   'toast.vendorRejected': 'Tagihan {supplier} ditolak.', 'toast.vendorPaid': 'Tagihan {supplier} ditandai dibayar.', 'toast.vendorDeleted': 'Tagihan pemasok dihapus.',
   'toast.contactAdded': '{name} ditambahkan ke direktori.', 'toast.contactSaved': '{name} tersimpan.', 'toast.contactDeleted': '{name} dihapus.',
   'toast.nowInternal': '{name} sekarang hanya untuk staf.', 'toast.nowPublic': '{name} sekarang terlihat oleh keluarga.',
+
+  'notif.suspended': '{name} ditangguhkan: invoice {number} ({amount}) belum dibayar. Keanggotaan dihentikan pada {date} jika masih belum dibayar.',
+  'notif.suspendedFamily': 'Keanggotaan ditangguhkan: invoice {number} ({amount}) untuk {name} belum dibayar. Setelah dibayar, {name} bisa datang lagi. Jika masih belum dibayar pada {date}, keanggotaan dihentikan.',
+  'notif.suspendedTold': '{name} ditangguhkan: invoice {number} ({amount}) belum dibayar. Keluarga sudah memberi kabar, jadi keanggotaan tetap ditangguhkan sampai dibayar.',
+  'notif.suspendedToldFamily': 'Keanggotaan ditangguhkan: invoice {number} ({amount}) untuk {name} belum dibayar. {name} bisa datang lagi setelah dibayar.',
+  'notif.stopped': 'Keanggotaan {name} dihentikan: invoice {number} ({amount}) masih belum dibayar. Untuk kembali perlu mendaftar ulang dan membayar biaya pendaftaran.',
+  'notif.stoppedFamily': 'Keanggotaan {name} dihentikan: invoice {number} ({amount}) masih belum dibayar pada tanggal 3. Silakan hubungi klub; untuk kembali perlu mendaftar ulang.',
+  'feed.suspended': '{name} ditangguhkan: invoice {number} belum dibayar', 'feed.stopped': 'Keanggotaan {name} dihentikan: invoice {number} belum dibayar',
+  'bill.holdTitle': 'Ditangguhkan · belum dibayar', 'bill.holdMeta': '{n}', 'bill.holdRow': '{number} · {amount} · dihentikan {date}', 'bill.holdRowTold': '{number} · {amount} · ditangguhkan sampai dibayar', 'bill.holdOne': '1 anggota', 'bill.holdMany': '{n} anggota',
 };

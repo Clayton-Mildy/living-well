@@ -1,7 +1,7 @@
 // Health station actions: readings, corrections, the nurse queue. Seed: Wed 21 Oct 2026, 09:58; Hendra and Tjahjadi waiting, Bambang already checked.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { DEFAULT_LIMITS, buildSeed, execute, getUser, actionItems, unreadUpdates, updatesFor, nurseQueue, monthlyDue, todayReading, live, toMin, translate, type ClubState } from '../index';
+import { DEFAULT_LIMITS, limitsFor, ownLimitKeys, buildSeed, execute, getUser, actionItems, unreadUpdates, updatesFor, nurseQueue, monthlyDue, todayReading, live, toMin, translate, type ClubState } from '../index';
 import { dueNow, stationQueue } from '../rules/healthStation';
 import type { ReadingSaveInput } from './health';
 
@@ -30,25 +30,18 @@ describe('reading.save', () => {
     // staff alerts stay immediate; nothing reaches the family yet
     expect(updatesFor(r0.state, nurse).some((n) => n.kind === 'health.notif.alert')).toBe(true);
     expect(actionItems(r0.state, user('s9'), T, toMin('10:05')).some((i) => i.id === 'alert:' + id)).toBe(true);
-    expect(live(r0.state.messages).filter((m) => m.kind === 'healthAlert' && m.at.startsWith(T))).toHaveLength(0);
     expect(unreadUpdates(r0.state, user('fm2_0')).some((n) => n.kind === 'health.notif.fam.alert')).toBe(false);
     expect(r0.state.readings[id].familyTold).toBeUndefined();
-    // management approves: the nurse's message and the bell update go out, in the nurse's name
+    // management approves: the family is told (recorded in the nurse's name) and the bell update goes out
     const r = execute(r0.state, 'approval.approve', { type: 'readings', ids: [id] }, user('s9'), at('10:30'), 'ap1');
     const row = r.state.readings[id];
     expect(row.approval).toMatchObject({ status: 'approved', decidedBy: 'staff:s9' });
     expect(row).toMatchObject({ shared: true });
     expect(row.familyTold).toEqual({ at: `${T}T10:30`, by: 's8', familyIds: ['fm2_0', 'fm2_1'] });
-    // a nurse-thread message for each contact (Cynthia reads Indonesian), marked unread for the family
-    const sent = live(r.state.messages).filter((m) => m.kind === 'healthAlert' && m.at.startsWith(T));
-    expect(sent).toHaveLength(2);
-    const cynthia = sent.find((m) => r.state.threads[m.threadId].familyId === 'fm2_0')!;
-    expect(r.state.threads[cynthia.threadId]).toMatchObject({ topic: 'nurse', memberId: 'm2', lastSeq: 3, familyReadSeq: 2, staffReadSeq: 3 });
-    expect(cynthia.from).toBe('staff:s8');
-    expect(cynthia.text).toContain('Halo Cynthia');
-    expect(cynthia.text).toContain('164/98 mmHg');
-    expect(cynthia.text).toContain('10:20');
-    expect(cynthia.ref).toEqual({ type: 'reading', id: row.id });
+    // nothing is posted to a Messages inbox (there is none): the club tells both contacts on WhatsApp (simulated), and each bell shows the update
+    expect(Object.keys(r.state.messages)).toHaveLength(0);
+    expect(Object.keys(r.state.threads)).toHaveLength(0);
+    for (const f of ['fm2_0', 'fm2_1']) expect(unreadUpdates(r.state, user(f)).find((n) => n.kind === 'health.notif.fam.alert')).toMatchObject({ link: '/health', severity: 'urgent', memberId: 'm2' });
     expect(unreadUpdates(r.state, user('fm2_0')).some((n) => n.kind === 'health.notif.fam.alert' && n.severity === 'urgent')).toBe(true);
     expect(Object.values(r0.state.activity).some((a) => a.key === 'health.feed.alert' && a.memberId === 'm2' && a.params.value === '164/98')).toBe(true);
   });
@@ -194,18 +187,18 @@ describe('reading.save', () => {
     expect(later.state.attendance[`${T}:m1`]).toBeUndefined();
   });
 
-  it('shared notes notify the family; telling the family without a flagged result still posts a plain message', () => {
+  it('shared notes notify the family; telling the family without a flagged result still tells them (and only notifies)', () => {
     const r0 = save(seed, arrival('m10', { kind: 'recheck', shared: true }), '10:05');
     expect(unreadUpdates(r0.state, user('fm10_0')).some((x) => x.kind.startsWith('health.notif.fam.'))).toBe(false); // waits for approval
     const r = approve(r0.state, [r0.result.readingId as string]);
     const n = unreadUpdates(r.state, user('fm10_0')).find((x) => x.kind.startsWith('health.notif.fam.'));
     expect(n).toMatchObject({ kind: 'health.notif.fam.normal', link: '/health', memberId: 'm10', severity: 'info' });
     const t0 = save(seed, arrival('m2', { tellFamily: true }));
-    expect(live(t0.state.messages).filter((m) => m.at === `${T}T10:05`)).toHaveLength(0);
+    expect(t0.state.readings[t0.result.readingId as string].familyTold).toBeUndefined(); // waits for approval
     const t = approve(t0.state, [t0.result.readingId as string]);
-    const msg = live(t.state.messages).filter((m) => m.at === `${T}T10:05`);
-    expect(msg).toHaveLength(2);
-    expect(msg.every((m) => m.kind === 'healthAlert')).toBe(true); // the chat shows every nurse update with the "Health update" header
+    expect(t.state.readings[t0.result.readingId as string].familyTold?.familyIds).toEqual(['fm2_0', 'fm2_1']);
+    expect(Object.keys(t.state.messages)).toHaveLength(0);
+    expect(unreadUpdates(t.state, user('fm2_1')).find((x) => x.kind.startsWith('health.notif.fam.'))).toMatchObject({ link: '/health' });
     expect(Object.values(t.state.activity).some((a) => a.key === 'health.feed.normal')).toBe(true); // the feed line is written when the nurse saves it
   });
 
@@ -214,7 +207,7 @@ describe('reading.save', () => {
     const r = save(quiet, arrival('m2', { sys: 164, dia: 98, tellFamily: true }));
     expect(r.result.told).toEqual([]);
     expect(r.state.readings[r.result.readingId as string].familyTold).toBeUndefined();
-    expect(live(r.state.messages).filter((m) => m.kind === 'healthAlert' && m.at.startsWith(T))).toHaveLength(0);
+    expect(unreadUpdates(r.state, user('fm2_0')).some((n) => n.kind.startsWith('health.notif.fam.'))).toBe(false);
   });
 
   it('is deterministic: the same mutation id gives the same ids and patches', () => {
@@ -230,7 +223,7 @@ describe('reading.save', () => {
     const row = r.state.readings[r.result.readingId as string];
     expect(row).toMatchObject({ memberId: null, guestId: 'g-e1', kind: 'arrival', status: 'alert', takenBy: 's8' });
     expect(r.state.guestVisits['g-e1'].recheckDueAt).toBe('10:55');
-    expect(live(r.state.messages).filter((m) => m.at.startsWith(T) && m.kind === 'healthAlert')).toHaveLength(0);
+    expect(r.state.readings[r.result.readingId as string].familyTold).toBeUndefined();
     expect(stationQueue(r.state, T, toMin('10:41')).later.map((x) => `${x.kind}:${x.personId}`)).toEqual(['recheck:g-e1']);
     expect(updatesFor(r.state, user('s9')).some((n) => n.kind === 'health.notif.guestAlert')).toBe(true);
     expect(() => execute(inClub, 'reading.save', { guestId: 'g-e1', kind: 'monthly', glucose: 100, ...flags }, nurse, at('10:40'), 'mg2')).toThrow('health.err.guestKind');
@@ -352,11 +345,9 @@ describe('reading.void', () => {
     const r = approve(r0.state, [r0.result.readingId as string]); // told once approved
     const v = execute(r.state, 'reading.void', { readingId: r0.result.readingId as string, reason: 'wrongPerson' }, nurse, at('10:12'), 'v1');
     expect(v.state.attendance[`${T}:m2`].recheckDueAt).toBeUndefined();
-    const fixes = live(v.state.messages).filter((m) => m.at === `${T}T10:12`);
-    expect(fixes).toHaveLength(2);
-    expect(fixes.find((m) => v.state.threads[m.threadId].familyId === 'fm2_0')!.text).toContain('Koreksi');
-    expect(fixes.find((m) => v.state.threads[m.threadId].familyId === 'fm2_1')!.kind).toBe('text');
-    expect(unreadUpdates(v.state, user('fm2_0')).some((n) => n.kind === 'health.notif.fam.void')).toBe(true);
+    // both contacts get the correction in their bell (the club tells them on WhatsApp, simulated); nothing is posted to Messages
+    expect(Object.keys(v.state.messages)).toHaveLength(0);
+    for (const f of ['fm2_0', 'fm2_1']) expect(unreadUpdates(v.state, user(f)).find((n) => n.kind === 'health.notif.fam.void')).toMatchObject({ link: '/health', memberId: 'm2', severity: 'attention' });
   });
 });
 
@@ -442,8 +433,8 @@ describe('the corrected queue', () => {
     expect(q.later).toEqual([]);
     expect(q.done.map((x) => x.memberId)).toEqual(['m10']);
   });
-  it('has real text for the messages in both languages (no raw keys)', () => {
-    for (const k of ['health.msg.normal', 'health.msg.watch', 'health.msg.alert', 'health.msg.void', 'health.notif.fam.alert', 'health.feed.alertTold', 'health.err.range.sys', 'health.err.alreadyTaken']) {
+  it('has real text for the family updates in both languages (no raw keys)', () => {
+    for (const k of ['health.notif.fam.alert', 'health.notif.fam.void', 'health.famTold', 'health.voidFamily', 'health.feed.alertTold', 'health.err.range.sys', 'health.err.alreadyTaken']) {
       expect(translate('en', k)).not.toBe(k);
       expect(translate('id', k)).not.toBe(k);
       expect(translate('id', k)).not.toBe(translate('en', k));
@@ -459,7 +450,7 @@ describe('health.setLimits', () => {
     const sv = save(r.state, arrival('m20', { sys: 128 }));
     expect(sv.result.status).toBe('watch');
     // saved readings are graded again: a 125–139 upper number that was Normal is Watch now
-    const was = live(seed.readings).filter((x) => !x.voided && x.sys != null && x.sys >= 125 && x.sys < 140 && x.dia! < 90 && x.status === 'normal');
+    const was = live(seed.readings).filter((x) => !x.voided && x.sys != null && x.sys >= 125 && x.sys < 140 && x.dia! < 90 && x.status === 'normal' && !seed.members[x.memberId!]?.limits?.sysHigh); // a member with their own upper limits (Hendra) does not follow the club's
     expect(was.length).toBeGreaterThan(0);
     for (const x of was) expect(r.state.readings[x.id].status).not.toBe('normal');
     expect(r.result.regraded).toBeGreaterThan(0);
@@ -469,5 +460,107 @@ describe('health.setLimits', () => {
     expect(() => execute(seed, 'health.setLimits', lim({ spo2Low: { watch: null, alert: null } }), nurse, at('10:00'), 'lim3')).toThrow('health.err.limitOrder');
     expect(() => execute(seed, 'health.setLimits', lim({ tempHigh: { watch: 50, alert: 51 } }), nurse, at('10:00'), 'lim4')).toThrow('health.err.limitRange');
     expect(() => execute(seed, 'health.setLimits', lim({ sysHigh: { watch: 130, alert: 160 } }), getUser(clubs, 's1')!, at('10:00'), 'lim5')).toThrow();
+  });
+});
+
+describe('health.setMemberLimits (a member’s own Watch / Alert limits)', () => {
+  const own = (memberId: string, limits: unknown) => ({ memberId, limits });
+  const sys = { sysHigh: { watch: 120, alert: 150 } };
+  const statusOf = (s: ClubState, id: string) => s.readings[id].status;
+  const set = (s: ClubState, memberId: string, limits: unknown, who = nurse, id = 'ml' + Math.random().toString(36).slice(2, 7)) => execute(s, 'health.setMemberLimits', own(memberId, limits), who, at('10:00'), id);
+
+  it('the effective limits are the club’s with the member’s own keys on top; the seed has one example (Opa Hendra)', () => {
+    const hendra = seed.members.m2;
+    expect(hendra.limits).toEqual({ sysHigh: { watch: 135, alert: 155 } });
+    expect(limitsFor(seed, hendra)).toEqual({ ...DEFAULT_LIMITS, sysHigh: { watch: 135, alert: 155 } });
+    expect(limitsFor(seed, 'm2').sysHigh).toEqual({ watch: 135, alert: 155 });
+    expect(limitsFor(seed, 'm20')).toEqual(DEFAULT_LIMITS); // nobody else has their own
+    expect(limitsFor(seed, null)).toEqual(DEFAULT_LIMITS); // a guest follows the club
+    expect(ownLimitKeys(hendra)).toEqual(['sysHigh']);
+    // the club changes its limits: Hendra keeps his own upper-number limits and follows the club for the rest
+    const club = execute(seed, 'health.setLimits', { limits: { ...DEFAULT_LIMITS, sysHigh: { watch: 125, alert: 165 }, pulseHigh: { watch: 95, alert: 120 } } }, nurse, at('10:00'), 'ml0');
+    expect(limitsFor(club.state, 'm2')).toMatchObject({ sysHigh: { watch: 135, alert: 155 }, pulseHigh: { watch: 95, alert: 120 } });
+  });
+
+  it('a reading that is Normal under the club’s limits is Watch or Alert under the member’s own; others are not affected', () => {
+    const r = set(seed, 'm20', sys);
+    expect(r.state.members.m20.limits).toEqual(sys);
+    expect(seed.members.m20.limits).toBeUndefined();
+    expect(r.state.club.settings.limits).toEqual(seed.club.settings.limits); // the club's limits are left alone
+    const grade = (s: ClubState, id: string, sysV: number) => { const x = save(s, arrival(id, { sys: sysV, dia: 80, kind: 'spot' })); return statusOf(x.state, x.result.readingId as string); };
+    expect(grade(seed, 'm20', 128)).toBe('normal');
+    expect(grade(r.state, 'm20', 128)).toBe('watch');
+    expect(grade(r.state, 'm20', 152)).toBe('alert');
+    expect(grade(r.state, 'm10', 128)).toBe('normal'); // Bambang follows the club
+    expect(save(r.state, arrival('m20', { sys: 128, dia: 80 })).result.status).toBe('watch');
+  });
+
+  it('saving grades that member’s saved readings again, and nobody else’s; the club-wide save keeps respecting the member’s own', () => {
+    const was = live(seed.readings).filter((x) => x.memberId === 'm20' && !x.voided && x.sys != null && x.sys >= 120 && x.sys < 140 && x.dia! < 90 && x.status === 'normal');
+    expect(was.length).toBeGreaterThan(0);
+    const r = set(seed, 'm20', sys);
+    for (const x of was) expect(statusOf(r.state, x.id)).toBe('watch');
+    expect(r.result.regraded).toBeGreaterThanOrEqual(was.length);
+    for (const x of live(seed.readings).filter((x) => x.memberId !== 'm20')) expect(statusOf(r.state, x.id)).toBe(x.status);
+    // the club changes its limits: m20 stays on his own upper-number limit
+    const club = execute(r.state, 'health.setLimits', { limits: { ...DEFAULT_LIMITS, sysHigh: { watch: 170, alert: 190 } } }, nurse, at('10:01'), 'ml1');
+    for (const x of was) expect(statusOf(club.state, x.id)).toBe('watch');
+    // a correction is graded with the member's limits too
+    const target = was[0];
+    const e = execute(r.state, 'reading.edit', { readingId: target.id, values: { sys: 118 }, reason: 'typo' }, nurse, at('10:05'), 'ml2');
+    expect(statusOf(e.state, target.id)).toBe('normal');
+    const e2 = execute(r.state, 'reading.edit', { readingId: target.id, values: { sys: 138 }, reason: 'typo' }, nurse, at('10:05'), 'ml3');
+    expect(statusOf(e2.state, target.id)).toBe('watch');
+  });
+
+  it('a member can have a higher limit than the club, and a Watch-only line', () => {
+    const r = set(seed, 'm2', { sysHigh: { watch: 150, alert: null } });
+    expect(r.state.members.m2.limits).toEqual({ sysHigh: { watch: 150, alert: null } });
+    const sv = save(r.state, arrival('m2', { sys: 164, dia: 98 }));
+    expect(sv.result.status).toBe('watch'); // the club's 160 Alert does not apply to him any more
+  });
+
+  it('"Use club limits" (null) clears them and grades their readings with the club’s limits again', () => {
+    const r = set(seed, 'm20', sys);
+    const back = set(r.state, 'm20', null, nurse, 'ml9');
+    expect(back.state.members.m20.limits).toBeUndefined();
+    expect(back.result.regraded).toBeGreaterThan(0);
+    for (const x of live(seed.readings).filter((x) => x.memberId === 'm20')) expect(statusOf(back.state, x.id)).toBe(x.status);
+    expect(save(back.state, arrival('m20', { sys: 128, dia: 80 })).result.status).toBe('normal');
+    // Hendra's seeded example can be cleared too: his 138 is Watch with his own, Normal with the club's
+    expect(save(seed, arrival('m2', { sys: 138, dia: 80 })).result.status).toBe('watch');
+    expect(save(set(seed, 'm2', null).state, arrival('m2', { sys: 138, dia: 80 })).result.status).toBe('normal');
+    // nothing to clear / nothing changed
+    expect(() => set(back.state, 'm20', null, nurse, 'ml10')).toThrow('err.noChanges');
+    expect(() => set(r.state, 'm20', sys, nurse, 'ml11')).toThrow('err.noChanges');
+    expect(() => set(seed, 'm20', {}, nurse, 'ml14')).toThrow('err.noChanges'); // an empty set is "use the club's" (already so)
+    expect(set(r.state, 'm20', {}, nurse, 'ml15').state.members.m20.limits).toBeUndefined();
+  });
+
+  it('is checked like the club’s limits: out of order, out of range, a line with neither number', () => {
+    expect(() => set(seed, 'm20', { sysHigh: { watch: 160, alert: 140 } })).toThrow('health.err.limitOrder');
+    expect(() => set(seed, 'm20', { spo2Low: { watch: null, alert: null } })).toThrow('health.err.limitOrder');
+    expect(() => set(seed, 'm20', { sysLow: { watch: 80, alert: 90 } })).toThrow('health.err.limitOrder'); // a low limit: Alert is the lower one
+    expect(() => set(seed, 'm20', { tempHigh: { watch: 50, alert: 51 } })).toThrow('health.err.limitRange');
+    expect(() => set(seed, 'nobody', sys)).toThrow('err.notFound');
+    expect(() => execute(seed, 'health.setMemberLimits', { limits: sys }, nurse, at('10:00'), 'ml12')).toThrow('err.invalid');
+  });
+
+  it('the nurse and management may; no one else', () => {
+    expect(set(seed, 'm20', sys, user('s9')).state.members.m20.limits).toEqual(sys);
+    expect(set(seed, 'm20', sys, nurse).state.members.m20.limits).toEqual(sys);
+    for (const id of ['s1', 's5', 's2', 'fm2_0']) expect(() => set(seed, 'm20', sys, user(id))).toThrow();
+  });
+
+  it('is on the activity feed with the member, in both languages', () => {
+    const r = set(seed, 'm20', sys);
+    expect(Object.values(r.state.activity).some((a) => a.key === 'health.feed.memberLimits' && a.memberId === 'm20')).toBe(true);
+    const back = set(r.state, 'm20', null, nurse, 'ml13');
+    expect(Object.values(back.state.activity).some((a) => a.key === 'health.feed.memberLimitsClear' && a.memberId === 'm20')).toBe(true);
+    for (const k of ['health.feed.memberLimits', 'health.feed.memberLimitsClear']) {
+      expect(translate('en', k)).not.toBe(k);
+      expect(translate('id', k)).not.toBe(k);
+      expect(translate('id', k)).not.toBe(translate('en', k));
+    }
   });
 });

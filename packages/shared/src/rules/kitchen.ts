@@ -14,14 +14,20 @@ export interface SessionSlot {
   slot: Slot;
   cell: ScheduleCell | null;
 }
-/** Activity sessions for a date (empty on closed days and outings). */
+/** KC round 7: the one-day change of the programme on a date, if any (`scheduleDays`, id = date). */
+export const scheduleDayOf = (s: ClubState, date: ISODate) => {
+  const d = s.scheduleDays?.[date];
+  return d && !d.deletedAt ? d : undefined;
+};
+/** Activity sessions for a date (empty on closed days and outings). A one-day change (KC round 7) overrides the weekly schedule slot by slot. */
 export function sessionsOn(s: ClubState, date: ISODate): SessionSlot[] {
   const st = dayStatus(s, date);
   if (!st.open || st.outing) return [];
   const v = scheduleVersionFor(s, date);
-  if (!v) return [];
-  const day = v.days[dow(date) as Weekday];
-  return (['10:30', '13:30'] as Slot[]).map((slot) => ({ slot, cell: day?.[slot] ?? null }));
+  const over = scheduleDayOf(s, date);
+  if (!v && !over) return [];
+  const day = v?.days[dow(date) as Weekday];
+  return (['10:30', '13:30'] as Slot[]).map((slot) => ({ slot, cell: over && slot in over.slots ? over.slots[slot] ?? null : day?.[slot] ?? null }));
 }
 /**
  * The weekly menu version in force on a date. A version the kitchen published waits for management's approval; the club's own screens already
@@ -57,6 +63,22 @@ export function lunchPhotosOn(s: ClubState, date: ISODate): Photo[] {
 }
 /** The lunch photos families may see on a date: approved ones only (pending, hidden and removed never reach a family). */
 export const visibleLunchPhotos = (s: ClubState, date: ISODate): Photo[] => lunchPhotosOn(s, date).filter((p) => p.visibility === 'visible');
+
+// ---------- afternoon tea photos (KC round 7: the same gallery and approval as lunch, kept in DayMenu.teaPhotoIds) ----------
+/** Tea photo ids of a date, oldest first. */
+export function teaPhotoIds(s: ClubState, date: ISODate): string[] {
+  const row = s.dayMenus[date];
+  return row && !row.deletedAt ? uniq(row.teaPhotoIds ?? []) : [];
+}
+/** A date's tea photos for the kitchen (waiting for approval, shown to families or hidden; removed ones are gone). Oldest first. */
+export function teaPhotosOn(s: ClubState, date: ISODate): Photo[] {
+  return teaPhotoIds(s, date).map((id) => s.photos[id]).filter((p): p is Photo => !!p && !p.deletedAt && p.kind === 'lunch' && p.visibility !== 'removed');
+}
+/** The tea photos families may see on a date: approved ones only. */
+export const visibleTeaPhotos = (s: ClubState, date: ISODate): Photo[] => teaPhotosOn(s, date).filter((p) => p.visibility === 'visible');
+/** Which meal's gallery a kitchen photo belongs to. */
+export type Meal = 'lunch' | 'tea';
+export const mealPhotosOn = (s: ClubState, date: ISODate, meal: Meal): Photo[] => (meal === 'tea' ? teaPhotosOn(s, date) : lunchPhotosOn(s, date));
 
 // ---------- diners ----------
 export type Diner =

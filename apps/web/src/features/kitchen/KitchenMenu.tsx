@@ -1,12 +1,14 @@
 // Kitchen menu of the day (design ScrKmenu): lunch photo, covers, today's menu, dietary needs, plus the allergy conflicts
 // panel and the weekly plan editor. Closed days and weekends show a closed state instead of crashing.
+// KC round 6: the front desk opens the same page view only: the menu, the allergy warnings and the week, with no buttons that change anything.
 import { useState } from 'react';
-import { Card, EmptyState, Icon, PageHead, Pager, Pin, usePaged, FONT_BODY } from '../../components/ui';
+import { Card, EmptyState, GROUP_HEAD, Group, Icon, PageHead, Pager, Pin, usePaged, FONT_BODY } from '../../components/ui';
 import type { DietRow } from '@cp/shared/rules/kitchenOps';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { PendingMark } from '../../components/PendingMark';
 import { useT, useFmt } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
+import { useMe } from '../../lib/me';
 import { AllergiesOnFile } from './AllergiesOnFile';
 import { ConflictsPanel } from './ConflictsPanel';
 import { DishesCard } from './DishesCard';
@@ -22,6 +24,8 @@ export function KitchenMenu() {
   const { device, isPhone } = useDevice();
   const s = useClub();
   const v = useMenuVals();
+  const { role } = useMe();
+  const readOnly = role !== 'kitchen' && role !== 'mgmt';
   const diet = usePaged(v.diet, 8);
   const editor = usePlanEditor();
   const [publishing, setPublishing] = useState(false);
@@ -33,31 +37,73 @@ export function KitchenMenu() {
 
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(18px, 2.8vw, 32px)', maxWidth: 1100 }}>
+      <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 20 : 'clamp(18px, 2.8vw, 32px)' }}>
         <PageHead eyebrow={fdl(v.today)} title={t('kitchen.menuTitle')} />
 
-        {v.closed ? (
+        {v.closed && isPhone ? (
+          <Group pad={0} gap={0}>
+            <EmptyState icon="event_busy" title={t('common.clubClosed')} sub={t(v.closedReason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(v.nextOpen) })} />
+          </Group>
+        ) : v.closed ? (
           <Card>
             <EmptyState icon="event_busy" title={t('common.clubClosed')} sub={t(v.closedReason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(v.nextOpen) })} />
           </Card>
         ) : v.menu ? (
           <>
-            <ConflictsPanel vals={v} />
+            <ConflictsPanel vals={v} readOnly={readOnly} />
+            {isPhone ? (
+              // round 6, phone: the day's menu is one flat card (its covers line is the small header over it), then the dietary needs as a grouped list
+              <>
+                <section style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+                  <div style={{ padding: '0 16px' }}><div style={GROUP_HEAD} data-testid="covers">{t(v.covers.total === 1 ? 'kitchen.cover1' : 'kitchen.covers', { n: v.covers.total })}</div></div>
+                  <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' }}>
+                    <LunchPhotos date={v.today} readOnly={readOnly} />
+                    <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+                      <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
+                      <div style={{ fontSize: 22, lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', marginTop: 2 }}>{names(v.menu.lunch)}</div>
+                      <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.softLine', { dishes: names(v.menu.soft) })}</div>
+                      <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.teaLine', { dishes: names(v.menu.tea) })}</div>
+                      {readOnly ? null : (<div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                        <OutlineButton onClick={() => setOverride(true)} icon="edit_calendar">{t('kitchen.menu.changeToday')}</OutlineButton>
+                      </div>)}
+                      {v.overridden ? <span style={{ fontSize: FONT_BODY, color: '#7A5510', lineHeight: 1.4 }}>{t('kitchen.menu.overridden')}</span> : null}
+                      <PendingMark row={s.dayMenus[v.today]} />
+                    </div>
+                    <LunchPhotos date={v.today} meal="tea" readOnly={readOnly} />
+                  </div>
+                </section>
+                <Group title={t('kitchen.diet.title')} pad="0 16px" gap={0}>
+                  {diet.rows.map((r, i) => (
+                    <div key={r.key} data-testid="diet-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i === 0 ? 'none' : '1px solid #EFEAE3', minHeight: 56 }}>
+                      <Icon name={r.icon} size={19} color="#75624B" style={{ width: 36, height: 36, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }} />
+                      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                        <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{dietTitle(t, r)}</span>
+                        <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6B6259' }}>{r.names.join(', ')}</span>
+                      </div>
+                      <span style={{ fontSize: 22, fontWeight: 300, fontVariantNumeric: 'tabular-nums', flex: 'none', lineHeight: 1.2 }}>{r.n}</span>
+                    </div>
+                  ))}
+                  {!v.diet.length ? <div style={{ padding: '16px 0', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.diet.none')}</div> : null}
+                  {diet.pages > 1 ? <div style={{ borderTop: '1px solid #EFEAE3' }}><Pager page={diet.page} pages={diet.pages} onPage={diet.setPage} label={t('kitchen.diet.title')} /></div> : null}
+                </Group>
+              </>
+            ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,320px),1fr))', gap: 'clamp(16px, 2.4vw, 28px)', alignItems: 'start' }}>
               <Card shadow>
-                <LunchPhotos date={v.today} />
+                <LunchPhotos date={v.today} readOnly={readOnly} />
                 <div className="cp-card-pad" style={{ padding: '20px 22px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={cardLabel} data-testid="covers">{t(v.covers.total === 1 ? 'kitchen.cover1' : 'kitchen.covers', { n: v.covers.total })}</div>
                   <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
                   <div style={{ fontSize: 'clamp(20px, 2.4vw, 24px)', lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', marginTop: 4 }}>{names(v.menu.lunch)}</div>
                   <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.softLine', { dishes: names(v.menu.soft) })}</div>
                   <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.teaLine', { dishes: names(v.menu.tea) })}</div>
-                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 6 }}>
+                  {readOnly ? null : (<div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 6 }}>
                     <OutlineButton onClick={() => setOverride(true)} icon="edit_calendar">{t('kitchen.menu.changeToday')}</OutlineButton>
-                  </div>
+                  </div>)}
                   {v.overridden ? <span style={{ fontSize: FONT_BODY, color: '#7A5510', lineHeight: 1.4 }}>{t('kitchen.menu.overridden')}</span> : null}
                   <PendingMark row={s.dayMenus[v.today]} />
                 </div>
+                <LunchPhotos date={v.today} meal="tea" readOnly={readOnly} />
               </Card>
 
               <Card>
@@ -78,14 +124,15 @@ export function KitchenMenu() {
                 <div style={{ padding: diet.pages > 1 ? '8px 22px 12px' : 0 }}><Pager page={diet.page} pages={diet.pages} onPage={diet.setPage} label={t('kitchen.diet.title')} /></div>
               </Card>
             </div>
+            )}
           </>
         ) : null}
 
-        <AllergiesOnFile />
-        <WeeklyPlan editor={editor} onPublish={() => setPublishing(true)} isPhone={isPhone} />
-        <DishesCard />
+        <AllergiesOnFile readOnly={readOnly} />
+        <WeeklyPlan editor={editor} onPublish={() => setPublishing(true)} isPhone={isPhone} readOnly={readOnly} />
+        {readOnly ? null : <DishesCard />}
       </div>
-      {isPhone && editor.changes.length ? <Pin icon="publish" label={t('kitchen.plan.publish')} onClick={() => setPublishing(true)} /> : null}
+      {isPhone && !readOnly && editor.changes.length ? <Pin icon="publish" label={t('kitchen.plan.publish')} onClick={() => setPublishing(true)} /> : null}
       <PublishDialog open={publishing} onClose={() => setPublishing(false)} editor={editor} />
       <OverrideSheet open={override} onClose={() => setOverride(false)} initialDate={v.today} />
     </>

@@ -8,7 +8,6 @@ import { members } from './members';
 import { profile } from './profile';
 import { activity } from './activity';
 import { kitchen } from './kitchen';
-import { chat } from './chat';
 import { finance } from './finance';
 import { mgmt } from './mgmt';
 import { enq } from './enq';
@@ -19,6 +18,11 @@ import { reviews } from './reviews';
 import { approvals } from './approvals';
 import { people } from './people';
 import { ds } from './ds';
+import { renewals } from './renewals';
+import { tasks } from './tasks';
+import { guests } from './guests';
+import { insights } from './insights';
+import { report } from './report';
 
 export const id = {
   ...ns('common', common),
@@ -40,7 +44,6 @@ export const id = {
   ...ns('profile', profile),
   ...ns('activity', activity),
   ...ns('kitchen', kitchen),
-  ...ns('chat', chat),
   ...ns('finance', finance),
   ...ns('mgmt', mgmt),
   ...ns('enq', enq),
@@ -51,4 +54,9 @@ export const id = {
   ...ns('approvals', approvals),
   ...ns('people', people),
   ...ns('ds', ds),
+  ...ns('renewals', renewals),
+  ...ns('tasks', tasks),
+  ...ns('guests', guests),
+  ...ns('insights', insights),
+  ...ns('report', report),
 };

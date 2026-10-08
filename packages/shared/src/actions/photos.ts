@@ -4,11 +4,11 @@
 // on approval only if the approver left "notify" on.
 import { z } from 'zod';
 import type { Draft } from 'immer';
-import type { ClubState, Photo } from '../types';
+import type { ClubState, ISODate, Photo } from '../types';
 import { DomainError, defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { isPendingRow } from '../rules/core';
-import { curAct, hashOf, toneOf } from '../rules/activity';
+import { LOG_BACK_DAYS, curAct, hashOf, logDateOk, pictureSessions, toneOf } from '../rules/activity';
 import { announceLunchPhoto } from './kitchen';
 import { uniq } from '../util';
 
@@ -61,7 +61,9 @@ export function notifyNewPhotos(d: Draft<ClubState>, ctx: Ctx, items: { photo: {
 export const notifyPhotoFamilies = (d: Draft<ClubState>, ctx: Ctx, memberIds: string[], p: { id: string; media: 'photo' | 'video' }) =>
   notifyNewPhotos(d, ctx, [{ photo: p, memberIds }]);
 
-const feedFor = (d: Draft<ClubState>, ctx: Ctx, p: Pick<Photo, 'kind' | 'media' | 'memberIds'>) => {
+const feedFor = (d: Draft<ClubState>, ctx: Ctx, p: Pick<Photo, 'kind' | 'media' | 'memberIds' | 'activity'>) => {
+  // an activity picture is of the session, not of people: its feed line names the activity
+  if (p.kind === 'activity') { ctx.feed({ icon: 'photo_camera', key: 'activity.feed.activityPhoto', params: { activity: p.activity || '' } }); return; }
   const kindKey = p.kind === 'group' ? (p.media === 'video' ? 'groupVideo' : 'groupPhoto') : p.media === 'video' ? 'video' : 'photo';
   ctx.feed({ icon: p.media === 'video' ? 'videocam' : 'photo_camera', key: 'activity.feed.' + kindKey, params: { names: namesOf(d, p.memberIds) }, memberId: p.kind === 'solo' ? p.memberIds[0] : undefined });
 };
@@ -79,6 +81,15 @@ const takeSchema = z.object({
   notify: z.boolean().optional(),
 });
 type TakeInput = z.infer<typeof takeSchema>;
+
+/** KC round 7: a picture of a session itself (no member tags), for today or one of the last LOG_BACK_DAYS days. */
+const activitySchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  /** the activity's name (or its catalog id): it must be on that day's plan */
+  activity: z.string().trim().min(1).max(120),
+  mediaId: z.string().regex(/^[A-Za-z0-9_.-]{1,100}$/).optional(),
+});
+type ActivityInput = z.infer<typeof activitySchema>;
 
 const approveSchema = z.object({ photoIds: z.array(z.string().min(1)).min(1).max(200), notify: z.boolean().optional() });
 const rejectSchema = z.object({ photoIds: z.array(z.string().min(1)).min(1).max(200), reason: z.string().trim().min(1).max(200) });
@@ -113,6 +124,30 @@ export const photoActions = [
         if (input.notify !== false) notifyPhotoFamilies(d, ctx, ids, { id: pid, media: input.media });
         feedFor(d, ctx, { kind: input.kind, media: input.media, memberIds: ids });
       }
+      ctx.result.photoId = pid;
+      ctx.result.visibility = visibility;
+    },
+  }),
+
+  // An activity picture: of the session, not of people. Activity teachers wait for management's approval; management's own are visible at once.
+  defineAction<ActivityInput>({
+    name: 'photo.addActivity',
+    can: (u) => hasRole(u, 'activity', 'mgmt'),
+    parse: (raw) => parseWith(activitySchema, raw),
+    run(d, input, ctx) {
+      if (!logDateOk(ctx.today, input.date)) ctx.fail('activity.err.picDate', { n: LOG_BACK_DAYS });
+      const view = d as unknown as ClubState;
+      const given = d.activities[input.activity]?.name ?? input.activity;
+      const session = pictureSessions(view, input.date).find((x) => x.activity?.name === given);
+      if (!session) ctx.fail('activity.err.picSession');
+      const pid = ctx.id('p');
+      const visibility: Photo['visibility'] = isMgmt(ctx.user) ? 'visible' : 'pending';
+      d.photos[pid] = {
+        id: pid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, date: input.date as ISODate, time: ctx.now, kind: 'activity', media: 'photo',
+        activity: given, memberIds: [], tone: toneOf(pid), takenBy: ctx.user.id, visibility,
+        ...(input.mediaId ? { mediaId: input.mediaId } : {}),
+      };
+      if (visibility === 'visible') feedFor(d, ctx, d.photos[pid]);
       ctx.result.photoId = pid;
       ctx.result.visibility = visibility;
     },
@@ -183,7 +218,20 @@ export function rejectPhotoRows(d: Draft<ClubState>, ctx: Ctx, todo: Draft<Photo
   }
   const byTaker = new Map<string, Draft<Photo>[]>();
   for (const p of todo) if (p.takenBy !== ctx.user.id && d.staff[p.takenBy] && !d.staff[p.takenBy].deletedAt) (byTaker.get(p.takenBy) || byTaker.set(p.takenBy, []).get(p.takenBy)!).push(p);
-  for (const [who, ps] of byTaker) {
+  for (const [who, all] of byTaker) {
+    // an activity picture is told per session (the bell links back to that session, where the teacher can upload another); member photos are told as before
+    const sessions = new Map<string, Draft<Photo>[]>();
+    const ps: Draft<Photo>[] = [];
+    for (const p of all) {
+      if (p.kind !== 'activity') { ps.push(p); continue; }
+      const k = `${p.date}|${p.activity || ''}`;
+      (sessions.get(k) || sessions.set(k, []).get(k)!).push(p);
+    }
+    for (const sp of sessions.values()) {
+      const f = sp[0];
+      ctx.notify({ toUsers: [who], kind: sp.length === 1 ? 'activity.notif.activityPhotoRejected' : 'activity.notif.activityPhotosRejected', params: { activity: f.activity || '', n: sp.length, reason }, link: `/camera?tab=activity&date=${f.date}&act=${encodeURIComponent(f.activity || '')}`, ref: { type: 'photo', id: f.id } });
+    }
+    if (!ps.length) continue;
     const ids = uniq(ps.flatMap((p) => p.memberIds));
     ctx.notify({ toUsers: [who], kind: ps.length === 1 ? 'activity.notif.photoRejected' : 'activity.notif.photosRejected', params: { name: namesOf(d, ids), n: ps.length, reason }, link: '/camera?tab=library', memberId: ids[0], ref: { type: 'photo', id: ps[0].id } });
   }

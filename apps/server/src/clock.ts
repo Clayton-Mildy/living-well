@@ -20,12 +20,13 @@ export function clockInfo(): ClockInfo & { now: string; realStart: number; start
   const nowMin = Math.min(23 * 60 + 59, clock.startMin + Math.floor((Date.now() - clock.realStart) / 60000));
   return { today: clock.date, nowMin, now: toHM(nowMin), realStart: clock.realStart, startMin: clock.startMin };
 }
-/** Move the clock to hh:mm (demo only; never backwards unless reset). */
-export async function setClock(hm: string, allowBack = false) {
+/** Move the clock to hh:mm (demo only; never backwards unless reset). With a `date` it moves to that day too (the demo tools and the tests use it to reach the 1st and the 3rd of a month). */
+export async function setClock(hm: string, allowBack = false, date?: string) {
   const [h, m] = hm.split(':').map(Number);
   const target = h * 60 + m;
-  if (!allowBack && target < clockInfo().nowMin) return clockInfo();
-  clock = { ...clock, realStart: Date.now(), startMin: target };
+  const newDay = !!date && /^\d{4}-\d{2}-\d{2}$/.test(date) && date !== clock.date;
+  if (!allowBack && !newDay && target < clockInfo().nowMin) return clockInfo();
+  clock = { ...clock, ...(newDay ? { date } : {}), realStart: Date.now(), startMin: target };
   await setMeta('clock', clock);
   return clockInfo();
 }

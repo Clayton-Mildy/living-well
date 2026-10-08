@@ -82,6 +82,21 @@ describe('staff records', () => {
     // keeping your own phone is fine
     expect(run(s, 'staff.update', { staffId: 's4', phone: '+62 811-2201-3348' }).state.staff.s4.phone).toBe('+6281122013348');
   });
+  it('round 7: management sets, changes and removes a staff photo; only a real media id is accepted', () => {
+    const s = seed();
+    expect(s.staff.s4.photoMediaId).toBeUndefined();
+    const a = run(s, 'staff.update', { staffId: 's4', photoMediaId: 'md_staffphoto0001' });
+    expect(a.state.staff.s4.photoMediaId).toBe('md_staffphoto0001');
+    expect(a.state.staff.s4).toMatchObject({ name: 'Siti Aminah', title: s.staff.s4.title }); // nothing else changed
+    const b = run(a.state, 'staff.update', { staffId: 's4', photoMediaId: 'md_staffphoto0002' });
+    expect(b.state.staff.s4.photoMediaId).toBe('md_staffphoto0002');
+    expect(run(b.state, 'staff.update', { staffId: 's4', title: 'Head of housekeeping' }).state.staff.s4.photoMediaId).toBe('md_staffphoto0002'); // other edits keep it
+    expect(run(b.state, 'staff.update', { staffId: 's4', photoMediaId: null }).state.staff.s4.photoMediaId).toBeUndefined();
+    expect(run(b.state, 'staff.update', { staffId: 's4', photoMediaId: '' }).state.staff.s4.photoMediaId).toBeUndefined();
+    fails(s, 'staff.update', { staffId: 's4', photoMediaId: 'not-a-media-id' }, 'err.invalid');
+    fails(s, 'staff.update', { staffId: 's4', photoMediaId: 42 }, 'err.invalid');
+    for (const uid of ['s1', 's8', 's5']) expect(() => run(s, 'staff.update', { staffId: 's4', photoMediaId: 'md_staffphoto0001' }, uid)).toThrow('err.forbidden');
+  });
   it('contract dates warn before they end', () => {
     expect(contractState({ end: null }, T)).toEqual({ kind: 'permanent' });
     expect(contractState({ end: '2026-10-21' }, T)).toEqual({ kind: 'soon', days: 0 });

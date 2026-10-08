@@ -7,9 +7,10 @@ import { lobbyGroups, guestsOn } from './rules/attendance';
 import { todayReading, validReadings } from './rules/health';
 import { pendingPhotos } from './rules/members';
 import { pendingItems } from './rules/approvals';
+import { renewalMonth, renewalsLeft } from './rules/renewals';
 import { conflictsOn } from './rules/kitchen';
+import { dutyReminders } from './rules/tasks';
 import { invoiceStatus, runDone } from './rules/billing';
-import { staffThreads, staffUnread, familyThreads, familyUnread } from './rules/messages';
 import { liveSurvey, answeredBy } from './rules/surveys';
 import { memberShort, linksOfFamily, isPrimaryFor, isPendingRow } from './rules/core';
 
@@ -56,7 +57,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
     const waiting = pendingPhotos(s);
     if (waiting.length) add({ id: 'photos:pending', kind: 'notif.act.photosReview', params: { n: waiting.length }, link: '/reviews?tab=photos', severity: 'attention', at: waiting[0].createdAt });
     // what the team enters waits for approval before families see it: one item per type, however many entries
-    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu']] as const) {
+    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu'], ['renewals', 'renewals.notif.act.approve']] as const) {
       const items = pendingItems(s, type);
       if (items.length) add({ id: `approvals:${type}`, kind, params: { n: items.length }, link: `/reviews?tab=${type}`, severity: 'attention', at: items[0].at });
     }
@@ -87,23 +88,30 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
   if (isApprover) {
     for (const k of live(s.stockRequests).filter((x) => x.status === 'requested')) {
       if (role === 'kitchen' && k.area !== 'kitchen') continue;
-      add({ id: 'stock:' + k.id, kind: 'notif.act.stockApprove', params: { item: k.item, qty: `${k.qty} ${k.unit}` }, link: '/stock', severity: 'attention', at: k.createdAt });
+      add({ id: 'stock:' + k.id, kind: 'notif.act.stockApprove', params: { item: k.item, qty: `${k.qty} ${k.unit}` }, link: role === 'kitchen' ? '/requests' : '/stock', severity: 'attention', at: k.createdAt }); // F&B approves in Requests (no Stock page)
     }
   }
-  if (role === 'lobby' || role === 'mgmt') {
+  if (role === 'mgmt') {
+    // KC round 7: from the 20th the month-end follow-up of the coming month is due; it clears itself as the members are decided
+    // (the front desk gets this as its own duty reminders below; management keeps the plain items)
+    const month = renewalMonth(today);
+    const left = +today.slice(8) >= 20 ? renewalsLeft(s, today, month) : 0;
+    if (left > 0) add({ id: 'renewals:' + month, kind: 'renewals.notif.act.followUp', params: { n: left, month }, link: '/renewals', severity: 'attention', at: `${ym(today)}-20T08:00` });
     // a trial has no booked time (the guest can come any time the club is open); a visit is due half an hour before its time
     for (const g of guestsOn(s, today).filter((x) => x.status === 'booked' && !x.checkIn && toMin(x.time || s.club.settings.open) - 30 <= nowMin))
       add({ id: 'guest:' + g.id, kind: g.kind === 'trial' ? (g.time ? 'notif.act.guestTrial' : 'notif.act.guestTrialDay') : 'notif.act.guestVisit', params: { name: g.name, time: g.time || '' }, link: linkTo(role, 'arrivals'), severity: 'attention', at: `${today}T${g.time || s.club.settings.open}` });
+  }
+  if (role === 'lobby' || role === 'mgmt') {
     if (nowMin >= toMin(s.club.settings.departureFrom)) {
       for (const r of lobbyGroups(s, today).inClub) {
         if (todayReading(s, r.m.id, today, 'departure')) add({ id: 'ready:' + r.m.id, kind: 'notif.act.readyCheckout', params: { name: memberShort(r.m) }, link: linkTo(role, 'arrivals'), severity: 'attention', at: `${today}T15:30`, memberId: r.m.id });
       }
     }
   }
-  if (role === 'activity' && nowMin >= 15 * 60) {
-    const g = lobbyGroups(s, today);
-    const missing = [...g.inClub, ...g.goneHome].filter((r) => !live(s.dailyLogs).some((l) => l.memberId === r.m.id && l.date === today && l.status === 'saved'));
-    if (missing.length) add({ id: 'logs', kind: 'notif.act.logs', params: { n: missing.length }, link: '/log', severity: 'attention', at: `${today}T15:00` });
+  if (user.kind === 'staff') {
+    // KC round 7: a general duty that is late (a session picture, the lunch photo, a round of the daily log, the checks…) reminds the person on duty, and only them;
+    // it clears itself when the duty is done. Management switches duties off or retimes them in Tasks > Manage.
+    for (const r of dutyReminders(s, user.staff.role, today, nowMin)) add({ id: r.id, kind: r.kind, params: r.params, link: r.link, severity: 'attention', at: r.at });
   }
   if (role === 'kitchen' || role === 'mgmt') {
     for (const c of conflictsOn(s, today).filter((x) => !x.plan)) {
@@ -111,10 +119,6 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
       add({ id: `allergen:${c.diner.id}:${c.dish.id}`, kind: 'notif.act.allergen', params: { name, dish: c.dish.name, allergy: c.allergy }, link: linkTo(role, 'menu'), severity: 'urgent', at: `${today}T08:00`, memberId: c.diner.type === 'member' ? c.diner.id : undefined });
     }
     if (role === 'kitchen') for (const f of live(s.feedback).filter((x) => x.status === 'open')) add({ id: 'fb:' + f.id, kind: 'notif.act.complaint', params: { name: memberShort(s.members[f.memberId]), dish: f.dish }, link: '/feedback', severity: 'attention', at: f.createdAt, memberId: f.memberId });
-  }
-  if (user.kind === 'staff') {
-    const unread = staffThreads(s, role).filter((t) => staffUnread(s, t) > 0);
-    if (unread.length) add({ id: 'unread', kind: 'notif.act.unread', params: { n: unread.length }, link: '/chat', severity: 'attention', at: `${today}T00:00` });
   }
   return sortBy(out, (x) => (x.severity === 'urgent' ? '1' : '0') + x.at, -1);
 }
@@ -129,7 +133,6 @@ export function updatesFor(s: ClubState, user: User): Notification[] {
   );
 }
 export const unreadUpdates = (s: ClubState, user: User) => updatesFor(s, user).filter((n) => !n.readBy.includes(user.id));
-export const familyUnreadMessages = (s: ClubState, familyId: string) => familyThreads(s, familyId).filter((t) => familyUnread(s, t) > 0).length;
 export function bellCount(s: ClubState, user: User, today: ISODate, nowMin: number) {
   return actionItems(s, user, today, nowMin).length + unreadUpdates(s, user).length;
 }

@@ -6,6 +6,7 @@ export const members = {
   planGold: 'Gold', planFlex: 'Flex {n}/{q}', planFlexTip: 'Flex plan: {n} of {q} visits used this month', planGoldTip: 'Gold plan: unlimited visits', newTag: 'new member', paymentOverdue: 'Payment overdue', endingOn: 'ends {d}',
   since: 'Since {d}', renews: 'Renews {d}', endsOn: 'Ends {d}', endedOn: 'Ended {d}', sortLabel: 'Sort members', 'sort.name': 'Name', 'sort.startNew': 'Start date, newest', 'sort.startOld': 'Start date, oldest', 'sort.endSoon': 'End date, soonest',
   lastVisit: 'Last visit {d}', neverVisited: 'No visits yet', pagerLabel: 'Members pages',
+  noContact: 'No family contact on file',
   'st.ended': 'Membership ended {d}', 'st.upcoming': 'Starts {d}', 'st.home': 'Gone home at {t}',
   'st.in': 'In the club since {t}', 'st.off': 'Not in yet today', 'st.usually': 'Usually arrives around {t}', noMatch: 'No members match', noMatchSub: 'Try another name, family name, phone number or filter.',
   // add dialog
@@ -44,4 +45,6 @@ export const members = {
   'err.alreadyEnded': 'This membership has already ended.', 'err.alreadyEnding': 'A last day is already set. Cancel it first to choose another.', 'err.notEnding': 'No last day is set.',
   'err.notEnded': 'This membership is still active.',
   'err.formRequired': 'Attach the signed registration form.',
+  'err.emailInvalid': 'That email address doesn’t look right.', 'err.regPhoneInvalid': 'That phone number doesn’t look right. Use +62… or 08….',
+  'err.postcodeInvalid': 'A postcode has 5 digits.', 'err.rtRwInvalid': 'Check RT/RW, for example 004/002.',
 };

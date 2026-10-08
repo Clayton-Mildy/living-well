@@ -272,3 +272,105 @@ describe('moderating pending photos', () => {
     expect(note(ok.state, 'activity.notif.newPhoto').flatMap((x) => x.toUsers).sort()).toEqual(['fm10_0', 'fm2_0', 'fm2_1']);
   });
 });
+
+describe('photo.addActivity (KC round 7: activity pictures)', () => {
+  const add = (s: ClubState, input: object, uid = 's5', clk = clock) => { const r = run(s, 'photo.addActivity', input, uid, clk); return { s: r.state, id: r.result.photoId as string, r }; };
+  const KERO = { date: '2026-10-21', activity: 'Keroncong sing-along' };
+
+  it('a teacher’s picture of a session has no member tags, is pending, and tells nobody', () => {
+    const { s, id, r } = add(fresh(), { ...KERO, mediaId: 'md_act1' });
+    expect(s.photos[id]).toMatchObject({ kind: 'activity', media: 'photo', memberIds: [], activity: 'Keroncong sing-along', date: '2026-10-21', time: '10:00', takenBy: 's5', visibility: 'pending', mediaId: 'md_act1' });
+    expect(r.result).toMatchObject({ visibility: 'pending' });
+    expect(live(s.notifications).filter((n) => n.createdAt.startsWith('2026-10-21T10:00'))).toHaveLength(0);
+    expect(pendingPhotos(s).map((p) => p.id)).toEqual([id]);
+    expect(famPhotos(s, 'fm10_0')).not.toContain(id);
+  });
+
+  it('management’s own is visible at once, and the feed names the activity; the activity id works as well as its name', () => {
+    const { s, id } = add(fresh(), { date: '2026-10-21', activity: 'act-batik' }, 's9');
+    expect(s.photos[id]).toMatchObject({ kind: 'activity', visibility: 'visible', activity: 'Batik painting', memberIds: [] });
+    expect(Object.values(s.activity).find((a) => a.key === 'activity.feed.activityPhoto')).toMatchObject({ params: { activity: 'Batik painting' } });
+  });
+
+  it('can be for a past open day of the last 7 days, not for the future, an older day, a closed day, or an activity that is not on that day’s plan', () => {
+    const s = fresh();
+    expect(add(s, { date: '2026-10-20', activity: 'Batik painting' }).s.photos).toBeTruthy();
+    const old = add(s, { date: '2026-10-14', activity: 'Keroncong sing-along' });
+    expect(old.s.photos[old.id]).toMatchObject({ date: '2026-10-14', time: '10:00', visibility: 'pending' }); // the day it is for, the time it was added
+    fails(s, 'photo.addActivity', { date: '2026-10-13', activity: 'Batik painting' }, 's5', 'activity.err.picDate'); // 8 days back
+    fails(s, 'photo.addActivity', { date: '2026-10-22', activity: 'Gardening club' }, 's5', 'activity.err.picDate'); // tomorrow
+    fails(s, 'photo.addActivity', { date: '2026-10-17', activity: 'Batik painting' }, 's5', 'activity.err.picSession'); // a Saturday: no sessions
+    fails(s, 'photo.addActivity', { date: '2026-10-20', activity: 'Keroncong sing-along' }, 's5', 'activity.err.picSession'); // that day was Batik and Memory games
+    fails(s, 'photo.addActivity', { date: '2026-10-21', activity: 'Nope' }, 's5', 'activity.err.picSession');
+    fails(s, 'photo.addActivity', { date: 'yesterday', activity: 'Batik painting' }, 's5', 'err.invalid');
+    fails(s, 'photo.addActivity', { date: '2026-10-21', activity: 'Keroncong sing-along', mediaId: '../x' }, 's5', 'err.invalid');
+  });
+
+  it('is permissioned: activity and management only', () => {
+    const s = fresh();
+    for (const uid of ['s5', 's6', 's9']) run(s, 'photo.addActivity', { date: '2026-10-21', activity: 'Batik painting' }, uid);
+    for (const uid of ['s3', 's10', 'f1']) fails(s, 'photo.addActivity', { date: '2026-10-21', activity: 'Batik painting' }, uid, 'err.forbidden');
+  });
+
+  it('approving tells no family (nobody is tagged) but shows it to the families of members who came that day; the feed names the activity', () => {
+    const s0 = fresh();
+    const { s, id } = add(s0, KERO);
+    const ok = run(s, 'photo.approve', { photoIds: [id], notify: true }, 's9');
+    expect(ok.state.photos[id]).toMatchObject({ visibility: 'visible', approved: { by: 's9' } });
+    expect(live(ok.state.notifications).filter((n) => n.kind.startsWith('activity.notif.new'))).toHaveLength(0);
+    expect(Object.values(ok.state.activity).some((a) => a.key === 'activity.feed.activityPhoto' && a.params?.activity === 'Keroncong sing-along')).toBe(true);
+    // Bambang (m10) and Hendra (m2) checked in on the 21st; Oma Lina (m1) and Opa Budi (m46) did not
+    expect(s0.attendance['2026-10-21:m10']?.checkIn).toBeTruthy();
+    expect(s0.attendance['2026-10-21:m1']?.checkIn).toBeUndefined();
+    expect(s0.attendance['2026-10-21:m46']?.checkIn).toBeUndefined();
+    expect(famPhotos(ok.state, 'fm10_0')).toContain(id);
+    expect(famPhotos(ok.state, 'fm2_0')).toContain(id);
+    expect(famPhotos(ok.state, 'f1')).not.toContain(id);
+    expect(famPhotos(ok.state, 'f2')).not.toContain(id);
+    // still waiting: nobody
+    expect(famPhotos(s, 'fm10_0')).not.toContain(id);
+  });
+
+  it('a family sees the picture for a past day only if one of its members came that day; a hidden or rejected one is gone for everyone', () => {
+    const s0 = fresh();
+    const day = '2026-10-20';
+    const att = (m: string) => !!s0.attendance[`${day}:${m}`]?.checkIn;
+    const came = ['m10', 'm2', 'm1', 'm46'].filter(att);
+    expect(came.length).toBeGreaterThan(0); // the seed has members on that day…
+    const a = add(s0, { date: day, activity: 'Batik painting' }, 's9'); // management: visible at once
+    // each family sees it exactly when one of its members was checked in that day
+    const fam = (uid: string, mids: string[]) => famPhotos(a.s, uid).includes(a.id) === mids.some(att);
+    expect([fam('fm10_0', ['m10']), fam('fm2_0', ['m2']), fam('f1', ['m1', 'm46'])]).toEqual([true, true, true]);
+    // hidden from families: nobody
+    const hidden = run(a.s, 'photo.hide', { photoId: a.id, reason: 'privacy' }, 's9').state;
+    for (const uid of ['fm10_0', 'fm2_0', 'f1']) expect(famPhotos(hidden, uid)).not.toContain(a.id);
+  });
+
+  it('a member-tagged photo of the same activity is not an activity picture, and an activity picture appears for the family without member stubs', () => {
+    const g = take(fresh(), { kind: 'group', memberIds: ['m10', 'm2'], media: 'photo', activity: 'Keroncong sing-along' }, 's9');
+    const a = add(g.s, KERO, 's9');
+    const proj = projectForFamily(a.s, 'fm10_0');
+    expect(Object.keys(proj.photos)).toEqual(expect.arrayContaining([g.id, a.id]));
+    expect(proj.photos[a.id].memberIds).toEqual([]);
+  });
+
+  it('rejecting tells the teacher per session with a link back to it, and the picture is gone for the families', () => {
+    const a = add(fresh(), KERO);
+    const b = add(a.s, KERO);
+    let s = b.s;
+    const c = add(s, { date: '2026-10-21', activity: 'Batik painting' }); s = c.s;
+    const one = run(s, 'photo.reject', { photoIds: [c.id], reason: 'Blurry' }, 's9');
+    const n1 = note(one.state, 'activity.notif.activityPhotoRejected');
+    expect(n1).toHaveLength(1);
+    expect(n1[0]).toMatchObject({ toUsers: ['s5'], params: { activity: 'Batik painting', reason: 'Blurry' }, link: '/camera?tab=activity&date=2026-10-21&act=Batik%20painting', ref: { type: 'photo', id: c.id } });
+    expect(one.state.photos[c.id]).toMatchObject({ visibility: 'removed', moderated: { by: 's9', reason: 'Blurry' } });
+    // two of one session in one go: one notice with the count; another session's separately
+    const two = run(s, 'photo.reject', { photoIds: [b.id, c.id], reason: 'other: too dark' }, 's9');
+    const many = note(two.state, 'activity.notif.activityPhotosRejected');
+    expect(many).toHaveLength(0);
+    expect(note(two.state, 'activity.notif.activityPhotoRejected').map((x) => x.params.activity).sort()).toEqual(['Batik painting', 'Keroncong sing-along']);
+    expect(note(two.state, 'activity.notif.photoRejected')).toHaveLength(0); // not the member-photo notice
+    const both = run(s, 'photo.reject', { photoIds: [a.id, b.id], reason: 'Duplicate' }, 's9');
+    expect(note(both.state, 'activity.notif.activityPhotosRejected')[0]).toMatchObject({ params: { activity: 'Keroncong sing-along', n: 2, reason: 'Duplicate' }, link: '/camera?tab=activity&date=2026-10-21&act=Keroncong%20sing-along' });
+  });
+});

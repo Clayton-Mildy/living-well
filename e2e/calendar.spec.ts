@@ -1,5 +1,6 @@
 // Calendar area: the next-3-days list (with "Edit activity"), month view (a date opens its week in the schedule), management events editor (notify toggle),
 // weekly schedule builder by week (versions, date under each day, quick remove, tap-to-place, dated publish with notify), catalog editor (room "Other"),
+// all of that is management only: an activity teacher just views (and the server refuses her schedule changes),
 // family read-only view (no venue clients), Indonesian, no console errors, no horizontal scroll.
 // Isolated env: pnpm e2e:env activity 8805 5205 ; E2E_BASE_URL=http://localhost:5205 pnpm exec playwright test e2e/calendar.spec.ts
 import { test, expect, type Browser, type Page } from '@playwright/test';
@@ -20,6 +21,11 @@ async function snapshot(page: Page, uid: string): Promise<State> {
   const r = await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': uid } });
   expect(r.ok()).toBeTruthy();
   return (await r.json()).state;
+}
+/** Run an action straight on the API as a user (the call the app makes); returns the HTTP status and the error code, if any. */
+async function rawAct(page: Page, uid: string, name: string, input: object, mutationId: string) {
+  const r = await page.request.post(`/api/actions/${name}`, { headers: { 'x-user-id': uid }, data: { mutationId, club: 'citra', input } });
+  return { status: r.status(), code: ((await r.json().catch(() => ({}))) as { code?: string }).code };
 }
 /** No horizontal scroll, measured once the fonts are in (before the icon font loads, icon names briefly render as long words). */
 async function noHScroll(page: Page) {
@@ -223,20 +229,21 @@ test('s9 adds a three-day holiday and an outing with times', async ({ page }) =>
   c.assertClean();
 });
 
-test('list view: the next 3 days only, each activity has an "Edit activity" button; month view a date opens its week', async ({ page }) => {
+test('list view (s9): the next 3 days only, each activity has an "Edit activity" button; month view a date opens its week', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's5', '/calendar');
+  await signIn(page, 's9', '/calendar');
   // today, tomorrow and the day after: three cards, nothing further
   for (const d of ['2026-10-21', '2026-10-22', '2026-10-23']) await expect(block(page, d)).toBeVisible();
   await expect(page.locator('div[data-date]')).toHaveCount(3);
   await expect(block(page, '2026-10-26')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Show more days' })).toHaveCount(0);
   await noHScroll(page);
-  // every activity (two a day) has the button; a teacher edits activities, nothing else here is editable
+  // every activity (two a day) has the button (management only: a teacher just views, see the s5 test below)
   await expect(page.getByRole('button', { name: /Edit activity/ })).toHaveCount(6);
   await expect(block(page, '2026-10-21').getByRole('button', { name: /Edit activity: Keroncong sing-along/ })).toBeVisible();
   // Thursday's first session: this week has started, so next week's schedule opens with that slot's editor
   await block(page, '2026-10-22').getByRole('button', { name: /Edit activity: Gardening club/ }).click();
+  await page.getByRole('button', { name: /Change the weekly plan/ }).click(); // round 7: "Edit activity" first asks: just this day, or the weekly plan
   await expect(page.getByRole('status')).toContainText('the week of Monday 26 October is shown');
   await expect(page.getByText('26 Oct – 30 Oct 2026')).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Activity' })).toBeVisible(); // the slot's editor is open (on a phone, on that day)
@@ -260,17 +267,17 @@ test('list view: the next 3 days only, each activity has an "Edit activity" butt
   c.assertClean();
 });
 
-test('phone: the month is a compact grid of dots; a day lists its items under it; the key is collapsed; Add event is a small button in the header', async ({ page }) => {
+test('phone: the month is a compact grid of dots; a day lists its items under it; the key is collapsed; Add event is a small pill at the bottom right', async ({ page }) => {
   test.skip(!isPhone(page), 'the phone layout');
   const c = watchConsole(page);
   await signIn(page, 's9', '/calendar');
-  // "Add event" is a small button on the tabs row of the header, not a full-width pin over the page
+  // "Add event" is the compact Pin pill at the bottom right (round 6), not a full-width bar over the page
   const add = page.getByRole('button', { name: 'Add event' });
   const addBox = (await add.boundingBox())!;
   const tabBox = (await page.getByRole('tab', { name: 'List' }).boundingBox())!;
   expect(addBox.width).toBeLessThan(180);
   expect(addBox.height).toBeLessThanOrEqual(48);
-  expect(Math.abs(addBox.y - tabBox.y)).toBeLessThan(24);
+  expect(addBox.y).toBeGreaterThan(tabBox.y + tabBox.height); // below the List | Calendar switch, no longer on its row
   // list view: each day is compact; the activity's "Edit activity" is an icon button on the same row
   const row = block(page, '2026-10-21').getByRole('button', { name: /Edit activity: Keroncong sing-along/ });
   await expect(row).toBeVisible();
@@ -350,18 +357,18 @@ test('month view: any month, translated headers, closures, outings and holidays'
   await cellHas(page, '2026-09-23', 'Keroncong');
   await page.getByRole('button', { name: 'This month' }).click();
   await expect(page.getByRole('heading', { name: 'October 2026' })).toBeVisible();
-  // tapping a day shows its detail; tapping again hides it (and the day's week is open in the weekly schedule)
+  // tapping a day shows its detail; tapping again hides it
   await cell(page, '2026-10-21').click();
   await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
-  await expect(page.getByText('19 Oct – 23 Oct 2026')).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0); // a teacher has no schedule to open (management's date opens its week: see the list view test)
   await cell(page, '2026-10-21').click();
   await expect(block(page, '2026-10-21')).toHaveCount(0);
   c.assertClean();
 });
 
-test('builder (s5): this week is read-only; next week: tap an activity then a slot, publish from that Monday: today stays as it is', async ({ page }) => {
+test('builder (s9): this week is read-only; next week: tap an activity then a slot, publish from that Monday: today stays as it is', async ({ page, browser }) => {
   const c = watchConsole(page);
-  await signIn(page, 's5', '/calendar');
+  await signIn(page, 's9', '/calendar');
   await openBuilder(page);
   // the version in force this week; a week that has started cannot be changed
   await expect(page.getByText(/Published Mon 19 Oct, 16:10 by Ega/).first()).toBeVisible();
@@ -397,8 +404,8 @@ test('builder (s5): this week is read-only; next week: tap an activity then a sl
   await expect(page.getByRole('radio', { name: 'Kak Dimas' })).toHaveAttribute('aria-checked', 'true');
   await noHScroll(page);
   // the draft is saved on the server (shared with colleagues) for that week
-  await expect.poll(async () => (await snapshot(page, 's5')).scheduleVersions['sched-draft']?.days?.['3']?.['10:30']?.staffId).toBe('s6');
-  expect((await snapshot(page, 's5')).scheduleVersions['sched-draft'].effectiveFrom).toBe('2026-10-26');
+  await expect.poll(async () => (await snapshot(page, 's9')).scheduleVersions['sched-draft']?.days?.['3']?.['10:30']?.staffId).toBe('s6');
+  expect((await snapshot(page, 's9')).scheduleVersions['sched-draft'].effectiveFrom).toBe('2026-10-26');
   // publish: the date defaults to that week's Monday, and "notify" is on
   await publishPage(page).click();
   const sheet = page.getByRole('dialog', { name: 'Publish the weekly schedule' });
@@ -410,9 +417,9 @@ test('builder (s5): this week is read-only; next week: tap an activity then a sl
   await expect(page.getByRole('status')).toContainText('Schedule published from Monday 26 October');
   await expect(page.getByText('Upcoming')).toBeVisible();
   await expect(page.getByText('From Monday 26 October', { exact: true })).toBeVisible();
-  await expect(page.getByText(/Published Wed 21 Oct, \d\d:\d\d by Dinar · In force from Mon 26 Oct/)).toBeVisible(); // the status follows the version of the week shown
+  await expect(page.getByText(/Published Wed 21 Oct, \d\d:\d\d by Ega · In force from Mon 26 Oct/)).toBeVisible(); // the status follows the version of the week shown
   // stored as a dated version: the old one stays for the past
-  const s = await snapshot(page, 's5');
+  const s = await snapshot(page, 's9');
   const published = Object.values(s.scheduleVersions).filter((v) => v.status === 'published');
   expect(published.map((v) => v.effectiveFrom).sort()).toEqual(['2024-07-01', '2026-10-26']);
   expect(s.scheduleVersions['sched-draft']).toBeUndefined();
@@ -434,9 +441,12 @@ test('builder (s5): this week is read-only; next week: tap an activity then a sl
   await expect(page.getByRole('button', { name: 'Wednesday 10:30: Angklung ensemble' })).toBeVisible();
   // today is unchanged on the calendar and on the teacher's Today
   await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
-  await page.goto('/today');
-  await expect(page.getByText('Next · 10:30')).toBeVisible();
-  await expect(page.getByText('Keroncong sing-along')).toBeVisible();
+  const { page: t, ctx } = await otherUser(browser, 's5', '/today');
+  const tc = watchConsole(t);
+  await expect(t.getByText('Next · 10:30')).toBeVisible();
+  await expect(t.getByTestId('today-plan').getByText('Keroncong sing-along')).toBeVisible(); // in the day's programme (the hero shows it too)
+  tc.assertClean();
+  await ctx.close();
   c.assertClean();
 });
 
@@ -481,7 +491,7 @@ test('builder: the quick ✕ removes a placed activity, publishing with "notify"
 
 test('builder: "Clear this slot" in the editor, and an unpublished draft for another week is flagged; discard it', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's5', '/calendar');
+  await signIn(page, 's9', '/calendar');
   await openBuilder(page);
   await editNextWeek(page);
   await goDay(page, 'Tue');
@@ -500,20 +510,20 @@ test('builder: "Clear this slot" in the editor, and an unpublished draft for ano
   await page.getByRole('button', { name: 'Discard changes' }).click();
   await expect(page.getByText('You have unpublished changes for the week of')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Angklung ensemble', exact: true })).toBeVisible(); // editable again
-  await expect.poll(async () => (await snapshot(page, 's5')).scheduleVersions['sched-draft']?.days?.['2']?.['13:30']?.activityId).toBe('act-memory');
+  await expect.poll(async () => (await snapshot(page, 's9')).scheduleVersions['sched-draft']?.days?.['2']?.['13:30']?.activityId).toBe('act-memory');
   c.assertClean();
 });
 
-test('builder: the draft survives a reload, is shared with colleagues, and can be discarded', async ({ page, browser }) => {
+test('builder: the draft survives a reload, is shared with the manager\'s other device and can be discarded; a teacher has no builder', async ({ page, browser }) => {
   const c = watchConsole(page);
-  await signIn(page, 's5', '/calendar');
+  await signIn(page, 's9', '/calendar');
   await openBuilder(page);
   await editNextWeek(page);
   await goDay(page, 'Tue');
   await page.getByRole('button', { name: 'Reading circle', exact: true }).click();
   await page.getByRole('button', { name: 'Tuesday 13:30: Memory games' }).click();
   await expect(page.getByText('1 change not yet published')).toBeVisible();
-  await expect.poll(async () => (await snapshot(page, 's5')).scheduleVersions['sched-draft']?.days?.['2']?.['13:30']?.activityId).toBe('act-reading');
+  await expect.poll(async () => (await snapshot(page, 's9')).scheduleVersions['sched-draft']?.days?.['2']?.['13:30']?.activityId).toBe('act-reading');
   await page.reload();
   await openBuilder(page);
   // the schedule opens on this week again, and points at the draft
@@ -522,7 +532,15 @@ test('builder: the draft survives a reload, is shared with colleagues, and can b
   await expect(page.getByText('1 change not yet published')).toBeVisible();
   await goDay(page, 'Tue');
   await expect(page.getByRole('button', { name: 'Tuesday 13:30: Reading circle' })).toBeVisible();
-  // a colleague sees the same draft and discards it
+  // a teacher sees the published schedule only: no builder, so no draft banner and nothing to discard
+  const { page: teacher, ctx: teacherCtx } = await otherUser(browser, 's6', '/calendar');
+  const tc = watchConsole(teacher);
+  await expect(teacher.getByRole('heading', { level: 1, name: 'Calendar and schedule' })).toBeVisible();
+  await expect(teacher.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0);
+  await expect(teacher.getByText(/unpublished changes/)).toHaveCount(0);
+  tc.assertClean();
+  await teacherCtx.close();
+  // the same manager on a second device sees the same draft and discards it
   const { page: other, ctx: otherCtx } = await otherUser(browser, 's9', '/calendar');
   const oc = watchConsole(other);
   await openBuilder(other);
@@ -535,27 +553,27 @@ test('builder: the draft survives a reload, is shared with colleagues, and can b
   await expect.poll(async () => (await snapshot(other, 's9')).scheduleVersions['sched-draft']?.days?.['2']?.['13:30']?.activityId).toBe('act-memory');
   oc.assertClean();
   await otherCtx.close();
-  // and it follows to the first teacher without a reload
+  // and it follows to the first device without a reload
   await expect(page.getByText('1 change not yet published')).toHaveCount(0);
   c.assertClean();
 });
 
-test('catalog: teachers add activities with an Indonesian name; only management edits rooms', async ({ page, browser }) => {
+test('catalog (s9): add activities with an Indonesian name and a free-text room, switch one off, add a room that shows in the room chooser', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's5', '/calendar');
+  await signIn(page, 's9', '/calendar');
   await openBuilder(page);
   await editNextWeek(page); // the palette is there for a week that can be changed
   await page.getByRole('button', { name: 'Activities and rooms' }).click();
   const dlg = page.getByRole('dialog'); // the title changes between the list and the forms, so address "the open dialog"
   await expect(dlg).toHaveAttribute('aria-label', 'Activities and rooms');
-  await expect(dlg.getByRole('tab', { name: /Rooms/ })).toHaveCount(0); // rooms are management only
+  await expect(dlg.getByRole('tab', { name: /Rooms/ })).toBeVisible(); // management edits rooms too
   await dlg.getByRole('button', { name: 'Add activity' }).click();
   await dlg.getByLabel('Name', { exact: true }).fill('Tai chi');
   await dlg.getByLabel('Name in Bahasa Indonesia').fill('Tai chi pagi');
   await pickOption(page, 'Room', 'Garden');
   await dlg.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('status')).toContainText('Saved to the catalog.');
-  await goToPage(page, 2, 'Catalog pages'); // the catalog is paged (six a page, A to Z)
+  await goToPage(page, 3, 'Catalog pages'); // the catalog is paged (six a page, A to Z): twelve in the seed + this one is page 3
   await expect(dlg.getByText('Tai chi', { exact: true })).toBeVisible();
   // the room can be "Other": typed as free text, and it joins the catalog
   await dlg.getByRole('button', { name: 'Add activity' }).click();
@@ -566,46 +584,87 @@ test('catalog: teachers add activities with an Indonesian name; only management 
   await dlg.getByLabel('Room name').fill('Skyline deck');
   await dlg.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('status')).toContainText('Saved to the catalog.');
-  await goToPage(page, 2, 'Catalog pages');
+  await goToPage(page, 3, 'Catalog pages');
   await expect(dlg.getByText('Sunset stretching', { exact: true })).toBeVisible();
   await expect(dlg.getByText('Skyline deck')).toBeVisible();
-  const withRoom = await snapshot(page, 's5');
+  const withRoom = await snapshot(page, 's9');
   const roof = Object.values(withRoom.rooms).find((r) => r.name === 'Skyline deck')!;
-  expect(roof).toMatchObject({ venue: false, createdBy: 'staff:s5' });
+  expect(roof).toMatchObject({ venue: false, createdBy: 'staff:s9' });
   expect(Object.values(withRoom.activities).find((a) => a.name === 'Sunset stretching')).toMatchObject({ roomId: roof.id, active: true });
-  const s = await snapshot(page, 's5');
-  expect(Object.values(s.activities).find((a) => a.name === 'Tai chi')).toMatchObject({ nameId: 'Tai chi pagi', roomId: 'room-garden', active: true });
+  expect(Object.values(withRoom.activities).find((a) => a.name === 'Tai chi')).toMatchObject({ nameId: 'Tai chi pagi', roomId: 'room-garden', active: true });
   await dlg.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Tai chi', exact: true })).toBeVisible(); // in the palette now
   // switched off: it leaves the palette but stays in the catalog
   await page.getByRole('button', { name: 'Activities and rooms' }).click();
-  await goToPage(page, 2, 'Catalog pages');
+  await goToPage(page, 3, 'Catalog pages');
   await dlg.getByRole('button', { name: 'Edit Tai chi' }).click();
   await dlg.getByRole('switch', { name: 'Active' }).click();
   await dlg.getByRole('button', { name: 'Save' }).click();
   await expect(dlg.getByText('Inactive')).toBeVisible();
   await dlg.getByRole('button', { name: 'Done' }).click();
   await expect(page.getByRole('button', { name: 'Tai chi', exact: true })).toHaveCount(0);
+  // a room: it shows in the room chooser of a slot
+  await page.getByRole('button', { name: 'Activities and rooms' }).click();
+  await dlg.getByRole('tab', { name: /Rooms/ }).click();
+  await dlg.getByRole('button', { name: 'Add room' }).click();
+  await dlg.getByLabel('Name', { exact: true }).fill('Terrace');
+  await dlg.getByLabel('Name in Bahasa Indonesia').fill('Teras');
+  await dlg.getByRole('button', { name: 'Save' }).click();
+  await expect(page.getByRole('status')).toContainText('Saved to the catalog.');
+  await dlg.getByRole('button', { name: 'Done' }).click();
+  await goDay(page, 'Wed');
+  await page.getByRole('button', { name: 'Wednesday 10:30: Keroncong sing-along' }).click();
+  await expect(page.getByRole('radio', { name: 'Terrace' })).toBeVisible();
   c.assertClean();
-  // management also edits rooms, and they show in the room chooser
-  const { page: m, ctx: mCtx } = await otherUser(browser, 's9', '/calendar');
-  const mc = watchConsole(m);
-  await openBuilder(m);
-  await m.getByRole('button', { name: 'Activities and rooms' }).click();
-  const md = m.getByRole('dialog');
-  await md.getByRole('tab', { name: /Rooms/ }).click();
-  await md.getByRole('button', { name: 'Add room' }).click();
-  await md.getByLabel('Name', { exact: true }).fill('Terrace');
-  await md.getByLabel('Name in Bahasa Indonesia').fill('Teras');
-  await md.getByRole('button', { name: 'Save' }).click();
-  await expect(m.getByRole('status')).toContainText('Saved to the catalog.');
-  await md.getByRole('button', { name: 'Done' }).click();
-  await editNextWeek(m);
-  await goDay(m, 'Wed');
-  await m.getByRole('button', { name: 'Wednesday 10:30: Keroncong sing-along' }).click();
-  await expect(m.getByRole('radio', { name: 'Terrace' })).toBeVisible();
-  mc.assertClean();
-  await mCtx.close();
+});
+
+test('s5 (activity teacher) only views the calendar: list and month, no builder, no editors; the server refuses schedule changes', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's5', '/calendar');
+  await expect(page.getByRole('heading', { level: 1, name: 'Calendar and schedule' })).toBeVisible();
+  // the list: the next 3 days, with the activities, the rooms and the teachers, but nothing to change
+  for (const d of ['2026-10-21', '2026-10-22', '2026-10-23']) await expect(block(page, d)).toBeVisible();
+  await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
+  await expect(block(page, '2026-10-21')).toContainText('Dinar');
+  const none = async () => {
+    await expect(page.getByRole('button', { name: /Edit activity/ })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /^Edit / })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Add event' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Activities and rooms' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0);
+    await expect(publishPage(page)).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Edit next week' })).toHaveCount(0);
+  };
+  await none();
+  await noHScroll(page);
+  // the month: a day opens its detail, but not a week in the schedule, and there is no "add an event" either
+  await page.getByRole('tab', { name: 'Calendar' }).click();
+  await expect(page.getByRole('heading', { name: 'October 2026' })).toBeVisible();
+  await cell(page, '2026-10-21').click();
+  await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
+  await expect(page.getByRole('button', { name: 'Open this week in the schedule' })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Add an event on/ })).toHaveCount(0);
+  await none();
+  await noHScroll(page);
+  // phone: the teacher's bar is Today, Camera, Log, Calendar and More (Members and Requests are under More)
+  if (isPhone(page)) {
+    const bar = page.getByRole('navigation', { name: 'Main' });
+    await expect(bar.locator('[data-nav-key="calendar"]')).toBeVisible();
+    await expect(bar.locator('[data-nav-key="members"]')).toHaveCount(0);
+    await expect(bar.locator('[data-nav-key="requests"]')).toHaveCount(0);
+    await expect(bar.locator('[data-nav-key="more"]')).toBeVisible();
+  }
+  // the server refuses her too (not just the screen): nothing is saved
+  const days = Object.fromEntries(['1', '2', '3', '4', '5'].map((w) => [w, { '10:30': null, '13:30': null }]));
+  for (const [name, input] of [['schedule.saveDraft', { days, effectiveFrom: '2026-10-26' }], ['schedule.publish', { effectiveFrom: '2026-10-26', days }], ['activity.upsert', { name: 'Tai chi', roomId: 'room-garden' }]] as const) {
+    const r = await rawAct(page, 's5', name, input, `e2e-forbid-${name}`);
+    expect(r, name).toEqual({ status: 403, code: 'err.forbidden' });
+  }
+  const s = await snapshot(page, 's9');
+  expect(s.scheduleVersions['sched-draft']).toBeUndefined();
+  expect(Object.values(s.activities).some((a) => a.name === 'Tai chi')).toBe(false);
+  expect(Object.values(s.scheduleVersions).filter((v) => v.status === 'published').map((v) => v.effectiveFrom)).toEqual(['2024-07-01']);
+  c.assertClean();
 });
 
 test('f1 sees the calendar read-only: no editor, no builder, no venue clients, trials or visits; the Today link works', async ({ page }) => {

@@ -1,4 +1,4 @@
-// Small pieces shared by the lobby and messages screens: member avatar, care flags, reading badge, call link, labels.
+// Small pieces shared by the lobby screens: member avatar, care flags, reading badge, call link, labels.
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
 import { BADGE, initials, memberName, type DrugAllergy, type Member, type Reading } from '@cp/shared';
 import { FONT_BODY, FONT_SMALL, Icon, TONES } from '../../components/ui';

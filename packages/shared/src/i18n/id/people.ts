@@ -28,6 +28,7 @@ export const people: Same<typeof EN> = {
   added: '{name} ditambahkan ke tim.', saved: 'Data staf tersimpan.', deactivate: 'Nonaktifkan', deactivateTitle: 'Nonaktifkan {name}?',
   deactivateText: 'Mereka tidak bisa lagi masuk dan dikeluarkan dari daftar aktif. Data dan riwayatnya tetap ada, dan Anda bisa mengaktifkannya kembali kapan saja.', deactivated: '{name} dinonaktifkan.',
   reactivate: 'Aktifkan kembali', reactivated: '{name} aktif kembali.',
+  photoAria: 'Ganti foto {name}', photoSet: 'Foto baru untuk {name}.', photoRemoved: 'Foto {name} dihapus.',
   'err.phoneTaken': 'Nomor ponsel itu sudah dipakai orang lain.', 'err.endRequired': 'Kontrak waktu tertentu perlu tanggal berakhir.', 'err.endBeforeStart': 'Tanggal berakhir harus setelah tanggal mulai.',
   'err.ownRole': 'Anda tidak bisa mengubah peran Anda sendiri.', 'err.selfDeactivate': 'Anda tidak bisa menonaktifkan diri sendiri.', 'err.selfAccess': 'Anda tidak bisa mematikan akses Anda sendiri.',
   'err.inactive': 'Aktifkan orang ini terlebih dahulu.', 'err.phoneRequired': 'Tambahkan nomor ponsel terlebih dahulu.', 'err.futureDate': 'Waktu itu belum terjadi.', 'err.timeOrder': 'Jam pulang harus setelah jam masuk.',

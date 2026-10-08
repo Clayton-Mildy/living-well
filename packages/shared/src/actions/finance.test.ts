@@ -9,6 +9,12 @@ const at = (today: string, nowMin = NOW) => ({ today, nowMin });
 const clubs = buildSeed();
 let n = 0;
 
+/** Every open invoice paid in full (a club where nobody owes anything). */
+const paidUp = (s: ClubState): ClubState => {
+  const payments = { ...s.payments };
+  for (const i of live(s.invoices)) { const left = balanceOf(s, i); if (left > 0) payments[`pp-${i.id}`] = { id: `pp-${i.id}`, clubId: 'citra', createdAt: `${i.issueDate}T12:00`, createdBy: 'system', memberId: i.memberId, method: 'dokuVa', amount: left, receivedOn: i.issueDate, allocations: [{ invoiceId: i.id, amount: left }], xero: 'synced', by: 'system' }; }
+  return { ...s, payments };
+};
 /** A little world: current state, run actions as any demo user, optionally at another date/time. */
 function world(start: ClubState = buildSeed().citra) {
   let s = start;
@@ -51,19 +57,19 @@ describe('invoice run', () => {
     const w = world(withLinaExtra(buildSeed().citra));
     const plan = runPlan(w.s, '2026-11', T);
     expect(plan.early).toBe(true);
-    expect(plan.usualDate).toBe('2026-11-15');
-    expect(plan.dueDate).toBe('2026-11-27');
+    expect(plan.usualDate).toBe('2026-11-21');
+    expect(plan.dueDate).toBe('2026-11-30'); // the 28th is a Saturday
     const lina = plan.issue.find((r) => r.member.id === 'm1')!;
     expect(lina.lines.map((l) => l.kind)).toEqual(['plan', 'extraDay']);
     expect(lina.lines[1]).toMatchObject({ qty: 1, amount: 650000, refMonth: '2026-10', dates: ['2026-10-21'] });
-    expect(lina.total).toBe(5500000 + 650000);
+    expect(lina.total).toBe(2700000 + 650000);
     expect(plan.issue).toHaveLength(5);
 
     const r = issueNov(w);
     expect(r.result).toMatchObject({ count: 5, early: true });
     const inv = w.s.invoices['INV-2611-001'];
-    expect(inv).toMatchObject({ memberId: 'm1', payerFamilyId: 'f1', kind: 'monthly', period: '2026-11', issueDate: T, dueDate: '2026-11-27', releasedEarly: true, xero: 'awaitingPayment', reminders: [], callNotes: [] });
-    expect(invoiceTotal(inv)).toBe(6150000);
+    expect(inv).toMatchObject({ memberId: 'm1', payerFamilyId: 'f1', kind: 'monthly', period: '2026-11', issueDate: T, dueDate: '2026-11-30', releasedEarly: true, xero: 'awaitingPayment', reminders: [], callNotes: [] });
+    expect(invoiceTotal(inv)).toBe(3350000);
     expect(inv.lines.find((l) => l.kind === 'extraDay')?.label).toBe('inv.line.extra');
     expect(w.status('INV-2611-001')).toBe('outstanding');
     expect(Object.keys(w.s.invoices).filter((k) => k.startsWith('INV-2611')).sort()).toEqual(['INV-2611-001', 'INV-2611-002', 'INV-2611-010', 'INV-2611-020', 'INV-2611-046']);
@@ -74,19 +80,19 @@ describe('invoice run', () => {
   it('without that visit nobody has an extra day: Lina is exactly at her 10', () => {
     const plan = runPlan(world().s, '2026-11', T);
     expect(plan.issue.flatMap((r) => r.lines.map((l) => l.kind))).not.toContain('extraDay');
-    expect(plan.total).toBe(5_500_000 + 9_500_000 + 9_500_000 + 5_500_000 + 9_500_000);
+    expect(plan.total).toBe(2_700_000 + 3_950_000 + 3_950_000 + 2_700_000 + 3_950_000);
   });
   it('Flex pays for visits beyond 10 (Bambang’s 11th); Gold never has extra days', () => {
     // a month later, once October is over: Bambang has 8 visits and comes 3 more times; Hendra (Gold) comes every day he likes
     let s = buildSeed().citra;
     for (const d of ['2026-10-22', '2026-10-23', '2026-10-26']) s = withVisit(s, 'm10', d);
     for (const d of ['2026-10-01', '2026-10-06', '2026-10-08', '2026-10-13', '2026-10-15', '2026-10-17', '2026-10-22', '2026-10-23', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29']) s = withVisit(s, 'm2', d);
-    const plan = runPlan(s, '2026-11', '2026-11-16');
+    const plan = runPlan(s, '2026-11', '2026-11-23');
     const bambang = plan.issue.find((r) => r.member.id === 'm10')!;
     expect(bambang.lines.map((l) => l.kind)).toEqual(['plan', 'extraDay']);
     expect(bambang.lines[1]).toMatchObject({ qty: 1, amount: 650_000, dates: ['2026-10-26'] });
     expect(plan.issue.find((r) => r.member.id === 'm2')!.lines.map((l) => l.kind)).toEqual(['plan']);
-    expect(plan.partialMonth).toBeNull(); // run on 16 Nov: October is over
+    expect(plan.partialMonth).toBeNull(); // run on 23 Nov: October is over
   });
   it('bills extra days by date: a run released early does not lose the visits that come after it', () => {
     const w = world(withLinaExtra(buildSeed().citra));
@@ -95,26 +101,26 @@ describe('invoice run', () => {
     expect(w.s.invoices['INV-2611-001'].lines.find((l) => l.kind === 'extraDay')?.dates).toEqual(['2026-10-21']);
     // she comes again on Thu 22 and Fri 23 Oct, after the run went out
     w.set(withVisit(withVisit(w.s, 'm1', '2026-10-22'), 'm1', '2026-10-23'));
-    const lina = runPlan(w.s, '2026-12', '2026-12-15').issue.find((r) => r.member.id === 'm1')!;
+    const lina = runPlan(w.s, '2026-12', '2026-12-21').issue.find((r) => r.member.id === 'm1')!;
     expect(lina.lines.map((l) => l.kind)).toEqual(['plan', 'extraDay']);
     expect(lina.lines[1]).toMatchObject({ qty: 2, amount: 1_300_000, refMonth: '2026-10', dates: ['2026-10-22', '2026-10-23'] }); // 21 Oct is not billed twice
-    w.run('run.issue', { period: '2026-12' }, 's10', at('2026-12-15'));
+    w.run('run.issue', { period: '2026-12' }, 's10', at('2026-12-21'));
     expect(w.s.invoices['INV-2612-001'].lines.find((l) => l.kind === 'extraDay')?.dates).toEqual(['2026-10-22', '2026-10-23']);
     // and then nothing is left over for January
-    expect(runPlan(w.s, '2027-01', '2027-01-15').issue.find((r) => r.member.id === 'm1')!.lines.map((l) => l.kind)).toEqual(['plan']);
+    expect(runPlan(w.s, '2027-01', '2027-01-21').issue.find((r) => r.member.id === 'm1')!.lines.map((l) => l.kind)).toEqual(['plan']);
   });
   it('a voided invoice gives its extra days back to the next run', () => {
     const w = world(withLinaExtra(buildSeed().citra));
     issueNov(w);
-    expect(runPlan(w.s, '2026-12', '2026-12-15').issue.find((r) => r.member.id === 'm1')!.lines.some((l) => l.kind === 'extraDay')).toBe(false);
+    expect(runPlan(w.s, '2026-12', '2026-12-21').issue.find((r) => r.member.id === 'm1')!.lines.some((l) => l.kind === 'extraDay')).toBe(false);
     w.run('invoice.void', { invoiceId: 'INV-2611-001', reason: 'Re-issue' }, 's10');
     w.run('run.issue', { period: '2026-11' }, 's10'); // the supplementary run picks Lina up again, extra day and all
     expect(w.s.invoices['INV-2611-001-2'].lines.map((l) => l.kind)).toEqual(['plan', 'extraDay']);
   });
-  it('flags an early run (the month before is not over); the run on the 15th and the last day are not flagged', () => {
+  it('flags an early run (the month before is not over); the run on the 21st and the last day are not flagged', () => {
     const w = world();
     expect(runPlan(w.s, '2026-11', T).partialMonth).toBe('2026-10');
-    expect(runPlan(w.s, '2026-11', '2026-11-15').partialMonth).toBeNull();
+    expect(runPlan(w.s, '2026-11', '2026-11-21').partialMonth).toBeNull();
     expect(runPlan(w.s, '2026-11', '2026-10-31').partialMonth).toBeNull();
   });
   it('gives every invoice its own virtual account, derived from the member’s', () => {
@@ -164,13 +170,14 @@ describe('invoice run', () => {
     expect(w.s.invoices['INV-2611-020-2']).toMatchObject({ memberId: 'm20', period: '2026-11' });
     expect(live(w.s.invoiceRuns).filter((x) => x.period === '2026-11')).toHaveLength(2);
   });
-  it('rolls the due date: 27 Dec 2026 is a Sunday, so 28 Dec', () => {
+  it('the due date is a week after the 21st; a closed 28th rolls on: 28 Nov 2026 is a Saturday, so Monday 30 Nov', () => {
     const w = world();
     expect(dueDateFor(w.s, '2026-12')).toBe('2026-12-28');
-    const r = w.run('run.issue', { period: '2026-12' }, 's10', at('2026-12-15'));
-    expect(r.state.invoices['INV-2612-001']).toMatchObject({ dueDate: '2026-12-28', issueDate: '2026-12-15' });
+    expect(dueDateFor(w.s, '2026-11')).toBe('2026-11-30');
+    const r = w.run('run.issue', { period: '2026-12' }, 's10', at('2026-12-21'));
+    expect(r.state.invoices['INV-2612-001']).toMatchObject({ dueDate: '2026-12-28', issueDate: '2026-12-21' });
     expect(r.state.invoices['INV-2612-001'].releasedEarly).toBeUndefined();
-    expect(dueDateFor(w.s, '2027-02')).toBe('2027-02-26'); // 27 Feb is a Saturday and 28 Feb a Sunday: back to the Friday
+    expect(dueDateFor(w.s, '2027-02')).toBe('2027-02-26'); // 28 Feb is a Sunday and 1 March is next month: back to the Friday
   });
   it('a late run does not make invoices overdue on arrival', () => {
     const w = world();
@@ -179,16 +186,16 @@ describe('invoice run', () => {
   });
   it('uses account credit once: a second run does not spend it again', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm46', amount: 10_000_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 4_450_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10'); // 3.95M pays the invoice, 0.5M stays as credit
     expect(accountCredit(w.s, 'm46')).toBe(500_000);
     const plan = runPlan(w.s, '2026-11', T);
     const budi = plan.issue.find((r) => r.member.id === 'm46')!;
     expect(budi.lines.map((l) => l.kind)).toEqual(['plan', 'credit']);
-    expect(budi.total).toBe(9_000_000);
+    expect(budi.total).toBe(3_450_000);
     issueNov(w);
     expect(creditApplied(w.s, 'm46')).toBe(500_000);
     expect(availableCredit(w.s, 'm46')).toBe(0);
-    expect(runPlan(w.s, '2026-12', '2026-12-15').issue.find((r) => r.member.id === 'm46')!.lines.map((l) => l.kind)).toEqual(['plan']);
+    expect(runPlan(w.s, '2026-12', '2026-12-21').issue.find((r) => r.member.id === 'm46')!.lines.map((l) => l.kind)).toEqual(['plan']);
     // voiding the invoice gives the credit back
     w.run('invoice.void', { invoiceId: 'INV-2611-046', reason: 'Test' }, 's10');
     expect(availableCredit(w.s, 'm46')).toBe(500_000);
@@ -212,29 +219,29 @@ describe('invoice run', () => {
     expect(live(w.s.invoiceRuns).find((x) => x.period === '2026-11')!.skipped).toEqual([{ memberId: 'm10', reason: 'noPayer' }]);
   });
   it('the scheduled job issues the run on the issue day, once', () => {
-    const w = world();
-    // 14 Nov: not yet
-    expect(w.tick(at('2026-11-14')).patches).toHaveLength(0);
-    // 15 Nov: the job runs it as the system
-    const r = w.tick(at('2026-11-15', 480));
+    const w = world(paidUp(buildSeed().citra)); // nobody owes anything: the daily membership job has nothing to do
+    // 20 Nov: not yet
+    expect(w.tick(at('2026-11-20')).patches).toHaveLength(0);
+    // 21 Nov: the job runs it as the system
+    const r = w.tick(at('2026-11-21', 480));
     expect(r.patches.length).toBeGreaterThan(0);
     const run = live(w.s.invoiceRuns).find((x) => x.period === '2026-11')!;
-    expect(run).toMatchObject({ auto: true, issueDate: '2026-11-15' });
+    expect(run).toMatchObject({ auto: true, issueDate: '2026-11-21' });
     expect(run.early).toBeUndefined();
-    expect(w.s.invoices['INV-2611-001']).toMatchObject({ createdBy: 'system', issueDate: '2026-11-15' });
+    expect(w.s.invoices['INV-2611-001']).toMatchObject({ createdBy: 'system', issueDate: '2026-11-21' });
     // and not again
-    expect(w.tick(at('2026-11-15', 490)).patches).toHaveLength(0);
+    expect(w.tick(at('2026-11-21', 490)).patches).toHaveLength(0);
     expect(updatesFor(w.s, getUser(clubs, 'f1')!).some((x) => x.kind === 'finance.notif.invoiceIssued')).toBe(true);
   });
   it('the job does nothing when the month already has a run (today: October)', () => {
-    const w = world();
+    const w = world(paidUp(buildSeed().citra));
     expect(w.tick(at(T)).patches).toHaveLength(0);
   });
   it('nextRunPeriod: this month once its day has come and no run exists, otherwise next month', () => {
     const w = world();
     expect(nextRunPeriod(w.s, T)).toBe('2026-11'); // October's run exists
-    expect(nextRunPeriod(w.s, '2026-11-16')).toBe('2026-11'); // 15th has passed, no November run
-    expect(nextRunPeriod(w.s, '2026-11-10')).toBe('2026-12');
+    expect(nextRunPeriod(w.s, '2026-11-23')).toBe('2026-11'); // the 21st has passed, no November run
+    expect(nextRunPeriod(w.s, '2026-11-20')).toBe('2026-12');
   });
 });
 
@@ -243,10 +250,10 @@ describe('invoices', () => {
     const w = world();
     w.run('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'Late pick-up', amount: 150_000 }, 's10');
     expect(w.s.invoices['INV-2610-001'].lines.at(-1)).toMatchObject({ kind: 'adjustment', label: 'Late pick-up', amount: 150_000 });
-    expect(invoiceTotal(w.s.invoices['INV-2610-001'])).toBe(5_650_000);
+    expect(invoiceTotal(w.s.invoices['INV-2610-001'])).toBe(2_850_000);
     w.run('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'Goodwill', amount: -250_000 }, 's9');
     expect(w.s.invoices['INV-2610-001'].lines.at(-1)).toMatchObject({ kind: 'credit', amount: -250_000 });
-    expect(invoiceTotal(w.s.invoices['INV-2610-001'])).toBe(5_400_000);
+    expect(invoiceTotal(w.s.invoices['INV-2610-001'])).toBe(2_600_000);
     expect(updatesFor(w.s, getUser(clubs, 'f1')!).filter((x) => x.kind === 'finance.notif.adjusted')).toHaveLength(2);
     w.fail('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'x', amount: 0 }, 's10', 'err.invalid');
     w.fail('invoice.adjust', { invoiceId: 'INV-2610-001', label: '', amount: 5 }, 's10', 'err.invalid');
@@ -256,8 +263,8 @@ describe('invoices', () => {
   it('a credit cannot take the total below what was paid', () => {
     const w = world();
     w.fail('invoice.adjust', { invoiceId: 'INV-2610-002', label: 'Credit', amount: -1_000_000 }, 's10', 'finance.err.creditTooLarge'); // paid in full
-    w.run('payment.record', { memberId: 'm1', amount: 4_000_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10');
-    expect(() => w.run('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'Credit', amount: -1_500_000 }, 's10')).not.toThrow(); // 5.5M − 1.5M = 4M = paid
+    w.run('payment.record', { memberId: 'm1', amount: 1_500_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10');
+    expect(() => w.run('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'Credit', amount: -1_200_000 }, 's10')).not.toThrow(); // 2.7M − 1.2M = 1.5M = paid
     w.fail('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'Credit', amount: -1 }, 's10', 'finance.err.creditTooLarge');
   });
   it('voids only when nothing is paid, with a reason', () => {
@@ -278,8 +285,8 @@ describe('invoices', () => {
     w.fail('payment.record', { memberId: 'm46', amount: 5, method: 'cash', invoiceId: 'INV-2610-046' }, 's10', 'finance.err.invoiceVoid');
     // a fully refunded invoice has nothing paid any more: it can be voided
     const w2 = world();
-    const p = w2.run('payment.record', { memberId: 'm20', amount: 9_500_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10').result.paymentId as string;
-    w2.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-020', amount: 9_500_000, reason: 'Wrong member', creditNote: false }, 's10');
+    const p = w2.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10').result.paymentId as string;
+    w2.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-020', amount: 3_950_000, reason: 'Wrong member', creditNote: false }, 's10');
     expect(() => w2.run('invoice.void', { invoiceId: 'INV-2610-020', reason: 'Wrong member' }, 's10')).not.toThrow();
   });
   it('sends a reminder: records it and tells the payer', () => {
@@ -309,7 +316,8 @@ describe('invoices', () => {
   it('records a call note', () => {
     const w = world();
     w.run('invoice.callNote', { invoiceId: 'INV-2609-020', text: 'Spoke to Yohana, paying on Friday' }, 's10');
-    expect(w.s.invoices['INV-2609-020'].callNotes).toEqual([{ at: `${T}T10:00`, by: 'staff:s10', text: 'Spoke to Yohana, paying on Friday' }]);
+    expect(w.s.invoices['INV-2609-020'].callNotes.at(-1)).toEqual({ at: `${T}T10:00`, by: 'staff:s10', text: 'Spoke to Yohana, paying on Friday' }); // after the family’s word that finance wrote down on 29 Sep
+    expect(w.s.invoices['INV-2609-020'].callNotes).toHaveLength(2);
     w.fail('invoice.callNote', { invoiceId: 'INV-2609-020', text: '   ' }, 's10', 'err.invalid');
   });
 });
@@ -318,34 +326,34 @@ describe('payments', () => {
   it('a partial payment makes the invoice part paid, the rest makes it paid', () => {
     const w = world();
     expect(w.status('INV-2610-046')).toBe('outstanding');
-    const r = w.run('payment.record', { memberId: 'm46', amount: 4_000_000, method: 'bankTransferSgd', ref: 'SG-4471', invoiceId: 'INV-2610-046', foreign: { ccy: 'SGD', amount: 330.5 } }, 's10');
+    const r = w.run('payment.record', { memberId: 'm46', amount: 2_000_000, method: 'bankTransferSgd', ref: 'SG-4471', invoiceId: 'INV-2610-046', foreign: { ccy: 'SGD', amount: 330.5 } }, 's10');
     expect(w.status('INV-2610-046')).toBe('partial');
-    expect(balanceOf(w.s, w.s.invoices['INV-2610-046'])).toBe(5_500_000);
+    expect(balanceOf(w.s, w.s.invoices['INV-2610-046'])).toBe(1_950_000);
     const pay = w.s.payments[r.result.paymentId as string];
-    expect(pay).toMatchObject({ memberId: 'm46', method: 'bankTransferSgd', amount: 4_000_000, ref: 'SG-4471', receivedOn: T, receivedAt: '10:00', xero: 'pending', by: 'staff:s10', foreign: { ccy: 'SGD', amount: 330.5 } });
-    expect(pay.allocations).toEqual([{ invoiceId: 'INV-2610-046', amount: 4_000_000 }]);
+    expect(pay).toMatchObject({ memberId: 'm46', method: 'bankTransferSgd', amount: 2_000_000, ref: 'SG-4471', receivedOn: T, receivedAt: '10:00', xero: 'pending', by: 'staff:s10', foreign: { ccy: 'SGD', amount: 330.5 } });
+    expect(pay.allocations).toEqual([{ invoiceId: 'INV-2610-046', amount: 2_000_000 }]);
     expect(w.s.invoices['INV-2610-046'].xero).toBe('awaitingPayment'); // not settled yet
-    w.run('payment.record', { memberId: 'm46', amount: 5_500_000, method: 'revolut', ref: 'RV-1', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 1_950_000, method: 'revolut', ref: 'RV-1', invoiceId: 'INV-2610-046' }, 's10');
     expect(w.status('INV-2610-046')).toBe('paid');
     expect(w.s.invoices['INV-2610-046'].xero).toBe('pending'); // settled: Xero hears about it
-    expect(paidOn(w.s, 'INV-2610-046')).toBe(9_500_000);
+    expect(paidOn(w.s, 'INV-2610-046')).toBe(3_950_000);
   });
   it('without a chosen invoice the oldest due is paid first; the rest goes on to the next', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm20', amount: 12_000_000, method: 'cash' }, 's10');
+    w.run('payment.record', { memberId: 'm20', amount: 5_000_000, method: 'cash' }, 's10');
     expect(w.status('INV-2609-020')).toBe('paid'); // September, due first
     expect(w.status('INV-2610-020')).toBe('partial');
-    expect(balanceOf(w.s, w.s.invoices['INV-2610-020'])).toBe(7_000_000);
+    expect(balanceOf(w.s, w.s.invoices['INV-2610-020'])).toBe(2_900_000);
   });
   it('a chosen invoice goes first even when an older one is open', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm20', amount: 9_500_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10');
+    w.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10');
     expect(w.status('INV-2610-020')).toBe('paid');
     expect(w.status('INV-2609-020')).toBe('overdue');
   });
   it('an overpayment stays on the account as credit', () => {
     const w = world();
-    const r = w.run('payment.record', { memberId: 'm46', amount: 10_000_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
+    const r = w.run('payment.record', { memberId: 'm46', amount: 4_450_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
     expect(r.result).toMatchObject({ credit: 500_000, allocations: 1 });
     expect(accountCredit(w.s, 'm46')).toBe(500_000);
     expect(w.status('INV-2610-046')).toBe('paid');
@@ -363,9 +371,9 @@ describe('payments', () => {
   });
   it('tells management, the payer and the feed', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm46', amount: 9_500_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
     const mgmt = updatesFor(w.s, getUser(clubs, 's9')!).find((x) => x.kind === 'notif.paymentReceived' && x.params.invoice === 'INV-2610-046');
-    expect(mgmt?.params).toMatchObject({ name: 'Maria Wijaya', amount: 'Rp 9.500.000' });
+    expect(mgmt?.params).toMatchObject({ name: 'Maria Wijaya', amount: 'Rp 3.950.000' });
     expect(updatesFor(w.s, getUser(clubs, 'f1')!).some((x) => x.kind === 'finance.notif.paid')).toBe(true);
     expect(Object.values(w.s.activity).some((a) => a.key === 'finance.feed.pay_cash' && a.memberId === 'm46')).toBe(true);
   });
@@ -375,7 +383,7 @@ describe('payment.simulateVa (DOKU, demo)', () => {
   it('the primary contact pays for both parents: one payment per member', () => {
     const w = world();
     const r = w.run('payment.simulateVa', { invoiceIds: ['INV-2610-001', 'INV-2610-046'], bank: 'Mandiri' }, 'f1');
-    expect(r.result.total).toBe(5_500_000 + 9_500_000);
+    expect(r.result.total).toBe(2_700_000 + 3_950_000);
     const pays = (r.result.paymentIds as string[]).map((id) => w.s.payments[id]);
     expect(pays).toHaveLength(2);
     expect(pays.map((p) => p.memberId).sort()).toEqual(['m1', 'm46']);
@@ -417,7 +425,7 @@ describe('payment.simulateVa (DOKU, demo)', () => {
     const w = world();
     w.run('payment.record', { memberId: 'm1', amount: 1_000_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10');
     const r = w.run('payment.simulateVa', { invoiceIds: ['INV-2610-001'], bank: 'BNI' }, 'f1');
-    expect(r.result.total).toBe(4_500_000);
+    expect(r.result.total).toBe(1_700_000);
     expect(w.status('INV-2610-001')).toBe('paid');
   });
 });
@@ -425,32 +433,32 @@ describe('payment.simulateVa (DOKU, demo)', () => {
 describe('refunds', () => {
   const paid = () => {
     const w = world();
-    const p = w.run('payment.record', { memberId: 'm1', amount: 5_500_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10').result.paymentId as string;
+    const p = w.run('payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10').result.paymentId as string;
     return { w, p };
   };
   it('a partial refund without a credit note re-opens the invoice', () => {
     const { w, p } = paid();
     w.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-001', amount: 1_000_000, reason: 'Absent all month', creditNote: false }, 's10');
-    expect(paidOn(w.s, 'INV-2610-001')).toBe(4_500_000);
-    expect(invoiceTotal(w.s.invoices['INV-2610-001'])).toBe(5_500_000);
+    expect(paidOn(w.s, 'INV-2610-001')).toBe(1_700_000);
+    expect(invoiceTotal(w.s.invoices['INV-2610-001'])).toBe(2_700_000);
     expect(w.status('INV-2610-001')).toBe('partial');
-    expect(refundableOn(w.s, p, 'INV-2610-001')).toBe(4_500_000);
+    expect(refundableOn(w.s, p, 'INV-2610-001')).toBe(1_700_000);
     const rf = live(w.s.refunds)[0];
     expect(rf).toMatchObject({ paymentId: p, invoiceId: 'INV-2610-001', amount: 1_000_000, creditNote: false, reason: 'Absent all month', xero: 'pending' });
   });
   it('with a credit note the invoice stays settled and shrinks by the same amount', () => {
     const { w, p } = paid();
     w.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-001', amount: 1_000_000, reason: 'Absent all month', creditNote: true }, 's9');
-    expect(invoiceTotal(w.s.invoices['INV-2610-001'])).toBe(4_500_000);
-    expect(paidOn(w.s, 'INV-2610-001')).toBe(4_500_000);
+    expect(invoiceTotal(w.s.invoices['INV-2610-001'])).toBe(1_700_000);
+    expect(paidOn(w.s, 'INV-2610-001')).toBe(1_700_000);
     expect(w.status('INV-2610-001')).toBe('paid');
     expect(w.s.invoices['INV-2610-001'].lines.at(-1)).toMatchObject({ kind: 'credit', label: 'finance.line.creditNote', amount: -1_000_000 });
     expect(w.s.invoices['INV-2610-001'].xero).toBe('pending');
   });
   it('cannot exceed what was paid, counting earlier refunds', () => {
     const { w, p } = paid();
-    w.fail('refund.record', { paymentId: p, invoiceId: 'INV-2610-001', amount: 5_500_001, reason: 'x', creditNote: false }, 's10', 'finance.err.refundTooMuch');
-    w.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-001', amount: 5_000_000, reason: 'x', creditNote: false }, 's10');
+    w.fail('refund.record', { paymentId: p, invoiceId: 'INV-2610-001', amount: 2_700_001, reason: 'x', creditNote: false }, 's10', 'finance.err.refundTooMuch');
+    w.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-001', amount: 2_200_000, reason: 'x', creditNote: false }, 's10');
     w.fail('refund.record', { paymentId: p, invoiceId: 'INV-2610-001', amount: 600_000, reason: 'x', creditNote: false }, 's10', 'finance.err.refundTooMuch');
     w.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-001', amount: 500_000, reason: 'rest', creditNote: false }, 's10'); // the full amount in the end
     expect(paidOn(w.s, 'INV-2610-001')).toBe(0);
@@ -469,15 +477,15 @@ describe('refunds', () => {
     const r = w.run('payment.simulateVa', { invoiceIds: ['INV-2610-001', 'INV-2610-046'], bank: 'BCA' }, 'f1');
     const [p1, p2] = r.result.paymentIds as string[];
     let b = paymentsBoard(w.s, T);
-    expect(b.today).toEqual({ n: 2, sum: 15_000_000 });
-    expect(b.month).toEqual({ n: 4, sum: 30_000_000 }); // + Hendra's and Bambang's October payments in the seed
+    expect(b.today).toEqual({ n: 4, sum: 13_300_000 }); // + Hendra's and Bambang's October payments, made this morning
+    expect(b.month).toEqual({ n: 4, sum: 13_300_000 });
     expect(b.xeroPending).toBe(2);
     w.run('refund.record', { paymentId: p1, invoiceId: w.s.payments[p1].allocations[0].invoiceId, amount: w.s.payments[p1].amount, reason: 'Refund in full', creditNote: false }, 's10');
     b = paymentsBoard(w.s, T);
-    expect(b.today.n).toBe(1); // the fully refunded payment no longer counts
-    expect(b.today.sum).toBe(w.s.payments[p2].amount);
-    expect(b.month.sum).toBe(30_000_000 - 5_500_000);
-    expect(b.refunds).toEqual({ n: 1, sum: 5_500_000 });
+    expect(b.today.n).toBe(3); // the fully refunded payment no longer counts
+    expect(b.today.sum).toBe(w.s.payments[p2].amount + 6_650_000);
+    expect(b.month.sum).toBe(13_300_000 - w.s.payments[p1].amount);
+    expect(b.refunds).toEqual({ n: 1, sum: w.s.payments[p1].amount });
     expect(b.xeroPending).toBe(3);
   });
 });
@@ -485,7 +493,7 @@ describe('refunds', () => {
 describe('Xero (simulated)', () => {
   it('a payment waits in "pending" and the job syncs it about two demo minutes later', () => {
     const w = world();
-    const r = w.run('payment.record', { memberId: 'm46', amount: 9_500_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10', at(T, 600));
+    const r = w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10', at(T, 600));
     const id = r.result.paymentId as string;
     expect(w.s.payments[id].xero).toBe('pending');
     expect(w.s.invoices['INV-2610-046'].xero).toBe('pending');
@@ -501,7 +509,7 @@ describe('Xero (simulated)', () => {
   });
   it('xero.sync flips everything at once', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm46', amount: 9_500_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
     w.run('payment.record', { memberId: 'm20', amount: 1_000_000, method: 'revolut', ref: 'R', invoiceId: 'INV-2610-020' }, 's10');
     expect(paymentsBoard(w.s, T).xeroPending).toBe(2);
     const r = w.run('xero.sync', {}, 's10');
@@ -515,7 +523,7 @@ describe('Xero (simulated)', () => {
   });
   it('refunds, approved receipts and approved vendor invoices sync too', () => {
     const w = world();
-    const p = w.run('payment.record', { memberId: 'm20', amount: 9_500_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10').result.paymentId as string;
+    const p = w.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10').result.paymentId as string;
     w.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-020', amount: 500_000, reason: 'Goodwill', creditNote: true }, 's10');
     const rc = w.run('receipt.add', { date: T, supplier: 'Toko A', amount: 100_000, sectionId: 'fnb', fileName: 'a.jpg' }, 's2').result.receiptId as string;
     w.run('receipt.approve', { id: rc }, 's10');
@@ -754,7 +762,7 @@ describe('vendor invoices', () => {
     expect(w.s.vendorInvoices.vi1.status).toBe('toApprove');
     w.fail('vendorInvoice.add', { ...add, supplier: 'Sayur Segar Kemang', number: 'inv/ssk/1023' }, 's10', 'finance.err.duplicateInvoice');
     w.run('vendorInvoice.delete', { id: 'vi1' }, 's10');
-    expect(live(w.s.vendorInvoices).map((v) => v.id)).toEqual(['vi2']);
+    expect(live(w.s.vendorInvoices).map((v) => v.id).filter((id) => !id.startsWith('vi-gh'))).toEqual(['vi2']); // the guest hosts' invoices (round 7 seed) are not part of this story
     w.fail('vendorInvoice.delete', { id: 'vi1' }, 's10', 'err.notFound');
   });
   it('is for finance and management', () => {
@@ -776,20 +784,20 @@ describe('boards', () => {
     const w = world();
     const b = billingBoard(w.s, T);
     expect(b.overdue.map((v) => v.inv.id)).toEqual(['INV-2609-020']);
-    expect(b.overdue[0]).toMatchObject({ late: 23, balance: 9_500_000 });
+    expect(b.overdue[0]).toMatchObject({ late: 23, balance: 3_950_000 });
     expect(b.due.map((v) => v.inv.id).sort()).toEqual(['INV-2610-001', 'INV-2610-020', 'INV-2610-046']);
     expect(b.paid.map((v) => v.inv.id).sort()).toEqual(['INV-2610-002', 'INV-2610-010']);
-    expect(b.nextDue).toBe('2026-10-27');
-    expect(b.sums).toEqual({ paid: 15_000_000, due: 5_500_000 + 9_500_000 + 9_500_000, overdue: 9_500_000, xero: 0 });
+    expect(b.nextDue).toBe('2026-10-28');
+    expect(b.sums).toEqual({ paid: 3_950_000 + 2_700_000, due: 2_700_000 + 3_950_000 + 3_950_000, overdue: 3_950_000, xero: 0 });
     expect(invoicePeriod(w.s.invoices['INV-2610-001'])).toBe('2026-10');
   });
   it('part-paid invoices stay in the lists for what is left; overdue stays overdue', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm46', amount: 4_000_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 2_000_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
     let b = billingBoard(w.s, T);
-    expect(b.due.find((v) => v.inv.id === 'INV-2610-046')).toMatchObject({ status: 'partial', paid: 4_000_000, balance: 5_500_000 });
+    expect(b.due.find((v) => v.inv.id === 'INV-2610-046')).toMatchObject({ status: 'partial', paid: 2_000_000, balance: 1_950_000 });
     // after the due date the part-paid invoice is overdue for the balance
     b = billingBoard(w.s, '2026-10-29');
-    expect(b.overdue.find((v) => v.inv.id === 'INV-2610-046')).toMatchObject({ status: 'overdue', balance: 5_500_000, late: 2 });
+    expect(b.overdue.find((v) => v.inv.id === 'INV-2610-046')).toMatchObject({ status: 'overdue', balance: 1_950_000, late: 1 });
   });
 });

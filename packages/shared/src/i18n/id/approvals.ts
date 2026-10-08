@@ -12,7 +12,7 @@ export const approvals: Same<typeof EN> = {
   'none.readings': 'Tidak ada hasil ukur kesehatan untuk disetujui', 'none.readingsSub': 'Hasil ukur yang disimpan perawat muncul di sini sebelum keluarga bisa melihatnya.',
   'none.menu': 'Tidak ada perubahan menu untuk disetujui', 'none.menuSub': 'Menu mingguan atau perubahan satu hari dari dapur muncul di sini sebelum keluarga bisa melihatnya.',
   'none.stock': 'Tidak ada permintaan stok untuk disetujui', 'none.stockSub': 'Permintaan dari tim muncul di sini. Supervisor dapur dan keuangan juga bisa menyetujuinya di layar Stok.',
-  'none.history': 'Belum ada yang ditangani',
+  'mode.item': 'Per item', 'mode.person': 'Per orang', modeLabel: 'Tampilkan persetujuan', personWaiting: '{n} menunggu', approveAllFor: 'Setujui semua ({n})', approvedAllFor: '{n} disetujui untuk {name}.', groupPhotos: 'Foto bersama & aktivitas', otherSection: 'Lainnya · menu dan stok', 'none.all': 'Tidak ada yang menunggu persetujuan', 'none.history': 'Belum ada yang ditangani',
   historySub: 'Catatan yang disetujui atau ditolak',
   groupLabel: '{kind} {who}',
   'kind.cr': 'Perubahan', 'kind.flag': 'Sudah berlaku, tinjau', 'kind.log': 'Catatan harian', 'kind.note': 'Catatan untuk keluarga', 'kind.reading': 'Hasil ukur kesehatan', 'kind.version': 'Menu mingguan', 'kind.dayMenu': 'Menu satu hari', 'kind.stock': 'Permintaan stok', 'kind.photo': 'Foto',
@@ -26,4 +26,8 @@ export const approvals: Same<typeof EN> = {
   rejectedOne: 'Ditolak. Pembuat catatan diberi tahu.', rejectedN: '{n} ditolak. Pembuat catatan diberi tahu.',
   skippedN: '{n} dilewati: sudah ditangani atau tidak lagi menunggu.', conflictN: '{n} tidak bisa diterapkan karena datanya sudah berubah. Buka satu per satu.', nothingDone: 'Tidak ada yang perlu dilakukan: catatan itu sudah ditangani.',
   'notif.rejected.logs': 'Manajemen tidak menyetujui {n} catatan harian Anda: {reason}', 'notif.rejected.readings': 'Manajemen tidak menyetujui {n} hasil ukur kesehatan Anda: {reason}', 'notif.rejected.menu': 'Manajemen tidak menyetujui {n} perubahan menu Anda: {reason}',
+  // KC round 7: perubahan perpanjangan yang dicatat meja depan
+  'tab.renewals': 'Perpanjangan', 'none.renewals': 'Tidak ada perubahan perpanjangan untuk disetujui', 'none.renewalsSub': 'Perubahan yang dicatat meja depan setelah menelepon keluarga (naik paket, turun paket, cuti, berhenti) muncul di sini.', 'kind.renewal': 'Perpanjangan',
+  'sum.renewalUpgrade': 'Naik ke Gold mulai {month}', 'sum.renewalDowngrade': 'Turun ke Flex mulai {month}', 'sum.renewalLeave': 'Cuti di {months}', 'sum.renewalStop': 'Berhenti · hari terakhir {date}',
+  renewalChange: 'Perubahan', renewalMonth: 'Bulan', renewalReason: 'Alasan', 'notif.rejected.renewals': 'Manajemen tidak menyetujui {n} perubahan perpanjangan Anda: {reason}',
 };

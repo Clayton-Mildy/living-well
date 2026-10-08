@@ -1,8 +1,8 @@
 // Dish pieces: the allergen editor dialog, the "add a dish" picker sheet, and the chip field used for each course of a day.
 import { useMemo, useState } from 'react';
-import type { Dish, DishAllergen } from '@cp/shared';
+import type { Dish, DishAllergen, ISODate } from '@cp/shared';
 import { actorName, memberShort } from '@cp/shared';
-import { COURSES, DISH_ALLERGENS, DISH_TAGS, dishesByCourse, membersAffectedBy, type Course } from '@cp/shared/rules/kitchenOps';
+import { COURSES, DISH_ALLERGENS, DISH_TAGS, allergyReachOf, dishesByCourse, membersAffectedBy, type Course } from '@cp/shared/rules/kitchenOps';
 import { Button, ChipGroup, Dialog, Icon, Note, Pager, Sheet, TextField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
 import { useT, useFmt, type TFn } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -11,6 +11,42 @@ import { useClub } from '../../store/replica';
 import { useResetOn } from './parts';
 
 export const allergenText = (t: TFn, d: Pick<Dish, 'allergens'>) => (d.allergens.length ? d.allergens.map((a) => t('kitchen.allergen.' + a)).join(', ') : t('kitchen.noAllergens'));
+
+/**
+ * Round 7: how far a dish's allergens reach, as one rust chip: "3 allergic · 2 usually come Wed" (members whose food allergy the dish meets, and how many
+ * of those came on that weekday in at least 2 of the last 4 weeks). `date` is the planned date or weekday; without it only the allergic count shows.
+ * Nothing when nobody is allergic. The chip's accessible label names the allergens.
+ */
+export function useReach() {
+  const s = useClub();
+  const t = useT();
+  const { fd } = useFmt();
+  const { today } = useNow();
+  return (dish: Pick<Dish, 'allergens' | 'course'>, date?: ISODate) => {
+    const r = allergyReachOf(s, dish, today, date);
+    const n = r.allergic.length;
+    if (!n) return null;
+    const u = r.usual.length;
+    const withDay = !!(r.weekday && date);
+    const allergens = r.allergens.map((a) => t('kitchen.allergen.' + a).toLocaleLowerCase()).join(', ');
+    return {
+      n, u: withDay ? u : null,
+      text: [t('kitchen.reach.allergic', { n }), withDay ? t(u === 1 ? 'kitchen.reach.usualOne' : 'kitchen.reach.usual', { n: u, day: fd(date!, { weekday: 'short' }) }) : ''].filter(Boolean).join(' · '),
+      label: [t(n === 1 ? 'kitchen.reach.ariaOne' : 'kitchen.reach.aria', { n, allergens }), withDay ? t(u === 1 ? 'kitchen.reach.ariaUsualOne' : 'kitchen.reach.ariaUsual', { n: u, day: fd(date!, { weekday: 'long' }) }) : ''].filter(Boolean).join('; '),
+    };
+  };
+}
+export type Reach = NonNullable<ReturnType<ReturnType<typeof useReach>>>;
+/** The chip itself. `bare` is for use inside a button, whose own label already says it. */
+export function ReachChip({ reach, bare }: { reach: Reach; bare?: boolean }) {
+  return (
+    <span data-testid="allergy-reach" data-allergic={reach.n} data-usual={reach.u ?? undefined} {...(bare ? {} : { role: 'img', 'aria-label': reach.label })}
+      style={{ alignSelf: 'flex-start', maxWidth: '100%', display: 'inline-flex', alignItems: 'center', gap: 4, padding: '2px 8px 2px 5px', borderRadius: 8, background: '#F9E3DB', color: '#9A3D24', fontSize: 13, fontWeight: 500, lineHeight: '18px', textAlign: 'left' }}>
+      <Icon name="no_food" size={15} fill={1} color="#9A3D24" />
+      <span style={{ minWidth: 0 }}>{reach.text}</span>
+    </span>
+  );
+}
 
 /** Create or edit a dish: name, course, allergen chips, tags, and whether its allergens have been checked. */
 export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: boolean; onClose: () => void; dishId?: string; preset?: { name?: string; course?: Course }; onSaved?: (id: string) => void }) {
@@ -82,9 +118,10 @@ export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: b
 }
 
 /** Pick dishes of one course to add to a day; or type a new name to create it (allergens are asked right after). */
-export function DishPicker({ open, onClose, title, course, picked, onToggle, onCreated }: { open: boolean; onClose: () => void; title: string; course: Course; picked: string[]; onToggle: (id: string) => void; onCreated: (id: string) => void }) {
+export function DishPicker({ open, onClose, title, course, picked, onToggle, onCreated, date }: { open: boolean; onClose: () => void; title: string; course: Course; picked: string[]; onToggle: (id: string) => void; onCreated: (id: string) => void; date?: ISODate }) {
   const t = useT();
   const s = useClub();
+  const reachOf = useReach();
   const [q, setQ] = useState('');
   const [creating, setCreating] = useState(false);
   useResetOn(open, () => { if (open) { setQ(''); setCreating(false); } });
@@ -111,7 +148,12 @@ export function DishPicker({ open, onClose, title, course, picked, onToggle, onC
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
                   <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{allergenText(t, d)}{d.reviewedAt ? '' : ' · ' + t('kitchen.notChecked')}</span>
-                  {affectedNames(d) ? <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4, fontWeight: 500 }}>{t('kitchen.picker.affects', { names: affectedNames(d) })}</span> : null}
+                  {affectedNames(d) ? (
+                    <span style={{ display: 'flex', flexDirection: 'column', gap: 3, alignItems: 'flex-start' }}>
+                      {(() => { const r = reachOf(d, date); return r ? <ReachChip reach={r} /> : null; })()}
+                      <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4, fontWeight: 500 }}>{t('kitchen.picker.affects', { names: affectedNames(d) })}</span>
+                    </span>
+                  ) : null}
                 </span>
               </button>
             );
@@ -132,10 +174,11 @@ export function DishPicker({ open, onClose, title, course, picked, onToggle, onC
 }
 
 /** One course of one day: dish chips (tap to remove) and an add button. The box looks like the design's text fields. */
-export function DishField({ label, course, ids, onRemove, onAdd, flex, testId }: { label: string; course: Course; ids: string[]; onRemove: (id: string) => void; onAdd: () => void; flex: string; testId?: string }) {
+export function DishField({ label, course, ids, onRemove, onAdd, flex, testId, date, readOnly = false }: { label: string; course: Course; ids: string[]; onRemove: (id: string) => void; onAdd: () => void; flex: string; testId?: string; date?: ISODate; readOnly?: boolean }) {
   const t = useT();
   const s = useClub();
   const { today } = useNow();
+  const reachOf = useReach();
   return (
     <div role="group" aria-label={label} data-testid={testId} style={{ flex, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
       <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{label}</span>
@@ -144,22 +187,32 @@ export function DishField({ label, course, ids, onRemove, onAdd, flex, testId }:
           const d = s.dishes[id];
           if (!d || d.deletedAt) return null;
           const hit = membersAffectedBy(s, d, today).map(memberShort).join(', ');
-          const name = t('kitchen.plan.remove', { name: d.name }) + (hit ? `. ${t('kitchen.plan.affects', { names: hit })}` : '');
-          return (
-            <button key={id} type="button" onClick={() => onRemove(id)} aria-label={name} title={name} data-clash={hit ? 'yes' : undefined} className="h-cream"
-              style={{ minHeight: 44, padding: '0 10px 0 14px', borderRadius: 12, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
-              <span>{d.name}</span>
-              {hit ? <Icon name="no_food" size={17} fill={1} color="#9A3D24" style={{ marginLeft: 2 }} /> : null}
+          const reach = hit ? reachOf(d, date) : null;
+          const clash = hit ? `${reach ? reach.label + '. ' : ''}${t('kitchen.plan.affects', { names: hit })}` : '';
+          const name = t('kitchen.plan.remove', { name: d.name }) + (clash ? `. ${clash}` : '');
+          const chip: React.CSSProperties = { minHeight: 44, padding: reach ? '6px 10px 6px 14px' : '0 10px 0 14px', borderRadius: 12, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', textAlign: 'left', maxWidth: '100%' };
+          const inner = (
+            <>
+              {reach ? <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, alignItems: 'flex-start' }}><span>{d.name}</span><ReachChip reach={reach} bare /></span> : <span>{d.name}</span>}
+              {hit && !reach ? <Icon name="no_food" size={17} fill={1} color="#9A3D24" style={{ marginLeft: 2 }} /> : null}
               {!d.reviewedAt ? <Icon name="help" size={17} fill={1} color="#7A5510" style={{ marginLeft: 2 }} /> : null}
+            </>
+          );
+          // view only (the front desk): the dish and its allergy warning, nothing to tap
+          if (readOnly) return <span key={id} data-testid="plan-dish" title={clash || undefined} data-clash={hit ? 'yes' : undefined} style={chip}>{inner}</span>;
+          return (
+            <button key={id} type="button" onClick={() => onRemove(id)} aria-label={name} title={name} data-clash={hit ? 'yes' : undefined} className="h-cream" style={{ ...chip, cursor: 'pointer' }}>
+              {inner}
               <Icon name="close" size={18} color="#5E5852" />
             </button>
           );
         })}
-        <button type="button" onClick={onAdd} aria-label={t('kitchen.plan.addTo', { course: t('kitchen.course.' + course) })} className="h-cream"
+        {readOnly && !ids.some((id) => s.dishes[id] && !s.dishes[id].deletedAt) ? <span style={{ padding: '0 8px', fontSize: 15, color: '#8A8078' }}>{t('kitchen.plan.nothing')}</span> : null}
+        {readOnly ? null : <button type="button" onClick={onAdd} aria-label={t('kitchen.plan.addTo', { course: t('kitchen.course.' + course) })} className="h-cream"
           style={{ minHeight: 44, padding: '0 14px 0 10px', borderRadius: 12, border: '1px dashed #CAB8A2', background: '#FFFFFF', color: '#75624B', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="add" size={20} />
           {t('kitchen.plan.add')}
-        </button>
+        </button>}
       </div>
     </div>
   );

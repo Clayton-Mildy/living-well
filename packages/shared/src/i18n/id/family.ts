@@ -4,7 +4,7 @@ import type { family as EN } from '../en/family';
 export const family: Same<typeof EN> = {
   // ----- headings, plan and billing words from the design -----
   goodMorning: 'Selamat pagi, {n}', goodAfternoon: 'Selamat siang, {n}', todayAtClub: 'Hari ini di klub', now: 'SEKARANG', photos: 'Foto', notesTeam: 'Dari tim', used: 'Terpakai', payVA: 'Bayar via virtual account',
-  messageClub: 'Kirim pesan ke klub', bank: 'Bank', vaNumber: 'Virtual account', autoConfirm: 'Dikonfirmasi otomatis, biasanya dalam beberapa menit.',
+  messageClub: 'WhatsApp klub', bank: 'Bank', vaNumber: 'Virtual account', autoConfirm: 'Dikonfirmasi otomatis, biasanya dalam beberapa menit.',
   simPay: 'Demo: simulasikan pembayaran diterima', invL: 'Tagihan {p}', dueOn: 'Jatuh tempo {d} · virtual account DOKU', paidOn: 'Dibayar {d} · kuitansi terkirim', billingBy: '{n} mengurus tagihan untuk {m}.',
   sharedNote: 'Catatan dari klub: {n}', sPay: 'Bayar via virtual account', paidT: 'Pembayaran diterima. Kuitansi dikirim ke {n} lewat WhatsApp.', copied: 'Nomor virtual account disalin.', mood_cheerful: 'Ceria',
   mood_calm: 'Tenang', mood_quiet: 'Pendiam', mood_agitated: 'Gelisah', lunch_all: 'Makan siang habis', lunch_most: 'Makan siang hampir habis', lunch_half: 'Makan siang setengah', lunch_little: 'Makan sedikit',
@@ -17,7 +17,7 @@ export const family: Same<typeof EN> = {
 
   // ----- today: timeline -----
   tArrived: 'Tiba', tArrivedD: 'Check-in oleh {s}', tHealth: 'Cek kesehatan', tHealthUp: 'Cek kesehatan saat tiba', tHealthUpD: 'Tekanan darah, oksigen dan suhu dengan {n}', tLunch: 'Makan siang', tTea: 'Teh sore',
-  tHome: 'Waktu pulang', tHomeD: 'Cek tekanan darah sebelum {s} pulang', tHomeDoneD: 'Check-out oleh {s}', tHomeBp: 'Tekanan darah sebelum pulang {b}', lunchPhoto: 'Foto makan siang dari dapur',
+  tHome: 'Waktu pulang', tHomeD: 'Cek tekanan darah sebelum {s} pulang', tHomeDoneD: 'Check-out oleh {s}', tHomeBp: 'Tekanan darah sebelum pulang {b}', lunchPhoto: 'Foto makan siang dari dapur', teaPhoto: 'Foto teh sore dari dapur',
   lunchFeedback: 'Masukan untuk makan siang', tLunchSafe: 'Dapur mencatat alergi {a} {n}; menu hari ini aman.', tLunchAlt: '{d} hari ini tidak aman untuk alergi {a} {n}, jadi dapur menyiapkan {x} sebagai gantinya.',
   theLobby: 'lobi', forMember: 'Untuk {n}', pronS_f: 'ia', pronS_m: 'ia', pronO_f: 'dia', pronO_m: 'dia', tempLine: 'Suhu {t} °C', food_shellfish: 'kerang-kerangan', food_seafood: 'makanan laut', food_fish: 'ikan',
   food_peanuts: 'kacang', food_eggs: 'telur', food_dairy: 'susu', food_gluten: 'gluten', badgeNormal: 'Normal', badgeWatch: 'Sedikit di luar batas biasa · perawat memantau',
@@ -25,7 +25,7 @@ export const family: Same<typeof EN> = {
 
   // ----- today: both-parents cards -----
   bpArrival: 'Saat tiba · {t}', bpDeparture: 'Sebelum pulang · {t}', oxygen: ' · oksigen {o}%', healthSoon: 'Cek kesehatan sebentar lagi dengan {n}.', noHealthToday: 'Tidak ada cek kesehatan hari ini.', healthOnArrival: 'Perawat mengecek tekanan darah saat tiba.',
-  planUsedLine: 'Flex · {n} dari {q} kunjungan terpakai', planGoldLine: 'Gold · datang di hari buka mana saja', payAmount: 'Bayar {a}', plansTitle: 'Paket dan tagihan',
+  planLeftLine: 'Flex · sisa {n} dari {q} kunjungan', planUsedLine: 'Flex · {n} dari {q} kunjungan terpakai', planGoldLine: 'Gold · datang di hari buka mana saja', payAmount: 'Bayar {a}', plansTitle: 'Paket dan tagihan',
   plansBoth: 'Setiap orang tua punya paket, kunjungan dan tagihan sendiri. Semua tagihan terbuka bisa dibayar sekaligus dari Tagihan.', openBillingBoth: 'Buka tagihan keduanya',
 
   // ----- today: survey -----
@@ -35,12 +35,12 @@ export const family: Same<typeof EN> = {
 
   // ----- photos -----
   soloPhotos: 'Foto {n}', groupWith: 'Foto kelompok bersama {n}', groupWithBoth: 'Foto kelompok bersama keduanya', groupOther: 'Foto kelompok lainnya', photoAria: '{a}, {t}', photoAriaGroup: '{a}, {t}, foto kelompok',
-  photoAriaVideo: '{a}, {t}, video', clubPhoto: 'Foto klub', phEyebrow: '{n} · per hari', phEyebrowBoth: 'Kedua orang tua · per hari', phCountOne: '1 foto', phCountN: '{n} foto', phEmpty: 'Belum ada foto.',
+  photoAriaAct: '{a}, {t}, foto aktivitas', photoAriaVideo: '{a}, {t}, video', clubPhoto: 'Foto klub', phEyebrow: '{n} · per hari', phEyebrowBoth: 'Kedua orang tua · per hari', phCountOne: '1 foto', phCountN: '{n} foto', phEmpty: 'Belum ada foto.',
   phEmptySub: 'Foto dari hari-hari di klub muncul di sini.', phNote: 'Foto sendiri tampil lebih dulu setiap hari, lalu foto kelompok.',
   phNoteBoth: 'Foto sendiri tampil lebih dulu setiap hari, lalu foto kelompok. Foto yang memuat keduanya hanya tampil sekali.',
 
   // ----- team log and comments -----
-  logCommentPh: 'Komentar untuk tim', logSend: 'Kirim', commentLabel: 'Komentar', commentSent: 'Komentar dikirim ke {n}.', dayLine: '{n} melewati hari yang {m}.', dayLineJoined: '{n} melewati hari yang {m} dan ikut {a}.',
+  dayLine: '{n} melewati hari yang {m}.', dayLineJoined: '{n} melewati hari yang {m} dan ikut {a}.',
   dayLineSat: '{n} melewati hari yang {m} dan tidak ikut kegiatan.', sharedNoteFor: 'Catatan bersama tentang {m}: {n}', calendarBtn: 'Kalender klub', contactsBtn: 'Kontak penting',
 
   // ----- plan card: Flex visits this month (counted from check-ins, extra visits billed next month) and Gold -----
@@ -61,5 +61,38 @@ export const family: Same<typeof EN> = {
 
   // ----- sheet: lunch feedback -----
   fbTitle: 'Masukan untuk makan siang', fbMember: 'Untuk siapa?', fbDay: 'Hari apa?', fbDish: 'Hidangan yang mana?', fbWhole: 'Seluruh hidangan', fbText: 'Apa yang ingin Anda sampaikan ke dapur?',
-  fbPh: 'Ceritakan yang sudah baik atau yang perlu diubah', fbSend: 'Kirim masukan', fbSent: 'Terima kasih. Tim dapur akan membalas di Pesan.',
+  fbPh: 'Ceritakan yang sudah baik atau yang perlu diubah', fbSend: 'Kirim masukan', fbSent: 'Terima kasih. Balasan tim dapur akan tampil di Hari ini, di Masukan makan siang.', lunchFb: 'Masukan makan siang', lunchFbWaiting: 'Menunggu dapur', lunchFbAnswered: 'Dapur membalas', lunchFbClosed: 'Selesai', lunchFbYou: 'Anda · {when}', lunchFbPhone: 'Lewat telepon · {when}', lunchFbKitchen: 'Dapur · {when}',
+
+  leaveAsk: 'Ajukan cuti', leaveRecord: 'Catat cuti', leaveTitle: 'Cuti untuk {name}', leaveRecordTitle: 'Catat cuti untuk {name}',
+  leaveBody: 'Satu bulan cuti dikenakan {fee} di tagihan bulan itu, sebagai pengganti paket. Ajukan tertulis 14 hari sebelum akhir bulan sebelumnya; paling lama {max} bulan berturut-turut.',
+  leaveBodyStaff: 'Catat cuti yang diajukan keluarga secara tertulis. Dikenakan {fee} di tagihan bulan itu, sebagai pengganti paket: paling lama {max} bulan berturut-turut, diajukan 14 hari sebelum akhir bulan sebelumnya.',
+  leaveWhich: 'Bulan apa?', leaveChoice: '{m} · ajukan paling lambat {d}', leaveNone: 'Tidak ada bulan yang masih bisa diajukan.', leaveNote: 'Catatan (opsional)', leaveNotePh: 'mis. surat permohonan diterima 10 Okt',
+  leaveSend: 'Ajukan cuti · {m}', leaveRecordSend: 'Catat cuti · {m}', leaveSent: 'Cuti {m} diajukan. Klub sudah diberi tahu.', leaveRecorded: 'Cuti {m} dicatat.',
+  leaveNow: 'Sedang cuti pada {m}', leaveOpen: 'Cuti {m} · diajukan, bisa dibatalkan sampai {d}', leaveOpenStaff: 'Cuti {m} · diajukan, bisa dibatalkan sampai {d}', leaveLocked: 'Cuti {m} · dikonfirmasi · {fee} di tagihan bulan itu',
+  leaveTakeBack: 'Batalkan', leaveTakenBack: 'Cuti {m} dibatalkan.',
+  leaveWord: '{n} cuti 2 bulan berturut-turut. Beri tahu kami paling lambat {d} bahwa {n} kembali pada {m}, atau keanggotaan berakhir saat cuti habis.',
+  leaveBack: 'Kembali pada {m}', leaveBackSent: 'Terima kasih. Klub tahu {n} kembali pada {m}.', leaveSection: 'Cuti',
+  onHoldTold: 'Keanggotaan ditangguhkan: invoice {no} ({a}) belum dibayar. {n} bisa datang lagi setelah dibayar.',
+  onHold: 'Keanggotaan ditangguhkan: invoice {no} ({a}) belum dibayar. {n} bisa datang lagi setelah dibayar. Jika masih belum dibayar pada {d}, keanggotaan dihentikan.',
+  'notif.leaveAsked': '{name}: keluarga mengajukan cuti pada {month} ({fee} sebagai pengganti paket).', 'notif.leaveRecorded': 'Cuti {name} pada {month} dicatat: {fee} di tagihan bulan itu, sebagai pengganti paket.',
+  'notif.leaveWithdrawn': '{name}: keluarga membatalkan cuti {month}.', 'notif.leaveReturn': '{name}: keluarga mengonfirmasi kembali pada {month}.',
+  'notif.leaveOverrun': 'Keanggotaan {name} berakhir: cuti 2 bulan dan tidak ada kabar untuk {month}.', 'notif.leaveOverrunFamily': 'Keanggotaan {name} telah berakhir: setelah cuti 2 bulan kami tidak menerima kabar untuk {month}. Untuk kembali perlu mendaftar ulang. Silakan hubungi klub.',
+  'feed.leaveAsked': '{name}: cuti diajukan untuk {month}', 'feed.leaveWithdrawn': '{name}: cuti {month} dibatalkan', 'feed.leaveReturn': '{name}: kembali pada {month}', 'feed.leaveOverrun': '{name}: keanggotaan berakhir setelah cuti 2 bulan ({month})',
+
+  // ----- the day story and the monthly memories (KC round 7) -----
+  storyLooking: 'Menengok kembali', storyStrip: 'Pilih hari', storyPickDay: 'Lompat ke hari lain', storyCoverAria: 'Buka foto terbaik hari itu',
+  storyTitleToday: 'Hari ini bersama {n}', storyTitleYesterday: 'Kemarin bersama {n}', storyTitleWeek: 'Hari {d} bersama {n}', storyTitleOld: '{d} bersama {n}',
+  storyArrived: 'Tiba {a}', storyArrivedHome: 'Tiba {a} · Pulang {b}',
+  storyMood_cheerful: 'Ceria dan banyak bercerita', storyMood_calm: 'Tenang dan nyaman', storyMood_quiet: 'Pendiam dan merenung', storyMood_agitated: 'Sedikit gelisah', storyMoodToday: '{m} hari ini',
+  storyDidntCome: '{n} tidak datang pada hari {d}', storyClosedOn: 'Klub tutup pada hari {d}', storyWeekend: 'Akhir pekan', storyLastVisit: 'Dari tim · {d}',
+  storyDayAtClub: 'Hari {d} di klub', storyWhatWasOn: 'Acara hari itu',
+  storyJoined: 'Ikut serta', storySatOut: 'Beristirahat kali ini', storyWithGuest: 'bersama {n}, tamu kami',
+  storyAte_all: 'Makan siangnya habis', storyAte_most: 'Makan siangnya hampir habis', storyAte_half: 'Makan siang setengah porsi', storyAte_little: 'Makan sedikit', storyAte_none: 'Tidak makan siang kali ini',
+  storyBpOk: 'Tekanan darah normal · {b}', storyBp: 'Tekanan darah {b}', storyOxygen: 'Oksigen {o}%',
+  storyPhotos: 'Foto hari itu', storyAllPhotos: 'Semua foto', storyHealthLink: 'Detail kesehatan', storyVisitsOne: '1 kunjungan', storyVisitsN: '{n} kunjungan',
+  phMore: 'Tampilkan hari lainnya', 
+  memEyebrow: 'Kenangan', memTitle: '{m} bersama {n}', memPrev: 'Bulan sebelumnya', memNext: 'Bulan berikutnya', memSoFar: 'Sejauh bulan ini',
+  memVisits: 'Kunjungan', memJoined: 'Kegiatan diikuti', memPhotos: 'Foto', memFav: 'Kegiatan favorit', memTimesOne: '1 kali', memTimesN: '{n} kali',
+  memMood: 'Suasana hari-harinya', memMoodAria: '{d} · {m}', memMoodNone: 'Tidak ada catatan hari itu', memAppetite: 'Makan siang', memAppetiteLine: 'Makan siang habis di {a} dari {b} hari',
+  memQuotes: 'Kata-kata hangat dari tim', memEmpty: '{n} tidak datang pada bulan {m}.', memAllPhotos: 'Lihat semua foto', memPhotoAria: 'Foto tanggal {d}', memOpenDay: 'Buka {d}',
 };

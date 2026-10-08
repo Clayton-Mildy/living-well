@@ -271,7 +271,7 @@ describe('auth: usernames for new accounts', () => {
     const [n] = await sql`select count(*)::int as n from credentials`;
     expect(n.n).toBe(SEED_NAMES.length);
     expect((await app.request('/api/snapshot', bearer(t))).status).toBe(200); // sessions survive a reset
-  });
+  }, 20_000); // round 7: a reset now seeds 6 months of history, slower when the whole suite runs at once
 });
 
 describe('snapshots', () => {
@@ -282,8 +282,12 @@ describe('snapshots', () => {
     const fam = await j(await app.request('/api/snapshot', { headers: { 'x-user-id': 'f1' } }));
     expect(fam.state.members.m1.care.instructions).toBe('');
     expect(Object.keys(fam.state.enquiries)).toHaveLength(0);
-    expect(Object.values(fam.state.staff).every((x: any) => x.phone === '' && x.hr.salary === 0)).toBe(true);
-    expect(Object.values(fam.state.threads).every((t: any) => t.familyId === 'f1')).toBe(true);
+    // staff pay is never sent; the only staff phone a family gets is the front desk's (the "WhatsApp the club" link)
+    const withPhone = Object.values(fam.state.staff).filter((x: any) => x.phone !== '') as any[];
+    expect(withPhone.map((x) => x.role)).toEqual(['lobby']);
+    expect(Object.values(fam.state.staff).every((x: any) => x.hr.salary === 0)).toBe(true);
+    expect(Object.keys(fam.state.threads)).toHaveLength(0);
+    expect(Object.keys(fam.state.messages)).toHaveLength(0);
   });
   it('club access is enforced', async () => {
     expect((await app.request('/api/snapshot?club=adina', { headers: { 'x-user-id': 's1' } })).status).toBe(403);

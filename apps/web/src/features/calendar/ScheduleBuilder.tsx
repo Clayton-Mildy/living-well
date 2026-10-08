@@ -2,19 +2,20 @@
 // The schedule is versioned by effective date: the grid shows one Mon–Fri week at a time (previous / next week, date under each day name) with the version
 // in force for that week. A week that has not started can be changed; publishing defaults to that week's Monday. Edits are saved as a shared draft.
 // Drag works with a mouse; on touch, tap an activity and then a slot (or use "Move to"). Every placed activity has a quick ✕ to remove it.
-import { useCallback, useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from 'react';
+// Round 6 (phone, native look): one day is an iOS grouped list (the day's slots as rows), the slot editor is a set of groups, the versions are a list group.
+import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from 'react';
 import { useResetOn } from '../../lib/useResetOn';
 import { actorName, addDays, live, scheduleVersionFor, staffCall, type ISODate, type Slot, type Weekday } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
 import { SLOTS, WEEKDAYS, activityTeachers, changedCells, cloneDays, effectiveVersions, mondayOf, nextMonday, sameCell, weekDays, weekView, type Days } from '@cp/shared/rules/calendar';
-import { Button, DateField, Icon, IconButton, Note, Pager, Select, Sheet, Toggle, chipStyle, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, DateField, Group, Icon, IconButton, Note, Pager, Select, Sheet, Toggle, chipStyle, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
-import { Badge, plural } from '../activity/lib';
+import { Badge, plural, rowLine } from '../activity/lib';
 import { CatalogEditor } from './CatalogEditor';
 import { smallCaps, weekdayName } from './lib';
 
@@ -149,43 +150,44 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const midWeek = !changed && view.versions.length > 1 ? view.versions[1] : null;
 
   // the remove ✕ sits beside the cell (never inside the cell's own button)
-  const removeBtn = (c: Cell, size: number) => {
+  const removeBtn = (c: Cell, size: number, pos: CSSProperties = { top: 2, right: 2 }) => {
     if (!canEdit || !cellOf(c)) return null;
     return (
-      <button type="button" onClick={() => clearCell(c)} aria-label={t('cal.removeFromSlot', { name: title(c), day: wLong(c.w), slot: c.slot })} title={t('cal.clearSlot')}
-        style={{ position: 'absolute', top: 2, right: 2, width: size, height: size, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+      <button type="button" className={isPhone ? 'cp-press' : undefined} onClick={() => clearCell(c)} aria-label={t('cal.removeFromSlot', { name: title(c), day: wLong(c.w), slot: c.slot })} title={t('cal.clearSlot')}
+        style={{ position: 'absolute', ...pos, width: size, height: size, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: 999, background: '#F3EEE8', color: '#5E5852', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="close" size={18} /></span>
       </button>
     );
   };
 
-  const slotCard = (c: Cell, label: string) => {
+  // round 6, phone: a slot is one row of the day's group (time and part of the day, the activity with room and teacher); the selected row has a dark bar
+  const slotCard = (c: Cell, label: string, first: boolean) => {
     const v = cellOf(c);
-    const st = cellStyle(c);
+    const on = !!sel && key(sel) === key(c);
     const inner = (
       <>
-        <span style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 'none', width: isPhone ? 84 : 80 }}>
+        <span style={{ display: 'flex', flexDirection: 'column', gap: 1, flex: 'none', width: 74 }}>
           <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', fontWeight: 500, lineHeight: 1.4 }}>{c.slot}</span>
-          <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{label}</span>
+          <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.3 }}>{label}</span>
         </span>
-        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, paddingRight: v && canEdit ? 36 : 0 }}>
+        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, paddingRight: v && canEdit ? 40 : 0 }}>
           {v ? (
             <>
-              <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.4 }}>{title(c)}</span>
-              <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{roomOf(v.roomId)} · {staffCall(s.staff[v.staffId])}</span>
+              <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.35 }}>{title(c)}</span>
+              <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35 }}>{roomOf(v.roomId)} · {staffCall(s.staff[v.staffId])}</span>
             </>
-          ) : <span style={{ fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{hint || t('cal.empty')}</span>}
-          {isChanged(c) ? <span style={{ fontSize: FONT_SMALL, fontWeight: 600, color: '#7A5510', lineHeight: 1.4 }}>{t('cal.changed')}</span> : null}
+          ) : <span style={{ fontSize: 15, color: hint ? '#75624B' : '#8A8078', fontWeight: hint ? 500 : 400, lineHeight: 1.4 }}>{hint || t('cal.empty')}</span>}
+          {isChanged(c) ? <span style={{ fontSize: 13, fontWeight: 600, color: '#7A5510', lineHeight: 1.4 }}>{t('cal.changed')}</span> : null}
         </span>
       </>
     );
-    const box = { minHeight: isPhone ? 72 : 88, borderRadius: 12, border: st.border, background: st.background, boxShadow: st.boxShadow, padding: isPhone ? '10px 12px' : '12px 14px', display: 'flex', gap: isPhone ? 10 : 12, alignItems: 'flex-start', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', flex: 1, minWidth: 0 } as const;
+    const box = { width: '100%', minHeight: 64, padding: '10px 12px 10px 16px', display: 'flex', gap: 10, alignItems: 'center', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', flex: 1, minWidth: 0, border: 'none', background: 'transparent' } as const;
     return (
-      <div key={key(c)} style={{ position: 'relative', display: 'flex' }}>
+      <div key={key(c)} className={canEdit ? 'cp-tap' : undefined} style={{ position: 'relative', display: 'flex', backgroundColor: on ? '#FBF8F4' : '#FFFFFF', boxShadow: on ? 'inset 3px 0 0 #2B231C' : undefined, ...rowLine(first || on) }}>
         {canEdit
-          ? <button type="button" onClick={() => tapCell(c)} aria-label={aria(c)} aria-pressed={!!sel && key(sel) === key(c)} style={{ ...box, cursor: 'pointer' }}>{inner}</button>
+          ? <button type="button" className="cp-tap-target" onClick={() => tapCell(c)} aria-label={aria(c)} aria-pressed={on} style={{ ...box, cursor: 'pointer' }}>{inner}</button>
           : <div aria-label={aria(c)} role="group" style={box}>{inner}</div>}
-        {removeBtn(c, 44)}
+        {removeBtn(c, 44, { top: '50%', right: 6, marginTop: -22 })}
       </div>
     );
   };
@@ -194,9 +196,15 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const selV = selCell ? cellOf(selCell) : null;
   const chipBtn = (labelText: string, on: boolean, onClick: () => void, role?: string) => {
     const c = chipStyle(on, false);
-    return <button key={labelText} type="button" role={role} aria-checked={role ? on : undefined} onClick={onClick} style={{ height: 44, padding: '0 14px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{labelText}</button>;
+    return <button key={labelText} type="button" className={isPhone ? 'cp-press' : undefined} role={role} aria-checked={role ? on : undefined} onClick={onClick} style={{ height: isPhone ? 40 : 44, padding: '0 14px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{labelText}</button>;
   };
   const panelLabel = (text: string) => <span style={smallCaps}>{text}</span>;
+  const roomChips = selCell && selV ? rooms.map((r) => chipBtn(roomName(r, lang), selV.roomId === r.id, () => d.edit((x) => { const c = x[selCell.w][selCell.slot]; if (c) c.roomId = r.id; }), 'radio')) : null;
+  const teacherChips = selCell && selV ? [...teachers.map((x) => x.id), ...(teachers.some((x) => x.id === selV.staffId) ? [] : [selV.staffId])].map((id) => chipBtn(staffCall(s.staff[id]) || id, selV.staffId === id, () => d.edit((x) => { const c = x[selCell.w][selCell.slot]; if (c) c.staffId = id; }), 'radio')) : null;
+  const moveChips = selCell && selV ? (WEEKDAYS.flatMap((w) => SLOTS.map((slot) => ({ w, slot }))).filter((c) => key(c) !== key(selCell)).map((c) => (
+      <button key={key(c)} type="button" onClick={() => { swap(selCell, c); setPday(c.w); }} style={{ height: 44, padding: '0 12px', borderRadius: 12, border: cellOf(c) ? '1px solid #8A755B' : '1px dashed #CAB8A2', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{wShort(c.w)} {c.slot}</button>
+    ))) : null;
+
 
   const summary = d.changes.slice(0, 8).map((c) => {
     const before = d.base[c.w][c.slot], after = d.draft[c.w][c.slot];
@@ -210,7 +218,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
     const m = view.otherDraft.monday;
     await act('schedule.saveDraft', { days: weekDays(s, m), effectiveFrom: m }, { silent: true });
   };
-  const navBtn = (icon: string, label: string, to: ISODate) => <IconButton icon={icon} label={label} onClick={() => onWeek(to)} />;
+  const navBtn = (icon: string, label: string, to: ISODate) => <IconButton icon={icon} label={label} onClick={() => onWeek(to)} {...(isPhone ? { size: 40, bordered: false, style: { background: '#F3EEE8', color: '#75624B', borderRadius: 999 } } : {})} />;
 
   const activityOptions = (() => {
     const list = palette.map((a) => ({ value: a.id, label: activityName(a, lang) }));
@@ -218,8 +226,31 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
     return cur && !list.some((o) => o.value === cur) ? [...list, { value: cur, label: activityName(s.activities[cur], lang) }] : list;
   })();
 
+  const versionRow = (v: (typeof versions)[number], i: number) => {
+    const tag = v.effectiveFrom > today ? t('cal.upcoming') : inForce?.id === v.id ? t('cal.inForce') : t('cal.earlier');
+    return (
+      <div key={v.id} style={isPhone ? { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 56, flexWrap: 'wrap', ...rowLine(i === 0) } : { display: 'flex', alignItems: 'center', gap: 12, padding: '12px 22px', borderTop: '1px solid #F0EAE1', minHeight: 56, flexWrap: 'wrap' }}>
+        <span style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t('cal.versionFrom', { date: fdl(v.effectiveFrom) })}</span>
+          <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: '20px' }}>{t('cal.publishedBy', { when: `${fds(v.publishedAt?.slice(0, 10) || v.effectiveFrom)}, ${v.publishedAt?.slice(11, 16) || ''}`, who: who(v) })}</span>
+        </span>
+        <Badge label={tag} bg={v.effectiveFrom > today ? '#F6ECD6' : inForce?.id === v.id ? '#E3EFE6' : '#F0EAE1'} fg={v.effectiveFrom > today ? '#7A5510' : inForce?.id === v.id ? '#3D6B4F' : '#5E5852'} icon={v.effectiveFrom > today ? 'schedule' : inForce?.id === v.id ? 'check_circle' : 'history'} />
+      </div>
+    );
+  };
+
+  const paletteChips = palette.map((a) => {
+    const c = chipStyle(pal === a.id, false);
+    return (
+      <button key={a.id} type="button" draggable onDragStart={(e: DragEvent) => { try { e.dataTransfer.setData('text/plain', a.id); } catch { /* ignore */ } setDrag({ act: a.id }); setPal(null); }} onDragEnd={() => { setDrag(null); setOver(null); }} onClick={() => { setPal(pal === a.id ? null : a.id); setSel(null); }} aria-pressed={pal === a.id}
+        style={{ height: 44, padding: '0 16px 0 12px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'grab', whiteSpace: 'nowrap', fontFamily: 'Inter', flex: 'none' }}>
+        <Icon name={a.icon} size={18} />{activityName(a, lang)}
+      </button>
+    );
+  });
+
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 16, paddingTop: isPhone ? 18 : 28, borderTop: '1px solid #E6DDD1' }}>
+    <div className={isPhone ? 'cp-native' : undefined} style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 16, paddingTop: isPhone ? 14 : 28, borderTop: isPhone ? 'none' : '1px solid #E6DDD1' }}>
       <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: isPhone ? 10 : 16, flexWrap: 'wrap' }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 4 : 6, minWidth: 0 }}>
           <div style={smallCaps}>{t('cal.builder')}</div>
@@ -230,25 +261,25 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {isPhone ? <IconButton icon="tune" label={t('cal.catalogBtn')} onClick={() => setCatalog(true)} style={{ borderColor: '#75624B', color: '#75624B' }} /> : <Button variant="secondary" icon="tune" onClick={() => setCatalog(true)}>{t('cal.catalogBtn')}</Button>}
+          {isPhone ? <IconButton icon="tune" label={t('cal.catalogBtn')} onClick={() => setCatalog(true)} size={40} bordered={false} style={{ background: '#EFEAE3', color: '#75624B', borderRadius: 999 }} /> : <Button variant="secondary" icon="tune" onClick={() => setCatalog(true)}>{t('cal.catalogBtn')}</Button>}
           {changed ? <Button variant="ghost" size={isPhone ? 44 : 48} onClick={() => { d.discard(); setSel(null); }}>{t('cal.discard')}</Button> : null}
-          <button type="button" onClick={() => changed && canEdit && setPubOpen(true)} aria-disabled={!changed || !canEdit} aria-label={isPhone ? t('cal.publishBtn') : undefined} style={{ height: isPhone ? 44 : 52, padding: isPhone ? '0 18px' : '0 24px', borderRadius: 999, border: 'none', background: changed && canEdit ? '#24201C' : '#E8E1D8', color: changed && canEdit ? '#FFFFFF' : '#5E5852', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: changed && canEdit ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+          <button type="button" className={isPhone ? 'cp-press' : undefined} onClick={() => changed && canEdit && setPubOpen(true)} aria-disabled={!changed || !canEdit} aria-label={isPhone ? t('cal.publishBtn') : undefined} style={{ height: isPhone ? 40 : 52, padding: isPhone ? '0 18px' : '0 24px', borderRadius: 999, border: 'none', background: changed && canEdit ? '#24201C' : '#E8E1D8', color: changed && canEdit ? '#FFFFFF' : '#5E5852', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: changed && canEdit ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
             <Icon name="send" size={20} />{isPhone ? t('cal.publishShort') : t('cal.publishBtn')}
           </button>
         </div>
       </div>
       {!teachers.length ? <Note tone="ochre" icon="info">{t('cal.noTeachers')}</Note> : null}
 
-      <div role="group" aria-label={t('cal.weekNav')} style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+      <div role="group" aria-label={t('cal.weekNav')} style={isPhone ? { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 14, background: '#FFFFFF' } : { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {navBtn('chevron_left', t('cal.prevWeek'), addDays(week, -7))}
-        <span aria-live="polite" style={{ fontSize: isPhone ? 17 : 18, fontWeight: 500, lineHeight: 1.4, minWidth: isPhone ? 0 : 150, flex: isPhone ? 1 : undefined, textAlign: 'center', whiteSpace: isPhone ? 'nowrap' : undefined, fontVariantNumeric: 'tabular-nums' }}>{weekLabel}</span>
+        <span aria-live="polite" style={{ fontSize: isPhone ? 16 : 18, fontWeight: 500, lineHeight: 1.4, minWidth: isPhone ? 0 : 150, flex: isPhone ? 1 : undefined, textAlign: 'center', whiteSpace: isPhone ? 'nowrap' : undefined, fontVariantNumeric: 'tabular-nums' }}>{weekLabel}</span>
         {navBtn('chevron_right', t('cal.nextWeek'), addDays(week, 7))}
         {week !== thisMonday ? <Button variant="ghost" size={44} onClick={() => onWeek(thisMonday)}>{t('cal.thisWeek')}</Button> : null}
       </div>
       {!view.editable ? (
         <Note tone="ochre" icon="lock_clock">
           <span style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
-            {t('cal.weekStarted')}
+            <span>{t('cal.weekStarted')} {t('cal.weekStartedHint')}</span>
             <Button variant="secondary" size={44} onClick={() => onWeek(nextMonday(today))}>{t('cal.editNextWeek')}</Button>
           </span>
         </Note>
@@ -266,37 +297,35 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
       ) : null}
       {midWeek ? <Note tone="cream" icon="info">{t('cal.midWeekChange', { date: fds(midWeek.effectiveFrom) })}</Note> : null}
 
-      {canEdit ? (
-        <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: isPhone ? '14px 16px' : '18px 22px', display: 'flex', flexDirection: 'column', gap: isPhone ? 8 : 10 }}>
+      {canEdit ? (isPhone ? (
+        // round 6, phone: the activities are a group with its header outside
+        <Group title={t('cal.paletteHint')} pad="10px 0" gap={0}>
+          <div className="scroll-x" style={{ display: 'flex', gap: 8, padding: '0 14px 2px' }}>{paletteChips}</div>
+        </Group>
+      ) : (
+        <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={smallCaps}>{t('cal.paletteHint')}</div>
-          <div className={isPhone ? 'scroll-x' : undefined} style={isPhone ? { display: 'flex', gap: 8, margin: '0 -14px', padding: '0 14px 4px' } : { display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-            {palette.map((a) => {
-              const c = chipStyle(pal === a.id, false);
-              return (
-                <button key={a.id} type="button" draggable onDragStart={(e: DragEvent) => { try { e.dataTransfer.setData('text/plain', a.id); } catch { /* ignore */ } setDrag({ act: a.id }); setPal(null); }} onDragEnd={() => { setDrag(null); setOver(null); }} onClick={() => { setPal(pal === a.id ? null : a.id); setSel(null); }} aria-pressed={pal === a.id}
-                  style={{ height: 44, padding: '0 16px 0 12px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'grab', whiteSpace: 'nowrap', fontFamily: 'Inter', flex: 'none' }}>
-                  <Icon name={a.icon} size={18} />{activityName(a, lang)}
-                </button>
-              );
-            })}
-          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{paletteChips}</div>
         </div>
-      ) : null}
+      )) : null}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 16, alignItems: 'flex-start' }}>
         {isPhone ? (
-          <div style={{ flex: '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div role="tablist" aria-label={t('cal.day')} style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 999, background: '#EDE5DA' }}>
+          // round 6, phone: one day at a time; a segmented day switch, then the day's rows in one flat group (the fixed times are quiet rows)
+          <div style={{ flex: '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
+            <div role="tablist" aria-label={t('cal.day')} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>
               {WEEKDAYS.map((w) => (
-                <button key={w} type="button" role="tab" aria-label={`${wShort(w)} ${dayNum(w)}`} aria-selected={pday === w} onClick={() => { setPday(w); setSel(null); }} style={{ flex: 1, minWidth: 0, minHeight: 50, padding: '3px 0', borderRadius: 999, border: 'none', background: pday === w ? '#FFFFFF' : 'transparent', boxShadow: pday === w ? '0 1px 3px rgba(40,30,20,0.12)' : 'none', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.2 }}>
+                <button key={w} type="button" role="tab" aria-label={`${wShort(w)} ${dayNum(w)}`} aria-selected={pday === w} onClick={() => { setPday(w); setSel(null); }} style={{ minWidth: 0, minHeight: 48, padding: '3px 0', borderRadius: 9, border: 'none', background: pday === w ? '#FFFFFF' : 'transparent', boxShadow: pday === w ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: pday === w ? '#1E1A16' : '#5E5852', fontSize: 15, fontWeight: pday === w ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.2, transition: 'background-color .15s' }}>
                   <span>{wShort(w)}</span>
-                  <span style={{ fontSize: 12, color: '#5E5852', fontWeight: 400, whiteSpace: 'nowrap' }}>{fd(dateOf(w), { day: 'numeric', month: 'short' })}</span>
+                  <span style={{ fontSize: 12, color: '#6B6259', fontWeight: 400, whiteSpace: 'nowrap' }}>{fd(dateOf(w), { day: 'numeric', month: 'short' })}</span>
                 </button>
               ))}
             </div>
-            {fixed.map(([time, label, icon, slotLabel]) => icon
-              ? <div key={time} style={{ minHeight: 44, borderRadius: 10, background: '#F0EAE1', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 12px', fontSize: 16, lineHeight: 1.3 }}><span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, flex: 'none' }}>{time}</span><span>{label}</span></div>
-              : slotCard({ w: pday, slot: time as Slot }, slotLabel))}
+            <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' }}>
+              {fixed.map(([time, label, icon, slotLabel], i) => icon
+                ? <div key={time} style={{ minHeight: 44, background: '#FBF9F6', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', fontSize: 15, lineHeight: 1.3, color: '#4A4038', ...rowLine(i === 0) }}><span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, flex: 'none', width: 74 }}>{time}</span><span>{label}</span></div>
+                : slotCard({ w: pday, slot: time as Slot }, slotLabel, i === 0))}
+            </div>
           </div>
         ) : (
           <div style={{ flex: '1 1 640px', minWidth: 0, overflowX: 'auto' }}>
@@ -353,7 +382,30 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           </div>
         )}
 
-        {selCell && selV ? (
+        {selCell && selV ? (isPhone ? (
+          // round 6, phone: the slot editor is a set of groups (the activity, the room, the teacher, move to) and a red "clear" row
+          <div style={{ flex: '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 18 }}>
+            <Group title={`${wLong(selCell.w)} ${dayNum(selCell.w)} · ${selCell.slot}`} pad="12px 16px 14px" gap={12}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+                <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 500, letterSpacing: '-0.3px', color: '#2B231C', minWidth: 0 }}>{title(selCell)}</span>
+                <button type="button" className="cp-press" onClick={() => setSel(null)} aria-label={t('common.close')} style={{ width: 34, height: 34, borderRadius: 999, border: 'none', background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 }}>
+                  <Icon name="close" size={19} />
+                </button>
+              </div>
+              <Select label={t('cal.activity')} value={selV.activityId} onChange={(id) => placeAct(selCell, id)} options={activityOptions} />
+            </Group>
+            <Group title={t('cal.room')} pad="12px 14px">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="radiogroup" aria-label={t('cal.room')}>{roomChips}</div>
+            </Group>
+            <Group title={t('cal.teacher')} pad="12px 14px">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="radiogroup" aria-label={t('cal.teacher')}>{teacherChips}</div>
+            </Group>
+            <Group title={t('cal.moveTo')} pad="12px 14px">
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{moveChips}</div>
+            </Group>
+            <button type="button" className="cp-tap-self" onClick={() => clearCell(selCell)} style={{ height: 50, borderRadius: 14, border: 'none', background: '#FFFFFF', color: '#9A3D24', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('cal.clearSlot')}</button>
+          </div>
+        ) : (
           <div style={{ flex: isPhone ? '1 1 100%' : '0 1 300px', minWidth: isPhone ? 0 : 260, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: isPhone ? '16px 16px 14px' : '20px 22px', display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 14 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -368,44 +420,38 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {panelLabel(t('cal.room'))}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="radiogroup" aria-label={t('cal.room')}>
-                {rooms.map((r) => chipBtn(roomName(r, lang), selV.roomId === r.id, () => d.edit((x) => { const c = x[selCell.w][selCell.slot]; if (c) c.roomId = r.id; }), 'radio'))}
+                {roomChips}
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {panelLabel(t('cal.teacher'))}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }} role="radiogroup" aria-label={t('cal.teacher')}>
-                {[...teachers.map((x) => x.id), ...(teachers.some((x) => x.id === selV.staffId) ? [] : [selV.staffId])].map((id) => chipBtn(staffCall(s.staff[id]) || id, selV.staffId === id, () => d.edit((x) => { const c = x[selCell.w][selCell.slot]; if (c) c.staffId = id; }), 'radio'))}
+                {teacherChips}
               </div>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {panelLabel(t('cal.moveTo'))}
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                {WEEKDAYS.flatMap((w) => SLOTS.map((slot) => ({ w, slot }))).filter((c) => key(c) !== key(selCell)).map((c) => (
-                  <button key={key(c)} type="button" onClick={() => { swap(selCell, c); setPday(c.w); }} style={{ height: 44, padding: '0 12px', borderRadius: 12, border: cellOf(c) ? '1px solid #8A755B' : '1px dashed #CAB8A2', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{wShort(c.w)} {c.slot}</button>
-                ))}
+                {moveChips}
               </div>
             </div>
             <button type="button" onClick={() => clearCell(selCell)} style={{ alignSelf: 'flex-start', height: 44, padding: '0 14px', borderRadius: 12, border: 'none', background: 'transparent', color: '#9A3D24', fontSize: 16, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('cal.clearSlot')}</button>
           </div>
-        ) : null}
+        )) : null}
       </div>
 
-      <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
-        <div style={{ padding: isPhone ? '14px 16px 8px' : '18px 22px 10px' }}><span style={smallCaps}>{t('cal.versions')}</span></div>
-        {vp.rows.map((v) => {
-          const tag = v.effectiveFrom > today ? t('cal.upcoming') : inForce?.id === v.id ? t('cal.inForce') : t('cal.earlier');
-          return (
-            <div key={v.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '10px 16px' : '12px 22px', borderTop: '1px solid #F0EAE1', minHeight: 56, flexWrap: 'wrap' }}>
-              <span style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t('cal.versionFrom', { date: fdl(v.effectiveFrom) })}</span>
-                <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: '20px' }}>{t('cal.publishedBy', { when: `${fds(v.publishedAt?.slice(0, 10) || v.effectiveFrom)}, ${v.publishedAt?.slice(11, 16) || ''}`, who: who(v) })}</span>
-              </span>
-              <Badge label={tag} bg={v.effectiveFrom > today ? '#F6ECD6' : inForce?.id === v.id ? '#E3EFE6' : '#F0EAE1'} fg={v.effectiveFrom > today ? '#7A5510' : inForce?.id === v.id ? '#3D6B4F' : '#5E5852'} icon={v.effectiveFrom > today ? 'schedule' : inForce?.id === v.id ? 'check_circle' : 'history'} />
-            </div>
-          );
-        })}
-        <Pager page={vp.page} pages={vp.pages} onPage={vp.setPage} label={t('cal.pagerVersions')} />
-      </div>
+      {isPhone ? (
+        <Group title={t('cal.versions')} pad={0} gap={0}>
+          {vp.rows.map((v, i) => versionRow(v, i))}
+          <Pager page={vp.page} pages={vp.pages} onPage={vp.setPage} label={t('cal.pagerVersions')} />
+        </Group>
+      ) : (
+        <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+          <div style={{ padding: '18px 22px 10px' }}><span style={smallCaps}>{t('cal.versions')}</span></div>
+          {vp.rows.map((v, i) => versionRow(v, i))}
+          <Pager page={vp.page} pages={vp.pages} onPage={vp.setPage} label={t('cal.pagerVersions')} />
+        </div>
+      )}
 
       <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, changed - summary.length)} count={changed} week={week}
         onPublish={async (effectiveFrom, notify) => {

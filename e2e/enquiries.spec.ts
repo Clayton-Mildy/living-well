@@ -264,7 +264,7 @@ test('visit today: the front desk sees the guest in "Also today"', async ({ page
 });
 
 // ---------------------------------------------------------------- trials
-test('trial: a day pass booked at least a day ahead on an open day (no time, lunch and health check included); allergies and mobility go to the kitchen and nurse; it shows on the calendar', async ({ page }) => {
+test('trial: 2 days in a row (Rp 450.000), booked at least a day ahead on an open day (no time, lunch and health check included); allergies and mobility go to the kitchen and nurse; it shows on the calendar', async ({ page }) => {
   test.setTimeout(90_000);
   const c = watchConsole(page);
   await signIn(page, 's9', '/enquiries');
@@ -282,14 +282,14 @@ test('trial: a day pass booked at least a day ahead on an open day (no time, lun
   for (const iso of ['2026-10-21', '2026-10-29', '2026-10-30']) await expect(page.locator(`[data-date="${iso}"]`), iso).toHaveAttribute('aria-disabled', 'true'); // today (a day's notice), the outing, the closure
   await expect(page.locator('[data-date="2026-10-22"]')).not.toHaveAttribute('aria-disabled', 'true');
   await page.locator('[data-date="2026-10-22"]').click();
-  await expect(d.getByRole('button', { name: 'Book trial · Thu 22 Oct', exact: true })).toBeVisible(); // a day alone is enough
+  await expect(d.getByRole('button', { name: 'Book trial · Thu 22 Oct and Fri 23 Oct · Rp 450.000', exact: true })).toBeVisible(); // a day alone is enough
   await expect(d.getByRole('radio', { name: /^Thu 22 Oct Tomorrow/ })).toHaveAttribute('aria-checked', 'true');
   // the kitchen is told about the allergy
   await d.getByRole('button', { name: 'Peanuts', exact: true }).click();
   await d.getByRole('button', { name: 'Walker', exact: true }).click();
   await d.getByRole('button', { name: 'Soft food', exact: true }).click();
-  await d.getByRole('button', { name: 'Book trial · Thu 22 Oct', exact: true }).click();
-  await expect(toast(page, 'Trial booked for Bapak Yusuf Hamid: Thu 22 Oct. Ilham got the details on WhatsApp (demo).')).toBeVisible();
+  await d.getByRole('button', { name: 'Book trial · Thu 22 Oct and Fri 23 Oct · Rp 450.000', exact: true }).click();
+  await expect(toast(page, 'Trial booked for Bapak Yusuf Hamid: Thu 22 Oct and Fri 23 Oct (Rp 450.000). Ilham got the details on WhatsApp (demo).')).toBeVisible();
   await expect.poll(() => counts(page)).toEqual({ new: 1, visit: 1, trial: 2, joined: 0, lost: 1 });
   await openStage(page, 'trial');
   await expect(lead(page, 'e2')).toContainText('Trial day Thu 22 Oct');
@@ -409,8 +409,8 @@ test('join: the details come from the paper form, the signed form is attached (P
   const t = page.getByRole('dialog', { name: 'Opa Leo Gunadi' });
   await expect(t.getByText('Health details are filled in from the family’s form.')).toHaveCount(0);
   await t.getByRole('radio', { name: /^Fri 23 Oct/ }).click();
-  await t.getByRole('button', { name: 'Book trial · Fri 23 Oct', exact: true }).click();
-  await expect(toast(page, /Trial booked for Opa Leo Gunadi: Fri 23 Oct\./)).toBeVisible();
+  await t.getByRole('button', { name: 'Book trial · Fri 23 Oct and Mon 26 Oct · Rp 450.000', exact: true }).click();
+  await expect(toast(page, /Trial booked for Opa Leo Gunadi: Fri 23 Oct and Mon 26 Oct/)).toBeVisible();
 
   // Join: key details typed in from the paper, plan and first day, and the signed form must be attached
   await openStage(page, 'trial');
@@ -466,6 +466,42 @@ test('join: the details come from the paper form, the signed form is attached (P
   await page.evaluate(() => { (window as unknown as { __opened: string[] }).__opened = []; window.open = ((u?: string | URL) => { (window as unknown as { __opened: string[] }).__opened.push(String(u)); return null; }) as typeof window.open; });
   await page.getByRole('button', { name: 'View' }).click();
   await expect.poll(() => page.evaluate(() => (window as unknown as { __opened: string[] }).__opened)).toEqual([`/api/media/${m.documents.find((x) => x.type === 'membershipForm')!.mediaId}`]);
+  c.assertClean();
+});
+
+// KC round 6: Join asks the application form's questions too (like Add member), so the brochure form prints filled in before the member is saved
+test('join: the form questions are asked, the trial day fills in the allergies, and "Print the form to sign" prints the answers', async ({ page }) => {
+  test.setTimeout(90_000);
+  const c = watchConsole(page);
+  expect((await act(page, 'enquiry.bookTrial', { enquiryId: 'e5', date: '2026-10-23', food: ['shellfish'], drugs: [], mobility: 'walker', diet: [] })).ok()).toBeTruthy();
+  await signIn(page, 's9', '/enquiries');
+  await openStage(page, 'trial');
+  await lead(page, 'e5').getByRole('button', { name: 'Join', exact: true }).click();
+  const j = page.getByRole('dialog', { name: 'Opa Leo Gunadi' });
+  await expect(j.getByText('Allergies and needs from the trial day are filled in.')).toBeVisible();
+  await expect(j.getByRole('button', { name: 'Shellfish', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await j.getByLabel('Nickname (Panggilan)').fill('Opa Leo');
+  await j.getByLabel('Home address').fill('Jl. Kenanga 3');
+  // the four brochure pages with the answers, before the member exists
+  await page.evaluate(() => { const w = window as unknown as { __prints: number }; w.__prints = 0; window.print = () => { w.__prints += 1; }; });
+  await j.getByRole('button', { name: 'Print the form to sign' }).click();
+  const pages = page.getByTestId('application-form').getByTestId('form-page');
+  await expect(pages).toHaveCount(4);
+  const v = (field: string) => pages.first().locator(`[data-field="${field}"]`);
+  await expect(v('name')).toHaveText('Leo Gunadi');
+  await expect(v('nickname')).toHaveText('Opa Leo');
+  await expect(v('address1')).toHaveText('Jl. Kenanga 3');
+  await expect(v('allergy')).toHaveText('Ya');
+  await page.getByTestId('application-form').getByRole('button', { name: 'Print', exact: true }).click();
+  expect(await page.evaluate(() => (window as unknown as { __prints: number }).__prints)).toBe(1);
+  await page.keyboard.press('Escape'); // closes the printed form; the Join dialog keeps what was typed
+  await expect(page.getByTestId('application-form')).toHaveCount(0);
+  await expect(j.getByLabel('Nickname (Panggilan)')).toHaveValue('Opa Leo');
+  await attachForm(j);
+  await j.getByRole('button', { name: 'Create member · Flex' }).click();
+  await expect(toast(page, /Opa Leo Gunadi is now a member/)).toBeVisible();
+  const m = (Object.values((await snapshot(page)).members) as { lastName: string; address: string | null; registration?: { nickname?: string }; health: { food: string[]; mobility: string | null } }[]).find((x) => x.lastName === 'Gunadi')!;
+  expect(m).toMatchObject({ address: 'Jl. Kenanga 3', registration: { nickname: 'Opa Leo' }, health: { food: ['shellfish'], mobility: 'walker' } });
   c.assertClean();
 });
 

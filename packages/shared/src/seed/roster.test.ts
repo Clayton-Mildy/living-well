@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import {
   addDays, buildSeed, dayStatus, DEMO_START_MIN, DEMO_TODAY, invoiceStatus, isWeekday, live, lobbyGroups, membershipStatus, planOn, primaryContact,
-  projectForFamily, runPreview, flexMonth, ym, toMin, type ClubState,
+  projectForFamily, runPreview, flexMonth, suspensions, ym, toMin, type ClubState,
 } from '../index';
 
 const build = (T = DEMO_TODAY, nowMin = DEMO_START_MIN) => buildSeed(T, nowMin, { roster: true }).citra;
@@ -45,14 +45,14 @@ describe('demo roster', () => {
     expect(plans.filter((p) => p === 'flex').length).toBeGreaterThanOrEqual(12);
     const life = extra(s).map((m) => membershipStatus(m, DEMO_TODAY));
     expect(life.filter((x) => x === 'ending')).toHaveLength(3);
-    expect(life.filter((x) => x === 'ended')).toHaveLength(3);
+    expect(life.filter((x) => x === 'ended')).toHaveLength(4); // one of them was stopped for an unpaid invoice (the terms)
     expect(life.filter((x) => x === 'upcoming')).toHaveLength(0);
   });
 
   it('is deterministic', () => {
     expect(JSON.stringify(build())).toBe(JSON.stringify(build()));
     expect(JSON.stringify(build('2026-12-04', 700))).toBe(JSON.stringify(build('2026-12-04', 700)));
-  });
+  }, 30000);
 
   it('keeps visits, invoices and the lobby consistent', () => {
     const s = build();
@@ -72,10 +72,15 @@ describe('demo roster', () => {
     // invoices: last two runs, a few overdue / outstanding, all payments allocated to a real invoice
     const mine = live(s.invoices).filter((i) => extra(s).some((m) => m.id === i.memberId));
     expect(mine.length).toBeGreaterThan(40);
+    // 21 Oct is invoice day: this month's invoices were issued this morning (some families have paid already), and one family never paid September
     const open = mine.filter((i) => ['overdue', 'outstanding', 'partial'].includes(invoiceStatus(s, i, DEMO_TODAY)));
-    expect(new Set(open.map((i) => i.memberId)).size).toBeLessThanOrEqual(4);
-    expect(new Set(open.map((i) => i.memberId)).size).toBeGreaterThanOrEqual(2);
-    expect(mine.filter((i) => invoiceStatus(s, i, DEMO_TODAY) === 'overdue').length).toBeGreaterThanOrEqual(1);
+    expect(new Set(open.map((i) => i.memberId)).size).toBeGreaterThanOrEqual(15);
+    expect(mine.filter((i) => i.issueDate === '2026-10-21' && i.dueDate === '2026-10-28')).not.toHaveLength(0);
+    const overdue = mine.filter((i) => invoiceStatus(s, i, DEMO_TODAY) === 'overdue');
+    expect(overdue.map((i) => [i.memberId, i.period])).toEqual([['m74', '2026-09']]); // Tjahjadi's overdue invoice is not in the roster
+    expect(s.members.m74.memberships[0]).toMatchObject({ endReason: 'unpaid', endedBy: 'system' });
+    expect(membershipStatus(s.members.m74, DEMO_TODAY)).toBe('ended');
+    expect(Object.keys(suspensions(s, DEMO_TODAY))).toEqual(['m20']); // stopped members are not on hold (they are ended); Tjahjadi is (see seed.test)
     for (const p of live(s.payments)) for (const a of p.allocations) expect(s.invoices[a.invoiceId], p.id).toBeTruthy();
     for (const run of live(s.invoiceRuns)) for (const iid of run.invoiceIds) expect(s.invoices[iid], iid).toBeTruthy();
     expect(() => runPreview(s, '2026-11', DEMO_TODAY)).not.toThrow();
@@ -84,18 +89,16 @@ describe('demo roster', () => {
   });
 
   it('shows today\'s check-ins only once their time has passed', () => {
-    const arrivals = (nowMin: number) => {
-      const s = build(DEMO_TODAY, nowMin);
-      return live(s.attendance).filter((a) => a.date === DEMO_TODAY && /^m(5\d|[6-8]\d|90)$/.test(a.memberId));
-    };
+    const built = new Map<number, ClubState>(); // one build per time of day (a build holds six months of history)
+    const at = (nowMin: number) => { if (!built.has(nowMin)) built.set(nowMin, build(DEMO_TODAY, nowMin)); return built.get(nowMin)!; };
+    const arrivals = (nowMin: number) => live(at(nowMin).attendance).filter((a) => a.date === DEMO_TODAY && /^m(5\d|[6-8]\d|90)$/.test(a.memberId));
     for (const nowMin of [toMin('07:00'), toMin('09:00'), DEMO_START_MIN, toMin('12:00'), toMin('15:00'), toMin('17:00')]) {
       const rows = arrivals(nowMin);
       for (const a of rows) {
         expect(toMin(a.checkIn!.at)).toBeLessThanOrEqual(nowMin);
         if (a.checkOut) expect(toMin(a.checkOut.at)).toBeLessThanOrEqual(nowMin);
       }
-      const s = build(DEMO_TODAY, nowMin);
-      for (const x of live(s.readings).filter((r) => r.date === DEMO_TODAY)) expect(toMin(x.time)).toBeLessThanOrEqual(nowMin);
+      for (const x of live(at(nowMin).readings).filter((r) => r.date === DEMO_TODAY)) expect(toMin(x.time)).toBeLessThanOrEqual(nowMin);
     }
     expect(arrivals(toMin('07:00'))).toHaveLength(0);
     expect(arrivals(toMin('09:58')).length).toBeGreaterThanOrEqual(11);
@@ -104,16 +107,16 @@ describe('demo roster', () => {
     const mid = arrivals(toMin('15:00'));
     expect(mid.filter((a) => a.checkOut).length).toBeGreaterThanOrEqual(2); // a few already gone home
     expect(mid.filter((a) => !a.checkOut).length).toBeGreaterThanOrEqual(5);
-  });
+  }, 30000);
 
   it('works around other days', () => {
     for (const T of ['2026-10-06', '2026-10-30', '2026-11-02', '2026-12-28', '2027-02-17']) {
       const s = build(T, 620);
       expect(live(s.members)).toHaveLength(45);
-      for (const a of live(s.attendance)) expect(a.date <= T && isWeekday(a.date)).toBe(true);
-      for (const m of extra(s)) expect(primaryContact(s, m.id)).toBeTruthy();
+      expect(live(s.attendance).every((a) => a.date <= T && isWeekday(a.date) && dayStatus(s, a.date).open)).toBe(true); // six months of visits, none on a closed day
+      expect(extra(s).every((m) => !!primaryContact(s, m.id))).toBe(true);
       expect(() => lobbyGroups(s, T)).not.toThrow();
       expect(() => runPreview(s, ym(addDays(T, 31)), T)).not.toThrow();
     }
-  });
+  }, 30000);
 });

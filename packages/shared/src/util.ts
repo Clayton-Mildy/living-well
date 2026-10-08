@@ -83,6 +83,12 @@ export const sortBy = <T>(a: T[], key: (x: T) => string | number, dir: 1 | -1 = 
 export const uniq = <T>(a: T[]) => Array.from(new Set(a));
 export const sum = (a: number[]) => a.reduce((t, x) => t + x, 0);
 
+/** A WhatsApp chat link (wa.me) for a phone number: its digits, no "+". Empty when there is no number. */
+export const waUrl = (phone: string | undefined | null) => {
+  const digits = String(phone ?? '').replace(/\D/g, '');
+  return digits ? `https://wa.me/${digits}` : '';
+};
+
 /** Normalise a phone to E.164 digits with a + prefix. Local '0812…' and '812…' become +62812…. */
 export const e164 = (raw: string, defaultCc = '62') => {
   const t = String(raw).trim();

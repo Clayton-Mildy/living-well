@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, systemUser, live, priceOn, surveyStats, updatesFor, actionItems, DomainError, type ClubState } from '../index';
+import { buildSeed, execute, getUser, systemUser, live, priceOn, surveyStats, updatesFor, actionItems, liveSurvey, ratingLinkOf, DomainError, type ClubState } from '../index';
 import { appFamilies, audienceRecipients, broadcastRecipients, checkVenueSlot, resolveSurveyAudience, surveyMembers, venueClash } from '../rules/mgmt';
 
 const T = '2026-10-21'; // Wednesday
@@ -98,8 +98,10 @@ describe('venue', () => {
     fails(s, 'venue.askReview', { venueId: 'v1' }, 's9', 'mgmt.err.venueNotDone');
     fails(s, 'venue.recordReview', { venueId: 'v1', stars: 5, text: 'x' }, 's9', 'mgmt.err.venueNotDone');
     const asked = run(s, 'venue.askReview', { venueId: 'v1' }, 's9', later);
-    expect(asked.state.venueBookings.v1.reviewAskedAt).toBe('2026-11-02T10:00');
-    fails(asked.state, 'venue.askReview', { venueId: 'v1' }, 's9', 'mgmt.err.venueAsked', later);
+    expect(asked.state.venueBookings.v1).toMatchObject({ reviewAskedAt: '2026-11-02T10:00', surveyId: 'svv1' });
+    expect(asked.state.venueBookings.v1.ratingToken).toBeTruthy();
+    // asking again sends the same link
+    expect(run(asked.state, 'venue.askReview', { venueId: 'v1' }, 's9', later).state.venueBookings.v1.ratingToken).toBe(asked.state.venueBookings.v1.ratingToken);
     const rev = run(asked.state, 'venue.recordReview', { venueId: 'v1', stars: 4, text: 'Great morning, thank you' }, 's9', later);
     expect(rev.state.venueBookings.v1.review).toEqual({ stars: 4, text: 'Great morning, thank you' });
     fails(rev.state, 'venue.askReview', { venueId: 'v1' }, 's9', 'mgmt.err.venueReviewed', later);
@@ -448,39 +450,182 @@ describe('survey custom questions', () => {
   });
 });
 
+describe('survey templates, the survey log and venue ratings', () => {
+  const later = { today: '2026-11-02', nowMin: 10 * 60 }; // v1 (Sat 24 Oct) is over
+  const venueDraft = { kind: 'venue', title: 'Venue rating 2', questions: ['overall', 'comment'], custom: [] };
+  const rate = (st: ClubState, input: unknown) => execute(st, 'venue.rate', input, systemUser(st.clubId), later, mid());
+  const rateFails = (st: ClubState, input: unknown, code: string) => {
+    try { rate(st, input); } catch (e) { expect((e as DomainError).code).toBe(code); return; }
+    throw new Error(`expected venue.rate to fail with ${code}`);
+  };
+
+  it('templates: save, change, delete; a survey starts from one and copies its questions', () => {
+    const s = seed().citra;
+    expect(live(s.surveyTemplates).map((t) => `${t.kind}:${t.title}`).sort()).toEqual(['family:Activities feedback', 'family:Lunch and menu', 'family:Monthly family satisfaction', 'venue:Venue rating']);
+    const saved = run(s, 'surveyTemplate.save', { title: 'Short check', kind: 'family', questions: ['overall', 'team'], custom: [{ kind: 'yesno', text: 'Happy?' }], teamStaffIds: ['s1'] }, 's9');
+    const id = saved.result.templateId as string;
+    expect(id).toBe('st5');
+    expect(saved.state.surveyTemplates[id]).toMatchObject({ title: 'Short check', kind: 'family', questions: ['overall', 'team'], custom: [{ id: 'q1', kind: 'yesno', text: 'Happy?', required: false }], teamStaffIds: ['s1'], createdBy: 'staff:s9' });
+    // changing keeps the id; a template without the team question has no team
+    const changed = run(saved.state, 'surveyTemplate.save', { id, title: 'Short check 2', kind: 'family', questions: ['overall'], custom: [{ kind: 'yesno', text: 'Happy?' }], teamStaffIds: ['s1'] }, 's9');
+    expect(changed.state.surveyTemplates[id]).toMatchObject({ title: 'Short check 2', questions: ['overall'], teamStaffIds: [] });
+    expect(Object.keys(changed.state.surveyTemplates)).toHaveLength(5);
+    // a survey made from it: questions copied, its own log starts with "created from"
+    const c = run(saved.state, 'survey.create', { templateId: id }, 's9');
+    expect(c.state.surveys.sv2).toMatchObject({ title: 'Short check', kind: 'family', templateId: id, questions: ['overall', 'team'], custom: [{ id: 'q1', text: 'Happy?' }], teamStaffIds: ['s1'], status: 'draft', log: [{ what: 'created', by: 'staff:s9', note: 'Short check' }] });
+    // what is typed wins over the template; the template is left alone
+    expect(run(saved.state, 'survey.create', { templateId: id, title: 'Own title', questions: ['comment'], teamStaffIds: [] }, 's9').state.surveys.sv2).toMatchObject({ title: 'Own title', questions: ['comment'], templateId: id });
+    // deleted templates are gone; surveys made from them stay
+    const gone = run(c.state, 'surveyTemplate.delete', { id }, 's9').state;
+    expect(live(gone.surveyTemplates)).toHaveLength(4);
+    expect(gone.surveys.sv2.templateId).toBe(id);
+    fails(gone, 'survey.create', { templateId: id }, 's9', 'err.notFound');
+    fails(gone, 'surveyTemplate.delete', { id }, 's9', 'err.notFound');
+    // KC round 7: the venue rating template is built in: it can't be deleted or turned into a family survey, but its questions can change
+    expect(s.surveyTemplates.st4.builtIn).toBe(true);
+    fails(s, 'surveyTemplate.delete', { id: 'st4' }, 's9', 'mgmt.err.svTplBuiltIn');
+    fails(s, 'surveyTemplate.save', { id: 'st4', title: 'Venue', kind: 'family', questions: ['overall'], custom: [] }, 's9', 'mgmt.err.svTplBuiltIn');
+    expect(run(s, 'surveyTemplate.save', { id: 'st4', title: 'Venue rating', kind: 'venue', questions: ['overall', 'comment'], custom: [] }, 's9').state.surveyTemplates.st4).toMatchObject({ questions: ['overall', 'comment'], builtIn: true });
+    fails(s, 'surveyTemplate.save', { id: 'st99', title: 'x', kind: 'family', questions: ['comment'], custom: [] }, 's9', 'err.notFound');
+    fails(s, 'surveyTemplate.save', { title: 'x', kind: 'family', questions: [], custom: [] }, 's9', 'mgmt.err.noQuestions');
+    fails(s, 'surveyTemplate.save', { title: 'x', kind: 'venue', questions: ['comment'], custom: [] }, 's9', 'mgmt.err.venueNeedsOverall');
+    fails(s, 'surveyTemplate.save', { title: 'x', kind: 'family', questions: ['team'], custom: [], teamStaffIds: ['s99'] }, 's9', 'err.invalid');
+    for (const uid of ['s1', 'f1']) expect(() => run(s, 'surveyTemplate.save', { title: 'x', kind: 'family', questions: ['comment'], custom: [] }, uid)).toThrow('err.forbidden');
+  });
+
+  it('one family survey and one venue survey can be live together; sending one kind closes only that kind', () => {
+    const s = seed().citra;
+    expect(liveSurvey(s)?.id).toBe('sv1');
+    expect(liveSurvey(s, 'venue')?.id).toBe('svv1');
+    const fam = run(run(s, 'survey.create', { title: 'November', questions: ['comment'], teamStaffIds: [] }, 's9').state, 'survey.send', { surveyId: 'sv2' }, 's9').state;
+    expect(fam.surveys.sv1.status).toBe('closed');
+    expect(fam.surveys.svv1.status).toBe('live'); // the venue survey is not touched
+    expect(fam.surveys.sv1.log!.at(-1)).toMatchObject({ what: 'closed', note: 'replaced', by: 'staff:s9' });
+    expect(fam.surveys.sv2.log!.map((l) => l.what)).toEqual(['created', 'sent']);
+    expect(fam.surveys.sv2.log!.at(-1)!.note).toBe('6'); // how many families it went to
+    const created = run(fam, 'survey.create', venueDraft, 's9');
+    expect(created.state.surveys.sv3).toMatchObject({ kind: 'venue', status: 'draft', recipients: [], teamStaffIds: [] });
+    const ven = run(created.state, 'survey.send', { surveyId: 'sv3' }, 's9');
+    expect(ven.state.surveys.sv3).toMatchObject({ status: 'live', recipients: [], sentOn: T });
+    expect(ven.state.surveys.svv1).toMatchObject({ status: 'closed', closedOn: T });
+    expect(ven.state.surveys.sv2.status).toBe('live'); // the family survey stays live
+    expect(liveSurvey(ven.state)?.id).toBe('sv2');
+    expect(liveSurvey(ven.state, 'venue')?.id).toBe('sv3');
+    // reopen: the live one of the same kind closes, the log says so
+    const re = run(ven.state, 'survey.reopen', { surveyId: 'svv1' }, 's9').state;
+    expect(re.surveys).toMatchObject({ svv1: { status: 'live' }, sv3: { status: 'closed' } });
+    expect(re.surveys.svv1.closedOn).toBeUndefined();
+    expect(re.surveys.svv1.log!.at(-1)).toMatchObject({ what: 'reopened' });
+    fails(re, 'survey.reopen', { surveyId: 'svv1' }, 's9', 'mgmt.err.notClosed');
+    fails(re, 'survey.reopen', { surveyId: 'sv2' }, 's9', 'mgmt.err.notClosed');
+    // editing a draft is one line in the log per person and day
+    const e1 = run(created.state, 'survey.update', { surveyId: 'sv3', title: 'A' }, 's9').state;
+    const e2 = run(e1, 'survey.update', { surveyId: 'sv3', title: 'B' }, 's9').state;
+    expect(e2.surveys.sv3.log!.map((l) => l.what)).toEqual(['created', 'edited']);
+    // a venue survey asks for the overall rating and has no team
+    fails(s, 'survey.create', { kind: 'venue', title: 'x', questions: ['comment'], custom: [] }, 's9', 'mgmt.err.venueNeedsOverall');
+    expect(run(s, 'survey.create', { kind: 'venue', title: 'x', questions: ['overall', 'team'], teamStaffIds: ['s1'], custom: [] }, 's9').state.surveys.sv2).toMatchObject({ questions: ['overall'], teamStaffIds: [] });
+    // families never see a venue survey, a renter's answer, or a template
+    expect(() => run(s, 'survey.answer', { surveyId: 'svv1', overall: 5 }, 'f1')).toThrow('err.forbidden');
+  });
+
+  it('venue rating link: asking sets a link on the booking, the renter answers once through venue.rate (as the system)', () => {
+    const s = seed().citra;
+    const ask = run(s, 'venue.askReview', { venueId: 'v1' }, 's9', later);
+    const b = ask.state.venueBookings.v1;
+    expect(b).toMatchObject({ surveyId: 'svv1', reviewAskedAt: '2026-11-02T10:00' });
+    expect(b.ratingToken).toMatch(/^[a-z0-9]{20,24}$/);
+    expect(ask.result).toMatchObject({ token: b.ratingToken, surveyId: 'svv1' });
+    expect(ratingLinkOf(ask.state, b.ratingToken)).toMatchObject({ state: 'open' });
+    expect(ratingLinkOf(ask.state, 'nope')).toBeNull();
+    expect(ratingLinkOf(ask.state, '')).toBeNull();
+    const token = b.ratingToken!;
+    const input = { token, name: 'Santi W.', overall: 5, recommend: true, comment: 'Great morning', answers: { q1: true, q2: 'More parking' } };
+    // a wrong token, or a signed-in user (even management), cannot answer
+    rateFails(ask.state, { ...input, token: 'wrong-token-1234' }, 'err.notFound');
+    for (const uid of ['s9', 's1', 'f1']) expect(() => run(ask.state, 'venue.rate', input, uid, later)).toThrow('err.forbidden');
+    rateFails(ask.state, { ...input, overall: 0 }, 'err.invalid');
+    rateFails(ask.state, { ...input, answers: { q1: 'yes' } }, 'err.invalid');
+    const r = rate(ask.state, input);
+    expect(r.state.surveyResponses['sr-svv1-v1']).toMatchObject({ familyId: '', venueBookingId: 'v1', respondentName: 'Santi W.', overall: 5, recommend: true, comment: 'Great morning', answers: { q1: true, q2: 'More parking' }, on: '2026-11-02', createdBy: 'system' });
+    expect(r.state.venueBookings.v1.review).toEqual({ stars: 5, text: 'Great morning' });
+    expect(ratingLinkOf(r.state, token)).toMatchObject({ state: 'answered' });
+    expect(surveyStats(r.state, r.state.surveys.svv1)).toMatchObject({ answered: 3, recipients: 4, overallN: 3 }); // two answers and three links in the seed, plus this one
+    expect(Object.values(r.state.activity).some((a) => a.key === 'mgmt.feed.venueRated' && a.params.org === 'PT Arunika Farma caregiver seminar')).toBe(true);
+    expect(updatesFor(r.state, user(r.state, 's9')).some((x) => x.kind === 'mgmt.notif.venueRated')).toBe(true);
+    // one answer per booking
+    rateFails(r.state, input, 'mgmt.err.alreadyAnswered');
+    fails(r.state, 'venue.askReview', { venueId: 'v1' }, 's9', 'mgmt.err.venueReviewed', later);
+    // the name is the booking's contact when left empty; the venue survey's own questions follow their kind
+    expect(rate(ask.state, { ...input, name: '' }).state.surveyResponses['sr-svv1-v1'].respondentName).toBe('Ibu Santi Wirjo');
+    // a closed survey takes no more answers; asking again points the link at the live one
+    const closed = run(ask.state, 'survey.close', { surveyId: 'svv1' }, 's9', later).state;
+    expect(ratingLinkOf(closed, token)).toMatchObject({ state: 'closed' });
+    rateFails(closed, input, 'mgmt.err.notLive');
+  });
+
+  it('asking for a rating with no live venue survey makes one from the venue template and sends it', () => {
+    const s = run(seed().citra, 'survey.close', { surveyId: 'svv1' }, 's9').state;
+    expect(liveSurvey(s, 'venue')).toBeUndefined();
+    const ask = run(s, 'venue.askReview', { venueId: 'v1' }, 's9', later);
+    const sv = ask.state.surveys.sv2;
+    expect(sv).toMatchObject({ kind: 'venue', status: 'live', title: 'Venue rating', templateId: 'st4', recipients: [], sentOn: '2026-11-02', questions: ['overall', 'recommend', 'comment'] });
+    expect(sv.custom!.map((q) => q.text)).toEqual(['Was the room ready on time?', 'What could we do better?']);
+    expect(sv.log!.map((l) => l.what)).toEqual(['created', 'sent']);
+    expect(ask.state.venueBookings.v1.surveyId).toBe('sv2');
+    // a booking whose link went to the closed survey is pointed at the new one when it is asked again
+    const old = run(seed().citra, 'venue.askReview', { venueId: 'v1' }, 's9', later).state;
+    const reasked = run(run(old, 'survey.close', { surveyId: 'svv1' }, 's9', later).state, 'venue.askReview', { venueId: 'v1' }, 's9', later).state;
+    expect(reasked.venueBookings.v1.surveyId).toBe('sv2');
+    expect(reasked.venueBookings.v1.ratingToken).toBe(old.venueBookings.v1.ratingToken);
+    // keeping a typed review as a fallback
+    expect(run(s, 'venue.recordReview', { venueId: 'v1', stars: 4, text: 'By phone' }, 's9', later).state.venueBookings.v1.review).toEqual({ stars: 4, text: 'By phone' });
+  });
+});
+
 describe('prices and club rules', () => {
   it('saves a new price version; changed prices stop being "sample"; invoices already sent keep their amounts', () => {
     const s = seed().citra;
-    expect(priceOn(s, T)).toMatchObject({ flex: 5500000, sample: { flex: true, gold: true, extra: true } });
-    const r = run(s, 'prices.set', { flex: 6000000, gold: 9500000, extra: 700000, from: T }, 's9');
-    expect(priceOn(r.state, T)).toMatchObject({ flex: 6000000, gold: 9500000, extra: 700000, sample: { flex: false, gold: true, extra: false } });
-    expect(priceOn(r.state, '2026-10-15').flex).toBe(5500000); // before the change
-    expect(r.state.invoices['INV-2610-001'].lines[0].amount).toBe(5500000);
+    // the brochure's prices are real; only the extra-day price (not in it) is still a sample
+    expect(priceOn(s, T)).toMatchObject({ flex: 2700000, gold: 3950000, extra: 650000, registration: 2500000, trial: 450000, leave: 250000, sample: { flex: false, gold: false, extra: true } });
+    const r = run(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 700000, from: T }, 's9');
+    expect(priceOn(r.state, T)).toMatchObject({ flex: 3000000, gold: 3950000, extra: 700000, registration: 2500000, trial: 450000, leave: 250000, sample: { flex: false, gold: false, extra: false } }); // the fees carry over
+    expect(priceOn(r.state, '2026-10-20').flex).toBe(2700000); // before the change
+    expect(r.state.invoices['INV-2610-001'].lines[0].amount).toBe(2700000);
     expect(updatesFor(r.state, user(r.state, 's10')).some((x) => x.kind === 'mgmt.notif.pricesChanged')).toBe(true);
     // a second change the same day edits that version
-    const r2 = run(r.state, 'prices.set', { flex: 6000000, gold: 10000000, extra: 700000, from: T }, 's9');
+    const r2 = run(r.state, 'prices.set', { flex: 3000000, gold: 4000000, extra: 700000, from: T }, 's9');
     expect(live(r2.state.prices)).toHaveLength(2);
-    expect(priceOn(r2.state, T)).toMatchObject({ gold: 10000000, sample: { flex: false, gold: false, extra: false } });
+    expect(priceOn(r2.state, T)).toMatchObject({ gold: 4000000, sample: { flex: false, gold: false, extra: false } });
     // effective later
-    const later = run(s, 'prices.set', { flex: 6000000, gold: 9500000, extra: 650000, from: '2026-12-01' }, 's9');
-    expect(priceOn(later.state, T).flex).toBe(5500000);
-    expect(priceOn(later.state, '2026-12-01').flex).toBe(6000000);
-    fails(s, 'prices.set', { flex: 0, gold: 9500000, extra: 650000, from: T }, 's9', 'err.invalid');
-    fails(s, 'prices.set', { flex: 5500000.5, gold: 9500000, extra: 650000, from: T }, 's9', 'err.invalid');
-    fails(s, 'prices.set', { flex: -1, gold: 9500000, extra: 650000, from: T }, 's9', 'err.invalid');
-    fails(s, 'prices.set', { flex: 5500000, gold: 9500000, extra: 650000, from: T }, 's9', 'err.noChanges');
-    fails(s, 'prices.set', { flex: 6000000, gold: 9500000, extra: 650000, from: '2026-10-20' }, 's9', 'mgmt.err.pricePast');
-    for (const uid of ['s10', 's1', 'f1']) expect(() => run(s, 'prices.set', { flex: 6000000, gold: 9500000, extra: 650000, from: T }, uid)).toThrow('err.forbidden');
+    const later = run(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, from: '2026-12-01' }, 's9');
+    expect(priceOn(later.state, T).flex).toBe(2700000);
+    expect(priceOn(later.state, '2026-12-01').flex).toBe(3000000);
+    fails(s, 'prices.set', { flex: 0, gold: 3950000, extra: 650000, from: T }, 's9', 'err.invalid');
+    fails(s, 'prices.set', { flex: 2700000.5, gold: 3950000, extra: 650000, from: T }, 's9', 'err.invalid');
+    fails(s, 'prices.set', { flex: -1, gold: 3950000, extra: 650000, from: T }, 's9', 'err.invalid');
+    fails(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, from: T }, 's9', 'err.noChanges');
+    fails(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, from: '2026-10-20' }, 's9', 'mgmt.err.pricePast');
+    for (const uid of ['s10', 's1', 'f1']) expect(() => run(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, from: T }, uid)).toThrow('err.forbidden');
+  });
+  it('the registration fee, the 2-day trial and a month of leave are prices too (left out = unchanged)', () => {
+    const s = seed().citra;
+    const r = run(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, registration: 3000000, trial: 500000, leave: 300000, from: T }, 's9');
+    expect(priceOn(r.state, T)).toMatchObject({ registration: 3000000, trial: 500000, leave: 300000, flex: 2700000, sample: { flex: false, gold: false, extra: true } });
+    fails(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, registration: 2500000, trial: 450000, leave: 250000, from: T }, 's9', 'err.noChanges'); // all the same
+    fails(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, trial: 0, from: T }, 's9', 'err.invalid');
+    const onlyLeave = run(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, leave: 260000, from: T }, 's9');
+    expect(priceOn(onlyLeave.state, T)).toMatchObject({ registration: 2500000, trial: 450000, leave: 260000 });
   });
   it('the notify toggle: the team is told by default, and not when it is switched off', () => {
     const s = seed().citra;
     const pricesNotes = (st: ClubState) => updatesFor(st, user(st, 's10')).filter((x) => x.kind === 'mgmt.notif.pricesChanged');
-    const on = run(s, 'prices.set', { flex: 6000000, gold: 9500000, extra: 650000, from: T }, 's9');
+    const on = run(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, from: T }, 's9');
     expect(pricesNotes(on.state)).toHaveLength(1);
-    expect(pricesNotes(run(s, 'prices.set', { flex: 6000000, gold: 9500000, extra: 650000, from: T, notify: true }, 's9').state)).toHaveLength(1);
-    const off = run(s, 'prices.set', { flex: 6000000, gold: 9500000, extra: 650000, from: T, notify: false }, 's9');
+    expect(pricesNotes(run(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, from: T, notify: true }, 's9').state)).toHaveLength(1);
+    const off = run(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, from: T, notify: false }, 's9');
     expect(pricesNotes(off.state)).toHaveLength(0);
-    expect(priceOn(off.state, T).flex).toBe(6000000); // the change itself is the same
+    expect(priceOn(off.state, T).flex).toBe(3000000); // the change itself is the same
     expect(Object.values(off.state.activity).some((x) => x.key === 'mgmt.feed.prices')).toBe(true); // the activity feed still records it
   });
   it('editable rule: Flex visits per month', () => {

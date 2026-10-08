@@ -202,6 +202,8 @@ test.describe('menu of the day', () => {
     await takePhotoWithFile(page);
     await expect(tiles).toHaveCount(3);
     await expect(page.getByText('Lunch photos · 3')).toBeVisible();
+    // the tiles show at once (optimistic); the server has all three a moment later
+    await expect.poll(async () => (await stateOf(page, 's3')).dayMenus[T].photoIds?.length, { timeout: 10_000 }).toBe(3);
     const s1 = await stateOf(page, 's3');
     const ids: string[] = s1.dayMenus[T].photoIds;
     expect(ids).toHaveLength(3);
@@ -232,7 +234,7 @@ test.describe('menu of the day', () => {
   test('management\'s photos go live at once; the notify toggle is on by default and off keeps the families quiet', async ({ page, browser }, info) => {
     const c = watchConsole(page);
     await signIn(page, 's9', '/menu');
-    const notify = page.getByRole('switch', { name: /Notify families/ });
+    const notify = page.getByTestId('lunch-photos').getByRole('switch', { name: /Notify families/ }); // the tea photos have their own switch
     await expect(notify).toHaveAttribute('aria-checked', 'true');
     const laras = await another(browser, info, 'fm10_0', '/today');
     await expect(laras.page.getByTestId('lunch-photo')).toHaveCount(0);
@@ -422,6 +424,62 @@ test.describe('allergies on file: planning ahead', () => {
     await expect(picker.getByRole('checkbox', { name: /Sop ikan kakap/ })).toContainText('Clashes with Bapak Bambang');
     await picker.getByLabel('Find a dish').fill('rawon');
     await expect(picker.getByRole('checkbox', { name: /Rawon daging/ })).not.toContainText('Clashes with');
+  });
+});
+
+test.describe('allergen reach of a dish', () => {
+  // seed: Bambang has a seafood allergy and came on all of the last 4 Wednesdays and Fridays, but on none of the Thursdays
+  test('the weekly plan, the dish picker, the one-date sheet and the dishes list say how many are allergic and how many usually come that weekday', async ({ page }) => {
+    const c = watchConsole(page);
+    await signIn(page, 's3');
+    const reach = (l: ReturnType<Page['locator']>) => l.getByTestId('allergy-reach');
+    // the dishes list: the fish soup and the fish porridge (soft food) reach Bambang, who eats the regular lunch
+    await page.getByLabel('Search dishes').fill('sop ikan');
+    await expect(reach(page.getByTestId('dish-row').filter({ hasText: 'Sop ikan kakap' }))).toContainText('1 allergic');
+    await expect(reach(page.getByTestId('dish-row').filter({ hasText: 'Sop ikan kakap' }))).not.toContainText('usually');
+    await page.getByLabel('Search dishes').fill('rawon');
+    await expect(reach(page.getByTestId('dish-row'))).toHaveCount(0); // nobody is allergic to it: no chip
+    // the weekly plan: Wednesday's fish soup, counted for Wednesdays
+    const soup = page.getByTestId('plan-3-lunch').getByRole('button', { name: /Remove Sop ikan kakap/ });
+    await expect(reach(soup)).toContainText('1 allergic · 1 usually comes Wed');
+    await expect(soup).toHaveAttribute('aria-label', /1 member allergic to fish; 1 usually comes on Wednesday/);
+    await expect(reach(page.getByTestId('plan-3-lunch'))).toHaveCount(1); // only the soup
+    await expect(reach(page.getByTestId('plan-4-lunch'))).toHaveCount(0);
+    // the picker opened for Thursday counts Thursdays: Bambang is allergic but does not usually come
+    await page.getByTestId('plan-4-lunch').getByRole('button', { name: 'Add a dish to Lunch' }).click();
+    const picker = page.getByRole('dialog', { name: 'Thursday · Lunch' });
+    await picker.getByLabel('Find a dish').fill('sop ikan');
+    const row = picker.getByRole('checkbox', { name: /Sop ikan kakap/ });
+    await expect(reach(row)).toContainText('1 allergic · 0 usually come Thu');
+    await expect(row.getByRole('img', { name: /1 member allergic to fish; 0 usually come on Thursday/ })).toBeVisible();
+    await expect(row).toContainText('Clashes with Bapak Bambang');
+    await picker.getByLabel('Find a dish').fill('rawon');
+    await expect(reach(picker.getByRole('checkbox', { name: /Rawon daging/ }))).toHaveCount(0);
+    await picker.getByRole('button', { name: 'Done' }).click();
+    // the same soup picked for Friday: he does come on Fridays
+    await page.getByTestId('plan-5-lunch').getByRole('button', { name: 'Add a dish to Lunch' }).click();
+    const fri = page.getByRole('dialog', { name: 'Friday · Lunch' });
+    await fri.getByLabel('Find a dish').fill('sop ikan');
+    await expect(reach(fri.getByRole('checkbox', { name: /Sop ikan kakap/ }))).toContainText('1 allergic · 1 usually comes Fri');
+    await fri.getByRole('button', { name: 'Done' }).click();
+    // the one-date sheet counts for its own date's weekday (today is a Wednesday and serves the soup)
+    await page.getByRole('button', { name: 'Change a date' }).click();
+    const sheet = page.getByRole('dialog', { name: 'Change one date' });
+    await expect(reach(sheet.getByTestId('override-lunch'))).toContainText('1 allergic · 1 usually comes Wed');
+    await pickDate(page, 'Date', '2026-10-22');
+    await expect(sheet.getByTestId('override-lunch')).toContainText('Semur tahu tempe');
+    await expect(reach(sheet.getByTestId('override-lunch'))).toHaveCount(0);
+    await assertNoHorizontalScroll(page);
+    c.assertClean();
+  });
+
+  test('in Indonesian the chip and its label are translated', async ({ page }) => {
+    const c = watchConsole(page);
+    await signIn(page, 's3', '/today', 'id');
+    const soup = page.getByTestId('plan-3-lunch').getByRole('button', { name: /Hapus Sop ikan kakap/ });
+    await expect(soup.getByTestId('allergy-reach')).toContainText('1 alergi · 1 biasanya datang Rab');
+    await expect(soup).toHaveAttribute('aria-label', /1 anggota alergi terhadap ikan; 1 biasanya datang pada hari Rabu/);
+    c.assertClean();
   });
 });
 
@@ -755,38 +813,44 @@ test.describe('feedback', () => {
     await expect(card).toHaveAttribute('data-status', 'open');
     await card.getByLabel('Reply').fill('Thank you, Laras. We will use less salt in the sayur asem.');
     await card.getByRole('button', { name: 'Send reply' }).click();
-    await expect(toast(page)).toContainText('Reply sent to Laras');
+    await expect(toast(page)).toContainText('Reply sent to Laras. They see it in the app, on their Today.');
     await expect(card).toHaveAttribute('data-status', 'answered');
     await expect(card.getByTestId('reply')).toContainText('We will use less salt in the sayur asem.');
     await expect(card.getByTestId('reply')).toContainText('Chef Agus');
     await expect(page.getByText('1 open · from families')).toBeVisible();
     await assertNoHorizontalScroll(page);
-    // Laras: the reply is in her Messages thread, and in her updates
+    // Laras: no Messages (the reply goes to her on WhatsApp, simulated); the reply text is in her updates, and the update opens Today
     const laras = await another(browser, info, 'fm10_0', '/today');
     const st = await stateOf(laras.page, 'fm10_0');
-    const msgs = Object.values<{ threadId: string; from: string; text: string }>(st.messages).filter((m) => m.threadId === 'tk-c1');
-    expect(msgs.map((m) => m.from)).toEqual(['family:fm10_0', 'staff:s3']);
-    expect(msgs[1].text).toContain('use less salt');
+    expect(Object.keys(st.messages)).toHaveLength(0);
+    expect(st.feedback.c1.replies).toHaveLength(1);
+    expect(st.feedback.c1.replies[0]).toMatchObject({ by: 'staff:s3', text: 'Thank you, Laras. We will use less salt in the sayur asem.' });
+    const bell = Object.values<{ kind: string; link: string; params: { text: string } }>(st.notifications).find((n) => n.kind === 'kitchen.notif.feedbackReply')!;
+    expect(bell).toMatchObject({ link: '/today', params: { text: 'Thank you, Laras. We will use less salt in the sayur asem.' } });
     await laras.page.getByRole('button', { name: /Notifications/ }).first().click();
     const panel = laras.page.getByRole('dialog', { name: 'Notifications' });
     await panel.getByRole('tab', { name: /Updates/ }).click();
-    await expect(panel.getByText('The kitchen replied about Bapak Bambang’s meal.')).toBeVisible();
-    // and the Messages screen shows it once the chat screen is built
-    await laras.page.keyboard.press('Escape');
-    await laras.page.goto('/chat');
-    if (!(await laras.page.getByText('This screen is being built.').count())) await expect(laras.page.getByText(/use less salt/).first()).toBeVisible();
+    const update = panel.getByRole('button', { name: /The kitchen replied about Bapak Bambang’s meal/ });
+    await expect(update).toContainText('We will use less salt in the sayur asem.');
+    await update.click();
+    await expect(laras.page).toHaveURL(/\/today$/);
+    await expect(laras.page.locator('[data-nav-key="chat"]')).toHaveCount(0); // there is no Messages tab
     await laras.close();
     c.assertClean();
   });
 
-  test('through three screens: Laras sends feedback in her app, the kitchen answers, the answer lands in her Messages', async ({ page, browser }, info) => {
+  test('through three screens: Laras sends feedback in her app, the kitchen answers, the answer shows in her app (Today and her updates)', async ({ page, browser }, info) => {
     const c = watchConsole(page);
     await signIn(page, 'fm10_0', '/today');
     await page.getByRole('button', { name: 'Feedback on lunch' }).click();
     await page.getByRole('radio', { name: 'Sop ikan kakap' }).click();
     await page.getByLabel('What would you like the kitchen to know?').fill('The fish soup was a little too hot for Papa.');
     await page.getByRole('button', { name: 'Send feedback' }).click();
-    await expect(toast(page)).toContainText('The kitchen team will reply in Messages');
+    await expect(toast(page)).toContainText('The kitchen team’s reply will appear on your Today, under Lunch feedback.');
+    // her feedback is on her Today, waiting for the kitchen
+    const mine = page.getByTestId('lunch-feedback').locator('[data-feedback]').filter({ hasText: 'a little too hot for Papa' });
+    await expect(mine).toHaveAttribute('data-status', 'open');
+    await expect(mine).toContainText('Waiting for the kitchen');
     // the kitchen sees it, open, with the dish and the family it came from
     const chef = await another(browser, info, 's3', '/feedback');
     const card = chef.page.getByTestId('feedback-card').filter({ hasText: 'a little too hot for Papa' });
@@ -797,11 +861,17 @@ test.describe('feedback', () => {
     await expect(chef.page.getByText('3 open · from families')).toBeVisible();
     await card.getByLabel('Reply').fill('Thank you Laras, we will serve it cooler.');
     await card.getByRole('button', { name: 'Send reply' }).click();
-    await expect(chef.page.getByRole('status')).toContainText('Reply sent to Laras');
+    await expect(chef.page.getByRole('status')).toContainText('Reply sent to Laras. They see it in the app, on their Today.');
+    await expect(card.getByTestId('reply')).toContainText('we will serve it cooler');
     await chef.close();
-    // Laras: the answer is waiting in Messages
-    await page.goto('/chat');
-    await expect(page.getByText(/we will serve it cooler/).first()).toBeVisible();
+    // Laras: the answer is on her Today, under her feedback (live, no reload), and in her updates
+    await expect(mine).toHaveAttribute('data-status', 'answered');
+    await expect(mine.getByTestId('kitchen-reply')).toContainText('Thank you Laras, we will serve it cooler.');
+    await expect(mine).toContainText('The kitchen replied');
+    await page.getByRole('button', { name: /Notifications/ }).first().click();
+    const bell = page.getByRole('dialog', { name: 'Notifications' });
+    await bell.getByRole('tab', { name: /Updates/ }).click();
+    await expect(bell.getByRole('button', { name: /The kitchen replied about Bapak Bambang’s meal/ }).first()).toContainText('we will serve it cooler');
     await assertNoHorizontalScroll(page);
     c.assertClean();
   });
@@ -818,7 +888,7 @@ test.describe('feedback', () => {
     await card.getByLabel('Reply').fill('Sorry! We will steam them longer.');
     await card.getByRole('button', { name: 'Send reply' }).click();
     await expect(card).toHaveAttribute('data-status', 'answered');
-    // edit the reply: a new message, the first stays in the thread
+    // edit the reply: another reply, the first stays on the card
     await card.getByRole('button', { name: 'Edit reply' }).click();
     await expect(card.getByLabel('Reply')).toHaveValue('Sorry! We will steam them longer.');
     await card.getByLabel('Reply').fill('Sorry! We will steam them longer, and cut them smaller.');
@@ -831,10 +901,14 @@ test.describe('feedback', () => {
     await expect(card).toHaveAttribute('data-status', 'open');
     await expect(card.getByLabel('Reply')).toBeVisible();
     await expect(page.getByText('3 open · from families')).toBeVisible();
-    // close without more words
+    // close without more words: it leaves the list and waits behind "Show closed feedback" at the bottom (KC round 6)
     await card.getByRole('button', { name: 'Close' }).click();
-    await expect(card).toHaveAttribute('data-status', 'closed');
-    await expect(card.getByLabel('Reply')).toHaveCount(0);
+    await expect(card).toHaveCount(0);
+    await page.getByRole('button', { name: /^Show closed feedback \(\d+\)$/ }).click();
+    const closedCard = page.getByTestId('closed-feedback').getByTestId('feedback-card').filter({ hasText: 'The beans were a bit hard for Papa.' });
+    await expect(closedCard).toHaveAttribute('data-status', 'closed');
+    await expect(closedCard.getByLabel('Reply')).toHaveCount(0);
+    await expect(closedCard.getByRole('button', { name: 'Reopen' })).toBeVisible();
   });
 
   test('staff log feedback received by phone, then answer it', async ({ page }) => {
@@ -853,34 +927,50 @@ test.describe('feedback', () => {
     await expect(card).toHaveAttribute('data-status', 'open');
     await card.getByLabel('Reply').fill('Thank you, we will serve it cooler.');
     await card.getByRole('button', { name: 'Send reply' }).click();
-    await expect(toast(page)).toContainText('Reply sent to the family'); // the server has it
+    await expect(toast(page)).toContainText('Reply sent to the family. They see it in the app, on their Today.'); // the server has it
     await expect(card).toHaveAttribute('data-status', 'answered');
+    await expect(card.getByTestId('reply')).toContainText('we will serve it cooler');
     const st = await stateOf(page, 's3');
-    const fb = Object.values<{ text: string; familyId: string | null; threadId?: string }>(st.feedback).find((f) => f.text.includes('too hot'))!;
+    const fb = Object.values<{ text: string; familyId: string | null; threadId?: string; replies?: { by: string; text: string }[] }>(st.feedback).find((f) => f.text.includes('too hot'))!;
     expect(fb.familyId).toBeNull();
-    expect(st.threads[fb.threadId!]).toMatchObject({ familyId: 'fm2_0', topic: 'kitchen' }); // Cynthia, Hendra's primary contact
+    expect(fb.threadId).toBeUndefined();
+    expect(fb.replies).toMatchObject([{ by: 'staff:s3', text: 'Thank you, we will serve it cooler.' }]);
+    expect(Object.keys(st.threads)).toHaveLength(0);
+    // the reply goes to Cynthia, Hendra's primary contact: her bell has it
+    const cyn = await stateOf(page, 'fm2_0');
+    expect(Object.values<{ kind: string; link: string; toUsers: string[] }>(cyn.notifications).find((n) => n.kind === 'kitchen.notif.feedbackReply')).toMatchObject({ link: '/today', toUsers: ['fm2_0'] });
     await assertNoHorizontalScroll(page);
     c.assertClean();
   });
 });
 
 test.describe('stock', () => {
-  test('the F&B supervisor approves kitchen items; management declines with a note and the request is kept', async ({ page, browser }, info) => {
+  // KC round 6: F&B has no Stock page; the supervisor approves the kitchen's requests in Requests ("Team stock requests")
+  test('the F&B supervisor approves kitchen items in Requests; management declines with a note and the request is kept', async ({ page, browser }, info) => {
     const c = watchConsole(page);
-    await signIn(page, 's2', '/stock');
-    await expect(page.getByRole('heading', { name: 'Stock requests' })).toBeVisible();
-    await expect(page.getByTestId('stock-row')).toHaveCount(5);
-    // k2 (Teh melati, kitchen): approve
-    const k2 = page.locator('[data-testid="stock-row"][data-id="k2"]');
-    await k2.getByRole('button', { name: 'Approve' }).click();
+    expect((await act(page, 's3', 'stock.request', { item: 'Cooking oil', qty: 6, unit: 'litres', area: 'kitchen', sectionId: 'fnb' })).ok()).toBeTruthy();
+    await signIn(page, 's2', '/requests');
+    await expect(page.locator('[data-nav-key="stock"]')).toHaveCount(0);
+    await expect(page.getByText('Team stock requests')).toBeVisible();
+    // the kitchen's waiting requests only: k1 (glucose strips, health) is not his to decide
+    const team = page.getByTestId('team-stock-row');
+    await expect(team).toHaveCount(2);
+    await expect(page.locator('[data-testid="team-stock-row"][data-id="k1"]')).toHaveCount(0);
+    // the chef's oil: approve, then mark it received
+    const oil = team.filter({ hasText: 'Cooking oil' });
+    await expect(oil).toContainText('Agus');
+    await oil.getByRole('button', { name: 'Approve' }).click();
+    await expect(toast(page)).toContainText('Cooking oil approved');
+    await expect(oil).toHaveAttribute('data-status', 'approved');
+    await oil.getByRole('button', { name: 'Mark received' }).click();
+    await expect(toast(page)).toContainText('Cooking oil marked as received');
+    await expect(oil).toHaveCount(0);
+    // his own k2 (Teh melati): approved here, then followed in My requests
+    await page.locator('[data-testid="team-stock-row"][data-id="k2"]').getByRole('button', { name: 'Approve' }).click();
     await expect(toast(page)).toContainText('Teh melati approved');
-    await expect(k2).toHaveAttribute('data-status', 'approved');
-    await expect(k2).toContainText('Approved · to order');
-    await expect(k2).toContainText('approved by Pak Yohanes');
-    // k1 (glucose strips, health): the supervisor cannot decide
-    const k1 = page.locator('[data-testid="stock-row"][data-id="k1"]');
-    await expect(k1.getByRole('button', { name: 'Approve' })).toHaveCount(0);
-    await expect(k1).toContainText('Waiting for approval');
+    await expect(team).toHaveCount(0);
+    await expect(page.getByText('Nothing to approve')).toBeVisible();
+    await expect(page.getByTestId('my-request').filter({ hasText: 'Teh melati' })).toContainText('Approved · to order');
     // management declines k1 with a reason
     const boss = await another(browser, info, 's9', '/stock');
     const b1 = boss.page.locator('[data-testid="stock-row"][data-id="k1"]');
@@ -893,11 +983,8 @@ test.describe('stock', () => {
     await expect(b1).toContainText('Declined');
     await expect(b1).toContainText('We still have four boxes in the clinic.');
     await expect(b1).toContainText('declined by Ega');
-    await expect(boss.page.getByTestId('stock-row')).toHaveCount(5); // kept, not deleted
+    await expect(boss.page.getByTestId('stock-row')).toHaveCount(6); // kept, not deleted (the five, plus the oil)
     await boss.close();
-    // the supervisor sees it too, still listed as Declined
-    await page.reload();
-    await expect(page.locator('[data-testid="stock-row"][data-id="k1"]')).toHaveAttribute('data-status', 'rejected');
     // the nurse was told
     const nurse = await another(browser, info, 's8', '/requests');
     await nurse.page.getByRole('button', { name: /Notifications/ }).first().click();
@@ -910,13 +997,15 @@ test.describe('stock', () => {
   });
 
   test('receiving is limited to the requester and approvers', async ({ page }) => {
-    await signIn(page, 's3', '/stock'); // the chef: not the requester of k3, not an approver
-    const k3 = page.locator('[data-testid="stock-row"][data-id="k3"]');
-    await expect(k3).toHaveAttribute('data-status', 'approved');
-    await expect(k3.getByRole('button', { name: 'Mark received' })).toHaveCount(0);
+    await signIn(page, 's3', '/stock'); // the chef: no Stock page, and not an approver, so no team list in Requests either
+    await expect(page).toHaveURL(/\/today$/);
+    await page.goto('/requests');
+    await expect(page.getByText('My requests')).toBeVisible();
+    await expect(page.getByText('Team stock requests')).toHaveCount(0);
     // the supervisor receives kitchen items only: k3 is activities
-    await signIn(page, 's2', '/stock');
-    await expect(page.locator('[data-testid="stock-row"][data-id="k3"]').getByRole('button', { name: 'Mark received' })).toHaveCount(0);
+    await signIn(page, 's2', '/requests');
+    await expect(page.getByText('Team stock requests')).toBeVisible();
+    await expect(page.locator('[data-testid="team-stock-row"][data-id="k3"]')).toHaveCount(0);
     // management may
     await signIn(page, 's9', '/stock');
     const m3 = page.locator('[data-testid="stock-row"][data-id="k3"]');
@@ -926,7 +1015,7 @@ test.describe('stock', () => {
   });
 
   test('filters show counts and requests from every section are listed', async ({ page }) => {
-    await signIn(page, 's3', '/stock');
+    await signIn(page, 's9', '/stock');
     if (isPhone(page)) {
       // phone: the area and status filters are two dropdowns (the counts are in the options)
       await page.getByRole('combobox', { name: 'Filter by section' }).click();
@@ -961,7 +1050,7 @@ test.describe('stock', () => {
 
   test('send a request, edit it, cancel it: the cancelled request stays in the list', async ({ page }) => {
     const c = watchConsole(page);
-    await signIn(page, 's3', '/stock');
+    await signIn(page, 's9', '/stock');
     await page.getByLabel('Item', { exact: true }).fill('Cooking oil');
     await page.getByLabel('Quantity').fill('6');
     await page.getByRole('button', { name: 'litres', exact: true }).click();
@@ -970,7 +1059,6 @@ test.describe('stock', () => {
     const row = page.getByTestId('stock-row').filter({ hasText: 'Cooking oil' });
     await expect(row).toContainText('Cooking oil · 6 litres');
     await expect(row).toContainText('Requested');
-    await expect(row).toContainText('Waiting for approval'); // the chef is not an approver
     await row.getByRole('button', { name: 'Edit' }).click();
     const dlg = page.getByRole('dialog', { name: 'Edit request' });
     await dlg.getByLabel('Quantity').fill('8');
@@ -1013,7 +1101,7 @@ test.describe('pages', () => {
 
   test('stock requests are paged and a filter starts again on page 1', async ({ page }) => {
     for (let i = 1; i <= 8; i++) expect((await act(page, 's3', 'stock.request', { item: `Item ${i}`, qty: i, unit: 'pcs', area: 'kitchen', sectionId })).ok()).toBeTruthy();
-    await signIn(page, 's3', '/stock');
+    await signIn(page, 's9', '/stock');
     await expect(page.getByTestId('stock-row')).toHaveCount(10); // 13 requests
     await goToPage(page, 2, 'Stock requests');
     await expect(page.getByTestId('stock-row')).toHaveCount(3);
@@ -1052,7 +1140,7 @@ test.describe('layout and language', () => {
   test('every kitchen screen fits the viewport without console errors', async ({ page }) => {
     const c = watchConsole(page);
     await signIn(page, 's3');
-    for (const key of ['today', 'feedback', 'stock', 'requests']) {
+    for (const key of ['today', 'feedback', 'requests']) {
       await page.locator(`[data-nav-key="${key}"]`).first().click();
       await expect(page.locator('#main')).toBeVisible();
       await expect(page.getByText('This screen is being built.')).toHaveCount(0);
@@ -1070,7 +1158,7 @@ test.describe('layout and language', () => {
     await expect(page.getByRole('heading', { name: 'Menu hari ini' })).toBeVisible();
     await expect(page.getByText('Bentrok alergi hari ini')).toBeVisible();
     await expect(page.getByText('Rencana menu mingguan')).toBeVisible();
-    for (const [key, heading] of [['feedback', 'Masukan'], ['stock', 'Permintaan stok'], ['requests', 'Permintaan']] as const) {
+    for (const [key, heading] of [['feedback', 'Masukan'], ['requests', 'Permintaan']] as const) {
       await page.locator(`[data-nav-key="${key}"]`).first().click();
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
       expect(await page.locator('#main').innerText()).not.toMatch(/\b(kitchen|requests|common|status|err)\.[a-zA-Z_]+/);
@@ -1089,7 +1177,7 @@ test.describe('layout and language', () => {
     await expect(page.getByText('Alergi tercatat', { exact: true })).toBeVisible();
     await expect(page.getByText('Alergi seafood', { exact: true })).toBeVisible();
     await expect(page.getByText('Rencana menu mingguan')).toBeVisible();
-    for (const [path, text] of [['/today', 'Hidangan dan alergen'], ['/feedback', 'Masukan'], ['/stock', 'Permintaan stok']] as const) {
+    for (const [path, text] of [['/today', 'Hidangan dan alergen'], ['/feedback', 'Masukan'], ['/requests', 'Permintaan saya']] as const) {
       await page.goto(path);
       await expect(page.getByText(text).first()).toBeVisible();
       const body = await page.locator('#main').innerText();
@@ -1102,6 +1190,26 @@ test.describe('layout and language', () => {
     await page.getByRole('button', { name: 'Pengganti sudah disiapkan' }).first().click();
     await expect(page.getByRole('dialog', { name: 'Pengganti untuk Bapak Bambang' })).toBeVisible();
     expect(await page.getByRole('dialog').innerText()).not.toMatch(/\b(kitchen|requests|common)\.[a-zA-Z_]+/);
+    c.assertClean();
+  });
+
+  // KC round 6: the front desk (Caca) has the kitchen's Menu, view only, for the allergy warnings
+  test('the front desk sees the menu and the allergy warnings, with nothing to change', async ({ page }) => {
+    const c = watchConsole(page);
+    await signIn(page, 's1');
+    await page.locator('[data-nav-key="menu"]').first().click();
+    await expect(page).toHaveURL(/\/menu$/);
+    await expect(page.getByRole('heading', { name: 'Menu of the day' })).toBeVisible();
+    const row = page.getByTestId('conflict-row');
+    await expect(row).toHaveCount(1);
+    await expect(row).toContainText('Bapak Bambang');
+    await expect(row).toContainText('Needs an alternative');
+    await expect(page.getByTestId('onfile-row').first()).toBeVisible();
+    await expect(page.getByTestId('plan-dish').first()).toBeVisible();
+    for (const name of ['Alternative prepared', 'Prepare an alternative', 'Change today’s menu', 'Publish menu', 'Add a dish', 'Change a date', 'Add']) await expect(page.getByRole('button', { name, exact: true })).toHaveCount(0);
+    await expect(page.getByTestId('dish-row')).toHaveCount(0);
+    await expect(page.getByTestId('lunch-photo-add')).toHaveCount(0);
+    await assertNoHorizontalScroll(page);
     c.assertClean();
   });
 

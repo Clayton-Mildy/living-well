@@ -1,17 +1,22 @@
 // Deterministic demo seed: 5 members at CitraPremier on the demo day (09:58). Adina starts empty.
 // Written for Wed 21 Oct 2026 (DEMO_TODAY): every date is relative to the anchor, so buildSeed('2026-10-21') gives exactly
-// the data the tests expect, and buildSeed(today) tells the same story around today.
+// the data the tests expect, and buildSeed(today) tells the same story around today. The 4 weeks before the anchor are written here (and in roster.ts);
+// history.ts adds the six months behind them (visits, readings, daily logs and paid invoices).
 // Values follow design/data.js (same names, phones, baselines, menu, schedule) trimmed to the 5-member cast.
 import type {
   Actor, Attendance, ClubSettings, ClubState, DailyLog, Dish, DishAllergen, DT, FamilyContact, FamilyLink,
-  Invoice, ISODate, Member, MemberNote, Payment, Photo, Reading, Row, ScheduleCell, Slot, Staff, StaffRole, Thread, Message, Weekday,
-  ChangeRequest, Notification, ActivityEntry, Relation, Bank,
+  Invoice, ISODate, Member, MemberNote, Payment, Photo, Reading, Row, ScheduleCell, Slot, Staff, StaffRole, Weekday,
+  ChangeRequest, Notification, ActivityEntry, Relation, Bank, MemberRegistration,
 } from '../types';
 import { COLLECTIONS } from '../types';
 import type { CollectionName } from '../types';
-import { addDays, addMonths, daysBetween, dow, rng, toHM, toMin, ym, DEMO_TODAY, DEMO_START_MIN, isWeekday, e164 } from '../util';
-import { evaluateReading } from '../rules/health';
+import { addDays, addMonths, daysBetween, dow, rng, rp, toHM, toMin, ym, DEMO_TODAY, DEMO_START_MIN, isWeekday, e164 } from '../util';
+import { evaluateReading, limitsFor } from '../rules/health';
+import { suspensions } from '../rules/billing';
 import { addRoster } from './roster';
+import { addHistory } from './history';
+import { activityPicId } from './demoMedia';
+import { seedRound7 } from './r7';
 
 type Coll<K extends keyof ClubState> = ClubState[K];
 
@@ -22,8 +27,11 @@ export function emptyClub(clubId: string, club: ClubState['club']): ClubState {
 }
 const base = (clubId: string, id: string, createdAt: DT, createdBy: Actor = 'system'): Row => ({ id, clubId, createdAt, createdBy });
 
+/** The brochure's price list (KC round 6, p. 9): Gold and Flex a month, the one-time registration, the 2-day trial and a month of leave. The extra-day price is not in it, so it stays a sample. */
+export const PRICES = { flex: 2_700_000, gold: 3_950_000, extra: 650_000, registration: 2_500_000, trial: 450_000, leave: 250_000, sample: { flex: false, gold: false, extra: true } } as const;
+
 export const SETTINGS: ClubSettings = {
-  open: '08:30', close: '16:30', departureFrom: '15:30', recheckMin: 15, flexQuota: 10, issueDay: 15, dueDay: 27, finalDueDays: 14,
+  open: '08:30', close: '16:30', departureFrom: '15:30', recheckMin: 15, flexQuota: 10, issueDay: 21, dueDay: 28, suspendDay: 1, stopDay: 3, finalDueDays: 14,
   emergencyPhone: '+62 21 7590 1188', hoursLabel: 'Mon–Fri 08:30–16:30',
   broadcastTemplates: [
     { id: 'tpl-update', key: 'update', title: 'Club update', text: 'Hello {name}, news from CitraPremier: {msg}' },
@@ -167,7 +175,25 @@ const LINA_21OCT = ['2026-09-23', '2026-09-28', '2026-09-30', '2026-10-02', '202
 const BAMBANG_21OCT = ['2026-09-23', '2026-09-28', '2026-09-30', '2026-10-02', '2026-10-05', '2026-10-07', '2026-10-09', '2026-10-12', '2026-10-14', '2026-10-19'];
 const MON_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const MONTH_FULL = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-const weekdaysIn = (from: ISODate, to: ISODate) => { const out: ISODate[] = []; for (let d = from; d <= to; d = addDays(d, 1)) if (isWeekday(d)) out.push(d); return out; };
+/** Indonesian national holidays and collective leave days (cuti bersama) the club closes on: April to August 2026 (the 6-month history behind a demo in October), then the Christmas and New Year closures ahead. */
+const HOLIDAYS: [ISODate, string, string][] = [
+  ['2026-04-03', 'Good Friday (national holiday)', 'Wafat Isa Almasih (libur nasional)'],
+  ['2026-05-01', 'Labour Day (national holiday)', 'Hari Buruh Internasional (libur nasional)'],
+  ['2026-05-14', 'Ascension Day (national holiday)', 'Kenaikan Isa Almasih (libur nasional)'],
+  ['2026-05-15', 'Collective leave: Ascension Day (club closed)', 'Cuti bersama Kenaikan Isa Almasih (klub tutup)'],
+  ['2026-05-27', 'Eid al-Adha (national holiday)', 'Idul Adha (libur nasional)'],
+  ['2026-05-28', 'Collective leave: Eid al-Adha (club closed)', 'Cuti bersama Idul Adha (klub tutup)'],
+  ['2026-06-01', 'Pancasila Day (national holiday)', 'Hari Lahir Pancasila (libur nasional)'],
+  ['2026-06-16', 'Islamic New Year (national holiday)', 'Tahun Baru Islam 1448 H (libur nasional)'],
+  ['2026-08-17', 'Independence Day (national holiday)', 'Hari Kemerdekaan RI (libur nasional)'],
+  ['2026-08-25', 'Prophet’s Birthday (national holiday)', 'Maulid Nabi Muhammad SAW (libur nasional)'],
+  ['2026-12-25', 'Christmas Day (national holiday)', 'Hari Natal (libur nasional)'],
+  ['2027-01-01', 'New Year’s Day (national holiday)', 'Tahun Baru (libur nasional)'],
+];
+const HOLIDAY_DATES = new Set(HOLIDAYS.map((h) => h[0]));
+/** The seed's club days: weekdays that are not a holiday (Christmas Day and New Year's Day in any year, plus the table above). */
+const isClubDay = (d: ISODate) => isWeekday(d) && !HOLIDAY_DATES.has(d) && !['12-25', '01-01'].includes(d.slice(5));
+const weekdaysIn = (from: ISODate, to: ISODate) => { const out: ISODate[] = []; for (let d = from; d <= to; d = addDays(d, 1)) if (isClubDay(d)) out.push(d); return out; };
 /** n days spread evenly over a list, always keeping the first and the last. */
 const spread = (days: ISODate[], n: number) => (n >= days.length ? days.slice() : Array.from({ length: n }, (_, i) => days[Math.round((i * (days.length - 1)) / Math.max(1, n - 1))]));
 
@@ -182,7 +208,6 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   const canon = off === 0;
   const sh = (d: ISODate) => addDays(d, off); // a seed date, moved with the anchor
   const at = (dt: DT) => sh(dt.slice(0, 10)) + dt.slice(10);
-  const isClubDay = (d: ISODate) => isWeekday(d) && !['12-25', '01-01'].includes(d.slice(5)); // the seed's holidays
   const openOn = (d: ISODate) => { let x = d; while (!isClubDay(x)) x = addDays(x, 1); return x; };
   const op = (d: ISODate) => openOn(sh(d)); // moved, then onto an open club day
   const lastDow = (w: number) => { let x = addDays(T, -1); while (dow(x) !== w) x = addDays(x, -1); return x; };
@@ -191,7 +216,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   const month = ym(T);
   const dm = (d: ISODate) => `${+d.slice(8)} ${MON_EN[+d.slice(5, 7) - 1]}`;
   const longDay = (d: ISODate) => new Date(d + 'T00:00:00Z').toLocaleDateString('en-GB', { timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long' }).replace(',', '');
-  // history: the 4 weeks before the anchor (20 club days)
+  // the 4 weeks before the anchor (20 club days); the months before them are in history.ts
   const PAST: ISODate[] = weekdaysIn(addDays(T, -28), addDays(T, -1));
   const openBefore = weekdaysIn(`${month}-01`, addDays(T, -1));
   const prevOpen = weekdaysIn(`${addMonths(month, -1)}-01`, addDays(`${month}-01`, -1));
@@ -219,13 +244,13 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   const nz = (v: number, sp: number) => Math.round(v + (r() - 0.5) * 2 * sp);
   const put = <K extends CollectionName>(k: K, row: ClubState[K][string]) => { ((s[k] as unknown) as Record<string, unknown>)[(row as { id: string }).id] = row; };
 
-  put('prices', { ...base(C, 'price-2024', '2024-06-01T09:00'), from: '2024-01-01', flex: 5500000, gold: 9500000, extra: 650000, sample: { flex: true, gold: true, extra: true } });
+  put('prices', { ...base(C, 'price-2024', '2024-06-01T09:00'), from: '2024-01-01', ...PRICES, sample: { ...PRICES.sample } });
   staffRows(C, T).forEach((x) => put('staff', x));
   put('hrNotes', { ...base(C, 'hr-s4-1', at('2026-08-12T10:00'), 'staff:s9'), staffId: 's4', kind: 'warning', on: sh('2026-08-12'), text: 'Verbal warning: arrived 40 minutes late twice in one week. Agreed a new bus route.' });
   for (const d of PAST) for (const [id] of STAFF) put('staffTime', { ...base(C, `st-${id}-${d}`, d + 'T17:00'), staffId: id, date: d, kind: 'worked', from: id === 's7' ? '07:30' : '08:00', to: id === 's7' ? '16:45' : '17:00' });
 
   ROOMS.forEach(([id, name, nameId, venue]) => put('rooms', { ...base(C, id, '2024-06-01T09:00'), name, nameId, venue }));
-  ACTS.forEach(([id, name, nameId, roomId, icon]) => put('activities', { ...base(C, id, '2024-06-01T09:00'), name, nameId, icon, roomId, active: true }));
+  ACTS.forEach(([id, name, nameId, roomId, icon]) => put('activities', { ...base(C, id, '2024-06-01T09:00'), name, nameId, icon, roomId, active: true, photoMediaId: activityPicId(id) })); // KC round 7: each activity has its picture (a free Unsplash scene, seed/demoMedia.ts)
   const days = {} as Record<Weekday, Record<Slot, ScheduleCell | null>>;
   ([1, 2, 3, 4, 5] as Weekday[]).forEach((w) => { const [a, b] = SCHED[w]; days[w] = { '10:30': { activityId: a[0], staffId: a[1], roomId: actRoom(a[0]) }, '13:30': { activityId: b[0], staffId: b[1], roomId: actRoom(b[0]) } }; });
   put('scheduleVersions', { ...base(C, 'sched-2024-07', at('2026-10-19T16:10'), 'staff:s9'), effectiveFrom: '2024-07-01', status: 'published', days, publishedBy: 'staff:s9', publishedAt: at('2026-10-19T16:10') });
@@ -234,12 +259,20 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   // the demo day always serves Wednesday's fish soup (Bambang's seafood allergy, the fish-bone feedback)
   if (dow(T) !== 3) put('dayMenus', { ...base(C, T, `${T}T07:00`, 'staff:s3'), date: T, lunch: MENU_DAYS[3].lunch, soft: MENU_DAYS[3].soft, tea: MENU_DAYS[3].tea, photoIds: [], allergyPlans: [] });
 
+  // KC round 6: the extra answers of the paper Membership Application Form, so the printed form fills in
+  const REG: Record<string, MemberRegistration> = {
+    m1: { nickname: 'Oma Lina', marital: 'married', rtRw: '004/002', city: 'Jakarta Selatan', postcode: '12730', phone: '+62 21 7199 2210', mobile: '+62 812-1090-4471', email: 'maria.wijaya@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: true, carer: true } },
+    m46: { nickname: 'Opa Budi', marital: 'married', rtRw: '004/002', city: 'Jakarta Selatan', postcode: '12730', phone: '+62 21 7199 2210', mobile: '+62 812-1090-4471', email: 'maria.wijaya@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: true } },
+    m2: { nickname: 'Opa Hendra', marital: 'widowed', rtRw: '007/001', city: 'Jakarta Selatan', postcode: '12730', mobile: '+62 815-1294-4718', email: 'cynthia.gunawan@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: true } },
+    m20: { nickname: 'Opa Tjahjadi', marital: 'widowed', rtRw: '002/005', city: 'Jakarta Selatan', postcode: '12410', mobile: '+62 814-2182-3624', commDifficulty: true, selfCare: true, bathroomHelp: true, dementiaNote: 'Mild memory loss; may repeat questions', ids: { guarantor: true, member: true } },
+    m10: { nickname: 'Pak Bambang', marital: 'married', rtRw: '001/003', city: 'Jakarta Selatan', postcode: '12160', mobile: '+62 816-1436-6582', email: 'laras.saputra@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: false } },
+  };
   // members
   for (const c of CAST) {
     const m: Member = {
       ...base(C, c.id, c.start + 'T10:00', 'staff:s1'), title: c.title, firstName: c.first, lastName: c.last, gender: c.gender, dob: c.dob, ageYears: null, address: c.address, photoTone: c.tone,
       memberships: [{ start: c.start }], plans: [{ from: c.start, plan: c.plan, by: 'staff:s1' }], usualArrival: c.usual,
-      nanny: c.nanny ? { name: c.nanny } : null, spouseId: c.spouse,
+      nanny: c.nanny ? { name: c.nanny } : null, spouseId: c.spouse, ...(REG[c.id] ? { registration: REG[c.id] } : {}),
       health: { conditions: c.conditions, diabetic: c.diabetic, food: c.food, drugs: [], mobility: c.mobility, diet: c.diet, meds: c.meds.map(([name, dose, timing], i) => ({ id: `${c.id}-med${i + 1}`, name, dose, timing })),
         cognitive: { summary: c.cognitive, reviewedBy: 's8', reviewedOn: sh('2026-10-01') } },
       care: { instructions: c.id === 'm2' ? c.care.replace('14 Oct', dm(HENDRA_DAY)) : c.care, by: 'staff:s8', at: `${HENDRA_DAY}T10:45` },
@@ -251,6 +284,8 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
         c.healthInfo ? { id: `${c.id}-doc-health`, type: 'healthInfo', status: 'onFile', fileName: 'health-info.jpg', on: c.start, via: 'staff', by: `family:${PRIMARY[c.id]}` } : { id: `${c.id}-doc-health`, type: 'healthInfo', status: 'requested', on: sh('2026-10-12'), by: 'staff:s1' },
       ],
       face: { enrolled: true, at: c.start + 'T10:00' }, billing: { va: VA(c.idx) }, sim: c.sim,
+      // round 7: Opa Hendra is on watch for blood pressure, so his upper-number limits sit lower than the club's (140 / 160)
+      ...(c.id === 'm2' ? { limits: { sysHigh: { watch: 135, alert: 155 } } } : {}),
     };
     put('members', m);
     put('activity', { id: `act-${c.id}-created`, clubId: C, at: c.start + 'T10:00', actor: 'staff:s1', action: 'members.create', memberId: c.id, icon: 'person_add', key: 'feed.memberCreatedForm', params: {} } satisfies ActivityEntry);
@@ -284,7 +319,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   let rid = 0;
   const reading = (memberId: string, date: ISODate, time: string, kind: Reading['kind'], v: Partial<Reading>) => {
     const row: Reading = { ...base(C, `h${++rid}`, `${date}T${time}`, 'staff:s8'), memberId, date, time, kind, status: 'normal', takenBy: 's8', source: 'device', noteKeys: [], shared: false, edits: [], ...v };
-    row.status = evaluateReading(row);
+    row.status = evaluateReading(row, undefined, limitsFor(s, memberId)); // a member's own limits first
     put('readings', row);
     return row;
   };
@@ -377,47 +412,42 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   // plan change request: Bambang's family asks for Gold from November
   put('planChangeRequests', { ...base(C, 'pcr-m10', at('2026-10-18T20:00'), 'family:fm10_0'), memberId: 'm10', to: 'gold', from: `${addMonths(month, 1)}-01`, status: 'pending' });
 
-  // invoices + DOKU payments
-  const inv = (period: string, c: CastRow, paidOn: ISODate | null) => {
+  // invoices + DOKU payments: issued on the 21st, due on the 28th (KC round 6, the brochure's terms)
+  type PaidAt = { on: ISODate; at: string };
+  const inv = (period: string, c: CastRow, paid: PaidAt | null) => {
     const id = `INV-${period.slice(2, 4)}${period.slice(5, 7)}-${String(c.idx + 1).padStart(3, '0')}`;
-    const amount = c.plan === 'gold' ? 9500000 : 5500000;
-    const issue = `${period}-15`;
-    const due = openOn(`${period}-27`); // a weekend due date moves to the next weekday
+    const amount = c.plan === 'gold' ? PRICES.gold : PRICES.flex;
+    const issue = `${period}-${String(SETTINGS.issueDay).padStart(2, '0')}`;
+    const due = openOn(`${period}-${SETTINGS.dueDay}`); // a weekend due date moves to the next weekday
     put('invoices', { ...base(C, id, issue + 'T08:00', 'system'), number: id, memberId: c.id, payerFamilyId: PRIMARY[c.id], kind: 'monthly', period, issueDate: issue, dueDate: due,
       lines: [{ id: `plan-${period}`, kind: 'plan', label: c.plan === 'gold' ? 'inv.line.gold' : 'inv.line.flex', params: { month: period }, qty: 1, unit: amount, amount, refMonth: period }],
-      va: VA(c.idx), xero: paidOn ? 'synced' : 'awaitingPayment', reminders: [], callNotes: [] } satisfies Invoice);
-    if (paidOn) put('payments', { ...base(C, `pay-${id}`, paidOn + 'T11:20', `family:${PRIMARY[c.id]}`), memberId: c.id, method: 'dokuVa', amount, bank: 'BCA', receivedOn: paidOn, receivedAt: '11:20', allocations: [{ invoiceId: id, amount }], xero: 'synced', by: `family:${PRIMARY[c.id]}` } satisfies Payment);
+      va: VA(c.idx), xero: paid ? 'synced' : 'awaitingPayment', reminders: [],
+      // Tjahjadi's family told finance they would pay late: the terms put him on hold from the 1st, but stop a membership only when there was no word
+      callNotes: !paid && c.id === 'm20' && addDays(due, 1) < T ? [{ at: `${addDays(due, 1)}T11:00`, by: 'staff:s10', text: 'Spoke to Yohana: the family will pay on Friday.' }] : [] } satisfies Invoice);
+    if (paid) put('payments', { ...base(C, `pay-${id}`, `${paid.on}T${paid.at}`, `family:${PRIMARY[c.id]}`), memberId: c.id, method: 'dokuVa', amount, bank: 'BCA', receivedOn: paid.on, receivedAt: paid.at, allocations: [{ invoiceId: id, amount }], xero: 'synced', by: `family:${PRIMARY[c.id]}` } satisfies Payment);
   };
   // the two latest runs: this month's once the issue day has passed (as on 21 Oct), else last month's.
-  // Tjahjadi's older invoice is overdue; in the late case the latest run is still open for Lina, Budi and Tjahjadi.
+  // Everyone pays within the week except Tjahjadi, whose invoice is overdue. The terms put a member who is still unpaid on the 1st on hold, and stop the
+  // membership on the 3rd unless the family has told the club: Tjahjadi's family has (finance's call note on the invoice), so he stays on hold until it is paid.
   const late = +T.slice(8) >= SETTINGS.issueDay;
   const cur = late ? month : addMonths(month, -1);
   const prev = addMonths(cur, -1);
-  // once the latest run is past its due date, families have paid it; only Tjahjadi's latest stays open (overdue)
-  const settled = T > openOn(`${cur}-27`);
-  const PREV_PAID: Record<string, ISODate> = { m1: `${prev}-21`, m46: `${prev}-21`, m2: `${prev}-17`, m10: `${prev}-24`, ...(settled ? { m20: `${prev}-22` } : {}) };
-  const CUR_PAID: Record<string, ISODate> = settled ? { m1: `${cur}-21`, m46: `${cur}-21`, m2: `${cur}-17`, m10: `${cur}-24` } : { m2: `${cur}-16`, m10: `${cur}-18` };
-  const paidBy = (d: ISODate | undefined) => (d && d < T ? d : null);
+  const issueOf = (p: string) => `${p}-${String(SETTINGS.issueDay).padStart(2, '0')}`;
+  const settled = T > openOn(`${cur}-${SETTINGS.dueDay}`); // the latest run is past its due date
+  const PREV_PAID: Record<string, PaidAt> = { m1: { on: `${prev}-23`, at: '11:20' }, m46: { on: `${prev}-23`, at: '11:20' }, m2: { on: `${prev}-22`, at: '11:20' }, m10: { on: `${prev}-25`, at: '11:20' }, ...(settled ? { m20: { on: `${prev}-26`, at: '11:20' } } : {}) };
+  const CUR_PAID: Record<string, PaidAt> = settled
+    ? { m1: { on: `${cur}-23`, at: '11:20' }, m46: { on: `${cur}-23`, at: '11:20' }, m2: { on: `${cur}-22`, at: '11:20' }, m10: { on: `${cur}-25`, at: '11:20' } }
+    : { m2: { on: issueOf(cur), at: '08:40' }, m10: { on: issueOf(cur), at: '09:12' } }; // the early payers, on the issue day itself
+  const paidBy = (p: PaidAt | undefined) => (p && (p.on < T || (p.on === T && done(p.at))) ? p : null);
   for (const c of CAST) inv(prev, c, paidBy(PREV_PAID[c.id]));
   for (const c of CAST) inv(cur, c, paidBy(CUR_PAID[c.id]));
   const invNo = (p: string, c: CastRow) => `INV-${p.slice(2, 4)}${p.slice(5, 7)}-${String(c.idx + 1).padStart(3, '0')}`;
-  for (const p of [prev, cur]) put('invoiceRuns', { ...base(C, `run-${p}`, `${p}-15T00:00`), period: p, issueDate: `${p}-15`, invoiceIds: CAST.map((c) => invNo(p, c)), skipped: [] });
-  const bambangPaid = paidBy(CUR_PAID.m10) ? { on: CUR_PAID.m10, period: cur } : { on: PREV_PAID.m10, period: prev };
+  for (const p of [prev, cur]) put('invoiceRuns', { ...base(C, `run-${p}`, `${issueOf(p)}T08:00`), period: p, issueDate: issueOf(p), invoiceIds: CAST.map((c) => invNo(p, c)), skipped: [] });
+  const bambangPaid = paidBy(CUR_PAID.m10) ? { on: CUR_PAID.m10.on, at: CUR_PAID.m10.at, period: cur } : { on: PREV_PAID.m10.on, at: PREV_PAID.m10.at, period: prev };
 
-  // threads & messages
-  const thread = (id: string, fid: string, mid: string, topic: Thread['topic'], msgs: [Actor, string, DT, Message['kind']?][], readStaff: number, readFam: number, feedbackId?: string) => {
-    put('threads', { ...base(C, id, msgs[0][2], msgs[0][0]), memberId: mid, familyId: fid, topic, ...(feedbackId ? { feedbackId } : {}), lastSeq: msgs.length, staffReadSeq: readStaff, familyReadSeq: readFam } satisfies Thread);
-    msgs.forEach(([from, text, at, kind], i) => put('messages', { ...base(C, `${id}-${i + 1}`, at, from), threadId: id, seq: i + 1, from, at, text, kind: kind || 'text' } satisfies Message));
-  };
-  thread('t1', 'f1', 'm1', 'lobby', [['family:f1', 'Is Mama’s blood pressure okay this week?', at('2026-10-14T18:02')], ['staff:s8', 'Yes, all normal this week, 124/78 to 130/82. She is doing well.', at('2026-10-14T18:30')], ['family:f1', 'Mama forgot her cardigan on Monday, is it at the lobby?', at('2026-10-20T19:12')]], 2, 3);
-  if (done('07:40')) thread('t2', 'fm10_0', 'm10', 'lobby', [['family:fm10_0', 'Papa has a dentist appointment Friday, he will leave at 14:00.', `${T}T07:40`]], 0, 1);
-  thread('t3', 'fm2_0', 'm2', 'nurse', [['staff:s8', 'Opa Hendra’s blood pressure was 164/98 on arrival today. After a rest it was 150/92. dr. Andreas will see him on Tuesday.', `${HENDRA_DAY}T10:40`, 'healthAlert'], ['family:fm2_0', 'Thank you Ns. Dewi. We will bring his medicine list.', `${HENDRA_DAY}T12:02`]], 2, 2);
-  thread('t4', 'fm20_0', 'm20', 'nurse', [['staff:s8', 'Opa Tjahjadi’s glucose was 196 this month. Could you ask his doctor about the evening dose?', `${firstVisit('m20')}T11:15`]], 1, 1);
-  // meal feedback (+ kitchen threads)
+  // meal feedback (the kitchen's reply is on the card; it reaches the family on WhatsApp, simulated in the demo)
   const fb = (id: string, memberId: string, familyId: string, mealDate: ISODate, dish: string, text: string, at: DT, reply?: [string, DT]) => {
-    const tid = `tk-${id}`;
-    thread(tid, familyId, memberId, 'kitchen', [[`family:${familyId}`, text, at], ...(reply ? [[`staff:s3`, reply[0], reply[1]] as [Actor, string, DT]] : [])], 1, reply ? 2 : 1, id);
-    put('feedback', { ...base(C, id, at, `family:${familyId}`), memberId, familyId, mealDate, dish, text, status: reply ? 'answered' : 'open', threadId: tid, source: 'family' });
+    put('feedback', { ...base(C, id, at, `family:${familyId}`), memberId, familyId, mealDate, dish, text, status: reply ? 'answered' : 'open', ...(reply ? { replies: [{ id: `${id}-r1`, at: reply[1], by: 'staff:s3', text: reply[0] }] } : {}), source: 'family' });
   };
   const lastMon = lastDow(1), lastFri = lastDow(5);
   fb('c1', 'm10', 'fm10_0', lastMon, 'Sayur asem', 'Papa said the soup was too salty on Monday.', `${lastMon}T19:30`);
@@ -443,8 +473,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   ev('ev-closed-1030', closedDay, 'closed', 'Club closed: staff first-aid training', 'Klub tutup: pelatihan P3K staf');
   ev('ev-outing-1029', outingDay, 'outing', 'Outing: Kebun Raya Bogor botanical garden', 'Jalan-jalan: Kebun Raya Bogor', '08:30', '15:00');
   ev('ev-outing-1126', freeDay(sh('2026-11-26')), 'outing', 'Outing: batik museum and lunch', 'Jalan-jalan: museum batik dan makan siang', '09:00', '14:30');
-  ev('ev-hol-1225', '2026-12-25', 'holiday', 'Christmas Day (national holiday)', 'Hari Natal (libur nasional)');
-  ev('ev-hol-0101', '2027-01-01', 'holiday', 'New Year’s Day (national holiday)', 'Tahun Baru (libur nasional)');
+  for (const [date, title, titleId] of HOLIDAYS) ev(`ev-hol-${date.slice(5, 7)}${date.slice(8)}`, date, 'holiday', title, titleId);
   const venue = (id: string, org: string, contactName: string, phone: string, guests: number, roomId: string, date: ISODate, from: string, to: string, review?: { stars: number; text: string }) =>
     put('venueBookings', { ...base(C, id, at('2026-09-20T10:00'), 'staff:s9'), org, contactName, phone: e164(phone), guests, roomId, date, from, to, status: 'confirmed', price: 3500000, deposit: 1000000, ...(review ? { review, reviewAskedAt: `${date}T13:00` } : {}) });
   venue('v4', 'Rotary Club Jakarta Selatan breakfast', 'Bapak Arief Sudarmo', '+62 812-5570-8812', 35, 'room-garden-room', lastDow(6), '08:00', '12:00', { stars: 5, text: 'Spotless rooms and the kue were a hit. We will book again in January.' });
@@ -538,17 +567,27 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
     put('notifications', { ...base(C, id, at), toUsers, toRoles, kind, params, severity: 'info', action: false, link, memberId, readBy: [] } satisfies Notification);
   notif('nt-1', `${LINA_LOG_DAY}T15:20`, ['f1'], [], 'notif.logSaved', { name: 'Oma Lina', mood: 'cheerful' }, '/today', 'm1');
   notif('nt-2', `${LINA_LOG_DAY}T15:25`, ['f1', 'f2'], [], 'notif.newPhotos', { name: 'Oma Lina', n: 3 }, '/photos', 'm1');
-  notif('nt-3', `${bambangPaid.on}T11:20`, [], ['finance', 'mgmt'], 'notif.paymentReceived', { name: 'Laras Saputra', amount: 5500000, invoice: invNo(bambangPaid.period, CAST.find((c) => c.id === 'm10')!) }, '/payments', 'm10');
+  notif('nt-3', `${bambangPaid.on}T${bambangPaid.at}`, [], ['finance', 'mgmt'], 'notif.paymentReceived', { name: 'Laras Saputra', amount: PRICES.flex, invoice: invNo(bambangPaid.period, CAST.find((c) => c.id === 'm10')!) }, '/payments', 'm10');
+  // the club was told when Tjahjadi's membership went on hold (the daily job writes this on the first day of a hold)
+  const onHold = suspensions(s, T).m20;
+  if (onHold) {
+    const params = { name: 'Opa Tjahjadi', number: onHold.number, amount: rp(onHold.balance), date: onHold.stopOn };
+    const ref = { type: 'invoice' as const, id: onHold.invoiceId };
+    put('notifications', { ...base(C, 'nt-hold', `${onHold.since}T08:00`), toUsers: [], toRoles: ['mgmt', 'finance'], kind: onHold.told ? 'finance.notif.suspendedTold' : 'finance.notif.suspended', params, severity: 'attention', action: false, link: '/members/m20', memberId: 'm20', ref, readBy: ['s9', 's10'] } satisfies Notification);
+    put('notifications', { ...base(C, 'nt-hold-fam', `${onHold.since}T08:00`), toUsers: ['fm20_0'], toRoles: [], kind: onHold.told ? 'finance.notif.suspendedToldFamily' : 'finance.notif.suspendedFamily', params, severity: 'attention', action: false, link: '/billing', memberId: 'm20', ref, readBy: [] } satisfies Notification);
+  }
   if (done('09:40')) notif('nt-4', `${T}T09:40`, ['fm2_0', 'fm2_1'], [], 'notif.checkedIn', { name: 'Opa Hendra', time: '09:40' }, '/today', 'm2');
   if (done('09:48')) notif('nt-5', `${T}T09:48`, ['fm10_0'], [], 'notif.checkedIn', { name: 'Bapak Bambang', time: '09:48' }, '/today', 'm10');
-  if (opts.roster) addRoster(s, T, nowMin); // 40 more members (roster.ts); off by default so the tests keep the 5-member world
+  const patterns = opts.roster ? addRoster(s, T, nowMin) : undefined; // 40 more members (roster.ts); off by default so the tests keep the 5-member world
+  addHistory(s, T, { patterns }); // KC round 7: six months of visits, readings, logs and paid invoices behind the 4 weeks above (history.ts)
+  seedRound7(s, T); // KC round 7: renewals, guest hosts, survey templates, tasks (seed/r7)
   return s;
 }
 
 export function buildAdina(): ClubState {
   const A = 'adina';
   const s = emptyClub(A, { ...base(A, A, '2026-09-01T09:00'), name: 'Adina Seniors Clubhouse', fullName: 'Adina Seniors Clubhouse', status: 'opening', note: 'Opening 2027', settings: SETTINGS });
-  s.prices['price-adina'] = { ...base(A, 'price-adina', '2026-09-01T09:00'), from: '2027-01-01', flex: 5500000, gold: 9500000, extra: 650000, sample: { flex: true, gold: true, extra: true } };
+  s.prices['price-adina'] = { ...base(A, 'price-adina', '2026-09-01T09:00'), from: '2027-01-01', ...PRICES, sample: { ...PRICES.sample } };
   return s;
 }
 

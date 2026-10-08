@@ -1,9 +1,11 @@
 // Family projection: what a family user's browser receives (their members only; no staff-only fields).
-import type { ClubState, Member } from './types';
+import type { ClubState, GuestHost, GuestSession, Member } from './types';
 import { COLLECTIONS } from './types';
 import { live, sortBy, uniq } from './util';
 import { approvedDayMenu, logForFamily, menuVersionForFamily, noteForFamily, readingForFamily } from './rules/approvals';
-import { isPendingRow } from './rules/core';
+import { firstOfRole, isPendingRow } from './rules/core';
+import { replyTarget } from './rules/kitchenOps';
+import { cameOn } from './rules/activity';
 
 const pick = <T extends { id: string }>(rows: T[]) => Object.fromEntries(rows.map((r) => [r.id, r])) as Record<string, T>;
 const present = <T>(x: T | null): x is T => x !== null;
@@ -39,9 +41,11 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
     out.members[id] = { ...strip(m), dob: null, address: null, health: { conditions: [], diabetic: false, food: [], drugs: [], mobility: null, diet: [], meds: [], cognitive: { summary: '' } }, documents: [], consents: [], billing: { va: '' }, review: { status: 'approved', crId: 'stub' } } as Member;
   }
   // the kitchen's lunch photos (no member tags) show on the family's Today timeline
-  const lunchIds = new Set(live(s.dayMenus).flatMap((d) => [...(d.photoIds || []), ...(d.photoId ? [d.photoId] : [])]));
+  const lunchIds = new Set(live(s.dayMenus).flatMap((d) => [...(d.photoIds || []), ...(d.teaPhotoIds || []), ...(d.photoId ? [d.photoId] : [])])); // KC round 7: the tea photos too
   const lunch = live(s.photos).filter((p) => lunchIds.has(p.id) && p.visibility === 'visible' && !photos.includes(p));
-  out.photos = pick([...photos, ...lunch]);
+  // KC round 7: activity pictures (of a session, no member tags) reach the families of members who came to the club that day (any check-in that date)
+  const sessionPics = live(s.photos).filter((p) => p.kind === 'activity' && p.visibility === 'visible' && !photos.includes(p) && cameOn(s, mids, p.date));
+  out.photos = pick([...photos, ...lunch, ...sessionPics]);
   const householdLinks = live(s.familyLinks).filter((l) => mids.includes(l.memberId) && !isPendingRow(l));
   out.familyLinks = pick(householdLinks);
   // sign-in names: a family user sees only their own, never another contact's or a staff member's
@@ -58,21 +62,27 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const invIds = new Set(invoices.map((i) => i.id));
   out.payments = pick(mine(live(s.payments)).map((p) => ({ ...p, xero: 'synced' as const })));
   out.refunds = pick(live(s.refunds).filter((r) => invIds.has(r.invoiceId)));
-  out.threads = pick(live(s.threads).filter((t) => t.familyId === familyId));
-  const tids = new Set(Object.keys(out.threads));
-  out.messages = pick(live(s.messages).filter((m) => tids.has(m.threadId)));
-  out.feedback = pick(live(s.feedback).filter((f) => f.familyId === familyId));
+  // their own feedback, and feedback the kitchen logged from a phone call whose replies go to them (KC round 6: replies show in the family app)
+  out.feedback = pick(live(s.feedback).filter((f) => f.familyId === familyId || (!f.familyId && replyTarget(s, f) === familyId)));
   out.calendarEvents = pick(live(s.calendarEvents));
   out.rooms = pick(live(s.rooms));
   out.activities = pick(live(s.activities));
   out.scheduleVersions = pick(live(s.scheduleVersions).filter((v) => v.status === 'published'));
+  // KC round 7: one-day programme changes, and who leads a session that is on (a guest host's name and what they do; never fees, phones, bank details or notes)
+  out.scheduleDays = pick(live(s.scheduleDays || {}).map(({ note: _note, ...d }) => d)); // the day's note ("… is off sick") is for staff
+  const guestSessions = live(s.guestSessions || {}).filter((g) => g.status !== 'cancelled');
+  out.guestSessions = pick(guestSessions.map((g): GuestSession => ({ ...g, fee: 0, vendorInvoiceId: undefined, note: undefined })));
+  const hostIds = new Set(guestSessions.map((g) => g.hostId));
+  out.guestHosts = pick(live(s.guestHosts || {}).filter((h) => hostIds.has(h.id)).map((h): GuestHost => ({ id: h.id, clubId: h.clubId, createdAt: h.createdAt, createdBy: h.createdBy, name: h.name, kind: h.kind, what: h.what, photoMediaId: h.photoMediaId, phone: '', fee: 0, active: true })));
   out.dishes = pick(live(s.dishes));
   out.menuVersions = pick(live(s.menuVersions).filter((v) => v.status === 'published').map(menuVersionForFamily).filter(present));
   // allergy alternatives: only the family's own members
   out.dayMenus = pick(live(s.dayMenus).map(approvedDayMenu).map((d) => ({ ...d, approval: undefined, allergyPlans: d.allergyPlans.filter((p) => mids.some((id) => p.person === `member:${id}`)) })));
   out.directory = pick(live(s.directory).filter((d) => d.public));
   out.prices = pick(live(s.prices));
-  out.staff = pick(live(s.staff).map((x) => ({ ...x, username: undefined, phone: '', hr: { ...x.hr, salary: 0, allowance: 0, account: '', ktpLast4: '' } })));
+  // the front desk's number is the one staff phone a family gets: "WhatsApp the club" opens a chat with it
+  const desk = firstOfRole(s, 'lobby')?.id;
+  out.staff = pick(live(s.staff).map((x) => ({ ...x, username: undefined, phone: x.id === desk ? x.phone : '', hr: { ...x.hr, salary: 0, allowance: 0, account: '', ktpLast4: '' } })));
   out.surveys = pick(live(s.surveys).filter((x) => x.recipients.includes(familyId) && x.status !== 'draft'));
   out.surveyResponses = pick(live(s.surveyResponses).filter((r) => r.familyId === familyId));
   out.notifications = pick(live(s.notifications).filter((n) => n.toUsers.includes(familyId)));

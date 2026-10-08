@@ -55,9 +55,12 @@ test.skip('Oma Lina’s day: the guided demo runs end to end (the guided demo is
   s = await stateOf(page);
   expect(Object.keys(s.attendance[`${T}:m1`].checkOut).sort()).toEqual(['at', 'by', 'method']);
 
-  // 7 · 17:10 Maria opens Today, comments on the log and messages the lobby
+  // 7 · 17:10 Maria opens Today and reads the team's log (families answer the club on WhatsApp: no comments, no messages in the app)
   await step(page, /^Open Maria.s Today$/);
-  await poll(page, (x) => rows(x.messages).filter((m) => m.from === 'family:f1' && String(m.at).startsWith(T)).length).toBeGreaterThanOrEqual(2);
+  await expect(page).toHaveURL(/\/today$/);
+  await expect(page.getByTestId('team-log').first()).toBeVisible();
+  await expect(page.getByRole('link', { name: 'WhatsApp the club' })).toHaveAttribute('href', /^https:\/\/wa\.me\/\d+$/);
+  await poll(page, (x) => rows(x.messages).length).toBe(0);
 
   // 8 · Maria sees the extra visit on her plan card
   await step(page, /^Open Maria.s plan$/);

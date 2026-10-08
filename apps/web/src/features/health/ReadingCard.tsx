@@ -2,10 +2,11 @@
 // who took it, the notes, who was told and the corrections, with the buttons to correct or remove it. Used for "today" in the
 // station and for any day in Readings.
 import { useState } from 'react';
-import { bpStatus, gluStatus, lastBefore, limitsOf, pulseStatus, spo2Status, staffCall, tempStatus, weightStatus, type ClubState, type Health, type Reading } from '@cp/shared';
+import { bpStatus, gluStatus, lastBefore, limitsFor, pulseStatus, spo2Status, staffCall, tempStatus, weightStatus, type ClubState, type Health, type Reading } from '@cp/shared';
 import { Button, Icon } from '../../components/ui';
 import type { TFn } from '../../lib/i18n';
 import { PendingMark } from '../../components/PendingMark';
+import { useDevice } from '../../hooks/useDevice';
 import { smallCaps } from './lib';
 import { Badge } from './parts';
 
@@ -20,12 +21,17 @@ export function readingTitle(r: Reading, t: TFn) {
   return `${r.sys}/${r.dia}` + (r.pulse != null ? ` · ${t('health.pulse').toLowerCase()} ${r.pulse}` : '') + (r.spo2 != null ? ` · SpO₂ ${r.spo2}%` : '') + (r.temp != null ? ` · ${r.temp} °C` : '');
 }
 
-export function ReadingCard({ r, s, t, meta, name, defaultOpen, onEdit, onVoid }: { r: Reading; s: ClubState; t: TFn; meta?: string; name?: string; defaultOpen?: boolean; onEdit: () => void; onVoid: () => void }) {
+export function ReadingCard({ r, s, t, meta, name, defaultOpen, first, onEdit, onVoid }: { r: Reading; s: ClubState; t: TFn; meta?: string; name?: string; defaultOpen?: boolean; /** phone: the first row of a group has no hairline above it */ first?: boolean; onEdit: () => void; onVoid: () => void }) {
   const [open, setOpen] = useState(!!defaultOpen);
+  const { isPhone } = useDevice();
+  // round 6, phone: a row of an iOS group (16px inset, a hairline from the text on, a tint while pressed); it sits in a Group with pad 0
+  const wrap: React.CSSProperties = isPhone
+    ? { backgroundColor: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', overflow: 'hidden' }
+    : { borderTop: '1px solid #F0EAE1', background: '#FFFFFF', overflow: 'hidden' };
   return (
-    <div data-testid="reading-card" data-reading={r.id} style={{ borderTop: '1px solid #F0EAE1', background: '#FFFFFF', overflow: 'hidden' }}>
-      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className="h-row cp-bleed"
-        style={{ width: '100%', minHeight: 60, padding: '12px 0', display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+    <div data-testid="reading-card" data-reading={r.id} style={wrap}>
+      <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={isPhone ? 'cp-tap-self' : 'h-row cp-bleed'}
+        style={{ width: '100%', minHeight: 60, padding: isPhone ? '12px 16px' : '12px 0', display: 'flex', alignItems: 'center', gap: 10, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           {name ? <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{name}</span> : null}
           <span style={{ fontSize: 16, fontWeight: name ? 400 : 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{readingTitle(r, t)}</span>
@@ -33,7 +39,7 @@ export function ReadingCard({ r, s, t, meta, name, defaultOpen, onEdit, onVoid }
           <PendingMark row={r} />
         </span>
         <Badge kind={r.status} icon={17} />
-        <Icon name={open ? 'expand_less' : 'expand_more'} size={22} weight={300} color="#6B6259" />
+        <Icon name={open ? 'expand_less' : 'expand_more'} size={22} weight={300} color={isPhone ? '#A89C8E' : '#6B6259'} />
       </button>
       {open ? <ReadingBody r={r} s={s} t={t} onEdit={onEdit} onVoid={onVoid} /> : null}
     </div>
@@ -42,8 +48,9 @@ export function ReadingCard({ r, s, t, meta, name, defaultOpen, onEdit, onVoid }
 
 /** Every number of one reading with its status, then who saved it, notes, who was told, corrections and the two buttons. */
 export function ReadingBody({ r, s, t, onEdit, onVoid }: { r: Reading; s: ClubState; t: TFn; onEdit: () => void; onVoid: () => void }) {
+  const { isPhone } = useDevice();
   const prevW = r.memberId ? lastBefore(s, r.memberId, r.date, 'weight')?.weight : undefined;
-  const L = limitsOf(s);
+  const L = limitsFor(s, r.memberId); // the member's own limits first
   const tiles: { label: string; value: string; st: Health | null }[] = [];
   if (r.sys != null && r.dia != null) tiles.push({ label: t('health.bp'), value: `${r.sys}/${r.dia}`, st: bpStatus(r.sys, r.dia, L) });
   if (r.pulse != null) tiles.push({ label: t('health.pulse'), value: String(r.pulse), st: pulseStatus(r.pulse, L) });
@@ -55,10 +62,10 @@ export function ReadingBody({ r, s, t, onEdit, onVoid }: { r: Reading; s: ClubSt
   const who = (id: string) => staffCall(s.staff[id]) || id;
   const told = r.familyTold ? r.familyTold.familyIds.map((id) => s.familyContacts[id]?.firstName).filter(Boolean) : [];
   return (
-    <div style={{ padding: '4px 0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(130px,1fr))', gap: 8 }}>
+    <div style={{ padding: isPhone ? '4px 16px 16px' : '4px 0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fit,minmax(130px,1fr))', gap: 8 }}>
         {tiles.map((v) => (
-          <div key={v.label} style={{ padding: '10px 12px', borderRadius: 8, background: '#FFFFFF', border: '1px solid #DDD1C2', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div key={v.label} style={{ padding: '10px 12px', borderRadius: isPhone ? 10 : 8, background: isPhone ? '#F5F5F3' : '#FFFFFF', border: isPhone ? 'none' : '1px solid #DDD1C2', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ ...smallCaps('1.2px'), fontWeight: 600, color: '#5E5852' }}>{v.label}</span>
             <span style={{ fontSize: 26, lineHeight: '30px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>{v.value}</span>
             {v.st ? <span style={{ alignSelf: 'flex-start' }}><Badge kind={v.st} /></span> : null}

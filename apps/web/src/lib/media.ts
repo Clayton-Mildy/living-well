@@ -1,4 +1,5 @@
 // Photos and short videos from the camera or a file: shrink photos on the device, upload to the API, show by id.
+import { demoMediaPath } from '@cp/shared/seed/demoMedia';
 import { api, ApiError } from './api';
 
 export const MAX_DIM = 1600;
@@ -11,10 +12,13 @@ export const MAX_VIDEO_SEC = 15;
 /** A PDF (a scanned paper form) is sent as it is: up to 10 MB. */
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
-/** The URL of an uploaded photo (a long random id, so the link itself is the key). */
-export const mediaUrl = (id: string) => `/api/media/${encodeURIComponent(id)}`;
+/** The URL of an uploaded photo (a long random id, so the link itself is the key). A demo picture (`md_demo_<name>`, KC round 7: the seed's free Unsplash scenes)
+ *  is a static file of the web app, `/demo/<name>.jpg`, never fetched from the media table. */
+export const mediaUrl = (id: string) => demoMediaPath(id) ?? `/api/media/${encodeURIComponent(id)}`;
 /** A member's profile picture URL, if they have one. */
 export const memberPhoto = (m?: { photoMediaId?: string } | null) => (m?.photoMediaId ? mediaUrl(m.photoMediaId) : undefined);
+/** An activity's picture (KC round 6), or undefined: the icon tile stands in. */
+export const activityPhoto = memberPhoto;
 /** Background of a round avatar: the photo when there is one, over the tone colour. */
 export const photoFill = (url: string | undefined, bg: string) => (url ? `center / cover no-repeat url("${url}"), ${bg}` : bg);
 

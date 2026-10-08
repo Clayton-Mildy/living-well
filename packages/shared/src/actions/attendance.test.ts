@@ -14,6 +14,8 @@ const checkIn = (s: ClubState, memberId = 'm1', method: 'face' | 'manual' = 'fac
 const att = (s: ClubState, memberId: string, date = clock.today) => s.attendance[`${date}:${memberId}`];
 /** Oma Lina without her 20 Oct visit: checking in today is her 10th visit, still inside the plan. */
 const linaNineVisits = () => produce(base, (d) => { delete d.attendance['2026-10-20:m1']; });
+/** Nobody owes anything (a later day in the tests below: an unpaid October invoice would put the membership on hold from 1 November). */
+const noDebt = produce(base, (d) => { d.invoices = {}; });
 const extraNotes = (s: ClubState, userId: string) => unreadUpdates(s, as(userId)).filter((x) => x.kind === 'lobby.notif.extraVisit');
 
 describe('attendance.checkIn', () => {
@@ -85,8 +87,8 @@ describe('attendance.checkIn', () => {
     expect(() => run(base, 'attendance.checkIn', { memberId: 'm46', method: 'manual' }, 's1', { today: '2026-10-30', nowMin: 600 })).toThrow('err.closedDay'); // closed event
   });
   it('uses the club date, not a fixed month', () => {
-    const c = { today: '2026-11-04', nowMin: 650 }; // a Wednesday in November
-    const r = run(base, 'attendance.checkIn', { memberId: 'm46', method: 'manual' }, 's1', c);
+    const c = { today: '2026-11-04', nowMin: 650 }; // a Wednesday in November (the families have paid October, or the membership would be on hold)
+    const r = run(noDebt, 'attendance.checkIn', { memberId: 'm46', method: 'manual' }, 's1', c);
     expect(att(r.state, 'm46', c.today).checkIn?.at).toBe('10:50');
     expect(Object.values(r.state.photos).some((p) => p.date === c.today && p.kind === 'arrival' && p.memberIds[0] === 'm46')).toBe(true);
     expect(att(r.state, 'm46', clock.today)?.checkIn).toBeUndefined();
@@ -124,7 +126,7 @@ describe('extra days (Flex: 10 visits a month; the 11th visit is an extra day)',
   });
   it('counts actual check-ins, month by month', () => {
     const nov = { today: '2026-11-04', nowMin: 600 };
-    const r = run(base, 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, 's1', nov); // Oma Lina's first November visit
+    const r = run(noDebt, 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, 's1', nov); // Oma Lina's first November visit
     expect(r.result).toMatchObject({ extra: false, visit: 1 });
     // a Flex member who has not been in this month is nowhere near the quota, whatever the plan
     const s = produce(base, (d) => { for (const k of Object.keys(d.attendance)) if (k.endsWith(':m1')) delete d.attendance[k]; });

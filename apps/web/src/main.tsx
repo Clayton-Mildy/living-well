@@ -14,6 +14,8 @@ import { reloadForNewVersion } from './app/RouteError';
 
 // a new version was deployed while this tab was open: its code files are gone, so load the new version
 window.addEventListener('vite:preloadError', (e) => { if (reloadForNewVersion()) e.preventDefault(); });
+// iOS Safari only applies :active (the phone's press feedback) when the page listens for touches
+document.addEventListener('touchstart', () => {}, { passive: true });
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>

@@ -33,7 +33,7 @@ export const cal = {
   // catalog
   catalog: 'Catalog', catalogTitle: 'Activities and rooms', catalogSaved: 'Saved to the catalog.', activities: 'Activities', rooms: 'Rooms', addActivity: 'Add activity', addRoom: 'Add room',
   editActivity: 'Edit activity', editRoom: 'Edit room', editItem: 'Edit {name}', inactive: 'Inactive', nameEn: 'Name', nameId: 'Name in Bahasa Indonesia', nameIdHint: 'Optional. Shown in Bahasa Indonesia mode.',
-  icon: 'Icon', active: 'Active', activeSub: 'Shown in the schedule builder palette.', venueRoom: 'Can be booked as a venue', venueRoomSub: 'Shown in the venue booking screen.',
+  photo: 'Photo', photoHint: 'Shown on the teacher’s Today and in the family timeline.', icon: 'Icon', active: 'Active', activeSub: 'Shown in the schedule builder palette.', venueRoom: 'Can be booked as a venue', venueRoomSub: 'Shown in the venue booking screen.',
   icon_music_note: 'Music', icon_palette: 'Painting', icon_self_improvement: 'Stretching', icon_yard: 'Gardening', icon_extension: 'Puzzles', icon_style: 'Cards', icon_skillet: 'Cooking', icon_menu_book: 'Reading',
   icon_interests: 'General', icon_sports_esports: 'Games', icon_theater_comedy: 'Theatre', icon_brush: 'Crafts', icon_local_florist: 'Flowers', icon_fitness_center: 'Exercise', icon_celebration: 'Party', icon_directions_walk: 'Walking',
   // notifications, feed and errors (schedule.ts)
@@ -62,4 +62,19 @@ export const cal = {
   eventSavedQuiet: 'Calendar updated. Nobody was notified.', eventDeletedQuiet: 'Event deleted. Nobody was notified.', publishedToastQuiet: 'Schedule published from {date}. Nobody was notified; today stays as it is.',
   editFromWeek: 'This week has already started, so the week of {date} is shown. Changes start there.',
   trialSub: 'Lunch and a health check',
+  // round 7: change one session for one day only (management), shown to staff as "Changed"
+  editChoiceTitle: 'Edit {title}', addSession: 'Add a session', addSessionAria: 'Add a session at {slot}', justThisDay: 'Just this day', justThisDaySub: 'Only {date}', weeklyPlan: 'Change the weekly plan', weeklyPlanSub: 'Starts from next week',
+  noSession: 'No session', dayTitle: '{date} · {slot}', dayWeekly: 'Weekly plan: {what}', dayWeeklyNone: 'Weekly plan: no session', dayGuest: '{name} is booked as the guest host for this session.',
+  dayNote: 'Note for the day', dayNotePh: 'Why? For example: Kak Dimas is off sick', dayTell: 'Tell teachers and families', daySave: 'Save for this day', dayBack: 'Back to the weekly plan',
+  daySaved: 'Changed for {date}. Teachers and families are told.', daySavedQuiet: 'Changed for {date}. Nobody was notified.', dayBackDone: 'Back to the weekly plan on {date}.',
+  changedNote: 'Changed · {note}', changedToday: 'Changed today: {note}', changedTodayPlain: 'Changed today',
+  weekStartedHint: 'For one day only, use Edit activity on that day.',
+  guestBook: 'Book a guest host', guestBookSub: 'Someone from outside leads this session', guestOpen: 'Guest host booked',
+  'err.pastDay': 'Only today and later days can be changed.', 'err.dayClosed': 'The club is closed that day.', 'err.dayOuting': 'There is an outing that day, so no sessions run at the club.',
+  'notif.dayChanged': 'On {date} the {slot} activity is now {name}.', 'notif.dayNoSession': 'On {date} there is no {slot} activity.',
+  'notif.dayBack': 'On {date} the {slot} activity is back to the usual plan.', 'notif.dayBackAll': 'On {date} the activities are back to the usual plan.',
+  'feed.dayChanged': 'Activity changed for {date} · {slot}: {name}', 'feed.dayNoSession': 'No activity on {date} · {slot}',
+  'feed.dayBack': 'Back to the weekly plan · {date} {slot}', 'feed.dayBackAll': 'Back to the weekly plan · {date}',
+  // round 7: family Today notice for a closure or holiday in the next 7 days
+  famClosureLabel: 'Upcoming closures', famClosedOn: 'Club closed on {d}', famClosedRange: 'Club closed {a} to {b}',
 };

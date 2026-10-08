@@ -1,11 +1,15 @@
-// "Add a member" (design OvPe, mode add): the details come from the signed paper registration form, which must be attached (photo or PDF), with validation (name, date of birth, contact name and mobile,
-// consent to data use; the usual arrival time is optional and informational, since members drop in on any open day). Non-management staff
-// send it for review; the family contact can sign in once management approves.
+// "Add a member" (design OvPe, mode add): the details are typed in from the paper registration form (the brochure's Membership Application Form), which
+// is printed here with the answers filled in ("Print the form to sign"), signed on paper, and attached again (photo or PDF) before the member is created,
+// with validation (name, date of birth, contact name and mobile, consent to data use; the usual arrival time is optional and informational, since members
+// drop in on any open day). Non-management staff send it for review; the family contact can sign in once management approves.
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { fmtPhone, isOpen, isWeekday, live, memberName, nextOpenDay, sortBy, e164, rp, priceOn, toHM, toMin, type Diet, type DocType, type FoodAllergen, type Mobility, type Plan, type Relation, type Title } from '@cp/shared';
 import { DOC_TYPES, nextMonday, validateNewMember, type FieldIssue, type NewMemberInput } from '@cp/shared/rules/members';
-import { Button, ChipGroup, DateField, Dialog, Note, Toggle } from '../../../components/ui';
+import { applicationDataFromInput, validateRegistration } from '@cp/shared/rules/applicationForm';
+import type { MemberRegistration } from '@cp/shared';
+import { Button, ChipGroup, DateField, Dialog, Eyebrow, Group, Note, PhoneScreen, Toggle } from '../../../components/ui';
+import { useDevice } from '../../../hooks/useDevice';
 import { useAct } from '../../../lib/act';
 import { useT } from '../../../lib/i18n';
 import { useClub } from '../../../store/replica';
@@ -14,7 +18,8 @@ import { useMe } from '../../../lib/me';
 import { docLabel } from '../lib';
 import { ProfilePhotoField } from '../ProfilePhoto';
 import { PaperFormField, type PaperFile } from '../PaperForm';
-import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, PeSection, OptionalTime, RelationChips, SelectField, TitleName, YesNo, joinDrugs, useDraft, type MedRow } from './forms';
+import { useApplicationForm } from '../ApplicationForm';
+import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, PeSection, OptionalTime, RegCareFields, RegPersonalFields, RelationChips, SelectField, TitleName, YesNo, joinDrugs, regDraftOf, regOfDraft, useDraft, type MedRow, type RegDraft } from './forms';
 
 interface AddDraft {
   title: Title; name: string; dob: string; address: string; usual: string; nanny: boolean; nannyName: string; spouseId: string; photo: string;
@@ -22,6 +27,7 @@ interface AddDraft {
   plan: Plan; start: string;
   conditions: string[]; diabetic: boolean; meds: MedRow[]; food: FoodAllergen[]; foodOther: string; drug: string[]; drugOther: string; mobility: Mobility | 'none'; diet: Diet[]; care: string;
   docs: DocType[]; form: PaperFile | null; consentData: boolean; consentFace: boolean; note: string;
+  /** the application form's extra answers */ reg: RegDraft;
 }
 
 export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -38,14 +44,16 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
   const [d, set] = useDraft<AddDraft>(() => ({
     title: 'Oma', name: '', dob: '', address: '', usual: '', nanny: false, nannyName: '', spouseId: '', photo: '',
     contactMode: 'new', existingId: '', contact: '', rel: 'daughter', phone: '', primary: true, plan: 'flex', start: firstDay,
-    conditions: [], diabetic: false, meds: [], food: [], foodOther: '', drug: [], drugOther: '', mobility: 'none', diet: [], care: '', docs: [], form: null, consentData: false, consentFace: true, note: '',
+    conditions: [], diabetic: false, meds: [], food: [], foodOther: '', drug: [], drugOther: '', mobility: 'none', diet: [], care: '', docs: [], form: null, consentData: false, consentFace: true, note: '', reg: regDraftOf(),
   }));
+  const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
+  const printer = useApplicationForm();
   const [tried, setTried] = useState(false);
   const [busy, setBusy] = useState(false);
   const contacts = sortBy(live(s.familyContacts).filter((c) => !c.review || c.review.status === 'approved'), (c) => c.name);
   const members = sortBy(live(s.members).filter((m) => !m.review || m.review.status === 'approved'), (m) => m.firstName);
 
-  const input = (): NewMemberInput => ({
+  const input = (): NewMemberInput & { registration?: MemberRegistration } => ({
     ...(d.photo ? { photoMediaId: d.photo } : {}),
     title: d.title, name: d.name.trim(), dob: d.dob, address: d.address.trim(), usualArrival: d.usual, nanny: d.nanny ? { name: d.nannyName.trim() } : null, spouseId: d.spouseId || null,
     plan: d.plan, start: d.start,
@@ -54,11 +62,12 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
       conditions: d.conditions, diabetic: d.diabetic, food: d.food, foodOther: d.foodOther.trim(), drugs: joinDrugs(d), mobility: d.mobility === 'none' ? null : d.mobility, diet: d.diet,
       meds: d.meds.filter((x) => x.name.trim()).map((x) => ({ name: x.name.trim(), dose: x.dose.trim(), timing: x.timing })),
     },
-    careInstructions: d.care.trim(), docs: d.docs.filter((x) => (x !== 'nannyKtp' || d.nanny) && x !== 'membershipForm'), formMediaId: d.form?.mediaId ?? '', formFileName: d.form?.fileName ?? '', consent: { data: d.consentData, face: d.consentFace }, ...(d.note.trim() ? { note: d.note.trim() } : {}),
+    careInstructions: d.care.trim(), docs: d.docs.filter((x) => (x !== 'nannyKtp' || d.nanny) && x !== 'membershipForm'), formMediaId: d.form?.mediaId ?? '', formFileName: d.form?.fileName ?? '', consent: { data: d.consentData, face: d.consentFace }, ...(regOfDraft(d.reg) ? { registration: regOfDraft(d.reg) } : {}), ...(d.note.trim() ? { note: d.note.trim() } : {}),
   });
-  const issues: FieldIssue[] = validateNewMember(input(), today).concat(d.contactMode === 'existing' && !d.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []);
+  const issues: FieldIssue[] = validateNewMember(input(), today).concat(validateRegistration(regOfDraft(d.reg)), d.contactMode === 'existing' && !d.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []);
   const err = (...fields: string[]) => (tried ? (() => { const i = issues.find((x) => fields.includes(x.field)); return i ? t(i.code, i.params) : ''; })() : '');
   const mgmt = role === 'mgmt';
+  const { isPhone } = useDevice();
 
   const submit = async () => {
     setTried(true);
@@ -71,13 +80,11 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
       if (r.result.memberId) navigate(`/members/${String(r.result.memberId)}`);
     }
   };
-  return (
-    <Dialog open={open} onClose={onClose} eyebrow={t('members.newMember')} title={t('members.addTitle')}
-      footer={<><Button variant="secondary" size={48} onClick={onClose}>{t('common.cancel')}</Button><Button size={48} disabled={busy} onClick={submit}>{t('members.create')}</Button></>}>
-      <DialogBody>
+  const body = (
+    <>
       {mgmt ? null : <Note>{t('members.addNoteReview')}</Note>}
       {tried && issues.length ? <Note tone="rust" icon="error">{t('err.invalid')}</Note> : null}
-      <PeSection label={t('profile.sec.details')}>
+      <PeSection native={isPhone} label={t('profile.sec.details')}>
         <ProfilePhotoField name={d.name ? `${d.title} ${d.name}` : '?'} value={d.photo || null} onChange={(id) => set({ photo: id || '' })} />
         <TitleName d={d} set={set} t={t} errors={{ name: err('name') }} />
         <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} error={err('dob')} />
@@ -87,7 +94,10 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
         {d.nanny ? <TextField label={t('profile.nannyName')} value={d.nannyName} onChange={(v) => set({ nannyName: v })} error={err('nannyName')} /> : null}
         <SelectField label={t('profile.f.spouse')} value={d.spouseId} onChange={(v) => set({ spouseId: v })} placeholder={t('profile.noSpouse')} options={members.map((m) => ({ value: m.id, label: memberName(m) }))} />
       </PeSection>
-      <PeSection label={t('profile.sec.contact')}>
+      <PeSection native={isPhone} label={t('profile.sec.regPersonal')}>
+        <RegPersonalFields d={d.reg} set={setReg} t={t} err={err} />
+      </PeSection>
+      <PeSection native={isPhone} label={t('profile.sec.contact')}>
         {contacts.length ? (
           <ChipGroup label={t('members.contactMode')} value={d.contactMode} onChange={(v) => set({ contactMode: v as 'new' | 'existing' })} options={[{ value: 'new', label: t('members.newContact') }, { value: 'existing', label: t('members.existingContact') }]} />
         ) : null}
@@ -102,33 +112,60 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
         <RelationChips value={d.rel} onChange={(v) => set({ rel: v })} t={t} />
         <Toggle on={d.primary} onClick={() => set({ primary: !d.primary })} label={t('profile.primaryBilling')} />
       </PeSection>
-      <PeSection label={t('profile.sec.plan')}>
+      <PeSection native={isPhone} label={t('profile.sec.plan')}>
         <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={[{ value: 'flex', label: `${t('profile.planFlex')} · ${rp(price.flex)}` }, { value: 'gold', label: `${t('profile.planGold')} · ${rp(price.gold)}` }]} />
         <div style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{d.plan === 'flex' ? t('profile.planNoteFlex', { q: s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold')}</div>
         <DateField label={t('profile.f.start')} value={d.start} onChange={(v) => set({ start: v })} min={today} disabledDate={(x) => !isWeekday(x) || !isOpen(s, x)} error={err('start')} />
       </PeSection>
-      <PeSection label={t('profile.sec.health')}>
+      <PeSection native={isPhone} label={t('profile.sec.health')}>
         <HealthFields d={d} set={set} t={t} />
         <div style={{ fontWeight: 500 }}>{t('profile.medicines')}</div>
         <MedsEditor rows={d.meds} onChange={(meds) => set({ meds })} t={t} showErrors={tried} />
       </PeSection>
-      <PeSection label={t('profile.sec.allergies')}>
+      <PeSection native={isPhone} label={t('profile.sec.allergies')}>
         <AllergyFields d={d} set={set} t={t} />
         <TextField label={t('profile.careInstructions')} value={d.care} onChange={(v) => set({ care: v })} multiline rows={3} hint={t('profile.careHint')} />
       </PeSection>
-      <PeSection label={t('profile.paperTitle')}>
+      <PeSection native={isPhone} label={t('profile.sec.regCare')}>
+        <RegCareFields d={d.reg} set={setReg} t={t} />
+      </PeSection>
+      <PeSection native={isPhone} label={t('profile.paperTitle')}>
+        <div><Button variant="secondary" size={44} icon="print" onClick={() => printer.open(applicationDataFromInput(s, input(), today))}>{t('form.printToSign')}</Button></div>
         <PaperFormField value={d.form} onChange={(f) => set({ form: f })} error={err('form')} />
       </PeSection>
-      <PeSection label={t('profile.sec.docsNow')}>
+      <PeSection native={isPhone} label={t('profile.sec.docsNow')}>
         <ChipGroup label={t('profile.docsReceived')} multi value={d.docs} onChange={(v) => set({ docs: v as DocType[] })} options={DOC_TYPES.filter((x) => x !== 'membershipForm' && (x !== 'nannyKtp' || d.nanny)).map((x) => ({ value: x, label: docLabel(t, x) }))} />
       </PeSection>
-      <PeSection label={t('profile.consentTitle')}>
+      <PeSection native={isPhone} label={t('profile.consentTitle')}>
         <Toggle on={d.consentData} onClick={() => set({ consentData: !d.consentData })} label={t('profile.consent.data')} sub={t('profile.consentSub.data')} />
         {err('consentData') ? <Note tone="rust" icon="error">{err('consentData')}</Note> : null}
         <Toggle on={d.consentFace} onClick={() => set({ consentFace: !d.consentFace })} label={t('profile.consent.face')} sub={t('profile.consentSub.face')} />
       </PeSection>
-      {!mgmt ? <TextField label={t('profile.noteForMgmt')} value={d.note} onChange={(v) => set({ note: v })} multiline rows={2} /> : null}
-      </DialogBody>
-    </Dialog>
+      {!mgmt ? (isPhone ? <Group><TextField label={t('profile.noteForMgmt')} value={d.note} onChange={(v) => set({ note: v })} multiline rows={2} /></Group> : <TextField label={t('profile.noteForMgmt')} value={d.note} onChange={(v) => set({ note: v })} multiline rows={2} />) : null}
+    </>
+  );
+  const foot = (style?: React.CSSProperties) => <><Button variant="secondary" size={48} onClick={onClose} style={style}>{t('common.cancel')}</Button><Button size={48} disabled={busy} onClick={submit} style={style}>{t('members.create')}</Button></>;
+  // round 6, phone: the form is a pushed screen ("‹ Members") with iOS grouped sections and Cancel / Create pinned at the bottom
+  if (isPhone) {
+    return (
+      <>
+        <PhoneScreen open={open} onClose={onClose} label={t('members.addTitle')} back={t('nav.members')} footer={<div style={{ display: 'flex', gap: 10 }}>{foot({ flex: '1 1 0' })}</div>}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4 }}>
+            <Eyebrow>{t('members.newMember')}</Eyebrow>
+            <h2 style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{t('members.addTitle')}</h2>
+          </div>
+          {body}
+        </PhoneScreen>
+        {printer.node}
+      </>
+    );
+  }
+  return (
+    <>
+      <Dialog open={open} onClose={onClose} eyebrow={t('members.newMember')} title={t('members.addTitle')} footer={foot()}>
+        <DialogBody>{body}</DialogBody>
+      </Dialog>
+      {printer.node}
+    </>
   );
 }

@@ -52,7 +52,7 @@ e2e/                   Playwright specs (one per area) · helpers.ts
   - When `r.reviewed === 'gate'` it shows a "sent for review" toast.
   - Check `r.ok` before closing sheets.
 - **Helpers** in `actions/helpers.ts`: `ensureAttendance`, `familyUserIds`, `shortOf`, `requireMember`, `postMessage` (creates the thread if needed, marks the sender's side read).
-- **Jobs.** `registerJob(name, (draft, ctx) => …)` in your actions file runs every 15 s on the server as the system user. Use it for scheduled things such as broadcasts at their time, the invoice run on the 15th, and simulated Xero/DOKU syncs.
+- **Jobs.** `registerJob(name, (draft, ctx) => …)` in your actions file runs every 15 s on the server as the system user. Use it for scheduled things such as broadcasts at their time, the invoice run on the 21st, the daily hold/stop of memberships with an unpaid invoice, and simulated Xero/DOKU syncs.
 - **Clock.** `useNow()` returns `{ today, nowMin, now }` from the shared demo clock (the demo day, from 09:58; tests pin it to Wed 21 Oct 2026). **Never hard-code `2026-10`, `October` or `2026`**; derive them from `today`.
 - **Permissions.** `can(user, input, state)` is enforced on the server. Use the plan's permission table. For UI visibility, check the role (`useMe().role`) or call `getAction(name).can(...)`.
 

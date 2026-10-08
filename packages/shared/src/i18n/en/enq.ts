@@ -23,14 +23,15 @@ export const enq = {
   // ----- visit and trial -----
   visitTitle: 'Book a visit', visitChange: 'Change the visit', trialTitle: 'Book a trial day', trialChange: 'Change the trial day',
   visitText: '{contact} gets the details on WhatsApp (demo).',
-  trialText: 'Book at least one day ahead. {contact} gets a WhatsApp confirmation (demo).',
-  pickDay: 'Day', otherDate: 'Another date', pickTime: 'Time', otherTime: 'Another time', pickDayTime: 'Pick a day and time', bookVisitFor: 'Book visit · {date}, {time}', bookTrialFor: 'Book trial · {date}', pickADay: 'Pick a day', trialPass: 'Lunch and a health check are included.',
-  visitBooked: 'Visit booked for {name}: {date}, {time}. {contact} got the details on WhatsApp (demo).', trialBooked: 'Trial booked for {name}: {date}. {contact} got the details on WhatsApp (demo).',
+  trialText: 'A trial is 2 days in a row for {price}. Book at least one day ahead. {contact} gets a WhatsApp confirmation (demo).',
+  pickDay: 'Day', otherDate: 'Another date', pickTime: 'Time', otherTime: 'Another time', pickDayTime: 'Pick a day and time', bookVisitFor: 'Book visit · {date}, {time}', bookTrialFor: 'Book trial · {date} and {date2} · {price}', pickADay: 'Pick a day', trialPass: 'Two days in a row, with lunch and a health check each day.', trialDays: '{a} and {b}', trialPrice: 'Trial fee {price}, paid at the front desk.',
+  visitBooked: 'Visit booked for {name}: {date}, {time}. {contact} got the details on WhatsApp (demo).', trialBooked: 'Trial booked for {name}: {date} and {date2} ({price}). {contact} got the details on WhatsApp (demo).',
   foodAllergies: 'Food allergies', notKnown: 'Not known yet', foodHint: 'If you don’t know yet, the kitchen is asked to find out before lunch.',
   mobility: 'Mobility aid', diet: 'Diet',
 
   // ----- join -----
   jn_eyebrow: 'Join as a member', jn_fromEnquiry: 'From the enquiry', jn_member: 'Member', jn_contact: 'Billing contact', jn_allergies: 'Allergies',
+  jn_regFee: 'The registration fee ({price}, one time) is on the first invoice.', jn_fromTrial: 'Allergies and needs from the trial day are filled in.',
   plan: 'Plan', jn_visits: '{n} visits a month', jn_visitsOne: '{n} visit a month', start: 'Start',
   createMember: 'Create member · {plan}', sendForApproval: 'Send to management · {plan}', joinReviewNote: 'Your request goes to management. The member becomes active, and the family can sign in, once they approve.',
   joined: '{name} is now a member, starting {date}. A family login was created for {contact}.', joinSent: '{name} is waiting for management approval. The family can sign in once it is approved.',

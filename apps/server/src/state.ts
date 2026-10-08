@@ -125,15 +125,18 @@ export function resetDemo(): Promise<void> {
 }
 
 let tickBusy = false;
+/** One round of the scheduled work for every clubhouse (the 15 s timer, and the demo clock when it moves to another day). */
+export async function runJobsNow(wait = true) {
+  while (tickBusy && wait) await new Promise((r) => setTimeout(r, 25)); // a timer round in progress finishes first, so this one sees the new day
+  if (tickBusy) return;
+  tickBusy = true;
+  try {
+    for (const id of Object.keys(clubs)) {
+      try { await runAction(id, 'jobs.tick', {}, systemUser(id), `job-${Date.now().toString(36)}-${id}`); }
+      catch (e) { if (!(e instanceof DomainError)) console.error('job tick failed', e); }
+    }
+  } finally { tickBusy = false; }
+}
 export function startJobs() {
-  setInterval(async () => {
-    if (tickBusy) return;
-    tickBusy = true;
-    try {
-      for (const id of Object.keys(clubs)) {
-        try { await runAction(id, 'jobs.tick', {}, systemUser(id), `job-${Date.now().toString(36)}-${id}`); }
-        catch (e) { if (!(e instanceof DomainError)) console.error('job tick failed', e); }
-      }
-    } finally { tickBusy = false; }
-  }, 15000);
+  setInterval(() => { void runJobsNow(false); }, 15000);
 }

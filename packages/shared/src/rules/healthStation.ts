@@ -292,50 +292,19 @@ export const lastOfKind = (s: ClubState, memberId: string, date: ISODate, kinds:
 export const recentFlagged = (s: ClubState, memberId: string, date: ISODate, days = 14) =>
   lastOf(readingsOf(s, memberId).filter((r) => r.date < date && r.date >= addDays(date, -days) && r.status !== 'normal' && r.sys != null));
 
-// ---------- sparklines ----------
-export const SPARK_W = 600;
-export const SPARK_H = 130;
-export interface SparkPoint { d: ISODate; v: number; s?: Health | null }
-export interface SparkOpts { lo: number; hi: number; bLo?: number; bHi?: number }
-export interface SparkPaths { line: string; line2: string; dots: string; hot: string; bandY: string; bandH: string; from: ISODate | null; to: ISODate | null }
+// ---------- trend points (dated: the web's TrendChart puts them on a time scale) ----------
+/** One plotted reading: its date and time, the value, how it grades, and for the tooltip a ready-made text ("134/82 mmHg") or the nurse's note. */
+export interface ChartPoint { date: ISODate; time: HM; value: number; status?: Health; text?: string; note?: string }
+const chartPt = (r: Reading, value: number, status?: Health | null, text?: string, note = false): ChartPoint => ({
+  date: r.date, time: r.time, value, ...(status ? { status } : {}), ...(text ? { text } : {}), ...(note && r.note?.trim() ? { note: r.note.trim() } : {}),
+});
+const bpText = (r: Reading) => (r.sys != null && r.dia != null ? `${r.sys}/${r.dia} mmHg` : undefined);
 
-/** The trend chart's paths (design `spark`): shared x positions by date, y clamped inside the chart. */
-export function sparkPaths(series: SparkPoint[][], o: SparkOpts): SparkPaths {
-  const W = SPARK_W, H = SPARK_H;
-  const all = series.flat();
-  const dates = Array.from(new Set(all.map((p) => p.d))).sort();
-  const xs = (d: ISODate) => (dates.length > 1 ? 14 + dates.indexOf(d) * ((W - 28) / (dates.length - 1)) : W / 2);
-  const y = (v: number) => Math.max(6, Math.min(H - 6, H - 6 - ((v - o.lo) / (o.hi - o.lo)) * (H - 12)));
-  const c = (cx: number, cy: number) => 'M' + (cx - 4).toFixed(1) + ' ' + cy.toFixed(1) + 'a4 4 0 1 0 8 0a4 4 0 1 0 -8 0';
-  const line = (s: SparkPoint[]) => s.map((p, i) => (i ? 'L' : 'M') + xs(p.d).toFixed(1) + ' ' + y(p.v).toFixed(1)).join(' ');
-  return {
-    line: series[0] ? line(series[0]) : '',
-    line2: series[1] ? line(series[1]) : '',
-    dots: all.filter((p) => !p.s || p.s === 'normal').map((p) => c(xs(p.d), y(p.v))).join(''),
-    hot: all.filter((p) => p.s && p.s !== 'normal').map((p) => c(xs(p.d), y(p.v))).join(''),
-    bandY: o.bHi ? y(o.bHi).toFixed(1) : '0',
-    bandH: o.bHi ? (y(o.bLo ?? 0) - y(o.bHi)).toFixed(1) : '0',
-    from: dates[0] ?? null,
-    to: dates[dates.length - 1] ?? null,
-  };
-}
-
-/** The small systolic chart in the station header (design `tr`): 200 × 48, normal band 100–139. */
-export function headSpark(sys: number[]) {
-  const y = (v: number) => Math.max(2, Math.min(46, 46 - ((v - 90) / 90) * 44));
-  const xs = (i: number) => (sys.length > 1 ? 6 + i * (188 / (sys.length - 1)) : 100);
-  const circ = (cx: number, cy: number) => `M${(cx - 2.6).toFixed(1)} ${cy.toFixed(1)}a2.6 2.6 0 1 0 5.2 0a2.6 2.6 0 1 0 -5.2 0`;
-  return {
-    bandY: y(139).toFixed(1),
-    bandH: (y(100) - y(139)).toFixed(1),
-    line: sys.map((v, i) => (i ? 'L' : 'M') + xs(i).toFixed(1) + ' ' + y(v).toFixed(1)).join(' '),
-    dots: sys.map((v, i) => (v < 140 ? circ(xs(i), y(v)) : '')).join(''),
-    hot: sys.map((v, i) => (v >= 140 ? circ(xs(i), y(v)) : '')).join(''),
-  };
-}
-/** Arrival systolic values of the last `days` days before `date` (header chart). */
-export const arrivalSystolic = (s: ClubState, memberId: string, date: ISODate, days = 28) =>
-  readingsOf(s, memberId).filter((r) => r.kind === 'arrival' && r.sys != null && r.date < date && r.date >= addDays(date, -days)).map((r) => r.sys!);
+/** Arrival systolic readings of the last `days` days up to `date` (today included): the small chart in the station header. */
+export const arrivalSystolic = (s: ClubState, memberId: string, date: ISODate, days = 28, L: HealthLimits = DEFAULT_LIMITS): ChartPoint[] =>
+  readingsOf(s, memberId)
+    .filter((r) => r.kind === 'arrival' && r.sys != null && r.date <= date && r.date >= addDays(date, -days))
+    .map((r) => chartPt(r, r.sys!, r.dia != null ? bpStatus(r.sys!, r.dia, L) : null, bpText(r)));
 
 // ---------- trends (Readings screen) ----------
 export interface TrendRow { m: Member; rs: Reading[]; worst: Health; last?: Reading; n: number }
@@ -359,31 +328,51 @@ export function trendRows(s: ClubState, today: ISODate, days = 28): TrendRow[] {
 }
 
 export type ChartId = 'bp' | 'pulse' | 'spo2' | 'temp' | 'glucose' | 'weight';
-export interface ChartSpec { id: ChartId; series: SparkPoint[][]; opts: SparkOpts; latest?: Reading; latestStatus: Health | null; sinceMonth?: YM }
+export interface ChartSpec { id: ChartId; series: ChartPoint[][]; band?: { from: number; to: number }; latest?: Reading; latestStatus: Health | null; sinceMonth?: YM }
 /**
- * The six chart cards of a member: BP (arrival solid, departure dashed), pulse, SpO₂, temperature over the last `days` days;
- * glucose and weight over every monthly measurement (whichever reading carries them).
+ * The six chart cards of a member over their whole history (the screen picks the date range): BP (arrival solid, departure dashed), pulse, SpO₂
+ * and temperature on arrival; glucose and weight from every reading that carries them. Points are dated, with the time of the reading.
  */
-export function trendCharts(rs: Reading[], today: ISODate, days = 28, L: HealthLimits = DEFAULT_LIMITS): ChartSpec[] {
-  const since = addDays(today, -days);
-  const rec = rs.filter((r) => r.date >= since);
-  const arr = rec.filter((r) => r.kind === 'arrival');
-  const dep = rec.filter((r) => r.kind === 'departure');
-  const pt = (r: Reading, k: keyof Reading, fn?: (r: Reading) => Health): SparkPoint => ({ d: r.date, v: r[k] as number, s: fn ? fn(r) : null });
+export function trendCharts(rs: Reading[], L: HealthLimits = DEFAULT_LIMITS): ChartSpec[] {
+  const arr = rs.filter((r) => r.kind === 'arrival');
+  const dep = rs.filter((r) => r.kind === 'departure');
+  const pt = (r: Reading, k: keyof Reading, fn?: (r: Reading) => Health, text?: string): ChartPoint => chartPt(r, r[k] as number, fn?.(r) ?? null, text, true);
   const withField = (a: Reading[], k: keyof Reading) => a.filter((r) => r[k] != null);
   const glu = withField(rs, 'glucose');
   const wts = withField(rs, 'weight');
-  const wv = wts.map((r) => r.weight!);
   const bpS = (r: Reading) => bpStatus(r.sys!, r.dia!, L);
+  const band = (b: readonly [number, number]) => ({ from: b[0], to: b[1] });
   const specs: ChartSpec[] = [
-    { id: 'bp', series: [withField(arr, 'sys').map((r) => pt(r, 'sys', bpS)), withField(dep, 'sys').map((r) => pt(r, 'sys', bpS))], opts: { lo: 80, hi: 180, bLo: NORMAL_BANDS.bp[0], bHi: NORMAL_BANDS.bp[1] }, latest: lastOf(withField(arr, 'sys')), latestStatus: null },
-    { id: 'pulse', series: [withField(arr, 'pulse').map((r) => pt(r, 'pulse', (x) => pulseStatus(x.pulse!, L)))], opts: { lo: 40, hi: 120, bLo: NORMAL_BANDS.pulse[0], bHi: NORMAL_BANDS.pulse[1] }, latest: lastOf(withField(arr, 'pulse')), latestStatus: null },
-    { id: 'spo2', series: [withField(arr, 'spo2').map((r) => pt(r, 'spo2', (x) => spo2Status(x.spo2!, L)))], opts: { lo: 85, hi: 100, bLo: NORMAL_BANDS.spo2[0], bHi: NORMAL_BANDS.spo2[1] }, latest: lastOf(withField(arr, 'spo2')), latestStatus: null },
-    { id: 'temp', series: [withField(arr, 'temp').map((r) => pt(r, 'temp', (x) => tempStatus(x.temp!, L)))], opts: { lo: 35, hi: 39, bLo: NORMAL_BANDS.temp[0], bHi: NORMAL_BANDS.temp[1] }, latest: lastOf(withField(arr, 'temp')), latestStatus: null },
-    { id: 'glucose', series: [glu.map((r) => pt(r, 'glucose', (x) => gluStatus(x.glucose!, L)))], opts: { lo: 60, hi: 260, bLo: NORMAL_BANDS.glucose[0], bHi: NORMAL_BANDS.glucose[1] }, latest: lastOf(glu), latestStatus: null, sinceMonth: glu[0] ? ym(glu[0].date) : undefined },
-    { id: 'weight', series: [wts.map((r) => pt(r, 'weight'))], opts: { lo: wv.length ? Math.min(...wv) - 3 : 40, hi: wv.length ? Math.max(...wv) + 3 : 80, bLo: 0, bHi: 0 }, latest: lastOf(wts), latestStatus: null, sinceMonth: wts[0] ? ym(wts[0].date) : undefined },
+    { id: 'bp', series: [withField(arr, 'sys').map((r) => pt(r, 'sys', bpS, bpText(r))), withField(dep, 'sys').map((r) => pt(r, 'sys', bpS, bpText(r)))], band: band(NORMAL_BANDS.bp), latest: lastOf(withField(arr, 'sys')), latestStatus: null },
+    { id: 'pulse', series: [withField(arr, 'pulse').map((r) => pt(r, 'pulse', (x) => pulseStatus(x.pulse!, L)))], band: band(NORMAL_BANDS.pulse), latest: lastOf(withField(arr, 'pulse')), latestStatus: null },
+    { id: 'spo2', series: [withField(arr, 'spo2').map((r) => pt(r, 'spo2', (x) => spo2Status(x.spo2!, L)))], band: band(NORMAL_BANDS.spo2), latest: lastOf(withField(arr, 'spo2')), latestStatus: null },
+    { id: 'temp', series: [withField(arr, 'temp').map((r) => pt(r, 'temp', (x) => tempStatus(x.temp!, L)))], band: band(NORMAL_BANDS.temp), latest: lastOf(withField(arr, 'temp')), latestStatus: null },
+    { id: 'glucose', series: [glu.map((r) => pt(r, 'glucose', (x) => gluStatus(x.glucose!, L)))], band: band(NORMAL_BANDS.glucose), latest: lastOf(glu), latestStatus: null, sinceMonth: glu[0] ? ym(glu[0].date) : undefined },
+    { id: 'weight', series: [wts.map((r) => pt(r, 'weight'))], latest: lastOf(wts), latestStatus: null, sinceMonth: wts[0] ? ym(wts[0].date) : undefined },
   ];
   return specs.map((c) => ({ ...c, latestStatus: chartStatus(c.id, L, c.latest) }));
+}
+
+/** The four trends on a member's health tab (staff and family). */
+export type TabMetric = 'bp' | 'pulse' | 'weight' | 'glucose';
+export const TAB_METRICS: TabMetric[] = ['bp', 'pulse', 'weight', 'glucose'];
+/**
+ * One trend of the health tab: BP (upper number, with the lower number as a second series; the shaded band is this member's upper-number limits),
+ * pulse (arrival), weight and glucose (every reading that has them). No notes in the points: the family sees this tab too.
+ */
+export function tabTrend(rs: Reading[], metric: TabMetric, L: HealthLimits = DEFAULT_LIMITS): { series: ChartPoint[][]; band?: { from: number; to: number } } {
+  const arr = rs.filter((r) => r.kind === 'arrival');
+  const pt = (r: Reading, v: number, st?: Health) => chartPt(r, v, st ?? null);
+  switch (metric) {
+    case 'bp': {
+      const a = arr.filter((r) => r.sys != null);
+      const hi = L.sysHigh.watch ?? L.sysHigh.alert ?? 140, lo = L.sysLow.watch ?? L.sysLow.alert ?? 100;
+      return { series: [a.map((r) => pt(r, r.sys!, r.dia != null ? bpStatus(r.sys!, r.dia, L) : undefined)), a.filter((r) => r.dia != null).map((r) => pt(r, r.dia!))], band: { from: lo, to: hi - 1 } };
+    }
+    case 'pulse': return { series: [arr.filter((r) => r.pulse != null).map((r) => pt(r, r.pulse!, pulseStatus(r.pulse!, L)))], band: { from: NORMAL_BANDS.pulse[0], to: NORMAL_BANDS.pulse[1] } };
+    case 'glucose': return { series: [rs.filter((r) => r.glucose != null).map((r) => pt(r, r.glucose!, gluStatus(r.glucose!, L)))], band: { from: NORMAL_BANDS.glucose[0], to: NORMAL_BANDS.glucose[1] } };
+    default: return { series: [rs.filter((r) => r.weight != null).map((r) => pt(r, r.weight!))] };
+  }
 }
 /** Status badge of a chart's latest value (weight has none: it is judged against the previous weight). */
 function chartStatus(id: ChartId, L: HealthLimits, r?: Reading): Health | null {
@@ -398,7 +387,7 @@ function chartStatus(id: ChartId, L: HealthLimits, r?: Reading): Health | null {
   }
 }
 
-// ---------- plain-text summary of a reading (messages, notifications; language-neutral numbers and units) ----------
+// ---------- plain-text summary of a reading (notifications; language-neutral numbers and units) ----------
 /** "164/98 mmHg · 84 bpm · SpO₂ 96% · 36.7 °C" */
 export function readingSummary(r: Partial<Reading>): string {
   return [

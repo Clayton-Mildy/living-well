@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { buildSeed, execute, getUser, type ClubState } from '../index';
+import { actionItems, buildSeed, execute, getUser, live, type ClubState } from '../index';
 import {
   FIXED_SLOTS, GENERAL_ACTIVITY, NORMAL_LOG, SESSION_MIN, activityName, attendedOn, cogSummary, curAct, dayPlan, faceOptedOut, faceSuggestable, faceTagging, fmtDuration, hashOf,
-  inClubMembers, isPendingPhoto, libraryPhotos, logComments, logDateOk, logDates, logDeviations, logId, logOf, nowNext, pendingLogMembers, pendingPhotos, photoActivities, photoCountByMember, photoDays, roomName, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, toneOf,
+  LUNCH_AMOUNTS, cameOn, defaultRound, inClubMembers, joinedOf, logsOn, lunchLabelKey, roundMarked, roundProgress, roundsOf, isPendingPhoto, pictureDays, pictureSessions, sessionPhotos, sessionPictures, libraryPhotos, logDateOk, logDates, logDeviations, logId, logOf, nowNext, pendingLogMembers, pendingPhotos, photoActivities, photoCountByMember, photoDays, roomName, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, toneOf,
 } from './activity';
 
 const T = '2026-10-21'; // Wednesday: 10:30 Keroncong (Dinar), 13:30 Batik (Kak Dimas)
@@ -126,6 +126,9 @@ describe('daily log helpers', () => {
     expect(logDeviations(NORMAL_LOG)).toEqual([]);
     expect(logDeviations({ ...NORMAL_LOG, mood: 'cheerful', lunch: 'most' })).toEqual(['mood.cheerful', 'lunch.most']);
     expect(logDeviations({ mood: 'agitated', lunch: 'little', joined: 'satOut', communicative: 'withdrawn', content: 'low' })).toEqual(['mood.agitated', 'lunch.little', 'joined.satOut', 'communicative.withdrawn', 'content.low']);
+    // KC round 7: parts that are not marked yet are left out, and "didn't eat" is a deviation
+    expect(logDeviations({})).toEqual([]);
+    expect(logDeviations({ lunch: 'none', mood: 'calm' })).toEqual(['lunch.none']);
   });
 
   it('cognitive summary counts quiet and unsettled days among the last ten logs', () => {
@@ -138,18 +141,71 @@ describe('daily log helpers', () => {
     const noisy = produce(s, (d) => { for (const l of Object.values(d.dailyLogs)) if (l.memberId === 'm2') l.mood = 'quiet'; });
     expect(cogSummary(noisy, noisy.members.m2).quiet).toBe(10);
   });
+});
 
-  it('family comments are the messages that point at the log, oldest first', () => {
-    const s = produce(fresh(), (d) => {
-      const base = { clubId: 'citra', createdAt: '2026-10-19T19:00', createdBy: 'family:f1' as const, threadId: 't1', kind: 'text' as const };
-      d.messages.c1 = { ...base, id: 'c1', seq: 4, from: 'family:f1', at: '2026-10-19T19:30', text: 'Thank you, she loved it!', ref: { type: 'dailyLog', id: 'log-m1-2026-10-19' } };
-      d.messages.c2 = { ...base, id: 'c2', seq: 5, from: 'staff:s5', createdBy: 'staff:s5', at: '2026-10-20T08:10', text: 'We will play it again.', ref: { type: 'dailyLog', id: 'log-m1-2026-10-19' } };
-      d.messages.c3 = { ...base, id: 'c3', seq: 6, from: 'family:f1', at: '2026-10-20T09:00', text: 'About something else', ref: { type: 'photo', id: 'p1' } };
+describe('rounds of the daily log (KC round 7)', () => {
+  const withLogs = (logs: Record<string, Partial<ClubState['dailyLogs'][string]>>) => produce(fresh(), (d) => {
+    for (const [mid, l] of Object.entries(logs)) d.dailyLogs[logId(mid, T)] = { id: logId(mid, T), clubId: 'citra', createdAt: `${T}T10:00`, createdBy: 'staff:s5', memberId: mid, date: T, note: '', status: 'saved', by: 's5', edits: [], ...l } as never;
+  });
+
+  it('roundsOf: each session, lunch and mood & notes in time order; a slot without a session is skipped', () => {
+    const s = fresh();
+    expect(roundsOf(s, T).map((r) => `${r.time} ${r.kind}`)).toEqual(['10:30 session', '12:00 lunch', '13:30 session', '15:00 mood']);
+    expect(roundsOf(s, T).map((r) => r.id)).toEqual(['10:30', 'lunch', '13:30', 'mood']);
+    expect(roundsOf(s, T)[0].session?.activity?.name).toBeTruthy();
+    const noAfternoon = produce(s, (d) => { for (const v of Object.values(d.scheduleVersions)) for (const day of Object.values(v.days)) delete (day as Record<string, unknown>)['13:30']; });
+    expect(roundsOf(noAfternoon, T).map((r) => r.id)).toEqual(['10:30', 'lunch', 'mood']);
+    expect(roundsOf(s, '2026-10-24').map((r) => r.id)).toEqual(['lunch', 'mood']); // Saturday: the club is closed, only the lunch and mood rounds remain
+  });
+
+  it('defaultRound follows the clock: first session before noon, lunch, second session from 13:30, mood & notes from 15:00', () => {
+    const r = roundsOf(fresh(), T);
+    expect(defaultRound(r, min('08:30'))).toBe('10:30');
+    expect(defaultRound(r, min('11:59'))).toBe('10:30');
+    expect(defaultRound(r, min('12:00'))).toBe('lunch');
+    expect(defaultRound(r, min('13:29'))).toBe('lunch');
+    expect(defaultRound(r, min('13:30'))).toBe('13:30');
+    expect(defaultRound(r, min('14:59'))).toBe('13:30');
+    expect(defaultRound(r, min('15:00'))).toBe('mood');
+    const noMorning = roundsOf(produce(fresh(), (d) => { for (const v of Object.values(d.scheduleVersions)) for (const day of Object.values(v.days)) delete (day as Record<string, unknown>)['10:30']; }), T);
+    expect(defaultRound(noMorning, min('09:00'))).toBe('lunch');
+    expect(defaultRound(noMorning, min('14:00'))).toBe('13:30');
+  });
+
+  it('roundMarked and roundProgress count who is marked among everyone who checked in', () => {
+    const s = withLogs({
+      m2: { lunch: 'all', sessions: { '10:30': 'joined' }, joined: 'yes' },
+      m10: { lunch: 'none', mood: 'quiet' },
     });
-    const cs = logComments(s, 'log-m1-2026-10-19');
-    expect(cs.map((c) => [c.id, c.fromFamily])).toEqual([['c1', true], ['c2', false]]);
-    expect(cs[0]).toMatchObject({ threadId: 't1', text: 'Thank you, she loved it!' });
-    expect(logComments(s, 'log-m2-2026-10-19')).toEqual([]);
+    expect(roundProgress(s, T, 'lunch')).toEqual({ marked: 2, total: 3 });
+    expect(roundProgress(s, T, '10:30')).toEqual({ marked: 1, total: 3 });
+    expect(roundProgress(s, T, '13:30')).toEqual({ marked: 0, total: 3 });
+    expect(roundProgress(s, T, roundsOf(s, T).find((r) => r.id === 'mood')!)).toEqual({ marked: 1, total: 3 }); // also accepts the round itself
+    expect(roundMarked(logOf(s, 'm2', T), 'mood')).toBe(false);
+    expect(roundMarked(undefined, 'lunch')).toBe(false);
+    expect(logsOn(s, T).get('m10')?.lunch).toBe('none');
+    expect(roundProgress(s, '2026-10-24', 'lunch')).toEqual({ marked: 0, total: 0 });
+  });
+
+  it('the activity role is reminded once a round is over and people are still unmarked (lunch from 13:30, a session after it ends, mood & notes from 15:00)', () => {
+    const s = withLogs({ m2: { lunch: 'all' }, m10: { lunch: 'all' } });
+    const u = getUser({ [s.clubId]: s }, 's5')!;
+    const items = (hm: string) => actionItems(s, u, T, min(hm)).filter((i) => i.id.startsWith('round:')).map((i) => `${i.id}:${i.params.n}`);
+    expect(items('11:00')).toEqual([]); // the 10:30 session runs until 11:45
+    expect(items('11:50')).toEqual(['round:10:30:3']);
+    expect(items('13:00')).toEqual(['round:10:30:3']); // lunch is still going
+    expect(items('13:35')).toEqual(['round:lunch:1', 'round:10:30:3']);
+    expect(items('15:05')).toEqual(['round:mood:3', 'round:13:30:3', 'round:lunch:1', 'round:10:30:3']);
+    expect(actionItems(s, u, T, min('15:05')).find((i) => i.id === 'round:mood')).toMatchObject({ kind: 'activity.notif.act.mood', link: '/log?round=mood' });
+    expect(actionItems(s, getUser({ [s.clubId]: s }, 's1')!, T, min('15:05')).some((i) => i.id.startsWith('round:'))).toBe(false); // only the activity role
+  });
+
+  it('joined is derived from the session marks; lunch labels exist for every amount', () => {
+    expect(joinedOf(undefined)).toBeUndefined();
+    expect(joinedOf({})).toBeUndefined();
+    expect(joinedOf({ '10:30': 'satOut' })).toBe('satOut');
+    expect(joinedOf({ '10:30': 'satOut', '13:30': 'joined' })).toBe('yes');
+    expect(LUNCH_AMOUNTS.map(lunchLabelKey)).toEqual(['family.lunch_all', 'family.lunch_most', 'family.lunch_half', 'family.lunch_little', 'activity.opt.lunch.none']);
   });
 });
 
@@ -251,5 +307,69 @@ describe('photo library selectors', () => {
     expect(fmtDuration(14)).toBe('0:14');
     expect(fmtDuration(75)).toBe('1:15');
     expect(fmtDuration(undefined)).toBe('0:00');
+  });
+});
+
+describe('activity pictures (KC round 7)', () => {
+  const clock = { today: T, nowMin: 10 * 60 + 45 };
+  const as = (s: ClubState, id: string) => getUser({ [s.clubId]: s }, id)!;
+  const run = (s: ClubState, name: string, input: unknown, uid: string, id: string) => execute(s, name, input, as(s, uid), clock, id);
+  const kero = (s: ClubState) => live(s.activities).find((a) => a.name === 'Keroncong sing-along')!;
+
+  it('a session shows its activity pictures only: not solo or group photos taken during it; staff also see the waiting ones, families only the approved', () => {
+    let s = buildSeed().citra;
+    const solo = run(s, 'photo.take', { kind: 'solo', memberIds: ['m10'], media: 'photo', activity: 'Keroncong sing-along' }, 's9', 'k1');
+    s = solo.state;
+    const mine = run(s, 'photo.addActivity', { date: T, activity: 'Keroncong sing-along' }, 's5', 'k2'); // a teacher's: waiting
+    s = mine.state;
+    const mgmt = run(s, 'photo.addActivity', { date: T, activity: 'Keroncong sing-along' }, 's9', 'k3'); // management's: visible at once
+    s = mgmt.state;
+    const act = kero(s);
+    const staff = sessionPhotos(s, T, act).map((p) => p.id);
+    expect(staff).toEqual([mine.result.photoId, mgmt.result.photoId].sort((a, b) => (s.photos[a as string].time + a < s.photos[b as string].time + b ? -1 : 1)));
+    expect(staff).not.toContain(solo.result.photoId);
+    expect(sessionPhotos(s, T, act, { familyOnly: true }).map((p) => p.id)).toEqual([mgmt.result.photoId]);
+    expect(sessionPhotos(s, T, undefined)).toEqual([]);
+    expect(sessionPhotos(s, '2000-01-01', act)).toEqual([]);
+    expect(sessionPhotos(s, T, live(s.activities).find((a) => a.name === 'Batik painting'))).toEqual([]);
+  });
+
+  it('the sessions and days pictures can be added to: one per activity, the last 7 days, open days with a session only', () => {
+    const s = buildSeed().citra;
+    expect(pictureSessions(s, T).map((x) => `${x.time} ${x.activity?.name}`)).toEqual(['10:30 Keroncong sing-along', '13:30 Batik painting']);
+    expect(pictureSessions(s, '2026-10-24')).toEqual([]); // a Saturday
+    const days = pictureDays(s, T);
+    expect(days[0]).toBe(T);
+    expect(days.every((d) => d <= T && d >= '2026-10-14' && pictureSessions(s, d).length > 0)).toBe(true);
+    expect(days).toEqual([...days].sort().reverse());
+    expect(days).not.toContain('2026-10-24');
+  });
+
+  it('what the teacher sees of a session: each picture with its state; a rejected one stays with its reason, her own removal is gone', () => {
+    let s = buildSeed().citra;
+    const ids: string[] = [];
+    for (const [i, uid] of ['s5', 's5', 's5', 's9'].entries()) { const r = run(s, 'photo.addActivity', { date: T, activity: 'Keroncong sing-along' }, uid, 'p' + i); s = r.state; ids.push(r.result.photoId as string); }
+    s = run(s, 'photo.approve', { photoIds: [ids[0]], notify: false }, 's9', 'ok').state;
+    s = run(s, 'photo.reject', { photoIds: [ids[1]], reason: 'Blurry' }, 's9', 'no').state;
+    s = run(s, 'photo.remove', { photoId: ids[2], reason: 'duplicate' }, 's5', 'rm').state; // her own removal
+    const got = sessionPictures(s, T, kero(s));
+    expect(got.map((x) => [x.photo.id, x.state])).toEqual(expect.arrayContaining([[ids[0], 'approved'], [ids[1], 'rejected'], [ids[3], 'approved']]));
+    expect(got.find((x) => x.photo.id === ids[1])?.reason).toBe('Blurry');
+    expect(got.map((x) => x.photo.id)).not.toContain(ids[2]);
+    s = run(s, 'photo.addActivity', { date: T, activity: 'Keroncong sing-along' }, 's5', 'again').state;
+    expect(sessionPictures(s, T, kero(s)).filter((x) => x.state === 'pending')).toHaveLength(1); // "upload another"
+  });
+
+  it('the library can filter to activity pictures; cameOn says whether any of the members checked in', () => {
+    let s = buildSeed().citra;
+    s = run(s, 'photo.addActivity', { date: T, activity: 'Batik painting' }, 's9', 'l1').state;
+    const only = libraryPhotos(s, { kind: 'activity' });
+    expect(only.length).toBeGreaterThan(0);
+    expect(only.every((p) => p.kind === 'activity')).toBe(true);
+    expect(libraryPhotos(s).length).toBeGreaterThan(only.length);
+    expect(cameOn(s, ['m10'], T)).toBe(true);
+    expect(cameOn(s, ['m1'], T)).toBe(false);
+    expect(cameOn(s, ['m1', 'm10'], T)).toBe(true);
+    expect(cameOn(s, [], T)).toBe(false);
   });
 });

@@ -1,7 +1,7 @@
 // The reading form: one form with every measurement, one complete measurement is enough, live status against the limits, keypad,
 // the kind of check it is saved as, and the input it sends. Plus the PC-303 simulation.
 import { describe, it, expect } from 'vitest';
-import { DEFAULT_LIMITS } from '@cp/shared';
+import { DEFAULT_LIMITS, buildSeed, limitsFor } from '@cp/shared';
 import { FORM_GROUPS, applyDevice, canSave, effTell, evalDraft, groupFill, groupStatus, kindFor, newDraft, partialGroups, press, toInput, typeText, type Draft } from './form';
 import { simulate, GUEST_SIM } from './device';
 
@@ -105,6 +105,16 @@ describe('live status', () => {
     expect(evalDraft(d, undefined, L).st.bp).toBe('watch');
     expect(evalDraft(fill(d, { sys: '150' }), undefined, L).st.bp).toBe('alert');
     expect(evalDraft(fill(newDraft(), { spo2: '96', temp: '36.6' }), undefined, { ...DEFAULT_LIMITS, spo2Low: { watch: null, alert: 90 } }).st.spo2).toBe('normal');
+  });
+});
+
+describe('a member’s own limits', () => {
+  it('the form grades with them (Opa Hendra: Watch from 135), and with the club’s for everyone else', () => {
+    const s = buildSeed().citra;
+    const d = fill(newDraft(), { sys: '138', dia: '80', pulse: '74' });
+    expect(evalDraft(d, undefined, limitsFor(s, 'm2')).st.bp).toBe('watch');
+    expect(evalDraft(d, undefined, limitsFor(s, 'm20')).st.bp).toBe('normal');
+    expect(evalDraft(fill(d, { sys: '156' }), undefined, limitsFor(s, 'm2')).st.bp).toBe('alert'); // his Alert is 155, the club's 160
   });
 });
 

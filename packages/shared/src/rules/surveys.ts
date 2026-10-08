@@ -1,8 +1,16 @@
-// Surveys: one live at a time; response rate = recipients who answered / recipients.
+// Surveys: one live family survey and one live venue survey at a time; response rate = recipients who answered / recipients.
 // A survey asks the preset questions that are switched on (overall, team, recommend, comment) and the custom questions management wrote
 // (stars, yes or no, one option out of several, free text). Older surveys have no custom questions and still read the same.
-import type { ClubState, ISODate, Survey, SurveyAnswer, SurveyCustomQuestion, SurveyQuestionKind } from '../types';
+// KC round 7: a 'venue' survey is answered by people who rented the venue, through the no-login rating link of their booking (/rate/:token);
+// 'recipients' of a venue survey is empty and its "sent" count is the number of bookings whose link points at it.
+import type { ClubState, ISODate, Survey, SurveyAnswer, SurveyCustomQuestion, SurveyQuestionKind, SurveyResponse, SurveyTemplate, VenueBooking } from '../types';
 import { live, sortBy } from '../util';
+
+export type SurveyKind = NonNullable<Survey['kind']>;
+export const SURVEY_KIND_LIST: SurveyKind[] = ['family', 'venue'];
+export const surveyKind = (sv: Pick<Survey, 'kind'>): SurveyKind => sv.kind ?? 'family';
+/** The preset questions a kind of survey can ask: renters have no team to rate. */
+export const presetsFor = (kind: SurveyKind): Survey['questions'] => (kind === 'venue' ? ['overall', 'recommend', 'comment'] : ['overall', 'team', 'recommend', 'comment']);
 
 export const SURVEY_BUILTINS: Survey['questions'] = ['overall', 'team', 'recommend', 'comment'];
 export const SURVEY_KINDS: SurveyQuestionKind[] = ['rating', 'yesno', 'choice', 'text'];
@@ -81,7 +89,8 @@ export function missingRequired(sv: Pick<Survey, 'custom'>, answers: Record<stri
   });
 }
 
-export const liveSurvey = (s: ClubState): Survey | undefined => live(s.surveys).find((x) => x.status === 'live');
+/** The live survey of a kind (one family survey and one venue survey can be live together). Without a kind: the family survey. */
+export const liveSurvey = (s: ClubState, kind: SurveyKind = 'family'): Survey | undefined => live(s.surveys).find((x) => x.status === 'live' && surveyKind(x) === kind);
 export const responsesOf = (s: ClubState, surveyId: string) => live(s.surveyResponses).filter((r) => r.surveyId === surveyId);
 
 /** What the families answered to one custom question. Only the fields of the question's kind are filled. */
@@ -121,19 +130,26 @@ export function customResults(sv: Survey, rs: ResponseLike[]): CustomResult[] {
   });
 }
 
+/** The bookings whose rating link points at a venue survey (the renters it was "sent" to). */
+export const venueLinksOf = (s: ClubState, surveyId: string): VenueBooking[] => live(s.venueBookings).filter((b) => b.surveyId === surveyId && !!b.ratingToken);
+
+/** The numbers of one survey. A family survey counts families (recipients); a venue survey counts rating links sent and bookings that answered. */
 export function surveyStats(s: ClubState, sv: Survey) {
-  const rs = responsesOf(s, sv.id).filter((r) => sv.recipients.includes(r.familyId));
-  const families = new Set(rs.map((r) => r.familyId));
+  const venue = surveyKind(sv) === 'venue';
+  const rs = responsesOf(s, sv.id).filter((r) => (venue ? !!r.venueBookingId : sv.recipients.includes(r.familyId)));
+  const who = new Set(rs.map((r) => (venue ? r.venueBookingId : r.familyId)));
+  const sent = venue ? venueLinksOf(s, sv.id).length : sv.recipients.length;
   const avg = avgOf;
   const team = sv.teamStaffIds.map((id) => ({ staffId: id, avg: avg(rs.map((r) => r.team[id]).filter((x): x is number => typeof x === 'number')), n: rs.filter((r) => typeof r.team[id] === 'number').length }));
   const overalls = rs.map((r) => r.overall).filter((x) => x > 0); // a survey without the overall question stores 0
   return {
     responses: rs,
-    answered: families.size,
-    recipients: sv.recipients.length,
-    rate: sv.recipients.length ? Math.round((families.size / sv.recipients.length) * 100) : 0,
+    answered: who.size,
+    /** how many it went to: families, or rating links sent for a venue survey */
+    recipients: sent,
+    rate: sent ? Math.min(100, Math.round((who.size / sent) * 100)) : 0,
     overall: avg(overalls),
-    /** families who gave an overall rating */
+    /** answers that gave an overall rating */
     overallN: overalls.length,
     recommend: rs.filter((r) => r.recommend === true).length,
     team,
@@ -142,3 +158,80 @@ export function surveyStats(s: ClubState, sv: Survey) {
   };
 }
 export const answeredBy = (s: ClubState, surveyId: string, familyId: string) => responsesOf(s, surveyId).some((r) => r.familyId === familyId);
+
+/** Who answered: the family contact, or the renter's name (what they typed on the rating page, else the booking's contact). */
+export const responseWho = (s: ClubState, r: Pick<SurveyResponse, 'familyId' | 'venueBookingId' | 'respondentName'>): string =>
+  r.venueBookingId ? r.respondentName || s.venueBookings[r.venueBookingId]?.contactName || '' : s.familyContacts[r.familyId]?.name || r.familyId;
+
+/** The answers to one survey, newest first (the Responses list). */
+export function responseRows(s: ClubState, sv: Survey): SurveyResponse[] {
+  return sortBy(surveyStats(s, sv).responses, (r) => r.createdAt + r.id, -1);
+}
+
+// ---------- the survey log ----------
+export interface SurveyLogRow {
+  survey: Survey;
+  kind: SurveyKind;
+  sentOn: ISODate;
+  /** closed surveys: the day it closed; live ones: undefined */
+  closedOn?: ISODate;
+  sent: number;
+  answered: number;
+  rate: number;
+  /** average overall rating, 0 when nobody gave one */
+  avg: number;
+  avgN: number;
+}
+/** Every survey ever sent (live and closed), newest first. */
+export function surveyLog(s: ClubState): SurveyLogRow[] {
+  const rows = live(s.surveys).filter((x) => x.status !== 'draft').map((sv): SurveyLogRow => {
+    const st = surveyStats(s, sv);
+    return { survey: sv, kind: surveyKind(sv), sentOn: sv.sentOn, ...(sv.status === 'closed' ? { closedOn: sv.closedOn } : {}), sent: st.recipients, answered: st.answered, rate: st.rate, avg: st.overall, avgN: st.overallN };
+  });
+  return sortBy(rows, (r) => r.sentOn + r.survey.createdAt + r.survey.id, -1);
+}
+/** Drafts, newest first. */
+export const draftSurveys = (s: ClubState): Survey[] => sortBy(live(s.surveys).filter((x) => x.status === 'draft'), (x) => x.createdAt + x.id, -1);
+/** Live surveys: the family one first, then the venue one. */
+export const liveSurveys = (s: ClubState): Survey[] => SURVEY_KIND_LIST.map((k) => liveSurvey(s, k)).filter((x): x is Survey => !!x);
+
+// ---------- templates ----------
+/** Templates, family ones first, each group by title. */
+export const surveyTemplatesOf = (s: ClubState): SurveyTemplate[] => sortBy(live(s.surveyTemplates), (t) => (t.kind === 'family' ? '0' : '1') + t.title.toLowerCase());
+
+// ---------- the venue rating link ----------
+// Not secret in the cryptographic sense (this is a demo): a long string nobody would guess, the same on the browser and the server for one mutation.
+function cyrb53(str: string, seed: number): number {
+  let h1 = 0xdeadbeef ^ seed, h2 = 0x41c6ce57 ^ seed;
+  for (let i = 0; i < str.length; i++) {
+    const ch = str.charCodeAt(i);
+    h1 = Math.imul(h1 ^ ch, 2654435761);
+    h2 = Math.imul(h2 ^ ch, 1597334677);
+  }
+  h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
+  h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
+  return 4294967296 * (2097151 & h2) + (h1 >>> 0);
+}
+/** A rating-link token (22 or so lower-case letters and digits) made from any seed text. */
+export const ratingTokenOf = (seed: string): string => cyrb53(seed, 7).toString(36).padStart(11, '0') + cyrb53(seed, 31).toString(36).padStart(11, '0');
+/** The path of a booking's rating page. */
+export const ratePath = (token: string) => `/rate/${token}`;
+
+export type RatingLinkState = 'open' | 'answered' | 'closed';
+export interface RatingLink { booking: VenueBooking; survey: Survey; state: RatingLinkState }
+/** What a rating link points at: the booking, its venue survey and whether it can still be answered. Null for a token that matches nothing. */
+export function ratingLinkOf(s: ClubState, token: string | undefined | null): RatingLink | null {
+  if (!token) return null;
+  const booking = live(s.venueBookings).find((b) => b.ratingToken === token);
+  const survey = booking?.surveyId ? s.surveys[booking.surveyId] : undefined;
+  if (!booking || !survey || survey.deletedAt || surveyKind(survey) !== 'venue') return null;
+  const answered = !!booking.review || responsesOf(s, survey.id).some((r) => r.venueBookingId === booking.id);
+  return { booking, survey, state: answered ? 'answered' : survey.status === 'live' ? 'open' : 'closed' };
+}
+/** The answer a booking's renter gave through the link, if any. */
+export const venueResponseOf = (s: ClubState, bookingId: string): SurveyResponse | undefined =>
+  sortBy(live(s.surveyResponses).filter((r) => r.venueBookingId === bookingId), (r) => r.createdAt, -1)[0];
+
+// ---------- the history of a survey ----------
+export type SurveyLogEntry = NonNullable<Survey['log']>[number];
+export const surveyHistory = (sv: Pick<Survey, 'log'>): SurveyLogEntry[] => sv.log ?? [];

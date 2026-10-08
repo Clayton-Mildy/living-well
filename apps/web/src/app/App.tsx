@@ -7,6 +7,7 @@ import { useReplica } from '../store/replica';
 import { useMe } from '../lib/me';
 import { AppShell } from '../shell/AppShell';
 import { Login } from '../features/auth/Login';
+import { RatePage } from '../features/rate/RatePage';
 import { PageSkeleton, EmptyState, Button } from '../components/ui';
 import { SCREENS, MemberProfileScreen, DesignSystemScreen } from './screens';
 import { screenFor } from './nav';
@@ -47,6 +48,8 @@ function LoginRoute() {
 }
 const router = createBrowserRouter([
   { path: '/login', element: <LoginRoute />, errorElement: <RouteError /> },
+  // KC round 7: a renter rates their event through a link from WhatsApp, no sign-in
+  { path: '/rate/:token', element: <RatePage />, errorElement: <RouteError /> },
   { path: '/design-system', element: <Suspense fallback={<PageSkeleton />}><DesignSystemScreen /></Suspense>, errorElement: <RouteError /> },
   {
     path: '/',

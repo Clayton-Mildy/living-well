@@ -12,6 +12,7 @@ import { useSession } from '../store/session';
 import { useClub } from '../store/replica';
 import { SignOutButton } from './AppShell';
 import { say } from '../store/ui';
+import { memberPhoto } from '../lib/media';
 
 type PwErrors = { current?: string; next?: string; confirm?: string };
 
@@ -73,7 +74,7 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <Sheet open={open} onClose={onClose} title={t('shell.account')}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Avatar name={name0} size={52} />
+        <Avatar name={name0} size={52} src={user.kind === 'staff' ? memberPhoto(user.staff) : undefined} />
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
           <span style={{ fontSize: 18, fontWeight: 500 }}>{name0}</span>
           <span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{roleLabel} · {s.club.name}</span>

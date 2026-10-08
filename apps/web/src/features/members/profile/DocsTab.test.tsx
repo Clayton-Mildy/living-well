@@ -79,4 +79,21 @@ describe('Documents tab (paper registration)', () => {
     expect(open).toHaveBeenCalledTimes(1);
     expect(document.querySelector('[data-testid="doc-image"]')?.getAttribute('src')).toBe('/api/media/md_testregistrationform01');
   });
+  it('staff can print the application form next to the membership form: four pages, filled in, signed for by the billing contact; the family cannot', async () => {
+    const s = buildSeed().citra;
+    await show(s);
+    const print = Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => (b.textContent ?? '').includes('Print application form'));
+    expect(print).toBeDefined();
+    expect(document.querySelector('[data-testid="application-form"]')).toBeNull();
+    await act(async () => { print!.click(); });
+    const pages = document.querySelectorAll('[data-testid="application-form"] [data-testid="form-page"]');
+    expect(pages).toHaveLength(4);
+    expect(pages[0].querySelector('[data-field="name"]')?.textContent).toBe('Lina Wijaya');
+    expect(pages[0].querySelector('[data-field="signer"]')?.textContent).toBe('Maria Wijaya');
+    expect(pages[3].querySelector('[data-field="saya"]')?.textContent).toBe('Maria Wijaya');
+  });
+  it('the family sees no print button', async () => {
+    await show(buildSeed().citra, 'family', true);
+    expect(Array.from(document.querySelectorAll<HTMLElement>('button')).some((b) => (b.textContent ?? '').includes('Print application form'))).toBe(false);
+  });
 });

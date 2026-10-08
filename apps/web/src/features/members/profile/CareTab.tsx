@@ -1,15 +1,15 @@
 // Care log tab (design ScrProfile care), day by day: cognitive status with its real reviewer and date, mood counts for the last 4 weeks,
 // then one card per day the member was in (newest first): when they came and left, that day's health readings with their status, and
-// the daily log with every field the teacher recorded, the staff note (staff only) and family comments. The activity team, nurse and
+// the daily log with every field the teacher recorded and the staff note (staff only). The activity team, nurse and
 // management write or correct the log right on its day (the last week's days they were in).
 import { useState } from 'react';
-import { addDays, actorName, attId, live, memberShort, messagesOf, sortBy, staffCall, type Attendance, type DailyLog, type Reading } from '@cp/shared';
-import { NORMAL_LOG, logDates, logDeviations } from '@cp/shared/rules/activity';
+import { addDays, actorName, attId, live, memberShort, sortBy, staffCall, type Attendance, type DailyLog, type Reading } from '@cp/shared';
+import { activityName, logDates, logDeviations, lunchLabelKey, roundsOf } from '@cp/shared/rules/activity';
 import { logForFamily, readingForFamily } from '@cp/shared/rules/approvals';
 import { PendingMark } from '../../../components/PendingMark';
-import { Button, FONT_BODY, Icon, Pager, StaffOnlyTag, StatusBadge, usePaged } from '../../../components/ui';
+import { Button, FONT_BODY, Group, Icon, Pager, StaffOnlyTag, StatusBadge, usePaged } from '../../../components/ui';
 import { CHECK_KEY } from '../../health/ReadingCard';
-import { LogFieldsForm, logInput, sameLog, type LogEntry } from '../../activity/LogFields';
+import { LogFieldsForm, baseEntry, logInput, sameLog, type LogEntry } from '../../activity/LogFields';
 import { cardStyle, cogText, HAIR, listCardStyle, logNote } from '../lib';
 import { Block, ListHead, PendingBanner } from './parts';
 import type { P } from './types';
@@ -31,50 +31,63 @@ export function CareTab({ p }: { p: P }) {
   const behaviour = cnt('agitated') ? t('profile.unsettledOn', { n: cnt('agitated') }) : t('profile.settled');
   const cog = m.health.cognitive;
   const reviewer = cog.reviewedBy ? staffCall(s.staff[cog.reviewedBy]) || cog.reviewedBy : '';
-  const comments = (logId: string) => {
-    const out: { id: string; who: string; text: string; at: string }[] = [];
-    for (const th of live(s.threads).filter((x) => x.memberId === m.id)) {
-      for (const msg of messagesOf(s, th.id)) if (msg.ref?.type === 'dailyLog' && msg.ref.id === logId) out.push({ id: msg.id, who: actorName(s, msg.from), text: msg.text, at: msg.at });
-    }
-    return sortBy(out, (x) => x.at);
-  };
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <PendingBanner p={p} tab="care" />
-      <div style={{ ...cardStyle, gap: 18, maxWidth: 760 }}>
-        <Block first title={t('profile.cognitive')} gap={6}>
-          <div style={{ fontSize: 22, lineHeight: '30px', letterSpacing: '-0.3px', color: '#2B231C' }}>{cogText(t, cog.summary)}</div>
-          <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>
-            {cog.reviewedOn ? t('profile.reviewedBy', { n: reviewer || t('profile.theTeam'), d: fmt.fdy(cog.reviewedOn) }) : t('profile.notReviewed')}
-          </div>
-        </Block>
-        <Block title={t('profile.moodTitle')} gap={8}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px' }}>
-            {moods.map((c) => (
-              <span key={c.label} style={{ fontSize: 15, display: 'inline-flex', alignItems: 'baseline', gap: 6, lineHeight: 1.3 }}>
-                {c.label}
-                <span style={{ fontWeight: 500 }}>{c.n}</span>
-              </span>
-            ))}
-            {!moods.length ? <span style={{ fontSize: 14, color: '#6B6259' }}>{t('profile.noLogsYet')}</span> : null}
-          </div>
-          <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{behaviour}</div>
-        </Block>
+  const ph = p.isPhone; // round 6, phone (staff and family): the cognitive status, the mood and the days are iOS grouped sections
+  const cogBody = (
+    <>
+      <div style={{ fontSize: 22, lineHeight: '30px', letterSpacing: '-0.3px', color: '#2B231C' }}>{cogText(t, cog.summary)}</div>
+      <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>
+        {cog.reviewedOn ? t('profile.reviewedBy', { n: reviewer || t('profile.theTeam'), d: fmt.fdy(cog.reviewedOn) }) : t('profile.notReviewed')}
       </div>
-      <div style={listCardStyle} data-testid="care-days">
-        <ListHead title={t('profile.byDay')} />
-        {paged.rows.map((d) => (
-          <DayCard key={d} p={p} date={d} log={logs.find((l) => l.date === d)} readings={readings.filter((r) => r.date === d)} visit={visits.find((a) => a.date === d)}
-            comments={(id) => comments(id)} canEdit={editable.has(d)} />
+    </>
+  );
+  const moodBody = (
+    <>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px 20px' }}>
+        {moods.map((c) => (
+          <span key={c.label} style={{ fontSize: 15, display: 'inline-flex', alignItems: 'baseline', gap: 6, lineHeight: 1.3 }}>
+            {c.label}
+            <span style={{ fontWeight: 500 }}>{c.n}</span>
+          </span>
         ))}
-        {!days.length ? <div style={{ padding: '14px 0 20px', borderTop: HAIR, fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noLogsYet')}</div> : null}
-        {paged.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('profile.pagerCare')} /></div> : null}
+        {!moods.length ? <span style={{ fontSize: 14, color: '#6B6259' }}>{t('profile.noLogsYet')}</span> : null}
       </div>
+      <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{behaviour}</div>
+    </>
+  );
+  const dayRows = (
+    <>
+      {paged.rows.map((d, di) => (
+        <DayCard key={d} p={p} date={d} first={ph && !di} log={logs.find((l) => l.date === d)} readings={readings.filter((r) => r.date === d)} visit={visits.find((a) => a.date === d)}
+          canEdit={editable.has(d)} />
+      ))}
+      {!days.length ? <div style={{ padding: ph ? '14px 0' : '14px 0 20px', borderTop: ph ? 'none' : HAIR, fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noLogsYet')}</div> : null}
+      {paged.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('profile.pagerCare')} /></div> : null}
+    </>
+  );
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 14 : 16 }}>
+      <PendingBanner p={p} tab="care" />
+      {ph ? (
+        <>
+          <Group title={t('profile.cognitive')} gap={6}>{cogBody}</Group>
+          <Group title={t('profile.moodTitle')} gap={8}>{moodBody}</Group>
+        </>
+      ) : (
+        <div style={{ ...cardStyle, gap: 18, maxWidth: 760 }}>
+          <Block first title={t('profile.cognitive')} gap={6}>{cogBody}</Block>
+          <Block title={t('profile.moodTitle')} gap={8}>{moodBody}</Block>
+        </div>
+      )}
+      {ph ? <Group title={t('profile.byDay')} pad="0 16px" gap={0}><div data-testid="care-days">{dayRows}</div></Group> : (
+        <div style={listCardStyle} data-testid="care-days">
+          <ListHead title={t('profile.byDay')} />
+          {dayRows}
+        </div>
+      )}
     </div>
   );
 }
 
-type Comment = { id: string; who: string; text: string; at: string };
 const smallCaps = { fontSize: 12, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' } as const;
 
 /** Every number of a reading, in the station's words. */
@@ -91,12 +104,13 @@ export function values(r: Reading, t: P['t']): string {
 }
 
 /** One day: when they came and left, the health readings, the daily log (written or corrected here on the days that allow it). */
-function DayCard({ p, date, log, readings, visit, comments, canEdit }: { p: P; date: string; log?: DailyLog; readings: Reading[]; visit?: Attendance; comments: (logId: string) => Comment[]; canEdit: boolean }) {
+function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date: string; log?: DailyLog; readings: Reading[]; visit?: Attendance; canEdit: boolean; first?: boolean }) {
   const { s, m, t, fmt, today, act } = p;
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<LogEntry | null>(null);
   const [busy, setBusy] = useState(false);
-  const base: LogEntry = log ? { mood: log.mood, lunch: log.lunch, joined: log.joined, communicative: log.communicative, content: log.content, note: log.note, staffNote: log.staffNote || '' } : { ...NORMAL_LOG, note: '', staffNote: '' };
+  const base: LogEntry = baseEntry(log);
+  const moodSaved = log?.mood !== undefined; // KC round 7: a log can hold only lunch or a session mark so far
   const e = draft ?? base;
   const editing = open || (!!draft && !sameLog(draft, base));
   const name = memberShort(m);
@@ -104,23 +118,33 @@ function DayCard({ p, date, log, readings, visit, comments, canEdit }: { p: P; d
     if (busy) return;
     setBusy(true);
     const what = logDeviations(e).map((k) => t('activity.opt.' + k)).join(', ').toLowerCase();
-    const r = await act('log.save', logInput(m.id, date, e), { ok: log ? t('activity.logUpdated', { name }) : what ? t('activity.logSavedWhat', { name, what }) : t('activity.logSavedNormal', { name }) });
+    const r = await act('log.save', logInput(m.id, date, e), { ok: moodSaved ? t('activity.logUpdated', { name }) : what ? t('activity.logSavedWhat', { name, what }) : t('activity.logSavedNormal', { name }) });
     setBusy(false);
     if (!r.ok) return;
     setDraft(null);
     setOpen(false);
   };
   const where = visit?.checkIn ? (visit.checkOut ? t('profile.dayInOut', { a: visit.checkIn.at, b: visit.checkOut.at }) : t('profile.dayIn', { a: visit.checkIn.at })) : t('profile.dayAway');
-  const cs = log ? comments(log.id) : [];
-  const chips: [string, string][] = log ? [
-    ['sentiment_satisfied', t('family.mood_' + log.mood)],
-    ['restaurant', t('family.lunch_' + log.lunch)],
-    [log.joined === 'yes' ? 'groups' : 'chair', t('profile.joined_' + log.joined)],
-    [log.communicative === 'normal' ? 'forum' : 'speaker_notes_off', t('profile.comm_' + log.communicative)],
-    [log.content === 'normal' ? 'mood' : 'mood_bad', t('profile.content_' + log.content)],
-  ] : [];
+  // what the rounds marked: lunch, each session (named by its activity), then mood, communicative and content; staff also see what is not marked yet
+  const chips: { icon: string; label: string; muted?: boolean }[] = [];
+  if (log) {
+    const staff = !p.family;
+    if (log.lunch) chips.push({ icon: 'restaurant', label: t(lunchLabelKey(log.lunch)) });
+    else if (staff) chips.push({ icon: 'restaurant', label: t('activity.lunchNotMarked'), muted: true });
+    const sessions = roundsOf(s, date).filter((r) => r.kind === 'session');
+    for (const r of sessions) {
+      const v = log.sessions?.[r.id as '10:30' | '13:30'];
+      if (v) chips.push({ icon: v === 'joined' ? 'groups' : 'chair', label: `${activityName(r.session?.activity, p.lang) || r.time} · ${t('activity.opt.session.' + v)}` });
+    }
+    if (!log.sessions && log.joined) chips.push({ icon: log.joined === 'yes' ? 'groups' : 'chair', label: t('profile.joined_' + log.joined) }); // logs from before the rounds
+    else if (!log.sessions && staff && sessions.length) chips.push({ icon: 'groups', label: t('activity.noSessionMarks'), muted: true });
+    if (log.mood) chips.push({ icon: 'sentiment_satisfied', label: t('family.mood_' + log.mood) });
+    if (log.communicative) chips.push({ icon: log.communicative === 'normal' ? 'forum' : 'speaker_notes_off', label: t('profile.comm_' + log.communicative) });
+    if (log.content) chips.push({ icon: log.content === 'normal' ? 'mood' : 'mood_bad', label: t('profile.content_' + log.content) });
+    if (!log.mood && staff) chips.push({ icon: 'edit_note', label: t('activity.moodNotMarked'), muted: true });
+  }
   return (
-    <div data-testid="care-day" data-date={date} style={{ display: 'flex', flexDirection: p.isPhone ? 'column' : 'row', gap: p.isPhone ? 10 : 16, padding: p.isPhone ? '18px 0' : '20px 0', borderTop: HAIR }}>
+    <div data-testid="care-day" data-date={date} style={{ display: 'flex', flexDirection: p.isPhone ? 'column' : 'row', gap: p.isPhone ? 10 : 16, padding: p.isPhone ? '18px 0' : '20px 0', borderTop: first ? 'none' : HAIR }}>
       {p.isPhone ? null : (
         <div style={{ width: 56, flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
           <span style={{ fontSize: 12, textTransform: 'uppercase', letterSpacing: '1px', color: '#6B6259', lineHeight: '18px' }}>{date === today ? t('common.today') : fmt.fd(date, { weekday: 'short' })}</span>
@@ -155,39 +179,33 @@ function DayCard({ p, date, log, readings, visit, comments, canEdit }: { p: P; d
             <>
               <LogFieldsForm e={e} onChange={(patch) => setDraft({ ...e, ...patch })} />
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                <Button icon="check" size={44} disabled={busy} onClick={() => void save()}>{log ? t('activity.saveChanges') : t('activity.saveLog')}</Button>
+                <Button icon="check" size={44} disabled={busy} onClick={() => void save()}>{moodSaved ? t('activity.saveChanges') : t('activity.saveLog')}</Button>
                 <Button variant="ghost" size={44} onClick={() => { setDraft(null); setOpen(false); }}>{t('common.cancel')}</Button>
               </div>
             </>
           ) : log ? (
             <>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
-                {chips.map(([icon, label]) => (
-                  <span key={icon + label} style={{ fontSize: 14, color: '#6B6259', display: 'inline-flex', alignItems: 'center', gap: 5, lineHeight: 1.3 }}>
-                    <Icon name={icon} size={17} color="#75624B" />
-                    {label}
+                {chips.map((c) => (
+                  <span key={c.icon + c.label} style={{ fontSize: 14, color: c.muted ? '#8A8078' : '#6B6259', display: 'inline-flex', alignItems: 'center', gap: 5, lineHeight: 1.3 }}>
+                    <Icon name={c.icon} size={17} color={c.muted ? '#B3A99C' : '#75624B'} />
+                    {c.label}
                   </span>
                 ))}
                 {log.status === 'draft' ? <span style={{ height: 26, padding: '0 10px', borderRadius: 8, background: '#F6ECD6', color: '#7A5510', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>{t('profile.draft')}</span> : null}
               </div>
-              <div style={{ fontSize: 15, lineHeight: '23px', textWrap: 'pretty' }}>{logNote(s, t, p.lang, m, log)}</div>
+              {log.mood !== undefined || log.note ? <div style={{ fontSize: 15, lineHeight: '23px', textWrap: 'pretty' }}>{logNote(s, t, p.lang, m, log)}</div> : null}
               {!p.family && log.staffNote ? (
                 <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 15, lineHeight: '22px', padding: '10px 14px', borderRadius: 10, background: '#F3EEE8' }}>
                   <Icon name="lock" size={18} color="#75624B" style={{ marginTop: 2 }} />
                   <span style={{ flex: 1, minWidth: 0 }}><StaffOnlyTag /> {log.staffNote}</span>
                 </div>
               ) : null}
-              {cs.map((c) => (
-                <div key={c.id} style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 15, lineHeight: '22px', padding: '2px 0' }}>
-                  <Icon name="chat_bubble" size={18} color="#75624B" style={{ marginTop: 2 }} />
-                  <span style={{ flex: 1, minWidth: 0 }}><strong style={{ fontWeight: 500 }}>{c.who}</strong> · <span style={{ color: '#5E5852', fontSize: FONT_BODY }}>{c.at.slice(11, 16)}</span><br />{c.text}</span>
-                </div>
-              ))}
               <div style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.loggedBy', { n: staffCall(s.staff[log.by]) || actorName(s, log.createdBy) || t('profile.theTeam') })}</div>
             </>
           ) : <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('profile.noLogDay')}</span>}
           {canEdit && !editing ? (
-            <div><Button variant="secondary" size={44} icon="edit_note" onClick={() => setOpen(true)}>{log ? t('profile.logEdit') : t('profile.logWrite')}</Button></div>
+            <div><Button variant="secondary" size={44} icon="edit_note" onClick={() => setOpen(true)}>{moodSaved ? t('profile.logEdit') : t('profile.logWrite')}</Button></div>
           ) : null}
         </div>
       </div>

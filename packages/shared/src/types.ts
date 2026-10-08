@@ -17,7 +17,8 @@ export type DishAllergen = 'fish' | 'shellfish' | 'peanuts' | 'treeNuts' | 'eggs
 export type DrugAllergy = 'penicillin' | 'sulfa' | 'aspirin' | 'ibuprofen' | `other:${string}`;
 export type Mobility = 'walkingStick' | 'walker' | 'wheelchair';
 export type Diet = 'softFood' | 'lowSalt' | 'vegetarian' | 'sugarFree';
-export type EndReason = 'movedAway' | 'careNeeds' | 'careHome' | 'passedAway' | 'familyDecision';
+/** 'unpaid': stopped automatically when an invoice is still unpaid on the stop day (KC round 6, the brochure's terms); 'leaveOverrun': no word after the 2 months of leave */
+export type EndReason = 'movedAway' | 'careNeeds' | 'careHome' | 'passedAway' | 'familyDecision' | 'unpaid' | 'leaveOverrun';
 export type LostReason = 'price' | 'distance' | 'notReady' | 'otherPlace' | 'health' | 'other';
 export type QuickNote = 'rested' | 'medsTaken' | 'dizzy' | 'headache' | 'rightArm';
 export type StaffRole = 'lobby' | 'nurse' | 'activity' | 'kitchen' | 'finance' | 'mgmt' | 'housekeeping' | 'driver';
@@ -62,7 +63,7 @@ export interface Approval {
   /** a monthly reading saved together with another reading: it is decided with that one and not listed on its own */
   companionOf?: string;
   /** family notices that go out once management approves */
-  defer?: { tell?: boolean; share?: boolean; overall?: Health; recheckAt?: HM; companionId?: string; notify?: boolean };
+  defer?: { tell?: boolean; share?: boolean; overall?: Health; companionId?: string; notify?: boolean };
 }
 
 export interface ClubSettings {
@@ -71,14 +72,19 @@ export interface ClubSettings {
   departureFrom: HM; // departure checks auto-queue from here
   recheckMin: number; // 15
   flexQuota: number; // 10 visits / month
-  issueDay: number; // 15
-  dueDay: number; // 27
+  issueDay: number; // 21 (KC round 6, brochure: invoices on the 21st)
+  dueDay: number; // 28 (paid within 7 days)
   finalDueDays: number; // 14
+  /** KC round 6 (brochure terms): still unpaid on this day of the next month = membership suspended (1), and on this day = stopped, re-registration needed (3) */
+  suspendDay?: number;
+  stopDay?: number;
   emergencyPhone: string;
   hoursLabel: string; // 'Mon–Fri 08:30–16:30'
   broadcastTemplates: { id: string; key: 'update' | 'closure' | 'event' | 'custom'; title: string; text: string }[];
   /** When a reading counts as Watch or Alert (missing = the defaults in rules/health.ts) */
   limits?: HealthLimits;
+  /** KC round 7: management's switches for the general duties (rules/tasks.ts `DUTIES`): off = the duty is not tracked or reminded, dueBy = its time (missing = the default) */
+  duties?: Record<string, { off?: boolean; dueBy?: HM }>;
 }
 
 /** One Watch / Alert pair; null = not used. */
@@ -99,12 +105,26 @@ export interface PriceVersion extends Row {
   flex: number;
   gold: number;
   extra: number;
+  /** KC round 6 (brochure): one-time registration fee (also the re-registration fee), the 2-day trial, and leave (cuti) per month */
+  registration?: number;
+  trial?: number;
+  leave?: number;
   sample: { flex: boolean; gold: boolean; extra: boolean };
   by?: Actor;
 }
 
+/** KC round 6 (brochure terms): a month of leave (cuti). Asked in writing 14 days before the month starts; Rp leave fee instead of the plan; at most 2 in a row. */
+export interface MembershipLeave {
+  month: YM;
+  at: DT;
+  by: Actor;
+  note?: string;
+}
+
 export interface Membership {
   start: ISODate;
+  /** leave months (cuti) */
+  leaves?: MembershipLeave[];
   lastDay?: ISODate;
   endReason?: EndReason;
   endNote?: string;
@@ -163,6 +183,29 @@ export interface MemberDocument {
   mediaId?: string;
 }
 
+/** KC round 6: the answers of the paper Membership Application Form (brochure pp. 14–17) that the app does not keep elsewhere.
+ *  Name, date of birth, address, plan, conditions, dementia (cognitive), allergies, the carer (nanny) and the family contacts live on the member already. */
+export interface MemberRegistration {
+  nickname?: string; // Panggilan
+  marital?: 'single' | 'married' | 'widowed' | 'divorced';
+  rtRw?: string;
+  city?: string;
+  postcode?: string;
+  phone?: string; // Telepon (home)
+  mobile?: string;
+  email?: string;
+  /** 1. difficulty communicating */
+  commDifficulty?: boolean;
+  /** 2. can do activities and eat on their own */
+  selfCare?: boolean;
+  /** 3. needs help going to the bathroom */
+  bathroomHelp?: boolean;
+  /** dementia notes that affect the monthly fee */
+  dementiaNote?: string;
+  /** identity documents received (berikan tanda): the responsible family member's, the member's, the carer's */
+  ids?: { guarantor?: boolean; member?: boolean; carer?: boolean };
+}
+
 export interface Member extends Row {
   review?: ReviewMark;
   title: Title;
@@ -197,6 +240,10 @@ export interface Member extends Row {
   face: { enrolled: boolean; at?: DT };
   billing: { va: string };
   sim: Vitals & { script?: Record<string, Partial<Vitals>> }; // PC-303 simulation baseline
+  /** KC round 6: this member's own Watch / Alert limits (nurse or management); unset keys follow the club's `settings.limits` */
+  limits?: Partial<HealthLimits>;
+  /** KC round 6: the extra answers of the paper Membership Application Form */
+  registration?: MemberRegistration;
 }
 
 export interface MemberNote extends Row {
@@ -316,23 +363,30 @@ export interface Reading extends Row {
 export interface DailyLog extends Row {
   memberId: string;
   date: ISODate;
-  mood: 'cheerful' | 'calm' | 'quiet' | 'agitated';
-  lunch: 'all' | 'most' | 'half' | 'little';
-  joined: 'yes' | 'satOut';
-  communicative: 'normal' | 'withdrawn';
-  content: 'normal' | 'low';
+  /** KC round 7: the daily log is filled in rounds (lunch, each activity session, mood and notes), so each part can be saved alone: missing = not marked yet */
+  mood?: 'cheerful' | 'calm' | 'quiet' | 'agitated';
+  /** the lunch round; 'none' = did not eat */
+  lunch?: 'all' | 'most' | 'half' | 'little' | 'none';
+  /** legacy / derived: 'yes' when the member joined any session, 'satOut' when every marked session was sat out (older logs have it without sessions) */
+  joined?: 'yes' | 'satOut';
+  communicative?: 'normal' | 'withdrawn';
+  content?: 'normal' | 'low';
   note: string; // family-visible
   staffNote?: string;
   status: 'draft' | 'saved';
   by: string; // staff id
   edits: { at: DT; by: string }[];
   approval?: Approval;
+  /** KC round 7: marked per activity session during the activity round (joined or sat out); missing = not marked */
+  sessions?: Partial<Record<Slot, 'joined' | 'satOut'>>;
 }
 
 export interface Photo extends Row {
   date: ISODate;
   time: HM;
-  kind: 'solo' | 'group' | 'arrival' | 'lunch';
+  /** KC round 6: 'activity' is a picture of a session itself (no member tags; `activity` + `date` say which session, which can be a past one).
+   *  Families see it for the days their member came to the club. */
+  kind: 'solo' | 'group' | 'arrival' | 'lunch' | 'activity';
   media: 'photo' | 'video';
   durationSec?: number;
   activity?: string;
@@ -347,6 +401,7 @@ export interface Photo extends Row {
   mediaId?: string;
 }
 
+/** Messages were removed (families and staff use WhatsApp). Thread and Message stay only so the `threads` and `messages` collections need no DB migration: nothing seeds, reads or writes them. */
 export interface Thread extends Row {
   memberId: string;
   familyId: string;
@@ -375,6 +430,9 @@ export interface Feedback extends Row {
   dish: string;
   text: string;
   status: 'open' | 'answered' | 'closed';
+  /** the kitchen's replies, oldest first (an edited reply is another entry); they reach the family on WhatsApp, simulated in the demo */
+  replies?: { id: string; at: DT; by: string; text: string }[];
+  /** @deprecated the Messages thread of older data; Messages no longer exist, nothing reads or writes it */
   threadId?: string;
   source: 'family' | 'staff';
 }
@@ -421,6 +479,9 @@ export interface VenueBooking extends Row {
   invoiceRef?: string;
   review?: { stars: number; text: string };
   reviewAskedAt?: DT;
+  /** KC round 7: the no-login rating link sent to the renter (/rate/:token) and the venue survey it answers */
+  ratingToken?: string;
+  surveyId?: string;
 }
 
 export interface Room extends Row {
@@ -435,6 +496,8 @@ export interface Activity extends Row {
   icon: string;
   roomId: string;
   active: boolean;
+  /** KC round 6: the activity's picture (uploaded in the Activities editor); the icon tile stands in until there is one */
+  photoMediaId?: string;
 }
 
 export type Slot = '10:30' | '13:30';
@@ -493,6 +556,8 @@ export interface DayMenu extends Row {
   tea?: string[];
   /** lunch photos, oldest first (families see the approved ones) */
   photoIds?: string[];
+  /** KC round 7: afternoon tea photos, oldest first (the same approval as lunch photos) */
+  teaPhotoIds?: string[];
   /** @deprecated single lunch photo: use photoIds */
   photoId?: string;
   allergyPlans: AllergyPlan[];
@@ -682,6 +747,8 @@ export interface Staff extends Row {
   active: boolean;
   extraClubIds: string[];
   hr: StaffHr;
+  /** KC round 6: the staff member's profile picture (set in People) */
+  photoMediaId?: string;
 }
 
 export interface HrNote extends Row {
@@ -726,11 +793,32 @@ export interface Survey extends Row {
   sentOn: ISODate;
   status: 'draft' | 'live' | 'closed';
   closedOn?: ISODate;
+  /** KC round 7: 'venue' surveys are answered by people who rented the venue, through a no-login link. Missing = 'family'. */
+  kind?: 'family' | 'venue';
+  /** the template it was started from */
+  templateId?: string;
+  /** KC round 7: the survey's log (created, edited, sent, closed), oldest first */
+  log?: { at: DT; by: Actor; what: 'created' | 'edited' | 'sent' | 'closed' | 'reopened'; note?: string }[];
+}
+
+/** KC round 7: a reusable survey (title and questions) management starts new surveys from. */
+export interface SurveyTemplate extends Row {
+  title: string;
+  kind: 'family' | 'venue';
+  questions: Survey['questions'];
+  custom: SurveyCustomQuestion[];
+  teamStaffIds?: string[];
+  /** KC round 7: the club's own template (the venue rating): its questions can change, it can't be deleted */
+  builtIn?: boolean;
 }
 
 export interface SurveyResponse extends Row {
   surveyId: string;
+  /** the family contact who answered; '' for a venue renter (see venueBookingId) */
   familyId: string;
+  /** KC round 7: a venue renter's answer, through the booking's rating link */
+  venueBookingId?: string;
+  respondentName?: string;
   /** 1 to 5, or 0 when the survey did not ask for it */
   overall: number;
   team: Record<string, number>;
@@ -749,6 +837,99 @@ export interface Broadcast extends Row {
   sendAt: DT;
   status: 'scheduled' | 'sent' | 'cancelled';
   sentAt?: DT;
+}
+
+// ---------------- KC round 7 ----------------
+
+/** What the family decided for the coming month, as the front desk recorded it. 'noAnswer' / 'callBack' keep the follow-up open. */
+export type FollowUpOutcome = 'continue' | 'upgrade' | 'downgrade' | 'leave' | 'stop' | 'noAnswer' | 'callBack';
+export interface FollowUpCall { at: DT; by: Actor; outcome: FollowUpOutcome; note?: string }
+
+/**
+ * KC round 7: the front desk's month-end follow-up of one member's subscription for the coming month. id `fu-${month}-${memberId}`.
+ * A decision that changes the membership (upgrade, downgrade, leave, stop) waits for management's approval (`approval`), then applies from the 1st.
+ */
+export interface FollowUp extends Row {
+  memberId: string;
+  /** the month being decided ('YYYY-MM'), usually the coming month */
+  month: YM;
+  /** the latest outcome; missing = nobody reached yet */
+  outcome?: FollowUpOutcome;
+  note?: string;
+  /** leave: the months asked for */
+  leaveMonths?: YM[];
+  /** stop: the member's last day */
+  lastDay?: ISODate;
+  /** stop: why (default familyDecision) */
+  endReason?: EndReason;
+  /** every call or message, oldest first */
+  calls: FollowUpCall[];
+  /** open: still to decide · pending: a change waits for management · done: decided (applied, or nothing to apply) · rejected: management said no */
+  status: 'open' | 'pending' | 'done' | 'rejected';
+  approval?: Approval;
+}
+
+/** KC round 7: a one-day change of the activity programme (a sudden change). id = date. A slot present here overrides the weekly schedule; null = no session then. */
+export interface ScheduleDay extends Row {
+  date: ISODate;
+  slots: Partial<Record<Slot, ScheduleCell | null>>;
+  note?: string;
+}
+
+export type GuestHostKind = 'teacher' | 'entertainer' | 'speaker' | 'other';
+/** KC round 7: someone from outside the club who is invited and paid to lead a session (a guest teacher, a singer, a speaker). */
+export interface GuestHost extends Row {
+  name: string;
+  kind: GuestHostKind;
+  /** what they do, e.g. 'Angklung teacher', 'Keroncong singer' */
+  what: string;
+  phone: string;
+  /** the usual fee per session (Rp) */
+  fee: number;
+  bank?: { bank: string; account: string; holder: string };
+  note?: string;
+  active: boolean;
+  photoMediaId?: string;
+}
+/** KC round 7: a guest host booked for one session. Once it took place, its fee becomes a vendor invoice that finance pays. */
+export interface GuestSession extends Row {
+  hostId: string;
+  date: ISODate;
+  slot: Slot;
+  activityId: string;
+  fee: number;
+  status: 'booked' | 'done' | 'cancelled';
+  note?: string;
+  vendorInvoiceId?: string;
+}
+
+export type TaskEvery = 'daily' | 'weekly' | 'monthly';
+/** KC round 7: a recurring task management sets for a role, e.g. "Photo of the clean dining room". */
+export interface TaskTemplate extends Row {
+  title: string;
+  role: StaffRole;
+  every: TaskEvery;
+  /** weekly: the weekday it is due */
+  weekday?: Weekday;
+  /** monthly: the day of the month it is due (1–28; 31 = the last open day) */
+  dayOfMonth?: number;
+  /** due by this time of day */
+  dueBy?: HM;
+  /** 'photo': ticking it off needs a photo as proof */
+  proof: 'none' | 'photo';
+  active: boolean;
+}
+/** KC round 7: one task ticked off for its period. id `td-${templateId}-${period}` */
+export interface TaskDone extends Row {
+  templateId: string;
+  /** the period it counts for: the date (daily), the Monday (weekly) or 'YYYY-MM' (monthly) */
+  period: string;
+  date: ISODate;
+  at: HM;
+  /** staff id */
+  by: string;
+  photoMediaId?: string;
+  note?: string;
 }
 
 export type ReviewSection = 'newMember' | 'conversion' | 'details' | 'plan' | 'docsConsent' | 'family' | 'allergies' | 'medicines' | 'care';
@@ -814,8 +995,8 @@ export interface ClubState {
   readings: Record<string, Reading>;
   dailyLogs: Record<string, DailyLog>;
   photos: Record<string, Photo>;
-  threads: Record<string, Thread>;
-  messages: Record<string, Message>;
+  threads: Record<string, Thread>; // unused since Messages was removed (kept: no DB migration)
+  messages: Record<string, Message>; // unused, see threads
   feedback: Record<string, Feedback>;
   enquiries: Record<string, Enquiry>;
   calendarEvents: Record<string, CalendarEvent>;
@@ -847,6 +1028,14 @@ export interface ClubState {
   changeRequests: Record<string, ChangeRequest>;
   notifications: Record<string, Notification>;
   activity: Record<string, ActivityEntry>;
+  // KC round 7
+  followUps: Record<string, FollowUp>;
+  scheduleDays: Record<string, ScheduleDay>;
+  guestHosts: Record<string, GuestHost>;
+  guestSessions: Record<string, GuestSession>;
+  surveyTemplates: Record<string, SurveyTemplate>;
+  taskTemplates: Record<string, TaskTemplate>;
+  taskDone: Record<string, TaskDone>;
 }
 
 /** Collections stored as one Postgres table each (everything except clubId/rev/club). */
@@ -857,6 +1046,7 @@ export const COLLECTIONS = [
   'dayMenus', 'stockRequests', 'budgetSections', 'budgetRequests', 'budgetAdjustments', 'receipts', 'vendorInvoices',
   'invoices', 'payments', 'refunds', 'pendingCharges', 'invoiceRuns', 'directory', 'staff', 'hrNotes', 'staffTime',
   'surveys', 'surveyResponses', 'broadcasts', 'changeRequests', 'notifications', 'activity',
+  'followUps', 'scheduleDays', 'guestHosts', 'guestSessions', 'surveyTemplates', 'taskTemplates', 'taskDone',
 ] as const;
 export type CollectionName = (typeof COLLECTIONS)[number];
 

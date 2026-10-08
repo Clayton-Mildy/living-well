@@ -4,16 +4,16 @@
 // Phone: the list alone, a row opens the member as a full-screen sheet.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { addDays, limitsOf, memberAge, memberName, ym, type ClubState, type Health, type HealthLimits, type Reading } from '@cp/shared';
-import { NORMAL_BANDS, daySummary, memberReadingsOn, memberTrend, nameMatches, neighbourDay, readingDays, readingsOnDay, sparkPaths, trendCharts, trendRows, type ChartSpec, type TrendRow } from '@cp/shared/rules/healthStation';
-import { Button, DateField, Icon, PageHead, Pager, Segmented, usePaged } from '../../components/ui';
+import { addDays, limitsFor, memberAge, memberName, ym, type ClubState, type Health, type HealthLimits, type Reading } from '@cp/shared';
+import { NORMAL_BANDS, daySummary, memberReadingsOn, memberTrend, nameMatches, neighbourDay, readingDays, readingsOnDay, trendCharts, trendRows, type ChartSpec, type TrendRow } from '@cp/shared/rules/healthStation';
+import { Button, DateField, GROUP_HEAD, Group, Icon, PageHead, Pager, Segmented, TrendChart, TrendRangeControl, rangeValue, usePaged, windowOf } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
 import { useFmt, useT, type TFn } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { memberPhoto } from '../../lib/media';
 import { EditReadingDialog, VoidReadingDialog } from './dialogs';
-import { Av, Badge, FullSheet, SearchBox, StepButton } from './parts';
+import { Av, Badge, FullSheet, PhoneSeg, SearchBox, StepButton } from './parts';
 import { CHECK_KEY, ReadingCard, readingTitle } from './ReadingCard';
 import { smallCaps, useWidth } from './lib';
 import { whoOfReading } from './who';
@@ -160,6 +160,75 @@ export function Readings() {
     </>
   );
 
+  // round 6, phone: iOS look. The grey search bar, the filter as a segmented control (still pressed buttons), then flat groups of rows; nothing is boxed in a card.
+  const rowStyle = (first: boolean, inset = 70): React.CSSProperties => ({ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 10px 10px 16px', minHeight: 64, border: 'none', backgroundColor: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: `calc(100% - ${inset}px) 1px`, backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', color: '#24201C', fontFamily: 'Inter' });
+  const chevron = <Icon name="chevron_right" size={22} color="#A89C8E" />;
+  const phoneTrends = (
+    <>
+      <SearchBox value={q} onChange={setQ} label={t('health.searchL')} placeholder={t('health.trendsSearchPh')} />
+      <PhoneSeg<Filter> role="group" label={t('health.filterL')} value={filter} onChange={(k) => { setFilter(k); setSel(null); }} items={filters.map(([k, label]) => ({ value: k, label: `${label} · ${rows.filter(F[k]).length}` }))} />
+      <Group pad={0} gap={0}>
+        {pagedT.rows.map((r, i) => {
+          const on = cur?.m.id === r.m.id; // the first row is "current" before anything is chosen: aria only, no highlight on the phone
+          return (
+            <button key={r.m.id} type="button" className="cp-tap-self" onClick={() => choose(r.m.id)} aria-current={on ? 'true' : undefined} data-testid="reading-row" style={{ ...rowStyle(i === 0), cursor: 'pointer' }}>
+              <Av name={memberName(r.m)} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} font={15} />
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{memberName(r.m)}</span>
+                <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{r.last ? t('health.lastBp', { v: `${r.last.sys}/${r.last.dia}`, d: when(r.last.date) }) : ''}</span>
+              </span>
+              <Badge kind={r.worst} icon={17} />
+              {chevron}
+            </button>
+          );
+        })}
+        {!list.length ? <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{q.trim() ? t('common.noResults') : t('health.nobodyGroup')}</div> : null}
+      </Group>
+      <Pager page={pagedT.page} pages={pagedT.pages} onPage={pagedT.setPage} />
+    </>
+  );
+  const phoneDay = (
+    <>
+      <Group pad="12px 16px" gap={10}>
+        <DayNav value={date} onChange={setDate} today={today} ariaLabel={t('health.dayL')} prev={() => setDate(addDays(date, -1))} next={date < today ? () => setDate(addDays(date, 1)) : null}
+          prevLabel={t('health.dayPrev')} nextLabel={t('health.dayNext')} reset={date !== today ? { label: t('health.dayToday'), run: () => setDate(today) } : null} />
+        <div data-testid="day-summary" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+          <span style={{ fontSize: 14, color: '#24201C', fontWeight: 500, lineHeight: 1.4 }}>{t('health.daySum', { r: sum.readings, p: sum.people })}</span>
+          {sum.watch ? <Badge kind="watch" label={`${t('status.watch')} · ${sum.watch}`} /> : null}
+          {sum.alert ? <Badge kind="alert" label={`${t('status.alert')} · ${sum.alert}`} /> : null}
+        </div>
+      </Group>
+      {dayAll.length > 1 ? <SearchBox value={q} onChange={setQ} label={t('health.searchL')} placeholder={t('health.trendsSearchPh')} /> : null}
+      <Group pad={0} gap={0}>
+        {pagedD.rows.map(({ r, who }, i) => {
+          const inner = (
+            <>
+              <Av name={who?.name || ''} tone={who?.tone} src={who?.photo} size={42} font={15} />
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.name}</span>
+                <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{readingTitle(r, t)}</span>
+                <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{`${t(CHECK_KEY[r.kind])} · ${r.time}`}</span>
+              </span>
+              <Badge kind={r.status} icon={17} />
+              {who?.member ? chevron : null}
+            </>
+          );
+          const on = !!who && cur?.m.id === who.id;
+          return who?.member
+            ? <button key={r.id} type="button" className="cp-tap-self" data-testid="day-row" onClick={() => choose(who.id, r.date)} aria-current={on ? 'true' : undefined} style={{ ...rowStyle(i === 0), cursor: 'pointer' }}>{inner}</button>
+            : <div key={r.id} data-testid="day-row" style={{ ...rowStyle(i === 0), paddingRight: 16 }}>{inner}</div>;
+        })}
+        {!dayAll.length ? (
+          <div style={{ padding: '32px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Icon name="event_busy" size={30} weight={300} color="#6E5A43" style={{ alignSelf: 'center' }} />
+            <span style={{ fontSize: 16, lineHeight: 1.4 }}>{t('health.dayEmpty', { d: fds(date) })}</span>
+          </div>
+        ) : !dayItems.length ? <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 16, color: '#5E5852' }}>{t('common.noResults')}</div> : null}
+      </Group>
+      <Pager page={pagedD.page} pages={pagedD.pages} onPage={pagedD.setPage} />
+    </>
+  );
+
   const listCard = (
     <div data-testid="readings-list" style={{ flex: stacked ? '1 1 100%' : mode === 'day' ? '0 1 400px' : '0 1 340px', minWidth: 290, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
       {mode === 'trends' ? trendsCard : dayCard}
@@ -174,17 +243,19 @@ export function Readings() {
   ) : null;
   const pos = cur && mode === 'trends' ? t('health.posList', { i: Math.max(0, list.findIndex((r) => r.m.id === cur.m.id)) + 1, n: list.length }) : '';
 
+  const modeItems: { value: Mode; label: string }[] = [{ value: 'trends', label: t('health.modeTrends') }, { value: 'day', label: t('health.modeDay') }];
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 'clamp(18px, 2.8vw, 28px)' }}>
+    <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 'clamp(18px, 2.8vw, 28px)' }}>
       <PageHead size={40} eyebrow={t('health.readingsEyebrow', { n: WEEKS })} title={t('nav.readings')} />
-      <Segmented<Mode> label={t('health.modeL')} value={mode} onChange={switchMode} items={[{ value: 'trends', label: t('health.modeTrends') }, { value: 'day', label: t('health.modeDay') }]} />
+      {isPhone ? <PhoneSeg<Mode> label={t('health.modeL')} value={mode} onChange={switchMode} items={modeItems} />
+        : <Segmented<Mode> label={t('health.modeL')} value={mode} onChange={switchMode} items={modeItems} />}
       <div ref={bodyRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(14px, 2vw, 24px)', alignItems: 'flex-start' }}>
-        {listCard}
+        {isPhone ? <div data-testid="readings-list" style={{ flex: '1 1 100%', display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>{mode === 'trends' ? phoneTrends : phoneDay}</div> : listCard}
         {!isPhone && detail ? <div ref={detailRef} style={{ flex: '1 1 560px', minWidth: 0 }}>{detail}</div> : null}
       </div>
       {isPhone ? (
         <FullSheet open={sheetOpen} onClose={() => setSheet(false)} back={t('nav.readings')} pos={pos} label={cur ? memberName(cur.m) : t('nav.readings')} bg="#F5F5F3">
-          <div style={{ padding: '16px 16px 28px' }}>{detail}</div>
+          {detail}
         </FullSheet>
       ) : null}
       {dlg?.t === 'edit' ? <EditReadingDialog readingId={dlg.id} onClose={() => setDlg(null)} /> : null}
@@ -197,6 +268,20 @@ export function Readings() {
 function DayNav({ value, onChange, today, ariaLabel, prev, next, prevLabel, nextLabel, reset }: {
   value: string; onChange: (d: string) => void; today: string; ariaLabel: string; prev: (() => void) | null; next: (() => void) | null; prevLabel: string; nextLabel: string; reset: { label: string; run: () => void } | null;
 }) {
+  const { isPhone } = useDevice();
+  // round 6, phone: the date field and the two step arrows on one line; "Today" / "Latest" only when there is somewhere to go back to
+  if (isPhone) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          <div style={{ flex: 1, minWidth: 0 }}><DateField ariaLabel={ariaLabel} value={value} onChange={(d) => d && onChange(d)} max={today} /></div>
+          <StepButton icon="chevron_left" label={prevLabel} onClick={prev} />
+          <StepButton icon="chevron_right" label={nextLabel} onClick={next} />
+        </div>
+        {reset ? <div style={{ display: 'flex' }}><Button variant="secondary" size={44} onClick={reset.run}>{reset.label}</Button></div> : null}
+      </div>
+    );
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <DateField ariaLabel={ariaLabel} value={value} onChange={(d) => d && onChange(d)} max={today} />
@@ -215,9 +300,38 @@ function Detail({ row, s, today, t, when, fds, fmonth, day, onDay, onProfile, on
 }) {
   const m = row.m;
   const name = memberName(m);
-  const L = limitsOf(s);
-  const charts = useMemo(() => trendCharts(row.rs, today, WEEKS * 7, L), [row.rs, today, L]);
+  const L = limitsFor(s, m); // this member's own limits first, the club's for the rest
+  const charts = useMemo(() => trendCharts(row.rs, L), [row.rs, L]);
   const age = memberAge(m, today);
+  const { isPhone } = useDevice();
+  // KC round 7: the charts show the whole history; 1M / 3M / 6M / All or a custom From and To picks the dates (3M first), and any chart can be hovered or tapped
+  const [range, setRange] = useState(() => rangeValue('1w')); // KC round 7: the readings open on the last week
+  const first = row.rs[0]?.date;
+  const win = windowOf(range, today, first);
+  const rangeCtl = <TrendRangeControl value={range} onChange={setRange} today={today} firstDate={first} />;
+  // round 6, phone: a centred header, the record link as an iOS row, one grouped section per chart and the history (22px between them, from the sheet)
+  if (isPhone) {
+    return (
+      <>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, minWidth: 0 }}>
+          <Av name={name} tone={m.photoTone} src={memberPhoto(m)} size={72} font={26} />
+          <h2 style={{ margin: '6px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{name}</h2>
+          <span style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{[age ?? '', m.health.conditions.length ? m.health.conditions.join(', ') : t('health.noConditions')].filter((x) => x !== '').join(' · ')}</span>
+        </div>
+        <Group pad={0} gap={0}>
+          <button type="button" className="cp-tap-self" onClick={onProfile} style={{ height: 50, padding: '0 10px 0 16px', border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+            <Icon name="folder_open" size={21} color="#75624B" />
+            <span style={{ flex: 1 }}>{t('health.openRecord')}</span>
+            <Icon name="chevron_right" size={22} color="#A89C8E" />
+          </button>
+        </Group>
+        {rangeCtl}
+        {charts.map((c) => <ChartCard key={c.id} c={c} t={t} fds={fds} fmonth={fmonth} today={today} L={L} from={win.from} to={win.to} />)}
+        <History row={row} s={s} today={today} t={t} when={when} day={day} onDay={onDay} onEdit={onEdit} onVoid={onVoid} />
+        <div aria-hidden="true" style={{ height: 'calc(2px + env(safe-area-inset-bottom, 0px))' }} />
+      </>
+    );
+  }
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
@@ -228,8 +342,9 @@ function Detail({ row, s, today, t, when, fds, fmonth, day, onDay, onProfile, on
         </div>
         <Button variant="secondary" size={44} icon="folder_open" onClick={onProfile}>{t('health.openRecord')}</Button>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,260px),1fr))', gap: 12 }}>
-        {charts.map((c) => <ChartCard key={c.id} c={c} t={t} fds={fds} fmonth={fmonth} today={today} L={L} />)}
+      {rangeCtl}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,280px),1fr))', gap: 12 }}>
+        {charts.map((c) => <ChartCard key={c.id} c={c} t={t} fds={fds} fmonth={fmonth} today={today} L={L} from={win.from} to={win.to} />)}
       </div>
       <History row={row} s={s} today={today} t={t} when={when} day={day} onDay={onDay} onEdit={onEdit} onVoid={onVoid} />
     </div>
@@ -247,6 +362,27 @@ function History({ row, s, today, t, when, day, onDay, onEdit, onVoid }: {
   const prev = neighbourDay(days, cur, -1);
   const next = neighbourDay(days, cur, 1);
   const idx = days.indexOf(cur);
+  const { isPhone } = useDevice();
+  // round 6, phone: one grouped section (title outside): the day picker, then the day's readings as rows
+  if (isPhone) {
+    return (
+      <div data-testid="history">
+        <Group title={t('health.history')} pad={0} gap={0}>
+          <div style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 10 }}>
+            <DayNav value={cur} onChange={onDay} today={today} ariaLabel={t('health.histDayL')} prev={prev ? () => onDay(prev) : null} next={next ? () => onDay(next) : null}
+              prevLabel={t('health.histEarlier')} nextLabel={t('health.histLater')} reset={cur !== latest ? { label: t('health.histLatest'), run: () => onDay(null) } : null} />
+            {idx >= 0 ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('health.histPos', { i: idx + 1, n: days.length })}</span> : null}
+          </div>
+          {rs.map((r) => <ReadingCard key={r.id} r={r} s={s} t={t} meta={`${when(r.date)} ${r.time}`} onEdit={() => onEdit(r.id)} onVoid={() => onVoid(r.id)} />)}
+          {!rs.length ? (
+            <div data-testid="history-empty" style={{ padding: '20px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 4 }}>
+              <span style={{ fontSize: 16, lineHeight: 1.4 }}>{days.length ? t('health.histEmpty', { d: when(cur) }) : t('health.histNone')}</span>
+            </div>
+          ) : null}
+        </Group>
+      </div>
+    );
+  }
   return (
     <div data-testid="history" style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
       <div style={{ padding: '16px clamp(16px, 2vw, 24px) 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -267,10 +403,16 @@ function History({ row, s, today, t, when, day, onDay, onEdit, onVoid }: {
   );
 }
 
-function ChartCard({ c, t, fds, fmonth, today, L }: { c: ChartSpec; t: TFn; fds: (d: string) => string; fmonth: (m: string) => string; today: string; L: HealthLimits }) {
-  const p = useMemo(() => sparkPaths(c.series, c.opts), [c]);
+const CHART_UNIT: Record<ChartSpec['id'], string> = { bp: 'mmHg', pulse: 'bpm', spo2: '%', temp: '°C', glucose: 'mg/dL', weight: 'kg' };
+const oneDecimal = (v: number) => v.toFixed(1);
+const whole = (v: number) => String(Math.round(v));
+
+function ChartCard({ c, t, fds, fmonth, today, L, from, to }: { c: ChartSpec; t: TFn; fds: (d: string) => string; fmonth: (m: string, year?: boolean) => string; today: string; L: HealthLimits; from: string; to: string }) {
   const r = c.latest;
-  const since = fmonth(c.sinceMonth ?? ym(today));
+  // "Since <month>" is the month of the first reading inside the range (with the year when it is not this year), not of the member's first reading ever
+  const firstIn = c.series[0].filter((p) => p.date >= from && p.date <= to).map((p) => p.date).sort()[0];
+  const sinceYm = firstIn ? ym(firstIn) : c.sinceMonth ?? ym(today);
+  const since = fmonth(sinceYm, sinceYm.slice(0, 4) !== today.slice(0, 4));
   const meta: Record<ChartSpec['id'], { title: string; latest: string; legend: string }> = {
     bp: { title: t('health.bp'), latest: r ? `${r.sys}/${r.dia}` : '—', legend: t('health.lgBp') },
     pulse: { title: t('health.pulse'), latest: r ? String(r.pulse) : '—', legend: t('health.lgPulse', { lo: NORMAL_BANDS.pulse[0], hi: NORMAL_BANDS.pulse[1] }) },
@@ -281,26 +423,54 @@ function ChartCard({ c, t, fds, fmonth, today, L }: { c: ChartSpec; t: TFn; fds:
   };
   const m = meta[c.id];
   const badge: Health | null = c.latestStatus;
+  const { isPhone } = useDevice();
+  // the chart: the readings from `from` to today, placed by date; hover, tap or the arrow keys read a date's value
+  const series = c.id === 'bp'
+    ? [{ key: 'arrival', label: t('health.arrivalCheck'), points: c.series[0] }, { key: 'departure', label: t('health.departureCheck'), points: c.series[1], dashed: true, tone: 'muted' as const }]
+    : [{ key: c.id, label: m.title, points: c.series[0] }];
+  const seen = c.series.flat().filter((p) => p.date >= from && p.date <= to).map((p) => p.date).sort();
+  const everSeen = c.series.some((x) => x.length > 0);
+  const chart = (
+    <TrendChart series={series} band={c.band} unit={CHART_UNIT[c.id]} format={c.id === 'temp' || c.id === 'weight' ? oneDecimal : whole} from={from} to={to} height={150}
+      ariaLabel={t('health.trendOf', { n: m.title })} empty={everSeen ? t('health.noInRange') : t('health.noReadingsYet')} />
+  );
+  const foot = (
+    <>
+      <span>{m.legend}</span>
+      {seen.length ? <span>{`${fds(seen[0])} – ${fds(seen[seen.length - 1])}`}</span> : null}
+    </>
+  );
+  // round 6, phone: the chart's title sits outside a flat white group (the latest value and its status on top, the chart, the legend below)
+  if (isPhone) {
+    return (
+      <div data-chart={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+        <div style={{ padding: '0 16px' }}><h2 style={GROUP_HEAD}>{m.title}</h2></div>
+        <div style={{ background: '#FFFFFF', borderRadius: 14, padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
+            <span style={{ display: 'flex', flexDirection: 'column' }}>
+              <span style={{ fontSize: 28, lineHeight: '34px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>{m.latest}</span>
+              {r ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px' }}>{t('health.latestOn', { d: r.date })}</span> : null}
+            </span>
+            {badge ? <Badge kind={badge} icon={17} /> : null}
+          </div>
+          {chart}
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{foot}</div>
+        </div>
+      </div>
+    );
+  }
   return (
     <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }} data-chart={c.id}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ ...smallCaps('1.3px'), fontWeight: 600, color: '#5E5852' }}>{m.title}</span>
           <span style={{ fontSize: 26, lineHeight: '32px', fontWeight: 400, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>{m.latest}</span>
+          {r ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px' }}>{t('health.latestOn', { d: r.date })}</span> : null}
         </div>
         {badge ? <Badge kind={badge} icon={17} /> : null}
       </div>
-      <svg viewBox="0 0 600 130" aria-hidden="true" style={{ width: '100%', height: 'auto', display: 'block' }}>
-        <rect x="0" y={p.bandY} width="600" height={p.bandH} rx="6" style={{ fill: '#EAF1EC' }} />
-        <path d={p.line2} style={{ fill: 'none', stroke: '#8A755B', strokeWidth: 2, strokeDasharray: '6 5' }} />
-        <path d={p.line} style={{ fill: 'none', stroke: '#75624B', strokeWidth: 2 }} />
-        <path d={p.dots} style={{ fill: '#75624B' }} />
-        <path d={p.hot} style={{ fill: '#9A3D24' }} />
-      </svg>
-      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>
-        <span>{m.legend}</span>
-        <span>{p.from && p.to ? `${fds(p.from)} – ${fds(p.to)}` : t('health.noReadingsYet')}</span>
-      </div>
+      {chart}
+      <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{foot}</div>
     </div>
   );
 }

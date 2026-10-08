@@ -1,11 +1,14 @@
-// "Also today" (Prototype v3 aside rail, no box): trial guests (no time: they come from opening), visit guests (with their time) and unread messages from families.
-// Plain text blocks (19px title, 14px sub line, the guest's actions) separated by hairlines. Every title is tappable: guest -> its enquiry (/enquiries),
-// unread -> /chat (a quick link with an arrow). Guests show GUESTS_PER_PAGE at a time.
+// "Also today" (Prototype v3 aside rail, no box): trial guests (no time: they come from opening) and visit guests (with their time).
+// Plain text blocks (19px title, 14px sub line, the guest's actions) separated by hairlines. Every title is tappable: guest -> its enquiry (/enquiries).
+// Guests show GUESTS_PER_PAGE at a time.
 import { Fragment, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { staffUnread, type GuestVisit, type Role } from '@cp/shared';
+import type { GuestVisit } from '@cp/shared';
 import { alsoToday } from '@cp/shared/rules/lobby';
-import { Button, Eyebrow, Icon, Pager, usePaged } from '../../components/ui';
+import { menuOn } from '@cp/shared/rules/kitchen';
+import { dayPlan } from '@cp/shared/rules/activity';
+import { Button, Eyebrow, GROUP_HEAD, Icon, Pager, usePaged } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
@@ -34,25 +37,53 @@ function guestNotes(t: TFn, g: GuestVisit): string {
 }
 
 function Block({ title, openLabel, onClick, children }: { title: string; openLabel?: string; onClick: () => void; children?: ReactNode }) {
+  const { isPhone } = useDevice();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <button type="button" onClick={onClick} aria-label={openLabel ? `${title}. ${openLabel}` : undefined}
-        style={{ alignSelf: 'flex-start', maxWidth: '100%', minHeight: 28, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#2B231C', fontFamily: 'Inter', fontSize: 19, lineHeight: 1.3, fontWeight: 500 }}>{title}</button>
+        style={{ alignSelf: 'flex-start', maxWidth: '100%', minHeight: 28, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#2B231C', fontFamily: 'Inter', fontSize: isPhone ? 16 : 19, lineHeight: 1.3, fontWeight: 500 }}>{title}</button>
       {children}
     </div>
   );
 }
 
-export function AlsoToday({ role, guest }: { role: Role; guest: GuestActions }) {
+export function AlsoToday({ guest }: { guest: GuestActions }) {
   const t = useT();
   const s = useClub();
   const { today } = useNow();
   const navigate = useNavigate();
-  const a = alsoToday(s, today, role);
-  const unreadCount = a.unread.threads.reduce((n, th) => n + staffUnread(s, th), 0);
-  const empty = !a.guests.length && !unreadCount;
+  const a = alsoToday(s, today);
+  const empty = !a.guests.length;
   const guests = usePaged(a.guests, GUESTS_PER_PAGE);
   const sub14 = { fontSize: 14, lineHeight: 1.4, color: '#6B6259' } as const;
+  const { isPhone } = useDevice();
+
+  // KC round 6: the front desk knows today's menu (what the kitchen cooks: lunch, the soft version, afternoon tea)
+  const menu = menuOn(s, today);
+  const plan = dayPlan(s, today);
+  const timeOf = (k: 'lunch' | 'tea') => plan.find((x) => x.kind === k)?.time || '';
+  const names = (ids: string[]) => ids.map((id) => s.dishes[id]?.name).filter(Boolean).join(', ');
+  const menuLine = (icon: string, label: string, text: string) => (
+    <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+      <Icon name={icon} size={18} weight={300} color="#6E5A43" style={{ marginTop: 2 }} />
+      <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
+        <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{label}</span>
+        <span style={{ fontSize: 15, color: '#24201C', lineHeight: 1.4 }}>{text}</span>
+      </span>
+    </div>
+  );
+  const menuBlock = menu ? (
+    <div key="menu" data-testid="lobby-menu" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ fontSize: isPhone ? 16 : 19, lineHeight: 1.3, fontWeight: 500, color: '#2B231C' }}>{t('lobby.menuToday')}</span>
+      {menu.lunch.length || menu.tea.length ? (
+        <>
+          {menu.lunch.length ? menuLine('restaurant', t('lobby.menuLunch', { t: timeOf('lunch') }).replace(/ · $/, ''), names(menu.lunch)) : null}
+          {menu.soft.length ? menuLine('soup_kitchen', t('lobby.menuSoft'), names(menu.soft)) : null}
+          {menu.tea.length ? menuLine('local_cafe', t('lobby.menuTea', { t: timeOf('tea') }).replace(/ · $/, ''), names(menu.tea)) : null}
+        </>
+      ) : <span style={sub14}>{t('lobby.menuNone')}</span>}
+    </div>
+  ) : null;
 
   const blocks: ReactNode[] = guests.rows.map((g) => {
     const e = s.enquiries[g.enquiryId];
@@ -97,21 +128,20 @@ export function AlsoToday({ role, guest }: { role: Role; guest: GuestActions }) 
     );
   });
   if (guests.pages > 1) blocks.push(<Pager key="pager" page={guests.page} pages={guests.pages} onPage={guests.setPage} label={t('lobby.pagerAria', { list: t('lobby.alsoToday') })} />);
-  if (unreadCount && a.unread.latest) {
-    const sub = `“${a.unread.latest.message.text}” · ${s.familyContacts[a.unread.latest.thread.familyId]?.name || ''}`;
-    blocks.push(
-      <button key="unread" type="button" onClick={() => navigate('/chat')} style={{ padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#1E1A16', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <span style={{ fontSize: 14, display: 'flex', alignItems: 'center', gap: 8, minHeight: 28 }}>
-          <Icon name="chat" size={19} weight={300} color="#6E5A43" />
-          <span>{unreadCount === 1 ? t('lobby.alsoUnread1') : t('lobby.alsoUnreadN', { n: unreadCount })}</span>
-          <Icon name="arrow_forward" size={18} color="#6E5A43" />
-        </span>
-        <span style={{ ...sub14, paddingLeft: 27 }}>{sub}</span>
-      </button>,
+  if (empty) blocks.push(<div key="none" style={sub14}>{t('lobby.alsoNone')}</div>);
+  if (menuBlock) blocks.unshift(menuBlock);
+
+  // round 6, phone: an iOS grouped section, the header over one flat white group, the blocks split by hairlines inside it
+  if (isPhone) {
+    return (
+      <section aria-label={t('lobby.alsoToday')} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+        <h2 style={{ ...GROUP_HEAD, padding: '0 16px' }}>{t('lobby.alsoToday')}</h2>
+        <div style={{ background: '#FFFFFF', borderRadius: 14, padding: '0 16px' }}>
+          {blocks.map((b, i) => <div key={i} style={{ padding: '12px 0', borderTop: i > 0 ? '1px solid #EFEAE3' : 'none' }}>{b}</div>)}
+        </div>
+      </section>
     );
   }
-  if (empty) blocks.push(<div key="none" style={sub14}>{t('lobby.alsoNone')}</div>);
-
   return (
     <section aria-label={t('lobby.alsoToday')} style={{ display: 'flex', flexDirection: 'column', gap: 18, paddingTop: 8, minWidth: 0 }}>
       <Eyebrow>{t('lobby.alsoToday')}</Eyebrow>

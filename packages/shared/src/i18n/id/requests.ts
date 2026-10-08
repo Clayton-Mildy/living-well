@@ -15,4 +15,5 @@ export const requests: Same<typeof EN> = {
   'mine.cancelTitle': 'Batalkan permintaan ini?', 'mine.cancelAsk': 'Batalkan “{what}”? Tetap ada di daftar Anda dengan status Dibatalkan.', 'mine.cancelled': 'Permintaan dibatalkan.', 'mine.saved': 'Permintaan diperbarui.',
   'mine.fixSend': 'Perbaiki dan kirim ulang', 'mine.editBudget': 'Ubah permintaan anggaran', 'mine.editReceipt': 'Ubah kuitansi', 'mine.empty': 'Belum ada permintaan',
   'mine.s_waiting': 'Menunggu', 'mine.s_approved': 'Disetujui', 'mine.s_rejected': 'Ditolak', 'mine.s_cancelled': 'Dibatalkan', 'mine.s_withFinance': 'Di keuangan',
+  'team.title': 'Permintaan stok tim', 'team.waiting': '{n} perlu disetujui', 'team.empty': 'Tidak ada yang perlu disetujui',
 };

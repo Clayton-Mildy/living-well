@@ -14,7 +14,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { digits, matches } from './lib';
-import { Badge, ConfirmDialog, FormOverlay, HAIR, Hero, HeroHead, PagerBar, RpField, SearchField, dangerStrip, fieldLabel, hrow, inputBox, rowSub, rowTitle } from './parts';
+import { Badge, ConfirmDialog, FormOverlay, HAIR, Hero, HeroHead, PGroup, PagerBar, PillBtn, RpField, SearchField, dangerStrip, fieldLabel, hrow, inputBox, prow, rowSub, rowTitle } from './parts';
 
 const PAPER = 'linear-gradient(160deg, #FBF8F4 0%, #EFE7DD 55%, #DCCFC0 100%)';
 const noteName = (date: string) => `nota_${date.slice(8)}${date.slice(5, 7)}.jpg`;
@@ -41,7 +41,7 @@ export function Receipts() {
 
   return (
     <>
-      <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 'clamp(18px, 2.8vw, 36px)', maxWidth: 1180 }}>
+      <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 18 : 'clamp(18px, 2.8vw, 36px)' }}>
         <PageHead title={t('nav.receipts')} />
         {!snapping && !isPhone ? (
           <Button size={48} icon="photo_camera" onClick={() => setSnapping(true)} style={{ alignSelf: 'flex-start', padding: '0 22px 0 18px' }}>{t('finance.rc.snap')}</Button>
@@ -49,6 +49,21 @@ export function Receipts() {
         {snapping ? <SnapPanel today={today} onClose={() => setSnapping(false)} /> : null}
 
         <SearchField value={q} onChange={setQ} label={t('finance.rc.search')} placeholder={t('finance.rc.search')} />
+        {isPhone ? (
+          // round 6, phone: two grouped lists, the receipts and the vendor invoices, each with its title over a flat white group
+          <>
+            <PGroup title={t('nav.receipts')} pad={0} gap={0}>
+              {rPaged.rows.map((r, i) => <ReceiptRow key={r.id} r={r} first={i === 0} canApprove={canApprove} onEdit={() => setEditReceipt(r)} />)}
+              {!rHits.length ? <EmptyState icon={q ? 'search_off' : 'receipt_long'} title={q ? t('common.noResults') : t('finance.rc.empty')} /> : null}
+              <PagerBar paged={rPaged} label={t('nav.receipts')} />
+            </PGroup>
+            <PGroup title={t('finance.rc.vendorTitle')} meta={canApprove ? <PillBtn icon="add" onClick={() => setVendorForm('new')}>{t('finance.rc.addVendor')}</PillBtn> : undefined} pad={0} gap={0}>
+              {vPaged.rows.map((v, i) => <VendorRow key={v.id} v={v} first={i === 0} canApprove={canApprove} onEdit={() => setVendorForm(v)} />)}
+              {!vHits.length ? <EmptyState icon={q ? 'search_off' : 'request_quote'} title={q ? t('common.noResults') : t('finance.rc.vendorEmpty')} /> : null}
+              <PagerBar paged={vPaged} label={t('finance.rc.vendorTitle')} />
+            </PGroup>
+          </>
+        ) : (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,380px),1fr))', gap: 'clamp(16px, 2.4vw, 32px)', alignItems: 'start' }}>
           <Hero>
             <HeroHead title={t('nav.receipts')} />
@@ -63,6 +78,7 @@ export function Receipts() {
             <PagerBar paged={vPaged} label={t('finance.rc.vendorTitle')} />
           </Hero>
         </div>
+        )}
       </div>
       {isPhone && !snapping ? <Pin icon="photo_camera" label={t('finance.rc.snap')} onClick={() => setSnapping(true)} /> : null}
       <VendorForm value={vendorForm} onClose={() => setVendorForm(null)} />
@@ -137,6 +153,38 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
       { ok: t('finance.toast.receiptSent', { section: sectionName(s, sectionId, lang) }) });
     if (r.ok) onClose();
   };
+  const { isPhone } = useDevice();
+  // round 6, phone: a flat group; the photo is a slim row (a small thumb with the file name and Retake) instead of the big 3:4 tile
+  if (isPhone) {
+    return (
+      <PGroup gap={14}>
+        {!snapped ? (
+          <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} className="cp-press" style={{ height: 64, borderRadius: 12, border: 'none', background: '#2E2924', color: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter' }}>
+            <Icon name="receipt_long" size={28} color="#CAB8A2" />
+            <span style={{ fontSize: 16, lineHeight: 1.4 }}>{uploading ? t('common.processing') : t('finance.rc.tap')}</span>
+          </button>
+        ) : (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+            <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: 84, flex: 'none', aspectRatio: '3/4', borderRadius: 10, background: PAPER, border: '1px solid #E4DACD', position: 'relative', overflow: 'hidden' }}>
+              <PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} />
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', minWidth: 0 }}>
+              <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#F3EEE8', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+                <Icon name="check_circle" size={17} color="#3D6B4F" />{file}
+              </span>
+              <PillBtn icon="refresh" onClick={() => setCam(true)}>{t('common.retake')}</PillBtn>
+            </div>
+          </div>
+        )}
+        <CameraCapture open={cam} onClose={() => setCam(false)} onCapture={(b) => void took(b)} />
+        <ReceiptFields v={{ ...v, sectionId }} set={set} />
+        <div style={{ display: 'flex', gap: 8 }}>
+          <Button variant="secondary" size={48} onClick={onClose} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
+          <Button size={48} disabled={!ok} onClick={send} style={{ flex: 1 }}>{t('finance.rc.send')}</Button>
+        </div>
+      </PGroup>
+    );
+  }
   return (
     <Hero visible style={{ padding: '22px clamp(18px, 3vw, 36px)', display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', animation: 'cpUp .2s ease-out' }}>
       {!snapped ? (
@@ -188,13 +236,14 @@ function EditReceipt({ receipt, onClose }: { receipt: Receipt | null; onClose: (
   );
 }
 
-function ReceiptRow({ r, canApprove, onEdit }: { r: Receipt; canApprove: boolean; onEdit: () => void }) {
+function ReceiptRow({ r, canApprove, onEdit, first }: { r: Receipt; canApprove: boolean; onEdit: () => void; first?: boolean }) {
   const s = useClub();
   const t = useT();
   const act = useAct();
   const { lang, fds } = useFmt();
   const { today } = useNow();
   const { id: meId } = useMe();
+  const { isPhone } = useDevice();
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState('');
   const [confirmVoid, setConfirmVoid] = useState(false);
@@ -207,6 +256,47 @@ function ReceiptRow({ r, canApprove, onEdit }: { r: Receipt; canApprove: boolean
     const x = await act('receipt.reject', { id: r.id, note: note.trim() }, { ok: t('finance.toast.receiptRejected') });
     if (x.ok) { setRejecting(false); setNote(''); }
   };
+  const rejectStrip = rejecting ? (
+    <div style={dangerStrip}>
+      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
+      <Button variant="secondary" size={48} onClick={() => setRejecting(false)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
+      <Button variant="danger" size={48} disabled={!note.trim()} onClick={reject} style={{ padding: '0 20px' }}>{t('finance.rc.rejectConfirm')}</Button>
+    </div>
+  ) : null;
+  const voidDialog = (
+    <ConfirmDialog open={confirmVoid} onClose={() => setConfirmVoid(false)} title={t('finance.rc.voidTitle')} body={t('finance.rc.voidBody', { supplier: r.supplier, amount: rp(r.amount) })} confirmLabel={t('finance.rc.void')}
+      onConfirm={async () => { const x = await act('receipt.void', { id: r.id }, { ok: t('finance.toast.receiptVoided') }); if (x.ok) setConfirmVoid(false); }} />
+  );
+  // round 6, phone: a thumb, the supplier and amount, one meta line and a quiet status; the actions are 34px pills under the text
+  if (isPhone) {
+    return (
+      <div style={{ ...prow(first), display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <span aria-hidden="true" style={{ width: 36, height: 46, borderRadius: 7, background: PAPER, border: '1px solid #E4DACD', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ ...rowTitle, fontSize: 16 }}>{r.supplier} · {rp(r.amount)}</span>
+            <span style={{ ...rowSub, fontSize: 13 }}>{sectionName(s, r.sectionId, lang)} · {actorName(s, `staff:${r.by}`)} · {r.date === today ? t('common.today').toLowerCase() : fds(r.date)}</span>
+          </div>
+          {badge}
+        </div>
+        {(submitted && canApprove) || canEdit || (mine && submitted) ? (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingLeft: 48 }}>
+            {canEdit ? <PillBtn onClick={onEdit} label={`${t('common.edit')} ${r.supplier}`}>{t('common.edit')}</PillBtn> : null}
+            {(mine && submitted) || canApprove ? <PillBtn onClick={() => setConfirmVoid(true)} label={`${t('finance.rc.void')} ${r.supplier}`}>{t('finance.rc.void')}</PillBtn> : null}
+            {submitted && canApprove ? (
+              <>
+                <PillBtn tone="danger" onClick={() => setRejecting(!rejecting)} label={`${t('finance.budget.reject')} ${r.supplier}`}>{t('finance.budget.reject')}</PillBtn>
+                <PillBtn tone="primary" onClick={() => act('receipt.approve', { id: r.id }, { ok: t('finance.toast.receiptApproved', { supplier: r.supplier }) })} label={`${t('finance.budget.approve')} ${r.supplier}`}>{t('finance.budget.approve')}</PillBtn>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+        {r.status === 'rejected' && r.note ? <span style={{ fontSize: 14, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
+        {rejectStrip}
+        {voidDialog}
+      </div>
+    );
+  }
   return (
     <div style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px 14px', flexWrap: 'wrap' }}>
@@ -231,39 +321,76 @@ function ReceiptRow({ r, canApprove, onEdit }: { r: Receipt; canApprove: boolean
         ) : null}
       </div>
       {r.status === 'rejected' && r.note ? <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
-      {rejecting ? (
-        <div style={dangerStrip}>
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
-          <Button variant="secondary" size={48} onClick={() => setRejecting(false)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
-          <Button variant="danger" size={48} disabled={!note.trim()} onClick={reject} style={{ padding: '0 20px' }}>{t('finance.rc.rejectConfirm')}</Button>
-        </div>
-      ) : null}
-      <ConfirmDialog open={confirmVoid} onClose={() => setConfirmVoid(false)} title={t('finance.rc.voidTitle')} body={t('finance.rc.voidBody', { supplier: r.supplier, amount: rp(r.amount) })} confirmLabel={t('finance.rc.void')}
-        onConfirm={async () => { const x = await act('receipt.void', { id: r.id }, { ok: t('finance.toast.receiptVoided') }); if (x.ok) setConfirmVoid(false); }} />
+      {rejectStrip}
+      {voidDialog}
     </div>
   );
 }
 
-function VendorRow({ v, canApprove, onEdit }: { v: VendorInvoice; canApprove: boolean; onEdit: () => void }) {
+function VendorRow({ v, canApprove, onEdit, first }: { v: VendorInvoice; canApprove: boolean; onEdit: () => void; first?: boolean }) {
   const s = useClub();
   const t = useT();
   const act = useAct();
   const { lang, fds } = useFmt();
+  const { isPhone } = useDevice();
   const [rejecting, setRejecting] = useState(false);
   const [note, setNote] = useState('');
   const [confirmDel, setConfirmDel] = useState(false);
+  // KC round 7: the fee of a guest host's session arrives here as a vendor invoice (made by "Mark as done" on the Guests screen)
+  const guestHost = Object.values(s.guestSessions || {}).some((g) => g.vendorInvoiceId === v.id) ? ` · ${t('guests.hint')}` : '';
   const badge = v.status === 'toApprove' ? <Badge kind="watch" label={t('finance.rc.toApprove')} /> : v.status === 'rejected' ? <Badge kind="overdue" label={t('status.rejected')} />
     : v.status === 'paid' ? <Badge kind="paid" label={t('finance.rc.paid')} /> : <Badge kind="paid" label={v.xero === 'synced' ? t('finance.rc.approvedXero') : t('status.approved')} />;
   const reject = async () => {
     const x = await act('vendorInvoice.reject', { id: v.id, note: note.trim() }, { ok: t('finance.toast.vendorRejected', { supplier: v.supplier }) });
     if (x.ok) { setRejecting(false); setNote(''); }
   };
+  const rejectStrip = rejecting ? (
+    <div style={dangerStrip}>
+      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
+      <Button variant="secondary" size={48} onClick={() => setRejecting(false)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
+      <Button variant="danger" size={48} disabled={!note.trim()} onClick={reject} style={{ padding: '0 20px' }}>{t('finance.rc.rejectConfirm')}</Button>
+    </div>
+  ) : null;
+  const delDialog = (
+    <ConfirmDialog open={confirmDel} onClose={() => setConfirmDel(false)} title={t('finance.rc.deleteTitle')} body={t('finance.rc.deleteBody', { supplier: v.supplier, number: v.number })} confirmLabel={t('common.delete')}
+      onConfirm={async () => { const x = await act('vendorInvoice.delete', { id: v.id }, { ok: t('finance.toast.vendorDeleted') }); if (x.ok) setConfirmDel(false); }} />
+  );
+  // round 6, phone: supplier and number, one meta line, a quiet status, then the actions as 34px pills
+  if (isPhone) {
+    return (
+      <div style={{ ...prow(first), display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ ...rowTitle, fontSize: 16 }}>{v.supplier} · {v.number}</span>
+            <span style={{ ...rowSub, fontSize: 13 }}>{rp(v.amount)} · {t('finance.rc.due', { date: fds(v.due) })} · {sectionName(s, v.sectionId, lang)}{guestHost}</span>
+          </div>
+          {badge}
+        </div>
+        {canApprove ? (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            {v.status !== 'paid' ? <PillBtn onClick={onEdit} label={`${t('common.edit')} ${v.number}`}>{t('common.edit')}</PillBtn> : null}
+            {v.status !== 'paid' ? <PillBtn onClick={() => setConfirmDel(true)} label={`${t('common.delete')} ${v.number}`}>{t('common.delete')}</PillBtn> : null}
+            {v.status === 'toApprove' ? (
+              <>
+                <PillBtn tone="danger" onClick={() => setRejecting(!rejecting)} label={`${t('finance.budget.reject')} ${v.number}`}>{t('finance.budget.reject')}</PillBtn>
+                <PillBtn tone="primary" onClick={() => act('vendorInvoice.approve', { id: v.id }, { ok: t('finance.toast.vendorApproved', { supplier: v.supplier }) })} label={`${t('finance.budget.approve')} ${v.number}`}>{t('finance.budget.approve')}</PillBtn>
+              </>
+            ) : null}
+            {v.status === 'approved' ? <PillBtn tone="primary" onClick={() => act('vendorInvoice.markPaid', { id: v.id }, { ok: t('finance.toast.vendorPaid', { supplier: v.supplier }) })} label={`${t('finance.rc.markPaid')} ${v.number}`}>{t('finance.rc.markPaid')}</PillBtn> : null}
+          </div>
+        ) : null}
+        {v.status === 'rejected' && v.note ? <span style={{ fontSize: 14, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: v.note })}</span> : null}
+        {rejectStrip}
+        {delDialog}
+      </div>
+    );
+  }
   return (
     <div style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px 14px', flexWrap: 'wrap' }}>
         <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={rowTitle}>{v.supplier} · {v.number}</span>
-          <span style={rowSub}>{rp(v.amount)} · {t('finance.rc.due', { date: fds(v.due) })} · {sectionName(s, v.sectionId, lang)}</span>
+          <span style={rowSub}>{rp(v.amount)} · {t('finance.rc.due', { date: fds(v.due) })} · {sectionName(s, v.sectionId, lang)}{guestHost}</span>
         </div>
         {badge}
         {canApprove ? (
@@ -285,15 +412,8 @@ function VendorRow({ v, canApprove, onEdit }: { v: VendorInvoice; canApprove: bo
         ) : null}
       </div>
       {v.status === 'rejected' && v.note ? <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: v.note })}</span> : null}
-      {rejecting ? (
-        <div style={dangerStrip}>
-          <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
-          <Button variant="secondary" size={48} onClick={() => setRejecting(false)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
-          <Button variant="danger" size={48} disabled={!note.trim()} onClick={reject} style={{ padding: '0 20px' }}>{t('finance.rc.rejectConfirm')}</Button>
-        </div>
-      ) : null}
-      <ConfirmDialog open={confirmDel} onClose={() => setConfirmDel(false)} title={t('finance.rc.deleteTitle')} body={t('finance.rc.deleteBody', { supplier: v.supplier, number: v.number })} confirmLabel={t('common.delete')}
-        onConfirm={async () => { const x = await act('vendorInvoice.delete', { id: v.id }, { ok: t('finance.toast.vendorDeleted') }); if (x.ok) setConfirmDel(false); }} />
+      {rejectStrip}
+      {delDialog}
     </div>
   );
 }

@@ -35,14 +35,14 @@ test.describe('billing', () => {
     await signIn(page, 's10', '/today');
     await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Overdue\s*1\b/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Outstanding · due 27 Oct\s*3\b/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Outstanding · due 28 Oct\s*3\b/ })).toBeVisible();
     await expect(row(page, /Opa Tjahjadi Lim, INV-2609-020/)).toBeVisible();
     await expect(page.getByText('23 days late')).toBeVisible();
     await expect(row(page, /INV-2610-/)).toHaveCount(3);
     await assertNoHorizontalScroll(page);
 
     await page.getByRole('button', { name: /^Overdue/ }).click();
-    await expect(page.getByText('Due on the 27th', { exact: true })).toHaveCount(0);
+    await expect(page.getByText('Due on the 28th', { exact: true })).toHaveCount(0);
     await expect(row(page, /INV-2610-/)).toHaveCount(0);
     await page.getByRole('button', { name: /^Paid · October/ }).click();
     await expect(row(page, /INV-2610-002/)).toBeVisible();
@@ -118,7 +118,7 @@ test.describe('billing', () => {
     const sheet = page.getByRole('dialog', { name: 'Invoice INV-2610-046' });
     await expect(sheet).toBeVisible();
     await expect(sheet.getByText('Gold plan · October')).toBeVisible();
-    await expect(sheet.getByText('Rp 9.500.000').first()).toBeVisible();
+    await expect(sheet.getByText('Rp 3.950.000').first()).toBeVisible();
     await expect(sheet.getByTestId('va-number')).toHaveText(/^3901 \d{4} \d{4} \d{4}$/);
     await sheet.getByRole('button', { name: 'Mandiri' }).click();
     await expect(sheet.getByTestId('va-number')).toHaveText(/^8950 /);
@@ -126,13 +126,13 @@ test.describe('billing', () => {
     await toast(page, /Virtual account number copied|Couldn.t copy/);
 
     await sheet.getByRole('button', { name: 'Record payment' }).click();
-    await sheet.getByLabel('Amount credited (Rp)').fill('4000000');
+    await sheet.getByLabel('Amount credited (Rp)').fill('2000000');
     await sheet.getByLabel('Reference').fill('SG-4471');
     await sheet.getByLabel('Amount received in SGD (optional)').fill('330.50');
     await sheet.getByRole('button', { name: 'Record payment' }).last().click();
     await toast(page, /Payment recorded for Opa Budi/);
     await expect(sheet.getByText('Part paid').first()).toBeVisible();
-    await expect(sheet.getByText('Rp 4.000.000 paid · Rp 5.500.000 left')).toBeVisible();
+    await expect(sheet.getByText('Rp 2.000.000 paid · Rp 1.950.000 left')).toBeVisible();
     await expect(sheet.getByText(/SGD bank transfer · SGD 330.5/)).toBeVisible();
     await assertNoHorizontalScroll(page);
     await page.keyboard.press('Escape');
@@ -142,7 +142,7 @@ test.describe('billing', () => {
     // the rest of the money settles it (the row is still open)
     await page.getByRole('button', { name: 'Open invoice' }).click();
     await sheet.getByRole('button', { name: 'Record payment' }).click();
-    await expect(sheet.getByLabel('Amount credited (Rp)')).toHaveValue('5.500.000'); // the balance is suggested
+    await expect(sheet.getByLabel('Amount credited (Rp)')).toHaveValue('1.950.000'); // the balance is suggested
     await sheet.getByLabel('Reference').fill('SG-4472');
     await sheet.getByRole('button', { name: 'Record payment' }).last().click();
     await expect(sheet.getByText('Paid', { exact: true }).first()).toBeVisible();
@@ -161,7 +161,7 @@ test.describe('billing', () => {
     await sheet.getByRole('button', { name: 'Add charge' }).click();
     await toast(page, 'Invoice INV-2610-001 updated.');
     await expect(sheet.getByText('Late pick-up fee')).toBeVisible();
-    await expect(sheet.getByText('Rp 5.650.000').first()).toBeVisible();
+    await expect(sheet.getByText('Rp 2.850.000').first()).toBeVisible();
 
     await sheet.getByRole('button', { name: 'Void', exact: true }).click();
     await sheet.getByLabel('Why is it voided?').fill('Member left early');
@@ -190,7 +190,7 @@ test.describe('billing', () => {
     const sheet = page.getByRole('dialog', { name: 'Invoice run' });
     await expect(sheet).toBeVisible();
     await expect(sheet.getByRole('button', { name: 'November 2026', pressed: true })).toBeVisible();
-    await expect(sheet.getByText(/before the usual issue date \(15 November 2026\)/)).toBeVisible();
+    await expect(sheet.getByText(/before the usual issue date \(21 November 2026\)/)).toBeVisible();
     await expect(sheet.getByText(/October 2026 isn.t over yet/)).toBeVisible(); // an early run says what it can't see yet
     await expect(sheet.getByText('Bill to Maria Wijaya').first()).toBeVisible();
     await expect(sheet.getByText('Gold plan · November').first()).toBeVisible();
@@ -198,7 +198,7 @@ test.describe('billing', () => {
     await expect(sheet.getByText('Extra days · October (1)')).toBeVisible();
     await expect(sheet.getByText('Wed 21 Oct', { exact: true })).toBeVisible(); // the visit that is the extra day
     await expect(sheet.getByText('Rp 650.000', { exact: true })).toBeVisible();
-    await expect(sheet.getByText('Rp 6.150.000', { exact: true })).toBeVisible(); // Flex Rp 5.500.000 + 1 extra day
+    await expect(sheet.getByText('Rp 3.350.000', { exact: true })).toBeVisible(); // Flex Rp 2.700.000 + 1 extra day
     await assertNoHorizontalScroll(page);
     await sheet.getByRole('button', { name: /^Issue invoices \(5\)/ }).click();
     await expect(sheet.getByText(/Send these invoices \(5, Rp [\d.]+\) to families now\?/)).toBeVisible();
@@ -206,21 +206,21 @@ test.describe('billing', () => {
     await toast(page, 'Invoices issued: 5. Families have been told.');
     await expect(sheet).toHaveCount(0);
     for (const n of ['INV-2611-001', 'INV-2611-046', 'INV-2611-002', 'INV-2611-010', 'INV-2611-020']) await expect(row(page, new RegExp(n))).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Outstanding · due 27 Oct\s*8\b/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Outstanding · due 28 Oct\s*8\b/ })).toBeVisible();
     // every invoice has its own virtual account, and Lina's carries the extra day
     await row(page, /INV-2611-001/).click();
     await page.getByRole('button', { name: 'Open invoice' }).click();
     const inv = page.getByRole('dialog', { name: 'Invoice INV-2611-001' });
     await expect(inv.getByText('Released early on Wed 21 Oct')).toBeVisible();
     await expect(inv.getByText('Extra days · October (1)')).toBeVisible();
-    await expect(inv.getByText('Rp 6.150.000').first()).toBeVisible();
+    await expect(inv.getByText('Rp 3.350.000').first()).toBeVisible();
     await expect(inv.getByTestId('va-number')).toHaveText(/^3901 \d{4} \d{4} \d{4}$/);
 
     // the payer hears about it; a second run has nothing left to do
     const fam = await context.newPage();
     await signIn(fam, 'f1', '/contacts');
     const panel = await updatesOf(fam);
-    await expect(panel.getByText(/New invoice INV-2611-001 for Oma Lina: Rp 6\.150\.000/)).toBeVisible();
+    await expect(panel.getByText(/New invoice INV-2611-001 for Oma Lina: Rp 3\.350\.000/)).toBeVisible();
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'Preview and issue' }).click();
     await expect(page.getByRole('dialog', { name: 'Invoice run' }).getByText('Everything for November 2026 has been invoiced.')).toBeVisible();
@@ -234,7 +234,7 @@ test.describe('payments', () => {
     await signIn(page, 's10', '/payments');
     await expect(page.getByRole('heading', { name: 'Payments' })).toBeVisible();
     await expect(page.getByText('October so far')).toBeVisible();
-    await expect(page.getByText('Rp 15.000.000').first()).toBeVisible();
+    await expect(page.getByText('Rp 6.650.000').first()).toBeVisible();
     await assertNoHorizontalScroll(page);
 
     await page.getByRole('button', { name: /^Refund Bapak Bambang Purnomo INV-2610-010/ }).click();
@@ -243,7 +243,7 @@ test.describe('payments', () => {
     await page.getByRole('button', { name: 'Refund Rp 1.000.000' }).click();
     await toast(page, 'Refund of Rp 1.000.000 recorded and sent to Xero.');
     await expect(page.getByText(/Refunded Rp 1\.000\.000 · .* · Absent all month/)).toBeVisible();
-    await expect(page.getByText('Rp 14.000.000').first()).toBeVisible(); // refunds are not in the totals
+    await expect(page.getByText('Rp 5.650.000').first()).toBeVisible(); // refunds are not in the totals
     await expect(page.getByTestId('pay-tile-refunds')).toContainText('Rp 1.000.000'); // the tile shows the amount only
 
     // Hendra: a refund with a credit note keeps his invoice settled
@@ -297,9 +297,9 @@ test.describe('payments', () => {
     await expect(page.getByRole('radio', { name: /Opa Tjahjadi · September/ })).toBeVisible();
     await expect(page.getByRole('radio', { name: /Opa Budi/ })).toHaveCount(0);
     await page.getByRole('radio', { name: /Opa Tjahjadi · September/ }).click();
-    await expect(page.getByLabel('Amount credited (Rp)')).toHaveValue('9.500.000');
+    await expect(page.getByLabel('Amount credited (Rp)')).toHaveValue('3.950.000');
     await page.getByRole('button', { name: 'Revolut' }).click();
-    await page.getByLabel('Amount credited (Rp)').fill('12000000'); // more than September: the rest goes to October
+    await page.getByLabel('Amount credited (Rp)').fill('5000000'); // more than September: the rest goes to October
     await expect(page.getByRole('button', { name: 'Record payment' })).toHaveAttribute('aria-disabled', 'true'); // a Revolut payment needs its reference
     await page.getByLabel('Reference', { exact: true }).fill('RV-9981');
     await expect(page.getByRole('button', { name: 'Record payment' })).not.toHaveAttribute('aria-disabled', 'true');
@@ -333,7 +333,7 @@ test.describe('payments', () => {
     // the payer is told that the receipt is on its way
     const fam = await context.newPage();
     await signIn(fam, 'f1', '/contacts');
-    await expect((await updatesOf(fam)).getByText(/Payment received for Oma Lina: Rp 5.500.000/)).toBeVisible();
+    await expect((await updatesOf(fam)).getByText(/Payment received for Oma Lina: Rp 2.700.000/)).toBeVisible();
     c.assertClean();
   });
 });
@@ -614,7 +614,7 @@ test.describe('screens render everywhere', () => {
       expect(await text(), path).not.toMatch(RAW);
     }
     await signIn(page, 's10', '/today', 'id');
-    await expect(page.getByText('Tagihan terbit tanggal 15 · jatuh tempo tanggal 27')).toBeVisible();
+    await expect(page.getByText('Tagihan terbit tanggal 21 · jatuh tempo tanggal 28')).toBeVisible();
     await expect(page.getByText('Terlambat 23 hari')).toBeVisible();
     // overlays
     await page.getByRole('button', { name: 'Pratinjau dan terbitkan' }).click();

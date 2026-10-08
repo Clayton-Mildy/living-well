@@ -34,8 +34,8 @@ export const lobby = {
   // toasts
   tUndoIn: '{n}’s check-in was undone.', tUndoOut: '{n}’s check-out was undone.',
   // also today
-  alsoNone: 'Nothing else is planned today.',
-  alsoUnread1: '1 unread message from a family', alsoUnreadN: '{n} unread messages from families', guestTrial: 'Trial day: {n}', guestVisit: 'Visit: {n}',
+  menuToday: 'Menu today', menuLunch: 'Lunch · {t}', menuSoft: 'Soft food', menuTea: 'Afternoon tea · {t}', menuNone: 'The kitchen has not set today’s menu yet.', alsoNone: 'Nothing else is planned today.',
+  guestTrial: 'Trial day: {n}', guestVisit: 'Visit: {n}',
   guestWith: 'With {e} ({r}) · {s}', guestWithNo: 'With {e}', guestAllergyUnknown: 'Allergies not recorded', guestHealth: 'Health check on arrival', guestLunch: 'Staying for lunch',
   guestStatusIn: 'Checked in {t}', guestStatusOut: 'Left {t}', guestStatusNoShow: 'Did not come', noShow: 'No-show', undoNoShow: 'Undo no-show', openEnquiry: 'Open enquiry',
   tGuestIn: '{n} checked in at {t}.', tGuestInHealth: '{n} checked in at {t}. Sent to the health station.', tGuestOut: '{n} left at {t}.', tNoShow: '{n} marked as not coming.',

@@ -40,6 +40,10 @@
   .cp-card-pad { padding: 14px 16px !important; gap: 10px !important; }
   /* phone only: hide helper paragraphs / the second half of a header */
   .cp-hide-phone { display: none !important; }
+  /* round 6, native phone look (Arrivals and the member profile first): flat cards, no grey tap boxes, iOS-style press feedback */
+  .cp-native { --card-shadow: none; }
+  .cp-press:active { opacity: .55; }
+  .cp-tap:has(> .cp-tap-target:active), .cp-tap-self:active { background-color: #F1EEEA !important; }
 }
 /* KC round 5: the whole UI was too big (they ran the laptop at 80% browser zoom). Scale everything once here:
    80% on tablet/laptop, 87.5% on phone (16px text -> 14px). Coordinates read from the DOM go through uiZoom(). */
@@ -49,7 +53,7 @@ html, body { margin: 0; height: 100%; background: var(--page); color: var(--ink)
 #root { height: 100%; }
 a { color: #75624B; text-decoration: underline; text-underline-offset: 3px; }
 a:hover { color: #24201C; }
-* { box-sizing: border-box; }
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; } /* no blue / grey tap boxes on phones (KC round 6); presses show their own feedback */
 button { font-family: Inter, system-ui, sans-serif; }
 button:focus-visible, input:focus-visible, textarea:focus-visible, select:focus-visible, a:focus-visible { outline: 2px solid #75624B; outline-offset: 2px; }
 input, textarea, select { font-family: Inter, system-ui, sans-serif; }

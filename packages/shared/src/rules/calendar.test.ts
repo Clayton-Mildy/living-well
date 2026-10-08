@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, execute, getUser, projectForFamily, type ClubState } from '../index';
-import { DRAFT_ID, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, weekDates, weekDays, weekEditable, weekVersions, weekView } from './calendar';
+import { DRAFT_ID, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView } from './calendar';
 
 const T = '2026-10-21';
 const fresh = (): ClubState => buildSeed().citra;
@@ -136,7 +136,7 @@ describe('schedule drafts and versions', () => {
     expect(latestPublished(s)?.id).toBe('sched-2024-07');
     expect(scheduleDraft(s)).toBeUndefined();
     expect(builderDays(s)[3]['10:30']?.activityId).toBe('act-keroncong');
-    const cx = (st: ClubState, input: unknown, mid: string) => execute(st, 'schedule.saveDraft', input, getUser({ citra: st }, 's5')!, { today: T, nowMin: 600 }, mid).state;
+    const cx = (st: ClubState, input: unknown, mid: string) => execute(st, 'schedule.saveDraft', input, getUser({ citra: st }, 's9')!, { today: T, nowMin: 600 }, mid).state;
     const days = builderDays(s);
     days[3]['10:30'] = null;
     const withDraft = cx(s, { days }, 'd1');
@@ -144,7 +144,7 @@ describe('schedule drafts and versions', () => {
     expect(builderDays(withDraft)[3]['10:30']).toBeNull();
     expect(builderBase(withDraft)[3]['10:30']?.activityId).toBe('act-keroncong');
     // versions list: one per effective date, newest first
-    let v = execute(withDraft, 'schedule.publish', { effectiveFrom: '2026-10-26' }, getUser({ citra: withDraft }, 's5')!, { today: T, nowMin: 600 }, 'p1').state;
+    let v = execute(withDraft, 'schedule.publish', { effectiveFrom: '2026-10-26' }, getUser({ citra: withDraft }, 's9')!, { today: T, nowMin: 600 }, 'p1').state;
     expect(effectiveVersions(v).map((x) => x.effectiveFrom)).toEqual(['2026-10-26', '2024-07-01']);
     const days2 = builderDays(v);
     days2[1]['10:30'] = null;
@@ -185,7 +185,7 @@ describe('the weekly schedule by week', () => {
     const days = builderDays(s);
     days[3]['10:30'] = null;
     days[4]['10:30'] = null;
-    const v = cx(s, 'schedule.publish', { effectiveFrom: '2026-11-04', days }, 's5', 'w1'); // a Wednesday
+    const v = cx(s, 'schedule.publish', { effectiveFrom: '2026-11-04', days }, 's9', 'w1'); // a Wednesday
     const w = weekDays(v, '2026-11-02');
     expect(w[1]['10:30']?.activityId).toBeTruthy(); // Monday: the old version
     expect(w[2]['10:30']?.activityId).toBeTruthy(); // Tuesday: the old version
@@ -200,7 +200,7 @@ describe('the weekly schedule by week', () => {
     const s = fresh();
     const days = builderDays(s);
     days[2]['10:30'] = null;
-    const d = cx(s, 'schedule.saveDraft', { days, effectiveFrom: '2026-11-02' }, 's5', 'w2');
+    const d = cx(s, 'schedule.saveDraft', { days, effectiveFrom: '2026-11-02' }, 's9', 'w2');
     const here = weekView(d, '2026-11-02', T);
     expect(here).toMatchObject({ monday: '2026-11-02', editable: true, draftHere: true, otherDraft: undefined });
     expect(here.changes).toEqual([{ w: 2, slot: '10:30' }]);
@@ -216,8 +216,40 @@ describe('the weekly schedule by week', () => {
     expect(now).toMatchObject({ editable: false, draftHere: false, changes: [] });
     expect(now.days[3]['10:30']?.activityId).toBe('act-keroncong');
     // a draft equal to what runs is no draft for the banner
-    const same = cx(s, 'schedule.saveDraft', { days: builderDays(s), effectiveFrom: '2026-11-02' }, 's5', 'w3');
+    const same = cx(s, 'schedule.saveDraft', { days: builderDays(s), effectiveFrom: '2026-11-02' }, 's9', 'w3');
     expect(weekView(same, '2026-11-09', T).otherDraft).toBeUndefined();
     expect(weekView(same, '2026-11-02', T).changes).toEqual([]);
+  });
+});
+
+describe('upcomingClosures (family Today note)', () => {
+  const ev = (id: string, date: string, kind: 'closed' | 'holiday' | 'outing', extra: Record<string, unknown> = {}) => ({ id, clubId: 'citra', createdAt: '', createdBy: 'system', date, kind, title: 'Event ' + id, ...extra }) as ClubState['calendarEvents'][string];
+  const withEvents = (...rows: ReturnType<typeof ev>[]) => produce(fresh(), (d) => { for (const r of rows) d.calendarEvents[r.id] = r; });
+
+  it('the seed has nothing in the next 7 days; the closure on 30 Oct is 9 days away', () => {
+    expect(upcomingClosures(fresh(), T)).toEqual([]);
+    expect(upcomingClosures(fresh(), T, 9)).toMatchObject([{ eventId: 'ev-closed-1030', kind: 'closed', from: '2026-10-30', to: '2026-10-30', title: 'Club closed: staff first-aid training' }]);
+  });
+
+  it('covers tomorrow through day 7; later days and outings are left out; soonest first', () => {
+    const s = withEvents(ev('late', '2026-10-29', 'closed'), ev('edge', '2026-10-28', 'holiday', { titleId: 'Libur' }), ev('next', '2026-10-22', 'closed'), ev('trip', '2026-10-26', 'outing'));
+    expect(upcomingClosures(s, T).map((x) => [x.eventId, x.kind, x.from])).toEqual([['next', 'closed', '2026-10-22'], ['edge', 'holiday', '2026-10-28']]);
+    expect(upcomingClosures(s, T)[1].titleId).toBe('Libur');
+    expect(upcomingClosures(s, T, 8).map((x) => x.eventId)).toEqual(['next', 'edge', 'late']);
+  });
+
+  it('today is the timeline\'s job: a closure today, or one already under way, is not repeated', () => {
+    const s = withEvents(ev('now', T, 'closed'), ev('under', '2026-10-20', 'closed', { endDate: '2026-10-23' }));
+    expect(upcomingClosures(s, T)).toEqual([]);
+  });
+
+  it('a several-day closure is one row from its first to its last weekday, even past the window; weekend days are not counted', () => {
+    const s = withEvents(ev('range', '2026-10-26', 'closed', { endDate: '2026-11-03' }), ev('short', '2026-10-23', 'holiday', { endDate: '2026-10-25' }));
+    expect(upcomingClosures(s, T).map((x) => [x.eventId, x.from, x.to])).toEqual([['short', '2026-10-23', '2026-10-23'], ['range', '2026-10-26', '2026-11-03']]);
+  });
+
+  it('normal weekends, holidays on a weekend, cancelled and deleted events show nothing; closed wins over a holiday on one day', () => {
+    const s = withEvents(ev('sat', '2026-10-24', 'holiday'), ev('gone', '2026-10-22', 'closed', { cancelledAt: '2026-10-01T10:00' }), ev('del', '2026-10-23', 'closed', { deletedAt: '2026-10-01T10:00' }), ev('h', '2026-10-27', 'holiday'), ev('c', '2026-10-27', 'closed'));
+    expect(upcomingClosures(s, T).map((x) => [x.eventId, x.kind])).toEqual([['c', 'closed']]);
   });
 });

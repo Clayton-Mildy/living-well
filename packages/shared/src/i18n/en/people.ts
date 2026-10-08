@@ -25,6 +25,7 @@ export const people = {
   added: '{name} added to the team.', saved: 'Staff record saved.', deactivate: 'Deactivate', deactivateTitle: 'Deactivate {name}?',
   deactivateText: 'They can no longer sign in and are removed from active lists. Their record and history stay, and you can reactivate them at any time.', deactivated: '{name} is deactivated.',
   reactivate: 'Reactivate', reactivated: '{name} is active again.',
+  photoAria: 'Change the photo of {name}', photoSet: 'New photo for {name}.', photoRemoved: 'Photo removed for {name}.',
   'err.phoneTaken': 'That mobile number already belongs to someone else.', 'err.endRequired': 'A fixed-term contract needs an end date.', 'err.endBeforeStart': 'The end date must be after the start date.',
   'err.ownRole': 'You cannot change your own role.', 'err.selfDeactivate': 'You cannot deactivate yourself.', 'err.selfAccess': 'You cannot switch off your own access.',
   'err.inactive': 'Reactivate this person first.', 'err.phoneRequired': 'Add a mobile number first.', 'err.futureDate': 'That time has not happened yet.', 'err.timeOrder': 'Clock out must be after clock in.',

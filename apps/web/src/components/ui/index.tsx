@@ -66,8 +66,8 @@ export function Button({ variant = 'primary', size = 48, icon, iconRight, childr
   };
   const hover = disabled ? '' : variant === 'primary' || variant === 'dark' ? 'h-bronze' : variant === 'secondary' || variant === 'ghost' || variant === 'quiet' ? 'h-cream' : '';
   return (
-    <button type={type} onClick={disabled ? undefined : onClick} aria-disabled={disabled || undefined} aria-label={label} title={title} className={`${hover} cp-btn${size === 56 ? ' cp-btn-56' : ''}`}
-      style={{ height: h, padding: pad, borderRadius: h <= 40 ? 10 : 12, fontFamily: 'Inter', fontSize: fs, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', width: full ? '100%' : undefined, flex: full ? '1 1 auto' : 'none',
+    <button type={type} onClick={disabled ? undefined : onClick} aria-disabled={disabled || undefined} aria-label={label} title={title} className={`${hover} cp-btn${size === 56 ? ' cp-btn-56' : ''}${disabled ? '' : ' cp-press'}`}
+      style={{ height: h, padding: pad, borderRadius: h <= 40 ? 10 : 12, fontFamily: 'Inter', fontSize: fs, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', width: full ? '100%' : undefined, flex: full ? '1 0 auto' : 'none', // never shrinks: in a column (a sheet or drawer) a shrinking button was squashed flat
         ...v[variant], ...(disabled ? { background: '#EDE5DA', color: '#8A8078', border: 'none' } : {}), ...style }}>
       {icon ? <Icon name={icon} size={size === 56 ? 21 : 19} weight={300} /> : null}
       {children}
@@ -131,6 +131,22 @@ export function Avatar({ name, tone, size = 48, ring, src }: { name: string; ton
 /** Prototype v3 card: white, hairline warm border, 24px radius and a soft lifted shadow (pass shadow={false} for flat inner cards). */
 export function Card({ children, pad = 0, style, shadow = true }: { children: ReactNode; pad?: number | string; style?: CSSProperties; shadow?: boolean }) {
   return <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, overflow: 'hidden', padding: pad, boxShadow: shadow ? 'var(--card-shadow)' : undefined, ...style }}>{children}</div>;
+}
+/** Round 6 (phone, native look): header of an iOS-style grouped section; it sits outside the group, over the page. */
+export const GROUP_HEAD: CSSProperties = { margin: 0, fontSize: 13, lineHeight: '18px', letterSpacing: '0.4px', textTransform: 'uppercase', fontWeight: 500, color: '#6B6259', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+/** Round 6 (phone, native look): an iOS-style grouped section, a small grey header over a flat white rounded group (no shadow, no border). */
+export function Group({ title, meta, children, label, pad = '14px 16px', gap = 10 }: { title?: ReactNode; meta?: ReactNode; children: ReactNode; label?: string; pad?: number | string; gap?: number }) {
+  return (
+    <section aria-label={label} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
+      {title || meta ? (
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0 16px' }}>
+          <h2 style={GROUP_HEAD}>{title}</h2>
+          {meta ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px', flex: 'none' }}>{meta}</span> : null}
+        </div>
+      ) : null}
+      <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden', padding: pad, display: 'flex', flexDirection: 'column', gap }}>{children}</div>
+    </section>
+  );
 }
 export function CardHead({ title, meta, right }: { title: ReactNode; meta?: ReactNode; right?: ReactNode }) {
   return (
@@ -262,12 +278,13 @@ export function PageSkeleton() {
     </div>
   );
 }
-/** Phone-only primary action (design's "pin"): a compact pill at the bottom right, so it never covers a whole list row. */
+/** Phone-only primary action (design's "pin"): a compact pill at the bottom right, so it never covers a whole list row. The shell adds room under the page for it. */
 export function Pin({ icon, label, onClick }: { icon: string; label: ReactNode; onClick: () => void }) {
   const pin = useUi((s) => s.pin);
   useEffect(() => { pin(1); return () => pin(-1); }, [pin]);
   return (
-    <div style={{ position: 'sticky', bottom: 0, zIndex: 4, padding: '4px 14px 10px', display: 'flex', justifyContent: 'flex-end', pointerEvents: 'none' }}>
+    // round 6: fixed just above the floating tab bar (86px + safe area), so it never stops halfway down a short page
+    <div style={{ position: 'fixed', right: 0, bottom: 'calc(86px + env(safe-area-inset-bottom, 0px))', zIndex: 44, padding: '4px 14px 10px', display: 'flex', justifyContent: 'flex-end', pointerEvents: 'none' }}>
       <button type="button" onClick={onClick} className="h-bronze" style={{ pointerEvents: 'auto', height: 44, maxWidth: '100%', padding: '0 18px 0 14px', borderRadius: 12, border: 'none', background: '#24201C', color: '#F7F3EE', fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', boxShadow: '0 10px 24px rgba(40,30,20,0.28)', fontFamily: 'Inter', whiteSpace: 'nowrap' }}>
         <Icon name={icon} size={20} />
         {label}
@@ -360,6 +377,46 @@ export function Drawer({ open, onClose, label, children, footer, width = 440 }: 
     </div>,
   );
 }
+/** Round 6 (KC: "Today like a progress bar"): one step of a day's timeline. Passed steps and the line below them fill in bronze
+ *  (the colour of the Flex visits bar); the running step is ink with a soft ring and a half-filled line; later steps sit on a grey track. */
+export type RailState = 'done' | 'now' | 'up';
+const RAIL: Record<RailState, { bg: string; bd: string; fg: string; fill: 0 | 1; line: string }> = {
+  done: { bg: '#75624B', bd: 'none', fg: '#FFFFFF', fill: 1, line: '#75624B' },
+  now: { bg: '#2B231C', bd: 'none', fg: '#FFFFFF', fill: 1, line: 'linear-gradient(#75624B 0 50%, #E6DDD1 50% 100%)' },
+  up: { bg: '#FFFFFF', bd: '1.5px solid #DCD3C8', fg: '#8A8078', fill: 0, line: '#E6DDD1' },
+};
+/** `src`: the step's picture (an activity photo) in place of the icon, ringed in the step's colour. */
+export function RailDot({ state, icon, last, size = 34, src }: { state: RailState; icon: string; last?: boolean; size?: number; src?: string }) {
+  const r = RAIL[state];
+  const ring = state === 'done' ? '#75624B' : state === 'now' ? '#2B231C' : '#DCD3C8';
+  return (
+    <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 'none', width: size }}>
+      <span style={{ width: size, height: size, borderRadius: 999, background: src ? photoFill(src, '#F3EEE8') : r.bg, border: src ? `2.5px solid ${ring}` : r.bd, color: r.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', boxShadow: state === 'now' ? '0 0 0 4px #E8E1D8' : undefined }}>
+        {src ? null : <Icon name={icon} size={Math.round(size * 0.53)} fill={r.fill} weight={300} color={r.fg} />}
+      </span>
+      <span style={{ flex: 1, width: 3, minHeight: 12, borderRadius: 2, background: last ? 'transparent' : r.line }} />
+    </div>
+  );
+}
+/** Round 6 (phone, native look): a pushed full screen over the page, sliding in from the right. A top bar with "‹ back", the grey page
+ *  behind grouped sections, and an optional footer pinned at the bottom for the main action. */
+export function PhoneScreen({ open, onClose, label, back, children, footer }: { open: boolean; onClose: () => void; label: string; back: string; children: ReactNode; footer?: ReactNode }) {
+  const { ref, trap } = useOverlayA11y(open, onClose);
+  if (!open) return null;
+  return portal(
+    <div ref={ref} onKeyDown={trap} tabIndex={-1} role="dialog" aria-modal="true" aria-label={label} className="cp-native"
+      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: '#F5F5F3', animation: 'cpSlideL .2s ease-out', outline: 'none' }}>
+      <div style={{ height: 50, flex: 'none', display: 'flex', alignItems: 'center', padding: '0 6px 0 2px' }}>
+        <button type="button" className="cp-press" onClick={onClose} aria-label={back} style={{ maxWidth: '100%', height: 44, padding: '0 8px 0 0', border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: 'Inter' }}>
+          <Icon name="chevron_left" size={32} weight={300} />
+          <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{back}</span>
+        </button>
+      </div>
+      <div className="cp-noshrink" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 16px 24px', display: 'flex', flexDirection: 'column', gap: 22 }}>{children}</div>
+      {footer ? <div style={{ flex: 'none', padding: '10px 16px calc(14px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #E6E1DA', background: '#F5F5F3' }}>{footer}</div> : null}
+    </div>,
+  );
+}
 /** Centred dialog (design's member-edit dialog: max 640px, 28px radius). */
 export function Dialog({ open, onClose, eyebrow, title, children, footer, maxWidth = 640 }: { open: boolean; onClose: () => void; eyebrow?: ReactNode; title: ReactNode; children: ReactNode; footer?: ReactNode; maxWidth?: number }) {
   const t = useT();
@@ -391,5 +448,6 @@ export { DateField, MonthField } from './DateField';
 export { TimeField } from './TimeField';
 export { usePaged, Pager, type Paged } from './Pager';
 export { CameraCapture, type CaptureInfo } from './CameraCapture';
-export { PhotoImg } from './PhotoImg';
+export { PhotoImg, PhotoThumbs } from './PhotoImg';
 export { uiZoom } from './field';
+export { TrendChart, TrendRangeTabs, TrendRangeControl, rangeFrom, rangeValue, windowOf, inWindow, TREND_RANGES, type TrendChartProps, type TrendPoint, type TrendSeries, type TrendRange, type RangeValue, type RangeChoice, type DateWindow } from './TrendChart';

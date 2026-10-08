@@ -1,12 +1,12 @@
 // Demo roster: 40 more members (m51 to m90) so CitraPremier looks like a busy club (45 in all). The 5 hand-made members in
 // index.ts carry the scripted stories and stay as they are; these 40 are background: complete profiles, family contacts,
-// 4 weeks of visits, a few readings and logs, last month's invoices. Fully deterministic (fixed tables + a seeded PRNG),
+// 4 weeks of visits, a few readings and logs, the two latest invoice runs (history.ts adds the six months behind that). Fully deterministic (fixed tables + a seeded PRNG),
 // and every date moves with the anchor, like the rest of the seed. Opt-in: buildSeed(anchor, nowMin, { roster: true }).
 import type {
   Actor, ActivityEntry, Attendance, Bank, ClubState, CollectionName, DailyLog, Diet, DrugAllergy, EndReason, FamilyContact, FamilyLink, FoodAllergen,
   HM, Invoice, ISODate, Member, MedTiming, Membership, Mobility, Payment, Plan, PlanEntry, Reading, Relation, Row, Title, Vitals,
 } from '../types';
-import { addDays, addMonths, dow, e164, rng, toHM, toMin, ym } from '../util';
+import { addDays, addMonths, daysInMonth, dow, e164, rng, toHM, toMin, ym } from '../util';
 import { activeOn, isOpen, openDaysInMonth, planOn } from '../rules/core';
 import { flexQuota } from '../rules/attendance';
 import { dueDateFor, invoiceTotal, runLinesFor } from '../rules/billing';
@@ -63,7 +63,8 @@ const SPOUSE: Record<number, number> = { 1: 0, 3: 2, 28: 9 }; // second spouse -
 /** plan changes: the date it took effect ('M' = first open day this month) and the plan from then on (the plan before it is the other one) */
 const PLAN_CHANGE: Record<number, string> = { 4: '2025-09-01', 8: '2026-03-02', 17: '2026-07-01', 36: 'M', 33: '2026-01-05' };
 const ENDING: Record<number, [number, EndReason, string]> = { 12: [0, 'careHome', 'Moving to a care home near family'], 21: [3, 'careNeeds', 'Needs more care than a day club can give'], 29: [6, 'movedAway', 'Moving to Bandung to live with his daughter'] };
-const ENDED: Record<number, [string, EndReason, string]> = { 19: ['-12', 'movedAway', 'Moved to Surabaya'], 26: ['2026-08-28', 'careHome', 'Moved into a care home'], 7: ['2026-07-31', 'familyDecision', 'Family decided to stay home'] };
+/** '@unpaid' = stopped on the 3rd for the older of the two runs still unpaid (the brochure's terms): the last day is the end of that run's month */
+const ENDED: Record<number, [string, EndReason, string]> = { 19: ['-12', 'movedAway', 'Moved to Surabaya'], 26: ['2026-08-28', 'careHome', 'Moved into a care home'], 7: ['2026-07-31', 'familyDecision', 'Family decided to stay home'], 23: ['@unpaid', 'unpaid', 'The invoice was still unpaid on the 3rd'] };
 /** members in the club today: arrival time (a person arrives only once that time has passed) */
 const TODAY_IN: Record<number, HM> = { 0: '08:42', 1: '08:43', 2: '09:07', 3: '09:07', 4: '08:56', 8: '09:14', 9: '09:18', 28: '09:19', 13: '09:28', 16: '09:36', 20: '09:44', 21: '09:49', 27: '09:51', 15: '10:08', 25: '10:20' };
 const TODAY_OUT: Record<number, HM> = { 8: '13:50', 21: '14:20', 4: '14:40' }; // gone home in the afternoon; everyone else leaves 15:35 to 16:25
@@ -75,7 +76,8 @@ const VEG = new Set([8, 20, 32]);
 const NANNY: Record<number, string> = { 9: 'Mbak Wati', 21: 'Mbak Yanti', 28: 'Mbak Wati', 36: 'Mbak Lastri', 39: 'Pak Maman' };
 const NO_HEALTH_FORM = new Set([37, 38]); // the newest members: health form still requested
 const FLEX3 = new Set([10, 22, 24]); // Flex members who come 3 days a week and use up their quota
-const LATE_PAYERS: Record<number, 'cur' | 'both'> = { 14: 'cur', 5: 'cur', 23: 'both' };
+/** pays the latest run late (overdue from the day after its due date), but still within its month, before the terms would suspend the membership */
+const LATE_PAYERS = new Set([14, 5]);
 
 const COND: Record<string, { text: string; med?: [string, string, MedTiming][] }> = {
   htn: { text: 'High blood pressure, controlled' }, chol: { text: 'High cholesterol', med: [['Simvastatin', '20 mg', 'eveningHome']] },
@@ -104,8 +106,16 @@ const STREETS: [string, string][] = [
   ['Jl. Kemang Raya', 'Kemang'], ['Jl. Tebet Barat', 'Tebet'], ['Jl. Pejaten Raya', 'Pejaten'], ['Jl. Ampera Raya', 'Cilandak'], ['Jl. Brawijaya', 'Kebayoran Baru'], ['Jl. Hang Lekir', 'Senayan'],
 ];
 
-/** Adds m51 … m90 with their family, visits, readings, logs and invoices to a Citra state that already has the 5 hand-made members. */
-export function addRoster(s: ClubState, T: ISODate, nowMin: number): void {
+/** A visit that did not happen on a usual day, by weekday: Tuesday and Thursday are the busy days, Friday the quietest. */
+const SKIP: Record<number, number> = { 1: 0.11, 2: 0.05, 3: 0.09, 4: 0.05, 5: 0.14 };
+/** How likely a weekday is to be one of a member's usual days. */
+const DAY_WEIGHT: Record<number, number> = { 1: 1, 2: 1.25, 3: 1, 4: 1.25, 5: 0.8 };
+
+/**
+ * Adds m51 … m90 with their family, visits, readings, logs and invoices to a Citra state that already has the 5 hand-made members.
+ * Returns each member's usual weekdays (Mon = 1 … Fri = 5, in the order they were drawn) so history.ts can continue the same pattern further back.
+ */
+export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<string, number[]> {
   const C = s.clubId;
   const done = (hm: string) => toMin(hm) <= nowMin;
   const base = (id: string, createdAt: string, createdBy: Actor = 'staff:s1'): Row => ({ id, clubId: C, createdAt, createdBy });
@@ -154,7 +164,12 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): void {
       ms.lastDay = last2 < T ? T : last2; ms.endReason = reason; ms.endNote = note; ms.endedBy = 'staff:s9'; ms.endedAt = `${addDays(T, -4 - k)}T10:30`;
     } else if (ENDED[i]) {
       const [when, reason, note] = ENDED[i];
-      ms.lastDay = when.startsWith('-') ? prevOpen(addDays(T, +when)) : prevOpen(when); ms.endReason = reason; ms.endNote = note; ms.endedBy = 'staff:s9'; ms.endedAt = `${addDays(ms.lastDay, -6)}T10:30`;
+      if (when === '@unpaid') {
+        const stopMonth = addMonths(+T.slice(8) >= s.club.settings.issueDay ? month : addMonths(month, -1), -1); // the older run's month
+        ms.lastDay = prevOpen(`${stopMonth}-${String(daysInMonth(stopMonth)).padStart(2, '0')}`); ms.endReason = reason; ms.endNote = note; ms.endedBy = 'system'; ms.endedAt = `${addMonths(stopMonth, 1)}-03T08:00`;
+      } else {
+        ms.lastDay = when.startsWith('-') ? prevOpen(addDays(T, +when)) : prevOpen(when); ms.endReason = reason; ms.endNote = note; ms.endedBy = 'staff:s9'; ms.endedAt = `${addDays(ms.lastDay, -6)}T10:30`;
+      }
     }
     // health
     const codes = prof.split(' ');
@@ -189,7 +204,7 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): void {
     if (food.length) care.push(`Allergic to ${food.join(' and ')}: check every dish with the kitchen.`);
     if (drugs.length) care.push(`Drug allergy (${drugs.join(', ')}): tell the nurse before any medicine.`);
     if (care.length < 2) care.push(FLAVOUR[i % FLAVOUR.length]);
-    // family: primary (with app access, for chat and billing) and sometimes a second contact (no app access)
+    // family: primary (with app access, for billing and the daily updates) and sometimes a second contact (no app access)
     const gm = GROUP_OF(last);
     let fid0: string;
     if (lead !== i) fid0 = primary[lead];
@@ -243,9 +258,11 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): void {
     // visit days of the week: Flex 2 (a few 3), Gold 2 to 4; couples come together, today's group includes today's weekday
     if (lead !== i) patterns[i] = patterns[lead];
     else {
-      const days = [1, 2, 3, 4, 5];
-      for (let k = days.length - 1; k > 0; k--) { const j = between(0, k); [days[k], days[j]] = [days[j], days[k]]; }
-      const n = nowPlan === 'gold' ? 2 + (i % 3) : FLEX3.has(i) ? 3 : 2;
+      // the usual days, drawn by weight (4 draws, as the plain shuffle used): Tuesday and Thursday come first more often
+      const days: number[] = [], pool = [1, 2, 3, 4, 5];
+      while (pool.length > 1) { let x = r() * pool.reduce((t, w) => t + DAY_WEIGHT[w], 0), k = 0; while (k < pool.length - 1 && x >= DAY_WEIGHT[pool[k]]) { x -= DAY_WEIGHT[pool[k]]; k++; } days.push(pool.splice(k, 1)[0]); }
+      days.push(pool[0]);
+      const n = nowPlan === 'gold' ? 4 + (i % 2) : FLEX3.has(i) ? 3 : 2; // Gold comes 4 or 5 days a week (about 4 in practice), Flex 2 (a few 3)
       const p = new Set(days.slice(0, n));
       if (TODAY_IN[i] && !p.has(dow(T))) { p.delete(days[0]); p.add(dow(T)); }
       patterns[i] = p;
@@ -259,7 +276,7 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): void {
   const visits: ISODate[][] = [];
   ROWS.forEach((_, i) => {
     const lead = SPOUSE[i] ?? i;
-    const cand = lead !== i ? rawDays[lead] : PAST.filter((d) => patterns[i].has(dow(d)) && r() >= 0.1);
+    const cand = lead !== i ? rawDays[lead] : PAST.filter((d) => patterns[i].has(dow(d)) && r() >= SKIP[dow(d)]);
     rawDays[i] = cand;
     const m = s.members[id(i)];
     const count: Record<string, number> = {};
@@ -352,34 +369,43 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): void {
     if (gone && s.readings[arr.id]) feedReading(reading(mid, T, toHM(toMin(outAt) - between(10, 20)), 'departure', bp(s.members[mid].sim, 2)));
   });
 
-  // ----- invoices: the two latest runs, like the 5 hand-made members; a few families are late with payment -----
+  // ----- invoices: the two latest runs (issued on the 21st, due on the 28th), like the 5 hand-made members -----
+  // Families pay over the week after the invoice (some on the day itself); two families are late with the latest run and pay by the end of that month.
+  // Bapak Rudy Tanoto did not pay the older run and the family did not tell the club: the terms put him on hold on the 1st and stopped his membership on the 3rd (see ENDED).
   const late = +T.slice(8) >= s.club.settings.issueDay;
   const cur = late ? month : addMonths(month, -1);
   const prev = addMonths(cur, -1);
   const bank = ['BCA', 'Mandiri', 'BNI', 'BRI'] as Bank[];
+  const issueDay = String(s.club.settings.issueDay).padStart(2, '0');
+  const lastOpenOf = (p: string) => prevOpen(`${p}-${String(daysInMonth(p)).padStart(2, '0')}`);
   ROWS.forEach((_, i) => {
     const m = s.members[id(i)];
     const fid = primary[i];
     for (const p of [prev, cur]) {
-      const lines = runLinesFor(s, m, p, T);
+      // the registration fee is on a member's first invoice: only those who joined since the run before this one have it here, the rest registered long ago
+      const lines = runLinesFor(s, m, p, T).filter((l) => !l.id.startsWith('reg-') || m.memberships[0].start > `${addMonths(p, -1)}-${issueDay}`);
       if (!lines.length) continue;
       const number = `INV-${p.slice(2, 4)}${p.slice(5, 7)}-${String(FIRST_NO + i).padStart(3, '0')}`;
-      const issue = `${p}-15`;
+      const issue = `${p}-${issueDay}`;
       const due = dueDateFor(s, p);
-      const day = p === cur ? 16 + ((i * 3) % 5) : 16 + ((i * 5) % 11); // families pay within days of the 15th
-      const ended = !!ENDED[i];
-      const unpaid = !ended && ((LATE_PAYERS[i] === 'both') || (LATE_PAYERS[i] === 'cur' && p === cur));
-      const paidOn = unpaid ? null : `${p}-${String(day).padStart(2, '0')}`;
-      const paid = paidOn && paidOn < T ? paidOn : null;
+      const stopped = ENDED[i]?.[1] === 'unpaid';
+      // when and at what time the family pays: the issue day plus up to 6 days (the older run: any day of the week)
+      const day = +issueDay + ((i * 5 + (p === cur ? 0 : 3)) % 7);
+      const at = toHM(8 * 60 + 10 + ((i * 13) % 100));
+      let paidOn: ISODate | null = `${p}-${String(day).padStart(2, '0')}`;
+      if (stopped) paidOn = p === prev ? null : paidOn;
+      else if (LATE_PAYERS.has(i) && p === cur) paidOn = lastOpenOf(p);
+      const paid = paidOn && (paidOn < T || (paidOn === T && done(at))) ? paidOn : null;
       const overdue = !paid && due < T;
       const inv: Invoice = { ...base(number, issue + 'T08:00', 'system'), number, memberId: m.id, payerFamilyId: fid, kind: 'monthly', period: p, issueDate: issue, dueDate: due, lines, va: m.billing.va,
         xero: paid ? 'synced' : 'awaitingPayment',
-        reminders: overdue && addDays(due, 3) < T ? [{ at: `${addDays(due, 3)}T10:00`, by: 'staff:s10' }] : [],
-        callNotes: overdue && LATE_PAYERS[i] === 'both' && addDays(due, 6) < T ? [{ at: `${addDays(due, 6)}T11:00`, by: 'staff:s10', text: `Called ${s.familyContacts[fid].firstName}; the family will transfer after the 5th.` }] : [] };
+        reminders: overdue && addDays(due, 1) < T ? [{ at: `${addDays(due, 1)}T10:00`, by: 'staff:s10' }] : [],
+        callNotes: [] }; // no word from the family: that is why the stop went through
       put('invoices', inv);
-      if (paid) put('payments', { ...base(`pay-${number}`, paid + 'T11:20', `family:${fid}`), memberId: m.id, method: 'dokuVa', amount: invoiceTotal(inv), bank: bank[(i + (p === cur ? 1 : 0)) % 4], receivedOn: paid, receivedAt: '11:20', allocations: [{ invoiceId: number, amount: invoiceTotal(inv) }], xero: 'synced', by: `family:${fid}` } satisfies Payment);
+      if (paid) put('payments', { ...base(`pay-${number}`, paid + `T${paid === issue ? at : '11:20'}`, `family:${fid}`), memberId: m.id, method: 'dokuVa', amount: invoiceTotal(inv), bank: bank[(i + (p === cur ? 1 : 0)) % 4], receivedOn: paid, receivedAt: paid === issue ? at : '11:20', allocations: [{ invoiceId: number, amount: invoiceTotal(inv) }], xero: 'synced', by: `family:${fid}` } satisfies Payment);
       const run = s.invoiceRuns[`run-${p}`];
       if (run) run.invoiceIds.push(number);
     }
   });
+  return Object.fromEntries(patterns.map((p, i) => [id(i), [...p]]));
 }

@@ -1,8 +1,10 @@
 // Events editor (management): add, edit and delete closures, national holidays and outings. Uses the design's edit dialog.
 // A "notify" toggle (on by default) decides whether staff and families are told about the change.
+// Round 6 (phone): a pushed full screen (PhoneScreen) with grouped fields and the Save pill pinned at the bottom, instead of the centred dialog.
 import { useEffect, useState } from 'react';
 import type { CalendarEvent } from '@cp/shared';
-import { Button, Chip, DateField, Dialog, Note, TextField, TimeField, Toggle, FONT_BODY } from '../../components/ui';
+import { Button, Chip, DateField, Dialog, Eyebrow, Group, Note, PhoneScreen, TextField, TimeField, Toggle, FONT_BODY } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -14,6 +16,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
   const t = useT();
   const { fdl } = useFmt();
   const { today } = useNow();
+  const { isPhone } = useDevice();
   const act = useAct();
   const [kind, setKind] = useState<Kind>('closed');
   const [title, setTitle] = useState('');
@@ -72,6 +75,62 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
     if (r.ok) { setConfirmDel(false); onClose(); } else setErr(t(r.code, r.params));
   };
 
+  const heading = event ? t('cal.editEventTitle') : t('cal.addEventTitle');
+  const pill = (label: string, run: () => void, danger = false) => (
+    <button type="button" className="h-bronze cp-press" aria-disabled={busy || undefined} onClick={busy ? undefined : run} style={{ width: '100%', height: 50, borderRadius: 999, border: 'none', background: danger ? '#9A3D24' : '#24201C', color: '#FFFFFF', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{label}</button>
+  );
+  // round 6, phone: a pushed screen ("‹ Cancel"), a centred header, one group per part of the form, Save pinned at the bottom
+  if (isPhone) {
+    return (
+      <PhoneScreen open={open} onClose={onClose} label={heading} back={t('common.cancel')}
+        footer={confirmDel ? (
+          <div style={{ display: 'flex', gap: 8 }}>
+            <button type="button" className="cp-press" onClick={() => setConfirmDel(false)} style={{ flex: 1, height: 50, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('cal.keep')}</button>
+            <div style={{ flex: 1 }}>{pill(t('cal.confirmDelete'), remove, true)}</div>
+          </div>
+        ) : pill(t('common.save'), save)}>
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4 }}>
+          <Eyebrow>{t('cal.eventsEditor')}</Eyebrow>
+          <h2 style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{heading}</h2>
+        </div>
+        {confirmDel ? (
+          <>
+            <Note tone="rust" icon="warning">{t('cal.deleteWarn', { date: fdl(event?.date ?? d0) })}</Note>
+            <Group pad="10px 12px"><Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} /></Group>
+            {err ? <Note tone="rust" icon="error">{err}</Note> : null}
+          </>
+        ) : (
+          <>
+            <Group title={t('cal.type')} pad="12px 14px">
+              <div role="group" aria-label={t('cal.type')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {KINDS.map((k) => <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>{t('cal.t_' + k)}</Chip>)}
+              </div>
+            </Group>
+            <Group pad="14px 14px 16px" gap={14}>
+              <TextField label={t('cal.titleEn')} value={title} onChange={setTitle} maxLength={120} error={tried && errors.title} placeholder={t('cal.titleEnPh')} />
+              <TextField label={t('cal.titleId')} value={titleId} onChange={setTitleId} maxLength={120} />
+            </Group>
+            <Group pad="14px 14px 16px" gap={14}>
+              <DateField label={t('cal.date')} value={d0} min={event?.date && event.date < today ? event.date : today} onChange={setD0} error={tried && errors.date} />
+              <Toggle on={multi} onClick={() => { setMulti(!multi); if (!multi && !d1) setD1(d0); }} label={t('cal.multiDay')} />
+              {multi ? <DateField label={t('cal.until')} value={d1} min={d0} onChange={setD1} error={tried && errors.end} /> : null}
+              {kind === 'outing' ? (
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                  <TimeField label={t('cal.from')} value={from} onChange={setFrom} error={tried && errors.time} />
+                  <TimeField label={t('cal.to')} value={to} onChange={setTo} />
+                </div>
+              ) : null}
+            </Group>
+            {err ? <Note tone="rust" icon="error">{err}</Note> : null}
+            <Group pad="10px 12px"><Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} /></Group>
+            {event ? (
+              <button type="button" className="cp-tap-self cp-press" onClick={() => setConfirmDel(true)} style={{ height: 50, borderRadius: 14, border: 'none', background: '#FFFFFF', color: '#9A3D24', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>{t('common.delete')}</button>
+            ) : null}
+          </>
+        )}
+      </PhoneScreen>
+    );
+  }
   return (
     <Dialog open={open} onClose={onClose} eyebrow={t('cal.eventsEditor')} title={event ? t('cal.editEventTitle') : t('cal.addEventTitle')} maxWidth={560}
       footer={confirmDel ? (

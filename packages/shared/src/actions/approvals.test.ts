@@ -2,7 +2,7 @@
 // (projectForFamily and the client rules); the bulk hub actions (one action per batch, stale ids skipped); and the per-type selectors.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { buildSeed, execute, getUser, projectForFamily, actionItems, unreadUpdates, live, toMin, DomainError, type ClubState } from '../index';
+import { buildSeed, execute, getUser, projectForFamily, actionItems, unreadUpdates, toMin, DomainError, type ClubState } from '../index';
 import { approvalCounts, approvalHistory, approvalTotal, approvedDayMenu, approvedVersion, pendingItems } from '../rules/approvals';
 import { latestLog, sharedNoteOf, servedLunch } from '../rules/family';
 import { menuOn } from '../rules/kitchen';
@@ -102,15 +102,17 @@ describe('the gate: health readings', () => {
     expect(famReadings(r.state, 'fm20_0')).toEqual([]);
     expect(Object.values(r.state.notifications).some((x) => x.kind === 'health.notif.alert' && x.toRoles.includes('nurse'))).toBe(true);
     expect(Object.values(r.state.notifications).some((x) => x.kind.startsWith('health.notif.fam.') && x.createdAt === `${T}T10:00`)).toBe(false);
-    expect(live(r.state.messages).some((m) => m.kind === 'healthAlert' && m.at === `${T}T10:00`)).toBe(false);
+    expect(r.state.readings[id].familyTold).toBeUndefined();
     const ok = run(r.state, 'approval.approve', { type: 'readings', ids: [id] }, 's9');
     expect(famReadings(ok.state, 'fm20_0')).toHaveLength(1);
-    expect(live(ok.state.messages).filter((m) => m.kind === 'healthAlert' && m.at === `${T}T10:00`).length).toBeGreaterThan(0);
+    expect(unreadUpdates(ok.state, as(ok.state, 'fm20_0')).some((n) => n.kind === 'health.notif.fam.alert' && n.link === '/health')).toBe(true); // the family's bell (the club tells them on WhatsApp, simulated)
+    expect(Object.keys(ok.state.messages)).toHaveLength(0); // Messages is gone
     expect(ok.state.readings[id].familyTold?.by).toBe('s8');
     // management's own reading tells the family at once, with no mark
     const mg = run(fresh(), 'reading.save', reading, 's9');
     expect(mg.state.readings[mg.result.readingId as string].approval).toBeUndefined();
-    expect(live(mg.state.messages).some((m) => m.kind === 'healthAlert' && m.at === `${T}T10:00`)).toBe(true);
+    expect(mg.state.readings[mg.result.readingId as string].familyTold).toMatchObject({ by: 's9' });
+    expect(unreadUpdates(mg.state, as(mg.state, 'fm20_0')).some((n) => n.kind === 'health.notif.fam.alert')).toBe(true);
   });
 
   it('a correction waits too: families keep the approved values; rejecting restores them; a rejected new reading counts for nothing', () => {
@@ -292,7 +294,7 @@ describe('selectors: counts, the derived items and the history', () => {
     const logsItem = items.filter((i) => i.id === 'approvals:logs');
     expect(logsItem).toHaveLength(1);
     expect(logsItem[0]).toMatchObject({ kind: 'notif.act.approvalsLogs', params: { n: 5 }, link: '/reviews?tab=logs' });
-    expect(items.filter((i) => i.id.startsWith('approvals:')).map((i) => i.id).sort()).toEqual(['approvals:logs', 'approvals:menu', 'approvals:readings']);
+    expect(items.filter((i) => i.id.startsWith('approvals:')).map((i) => i.id).sort()).toEqual(['approvals:logs', 'approvals:menu', 'approvals:readings', 'approvals:renewals']); // renewals: Caca's seeded upgrade
     expect(actionItems(s, as(s, 's5'), T, toMin('10:00')).some((i) => i.id.startsWith('approvals:'))).toBe(false); // staff do not get them
   });
 

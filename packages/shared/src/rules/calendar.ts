@@ -1,9 +1,10 @@
 // Calendar and weekly schedule builder selectors: day info for the list / month views, schedule drafts and versions.
 // Pure functions over ClubState. Family audiences never see venue clients; trials and visits are staff-only.
 import type { ClubState, HM, ISODate, Lang, ScheduleCell, ScheduleVersion, Slot, Staff, Weekday, YM } from '../types';
-import { eventsOn, staffByRole } from './core';
+import { dayStatus, eventsOn, staffByRole } from './core';
 import { guestsOn } from './attendance';
-import { scheduleVersionFor, sessionsOn } from './kitchen';
+import { scheduleDayOf, scheduleVersionFor, sessionsOn } from './kitchen';
+import { guestOn } from './guests';
 import { addDays, dow, isWeekday, live, monthDays, sortBy } from '../util';
 
 export type CalAudience = 'staff' | 'family';
@@ -27,6 +28,13 @@ export interface DayItem {
   guestKind?: 'trial' | 'visit';
   /** a venue booking shown to a family: "Private event", no client */
   private?: boolean;
+  /** KC round 7, staff only: this session differs from the weekly plan (a one-day change), and the day's note (on the first changed session) */
+  changed?: boolean;
+  note?: string;
+  /** KC round 7: a guest host leads this session (also shown to families: name and what they do only) */
+  guest?: { hostId: string; sessionId: string; name: string; what: string };
+  /** a pseudo item the day view adds for a slot with no session (never produced by `dayInfo`) */
+  empty?: boolean;
 }
 export type DayState = 'open' | 'closed' | 'holiday' | 'weekend';
 export interface DayInfo {
@@ -37,6 +45,8 @@ export interface DayInfo {
   state: DayState;
   items: DayItem[];
   hasOuting: boolean;
+  /** KC round 7, staff only: slots of an open day that have no session (`changed`: removed for this day only), so the day view can offer to add one */
+  noSession: { slot: Slot; changed: boolean }[];
 }
 const ORDER: Record<CalKind, number> = { closed: 0, holiday: 1, outing: 2, venue: 3, guest: 4, activity: 5 };
 
@@ -69,15 +79,28 @@ export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'st
         items.push({ key: 'q:' + e.id, kind: 'guest', time: e.next.kind === 'trial' ? null : e.next.time ?? null, title: `${e.senior.title} ${e.senior.name}`, enquiryId: e.id, guestKind: e.next.kind });
     }
   }
+  const noSession: DayInfo['noSession'] = [];
   if (open && !events.some((e) => e.kind === 'outing')) {
     for (const x of sessionsOn(s, date)) {
-      if (!x.cell) continue;
+      if (!x.cell) {
+        if (audience === 'staff') noSession.push({ slot: x.slot, changed: slotChanged(s, date, x.slot) });
+        continue;
+      }
       const a = s.activities[x.cell.activityId];
-      items.push({ key: 'a:' + x.slot, kind: 'activity', time: x.slot, title: a?.name ?? '', titleId: a?.nameId, activityId: x.cell.activityId, roomId: x.cell.roomId, staffId: x.cell.staffId });
+      const g = guestOn(s, date, x.slot);
+      items.push({
+        key: 'a:' + x.slot, kind: 'activity', time: x.slot, title: a?.name ?? '', titleId: a?.nameId, activityId: x.cell.activityId, roomId: x.cell.roomId, staffId: x.cell.staffId,
+        ...(audience === 'staff' && slotChanged(s, date, x.slot) ? { changed: true } : {}),
+        ...(g ? { guest: { hostId: g.host.id, sessionId: g.session.id, name: g.host.name, what: g.host.what } } : {}),
+      });
     }
+    // the day's note rides on its first changed session (staff only)
+    const note = audience === 'staff' ? scheduleDayOf(s, date)?.note : undefined;
+    const first = note ? items.filter((i) => i.changed).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''))[0] : undefined;
+    if (first && note) first.note = note;
   }
   items.sort((a, b) => ((a.time ?? '00:00') + ORDER[a.kind]).localeCompare((b.time ?? '00:00') + ORDER[b.kind]));
-  return { date, weekday: dow(date), weekend, open, state, items, hasOuting: events.some((e) => e.kind === 'outing') };
+  return { date, weekday: dow(date), weekend, open, state, items, hasOuting: events.some((e) => e.kind === 'outing'), noSession };
 }
 
 /** The next `count` calendar days from `from`, skipping weekends that have nothing on. */
@@ -136,6 +159,20 @@ export function normalizeDays(raw: Partial<Record<number, Partial<Record<Slot, S
 export const cloneDays = (d: Days): Days => normalizeDays(d);
 export const sameCell = (a: ScheduleCell | null | undefined, b: ScheduleCell | null | undefined) =>
   (!a && !b) || (!!a && !!b && a.activityId === b.activityId && a.staffId === b.staffId && a.roomId === b.roomId);
+/** KC round 7: the weekly plan's cell for a date and slot (a one-day change is ignored). */
+export function weeklyCell(s: ClubState, date: ISODate, slot: Slot): ScheduleCell | null {
+  return scheduleVersionFor(s, date)?.days[dow(date) as Weekday]?.[slot] ?? null;
+}
+/** KC round 7: does a one-day change make this slot differ from the weekly plan? */
+export function slotChanged(s: ClubState, date: ISODate, slot: Slot): boolean {
+  const over = scheduleDayOf(s, date);
+  return !!over && slot in over.slots && !sameCell(over.slots[slot], weeklyCell(s, date, slot));
+}
+/** KC round 7: can the programme of this day be changed? An open day with no outing, today or later. */
+export function dayChangeable(s: ClubState, date: ISODate, today: ISODate): boolean {
+  const st = dayStatus(s, date);
+  return date >= today && st.open && !st.outing;
+}
 export function changedCells(a: Days, b: Days): { w: Weekday; slot: Slot }[] {
   const out: { w: Weekday; slot: Slot }[] = [];
   for (const w of WEEKDAYS) for (const slot of SLOTS) if (!sameCell(a[w]?.[slot], b[w]?.[slot])) out.push({ w, slot });
@@ -239,3 +276,35 @@ export function publishedCellKeys(s: ClubState): Set<string> {
   return keys;
 }
 export const cellKey = (w: Weekday, slot: Slot, c: ScheduleCell) => `${w}|${slot}|${c.activityId}|${c.staffId}|${c.roomId}`;
+
+// ---------- upcoming closures (family Today) ----------
+export interface UpcomingClosure {
+  eventId: string;
+  kind: 'closed' | 'holiday';
+  /** first and last closed weekday of the event (the same day for a one-day closure; `to` is the event's real last weekday, even past the window) */
+  from: ISODate;
+  to: ISODate;
+  title: string;
+  titleId?: string;
+}
+/**
+ * Club closures and holidays that start in the next `days` days (tomorrow onward), soonest first, one row per event, so families hear about
+ * them before the day. Today is left out (the family timeline already says the club is closed), and so is an event that has already
+ * started. Normal weekends and weekend days of an event are skipped: the club is shut then anyway.
+ */
+export function upcomingClosures(s: ClubState, today: ISODate, days = 7): UpcomingClosure[] {
+  const out: UpcomingClosure[] = [];
+  const seen = new Set<string>();
+  for (let i = 1; i <= days; i++) {
+    const date = addDays(today, i);
+    const st = dayStatus(s, date);
+    if (st.open || st.reason === 'weekend' || !st.event) continue;
+    const e = st.event;
+    if (seen.has(e.id) || e.date <= today) continue;
+    seen.add(e.id);
+    let to = e.endDate && e.endDate > date ? e.endDate : date;
+    while (to > date && !isWeekday(to)) to = addDays(to, -1);
+    out.push({ eventId: e.id, kind: e.kind === 'holiday' ? 'holiday' : 'closed', from: date, to, title: e.title, ...(e.titleId ? { titleId: e.titleId } : {}) });
+  }
+  return out;
+}

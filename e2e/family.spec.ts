@@ -1,6 +1,6 @@
-// Family app for a drop-in day club: Today (Both mode and per member: at the club since, went home, or simply not at the club), the plan card
-// (Flex visits counted from check-ins, extra visits billed next month, Gold come any open day), the lobby checking a member in and out,
-// billing (open invoices, pay one or all), photos, health member switcher, survey, lunch feedback, log comments, Indonesian.
+// Family app for a drop-in day club: Today (Both mode and per member: at the club since, went home, or simply not at the club; the plan line under the name),
+// the plan card on Billing (Flex visits counted from check-ins, extra visits billed next month, Gold come any open day), the lobby checking a member in and out,
+// billing (open invoices, pay one or all), photos, health member switcher, survey, lunch feedback, the team log (no comments), WhatsApp the club, Indonesian.
 // Nothing is "expected": there are no bookings, leave, "not coming" or "running late", and no "brought by" or "collected by".
 // Run in the isolated env:  pnpm e2e:env family 8801 5201  ·  E2E_BASE_URL=http://localhost:5201 pnpm exec playwright test e2e/family.spec.ts
 import { test, expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
@@ -59,32 +59,76 @@ test('Maria: Today in Both mode shows where each parent is, with no booking, lea
   await expect(tab(page, 'Both')).toHaveAttribute('aria-selected', 'true');
   const lina = card(page, 'Oma Lina Wijaya');
   const budi = card(page, 'Opa Budi Wijaya');
-  for (const [parent, pay, planLine] of [[lina, 'Pay Rp 5.500.000', 'Flex · 10 of 10 visits used'], [budi, 'Pay Rp 9.500.000', 'Gold · come any open day']] as const) {
+  for (const [parent, pay, planLine] of [[lina, 'Pay Rp 2.700.000', 'Flex · 0 of 10 visits left'], [budi, 'Pay Rp 3.950.000', 'Gold · come any open day']] as const) {
     await expect(parent).toBeVisible();
     // neither has come yet: a neutral line and their usual time, never "expected"
     await expect(parent).toContainText('Not at the club right now');
     await expect(parent).toContainText('Usually arrives around 10:05');
     await expect(parent).toContainText(planLine);
-    for (const name of [pay, 'Profile']) await expect(parent.getByRole('button', { name })).toBeVisible();
-    await expect(parent.getByLabel(/^Comment/)).toBeVisible(); // comments are per parent in Both mode
+    await expect(parent.getByRole('button', { name: 'Profile' })).toBeVisible();
+    await expect(parent.getByRole('button', { name: pay })).toHaveCount(0); // bills and Pay live in the Bills tab (KC round 6)
+    await expect(parent.getByLabel(/^Comment/)).toHaveCount(0); // families answer the club on WhatsApp: no comment box on the team log
   }
   await noBookingUi(page);
   await expect(page.getByTestId('timeline')).toContainText('Keroncong sing-along');
-  // each parent keeps their own plan card
+  await expect(plan(page)).toHaveCount(0); // the plan card lives in Billing now
+  await assertNoHorizontalScroll(page);
+  // each parent keeps their own plan card, in Billing
+  await page.goto('/billing');
+  await expect(tab(page, 'Both')).toHaveAttribute('aria-selected', 'true');
   await expect(plan(page)).toHaveCount(2);
   await expect(page.locator('[data-testid="plan-card"][data-member="m1"]')).toContainText('10 of 10 visits used in October');
   await expect(page.locator('[data-testid="plan-card"][data-member="m46"]')).toContainText('Gold plan · come any open day');
   await assertNoHorizontalScroll(page);
   // one parent: a single card, that parent's plan, and the choice survives a reload
   await tab(page, 'Opa Budi').click();
-  await expect(page.getByTestId('member-card')).toContainText('Opa Budi Wijaya');
-  await expect(card(page, 'Oma Lina Wijaya')).toHaveCount(0);
+  await expect(plan(page)).toHaveCount(1);
   await expect(plan(page)).toContainText('Gold plan');
   await expect(plan(page)).not.toContainText('visits used');
+  await page.goto('/today');
+  await expect(tab(page, 'Opa Budi')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('member-card')).toContainText('Opa Budi Wijaya');
+  await expect(page.getByTestId('member-card')).toContainText('Gold · come any open day');
+  await expect(card(page, 'Oma Lina Wijaya')).toHaveCount(0);
   await page.reload();
   await expect(tab(page, 'Opa Budi')).toHaveAttribute('aria-selected', 'true');
   await expect(page.getByTestId('member-card')).toContainText('Opa Budi Wijaya');
   await assertNoHorizontalScroll(page);
+  c.assertClean();
+});
+
+test('Today notes a club closure or holiday in the coming week, in both languages: none when there is none, calm, under the switcher', async ({ page, request }) => {
+  const c = watchConsole(page);
+  await signIn(page, 'f1', '/today');
+  await expect(page.getByRole('heading', { level: 1, name: 'Good morning, Maria' })).toBeVisible();
+  await expect(page.getByTestId('closure-notice')).toHaveCount(0); // the seed's closure (30 Oct) is more than a week away
+  // management adds a closure on Friday and a holiday on Tuesday (families are told when they are created)
+  const closed = await api(request, 's9', 'calendarEvent.create', { date: '2026-10-23', kind: 'closed', title: 'Staff first-aid training', titleId: 'Pelatihan P3K staf' });
+  expect(closed.ok()).toBeTruthy();
+  const holiday = await api(request, 's9', 'calendarEvent.create', { date: '2026-10-27', kind: 'holiday', title: 'Prophet’s Birthday (national holiday)', titleId: 'Maulid Nabi (libur nasional)' });
+  expect(holiday.ok()).toBeTruthy();
+  expect(noticesFor(await snapshot(request, 'f1'), 'f1', 'cal.notif.added_closed')).toHaveLength(1);
+  // one past the 7 days (28 Oct is day 7): not shown yet
+  expect((await api(request, 's9', 'calendarEvent.create', { date: '2026-10-29', kind: 'closed', title: 'Too far ahead' })).ok()).toBeTruthy();
+  await page.reload();
+  const note = page.getByTestId('closure-notice');
+  await expect(note).toBeVisible();
+  const rows = note.getByTestId('closure-row');
+  await expect(rows).toHaveCount(2);
+  await expect(rows.nth(0)).toContainText('Club closed on Friday 23 Oct · Staff first-aid training');
+  await expect(rows.nth(1)).toContainText('Club closed on Tuesday 27 Oct · Prophet’s Birthday (national holiday)');
+  await expect(note).not.toContainText('Too far ahead');
+  await expect(note).not.toContainText(/\bcal\.[a-z]/i);
+  // under the member switcher, above the member cards
+  const y = async (l: Locator) => (await l.boundingBox())!.y;
+  expect(await y(page.getByRole('tablist', { name: 'Choose a member' }))).toBeLessThan(await y(note));
+  expect(await y(note)).toBeLessThan(await y(card(page, 'Oma Lina Wijaya')));
+  await assertNoHorizontalScroll(page);
+  // Indonesian uses the Indonesian titles
+  await toId(page);
+  await expect(rows.nth(0)).toContainText('Klub tutup pada Jumat 23 Okt · Pelatihan P3K staf');
+  await expect(rows.nth(1)).toContainText('Klub tutup pada Selasa 27 Okt · Maulid Nabi (libur nasional)');
+  await expect(note).not.toContainText(/\bcal\.[a-z]/i);
   c.assertClean();
 });
 
@@ -95,26 +139,38 @@ test('Today for one member: the programme without "expected", lunch line, team l
   const mc = page.getByTestId('member-card');
   await expect(mc).toContainText('Not at the club right now');
   await expect(mc).toContainText('Usually arrives around 10:05');
+  await expect(mc).toContainText('Flex · 0 of 10 visits left'); // the plan sits under the name
   const tl = page.getByTestId('timeline');
   for (const x of ['Keroncong sing-along', 'Music room · Dinar', 'Batik painting', 'Afternoon tea']) await expect(tl).toContainText(x);
   // the club's day is shown either way; her own arrival, health check and home time appear once they happen
   for (const x of ['Arrived', 'Health check', 'Home time', 'expected']) await expect(tl).not.toContainText(x);
   // the kitchen has Oma Lina's shellfish allergy on file and today's menu is clear, before she has arrived
   await expect(tl).toContainText('shellfish allergy on file; today’s menu is clear');
-  await expect(page.getByTestId('team-log')).toContainText(/Oma Lina had a \w+ day/); // the latest saved log, from her last visit
+  // the team quote is only what the team wrote: today has no note yet, so it is the newest written one, from her last visit (round 7)
+  await expect(page.getByTestId('team-note')).toContainText(/From the team · .*19 Oct/i);
+  await expect(page.getByTestId('team-note').getByTestId('team-log')).toContainText('Oma Lina sang Bengawan Solo for the group');
+  await expect(page.getByTestId('team-log')).toContainText('Dinar');
   await expect(page.getByTestId('survey-card')).toContainText('October check-in');
-  await expect(page.getByTestId('photos-card')).toBeVisible();
+  await expect(page.getByTestId('photos-card')).toHaveCount(0); // photos have their own tab
   await expect(page.getByText(/Shared note from the club: Loves keroncong/)).toBeVisible();
-  for (const name of ['Message the club', 'Club calendar', 'Useful contacts']) await expect(page.getByRole('button', { name })).toBeVisible();
+  for (const name of ['Club calendar', 'Useful contacts']) await expect(page.getByRole('button', { name })).toBeVisible();
+  // "WhatsApp the club" is a real link to the front desk (Caca, the first lobby staff), not an in-app screen; there is no Messages tab
+  const wa = page.getByRole('link', { name: 'WhatsApp the club' });
+  await expect(wa).toBeVisible();
+  await expect(wa).toHaveAttribute('href', 'https://wa.me/6281122013345');
+  await expect(wa).toHaveAttribute('target', '_blank');
+  await expect(wa).toHaveAttribute('rel', /noopener/);
+  await expect(page.getByRole('button', { name: /WhatsApp the club|Message the club/ })).toHaveCount(0);
+  await expect(page.locator('[data-nav-key="chat"]')).toHaveCount(0);
   await noBookingUi(page);
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
 
 // ---------------------------------------------------------------- plan card
-test('Plan card: Flex counts visits from check-ins and states the extra-visit rule; Gold is "come any open day"', async ({ page }) => {
+test('Plan card (Billing): Flex counts visits from check-ins and states the extra-visit rule; Gold is "come any open day"', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 'f1', '/today');
+  await signIn(page, 'f1', '/billing');
   await tab(page, 'Oma Lina').click();
   const p = plan(page);
   await expect(p).toContainText('Flex plan · October');
@@ -122,7 +178,7 @@ test('Plan card: Flex counts visits from check-ins and states the extra-visit ru
   expect(await bar(p)).toEqual({ total: 10, on: 10 });
   await expect(p).toContainText('Extra visits are Rp 650.000 each, billed next month on the November invoice.');
   await expect(p.getByTestId('extra-visits')).toHaveCount(0); // no 11th visit yet
-  await expect(p.getByRole('button')).toHaveCount(1); // nothing to book or cancel; only a plan request
+  await expect(p.getByRole('button')).toHaveCount(2); // nothing to book or cancel; a plan request and a leave request (the brochure's terms)
   await expect(p.getByRole('button', { name: 'Ask to switch to Gold' })).toBeVisible();
   // Gold: no quota, no bar, no charge
   await tab(page, 'Opa Budi').click();
@@ -137,12 +193,12 @@ test('Plan card: Flex counts visits from check-ins and states the extra-visit ru
 
 test('Plan request: Maria asks to switch Oma Lina to Gold, management sees it, she can withdraw it', async ({ page, request }) => {
   const c = watchConsole(page);
-  await signIn(page, 'f1', '/today');
+  await signIn(page, 'f1', '/billing');
   await tab(page, 'Oma Lina').click();
   const p = plan(page);
   await p.getByRole('button', { name: 'Ask to switch to Gold' }).click();
   const sheet = page.getByRole('dialog', { name: 'Switch Oma Lina to Gold?' });
-  await expect(sheet).toContainText('Gold: come any open day for Rp 9.500.000 a month, with no extra-day charges. It starts on Sunday 1 November once the club confirms.');
+  await expect(sheet).toContainText('Gold: come any open day for Rp 3.950.000 a month, with no extra-day charges. It starts on Sunday 1 November once the club confirms.');
   await sheet.getByRole('button', { name: 'Send request' }).click();
   await expect(sheet).toHaveCount(0);
   await expect(p.getByTestId('plan-request')).toContainText('Switch to Gold from Sun 1 Nov requested · waiting for the club');
@@ -154,7 +210,7 @@ test('Plan request: Maria asks to switch Oma Lina to Gold, management sees it, s
   await expect(p.getByTestId('plan-request')).toHaveCount(0);
   await expect(p.getByRole('button', { name: 'Ask to switch to Gold' })).toBeVisible();
   // Daniel is not the payer: no request button for him
-  await signIn(page, 'f2', '/today');
+  await signIn(page, 'f2', '/billing');
   await tab(page, 'Oma Lina').click();
   await expect(plan(page).getByRole('button')).toHaveCount(0);
   c.assertClean();
@@ -164,6 +220,8 @@ test('Plan card: Bapak Bambang has used 8 of 10 visits, today included', async (
   const c = watchConsole(page);
   await signIn(page, 'fm10_0', '/today');
   await expect(tab(page, 'Bapak Bambang')).toHaveCount(0); // one member: no switcher
+  await expect(page.getByTestId('member-card')).toContainText('Flex · 2 of 10 visits left');
+  await page.goto('/billing');
   await expect(plan(page)).toContainText('8 of 10 visits used in October');
   expect(await bar(plan(page))).toEqual({ total: 10, on: 8 });
   await expect(plan(page).getByTestId('extra-visits')).toHaveCount(0);
@@ -178,7 +236,7 @@ test('Lobby checks Oma Lina in: Maria’s Today follows live, the 11th visit is 
   await tab(page, 'Oma Lina').click();
   const mc = page.getByTestId('member-card');
   await expect(mc).toContainText('Not at the club right now');
-  await expect(plan(page)).toContainText('10 of 10 visits used in October');
+  await expect(mc).toContainText('Flex · 0 of 10 visits left');
   expect(await board(request).then((b) => ids(b.inClub))).toEqual(['m10', 'm2', 'm20']);
 
   // the lobby checks her in with the door camera
@@ -194,11 +252,7 @@ test('Lobby checks Oma Lina in: Maria’s Today follows live, the 11th visit is 
   await expect(tl.locator('[data-tl="health"]')).toContainText('Health check on arrival');
   await expect(tl.locator('[data-tl="home"]')).toContainText('Home time');
   await expect(tl).toContainText('Keroncong sing-along');
-  // the plan card: still 10 of 10, and the 11th visit is an extra day billed on the November invoice
-  await expect(plan(page)).toContainText('10 of 10 visits used in October');
-  const extra = plan(page).getByTestId('extra-visits');
-  await expect(extra).toContainText('1 extra visit this month · Rp 650.000 on the November invoice');
-  await expect(extra).toContainText('Wed 21 Oct');
+  await expect(mc).toContainText('Flex · 0 of 10 visits left'); // never below zero: the 11th visit is an extra visit
   await noBookingUi(page);
   await assertNoHorizontalScroll(page);
   expect(await board(request).then((b) => ids(b.inClub))).toEqual(['m1', 'm10', 'm2', 'm20']);
@@ -212,8 +266,14 @@ test('Lobby checks Oma Lina in: Maria’s Today follows live, the 11th visit is 
   expect(translate('en', 'notif.checkedIn', told[0].params)).not.toMatch(/brought|collected/i);
   expect(noticesFor(await snapshot(request, 'f2'), 'f2', 'notif.checkedIn')).toHaveLength(1); // Daniel, the other contact, too
 
-  // Billing says the same
+  // Billing: the plan card is still 10 of 10, and the 11th visit is an extra day billed on the November invoice
   await page.goto('/billing');
+  await expect(tab(page, 'Oma Lina')).toHaveAttribute('aria-selected', 'true');
+  await expect(plan(page)).toContainText('10 of 10 visits used in October');
+  const extra = plan(page).getByTestId('extra-visits');
+  await expect(extra).toContainText('1 extra visit this month · Rp 650.000 on the November invoice');
+  await expect(extra).toContainText('Wed 21 Oct');
+  // and the invoice says the same
   const lina = page.locator('[data-testid="open-invoice"]', { hasText: 'Oma Lina Wijaya' });
   await expect(lina).toContainText('Flex · 10 of 10 visits used in October');
   await expect(lina.getByTestId('billing-extra')).toContainText('1 extra visit this month · Rp 650.000 on the November invoice');
@@ -270,7 +330,7 @@ test('Home time shows the real time once the lobby checks Oma Lina out, without 
 
 test('A Gold member is never charged: Opa Budi checks in and the plan card only counts the visit', async ({ page, request }) => {
   const c = watchConsole(page);
-  await signIn(page, 'f1', '/today');
+  await signIn(page, 'f1', '/billing');
   await tab(page, 'Opa Budi').click();
   const p = plan(page);
   await expect(p).toContainText(/Visits in October: \d+\./);
@@ -278,12 +338,15 @@ test('A Gold member is never charged: Opa Budi checks in and the plan card only 
   const r = await api(request, 's1', 'attendance.checkIn', { memberId: 'm46', method: 'manual' });
   expect(r.ok()).toBe(true);
   expect((await r.json()).result).toMatchObject({ extra: false });
-  await expect(page.getByTestId('member-card')).toContainText(/At the club since \d\d:\d\d/);
   await expect(p).toContainText(`Visits in October: ${before + 1}.`);
   await expect(p).toContainText('Gold plan · come any open day');
   await expect(p.getByTestId('extra-visits')).toHaveCount(0);
   await expect(p).not.toContainText('650.000');
   await assertNoHorizontalScroll(page);
+  await page.goto('/today');
+  await expect(tab(page, 'Opa Budi')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByTestId('member-card')).toContainText(/At the club since \d\d:\d\d/);
+  await expect(page.getByTestId('member-card')).toContainText('Gold · come any open day');
   c.assertClean();
 });
 
@@ -297,12 +360,16 @@ test('Laras: Bapak Bambang is at the club since 09:48; if the lobby undoes the c
   const tl = page.getByTestId('timeline');
   await expect(tl.locator('[data-tl="arrival"]')).toContainText('09:48');
   await expect(tl.locator('[data-tl="health"]')).toContainText('122/73');
+  await expect(mc).toContainText('Flex · 2 of 10 visits left');
+  await page.goto('/billing');
   await expect(plan(page)).toContainText('8 of 10 visits used in October');
   expect((await api(request, 's1', 'attendance.undoCheckIn', { memberId: 'm10' })).ok()).toBe(true);
-  await expect(mc).toContainText('Not at the club right now');
-  await expect(mc).toContainText('Usually arrives around 09:48');
   await expect(plan(page)).toContainText('7 of 10 visits used in October');
   expect(await bar(plan(page))).toEqual({ total: 10, on: 7 });
+  await page.goto('/today');
+  await expect(mc).toContainText('Not at the club right now');
+  await expect(mc).toContainText('Usually arrives around 09:48');
+  await expect(mc).toContainText('Flex · 3 of 10 visits left');
   await expect(tl.locator('[data-tl="arrival"]')).toHaveCount(0);
   await expect(tl.locator('[data-tl="health"]')).toHaveCount(0);
   await expect(tl).toContainText('Sop ikan kakap'); // the programme stays
@@ -319,7 +386,7 @@ test('Maria pays an invoice (demo): one invoice, then the rest together', async 
   const c = watchConsole(page);
   await signIn(page, 'f1', '/billing');
   await expect(page.getByRole('heading', { level: 1, name: 'Billing' })).toBeVisible();
-  await expect(page.getByTestId('open-total')).toHaveText('Rp 15.000.000');
+  await expect(page.getByTestId('open-total')).toHaveText('Rp 6.650.000');
   await expect(page.getByTestId('open-invoice')).toHaveCount(2);
   await expect(page.getByTestId('billing-total')).toContainText('Pay all together');
   // pay Oma Lina's invoice only
@@ -329,26 +396,25 @@ test('Maria pays an invoice (demo): one invoice, then the rest together', async 
   await lina.getByRole('button', { name: 'Pay this invoice' }).click();
   const dlg = sheet(page, 'Pay by virtual account');
   await expect(dlg).toContainText('INV-2610-001');
-  await expect(dlg).toContainText('Rp 5.500.000');
+  await expect(dlg).toContainText('Rp 2.700.000');
   await dlg.getByRole('radio', { name: 'Mandiri' }).click();
   await expect(dlg.getByTestId('va-number')).toHaveText(/^8950 /);
   await dlg.getByRole('button', { name: 'Demo: simulate payment received' }).click();
   await expect(toast(page)).toContainText('Payment received. Receipt sent to Maria on WhatsApp.');
   await expect(page.getByTestId('open-invoice')).toHaveCount(1);
-  await expect(page.getByTestId('open-total')).toHaveText('Rp 9.500.000');
+  await expect(page.getByTestId('open-total')).toHaveText('Rp 3.950.000');
   await expect(page.locator('[data-history]', { hasText: 'INV-2610-001' })).toContainText('Paid');
   await assertNoHorizontalScroll(page);
-  // the last open invoice from the Today page
-  await page.goto('/today');
-  await tab(page, 'Opa Budi').click();
-  const inv = page.getByTestId('invoice-card');
-  await expect(inv).toContainText('Rp 9.500.000');
-  await inv.getByRole('button', { name: 'Pay by virtual account' }).click();
+  // the last open invoice, also from Billing (Today carries no bills since KC round 6)
+  const budi = page.locator('[data-testid="open-invoice"]', { hasText: 'Opa Budi Wijaya' });
+  await expect(budi).toContainText('Rp 3.950.000');
+  await budi.getByRole('button', { name: 'Pay this invoice' }).click();
   const d2 = sheet(page, 'Pay by virtual account');
   await d2.getByRole('button', { name: 'Demo: simulate payment received' }).click();
   await expect(toast(page)).toContainText('Payment received');
-  await expect(inv).toContainText('Paid');
-  await expect(inv.getByRole('button', { name: 'Pay by virtual account' })).toHaveCount(0);
+  await expect(page.getByTestId('open-invoice')).toHaveCount(0);
+  await page.goto('/today');
+  await expect(page.getByTestId('invoice-card')).toHaveCount(0);
   c.assertClean();
 });
 
@@ -357,7 +423,7 @@ test('Maria can pay every open invoice together from Billing', async ({ page }) 
   const c = watchConsole(page);
   await signIn(page, 'f1', '/billing');
   const all = page.getByTestId('billing-total');
-  await expect(all).toContainText('Oma Lina Rp 5.500.000 + Opa Budi Rp 9.500.000');
+  await expect(all).toContainText('Oma Lina Rp 2.700.000 + Opa Budi Rp 3.950.000');
   await expect(all).toContainText('Combined virtual account · DOKU');
   await all.getByRole('radio', { name: 'BNI' }).click();
   await all.getByRole('button', { name: 'Demo: simulate payment received' }).click();
@@ -378,14 +444,14 @@ test('Yohana sees the overdue September invoice and can pay it', async ({ page }
   await expect(sep).toContainText('September 2026');
   await expect(sep).toContainText('Overdue');
   await expect(sep).toContainText('INV-2609-020');
-  await expect(page.getByTestId('open-total')).toHaveText('Rp 19.000.000');
+  await expect(page.getByTestId('open-total')).toHaveText('Rp 7.900.000');
   await expect(page.getByTestId('billing-total')).toContainText('1 overdue');
   await sep.getByRole('button', { name: 'Pay this invoice' }).click();
   await sheet(page, 'Pay by virtual account').getByRole('button', { name: 'Demo: simulate payment received' }).click();
   await expect(toast(page)).toContainText('Payment received');
   await expect(page.getByTestId('open-invoice')).toHaveCount(1);
   await expect(page.locator('[data-testid="open-invoice"][data-status="overdue"]')).toHaveCount(0);
-  await expect(page.getByTestId('open-total')).toHaveText('Rp 9.500.000');
+  await expect(page.getByTestId('open-total')).toHaveText('Rp 3.950.000');
   c.assertClean();
 });
 
@@ -399,21 +465,42 @@ test('Only the primary contact pays: Daniel sees every invoice and who looks aft
   await page.goto('/today');
   await expect(page.getByRole('button', { name: /^Pay Rp/ })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Pay by virtual account' })).toHaveCount(0);
-  await expect(page.getByTestId('invoice-card').first()).toContainText('Maria Wijaya looks after billing');
+  await expect(page.getByTestId('invoice-card')).toHaveCount(0); // bills live in the Bills tab (KC round 6)
   c.assertClean();
 });
 
 test('A member with no invoice gets an empty state, not a crash', async ({ page, request }) => {
-  test.skip(!hasAction('invoice.void'), 'invoice.void (finance) is not built yet');
-  for (const id of ['INV-2609-020', 'INV-2610-020']) expect((await api(request, 's10', 'invoice.void', { invoiceId: id, reason: 'e2e: no invoice' })).ok()).toBe(true);
+  // every seeded member has six months of paid invoices now, so the club registers a new member: no invoice until the first run
+  const made = await api(request, 's9', 'members.create', {
+    title: 'Opa', name: 'Nol Faktur', dob: '1945-03-02', usualArrival: '11:00', plan: 'gold', start: TODAY,
+    contact: { name: 'Keluarga Faktur', phone: '+62 812 9300 0001', relation: 'daughter', primary: true },
+    formMediaId: 'md_e2eregistrationform0001', formFileName: 'registration-form.jpg', consent: { data: true, face: true },
+  });
+  expect(made.ok(), await made.text()).toBe(true);
+  const { memberId, familyId } = (await made.json()).result as { memberId: string; familyId: string };
+  expect(Object.values((await snapshot(request, 's9')).invoices as Record<string, { memberId: string }>).filter((i) => i.memberId === memberId)).toHaveLength(0);
   const c = watchConsole(page);
-  await signIn(page, 'fm20_0', '/today');
-  const inv = page.getByTestId('invoice-card');
-  await expect(inv).toContainText('No invoice yet');
-  await expect(inv).toContainText('The first invoice arrives on the 15th (15 November 2026).');
-  await expect(plan(page)).toBeVisible();
+  await signIn(page, familyId, '/today');
+  await expect(page.getByTestId('member-card')).toBeVisible(); // Today renders without an invoice (bills live in the Bills tab)
+  await expect(page.getByTestId('invoice-card')).toHaveCount(0);
   await page.goto('/billing');
-  await expect(page.getByTestId('billing-empty')).toContainText('The first invoice arrives on the 15th');
+  await expect(plan(page)).toBeVisible();
+  await expect(page.getByTestId('billing-empty')).toContainText('The first invoice arrives on the 21st');
+  await expect(page.getByTestId('open-invoice')).toHaveCount(0);
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+});
+
+// a member whose invoices are all paid: the history stays and "All paid" says so (the six months of seeded history)
+test('A member whose invoices are all paid gets "All paid" and the history, not an empty state', async ({ page, request }) => {
+  test.skip(!hasAction('invoice.void'), 'invoice.void (finance) is not built yet');
+  for (const id of ['INV-2609-020', 'INV-2610-020']) expect((await api(request, 's10', 'invoice.void', { invoiceId: id, reason: 'e2e: no open invoice' })).ok()).toBe(true);
+  const c = watchConsole(page);
+  await signIn(page, 'fm20_0', '/billing');
+  await expect(plan(page)).toBeVisible();
+  await expect(page.getByTestId('billing-empty')).toHaveCount(0);
+  await expect(page.getByTestId('billing-allpaid')).toContainText('All paid');
+  await expect(page.locator('[data-history]', { hasText: 'INV-2608-020' })).toContainText('Paid');
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
@@ -439,6 +526,41 @@ test('Photos: by day, solo first; a tile opens the viewer for families', async (
   for (const staff of [/Hide/i, /Retag|Tag/i, /Remove|Delete/i]) await expect(viewer.getByRole('button', { name: staff })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
+  c.assertClean();
+});
+
+test('Photos: activity pictures show for the days a member came, labelled with the activity; a family whose member did not come gets none until one checks in', async ({ page, request }) => {
+  const c = watchConsole(page);
+  // management adds approved pictures of today's two sessions (activity is for the activity: nobody is tagged)
+  for (const [i, activity] of ['Keroncong sing-along', 'Batik painting'].entries()) expect((await api(request, 's9', 'photo.addActivity', { date: TODAY, activity })).ok(), String(i)).toBe(true);
+  // Bambang came today: his family sees the day's pictures, each set named after its activity, and they open in the viewer
+  await signIn(page, 'fm10_0', '/photos');
+  const day = page.locator(`[data-testid="photo-day"][data-date="${TODAY}"]`);
+  await expect(day).toBeVisible();
+  await expect(day.getByText('Keroncong sing-along', { exact: true })).toBeVisible();
+  await expect(day.getByText('Batik painting', { exact: true })).toBeVisible();
+  await expect(day.getByRole('button', { name: /^Keroncong sing-along, \d\d:\d\d, activity picture$/ })).toHaveCount(1);
+  await assertNoHorizontalScroll(page);
+  await day.getByRole('button', { name: /^Batik painting, \d\d:\d\d, activity picture$/ }).click();
+  const viewer = page.getByRole('dialog', { name: 'Batik painting' });
+  await expect(viewer).toBeVisible();
+  await expect(viewer.getByRole('button', { name: /Edit tags|Hide from families|Remove photo|Approve/ })).toHaveCount(0); // families get no staff actions
+  await page.keyboard.press('Escape');
+  // in Indonesian the activity names follow the catalogue
+  await signIn(page, 'fm10_0', '/photos', 'id');
+  await expect(page.locator(`[data-testid="photo-day"][data-date="${TODAY}"]`).getByText('Bernyanyi keroncong', { exact: true })).toBeVisible();
+  // Maria's members (Oma Lina, Opa Budi) did not come today: no picture of today in her data, none of today on her page (the seeded past weeks are theirs: they came then)…
+  const todays = async () => Object.values((await snapshot(request, 'f1')).photos as Record<string, { kind: string; date: string }>).filter((p) => p.kind === 'activity' && p.date === TODAY);
+  expect(await todays()).toHaveLength(0);
+  await signIn(page, 'f1', '/photos');
+  await expect(page.getByTestId('photo-day').first()).toBeVisible();
+  const today = page.locator(`[data-testid="photo-day"][data-date="${TODAY}"]`);
+  await expect(today.getByRole('button', { name: /activity picture$/ })).toHaveCount(0);
+  // …until the lobby checks Oma Lina in: any check-in that day is enough, and her page follows live
+  expect((await api(request, 's1', 'attendance.checkIn', { memberId: 'm1', method: 'manual' })).ok()).toBe(true);
+  await expect(today.getByRole('button', { name: /^Keroncong sing-along, \d\d:\d\d, activity picture$/ })).toBeVisible();
+  await expect(today.getByRole('button', { name: /^Batik painting, \d\d:\d\d, activity picture$/ })).toBeVisible();
+  expect(await todays()).toHaveLength(2);
   c.assertClean();
 });
 
@@ -494,7 +616,7 @@ test('Health shows the member you chose: Opa Budi’s Health is Opa Budi’s', a
   c.assertClean();
 });
 
-// ---------------------------------------------------------------- survey, lunch, log comments
+// ---------------------------------------------------------------- survey, lunch, the team log
 test('Survey: Maria answers it from Today (and from the notification link)', async ({ page }) => {
   test.skip(!hasAction('survey.answer'), 'survey.answer (club) is not built yet');
   const c = watchConsole(page);
@@ -528,7 +650,7 @@ test('Lunch: feedback goes to the kitchen; the allergy line follows the kitchen�
   await dlg.getByRole('radio', { name: 'Sop ikan kakap' }).click();
   await dlg.getByLabel('What would you like the kitchen to know?').fill('The soup was a little salty again.');
   await dlg.getByRole('button', { name: 'Send feedback' }).click();
-  await expect(toast(page)).toContainText('Thank you. The kitchen team will reply in Messages.');
+  await expect(toast(page)).toContainText('Thank you. The kitchen team’s reply will appear on your Today, under Lunch feedback.');
   const state = await snapshot(request, 's3');
   const fb = Object.values(state.feedback as Record<string, { memberId: string; dish: string; text: string; mealDate: string; source: string }>).find((f) => f.text.includes('a little salty again'));
   expect(fb).toMatchObject({ memberId: 'm10', dish: 'Sop ikan kakap', mealDate: TODAY, source: 'family' });
@@ -552,31 +674,29 @@ test('The allergy line is honest before the member arrives: Bapak Bambang, undon
   c.assertClean();
 });
 
-test('Log comments: a comment goes to the care thread and shows under the log', async ({ page, request }) => {
-  test.skip(!hasAction('message.send'), 'message.send (lobby / chat) is not built yet');
+test('Team log: the latest log shows its text and who wrote it, with no comment box; WhatsApp the club opens the front desk', async ({ page, request }) => {
   const c = watchConsole(page);
   await signIn(page, 'f1', '/today');
   await tab(page, 'Oma Lina').click();
   const log = page.getByTestId('team-log');
-  await log.getByLabel(/^Comment/).fill('Thank you Dinar, she is still humming it at home!');
-  await log.getByRole('button', { name: 'Send' }).click();
-  await expect(toast(page)).toContainText('Comment sent to Dinar.');
-  await expect(log.getByTestId('log-comment')).toContainText('still humming it at home');
-  await expect(log.getByTestId('log-comment')).toContainText('Maria Wijaya');
-  // it is a care-thread message that references the log
-  const state = await snapshot(request, 's5');
-  const msgs = Object.values(state.messages as Record<string, { text: string; ref?: { type: string; id: string }; threadId: string }>);
-  const m = msgs.find((x) => x.text.includes('still humming'));
-  expect(m?.ref?.type).toBe('dailyLog');
-  expect(state.threads[m!.threadId].topic).toBe('care');
-  // a staff reply in the same thread shows up under the log
-  if (hasAction('thread.markRead')) {
-    const reply = await api(request, 's5', 'message.send', { threadId: m!.threadId, text: 'We will play it again on Friday!', ref: { type: 'dailyLog', id: m!.ref!.id } });
-    expect(reply.ok()).toBe(true);
-    await expect(log.getByTestId('log-comment')).toHaveCount(2);
-    await expect(log.getByTestId('log-comment').nth(1)).toContainText('We will play it again on Friday!');
-    await expect(log.getByTestId('log-comment').nth(1)).toContainText('Dinar');
-  }
+  await expect(log).toContainText(/Oma Lina had a \w+ day|“/);
+  await expect(log).toContainText('Dinar');
+  await expect(log.getByLabel(/^Comment/)).toHaveCount(0);
+  await expect(log.getByRole('button', { name: 'Send' })).toHaveCount(0);
+  await expect(log.getByTestId('log-comment')).toHaveCount(0);
+  // the club's WhatsApp: a link that opens a chat with the front desk number
+  const wa = page.getByRole('link', { name: 'WhatsApp the club' });
+  await expect(wa).toHaveAttribute('href', 'https://wa.me/6281122013345');
+  // nothing is stored in Messages, and the old message actions are gone
+  const state = await snapshot(request, 'f1');
+  expect(Object.keys(state.messages)).toHaveLength(0);
+  expect(Object.keys(state.threads)).toHaveLength(0);
+  const r = await api(request, 'f1', 'message.send', { memberId: 'm1', topic: 'care', text: 'Hello' });
+  expect(r.status()).toBe(422);
+  expect((await r.json()).code).toBe('err.unknownAction');
+  // an old /chat link lands on Today
+  await page.goto('/chat');
+  await expect(page).toHaveURL(/\/today$/);
   c.assertClean();
 });
 
@@ -606,14 +726,16 @@ test('The timeline follows the clock for a member in the club, and every approve
   c.assertClean();
 });
 
-test('Before the member arrives nothing is "now": the same clock, the same programme, all still to come', async ({ page, request }) => {
+test('Before the member arrives nothing is "now": the programme still fills in as time passes (a progress bar), the rest still to come', async ({ page, request }) => {
   const c = watchConsole(page);
   expect((await request.post('/api/demo/clock', { data: { hm: '12:05' } })).ok()).toBe(true);
   await signIn(page, 'f1', '/today');
   await tab(page, 'Oma Lina').click();
   const tl = page.getByTestId('timeline');
   await expect(page.getByTestId('member-card')).toContainText('Not at the club right now');
-  for (const id of ['session-10:30', 'lunch', 'session-13:30', 'tea']) await expect(tl.locator(`[data-tl="${id}"]`)).toHaveAttribute('data-state', 'up');
+  // KC round 6: what is over is marked passed even when she is not in; lunch is running, but it is not "now" for someone who is not there
+  await expect(tl.locator('[data-tl="session-10:30"]')).toHaveAttribute('data-state', 'done');
+  for (const id of ['lunch', 'session-13:30', 'tea']) await expect(tl.locator(`[data-tl="${id}"]`)).toHaveAttribute('data-state', 'up');
   await expect(tl).not.toContainText('NOW');
   c.assertClean();
 });
@@ -653,18 +775,19 @@ test('A closed day shows "Club closed" instead of a timeline', async ({ page, re
   c.assertClean();
 });
 
-test('A scheduled last day shows on the card; the plan card stays', async ({ page, request }) => {
+test('A scheduled last day shows on the card; the plan card stays in Billing', async ({ page, request }) => {
   test.skip(!hasAction('members.end'), 'members.end (members) is not built yet');
   const end = await api(request, 's9', 'members.end', { memberId: 'm1', lastDay: '2026-10-28', reason: 'movedAway' });
   expect(end.ok()).toBe(true);
   const c = watchConsole(page);
   await signIn(page, 'f1', '/today');
   await tab(page, 'Oma Lina').click();
-  await expect(page.getByTestId('member-card')).toContainText('Membership ends Wed 28 Oct');
+  await expect(page.getByTestId('member-card')).toContainText('Flex · 0 of 10 visits left · Membership ends Wed 28 Oct');
   await expect(page.getByTestId('member-card')).toContainText('Not at the club right now');
-  await expect(plan(page)).toContainText('10 of 10 visits used in October');
   await noBookingUi(page);
   await assertNoHorizontalScroll(page);
+  await page.goto('/billing');
+  await expect(plan(page)).toContainText('10 of 10 visits used in October');
   c.assertClean();
 });
 
@@ -691,17 +814,15 @@ test('Indonesian: toggling the language shows no raw keys on any family screen o
   await expect(page.getByText('Sedang tidak di klub').first()).toBeVisible();
   await expect(page.getByText('Biasanya tiba sekitar 10:05').first()).toBeVisible();
   await expect(page.getByText('Gold · datang di hari buka mana saja').first()).toBeVisible();
+  await expect(page.getByText('Flex · sisa 0 dari 10 kunjungan').first()).toBeVisible();
   await tab(page, 'Oma Lina', 'Pilih anggota').click();
   await expect(page.getByTestId('timeline')).toContainText('Dapur mencatat alergi kerang-kerangan Oma Lina; menu hari ini aman.');
-  await expect(plan(page)).toContainText('Paket Flex · Oktober');
-  await expect(plan(page)).toContainText('10 dari 10 kunjungan terpakai di Oktober');
-  await expect(plan(page)).toContainText('Kunjungan tambahan Rp 650.000 per kunjungan, ditagih bulan depan di tagihan November.');
+  await expect(page.getByTestId('member-card')).toContainText('Flex · sisa 0 dari 10 kunjungan');
   await clean('today lina');
   // the lobby checks her in: the 11th visit is an extra visit, all in Indonesian
   expect((await api(request, 's1', 'attendance.checkIn', { memberId: 'm1', method: 'face' })).ok()).toBe(true);
   await expect(page.getByTestId('member-card')).toContainText(/Di klub sejak \d\d:\d\d/);
   await expect(page.getByTestId('member-card')).toContainText('Check-in oleh Caca');
-  await expect(plan(page).getByTestId('extra-visits')).toContainText('1 kunjungan tambahan bulan ini · Rp 650.000 di tagihan November');
   await expect(page.getByTestId('timeline')).toContainText('Cek kesehatan saat tiba');
   await clean('today lina in the club');
   // the family notice is translated too
@@ -724,6 +845,10 @@ test('Indonesian: toggling the language shows no raw keys on any family screen o
   await go('billing');
   await expect(page.getByRole('heading', { level: 1, name: 'Tagihan' })).toBeVisible();
   await expect(page.getByTestId('billing-total')).toContainText('Total yang harus dibayar');
+  await expect(plan(page)).toContainText('Paket Flex · Oktober');
+  await expect(plan(page)).toContainText('10 dari 10 kunjungan terpakai di Oktober');
+  await expect(plan(page)).toContainText('Kunjungan tambahan Rp 650.000 per kunjungan, ditagih bulan depan di tagihan November.');
+  await expect(plan(page).getByTestId('extra-visits')).toContainText('1 kunjungan tambahan bulan ini · Rp 650.000 di tagihan November');
   await expect(page.locator('[data-testid="open-invoice"]', { hasText: 'Oma Lina Wijaya' })).toContainText('Flex · 10 dari 10 kunjungan terpakai di Oktober');
   await expect(page.locator('[data-testid="open-invoice"]', { hasText: 'Oma Lina Wijaya' }).getByTestId('billing-extra')).toContainText('1 kunjungan tambahan bulan ini');
   await clean('billing');
@@ -743,11 +868,15 @@ test('Indonesian: signing in as Yohana, a Gold member’s day reads in Indonesia
   await signIn(page, 'fm20_0', '/today', 'id');
   await expect(page.getByRole('heading', { level: 1, name: 'Selamat pagi, Yohana' })).toBeVisible();
   await expect(page.getByTestId('member-card')).toContainText('Di klub sejak 09:38');
-  await expect(plan(page)).toContainText('Paket Gold · datang di hari buka mana saja');
-  await expect(plan(page)).toContainText('Tanpa batas dan tanpa biaya tambahan.');
+  await expect(page.getByTestId('member-card')).toContainText('Gold · datang di hari buka mana saja');
   const text = await page.evaluate(() => document.body.innerText);
   expect(text).not.toMatch(RAW);
   expect(text).not.toMatch(/Pesan hari|Atur cuti|Tidak datang hari ini|Datang terlambat|Dijadwalkan|diantar|Diantar|dijemput|Dijemput/);
+  await assertNoHorizontalScroll(page);
+  await page.goto('/billing');
+  await expect(plan(page)).toContainText('Paket Gold · datang di hari buka mana saja');
+  await expect(plan(page)).toContainText('Tanpa batas dan tanpa biaya tambahan.');
+  expect(await page.evaluate(() => document.body.innerText)).not.toMatch(RAW);
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });

@@ -5,13 +5,14 @@ import { isPrimaryFor, memberName, memberShort, paidDate, rp, type Bank, type Me
 import {
   BANKS, billingContactOf, combinedVa, historyRows, invoiceRows, nextIssueDate, openInvoiceRows, openTotal, planSummary, type InvRow,
 } from '@cp/shared/rules/family';
-import { Avatar, Button, Icon, StatusBadge, chipStyle } from '../../components/ui';
+import { Avatar, Button, GROUP_HEAD, Group, Icon, StatusBadge, chipStyle } from '../../components/ui';
 import { useAct } from '../../lib/act';
 import { useDevice } from '../../hooks/useDevice';
 import { say } from '../../store/ui';
 import { InvoiceSheet } from '../finance/InvoiceSheet';
 import { Cap, FamSwitch, H1, fcard } from './parts';
 import { PaySheet } from './sheets';
+import { PlanCard } from './PlanCard';
 import { famPad, useFamilyCtx, useFamilySel } from './useFamily';
 import { memberPhoto } from '../../lib/media';
 
@@ -62,105 +63,147 @@ export function FamilyBilling() {
   const subOf = (r: InvRow) => (r.status === 'paid' ? t('family.histPaid', { no: r.inv.number, d: fmt.fds(paidDate(s, r.inv.id) || r.inv.issueDate) })
     : r.status === 'partial' ? `${r.inv.number} · ${t('family.partPaid', { a: rp(r.paid), t: rp(r.total) })}` : t('family.histDue', { no: r.inv.number, d: fmt.fds(r.inv.dueDate) }));
   const first = members[0];
+  // round 6, phone: iOS grouped sections on the grey page (the label outside, one flat white group per thing), the way the iPhone Settings reads
+  const ph = isPhone;
+  const emptyBody = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <span aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', color: '#6E5A43' }}><Icon name="receipt_long" size={24} weight={300} /></span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
+        <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 300, letterSpacing: '-0.3px', color: '#2B231C' }}>{t('family.invNone')}</span>
+        <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('family.invNoneSub', { od, d: day, date: fmt.fdy(nextIssueDate(s, today)) })}</span>
+      </div>
+    </div>
+  );
+  const allPaidBody = (
+    <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+      <span aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 999, background: '#E3EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', color: '#3D6B4F' }}><Icon name="check_circle" size={26} fill={1} /></span>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 300, letterSpacing: '-0.3px', color: '#2B231C' }}>{t('family.invAllPaid')}</span>
+      </div>
+    </div>
+  );
+  const totalLabel = payable.length > 1 ? t('family.payTogether') : t('family.billTotal');
+  const totalAmount = <span style={{ fontSize: ph ? 34 : 'clamp(26px, 6vw, 32px)', lineHeight: ph ? 1.1 : undefined, fontWeight: 300, letterSpacing: '-0.8px', fontVariantNumeric: 'tabular-nums', color: '#1E1A16' }} data-testid="open-total">{rp(total)}</span>;
+  const totalBody = (
+    <>
+      <span className="cp-hide-phone" style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>{overdue.length ? t('family.billTotalSub', { n: open.length, o: overdue.length }) : t('family.billTotalSubOk', { n: open.length })}</span>
+      {payable.length > 1 ? (
+        <>
+          <span className="cp-hide-phone" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t('family.payTogetherNote', { list: payable.map((r) => `${memberShort(r.member)} ${rp(r.balance)}`).join(' + ') })}</span>
+          <div role="radiogroup" aria-label={t('family.bank')} className={isPhone ? 'scroll-x' : undefined} style={{ display: 'flex', flexWrap: isPhone ? 'nowrap' : 'wrap', gap: isPhone ? 6 : 8, ...(isPhone ? { scrollbarWidth: 'none' } : {}) }}>
+            {BANKS.map((b) => {
+              const c = chipStyle(bank === b, false);
+              return <button key={b} type="button" role="radio" aria-checked={bank === b} onClick={() => setBank(b)} className="cp-chip cp-press" style={{ flex: 'none', height: 44, padding: '0 18px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter' }}>{b}</button>;
+            })}
+          </div>
+          <div style={{ padding: 14, borderRadius: 14, background: '#FBF8F4', border: ph ? 'none' : '1px solid #EFE7DC', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+            <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+              <Cap>{t('family.comboVa')}</Cap>
+              <span style={{ fontSize: 20, letterSpacing: '1px', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>{va}</span>
+            </div>
+            <Button variant="secondary" size={44} icon="content_copy" onClick={copy}>{t('common.copy')}</Button>
+          </div>
+          <button type="button" className="cp-btn cp-press" onClick={simulate} disabled={busy} style={{ height: 48, borderRadius: 999, border: '1px dashed #8A755B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('family.simPay')}</button>
+        </>
+      ) : null}
+    </>
+  );
+  const payerNote = (n: string) => ph
+    ? <div key={n} style={{ ...GROUP_HEAD, textTransform: 'none', letterSpacing: 0, whiteSpace: 'normal', fontWeight: 400, lineHeight: '19px', padding: '0 16px' }} data-testid="payer-note">{t('family.payerNote', { n })}</div>
+    : <div key={n} style={{ paddingLeft: 14, borderLeft: '2px solid #E6DDD1', fontSize: 15, lineHeight: '22px', color: '#5E5852' }} data-testid="payer-note">{t('family.payerNote', { n })}</div>;
+  const invoice = (r: InvRow) => {
+    const body = (
+      <>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+          <Avatar name={memberName(r.member)} tone={r.member.photoTone} src={memberPhoto(r.member)} size={46} ring />
+          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{memberName(r.member)}</span>
+            <span className="cp-hide-phone" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{planLine(r.member)}</span>
+            {extraLine(r.member) ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }} data-testid="billing-extra">{extraLine(r.member)}</span> : null}
+          </div>
+        </div>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+            {ph ? null : <Cap>{fmt.fmonth(r.period, true)}</Cap>}
+            <span style={{ fontSize: 'clamp(28px, 6.4vw, 32px)', lineHeight: 1.15, fontWeight: 300, letterSpacing: '-0.8px', fontVariantNumeric: 'tabular-nums', color: '#1E1A16' }}>{rp(r.balance)}</span>
+            <span style={{ fontSize: 14, color: r.status === 'overdue' ? '#9A3D24' : '#6B6259', lineHeight: 1.4 }}>{r.status === 'overdue' ? `${t('family.invOverdueSub', { d: fmt.fds(r.inv.dueDate) })} · ${r.inv.number}` : subOf(r)}</span>
+          </div>
+          {badgeOf(r) !== 'outstanding' ? <StatusBadge kind={badgeOf(r)} /> : null}
+        </div>
+        {r.inv.lines.length > 1 ? (
+          <div style={{ display: 'flex', flexDirection: 'column' }}>
+            {lineText(r).map((l) => (
+              <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 15, lineHeight: 1.4 }}>
+                <span>{l.k}</span><span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{l.v}</span>
+              </div>
+            ))}
+          </div>
+        ) : null}
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          {primaryOf(r.member.id) ? <Button size={56} icon="account_balance" onClick={() => setPay([r.inv.id])} style={{ flex: ph ? '1 1 0' : '1 1 180px' }}>{t('family.payOne')}</Button> : null}
+          <Button variant="secondary" size={56} onClick={() => setDetail(r.inv.id)} style={{ flex: ph ? '1 1 0' : '1 1 120px' }}>{t('family.viewDetails')}</Button>
+        </div>
+      </>
+    );
+    // one invoice is one thing: a single flat group, the month outside as its label
+    if (ph) return <div key={r.inv.id} data-testid="open-invoice" data-invoice={r.inv.id} data-status={r.status}><Group title={fmt.fmonth(r.period, true)} gap={14}>{body}</Group></div>;
+    return (
+      <div key={r.inv.id} style={fcard('', 14)} data-testid="open-invoice" data-invoice={r.inv.id} data-status={r.status}>
+        {body}
+      </div>
+    );
+  };
   return (
-    <div style={{ padding: famPad(isPhone), display: 'flex', flexDirection: 'column', gap: 'clamp(16px, 3vw, 28px)', maxWidth: 680, margin: '0 auto', width: '100%' }}>
+    <div className={ph ? 'cp-native' : undefined} style={{ padding: famPad(isPhone), display: 'flex', flexDirection: 'column', gap: ph ? 22 : 'clamp(16px, 3vw, 28px)', maxWidth: 680, margin: '0 auto', width: '100%' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 4 : 8 }}>
         <Cap>{multi && members.length > 1 ? t('family.billEyebrowMulti') : memberName(first)}</Cap>
         <H1>{t('nav.billing')}</H1>
       </div>
-      {multi ? <FamSwitch label={t('family.switcher')} value={sel} onChange={setSel} items={[...choices.map((id) => ({ key: id, label: memberShort(s.members[id]) })), { key: 'both', label: choices.length > 2 ? t('family.everyone') : t('family.both') }]} /> : null}
+      {multi ? <FamSwitch segmented={isPhone} label={t('family.switcher')} value={sel} onChange={setSel} items={[...choices.map((id) => ({ key: id, label: memberShort(s.members[id]) })), { key: 'both', label: choices.length > 2 ? t('family.everyone') : t('family.both') }]} /> : null}
+      {/* KC round 6: the plan card (visits, extra visits, ask to switch plan) moved here from Today */}
+      {members.map((m) => <PlanCard key={m.id} m={m} showName={members.length > 1} />)}
 
-      {!rows.length ? (
-        <div style={fcard('', 12)} data-testid="billing-empty">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', color: '#6E5A43' }}><Icon name="receipt_long" size={24} weight={300} /></span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-              <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 300, letterSpacing: '-0.3px', color: '#2B231C' }}>{t('family.invNone')}</span>
-              <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('family.invNoneSub', { od, d: day, date: fmt.fdy(nextIssueDate(s, today)) })}</span>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {!rows.length ? (ph ? <div data-testid="billing-empty"><Group>{emptyBody}</Group></div> : <div style={fcard('', 12)} data-testid="billing-empty">{emptyBody}</div>) : null}
 
-      {rows.length && !open.length ? (
-        <div style={fcard('', 8)} data-testid="billing-allpaid">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <span aria-hidden="true" style={{ width: 48, height: 48, borderRadius: 999, background: '#E3EFE6', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', color: '#3D6B4F' }}><Icon name="check_circle" size={26} fill={1} /></span>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 300, letterSpacing: '-0.3px', color: '#2B231C' }}>{t('family.invAllPaid')}</span>
-            </div>
-          </div>
-        </div>
-      ) : null}
+      {rows.length && !open.length ? (ph ? <div data-testid="billing-allpaid"><Group>{allPaidBody}</Group></div> : <div style={fcard('', 8)} data-testid="billing-allpaid">{allPaidBody}</div>) : null}
 
-      {open.length ? (
+      {open.length ? (ph ? (
+        <div data-testid="billing-total"><Group title={totalLabel} gap={12}>{totalAmount}{totalBody}</Group></div>
+      ) : (
         <div style={fcard('', 12)} data-testid="billing-total">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 12, flexWrap: 'wrap' }}>
-            <Cap>{payable.length > 1 ? t('family.payTogether') : t('family.billTotal')}</Cap>
-            <span style={{ fontSize: 'clamp(26px, 6vw, 32px)', fontWeight: 300, letterSpacing: '-0.8px', fontVariantNumeric: 'tabular-nums', color: '#1E1A16' }} data-testid="open-total">{rp(total)}</span>
+            <Cap>{totalLabel}</Cap>
+            {totalAmount}
           </div>
-          <span className="cp-hide-phone" style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>{overdue.length ? t('family.billTotalSub', { n: open.length, o: overdue.length }) : t('family.billTotalSubOk', { n: open.length })}</span>
-          {payable.length > 1 ? (
-            <>
-              <span className="cp-hide-phone" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t('family.payTogetherNote', { list: payable.map((r) => `${memberShort(r.member)} ${rp(r.balance)}`).join(' + ') })}</span>
-              <div role="radiogroup" aria-label={t('family.bank')} className={isPhone ? 'scroll-x' : undefined} style={{ display: 'flex', flexWrap: isPhone ? 'nowrap' : 'wrap', gap: isPhone ? 6 : 8, ...(isPhone ? { scrollbarWidth: 'none' } : {}) }}>
-                {BANKS.map((b) => {
-                  const c = chipStyle(bank === b, false);
-                  return <button key={b} type="button" role="radio" aria-checked={bank === b} onClick={() => setBank(b)} className="cp-chip" style={{ flex: 'none', height: 44, padding: '0 18px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter' }}>{b}</button>;
-                })}
-              </div>
-              <div style={{ padding: 14, borderRadius: 14, background: '#FBF8F4', border: '1px solid #EFE7DC', display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-                <div style={{ flex: '1 1 180px', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-                  <Cap>{t('family.comboVa')}</Cap>
-                  <span style={{ fontSize: 20, letterSpacing: '1px', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>{va}</span>
-                </div>
-                <Button variant="secondary" size={44} icon="content_copy" onClick={copy}>{t('common.copy')}</Button>
-              </div>
-              <button type="button" className="cp-btn" onClick={simulate} disabled={busy} style={{ height: 48, borderRadius: 999, border: '1px dashed #8A755B', background: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('family.simPay')}</button>
-            </>
-          ) : null}
+          {totalBody}
         </div>
-      ) : null}
+      )) : null}
 
-      {open.map((r) => (
-         <div key={r.inv.id} style={fcard('', 14)} data-testid="open-invoice" data-invoice={r.inv.id} data-status={r.status}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Avatar name={memberName(r.member)} tone={r.member.photoTone} src={memberPhoto(r.member)} size={46} ring />
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{memberName(r.member)}</span>
-              <span className="cp-hide-phone" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{planLine(r.member)}</span>
-              {extraLine(r.member) ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }} data-testid="billing-extra">{extraLine(r.member)}</span> : null}
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap' }}>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-              <Cap>{fmt.fmonth(r.period, true)}</Cap>
-              <span style={{ fontSize: 'clamp(28px, 6.4vw, 32px)', lineHeight: 1.15, fontWeight: 300, letterSpacing: '-0.8px', fontVariantNumeric: 'tabular-nums', color: '#1E1A16' }}>{rp(r.balance)}</span>
-              <span style={{ fontSize: 14, color: r.status === 'overdue' ? '#9A3D24' : '#6B6259', lineHeight: 1.4 }}>{r.status === 'overdue' ? `${t('family.invOverdueSub', { d: fmt.fds(r.inv.dueDate) })} · ${r.inv.number}` : subOf(r)}</span>
-            </div>
-            {badgeOf(r) !== 'outstanding' ? <StatusBadge kind={badgeOf(r)} /> : null}
-          </div>
-          {r.inv.lines.length > 1 ? (
-            <div style={{ display: 'flex', flexDirection: 'column' }}>
-              {lineText(r).map((l) => (
-                <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 15, lineHeight: 1.4 }}>
-                  <span>{l.k}</span><span style={{ fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{l.v}</span>
+      {open.map(invoice)}
+
+      {payers.map(payerNote)}
+
+      {hist.length ? (ph ? (
+        <div data-testid="billing-history">
+          <Group title={t('family.history')} pad={0} gap={0}>
+            {hist.map((r, i) => (
+              <button key={r.inv.id} type="button" onClick={() => setDetail(r.inv.id)} aria-label={t('family.viewInvoice', { no: r.inv.number })} className="cp-tap-self" data-history={r.inv.id}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '12px 10px 12px 16px', minHeight: 62, border: 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter',
+                  backgroundImage: i ? 'linear-gradient(#EFEAE3, #EFEAE3)' : 'none', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{fmt.fmonth(r.period, true)}{members.length > 1 ? ` · ${memberShort(r.member)}` : ''}</span>
+                  <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{subOf(r)}</span>
                 </div>
-              ))}
-            </div>
-          ) : null}
-          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            {primaryOf(r.member.id) ? <Button size={56} icon="account_balance" onClick={() => setPay([r.inv.id])} style={{ flex: '1 1 180px' }}>{t('family.payOne')}</Button> : null}
-            <Button variant="secondary" size={56} onClick={() => setDetail(r.inv.id)} style={{ flex: '1 1 120px' }}>{t('family.viewDetails')}</Button>
-          </div>
+                <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 4, flex: 'none' }}>
+                  <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{rp(r.total)}</span>
+                  <StatusBadge kind={badgeOf(r)} small />
+                </div>
+                <Icon name="chevron_right" size={22} color="#A89C8E" />
+              </button>
+            ))}
+          </Group>
         </div>
-      ))}
-
-      {payers.map((n) => (
-        <div key={n} style={{ paddingLeft: 14, borderLeft: '2px solid #E6DDD1', fontSize: 15, lineHeight: '22px', color: '#5E5852' }} data-testid="payer-note">{t('family.payerNote', { n })}</div>
-      ))}
-
-      {hist.length ? (
+      ) : (
         <div style={fcard('', 0, { padding: '8px clamp(18px, 3vw, 28px) 10px', gap: 0 })} data-testid="billing-history">
           <div style={{ padding: '14px 0 10px' }}><Cap>{t('family.history')}</Cap></div>
           {hist.map((r) => (
@@ -175,7 +218,7 @@ export function FamilyBilling() {
             </button>
           ))}
         </div>
-      ) : null}
+      )) : null}
 
       <PaySheet invoiceIds={pay || []} open={!!pay} onClose={closePay} />
       {detail ? <InvoiceSheet invoiceId={detail} open onClose={closeDetail} audience="family" /> : null}

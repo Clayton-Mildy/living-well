@@ -4,8 +4,8 @@ import { produce } from 'immer';
 import { buildSeed, getUser, menuOn, type ClubState, type MenuVersion } from '../index';
 import {
   COURSES, DISH_ALLERGENS, DISH_TAGS, KNOWN_UNITS, STOCK_AREAS, WEEKDAYS,
-  allergiesOnFile, canApproveStock, canEditStock, canReceiveStock, canRequestStock, coversOn, defaultAreaFor, defaultSectionFor, diffTemplates, dishUsage, dishesByCourse, feedbackThread, isStockApprover,
-  kitchenConflicts, membersAffectedBy, menuAudience, menuDishesOn, overridesFrom, personKey, potentialConflicts, replyTarget, safetyOf, sameIds, scheduledVersions, sortFeedback, sortStock, templateForWeek, templateOn, unreviewedDishesOn, weekDate, weekdayOf, planStartFor, MAX_PLAN_WEEKS,
+  allergiesOnFile, canApproveStock, canEditStock, canReceiveStock, canRequestStock, coversOn, defaultAreaFor, defaultSectionFor, diffTemplates, dishUsage, dishesByCourse, feedbackReplies, isStockApprover,
+  kitchenConflicts, allergyReachOf, dishAllergyReach, lastSameWeekdays, membersAffectedBy, usuallyComes, menuAudience, menuDishesOn, overridesFrom, personKey, potentialConflicts, replyTarget, safetyOf, sameIds, scheduledVersions, sortFeedback, sortStock, templateForWeek, templateOn, unreviewedDishesOn, weekDate, weekdayOf, planStartFor, MAX_PLAN_WEEKS,
 } from './kitchenOps';
 import { lunchPhotoIds, lunchPhotosOn, visibleLunchPhotos } from './kitchen';
 
@@ -102,6 +102,68 @@ describe('drop-in club: who is here, and who is on file', () => {
     expect(membersAffectedBy(s, { course: 'lunch', allergens: [] }, T)).toEqual([]);
     const ended = produce(s, (d) => { d.members.m1.memberships[0].lastDay = '2026-10-10'; });
     expect(membersAffectedBy(ended, { course: 'lunch', allergens: ['peanuts'] }, T)).toEqual([]);
+  });
+});
+
+describe('allergy reach: how many are allergic, and how many of them usually come that weekday', () => {
+  const WED = '2026-10-28';
+  const ids = (ms: { id: string }[]) => ms.map((m) => m.id).sort();
+  /** a member's check-ins on exactly these dates (the seed's history for them is cleared first) */
+  const cameOn = (s: ClubState, id: string, dates: string[]) => produce(s, (d) => {
+    for (const k of Object.keys(d.attendance)) if (d.attendance[k].memberId === id) delete d.attendance[k];
+    for (const date of dates) d.attendance[`${date}:${id}`] = { id: `${date}:${id}`, clubId: 'citra', createdAt: `${date}T10:00`, createdBy: 'system', memberId: id, date, checkIn: { at: `${date}T10:00`, by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] } as never;
+  });
+
+  it('the last 4 same weekdays are strictly before today, newest first', () => {
+    expect(lastSameWeekdays(WED, T)).toEqual(['2026-10-14', '2026-10-07', '2026-09-30', '2026-09-23']); // today is a Wednesday and does not count
+    expect(lastSameWeekdays('2026-10-22', T)).toEqual(['2026-10-15', '2026-10-08', '2026-10-01', '2026-09-24']); // Thursdays
+    expect(lastSameWeekdays('2026-10-20', T)).toEqual(['2026-10-20', '2026-10-13', '2026-10-06', '2026-09-29']); // Tuesdays: yesterday counts
+  });
+
+  it('the fish soup reaches Bambang; with a Wednesday given, he usually comes (4 of the last 4)', () => {
+    const s = seed();
+    const any = dishAllergyReach(s, 'dish-sop-ikan', T);
+    expect(ids(any.allergic)).toEqual(['m10']);
+    expect(any.allergens).toEqual(['fish']);
+    expect(any.weekday).toBeUndefined();
+    expect(any.usual).toEqual([]);
+    const wed = dishAllergyReach(s, 'dish-sop-ikan', T, WED);
+    expect(wed).toMatchObject({ weekday: 3, allergens: ['fish'] });
+    expect(ids(wed.usual)).toEqual(['m10']);
+    // a dish with no allergens, and an unknown one, reach nobody
+    expect(dishAllergyReach(s, 'dish-rawon', T, WED)).toMatchObject({ allergic: [], usual: [], allergens: [] });
+    expect(dishAllergyReach(s, 'dish-nope', T, WED).allergic).toEqual([]);
+  });
+
+  it('usually comes means at least 2 of the last 4 weeks of that weekday: 2 is in, 1 is out, and today does not count', () => {
+    const s = seed();
+    expect(usuallyComes(cameOn(s, 'm10', ['2026-10-14', '2026-09-23']), 'm10', WED, T)).toBe(true);
+    expect(ids(dishAllergyReach(cameOn(s, 'm10', ['2026-10-14', '2026-09-23']), 'dish-sop-ikan', T, WED).usual)).toEqual(['m10']);
+    expect(usuallyComes(cameOn(s, 'm10', ['2026-10-14']), 'm10', WED, T)).toBe(false);
+    expect(dishAllergyReach(cameOn(s, 'm10', ['2026-10-14']), 'dish-sop-ikan', T, WED).usual).toEqual([]);
+    // another weekday, and older weeks, do not count
+    expect(usuallyComes(cameOn(s, 'm10', ['2026-10-15', '2026-10-13', '2026-09-16', '2026-09-09']), 'm10', WED, T)).toBe(false);
+    expect(usuallyComes(cameOn(s, 'm10', [T, '2026-10-14']), 'm10', WED, T)).toBe(false); // today's check-in is not history
+    // they are still allergic; just not expected that day
+    expect(ids(dishAllergyReach(cameOn(s, 'm10', []), 'dish-sop-ikan', T, WED).allergic)).toEqual(['m10']);
+  });
+
+  it('follows the course and the diet: a soft dish reaches soft-food eaters only; seafood covers fish and shellfish', () => {
+    const soft = produce(seed(), (d) => { d.members.m10.health.diet = ['softFood']; });
+    expect(dishAllergyReach(soft, 'dish-sop-ikan', T, WED).allergic).toEqual([]); // Bambang eats the soft option now
+    expect(ids(dishAllergyReach(soft, 'dish-bubur-ikan', T, WED).allergic)).toEqual(['m10']);
+    const draft = allergyReachOf(seed(), { course: 'tea', allergens: ['fish', 'shellfish', 'peanuts'] }, T, WED);
+    expect(ids(draft.allergic)).toEqual(['m1', 'm10']); // Oma Lina: shellfish; Bambang: seafood
+    expect(draft.allergens).toEqual(['fish', 'shellfish']); // peanuts meets nobody
+  });
+
+  it('a member who has left by that date is not counted; a weekend date has no weekday', () => {
+    const left = produce(seed(), (d) => { d.members.m10.memberships[0].lastDay = '2026-10-25'; });
+    expect(dishAllergyReach(left, 'dish-sop-ikan', T, WED).allergic).toEqual([]);
+    expect(ids(dishAllergyReach(left, 'dish-sop-ikan', T, '2026-10-23').allergic)).toEqual(['m10']);
+    const sat = dishAllergyReach(seed(), 'dish-sop-ikan', T, '2026-10-24');
+    expect(sat.weekday).toBeUndefined();
+    expect(sat.usual).toEqual([]);
   });
 });
 
@@ -210,11 +272,12 @@ describe('stock helpers', () => {
 });
 
 describe('feedback helpers', () => {
-  it('open first, then the newest meal date; the thread comes back in order', () => {
+  it('open first, then the newest meal date; the replies come back in order', () => {
     const s = seed();
     expect(sortFeedback(Object.values(s.feedback)).map((f) => f.id)).toEqual(['c3', 'c1', 'c2']); // c3 (21 Oct) and c1 (19 Oct) are open
-    expect(feedbackThread(s, s.feedback.c2).map((m) => [m.seq, m.from])).toEqual([[1, 'family:fm2_0'], [2, 'staff:s3']]);
-    expect(feedbackThread(s, { ...s.feedback.c2, threadId: undefined })).toEqual([]);
+    expect(feedbackReplies(s.feedback.c2).map((r) => r.by)).toEqual(['staff:s3']); // the seeded answer
+    expect(feedbackReplies({ replies: [{ id: 'a', at: '2026-10-19T10:00', by: 'staff:s3', text: 'a' }, { id: 'b', at: '2026-10-19T11:00', by: 'staff:s9', text: 'b' }] }).map((r) => r.id)).toEqual(['a', 'b']);
+    expect(feedbackReplies(s.feedback.c1)).toEqual([]); // not answered yet (and older data without replies reads as none)
   });
   it('replies go to the family who wrote; a staff-logged item goes to the first contact with app access', () => {
     const s = seed();

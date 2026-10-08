@@ -25,6 +25,18 @@ export const LIMIT_RANGE: Record<LimitKey, [number, number]> = {
 };
 /** The club's limits (defaults for any not set). */
 export const limitsOf = (s?: Pick<ClubState, 'club'> | null): HealthLimits => ({ ...DEFAULT_LIMITS, ...(s?.club?.settings.limits || {}) });
+/**
+ * A member's own limits (KC round 7): the club's limits, with any key the member has of their own taking over (the whole Watch + Alert pair of that key).
+ * Takes the member row or its id; guests and anyone unknown follow the club. Every grade of a member goes through this.
+ */
+export function limitsFor(s: Pick<ClubState, 'club'> & Partial<Pick<ClubState, 'members'>>, member?: Pick<Member, 'limits'> | string | null): HealthLimits {
+  const m = typeof member === 'string' ? s.members?.[member] : member;
+  const out = limitsOf(s);
+  for (const k of LIMIT_KEYS) { const own = m?.limits?.[k]; if (own) out[k] = { watch: own.watch ?? null, alert: own.alert ?? null }; }
+  return out;
+}
+/** The limits a member has of their own (none = they follow the club's). */
+export const ownLimitKeys = (m?: Pick<Member, 'limits'> | null): LimitKey[] => LIMIT_KEYS.filter((k) => !!m?.limits?.[k]);
 /** Watch and Alert must be in order: for a high limit Alert is the higher one, for a low limit the lower one. */
 export function limitOrderOk(k: LimitKey, l: { watch: number | null; alert: number | null }): boolean {
   if (l.watch == null || l.alert == null) return l.watch != null || l.alert != null;

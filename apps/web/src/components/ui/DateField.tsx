@@ -166,9 +166,9 @@ function Calendar({ mode, value, min, max, disabledDate, today, clearable, start
   );
 }
 
-interface FieldBase { label?: string; error?: string | false; placeholder?: string; disabled?: boolean; ariaLabel?: string; hint?: string; clearable?: boolean; id?: string; startAt?: string }
+interface FieldBase { label?: string; error?: string | false; placeholder?: string; disabled?: boolean; ariaLabel?: string; hint?: string; clearable?: boolean; id?: string; startAt?: string; /** a slim 40px box without the leading icon and the weekday, for two fields side by side (a date range) */ compact?: boolean }
 
-function PickerField({ mode, value, onChange, min, max, disabledDate, label, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt }: FieldBase & {
+function PickerField({ mode, value, onChange, min, max, disabledDate, label, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact }: FieldBase & {
   mode: 'date' | 'month'; value: string; onChange: (v: string) => void; min?: string; max?: string; disabledDate?: (d: ISODate) => boolean;
 }) {
   const t = useT();
@@ -178,15 +178,15 @@ function PickerField({ mode, value, onChange, min, max, disabledDate, label, err
   const trigger = useRef<HTMLButtonElement>(null);
   const [open, setOpen] = useState(false);
   const title = label || ariaLabel || (mode === 'date' ? t('common.pickDate') : t('common.pickMonth'));
-  const text = useMemo(() => (!value ? '' : mode === 'date' ? fd(value, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).replace(/,/g, '') : fmonth(value, true)), [value, mode, fd, fmonth]);
+  const text = useMemo(() => (!value ? '' : mode === 'date' ? fd(value, { ...(compact ? {} : { weekday: 'short' as const }), day: 'numeric', month: 'short', year: 'numeric' }).replace(/,/g, '') : fmonth(value, true)), [value, mode, compact, fd, fmonth]);
   return (
     <FieldFrame ids={ids} label={label} error={error} hint={hint}>
       <button ref={trigger} id={ids.trigger} type="button" aria-haspopup="dialog" aria-expanded={open} aria-labelledby={label ? `${ids.label} ${ids.value}` : undefined} aria-label={label ? undefined : `${title}${text ? ', ' + text : ''}`}
         aria-describedby={error || hint ? ids.msg : undefined} aria-invalid={error ? true : undefined} disabled={disabled} onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); } }} style={triggerStyle({ error: !!error, disabled, open })}>
-        <Icon name={mode === 'date' ? 'calendar_month' : 'calendar_view_month'} size={22} color="#5E5852" />
+        onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); } }} style={{ ...triggerStyle({ error: !!error, disabled, open }), ...(compact ? { height: 40, gap: 6, fontSize: 15, padding: open || error ? '0 9px' : '0 10px' } : {}) }}>
+        {compact ? null : <Icon name={mode === 'date' ? 'calendar_month' : 'calendar_view_month'} size={22} color="#5E5852" />}
         <span id={ids.value} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: text ? undefined : '#5E5852' }}>{text || placeholder || (mode === 'date' ? t('common.pickDate') : t('common.pickMonth'))}</span>
-        <Icon name="expand_more" size={22} color="#5E5852" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
+        <Icon name="expand_more" size={compact ? 20 : 22} color="#5E5852" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
       </button>
       <PopLayer open={open} onClose={() => setOpen(false)} anchorRef={trigger} title={title} minWidth={330} maxHeight={480}>
         <Calendar mode={mode} value={value} min={min} max={max} disabledDate={disabledDate} today={today} clearable={clearable} startAt={startAt} onPick={(v) => { setOpen(false); onChange(v); }} />
@@ -199,10 +199,10 @@ function PickerField({ mode, value, onChange, min, max, disabledDate, label, err
  * Pick a day. `value` is 'YYYY-MM-DD' or ''. `min`/`max` are inclusive 'YYYY-MM-DD'; `disabledDate` greys out single days.
  * `startAt` ('YYYY-MM-DD') is the day the calendar opens on while the field is empty (a date of birth: around 1950, not today).
  */
-export function DateField({ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt }: FieldBase & {
+export function DateField({ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact }: FieldBase & {
   value: string; onChange: (v: string) => void; min?: string; max?: string; disabledDate?: (d: ISODate) => boolean;
 }) {
-  return <PickerField mode="date" {...{ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt }} />;
+  return <PickerField mode="date" {...{ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact }} />;
 }
 /** Pick a month. `value`, `min` and `max` are 'YYYY-MM'. */
 export function MonthField({ label, value, onChange, min, max, error, placeholder, disabled, ariaLabel, hint, clearable, id }: FieldBase & {

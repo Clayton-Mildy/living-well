@@ -5,14 +5,14 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import type { Enquiry } from '@cp/shared';
 import { ENQ_STAGES, archivedEnquiries, enquiriesByStage, seniorName, type EnqStage } from '@cp/shared/rules/enquiries';
-import { Button, Dialog, FilterChips, Icon, IconButton, PageHead, Pager, TextField, uiZoom, usePaged } from '../../components/ui';
+import { Button, Dialog, FilterChips, Icon, IconButton, PageHead, Pager, Pin, TextField, uiZoom, usePaged } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
-import { Pill, BadgePill, HPAD, heroCard, labelStyle } from '../mgmt/common';
+import { Pill, BadgePill, ListCard, PillBtn, SearchBar, HPAD, groupCard, heroCard, labelStyle } from '../mgmt/common';
 import { EnquiryDialogs, type Dlg } from './dialogs';
 import { nextText } from './text';
 
@@ -94,25 +94,29 @@ export function Enquiries() {
   const dragged = active ? s.enquiries[active] : undefined;
 
   return (
-    <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 20 }}>
+    <>
+    {/* round 6, phone: cp-native flattens the cards; the lead cards and the archive are iOS-style groups */}
+    <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 20 }}>
       <PageHead eyebrow={fdl(today)} title={t('nav.enquiries')} size={40}
-        right={(
+        right={isPhone && !archivedAll.length ? undefined : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {archivedAll.length ? <Button variant="secondary" icon="inventory_2" onClick={() => setShowArchived(!showArchived)}>{t('enq.archivedN', { n: archived.length })}</Button> : null}
-            <Button icon="add" onClick={() => setDlg({ mode: 'new' })}>{t('enq.newLead')}</Button>
+            {isPhone ? null : <Button icon="add" onClick={() => setDlg({ mode: 'new' })}>{t('enq.newLead')}</Button>}
           </div>
         )} />
 
+      {isPhone ? <SearchBar value={q} onChange={setQ} label={t('enq.searchLabel')} placeholder={t('enq.searchPh')} /> : (
       <div style={{ maxWidth: 460 }}>
-        <TextField label={isPhone ? <span className="sr-only">{t('enq.searchLabel')}</span> : t('enq.searchLabel')} type="search" inputMode="search" value={q} onChange={setQ} placeholder={t('enq.searchPh')} />
+        <TextField label={t('enq.searchLabel')} type="search" inputMode="search" value={q} onChange={setQ} placeholder={t('enq.searchPh')} />
       </div>
+      )}
 
       {isPhone ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <FilterChips label={t('enq.stageLabel')} value={stage} onChange={setStage} options={ENQ_STAGES.map((k) => ({ value: k, label: t('enq.stage.' + k), count: by[k].length }))} />
           {phonePaged.rows.map((e) => <LeadCard key={e.id} e={e} phone h={handlers} />)}
           <Pager page={phonePaged.page} pages={phonePaged.pages} onPage={phonePaged.setPage} label={t('enq.pgColumn', { stage: t('enq.stage.' + stage) })} />
-          {!by[stage].length ? <div style={{ padding: '28px 16px', borderRadius: 14, border: '1px dashed #CAB8A2', textAlign: 'center', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{searching ? t('enq.noMatch', { q: q.trim() }) : t('enq.nobody')}</div> : null}
+          {!by[stage].length ? <div style={{ padding: '28px 16px', borderRadius: 14, background: '#FFFFFF', textAlign: 'center', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{searching ? t('enq.noMatch', { q: q.trim() }) : t('enq.nobody')}</div> : null}
         </div>
       ) : (
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
@@ -126,7 +130,21 @@ export function Enquiries() {
         </DndContext>
       )}
 
-      {showArchived && archived.length ? (
+      {showArchived && archived.length ? (isPhone ? (
+        // round 6, phone: the archive is a grouped list under a small header
+        <ListCard title={t('enq.archivedTitle')}>
+          {archivedPaged.rows.map((e) => (
+            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: '1px solid #F0EAE1' }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{seniorName(e)}</span>
+                <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{e.contact.name} · {t('enq.stage.' + e.stage)} · {fds(e.archivedAt!.slice(0, 10))}</span>
+              </div>
+              <PillBtn icon="unarchive" onClick={() => act('enquiry.archive', { enquiryId: e.id, restore: true }, { ok: t('enq.restored', { name: seniorName(e) }) })}>{t('enq.restore')}</PillBtn>
+            </div>
+          ))}
+          <Pager page={archivedPaged.page} pages={archivedPaged.pages} onPage={archivedPaged.setPage} label={t('enq.pgArchived')} />
+        </ListCard>
+      ) : (
         <div style={{ ...heroCard, padding: `0 ${HPAD} 8px` }}>
           <div style={{ padding: '18px 0 8px' }}><span style={labelStyle}>{t('enq.archivedTitle')}</span></div>
           {archivedPaged.rows.map((e) => (
@@ -142,7 +160,7 @@ export function Enquiries() {
           ))}
           <Pager page={archivedPaged.page} pages={archivedPaged.pages} onPage={archivedPaged.setPage} label={t('enq.pgArchived')} />
         </div>
-      ) : null}
+      )) : null}
 
       <EnquiryDialogs dlg={dlg} onClose={() => setDlg(null)} />
       <Dialog open={!!moveFor} onClose={() => setMoveFor(null)} eyebrow={t('enq.moveTo')} title={moveFor ? seniorName(moveFor) : ''} maxWidth={420}>
@@ -153,6 +171,8 @@ export function Enquiries() {
         </div>
       </Dialog>
     </div>
+    {isPhone ? <Pin icon="add" label={t('enq.newLead')} onClick={() => setDlg({ mode: 'new' })} /> : null}
+    </>
   );
 }
 
@@ -205,7 +225,10 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
   const pending = e.stage === 'joined' && e.memberId && s.members[e.memberId]?.review?.status === 'pending';
   const open = e.stage === 'new' || e.stage === 'visit' || e.stage === 'trial';
   const sz = phone ? 15 : 13;
-  const A = (variant: 'primary' | 'secondary' | 'ghost', label: string, onClick: () => void, key = label) => <Button key={key} size={44} variant={variant} onClick={onClick} style={{ fontSize: sz }}>{label}</Button>;
+  // round 6, phone: the actions are small 34px pills (ink for the main step, white for the next, tinted for the quiet ones)
+  const A = (variant: 'primary' | 'secondary' | 'ghost', label: string, onClick: () => void, key = label) => phone
+    ? <PillBtn key={key} tone={variant === 'ghost' ? 'quiet' : variant} onClick={onClick}>{label}</PillBtn>
+    : <Button key={key} size={44} variant={variant} onClick={onClick} style={{ fontSize: sz }}>{label}</Button>;
   const actions: React.ReactNode[] = [];
   if (e.stage === 'new') actions.push(A('primary', t('enq.bookVisit'), () => h.dialog('visit', e)));
   if (e.stage === 'visit') actions.push(A('primary', t('enq.bookTrial'), () => h.dialog('trial', e)));
@@ -216,7 +239,9 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
   if ((e.stage === 'visit' || e.stage === 'trial') && e.next?.date) actions.push(A('ghost', t(e.stage === 'trial' ? 'enq.changeDay' : 'enq.changeTime'), () => h.dialog(e.stage as 'visit' | 'trial', e)));
   if (open) actions.push(A('ghost', t('enq.lostAction'), () => h.dialog('lost', e)));
   return (
-    <div data-lead={e.id} style={{ background: '#FFFFFF', border: '1px solid #E4DACD', borderRadius: 12, padding: phone ? 14 : 12, display: 'flex', flexDirection: 'column', gap: phone ? 8 : 8, cursor: phone || overlay ? 'default' : 'grab', boxShadow: overlay ? '0 12px 28px rgba(117,98,75,0.22)' : '0 1px 3px rgba(60,45,30,.05)' }}>
+    <div data-lead={e.id} style={phone
+      ? { ...groupCard, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, cursor: 'default' }
+      : { background: '#FFFFFF', border: '1px solid #E4DACD', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, cursor: overlay ? 'default' : 'grab', boxShadow: overlay ? '0 12px 28px rgba(117,98,75,0.22)' : '0 1px 3px rgba(60,45,30,.05)' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: phone ? 17 : 15, fontWeight: 600, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{seniorName(e)}</span>
@@ -245,7 +270,7 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
             <span style={{ fontSize: 13, fontWeight: 500, color: '#6B6259', lineHeight: 1.4, paddingRight: 2 }}>{t('enq.moveTo')}</span>
             <div style={{ display: 'contents' }}>
               {ENQ_STAGES.filter((k) => k !== e.stage).map((k) => (
-                <button key={k} type="button" data-move={k} className="cp-chip" onClick={() => void h.move(e, k)} style={{ height: 40, padding: '0 14px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('enq.stage.' + k)}</button>
+                <button key={k} type="button" data-move={k} className="cp-press" onClick={() => void h.move(e, k)} style={{ height: 34, padding: '0 14px', borderRadius: 999, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('enq.stage.' + k)}</button>
               ))}
             </div>
           </div>

@@ -6,11 +6,12 @@ import {
   type Plan, type Title, type Relation, type EndReason,
 } from '@cp/shared';
 import { END_REASONS, consentOf, firstOfNextMonth, isPhone, openBalance, plainName } from '@cp/shared/rules/members';
+import { cleanRegistration, validateRegistration } from '@cp/shared/rules/applicationForm';
 import { Button, ChipGroup, DateField, Dialog, Note, StaffOnlyTag, Toggle } from '../../../components/ui';
 import { say } from '../../../store/ui';
 import { endReasonLabel } from '../lib';
 import { ProfilePhotoField } from '../ProfilePhoto';
-import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, OptionalTime, PeSection, RelationChips, SelectField, TitleName, YesNo, joinDrugs, splitDrugs, useDraft, type MedRow } from './forms';
+import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, OptionalTime, PeSection, RegCareFields, RegPersonalFields, RelationChips, SelectField, TitleName, YesNo, joinDrugs, regDraftOf, regOfDraft, splitDrugs, useDraft, type MedRow, type RegDraft } from './forms';
 import type { DialogKind, P } from '../profile/types';
 
 type Props = { p: P; kind: DialogKind; familyId?: string; onClose: () => void };
@@ -53,16 +54,20 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
   const hours = { open: s.club.settings.open, last: toHM(toMin(s.club.settings.close) - 1) };
   const [d, set] = useDraft(() => ({
     title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
-    spouseId: m.spouseId || '', note: '', photo: m.photoMediaId || '',
+    spouseId: m.spouseId || '', note: '', photo: m.photoMediaId || '', reg: regDraftOf(m.registration),
   }));
+  const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
   const members = sortBy(live(s.members).filter((x) => x.id !== m.id && !isPendingRow(x)), (x) => x.firstName);
   const errName = tried && d.name.trim().length < 2 ? t('members.err.nameRequired') : '';
   const errNanny = tried && d.nanny && !d.nannyName.trim() ? t('members.err.nannyNameRequired') : '';
+  const reg = regOfDraft(d.reg);
+  const regIssues = validateRegistration(reg);
+  const regErr = (...fields: string[]) => { const i = tried ? regIssues.find((x) => fields.includes(x.field)) : undefined; return i ? t(i.code, i.params) : ''; };
   const save = async () => {
     setTried(true);
-    if (d.name.trim().length < 2 || (d.nanny && !d.nannyName.trim()) || busy) return;
+    if (d.name.trim().length < 2 || (d.nanny && !d.nannyName.trim()) || regIssues.length || busy) return;
     const patch: Record<string, unknown> = {};
     if (d.title !== m.title) patch.title = d.title;
     if (d.name.trim() !== plainName(m)) patch.name = d.name.trim();
@@ -73,6 +78,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
     if (JSON.stringify(nanny) !== JSON.stringify(m.nanny)) patch.nanny = nanny;
     if ((d.spouseId || null) !== m.spouseId) patch.spouseId = d.spouseId || null;
     if ((d.photo || undefined) !== m.photoMediaId) patch.photoMediaId = d.photo || null;
+    if (JSON.stringify(reg ?? null) !== JSON.stringify(cleanRegistration(m.registration) ?? null)) patch.registration = reg ?? null;
     if (!Object.keys(patch).length) { say(t('err.noChanges')); return; }
     setBusy(true);
     const r = await p.act('members.updateDetails', { memberId: m.id, patch, ...(d.note.trim() ? { note: d.note.trim() } : {}) }, { ok: t('profile.savedDetails', { n: memberName(m) }), reviewText: t('profile.sentForReview') });
@@ -90,6 +96,9 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
         <OptionalTime label={t('profile.f.usualOpt')} value={d.usual} onChange={(v) => set({ usual: v })} min={hours.open} max={hours.last} t={t} />
         <SelectField label={t('profile.f.spouse')} value={d.spouseId} onChange={(v) => set({ spouseId: v })} placeholder={t('profile.noSpouse')} options={members.map((x) => ({ value: x.id, label: memberName(x) }))} />
       </PeSection>
+      <PeSection label={t('profile.sec.regPersonal')}>
+        <RegPersonalFields d={d.reg} set={setReg} t={t} err={regErr} />
+      </PeSection>
       <PeSection label={t('profile.sec.nanny')}>
         <YesNo label={t('profile.comesWithNanny')} value={d.nanny} onChange={(v) => set({ nanny: v })} t={t} />
         {d.nanny ? (
@@ -98,6 +107,9 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
             <TextField label={t('profile.nannyPhone')} value={d.nannyPhone} onChange={(v) => set({ nannyPhone: v })} inputMode="tel" placeholder="+62" />
           </>
         ) : null}
+      </PeSection>
+      <PeSection label={t('profile.sec.regCare')}>
+        <RegCareFields d={d.reg} set={setReg} t={t} />
       </PeSection>
       <MgmtNote p={p} v={d.note} set={(v) => set({ note: v })} />
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={p.mgmt ? t('common.saveChanges') : t('common.submitReview')} />

@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, dayStatus, sessionsOn, scheduleVersionFor, projectForFamily, live, DomainError, type ClubState } from '../index';
-import { DRAFT_ID, builderBase, builderDays, nextMonday, normalizeDays, weekView, type Days } from '../rules/calendar';
+import { DRAFT_ID, builderBase, builderDays, dayInfo, nextMonday, normalizeDays, slotChanged, weekView, weeklyCell, type Days } from '../rules/calendar';
 import { nowNext, dayPlan } from '../rules/activity';
 
 const clock = { today: '2026-10-21', nowMin: 600 }; // Wed 21 Oct, 10:00
@@ -25,28 +25,28 @@ const ANGKLUNG = { activityId: 'act-angklung', staffId: 's6', roomId: 'room-musi
 describe('schedule.saveDraft', () => {
   it('stores a draft (next Monday by default) and leaves the published schedule alone', () => {
     const s0 = fresh();
-    const r = run(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's5');
+    const r = run(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9');
     const draft = r.state.scheduleVersions[DRAFT_ID];
-    expect(draft).toMatchObject({ status: 'draft', effectiveFrom: '2026-10-26', submittedBy: 'staff:s5' });
+    expect(draft).toMatchObject({ status: 'draft', effectiveFrom: '2026-10-26', submittedBy: 'staff:s9' });
     expect(draft.days[3]['10:30']).toEqual(ANGKLUNG);
     expect(sessionsOn(r.state, '2026-10-21')[0].cell?.activityId).toBe('act-keroncong');
     expect(builderDays(r.state)[3]['10:30']).toEqual(ANGKLUNG);
     expect(builderBase(r.state)[3]['10:30']?.activityId).toBe('act-keroncong');
     // saving again replaces it; an explicit date sticks
     const r2 = run(r.state, 'schedule.saveDraft', { days: withCell(s0, 4, '13:30', ANGKLUNG), effectiveFrom: '2026-11-04' }, 's9');
-    expect(r2.state.scheduleVersions[DRAFT_ID]).toMatchObject({ effectiveFrom: '2026-11-04', createdBy: 'staff:s5', submittedBy: 'staff:s9' });
+    expect(r2.state.scheduleVersions[DRAFT_ID]).toMatchObject({ effectiveFrom: '2026-11-04', createdBy: 'staff:s9', submittedBy: 'staff:s9' });
     expect(Object.values(r2.state.scheduleVersions).filter((v) => v.status === 'draft')).toHaveLength(1);
   });
 
   it('keeps empty slots (clear this slot) and validates the catalog', () => {
     const s0 = fresh();
-    const cleared = run(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', null) }, 's5').state;
+    const cleared = run(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', null) }, 's9').state;
     expect(cleared.scheduleVersions[DRAFT_ID].days[3]['10:30']).toBeNull();
-    fails(s0, 'schedule.saveDraft', { days: withCell(s0, 1, '10:30', { ...ANGKLUNG, activityId: 'act-ghost' }) }, 's5', 'cal.err.badActivity');
-    fails(s0, 'schedule.saveDraft', { days: withCell(s0, 1, '10:30', { ...ANGKLUNG, roomId: 'room-ghost' }) }, 's5', 'cal.err.badRoom');
-    fails(s0, 'schedule.saveDraft', { days: withCell(s0, 1, '10:30', { ...ANGKLUNG, staffId: 's8' }) }, 's5', 'cal.err.badTeacher'); // the nurse does not teach
-    fails(s0, 'schedule.saveDraft', { days: { 1: {} } }, 's5', 'err.invalid');
-    fails(s0, 'schedule.saveDraft', {}, 's5', 'err.invalid');
+    fails(s0, 'schedule.saveDraft', { days: withCell(s0, 1, '10:30', { ...ANGKLUNG, activityId: 'act-ghost' }) }, 's9', 'cal.err.badActivity');
+    fails(s0, 'schedule.saveDraft', { days: withCell(s0, 1, '10:30', { ...ANGKLUNG, roomId: 'room-ghost' }) }, 's9', 'cal.err.badRoom');
+    fails(s0, 'schedule.saveDraft', { days: withCell(s0, 1, '10:30', { ...ANGKLUNG, staffId: 's8' }) }, 's9', 'cal.err.badTeacher'); // the nurse does not teach
+    fails(s0, 'schedule.saveDraft', { days: { 1: {} } }, 's9', 'err.invalid');
+    fails(s0, 'schedule.saveDraft', {}, 's9', 'err.invalid');
   });
 
   it('teachers come from staff with the activity role, not fixed ids', () => {
@@ -60,28 +60,32 @@ describe('schedule.saveDraft', () => {
   });
 
   it('a deactivated activity cannot be newly placed, but stays where it already is', () => {
-    let s = step(fresh(), 'activity.upsert', { id: 'act-angklung', name: 'Angklung ensemble', roomId: 'room-music', active: false }, 's5');
-    fails(s, 'schedule.saveDraft', { days: withCell(s, 3, '10:30', ANGKLUNG) }, 's5', 'cal.err.inactiveActivity');
-    s = step(s, 'activity.upsert', { id: 'act-keroncong', name: 'Keroncong sing-along', roomId: 'room-music', active: false }, 's5');
-    run(s, 'schedule.saveDraft', { days: builderDays(s) }, 's5'); // unchanged cells are fine
+    let s = step(fresh(), 'activity.upsert', { id: 'act-angklung', name: 'Angklung ensemble', roomId: 'room-music', active: false }, 's9');
+    fails(s, 'schedule.saveDraft', { days: withCell(s, 3, '10:30', ANGKLUNG) }, 's9', 'cal.err.inactiveActivity');
+    s = step(s, 'activity.upsert', { id: 'act-keroncong', name: 'Keroncong sing-along', roomId: 'room-music', active: false }, 's9');
+    run(s, 'schedule.saveDraft', { days: builderDays(s) }, 's9'); // unchanged cells are fine
   });
 
-  it('is permissioned: activity and management only', () => {
+  it('is permissioned: management only (KC round 6: activity teachers see the schedule but cannot change it)', () => {
     const s = fresh();
     const days = withCell(s, 3, '10:30', ANGKLUNG);
-    for (const uid of ['s5', 's6', 's9']) run(s, 'schedule.saveDraft', { days }, uid);
-    for (const uid of ['s1', 's8', 's3', 's10', 'f1']) fails(s, 'schedule.saveDraft', { days }, uid, 'err.forbidden');
+    run(s, 'schedule.saveDraft', { days }, 's9');
+    for (const uid of ['s5', 's6', 's1', 's8', 's3', 's10', 'f1']) fails(s, 'schedule.saveDraft', { days }, uid, 'err.forbidden');
+    for (const uid of ['s5', 's6']) {
+      fails(s, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, uid, 'err.forbidden');
+      fails(s, 'activity.upsert', { name: 'Tai chi', roomId: 'room-garden' }, uid, 'err.forbidden');
+    }
   });
 });
 
 describe('schedule.publish', () => {
   it('publishes a dated version: today and the past keep their schedule', () => {
     const s0 = fresh();
-    let s = step(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's5');
-    const r = run(s, 'schedule.publish', { effectiveFrom: '2026-10-26' }, 's5');
+    let s = step(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9');
+    const r = run(s, 'schedule.publish', { effectiveFrom: '2026-10-26' }, 's9');
     s = r.state;
     const v = s.scheduleVersions[r.result.versionId as string];
-    expect(v).toMatchObject({ status: 'published', effectiveFrom: '2026-10-26', publishedBy: 'staff:s5', publishedAt: '2026-10-21T10:00' });
+    expect(v).toMatchObject({ status: 'published', effectiveFrom: '2026-10-26', publishedBy: 'staff:s9', publishedAt: '2026-10-21T10:00' });
     expect(s.scheduleVersions[DRAFT_ID]).toBeUndefined();
     expect(sessionsOn(s, '2026-10-21')[0].cell?.activityId).toBe('act-keroncong'); // today unchanged
     expect(sessionsOn(s, '2026-10-19')[0].cell?.activityId).toBe('act-angklung'); // history unchanged (Monday, as before)
@@ -108,28 +112,28 @@ describe('schedule.publish', () => {
   it('refuses today and the past, an empty draft, and a publish that changes nothing', () => {
     const s0 = fresh();
     const days = withCell(s0, 3, '10:30', ANGKLUNG);
-    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-21', days }, 's5', 'cal.err.futureOnly');
-    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-01', days }, 's5', 'cal.err.futureOnly');
-    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26' }, 's5', 'cal.err.noDraft');
-    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: builderDays(s0) }, 's5', 'err.noChanges');
-    fails(s0, 'schedule.publish', { effectiveFrom: 'next monday', days }, 's5', 'err.invalid');
+    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-21', days }, 's9', 'cal.err.futureOnly');
+    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-01', days }, 's9', 'cal.err.futureOnly');
+    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26' }, 's9', 'cal.err.noDraft');
+    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: builderDays(s0) }, 's9', 'err.noChanges');
+    fails(s0, 'schedule.publish', { effectiveFrom: 'next monday', days }, 's9', 'err.invalid');
   });
 
   it('later versions stack: each date uses the latest version in force on it', () => {
     const s0 = fresh();
-    let s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's5');
+    let s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9');
     const second = withCell(s, 3, '10:30', { activityId: 'act-yoga', staffId: 's6', roomId: 'room-garden-room' });
     s = step(s, 'schedule.publish', { effectiveFrom: '2026-11-09', days: second }, 's9');
     expect(sessionsOn(s, '2026-10-28')[0].cell?.activityId).toBe('act-angklung');
     expect(sessionsOn(s, '2026-11-11')[0].cell?.activityId).toBe('act-yoga');
     expect(sessionsOn(s, '2026-10-21')[0].cell?.activityId).toBe('act-keroncong');
     // republishing the second version's days for a date after it changes nothing
-    fails(s, 'schedule.publish', { effectiveFrom: '2026-12-01', days: second }, 's5', 'err.noChanges');
+    fails(s, 'schedule.publish', { effectiveFrom: '2026-12-01', days: second }, 's9', 'err.noChanges');
   });
 
   it('tells staff roles and every family with app access', () => {
     const s0 = fresh();
-    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's5');
+    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9');
     const ns = note(r.state, 'cal.notif.schedulePublished');
     expect(ns).toHaveLength(1);
     expect(ns[0].toRoles).toEqual(expect.arrayContaining(['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt']));
@@ -137,7 +141,7 @@ describe('schedule.publish', () => {
     expect(ns[0]).toMatchObject({ params: { date: '26/10/2026' }, link: '/calendar' });
     expect(Object.values(r.state.activity).some((a) => a.key === 'cal.feed.schedulePublished')).toBe(true);
     // the family projection carries the published versions only (the draft stays internal)
-    const withDraft = step(r.state, 'schedule.saveDraft', { days: withCell(r.state, 1, '10:30', null) }, 's5');
+    const withDraft = step(r.state, 'schedule.saveDraft', { days: withCell(r.state, 1, '10:30', null) }, 's9');
     expect(Object.values(projectForFamily(withDraft, 'f1').scheduleVersions).every((v) => v.status === 'published')).toBe(true);
   });
 
@@ -171,18 +175,18 @@ describe('schedule.publish notify toggle and weekly versions', () => {
   it('notify:false publishes the version and the feed line but tells nobody; the default tells everyone', () => {
     const s0 = fresh();
     const days = withCell(s0, 3, '10:30', ANGKLUNG);
-    const quiet = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days, notify: false }, 's5');
+    const quiet = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days, notify: false }, 's9');
     expect(quiet.state.scheduleVersions[quiet.result.versionId as string].status).toBe('published');
     expect(note(quiet.state, 'cal.notif.schedulePublished')).toHaveLength(0);
     expect(Object.values(quiet.state.activity).some((a) => a.key === 'cal.feed.schedulePublished')).toBe(true);
-    expect(note(run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days, notify: true }, 's5').state, 'cal.notif.schedulePublished')).toHaveLength(1);
-    expect(note(run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's5').state, 'cal.notif.schedulePublished')).toHaveLength(1);
-    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days, notify: 'no' }, 's5', 'err.invalid');
+    expect(note(run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days, notify: true }, 's9').state, 'cal.notif.schedulePublished')).toHaveLength(1);
+    expect(note(run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's9').state, 'cal.notif.schedulePublished')).toHaveLength(1);
+    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days, notify: 'no' }, 's9', 'err.invalid');
   });
 
   it('publishing from a later week’s Monday leaves the weeks before it on their own version', () => {
     const s0 = fresh();
-    const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-11-09', days: withCell(s0, 4, '10:30', ANGKLUNG) }, 's5');
+    const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-11-09', days: withCell(s0, 4, '10:30', ANGKLUNG) }, 's9');
     const before = weekView(s, '2026-11-02', clock.today);
     const from = weekView(s, '2026-11-09', clock.today);
     const after = weekView(s, '2026-11-16', clock.today);
@@ -196,7 +200,7 @@ describe('schedule.publish notify toggle and weekly versions', () => {
 
   it('a draft saved for a week shows in that week only, and publishing it needs no new input', () => {
     const s0 = fresh();
-    const s = step(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', ANGKLUNG), effectiveFrom: '2026-11-09' }, 's5');
+    const s = step(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', ANGKLUNG), effectiveFrom: '2026-11-09' }, 's9');
     const here = weekView(s, '2026-11-09', clock.today);
     expect(here.draftHere).toBe(true);
     expect(here.changes).toEqual([{ w: 3, slot: '10:30' }]);
@@ -205,18 +209,18 @@ describe('schedule.publish notify toggle and weekly versions', () => {
     expect(elsewhere.draftHere).toBe(false);
     expect(elsewhere.changes).toEqual([]);
     expect(elsewhere.otherDraft).toEqual({ monday: '2026-11-09', changes: 1 });
-    const out = run(s, 'schedule.publish', { effectiveFrom: '2026-11-09' }, 's5');
+    const out = run(s, 'schedule.publish', { effectiveFrom: '2026-11-09' }, 's9');
     expect(out.state.scheduleVersions[out.result.versionId as string].days[3]['10:30']).toEqual(ANGKLUNG);
   });
 
   it('a cell that an earlier version already had stays valid after its activity is switched off', () => {
     const s0 = fresh();
     const days = withCell(s0, 3, '10:30', ANGKLUNG);
-    let s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's5');
-    s = step(s, 'activity.upsert', { id: 'act-angklung', name: 'Angklung ensemble', roomId: 'room-music', active: false }, 's5');
+    let s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's9');
+    s = step(s, 'activity.upsert', { id: 'act-angklung', name: 'Angklung ensemble', roomId: 'room-music', active: false }, 's9');
     // an old week is shown, edited elsewhere and saved again: the unchanged Angklung cell is not re-validated
-    run(s, 'schedule.saveDraft', { days, effectiveFrom: '2026-11-09' }, 's5');
-    fails(s, 'schedule.saveDraft', { days: withCell(s, 4, '10:30', ANGKLUNG), effectiveFrom: '2026-11-09' }, 's5', 'cal.err.inactiveActivity');
+    run(s, 'schedule.saveDraft', { days, effectiveFrom: '2026-11-09' }, 's9');
+    fails(s, 'schedule.saveDraft', { days: withCell(s, 4, '10:30', ANGKLUNG), effectiveFrom: '2026-11-09' }, 's9', 'cal.err.inactiveActivity');
   });
 });
 
@@ -355,50 +359,64 @@ describe('calendarEvent', () => {
 });
 
 describe('activity.upsert and room.upsert', () => {
+  it('an activity has a picture (KC round 6): management sets it with the activity, changes it, and null removes it', () => {
+    const s0 = fresh();
+    const r = run(s0, 'activity.upsert', { name: 'Tai chi', roomId: 'room-garden', photoMediaId: 'md_taichi0001' }, 's9');
+    const id = r.result.activityId as string;
+    expect(r.state.activities[id].photoMediaId).toBe('md_taichi0001');
+    const s1 = step(r.state, 'activity.upsert', { id, name: 'Tai chi', roomId: 'room-garden', photoMediaId: 'md_taichi0002' }, 's9');
+    expect(s1.activities[id].photoMediaId).toBe('md_taichi0002');
+    const s2 = step(s1, 'activity.upsert', { id, name: 'Tai chi', roomId: 'room-garden' }, 's9'); // not given: unchanged
+    expect(s2.activities[id].photoMediaId).toBe('md_taichi0002');
+    const s3 = step(s2, 'activity.upsert', { id, name: 'Tai chi', roomId: 'room-garden', photoMediaId: null }, 's9');
+    expect(s3.activities[id].photoMediaId).toBeUndefined();
+    fails(s0, 'activity.upsert', { name: 'Yoga', roomId: 'room-garden', photoMediaId: 'not-a-media-id' }, 's9', 'err.invalid');
+  });
+
   it('adds and edits activities (name, Indonesian name, icon, room, active)', () => {
     const s0 = fresh();
-    const r = run(s0, 'activity.upsert', { name: 'Tai chi', nameId: 'Tai chi pagi', icon: 'self_improvement', roomId: 'room-garden' }, 's5');
+    const r = run(s0, 'activity.upsert', { name: 'Tai chi', nameId: 'Tai chi pagi', icon: 'self_improvement', roomId: 'room-garden' }, 's9');
     const a = r.state.activities[r.result.activityId as string];
     expect(a).toMatchObject({ name: 'Tai chi', nameId: 'Tai chi pagi', icon: 'self_improvement', roomId: 'room-garden', active: true });
     const e = run(r.state, 'activity.upsert', { id: a.id, name: 'Tai chi in the garden', nameId: null, roomId: 'room-garden-room', active: false }, 's9').state.activities[a.id];
     expect(e).toMatchObject({ name: 'Tai chi in the garden', roomId: 'room-garden-room', active: false, icon: 'self_improvement' });
     expect(e.nameId).toBeUndefined();
     // defaults
-    const d = run(s0, 'activity.upsert', { name: 'Origami', roomId: 'room-lounge' }, 's5');
+    const d = run(s0, 'activity.upsert', { name: 'Origami', roomId: 'room-lounge' }, 's9');
     expect(d.state.activities[d.result.activityId as string]).toMatchObject({ icon: 'interests', active: true });
   });
 
   it('rejects duplicates, unknown rooms and bad input', () => {
     const s = fresh();
-    fails(s, 'activity.upsert', { name: ' angklung ENSEMBLE ', roomId: 'room-music' }, 's5', 'cal.err.dupName');
-    fails(s, 'activity.upsert', { name: 'Origami', roomId: 'room-ghost' }, 's5', 'cal.err.badRoom');
-    fails(s, 'activity.upsert', { id: 'act-ghost', name: 'Origami', roomId: 'room-lounge' }, 's5', 'err.notFound');
-    fails(s, 'activity.upsert', { name: '', roomId: 'room-lounge' }, 's5', 'err.invalid');
-    fails(s, 'activity.upsert', { name: 'Origami', roomId: 'room-lounge', icon: 'Not An Icon' }, 's5', 'err.invalid');
-    run(s, 'activity.upsert', { id: 'act-batik', name: 'Batik painting', roomId: 'room-studio' }, 's5'); // keeping its own name is fine
+    fails(s, 'activity.upsert', { name: ' angklung ENSEMBLE ', roomId: 'room-music' }, 's9', 'cal.err.dupName');
+    fails(s, 'activity.upsert', { name: 'Origami', roomId: 'room-ghost' }, 's9', 'cal.err.badRoom');
+    fails(s, 'activity.upsert', { id: 'act-ghost', name: 'Origami', roomId: 'room-lounge' }, 's9', 'err.notFound');
+    fails(s, 'activity.upsert', { name: '', roomId: 'room-lounge' }, 's9', 'err.invalid');
+    fails(s, 'activity.upsert', { name: 'Origami', roomId: 'room-lounge', icon: 'Not An Icon' }, 's9', 'err.invalid');
+    run(s, 'activity.upsert', { id: 'act-batik', name: 'Batik painting', roomId: 'room-studio' }, 's9'); // keeping its own name is fine
   });
 
   it('room "Other": a room typed as free text is added to the catalog, or an existing one with that name is reused', () => {
     const s0 = fresh();
-    const r = run(s0, 'activity.upsert', { name: 'Tai chi', roomOther: 'Terrace' }, 's5');
+    const r = run(s0, 'activity.upsert', { name: 'Tai chi', roomOther: 'Terrace' }, 's9');
     const a = r.state.activities[r.result.activityId as string];
     const room = r.state.rooms[a.roomId];
-    expect(room).toMatchObject({ name: 'Terrace', venue: false, createdBy: 'staff:s5' });
+    expect(room).toMatchObject({ name: 'Terrace', venue: false, createdBy: 'staff:s9' });
     expect(r.result).toMatchObject({ roomId: room.id, roomCreated: true });
     // the same text again (any case, or the Indonesian name) reuses it
-    const again = run(r.state, 'activity.upsert', { name: 'Stretching', roomOther: ' terrace ' }, 's5');
+    const again = run(r.state, 'activity.upsert', { name: 'Stretching', roomOther: ' terrace ' }, 's9');
     expect(again.state.activities[again.result.activityId as string].roomId).toBe(room.id);
     expect(Object.values(again.state.rooms).filter((x) => x.name === 'Terrace')).toHaveLength(1);
     expect(again.result.roomCreated).toBeUndefined();
-    const lounge = run(s0, 'activity.upsert', { name: 'Origami', roomOther: 'LOUNGE' }, 's5');
+    const lounge = run(s0, 'activity.upsert', { name: 'Origami', roomOther: 'LOUNGE' }, 's9');
     expect(lounge.state.activities[lounge.result.activityId as string].roomId).toBe('room-lounge');
     // an edit can move an activity into a typed room
     const moved = run(s0, 'activity.upsert', { id: 'act-batik', name: 'Batik painting', roomOther: 'Courtyard' }, 's9');
     expect(moved.state.rooms[moved.state.activities['act-batik'].roomId].name).toBe('Courtyard');
     // one of the two is needed; a duplicate name still fails before anything is created
-    fails(s0, 'activity.upsert', { name: 'Tai chi' }, 's5', 'err.invalid');
-    fails(s0, 'activity.upsert', { name: 'Tai chi', roomOther: '   ' }, 's5', 'err.invalid');
-    fails(s0, 'activity.upsert', { name: 'Angklung ensemble', roomOther: 'Terrace' }, 's5', 'cal.err.dupName');
+    fails(s0, 'activity.upsert', { name: 'Tai chi' }, 's9', 'err.invalid');
+    fails(s0, 'activity.upsert', { name: 'Tai chi', roomOther: '   ' }, 's9', 'err.invalid');
+    fails(s0, 'activity.upsert', { name: 'Angklung ensemble', roomOther: 'Terrace' }, 's9', 'cal.err.dupName');
   });
 
   it('rooms: management only; activities: activity teachers too', () => {
@@ -413,5 +431,104 @@ describe('activity.upsert and room.upsert', () => {
     fails(s, 'room.upsert', { name: 'lounge' }, 's9', 'cal.err.dupName');
     fails(s, 'room.upsert', { id: 'room-ghost', name: 'X' }, 's9', 'err.notFound');
     for (const uid of ['s1', 's8', 's3', 's10', 'f1']) fails(s, 'activity.upsert', { name: 'Origami', roomId: 'room-lounge' }, uid, 'err.forbidden');
+  });
+});
+
+// KC round 7: "activity can be changed for this week including today, there might be sudden changes in each day"
+describe('schedule.changeDay (one day only)', () => {
+  const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
+  const BATIK = { activityId: 'act-batik', staffId: 's6', roomId: 'room-studio' }; // Wednesday 13:30 in the weekly plan
+  const TODAY = '2026-10-21';
+  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'fm10_0', 'fm20_0'];
+
+  it('changes today for that day only: the weekly plan and other days stay, teachers and families are told', () => {
+    const s0 = fresh();
+    const r = run(s0, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY, note: 'Kak Dimas is off sick' }, 's9');
+    const s = r.state;
+    expect(sessionsOn(s, TODAY)[1].cell).toEqual(MEMORY);
+    expect(sessionsOn(s, TODAY)[0].cell?.activityId).toBe('act-keroncong'); // 10:30 untouched
+    expect(sessionsOn(s, '2026-10-28')[1].cell?.activityId).toBe('act-batik'); // next Wednesday follows the weekly plan
+    expect(weeklyCell(s, TODAY, '13:30')).toEqual(BATIK);
+    expect(s.scheduleDays[TODAY]).toMatchObject({ date: TODAY, note: 'Kak Dimas is off sick', slots: { '13:30': MEMORY } });
+    expect(slotChanged(s, TODAY, '13:30')).toBe(true);
+    expect(slotChanged(s, TODAY, '10:30')).toBe(false);
+    // Today (the teacher's hero) and the calendar follow it; staff see "Changed" and the note, families only the new session
+    expect(nowNext(s, TODAY, 600).later.some((x) => x.kind === 'session' && x.activity?.id === 'act-memory')).toBe(true);
+    const staff = dayInfo(s, TODAY, 'staff').items.find((i) => i.time === '13:30')!;
+    expect(staff).toMatchObject({ activityId: 'act-memory', changed: true, note: 'Kak Dimas is off sick' });
+    const fam = dayInfo(s, TODAY, 'family').items.find((i) => i.time === '13:30')!;
+    expect(fam.activityId).toBe('act-memory');
+    expect(fam.changed).toBeUndefined();
+    expect(fam.note).toBeUndefined();
+    const ns = note(s, 'cal.notif.dayChanged');
+    expect(ns).toHaveLength(1);
+    expect(ns[0]).toMatchObject({ toRoles: ['activity'], params: { date: TODAY, slot: '13:30', name: 'Memory games' }, link: '/calendar' });
+    expect(new Set(ns[0].toUsers)).toEqual(new Set(FAMILIES));
+    expect(Object.values(s.activity).some((a) => a.key === 'cal.feed.dayChanged')).toBe(true);
+  });
+
+  it('refuses a day that has passed, a closed day and an outing day; changes nothing when nothing changes', () => {
+    const s = fresh();
+    fails(s, 'schedule.changeDay', { date: '2026-10-20', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.pastDay');
+    fails(s, 'schedule.changeDay', { date: '2026-10-24', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayClosed'); // Saturday
+    fails(s, 'schedule.changeDay', { date: '2026-10-30', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayClosed'); // club closed
+    fails(s, 'schedule.changeDay', { date: '2026-10-29', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayOuting');
+    fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: BATIK }, 's9', 'err.noChanges'); // the weekly plan already runs
+    fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: { ...MEMORY, activityId: 'act-ghost' } }, 's9', 'cal.err.badActivity');
+    fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: { ...MEMORY, staffId: 's8' } }, 's9', 'cal.err.badTeacher'); // the nurse does not teach
+    fails(s, 'schedule.changeDay', { date: TODAY, slot: '15:00', cell: MEMORY }, 's9', 'err.invalid');
+  });
+
+  it('a cell equal to the weekly plan takes the change away, and a day with nothing changed is deleted', () => {
+    let s = step(fresh(), 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY, note: 'Swap' }, 's9');
+    s = step(s, 'schedule.changeDay', { date: TODAY, slot: '10:30', cell: null }, 's9'); // no 10:30 session today
+    expect(Object.keys(s.scheduleDays[TODAY].slots).sort()).toEqual(['10:30', '13:30']);
+    expect(sessionsOn(s, TODAY)[0].cell).toBeNull();
+    expect(dayInfo(s, TODAY, 'staff').noSession).toEqual([{ slot: '10:30', changed: true }]);
+    expect(dayInfo(s, TODAY, 'family').noSession).toEqual([]);
+    s = step(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: BATIK }, 's9'); // same as the weekly plan
+    expect(Object.keys(s.scheduleDays[TODAY].slots)).toEqual(['10:30']);
+    expect(sessionsOn(s, TODAY)[1].cell).toEqual(BATIK);
+    const back = run(s, 'schedule.changeDay', { date: TODAY, slot: '10:30', cell: { activityId: 'act-keroncong', staffId: 's5', roomId: 'room-music' } }, 's9');
+    expect(back.state.scheduleDays[TODAY]).toBeUndefined(); // empty overrides are deleted
+    expect(note(back.state, 'cal.notif.dayBack')).toHaveLength(2); // one for each slot that went back to the plan
+  });
+
+  it('"tell" is a toggle: off still changes the day and leaves a feed entry, but nobody is notified', () => {
+    const r = run(fresh(), 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY, notify: false }, 's9');
+    expect(sessionsOn(r.state, TODAY)[1].cell).toEqual(MEMORY);
+    expect(note(r.state, 'cal.notif.dayChanged')).toHaveLength(0);
+    expect(Object.values(r.state.activity).some((a) => a.key === 'cal.feed.dayChanged')).toBe(true);
+  });
+
+  it('is management only, like the weekly schedule', () => {
+    const s = fresh();
+    for (const uid of ['s5', 's6', 's1', 's8', 's3', 's10', 'f1']) {
+      fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, uid, 'err.forbidden');
+      fails(s, 'schedule.resetDay', { date: '2026-10-23' }, uid, 'err.forbidden');
+    }
+  });
+
+  it('schedule.resetDay puts one slot or the whole day back to the weekly plan', () => {
+    let s = step(fresh(), 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's9');
+    s = step(s, 'schedule.changeDay', { date: TODAY, slot: '10:30', cell: MEMORY }, 's9');
+    const one = run(s, 'schedule.resetDay', { date: TODAY, slot: '13:30' }, 's9');
+    expect(Object.keys(one.state.scheduleDays[TODAY].slots)).toEqual(['10:30']);
+    expect(note(one.state, 'cal.notif.dayBack')).toHaveLength(1);
+    const all = run(s, 'schedule.resetDay', { date: TODAY, notify: false }, 's9').state;
+    expect(all.scheduleDays[TODAY]).toBeUndefined();
+    expect(sessionsOn(all, TODAY).map((x) => x.cell?.activityId)).toEqual(['act-keroncong', 'act-batik']);
+    expect(note(all, 'cal.notif.dayBackAll')).toHaveLength(0);
+    fails(all, 'schedule.resetDay', { date: TODAY }, 's9', 'err.noChanges');
+    fails(one.state, 'schedule.resetDay', { date: TODAY, slot: '13:30' }, 's9', 'err.noChanges');
+    fails(s, 'schedule.resetDay', { date: '2026-10-20' }, 's9', 'cal.err.pastDay');
+  });
+
+  it('the demo seed has one sudden change (the teacher is off sick, Karaoke instead) on an open day after today', () => {
+    const s = fresh();
+    const days = Object.values(s.scheduleDays).filter((d) => d.date > TODAY);
+    const sick = days.find((d) => d.note);
+    expect(sick).toMatchObject({ date: '2026-10-23', slots: { '13:30': { activityId: 'act-karaoke' } }, note: 'Kak Dimas is off sick' });
+    expect(sessionsOn(s, '2026-10-23')[1].cell?.activityId).toBe('act-karaoke');
   });
 });

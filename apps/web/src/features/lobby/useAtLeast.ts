@@ -1,5 +1,5 @@
 // Container-width switch: `wide` is true when the element is at least `min` px wide. `ready` turns true after the first real
-// measurement, so effects that must not act on the guessed first render (e.g. marking a thread read) can wait for it.
+// measurement, so effects that must not act on the guessed first render can wait for it.
 import { useLayoutEffect, useState, type RefObject } from 'react';
 
 export function useAtLeast(ref: RefObject<HTMLElement | null>, min: number) {

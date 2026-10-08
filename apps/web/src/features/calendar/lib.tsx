@@ -29,14 +29,14 @@ export function dayState(t: TFn, info: Pick<DayInfo, 'state'>, hours: { open: st
   const label = info.state === 'open' ? t('cal.stOpen', { from: hours.open, to: hours.close }) : info.state === 'holiday' ? t('cal.stHoliday') : info.state === 'weekend' ? t('cal.stWeekend') : t('cal.stClosed');
   return { ...st, label };
 }
-export const StatePill = ({ st }: { st: ReturnType<typeof dayState> }) => (
-  <span style={{ color: st.fg, fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+export const StatePill = ({ st, size = 14 }: { st: ReturnType<typeof dayState>; size?: number }) => (
+  <span style={{ color: st.fg, fontSize: size, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
     <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: st.fg, flex: 'none' }} />
     {st.label}
   </span>
 );
 
-export interface ItemText { title: string; sub: string; icon: string; bg: string; fg: string; time: string }
+export interface ItemText { title: string; sub: string; icon: string; bg: string; fg: string; time: string; /** KC round 7, staff: "Changed · note" under a session that differs from the weekly plan */ changedLine?: string }
 /** What a day item shows: title, subtitle, icon and colours. Families never get a venue client (the title is "Private event"). */
 export function itemText(s: Pick<ClubState, 'rooms' | 'staff' | 'activities'>, it: DayItem, t: TFn, lang: Lang, weekend: boolean): ItemText {
   const k = KIND[it.kind];
@@ -60,14 +60,17 @@ export function itemText(s: Pick<ClubState, 'rooms' | 'staff' | 'activities'>, i
       else { title = `${t('cal.k_trial')}: ${it.title}`; sub = t('cal.trialSub'); }
       break;
     case 'activity': {
+      if (it.empty) { title = t('cal.noSession'); icon = 'event_busy'; break; }
       const a = s.activities[it.activityId || ''];
       title = activityName({ name: it.title, nameId: it.titleId }, lang);
       icon = a?.icon || k.icon;
-      sub = [room, it.staffId ? staffCall(s.staff[it.staffId]) : ''].filter(Boolean).join(' · ');
+      // KC round 7: a guest host leads the session ("with Bu Ratna · guest") instead of the teacher
+      sub = [room, it.guest ? t('guests.withGuest', { name: it.guest.name }) : it.staffId ? staffCall(s.staff[it.staffId]) : ''].filter(Boolean).join(' · ');
       break;
     }
   }
-  return { title, sub, icon, bg: k.bg, fg: k.fg, time: it.time ?? (it.kind === 'guest' ? '' : t('cal.allDay')) };
+  const changedLine = it.changed ? (it.note ? t('cal.changedNote', { note: it.note }) : t('cal.changed')) : undefined;
+  return { title, sub, icon, bg: k.bg, fg: k.fg, time: it.time ?? (it.kind === 'guest' ? '' : t('cal.allDay')), ...(changedLine ? { changedLine } : {}) };
 }
 
 export const smallCaps: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };

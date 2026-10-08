@@ -160,4 +160,14 @@ export const finance = {
   'toast.vendorRejected': '{supplier} invoice rejected.', 'toast.vendorPaid': '{supplier} invoice marked as paid.', 'toast.vendorDeleted': 'Vendor invoice deleted.',
   'toast.contactAdded': '{name} added to the directory.', 'toast.contactSaved': '{name} saved.', 'toast.contactDeleted': '{name} deleted.',
   'toast.nowInternal': '{name} is now staff only.', 'toast.nowPublic': '{name} is now visible to families.',
+
+  // ----- KC round 6: an unpaid invoice puts the membership on hold on the 1st and stops it on the 3rd (the brochure's terms) -----
+  'notif.suspended': '{name} is on hold: invoice {number} ({amount}) is unpaid. The membership stops on {date} if it is still unpaid.',
+  'notif.suspendedFamily': 'Membership on hold: invoice {number} ({amount}) for {name} is unpaid. Pay it and {name} can come again. If it is still unpaid on {date}, the membership stops.',
+  'notif.suspendedTold': '{name} is on hold: invoice {number} ({amount}) is unpaid. The family has told us, so the membership stays on hold until it is paid.',
+  'notif.suspendedToldFamily': 'Membership on hold: invoice {number} ({amount}) for {name} is unpaid. {name} can come again once it is paid.',
+  'notif.stopped': '{name}’s membership stopped: invoice {number} ({amount}) was still unpaid. Coming back needs a new registration and the registration fee.',
+  'notif.stoppedFamily': '{name}’s membership has stopped: invoice {number} ({amount}) was still unpaid on the 3rd. Please call the club; coming back needs a new registration.',
+  'feed.suspended': '{name} on hold: invoice {number} unpaid', 'feed.stopped': '{name}’s membership stopped: invoice {number} unpaid',
+  'bill.holdTitle': 'On hold · unpaid', 'bill.holdMeta': '{n}', 'bill.holdRow': '{number} · {amount} · stops {date}', 'bill.holdRowTold': '{number} · {amount} · on hold until paid', 'bill.holdOne': '1 member', 'bill.holdMany': '{n} members',
 };

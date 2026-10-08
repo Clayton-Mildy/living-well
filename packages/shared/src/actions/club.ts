@@ -1,14 +1,14 @@
 // Club management: venue bookings, WhatsApp broadcasts (and the job that sends scheduled ones), surveys, prices and club rules.
 import type { Draft } from 'immer';
-import type { Broadcast, ClubState, HM, ISODate, Survey, SurveyAnswer, SurveyCustomQuestion, User, VenueBooking } from '../types';
+import type { Actor, Broadcast, ClubState, HM, ISODate, PriceVersion, Survey, SurveyAnswer, SurveyCustomQuestion, User, VenueBooking } from '../types';
 import { defineAction, isFamily, isMgmt, type Ctx } from './framework';
 import { registerJob } from './jobs';
-import { priceOn } from '../rules/billing';
+import { feeOf, priceOn } from '../rules/billing';
 import {
   AUDIENCES, SURVEY_AUDIENCE_MODES, appFamilies, broadcastRecipients, checkVenueSlot, resolveSurveyAudience, venueIsPast, type AudienceKey, type SurveyAudience,
 } from '../rules/mgmt';
 import { arr, bad, bool, dm, hm, int, isoDate, nextNumId, obj, oneOf, phone, str, uniq } from '../rules/mgmtParse';
-import { SURVEY_BUILTINS, SURVEY_KINDS, SURVEY_LIMITS, answerValue, assignQuestionIds, customOf, questionProblem } from '../rules/surveys';
+import { SURVEY_BUILTINS, SURVEY_KINDS, SURVEY_KIND_LIST, SURVEY_LIMITS, answerValue, assignQuestionIds, customOf, presetsFor, questionProblem, ratingLinkOf, ratingTokenOf, surveyKind, type SurveyKind } from '../rules/surveys';
 import { live, rp, sortBy } from '../util';
 
 const mgmtOnly = (u: User) => isMgmt(u);
@@ -61,7 +61,9 @@ registerJob('broadcast.fire', (d, ctx) => {
 // ---------- surveys ----------
 /** A custom question as sent: `id` is kept when it is a valid unused one (q1, q2, …) and given by the server otherwise. */
 type CustomIn = Omit<SurveyCustomQuestion, 'id'> & { id?: string };
-interface SurveyIn { title: string; questions: Survey['questions']; custom?: CustomIn[]; teamStaffIds: string[]; audience?: SurveyAudience }
+interface SurveyIn { title: string; questions: Survey['questions']; custom?: CustomIn[]; teamStaffIds: string[]; audience?: SurveyAudience; kind?: SurveyKind; templateId?: string }
+interface TemplateIn { id?: string; title: string; kind: SurveyKind; questions: Survey['questions']; custom: CustomIn[]; teamStaffIds: string[] }
+interface RateIn { token: string; name: string; overall: number; recommend: boolean | null; comment: string; answers: Record<string, SurveyAnswer> }
 /** Who a survey is for: every family with the app, the families of chosen members, or chosen contacts. */
 const parseAudience = (v: unknown): SurveyAudience => {
   const o = obj(v, 'audience');
@@ -83,6 +85,8 @@ const parseCustomQuestion = (v: unknown): CustomIn => {
 const parseSurvey = (o: Record<string, unknown>, partial = false): Partial<SurveyIn> => {
   const out: Partial<SurveyIn> = {};
   if (o.audience !== undefined) out.audience = parseAudience(o.audience);
+  if (o.kind !== undefined) out.kind = oneOf(o.kind, SURVEY_KIND_LIST, 'kind');
+  if (o.templateId !== undefined && o.templateId !== null && o.templateId !== '') out.templateId = id80(o.templateId, 'templateId');
   if (!partial || o.title !== undefined) out.title = str(o.title, 80, { required: true, field: 'title' });
   if (!partial || o.questions !== undefined) {
     const picked = uniq(arr(o.questions, (x) => oneOf(x, SURVEY_BUILTINS, 'questions')));
@@ -132,6 +136,63 @@ function survey(d: Draft<ClubState>, id: string, ctx: Ctx) {
   const sv = d.surveys[id];
   if (!sv || sv.deletedAt) ctx.fail('err.notFound');
   return sv;
+}
+/** KC round 7: a line in the survey's own log (created, edited, sent, closed, reopened), with who did it. */
+function logAdd(sv: { log?: NonNullable<Survey['log']> }, ctx: Ctx, what: NonNullable<Survey['log']>[number]['what'], note?: string) {
+  (sv.log ??= []).push({ at: ctx.nowDT, by: ctx.actor, what, ...(note ? { note } : {}) });
+}
+/** The rating a renter gives, or the answers a family gives: the shared fields (overall 0 = not given, a yes/no that may be left out, the comment, the answers to own questions). */
+function parseAnswerFields(o: Record<string, unknown>) {
+  const answers: Record<string, SurveyAnswer> = {};
+  if (o.answers !== undefined && o.answers !== null) {
+    const entries = Object.entries(obj(o.answers, 'answers'));
+    if (entries.length > SURVEY_LIMITS.custom * 2) bad('answers');
+    for (const [k, v] of entries) {
+      if (typeof v !== 'number' && typeof v !== 'boolean' && typeof v !== 'string') bad('answers');
+      answers[str(k, 12)] = v as SurveyAnswer;
+    }
+  }
+  const overall = o.overall === undefined || o.overall === null || o.overall === 0 ? 0 : int(o.overall, 1, 5, 'overall');
+  return { overall, recommend: o.recommend === true ? true : o.recommend === false ? false : null, comment: str(o.comment, 1000), answers };
+}
+/** A venue survey asks for the overall rating (it is what the booking keeps) and has no team to rate. */
+function venueQuestions(ctx: Ctx, questions: Survey['questions']): Survey['questions'] {
+  const q = questions.filter((x) => x !== 'team');
+  if (!q.includes('overall')) ctx.fail('mgmt.err.venueNeedsOverall');
+  return q;
+}
+/** Staff named in a template exist and are active (a template may keep an empty team; a survey made from it needs one). */
+function checkTeamIds(d: Draft<ClubState>, ctx: Ctx, ids: string[]) {
+  for (const id of ids) {
+    const st = d.staff[id];
+    if (!st || st.deletedAt || !st.active) ctx.fail('err.invalid', { field: 'teamStaffIds' });
+  }
+}
+/** When a survey of a kind goes live, the one that was live before it closes (a family survey and a venue survey can be live together). */
+function closeOthers(d: Draft<ClubState>, ctx: Ctx, keep: string, kind: SurveyKind) {
+  for (const other of Object.values(d.surveys)) {
+    if (other.id !== keep && !other.deletedAt && other.status === 'live' && surveyKind(other) === kind) {
+      other.status = 'closed';
+      other.closedOn = ctx.today;
+      logAdd(other, ctx, 'closed', 'replaced');
+    }
+  }
+}
+/** The live venue survey. With none, one is made from the venue template (or a plain one) and sent, so a rating link always has something to answer. */
+function ensureVenueSurvey(d: Draft<ClubState>, ctx: Ctx): Draft<Survey> {
+  const cur = Object.values(d.surveys).find((x) => !x.deletedAt && x.status === 'live' && surveyKind(x) === 'venue');
+  if (cur) return cur;
+  const tpl = sortBy(Object.values(d.surveyTemplates).filter((t) => !t.deletedAt && t.kind === 'venue'), (t) => (t.builtIn ? '0' : '1') + t.createdAt + t.id)[0]; // the built-in venue rating first
+  const id = nextNumId(d.surveys, 'sv');
+  const asked = (tpl?.questions ?? presetsFor('venue')).filter((x) => x !== 'team');
+  const custom = (tpl?.custom ?? []).map((c) => ({ id: c.id, kind: c.kind, text: c.text, required: c.required, ...(c.options ? { options: [...c.options] } : {}) }));
+  d.surveys[id] = {
+    id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, title: tpl?.title ?? 'Venue rating', kind: 'venue', ...(tpl ? { templateId: tpl.id } : {}),
+    questions: asked.includes('overall') ? [...asked] : ['overall', ...asked], custom, teamStaffIds: [], recipients: [], sentOn: ctx.today, status: 'live',
+    log: [{ at: ctx.nowDT, by: ctx.actor, what: 'created', ...(tpl ? { note: tpl.title } : {}) }, { at: ctx.nowDT, by: ctx.actor, what: 'sent' }],
+  };
+  ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.surveyLive', params: { title: d.surveys[id].title } });
+  return d.surveys[id];
 }
 
 export const clubActions = [
@@ -213,6 +274,7 @@ export const clubActions = [
       ctx.feed({ icon: 'event_busy', key: 'mgmt.feed.venueCancelled', params: { org: v.org, date: dm(v.date) } });
     },
   }),
+  // KC round 7: the review is asked through a no-login rating link (/rate/:token) that goes to the renter on WhatsApp (simulated). Asking again sends the same link.
   defineAction<{ venueId: string }>({
     name: 'venue.askReview',
     can: mgmtOnly,
@@ -222,9 +284,50 @@ export const clubActions = [
       if (v.deletedAt || v.status === 'cancelled') ctx.fail('err.notFound');
       if (!venueIsPast(v as unknown as VenueBooking, ctx.today, ctx.now)) ctx.fail('mgmt.err.venueNotDone');
       if (v.review) ctx.fail('mgmt.err.venueReviewed');
-      if (v.reviewAskedAt) ctx.fail('mgmt.err.venueAsked');
+      const sv = ensureVenueSurvey(d, ctx);
+      v.surveyId = sv.id;
+      v.ratingToken ??= ratingTokenOf(`${ctx.id('rate')}|${v.id}|${v.createdAt}|${ctx.clubId}`);
       v.reviewAskedAt = ctx.nowDT;
+      ctx.result.token = v.ratingToken;
+      ctx.result.surveyId = sv.id;
       ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.venueReviewAsked', params: { org: v.org } });
+    },
+  }),
+  // The renter answers on the public rating page. The server runs this as the system, never as a signed-in user.
+  defineAction<RateIn>({
+    name: 'venue.rate',
+    can: (u) => u.id === 'system',
+    parse(raw) {
+      const o = obj(raw);
+      return { token: str(o.token, 80, { required: true, field: 'token' }), name: str(o.name, 80), ...parseAnswerFields(o) };
+    },
+    run(d, i, ctx) {
+      const link = ratingLinkOf(S(d), i.token) ?? ctx.fail('err.notFound');
+      if (link.state === 'answered') ctx.fail('mgmt.err.alreadyAnswered');
+      if (link.state === 'closed') ctx.fail('mgmt.err.notLive');
+      const v = d.venueBookings[link.booking.id];
+      const sv = d.surveys[link.survey.id];
+      const asks = (q: Survey['questions'][number]) => (sv.questions as string[]).includes(q);
+      if (asks('overall') && !i.overall) ctx.fail('err.invalid', { field: 'overall' });
+      const custom = customOf(sv as Survey);
+      const answers: Record<string, SurveyAnswer> = {};
+      for (const q of custom) {
+        const r = answerValue(q, i.answers[q.id]);
+        if (!r.ok) ctx.fail('err.invalid', { field: `answers.${q.id}` });
+        else if (r.value !== undefined) answers[q.id] = r.value;
+        else if (q.required) ctx.fail('mgmt.err.answerRequired', { q: q.text });
+      }
+      const comment = asks('comment') ? i.comment : '';
+      const id = `sr-${sv.id}-${v.id}`;
+      d.surveyResponses[id] = {
+        id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, surveyId: sv.id, familyId: '', venueBookingId: v.id, respondentName: i.name || v.contactName,
+        overall: asks('overall') ? i.overall : 0, team: {}, recommend: asks('recommend') ? i.recommend : null, comment, ...(custom.length ? { answers } : {}), on: ctx.today,
+      };
+      // the booking keeps the rating too, so the Venue page and older readers see it
+      v.review = { stars: asks('overall') ? i.overall : 0, text: comment };
+      ctx.result.responseId = id;
+      ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.venueRated', params: { org: v.org, stars: i.overall } });
+      ctx.notify({ toRoles: ['mgmt'], kind: 'mgmt.notif.venueRated', params: { org: v.org, stars: i.overall }, link: '/surveys' });
     },
   }),
   defineAction<{ venueId: string; stars: number; text: string }>({
@@ -381,15 +484,26 @@ export const clubActions = [
   defineAction<SurveyIn>({
     name: 'survey.create',
     can: mgmtOnly,
-    parse: (raw) => parseSurvey(obj(raw)) as SurveyIn,
+    // with a template, anything left out (title, questions, team) comes from it
+    parse: (raw) => parseSurvey(obj(raw), !!obj(raw).templateId && obj(raw).templateId !== '') as SurveyIn,
     run(d, i, ctx) {
-      const custom = assignQuestionIds(i.custom ?? []);
-      checkAsks(ctx, i.questions, custom);
-      const team = checkTeam(d, ctx, i.questions, i.teamStaffIds);
-      const audience = checkAudience(d, ctx, i.audience ?? { mode: 'all' });
+      const tpl = i.templateId ? d.surveyTemplates[i.templateId] : undefined;
+      if (i.templateId && (!tpl || tpl.deletedAt)) ctx.fail('err.notFound');
+      const kind: SurveyKind = i.kind ?? tpl?.kind ?? 'family';
+      const title = i.title ?? tpl?.title ?? bad('title');
+      const asked = i.questions ?? (tpl ? [...tpl.questions] : bad('questions'));
+      const questions = kind === 'venue' ? venueQuestions(ctx, asked) : asked;
+      const custom = assignQuestionIds(i.custom ?? (tpl ? tpl.custom.map((c) => ({ id: c.id, kind: c.kind, text: c.text, required: c.required, ...(c.options ? { options: [...c.options] } : {}) })) : []));
+      checkAsks(ctx, questions, custom);
+      const team = kind === 'venue' ? [] : checkTeam(d, ctx, questions, i.teamStaffIds ?? [...(tpl?.teamStaffIds ?? [])]);
+      const audience = kind === 'venue' ? undefined : checkAudience(d, ctx, i.audience ?? { mode: 'all' });
       const id = nextNumId(d.surveys, 'sv');
       // a draft already shows who it would go to; the list is worked out again when it is sent
-      d.surveys[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, title: i.title, questions: i.questions, custom, teamStaffIds: team, recipients: resolveSurveyAudience(S(d), audience, ctx.today), audience, sentOn: '', status: 'draft' };
+      d.surveys[id] = {
+        id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, title, kind, ...(tpl ? { templateId: tpl.id } : {}), questions, custom, teamStaffIds: team,
+        recipients: audience ? resolveSurveyAudience(S(d), audience, ctx.today) : [], ...(audience ? { audience } : {}), sentOn: '', status: 'draft',
+        log: [{ at: ctx.nowDT, by: ctx.actor, what: 'created', ...(tpl ? { note: tpl.title } : {}) }],
+      };
       ctx.result.surveyId = id;
       ctx.result.recipients = d.surveys[id].recipients.length;
     },
@@ -401,17 +515,25 @@ export const clubActions = [
     run(d, i, ctx) {
       const sv = survey(d, i.surveyId, ctx);
       if (sv.status !== 'draft') ctx.fail('mgmt.err.notDraft');
-      const questions = i.questions ?? (sv.questions as Survey['questions']);
+      const venue = surveyKind(sv as Survey) === 'venue';
+      const asked = i.questions ?? (sv.questions as Survey['questions']);
+      const questions = venue ? venueQuestions(ctx, asked) : asked;
       const custom = i.custom !== undefined ? assignQuestionIds(i.custom) : customOf(sv as Survey);
       checkAsks(ctx, questions, custom);
-      const team = checkTeam(d, ctx, questions, i.teamStaffIds ?? (sv.teamStaffIds as string[]));
+      const team = venue ? [] : checkTeam(d, ctx, questions, i.teamStaffIds ?? (sv.teamStaffIds as string[]));
       if (i.title !== undefined) sv.title = i.title;
       sv.questions = questions;
       if (i.custom !== undefined) sv.custom = custom;
       sv.teamStaffIds = team;
-      if (i.audience) sv.audience = checkAudience(d, ctx, i.audience);
-      sv.recipients = resolveSurveyAudience(S(d), (sv.audience as SurveyAudience | undefined) ?? { mode: 'all' }, ctx.today);
+      if (!venue) {
+        if (i.audience) sv.audience = checkAudience(d, ctx, i.audience);
+        sv.recipients = resolveSurveyAudience(S(d), (sv.audience as SurveyAudience | undefined) ?? { mode: 'all' }, ctx.today);
+      }
       ctx.result.recipients = sv.recipients.length;
+      // saving again straight away by the same person is one line in the history, not many
+      const last = (sv.log ?? [])[(sv.log ?? []).length - 1];
+      if (last && last.what === 'edited' && last.by === ctx.actor && last.at.slice(0, 10) === ctx.today) last.at = ctx.nowDT;
+      else logAdd(sv, ctx, 'edited');
     },
   }),
   defineAction<{ surveyId: string }>({
@@ -431,19 +553,18 @@ export const clubActions = [
     run(d, i, ctx) {
       const sv = survey(d, i.surveyId, ctx);
       if (sv.status !== 'draft') ctx.fail('mgmt.err.notDraft');
-      const rec = resolveSurveyAudience(S(d), sv.audience as SurveyAudience | undefined, ctx.today);
-      if (!rec.length) ctx.fail('mgmt.err.noRecipients');
-      for (const other of Object.values(d.surveys)) {
-        if (other.id !== sv.id && !other.deletedAt && other.status === 'live') {
-          other.status = 'closed';
-          other.closedOn = ctx.today;
-        }
-      }
+      const kind = surveyKind(sv as Survey);
+      // a family survey goes to families; a venue survey goes live and is answered through the rating links of bookings
+      const rec = kind === 'family' ? resolveSurveyAudience(S(d), sv.audience as SurveyAudience | undefined, ctx.today) : [];
+      if (kind === 'family' && !rec.length) ctx.fail('mgmt.err.noRecipients');
+      closeOthers(d, ctx, sv.id, kind);
       sv.recipients = rec;
       sv.sentOn = ctx.today;
       sv.status = 'live';
+      logAdd(sv, ctx, 'sent', kind === 'family' ? String(rec.length) : undefined);
       ctx.result.recipients = rec.length;
-      ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.surveySent', params: { title: sv.title, n: rec.length } });
+      if (kind === 'family') ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.surveySent', params: { title: sv.title, n: rec.length } });
+      else ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.surveyLive', params: { title: sv.title } });
     },
   }),
   defineAction<{ surveyId: string }>({
@@ -455,7 +576,64 @@ export const clubActions = [
       if (sv.status !== 'live') ctx.fail('mgmt.err.notLive');
       sv.status = 'closed';
       sv.closedOn = ctx.today;
+      logAdd(sv, ctx, 'closed');
       ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.surveyClosed', params: { title: sv.title } });
+    },
+  }),
+  // A closed survey can be opened again (the live one of its kind closes). Families who already answered keep their answer.
+  defineAction<{ surveyId: string }>({
+    name: 'survey.reopen',
+    can: mgmtOnly,
+    parse: (raw) => ({ surveyId: id80(obj(raw).surveyId, 'surveyId') }),
+    run(d, i, ctx) {
+      const sv = survey(d, i.surveyId, ctx);
+      if (sv.status !== 'closed') ctx.fail('mgmt.err.notClosed');
+      closeOthers(d, ctx, sv.id, surveyKind(sv as Survey));
+      sv.status = 'live';
+      delete sv.closedOn;
+      logAdd(sv, ctx, 'reopened');
+      ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.surveyReopened', params: { title: sv.title } });
+    },
+  }),
+
+  // ----- survey templates (KC round 7): a title and questions that new surveys start from -----
+  defineAction<TemplateIn>({
+    name: 'surveyTemplate.save',
+    can: mgmtOnly,
+    parse(raw) {
+      const o = obj(raw);
+      const p = parseSurvey(o);
+      return {
+        ...(o.id !== undefined && o.id !== null && o.id !== '' ? { id: id80(o.id, 'id') } : {}), title: p.title!, kind: oneOf(o.kind ?? 'family', SURVEY_KIND_LIST, 'kind'), questions: p.questions!,
+        custom: p.custom ?? [], teamStaffIds: p.teamStaffIds ?? [],
+      };
+    },
+    run(d, i, ctx) {
+      const prev = i.id ? d.surveyTemplates[i.id] : undefined;
+      if (i.id && (!prev || prev.deletedAt)) ctx.fail('err.notFound');
+      if (prev?.builtIn && i.kind !== prev.kind) ctx.fail('mgmt.err.svTplBuiltIn'); // the built-in venue rating stays a venue survey
+      const questions = i.kind === 'venue' ? venueQuestions(ctx, i.questions) : i.questions;
+      const custom = assignQuestionIds(i.custom);
+      checkAsks(ctx, questions, custom);
+      const team = i.kind === 'venue' || !questions.includes('team') ? [] : i.teamStaffIds;
+      checkTeamIds(d, ctx, team);
+      const id = i.id ?? nextNumId(d.surveyTemplates, 'st');
+      d.surveyTemplates[id] = {
+        id, clubId: ctx.clubId, createdAt: prev ? prev.createdAt : ctx.nowDT, createdBy: prev ? (prev.createdBy as Actor) : ctx.actor,
+        title: i.title, kind: i.kind, questions, custom, teamStaffIds: team, ...(prev?.builtIn ? { builtIn: true } : {}),
+      };
+      ctx.result.templateId = id;
+    },
+  }),
+  defineAction<{ id: string }>({
+    name: 'surveyTemplate.delete',
+    can: mgmtOnly,
+    parse: (raw) => ({ id: id80(obj(raw).id, 'id') }),
+    run(d, i, ctx) {
+      const t = d.surveyTemplates[i.id];
+      if (!t || t.deletedAt) ctx.fail('err.notFound');
+      if (t.builtIn) ctx.fail('mgmt.err.svTplBuiltIn'); // KC round 7: the venue rating template stays
+      t.deletedAt = ctx.nowDT;
     },
   }),
   defineAction<{ surveyId: string; overall: number; team: Record<string, number>; recommend: boolean | null; comment: string; answers: Record<string, SurveyAnswer> }>({
@@ -467,19 +645,8 @@ export const clubActions = [
       if (o.team !== undefined && o.team !== null) {
         for (const [k, v] of Object.entries(obj(o.team, 'team'))) team[str(k, 80)] = int(v, 1, 5, 'team');
       }
-      // answers to the survey's own questions, by question id; each is checked against its question's kind in run
-      const answers: Record<string, SurveyAnswer> = {};
-      if (o.answers !== undefined && o.answers !== null) {
-        const entries = Object.entries(obj(o.answers, 'answers'));
-        if (entries.length > SURVEY_LIMITS.custom * 2) bad('answers');
-        for (const [k, v] of entries) {
-          if (typeof v !== 'number' && typeof v !== 'boolean' && typeof v !== 'string') bad('answers');
-          answers[str(k, 12)] = v as SurveyAnswer;
-        }
-      }
-      // 0 = not given; the survey decides whether the overall rating was asked
-      const overall = o.overall === undefined || o.overall === null || o.overall === 0 ? 0 : int(o.overall, 1, 5, 'overall');
-      return { surveyId: id80(o.surveyId, 'surveyId'), overall, team, recommend: o.recommend === true ? true : o.recommend === false ? false : null, comment: str(o.comment, 1000), answers };
+      // answers to the survey's own questions, by question id; each is checked against its question's kind in run; overall 0 = not given (the survey decides whether it was asked)
+      return { surveyId: id80(o.surveyId, 'surveyId'), team, ...parseAnswerFields(o) };
     },
     run(d, i, ctx) {
       const sv = survey(d, i.surveyId, ctx);
@@ -512,7 +679,8 @@ export const clubActions = [
   }),
 
   // ----- prices and rules -----
-  defineAction<{ flex: number; gold: number; extra: number; from: ISODate; notify?: boolean }>({
+  // KC round 6: besides the monthly prices, the brochure's one-time registration fee, the 2-day trial and a month of leave (left out = unchanged)
+  defineAction<{ flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; from: ISODate; notify?: boolean }>({
     name: 'prices.set',
     can: mgmtOnly,
     parse(raw) {
@@ -521,22 +689,25 @@ export const clubActions = [
         const n = int(v, 1, 1_000_000_000, f);
         return n;
       };
-      return { flex: price(o.flex, 'flex'), gold: price(o.gold, 'gold'), extra: price(o.extra, 'extra'), from: isoDate(o.from, 'from'), notify: o.notify === undefined ? true : bool(o.notify) };
+      const fee = (v: unknown, f: string) => (v === undefined ? {} : { [f]: price(v, f) });
+      return { flex: price(o.flex, 'flex'), gold: price(o.gold, 'gold'), extra: price(o.extra, 'extra'), ...fee(o.registration, 'registration'), ...fee(o.trial, 'trial'), ...fee(o.leave, 'leave'), from: isoDate(o.from, 'from'), notify: o.notify === undefined ? true : bool(o.notify) };
     },
     run(d, i, ctx) {
       if (i.from < ctx.today) ctx.fail('mgmt.err.pricePast');
       const s = S(d);
       const cur = priceOn(s, i.from);
       const exact = live(s.prices).find((p) => p.from === i.from);
-      if (!exact && cur.flex === i.flex && cur.gold === i.gold && cur.extra === i.extra) ctx.fail('err.noChanges');
-      if (exact && exact.flex === i.flex && exact.gold === i.gold && exact.extra === i.extra) ctx.fail('err.noChanges');
+      const fees = { registration: i.registration ?? feeOf(cur, 'registration'), trial: i.trial ?? feeOf(cur, 'trial'), leave: i.leave ?? feeOf(cur, 'leave') };
+      const same = (p: PriceVersion) => p.flex === i.flex && p.gold === i.gold && p.extra === i.extra && (['registration', 'trial', 'leave'] as const).every((k) => feeOf(p, k) === fees[k]);
+      if (!exact && same(cur)) ctx.fail('err.noChanges');
+      if (exact && same(exact)) ctx.fail('err.noChanges');
       const sample = { flex: cur.sample.flex && cur.flex === i.flex, gold: cur.sample.gold && cur.gold === i.gold, extra: cur.sample.extra && cur.extra === i.extra };
       if (exact) {
         const row = d.prices[exact.id];
-        Object.assign(row, { flex: i.flex, gold: i.gold, extra: i.extra, sample, by: ctx.actor });
+        Object.assign(row, { flex: i.flex, gold: i.gold, extra: i.extra, ...fees, sample, by: ctx.actor });
       } else {
         const id = ctx.id('price');
-        d.prices[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, from: i.from, flex: i.flex, gold: i.gold, extra: i.extra, sample, by: ctx.actor };
+        d.prices[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, from: i.from, flex: i.flex, gold: i.gold, extra: i.extra, ...fees, sample, by: ctx.actor };
       }
       ctx.feed({ icon: 'sell', key: 'mgmt.feed.prices', params: { date: dm(i.from) } });
       if (i.notify !== false) ctx.notify({ toRoles: ['finance'], kind: 'mgmt.notif.pricesChanged', params: { date: dm(i.from) }, link: '/billing' });

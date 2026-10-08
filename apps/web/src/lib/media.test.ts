@@ -4,7 +4,7 @@ import { describe, expect, it, vi, beforeEach } from 'vitest';
 const api = vi.fn();
 vi.mock('./api', () => ({ api: (...a: unknown[]) => api(...a), ApiError: class ApiError extends Error { constructor(public status: number, public code: string) { super(code); } } }));
 
-import { MAX_PDF_BYTES, isPdfFile, isPdfName, uploadDocument } from './media';
+import { MAX_PDF_BYTES, isPdfFile, isPdfName, mediaUrl, uploadDocument } from './media';
 
 beforeEach(() => { api.mockReset(); api.mockResolvedValue({ id: 'md_testdocument0000001' }); });
 
@@ -28,5 +28,13 @@ describe('documents', () => {
     const big = new Blob([new Uint8Array(MAX_PDF_BYTES + 1)], { type: 'application/pdf' });
     await expect(uploadDocument(big, 'big.pdf')).rejects.toMatchObject({ code: 'common.docTooBig' });
     expect(api).not.toHaveBeenCalled();
+  });
+});
+
+describe('demo pictures', () => {
+  it('a seeded demo id (md_demo_<name>) is a static file of the web app; an uploaded id is read from the API', () => {
+    expect(mediaUrl('md_demo_act-batik-1')).toBe('/demo/act-batik-1.jpg');
+    expect(mediaUrl('md_demo_food-soto-2')).toBe('/demo/food-soto-2.jpg');
+    expect(mediaUrl('md_Ab3dEf9hIj')).toBe('/api/media/md_Ab3dEf9hIj');
   });
 });

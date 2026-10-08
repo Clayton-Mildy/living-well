@@ -3,16 +3,15 @@
 // The club is drop-in: a member can be checked at any time (checked in or not, still here or gone home), so a reading only needs an
 // active membership. Trial guests are different: they are checked while they are in the club.
 import type { Draft } from 'immer';
-import type { Attendance, ClubState, GuestVisit, Health, HealthLimits, HM, Member, QueueKind, QuickNote, Reading, User } from '../types';
+import type { Attendance, ClubState, GuestVisit, Health, HealthLimits, HM, LimitKey, Member, QueueKind, QuickNote, Reading, User } from '../types';
 import { DomainError, defineAction, hasRole, nameOfUser, type ActionDef, type Ctx } from './framework';
-import { ensureAttendance, postMessage, requireMember, shortOf } from './helpers';
+import { ensureAttendance, requireMember, shortOf } from './helpers';
 import { attId } from '../rules/attendance';
 import { activeOn, isPendingRow, memberShort } from '../rules/core';
-import { LIMIT_KEYS, LIMIT_RANGE, evaluateReading, lastBefore, limitOrderOk, limitsOf, todayReading, validReadings, worst } from '../rules/health';
+import { LIMIT_KEYS, LIMIT_RANGE, evaluateReading, lastBefore, limitOrderOk, limitsFor, limitsOf, todayReading, validReadings, worst } from '../rules/health';
 import {
   MONTHLY_FIELDS, READING_FIELDS, VITAL_FIELDS, alertRecipients, headlineValue, inRange, monthlyNeeds, readingSummary, roundField, stationQueue, type ReadingField,
 } from '../rules/healthStation';
-import { translate } from '../i18n';
 import { READING_KEYS } from '../rules/approvals';
 import { markPending, needsApproval, priorOf } from './approvalGate';
 import { toHM, toMin } from '../util';
@@ -46,7 +45,6 @@ const EDIT_REASONS: EditReason[] = ['typo', 'deviceError', 'remeasured', 'other'
 const VOID_REASONS: VoidReason[] = ['wrongPerson', 'deviceError', 'duplicate', 'other'];
 const DISMISS_REASONS: DismissReason[] = ['declined', 'notNeeded', 'leftEarly', 'other'];
 const QUEUE_KINDS: QueueKind[] = ['arrival', 'departure', 'recheck', 'monthly', 'spot'];
-const CHECK_KEY: Record<ReadingKind, string> = { arrival: 'health.arrivalCheck', departure: 'health.departureCheck', recheck: 'health.recheckL', spot: 'health.spotCheck', monthly: 'health.monthlyCheck' };
 
 const nurseOrMgmt = (u: User) => hasRole(u, 'nurse', 'mgmt');
 const rec = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' ? (v as Record<string, unknown>) : {});
@@ -79,46 +77,37 @@ function checkBp(v: NumericValues) {
 const FAMILY_KIND: Record<Health, string> = { normal: 'health.notif.fam.normal', watch: 'health.notif.fam.watch', alert: 'health.notif.fam.alert' };
 const severityOf = (h: Health) => (h === 'alert' ? 'urgent' : h === 'watch' ? 'attention' : 'info') as 'urgent' | 'attention' | 'info';
 
-/** Tell the family now: a message in each contact's own language, plus an update in their bell. `nurse` is who took the reading (not necessarily who approved it). */
-function tellFamily(d: Draft<ClubState>, ctx: Ctx, m: Member, row: Draft<Reading>, shown: Partial<Reading>, overall: Health, recheckAt: HM | undefined, nurse: { name: string; id: string }): string[] {
-  const s = d as unknown as ClubState;
-  const ids: string[] = [];
-  const names: string[] = [];
-  for (const { contact } of alertRecipients(s, m.id)) {
-    const tt = (k: string, p?: Record<string, string | number>) => translate(contact.lang || 'en', k, p);
-    const next = overall === 'normal' ? '' : recheckAt ? tt('health.msg.nextRecheck', { t: recheckAt }) : tt('health.msg.nextNone');
-    const text = tt('health.msg.' + overall, { f: contact.firstName, name: memberShort(m), nurse: nurse.name, check: tt(CHECK_KEY[row.kind]), time: row.time, value: readingSummary(shown), next }).trim();
-    postMessage(d, ctx, { memberId: m.id, familyId: contact.id, topic: 'nurse', text, kind: 'healthAlert', ref: { type: 'reading', id: row.id }, from: row.createdBy });
-    ids.push(contact.id);
-    names.push(contact.firstName);
-  }
-  if (ids.length) {
-    row.familyTold = { at: ctx.nowDT, by: nurse.id, familyIds: ids };
+/**
+ * Tell the family now: remember on the reading who was told (the club tells them on WhatsApp; the demo simulates that, and the family's bell shows the update).
+ * `nurseId` is who took the reading (not necessarily who approved it).
+ */
+function tellFamily(d: Draft<ClubState>, ctx: Ctx, m: Member, row: Draft<Reading>, nurseId: string): string[] {
+  const contacts = alertRecipients(d as unknown as ClubState, m.id).map((x) => x.contact);
+  if (contacts.length) {
+    row.familyTold = { at: ctx.nowDT, by: nurseId, familyIds: contacts.map((c) => c.id) };
     row.shared = true;
   }
-  return names;
+  return contacts.map((c) => c.firstName);
 }
 
 /**
- * Everything the family hears about a reading: the chat message (tell family), and the bell update (shared or told). For a nurse's reading this runs when
+ * Everything the family hears about a reading: being told (tell family: recorded on the reading), and the bell update (shared or told). For a nurse's reading this runs when
  * management approves it; for management's own reading, at once. Returns the first names told.
  */
-export function noticeFamilies(d: Draft<ClubState>, ctx: Ctx, row: Draft<Reading>, o: { tell: boolean; share: boolean; overall: Health; recheckAt?: HM; companion?: Reading }): string[] {
+export function noticeFamilies(d: Draft<ClubState>, ctx: Ctx, row: Draft<Reading>, o: { tell: boolean; share: boolean; overall: Health; companion?: Reading }): string[] {
   if (!row.memberId) return [];
   const m = d.members[row.memberId];
   if (!m) return [];
   const s = d as unknown as ClubState;
   const shown: Partial<Reading> = { ...row, ...(o.companion ? pick(o.companion as NumericValues, MONTHLY_FIELDS) : {}) };
-  const nurse = { id: row.takenBy, name: d.staff[row.takenBy] ? nameOfStaff(d.staff[row.takenBy]) : nameOfUser(ctx.user) };
-  const told = o.tell ? tellFamily(d, ctx, m, row, shown, o.overall, o.recheckAt, nurse) : [];
+  const told = o.tell ? tellFamily(d, ctx, m, row, row.takenBy) : [];
   if (o.share || told.length) {
     row.shared = true;
     const ids = alertRecipients(s, m.id).map((x) => x.contact.id);
-    if (ids.length) ctx.notify({ toUsers: ids, kind: FAMILY_KIND[o.overall], params: { name: memberShort(m), time: row.time, value: readingSummary(shown) }, link: told.length ? '/chat' : '/health', memberId: m.id, severity: severityOf(o.overall), ref: { type: 'reading', id: row.id } });
+    if (ids.length) ctx.notify({ toUsers: ids, kind: FAMILY_KIND[o.overall], params: { name: memberShort(m), time: row.time, value: readingSummary(shown) }, link: '/health', memberId: m.id, severity: severityOf(o.overall), ref: { type: 'reading', id: row.id } });
   }
   return told;
 }
-const nameOfStaff = (x: { knownAs?: string; name: string }) => x.knownAs || x.name;
 
 export const healthActions: ActionDef[] = [
   // ---------- save a reading ----------
@@ -174,7 +163,7 @@ export const healthActions: ActionDef[] = [
       const inMain = input.kind === 'monthly' || !!guest;
       const base = { clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: m ? m.id : null, ...(guest ? { guestId: guest.id } : {}), date: today, time: ctx.now, takenBy: ctx.user.id, source: input.source, edits: [] };
       const main: Reading = { id: ctx.id('h'), ...base, kind: input.kind, ...vitals, ...(inMain ? monthly : {}), status: 'normal', noteKeys: input.noteKeys, ...(input.note ? { note: input.note } : {}), shared: input.shared };
-      const L = limitsOf(s);
+      const L = limitsFor(s, m); // a member's own limits first, the club's for the rest (guests: the club's)
       main.status = evaluateReading(main, prevWeight, L);
       let companion: Reading | undefined;
       if (m && !inMain && hasAny(monthly, MONTHLY_FIELDS)) {
@@ -211,9 +200,9 @@ export const healthActions: ActionDef[] = [
       const shown: Partial<Reading> = { ...main, ...(companion ? pick(companion as NumericValues, MONTHLY_FIELDS) : {}) };
       let told: string[] = [];
       if (gated) {
-        markPending(row, ctx, undefined, { tell: input.tellFamily, share: input.shared || input.tellFamily, overall, ...(recheckAt ? { recheckAt } : {}), ...(companion ? { companionId: companion.id } : {}) });
+        markPending(row, ctx, undefined, { tell: input.tellFamily, share: input.shared || input.tellFamily, overall, ...(companion ? { companionId: companion.id } : {}) });
         if (companion) { markPending(d.readings[companion.id], ctx, undefined); d.readings[companion.id].approval!.companionOf = row.id; }
-      } else if (m && (input.tellFamily || input.shared)) told = noticeFamilies(d, ctx, row, { tell: input.tellFamily, share: input.shared, overall, recheckAt, companion });
+      } else if (m && (input.tellFamily || input.shared)) told = noticeFamilies(d, ctx, row, { tell: input.tellFamily, share: input.shared, overall, companion });
       // the nurses and management hear about Alerts (management also gets the derived "Needs action" item)
       if (overall === 'alert') {
         if (m) ctx.notify({ toRoles: ['nurse'], kind: 'health.notif.alert', params: { name: memberShort(m), value: headlineValue(shown) }, link: `/readings?member=${m.id}`, memberId: m.id, severity: 'urgent', ref: { type: 'reading', id: main.id } });
@@ -262,7 +251,7 @@ export const healthActions: ActionDef[] = [
       if ((r.sys === undefined) !== (r.dia === undefined)) ctx.fail('health.err.bpPair');
       if (r.sys !== undefined && r.dia !== undefined && r.dia >= r.sys) ctx.fail('health.err.diaSys');
       const prevWeight = r.memberId ? lastBefore(s, r.memberId, r.date, 'weight')?.weight : undefined;
-      r.status = evaluateReading(r, prevWeight, limitsOf(d as unknown as ClubState));
+      r.status = evaluateReading(r, prevWeight, limitsFor(s, r.memberId));
       if (r.source === 'device') r.source = 'mixed';
       r.edits.push({ at: ctx.nowDT, by: ctx.user.id, fields, reason: input.reason, ...(input.note ? { note: input.note } : {}), from });
       if (gated) markPending(r, ctx, before);
@@ -311,17 +300,10 @@ export const healthActions: ActionDef[] = [
         if (!other && g && !g.recheckDueAt) g.recheckDueAt = ctx.now;
       }
       if (a && r.kind === 'monthly' && monthlyNeeds(d as unknown as ClubState, r.memberId!, r.date).any) a.monthlyDeferred = true;
-      // the family was told: tell them it was a mistake
+      // the family was told: tell them it was a mistake (the demo shows it as an update in their bell)
       if (r.memberId && r.familyTold) {
         const m = d.members[r.memberId];
-        const nurse = nameOfUser(ctx.user);
-        for (const id of r.familyTold.familyIds) {
-          const c = d.familyContacts[id];
-          if (!m || !c) continue;
-          const text = translate(c.lang || 'en', 'health.msg.void', { nurse, check: translate(c.lang || 'en', CHECK_KEY[r.kind]).toLowerCase(), name: memberShort(m), time: r.time });
-          postMessage(d, ctx, { memberId: m.id, familyId: id, topic: 'nurse', text, kind: 'text', ref: { type: 'reading', id: r.id } });
-        }
-        ctx.notify({ toUsers: r.familyTold.familyIds, kind: 'health.notif.fam.void', params: { name: memberShort(m) }, link: '/chat', memberId: m.id, severity: 'attention' });
+        if (m) ctx.notify({ toUsers: r.familyTold.familyIds, kind: 'health.notif.fam.void', params: { name: memberShort(m) }, link: '/health', memberId: m.id, severity: 'attention' });
       }
       const name = r.memberId ? shortOf(d, r.memberId) : d.guestVisits[r.guestId || '']?.name || '';
       ctx.feed({ icon: 'delete', key: 'health.feed.voided', params: { name }, ...(r.memberId ? { memberId: r.memberId } : {}) });
@@ -410,37 +392,85 @@ export const healthActions: ActionDef[] = [
     name: 'health.setLimits',
     can: (u) => nurseOrMgmt(u),
     parse(raw) {
-      const src = rec(rec(raw).limits);
-      const out = {} as HealthLimits;
-      for (const k of LIMIT_KEYS) {
-        const l = rec(src[k]);
-        const [lo, hi] = LIMIT_RANGE[k];
-        const one = (v: unknown) => {
-          if (v === null || v === undefined || v === '') return null;
-          const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.'));
-          if (!Number.isFinite(n) || n < lo || n > hi) throw new DomainError('health.err.limitRange');
-          return Math.round(n * 10) / 10;
-        };
-        out[k] = { watch: one(l.watch), alert: one(l.alert) };
-        if (!limitOrderOk(k, out[k])) throw new DomainError('health.err.limitOrder');
-      }
-      return { limits: out };
+      const out = parseLimits(rec(rec(raw).limits), LIMIT_KEYS);
+      return { limits: out as HealthLimits };
     },
     run(d, i, ctx) {
       const before = limitsOf(d as unknown as ClubState);
       if (LIMIT_KEYS.every((k) => before[k].watch === i.limits[k].watch && before[k].alert === i.limits[k].alert)) ctx.fail('err.noChanges');
       d.club.settings.limits = i.limits;
-      // every saved reading is graded again with the new limits (lists, records, trends and the family's view follow)
-      const s = d as unknown as ClubState;
-      let regraded = 0;
-      for (const r of Object.values(d.readings)) {
-        if (r.deletedAt) continue;
-        const prev = r.memberId ? lastBefore(s, r.memberId, r.date, 'weight')?.weight : undefined;
-        const st = evaluateReading(r as Reading, prev, i.limits);
-        if (st !== r.status) { r.status = st; regraded++; }
-      }
+      // every saved reading is graded again with the new limits (a member's own limits still come first); lists, records, trends and the family's view follow
+      const regraded = regrade(d, () => true);
       ctx.result.regraded = regraded;
       ctx.feed({ icon: 'tune', key: 'health.feed.limits', params: { name: nameOfUser(ctx.user) } });
     },
   }),
+
+  // ---------- one member's own limits (KC round 7): the keys given replace the club's for them; null clears them ----------
+  defineAction<{ memberId: string; limits: Partial<HealthLimits> | null }>({
+    name: 'health.setMemberLimits',
+    can: (u) => nurseOrMgmt(u),
+    parse(raw) {
+      const i = rec(raw);
+      const memberId = str(i.memberId);
+      if (!memberId) throw new DomainError('err.invalid');
+      if (i.limits === null || i.limits === undefined) return { memberId, limits: null };
+      const src = rec(i.limits);
+      const given = LIMIT_KEYS.filter((k) => src[k] !== undefined && src[k] !== null);
+      return { memberId, limits: given.length ? parseLimits(src, given) : null };
+    },
+    run(d, i, ctx) {
+      const m = requireMember(d, i.memberId, ctx);
+      const was = m.limits as Partial<HealthLimits> | undefined;
+      const norm = (l?: Partial<HealthLimits> | null) => LIMIT_KEYS.map((k) => (l?.[k] ? `${l[k]!.watch}/${l[k]!.alert}` : '-')).join('|');
+      if (norm(was) === norm(i.limits)) ctx.fail('err.noChanges');
+      if (i.limits) m.limits = i.limits; else delete m.limits;
+      // this member's saved readings are graded again with the new limits
+      const regraded = regrade(d, (r) => r.memberId === m.id);
+      ctx.result.regraded = regraded;
+      ctx.feed({ icon: 'tune', key: i.limits ? 'health.feed.memberLimits' : 'health.feed.memberLimitsClear', params: { name: nameOfUser(ctx.user), member: shortOf(d, m.id) }, memberId: m.id });
+    },
+  }),
 ];
+
+/** Watch and Alert for the given limits: plausible numbers, one decimal, Alert past Watch, each line needs at least one of the two. */
+function parseLimits(src: Record<string, unknown>, keys: readonly LimitKey[]): Partial<HealthLimits> {
+  const out: Partial<HealthLimits> = {};
+  for (const k of keys) {
+    const l = rec(src[k]);
+    const [lo, hi] = LIMIT_RANGE[k];
+    const one = (v: unknown) => {
+      if (v === null || v === undefined || v === '') return null;
+      const n = typeof v === 'number' ? v : Number(String(v).replace(',', '.'));
+      if (!Number.isFinite(n) || n < lo || n > hi) throw new DomainError('health.err.limitRange');
+      return Math.round(n * 10) / 10;
+    };
+    const pair = { watch: one(l.watch), alert: one(l.alert) };
+    if (!limitOrderOk(k, pair)) throw new DomainError('health.err.limitOrder');
+    out[k] = pair;
+  }
+  return out;
+}
+
+/** Grade the saved readings again (those `pick`ed) with each member's effective limits; returns how many changed. */
+function regrade(d: Draft<ClubState>, pick: (r: Draft<Reading>) => boolean): number {
+  const s = d as unknown as ClubState;
+  let n = 0;
+  // each member's weights once, oldest first (`lastBefore` per reading scans every reading: with months of history that is millions of draft reads)
+  const weights = new Map<string, { at: string; date: string; w: number }[]>();
+  for (const r of Object.values(d.readings)) {
+    if (r.deletedAt || r.voided || r.weight == null || !r.memberId) continue;
+    const l = weights.get(r.memberId) ?? [];
+    l.push({ at: r.date + r.time, date: r.date, w: r.weight });
+    weights.set(r.memberId, l);
+  }
+  for (const l of weights.values()) l.sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
+  const prevWeight = (memberId: string, date: string) => { const l = weights.get(memberId); if (!l) return undefined; let i = l.length - 1; while (i >= 0 && l[i].date >= date) i--; return i >= 0 ? l[i].w : undefined; };
+  for (const r of Object.values(d.readings)) {
+    if (r.deletedAt || !pick(r)) continue;
+    const prev = r.memberId ? prevWeight(r.memberId, r.date) : undefined;
+    const st = evaluateReading(r as Reading, prev, limitsFor(s, r.memberId));
+    if (st !== r.status) { r.status = st; n++; }
+  }
+  return n;
+}

@@ -5,7 +5,8 @@ import { useNavigate } from 'react-router-dom';
 import { actorName, memberName, type Enquiry } from '@cp/shared';
 import { comingUp, familyRequests, liveToday, overviewStats, type ComingUpItem, type FamilyRequest } from '@cp/shared/rules/mgmt';
 import { openEnquiries } from '@cp/shared/rules/enquiries';
-import { Avatar, EmptyState, PageHead } from '../../components/ui';
+import { Avatar, EmptyState, Group, PageHead } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
@@ -20,6 +21,7 @@ const STAGE_ICON: Record<Enquiry['stage'], string> = { new: 'call', visit: 'meet
 
 export function Overview() {
   const t = useT();
+  const { isPhone } = useDevice();
   const { lang, fdl, fds } = useFmt();
   const s = useClub();
   const { today } = useNow();
@@ -41,7 +43,6 @@ export function Overview() {
     { key: 'logs', label: t('mgmt.tileLogs'), value: `${st.logsSaved} / ${st.logsTotal}`, icon: 'edit_note', to: '/log' },
     { key: 'lunch', label: t('mgmt.tileLunch'), value: st.lunchPhoto ? t('mgmt.posted') : t('mgmt.notYet'), icon: 'restaurant', to: '/menu' },
     { key: 'pay', label: t('mgmt.tilePayments'), value: String(st.payments), icon: 'payments', to: '/payments' },
-    { key: 'unread', label: t('mgmt.tileUnread'), value: String(st.unread), icon: 'chat', to: '/chat' },
     { key: 'stock', label: t('mgmt.tileStock'), value: String(st.stock), icon: 'inventory_2', to: '/stock' },
     { key: 'venue', label: t('mgmt.tileVenue'), value: String(st.venues), icon: 'storefront', to: '/venue' },
     { key: 'plans', label: t('nav.plans'), value: st.samplePrices ? t('mgmt.sample') : t('mgmt.priceSet'), icon: 'sell', to: '/plans', badge: st.samplePrices ? { icon: 'visibility', fg: '#7A5510', bg: '#F6ECD6', label: t('mgmt.samplePrices') } : { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6', label: t('mgmt.clubPrices') } },
@@ -58,6 +59,24 @@ export function Overview() {
       <PageHead eyebrow={fdl(today)} title={t('nav.overview')} />
       {empty ? <div style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>{t('mgmt.emptyClub', { club: s.club.fullName })}</div> : null}
 
+      {isPhone ? (
+        // round 6, phone: the numbers are one flat group, two by two, each still a tap into its screen
+        <Group pad="6px 16px 8px" gap={0}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '4px 16px' }}>
+            {tiles.map((x) => (
+              <button key={x.key} type="button" data-tile={x.key} onClick={() => navigate(x.to)} className="cp-press"
+                style={{ minWidth: 0, padding: '10px 0', border: 'none', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, color: '#24201C', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
+                <span data-testid={`tile-${x.key}`} style={{ fontSize: 26, lineHeight: '30px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>{x.value}</span>
+                <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, lineHeight: 1.3, color: '#6B6259' }}>
+                  <IconBox name={x.icon} size={16} color="#75624B" />
+                  {x.label}
+                </span>
+                {x.badge ? <span style={{ fontSize: 13, lineHeight: '18px' }}><DotText color={x.badge.fg === '#FFFFFF' ? '#9A3D24' : x.badge.fg}>{x.badge.label}</DotText></span> : null}
+              </button>
+            ))}
+          </div>
+        </Group>
+      ) : (
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 'clamp(14px, 2.4vw, 32px) clamp(14px, 2.4vw, 32px)' }}>
         {tiles.map((x) => (
           <button key={x.key} type="button" data-tile={x.key} onClick={() => navigate(x.to)}
@@ -71,6 +90,7 @@ export function Overview() {
           </button>
         ))}
       </div>
+      )}
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,340px),1fr))', gap: 'clamp(16px, 2.4vw, 32px)', alignItems: 'start' }}>
         <ListCard id="ov-live" title={t('mgmt.listLive')}>

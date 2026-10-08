@@ -12,7 +12,7 @@ export const approvals = {
   'none.readings': 'No health readings to approve', 'none.readingsSub': 'Readings saved by the nurse appear here before families can see them.',
   'none.menu': 'No menu changes to approve', 'none.menuSub': 'A weekly menu or a one-day change from the kitchen appears here before families can see it.',
   'none.stock': 'No stock requests to approve', 'none.stockSub': 'Requests from the team appear here. The kitchen supervisor and finance can also approve them on the Stock screen.',
-  'none.history': 'Nothing handled yet',
+  'mode.item': 'Per item', 'mode.person': 'Per person', modeLabel: 'Show approvals', personWaiting: '{n} waiting', approveAllFor: 'Approve all ({n})', approvedAllFor: '{n} approved for {name}.', groupPhotos: 'Group & activity photos', otherSection: 'Other · menu and stock', 'none.all': 'Nothing is waiting for approval', 'none.history': 'Nothing handled yet',
   historySub: 'Entries that were approved or rejected',
   groupLabel: '{kind} {who}',
   // kinds
@@ -31,4 +31,8 @@ export const approvals = {
   skippedN: '{n} skipped: already handled or no longer waiting.', conflictN: '{n} could not be applied because the record changed since. Open them one at a time.', nothingDone: 'Nothing to do: those entries were already handled.',
   // notifications to the author of a rejected entry
   'notif.rejected.logs': 'Management did not approve {n} of your care log entries: {reason}', 'notif.rejected.readings': 'Management did not approve {n} of your health readings: {reason}', 'notif.rejected.menu': 'Management did not approve {n} of your menu changes: {reason}',
+  // KC round 7: renewal changes recorded by the front desk
+  'tab.renewals': 'Renewals', 'none.renewals': 'No renewal changes to approve', 'none.renewalsSub': 'Changes the front desk records after calling a family (upgrade, downgrade, leave, stop) appear here.', 'kind.renewal': 'Renewal',
+  'sum.renewalUpgrade': 'Upgrade to Gold from {month}', 'sum.renewalDowngrade': 'Downgrade to Flex from {month}', 'sum.renewalLeave': 'Leave in {months}', 'sum.renewalStop': 'Stop · last day {date}',
+  renewalChange: 'Change', renewalMonth: 'Month', renewalReason: 'Reason', 'notif.rejected.renewals': 'Management did not approve {n} of your renewal changes: {reason}',
 };

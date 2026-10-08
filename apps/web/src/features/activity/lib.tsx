@@ -1,8 +1,9 @@
 // Small shared pieces for the activity screens: avatar, status badge, photo tile, labels that follow the language.
 import { type CSSProperties, type ReactNode } from 'react';
-import { BADGE, initials, memberName, type BadgeKey, type ClubState, type Lang, type Member, type Photo } from '@cp/shared';
+import { BADGE, initials, memberName, type Activity, type BadgeKey, type ClubState, type ISODate, type Lang, type Member, type Photo } from '@cp/shared';
 import { activityName, photoActivity, fmtDuration } from '@cp/shared/rules/activity';
 import { Icon, PhotoImg, TONES, FONT_BODY } from '../../components/ui';
+import { useDevice } from '../../hooks/useDevice';
 import type { TFn } from '../../lib/i18n';
 import { memberPhoto, photoFill } from '../../lib/media';
 
@@ -51,6 +52,13 @@ export function PhotoTile({ p, onClick, aria, hiddenLabel, pendingLabel, size }:
   );
 }
 
+/** An activity's catalog picture as a Photo, so the viewer can open it (it is not a stored photo: the viewer shows it with no actions). */
+const CATALOG = 'catalog:';
+export const isCatalogPhoto = (p: Pick<Photo, 'id'>) => p.id.startsWith(CATALOG);
+export const catalogPhoto = (a: Pick<Activity, 'id' | 'name' | 'photoMediaId'>, date: ISODate): Photo => ({
+  id: CATALOG + a.id, clubId: '', createdAt: '', createdBy: 'system', date, time: '00:00', kind: 'activity', media: 'photo', activity: a.name, memberIds: [], tone: 0, takenBy: '', visibility: 'visible', mediaId: a.photoMediaId,
+});
+
 /** Caption of a photo: the catalog activity in the current language, or the door-camera / lunch / general labels. */
 export function photoCaption(s: Pick<ClubState, 'activities'>, p: Pick<Photo, 'activity' | 'kind'>, t: TFn, lang: Lang): string {
   return activityLabel(s, photoActivity(p), t, lang);
@@ -91,8 +99,43 @@ export function StatusDot({ color, children }: { color: string; children: ReactN
 export const heroCardStyle: CSSProperties = { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '8px clamp(18px, 3vw, 32px) 12px', minWidth: 0 };
 export const heroEyebrow: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' };
 
-/** v3 number tabs: big light number over a label, 2px underline (ink when selected). */
+/** round 6, phone: the hairline between grouped rows, inset from the left (16px, or where the text starts); none on the first row. */
+export const rowLine = (first: boolean, inset = 16): CSSProperties => (first ? {} : { backgroundImage: 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: `calc(100% - ${inset}px) 1px`, backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' });
+
+/** round 6, phone: an iOS segmented control (#EAE6E0 track, white thumb), as on the Arrivals tabs. */
+export function NativeSeg<V extends string>({ items, value, onChange, label }: { items: { value: V; label: ReactNode; aria?: string; n?: number }[]; value: V; onChange: (v: V) => void; label: string }) {
+  return (
+    <div role="tablist" aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0', width: '100%' }}>
+      {items.map((it) => {
+        const on = it.value === value;
+        return (
+          <button key={it.value} type="button" role="tab" aria-selected={on} aria-label={it.aria} onClick={() => onChange(it.value)}
+            style={{ minWidth: 0, height: 36, padding: '0 6px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', transition: 'background-color .15s' }}>
+            <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
+            {it.n !== undefined ? <span style={{ flex: 'none', fontVariantNumeric: 'tabular-nums', color: on ? '#1E1A16' : '#8A8078' }}>{it.n}</span> : null}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+/** round 6, phone: the grey iOS search bar (as in the Arrivals list). */
+export function SearchBar({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string }) {
+  return (
+    <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0' }}>
+      <Icon name="search" size={19} color="#6B6259" />
+      <input value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} inputMode="search" placeholder={placeholder} autoComplete="off"
+        style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16' }} />
+    </label>
+  );
+}
+
+/** v3 number tabs: big light number over a label, 2px underline (ink when selected). On a phone: an iOS segmented control. */
 export function NumTabs<V extends string>({ items, value, onChange, label, maxWidth = 640 }: { items: { value: V; n: number; label: string }[]; value: V; onChange: (v: V) => void; label: string; maxWidth?: number }) {
+  const { isPhone } = useDevice();
+  // round 6, phone: "All 12 | Visible 9 | Hidden 1 | Pending 2" as one segmented control
+  if (isPhone) return <NativeSeg label={label} value={value} onChange={onChange} items={items.map((it) => ({ value: it.value, label: it.label, n: it.n, aria: `${it.label} ${it.n}` }))} />;
   return (
     <div role="tablist" aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 'clamp(8px, 2vw, 28px)', maxWidth, width: '100%' }}>
       {items.map((it) => {

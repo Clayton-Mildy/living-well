@@ -1,6 +1,6 @@
 // Management approval hub: approve or reject what non-management staff entered, one action for a whole batch (one patch, one SSE update).
 //   approval.approve { type, ids, notify? }      approval.reject { type, ids, reason }
-// type: profile (change requests, applied-at-once flags), logs (daily logs + family notes), readings, photos, menu (weekly versions + per-day overrides), stock.
+// type: profile (change requests, applied-at-once flags), logs (daily logs + family notes), readings, photos, menu (weekly versions + per-day overrides), stock, renewals (a change the front desk recorded in the month-end follow-up: approving applies it from the 1st).
 // Ids that were already handled, are gone or have gone stale (a profile change whose values moved on) are skipped and reported back in `skipped`.
 // Families never see an entry before this approves it (rules/approvals.ts, project.ts); the notices that would tell them go out here.
 import { z } from 'zod';
@@ -10,6 +10,7 @@ import { DomainError, defineAction, isMgmt, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { acknowledgeChange, approveChange, rejectChange, revertChange } from './review';
 import { approvePhotoRows, rejectPhotoRows } from './photos';
+import { applyFollowUp } from './renewals';
 import { approveStockRow, rejectStockRow } from './kitchen';
 import { noticeFamilies } from './health';
 import { menuAudience } from '../rules/kitchenOps';
@@ -67,9 +68,10 @@ type Handler = (d: Draft<ClubState>, ctx: Ctx, id: string, o: { reason?: string;
 
 const approveLog = (d: Draft<ClubState>, ctx: Ctx, l: Draft<DailyLog>) => {
   const a = l.approval!;
-  const edit = !!a.prev;
+  // KC round 7: a log fills in round by round; families hear about it once the Mood & notes round is in, not for a lunch or session mark alone
+  const edit = !!a.prev && a.prev.mood !== undefined;
   decide(a, ctx, 'approved');
-  const to = familyUserIds(d, l.memberId);
+  const to = l.mood !== undefined ? familyUserIds(d, l.memberId) : [];
   if (to.length) ctx.notify({ toUsers: to, kind: edit ? 'activity.notif.logUpdated' : 'activity.notif.logSaved', params: { name: shortOf(d, l.memberId) }, link: '/today', memberId: l.memberId, ref: { type: 'dailyLog', id: l.id } });
 };
 const approveNote = (d: Draft<ClubState>, ctx: Ctx, n: Draft<MemberNote>) => {
@@ -83,7 +85,7 @@ const approveReading = (d: Draft<ClubState>, ctx: Ctx, r: Draft<Reading>) => {
   const companion = defer?.companionId ? d.readings[defer.companionId] : undefined;
   decide(a, ctx, 'approved');
   if (companion?.approval) decide(companion.approval, ctx, 'approved');
-  if (defer && !a.prev) noticeFamilies(d, ctx, r, { tell: !!defer.tell, share: !!defer.share, overall: defer.overall ?? r.status, recheckAt: defer.recheckAt, companion: companion as Reading | undefined });
+  if (defer && !a.prev) noticeFamilies(d, ctx, r, { tell: !!defer.tell, share: !!defer.share, overall: defer.overall ?? r.status, companion: companion as Reading | undefined });
 };
 const rejectReading = (ctx: Ctx, r: Draft<Reading>, reason: string) => {
   const a = r.approval!;
@@ -147,6 +149,17 @@ const APPROVE: Record<ApprovalType, Handler> = {
     const k = d.stockRequests[id];
     if (!k || k.deletedAt || k.status !== 'requested') return 'skip';
     approveStockRow(d, ctx, k as Draft<StockRequest>);
+    return 'done';
+  },
+  // KC round 7: a renewal change (upgrade, downgrade, leave, stop) recorded by the front desk applies from the 1st, and the family hears about it
+  renewals(d, ctx, id) {
+    const f = d.followUps?.[id];
+    if (!f || f.deletedAt || f.status !== 'pending' || !f.approval) return 'skip';
+    if (tryRun(d, ctx, (x, k) => applyFollowUp(x, x.followUps[id], k))) return 'conflict'; // no longer fits (the month began, the member already ended…)
+    applyFollowUp(d, f, ctx);
+    f.status = 'done';
+    decide(f.approval, ctx, 'approved');
+    ctx.feed({ icon: 'event_repeat', key: 'renewals.feed.approved', params: { name: shortOf(d, f.memberId), month: f.month }, memberId: f.memberId });
     return 'done';
   },
 };
@@ -221,10 +234,21 @@ const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
     rejectStockRow(d, ctx, k as Draft<StockRequest>, o.reason!);
     return 'done';
   },
+  // KC round 7: nothing was applied, so only the mark changes; the recorder hears why and the member goes back on her to-do list
+  renewals: (out) => (d, ctx, id, o) => {
+    const f = d.followUps?.[id];
+    if (!f || f.deletedAt || f.status !== 'pending' || !f.approval) return 'skip';
+    const by = f.approval.by;
+    f.status = 'rejected';
+    decide(f.approval, ctx, 'rejected', o.reason);
+    ctx.feed({ icon: 'event_repeat', key: 'renewals.feed.rejected', params: { name: shortOf(d, f.memberId), month: f.month }, memberId: f.memberId });
+    note(out, by);
+    return 'done';
+  },
 };
 const note = (out: Outcome, by: string) => { const s = staffIdOfActor(by); if (s) out.rejectedBy.set(s, (out.rejectedBy.get(s) || 0) + 1); };
 
-const REJECT_LINK: Partial<Record<ApprovalType, string>> = { logs: '/log', readings: '/readings', menu: '/menu' };
+const REJECT_LINK: Partial<Record<ApprovalType, string>> = { logs: '/log', readings: '/readings', menu: '/menu', renewals: '/renewals' };
 
 function run(d: Draft<ClubState>, ctx: Ctx, type: ApprovalType, ids: string[], mode: 'approve' | 'reject', o: { reason?: string; notify?: boolean }): Outcome {
   const out: Outcome = { done: [], skipped: [], conflicts: [], rejectedBy: new Map() };

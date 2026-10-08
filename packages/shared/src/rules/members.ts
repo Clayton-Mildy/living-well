@@ -8,7 +8,8 @@ import type {
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
 import { currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
-import { invoiceStatus, invoicesOf, nextInvoiceNumber, priceOn, balanceOf } from './billing';
+import { invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
+import { onLeaveOn } from './leave';
 import { latestBp } from './health';
 
 // ---------- option lists ----------
@@ -158,6 +159,9 @@ export interface MemberRow {
   lr?: Reading;
   hs: Health | null;
   od: boolean;
+  /** KC round 6 (the brochure's terms): on hold for an unpaid invoice, or in a month of leave */
+  sus?: Suspension;
+  leave?: YM;
   /** the latest day up to today the member checked in (today included); undefined when they never have */
   lastVisit?: ISODate;
 }
@@ -169,6 +173,7 @@ export function lastVisits(s: ClubState, today: ISODate): Record<string, ISODate
 }
 export function memberRows(s: ClubState, today: ISODate): MemberRow[] {
   const overdue = new Set(live(s.invoices).filter((i) => invoiceStatus(s, i, today) === 'overdue').map((i) => i.memberId));
+  const hold = suspensions(s, today);
   const last = lastVisits(s, today);
   return sortBy(
     live(s.members).filter((m) => !isPendingRow(m) || m.review?.status === 'pending'),
@@ -176,13 +181,13 @@ export function memberRows(s: ClubState, today: ISODate): MemberRow[] {
   ).map((m) => {
     const lr = latestBp(s, m.id);
     const pending = isPendingRow(m);
-    return { m, st: memberStatus(s, m, today), pending, ended: !pending && isEndedMember(m, today), endsOn: pending ? undefined : endingOn(m, today), ...(pending ? {} : { subStart: subStart(m), subEnd: subEnd(m, today) }), isNew: isNewMember(m, today), plan: planOn(m, today).plan, lr, hs: lr && lr.status !== 'normal' ? lr.status : null, od: overdue.has(m.id), ...(last[m.id] ? { lastVisit: last[m.id] } : {}) };
+    return { m, st: memberStatus(s, m, today), pending, ended: !pending && isEndedMember(m, today), endsOn: pending ? undefined : endingOn(m, today), ...(pending ? {} : { subStart: subStart(m), subEnd: subEnd(m, today) }), isNew: isNewMember(m, today), plan: planOn(m, today).plan, lr, hs: lr && lr.status !== 'normal' ? lr.status : null, od: overdue.has(m.id), ...(hold[m.id] ? { sus: hold[m.id] } : {}), ...(!pending && onLeaveOn(m, today) ? { leave: ym(today) } : {}), ...(last[m.id] ? { lastVisit: last[m.id] } : {}) };
   });
 }
 export const FILTERS: Record<MemberFilter, (r: MemberRow) => boolean> = {
   active: (r) => !r.ended,
   in: (r) => r.st.key === 'in',
-  att: (r) => !r.ended && !r.pending && !!(r.hs || r.od),
+  att: (r) => !r.ended && !r.pending && !!(r.hs || r.od || r.sus),
   flex: (r) => !r.ended && r.plan === 'flex',
   gold: (r) => !r.ended && r.plan === 'gold',
   ended: (r) => r.ended,
@@ -252,9 +257,9 @@ export const handledReviews = (s: ClubState) => sortBy(live(s.changeRequests).fi
 /** Photos waiting for management's approval (taken by non-management staff; families never see them). Newest first. */
 export const pendingPhotos = (s: ClubState): Photo[] => sortBy(live(s.photos).filter((p) => p.visibility === 'pending'), (p) => p.createdAt + p.id, -1);
 export const pendingPhotoCount = (s: ClubState): number => pendingPhotos(s).length;
-/** What a pending photo is, for the review grid: a lunch photo, a group photo, the door-camera arrival photo, or a photo of one member. */
-export type PhotoReviewKind = 'lunch' | 'group' | 'arrival' | 'solo';
-export const photoReviewKind = (p: Pick<Photo, 'kind'>): PhotoReviewKind => (p.kind === 'lunch' || p.kind === 'group' || p.kind === 'arrival' ? p.kind : 'solo');
+/** What a pending photo is, for the review grid: a lunch photo, a group photo, the door-camera arrival photo, an activity picture (of a session, no members), or a photo of one member. */
+export type PhotoReviewKind = 'lunch' | 'group' | 'arrival' | 'activity' | 'solo';
+export const photoReviewKind = (p: Pick<Photo, 'kind'>): PhotoReviewKind => (p.kind === 'lunch' || p.kind === 'group' || p.kind === 'arrival' || p.kind === 'activity' ? p.kind : 'solo');
 
 // ---------- final invoice (ending a membership) ----------
 // Flex visits beyond the monthly quota are extra days, normally billed on the next month's invoice. When a membership is ended, the extra days that
@@ -278,7 +283,7 @@ export function finalInvoiceLines(s: ClubState, m: Member, lastDay: ISODate, tod
   for (const p of unbilledExtraMonths(s, m, lastDay)) {
     const extra = extraDaysFor(s, m, p, today).filter((d) => d <= lastDay && !done.has(d));
     if (!extra.length) continue;
-    const unit = priceOn(s, `${p}-15`).extra;
+    const unit = priceOn(s, issueDateOf(s, p)).extra;
     lines.push({ id: `extra-${p}`, kind: 'extraDay', label: 'inv.line.extra', params: { month: p, n: extra.length }, qty: extra.length, unit, amount: extra.length * unit, refMonth: p, dates: extra });
   }
   return lines;

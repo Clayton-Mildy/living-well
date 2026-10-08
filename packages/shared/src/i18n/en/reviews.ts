@@ -21,6 +21,6 @@ export const reviews = {
   notifyFamilies: 'Notify families', notifyFamiliesSub: 'The families of the people in the photos get an update.', photosApprovedOne: 'Photo approved.', photosApprovedN: '{n} photos approved.',
   photosApprovedToldOne: 'Photo approved. The family is told.', photosApprovedToldN: '{n} photos approved. Families are told.', photosRejectedOne: 'Photo rejected.', photosRejectedN: '{n} photos rejected.',
   rejectPhotosTitleOne: 'Reject this photo', rejectPhotosTitleN: 'Reject {n} photos', rejectPhotosSub: 'Rejected photos are never shown to families. The person who took them is told, with your reason.', rejectPhotosReason: 'Why are they not approved?',
-  nonePhotos: 'No photos to approve', nonePhotosSub: 'Photos taken by the team appear here before families can see them.', 'photoKind.solo': 'Photo', 'photoKind.group': 'Group photo', 'photoKind.lunch': 'Lunch photo', 'photoKind.arrival': 'Arrival photo',
+  nonePhotos: 'No photos to approve', nonePhotosSub: 'Photos taken by the team appear here before families can see them.', 'photoKind.solo': 'Photo', 'photoKind.group': 'Group photo', 'photoKind.lunch': 'Lunch photo', 'photoKind.tea': 'Afternoon tea photo', 'photoKind.activity': 'Activity picture', 'photoKind.arrival': 'Arrival photo',
   photoBy: 'by {n}', selectPhoto: 'Select the photo of {n}', openPhoto: 'Open the photo of {n}', photosPager: 'Photo pages', pagerPending: 'Requests to approve pages', pagerApplied: 'Applied requests pages', pagerHistory: 'History pages',
 };

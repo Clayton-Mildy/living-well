@@ -1,10 +1,10 @@
 // Kitchen actions: dishes and allergens, conflicts and plans, menu versions, lunch photo, feedback flow, stock permissions and statuses.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { buildSeed, execute, getUser, getAction, actionItems, updatesFor, unreadUpdates, lunchSafety, menuOn, projectForFamily, familyThreads, familyUnread, staffUnreadCount, live, type ClubState } from '../index';
+import { buildSeed, execute, getUser, getAction, actionItems, updatesFor, unreadUpdates, lunchSafety, menuOn, projectForFamily, live, translate, type ClubState } from '../index';
 import { defineAction, registerActions } from './framework';
 import { announceLunchPhoto } from './kitchen';
-import { MAX_LUNCH_PHOTOS, lunchPhotosOn, visibleLunchPhotos } from '../rules/kitchen';
+import { MAX_LUNCH_PHOTOS, lunchPhotosOn, teaPhotosOn, visibleLunchPhotos, visibleTeaPhotos } from '../rules/kitchen';
 import {
   allergiesOnFile, canApproveStock, canReceiveStock, coversOn, dietaryRows, dishUsage, kitchenConflicts, menuDishesOn, potentialConflicts, safetyOf, sortStock, templateOn, unknownAllergyGuests, unreviewedDishesOn,
 } from '../rules/kitchenOps';
@@ -376,6 +376,69 @@ describe('weekly menu', () => {
   });
 });
 
+describe('tea photos (KC round 7)', () => {
+  const notes = (st: ClubState, kind: string) => Object.values(st.notifications).filter((x) => x.kind === kind);
+  const IN_CLUB = ['fm10_0', 'fm20_0', 'fm2_0', 'fm2_1'];
+  it('a tea photo goes to the tea gallery, waits for approval like a lunch photo, and the lunch gallery stays as it was', () => {
+    const s = seed();
+    const r = run(s, 'menu.postLunchPhoto', { date: T, meal: 'tea', mediaId: 'media-tea_1' }, 's3');
+    const p = r.state.photos[r.result.photoId as string];
+    expect(p).toMatchObject({ kind: 'lunch', media: 'photo', memberIds: [], visibility: 'pending', date: T, time: '10:00', takenBy: 's3', mediaId: 'media-tea_1' });
+    expect(r.result.pending).toBe(true);
+    expect(r.state.dayMenus[T].teaPhotoIds).toEqual([p.id]);
+    expect(r.state.dayMenus[T].photoIds ?? []).toEqual([]);
+    expect(teaPhotosOn(r.state, T).map((x) => x.id)).toEqual([p.id]);
+    expect(lunchPhotosOn(r.state, T)).toEqual([]);
+    expect(visibleTeaPhotos(r.state, T)).toEqual([]);
+    expect(Object.keys(projectForFamily(r.state, 'fm10_0').photos)).not.toContain(p.id);
+    expect(Object.values(r.state.activity).some((a) => a.key === 'kitchen.feed.teaPhotoPending')).toBe(true);
+    // management approves it (photo.approve): families see it, and are told about the tea, not the lunch
+    const ok = run(r.state, 'photo.approve', { photoIds: [p.id], notify: true }, 's9');
+    expect(visibleTeaPhotos(ok.state, T).map((x) => x.id)).toEqual([p.id]);
+    expect(notes(ok.state, 'kitchen.notif.lunchPhoto')).toHaveLength(0);
+    expect([...notes(ok.state, 'kitchen.notif.teaPhoto')[0].toUsers].sort()).toEqual(IN_CLUB);
+    expect(Object.keys(projectForFamily(ok.state, 'fm10_0').photos)).toContain(p.id);
+  });
+  it('management\'s tea photo is visible at once; lunch and tea are announced separately, each once a day', () => {
+    const s = seed();
+    const tea = run(s, 'menu.postLunchPhoto', { date: T, meal: 'tea' }, 's9');
+    expect(tea.state.photos[tea.result.photoId as string]).toMatchObject({ visibility: 'visible', approved: { by: 's9' } });
+    expect(notes(tea.state, 'kitchen.notif.teaPhoto')).toHaveLength(1);
+    const lunch = run(tea.state, 'menu.postLunchPhoto', { date: T }, 's9', { today: T, nowMin: 610 });
+    expect(notes(lunch.state, 'kitchen.notif.lunchPhoto')).toHaveLength(1); // not swallowed by the tea notice
+    const again = run(lunch.state, 'menu.postLunchPhoto', { date: T, meal: 'tea' }, 's9', { today: T, nowMin: 620 });
+    expect(notes(again.state, 'kitchen.notif.teaPhoto')).toHaveLength(1); // once a day
+    expect(again.state.dayMenus[T].teaPhotoIds).toHaveLength(2);
+    expect(again.state.dayMenus[T].photoIds).toHaveLength(1);
+    expect(Object.values(again.state.activity).some((a) => a.key === 'kitchen.feed.teaPhoto')).toBe(true);
+  });
+  it('the same limits and permissions as lunch photos; "meal" must be lunch or tea', () => {
+    let st = seed();
+    for (let i = 0; i < MAX_LUNCH_PHOTOS; i++) st = run(st, 'menu.postLunchPhoto', { date: T, meal: 'tea' }, 's9').state;
+    expect(() => run(st, 'menu.postLunchPhoto', { date: T, meal: 'tea' }, 's9')).toThrow('kitchen.err.tooManyTeaPhotos');
+    expect(run(st, 'menu.postLunchPhoto', { date: T }, 's9').state.dayMenus[T].photoIds).toHaveLength(1); // the lunch gallery has its own room
+    const s = seed();
+    expect(() => run(s, 'menu.postLunchPhoto', { date: T, meal: 'dinner' }, 's3')).toThrow('err.invalid');
+    expect(() => run(s, 'menu.postLunchPhoto', { date: T, meal: 'tea' }, 's1')).toThrow('err.forbidden');
+    expect(() => run(s, 'menu.postLunchPhoto', { date: '2026-10-22', meal: 'tea' }, 's3')).toThrow('kitchen.err.notToday');
+  });
+  it('removing a tea photo takes it out of the tea gallery only; the last one takes the day\'s row with it', () => {
+    const s = seed();
+    const lunch = run(s, 'menu.postLunchPhoto', { date: T }, 's9');
+    const tea = run(lunch.state, 'menu.postLunchPhoto', { date: T, meal: 'tea' }, 's3');
+    const pt = tea.result.photoId as string;
+    const r = run(tea.state, 'menu.removeLunchPhoto', { photoId: pt }, 's3');
+    expect(r.state.dayMenus[T].teaPhotoIds).toBeUndefined();
+    expect(r.state.dayMenus[T].photoIds).toEqual([lunch.result.photoId]);
+    expect(r.state.photos[pt]).toMatchObject({ visibility: 'removed', moderated: { by: 's3', reason: 'removed' } });
+    expect(teaPhotosOn(r.state, T)).toEqual([]);
+    expect(Object.values(r.state.activity).some((a) => a.key === 'kitchen.feed.teaPhotoRemoved')).toBe(true);
+    const first = run(s, 'menu.postLunchPhoto', { date: T, meal: 'tea' }, 's9');
+    const only = run(first.state, 'menu.removeLunchPhoto', { photoId: first.result.photoId as string }, 's9');
+    expect(only.state.dayMenus[T]).toBeUndefined();
+  });
+});
+
 describe('lunch photos', () => {
   const lunchNotes = (st: ClubState) => Object.values(st.notifications).filter((x) => x.kind === 'kitchen.notif.lunchPhoto');
   const IN_CLUB = ['fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']; // Bambang, Hendra and Tjahjadi are in; Oma Lina and Opa Budi have not arrived
@@ -503,17 +566,17 @@ describe('lunch photos', () => {
 
 describe('meal feedback', () => {
   const sub = { memberId: 'm10', mealDate: '2026-10-19', dish: 'Sayur asem', text: 'Papa said the soup was too salty again.' };
-  it('a family submits: feedback, a kitchen thread, and the kitchen is told', () => {
+  it('a family submits: the feedback, no Messages thread, and the kitchen is told', () => {
     const s = seed();
     const r = run(s, 'feedback.submit', sub, 'fm10_0');
     const fb = r.state.feedback[r.result.feedbackId as string];
     expect(fb).toMatchObject({ ...sub, familyId: 'fm10_0', source: 'family', status: 'open' });
-    const th = r.state.threads[fb.threadId!];
-    expect(th).toMatchObject({ topic: 'kitchen', memberId: 'm10', familyId: 'fm10_0', feedbackId: fb.id, lastSeq: 1 });
-    expect(Object.values(r.state.messages).find((m) => m.threadId === th.id)).toMatchObject({ from: 'family:fm10_0', text: sub.text, ref: { type: 'feedback', id: fb.id } });
+    expect(fb.replies).toBeUndefined();
+    expect(fb.threadId).toBeUndefined();
+    expect(Object.keys(r.state.threads)).toHaveLength(0);
+    expect(Object.keys(r.state.messages)).toHaveLength(0);
     const chef = usr(r.state, 's3');
     expect(updatesFor(r.state, chef).some((x) => x.kind === 'kitchen.notif.feedbackNew' && x.params.name === 'Bapak Bambang')).toBe(true);
-    expect(staffUnreadCount(r.state, 'kitchen')).toBe(staffUnreadCount(s, 'kitchen') + 1);
     expect(actionItems(r.state, chef, T, 600).filter((i) => i.kind === 'notif.act.complaint')).toHaveLength(3); // c1, c3 and the new one
     // it reaches only that family's view
     expect(projectForFamily(r.state, 'fm10_0').feedback[fb.id]).toBeDefined();
@@ -527,10 +590,9 @@ describe('meal feedback', () => {
     expect(client.result.feedbackId).toBe(server.result.feedbackId);
     expect(client.result.feedbackId).toBe('fb_mfam_1');
     expect(JSON.stringify(client.patches)).toEqual(JSON.stringify(server.patches));
-    // after the server confirms, the family's refreshed projection carries the thread and the feedback
+    // after the server confirms, the family's refreshed projection carries the feedback
     const next = projectForFamily(server.state, 'fm10_0');
     expect(next.feedback.fb_mfam_1.status).toBe('open');
-    expect(Object.values(next.threads).some((t) => t.feedbackId === 'fb_mfam_1')).toBe(true);
   });
   it('only a linked family can submit, for a real meal date, with words', () => {
     const s = seed();
@@ -541,30 +603,29 @@ describe('meal feedback', () => {
     expect(() => run(s, 'feedback.submit', { ...sub, mealDate: 'yesterday' }, 'fm10_0')).toThrow('err.invalid');
     expect(run(s, 'feedback.submit', { ...sub, dish: '' }, 'fm10_0').state.feedback).toBeDefined(); // a dish is optional
   });
-  it('the kitchen replies into that thread: answered, the family is told and finds it in Messages', () => {
+  it('the kitchen replies on the card: answered, and the family is told (the bell carries the text, WhatsApp is simulated)', () => {
     const s = run(seed(), 'feedback.submit', sub, 'fm10_0').state;
     const id = Object.values(s.feedback).find((f) => f.text === sub.text)!.id;
     const r = run(s, 'feedback.reply', { feedbackId: id, text: 'Sorry about that. We will use less salt.' }, 's3');
     const fb = r.state.feedback[id];
     expect(fb.status).toBe('answered');
-    const th = r.state.threads[fb.threadId!];
-    expect(th.lastSeq).toBe(2);
-    expect(Object.values(r.state.messages).filter((m) => m.threadId === th.id).map((m) => m.from)).toEqual(['family:fm10_0', 'staff:s3']);
-    expect(familyUnread(r.state, th)).toBe(1);
-    expect(familyThreads(r.state, 'fm10_0').some((t) => t.id === th.id)).toBe(true);
-    expect(unreadUpdates(r.state, usr(r.state, 'fm10_0')).some((x) => x.kind === 'kitchen.notif.feedbackReply' && x.link === '/chat')).toBe(true);
+    expect(fb.replies).toEqual([{ id: expect.any(String), at: `${T}T10:00`, by: 'staff:s3', text: 'Sorry about that. We will use less salt.' }]);
+    expect(Object.keys(r.state.messages)).toHaveLength(0); // no Messages
+    const note = unreadUpdates(r.state, usr(r.state, 'fm10_0')).find((x) => x.kind === 'kitchen.notif.feedbackReply')!;
+    expect(note).toMatchObject({ link: '/today', memberId: 'm10', params: { name: 'Bapak Bambang', dish: 'Sayur asem', text: 'Sorry about that. We will use less salt.' } });
+    expect(translate('en', note.kind, note.params)).toContain('We will use less salt');
     expect(actionItems(r.state, usr(r.state, 's3'), T, 600).some((i) => i.id === 'fb:' + id)).toBe(false); // handled: leaves "needs action"
-    const reply = Object.values(r.state.messages).find((m) => m.from === 'staff:s3' && m.threadId === th.id)!;
-    expect(projectForFamily(r.state, 'fm10_0').messages[reply.id]).toBeDefined();
-    expect(projectForFamily(r.state, 'f1').messages[reply.id]).toBeUndefined();
+    // the reply reaches only that family's view
+    expect(projectForFamily(r.state, 'fm10_0').feedback[id].replies).toHaveLength(1);
+    expect(projectForFamily(r.state, 'f1').feedback[id]).toBeUndefined();
   });
-  it('an edited reply is a new message; reopening puts the item back in needs-action; closing stops replies', () => {
+  it('an edited reply is another reply; reopening puts the item back in needs-action; closing stops replies', () => {
     const s0 = run(seed(), 'feedback.submit', sub, 'fm10_0').state;
     const id = Object.values(s0.feedback).find((f) => f.text === sub.text)!.id;
     const a = run(s0, 'feedback.reply', { feedbackId: id, text: 'We will use less salt.' }, 's3');
     const b = run(a.state, 'feedback.reply', { feedbackId: id, text: 'We will use less salt and taste it first.' }, 's2');
-    const th = b.state.feedback[id].threadId!;
-    expect(Object.values(b.state.messages).filter((m) => m.threadId === th).map((m) => m.text)).toEqual([sub.text, 'We will use less salt.', 'We will use less salt and taste it first.']);
+    expect(b.state.feedback[id].replies!.map((x) => [x.by, x.text])).toEqual([['staff:s3', 'We will use less salt.'], ['staff:s2', 'We will use less salt and taste it first.']]);
+    expect(new Set(b.state.feedback[id].replies!.map((x) => x.id)).size).toBe(2);
     expect(b.state.feedback[id].status).toBe('answered');
     const open = run(b.state, 'feedback.setStatus', { feedbackId: id, status: 'open' }, 's3');
     expect(actionItems(open.state, usr(open.state, 's3'), T, 600).some((i) => i.id === 'fb:' + id)).toBe(true);
@@ -576,16 +637,20 @@ describe('meal feedback', () => {
     expect(() => run(open.state, 'feedback.reply', { feedbackId: id, text: 'Hi' }, 'fm10_0')).toThrow('err.forbidden');
     expect(() => run(open.state, 'feedback.reply', { feedbackId: 'nope', text: 'Hi' }, 's3')).toThrow('err.notFound');
   });
-  it('a reply to the seeded complaint lands in its existing thread; management may reply too', () => {
+  it('a reply to the seeded complaint is added to the card; management may reply too; the seeded answer is one of the replies', () => {
     const s = seed();
-    const threadsBefore = Object.keys(s.threads).length;
+    expect(s.feedback.c2.replies).toHaveLength(1); // answered in the seed
+    expect(s.feedback.c2.replies![0]).toMatchObject({ by: 'staff:s3', text: expect.stringContaining('tempeh') });
+    expect(s.feedback.c1.replies).toBeUndefined();
+    expect(Object.keys(s.threads)).toHaveLength(0);
+    expect(Object.keys(s.messages)).toHaveLength(0);
     const r = run(s, 'feedback.reply', { feedbackId: 'c1', text: 'We will check the salt.' }, 's9');
-    expect(Object.keys(r.state.threads)).toHaveLength(threadsBefore);
-    expect(r.state.threads['tk-c1'].lastSeq).toBe(2);
     expect(r.state.feedback.c1.status).toBe('answered');
-    expect(Object.values(r.state.messages).find((m) => m.threadId === 'tk-c1' && m.seq === 2)!.from).toBe('staff:s9');
+    expect(r.state.feedback.c1.replies).toMatchObject([{ by: 'staff:s9', text: 'We will check the salt.' }]);
+    const again = run(r.state, 'feedback.reply', { feedbackId: 'c2', text: 'Added from this week.' }, 's3');
+    expect(again.state.feedback.c2.replies!.map((x) => x.text)).toEqual([s.feedback.c2.replies![0].text, 'Added from this week.']);
   });
-  it('staff log feedback received by phone; the reply goes to the member\'s family contact in Messages', () => {
+  it('staff log feedback received by phone; the reply goes to the member\'s family contact on WhatsApp (simulated)', () => {
     const s = seed();
     const r = run(s, 'feedback.log', { memberId: 'm2', mealDate: T, dish: 'Sop ikan kakap', text: 'Cynthia phoned: the fish soup was too hot.' }, 's1');
     const id = r.result.feedbackId as string;
@@ -593,10 +658,8 @@ describe('meal feedback', () => {
     expect(r.state.feedback[id].threadId).toBeUndefined();
     expect(updatesFor(r.state, usr(r.state, 's3')).some((x) => x.kind === 'kitchen.notif.feedbackNew')).toBe(true);
     const ans = run(r.state, 'feedback.reply', { feedbackId: id, text: 'Thank you, we will serve it cooler.' }, 's3');
-    const th = ans.state.threads[ans.state.feedback[id].threadId!];
-    expect(th).toMatchObject({ familyId: 'fm2_0', topic: 'kitchen', feedbackId: id });
-    expect(ans.state.feedback[id]).toMatchObject({ status: 'answered', familyId: null });
-    expect(unreadUpdates(ans.state, usr(ans.state, 'fm2_0')).some((x) => x.kind === 'kitchen.notif.feedbackReply')).toBe(true);
+    expect(ans.state.feedback[id]).toMatchObject({ status: 'answered', familyId: null, replies: [{ by: 'staff:s3', text: 'Thank you, we will serve it cooler.' }] });
+    expect(unreadUpdates(ans.state, usr(ans.state, 'fm2_0')).some((x) => x.kind === 'kitchen.notif.feedbackReply' && x.link === '/today')).toBe(true);
     // nobody to message: the reply is refused, the kitchen answers by phone and marks it answered
     const noApp = produce(r.state, (d) => { for (const l of Object.values(d.familyLinks)) if (l.memberId === 'm2') l.appAccess = false; });
     expect(() => run(noApp, 'feedback.reply', { feedbackId: id, text: 'Hi' }, 's3')).toThrow('kitchen.err.noFamilyApp');
@@ -642,7 +705,7 @@ describe('stock requests', () => {
     const note = unreadUpdates(k1.state, usr(k1.state, 's8')).find((x) => x.kind === 'kitchen.notif.stockApproved')!;
     expect(note).toMatchObject({ params: { item: 'Test strips (glucose)', qty: '2 boxes' }, link: '/requests' });
     const k2b = run(s, 'stock.approve', { id: 'k2' }, 's9');
-    expect(updatesFor(k2b.state, usr(k2b.state, 's2')).find((x) => x.kind === 'kitchen.notif.stockApproved')!.link).toBe('/stock');
+    expect(updatesFor(k2b.state, usr(k2b.state, 's2')).find((x) => x.kind === 'kitchen.notif.stockApproved')!.link).toBe('/requests'); // F&B has no Stock page
   });
   it('declining needs a note and keeps the request as Declined', () => {
     const s = seed();

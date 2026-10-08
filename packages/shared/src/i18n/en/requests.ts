@@ -12,4 +12,5 @@ export const requests = {
   'mine.cancelTitle': 'Cancel this request?', 'mine.cancelAsk': 'Cancel “{what}”? It stays in your list as Cancelled.', 'mine.cancelled': 'Request cancelled.', 'mine.saved': 'Request updated.',
   'mine.fixSend': 'Fix and resend', 'mine.editBudget': 'Edit budget request', 'mine.editReceipt': 'Edit receipt', 'mine.empty': 'No requests yet',
   'mine.s_waiting': 'Waiting', 'mine.s_approved': 'Approved', 'mine.s_rejected': 'Rejected', 'mine.s_cancelled': 'Cancelled', 'mine.s_withFinance': 'With finance',
+  'team.title': 'Team stock requests', 'team.waiting': '{n} to approve', 'team.empty': 'Nothing to approve',
 };

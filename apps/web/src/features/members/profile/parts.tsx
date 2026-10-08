@@ -3,10 +3,10 @@ import { Fragment, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { actorName, type ChangeRequest } from '@cp/shared';
 import { tabForSection, type ProfileTab } from '@cp/shared/rules/members';
-import { Button, FONT_BODY, FONT_SMALL, Icon, SectionLabel } from '../../../components/ui';
+import { Button, FONT_BODY, FONT_SMALL, Group, Icon, SectionLabel } from '../../../components/ui';
 import type { TFn } from '../../../lib/i18n';
 import { describeCr, type Described, type DiffRow } from '../reviewDiff';
-import { HAIR, whenText, type FlagChip } from '../lib';
+import { HAIR, listCardStyle, whenText, type FlagChip } from '../lib';
 import type { P } from './types';
 
 export const Chips32 = ({ chips }: { chips: FlagChip[] }) => (
@@ -64,6 +64,10 @@ export const ListHead = ({ title, meta, right }: { title: ReactNode; meta?: Reac
     {right}
   </div>
 );
+
+/** A list card with its heading (tablet, laptop), or, with `phone`, an iOS grouped section: the heading outside, a flat white group whose rows carry their own hairlines (round 6). */
+export const ListCard = ({ phone, title, style, children }: { phone?: boolean; title: ReactNode; style?: CSSProperties; children: ReactNode }) =>
+  phone ? <Group title={title} pad="0 16px" gap={0}>{children}</Group> : <div style={{ ...listCardStyle, ...style }}><ListHead title={title} />{children}</div>;
 
 /** Old → new rows (proposed or applied). */
 export function DiffList({ d, t, proposed = true }: { d: Described; t: TFn; proposed?: boolean }) {

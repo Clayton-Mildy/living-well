@@ -1,9 +1,9 @@
-// Health station selectors: queue, care flags, family recipients, trends and sparklines. Seed: Wed 21 Oct 2026, 09:58.
+// Health station selectors: queue, care flags, family recipients and dated trends. Seed: Wed 21 Oct 2026, 09:58.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { buildSeed, execute, getUser, toMin, bpStatus, type ClubState } from '../index';
+import { buildSeed, execute, getUser, toMin, bpStatus, DEFAULT_LIMITS, type ClubState } from '../index';
 import {
-  alertRecipients, careFlagsOf, guestsInClub, headSpark, headlineValue, inRange, membersInClub, monthlyNeeds, queueName, readingSummary, recentFlagged, roundField, sparkPaths, stationQueue, trendCharts, trendRows, arrivalSystolic, lastOfKind,
+  alertRecipients, careFlagsOf, guestsInClub, headlineValue, inRange, membersInClub, monthlyNeeds, queueName, readingSummary, recentFlagged, roundField, stationQueue, tabTrend, trendCharts, trendRows, arrivalSystolic, lastOfKind,
   daySummary, dueNow, filterRows, inClubCount, kindChoices, memberReadingsOn, memberTrend, nameMatches, neighbourDay, readingDays, readingsOnDay, rowName, stationRows, suggestKind,
 } from './healthStation';
 
@@ -112,32 +112,51 @@ describe('trends', () => {
     const x = tweak(s, (d) => { d.members.m1.memberships[0].lastDay = '2026-10-01'; d.members.m46.review = { status: 'pending', crId: 'c' }; });
     expect(trendRows(x, T).map((r) => r.m.id)).toEqual(['m2', 'm20', 'm10']);
   });
-  it('builds six chart cards from the clock, not from a fixed month', () => {
+  it('builds six chart cards of dated points over the whole history (the screen picks the range)', () => {
     const rs = trendRows(s, T)[0].rs; // Hendra
-    const charts = trendCharts(rs, T);
+    const charts = trendCharts(rs);
     expect(charts.map((c) => c.id)).toEqual(['bp', 'pulse', 'spo2', 'temp', 'glucose', 'weight']);
     const bp = charts[0];
     expect(bp.series[0].length).toBeGreaterThan(5);
     expect(bp.series[1].length).toBeGreaterThan(5);
-    expect(bp.series[0].every((p) => p.d >= '2026-09-23' && p.d < T)).toBe(true);
+    // every point carries its date and time, oldest first; no 28-day cap
+    expect(bp.series[0].every((p) => /^\d{4}-\d\d-\d\d$/.test(p.date) && /^\d\d:\d\d$/.test(p.time))).toBe(true);
+    expect(bp.series[0].map((p) => p.date + p.time)).toEqual(bp.series[0].map((p) => p.date + p.time).sort());
+    expect(bp.series[0].length).toBe(rs.filter((r) => r.kind === 'arrival' && r.sys != null).length);
+    expect(bp.band).toEqual({ from: 100, to: 139 });
     expect(bp.latest?.kind).toBe('arrival');
     expect(bp.latestStatus).toBe(bpStatus(bp.latest!.sys!, bp.latest!.dia!));
-    expect(bp.series[0].some((p) => p.s === 'alert')).toBe(true); // 164/98 on 14 Oct
+    const alert = bp.series[0].find((p) => p.status === 'alert'); // 164/98 on 14 Oct
+    expect(alert).toMatchObject({ date: '2026-10-14', value: 164, text: '164/98 mmHg' });
     const glu = charts[4];
-    expect(glu.series[0].map((p) => p.d)).toEqual(['2026-09-23', '2026-10-01']);
-    expect(glu.sinceMonth).toBe('2026-09');
-    expect(charts[5].sinceMonth).toBe('2026-09');
+    expect(glu.series[0].length).toBe(rs.filter((r) => r.glucose != null).length);
+    expect(glu.sinceMonth).toBe(glu.series[0][0].date.slice(0, 7));
+    expect(charts[5].sinceMonth).toBe(charts[5].series[0][0].date.slice(0, 7));
     expect(charts[5].latestStatus).toBeNull();
-    // four weeks later the blood pressure charts are empty but the monthly history stays
-    const later = trendCharts(rs, '2026-12-01');
-    expect(later[0].series[0]).toEqual([]);
-    expect(later[0].latest).toBeUndefined();
-    expect(later[4].series[0]).toHaveLength(2);
+    expect(charts[5].band).toBeUndefined();
+    // a member with no readings gets six empty charts, not a crash
+    const none = trendCharts([]);
+    expect(none.map((c) => c.series.map((x) => x.length))).toEqual([[0, 0], [0], [0], [0], [0], [0]]);
+    expect(none[0].latest).toBeUndefined();
+  });
+  it('the health tab’s trends: blood pressure with a lower-number series and the member’s own band, pulse, weight and glucose', () => {
+    const rs = trendRows(s, T)[0].rs; // Hendra
+    const bp = tabTrend(rs, 'bp');
+    expect(bp.series).toHaveLength(2);
+    expect(bp.series[0].length).toBe(bp.series[1].length);
+    expect(bp.series[1][0].value).toBeLessThan(bp.series[0][0].value);
+    expect(bp.band).toEqual({ from: 100, to: 139 });
+    const own = { ...DEFAULT_LIMITS, sysHigh: { watch: 130, alert: 150 } };
+    expect(tabTrend(rs, 'bp', own).band).toEqual({ from: 100, to: 129 });
+    expect(tabTrend(rs, 'pulse').band).toEqual({ from: 60, to: 100 });
+    expect(tabTrend(rs, 'weight').band).toBeUndefined();
+    expect(tabTrend(rs, 'weight').series[0].every((p) => p.status === undefined && p.note === undefined)).toBe(true);
+    expect(tabTrend(rs, 'glucose').series[0].length).toBe(rs.filter((r) => r.glucose != null).length);
   });
   it('flags a high pulse on the pulse chart (new threshold)', () => {
     const rs = [{ id: 'a', date: '2026-10-19', time: '10:00', kind: 'arrival', pulse: 112, status: 'watch' }, { id: 'b', date: '2026-10-20', time: '10:00', kind: 'arrival', pulse: 72, status: 'normal' }] as never;
-    const c = trendCharts(rs, T)[1];
-    expect(c.series[0].map((p) => p.s)).toEqual(['watch', 'normal']);
+    const c = trendCharts(rs)[1];
+    expect(c.series[0].map((p) => p.status)).toEqual(['watch', 'normal']);
     expect(c.latestStatus).toBe('normal');
     expect(c.latest?.pulse).toBe(72);
   });
@@ -148,32 +167,10 @@ describe('trends', () => {
     expect(recentFlagged(s, 'm2', '2026-11-10')).toBeUndefined();
     expect(recentFlagged(s, 'm20', T)).toBeUndefined();
     expect(arrivalSystolic(s, 'm2', T).length).toBeGreaterThan(10);
-    expect(arrivalSystolic(s, 'm2', T, 7)).toHaveLength(5);
-  });
-});
-
-describe('sparklines', () => {
-  it('draws the design’s chart: shared dates on x, clamped y, normal band, dots and hot dots', () => {
-    const p = sparkPaths([[{ d: '2026-10-01', v: 120, s: 'normal' }, { d: '2026-10-08', v: 170, s: 'alert' }], [{ d: '2026-10-08', v: 130, s: 'normal' }]], { lo: 80, hi: 180, bLo: 100, bHi: 139 });
-    expect(p.line).toBe('M14.0 76.8 L586.0 17.8');
-    expect(p.line2).toBe('M586.0 65.0');
-    expect(p.dots.startsWith('M10.0 76.8a4 4')).toBe(true);
-    expect(p.hot.startsWith('M582.0 17.8a4 4')).toBe(true);
-    expect(p.bandY).toBe('54.4');
-    expect(p.bandH).toBe('46.0');
-    expect([p.from, p.to]).toEqual(['2026-10-01', '2026-10-08']);
-  });
-  it('centres a single point, copes with no data, and has no band when asked for none', () => {
-    expect(sparkPaths([[{ d: '2026-10-01', v: 50 }]], { lo: 40, hi: 60 }).line).toBe('M300.0 65.0');
-    const none = sparkPaths([[]], { lo: 0, hi: 1 });
-    expect(none).toMatchObject({ line: '', line2: '', dots: '', hot: '', bandY: '0', bandH: '0', from: null, to: null });
-  });
-  it('the header chart splits normal and high systolic values', () => {
-    const h = headSpark([120, 150, 130]);
-    expect(h.line.split(' ').filter((x) => x.startsWith('L'))).toHaveLength(2);
-    expect(h.dots.match(/M/g)).toHaveLength(2);
-    expect(h.hot.match(/M/g)).toHaveLength(1);
-    expect(headSpark([])).toMatchObject({ line: '', dots: '', hot: '' });
+    const week = arrivalSystolic(s, 'm2', T, 7);
+    expect(week.length).toBeGreaterThan(3);
+    expect(week.every((p) => p.date >= '2026-10-14' && p.date <= T)).toBe(true); // up to and including the day itself
+    expect(week[0]).toMatchObject({ value: expect.any(Number), time: expect.stringMatching(/^\d\d:\d\d$/) });
   });
 });
 

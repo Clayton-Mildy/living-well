@@ -3,3 +3,4 @@ export { FamilyToday } from './FamilyToday';
 export { FamilyPhotos } from './FamilyPhotos';
 export { FamilyHealth } from './FamilyHealth';
 export { FamilyBilling } from './FamilyBilling';
+export { FamilyMemories } from './Memories';

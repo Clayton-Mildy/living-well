@@ -2,7 +2,7 @@
 // edit or delete a note; every change is logged. The pinned shared note is the one the family sees on their Today page.
 import { useState } from 'react';
 import { actorName, live, sortBy, type MemberNote } from '@cp/shared';
-import { Button, Icon, IconButton, Pager, SectionLabel, Sheet, TextField, usePaged } from '../../../components/ui';
+import { Button, Group, Icon, IconButton, Pager, SectionLabel, Sheet, TextField, usePaged } from '../../../components/ui';
 import { noteForFamily } from '@cp/shared/rules/approvals';
 import { PendingMark } from '../../../components/PendingMark';
 import { cardStyle, HAIR, listCardStyle } from '../lib';
@@ -69,45 +69,62 @@ export function NotesTab({ p }: { p: P }) {
       </div>
     );
   };
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(18px, 2.8vw, 28px)', maxWidth: 860 }}>
-      {writer ? (
-        <div style={cardStyle}>
-          <SectionLabel>{t('profile.addNote')}</SectionLabel>
-          <TextField label={<span className="sr-only">{t('profile.noteLabel')}</span>} value={draft} onChange={setDraft} multiline rows={3} placeholder={t('profile.notePlaceholder')} />
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
-            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} role="radiogroup" aria-label={t('profile.whoCanSee')}>
-              {([['staff', t('common.staffOnly'), 'lock'], ['family', t('common.sharedFam'), 'group']] as const).map(([k, label, icon]) => (
-                <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} style={{ height: 40, padding: '0 16px 0 12px', borderRadius: 12, border: kind === k ? '1px solid #24201C' : '1px solid #DCD3C8', background: kind === k ? '#24201C' : '#FFFFFF', color: kind === k ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
-                  <Icon name={icon} size={18} />{label}
-                </button>
-              ))}
-            </div>
-            <Button disabled={!ok} onClick={add}>{t('profile.addNoteBtn')}</Button>
-          </div>
+  const ph = p.isPhone; // round 6, phone (staff and family): the cards are iOS grouped sections, the header outside
+  const hd = (icon: string, text: string) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name={icon} size={16} color="#75624B" />{text}</span>;
+  /** the rows of a notes list card, then its empty line and pager */
+  const listBody = (paged: typeof pagedInternal, items: MemberNote[], pagerLabel: string) => (
+    <>
+      {paged.rows.map((n, i) => row(n, i))}
+      {!items.length ? <div style={{ padding: ph ? '14px 0' : '4px 0 20px', fontSize: 15, color: '#6B6259' }}>{t('profile.noNotes')}</div> : null}
+      {paged.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={pagerLabel} /></div> : null}
+    </>
+  );
+  const addBody = (
+    <>
+      <TextField label={<span className="sr-only">{t('profile.noteLabel')}</span>} value={draft} onChange={setDraft} multiline rows={3} placeholder={t('profile.notePlaceholder')} />
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} role="radiogroup" aria-label={t('profile.whoCanSee')}>
+          {([['staff', t('common.staffOnly'), 'lock'], ['family', t('common.sharedFam'), 'group']] as const).map(([k, label, icon]) => (
+            <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} style={{ height: 40, padding: '0 16px 0 12px', borderRadius: 12, border: kind === k ? '1px solid #24201C' : '1px solid #DCD3C8', background: kind === k ? '#24201C' : '#FFFFFF', color: kind === k ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+              <Icon name={icon} size={18} />{label}
+            </button>
+          ))}
         </div>
+        <Button disabled={!ok} onClick={add}>{t('profile.addNoteBtn')}</Button>
+      </div>
+    </>
+  );
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 14 : 'clamp(18px, 2.8vw, 28px)', maxWidth: 860 }}>
+      {writer ? (
+        ph ? <Group title={t('profile.addNote')} gap={16}>{addBody}</Group> : (
+          <div style={cardStyle}>
+            <SectionLabel>{t('profile.addNote')}</SectionLabel>
+            {addBody}
+          </div>
+        )
       ) : null}
       {!p.family ? (
+        ph ? <Group title={hd('lock', t('common.staffOnly'))} pad="0 16px" gap={0}>{listBody(pagedInternal, internal, `${t('profile.pagerNotes')} · ${t('common.staffOnly')}`)}</Group> : (
+          <div style={listCardStyle}>
+            <div style={{ padding: '20px 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
+              <Icon name="lock" size={20} color="#75624B" />
+              <span style={{ flex: 1 }}><SectionLabel>{t('common.staffOnly')}</SectionLabel></span>
+            </div>
+            {listBody(pagedInternal, internal, `${t('profile.pagerNotes')} · ${t('common.staffOnly')}`)}
+          </div>
+        )
+      ) : null}
+      {ph ? <Group title={hd('group', t('common.sharedFam'))} meta={p.family ? t('profile.fromClubTeam') : undefined} pad="0 16px" gap={0}>{listBody(pagedShared, shared, `${t('profile.pagerNotes')} · ${t('common.sharedFam')}`)}</Group> : (
         <div style={listCardStyle}>
           <div style={{ padding: '20px 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Icon name="lock" size={20} color="#75624B" />
-            <span style={{ flex: 1 }}><SectionLabel>{t('common.staffOnly')}</SectionLabel></span>
+            <Icon name="group" size={20} color="#75624B" />
+            <span style={{ flex: 1 }}><SectionLabel>{t('common.sharedFam')}</SectionLabel></span>
+            {p.family ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.fromClubTeam')}</span> : null}
           </div>
-          {pagedInternal.rows.map((n, i) => row(n, i))}
-          {!internal.length ? <div style={{ padding: '4px 0 20px', fontSize: 15, color: '#6B6259' }}>{t('profile.noNotes')}</div> : null}
-          {pagedInternal.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={pagedInternal.page} pages={pagedInternal.pages} onPage={pagedInternal.setPage} label={`${t('profile.pagerNotes')} · ${t('common.staffOnly')}`} /></div> : null}
+          {listBody(pagedShared, shared, `${t('profile.pagerNotes')} · ${t('common.sharedFam')}`)}
         </div>
-      ) : null}
-      <div style={listCardStyle}>
-        <div style={{ padding: '20px 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          <Icon name="group" size={20} color="#75624B" />
-          <span style={{ flex: 1 }}><SectionLabel>{t('common.sharedFam')}</SectionLabel></span>
-          {p.family ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.fromClubTeam')}</span> : null}
-        </div>
-        {pagedShared.rows.map((n, i) => row(n, i))}
-        {!shared.length ? <div style={{ padding: '4px 0 20px', fontSize: 15, color: '#6B6259' }}>{t('profile.noNotes')}</div> : null}
-        {pagedShared.pages > 1 ? <div style={{ padding: '12px 0 16px', borderTop: HAIR }}><Pager page={pagedShared.page} pages={pagedShared.pages} onPage={pagedShared.setPage} label={`${t('profile.pagerNotes')} · ${t('common.sharedFam')}`} /></div> : null}
-      </div>
+      )}
       <Sheet open={!!del} onClose={() => setDel(null)} title={t('profile.deleteNote')}
         footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" onClick={() => setDel(null)}>{t('common.cancel')}</Button><Button variant="danger" icon="delete" onClick={async () => { if (del) await p.act('note.delete', { noteId: del }, { ok: t('profile.noteDeleted') }); setDel(null); }}>{t('common.delete')}</Button></div>}>
         <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('profile.deleteNoteSub')}</div>

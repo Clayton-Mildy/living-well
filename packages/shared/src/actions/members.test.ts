@@ -586,7 +586,7 @@ describe('list rules: search, filters, status', () => {
   it('six filters with counts; pending members are listed; ended ones only under Ended', () => {
     const c = seed();
     const rows = rows2(c.citra, T);
-    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, flex: 2, gold: 3, ended: 0 });
+    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, flex: 2, gold: 3, ended: 0 }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
     const r = run(c.citra, 'members.create', newMember(), who(c, 's1'));
     const rows2b = rows2(r.state, T);
     expect(rows2b.find((x) => x.m.id === 'm47')?.st.key).toBe('pending');
@@ -619,5 +619,75 @@ describe('list rules: search, filters, status', () => {
     expect(isNewMember(m, '2026-11-25')).toBe(false);
     expect(isNewMember(c.citra.members.m1, T)).toBe(false);
     expect(nextMemberId(c.citra)).toBe('m47');
+  });
+});
+
+// ---------- the paper application form's extra answers (Panggilan, status, RT/RW, phones, the care questions, the IDs received) ----------
+describe('application form answers', () => {
+  const answers = { nickname: 'Oma Siti', marital: 'widowed', rtRw: '004/002', city: 'Jakarta Selatan', postcode: '12730', phone: '021 7199 2210', mobile: '0812 5550 1234', email: 'rudi@example.com', commDifficulty: true, selfCare: true, bathroomHelp: false, dementiaNote: 'Forgets names', ids: { guarantor: true, member: false, carer: true } };
+
+  it('members.create keeps them on the new member, cleaned (phones in one format, unticked IDs left out)', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.create', newMember({ registration: answers }), who(c, 's9'));
+    expect(r.state.members[r.result.memberId as string].registration).toEqual({
+      nickname: 'Oma Siti', marital: 'widowed', rtRw: '004/002', city: 'Jakarta Selatan', postcode: '12730', phone: '+62 21 7199 2210', mobile: '+62 812-5550-1234', email: 'rudi@example.com',
+      commDifficulty: true, selfCare: true, bathroomHelp: false, dementiaNote: 'Forgets names', ids: { guarantor: true, carer: true },
+    });
+  });
+  it('members.create without answers stores none, and rejects a bad email, postcode, RT/RW or phone', () => {
+    const c = seed();
+    expect(run(c.citra, 'members.create', newMember(), who(c, 's9')).state.members.m47.registration).toBeUndefined();
+    expect(run(c.citra, 'members.create', newMember({ registration: {} }), who(c, 's9')).state.members.m47.registration).toBeUndefined();
+    const go = (registration: Record<string, unknown>) => () => run(c.citra, 'members.create', newMember({ registration }), who(c, 's9'));
+    expect(go({ email: 'not an email' })).toThrow('members.err.emailInvalid');
+    expect(go({ postcode: '1273' })).toThrow('members.err.postcodeInvalid');
+    expect(go({ rtRw: '004#002' })).toThrow('members.err.rtRwInvalid');
+    expect(go({ mobile: '12' })).toThrow('members.err.regPhoneInvalid');
+    expect(go({ phone: 'abc' })).toThrow('members.err.regPhoneInvalid');
+    expect(go({ marital: 'engaged', nickname: 'Ok' })).not.toThrow(); // an unknown status is simply dropped
+  });
+  it('the lobby adds a member with answers: they wait for approval with the member', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.create', newMember({ registration: answers }), who(c, 's1'));
+    expect(r.reviewed).toBe('gate');
+    const id = r.result.memberId as string;
+    expect(r.state.members[id].registration?.nickname).toBe('Oma Siti');
+    expect(r.state.members[id].review?.status).toBe('pending');
+  });
+
+  it('members.updateDetails: management changes the answers at once; they are replaced as a whole', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { registration: { ...c.citra.members.m1.registration, nickname: 'Oma L', mobile: '0813 4000 1111', ids: { guarantor: true } } } }, who(c, 's9'));
+    expect(r.reviewed).toBeUndefined();
+    expect(r.state.members.m1.registration).toMatchObject({ nickname: 'Oma L', mobile: '+62 813-4000-1111', marital: 'married', ids: { guarantor: true } });
+    expect(r.state.members.m1.registration?.ids).toEqual({ guarantor: true }); // member and carer ticks are gone: the whole answer set was replaced
+    expect(Object.values(r.state.activity).some((x) => x.memberId === 'm1' && x.key === 'members.feed.details' && String((x.params as Record<string, string>).fields).includes('registration'))).toBe(true);
+  });
+  it('members.updateDetails: the lobby is gated; the request shows the registration change; approval applies it', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { registration: { ...c.citra.members.m1.registration, nickname: 'Oma L' } } }, who(c, 's1'));
+    expect(r.reviewed).toBe('gate');
+    expect(r.state.members.m1.registration?.nickname).toBe('Oma Lina'); // nothing changes until approved
+    const cr = r.state.changeRequests[r.result.changeRequestId as string];
+    expect(cr.changes.map((x) => x.field)).toEqual(['registration']);
+    expect((cr.changes[0].from as { nickname: string }).nickname).toBe('Oma Lina');
+    expect((cr.changes[0].to as { nickname: string }).nickname).toBe('Oma L');
+    const a = run(r.state, 'review.approve', { crId: cr.id }, who(c, 's9'));
+    expect(a.state.members.m1.registration?.nickname).toBe('Oma L');
+  });
+  it('members.updateDetails: sending the same answers is no change; null clears them; a bad value is rejected', () => {
+    const c = seed();
+    const same = { memberId: 'm1', patch: { registration: c.citra.members.m1.registration } };
+    expect(() => run(c.citra, 'members.updateDetails', same, who(c, 's9'))).toThrow('err.noChanges');
+    const cleared = run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { registration: null } }, who(c, 's9'));
+    expect(cleared.state.members.m1.registration).toBeUndefined();
+    expect(() => run(cleared.state, 'members.updateDetails', { memberId: 'm1', patch: { registration: null } }, who(c, 's9'))).toThrow('err.noChanges');
+    expect(() => run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { registration: { email: 'nope' } } }, who(c, 's9'))).toThrow('members.err.emailInvalid');
+  });
+  it('members.updateDetails: answers can be added to a member who has none', () => {
+    const c = seed();
+    const made = run(c.citra, 'members.create', newMember(), who(c, 's9'));
+    const r = run(made.state, 'members.updateDetails', { memberId: 'm47', patch: { registration: { nickname: 'Oma Siti', commDifficulty: false } } }, who(c, 's9'));
+    expect(r.state.members.m47.registration).toEqual({ nickname: 'Oma Siti', commDifficulty: false });
   });
 });

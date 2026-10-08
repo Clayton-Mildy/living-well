@@ -220,7 +220,7 @@ describe('Also today: guests', () => {
     const s = useReplica.getState().view!;
     for (let i = 0; i < 10; i++) s.guestVisits[`gx${i}`] = { ...structuredClone(s.guestVisits['g-e2']), id: `gx${i}`, name: `Guest ${String(i).padStart(2, '0')}`, time: `11:${String(10 + i).padStart(2, '0')}` };
     useReplica.setState({ confirmed: s, view: s });
-    await show(<AlsoToday role="lobby" guest={noop} />);
+    await show(<AlsoToday guest={noop} />);
     const guests = () => Array.from(host!.querySelectorAll('button[aria-label^="Check in: "]')).map((b) => b.getAttribute('aria-label')!.replace('Check in: ', ''));
     expect(guests()).toHaveLength(GUESTS_PER_PAGE);
     expect(host!.querySelector('nav')?.getAttribute('aria-label')).toBe('Pages of Also today');
@@ -228,14 +228,14 @@ describe('Also today: guests', () => {
     expect(guests()).toHaveLength(GUESTS_PER_PAGE);
     await act(async () => { pageButton('Next page').click(); });
     expect(guests()).toHaveLength(2); // 12 guests: 5 + 5 + 2
-    expect(host!.textContent).toContain('2 unread messages from families'); // the unread row is not paged away
+    expect(host!.textContent).not.toMatch(/unread|message/i); // Messages is gone: Also today lists guests only
   });
   it('a trial guest without a time shows "Trial day" and the name with no time, before the timed visit', async () => {
     openClub(0);
     const s = useReplica.getState().view!;
     delete (s.guestVisits['g-e1'] as { time?: string }).time;
     useReplica.setState({ confirmed: s, view: s });
-    await show(<AlsoToday role="lobby" guest={noop} />);
+    await show(<AlsoToday guest={noop} />);
     const text = host!.textContent || '';
     expect(text).toContain('Trial day: Oma Siu Lan Tjandra');
     expect(text).not.toContain('10:30');
@@ -245,7 +245,7 @@ describe('Also today: guests', () => {
   });
   it('a day with a couple of guests has no pager', async () => {
     openClub(0);
-    await show(<AlsoToday role="lobby" guest={noop} />);
+    await show(<AlsoToday guest={noop} />);
     expect(host!.querySelector('nav')).toBeNull();
     expect(host!.textContent).toContain('Trial day: Oma Siu Lan Tjandra');
   });

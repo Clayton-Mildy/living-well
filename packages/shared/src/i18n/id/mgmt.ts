@@ -5,7 +5,7 @@ import type { mgmt as EN } from '../en/mgmt';
 export const mgmt: Same<typeof EN> = {
   // ----- ringkasan -----
   tileInClubNow: 'Di klub sekarang', tileGoneHome: 'Sudah pulang', tileVisits: 'Kunjungan hari ini', tileExtra: 'Kunjungan tambahan bulan ini', tileReview: 'Perlu ditinjau', toWatch: '{n} perlu dipantau', allNormal: 'Semua normal', tileOverdue: 'Tagihan terlambat', tileSurvey: 'Survei · keseluruhan', noAnswers: 'Belum ada jawaban', nAnswers: '{n} jawaban', nAnswersOne: '{n} jawaban',
-  tilePhotos: 'Foto terkirim hari ini', tileLogs: 'Catatan harian tersimpan', tileLunch: 'Foto makan siang', posted: 'Sudah diposting', notYet: 'Belum', tilePayments: 'Pembayaran hari ini', tileUnread: 'Pesan belum dibaca',
+  tilePhotos: 'Foto terkirim hari ini', tileLogs: 'Catatan harian tersimpan', tileLunch: 'Foto makan siang', posted: 'Sudah diposting', notYet: 'Belum', tilePayments: 'Pembayaran hari ini',
   tileStock: 'Stok menunggu persetujuan', tileVenue: 'Pemesanan venue mendatang', sample: 'Contoh', priceSet: 'Sudah diatur', samplePrices: 'Harga contoh', clubPrices: 'Harga klub',
   emptyClub: '{club} belum punya anggota atau staf.',
   listLive: 'Terjadi hari ini', newestFirst: 'terbaru di atas', liveEmptyMeta: 'kegiatan muncul di sini saat terjadi', liveEmpty: 'Belum ada kegiatan hari ini.', whoSystem: 'Otomatis', whoDoor: 'Kamera pintu',
@@ -38,13 +38,13 @@ export const mgmt: Same<typeof EN> = {
   vnHint: 'Pemesanan memblokir kalender klub pada jam itu. Pada hari klub buka, acara luar berlangsung setelah {close}.', vnConfirm: 'Konfirmasi pemesanan',
   vnBooked: 'Dipesan. {date}, {time} kini terblokir di kalender klub.', vnUpcoming: 'Mendatang', vnOnCalendar: 'di kalender klub', vnNone: 'Belum ada pemesanan mendatang.', vnPast: 'Lalu dan dibatalkan',
   vnPastMeta: 'kirim tautan ulasan ke tamu setelah acara', vnSub: '{date} · {from}–{to} · {n} tamu · {room}', vnPrice: 'Harga {n}', vnDeposit: 'Uang muka {n}', vnInvoice: 'Faktur {ref}',
-  vnConfirmed: 'Terkonfirmasi · di kalender', vnDone: 'Acara selesai', vnAsked: 'Tautan ulasan terkirim', vnReviewed: 'Diulas {n}/5', vnCancel: 'Batalkan pemesanan', vnCancelTitle: 'Batalkan pemesanan ini?',
+  vnConfirmed: 'Terkonfirmasi · di kalender', vnDone: 'Acara selesai', vnAsked: 'Tautan penilaian terkirim', vnReviewed: 'Dinilai {n}/5', vnCancel: 'Batalkan pemesanan', vnCancelTitle: 'Batalkan pemesanan ini?',
   vnCancelText: '{org} pada {date}. Ruangan dan jamnya kosong kembali.', vnKeep: 'Pertahankan', vnCancelled: 'Pemesanan dibatalkan. Jamnya kosong kembali.', vnCreateInvoice: 'Buat faktur',
-  vnInvoiced: 'Faktur {ref} dibuat (demo) dan dikirim ke keuangan.', vnSendReview: 'Kirim tautan ulasan', vnAskedToast: 'Tautan ulasan dikirim ke {name} lewat WhatsApp (demo).', vnRecordReview: 'Catat ulasan',
+  vnInvoiced: 'Faktur {ref} dibuat (demo) dan dikirim ke keuangan.', vnSendReview: 'Kirim tautan ulasan', vnAskedToast: 'Tautan ulasan dikirim ke {name} lewat WhatsApp (demo).', vnRecordReview: 'Isi penilaian manual',
   vnStars: 'Penilaian', vnStarsOf: '{n} dari 5', vnReviewText: 'Kata mereka', vnReviewSaved: 'Ulasan dicatat.', vnNoText: 'Tanpa komentar', vnUpdated: 'Pemesanan diperbarui.',
 
   // ----- survei -----
-  svEyebrow: 'Keluarga · kepuasan', svLiveSent: 'Berjalan · dikirim {date}', svRespOf: '{n} dari {total} keluarga', svRespOfOne: '{n} dari {total} keluarga', svOverall: 'Keseluruhan', svAnswers: '{n} jawaban', svAnswersOne: '{n} jawaban', svRecommend: 'Akan merekomendasikan',
+  svEyebrow: 'Kepuasan', svLiveSent: 'Berjalan · dikirim {date}', svRespOf: '{n} dari {total} keluarga', svRespOfOne: '{n} dari {total} keluarga', svOverall: 'Keseluruhan', svAnswers: '{n} jawaban', svAnswersOne: '{n} jawaban', svRecommend: 'Akan merekomendasikan',
   svOfAnswered: 'dari keluarga yang menjawab', svRate: 'Tingkat respons', svRateSub: '{n} dari {total} keluarga', svRateSubOne: '{n} dari {total} keluarga', svTeamRatings: 'Penilaian tim · tampil di SDM', svRatings: '{n} penilaian', svRatingsOne: '{n} penilaian',
   svNoRatings: 'belum ada penilaian', svComments: 'Komentar', svDetails: 'Lihat rincian', svClose: 'Tutup survei', svClosed: '{title} ditutup.', svNew: 'Survei baru', svEditDraft: 'Ubah draf',
   svTitle: 'Judul', svTitlePh: 'mis. survei bulan November', svQuestions: 'Pertanyaan', svq_overall: 'Kepuasan keseluruhan, 1 sampai 5', svq_team: 'Nilai tim', svq_recommend: 'Apakah Anda akan merekomendasikan kami?',
@@ -94,7 +94,7 @@ export const mgmt: Same<typeof EN> = {
   'err.venueOuting': 'Hari itu jalan-jalan, jadi klub tidak bisa menerima pemesanan.', 'err.venueClosed': 'Klub tutup pada hari itu karena urusan sendiri, jadi tidak bisa menerima pemesanan.',
   'err.venuePast': 'Jam itu sudah lewat.', 'err.venueTimes': 'Jam selesai harus setelah jam mulai.', 'err.venueLate': 'Acara harus berlangsung antara pukul {from} dan {to}.',
   'err.venueRoom': 'Pilih ruangan yang bisa dipesan untuk acara.', 'err.venueCancelled': 'Pemesanan itu sudah dibatalkan.', 'err.venueDone': 'Acara itu sudah berlangsung.',
-  'err.venueNotDone': 'Acaranya belum berlangsung.', 'err.venueReviewed': 'Acara ini sudah punya ulasan.', 'err.venueAsked': 'Tautan ulasan sudah dikirim.',
+  'err.venueNotDone': 'Acaranya belum berlangsung.', 'err.venueReviewed': 'Acara ini sudah punya ulasan.', 'err.venueAsked': 'Tautan ulasan sudah dikirim.', 'err.svTplBuiltIn': 'Templat rating venue sudah bawaan: pertanyaannya bisa diubah, tetapi tidak bisa dihapus.', svTplBuiltIn: 'Bawaan',
   'err.venuePrice': 'Isi harga terlebih dahulu.', 'err.venueInvoiced': 'Pemesanan ini sudah punya faktur.', 'err.noRecipients': 'Tidak ada penerima.', 'err.pastTime': 'Pilih waktu setelah sekarang.',
   'err.notScheduled': 'Pesan ini sudah terkirim atau dibatalkan.', 'err.tplMsg': 'Teks harus memuat {msg} agar pesan Anda masuk.', 'err.tplBuiltIn': 'Templat bawaan boleh diubah tetapi tidak bisa dihapus.',
   'err.teamRequired': 'Pilih setidaknya satu anggota tim untuk dinilai.', 'err.notDraft': 'Hanya survei draf yang bisa diubah.', 'err.notLive': 'Survei ini tidak sedang dibuka.',
@@ -113,4 +113,35 @@ export const mgmt: Same<typeof EN> = {
   // ----- notifikasi -----
   'notif.bc_update': 'Kabar klub: {text}', 'notif.bc_closure': 'Klub tutup pada {text}.', 'notif.bc_event': 'Anda diundang: {text}', 'notif.bc_custom': '{text}',
   'notif.broadcastSent': 'Siaran terkirim ke {n} orang.', 'notif.venueInvoice': 'Faktur venue {ref} untuk {org}: {amount}.', 'notif.pricesChanged': 'Harga berubah mulai {date}. Periksa penerbitan tagihan berikutnya.',
+
+  plan_registration: 'Pendaftaran', plan_trial: 'Percobaan', plan_leave: 'Cuti', perOnce: 'Sekali saja', perTrial: 'Untuk 2 hari berturut-turut',
+  plRegWhen: 'Ditagih', plRegWhenV: 'Di invoice pertama', plRegAgain: 'Lagi setelah', plRegAgainV: 'Dihentikan karena invoice belum dibayar',
+  plTrialDays: 'Lama', plTrialDaysV: '2 hari berturut-turut', plTrialCollect: 'Dibayar', plTrialCollectV: 'Di meja depan',
+  plLeaveBilled: 'Ditagih', plLeaveBilledV: 'Sebagai pengganti paket', plLeaveAsk: 'Diajukan', plLeaveAskV: '14 hari sebelum bulan berakhir',
+
+  // ----- KC round 7: templat survei, riwayat survei, survei venue, dan tautan penilaian untuk penyewa -----
+  svTabLive: 'Aktif', svTabDrafts: 'Draf', svTabTemplates: 'Templat', svTabLog: 'Riwayat', svKind_family: 'Keluarga', svKind_venue: 'Penyewa venue',
+  svLiveNone: 'Tidak ada survei yang aktif.', svLinksSent: '{n} tautan penilaian terkirim', svLinksSentOne: '{n} tautan penilaian terkirim', svAnsweredOf: '{n} dari {total} menjawab', svOfAnsweredV: 'dari penyewa yang menjawab',
+  svDraftsNone: 'Belum ada draf.', svQuestionsN: '{n} pertanyaan', svQuestionsNOne: '{n} pertanyaan', svSentOn: 'Dikirim {date}',
+  svTemplates: 'Templat', svTplNone: 'Belum ada templat.', svTplNew: 'Templat baru', svTplUse: 'Pakai', svTplEdit: 'Ubah templat', svTplSave: 'Simpan templat', svTplSaved: 'Templat disimpan.', svTplDeleted: 'Templat dihapus.',
+  svTplDelete: 'Hapus templat', svTplDeleteText: 'Hapus “{title}”? Survei yang sudah dibuat darinya tetap memakai pertanyaannya.', svTplSaveAs: 'Simpan sebagai templat', svTplName: 'Nama templat',
+  svPickScratch: 'Mulai dari kosong', svPickTemplates: 'Dari templat', svPickBlankFamily: 'Survei keluarga kosong', svPickFamilySub: 'Untuk keluarga yang memakai aplikasi', svPickBlankVenue: 'Survei venue kosong', svPickVenueSub: 'Untuk orang yang menyewa venue',
+  svTitlePhV: 'mis. Penilaian venue', svGoLive: 'Aktifkan', svLiveToast: '{title} sudah aktif. Penyewa menjawab lewat tautan penilaian mereka.',
+  svReplaces: 'Mengirim ini menutup “{title}”, survei keluarga yang sedang aktif.', svReplacesV: 'Mengaktifkan ini menutup “{title}”, survei venue yang sedang aktif.',
+  svFilterKind: 'Jenis', svFilterAll: 'Semua', svLogTitle: 'Semua survei yang pernah dikirim', svLogCount: '{n} survei', svLogCountOne: '{n} survei', svLogMeta: 'Terkirim {sent} · {answered} menjawab · {rate}%', svLogNow: 'sekarang', svLogNone: 'Belum ada survei yang dikirim.',
+  svDet_summary: 'Ringkasan', svDet_responses: 'Jawaban', svDet_history: 'Riwayat', svReopen: 'Buka lagi', svReopened: '{title} aktif lagi.', svWaitingFor: 'Menunggu {n}', svWaitingForOne: 'Menunggu {n}',
+  svLog_created: 'Dibuat oleh {who}', svLog_createdFrom: 'Dibuat dari templat “{tpl}” oleh {who}', svLog_edited: 'Diubah oleh {who}', svLog_sent: 'Dikirim ke {n} keluarga oleh {who}', svLog_sentOne: 'Dikirim ke {n} keluarga oleh {who}', svLog_sentV: 'Diaktifkan oleh {who}',
+  svLog_closed: 'Ditutup oleh {who}', svLog_closedReplaced: 'Ditutup saat survei yang lebih baru dikirim', svLog_reopened: 'Dibuka lagi oleh {who}',
+  // venue: minta penilaian lewat tautan
+  vnAskRating: 'Minta penilaian', vnSendAgain: 'Kirim lagi', vnCopyLink: 'Salin tautan', vnOpenLink: 'Buka tautan', vnLinkCopied: 'Tautan penilaian disalin.', vnLinkManual: 'Salin tautan dari sini: {url}',
+  vnRatingSent: 'Tautan penilaian terkirim ke {name} lewat WhatsApp (demo).', vnWaiting: 'Menunggu {name} memberi penilaian.', vnEnterByHand: 'Isi manual', vnRatingFrom: 'Dinilai oleh {name} lewat tautan', vnEnteredByHand: 'Diisi manual', vnViewAnswers: 'Lihat jawaban', vnLinkClosed: 'Survei itu sudah ditutup. Kirim ulang tautan untuk memindahkannya ke survei yang aktif.',
+  // halaman penilaian publik (/rate/:token)
+  rtTab: 'Nilai acara Anda', rtHello: 'Bagaimana acara Anda di CitraPremier?', rtQOverall: 'Secara keseluruhan, bagaimana acara Anda?', rtQRecommend: 'Apakah Anda akan merekomendasikan CitraPremier kepada orang lain?', rtQComment: 'Ada hal lain yang ingin Anda sampaikan?',
+  rtName: 'Nama Anda', rtSend: 'Kirim penilaian', rtNeedHint: 'Beri bintang dan jawab pertanyaan yang bertanda Wajib untuk mengirim.', rtNeed: 'Mohon jawab pertanyaan yang bertanda Wajib.', rtError: 'Penilaian Anda belum terkirim. Silakan coba lagi.',
+  rtThanksTitle: 'Terima kasih, {name}', rtThanksAnon: 'Terima kasih', rtThanksText: 'Penilaian Anda sudah sampai ke tim CitraPremier. Kami membaca setiap jawaban.', rtAlreadyTitle: 'Sudah terkirim', rtAlreadyText: 'Anda sudah mengirim penilaian untuk acara ini. Terima kasih.',
+  rtClosedTitle: 'Penilaian ini sudah ditutup', rtClosedText: 'Tim tidak lagi mengumpulkan penilaian untuk acara ini. Terima kasih telah memilih CitraPremier.', rtBadTitle: 'Tautan ini tidak valid',
+  rtBadText: 'Silakan periksa pesan yang Anda terima, atau minta tim CitraPremier mengirim ulang tautannya.', rtNetTitle: 'Halaman ini tidak bisa dimuat', rtNetText: 'Periksa koneksi Anda lalu coba lagi.', rtFooter: 'CitraPremier · klub harian untuk lansia, Jakarta',
+  'err.venueNeedsOverall': 'Survei venue harus menanyakan penilaian keseluruhan.', 'err.notClosed': 'Hanya survei yang sudah ditutup yang bisa dibuka lagi.',
+  'feed.surveyLive': 'Survei aktif · {title}', 'feed.surveyReopened': 'Survei dibuka lagi · {title}', 'feed.venueRated': 'Venue dinilai · {org} · {stars}/5',
+  'notif.venueRated': '{org} menilai acaranya {stars}/5 lewat tautan penilaian.',
 };

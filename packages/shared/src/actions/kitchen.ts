@@ -7,7 +7,7 @@
 import type { Draft } from 'immer';
 import type { ClubState, Dish, DishAllergen, Feedback, ISODate, MenuDay, StockRequest, User, Weekday } from '../types';
 import { DomainError, defineAction, hasRole, isStaff, type ActionDef, type Ctx } from './framework';
-import { familyUserIds, postMessage, requireMember, shortOf } from './helpers';
+import { familyUserIds, requireMember, shortOf } from './helpers';
 import { dayStatus } from '../rules/core';
 import { ALLERGY_COVERS, MAX_LUNCH_PHOTOS, dinersOn } from '../rules/kitchen';
 import {
@@ -76,7 +76,7 @@ function ensureDayMenu(d: Draft<ClubState>, date: ISODate, ctx: Ctx) {
   return d.dayMenus[date];
 }
 /** A day's row with nothing left in it (no override, no lunch photo, no allergy plan) is dropped. */
-const isEmptyDay = (row: Draft<ClubState>['dayMenus'][string]) => !row.lunch && !row.soft && !row.tea && !row.photoIds?.length && !row.allergyPlans.length && !row.approval; // a decided or waiting override keeps its row (the history)
+const isEmptyDay = (row: Draft<ClubState>['dayMenus'][string]) => !row.lunch && !row.soft && !row.tea && !row.photoIds?.length && !row.teaPhotoIds?.length && !row.allergyPlans.length && !row.approval; // a decided or waiting override keeps its row (the history)
 const sameSet = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 // ---------- dishes ----------
@@ -145,9 +145,10 @@ const dishActions: ActionDef[] = [
 export function announceLunchPhoto(d: Draft<ClubState>, ctx: Ctx, photoId: string): void {
   const p = d.photos[photoId];
   if (!p || p.deletedAt || p.kind !== 'lunch' || p.visibility !== 'visible' || p.date !== ctx.today) return;
-  const told = new Set(Object.values(d.notifications).filter((n) => !n.deletedAt && n.kind === 'kitchen.notif.lunchPhoto' && n.createdAt.startsWith(p.date)).flatMap((n) => n.toUsers));
+  const kind = d.dayMenus[p.date]?.teaPhotoIds?.includes(p.id) ? 'kitchen.notif.teaPhoto' : 'kitchen.notif.lunchPhoto'; // KC round 7: tea photos have their own message
+  const told = new Set(Object.values(d.notifications).filter((n) => !n.deletedAt && n.kind === kind && n.createdAt.startsWith(p.date)).flatMap((n) => n.toUsers));
   const families = uniq(dinersOn(asState(d), p.date).flatMap((x) => (x.type === 'member' ? familyUserIds(d, x.id) : []))).filter((f) => !told.has(f));
-  if (families.length) ctx.notify({ toUsers: families, kind: 'kitchen.notif.lunchPhoto', link: '/today', ref: { type: 'photo', id: p.id } });
+  if (families.length) ctx.notify({ toUsers: families, kind, link: '/today', ref: { type: 'photo', id: p.id } });
 }
 
 // ---------- menu ----------
@@ -224,22 +225,23 @@ const menuActions: ActionDef[] = [
   }),
   // Add a lunch photo to today's menu. mediaId: the uploaded camera picture (without it the design's placeholder shows).
   // Management's photo is visible at once and, with notify (default on), the families of today's diners are told. Anyone else's waits as 'pending'.
-  defineAction<{ date: ISODate; mediaId?: string; notify: boolean }>({
+  // KC round 7: `meal` 'tea' adds a photo of the afternoon tea instead (DayMenu.teaPhotoIds; same approval, same limit).
+  defineAction<{ date: ISODate; mediaId?: string; notify: boolean; meal: 'lunch' | 'tea' }>({
     name: 'menu.postLunchPhoto',
     can: (u) => kitchenOrMgmt(u),
-    parse: (raw) => { const r = rec(raw); return { date: isoDate(r.date), mediaId: mediaIdOf(r.mediaId), notify: optBool(r.notify, true) }; },
+    parse: (raw) => { const r = rec(raw); return { date: isoDate(r.date), mediaId: mediaIdOf(r.mediaId), notify: optBool(r.notify, true), meal: r.meal === undefined || r.meal === null ? 'lunch' : oneOf(r.meal, ['lunch', 'tea'] as const) }; },
     run(d, i, ctx) {
       if (i.date !== ctx.today) ctx.fail('kitchen.err.notToday');
       const st = asState(d);
       if (!dayStatus(st, i.date).open) ctx.fail('err.closedDay');
       const row = ensureDayMenu(d, i.date, ctx);
-      const ids = (row.photoIds ??= []);
-      if (ids.length >= MAX_LUNCH_PHOTOS) ctx.fail('kitchen.err.tooManyPhotos', { n: MAX_LUNCH_PHOTOS });
+      const ids = i.meal === 'tea' ? (row.teaPhotoIds ??= []) : (row.photoIds ??= []);
+      if (ids.length >= MAX_LUNCH_PHOTOS) ctx.fail(i.meal === 'tea' ? 'kitchen.err.tooManyTeaPhotos' : 'kitchen.err.tooManyPhotos', { n: MAX_LUNCH_PHOTOS });
       const pid = ctx.id('p');
       const mgmt = ctx.role === 'mgmt';
       d.photos[pid] = {
         id: pid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, date: i.date, time: ctx.now, kind: 'lunch', media: 'photo', activity: 'lunch', memberIds: [],
-        tone: (3 + ids.length) % 5, // the design's lunch placeholder; each one gets its own tone
+        tone: (3 + ids.length + (i.meal === 'tea' ? 1 : 0)) % 5, // the design's lunch placeholder; each one gets its own tone
         takenBy: ctx.user.id, visibility: mgmt ? 'visible' : 'pending', ...(mgmt ? { approved: { at: ctx.nowDT, by: ctx.user.id } } : {}), ...(i.mediaId ? { mediaId: i.mediaId } : {}),
       };
       ids.push(pid);
@@ -247,8 +249,8 @@ const menuActions: ActionDef[] = [
       ctx.result.pending = !mgmt;
       if (mgmt) {
         if (i.notify) announceLunchPhoto(d, ctx, pid);
-        ctx.feed({ icon: 'restaurant', key: 'kitchen.feed.lunchPhoto' });
-      } else ctx.feed({ icon: 'hourglass_top', key: 'kitchen.feed.lunchPhotoPending' }); // management is asked in Reviews
+        ctx.feed({ icon: i.meal === 'tea' ? 'local_cafe' : 'restaurant', key: i.meal === 'tea' ? 'kitchen.feed.teaPhoto' : 'kitchen.feed.lunchPhoto' });
+      } else ctx.feed({ icon: 'hourglass_top', key: i.meal === 'tea' ? 'kitchen.feed.teaPhotoPending' : 'kitchen.feed.lunchPhotoPending' }); // management is asked in Reviews
     },
   }),
   // Take one of today's lunch photos away (a blurry one, or one that was posted by mistake). Kept as 'removed', never shown again.
@@ -261,14 +263,16 @@ const menuActions: ActionDef[] = [
       if (!p || p.deletedAt || p.kind !== 'lunch' || p.visibility === 'removed') ctx.fail('err.notFound');
       if (p.date !== ctx.today) ctx.fail('kitchen.err.notToday');
       const row = d.dayMenus[p.date];
-      const k = row?.photoIds ? row.photoIds.indexOf(p.id) : -1;
-      if (!row || !row.photoIds || k < 0) ctx.fail('err.notFound');
-      row.photoIds.splice(k, 1);
-      if (!row.photoIds.length) delete row.photoIds;
+      const tea = !!row?.teaPhotoIds?.includes(p.id); // KC round 7: a tea photo lives in the tea gallery
+      const list = tea ? row?.teaPhotoIds : row?.photoIds;
+      const k = list ? list.indexOf(p.id) : -1;
+      if (!row || !list || k < 0) ctx.fail('err.notFound');
+      list.splice(k, 1);
+      if (!list.length) delete row[tea ? 'teaPhotoIds' : 'photoIds'];
       p.visibility = 'removed';
       p.moderated = { at: ctx.nowDT, by: ctx.user.id, reason: 'removed' };
       if (isEmptyDay(row)) delete d.dayMenus[p.date];
-      ctx.feed({ icon: 'no_photography', key: 'kitchen.feed.lunchPhotoRemoved' });
+      ctx.feed({ icon: 'no_photography', key: tea ? 'kitchen.feed.teaPhotoRemoved' : 'kitchen.feed.lunchPhotoRemoved' });
     },
   }),
 ];
@@ -343,9 +347,6 @@ const feedbackActions: ActionDef[] = [
       if (i.mealDate > ctx.today) ctx.fail('kitchen.err.futureDate');
       const id = ctx.id('fb');
       d.feedback[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: i.memberId, familyId: ctx.user.id, mealDate: i.mealDate, dish: i.dish, text: i.text, status: 'open', source: 'family' };
-      // the kitchen thread: the family's words are its first message, so replies land in the family's Messages
-      const r = postMessage(d, ctx, { memberId: i.memberId, familyId: ctx.user.id, topic: 'kitchen', text: i.text, feedbackId: id, ref: { type: 'feedback', id } });
-      d.feedback[id].threadId = r.threadId;
       ctx.notify({ toRoles: ['kitchen'], kind: 'kitchen.notif.feedbackNew', params: { name: shortOf(d, i.memberId), dish: i.dish }, link: '/feedback', memberId: i.memberId, ref: { type: 'feedback', id } });
       ctx.feed({ icon: 'forum', key: 'kitchen.feed.feedback', params: { name: shortOf(d, i.memberId), dish: i.dish }, memberId: i.memberId });
       ctx.result.feedbackId = id;
@@ -374,11 +375,11 @@ const feedbackActions: ActionDef[] = [
       if (fb.status === 'closed') ctx.fail('kitchen.err.feedbackClosed');
       const familyId = replyTarget(asState(d), fb);
       if (!familyId) ctx.fail('kitchen.err.noFamilyApp');
-      // answering again (an edited reply) adds a new message; the earlier one stays in the thread
-      const r = postMessage(d, ctx, { memberId: fb.memberId, familyId, topic: 'kitchen', text: i.text, feedbackId: fb.id, ref: { type: 'feedback', id: fb.id } });
-      fb.threadId = r.threadId;
+      // answering again (an edited reply) adds another reply; the earlier ones stay on the card. The club sends the reply on WhatsApp (simulated in the demo):
+      // the family's bell carries its text.
+      fb.replies = [...(fb.replies ?? []), { id: ctx.id('fr'), at: ctx.nowDT, by: ctx.actor, text: i.text }];
       fb.status = 'answered';
-      ctx.notify({ toUsers: [familyId], kind: 'kitchen.notif.feedbackReply', params: { name: shortOf(d, fb.memberId), dish: fb.dish }, link: '/chat', memberId: fb.memberId, ref: { type: 'feedback', id: fb.id } });
+      ctx.notify({ toUsers: [familyId], kind: 'kitchen.notif.feedbackReply', params: { name: shortOf(d, fb.memberId), dish: fb.dish, text: i.text }, link: '/today', memberId: fb.memberId, ref: { type: 'feedback', id: fb.id } });
       ctx.feed({ icon: 'reply', key: 'kitchen.feed.feedbackReply', params: { name: shortOf(d, fb.memberId), dish: fb.dish }, memberId: fb.memberId });
     },
   }),
@@ -404,7 +405,8 @@ const stockRow = (d: Draft<ClubState>, id: string, ctx: Ctx) => {
   return k;
 };
 const stockParts = (r: Raw) => ({ item: line(r.item, 80), qty: posNumber(r.qty, 100000), unit: line(r.unit, 24), area: oneOf(r.area, STOCK_AREAS), sectionId: line(r.sectionId, 60) });
-const requesterLink = (d: Draft<ClubState>, k: StockRequest) => (['kitchen', 'mgmt'].includes(d.staff[k.requestedBy]?.role ?? '') ? '/stock' : '/requests');
+/** Where the requester follows it: management and finance on the Stock page, everyone else (F&B too, KC round 6) in Requests. */
+const requesterLink = (d: Draft<ClubState>, k: StockRequest) => (['mgmt', 'finance'].includes(d.staff[k.requestedBy]?.role ?? '') ? '/stock' : '/requests');
 
 /** Approve a requested stock item (stock.approve and the Approvals hub). */
 export function approveStockRow(d: Draft<ClubState>, ctx: Ctx, k: Draft<StockRequest>) {

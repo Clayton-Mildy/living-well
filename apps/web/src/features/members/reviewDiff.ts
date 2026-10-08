@@ -1,5 +1,5 @@
 // Turns a change request into readable "old → new" rows (translated field labels) and, for creates, a summary of what is being added.
-import { fmtPhone, memberName, type ChangeRequest, type ClubState, type Member, type Plan, type PlanEntry } from '@cp/shared';
+import { fmtPhone, memberName, type ChangeRequest, type ClubState, type Member, type MemberRegistration, type Plan, type PlanEntry } from '@cp/shared';
 import { plainName } from '@cp/shared/rules/members';
 import type { TFn } from '../../lib/i18n';
 import { dietLabel, docLabel, drugLabel, foodLabel, mobLabel, relLabel, timingLabel } from './lib';
@@ -40,6 +40,24 @@ function healthRows(t: TFn, from: Member['health'] | undefined, to: Member['heal
   return out;
 }
 
+/** The answers of the paper application form that changed: one row each, old to new. */
+function registrationRows(t: TFn, from: MemberRegistration | undefined, to: MemberRegistration | undefined): DiffRow[] {
+  const a = from || {}, b = to || {};
+  const out: DiffRow[] = [];
+  const row = (label: string, x: string, y: string) => { if (x !== y) out.push({ label, from: x || dash, to: y || dash }); };
+  const text = (k: 'nickname' | 'rtRw' | 'city' | 'postcode' | 'phone' | 'mobile' | 'email' | 'dementiaNote', label: string) => row(t(label), a[k] || '', b[k] || '');
+  const ask = (k: 'commDifficulty' | 'selfCare' | 'bathroomHelp', label: string) => row(t(label), a[k] === undefined ? '' : yn(t, a[k]), b[k] === undefined ? '' : yn(t, b[k]));
+  const ids = (r: MemberRegistration) => (['guarantor', 'member', 'carer'] as const).filter((k) => r.ids?.[k]).map((k) => t('profile.ids.' + k)).join(', ');
+  text('nickname', 'profile.f.nickname');
+  row(t('profile.f.marital'), a.marital ? t('profile.marital.' + a.marital) : '', b.marital ? t('profile.marital.' + b.marital) : '');
+  text('rtRw', 'profile.f.rtRw'); text('city', 'profile.f.city'); text('postcode', 'profile.f.postcode');
+  text('mobile', 'profile.f.memberMobile'); text('phone', 'profile.f.homePhone'); text('email', 'profile.f.email');
+  ask('commDifficulty', 'profile.q.comm'); ask('selfCare', 'profile.q.self'); ask('bathroomHelp', 'profile.q.bath');
+  text('dementiaNote', 'profile.f.dementiaShort');
+  row(t('profile.f.idsShort'), ids(a), ids(b));
+  return out;
+}
+
 const docText = (t: TFn, d: Member['documents'][number] | undefined) => (!d ? t('profile.docMissing') : d.status === 'onFile' ? d.fileName || t('profile.docOnFile') : d.status === 'requested' ? t('profile.docRequested') : t('profile.docPending'));
 const consentText = (t: TFn, c: Member['consents'][number] | undefined) => (!c ? dash : c.granted ? t('profile.consentGranted') : t('profile.consentOptOut'));
 
@@ -69,6 +87,8 @@ export function describeCr(cr: ChangeRequest, s: ClubState, t: TFn, fmt: Fmt): D
     if (pl) summary.push({ label: t('profile.f.plan'), to: planText(t, pl) });
     if (first) summary.push({ label: t('profile.f.start'), to: fmt.fdy(first) });
     if (nm?.address) summary.push({ label: t('profile.f.address'), to: nm.address });
+    const regLine = nm?.registration ? [nm.registration.nickname, nm.registration.mobile, nm.registration.email].filter(Boolean).join(' · ') : '';
+    if (regLine) summary.push({ label: t('profile.f.regForm'), to: regLine });
     const fam = nm ? Object.values(s.familyLinks).find((l) => l.memberId === nm.id && !l.deletedAt) : undefined;
     const c = fam ? s.familyContacts[fam.familyId] : undefined;
     if (c && fam) summary.push({ label: t('profile.f.contact'), to: `${c.name} · ${relLabel(t, fam.relation)} · ${fmtPhone(c.phone)}${fam.primary ? ' · ' + t('profile.primaryBilling') : ''}` });
@@ -155,6 +175,7 @@ export function describeCr(cr: ChangeRequest, s: ClubState, t: TFn, fmt: Fmt): D
         break;
       }
       case 'health': rows.push(...healthRows(t, c.from as Member['health'], c.to as Member['health'])); break;
+      case 'registration': rows.push(...registrationRows(t, c.from as MemberRegistration | undefined, c.to as MemberRegistration | undefined)); break;
       case 'care': rows.push({ label: t('profile.f.care'), from: (c.from as Member['care'])?.instructions || dash, to: (c.to as Member['care'])?.instructions || dash }); break;
       case 'name': rows.push({ label: t('profile.f.name'), from: String(c.from ?? dash), to: String(c.to ?? dash) }); break;
       case 'phone': rows.push({ label: t('profile.f.phone'), from: c.from ? fmtPhone(String(c.from)) : dash, to: c.to ? fmtPhone(String(c.to)) : dash }); break;
