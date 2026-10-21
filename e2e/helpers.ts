@@ -1,5 +1,5 @@
 // E2E helpers: reset the demo database, sign in as a demo user, collect console errors, check the screen.
-import { expect, type Page, type APIRequestContext } from '@playwright/test';
+import { expect, type Page, type Locator, type APIRequestContext } from '@playwright/test';
 
 export async function resetDemo(request: APIRequestContext) {
   const r = await request.post('/api/demo/reset', { data: {} });
@@ -45,4 +45,13 @@ export async function assertNoHorizontalScroll(page: Page) {
     return el.scrollWidth - el.clientWidth;
   });
   expect(over).toBeLessThanOrEqual(1);
+}
+/** Round 12: check-in and check-out ask for the arrival / departure mood face; the confirm stays off until one is tapped. */
+export async function tapFace(scope: Page | Locator, face = 4) {
+  await scope.locator(`[role=radio][data-face="${face}"]`).first().click();
+}
+/** Tap a face, then confirm the check-in (the face card or the manual check-in sheet, whichever is open). */
+export async function confirmCheckIn(page: Page, face = 4) {
+  await tapFace(page, face);
+  await page.getByRole('button', { name: 'Confirm check-in' }).click();
 }

@@ -2,8 +2,8 @@
 // the 1st and stops it on the 3rd, the registration fee on a first invoice (and again after a stop), and the 2-day trial with its price.
 // The demo clock moves to other days with POST /api/demo/clock { date } (the club's daily job then runs at once).
 import { test, expect as baseExpect, type APIRequestContext, type Page } from '@playwright/test';
-import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll, isPhone } from './helpers';
-import { pickOption } from './kit';
+import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll, isPhone, confirmCheckIn } from './helpers';
+import { pickOption, regNext } from './kit';
 
 const expect = baseExpect.configure({ timeout: 15_000 });
 test.beforeEach(async ({ request }) => { test.setTimeout(90_000); await resetDemo(request); });
@@ -130,7 +130,7 @@ test.describe('leave (cuti)', () => {
     await signIn(page, 's1', '/today');
     await expect(page.getByRole('button', { name: /^Oma Lina\b/ })).toContainText('On leave · Dec');
     await page.getByRole('button', { name: /^Check in: Oma Lina Wijaya/ }).click();
-    await page.getByRole('button', { name: 'Confirm check-in' }).click();
+    await confirmCheckIn(page);
     await toast(page, /Oma Lina is on leave in December 2026/);
     const r = await api(request, 's1', 'attendance.checkIn', { memberId: 'm1', method: 'manual' });
     expect(r.status()).toBe(422);
@@ -181,7 +181,7 @@ test.describe('an unpaid invoice: on hold on the 1st, stopped on the 3rd', () =>
     await signIn(page, 's1', '/today');
     await expect(page.getByRole('button', { name: /^Oma Lina\b/ })).toContainText('Suspended · unpaid');
     await page.getByRole('button', { name: /^Check in: Oma Lina Wijaya/ }).click();
-    await page.getByRole('button', { name: 'Confirm check-in' }).click();
+    await confirmCheckIn(page);
     await toast(page, /Membership on hold: invoice INV-2610-001 \(Rp 2\.700\.000\) is still unpaid/);
     // Members list and the profile
     await signIn(page, 's9', '/members');
@@ -254,7 +254,9 @@ test.describe('the registration fee and the trial', () => {
     await signIn(page, 's9', '/enquiries');
     await showStage(page, /^Trial booked ·/);
     await page.locator('[data-lead="e1"]').getByRole('button', { name: 'Join', exact: true }).click();
-    await expect(page.getByRole('dialog', { name: 'Oma Siu Lan Tjandra' }).getByTestId('join-reg-fee')).toContainText('The registration fee (Rp 2.500.000, one time) is on the first invoice.');
+    const join1 = page.getByRole('dialog', { name: 'Oma Siu Lan Tjandra' });
+    for (let i = 0; i < 3; i++) await regNext(join1); // Person, Family, Health: the fee is told on the Plan step
+    await expect(join1.getByTestId('join-reg-fee')).toContainText('The registration fee (Rp 2.500.000, one time) is on the first invoice.');
     await page.keyboard.press('Escape');
     // she joins on Monday 26 October (the paper form is attached through the API); November's invoice is her first
     const join = await ok(request, 's9', 'enquiry.convert', { enquiryId: 'e1', plan: 'gold', start: '2026-10-26', formMediaId: 'md_testregistrationform01', formFileName: 'form.jpg' });

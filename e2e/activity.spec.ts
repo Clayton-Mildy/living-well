@@ -252,7 +252,7 @@ test('Camera: a teacher takes a group photo with the camera, picks who is in it 
   await expect(viewer.getByRole('button', { name: 'Type and people' })).toBeVisible();
   await expect(viewer.getByRole('button', { name: 'Remove photo' })).toBeVisible();
   await expect(viewer.getByRole('button', { name: /Hide from families|Approve|Reject/ })).toHaveCount(0);
-  await expect(viewer.getByRole('button', { name: 'Save' })).toHaveCount(0);
+  await expect(viewer.getByRole('button', { name: 'Save to your gallery' })).toBeVisible(); // round 10: staff can save a photo to their gallery too
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
   c.assertClean();
@@ -822,8 +822,8 @@ test('Photo library (s9): hide a photo, and the family no longer sees it on /pho
   await famTile.click();
   const famViewer = fam.getByTestId('family-viewer');
   await expect(famViewer).toBeVisible();
-  await expect(famViewer.getByRole('button', { name: 'Share this photo' })).toBeVisible(); // round 8: Share only (no Save)
-  await expect(famViewer.getByRole('button', { name: 'Save' })).toHaveCount(0);
+  await expect(famViewer.getByRole('button', { name: 'Share this photo' })).toBeVisible(); // round 8: Share…
+  await expect(famViewer.getByRole('button', { name: 'Save to your gallery' })).toBeVisible(); // …and, since round 10, Save to the gallery
   await expect(famViewer.getByRole('button', { name: /Hide from families|Type and people|Remove photo/ })).toHaveCount(0);
   await fam.keyboard.press('Escape');
   await expect(famViewer).toHaveCount(0);
@@ -831,7 +831,7 @@ test('Photo library (s9): hide a photo, and the family no longer sees it on /pho
   await tile.click();
   const viewer = page.getByRole('dialog').first();
   await expect(viewer.getByRole('button', { name: 'Hide from families' })).toBeVisible();
-  await expect(viewer.getByRole('button', { name: 'Save' })).toHaveCount(0); // staff never get Save
+  await expect(viewer.getByRole('button', { name: 'Save to your gallery' })).toBeVisible(); // round 10: staff get Save to the gallery too
   await viewer.getByRole('button', { name: 'Hide from families' }).click();
   const sheet = page.getByRole('dialog', { name: 'Hide from families' });
   await sheet.getByRole('button', { name: 'Blurry' }).click();

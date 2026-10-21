@@ -145,11 +145,11 @@ test('the list: every member, the ones in the club first; the last reading; noth
   const rows = page.getByTestId('station-row');
   await expect(rows).toHaveCount(5);
   // in the club first (with something due on top), then the others by first name
-  await expect(rows.nth(0)).toContainText('Opa Tjahjadi Lim');
-  await expect(rows.nth(1)).toContainText('Opa Hendra Gunawan');
-  await expect(rows.nth(2)).toContainText('Bapak Bambang Purnomo');
-  await expect(rows.nth(3)).toContainText('Opa Budi Wijaya');
-  await expect(rows.nth(4)).toContainText('Oma Lina Wijaya');
+  await expect(rows.nth(0)).toContainText('Opa Tjahjadi');
+  await expect(rows.nth(1)).toContainText('Opa Hendra');
+  await expect(rows.nth(2)).toContainText('Bapak Bambang');
+  await expect(rows.nth(3)).toContainText('Opa Budi');
+  await expect(rows.nth(4)).toContainText('Oma Lina');
   for (const [i, p] of ['in', 'in', 'in', 'no', 'no'].entries()) await expect(rows.nth(i)).toHaveAttribute('data-presence', p);
   await expect(rows.nth(0)).toContainText('Arrived 09:38');
   // the last reading and its status
@@ -179,12 +179,12 @@ test('the list: every member, the ones in the club first; the last reading; noth
     // tablet and laptop: nobody is open until a row is tapped; then the keypad is beside the fields
     await expect(page.getByText('Choose someone from the list')).toBeVisible();
     await rows.nth(1).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra Gunawan' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra' })).toBeVisible();
     await expect(rows.nth(1)).toHaveAttribute('aria-current', 'true');
     await expect(page.getByText('Keypad · Sys')).toBeVisible();
     await expect(page.getByRole('button', { name: '7', exact: true })).toBeVisible();
     await rows.nth(0).click();
-    await expect(page.getByRole('heading', { level: 2, name: 'Opa Tjahjadi Lim' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 2, name: 'Opa Tjahjadi' })).toBeVisible();
     await expect(rows.nth(0)).toHaveAttribute('aria-current', 'true');
   }
   await assertNoHorizontalScroll(page);
@@ -199,7 +199,7 @@ test('search by name or family name, and pages: ten at a time, a search goes bac
   const list = page.getByTestId('station-list');
   await expect(page.getByText('17 members')).toBeVisible();
   await expect(rows).toHaveCount(10);
-  await expect(rows.nth(0)).toContainText('Opa Tjahjadi Lim'); // the ones in the club stay first
+  await expect(rows.nth(0)).toContainText('Opa Tjahjadi'); // the ones in the club stay first
   await expect(list.getByRole('navigation')).toBeVisible();
   await goToPage(page, 2);
   await expect(rows).toHaveCount(7);
@@ -214,7 +214,7 @@ test('search by name or family name, and pages: ten at a time, a search goes bac
   await expect(list.getByRole('navigation')).toHaveCount(0);
   await search.fill('gunawan');
   await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText('Opa Hendra Gunawan');
+  await expect(rows.first()).toContainText('Opa Hendra');
   await search.fill('wijaya');
   await expect(rows).toHaveCount(2); // Budi and Lina, whose family name is Wijaya
   await search.fill('zzz');
@@ -270,7 +270,7 @@ test('the header links open the Trends screen on that member, and the member’s
   await detail(page, 'Opa Hendra Gunawan').getByRole('button', { name: 'Trends' }).click();
   await expect(page).toHaveURL(/\/readings$/);
   await expect(page.getByRole('heading', { name: 'Readings', level: 1 })).toBeVisible();
-  await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra Gunawan' })).toBeVisible(); // selected from the link
+  await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra' })).toBeVisible(); // selected from the link
   await page.goBack();
   await expect(page).toHaveURL(/\/today$/);
   await openPerson(page, 'Opa Hendra');
@@ -332,7 +332,7 @@ test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-che
 
   // "Save and next" moved on to the next person with something due: Tjahjadi
   if (isPhone(page)) await expect(page.getByRole('dialog', { name: 'Opa Tjahjadi Lim' })).toBeVisible();
-  else await expect(page.getByRole('heading', { level: 2, name: 'Opa Tjahjadi Lim' })).toBeVisible();
+  else await expect(page.getByRole('heading', { level: 2, name: 'Opa Tjahjadi' })).toBeVisible();
   await backToList(page);
   // the list: Hendra's row has today's reading with its status and the chip with the re-check time; Tjahjadi stays on top
   await expect(page.getByTestId('station-row').nth(0)).toContainText('Opa Tjahjadi');
@@ -612,7 +612,7 @@ test('deep link ?member=m1&demo=high: opens Oma Lina, runs Read PC-303 once (152
   await checkIn(page, 'm1');
   await signIn(page, 's8', '/today?member=m1&demo=high');
   await expect(page).toHaveURL(/\/today$/); // the query is removed once applied: a reload does not repeat it
-  await expect(page.getByRole('heading', { level: 2, name: 'Oma Lina Wijaya' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Oma Lina' })).toBeVisible();
   if (isPhone(page)) await expect(page.getByRole('dialog', { name: 'Oma Lina Wijaya' })).toBeVisible(); // the sheet is open on the phone
   await expectValue(page, 'bp', 'sys', '152');
   await expectValue(page, 'bp', 'dia', '94');
@@ -641,7 +641,7 @@ test('deep link ?member=: anyone in the list is opened (checked in or not) and t
   const c = watchConsole(page);
   await signIn(page, 's8', '/today?member=m2');
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra Gunawan' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra' })).toBeVisible();
   if (isPhone(page)) await expect(page.getByRole('dialog', { name: 'Opa Hendra Gunawan' })).toBeVisible();
   // opening someone waits for the PC-303, and its values arrive (Hendra's arrival is scripted 164/98)
   await expect(group(page, 'bp').getByRole('button', { name: /Stop waiting/ })).toBeVisible();
@@ -650,12 +650,12 @@ test('deep link ?member=: anyone in the list is opened (checked in or not) and t
   // already checked today: their reading is on the detail, the next check is a spot check
   await page.goto('/today?member=m10');
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Bapak Bambang Purnomo' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Bapak Bambang' })).toBeVisible();
   await expect(detail(page, 'Bapak Bambang Purnomo').getByText('Today’s readings · 1')).toBeVisible();
   // an active member who is not in the club today: opened too
   await page.goto('/today?member=m46');
   await expect(page).toHaveURL(/\/today$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Opa Budi Wijaya' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Opa Budi' })).toBeVisible();
   await expect(detail(page, 'Opa Budi Wijaya').getByText('Not checked in today')).toBeVisible();
   // an id that is nobody: ignored, and the query is dropped
   await page.goto('/today?member=nobody');
@@ -668,13 +668,13 @@ test('deep link ?member=: anyone in the list is opened (checked in or not) and t
   const m = await page.context().newPage();
   await signIn(m, 's9', '/hchecks?member=m20');
   await expect(m).toHaveURL(/\/hchecks$/);
-  await expect(m.getByRole('heading', { level: 2, name: 'Opa Tjahjadi Lim' })).toBeVisible();
+  await expect(m.getByRole('heading', { level: 2, name: 'Opa Tjahjadi' })).toBeVisible();
 });
 
 test('opening someone waits for the PC-303; tapping a box stops it; blood pressure alone is enough to save', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's8', '/today?member=m46');
-  await expect(page.getByRole('heading', { level: 2, name: 'Opa Budi Wijaya' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Opa Budi' })).toBeVisible();
   await expect(group(page, 'bp').getByRole('button', { name: /Stop waiting/ })).toBeVisible();
   await typeValue(page, 'bp', 'sys', '126'); // typing stops the wait
   await expect(group(page, 'bp').getByRole('button', { name: 'Read PC-303' })).toBeVisible();
@@ -723,11 +723,11 @@ test('Own limits: the nurse gives a member their own limits on the profile; a re
   };
   await signIn(page, 's8', '/today?member=m2');
   // the seed's one example: Opa Hendra has his own upper-number limits, and the station says so
-  await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra Gunawan' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Opa Hendra' })).toBeVisible();
   await expect(page.getByTestId('own-limits')).toHaveText(/Own limits/);
 
   // Opa Tjahjadi follows the club: 128/78 is Normal
-  await typeBp('m20', 'Opa Tjahjadi Lim');
+  await typeBp('m20', 'Opa Tjahjadi');
   await expect(page.getByTestId('own-limits')).toHaveCount(0);
   await expect(bpBadge()).toHaveAttribute('data-status', 'normal');
 
@@ -761,7 +761,7 @@ test('Own limits: the nurse gives a member their own limits on the profile; a re
   expect(st.club.settings.limits?.sysHigh?.watch).not.toBe(125); // the club's own limits are left alone
 
   // the same reading is Watch for him now, and the station says why
-  await typeBp('m20', 'Opa Tjahjadi Lim');
+  await typeBp('m20', 'Opa Tjahjadi');
   await expect(page.getByTestId('own-limits')).toHaveText(/Own limits/);
   await expect(bpBadge()).toHaveAttribute('data-status', 'watch');
 
@@ -772,7 +772,7 @@ test('Own limits: the nurse gives a member their own limits on the profile; a re
   await expect(page.getByText('Opa Tjahjadi follows the club’s limits.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Use club limits' })).toHaveCount(0);
   expect((await stateOf(page, 's8')).members.m20.limits).toBeUndefined();
-  await typeBp('m20', 'Opa Tjahjadi Lim');
+  await typeBp('m20', 'Opa Tjahjadi');
   await expect(page.getByTestId('own-limits')).toHaveCount(0);
   await expect(bpBadge()).toHaveAttribute('data-status', 'normal');
   c.assertClean();
@@ -807,19 +807,19 @@ test('Readings: filters and search, the member’s six chart cards; phone: a ful
   await expect(filters.getByRole('button', { name: 'Alert · 1' })).toBeVisible();
   const rows = page.getByTestId('reading-row');
   await expect(rows).toHaveCount(5);
-  await expect(rows.nth(0)).toContainText('Opa Hendra Gunawan'); // worst first
+  await expect(rows.nth(0)).toContainText('Opa Hendra'); // worst first
   await expect(rows.nth(0).getByTestId('status-badge')).toHaveAttribute('data-status', 'alert');
-  await expect(rows.nth(1)).toContainText('Opa Tjahjadi Lim');
+  await expect(rows.nth(1)).toContainText('Opa Tjahjadi');
   await expect(rows.nth(0)).toContainText(/Last BP \d+\/\d+ · /);
   // filter Watch: only the people whose worst reading in the last 4 weeks is Watch
   await filters.getByRole('button', { name: 'Watch · 1' }).click();
   await expect(filters.getByRole('button', { name: 'Watch · 1' })).toHaveAttribute('aria-pressed', 'true');
   await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText('Opa Tjahjadi Lim');
+  await expect(rows.first()).toContainText('Opa Tjahjadi');
   await expect(rows.first().getByTestId('status-badge')).toHaveAttribute('data-status', 'watch');
   await filters.getByRole('button', { name: 'Alert · 1' }).click();
   await expect(rows).toHaveCount(1);
-  await expect(rows.first()).toContainText('Opa Hendra Gunawan');
+  await expect(rows.first()).toContainText('Opa Hendra');
   await filters.getByRole('button', { name: 'All · 5' }).click();
   await expect(rows).toHaveCount(5);
   // search by name or family name
@@ -847,7 +847,7 @@ test('Readings: filters and search, the member’s six chart cards; phone: a ful
   // Hendra's detail
   await readingRow(page, 'Opa Hendra').click();
   const view = isPhone(page) ? page.getByRole('dialog', { name: 'Opa Hendra Gunawan' }) : page.locator('#main');
-  await expect(view.getByRole('heading', { level: 2, name: 'Opa Hendra Gunawan' })).toBeVisible();
+  await expect(view.getByRole('heading', { level: 2, name: 'Opa Hendra' })).toBeVisible();
   await expect(view.getByText('84 · High blood pressure')).toBeVisible();
   await expect(view.locator('[data-chart]')).toHaveCount(6);
   // KC round 7: the readings open on the last week (1W); the checks below look at three months
@@ -944,7 +944,7 @@ test('Readings by day: pick any date to see that day’s readings for everyone, 
   await expect(fieldText(page, /^Day,/)).toContainText('Wed 21 Oct 2026');
   await expect(page.getByTestId('day-summary')).toContainText(`Readings: ${of(T).length} · People: ${people(T)}`);
   await expect(rows).toHaveCount(of(T).length);
-  await expect(rows.first()).toContainText('Bapak Bambang Purnomo');
+  await expect(rows.first()).toContainText('Bapak Bambang');
   await expect(rows.first()).toContainText('122/73');
   await expect(page.getByRole('button', { name: 'Next day' })).toHaveAttribute('aria-disabled', 'true'); // nothing after today
   await expect(page.getByRole('button', { name: 'Today', exact: true })).toHaveCount(0);
@@ -965,11 +965,11 @@ test('Readings by day: pick any date to see that day’s readings for everyone, 
   // a search narrows the day to one person, and goes back to page 1
   await page.getByLabel('Search members').fill('hendra');
   await expect(rows).toHaveCount(of(D).filter((r) => r.memberId === 'm2').length);
-  await expect(rows.first()).toContainText('Opa Hendra Gunawan');
+  await expect(rows.first()).toContainText('Opa Hendra');
   // a row opens that member with their record on that day
   await rows.first().click();
   const view = isPhone(page) ? page.getByRole('dialog', { name: 'Opa Hendra Gunawan' }) : page.locator('#main');
-  await expect(view.getByRole('heading', { level: 2, name: 'Opa Hendra Gunawan' })).toBeVisible();
+  await expect(view.getByRole('heading', { level: 2, name: 'Opa Hendra' })).toBeVisible();
   await expect(fieldText(page, /^Reading day,/)).toContainText(/Wed 23 Sept? 2026/);
   await expect(view.getByTestId('history').getByTestId('reading-card')).toHaveCount(of(D).filter((r) => r.memberId === 'm2').length);
   await assertNoHorizontalScroll(page);

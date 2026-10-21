@@ -6,7 +6,7 @@
 // Nobody is "expected" and nobody is recorded as bringing or collecting.
 // Isolated env: pnpm e2e:env lobby 8802 5202 && E2E_BASE_URL=http://localhost:5202 pnpm exec playwright test e2e/lobby.spec.ts
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
-import { resetDemo, signIn, watchConsole, isPhone, uiZoom, assertNoHorizontalScroll } from './helpers';
+import { resetDemo, signIn, watchConsole, isPhone, uiZoom, assertNoHorizontalScroll, confirmCheckIn, tapFace } from './helpers';
 
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
 
@@ -170,10 +170,10 @@ test('Simulate next arrival picks Oma Lina; her 11th visit is an extra day, said
   await expect(faceCard(page).getByText('Oma Lina Wijaya')).toBeVisible();
   await expect(faceCard(page).getByText('Flex · visit 11 of 10 this month')).toBeVisible();
   await expect(faceCard(page).getByText(EXTRA_NOTE)).toBeVisible();
-  await expect(faceCard(page).getByRole('radio')).toHaveCount(0); // nobody is recorded as bringing her
+  await expect(faceCard(page).getByRole('radio')).toHaveCount(5); // only the five mood faces: nobody is recorded as bringing her
   await expect(faceCard(page)).not.toContainText(/brought by|escort|nanny/i);
   await assertNoHorizontalScroll(page);
-  await page.getByRole('button', { name: 'Confirm check-in' }).click();
+  await confirmCheckIn(page);
   await expect(toast(page, /Oma Lina checked in at \d\d:\d\d\. Maria and Daniel got a message\. This is an extra day: Rp\s650\.000 on next month’s invoice\./)).toBeVisible();
   await expect(tile(page, 'inClub')).toHaveText('4');
   await expect(rowOf(page, 'Oma Lina Wijaya')).toHaveCount(0); // she left the check-in list…
@@ -195,7 +195,7 @@ test('management and finance are told about the extra day; the family only gets 
   await signIn(page, 's1');
   await page.getByRole('button', { name: 'Simulate next arrival' }).click();
   await expect(faceCard(page).getByText('98% match')).toBeVisible();
-  await page.getByRole('button', { name: 'Confirm check-in' }).click();
+  await confirmCheckIn(page);
   await expect(toast(page, /This is an extra day/)).toBeVisible();
   const notes = async (user: string) => {
     const state = (await (await request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': user } })).json()).state;
@@ -220,7 +220,10 @@ test('check in by name from the list: Opa Budi (Gold, unlimited) confirms in a d
   await expect(faceCard(page).getByRole('button', { name: 'Confirm check-in' })).toHaveCount(0); // a manual pick is not a face match
   await expect(page.getByText('Gold · unlimited days')).toBeVisible();
   await expect(page.getByText(/an extra day/)).toHaveCount(0);
-  await expect(page.getByRole('radio')).toHaveCount(0);
+  await expect(page.getByRole('radio')).toHaveCount(5); // the five mood faces, no escort pick
+  await expect(confirm).toBeDisabled(); // confirm waits for a face
+  await tapFace(page);
+  await expect(confirm).toBeEnabled();
   await confirm.click();
   await expect(toast(page, /Opa Budi checked in at \d\d:\d\d\. Maria and Daniel got a message\./)).toBeVisible();
   await expect(toast(page, /extra day/)).toHaveCount(0);
@@ -261,7 +264,7 @@ test('search the check-in list by name, family or phone, then check in; undo fro
   await list.getByRole('button', { name: /^Check in: Oma Lina Wijaya/ }).click();
   await expect(page.getByText('Flex · visit 11 of 10 this month')).toBeVisible();
   await expect(page.getByText(EXTRA_NOTE)).toBeVisible(); // said before it is confirmed
-  await page.getByRole('button', { name: 'Confirm check-in' }).click();
+  await confirmCheckIn(page);
   await expect(toast(page, /Oma Lina checked in at \d\d:\d\d\./)).toBeVisible();
   await expect(search).toHaveValue(''); // ready for the next person
   await expect(tile(page, 'inClub')).toHaveText('4');
@@ -350,7 +353,7 @@ test('face opt-out: once management records it, Simulate skips Oma Lina and she 
   const who = page.getByRole('dialog', { name: 'Who is this?' });
   await expect(who.getByRole('button', { name: /Opa Budi/ })).toHaveCount(0); // the wrong match is not offered
   await who.getByRole('button', { name: /Oma Lina/ }).click();
-  await page.getByRole('dialog', { name: 'Check in' }).getByRole('button', { name: 'Confirm check-in' }).click();
+  await confirmCheckIn(page);
   await expect(toast(page, /Oma Lina checked in at \d\d:\d\d\./)).toBeVisible();
   await expect(tile(page, 'inClub')).toHaveText('4');
 });
@@ -362,7 +365,7 @@ test('check out Opa Hendra: send to the health station, then one confirmation; u
   await rowOf(page, 'Opa Hendra Gunawan').click();
   const dialog = page.getByRole('dialog', { name: 'Check out · Opa Hendra' });
   await expect(dialog).toBeVisible();
-  await expect(dialog.getByRole('radio')).toHaveCount(0); // nobody is recorded as collecting him
+  await expect(dialog.getByRole('radio')).toHaveCount(5); // only the five mood faces: nobody is recorded as collecting him
   await expect(dialog.locator('a[href^="tel:"]')).toHaveCount(0);
   await expect(dialog).not.toContainText(/collecting|collected|driver|Cynthia/i);
   await expect(dialog.getByText('Departure blood pressure not taken yet.')).toBeVisible();
@@ -374,6 +377,8 @@ test('check out Opa Hendra: send to the health station, then one confirmation; u
   const snap = await request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's8' } });
   const state = (await snap.json()).state;
   expect(state.attendance['2026-10-21:m2'].departureAsked).toMatchObject({ by: 'staff:s1' });
+  await expect(dialog.getByRole('button', { name: 'Check out and tell family' })).toBeDisabled(); // waits for the departure face
+  await tapFace(dialog);
   await dialog.getByRole('button', { name: 'Check out and tell family' }).click();
   await expect(toast(page, /Opa Hendra checked out at \d\d:\d\d\. Family told\./)).toBeVisible();
   await expect(dialog).toHaveCount(0);
@@ -437,7 +442,7 @@ test('the drawer of a member who has not come in: usual arrival, the nanny as ca
   const drawer = page.getByRole('dialog', { name: 'Oma Lina Wijaya' });
   await expect(drawer.getByText('Flex · visit 11 of 10 this month')).toBeVisible();
   await expect(drawer.getByText('Not checked in today · Usually arrives around 10:05')).toBeVisible();
-  await expect(drawer.getByText('With Mbak Sari, her nanny')).toBeVisible();
+  await expect(drawer.getByText('With Mbak Sari, her carer')).toBeVisible();
   await expect(drawer.locator('a[href^="tel:"]')).toHaveCount(2); // Maria and Daniel (the nanny has no number on file)
   await expect(drawer.getByText('Mbak Sari', { exact: true })).toBeVisible(); // listed with the family as a contact
   await expect(drawer.getByRole('button', { name: 'Undo check-in' })).toHaveCount(0);

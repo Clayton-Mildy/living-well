@@ -916,7 +916,7 @@ test.describe('feedback', () => {
     await page.getByRole('button', { name: 'Log a call' }).click();
     const sheet = page.getByRole('dialog', { name: 'Log feedback' });
     await sheet.getByLabel('Who is it about?').fill('Hendra');
-    await sheet.getByRole('button', { name: /Opa Hendra Gunawan/ }).click();
+    await sheet.getByRole('button', { name: /Opa Hendra/ }).click();
     await sheet.getByRole('button', { name: 'Sop ikan kakap' }).click();
     await sheet.getByLabel('What did they say?').fill('Cynthia phoned: the fish soup was too hot for Papa.');
     await sheet.getByRole('button', { name: 'Log feedback' }).click();

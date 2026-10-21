@@ -6,7 +6,7 @@
 // Run in its own environment:  pnpm e2e:env members 8804 5204   then   E2E_BASE_URL=http://localhost:5204 pnpm exec playwright test e2e/members.spec.ts
 import { test, expect, type APIRequestContext, type Page } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, isPhone } from './helpers';
-import { TINY_PNG, goToPage, pickDate, pickOption, takePhotoWithFile } from './kit';
+import { TINY_PNG, goToPage, nextBtn, pickDate, pickOption, regNext, regTryNext, takePhotoWithFile } from './kit';
 
 /** A members filter with its count: chips on tablet and laptop, one dropdown on a phone (its options carry the counts). */
 async function expectFilter(page: Page, name: string) {
@@ -32,6 +32,12 @@ async function openFromList(page: Page, name: string) {
   await expect(page).toHaveURL(/\/members\/m\d+/);
 }
 const dialog = (page: Page) => page.getByRole('dialog').last();
+/** Oma Lina has a carer on file without a NIK; since round 10 the edit dialog asks for it before any change can be saved. */
+const carerNik = async (d: ReturnType<typeof dialog>) => {
+  const f = d.locator('input[name="nannyNik"]');
+  await expect(f).toBeVisible();
+  if (!(await f.inputValue())) await f.fill('3175010101010001');
+};
 /** No horizontal page scroll. Polled: until the icon font has loaded, icon names show as text for a moment and can widen a row; a real overflow still fails. */
 const noHScroll = (page: Page) =>
   expect.poll(() => page.evaluate(() => { const el = (document.querySelector('#main') || document.documentElement) as HTMLElement; return el.scrollWidth - el.clientWidth; }), { timeout: 5000 }).toBeLessThanOrEqual(1);
@@ -80,11 +86,13 @@ test('members list: compact rows (name, status, plan), search finds family names
   if (isPhone(page)) {
     await page.getByRole('combobox', { name: 'Filter members' }).click();
     await expect(page.getByRole('option', { name: 'Ended · 0' })).toBeVisible();
-    await expect(page.getByRole('option')).toHaveCount(6); // no "On leave" filter
+    await expect(page.getByRole('option', { name: 'Check on · 0' })).toBeVisible(); // round 12
+    await expect(page.getByRole('option')).toHaveCount(7); // no "On leave" filter
     await page.keyboard.press('Escape');
   } else {
     await expect(page.getByRole('button', { name: 'Ended · 0' })).toBeVisible();
-    await expect(page.getByRole('group', { name: 'Filter members' }).getByRole('button')).toHaveCount(6); // no "On leave" filter
+    await expect(page.getByRole('button', { name: 'Check on · 0' })).toBeVisible(); // round 12
+    await expect(page.getByRole('group', { name: 'Filter members' }).getByRole('button')).toHaveCount(7); // no "On leave" filter
   }
   // compact rows: avatar, name, status ("in the club" or the last visit) and the plan chip; the detail lives on the profile
   await expect(page.locator('[data-member="m1"]')).toContainText('Last visit Tue 20 Oct');
@@ -305,6 +313,7 @@ test('edit details: a pending-review chip shows the proposal, values stay; manag
   await signIn(page, 's1', '/members/m1');
   await page.getByRole('button', { name: 'Edit details' }).click();
   await expect(dialog(page)).toBeVisible();
+  await carerNik(dialog(page));
   await dialog(page).getByLabel('Home address').fill('Jl. Kemang Baru 99, Jakarta');
   await dialog(page).getByLabel('Note for management (optional)').fill('Family moved house');
   await dialog(page).getByRole('button', { name: 'Submit for review' }).click();
@@ -375,6 +384,7 @@ test('reviews: a conflict is flagged and can be approved anyway', async ({ page 
   const c = watchConsole(page);
   await signIn(page, 's1', '/members/m1');
   await page.getByRole('button', { name: 'Edit details' }).click();
+  await carerNik(dialog(page));
   await dialog(page).getByLabel('Home address').fill('Jl. Proposal 1');
   await dialog(page).getByRole('button', { name: 'Submit for review' }).click();
   await expect(page.getByRole('group', { name: 'Pending review' })).toBeVisible();
@@ -382,6 +392,7 @@ test('reviews: a conflict is flagged and can be approved anyway', async ({ page 
   await signIn(page, 's9', '/members/m1');
   await page.getByRole('button', { name: 'Edit details' }).click();
   await dialog(page).getByLabel('Home address').fill('Jl. Direct 2');
+  await carerNik(dialog(page));
   await dialog(page).getByRole('button', { name: 'Save changes' }).click();
   await expect(dialog(page)).toHaveCount(0);
   await page.goto('/reviews');
@@ -441,23 +452,36 @@ test('lobby adds a new member: pending approval; management approves; the new co
   // no usual days, no transport: the club is drop-in; the usual arrival is optional information
   await expect(d.getByRole('button', { name: 'Club driver' })).toHaveCount(0);
   await expect(d).not.toContainText(/Usual days|Who brings/);
-  await expect(d).toContainText('Usual arrival time (optional)');
-  await expect(d).toContainText('Flex includes 10 visits a month');
-  await d.getByRole('button', { name: 'Create member' }).click(); // empty form: validation messages
+  await expect(d).toContainText('Usual arrival time (optional)'); // on the Person step
+  await expect(nextBtn(d)).toHaveAttribute('aria-disabled', 'true'); // an empty Person step cannot move on
+  await regTryNext(d); // …but a tap says what is missing
   await expect(d).toContainText('Please enter the full name.');
-  await expect(d).toContainText('Attach the signed registration form.');
-  await expect(d).not.toContainText('usual arrival');
   await expect(d).toContainText('Please enter the date of birth.');
-  await expect(d).toContainText('Consent to the use of information is required.');
   await d.getByLabel('Full name, as on the KTP').fill('Siti Rahma');
   await pickDate(page, 'Date of birth', '1946-03-12');
+  await regNext(d);
+  // Family
   await d.getByRole('textbox', { name: /^Name/ }).fill('Rudi Rahma');
   await d.getByLabel('Mobile (WhatsApp)').fill('0813 4000 7777');
-  await d.getByRole('switch', { name: /Use of information/ }).click();
-  await d.getByRole('button', { name: 'Create member' }).click();
-  await expect(d).toContainText('Attach the signed registration form.'); // registration is on paper: the signed form is required
+  await regNext(d);
+  await regNext(d); // Health: nothing is required
+  // Plan: Flex or Gold is chosen, Next waits for it
+  await expect(nextBtn(d)).toHaveAttribute('aria-disabled', 'true');
+  await d.getByRole('radio', { name: /^Flex/ }).click();
+  await expect(d).toContainText('Flex includes 10 visits a month');
+  await regNext(d);
+  // Form: registration is on paper, so the signed form is required
+  await expect(nextBtn(d)).toHaveAttribute('aria-disabled', 'true');
+  await regTryNext(d);
+  await expect(d).toContainText('Attach the signed registration form.');
   await d.getByTestId('doc-file').setInputFiles({ name: 'registration-form.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(d).toContainText('Attached: registration-form.pdf');
+  await regNext(d);
+  // Review: the consent to use the information is required
+  await expect(d.getByRole('button', { name: 'Create member' })).toHaveAttribute('aria-disabled', 'true');
+  await d.getByRole('button', { name: 'Create member' }).click({ force: true });
+  await expect(d).toContainText('Consent to the use of information is required.');
+  await d.getByRole('switch', { name: /Use of information/ }).click();
   await d.getByRole('button', { name: 'Create member' }).click();
   await expect(page).toHaveURL(/\/members\/m47$/);
   await expect(page.getByRole('heading', { name: 'Oma Siti Rahma', level: 1 })).toBeVisible();
@@ -1162,6 +1186,7 @@ test('application form: add a member with the new answers, print the form to sig
   await signIn(page, 's9', '/members');
   await page.getByRole('button', { name: 'Add member' }).click();
   const d = dialog(page);
+  // Person
   await d.getByLabel('Full name, as on the KTP').fill('Siti Rahma');
   await pickDate(page, 'Date of birth', '1946-03-12');
   await d.getByLabel('Called', { exact: true }).fill('Oma Siti');
@@ -1171,21 +1196,28 @@ test('application form: add a member with the new answers, print the form to sig
   await d.getByLabel('City').fill('Jakarta Selatan');
   await d.getByLabel('Member’s mobile').fill('0812 5550 1234');
   await d.getByLabel('Home phone').fill('021 7199 2210');
+  // a bad email is caught before the member can move on
+  await d.getByLabel('Email').fill('not-an-email');
+  await regTryNext(d);
+  await expect(d).toContainText('That email address doesn’t look right.');
   await d.getByLabel('Email').fill('rudi.rahma@example.com');
+  await regNext(d);
+  // Family: the contact who signs, and the family member's ID received (the tick on the printed form)
+  await d.getByRole('textbox', { name: /^Name/ }).fill('Rudi Rahma');
+  await d.getByLabel('Mobile (WhatsApp)').fill('0813 4000 7777');
+  await d.getByRole('switch', { name: 'Family member’s KTP received' }).click();
+  await regNext(d);
+  // Health: the form's care questions and the dementia answer
   await askChip(d, 'Difficulty communicating?', 'Yes').click();
   await askChip(d, 'Can do activities and eat alone?', 'Yes').click();
   await askChip(d, 'Needs help in the bathroom?', 'No').click();
-  await d.getByLabel('Dementia notes (affect the monthly fee)').fill('Forgets names');
-  await d.getByRole('button', { name: 'Responsible family member', exact: true }).click();
-  await d.getByRole('button', { name: /^Gold/ }).click();
-  await d.getByRole('textbox', { name: /^Name/ }).fill('Rudi Rahma');
-  await d.getByLabel('Mobile (WhatsApp)').fill('0813 4000 7777');
-  // a bad email is caught before the member is created
-  await d.getByLabel('Email').fill('not-an-email');
-  await d.getByRole('button', { name: 'Create member' }).click();
-  await expect(d).toContainText('That email address doesn’t look right.');
-  await d.getByLabel('Email').fill('rudi.rahma@example.com');
-  // print the form to sign: the four brochure pages with the typed answers on their lines, before the member is saved
+  await askChip(d, 'Dementia (affects the monthly fee)?', 'Yes').click();
+  await d.getByLabel('Dementia notes (optional)').fill('Forgets names');
+  await regNext(d);
+  // Plan: Gold
+  await d.getByRole('radio', { name: /^Gold/ }).click();
+  await regNext(d);
+  // Form: print it to sign — the four brochure pages with the typed answers on their lines, before the member is saved
   await countPrints(page);
   await d.getByRole('button', { name: 'Print the form to sign' }).click();
   await expect(page.getByTestId('application-form')).toBeVisible();
@@ -1212,13 +1244,16 @@ test('application form: add a member with the new answers, print the form to sig
   await page.keyboard.press('Escape'); // closes the printed form only; the member form stays open with what was typed
   await expect(page.getByTestId('application-form')).toHaveCount(0);
   await expect(d).toBeVisible();
-  await expect(d.getByLabel('Called', { exact: true })).toHaveValue('Oma Siti');
   // the signed form is scanned and attached as before (still required)
-  await d.getByRole('switch', { name: /Use of information/ }).click();
-  await d.getByRole('button', { name: 'Create member' }).click();
+  await expect(nextBtn(d)).toHaveAttribute('aria-disabled', 'true');
+  await regTryNext(d);
   await expect(d).toContainText('Attach the signed registration form.');
   await d.getByTestId('doc-file').setInputFiles({ name: 'signed-form.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(d).toContainText('Attached: signed-form.pdf');
+  await regNext(d);
+  // Review: it all shows, then the consent and Create member
+  await expect(d.locator('[data-review-group="person"]')).toContainText('Oma Siti');
+  await d.getByRole('switch', { name: /Use of information/ }).click();
   await d.getByRole('button', { name: 'Create member' }).click();
   await expect(page).toHaveURL(/\/members\/m47$/);
   // the answers are on the profile's Overview; the signed scan is in Documents, next to the print button
@@ -1294,6 +1329,7 @@ test('application form: Edit details changes the answers; they show on Overview;
   await page.getByRole('button', { name: /Edit details/ }).first().click();
   const d = dialog(page);
   await expect(d.getByLabel('Called', { exact: true })).toHaveValue('Oma Lina');
+  await carerNik(d);
   await d.getByLabel('Called', { exact: true }).fill('Oma Lin');
   await d.getByRole('button', { name: 'Widowed', exact: true }).click();
   await d.getByLabel('Home phone').fill('021 5550 9988');
@@ -1302,7 +1338,9 @@ test('application form: Edit details changes the answers; they show on Overview;
   await expect(d).toContainText('A postcode has 5 digits.');
   await d.getByLabel('Postcode').fill('12731');
   await askChip(d, 'Difficulty communicating?', 'Yes').click();
-  await d.getByLabel('Dementia notes (affect the monthly fee)').fill('Repeats questions');
+  // the dementia note opens once the dementia answer is Yes (tapping Yes again would clear it)
+  if (!(await d.getByLabel('Dementia notes (optional)').count())) await askChip(d, 'Dementia (affects the monthly fee)?', 'Yes').click();
+  await d.getByLabel('Dementia notes (optional)').fill('Repeats questions');
   await d.getByRole('button', { name: 'Save changes' }).click();
   await expect(dialog(page)).toHaveCount(0);
   await expect(main(page)).toContainText('Oma Lin');

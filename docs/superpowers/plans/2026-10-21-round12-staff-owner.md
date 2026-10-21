@@ -617,11 +617,11 @@ export const occasionsThisWeek = (s: ClubState, today: ISODate) => occasionsInRa
 - Create: `e2e/round12.spec.ts`
 - Modify: `docs/superpowers/plans/2026-10-21-round12-staff-owner.md` (tick boxes, "Friction fixed" list)
 
-- [ ] **Step 1: Write `e2e/round12.spec.ts`** (phone project; `CP_SEED_SMALL=1` state): as `caca`: manual check-in of Opa Budi: confirm is disabled until a face is tapped, then succeeds; the Check on block is absent (the small seed has nobody quiet); book the venue; as `ega`: Month report renders four groups and Send to owner opens; as `maria`: Today timeline shows the arrival mood text. Keep it to one spec file, under ten assertions.
-- [ ] **Step 2: Run** `pnpm typecheck && pnpm test` → all PASS (paste the summary line into the commit).
-- [ ] **Step 3: Run** `scripts/e2e-all.sh 1 "phone" round12` → PASS. If the disk is still near full, run `pnpm test:e2e -g round12` against a single dev server instead and say so.
-- [ ] **Step 4: Browser demo pass** on the phone viewport through the README rows; screenshots of mood at the door, Check on, Month report for KC.
-- [ ] **Step 5: Commit** — `round 12: README demo script, e2e`.
+- [x] **Step 1: Write `e2e/round12.spec.ts`** (phone project; `CP_SEED_SMALL=1` state): as `caca`: manual check-in of Opa Budi: confirm is disabled until a face is tapped, then succeeds; the Check on block is absent (the small seed has nobody quiet); book the venue; as `ega`: Month report renders four groups and Send to owner opens; as `maria`: Today timeline shows the arrival mood text. Keep it to one spec file, under ten assertions.
+- [x] **Step 2: Run** `pnpm typecheck && pnpm test` → all PASS (paste the summary line into the commit).
+- [x] **Step 3: Run** `scripts/e2e-all.sh 1 "phone" round12` → PASS. If the disk is still near full, run `pnpm test:e2e -g round12` against a single dev server instead and say so.
+- [x] **Step 4: Browser demo pass** on the phone viewport through the README rows; screenshots of mood at the door, Check on, Month report for KC.
+- [x] **Step 5: Commit** — `round 12: README demo script, e2e`.
 
 ---
 

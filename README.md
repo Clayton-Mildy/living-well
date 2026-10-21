@@ -67,6 +67,13 @@ Open the **Demo** pill (bottom right) and run the guided steps in order.
 | 12:02 | Lunch photo | Kitchen posts lunch; Bambang's fish allergy has an alternative |
 | 13:15 | Daily log | "Ate half of lunch" feeds Maria's Today page |
 | 15:45 | Home time | Departure BP, check-out, family told |
+| 10:00 | Mood at the door | Check Opa Budi in by name: Confirm stays off until you tap a face (Great to Upset). Maria's Today then says how he arrived, and Home time asks for a face too |
+| 10:05 | Check on | Arrivals, "Check on" in the side list: Bapak Hendrik Wongso has not been in for 22 days. Tap him, call his daughter, pick "Unwell", Save: Ega gets a notice and the row leaves the list |
+| 10:30 | Front desk books the venue | Caca: More, Venue, New booking (room, day, time). It blocks the calendar; only Ega and finance can invoice it |
+| 11:00 | Celebration | Venue, Celebrations: Caca asks for Opa Tjahjadi's anniversary lunch (waiting); Ega confirms or declines it, and the family and the front desk are told |
+| Day +3 | Opa Budi's birthday | He turns 80 three open days after the demo date (Mon 26 Oct when the date is pinned to 21 Oct) and the seeded celebration (Garden room, 12 guests, chocolate cake without nuts) is that day. A cake icon shows beside his name on Arrivals, in the menu and on the calendar, and on Maria's Today |
+| 11:20 | A bad photo | Camera ▸ More ways ▸ Solo: **Retake** a blurry shot before **Use photo**. In Drafts, delete a bad one. After Send, the toast has **Undo** for 10 minutes: the photos go back to Drafts and the family notice is withdrawn |
+| Live | Month report | Ega: Month report (after Report). Money, Members, Care and mood, Pipeline and team, each against the month before. **Send to owner** shows a WhatsApp summary to copy or send. Insights has a Mood tab |
 | 17:10 | Maria's Today | The team's log and photos; "WhatsApp the club" opens the front desk |
 | 17:15 | Extra visit | Flex includes 10 visits a month; today's 11th visit shows on Maria's plan card |
 | 15 Nov | Invoice | Issued early with the extra day, paid by DOKU VA, synced to Xero (demo) |
@@ -122,6 +129,16 @@ KC's additions:
 - drop-in attendance, as described above;
 - a **notification centre** for every role;
 - a small seed, a real database, the brand logo, full Indonesian.
+
+Round 12 (KC, staff and owner):
+- the **nickname is the display name** ("Oma Lina", "Opa Budi"): lists, toasts and the family app use it, the full name stays on forms and invoices;
+- a **mood face** (Great to Upset) at four moments: check-in and check-out (required in the app), the health check and each activity round; it feeds Maria's Today, the Daily report and the Insights **Mood** tab;
+- **Check on**: members not seen for a while, with a call sheet for the family (outcome, note, "check again on"); "Unwell" and "In hospital" notify management;
+- the lobby has **Venue** (the front desk books, management and finance invoice) and **Celebrations** (the family asks through the front desk, management confirms);
+- **one stepped registration** for Join and Add member (Person, Family, Health, Plan, Form, Review), kept on the device until sent; "Use sample form" stands in for the scan when demo login is on;
+- **Month report** for management, with **Send to owner** (a WhatsApp-style summary);
+- **birthdays and anniversaries** this week on Arrivals, the calendar and the menu;
+- **Undo after sending photos**: ten minutes to pull a batch back into Drafts.
 
 The full list is in the approved plan; `docs/BUILD_GUIDE.md` describes the architecture.
 

@@ -30,6 +30,10 @@ const ENGLISH = new Set(
     .map(([, v]) => v.trim()),
 );
 
+// seeded content that is data, not interface text: the built-in venue survey template keeps its English title in Indonesian too
+// (round 12's month report added the same words as a dictionary string, which the check above would otherwise flag)
+const DATA_TITLES = new Set(['Venue rating']);
+
 /** Wait for lazy screens and skeletons to finish (the SSE stream keeps the network busy, so no networkidle). */
 const settled = (page: Page) => page.waitForFunction(() => !document.querySelector('[aria-busy="true"]'), null, { timeout: 8000 }).catch(() => {});
 async function screenTexts(page: Page) {
@@ -51,7 +55,7 @@ async function checkScreen(page: Page, lang: 'en' | 'id', where: string, problem
   await page.waitForTimeout(150);
   for (const s of await screenTexts(page)) {
     if (RAW.test(s)) problems.push(`${where}: raw key "${s.slice(0, 80)}"`);
-    else if (lang === 'id' && ENGLISH.has(s)) problems.push(`${where}: English on Indonesian screen "${s.slice(0, 80)}"`);
+    else if (lang === 'id' && ENGLISH.has(s) && !DATA_TITLES.has(s)) problems.push(`${where}: English on Indonesian screen "${s.slice(0, 80)}"`);
   }
   await assertNoHorizontalScroll(page);
 }

@@ -6,8 +6,9 @@
 //   await pickMonth(page, 'Month', '2026-11');           // MonthField
 //   await pickTime(page, 'From', '09:30');               // TimeField (hour, then minute, then Done)
 //   await goToPage(page, 2);                              // Pager: numbered button on tablet and laptop, Next on phone
+//   await regNext(dialog);                                // the six-step registration flow (Join, Add member): Next / a tap on the off Next / its button
 //   await takePhotoWithFile(page);                        // CameraCapture without a camera: the file-picker fallback, then "Use photo"
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 
 type Name = string | RegExp;
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -98,3 +99,10 @@ export async function takePhotoWithFile(page: Page, file: { name: string; mimeTy
   await cam.getByRole('button', { name: 'Use photo' }).click();
   await expect(cam).toBeHidden();
 }
+
+/** The Next button of the six-step registration flow (Person, Family, Health, Plan, Form, Review) inside its dialog / full screen. */
+export const nextBtn = (d: Locator) => d.getByRole('button', { name: /^(Next|Lanjut)/ });
+/** Go to the next step (Next must be on, so the step is complete). */
+export const regNext = (d: Locator) => nextBtn(d).click();
+/** A tap on the off Next button: it stays on the step and says what is missing. */
+export const regTryNext = (d: Locator) => nextBtn(d).click({ force: true });
