@@ -44,7 +44,7 @@ export function Arrivals() {
   const location = useLocation();
   const [params] = useSearchParams();
 
-  const [mode, setMode] = useState<Mode>('in');
+  const [mode, setMode] = useState<Mode>(() => { const m = params.get('mode'); return m === 'out' || m === 'gone' ? m : 'in'; }); // /today?mode=out|gone opens that tab (the Tasks rows)
   const [scan, setScan] = useState<Scan>({ state: 'idle' });
   const [busy, setBusy] = useState(false);
   const [face, setFace] = useState<Face | null>(null); // the arrival face chosen on the open confirm
@@ -55,6 +55,7 @@ export function Arrivals() {
   const [query, setQuery] = useState(''); // the check-in list's search
   const [outQuery, setOutQuery] = useState(''); // the search of the In the club and Gone home lists (shared: switching between the two keeps it)
   useEffect(() => { const c = params.get('checkOn'); if (c) setCallId(c); }, [params]);
+  useEffect(() => { const m = params.get('mode'); if (m === 'in' || m === 'out' || m === 'gone') setMode(m); }, [params]); // tapping another Tasks row while here
   const columnsRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<HTMLDivElement>(null);
   const { wide: twoColumns } = useAtLeast(columnsRef, TWO_COLUMNS);

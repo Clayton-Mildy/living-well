@@ -3,7 +3,7 @@ import { produce } from 'immer';
 import { buildSeed, execute, getUser, live, type ClubState, type DailyLog, type Photo } from '../index';
 import { actionItems } from '../notify';
 import { dayPlan, pictureSessions, roundProgress, type SessionItem } from './activity';
-import { guestsOn } from './attendance';
+import { guestsOn, lobbyGroups } from './attendance';
 import { renewalsLeft } from './renewals';
 import { approvalTotal } from './approvals';
 import { DUTIES, countsOn, customTasks, doneId, doneOf, dueDateOf, dutiesOf, dutyById, dutyDueBy, dutyReminders, dutyState, openTaskCount, periodOf, roleRange, roleSummary, spanOf, teamRange, teamSummary, templateShows } from './tasks';
@@ -188,6 +188,25 @@ describe('general duties: from the data, for any day', () => {
     expect(dutiesOf(buildSeed('2026-10-19').citra, 'lobby', '2026-10-19', '2026-10-19', NOW).some((d) => d.def.id === 'lobby.renewals')).toBe(false);
   });
 
+  it('front desk counts: the check-ins so far today, and the check-outs as m of n', () => {
+    const lobbyGroupsToday = lobbyGroups(base, T);
+    const n = lobbyGroupsToday.inClub.length + lobbyGroupsToday.goneHome.length;
+    expect(n).toBeGreaterThan(0);
+    const ci = dutiesOf(base, 'lobby', T, T, at('10:05')).find((d) => d.def.id === 'lobby.checkin')!;
+    expect(ci).toMatchObject({ status: 'done', total: 1, late: 0 }); // informational: ticked once anyone is in, so it never counts against the desk
+    expect(ci.parts[0]).toMatchObject({ done: true, count: { done: n, total: n }, link: '/today' });
+    expect(duty(base, 'lobby.checkin', T, at('07:30')).status).toBe('none'); // before opening
+    expect(duty(closeOn(base, T), 'lobby.checkin', T, at('10:05')).status).toBe('none'); // a closed day
+    expect(duty(base, 'lobby.checkin', '2026-10-18', at('10:05')).status).toBe('none'); // a Sunday
+    expect(duty(base, 'lobby.checkin', T, at('17:30')).late).toBe(0); // never late
+    expect(duty(base, 'lobby.checkout', T, at('10:05')).parts[0]).toMatchObject({ done: false, count: { done: 0, total: n }, link: '/today?mode=out' });
+    let s = base;
+    for (const id of ['m2', 'm10', 'm20']) s = run(s, 'attendance.checkOut', { memberId: id }, 's1', at('15:40'));
+    expect(duty(s, 'lobby.checkout', T, at('17:00'))).toMatchObject({ status: 'done' });
+    expect(duty(s, 'lobby.checkout', T, at('17:00')).parts[0].count).toEqual({ done: n, total: n });
+    expect(duty(base, 'lobby.checkin', '2026-10-20', at('07:30')).status).toBe('done'); // a past day ignores the clock
+  });
+
   it('finance and management: waiting work is counted for today only; the invoice run follows the issue day', () => {
     expect(duty(base, 'finance.overdue').parts[0].count!.total).toBe(1);
     expect(duty(base, 'mgmt.approvals').parts[0]).toMatchObject({ done: approvalTotal(base) === 0, link: '/reviews' });
@@ -267,7 +286,7 @@ describe('a role’s day, a week and a month', () => {
   it('the day: duty score and additional tasks apart; the badge counts late duties and tasks due', () => {
     const lobby = roleSummary(base, 'lobby', T, T, NOW);
     expect(lobby.people.map((p) => p.id)).toEqual(['s1']);
-    expect(lobby).toMatchObject({ role: 'lobby', done: 0, customDone: 1, customTotal: 2 }); // the desk is ticked; the lobby photo is open
+    expect(lobby).toMatchObject({ role: 'lobby', done: 1, customDone: 1, customTotal: 2 }); // the desk is ticked; the lobby photo is open
     expect(lobby.total).toBe(lobby.duties.reduce((n, d) => n + d.parts.length, 0));
     expect(lobby.late).toBeGreaterThan(0); // the trial day from opening, the renewals from 09:00
     expect(openTaskCount(base, 'lobby', T, NOW)).toBe(lobby.late + 1);

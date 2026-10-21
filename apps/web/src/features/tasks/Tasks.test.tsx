@@ -52,7 +52,7 @@ describe('Tasks: my day', () => {
   it('shows today’s duties first (late ones with a rust dot and their time), then the additional tasks with who ticked what', async () => {
     openClub('s1', 'lobby');
     await show(<Tasks />);
-    expect(document.querySelector('[role="status"]')?.textContent).toMatch(/^0 of 4 done/); // the duty score: the check-out, two guests, the renewals
+    expect(document.querySelector('[role="status"]')?.textContent).toMatch(/^1 of 5 done/); // the duty score: the check-ins (ticked once anyone is in), the check-out, two guests, the renewals
     const heads = Array.from(document.querySelectorAll('h2')).map((h) => h.textContent);
     expect(heads).toEqual(['Today’s duties', 'Additional tasks']); // duties first
     const renewals = document.querySelector('[data-duty="lobby.renewals"]')!;
@@ -60,7 +60,8 @@ describe('Tasks: my day', () => {
     expect(renewals.textContent).toContain('Late · By 09:00'); // 09:58 now
     expect(renewals.hasAttribute('data-late')).toBe(true);
     expect(renewals.querySelector('[data-late]')).toBeTruthy(); // the rust dot
-    expect(document.querySelector('[data-duty="lobby.checkout"]')?.textContent).toContain('By 16:30'); // waiting for its time: no dot
+    expect(document.querySelector('[data-duty="lobby.checkout"]')?.textContent).toContain('0 of 3 · By 16:30'); // waiting for its time: no dot
+    expect(document.querySelector('[data-duty="lobby.checkin"]')?.textContent).toContain('Check-ins3'); // the count of check-ins so far, no deadline
     expect(document.querySelector('[data-duty="lobby.checkout"]')?.hasAttribute('data-late')).toBe(false);
     expect(document.querySelectorAll('[data-duty="lobby.guests"]').length).toBeGreaterThan(0); // one row per guest
     expect(document.querySelector('[data-task="task-lobby-desk"][data-done]')?.textContent).toContain('Caca · 08:22');

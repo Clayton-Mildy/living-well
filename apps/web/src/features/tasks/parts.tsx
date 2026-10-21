@@ -169,7 +169,11 @@ export function DutyRow({ s, def, part, date, today, nowMin, first, link = true 
   const open = !part.done;
   const late = partLate(part, date, today, nowMin);
   const left = part.count ? part.count.total - part.count.done : 0;
-  const meta = part.done
+  // the front desk's counting rows: "3" check-ins so far, "1 of 3" checked out (a count, not a deadline); always a way into the lobby screen
+  const counting = (def.id === 'lobby.checkin' || def.id === 'lobby.checkout') && !!part.count;
+  const meta = counting
+    ? (def.id === 'lobby.checkin' ? String(part.count!.total) : [t('tasks.part.countOf', part.count!), ...(part.done ? [] : [late ? t('tasks.late') : '', t('tasks.by', { t: part.due })])].filter(Boolean).join(' · '))
+    : part.done
     ? (part.by && part.at ? t('tasks.doneBy', { name: whoIs(s, part.by), t: part.at }) : part.at ? t('tasks.doneAtOnly', { t: part.at }) : '')
     : [late ? t('tasks.late') : '', t('tasks.by', { t: part.due })].filter(Boolean).join(' · ');
   const body = (
@@ -188,13 +192,13 @@ export function DutyRow({ s, def, part, date, today, nowMin, first, link = true 
           </span>
         ) : null}
       </span>
-      {open && left > 0 ? <span aria-label={t('tasks.left', { n: left })} className="cp-fill" style={{ flex: 'none', minWidth: 24, height: 24, padding: '0 8px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: '#4A4038', fontSize: FONT_SMALL, fontWeight: 600, fontVariantNumeric: 'tabular-nums', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{left}</span> : null}
-      {link && open ? <Icon name="chevron_right" size={22} color="#A89C8E" /> : null}
+      {open && left > 0 && !counting ? <span aria-label={t('tasks.left', { n: left })} className="cp-fill" style={{ flex: 'none', minWidth: 24, height: 24, padding: '0 8px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: '#4A4038', fontSize: FONT_SMALL, fontWeight: 600, fontVariantNumeric: 'tabular-nums', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{left}</span> : null}
+      {link && (open || counting) ? <Icon name="chevron_right" size={22} color="#A89C8E" /> : null}
     </>
   );
   const style: CSSProperties = { width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '4px 16px 4px 6px', minHeight: 56, border: 'none', color: '#24201C', fontFamily: 'Inter', ...hairline(first) };
   const data = { 'data-duty': def.id, 'data-part': part.key, 'data-done': part.done || undefined, 'data-late': (open && late) || undefined };
-  return link && open
+  return link && (open || counting)
     ? <button type="button" className="cp-bleed cp-tap-self" {...data} onClick={() => navigate(part.link)} style={{ ...style, cursor: 'pointer' }}>{body}</button>
     : <div className="cp-bleed" {...data} style={style}>{body}</div>;
 }

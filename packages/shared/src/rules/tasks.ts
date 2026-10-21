@@ -260,11 +260,19 @@ export const DUTIES: DutyDef[] = [
 
   // ----- front desk -----
   {
+    // informational: today's check-ins so far. Done as soon as anyone is in, so it never turns late; its row shows the count. Hidden before opening.
+    id: 'lobby.checkin', role: 'lobby', icon: 'how_to_reg', titleKey: 'tasks.duty.lobby.checkin', every: 'day', defaultDue: (s) => s.club.settings.close,
+    parts: (s, date, nowMin) => {
+      const n = nowMin < toMin(s.club.settings.open) ? 0 : attendedRows(s, date).length;
+      return n ? [stub('checkin', { done: true, count: { done: n, total: n }, link: linkTo('lobby', 'arrivals') })] : [];
+    },
+  },
+  {
     id: 'lobby.checkout', role: 'lobby', icon: 'logout', titleKey: 'tasks.duty.lobby.checkout', every: 'day', defaultDue: (s) => s.club.settings.close, bellKind: 'tasks.notif.act.checkout',
     parts: (s, date) => {
       const rows = attendedRows(s, date);
       const done = rows.filter(({ a }) => !!a.checkOut).length;
-      return rows.length ? [stub('checkout', { done: done >= rows.length, count: { done, total: rows.length }, link: linkTo('lobby', 'arrivals') })] : [];
+      return rows.length ? [stub('checkout', { done: done >= rows.length, count: { done, total: rows.length }, link: linkTo('lobby', 'arrivals', '?mode=out') })] : [];
     },
   },
   {
@@ -362,7 +370,7 @@ export function dutyState(s: ClubState, def: DutyDef, date: ISODate, today: ISOD
   if (!dutyIsOn(s, def.id) || date > today || !isOpen(s, date)) return none('none');
   if (def.todayOnly && date !== today) return none('past');
   const cfg = dutyCfg(s, def.id);
-  const parts: DutyPart[] = def.parts(s, date, nowMin).map((p) => ({ ...p, titleKey: def.partKey ?? def.titleKey, due: cfg.dueBy ?? p.due ?? def.defaultDue?.(s) ?? '16:30' }));
+  const parts: DutyPart[] = def.parts(s, date, date < today ? 24 * 60 : nowMin).map((p) => ({ ...p, titleKey: def.partKey ?? def.titleKey, due: cfg.dueBy ?? p.due ?? def.defaultDue?.(s) ?? '16:30' }));
   if (!parts.length) return none('none');
   const done = parts.filter((p) => p.done).length;
   const late = parts.filter((p) => partLate(p, date, today, nowMin)).length;
