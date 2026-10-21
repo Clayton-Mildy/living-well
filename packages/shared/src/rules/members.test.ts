@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { buildSeed, type Attendance, type ClubState, type Invoice, type Member, type Photo } from '../index';
 import { addMonths } from '../util';
 import {
-  DOC_TYPES, billedExtraDates, docIdFor, endingOn, faceConsent, faceReady, finalInvoiceFor, finalInvoiceLines, firstOfNextMonth, formatVa, genderOf, isHM, isISO, isPhone, isNewMember, lastContactId, lastLinkId, lastMemberId,
+  DOC_TYPES, billedExtraDates, findDuplicates, docIdFor, endingOn, faceConsent, faceReady, finalInvoiceFor, finalInvoiceLines, firstOfNextMonth, formatVa, genderOf, isHM, isISO, isPhone, isNewMember, lastContactId, lastLinkId, lastMemberId,
   matchesQuery, memberStatus, nextContactId, nextLinkId, nextMemberId, nextMonday, openBalance, plainName, splitName, tabForSection, unbilledExtraMonths, validateNewMember,
   documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows,
 } from './members';
@@ -323,5 +323,18 @@ describe('nickname search', () => {
     const s = buildSeed(undefined, undefined, { roster: true }).citra;
     const nio = Object.values(s.members).find((m) => m.registration?.nickname === 'Nio')!;
     expect(matchesQuery(s, nio, 'nio')).toBe(true);
+  });
+});
+
+describe('findDuplicates (round 12 registration)', () => {
+  it('finds members by a family phone or the NIK, and open leads by phone, ignoring formatting', () => {
+    const s = seed();
+    expect(findDuplicates(s, { phone: '0812 1090 4471' }).members.map((m) => m.id)).toEqual(expect.arrayContaining(['m1', 'm46'])); // Maria's phone, on both parents
+    expect(findDuplicates(s, { phone: '+62 811-9034-2215' }).leads.map((e) => e.id)).toEqual(['e3']);
+    s.members.m2.registration = { ...s.members.m2.registration, nik: '3174012345678901' };
+    expect(findDuplicates(s, { nik: '3174 0123 4567 8901' }).members.map((m) => m.id)).toEqual(['m2']);
+    expect(findDuplicates(s, { phone: '', nik: '' })).toEqual({ members: [], leads: [] });
+    expect(findDuplicates(s, { phone: '0812' })).toEqual({ members: [], leads: [] }); // too short to compare
+    expect(findDuplicates(s, { phone: '+62 812-8831-2201' }).leads).toEqual([]); // e9 is lost: not an open lead
   });
 });

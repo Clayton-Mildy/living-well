@@ -26,6 +26,7 @@ import { report } from './report';
 import { drafts } from './drafts';
 import { mood } from './mood';
 import { checkOn } from './checkOn';
+import { reg } from './reg';
 import { celeb } from './celeb';
 import { fam } from './fam';
 import { ftoday } from './ftoday';
@@ -72,6 +73,7 @@ export const en = {
   ...ns('drafts', drafts),
   ...ns('mood', mood),
   ...ns('checkOn', checkOn),
+  ...ns('reg', reg),
   ...ns('celeb', celeb),
   ...ns('fam', fam),
   ...ns('ftoday', ftoday),
@@ -80,4 +82,4 @@ export const en = {
   ...ns('fhealth', fhealth),
   ...ns('fme', fme),
 };
-export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, celeb, fam, ftoday, fphotos, fcal, fhealth, fme };
+export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, reg, celeb, fam, ftoday, fphotos, fcal, fhealth, fme };

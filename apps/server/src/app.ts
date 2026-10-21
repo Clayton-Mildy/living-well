@@ -107,7 +107,8 @@ app.get('/api/media/:id', async (c) => {
 // demo tools
 app.get('/api/demo/accounts', (c) => {
   const s = getClub('citra');
-  if (!s) return c.json({ accounts: [] });
+  const demoLogin = process.env.CP_DEMO_LOGIN !== '0'; // KC round 12: the web shows demo-only helpers (the sample registration form)
+  if (!s) return c.json({ accounts: [], demoLogin });
   const order = ['s1', 's8', 'f1', 'f2', 's5', 's6', 's3', 's2', 's10', 's9'];
   const accounts = order.map((id) => {
     const st = s.staff[id];
@@ -119,7 +120,7 @@ app.get('/api/demo/accounts', (c) => {
     const both = links.length > 1 ? ' & ' + links.slice(1).map((l) => s.members[l.memberId]?.title + ' ' + s.members[l.memberId]?.firstName).join(', ') : '';
     return { id, name: f.name, kind: 'family', roleKey: 'family', member: m ? `${m.title} ${m.firstName}${both}` : '', billing: links.some((l) => l.primary) };
   }).filter(Boolean);
-  return c.json({ accounts });
+  return c.json({ accounts, demoLogin });
 });
 app.post('/api/demo/reset', async (c) => { await resetDemo(); return c.json({ ok: true, clock: clockInfo() }); });
 app.post('/api/demo/clock', async (c) => {
