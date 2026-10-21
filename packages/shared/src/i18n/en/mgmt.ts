@@ -143,6 +143,6 @@ export const mgmt = {
   'feed.surveyLive': 'Survey live · {title}', 'feed.surveyReopened': 'Survey reopened · {title}', 'feed.venueRated': 'Venue rated · {org} · {stars}/5',
   'notif.venueBookedBy': '{who} booked {org} for {date}.',
   'notif.venueRated': '{org} rated their event {stars}/5 through the rating link.',
-  tileCheckOn: 'Check on',
+  tileCheckOn: "Haven't come lately",
   tileMood: 'Mood today',
 };

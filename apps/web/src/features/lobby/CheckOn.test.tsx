@@ -45,7 +45,7 @@ describe('Check on in the Arrivals rail', () => {
     open(true);
     await show();
     const text = host!.textContent ?? '';
-    expect(text).toContain('Check on (1)');
+    expect(text).toContain("Haven't come lately (1)");
     const row = host!.querySelector('[data-check-on="m1"]') as HTMLButtonElement;
     expect(row.textContent).toContain('Lina');
     expect(row.textContent).toContain('12 days');
@@ -61,6 +61,6 @@ describe('Check on in the Arrivals rail', () => {
   it('shows no block when nobody is quiet', async () => {
     open(false);
     await show();
-    expect(host!.textContent).not.toContain('Check on');
+    expect(host!.textContent).not.toContain("Haven't come lately");
   });
 });

@@ -145,6 +145,6 @@ export const mgmt: Same<typeof EN> = {
   'feed.surveyLive': 'Survei aktif · {title}', 'feed.surveyReopened': 'Survei dibuka lagi · {title}', 'feed.venueRated': 'Venue dinilai · {org} · {stars}/5',
   'notif.venueBookedBy': '{who} memesan {org} untuk {date}.',
   'notif.venueRated': '{org} menilai acaranya {stars}/5 lewat tautan penilaian.',
-  tileCheckOn: 'Perlu dihubungi',
+  tileCheckOn: 'Lama tidak datang',
   tileMood: 'Suasana hati hari ini',
 };

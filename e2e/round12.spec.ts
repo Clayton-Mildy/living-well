@@ -12,7 +12,7 @@ test('front desk: Opa Budi’s check-in waits for a face; nobody is quiet; the v
   await signIn(page, 's1'); // Caca
   // nobody has been away long enough to need a call in the small seed
   await expect(page.locator('[data-check-on]')).toHaveCount(0);
-  await expect(page.getByText(/^Check on \(/)).toHaveCount(0);
+  await expect(page.getByText(/^Haven't come lately \(/)).toHaveCount(0);
   // manual check-in: five faces, Confirm stays off until one is tapped
   await page.getByRole('button', { name: /^Check in: Opa Budi Wijaya/ }).click();
   const confirm = page.getByRole('button', { name: 'Confirm check-in' });

@@ -81,17 +81,17 @@ test('members list: compact rows (name, status, plan), search finds family names
   await expect(page.locator('[data-member]')).toHaveCount(5);
   await expectFilter(page, 'Active · 5');
   await expectFilter(page, 'In the club · 3');
-  await expectFilter(page, 'Needs attention · 2');
+  await expectFilter(page, 'Health attention · 2');
   await expectFilter(page, 'Gold · 3');
   if (isPhone(page)) {
     await page.getByRole('combobox', { name: 'Filter members' }).click();
     await expect(page.getByRole('option', { name: 'Ended · 0' })).toBeVisible();
-    await expect(page.getByRole('option', { name: 'Check on · 0' })).toBeVisible(); // round 12
+    await expect(page.getByRole('option', { name: "Haven't come lately · 0" })).toBeVisible(); // round 12
     await expect(page.getByRole('option')).toHaveCount(7); // no "On leave" filter
     await page.keyboard.press('Escape');
   } else {
     await expect(page.getByRole('button', { name: 'Ended · 0' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Check on · 0' })).toBeVisible(); // round 12
+    await expect(page.getByRole('button', { name: "Haven't come lately · 0" })).toBeVisible(); // round 12
     await expect(page.getByRole('group', { name: 'Filter members' }).getByRole('button')).toHaveCount(7); // no "On leave" filter
   }
   // compact rows: avatar, name, status ("in the club" or the last visit) and the plan chip; the detail lives on the profile
@@ -122,11 +122,11 @@ test('members list: compact rows (name, status, plan), search finds family names
   await expect(page.getByText('No members match')).toBeVisible();
   await page.getByLabel('Search members').fill('');
   if (isPhone(page)) {
-    await pickOption(page, 'Filter members', /^Needs attention/);
+    await pickOption(page, 'Filter members', /^Health attention/);
     await expect(page.locator('[data-member]')).toHaveCount(2);
     await pickOption(page, 'Filter members', /^Active/);
   } else {
-    await page.getByRole('group', { name: 'Filter members' }).getByRole('button', { name: /Needs attention/ }).click();
+    await page.getByRole('group', { name: 'Filter members' }).getByRole('button', { name: /Health attention/ }).click();
     await expect(page.locator('[data-member]')).toHaveCount(2);
     await page.getByRole('button', { name: /^Active/ }).click();
   }
