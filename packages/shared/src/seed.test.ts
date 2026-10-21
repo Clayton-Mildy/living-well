@@ -64,4 +64,8 @@ describe('seed', () => {
     const flagged = new Set(live(s.readings).filter((r) => r.status !== 'normal').map((r) => r.memberId));
     expect([...flagged].sort()).toEqual(['m2', 'm20']);
   });
+  it('round 12 collections exist and start empty in Adina', () => {
+    const { citra, adina } = buildSeed();
+    for (const k of ['moodMarks', 'careCalls', 'celebrations'] as const) { expect(citra[k]).toBeTypeOf('object'); expect(adina[k]).toEqual({}); }
+  });
 });

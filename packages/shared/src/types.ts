@@ -267,6 +267,9 @@ export interface MemberNote extends Row {
   approval?: Approval;
 }
 
+export type CareCallOutcome = 'fine' | 'unwell' | 'hospital' | 'travelling' | 'wantsPause' | 'noAnswer' | 'other';
+export interface CareCall extends Row { memberId: string; date: ISODate; at: DT; by: Actor; contactName: string; phone: string; outcome: CareCallOutcome; note?: string; checkAgainOn?: ISODate }
+
 export interface PlanChangeRequest extends Row {
   memberId: string;
   to: Plan;
@@ -322,6 +325,10 @@ export interface Attendance extends Row {
   dismissed: (Stamp & { kind: QueueKind; reason: string })[];
   edits: AttendanceEdit[];
 }
+
+export type MoodMoment = 'arrival' | 'health' | 'activity' | 'departure';
+export type Face = 1 | 2 | 3 | 4 | 5;
+export interface MoodMark extends Row { memberId: string; date: ISODate; time: HM; moment: MoodMoment; face: Face; slot?: Slot; readingId?: string; by: Actor }
 
 export interface GuestVisit extends Row {
   enquiryId: string;
@@ -545,6 +552,10 @@ export interface VenueBooking extends Row {
   ratingToken?: string;
   surveyId?: string;
 }
+
+export type CelebrationKind = 'birthday' | 'anniversary' | 'other';
+export type CelebrationStatus = 'requested' | 'confirmed' | 'declined' | 'cancelled';
+export interface Celebration extends Row { memberId: string; kind: CelebrationKind; title: string; date: ISODate; from: HM; to: HM; roomId: string; guests: number; cateringNote?: string; status: CelebrationStatus; requestedBy: Actor; decidedBy?: Actor; decidedAt?: DT; declineReason?: string }
 
 export interface Room extends Row {
   name: string;
@@ -1109,6 +1120,10 @@ export interface ClubState {
   surveyTemplates: Record<string, SurveyTemplate>;
   taskTemplates: Record<string, TaskTemplate>;
   taskDone: Record<string, TaskDone>;
+  // round 12
+  moodMarks: Record<string, MoodMark>;
+  careCalls: Record<string, CareCall>;
+  celebrations: Record<string, Celebration>;
 }
 
 /** Collections stored as one Postgres table each (everything except clubId/rev/club). */
@@ -1120,6 +1135,7 @@ export const COLLECTIONS = [
   'invoices', 'payments', 'refunds', 'pendingCharges', 'invoiceRuns', 'directory', 'staff', 'hrNotes', 'staffTime',
   'surveys', 'surveyResponses', 'broadcasts', 'changeRequests', 'notifications', 'activity',
   'followUps', 'scheduleDays', 'guestHosts', 'guestSessions', 'surveyTemplates', 'taskTemplates', 'taskDone',
+  'moodMarks', 'careCalls', 'celebrations',
 ] as const;
 export type CollectionName = (typeof COLLECTIONS)[number];
 

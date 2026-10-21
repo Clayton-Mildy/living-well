@@ -35,7 +35,9 @@ export const prices = tables.prices, members = tables.members, memberNotes = tab
   surveys = tables.surveys, surveyResponses = tables.surveyResponses, broadcasts = tables.broadcasts, changeRequests = tables.changeRequests, notifications = tables.notifications, activity = tables.activity,
   // KC round 7
   followUps = tables.followUps, scheduleDays = tables.scheduleDays, guestHosts = tables.guestHosts, guestSessions = tables.guestSessions, surveyTemplates = tables.surveyTemplates,
-  taskTemplates = tables.taskTemplates, taskDone = tables.taskDone;
+  taskTemplates = tables.taskTemplates, taskDone = tables.taskDone,
+  // round 12
+  moodMarks = tables.moodMarks, careCalls = tables.careCalls, celebrations = tables.celebrations;
 
 export const clubs = pgTable('clubs', {
   id: text('id').primaryKey(),
