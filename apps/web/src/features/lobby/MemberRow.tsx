@@ -2,7 +2,8 @@
 // A 46px avatar, the name, one sub line and ONE pill button. The sub line carries the time ("Est 10:05" / "Arrived 09:48" / "Arrived 09:40 · left 11:30"),
 // the departure-check status as a dot item (in the club) and, only when there is one, the member's allergy as a rust dot item.
 // Every other tag (walking stick, diet, diabetes, lunch medicines…) lives in the member drawer, one tap away.
-import { memberName, onLeaveOn, suspensionOf, todayReading, type BoardRow } from '@cp/shared';
+import { dayArc, memberName, onLeaveOn, suspensionOf, todayReading, type BoardRow } from '@cp/shared';
+import { Icon, FACE_ICON } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useFmt, useT } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -30,6 +31,7 @@ export function MemberRow({ r, first, selected, onOpen, onCheckIn, onCheckOut, o
   const kind = state === 'in' ? (arr ? arr.status : 'pending') : null;
   const stFg = kind ? ST_FG[kind] ?? '#8A6216' : '';
   const allergy = allergyLine(t, m);
+  const arrivalFace = dayArc(s, m.id, today).arrival; // the face taken at the door
   // KC round 6 (the brochure's terms): an unpaid invoice past the 1st puts the membership on hold; a month of leave is not a visiting month. Either way the check-in is refused with the reason.
   const hold = suspensionOf(s, m.id, today);
   const onLeave = state === 'notIn' && onLeaveOn(m, today);
@@ -51,6 +53,7 @@ export function MemberRow({ r, first, selected, onOpen, onCheckIn, onCheckOut, o
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: isPhone ? 16 : 17, fontWeight: 500, lineHeight: 1.3 }}>{name}</span>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: '2px 10px', flexWrap: 'wrap' }}>
+            {arrivalFace ? <span title={t('mood.face.' + arrivalFace)} style={{ display: 'inline-flex', alignItems: 'center', color: '#24201C' }}><Icon name={FACE_ICON[arrivalFace]} size={16} fill={1} /></span> : null}
             {sub ? <span>{sub}</span> : null}
             {kind ? <DotItem color={stFg}>{t('status.' + kind)}</DotItem> : null}
             {hold ? <DotItem color="#9A3D24">{t('status.suspended')}</DotItem> : null}

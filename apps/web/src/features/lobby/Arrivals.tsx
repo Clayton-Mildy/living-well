@@ -5,7 +5,7 @@
 // confirmed and in the toast. When the rail drops below the list (narrow screens) a manual check-in is confirmed in a bottom sheet instead.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { dayStatus, famNames, lobbyGroups, memberShort, nextOpenDay, priceOn, rp, toMin, type GuestVisit } from '@cp/shared';
+import { dayStatus, famNames, type Face, lobbyGroups, memberShort, nextOpenDay, priceOn, rp, toMin, type GuestVisit } from '@cp/shared';
 import { checkoutCandidates, faceRecognisable, goneHomeRows, manualCandidates, nextFaceArrival, visitInfo } from '@cp/shared/rules/lobby';
 import { Dialog, EmptyState, Eyebrow, Note, Sheet } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -46,6 +46,7 @@ export function Arrivals() {
   const [mode, setMode] = useState<Mode>('in');
   const [scan, setScan] = useState<Scan>({ state: 'idle' });
   const [busy, setBusy] = useState(false);
+  const [face, setFace] = useState<Face | null>(null); // the arrival face chosen on the open confirm
   const [whoFor, setWhoFor] = useState<string | null>(null); // "Not this person" on a face match: pick who it really is
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [coId, setCoId] = useState<string | null>(null);
@@ -60,8 +61,8 @@ export function Arrivals() {
   const scanMember = scan.state !== 'idle' ? s.members[scan.id] : undefined;
 
   // Timers read the latest state through a ref so a late callback never acts on stale data.
-  const latest = useRef({ s, groups, scan, today });
-  latest.current = { s, groups, scan, today };
+  const latest = useRef({ s, groups, scan, today, face });
+  latest.current = { s, groups, scan, today, face };
   const scanTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
   useEffect(() => () => clearTimeout(scanTimer.current), []);
 
@@ -82,18 +83,18 @@ export function Arrivals() {
   }, [act, t]);
 
   /** Check a member in. The toast carries Undo, and says when the visit is an extra day. */
-  const doCheckIn = async (memberId: string, method: 'face' | 'manual'): Promise<boolean> => {
+  const doCheckIn = async (memberId: string, method: 'face' | 'manual', face: Face): Promise<boolean> => {
     const cur = latest.current;
-    const r = await act('attendance.checkIn', { memberId, method }, { silent: true });
+    const r = await act('attendance.checkIn', { memberId, method, face }, { silent: true });
     if (!r.ok) return false;
     let text = checkedInText(memberId, String(r.result.time || ''));
     if (r.result.extra) text += ' ' + t('lobby.extraToast', { p: price(priceOn(cur.s, cur.today).extra) });
     say(text, { action: { label: t('common.undo'), run: () => void undoIn(memberId) } });
     return true;
   };
-  const doCheckOut = async (memberId: string): Promise<boolean> => {
+  const doCheckOut = async (memberId: string, face: Face): Promise<boolean> => {
     const m = latest.current.s.members[memberId];
-    const r = await act('attendance.checkOut', { memberId }, { silent: true });
+    const r = await act('attendance.checkOut', { memberId, face }, { silent: true });
     if (!r.ok) return false;
     setOutQuery(''); // ready for the next person
     say(t('lobby.tCheckedOut', { n: memberShort(m), t: String(r.result.time || '') }), { action: { label: t('common.undo'), run: () => void undoOut(memberId) } });
@@ -124,9 +125,9 @@ export function Arrivals() {
   const rejectScan = () => { clearTimeout(scanTimer.current); setScan({ state: 'idle' }); };
   const confirmScan = async () => {
     const cur = latest.current;
-    if (cur.scan.state !== 'matched') return;
+    if (cur.scan.state !== 'matched' || cur.face === null) return;
     setBusy(true);
-    const ok = await doCheckIn(cur.scan.id, cur.scan.manual ? 'manual' : 'face');
+    const ok = await doCheckIn(cur.scan.id, cur.scan.manual ? 'manual' : 'face', cur.face);
     setBusy(false);
     if (ok) { setScan({ state: 'idle' }); setQuery(''); }
   };
@@ -144,7 +145,7 @@ export function Arrivals() {
     const timer = setTimeout(async () => {
       const c = latest.current;
       // confirm only if the camera card still shows her (someone may have tapped "Not this person") and she is not in yet
-      if (c.scan.state === 'matched' && c.scan.id === 'm1' && c.groups.others.some((r) => r.m.id === 'm1')) await doCheckIn('m1', 'face');
+      if (c.scan.state === 'matched' && c.scan.id === 'm1' && c.groups.others.some((r) => r.m.id === 'm1')) await doCheckIn('m1', 'face', 4);
       setScan((x) => (x.state !== 'idle' && x.id === 'm1' ? { state: 'idle' } : x));
       clear();
     }, SCAN_MS * 2);
@@ -175,6 +176,7 @@ export function Arrivals() {
   // A scan (or a pick from the list) shows in the camera card: bring that card fully into view if it is cut off. When the rail is
   // stacked under the list, this also follows the scan as it starts.
   const scanKey = scan.state === 'idle' ? '' : `${scan.state}:${scan.id}`;
+  useEffect(() => { setFace(null); }, [scanKey]); // a new scan, a new pick or a closed sheet starts without a face
   useEffect(() => {
     if (!scanKey || sheetMode || mode !== 'in') return;
     cameraRef.current?.scrollIntoView?.({ block: 'nearest', behavior: scrollBehavior() });
@@ -186,7 +188,7 @@ export function Arrivals() {
 
   const visit = scanMember ? visitInfo(s, scanMember, today) : null;
   const matchedPanel = scanMember ? (
-    <MatchedPanel t={t} m={scanMember} plan={visitLine(t, s, scanMember, today)} flags={memberFlags(t, scanMember, true)} busy={busy} onConfirm={() => void confirmScan()}
+    <MatchedPanel t={t} m={scanMember} plan={visitLine(t, s, scanMember, today)} flags={memberFlags(t, scanMember, true)} busy={busy} face={face} onFace={setFace} onConfirm={() => void confirmScan()}
       rejectLabel={scan.state === 'matched' && scan.manual ? t('common.cancel') : undefined}
       onReject={scan.state === 'matched' && !scan.manual ? () => { const wrong = scan.id; rejectScan(); setWhoFor(wrong); } : rejectScan}>
       {visit?.extra ? <Note tone="ochre" icon="payments">{t('lobby.extraVisit', { n: visit.n, q: visit.quota ?? 0, p: price(priceOn(s, today).extra) })}</Note> : null}

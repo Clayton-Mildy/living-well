@@ -1,20 +1,21 @@
 // Check-out dialog (design OvCheckout): the departure-check status (done with BP / waiting at the health station / missing,
 // with "Send to health station") and the confirm. Nobody is recorded as collecting the member.
 import { useState } from 'react';
-import { memberShort } from '@cp/shared';
+import { memberShort, type Face } from '@cp/shared';
 import { departureStatus } from '@cp/shared/rules/lobby';
-import { Dialog, Icon } from '../../components/ui';
+import { Dialog, Icon, MoodFaces } from '../../components/ui';
 import { useT } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { MemberAvatar, Stack } from './parts';
 
-export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }: { memberId: string; onClose: () => void; onConfirm: (memberId: string) => Promise<boolean>; onAskDeparture: (memberId: string) => Promise<void> }) {
+export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }: { memberId: string; onClose: () => void; onConfirm: (memberId: string, face: Face) => Promise<boolean>; onAskDeparture: (memberId: string) => Promise<void> }) {
   const t = useT();
   const s = useClub();
   const { today, nowMin } = useNow();
   const m = s.members[memberId];
   const [busy, setBusy] = useState(false);
+  const [face, setFace] = useState<Face | null>(null); // the departure face, required
   if (!m) return null;
 
   const dep = departureStatus(s, m.id, today, nowMin);
@@ -22,9 +23,11 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
   const depText = dep.kind === 'done'
     ? `${t('lobby.depDone', { t: dep.reading.time })}${dep.reading.sys != null ? ` ${dep.reading.sys}/${dep.reading.dia}.` : ''}`
     : dep.kind === 'waiting' ? t('lobby.depWaiting') : t('lobby.depMissing');
+  const off = busy || face === null;
   const confirm = async () => {
+    if (face === null) return;
     setBusy(true);
-    const ok = await onConfirm(m.id);
+    const ok = await onConfirm(m.id, face);
     setBusy(false);
     if (ok) onClose();
   };
@@ -43,10 +46,14 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
             ) : null}
           </div>
         </div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.askOut', { name: memberShort(m) })}</div>
+          <MoodFaces value={face} onChange={setFace} name={memberShort(m)} />
+        </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button type="button" className="h-fill" onClick={onClose} style={{ height: 48, padding: '0 22px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>
-          <button type="button" className={busy ? undefined : 'h-bronze'} onClick={busy ? undefined : () => void confirm()} aria-disabled={busy || undefined}
-            style={{ height: 48, padding: '0 24px', borderRadius: 12, border: 'none', background: busy ? 'var(--press, #EEEEF0)' : '#24201C', color: busy ? '#8A8078' : '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
+          <button type="button" data-testid="co-confirm" className={off ? undefined : 'h-bronze'} onClick={off ? undefined : () => void confirm()} aria-disabled={off || undefined}
+            style={{ height: 48, padding: '0 24px', borderRadius: 12, border: 'none', background: off ? 'var(--press, #EEEEF0)' : '#24201C', color: off ? '#8A8078' : '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
             {t('lobby.coConfirm')}
           </button>
         </div>

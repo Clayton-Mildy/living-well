@@ -1,8 +1,8 @@
 // The face check-in camera card (Prototype v3 secondary card, sits in the Arrivals side rail): idle / scanning / matched.
 // MatchedPanel (name, visit line, care flags, extra-day note, confirm) is shared with the bottom sheet that confirms a manual check-in on narrow screens.
 import type { ReactNode } from 'react';
-import { memberName, type Member } from '@cp/shared';
-import { Eyebrow, GROUP_HEAD, Icon } from '../../components/ui';
+import { memberName, memberShort, type Face, type Member } from '@cp/shared';
+import { Eyebrow, GROUP_HEAD, Icon, MoodFaces } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import type { TFn } from '../../lib/i18n';
 import { FlagChip, MemberAvatar, type Flag } from './parts';
@@ -18,9 +18,10 @@ const corner = (pos: Record<string, number | string>, borders: Record<string, st
 );
 
 /** Name, visit line (Flex visit n of 10 / Gold), care flags, a note when the visit is an extra day, and the confirm / "not this person" buttons. */
-export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, children, rejectLabel }: {
-  t: TFn; m: Member; plan: string; flags: Flag[]; onConfirm: () => void; onReject: () => void; busy?: boolean; children?: ReactNode; /** a face match says "Not this person"; a manual pick just cancels */ rejectLabel?: string;
+export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, children, rejectLabel, face, onFace }: {
+  t: TFn; m: Member; plan: string; flags: Flag[]; onConfirm: () => void; onReject: () => void; busy?: boolean; /** the arrival face; confirm stays off until one is chosen */ face: Face | null; onFace: (f: Face) => void; children?: ReactNode; /** a face match says "Not this person"; a manual pick just cancels */ rejectLabel?: string;
 }) {
+  const off = busy || face === null;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'cpUp .25s ease-out', flex: 'none' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -29,9 +30,13 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
       </div>
       {flags.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{flags.map((f, i) => <FlagChip key={i} f={f} />)}</div> : null}
       {children}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.ask', { name: memberShort(m) })}</div>
+        <MoodFaces value={face} onChange={onFace} name={memberShort(m)} />
+      </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        <button type="button" className={busy ? undefined : 'h-bronze'} onClick={busy ? undefined : onConfirm} aria-disabled={busy || undefined}
-          style={{ flex: '1 1 160px', height: 52, borderRadius: 999, border: 'none', background: busy ? 'var(--press, #EEEEF0)' : '#24201C', color: busy ? '#8A8078' : '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" className={off ? undefined : 'h-bronze'} onClick={off ? undefined : onConfirm} aria-disabled={off || undefined}
+          style={{ flex: '1 1 160px', height: 52, borderRadius: 999, border: 'none', background: off ? 'var(--press, #EEEEF0)' : '#24201C', color: off ? '#8A8078' : '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
           <Icon name="how_to_reg" size={20} weight={300} />
           {t('lobby.confirmCheckin')}
         </button>
