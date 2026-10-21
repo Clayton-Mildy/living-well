@@ -62,6 +62,7 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   insights: L(insights, 'Insights'),
   fmemories: L(family, 'FamilyMemories'),
   report: L(report, 'DailyReport'),
+  monthReport: L(report, 'MonthReport'),
   // round 8: the family app (Family App prototype)
   fme: L(family, 'FamilyMe'),
   fprofile: L(family, 'FamilyProfile'),

@@ -20,7 +20,7 @@ export const NAVS: Record<Role, NavItem[]> = {
 };
 export const NAVG: Record<string, [string | null, NavItem[]][]> = {
   mgmt: [
-    [null, [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('reviews', 'reviews', 'fact_check'), n('tasks', 'tasks', 'checklist'), n('report', 'report', 'summarize')]], // round 7: the daily report (management)
+    [null, [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('reviews', 'reviews', 'fact_check'), n('tasks', 'tasks', 'checklist'), n('report', 'report', 'summarize'), n('monthReport', 'monthReport', 'query_stats')]], // round 7: the daily report (management); round 12: the month report
     ['nav.g_front', [n('enquiries', 'enquiries', 'contact_phone'), n('renewals', 'renewals', 'event_repeat')]],
     ['nav.g_care', [n('hchecks', 'health', 'monitor_heart'), n('readings', 'readings', 'monitoring'), n('log', 'log', 'edit_note'), n('camera', 'camera', 'photo_camera')]], // the photo library is the Camera's Library tab
     ['nav.g_kitchen', [n('menu', 'menu', 'restaurant'), n('feedback', 'feedback', 'forum'), n('stock', 'stock', 'inventory_2')]],
@@ -63,7 +63,7 @@ export const allowedKeys = (role: Role) => new Set([...NAVS[role].map((x) => x.k
 export type ScreenId =
   | 'arrivals' | 'health' | 'activityToday' | 'kmenu' | 'fin' | 'overview' | 'familyToday' | 'requests' | 'enq' | 'members' | 'readings' | 'camera' | 'dlog'
   | 'cal' | 'kfeed' | 'kstock' | 'pay' | 'budget' | 'rcpt' | 'dir' | 'venue' | 'bc' | 'hr' | 'surveys' | 'plans' | 'reviews' | 'photoLib' | 'fphotos' | 'familyHealth' | 'fbill'
-  | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'drafts'
+  | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'monthReport' | 'drafts'
   | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts';
 
 export function screenFor(role: Role, key: string): ScreenId | null {
@@ -74,7 +74,7 @@ export function screenFor(role: Role, key: string): ScreenId | null {
     arrivals: 'arrivals', hchecks: 'health', menu: 'kmenu', readings: 'readings', log: 'dlog', camera: 'camera', photos: 'photoLib', feedback: 'kfeed', stock: 'kstock',
     billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', directory: 'dir', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
     enquiries: 'enq', calendar: 'cal', plans: 'plans', surveys: 'surveys', reviews: 'reviews', requests: 'requests',
-    renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', drafts: 'drafts',
+    renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', monthReport: 'monthReport', drafts: 'drafts',
   };
   return map[key] || null;
 }

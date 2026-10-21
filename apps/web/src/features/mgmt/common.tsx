@@ -275,3 +275,17 @@ export function useBusy() {
 /** The time ranges offered as one tap when booking a room (venue bookings and celebrations). */
 export const SLOTS: [string, string][] = [['08:00', '12:00'], ['13:00', '17:00'], ['17:00', '21:00']];
 export const roomName = (r: Room | undefined, lang: string) => (r ? (lang === 'id' && r.nameId ? r.nameId : r.name) : '');
+
+/** A simulated WhatsApp message (Broadcast preview, the month report's owner summary): a white bubble from CitraPremier on a grey ground, the time under it. */
+export function WaBubble({ text, time, footer, testId }: { text: ReactNode; time: string; footer?: ReactNode; testId?: string }) {
+  return (
+    <div style={{ borderRadius: 14, background: 'var(--hairline, #E2E2E6)', padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+      <div style={{ maxWidth: '92%', background: '#FFFFFF', borderRadius: 10, padding: '12px 14px 8px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 1px 2px rgba(40,30,20,0.1)' }}>
+        <span style={{ fontSize: 12, fontWeight: 600, color: '#3D6B4F', lineHeight: 1.4 }}>CitraPremier</span>
+        <span data-testid={testId} style={{ fontSize: 15, lineHeight: 1.45, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{text}</span>
+        <span style={{ alignSelf: 'flex-end', fontSize: 12, color: '#5E5852' }}>{time}</span>
+        {footer ? <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)', paddingTop: 8, textAlign: 'center', fontSize: 14, fontWeight: 500, color: 'var(--accent, #75624B)', lineHeight: 1.4 }}>{footer}</div> : null}
+      </div>
+    </div>
+  );
+}
