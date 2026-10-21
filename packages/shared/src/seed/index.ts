@@ -12,6 +12,7 @@ import { COLLECTIONS } from '../types';
 import type { CollectionName } from '../types';
 import { addDays, addMonths, daysBetween, dow, rng, rp, toHM, toMin, ym, DEMO_TODAY, DEMO_START_MIN, isWeekday, e164 } from '../util';
 import { evaluateReading, limitsFor } from '../rules/health';
+import { moodId } from '../rules/mood';
 import { suspensions } from '../rules/billing';
 import { addRoster } from './roster';
 import { addHistory } from './history';
@@ -406,6 +407,12 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
     put('activity', { id: `act-${T}-${id}-in`, clubId: C, at: `${T}T${at}`, actor: 'staff:s1', action: 'attendance.checkIn', memberId: id, icon: 'how_to_reg', key: 'feed.checkedIn', params: { name: `${m.title} ${m.firstName}`, how: 'face' } } satisfies ActivityEntry);
   }
   if (done('09:55')) put('activity', { id: `act-${T}-m10-reading`, clubId: C, at: `${T}T09:55`, actor: 'staff:s8', action: 'health.reading.save', memberId: 'm10', icon: 'monitor_heart', key: 'feed.reading', params: { name: 'Bapak Bambang', value: '122/73', status: 'normal' } } satisfies ActivityEntry);
+
+  // round 12: Oma Lina is the mood story. Her check-in is live in the demo (she is not seeded as arrived), so her marks exist only when the clock has passed them:
+  // she arrives "okay" (3) at 10:00 and leaves "great" (5) at 15:45. The other seeded visits get theirs in seed/r7/moodMarks.ts.
+  for (const [moment, face, time] of [['arrival', 3, '10:00'], ['departure', 5, '15:45']] as const) {
+    if (done(time)) put('moodMarks', { ...base(C, moodId(T, 'm1', moment), `${T}T${time}`, 'staff:s1'), memberId: 'm1', date: T, time, moment, face, by: 'staff:s1' });
+  }
 
   // plan change request: Bambang's family asks for Gold from November
   put('planChangeRequests', { ...base(C, 'pcr-m10', at('2026-10-18T20:00'), 'family:fm10_0'), memberId: 'm10', to: 'gold', from: `${addMonths(month, 1)}-01`, status: 'pending' });

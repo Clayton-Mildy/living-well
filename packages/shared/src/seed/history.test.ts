@@ -2,7 +2,7 @@
 // and the 40 background ones.
 import { describe, it, expect } from 'vitest';
 import {
-  addDays, addMonths, buildSeed, dayStatus, DEMO_START_MIN, DEMO_TODAY, dow, extraDaysFor, flexMonth, invoiceStatus, isWeekday, live, membershipStatus, planOn,
+  addDays, addMonths, buildSeed, dayArc, dayStatus, DEMO_START_MIN, DEMO_TODAY, dow, extraDaysFor, flexMonth, invoiceStatus, isWeekday, live, membershipStatus, moodId, moodStats, planOn,
   primaryContact, projectForFamily, stopsDue, suspensions, toMin, ym, type ClubState,
 } from '../index';
 import { existsSync } from 'node:fs';
@@ -189,9 +189,44 @@ describe('six months of history', () => {
     }
   });
 
-  it('is small and quick: under 5 MB of club state, a family’s share small, built in a couple of seconds', () => {
-    expect(JSON.stringify(s).length).toBeLessThan(5_000_000);
+  it('is small and quick: under 7.5 MB of club state, a family’s share small, built in a couple of seconds', () => {
+    expect(JSON.stringify(s).length).toBeLessThan(7_500_000); // round 12: about 12,500 mood marks add 3 MB
     expect(JSON.stringify(projectForFamily(s, 'f1')).length).toBeLessThan(700_000);
     expect(buildMs).toBeLessThan(4000);
+  });
+});
+
+describe('mood history (round 12)', () => {
+  it('every historical visit has arrival and departure marks and the club lifts mood', () => {
+    const done = Object.values(s.attendance).filter((a) => a.checkIn && a.checkOut && a.date < DEMO_TODAY);
+    for (const a of done.slice(0, 50)) {
+      expect(s.moodMarks[moodId(a.date, a.memberId, 'arrival')]).toBeDefined();
+      expect(s.moodMarks[moodId(a.date, a.memberId, 'departure')]).toBeDefined();
+    }
+    const st = moodStats(s, [...new Set(done.map((a) => a.date))]);
+    expect(st.lift).toBeGreaterThan(0.2);
+    expect(st.lift).toBeLessThan(0.6);
+  });
+  it('Oma Lina arrives okay and leaves great today', () => {
+    const late = buildSeed('2026-10-21', 16 * 60).citra;
+    expect(dayArc(late, 'm1', '2026-10-21')).toMatchObject({ arrival: 3, departure: 5 });
+  });
+  it('Opa Hendra arrives low on his Watch days, and a health mark copies the arrival face', () => {
+    const watch = live(s.readings).filter((r) => r.memberId === 'm2' && r.kind === 'arrival' && r.status === 'watch' && r.date < T);
+    expect(watch.length).toBeGreaterThan(0);
+    for (const r of watch) expect(dayArc(s, 'm2', r.date).arrival, r.date).toBe(2);
+    const r = live(s.readings).find((x) => x.memberId === 'm10' && x.kind === 'arrival' && x.date < T)!;
+    const h = s.moodMarks[moodId(r.date, 'm10', 'health')];
+    expect(h.readingId).toBe(r.id);
+    expect(h.face).toBe(s.moodMarks[moodId(r.date, 'm10', 'arrival')].face);
+  });
+  it('marks are stamps by the staff who did the action, with ids that are the mood ids', () => {
+    const some = Object.values(s.moodMarks).filter((_, i) => i % 7 === 0);
+    expect(some.length).toBeGreaterThan(1000);
+    for (const m of some) {
+      expect(m.id).toBe(moodId(m.date, m.memberId, m.moment, m.slot));
+      expect(m.createdAt).toBe(`${m.date}T${m.time}`);
+      expect(m.by).toBe({ arrival: 'staff:s1', departure: 'staff:s1', health: 'staff:s8', activity: 'staff:s5' }[m.moment]);
+    }
   });
 });

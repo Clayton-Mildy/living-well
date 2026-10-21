@@ -21,13 +21,13 @@ const HIST_DAYS = 182;
 /** The window the hand-made seed and the roster already cover (they stay as written). */
 const WINDOW_DAYS = 28;
 
-const hash32 = (str: string): number => {
+export const hash32 = (str: string): number => {
   let h = 2166136261;
   for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
   return h >>> 0;
 };
 const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
-const unit = (str: string) => (hash32(str) % 10000) / 10000;
+export const unit = (str: string) => (hash32(str) % 10000) / 10000;
 const pick = <T,>(a: readonly T[], x: number): T => a[Math.min(a.length - 1, Math.floor(x * a.length))];
 
 // ---------- who comes when ----------
