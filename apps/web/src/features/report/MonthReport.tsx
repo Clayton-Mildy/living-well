@@ -92,6 +92,7 @@ export function MonthReport() {
       <Stat first label={t('month.billed')} value={rp(m.billed.cur)} d={m.billed} df={rp} sub={basis} onClick={open('/billing')} />
       <Stat label={t('month.collected')} value={rp(m.collected.cur)} d={m.collected} df={rp} onClick={open('/payments')} />
       <Stat label={t('month.outstanding')} value={rp(m.outstanding.cur)} d={m.outstanding} df={rp} onClick={open('/billing')} />
+      <Stat label={t('month.notYetDue')} value={rp(m.notYetDue.cur)} d={m.notYetDue} df={rp} onClick={open('/billing')} />
       <Stat label={t('month.extraDays')} value={m.extraDays.cur ? `${m.extraDays.cur} · ${rp(m.extraDays.amount.cur)}` : '0'} d={m.extraDays} sub={basis} onClick={open('/billing')} />
       <Stat label={t('month.venueIncome')} value={rp(m.venueIncome.cur)} d={m.venueIncome} df={rp} onClick={open('/venue')} />
       <Stat label={t('month.refunds')} value={rp(m.refunds.cur)} d={m.refunds} df={rp} onClick={open('/payments')} />

@@ -11,7 +11,7 @@ import { REG_STEPS, type RegStep } from './steps';
 
 export function ReviewStep({ p, role, goTo }: { p: StepProps; role: string | null; goTo: (k: RegStep) => void }) {
   const { st, set, t, s, today, mode } = p;
-  const { fds } = useFmt();
+  const { fds, fd } = useFmt();
   const none = t('reg.none');
   const isNew = mode.kind === 'new';
   const mgmt = role === 'mgmt';
@@ -19,7 +19,7 @@ export function ReviewStep({ p, role, goTo }: { p: StepProps; role: string | nul
   const contactPhone = isNew && st.contactMode === 'existing' ? s.familyContacts[st.existingId]?.phone ?? '' : st.phone;
   const allergies = [...st.health.food.map((x) => foodLabel(t, x)), st.health.foodOther.trim(), ...st.health.drug.map((x) => t('profile.drug.' + x)), st.health.drugOther.trim()].filter(Boolean);
   const rows: Record<Exclude<RegStep, 'review'>, [ReactNode, ReactNode][]> = {
-    person: [[t('common.name'), `${st.title} ${st.name.trim()}`], [t('profile.f.called'), st.reg.nickname.trim() || none], [t('profile.f.dob'), st.dob ? fds(st.dob) : none], [t('profile.f.address'), st.address.trim() || none]],
+    person: [[t('common.name'), `${st.title} ${st.name.trim()}`], [t('profile.f.called'), st.reg.nickname.trim() || none], [t('profile.f.dob'), st.dob ? fd(st.dob, { day: 'numeric', month: 'short', year: 'numeric' }) : none], [t('profile.f.address'), st.address.trim() || none]],
     family: [[t('common.name'), contactName || none], [t('profile.f.relation'), relLabel(t, st.rel)], [t('common.phone'), contactPhone ? fmtPhone(contactPhone) : none], [t('profile.sec.nanny'), st.carer.nanny ? st.carer.nannyName.trim() || none : none]],
     health: [[t('profile.f.conditions'), st.health.conditions.join(', ') || none], [t('profile.f.mobility'), mobLabel(t, st.health.mobility === 'none' ? null : st.health.mobility)], [t('profile.sec.allergies'), allergies.join(', ') || none], [t('profile.q.dementia'), st.reg.dementia === null ? none : t(st.reg.dementia ? 'common.yes' : 'common.no')]],
     plan: [[t('enq.plan'), st.plan ? t('mgmt.plan_' + st.plan) : none], [t('enq.start'), st.start ? fds(st.start) : none]],

@@ -146,6 +146,6 @@ describe('enquiry rules', () => {
 describe('overview mood (round 12)', () => {
   it('overview has the mood index', () => {
     expect(overviewStats(withMarks, T).mood).toEqual({ index: 4, lift: 2, n: 2 });
-    expect(overviewStats(buildSeed().citra, T).mood.index).toBeNull();
+    expect(overviewStats(buildSeed().citra, T).mood.index).toBe(3.3); // today's seeded arrivals are marked at the door (Lina's is live)
   });
 });

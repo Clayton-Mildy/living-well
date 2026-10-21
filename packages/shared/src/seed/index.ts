@@ -122,6 +122,9 @@ const MENU_DAYS: Record<Weekday, { lunch: string[]; soft: string[]; tea: string[
 // ---------------- members & family ----------------
 const VA = (i: number) => '8808' + String(1203440000 + i * 7919).padStart(12, '0');
 
+/** The cast carers' NIK (16 digits), so editing a member with a carer on the phone does not stop at "Add the carer's NIK". */
+const NANNY_NIK: Record<string, string> = { m1: '3175014507850002' };
+
 interface CastRow {
   id: string; idx: number; title: Member['title']; first: string; last: string; gender: 'f' | 'm'; dob: ISODate; address: string; start: ISODate;
   plan: 'flex' | 'gold'; usual: string;
@@ -270,7 +273,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
     const m: Member = {
       ...base(C, c.id, c.start + 'T10:00', 'staff:s1'), title: c.title, firstName: c.first, lastName: c.last, gender: c.gender, dob: c.dob, ageYears: null, address: c.address, photoTone: c.tone, ...(portraitId(c.id) ? { photoMediaId: portraitId(c.id) } : {}),
       memberships: [{ start: c.start }], plans: [{ from: c.start, plan: c.plan, by: 'staff:s1' }], usualArrival: c.usual,
-      nanny: c.nanny ? { name: c.nanny } : null, spouseId: c.spouse, ...(REG[c.id] ? { registration: REG[c.id] } : {}),
+      nanny: c.nanny ? { name: c.nanny, ...(NANNY_NIK[c.id] ? { nik: NANNY_NIK[c.id] } : {}) } : null, spouseId: c.spouse, ...(REG[c.id] ? { registration: REG[c.id] } : {}),
       health: { conditions: c.conditions, diabetic: c.diabetic, food: c.food, drugs: [], mobility: c.mobility, diet: c.diet, meds: c.meds.map(([name, dose, timing], i) => ({ id: `${c.id}-med${i + 1}`, name, dose, timing })),
         cognitive: { summary: c.cognitive, reviewedBy: 's8', reviewedOn: sh('2026-10-01') } },
       care: { instructions: c.id === 'm2' ? c.care.replace('14 Oct', dm(HENDRA_DAY)) : c.care, by: 'staff:s8', at: `${HENDRA_DAY}T10:45` },

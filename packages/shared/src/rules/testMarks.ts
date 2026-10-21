@@ -1,4 +1,5 @@
 // Test fixture (round 12): the seed on the demo day with Oma Lina (m1) in the club, arriving at 3 (10:00) and leaving at 5 (15:45).
+// Today's seeded marks (everyone else's arrival faces) are removed, so Lina's are the only marks of the day.
 import { produce } from 'immer';
 import { buildSeed } from '../index';
 import { moodId } from './mood';
@@ -6,6 +7,7 @@ import { moodId } from './mood';
 export const MARKS_DAY = '2026-10-21';
 const T = MARKS_DAY;
 export const withMarks = produce(buildSeed().citra, (d) => {
+  for (const [id, mk] of Object.entries(d.moodMarks)) if (mk.date === T) delete d.moodMarks[id];
   // the seed has m1 away today; here they are in the club, so their visit is one of the day's check-ins
   d.attendance[`${T}:m1`] = { id: `${T}:m1`, clubId: d.clubId, createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
   for (const [moment, face, time] of [['arrival', 3, '10:00'], ['departure', 5, '15:45']] as const) {

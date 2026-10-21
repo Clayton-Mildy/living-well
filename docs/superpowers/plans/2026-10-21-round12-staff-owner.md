@@ -27,6 +27,8 @@
 2. **No "Mood?" pill for door-camera auto check-ins**: there is no auto check-in path in the code (`doorCamera` is only an actor label), so there is nothing to patch.
 3. **Guided demo steps are off** (`SHOW_GUIDED = false` in `shell/DemoPanel.tsx`), so §11's "demo steps" become README script rows plus the e2e spec `e2e/round12.spec.ts`.
 4. **Opa Budi turns 80**, not whatever 1942 gives: his `dob` year becomes 1946 so "turns 80 on Friday" reads well; tests that pinned his age get updated in Task 14.
+5. **Management may unsend others' photos** (`photo.unsend` is sender-or-mgmt); the spec said own photos only.
+6. **Month report rows open their screens unfiltered by period** (Billing, Members, Insights…); only Insights carries `?tab=`.
 
 ## Review Focus
 

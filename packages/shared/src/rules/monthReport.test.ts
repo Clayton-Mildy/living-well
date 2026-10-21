@@ -23,6 +23,13 @@ describe('month report', () => {
     expect(mid.money.billed.cur).toBe(total('2026-10'));
     const r = monthReport(s, periodFor('thisMonth', T), T, 600);
     expect([r.money.billed.cur, r.money.billed.prev]).toEqual([total('2026-10'), total('2026-09')]);
+    // overdue = past its due date at the end of the period: October's invoices (due the 28th) are not in it on the 21st, they are "not yet due"
+    const owed = invoiceViews(s, T, false).filter((v) => !v.inv.voided && v.inv.issueDate <= T);
+    const left = (pred: (due: string) => boolean) => owed.filter((v) => pred(v.inv.dueDate)).reduce((a, v) => a + v.balance, 0);
+    expect(left((d) => d >= T)).toBeGreaterThan(0);
+    expect(r.money.outstanding.cur).toBe(left((d) => d < T));
+    expect(r.money.notYetDue.cur).toBe(left((d) => d >= T));
+    expect(r.money.outstanding.cur).toBeLessThan(r.money.notYetDue.cur);
     expect(monthReport(s, periodFor('last3', T), T, 600).months.prev).toEqual(['2026-05', '2026-06', '2026-07']);
   });
 });

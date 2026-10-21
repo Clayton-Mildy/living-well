@@ -30,7 +30,7 @@ export function ownerSummaryLines(r: MonthReport, t: TFn, fmt: SummaryFmt): stri
     `*${t('month.sum.head', { period: range })}*`,
     '',
     `*${t('month.money')}*`,
-    row('billed', m.billed, fmt.rp), row('collected', m.collected, fmt.rp), row('outstanding', m.outstanding, fmt.rp),
+    row('billed', m.billed, fmt.rp), row('collected', m.collected, fmt.rp), row('outstanding', m.outstanding, fmt.rp), row('notYetDue', m.notYetDue, fmt.rp),
     '',
     `*${t('month.members')}*`,
     row('active', mb.active, n), row('joined', mb.joined, n), row('ended', mb.ended, n), row('utilisation', mb.utilisation, (x) => fmt.pct(x), pts),

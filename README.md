@@ -72,7 +72,7 @@ Open the **Demo** pill (bottom right) and run the guided steps in order.
 | 10:30 | Front desk books the venue | Caca: More, Venue, New booking (room, day, time). It blocks the calendar; only Ega and finance can invoice it |
 | 11:00 | Celebration | Venue, Celebrations: Caca asks for Opa Tjahjadi's anniversary lunch (waiting); Ega confirms or declines it, and the family and the front desk are told |
 | Day +3 | Opa Budi's birthday | He turns 80 three open days after the demo date (Mon 26 Oct when the date is pinned to 21 Oct) and the seeded celebration (Garden room, 12 guests, chocolate cake without nuts) is that day. A cake icon shows beside his name on Arrivals, in the menu and on the calendar, and on Maria's Today |
-| 11:20 | A bad photo | Camera ▸ More ways ▸ Solo: **Retake** a blurry shot before **Use photo**. In Drafts, delete a bad one. After Send, the toast has **Undo** for 10 minutes: the photos go back to Drafts and the family notice is withdrawn |
+| 11:20 | A bad photo | Camera ▸ More ways ▸ Solo: **Retake** a blurry shot before **Use photo**. In Drafts, delete a bad one. After Send, the toast has **Undo**; the send can be taken back for 10 minutes: the photos go back to Drafts and the family notice is withdrawn |
 | Live | Month report | Ega: Month report (after Report). Money, Members, Care and mood, Pipeline and team, each against the month before. **Send to owner** shows a WhatsApp summary to copy or send. Insights has a Mood tab |
 | 17:10 | Maria's Today | The team's log and photos; "WhatsApp the club" opens the front desk |
 | 17:15 | Extra visit | Flex includes 10 visits a month; today's 11th visit shows on Maria's plan card |

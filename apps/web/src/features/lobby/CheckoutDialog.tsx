@@ -5,6 +5,7 @@ import { displayName, type Face } from '@cp/shared';
 import { departureStatus } from '@cp/shared/rules/lobby';
 import { Dialog, Icon, MoodFaces } from '../../components/ui';
 import { useT } from '../../lib/i18n';
+import { useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { MemberAvatar, Stack } from './parts';
@@ -13,6 +14,7 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
   const t = useT();
   const s = useClub();
   const { today, nowMin } = useNow();
+  const { isPhone } = useDevice();
   const m = s.members[memberId];
   const [busy, setBusy] = useState(false);
   const [face, setFace] = useState<Face | null>(null); // the departure face, required
@@ -48,7 +50,7 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.askOut', { name: displayName(m) })}</div>
-          <MoodFaces value={face} onChange={setFace} name={displayName(m)} label={t('mood.askOut', { name: displayName(m) })} />
+          <MoodFaces value={face} onChange={setFace} name={displayName(m)} labels={!isPhone} label={t('mood.askOut', { name: displayName(m) })} />
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button type="button" className="h-fill" onClick={onClose} style={{ height: 48, padding: '0 22px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>

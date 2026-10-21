@@ -25,6 +25,7 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
   t: TFn; m: Member; plan: string; flags: Flag[]; onConfirm: () => void; onReject: () => void; busy?: boolean; /** the arrival face; confirm stays off until one is chosen */ face: Face | null; onFace: (f: Face) => void; children?: ReactNode; /** a face match says "Not this person"; a manual pick just cancels */ rejectLabel?: string;
 }) {
   const off = busy || face === null;
+  const { isPhone } = useDevice();
   const s = useClub();
   const { today } = useNow();
   // round 12: today is this member's birthday or membership anniversary (a birthday wins)
@@ -39,7 +40,7 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
       {children}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.ask', { name: displayName(m) })}</div>
-        <MoodFaces value={face} onChange={onFace} name={displayName(m)} />
+        <MoodFaces value={face} onChange={onFace} name={displayName(m)} labels={!isPhone} />
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className={off ? undefined : 'h-bronze'} onClick={off ? undefined : onConfirm} aria-disabled={off || undefined}

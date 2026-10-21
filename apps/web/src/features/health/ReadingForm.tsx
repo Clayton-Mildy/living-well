@@ -85,7 +85,7 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
   const faces = who.kind === 'member' ? (
     <>
       <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.ask', { name: who.short })}</div>
-      <div data-testid="health-faces"><MoodFaces value={draft.face} onChange={(f) => patch((d) => ({ ...d, face: d.face === f ? null : f }))} size={isPhone ? 46 : 48} name={who.short} /></div>
+      <div data-testid="health-faces"><MoodFaces value={draft.face} onChange={(f) => patch((d) => ({ ...d, face: d.face === f ? null : f }))} size={isPhone ? 46 : 48} name={who.short} labels={!isPhone} /></div>
     </>
   ) : null;
   const saveBg = ok && !busy ? '#24201C' : 'var(--press, #EEEEF0)';

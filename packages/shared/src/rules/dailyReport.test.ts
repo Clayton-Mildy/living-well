@@ -1,6 +1,7 @@
 // KC round 7: the daily report on the 5-member seed. A past day (Mon 19 Oct), a day with a log waiting for approval (Tue 20), a day with an Alert reading (Wed 14),
 // today read live (Wed 21 Oct, 09:58), a one-day change of the programme, a closed day and a weekend, and moving between days.
 import { describe, it, expect } from 'vitest';
+import { produce } from 'immer';
 import { buildCitra } from '../seed/index';
 import { memberName } from './core';
 import { withMarks } from './testMarks';
@@ -188,9 +189,16 @@ describe('mood faces (round 12)', () => {
     expect(r.members.find((x) => x.m.id === 'm1')).toMatchObject({ arrivalFace: 3, departureFace: 5 });
   });
   it('a day nobody marked has zero counts and no lift', () => {
-    const r = dailyReport(s, T, T, NOW);
+    const r = dailyReport(produce(s, (d) => { for (const [id, mk] of Object.entries(d.moodMarks)) if (mk.date === T) delete d.moodMarks[id]; }), T, T, NOW);
     expect(r.mood.faces.lift).toBeNull();
     expect(Object.values(r.mood.faces.arrival).every((n) => n === 0)).toBe(true);
     expect(r.mood.faces.notMarkedDoor).toBe(r.members.length);
+  });
+  it('the seeded demo day has every check-in marked at the door except Oma Lina (hers is live)', () => {
+    const r = dailyReport(s, T, T, NOW);
+    const checkedIn = Object.values(s.attendance).filter((a) => a.date === T && a.checkIn && !a.deletedAt).map((a) => a.memberId);
+    expect(checkedIn.length).toBeGreaterThan(0);
+    expect(r.mood.faces.notMarkedDoor).toBe(checkedIn.filter((id) => id === 'm1').length);
+    expect(Object.values(r.mood.faces.arrival).reduce((a, n) => a + n, 0)).toBe(checkedIn.filter((id) => id !== 'm1').length);
   });
 });

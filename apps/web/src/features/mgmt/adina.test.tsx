@@ -87,7 +87,7 @@ describe('Adina, an empty clubhouse', () => {
     expect([tile('inClub'), tile('goneHome'), tile('visits'), tile('extra')]).toEqual(['3', '0', '3', '0']);
     expect(body()).not.toMatch(/Expected|To arrive|expected/);
     expect(tile('enq')).toBe('4');
-    expect(tile('mood')).toBe('–'); // nobody marked a face yet
+    expect(tile('mood')).toBe('3.3'); // today's seeded arrivals carry their door faces
     expect([tile('review'), tile('checks'), tile('overdue'), tile('survey'), tile('photos'), tile('logs'), tile('lunch'), tile('pay'), tile('stock'), tile('venue'), tile('plans')])
       .toEqual(['7', '1', '1', '4.7 / 5', '0', '0 / 3', 'Not yet', '2', '3', '2', 'Sample']); // Hendra and Bambang paid this morning (invoice day)
     expect(host?.querySelector('[data-tile="checks"]')?.textContent).toContain('All normal');

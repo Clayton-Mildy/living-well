@@ -15,7 +15,7 @@ import { addDays, addMonths, diffDays, live, sum, toMin } from '../util';
 
 /** A number now and in the period before. `diff` is cur − prev (null when either side is unknown); `good` says which way is good news. */
 export interface Delta<T = number> { cur: T; prev: T; diff: T | null; good: 'up' | 'down' | 'none' }
-export interface MoneyGroup { billed: Delta; collected: Delta; outstanding: Delta; extraDays: Delta & { amount: Delta }; venueIncome: Delta; refunds: Delta }
+export interface MoneyGroup { billed: Delta; collected: Delta; outstanding: Delta; notYetDue: Delta; extraDays: Delta & { amount: Delta }; venueIncome: Delta; refunds: Delta }
 export interface MembersGroup { active: Delta; joined: Delta; ended: Delta & { byReason: Record<EndReason, number> }; renewalsKept: Delta; renewalsLost: Delta; onLeave: Delta; checkOn: number; visitsPerMember: Delta<number | null>; utilisation: Delta<number | null> }
 export interface CareGroup { index: Delta<number | null>; lift: Delta<number | null>; byMoment: Record<MoodMoment, number | null>; alerts: Delta; watches: Delta; rechecks: Delta; lunchEaten: Delta<number | null> }
 export interface PipelineGroup { funnel: { new: number; visit: number; trial: number; joined: number }; conversion: { toVisit: number | null; toTrial: number | null; toJoined: number | null }; lostReasons: Record<LostReason, number>; duties: { role: StaffRole; done: number; total: number }[]; surveys: { family: number | null; venue: number | null } }
@@ -47,7 +47,7 @@ function delta(cur: number | null, prev: number | null, good: Delta['good']): De
 
 /** Everything one period stands for, before it is paired with the period before. */
 interface Side {
-  billed: number; collected: number; outstanding: number; extraQty: number; extraAmount: number; venueIncome: number; refunds: number;
+  billed: number; collected: number; outstanding: number; notYetDue: number; extraQty: number; extraAmount: number; venueIncome: number; refunds: number;
   active: number; joined: number; ended: number; byReason: Record<EndReason, number>; kept: number; lost: number; onLeave: number;
   visits: number; visitsPerMember: number | null; utilisation: number | null;
   index: number | null; lift: number | null; byMoment: Record<MoodMoment, number | null>; alerts: number; watches: number; rechecks: number; lunchEaten: number | null;
@@ -62,11 +62,14 @@ function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, t
   const extra = invs.flatMap((i) => i.lines).filter((l) => l.kind === 'extraDay');
   const payments = live(s.payments).filter((x) => within(x.receivedOn, p));
   const refunds = live(s.refunds).filter((r) => within(r.createdAt.slice(0, 10), p));
-  // what was still owed at the end of the period: invoices issued by then, less what had been paid (and not refunded) by then
+  // what was still owed at the end of the period: invoices issued by then, less what had been paid (and not refunded) by then;
+  // "outstanding" is the part already past its due date at the end of the period, "not yet due" the rest (an invoice due on the 28th is not a collections problem on the 21st)
   const paidBy = new Map<string, number>();
   for (const x of live(s.payments)) if (x.receivedOn <= p.to) for (const a of x.allocations) paidBy.set(a.invoiceId, (paidBy.get(a.invoiceId) ?? 0) + a.amount);
   for (const r of live(s.refunds)) if (r.createdAt.slice(0, 10) <= p.to) paidBy.set(r.invoiceId, (paidBy.get(r.invoiceId) ?? 0) - r.amount);
-  const outstanding = sum(live(s.invoices).filter((i) => !i.voided && i.issueDate <= p.to).map((i) => Math.max(0, invoiceTotal(i) - (paidBy.get(i.id) ?? 0))));
+  const owing = live(s.invoices).filter((i) => !i.voided && i.issueDate <= p.to).map((i) => ({ due: i.dueDate, left: Math.max(0, invoiceTotal(i) - (paidBy.get(i.id) ?? 0)) }));
+  const outstanding = sum(owing.filter((o) => o.due < p.to).map((o) => o.left));
+  const notYetDue = sum(owing.filter((o) => o.due >= p.to).map((o) => o.left));
   const venueIncome = sum(live(s.venueBookings).filter((b) => b.status !== 'cancelled' && !!b.invoiceRef && within(b.date, p)).map((b) => b.price ?? 0));
 
   // ---------- members ----------
@@ -97,7 +100,7 @@ function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, t
   const logs = live(s.dailyLogs).filter((l) => !!l.lunch && within(l.date, p));
 
   return {
-    billed: sum(invs.map(invoiceTotal)), collected: sum(payments.map((x) => x.amount)), outstanding,
+    billed: sum(invs.map(invoiceTotal)), collected: sum(payments.map((x) => x.amount)), outstanding, notYetDue,
     extraQty: sum(extra.map((l) => l.qty)), extraAmount: sum(extra.map((l) => l.amount)), venueIncome, refunds: sum(refunds.map((r) => r.amount)),
     active, joined, ended, byReason, kept, lost, onLeave,
     visits, visitsPerMember: days.length ? ratio(visits, active, 1) : null, utilisation: ratio(visits, days.length * active),
@@ -139,7 +142,7 @@ export function monthReport(s: ClubState, period: InsightPeriod, today: ISODate,
   return {
     period, prev, months,
     money: {
-      billed: delta(c.billed, b.billed, 'up'), collected: delta(c.collected, b.collected, 'up'), outstanding: delta(c.outstanding, b.outstanding, 'down'),
+      billed: delta(c.billed, b.billed, 'up'), collected: delta(c.collected, b.collected, 'up'), outstanding: delta(c.outstanding, b.outstanding, 'down'), notYetDue: delta(c.notYetDue, b.notYetDue, 'none'),
       extraDays: { ...delta(c.extraQty, b.extraQty, 'up'), amount: delta(c.extraAmount, b.extraAmount, 'up') },
       venueIncome: delta(c.venueIncome, b.venueIncome, 'up'), refunds: delta(c.refunds, b.refunds, 'down'),
     },
