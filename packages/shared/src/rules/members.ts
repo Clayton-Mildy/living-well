@@ -60,7 +60,7 @@ export const plainName = (m: Pick<Member, 'firstName' | 'lastName'>) => (m.first
 /** Longest title a front-desk user may type under "Other". */
 export const TITLE_MAX = 20;
 /** Titles read as female (pronouns); a free-text title that is not here counts as male until the profile says otherwise. */
-const FEMALE_TITLES = ['oma', 'ibu', 'tante', 'bu', 'nyonya', 'nenek', 'mbak', 'mama'];
+const FEMALE_TITLES = ['oma', 'ibu', 'tante', 'bu', 'nyonya', 'nenek', 'mbak', 'mama', 'mrs', 'ms', 'miss', 'madam', 'aunty', 'nona', 'mami'];
 export const genderOf = (t: Title): 'f' | 'm' => (FEMALE_TITLES.includes(t.trim().toLowerCase()) ? 'f' : 'm');
 
 // ---------- ids ----------

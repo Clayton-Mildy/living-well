@@ -103,7 +103,7 @@ export function Readings() {
           return (
             <button key={r.m.id} type="button" className="h-row" onClick={() => choose(r.m.id)} aria-current={on ? 'true' : undefined} data-testid="reading-row"
               style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', minHeight: 66, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: on ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-              <Av name={memberName(r.m)} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} font={15} />
+              <Av name={memberName(r.m)} member={r.m} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{memberName(r.m)}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{r.last ? t('health.lastBp', { v: `${r.last.sys}/${r.last.dia}`, d: when(r.last.date) }) : ''}</span>
@@ -135,7 +135,7 @@ export function Readings() {
           const on = !!who && cur?.m.id === who.id;
           const inner = (
             <>
-              <Av name={who?.name || ''} tone={who?.tone} src={who?.photo} size={42} font={15} />
+              <Av name={who?.name || ''} member={who?.member} tone={who?.tone} src={who?.photo} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.lead}</span>
                 <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{readingTitle(r, t)}</span>
@@ -172,7 +172,7 @@ export function Readings() {
           const on = cur?.m.id === r.m.id; // the first row is "current" before anything is chosen: aria only, no highlight on the phone
           return (
             <button key={r.m.id} type="button" className="cp-tap-self" onClick={() => choose(r.m.id)} aria-current={on ? 'true' : undefined} data-testid="reading-row" style={{ ...rowStyle(i === 0), cursor: 'pointer' }}>
-              <Av name={memberName(r.m)} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} font={15} />
+              <Av name={memberName(r.m)} member={r.m} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{memberName(r.m)}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{r.last ? t('health.lastBp', { v: `${r.last.sys}/${r.last.dia}`, d: when(r.last.date) }) : ''}</span>
@@ -203,7 +203,7 @@ export function Readings() {
         {pagedD.rows.map(({ r, who }, i) => {
           const inner = (
             <>
-              <Av name={who?.name || ''} tone={who?.tone} src={who?.photo} size={42} font={15} />
+              <Av name={who?.name || ''} member={who?.member} tone={who?.tone} src={who?.photo} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.lead}</span>
                 <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{readingTitle(r, t)}</span>
@@ -314,7 +314,7 @@ function Detail({ row, s, today, t, when, fds, fmonth, day, onDay, onProfile, on
     return (
       <>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, minWidth: 0 }}>
-          <Av name={name} tone={m.photoTone} src={memberPhoto(m)} size={72} font={26} />
+          <Av name={name} member={m} tone={m.photoTone} src={memberPhoto(m)} size={72} font={26} />
           <h2 className="cp-serif" style={{ margin: '6px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{name}</h2>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{[age ?? '', m.health.conditions.length ? m.health.conditions.join(', ') : t('health.noConditions')].filter((x) => x !== '').join(' · ')}</span>
         </div>
@@ -335,7 +335,7 @@ function Detail({ row, s, today, t, when, fds, fmonth, day, onDay, onProfile, on
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <Av name={name} tone={m.photoTone} src={memberPhoto(m)} size={48} font={17} />
+        <Av name={name} member={m} tone={m.photoTone} src={memberPhoto(m)} size={48} font={17} />
         <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <h2 style={{ margin: 0, fontSize: 'clamp(20px, 2vw, 24px)', lineHeight: 1.2, fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C' }}>{name}</h2>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[age ?? '', m.health.conditions.length ? m.health.conditions.join(', ') : t('health.noConditions')].filter((x) => x !== '').join(' · ')}</span>

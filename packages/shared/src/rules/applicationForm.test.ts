@@ -130,6 +130,10 @@ describe('a new member who is still being typed', () => {
       kin: 'Rudi Rahma', kinRelation: 'Putra', kinPhone: '+62 813-4000-7777', idGuarantor: true, idMember: false, idCarer: true, signer: 'Rudi Rahma', date: '21 Oktober 2026',
     });
   });
+  it('the gender box follows the title like the member record does (free-text Tante is female)', () => {
+    expect(applicationDataFromInput(s, { ...input, title: 'Tante' }, T).gender).toBe('f');
+    expect(applicationDataFromInput(s, { ...input, title: 'Opa' }, T).gender).toBe('m');
+  });
   it('works with nothing typed yet (blank lines, no error)', () => {
     const empty = applicationDataFromInput(s, { name: '', dob: '', address: '', plan: 'flex', nanny: null, contact: { name: '', phone: '', relation: 'daughter', primary: true }, health: { conditions: [], food: [], foodOther: '', drugs: [] } }, T);
     expect(page1Values(empty)).toMatchObject({ name: '', dobAge: '', kin: '', signer: '', carer: 'Tidak', allergy: 'Tidak', registrationFee: expect.stringMatching(/^Flex/) });

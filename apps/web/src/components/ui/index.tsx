@@ -1,7 +1,7 @@
 // UI primitives with the design's exact values (Design System.dc.html + CitraPremier App.dc.html).
 import { useEffect, useRef, type CSSProperties, type ReactNode, type KeyboardEvent as RKE } from 'react';
 import { createPortal } from 'react-dom';
-import { BADGE, type BadgeKey, initials } from '@cp/shared';
+import { BADGE, type BadgeKey, type Member, initials } from '@cp/shared';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { photoFill } from '../../lib/media';
@@ -134,11 +134,11 @@ export const CountDot = ({ n, style }: { n: number; style?: CSSProperties }) =>
   n > 0 ? <span style={{ minWidth: 22, height: 22, padding: '0 7px', borderRadius: 999, background: '#2B231C', color: '#FFFFFF', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...style }}>{n > 99 ? '99+' : n}</span> : null;
 
 // ---------- avatar & card ----------
-export function Avatar({ name, tone, size = 48, ring, src }: { name: string; tone?: number; size?: number; ring?: boolean; /** a photo (member profile picture) */ src?: string }) {
+export function Avatar({ name, member, tone, size = 48, ring, src }: { name: string; /** a member: initials come from the first and last name, never the title (any title, "Tante" included) */ member?: Pick<Member, 'title' | 'firstName' | 'lastName'> | null; tone?: number; size?: number; ring?: boolean; /** a photo (member profile picture) */ src?: string }) {
   const [bg, fg] = TONES[(tone ?? toneFor(name)) % 5];
   return (
     <div aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(src, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.36), fontWeight: 500, flex: 'none', boxShadow: ring ? 'inset 0 0 0 3px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' : undefined }}>
-      {src ? null : initials(name)}
+      {src ? null : initials(member ?? name)}
     </div>
   );
 }

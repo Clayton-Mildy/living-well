@@ -100,7 +100,7 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Avatar name={m ? memberName(m) : inv.memberId} tone={m?.photoTone} src={memberPhoto(m)} size={48} />
+        <Avatar name={m ? memberName(m) : inv.memberId} member={m} tone={m?.photoTone} src={memberPhoto(m)} size={48} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{m ? memberName(m) : inv.memberId}</span>
           <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{inv.number} · {fmonth(invoicePeriod(inv), true)}</span>

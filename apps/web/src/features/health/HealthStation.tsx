@@ -351,7 +351,7 @@ function ListRow({ r, on, first, today, t, fds, onClick }: { r: StationRow; on: 
     return (
       <button type="button" className="cp-tap-self" onClick={onClick} aria-current={on ? 'true' : undefined} data-testid="station-row" data-person={r.personId} data-presence={r.presence}
         style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'center', padding: '10px 10px 10px 16px', minHeight: 64, border: 'none', backgroundColor: on ? 'var(--press, #EEEEF0)' : 'transparent', backgroundImage: first || on ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 70px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-        <Av name={w.name} tone={w.tone} src={w.photo} size={42} font={15} />
+        <Av name={w.name} member={w.member} tone={w.tone} src={w.photo} size={42} font={15} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
             <span style={{ minWidth: 0, fontSize: 16, fontWeight: 500, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.lead}</span>
@@ -369,7 +369,7 @@ function ListRow({ r, on, first, today, t, fds, onClick }: { r: StationRow; on: 
   return (
     <button type="button" className="h-row" onClick={onClick} aria-current={on ? 'true' : undefined} data-testid="station-row" data-person={r.personId} data-presence={r.presence}
       style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'center', padding: isPhone ? '10px 14px' : '12px 16px', minHeight: isPhone ? 60 : 70, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: on ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-      <Av name={w.name} tone={w.tone} src={w.photo} size={isPhone ? 40 : 44} font={isPhone ? 14 : 16} />
+      <Av name={w.name} member={w.member} tone={w.tone} src={w.photo} size={isPhone ? 40 : 44} font={isPhone ? 14 : 16} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
           <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{w.lead}</span>

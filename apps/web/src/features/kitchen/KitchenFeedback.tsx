@@ -95,7 +95,7 @@ function FeedbackCard({ f }: { f: Feedback }) {
     // one soft grey card per feedback (no outline), the row actions as small pills
     <div data-testid="feedback-card" data-status={f.status} className="cp-card-pad cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={44} /> : null}
+        {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={44} /> : null}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{m ? listName(m) : '—'}</span>
           <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{from}</span>

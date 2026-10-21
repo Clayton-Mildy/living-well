@@ -117,7 +117,7 @@ export function Overview() {
             if (!m) return null;
             return (
               <Fragment key={r.id}>
-                <LightRow avatar={<Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={46} />} title={memberName(m)} sub={reqText(t, fds, r)} onClick={() => navigate(`/members/${m.id}/plan`)} />
+                <LightRow avatar={<Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={46} />} title={memberName(m)} sub={reqText(t, fds, r)} onClick={() => navigate(`/members/${m.id}/plan`)} />
               </Fragment>
             );
           }) : <EmptyState icon="inbox" title={t('mgmt.reqEmpty')} />}

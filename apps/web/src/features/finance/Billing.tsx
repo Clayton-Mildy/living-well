@@ -268,7 +268,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
     <div style={{ borderTop: HAIR, ...(open ? { background: 'var(--press, #EEEEF0)', margin: '0 calc(var(--hp) * -1)', padding: '0 var(--hp)', boxShadow: 'inset 3px 0 0 #2B231C' } : null) }}>
       <button type="button" onClick={onToggle} aria-expanded={open} aria-label={`${name}, ${inv.number}`}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16, padding: 'clamp(13px, 2.2vw, 18px) 0', minHeight: isPhone ? 60 : 78, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-        {isPhone ? null : <Avatar name={name} tone={member?.photoTone} src={memberPhoto(member)} size={46} />}
+        {isPhone ? null : <Avatar name={name} member={member} tone={member?.photoTone} src={memberPhoto(member)} size={46} />}
         <span style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={rowTitle}>{name}</span>
           <span style={rowSub}>{sub}</span>

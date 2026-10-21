@@ -49,7 +49,7 @@ export function PerPerson({ data, onOpen }: { data: VisitInsights; onOpen: (memb
             return (
               <button key={p.memberId} type="button" onClick={() => onOpen(p.memberId)} className="h-row cp-bleed" data-member={p.memberId} aria-label={name}
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 60, border: 'none', borderTop: i ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-                <Avatar name={memberName(m)} tone={m.photoTone} size={38} src={memberPhoto(m)} />
+                <Avatar name={memberName(m)} member={m} tone={m.photoTone} size={38} src={memberPhoto(m)} />
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '21px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                   <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

@@ -236,7 +236,7 @@ function Frame({ cover, scrim, top, children, attrs, onOpen, onOpenPhoto, grow }
 }
 
 function Face({ m, size }: { m: Member; size: number }) {
-  return <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={size} />;
+  return <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={size} />;
 }
 
 /** Where the parent is, as one strong line and a quiet one under it (never side by side, so neither wraps into the other). */

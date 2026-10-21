@@ -39,7 +39,7 @@ export function FlexQuota({ period, today, gap, onOpen }: { period: InsightPerio
     return (
       <button key={`${e.month}:${e.memberId}`} type="button" onClick={() => onOpen(e.memberId)} className="h-row cp-bleed" data-member={e.memberId} aria-label={name}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 62, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: INK, fontFamily: 'Inter' }}>
-        <Avatar name={memberName(m)} tone={m.photoTone} size={36} src={memberPhoto(m)} />
+        <Avatar name={memberName(m)} member={m} tone={m.photoTone} size={36} src={memberPhoto(m)} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
           <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '21px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>

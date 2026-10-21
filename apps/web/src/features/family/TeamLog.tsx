@@ -103,7 +103,7 @@ function Block({ b, m, multi, past, onOpenDay }: { b: LogBlock; m: Member; multi
       <FillCard radius={22} pad={0} gap={0} style={{ overflow: 'hidden' }}>
         {multi ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px 6px' }}>
-            <Avatar name={memberName(m)} src={memberPhoto(m)} tone={m.photoTone} size={28} />
+            <Avatar name={memberName(m)} member={m} src={memberPhoto(m)} tone={m.photoTone} size={28} />
             <span style={{ fontSize: 15, fontWeight: 600, color: F.text }}>{displayName(m)}</span>
           </div>
         ) : null}

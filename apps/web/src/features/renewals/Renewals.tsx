@@ -189,7 +189,7 @@ export function Renewals() {
             : { display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 0', fontFamily: 'Inter', color: '#24201C', borderTop: i ? HAIRLINE : 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button type="button" className="cp-tap-target" onClick={() => setOpenId(r.m.id)} aria-label={label} style={openStyle}>
-              <Avatar name={memberName(r.m)} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} />
+              <Avatar name={memberName(r.m)} member={r.m} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {nameEl}
                 {contactLine}
@@ -213,7 +213,7 @@ export function Renewals() {
         style={{ display: 'grid', gridTemplateColumns: gridCols, columnGap: 14, rowGap: 8, alignItems: 'center', minHeight: 66, fontFamily: 'Inter', color: '#24201C', padding: '11px 0', borderTop: HAIRLINE, cursor: 'pointer' }}>
         <div role="cell" style={{ display: 'flex', minWidth: 0 }}>
           <button type="button" className="cp-tap-target" onClick={(e) => { e.stopPropagation(); setOpenId(r.m.id); }} aria-label={name} style={{ ...openStyle, alignItems: 'center' }}>
-            <Avatar name={memberName(r.m)} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} />
+            <Avatar name={memberName(r.m)} member={r.m} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>{nameEl}{contactLine}</span>
           </button>
         </div>

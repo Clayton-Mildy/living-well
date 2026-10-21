@@ -17,7 +17,7 @@ export const enq = {
   changeTime: 'Change time', changeDay: 'Change day', searchLabel: 'Search by name', searchPh: 'Senior or contact name', noMatch: 'No leads match “{q}”.', noMatchShort: 'No match', lostAction: 'Lost', editLead: 'Edit lead',
 
   // ----- lead dialog -----
-  newEyebrow: 'New lead', editEyebrow: 'Edit lead', fSenior: 'Who is it for?', fSeniorTitle: 'Title', fSeniorName: 'Name', fContact: 'Who is asking?', fContactName: 'Contact person',
+  newEyebrow: 'New lead', editEyebrow: 'Edit lead', fSenior: 'Who is it for?', fSeniorName: 'Name', fContact: 'Who is asking?', fContactName: 'Contact person',
   fRelation: 'Relationship', fSource: 'How did they hear of us?', fNotes: 'Notes', addLead: 'Add lead', leadCreated: 'Lead added: {name}.', leadSaved: 'Lead saved.',
 
   // ----- visit and trial -----

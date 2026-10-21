@@ -61,7 +61,7 @@ export function FamilyBilling() {
       : p.left === 0 ? t('fme.nextExtra', { p: rp(p.price), m: fmt.fmonth(p.invoiceMonth) }) : '') : '';
     return (
       <div key={m.id} data-testid="plan-card" data-member={m.id} data-plan={p.plan} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderTop: i ? HAIR : 'none' }}>
-        <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={36} />
+        <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={36} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
           <span style={{ fontSize: 15, fontWeight: 500, overflowWrap: 'anywhere' }}>{t('fme.planName', { n: displayName(m), p: t(flex ? 'family.planFlex' : 'family.planGold') })}</span>
           <span style={{ fontSize: 13, color: F.muted }} data-testid="plan-line">{p.ended ? t('fme.ended') : flex ? t('family.visitsUsed', { n: p.used, q: p.quota ?? 0, m: fmt.fmonth(p.month) }) : t('fme.anyOpenDay')}</span>

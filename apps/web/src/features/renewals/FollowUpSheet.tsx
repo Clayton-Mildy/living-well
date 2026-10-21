@@ -171,7 +171,7 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
     <>
       {isPhone ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={48} />
+          <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={48} />
           <h1 style={{ margin: 0, fontSize: 24, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C', minWidth: 0, overflowWrap: 'anywhere' }}>{title}</h1>
         </div>
       ) : null}

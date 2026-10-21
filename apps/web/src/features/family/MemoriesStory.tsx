@@ -251,7 +251,7 @@ export function MemoriesStory({ memberId, month, startSlide = 0, cover, onClose 
             ))}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, ...fade }}>
-            <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={32} />
+            <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={32} />
             <span style={{ flex: 1, minWidth: 0, fontSize: 14, fontWeight: 500, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</span>
             <button type="button" onClick={() => setUserPaused((v) => !v)} aria-label={userPaused ? t('fphotos.storyPlay') : t('fphotos.storyPause')} data-testid="story-pause" data-nohold="" style={{ ...round, width: 40, height: 40, borderRadius: 999, background: 'transparent', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={userPaused ? 'play_arrow' : 'pause'} size={26} fill={1} /></button>
             <button type="button" onClick={onClose} aria-label={t('common.close')} data-testid="story-close" data-nohold="" style={{ ...round, width: 40, height: 40, borderRadius: 999, background: 'transparent', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="close" size={28} /></button>

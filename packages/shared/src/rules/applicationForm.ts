@@ -7,7 +7,7 @@ import { translate } from '../i18n';
 import { memberAge, planOn, primaryContact, linksOfMember } from './core';
 import { priceOn } from './billing';
 import { billingContactOf } from './family';
-import { isPhone, plainName, type FieldIssue, type NewMemberInput } from './members';
+import { genderOf, isPhone, plainName, type FieldIssue, type NewMemberInput } from './members';
 
 export const MARITALS = ['single', 'married', 'widowed', 'divorced'] as const;
 export type Marital = (typeof MARITALS)[number];
@@ -150,7 +150,7 @@ export function applicationDataFromInput(s: ClubState, input: ApplicationInput, 
   const existing = input.contact.existingId ? s.familyContacts[input.contact.existingId] : undefined;
   const kinName = existing?.name || input.contact.name.trim();
   const kinPhone = existing?.phone || input.contact.phone;
-  const female = input.title ? input.title === 'Oma' || input.title === 'Ibu' : null;
+  const female = input.title ? genderOf(input.title) === 'f' : null;
   return {
     name: input.name.trim(), nickname: r.nickname || '', dob: input.dob || null, age: input.dob ? ageOn(input.dob, today) : null, marital: r.marital ?? null, gender: female === null ? null : female ? 'f' : 'm',
     address: input.address.trim(), rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',

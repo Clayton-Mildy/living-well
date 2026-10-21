@@ -1,6 +1,6 @@
 // Small pieces shared by the health station and the readings screen, with the design's exact sizes.
 import { useEffect, useRef, type ReactNode } from 'react';
-import { BADGE, initials, type Health } from '@cp/shared';
+import { BADGE, initials, type Health, type Member } from '@cp/shared';
 import { Icon, TONES, FONT_BODY, FONT_SMALL, toneFor } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
@@ -20,9 +20,9 @@ export function Badge({ kind, size = 28, icon, label }: { kind: Health; size?: 2
 }
 
 /** Round avatar with initials in the member's tone (design: 44, 60 and 64px). */
-export function Av({ name, tone, size, font, src }: { name: string; tone?: number; size: number; font: number; src?: string }) {
+export function Av({ name, member, tone, size, font, src }: { name: string; member?: Pick<Member, 'title' | 'firstName' | 'lastName'> | null; tone?: number; size: number; font: number; src?: string }) {
   const [bg, fg] = TONES[(tone ?? toneFor(name)) % 5];
-  return <div aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(src, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: font, fontWeight: 500, flex: 'none' }}>{src ? null : initials(name)}</div>;
+  return <div aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(src, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: font, fontWeight: 500, flex: 'none' }}>{src ? null : initials(member ?? name)}</div>;
 }
 
 /** The design's pill switch under a result: dark when on, check icon + label (role switch). Long labels wrap instead of overflowing. */

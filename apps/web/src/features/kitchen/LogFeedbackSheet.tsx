@@ -45,7 +45,7 @@ export function LogFeedbackSheet({ open, onClose, memberId: preset }: { open: bo
       footer={<Button full style={{ flex: 'none' }} onClick={save} disabled={!ok || busy} icon="call">{t('kitchen.log.save')}</Button>}>
       {picked ? (
         <div className="cp-grey" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: 'var(--fill, #F4F4F5)', borderRadius: 12 }}>
-          <Avatar name={memberName(picked)} tone={picked.photoTone} src={memberPhoto(picked)} size={40} />
+          <Avatar name={memberName(picked)} member={picked} tone={picked.photoTone} src={memberPhoto(picked)} size={40} />
           <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>{listName(picked)}</span>
           {!preset ? <Button variant="ghost" size={44} onClick={() => setMemberId(null)}>{t('kitchen.log.change')}</Button> : null}
         </div>
@@ -56,7 +56,7 @@ export function LogFeedbackSheet({ open, onClose, memberId: preset }: { open: bo
             {shown.map((m, k) => (
               <button key={m.id} type="button" onClick={() => setMemberId(m.id)} className="h-row"
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', minHeight: 56, border: 'none', borderTop: k ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
-                <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={40} />
+                <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={40} />
                 <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>{listName(m)}</span>
                 <Icon name="chevron_right" size={22} color="#5E5852" />
               </button>

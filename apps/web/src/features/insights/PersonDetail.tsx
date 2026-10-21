@@ -44,7 +44,7 @@ function Body({ memberId, period, periodLabel, today, todayDone }: { memberId: s
   return (
     <>
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-        <Avatar name={memberName(m)} tone={m.photoTone} size={56} src={memberPhoto(m)} />
+        <Avatar name={memberName(m)} member={m} tone={m.photoTone} size={56} src={memberPhoto(m)} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           <span style={{ fontSize: 20, fontWeight: 500, color: '#2B231C', lineHeight: '26px' }}>{listName(m)}</span>
           <span style={{ fontSize: 14, color: '#6B6259' }}>{t(p?.plan === 'gold' ? 'insights.planGold' : 'insights.planFlex')} · {periodLabel}</span>

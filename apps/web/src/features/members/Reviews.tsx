@@ -238,7 +238,7 @@ export function Reviews() {
       <div key={cr.id} data-cr={cr.id} role="group" aria-label={`${d.title} ${name}`} className="cp-grey" style={isPhone ? { background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 } : { background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '20px clamp(18px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Check on={on} onClick={() => toggleSel(cr.id)} label={t('approvals.checkRow', { n: name || d.title })} />
-          <Avatar name={name || d.title} tone={m?.photoTone} src={memberPhoto(m)} size={isPhone ? 40 : 46} />
+          <Avatar name={name || d.title} member={m} tone={m?.photoTone} src={memberPhoto(m)} size={isPhone ? 40 : 46} />
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {isPhone ? <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>{who0}{chip}</div> : who0}
             <span style={{ fontSize: isPhone ? 13 : 14, color: '#6B6259', lineHeight: 1.4 }}>{`${d.title} · ${who(cr.submittedBy)} · ${whenText(fmt.fds, today, cr.createdAt, t)}`}</span>
@@ -295,7 +295,7 @@ export function Reviews() {
         <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()}
           style={{ padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, backgroundColor: on ? 'var(--press, #EEEEF0)' : 'transparent', backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 54px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
           <div style={{ paddingTop: 6 }}><Check on={on} onClick={() => toggleSel(it.id)} label={t('approvals.checkRow', { n: title })} /></div>
-          {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={40} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={21} /></span>}
+          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={40} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={21} /></span>}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
@@ -318,7 +318,7 @@ export function Reviews() {
       <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()} style={{ borderTop: i ? HAIRLINE : 'none', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 10, background: on ? 'var(--press, #EEEEF0)' : 'transparent' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ paddingTop: 6 }}><Check on={on} onClick={() => toggleSel(it.id)} label={t('approvals.checkRow', { n: title })} /></div>
-          {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={42} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 42, height: 42, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={22} /></span>}
+          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={42} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 42, height: 42, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={22} /></span>}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
@@ -466,7 +466,7 @@ export function Reviews() {
     const kinds = APPROVAL_TYPES.map((k) => [k, g.items.filter((x) => x.type === k).length] as const).filter(([, c]) => c).map(([k, c]) => `${t('approvals.tab.' + k)} ${c}`).join(' · ');
     return sectionCard(g.memberId, (
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '12px 16px' : '12px 0' }}>
-        <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={isPhone ? 42 : 46} />
+        <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={isPhone ? 42 : 46} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <button type="button" onClick={() => navigate(`/members/${m.id}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: isPhone ? 16 : 17, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{memberName(m)}</button>
           <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('approvals.personWaiting', { n })} · {kinds}</span>

@@ -20,7 +20,7 @@ export const enq: Same<typeof EN> = {
   changeTime: 'Ubah jam', changeDay: 'Ubah hari', searchLabel: 'Cari berdasarkan nama', searchPh: 'Nama calon anggota atau narahubung', noMatch: 'Tidak ada calon yang cocok dengan “{q}”.', noMatchShort: 'Tidak cocok', lostAction: 'Batal', editLead: 'Ubah data calon',
 
   // ----- dialog calon -----
-  newEyebrow: 'Calon baru', editEyebrow: 'Ubah data calon', fSenior: 'Untuk siapa?', fSeniorTitle: 'Sapaan', fSeniorName: 'Nama', fContact: 'Siapa yang bertanya?', fContactName: 'Narahubung',
+  newEyebrow: 'Calon baru', editEyebrow: 'Ubah data calon', fSenior: 'Untuk siapa?', fSeniorName: 'Nama', fContact: 'Siapa yang bertanya?', fContactName: 'Narahubung',
   fRelation: 'Hubungan', fSource: 'Dari mana mereka tahu tentang kami?', fNotes: 'Catatan', addLead: 'Tambah calon', leadCreated: 'Calon ditambahkan: {name}.', leadSaved: 'Data calon tersimpan.',
 
   // ----- kunjungan dan percobaan -----

@@ -70,7 +70,7 @@ export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: 
     return (
       <>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, minWidth: 0 }}>
-          <Av name={who.name} tone={who.tone} src={who.photo} size={72} font={26} />
+          <Av name={who.name} member={who.member} tone={who.tone} src={who.photo} size={72} font={26} />
           <Eyebrow style={{ marginTop: 6 }}>{eyebrow}</Eyebrow>
           <h2 className="cp-serif" style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{who.lead}</h2>
           {who.member ? <FullName m={who.member} /> : null}
@@ -111,7 +111,7 @@ export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: 
   return (
     <>
       <div style={{ padding: pad, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: isPhone ? 12 : 16, borderBottom: '0.5px solid var(--hairline, #E2E2E6)' }}>
-        <Av name={who.name} tone={who.tone} src={who.photo} size={isPhone ? 52 : 56} font={isPhone ? 18 : 20} />
+        <Av name={who.name} member={who.member} tone={who.tone} src={who.photo} size={isPhone ? 52 : 56} font={isPhone ? 18 : 20} />
         <div style={{ flex: '1 1 180px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Eyebrow>{eyebrow}</Eyebrow>
           <h2 className="cp-serif" style={{ margin: 0, fontSize: isPhone ? 22 : 'clamp(22px, 2vw, 26px)', lineHeight: 1.2, fontWeight: 500, letterSpacing: '-0.3px', color: '#24201C' }}>{who.lead}</h2>

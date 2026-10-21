@@ -66,7 +66,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
   const regErr = (...fields: string[]) => { const i = tried ? regIssues.find((x) => fields.includes(x.field)) : undefined; return i ? t(i.code, i.params) : ''; };
   const save = async () => {
     setTried(true);
-    if (d.name.trim().length < 2 || !carerOk(d) || regIssues.length || busy) return;
+    if (!d.title.trim() || d.name.trim().length < 2 || !carerOk(d) || regIssues.length || busy) return;
     const patch: Record<string, unknown> = {};
     if (d.title !== m.title) patch.title = d.title;
     if (d.name.trim() !== plainName(m)) patch.name = d.name.trim();
@@ -89,7 +89,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
       <GateNote p={p} />
       <PeSection label={t('profile.sec.details')}>
         <ProfilePhotoField name={memberName(m)} tone={m.photoTone} value={d.photo || null} onChange={(id) => set({ photo: id || '' })} />
-        <TitleName d={d} set={set} t={t} errors={{ name: errName }} />
+        <TitleName d={d} set={set} t={t} errors={{ title: tried && !d.title.trim() ? t('members.err.titleRequired') : '', name: errName }} />
         <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} />
         <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} name="address" />
         <OptionalTime label={t('profile.f.usualOpt')} value={d.usual} onChange={(v) => set({ usual: v })} min={hours.open} max={hours.last} t={t} />
