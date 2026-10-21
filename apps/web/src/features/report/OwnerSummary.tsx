@@ -49,8 +49,9 @@ export function OwnerSummary({ open, onClose, r, fmt }: { open: boolean; onClose
   if (!open) return null;
   const text = ownerSummaryLines(r, t, fmt).join('\n');
   const copy = () => {
-    const done = () => say(t('month.copied'));
-    try { navigator.clipboard?.writeText(text).then(done, () => {}); } catch { /* no clipboard (an old browser or an insecure page): nothing to do */ }
+    const failed = () => say(t('month.copyFailed'), { tone: 'error' });
+    // no clipboard (an old browser, an insecure page) or a refusal: say so rather than nothing
+    try { if (navigator.clipboard?.writeText) navigator.clipboard.writeText(text).then(() => say(t('month.copied')), failed); else failed(); } catch { failed(); }
   };
   const send = () => { say(t('month.sent')); onClose(); };
   return (

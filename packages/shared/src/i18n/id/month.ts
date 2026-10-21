@@ -10,7 +10,7 @@ export const month: Same<typeof EN> = {
   visitsPerMember: 'Kunjungan per anggota', utilisation: 'Tingkat kehadiran',
   index: 'Suasana hati', lift: 'Naik dari datang ke pulang', alerts: 'Bacaan bahaya', watches: 'Bacaan waspada', rechecks: 'Cek ulang', lunchEaten: 'Makan siang habis',
   leads: 'Calon baru', leadsCaption: 'calon yang masuk periode ini', visits: 'Berkunjung', trials: 'Hari percobaan', converted: 'Bergabung', lost: 'Batal',
-  duties: 'Tugas selesai', surveyFamily: 'Nilai keluarga', surveyVenue: 'Nilai penyewa ruang', nDays: '{n} hari',
-  sendOwner: 'Kirim ke pemilik', summaryTitle: 'Ringkasan untuk pemilik', copy: 'Salin', copied: 'Tersalin', sendWa: 'Kirim lewat WhatsApp', sent: 'Terkirim ke pemilik lewat WhatsApp',
+  duties: 'Tugas selesai', surveyFamily: 'Nilai keluarga', surveyVenue: 'Nilai penyewa ruang', monthsVs: '{cur} vs {prev}',
+  sendOwner: 'Kirim ke pemilik', summaryTitle: 'Ringkasan untuk pemilik', copy: 'Salin', copied: 'Tersalin', copyFailed: 'Gagal menyalin. Pilih teksnya lalu salin manual.', sendWa: 'Kirim lewat WhatsApp', sent: 'Terkirim ke pemilik lewat WhatsApp',
   'sum.head': 'CitraPremier · {period}', 'sum.row': '{label}: {cur}', 'sum.rowDiff': '{label}: {cur} ({diff})',
 };

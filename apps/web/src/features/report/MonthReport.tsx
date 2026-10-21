@@ -82,13 +82,17 @@ export function MonthReport() {
   const sendBtn = !isPhone && !r.empty ? <Button size={44} icon="send" onClick={() => setSending(true)}>{t('month.sendOwner')}</Button> : null;
 
   const { money: m, members: mb, care: c, pipeline: p } = r;
+  // billed, extra days and renewals go by billing month: say which months they compare ("Oct vs Sep")
+  const mon = (x: string) => fmt.fd(`${x}-01`, { month: 'short' });
+  const months = (list: string[]) => (list.length > 1 ? `${mon(list[0])}–${mon(list[list.length - 1])}` : mon(list[0]));
+  const basis = t('month.monthsVs', { cur: months(r.months.cur), prev: months(r.months.prev) });
   const open = (path: string) => () => go(path);
   const money = (
     <Group key="money" title={t('month.money')} label={t('month.money')} pad={0} gap={0}>
-      <Stat first label={t('month.billed')} value={rp(m.billed.cur)} d={m.billed} df={rp} onClick={open('/billing')} />
+      <Stat first label={t('month.billed')} value={rp(m.billed.cur)} d={m.billed} df={rp} sub={basis} onClick={open('/billing')} />
       <Stat label={t('month.collected')} value={rp(m.collected.cur)} d={m.collected} df={rp} onClick={open('/payments')} />
       <Stat label={t('month.outstanding')} value={rp(m.outstanding.cur)} d={m.outstanding} df={rp} onClick={open('/billing')} />
-      <Stat label={t('month.extraDays')} value={m.extraDays.cur ? `${m.extraDays.cur} · ${rp(m.extraDays.amount.cur)}` : '0'} d={m.extraDays} onClick={open('/billing')} />
+      <Stat label={t('month.extraDays')} value={m.extraDays.cur ? `${m.extraDays.cur} · ${rp(m.extraDays.amount.cur)}` : '0'} d={m.extraDays} sub={basis} onClick={open('/billing')} />
       <Stat label={t('month.venueIncome')} value={rp(m.venueIncome.cur)} d={m.venueIncome} df={rp} onClick={open('/venue')} />
       <Stat label={t('month.refunds')} value={rp(m.refunds.cur)} d={m.refunds} df={rp} onClick={open('/payments')} />
     </Group>
@@ -98,8 +102,8 @@ export function MonthReport() {
       <Stat first label={t('month.active')} value={mb.active.cur} d={mb.active} onClick={open('/members')} />
       <Stat label={t('month.joined')} value={mb.joined.cur} d={mb.joined} onClick={open('/members')} />
       <Stat label={t('month.ended')} value={mb.ended.cur} d={mb.ended} sub={breakdown(t, END_REASONS, mb.ended.byReason, 'profile.endReason.') || undefined} onClick={open('/members')} />
-      <Stat label={t('month.renewalsKept')} value={mb.renewalsKept.cur} d={mb.renewalsKept} onClick={open('/renewals')} />
-      <Stat label={t('month.renewalsLost')} value={mb.renewalsLost.cur} d={mb.renewalsLost} onClick={open('/renewals')} />
+      <Stat label={t('month.renewalsKept')} value={mb.renewalsKept.cur} d={mb.renewalsKept} sub={basis} onClick={open('/renewals')} />
+      <Stat label={t('month.renewalsLost')} value={mb.renewalsLost.cur} d={mb.renewalsLost} sub={basis} onClick={open('/renewals')} />
       <Stat label={t('month.onLeave')} value={mb.onLeave.cur} d={mb.onLeave} onClick={open('/members')} />
       <Stat label={t('month.checkOn')} value={mb.checkOn} onClick={open('/today')} />
       <Stat label={t('month.visitsPerMember')} value={val(mb.visitsPerMember, one)} d={mb.visitsPerMember} df={one} onClick={open('/insights')} />

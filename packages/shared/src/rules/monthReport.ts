@@ -1,6 +1,6 @@
 // Round 12: the month report (management). The business view of a period — money, members, care and mood, pipeline and team — with every number
 // that has a history compared with the period just before it (same length, ending the day before). Pure rules over the club state.
-import type { ClubState, EndReason, ISODate, LostReason, MoodMoment, StaffRole } from '../types';
+import type { ClubState, EndReason, ISODate, LostReason, MoodMoment, StaffRole, YM } from '../types';
 import { activeOn, currentMembership, isPendingRow } from './core';
 import { checkOnList } from './checkOn';
 import { invoicePeriod } from './finance';
@@ -11,7 +11,7 @@ import { moodStats } from './mood';
 import { renewalRows } from './renewals';
 import { surveyKind } from './surveys';
 import { teamRange } from './tasks';
-import { addDays, diffDays, live, sum, toMin } from '../util';
+import { addDays, addMonths, diffDays, live, sum, toMin } from '../util';
 
 /** A number now and in the period before. `diff` is cur − prev (null when either side is unknown); `good` says which way is good news. */
 export interface Delta<T = number> { cur: T; prev: T; diff: T | null; good: 'up' | 'down' | 'none' }
@@ -19,7 +19,8 @@ export interface MoneyGroup { billed: Delta; collected: Delta; outstanding: Delt
 export interface MembersGroup { active: Delta; joined: Delta; ended: Delta & { byReason: Record<EndReason, number> }; renewalsKept: Delta; renewalsLost: Delta; onLeave: Delta; checkOn: number; visitsPerMember: Delta<number | null>; utilisation: Delta<number | null> }
 export interface CareGroup { index: Delta<number | null>; lift: Delta<number | null>; byMoment: Record<MoodMoment, number | null>; alerts: Delta; watches: Delta; rechecks: Delta; lunchEaten: Delta<number | null> }
 export interface PipelineGroup { funnel: { new: number; visit: number; trial: number; joined: number }; conversion: { toVisit: number | null; toTrial: number | null; toJoined: number | null }; lostReasons: Record<LostReason, number>; duties: { role: StaffRole; done: number; total: number }[]; surveys: { family: number | null; venue: number | null } }
-export interface MonthReport { period: InsightPeriod; prev: InsightPeriod; money: MoneyGroup; members: MembersGroup; care: CareGroup; pipeline: PipelineGroup; empty: boolean }
+/** `months`: the billing months that billed, extra days and renewals compare (the period's months against as many months just before them). */
+export interface MonthReport { period: InsightPeriod; prev: InsightPeriod; months: { cur: YM[]; prev: YM[] }; money: MoneyGroup; members: MembersGroup; care: CareGroup; pipeline: PipelineGroup; empty: boolean }
 
 export const END_REASONS: EndReason[] = ['movedAway', 'careNeeds', 'careHome', 'passedAway', 'familyDecision', 'unpaid', 'leaveOverrun'];
 export const LOST_REASONS: LostReason[] = ['price', 'distance', 'notReady', 'otherPlace', 'health', 'other'];
@@ -30,6 +31,8 @@ export function prevPeriod(p: InsightPeriod): InsightPeriod {
   const to = addDays(p.from, -1);
   return { from: addDays(to, -diffDays(p.from, p.to)), to };
 }
+/** The months just before `months`, as many of them (Oct → Sep; May…Oct → Nov…Apr): the two windows never overlap. */
+export const prevMonths = (months: YM[]): YM[] => months.map((m) => addMonths(m, -months.length));
 
 const round = (n: number, dp: number) => { const f = 10 ** dp; return Math.round(n * f) / f; };
 const ratio = (a: number, b: number, dp = 2): number | null => (b > 0 ? round(a / b, dp) : null);
@@ -51,10 +54,10 @@ interface Side {
   invoices: number; payments: number; enquiries: number; marks: number; readings: number;
 }
 
-function side(s: ClubState, p: InsightPeriod, today: ISODate, todayDone: boolean): Side {
+function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, todayDone: boolean): Side {
   // ---------- money ----------
-  // invoices belong to a billing month: every month the period touches
-  const months = new Set(monthsOf(p));
+  // invoices (and renewals) belong to a billing month: whole months, compared with as many months before them
+  const months = new Set(monthList);
   const invs = live(s.invoices).filter((i) => !i.voided && months.has(invoicePeriod(i)));
   const extra = invs.flatMap((i) => i.lines).filter((l) => l.kind === 'extraDay');
   const payments = live(s.payments).filter((x) => within(x.receivedOn, p));
@@ -109,7 +112,8 @@ function side(s: ClubState, p: InsightPeriod, today: ISODate, todayDone: boolean
 function pipeline(s: ClubState, p: InsightPeriod, today: ISODate, nowMin: number): PipelineGroup {
   const leads = live(s.enquiries).filter((e) => within(e.createdAt.slice(0, 10), p));
   const came = (kind: 'visit' | 'trial') => new Set(live(s.guestVisits).filter((g) => g.kind === kind && g.status === 'booked' && within(g.date, p) && g.date <= today).map((g) => g.enquiryId)).size;
-  const joined = live(s.enquiries).filter((e) => { const m = e.memberId ? s.members[e.memberId] : undefined; return !!m && !m.deletedAt && within(currentMembership(m)?.start, p); }).length;
+  // members (not leads: two enquiries for one person are one join) whose lead started a membership in the period
+  const joined = new Set(live(s.enquiries).filter((e) => { const m = e.memberId ? s.members[e.memberId] : undefined; return !!m && !m.deletedAt && !isPendingRow(m) && within(currentMembership(m)?.start, p); }).map((e) => e.memberId)).size;
   const funnel = { new: leads.length, visit: came('visit'), trial: came('trial'), joined };
   const lostReasons = Object.fromEntries(LOST_REASONS.map((k) => [k, 0])) as Record<LostReason, number>;
   // there is no date a lead was lost on: these are the leads opened this period that are lost now
@@ -128,11 +132,12 @@ function pipeline(s: ClubState, p: InsightPeriod, today: ISODate, nowMin: number
 export function monthReport(s: ClubState, period: InsightPeriod, today: ISODate, nowMin: number): MonthReport {
   const prev = prevPeriod(period);
   const todayDone = nowMin >= toMin(s.club.settings.close);
-  const c = side(s, period, today, todayDone), b = side(s, prev, today, todayDone);
+  const months = { cur: monthsOf(period), prev: prevMonths(monthsOf(period)) };
+  const c = side(s, period, months.cur, today, todayDone), b = side(s, prev, months.prev, today, todayDone);
   const pl = pipeline(s, period, today, nowMin);
   const empty = !c.visits && !c.invoices && !c.payments && !c.enquiries && !c.marks && !c.readings && !c.joined && !c.ended;
   return {
-    period, prev,
+    period, prev, months,
     money: {
       billed: delta(c.billed, b.billed, 'up'), collected: delta(c.collected, b.collected, 'up'), outstanding: delta(c.outstanding, b.outstanding, 'down'),
       extraDays: { ...delta(c.extraQty, b.extraQty, 'up'), amount: delta(c.extraAmount, b.extraAmount, 'up') },

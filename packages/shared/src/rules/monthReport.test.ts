@@ -13,6 +13,16 @@ const s = buildSeed().citra;
 describe('month report', () => {
   it('prevPeriod is the same length ending the day before', () => expect(prevPeriod({ from: '2026-10-01', to: '2026-10-21' })).toEqual({ from: '2026-09-10', to: '2026-09-30' }));
   it('an empty period has zeros and nulls, no NaN', () => { const r = monthReport(buildSeed().citra, { from: '2020-01-01', to: '2020-01-31' }, T, 600); expect(r.empty).toBe(true); expect(r.members.visitsPerMember.cur).toBeNull(); expect(r.members.utilisation.cur).toBeNull(); expect(r.care.index.cur).toBeNull(); expect(r.money.billed.cur).toBe(0); expect(JSON.stringify(r)).not.toContain('NaN'); });
-  it('September money matches the seed invoices', () => { const r = monthReport(s, periodFor('lastMonth', T), T, 600); const sept = invoiceViews(s, T, true).filter((v) => invoicePeriod(v.inv) === '2026-09'); expect(r.money.billed.cur).toBe(sept.reduce((a, v) => a + v.total, 0)); expect(r.money.extraDays.cur).toBe(sept.flatMap((v) => v.inv.lines).filter((l) => l.kind === 'extraDay').reduce((a, l) => a + l.qty, 0)); });
+  it('September money matches the seed invoices', () => { const r = monthReport(s, periodFor('lastMonth', T), T, 600); const sept = invoiceViews(s, T, false).filter((v) => invoicePeriod(v.inv) === '2026-09'); expect(r.money.billed.cur).toBe(sept.reduce((a, v) => a + v.total, 0)); expect(r.money.extraDays.cur).toBe(sept.flatMap((v) => v.inv.lines).filter((l) => l.kind === 'extraDay').reduce((a, l) => a + l.qty, 0)); });
   it('this month counts Lina as active and the check-on list', () => { const r = monthReport(s, periodFor('thisMonth', T), T, 600); expect(r.members.active.cur).toBe(Object.values(s.members).filter((m) => activeOn(m, T)).length); expect(r.members.checkOn).toBe(checkOnList(s, T).length); expect(r.care.lift.cur).toBeGreaterThan(0); });
+  it('billed compares whole months that never overlap: a custom Oct 10–21 against September, Oct 1–21 October against September', () => {
+    const total = (m: string) => invoiceViews(s, T, false).filter((v) => invoicePeriod(v.inv) === m).reduce((a, v) => a + v.total, 0);
+    const mid = monthReport(s, { from: '2026-10-10', to: '2026-10-21' }, T, 600);
+    expect(mid.months).toEqual({ cur: ['2026-10'], prev: ['2026-09'] });
+    expect(mid.money.billed.prev).toBe(total('2026-09'));
+    expect(mid.money.billed.cur).toBe(total('2026-10'));
+    const r = monthReport(s, periodFor('thisMonth', T), T, 600);
+    expect([r.money.billed.cur, r.money.billed.prev]).toEqual([total('2026-10'), total('2026-09')]);
+    expect(monthReport(s, periodFor('last3', T), T, 600).months.prev).toEqual(['2026-05', '2026-06', '2026-07']);
+  });
 });

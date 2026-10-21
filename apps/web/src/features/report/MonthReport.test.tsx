@@ -50,6 +50,7 @@ describe('the month report page', () => {
     expect(money.textContent).toContain('Billed');
     const billed = monthReport(state, periodFor('thisMonth', T), T, 598).money.billed.cur;
     expect(money.textContent).toContain(rp(billed));
+    expect(money.textContent).toContain('Oct vs Sep'); // billed goes by billing month and says which
     await click(button(/Send to owner/));
     const dialog = document.querySelector('[role="dialog"]');
     expect(dialog?.textContent).toContain(rp(billed));
