@@ -207,10 +207,6 @@ describe('mood history (round 12)', () => {
     expect(st.lift).toBeGreaterThan(0.2);
     expect(st.lift).toBeLessThan(0.6);
   });
-  it('Oma Lina arrives okay and leaves great today', () => {
-    const late = buildSeed('2026-10-21', 16 * 60).citra;
-    expect(dayArc(late, 'm1', '2026-10-21')).toMatchObject({ arrival: 3, departure: 5 });
-  });
   it('Opa Hendra arrives low on his Watch days, and a health mark copies the arrival face', () => {
     const watch = live(s.readings).filter((r) => r.memberId === 'm2' && r.kind === 'arrival' && r.status === 'watch' && r.date < T);
     expect(watch.length).toBeGreaterThan(0);

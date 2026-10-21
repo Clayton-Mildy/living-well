@@ -14,7 +14,7 @@ const arrivalFace = (x: number): Face => (x < 0.15 ? 5 : x < 0.55 ? 4 : x < 0.9 
 /** Departure: one higher in 40% of visits (never above 5), one lower in 5%, otherwise the same. */
 const departureFace = (a: Face, x: number): Face => (x < 0.4 ? clampFace(a + 1) : x < 0.45 ? clampFace(a - 1) : a);
 
-/** Past days only: today's three early arrivals stay unmarked (the lobby step "mood at the door" is live), and Lina's scripted day is in seed/index.ts. */
+/** Past days only: today's three early arrivals stay unmarked (the lobby step "mood at the door" is live) (Lina's check-in and face are done live by Caca). */
 export function seedMoodMarks(s: ClubState, T: ISODate): void {
   const put = (date: ISODate, memberId: string, moment: MoodMoment, face: Face, time: HM, extra: { slot?: Slot; readingId?: string } = {}) => {
     const id = moodId(date, memberId, moment, extra.slot);

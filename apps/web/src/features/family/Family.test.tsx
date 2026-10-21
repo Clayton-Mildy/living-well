@@ -90,7 +90,7 @@ describe('family Today', () => {
     await show(<FamilyToday />, `/today?member=m1&date=${day}`);
     expect(q('[data-testid="today-header"]')?.getAttribute('data-date')).toBe(day);
     expect(q('[data-testid="day-strip"] [data-selected="true"]')?.getAttribute('data-date')).toBe(day);
-    expect(q('[data-testid="story-hero"]')?.textContent).toMatch(/Arrived \d\d:\d\d(, feeling [^·]+)? · Home \d\d:\d\d/);
+    expect(q('[data-testid="story-hero"]')?.textContent).toMatch(/Arrived \d\d:\d\d(, feeling [^·]+) · Home \d\d:\d\d/);
     expect(q('[data-testid="story-hero"] h1')?.textContent).toMatch(/Oma Lina/); // the day's title ("Yesterday with Oma Lina", "Oma Lina’s Monday")
     expect(q('[data-testid="back-to-today"]')).toBeTruthy();
     expect(q('[data-testid="hero-sub"]')).toBeTruthy();
@@ -304,7 +304,7 @@ describe('family Today', () => {
     await show(<FamilyToday />, `/today?member=m1&date=${day}`);
     expect(q('[data-testid="story-hero"] h1')?.textContent).toMatch(/Oma Lina/); // the day's title, in Indonesian
     expect(q('[data-testid="back-to-today"]')?.textContent).toBe('Hari ini');
-    expect(text()).toMatch(/Tiba \d\d:\d\d(, perasaan [^·]+)? · Pulang \d\d:\d\d/);
+    expect(text()).toMatch(/Tiba \d\d:\d\d(, perasaan [^·]+) · Pulang \d\d:\d\d/);
     expect(text()).toContain('Hari itu');
     expect(text()).not.toMatch(/\b(family|ftoday|fam)\.[a-z]/i);
   });
