@@ -1,7 +1,7 @@
 // KC round 7 seed: guest hosts and one-day programme changes. Runs after the main seed (and the roster), so every staff row, room, activity and the weekly schedule already exist.
 // Everything is relative to the demo day T and lands on open club days, so it holds for T = 21 Oct (tests) and for any other day.
 //   hosts     Bu Ratna (angklung), Pak Hendro (keroncong), dr. Maya Sari (heart-health talk)
-//   sessions  2 done in the last days (one invoice paid, one approved and waiting for finance) · 1 booked on the next open day (paid in advance) · 1 booked next week (to pay)
+//   sessions  2 done in the last days (one invoice paid, one approved and waiting for finance) · 1 booked on the demo day (paid in advance) · 1 booked on the next open day (paid in advance) · 1 booked next week (to pay)
 //   changes   the 13:30 session of the second open day after T becomes Karaoke ("Kak Dimas is off sick"); the booked talk changes the 13:30 session of its day
 import type { ClubState, DT, GuestHost, GuestSession, ISODate, ScheduleCell, ScheduleDay, Slot, VendorInvoice, Weekday, WeekSlot } from '../../types';
 import { dayStatus } from '../../rules/core';
@@ -93,6 +93,18 @@ export function seedGuests(s: ClubState, T: ISODate): void {
   s.guestSessions['gs-4'] = sess('gs-4', 'gh-hendro', nextWeek, '10:30', 'act-keroncong', 900000, 'booked');
   booked('gs-4', 'vi-gh-4', nextWeek, 'Pak Hendro', 900000, false);
   lead(nextWeek, '10:30', 'act-keroncong');
+  // round 13: a guest host on the demo day itself, so the front desk's "Guests today" has someone to show: the host whose activity the weekly plan already runs that
+  // day (Pak Hendro's keroncong on a Wednesday), else Bu Ratna in the morning session's own activity. The slot keeps its activity, so no schedule changes; paid in advance.
+  if (free(T)) {
+    const slot: WeekSlot = '10:30';
+    const w = weekly(T, slot);
+    const pair = PAIRS.find(([, act]) => w?.activityId === act) ?? PAIRS[0];
+    if (w) {
+      const [hostId, , name, fee] = pair;
+      s.guestSessions['gs-5'] = sess('gs-5', hostId, T, slot, w.activityId, fee, 'booked');
+      booked('gs-5', 'vi-gh-5', T, name, fee, true);
+    }
+  }
 
   // ---- a sudden change: the teacher is off sick, Karaoke instead (the cover is the other activity teacher) ----
   const w2 = weekly(d2, '13:30');

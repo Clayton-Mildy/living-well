@@ -25,7 +25,15 @@ async function show(today: string) {
 }
 
 describe('Guests today on the Arrivals rail', () => {
-  it('lists the guest host booked for today with the session time and the activity', async () => {
+  it('lists the guest host booked for today (the demo seed has one on the demo day) with the session time and the activity', async () => {
+    await show('2026-10-21');
+    const today = host!.querySelector('[data-testid="guests-today"]')!;
+    expect(today.textContent).toContain('Pak Hendro');
+    expect(today.textContent).toContain('10:30');
+    expect(today.textContent).toContain('Keroncong sing-along');
+    expect(today.querySelector('[data-guest-session="gs-5"]')).not.toBeNull();
+  });
+  it('lists the talk on its own day', async () => {
     await show('2026-10-22');
     const block = host!.querySelector('[data-testid="guests-today"]')!;
     expect(host!.textContent).toContain('Guests today');
@@ -34,7 +42,7 @@ describe('Guests today on the Arrivals rail', () => {
     expect(block.textContent).toContain('Health talk');
   });
   it('is not there on a day without a guest', async () => {
-    await show('2026-10-21');
+    await show('2026-10-20');
     expect(host!.querySelector('[data-testid="guests-today"]')).toBeNull();
     expect(host!.textContent).not.toContain('Guests today');
   });

@@ -667,7 +667,7 @@ test('s5 (activity teacher) only views the calendar: list and month, no builder,
   // the list: the next 3 days, with the activities, the rooms and the teachers, but nothing to change
   for (const d of ['2026-10-21', '2026-10-22', '2026-10-23']) await expect(block(page, d)).toBeVisible();
   await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
-  await expect(block(page, '2026-10-21')).toContainText('Dinar');
+  await expect(block(page, '2026-10-21')).toContainText('Pak Hendro'); // round 13: the demo seed has a guest host on the demo day's keroncong session
   const none = async () => {
     await expect(page.getByRole('button', { name: /Edit activity/ })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /^Edit / })).toHaveCount(0);
@@ -718,7 +718,7 @@ test('f1 sees the calendar read-only: no editor, no builder, no venue clients, t
   await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Edit / })).toHaveCount(0);
   await expect(day('2026-10-21')).toContainText('Keroncong sing-along');
-  await expect(day('2026-10-21')).toContainText('Dinar');
+  await expect(day('2026-10-21')).toContainText('guest host Pak Hendro');
   await expect(page.getByRole('button', { name: /Edit activity/ })).toHaveCount(0);
   await expect(page.getByTestId('cal-day')).toHaveCount(5); // the week's five open days
   await expect(page.getByText(/Siu Lan|Yusuf Hamid|Trial day|Visit ·/)).toHaveCount(0); // trials and visits are staff only
@@ -868,7 +868,7 @@ test('Indonesian: month and weekday names, labels and activity names follow the 
   await expect(page.getByRole('heading', { level: 1, name: 'Kalender dan jadwal' })).toBeVisible();
   await expect(page.getByText('Buka Senin sampai Jumat · 08:30–16:30')).toBeVisible();
   await expect(block(page, '2026-10-21')).toContainText('Bernyanyi keroncong'); // nameId, not the English name
-  await expect(block(page, '2026-10-21')).toContainText('Ruang musik · Dinar');
+  await expect(block(page, '2026-10-21')).toContainText('Ruang musik · bersama Pak Hendro · tamu');
   await expect(block(page, '2026-10-21')).toContainText('Buka · 08:30–16:30');
   await expect(block(page, '2026-10-21')).toContainText('Hari ini');
   await expect(block(page, '2026-10-21')).toContainText('Hari uji coba: Oma Siu Lan Tjandra');

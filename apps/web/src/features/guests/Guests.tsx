@@ -68,7 +68,7 @@ export function Guests() {
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{host?.name ?? ''}</span>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35 }}>{fds(g.date)} · {g.slot} · {activityName(a, lang)}</span>
-          {issue || late ? <span style={{ fontSize: 13, fontWeight: 500, color: '#7A5510', lineHeight: 1.35 }}>{issue ? issueText(t, issue) : t('guests.late')}</span> : null}
+          {issue || (late && canEdit) ? <span style={{ fontSize: 13, fontWeight: 500, color: '#7A5510', lineHeight: 1.35 }}>{issue ? issueText(t, issue) : t('guests.late')}</span> : null}
         </span>
         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flex: 'none' }}>
           {money ? <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{rp(feeOfSession(s, g))}</span> : null}

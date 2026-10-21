@@ -236,7 +236,7 @@ describe('Also today: guests', () => {
     delete (s.guestVisits['g-e1'] as { time?: string }).time;
     useReplica.setState({ confirmed: s, view: s });
     await show(<AlsoToday guest={noop} />);
-    const text = host!.textContent || '';
+    const text = (host!.textContent || '').split('Guests today')[0]; // the guest host's own 10:30 session (the seed has one today) is another block
     expect(text).toContain('Trial day: Oma Siu Lan Tjandra');
     expect(text).not.toContain('10:30');
     expect(text).toContain('14:00'); // the visit keeps its time

@@ -67,7 +67,7 @@ export function SessionSheet({ id, onClose, onEdit }: { id: string | null; onClo
         {g.note ? field(t('guests.note'), g.note) : null}
       </div>
       {issue ? <Note tone="ochre" icon="warning">{issueText(t, issue)}</Note> : null}
-      {booked && g.date < today ? <Note tone="ochre" icon="event_available">{t('guests.overdue', { date: fdl(g.date) })}</Note> : null}
+      {mgmt && booked && g.date < today ? <Note tone="ochre" icon="event_available">{t('guests.overdue', { date: fdl(g.date) })}</Note> : null}
       {money && pay === 'toPay' ? <Note tone="cream" icon="hourglass_top">{t('guests.waitingFinance')}</Note> : null}
       {mgmt && booked && g.date <= today ? <Button full icon="task_alt" disabled={busy} onClick={() => run('guest.done', { id: g.id }, t('guests.doneToast', { name }))}>{t('guests.markDone')}</Button> : null}
       {(mgmt || role === 'finance') && pay === 'toPay' && inv && inv.status === 'approved' ? <Button full icon="paid" disabled={busy} onClick={() => run('vendorInvoice.markPaid', { id: inv.id }, t('guests.paidToast', { name }))}>{t('guests.markPaid')}</Button> : null}

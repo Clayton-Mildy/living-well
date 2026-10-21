@@ -97,7 +97,8 @@ test('s5 Today: the 10:30 Keroncong session, who is in the club, the day’s pro
   await expect(page.getByRole('heading', { level: 1, name: 'Hello, Dinar' })).toBeVisible();
   await expect(page.getByText('Next · 10:30')).toBeVisible();
   await expect(page.getByText('Keroncong sing-along').first()).toBeVisible(); // the hero (its row in the programme is checked below)
-  await expect(page.getByText(/Music room · with Dinar · 3 members in the club/)).toBeVisible();
+  // round 13: the demo seed has a guest host (Pak Hendro) on today's keroncong session
+  await expect(page.getByText(/Music room · with Pak Hendro · guest · 3 members in the club/)).toBeVisible();
   // in the club: the three members who have checked in, none logged yet
   for (const n of ['Bapak Bambang Purnomo', 'Opa Hendra Gunawan', 'Opa Tjahjadi Lim']) await expect(page.getByRole('button', { name: new RegExp(`${n}: Not logged`) })).toBeVisible();
   await expect(page.getByText('Oma Lina')).toHaveCount(0); // not here yet

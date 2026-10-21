@@ -18,12 +18,12 @@ const note = (s: ClubState, kind: string) => live(s.notifications).filter((x) =>
 const notLobby = (s: ClubState, kind: string) => note(s, kind).filter((x) => !(x.toRoles.length === 1 && x.toRoles[0] === 'lobby'));
 
 describe('the demo seed', () => {
-  it('has three hosts, two sessions done (one paid, one waiting for finance), one booked this week (paid in advance) and one next week (to pay)', () => {
+  it('has three hosts, two sessions done (one paid, one waiting for finance), one booked today and one tomorrow (both paid in advance) and one next week (to pay)', () => {
     const s = fresh();
     expect(hostsList(s).map((h) => h.name)).toEqual(['Bu Ratna', 'dr. Maya Sari', 'Pak Hendro']);
     const l = guestLists(s);
-    expect(l.upcoming.map((g) => [g.hostId, g.date, g.slot])).toEqual([['gh-maya', '2026-10-22', '13:30'], ['gh-hendro', '2026-10-28', '10:30']]);
-    expect(l.paid.map((g) => g.id)).toEqual(['gs-3', 'gs-1']); // dr. Maya is paid before her talk
+    expect(l.upcoming.map((g) => [g.hostId, g.date, g.slot])).toEqual([['gh-hendro', '2026-10-21', '10:30'], ['gh-maya', '2026-10-22', '13:30'], ['gh-hendro', '2026-10-28', '10:30']]);
+    expect(l.paid.map((g) => g.id)).toEqual(['gs-3', 'gs-5', 'gs-1']); // dr. Maya is paid before her talk
     expect(l.toPay.map((g) => g.id)).toEqual(['gs-2', 'gs-4']);
     expect(l.doneToPay.map((g) => g.id)).toEqual(['gs-2']);
     expect(l.donePaid.map((g) => g.id)).toEqual(['gs-1']);
@@ -33,10 +33,12 @@ describe('the demo seed', () => {
     expect(s.vendorInvoices['vi-gh-2']).toMatchObject({ status: 'approved', xero: 'synced', sectionId: 'activities', supplier: 'Bu Ratna', amount: 750000 });
     expect(s.vendorInvoices['vi-gh-1']).toMatchObject({ status: 'paid', supplier: 'Pak Hendro', amount: 900000 });
     expect(s.vendorInvoices['vi-gh-4']).toMatchObject({ status: 'approved', supplier: 'Pak Hendro', amount: 900000, due: '2026-10-28' });
-    expect([1, 2, 3, 4].map((n) => s.vendorInvoices[`vi-gh-${n}`].number)).toEqual(['GH-2610-001', 'GH-2610-002', 'GH-2610-003', 'GH-2610-004']);
+    expect([1, 2, 3, 4, 5].map((n) => s.vendorInvoices[`vi-gh-${n}`].number)).toEqual(['GH-2610-001', 'GH-2610-002', 'GH-2610-003', 'GH-2610-004', 'GH-2610-005']);
+    expect(s.guestSessions['gs-5']).toMatchObject({ hostId: 'gh-hendro', date: '2026-10-21', slot: '10:30', activityId: 'act-keroncong', status: 'booked' }); // the demo day itself, the weekly plan already has keroncong
+    expect(s.scheduleDays['2026-10-21']).toBeUndefined(); // so no schedule change
     expect(owedTotal(s)).toBe(750000 + 900000);
     expect(hostTotals(s, 'gh-ratna')).toEqual({ sessions: 1, upcoming: 0, paid: 0, owed: 750000 });
-    expect(hostTotals(s, 'gh-hendro')).toEqual({ sessions: 1, upcoming: 1, paid: 900000, owed: 900000 });
+    expect(hostTotals(s, 'gh-hendro')).toEqual({ sessions: 1, upcoming: 2, paid: 1800000, owed: 900000 }); // gs-1 (done, paid) + gs-5 (today, paid in advance); gs-4 is still to pay
     expect(hostTotals(s, 'gh-maya')).toEqual({ sessions: 0, upcoming: 1, paid: 1200000, owed: 0 });
     for (const g of live(s.guestSessions)) expect(guestIssue(s, g)).toBeNull();
   });
@@ -181,10 +183,10 @@ describe('KC round 7: the fee is a payable from the booking, so it can be paid b
     let s = b.state;
     const id = b.result.sessionId as string;
     const viId = b.result.vendorInvoiceId as string;
-    expect(s.vendorInvoices[viId]).toMatchObject({ supplier: 'Bu Ratna', number: 'GH-2610-005', amount: 820000, due: '2026-10-21', sectionId: 'activities', status: 'approved', xero: 'pending' });
+    expect(s.vendorInvoices[viId]).toMatchObject({ supplier: 'Bu Ratna', number: 'GH-2610-006', amount: 820000, due: '2026-10-21', sectionId: 'activities', status: 'approved', xero: 'pending' });
     expect(s.guestSessions[id]).toMatchObject({ status: 'booked', vendorInvoiceId: viId });
     expect(payStateOf(s, s.guestSessions[id])).toBe('toPay');
-    expect(note(s, 'guests.notif.toPay')[0]).toMatchObject({ toRoles: ['finance'], link: '/guests', params: { name: 'Bu Ratna', amount: 'Rp 820.000', number: 'GH-2610-005' } });
+    expect(note(s, 'guests.notif.toPay')[0]).toMatchObject({ toRoles: ['finance'], link: '/guests', params: { name: 'Bu Ratna', amount: 'Rp 820.000', number: 'GH-2610-006' } });
     // paid before the performance
     s = step(s, 'vendorInvoice.markPaid', { vendorInvoiceId: viId }, 's10');
     expect(payStateOf(s, s.guestSessions[id])).toBe('paid');
@@ -214,7 +216,7 @@ describe('KC round 7: the fee is a payable from the booking, so it can be paid b
 
   it('invoice numbers are unique per month; a deleted invoice puts the session back to "to pay"', () => {
     const s = fresh();
-    expect(guestInvoiceNumber(s, '2026-10-21')).toBe('GH-2610-005');
+    expect(guestInvoiceNumber(s, '2026-10-21')).toBe('GH-2610-006');
     expect(guestInvoiceNumber(s, '2026-11-02')).toBe('GH-2611-001');
     const d = step(s, 'vendorInvoice.delete', { vendorInvoiceId: 'vi-gh-2' }, 's10');
     expect(payStateOf(d, d.guestSessions['gs-2'])).toBe('toPay');
