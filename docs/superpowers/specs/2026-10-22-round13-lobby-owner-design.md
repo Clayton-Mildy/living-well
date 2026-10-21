@@ -63,3 +63,6 @@ KC: "section the plans and billing better". To be detailed with KC after the rev
 
 ## Out of scope
 Finance invoice issuing by lobby, survey creation by lobby, payroll, leave carry-over between years.
+
+### 5b. Portraits for every member (added 22 Oct 01:xx)
+All 40 roster members get a stock portrait (free Unsplash photos, matched to gender and age, recorded in SOURCES.md) so no member shows initials. Phase 1.
