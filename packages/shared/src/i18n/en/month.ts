@@ -3,7 +3,7 @@ export const month = {
   title: 'Month report', period: 'Period', vsPrev: 'vs {period}', empty: 'Nothing recorded in this period',
   money: 'Money', members: 'Members', care: 'Care and mood', pipeline: 'Pipeline and team',
   billed: 'Billed', collected: 'Collected', outstanding: 'Overdue', notYetDue: 'Not yet due', extraDays: 'Extra days', venueIncome: 'Venue income', refunds: 'Refunds',
-  active: 'Active members', joined: 'Joined', ended: 'Ended', renewalsKept: 'Renewals kept', renewalsLost: 'Renewals lost', onLeave: 'On leave', checkOn: 'To check on',
+  active: 'Active members', joined: 'Joined', ended: 'Ended', renewalsKept: 'Renewals kept', renewalsLost: 'Renewals lost', onLeave: 'On leave', checkOn: "Haven't come lately",
   visitsPerMember: 'Visits per member', utilisation: 'Utilisation',
   index: 'Mood', lift: 'Lift arrival to departure', alerts: 'Alert readings', watches: 'Watch readings', rechecks: 'Re-checks', lunchEaten: 'Ate most of lunch',
   leads: 'New leads', leadsCaption: 'leads opened this period', visits: 'Visited', trials: 'Trial day', converted: 'Joined', lost: 'Lost',

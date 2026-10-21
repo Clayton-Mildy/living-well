@@ -6,7 +6,7 @@ export const month: Same<typeof EN> = {
   title: 'Laporan bulanan', period: 'Periode', vsPrev: 'vs {period}', empty: 'Belum ada catatan di periode ini',
   money: 'Keuangan', members: 'Anggota', care: 'Perawatan dan suasana hati', pipeline: 'Calon anggota dan tim',
   billed: 'Ditagihkan', collected: 'Diterima', outstanding: 'Lewat jatuh tempo', notYetDue: 'Belum jatuh tempo', extraDays: 'Hari tambahan', venueIncome: 'Pendapatan sewa ruang', refunds: 'Pengembalian dana',
-  active: 'Anggota aktif', joined: 'Bergabung', ended: 'Berhenti', renewalsKept: 'Perpanjangan lanjut', renewalsLost: 'Perpanjangan berhenti', onLeave: 'Cuti', checkOn: 'Perlu dihubungi',
+  active: 'Anggota aktif', joined: 'Bergabung', ended: 'Berhenti', renewalsKept: 'Perpanjangan lanjut', renewalsLost: 'Perpanjangan berhenti', onLeave: 'Cuti', checkOn: 'Lama tidak datang',
   visitsPerMember: 'Kunjungan per anggota', utilisation: 'Tingkat kehadiran',
   index: 'Suasana hati', lift: 'Naik dari datang ke pulang', alerts: 'Bacaan bahaya', watches: 'Bacaan waspada', rechecks: 'Cek ulang', lunchEaten: 'Makan siang habis',
   leads: 'Calon baru', leadsCaption: 'calon yang masuk periode ini', visits: 'Berkunjung', trials: 'Hari percobaan', converted: 'Bergabung', lost: 'Batal',

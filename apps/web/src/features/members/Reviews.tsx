@@ -576,21 +576,21 @@ export function Reviews() {
           </div>
           {current === 'photos' ? <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('reviews.notifyFamilies')} /> : null}
           <div style={{ display: 'flex', gap: 10 }}>
-            <Button size={44} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 0' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
-            <Button size={44} variant="secondary" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 0', color: selected.length ? '#9A3D24' : undefined }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
+            <Button size={48} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 0' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
+            <Button size={48} variant="secondary" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 0', color: selected.length ? '#9A3D24' : undefined }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
           </div>
         </div>
       ) : null}
       {showBar && !isPhone ? (
-        <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '0 -4px', padding: '12px 4px 14px', background: 'linear-gradient(to top, #FFFFFF 72%, rgba(255,255,255,0))', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+        <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '0 -4px', padding: '12px 4px 14px', background: 'linear-gradient(to top, var(--page, #F6F1EA) 72%, transparent)', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: '1 1 260px', minWidth: 0 }}>
             {selected.length < here.length ? <Button variant="secondary" size={44} icon="select_all" onClick={() => setSel(here.map((x) => x.id))}>{t('reviews.selectAll', { n: here.length })}</Button> : null}
             {selected.length ? <Button variant="ghost" size={44} onClick={() => setSel([])}>{t('reviews.clearSelection')}</Button> : null}
             <span aria-live="polite" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{selected.length ? t('reviews.selectedN', { n: selected.length }) : ''}</span>
           </div>
           {current === 'photos' ? <div style={{ flex: '1 1 260px', minWidth: 0 }}><Toggle on={notify} onClick={() => setNotify(!notify)} label={t('reviews.notifyFamilies')} /></div> : null}
-          <Button size={44} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 140px' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
-          <Button size={44} variant="secondary" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 140px', color: selected.length ? '#9A3D24' : undefined }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
+          <Button size={48} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 140px' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
+          <Button size={48} variant="secondary" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 140px', color: selected.length ? '#9A3D24' : undefined }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
         </div>
       ) : null}
 
