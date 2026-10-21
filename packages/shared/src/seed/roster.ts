@@ -7,6 +7,7 @@ import type {
   HM, Invoice, ISODate, Member, MedTiming, Membership, Mobility, Payment, Plan, PlanEntry, Reading, Relation, Row, Title, Vitals,
 } from '../types';
 import { addDays, addMonths, daysInMonth, dow, e164, rng, toHM, toMin, ym } from '../util';
+import { portraitId } from './demoMedia';
 import { activeOn, isOpen, openDaysInMonth, planOn } from '../rules/core';
 import { flexQuota } from '../rules/attendance';
 import { dueDateFor, invoiceTotal, runLinesFor } from '../rules/billing';
@@ -241,7 +242,7 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<stri
       glucose: diabetic ? between(136, 168) : between(94, 114), weight: f ? between(44, 64) : between(54, 76), temp: Math.round((36.4 + r() * 0.4) * 10) / 10, grip: f ? between(12, 20) : between(18, 30),
     };
     const m: Member = {
-      ...base(mid, start + 'T10:00'), title, firstName: first, lastName: last, ...(NICK[first] ? { registration: { nickname: NICK[first] } } : {}), gender: f ? 'f' : 'm', dob, ageYears: null, address: addr[i], photoTone: between(0, 4),
+      ...base(mid, start + 'T10:00'), title, firstName: first, lastName: last, ...(NICK[first] ? { registration: { nickname: NICK[first] } } : {}), gender: f ? 'f' : 'm', dob, ageYears: null, address: addr[i], photoTone: between(0, 4), ...(portraitId(mid) ? { photoMediaId: portraitId(mid) } : {}),
       memberships: [ms], plans, usualArrival: usual, nanny: NANNY[i] ? { name: NANNY[i] } : null, spouseId: spouseOf(i) !== undefined ? id(spouseOf(i)) : null,
       health: { conditions, diabetic, food, drugs, mobility, diet, meds,
         cognitive: { summary: mem ? 'Mild memory loss; needs gentle reminders of the day’s plan' : codes.includes('park') ? 'Alert and oriented; slow to start movements' : 'Alert and oriented', reviewedBy: 's8', reviewedOn: start > addDays(T, -25) ? start : addDays(T, -25) } },

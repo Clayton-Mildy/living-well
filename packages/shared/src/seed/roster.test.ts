@@ -1,9 +1,12 @@
 // The 45-member demo club: the opt-in roster (roster.ts) adds 40 background members to the 5 hand-made ones.
 import { describe, it, expect } from 'vitest';
+import { existsSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import {
   addDays, buildSeed, dayStatus, DEMO_START_MIN, DEMO_TODAY, invoiceStatus, isWeekday, live, lobbyGroups, membershipStatus, planOn, primaryContact,
   projectForFamily, runPreview, flexMonth, suspensions, ym, toMin, type ClubState,
 } from '../index';
+import { portraitId, demoMediaPath } from './demoMedia';
 
 const build = (T = DEMO_TODAY, nowMin = DEMO_START_MIN) => buildSeed(T, nowMin, { roster: true }).citra;
 const extra = (s: ClubState) => live(s.members).filter((m) => /^m(5\d|[6-8]\d|90)$/.test(m.id));
@@ -11,6 +14,19 @@ const extra = (s: ClubState) => live(s.members).filter((m) => /^m(5\d|[6-8]\d|90
 describe('demo roster', () => {
   it('is off by default (the 5-member world the other tests use)', () => {
     expect(Object.keys(buildSeed().citra.members).sort()).toEqual(['m1', 'm10', 'm2', 'm20', 'm46']);
+  });
+
+  it('gives every roster member a stock portrait that exists as a file (KC round 13)', () => {
+    const s = build();
+    const dir = fileURLToPath(new URL('../../../../apps/web/public/demo/', import.meta.url));
+    const ms = extra(s);
+    expect(ms).toHaveLength(40);
+    for (const m of ms) {
+      expect(m.photoMediaId, m.id).toBe(portraitId(m.id));
+      expect(m.photoMediaId, m.id).toBe(`md_demo_portrait-${m.id}`);
+      expect(existsSync(dir + demoMediaPath(m.photoMediaId!)!.replace('/demo/', '')), m.id).toBe(true);
+    }
+    expect(new Set(ms.map((m) => m.photoMediaId)).size).toBe(40);
   });
 
   it('adds 40 complete members', () => {
