@@ -33,6 +33,7 @@ import { fphotos } from './fphotos';
 import { fcal } from './fcal';
 import { fhealth } from './fhealth';
 import { fme } from './fme';
+import { month } from './month';
 
 export const id = {
   ...ns('common', common),
@@ -79,4 +80,5 @@ export const id = {
   ...ns('fcal', fcal),
   ...ns('fhealth', fhealth),
   ...ns('fme', fme),
+  ...ns('month', month),
 };

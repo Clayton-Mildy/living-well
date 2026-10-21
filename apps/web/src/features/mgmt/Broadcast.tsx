@@ -9,7 +9,7 @@ import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
-import { BadgePill, ListCard, Page, PillBtn, HPAD, heroCard, labelStyle, chipRow, splitRow, tn } from './common';
+import { BadgePill, ListCard, Page, PillBtn, HPAD, heroCard, labelStyle, chipRow, splitRow, tn, WaBubble } from './common';
 
 type TplRow = { id: string; key: BroadcastRow['template']; title: string; text: string };
 const DEFAULT_EN: Record<string, { title: string; text: string }> = {
@@ -143,16 +143,7 @@ export function Broadcast() {
     <Select label={t('mgmt.previewPick')} value={previewTo?.key ?? ''} onChange={setPreviewKey} searchable
       options={recipients.map((r) => ({ value: r.key, label: `${r.name} · ${t('mgmt.aud_' + r.audience)}` }))} />
   ) : null;
-  const bubbleBox = (
-    <div style={{ borderRadius: 14, background: 'var(--hairline, #E2E2E6)', padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
-      <div style={{ maxWidth: '92%', background: '#FFFFFF', borderRadius: 10, padding: '12px 14px 8px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 1px 2px rgba(40,30,20,0.1)' }}>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#3D6B4F', lineHeight: 1.4 }}>CitraPremier</span>
-        <span data-testid="bc-preview" style={{ fontSize: 15, lineHeight: 1.45, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{bubble}</span>
-        <span style={{ alignSelf: 'flex-end', fontSize: 12, color: '#5E5852' }}>{now}</span>
-        <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)', paddingTop: 8, textAlign: 'center', fontSize: 14, fontWeight: 500, color: 'var(--accent, #75624B)', lineHeight: 1.4 }}>{t('mgmt.openApp')}</div>
-      </div>
-    </div>
-  );
+  const bubbleBox = <WaBubble text={bubble} time={now} testId="bc-preview" footer={t('mgmt.openApp')} />;
   const editNote = editing ? <Note tone="ochre" icon="edit">{t('mgmt.bcEditing')}</Note> : null;
 
   return (

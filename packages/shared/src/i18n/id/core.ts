@@ -38,7 +38,7 @@ export const nav: Same<typeof EN.nav> = {
   s_log: 'Catatan', s_menu: 'Menu', s_feedback: 'Masukan', s_stock: 'Stok', s_billing: 'Tagihan', s_payments: 'Bayar', s_budget: 'Anggaran', s_receipts: 'Kuitansi', s_directory: 'Kontak',
   s_calendar: 'Kalender', s_calShort: 'Kalender', s_me: 'Saya', s_photos: 'Foto', s_healthF: 'Kesehatan', s_more: 'Lainnya', s_requests: 'Permintaan', s_reviews: 'Persetujuan', s_contacts: 'Kontak',
   // KC round 7
-  renewals: 'Perpanjangan', tasks: 'Tugas', guests: 'Pengisi acara', insights: 'Insight', memories: 'Kenangan', report: 'Laporan harian', s_report: 'Laporan', s_renewals: 'Perpanjang', s_tasks: 'Tugas', s_guests: 'Pengisi', s_insights: 'Insight', s_memories: 'Kenangan',
+  renewals: 'Perpanjangan', tasks: 'Tugas', guests: 'Pengisi acara', insights: 'Insight', memories: 'Kenangan', report: 'Laporan harian', s_report: 'Laporan', monthReport: 'Laporan bulanan', s_monthReport: 'Bulanan', s_renewals: 'Perpanjang', s_tasks: 'Tugas', s_guests: 'Pengisi', s_insights: 'Insight', s_memories: 'Kenangan',
 };
 export const roles: Same<typeof EN.roles> = {
   lobby: 'Lobi', nurse: 'Perawat', activity: 'Pengajar aktivitas', kitchen: 'Dapur & F&B', finance: 'Keuangan', mgmt: 'Manajemen', family: 'Keluarga',
