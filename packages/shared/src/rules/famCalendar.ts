@@ -140,6 +140,10 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
     const others = came.length ? familyPhotosOn(s, who, date).filter((p) => !used.has(p.id)) : [];
     return { date, state: info.state, banner, rows, came, others };
   }
+  // a closed day (weekend, holiday) can still hold a celebration: the banner stays, the celebration is its only row
+  for (const it of info.items) {
+    if (it.kind === 'celebration' && it.memberId && who.includes(it.memberId)) rows.push({ key: it.key, kind: 'celebration', time: it.time ?? (s.club.settings.open as HM), to: it.to ?? null, accent: true, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
+  }
   return { date, state: info.state, banner, rows, came, others: [] };
 }
 

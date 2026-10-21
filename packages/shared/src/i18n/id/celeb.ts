@@ -21,7 +21,7 @@ export const celeb: Same<typeof EN> = {
   'notif.requested': '{name}: perayaan diminta untuk {date} ({title})',
   'notif.decided': 'Terkonfirmasi: {title} pada {date}',
   'notif.declined': 'Ditolak: {title} pada {date}',
-  'notif.cancelled': 'Dibatalkan oleh resepsionis: {title} pada {date}',
+  'notif.cancelled': 'Dibatalkan: {title} pada {date}',
   'notif.family': '{title} dipesan di klub pada {date} pukul {from}',
   'feed.requested': '{name}: perayaan diminta untuk {date}',
   'feed.confirmed': '{name}: perayaan terkonfirmasi untuk {date}',

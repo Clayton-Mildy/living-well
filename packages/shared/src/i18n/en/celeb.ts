@@ -18,7 +18,7 @@ export const celeb = {
   'notif.requested': '{name}: celebration requested for {date} ({title})',
   'notif.decided': 'Confirmed: {title} on {date}',
   'notif.declined': 'Declined: {title} on {date}',
-  'notif.cancelled': 'Cancelled by the front desk: {title} on {date}',
+  'notif.cancelled': 'Cancelled: {title} on {date}',
   'notif.family': '{title} is booked at the club on {date} at {from}',
   'feed.requested': '{name}: celebration requested for {date}',
   'feed.confirmed': '{name}: celebration confirmed for {date}',

@@ -110,7 +110,12 @@ export const celebrationActions = [
       c.status = 'cancelled';
       const name = shortOf(d, c.memberId);
       ctx.feed({ icon: 'event_busy', key: 'celeb.feed.cancelled', memberId: c.memberId, params: { name, date: dm(c.date) } });
-      if (wasConfirmed && !isMgmt(ctx.user)) ctx.notify({ toRoles: ['mgmt'], kind: 'celeb.notif.cancelled', params: { name, title: c.title, date: dm(c.date) }, link: '/venue?tab=celebrations', memberId: c.memberId });
+      if (wasConfirmed) {
+        const p = { name, title: c.title, date: dm(c.date) };
+        // the front desk cancelling tells management; management cancelling a confirmed one tells the member's family (they were told it was booked)
+        if (isMgmt(ctx.user)) { const users = familyUserIds(d, c.memberId); if (users.length) ctx.notify({ toUsers: users, kind: 'celeb.notif.cancelled', params: p, link: '/calendar', memberId: c.memberId }); }
+        else ctx.notify({ toRoles: ['mgmt'], kind: 'celeb.notif.cancelled', params: p, link: '/venue?tab=celebrations', memberId: c.memberId });
+      }
     },
   }),
   defineAction<{ celebrationId: string; status: 'confirmed' | 'declined'; reason?: string }>({
@@ -135,7 +140,7 @@ export const celebrationActions = [
       if (i.status === 'declined' && i.reason) c.declineReason = i.reason;
       const name = shortOf(d, c.memberId);
       ctx.feed({ icon: 'cake', key: i.status === 'confirmed' ? 'celeb.feed.confirmed' : 'celeb.feed.declined', memberId: c.memberId, params: { name, date: dm(c.date) } });
-      ctx.notify({ toRoles: ['lobby'], kind: 'celeb.notif.decided', params: { name, title: c.title, date: dm(c.date), status: i.status }, link: '/venue?tab=celebrations', memberId: c.memberId });
+      ctx.notify({ toRoles: ['lobby'], kind: i.status === 'confirmed' ? 'celeb.notif.decided' : 'celeb.notif.declined', params: { name, title: c.title, date: dm(c.date), status: i.status }, link: '/venue?tab=celebrations', memberId: c.memberId });
       if (i.status === 'confirmed') tellFamily(d, c, ctx);
     },
   }),

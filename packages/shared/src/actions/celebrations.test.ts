@@ -71,11 +71,15 @@ describe('celebrations (actions)', () => {
     const no = run(r.state, 'celebration.decide', { celebrationId: id, status: 'declined', reason: 'Room is being painted' }, 's9');
     expect(no.state.celebrations[id]).toMatchObject({ status: 'declined', declineReason: 'Room is being painted' });
     for (const f of fam) expect(updatesFor(no.state, user(no.state, f)).some((x) => x.kind === 'celeb.notif.family')).toBe(false);
+    const toLobby = updatesFor(no.state, user(no.state, 's1')).map((x) => x.kind);
+    expect(toLobby).toContain('celeb.notif.declined');
+    expect(toLobby).not.toContain('celeb.notif.decided');
     // a confirmed celebration blocks a venue booking, and the other way round
     const sat = run(s, 'celebration.request', { ...req, date: '2026-11-07' }, 's9').state; // a Saturday, where a private event may also be booked
     fails(sat, 'venue.book', { org: 'X', contactName: 'Y', phone: '', guests: 5, roomId: 'room-garden-room', date: '2026-11-07', from: '16:00', to: '18:00' }, 's9', 'mgmt.err.venueClash');
     fails(d.state, 'celebration.request', { ...req, memberId: 'm1' }, 's1', 'mgmt.err.venueClash');
-    expect(run(r.state, 'celebration.request', { ...req, memberId: 'm1' }, 's1').state.celebrations).toBeTruthy(); // while it is only requested, the slot is free
+    const other = run(r.state, 'celebration.request', { ...req, memberId: 'm1' }, 's1'); // while it is only requested, the slot is free
+    expect(other.state.celebrations[other.result.celebrationId as string]).toMatchObject({ memberId: 'm1', status: 'requested' });
   });
   it('lobby editing a confirmed celebration sends it back to requested; cancel works once', () => {
     const s = seed();
@@ -87,7 +91,12 @@ describe('celebrations (actions)', () => {
     const m = run(c.state, 'celebration.update', { celebrationId: id, guests: 20, to: '17:30' }, 's9');
     expect(m.state.celebrations[id]).toMatchObject({ status: 'confirmed', guests: 20, to: '17:30' });
     fails(c.state, 'celebration.update', { celebrationId: id, date: '2026-10-24', roomId: 'room-lounge', from: '10:00', to: '11:00' }, 's1', 'mgmt.err.venueClash');
+    // management cancelling a confirmed one tells the member's family; the front desk cancelling tells management only
+    const byMgmt = run(c.state, 'celebration.cancel', { celebrationId: id }, 's9');
+    for (const f of familyUserIds(byMgmt.state, 'm46')) expect(updatesFor(byMgmt.state, user(byMgmt.state, f)).filter((n) => n.kind === 'celeb.notif.cancelled' && n.link === '/calendar')).toHaveLength(1);
     const x = run(c.state, 'celebration.cancel', { celebrationId: id }, 's1');
+    expect(updatesFor(x.state, user(x.state, 's9')).some((n) => n.kind === 'celeb.notif.cancelled')).toBe(true);
+    for (const f of familyUserIds(x.state, 'm46')) expect(updatesFor(x.state, user(x.state, f)).some((n) => n.kind === 'celeb.notif.cancelled')).toBe(false);
     expect(x.state.celebrations[id].status).toBe('cancelled');
     fails(x.state, 'celebration.cancel', { celebrationId: id }, 's1', 'celeb.err.decided');
   });

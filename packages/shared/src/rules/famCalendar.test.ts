@@ -143,3 +143,20 @@ describe('famWeek: the five open days the desktop lists', () => {
     expect(week[2]).toEqual(famDay(s, WHO, '2026-10-21', T, NOW));
   });
 });
+
+describe('famDay: a celebration on a closed day', () => {
+  it('a confirmed weekend celebration is a row under the weekend banner, only for its own member; a requested one is not shown', () => {
+    const s = seed();
+    let sat = T;
+    while (dow(sat) !== 6) sat = addDays(sat, 1);
+    const cel = { id: 'c-wk', clubId: s.clubId, createdAt: `${T}T09:00`, createdBy: 'staff:s1', memberId: 'm46', kind: 'birthday', title: "Opa Budi's birthday", date: sat, from: '14:00', to: '16:00', roomId: 'room-garden-room', guests: 8, status: 'confirmed', requestedBy: 'staff:s1' } as const;
+    s.celebrations['c-wk'] = { ...cel };
+    const day = famDay(s, WHO, sat, T, NOW);
+    expect(day.banner).toMatchObject({ kind: 'weekend' });
+    expect(day.rows).toHaveLength(1);
+    expect(day.rows[0]).toMatchObject({ kind: 'celebration', celebrationId: 'c-wk', memberId: 'm46', time: '14:00', to: '16:00', title: "Opa Budi's birthday" });
+    expect(famDay(s, ['m1'], sat, T, NOW).rows).toHaveLength(0);
+    s.celebrations['c-wk'] = { ...cel, status: 'requested' };
+    expect(famDay(s, WHO, sat, T, NOW).rows).toHaveLength(0);
+  });
+});
