@@ -5,7 +5,7 @@
 // Both parents: a row each (tap to focus on one). One parent: the day's icon rail. A day the parent did not come shows the last visit's picture,
 // dimmed; no picture at all is the warm bronze gradient, so a morning before the first photo never looks empty.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { addDays, flexMonth, memberName, memberShort, planOn, ym, type ISODate, type Member, type Photo } from '@cp/shared';
+import { FACE_KEY, addDays, dayArc, flexMonth, memberName, memberShort, planOn, ym, type ISODate, type Member, type Photo } from '@cp/shared';
 import { activityLabel, bestPhotoOf, eventTitle, mayStillCome, type DayStory } from '@cp/shared/rules/family';
 import { railFill } from '@cp/shared/rules/famToday';
 import { famPhotoDays, ownPicture } from '@cp/shared/rules/famPhotos';
@@ -327,10 +327,12 @@ function SingleHero({ m, story, date, top, onProfile, onOpenPhoto }: { m: Member
   const isToday = date === now.today;
   const n = memberShort(m);
   const photoFrom = cover.fromDay ? t(m.gender === 'f' ? 'ftoday.photoFromF' : 'ftoday.photoFromM', { d: dayWord(fmt, cover.fromDay, now.today) }) : '';
+  const arrivalFace = dayArc(s, m.id, date).arrival; // round 12: the face marked at the door
+  const face = arrivalFace !== undefined ? t(FACE_KEY[arrivalFace]).toLowerCase() : '';
   let status = '', sub = '', live = false, rail = false;
-  if (st.kind === 'here' && isToday) { status = t('family.atSince', { t: st.since }); sub = join([nowWhat(c, story), moodOf(c, story)]); live = true; rail = true; }
-  else if (st.kind === 'here') { status = t('family.storyArrived', { a: st.since }); sub = join([highlights(c, story), moodOf(c, story)]); rail = true; }
-  else if (st.kind === 'home') { status = t('family.storyArrivedHome', { a: story.arrivedAt || '', b: st.at }); sub = join([highlights(c, story), moodOf(c, story)]); rail = true; }
+  if (st.kind === 'here' && isToday) { status = face ? t('ftoday.atSinceFelt', { t: st.since, face }) : t('family.atSince', { t: st.since }); sub = join([nowWhat(c, story), moodOf(c, story)]); live = true; rail = true; }
+  else if (st.kind === 'here') { status = face ? t('ftoday.arrivedFelt', { a: st.since, face }) : t('family.storyArrived', { a: st.since }); sub = join([highlights(c, story), moodOf(c, story)]); rail = true; }
+  else if (st.kind === 'home') { status = face ? t('ftoday.arrivedHomeFelt', { a: story.arrivedAt || '', b: st.at, face }) : t('family.storyArrivedHome', { a: story.arrivedAt || '', b: st.at }); sub = join([highlights(c, story), moodOf(c, story)]); rail = true; }
   else if (st.kind === 'away') {
     status = isToday ? t(mayStillCome(s, now.nowMin) ? 'ftoday.notYet' : 'ftoday.homeToday', { n }) : t('family.storyDidntCome', { n, d: dayWord(fmt, date, now.today) });
     // KC round 8b: no "usually arrives around"; where the picture is from, else the last visit

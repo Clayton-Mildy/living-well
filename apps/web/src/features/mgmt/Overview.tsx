@@ -39,7 +39,7 @@ export function Overview() {
     { key: 'overdue', label: t('mgmt.tileOverdue'), value: String(st.overdue), icon: 'receipt_long', to: '/billing', badge: { icon: 'error', fg: '#FFFFFF', bg: '#9A3D24', label: t('status.overdue') } },
     { key: 'enq', label: t('nav.enquiries'), value: String(st.enquiries), icon: 'contact_phone', to: '/enquiries' },
     { key: 'survey', label: t('mgmt.tileSurvey'), value: st.survey ? `${st.survey.avg.toFixed(1)} / 5` : t('mgmt.noAnswers'), icon: 'rate_review', to: '/surveys', badge: st.survey ? { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6', label: tn(t, 'mgmt.nAnswers', st.survey.n) } : undefined },
-    { key: 'mood', label: t('mgmt.tileMood'), value: st.mood.index === null ? '–' : st.mood.index.toFixed(1), icon: 'sentiment_satisfied', to: '/insights?tab=mood', badge: st.mood.lift === null ? undefined : { icon: 'trending_up', fg: st.mood.lift < 0 ? '#7A5510' : '#3D6B4F', bg: '#F6ECD6', label: `${st.mood.lift > 0 ? '+' : ''}${st.mood.lift.toFixed(1)}` } },
+    { key: 'mood', label: t('mgmt.tileMood'), value: st.mood.index === null ? '–' : st.mood.index.toFixed(1), icon: 'sentiment_satisfied', to: '/insights?tab=mood', badge: st.mood.lift === null ? undefined : { icon: 'trending_up', fg: '#24201C', bg: '#F2F2F4', label: `${st.mood.lift > 0 ? '+' : ''}${st.mood.lift.toFixed(1)}` } },
     { key: 'photos', label: t('mgmt.tilePhotos'), value: String(st.photos), icon: 'photo_camera', to: '/camera?tab=library' },
     { key: 'logs', label: t('mgmt.tileLogs'), value: `${st.logsSaved} / ${st.logsTotal}`, icon: 'edit_note', to: '/log' },
     { key: 'lunch', label: t('mgmt.tileLunch'), value: st.lunchPhoto ? t('mgmt.posted') : t('mgmt.notYet'), icon: 'restaurant', to: '/menu' },

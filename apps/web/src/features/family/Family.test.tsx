@@ -6,6 +6,7 @@ import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vite
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { buildSeed, limitsFor, projectForFamily } from '@cp/shared';
 import { dayStory, END_OF_DAY, visitDays } from '@cp/shared/rules/family';
+import { withMarks } from '@cp/shared/rules/testMarks';
 import { dayChecks } from '@cp/shared/rules/famHealth';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
@@ -306,5 +307,16 @@ describe('family Today', () => {
     expect(text()).toMatch(/Tiba \d\d:\d\d · Pulang \d\d:\d\d/);
     expect(text()).toContain('Hari itu');
     expect(text()).not.toMatch(/\b(family|ftoday|fam)\.[a-z]/i);
+  });
+});
+
+describe('family Today: the face at the door (round 12)', () => {
+  it('the hero says how the parent arrived: "Arrived 10:00, feeling okay"', async () => {
+    const view = projectForFamily(withMarks, 'f1');
+    open('f1');
+    useReplica.setState({ confirmed: view, view, clock: { today: T, startMin: 16 * 60, realStart: Date.now(), offset: 0 } });
+    await show(<FamilyToday />, '/today?member=m1');
+    const hero = q('[data-testid="story-hero"]')!;
+    expect(hero.textContent).toContain('At the club since 10:00, feeling okay');
   });
 });

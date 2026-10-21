@@ -249,20 +249,20 @@ function MoodNotes({ r }: { r: DayReport }) {
   const cap = useCap(m.notes, 4);
   if (!r.members.length) return null;
   const any = MOODS.some((k) => m.counts[k]);
-  const anyFace = FACES.some((f) => m.faces.arrival[f] || m.faces.departure[f]);
+  const showFaces = FACES.some((f) => m.faces.arrival[f] || m.faces.departure[f]) || m.faces.notMarkedDoor > 0;
   return (
     <Group title={t('report.mood')} meta={m.notes.length ? plural(t, 'report.notesN', m.notes.length) : undefined} pad={0} gap={0}>
-      {anyFace || m.faces.notMarkedDoor ? (
+      {showFaces ? (
         <Line first>
           <span data-testid="mood-faces" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
             <FaceLine label={t('report.moodArrival')} counts={m.faces.arrival} />
             <FaceLine label={t('report.moodDeparture')} counts={m.faces.departure} />
-            {m.faces.lift !== null ? <span data-testid="mood-lift" style={{ fontSize: 14, color: '#3D6B4F' }}>{t('mood.lift', { n: (m.faces.lift > 0 ? '+' : '') + m.faces.lift.toFixed(1) })}</span> : null}
+            {m.faces.lift !== null ? <span data-testid="mood-lift" style={{ fontSize: 14, color: '#24201C' }}>{t('mood.lift', { n: (m.faces.lift > 0 ? '+' : '') + m.faces.lift.toFixed(1) })}</span> : null}
             {m.faces.notMarkedDoor ? <DotItem color={OCHRE}>{t('mood.notMarkedDoor', { n: m.faces.notMarkedDoor })}</DotItem> : null}
           </span>
         </Line>
       ) : null}
-      <Line first={!(anyFace || m.faces.notMarkedDoor)}>
+      <Line first={!showFaces}>
         <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 14px', fontSize: 15 }}>
           {MOODS.filter((k) => m.counts[k]).map((k) => <DotItem key={k} color={MOOD_DOT[k]}><span style={{ color: '#24201C' }}>{t('activity.opt.mood.' + k)} {m.counts[k]}</span></DotItem>)}
           {!any && !m.notMarked && !m.pendingLogs ? <span style={sub}>—</span> : null}

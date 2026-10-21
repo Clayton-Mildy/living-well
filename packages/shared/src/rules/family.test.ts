@@ -1,5 +1,6 @@
 // Family selectors for a drop-in club: switcher, the member's day, plan card (Flex visits, Gold), timeline, lunch line, photos, invoices, comments.
 import { describe, it, expect } from 'vitest';
+import { produce } from 'immer';
 import { buildSeed, execute, getUser, projectForFamily, lunchSafety, flexQuota, type ClubState } from '../index';
 import {
   BANKS, combinedVa, dayStateOf, extraPriceFor, familyMembers, familyPhotoDays, healthMemberOf, historyRows, homeTime, invoiceRows, isFamilyPhoto, mayStillCome, nextIssueDate,
@@ -605,6 +606,8 @@ describe('mood faces on the timeline (round 12)', () => {
   it('timeline carries the faces', () => {
     const items = timelineOf(withMarks, [withMarks.members.m1], T, 16 * 60);
     expect(items.find((i) => i.kind === 'arrival')).toMatchObject({ face: 3 });
-    expect(items.find((i) => i.kind === 'home')).toMatchObject({ face: 5 });
+    expect(items.find((i) => i.kind === 'home')?.face).toBeUndefined(); // not home yet: the step is still "Home time"
+    const out = produce(withMarks, (d) => { d.attendance[`${T}:m1`].checkOut = { at: '15:45', by: 'staff:s1', method: 'manual' }; });
+    expect(timelineOf(out, [out.members.m1], T, 16 * 60).find((i) => i.kind === 'home')).toMatchObject({ face: 5 });
   });
 });

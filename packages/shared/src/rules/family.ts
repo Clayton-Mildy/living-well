@@ -218,7 +218,7 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
     const { a, st } = single;
     const arc = dayArc(s, single.m.id, today);
     if (a?.checkOut) items.push({ id: 'home', kind: 'home', state: 'done', time: a.checkOut.at, att: a, departure: famReading(s, single.m.id, today, 'departure'), ...(arc.departure !== undefined ? { face: arc.departure } : {}) });
-    else if (st.kind === 'here') items.push({ id: 'home', kind: 'home', state: 'up', time: homeTime(s), ...(arc.departure !== undefined ? { face: arc.departure } : {}) });
+    else if (st.kind === 'here') items.push({ id: 'home', kind: 'home', state: 'up', time: homeTime(s) });
   }
   return items;
 }
