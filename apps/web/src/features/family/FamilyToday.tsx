@@ -12,6 +12,8 @@ import { activityLabel, roomLabel, dayStory, dishNamesOf, END_OF_DAY, familyPhot
 import { openDayStrip, planDay } from '@cp/shared/rules/famToday';
 import { eventTitle as calTitle, upcomingClosures } from '@cp/shared/rules/calendar';
 import { celebrationsOn } from '@cp/shared/rules/celebrations';
+import { occasionsThisWeek } from '@cp/shared/rules/occasions';
+import { occasionLine } from '../../lib/occasions';
 import { Icon, PhotoImg } from '../../components/ui';
 import { NotificationBell } from '../../shell/Notifications';
 import { useUi } from '../../store/ui';
@@ -175,6 +177,27 @@ function CelebrationCard({ members, date }: { members: Member[]; date: ISODate }
   );
 }
 
+/** Round 12: one of these parents has a birthday in the coming week ("Opa Budi turns 80 on Monday"): a quiet card, only while looking at today. */
+function BirthdayCard({ members, today }: { members: Member[]; today: ISODate }) {
+  const { s, t, fmt } = useFamilyCtx();
+  const ids = members.map((m) => m.id);
+  const list = occasionsThisWeek(s, today).filter((o) => o.kind === 'birthday' && ids.includes(o.member.id));
+  if (!list.length) return null;
+  return (
+    <section data-testid="birthday-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <Cap>{t('occasions.famCard')}</Cap>
+      {list.map((o) => (
+        <FillCard key={o.member.id} radius={22} pad={14} gap={10} testId="birthday-body">
+          <span style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <IconTile icon="cake" size={40} iconSize={22} />
+            <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, color: F.text, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{occasionLine(t, fmt.lang, o, today, displayName(o.member))}</span>
+          </span>
+        </FillCard>
+      ))}
+    </section>
+  );
+}
+
 export function FamilyToday() {
   const { s, t, fmt, now, user } = useFamilyCtx();
   const navigate = useNavigate();
@@ -275,6 +298,8 @@ export function FamilyToday() {
 
       {/* KC round 10: today, when nobody has come (and the club is shut for the day or they are simply home), the last visit comes first */}
       {isToday && !stories.some((st) => st.visited) && stories.some((st) => st.state.kind === 'away') ? <LastVisitCard members={members} stories={stories} onOpen={setDate} onOpenPhoto={openPhoto} /> : null}
+
+      {isToday ? <BirthdayCard members={members} today={today} /> : null}
 
       <CelebrationCard members={members} date={date} />
 

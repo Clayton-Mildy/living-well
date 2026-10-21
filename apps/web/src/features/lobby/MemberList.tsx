@@ -1,10 +1,14 @@
 // The hero card of Arrivals (Prototype v3): the selected tab's list. The check-in list (members not in yet), the check-out list (members in the club) and "Gone home".
 // The title is an eyebrow on the left and an underline search on the right; the rows sit inside the card's padding with inset hairlines
 // (a page of PAGE_SIZE at a time, with a pager), then the empty / no-match states.
+import { useMemo } from 'react';
 import type { BoardRow } from '@cp/shared';
+import { occasionsInRange } from '@cp/shared/rules/occasions';
 import { GROUP_HEAD, HAIRLINE, Icon, Pager, usePaged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import type { TFn } from '../../lib/i18n';
+import { useNow } from '../../lib/clock';
+import { useClub } from '../../store/replica';
 import { MemberRow } from './MemberRow';
 
 /** Members per page. Searching goes back to page 1. */
@@ -36,6 +40,10 @@ export function MemberList({ t, title, rows, total, query, onQuery, empty, noMat
   const searching = !!query.trim();
   const paged = usePaged(rows, PAGE_SIZE, query.trim());
   const { isPhone } = useDevice();
+  const s = useClub();
+  const { today } = useNow();
+  // round 12: whose birthday or membership anniversary is today (one pass for the whole list); a birthday wins
+  const todays = useMemo(() => { const m = new Map<string, 'birthday' | 'anniversary'>(); for (const o of occasionsInRange(s, today, today)) if (o.kind === 'birthday' || !m.has(o.member.id)) m.set(o.member.id, o.kind); return m; }, [s, today]);
   const count = (
     <span data-testid={`count-${listId}`} className={searching ? undefined : 'sr-only'} style={{ fontSize: isPhone ? 13 : 14, color: '#6B6259', lineHeight: 1.3, flex: 'none', fontVariantNumeric: 'tabular-nums' }}>
       {searching ? t('lobby.countOf', { n: rows.length, total }) : total}
@@ -44,7 +52,7 @@ export function MemberList({ t, title, rows, total, query, onQuery, empty, noMat
   const body = (hair: string, pad: string) => (
     <>
       {paged.rows.map((r, i) => (
-        <MemberRow key={r.m.id} r={r} first={i === 0} selected={selectedId === r.m.id} onOpen={() => onOpen(r.m.id)} onCheckIn={() => onCheckIn?.(r.m.id)} onCheckOut={() => onCheckOut?.(r.m.id)} onUndoOut={onUndoOut ? () => onUndoOut(r.m.id) : undefined} />
+        <MemberRow key={r.m.id} r={r} first={i === 0} selected={selectedId === r.m.id} occasion={todays.get(r.m.id)} onOpen={() => onOpen(r.m.id)} onCheckIn={() => onCheckIn?.(r.m.id)} onCheckOut={() => onCheckOut?.(r.m.id)} onUndoOut={onUndoOut ? () => onUndoOut(r.m.id) : undefined} />
       ))}
       {!rows.length ? (
         total === 0 || !searching ? (

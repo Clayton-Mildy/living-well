@@ -11,6 +11,7 @@ export const KIND: Record<CalKind, { icon: string; bg: string; fg: string; dot: 
   outing: { icon: 'directions_bus', bg: '#E3EFE6', fg: '#3D6B4F', dot: '#3D6B4F' },
   venue: { icon: 'storefront', bg: '#F6ECD6', fg: '#7A5510', dot: '#7A5510' },
   celebration: { icon: 'cake', bg: '#F6E7DD', fg: '#8A4A22', dot: '#B5652E' },
+  birthday: { icon: 'cake', bg: '#F6E7DD', fg: '#8A4A22', dot: '#D49A6A' },
   activity: { icon: 'interests', bg: 'var(--fill, #F4F4F5)', fg: 'var(--accent, #75624B)', dot: '#8A755B' },
   guest: { icon: 'waving_hand', bg: '#E8E1D8', fg: '#24201C', dot: 'var(--accent, #75624B)' },
 };
@@ -57,6 +58,7 @@ export function itemText(s: Pick<ClubState, 'rooms' | 'staff' | 'activities'>, i
       sub = [it.private ? t('cal.k_private') : t('cal.k_venue'), it.private ? span : room, it.private ? '' : span, weekend && !it.private ? t('cal.membersNotAffected') : ''].filter(Boolean).join(' · ');
       break;
     case 'celebration': sub = [t('cal.k_celebration'), room, span, it.note === 'requested' ? t('cal.waiting') : ''].filter(Boolean).join(' · '); break;
+    case 'birthday': sub = [t('occasions.calBirthday'), it.years !== undefined ? t('occasions.calTurns', { n: it.years }) : ''].filter(Boolean).join(' · '); break;
     case 'guest':
       // a trial has no time (it is a lunch and a health check); a visit keeps its time
       icon = it.guestKind === 'visit' ? 'meeting_room' : 'waving_hand';

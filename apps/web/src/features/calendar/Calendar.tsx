@@ -72,7 +72,7 @@ export function Calendar() {
   };
   /** "Edit activity" on a day's session (or an empty slot): choose between this day only and the weekly plan. */
   const editActivity = (slot: Slot, date: ISODate) => setChoice({ date, slot });
-  const legend: [CalKind, string][] = [['activity', t('cal.k_activity')], ['outing', t('cal.k_outing')], ['venue', t(family ? 'cal.k_private' : 'cal.k_venue')], ['celebration', t('cal.k_celebration')], ...(family ? [] : ([['guest', t('cal.k_guest')]] as [CalKind, string][])), ['holiday', t('cal.k_holiday')], ['closed', t('cal.k_closed')]];
+  const legend: [CalKind, string][] = [['activity', t('cal.k_activity')], ['outing', t('cal.k_outing')], ['venue', t(family ? 'cal.k_private' : 'cal.k_venue')], ['celebration', t('cal.k_celebration')], ...(family ? [] : ([['birthday', t('occasions.calBirthday')], ['guest', t('cal.k_guest')]] as [CalKind, string][])), ['holiday', t('cal.k_holiday')], ['closed', t('cal.k_closed')]];
 
   const tab = (v: View, icon: string, label: string) => {
     const on = view === v;

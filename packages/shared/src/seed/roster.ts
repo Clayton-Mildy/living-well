@@ -16,7 +16,7 @@ const FIRST_NO = 51; // m51 … m90 (idx 50 … 89: the digits keep invoice numb
 const VA = (i: number) => '8808' + String(1203440000 + i * 7919).padStart(12, '0');
 
 type Row5 = [Title, string, string, ISODate, 'f' | 'g', HM, string, string];
-/** title, first name, last name, date of birth, plan now, usual arrival, start ('M1' / 'M3' = first open day this month / two open days later), health profile codes */
+/** title, first name, last name, date of birth, plan now, usual arrival, start ('M1' / 'M3' = first open day this month / two open days later; 'A2' = a year ago, so the anniversary falls two days from the anchor), health profile codes */
 const ROWS: Row5[] = [
   ['Opa', 'Hartono', 'Salim', '1944-03-11', 'g', '08:45', '2024-07-01', 'htn chol'],
   ['Oma', 'Lieni', 'Salim', '1947-09-02', 'g', '08:45', '2024-07-01', 'oa osteo'],
@@ -38,7 +38,7 @@ const ROWS: Row5[] = [
   ['Opa', 'Paulus', 'Gondokusumo', '1940-02-16', 'g', '08:50', '2025-07-14', 'stroke htn'],
   ['Ibu', 'Soekartini', 'Wirjo', '1956-11-30', 'f', '10:30', '2025-08-04', 'asthma'],
   ['Bapak', 'Joko', 'Prasetyo', '1952-09-13', 'f', '09:25', '2025-09-15', 'htn'],
-  ['Oma', 'Hana', 'Lukito', '1946-12-22', 'g', '09:45', '2025-10-06', 'osteo gerd'],
+  ['Oma', 'Hana', 'Lukito', '1946-12-22', 'g', '09:45', 'A2', 'osteo gerd'],
   ['Opa', 'Budiman', 'Kurniawan', '1938-06-05', 'g', '09:50', '2024-08-19', 'heart htn hear'],
   ['Ibu', 'Margaretha', 'Sitompul', '1954-04-02', 'f', '10:10', '2025-11-03', 'oa dm'],
   ['Bapak', 'Rudy', 'Tanoto', '1945-07-24', 'f', '09:05', '2025-12-01', 'htn chol'],
@@ -130,7 +130,7 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<stri
   const prevOpen = (d: ISODate) => { let x = d; for (let i = 0; i < 10 && !isOpen(s, x); i++) x = addDays(x, -1); return x; };
   const monthOpen = openDaysInMonth(s, month);
   const firstOpen = monthOpen.find((d) => d <= T) ?? T;
-  const startOf = (v: string): ISODate => (v === 'M1' ? firstOpen : v === 'M3' ? (monthOpen.filter((d) => d <= T)[2] ?? T) : v);
+  const startOf = (v: string): ISODate => (v === 'M1' ? firstOpen : v === 'M3' ? (monthOpen.filter((d) => d <= T)[2] ?? T) : v === 'A2' ? `${+T.slice(0, 4) - 1}-${addDays(T, 2).slice(5).replace('02-29', '02-28')}` : v);
   const id = (i: number) => `m${FIRST_NO + i}`;
   const usedPhones = new Set<string>([...Object.values(s.staff).map((x) => x.phone), ...Object.values(s.familyContacts).map((x) => x.phone)]);
   const phone = () => {

@@ -2,9 +2,12 @@
 // MatchedPanel (name, visit line, care flags, extra-day note, confirm) is shared with the bottom sheet that confirms a manual check-in on narrow screens.
 import type { ReactNode } from 'react';
 import { displayName, memberName, type Face, type Member } from '@cp/shared';
+import { occasionsInRange } from '@cp/shared/rules/occasions';
 import { Eyebrow, GROUP_HEAD, Icon, MoodFaces } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import type { TFn } from '../../lib/i18n';
+import { useNow } from '../../lib/clock';
+import { useClub } from '../../store/replica';
 import { FlagChip, MemberAvatar, type Flag } from './parts';
 
 export type Scan = { state: 'idle' } | { state: 'scanning'; id: string } | { state: 'matched'; id: string; manual: boolean };
@@ -22,10 +25,14 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
   t: TFn; m: Member; plan: string; flags: Flag[]; onConfirm: () => void; onReject: () => void; busy?: boolean; /** the arrival face; confirm stays off until one is chosen */ face: Face | null; onFace: (f: Face) => void; children?: ReactNode; /** a face match says "Not this person"; a manual pick just cancels */ rejectLabel?: string;
 }) {
   const off = busy || face === null;
+  const s = useClub();
+  const { today } = useNow();
+  // round 12: today is this member's birthday or membership anniversary (a birthday wins)
+  const occ = occasionsInRange(s, today, today).filter((o) => o.member.id === m.id).sort((a, b) => (a.kind === 'birthday' ? -1 : 1) - (b.kind === 'birthday' ? -1 : 1))[0]?.kind;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 14, animation: 'cpUp .25s ease-out', flex: 'none' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-        <div style={{ fontSize: 22, lineHeight: '28px', fontWeight: 500, letterSpacing: '-0.3px', color: '#2B231C' }}>{memberName(m)}</div>
+        <div style={{ fontSize: 22, lineHeight: '28px', fontWeight: 500, letterSpacing: '-0.3px', color: '#2B231C' }}>{memberName(m)}{occ ? <span data-testid="occasion-icon" role="img" aria-label={t(occ === 'birthday' ? 'occasions.birthdayToday' : 'occasions.anniversaryToday')} title={t(occ === 'birthday' ? 'occasions.birthdayToday' : 'occasions.anniversaryToday')} style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 8 }}><Icon name={occ === 'birthday' ? 'cake' : 'celebration'} size={20} fill={1} color="#B5652E" /></span> : null}</div>
         <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{plan}</div>
       </div>
       {flags.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{flags.map((f, i) => <FlagChip key={i} f={f} />)}</div> : null}

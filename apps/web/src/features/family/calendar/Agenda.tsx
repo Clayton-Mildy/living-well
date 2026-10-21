@@ -56,6 +56,10 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
       }
       case 'outing': return { title: cap(eventTitle({ title: r.title ?? '', titleId: r.titleId }, lang)), sub: [t('cal.k_outing'), span(r)].filter(Boolean).join(' · ') };
       case 'venue': return { title: t('cal.private'), sub: [roomLabel(s, r.roomId, lang), span(r)].filter(Boolean).join(' · ') };
+      case 'birthday': {
+        const m = r.memberId ? s.members[r.memberId] : undefined;
+        return { title: m ? t('occasions.turnsPlain', { name: displayName(m), n: r.years ?? '' }) : '', sub: t('occasions.famCard') };
+      }
       case 'celebration': {
         const c = r.celebrationId ? s.celebrations?.[r.celebrationId] : undefined;
         return { title: r.title ?? '', sub: [t('celeb.famCard'), roomLabel(s, r.roomId, lang), span(r), c?.cateringNote ?? ''].filter(Boolean).join(' · ') };

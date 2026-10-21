@@ -4,13 +4,15 @@
 import { Fragment, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listName, type GuestVisit } from '@cp/shared';
+import { occasionsThisWeek } from '@cp/shared/rules/occasions';
 import { checkOnList } from '@cp/shared/rules/checkOn';
 import { alsoToday } from '@cp/shared/rules/lobby';
 import { menuOn } from '@cp/shared/rules/kitchen';
 import { dayPlan } from '@cp/shared/rules/activity';
 import { Button, Eyebrow, GROUP_HEAD, Icon, Pager, usePaged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
-import { useT } from '../../lib/i18n';
+import { useLang, useT } from '../../lib/i18n';
+import { occasionLine } from '../../lib/occasions';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { CallLink, DotItem, drugLabel, relText } from './parts';
@@ -50,6 +52,7 @@ function Block({ title, openLabel, onClick, children }: { title: string; openLab
 
 export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn?: (memberId: string) => void }) {
   const t = useT();
+  const lang = useLang();
   const s = useClub();
   const { today } = useNow();
   const navigate = useNavigate();
@@ -148,6 +151,25 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
           ))}
         </div>
         {quiet.length > 5 ? <button type="button" onClick={() => navigate('/members?f=checkOn')} style={{ ...sub14, alignSelf: 'flex-start', padding: 0, minHeight: 28, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline' }}>{t('checkOn.all', { n: quiet.length })}</button> : null}
+      </Block>,
+    );
+  }
+
+  // round 12: birthdays and membership anniversaries from today to next week (a cake or a party popper, then one line; a tap opens the member)
+  const week = occasionsThisWeek(s, today);
+  if (week.length) {
+    blocks.push(
+      <Block key="occasions" title={t('occasions.title')} onClick={() => navigate('/calendar')}>
+        <div data-testid="occasions-week" style={{ display: 'flex', flexDirection: 'column' }}>
+          {week.slice(0, 5).map((o) => (
+            <button key={o.kind + o.member.id} type="button" data-occasion={o.kind} data-member={o.member.id} onClick={() => navigate(`/members/${o.member.id}`)} aria-label={t('occasions.open', { name: listName(o.member) })}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minHeight: 36, padding: '6px 0', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', color: '#24201C' }}>
+              <Icon name={o.kind === 'birthday' ? 'cake' : 'celebration'} size={18} weight={300} color="var(--eyebrow, #6E5A43)" style={{ marginTop: 2 }} />
+              <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>{occasionLine(t, lang, o, today, listName(o.member))}</span>
+            </button>
+          ))}
+        </div>
+        {week.length > 5 ? <button type="button" onClick={() => navigate('/calendar')} style={{ ...sub14, alignSelf: 'flex-start', padding: 0, minHeight: 28, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline' }}>{t('occasions.more', { n: week.length - 5 })}</button> : null}
       </Block>,
     );
   }

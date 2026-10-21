@@ -3,6 +3,7 @@
 // KC round 6: the front desk opens the same page view only: the menu, the allergy warnings and the week, with no buttons that change anything.
 import { useState } from 'react';
 import { Card, EmptyState, GROUP_HEAD, Group, Icon, PageHead, Pager, Pin, usePaged, FONT_BODY } from '../../components/ui';
+import { listName } from '@cp/shared';
 import type { DietRow } from '@cp/shared/rules/kitchenOps';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { PendingMark } from '../../components/PendingMark';
@@ -43,6 +44,14 @@ export function KitchenMenu() {
     </div>
   ));
 
+  // round 12: whose birthday it is today, so the cake is not forgotten: "Birthday today: Opa Budi (80)"
+  const birthdayLine = v.birthdays.length ? (
+    <div data-testid="birthday-line" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 15, lineHeight: '22px', color: '#24201C' }}>
+      <Icon name="cake" size={18} color="var(--accent, #75624B)" style={{ marginTop: 2 }} />
+      <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{t('occasions.kitchenToday', { list: v.birthdays.map((o) => `${listName(o.member)} (${o.years})`).join(', ') })}</span>
+    </div>
+  ) : null;
+
   return (
     <>
       <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 20 : 'clamp(18px, 2.8vw, 32px)' }}>
@@ -69,6 +78,7 @@ export function KitchenMenu() {
                     <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
 {celebLines}
+{birthdayLine}
                       <div style={{ fontSize: 22, lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', marginTop: 2 }}>{names(v.menu.lunch)}</div>
                       <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.softLine', { dishes: names(v.menu.soft) })}</div>
                       <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.teaLine', { dishes: names(v.menu.tea) })}</div>
@@ -104,6 +114,7 @@ export function KitchenMenu() {
                   <div style={cardLabel} data-testid="covers">{t(v.covers.total === 1 ? 'kitchen.cover1' : 'kitchen.covers', { n: v.covers.total })}</div>
                   <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
 {celebLines}
+{birthdayLine}
                   <div style={{ fontSize: 'clamp(20px, 2.4vw, 24px)', lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', marginTop: 4 }}>{names(v.menu.lunch)}</div>
                   <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.softLine', { dishes: names(v.menu.soft) })}</div>
                   <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.teaLine', { dishes: names(v.menu.tea) })}</div>

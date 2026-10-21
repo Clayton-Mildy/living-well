@@ -5,12 +5,13 @@ import type { ClubState, HM, ISODate, Member, Photo, Slot, YM } from '../types';
 import { dayStatus } from './core';
 import { attOf } from './attendance';
 import { sessionPhotos } from './activity';
+import { occasionsInRange } from './occasions';
 import { dayInfo, monthGrid, type DayState } from './calendar';
 import { extrasOn, menuOn, teaPhotosOn, visibleLunchPhotos } from './kitchen';
 import { bestPhotoOf, familyPhotosOn, logOn, servedLunch, dishNamesOf, tookPart, visitDays, LUNCH_AT, TEA_AT } from './family';
 import { addDays, addMonths, live, toMin, ym } from '../util';
 
-export type FamRowKind = 'session' | 'lunch' | 'tea' | 'outing' | 'venue' | 'celebration';
+export type FamRowKind = 'session' | 'lunch' | 'tea' | 'outing' | 'venue' | 'birthday' | 'celebration';
 export interface FamDishes {
   /** the parents these dishes are for; undefined when everyone is served the same */
   memberIds?: string[];
@@ -36,6 +37,8 @@ export interface FamRow {
   /** round 12, celebration: which celebration (title, guests and the catering note are read from it) and whose it is */
   celebrationId?: string;
   memberId?: string;
+  /** round 12, birthday: the age the parent turns (memberId says who) */
+  years?: number;
   /** venue / outing / celebration: the end time when there is one */
   to?: HM | null;
   /** lunch and tea: the dishes */
@@ -92,6 +95,9 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
   if (info.state === 'closed' || info.state === 'holiday') banner = { kind: info.state, title: shut?.title, titleId: shut?.titleId };
   else if (info.state === 'weekend') banner = { kind: 'weekend' };
 
+  // round 12: a birthday of one of these parents (all day, so it sits at the top of the club's day; on a closed day it is the only row)
+  const birthdays: FamRow[] = occasionsInRange(s, date, date).filter((o) => o.kind === 'birthday' && who.includes(o.member.id))
+    .map((o) => ({ key: 'bd:' + o.member.id, kind: 'birthday', time: s.club.settings.open as HM, accent: true, memberId: o.member.id, years: o.years, took: [], photos: [] }));
   if (info.open) {
     const open = s.club.settings.open as HM;
     const extraTimes = new Set(extrasOn(s, date).map((x) => x.time as string));
@@ -135,7 +141,8 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
         rows.push({ key: 'tea', kind: 'tea', time: TEA_AT, accent: false, dishes: [{ names: tea }], took: [], photos });
       }
     }
-    const rank: Record<FamRowKind, number> = { outing: 0, venue: 1, celebration: 2, session: 3, lunch: 4, tea: 5 };
+    const rank: Record<FamRowKind, number> = { outing: 0, venue: 1, birthday: 2, celebration: 3, session: 4, lunch: 5, tea: 6 };
+    rows.push(...birthdays);
     rows.sort((a, b) => a.time.localeCompare(b.time) || rank[a.kind] - rank[b.kind]);
     const others = came.length ? familyPhotosOn(s, who, date).filter((p) => !used.has(p.id)) : [];
     return { date, state: info.state, banner, rows, came, others };
@@ -144,6 +151,7 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
   for (const it of info.items) {
     if (it.kind === 'celebration' && it.memberId && who.includes(it.memberId)) rows.push({ key: it.key, kind: 'celebration', time: it.time ?? (s.club.settings.open as HM), to: it.to ?? null, accent: true, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
   }
+  rows.push(...birthdays);
   return { date, state: info.state, banner, rows, came, others: [] };
 }
 

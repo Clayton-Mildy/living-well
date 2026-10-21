@@ -27,6 +27,7 @@ import { drafts } from './drafts';
 import { mood } from './mood';
 import { checkOn } from './checkOn';
 import { celeb } from './celeb';
+import { occasions } from './occasions';
 import { fam } from './fam';
 import { ftoday } from './ftoday';
 import { fphotos } from './fphotos';
@@ -74,6 +75,7 @@ export const id = {
   ...ns('mood', mood),
   ...ns('checkOn', checkOn),
   ...ns('celeb', celeb),
+  ...ns('occasions', occasions),
   ...ns('fam', fam),
   ...ns('ftoday', ftoday),
   ...ns('fphotos', fphotos),

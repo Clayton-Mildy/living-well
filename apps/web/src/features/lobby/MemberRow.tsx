@@ -13,8 +13,8 @@ import { DotItem, MemberAvatar, allergyLine } from './parts';
 /** Dot colour of the arrival reading: normal sage, alert rust, watch / not taken yet ochre. */
 const ST_FG: Record<string, string> = { normal: '#3F7A55', alert: '#9A3D24' };
 
-export function MemberRow({ r, first, selected, onOpen, onCheckIn, onCheckOut, onUndoOut }: {
-  r: BoardRow; first?: boolean; selected?: boolean; onOpen: () => void; onCheckIn: () => void; onCheckOut: () => void; onUndoOut?: () => void;
+export function MemberRow({ r, first, selected, occasion, onOpen, onCheckIn, onCheckOut, onUndoOut }: {
+  r: BoardRow; first?: boolean; /** round 12: today is this member's birthday / membership anniversary */ occasion?: 'birthday' | 'anniversary'; selected?: boolean; onOpen: () => void; onCheckIn: () => void; onCheckOut: () => void; onUndoOut?: () => void;
 }) {
   const t = useT();
   const fmt = useFmt();
@@ -31,7 +31,7 @@ export function MemberRow({ r, first, selected, onOpen, onCheckIn, onCheckOut, o
   const kind = state === 'in' ? (arr ? arr.status : 'pending') : null;
   const stFg = kind ? ST_FG[kind] ?? '#8A6216' : '';
   const allergy = allergyLine(t, m);
-  const arrivalFace = dayArc(s, m.id, today).arrival; // the face taken at the door
+  const arrivalFace = state === 'notIn' ? undefined : dayArc(s, m.id, today).arrival; // the face taken at the door (only someone who is in has one)
   // KC round 6 (the brochure's terms): an unpaid invoice past the 1st puts the membership on hold; a month of leave is not a visiting month. Either way the check-in is refused with the reason.
   const hold = suspensionOf(s, m.id, today);
   const onLeave = state === 'notIn' && onLeaveOn(m, today);
@@ -51,7 +51,10 @@ export function MemberRow({ r, first, selected, onOpen, onCheckIn, onCheckOut, o
       <button type="button" onClick={onOpen} className={isPhone ? 'cp-tap-target' : undefined} style={{ flex: '1 1 0', minWidth: 0, minHeight: 46, display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
         <MemberAvatar m={m} size={isPhone ? 42 : 46} font={15} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: isPhone ? 16 : 17, fontWeight: 500, lineHeight: 1.3 }}>{listName(m)}</span>
+          <span style={{ fontSize: isPhone ? 16 : 17, fontWeight: 500, lineHeight: 1.3, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{listName(m)}</span>
+            {occasion ? <span data-testid="occasion-icon" title={t(occasion === 'birthday' ? 'occasions.birthdayToday' : 'occasions.anniversaryToday')} role="img" aria-label={t(occasion === 'birthday' ? 'occasions.birthdayToday' : 'occasions.anniversaryToday')} style={{ display: 'inline-flex', flex: 'none' }}><Icon name={occasion === 'birthday' ? 'cake' : 'celebration'} size={17} fill={1} color="#B5652E" /></span> : null}
+          </span>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: '2px 10px', flexWrap: 'wrap' }}>
             {arrivalFace ? <span title={t('mood.face.' + arrivalFace)} style={{ display: 'inline-flex', alignItems: 'center', color: '#24201C' }}><Icon name={FACE_ICON[arrivalFace]} size={16} fill={1} /></span> : null}
             {sub ? <span>{sub}</span> : null}

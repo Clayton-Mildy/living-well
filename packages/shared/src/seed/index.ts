@@ -136,7 +136,7 @@ const CAST: CastRow[] = [
     meds: [['Amlodipine', '5 mg', 'morningHome'], ['Calcium + Vitamin D', '1 tablet', 'lunchClub']], cognitive: 'Alert and oriented',
     care: 'Use her right arm for blood pressure (old wrist fracture on the left). Hard of hearing on the left side.', nanny: 'Mbak Sari', spouse: 'm46',
     sim: { sys: 128, dia: 80, pulse: 74, spo2: 97, glucose: 118, weight: 54, temp: 36.6, grip: 17, script: { demoHigh: { sys: 152, dia: 94, pulse: 82 } } }, tone: 0, healthInfo: true },
-  { id: 'm46', idx: 45, title: 'Opa', first: 'Budi', last: 'Wijaya', gender: 'm', dob: '1942-02-03', address: 'Jl. Bangka Raya no. 18, Kemang, Jakarta Selatan', start: '2025-03-03',
+  { id: 'm46', idx: 45, title: 'Opa', first: 'Budi', last: 'Wijaya', gender: 'm', dob: '1946-01-01' /* placeholder: seed/r7/celebrations.ts moves it to his party day, when he turns 80 */, address: 'Jl. Bangka Raya no. 18, Kemang, Jakarta Selatan', start: '2025-03-03',
     plan: 'gold', usual: '10:05', food: [], mobility: 'walkingStick', diet: ['lowSalt'], diabetic: false,
     conditions: ['High blood pressure', 'Heart health, on preventive aspirin', 'Hard of hearing, right ear'],
     meds: [['Amlodipine', '5 mg', 'morningHome'], ['Aspirin', '80 mg', 'morningHome']], cognitive: 'Alert and oriented',

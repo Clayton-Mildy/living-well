@@ -2,6 +2,8 @@
 // the family's Health screen renders it with audience="family" (no History, no edit bars, no staff-only fields).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { occasionsThisWeek } from '@cp/shared/rules/occasions';
+import { birthdayHint } from '../../lib/occasions';
 import { listName, latestBp, live, memberAge, memberName, memberSince, onLeaveOn, planOn, suspensionOf, ym, currentMembership, membershipStatus, type Member, type Role } from '@cp/shared';
 import { checkOnList } from '@cp/shared/rules/checkOn';
 import { PROFILE_TABS, endingOn, isNewMember, memberStatus, pendingReviewsFor, tabForSection, type ProfileTab } from '@cp/shared/rules/members';
@@ -122,8 +124,10 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
   const onLeave = !!m && onLeaveOn(m, today);
   const spouse = m.spouseId ? s.members[m.spouseId] : undefined;
   const pronN = m.gender;
+  // round 12: the birthday, when it falls within the coming week
+  const birthday = occasionsThisWeek(s, today).find((o) => o.kind === 'birthday' && o.member.id === id);
   const sub = [
-    age != null ? t('profile.years', { n: age }) : '',
+    age != null ? t('profile.years', { n: age }) + (birthday ? ` · ${birthdayHint(t, fmt.lang, birthday.date, today)}` : '') : '',
     isPhone ? '' : m.nanny ? t('profile.withNanny_' + pronN, { n: m.nanny.name }) : '',
     isPhone ? '' : spouse && !spouse.deletedAt ? t('profile.marriedTo', { n: spouse ? `${spouse.title} ${spouse.firstName}` : '' }) : '',
   ].filter(Boolean).join(' · ');
