@@ -266,3 +266,75 @@ describe('the demo seed', () => {
     expect(r.result).toMatchObject({ sent: 5, skipped: [] });
   });
 });
+
+describe('photo.unsend', () => {
+  const two = (uid: string) => {
+    let s = fresh();
+    const a = shootKind(s, uid, 'people'); s = a.s;
+    const b = shootKind(s, uid, 'people'); s = b.s;
+    s = step(s, 'photo.editDraft', { id: a.p.id, kind: 'people', memberIds: ['m10'] }, uid);
+    s = step(s, 'photo.editDraft', { id: b.p.id, kind: 'people', memberIds: ['m10'] }, uid);
+    return { s, ids: [a.p.id, b.p.id] };
+  };
+
+  it('a teacher’s two sent photos go back to drafts: no approval waiting, nothing told to a family', () => {
+    const { s, ids } = two('s5');
+    const sent = step(s, 'photo.sendDrafts', { ids }, 's5');
+    expect(sent.photos[ids[0]].sentAt).toBe(`${T}T10:00`);
+    const before = approvalTotal(s);
+    expect(approvalTotal(sent)).toBe(before + 2);
+    const r = run(sent, 'photo.unsend', { ids }, 's5', { today: T, nowMin: 605 });
+    expect(r.result).toMatchObject({ undone: 2 });
+    for (const id of ids) {
+      expect(r.state.photos[id].visibility).toBe('draft');
+      expect(r.state.photos[id].approved).toBeUndefined();
+      expect(r.state.photos[id].sentAt).toBeUndefined();
+    }
+    expect(approvalTotal(r.state)).toBe(before);
+    expect(pendingPhotos(r.state)).toEqual([]);
+    expect(draftsOf(r.state, 's5').map((x) => x.id).sort()).toEqual([...ids].sort());
+    expect(live(r.state.notifications).filter((x) => x.ref?.type === 'photo' && ids.includes(x.ref.id))).toEqual([]);
+  });
+
+  it('management’s visible people photos: the family notification and the feed line go with them', () => {
+    const { s, ids } = two('s9');
+    const sent = step(s, 'photo.sendDrafts', { ids }, 's9');
+    expect(note(sent, 'activity.notif.newPhotos')).toHaveLength(1);
+    expect(feedKeys(sent)).toContain('activity.feed.photo');
+    const r = run(sent, 'photo.unsend', { ids }, 's9', { today: T, nowMin: 602 });
+    expect(r.state.photos[ids[0]].visibility).toBe('draft');
+    expect(famPhotos(r.state, 'fm10_0')).not.toContain(ids[0]);
+    expect(note(r.state, 'activity.notif.newPhotos')).toHaveLength(0);
+    expect(Object.values(r.state.notifications).filter((x) => x.ref?.type === 'photo' && ids.includes(x.ref.id))).toEqual([]);
+    expect(Object.values(r.state.activity).filter((a) => ids.includes(String(a.params.photoId)))).toEqual([]);
+  });
+
+  it('a visible lunch photo leaves the day’s gallery and its announcement', () => {
+    const m = shoot(fresh(), 's9');
+    const food = step(m.s, 'photo.editDraft', { id: m.p.id, kind: 'food' }, 's9');
+    const sent = step(food, 'photo.sendDrafts', { ids: [m.p.id] }, 's9');
+    expect(sent.dayMenus[T].photoIds).toContain(m.p.id);
+    expect(note(sent, 'kitchen.notif.lunchPhoto')).toHaveLength(1);
+    const r = run(sent, 'photo.unsend', { ids: [m.p.id] }, 's9', { today: T, nowMin: 603 });
+    expect(r.state.dayMenus[T].photoIds ?? []).not.toContain(m.p.id);
+    expect(visibleLunchPhotos(r.state, T)).toEqual([]);
+    expect(r.state.photos[m.p.id].visibility).toBe('draft');
+    expect(note(r.state, 'kitchen.notif.lunchPhoto')).toHaveLength(0);
+    expect(Object.values(r.state.activity).filter((a) => a.params.photoId === m.p.id)).toEqual([]);
+  });
+
+  it('more than 10 minutes later it is too late; ten exactly still works', () => {
+    const { s, ids } = two('s5');
+    const sent = step(s, 'photo.sendDrafts', { ids }, 's5');
+    fails(sent, 'photo.unsend', { ids }, 's5', 'drafts.err.tooLate', { today: T, nowMin: 611 });
+    expect(run(sent, 'photo.unsend', { ids }, 's5', { today: T, nowMin: 610 }).result).toMatchObject({ undone: 2 });
+  });
+
+  it('another teacher cannot take back my photos; a draft that was never sent cannot be unsent', () => {
+    const { s, ids } = two('s5');
+    const sent = step(s, 'photo.sendDrafts', { ids }, 's5');
+    fails(sent, 'photo.unsend', { ids }, 's6', 'err.forbidden', { today: T, nowMin: 602 });
+    fails(sent, 'photo.unsend', { ids }, 's2', 'err.forbidden');
+    fails(s, 'photo.unsend', { ids }, 's5', 'drafts.err.gone');
+  });
+});

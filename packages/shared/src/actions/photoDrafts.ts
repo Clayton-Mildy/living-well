@@ -6,15 +6,17 @@
 import { z } from 'zod';
 import type { Draft } from 'immer';
 import type { ClubState, ISODate, Photo, PhotoAi } from '../types';
-import { DomainError, defineAction, hasRole, isMgmt, original, type Ctx } from './framework';
+import { DomainError, defineAction, hasRole, isMgmt, isStaff, original, type Ctx } from './framework';
 import { requireMember } from './helpers';
 import { announceLunchPhoto, ensureDayMenu } from './kitchen';
 import { feedFor, notifyNewPhotos } from './photos';
 import { isPendingRow } from '../rules/core';
 import { LOG_BACK_DAYS, curAct, hashOf, logDateOk, pictureSessions, toneOf, type CurAct } from '../rules/activity';
 import { analyzePhoto, bestOfBurst, draftKindOf, draftKindsFor, draftMeal, sendProblem, TEA_FROM, type DraftKind } from '../rules/photoAi';
-import { toMin, uniq } from '../util';
+import { daysBetween, toMin, uniq } from '../util';
 
+/** How long after sending the person who sent photos can still take them back (`photo.unsend`). */
+const UNSEND_MIN = 10;
 const draftTakers = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'activity', 'mgmt', 'kitchen');
 const MEDIA_ID = /^[A-Za-z0-9_.-]{1,100}$/;
 const ISO = /^\d{4}-\d{2}-\d{2}$/;
@@ -188,8 +190,8 @@ export const photoDraftActions = [
           if (mgmt) {
             p.approved = { at: ctx.nowDT, by: ctx.user.id };
             if (input.notify !== false) announceLunchPhoto(d, ctx, p.id);
-            ctx.feed({ icon: tea ? 'local_cafe' : 'restaurant', key: tea ? 'kitchen.feed.teaPhoto' : 'kitchen.feed.lunchPhoto' });
-          } else ctx.feed({ icon: 'hourglass_top', key: tea ? 'kitchen.feed.teaPhotoPending' : 'kitchen.feed.lunchPhotoPending' });
+            ctx.feed({ icon: tea ? 'local_cafe' : 'restaurant', key: tea ? 'kitchen.feed.teaPhoto' : 'kitchen.feed.lunchPhoto', params: { photoId: p.id } });
+          } else ctx.feed({ icon: 'hourglass_top', key: tea ? 'kitchen.feed.teaPhotoPending' : 'kitchen.feed.lunchPhotoPending', params: { photoId: p.id } });
         } else {
           p.visibility = mgmt ? 'visible' : 'pending';
           if (mgmt) {
@@ -197,6 +199,7 @@ export const photoDraftActions = [
             if (kind === 'people') forFamilies.push({ photo: { id: p.id, media: p.media }, memberIds: p.memberIds.slice() });
           }
         }
+        p.sentAt = ctx.nowDT;
         sent.push(p);
       }
       if (!sent.length) ctx.fail(firstProblem!.code, firstProblem!.params);
@@ -205,6 +208,37 @@ export const photoDraftActions = [
       ctx.result.photoIds = sent.map((p) => p.id);
       ctx.result.skipped = skipped;
       ctx.result.pending = !mgmt;
+    },
+  }),
+
+  // Take back photos that were just sent (the Undo on the "sent" toast): they return to Drafts as they were, and what the send told the families and
+  // the feed is withdrawn. Only the sender (or management), and only within UNSEND_MIN minutes of the send.
+  defineAction<{ ids: string[] }>({
+    name: 'photo.unsend',
+    can: (u) => isStaff(u),
+    parse: (raw) => { const r = parseWith(idsSchema, raw); return { ids: uniq([...(r.id ? [r.id] : []), ...(r.ids ?? [])]) }; },
+    run(d, input, ctx: Ctx) {
+      const mgmt = isMgmt(ctx.user);
+      const photos = input.ids.map((id) => d.photos[id] ?? ctx.fail('err.notFound'));
+      for (const p of photos) {
+        if ((p.visibility !== 'visible' && p.visibility !== 'pending') || p.deletedAt || !p.sentAt) ctx.fail('drafts.err.gone');
+        if (!mgmt && p.createdBy !== ctx.actor) ctx.fail('err.forbidden');
+        const ago = daysBetween(p.sentAt.slice(0, 10) as ISODate, ctx.today) * 1440 + ctx.nowMin - toMin(p.sentAt.slice(11, 16) as `${number}:${number}`);
+        if (ago > UNSEND_MIN) ctx.fail('drafts.err.tooLate');
+      }
+      const ids = new Set(photos.map((p) => p.id));
+      for (const p of photos) {
+        p.visibility = 'draft';
+        delete p.approved;
+        delete p.sentAt;
+        for (const row of Object.values(d.dayMenus)) {
+          if (row.photoIds?.includes(p.id)) row.photoIds = row.photoIds.filter((x) => x !== p.id);
+          if (row.teaPhotoIds?.includes(p.id)) row.teaPhotoIds = row.teaPhotoIds.filter((x) => x !== p.id);
+        }
+      }
+      for (const n of Object.values(d.notifications)) if (n.ref?.type === 'photo' && ids.has(n.ref.id)) delete d.notifications[n.id];
+      for (const a of Object.values(d.activity)) if (a.params.photoId !== undefined && ids.has(String(a.params.photoId))) delete d.activity[a.id];
+      ctx.result.undone = photos.length;
     },
   }),
 ];

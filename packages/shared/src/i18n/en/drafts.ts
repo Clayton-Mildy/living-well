@@ -10,7 +10,7 @@ export const drafts = {
   select: 'Select', selectAll: 'Select all', nSelected: '{n} selected', sendAll: 'Send all ({n})', sendAllReview: 'Send for approval ({n})', sendSel: 'Send ({n})', deleteSel: 'Delete ({n})',
   sentN_one: '1 photo sent.', sentN_other: '{n} photos sent.', sentReviewN_one: '1 photo sent for approval.', sentReviewN_other: '{n} photos sent for approval.',
   notAll_one: '1 needs a closer look and stays in Drafts.', notAll_other: '{n} need a closer look and stay in Drafts.',
-  deletedN_one: 'Draft deleted.', deletedN_other: '{n} drafts deleted.', saved: 'Draft saved.',
+  deletedN_one: 'Draft deleted.', deletedN_other: '{n} drafts deleted.', saved: 'Draft saved.', undone: 'Back in Drafts.',
   // edit sheet
   editTitle: 'Edit draft', filedAs: 'Filed as', kindPeople: 'People', kindScene: 'Session', kindFood: 'Food', session: 'Session', noSession: 'No session', day: 'Day', meal: 'Meal',
   deleteDraft: 'Delete draft', unnamed_one: '1 face the AI could not name. Add them by name.', unnamed_other: '{n} faces the AI could not name. Add them by name.',
@@ -21,6 +21,7 @@ export const drafts = {
   doneBtn: 'Done', draftsLink: 'Drafts', draftsN: 'Drafts ({n})', inDrafts_one: '1 photo in Drafts', inDrafts_other: '{n} photos in Drafts', review: 'Review', burst: 'Burst',
   noCamera: 'No camera here. Choose photos from the gallery.',
   // errors
+  'err.tooLate': 'Too late to undo: sent more than 10 minutes ago.', 
   'err.gone': 'That draft was already sent or deleted.', 'err.needPeople': 'Say who is in the photo first.', 'err.needSession': 'Pick the session first.',
   'err.notToday': 'Lunch and tea photos can only be sent on the day they were taken.',
 } as const;

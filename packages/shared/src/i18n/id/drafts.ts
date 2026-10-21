@@ -11,7 +11,7 @@ export const drafts: Same<typeof EN> = {
   select: 'Pilih', selectAll: 'Pilih semua', nSelected: '{n} dipilih', sendAll: 'Kirim semua ({n})', sendAllReview: 'Kirim untuk persetujuan ({n})', sendSel: 'Kirim ({n})', deleteSel: 'Hapus ({n})',
   sentN_one: '1 foto terkirim.', sentN_other: '{n} foto terkirim.', sentReviewN_one: '1 foto dikirim untuk persetujuan.', sentReviewN_other: '{n} foto dikirim untuk persetujuan.',
   notAll_one: '1 perlu dicek lagi dan tetap di Draf.', notAll_other: '{n} perlu dicek lagi dan tetap di Draf.',
-  deletedN_one: 'Draf dihapus.', deletedN_other: '{n} draf dihapus.', saved: 'Draf disimpan.',
+  deletedN_one: 'Draf dihapus.', deletedN_other: '{n} draf dihapus.', saved: 'Draf disimpan.', undone: 'Kembali ke Draf.',
   // edit sheet
   editTitle: 'Ubah draf', filedAs: 'Disimpan sebagai', kindPeople: 'Orang', kindScene: 'Sesi', kindFood: 'Makanan', session: 'Sesi', noSession: 'Tanpa sesi', day: 'Hari', meal: 'Waktu makan',
   deleteDraft: 'Hapus draf', unnamed_one: '1 wajah yang tidak dikenali AI. Tambahkan lewat nama.', unnamed_other: '{n} wajah yang tidak dikenali AI. Tambahkan lewat nama.',
@@ -22,6 +22,7 @@ export const drafts: Same<typeof EN> = {
   doneBtn: 'Selesai', draftsLink: 'Draf', draftsN: 'Draf ({n})', inDrafts_one: '1 foto di Draf', inDrafts_other: '{n} foto di Draf', review: 'Tinjau', burst: 'Beruntun',
   noCamera: 'Tidak ada kamera di sini. Pilih foto dari galeri.',
   // errors
+  'err.tooLate': 'Terlambat untuk diurungkan: sudah dikirim lebih dari 10 menit lalu.', 
   'err.gone': 'Draf itu sudah dikirim atau dihapus.', 'err.needPeople': 'Tentukan dulu siapa yang ada di foto.', 'err.needSession': 'Pilih sesinya dulu.',
   'err.notToday': 'Foto makan siang dan teh sore hanya bisa dikirim pada hari pengambilannya.',
 };

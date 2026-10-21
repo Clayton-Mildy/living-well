@@ -416,6 +416,8 @@ export interface Photo extends Row {
   visibility: 'draft' | 'pending' | 'visible' | 'hidden' | 'removed';
   moderated?: { at: DT; by: string; reason: string };
   approved?: { at: DT; by: string };
+  /** when the quick camera's `photo.sendDrafts` sent it (the 10 minutes in which `photo.unsend` can take it back); cleared by an unsend */
+  sentAt?: DT;
   /** a real image from the camera or an upload (GET /api/media/:id); without it the design's tone placeholder shows */
   mediaId?: string;
   /** KC round 7: what the (simulated) AI saw and suggested when the shot was taken: kept after sending, for the record. `rules/photoAi.ts` */
