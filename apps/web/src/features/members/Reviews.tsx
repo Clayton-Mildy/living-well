@@ -568,7 +568,7 @@ export function Reviews() {
 
       {showBar && isPhone ? (
         // round 6, phone: a bottom toolbar pinned like a PhoneScreen footer: the selection text buttons, then the two main actions side by side
-        <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '0 -16px -20px', padding: '8px 16px 14px', background: '#FFFFFF', borderTop: HAIRLINE, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '0 -16px -20px', padding: '6px 16px 12px', background: 'var(--page, #F2F2F4)', borderTop: HAIRLINE, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, minHeight: 34 }}>
             {selected.length < here.length ? <button type="button" className="cp-press" onClick={() => setSel(here.map((x) => x.id))} style={{ ...textBtn, padding: '0 8px 0 0' }}>{t('reviews.selectAll', { n: here.length })}</button> : null}
             {selected.length ? <button type="button" className="cp-press" onClick={() => setSel([])} style={textBtn}>{t('reviews.clearSelection')}</button> : null}
@@ -576,8 +576,8 @@ export function Reviews() {
           </div>
           {current === 'photos' ? <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('reviews.notifyFamilies')} /> : null}
           <div style={{ display: 'flex', gap: 10 }}>
-            <Button size={48} icon="check" disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 0' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
-            <Button size={48} variant="secondary" icon="close" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 0' }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
+            <Button size={44} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 0' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
+            <Button size={44} variant="secondary" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 0', color: selected.length ? '#9A3D24' : undefined }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
           </div>
         </div>
       ) : null}
@@ -589,8 +589,8 @@ export function Reviews() {
             <span aria-live="polite" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{selected.length ? t('reviews.selectedN', { n: selected.length }) : ''}</span>
           </div>
           {current === 'photos' ? <div style={{ flex: '1 1 260px', minWidth: 0 }}><Toggle on={notify} onClick={() => setNotify(!notify)} label={t('reviews.notifyFamilies')} /></div> : null}
-          <Button size={isPhone ? 48 : 56} icon="check" disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 140px' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
-          <Button size={isPhone ? 48 : 56} variant="secondary" icon="close" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 140px' }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
+          <Button size={44} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 140px' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
+          <Button size={44} variant="secondary" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 140px', color: selected.length ? '#9A3D24' : undefined }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
         </div>
       ) : null}
 

@@ -58,8 +58,12 @@ describe('Approvals', () => {
     const rows = document.querySelectorAll('[data-approval]');
     expect(rows).toHaveLength(2);
     expect(btn(/Approve \(0\)/)).toBeTruthy();
+    // round 13: with nothing selected both bar buttons are off; with two selected the label carries the count
+    expect(btn(/Approve \(0\)/)!.getAttribute('aria-disabled')).toBe('true');
+    expect(btn(/Reject \(0\)/)!.getAttribute('aria-disabled')).toBe('true');
     await click(btn(/Select all \(2\)/));
-    expect(btn(/Approve \(2\)/)).toBeTruthy();
+    expect(btn(/Approve \(2\)/)!.textContent).toContain('2');
+    expect(btn(/Approve \(2\)/)!.getAttribute('aria-disabled')).toBeNull();
     expect(document.body.textContent).toContain('2 selected');
     await click(btn(/Approve \(2\)/));
     expect(actMock).toHaveBeenCalledTimes(1);
