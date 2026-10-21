@@ -48,7 +48,7 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.askOut', { name: memberShort(m) })}</div>
-          <MoodFaces value={face} onChange={setFace} name={memberShort(m)} />
+          <MoodFaces value={face} onChange={setFace} name={memberShort(m)} label={t('mood.askOut', { name: memberShort(m) })} />
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button type="button" className="h-fill" onClick={onClose} style={{ height: 48, padding: '0 22px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>

@@ -56,4 +56,11 @@ describe('mood actions', () => {
     const s2 = run(s1, 'log.mark', { date: T, memberIds: ['m1'], session: { slot: '10:30', value: 'joined' }, face: 5 }, 's5').state;
     expect(s2.moodMarks[moodId(T, 'm1', 'activity', '10:30')]?.face).toBe(5);
   });
+  it('log.mark with onlyEmpty and a face does not overwrite a member already marked in that session', () => {
+    let s = run(seed(), 'attendance.checkIn', { memberId: 'm1', method: 'face' }, 's1').state;
+    s = run(s, 'log.mark', { date: T, memberIds: ['m1'], session: { slot: '10:30', value: 'joined' }, face: 2 }, 's5').state;
+    s = run(s, 'log.mark', { date: T, memberIds: ['m1', 'm2'], session: { slot: '10:30', value: 'joined' }, face: 5, onlyEmpty: true }, 's5').state;
+    expect(s.moodMarks[moodId(T, 'm1', 'activity', '10:30')]?.face).toBe(2);
+    expect(s.moodMarks[moodId(T, 'm2', 'activity', '10:30')]?.face).toBe(5);
+  });
 });

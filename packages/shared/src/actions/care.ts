@@ -210,9 +210,9 @@ export const careActions = [
         ...(input.session ? { sessions: { [input.session.slot]: input.session.value } } : {}),
       };
       const done = ids.filter((id) => applyMarks(d, ctx, id, input.date, marks, !!input.onlyEmpty));
-      // a face rides with a joined / sat-out mark: one activity mark per member (today's sessions only, like every mood mark)
+      // a face rides with a joined / sat-out mark: one activity mark per member (today's sessions only, like every mood mark); "mark the rest" (onlyEmpty) only faces the members it marked
       if (input.face && input.session && (input.session.value === 'joined' || input.session.value === 'satOut') && input.date === ctx.today) {
-        for (const id of ids) writeMark(d, ctx, { memberId: id, moment: 'activity', face: input.face as Face, slot: input.session.slot });
+        for (const id of input.onlyEmpty ? done : ids) writeMark(d, ctx, { memberId: id, moment: 'activity', face: input.face as Face, slot: input.session.slot });
       }
       if (done.length > 1) {
         const names = namesOf(d, done);

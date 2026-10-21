@@ -7,10 +7,10 @@ import { HAIRLINE, Icon } from './index';
 /** Material glyph per face, 5 (great) to 1 (upset). */
 export const FACE_ICON: Record<Face, string> = { 5: 'sentiment_very_satisfied', 4: 'sentiment_satisfied', 3: 'sentiment_neutral', 2: 'sentiment_dissatisfied', 1: 'sentiment_very_dissatisfied' };
 
-export function MoodFaces({ value, onChange, size = 44, labels = false, name }: { value: Face | null; onChange: (f: Face) => void; size?: number; labels?: boolean; name: string }) {
+export function MoodFaces({ value, onChange, size = 44, labels = false, name, label }: { value: Face | null; onChange: (f: Face) => void; size?: number; labels?: boolean; name: string; /** the group's accessible name; defaults to the arrival question */ label?: string }) {
   const t = useT();
   return (
-    <div role="radiogroup" aria-label={t('mood.ask', { name })} style={{ display: 'flex', gap: 8, justifyContent: 'space-between', maxWidth: 5 * size + 4 * 8 + (labels ? 40 : 0) }}>
+    <div role="radiogroup" aria-label={label ?? t('mood.ask', { name })} style={{ display: 'flex', gap: 8, justifyContent: 'space-between', maxWidth: 5 * size + 4 * 8 + (labels ? 40 : 0) }}>
       {FACES.map((f) => {
         const on = value === f;
         return (

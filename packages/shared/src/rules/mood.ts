@@ -28,6 +28,7 @@ export function dayArc(s: ClubState, memberId: string, date: ISODate): DayArc {
     if (m.moment === 'activity') arc.activity.push({ slot: m.slot ?? m.time, face: m.face });
     else arc[m.moment] = m.face;
   }
+  arc.activity.sort((a, b) => (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0));
   if (arc.arrival !== undefined && arc.departure !== undefined) arc.lift = arc.departure - arc.arrival;
   return arc;
 }

@@ -5,7 +5,7 @@
 import { type KeyboardEvent as RKE } from 'react';
 import { lastBefore, limitsFor, type ClubState } from '@cp/shared';
 import { lastOfKind } from '@cp/shared/rules/healthStation';
-import { GROUP_HEAD, Group, Icon, TextField } from '../../components/ui';
+import { GROUP_HEAD, Group, Icon, MoodFaces, TextField } from '../../components/ui';
 import { useT, type TFn } from '../../lib/i18n';
 import type { DeviceKind } from './device';
 import { FIELD, FORM_GROUPS, GROUPS, canSave, effTell, evalDraft, flagged, groupStatus, partialGroups, press, typeText, type Draft, type FieldKey, type GroupDef } from './form';
@@ -81,6 +81,13 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
       onField={(k) => { onManual(); patch((d) => ({ ...d, field: k })); }} onFocus={onManual}
       onType={(k, raw) => patch((d) => typeText(d, k, raw))} onRead={() => g.device && onMeasure([g.device])} onStop={onManual} />
   );
+  // round 12: how the person is, optional (a member only; the mark is theirs, not a guest's)
+  const faces = who.kind === 'member' ? (
+    <>
+      <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.ask', { name: who.short })}</div>
+      <div data-testid="health-faces"><MoodFaces value={draft.face} onChange={(f) => patch((d) => ({ ...d, face: d.face === f ? null : f }))} size={isPhone ? 46 : 48} name={who.short} /></div>
+    </>
+  ) : null;
   const saveBg = ok && !busy ? '#24201C' : 'var(--press, #EEEEF0)';
   const saveFg = ok && !busy ? '#FFFFFF' : '#8A8078';
 
@@ -104,6 +111,7 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
             {isFlagged && who.kind === 'member' && !recipients.length ? <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, padding: '0 16px' }}>{t('health.noFamily', { n: who.short })}</div> : null}
           </div>
         ) : null}
+        {faces ? <Group title={t('mood.moment.health')} gap={8}>{faces}</Group> : null}
         <Group title={t('health.quickNotes')} gap={12}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {QUICK.map((k) => (
@@ -171,6 +179,12 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
             ) : null}
             {isFlagged && who.kind === 'member' && !recipients.length ? <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('health.noFamily', { n: who.short })}</div> : null}
           </>
+        ) : null}
+        {faces ? (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ ...smallCaps('2px'), color: 'var(--eyebrow, #6E5A43)' }}>{t('mood.moment.health')}</div>
+            {faces}
+          </div>
         ) : null}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ ...smallCaps('2px'), color: 'var(--eyebrow, #6E5A43)' }}>{t('health.quickNotes')}</div>

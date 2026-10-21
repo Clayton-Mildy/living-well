@@ -6,13 +6,13 @@
 // and the day's attendees (people still in the club first). A pin marks the rest of a round at once. Marks save as you tap (the replica applies them at once).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { actorName, addDays, attId, memberName, memberShort, staffCall, type DailyLog as LogRow, type Member } from '@cp/shared';
+import { actorName, addDays, attId, dayArc, marksOn, memberName, memberShort, staffCall, type DailyLog as LogRow, type Face, type Member } from '@cp/shared';
 import { PendingMark } from '../../components/PendingMark';
 import { approvalState } from '@cp/shared/rules/approvals';
 import {
   LUNCH_AMOUNTS, SESSION_MARKS, activityName, attendedOn, cogSummary, defaultRound, logDateOk, logDates, logDeviations, logsOn, roundMarked, roundsOf, searchMembers, type Round, type RoundId,
 } from '@cp/shared/rules/activity';
-import { Button, Card, Chip, GROUP_HEAD, Group, Icon, Note, PageHead, Pin, Sheet, TextField, FONT_SMALL } from '../../components/ui';
+import { Button, Card, Chip, GROUP_HEAD, Group, Icon, MoodFaces, Note, PageHead, Pin, Sheet, TextField, FONT_SMALL } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -20,6 +20,7 @@ import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { Av, SearchBar, StatusDot, cogLine, plural, rowLine } from './lib';
+import { MoodArc } from './MoodArc';
 import { LogFieldsForm, RoundChips, baseEntry, logInput, sameLog, type LogEntry, type RoundChoice } from './LogFields';
 
 const HAIR = '0.5px solid var(--hairline, #E2E2E6)';
@@ -100,10 +101,15 @@ export function DailyLog() {
   const lunchChoices: RoundChoice[] = LUNCH_AMOUNTS.map((v) => ({ value: v, label: t('activity.lunchShort.' + v), tone: v === 'all' ? 'normal' : v === 'none' ? 'alert' : 'other' }));
   const sessionChoices: RoundChoice[] = SESSION_MARKS.map((v) => ({ value: v, label: t('activity.opt.session.' + v), tone: v === 'joined' ? 'normal' : 'other' }));
   const choices = round.kind === 'lunch' ? lunchChoices : sessionChoices;
-  const markOne = (id: string, v: string | null) => {
+  const markOne = (id: string, v: string | null, face?: Face) => {
     const part = round.kind === 'lunch' ? { lunch: v } : { session: { slot: round.id, value: v } };
-    void act('log.mark', { date, memberIds: [id], ...part }, { silent: true }); // the replica shows the mark at once; a failure toasts and rolls it back
+    void act('log.mark', { date, memberIds: [id], ...part, ...(face ? { face } : {}) }, { silent: true }); // the replica shows the mark at once; a failure toasts and rolls it back
+    // taking the session mark away takes its face with it
+    if (v === null && round.kind === 'session' && isToday && faceOf(id)) void act('mood.clear', { memberId: id, moment: 'activity', slot: round.id }, { silent: true });
   };
+  // round 12: a face per person per session (today only, like every mood mark). On a row not marked yet the face also marks the session joined.
+  const faceOf = (id: string): Face | undefined => (round.kind === 'session' ? marksOn(s, id, date).find((x) => x.moment === 'activity' && x.slot === round.id)?.face : undefined);
+  const pickFace = (id: string, f: Face) => markOne(id, logs.get(id)?.sessions?.[round.id] ?? 'joined', f);
   const restWhat = t('activity.restWhat.' + round.kind);
   const markRest = async () => {
     setAsk(false);
@@ -127,10 +133,11 @@ export function DailyLog() {
   const restLabel = t(round.kind === 'lunch' ? 'activity.markRestLunch' : round.kind === 'mood' ? 'activity.markRestMood' : 'activity.markRestSession');
   const block = (title: ReactNode, meta: ReactNode, list: Member[]) => {
     const rows = list.map((m, i) => (round.kind === 'mood'
-      ? <MoodRow key={m.id} m={m} i={i} log={logs.get(m.id)} entry={entry(m.id)} dirty={dirty(m.id)} open={open === m.id} busy={busy} s={s} today={today}
+      ? <MoodRow key={m.id} m={m} i={i} log={logs.get(m.id)} entry={entry(m.id)} dirty={dirty(m.id)} open={open === m.id} busy={busy} s={s} today={today} date={date}
           onToggle={() => setOpen(open === m.id ? null : m.id)} onEdit={(patch) => edit(m.id, patch)} onSave={() => void saveMood(m.id)} onProfile={() => navigate(`/members/${m.id}`)} />
-      : <MarkRow key={m.id} m={m} i={i} log={logs.get(m.id)} stacked={isPhone && round.kind === 'lunch'} choices={choices} value={round.kind === 'lunch' ? logs.get(m.id)?.lunch : logs.get(m.id)?.sessions?.[round.id]}
-          onPick={(v) => markOne(m.id, v)} label={nameOf(round)} lunch={round.kind === 'lunch'} />));
+      : <MarkRow key={m.id} m={m} i={i} log={logs.get(m.id)} stacked={isPhone} choices={choices} value={round.kind === 'lunch' ? logs.get(m.id)?.lunch : logs.get(m.id)?.sessions?.[round.id]}
+          onPick={(v) => markOne(m.id, v)} label={nameOf(round)} lunch={round.kind === 'lunch'}
+          faces={round.kind === 'session' && isToday} face={faceOf(m.id)} onFace={(f) => pickFace(m.id, f)} />));
     return isPhone ? <Group key={String(title)} title={title} meta={meta} pad="0" gap={0}>{rows}</Group> : (
       <section key={String(title)} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         {title ? <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0 4px' }}><h2 style={GROUP_HEAD}>{title}</h2><span style={{ fontSize: 13, color: '#6B6259' }}>{meta}</span></div> : null}
@@ -214,12 +221,18 @@ function PendingDot({ log }: { log: LogRow | undefined }) {
 }
 
 /** One person in a lunch or activity round: name (with the allergy dot and diet hint at lunch) and the one-tap choices. Marked rows are a shade darker (round 8c). */
-function MarkRow({ m, i, log, stacked, choices, value, onPick, label, lunch }: { m: Member; i: number; log: LogRow | undefined; stacked: boolean; choices: RoundChoice[]; value: string | undefined; onPick: (v: string | null) => void; label: string; lunch: boolean }) {
+function MarkRow({ m, i, log, stacked, choices, value, onPick, label, lunch, faces, face, onFace }: { m: Member; i: number; log: LogRow | undefined; stacked: boolean; choices: RoundChoice[]; value: string | undefined; onPick: (v: string | null) => void; label: string; lunch: boolean; faces: boolean; face: Face | undefined; onFace: (f: Face) => void }) {
   const t = useT();
   const { isPhone } = useDevice();
   const allergies = lunch ? [...m.health.food.map((a) => t('lobby.food.' + a)), ...(m.health.foodOther ? [m.health.foodOther] : [])] : [];
   const diets = lunch ? m.health.diet.map((d) => t('lobby.diet.' + d)) : [];
   const chips = <RoundChips choices={choices} value={value} onPick={onPick} label={`${memberName(m)} · ${label}`} />;
+  const controls = faces ? (
+    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: stacked ? 'space-between' : 'flex-end', gap: 8 }}>
+      {chips}
+      <MoodFaces value={face ?? null} onChange={onFace} size={isPhone ? 32 : 36} name={memberShort(m)} label={t('mood.ask', { name: memberShort(m) })} />
+    </div>
+  ) : chips;
   return (
     <div data-testid="log-row" data-member={m.id} data-marked={value !== undefined ? '1' : '0'}
       // KC round 10 ("the brown thing"): a marked row keeps the card's colour — the solid chip says it is marked; the old tint turned a finished list into one brown block
@@ -239,14 +252,14 @@ function MarkRow({ m, i, log, stacked, choices, value, onPick, label, lunch }: {
           ) : null}
         </span>
       </div>
-      {chips}
+      {controls}
     </div>
   );
 }
 
 /** One person in the Mood & notes round: a row that opens the form in place. */
-function MoodRow({ m, i, log, entry, dirty, open, busy, s, today, onToggle, onEdit, onSave, onProfile }: {
-  m: Member; i: number; log: LogRow | undefined; entry: LogEntry; dirty: boolean; open: boolean; busy: boolean; s: ReturnType<typeof useClub>; today: string;
+function MoodRow({ m, i, log, entry, dirty, open, busy, s, today, date, onToggle, onEdit, onSave, onProfile }: {
+  m: Member; i: number; log: LogRow | undefined; entry: LogEntry; dirty: boolean; open: boolean; busy: boolean; s: ReturnType<typeof useClub>; today: string; date: string;
   onToggle: () => void; onEdit: (patch: Partial<LogEntry>) => void; onSave: () => void; onProfile: () => void;
 }) {
   const t = useT();
@@ -272,6 +285,7 @@ function MoodRow({ m, i, log, entry, dirty, open, busy, s, today, onToggle, onEd
       </button>
       {open ? (
         <div id={'log-body-' + m.id} style={{ padding: isPhone ? '2px 16px 16px' : '8px 22px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <MoodArc arc={dayArc(s, m.id, date)} />
           <LogFieldsForm e={entry} onChange={onEdit} />
           {saved && log ? (
             <div style={{ fontSize: FONT_SMALL, color: '#5E5852', lineHeight: 1.4 }}>

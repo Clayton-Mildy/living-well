@@ -1,6 +1,6 @@
 // The reading form as plain data: every measurement on one form, when it can be saved (one complete measurement), the live status of
 // what has been typed against the club's Watch / Alert limits, the kind of check it is saved as, and the `reading.save` input. Pure functions so the station can be tested without a browser.
-import { DEFAULT_LIMITS, bpStatus, gluStatus, pulseStatus, spo2Status, tempStatus, weightStatus, worst, type Health, type HealthLimits, type QueueKind, type QuickNote } from '@cp/shared';
+import { DEFAULT_LIMITS, bpStatus, gluStatus, pulseStatus, spo2Status, tempStatus, weightStatus, worst, type Health, type HealthLimits, type Face, type QueueKind, type QuickNote } from '@cp/shared';
 import { inRange, type ReadingField } from '@cp/shared/rules/healthStation';
 import type { ReadingSaveInput } from '@cp/shared/actions/health';
 import type { DeviceKind } from './device';
@@ -44,8 +44,9 @@ export interface Draft {
   note: string;
   share: boolean;
   tell: boolean | null; // null = the default (on when the result is flagged)
+  face: Face | null; // round 12: how the person is today, optional
 }
-export const newDraft = (): Draft => ({ v: {}, src: {}, field: 'sys', meas: null, notes: [], note: '', share: false, tell: null });
+export const newDraft = (): Draft => ({ v: {}, src: {}, field: 'sys', meas: null, notes: [], note: '', share: false, tell: null, face: null });
 export const hasValues = (d: Draft) => Object.values(d.v).some((x) => (x ?? '') !== '');
 
 /** Keypad press (design `press`): digits up to the field's length, one decimal point where decimals make sense, backspace. */
@@ -150,6 +151,7 @@ export function toInput(o: { personId: string; person: PersonKind; kind: QueueKi
     noteKeys: d.notes,
     ...(note ? { note } : {}),
     shared: d.share,
+    ...(d.face && o.person === 'member' ? { face: d.face } : {}),
     tellFamily: o.canTell && effTell(d, ev),
     recheck: false,
     deferMonthly: false,
