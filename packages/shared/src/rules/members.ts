@@ -1,9 +1,9 @@
 // Members: lifecycle status, list rows, filters and search, id allocation, documents and consent, validation,
 // pending reviews and the final invoice. Members drop in on any open day, so there are no bookings, leave or "expected" days here:
 // status comes from check-ins, and the Flex plan counts visits. Pure selectors shared by the actions and the screens.
-import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
+import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
-import { currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
+import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
 import { invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
 import { onLeaveOn } from './leave';
@@ -317,6 +317,28 @@ export function finalInvoiceFor(s: ClubState, m: Member, lastDay: ISODate, today
     number: finalInvoiceNumber(s, m.id, today), memberId: m.id, payerFamilyId: primaryContact(s, m.id)?.id || '', kind: 'final', issueDate: issue,
     dueDate: addDays(lastDay > issue ? lastDay : issue, s.club.settings.finalDueDays), lines, va: m.billing.va, xero: 'draft', reminders: [], callNotes: [],
   };
+}
+
+// ---------- duplicates (KC round 12: the registration warns when a person may already be on file) ----------
+/** A phone as its digits in +62 form ('' when too short to compare); a NIK as its digits. */
+const phoneKey = (p?: string) => { const x = e164(p || '').replace(/\D/g, ''); return x.length >= 9 ? x : ''; };
+const nikKey = (n?: string) => { const x = (n || '').replace(/\D/g, ''); return x.length >= 8 ? x : ''; };
+/**
+ * Members who already have this phone (on a linked family contact, or the member's own mobile or home phone) or this NIK, and open leads
+ * (not joined, lost or archived) with this contact phone or NIK. Rejected rows are left out.
+ */
+export function findDuplicates(s: ClubState, q: { phone?: string; nik?: string }): { members: Member[]; leads: Enquiry[] } {
+  const phone = phoneKey(q.phone), nik = nikKey(q.nik);
+  if (!phone && !nik) return { members: [], leads: [] };
+  const hitPhone = (...ps: (string | undefined)[]) => !!phone && ps.some((p) => phoneKey(p) === phone);
+  const members = live(s.members).filter((m) => m.review?.status !== 'rejected' && (
+    (!!nik && nikKey(m.registration?.nik) === nik)
+    || hitPhone(m.registration?.mobile, m.registration?.phone, ...contactsOfMember(s, m.id).map((x) => x.contact.phone))
+  ));
+  const leads = live(s.enquiries).filter((e) => e.stage !== 'joined' && e.stage !== 'lost' && !e.archivedAt && (
+    hitPhone(e.contact.phone) || (!!nik && nikKey(e.form?.draft?.registration?.nik) === nik)
+  ));
+  return { members, leads };
 }
 
 // ---------- validation ----------

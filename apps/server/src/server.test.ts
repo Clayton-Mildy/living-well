@@ -350,6 +350,15 @@ describe('demo accounts', () => {
     expect(r.accounts.map((a: any) => a.id)).toEqual(expect.arrayContaining(['s1', 's9', 'f1', 'f2', 's10']));
     expect(r.accounts.find((a: any) => a.id === 'f1')).toMatchObject({ member: 'Oma Lina & Opa Budi', billing: true });
   });
+  it('round 12: says whether this is a demo (CP_DEMO_LOGIN=0 turns it off)', async () => {
+    const was = process.env.CP_DEMO_LOGIN;
+    try {
+      delete process.env.CP_DEMO_LOGIN;
+      expect((await j(await app.request('/api/demo/accounts'))).demoLogin).toBe(true);
+      process.env.CP_DEMO_LOGIN = '0';
+      expect((await j(await app.request('/api/demo/accounts'))).demoLogin).toBe(false);
+    } finally { if (was === undefined) delete process.env.CP_DEMO_LOGIN; else process.env.CP_DEMO_LOGIN = was; }
+  });
 });
 
 describe('media (photos)', () => {

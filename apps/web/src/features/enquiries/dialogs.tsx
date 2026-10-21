@@ -1,25 +1,22 @@
-// Lead dialogs (design OvEnq + new ones): new / edit lead, book a visit, book a trial, join as a member (plan, first day and the signed paper
-// registration form), and mark lost. Registration is on paper: staff type the key details in and attach a photo or PDF of the signed form.
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from 'react';
+// Lead dialogs (design OvEnq + new ones): new / edit lead, book a visit, book a trial, join as a member (KC round 12: the stepped registration
+// shared with Add member, members/register), and mark lost. Registration is on paper: staff type the key details in and attach a photo or PDF of the signed form.
+import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
-  addDays, dayStatus, feeOf, fmtPhone, live, priceOn, rp, sortBy, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type KtpKind, type KtpUploads, type Mobility, type Plan, type Relation, type Title,
+  addDays, dayStatus, feeOf, fmtPhone, priceOn, rp, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Relation, type Title,
 } from '@cp/shared';
-import { applicationDataFromInput, validateRegistration, type ApplicationInput } from '@cp/shared/rules/applicationForm';
 import {
-  ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookableDays, bookingDayCheck, formLinkState, formPath, openGuest, seniorName, startMondays, trialDays,
+  ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookableDays, bookingDayCheck, formLinkState, formPath, openGuest, seniorName, trialDays,
 } from '@cp/shared/rules/enquiries';
-import { Button, DateField, Dialog, Icon, Note, TimeField, FONT_SMALL } from '../../components/ui';
+import { Button, DateField, Dialog, Icon, Note, TimeField } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
-import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
-import { tn } from '../mgmt/common';
-import { PaperFormField, type PaperFile } from '../members/PaperForm';
-import { useApplicationForm } from '../members/ApplicationForm';
-import { AllergyFields, CarerFields, DementiaFields, DialogBody, HealthFields, PeSection, RegCareFields, RegPersonalFields, TextField, carerOf, carerOk, joinDrugs, ktpFor, regDraftOf, regOfDraft, splitDrugs, useDraft, type AllergyDraft, type CarerDraft, type HealthDraft, type RegDraft } from '../members/dialogs/forms';
+import { RegistrationFlow } from '../members/register/RegistrationFlow';
+import { StackChip } from '../members/register/parts';
+import { DialogBody, PeSection, TextField } from '../members/dialogs/forms';
 
 export type Dlg =
   | { mode: 'new' }
@@ -27,16 +24,7 @@ export type Dlg =
 
 const row: React.CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8 };
 
-/** The design's two-line choice chip (label + small sub line). */
-export function StackChip({ label, sub, selected, off, onClick }: { label: ReactNode; sub?: ReactNode; selected?: boolean; off?: boolean; onClick: () => void }) {
-  return (
-    <button type="button" role="radio" aria-checked={!!selected} aria-disabled={off || undefined} onClick={() => { if (!off) onClick(); }} className={selected ? undefined : 'cp-fill'}
-      style={{ minHeight: 52, minWidth: 88, padding: '6px 14px', borderRadius: 14, border: 'none', background: selected ? '#24201C' : off ? 'var(--press, #EEEEF0)' : 'var(--fill, #F4F4F5)', color: selected ? '#FFFFFF' : off ? '#5E5852' : '#24201C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
-      <span style={{ fontSize: 15, fontWeight: 600, lineHeight: 1.4, whiteSpace: 'nowrap' }}>{label}</span>
-      {sub ? <span style={{ fontSize: FONT_SMALL, lineHeight: 1.4 }}>{sub}</span> : null}
-    </button>
-  );
-}
+export { StackChip };
 /** One-line pill chip (design chips: 44px). */
 function Pick({ selected, onClick, children, off }: { selected?: boolean; onClick: () => void; children: ReactNode; off?: boolean }) {
   return (
@@ -251,134 +239,12 @@ function BookDialog({ kind, id, onClose }: { kind: 'visit' | 'trial'; id: string
   );
 }
 
-// ---------- joining: plan and first day (shared by "Approve and join" and the Join button) ----------
-function useJoinPick() {
-  const s = useClub();
-  const { today } = useNow();
-  const mondays = useMemo(() => startMondays(s, today, 4), [s, today]);
-  const [plan, setPlan] = useState<Plan>('flex');
-  const [start, setStart] = useState(mondays[0] ?? '');
-  const st = start ? dayStatus(s, start) : null;
-  const startOk = !!start && start >= today && !!st?.open;
-  return { plan, setPlan, start, setStart, mondays, startOk, today };
-}
-function JoinPick({ pick }: { pick: ReturnType<typeof useJoinPick> }) {
-  const t = useT();
-  const { fds } = useFmt();
-  const s = useClub();
-  const { plan, setPlan, start, setStart, mondays, startOk, today } = pick;
-  const price = priceOn(s, today);
-  return (
-    <>
-      <Sec label={t('enq.plan')}>
-        <div style={row} role="radiogroup" aria-label={t('enq.plan')}>
-          <StackChip selected={plan === 'flex'} label={t('mgmt.plan_flex')} sub={`${rp(price.flex)} · ${tn(t, 'enq.jn_visits', s.club.settings.flexQuota)}`} onClick={() => setPlan('flex')} />
-          <StackChip selected={plan === 'gold'} label={t('mgmt.plan_gold')} sub={`${rp(price.gold)} · ${t('mgmt.plUnlimited').toLowerCase()}`} onClick={() => setPlan('gold')} />
-        </div>
-      </Sec>
-      <div data-testid="join-reg-fee" style={{ fontSize: 14, lineHeight: '21px', padding: '10px 14px', borderRadius: 14, background: 'var(--fill, #F4F4F5)' }}>{t('enq.jn_regFee', { price: rp(feeOf(price, 'registration')) })}</div>
-      <Sec label={t('enq.start')}>
-        <div style={row} role="radiogroup" aria-label={t('enq.start')}>
-          {mondays.map((m) => <StackChip key={m} selected={start === m} label={fds(m).replace(/,/g, '')} onClick={() => setStart(m)} />)}
-        </div>
-        <DateField label={t('enq.otherDate')} value={start} min={today} onChange={setStart} disabledDate={(d) => !dayStatus(s, d).open} error={start && !startOk ? (start < today ? t('enq.err.startPast') : t('err.closedDay')) : false} />
-      </Sec>
-    </>
-  );
-}
-/** What the footer button of the join step says: management creates the member, everyone else sends it to management. */
-const joinLabel = (t: ReturnType<typeof useT>, role: string | null, plan: Plan) =>
-  t(role === 'mgmt' ? 'enq.createMember' : 'enq.sendForApproval', { plan: t('mgmt.plan_' + plan) });
-
-// ---------- join as a member: plan, first day, the application form's answers and the signed paper registration form ----------
-// KC round 6: the same questions as Add member, so "Print the form to sign" prints the brochure's application form filled in;
-// allergies and needs start from the trial day. Medicines are left to the nurse.
-type JoinDraft = HealthDraft & AllergyDraft & CarerDraft & { dob: string; address: string; reg: RegDraft; /** KC round 10: photos of the ID cards */ ktp: KtpUploads };
+// ---------- join as a member: KC round 12, the stepped registration shared with Add member (plan, first day, the application form's answers and the
+// signed paper form), pre-filled from the lead, the family's online form, or the trial day ----------
 function JoinDialog({ id, onClose }: { id: string; onClose: () => void }) {
-  const t = useT();
-  const { fds } = useFmt();
   const s = useClub();
-  const act = useAct();
-  const { role } = useMe();
-  const { today } = useNow();
-  const e = s.enquiries[id];
-  const pick = useJoinPick();
-  const printer = useApplicationForm();
-  const trial = useMemo(() => sortBy(live(s.guestVisits).filter((g) => g.enquiryId === id && g.kind === 'trial'), (g) => g.date).pop(), [s.guestVisits, id]);
-  // KC round 10: the family's online form (when it was sent in) fills the join in; else allergies and needs start from the trial day
-  const online = e?.form?.submittedAt ? e.form.draft : undefined;
-  const [d, set] = useDraft<JoinDraft>(() => (online ? {
-    dob: online.dob, address: online.address, conditions: online.health.conditions, diabetic: online.health.diabetic, mobility: online.health.mobility ?? 'none', diet: online.health.diet, food: online.health.food, foodOther: online.health.foodOther, ...splitDrugs(online.health.drugs), reg: regDraftOf(online.registration),
-    nanny: !!online.nanny, nannyName: online.nanny?.name ?? '', nannyNik: online.nanny?.nik ?? '', ktp: online.ktp ?? {},
-  } : {
-    dob: '', address: '', conditions: [], diabetic: false, mobility: trial?.mobility ?? 'none', diet: trial?.diet ?? [], food: trial?.food ?? [], foodOther: '', ...splitDrugs(trial?.drugs ?? []), reg: regDraftOf(), nanny: false, nannyName: '', nannyNik: '', ktp: {},
-  }));
-  const setKtp = (kind: KtpKind, f: PaperFile | null) => set({ ktp: { ...d.ktp, [kind]: f ?? undefined } });
-  useEffect(() => { if (online?.plan) pick.setPlan(online.plan); }, []); // eslint-disable-line react-hooks/exhaustive-deps
-  const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
-  const [paper, setPaper] = useState<PaperFile | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [tried, setTried] = useState(false);
-  if (!e) return null;
-  const reg = regOfDraft(d.reg, d.nanny);
-  const issues = validateRegistration(reg);
-  const err = (...fields: string[]) => (tried ? (() => { const i = issues.find((x) => fields.includes(x.field)); return i ? t(i.code, i.params) : ''; })() : '');
-  const health = { conditions: d.conditions, diabetic: d.diabetic, food: d.food, foodOther: d.foodOther.trim(), drugs: joinDrugs(d), mobility: d.mobility === 'none' ? null : d.mobility, diet: d.diet };
-  const formInput = (): ApplicationInput => ({
-    title: e.senior.title, name: e.senior.name, dob: d.dob, address: d.address.trim(), plan: pick.plan, nanny: carerOf(d),
-    contact: { name: e.contact.name, phone: e.contact.phone, relation: e.contact.relation, primary: true }, health, ...(reg ? { registration: reg } : {}),
-  });
-  const rows: [string, string][] = [[t('enq.jn_member'), seniorName(e)], [t('enq.jn_contact'), `${e.contact.name} · ${fmtPhone(e.contact.phone)}`]];
-  const go = async () => {
-    setTried(true);
-    if (!pick.startOk || !paper || busy || issues.length || !carerOk(d)) return;
-    setBusy(true);
-    try {
-      const input = {
-        enquiryId: id, plan: pick.plan, start: pick.start, formMediaId: paper.mediaId, formFileName: paper.fileName,
-        ...(d.dob ? { dob: d.dob } : {}), ...(d.address.trim() ? { address: d.address.trim() } : {}), health, ...(reg ? { registration: reg } : {}), nanny: carerOf(d), ...(ktpFor(d.ktp, d.reg.ids, d.nanny) ? { ktp: ktpFor(d.ktp, d.reg.ids, d.nanny) } : {}),
-      };
-      const r = await act('enquiry.convert', input, { ok: t('enq.joined', { name: seniorName(e), date: fds(pick.start), contact: e.contact.name.split(' ')[0] }), reviewText: t('enq.joinSent', { name: seniorName(e) }) });
-      if (r.ok) onClose();
-    } finally { setBusy(false); }
-  };
-  return (
-    <>
-      <Dialog open onClose={onClose} eyebrow={t('enq.jn_eyebrow')} title={seniorName(e)} maxWidth={600}
-        footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button onClick={go} disabled={!pick.startOk || !paper || busy}>{joinLabel(t, role, pick.plan)}</Button></>}>
-        <DialogBody>
-        <Sec label={online ? t('enq.jn_fromOnline') : t('enq.jn_fromEnquiry')}>
-          {online && e.form ? <Note tone="sage" icon="assignment_turned_in">{t('enq.formFilledBy', { name: e.form.filledBy || online.contact.name, date: fds(e.form.submittedAt!.slice(0, 10)) })}</Note> : null}
-          <Rows rows={rows} />
-        </Sec>
-        <JoinPick pick={pick} />
-        <Sec label={t('profile.sec.regPersonal')}>
-          <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} />
-          <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} />
-          <RegPersonalFields d={d.reg} set={setReg} t={t} err={err} />
-        </Sec>
-        <Sec label={t('profile.sec.nanny')}>
-          <CarerFields d={d} set={set} t={t} tried={tried} ktp={d.ktp} setKtp={setKtp} />
-        </Sec>
-        <Sec label={t('profile.sec.health')}>
-          {trial && !online ? <Note tone="cream" icon="info">{t('enq.jn_fromTrial')}</Note> : null}
-          <HealthFields d={d} set={set} t={t} instead={<DementiaFields d={d.reg} set={setReg} t={t} />} />
-          <AllergyFields d={d} set={set} t={t} />
-        </Sec>
-        <Sec label={t('profile.sec.regCare')}>
-          <RegCareFields d={d.reg} set={setReg} t={t} err={err} dementia={false} ktp={d.ktp} setKtp={setKtp} />
-        </Sec>
-        <Sec label={t('profile.paperTitle')}>
-          <div><Button variant="secondary" size={44} icon="print" onClick={() => printer.open(applicationDataFromInput(s, formInput(), today))}>{t('form.printToSign')}</Button></div>
-          <PaperFormField value={paper} onChange={setPaper} />
-        </Sec>
-        {tried && issues.length ? <Note tone="rust" icon="error">{t('err.invalid')}</Note> : null}
-        {role !== 'mgmt' ? <Note tone="ochre" icon="hourglass_top">{t('enq.joinReviewNote')}</Note> : null}
-        </DialogBody>
-      </Dialog>
-      {printer.node}
-    </>
-  );
+  if (!s.enquiries[id]) return null;
+  return <RegistrationFlow mode={{ kind: 'lead', id }} onDone={() => onClose()} />;
 }
 
 // ---------- lost ----------

@@ -167,7 +167,7 @@ export function useDraft<T extends object>(init: () => T) {
 }
 
 // ---------- the paper application form's extra answers (Panggilan, status, RT/RW, phones, the care questions, the IDs received) ----------
-type YN = boolean | null;
+export type YN = boolean | null;
 export type RegId = (typeof REG_IDS)[number];
 export interface RegDraft { nickname: string; nik: string; guarantorNik: string; marital: Marital | ''; rtRw: string; city: string; postcode: string; phone: string; mobile: string; email: string; comm: YN; self: YN; bath: YN; dementia: YN; dementiaNote: string; ids: RegId[] }
 export const regDraftOf = (r?: MemberRegistration): RegDraft => ({
@@ -239,15 +239,15 @@ export function IdFields({ d, set, t, err, label, ktp, setKtp, uploader }: { d: 
     </>
   );
 }
-/** The three care questions and the IDs; `dementia` (default on) adds the dementia pair here — a registration shows it under Health instead. */
-export function RegCareFields({ d, set, t, err, dementia = true, idsLabel, ...ktp }: { d: RegDraft; set: RegSet; t: TFn; err?: (...f: string[]) => string; dementia?: boolean; idsLabel?: string } & KtpProps) {
+/** The three care questions and the IDs; `dementia` (default on) adds the dementia pair here — a registration shows it under Health instead. `ids={false}` leaves the IDs out (round 12: the stepped registration asks for each ID with its person). */
+export function RegCareFields({ d, set, t, err, dementia = true, ids = true, idsLabel, ...ktp }: { d: RegDraft; set: RegSet; t: TFn; err?: (...f: string[]) => string; dementia?: boolean; ids?: boolean; idsLabel?: string } & KtpProps) {
   return (
     <>
       <YesNoOpen label={t('profile.q.comm')} value={d.comm} onChange={(v) => set({ comm: v })} t={t} />
       <YesNoOpen label={t('profile.q.self')} value={d.self} onChange={(v) => set({ self: v })} t={t} />
       <YesNoOpen label={t('profile.q.bath')} value={d.bath} onChange={(v) => set({ bath: v })} t={t} />
       {dementia ? <DementiaFields d={d} set={set} t={t} /> : null}
-      <IdFields d={d} set={set} t={t} err={err ?? (() => '')} label={idsLabel} {...ktp} />
+      {ids ? <IdFields d={d} set={set} t={t} err={err ?? (() => '')} label={idsLabel} {...ktp} /> : null}
     </>
   );
 }

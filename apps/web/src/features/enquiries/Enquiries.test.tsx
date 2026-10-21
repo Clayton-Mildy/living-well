@@ -3,12 +3,16 @@
 // because the browser tests only reach the few leads the seed has.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { buildSeed, type ClubState } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { Enquiries, leadMatches } from './Enquiries';
+
+// KC round 12: Join is the stepped registration; the demo's "Use sample form" stands in for the signed scan
+vi.mock('../../lib/media', async (orig) => ({ ...(await orig<typeof import('../../lib/media')>()), uploadDocument: async () => ({ mediaId: 'med-sample', fileName: 'registration-form.jpg' }) }));
+vi.mock('../../shell/demoAccounts', () => ({ useDemoLogin: () => true, useDemoAccounts: () => [] }));
 
 const T = '2026-10-21';
 let root: Root | null = null;
@@ -23,6 +27,7 @@ afterEach(async () => {
   root = null;
   host = null;
   document.body.innerHTML = '';
+  vi.unstubAllGlobals();
 });
 
 function openClub(as: 'mgmt' | 'lobby', extra = 0, lang: 'en' | 'id' = 'en') {
@@ -116,42 +121,67 @@ describe('joining needs the signed paper registration form', () => {
     expect(document.querySelector<HTMLElement>('[data-lead="e5"]')!.textContent).toMatch(/Form opened/);
     expect(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!)).toBeTruthy(); // the trial lead
   });
-  it('the Join button stays off until a form is attached (management creates the member)', async () => {
+  // the stepped flow (members/register): the rail jumps to any step up to the first one that is not complete
+  const rail = (label: string) => button(label, document.querySelector<HTMLElement>('nav[data-progress]')!);
+  const sampleForm = async () => {
+    vi.stubGlobal('fetch', async () => ({ blob: async () => new Blob(['x'], { type: 'image/jpeg' }) }));
+    await click(button(/^(Use sample form|Pakai formulir contoh)$/));
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+  };
+  const pickPlan = async (re: RegExp) => click(Array.from(dialog()!.querySelectorAll<HTMLElement>('[role="radio"]')).find((r) => re.test(r.textContent ?? '')));
+  it('Join cannot be sent until a form is attached (management creates the member)', async () => {
     openClub('mgmt');
     await show(<Enquiries />);
     await click(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
+    expect(rail('Form')!.getAttribute('aria-disabled')).toBe('true'); // no plan yet
+    await click(rail('Plan'));
+    await pickPlan(/^Flex/);
+    await click(rail('Form'));
     const d = dialog()!;
     expect(d.textContent).toContain('Signed registration form');
     expect(d.querySelector('[data-testid="paper-form"]')).toBeTruthy();
     expect(button('Take photo', d)).toBeTruthy();
     expect(button('Choose file', d)).toBeTruthy();
     expect(d.querySelector('input[type="file"]')?.getAttribute('accept')).toContain('application/pdf');
+    expect(button('Next', d)!.getAttribute('aria-disabled')).toBe('true'); // no form attached yet
+    expect(rail('Review')!.getAttribute('aria-disabled')).toBe('true');
+    await sampleForm();
+    await click(button('Next', d));
     expect(d.textContent).not.toContain('Your request goes to management');
-    const create = button('Create member · Flex', d)!;
-    expect(create).toBeTruthy();
-    expect(create.getAttribute('aria-disabled')).toBe('true'); // no form attached yet
-    await click(Array.from(d.querySelectorAll<HTMLElement>('[role="radio"]')).find((r) => /^Gold/.test(r.textContent ?? '')));
+    expect(button('Create member · Flex', d)).toBeTruthy();
+    await click(rail('Plan'));
+    await pickPlan(/^Gold/);
+    await click(rail('Review'));
     expect(button('Create member · Gold', d)).toBeTruthy();
-    expect(button('Create member · Gold', d)!.getAttribute('aria-disabled')).toBe('true');
   });
-  it('front desk: the same dialog, but it says the request goes to management', async () => {
+  it('front desk: the same flow, but it says the request goes to management', async () => {
     openClub('lobby');
     await show(<Enquiries />);
     await click(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
+    await click(rail('Plan'));
+    await pickPlan(/^Flex/);
+    await click(rail('Form'));
+    await sampleForm();
+    await click(rail('Review'));
     expect(dialog()!.textContent).toContain('Your request goes to management.');
     expect(button('Send to management · Flex', dialog()!)).toBeTruthy();
     expect(button(/^Create member/, dialog()!)).toBeUndefined();
   });
-  it('moving a lead to Joined opens the same dialog; Indonesian has no raw keys', async () => {
+  it('moving a lead to Joined opens the same flow; Indonesian has no raw keys', async () => {
     openClub('mgmt', 0, 'id');
     await show(<Enquiries />);
     await click(button('Bergabung', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
+    await click(rail('Paket'));
+    await pickPlan(/^Flex/);
+    await click(rail('Formulir'));
     const d = dialog()!;
     expect(d.textContent).toContain('Formulir pendaftaran bertanda tangan');
     expect(button('Ambil foto', d)).toBeTruthy();
     expect(button('Pilih berkas', d)).toBeTruthy();
+    await sampleForm();
+    await click(rail('Periksa'));
     expect(button('Buat anggota · Flex', d)).toBeTruthy();
-    expect(document.body.textContent).not.toMatch(/\b(?:enq|mgmt|form|profile)\.[A-Za-z]/);
+    expect(document.body.textContent).not.toMatch(/(?<![\w-])(?:enq|mgmt|form|profile|reg)\.[A-Za-z]/); // (the file name registration-form.jpg is not a key)
   });
 });
 
