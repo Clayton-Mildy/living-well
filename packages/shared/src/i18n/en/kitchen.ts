@@ -92,7 +92,7 @@ export const kitchen = {
   'stock.declineKept': 'The request stays in the list as Declined, with this note. The requester is told.', 'stock.declinedBy': 'declined by {name}', 'stock.approvedBy': 'approved by {name}',
   'stock.approvedToast': '{item} approved. {name} has been told.', 'stock.declinedToast': '{item} request declined. The requester has been told.', 'stock.receivedToast': '{item} marked as received.',
   'stock.editTitle': 'Edit request', 'stock.edited': 'Request updated.', 'stock.again': 'Request again', 'stock.empty': 'No requests here',
-  'area.kitchen': 'Kitchen', 'area.health': 'Health', 'area.activities': 'Activities', 'area.housekeeping': 'Housekeeping', 'area.transport': 'Transport',
+  'area.kitchen': 'Kitchen', 'area.health': 'Health', 'area.activities': 'Activities',
   'unit.pcs': 'pcs', 'unit.boxes': 'boxes', 'unit.packs': 'packs', 'unit.kg': 'kg', 'unit.litres': 'litres', 'unit.bottles': 'bottles', 'unit.rolls': 'rolls', 'unit.sets': 'sets',
   // ---- errors from the kitchen actions
   'err.pastDate': 'That date has passed.', 'err.futureDate': 'Pick a day that has already happened.', 'err.badDish': 'That dish isn’t in the dish list for this course.', 'err.dishExists': '{name} already exists.',

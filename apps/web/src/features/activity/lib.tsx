@@ -95,22 +95,22 @@ export function cogLine(t: TFn, c: { base: string; isDefault: boolean; quiet: nu
 export function StatusDot({ color, children }: { color: string; children: ReactNode }) {
   return <span style={{ color, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 14, whiteSpace: 'nowrap', flex: 'none' }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: color, flex: 'none' }} />{children}</span>;
 }
-/** v3 hero card (white, 24px radius, soft shadow); rows inside sit between inset hairlines. */
-export const heroCardStyle: CSSProperties = { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '8px clamp(18px, 3vw, 32px) 12px', minWidth: 0 };
-export const heroEyebrow: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' };
+/** v3 hero card, round 8c: a soft grey block (give it className="cp-grey"), 20px radius, no border or shadow; rows inside sit between inset hairlines. */
+export const heroCardStyle: CSSProperties = { background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '8px clamp(18px, 3vw, 32px) 12px', minWidth: 0 };
+export const heroEyebrow: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' };
 
 /** round 6, phone: the hairline between grouped rows, inset from the left (16px, or where the text starts); none on the first row. */
-export const rowLine = (first: boolean, inset = 16): CSSProperties => (first ? {} : { backgroundImage: 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: `calc(100% - ${inset}px) 1px`, backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' });
+export const rowLine = (first: boolean, inset = 16): CSSProperties => (first ? {} : { backgroundImage: 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: `calc(100% - ${inset}px) 1px`, backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' });
 
-/** round 6, phone: an iOS segmented control (#EAE6E0 track, white thumb), as on the Arrivals tabs. */
+/** round 6, phone: a segmented control (round 8c: the family look, #EEEEF0 track, white thumb). */
 export function NativeSeg<V extends string>({ items, value, onChange, label }: { items: { value: V; label: ReactNode; aria?: string; n?: number }[]; value: V; onChange: (v: V) => void; label: string }) {
   return (
-    <div role="tablist" aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0', width: '100%' }}>
+    <div role="tablist" aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', width: '100%' }}>
       {items.map((it) => {
         const on = it.value === value;
         return (
           <button key={it.value} type="button" role="tab" aria-selected={on} aria-label={it.aria} onClick={() => onChange(it.value)}
-            style={{ minWidth: 0, height: 36, padding: '0 6px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', transition: 'background-color .15s' }}>
+            style={{ minWidth: 0, height: 36, padding: '0 6px', borderRadius: 7, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', transition: 'background-color .15s' }}>
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.label}</span>
             {it.n !== undefined ? <span style={{ flex: 'none', fontVariantNumeric: 'tabular-nums', color: on ? '#1E1A16' : '#8A8078' }}>{it.n}</span> : null}
           </button>
@@ -123,7 +123,7 @@ export function NativeSeg<V extends string>({ items, value, onChange, label }: {
 /** round 6, phone: the grey iOS search bar (as in the Arrivals list). */
 export function SearchBar({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0' }}>
+    <label className="cp-input-wrap cp-fill" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 12, background: 'var(--fill, #F4F4F5)' }}>
       <Icon name="search" size={19} color="#6B6259" />
       <input value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} inputMode="search" placeholder={placeholder} autoComplete="off"
         style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16' }} />
@@ -142,12 +142,21 @@ export function NumTabs<V extends string>({ items, value, onChange, label, maxWi
         const on = it.value === value;
         return (
           <button key={it.value} type="button" role="tab" aria-selected={on} aria-label={`${it.label} ${it.n}`} onClick={() => onChange(it.value)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '0 0 10px', border: 'none', borderBottom: `2px solid ${on ? '#24201C' : '#E6DDD1'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', minWidth: 0 }}>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '0 0 10px', border: 'none', borderBottom: `2px solid ${on ? '#24201C' : 'var(--hairline, #E2E2E6)'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', minWidth: 0 }}>
             <span style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', color: on ? '#24201C' : '#8A8078', fontVariantNumeric: 'tabular-nums' }}>{it.n}</span>
             <span style={{ fontSize: 13, fontWeight: on ? 600 : 500, color: on ? '#24201C' : '#8A8078', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{it.label}</span>
           </button>
         );
       })}
     </div>
+  );
+}
+
+/** KC round 7: the small mark for something the (simulated) AI suggested: "AI suggested" on an approval, "AI" on a draft. */
+export function AiMark({ label, style }: { label: string; style?: CSSProperties }) {
+  return (
+    <span data-ai-mark="" className="cp-fill" style={{ height: 22, padding: '0 8px 0 6px', borderRadius: 7, background: 'var(--fill, #F4F4F5)', color: 'var(--eyebrow, #6E5A43)', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3, whiteSpace: 'nowrap', flex: 'none', ...style }}>
+      <Icon name="auto_awesome" size={14} fill={1} />{label}
+    </span>
   );
 }

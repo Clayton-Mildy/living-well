@@ -31,7 +31,7 @@ export function MineView({ s, role, today, nowMin }: { s: ClubState; role: Staff
     { key: 'month', title: t('tasks.thisMonth'), items: sum.custom.filter((i) => i.template.every === 'monthly') },
   ].filter((g) => g.items.length);
   const open = openKey ? sum.custom.find((i) => i.template.id === openKey.id && i.period === openKey.period) : undefined;
-  // the progress line is the duties' score (the tracker); a role with no duties (housekeeping, the driver) shows its additional tasks instead
+  // the progress line is the duties' score (the tracker); a role with no duties shows its additional tasks instead
   const done = sum.total ? sum.done : sum.customDone;
   const total = sum.total ? sum.total : sum.customTotal;
 

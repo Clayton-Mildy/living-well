@@ -122,13 +122,13 @@ function Responses({ sv }: { sv: Survey }) {
           {paged.rows.map((r) => <ResponseRow key={r.id} sv={sv} r={r} />)}
           <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('mgmt.pgFamilies')} />
         </>
-      ) : <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('mgmt.svResNone')}</div>)}
+      ) : <div style={{ padding: '14px 0 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, color: '#6B6259' }}>{t('mgmt.svResNone')}</div>)}
       {waiting.length ? frame(tn(t, 'mgmt.svWaitingFor', waiting.length), (
         <>
           {wPaged.rows.map((fid) => {
             const members = live(s.familyLinks).filter((l) => l.familyId === fid && l.primary && s.members[l.memberId]).map((l) => memberShort(s.members[l.memberId]));
             return (
-              <div key={fid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1' }}>
+              <div key={fid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{s.familyContacts[fid]?.name || fid}</span>
                   {members.length ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{members.join(', ')}</span> : null}
@@ -154,10 +154,10 @@ function ResponseRow({ sv, r }: { sv: Survey; r: SurveyResponse }) {
   const sub = [venue ? b?.org : members.join(', '), fds(r.on)].filter(Boolean).join(' · ');
   const own = customOf(sv).filter((q) => r.answers && r.answers[q.id] !== undefined);
   return (
-    <div data-response={r.id} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 0', borderTop: '1px solid #F0EAE1' }}>
+    <div data-response={r.id} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '12px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
         <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{responseWho(s, r)}</span>
-        {r.overall > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}><Icon name="star" size={17} fill={1} color="#75624B" />{r.overall}/5</span> : null}
+        {r.overall > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}><Icon name="star" size={17} fill={1} color="var(--accent, #75624B)" />{r.overall}/5</span> : null}
       </div>
       <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852', overflowWrap: 'anywhere' }}>{sub}</span>
       {r.comment.trim() ? <span style={{ fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>“{r.comment}”</span> : null}
@@ -188,8 +188,8 @@ function History({ sv }: { sv: Survey }) {
   const list = (
     <>
       {paged.rows.map((e, i) => (
-        <div key={`${e.at}${e.what}${i}`} data-log={e.what} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1' }}>
-          <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><IconBox name={LOG_ICON[e.what]} size={18} /></span>
+        <div key={`${e.at}${e.what}${i}`} data-log={e.what} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
+          <span aria-hidden="true" className="cp-fill" style={{ width: 32, height: 32, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><IconBox name={LOG_ICON[e.what]} size={18} /></span>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 15, lineHeight: '21px', overflowWrap: 'anywhere' }}>{text(e)}</span>
             <span style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259' }}>{fds(e.at.slice(0, 10))} · {e.at.slice(11, 16)}</span>

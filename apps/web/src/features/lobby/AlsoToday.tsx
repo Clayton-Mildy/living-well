@@ -25,7 +25,7 @@ export interface GuestActions {
   onUndoNoShow(g: GuestVisit): void;
 }
 
-const Rule = () => <div aria-hidden="true" style={{ height: 1, background: '#E6DDD1' }} />;
+const Rule = () => <div aria-hidden="true" style={{ height: 0.5, background: 'var(--hairline, #E2E2E6)' }} />;
 
 /** The guest's non-allergy care notes as one quiet line ("Walker · Health check on arrival · Staying for lunch"). */
 function guestNotes(t: TFn, g: GuestVisit): string {
@@ -65,7 +65,7 @@ export function AlsoToday({ guest }: { guest: GuestActions }) {
   const names = (ids: string[]) => ids.map((id) => s.dishes[id]?.name).filter(Boolean).join(', ');
   const menuLine = (icon: string, label: string, text: string) => (
     <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
-      <Icon name={icon} size={18} weight={300} color="#6E5A43" style={{ marginTop: 2 }} />
+      <Icon name={icon} size={18} weight={300} color="var(--eyebrow, #6E5A43)" style={{ marginTop: 2 }} />
       <span style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
         <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{label}</span>
         <span style={{ fontSize: 15, color: '#24201C', lineHeight: 1.4 }}>{text}</span>
@@ -136,8 +136,8 @@ export function AlsoToday({ guest }: { guest: GuestActions }) {
     return (
       <section aria-label={t('lobby.alsoToday')} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <h2 style={{ ...GROUP_HEAD, padding: '0 16px' }}>{t('lobby.alsoToday')}</h2>
-        <div style={{ background: '#FFFFFF', borderRadius: 14, padding: '0 16px' }}>
-          {blocks.map((b, i) => <div key={i} style={{ padding: '12px 0', borderTop: i > 0 ? '1px solid #EFEAE3' : 'none' }}>{b}</div>)}
+        <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '0 16px' }}>
+          {blocks.map((b, i) => <div key={i} style={{ padding: '12px 0', borderTop: i > 0 ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }}>{b}</div>)}
         </div>
       </section>
     );

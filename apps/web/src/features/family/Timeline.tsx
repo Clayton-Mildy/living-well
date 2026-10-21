@@ -1,39 +1,51 @@
-// The day's rail ("Today at the club", or "Tuesday at the club" on an earlier day): the club's programme as a progress rail, with the member's arrival,
-// health check and home time once they happen. Each activity shows its picture, who leads it (a guest host too), whether the member joined in or
-// took a rest, and that session's pictures; lunch shows the dishes, how much was eaten and the kitchen's photos.
-// Members drop in, so nothing is "expected". On a day the member did not come the programme is listed quietly ("What was on that day").
-import { Fragment, type ReactNode } from 'react';
+// The day's list (round 8, as a timeline in round 8b): "Next" today (what is still to come), "That day" on an earlier day the parent came, "What was on" on a day
+// they did not. A vertical rail runs down the left with a dot per step (the shared RailDot: passed steps and their line bronze, the step now ink with a half line,
+// later steps on a grey track); to the right of each dot sit the time, the title with its details and a "View image" pill that opens that step's pictures. Our
+// richer details stay: the lunch dishes and the allergy line, the guest host, joined in / took a rest, how much was eaten, the health reading. Members drop in,
+// so nothing is "expected".
+// KC round 9: a step with pictures shows its newest one on the right, fading in from the white (no "View image" pill to find); a tap opens the row
+// downwards with the step's pictures as big cards, and a card opens the full-screen viewer. Lunch has its own "Tell the kitchen about lunch" line.
+import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { firstOfRole, lunchSafety, memberShort, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
+import { addDays, firstOfRole, lunchSafety, memberShort, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
 import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, storyNowMin, type DayStory, type StorySession, type TlItem } from '@cp/shared/rules/family';
-import { Avatar, Button, EmptyState, Group, PhotoImg, RailDot } from '../../components/ui';
+import { listItems, listKind } from '@cp/shared/rules/famToday';
+import { Avatar, Icon, PhotoImg, RailDot } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
-import { useFamilyCtx } from './useFamily';
 import { mediaUrl } from '../../lib/media';
-import { H2, HealthPill, fcard } from './parts';
-import { lunchWords, quietLink } from './storyBits';
 import type { TFn } from '../../lib/i18n';
+import { Cap, F, TextLink } from './kit';
+import { HealthPill } from './parts';
+import { lunchWords, stepIcon } from './storyBits';
+import { useFamilyCtx } from './useFamily';
 
 interface Props {
   members: Member[];
   /** one story per member (same date) */
   stories: DayStory[];
   date: ISODate;
-  onFeedback: () => void;
-  /** `all`: every picture of the group, so the viewer can page through them */
+  /** `all`: every picture of the step, so the viewer can page through them */
   onOpenPhoto: (p: Photo, all?: Photo[]) => void;
+  /** open another day (the last visit) */
+  onDay: (d: ISODate) => void;
+  /** KC round 9: the lunch row's own way to the lunch feedback sheet (what the row at the foot of the page says) */
+  lunchFeedback?: { label: string; onClick: () => void };
 }
 
 const bpOf = (r: Reading) => (r.sys != null && r.dia != null ? `${r.sys}/${r.dia}` : '');
 /** "Blood pressure normal · 128/82", or just "Blood pressure 152/94" (the pill under it says what the nurse is doing). */
 const bpLine = (t: TFn, r: Reading) => (bpOf(r) ? t(r.status === 'normal' ? 'family.storyBpOk' : 'family.storyBp', { b: bpOf(r) }) : '');
 
+const line = (children: ReactNode, key?: string | number, extra?: { color?: string; testId?: string }) => (
+  <span key={key} data-testid={extra?.testId} style={{ display: 'block', color: extra?.color }}>{children}</span>
+);
+
 /** A small dot and words: joined in (sage) or took a rest (warm grey, never a mark against anyone). */
 function Took({ took, name }: { took: 'joined' | 'satOut'; name?: string }) {
   const { t } = useFamilyCtx();
   return (
-    <span data-testid="took" data-took={took} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 14, lineHeight: '20px', color: took === 'joined' ? '#2F5A40' : '#6B6259' }}>
-      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: took === 'joined' ? '#3D6B4F' : '#BBA88F', flex: 'none' }} />
+    <span data-testid="took" data-took={took} style={{ display: 'inline-flex', alignItems: 'center', gap: 7, color: took === 'joined' ? F.sage : F.muted }}>
+      <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: took === 'joined' ? F.sageDot : '#BBA88F', flex: 'none' }} />
       {name ? `${name} · ` : ''}{t(took === 'joined' ? 'family.storyJoined' : 'family.storySatOut')}
     </span>
   );
@@ -42,94 +54,45 @@ function Took({ took, name }: { took: 'joined' | 'satOut'; name?: string }) {
 function Guest({ g }: { g: NonNullable<StorySession['guest']> }) {
   const { t } = useFamilyCtx();
   return (
-    <span data-testid="guest-host" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>
+    <span data-testid="guest-host" style={{ display: 'inline-flex', alignItems: 'center', gap: 8, color: F.muted }}>
       <Avatar name={g.name} src={g.photoMediaId ? mediaUrl(g.photoMediaId) : undefined} size={22} />
       <span style={{ minWidth: 0 }}>{t('family.storyWithGuest', { n: g.name })}{g.what ? ` · ${g.what}` : ''}</span>
     </span>
   );
 }
 
-/**
- * KC round 7: the photos of one step of the day (a session, lunch or afternoon tea), all in the same row of equal square tiles so every step
- * looks alike; after three, the last tile says "+N". Each opens in the viewer. `kind` keeps the test ids (lunch-photo, tea-photo, session-photo).
- */
-const TILE = 84;
-const ROW_MAX = 3;
-function PhotoRow({ photos, caption, alt, onOpen, kind }: { photos: Photo[]; caption?: string; alt: (p: Photo) => string; onOpen: (p: Photo, all: Photo[]) => void; kind: 'lunch' | 'tea' | 'session' }) {
-  const shown = photos.slice(0, ROW_MAX);
-  const more = photos.length - shown.length;
-  return (
-    <div data-testid={`${kind}-photos`} style={{ display: 'flex', flexDirection: 'column', gap: 8, marginTop: 8, alignSelf: 'flex-start', maxWidth: '100%' }}>
-      {caption ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{caption}{photos.length === 1 ? ` · ${photos[0].time}` : ''}</span> : null}
-      <div style={{ display: 'flex', gap: 8 }}>
-        {shown.map((p, i) => (
-          <button key={p.id} type="button" onClick={() => onOpen(p, photos)} aria-label={alt(p)} data-testid={`${kind}-photo`} data-photo-id={p.id} className="cp-press"
-            style={{ position: 'relative', width: TILE, height: TILE, borderRadius: 12, border: 'none', padding: 0, overflow: 'hidden', cursor: 'pointer', background: '#F3EEE8', flex: 'none' }}>
-            <PhotoImg photo={p} />
-            {i === shown.length - 1 && more > 0 ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'rgba(36,32,28,0.55)', color: '#FFFFFF', fontSize: 16, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+{more}</span> : null}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+interface Row { time: string; title: string; detail?: ReactNode; extra?: ReactNode; photos?: Photo[]; kind?: 'session' | 'lunch' | 'tea'; alt?: (p: Photo) => string }
 
-export function Timeline({ members, stories, date, onFeedback, onOpenPhoto }: Props) {
+export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeedback }: Props) {
   const { s, t, fmt, now, pron } = useFamilyCtx();
-  const { isPhone } = useDevice();
+  const [open, setOpen] = useState<string | null>(null); // the step whose pictures are opened out
   const navigate = useNavigate();
+  const { isPhone } = useDevice();
   const { today } = now;
   const isToday = date === today;
   const nowMin = storyNowMin(date, today, now.nowMin);
   const states = members.map((m) => dayStateOf(s, m, date));
+  // members drop in on any open day, so the programme shows whether or not anyone has arrived; only a closed day or an ended membership has none (the hero says so)
+  if (!states.some((x) => x.kind === 'away' || x.kind === 'here' || x.kind === 'home')) return null;
   const visited = stories.some((x) => x.visited);
-  // members drop in on any open day, so the programme shows whether or not anyone has arrived; only a closed day or an ended membership has none
-  const showTimeline = states.some((x) => x.kind === 'away' || x.kind === 'here' || x.kind === 'home');
-  // the rail is a progress bar for a day someone was at the club (or is today); on a day nobody came it is just what was on
-  const quiet = !isToday && !visited;
-  const head = isToday ? t('family.todayAtClub') : quiet ? t('family.storyWhatWasOn') : t('family.storyDayAtClub', { d: fmt.fd(date, { weekday: 'long' }) });
-
-  // ----- no timeline: club closed / membership ended (an earlier day says it in the cover) -----
-  if (!showTimeline) {
-    if (!isToday) return null;
-    const first = states[0];
-    let icon = 'event', title: string = t('family.notToday'), sub: ReactNode = '';
-    if (first.kind === 'closed') {
-      icon = 'event_busy';
-      title = t('common.clubClosed');
-      const d = fmt.fdl(first.next);
-      sub = first.reason === 'weekend' ? t('common.weekendSub', { date: d }) : <>{eventTitle(first.event, fmt.lang) ? <>{eventTitle(first.event, fmt.lang)}. </> : null}{t('common.clubClosedSub', { date: d })}</>;
-    } else if (first.kind === 'ended') {
-      icon = 'archive';
-      title = t('family.stEnded', { d: fmt.fds(first.lastDay) });
-    } else if (first.kind === 'upcoming') {
-      title = t('family.stUpcoming', { d: fmt.fds(first.start) });
-    }
-    // round 6, phone: an iOS grouped section (the title over a flat white group)
-    if (isPhone) return <div data-testid="timeline-empty"><Group title={head} pad={0}><EmptyState icon={icon} title={title} sub={sub} /></Group></div>;
-    return (
-      <div style={fcard('', 14)} data-testid="timeline-empty">
-        <H2>{head}</H2>
-        <EmptyState icon={icon} title={title} sub={sub} />
-      </div>
-    );
-  }
-
-  // ----- the timeline -----
-  const items = stories.length === 1 ? stories[0].items : timelineOf(s, members, date, nowMin);
+  const all = stories.length === 1 ? stories[0].items : timelineOf(s, members, date, nowMin);
+  const ahead = date > today; // KC round 9: the day ahead — its plan
+  const kind = listKind(isToday, visited, all, ahead);
+  const items = listItems(kind, all);
+  if (!items.length) return null;
   const single = members.length === 1 ? members[0] : null;
   const nurse = firstOfRole(s, 'nurse');
   const staffName = (by: string | undefined) => staffFirst(s, staffIdOf(by)) || t('family.theLobby');
   const foods = (m: Member) => [...m.health.food.map((f) => t('family.food_' + f)), ...(m.health.foodOther ? [m.health.foodOther] : [])].join(` ${t('common.and')} `);
   const sessionOf = (id: string) => stories.map((st, i) => ({ m: members[i], x: st.sessions.find((y) => y.id === id) })).filter((r): r is { m: Member; x: StorySession } => !!r.x);
 
-  const view = (it: TlItem): { icon: string; time: string; title: string; detail: ReactNode; badge?: ReactNode; extra?: ReactNode } => {
+  const view = (it: TlItem): Row => {
     switch (it.kind) {
       case 'arrival':
-        return { icon: 'how_to_reg', time: it.time, title: t('family.tArrived'), detail: t('family.tArrivedD', { s: staffName(it.att.checkIn?.by) }) };
+        return { time: it.time, title: t('family.tArrived'), detail: t('family.tArrivedD', { s: staffName(it.att.checkIn?.by) }) };
       case 'health': {
         const arr = it.arrival;
-        if (!arr) return { icon: 'monitor_heart', time: '', title: t('family.tHealthUp'), detail: t('family.tHealthUpD', { n: staffCall(nurse) || t('roles.nurse') }) };
+        if (!arr) return { time: '', title: t('family.tHealthUp'), detail: t('family.tHealthUpD', { n: staffCall(nurse) || t('roles.nurse') }) };
         const parts: string[] = [];
         const bp = bpLine(t, arr);
         if (bp) parts.push(bp);
@@ -138,120 +101,144 @@ export function Timeline({ members, stories, date, onFeedback, onOpenPhoto }: Pr
         if (it.monthly) { if (it.monthly.glucose != null) parts.push(`${it.monthly.glucose} mg/dL`); if (it.monthly.weight != null) parts.push(`${it.monthly.weight} kg`); }
         if (arr.shared) { for (const k of arr.noteKeys) parts.push(t('health.note.' + k)); if (arr.note) parts.push(arr.note); }
         return {
-          icon: 'monitor_heart', time: it.time, title: t('family.tHealth'), detail: parts.join(' · '),
-          badge: arr.status !== 'normal' ? <HealthPill status={arr.status} style={{ marginTop: 4 }} /> : undefined,
-          extra: <button type="button" onClick={() => navigate('/health')} style={{ ...quietLink, alignSelf: 'flex-start', minHeight: 32, padding: 0 }}>{t('family.storyHealthLink')}</button>,
+          time: it.time, title: t('family.tHealth'), detail: parts.join(' · '),
+          extra: (
+            <>
+              {arr.status !== 'normal' ? <HealthPill status={arr.status} style={{ marginTop: 6 }} /> : null}
+              <TextLink size={13} onClick={() => navigate('/health')} style={{ minHeight: 28 }}>{t('family.storyHealthLink')}</TextLink>
+            </>
+          ),
         };
       }
       case 'session': {
         // the activity pictures of this session (families get only approved ones, and only on a day one of these members came)
-        const a = s.activities[it.activityId];
         const rows = sessionOf(it.id);
         const shots = Array.from(new Map(rows.flatMap((r) => r.x.photos).map((p) => [p.id, p])).values()).sort((p, q) => (p.time + p.id < q.time + q.id ? -1 : 1));
         const title = activityLabel(s, it.activityId, fmt.lang);
         const guest = rows.find((r) => r.x.guest)?.x.guest ?? null;
         const took = rows.filter((r) => r.x.took);
         return {
-          icon: a?.icon || 'interests', time: it.time, title,
+          time: it.time, title, kind: 'session', photos: [...shots].reverse(), alt: (p) => t('family.photoAria', { a: title, t: p.time }),
           detail: (
             <>
-              <span style={{ display: 'block' }}>{[roomLabel(s, it.roomId, fmt.lang), staffFirst(s, it.staffId)].filter(Boolean).join(' · ')}</span>
+              {line([roomLabel(s, it.roomId, fmt.lang), staffFirst(s, it.staffId)].filter(Boolean).join(' · '), 'where')}
               {guest ? <span style={{ display: 'block', marginTop: 4 }}><Guest g={guest} /></span> : null}
               {took.length ? <span style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>{took.map((r) => <Took key={r.m.id} took={r.x.took!} name={members.length > 1 ? memberShort(r.m) : undefined} />)}</span> : null}
             </>
           ),
-          // KC round 7: every dot on the line is an icon; the session's pictures sit beside the line, in the same row of tiles as lunch and tea
-          extra: shots.length ? <PhotoRow kind="session" photos={[...shots].reverse()} onOpen={onOpenPhoto} alt={(p) => t('family.photoAria', { a: title, t: p.time })} /> : undefined,
         };
       }
       case 'outing':
-        return { icon: 'directions_bus', time: it.time, title: eventTitle(it.event, fmt.lang), detail: `${it.event.from || ''}–${it.event.to || ''}` };
+        return { time: it.time, title: eventTitle(it.event, fmt.lang), detail: `${it.event.from || ''}–${it.event.to || ''}` };
       case 'lunch': {
         const groups = new Map<string, Member[]>();
         for (const m of members) { const k = dishNamesOf(s, servedLunch(s, m, date)).join(', '); groups.set(k, [...(groups.get(k) || []), m]); }
-        const lines: string[] = [];
-        for (const [dishes, ms] of groups) if (dishes) lines.push(groups.size > 1 ? `${ms.map(memberShort).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`);
-        if (isToday) {
+        const lines: ReactNode[] = [];
+        for (const [dishes, ms] of groups) if (dishes) lines.push(line(groups.size > 1 ? `${ms.map(memberShort).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`, 'dish-' + dishes));
+        if (isToday || ahead) { // the allergy line also for tomorrow's lunch
           for (const m of members) {
             const ls = lunchSafety(s, m.id, date);
-            if (ls.kind === 'clear') lines.push(t('family.tLunchSafe', { n: memberShort(m), a: foods(m) }));
-            else if (ls.kind === 'alternative') lines.push(t('family.tLunchAlt', { n: memberShort(m), a: foods(m), d: ls.dish, x: ls.alternative }));
+            const day = fmt.fd(date, { weekday: 'long' }); // the day ahead says whose menu it is ("Monday's menu"), today says "today's"
+            if (ls.kind === 'clear') lines.push(line(ahead ? t('ftoday.planLunchSafe', { n: memberShort(m), a: foods(m), day }) : t('family.tLunchSafe', { n: memberShort(m), a: foods(m) }), 'safe-' + m.id, { color: F.sage, testId: 'lunch-safe' }));
+            else if (ls.kind === 'alternative') lines.push(line(ahead ? t('ftoday.planLunchAlt', { n: memberShort(m), a: foods(m), d: ls.dish, x: ls.alternative, day }) : t('family.tLunchAlt', { n: memberShort(m), a: foods(m), d: ls.dish, x: ls.alternative }), 'alt-' + m.id, { color: F.ochre, testId: 'lunch-alt' }));
           }
         }
         // how much was eaten, from the team's log (a kind line, one per member who has one)
         const ate = stories.flatMap((st, i) => (st.lunch?.amount ? [{ m: members[i], a: st.lunch.amount as string }] : []));
-        const photos = stories[0]?.lunch?.photos ?? []; // the kitchen's approved photos (a family never receives pending ones)
         return {
-          icon: 'restaurant', time: it.time, title: t('family.tLunch'),
+          time: it.time, title: t('family.tLunch'), kind: 'lunch', photos: stories[0]?.lunch?.photos ?? [], alt: (p) => t('kitchen.photo.alt', { time: p.time }), // the kitchen's approved photos
           detail: (
             <>
-              {lines.map((l, i) => <span key={i} style={{ display: 'block' }}>{l}</span>)}
-              {ate.map((r) => (
-                <span key={r.m.id} data-testid="lunch-amount" data-amount={r.a} style={{ display: 'block', marginTop: 4, color: '#2F5A40', fontWeight: 500 }}>{members.length > 1 ? `${memberShort(r.m)}: ` : ''}{lunchWords(t, r.a)}</span>
-              ))}
+              {lines}
+              {ate.map((r) => <span key={r.m.id} data-testid="lunch-amount" data-amount={r.a} style={{ display: 'block', marginTop: 2, color: F.sage, fontWeight: 500 }}>{members.length > 1 ? `${memberShort(r.m)}: ` : ''}{lunchWords(t, r.a)}</span>)}
             </>
           ),
-          extra: (
-            <>
-              {photos.length ? <PhotoRow kind="lunch" photos={photos} caption={t('family.lunchPhoto')} alt={(p) => t('kitchen.photo.alt', { time: p.time })} onOpen={onOpenPhoto} /> : null}
-              {isToday || visited ? <Button variant="ghost" size={44} onClick={onFeedback} style={{ alignSelf: 'flex-start', padding: '0 4px' }}>{t('family.lunchFeedback')}</Button> : null}
-            </>
-          ),
+          extra: lunchFeedback ? (
+            <button type="button" onClick={lunchFeedback.onClick} data-testid="lunch-feedback-line" className="cp-press"
+              style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, minHeight: 28, padding: 0, border: 'none', background: 'transparent', color: F.bronze, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+              <Icon name="rate_review" size={16} color={F.bronze} />{lunchFeedback.label}<Icon name="chevron_right" size={16} color={F.bronze} />
+            </button>
+          ) : undefined,
         };
       }
-      case 'tea': {
-        const photos = visibleTeaPhotos(s, date); // the kitchen's approved tea photos (a family never receives pending ones)
-        return {
-          icon: 'local_cafe', time: it.time, title: t('family.tTea'), detail: dishNamesOf(s, it.dishIds).join(', '),
-          extra: photos.length ? <PhotoRow kind="tea" photos={photos} caption={t('family.teaPhoto')} alt={(p) => t('kitchen.photo.tea.alt', { time: p.time })} onOpen={onOpenPhoto} /> : undefined,
-        };
-      }
+      case 'tea':
+        return { time: it.time, title: t('family.tTea'), detail: dishNamesOf(s, it.dishIds).join(', '), kind: 'tea', photos: visibleTeaPhotos(s, date), alt: (p) => t('kitchen.photo.tea.alt', { time: p.time }) };
       case 'home': {
-        const m = single!;
+        const m = single;
         if (it.att?.checkOut) {
           const dep = it.departure;
           const bp = dep ? bpLine(t, dep) : '';
-          return { icon: 'home', time: it.time, title: t('family.tHome'), detail: t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), badge: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 4 }} /> : undefined };
+          return { time: it.time, title: t('family.tHome'), detail: t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
         }
-        return { icon: 'home', time: it.time, title: t('family.tHome'), detail: t('family.tHomeD', { s: pron(m).s }) };
+        return { time: it.time, title: t('family.tHome'), detail: m ? t('family.tHomeD', { s: pron(m).s }) : '' };
       }
     }
   };
 
-  const views = items.map((it) => ({ it, v: view(it) }));
-  const dot = 34; // KC round 7: icons only on the line, one size, so the text lines up
-  const list = (
-    <ol style={{ display: 'flex', flexDirection: 'column', listStyle: 'none', margin: 0, padding: 0 }}>
-      {views.map(({ it, v }, i) => {
-        const last = i === views.length - 1;
-        const state = quiet ? 'up' : it.state;
-        return (
-          <Fragment key={it.id}>
-            <li style={{ display: 'flex', gap: 14, position: 'relative' }} data-tl={it.id} data-state={state}>
-              <RailDot state={state} icon={v.icon} last={last} size={dot} />
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3, padding: '6px 0 18px' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', color: '#6B6259', lineHeight: 1.4 }}>{v.time}</span>
-                  {state === 'now' ? <span style={{ height: 22, padding: '0 8px', borderRadius: 8, background: '#2B231C', color: '#FFFFFF', fontSize: 12, fontWeight: 600, letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center' }}>{t('family.now')}</span> : null}
+  // KC round 10: today, when nobody came, the programme reads "At the club today" (the last visit has its own card above); an earlier day keeps "What was on"
+  const head = kind === 'plan' ? (date === addDays(today, 1) ? t('ftoday.planTomorrow') : t('ftoday.planOn', { d: fmt.fd(date, { weekday: 'long' }) })) : kind === 'wasOn' && isToday ? t('ftoday.wasOnToday') : t('ftoday.' + kind);
+  // an earlier day nobody came: a way to the last visit (today has the Last visit card instead)
+  const lastVisit = kind === 'wasOn' && !isToday ? stories.map((x) => x.lastVisit).filter((d): d is ISODate => !!d).sort().pop() : undefined;
+  const dot = isPhone ? 32 : 34;
+  return (
+    <section data-testid="timeline" data-day={date} data-kind={kind} style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+      {/* KC round 9: "View calendar" on the right of every day's list (that day, today, tomorrow's plan) opens the calendar on that day */}
+      <Cap right={(
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 14 }}>
+          {lastVisit ? <TextLink size={14} onClick={() => onDay(lastVisit)} testId="last-visit" style={{ minHeight: 24 }}>{t('ftoday.lastVisit')}</TextLink> : null}
+          <TextLink size={14} onClick={() => navigate(`/calendar?date=${date}`)} testId="view-calendar" style={{ minHeight: 24 }}>{t('ftoday.viewCalendar')}</TextLink>
+        </span>
+      )}>{head}</Cap>
+      <ol style={{ listStyle: 'none', margin: 0, padding: '0 4px', display: 'flex', flexDirection: 'column' }}>
+        {items.map((it, i) => {
+          const v = view(it);
+          const st = kind === 'wasOn' || kind === 'plan' ? 'up' : it.state; // a day they did not come, or the day ahead: the programme on a light track (nothing done yet)
+          const isNow = kind === 'next' && it.state === 'now';
+          const n = v.photos?.length ?? 0;
+          const last = i === items.length - 1;
+          return (
+            <li key={it.id} data-tl={it.id} data-state={st} style={{ display: 'flex', gap: 14 }}>
+              <RailDot state={st} icon={stepIcon(s, it)} last={last} size={dot} />
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 10, padding: `3px 0 ${last ? 2 : 18}px` }}>
+              <div style={{ display: 'flex', alignItems: 'stretch', gap: 10, minWidth: 0 }}>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                  {v.time || isNow ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 8, minHeight: 20 }}>
+                      {v.time ? <span style={{ fontSize: 13, lineHeight: 1.4, fontWeight: 500, fontVariantNumeric: 'tabular-nums', color: F.muted }}>{v.time}</span> : null}
+                      {isNow ? <span style={{ height: 20, padding: '0 7px', borderRadius: 7, background: F.ink, color: '#FFFFFF', fontSize: 11, fontWeight: 600, letterSpacing: '0.5px', display: 'inline-flex', alignItems: 'center' }}>{t('family.now')}</span> : null}
+                    </span>
+                  ) : null}
+                  <span style={{ fontSize: 16, lineHeight: 1.35, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{v.title}</span>
+                  {v.detail ? <span style={{ fontSize: 13, lineHeight: '19px', color: F.muted, overflowWrap: 'anywhere' }}>{v.detail}</span> : null}
+                  {v.extra}
                 </div>
-                <span style={{ fontSize: 16, fontWeight: 500, color: '#24201C', lineHeight: 1.4 }}>{v.title}</span>
-                {v.detail ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{v.detail}</span> : null}
-                {v.badge}
-                {v.extra}
+                {n ? (
+                  // the newest picture, fading in from the white on its left; a tap opens the row's pictures underneath (again: folds them away)
+                  <button type="button" onClick={() => setOpen(open === it.id ? null : it.id)} aria-expanded={open === it.id} aria-label={`${n > 1 ? t('ftoday.viewImages', { n }) : t('ftoday.viewImage')} · ${v.title}`} data-testid={`${v.kind}-photos`} data-count={n}
+                    style={{ position: 'relative', flex: '0 0 42%', maxWidth: 190, minHeight: 72, border: 'none', padding: 0, background: 'transparent', cursor: 'pointer', borderRadius: 14, overflow: 'hidden' }}>
+                    <span aria-hidden="true" style={{ position: 'absolute', inset: 0, WebkitMaskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,.45) 28%, #000 70%)', maskImage: 'linear-gradient(to right, transparent 0%, rgba(0,0,0,.45) 28%, #000 70%)' }}><PhotoImg photo={v.photos![0]} /></span>
+                    <span aria-hidden="true" style={{ position: 'absolute', right: 6, bottom: 6, height: 24, padding: '0 8px 0 6px', borderRadius: 999, background: 'rgba(20,16,12,.55)', color: '#FFFFFF', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 3 }}>
+                      <Icon name={open === it.id ? 'expand_less' : 'photo_library'} size={15} />{n}
+                    </span>
+                  </button>
+                ) : null}
+              </div>
+              {n && open === it.id ? (
+                <div data-testid={`${v.kind}-photos-open`} className="cp-snap cp-pillrow" style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollSnapType: 'x mandatory', animation: 'cpUp .22s ease-out' }}>
+                  {v.photos!.map((p) => (
+                    <button key={p.id} type="button" onClick={() => onOpenPhoto(p, v.photos)} aria-label={v.alt ? v.alt(p) : v.title} data-photo-id={p.id}
+                      style={{ position: 'relative', flex: n > 1 ? '0 0 min(240px, 78%)' : '0 0 100%', aspectRatio: '4 / 3', border: 'none', padding: 0, borderRadius: 14, overflow: 'hidden', background: F.fill, cursor: 'pointer', scrollSnapAlign: 'start' }}>
+                      <PhotoImg photo={p} />
+                      <span aria-hidden="true" style={{ position: 'absolute', left: 8, bottom: 8, height: 22, padding: '0 8px', borderRadius: 999, background: 'rgba(20,16,12,.55)', color: '#FFFFFF', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center' }}>{p.time}</span>
+                    </button>
+                  ))}
+                </div>
+              ) : null}
               </div>
             </li>
-          </Fragment>
-        );
-      })}
-    </ol>
-  );
-  // round 6, phone: an iOS grouped section (the title over a flat white group)
-  if (isPhone) return <div data-testid="timeline" data-day={date}><Group title={head} pad="16px 16px 0" gap={0}>{list}</Group></div>;
-  return (
-    <div style={fcard('', 10)} data-testid="timeline" data-day={date}>
-      <H2>{head}</H2>
-      {list}
-    </div>
+          );
+        })}
+      </ol>
+    </section>
   );
 }
-

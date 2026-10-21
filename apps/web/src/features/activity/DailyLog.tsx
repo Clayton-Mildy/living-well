@@ -22,7 +22,7 @@ import { say } from '../../store/ui';
 import { Av, SearchBar, StatusDot, cogLine, plural, rowLine } from './lib';
 import { LogFieldsForm, RoundChips, baseEntry, logInput, sameLog, type LogEntry, type RoundChoice } from './LogFields';
 
-const HAIR = '1px solid #F0EAE1';
+const HAIR = '0.5px solid var(--hairline, #E2E2E6)';
 const rowStyle = (first: boolean, phone: boolean, inset = 68) => (phone ? rowLine(first, inset) : first ? {} : { borderTop: HAIR });
 
 export function DailyLog() {
@@ -129,7 +129,7 @@ export function DailyLog() {
     const rows = list.map((m, i) => (round.kind === 'mood'
       ? <MoodRow key={m.id} m={m} i={i} log={logs.get(m.id)} entry={entry(m.id)} dirty={dirty(m.id)} open={open === m.id} busy={busy} s={s} today={today}
           onToggle={() => setOpen(open === m.id ? null : m.id)} onEdit={(patch) => edit(m.id, patch)} onSave={() => void saveMood(m.id)} onProfile={() => navigate(`/members/${m.id}`)} />
-      : <MarkRow key={m.id} m={m} i={i} log={logs.get(m.id)} stacked={isPhone && round.kind === 'lunch'} choices={choices} value={round.kind === 'lunch' ? logs.get(m.id)?.lunch : logs.get(m.id)?.sessions?.[round.id as '10:30' | '13:30']}
+      : <MarkRow key={m.id} m={m} i={i} log={logs.get(m.id)} stacked={isPhone && round.kind === 'lunch'} choices={choices} value={round.kind === 'lunch' ? logs.get(m.id)?.lunch : logs.get(m.id)?.sessions?.[round.id]}
           onPick={(v) => markOne(m.id, v)} label={nameOf(round)} lunch={round.kind === 'lunch'} />));
     return isPhone ? <Group key={String(title)} title={title} meta={meta} pad="0" gap={0}>{rows}</Group> : (
       <section key={String(title)} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -144,7 +144,7 @@ export function DailyLog() {
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 10 : 'clamp(14px, 2vw, 22px)' }}>
       <PageHead eyebrow={fdl(date)} title={t('nav.log')} />
 
-      <div className="scroll-x" style={{ display: 'flex', gap: 8, paddingBottom: 4 }} role="group" aria-label={t('activity.pickDay')}>
+      <div className="scroll-x cp-pillrow" style={{ display: 'flex', gap: 8, paddingBottom: 4 }} role="group" aria-label={t('activity.pickDay')}>
         {dates.map((d) => <Chip key={d} selected={d === date} onClick={() => pickDate(d)}>{d === today ? t('common.today') : d === addDays(today, -1) ? t('common.yesterday') : fds(d)}</Chip>)}
       </div>
       {isToday ? null : <Note tone="ochre" icon="history">{t('activity.editingPast', { date: fdl(date) })}</Note>}
@@ -172,8 +172,8 @@ export function DailyLog() {
           </>
         ) : found.length ? block(undefined, null, found) : null}
       </div>
-      {people.length && !found.length ? <div role="status" style={{ padding: '28px 20px', borderRadius: isPhone ? 14 : 16, background: '#FFFFFF', border: isPhone ? 'none' : '1px solid #EFE7DC', textAlign: 'center', fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{t('activity.noMemberMatch', { q: q.trim() })}</div> : null}
-      {!people.length ? <div style={{ padding: '40px 20px', borderRadius: isPhone ? 14 : 16, background: '#FFFFFF', border: isPhone ? 'none' : '1px solid #EFE7DC', boxShadow: 'var(--card-shadow)', textAlign: 'center', fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{t(isToday ? 'activity.nobodyYet' : 'activity.nobodyThatDay')}</div> : null}
+      {people.length && !found.length ? <div role="status" style={{ padding: '28px 20px', borderRadius: 16, background: 'var(--fill, #F4F4F5)', textAlign: 'center', fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{t('activity.noMemberMatch', { q: q.trim() })}</div> : null}
+      {!people.length ? <div style={{ padding: '40px 20px', borderRadius: 16, background: 'var(--fill, #F4F4F5)', textAlign: 'center', fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{t(isToday ? 'activity.nobodyYet' : 'activity.nobodyThatDay')}</div> : null}
 
       {isPhone && left.length && !(round.kind === 'mood' && open) ? <Pin icon="done_all" label={restLabel} onClick={() => setAsk(true)} /> : null}
       <Sheet open={ask} onClose={() => setAsk(false)} title={plural(t, 'activity.markRestTitle', left.length, { what: restWhat })}
@@ -189,12 +189,12 @@ function RoundTabs({ rounds, value, onChange, label, nameOf, doneOf }: { rounds:
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => { ref.current?.querySelector('[aria-selected="true"]')?.scrollIntoView({ inline: 'center', block: 'nearest' }); }, [value]);
   return (
-    <div ref={ref} role="tablist" aria-label={label} style={{ display: 'flex', gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0', overflowX: 'auto', scrollbarWidth: 'none', maxWidth: '100%' }}>
+    <div ref={ref} role="tablist" aria-label={label} style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', overflowX: 'auto', scrollbarWidth: 'none', maxWidth: '100%' }}>
       {rounds.map((r) => {
         const on = r.id === value;
         return (
           <button key={r.id} type="button" role="tab" aria-selected={on} data-round={r.id} onClick={() => onChange(r.id)} className="cp-press"
-            style={{ flex: '1 0 auto', height: 36, padding: '0 12px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', whiteSpace: 'nowrap' }}>
+            style={{ flex: '1 0 auto', height: 36, padding: '0 12px', borderRadius: 7, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', whiteSpace: 'nowrap' }}>
             {nameOf(r)}
             {doneOf(r) ? <Icon name="check_circle" size={16} fill={1} color="#3D6B4F" /> : null}
           </button>
@@ -213,7 +213,7 @@ function PendingDot({ log }: { log: LogRow | undefined }) {
   return <span data-testid="approval-mark" data-state="pending" role="img" aria-label={t('approvals.pending')} title={t('approvals.pending')} style={{ width: 7, height: 7, borderRadius: 999, background: '#7A5510', flex: 'none' }} />;
 }
 
-/** One person in a lunch or activity round: name (with the allergy dot and diet hint at lunch) and the one-tap choices. Unmarked rows carry a faint tint. */
+/** One person in a lunch or activity round: name (with the allergy dot and diet hint at lunch) and the one-tap choices. Marked rows are a shade darker (round 8c). */
 function MarkRow({ m, i, log, stacked, choices, value, onPick, label, lunch }: { m: Member; i: number; log: LogRow | undefined; stacked: boolean; choices: RoundChoice[]; value: string | undefined; onPick: (v: string | null) => void; label: string; lunch: boolean }) {
   const t = useT();
   const { isPhone } = useDevice();
@@ -222,7 +222,8 @@ function MarkRow({ m, i, log, stacked, choices, value, onPick, label, lunch }: {
   const chips = <RoundChips choices={choices} value={value} onPick={onPick} label={`${memberName(m)} · ${label}`} />;
   return (
     <div data-testid="log-row" data-member={m.id} data-marked={value !== undefined ? '1' : '0'}
-      style={{ backgroundColor: value !== undefined ? '#FFFFFF' : '#FAF6EF', padding: isPhone ? '10px 14px 10px 16px' : '12px 22px', display: 'flex', flexDirection: stacked ? 'column' : 'row', alignItems: stacked ? 'stretch' : 'center', gap: stacked ? 8 : 12, ...rowStyle(i === 0, isPhone) }}>
+      // KC round 10 ("the brown thing"): a marked row keeps the card's colour — the solid chip says it is marked; the old tint turned a finished list into one brown block
+      style={{ backgroundColor: 'transparent', padding: isPhone ? '10px 14px 10px 16px' : '12px 22px', display: 'flex', flexDirection: stacked ? 'column' : 'row', alignItems: stacked ? 'stretch' : 'center', gap: stacked ? 8 : 12, ...rowStyle(i === 0, isPhone) }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, flex: stacked ? 'none' : 1, minWidth: 0 }}>
         <Av m={m} size={isPhone ? 40 : 44} fs={isPhone ? 14 : 15} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -256,7 +257,7 @@ function MoodRow({ m, i, log, entry, dirty, open, busy, s, today, onToggle, onEd
   const status = saved && !dirty ? (dev ? t('activity.stSaved', { what: dev }) : t('activity.stSavedNormal')) : dev ? t('activity.stDraft', { what: dev }) : t('activity.stDraftNormal');
   const lastEdit = log?.edits.length ? log.edits[log.edits.length - 1] : null;
   return (
-    <div id={'log-card-' + m.id} data-testid="log-row" data-member={m.id} data-marked={saved ? '1' : '0'} style={{ background: open ? '#FBF9F6' : saved ? '#FFFFFF' : '#FAF6EF', scrollMarginTop: 12, ...rowStyle(i === 0 || open, isPhone) }}>
+    <div id={'log-card-' + m.id} data-testid="log-row" data-member={m.id} data-marked={saved ? '1' : '0'} className={open ? 'cp-grey' : undefined} style={{ backgroundColor: open ? '#FFFFFF' : 'transparent', scrollMarginTop: 12, ...rowStyle(i === 0 || open, isPhone) }}>
       <button type="button" className={isPhone ? 'cp-tap-self' : undefined} onClick={onToggle} aria-expanded={open} aria-controls={'log-body-' + m.id} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '10px 14px 10px 16px' : '12px 22px', minHeight: isPhone ? 60 : 68, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
         <Av m={m} size={isPhone ? 40 : 44} fs={isPhone ? 14 : 15} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -267,7 +268,7 @@ function MoodRow({ m, i, log, entry, dirty, open, busy, s, today, onToggle, onEd
             {log && approvalState(log) ? <PendingMark row={log} /> : null}
           </span>
         </span>
-        <Icon name="expand_more" size={24} color="#75624B" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
+        <Icon name="expand_more" size={24} color="var(--accent, #75624B)" style={{ transform: open ? 'rotate(180deg)' : 'none' }} />
       </button>
       {open ? (
         <div id={'log-body-' + m.id} style={{ padding: isPhone ? '2px 16px 16px' : '8px 22px 20px', display: 'flex', flexDirection: 'column', gap: 12 }}>
@@ -280,7 +281,7 @@ function MoodRow({ m, i, log, entry, dirty, open, busy, s, today, onToggle, onEd
           ) : null}
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button type="button" className="dh44 cp-btn" onClick={onSave} aria-disabled={busy} style={{ flex: '1 1 180px', height: 52, borderRadius: 999, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{saved ? t('activity.saveChanges') : t('activity.saveLog')}</button>
-            <button type="button" className="cp-btn" onClick={onProfile} style={{ height: 52, padding: '0 20px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+            <button type="button" className="cp-btn h-fill cp-fill" onClick={onProfile} style={{ height: 52, padding: '0 20px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
               <Icon name="person" size={20} />{t('activity.openProfile')}
             </button>
           </div>

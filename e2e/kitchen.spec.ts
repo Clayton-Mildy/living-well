@@ -124,7 +124,6 @@ test.describe('menu of the day', () => {
     const laras = await another(browser, info, 'fm10_0', '/today');
     await laras.page.getByRole('button', { name: /Notifications/ }).first().click();
     const panel = laras.page.getByRole('dialog', { name: 'Notifications' });
-    await panel.getByRole('tab', { name: /Updates/ }).click();
     await expect(panel.getByText('Bapak Bambang: the kitchen is serving Ayam kukus instead of Sop ikan kakap today.')).toBeVisible();
     await expect(panel.getByText('The kitchen posted a photo of today’s lunch.')).toBeVisible();
     await laras.close();
@@ -138,7 +137,7 @@ test.describe('menu of the day', () => {
     // before the kitchen sorts it out she is not told "the menu is clear"
     await expect(laras.page.getByTestId('timeline')).toBeVisible();
     await expect(laras.page.getByText(/the menu is clear/)).toHaveCount(0);
-    await expect(laras.page.getByTestId('lunch-photo')).toHaveCount(0);
+    await expect(laras.page.getByTestId('lunch-photos')).toHaveCount(0);
     await page.getByTestId('conflict-row').getByRole('button', { name: 'Alternative prepared' }).click();
     const sheet = page.getByRole('dialog', { name: 'Alternative for Bapak Bambang' });
     await sheet.getByLabel('What will you serve instead?').fill('Ayam kukus');
@@ -149,8 +148,8 @@ test.describe('menu of the day', () => {
     await expect(toast(boss.page)).toContainText('Lunch photo posted');
     // live: the family's page updates without a reload
     await expect(laras.page.getByText(/the kitchen is serving Ayam kukus instead/)).toBeVisible();
-    await expect(laras.page.getByTestId('lunch-photo')).toBeVisible();
-    await expect(laras.page.getByTestId('lunch-photos')).toContainText('Lunch photo posted by the kitchen');
+    await expect(laras.page.getByTestId('lunch-photos')).toBeVisible(); // "View image" on the lunch row
+    await expect(laras.page.getByTestId('lunch-photos')).toHaveAttribute('aria-label', /^View image · Lunch/); // KC round 9: the picture itself sits on the row
     await laras.close();
     await boss.close();
   });
@@ -213,7 +212,7 @@ test.describe('menu of the day', () => {
     // the family sees none of them
     const laras = await another(browser, info, 'fm10_0', '/today');
     await expect(laras.page.getByTestId('timeline')).toBeVisible();
-    await expect(laras.page.getByTestId('lunch-photo')).toHaveCount(0);
+    await expect(laras.page.getByTestId('lunch-photos')).toHaveCount(0);
     expect(Object.keys((await stateOf(laras.page, 'fm10_0')).photos)).not.toEqual(expect.arrayContaining([ids[0]]));
     await laras.close();
     // remove the first: confirm, it goes, the others stay
@@ -237,7 +236,8 @@ test.describe('menu of the day', () => {
     const notify = page.getByTestId('lunch-photos').getByRole('switch', { name: /Notify families/ }); // the tea photos have their own switch
     await expect(notify).toHaveAttribute('aria-checked', 'true');
     const laras = await another(browser, info, 'fm10_0', '/today');
-    await expect(laras.page.getByTestId('lunch-photo')).toHaveCount(0);
+    await expect(laras.page.getByTestId('timeline')).toBeVisible();
+    await expect(laras.page.getByTestId('lunch-photos')).toHaveCount(0);
     // toggle off: the photo is shown to families, but nobody is told
     await notify.click();
     await expect(notify).toHaveAttribute('aria-checked', 'false');
@@ -248,7 +248,7 @@ test.describe('menu of the day', () => {
     await expect(tiles).toHaveCount(1);
     await expect(tiles.first()).toHaveAttribute('data-status', 'visible');
     await expect(tiles.first()).toContainText('Shown to families');
-    await expect(laras.page.getByTestId('lunch-photo')).toHaveCount(1); // live, no reload
+    await expect(laras.page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '1'); // live, no reload
     const quiet = await stateOf(page, 's9');
     expect(Object.values<{ kind: string }>(quiet.notifications).filter((x) => x.kind === 'kitchen.notif.lunchPhoto')).toHaveLength(0);
     // toggle on again: the next photo tells the families of whoever is in the club, once
@@ -257,15 +257,16 @@ test.describe('menu of the day', () => {
     await takePhotoWithFile(page);
     await expect(toast(page)).toContainText('Lunch photo posted. Families see it on the Today page.');
     await expect(tiles).toHaveCount(2);
-    await expect(laras.page.getByTestId('lunch-photo')).toHaveCount(2);
-    await expect(laras.page.getByTestId('lunch-photos')).toContainText('Lunch photo posted by the kitchen');
+    await expect(laras.page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '2');
+    await expect(laras.page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '2'); // KC round 9: the picture on the row, with its count
     const st = await stateOf(page, 's9');
     const told = Object.values<{ kind: string; toUsers: string[] }>(st.notifications).filter((x) => x.kind === 'kitchen.notif.lunchPhoto');
     expect(told).toHaveLength(1);
     expect([...told[0].toUsers].sort()).toEqual(['fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']);
-    // a family thumbnail opens in the viewer
-    await laras.page.getByTestId('lunch-photo').first().click();
-    await expect(laras.page.getByRole('dialog').first()).toBeVisible();
+    // the lunch row opens out to its pictures (KC round 9); a picture opens in the viewer
+    await laras.page.getByTestId('lunch-photos').click();
+    await laras.page.getByTestId('lunch-photos-open').locator('[data-photo-id]').first().click();
+    await expect(laras.page.getByTestId('family-viewer')).toBeVisible();
     await laras.close();
     await assertNoHorizontalScroll(page);
     c.assertClean();
@@ -374,7 +375,6 @@ test.describe('allergies on file: planning ahead', () => {
     const maria = await another(browser, info, 'f1', '/today');
     await maria.page.getByRole('button', { name: /Notifications/ }).first().click();
     const panel = maria.page.getByRole('dialog', { name: 'Notifications' });
-    await panel.getByRole('tab', { name: /Updates/ }).click();
     await expect(panel.getByText('Oma Lina: the kitchen is serving Ayam kukus instead of Sop ikan kakap today.')).toBeVisible();
     await maria.close();
     // undo from the list, then prepare it again
@@ -730,7 +730,6 @@ test.describe('planning other weeks', () => {
     expect(await notes(page, 'fm10_0', 'kitchen.notif.menuPublished')).toHaveLength(1);
     await laras.page.getByRole('button', { name: /Notifications/ }).first().click();
     const panel = laras.page.getByRole('dialog', { name: 'Notifications' });
-    await panel.getByRole('tab', { name: /Updates/ }).click();
     await expect(panel.getByText('The weekly menu changes from Mon 26 Oct.')).toBeVisible();
     await laras.close();
     await assertNoHorizontalScroll(page);
@@ -829,7 +828,6 @@ test.describe('feedback', () => {
     expect(bell).toMatchObject({ link: '/today', params: { text: 'Thank you, Laras. We will use less salt in the sayur asem.' } });
     await laras.page.getByRole('button', { name: /Notifications/ }).first().click();
     const panel = laras.page.getByRole('dialog', { name: 'Notifications' });
-    await panel.getByRole('tab', { name: /Updates/ }).click();
     const update = panel.getByRole('button', { name: /The kitchen replied about Bapak Bambang’s meal/ });
     await expect(update).toContainText('We will use less salt in the sayur asem.');
     await update.click();
@@ -842,10 +840,12 @@ test.describe('feedback', () => {
   test('through three screens: Laras sends feedback in her app, the kitchen answers, the answer shows in her app (Today and her updates)', async ({ page, browser }, info) => {
     const c = watchConsole(page);
     await signIn(page, 'fm10_0', '/today');
-    await page.getByRole('button', { name: 'Feedback on lunch' }).click();
-    await page.getByRole('radio', { name: 'Sop ikan kakap' }).click();
-    await page.getByLabel('What would you like the kitchen to know?').fill('The fish soup was a little too hot for Papa.');
-    await page.getByRole('button', { name: 'Send feedback' }).click();
+    await page.getByTestId('lunch-feedback-row').click();
+    const fbSheet = page.getByRole('dialog', { name: 'Lunch feedback' });
+    await fbSheet.getByTestId('fb-change').click();
+    await fbSheet.getByRole('button', { name: 'Sop ikan kakap', exact: true }).click();
+    await fbSheet.getByLabel('What would you like the kitchen to know?').fill('The fish soup was a little too hot for Papa.');
+    await fbSheet.getByRole('button', { name: 'Send', exact: true }).click();
     await expect(toast(page)).toContainText('The kitchen team’s reply will appear on your Today, under Lunch feedback.');
     // her feedback is on her Today, waiting for the kitchen
     const mine = page.getByTestId('lunch-feedback').locator('[data-feedback]').filter({ hasText: 'a little too hot for Papa' });
@@ -870,7 +870,6 @@ test.describe('feedback', () => {
     await expect(mine).toContainText('The kitchen replied');
     await page.getByRole('button', { name: /Notifications/ }).first().click();
     const bell = page.getByRole('dialog', { name: 'Notifications' });
-    await bell.getByRole('tab', { name: /Updates/ }).click();
     await expect(bell.getByRole('button', { name: /The kitchen replied about Bapak Bambang’s meal/ }).first()).toContainText('we will serve it cooler');
     await assertNoHorizontalScroll(page);
     c.assertClean();
@@ -1019,10 +1018,11 @@ test.describe('stock', () => {
     if (isPhone(page)) {
       // phone: the area and status filters are two dropdowns (the counts are in the options)
       await page.getByRole('combobox', { name: 'Filter by section' }).click();
-      for (const o of ['All · 5', 'Kitchen · 2', 'Health · 1', 'Activities · 1', 'Housekeeping · 1', 'Transport · 0']) await expect(page.getByRole('option', { name: o })).toBeVisible();
-      await page.getByRole('option', { name: 'Health · 1' }).click();
-      await expect(page.getByTestId('stock-row')).toHaveCount(1);
-      await expect(page.getByTestId('stock-row')).toContainText('Test strips (glucose) · 2 boxes');
+      for (const o of ['All · 5', 'Kitchen · 2', 'Health · 2', 'Activities · 1']) await expect(page.getByRole('option', { name: o })).toBeVisible();
+      await expect(page.getByRole('option', { name: /^(Housekeeping|Transport)/ })).toHaveCount(0);
+      await page.getByRole('option', { name: 'Health · 2' }).click();
+      await expect(page.getByTestId('stock-row')).toHaveCount(2);
+      await expect(page.getByTestId('stock-row').filter({ hasText: 'Test strips (glucose) · 2 boxes' })).toHaveCount(1);
       await pickOption(page, 'Filter by section', 'All · 5');
       await pickOption(page, 'Filter by status', /^Approved/);
       await expect(page.getByTestId('stock-row')).toHaveCount(1);
@@ -1034,13 +1034,12 @@ test.describe('stock', () => {
     }
     await expect(page.getByRole('button', { name: 'All · 5' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Kitchen · 2' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Health · 1' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Health · 2' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Activities · 1' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Housekeeping · 1' })).toBeVisible();
-    await expect(page.getByRole('button', { name: 'Transport · 0' })).toBeVisible();
-    await page.getByRole('button', { name: 'Health · 1' }).click();
-    await expect(page.getByTestId('stock-row')).toHaveCount(1);
-    await expect(page.getByTestId('stock-row')).toContainText('Test strips (glucose) · 2 boxes');
+    await expect(page.getByRole('button', { name: /^(Housekeeping|Transport)/ })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Health · 2' }).click();
+    await expect(page.getByTestId('stock-row')).toHaveCount(2);
+    await expect(page.getByTestId('stock-row').filter({ hasText: 'Test strips (glucose) · 2 boxes' })).toHaveCount(1);
     await page.getByRole('button', { name: 'All · 5' }).click();
     await page.getByRole('tab', { name: /Approved/ }).click();
     await expect(page.getByTestId('stock-row')).toHaveCount(1);
@@ -1107,7 +1106,7 @@ test.describe('pages', () => {
     await expect(page.getByTestId('stock-row')).toHaveCount(3);
     if (isPhone(page)) await pickOption(page, 'Filter by section', /^Health · /);
     else await page.getByRole('button', { name: /^Health · / }).click();
-    await expect(page.getByTestId('stock-row')).toHaveCount(1);
+    await expect(page.getByTestId('stock-row')).toHaveCount(2);
     await expect(page.getByRole('navigation', { name: 'Stock requests' })).toHaveCount(0);
     await assertNoHorizontalScroll(page);
   });
@@ -1258,8 +1257,11 @@ test.describe('lunch photo with a live camera', () => {
     await expect(tile).toHaveCount(1);
     await expect.poll(() => tile.locator('img').evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
     const laras = await another(browser, info, 'fm10_0', '/today');
-    await expect(laras.page.getByTestId('lunch-photo')).toHaveCount(1);
-    await expect.poll(() => laras.page.getByTestId('lunch-photo').locator('img').evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
+    await expect(laras.page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '1');
+    await laras.page.getByTestId('lunch-photos').click(); // KC round 9: the lunch row opens out to its pictures; a picture opens the viewer
+    await laras.page.getByTestId('lunch-photos-open').locator('[data-photo-id]').first().click();
+    const shot = laras.page.getByTestId('family-viewer').locator('img');
+    await expect.poll(() => shot.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
     await laras.close();
     c.assertClean();
   });

@@ -90,7 +90,7 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
       <form onSubmit={(e) => void changePassword(e)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
           <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('login.username')}</span>
-          <span style={{ display: 'flex', alignItems: 'center', height: 52, border: '1px solid #EFE7DC', borderRadius: 10, background: '#F5F5F3', paddingRight: 14 }}>
+          <span style={{ display: 'flex', alignItems: 'center', height: 52, border: 'none', borderRadius: 12, background: 'var(--press, #EEEEF0)', paddingRight: 14 }}>
             <input readOnly value={stateUsername || fetched || ''} name="username" autoComplete="username" aria-readonly="true" data-testid="account-username"
               style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C' }} />
             <Icon name="lock" size={20} color="#5E5852" />

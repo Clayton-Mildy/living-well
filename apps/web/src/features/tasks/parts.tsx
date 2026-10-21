@@ -14,7 +14,7 @@ import { say } from '../../store/ui';
 
 const RUST = '#9A3D24';
 /** The row's hairline, inset past the circle (the iOS grouped-list look). */
-const hairline = (first: boolean): CSSProperties => ({ backgroundColor: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 58px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' });
+const hairline = (first: boolean): CSSProperties => ({ backgroundColor: 'transparent', backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 58px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' });
 
 /** Staff member's name from a staff id. */
 export const whoIs = (s: ClubState, id: string) => staffCall(s.staff[id]) || id;
@@ -78,7 +78,7 @@ export function Progress({ done, total }: { done: number; total: number }) {
         {complete ? <Icon name="check_circle" size={19} fill={1} /> : null}
         {total === 0 ? t('tasks.nothingDue') : complete ? `${t('tasks.allDone')} · ${done}/${total}` : t('tasks.progress', { done, total })}
       </div>
-      <div aria-hidden="true" style={{ height: 6, borderRadius: 999, background: '#E8E1D8', overflow: 'hidden' }}>
+      <div aria-hidden="true" className="cp-fill" style={{ height: 6, borderRadius: 999, background: 'var(--press, #EEEEF0)', overflow: 'hidden' }}>
         <div style={{ height: '100%', width: `${total ? Math.round((done / total) * 100) : 0}%`, borderRadius: 999, background: complete ? '#3D6B4F' : '#24201C', transition: 'width .25s ease' }} />
       </div>
     </div>
@@ -108,7 +108,7 @@ export function ProofThumb({ item, size = 40, onOpen }: { item: TaskItem; size?:
   if (!item.done || item.template.proof !== 'photo') return null;
   const photo = { mediaId: item.done.photoMediaId, tone: toneOf(item.done.id), media: 'photo' as const };
   const body = (
-    <span style={{ position: 'relative', display: 'block', width: size, height: size, borderRadius: 10, overflow: 'hidden', background: '#F3EEE8' }}>
+    <span style={{ position: 'relative', display: 'block', width: size, height: size, borderRadius: 10, overflow: 'hidden', background: '#E8E1D8' }}>
       <PhotoImg photo={photo} />
       {item.done.photoMediaId ? null : <span aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'rgba(255,255,255,0.9)' }}><Icon name="photo_camera" size={Math.round(size * 0.45)} fill={1} /></span>}
     </span>
@@ -128,7 +128,7 @@ export function TaskRow({ item, date, first, who, canTick, busy, onTick, onOpen 
   const meta = useMeta()(item, date, who);
   const done = !!item.done;
   const circle = (
-    <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 999, border: done ? 'none' : `2px solid ${item.overdue ? '#C9A596' : '#CFC4B6'}`, background: done ? '#24201C' : '#FFFFFF', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: busy ? 0.5 : 1 }}>
+    <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 999, border: done ? 'none' : `2px solid ${item.overdue ? '#C9A596' : 'var(--outline, #D4D4D8)'}`, background: done ? '#24201C' : '#FFFFFF', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', opacity: busy ? 0.5 : 1 }}>
       {done ? <Icon name="check" size={18} /> : null}
     </span>
   );
@@ -177,7 +177,7 @@ export function DutyRow({ s, def, part, date, today, nowMin, first, link = true 
       <span style={{ width: 44, height: 44, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {part.done
           ? <span aria-hidden="true" style={{ width: 26, height: 26, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="check" size={18} /></span>
-          : <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={def.icon} size={17} fill={1} /></span>}
+          : <span aria-hidden="true" className="cp-fill" style={{ width: 28, height: 28, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={def.icon} size={17} fill={1} /></span>}
       </span>
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, textAlign: 'left', paddingLeft: 2 }}>
         <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere', color: part.done ? '#8A8078' : '#24201C' }}>{title}</span>
@@ -188,8 +188,8 @@ export function DutyRow({ s, def, part, date, today, nowMin, first, link = true 
           </span>
         ) : null}
       </span>
-      {open && left > 0 ? <span aria-label={t('tasks.left', { n: left })} style={{ flex: 'none', minWidth: 24, height: 24, padding: '0 8px', borderRadius: 999, background: '#F3EEE8', color: '#4A4038', fontSize: FONT_SMALL, fontWeight: 600, fontVariantNumeric: 'tabular-nums', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{left}</span> : null}
-      {link && open ? <Icon name="chevron_right" size={22} color="#C2B8AB" /> : null}
+      {open && left > 0 ? <span aria-label={t('tasks.left', { n: left })} className="cp-fill" style={{ flex: 'none', minWidth: 24, height: 24, padding: '0 8px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: '#4A4038', fontSize: FONT_SMALL, fontWeight: 600, fontVariantNumeric: 'tabular-nums', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}>{left}</span> : null}
+      {link && open ? <Icon name="chevron_right" size={22} color="#A89C8E" /> : null}
     </>
   );
   const style: CSSProperties = { width: '100%', display: 'flex', alignItems: 'center', gap: 8, padding: '4px 16px 4px 6px', minHeight: 56, border: 'none', color: '#24201C', fontFamily: 'Inter', ...hairline(first) };
@@ -230,7 +230,7 @@ export function TaskSheet({ item, date, who, canTick, canUndo, tick, onClose }: 
         {done?.note ? <Line k={t('tasks.noteFrom')}>{done.note}</Line> : null}
         {done && tpl.proof === 'photo' ? (
           <div>
-            <div style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 12, overflow: 'hidden', background: '#F3EEE8' }}>
+            <div style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 12, overflow: 'hidden', background: '#E8E1D8' }}>
               <PhotoImg photo={{ mediaId: done.photoMediaId, tone: toneOf(done.id), media: 'photo' }} alt={`${t('tasks.proof')}: ${tpl.title}`} />
             </div>
             {done.photoMediaId ? null : <div style={{ ...label, marginTop: 6 }}>{t('tasks.proofNone')}</div>}

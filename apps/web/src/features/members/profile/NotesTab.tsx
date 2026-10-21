@@ -55,7 +55,7 @@ export function NotesTab({ p }: { p: P }) {
                 {n.editedAt ? ` · ${t('profile.edited', { n: actorName(s, n.editedBy), d: fmt.fds(n.editedAt.slice(0, 10)) })}` : ''}
               </span>
               {!p.family ? <PendingMark row={n} /> : null}
-              {n.pinned ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: '#75624B', fontWeight: 600 }}><Icon name="push_pin" size={16} fill={1} />{t('profile.pinnedNote')}</span> : null}
+              {n.pinned ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--accent, #75624B)', fontWeight: 600 }}><Icon name="push_pin" size={16} fill={1} />{t('profile.pinnedNote')}</span> : null}
             </>
           )}
         </div>
@@ -70,7 +70,7 @@ export function NotesTab({ p }: { p: P }) {
     );
   };
   const ph = p.isPhone; // round 6, phone (staff and family): the cards are iOS grouped sections, the header outside
-  const hd = (icon: string, text: string) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name={icon} size={16} color="#75624B" />{text}</span>;
+  const hd = (icon: string, text: string) => <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><Icon name={icon} size={16} color="var(--accent, #75624B)" />{text}</span>;
   /** the rows of a notes list card, then its empty line and pager */
   const listBody = (paged: typeof pagedInternal, items: MemberNote[], pagerLabel: string) => (
     <>
@@ -85,7 +85,7 @@ export function NotesTab({ p }: { p: P }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', justifyContent: 'space-between' }}>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }} role="radiogroup" aria-label={t('profile.whoCanSee')}>
           {([['staff', t('common.staffOnly'), 'lock'], ['family', t('common.sharedFam'), 'group']] as const).map(([k, label, icon]) => (
-            <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} style={{ height: 40, padding: '0 16px 0 12px', borderRadius: 12, border: kind === k ? '1px solid #24201C' : '1px solid #DCD3C8', background: kind === k ? '#24201C' : '#FFFFFF', color: kind === k ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+            <button key={k} type="button" role="radio" aria-checked={kind === k} onClick={() => setKind(k)} className={kind === k ? undefined : 'cp-fill'} style={{ height: 40, padding: '0 16px 0 12px', borderRadius: 999, border: 'none', background: kind === k ? '#24201C' : 'var(--fill, #F4F4F5)', color: kind === k ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
               <Icon name={icon} size={18} />{label}
             </button>
           ))}
@@ -98,7 +98,7 @@ export function NotesTab({ p }: { p: P }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 14 : 'clamp(18px, 2.8vw, 28px)', maxWidth: 860 }}>
       {writer ? (
         ph ? <Group title={t('profile.addNote')} gap={16}>{addBody}</Group> : (
-          <div style={cardStyle}>
+          <div className="cp-grey" style={cardStyle}>
             <SectionLabel>{t('profile.addNote')}</SectionLabel>
             {addBody}
           </div>
@@ -106,9 +106,9 @@ export function NotesTab({ p }: { p: P }) {
       ) : null}
       {!p.family ? (
         ph ? <Group title={hd('lock', t('common.staffOnly'))} pad="0 16px" gap={0}>{listBody(pagedInternal, internal, `${t('profile.pagerNotes')} · ${t('common.staffOnly')}`)}</Group> : (
-          <div style={listCardStyle}>
+          <div className="cp-grey" style={listCardStyle}>
             <div style={{ padding: '20px 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-              <Icon name="lock" size={20} color="#75624B" />
+              <Icon name="lock" size={20} color="var(--accent, #75624B)" />
               <span style={{ flex: 1 }}><SectionLabel>{t('common.staffOnly')}</SectionLabel></span>
             </div>
             {listBody(pagedInternal, internal, `${t('profile.pagerNotes')} · ${t('common.staffOnly')}`)}
@@ -116,9 +116,9 @@ export function NotesTab({ p }: { p: P }) {
         )
       ) : null}
       {ph ? <Group title={hd('group', t('common.sharedFam'))} meta={p.family ? t('profile.fromClubTeam') : undefined} pad="0 16px" gap={0}>{listBody(pagedShared, shared, `${t('profile.pagerNotes')} · ${t('common.sharedFam')}`)}</Group> : (
-        <div style={listCardStyle}>
+        <div className="cp-grey" style={listCardStyle}>
           <div style={{ padding: '20px 0 8px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <Icon name="group" size={20} color="#75624B" />
+            <Icon name="group" size={20} color="var(--accent, #75624B)" />
             <span style={{ flex: 1 }}><SectionLabel>{t('common.sharedFam')}</SectionLabel></span>
             {p.family ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.fromClubTeam')}</span> : null}
           </div>

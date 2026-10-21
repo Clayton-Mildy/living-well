@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, execute, getUser, projectForFamily, type ClubState } from '../index';
-import { DRAFT_ID, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView } from './calendar';
+import { DRAFT_ID, dayEditable, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView } from './calendar';
 
 const T = '2026-10-21';
 const fresh = (): ClubState => buildSeed().citra;
@@ -174,10 +174,16 @@ describe('the weekly schedule by week', () => {
     expect(weekDates('2026-11-02')).toEqual(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']);
   });
 
-  it('only a week that has not started can be changed', () => {
-    expect(weekEditable('2026-10-19', T)).toBe(false); // this week
+  it('KC round 7: a week can be changed until it is over: the current week from today on, a future week, but not a week that has passed', () => {
+    expect(weekEditable('2026-10-19', T)).toBe(true); // this week (Wednesday): editable
     expect(weekEditable('2026-10-26', T)).toBe(true);
-    expect(weekEditable('2026-10-26', '2026-10-26')).toBe(false); // on its Monday it has started
+    expect(weekEditable('2026-10-26', '2026-10-26')).toBe(true); // on its Monday it is the current week
+    expect(weekEditable('2026-10-19', '2026-10-23')).toBe(true); // its Friday
+    expect(weekEditable('2026-10-19', '2026-10-24')).toBe(false); // Saturday: the week is over
+    expect(weekEditable('2026-10-12', T)).toBe(false);
+    expect(dayEditable('2026-10-20', T)).toBe(false); // a day before today stays as it was
+    expect(dayEditable(T, T)).toBe(true);
+    expect(dayEditable('2026-10-22', T)).toBe(true);
   });
 
   it('weekDays follows the version in force on each date, even when a version starts mid-week', () => {
@@ -211,9 +217,10 @@ describe('the weekly schedule by week', () => {
     expect(other.draftHere).toBe(false);
     expect(other.changes).toEqual([]);
     expect(other.otherDraft).toEqual({ monday: '2026-11-02', changes: 1 });
-    // this week has started: it shows what runs and is not editable; the draft is for another week
+    // this week is editable from today on; the draft is for another week
     const now = weekView(d, '2026-10-19', T);
-    expect(now).toMatchObject({ editable: false, draftHere: false, changes: [] });
+    expect(now).toMatchObject({ editable: true, draftHere: false, changes: [] });
+    expect(weekView(d, '2026-10-12', T)).toMatchObject({ editable: false, draftHere: false, changes: [] }); // a week that is over only shows what ran
     expect(now.days[3]['10:30']?.activityId).toBe('act-keroncong');
     // a draft equal to what runs is no draft for the banner
     const same = cx(s, 'schedule.saveDraft', { days: builderDays(s), effectiveFrom: '2026-11-02' }, 's9', 'w3');

@@ -23,8 +23,6 @@ function world(start: ClubState = buildSeed().citra) {
     set(next: ClubState) { s = next; },
     /** The demo user as the current state sees them (so a test can switch app access on). */
     who: (uid: string) => getUser({ citra: s }, uid)!,
-    /** The driver and housekeeping have no app access until People switches it on. */
-    withAccess(uid: string) { s = { ...s, staff: { ...s.staff, [uid]: { ...s.staff[uid], appAccess: true } } }; return w; },
     run(name: string, input: unknown, uid: string, clock = at(T)) {
       const r = execute(s, name, input, w.who(uid), clock, `t${++n}`);
       s = r.state;
@@ -326,14 +324,15 @@ describe('payments', () => {
   it('a partial payment makes the invoice part paid, the rest makes it paid', () => {
     const w = world();
     expect(w.status('INV-2610-046')).toBe('outstanding');
-    const r = w.run('payment.record', { memberId: 'm46', amount: 2_000_000, method: 'bankTransferSgd', ref: 'SG-4471', invoiceId: 'INV-2610-046', foreign: { ccy: 'SGD', amount: 330.5 } }, 's10');
+    const r = w.run('payment.record', { memberId: 'm46', amount: 2_000_000, method: 'bankTransfer', ref: 'TF-4471', invoiceId: 'INV-2610-046' }, 's10');
     expect(w.status('INV-2610-046')).toBe('partial');
     expect(balanceOf(w.s, w.s.invoices['INV-2610-046'])).toBe(1_950_000);
     const pay = w.s.payments[r.result.paymentId as string];
-    expect(pay).toMatchObject({ memberId: 'm46', method: 'bankTransferSgd', amount: 2_000_000, ref: 'SG-4471', receivedOn: T, receivedAt: '10:00', xero: 'pending', by: 'staff:s10', foreign: { ccy: 'SGD', amount: 330.5 } });
+    expect(pay).toMatchObject({ memberId: 'm46', method: 'bankTransfer', amount: 2_000_000, ref: 'TF-4471', receivedOn: T, receivedAt: '10:00', xero: 'pending', by: 'staff:s10' });
+    expect(pay).not.toHaveProperty('foreign');
     expect(pay.allocations).toEqual([{ invoiceId: 'INV-2610-046', amount: 2_000_000 }]);
     expect(w.s.invoices['INV-2610-046'].xero).toBe('awaitingPayment'); // not settled yet
-    w.run('payment.record', { memberId: 'm46', amount: 1_950_000, method: 'revolut', ref: 'RV-1', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 1_950_000, method: 'bankTransfer', ref: 'TF-2', invoiceId: 'INV-2610-046' }, 's10');
     expect(w.status('INV-2610-046')).toBe('paid');
     expect(w.s.invoices['INV-2610-046'].xero).toBe('pending'); // settled: Xero hears about it
     expect(paidOn(w.s, 'INV-2610-046')).toBe(3_950_000);
@@ -364,7 +363,9 @@ describe('payments', () => {
     w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash' }, 'f1', 'err.forbidden');
     w.fail('payment.record', { memberId: 'm46', amount: 0, method: 'cash' }, 's10', 'err.invalid');
     w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'bitcoin' }, 's10', 'err.invalid');
-    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'revolut', foreign: { ccy: 'USD', amount: 3 } }, 's10', 'err.invalid');
+    // KC round 8d: everything is paid in Indonesia, in rupiah: no SGD / Revolut methods and no foreign amount any more
+    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'revolut' }, 's10', 'err.invalid');
+    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'bankTransferSgd' }, 's10', 'err.invalid');
     w.fail('payment.record', { memberId: 'nobody', amount: 1000, method: 'cash' }, 's10', 'err.notFound');
     w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10', 'err.notFound'); // someone else's invoice
     w.fail('payment.record', { memberId: 'm2', amount: 1000, method: 'cash', invoiceId: 'INV-2610-002' }, 's10', 'finance.err.invoicePaid');
@@ -510,7 +511,7 @@ describe('Xero (simulated)', () => {
   it('xero.sync flips everything at once', () => {
     const w = world();
     w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
-    w.run('payment.record', { memberId: 'm20', amount: 1_000_000, method: 'revolut', ref: 'R', invoiceId: 'INV-2610-020' }, 's10');
+    w.run('payment.record', { memberId: 'm20', amount: 1_000_000, method: 'bankTransfer', ref: 'R', invoiceId: 'INV-2610-020' }, 's10');
     expect(paymentsBoard(w.s, T).xeroPending).toBe(2);
     const r = w.run('xero.sync', {}, 's10');
     expect(r.result.synced).toBeGreaterThanOrEqual(3); // two payments + the invoice they settled
@@ -540,8 +541,8 @@ describe('Xero (simulated)', () => {
 
 describe('budget', () => {
   it('any staff can request; finance and management requests stay pending too', () => {
-    const w = world().withAccess('s7');
-    for (const uid of ['s5', 's8', 's10', 's9', 's7']) {
+    const w = world();
+    for (const uid of ['s5', 's8', 's10', 's9', 's2']) {
       const r = w.run('budget.request', { sectionId: 'operations', item: `Item by ${uid}`, amount: 100_000 }, uid);
       expect(w.s.budgetRequests[r.result.requestId as string]).toMatchObject({ status: 'pending', requestedBy: uid, sectionId: 'operations', weekStart: '2026-10-19', amount: 100_000 });
     }
@@ -578,7 +579,7 @@ describe('budget', () => {
     expect(updatesFor(w.s, getUser(clubs, 's2')!).some((x) => x.kind === 'finance.notif.budgetRejected')).toBe(true);
   });
   it('the requester can edit and cancel while it is pending; nobody else, and not afterwards', () => {
-    const w = world().withAccess('s7');
+    const w = world();
     w.fail('budget.cancel', { id: 'b1' }, 's2', 'err.forbidden'); // someone else's
     w.fail('budget.cancel', { id: 'b1' }, 's10', 'err.forbidden'); // finance rejects instead
     w.fail('budget.edit', { id: 'b1', amount: 1 }, 's2', 'err.forbidden');
@@ -590,7 +591,7 @@ describe('budget', () => {
     w.fail('budget.cancel', { id: 'b1' }, 's5', 'finance.err.notPending');
     w.fail('budget.edit', { id: 'b1', amount: 1 }, 's5', 'finance.err.notPending');
     // approved: the requester can no longer pull it back
-    w.fail('budget.cancel', { id: 'b3' }, 's7', 'finance.err.notPending');
+    w.fail('budget.cancel', { id: 'b3' }, 's1', 'finance.err.notPending');
   });
   it('sets a weekly limit from a Monday on, keeping the history', () => {
     const w = world();
@@ -605,7 +606,7 @@ describe('budget', () => {
     w.fail('budget.setLimit', { sectionId: 'nope', weekly: 1, fromWeek: '2026-10-26' }, 's10', 'err.notFound');
   });
   it('adds and renames sections', () => {
-    const w = world().withAccess('s7');
+    const w = world();
     const r = w.run('budget.addSection', { name: 'Transport', nameId: 'Transportasi', weekly: 1_500_000 }, 's10');
     const id = r.result.sectionId as string;
     expect(w.s.budgetSections[id]).toMatchObject({ name: 'Transport', nameId: 'Transportasi', limits: [{ fromWeek: '2026-10-19', weekly: 1_500_000 }] });
@@ -618,7 +619,7 @@ describe('budget', () => {
     expect(w.s.budgetSections[id].nameId).toBeUndefined();
     w.fail('budget.renameSection', { id, name: 'Activities' }, 's10', 'finance.err.sectionExists');
     // a request can use the new section straight away
-    expect(() => w.run('budget.request', { sectionId: id, item: 'Fuel', amount: 200_000 }, 's7')).not.toThrow();
+    expect(() => w.run('budget.request', { sectionId: id, item: 'Fuel', amount: 200_000 }, 's1')).not.toThrow();
   });
   it('the seed numbers: spend is receipts, committed is approved requests without a receipt', () => {
     const w = world();
@@ -629,8 +630,8 @@ describe('budget', () => {
     expect(budgetWeekOf(w.s, 'fnb', '2026-10-14')).toMatchObject({ weekStart: '2026-10-12', spent: 0, committed: 0, left: 9_500_000 });
   });
   it('a receipt that settles an approved request turns committed into spent: no double count, in any week', () => {
-    const w = world().withAccess('s7');
-    const r = w.run('receipt.add', { date: '2026-10-20', supplier: 'Bengkel Maju', amount: 240_000, sectionId: 'operations', budgetRequestId: 'b3', fileName: 'nota.jpg' }, 's7');
+    const w = world();
+    const r = w.run('receipt.add', { date: '2026-10-20', supplier: 'Bengkel Maju', amount: 240_000, sectionId: 'operations', budgetRequestId: 'b3', fileName: 'nota.jpg' }, 's1');
     expect(budgetWeekOf(w.s, 'operations', T)).toMatchObject({ spent: 1_170_000 + 240_000, committed: 0, used: 1_410_000 });
     // receipted in a later week: the request no longer counts as committed in its own week
     const s2 = { ...w.s, receipts: { ...w.s.receipts, [r.result.receiptId as string]: { ...w.s.receipts[r.result.receiptId as string], date: '2026-10-27' } } };
@@ -682,12 +683,12 @@ describe('receipts', () => {
     w.fail('receipt.add', { date: T, supplier: 'X', directoryId: 'nope', amount: 5, sectionId: 'fnb' }, 's2', 'err.notFound');
   });
   it('only an approved request of the same section that nobody has receipted can be linked', () => {
-    const w = world().withAccess('s7');
+    const w = world();
     const ok = { date: T, supplier: 'X', amount: 200_000, sectionId: 'operations', budgetRequestId: 'b3', fileName: 'x.jpg' };
-    w.fail('receipt.add', { ...ok, budgetRequestId: 'b1' }, 's7', 'finance.err.requestNotLinkable'); // pending, and another section
-    w.fail('receipt.add', { ...ok, sectionId: 'fnb' }, 's7', 'finance.err.requestNotLinkable');
-    w.run('receipt.add', ok, 's7');
-    w.fail('receipt.add', ok, 's7', 'finance.err.requestNotLinkable'); // already receipted
+    w.fail('receipt.add', { ...ok, budgetRequestId: 'b1' }, 's1', 'finance.err.requestNotLinkable'); // pending, and another section
+    w.fail('receipt.add', { ...ok, sectionId: 'fnb' }, 's1', 'finance.err.requestNotLinkable');
+    w.run('receipt.add', ok, 's1');
+    w.fail('receipt.add', ok, 's1', 'finance.err.requestNotLinkable'); // already receipted
   });
   it('finance approves: Xero pending, submitter told; or rejects with a note: no longer spent', () => {
     const w = world();

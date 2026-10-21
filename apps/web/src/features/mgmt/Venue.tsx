@@ -33,12 +33,12 @@ function RatingLine({ v }: { v: VenueBooking }) {
   return (
     <div data-rating={v.id} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 4 }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexWrap: 'wrap', fontSize: 14, lineHeight: '20px' }}>
-        {v.review.stars > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontWeight: 500 }}><Icon name="star" size={16} fill={1} color="#75624B" />{v.review.stars}/5</span> : null}
+        {v.review.stars > 0 ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2, fontWeight: 500 }}><Icon name="star" size={16} fill={1} color="var(--accent, #75624B)" />{v.review.stars}/5</span> : null}
         <span style={{ overflowWrap: 'anywhere' }}>“{v.review.text || t('mgmt.vnNoText')}”</span>
       </span>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13, lineHeight: '18px', color: '#6B6259' }}>
         {resp ? t('mgmt.vnRatingFrom', { name: resp.respondentName || v.contactName }) : t('mgmt.vnEnteredByHand')}
-        {resp ? <button type="button" onClick={() => navigate(`/surveys?survey=${resp.surveyId}&tab=responses`)} style={{ border: 'none', background: 'transparent', padding: 0, color: '#75624B', fontSize: 13, fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'Inter' }}>{t('mgmt.vnViewAnswers')}</button> : null}
+        {resp ? <button type="button" onClick={() => navigate(`/surveys?survey=${resp.surveyId}&tab=responses`)} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 13, fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'Inter' }}>{t('mgmt.vnViewAnswers')}</button> : null}
       </span>
     </div>
   );
@@ -98,9 +98,9 @@ export function Venue() {
     if (isPhone) {
       // round 6, phone: a grouped row (icon, the booking's lines, status), then small pill actions under it
       return (
-        <div key={v.id} data-venue={v.id} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 0', borderTop: '1px solid #F0EAE1', opacity: v.status === 'cancelled' ? 0.7 : 1 }}>
+        <div key={v.id} data-venue={v.id} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '12px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', opacity: v.status === 'cancelled' ? 0.7 : 1 }}>
           <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
-            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', flex: 'none' }}><Icon name="storefront" size={20} /></span>
+            <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent, #75624B)', flex: 'none' }}><Icon name="storefront" size={20} /></span>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{v.org}</span>
               <span style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{t('mgmt.vnSub', { date: fdl(v.date), from: v.from, to: v.to, n: v.guests, room: roomName(s.rooms[v.roomId], lang) })}</span>
@@ -121,8 +121,8 @@ export function Venue() {
     }
     return (
       <Fragment key={v.id}>
-        <div data-venue={v.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', padding: '18px 0', borderTop: '1px solid #F0EAE1', opacity: v.status === 'cancelled' ? 0.7 : 1 }}>
-          <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', flex: 'none' }}><Icon name="storefront" size={21} /></span>
+        <div data-venue={v.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 16, flexWrap: 'wrap', padding: '18px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', opacity: v.status === 'cancelled' ? 0.7 : 1 }}>
+          <span aria-hidden="true" className="cp-fill" style={{ width: 46, height: 46, borderRadius: 999, background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent, #75624B)', flex: 'none' }}><Icon name="storefront" size={21} /></span>
           <div style={{ flex: '1 1 260px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{v.org}</span>
             <span style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{t('mgmt.vnSub', { date: fdl(v.date), from: v.from, to: v.to, n: v.guests, room: roomName(s.rooms[v.roomId], lang) })}</span>
@@ -158,7 +158,7 @@ export function Venue() {
           </div>
         </>
       ) : (
-        <div style={{ ...heroCard, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 16, animation: 'cpUp .2s ease-out' }}>
+        <div className="cp-grey" style={{ ...heroCard, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 16, animation: 'cpUp .2s ease-out' }}>
           <span style={labelStyle}>{t('mgmt.vnBooking')}</span>
           <VenueForm value={form} onChange={setForm} rooms={rooms} />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
@@ -169,7 +169,7 @@ export function Venue() {
       )) : null}
 
       <ListCard title={t('mgmt.vnUpcoming')}>
-        {upcoming.length ? upPaged.rows.map(row) : <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('mgmt.vnNone')}</div>}
+        {upcoming.length ? upPaged.rows.map(row) : <div style={{ padding: '14px 0 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, color: '#6B6259' }}>{t('mgmt.vnNone')}</div>}
         <Pager page={upPaged.page} pages={upPaged.pages} onPage={upPaged.setPage} label={t('mgmt.pgUpcoming')} />
       </ListCard>
       {past.length ? (
@@ -244,8 +244,8 @@ function VenueForm({ value: f, onChange, rooms, ignoreId }: { value: VForm; onCh
             const sel = f.from === a && f.to === b;
             const off = !slotOk(a, b);
             return (
-              <button key={a} type="button" className="cp-chip" aria-pressed={sel} aria-disabled={off || undefined} onClick={() => { if (!off || sel) set({ from: a, to: b }); }}
-                style={{ minHeight: 52, minWidth: 96, padding: '6px 14px', borderRadius: 12, border: sel ? '1px solid #24201C' : off ? '1px solid #F0EAE1' : '1px solid #DCD3C8', background: sel ? '#24201C' : off ? '#F3EEE8' : '#FFFFFF', color: sel ? '#FFFFFF' : off ? '#5E5852' : '#24201C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
+              <button key={a} type="button" className={sel ? 'cp-chip' : 'cp-chip cp-fill'} aria-pressed={sel} aria-disabled={off || undefined} onClick={() => { if (!off || sel) set({ from: a, to: b }); }}
+                style={{ minHeight: 52, minWidth: 96, padding: '6px 14px', borderRadius: 12, border: 'none', background: sel ? '#24201C' : 'var(--fill, #F4F4F5)', color: sel ? '#FFFFFF' : off ? '#8A8078' : '#24201C', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 1, cursor: off ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
                 <span style={{ fontSize: 16, fontWeight: 600, whiteSpace: 'nowrap', lineHeight: 1.4 }}>{a}–{b}</span>
                 <span style={{ fontSize: FONT_SMALL, whiteSpace: 'nowrap', lineHeight: 1.4 }}>{slotSub(a, b)}</span>
               </button>
@@ -316,8 +316,8 @@ function ReviewDialog({ v, onClose }: { v: VenueBooking | null; onClose: () => v
         <SectionLabel>{t('mgmt.vnStars')}</SectionLabel>
         <div style={chipRow} role="radiogroup" aria-label={t('mgmt.vnStars')}>
           {[1, 2, 3, 4, 5].map((n) => (
-            <button key={n} type="button" role="radio" aria-checked={stars === n} aria-label={t('mgmt.vnStarsOf', { n })} onClick={() => setStars(n)}
-              style={{ width: 52, height: 52, borderRadius: 999, border: stars === n ? '1px solid #75624B' : '1px solid #E4DACD', background: stars === n ? '#F3EEE8' : '#FFFFFF', color: stars === n ? '#75624B' : '#8A755B', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', fontFamily: 'Inter', fontSize: 16, fontWeight: 600 }}>
+            <button key={n} type="button" role="radio" aria-checked={stars === n} aria-label={t('mgmt.vnStarsOf', { n })} onClick={() => setStars(n)} className={stars === n ? undefined : 'cp-fill'}
+              style={{ width: 52, height: 52, borderRadius: 999, border: 'none', background: stars === n ? '#24201C' : 'var(--fill, #F4F4F5)', color: stars === n ? '#FFFFFF' : 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', fontFamily: 'Inter', fontSize: 16, fontWeight: 600 }}>
               {n}<Icon name="star" size={18} fill={stars >= n ? 1 : 0} />
             </button>
           ))}

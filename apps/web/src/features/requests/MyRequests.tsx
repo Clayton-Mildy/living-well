@@ -119,7 +119,7 @@ export function MyRequests() {
           );
         })}
         {!rows.length ? <EmptyState icon="inbox" title={t('requests.mine.empty')} /> : null}
-        {paged.pages > 1 ? <div style={{ padding: '8px 0 4px', borderTop: '1px solid #F0EAE1' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.mine.title')} /></div> : null}
+        {paged.pages > 1 ? <div style={{ padding: '8px 0 4px', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.mine.title')} /></div> : null}
         {dialogs}
       </PGroup>
     );
@@ -129,7 +129,7 @@ export function MyRequests() {
       <HeroHead title={t('requests.mine.title')} meta={waiting ? t('requests.mine.waiting', { n: waiting }) : undefined} />
       {paged.rows.map((x) => (
         <div key={x.type + x.id} data-testid="my-request" data-type={x.type} data-open={x.open ? 'yes' : 'no'} style={{ ...hrow, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span aria-hidden="true" className="cp-hide-phone" style={{ width: 46, height: 46, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={iconOf(x)} size={21} weight={300} color="#6E5A43" /></span>
+          <span aria-hidden="true" className="cp-hide-phone" style={{ width: 46, height: 46, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={iconOf(x)} size={21} weight={300} color="var(--eyebrow, #6E5A43)" /></span>
           <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <span style={rowTitle}>{titleOf(x)}</span>
             <span style={rowSub}>{subOf(x)}</span>
@@ -140,7 +140,7 @@ export function MyRequests() {
         </div>
       ))}
       {!rows.length ? <EmptyState icon="inbox" title={t('requests.mine.empty')} /> : null}
-      <div style={{ padding: paged.pages > 1 ? '8px 0 4px' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.mine.title')} /></div>
+      <div style={{ padding: paged.pages > 1 ? '8px 0 4px' : 0, borderTop: paged.pages > 1 ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.mine.title')} /></div>
 
       {dialogs}
     </Hero>

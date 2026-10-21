@@ -71,7 +71,7 @@ export function SessionSheet({ id, onClose, onEdit }: { id: string | null; onClo
       {mgmt && booked && g.date <= today ? <Button full icon="task_alt" disabled={busy} onClick={() => run('guest.done', { id: g.id }, t('guests.doneToast', { name }))}>{t('guests.markDone')}</Button> : null}
       {(mgmt || role === 'finance') && pay === 'toPay' && inv && inv.status === 'approved' ? <Button full icon="paid" disabled={busy} onClick={() => run('vendorInvoice.markPaid', { id: inv.id }, t('guests.paidToast', { name }))}>{t('guests.markPaid')}</Button> : null}
       {wa ? (
-        <a href={wa} target="_blank" rel="noopener" className="h-cream cp-press" style={{ height: 44, borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 15, fontWeight: 500, textDecoration: 'none', fontFamily: 'Inter' }}>
+        <a href={wa} target="_blank" rel="noopener" className="h-fill cp-press" style={{ height: 44, borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, fontSize: 15, fontWeight: 500, textDecoration: 'none', fontFamily: 'Inter' }}>
           <Icon name="chat" size={19} weight={300} />{t('guests.whatsapp', { name })}<span style={{ color: '#6B6259', fontWeight: 400, fontVariantNumeric: 'tabular-nums' }}>{host ? fmtPhone(host.phone) : ''}</span>
         </a>
       ) : null}

@@ -89,7 +89,7 @@ export function ActivityPicturesBody() {
     const size = isPhone ? 52 : 64;
     const thumb: CSSProperties = { position: 'relative', width: size, height: size, borderRadius: 10, overflow: 'hidden', background: '#E8E1D8', flex: 'none', border: 'none', padding: 0 };
     return (
-      <div key={p.id} data-picture={p.id} data-state={x.state} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '10px 12px 10px 16px' : '12px 0', minHeight: size + 20, ...(isPhone ? rowLine(i === 0, 80) : { borderTop: i ? '1px solid #F0EAE1' : 'none' }) }}>
+      <div key={p.id} data-picture={p.id} data-state={x.state} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '10px 12px 10px 16px' : '12px 0', minHeight: size + 20, ...(isPhone ? rowLine(i === 0, 80) : { borderTop: i ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }) }}>
         {rejected
           ? <span aria-hidden="true" style={{ ...thumb, opacity: 0.45 }}><PhotoImg photo={p} /></span>
           : <button type="button" className="cp-press" onClick={() => setViewer(p.id)} aria-label={aria} data-photo-id={p.id} style={{ ...thumb, cursor: 'pointer' }}><PhotoImg photo={p} /></button>}
@@ -99,7 +99,7 @@ export function ActivityPicturesBody() {
           {rejected && x.reason ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#9A3D24' }}>{t('activity.picReason', { reason: x.reason })}</span> : null}
         </span>
         {rejected && canAdd ? (
-          <button type="button" className="cp-press" onClick={() => !busy && setCap(true)} aria-disabled={busy} style={{ height: isPhone ? 34 : 44, padding: '0 14px 0 10px', borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', flex: 'none', fontFamily: 'Inter' }}>
+          <button type="button" className="cp-press cp-fill" onClick={() => !busy && setCap(true)} aria-disabled={busy} style={{ height: isPhone ? 34 : 44, padding: '0 14px 0 10px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', flex: 'none', fontFamily: 'Inter' }}>
             <Icon name="add_a_photo" size={18} />{t('activity.picUploadAnother')}
           </button>
         ) : null}
@@ -118,7 +118,7 @@ export function ActivityPicturesBody() {
   const list = pics.length ? pics.map(row) : [<div key="empty" style={{ padding: isPhone ? '18px 16px' : '20px 0', fontSize: 15, color: '#5E5852', lineHeight: 1.4 }}>{t('activity.picsEmpty')}</div>];
   const note = (
     <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6, padding: isPhone ? '0 16px' : 0, fontSize: 13, lineHeight: '18px', color: '#6B6259' }}>
-      <Icon name={review ? 'hourglass_top' : 'lock'} size={16} color="#75624B" style={{ marginTop: 1 }} />{t(review ? 'activity.picNoteReview' : 'activity.picNote')}
+      <Icon name={review ? 'hourglass_top' : 'lock'} size={16} color="var(--accent, #75624B)" style={{ marginTop: 1 }} />{t(review ? 'activity.picNoteReview' : 'activity.picNote')}
     </div>
   );
 

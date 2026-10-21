@@ -94,7 +94,7 @@ export const taskActions: ActionDef[] = [
 
   defineAction<{ templateId: string; photoMediaId?: string; note?: string }>({
     name: 'task.done',
-    // the role's own staff, or management (for people without a login: housekeeping, the driver)
+    // the role's own staff, or management
     can: (u, i, s) => {
       if (!isStaff(u)) return false;
       const t = s.taskTemplates?.[i.templateId];

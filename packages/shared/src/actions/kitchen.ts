@@ -71,7 +71,7 @@ function checkDishes(d: Draft<ClubState>, ids: string[], course: Course, ctx: Ct
     if (!x || x.deletedAt || x.course !== course) ctx.fail('kitchen.err.badDish', { id });
   }
 }
-function ensureDayMenu(d: Draft<ClubState>, date: ISODate, ctx: Ctx) {
+export function ensureDayMenu(d: Draft<ClubState>, date: ISODate, ctx: Ctx) {
   if (!d.dayMenus[date]) d.dayMenus[date] = { id: date, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, date, allergyPlans: [] };
   return d.dayMenus[date];
 }

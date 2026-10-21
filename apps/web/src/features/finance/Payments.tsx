@@ -95,7 +95,7 @@ function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentVi
       <div style={{ ...prow(first), display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
           <span style={{ ...rowTitle, fontSize: 16, minWidth: 0 }}>{member ? memberName(member) : p.memberId}</span>
-          <span style={{ fontSize: 16, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, textAlign: 'right' }}>{p.foreign ? `${p.foreign.ccy} ${p.foreign.amount} · ` : ''}{rp(p.amount)}</span>
+          <span style={{ fontSize: 16, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, textAlign: 'right' }}>{rp(p.amount)}</span>
         </div>
         <span style={{ ...rowSub, fontSize: 13 }}>{sub}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', minHeight: 24 }}>
@@ -125,14 +125,14 @@ function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentVi
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginLeft: 'auto' }}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2 }}>
-            <span style={{ fontSize: 17, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{p.foreign ? `${p.foreign.ccy} ${p.foreign.amount} · ` : ''}{rp(p.amount)}</span>
+            <span style={{ fontSize: 17, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{rp(p.amount)}</span>
             <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{p.receivedOn === today ? t('common.today') : fds(p.receivedOn)}{p.receivedAt ? `, ${p.receivedAt}` : ''}</span>
           </div>
           {p.xero === 'synced' ? <Badge kind="paid" label={t('finance.xero.synced')} /> : <Badge kind="pending" label={t('finance.xero.pending')} />}
         </div>
         {pv.refundable > 0 && !refunding ? (
           <button type="button" onClick={onRefund} aria-label={`${t('finance.pay.refund')} ${member ? memberName(member) : ''} ${numbers.join(' ')}`.trim()}
-            style={{ height: 40, padding: '0 6px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('finance.pay.refund')}</button>
+            style={{ height: 40, padding: '0 6px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('finance.pay.refund')}</button>
         ) : null}
       </div>
       {pv.refunds.map((r) => (

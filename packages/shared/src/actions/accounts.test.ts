@@ -7,12 +7,12 @@ let n = 0;
 const clubs = (s: ClubState) => ({ [s.clubId]: s });
 const run = (s: ClubState, name: string, input: unknown, user: User) => execute(s, name, input, user, clock, `a${++n}`);
 const mgmt = (s: ClubState) => getUser(clubs(s), 's9')!;
-const newStaff = (over: Record<string, unknown> = {}) => ({ name: 'Wulan Sari', role: 'housekeeping', title: 'Housekeeping', phone: '0811 2201 7788', hr: { contract: 'pkwtt' }, ...over });
+const newStaff = (over: Record<string, unknown> = {}) => ({ name: 'Wulan Sari', role: 'kitchen', title: 'Kitchen helper', phone: '0811 2201 7788', hr: { contract: 'pkwtt' }, ...over });
 
 describe('seed usernames', () => {
   it('every staff member and family contact has their lowercase first name, all unique', () => {
     const rows = accountRows(buildSeed());
-    expect(rows.map((r) => r.username).sort()).toEqual(['agus', 'caca', 'cynthia', 'daniel', 'dewi', 'dimas', 'dinar', 'ega', 'fransiska', 'joko', 'laras', 'maria', 'siti', 'stephanie', 'yohana', 'yohanes']);
+    expect(rows.map((r) => r.username).sort()).toEqual(['agus', 'caca', 'cynthia', 'daniel', 'dewi', 'dimas', 'dinar', 'ega', 'fransiska', 'laras', 'maria', 'stephanie', 'yohana', 'yohanes']);
     expect(new Set(rows.map((r) => r.username)).size).toBe(rows.length);
   });
   it('nobody in the seed is waiting for a username', () => {
@@ -45,9 +45,11 @@ describe('who needs a username', () => {
     expect(accountsNeedingUsername(clubs(a.state)).map((x) => x.id)).toEqual([fid]);
   });
   it('access states: ok, no app access, no such account', () => {
-    const c = clubs(buildSeed().citra);
+    const s = buildSeed().citra;
+    const added = run(s, 'staff.create', newStaff(), mgmt(s)); // a new staff member has no app access until management switches it on
+    const c = clubs(added.state);
     expect(accessState(c, 's1')).toBe('ok');
-    expect(accessState(c, 's4')).toBe('noAccess');
+    expect(accessState(c, added.result.staffId as string)).toBe('noAccess');
     expect(accessState(c, 'nobody')).toBe('none');
     expect(findAccount(c, 'f1')).toMatchObject({ kind: 'family', username: 'maria', clubId: 'citra' });
   });

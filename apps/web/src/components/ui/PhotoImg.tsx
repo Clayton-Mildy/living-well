@@ -30,7 +30,7 @@ export function PhotoThumbs({ photos, onOpen, alt, max = 4, size = 60 }: { photo
     <div data-testid="session-photos" style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
       {shown.map((p, i) => (
         <button key={p.id} type="button" onClick={() => onOpen(p)} aria-label={alt(p)} data-photo-id={p.id} className="cp-press"
-          style={{ position: 'relative', width: size, height: size, borderRadius: 10, border: 'none', padding: 0, overflow: 'hidden', cursor: 'pointer', background: '#F3EEE8', flex: 'none' }}>
+          style={{ position: 'relative', width: size, height: size, borderRadius: 10, border: 'none', padding: 0, overflow: 'hidden', cursor: 'pointer', background: 'var(--fill, #F4F4F5)', flex: 'none' }}>
           <PhotoImg photo={p} />
           {i === shown.length - 1 && more > 0 ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'rgba(36,32,28,0.55)', color: '#FFFFFF', fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+{more}</span> : null}
         </button>

@@ -43,22 +43,22 @@ export function BudgetForm({ onSent }: { onSent?: () => void }) {
             {secs.map((x) => <ChoiceChip key={x.id} label={sectionName(s, x.id, lang)} selected={sectionId === x.id} onClick={() => setPicked(x.id)} />)}
           </div>
         )}
-        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('requests.budget.item')} aria-label={t('requests.budget.itemLabel')} maxLength={80} style={phoneField} />
-        <input value={amt} onChange={(e) => setAmt(fmtN(e.target.value))} placeholder={t('requests.budget.amount')} aria-label={t('requests.budget.amountLabel')} inputMode="numeric" style={phoneField} />
+        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('requests.budget.item')} aria-label={t('requests.budget.itemLabel')} maxLength={80} className="cp-input cp-fill" style={phoneField} />
+        <input value={amt} onChange={(e) => setAmt(fmtN(e.target.value))} placeholder={t('requests.budget.amount')} aria-label={t('requests.budget.amountLabel')} inputMode="numeric" className="cp-input cp-fill" style={phoneField} />
         <PillButton height={48} on={ok && !busy} onClick={send}>{t('requests.budget.send')}</PillButton>
         {!secs.length ? <Note tone="ochre" icon="info">{t('requests.budget.noSections')}</Note> : null}
       </PGroup>
     );
   }
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 20, boxShadow: '0 1px 2px rgba(60,40,20,.04), 0 18px 40px rgba(60,40,20,.07)', padding: '20px clamp(18px, 3vw, 32px) 24px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'cpUp .2s ease-out' }}>
+    <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '20px clamp(18px, 3vw, 32px) 24px', display: 'flex', flexDirection: 'column', gap: 14, animation: 'cpUp .2s ease-out' }}>
       <span style={cardLabel}>{t('requests.budget.card')}</span>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }} role="group" aria-label={t('requests.budget.section')}>
         {secs.map((x) => <ChoiceChip key={x.id} label={sectionName(s, x.id, lang)} selected={sectionId === x.id} onClick={() => setPicked(x.id)} />)}
       </div>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('requests.budget.item')} aria-label={t('requests.budget.itemLabel')} maxLength={80} style={{ ...bronzeInput, flex: '2 1 240px' }} />
-        <input value={amt} onChange={(e) => setAmt(fmtN(e.target.value))} placeholder={t('requests.budget.amount')} aria-label={t('requests.budget.amountLabel')} inputMode="numeric" style={{ ...bronzeInput, flex: '1 1 140px' }} />
+        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('requests.budget.item')} aria-label={t('requests.budget.itemLabel')} maxLength={80} className="cp-input cp-fill" style={{ ...bronzeInput, flex: '2 1 240px' }} />
+        <input value={amt} onChange={(e) => setAmt(fmtN(e.target.value))} placeholder={t('requests.budget.amount')} aria-label={t('requests.budget.amountLabel')} inputMode="numeric" className="cp-input cp-fill" style={{ ...bronzeInput, flex: '1 1 140px' }} />
         <PillButton height={52} on={ok && !busy} onClick={send}>{t('requests.budget.send')}</PillButton>
       </div>
       {!secs.length ? <Note tone="ochre" icon="info">{t('requests.budget.noSections')}</Note> : null}

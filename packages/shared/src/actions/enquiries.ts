@@ -1,7 +1,7 @@
 // Enquiries (leads), visits and trials, and joining a lead as a member.
 // Registration is on paper: lobby and management type the key details in and attach the signed paper form (a photo or PDF uploaded to /api/media) when the lead joins.
 import type { Draft } from 'immer';
-import type { ClubState, DrugAllergy, Enquiry, FamilyContact, FoodAllergen, GuestVisit, Plan, User } from '../types';
+import type { ClubState, DrugAllergy, Enquiry, FamilyContact, FoodAllergen, GuestVisit, OnlineRegistration, Plan, User } from '../types';
 import { defineAction, hasRole, DomainError, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
@@ -9,11 +9,14 @@ import { FEE_DEFAULTS, priceOn } from '../rules/billing';
 import {
   ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
 } from '../rules/enquiries';
-import { parseHealthBasics, parseRegistration } from './members';
+import { parseCarer, parseHealthBasics, parseKtp, parseRegistration } from './members';
+import { FORM_LINK_DAYS, enquiryByFormToken, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
 import { arr, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
-import { e164, live, sortBy } from '../util';
+import { e164, live, sortBy, addDays } from '../util';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
+/** The public form routes run as the system user (no sign-in: the link is the key). */
+const system = (u: User) => u.id === 'system';
 const S = (d: Draft<ClubState>) => d as unknown as ClubState;
 const NEXT_KINDS = ['callBack', 'sendPrices', 'visit', 'trial', 'followUp', 'starts', 'custom'] as const;
 
@@ -293,6 +296,8 @@ export const enquiriesActions = [
       return {
         enquiryId: id60(o.enquiryId, 'enquiryId'), plan, start: isoDate(o.start, 'start'), formMediaId: mediaId, formFileName: str(o.formFileName, 120) || 'registration-form',
         ...(dob ? { dob } : {}), ...(address ? { address } : {}), ...(o.health !== undefined ? { health: parseHealthBasics(o.health) } : {}), ...(registration ? { registration } : {}),
+        ...(o.nanny !== undefined ? { nanny: parseCarer(o.nanny) as { name: string; nik: string } | null } : {}),
+        ...(o.ktp !== undefined ? { ktp: parseKtp(o.ktp) } : {}),
       };
     },
     run(d, i, ctx) {
@@ -311,7 +316,7 @@ export const enquiriesActions = [
       const gate = ctx.review === 'gate';
       d.members[memberId] = memberFromLead({
         id: memberId, contactId, enquiry: e as unknown as Enquiry, plan: i.plan, start: i.start, today: ctx.today, nowDT: ctx.nowDT, actor: ctx.actor, vaIndex: num, photoTone: num % 5,
-        form: { mediaId: i.formMediaId, fileName: i.formFileName }, details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration },
+        form: { mediaId: i.formMediaId, fileName: i.formFileName }, details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration, nanny: i.nanny, ktp: i.ktp },
       });
       if (!existing) d.familyContacts[contactId] = contactFromLead({ id: contactId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor, activated: !gate });
       const link = linkFromLead({ contactId, memberId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor });
@@ -348,6 +353,79 @@ export const enquiriesActions = [
       delete e.prevStage;
       delete e.prevNext;
       ctx.feed({ icon: 'undo', key: 'enq.feed.joinRejected', params: { name: seniorName(e) } });
+    },
+  }),
+
+  // ---------- KC round 10: the online registration link (a pre-fill for the paper form) ----------
+  defineAction<{ enquiryId: string }>({
+    name: 'enquiry.sendForm',
+    can: (u) => lobbyOrMgmt(u),
+    parse: (raw) => ({ enquiryId: id60(obj(raw).enquiryId, 'enquiryId') }),
+    run(d, i, ctx) {
+      const e = enq(d, i.enquiryId, ctx);
+      if (e.stage === 'joined') ctx.fail('enq.err.alreadyMember');
+      if (e.stage === 'lost' || e.archivedAt) ctx.fail('enq.err.notOpen');
+      const state = formLinkState(e.form, ctx.nowDT);
+      if (state === 'submitted') ctx.fail('enq.err.formDone');
+      const expiresAt = `${addDays(ctx.today, FORM_LINK_DAYS)}T${ctx.now}`;
+      if (e.form && state !== 'expired') {
+        e.form.expiresAt = expiresAt; // sending again keeps the same link alive
+      } else {
+        let token = formTokenOf(`${ctx.clubId}|${e.id}|${ctx.mutationId}`);
+        for (let n = 1; enquiryByFormToken(S(d), token); n++) token = formTokenOf(`${token}|${n}`);
+        e.form = { token, sentAt: ctx.nowDT, sentBy: ctx.actor, expiresAt };
+      }
+      ctx.result.token = e.form.token;
+      ctx.result.path = formPath(e.form.token);
+      ctx.feed({ icon: 'send', key: 'enq.feed.formSent', params: { name: seniorName(e) } });
+    },
+  }),
+  defineAction<{ token: string }>({
+    name: 'enquiry.formOpen',
+    can: (u, i, s) => system(u) && !!enquiryByFormToken(s, i.token),
+    parse: (raw) => ({ token: str(obj(raw).token, 80, { required: true, field: 'token' }) }),
+    run(d, i, ctx) {
+      const e = enquiryByFormToken(S(d), i.token);
+      if (!e) return ctx.fail('err.notFound');
+      const f = d.enquiries[e.id].form!;
+      if (formLinkState(f, ctx.nowDT) === 'sent') f.openedAt = ctx.nowDT;
+    },
+  }),
+  defineAction<{ token: string; draft: OnlineRegistration }>({
+    name: 'enquiry.formSubmit',
+    can: (u, i, s) => system(u) && !!enquiryByFormToken(s, i.token),
+    parse(raw) {
+      const o = obj(raw);
+      const dr = obj(o.draft, 'draft');
+      const c = obj(dr.contact, 'contact');
+      const h = parseHealthBasics(dr.health);
+      const registration = parseRegistration(dr.registration);
+      const plan = dr.plan ? oneOf(dr.plan, ['flex', 'gold'] as const, 'plan') : undefined;
+      return {
+        token: str(o.token, 80, { required: true, field: 'token' }),
+        draft: {
+          title: oneOf(dr.title, TITLES, 'title'), name: str(dr.name, 80, { required: true, field: 'name' }), dob: dr.dob ? isoDate(dr.dob, 'dob') : '', address: str(dr.address, 200),
+          contact: { name: str(c.name, 80, { required: true, field: 'contact.name' }), relation: oneOf(c.relation, ALL_RELATIONS, 'contact.relation'), phone: phone(c.phone, 'contact.phone') },
+          ...(plan ? { plan } : {}), ...(dr.nanny !== undefined ? { nanny: parseCarer(dr.nanny) as { name: string; nik: string } | null } : {}), ...(dr.ktp !== undefined ? { ktp: parseKtp(dr.ktp) } : {}), health: h, ...(registration ? { registration } : {}), lang: oneOf(dr.lang ?? 'en', ['en', 'id'] as const, 'lang'),
+        },
+      };
+    },
+    run(d, i, ctx) {
+      const e = enquiryByFormToken(S(d), i.token);
+      if (!e) return ctx.fail('err.notFound');
+      const row = d.enquiries[e.id];
+      const state = formLinkState(row.form, ctx.nowDT);
+      if (state === 'expired') ctx.fail('enq.err.formExpired');
+      if (state === 'submitted') ctx.fail('enq.err.formDone');
+      if (row.stage === 'joined' || row.stage === 'lost' || row.archivedAt) ctx.fail('enq.err.notOpen');
+      if (i.draft.dob && i.draft.dob > ctx.today) ctx.fail('members.err.dobInvalid');
+      const f = row.form!;
+      f.draft = i.draft;
+      f.submittedAt = ctx.nowDT;
+      f.filledBy = i.draft.contact.name;
+      f.openedAt ??= ctx.nowDT;
+      ctx.feed({ icon: 'assignment_turned_in', key: 'enq.feed.formSubmitted', params: { name: seniorName(row) } });
+      ctx.notify({ toRoles: ['lobby', 'mgmt'], kind: 'enq.notif.formSubmitted', params: { name: seniorName(row), by: i.draft.contact.name }, link: `/enquiries?e=${row.id}` });
     },
   }),
 ];

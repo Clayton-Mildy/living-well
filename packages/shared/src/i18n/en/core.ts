@@ -21,27 +21,27 @@ export const common = {
   mediaType: 'Please use a JPEG, PNG or WebP photo.', mediaTooBig: 'That photo is too large (max 5 MB).', mediaFailed: 'The photo could not be uploaded.', docTooBig: 'That file is too large (max 10 MB).', docType: 'Please use a photo or a PDF file.',
 };
 export const status = {
-  normal: 'Normal', watch: 'Watch', alert: 'Alert', paid: 'Paid', outstanding: 'Outstanding', overdue: 'Overdue', pending: 'Check pending', partial: 'Part paid', void: 'Void',
+  normal: 'Normal', watch: 'Watch', alert: 'Alert', paid: 'Paid', outstanding: 'Not paid', overdue: 'Overdue', pending: 'Check pending', partial: 'Part paid', void: 'Void',
   approved: 'Approved', rejected: 'Rejected', requested: 'Requested', received: 'Received', declined: 'Declined', cancelled: 'Cancelled', open: 'Open', answered: 'Answered', closed: 'Closed',
   suspended: 'Suspended · unpaid', onLeave: 'On leave · {month}',
 };
 export const nav = {
   arrivals: 'Arrivals', enquiries: 'Enquiries', members: 'Members', health: 'Health checks', readings: 'Readings', today: 'Today', camera: 'Camera', log: 'Daily log',
   menu: 'Menu', feedback: 'Feedback', stock: 'Stock', billing: 'Billing', payments: 'Payments', budget: 'Budget', receipts: 'Receipts', overview: 'Overview', broadcast: 'Broadcast',
-  calendar: 'Calendar and schedule', calShort: 'Calendar', people: 'People', photos: 'Photos', healthF: 'Health', venue: 'Venue', more: 'More', directory: 'Directory', contacts: 'Contacts',
+  calendar: 'Calendar and schedule', calShort: 'Calendar', me: 'Me', people: 'People', photos: 'Photos', healthF: 'Health', venue: 'Venue', more: 'More', directory: 'Directory', contacts: 'Contacts',
   surveys: 'Surveys', plans: 'Plans and pricing', reviews: 'Approvals', requests: 'Requests',
   g_front: 'Front desk', g_care: 'Care', g_kitchen: 'Kitchen', g_finance: 'Finance', g_club: 'Club', allModules: 'All modules',
   // short labels for the phone bottom bar
   s_overview: 'Home', s_arrivals: 'Arrivals', s_enquiries: 'Leads', s_members: 'Members', s_health: 'Checks', s_readings: 'Trends', s_today: 'Today', s_camera: 'Camera',
   s_log: 'Log', s_menu: 'Menu', s_feedback: 'Feedback', s_stock: 'Stock', s_billing: 'Bills', s_payments: 'Pay', s_budget: 'Budget', s_receipts: 'Receipts', s_directory: 'Contacts',
-  s_calendar: 'Calendar', s_calShort: 'Calendar', s_photos: 'Photos', s_healthF: 'Health', s_more: 'More', s_requests: 'Requests', s_reviews: 'Approvals', s_contacts: 'Contacts',
+  s_calendar: 'Calendar', s_calShort: 'Calendar', s_me: 'Me', s_photos: 'Photos', s_healthF: 'Health', s_more: 'More', s_requests: 'Requests', s_reviews: 'Approvals', s_contacts: 'Contacts',
   // KC round 7
-  renewals: 'Renewals', tasks: 'Tasks', guests: 'Guest hosts', insights: 'Visit insights', memories: 'Memories', report: 'Daily report', s_report: 'Report', s_renewals: 'Renewals', s_tasks: 'Tasks', s_guests: 'Guests', s_insights: 'Insights', s_memories: 'Memories',
+  renewals: 'Renewals', tasks: 'Tasks', guests: 'Guest hosts', insights: 'Insights', memories: 'Memories', report: 'Daily report', s_report: 'Report', s_renewals: 'Renewals', s_tasks: 'Tasks', s_guests: 'Guests', s_insights: 'Insights', s_memories: 'Memories',
 };
 export const roles = {
-  lobby: 'Lobby', nurse: 'Nurse', activity: 'Activity teacher', kitchen: 'Kitchen & F&B', finance: 'Finance', mgmt: 'Management', family: 'Family', housekeeping: 'Housekeeping', driver: 'Driver',
+  lobby: 'Lobby', nurse: 'Nurse', activity: 'Activity teacher', kitchen: 'Kitchen & F&B', finance: 'Finance', mgmt: 'Management', family: 'Family',
   lands_lobby: 'Arrivals board', lands_nurse: 'Health station', lands_activity: "Today's activity", lands_kitchen: 'Menu of the day', lands_finance: 'Billing board', lands_mgmt: 'Arrivals board',
-  lands_family: 'Today page', lands_housekeeping: 'Requests', lands_driver: 'Requests', billing: 'billing',
+  lands_family: 'Today page', billing: 'billing',
 };
 export const login = {
   signIn: 'Sign in', welcome: 'Welcome', loginSub: 'One sign-in for the club team and for families. Use your username and password.',

@@ -67,9 +67,9 @@ function DemoPanel({ open, onClose, phone }: { open: boolean; onClose: () => voi
               const isDone = !!s && st.done(s);
               const next = !isDone && DEMO_STEPS.findIndex((x) => !(s && x.done(s))) === i;
               return (
-                <div key={st.id} style={{ borderRadius: 14, border: next ? '2px solid #24201C' : '1px solid #EFE7DC', background: isDone ? '#F3EEE8' : '#FFFFFF', padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div key={st.id} className={next ? undefined : 'cp-grey'} style={{ borderRadius: 16, border: next ? '2px solid #24201C' : 'none', background: next ? '#FFFFFF' : 'var(--fill, #F4F4F5)', padding: next ? '12px 14px' : '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={{ display: 'flex', gap: 10, alignItems: 'flex-start' }}>
-                    <span style={{ width: 28, height: 28, borderRadius: 999, background: isDone ? '#3D6B4F' : next ? '#24201C' : '#F3EEE8', color: isDone || next ? '#FFFFFF' : '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flex: 'none' }}>{isDone ? <Icon name="check" size={18} /> : i + 1}</span>
+                    <span className={isDone || next ? undefined : 'cp-fill'} style={{ width: 28, height: 28, borderRadius: 999, background: isDone ? '#3D6B4F' : next ? '#24201C' : 'var(--fill, #F4F4F5)', color: isDone || next ? '#FFFFFF' : '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600, flex: 'none' }}>{isDone ? <Icon name="check" size={18} /> : i + 1}</span>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <span style={{ fontSize: FONT_BODY, color: '#5E5852', fontVariantNumeric: 'tabular-nums' }}>{st.time}</span>
                       <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '21px' }}>{t(st.titleKey)}</span>
@@ -89,7 +89,7 @@ function DemoPanel({ open, onClose, phone }: { open: boolean; onClose: () => voi
       <SectionLabel>{t('demo.switchAccount')}</SectionLabel>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         {pagedAccounts.rows.map((a) => (
-          <button key={a.id} type="button" onClick={async () => { await signInAs(a.id); onClose(); navigate('/today'); }} className="h-border" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', minHeight: 56, borderRadius: 12, border: a.id === me ? '2px solid #75624B' : '1px solid #E4DACD', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', color: '#24201C' }}>
+          <button key={a.id} type="button" onClick={async () => { await signInAs(a.id); onClose(); navigate('/today'); }} className="h-fill" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', minHeight: 56, borderRadius: 12, border: 'none', boxShadow: a.id === me ? 'inset 0 0 0 2px var(--accent, #75624B)' : undefined, background: 'var(--fill, #F4F4F5)', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', color: '#24201C' }}>
             <Avatar name={a.name} size={38} src={a.kind === 'staff' ? memberPhoto(s?.staff[a.id]) : undefined} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}><span style={{ fontSize: 16, fontWeight: 500 }}>{a.name}</span><span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{a.role}</span></span>
           </button>
@@ -106,7 +106,7 @@ function DemoPanel({ open, onClose, phone }: { open: boolean; onClose: () => voi
   );
   return phone ? <Sheet open={open} onClose={onClose} title={t('demo.title')}>{body}</Sheet> : (
     <Drawer open={open} onClose={onClose} label={t('demo.title')} width={440}>
-      <h2 style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C' }}>{t('demo.title')}</h2>
+      <h2 className="cp-serif" style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C' }}>{t('demo.title')}</h2>
       {body}
     </Drawer>
   );

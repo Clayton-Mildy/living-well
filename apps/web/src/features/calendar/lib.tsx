@@ -6,18 +6,20 @@ import { eventTitle, type DayInfo, type DayItem, type CalKind } from '@cp/shared
 import { fd, type TFn } from '../../lib/i18n';
 
 export const KIND: Record<CalKind, { icon: string; bg: string; fg: string; dot: string }> = {
-  closed: { icon: 'event_busy', bg: '#F0EAE1', fg: '#5E5852', dot: '#5E5852' },
+  closed: { icon: 'event_busy', bg: 'var(--fill, #F4F4F5)', fg: '#5E5852', dot: '#5E5852' },
   holiday: { icon: 'flag', bg: '#F9E3DB', fg: '#9A3D24', dot: '#9A3D24' },
   outing: { icon: 'directions_bus', bg: '#E3EFE6', fg: '#3D6B4F', dot: '#3D6B4F' },
   venue: { icon: 'storefront', bg: '#F6ECD6', fg: '#7A5510', dot: '#7A5510' },
-  activity: { icon: 'interests', bg: '#F3EEE8', fg: '#75624B', dot: '#8A755B' },
-  guest: { icon: 'waving_hand', bg: '#E8E1D8', fg: '#24201C', dot: '#75624B' },
+  activity: { icon: 'interests', bg: 'var(--fill, #F4F4F5)', fg: 'var(--accent, #75624B)', dot: '#8A755B' },
+  guest: { icon: 'waving_hand', bg: '#E8E1D8', fg: '#24201C', dot: 'var(--accent, #75624B)' },
 };
+/** the neutral (grey) tints are a fill: className "cp-fill" turns one white when it sits on a grey block */
+export const neutralFill = (bg: string) => (bg === 'var(--fill, #F4F4F5)' ? 'cp-fill' : undefined);
 const STATE = {
   open: { icon: 'storefront', bg: '#E3EFE6', fg: '#2F5A40' },
-  closed: { icon: 'event_busy', bg: '#F0EAE1', fg: '#6B6259' },
+  closed: { icon: 'event_busy', bg: 'var(--fill, #F4F4F5)', fg: '#6B6259' },
   holiday: { icon: 'flag', bg: '#F9E3DB', fg: '#9A3D24' },
-  weekend: { icon: 'event_busy', bg: '#F0EAE1', fg: '#6B6259' },
+  weekend: { icon: 'event_busy', bg: 'var(--fill, #F4F4F5)', fg: '#6B6259' },
 } as const;
 
 /** Weekday names from Intl (so Monday is "Mon" / "Sen"): 0 = Sunday … 6 = Saturday. 1 January 2001 was a Monday, used only as a reference week. */
@@ -69,8 +71,9 @@ export function itemText(s: Pick<ClubState, 'rooms' | 'staff' | 'activities'>, i
       break;
     }
   }
-  const changedLine = it.changed ? (it.note ? t('cal.changedNote', { note: it.note }) : t('cal.changed')) : undefined;
+  // an extra session carries its own tag and note; a one-day change shows "Changed" (and the day's note)
+  const changedLine = it.extra ? (it.note ? t('cal.extraNote', { note: it.note }) : t('cal.extra')) : it.changed ? (it.note ? t('cal.changedNote', { note: it.note }) : t('cal.changed')) : undefined;
   return { title, sub, icon, bg: k.bg, fg: k.fg, time: it.time ?? (it.kind === 'guest' ? '' : t('cal.allDay')), ...(changedLine ? { changedLine } : {}) };
 }
 
-export const smallCaps: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };
+export const smallCaps: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: 'var(--eyebrow, #6E5A43)' };

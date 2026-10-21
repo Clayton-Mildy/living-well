@@ -1,12 +1,13 @@
 // Schedule and calendar actions: weekly schedule drafts and dated versions, closures / holidays / outings, activity and room catalog.
 import { z } from 'zod';
 import type { Draft } from 'immer';
-import type { CalendarEvent, ClubState, ISODate, Member, ScheduleCell, ScheduleDay, Slot, StaffRole, Weekday } from '../types';
+import type { CalendarEvent, ClubState, HM, ISODate, Member, ScheduleCell, ScheduleDay, Slot, StaffRole, Weekday, WeekSlot } from '../types';
 import { DomainError, defineAction, hasRole, type Ctx } from './framework';
 import { dayStatus, membershipStatus } from '../rules/core';
-import { scheduleDayOf, scheduleVersionFor, sessionsOn } from '../rules/kitchen';
-import { DRAFT_ID, SLOTS, WEEKDAYS, cellKey, daysEqual, fmtDMY, nextMonday, normalizeDays, publishedCellKeys, sameCell, weeklyCell, type Days } from '../rules/calendar';
-import { diffDays, dow, live, uniq } from '../util';
+import { extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from '../rules/kitchen';
+import { DRAFT_ID, SLOTS, WEEKDAYS, cellKey, daysEqual, extraTimeIssue, fmtDMY, nextMonday, normalizeDays, publishedCellKeys, sameCell, weeklyCell, type Days } from '../rules/calendar';
+import { guestOn } from '../rules/guests';
+import { diffDays, dow, live, sortBy, uniq } from '../util';
 import { mediaIdOf } from './members';
 
 const mgmtOnly = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'mgmt');
@@ -116,7 +117,8 @@ const dateText = (date: ISODate, endDate?: ISODate) => (endDate ? `${fmtDMY(date
 const KIND_ICON = { closed: 'event_busy', holiday: 'flag', outing: 'directions_bus' } as const;
 
 // ---------- one-day changes (KC round 7): "activity can be changed for this week including today, there might be sudden changes in each day" ----------
-const slotSchema = z.enum(['10:30', '13:30']);
+/** A weekly slot (reset a one-day change) / any session time (a one-day change of a weekly slot or of an extra session). */
+const weekSlotSchema = z.enum(['10:30', '13:30']);
 type Params = Record<string, string | number>;
 export interface DayChange {
   date: ISODate;
@@ -152,37 +154,81 @@ function tellDay(d: Draft<ClubState>, ctx: Ctx, n: { kind: string; params: Param
  */
 export function setDayCell(d: Draft<ClubState>, ctx: Ctx, c: DayChange): void {
   openDayOrFail(d, ctx, c.date);
+  if (!isWeekSlot(c.slot)) return setExtraCell(d, ctx, c);
+  const slot: WeekSlot = c.slot;
   const view = d as unknown as ClubState;
-  const weekly = weeklyCell(view, c.date, c.slot);
-  const cur = effectiveCell(d, c.date, c.slot);
-  if (c.cell) validateCell(d, ctx, c.cell, sameCell(cur, c.cell) || sameCell(weekly, c.cell) || publishedCellKeys(view).has(cellKey(dow(c.date) as Weekday, c.slot, c.cell)));
+  const weekly = weeklyCell(view, c.date, slot);
+  const cur = effectiveCell(d, c.date, slot);
+  if (c.cell) validateCell(d, ctx, c.cell, sameCell(cur, c.cell) || sameCell(weekly, c.cell) || publishedCellKeys(view).has(cellKey(dow(c.date) as Weekday, slot, c.cell)));
   const existing = scheduleDayOf(view, c.date);
   const slots: ScheduleDay['slots'] = {};
   for (const sl of SLOTS) if (existing && sl in existing.slots) slots[sl] = existing.slots[sl] ? { ...(existing.slots[sl] as ScheduleCell) } : null;
   const back = sameCell(c.cell, weekly);
-  if (back) delete slots[c.slot];
-  else slots[c.slot] = c.cell ? { activityId: c.cell.activityId, staffId: c.cell.staffId, roomId: c.cell.roomId } : null;
+  if (back) delete slots[slot];
+  else slots[slot] = c.cell ? { activityId: c.cell.activityId, staffId: c.cell.staffId, roomId: c.cell.roomId } : null;
   const note = c.note === undefined ? existing?.note : c.note?.trim() || undefined;
   const cellChanged = !sameCell(cur, c.cell);
   if (!cellChanged && (note ?? '') === (existing?.note ?? '')) ctx.fail('err.noChanges');
+  const extra = existing?.extra?.length ? existing.extra.map(plainExtra) : undefined; // the date's extra sessions stay
+  const row = (o: Pick<ScheduleDay, 'slots'> & { note?: string }): ScheduleDay => ({ id: c.date, clubId: ctx.clubId, createdAt: existing ? existing.createdAt : ctx.nowDT, createdBy: existing ? existing.createdBy : ctx.actor, date: c.date, ...o, ...(extra ? { extra } : {}) });
   if (!Object.keys(slots).length) {
-    if (!existing) ctx.fail('err.noChanges'); // a note alone on a day that runs as planned
-    delete d.scheduleDays[c.date];
-  } else d.scheduleDays[c.date] = { id: c.date, clubId: ctx.clubId, createdAt: existing ? existing.createdAt : ctx.nowDT, createdBy: existing ? existing.createdBy : ctx.actor, date: c.date, slots, ...(note ? { note } : {}) };
+    if (!existing || (extra && !cellChanged)) ctx.fail('err.noChanges'); // a note alone on a day that runs as planned
+    if (extra) d.scheduleDays[c.date] = row({ slots }); // nothing changed in the weekly slots any more: only the extra sessions keep the date
+    else delete d.scheduleDays[c.date];
+  } else d.scheduleDays[c.date] = row({ slots, ...(note ? { note } : {}) });
   if (!cellChanged) return;
   const name = c.cell ? d.activities[c.cell.activityId]?.name ?? '' : '';
-  const p: Params = { date: c.date, slot: c.slot, ...(c.cell ? { name } : {}) };
+  const p: Params = { date: c.date, slot, ...(c.cell ? { name } : {}) };
   const key = back ? 'dayBack' : c.cell ? 'dayChanged' : 'dayNoSession';
   if (c.notify !== false) tellDay(d, ctx, c.tell ?? { kind: 'cal.notif.' + key, params: p });
   ctx.feed({ icon: back ? 'event_repeat' : 'edit_calendar', key: 'cal.feed.' + key, params: p });
 }
+const plainExtra = (x: { time: HM; cell: ScheduleCell; note?: string }) => ({ time: x.time, cell: { activityId: x.cell.activityId, staffId: x.cell.staffId, roomId: x.cell.roomId }, ...(x.note ? { note: x.note } : {}) });
+/** A guest booking can change the activity of an extra session (an extra has no weekly plan to go back to, and no "No session": that is removing it). */
+function setExtraCell(d: Draft<ClubState>, ctx: Ctx, c: DayChange): void {
+  const row = d.scheduleDays[c.date];
+  const x = row && !row.deletedAt ? row.extra?.find((e) => e.time === c.slot) : undefined;
+  if (!x || !c.cell) ctx.fail('cal.err.badSlot');
+  if (sameCell(x.cell, c.cell)) ctx.fail('err.noChanges');
+  validateCell(d, ctx, c.cell, false);
+  x.cell = { activityId: c.cell.activityId, staffId: c.cell.staffId, roomId: c.cell.roomId };
+  const p: Params = { date: c.date, time: c.slot, name: d.activities[c.cell.activityId]?.name ?? '' };
+  if (c.notify !== false) tellDay(d, ctx, c.tell ?? { kind: 'cal.notif.extraChanged', params: p });
+  ctx.feed({ icon: 'edit_calendar', key: 'cal.feed.extraChanged', params: p });
+}
 /** Take a slot's one-day change away without telling anyone (a guest booking that changed the slot was cancelled). */
 export function clearDaySlot(d: Draft<ClubState>, date: ISODate, slot: Slot) {
   const row = d.scheduleDays[date];
-  if (!row || row.deletedAt || !(slot in row.slots)) return;
+  if (!row || row.deletedAt || !isWeekSlot(slot) || !(slot in row.slots)) return;
   delete row.slots[slot];
-  if (!Object.keys(row.slots).length) delete d.scheduleDays[date];
+  if (!Object.keys(row.slots).length && !row.extra?.length) delete d.scheduleDays[date];
 }
+
+// ---------- extra sessions (KC round 7): "add an extra activity session at any time" on one date ----------
+const extraBase = z.object({
+  date: isoDate,
+  time: hm,
+  activityId: z.string().min(1),
+  staffId: z.string().min(1),
+  roomId: z.string().min(1),
+  note: z.string().trim().max(160).nullish(),
+  notify: z.boolean().optional(),
+});
+type ExtraInput = z.infer<typeof extraBase>;
+const dayRow = (d: Draft<ClubState>, ctx: Ctx, date: ISODate): Draft<ScheduleDay> => {
+  const cur = d.scheduleDays[date];
+  if (cur && !cur.deletedAt) return cur;
+  d.scheduleDays[date] = { id: date, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, date, slots: {} };
+  return d.scheduleDays[date];
+};
+const extraCell = (x: { activityId: string; staffId: string; roomId: string }): ScheduleCell => ({ activityId: x.activityId, staffId: x.staffId, roomId: x.roomId });
+/** An extra session cannot move or go away while people are marked in its round, or a guest host is booked for it (it has to be cleared first, nothing is lost silently). */
+function extraLocked(d: Draft<ClubState>, ctx: Ctx, date: ISODate, time: HM) {
+  if (live(d.dailyLogs as ClubState['dailyLogs']).some((l) => l.date === date && !!l.sessions && time in l.sessions)) ctx.fail('cal.err.sessionMarked', { time });
+  const g = guestOn(d as unknown as ClubState, date, time);
+  if (g) ctx.fail('cal.err.sessionGuest', { name: g.host.name });
+}
+const extraParams = (d: Draft<ClubState>, date: ISODate, time: HM, activityId: string): Params => ({ date, time, name: d.activities[activityId]?.name ?? '' });
 
 export const scheduleActions = [
   defineAction<{ days: Days; effectiveFrom?: ISODate }>({
@@ -211,9 +257,9 @@ export const scheduleActions = [
     },
     run(d, input, ctx) {
       const view = d as unknown as ClubState;
-      // default: next Monday. Any future date is fine; today and the past keep the schedule they have.
+      // default: next Monday. KC round 7: today or any later date is fine (editing this week's plan publishes from today); days before it keep the schedule they have.
       const effectiveFrom = input.effectiveFrom || nextMonday(ctx.today);
-      if (effectiveFrom <= ctx.today) ctx.fail('cal.err.futureOnly');
+      if (effectiveFrom < ctx.today) ctx.fail('cal.err.futureOnly');
       const draft = d.scheduleVersions[DRAFT_ID];
       const days: Days = input.days ?? (draft && !draft.deletedAt ? normalizeDays(draft.days as never) : undefined) ?? ctx.fail('cal.err.noDraft');
       validateDays(d, ctx, days);
@@ -374,16 +420,88 @@ export const scheduleActions = [
     name: 'schedule.changeDay',
     can: (u) => mgmtOnly(u), // like the weekly schedule: management only; teachers see the changed programme
     parse: (raw) =>
-      parseWith(z.object({ date: isoDate, slot: slotSchema, cell: cellSchema, note: z.string().trim().max(160).nullish(), notify: z.boolean().optional() }), raw),
+      parseWith(z.object({ date: isoDate, slot: hm, cell: cellSchema, note: z.string().trim().max(160).nullish(), notify: z.boolean().optional() }), raw),
     run(d, input, ctx) {
       setDayCell(d, ctx, input);
       ctx.result.date = input.date;
     },
   }),
-  defineAction<{ date: ISODate; slot?: Slot; notify?: boolean }>({
+  defineAction<ExtraInput>({
+    name: 'schedule.addSession',
+    can: (u) => mgmtOnly(u),
+    parse: (raw) => parseWith(extraBase, raw),
+    run(d, input, ctx) {
+      openDayOrFail(d, ctx, input.date);
+      const issue = extraTimeIssue(d as unknown as ClubState, input.date, input.time);
+      if (issue) ctx.fail(issue.code, issue.params);
+      const cell = extraCell(input);
+      validateCell(d, ctx, cell, false);
+      const row = dayRow(d, ctx, input.date);
+      const note = input.note?.trim() || undefined;
+      row.extra = sortBy([...(row.extra ?? []).map(plainExtra), { time: input.time, cell, ...(note ? { note } : {}) }], (x) => x.time);
+      const p = extraParams(d, input.date, input.time, cell.activityId);
+      if (input.notify !== false) tellDay(d, ctx, { kind: 'cal.notif.extraAdded', params: p });
+      ctx.feed({ icon: 'more_time', key: 'cal.feed.extraAdded', params: p });
+      ctx.result.date = input.date;
+      ctx.result.time = input.time;
+    },
+  }),
+  defineAction<ExtraInput & { toTime?: HM }>({
+    name: 'schedule.editSession',
+    can: (u) => mgmtOnly(u),
+    parse: (raw) => parseWith(extraBase.extend({ toTime: hm.optional() }), raw),
+    run(d, input, ctx) {
+      openDayOrFail(d, ctx, input.date);
+      const view = d as unknown as ClubState;
+      const cur = extrasOn(view, input.date).find((x) => x.time === input.time) ?? ctx.fail('err.notFound');
+      const to = input.toTime ?? input.time;
+      const moved = to !== input.time;
+      if (moved) {
+        const issue = extraTimeIssue(view, input.date, to, input.time);
+        if (issue) ctx.fail(issue.code, issue.params);
+        extraLocked(d, ctx, input.date, input.time);
+      }
+      const cell = extraCell(input);
+      const same = sameCell(cur.cell, cell);
+      validateCell(d, ctx, cell, same);
+      const note = input.note === undefined ? cur.note : input.note?.trim() || undefined;
+      if (!moved && same && (note ?? '') === (cur.note ?? '')) ctx.fail('err.noChanges');
+      const row = dayRow(d, ctx, input.date);
+      row.extra = sortBy((row.extra ?? []).map((x) => (x.time === input.time ? { time: to, cell, ...(note ? { note } : {}) } : plainExtra(x))), (x) => x.time);
+      if (moved || !same) { // a note alone is for staff only: nobody is told
+        const p = extraParams(d, input.date, to, cell.activityId);
+        if (input.notify !== false) tellDay(d, ctx, { kind: 'cal.notif.extraChanged', params: p });
+        ctx.feed({ icon: 'edit_calendar', key: 'cal.feed.extraChanged', params: p });
+      }
+      ctx.result.date = input.date;
+      ctx.result.time = to;
+    },
+  }),
+  defineAction<{ date: ISODate; time: HM; notify?: boolean }>({
+    name: 'schedule.removeSession',
+    can: (u) => mgmtOnly(u),
+    parse: (raw) => parseWith(z.object({ date: isoDate, time: hm, notify: z.boolean().optional() }), raw),
+    run(d, input, ctx) {
+      if (input.date < ctx.today) ctx.fail('cal.err.pastDay');
+      const cur = extrasOn(d as unknown as ClubState, input.date).find((x) => x.time === input.time) ?? ctx.fail('err.notFound');
+      extraLocked(d, ctx, input.date, input.time);
+      const row = d.scheduleDays[input.date];
+      const rest = (row.extra ?? []).filter((x) => x.time !== input.time).map(plainExtra);
+      if (rest.length) row.extra = rest;
+      else {
+        delete row.extra;
+        if (!Object.keys(row.slots).length) delete d.scheduleDays[input.date];
+      }
+      const p = extraParams(d, input.date, input.time, cur.cell.activityId);
+      if (input.notify !== false) tellDay(d, ctx, { kind: 'cal.notif.extraRemoved', params: p });
+      ctx.feed({ icon: 'event_busy', key: 'cal.feed.extraRemoved', params: p });
+      ctx.result.date = input.date;
+    },
+  }),
+  defineAction<{ date: ISODate; slot?: WeekSlot; notify?: boolean }>({
     name: 'schedule.resetDay',
     can: (u) => mgmtOnly(u),
-    parse: (raw) => parseWith(z.object({ date: isoDate, slot: slotSchema.optional(), notify: z.boolean().optional() }), raw),
+    parse: (raw) => parseWith(z.object({ date: isoDate, slot: weekSlotSchema.optional(), notify: z.boolean().optional() }), raw),
     run(d, input, ctx) {
       if (input.date < ctx.today) ctx.fail('cal.err.pastDay');
       const changed = SLOTS.filter((sl) => sl in (scheduleDayOf(d as unknown as ClubState, input.date)?.slots ?? {}));

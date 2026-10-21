@@ -16,7 +16,7 @@ import { useClub } from '../../store/replica';
 import { Av, StatusDot, catalogPhoto, cogLine, heroCardStyle, heroEyebrow, plural, rowLine } from './lib';
 import { activityPhoto, mediaUrl, photoFill } from '../../lib/media';
 
-const heroBtn = (primary: boolean): CSSProperties => ({ height: 46, padding: '0 20px', borderRadius: 12, border: primary ? 'none' : '1px solid #DCD3C8', background: primary ? '#24201C' : '#FFFFFF', color: primary ? '#FFFFFF' : '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter' });
+const heroBtn = (primary: boolean): CSSProperties => ({ height: 46, padding: '0 20px', borderRadius: 12, border: 'none', background: primary ? '#24201C' : 'var(--fill, #F4F4F5)', color: primary ? '#FFFFFF' : '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter' });
 
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 
@@ -61,7 +61,7 @@ export function ActivityToday() {
     <div style={{ display: 'flex', gap: 8, flexWrap: isPhone ? 'nowrap' : 'wrap' }}>
       {/* KC round 6: Camera opens today's Activity pictures for the Now / Next session */}
       <button type="button" onClick={() => navigate(`/camera?tab=activity${nn.current?.activity ? `&act=${encodeURIComponent(nn.current.activity.name)}` : ''}`)} style={isPhone ? pillStyle(true) : heroBtn(true)} className={isPhone ? 'dh5 cp-btn cp-press' : 'dh5 cp-btn'}><Icon name="photo_camera" size={20} />{t('nav.camera')}</button>
-      <button type="button" onClick={() => navigate('/log')} style={isPhone ? pillStyle(false) : heroBtn(false)} className={isPhone ? 'dh4 cp-btn cp-press' : 'dh4 cp-btn'}><Icon name="edit_note" size={20} />{t('nav.log')}</button>
+      <button type="button" onClick={() => navigate('/log')} style={isPhone ? pillStyle(false) : heroBtn(false)} className={isPhone ? 'h-fill cp-fill cp-btn cp-press' : 'h-fill cp-fill cp-btn'}><Icon name="edit_note" size={20} />{t('nav.log')}</button>
     </div>
   );
   // KC round 6: the session's picture as a banner on top of the card (uploaded in the Activities editor); KC round 7: tap it to see it in full
@@ -155,14 +155,14 @@ export function ActivityToday() {
       <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{meta}</span>
     </div>
   );
-  const emptyRow = (text: string) => <div style={{ padding: '18px 0 14px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{text}</div>;
+  const emptyRow = (text: string) => <div style={{ padding: '18px 0 14px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{text}</div>;
 
   // round 6, phone: a member row in the grouped list: avatar, name, logged / not logged, a chevron; the care line stays hidden on phones as before
   const memberRowPhone = (m: (typeof people)[number], i: number) => {
     const logged = logOf(s, m.id, today)?.mood !== undefined; // round 7: logged once the Mood & notes round is in
     return (
       <button key={m.id} type="button" onClick={() => navigate(`/log?member=${m.id}`)} className="cp-tap-self" aria-label={`${memberName(m)}: ${t(logged ? 'activity.logged' : 'activity.notLogged')}`}
-        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px 8px 16px', border: 'none', minHeight: 58, backgroundColor: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', ...rowLine(i === 0, 68) }}>
+        style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px 8px 16px', border: 'none', minHeight: 58, backgroundColor: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', ...rowLine(i === 0, 68) }}>
         <Av m={m} size={40} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{memberName(m)}</span>
@@ -205,13 +205,13 @@ export function ActivityToday() {
       ) : null}
       {status.open || people.length ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(24px, 4vw, 56px)', alignItems: 'flex-start' }}>
-          <section style={{ ...heroCardStyle, flex: '1 1 440px' }}>
+          <section className="cp-grey" style={{ ...heroCardStyle, flex: '1 1 440px' }}>
             {listHead(t('activity.inClub'), String(people.length))}
             {people.length ? people.map((m) => {
               const logged = logOf(s, m.id, today)?.mood !== undefined; // round 7: logged once the Mood & notes round is in
               return (
                 <button key={m.id} type="button" onClick={() => navigate(`/log?member=${m.id}`)} className="h-row cp-bleed" aria-label={`${memberName(m)}: ${t(logged ? 'activity.logged' : 'activity.notLogged')}`}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: isPhone ? '12px 0' : '16px 0', border: 'none', borderTop: '1px solid #F0EAE1', minHeight: isPhone ? 56 : 64, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: isPhone ? '12px 0' : '16px 0', border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: isPhone ? 56 : 64, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                   <Av m={m} size={isPhone ? 40 : 46} />
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                     <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{memberName(m)}</span>

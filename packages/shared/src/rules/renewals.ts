@@ -18,17 +18,17 @@ export function followUpOf(s: ClubState, memberId: string, month: YM): FollowUp 
 }
 
 // ---------- outcomes ----------
-export const FOLLOW_UP_OUTCOMES: FollowUpOutcome[] = ['continue', 'upgrade', 'downgrade', 'leave', 'stop', 'noAnswer', 'callBack'];
+export const FOLLOW_UP_OUTCOMES: FollowUpOutcome[] = ['continue', 'upgrade', 'downgrade', 'leave', 'stop', 'noAnswer'];
 /** Outcomes that change the membership: someone but management records them, management approves, and they apply from the 1st. */
 export const CHANGE_OUTCOMES: FollowUpOutcome[] = ['upgrade', 'downgrade', 'leave', 'stop'];
 export const isChange = (o: FollowUpOutcome | undefined): boolean => !!o && CHANGE_OUTCOMES.includes(o);
 /** The outcomes offered for a member: switching goes the one way their plan allows (Flex to Gold, Gold to Flex). */
-export const outcomeChoices = (plan: Plan): FollowUpOutcome[] => ['continue', plan === 'flex' ? 'upgrade' : 'downgrade', 'leave', 'stop', 'noAnswer', 'callBack'];
+export const outcomeChoices = (plan: Plan): FollowUpOutcome[] => ['continue', plan === 'flex' ? 'upgrade' : 'downgrade', 'leave', 'stop', 'noAnswer'];
 /** The plan an upgrade or a downgrade ends on. */
 export const planAfter = (o: 'upgrade' | 'downgrade'): Plan => (o === 'upgrade' ? 'gold' : 'flex');
 
 /** A follow-up is decided once the family gave an answer (not "no answer" / "call back") and management did not turn it down. */
-export const isDecided = (f: FollowUp | undefined) => !!f?.outcome && f.status !== 'rejected' && f.outcome !== 'noAnswer' && f.outcome !== 'callBack';
+export const isDecided = (f: FollowUp | undefined) => !!f?.outcome && f.status !== 'rejected' && f.outcome !== 'noAnswer';
 /** A change that went into the membership (applied at once by management, or after approval): it can only be changed on the member's page now. */
 export const isApplied = (f: FollowUp | undefined) => !!f && f.status === 'done' && isChange(f.outcome);
 
@@ -85,6 +85,40 @@ export interface RenewalRow {
   /** calls and messages so far */
   calls: number;
   last?: FollowUpCall;
+}
+
+// ---------- status and next step (KC round 8d: the list shows both in their own columns) ----------
+/** What the status column says: the family's answer, or "not contacted yet" / "no answer" / "asked in the app" / "management did not approve". */
+export type RenewalStatusKey = FollowUpOutcome | 'new' | 'asked' | 'rejected';
+/** Same order as `stateOf`: a record waiting for management or already decided wins, then what the family asked in the app, then the open ones. */
+export function renewalStatus(r: Pick<RenewalRow, 'f' | 'asked'>): RenewalStatusKey {
+  if ((r.f?.status === 'pending' || r.f?.status === 'done') && r.f.outcome) return r.f.outcome;
+  if (r.asked) return 'asked';
+  if (r.f?.status === 'rejected') return 'rejected';
+  return r.f?.outcome ?? 'new';
+}
+
+/** What to do now for a row, in words (the web app picks the sentence): call · call again · ask again (turned down) · waiting for approval · answer a plan request · or what starts when. */
+export type RenewalNextKind = 'call' | 'callAgain' | 'askAgain' | 'approval' | 'answerRequest' | 'renews' | 'planFrom' | 'leaveFrom' | 'lastDay' | 'none';
+export interface RenewalNext { kind: RenewalNextKind; /** the day a plan change or leave starts, the day the plan renews, or the last day */ date?: ISODate; /** the plan a switch ends on */ plan?: Plan; /** calls so far (callAgain) */ calls?: number }
+/** The next step for a member in `month`, as of `today`. A month that has started is a read-only log: nothing left to do. */
+export function renewalNext(r: Pick<RenewalRow, 'f' | 'asked'>, month: YM, today: ISODate): RenewalNext {
+  if (month <= ym(today)) return { kind: 'none' };
+  const f = r.f;
+  const first = monthStart(month);
+  if (f?.status === 'pending') return { kind: 'approval' };
+  if (f?.status === 'done' && f.outcome) {
+    switch (f.outcome) {
+      case 'upgrade': case 'downgrade': return { kind: 'planFrom', date: first, plan: planAfter(f.outcome) };
+      case 'leave': return { kind: 'leaveFrom', date: monthStart(f.leaveMonths?.[0] ?? month) };
+      case 'stop': return { kind: 'lastDay', date: f.lastDay ?? defaultLastDay(month) };
+      default: return { kind: 'renews', date: first };
+    }
+  }
+  if (r.asked) return r.asked === 'plan' ? { kind: 'answerRequest' } : { kind: 'leaveFrom', date: first };
+  if (f?.status === 'rejected') return { kind: 'askAgain' };
+  if (f?.outcome === 'noAnswer') return { kind: 'callAgain', calls: f.calls.length };
+  return { kind: 'call' };
 }
 
 /** One row per member to follow up for `month`, by first name. */

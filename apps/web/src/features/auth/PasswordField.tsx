@@ -15,18 +15,18 @@ export function PasswordField({ label, value, onChange, autoComplete, error, hin
   const id = useId();
   const [shown, setShown] = useState(false);
   const login = size === 'login';
-  const border = error ? '2px solid #9A3D24' : '1px solid #DDD1C2';
+  const ring = error ? 'inset 0 0 0 2px #9A3D24' : undefined;
   const msgId = `${id}-msg`;
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
       <label htmlFor={id} style={login ? loginLabel : { fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{label}</label>
-      <span style={{ display: 'flex', alignItems: 'center', height: 52, border, borderRadius: login ? 14 : 16, background: '#FFFFFF', overflow: 'hidden' }}>
+      <span className={`cp-input-wrap cp-fill${error ? ' cp-err' : ''}`} style={{ display: 'flex', alignItems: 'center', height: 52, boxShadow: ring, borderRadius: 12, background: 'var(--fill, #F4F4F5)', overflow: 'hidden' }}>
         <input id={id} name={name} type={shown ? 'text' : 'password'} value={value} onChange={(e) => onChange(e.target.value)} autoComplete={autoComplete} autoFocus={autoFocus}
           autoCapitalize="none" autoCorrect="off" spellCheck={false} aria-invalid={!!error || undefined} aria-describedby={error || hint ? msgId : undefined}
           onKeyDown={onEnter ? (e) => { if (e.key === 'Enter') { e.preventDefault(); onEnter(); } } : undefined}
           style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', padding: '0 4px 0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', background: 'transparent' }} />
-        <button type="button" onClick={() => setShown(!shown)} aria-label={shown ? t('login.hidePassword') : t('login.showPassword')} title={shown ? t('login.hidePassword') : t('login.showPassword')} className="h-cream"
-          style={{ width: 48, height: '100%', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', color: '#75624B', cursor: 'pointer', padding: 0 }}>
+        <button type="button" onClick={() => setShown(!shown)} aria-label={shown ? t('login.hidePassword') : t('login.showPassword')} title={shown ? t('login.hidePassword') : t('login.showPassword')} className="h-fill"
+          style={{ width: 48, height: '100%', flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', cursor: 'pointer', padding: 0 }}>
           <Icon name={shown ? 'visibility_off' : 'visibility'} size={22} />
         </button>
       </span>

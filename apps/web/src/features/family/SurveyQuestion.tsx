@@ -11,7 +11,7 @@ const ROWS_MAX = 5;
 
 const tagStyle = (required: boolean): CSSProperties => ({
   height: 24, padding: '0 10px', borderRadius: 999, display: 'inline-flex', alignItems: 'center', fontSize: FONT_SMALL, fontWeight: 600, whiteSpace: 'nowrap',
-  background: required ? '#F9E3DB' : '#F3EEE8', color: required ? '#9A3D24' : '#5E5852',
+  background: required ? '#F9E3DB' : '#F4F4F5', color: required ? '#9A3D24' : '#5E5852',
 });
 
 export function SurveyQuestion({ q, value, onChange }: { q: SurveyCustomQuestion; value: SurveyAnswer | undefined; onChange: (v: SurveyAnswer | undefined) => void }) {
@@ -45,8 +45,8 @@ export function SurveyQuestion({ q, value, onChange }: { q: SurveyCustomQuestion
                 const on = value === o;
                 return (
                   <button key={o} type="button" role="radio" aria-checked={on} onClick={() => onChange(o)}
-                    style={{ minHeight: 48, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', borderRadius: 12, border: on ? '1px solid #75624B' : '1px solid #DCD3C8', background: on ? '#F3EEE8' : '#FFFFFF', color: '#24201C', fontSize: 16, lineHeight: '22px', fontWeight: on ? 600 : 400, textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
-                    <Icon name={on ? 'radio_button_checked' : 'radio_button_unchecked'} size={24} color={on ? '#75624B' : '#5E5852'} fill={on ? 1 : 0} />
+                    className={on ? undefined : 'cp-fill'} style={{ minHeight: 48, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', borderRadius: 14, border: 'none', background: on ? '#2B231C' : '#F4F4F5', color: on ? '#FFFFFF' : '#24201C', fontSize: 16, lineHeight: '22px', fontWeight: on ? 600 : 400, textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
+                    <Icon name={on ? 'radio_button_checked' : 'radio_button_unchecked'} size={24} color={on ? '#FFFFFF' : '#6B6259'} fill={on ? 1 : 0} />
                     <span style={{ flex: 1, minWidth: 0, overflowWrap: 'anywhere' }}>{o}</span>
                   </button>
                 );

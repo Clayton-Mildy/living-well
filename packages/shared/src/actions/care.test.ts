@@ -198,7 +198,8 @@ describe('log.mark', () => {
     fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'] }, 's5', 'err.invalid');
     fails(fresh(), 'log.mark', { date: T, memberIds: [], lunch: 'all' }, 's5', 'err.invalid');
     fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'lots' }, 's5', 'err.invalid');
-    fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], session: { slot: '09:00', value: 'joined' } }, 's5', 'err.invalid');
+    fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], session: { slot: '09:00', value: 'joined' } }, 's5', 'activity.err.noSession'); // no session at 09:00 that day
+    fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], session: { slot: '9am', value: 'joined' } }, 's5', 'err.invalid');
     fails(fresh(), 'log.mark', { date: '2026-10-13', memberIds: ['m2'], lunch: 'all' }, 's5', 'activity.err.dateRange');
     for (const uid of ['s1', 's3', 's10', 'f1', 'fm2_0']) fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, uid, 'err.forbidden');
     for (const uid of ['s5', 's6', 's8', 's9']) run(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, uid);
@@ -303,9 +304,10 @@ describe('photo moderation', () => {
     const solo = live(s.photos).find((x) => x.kind === 'solo')!;
     const r2 = run(s, 'photo.retag', { photoId: solo.id, memberIds: [...solo.memberIds, 'm2', 'm10'] }, 's9');
     expect(r2.state.photos[solo.id].kind).toBe('group');
-    // untag
+    // untag down to one person: a group photo becomes a personal (solo) photo (KC round 7)
     const r3 = run(r.state, 'photo.retag', { photoId: p.id, memberIds: before.slice(0, 1) }, 's5');
     expect(r3.state.photos[p.id].memberIds).toEqual(before.slice(0, 1));
+    expect(r3.state.photos[p.id].kind).toBe('solo');
     fails(s, 'photo.retag', { photoId: p.id, memberIds: before }, 's5', 'err.noChanges');
     fails(s, 'photo.retag', { photoId: p.id, memberIds: [] }, 's5', 'err.invalid');
     fails(s, 'photo.retag', { photoId: p.id, memberIds: ['ghost'] }, 's5', 'err.notFound');
@@ -356,3 +358,38 @@ describe('photo moderation', () => {
       for (const uid of ['s1', 's8', 's3', 's10', 'f1', 'fm2_0']) fails(s, name, input, uid, 'err.forbidden');
   });
 });
+
+describe('KC round 7: a photo\'s type in Approvals — a session picture, or people (one: personal, more: group)', () => {
+  const pendingGroup = (s: ClubState) => {
+    const p = live(s.photos).find((x) => x.kind === 'group' && x.memberIds.length >= 2)!;
+    return produce(s, (d) => { d.photos[p.id].visibility = 'pending'; });
+  };
+  it('switches between people and session, and the number of names decides personal or group', () => {
+    const s0 = fresh();
+    const p0 = live(s0.photos).find((x) => x.kind === 'group' && x.memberIds.length >= 2)!;
+    const s = pendingGroup(s0);
+    // one name: a personal photo
+    let r = run(s, 'photo.setType', { photoId: p0.id, type: 'people', memberIds: ['m2'] }, 's9');
+    expect(r.state.photos[p0.id]).toMatchObject({ kind: 'solo', memberIds: ['m2'] });
+    // two names: a group photo again
+    r = run(r.state, 'photo.setType', { photoId: p0.id, type: 'people', memberIds: ['m2', 'm10'] }, 's9');
+    expect(r.state.photos[p0.id]).toMatchObject({ kind: 'group', memberIds: ['m2', 'm10'] });
+    // a picture of the session: no names, filed under the session
+    r = run(r.state, 'photo.setType', { photoId: p0.id, type: 'session', activity: 'Batik painting' }, 's9');
+    expect(r.state.photos[p0.id]).toMatchObject({ kind: 'activity', memberIds: [], activity: 'Batik painting' });
+    // and back to people
+    r = run(r.state, 'photo.setType', { photoId: p0.id, type: 'people', memberIds: ['m1'] }, 's9');
+    expect(r.state.photos[p0.id]).toMatchObject({ kind: 'solo', memberIds: ['m1'] });
+  });
+  it('needs a name for people and a known session for a session picture; lunch photos keep their type', () => {
+    const s = pendingGroup(fresh());
+    const p = live(s.photos).find((x) => x.kind === 'group' && x.visibility === 'pending')!;
+    fails(s, 'photo.setType', { photoId: p.id, type: 'people', memberIds: [] }, 's9', 'activity.err.needPeople');
+    fails(s, 'photo.setType', { photoId: p.id, type: 'session', activity: 'Skydiving' }, 's9', 'activity.err.needSession');
+    fails(s, 'photo.setType', { photoId: p.id, type: 'people', memberIds: p.memberIds }, 's9', 'err.noChanges');
+    const lunch = live(s.photos).find((x) => x.kind === 'lunch');
+    if (lunch) fails(s, 'photo.setType', { photoId: lunch.id, type: 'session', activity: 'Batik painting' }, 's9', 'err.invalid');
+    fails(s, 'photo.setType', { photoId: p.id, type: 'people', memberIds: ['m2'] }, 'f1', 'err.forbidden');
+  });
+});
+

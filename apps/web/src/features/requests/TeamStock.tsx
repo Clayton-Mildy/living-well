@@ -61,7 +61,7 @@ export function TeamStock() {
           </div>
         ))}
         {empty}
-        {paged.pages > 1 ? <div style={{ padding: '8px 0 4px', borderTop: '1px solid #F0EAE1' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.team.title')} /></div> : null}
+        {paged.pages > 1 ? <div style={{ padding: '8px 0 4px', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.team.title')} /></div> : null}
         {dialog}
       </PGroup>
     );
@@ -71,7 +71,7 @@ export function TeamStock() {
       <HeroHead title={t('requests.team.title')} meta={waiting ? t('requests.team.waiting', { n: waiting }) : undefined} />
       {paged.rows.map((k) => (
         <div key={k.id} data-testid="team-stock-row" data-id={k.id} data-status={k.status} style={{ ...hrow, display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-          <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="inventory_2" size={21} weight={300} color="#6E5A43" /></span>
+          <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="inventory_2" size={21} weight={300} color="var(--eyebrow, #6E5A43)" /></span>
           <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
             <span style={rowTitle}>{title(k)}</span>
             <span style={rowSub}>{sub(k)}</span>
@@ -81,7 +81,7 @@ export function TeamStock() {
         </div>
       ))}
       {empty}
-      <div style={{ padding: paged.pages > 1 ? '8px 0 4px' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.team.title')} /></div>
+      <div style={{ padding: paged.pages > 1 ? '8px 0 4px' : 0, borderTop: paged.pages > 1 ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('requests.team.title')} /></div>
       {dialog}
     </Hero>
   );

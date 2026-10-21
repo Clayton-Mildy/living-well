@@ -60,4 +60,22 @@ export const enq = {
   // registration is on paper
   regAttached: 'Registration form attached', regMissing: 'Registration form missing', 'err.formRequired': 'Attach the signed registration form to join.',
   jn_paperNote: 'Type the key details from the paper form. Attach a photo or PDF of the signed form to join.',
+
+  // ----- KC round 10: the online registration link -----
+  sendForm: 'Send form link', formLinkEyebrow: 'Online registration', formLinkIntro: 'The family fills in the registration on their phone. The answers come back to this lead and fill in the Join step. The signed paper form is still needed at the club.',
+  formLinkLabel: 'Link', formLinkCopy: 'Copy link', formLinkCopied: 'Link copied.', formLinkWa: 'Send on WhatsApp', formLinkAgain: 'Send a new link', formLinkMaking: 'Preparing the link…',
+  formLinkWaText: 'Hello {contact}, here is the CitraPremier registration form for {name}. Please fill it in before your visit: {link}',
+  formState_sent: 'Form sent', formState_opened: 'Form opened', formState_submitted: 'Form filled in', formState_expired: 'Form link expired',
+  formSentOn: 'Sent {date} · valid until {until}', formOpenedOn: 'Opened {date} · valid until {until}', formExpiredOn: 'The link expired on {until}.', formFilledBy: 'Filled in online by {name} on {date}',
+  formOpenJoin: 'Open in Join', jn_fromOnline: 'From the online form', formSentToast: 'Form link ready for {contact}.',
+  'err.formDone': 'The family has already sent this form. Open Join to use the answers.', 'err.formExpired': 'This link has expired. Ask the club for a new one.',
+  'feed.formSent': 'Registration form link sent · {name}', 'feed.formSubmitted': 'Registration form filled in online · {name}',
+  'notif.formSubmitted': '{by} filled in the registration form for {name} online.',
+  // the public page
+  pf_tab: 'Registration', pf_eyebrow: 'Membership registration', pf_intro: 'Fill this in before your visit. It takes about five minutes and saves the front desk retyping it. At the club you will sign the printed form.',
+  pf_who: 'Who is joining', pf_contact: 'Family contact', pf_plan: 'Plan you lean to', pf_planUnsure: 'Not sure yet', pf_paperNote: 'The signed paper form is still needed: the club prints it from these answers for you to sign.',
+  pf_submit: 'Send to the club', pf_sending: 'Sending…', pf_thanksTitle: 'Thank you, {name}', pf_thanksText: 'Your answers reached the club. Bring your KTP and the family card on the first day; the front desk has the form ready to sign.',
+  pf_doneTitle: 'Already sent', pf_doneText: 'This form reached the club on {date}. To change something, ask the front desk for a new link.',
+  pf_badTitle: 'This link does not work', pf_badText: 'Check the link you received, or ask the club to send it again.', pf_expiredTitle: 'This link has expired', pf_expiredText: 'Links stay open for 14 days. Ask the front desk to send a new one.',
+  pf_privacy: 'Only the club sees these answers.',
 };

@@ -61,7 +61,7 @@ export function notifyNewPhotos(d: Draft<ClubState>, ctx: Ctx, items: { photo: {
 export const notifyPhotoFamilies = (d: Draft<ClubState>, ctx: Ctx, memberIds: string[], p: { id: string; media: 'photo' | 'video' }) =>
   notifyNewPhotos(d, ctx, [{ photo: p, memberIds }]);
 
-const feedFor = (d: Draft<ClubState>, ctx: Ctx, p: Pick<Photo, 'kind' | 'media' | 'memberIds' | 'activity'>) => {
+export const feedFor = (d: Draft<ClubState>, ctx: Ctx, p: Pick<Photo, 'kind' | 'media' | 'memberIds' | 'activity'>) => {
   // an activity picture is of the session, not of people: its feed line names the activity
   if (p.kind === 'activity') { ctx.feed({ icon: 'photo_camera', key: 'activity.feed.activityPhoto', params: { activity: p.activity || '' } }); return; }
   const kindKey = p.kind === 'group' ? (p.media === 'video' ? 'groupVideo' : 'groupPhoto') : p.media === 'video' ? 'video' : 'photo';
@@ -108,7 +108,8 @@ export const photoActions = [
         const m = requireMember(d, id, ctx);
         if (isPendingRow(m)) ctx.fail('err.memberPending');
       }
-      if (input.kind === 'solo' && ids.length !== 1) ctx.fail('activity.err.soloOne');
+      // KC round 7: the number of people decides the type, whichever button took it: one person is a personal (solo) photo, more a group photo
+      const kind: Photo['kind'] = ids.length === 1 ? 'solo' : 'group'; // at least one name (the schema checks it)
       const pid = ctx.id('p');
       const cur = curAct(d as unknown as ClubState, ctx.today, ctx.nowMin);
       const given = input.activity ? d.activities[input.activity]?.name ?? input.activity : undefined;
@@ -116,16 +117,17 @@ export const photoActions = [
       const durationSec = input.media === 'video' ? input.durationSec ?? (input.mediaId ? undefined : 8 + (hashOf(pid) % 13)) : undefined;
       const visibility: Photo['visibility'] = isMgmt(ctx.user) ? 'visible' : 'pending';
       d.photos[pid] = {
-        id: pid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, date: ctx.today, time: ctx.now, kind: input.kind, media: input.media,
+        id: pid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, date: ctx.today, time: ctx.now, kind, media: input.media,
         ...(durationSec ? { durationSec } : {}), activity: given || cur.name, memberIds: ids, tone: toneOf(pid), takenBy: ctx.user.id, visibility,
         ...(input.mediaId ? { mediaId: input.mediaId } : {}),
       };
       if (visibility === 'visible') {
         if (input.notify !== false) notifyPhotoFamilies(d, ctx, ids, { id: pid, media: input.media });
-        feedFor(d, ctx, { kind: input.kind, media: input.media, memberIds: ids });
+        feedFor(d, ctx, { kind, media: input.media, memberIds: ids });
       }
       ctx.result.photoId = pid;
       ctx.result.visibility = visibility;
+      ctx.result.kind = kind;
     },
   }),
 

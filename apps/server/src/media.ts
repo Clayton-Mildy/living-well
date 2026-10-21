@@ -4,9 +4,9 @@ import { eq } from 'drizzle-orm';
 import { db } from './db/client';
 import { media } from './db/schema';
 
-/** Images: 5 MB (the client shrinks photos to 1600px first). Videos: 25 MB (a 15 s phone clip). PDFs: 10 MB (a scanned registration form). */
+/** Images: 5 MB (the client shrinks photos to 1600px first). Videos: 100 MB (a 60 s phone clip; KC round 11, was 15 s / 25 MB). PDFs: 10 MB (a scanned registration form). */
 export const MAX_MEDIA_BYTES = 5 * 1024 * 1024;
-export const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
+export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 export const IMAGE_MIME = ['image/jpeg', 'image/png', 'image/webp'] as const;
 export const VIDEO_MIME = ['video/webm', 'video/mp4'] as const;
@@ -41,7 +41,7 @@ export function sniffPdf(b: Uint8Array): 'application/pdf' | null {
 export const sniffMedia = (b: Uint8Array): MediaMime | null => sniffImage(b) ?? sniffVideo(b) ?? sniffPdf(b);
 
 export type MediaCheck = { ok: true; mime: MediaMime; bytes: Buffer } | { ok: false; status: 413 | 415 | 400; code: string };
-/** Check an upload `{ mime, data }` (data = base64, or a data: URL): an allowed type, really that image, video or PDF, and within its limit (images 5 MB, videos 25 MB, PDFs 10 MB). */
+/** Check an upload `{ mime, data }` (data = base64, or a data: URL): an allowed type, really that image, video or PDF, and within its limit (images 5 MB, videos 100 MB, PDFs 10 MB). */
 export function checkUpload(body: { mime?: unknown; data?: unknown }): MediaCheck {
   const mime = typeof body.mime === 'string' ? body.mime.toLowerCase() : '';
   if (typeof body.data !== 'string' || !body.data) return { ok: false, status: 400, code: 'common.mediaFailed' };

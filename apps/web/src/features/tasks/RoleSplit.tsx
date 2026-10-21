@@ -22,11 +22,11 @@ export interface RoleItem {
   total?: number;
 }
 
-const card: CSSProperties = { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' };
+const card: CSSProperties = { background: 'var(--fill, #F4F4F5)', borderRadius: 20, overflow: 'hidden' };
 
 function RoleIcon({ role, size = 36 }: { role: StaffRole; size?: number }) {
   return (
-    <span aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
+    <span aria-hidden="true" className="cp-fill" style={{ width: size, height: size, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
       <Icon name={TASK_ROLE_ICON[role]} size={Math.round(size * 0.55)} fill={1} />
     </span>
   );
@@ -37,7 +37,7 @@ export function ScoreBar({ done = 0, total = 0, h = 3 }: { done?: number; total?
   if (!total) return null;
   const complete = done >= total;
   return (
-    <span aria-hidden="true" style={{ display: 'block', height: h, borderRadius: 999, background: '#EFEAE3', overflow: 'hidden' }}>
+    <span aria-hidden="true" className="cp-fill" style={{ display: 'block', height: h, borderRadius: 999, background: 'var(--press, #EEEEF0)', overflow: 'hidden' }}>
       <span style={{ display: 'block', height: '100%', width: `${pct(done, total)}%`, background: complete ? GREEN : '#24201C' }} />
     </span>
   );
@@ -50,8 +50,8 @@ function RoleRow({ it, on, first, phone, onClick }: { it: RoleItem; on: boolean;
     <button type="button" data-role-row={it.role} aria-current={on ? 'true' : undefined} onClick={onClick} className={phone ? 'cp-tap-self' : 'h-row'}
       style={{
         width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px 12px 16px', minHeight: 64, border: 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter',
-        backgroundColor: on ? '#F7F6F3' : '#FFFFFF', boxShadow: on ? 'inset 3px 0 0 #24201C' : 'none',
-        backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 64px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat',
+        backgroundColor: on ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #24201C' : 'none',
+        backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 64px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat',
       }}>
       <RoleIcon role={it.role} />
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
@@ -67,7 +67,7 @@ function RoleRow({ it, on, first, phone, onClick }: { it: RoleItem; on: boolean;
         {it.sub ? <span style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.sub}</span> : null}
         <ScoreBar done={it.done} total={it.total} />
       </span>
-      {phone ? <Icon name="chevron_right" size={22} color="#C2B8AB" /> : null}
+      {phone ? <Icon name="chevron_right" size={22} color="#A89C8E" /> : null}
     </button>
   );
 }
@@ -126,14 +126,14 @@ export function RoleSplit({ items, listTitle, back, render, initial }: {
   }
   return (
     <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(14px, 2vw, 24px)', alignItems: 'flex-start' }}>
-      <div data-testid="role-list" style={{ ...card, flex: '0 1 330px', minWidth: 290 }}>
+      <div data-testid="role-list" className="cp-grey" style={{ ...card, flex: '0 1 330px', minWidth: 290 }}>
         <div style={{ padding: '14px 16px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ fontSize: 12, lineHeight: '16px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43' }}>{listTitle}</span>
+          <span style={{ fontSize: 12, lineHeight: '16px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)' }}>{listTitle}</span>
           <span style={{ fontSize: 14, color: '#6B6259' }}>{items.length}</span>
         </div>
         {items.map((it, i) => <RoleRow key={it.role} it={it} on={it.role === cur} first={i === 0} phone={false} onClick={() => setPicked(it.role)} />)}
       </div>
-      <div data-role={cur ?? undefined} style={{ ...card, flex: '1 1 520px', minWidth: 0, padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
+      <div data-role={cur ?? undefined} className="cp-grey" style={{ ...card, flex: '1 1 520px', minWidth: 0, padding: '18px 20px 20px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {cur ? render(cur) : null}
       </div>
     </div>

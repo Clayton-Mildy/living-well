@@ -20,18 +20,18 @@ export function IconBox({ name, size = 20, color, fill }: { name: string; size?:
 }
 
 /** Prototype v3 eyebrow: 12px, 2px tracking, uppercase, bronze-brown. */
-export const labelStyle: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };
+export const labelStyle: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: 'var(--eyebrow, #6E5A43)' };
 export const subStyle: CSSProperties = { fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 };
 /** Horizontal padding inside a hero card; rows sit inside it so their hairlines are inset. */
 export const HPAD = 'clamp(18px, 3vw, 32px)';
 /** Gap between page sections. */
 export const SECTION_GAP = 'clamp(18px, 2.8vw, 32px)';
-/** v3 hero card shell (white, hairline, 24px, soft lifted shadow). */
-export const heroCard: CSSProperties = { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' };
+/** Round 8c: the family card, a soft grey (var(--fill, #F4F4F5)) block with no border or shadow. A caller that puts controls on it adds className="cp-grey" (they turn white; see global.css). */
+export const heroCard: CSSProperties = { background: 'var(--fill, #F4F4F5)', borderRadius: 20, overflow: 'hidden' };
 
 /** A single v3 hero card with inner padding. Use `flush` for lists whose rows carry their own inset padding. */
 export function HeroCard({ children, pad = `20px ${HPAD}`, style, id }: { children: ReactNode; pad?: string; style?: CSSProperties; id?: string }) {
-  return <section id={id} style={{ ...heroCard, padding: pad, ...style }}>{children}</section>;
+  return <section id={id} className="cp-grey" style={{ ...heroCard, padding: pad, ...style }}>{children}</section>;
 }
 /** The no-box side rail: an eyebrow, then plain blocks separated by hairlines. */
 export function Rail({ eyebrow, children, grow = '0 1 300px' }: { eyebrow?: ReactNode; children: ReactNode; grow?: string }) {
@@ -45,7 +45,7 @@ export function Rail({ eyebrow, children, grow = '0 1 300px' }: { eyebrow?: Reac
 /** Two-column page body: main card then a rail that drops below on phones. */
 export const splitRow: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 'clamp(24px, 4vw, 56px)', alignItems: 'flex-start' };
 /** A quiet underlined text link / button (bronze). */
-export const linkBtn: CSSProperties = { border: 'none', background: 'transparent', padding: 0, color: '#75624B', fontSize: 14, fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'Inter' };
+export const linkBtn: CSSProperties = { border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'Inter' };
 
 /** v3 number tabs (big light number, label, 2px underline). Up to 3 columns. */
 export function NumberTabs<V extends string>({ items, value, onChange, label }: { items: { value: V; label: ReactNode; n: ReactNode }[]; value: V; onChange: (v: V) => void; label?: string }) {
@@ -55,7 +55,7 @@ export function NumberTabs<V extends string>({ items, value, onChange, label }: 
         const on = it.value === value;
         return (
           <button key={it.value} type="button" role="tab" aria-selected={on} onClick={() => onChange(it.value)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '0 0 12px', border: 'none', borderBottom: `2px solid ${on ? '#24201C' : '#E6DDD1'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter' }}>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '0 0 12px', border: 'none', borderBottom: `2px solid ${on ? '#24201C' : 'var(--hairline, #E2E2E6)'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter' }}>
             <span style={{ fontSize: 'clamp(32px, 3.8vw, 44px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums', color: on ? '#24201C' : '#8A8078' }}>{it.n}</span>
             <span style={{ fontSize: 13, fontWeight: on ? 600 : 500, color: on ? '#24201C' : '#8A8078' }}>{it.label}</span>
           </button>
@@ -79,8 +79,10 @@ export function Page({ gap = 18, children }: { max?: number; gap?: number; child
 
 /** The design's 28px pill: icon + label (status colours come from BADGE or are passed in). */
 export function Pill({ icon, label, fg, bg, fill = 1, size = 18 }: { icon?: string; label: ReactNode; fg: string; bg: string; fill?: 0 | 1; size?: number }) {
+  // the neutral kinds (linen / cream in the shared tables) are the family's soft grey
+  const grey = bg === '#E8E1D8' || bg === '#F0EAE1' || bg === '#F3EEE8';
   return (
-    <span style={{ height: 26, padding: icon ? '0 10px 0 6px' : '0 10px', borderRadius: 999, background: bg, color: fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', whiteSpace: 'nowrap' }}>
+    <span className={grey ? 'cp-fill' : undefined} style={{ height: 26, padding: icon ? '0 10px 0 6px' : '0 10px', borderRadius: 999, background: grey ? 'var(--press, #EEEEF0)' : bg, color: fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', whiteSpace: 'nowrap' }}>
       {icon ? <IconBox name={icon} size={Math.min(size, 16)} fill={fill} /> : null}
       {label}
     </span>
@@ -95,8 +97,8 @@ export const TONE = {
   ochre: { fg: '#7A5510', bg: '#F6ECD6' },
   rust: { fg: '#FFFFFF', bg: '#9A3D24' },
   rustSoft: { fg: '#9A3D24', bg: '#F9E3DB' },
-  linen: { fg: '#24201C', bg: '#E8E1D8' },
-  grey: { fg: '#5E5852', bg: '#F0EAE1' },
+  linen: { fg: '#24201C', bg: 'var(--press, #EEEEF0)' },
+  grey: { fg: '#5E5852', bg: 'var(--press, #EEEEF0)' },
 } as const;
 
 /** v3 hero card: eyebrow title (meta on the right), then rows inside the card padding so their hairlines are inset. */
@@ -111,7 +113,7 @@ export function ListCard({ title, meta, children, headPad = '18px 0 8px', right,
     );
   }
   return (
-    <section id={id} style={{ ...heroCard, padding: `0 ${HPAD} 8px` }}>
+    <section id={id} className="cp-grey" style={{ ...heroCard, padding: `0 ${HPAD} 8px` }}>
       <div style={{ padding: headPad, display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline', flexWrap: 'wrap' }}>
         <span style={labelStyle}>{title}</span>
         {meta !== undefined ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{meta}</span> : null}
@@ -123,7 +125,7 @@ export function ListCard({ title, meta, children, headPad = '18px 0 8px', right,
 }
 /** Plain padded block inside a ListCard (empty note, hint). */
 export const CardNote = ({ children }: { children: ReactNode }) => (
-  <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{children}</div>
+  <div style={{ padding: '14px 0 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{children}</div>
 );
 
 /** A quiet v3 row: avatar or icon circle, name (17/500), one sub line, one action. Tappable when `onClick` is set. Rows sit inside a ListCard's padding. */
@@ -135,7 +137,7 @@ export function LightRow({ avatar, icon, title, sub, badge, btn, right, onClick,
     <>
       {avatar}
       {icon ? (
-        <span aria-hidden="true" style={{ width: isPhone ? 40 : 46, height: isPhone ? 40 : 46, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', flex: 'none', overflow: 'hidden' }}>
+        <span aria-hidden="true" className="cp-fill" style={{ width: isPhone ? 40 : 46, height: isPhone ? 40 : 46, borderRadius: 999, background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent, #75624B)', flex: 'none', overflow: 'hidden' }}>
           <IconBox name={icon} size={isPhone ? 20 : 21} />
         </span>
       ) : null}
@@ -150,9 +152,9 @@ export function LightRow({ avatar, icon, title, sub, badge, btn, right, onClick,
     </>
   );
   // round 6, phone: a tighter grouped row (40px circle, 16px title), a press fade on the tappable ones
-  const base: CSSProperties = isPhone ? { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', minHeight: 58 } : { display: 'flex', alignItems: 'center', gap: 16, padding: '16px 0', borderTop: '1px solid #F0EAE1', minHeight: 64 };
+  const base: CSSProperties = isPhone ? { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: 58 } : { display: 'flex', alignItems: 'center', gap: 16, padding: '16px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: 64 };
   return onClick ? (
-    <button type="button" onClick={onClick} aria-label={ariaLabel} className={isPhone ? 'cp-press' : undefined} style={{ ...base, width: '100%', border: 'none', borderTop: '1px solid #F0EAE1', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>{inner}</button>
+    <button type="button" onClick={onClick} aria-label={ariaLabel} className={isPhone ? 'cp-press' : undefined} style={{ ...base, width: '100%', border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>{inner}</button>
   ) : (
     <div style={base}>{inner}</div>
   );
@@ -161,7 +163,7 @@ export function LightRow({ avatar, icon, title, sub, badge, btn, right, onClick,
 /** Label + value line used by facts lists (design: justify-between, hairline). */
 export function Fact({ k, v, last }: { k: ReactNode; v: ReactNode; last?: boolean }) {
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '12px 0', borderBottom: last ? 'none' : '1px solid #F0EAE1', fontSize: 15, lineHeight: 1.4 }}>
+    <div style={{ display: 'flex', justifyContent: 'space-between', gap: 16, padding: '12px 0', borderBottom: last ? 'none' : '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, lineHeight: 1.4 }}>
       <span style={{ color: '#6B6259' }}>{k}</span>
       <span style={{ textAlign: 'right', fontVariantNumeric: 'tabular-nums', minWidth: 0, overflowWrap: 'anywhere' }}>{v}</span>
     </div>
@@ -183,9 +185,9 @@ export function PushPanel({ open, onBack, backLabel, title, children }: { open: 
   if (!open) return null;
   // round 6, phone: a pushed iOS screen (only mounted on phones): "‹ People" in bronze on the grey page, no bar border; the button keeps its "Back" name
   return (
-    <div ref={ref} role="dialog" aria-modal="false" aria-label={typeof title === 'string' ? title : backLabel} className="cp-native" style={{ position: 'fixed', inset: 0, zIndex: 40, background: '#F5F5F3', display: 'flex', flexDirection: 'column', animation: 'cpSlideL .2s ease-out' }}>
-      <div style={{ flex: 'none', height: 50, display: 'flex', alignItems: 'center', padding: '0 6px 0 2px', background: '#F5F5F3' }}>
-        <button type="button" className="cp-press" onClick={onBack} aria-label={t('common.back')} style={{ maxWidth: '100%', height: 44, padding: '0 8px 0 0', border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: 'Inter' }}>
+    <div ref={ref} role="dialog" aria-modal="false" aria-label={typeof title === 'string' ? title : backLabel} className="cp-native" style={{ position: 'fixed', inset: 0, zIndex: 40, background: 'var(--page, #FFFFFF)', display: 'flex', flexDirection: 'column', animation: 'cpSlideL .2s ease-out' }}>
+      <div style={{ flex: 'none', height: 50, display: 'flex', alignItems: 'center', padding: '0 6px 0 2px', background: 'var(--page, #FFFFFF)' }}>
+        <button type="button" className="cp-press" onClick={onBack} aria-label={t('common.back')} style={{ maxWidth: '100%', height: 44, padding: '0 8px 0 0', border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="chevron_left" size={32} weight={300} />
           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{backLabel}</span>
         </button>
@@ -197,10 +199,10 @@ export function PushPanel({ open, onBack, backLabel, title, children }: { open: 
 
 /** Round 6 (phone): a small 34px pill action for a row. primary = ink, secondary = white with a hairline, quiet = tinted. A disabled pill keeps its click as a no-op, like Button. */
 export function PillBtn({ children, onClick, icon, tone = 'secondary', disabled, grow, label }: { children: ReactNode; onClick?: () => void; icon?: string; tone?: 'primary' | 'secondary' | 'quiet' | 'danger'; disabled?: boolean; grow?: boolean; label?: string }) {
-  const c = { primary: ['#24201C', '#FFFFFF', 'none'], secondary: ['#FFFFFF', '#24201C', '1px solid #DCD3C8'], quiet: ['#F3EEE8', '#24201C', 'none'], danger: ['#F9E3DB', '#9A3D24', 'none'] }[tone];
+  const c = { primary: ['#24201C', '#FFFFFF', 'none'], secondary: ['var(--fill, #F4F4F5)', '#24201C', 'none'], quiet: ['var(--fill, #F4F4F5)', '#24201C', 'none'], danger: ['#F9E3DB', '#9A3D24', 'none'] }[tone];
   return (
-    <button type="button" className="cp-press" onClick={disabled ? undefined : onClick} aria-disabled={disabled || undefined} aria-label={label}
-      style={{ height: 34, padding: '0 14px', borderRadius: 999, border: c[2], background: disabled ? '#EDE5DA' : c[0], color: disabled ? '#8A8078' : c[1], fontSize: 14, fontWeight: 500, fontFamily: 'Inter', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, whiteSpace: 'nowrap', cursor: disabled ? 'not-allowed' : 'pointer', flex: grow ? '1 1 auto' : 'none' }}>
+    <button type="button" className={tone === 'secondary' || tone === 'quiet' ? 'cp-press cp-fill h-fill' : disabled ? 'cp-press cp-fill' : 'cp-press'} onClick={disabled ? undefined : onClick} aria-disabled={disabled || undefined} aria-label={label}
+      style={{ height: 34, padding: '0 14px', borderRadius: 999, border: c[2], background: disabled ? 'var(--press, #EEEEF0)' : c[0], color: disabled ? '#8A8078' : c[1], fontSize: 14, fontWeight: 500, fontFamily: 'Inter', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, whiteSpace: 'nowrap', cursor: disabled ? 'not-allowed' : 'pointer', flex: grow ? '1 1 auto' : 'none' }}>
       {icon ? <IconBox name={icon} size={17} /> : null}
       {children}
     </button>
@@ -215,7 +217,7 @@ export function SwitchRow({ on, onClick, label, sub, disabled }: { on: boolean; 
         <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.35 }}>{label}</span>
         {sub ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span> : null}
       </span>
-      <span aria-hidden="true" style={{ width: 50, height: 30, borderRadius: 999, background: on ? '#24201C' : '#D9D3CB', position: 'relative', flex: 'none', transition: 'background-color .15s' }}>
+      <span aria-hidden="true" style={{ width: 50, height: 30, borderRadius: 999, background: on ? '#24201C' : 'var(--field-bd, #E0E0E4)', position: 'relative', flex: 'none', transition: 'background-color .15s' }}>
         <span style={{ position: 'absolute', top: 2, left: on ? 22 : 2, width: 26, height: 26, borderRadius: 999, background: '#FFFFFF', boxShadow: '0 1px 3px rgba(0,0,0,0.25)', transition: 'left .15s' }} />
       </span>
     </button>
@@ -224,12 +226,12 @@ export function SwitchRow({ on, onClick, label, sub, disabled }: { on: boolean; 
 /** Round 6 (phone): an iOS segmented control with the tab roles of the old tabs. `scroll` lets a long row (5 tabs) swipe sideways instead of squeezing. */
 export function SegTabs<V extends string>({ items, value, onChange, label, scroll }: { items: { value: V; label: ReactNode }[]; value: V; onChange: (v: V) => void; label?: string; scroll?: boolean }) {
   return (
-    <div role="tablist" aria-label={label} style={{ display: scroll ? 'flex' : 'grid', gridTemplateColumns: scroll ? undefined : `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0', overflowX: scroll ? 'auto' : undefined, scrollbarWidth: 'none', maxWidth: '100%' }}>
+    <div role="tablist" aria-label={label} style={{ display: scroll ? 'flex' : 'grid', gridTemplateColumns: scroll ? undefined : `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', overflowX: scroll ? 'auto' : undefined, scrollbarWidth: 'none', maxWidth: '100%' }}>
       {items.map((it) => {
         const on = it.value === value;
         return (
           <button key={it.value} type="button" role="tab" aria-selected={on} onClick={() => onChange(it.value)}
-            style={{ flex: scroll ? 'none' : undefined, minWidth: 0, height: 36, padding: '0 12px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: on ? '#1E1A16' : '#5E5852', fontSize: 14, fontWeight: on ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'Inter', transition: 'background-color .15s' }}>
+            style={{ flex: scroll ? 'none' : undefined, minWidth: 0, height: 36, padding: '0 12px', borderRadius: 7, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: on ? '#1E1A16' : '#5E5852', fontSize: 14, fontWeight: on ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontFamily: 'Inter', transition: 'background-color .15s' }}>
             {it.label}
           </button>
         );
@@ -237,12 +239,12 @@ export function SegTabs<V extends string>({ items, value, onChange, label, scrol
     </div>
   );
 }
-/** Round 6 (phone): the flat iOS group look for a card the screen builds itself (white, radius 14, no border, no shadow). */
-export const groupCard: CSSProperties = { background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' };
+/** Round 6 (phone): the flat iOS group look for a card the screen builds itself. Round 8c: soft grey, radius 16 (add className="cp-grey" where it holds controls). */
+export const groupCard: CSSProperties = { background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' };
 /** Round 6 (phone): the grey search bar (as in the Arrivals list) for a screen's own search box. */
 export function SearchBar({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0' }}>
+    <label className="cp-fill" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 12, background: 'var(--fill, #F4F4F5)' }}>
       <Icon name="search" size={19} color="#6B6259" />
       <input value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} type="search" inputMode="search" placeholder={placeholder} autoComplete="off"
         style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16', WebkitAppearance: 'none' }} />
@@ -255,4 +257,4 @@ export function SearchBar({ value, onChange, label, placeholder }: { value: stri
 export const wrapChip: CSSProperties = { height: 'auto', minHeight: 44, padding: '8px 16px', whiteSpace: 'normal', textAlign: 'left', maxWidth: '100%', flex: '0 1 auto', lineHeight: 1.3 };
 export const chipRow: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8 };
 /** v3 underline-style text field label (small caps eyebrow) used above textareas. */
-export const fieldBox: CSSProperties = { border: '1px solid #DDD1C2', borderRadius: 10, padding: '12px 14px', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#24201C', outline: 'none', background: '#FFFFFF' };
+export const fieldBox: CSSProperties = { border: 'none', borderRadius: 12, padding: '12px 14px', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#24201C', outline: 'none', background: 'var(--fill, #F4F4F5)' };

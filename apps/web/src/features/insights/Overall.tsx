@@ -1,4 +1,4 @@
-// Visit insights, Overall: one summary line, the daily visitors, the weekday x hour heat map (members in the club), arrivals per hour and the
+// Insights, Overall: one summary line, the daily visitors, the weekday x hour heat map (members in the club), arrivals per hour and the
 // average per weekday. The trial day passes (guests) are only a footnote.
 import { useMemo } from 'react';
 import { HEAT_HOURS, type VisitInsights } from '@cp/shared/rules/insights';

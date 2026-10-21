@@ -96,14 +96,14 @@ export function LimitsSheet({ open, onClose, member }: { open: boolean; onClose:
         {SECTIONS.map((sec) => (
           <section key={sec.title} style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 6 : 10 }}>
             {/* round 6, phone: the section title is a small grey header over soft grey boxes (no outlines), like the iOS settings groups */}
-            <div style={isPhone ? { ...GROUP_HEAD, padding: '0 4px' } : { ...smallCaps('2px'), color: '#6E5A43' }}>{t(sec.title)}</div>
+            <div style={isPhone ? { ...GROUP_HEAD, padding: '0 4px' } : { ...smallCaps('2px'), color: 'var(--eyebrow, #6E5A43)' }}>{t(sec.title)}</div>
             {sec.keys.map((k) => {
               const cmp = LIMIT_CMP[k];
               const unit = UNIT[k] ?? sec.unit;
               return (
-                <div key={k} data-limit={k} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 12, borderRadius: 12, background: isPhone ? '#F5F5F3' : '#FFFFFF', border: isPhone ? 'none' : '1px solid #E4DACD' }}>
+                <div key={k} data-limit={k} className="cp-grey" style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: 12, borderRadius: 14, background: 'var(--fill, #F4F4F5)' }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t('health.lim.' + k)} <span style={{ color: '#6B6259', fontWeight: 400 }}>· {unit}</span>
-                    {mem && isOwn(k) ? <span data-testid="limit-own" style={{ marginLeft: 8, padding: '1px 8px', borderRadius: 999, background: '#F3EEE8', color: '#75624B', fontSize: 12, fontWeight: 500, lineHeight: '18px', verticalAlign: 'middle' }}>{t('health.limOwn')}</span> : null}</span>
+                    {mem && isOwn(k) ? <span data-testid="limit-own" className="cp-fill" style={{ marginLeft: 8, padding: '1px 8px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', fontSize: 12, fontWeight: 500, lineHeight: '18px', verticalAlign: 'middle' }}>{t('health.limOwn')}</span> : null}</span>
                   <div style={{ display: 'flex', gap: 10 }}>
                     <div style={{ flex: '1 1 0', minWidth: 0 }}><TextField label={t('health.limW.' + cmp)} value={d[k].watch} onChange={(v) => set(k, 'watch', v)} inputMode="decimal" placeholder="—" /></div>
                     <div style={{ flex: '1 1 0', minWidth: 0 }}><TextField label={t('health.limA.' + cmp)} value={d[k].alert} onChange={(v) => set(k, 'alert', v)} inputMode="decimal" placeholder="—" /></div>

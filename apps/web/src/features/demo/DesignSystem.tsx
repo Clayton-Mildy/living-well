@@ -1,7 +1,7 @@
 // Design System page (port of "Design System.dc.html"), rendering the app's real primitives so it stays truthful.
 import type { CSSProperties, ReactNode } from 'react';
 import { Link } from 'react-router-dom';
-import { Avatar, Button, Card, Chip, EmptyState, Icon, InfoChip, Logo, SkeletonRows, StatusBadge, TextField, Toggle } from '../../components/ui';
+import { Avatar, Button, Card, Chip, EmptyState, HAIRLINE, Icon, IconButton, InfoChip, Logo, SkeletonRows, StatusBadge, TextField, Toggle } from '../../components/ui';
 
 const label: CSSProperties = { fontSize: 13, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#5E5852' };
 const h2: CSSProperties = { margin: 0, fontSize: 36, lineHeight: '44px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C' };
@@ -15,9 +15,9 @@ function Section({ n, title, children }: { n: string; title: string; children: R
   );
 }
 const SWATCHES: [string, string, string, ReactNode?][] = [
-  ['Page', '#F5F5F3', 'app background (white grey)'], ['Cream', '#F3EEE8', 'side nav, inset panels'], ['Linen', '#E8E1D8', 'selected, chips. Ink text only'], ['Sand', '#CAB8A2', 'decoration, booked days'],
-  ['Border', '#E4DACD', 'card edges, dividers'], ['Bronze heading', '#2B231C', 'headings 24px and up only (3.6:1)', <span key="a" style={{ color: '#FFFFFF', fontSize: 28, letterSpacing: '-0.5px' }}>Aa 24+</span>],
-  ['Bronze accent', '#8A755B', 'icons, input borders, rules'], ['Bronze-700', '#75624B', 'primary buttons, links, focus', <span key="b" style={{ color: '#FFFFFF', fontSize: 16 }}>White on bronze-700 · 5.8:1</span>],
+  ['Page', '#FFFFFF', 'every page, phone and laptop'], ['Fill', 'var(--fill, #F4F4F5)', 'cards, groups, fields, chips'], ['Press', 'var(--press, #EEEEF0)', 'pressed, hover on grey, tracks'], ['Linen', '#E8E1D8', 'avatar and photo tones only'], ['Sand', '#CAB8A2', 'decoration, booked days'],
+  ['Hairline', 'var(--hairline, #E2E2E6)', 'dividers, 0.5px, no card borders'], ['Bronze heading', '#2B231C', 'headings 24px and up only (3.6:1)', <span key="a" style={{ color: '#FFFFFF', fontSize: 28, letterSpacing: '-0.5px' }}>Aa 24+</span>],
+  ['Bronze accent', '#8A755B', 'icons, rules'], ['Bronze-700', 'var(--accent, #75624B)', 'primary buttons, links, focus', <span key="b" style={{ color: '#FFFFFF', fontSize: 16 }}>White on bronze-700 · 5.8:1</span>],
   ['Ink', '#24201C', 'body text, names, values', <span key="c" style={{ color: '#FFFFFF', fontSize: 16 }}>14.9:1 on white</span>], ['Slate', '#5E5852', 'secondary text. Not on linen', <span key="d" style={{ color: '#FFFFFF', fontSize: 16 }}>5.5:1 on white</span>],
   ['Rust', '#9A3D24', 'Alert and Overdue only', <span key="e" style={{ color: '#FFFFFF', fontSize: 16 }}>White on rust · 5.4:1</span>],
 ];
@@ -34,7 +34,7 @@ const TYPE: [string, CSSProperties, string][] = [
 
 export function DesignSystem() {
   return (
-    <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: '#F5F5F3', color: '#24201C' }}>
+    <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: '#FFFFFF', color: '#24201C' }}>
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '48px 24px 96px', display: 'flex', flexDirection: 'column', gap: 72 }}>
         <header style={{ display: 'flex', flexDirection: 'column', gap: 28 }}>
           <Logo height={72} />
@@ -54,12 +54,12 @@ export function DesignSystem() {
         <Section n="01" title="Colour roles">
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(220px,1fr))', gap: 16 }}>
             {SWATCHES.map(([name, hex, use, sample]) => (
-              <Card key={name} style={{ borderRadius: 14 }}>
-                <div style={{ height: 88, background: hex, borderBottom: '1px solid #E4DACD', display: 'flex', alignItems: 'flex-end', padding: '12px 16px' }}>{sample}</div>
+              <Card key={name} style={{ borderRadius: 14, background: '#FFFFFF', boxShadow: 'inset 0 0 0 0.5px var(--hairline, #E2E2E6)' }}>
+                <div style={{ height: 88, background: hex, borderBottom: HAIRLINE, display: 'flex', alignItems: 'flex-end', padding: '12px 16px' }}>{sample}</div>
                 <div style={{ padding: 16, display: 'flex', flexDirection: 'column', gap: 4 }}><div style={{ fontSize: 16, fontWeight: 500 }}>{name}</div><div style={{ fontSize: 14, color: '#5E5852' }}>{hex} · {use}</div></div>
               </Card>
             ))}
-            <Card style={{ borderRadius: 14 }}>
+            <Card style={{ borderRadius: 14, background: '#FFFFFF', boxShadow: 'inset 0 0 0 0.5px var(--hairline, #E2E2E6)' }}>
               <div style={{ height: 88, display: 'grid', gridTemplateColumns: '1fr 1fr' }}>
                 <div style={{ background: '#E3EFE6', display: 'flex', alignItems: 'flex-end', padding: 12, color: '#3D6B4F', fontSize: 14, fontWeight: 500 }}>Normal</div>
                 <div style={{ background: '#F6ECD6', display: 'flex', alignItems: 'flex-end', padding: 12, color: '#7A5510', fontSize: 14, fontWeight: 500 }}>Watch</div>
@@ -72,7 +72,7 @@ export function DesignSystem() {
         <Section n="02" title="Type scale · Inter">
           <Card style={{ padding: '8px 28px' }}>
             {TYPE.map(([k, st, sample], i) => (
-              <div key={k} style={{ display: 'grid', gridTemplateColumns: 'minmax(120px,180px) minmax(0,1fr)', gap: 24, alignItems: 'baseline', padding: '20px 0', borderBottom: i < TYPE.length - 1 ? '1px solid #F0EAE1' : 'none' }}>
+              <div key={k} style={{ display: 'grid', gridTemplateColumns: 'minmax(120px,180px) minmax(0,1fr)', gap: 24, alignItems: 'baseline', padding: '20px 0', borderBottom: i < TYPE.length - 1 ? HAIRLINE : 'none' }}>
                 <div style={{ fontSize: 14, color: '#5E5852' }}>{k}</div>
                 <div style={st}>{sample}</div>
               </div>
@@ -90,9 +90,9 @@ export function DesignSystem() {
               <Button variant="ghost">Ghost</Button>
               <Button variant="danger">Tell family now</Button>
               <Button disabled>Disabled</Button>
-              <button type="button" aria-label="Close" style={{ height: 44, width: 44, borderRadius: 999, border: '1px solid #E4DACD', background: '#FFFFFF', display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="close" /></button>
+              <IconButton icon="close" label="Close" />
             </div>
-            <div style={note}>Sizes: 56px for kiosk and tablet primary actions, 48px default, 44px minimum. Focus: 2px bronze-700 ring with 2px offset. Pressed: one shade darker (#5E4E3B).</div>
+            <div style={note}>Sizes: 56px for kiosk and tablet primary actions, 48px default, 44px minimum. Focus: 2px bronze-700 ring with 2px offset. Pressed: one shade darker.</div>
           </Card>
         </Section>
 
@@ -148,17 +148,17 @@ export function DesignSystem() {
             </Card>
             <Card>
               <div style={{ padding: '16px 20px', ...label, color: '#24201C' }}>Member row</div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: '1px solid #F0EAE1' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: HAIRLINE }}>
                 <Avatar name="Opa Hendra Gunawan" tone={1} />
-                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}><div style={{ fontSize: 17, fontWeight: 500 }}>Opa Hendra Gunawan</div><div style={{ fontSize: 14, color: '#5E5852' }}>Arrived 09:40 · Pak Joko</div></div>
+                <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}><div style={{ fontSize: 17, fontWeight: 500 }}>Opa Hendra Gunawan</div><div style={{ fontSize: 14, color: '#5E5852' }}>Arrived 09:40 · Caca</div></div>
                 <StatusBadge kind="watch" />
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: '1px solid #F0EAE1' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: HAIRLINE }}>
                 <Avatar name="Oma Lina Wijaya" tone={0} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}><div style={{ fontSize: 17, fontWeight: 500 }}>Oma Lina Wijaya</div><div style={{ fontSize: 14, color: '#5E5852' }}>Usually around 10:05 · Maria</div></div>
                 <Button variant="secondary" size={44}>Check in</Button>
               </div>
-              <div style={{ padding: '14px 20px', borderTop: '1px solid #F0EAE1', ...note }}>Avatars show the member&apos;s face photo; initials on warm tones until a photo is on file.</div>
+              <div style={{ padding: '14px 20px', borderTop: HAIRLINE, ...note }}>Avatars show the member&apos;s face photo; initials on warm tones until a photo is on file.</div>
             </Card>
           </div>
         </Section>
@@ -170,8 +170,8 @@ export function DesignSystem() {
           </div>
         </Section>
 
-        <section style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 28, borderRadius: 16, background: '#F3EEE8' }}>
-          <h2 style={{ margin: 0, fontSize: 28, lineHeight: '36px', fontWeight: 400, letterSpacing: '-0.5px', color: '#75624B' }}>Rules for every screen</h2>
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 16, padding: 28, borderRadius: 20, background: 'var(--fill, #F4F4F5)' }}>
+          <h2 className="cp-serif" style={{ margin: 0, fontSize: 28, lineHeight: '36px', fontWeight: 400, letterSpacing: '-0.5px', color: 'var(--accent, #75624B)' }}>Rules for every screen</h2>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(260px,1fr))', gap: '16px 32px', fontSize: 16, lineHeight: '24px' }}>
             <div>Staff never type something the app already knows. Pick from what&apos;s on file; devices fill readings.</div>
             <div>Members by name, with Oma / Opa / Ibu / Bapak. Never &quot;patient&quot;.</div>

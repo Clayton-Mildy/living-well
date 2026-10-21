@@ -62,7 +62,7 @@ export function InvoiceRunSheet({ open, onClose }: { open: boolean; onClose: () 
       {n ? (
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {paged.rows.map((r) => (
-            <div key={r.member.id} style={{ padding: '14px 0', borderTop: '1px solid #F0EAE1', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <div key={r.member.id} style={{ padding: '14px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
                 <Avatar name={memberName(r.member)} tone={r.member.photoTone} src={memberPhoto(r.member)} size={40} />
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>

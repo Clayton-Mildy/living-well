@@ -24,12 +24,16 @@ const cleanPhone = (v: unknown) => {
   return isPhone(e) ? fmtPhone(e) : raw;
 };
 /** The answers with empty ones left out, text trimmed, phones in one format; undefined when nothing is filled in. Anything that is not an answer is dropped. */
+/** A NIK (the KTP number) is 16 digits. */
+export const NIK_RE = /^\d{16}$/;
 export function cleanRegistration(raw: unknown): MemberRegistration | undefined {
   if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return undefined;
   const o = raw as Record<string, unknown>;
   const out: MemberRegistration = {};
   const set = <K extends keyof MemberRegistration>(k: K, v: MemberRegistration[K] | '' | undefined) => { if (v !== undefined && v !== '') out[k] = v as MemberRegistration[K]; };
   set('nickname', str(o.nickname, 40));
+  set('nik', str(o.nik, 24).replace(/\s/g, ''));
+  set('guarantorNik', str(o.guarantorNik, 24).replace(/\s/g, ''));
   set('marital', (MARITALS as readonly string[]).includes(o.marital as string) ? (o.marital as Marital) : undefined);
   set('rtRw', str(o.rtRw, 12));
   set('city', str(o.city, 60));
@@ -40,7 +44,8 @@ export function cleanRegistration(raw: unknown): MemberRegistration | undefined 
   set('commDifficulty', bool(o.commDifficulty));
   set('selfCare', bool(o.selfCare));
   set('bathroomHelp', bool(o.bathroomHelp));
-  set('dementiaNote', str(o.dementiaNote, 300));
+  set('dementia', bool(o.dementia));
+  if (out.dementia !== false) set('dementiaNote', str(o.dementiaNote, 300)); // "no" keeps no note
   const ids = o.ids && typeof o.ids === 'object' ? (o.ids as Record<string, unknown>) : {};
   const got: NonNullable<MemberRegistration['ids']> = {};
   for (const k of REG_IDS) if (ids[k] === true) got[k] = true; // an unticked ID is the same as none
@@ -52,6 +57,8 @@ export function validateRegistration(r: MemberRegistration | undefined): FieldIs
   const out: FieldIssue[] = [];
   if (!r) return out;
   const bad = (field: string, code: string) => out.push({ field, code: `members.err.${code}` });
+  if (r.nik && !NIK_RE.test(r.nik)) bad('nik', 'nikInvalid');
+  if (r.guarantorNik && !NIK_RE.test(r.guarantorNik)) bad('guarantorNik', 'nikInvalid');
   if (r.rtRw && !/^[0-9A-Za-z/ -]{1,12}$/.test(r.rtRw)) bad('rtRw', 'rtRwInvalid');
   if (r.postcode && !/^\d{5}$/.test(r.postcode)) bad('postcode', 'postcodeInvalid');
   if (r.phone && !isPhone(e164(r.phone))) bad('regPhone', 'regPhoneInvalid');
@@ -83,6 +90,8 @@ export interface ApplicationFormData {
   conditions: string[];
   cognitive: string;
   dementiaNote: string;
+  /** KC round 10: the yes / no answer (null = not answered) */
+  dementia: boolean | null;
   /** unanswered questions are null and print blank */
   commDifficulty: boolean | null;
   selfCare: boolean | null;
@@ -119,7 +128,7 @@ export function applicationDataOf(s: ClubState, memberId: string, today: ISODate
     name: plainName(m), nickname: r.nickname || '', dob: m.dob, age: memberAge(m, today), marital: r.marital ?? null, gender: m.gender,
     address: m.address || '', rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',
     plan, registrationFee: price.registration ?? null, monthlyFee: plan === 'gold' ? price.gold : price.flex,
-    conditions: m.health.conditions, cognitive: cognitiveText(m.health.cognitive.summary), dementiaNote: r.dementiaNote || '',
+    conditions: m.health.conditions, cognitive: cognitiveText(m.health.cognitive.summary), dementiaNote: r.dementiaNote || '', dementia: r.dementia ?? null,
     commDifficulty: r.commDifficulty ?? null, selfCare: r.selfCare ?? null, bathroomHelp: r.bathroomHelp ?? null,
     carer: m.nanny ? m.nanny.name : null,
     foodAllergies: foodWords(m.health.food, m.health.foodOther), drugAllergies: drugWords(m.health.drugs),
@@ -146,7 +155,7 @@ export function applicationDataFromInput(s: ClubState, input: ApplicationInput, 
     name: input.name.trim(), nickname: r.nickname || '', dob: input.dob || null, age: input.dob ? ageOn(input.dob, today) : null, marital: r.marital ?? null, gender: female === null ? null : female ? 'f' : 'm',
     address: input.address.trim(), rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',
     plan: input.plan, registrationFee: price.registration ?? null, monthlyFee: input.plan === 'gold' ? price.gold : price.flex,
-    conditions: input.health.conditions, cognitive: '', dementiaNote: r.dementiaNote || '',
+    conditions: input.health.conditions, cognitive: '', dementiaNote: r.dementiaNote || '', dementia: r.dementia ?? null,
     commDifficulty: r.commDifficulty ?? null, selfCare: r.selfCare ?? null, bathroomHelp: r.bathroomHelp ?? null,
     carer: input.nanny ? input.nanny.name : null,
     foodAllergies: foodWords(input.health.food, input.health.foodOther), drugAllergies: drugWords(input.health.drugs),
@@ -195,7 +204,8 @@ export function page1Values(d: ApplicationFormData): Page1Values {
     phone: d.phone, mobile: d.mobile, email: d.email,
     registrationFee: d.registrationFee ? `${planName} · ${rp(d.registrationFee)}` : planName,
     monthlyFee: d.monthlyFee != null ? rp(d.monthlyFee) : '',
-    conditions: d.conditions.join('; '), dementia: [d.cognitive, d.dementiaNote].filter(Boolean).join('; ') || id('form.dementiaNone'),
+    // "Tidak ada" when the answer is no (or nothing says otherwise); "Ya" when it is yes without a note; else the cognitive summary and the note
+    conditions: d.conditions.join('; '), dementia: d.dementia === false ? id('form.dementiaNone') : [d.cognitive, d.dementiaNote].filter(Boolean).join('; ') || (d.dementia ? 'Ya' : id('form.dementiaNone')),
     q1: yaTidak(d.commDifficulty), q2: yaTidak(d.selfCare), q3: yaTidak(d.bathroomHelp),
     carer: d.carer ? 'Ya' : 'Tidak', carerName: d.carer || '',
     allergy: allergies.length ? 'Ya' : 'Tidak', allergyList: allergies.join(', '),

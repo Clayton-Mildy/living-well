@@ -31,7 +31,7 @@ export function ModeToggle({ t, mode, counts, onChange, phone }: { t: TFn; mode:
   // round 6, phone: an iOS segmented control ("Not in yet 37 | In the club 5 | Gone home 0") instead of the big number tiles
   if (phone) {
     return (
-      <div role="tablist" aria-label={t('lobby.modeAria')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>
+      <div role="tablist" aria-label={t('lobby.modeAria')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>
         {ORDER.map((k) => {
           const on = k === mode;
           const label = t(LABEL[k]);
@@ -39,7 +39,7 @@ export function ModeToggle({ t, mode, counts, onChange, phone }: { t: TFn; mode:
           return (
             <button key={k} ref={(el) => { refs.current[k] = el; }} type="button" role="tab" id={TAB_ID(k)} aria-selected={on} aria-controls={PANEL_ID} tabIndex={on ? 0 : -1}
               aria-label={`${verb ? `${t(verb)} · ` : ''}${label} (${counts[k]})`} onClick={() => onChange(k)} onKeyDown={move} data-mode={k}
-              style={{ minWidth: 0, height: 38, padding: '0 6px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', transition: 'background-color .15s' }}>
+              style={{ minWidth: 0, height: 38, padding: '0 6px', borderRadius: 7, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 5, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', transition: 'background-color .15s' }}>
               <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
               <span data-testid={TILE_ID[k]} style={{ flex: 'none', fontVariantNumeric: 'tabular-nums', color: on ? '#1E1A16' : '#8A8078' }}>{counts[k]}</span>
             </button>
@@ -57,7 +57,7 @@ export function ModeToggle({ t, mode, counts, onChange, phone }: { t: TFn; mode:
         return (
           <button key={k} ref={(el) => { refs.current[k] = el; }} type="button" role="tab" id={TAB_ID(k)} aria-selected={on} aria-controls={PANEL_ID} tabIndex={on ? 0 : -1}
             aria-label={`${verb ? `${t(verb)} · ` : ''}${label} (${counts[k]})`} onClick={() => onChange(k)} onKeyDown={move} data-mode={k}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, minWidth: 0, minHeight: 44, padding: '0 0 12px', border: 'none', borderBottom: `2px solid ${on ? '#2B231C' : '#E6DDD1'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', color: '#1E1A16', transition: 'border-color .15s' }}>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, minWidth: 0, minHeight: 44, padding: '0 0 12px', border: 'none', borderBottom: `2px solid ${on ? '#2B231C' : 'var(--hairline, #E2E2E6)'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', color: '#1E1A16', transition: 'border-color .15s' }}>
             <span data-testid={TILE_ID[k]} style={{ fontSize: 'clamp(32px, 3.8vw, 44px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums', color: on ? '#2B231C' : '#8A8078' }}>{counts[k]}</span>
             <span style={{ fontSize: 13, lineHeight: 1.3, fontWeight: on ? 600 : 400, color: on ? '#1E1A16' : '#8A8078', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
           </button>

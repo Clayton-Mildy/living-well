@@ -150,13 +150,12 @@ export function staffRating(s: ClubState, staffId: string): StaffRating | null {
 }
 
 // ---------- staff records ----------
-export const STAFF_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt', 'housekeeping', 'driver'];
+export const STAFF_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt'];
 export const BANKS: Bank[] = ['BCA', 'Mandiri', 'BNI', 'BRI', 'Permata'];
 export const CONTRACTS: StaffHr['contract'][] = ['pkwtt', 'pkwt'];
 export const HR_NOTE_KINDS = ['warning', 'note', 'praise'] as const;
 export const TIME_KINDS: StaffTime['kind'][] = ['worked', 'leave', 'sick', 'off'];
 export const SOON_DAYS = 30;
-export const ROLES_WITH_REQUESTS_HOME: StaffRole[] = ['housekeeping', 'driver'];
 
 export type ContractState = { kind: 'permanent' } | { kind: 'ok' | 'soon' | 'ended'; days: number };
 /** Fixed-term contracts end on `hr.end`: warn within 30 days, flag when over. */

@@ -25,7 +25,7 @@ describe('constants', () => {
     expect(COURSES).toEqual(['lunch', 'soft', 'tea']);
     expect(DISH_TAGS).toEqual(['soft', 'lowSalt', 'sugarFree', 'vegetarian']);
     expect(WEEKDAYS).toEqual([1, 2, 3, 4, 5]);
-    expect(STOCK_AREAS).toEqual(['kitchen', 'health', 'activities', 'housekeeping', 'transport']);
+    expect(STOCK_AREAS).toEqual(['kitchen', 'health', 'activities']);
     expect(KNOWN_UNITS).toContain('boxes');
   });
 });
@@ -230,13 +230,13 @@ describe('stock helpers', () => {
     expect(defaultSectionFor(s, 'kitchen')).toBe('fnb');
     expect(defaultSectionFor(s, 'activities')).toBe('activities');
     expect(defaultSectionFor(s, 'health')).toBe('operations');
-    expect(defaultSectionFor(s, 'transport')).toBe('operations');
     const renamed = produce(s, (d) => { delete d.budgetSections.operations; });
     expect(defaultSectionFor(renamed, 'health')).toBeTruthy(); // falls back to a section that exists
     expect(defaultSectionFor(produce(s, (d) => { d.budgetSections = {}; }), 'kitchen')).toBeUndefined();
     expect(defaultAreaFor('nurse')).toBe('health');
     expect(defaultAreaFor('activity')).toBe('activities');
-    expect(defaultAreaFor('driver')).toBe('transport');
+    expect(defaultAreaFor('lobby')).toBe('health');
+    expect(defaultAreaFor('finance')).toBe('kitchen');
     expect(defaultAreaFor('mgmt')).toBe('kitchen');
     expect(defaultAreaFor(null)).toBe('kitchen');
   });

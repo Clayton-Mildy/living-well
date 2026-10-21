@@ -56,7 +56,7 @@ export function KitchenMenu() {
               <>
                 <section style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
                   <div style={{ padding: '0 16px' }}><div style={GROUP_HEAD} data-testid="covers">{t(v.covers.total === 1 ? 'kitchen.cover1' : 'kitchen.covers', { n: v.covers.total })}</div></div>
-                  <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' }}>
+                  <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
                     <LunchPhotos date={v.today} readOnly={readOnly} />
                     <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
@@ -74,8 +74,8 @@ export function KitchenMenu() {
                 </section>
                 <Group title={t('kitchen.diet.title')} pad="0 16px" gap={0}>
                   {diet.rows.map((r, i) => (
-                    <div key={r.key} data-testid="diet-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i === 0 ? 'none' : '1px solid #EFEAE3', minHeight: 56 }}>
-                      <Icon name={r.icon} size={19} color="#75624B" style={{ width: 36, height: 36, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }} />
+                    <div key={r.key} data-testid="diet-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline, #E2E2E6)', minHeight: 56 }}>
+                      <Icon name={r.icon} size={19} color="var(--accent, #75624B)" style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }} />
                       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{dietTitle(t, r)}</span>
                         <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6B6259' }}>{r.names.join(', ')}</span>
@@ -84,7 +84,7 @@ export function KitchenMenu() {
                     </div>
                   ))}
                   {!v.diet.length ? <div style={{ padding: '16px 0', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.diet.none')}</div> : null}
-                  {diet.pages > 1 ? <div style={{ borderTop: '1px solid #EFEAE3' }}><Pager page={diet.page} pages={diet.pages} onPage={diet.setPage} label={t('kitchen.diet.title')} /></div> : null}
+                  {diet.pages > 1 ? <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}><Pager page={diet.page} pages={diet.pages} onPage={diet.setPage} label={t('kitchen.diet.title')} /></div> : null}
                 </Group>
               </>
             ) : (
@@ -111,8 +111,8 @@ export function KitchenMenu() {
                   <span style={cardLabel}>{t('kitchen.diet.title')}</span>
                 </div>
                 {diet.rows.map((r) => (
-                  <div key={r.key} data-testid="diet-row" style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '0 22px', padding: '14px 0', borderTop: '1px solid #F0EAE1', minHeight: 60 }}>
-                    <Icon name={r.icon} size={20} color="#75624B" style={{ width: 40, height: 40, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
+                  <div key={r.key} data-testid="diet-row" style={{ display: 'flex', alignItems: 'center', gap: 14, margin: '0 22px', padding: '14px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: 60 }}>
+                    <Icon name={r.icon} size={20} color="var(--accent, #75624B)" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }} />
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{dietTitle(t, r)}</span>
                       <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6B6259' }}>{r.names.join(', ')}</span>
@@ -120,7 +120,7 @@ export function KitchenMenu() {
                     <span style={{ fontSize: 22, fontWeight: 300, fontVariantNumeric: 'tabular-nums', flex: 'none', lineHeight: 1.2 }}>{r.n}</span>
                   </div>
                 ))}
-                {!v.diet.length ? <div style={{ margin: '0 22px', padding: '16px 0 22px', borderTop: '1px solid #F0EAE1', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.diet.none')}</div> : null}
+                {!v.diet.length ? <div style={{ margin: '0 22px', padding: '16px 0 22px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.diet.none')}</div> : null}
                 <div style={{ padding: diet.pages > 1 ? '8px 22px 12px' : 0 }}><Pager page={diet.page} pages={diet.pages} onPage={diet.setPage} label={t('kitchen.diet.title')} /></div>
               </Card>
             </div>

@@ -12,7 +12,7 @@ import type { P } from './types';
 export const Chips32 = ({ chips }: { chips: FlagChip[] }) => (
   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
     {chips.map((f, i) => (
-      <span key={i} style={{ minHeight: 30, maxWidth: '100%', padding: '3px 12px 3px 9px', borderRadius: 12, background: f.bg, color: f.ic === '#9A3D24' ? '#9A3D24' : '#24201C', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
+      <span key={i} className={f.bg === 'var(--fill, #F4F4F5)' ? 'cp-fill' : undefined} style={{ minHeight: 30, maxWidth: '100%', padding: '3px 12px 3px 9px', borderRadius: 12, background: f.bg, color: f.ic === '#9A3D24' ? '#9A3D24' : '#24201C', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
         <Icon name={f.icon} size={17} color={f.ic} />
         <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{f.label}</span>
       </span>
@@ -36,7 +36,7 @@ export const Block = ({ title, meta, first, children, gap = 10 }: { title?: Reac
 /** A quote-style paragraph (the prototype's "From the team"). */
 export const Quote = ({ children }: { children: ReactNode }) => (
   <p style={{ margin: 0, display: 'flex', gap: 8, fontSize: 15, lineHeight: '23px', color: '#24201C', textWrap: 'pretty' }}>
-    <Icon name="format_quote" size={20} color="#75624B" style={{ marginTop: 1 }} />
+    <Icon name="format_quote" size={20} color="var(--accent, #75624B)" style={{ marginTop: 1 }} />
     <span style={{ minWidth: 0 }}>{children}</span>
   </p>
 );
@@ -50,7 +50,7 @@ export const Fact = ({ k, children, first }: { k: ReactNode; children: ReactNode
 );
 
 export const Tag28 = ({ icon, label, bg, fg = '#24201C' }: { icon: string; label: ReactNode; bg: string; fg?: string }) => (
-  <span style={{ minHeight: 28, maxWidth: '100%', padding: '3px 10px', borderRadius: 12, background: bg, color: fg, fontSize: FONT_SMALL, display: 'inline-flex', alignItems: 'center', gap: 4, lineHeight: 1.3 }}>
+  <span className={bg === 'var(--fill, #F4F4F5)' ? 'cp-fill' : undefined} style={{ minHeight: 28, maxWidth: '100%', padding: '3px 10px', borderRadius: 12, background: bg, color: fg, fontSize: FONT_SMALL, display: 'inline-flex', alignItems: 'center', gap: 4, lineHeight: 1.3 }}>
     <Icon name={icon} size={16} />
     <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{label}</span>
   </span>
@@ -67,7 +67,7 @@ export const ListHead = ({ title, meta, right }: { title: ReactNode; meta?: Reac
 
 /** A list card with its heading (tablet, laptop), or, with `phone`, an iOS grouped section: the heading outside, a flat white group whose rows carry their own hairlines (round 6). */
 export const ListCard = ({ phone, title, style, children }: { phone?: boolean; title: ReactNode; style?: CSSProperties; children: ReactNode }) =>
-  phone ? <Group title={title} pad="0 16px" gap={0}>{children}</Group> : <div style={{ ...listCardStyle, ...style }}><ListHead title={title} />{children}</div>;
+  phone ? <Group title={title} pad="0 16px" gap={0}>{children}</Group> : <div className="cp-grey" style={{ ...listCardStyle, ...style }}><ListHead title={title} />{children}</div>;
 
 /** Old → new rows (proposed or applied). */
 export function DiffList({ d, t, proposed = true }: { d: Described; t: TFn; proposed?: boolean }) {
@@ -80,11 +80,11 @@ export function DiffList({ d, t, proposed = true }: { d: Described; t: TFn; prop
         const changed = r.from !== undefined && r.to !== undefined && r.from !== r.to;
         return (
           <div key={i} style={{ padding: '10px 0', borderTop: i ? HAIR : 'none', display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: 12, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' }}>{r.label}</span>
+            <span style={{ fontSize: 12, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' }}>{r.label}</span>
             {changed ? (
               <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'baseline', gap: '2px 8px', fontSize: 16, lineHeight: '22px', whiteSpace: 'pre-line' }}>
                 <span style={{ color: '#5E5852', textDecoration: r.fromImg ? 'none' : 'line-through', opacity: r.fromImg ? 0.6 : 1 }}><span className="sr-only">{t('reviews.was')}: </span>{pic(r.fromImg, r.from)}</span>
-                <Icon name="arrow_forward" size={18} color="#75624B" style={{ alignSelf: 'center' }} />
+                <Icon name="arrow_forward" size={18} color="var(--accent, #75624B)" style={{ alignSelf: 'center' }} />
                 <strong style={{ fontWeight: 600 }}><span className="sr-only">{proposed ? t('reviews.proposed') : t('reviews.now')}: </span>{pic(r.toImg, r.to)}</strong>
               </span>
             ) : (
@@ -112,9 +112,9 @@ export function PendingBanner({ p, tab }: { p: P; tab: ProfileTab }) {
         const mineReq = cr.submittedBy === myActor;
         const flagged = cr.kind === 'postReview';
         return (
-          <div key={cr.id} role="group" aria-label={t('common.pendingReview')} style={{ background: flagged ? '#F3EEE8' : '#F6ECD6', borderRadius: 14, padding: '16px clamp(16px, 2.4vw, 22px)', display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div key={cr.id} role="group" aria-label={t('common.pendingReview')} className={flagged ? 'cp-grey' : undefined} style={{ background: flagged ? 'var(--fill, #F4F4F5)' : '#F6ECD6', borderRadius: 14, padding: '16px clamp(16px, 2.4vw, 22px)', display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-              <span style={{ height: 30, padding: '0 12px 0 8px', borderRadius: 8, background: flagged ? '#E8E1D8' : '#FFFFFF', color: '#7A5510', fontSize: FONT_BODY, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
+              <span style={{ height: 30, padding: '0 12px 0 8px', borderRadius: 8, background: 'var(--on-card, #FFFFFF)', color: '#7A5510', fontSize: FONT_BODY, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap' }}>
                 <Icon name={flagged ? 'fact_check' : 'hourglass_top'} size={18} fill={1} />
                 {flagged ? t('profile.appliedReview') : t('common.pendingReview')}
               </span>

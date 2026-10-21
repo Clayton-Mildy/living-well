@@ -2,7 +2,7 @@
 // The title is an eyebrow on the left and an underline search on the right; the rows sit inside the card's padding with inset hairlines
 // (a page of PAGE_SIZE at a time, with a pager), then the empty / no-match states.
 import type { BoardRow } from '@cp/shared';
-import { GROUP_HEAD, Icon, Pager, usePaged } from '../../components/ui';
+import { GROUP_HEAD, HAIRLINE, Icon, Pager, usePaged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import type { TFn } from '../../lib/i18n';
 import { MemberRow } from './MemberRow';
@@ -56,7 +56,7 @@ export function MemberList({ t, title, rows, total, query, onQuery, empty, noMat
         )
       ) : null}
       {paged.pages > 1 ? (
-        <div style={{ borderTop: '1px solid #F0EAE1' }}>
+        <div style={{ borderTop: HAIRLINE }}>
           <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('lobby.pagerAria', { list: title })} />
         </div>
       ) : null}
@@ -67,7 +67,7 @@ export function MemberList({ t, title, rows, total, query, onQuery, empty, noMat
     return (
       <section aria-label={title} data-list={listId} style={{ '--hp': '16px', display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 } as React.CSSProperties}>
         {onQuery ? (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', marginBottom: 10, borderRadius: 11, background: '#EAE6E0' }}>
+          <label className="cp-input-wrap cp-fill" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', marginBottom: 10, borderRadius: 12, background: 'var(--fill, #F4F4F5)' }}>
             <Icon name="search" size={19} color="#6B6259" />
             <input value={query} aria-label={t('lobby.searchMember')} onChange={(e) => onQuery(e.target.value)} inputMode="search" placeholder={t('common.search')} autoComplete="off"
               style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16' }} />
@@ -77,29 +77,29 @@ export function MemberList({ t, title, rows, total, query, onQuery, empty, noMat
           <h2 style={GROUP_HEAD}>{title}</h2>
           {count}
         </div>
-        <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' }}>
+        <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
           {body('none', '20px 16px')}
         </div>
       </section>
     );
   }
   return (
-    <section aria-label={title} data-list={listId} style={{ '--hp': 'clamp(18px, 3vw, 36px)', background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 20, boxShadow: '0 1px 2px rgba(60,40,20,.04), 0 18px 40px rgba(60,40,20,.07)', padding: '8px var(--hp) 12px', minWidth: 0 } as React.CSSProperties}>
+    <section aria-label={title} data-list={listId} className="cp-grey" style={{ '--hp': 'clamp(18px, 3vw, 36px)', background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '8px var(--hp) 12px', minWidth: 0 } as React.CSSProperties}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 0 10px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minWidth: 0 }}>
-          <h2 style={{ margin: 0, fontSize: 12, lineHeight: '18px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 auto' }}>{title}</h2>
+          <h2 style={{ margin: 0, fontSize: 12, lineHeight: '18px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 auto' }}>{title}</h2>
           {/* the count of the whole list; it is shown only while searching ("3 of 20"), the tab above already carries the number */}
           {count}
         </div>
         {onQuery ? (
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, borderBottom: '1px solid #DDD1C2', padding: '2px 2px', width: 'min(220px, 42%)', flex: 'none', minHeight: 44 }}>
+          <label className="cp-input-wrap cp-fill" style={{ display: 'flex', alignItems: 'center', gap: 6, borderRadius: 12, background: 'var(--fill, #F4F4F5)', padding: '2px 12px', width: 'min(220px, 42%)', flex: 'none', minHeight: 44 }}>
             <Icon name="search" size={18} color="#6B6259" />
             <input value={query} aria-label={t('lobby.searchMember')} onChange={(e) => onQuery(e.target.value)} inputMode="search" placeholder={t('common.search')} autoComplete="off"
               style={{ flex: 1, minWidth: 0, height: 40, border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16' }} />
           </label>
         ) : null}
       </div>
-      {body('1px solid #F0EAE1', '28px 0')}
+      {body(HAIRLINE, '28px 0')}
     </section>
   );
 }

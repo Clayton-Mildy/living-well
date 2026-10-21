@@ -12,14 +12,14 @@ export const kindIcon = (k: GuestHostKind) => GUEST_KIND_ICON[k];
 
 /** A round tile with the host's kind icon. */
 export const KindTile = ({ kind, size = 36 }: { kind: GuestHostKind; size?: number }) => (
-  <span aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: '#F3EEE8', color: '#6E5A43', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={kindIcon(kind)} size={Math.round(size * 0.53)} weight={300} /></span>
+  <span aria-hidden="true" className="cp-fill" style={{ width: size, height: size, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--eyebrow, #6E5A43)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={kindIcon(kind)} size={Math.round(size * 0.53)} weight={300} /></span>
 );
 
 /** Row style of the grouped lists: hairline from the text, comfortable tap height; wide screens get more air. */
 export const rowStyle = (first: boolean, phone: boolean): CSSProperties => ({
   width: '100%', display: 'flex', alignItems: 'center', gap: phone ? 12 : 16, padding: phone ? '8px 12px 8px 16px' : '12px 22px', minHeight: phone ? 58 : 68, border: 'none',
-  backgroundColor: '#FFFFFF', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', cursor: 'pointer',
-  ...(phone ? rowLine(first, 64) : first ? {} : { borderTop: '1px solid #F0EAE1' }),
+  backgroundColor: 'transparent', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', cursor: 'pointer',
+  ...(phone ? rowLine(first, 64) : first ? {} : { borderTop: '0.5px solid var(--hairline, #E2E2E6)' }),
 });
 
 /** The state of a session for its row: booked ones show nothing (the group says it), the others a dot and the word. */

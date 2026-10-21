@@ -28,15 +28,15 @@ export function PhoneMonth({ month, onMonth, today, sel, onSelect, info, hours, 
   const keyId = useId();
   const cells = useMemo(() => monthGrid(month), [month]);
   const nav = (dir: 1 | -1, label: string) => (
-    <button type="button" className="cp-press" onClick={() => onMonth(addMonths(month, dir))} aria-label={label} style={{ width: 40, height: 40, borderRadius: 999, border: 'none', background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#75624B', padding: 0, flex: 'none' }}>
+    <button type="button" className="cp-press cp-fill" onClick={() => onMonth(addMonths(month, dir))} aria-label={label} style={{ width: 40, height: 40, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: 'var(--accent, #75624B)', padding: 0, flex: 'none' }}>
       <Icon name={dir === 1 ? 'chevron_right' : 'chevron_left'} size={22} />
     </button>
   );
   return (
-    <div style={{ background: '#FFFFFF', borderRadius: 14, padding: '10px 8px 4px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '10px 8px 4px', display: 'flex', flexDirection: 'column', gap: 6 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
         {nav(-1, t('cal.prevMonth'))}
-        <h2 style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 22, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C', textAlign: 'center' }}>{fmonth(month, true)}</h2>
+        <h2 className="cp-serif" style={{ margin: 0, flex: 1, minWidth: 0, fontSize: 22, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C', textAlign: 'center' }}>{fmonth(month, true)}</h2>
         {nav(1, t('cal.nextMonth'))}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 2 }}>
@@ -62,7 +62,7 @@ export function PhoneMonth({ month, onMonth, today, sel, onSelect, info, hours, 
         })}
       </div>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-        <button type="button" className="cp-press" onClick={() => setKey((v) => !v)} aria-expanded={key} aria-controls={keyId} style={{ height: 44, padding: '0 12px 0 10px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" className="cp-press" onClick={() => setKey((v) => !v)} aria-expanded={key} aria-controls={keyId} style={{ height: 44, padding: '0 12px 0 10px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="info" size={20} />{t('cal.key')}<Icon name={key ? 'expand_less' : 'expand_more'} size={20} />
         </button>
         {month !== today.slice(0, 7) ? <Button variant="ghost" size={44} onClick={() => onMonth(today.slice(0, 7) as YM)}>{t('cal.thisMonth')}</Button> : null}

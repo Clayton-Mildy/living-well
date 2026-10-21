@@ -46,24 +46,24 @@ export function StockForm({ defaultArea, onSent, prefill, title }: { defaultArea
   // round 6, phone: the title sits outside a flat white group; item, then quantity | unit as plain rows with hairlines, soft pill chips, and a full-width send pill
   if (isPhone) {
     const line: React.CSSProperties = { ...bronzeInput, height: 50, border: 'none', borderRadius: 0, padding: '0 16px', background: 'transparent', width: '100%' };
-    const chip = (on: boolean): React.CSSProperties => ({ height: 36, flex: 'none', padding: '0 14px', borderRadius: 999, border: 'none', background: on ? '#24201C' : '#F3EEE8', color: on ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', whiteSpace: 'nowrap' });
+    const chip = (on: boolean): React.CSSProperties => ({ height: 36, flex: 'none', padding: '0 14px', borderRadius: 999, border: 'none', background: on ? '#24201C' : 'var(--fill, #F4F4F5)', color: on ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', whiteSpace: 'nowrap' });
     return (
       <section style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <div style={{ padding: '0 16px' }}><div style={GROUP_HEAD}>{title ?? t('kitchen.stock.new')}</div></div>
-        <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
+        <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('kitchen.stock.item')} aria-label={t('kitchen.stock.item')} maxLength={80} style={line} />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '1px solid #EFEAE3' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
             <input value={qty} onChange={(e) => setQty(e.target.value)} placeholder={t('kitchen.stock.qty')} aria-label={t('kitchen.stock.qty')} inputMode="decimal" maxLength={8} style={line} />
-            <input value={unitLabel(t, unit)} onChange={(e) => setUnit(e.target.value)} placeholder={t('kitchen.stock.unit')} aria-label={t('kitchen.stock.unit')} maxLength={24} style={{ ...line, borderLeft: '1px solid #EFEAE3' }} />
+            <input value={unitLabel(t, unit)} onChange={(e) => setUnit(e.target.value)} placeholder={t('kitchen.stock.unit')} aria-label={t('kitchen.stock.unit')} maxLength={24} style={{ ...line, borderLeft: '0.5px solid var(--hairline, #E2E2E6)' }} />
           </div>
-          <div className="scroll-x" style={{ display: 'flex', gap: 6, padding: '10px 16px', borderTop: '1px solid #EFEAE3', scrollbarWidth: 'none' }} role="group" aria-label={t('kitchen.stock.unit')}>
+          <div className="scroll-x" style={{ display: 'flex', gap: 6, padding: '10px 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', scrollbarWidth: 'none' }} role="group" aria-label={t('kitchen.stock.unit')}>
             {KNOWN_UNITS.map((u) => (
-              <button key={u} type="button" className="cp-press" aria-pressed={unit === u} onClick={() => setUnit(u)} style={chip(unit === u)}>{t('kitchen.unit.' + u)}</button>
+              <button key={u} type="button" className={unit === u ? 'cp-press' : 'cp-press cp-fill'} aria-pressed={unit === u} onClick={() => setUnit(u)} style={chip(unit === u)}>{t('kitchen.unit.' + u)}</button>
             ))}
           </div>
-          <div className="scroll-x" style={{ display: 'flex', gap: 6, padding: '10px 16px', borderTop: '1px solid #EFEAE3', scrollbarWidth: 'none' }} role="group" aria-label={t('kitchen.stock.area')}>
+          <div className="scroll-x" style={{ display: 'flex', gap: 6, padding: '10px 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', scrollbarWidth: 'none' }} role="group" aria-label={t('kitchen.stock.area')}>
             {STOCK_AREAS.map((a) => (
-              <button key={a} type="button" className="cp-press" aria-pressed={area === a} onClick={() => setArea(a)} style={chip(area === a)}>{areaLabel(t, a)}</button>
+              <button key={a} type="button" className={area === a ? 'cp-press' : 'cp-press cp-fill'} aria-pressed={area === a} onClick={() => setArea(a)} style={chip(area === a)}>{areaLabel(t, a)}</button>
             ))}
           </div>
           {/* a grid, not a flex column: a growing flex item in a column collapses to its text height */}
@@ -76,18 +76,18 @@ export function StockForm({ defaultArea, onSent, prefill, title }: { defaultArea
     );
   }
   return (
-    <div className="cp-card-pad" style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div className="cp-card-pad cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={cardLabel}>{title ?? t('kitchen.stock.new')}</div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('kitchen.stock.item')} aria-label={t('kitchen.stock.item')} maxLength={80} style={{ ...bronzeInput, flex: '2 1 220px' }} />
-        <input value={qty} onChange={(e) => setQty(e.target.value)} placeholder={t('kitchen.stock.qty')} aria-label={t('kitchen.stock.qty')} inputMode="decimal" maxLength={8} style={{ ...bronzeInput, flex: '1 1 120px' }} />
-        <input value={unitLabel(t, unit)} onChange={(e) => setUnit(e.target.value)} placeholder={t('kitchen.stock.unit')} aria-label={t('kitchen.stock.unit')} maxLength={24} style={{ ...bronzeInput, flex: '1 1 120px' }} />
+        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('kitchen.stock.item')} aria-label={t('kitchen.stock.item')} maxLength={80} className="cp-input cp-fill" style={{ ...bronzeInput, flex: '2 1 220px' }} />
+        <input value={qty} onChange={(e) => setQty(e.target.value)} placeholder={t('kitchen.stock.qty')} aria-label={t('kitchen.stock.qty')} inputMode="decimal" maxLength={8} className="cp-input cp-fill" style={{ ...bronzeInput, flex: '1 1 120px' }} />
+        <input value={unitLabel(t, unit)} onChange={(e) => setUnit(e.target.value)} placeholder={t('kitchen.stock.unit')} aria-label={t('kitchen.stock.unit')} maxLength={24} className="cp-input cp-fill" style={{ ...bronzeInput, flex: '1 1 120px' }} />
       </div>
       {/* phone: the unit and section chips are one scrolling row each, not a wrapped wall */}
       <div className={isPhone ? 'scroll-x' : undefined} style={{ display: 'flex', flexWrap: isPhone ? 'nowrap' : 'wrap', gap: 6, ...(isPhone ? { margin: '0 -16px', padding: '0 16px', scrollbarWidth: 'none' } : {}) }} role="group" aria-label={t('kitchen.stock.unit')}>
         {KNOWN_UNITS.map((u) => (
-          <button key={u} type="button" aria-pressed={unit === u} onClick={() => setUnit(u)}
-            style={{ height: isPhone ? 38 : 44, flex: 'none', padding: '0 14px', borderRadius: 12, border: unit === u ? '1px solid #24201C' : '1px solid #DCD3C8', background: unit === u ? '#24201C' : '#FFFFFF', color: unit === u ? '#FFFFFF' : '#24201C', fontSize: 'max(14px, var(--cp-body, 0px))', cursor: 'pointer', fontFamily: 'Inter' }}>
+          <button key={u} type="button" aria-pressed={unit === u} onClick={() => setUnit(u)} className={unit === u ? undefined : 'cp-fill'}
+            style={{ height: isPhone ? 38 : 44, flex: 'none', padding: '0 14px', borderRadius: 999, border: 'none', background: unit === u ? '#24201C' : 'var(--fill, #F4F4F5)', color: unit === u ? '#FFFFFF' : '#24201C', fontSize: 'max(14px, var(--cp-body, 0px))', cursor: 'pointer', fontFamily: 'Inter' }}>
             {t('kitchen.unit.' + u)}
           </button>
         ))}

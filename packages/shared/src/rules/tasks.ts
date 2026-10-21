@@ -16,10 +16,10 @@ import { renewalMonth, renewalMembers, renewalsLeft } from './renewals';
 import { approvalTotal } from './approvals';
 
 /** Every staff role that can have tasks, in the order the Team view lists them. */
-export const TASK_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'kitchen', 'housekeeping', 'driver', 'finance', 'mgmt'];
+export const TASK_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt'];
 /** Material icon of each role (the Team view cards). */
 export const TASK_ROLE_ICON: Record<StaffRole, string> = {
-  lobby: 'support_agent', nurse: 'medical_services', activity: 'palette', kitchen: 'restaurant', housekeeping: 'cleaning_services', driver: 'directions_car', finance: 'payments', mgmt: 'badge',
+  lobby: 'support_agent', nurse: 'medical_services', activity: 'palette', kitchen: 'restaurant', finance: 'payments', mgmt: 'badge',
 };
 /** The day of the month that means "the last open day" (monthly tasks). */
 export const LAST_DAY = 31;

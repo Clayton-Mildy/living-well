@@ -19,15 +19,17 @@ async function setDay(request: APIRequestContext, date: string, hm = '10:00') {
   expect(r.ok()).toBeTruthy();
 }
 const toast = (page: Page, text: string | RegExp) => expect(page.getByRole('status').filter({ hasText: text }).first()).toBeVisible();
-const famTab = (page: Page, name: string) => page.getByRole('tablist', { name: 'Choose a member' }).getByRole('tab', { name, exact: true });
-const planCard = (page: Page) => page.getByTestId('plan-card');
+/** One plan row per parent on the family's Billing page. */
+const planCard = (page: Page, memberId: string) => page.locator(`[data-testid="plan-card"][data-member="${memberId}"]`);
 /** A phone shows one stage of the enquiries board at a time. */
 const showStage = async (page: Page, stage: RegExp) => { if (isPhone(page)) await pickOption(page, 'Stage', stage); };
-/** The Updates tab of the notification panel. */
+/** The Updates tab of the staff notification panel (the family's panel is one list). */
 async function updatesOf(page: Page) {
-  await page.getByRole('button', { name: /Notifications/ }).first().click();
+  await page.getByRole('button', { name: /^Notifications/ }).first().click(); // not the Today tab, whose name carries the bell's count when you are elsewhere
   const panel = page.getByRole('dialog', { name: 'Notifications' });
-  await panel.getByRole('tab', { name: /Updates/ }).click();
+  await expect(panel).toBeVisible();
+  const tab = panel.getByRole('tab', { name: /Updates/ });
+  if (await tab.count()) await tab.click();
   return panel;
 }
 /** Everyone the families of Lina and Budi owe nothing to: pay October for them (finance, cash). */
@@ -69,19 +71,18 @@ test.describe('leave (cuti)', () => {
   test('Maria asks for leave beside "Ask to switch plan": November is too late, December is fine; she can take it back until its deadline', async ({ page, request }) => {
     const c = watchConsole(page);
     await signIn(page, 'f1', '/billing');
-    await famTab(page, 'Oma Lina').click();
-    const p = planCard(page);
-    await expect(p.getByRole('button', { name: 'Ask to switch to Gold' })).toBeVisible();
-    await expect(p.getByRole('button', { name: 'Ask for leave' })).toBeVisible(); // beside it
-    await p.getByRole('button', { name: 'Ask for leave' }).click();
+    const p = planCard(page, 'm1');
+    await expect(p.getByTestId('plan-ask-link')).toBeVisible();
+    await expect(p.getByTestId('leave-ask')).toHaveText('Ask for leave'); // beside it
+    await p.getByTestId('leave-ask').click();
     const sheet = page.getByRole('dialog', { name: 'Leave for Oma Lina' });
     await expect(sheet).toContainText('Rp 250.000');
     await expect(sheet).toContainText('14 days before the end of the month before');
     // the deadline for November was 17 October: it is not offered; December is, with its deadline
-    await expect(sheet.getByRole('button', { name: /^November/ })).toHaveCount(0);
-    await expect(sheet.getByRole('button', { name: 'December · ask by Mon 16 Nov' })).toBeVisible();
-    await sheet.getByRole('button', { name: 'December · ask by Mon 16 Nov' }).click();
-    await sheet.getByRole('button', { name: 'Ask for leave · December' }).click();
+    await expect(sheet.getByRole('radio', { name: /^November/ })).toHaveCount(0);
+    await expect(sheet.getByRole('radio', { name: 'December · ask by Mon 16 Nov' })).toBeVisible();
+    await sheet.getByRole('radio', { name: 'December · ask by Mon 16 Nov' }).click();
+    await sheet.getByRole('button', { name: 'Send', exact: true }).click();
     await toast(page, 'Leave for December asked.');
     await expect(sheet).toHaveCount(0);
     const row = p.getByTestId('leave-row');
@@ -98,11 +99,11 @@ test.describe('leave (cuti)', () => {
     await row.getByRole('button', { name: 'Take back' }).click();
     await toast(page, 'Leave for December taken back.');
     await expect(row).toHaveCount(0);
-    await expect(p.getByRole('button', { name: 'Ask for leave' })).toBeVisible();
+    await expect(p.getByTestId('leave-ask')).toBeVisible();
     // Daniel is not the billing contact: he sees no leave button
     await signIn(page, 'f2', '/billing');
-    await famTab(page, 'Oma Lina').click();
-    await expect(planCard(page).getByRole('button', { name: 'Ask for leave' })).toHaveCount(0);
+    await expect(planCard(page, 'm1')).toBeVisible();
+    await expect(planCard(page, 'm1').getByTestId('leave-ask')).toHaveCount(0);
     await assertNoHorizontalScroll(page);
     c.assertClean();
   });
@@ -119,11 +120,10 @@ test.describe('leave (cuti)', () => {
     expect(inv.find((i) => i.memberId === 'm46')!.lines.map((l) => [l.label, l.amount])).toEqual([['inv.line.gold', 3950000]]);
     // Maria sees it on her Billing: the leave line, the status
     await signIn(page, 'f1', '/billing');
-    await famTab(page, 'Oma Lina').click();
-    await expect(planCard(page).getByTestId('leave-row')).toContainText('On leave in December');
-    const invoice = page.getByTestId('open-invoice').filter({ hasText: 'Oma Lina' });
-    await expect(invoice).toContainText('Rp 250.000');
-    await invoice.getByRole('button', { name: 'Details' }).click();
+    await expect(planCard(page, 'm1').getByTestId('leave-row')).toContainText('On leave in December');
+    const invoice = page.getByTestId('invoice-row').filter({ hasText: 'Oma Lina · December' });
+    await expect(invoice).toContainText('Rp 250 rb');
+    await invoice.click();
     await expect(page.getByRole('dialog', { name: 'December 2026 invoice' })).toContainText(/Leave \(cuti\) · December/);
     await page.keyboard.press('Escape');
     // the lobby: her row says so, and the check-in is refused with a clear message (the server too)
@@ -201,9 +201,9 @@ test.describe('an unpaid invoice: on hold on the 1st, stopped on the 3rd', () =>
     await assertNoHorizontalScroll(page);
     // the family sees it on the plan card
     await signIn(page, 'f1', '/billing');
-    await famTab(page, 'Oma Lina').click();
-    await expect(planCard(page).getByTestId('plan-hold')).toContainText('Membership on hold: invoice INV-2610-001 (Rp 2.700.000) is unpaid');
-    // management and the billing contact were told (once) by the daily job
+    await expect(planCard(page, 'm1').getByTestId('plan-hold')).toContainText('Membership on hold: invoice INV-2610-001 (Rp 2.700.000) is unpaid');
+    // management and the billing contact were told (once) by the daily job (the family's bell is on Today)
+    await page.locator('[data-nav-key="today"]').click();
     await expect((await updatesOf(page)).getByText(/Membership on hold: invoice INV-2610-001 \(Rp 2\.700\.000\) for Oma Lina is unpaid/)).toBeVisible();
     // paying lifts the hold at once, and she can check in
     await ok(request, 's10', 'payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001' });
@@ -228,7 +228,7 @@ test.describe('an unpaid invoice: on hold on the 1st, stopped on the 3rd', () =>
     await page.keyboard.press('Escape');
     expect((await api(request, 's1', 'attendance.checkIn', { memberId: 'm1', method: 'manual' })).status()).toBe(422);
     // Maria is told
-    await signIn(page, 'f1', '/billing');
+    await signIn(page, 'f1', '/today');
     await expect((await updatesOf(page)).getByText(/Oma Lina’s membership has stopped: invoice INV-2610-001/)).toBeVisible();
     await page.keyboard.press('Escape');
     // management registers Oma Lina again: the first invoice of the new membership carries the registration fee once more

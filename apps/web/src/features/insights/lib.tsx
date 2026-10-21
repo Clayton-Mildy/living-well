@@ -1,9 +1,9 @@
-// Visit insights: small shared helpers (weekday names, minutes as HH:mm, the heat palette) and the section wrapper.
+// Insights: small shared helpers (weekday names, minutes as HH:mm, the heat palette) and the section wrapper.
 import { useMemo, type ReactNode } from 'react';
 import { Group } from '../../components/ui';
 import { useFmt, useT } from '../../lib/i18n';
 
-export const FLEX_COLOR = '#75624B'; // bronze
+export const FLEX_COLOR = 'var(--accent, #75624B)'; // bronze
 export const GOLD_COLOR = '#C9A24D'; // gold
 export const INK = '#24201C';
 export const MUTED = '#6B6259';
@@ -54,9 +54,19 @@ export function Panel({ title, meta, children, pad = '14px 16px', gap = 10 }: { 
 /** A label on the left and a value on the right, one hairline row. */
 export function Line({ label, value, first }: { label: ReactNode; value: ReactNode; first?: boolean }) {
   return (
-    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '9px 0', borderTop: first ? 'none' : '1px solid #F0EAE1', fontSize: 15 }}>
+    <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '9px 0', borderTop: first ? 'none' : '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15 }}>
       <span style={{ color: MUTED, minWidth: 0 }}>{label}</span>
       <span style={{ fontWeight: 500, color: INK, fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>{value}</span>
+    </div>
+  );
+}
+
+/** A key number: a light figure with a small grey label under it. */
+export function Stat({ label, value }: { label: ReactNode; value: ReactNode }) {
+  return (
+    <div style={{ minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <span style={{ fontSize: 24, lineHeight: '28px', fontWeight: 300, letterSpacing: '-0.5px', color: '#2B231C', fontVariantNumeric: 'tabular-nums', overflowWrap: 'anywhere' }}>{value}</span>
+      <span style={{ fontSize: 13, color: MUTED, lineHeight: '17px' }}>{label}</span>
     </div>
   );
 }

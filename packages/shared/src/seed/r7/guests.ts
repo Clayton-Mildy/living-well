@@ -3,7 +3,7 @@
 //   hosts     Bu Ratna (angklung), Pak Hendro (keroncong), dr. Maya Sari (heart-health talk)
 //   sessions  2 done in the last days (one invoice paid, one approved and waiting for finance) · 1 booked on the next open day (paid in advance) · 1 booked next week (to pay)
 //   changes   the 13:30 session of the second open day after T becomes Karaoke ("Kak Dimas is off sick"); the booked talk changes the 13:30 session of its day
-import type { ClubState, DT, GuestHost, GuestSession, ISODate, ScheduleCell, ScheduleDay, Slot, VendorInvoice, Weekday } from '../../types';
+import type { ClubState, DT, GuestHost, GuestSession, ISODate, ScheduleCell, ScheduleDay, Slot, VendorInvoice, Weekday, WeekSlot } from '../../types';
 import { dayStatus } from '../../rules/core';
 import { guestInvoiceNumber } from '../../rules/guests';
 import { addDays, dow } from '../../util';
@@ -22,19 +22,19 @@ export function seedGuests(s: ClubState, T: ISODate): void {
   const openAfter = (from: ISODate, n = 1): ISODate => { let d = from; let left = n; for (let i = 0; i < 90 && left > 0; i++) { d = addDays(d, 1); if (free(d)) left--; } return d; };
   const openFrom = (from: ISODate): ISODate => (free(from) ? from : openAfter(from));
 
-  const weekly = (date: ISODate, slot: Slot): ScheduleCell | null => {
+  const weekly = (date: ISODate, slot: WeekSlot): ScheduleCell | null => {
     const v = Object.values(s.scheduleVersions).filter((x) => x.status === 'published' && x.effectiveFrom <= date).sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom)).pop();
     return v?.days[dow(date) as Weekday]?.[slot] ?? null;
   };
   /** One-day change of a slot (merged into the day's row). */
-  const change = (date: ISODate, slot: Slot, cell: ScheduleCell, note?: string) => {
+  const change = (date: ISODate, slot: WeekSlot, cell: ScheduleCell, note?: string) => {
     const row: ScheduleDay = s.scheduleDays[date] ?? { ...base(date, `${addDays(T, -1)}T11:00`), date, slots: {} };
     row.slots[slot] = cell;
     if (note) row.note = note;
     s.scheduleDays[date] = row;
   };
   /** A guest leading `activityId` in a slot: the slot changes for that day unless the weekly plan already has that activity. */
-  const lead = (date: ISODate, slot: Slot, activityId: string) => {
+  const lead = (date: ISODate, slot: WeekSlot, activityId: string) => {
     const w = weekly(date, slot);
     if (w && w.activityId === activityId) return;
     change(date, slot, { activityId, staffId: w?.staffId ?? 's5', roomId: s.activities[activityId].roomId });
@@ -55,7 +55,7 @@ export function seedGuests(s: ClubState, T: ISODate): void {
   for (let i = 1; i <= 28 && past.length < 2; i++) {
     const date = addDays(T, -i);
     if (!free(date)) continue;
-    for (const slot of ['10:30', '13:30'] as Slot[]) for (const [hostId, activityId, name, fee] of PAIRS) {
+    for (const slot of ['10:30', '13:30'] as WeekSlot[]) for (const [hostId, activityId, name, fee] of PAIRS) {
       if (past.length < 2 && weekly(date, slot)?.activityId === activityId) past.push({ date, slot, hostId, activityId, name, fee });
     }
   }

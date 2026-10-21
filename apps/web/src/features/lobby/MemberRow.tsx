@@ -40,10 +40,10 @@ export function MemberRow({ r, first, selected, onOpen, onCheckIn, onCheckOut, o
   const pad = 'var(--hp, 24px)';
   // round 6, phone: an iOS grouped row, its own 16px inset, a hairline that starts at the name (not under the avatar), a tint while pressed
   const rowStyle: React.CSSProperties = isPhone
-    ? { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', backgroundColor: selected ? '#FBF8F4' : '#FFFFFF', boxShadow: selected ? 'inset 3px 0 0 #2B231C' : undefined,
-      backgroundImage: first || selected ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 70px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', transition: 'background-color .15s' }
-    : { display: 'flex', alignItems: 'center', gap: 16, padding: '18px 0', borderTop: '1px solid #F0EAE1',
-      ...(selected ? { background: '#FBF8F4', boxShadow: 'inset 3px 0 0 #2B231C', margin: `0 calc(${pad} * -1)`, padding: `18px ${pad}`, borderTopColor: 'transparent' } : {}) };
+    ? { display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', backgroundColor: selected ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: selected ? 'inset 3px 0 0 #2B231C' : undefined,
+      backgroundImage: first || selected ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 70px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', transition: 'background-color .15s' }
+    : { display: 'flex', alignItems: 'center', gap: 16, padding: '18px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)',
+      ...(selected ? { background: 'var(--press, #EEEEF0)', boxShadow: 'inset 3px 0 0 #2B231C', margin: `0 calc(${pad} * -1)`, padding: `18px ${pad}`, borderTopColor: 'transparent' } : {}) };
   return (
     <div className={isPhone ? 'cp-tap' : undefined} style={rowStyle}>
       <button type="button" onClick={onOpen} className={isPhone ? 'cp-tap-target' : undefined} style={{ flex: '1 1 0', minWidth: 0, minHeight: 46, display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
@@ -60,8 +60,8 @@ export function MemberRow({ r, first, selected, onOpen, onCheckIn, onCheckOut, o
         </span>
       </button>
       {action ? (
-        <button type="button" className={`${action.primary ? 'h-bronze' : 'h-cream'}${isPhone ? ' cp-press' : ''}`} onClick={action.run} aria-label={'label' in action ? action.label : `${action.text}: ${name}`}
-          style={{ height: isPhone ? 34 : 40, padding: isPhone ? '0 14px' : '0 18px', borderRadius: 999, border: `1px solid ${action.primary ? '#24201C' : '#DCD3C8'}`, background: action.primary ? '#24201C' : '#FFFFFF', color: action.primary ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', flex: 'none', fontFamily: 'Inter' }}>{action.text}</button>
+        <button type="button" className={`${action.primary ? 'h-bronze' : 'h-fill cp-fill'}${isPhone ? ' cp-press' : ''}`} onClick={action.run} aria-label={'label' in action ? action.label : `${action.text}: ${name}`}
+          style={{ height: isPhone ? 34 : 40, padding: isPhone ? '0 14px' : '0 18px', borderRadius: 999, border: 'none', background: action.primary ? '#24201C' : 'var(--fill, #F4F4F5)', color: action.primary ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', flex: 'none', fontFamily: 'Inter' }}>{action.text}</button>
       ) : null}
     </div>
   );

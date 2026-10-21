@@ -5,7 +5,7 @@ import { useEffect, useId, useLayoutEffect, useRef, useState, type CSSProperties
 import { createPortal } from 'react-dom';
 import { useT } from '../../lib/i18n';
 import { useDevice } from '../../hooks/useDevice';
-import { FONT_BODY, Icon, IconButton } from './index';
+import { CloseButton, FONT_BODY, Icon } from './index';
 
 /** ids that tie a label, its trigger and the message below together. */
 export function useFieldIds(idProp?: string) {
@@ -14,7 +14,6 @@ export function useFieldIds(idProp?: string) {
   return { trigger: base, label: `${base}-l`, msg: `${base}-m`, list: `${base}-list`, value: `${base}-v` };
 }
 
-/** The design's 52px field box (bronze border, 16px radius); `error` swaps in the rust border. */
 /** The page's CSS zoom (global.css scales the whole UI); 1 where unsupported. */
 export function uiZoom(): number {
   if (typeof document === 'undefined') return 1;
@@ -22,13 +21,16 @@ export function uiZoom(): number {
   return Number.isFinite(z) && z > 0 ? z : 1;
 }
 
+/** Round 8c: the field box is a soft grey (var(--fill, #F4F4F5)) 52px box, radius 12, no border; open = a 2px ink ring, `error` = a rust ring. Add className "cp-fill" (see `triggerClass`). */
 export function triggerStyle(o: { error?: boolean; disabled?: boolean; open?: boolean }): CSSProperties {
   return {
-    width: '100%', minWidth: 0, height: 'var(--cp-field-h, 52px)', padding: '0 14px', borderRadius: 14, background: o.disabled ? '#F3EEE8' : '#FFFFFF', color: o.disabled ? '#5E5852' : '#24201C',
-    border: o.error ? '2px solid #9A3D24' : o.open ? '2px solid #24201C' : '1px solid #DDD1C2', fontFamily: 'Inter', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10,
-    textAlign: 'left', cursor: o.disabled ? 'not-allowed' : 'pointer', ...(o.open || o.error ? { padding: '0 13px' } : {}),
+    width: '100%', minWidth: 0, height: 'var(--cp-field-h, 52px)', padding: '0 14px', borderRadius: 12, background: o.disabled ? 'var(--press, #EEEEF0)' : 'var(--fill, #F4F4F5)', color: o.disabled ? '#5E5852' : '#24201C',
+    border: 'none', boxShadow: o.error ? 'inset 0 0 0 2px #9A3D24' : o.open ? 'inset 0 0 0 2px #24201C' : undefined, fontFamily: 'Inter', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10,
+    textAlign: 'left', cursor: o.disabled ? 'not-allowed' : 'pointer',
   };
 }
+/** The class a field trigger carries: it turns white on a grey block (global.css `.cp-grey .cp-fill`); a disabled one stays grey. */
+export const triggerClass = (disabled?: boolean) => (disabled ? undefined : 'cp-fill');
 
 export function FieldFrame({ ids, label, error, hint, children }: { ids: ReturnType<typeof useFieldIds>; label?: ReactNode; error?: ReactNode; hint?: ReactNode; children: ReactNode }) {
   return (
@@ -120,13 +122,13 @@ export function PopLayer({ open, onClose, anchorRef, title, children, minWidth =
   if (isPhone) {
     return createPortal(
       <div style={{ position: 'fixed', inset: 0, zIndex: 70, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-        <div onClick={() => close.current()} style={{ position: 'absolute', inset: 0, background: 'rgba(40,40,40,0.36)' }} />
+        <div onClick={() => close.current()} style={{ position: 'absolute', inset: 0, background: 'rgba(20,16,12,.32)' }} />
         <div ref={panel} role="dialog" aria-modal="true" aria-label={title} onKeyDown={onKeyDown}
-          style={{ position: 'relative', width: '100%', maxWidth: 600, maxHeight: '86%', display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: '20px 20px 0 0', padding: '10px 16px calc(16px + env(safe-area-inset-bottom, 0px))', animation: 'cpUp .22s ease-out', gap: 12 }}>
-          <div style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 999, background: '#E4DACD', flex: 'none' }} />
+          style={{ position: 'relative', width: '100%', maxWidth: 600, maxHeight: '86%', display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: '28px 28px 0 0', padding: '8px 16px calc(16px + env(safe-area-inset-bottom, 0px))', animation: 'cpUp .22s ease-out', gap: 12 }}>
+          <div aria-hidden="true" style={{ alignSelf: 'center', width: 36, height: 5, borderRadius: 999, background: 'var(--outline, #D4D4D8)', flex: 'none' }} />
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flex: 'none' }}>
-            <h2 style={{ margin: 0, fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.4px', color: '#2B231C', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h2>
-            <IconButton icon="close" label={t('common.close')} onClick={() => close.current()} />
+            <h2 className="cp-serif cp-serif-up" style={{ margin: 0, fontSize: 20, lineHeight: '28px', fontWeight: 500, color: '#24201C', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{title}</h2>
+            <CloseButton label={t('common.close')} onClick={() => close.current()} />
           </div>
           <div style={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>{children}</div>
         </div>
@@ -138,7 +140,7 @@ export function PopLayer({ open, onClose, anchorRef, title, children, minWidth =
     <>
       <div onClick={() => close.current()} style={{ position: 'fixed', inset: 0, zIndex: 69, background: 'transparent' }} />
       <div ref={panel} onKeyDown={onKeyDown} role={menu ? undefined : 'dialog'} aria-label={menu ? undefined : title}
-        style={{ position: 'fixed', zIndex: 70, ...(pos || { left: -9999, top: 0, width: minWidth }), display: 'flex', flexDirection: 'column', background: '#FFFFFF', border: '1px solid #E4DACD', borderRadius: 16, boxShadow: '0 12px 32px rgba(40,30,20,0.16)', overflow: 'hidden' }}>
+        style={{ position: 'fixed', zIndex: 70, ...(pos || { left: -9999, top: 0, width: minWidth }), display: 'flex', flexDirection: 'column', background: '#FFFFFF', borderRadius: 18, boxShadow: '0 2px 6px rgba(40,30,20,.08), 0 18px 44px rgba(40,30,20,.2)', overflow: 'hidden' }}>
         <div ref={inner} style={{ minHeight: 0, display: 'flex', flexDirection: 'column', overflowY: 'auto' }}>{children}</div>
       </div>
     </>,

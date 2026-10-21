@@ -62,4 +62,22 @@ export const enq: Same<typeof EN> = {
   'notif.trialLunchUnknown': 'Makan siang percobaan pada {date}: {name}. Alergi makanan belum diketahui: tanyakan ke keluarga.', 'notif.trialHealth': 'Tamu percobaan pada {date}: {name}. Perlu pemeriksaan saat datang.',
   regAttached: 'Formulir pendaftaran terlampir', regMissing: 'Formulir pendaftaran belum ada', 'err.formRequired': 'Lampirkan formulir pendaftaran bertanda tangan untuk bergabung.',
   jn_paperNote: 'Ketik data pokok dari formulir kertas. Lampirkan foto atau PDF formulir bertanda tangan untuk bergabung.',
+
+  // ----- KC ronde 10: tautan pendaftaran online -----
+  sendForm: 'Kirim tautan formulir', formLinkEyebrow: 'Pendaftaran online', formLinkIntro: 'Keluarga mengisi pendaftaran di ponsel mereka. Jawabannya kembali ke prospek ini dan mengisi langkah Bergabung. Formulir kertas bertanda tangan tetap diperlukan di klub.',
+  formLinkLabel: 'Tautan', formLinkCopy: 'Salin tautan', formLinkCopied: 'Tautan disalin.', formLinkWa: 'Kirim lewat WhatsApp', formLinkAgain: 'Kirim tautan baru', formLinkMaking: 'Menyiapkan tautan…',
+  formLinkWaText: 'Halo {contact}, ini formulir pendaftaran CitraPremier untuk {name}. Mohon diisi sebelum kunjungan: {link}',
+  formState_sent: 'Formulir terkirim', formState_opened: 'Formulir dibuka', formState_submitted: 'Formulir sudah diisi', formState_expired: 'Tautan formulir kedaluwarsa',
+  formSentOn: 'Dikirim {date} · berlaku sampai {until}', formOpenedOn: 'Dibuka {date} · berlaku sampai {until}', formExpiredOn: 'Tautan kedaluwarsa pada {until}.', formFilledBy: 'Diisi online oleh {name} pada {date}',
+  formOpenJoin: 'Buka di Bergabung', jn_fromOnline: 'Dari formulir online', formSentToast: 'Tautan formulir siap untuk {contact}.',
+  'err.formDone': 'Keluarga sudah mengirim formulir ini. Buka Bergabung untuk memakai jawabannya.', 'err.formExpired': 'Tautan ini sudah kedaluwarsa. Minta tautan baru ke klub.',
+  'feed.formSent': 'Tautan formulir pendaftaran dikirim · {name}', 'feed.formSubmitted': 'Formulir pendaftaran diisi online · {name}',
+  'notif.formSubmitted': '{by} mengisi formulir pendaftaran untuk {name} secara online.',
+  // halaman publik
+  pf_tab: 'Pendaftaran', pf_eyebrow: 'Pendaftaran keanggotaan', pf_intro: 'Isi sebelum kunjungan Anda. Butuh sekitar lima menit dan resepsionis tidak perlu mengetik ulang. Di klub Anda akan menandatangani formulir cetaknya.',
+  pf_who: 'Siapa yang bergabung', pf_contact: 'Kontak keluarga', pf_plan: 'Paket yang diminati', pf_planUnsure: 'Belum yakin', pf_paperNote: 'Formulir kertas bertanda tangan tetap diperlukan: klub mencetaknya dari jawaban ini untuk Anda tandatangani.',
+  pf_submit: 'Kirim ke klub', pf_sending: 'Mengirim…', pf_thanksTitle: 'Terima kasih, {name}', pf_thanksText: 'Jawaban Anda sudah sampai di klub. Bawa KTP dan kartu keluarga di hari pertama; resepsionis sudah menyiapkan formulir untuk ditandatangani.',
+  pf_doneTitle: 'Sudah terkirim', pf_doneText: 'Formulir ini sampai di klub pada {date}. Untuk mengubah sesuatu, minta tautan baru ke resepsionis.',
+  pf_badTitle: 'Tautan ini tidak berfungsi', pf_badText: 'Periksa tautan yang Anda terima, atau minta klub mengirim ulang.', pf_expiredTitle: 'Tautan ini sudah kedaluwarsa', pf_expiredText: 'Tautan berlaku 14 hari. Minta tautan baru ke resepsionis.',
+  pf_privacy: 'Hanya klub yang melihat jawaban ini.',
 };

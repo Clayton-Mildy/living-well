@@ -15,11 +15,11 @@ import { memberPhoto } from '../../lib/media';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { relLabel, whenText } from '../members/lib';
-import { outcomeLabel, planLabel } from './lib';
+import { outcomeLabel, planLabel, usageText } from './lib';
 
-const HAIR = '1px solid #EFEAE3';
+const HAIR = '0.5px solid var(--hairline, #E2E2E6)';
 const short = { day: 'numeric', month: 'short' } as const;
-const pill: CSSProperties = { height: 36, padding: '0 14px 0 12px', borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontFamily: 'Inter', whiteSpace: 'nowrap' };
+const pill: CSSProperties = { height: 36, padding: '0 14px 0 12px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontFamily: 'Inter', whiteSpace: 'nowrap' };
 
 export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; month: YM; onClose: () => void }) {
   const s = useClub();
@@ -39,7 +39,7 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
   const mgmt = role === 'mgmt';
 
   // the form: what the family decided, and what that outcome needs
-  const [outcome, setOutcome] = useState<FollowUpOutcome | null>(() => (f && f.status !== 'rejected' && f.outcome && f.outcome !== 'noAnswer' && f.outcome !== 'callBack' ? f.outcome : null));
+  const [outcome, setOutcome] = useState<FollowUpOutcome | null>(() => (f && f.status !== 'rejected' && f.outcome && f.outcome !== 'noAnswer' ? f.outcome : null));
   const firstLeave = useMemo(() => leaveMonthChoices(month).find((x) => m && leaveMonthsCheck(s, m, [x], today).ok), [s, m, month, today]);
   const [leaveSel, setLeaveSel] = useState<YM[]>(() => f?.leaveMonths ?? (firstLeave ? [firstLeave] : []));
   const [lastDay, setLastDay] = useState(() => f?.lastDay ?? defaultLastDay(month));
@@ -70,7 +70,7 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
   const Section = (title: ReactNode, children: ReactNode, pad: string | number = '14px 16px') => (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
       <h2 style={{ ...GROUP_HEAD, padding: '0 16px' }}>{title}</h2>
-      <div style={{ background: isPhone ? '#FFFFFF' : '#FAF8F5', borderRadius: 14, overflow: 'hidden', padding: pad, display: 'flex', flexDirection: 'column', gap: pad === 0 ? 0 : 12 }}>{children}</div>
+      <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden', padding: pad, display: 'flex', flexDirection: 'column', gap: pad === 0 ? 0 : 12 }}>{children}</div>
     </section>
   );
 
@@ -84,15 +84,13 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
             <span style={{ fontSize: 13, color: '#6B6259', fontVariantNumeric: 'tabular-nums' }}>{fmtPhone(c.phone)}</span>
           </div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-            <a href={`tel:${c.phone}`} className="cp-press" style={pill}><Icon name="call" size={18} />{t('common.call')}</a>
-            <a href={waUrl(c.phone)} target="_blank" rel="noreferrer" className="cp-press" style={pill}><Icon name="chat" size={18} />{t('renewals.whatsapp')}</a>
+            <a href={`tel:${c.phone}`} className="cp-press cp-fill" style={pill}><Icon name="call" size={18} />{t('common.call')}</a>
+            <a href={waUrl(c.phone)} target="_blank" rel="noreferrer" className="cp-press cp-fill" style={pill}><Icon name="chat" size={18} />{t('renewals.whatsapp')}</a>
           </div>
         </>
       ) : <span style={{ fontSize: 15, color: '#6B6259' }}>{t('renewals.noContact')}</span>
   ));
-  const usage = row.plan === 'flex' || fm.quota !== null
-    ? `${t('renewals.usageFlex', { used: Math.min(fm.used, fm.quota ?? fm.used), quota: fm.quota ?? 0 })}${fm.extra ? t('renewals.usageExtra', { n: fm.extra }) : ''}`
-    : t('renewals.usageGold', { n: fm.used });
+  const usage = usageText(t, row.plan, fm);
   const line = (label: string, value: string) => (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, fontSize: 15, lineHeight: '22px' }}><span style={{ color: '#6B6259' }}>{label}</span><span style={{ fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{value}</span></div>
   );
@@ -109,7 +107,7 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
     status.push(
       <Note key="w" tone="ochre" icon="hourglass_top">
         {t('renewals.st.waiting', { who: f.approval ? actorName(s, f.approval.by) : '' })}
-        {mgmt ? <div style={{ marginTop: 6 }}><button type="button" className="cp-press" onClick={() => { onClose(); navigate('/reviews?tab=renewals'); }} style={{ border: 'none', background: 'transparent', padding: 0, color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('renewals.st.review')}</button></div> : null}
+        {mgmt ? <div style={{ marginTop: 6 }}><button type="button" className="cp-press" onClick={() => { onClose(); navigate('/reviews?tab=renewals'); }} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('renewals.st.review')}</button></div> : null}
       </Note>,
     );
   }
@@ -186,7 +184,7 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
   );
   const saveBtn = editable ? (
     isPhone
-      ? <button type="button" className="cp-press" aria-disabled={!canSave || undefined} onClick={canSave ? save : undefined} style={{ width: '100%', height: 50, borderRadius: 999, border: 'none', background: canSave ? '#24201C' : '#EDE5DA', color: canSave ? '#FFFFFF' : '#8A8078', fontSize: 16, fontWeight: 500, cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>{needsOk ? t('renewals.saveApproval') : t('renewals.save')}</button>
+      ? <button type="button" className="cp-press" aria-disabled={!canSave || undefined} onClick={canSave ? save : undefined} style={{ width: '100%', height: 50, borderRadius: 999, border: 'none', background: canSave ? '#24201C' : 'var(--press, #EEEEF0)', color: canSave ? '#FFFFFF' : '#8A8078', fontSize: 16, fontWeight: 500, cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>{needsOk ? t('renewals.saveApproval') : t('renewals.save')}</button>
       : <Button size={48} icon={needsOk ? 'send' : 'check'} disabled={!canSave} onClick={save}>{needsOk ? t('renewals.saveApproval') : t('renewals.save')}</Button>
   ) : undefined;
 

@@ -2,10 +2,7 @@
 // requests, notes, ending and reactivating a membership. Management is never gated.
 // Review policy: gate = waits for management; flag = applies now, reviewed afterwards; management always applies at once.
 import type { Draft } from 'immer';
-import type {
-  Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan,
-  PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration,
-} from '../types';
+import type { Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
 import { e164, toMin } from '../util';
 import { defineAction, hasRole, isMgmt, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
 import { requireMember, shortOf, familyUserIds } from './helpers';
@@ -15,7 +12,7 @@ import { currentMembership, isOpen, isPendingRow, membershipStatus, memberShort,
 import { paidOn } from '../rules/billing';
 import { cleanRegistration, validateRegistration } from '../rules/applicationForm';
 import {
-  DEFAULT_SIM, DIETS, DOC_TYPES, END_REASONS, FOODS, MED_TIMINGS, MOBILITIES, RELATIONS, SIM_FILE, TITLES, docIdFor,
+  DEFAULT_SIM, DIETS, DOC_TYPES, END_REASONS, FOODS, KTP_KINDS, MED_TIMINGS, MOBILITIES, RELATIONS, SIM_FILE, TITLES, docIdFor, ktpDocuments,
   finalInvoiceFor, firstOfNextMonth, firstWord, genderOf, isHM, isISO, nextContactId, nextMemberId, lastMemberId, nextMemberNumber, splitName,
   validateNewMember, vaFor, consentOf, type NewMemberInput,
 } from '../rules/members';
@@ -106,13 +103,21 @@ export function activateMember(d: Draft<ClubState>, memberId: string, ctx: Ctx) 
 }
 
 // ---------- parse: add member ----------
-const parseNanny = (v: unknown) => {
+export const parseNanny = (v: unknown) => {
   if (v === null || v === undefined) return null;
   const o = obj(v);
   const name = txt(o.name, 80);
   if (!name) bad('members.err.nannyNameRequired');
   const phone = txt(o.phone, 30);
-  return { name, ...(phone ? { phone: e164(phone) } : {}) };
+  const nik = txt(o.nik, 24).replace(/\s/g, '');
+  if (nik && !/^\d{16}$/.test(nik)) bad('members.err.nikInvalid');
+  return { name, ...(phone ? { phone: e164(phone) } : {}), ...(nik ? { nik } : {}) };
+};
+/** KC round 10: a carer typed in when a lead joins (the Join dialog, the family's online form): the NIK is required. */
+export const parseCarer = (v: unknown) => {
+  const n = parseNanny(v);
+  if (n && !n.nik) bad('members.err.nannyNikRequired');
+  return n;
 };
 const parseDrugs = (v: unknown): DrugAllergy[] => {
   const out: DrugAllergy[] = [];
@@ -176,6 +181,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
     },
     careInstructions: txt(o.careInstructions, 1000),
     docs: enumList(o.docs, DOC_TYPES).filter((x) => x !== 'membershipForm'), // the signed registration form is attached below, never just ticked
+    ...(o.ktp !== undefined ? { ktp: parseKtp(o.ktp) } : {}),
     formMediaId: mediaIdOf(o.formMediaId) ?? '',
     formFileName: txt(o.formFileName, 120) || 'registration-form',
     consent: { data: cons.data === true, face: cons.face !== false },
@@ -188,6 +194,20 @@ function parseNewMember(raw: unknown): NewMemberFull {
 }
 
 /** An uploaded media id (`md_…` from POST /api/media), or undefined when none was given. */
+/** KC round 10: the ID-card photos of a registration: each one an uploaded media id and its file name. */
+export function parseKtp(v: unknown): KtpUploads | undefined {
+  if (v === undefined || v === null) return undefined;
+  const o = obj(v);
+  const out: KtpUploads = {};
+  for (const k of KTP_KINDS) {
+    if (!o[k]) continue;
+    const r = obj(o[k]);
+    const mediaId = mediaIdOf(r.mediaId);
+    if (!mediaId) { bad('err.invalid'); continue; }
+    out[k] = { mediaId, fileName: txt(r.fileName, 120) || `${k}.jpg` };
+  }
+  return Object.keys(out).length ? out : undefined;
+}
 export function mediaIdOf(v: unknown): string | undefined {
   if (v === undefined || v === null || v === '') return undefined;
   const id = txt(v, 80);
@@ -197,7 +217,7 @@ export function mediaIdOf(v: unknown): string | undefined {
 
 // ---------- parse: details patch ----------
 export interface DetailsPatch {
-  title?: Title; name?: string; dob?: ISODate; address?: string; /** '' clears it */ usualArrival?: HM | ''; nanny?: { name: string; phone?: string } | null; spouseId?: string | null;
+  title?: Title; name?: string; dob?: ISODate; address?: string; /** '' clears it */ usualArrival?: HM | ''; nanny?: { name: string; phone?: string; nik?: string } | null; spouseId?: string | null;
   /** the profile picture; null removes it */ photoMediaId?: string | null;
   /** the answers of the paper application form, all of them as they should be now; null clears them */ registration?: MemberRegistration | null;
 }
@@ -259,7 +279,12 @@ export const membersActions: ActionDef[] = [
         { kind: 'data', granted: true, by: ctx.actor, byName, at: ctx.nowDT, via: 'staff' },
         { kind: 'face', granted: input.consent.face, by: ctx.actor, byName, at: ctx.nowDT, via: 'staff' },
       ];
-      const documents: MemberDocument[] = input.docs.filter((t) => t !== 'nannyKtp' || input.nanny).map((type) => ({ id: docIdFor(id, type), type, status: 'onFile', fileName: SIM_FILE[type], on: ctx.today, via: 'staff', by: ctx.actor }));
+      // KC round 10: a photographed ID card is on file with its picture; a ticked one without a picture is a paper copy kept at the club
+      const uploaded = ktpDocuments(id, input.ktp, !!input.nanny, ctx.today, ctx.actor, 'staff');
+      const documents: MemberDocument[] = [
+        ...input.docs.filter((t) => (t !== 'nannyKtp' || input.nanny) && !uploaded.some((u) => u.type === t)).map((type): MemberDocument => ({ id: docIdFor(id, type), type, status: 'onFile', fileName: SIM_FILE[type], on: ctx.today, via: 'staff', by: ctx.actor })),
+        ...uploaded,
+      ];
       // the signed paper registration form: the uploaded photo or PDF
       documents.push({ id: docIdFor(id, 'membershipForm'), type: 'membershipForm', status: 'onFile', mediaId: input.formMediaId, fileName: input.formFileName, on: ctx.today, via: 'staff', by: ctx.actor });
       d.members[id] = {

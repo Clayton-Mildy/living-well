@@ -65,15 +65,15 @@ export function ByMember({ r, wide }: { r: DayReport; wide: boolean }) {
   if (!r.members.length) return <EmptyState icon="groups" title={t('report.noMembers')} />;
 
   if (wide) {
-    const head: CSSProperties = { fontSize: 12, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '16px' };
+    const head: CSSProperties = { fontSize: 12, letterSpacing: '1px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '16px' };
     return (
       <Group pad={0} gap={0} label={t('report.tabMembers')}>
-        <div aria-hidden="true" style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '12px 16px 10px', backgroundColor: '#FFFFFF' }}>
+        <div aria-hidden="true" style={{ display: 'grid', gridTemplateColumns: GRID, gap: 14, padding: '12px 16px 10px', backgroundColor: 'transparent' }}>
           {(['colMember', 'colTime', 'colLunch', 'colActivities', 'colMood', 'colArrival'] as const).map((k) => <span key={k} style={head}>{t('report.' + k)}</span>)}
         </div>
         {r.members.map((x) => (
           <button key={x.m.id} type="button" onClick={() => go(`/members/${x.m.id}`)} data-member={x.m.id} className="h-row cp-tap-self"
-            style={{ width: '100%', display: 'grid', gridTemplateColumns: GRID, gap: 14, alignItems: 'center', padding: '10px 16px', minHeight: 56, border: 'none', backgroundColor: '#FFFFFF', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', cursor: 'pointer', ...rowLine(false) }}>
+            style={{ width: '100%', display: 'grid', gridTemplateColumns: GRID, gap: 14, alignItems: 'center', padding: '10px 16px', minHeight: 56, border: 'none', backgroundColor: 'transparent', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', cursor: 'pointer', ...rowLine(false) }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
               <MemberAvatar m={x.m} size={36} font={13} />
               <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>

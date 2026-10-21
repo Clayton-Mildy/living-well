@@ -1,7 +1,7 @@
 // KC round 7 seed: tasks. Runs after the main seed (and the roster), so every staff row already exists.
 // Management's recurring tasks for each role, and what was ticked off: on the last open days, in the last weeks and months, and a few things today before
-// the demo starts (09:58). Left open on purpose: the lobby picture, the housekeeping rounds (nobody there has a login; Ega ticks for them), the weekly bank
-// reconciliation (its Monday has passed, so it shows as overdue). Proof photos have no picture in the seed: the screen shows the tone placeholder.
+// the demo starts (09:58). Left open on purpose: the lobby picture, the weekly bank reconciliation
+// (its Monday has passed, so it shows as overdue). Proof photos have no picture in the seed: the screen shows the tone placeholder.
 import type { ClubState, HM, ISODate, StaffRole, TaskEvery, TaskTemplate, Weekday } from '../../types';
 import { addDays, rng, toHM, toMin, weekStart, ym, addMonths } from '../../util';
 import { isOpen } from '../../rules/core';
@@ -37,9 +37,6 @@ const DEFS: Def[] = [
   { id: 'task-activity-materials', title: 'Prepare tomorrow’s materials', role: 'activity', every: 'daily', dueBy: '16:00', by: ['s5', 's6'], window: ['15:00', '15:55'] },
   { id: 'task-kitchen-fridge', title: 'Fridge temperature log', role: 'kitchen', every: 'daily', proof: 'photo', by: ['s2', 's3'], window: ['07:55', '08:40'], note: 'Fridge 3°C, freezer −18°C', today: { at: '08:12', by: 's2', note: 'Fridge 3°C, freezer −18°C' } },
   { id: 'task-kitchen-deep', title: 'Deep clean the kitchen', role: 'kitchen', every: 'weekly', weekday: 5, by: ['s2', 's3'], window: ['15:30', '16:15'] },
-  { id: 'task-hk-toilets', title: 'Toilets checked', role: 'housekeeping', every: 'daily', dueBy: '10:00', proof: 'photo', by: ['s4'], window: ['09:00', '09:55'] },
-  { id: 'task-hk-dining', title: 'Dining room clean after lunch', role: 'housekeeping', every: 'daily', dueBy: '13:30', proof: 'photo', by: ['s4'], window: ['13:00', '13:28'] },
-  { id: 'task-driver-car', title: 'Car check: tyres, fuel, clean', role: 'driver', every: 'daily', dueBy: '07:30', by: ['s7'], window: ['07:00', '07:28'], today: { at: '07:18' } },
   { id: 'task-finance-bank', title: 'Bank reconciliation', role: 'finance', every: 'weekly', weekday: 1, by: ['s10'], window: ['10:00', '15:00'] },
   { id: 'task-mgmt-walk', title: 'Walk through the club', role: 'mgmt', every: 'daily', by: ['s9'], window: ['08:30', '09:30'] },
 ];

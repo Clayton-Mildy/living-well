@@ -179,3 +179,31 @@ describe('document.upload (family)', () => {
     expect(() => run(c.citra, 'document.upload', { memberId: 'm46', type: 'passport' }, who(c, 'f1'))).toThrow('err.invalid');
   });
 });
+
+describe('round 8: family.updateDetails and family.setHealthAlerts', () => {
+  it('a family edit waits for the club; approval applies it', () => {
+    const c = seed();
+    const r = run(c.citra, 'family.updateDetails', { memberId: 'm1', patch: { address: 'Jl. Kemang Raya 14', mobile: '0812 1111 2222', nanny: { name: 'Sri', phone: '0813 2201 7781' } } }, who(c, 'f1'));
+    expect(r.reviewed).toBe('gate');
+    expect(r.state.members.m1.address).toBe(c.citra.members.m1.address);
+    const cr = r.state.changeRequests[r.result.changeRequestId as string];
+    expect(cr).toMatchObject({ section: 'details', submittedBy: 'family:f1' });
+    const a = run(r.state, 'review.approve', { crId: cr.id }, who(c, 's9'));
+    expect(a.state.members.m1.address).toBe('Jl. Kemang Raya 14');
+    expect(a.state.members.m1.registration?.mobile).toBe('0812 1111 2222');
+    expect(a.state.members.m1.nanny).toMatchObject({ name: 'Sri' });
+  });
+  it('only their own parents; staff cannot use it', () => {
+    const c = seed();
+    expect(() => run(c.citra, 'family.updateDetails', { memberId: 'm10', patch: { address: 'x' } }, who(c, 'f1'))).toThrow('err.forbidden');
+    expect(() => run(c.citra, 'family.updateDetails', { memberId: 'm1', patch: { address: 'x' } }, who(c, 's1'))).toThrow('err.forbidden');
+    expect(() => run(c.citra, 'family.updateDetails', { memberId: 'm1', patch: {} }, who(c, 'f1'))).toThrow('err.noChanges');
+  });
+  it('health alerts switch on their own link, no review', () => {
+    const c = seed();
+    const r = run(c.citra, 'family.setHealthAlerts', { memberId: 'm1', on: false }, who(c, 'f1'));
+    expect(r.reviewed).toBeUndefined();
+    expect(r.state.familyLinks['f1:m1'].healthAlerts).toBe(false);
+    expect(r.state.familyLinks['f2:m1'].healthAlerts).toBe(true);
+  });
+});

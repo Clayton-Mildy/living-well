@@ -12,11 +12,11 @@ export const activity: Same<typeof EN> = {
   logged: 'Tercatat', notLogged: 'Belum dicatat', lunch: 'Makan siang', tea: 'Teh sore',
   cogAlert: 'Sadar dan terorientasi', quietOn: 'pendiam {n} kali', unsettledOn: 'gelisah {n} kali', ofLastDays: 'dari {n} hari terakhir', settledLastDays: 'tenang selama {n} hari terakhir',
   // Camera
-  groupPhoto: 'Foto kelompok', viewfinderNote: 'Ambil fotonya, lalu pilih siapa saja yang ada di dalamnya.',
+  groupPhoto: 'Ambil foto', viewfinderNote: 'Ambil fotonya, lalu pilih siapa saja yang ada di dalamnya.',
   whoPhoto: 'Siapa saja di foto ini?', whoVideo: 'Siapa saja di video ini?', facesHint: 'Cari nama untuk menambah orang, atau tambahkan wajah yang disarankan.', suggested: 'Disarankan',
   faceOptOut: 'Tanpa tag wajah', faceNotEnrolled: 'Wajah belum terdaftar', byNameOnly: 'Ditandai lewat nama',
   sendTo_one: 'Kirim ke {n} keluarga', sendTo_other: 'Kirim ke {n} keluarga', pickWho: 'Pilih siapa yang ada di foto',
-  takeGroup: 'Ambil foto kelompok', recordGroupVideo: 'Rekam video kelompok singkat',
+  takeGroup: 'Ambil foto', recordGroupVideo: 'Rekam video singkat', sendAsSession: 'Kirim sebagai foto {activity}', sessionPicType: 'Foto sesi · {activity}', sentSessionPending: 'Foto {activity} dikirim untuk persetujuan.', sentSessionDone: 'Foto {activity} ditambahkan.',
   privacyNote: 'Foto langsung masuk ke halaman Hari ini keluarga yang ditandai. Tidak ada yang tersimpan di galeri ponsel ini.',
   sentToday: 'Terkirim hari ini', video: 'Video', group: 'Kelompok', soloTitle: 'Foto satu anggota',
   nToday: '{n} hari ini', noPhotosToday: 'Belum ada foto hari ini', photosToday_one: '1 foto hari ini', photosToday_other: '{n} foto hari ini',
@@ -102,6 +102,6 @@ export const activity: Same<typeof EN> = {
   restMarked_one: '1 orang ditandai.', restMarked_other: '{n} orang ditandai.',
   lunchNotMarked: 'Makan siang belum ditandai', moodNotMarked: 'Suasana hati dan catatan belum disimpan', noSessionMarks: 'Belum ada aktivitas yang ditandai',
   'feed.markLunch': 'Makan siang ditandai · {names}', 'feed.markSession': 'Sesi {time} ditandai · {names}', 'feed.markMood': 'Suasana hati dan catatan ditandai · {names}',
-  'err.noSession': 'Sesi itu tidak ada di rencana hari tersebut.',
+  'err.noSession': 'Sesi itu tidak ada di rencana hari tersebut.', 'err.needPeople': 'Tambahkan minimal satu orang, atau simpan sebagai foto sesi.', 'err.needSession': 'Pilih sesi yang ada di foto ini.', editType: 'Jenis dan orang', typeTitle: 'Jenis dan orang', typePeople: 'Orang', typeSession: 'Sesi', typeSolo: 'Foto pribadi', typeGroup: 'Foto bersama · {n} orang', typeWhich: 'Sesi yang mana', typeSessionHint: 'Foto sesinya sendiri: tanpa nama, dan keluarga anggota yang datang hari itu bisa melihatnya.', typeSave: 'Simpan', typeSaved: 'Disimpan sebagai {type}.',
   'notif.act.lunch': 'Makan siang belum ditandai untuk {n} orang', 'notif.act.session': 'Sesi pukul {time} belum ditandai untuk {n} orang', 'notif.act.mood': 'Suasana hati dan catatan belum ada untuk {n} orang',
 };

@@ -1,11 +1,12 @@
-// KC round 7: visit insights. How intensely members come to the club: overall (when it is busy), per plan, per person and how Flex members spend their
-// monthly quota. Pure rules over the attendance rows: members drop in on any open day, so there is nothing "expected" to compare with.
+// KC round 7: insights. How intensely members come to the club: overall (when it is busy), per plan (a trend per plan, the visit rate, the people in each plan
+// and how Flex members spend their monthly quota) and per person. Pure rules over the attendance rows: members drop in on any open day, so there is nothing
+// "expected" to compare with.
 // A day counts once it is over: today is left out until `todayDone` (a half-finished day would pull every average down).
 import type { ClubState, HM, ISODate, Plan } from '../types';
-import { activeOn, isOpen, isPendingRow, planOn } from './core';
+import { activeOn, isOpen, isPendingRow, openDaysInMonth, planOn } from './core';
 import { flexMonth } from './attendance';
 import { lastVisits } from './members';
-import { addDays, addMonths, dow, live, sortBy, toHM, toMin, ym } from '../util';
+import { addDays, addMonths, diffDays, dow, live, sortBy, toHM, toMin, weekStart, ym } from '../util';
 
 // ---------- periods ----------
 export type PeriodKey = 'thisMonth' | 'lastMonth' | 'last3' | 'last6' | 'custom';
@@ -107,21 +108,57 @@ export interface OverallStats {
   /** arrivals (check-ins) per hour 08 … 16 over the whole period */
   arrivals: number[];
 }
+/** A week is 5 open days (Mon … Fri): the unit of "visits per member per week". */
+export const OPEN_DAYS_PER_WEEK = 5;
+/** One member inside one plan: what they did while they were on that plan (a member who changed plan is in both). */
+export interface PlanPerson {
+  memberId: string;
+  /** visits made on this plan */
+  visits: number;
+  /** open days of the period on which the member was active on this plan */
+  activeDays: number;
+  /** share of those days they came, 0 … 1; null without an active day */
+  rate: number | null;
+  /** visits per week of active days (one decimal); 0 without an active day */
+  perWeek: number;
+  /** the (up to) two weekdays they come on most (0 = Monday), most first */
+  usual: number[];
+}
 export interface PlanStats {
   plan: Plan;
-  /** members on this plan for at least one open day of the period (visited or not) */
+  /** members on this plan for at least one open day of the period (visited or not): the length of `people` */
   members: number;
   visitors: number;
   visits: number;
   /** 0 … 1 of all visits */
   share: number;
-  /** visits per member per month (member-months are prorated by open days) */
-  perMemberMonth: number | null;
+  /** visits per member per week: visits / (member-days on this plan / 5), so a member counts for the open days they were active */
+  perMemberWeek: number | null;
+  /**
+   * attendance rate, 0 … 1: of all the open days on which a member of this plan was active, the share on which they came. Pooled over the members, so each
+   * counts in proportion to their active open days (someone who joined mid-period is prorated). Null without an active day.
+   */
+  attendanceRate: number | null;
   /** visits per weekday Mon … Fri */
   weekdays: number[];
   avgArrival: HM | null;
   avgStayMin: number | null;
+  /** every member of the plan in the period, in name order (see `sortPeople` for most / fewest visits) */
+  people: PlanPerson[];
 }
+export type TrendGrain = 'day' | 'week';
+/** One point of the by-plan trend: the visits of each plan on one open day, or in one (Mon-Sun) week. */
+export interface PlanTrendPoint {
+  /** the first open day of the bucket (the day itself, or the first observed open day of the week) */
+  date: ISODate;
+  /** the last open day of the bucket */
+  end: ISODate;
+  /** open days the bucket covers (a week at the edge of the period, or with a holiday, has fewer than 5) */
+  days: number;
+  flex: number;
+  gold: number;
+}
+export interface PlanTrend { grain: TrendGrain; points: PlanTrendPoint[] }
 export interface PersonStats {
   memberId: string;
   plan: Plan;
@@ -148,6 +185,8 @@ export interface VisitInsights {
   overall: OverallStats;
   byPlan: Record<Plan, PlanStats>;
   people: PersonStats[];
+  /** visits per plan over time: by day, or by week once the period is longer than `TREND_DAY_MAX` days */
+  trend: PlanTrend;
   /** trial day passes in the period (guests, not members): a footnote */
   trials: number;
 }
@@ -202,24 +241,32 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
     for (let d = `${m}-01`; ym(d) === m; d = addDays(d, 1)) if (isOpen(s, d)) n++;
     monthOpen.set(m, n || 1);
   }
-  const planMonths: Record<Plan, number> = { flex: 0, gold: 0 };
-  const planMembers: Record<Plan, Set<string>> = { flex: new Set(), gold: new Set() };
+  const planDays: Record<Plan, number> = { flex: 0, gold: 0 };
+  const planCame: Record<Plan, number> = { flex: 0, gold: 0 };
   const memberMonths = new Map<string, number>();
   const lastActive = new Map<string, ISODate>();
+  /** per member and plan: the open days they were active on that plan, and on how many of them they came */
+  const onPlan = new Map<string, Record<Plan, { days: number; came: number }>>();
+  const visitDays = new Set(visits.map((v) => `${v.memberId}|${v.date}`));
   const members = live(s.members).filter((m) => !isPendingRow(m));
   for (const m of members) {
     let mm = 0;
+    const mine = { flex: { days: 0, came: 0 }, gold: { days: 0, came: 0 } };
     for (const d of days) {
       if (!activeOn(m, d)) continue;
-      const w = 1 / monthOpen.get(ym(d))!;
-      mm += w;
+      mm += 1 / monthOpen.get(ym(d))!;
       const p = planOn(m, d).plan;
-      planMonths[p] += w;
-      planMembers[p].add(m.id);
+      mine[p].days++;
+      planDays[p]++;
+      if (visitDays.has(`${m.id}|${d}`)) { mine[p].came++; planCame[p]++; }
       lastActive.set(m.id, d);
     }
+    onPlan.set(m.id, mine);
     memberMonths.set(m.id, mm);
   }
+  const byMember = new Map<string, Visit[]>();
+  for (const v of visits) { const a = byMember.get(v.memberId); if (a) a.push(v); else byMember.set(v.memberId, [v]); }
+  const usualDays = (wd: number[]) => wd.map((n, i) => ({ n, i })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n || a.i - b.i).slice(0, 2).map((x) => x.i);
 
   // ----- by plan
   const byPlan = {} as Record<Plan, PlanStats>;
@@ -227,11 +274,26 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
     const vs = visits.filter((v) => v.plan === plan);
     const wd = [0, 0, 0, 0, 0];
     for (const v of vs) if (v.wd >= 0) wd[v.wd]++;
+    const people: PlanPerson[] = [];
+    for (const m of sortBy(members, (x) => `${x.firstName} ${x.lastName}`)) {
+      const mine = (byMember.get(m.id) ?? []).filter((v) => v.plan === plan);
+      const { days: activeDays, came } = onPlan.get(m.id)![plan];
+      if (!activeDays && !mine.length) continue;
+      const pwd = [0, 0, 0, 0, 0];
+      for (const v of mine) if (v.wd >= 0) pwd[v.wd]++;
+      people.push({
+        memberId: m.id, visits: mine.length, activeDays,
+        rate: activeDays ? Math.min(1, came / activeDays) : null,
+        perWeek: activeDays ? r1(mine.length / (activeDays / OPEN_DAYS_PER_WEEK)) : 0,
+        usual: usualDays(pwd),
+      });
+    }
     byPlan[plan] = {
-      plan, members: planMembers[plan].size, visitors: new Set(vs.map((v) => v.memberId)).size, visits: vs.length,
+      plan, members: people.length, visitors: new Set(vs.map((v) => v.memberId)).size, visits: vs.length,
       share: visits.length ? vs.length / visits.length : 0,
-      perMemberMonth: planMonths[plan] > 0 ? r1(vs.length / planMonths[plan]) : null,
-      weekdays: wd, avgArrival: avgHM(vs.map((v) => v.inMin)), avgStayMin: avgStay(vs),
+      perMemberWeek: planDays[plan] > 0 ? r1(vs.length / (planDays[plan] / OPEN_DAYS_PER_WEEK)) : null,
+      attendanceRate: planDays[plan] > 0 ? Math.min(1, planCame[plan] / planDays[plan]) : null,
+      weekdays: wd, avgArrival: avgHM(vs.map((v) => v.inMin)), avgStayMin: avgStay(vs), people,
     };
   }
 
@@ -239,14 +301,12 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
   const last = lastVisits(s, today);
   const months = monthsOf(period);
   const people: PersonStats[] = [];
-  const byMember = new Map<string, Visit[]>();
-  for (const v of visits) { const a = byMember.get(v.memberId); if (a) a.push(v); else byMember.set(v.memberId, [v]); }
   for (const m of members) {
     const vs = (byMember.get(m.id) ?? []).sort((a, b) => (a.date < b.date ? -1 : a.date > b.date ? 1 : 0));
     if (!vs.length && !lastActive.has(m.id)) continue;
     const wd = [0, 0, 0, 0, 0];
     for (const v of vs) if (v.wd >= 0) wd[v.wd]++;
-    const usual = wd.map((n, i) => ({ n, i })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n || a.i - b.i).slice(0, 2).map((x) => x.i);
+    const usual = usualDays(wd);
     const mm = memberMonths.get(m.id) ?? 0;
     people.push({
       memberId: m.id, plan: planOn(m, lastActive.get(m.id) ?? today).plan, visits: vs.length, perMonth: mm > 0 ? r1(vs.length / mm) : 0,
@@ -258,120 +318,199 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
   }
 
   const trials = live(s.guestVisits).filter((g) => g.kind === 'trial' && g.status !== 'cancelled' && g.status !== 'noShow' && daySet.has(g.date)).length;
-  return { period, days, overall, byPlan, people, trials };
+  return { period, days, overall, byPlan, people, trend: planTrend(days, visits), trials };
+}
+
+// ---------- visits per plan over time ----------
+/** A period of up to this many calendar days (first to last open day) is drawn by day; a longer one, by week. */
+export const TREND_DAY_MAX = 35;
+/**
+ * Visits of each plan per open day (quiet days included), or per Mon-Sun week for a long period (3 to 6 months: a line per day would be a thicket).
+ * A week is placed on its first open day inside the period; `days` says how many open days it covers, so a short edge week or a holiday week is not
+ * mistaken for a dip. `visits` are the period's visits (each tagged with the plan on the day).
+ */
+export function planTrend(days: ISODate[], visits: { date: ISODate; plan: Plan }[]): PlanTrend {
+  const grain: TrendGrain = days.length && diffDays(days[0], days[days.length - 1]) + 1 > TREND_DAY_MAX ? 'week' : 'day';
+  const key = (d: ISODate) => (grain === 'day' ? d : weekStart(d));
+  const buckets = new Map<ISODate, PlanTrendPoint>();
+  for (const d of days) {
+    const b = buckets.get(key(d));
+    if (b) { b.end = d; b.days++; } else buckets.set(key(d), { date: d, end: d, days: 1, flex: 0, gold: 0 });
+  }
+  for (const v of visits) { const b = buckets.get(key(v.date)); if (b) b[v.plan]++; }
+  return { grain, points: [...buckets.values()] };
 }
 
 export type PersonSort = 'most' | 'fewest' | 'last';
 export const PERSON_SORTS: PersonSort[] = ['most', 'fewest', 'last'];
-/** Most / fewest visits (then the longer-absent first among equals), or the most recent visit first; ties by name. */
-export function sortPeople(s: ClubState, people: PersonStats[], sort: PersonSort): PersonStats[] {
-  const name = (p: PersonStats) => `${s.members[p.memberId]?.firstName ?? ''} ${s.members[p.memberId]?.lastName ?? ''}`;
+/** The two sorts of a plan's people. */
+export const PLAN_SORTS: PersonSort[] = ['most', 'fewest'];
+/** Most / fewest visits, or the most recent visit first (when the rows know it); ties by name. */
+export function sortPeople<T extends { memberId: string; visits: number; lastVisit?: ISODate | null }>(s: ClubState, people: T[], sort: PersonSort): T[] {
+  const name = (p: T) => `${s.members[p.memberId]?.firstName ?? ''} ${s.members[p.memberId]?.lastName ?? ''}`;
   const byName = sortBy(people, name);
   if (sort === 'most') return byName.sort((a, b) => b.visits - a.visits);
   if (sort === 'fewest') return byName.sort((a, b) => a.visits - b.visits);
   return byName.sort((a, b) => (b.lastVisit ?? '').localeCompare(a.lastVisit ?? ''));
 }
 
-// ---------- Flex: how the quota is spent ----------
-export type FlexBucket = 'b0' | 'b4' | 'b7' | 'all' | 'extra';
-export const FLEX_BUCKETS: FlexBucket[] = ['b0', 'b4', 'b7', 'all', 'extra'];
-export interface FlexRow {
+// ---------- Flex: how the monthly quota is spent ----------
+/** One Flex member in one calendar month: what they did with the month's quota. */
+export interface QuotaMonth {
   memberId: string;
-  quota: number;
-  used: number;
-  left: number;
-  extra: number;
-  /** current month: visits expected by month end at the member's own pace; null for a finished month or a member with no days yet */
-  projected: number | null;
-  /** visits that go unused: the visits left in a finished month; for the current month the quota minus the projection */
-  unused: number;
-  bucket: FlexBucket;
-}
-export interface FlexUsage {
+  /** 'YYYY-MM' */
   month: string;
+  /** the month's quota (prorated for a partial month, as in `flexQuota`) */
+  quota: number;
+  /** Flex visits so far (a running month: up to today) */
+  used: number;
   /** the month is still running */
   current: boolean;
-  rows: FlexRow[];
-  avgQuota: number;
-  quotaTotal: number;
-  /** Flex visits made (extra days included) */
-  visits: number;
-  leftTotal: number;
-  unusedTotal: number;
-  extraTotal: number;
-  /** current month: members expected to leave visits unused */
-  likelyMembers: number;
-  buckets: Record<FlexBucket, number>;
-  /** cumulative Flex visits per member (average), by open day, against an even pace to the full quota */
-  pace: { date: ISODate; avg: number; even: number }[];
-  /** share of the month's Flex visits made on days 1 – 15 and from the 16th; `complete` once the month is past the 15th */
-  half: { first: number; second: number; firstShare: number | null; complete: boolean };
+  /** the date of the visit that used the quota up; null while visits are left */
+  ranOut: ISODate | null;
+  /** calendar days from the first visit of the month to the one that used the quota up */
+  took: number | null;
+  /** visits after the quota was gone (billed as extra days) */
+  extra: number;
+  /** visits of the quota that went unused: only a finished month burns them (always 0 for the running month) */
+  burned: number;
 }
-const bucketOf = (quota: number, used: number, extra: number): FlexBucket =>
-  extra > 0 ? 'extra' : quota > 0 && used >= quota ? 'all' : used <= 3 ? 'b0' : used <= 6 ? 'b4' : 'b7';
-
-export function flexUsage(s: ClubState, month: string, today: ISODate, opts: { todayDone?: boolean } = {}): FlexUsage {
-  const current = month === ym(today);
-  const openDays: ISODate[] = [];
-  for (let d = `${month}-01`; ym(d) === month; d = addDays(d, 1)) if (isOpen(s, d)) openDays.push(d);
-  // the visits and days that count as lived: up to yesterday, or today once it is over
-  const cut = !current ? `${month}-31` : opts.todayDone ? today : addDays(today, -1);
-  const elapsed = openDays.filter((d) => d <= cut);
-  const remaining = openDays.filter((d) => d > cut);
-  const upTo = current ? today : `${month}-31`;
-  const rows: FlexRow[] = [];
-  const flexDates = new Map<string, ISODate[]>();
-  for (const m of live(s.members)) {
-    if (isPendingRow(m)) continue;
-    const fm = flexMonth(s, m, month, today);
-    if (fm.quota === null) continue;
-    const mine = fm.visits.filter((d) => planOn(m, d).plan === 'flex');
-    if (!mine.length && !openDays.some((d) => d <= upTo && activeOn(m, d))) continue;
-    flexDates.set(m.id, mine);
-    let projected: number | null = null;
-    let unused = fm.left ?? 0;
-    if (current) {
-      const activeElapsed = elapsed.filter((d) => activeOn(m, d)).length;
-      const usedCut = mine.filter((d) => d <= cut).length;
-      if (activeElapsed > 0) {
-        projected = Math.max(fm.used, usedCut + (usedCut / activeElapsed) * remaining.filter((d) => activeOn(m, d)).length);
-        unused = fm.used >= fm.quota ? 0 : Math.max(0, Math.round(fm.quota - projected));
-      }
+export interface FlexQuotaReport {
+  /** the calendar months the period touches, up to this month */
+  months: string[];
+  /** member-months with a quota to spend (what the two groups add up to, with `running`) */
+  total: number;
+  /** reached the quota: newest first. `avgDay`: the average day of the month it ran out (one decimal); `avgDays`: the average days it took from the first visit */
+  usedAll: { entries: QuotaMonth[]; avgDay: number | null; avgDays: number | null };
+  /** finished months that ended with visits left: most burned first. `burned`: visits left unused, in all; `avgBurned`: per member (month) */
+  notAll: { entries: QuotaMonth[]; burned: number; avgBurned: number | null };
+  /** the running month: members who still have visits left and have time to use them. Not burned, not listed. */
+  running: number;
+}
+/**
+ * How Flex members spend their quota over the calendar months a period touches (the whole month, not only the days inside the period: a quota is
+ * monthly). The quota, its proration for a partial month and the plan on each visit come from `flexMonth`. The running month counts as far as today:
+ * a member who already used the quota counts as "used it all", the others are `running`, never burned. Months with no quota to spend (prorated to 0) are left out.
+ */
+export function flexQuotaReport(s: ClubState, period: InsightPeriod, today: ISODate): FlexQuotaReport {
+  const months = monthsOf(period).filter((m) => m <= ym(today));
+  const usedAll: QuotaMonth[] = [];
+  const notAll: QuotaMonth[] = [];
+  let running = 0, total = 0;
+  for (const month of months) {
+    const current = month === ym(today);
+    const upTo = current ? today : `${month}-31`;
+    const openDays = openDaysInMonth(s, month).filter((d) => d <= upTo);
+    for (const m of live(s.members)) {
+      if (isPendingRow(m)) continue;
+      const fm = flexMonth(s, m, month, today);
+      if (fm.quota === null || fm.quota <= 0) continue;
+      const dates = fm.visits.filter((d) => d <= upTo && planOn(m, d).plan === 'flex');
+      if (!dates.length && !openDays.some((d) => activeOn(m, d))) continue;
+      total++;
+      const used = dates.length;
+      const ranOut = used >= fm.quota ? dates[fm.quota - 1] : null;
+      const entry: QuotaMonth = {
+        memberId: m.id, month, quota: fm.quota, used, current, ranOut,
+        took: ranOut ? diffDays(dates[0], ranOut) : null,
+        extra: Math.max(0, used - fm.quota),
+        burned: ranOut || current ? 0 : fm.quota - used,
+      };
+      if (ranOut) usedAll.push(entry);
+      else if (current) running++;
+      else notAll.push(entry);
     }
-    rows.push({ memberId: m.id, quota: fm.quota, used: fm.used, left: fm.left ?? 0, extra: fm.extra, projected: projected === null ? null : r1(projected), unused, bucket: bucketOf(fm.quota, fm.used, fm.extra) });
   }
-  const buckets: Record<FlexBucket, number> = { b0: 0, b4: 0, b7: 0, all: 0, extra: 0 };
-  for (const r of rows) buckets[r.bucket]++;
-  const avgQuota = rows.length ? rows.reduce((t, r) => t + r.quota, 0) / rows.length : 0;
-
-  // pace: cumulative visits per member on each lived open day, against an even spread of the quota over the month's open days
-  const pace = rows.length
-    ? elapsed.map((d, i) => ({
-        date: d,
-        avg: r1([...flexDates.values()].reduce((t, ds) => t + ds.filter((x) => x <= d).length, 0) / rows.length),
-        even: r1((avgQuota * (i + 1)) / openDays.length),
-      }))
-    : [];
-  let first = 0, second = 0;
-  for (const ds of flexDates.values()) for (const d of ds) if (d <= cut) { if (+d.slice(8) <= 15) first++; else second++; }
-  const total = first + second;
+  const name = (e: QuotaMonth) => `${s.members[e.memberId]?.firstName ?? ''} ${s.members[e.memberId]?.lastName ?? ''}`;
+  const byName = (list: QuotaMonth[]) => sortBy(list, name);
+  const burned = notAll.reduce((t, e) => t + e.burned, 0);
   return {
-    month, current, rows, avgQuota: r1(avgQuota),
-    quotaTotal: rows.reduce((t, r) => t + r.quota, 0),
-    visits: rows.reduce((t, r) => t + r.used, 0),
-    leftTotal: rows.reduce((t, r) => t + r.left, 0),
-    unusedTotal: rows.reduce((t, r) => t + r.unused, 0),
-    extraTotal: rows.reduce((t, r) => t + r.extra, 0),
-    likelyMembers: current ? rows.filter((r) => r.unused > 0).length : 0,
-    buckets, pace,
-    half: { first, second, firstShare: total ? first / total : null, complete: !current || +cut.slice(8) > 15 },
+    months, total, running,
+    usedAll: {
+      entries: byName(usedAll).sort((a, b) => b.ranOut!.localeCompare(a.ranOut!)),
+      avgDay: usedAll.length ? r1(mean(usedAll.map((e) => +e.ranOut!.slice(8)))!) : null,
+      avgDays: usedAll.length ? r1(mean(usedAll.map((e) => e.took!))!) : null,
+    },
+    notAll: {
+      entries: byName(notAll).sort((a, b) => b.burned - a.burned || b.month.localeCompare(a.month)),
+      burned, avgBurned: notAll.length ? r1(burned / notAll.length) : null,
+    },
   };
 }
-export type FlexSort = 'unused' | 'used' | 'extra';
-export const FLEX_SORTS: FlexSort[] = ['unused', 'used', 'extra'];
-/** Members who leave the most unused first (or the most used, or the most extra days); ties by name. */
-export function sortFlexRows(s: ClubState, rows: FlexRow[], sort: FlexSort): FlexRow[] {
-  const name = (r: FlexRow) => `${s.members[r.memberId]?.firstName ?? ''} ${s.members[r.memberId]?.lastName ?? ''}`;
-  const byName = sortBy(rows, name);
-  return byName.sort((a, b) => (sort === 'unused' ? b.unused - a.unused || b.left - a.left : sort === 'used' ? b.used - a.used : b.extra - a.extra || b.used - a.used));
+
+// ---------- membership trend (KC round 9: members in and out, by plan) ----------
+/** The Membership tab's own ranges: calendar months ("3 months" is this month and the two before it), a year, or a custom From and To. */
+export type MemberRangeKey = '3m' | '6m' | '1y' | 'custom';
+export const MEMBER_RANGES: MemberRangeKey[] = ['3m', '6m', '1y', 'custom'];
+export function memberRangeFor(key: MemberRangeKey, today: ISODate, custom?: InsightPeriod | null): InsightPeriod {
+  if (key === 'custom' && custom) return clampPeriod(custom, today);
+  const back = key === '6m' ? 5 : key === '1y' ? 11 : 2;
+  return { from: `${addMonths(ym(today), -back)}-01`, to: today };
+}
+export interface PlanCount { gold: number; flex: number }
+export interface MemberTrendPoint {
+  /** the first and last day of the week or month (cut to the range) */
+  start: ISODate;
+  end: ISODate;
+  /** memberships that started / ended in it, by the plan on that day */
+  joined: PlanCount;
+  left: PlanCount;
+  /** plan switches of members who stayed (a new plan entry while the membership ran) */
+  toGold: number;
+  toFlex: number;
+  /** members active on its last day, by plan */
+  active: PlanCount;
+}
+export interface MemberTrend {
+  grain: 'week' | 'month';
+  points: MemberTrendPoint[];
+  totals: { joined: PlanCount; left: PlanCount; toGold: number; toFlex: number; activeStart: PlanCount; activeEnd: PlanCount };
+}
+/** Weekly up to about three months (so "3 months" shows its weeks), monthly beyond. */
+export const MEMBER_WEEKLY_MAX_DAYS = 100;
+const zero = (): PlanCount => ({ gold: 0, flex: 0 });
+
+/** Members in and out over a period: who joined, who left and who switched plan, per week or month, and how many were active by plan. */
+export function memberTrend(s: ClubState, period: InsightPeriod, today: ISODate): MemberTrend {
+  const to = period.to > today ? today : period.to;
+  const from = period.from > to ? to : period.from;
+  const grain: MemberTrend['grain'] = diffDays(from, to) + 1 <= MEMBER_WEEKLY_MAX_DAYS ? 'week' : 'month';
+  const buckets: { start: ISODate; end: ISODate }[] = [];
+  if (grain === 'week') {
+    for (let w = weekStart(from); w <= to; w = addDays(w, 7)) buckets.push({ start: w < from ? from : w, end: addDays(w, 6) > to ? to : addDays(w, 6) });
+  } else {
+    for (const m of monthsOf({ from, to })) { const a = `${m}-01`, b = lastOfMonth(m); buckets.push({ start: a < from ? from : a, end: b > to ? to : b }); }
+  }
+  const members = live(s.members).filter((m) => !isPendingRow(m));
+  const countActive = (date: ISODate): PlanCount => {
+    const c = zero();
+    for (const m of members) if (activeOn(m, date)) c[planOn(m, date).plan]++;
+    return c;
+  };
+  const points: MemberTrendPoint[] = buckets.map((b) => ({ ...b, joined: zero(), left: zero(), toGold: 0, toFlex: 0, active: countActive(b.end) }));
+  const at = (d: ISODate) => points.find((p) => p.start <= d && d <= p.end);
+  for (const m of members) {
+    for (const ms of m.memberships) {
+      const j = at(ms.start);
+      if (j) j.joined[planOn(m, ms.start).plan]++;
+      if (ms.lastDay && ms.lastDay <= today) { const l = at(ms.lastDay); if (l) l.left[planOn(m, ms.lastDay).plan]++; }
+    }
+    m.plans.forEach((p, i) => {
+      const prev = m.plans[i - 1];
+      if (!prev || prev.plan === p.plan || p.from > today) return;
+      const b = at(p.from);
+      if (!b || !activeOn(m, addDays(p.from, -1))) return; // a member who stayed, not a new membership on another plan
+      if (p.plan === 'gold') b.toGold++; else b.toFlex++;
+    });
+  }
+  const sum = (f: (p: MemberTrendPoint) => PlanCount): PlanCount => points.reduce((a, p) => ({ gold: a.gold + f(p).gold, flex: a.flex + f(p).flex }), zero());
+  return {
+    grain,
+    points,
+    totals: {
+      joined: sum((p) => p.joined), left: sum((p) => p.left),
+      toGold: points.reduce((a, p) => a + p.toGold, 0), toFlex: points.reduce((a, p) => a + p.toFlex, 0),
+      activeStart: countActive(addDays(from, -1)), activeEnd: points.length ? points[points.length - 1].active : countActive(to),
+    },
+  };
 }

@@ -23,16 +23,16 @@ function DutyConfig({ def, first }: { def: DutyDef; first: boolean }) {
   const title = t(def.titleKey);
   const save = (input: Record<string, unknown>) => void act('duty.configure', { id: def.id, ...input }, { silent: true });
   return (
-    <div data-duty={def.id} data-on={on || undefined} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 16px 12px', minHeight: 58, backgroundColor: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
+    <div data-duty={def.id} data-on={on || undefined} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '10px 16px 12px', minHeight: 58, backgroundColor: 'transparent', backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-        <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', opacity: on ? 1 : 0.55 }}><Icon name={def.icon} size={18} fill={1} /></span>
+        <span aria-hidden="true" className="cp-fill" style={{ width: 30, height: 30, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', opacity: on ? 1 : 0.55 }}><Icon name={def.icon} size={18} fill={1} /></span>
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, opacity: on ? 1 : 0.6 }}>
           <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{title}</span>
           {def.todayOnly ? <span style={{ fontSize: FONT_SMALL, lineHeight: '18px', color: '#6B6259' }}>{t('tasks.todayOnly')}</span> : null}
         </span>
         <button type="button" role="switch" aria-checked={on} aria-label={t('tasks.dutyOn', { title })} onClick={() => save({ off: on })} className="cp-press"
           style={{ width: 52, height: 44, flex: 'none', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'flex-end' }}>
-          <span aria-hidden="true" style={{ width: 44, height: 26, borderRadius: 999, background: on ? '#24201C' : '#CDC2B5', position: 'relative', flex: 'none', transition: 'background .15s' }}>
+          <span aria-hidden="true" style={{ width: 44, height: 26, borderRadius: 999, background: on ? '#24201C' : 'var(--field-bd, #E0E0E4)', position: 'relative', flex: 'none', transition: 'background .15s' }}>
             <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left .15s' }} />
           </span>
         </button>
@@ -100,13 +100,13 @@ export function ManageView() {
               <Lines title={titled ? t('tasks.additional') : undefined} meta={titled ? rows.length : undefined}>
                 {rows.map((x, i) => (
                   <button key={x.id} type="button" className="cp-bleed cp-tap-self" data-template={x.id} onClick={() => setEditing({ tpl: x })}
-                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px 10px 20px', minHeight: 58, border: 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', backgroundColor: '#FFFFFF', backgroundImage: i ? 'linear-gradient(#EFEAE3, #EFEAE3)' : 'none', backgroundSize: 'calc(100% - 20px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
+                    style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px 10px 20px', minHeight: 58, border: 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', backgroundColor: 'transparent', backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 20px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1, opacity: x.active ? 1 : 0.6 }}>
                       <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{x.title}</span>
                       <span style={{ fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{meta(x)}</span>
                     </span>
-                    {x.active ? null : <span style={{ flex: 'none', fontSize: 12, fontWeight: 600, color: '#5E5852', background: '#F0EAE1', borderRadius: 8, padding: '2px 8px' }}>{t('tasks.paused')}</span>}
-                    <Icon name="chevron_right" size={22} color="#C2B8AB" />
+                    {x.active ? null : <span className="cp-fill" style={{ flex: 'none', fontSize: 12, fontWeight: 600, color: '#5E5852', background: 'var(--fill, #F4F4F5)', borderRadius: 8, padding: '2px 8px' }}>{t('tasks.paused')}</span>}
+                    <Icon name="chevron_right" size={22} color="#A89C8E" />
                   </button>
                 ))}
               </Lines>

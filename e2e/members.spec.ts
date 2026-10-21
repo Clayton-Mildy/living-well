@@ -641,60 +641,87 @@ test('documents: upload a PDF or a photo (paper registration), view it, request 
   c.assertClean();
 });
 
-test('family audience: no staff-only fields, no history, no edit bars; visits instead of days, no booking; an upload goes to review', async ({ page }) => {
+test('family audience: no staff-only fields, no history, no staff edit bars; visits instead of days, no booking; an upload goes to review', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 'f1', '/health');
-  const fh = page.getByTestId('family-health');
-  await expect(fh).toBeVisible();
-  await expect(page.getByRole('tablist', { name: 'Member profile' }).getByRole('tab')).toHaveCount(9); // the member switcher is another tablist
-  await expect(page.getByRole('tab', { name: 'History' })).toHaveCount(0);
-  await expect(page.getByRole('tab', { name: 'Health', exact: true })).toHaveAttribute('aria-selected', 'true');
-  // nothing staff-only or editable
-  await expect(fh.getByText('Care instructions')).toHaveCount(0);
-  await expect(fh.getByText('Staff only')).toHaveCount(0);
-  await expect(fh.getByText('Use her right arm')).toHaveCount(0);
-  await expect(fh.getByRole('button', { name: /^Edit/ })).toHaveCount(0);
-  await expect(fh.getByText('Medications')).toBeVisible();
+  await signIn(page, 'f1', '/profile?member=m1');
+  const fp = page.getByTestId('family-profile');
+  await expect(fp).toBeVisible();
+  // the parent's page has jump chips, not the staff tabs: no staff-only History section, and no tablist of profile tabs ("History" in Health is the readings)
+  await expect(page.getByTestId('pf-jump').getByRole('button')).toHaveText(['Overview', 'Health', 'Care', 'Visits', 'Plan', 'Family', 'Documents', 'Notes']);
+  await expect(page.getByRole('tablist', { name: 'Member profile' })).toHaveCount(0);
+  // nothing staff-only or editable by staff
+  await expect(fp.getByText('Care instructions')).toHaveCount(0);
+  await expect(fp.getByText('Staff only')).toHaveCount(0);
+  await expect(fp.getByText('Use her right arm')).toHaveCount(0);
+  await expect(fp.getByRole('button', { name: /^Edit (health|care|plan|notes)/i })).toHaveCount(0);
+  await expect(page.getByTestId('pf-edit')).toHaveCount(1); // the family's own Edit: personal and contact details, sent to the club
+  await expect(fp.getByText('Medications')).toBeVisible();
   await noHScroll(page);
-  await page.getByRole('tab', { name: 'Care log' }).click();
-  await expect(fh.getByText('Staff only')).toHaveCount(0);
-  await expect(fh.getByText(/Reviewed by Ns. Dewi/)).toBeVisible();
-  await page.getByRole('tab', { name: 'Plan and billing' }).click();
-  await expect(fh.getByText(/Xero/)).toHaveCount(0);
-  await expect(fh.getByText('Rp 2.700.000').first()).toBeVisible();
-  await expect(fh.getByRole('button', { name: 'Change plan' })).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Notes' }).click();
-  await expect(fh.getByText('Loves keroncong')).toBeVisible();
-  await expect(fh.getByText('Mbak Sari waits in the lounge')).toHaveCount(0); // a staff-only note
-  await expect(fh.getByLabel('Note', { exact: true })).toHaveCount(0);
-  await page.getByRole('tab', { name: 'Family' }).click();
-  await expect(fh.getByRole('link', { name: /Message on WhatsApp/ })).toHaveCount(0); // staff only
-  await expect(fh.getByRole('button', { name: 'Message family' })).toHaveCount(0);
-  await expect(fh.locator('a[href^="tel:"]').first()).toBeVisible();
+  await expect(page.getByTestId('pf-care')).toContainText(/Reviewed by Ns. Dewi/);
+  await expect(fp.getByText('Staff only')).toHaveCount(0);
+  await expect(fp.getByText(/Xero/)).toHaveCount(0);
+  await expect(page.getByTestId('pf-plan')).toContainText('Rp 2.700.000');
+  await expect(fp.getByRole('button', { name: 'Change plan' })).toHaveCount(0);
+  await expect(page.getByTestId('pf-notes')).toContainText('Loves keroncong');
+  await expect(fp.getByText('Mbak Sari waits in the lounge')).toHaveCount(0); // a staff-only note
+  await expect(fp.getByLabel('Note', { exact: true })).toHaveCount(0);
+  await expect(fp.getByRole('button', { name: 'Message family' })).toHaveCount(0);
+  await expect(page.getByTestId('pf-family').locator('a[href^="tel:"]').first()).toBeVisible();
   // the plan card counts visits; there is nothing to book and no leave to take
-  await page.getByRole('tab', { name: 'Overview' }).click();
-  await expect(fh.getByText('10 of 10 visits used')).toBeVisible();
-  await expect(fh.getByText('Usually arrives around 10:05').first()).toBeVisible();
-  for (const name of ['Book a day', 'Plan leave']) await expect(fh.getByRole('button', { name })).toHaveCount(0);
-  await expect(fh).not.toContainText(RETIRED);
-  await page.getByRole('tab', { name: 'Attendance' }).click();
-  await expect(fh.getByText('Visits used in October')).toBeVisible();
-  await expect(fh.locator('[data-visit="visit"]')).toHaveCount(10);
-  // an upload is gated: it waits for review and the family sees the chip
-  await page.getByRole('tab', { name: 'Documents' }).click();
-  await page.getByTestId('doc-file').first().setInputFiles({ name: 'ktp-baru.pdf', mimeType: 'application/pdf', buffer: PDF });
-  await expect(page.getByRole('group', { name: 'Pending review' })).toContainText('ktp-baru.pdf');
-  await expect(fh.getByRole('button', { name: /^Request from family/ })).toHaveCount(0);
-  await expect(fh.getByRole('button', { name: 'Send form link' })).toHaveCount(0);
-  // management approves; the document is on file, added by the family
+  await expect(page.getByTestId('pf-plan-card')).toContainText('10 of 10 visits used');
+  await expect(page.getByTestId('pf-personal')).toContainText('10:05'); // the usual arrival time, not an "expected" time
+  for (const name of ['Book a day', 'Plan leave']) await expect(fp.getByRole('button', { name })).toHaveCount(0);
+  await expect(fp).not.toContainText(RETIRED);
+  await expect(page.getByTestId('pf-visit-tiles')).toContainText('10/10');
+  const visited = await page.getByTestId('pf-month').locator('[data-date]').evaluateAll((els) => els.filter((e) => getComputedStyle(e).backgroundColor === 'rgb(117, 98, 75)').length);
+  expect(visited).toBe(10);
+  // an upload is gated: it waits for review and the family sees "Waiting for the club"
+  const ktp = page.locator('[data-testid="pf-doc"][data-type="ktp"]');
+  await expect(ktp).toHaveAttribute('data-state', 'onFile');
+  await ktp.getByTestId('doc-file').setInputFiles({ name: 'ktp-baru.pdf', mimeType: 'application/pdf', buffer: PDF });
+  await expect(ktp).toHaveAttribute('data-state', 'waiting');
+  await expect(ktp).toContainText('Waiting for the club');
+  await expect(fp.getByRole('button', { name: /^Request from family/ })).toHaveCount(0);
+  await expect(fp.getByRole('button', { name: 'Send form link' })).toHaveCount(0);
+  // management approves; the document is on file, uploaded by the family
   await signIn(page, 's9', '/reviews');
   const card = page.locator('[data-cr]').filter({ hasText: 'ktp-baru.pdf' });
   await expect(card).toContainText('Document uploaded by the family');
   await expect(card).toContainText('Maria Wijaya');
   await card.getByRole('button', { name: 'Approve' }).click();
   await expect(card).toHaveCount(0);
-  await signIn(page, 'f1', '/health?tab=docs');
-  await expect(page.getByText(/by Maria Wijaya · by the family/).first()).toBeVisible();
+  await signIn(page, 'f1', '/profile?member=m1');
+  await expect(page.locator('[data-testid="pf-doc"][data-type="ktp"]')).toHaveAttribute('data-state', 'onFile');
+  await expect(page.locator('[data-testid="pf-doc"][data-type="ktp"]')).toContainText('On file');
+  await expect(page.locator('[data-testid="pf-doc"][data-type="ktp"]').getByRole('button', { name: 'View' })).toBeVisible();
+  c.assertClean();
+});
+
+test('family profile: Edit sends changed details to the club for approval; the current ones stay until then, and the request can be withdrawn', async ({ page, request }) => {
+  const c = watchConsole(page);
+  await signIn(page, 'f1', '/profile?member=m1');
+  await expect(page.getByTestId('pf-personal')).toContainText('maria.wijaya@example.com');
+  await page.getByTestId('pf-edit').click();
+  const dlg = page.getByRole('dialog', { name: 'Edit details' });
+  await expect(dlg).toContainText('The club checks changes before they show.');
+  await expect(dlg.getByRole('button', { name: 'Send', exact: true })).toBeDisabled(); // nothing changed yet
+  await dlg.getByLabel('Email').fill('oma.lina@example.com');
+  await dlg.getByRole('button', { name: 'Send', exact: true }).click();
+  await expect(toast(page)).toContainText('Sent to the club for approval');
+  // the club has it to approve; the page still shows the current details and says the change is waiting
+  const waiting = async () => Object.values((await (await request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's9' } })).json()).state.changeRequests as Record<string, { status: string; section: string; submittedBy: string; action?: string; deletedAt?: string }>)
+    .filter((x) => x.status === 'pending' && x.section === 'details' && x.submittedBy === 'family:f1' && !x.deletedAt);
+  await expect.poll(async () => (await waiting()).length).toBe(1);
+  const pending = page.getByTestId('pf-pending');
+  await expect(pending).toContainText('Your changes are waiting for the club');
+  await expect(pending).toContainText('Email');
+  await expect(page.getByTestId('pf-personal')).toContainText('maria.wijaya@example.com');
+  await expect(page.getByTestId('pf-personal')).not.toContainText('oma.lina@example.com');
+  await noHScroll(page);
+  // she changes her mind
+  await page.getByTestId('pf-withdraw').click();
+  await expect(pending).toHaveCount(0);
+  await expect.poll(async () => (await waiting()).length).toBe(0);
   c.assertClean();
 });
 
@@ -767,12 +794,10 @@ test('photos tab: Take photo uses the camera flow; a teacher’s photo waits for
   const snap = await familySnapshot(request, 'f1');
   expect(Object.values(snap.photos).filter((p) => p.visibility === 'pending')).toHaveLength(0);
   expect(Object.values(snap.photos).filter((p) => p.mediaId && !p.mediaId.startsWith('md_demo_'))).toHaveLength(0); // round 7: the seed's demo scenes have images; no uploaded photo reaches the family
-  await signIn(page, 'f1', '/health?tab=photos');
-  const fh = page.getByTestId('family-health');
-  await expect(fh.locator('[data-photo]').first()).toBeVisible();
-  await expect(fh.locator('[data-visibility="pending"]')).toHaveCount(0);
-  await expect(fh).not.toContainText('Waiting for approval');
-  await expect(fh.getByRole('button', { name: 'Take photo' })).toHaveCount(0);
+  await signIn(page, 'f1', '/photos');
+  await expect(page.locator('[data-photo-id]').first()).toBeVisible();
+  await expect(page.locator('#main')).not.toContainText('Waiting for approval'); // nothing pending on the family's Photos
+  await expect(page.getByRole('button', { name: 'Take photo' })).toHaveCount(0);
   // the front desk may take a profile photo too (it waits for approval); management's photo is visible at once, with no waiting tag
   await signIn(page, 's1', '/members/m1/photos');
   await expect(page.getByRole('button', { name: 'Take photo' })).toHaveCount(1);
@@ -969,12 +994,18 @@ test('family tab: usernames are shown read-only; management resets a password to
   await signIn(page, 's1', '/members/m1/family');
   await expect(page.getByText('Username: maria', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: /Reset password/ })).toHaveCount(0);
-  // a family member sees only their own username
-  await signIn(page, 'f1', '/health?tab=family');
-  const fh = page.getByTestId('family-health');
-  await expect(fh.getByText('Username: maria', { exact: true })).toBeVisible();
-  await expect(fh.getByText('Username: daniel')).toHaveCount(0);
-  await expect(fh.getByRole('button', { name: /Reset password/ })).toHaveCount(0);
+  // a family member sees only their own username (Me → Password, read-only) and no reset button anywhere
+  await signIn(page, 'f1', '/me');
+  await page.getByTestId('me-password').click();
+  const pw = page.getByRole('dialog', { name: 'Password' });
+  await expect(pw.getByLabel('Username')).toHaveValue('maria');
+  await expect(pw.getByLabel('Username')).toHaveAttribute('readonly', '');
+  await page.keyboard.press('Escape');
+  await page.goto('/profile?member=m1');
+  const fp = page.getByTestId('family-profile');
+  await expect(fp.getByTestId('pf-family')).toContainText('Daniel Wijaya');
+  await expect(fp).not.toContainText(/Username/);
+  await expect(fp.getByRole('button', { name: /Reset password/ })).toHaveCount(0);
   c.assertClean();
 });
 
@@ -1089,11 +1120,11 @@ test('profile photo: management taps the avatar and takes one; it shows on the p
   await signIn(page, 's9', '/members/m46');
   await page.getByTestId('profile-avatar').click();
   const sheet = page.getByRole('dialog', { name: 'Profile photo' });
-  await sheet.getByRole('button', { name: 'Take or choose a photo' }).click();
+  await sheet.getByRole('button', { name: 'Change photo' }).click(); // KC round 9: the seed gives Opa Budi a stock portrait
   await takePhotoWithFile(page);
   await expect(sheet).toHaveCount(0);
   const photoOf = async () => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's9' } })).json()).state.members.m46.photoMediaId as string | undefined;
-  await expect.poll(photoOf).toMatch(/^md_/);
+  await expect.poll(photoOf).toMatch(/^md_(?!demo_)/); // the new upload replaces the portrait
   await expect.poll(() => page.getByTestId('profile-avatar').evaluate((el) => getComputedStyle(el).backgroundImage)).toContain('/api/media/');
   // the edit dialog shows it, and removes it
   await page.getByRole('button', { name: /Edit details/ }).first().click();
@@ -1108,11 +1139,11 @@ test('profile photo: the front desk’s new photo waits for management', async (
   const c = watchConsole(page);
   await signIn(page, 's1', '/members/m1');
   await page.getByTestId('profile-avatar').click();
-  await page.getByRole('dialog', { name: 'Profile photo' }).getByRole('button', { name: 'Take or choose a photo' }).click();
+  await page.getByRole('dialog', { name: 'Profile photo' }).getByRole('button', { name: 'Change photo' }).click(); // KC round 9: Oma Lina has a stock portrait
   await takePhotoWithFile(page);
   const st = async () => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's9' } })).json()).state;
   await expect.poll(async () => Object.values((await st()).changeRequests as Record<string, { status: string; target: { memberId: string }; section: string }>).some((r) => r.status === 'pending' && r.target.memberId === 'm1' && r.section === 'details')).toBe(true);
-  expect((await st()).members.m1.photoMediaId).toBeUndefined(); // not until approved
+  expect((await st()).members.m1.photoMediaId).toBe('md_demo_portrait-lina'); // the portrait stays until approved
   c.assertClean();
 });
 

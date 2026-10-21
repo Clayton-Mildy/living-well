@@ -89,8 +89,8 @@ export function Readings() {
           {filters.map(([k, label]) => {
             const on = filter === k;
             return (
-              <button key={k} type="button" className="cp-chip" aria-pressed={on} onClick={() => { setFilter(k); setSel(null); }}
-                style={{ height: 36, padding: '0 14px', borderRadius: 12, border: on ? '1px solid #24201C' : '1px solid #DCD3C8', background: on ? '#24201C' : '#FFFFFF', color: on ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+              <button key={k} type="button" className={on ? 'cp-chip' : 'cp-chip cp-fill'} aria-pressed={on} onClick={() => { setFilter(k); setSel(null); }}
+                style={{ height: 36, padding: '0 14px', borderRadius: 999, border: 'none', background: on ? '#24201C' : 'var(--fill, #F4F4F5)', color: on ? '#FFFFFF' : '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
                 {label} · {rows.filter(F[k]).length}
               </button>
             );
@@ -101,8 +101,8 @@ export function Readings() {
         {pagedT.rows.map((r) => {
           const on = cur?.m.id === r.m.id;
           return (
-            <button key={r.m.id} type="button" className="dh42" onClick={() => choose(r.m.id)} aria-current={on ? 'true' : undefined} data-testid="reading-row"
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', minHeight: 66, border: 'none', borderTop: '1px solid #F0EAE1', background: on ? '#FBF8F4' : '#FFFFFF', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+            <button key={r.m.id} type="button" className="h-row" onClick={() => choose(r.m.id)} aria-current={on ? 'true' : undefined} data-testid="reading-row"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', minHeight: 66, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: on ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
               <Av name={memberName(r.m)} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{memberName(r.m)}</span>
@@ -112,8 +112,8 @@ export function Readings() {
             </button>
           );
         })}
-        {!list.length ? <div style={{ padding: '32px 16px', borderTop: '1px solid #F0EAE1', textAlign: 'center', fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{q.trim() ? t('common.noResults') : t('health.nobodyGroup')}</div> : null}
-        <div style={{ borderTop: list.length ? '1px solid #F0EAE1' : undefined }}><Pager page={pagedT.page} pages={pagedT.pages} onPage={pagedT.setPage} /></div>
+        {!list.length ? <div style={{ padding: '32px 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', textAlign: 'center', fontSize: 16, color: '#5E5852', lineHeight: 1.4 }}>{q.trim() ? t('common.noResults') : t('health.nobodyGroup')}</div> : null}
+        <div style={{ borderTop: list.length ? '0.5px solid var(--hairline, #E2E2E6)' : undefined }}><Pager page={pagedT.page} pages={pagedT.pages} onPage={pagedT.setPage} /></div>
       </div>
     </>
   );
@@ -144,24 +144,24 @@ export function Readings() {
               <Badge kind={r.status} icon={17} />
             </>
           );
-          const st = { width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', minHeight: 66, borderTop: '1px solid #F0EAE1', background: on ? '#FBF8F4' : '#FFFFFF', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', color: '#24201C', fontFamily: 'Inter' } as const;
+          const st = { width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', minHeight: 66, borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: on ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', color: '#24201C', fontFamily: 'Inter' } as const;
           return who?.member
-            ? <button key={r.id} type="button" className="dh42" data-testid="day-row" onClick={() => choose(who.id, r.date)} aria-current={on ? 'true' : undefined} style={{ ...st, border: 'none', borderTop: st.borderTop, cursor: 'pointer' }}>{inner}</button>
+            ? <button key={r.id} type="button" className="h-row" data-testid="day-row" onClick={() => choose(who.id, r.date)} aria-current={on ? 'true' : undefined} style={{ ...st, border: 'none', borderTop: st.borderTop, cursor: 'pointer' }}>{inner}</button>
             : <div key={r.id} data-testid="day-row" style={st}>{inner}</div>;
         })}
         {!dayAll.length ? (
-          <div style={{ padding: '32px 16px', borderTop: '1px solid #F0EAE1', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Icon name="event_busy" size={30} weight={300} color="#6E5A43" style={{ alignSelf: 'center' }} />
+          <div style={{ padding: '32px 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <Icon name="event_busy" size={30} weight={300} color="var(--eyebrow, #6E5A43)" style={{ alignSelf: 'center' }} />
             <span style={{ fontSize: 16, lineHeight: 1.4 }}>{t('health.dayEmpty', { d: fds(date) })}</span>
           </div>
-        ) : !dayItems.length ? <div style={{ padding: '32px 16px', borderTop: '1px solid #F0EAE1', textAlign: 'center', fontSize: 16, color: '#5E5852' }}>{t('common.noResults')}</div> : null}
-        <div style={{ borderTop: dayItems.length ? '1px solid #F0EAE1' : undefined }}><Pager page={pagedD.page} pages={pagedD.pages} onPage={pagedD.setPage} /></div>
+        ) : !dayItems.length ? <div style={{ padding: '32px 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', textAlign: 'center', fontSize: 16, color: '#5E5852' }}>{t('common.noResults')}</div> : null}
+        <div style={{ borderTop: dayItems.length ? '0.5px solid var(--hairline, #E2E2E6)' : undefined }}><Pager page={pagedD.page} pages={pagedD.pages} onPage={pagedD.setPage} /></div>
       </div>
     </>
   );
 
   // round 6, phone: iOS look. The grey search bar, the filter as a segmented control (still pressed buttons), then flat groups of rows; nothing is boxed in a card.
-  const rowStyle = (first: boolean, inset = 70): React.CSSProperties => ({ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 10px 10px 16px', minHeight: 64, border: 'none', backgroundColor: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: `calc(100% - ${inset}px) 1px`, backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', color: '#24201C', fontFamily: 'Inter' });
+  const rowStyle = (first: boolean, inset = 70): React.CSSProperties => ({ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 10px 10px 16px', minHeight: 64, border: 'none', backgroundColor: 'transparent', backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: `calc(100% - ${inset}px) 1px`, backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', color: '#24201C', fontFamily: 'Inter' });
   const chevron = <Icon name="chevron_right" size={22} color="#A89C8E" />;
   const phoneTrends = (
     <>
@@ -220,7 +220,7 @@ export function Readings() {
         })}
         {!dayAll.length ? (
           <div style={{ padding: '32px 16px', textAlign: 'center', display: 'flex', flexDirection: 'column', gap: 6 }}>
-            <Icon name="event_busy" size={30} weight={300} color="#6E5A43" style={{ alignSelf: 'center' }} />
+            <Icon name="event_busy" size={30} weight={300} color="var(--eyebrow, #6E5A43)" style={{ alignSelf: 'center' }} />
             <span style={{ fontSize: 16, lineHeight: 1.4 }}>{t('health.dayEmpty', { d: fds(date) })}</span>
           </div>
         ) : !dayItems.length ? <div style={{ padding: '32px 16px', textAlign: 'center', fontSize: 16, color: '#5E5852' }}>{t('common.noResults')}</div> : null}
@@ -230,7 +230,7 @@ export function Readings() {
   );
 
   const listCard = (
-    <div data-testid="readings-list" style={{ flex: stacked ? '1 1 100%' : mode === 'day' ? '0 1 400px' : '0 1 340px', minWidth: 290, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+    <div data-testid="readings-list" className="cp-grey" style={{ flex: stacked ? '1 1 100%' : mode === 'day' ? '0 1 400px' : '0 1 340px', minWidth: 290, background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
       {mode === 'trends' ? trendsCard : dayCard}
     </div>
   );
@@ -239,7 +239,7 @@ export function Readings() {
     <Detail row={cur} s={s} today={today} t={t} when={when} fds={fds} fmonth={fmonth} day={histDay} onDay={setHistDay} onProfile={() => navigate(`/members/${cur.m.id}/health`)}
       onEdit={(id) => setDlg({ t: 'edit', id })} onVoid={(id) => setDlg({ t: 'void', id })} />
   ) : mode === 'day' ? (
-    <div style={{ padding: '60px 24px', textAlign: 'center', fontSize: 18, color: '#6B6259', ...{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)' } }}>{t('health.choose')}</div>
+    <div style={{ padding: '60px 24px', textAlign: 'center', fontSize: 18, color: '#6B6259', ...{ background: 'var(--fill, #F4F4F5)', borderRadius: 16 } }}>{t('health.choose')}</div>
   ) : null;
   const pos = cur && mode === 'trends' ? t('health.posList', { i: Math.max(0, list.findIndex((r) => r.m.id === cur.m.id)) + 1, n: list.length }) : '';
 
@@ -254,7 +254,7 @@ export function Readings() {
         {!isPhone && detail ? <div ref={detailRef} style={{ flex: '1 1 560px', minWidth: 0 }}>{detail}</div> : null}
       </div>
       {isPhone ? (
-        <FullSheet open={sheetOpen} onClose={() => setSheet(false)} back={t('nav.readings')} pos={pos} label={cur ? memberName(cur.m) : t('nav.readings')} bg="#F5F5F3">
+        <FullSheet open={sheetOpen} onClose={() => setSheet(false)} back={t('nav.readings')} pos={pos} label={cur ? memberName(cur.m) : t('nav.readings')}>
           {detail}
         </FullSheet>
       ) : null}
@@ -315,12 +315,12 @@ function Detail({ row, s, today, t, when, fds, fmonth, day, onDay, onProfile, on
       <>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, minWidth: 0 }}>
           <Av name={name} tone={m.photoTone} src={memberPhoto(m)} size={72} font={26} />
-          <h2 style={{ margin: '6px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{name}</h2>
+          <h2 className="cp-serif" style={{ margin: '6px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{name}</h2>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{[age ?? '', m.health.conditions.length ? m.health.conditions.join(', ') : t('health.noConditions')].filter((x) => x !== '').join(' · ')}</span>
         </div>
         <Group pad={0} gap={0}>
-          <button type="button" className="cp-tap-self" onClick={onProfile} style={{ height: 50, padding: '0 10px 0 16px', border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
-            <Icon name="folder_open" size={21} color="#75624B" />
+          <button type="button" className="cp-tap-self" onClick={onProfile} style={{ height: 50, padding: '0 10px 0 16px', border: 'none', background: 'transparent', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+            <Icon name="folder_open" size={21} color="var(--accent, #75624B)" />
             <span style={{ flex: 1 }}>{t('health.openRecord')}</span>
             <Icon name="chevron_right" size={22} color="#A89C8E" />
           </button>
@@ -384,9 +384,9 @@ function History({ row, s, today, t, when, day, onDay, onEdit, onVoid }: {
     );
   }
   return (
-    <div data-testid="history" style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+    <div data-testid="history" className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
       <div style={{ padding: '16px clamp(16px, 2vw, 24px) 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <span style={{ ...smallCaps('2px'), color: '#6E5A43' }}>{t('health.history')}</span>
+        <span style={{ ...smallCaps('2px'), color: 'var(--eyebrow, #6E5A43)' }}>{t('health.history')}</span>
         <DayNav value={cur} onChange={onDay} today={today} ariaLabel={t('health.histDayL')} prev={prev ? () => onDay(prev) : null} next={next ? () => onDay(next) : null}
           prevLabel={t('health.histEarlier')} nextLabel={t('health.histLater')} reset={cur !== latest ? { label: t('health.histLatest'), run: () => onDay(null) } : null} />
         {idx >= 0 ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('health.histPos', { i: idx + 1, n: days.length })}</span> : null}
@@ -445,7 +445,7 @@ function ChartCard({ c, t, fds, fmonth, today, L, from, to }: { c: ChartSpec; t:
     return (
       <div data-chart={c.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <div style={{ padding: '0 16px' }}><h2 style={GROUP_HEAD}>{m.title}</h2></div>
-        <div style={{ background: '#FFFFFF', borderRadius: 14, padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '12px 16px 14px', display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
             <span style={{ display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: 28, lineHeight: '34px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>{m.latest}</span>
@@ -460,7 +460,7 @@ function ChartCard({ c, t, fds, fmonth, today, L, from, to }: { c: ChartSpec; t:
     );
   }
   return (
-    <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }} data-chart={c.id}>
+    <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8 }} data-chart={c.id}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ ...smallCaps('1.3px'), fontWeight: 600, color: '#5E5852' }}>{m.title}</span>

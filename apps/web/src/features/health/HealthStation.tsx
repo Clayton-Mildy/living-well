@@ -189,7 +189,7 @@ export function HealthStation() {
   const pos = cur ? list.findIndex((r) => r.key === cur.key) : -1;
 
   const listCard = (
-    <div data-testid="station-list" style={{ flex: stacked ? '1 1 100%' : '0 1 330px', minWidth: 290, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+    <div data-testid="station-list" className="cp-grey" style={{ flex: stacked ? '1 1 100%' : '0 1 330px', minWidth: 290, background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
       <div style={{ padding: '14px 16px 10px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         <SearchBox value={q} onChange={setQ} label={t('health.searchL')} placeholder={t('health.searchPh')} />
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
@@ -198,7 +198,7 @@ export function HealthStation() {
         </div>
       </div>
       {closed ? (
-        <div role="status" style={{ padding: '12px 16px', borderTop: '1px solid #F0EAE1', background: '#FBF5E8', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+        <div role="status" style={{ padding: '12px 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: '#FBF5E8', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
           <Icon name="event_busy" size={22} color="#7A5510" />
           <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t('common.clubClosed')}</span>
@@ -212,7 +212,7 @@ export function HealthStation() {
         return (
           <div key={r.key}>
             {head ? (
-              <div style={{ padding: '12px 16px 8px', borderTop: '1px solid #F0EAE1', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
+              <div style={{ padding: '12px 16px 8px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
                 <Eyebrow>{t(g === 'in' ? 'health.grpIn' : 'health.grpOther')}</Eyebrow>
                 <span style={{ fontSize: 14, color: '#6B6259' }}>{groupCount[g]}</span>
               </div>
@@ -224,7 +224,7 @@ export function HealthStation() {
       {!list.length ? (
         <EmptyBlock icon={q.trim() ? 'search_off' : 'groups'} title={q.trim() ? t('common.noResults') : t('health.listEmpty')} />
       ) : null}
-      <div style={{ borderTop: list.length ? '1px solid #F0EAE1' : undefined }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} /></div>
+      <div style={{ borderTop: list.length ? '0.5px solid var(--hairline, #E2E2E6)' : undefined }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} /></div>
     </div>
   );
 
@@ -264,8 +264,8 @@ export function HealthStation() {
     <>
       <DetailHead who={who} row={cur} s={s} today={today} t={t} isPhone={isPhone} />
       {cur.today.length ? (
-        <div data-testid="today-block" style={{ padding: isPhone ? '14px 16px 6px' : '16px 24px 8px', display: 'flex', flexDirection: 'column', gap: 4, borderBottom: '1px solid #F0EAE1' }}>
-          <span style={{ ...smallCaps('2px'), color: '#6E5A43' }}>{t('health.todayHead', { n: cur.today.length })}</span>
+        <div data-testid="today-block" style={{ padding: isPhone ? '14px 16px 6px' : '16px 24px 8px', display: 'flex', flexDirection: 'column', gap: 4, borderBottom: '0.5px solid var(--hairline, #E2E2E6)' }}>
+          <span style={{ ...smallCaps('2px'), color: 'var(--eyebrow, #6E5A43)' }}>{t('health.todayHead', { n: cur.today.length })}</span>
           {cur.today.map((r) => <ReadingCard key={r.id} r={r} s={s} t={t} onEdit={() => setDlg({ t: 'edit', id: r.id })} onVoid={() => setDlg({ t: 'void', id: r.id })} />)}
         </div>
       ) : null}
@@ -313,7 +313,7 @@ export function HealthStation() {
       <div ref={bodyRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(14px, 2vw, 24px)', alignItems: 'flex-start' }}>
         {isPhone ? phoneList : listCard}
         {!isPhone ? (
-          <div ref={detailRef} style={{ flex: '1 1 520px', minWidth: 0, background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflowX: 'clip', overflowY: 'visible' }}>{detail}</div>
+          <div ref={detailRef} className="cp-grey" style={{ flex: '1 1 520px', minWidth: 0, background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflowX: 'clip', overflowY: 'visible' }}>{detail}</div>
         ) : null}
       </div>
       {isPhone ? (
@@ -328,9 +328,9 @@ export function HealthStation() {
 
 function EmptyBlock({ icon, title, sub, big, flat }: { icon: string; title: string; sub?: string; big?: boolean; /** phone: inside a flat group, no hairline above */ flat?: boolean }) {
   return (
-    <div style={{ padding: big ? '80px 24px' : '36px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center', borderTop: big || flat ? undefined : '1px solid #F0EAE1' }}>
-      <div style={{ width: big ? 72 : 64, height: big ? 72 : 64, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-        <Icon name={icon} size={big ? 34 : 30} weight={300} color="#6E5A43" />
+    <div style={{ padding: big ? '80px 24px' : '36px 20px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center', borderTop: big || flat ? undefined : '0.5px solid var(--hairline, #E2E2E6)' }}>
+      <div style={{ width: big ? 72 : 64, height: big ? 72 : 64, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <Icon name={icon} size={big ? 34 : 30} weight={300} color="var(--eyebrow, #6E5A43)" />
       </div>
       <div style={{ fontSize: big ? 20 : 18, fontWeight: 400, color: '#2B231C' }}>{title}</div>
       {sub ? <div style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#6B6259' }}>{sub}</div> : null}
@@ -350,7 +350,7 @@ function ListRow({ r, on, first, today, t, fds, onClick }: { r: StationRow; on: 
   if (isPhone) {
     return (
       <button type="button" className="cp-tap-self" onClick={onClick} aria-current={on ? 'true' : undefined} data-testid="station-row" data-person={r.personId} data-presence={r.presence}
-        style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'center', padding: '10px 10px 10px 16px', minHeight: 64, border: 'none', backgroundColor: on ? '#FBF8F4' : '#FFFFFF', backgroundImage: first || on ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 70px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+        style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'center', padding: '10px 10px 10px 16px', minHeight: 64, border: 'none', backgroundColor: on ? 'var(--press, #EEEEF0)' : 'transparent', backgroundImage: first || on ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 70px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
         <Av name={w.name} tone={w.tone} src={w.photo} size={42} font={15} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
@@ -367,8 +367,8 @@ function ListRow({ r, on, first, today, t, fds, onClick }: { r: StationRow; on: 
     );
   }
   return (
-    <button type="button" className="dh22" onClick={onClick} aria-current={on ? 'true' : undefined} data-testid="station-row" data-person={r.personId} data-presence={r.presence}
-      style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'center', padding: isPhone ? '10px 14px' : '12px 16px', minHeight: isPhone ? 60 : 70, border: 'none', borderTop: '1px solid #F0EAE1', background: on ? '#FBF8F4' : '#FFFFFF', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+    <button type="button" className="h-row" onClick={onClick} aria-current={on ? 'true' : undefined} data-testid="station-row" data-person={r.personId} data-presence={r.presence}
+      style={{ width: '100%', display: 'flex', gap: 12, alignItems: 'center', padding: isPhone ? '10px 14px' : '12px 16px', minHeight: isPhone ? 60 : 70, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: on ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
       <Av name={w.name} tone={w.tone} src={w.photo} size={isPhone ? 40 : 44} font={isPhone ? 14 : 16} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>

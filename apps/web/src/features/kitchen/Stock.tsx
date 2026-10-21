@@ -21,7 +21,7 @@ export function Stock() {
   const t = useT();
   const { fds } = useFmt();
   const { device, isPhone } = useDevice();
-  const { user, role } = useMe();
+  const { user } = useMe();
   const s = useClub();
   const act = useAct();
   const fmtQty = useQty();
@@ -43,7 +43,7 @@ export function Stock() {
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)' }}>
       <PageHead title={t('kitchen.stock.title')} />
-      <StockForm defaultArea={role === 'kitchen' || role === 'mgmt' ? 'kitchen' : 'housekeeping'} prefill={prefill} />
+      <StockForm defaultArea="kitchen" prefill={prefill} />
 
       {isPhone ? (
         // phone: the two filters are two dropdowns side by side, not two rows of chips
@@ -76,7 +76,7 @@ export function Stock() {
             const waiting = k.status === 'requested' && !approve;
             const again = k.status === 'rejected' && k.requestedBy === user.id;
             return (
-              <div key={k.id} data-testid="stock-row" data-id={k.id} data-status={k.status} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 0', borderTop: i === 0 ? 'none' : '1px solid #EFEAE3' }}>
+              <div key={k.id} data-testid="stock-row" data-id={k.id} data-status={k.status} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 0', borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline, #E2E2E6)' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{k.item} · {fmtQty(k.qty)} {unitLabel(t, k.unit)}</span>
@@ -110,14 +110,14 @@ export function Stock() {
           {!rows.length ? <EmptyState icon="inventory_2" title={t('kitchen.stock.empty')} /> : null}
         </Group>
       ) : (
-      <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden' }}>
+      <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
         {paged.rows.map((k) => {
           const mine = canEditStock(user, k);
           const approve = canApproveStock(user, k);
           const receive = canReceiveStock(user, k);
           const decided = k.status === 'approved' || k.status === 'received' ? t('kitchen.stock.approvedBy', { name: who(k.decidedBy) }) : k.status === 'rejected' ? t('kitchen.stock.declinedBy', { name: who(k.decidedBy) }) : '';
           return (
-            <div key={k.id} data-testid="stock-row" data-id={k.id} data-status={k.status} style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 8 : 12, flexWrap: 'wrap', padding: isPhone ? '10px 16px' : '14px 22px', borderTop: '1px solid #F0EAE1', minHeight: isPhone ? 56 : 68 }}>
+            <div key={k.id} data-testid="stock-row" data-id={k.id} data-status={k.status} style={{ display: 'flex', alignItems: 'center', gap: isPhone ? 8 : 12, flexWrap: 'wrap', padding: isPhone ? '10px 16px' : '14px 22px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: isPhone ? 56 : 68 }}>
               <div style={{ flex: '1 1 240px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{k.item} · {fmtQty(k.qty)} {unitLabel(t, k.unit)}</span>
                 <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{areaLabel(t, k.area)} · {who(k.requestedBy)} · {fds(k.createdAt.slice(0, 10))}{decided ? ' · ' + decided : ''}</span>

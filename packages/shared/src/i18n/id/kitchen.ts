@@ -93,7 +93,7 @@ export const kitchen: Same<typeof EN> = {
   'stock.declineKept': 'Permintaan tetap ada di daftar dengan status Ditolak beserta catatan ini. Pemohon diberi tahu.', 'stock.declinedBy': 'ditolak oleh {name}', 'stock.approvedBy': 'disetujui oleh {name}',
   'stock.approvedToast': '{item} disetujui. {name} sudah diberi tahu.', 'stock.declinedToast': 'Permintaan {item} ditolak. Pemohon sudah diberi tahu.', 'stock.receivedToast': '{item} ditandai diterima.',
   'stock.editTitle': 'Ubah permintaan', 'stock.edited': 'Permintaan diperbarui.', 'stock.again': 'Minta lagi', 'stock.empty': 'Tidak ada permintaan di sini',
-  'area.kitchen': 'Dapur', 'area.health': 'Kesehatan', 'area.activities': 'Aktivitas', 'area.housekeeping': 'Kebersihan', 'area.transport': 'Transportasi',
+  'area.kitchen': 'Dapur', 'area.health': 'Kesehatan', 'area.activities': 'Aktivitas',
   'unit.pcs': 'buah', 'unit.boxes': 'dus', 'unit.packs': 'bungkus', 'unit.kg': 'kg', 'unit.litres': 'liter', 'unit.bottles': 'botol', 'unit.rolls': 'gulung', 'unit.sets': 'set',
   // ---- pesan kesalahan dari aksi dapur
   'err.pastDate': 'Tanggal itu sudah lewat.', 'err.futureDate': 'Pilih hari ini atau hari yang sudah lewat.', 'err.badDish': 'Hidangan itu tidak ada di daftar untuk jenis ini.', 'err.dishExists': '{name} sudah ada.',

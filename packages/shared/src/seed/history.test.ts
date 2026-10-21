@@ -7,7 +7,8 @@ import {
 } from '../index';
 import { existsSync } from 'node:fs';
 import { onLeaveIn } from '../rules/leave';
-import { demoMediaPath } from './demoMedia';
+import { demoMediaId, demoMediaPath, MEMBER_PORTRAITS, portraitId } from './demoMedia';
+import { FACE_FREE } from './r7/drafts';
 import { sessionsOn } from '../rules/kitchen';
 
 const T = DEMO_TODAY;
@@ -136,12 +137,18 @@ describe('six months of history', () => {
       expect(s.dayMenus[p.date].photoIds, p.id).toContain(p.id);
     }
     expect(live(s.photos).some((p) => p.kind === 'lunch' && p.date >= T)).toBe(false); // today's lunch photo is taken at 12:00 in the demo
-    // the made-up members keep their initials and their tagged photos stay placeholders: no real face on a member's record
-    expect(members.every((m) => !m.photoMediaId)).toBe(true);
-    expect(live(s.photos).filter((p) => p.memberIds.length > 0).every((p) => !p.mediaId)).toBe(true);
+    // KC round 9: only the parents a demo family follows have a profile picture (a stock portrait); everyone else keeps their initials,
+    // and tagged photos stay placeholders
+    expect(members.filter((m) => m.photoMediaId).map((m) => m.id).sort()).toEqual(Object.keys(MEMBER_PORTRAITS).sort());
+    for (const m of members.filter((x) => x.photoMediaId)) expect(m.photoMediaId).toBe(portraitId(m.id));
+    expect(live(s.photos).filter((p) => p.memberIds.length > 0 && p.visibility !== 'draft').every((p) => !p.mediaId)).toBe(true);
+    // the quick camera's seeded drafts (private to Dinar) that name a member use only the demo pictures with no face in them
+    const drafts = live(s.photos).filter((p) => p.visibility === 'draft');
+    expect(drafts.length).toBeGreaterThan(0);
+    for (const p of drafts.filter((x) => x.memberIds.length > 0)) expect(FACE_FREE.map(demoMediaId), p.id).toContain(p.mediaId);
     // every activity has its own picture, and every demo id the seed uses is a file that is served and has the shape of an uploaded id
     expect(live(s.activities).every((a) => !!a.photoMediaId)).toBe(true);
-    const ids = new Set([...live(s.activities).map((a) => a.photoMediaId!), ...pics.map((p) => p.mediaId!), ...lunch.map((p) => p.mediaId!), ...tea.map((p) => p.mediaId!)]);
+    const ids = new Set([...live(s.activities).map((a) => a.photoMediaId!), ...members.flatMap((m) => (m.photoMediaId ? [m.photoMediaId] : [])), ...pics.map((p) => p.mediaId!), ...lunch.map((p) => p.mediaId!), ...tea.map((p) => p.mediaId!), ...drafts.map((p) => p.mediaId!)]);
     for (const id of ids) {
       expect(id).toMatch(/^md_[A-Za-z0-9_-]{8,}$/);
       expect(existsSync(new URL(`../../../../apps/web/public${demoMediaPath(id)}`, import.meta.url)), id).toBe(true);

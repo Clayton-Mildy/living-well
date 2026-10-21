@@ -36,7 +36,7 @@ export function ConflictsPanel({ vals, readOnly = false }: { vals: Conflicts; re
           {paged.rows.map((c, i) => {
             const plan = c.plan;
             return (
-              <div key={c.person + c.dish.id} data-testid="conflict-row" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: first(i) ? 'none' : '1px solid #EFEAE3' }}>
+              <div key={c.person + c.dish.id} data-testid="conflict-row" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: first(i) ? 'none' : '0.5px solid var(--hairline, #E2E2E6)' }}>
                 <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: c.resolved ? '#E3EFE6' : '#F9E3DB', color: c.resolved ? '#3D6B4F' : '#9A3D24', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
                   <Icon name={c.resolved ? 'check_circle' : 'no_food'} size={21} fill={1} />
                 </span>
@@ -58,9 +58,9 @@ export function ConflictsPanel({ vals, readOnly = false }: { vals: Conflicts; re
               </div>
             );
           })}
-          {paged.pages > 1 ? <div style={{ borderTop: '1px solid #EFEAE3' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.conflicts.title')} /></div> : null}
+          {paged.pages > 1 ? <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.conflicts.title')} /></div> : null}
           {vals.unknownGuests.map((u, i) => (
-            <div key={u.guest.id} data-testid="unknown-guest-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: first(i + paged.rows.length) ? 'none' : '1px solid #EFEAE3' }}>
+            <div key={u.guest.id} data-testid="unknown-guest-row" style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: first(i + paged.rows.length) ? 'none' : '0.5px solid var(--hairline, #E2E2E6)' }}>
               <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: '#F6ECD6', color: '#7A5510', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="help" size={21} fill={1} /></span>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{u.guest.name}<span style={{ fontWeight: 400, color: '#5E5852' }}> · {t('kitchen.conflicts.guest')}</span></span>
@@ -69,7 +69,7 @@ export function ConflictsPanel({ vals, readOnly = false }: { vals: Conflicts; re
                   <StatusDot color="#7A5510">{t('kitchen.conflicts.ask', { who: u.escort })}</StatusDot>
                   <span style={{ flex: 1 }} />
                   {u.phone ? (
-                    <a href={`tel:${u.phone}`} className="cp-press" style={{ height: 34, padding: '0 14px', borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
+                    <a href={`tel:${u.phone}`} className="cp-press cp-fill" style={{ height: 34, padding: '0 14px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
                       <Icon name="call" size={17} />{t('common.call')}
                     </a>
                   ) : null}
@@ -78,14 +78,14 @@ export function ConflictsPanel({ vals, readOnly = false }: { vals: Conflicts; re
             </div>
           ))}
           {clear || vals.unreviewed.length ? (
-            <div style={{ padding: '12px 0 14px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: vals.conflicts.length || vals.unknownGuests.length ? '1px solid #EFEAE3' : undefined }}>
+            <div style={{ padding: '12px 0 14px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: vals.conflicts.length || vals.unknownGuests.length ? '0.5px solid var(--hairline, #E2E2E6)' : undefined }}>
               {clear ? <Note tone={vals.covers.total ? 'sage' : 'cream'} icon={vals.covers.total ? 'verified_user' : 'hourglass_empty'}>{vals.covers.total ? t('kitchen.conflicts.clear', { n: vals.covers.total }) : t('kitchen.conflicts.nobody')}</Note> : null}
               {vals.unreviewed.length ? (
                 <Note tone="ochre" icon="help">
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                     <span>{t('kitchen.conflicts.unreviewed', { names: vals.unreviewed.map((d) => d.name).join(', ') })}</span>
                     {readOnly ? null : (<div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                      {vals.unreviewed.map((d) => <RowPill key={d.id} icon="fact_check" onClick={() => setDishId(d.id)}>{t('kitchen.conflicts.check', { name: d.name })}</RowPill>)}
+                      {vals.unreviewed.map((d) => <RowPill key={d.id} white icon="fact_check" onClick={() => setDishId(d.id)}>{t('kitchen.conflicts.check', { name: d.name })}</RowPill>)}
                     </div>)}
                   </div>
                 </Note>
@@ -104,7 +104,7 @@ export function ConflictsPanel({ vals, readOnly = false }: { vals: Conflicts; re
       {paged.rows.map((c) => {
         const plan = c.plan;
         return (
-          <div key={c.person + c.dish.id} data-testid="conflict-row" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 12px', margin: '0 22px', padding: '16px 0', borderTop: '1px solid #F0EAE1' }}>
+          <div key={c.person + c.dish.id} data-testid="conflict-row" data-resolved={c.resolved ? 'yes' : 'no'} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 12px', margin: '0 22px', padding: '16px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
             <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: c.resolved ? '#E3EFE6' : '#F9E3DB', color: c.resolved ? '#3D6B4F' : '#9A3D24', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
               <Icon name={c.resolved ? 'check_circle' : 'no_food'} size={22} fill={1} />
             </span>
@@ -127,9 +127,9 @@ export function ConflictsPanel({ vals, readOnly = false }: { vals: Conflicts; re
           </div>
         );
       })}
-      <div style={{ margin: '0 22px', padding: paged.pages > 1 ? '8px 0' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.conflicts.title')} /></div>
+      <div style={{ margin: '0 22px', padding: paged.pages > 1 ? '8px 0' : 0, borderTop: paged.pages > 1 ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.conflicts.title')} /></div>
       {vals.unknownGuests.map((u) => (
-        <div key={u.guest.id} data-testid="unknown-guest-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 12px', margin: '0 22px', padding: '16px 0', borderTop: '1px solid #F0EAE1' }}>
+        <div key={u.guest.id} data-testid="unknown-guest-row" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '10px 12px', margin: '0 22px', padding: '16px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
           <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F6ECD6', color: '#7A5510', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="help" size={22} fill={1} /></span>
           <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{u.guest.name}<span style={{ fontWeight: 400, color: '#5E5852' }}> · {t('kitchen.conflicts.guest')}</span></span>
@@ -137,21 +137,21 @@ export function ConflictsPanel({ vals, readOnly = false }: { vals: Conflicts; re
           </div>
           <StatusDot color="#7A5510">{t('kitchen.conflicts.ask', { who: u.escort })}</StatusDot>
           {u.phone ? (
-            <a href={`tel:${u.phone}`} className="h-cream" style={{ height: 44, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
+            <a href={`tel:${u.phone}`} className="h-fill cp-fill" style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
               <Icon name="call" size={18} />{t('common.call')}
             </a>
           ) : null}
         </div>
       ))}
       {clear || vals.unreviewed.length ? (
-        <div style={{ margin: '0 22px', padding: '16px 0 20px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: vals.conflicts.length || vals.unknownGuests.length ? '1px solid #F0EAE1' : undefined }}>
+        <div style={{ margin: '0 22px', padding: '16px 0 20px', display: 'flex', flexDirection: 'column', gap: 10, borderTop: vals.conflicts.length || vals.unknownGuests.length ? '0.5px solid var(--hairline, #E2E2E6)' : undefined }}>
           {clear ? <Note tone={vals.covers.total ? 'sage' : 'cream'} icon={vals.covers.total ? 'verified_user' : 'hourglass_empty'}>{vals.covers.total ? t('kitchen.conflicts.clear', { n: vals.covers.total }) : t('kitchen.conflicts.nobody')}</Note> : null}
           {vals.unreviewed.length ? (
             <Note tone="ochre" icon="help">
               <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
                 <span>{t('kitchen.conflicts.unreviewed', { names: vals.unreviewed.map((d) => d.name).join(', ') })}</span>
                 {readOnly ? null : (<div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
-                  {vals.unreviewed.map((d) => <OutlineButton key={d.id} onClick={() => setDishId(d.id)} icon="fact_check">{t('kitchen.conflicts.check', { name: d.name })}</OutlineButton>)}
+                  {vals.unreviewed.map((d) => <OutlineButton key={d.id} white onClick={() => setDishId(d.id)} icon="fact_check">{t('kitchen.conflicts.check', { name: d.name })}</OutlineButton>)}
                 </div>)}
               </div>
             </Note>

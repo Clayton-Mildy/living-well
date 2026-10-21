@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, dayStatus, sessionsOn, scheduleVersionFor, projectForFamily, live, DomainError, type ClubState } from '../index';
-import { DRAFT_ID, builderBase, builderDays, dayInfo, nextMonday, normalizeDays, slotChanged, weekView, weeklyCell, type Days } from '../rules/calendar';
-import { nowNext, dayPlan } from '../rules/activity';
+import { DRAFT_ID, builderBase, builderDays, dayInfo, extraTimeIssue, nextMonday, normalizeDays, slotChanged, suggestExtraTime, weekView, weeklyCell, type Days } from '../rules/calendar';
+import { nowNext, dayPlan, roundProgress, roundsOf } from '../rules/activity';
+import { guestOn } from '../rules/guests';
 
 const clock = { today: '2026-10-21', nowMin: 600 }; // Wed 21 Oct, 10:00
 let n = 0;
@@ -109,10 +110,27 @@ describe('schedule.publish', () => {
     expect(nextMonday('2027-03-03')).toBe('2027-03-08');
   });
 
-  it('refuses today and the past, an empty draft, and a publish that changes nothing', () => {
+  it('KC round 7: this week’s plan can be edited: a publish takes effect from today, and earlier days keep the version they had', () => {
+    const s0 = fresh();
+    const days = withCell(s0, 4, '10:30', { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' }); // Thursday morning of this week
+    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-21', days }, 's9'); // today
+    const s = r.state;
+    expect(r.result.effectiveFrom).toBe('2026-10-21');
+    expect(s.scheduleVersions[r.result.versionId as string]).toMatchObject({ status: 'published', effectiveFrom: '2026-10-21' });
+    expect(sessionsOn(s, '2026-10-22')[0].cell?.activityId).toBe('act-memory'); // Thursday, tomorrow: follows the new version
+    expect(sessionsOn(s, '2026-10-21')[1].cell?.activityId).toBe('act-batik'); // today's cell was not touched
+    expect(scheduleVersionFor(s, '2026-10-20')?.effectiveFrom).toBe('2024-07-01'); // yesterday keeps the version it had
+    expect(scheduleVersionFor(s, '2026-10-21')?.id).toBe(r.result.versionId);
+    // the week view: the current week is editable (from today), a week that is over is not
+    expect(weekView(s, '2026-10-19', clock.today)).toMatchObject({ editable: true });
+    expect(weekView(s, '2026-10-12', clock.today)).toMatchObject({ editable: false });
+    expect(note(s, 'cal.notif.schedulePublished')).toHaveLength(1);
+  });
+
+  it('refuses the past, an empty draft, and a publish that changes nothing', () => {
     const s0 = fresh();
     const days = withCell(s0, 3, '10:30', ANGKLUNG);
-    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-21', days }, 's9', 'cal.err.futureOnly');
+    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-20', days }, 's9', 'cal.err.futureOnly'); // yesterday
     fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-01', days }, 's9', 'cal.err.futureOnly');
     fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26' }, 's9', 'cal.err.noDraft');
     fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: builderDays(s0) }, 's9', 'err.noChanges');
@@ -476,7 +494,8 @@ describe('schedule.changeDay (one day only)', () => {
     fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: BATIK }, 's9', 'err.noChanges'); // the weekly plan already runs
     fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: { ...MEMORY, activityId: 'act-ghost' } }, 's9', 'cal.err.badActivity');
     fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: { ...MEMORY, staffId: 's8' } }, 's9', 'cal.err.badTeacher'); // the nurse does not teach
-    fails(s, 'schedule.changeDay', { date: TODAY, slot: '15:00', cell: MEMORY }, 's9', 'err.invalid');
+    fails(s, 'schedule.changeDay', { date: TODAY, slot: '15:00', cell: MEMORY }, 's9', 'cal.err.badSlot'); // not a session time that day (an extra session is added with schedule.addSession)
+    fails(s, 'schedule.changeDay', { date: TODAY, slot: '3pm', cell: MEMORY }, 's9', 'err.invalid');
   });
 
   it('a cell equal to the weekly plan takes the change away, and a day with nothing changed is deleted', () => {
@@ -530,5 +549,179 @@ describe('schedule.changeDay (one day only)', () => {
     const sick = days.find((d) => d.note);
     expect(sick).toMatchObject({ date: '2026-10-23', slots: { '13:30': { activityId: 'act-karaoke' } }, note: 'Kak Dimas is off sick' });
     expect(sessionsOn(s, '2026-10-23')[1].cell?.activityId).toBe('act-karaoke');
+  });
+});
+
+// KC round 7: "add an extra activity session at any time" (one date, beside the two weekly sessions)
+describe('extra sessions: schedule.addSession / editSession / removeSession', () => {
+  const TODAY = '2026-10-21'; // Wednesday, 10:00
+  const KARAOKE = { activityId: 'act-karaoke', staffId: 's6', roomId: 'room-music' };
+  const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
+  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'fm10_0', 'fm20_0'];
+  const add = (s: ClubState, o: Record<string, unknown> = {}) => run(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE, ...o }, 's9');
+
+  it('adds a session at any time of today: the day lists it in time order, teachers and families are told, the weekly plan stays', () => {
+    const r = add(fresh(), { note: 'Birthday sing-along' });
+    const s = r.state;
+    expect(r.result).toMatchObject({ date: TODAY, time: '15:00' });
+    expect(s.scheduleDays[TODAY]).toMatchObject({ date: TODAY, slots: {}, extra: [{ time: '15:00', cell: KARAOKE, note: 'Birthday sing-along' }] });
+    expect(sessionsOn(s, TODAY).map((x) => `${x.slot}${x.extra ? '*' : ''}:${x.cell?.activityId}`)).toEqual(['10:30:act-keroncong', '13:30:act-batik', '15:00*:act-karaoke']);
+    expect(weeklyCell(s, TODAY, '15:00')).toBeNull(); // an extra is not in the weekly plan
+    expect(slotChanged(s, TODAY, '15:00')).toBe(false);
+    const early = add(s, { time: '09:00', ...MEMORY }).state; // before the first weekly session
+    expect(sessionsOn(early, TODAY).map((x) => x.slot)).toEqual(['09:00', '10:30', '13:30', '15:00']);
+    expect(dayPlan(early, TODAY).filter((x) => x.kind === 'session').map((x) => x.time)).toEqual(['09:00', '10:30', '13:30', '15:00']);
+    // the calendar: staff see the "Extra" flag and its note, families see an ordinary session
+    expect(dayInfo(s, TODAY, 'staff').items.find((i) => i.time === '15:00')).toMatchObject({ extra: true, note: 'Birthday sing-along', activityId: 'act-karaoke' });
+    const fam = dayInfo(s, TODAY, 'family').items.find((i) => i.time === '15:00')!;
+    expect(fam.activityId).toBe('act-karaoke');
+    expect(fam.extra).toBeUndefined();
+    expect(fam.note).toBeUndefined();
+    expect(dayInfo(s, TODAY, 'staff').noSession).toEqual([]);
+    expect(projectForFamily(s, 'f1').scheduleDays[TODAY].extra).toEqual([{ time: '15:00', cell: KARAOKE }]); // the family's copy has no note
+    const ns = note(s, 'cal.notif.extraAdded');
+    expect(ns).toHaveLength(1);
+    expect(ns[0]).toMatchObject({ toRoles: ['activity'], params: { date: TODAY, time: '15:00', name: 'Karaoke' }, link: '/calendar' });
+    expect(new Set(ns[0].toUsers)).toEqual(new Set(FAMILIES));
+    expect(Object.values(s.activity).some((a) => a.key === 'cal.feed.extraAdded')).toBe(true);
+    // "tell" off: the session is added, the feed has it, nobody is notified
+    expect(note(add(fresh(), { notify: false }).state, 'cal.notif.extraAdded')).toHaveLength(0);
+    // a weekly one-day change on the same day keeps the extra
+    const both = step(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's9');
+    expect(both.scheduleDays[TODAY].extra).toHaveLength(1);
+    const reset = step(both, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: { activityId: 'act-batik', staffId: 's6', roomId: 'room-studio' } }, 's9'); // back to the plan
+    expect(reset.scheduleDays[TODAY]).toMatchObject({ slots: {}, extra: [{ time: '15:00' }] }); // the row stays for the extra
+  });
+
+  it('the demo seed has one extra session: tea-time karaoke at 15:00 on the next open day', () => {
+    const s = fresh();
+    const x = sessionsOn(s, '2026-10-22').find((e) => e.extra)!;
+    expect(x).toMatchObject({ slot: '15:00', cell: { activityId: 'act-karaoke' } });
+    expect(sessionsOn(s, '2026-10-22').map((e) => e.slot)).toEqual(['10:30', '13:30', '15:00']);
+  });
+
+  it('the time must be within the club’s hours, not a weekly time, and at least 30 minutes from another session', () => {
+    const s = fresh();
+    fails(s, 'schedule.addSession', { date: TODAY, time: '08:00', ...KARAOKE }, 's9', 'cal.err.sessionHours'); // opens 08:30
+    fails(s, 'schedule.addSession', { date: TODAY, time: '16:15', ...KARAOKE }, 's9', 'cal.err.sessionHours'); // the last start is 16:00
+    run(s, 'schedule.addSession', { date: TODAY, time: '08:30', ...KARAOKE }, 's9');
+    run(s, 'schedule.addSession', { date: TODAY, time: '16:00', ...KARAOKE }, 's9');
+    fails(s, 'schedule.addSession', { date: TODAY, time: '10:30', ...KARAOKE }, 's9', 'cal.err.sessionFixedTime');
+    fails(s, 'schedule.addSession', { date: TODAY, time: '10:55', ...KARAOKE }, 's9', 'cal.err.sessionClash'); // 25 minutes after the 10:30 session
+    fails(s, 'schedule.addSession', { date: TODAY, time: '10:05', ...KARAOKE }, 's9', 'cal.err.sessionClash');
+    run(s, 'schedule.addSession', { date: TODAY, time: '11:00', ...KARAOKE }, 's9'); // exactly 30 minutes apart is fine
+    run(s, 'schedule.addSession', { date: TODAY, time: '10:00', ...KARAOKE }, 's9');
+    const one = add(s).state;
+    fails(one, 'schedule.addSession', { date: TODAY, time: '15:20', ...MEMORY }, 's9', 'cal.err.sessionClash'); // another extra
+    fails(one, 'schedule.addSession', { date: TODAY, time: '15:00', ...MEMORY }, 's9', 'cal.err.sessionClash');
+    run(one, 'schedule.addSession', { date: TODAY, time: '15:30', ...MEMORY }, 's9');
+    // a weekly slot with no session does not count as a session (but its time is still the weekly slot's)
+    const none = step(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: null }, 's9');
+    run(none, 'schedule.addSession', { date: TODAY, time: '13:45', ...KARAOKE }, 's9');
+    fails(none, 'schedule.addSession', { date: TODAY, time: '13:30', ...KARAOKE }, 's9', 'cal.err.sessionFixedTime');
+    expect(extraTimeIssue(s, TODAY, '10:50')).toMatchObject({ code: 'cal.err.sessionClash', params: { time: '10:30' } });
+    expect(extraTimeIssue(s, TODAY, '15:00')).toBeNull();
+    expect(suggestExtraTime(s, TODAY)).toBe('11:30');
+    expect(suggestExtraTime(add(s, { time: '11:30' }).state, TODAY)).toBe('15:00');
+  });
+
+  it('only on an open day today or later; a valid activity and an active activity teacher; management only', () => {
+    const s = fresh();
+    fails(s, 'schedule.addSession', { date: '2026-10-20', time: '15:00', ...KARAOKE }, 's9', 'cal.err.pastDay');
+    fails(s, 'schedule.addSession', { date: '2026-10-24', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayClosed'); // Saturday
+    fails(s, 'schedule.addSession', { date: '2026-10-30', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayClosed'); // the club is closed
+    fails(s, 'schedule.addSession', { date: '2026-10-29', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayOuting');
+    fails(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE, activityId: 'act-ghost' }, 's9', 'cal.err.badActivity');
+    fails(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE, roomId: 'room-ghost' }, 's9', 'cal.err.badRoom');
+    fails(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE, staffId: 's8' }, 's9', 'cal.err.badTeacher'); // the nurse does not teach
+    fails(s, 'schedule.addSession', { date: TODAY, time: '3pm', ...KARAOKE }, 's9', 'err.invalid');
+    const off = step(s, 'activity.upsert', { id: 'act-karaoke', name: 'Karaoke', roomId: 'room-music', active: false }, 's9');
+    fails(off, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE }, 's9', 'cal.err.inactiveActivity');
+    for (const uid of ['s5', 's6', 's1', 's8', 's3', 's10', 'f1']) {
+      fails(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE }, uid, 'err.forbidden');
+      fails(s, 'schedule.editSession', { date: '2026-10-22', time: '15:00', ...KARAOKE }, uid, 'err.forbidden');
+      fails(s, 'schedule.removeSession', { date: '2026-10-22', time: '15:00' }, uid, 'err.forbidden');
+    }
+  });
+
+  it('edits an extra session: its activity, teacher, room, note and time; a note alone tells nobody; nothing changed is refused', () => {
+    const s0 = add(fresh()).state;
+    const e1 = run(s0, 'schedule.editSession', { date: TODAY, time: '15:00', ...MEMORY }, 's9');
+    expect(e1.state.scheduleDays[TODAY].extra).toEqual([{ time: '15:00', cell: MEMORY }]);
+    expect(note(e1.state, 'cal.notif.extraChanged')).toHaveLength(1);
+    // moving its time (it may overlap its own old time, only other sessions count)
+    const e2 = run(s0, 'schedule.editSession', { date: TODAY, time: '15:00', toTime: '15:10', ...KARAOKE }, 's9');
+    expect(sessionsOn(e2.state, TODAY).map((x) => x.slot)).toEqual(['10:30', '13:30', '15:10']);
+    expect(e2.result.time).toBe('15:10');
+    fails(s0, 'schedule.editSession', { date: TODAY, time: '15:00', toTime: '13:50', ...KARAOKE }, 's9', 'cal.err.sessionClash'); // too close to the 13:30 session
+    fails(s0, 'schedule.editSession', { date: TODAY, time: '15:00', toTime: '10:30', ...KARAOKE }, 's9', 'cal.err.sessionFixedTime');
+    // a note alone: saved quietly (families never see notes)
+    const e3 = run(s0, 'schedule.editSession', { date: TODAY, time: '15:00', ...KARAOKE, note: 'Bring the microphone' }, 's9');
+    expect(e3.state.scheduleDays[TODAY].extra![0].note).toBe('Bring the microphone');
+    expect(note(e3.state, 'cal.notif.extraChanged')).toHaveLength(0);
+    fails(s0, 'schedule.editSession', { date: TODAY, time: '15:00', ...KARAOKE }, 's9', 'err.noChanges');
+    fails(s0, 'schedule.editSession', { date: TODAY, time: '14:00', ...KARAOKE }, 's9', 'err.notFound'); // no extra at 14:00
+    fails(s0, 'schedule.editSession', { date: TODAY, time: '10:30', ...KARAOKE }, 's9', 'err.notFound'); // a weekly session is edited with schedule.changeDay
+    expect(note(run(s0, 'schedule.editSession', { date: TODAY, time: '15:00', ...MEMORY, notify: false }, 's9').state, 'cal.notif.extraChanged')).toHaveLength(0);
+  });
+
+  it('removes an extra session: the date goes back to the plan, teachers and families are told', () => {
+    const s0 = add(fresh()).state;
+    const r = run(s0, 'schedule.removeSession', { date: TODAY, time: '15:00' }, 's9');
+    expect(r.state.scheduleDays[TODAY]).toBeUndefined();
+    expect(sessionsOn(r.state, TODAY).map((x) => x.slot)).toEqual(['10:30', '13:30']);
+    const ns = note(r.state, 'cal.notif.extraRemoved');
+    expect(ns).toHaveLength(1);
+    expect(ns[0]).toMatchObject({ params: { date: TODAY, time: '15:00', name: 'Karaoke' } });
+    // a day that also has a one-day change keeps its row; one extra of two leaves the other
+    const two = add(step(s0, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's9'), { time: '09:00' }).state;
+    const one = step(two, 'schedule.removeSession', { date: TODAY, time: '09:00', notify: false }, 's9');
+    expect(one.scheduleDays[TODAY]).toMatchObject({ slots: { '13:30': MEMORY }, extra: [{ time: '15:00' }] });
+    const none = step(one, 'schedule.removeSession', { date: TODAY, time: '15:00' }, 's9');
+    expect(none.scheduleDays[TODAY].extra).toBeUndefined();
+    expect(none.scheduleDays[TODAY].slots).toEqual({ '13:30': MEMORY });
+    fails(none, 'schedule.removeSession', { date: TODAY, time: '15:00' }, 's9', 'err.notFound');
+    fails(s0, 'schedule.removeSession', { date: '2026-10-20', time: '15:00' }, 's9', 'cal.err.pastDay');
+  });
+
+  it('a round of the daily log for the extra session: people are marked in it, it counts in the progress, and it cannot move or go while marked', () => {
+    const s0 = add(fresh()).state;
+    expect(roundsOf(s0, TODAY).map((r) => `${r.id}:${r.kind}`)).toEqual(['10:30:session', 'lunch:lunch', '13:30:session', '15:00:session', 'mood:mood']); // mood & notes stays last
+    expect(roundsOf(s0, TODAY).find((r) => r.id === 'mood')!.time).toBe('16:15'); // once the last session is over
+    expect(roundsOf(fresh(), TODAY).find((r) => r.id === 'mood')!.time).toBe('15:00'); // unchanged without an extra
+    const m = run(s0, 'log.mark', { date: TODAY, memberIds: ['m2', 'm10'], session: { slot: '15:00', value: 'joined' } }, 's5');
+    expect(m.state.dailyLogs[`log-m2-${TODAY}`].sessions).toEqual({ '15:00': 'joined' });
+    expect(m.state.dailyLogs[`log-m2-${TODAY}`].joined).toBe('yes');
+    expect(roundProgress(m.state, TODAY, '15:00')).toMatchObject({ marked: 2, total: 3 });
+    expect(roundProgress(m.state, TODAY, '10:30').marked).toBe(0); // its own marks, not the other sessions’
+    const out = step(m.state, 'log.mark', { date: TODAY, memberIds: ['m2'], session: { slot: '15:00', value: 'satOut' } }, 's5');
+    expect(out.dailyLogs[`log-m2-${TODAY}`].sessions).toEqual({ '15:00': 'satOut' });
+    fails(m.state, 'schedule.removeSession', { date: TODAY, time: '15:00' }, 's9', 'cal.err.sessionMarked');
+    fails(m.state, 'schedule.editSession', { date: TODAY, time: '15:00', toTime: '15:30', ...KARAOKE }, 's9', 'cal.err.sessionMarked');
+    run(m.state, 'schedule.editSession', { date: TODAY, time: '15:00', ...MEMORY }, 's9'); // the activity can still change
+    // clear the marks and it can go
+    let clear = step(m.state, 'log.mark', { date: TODAY, memberIds: ['m2', 'm10'], session: { slot: '15:00', value: null } }, 's5');
+    clear = step(clear, 'schedule.removeSession', { date: TODAY, time: '15:00' }, 's9');
+    expect(sessionsOn(clear, TODAY)).toHaveLength(2);
+    fails(clear, 'log.mark', { date: TODAY, memberIds: ['m2'], session: { slot: '15:00', value: 'joined' } }, 's5', 'activity.err.noSession'); // no such round any more
+  });
+
+  it('a guest host can lead an extra session; it cannot move or go while a guest is booked', () => {
+    const s0 = add(fresh()).state;
+    const b = run(s0, 'guest.book', { hostId: 'gh-ratna', date: TODAY, slot: '15:00' }, 's9'); // follows the extra's own activity
+    expect(guestOn(b.state, TODAY, '15:00')?.host.id).toBe('gh-ratna');
+    expect(b.state.guestSessions[b.result.sessionId as string]).toMatchObject({ slot: '15:00', activityId: 'act-karaoke' });
+    expect(dayInfo(b.state, TODAY, 'staff').items.find((i) => i.time === '15:00')?.guest?.name).toBe('Bu Ratna');
+    fails(b.state, 'schedule.removeSession', { date: TODAY, time: '15:00' }, 's9', 'cal.err.sessionGuest');
+    fails(b.state, 'schedule.editSession', { date: TODAY, time: '15:00', toTime: '15:30', ...KARAOKE }, 's9', 'cal.err.sessionGuest');
+    // the guest teaches something else: the extra follows (an extra has no weekly plan to go back to)
+    const other = run(s0, 'guest.book', { hostId: 'gh-ratna', date: TODAY, slot: '15:00', activityId: 'act-angklung' }, 's9').state;
+    expect(sessionsOn(other, TODAY).find((x) => x.slot === '15:00')?.cell?.activityId).toBe('act-angklung');
+    // cancelling the booking leaves the extra as it is, and it can be removed again
+    const cancelled = step(b.state, 'guest.cancel', { id: b.result.sessionId }, 's9');
+    expect(sessionsOn(cancelled, TODAY).find((x) => x.slot === '15:00')?.cell?.activityId).toBe('act-karaoke');
+    step(cancelled, 'schedule.removeSession', { date: TODAY, time: '15:00' }, 's9');
+    // a time with no session is not bookable
+    fails(s0, 'guest.book', { hostId: 'gh-ratna', date: TODAY, slot: '09:00', activityId: 'act-karaoke' }, 's9', 'cal.err.badSlot');
   });
 });

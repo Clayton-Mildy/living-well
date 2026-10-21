@@ -25,8 +25,8 @@ const plural = (t: TFn, key: string, n: number) => t(`${key}_${n === 1 ? 'one' :
 /** ‹ and ›: a round-cornered button that greys out when there is no open day that way. */
 function Step({ dir, to, label, onClick }: { dir: 'prev' | 'next'; to: ISODate | null; label: string; onClick: (d: ISODate) => void }) {
   return (
-    <button type="button" aria-label={label} title={label} aria-disabled={!to || undefined} onClick={to ? () => onClick(to) : undefined} className={to ? 'h-cream cp-press' : undefined}
-      style={{ width: 40, height: 40, flex: 'none', borderRadius: 12, border: '1px solid #E4DACD', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: '#24201C', cursor: to ? 'pointer' : 'default', opacity: to ? 1 : 0.4 }}>
+    <button type="button" aria-label={label} title={label} aria-disabled={!to || undefined} onClick={to ? () => onClick(to) : undefined} className={to ? 'h-fill cp-fill cp-press' : 'cp-fill'}
+      style={{ width: 40, height: 40, flex: 'none', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: '#24201C', cursor: to ? 'pointer' : 'default', opacity: to ? 1 : 0.4 }}>
       <Icon name={dir === 'prev' ? 'chevron_left' : 'chevron_right'} size={22} />
     </button>
   );

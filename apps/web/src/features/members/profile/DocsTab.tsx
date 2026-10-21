@@ -13,8 +13,8 @@ import { useApplicationForm } from '../ApplicationForm';
 import { ListCard, PendingBanner } from './parts';
 import type { P } from './types';
 
-const PHOTO_NAME: Record<DocType, string> = { ktp: 'ktp', nannyKtp: 'ktp-nanny', membershipForm: 'registration-form', healthInfo: 'health-info', other: 'document' };
-const THUMB: Record<DocType, string> = { ktp: 'profile.thumb.ktp', nannyKtp: 'profile.thumb.ktp', membershipForm: 'profile.thumb.form', healthInfo: 'profile.thumb.photo', other: 'profile.thumb.file' };
+const PHOTO_NAME: Record<DocType, string> = { ktp: 'ktp', nannyKtp: 'ktp-nanny', guarantorKtp: 'ktp-family', membershipForm: 'registration-form', healthInfo: 'health-info', other: 'document' };
+const THUMB: Record<DocType, string> = { ktp: 'profile.thumb.ktp', nannyKtp: 'profile.thumb.ktp', guarantorKtp: 'profile.thumb.ktp', membershipForm: 'profile.thumb.form', healthInfo: 'profile.thumb.photo', other: 'profile.thumb.file' };
 
 /** Upload / Replace (any photo or file; on a phone the file chooser offers the camera) and a camera button. */
 function UploadControls({ label, name, onFile }: { label: string; name: string; onFile: (f: PaperFile) => void | Promise<unknown> }) {
@@ -22,7 +22,7 @@ function UploadControls({ label, name, onFile }: { label: string; name: string; 
   const pick = useDocPicker(onFile, name);
   return (
     <>
-      <button type="button" className="h-cream" disabled={pick.busy} onClick={pick.chooseFile} style={pillBtn}>
+      <button type="button" className="h-fill cp-fill" disabled={pick.busy} onClick={pick.chooseFile} style={pillBtn}>
         <Icon name="upload_file" size={18} />
         {label}
       </button>
@@ -47,7 +47,7 @@ export function DocsTab({ p }: { p: P }) {
   const sub = (type: DocType) => (type === 'nannyKtp' && !m.nanny ? t('profile.docMeta.noNanny') : ''); // a missing document says so in its badge
   const title = (type: DocType) => (type === 'ktp' ? t('profile.docTitle.ktp', { n: m.firstName }) : type === 'nannyKtp' ? t('profile.docTitle.nannyKtp') : t('profile.docTitle.' + type));
   const consents = (['data', 'face'] as const).map((k) => ({ k, c: consentOf(m, k) }));
-  const DOC_ICON: Record<DocType, string> = { ktp: 'badge', nannyKtp: 'badge', membershipForm: 'description', healthInfo: 'medical_information', other: 'draft' };
+  const DOC_ICON: Record<DocType, string> = { ktp: 'badge', nannyKtp: 'badge', guarantorKtp: 'badge', membershipForm: 'description', healthInfo: 'medical_information', other: 'draft' };
   const ph = p.isPhone; // round 6, phone (staff and family): each list card is an iOS grouped section
   const printer = useApplicationForm();
   return (
@@ -64,7 +64,7 @@ export function DocsTab({ p }: { p: P }) {
           const meta = has ? t('profile.uploadedMeta', { d: fmt.fds(doc!.on || today), w: who, v: via }) : requested ? t('profile.requestedMeta', { d: fmt.fds(doc!.on || today) }) : sub(type);
           return (
             <div key={type} style={{ display: 'flex', alignItems: 'center', gap: '10px 14px', flexWrap: 'wrap', padding: '16px 0', borderTop: idx ? HAIR : 'none' }}>
-              <span aria-hidden="true" title={t(THUMB[type])} style={{ width: 46, height: 46, borderRadius: 10, background: has ? '#F3EEE8' : 'transparent', border: has ? 'none' : '1px dashed #CAB8A2', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={DOC_ICON[type]} size={22} /></span>
+              <span aria-hidden="true" title={t(THUMB[type])} className={has ? 'cp-fill' : undefined} style={{ width: 46, height: 46, borderRadius: 10, background: has ? 'var(--fill, #F4F4F5)' : 'transparent', border: has ? 'none' : '1px dashed var(--outline, #D4D4D8)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={DOC_ICON[type]} size={22} /></span>
               <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <div style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{title(type)}</div>
                 {meta ? <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{meta}</div> : null}
@@ -76,10 +76,10 @@ export function DocsTab({ p }: { p: P }) {
                 </div>
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-                {type === 'membershipForm' && !p.family ? <button type="button" className="h-cream" onClick={() => printer.open(applicationDataOf(s, m.id, today))} style={pillBtn}><Icon name="print" size={18} />{t('form.printAction')}</button> : null}
-                {has && doc?.mediaId ? <DocView doc={doc} title={title(type)}>{(open) => <button type="button" className="h-cream" onClick={open} style={pillBtn}>{t('profile.view')}</button>}</DocView> : null}
+                {type === 'membershipForm' && !p.family ? <button type="button" className="h-fill cp-fill" onClick={() => printer.open(applicationDataOf(s, m.id, today))} style={pillBtn}><Icon name="print" size={18} />{t('form.printAction')}</button> : null}
+                {has && doc?.mediaId ? <DocView doc={doc} title={title(type)}>{(open) => <button type="button" className="h-fill cp-fill" onClick={open} style={pillBtn}>{t('profile.view')}</button>}</DocView> : null}
                 {canUpload && !(type === 'nannyKtp' && !m.nanny) ? <UploadControls label={has ? t('profile.replace') : t('profile.upload')} name={PHOTO_NAME[type]} onFile={(f) => upload(type, f)} /> : null}
-                {frontDesk && !has && !(type === 'nannyKtp' && !m.nanny) ? <button type="button" className="h-cream" onClick={() => ask(type)} style={pillBtn}>{requested ? t('profile.remind') : t('profile.requestFamily')}</button> : null}
+                {frontDesk && !has && !(type === 'nannyKtp' && !m.nanny) ? <button type="button" className="h-fill cp-fill" onClick={() => ask(type)} style={pillBtn}>{requested ? t('profile.remind') : t('profile.requestFamily')}</button> : null}
               </div>
             </div>
           );

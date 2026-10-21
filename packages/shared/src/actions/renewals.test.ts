@@ -49,7 +49,8 @@ describe('recording a follow-up', () => {
     expect(fu(s, 'm2')).toMatchObject({ outcome: 'continue', status: 'done', note: 'Cynthia confirmed.' });
     expect(fu(s, 'm2').calls.map((c) => [c.outcome, c.by])).toEqual([['noAnswer', 'staff:s1'], ['continue', 'staff:s1']]);
     expect(fu(s, 'm2').approval).toBeUndefined();
-    expect(record(s, 'm20', 'callBack').state.followUps[followUpId(MONTH, 'm20')].status).toBe('open');
+    expect(record(s, 'm20', 'noAnswer').state.followUps[followUpId(MONTH, 'm20')].status).toBe('open');
+    fails(s, 'followUp.record', { memberId: 'm20', month: MONTH, outcome: 'callBack' }, 's1', 'err.invalid'); // KC round 7: no "call back" option
   });
 
   it('only the front desk, finance and management; only a month that has not started; a change must fit the plan', () => {

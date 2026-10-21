@@ -1,7 +1,7 @@
-# Demo pictures (scenes only)
+# Demo pictures
 
 Free Unsplash photos (Unsplash licence: free for commercial use, no attribution required; none are Unsplash+). Saved as 1000x750 JPEG, quality 68.
-No portraits are used as member profile pictures and none are tagged to a member. File -> source page.
+Scenes are never tagged to a member. File -> source page.
 A mediaId `md_demo_<name>` is served from `/demo/<name>.jpg` (see `demoMediaPath` in `apps/web/src/lib/media.ts`; the seed ids are in `packages/shared/src/seed/demoMedia.ts`).
 
 | File | Unsplash photo (CDN URL) |
@@ -38,3 +38,16 @@ A mediaId `md_demo_<name>` is served from `/demo/<name>.jpg` (see `demoMediaPath
 | food-teh.jpg | https://images.unsplash.com/photo-1641997827504-268ad940f1e3 |
 | club-tea-1.jpg | https://images.unsplash.com/photo-1758691031135-42c95d817486 |
 | club-chat-1.jpg | https://images.unsplash.com/photo-1764173039543-f9f197744e1b |
+
+## Portraits (KC round 9)
+
+Stock portraits used as the profile pictures of the five parents the demo family accounts follow (`MEMBER_PORTRAITS` in `packages/shared/src/seed/demoMedia.ts`).
+The faces are real Unsplash models; the health and care records next to them are made up. Saved as 800x1000 JPEG (face-centred crop), quality 70.
+
+| File | Member | Unsplash photo (CDN URL) |
+|---|---|---|
+| portrait-lina.jpg | m1 Oma Lina Wijaya | https://images.unsplash.com/photo-1774094135149-bbeeb1767bfa |
+| portrait-budi.jpg | m46 Opa Budi Wijaya | https://images.unsplash.com/photo-1631400175304-8de55149500b |
+| portrait-hendra.jpg | m2 Opa Hendra Gunawan | https://images.unsplash.com/photo-1558919047-c9b36c16009e |
+| portrait-bambang.jpg | m10 Bapak Bambang Purnomo | https://images.unsplash.com/photo-1535213679542-f42b6f164647 |
+| portrait-tjahjadi.jpg | m20 Opa Tjahjadi Lim | https://images.unsplash.com/photo-1786114482543-ab1f49a26534 |

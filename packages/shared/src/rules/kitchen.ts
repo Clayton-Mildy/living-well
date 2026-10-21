@@ -1,5 +1,5 @@
 // Menu and schedule versions, diners/covers, allergen conflicts.
-import type { ClubState, ISODate, Dish, DishAllergen, FoodAllergen, Member, GuestVisit, MenuDay, Photo, ScheduleCell, Slot, Weekday, ScheduleVersion, MenuVersion } from '../types';
+import type { ClubState, ISODate, Dish, DishAllergen, FoodAllergen, Member, GuestVisit, MenuDay, Photo, ScheduleCell, Slot, Weekday, WeekSlot, ExtraSession, ScheduleVersion, MenuVersion } from '../types';
 import { dayStatus } from './core';
 import { lobbyGroups, guestsOn } from './attendance';
 import { dow, live, sortBy, uniq } from '../util';
@@ -11,15 +11,26 @@ export function scheduleVersionFor(s: ClubState, date: ISODate): ScheduleVersion
   return sortBy(pub, (v) => v.effectiveFrom + (v.publishedAt || '')).pop();
 }
 export interface SessionSlot {
+  /** the session's start time: one of the two weekly times, or the time of an extra session */
   slot: Slot;
   cell: ScheduleCell | null;
+  /** KC round 7: an extra session of that date (not in the weekly plan) */
+  extra?: boolean;
 }
+/** The two session times of the weekly plan, in order. */
+export const WEEK_SLOTS: WeekSlot[] = ['10:30', '13:30'];
+export const isWeekSlot = (slot: string): slot is WeekSlot => (WEEK_SLOTS as string[]).includes(slot);
 /** KC round 7: the one-day change of the programme on a date, if any (`scheduleDays`, id = date). */
 export const scheduleDayOf = (s: ClubState, date: ISODate) => {
   const d = s.scheduleDays?.[date];
   return d && !d.deletedAt ? d : undefined;
 };
-/** Activity sessions for a date (empty on closed days and outings). A one-day change (KC round 7) overrides the weekly schedule slot by slot. */
+/** KC round 7: the extra sessions of a date (not in the weekly plan), by time. */
+export const extrasOn = (s: ClubState, date: ISODate): ExtraSession[] => sortBy(scheduleDayOf(s, date)?.extra ?? [], (x) => x.time);
+/**
+ * Activity sessions for a date (empty on closed days and outings), in time order. A one-day change (KC round 7) overrides the weekly schedule slot by slot;
+ * the date's extra sessions (at any time) come after the weekly ones at the same time and are marked `extra`.
+ */
 export function sessionsOn(s: ClubState, date: ISODate): SessionSlot[] {
   const st = dayStatus(s, date);
   if (!st.open || st.outing) return [];
@@ -27,7 +38,9 @@ export function sessionsOn(s: ClubState, date: ISODate): SessionSlot[] {
   const over = scheduleDayOf(s, date);
   if (!v && !over) return [];
   const day = v?.days[dow(date) as Weekday];
-  return (['10:30', '13:30'] as Slot[]).map((slot) => ({ slot, cell: over && slot in over.slots ? over.slots[slot] ?? null : day?.[slot] ?? null }));
+  const fixed = WEEK_SLOTS.map((slot): SessionSlot => ({ slot, cell: over && slot in over.slots ? over.slots[slot] ?? null : day?.[slot] ?? null }));
+  const extra = extrasOn(s, date).map((x): SessionSlot => ({ slot: x.time, cell: x.cell, extra: true }));
+  return extra.length ? sortBy([...fixed, ...extra], (x) => x.slot) : fixed;
 }
 /**
  * The weekly menu version in force on a date. A version the kitchen published waits for management's approval; the club's own screens already
@@ -59,7 +72,7 @@ export function lunchPhotoIds(s: ClubState, date: ISODate): string[] {
 }
 /** A date's lunch photos for the kitchen: waiting for approval, shown to families, or hidden by management (removed ones are gone). Oldest first. */
 export function lunchPhotosOn(s: ClubState, date: ISODate): Photo[] {
-  return lunchPhotoIds(s, date).map((id) => s.photos[id]).filter((p): p is Photo => !!p && !p.deletedAt && p.kind === 'lunch' && p.visibility !== 'removed');
+  return lunchPhotoIds(s, date).map((id) => s.photos[id]).filter((p): p is Photo => !!p && !p.deletedAt && p.kind === 'lunch' && p.visibility !== 'removed' && p.visibility !== 'draft');
 }
 /** The lunch photos families may see on a date: approved ones only (pending, hidden and removed never reach a family). */
 export const visibleLunchPhotos = (s: ClubState, date: ISODate): Photo[] => lunchPhotosOn(s, date).filter((p) => p.visibility === 'visible');
@@ -72,7 +85,7 @@ export function teaPhotoIds(s: ClubState, date: ISODate): string[] {
 }
 /** A date's tea photos for the kitchen (waiting for approval, shown to families or hidden; removed ones are gone). Oldest first. */
 export function teaPhotosOn(s: ClubState, date: ISODate): Photo[] {
-  return teaPhotoIds(s, date).map((id) => s.photos[id]).filter((p): p is Photo => !!p && !p.deletedAt && p.kind === 'lunch' && p.visibility !== 'removed');
+  return teaPhotoIds(s, date).map((id) => s.photos[id]).filter((p): p is Photo => !!p && !p.deletedAt && p.kind === 'lunch' && p.visibility !== 'removed' && p.visibility !== 'draft');
 }
 /** The tea photos families may see on a date: approved ones only. */
 export const visibleTeaPhotos = (s: ClubState, date: ISODate): Photo[] => teaPhotosOn(s, date).filter((p) => p.visibility === 'visible');

@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, findByPhone, guestsOn, live, updatesFor, actionItems, DomainError, type ClubState } from '../index';
+import { buildSeed, execute, getUser, findByPhone, guestsOn, live, updatesFor, actionItems, DomainError, systemUser, type ClubState } from '../index';
+import { enquiryByFormToken, formLinkState } from '../rules/enquiries';
 
 const T = '2026-10-21'; // Wednesday
 const clock = { today: T, nowMin: 10 * 60 };
@@ -294,5 +295,56 @@ describe('joining a lead (registration is on paper)', () => {
     fails(s, 'enquiry.convert', { ...input, plan: 'platinum' }, 's9', 'err.invalid');
     expect(() => run(s, 'enquiry.convert', input, 's8')).toThrow('err.forbidden');
     expect(() => run(s, 'enquiry.convert', input, 'f1')).toThrow('err.forbidden');
+  });
+});
+
+// KC round 10: the online registration link
+describe('online registration link', () => {
+  const sys = (s: ClubState, name: string, input: unknown, clk = clock) => execute(s, name, input, systemUser('citra'), clk, mid());
+  const draft = (over: Record<string, unknown> = {}) => ({
+    title: 'Oma', name: 'Rosa Santoso', dob: '1947-05-02', address: 'Jl. Melati 3', contact: { name: 'Dina Santoso', relation: 'daughter', phone: '0812 5550 1234' }, plan: 'gold',
+    health: { conditions: ['Hypertension'], diabetic: false, food: ['peanuts'], foodOther: '', drugs: ['penicillin'], mobility: null, diet: [] },
+    registration: { nickname: 'Oma Rosa', nik: '3171 0405 4700 0001', dementia: true, dementiaNote: 'Forgets names', postcode: '12730' }, nanny: { name: 'Mbak Sri', nik: '3171234567890001' }, ktp: { ktp: { mediaId: 'md_testktpmember0001', fileName: 'ktp.jpg' }, nannyKtp: { mediaId: 'md_testktpcarer00001', fileName: 'ktp-carer.jpg' } }, lang: 'id', ...over,
+  });
+  it('lobby sends a link; the family opens and sends the form as the system; staff then see it on the lead', () => {
+    const made = run(seed().citra, 'enquiry.create', lead, 's1');
+    const id = made.result.enquiryId as string;
+    const sent = run(made.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    const token = sent.result.token as string;
+    expect(token.length).toBeGreaterThan(16);
+    expect(sent.result.path).toBe('/form/' + token);
+    expect(formLinkState(sent.state.enquiries[id].form, `${T}T10:00`)).toBe('sent');
+    // sending again keeps the same link
+    const again = run(sent.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    expect(again.result.token).toBe(token);
+    const opened = sys(again.state, 'enquiry.formOpen', { token });
+    expect(formLinkState(opened.state.enquiries[id].form, `${T}T10:00`)).toBe('opened');
+    const done = sys(opened.state, 'enquiry.formSubmit', { token, draft: draft() });
+    const f = done.state.enquiries[id].form!;
+    expect(formLinkState(f, `${T}T10:00`)).toBe('submitted');
+    expect(f.filledBy).toBe('Dina Santoso');
+    expect(f.draft).toMatchObject({ plan: 'gold', dob: '1947-05-02', registration: { nik: '3171040547000001', dementia: true, dementiaNote: 'Forgets names' }, nanny: { name: 'Mbak Sri', nik: '3171234567890001' }, ktp: { ktp: { mediaId: 'md_testktpmember0001' } }, health: { food: ['peanuts'] }, lang: 'id' });
+    expect(enquiryByFormToken(done.state, token)?.id).toBe(id);
+    expect(updatesFor(done.state, user({ citra: done.state }, 's1')).some((u) => u.kind === 'enq.notif.formSubmitted')).toBe(true);
+    // once sent in, it cannot be sent twice or re-linked
+    fails(done.state, 'enquiry.sendForm', { enquiryId: id }, 's1', 'enq.err.formDone');
+    expect(() => sys(done.state, 'enquiry.formSubmit', { token, draft: draft() })).toThrow(DomainError);
+  });
+  it('only the system submits, a wrong token is not found, an expired link is refused, and a bad answer is rejected', () => {
+    const made = run(seed().citra, 'enquiry.create', lead, 's1');
+    const id = made.result.enquiryId as string;
+    const sent = run(made.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    const token = sent.result.token as string;
+    fails(sent.state, 'enquiry.formSubmit', { token, draft: draft() }, 's1', 'err.forbidden');
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token: 'nope', draft: draft() })).toThrow(DomainError);
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft({ registration: { postcode: '12' } }) })).toThrow(DomainError);
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft({ nanny: { name: 'Mbak Sri' } }) })).toThrow(DomainError); // a carer needs a NIK
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft({ registration: { nik: '123' } }) })).toThrow(DomainError); // 16 digits
+    const late = { today: '2026-11-20', nowMin: 600 };
+    expect(formLinkState(sent.state.enquiries[id].form, '2026-11-20T10:00')).toBe('expired');
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft() }, late)).toThrow(DomainError);
+    // a fresh link after expiry is a new token
+    const renewed = run(sent.state, 'enquiry.sendForm', { enquiryId: id }, 's1', late);
+    expect(renewed.result.token).not.toBe(token);
   });
 });

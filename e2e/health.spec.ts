@@ -362,8 +362,7 @@ test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-che
   // Cynthia's own device: the update is in her bell (no "check your messages"), and it opens her Health tab
   const cyn = await another(browser, info, 'fm2_0', '/today');
   await cyn.page.getByRole('button', { name: /Notifications/ }).first().click();
-  const bell = cyn.page.getByRole('dialog', { name: 'Notifications' });
-  await bell.getByRole('tab', { name: /Updates/ }).click();
+  const bell = cyn.page.getByRole('dialog', { name: 'Notifications' }); // the family's panel is one list
   const update = bell.getByRole('button', { name: /Above the alert line; the nurse is looking after it\./ });
   await expect(update).toBeVisible();
   await expect(update).not.toContainText(/messages/i);

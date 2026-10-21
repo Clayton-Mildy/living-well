@@ -33,11 +33,11 @@ export function Pager({ page, pages, onPage, label }: { page: number; pages: num
   const t = useT();
   const { isPhone } = useDevice();
   if (pages <= 1) return null;
-  const btn = (disabled: boolean) => ({ width: 44, height: 44, borderRadius: 12, border: '1px solid #E4DACD', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#B5B0AC' : '#24201C', flex: 'none' as const, padding: 0 });
+  const btn = (disabled: boolean) => ({ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#B5B0AC' : '#24201C', flex: 'none' as const, padding: 0 });
   const prevOff = page <= 1, nextOff = page >= pages;
   return (
     <nav aria-label={label || t('common.pages')} style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '12px 16px', flexWrap: 'wrap' }}>
-      <button type="button" aria-label={t('common.pagePrev')} aria-disabled={prevOff || undefined} onClick={prevOff ? undefined : () => onPage(page - 1)} className={prevOff ? undefined : 'h-cream'} style={btn(prevOff)}><Icon name="chevron_left" size={22} /></button>
+      <button type="button" aria-label={t('common.pagePrev')} aria-disabled={prevOff || undefined} onClick={prevOff ? undefined : () => onPage(page - 1)} className={prevOff ? 'cp-fill' : 'h-fill cp-fill'} style={btn(prevOff)}><Icon name="chevron_left" size={22} /></button>
       {isPhone ? (
         <span aria-live="polite" style={{ minWidth: 112, textAlign: 'center', fontSize: FONT_BODY, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{t('common.pageOf', { page, pages })}</span>
       ) : (
@@ -46,12 +46,12 @@ export function Pager({ page, pages, onPage, label }: { page: number; pages: num
             ? <span key={`e${i}`} aria-hidden="true" style={{ width: 24, textAlign: 'center', color: '#5E5852' }}>…</span>
             : (
               <button key={p} type="button" aria-label={t('common.pageGo', { n: p })} aria-current={p === page ? 'page' : undefined} onClick={() => onPage(p)} className={p === page ? undefined : 'h-cream'}
-                style={{ minWidth: 44, height: 44, padding: '0 8px', borderRadius: 12, border: p === page ? '1px solid #24201C' : '1px solid transparent', background: p === page ? '#24201C' : 'transparent', color: p === page ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, fontWeight: p === page ? 600 : 500, cursor: 'pointer', fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter' }}>{p}</button>
+                style={{ minWidth: 44, height: 44, padding: '0 8px', borderRadius: 999, border: 'none', background: p === page ? '#24201C' : 'transparent', color: p === page ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, fontWeight: p === page ? 600 : 500, cursor: 'pointer', fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter' }}>{p}</button>
             ))}
           <span className="sr-only" aria-live="polite">{t('common.pageOf', { page, pages })}</span>
         </>
       )}
-      <button type="button" aria-label={t('common.pageNext')} aria-disabled={nextOff || undefined} onClick={nextOff ? undefined : () => onPage(page + 1)} className={nextOff ? undefined : 'h-cream'} style={btn(nextOff)}><Icon name="chevron_right" size={22} /></button>
+      <button type="button" aria-label={t('common.pageNext')} aria-disabled={nextOff || undefined} onClick={nextOff ? undefined : () => onPage(page + 1)} className={nextOff ? 'cp-fill' : 'h-fill cp-fill'} style={btn(nextOff)}><Icon name="chevron_right" size={22} /></button>
     </nav>
   );
 }

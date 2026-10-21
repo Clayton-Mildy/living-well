@@ -10,12 +10,11 @@ import { askedInApp, followUpId, leaveMonthsCheck, renewalMembers, renewalMonth 
 type Slot = { kind: FollowUpOutcome; plan?: Plan; calls?: number };
 /** In this order, each takes the next member who fits: the 5-member world uses the first four, the full roster all eight. */
 const SLOTS: Slot[] = [
-  { kind: 'upgrade', plan: 'flex' }, { kind: 'noAnswer', calls: 2 }, { kind: 'callBack' }, { kind: 'continue' }, { kind: 'continue' },
+  { kind: 'upgrade', plan: 'flex' }, { kind: 'noAnswer', calls: 2 }, { kind: 'noAnswer', calls: 1 }, { kind: 'continue' }, { kind: 'continue' },
   { kind: 'downgrade', plan: 'gold' }, { kind: 'continue' }, { kind: 'leave' },
 ];
 const NOTES: Partial<Record<FollowUpOutcome, string>> = {
   upgrade: 'Wants the unlimited days; the daughter will pay the difference on the next invoice.',
-  callBack: 'Asked to be called after 2 pm.',
   downgrade: 'Comes only twice a week now.',
   leave: 'Away with family for the month.',
 };

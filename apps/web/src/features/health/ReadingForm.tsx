@@ -60,7 +60,7 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
   if (ev.st.glu && ev.st.glu !== 'normal') probs.push(`${t('health.glucose')} ${draft.v.glu} mg/dL.`);
   if (ev.st.wt && ev.st.wt !== 'normal') probs.push(`${t('health.weight')} ${draft.v.wt} kg.`);
   const bannerText = overall === 'normal' ? t('health.allNormal') : `${probs.join(' ')} ${overall === 'alert' ? t('health.alertCall') : t('health.watchCall')}`;
-  const banner = overall === 'alert' ? { bg: '#FBEDE8', bd: '1px solid #9A3D24' } : overall === 'watch' ? { bg: '#FBF5E8', bd: '1px solid #E3CF9F' } : { bg: '#FBFAF8', bd: '1px solid #EFE7DC' };
+  const banner = overall === 'alert' ? { bg: '#FBEDE8', bd: '1px solid #9A3D24' } : overall === 'watch' ? { bg: '#FBF5E8', bd: '1px solid #E3CF9F' } : { bg: 'var(--fill, #F4F4F5)', bd: 'none' };
 
   const sh = isPhone ? 'Short' : '';
   const why = draft.meas ? t('health.whyWaiting' + sh)
@@ -81,7 +81,7 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
       onField={(k) => { onManual(); patch((d) => ({ ...d, field: k })); }} onFocus={onManual}
       onType={(k, raw) => patch((d) => typeText(d, k, raw))} onRead={() => g.device && onMeasure([g.device])} onStop={onManual} />
   );
-  const saveBg = ok && !busy ? '#24201C' : '#EDE5DA';
+  const saveBg = ok && !busy ? '#24201C' : 'var(--press, #EEEEF0)';
   const saveFg = ok && !busy ? '#FFFFFF' : '#8A8078';
 
   // round 6, phone: one grouped section per measurement (title outside, flat white group), the result banner, the quick notes as a group, and the
@@ -92,7 +92,7 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
         {FORM_GROUPS.map(panel)}
         {overall ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 14, background: overall === 'normal' ? '#FFFFFF' : banner.bg, border: overall === 'normal' ? 'none' : banner.bd }}>
+            <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderRadius: 14, background: banner.bg, border: banner.bd }}>
               <Badge kind={overall} size={32} />
               <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C' }}>{bannerText}</span>
             </div>
@@ -112,14 +112,14 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
           </div>
           <TextField label={t('common.note')} value={draft.note} onChange={(v) => patch((d) => ({ ...d, note: v }))} placeholder={t('health.notePh')} multiline rows={2} maxLength={280} />
           <button type="button" role="switch" aria-checked={draft.share} onClick={() => patch((d) => ({ ...d, share: !d.share }))} className="cp-press"
-            style={{ width: '100%', height: 48, padding: 0, border: 'none', borderTop: '1px solid #EFEAE3', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', color: '#24201C', fontSize: 16, fontFamily: 'Inter', textAlign: 'left' }}>
+            style={{ width: '100%', height: 48, padding: 0, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 10, cursor: 'pointer', color: '#24201C', fontSize: 16, fontFamily: 'Inter', textAlign: 'left' }}>
             {t('health.shareNotes')}
-            <span style={{ width: 44, height: 26, borderRadius: 999, background: draft.share ? '#24201C' : '#B9AA97', position: 'relative', flex: 'none' }}>
+            <span style={{ width: 44, height: 26, borderRadius: 999, background: draft.share ? '#24201C' : 'var(--field-bd, #E0E0E4)', position: 'relative', flex: 'none' }}>
               <span style={{ position: 'absolute', top: 3, left: draft.share ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
             </span>
           </button>
         </Group>
-        <div style={{ position: 'sticky', bottom: 0, zIndex: 2, margin: '0 -16px', padding: '10px 16px calc(14px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #E6E1DA', background: '#F5F5F3', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 2, margin: '0 -16px', padding: '10px 16px calc(14px + env(safe-area-inset-bottom, 0px))', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: 8 }}>
           {why ? (
             <div role="status" style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.4, color: '#24201C', paddingLeft: 46 }}>
               <Icon name="info" size={19} weight={300} color="#7A5510" />
@@ -127,7 +127,7 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
             </div>
           ) : null}
           <div style={{ display: 'flex', gap: 10 }}>
-            <button type="button" onClick={onClose} className="cp-press" style={{ flex: 'none', whiteSpace: 'nowrap', height: 50, padding: '0 22px', borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.close')}</button>
+            <button type="button" onClick={onClose} className="cp-press cp-fill" style={{ flex: 'none', whiteSpace: 'nowrap', height: 50, padding: '0 22px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.close')}</button>
             <button type="button" onClick={() => ok && onSave()} aria-disabled={!ok || busy} className="cp-press" style={{ flex: 1, minWidth: 0, whiteSpace: 'nowrap', height: 50, padding: '0 16px', borderRadius: 999, border: 'none', background: saveBg, color: saveFg, fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: ok ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
               <Icon name="check" size={20} weight={300} />
               {hasNext ? t('health.saveNext') : t('health.saveOnly')}
@@ -145,11 +145,11 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
         </div>
         {!isPhone ? (
           <div style={{ flex: '0 0 222px', display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <div style={{ ...smallCaps('2px'), color: '#6E5A43' }}>{t('health.keypad', { f: FIELD[field].key ? t(FIELD[field].key!) : FIELD[field].label })}</div>
+            <div style={{ ...smallCaps('2px'), color: 'var(--eyebrow, #6E5A43)' }}>{t('health.keypad', { f: FIELD[field].key ? t(FIELD[field].key!) : FIELD[field].label })}</div>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,minmax(0,1fr))', gap: 6 }}>
               {KEYS.map((k) => (
-                <button key={k} type="button" className="dh23 da24" aria-label={k === 'back' ? t('common.delete') : k} onClick={() => key(k)}
-                  style={{ height: 54, borderRadius: 8, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 22, fontWeight: 400, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>
+                <button key={k} type="button" className="dh23 da24 cp-fill" aria-label={k === 'back' ? t('common.delete') : k} onClick={() => key(k)}
+                  style={{ height: 54, borderRadius: 10, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 22, fontWeight: 400, cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Inter' }}>
                   {k === 'back' ? <Icon name="backspace" size={22} weight={300} /> : k}
                 </button>
               ))}
@@ -173,7 +173,7 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
           </>
         ) : null}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ ...smallCaps('2px'), color: '#6E5A43' }}>{t('health.quickNotes')}</div>
+          <div style={{ ...smallCaps('2px'), color: 'var(--eyebrow, #6E5A43)' }}>{t('health.quickNotes')}</div>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
             {QUICK.map((k) => (
               <NoteChip key={k} on={draft.notes.includes(k)} onClick={() => patch((d) => ({ ...d, notes: d.notes.includes(k) ? d.notes.filter((x) => x !== k) : [...d.notes, k] }))}>{t('health.note.' + k)}</NoteChip>
@@ -182,21 +182,21 @@ export function ReadingForm({ who, s, today, draft, patch, isPhone, busy, lastBp
           <TextField label={t('common.note')} value={draft.note} onChange={(v) => patch((d) => ({ ...d, note: v }))} placeholder={t('health.notePh')} multiline rows={2} maxLength={280} />
           <button type="button" role="switch" aria-checked={draft.share} onClick={() => patch((d) => ({ ...d, share: !d.share }))}
             style={{ alignSelf: 'flex-start', height: 44, padding: '0 4px', border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: '#24201C', fontSize: 15, fontFamily: 'Inter' }}>
-            <span style={{ width: 44, height: 26, borderRadius: 999, background: draft.share ? '#24201C' : '#B9AA97', position: 'relative', flex: 'none' }}>
+            <span style={{ width: 44, height: 26, borderRadius: 999, background: draft.share ? '#24201C' : 'var(--field-bd, #E0E0E4)', position: 'relative', flex: 'none' }}>
               <span style={{ position: 'absolute', top: 3, left: draft.share ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.2)' }} />
             </span>
             {t('health.shareNotes')}
           </button>
         </div>
       </div>
-      <div style={{ position: 'sticky', bottom: 0, zIndex: 2, padding: `12px ${isPhone ? 16 : DEMO_CLEAR}px calc(14px + env(safe-area-inset-bottom, 0px)) ${isPhone ? 16 : 'clamp(18px, 2.4vw, 28px)'}`, borderTop: '1px solid #F0EAE1', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px 12px', background: '#FFFFFF', borderRadius: '0 0 24px 24px' }}>
+      <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 2, padding: `12px ${isPhone ? 16 : DEMO_CLEAR}px calc(14px + env(safe-area-inset-bottom, 0px)) ${isPhone ? 16 : 'clamp(18px, 2.4vw, 28px)'}`, borderTop: '0.5px solid var(--hairline, #E2E2E6)', display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '10px 12px', background: 'var(--fill, #F4F4F5)', borderRadius: '0 0 16px 16px' }}>
         {why ? (
           <div role="status" style={{ flexBasis: '100%', display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: 14, lineHeight: 1.4, color: '#24201C', paddingLeft: isPhone ? 46 : 0 }}>
             <Icon name="info" size={19} weight={300} color="#7A5510" />
             <span>{why}</span>
           </div>
         ) : null}
-        <button type="button" onClick={onClose} style={{ whiteSpace: 'nowrap', height: 44, padding: '0 10px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 15, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.close')}</button>
+        <button type="button" onClick={onClose} style={{ whiteSpace: 'nowrap', height: 44, padding: '0 10px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 15, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.close')}</button>
         <button type="button" onClick={() => ok && onSave()} aria-disabled={!ok || busy} style={{ whiteSpace: 'nowrap', height: 48, padding: '0 22px', borderRadius: 12, border: 'none', background: saveBg, color: saveFg, fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, cursor: ok ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>
           <Icon name="check" size={20} weight={300} />
           {hasNext ? t('health.saveNext') : t('health.saveOnly')}
@@ -219,17 +219,17 @@ function GroupPanel({ g, t, draft, field, ev, last, isPhone, onField, onFocus, o
     return (
       <div data-group={g.id} data-waiting={measuring || undefined} data-has={g.fields.some((k) => (draft.v[k] ?? '') !== '') || undefined} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
         <div style={{ padding: '0 16px' }}><h2 style={GROUP_HEAD}>{t(g.titleKey)}</h2></div>
-        <div style={{ background: measuring ? '#FBF8F4' : '#FFFFFF', borderRadius: 14, boxShadow: measuring ? 'inset 0 0 0 1.5px #2B231C' : 'none', padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, boxShadow: measuring ? 'inset 0 0 0 1.5px #2B231C' : 'none', padding: '12px 14px 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
             {g.device ? (
               <button type="button" className="cp-press" onClick={() => (measuring ? onStop() : !draft.meas && onRead())} aria-disabled={!!draft.meas && !measuring} aria-label={measuring ? t('health.stopWaitingL') : undefined}
-                style={{ height: 38, padding: '0 16px 0 12px', borderRadius: 999, border: 'none', background: measuring ? '#24201C' : draft.meas ? '#EDE5DA' : '#2B231C', color: draft.meas && !measuring ? '#8A8078' : '#F7F3EE', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: draft.meas && !measuring ? 'wait' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+                style={{ height: 38, padding: '0 16px 0 12px', borderRadius: 999, border: 'none', background: measuring ? '#24201C' : draft.meas ? 'var(--press, #EEEEF0)' : '#2B231C', color: draft.meas && !measuring ? '#8A8078' : '#FFFFFF', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: draft.meas && !measuring ? 'wait' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
                 <span style={{ display: 'inline-flex', animation: measuring ? 'cpPulse 1.2s ease-in-out infinite' : undefined }}><Icon name={measuring ? 'bluetooth_searching' : 'bluetooth'} size={18} /></span>
                 {measuring ? t('health.waiting') : t('health.readDevice')}
               </button>
             ) : (
-              <span style={{ height: 32, padding: '0 12px 0 8px', borderRadius: 999, background: '#F3EEE8', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', color: '#24201C' }}>
-                <Icon name="dialpad" size={17} weight={300} color="#75624B" />
+              <span className="cp-fill" style={{ height: 32, padding: '0 12px 0 8px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', color: '#24201C' }}>
+                <Icon name="dialpad" size={17} weight={300} color="var(--accent, #75624B)" />
                 {t('health.byHand')}
               </span>
             )}
@@ -242,7 +242,7 @@ function GroupPanel({ g, t, draft, field, ev, last, isPhone, onField, onFocus, o
               const label = f.key ? t(f.key) : f.label!;
               const bad = ev.invalid.includes(k);
               return (
-                <label key={k} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '9px 12px 8px', borderRadius: 10, background: '#F5F5F3', border: bad ? '2px solid #9A3D24' : '2px solid transparent' }}>
+                <label key={k} className="cp-input-wrap cp-fill" style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '9px 12px 8px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', border: bad ? '2px solid #9A3D24' : '2px solid transparent' }}>
                   <span style={{ fontSize: 'max(12px, var(--cp-small, 0px))', letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 600, lineHeight: '16px', color: '#5E5852' }}>{label}</span>
                   <input value={draft.v[k] ?? ''} onFocus={onFocus} onChange={(e) => onType(k, e.target.value)} inputMode="decimal" aria-label={label} placeholder="—" aria-invalid={bad || undefined}
                     style={{ width: '100%', minWidth: 0, height: 38, border: 'none', outline: 'none', background: 'transparent', padding: 0, fontSize: 28, lineHeight: '38px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter', color: '#24201C' }} />
@@ -258,9 +258,9 @@ function GroupPanel({ g, t, draft, field, ev, last, isPhone, onField, onFocus, o
     );
   }
   return (
-    <div style={{ padding: isPhone ? 12 : 14, borderRadius: 12, background: measuring ? '#FBF8F4' : '#FFFFFF', border: measuring ? '1px solid #2B231C' : '1px solid #EFE7DC', display: 'flex', flexDirection: 'column', gap: 10 }} data-group={g.id} data-waiting={measuring || undefined} data-has={g.fields.some((k) => (draft.v[k] ?? '') !== '') || undefined}>
+    <div className="cp-grey" style={{ padding: isPhone ? 12 : 14, borderRadius: 16, background: 'var(--fill, #F4F4F5)', border: measuring ? '1px solid #2B231C' : 'none', display: 'flex', flexDirection: 'column', gap: 10 }} data-group={g.id} data-waiting={measuring || undefined} data-has={g.fields.some((k) => (draft.v[k] ?? '') !== '') || undefined}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-        <Icon name={g.icon} size={21} weight={300} color="#75624B" />
+        <Icon name={g.icon} size={21} weight={300} color="var(--accent, #75624B)" />
         <span style={{ flex: 1, minWidth: 120, display: 'flex', flexDirection: 'column' }}>
           <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t(g.titleKey)}</span>
           <span style={{ fontSize: 'max(13px, var(--cp-small, 0px))', color: '#6B6259', lineHeight: 1.4 }}>{last}</span>
@@ -268,13 +268,13 @@ function GroupPanel({ g, t, draft, field, ev, last, isPhone, onField, onFocus, o
         {st ? <Badge kind={st} size={28} /> : null}
         {g.device ? (
           <button type="button" onClick={() => (measuring ? onStop() : !draft.meas && onRead())} aria-disabled={!!draft.meas && !measuring} aria-label={measuring ? t('health.stopWaitingL') : undefined}
-            style={{ height: 38, padding: '0 14px', borderRadius: 12, border: 'none', background: measuring ? '#24201C' : draft.meas ? '#EDE5DA' : '#2B231C', color: draft.meas && !measuring ? '#8A8078' : '#F7F3EE', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: draft.meas && !measuring ? 'wait' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+            style={{ height: 38, padding: '0 14px', borderRadius: 12, border: 'none', background: measuring ? '#24201C' : draft.meas ? 'var(--press, #EEEEF0)' : '#2B231C', color: draft.meas && !measuring ? '#8A8078' : '#FFFFFF', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: draft.meas && !measuring ? 'wait' : 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
             <span style={{ display: 'inline-flex', animation: measuring ? 'cpPulse 1.2s ease-in-out infinite' : undefined }}><Icon name={measuring ? 'bluetooth_searching' : 'bluetooth'} size={18} /></span>
             {measuring ? t('health.waiting') : t('health.readDevice')}
           </button>
         ) : (
-          <span style={{ height: 32, padding: '0 12px 0 8px', borderRadius: 8, background: '#F3EEE8', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', color: '#24201C' }}>
-            <Icon name="dialpad" size={17} weight={300} color="#75624B" />
+          <span className="cp-fill" style={{ height: 32, padding: '0 12px 0 8px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', color: '#24201C' }}>
+            <Icon name="dialpad" size={17} weight={300} color="var(--accent, #75624B)" />
             {t('health.byHand')}
           </span>
         )}
@@ -286,7 +286,7 @@ function GroupPanel({ g, t, draft, field, ev, last, isPhone, onField, onFocus, o
           const bad = ev.invalid.includes(k);
           if (isPhone) {
             return (
-              <label key={k} style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 12px', borderRadius: 8, background: '#FFFFFF', border: bad ? '2px solid #9A3D24' : '1px solid #DDD1C2' }}>
+              <label key={k} className="cp-input-wrap cp-fill" style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, padding: '8px 12px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', border: bad ? '2px solid #9A3D24' : '1px solid transparent' }}>
                 <span style={{ fontSize: 'max(12px, var(--cp-small, 0px))', letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 600, lineHeight: '16px', color: '#5E5852' }}>{label}</span>
                 <input value={draft.v[k] ?? ''} onFocus={onFocus} onChange={(e) => onType(k, e.target.value)} inputMode="decimal" aria-label={label} placeholder="—" aria-invalid={bad || undefined}
                   style={{ width: '100%', minWidth: 0, border: 'none', outline: 'none', background: 'transparent', padding: 0, fontSize: 26, lineHeight: '32px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter', color: '#24201C' }} />
@@ -296,8 +296,8 @@ function GroupPanel({ g, t, draft, field, ev, last, isPhone, onField, onFocus, o
           }
           const focused = field === k;
           return (
-            <button key={k} type="button" onClick={() => onField(k)} onKeyDown={onKey} aria-pressed={focused} aria-invalid={bad || undefined}
-              style={{ flex: '1 1 0', minWidth: 0, minHeight: 76, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4, padding: focused || bad ? '7px 9px' : '8px 10px', borderRadius: 8, background: '#FFFFFF', border: bad ? '2px solid #9A3D24' : focused ? '2px solid #2B231C' : '1px solid #DDD1C2', cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
+            <button key={k} type="button" className="cp-fill" onClick={() => onField(k)} onKeyDown={onKey} aria-pressed={focused} aria-invalid={bad || undefined}
+              style={{ flex: '1 1 0', minWidth: 0, minHeight: 76, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', alignItems: 'flex-start', gap: 4, padding: focused || bad ? '7px 9px' : '8px 10px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', border: bad ? '2px solid #9A3D24' : focused ? '2px solid #2B231C' : '1px solid transparent', cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
               <span style={{ fontSize: 'max(12px, var(--cp-small, 0px))', letterSpacing: '1.2px', textTransform: 'uppercase', fontWeight: 600, lineHeight: '16px', color: '#5E5852' }}>{label}</span>
               <span style={{ fontSize: 28, lineHeight: '32px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>
                 {draft.v[k] || '—'}

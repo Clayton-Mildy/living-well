@@ -9,7 +9,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { actorName, memberName, memberShort, type ChangeRequest, type Photo } from '@cp/shared';
 import { tabForSection, photoReviewKind } from '@cp/shared/rules/members';
 import { APPROVAL_TYPES, approvalCounts, approvalHistory, pendingItems, type ApprovalItem, type ApprovalType, type HistoryItem } from '@cp/shared/rules/approvals';
-import { Avatar, Button, Dialog, EmptyState, GROUP_HEAD, Group, Icon, Note, PageHead, Pager, PhotoImg, TextField, Toggle, usePaged } from '../../components/ui';
+import { Avatar, Button, Dialog, EmptyState, GROUP_HEAD, Group, HAIRLINE, Icon, Note, PageHead, Pager, PhotoImg, TextField, Toggle, usePaged } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -17,6 +17,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { say, useUi } from '../../store/ui';
 import { PhotoViewer } from '../activity/PhotoViewer';
+import { AiMark } from '../activity/lib';
 import { photoCaption } from '../activity/lib';
 import { crMemberName, whenText } from './lib';
 import { describeCr } from './reviewDiff';
@@ -34,7 +35,7 @@ const LEGACY_TABS: Record<string, Tab> = { pending: 'profile', applied: 'profile
 function Check({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
   return (
     <button type="button" role="checkbox" aria-checked={on} aria-label={label} onClick={onClick} style={{ width: 44, height: 44, margin: '-8px -8px -8px -10px', border: 'none', padding: 0, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-      <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: 8, border: on ? '2px solid #24201C' : '2px solid #CFC4B6', background: on ? '#24201C' : '#FFFFFF', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? <Icon name="check" size={18} /> : null}</span>
+      <span aria-hidden="true" style={{ width: 24, height: 24, borderRadius: 8, border: on ? '2px solid #24201C' : '2px solid var(--outline, #D4D4D8)', background: on ? '#24201C' : '#FFFFFF', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{on ? <Icon name="check" size={18} /> : null}</span>
     </button>
   );
 }
@@ -103,12 +104,12 @@ export function Reviews() {
   }, [isPhone, current]);
   /** round 6, phone: a small iOS pill button (rows) or a wide one (cards); the same names and actions as the desktop Buttons */
   const pill = (text: string, onClick: () => void, o: { primary?: boolean; disabled?: boolean; h?: number; grow?: boolean } = {}) => (
-    <button type="button" className="cp-press" aria-disabled={o.disabled || undefined} onClick={o.disabled ? undefined : onClick}
+    <button type="button" className={o.disabled || o.primary ? 'cp-press' : 'cp-press cp-fill'} aria-disabled={o.disabled || undefined} onClick={o.disabled ? undefined : onClick}
       style={{ flex: o.grow ? '1 1 0' : 'none', height: o.h ?? 34, padding: '0 16px', borderRadius: 999, fontFamily: 'Inter', fontSize: o.grow ? 15 : 14, fontWeight: 500, cursor: o.disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap',
-        ...(o.disabled ? { background: '#EDE5DA', color: '#8A8078', border: 'none' } : o.primary ? { background: '#24201C', color: '#FFFFFF', border: 'none' } : { background: '#FFFFFF', color: '#24201C', border: '1px solid #DCD3C8' }) }}>{text}</button>
+        ...(o.disabled ? { background: 'var(--press, #EEEEF0)', color: '#8A8078', border: 'none' } : o.primary ? { background: '#24201C', color: '#FFFFFF', border: 'none' } : { background: 'var(--fill, #F4F4F5)', color: '#24201C', border: 'none' }) }}>{text}</button>
   );
   /** round 6, phone: a quiet bronze text button (Details, Select all…) */
-  const textBtn: CSSProperties = { height: 34, padding: '0 6px', border: 'none', background: 'transparent', color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', whiteSpace: 'nowrap' };
+  const textBtn: CSSProperties = { height: 34, padding: '0 6px', border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', whiteSpace: 'nowrap' };
 
   const who = (a: string) => {
     const role = a.startsWith('staff:') ? s.staff[a.slice(6)]?.role : a.startsWith('family:') ? 'family' : '';
@@ -195,7 +196,7 @@ export function Reviews() {
     const on = selected.includes(ph.id);
     const names = photoNames(ph);
     return (
-      <div key={ph.id} data-photo-review={ph.id} data-selected={on} style={{ background: '#FFFFFF', border: on ? '2px solid #24201C' : isPhone ? '2px solid transparent' : '1px solid #EFE7DC', borderRadius: 14, overflow: 'hidden', display: 'flex', flexDirection: 'column', margin: on || isPhone ? 0 : 1, boxShadow: 'var(--card-shadow)' }}>
+      <div key={ph.id} className="cp-grey" data-photo-review={ph.id} data-selected={on} style={{ background: 'var(--fill, #F4F4F5)', border: on ? '2px solid #24201C' : '2px solid transparent', borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
         <div style={{ position: 'relative', aspectRatio: '1', background: '#E8E1D8' }}>
           <button type="button" onClick={() => setViewer(ph.id)} aria-label={t('reviews.openPhoto', { n: names })} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'pointer' }}><PhotoImg photo={ph} /></button>
           <button type="button" role="checkbox" aria-checked={on} onClick={() => toggleSel(ph.id)} aria-label={t('reviews.selectPhoto', { n: names })} style={{ position: 'absolute', top: 0, left: 0, width: 52, height: 52, border: 'none', padding: 0, background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
@@ -207,6 +208,7 @@ export function Reviews() {
           <span style={{ fontSize: 15, fontWeight: 500, lineHeight: '22px', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', overflowWrap: 'anywhere' }}>{names}</span>
           <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.35 }}>{names === t('reviews.photoKind.' + photoReviewKind(ph)) ? '' : `${t('reviews.photoKind.' + photoReviewKind(ph))} · `}{whenText(fmt.fds, today, `${ph.date}T${ph.time}`, t)}</span>
           <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.35 }}>{t('reviews.photoBy', { n: actorName(s, ph.createdBy) })}</span>
+          {ph.ai ? <AiMark label={t('drafts.aiSuggested')} style={{ alignSelf: 'flex-start', marginTop: 4 }} /> : null}
         </div>
       </div>
     );
@@ -231,9 +233,9 @@ export function Reviews() {
         {kind === 'pending' ? t('reviews.waiting') : t('reviews.appliedChip')}
       </span>
     );
-    // round 6, phone: a flat grouped card (no border, radius 14); the status chip moves up next to the name so the text column keeps its width
+    // round 6, phone: a flat grouped card (grey, radius 16); the status chip moves up next to the name so the text column keeps its width
     return (
-      <div key={cr.id} data-cr={cr.id} role="group" aria-label={`${d.title} ${name}`} style={isPhone ? { background: '#FFFFFF', borderRadius: 14, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 } : { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '20px clamp(18px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div key={cr.id} data-cr={cr.id} role="group" aria-label={`${d.title} ${name}`} className="cp-grey" style={isPhone ? { background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 } : { background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '20px clamp(18px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Check on={on} onClick={() => toggleSel(cr.id)} label={t('approvals.checkRow', { n: name || d.title })} />
           <Avatar name={name || d.title} tone={m?.photoTone} src={memberPhoto(m)} size={isPhone ? 40 : 46} />
@@ -291,9 +293,9 @@ export function Reviews() {
     if (isPhone) {
       return (
         <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()}
-          style={{ padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, backgroundColor: on ? '#FBF8F4' : '#FFFFFF', backgroundImage: i ? 'linear-gradient(#EFEAE3, #EFEAE3)' : 'none', backgroundSize: 'calc(100% - 54px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
+          style={{ padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, backgroundColor: on ? 'var(--press, #EEEEF0)' : 'transparent', backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 54px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
           <div style={{ paddingTop: 6 }}><Check on={on} onClick={() => toggleSel(it.id)} label={t('approvals.checkRow', { n: title })} /></div>
-          {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={40} /> : <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={21} /></span>}
+          {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={40} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={21} /></span>}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
@@ -313,17 +315,17 @@ export function Reviews() {
       );
     }
     return (
-      <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()} style={{ borderTop: i ? '1px solid #F0EAE1' : 'none', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 10, background: on ? '#FBF8F4' : 'transparent' }}>
+      <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()} style={{ borderTop: i ? HAIRLINE : 'none', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 10, background: on ? 'var(--press, #EEEEF0)' : 'transparent' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ paddingTop: 6 }}><Check on={on} onClick={() => toggleSel(it.id)} label={t('approvals.checkRow', { n: title })} /></div>
-          {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={42} /> : <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={22} /></span>}
+          {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={42} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 42, height: 42, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={22} /></span>}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
             ) : <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '22px' }}>{v.kind}</span>}
             <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[m ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
             {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
-            <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : it.id)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: '4px 0', margin: 0, color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{expanded ? t('approvals.hide') : t('approvals.view')}</button>
+            <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : it.id)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: '4px 0', margin: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{expanded ? t('approvals.hide') : t('approvals.view')}</button>
           </div>
           <div style={{ display: 'flex', gap: 6, flex: 'none', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <Button size={48} variant="secondary" icon="close" disabled={bulkBusy} onClick={() => askReject(it.type, [it.id])}>{t('approvals.rejectOne')}</Button>
@@ -344,9 +346,9 @@ export function Reviews() {
     // round 6, phone: a grouped-list row with its own inset and an inset hairline; "Details" is a quiet text button
     if (isPhone) {
       return (
-        <div key={h.key} data-history={h.key} style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, backgroundImage: i ? 'linear-gradient(#EFEAE3, #EFEAE3)' : 'none', backgroundSize: 'calc(100% - 50px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
+        <div key={h.key} data-history={h.key} style={{ padding: '12px 16px', display: 'flex', flexDirection: 'column', gap: 8, backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 50px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
           <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-            <Icon name={STATUS_ICON[h.status] || 'history'} size={22} color={h.status === 'rejected' ? '#9A3D24' : '#75624B'} fill={1} />
+            <Icon name={STATUS_ICON[h.status] || 'history'} size={22} color={h.status === 'rejected' ? '#9A3D24' : 'var(--accent, #75624B)'} fill={1} />
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{[v.who, v.kind].filter(Boolean).join(' · ') || t('approvals.kind.' + h.sub)}</span>
               <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>
@@ -361,9 +363,9 @@ export function Reviews() {
       );
     }
     return (
-      <div key={h.key} data-history={h.key} style={{ borderTop: i ? '1px solid #F0EAE1' : 'none', padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div key={h.key} data-history={h.key} style={{ borderTop: i ? HAIRLINE : 'none', padding: '14px 0', display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
-          <Icon name={STATUS_ICON[h.status] || 'history'} size={22} color={h.status === 'rejected' ? '#9A3D24' : '#75624B'} fill={1} />
+          <Icon name={STATUS_ICON[h.status] || 'history'} size={22} color={h.status === 'rejected' ? '#9A3D24' : 'var(--accent, #75624B)'} fill={1} />
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{[v.who, v.kind].filter(Boolean).join(' · ') || t('approvals.kind.' + h.sub)}</span>
             <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>
@@ -378,12 +380,12 @@ export function Reviews() {
     );
   };
 
-  // round 6, phone: the list cards are flat groups (white, radius 14, no border or shadow); the rows carry their own inset
+  // round 6, phone: the list cards are flat groups (grey, radius 16, no border or shadow); the rows carry their own inset
   const card = (children: ReactNode, key?: string) => isPhone ? <Group key={key} pad={0} gap={0}>{children}</Group> : (
-    <div key={key} style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden', padding: '0 clamp(18px, 3vw, 28px)' }}>{children}</div>
+    <div key={key} className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden', padding: '0 clamp(18px, 3vw, 28px)' }}>{children}</div>
   );
   const empty = (type: ApprovalType) => (
-    <div style={isPhone ? { background: '#FFFFFF', borderRadius: 14 } : { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)' }}>
+    <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16 }}>
       {type === 'photos' ? <EmptyState icon="photo_library" title={t('reviews.nonePhotos')} /> : <EmptyState icon="done_all" title={t(`approvals.none.${type}`)} />}
     </div>
   );
@@ -406,13 +408,14 @@ export function Reviews() {
       : [[t('approvals.rejectOne'), () => askReject(it.type, [it.id]), false], [t('approvals.approveOne'), () => approveSelected(it.type, [it.id]), true]];
     return (
       <div key={it.id} data-person-item={it.id} data-type={it.type} role="group" aria-label={`${kindLine} ${v.who}`.trim()}
-        style={{ padding: isPhone ? '12px 16px' : '14px 0', display: 'flex', gap: 12, alignItems: 'flex-start', ...(isPhone ? { backgroundImage: i ? 'linear-gradient(#EFEAE3, #EFEAE3)' : 'none', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' } : { borderTop: i ? '1px solid #F0EAE1' : 'none' }) }}>
+        style={{ padding: isPhone ? '12px 16px' : '14px 0', display: 'flex', gap: 12, alignItems: 'flex-start', ...(isPhone ? { backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 16px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' } : { borderTop: i ? HAIRLINE : 'none' }) }}>
         {ph ? (
           <button type="button" onClick={() => setViewer(ph.id)} aria-label={t('reviews.openPhoto', { n: photoNames(ph) })} style={{ width: 52, height: 52, flex: 'none', borderRadius: 10, overflow: 'hidden', border: 'none', padding: 0, background: '#E8E1D8', cursor: 'pointer', position: 'relative' }}><PhotoImg photo={ph} /></button>
         ) : null}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 15, fontWeight: 500, lineHeight: '22px' }}>{kindLine}</span>
           <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{meta}</span>
+          {ph?.ai ? <AiMark label={t('drafts.aiSuggested')} style={{ alignSelf: 'flex-start', marginTop: 2 }} /> : null}
           {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
           {cr && conflict[cr.id] !== undefined ? <Note tone="ochre" icon="warning">{t('err.reviewConflict', { fields: conflict[cr.id] })}</Note> : null}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
@@ -452,9 +455,9 @@ export function Reviews() {
     say(t('approvals.approvedAllFor', { n, name: memberShort(s.members[g.memberId]) }), { icon: n ? 'task_alt' : 'info' });
   };
   const sectionCard = (key: string, head: ReactNode, rows: ReactNode) => (
-    <section key={key} data-person={key} style={isPhone ? { background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' } : { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '6px clamp(18px, 3vw, 28px) 4px' }}>
+    <section key={key} data-person={key} className="cp-grey" style={isPhone ? { background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' } : { background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '6px clamp(18px, 3vw, 28px) 4px' }}>
       {head}
-      <div style={isPhone ? { borderTop: '1px solid #EFEAE3' } : { borderTop: '1px solid #F0EAE1' }}>{rows}</div>
+      <div style={{ borderTop: HAIRLINE }}>{rows}</div>
     </section>
   );
   const personCard = (g: PersonGroup) => {
@@ -482,7 +485,7 @@ export function Reviews() {
   const nothingWaiting = !byPerson.people.length && !byPerson.groupPhotos.length && !byPerson.other.length;
   const personView = (
     <div data-testid="approvals-by-person" style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 16 }}>
-      {nothingWaiting ? <div style={isPhone ? { background: '#FFFFFF', borderRadius: 14 } : { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)' }}><EmptyState icon="done_all" title={t('approvals.none.all')} /></div> : null}
+      {nothingWaiting ? <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16 }}><EmptyState icon="done_all" title={t('approvals.none.all')} /></div> : null}
       {items.photos.length ? <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('reviews.notifyFamilies')} /> : null}
       {pagedPeople.rows.map(personCard)}
       {pagedPeople.pages > 1 ? <Pager page={pagedPeople.page} pages={pagedPeople.pages} onPage={pagedPeople.setPage} label={t('approvals.pagerRows')} /> : null}
@@ -491,12 +494,12 @@ export function Reviews() {
     </div>
   );
   const modeSwitch = (
-    <div role="tablist" aria-label={t('approvals.modeLabel')} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0', alignSelf: isPhone ? 'stretch' : 'flex-start', minWidth: isPhone ? undefined : 300 }}>
+    <div role="tablist" aria-label={t('approvals.modeLabel')} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', alignSelf: isPhone ? 'stretch' : 'flex-start', minWidth: isPhone ? undefined : 300 }}>
       {(['item', 'person'] as const).map((k) => {
         const on = mode === k;
         return (
           <button key={k} type="button" role="tab" aria-selected={on} data-mode={k} onClick={() => setMode(k)} className="cp-press"
-            style={{ height: 36, padding: '0 14px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('approvals.mode.' + k)}</button>
+            style={{ height: 36, padding: '0 14px', borderRadius: 7, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('approvals.mode.' + k)}</button>
         );
       })}
     </div>
@@ -513,14 +516,14 @@ export function Reviews() {
       {mode === 'person' ? personView : null}
       {mode === 'item' ? (<>
       {/* round 6, phone: the tabs stay one scrolling row, as iOS capsule chips (grey, the selected one ink) instead of underlined text links */}
-      <div ref={tabsRef} role="tablist" aria-label={t('approvals.tabsLabel')} className="cp-tabrow scroll-x" style={{ display: 'flex', gap: isPhone ? 8 : 28, ...(isPhone ? {} : { borderBottom: '1px solid #E6DDD1' }), overflowX: 'auto', scrollbarWidth: 'none' }}>
+      <div ref={tabsRef} role="tablist" aria-label={t('approvals.tabsLabel')} className="cp-tabrow scroll-x" style={{ display: 'flex', gap: isPhone ? 8 : 2, ...(isPhone ? {} : { padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', width: 'fit-content', maxWidth: '100%' }), overflowX: 'auto', scrollbarWidth: 'none' }}>
         {TABS.map((k) => {
           const sel0 = current === k;
           const n = k === 'history' ? 0 : counts[k];
           return (
             <button key={k} type="button" role="tab" aria-selected={sel0} onClick={() => setView(k)} className={isPhone ? 'cp-press' : undefined}
-              style={isPhone ? { flex: 'none', height: 34, padding: '0 14px', border: 'none', borderRadius: 999, background: sel0 ? '#24201C' : '#EAE6E0', color: sel0 ? '#FFFFFF' : '#4A4038', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }
-                : { flex: 'none', height: 46, padding: 0, border: 'none', borderBottom: sel0 ? '2px solid #24201C' : '2px solid transparent', marginBottom: -1, background: 'transparent', color: sel0 ? '#24201C' : '#6B6259', fontSize: 15, fontWeight: sel0 ? 500 : 400, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{tabLabel(k)}{k === 'history' ? '' : ` · ${n}`}</button>
+              style={isPhone ? { flex: 'none', height: 34, padding: '0 14px', border: 'none', borderRadius: 999, background: sel0 ? '#24201C' : 'var(--fill, #F4F4F5)', color: sel0 ? '#FFFFFF' : '#4A4038', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }
+                : { flex: 'none', height: 36, padding: '0 16px', borderRadius: 7, border: 'none', background: sel0 ? '#FFFFFF' : 'transparent', boxShadow: sel0 ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: sel0 ? '#1E1A16' : '#5E5852', fontSize: 15, fontWeight: sel0 ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{tabLabel(k)}{k === 'history' ? '' : ` · ${n}`}</button>
           );
         })}
       </div>
@@ -554,7 +557,7 @@ export function Reviews() {
             {!history.length ? <EmptyState icon="history" title={t('approvals.none.history')} /> : null}
           </Group>
         ) : (
-        <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', overflow: 'hidden', padding: '0 clamp(18px, 3vw, 28px) 6px' }}>
+        <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden', padding: '0 clamp(18px, 3vw, 28px) 6px' }}>
           {paged.history.rows.map(historyRow)}
           {!history.length ? <EmptyState icon="history" title={t('approvals.none.history')} /> : null}
         </div>
@@ -565,7 +568,7 @@ export function Reviews() {
 
       {showBar && isPhone ? (
         // round 6, phone: a bottom toolbar pinned like a PhoneScreen footer: the selection text buttons, then the two main actions side by side
-        <div style={{ position: 'sticky', bottom: 0, zIndex: 4, margin: '0 -16px -20px', padding: '8px 16px 14px', background: '#F5F5F3', borderTop: '1px solid #E6E1DA', display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '0 -16px -20px', padding: '8px 16px 14px', background: '#FFFFFF', borderTop: HAIRLINE, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 4, minHeight: 34 }}>
             {selected.length < here.length ? <button type="button" className="cp-press" onClick={() => setSel(here.map((x) => x.id))} style={{ ...textBtn, padding: '0 8px 0 0' }}>{t('reviews.selectAll', { n: here.length })}</button> : null}
             {selected.length ? <button type="button" className="cp-press" onClick={() => setSel([])} style={textBtn}>{t('reviews.clearSelection')}</button> : null}
@@ -579,7 +582,7 @@ export function Reviews() {
         </div>
       ) : null}
       {showBar && !isPhone ? (
-        <div style={{ position: 'sticky', bottom: 0, zIndex: 4, margin: '0 -4px', padding: '12px 4px 14px', background: 'linear-gradient(to top, #F5F5F3 72%, rgba(246,241,234,0))', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
+        <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '0 -4px', padding: '12px 4px 14px', background: 'linear-gradient(to top, #FFFFFF 72%, rgba(255,255,255,0))', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, flex: '1 1 260px', minWidth: 0 }}>
             {selected.length < here.length ? <Button variant="secondary" size={44} icon="select_all" onClick={() => setSel(here.map((x) => x.id))}>{t('reviews.selectAll', { n: here.length })}</Button> : null}
             {selected.length ? <Button variant="ghost" size={44} onClick={() => setSel([])}>{t('reviews.clearSelection')}</Button> : null}

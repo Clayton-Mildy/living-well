@@ -92,8 +92,8 @@ function FeedbackCard({ f }: { f: Feedback }) {
   const setStatus = (status: Feedback['status'], msg: string) => act('feedback.setStatus', { feedbackId: f.id, status }, { ok: msg });
   const metaOf = (x: { by: string; at: string }) => `${actorName(s, x.by)} · ${x.at.slice(0, 10) === today ? t('common.today') : fds(x.at.slice(0, 10))}, ${x.at.slice(11, 16)}`;
   return (
-    // round 6, phone: one flat white card per feedback (no outline), the row actions as small pills
-    <div data-testid="feedback-card" data-status={f.status} className="cp-card-pad" style={{ background: '#FFFFFF', border: isPhone ? 'none' : '1px solid #EFE7DC', borderRadius: isPhone ? 14 : 16, boxShadow: 'var(--card-shadow)', padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    // one soft grey card per feedback (no outline), the row actions as small pills
+    <div data-testid="feedback-card" data-status={f.status} className="cp-card-pad cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '18px 22px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={44} /> : null}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -103,7 +103,7 @@ function FeedbackCard({ f }: { f: Feedback }) {
         <FeedbackBadge status={f.status} />
       </div>
       <span style={{ alignSelf: 'flex-start', fontSize: FONT_SMALL, color: '#6B6259', display: 'inline-flex', alignItems: 'center', gap: 6 }}>
-        <Icon name="restaurant" size={16} color="#75624B" />
+        <Icon name="restaurant" size={16} color="var(--accent, #75624B)" />
         {f.dish ? t('kitchen.fb.dishLine', { dish: f.dish, day }) : t('kitchen.fb.dayOnly', { day })}
       </span>
       <p style={{ margin: 0, fontSize: 16, lineHeight: '24px' }}>“{f.text}”</p>
@@ -119,7 +119,7 @@ function FeedbackCard({ f }: { f: Feedback }) {
       {canReply ? (
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
           <input value={draft} onChange={(e) => setDraft(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void send(); }} placeholder={t(editing ? 'kitchen.fb.editPh' : 'kitchen.fb.replyPh')} aria-label={t('kitchen.fb.replyLabel')} maxLength={1000}
-            style={{ ...bronzeInput, flex: isPhone ? '1 1 160px' : '1 1 260px' }} />
+            className="cp-input cp-fill" style={{ ...bronzeInput, flex: isPhone ? '1 1 160px' : '1 1 260px' }} />
           <PillButton height={52} on={ok} onClick={send}>{t(editing ? 'kitchen.fb.sendEdit' : 'kitchen.fb.send')}</PillButton>
           {editing ? <Button variant="secondary" size={48} style={{ height: 52 }} onClick={() => { setEditing(false); setDraft(''); }}>{t('common.cancel')}</Button> : null}
         </div>

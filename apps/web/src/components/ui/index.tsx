@@ -2,13 +2,20 @@
 import { useEffect, useRef, type CSSProperties, type ReactNode, type KeyboardEvent as RKE } from 'react';
 import { createPortal } from 'react-dom';
 import { BADGE, type BadgeKey, initials } from '@cp/shared';
+import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { photoFill } from '../../lib/media';
 import { useUi } from '../../store/ui';
 
+// Round 8c: every role speaks the family palette — white page, soft grey (var(--fill, #F4F4F5)) fills with no border or shadow, #E2E2E6 hairlines, pills for chips,
+// var(--press, #EEEEF0) for pressed / tracks. A grey block carries className "cp-grey" and the controls on it ("cp-fill") turn white (global.css).
+/** Hairline between rows and sections (0.5px var(--hairline, #E2E2E6)). */
+export const HAIRLINE = '0.5px solid var(--hairline, #E2E2E6)';
+// round 9: CSS variables, so the staff shell's warm skin (global.css, html[data-skin="warm"]) recolours them; the family app keeps these defaults
+const FILL = 'var(--fill, #F4F4F5)', PRESS = 'var(--press, #EEEEF0)', TRACK = 'var(--track, #E8E8EB)'; // TRACK: segmented controls (visible on white and on a var(--fill, #F4F4F5) card)
 export const FONT_BODY = 'max(14px, var(--cp-body, 0px))';
 export const FONT_SMALL = 'max(13px, var(--cp-small, 0px))';
-export const TONES: [string, string][] = [['#E8E1D8', '#75624B'], ['#DCCFC0', '#3E3326'], ['#EADFD3', '#6B5640'], ['#CAB8A2', '#2E261D'], ['#F1E7DC', '#75624B']];
+export const TONES: [string, string][] = [['#E8E1D8', 'var(--accent, #75624B)'], ['#DCCFC0', '#3E3326'], ['#EADFD3', '#6B5640'], ['#CAB8A2', '#2E261D'], ['#F1E7DC', 'var(--accent, #75624B)']];
 const PTONES = ['#E8E1D8', '#DCCFC0', '#EADFD3', '#D9CDBF', '#F1E7DC'];
 const PDEEP = ['#C9B49C', '#B9A28A', '#CDB9A3', '#BFA88F', '#D4C2AE'];
 /** Placeholder photo background (design's photoBg). */
@@ -29,7 +36,7 @@ export function Logo({ height = 47, style }: { height?: number; style?: CSSPrope
 }
 
 // ---------- typography ----------
-export const Eyebrow = ({ children, color = '#6E5A43', style, className }: { children: ReactNode; color?: string; style?: CSSProperties; className?: string }) => (
+export const Eyebrow = ({ children, color = 'var(--eyebrow, #6E5A43)', style, className }: { children: ReactNode; color?: string; style?: CSSProperties; className?: string }) => (
   <div className={className} style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color, lineHeight: '18px', ...style }}>{children}</div>
 );
 export const SectionLabel = ({ children, style }: { children: ReactNode; style?: CSSProperties }) => <Eyebrow style={style}>{children}</Eyebrow>;
@@ -58,17 +65,19 @@ export function Button({ variant = 'primary', size = 48, icon, iconRight, childr
   const fs = size === 56 ? 16 : size === 48 ? 15 : 14;
   const v: Record<BtnVariant, CSSProperties> = {
     primary: { background: '#24201C', color: '#FFFFFF', border: 'none' },
-    secondary: { background: '#FFFFFF', color: '#24201C', border: '1px solid #DCD3C8' },
-    ghost: { background: 'transparent', color: '#75624B', border: 'none', textDecoration: 'underline', textUnderlineOffset: 4 },
+    secondary: { background: FILL, color: '#24201C', border: 'none' },
+    ghost: { background: FILL, color: 'var(--accent, #75624B)', border: 'none' },
     danger: { background: '#9A3D24', color: '#FFFFFF', border: 'none' },
     dark: { background: '#24201C', color: '#FFFFFF', border: 'none' },
-    quiet: { background: '#F3EEE8', color: '#24201C', border: 'none' },
+    quiet: { background: FILL, color: '#24201C', border: 'none' },
   };
-  const hover = disabled ? '' : variant === 'primary' || variant === 'dark' ? 'h-bronze' : variant === 'secondary' || variant === 'ghost' || variant === 'quiet' ? 'h-cream' : '';
+  const grey = variant === 'secondary' || variant === 'ghost' || variant === 'quiet';
+  // round 8c contrast audit: a disabled button is a grey shape that turns white on a grey card (cp-fill), so it never vanishes into it
+  const hover = disabled ? 'cp-fill' : variant === 'primary' || variant === 'dark' ? 'h-bronze' : grey ? 'h-fill cp-fill' : '';
   return (
     <button type={type} onClick={disabled ? undefined : onClick} aria-disabled={disabled || undefined} aria-label={label} title={title} className={`${hover} cp-btn${size === 56 ? ' cp-btn-56' : ''}${disabled ? '' : ' cp-press'}`}
-      style={{ height: h, padding: pad, borderRadius: h <= 40 ? 10 : 12, fontFamily: 'Inter', fontSize: fs, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', width: full ? '100%' : undefined, flex: full ? '1 0 auto' : 'none', // never shrinks: in a column (a sheet or drawer) a shrinking button was squashed flat
-        ...v[variant], ...(disabled ? { background: '#EDE5DA', color: '#8A8078', border: 'none' } : {}), ...style }}>
+      style={{ height: h, minHeight: h, padding: pad, borderRadius: h <= 40 ? 10 : 12, fontFamily: 'Inter', fontSize: fs, fontWeight: 500, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', width: full ? '100%' : undefined, flex: full ? '1 1 auto' : 'none', // shares a row with its neighbours; minHeight keeps it from being squashed flat in a column (a sheet or drawer)
+        ...v[variant], ...(disabled ? { background: PRESS, color: '#8A8078', border: 'none' } : {}), ...style }}>
       {icon ? <Icon name={icon} size={size === 56 ? 21 : 19} weight={300} /> : null}
       {children}
       {iconRight ? <Icon name={iconRight} size={19} weight={300} /> : null}
@@ -76,21 +85,24 @@ export function Button({ variant = 'primary', size = 48, icon, iconRight, childr
   );
 }
 export function IconButton({ icon, label, onClick, size = 44, bordered = true, fill = 0, style, color = '#24201C' }: { icon: string; label: string; onClick?: () => void; size?: number; bordered?: boolean; fill?: 0 | 1; style?: CSSProperties; color?: string }) {
+  // round and grey (bordered) or bare; a white icon (on the camera) gets no light hover tint
+  const light = /^#f{3,6}$/i.test(color);
   return (
-    <button type="button" onClick={onClick} aria-label={label} title={label} className="h-cream"
-      style={{ width: size, height: size, borderRadius: Math.round(size * 0.28), border: bordered ? '1px solid #E4DACD' : 'none', background: bordered ? '#FFFFFF' : 'transparent', boxShadow: bordered ? '0 1px 2px rgba(60,40,20,.04)' : undefined, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', color, padding: 0, ...style }}>
+    <button type="button" onClick={onClick} aria-label={label} title={label} className={light ? undefined : bordered ? 'h-fill cp-fill' : 'h-cream'}
+      style={{ width: size, height: size, borderRadius: 999, border: 'none', background: bordered ? FILL : 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', color, padding: 0, ...style }}>
       <Icon name={icon} size={22} fill={fill} />
     </button>
   );
 }
 
 // ---------- chips & badges ----------
-export const chipStyle = (sel: boolean, off = false) => ({ bg: sel ? '#24201C' : off ? '#F3EEE8' : '#FFFFFF', fg: sel ? '#FFFFFF' : off ? '#8A8078' : '#24201C', bd: sel ? '1px solid #24201C' : off ? '1px solid #F0EAE1' : '1px solid #DCD3C8' });
+/** The pill look: grey fill, ink when selected, no border (`bd` stays for callers that spread it; add className "cp-fill" to a grey one that sits on a grey block). */
+export const chipStyle = (sel: boolean, off = false) => ({ bg: sel ? '#24201C' : FILL, fg: sel ? '#FFFFFF' : off ? '#8A8078' : '#24201C', bd: 'none' });
 export function Chip({ selected = false, off = false, children, icon, onClick, size = 44, count, style }: { selected?: boolean; off?: boolean; children: ReactNode; icon?: string; onClick?: () => void; size?: 44 | 40 | 36; count?: number | string; style?: CSSProperties }) {
   const c = chipStyle(selected, off);
   return (
-    <button type="button" aria-pressed={selected} aria-disabled={off || undefined} onClick={off ? undefined : onClick} className="cp-chip"
-      style={{ height: size - 4, padding: '0 14px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: size === 44 ? 15 : 14, fontWeight: 500, cursor: off ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', flex: 'none', ...style }}>
+    <button type="button" aria-pressed={selected} aria-disabled={off || undefined} onClick={off ? undefined : onClick} className={selected ? 'cp-chip' : 'cp-chip cp-fill'}
+      style={{ height: size - 4, padding: '0 14px', borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: size === 44 ? 15 : 14, fontWeight: 500, cursor: off ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', flex: 'none', ...style }}>
       {icon ? <Icon name={icon} size={17} /> : null}
       {children}
       {count !== undefined ? <span style={{ fontSize: 14, fontWeight: 600, opacity: 0.8 }}>{count}</span> : null}
@@ -98,9 +110,9 @@ export function Chip({ selected = false, off = false, children, icon, onClick, s
   );
 }
 export function InfoChip({ icon, label, tone = 'linen', iconColor }: { icon?: string; label: ReactNode; tone?: 'linen' | 'rust' | 'cream' | 'ink' | 'sage' | 'ochre'; iconColor?: string }) {
-  const t = { linen: ['#F3EEE8', '#4A4038'], rust: ['#F9E3DB', '#9A3D24'], cream: ['#F5F5F3', '#4A4038'], ink: ['#24201C', '#FFFFFF'], sage: ['#E3EFE6', '#2F5A40'], ochre: ['#F6ECD6', '#7A5510'] }[tone];
+  const t = { linen: [FILL, '#4A4038'], rust: ['#F9E3DB', '#9A3D24'], cream: [FILL, '#4A4038'], ink: ['#24201C', '#FFFFFF'], sage: ['#E3EFE6', '#2F5A40'], ochre: ['#F6ECD6', '#7A5510'] }[tone];
   return (
-    <span style={{ height: 28, padding: '0 11px', borderRadius: 8, background: t[0], color: t[1], fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', lineHeight: 1.4 }}>
+    <span className={tone === 'linen' || tone === 'cream' ? 'cp-fill' : undefined} style={{ height: 28, padding: '0 11px', borderRadius: 999, background: t[0], color: t[1], fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', lineHeight: 1.4 }}>
       {icon ? <Icon name={icon} size={16} color={iconColor || (tone === 'rust' ? '#9A3D24' : undefined)} /> : null}
       {label}
     </span>
@@ -109,32 +121,34 @@ export function InfoChip({ icon, label, tone = 'linen', iconColor }: { icon?: st
 export function StatusBadge({ kind, label, small }: { kind: BadgeKey; label?: ReactNode; small?: boolean }) {
   const t = useT();
   const b = BADGE[kind];
+  // the neutral kinds (outstanding, part paid, pending, void) are linen / cream in the shared table: here they are the family's soft grey
+  const bg = b[2] as string, neutral = bg === '#E8E1D8' || bg === '#F0EAE1';
   return (
-    <span style={{ height: small ? 24 : 28, padding: '0 11px 0 7px', borderRadius: 12, background: b[2], color: b[1], fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', lineHeight: 1.4, flex: 'none' }}>
+    <span className={neutral ? 'cp-fill' : undefined} style={{ height: small ? 24 : 28, padding: '0 11px 0 7px', borderRadius: 999, background: neutral ? PRESS : bg, color: b[1], fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap', lineHeight: 1.4, flex: 'none' }}>
       <Icon name={b[0]} size={16} fill={kind === 'outstanding' || kind === 'pending' ? 0 : 1} />
       {label ?? t('status.' + kind)}
     </span>
   );
 }
 export const CountDot = ({ n, style }: { n: number; style?: CSSProperties }) =>
-  n > 0 ? <span style={{ minWidth: 22, height: 22, padding: '0 7px', borderRadius: 8, background: '#2B231C', color: '#FFFFFF', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...style }}>{n > 99 ? '99+' : n}</span> : null;
+  n > 0 ? <span style={{ minWidth: 22, height: 22, padding: '0 7px', borderRadius: 999, background: '#2B231C', color: '#FFFFFF', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...style }}>{n > 99 ? '99+' : n}</span> : null;
 
 // ---------- avatar & card ----------
 export function Avatar({ name, tone, size = 48, ring, src }: { name: string; tone?: number; size?: number; ring?: boolean; /** a photo (member profile picture) */ src?: string }) {
   const [bg, fg] = TONES[(tone ?? toneFor(name)) % 5];
   return (
-    <div aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(src, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.36), fontWeight: 500, flex: 'none', boxShadow: ring ? 'inset 0 0 0 3px #FFFFFF, 0 0 0 1px #D9CBB8' : undefined }}>
+    <div aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(src, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.36), fontWeight: 500, flex: 'none', boxShadow: ring ? 'inset 0 0 0 3px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' : undefined }}>
       {src ? null : initials(name)}
     </div>
   );
 }
-/** Prototype v3 card: white, hairline warm border, 24px radius and a soft lifted shadow (pass shadow={false} for flat inner cards). */
-export function Card({ children, pad = 0, style, shadow = true }: { children: ReactNode; pad?: number | string; style?: CSSProperties; shadow?: boolean }) {
-  return <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, overflow: 'hidden', padding: pad, boxShadow: shadow ? 'var(--card-shadow)' : undefined, ...style }}>{children}</div>;
+/** Round 8c, the family card: a soft grey (var(--fill, #F4F4F5)) block, 20px radius, no border and no shadow (`shadow` is kept for old callers and does nothing). */
+export function Card({ children, pad = 0, style }: { children: ReactNode; pad?: number | string; style?: CSSProperties; /** @deprecated cards have no shadow any more */ shadow?: boolean }) {
+  return <div className="cp-grey" style={{ background: FILL, borderRadius: 20, overflow: 'hidden', padding: pad, ...style }}>{children}</div>;
 }
 /** Round 6 (phone, native look): header of an iOS-style grouped section; it sits outside the group, over the page. */
-export const GROUP_HEAD: CSSProperties = { margin: 0, fontSize: 13, lineHeight: '18px', letterSpacing: '0.4px', textTransform: 'uppercase', fontWeight: 500, color: '#6B6259', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
-/** Round 6 (phone, native look): an iOS-style grouped section, a small grey header over a flat white rounded group (no shadow, no border). */
+export const GROUP_HEAD: CSSProperties = { margin: 0, fontSize: 13, lineHeight: '18px', letterSpacing: '0.4px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--group-head, #6B6259)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' };
+/** Round 6 (phone, native look): an iOS-style grouped section, a small grey header over a grey (var(--fill, #F4F4F5)) rounded group, 16px radius, no shadow, no border. */
 export function Group({ title, meta, children, label, pad = '14px 16px', gap = 10 }: { title?: ReactNode; meta?: ReactNode; children: ReactNode; label?: string; pad?: number | string; gap?: number }) {
   return (
     <section aria-label={label} style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
@@ -144,7 +158,7 @@ export function Group({ title, meta, children, label, pad = '14px 16px', gap = 1
           {meta ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px', flex: 'none' }}>{meta}</span> : null}
         </div>
       ) : null}
-      <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden', padding: pad, display: 'flex', flexDirection: 'column', gap }}>{children}</div>
+      <div className="cp-grey" style={{ background: FILL, borderRadius: 16, overflow: 'hidden', padding: pad, display: 'flex', flexDirection: 'column', gap }}>{children}</div>
     </section>
   );
 }
@@ -159,9 +173,9 @@ export function CardHead({ title, meta, right }: { title: ReactNode; meta?: Reac
 }
 export const Row = ({ children, onClick, style, label }: { children: ReactNode; onClick?: () => void; style?: CSSProperties; label?: string }) =>
   onClick ? (
-    <button type="button" onClick={onClick} aria-label={label} className="h-row cp-row" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px', minHeight: 66, border: 'none', borderTop: '1px solid #F0EAE1', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', ...style }}>{children}</button>
+    <button type="button" onClick={onClick} aria-label={label} className="h-row cp-row" style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px', minHeight: 66, border: 'none', borderTop: HAIRLINE, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', ...style }}>{children}</button>
   ) : (
-    <div className="cp-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px', minHeight: 66, borderTop: '1px solid #F0EAE1', ...style }}>{children}</div>
+    <div className="cp-row" style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 22px', minHeight: 66, borderTop: HAIRLINE, ...style }}>{children}</div>
   );
 export const RowText = ({ title, sub, titleSize = 16 }: { title: ReactNode; sub?: ReactNode; titleSize?: number }) => (
   <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -173,9 +187,9 @@ export const RowText = ({ title, sub, titleSize = 16 }: { title: ReactNode; sub?
 // ---------- form controls ----------
 export function Toggle({ on, onClick, label, sub, disabled }: { on: boolean; onClick: () => void; label: ReactNode; sub?: ReactNode; disabled?: boolean }) {
   return (
-    <button type="button" role="switch" aria-checked={on} aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick}
-      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderRadius: 12, border: '1px solid #EFE7DC', background: '#FFFFFF', textAlign: 'left', cursor: disabled ? 'not-allowed' : 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
-      <span style={{ width: 44, height: 26, borderRadius: 999, background: on ? '#24201C' : '#CDC2B5', position: 'relative', flex: 'none', marginTop: 1 }}>
+    <button type="button" role="switch" aria-checked={on} aria-disabled={disabled || undefined} onClick={disabled ? undefined : onClick} className="cp-fill"
+      style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderRadius: 14, border: 'none', background: FILL, textAlign: 'left', cursor: disabled ? 'not-allowed' : 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
+      <span style={{ width: 44, height: 26, borderRadius: 999, background: on ? '#3D6B4F' : 'var(--field-bd, #E0E0E4)', transition: 'background-color .2s', position: 'relative', flex: 'none', marginTop: 1 }}>
         <span style={{ position: 'absolute', top: 3, left: on ? 21 : 3, width: 20, height: 20, borderRadius: 999, background: '#FFFFFF', boxShadow: '0 1px 2px rgba(0,0,0,0.2)', transition: 'left .15s' }} />
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -189,20 +203,21 @@ export function TextField({ label, value, onChange, placeholder, inputMode, type
   label?: ReactNode; value: string; onChange: (v: string) => void; placeholder?: string; inputMode?: 'text' | 'tel' | 'numeric' | 'decimal' | 'email' | 'search';
   type?: string; error?: string | false; hint?: ReactNode; multiline?: boolean; rows?: number; autoFocus?: boolean; name?: string; maxLength?: number; onEnter?: () => void; prefix?: ReactNode;
 }) {
-  const border = error ? '2px solid #9A3D24' : '1px solid #DDD1C2';
-  const common: CSSProperties = { border: prefix ? 'none' : border, borderRadius: prefix ? 0 : 14, background: '#FFFFFF', padding: multiline ? '12px 14px' : '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', width: '100%', minWidth: 0 };
+  // round 8c: a soft grey field, no border, a 2px ink ring on focus (global.css .cp-input) and a rust ring on an error
+  const ring = error ? 'inset 0 0 0 2px #9A3D24' : undefined;
+  const common: CSSProperties = { border: 'none', borderRadius: prefix ? 0 : 12, background: prefix ? 'transparent' : FILL, boxShadow: prefix ? undefined : ring, padding: multiline ? '12px 14px' : '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', width: '100%', minWidth: 0 };
   const input = multiline ? (
-    <textarea name={name} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={rows} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} style={{ ...common, resize: 'vertical', lineHeight: '22px' }} />
+    <textarea name={name} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={rows} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} className={prefix ? 'cp-input' : 'cp-input cp-fill'} style={{ ...common, resize: 'vertical', lineHeight: '22px' }} />
   ) : (
-    <input name={name} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} inputMode={inputMode} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined}
+    <input name={name} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} inputMode={inputMode} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} className={prefix ? 'cp-input' : 'cp-input cp-fill'}
       onKeyDown={onEnter ? (e) => { if (e.key === 'Enter') onEnter(); } : undefined} style={{ ...common, height: prefix ? '100%' : 'var(--cp-field-h, 52px)', flex: prefix ? 1 : 'none' }} />
   );
   return (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
       {label ? <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.4, color: '#4A4038' }}>{label}</span> : null}
       {prefix ? (
-        <span style={{ display: 'flex', alignItems: 'center', height: 'var(--cp-field-h, 52px)', border, borderRadius: 10, background: '#FFFFFF', overflow: 'hidden' }}>
-          <span style={{ padding: '0 14px', height: '100%', display: 'flex', alignItems: 'center', background: '#F3EEE8', borderRight: '1px solid #E4DACD', fontSize: 16, flex: 'none' }}>{prefix}</span>
+        <span className={`cp-input-wrap cp-fill${error ? ' cp-err' : ''}`} style={{ display: 'flex', alignItems: 'center', height: 'var(--cp-field-h, 52px)', borderRadius: 12, background: FILL, boxShadow: ring, overflow: 'hidden' }}>
+          <span style={{ padding: '0 14px', height: '100%', display: 'flex', alignItems: 'center', background: PRESS, fontSize: 16, flex: 'none' }}>{prefix}</span>
           {input}
         </span>
       ) : input}
@@ -225,16 +240,17 @@ export function ChipGroup<V extends string | number | boolean>({ label, options,
     </div>
   );
 }
-export function Segmented<V extends string>({ items, value, onChange, label }: { items: { value: V; label: ReactNode; count?: number }[]; value: V; onChange: (v: V) => void; label?: string }) {
+/** `cols` (round 9): lay the items out as an equal grid of that many columns (e.g. 2 × 2 on a phone when four labels would not fit in one row). */
+export function Segmented<V extends string>({ items, value, onChange, label, cols }: { items: { value: V; label: ReactNode; count?: number }[]; value: V; onChange: (v: V) => void; label?: string; cols?: number }) {
   return (
-    <div role="tablist" aria-label={label} style={{ display: 'flex', gap: 4, padding: 4, borderRadius: 12, background: '#EDE5DA', alignSelf: 'flex-start', maxWidth: '100%', overflowX: 'auto' }}>
+    <div role="tablist" aria-label={label} style={cols ? { display: 'grid', gridTemplateColumns: `repeat(${cols}, minmax(0, 1fr))`, gap: 2, padding: 2, borderRadius: 9, background: TRACK, alignSelf: 'stretch' } : { display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: TRACK, alignSelf: 'flex-start', maxWidth: '100%', overflowX: 'auto' }}>
       {items.map((it) => {
         const on = it.value === value;
         return (
           <button key={it.value} type="button" role="tab" aria-selected={on} onClick={() => onChange(it.value)}
-            style={{ height: 36, padding: '0 16px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: '#24201C', fontSize: FONT_BODY, fontWeight: on ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter' }}>
+            style={{ height: 36, padding: cols ? '0 8px' : '0 16px', borderRadius: 7, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: on ? '#1E1A16' : '#5E5852', fontSize: FONT_BODY, fontWeight: on ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: cols ? 'center' : undefined, minWidth: 0, gap: 6, fontFamily: 'Inter' }}>
             {it.label}
-            {it.count !== undefined ? <span style={{ fontVariantNumeric: 'tabular-nums', color: '#5E5852' }}>{it.count}</span> : null}
+            {it.count !== undefined ? <span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, color: '#6B6259' }}>{it.count}</span> : null}
           </button>
         );
       })}
@@ -246,23 +262,25 @@ export function Segmented<V extends string>({ items, value, onChange, label }: {
 export function EmptyState({ icon, title, sub, action }: { icon: string; title: ReactNode; sub?: ReactNode; action?: ReactNode }) {
   return (
     <div className="cp-empty" style={{ padding: '40px 28px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center' }}>
-      <div className="cp-empty-icon" style={{ width: 72, height: 72, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B' }}><Icon name={icon} size={30} weight={300} /></div>
+      <div className="cp-empty-icon cp-fill" style={{ width: 72, height: 72, borderRadius: 999, background: FILL, display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent, #75624B)' }}><Icon name={icon} size={30} weight={300} /></div>
       <div style={{ fontSize: 20, lineHeight: '28px', letterSpacing: '-0.3px', fontWeight: 300, color: '#4A4038' }}>{title}</div>
       {sub ? <div style={{ fontSize: 14, lineHeight: '21px', color: '#6B6259', maxWidth: 320 }}>{sub}</div> : null}
       {action}
     </div>
   );
 }
-const shimmer: CSSProperties = { background: 'linear-gradient(90deg,#F0EAE1 0,#F7F3EE 40%,#F0EAE1 80%)', backgroundSize: '800px 100%', animation: 'cpShimmer 1.4s linear infinite' };
+// translucent greys, so the placeholders read on a white page and on a grey block alike
+const SKEL = 'rgba(30,30,36,.065)', SKEL_HI = 'rgba(30,30,36,.03)';
+const shimmer: CSSProperties = { background: `linear-gradient(90deg,${SKEL} 0,${SKEL_HI} 40%,${SKEL} 80%)`, backgroundSize: '800px 100%', animation: 'cpShimmer 1.4s linear infinite' };
 export function SkeletonRows({ n = 3, label = 'Loading' }: { n?: number; label?: string }) {
   return (
     <div aria-busy="true" aria-label={label}>
       {Array.from({ length: n }, (_, i) => (
-        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: '1px solid #F0EAE1' }}>
+        <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '14px 20px', borderTop: HAIRLINE }}>
           <div style={{ width: 48, height: 48, borderRadius: 999, ...shimmer }} />
           <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ height: 14, width: `${55 - i * 7}%`, borderRadius: 8, ...shimmer }} />
-            <div style={{ height: 12, width: `${35 - i * 3}%`, borderRadius: 8, background: '#F0EAE1' }} />
+            <div style={{ height: 12, width: `${35 - i * 3}%`, borderRadius: 8, background: SKEL }} />
           </div>
         </div>
       ))}
@@ -274,7 +292,7 @@ export function PageSkeleton() {
     <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 16, padding: 40 }} aria-busy="true" aria-label="Loading">
       <div style={{ height: 14, width: 180, borderRadius: 8, ...shimmer }} />
       <div style={{ height: 36, width: 320, maxWidth: '80%', borderRadius: 8, ...shimmer }} />
-      <div style={{ height: 220, borderRadius: 16, background: '#F0EAE1' }} />
+      <div style={{ height: 220, borderRadius: 20, background: SKEL }} />
     </div>
   );
 }
@@ -285,7 +303,7 @@ export function Pin({ icon, label, onClick }: { icon: string; label: ReactNode; 
   return (
     // round 6: fixed just above the floating tab bar (86px + safe area), so it never stops halfway down a short page
     <div style={{ position: 'fixed', right: 0, bottom: 'calc(86px + env(safe-area-inset-bottom, 0px))', zIndex: 44, padding: '4px 14px 10px', display: 'flex', justifyContent: 'flex-end', pointerEvents: 'none' }}>
-      <button type="button" onClick={onClick} className="h-bronze" style={{ pointerEvents: 'auto', height: 44, maxWidth: '100%', padding: '0 18px 0 14px', borderRadius: 12, border: 'none', background: '#24201C', color: '#F7F3EE', fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', boxShadow: '0 10px 24px rgba(40,30,20,0.28)', fontFamily: 'Inter', whiteSpace: 'nowrap' }}>
+      <button type="button" onClick={onClick} className="h-bronze" style={{ pointerEvents: 'auto', height: 44, maxWidth: '100%', padding: '0 18px 0 14px', borderRadius: 999, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', boxShadow: '0 10px 24px rgba(40,30,20,0.28)', fontFamily: 'Inter', whiteSpace: 'nowrap' }}>
         <Icon name={icon} size={20} />
         {label}
       </button>
@@ -293,9 +311,9 @@ export function Pin({ icon, label, onClick }: { icon: string; label: ReactNode; 
   );
 }
 export const Note = ({ children, tone = 'cream', icon }: { children: ReactNode; tone?: 'cream' | 'ochre' | 'sage' | 'rust'; icon?: string }) => {
-  const c = { cream: ['#F3EEE8', '#24201C'], ochre: ['#F6ECD6', '#7A5510'], sage: ['#E3EFE6', '#3D6B4F'], rust: ['#F9E3DB', '#9A3D24'] }[tone];
+  const c = { cream: [FILL, '#24201C'], ochre: ['#F6ECD6', '#7A5510'], sage: ['#E3EFE6', '#3D6B4F'], rust: ['#F9E3DB', '#9A3D24'] }[tone];
   return (
-    <div style={{ fontSize: 14, lineHeight: '21px', padding: '12px 14px', borderRadius: 10, background: c[0], color: tone === 'cream' ? '#24201C' : c[1], display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+    <div className={tone === 'cream' ? 'cp-fill' : undefined} style={{ fontSize: 14, lineHeight: '21px', padding: '12px 14px', borderRadius: 14, background: c[0], color: tone === 'cream' ? '#24201C' : c[1], display: 'flex', gap: 10, alignItems: 'flex-start' }}>
       {icon ? <Icon name={icon} size={20} fill={1} color={c[1]} style={{ marginTop: 1 }} /> : null}
       <div style={{ flex: 1, minWidth: 0 }}>{children}</div>
     </div>
@@ -303,7 +321,7 @@ export const Note = ({ children, tone = 'cream', icon }: { children: ReactNode; 
 };
 export const StaffOnlyTag = () => {
   const t = useT();
-  return <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: FONT_SMALL, fontWeight: 600, color: '#4A4038', background: '#F3EEE8', borderRadius: 12, padding: '2px 10px 2px 6px', lineHeight: '20px', whiteSpace: 'nowrap' }}><Icon name="lock" size={16} />{t('common.staffOnly')}</span>;
+  return <span className="cp-fill" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: FONT_SMALL, fontWeight: 600, color: '#4A4038', background: FILL, borderRadius: 999, padding: '2px 10px 2px 6px', lineHeight: '20px', whiteSpace: 'nowrap' }}><Icon name="lock" size={16} />{t('common.staffOnly')}</span>;
 };
 
 // ---------- overlays ----------
@@ -336,20 +354,36 @@ export function useOverlayA11y(open: boolean, onClose: () => void) {
 }
 const portal = (node: ReactNode) => createPortal(node, document.body);
 
-/** Bottom sheet (design: max 600px, 28px top radius, grab handle). */
+/** The round grey close button of a sheet, dialog or drawer header (the family popover's). */
+export function CloseButton({ onClick, label, size = 32 }: { onClick: () => void; label: string; size?: number }) {
+  return (
+    <button type="button" onClick={onClick} aria-label={label} title={label} className="h-fill"
+      style={{ width: size, height: size, borderRadius: 999, border: 'none', background: FILL, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0, color: '#24201C' }}>
+      <Icon name="close" size={18} />
+    </button>
+  );
+}
+/** The dimmed backdrop behind every overlay (neutral, not warm). */
+const SCRIM = 'rgba(20,16,12,.32)';
+
+/**
+ * Round 8c: a bottom sheet on a phone (white, 28px top corners, a handle) and a CENTRED dialog on tablet and laptop (radius 24, padding 18/22/22,
+ * up to `maxWidth` wide) over a dimmed backdrop, like the family prototype. Header: the title (20/500) on the left, a round grey close button.
+ */
 export function Sheet({ open, onClose, title, children, footer, maxWidth = 600 }: { open: boolean; onClose: () => void; title: ReactNode; children: ReactNode; footer?: ReactNode; maxWidth?: number }) {
   const t = useT();
+  const { isWide } = useDevice();
   const { ref, trap } = useOverlayA11y(open, onClose);
   if (!open) return null;
   return portal(
-    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'flex-end', justifyContent: 'center' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(36,32,28,0.36)' }} />
+    <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: isWide ? 'center' : 'flex-end', justifyContent: 'center', padding: isWide ? 24 : 0, boxSizing: 'border-box' }}>
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: SCRIM, animation: 'cpFade .16s ease-out' }} />
       <div ref={ref} className="cp-noshrink" onKeyDown={trap} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
-        style={{ position: 'relative', width: '100%', maxWidth, maxHeight: '88%', overflowY: 'auto', background: '#FFFFFF', borderRadius: '20px 20px 0 0', padding: '10px 20px 32px', display: 'flex', flexDirection: 'column', gap: 18, animation: 'cpUp .22s ease-out', outline: 'none' }}>
-        <div style={{ alignSelf: 'center', width: 40, height: 4, borderRadius: 999, background: '#E4DACD' }} />
+        style={{ position: 'relative', width: '100%', maxWidth, maxHeight: isWide ? '90%' : '88%', overflowY: 'auto', background: '#FFFFFF', borderRadius: isWide ? 24 : '28px 28px 0 0', padding: isWide ? '18px 22px 22px' : '8px 20px calc(32px + env(safe-area-inset-bottom, 0px))', boxShadow: isWide ? '0 2px 6px rgba(40,30,20,.08), 0 24px 60px rgba(40,30,20,.22)' : undefined, display: 'flex', flexDirection: 'column', gap: 18, animation: isWide ? 'cpPop .2s cubic-bezier(.3,.7,.2,1)' : 'cpUp .22s ease-out', outline: 'none', boxSizing: 'border-box' }}>
+        {isWide ? null : <span aria-hidden="true" style={{ display: 'block', alignSelf: 'center', width: 36, height: 5, borderRadius: 999, background: 'var(--outline, #D4D4D8)', flex: 'none' }} />}
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-          <h2 style={{ margin: 0, fontSize: 22, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C' }}>{title}</h2>
-          <IconButton icon="close" label={t('common.close')} onClick={onClose} />
+          <h2 className="cp-serif cp-serif-up" style={{ margin: 0, fontSize: 20, lineHeight: '28px', fontWeight: 500, color: '#24201C', minWidth: 0, overflowWrap: 'anywhere' }}>{title}</h2>
+          <CloseButton label={t('common.close')} onClick={onClose} />
         </div>
         {children}
         {footer}
@@ -365,14 +399,14 @@ export function Drawer({ open, onClose, label, children, footer, width = 440 }: 
   const w = typeof window !== 'undefined' && window.innerWidth < 768 ? '100%' : `${width}px`;
   return portal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', justifyContent: 'flex-end' }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(36,32,28,0.32)' }} />
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: SCRIM, animation: 'cpFade .16s ease-out' }} />
       <div ref={ref} onKeyDown={trap} tabIndex={-1} role="dialog" aria-modal="true" aria-label={label}
         style={{ position: 'relative', width: w, maxWidth: '100%', height: '100%', background: '#FFFFFF', display: 'flex', flexDirection: 'column', animation: 'cpSlideL .2s ease-out', boxShadow: '-12px 0 40px rgba(40,30,20,0.15)', outline: 'none' }}>
         <div style={{ padding: '16px 16px 0', display: 'flex', justifyContent: 'flex-end' }}>
-          <IconButton icon="close" label={t('common.close')} onClick={onClose} />
+          <CloseButton label={t('common.close')} onClick={onClose} />
         </div>
         <div className="cp-noshrink" style={{ flex: 1, overflowY: 'auto', padding: '0 28px 24px', display: 'flex', flexDirection: 'column', gap: 22 }}>{children}</div>
-        {footer ? <div style={{ padding: '16px 28px 24px', borderTop: '1px solid #F0EAE1' }}>{footer}</div> : null}
+        {footer ? <div style={{ padding: '16px 28px 24px', borderTop: HAIRLINE }}>{footer}</div> : null}
       </div>
     </div>,
   );
@@ -381,39 +415,39 @@ export function Drawer({ open, onClose, label, children, footer, width = 440 }: 
  *  (the colour of the Flex visits bar); the running step is ink with a soft ring and a half-filled line; later steps sit on a grey track. */
 export type RailState = 'done' | 'now' | 'up';
 const RAIL: Record<RailState, { bg: string; bd: string; fg: string; fill: 0 | 1; line: string }> = {
-  done: { bg: '#75624B', bd: 'none', fg: '#FFFFFF', fill: 1, line: '#75624B' },
-  now: { bg: '#2B231C', bd: 'none', fg: '#FFFFFF', fill: 1, line: 'linear-gradient(#75624B 0 50%, #E6DDD1 50% 100%)' },
-  up: { bg: '#FFFFFF', bd: '1.5px solid #DCD3C8', fg: '#8A8078', fill: 0, line: '#E6DDD1' },
+  done: { bg: 'var(--accent, #75624B)', bd: 'none', fg: '#FFFFFF', fill: 1, line: 'var(--accent, #75624B)' },
+  now: { bg: '#2B231C', bd: 'none', fg: '#FFFFFF', fill: 1, line: 'linear-gradient(var(--accent, #75624B) 0 50%, #E2E2E6 50% 100%)' },
+  up: { bg: '#FFFFFF', bd: '1.5px solid var(--field-bd, #E0E0E4)', fg: '#8A8078', fill: 0, line: 'var(--hairline, #E2E2E6)' },
 };
 /** `src`: the step's picture (an activity photo) in place of the icon, ringed in the step's colour. */
 export function RailDot({ state, icon, last, size = 34, src }: { state: RailState; icon: string; last?: boolean; size?: number; src?: string }) {
   const r = RAIL[state];
-  const ring = state === 'done' ? '#75624B' : state === 'now' ? '#2B231C' : '#DCD3C8';
+  const ring = state === 'done' ? 'var(--accent, #75624B)' : state === 'now' ? '#2B231C' : 'var(--field-bd, #E0E0E4)';
   return (
     <div aria-hidden="true" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', flex: 'none', width: size }}>
-      <span style={{ width: size, height: size, borderRadius: 999, background: src ? photoFill(src, '#F3EEE8') : r.bg, border: src ? `2.5px solid ${ring}` : r.bd, color: r.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', boxShadow: state === 'now' ? '0 0 0 4px #E8E1D8' : undefined }}>
+      <span style={{ width: size, height: size, borderRadius: 999, background: src ? photoFill(src, FILL) : r.bg, border: src ? `2.5px solid ${ring}` : r.bd, color: r.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', boxShadow: state === 'now' ? '0 0 0 4px var(--hairline, #E2E2E6)' : undefined }}>
         {src ? null : <Icon name={icon} size={Math.round(size * 0.53)} fill={r.fill} weight={300} color={r.fg} />}
       </span>
       <span style={{ flex: 1, width: 3, minHeight: 12, borderRadius: 2, background: last ? 'transparent' : r.line }} />
     </div>
   );
 }
-/** Round 6 (phone, native look): a pushed full screen over the page, sliding in from the right. A top bar with "‹ back", the grey page
- *  behind grouped sections, and an optional footer pinned at the bottom for the main action. */
+/** Round 6 (phone, native look): a pushed full screen over the page, sliding in from the right. A top bar with "‹ back", a white page
+ *  holding the grey grouped sections, and an optional footer pinned at the bottom for the main action. */
 export function PhoneScreen({ open, onClose, label, back, children, footer }: { open: boolean; onClose: () => void; label: string; back: string; children: ReactNode; footer?: ReactNode }) {
   const { ref, trap } = useOverlayA11y(open, onClose);
   if (!open) return null;
   return portal(
     <div ref={ref} onKeyDown={trap} tabIndex={-1} role="dialog" aria-modal="true" aria-label={label} className="cp-native"
-      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: '#F5F5F3', animation: 'cpSlideL .2s ease-out', outline: 'none' }}>
+      style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', flexDirection: 'column', background: '#FFFFFF', animation: 'cpSlideL .2s ease-out', outline: 'none' }}>
       <div style={{ height: 50, flex: 'none', display: 'flex', alignItems: 'center', padding: '0 6px 0 2px' }}>
-        <button type="button" className="cp-press" onClick={onClose} aria-label={back} style={{ maxWidth: '100%', height: 44, padding: '0 8px 0 0', border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" className="cp-press" onClick={onClose} aria-label={back} style={{ maxWidth: '100%', height: 44, padding: '0 8px 0 0', border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="chevron_left" size={32} weight={300} />
           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{back}</span>
         </button>
       </div>
       <div className="cp-noshrink" style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '4px 16px 24px', display: 'flex', flexDirection: 'column', gap: 22 }}>{children}</div>
-      {footer ? <div style={{ flex: 'none', padding: '10px 16px calc(14px + env(safe-area-inset-bottom, 0px))', borderTop: '1px solid #E6E1DA', background: '#F5F5F3' }}>{footer}</div> : null}
+      {footer ? <div style={{ flex: 'none', padding: '10px 16px calc(14px + env(safe-area-inset-bottom, 0px))', borderTop: HAIRLINE, background: '#FFFFFF' }}>{footer}</div> : null}
     </div>,
   );
 }
@@ -424,18 +458,18 @@ export function Dialog({ open, onClose, eyebrow, title, children, footer, maxWid
   if (!open) return null;
   return portal(
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
-      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(36,32,28,0.32)' }} />
+      <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: SCRIM, animation: 'cpFade .16s ease-out' }} />
       <div ref={ref} className="cp-noshrink" onKeyDown={trap} tabIndex={-1} role="dialog" aria-modal="true" aria-label={typeof title === 'string' ? title : undefined}
-        style={{ position: 'relative', width: '100%', maxWidth, maxHeight: '92%', overflowY: 'auto', background: '#FFFFFF', borderRadius: 20, padding: 28, display: 'flex', flexDirection: 'column', gap: 20, animation: 'cpUp .2s ease-out', boxShadow: '0 24px 60px rgba(40,30,20,0.18)', border: '1px solid #EFE7DC', outline: 'none' }}>
+        style={{ position: 'relative', width: '100%', maxWidth, maxHeight: '92%', overflowY: 'auto', background: '#FFFFFF', borderRadius: 24, padding: 28, display: 'flex', flexDirection: 'column', gap: 20, animation: 'cpUp .2s ease-out', boxShadow: '0 2px 6px rgba(40,30,20,.08), 0 24px 60px rgba(40,30,20,.22)', outline: 'none' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
             {eyebrow ? <Eyebrow className="cp-eyebrow1">{eyebrow}</Eyebrow> : null}
-            <h2 style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C' }}>{title}</h2>
+            <h2 className="cp-serif cp-serif-up" style={{ margin: 0, fontSize: 22, lineHeight: '30px', fontWeight: 500, color: '#24201C', overflowWrap: 'anywhere' }}>{title}</h2>
           </div>
-          <IconButton icon="close" label={t('common.close')} onClick={onClose} />
+          <CloseButton label={t('common.close')} onClick={onClose} />
         </div>
         {children}
-        {footer ? <div style={{ position: 'sticky', bottom: -28, margin: '0 -28px -28px', padding: '16px 28px 24px', background: '#FFFFFF', borderTop: '1px solid #F0EAE1', display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>{footer}</div> : null}
+        {footer ? <div style={{ position: 'sticky', bottom: -28, margin: '0 -28px -28px', padding: '16px 28px 24px', background: '#FFFFFF', borderTop: HAIRLINE, display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>{footer}</div> : null}
       </div>
     </div>,
   );

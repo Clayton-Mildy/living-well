@@ -5,7 +5,7 @@
 // Values follow design/data.js (same names, phones, baselines, menu, schedule) trimmed to the 5-member cast.
 import type {
   Actor, Attendance, ClubSettings, ClubState, DailyLog, Dish, DishAllergen, DT, FamilyContact, FamilyLink,
-  Invoice, ISODate, Member, MemberNote, Payment, Photo, Reading, Row, ScheduleCell, Slot, Staff, StaffRole, Weekday,
+  Invoice, ISODate, Member, MemberNote, Payment, Photo, Reading, Row, ScheduleCell, Staff, StaffRole, Weekday, WeekSlot,
   ChangeRequest, Notification, ActivityEntry, Relation, Bank, MemberRegistration,
 } from '../types';
 import { COLLECTIONS } from '../types';
@@ -15,7 +15,7 @@ import { evaluateReading, limitsFor } from '../rules/health';
 import { suspensions } from '../rules/billing';
 import { addRoster } from './roster';
 import { addHistory } from './history';
-import { activityPicId } from './demoMedia';
+import { activityPicId, portraitId } from './demoMedia';
 import { seedRound7 } from './r7';
 
 type Coll<K extends keyof ClubState> = ClubState[K];
@@ -45,28 +45,27 @@ const STAFF: [string, string, StaffRole, string, boolean, string, string?][] = [
   ['s1', 'Caca', 'lobby', 'Front of house', true, '+62 811-2201-3345'],
   ['s2', 'Yohanes Pratama', 'kitchen', 'F&B supervisor', true, '+62 811-2201-3346', 'Pak Yohanes'],
   ['s3', 'Agus Santoso', 'kitchen', 'Chef', true, '+62 811-2201-3347', 'Chef Agus'],
-  ['s4', 'Siti Aminah', 'housekeeping', 'Housekeeping', false, '+62 811-2201-3348', 'Bu Siti'],
   ['s5', 'Dinar', 'activity', 'Activity teacher', true, '+62 811-2201-3349', 'Dinar'],
   ['s6', 'Dimas Wibowo', 'activity', 'Activity teacher', true, '+62 811-2201-3350', 'Kak Dimas'],
-  ['s7', 'Joko Susilo', 'driver', 'Driver', false, '+62 811-2201-3351', 'Pak Joko'],
   ['s8', 'Dewi Anggraini', 'nurse', 'Nurse', true, '+62 811-2201-3352', 'Ns. Dewi'],
   ['s9', 'Ega', 'mgmt', 'Club manager', true, '+62 811-2201-3353', 'Ega'],
   ['s10', 'Fransiska Tan', 'finance', 'Finance (AR)', true, '+62 811-2201-3354', 'Bu Fransiska'],
 ];
-const SALARY: Record<string, number> = { lobby: 6500000, kitchen: 7200000, housekeeping: 4800000, activity: 6800000, driver: 5200000, nurse: 8900000, mgmt: 18500000, finance: 9800000 };
-const STARTS = ['2024-07-01', '2024-07-01', '2024-08-01', '2024-09-01', '2024-07-15', '2025-01-06', '2024-07-01', '2024-07-01', '2024-06-01', '2025-02-03'];
-const QUOTES: Record<string, string> = { s1: 'Always greets Mama by name.', s3: 'The soto tastes just like home.', s5: 'Dinar makes Papa laugh every day.', s6: 'So patient with Mama during batik.', s8: 'Ns. Dewi explains everything clearly.', s7: 'Careful driver, always on time.' };
+const SALARY: Record<string, number> = { lobby: 6500000, kitchen: 7200000, activity: 6800000, nurse: 8900000, mgmt: 18500000, finance: 9800000 };
+const STARTS = ['2024-07-01', '2024-07-01', '2024-08-01', '2024-07-15', '2025-01-06', '2024-07-01', '2024-06-01', '2025-02-03'];
+const QUOTES: Record<string, string> = { s1: 'Always greets Mama by name.', s3: 'The soto tastes just like home.', s5: 'Dinar makes Papa laugh every day.', s6: 'So patient with Mama during batik.', s8: 'Ns. Dewi explains everything clearly.' };
 
 function staffRows(clubId: string, T: ISODate): Staff[] {
   return STAFF.map(([id, name, role, title, login, phone, knownAs], i) => {
-    const r = (n: number) => ((i * 7919 + n * 104729) % 1000) / 1000;
-    let end: string | null = i < 3 ? null : '2026-' + String(6 + (i % 6)).padStart(2, '0') + '-30';
+    const k = +id.slice(1) - 1; // the number in the id (not the list position), so each person's derived details stay put
+    const r = (n: number) => ((k * 7919 + n * 104729) % 1000) / 1000;
+    let end: string | null = k < 3 ? null : '2026-' + String(6 + (k % 6)).padStart(2, '0') + '-30';
     if (end && end < T) end = String(+end.slice(0, 4) + 1) + end.slice(4); // roll expired fixed-term contracts to the next anniversary
     const sal = SALARY[role] || 6000000;
     return {
-      ...base(clubId, id, STARTS[i] + 'T09:00'), username: name.split(' ')[0].toLowerCase(), name, knownAs, role, title, phone: e164(phone), supervisor: id === 's2', rateable: ['s1', 's3', 's5', 's6', 's7', 's8'].includes(id),
+      ...base(clubId, id, STARTS[i] + 'T09:00'), username: name.split(' ')[0].toLowerCase(), name, knownAs, role, title, phone: e164(phone), supervisor: id === 's2', rateable: ['s1', 's3', 's5', 's6', 's8'].includes(id),
       appAccess: login, active: true, extraClubIds: id === 's9' ? ['adina'] : [],
-      hr: { contract: i < 3 ? 'pkwtt' : 'pkwt', start: STARTS[i], end, signed: i !== 6, ktpLast4: String(1000 + Math.round(r(1) * 8999)), ktpOnFile: i !== 3, salary: sal, allowance: Math.round((sal * 0.1) / 50000) * 50000, bank: (['BCA', 'Mandiri', 'BNI', 'BRI'] as Bank[])[i % 4], account: String(1000000000 + Math.round(r(2) * 8999999999)).slice(0, 10), quote: QUOTES[id] },
+      hr: { contract: k < 3 ? 'pkwtt' : 'pkwt', start: STARTS[i], end, signed: id !== 's10', ktpLast4: String(1000 + Math.round(r(1) * 8999)), ktpOnFile: id !== 's6', salary: sal, allowance: Math.round((sal * 0.1) / 50000) * 50000, bank: (['BCA', 'Mandiri', 'BNI', 'BRI'] as Bank[])[k % 4], account: String(1000000000 + Math.round(r(2) * 8999999999)).slice(0, 10), quote: QUOTES[id] },
     } satisfies Staff;
   });
 }
@@ -246,12 +245,11 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
 
   put('prices', { ...base(C, 'price-2024', '2024-06-01T09:00'), from: '2024-01-01', ...PRICES, sample: { ...PRICES.sample } });
   staffRows(C, T).forEach((x) => put('staff', x));
-  put('hrNotes', { ...base(C, 'hr-s4-1', at('2026-08-12T10:00'), 'staff:s9'), staffId: 's4', kind: 'warning', on: sh('2026-08-12'), text: 'Verbal warning: arrived 40 minutes late twice in one week. Agreed a new bus route.' });
-  for (const d of PAST) for (const [id] of STAFF) put('staffTime', { ...base(C, `st-${id}-${d}`, d + 'T17:00'), staffId: id, date: d, kind: 'worked', from: id === 's7' ? '07:30' : '08:00', to: id === 's7' ? '16:45' : '17:00' });
+  for (const d of PAST) for (const [id] of STAFF) put('staffTime', { ...base(C, `st-${id}-${d}`, d + 'T17:00'), staffId: id, date: d, kind: 'worked', from: '08:00', to: '17:00' });
 
   ROOMS.forEach(([id, name, nameId, venue]) => put('rooms', { ...base(C, id, '2024-06-01T09:00'), name, nameId, venue }));
   ACTS.forEach(([id, name, nameId, roomId, icon]) => put('activities', { ...base(C, id, '2024-06-01T09:00'), name, nameId, icon, roomId, active: true, photoMediaId: activityPicId(id) })); // KC round 7: each activity has its picture (a free Unsplash scene, seed/demoMedia.ts)
-  const days = {} as Record<Weekday, Record<Slot, ScheduleCell | null>>;
+  const days = {} as Record<Weekday, Record<WeekSlot, ScheduleCell | null>>;
   ([1, 2, 3, 4, 5] as Weekday[]).forEach((w) => { const [a, b] = SCHED[w]; days[w] = { '10:30': { activityId: a[0], staffId: a[1], roomId: actRoom(a[0]) }, '13:30': { activityId: b[0], staffId: b[1], roomId: actRoom(b[0]) } }; });
   put('scheduleVersions', { ...base(C, 'sched-2024-07', at('2026-10-19T16:10'), 'staff:s9'), effectiveFrom: '2024-07-01', status: 'published', days, publishedBy: 'staff:s9', publishedAt: at('2026-10-19T16:10') });
   DISHES.forEach(([id, name, course, allergens, tags]) => put('dishes', { ...base(C, id, '2024-06-01T09:00', 'staff:s3'), name, course, allergens, tags, reviewedBy: 's3', reviewedAt: at('2026-10-01T10:00') } satisfies Dish));
@@ -264,13 +262,13 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
     m1: { nickname: 'Oma Lina', marital: 'married', rtRw: '004/002', city: 'Jakarta Selatan', postcode: '12730', phone: '+62 21 7199 2210', mobile: '+62 812-1090-4471', email: 'maria.wijaya@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: true, carer: true } },
     m46: { nickname: 'Opa Budi', marital: 'married', rtRw: '004/002', city: 'Jakarta Selatan', postcode: '12730', phone: '+62 21 7199 2210', mobile: '+62 812-1090-4471', email: 'maria.wijaya@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: true } },
     m2: { nickname: 'Opa Hendra', marital: 'widowed', rtRw: '007/001', city: 'Jakarta Selatan', postcode: '12730', mobile: '+62 815-1294-4718', email: 'cynthia.gunawan@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: true } },
-    m20: { nickname: 'Opa Tjahjadi', marital: 'widowed', rtRw: '002/005', city: 'Jakarta Selatan', postcode: '12410', mobile: '+62 814-2182-3624', commDifficulty: true, selfCare: true, bathroomHelp: true, dementiaNote: 'Mild memory loss; may repeat questions', ids: { guarantor: true, member: true } },
+    m20: { nickname: 'Opa Tjahjadi', marital: 'widowed', rtRw: '002/005', city: 'Jakarta Selatan', postcode: '12410', mobile: '+62 814-2182-3624', commDifficulty: true, selfCare: true, bathroomHelp: true, dementia: true, dementiaNote: 'Mild memory loss; may repeat questions', ids: { guarantor: true, member: true } },
     m10: { nickname: 'Pak Bambang', marital: 'married', rtRw: '001/003', city: 'Jakarta Selatan', postcode: '12160', mobile: '+62 816-1436-6582', email: 'laras.saputra@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: false } },
   };
   // members
   for (const c of CAST) {
     const m: Member = {
-      ...base(C, c.id, c.start + 'T10:00', 'staff:s1'), title: c.title, firstName: c.first, lastName: c.last, gender: c.gender, dob: c.dob, ageYears: null, address: c.address, photoTone: c.tone,
+      ...base(C, c.id, c.start + 'T10:00', 'staff:s1'), title: c.title, firstName: c.first, lastName: c.last, gender: c.gender, dob: c.dob, ageYears: null, address: c.address, photoTone: c.tone, ...(portraitId(c.id) ? { photoMediaId: portraitId(c.id) } : {}),
       memberships: [{ start: c.start }], plans: [{ from: c.start, plan: c.plan, by: 'staff:s1' }], usualArrival: c.usual,
       nanny: c.nanny ? { name: c.nanny } : null, spouseId: c.spouse, ...(REG[c.id] ? { registration: REG[c.id] } : {}),
       health: { conditions: c.conditions, diabetic: c.diabetic, food: c.food, drugs: [], mobility: c.mobility, diet: c.diet, meds: c.meds.map(([name, dose, timing], i) => ({ id: `${c.id}-med${i + 1}`, name, dose, timing })),
@@ -459,8 +457,14 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   put('guestVisits', { ...base(C, 'g-e1', at('2026-10-12T10:05'), 'staff:s1'), enquiryId: 'e1', kind: 'trial', date: T, name: 'Oma Siu Lan Tjandra', escortName: 'Melinda Tjandra', lunch: true, healthCheck: true, food: ['shellfish'], drugs: ['penicillin'], mobility: 'walkingStick', diet: [], status: 'booked' });
   put('enquiries', { ...base(C, 'e2', at('2026-10-17T15:00'), 'staff:s1'), senior: { title: 'Bapak', name: 'Yusuf Hamid' }, contact: { name: 'Ilham Hamid', relation: 'son', phone: e164('+62 813-5520-1874') }, source: 'instagram', stage: 'visit', next: { kind: 'visit', date: T, time: '14:00' } });
   put('guestVisits', { ...base(C, 'g-e2', at('2026-10-17T15:05'), 'staff:s1'), enquiryId: 'e2', kind: 'visit', date: T, time: '14:00', name: 'Bapak Yusuf Hamid', escortName: 'Ilham Hamid', lunch: false, healthCheck: false, food: null, drugs: [], mobility: null, diet: [], status: 'booked' });
-  put('enquiries', { ...base(C, 'e3', at('2026-10-20T09:30'), 'staff:s1'), senior: { title: 'Oma', name: 'Ellen Sutanto' }, contact: { name: 'Kevin Sutanto', relation: 'grandson', phone: e164('+62 811-9034-2215') }, source: 'website', stage: 'new', next: { kind: 'callBack', date: op('2026-10-22') } });
-  put('enquiries', { ...base(C, 'e5', at('2026-10-13T10:00'), 'staff:s1'), senior: { title: 'Opa', name: 'Leo Gunadi' }, contact: { name: 'Felicia Gunadi', relation: 'daughter', phone: e164('+62 812-4410-7781') }, source: 'referral', stage: 'visit', next: { kind: 'visit', date: op('2026-10-23'), time: '11:00' } });
+  put('enquiries', { ...base(C, 'e3', at('2026-10-20T09:30'), 'staff:s1'), senior: { title: 'Oma', name: 'Ellen Sutanto' }, contact: { name: 'Kevin Sutanto', relation: 'grandson', phone: e164('+62 811-9034-2215') }, source: 'website', stage: 'new', next: { kind: 'callBack', date: op('2026-10-22') },
+    // KC round 10: Kevin filled in the registration online the evening the link went out, so Join opens pre-filled
+    form: { token: 'demo-ellen-sutanto-7f2k9q', sentAt: at('2026-10-20T10:05'), sentBy: 'staff:s1', expiresAt: at('2026-11-03T10:05'), openedAt: at('2026-10-20T19:31'), submittedAt: at('2026-10-20T19:44'), filledBy: 'Kevin Sutanto',
+      draft: { title: 'Oma', name: 'Ellen Sutanto', dob: '1948-03-14', address: 'Jl. Kemang Timur IX No. 12', contact: { name: 'Kevin Sutanto', relation: 'grandson', phone: e164('+62 811-9034-2215') }, plan: 'flex',
+        health: { conditions: ['Hypertension', 'Mild arthritis'], diabetic: false, food: ['shellfish'], foodOther: '', drugs: [], mobility: 'walkingStick', diet: ['lowSalt'] },
+        registration: { nickname: 'Oma Ellen', marital: 'widowed', rtRw: '003/004', city: 'Jakarta Selatan', postcode: '12730', mobile: '+62 811-9034-2215', email: 'kevin.sutanto@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, dementia: false }, lang: 'id' } } });
+  put('enquiries', { ...base(C, 'e5', at('2026-10-13T10:00'), 'staff:s1'), senior: { title: 'Opa', name: 'Leo Gunadi' }, contact: { name: 'Felicia Gunadi', relation: 'daughter', phone: e164('+62 812-4410-7781') }, source: 'referral', stage: 'visit', next: { kind: 'visit', date: op('2026-10-23'), time: '11:00' },
+    form: { token: 'demo-leo-gunadi-3m8x2v', sentAt: at('2026-10-19T14:20'), sentBy: 'staff:s1', expiresAt: at('2026-11-02T14:20'), openedAt: at('2026-10-19T20:02') } });
   put('enquiries', { ...base(C, 'e9', at('2026-09-28T10:00'), 'staff:s1'), senior: { title: 'Ibu', name: 'Nyoman Sari' }, contact: { name: 'Made Arya', relation: 'son', phone: e164('+62 812-8831-2201') }, source: 'referral', stage: 'lost', lost: { reason: 'otherPlace', note: 'Chose a place closer to family in Bali', prevStage: 'visit' } });
 
   // calendar & venue bookings
@@ -492,19 +496,19 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   dir('d9', 'supplier', 'Bersih Prima', 'Cleaning supplies', 'Perlengkapan kebersihan', '+62 21 7581 4410', false);
 
   // stock, budget, receipts, vendor invoices
-  const stock = (id: string, item: string, qty: number, unit: string, area: 'kitchen' | 'health' | 'activities' | 'housekeeping', sectionId: string, by: string, status: 'requested' | 'approved' | 'received', date: ISODate, decidedBy?: string) =>
+  const stock = (id: string, item: string, qty: number, unit: string, area: 'kitchen' | 'health' | 'activities', sectionId: string, by: string, status: 'requested' | 'approved' | 'received', date: ISODate, decidedBy?: string) =>
     put('stockRequests', { ...base(C, id, at(date + 'T09:00'), `staff:${by}`), item, qty, unit, area, sectionId, status, requestedBy: by, ...(decidedBy ? { decidedBy: `staff:${decidedBy}` as Actor, decidedAt: at(date + 'T11:00') } : {}), ...(status === 'received' ? { receivedBy: `staff:${by}` as Actor } : {}) });
   stock('k1', 'Test strips (glucose)', 2, 'boxes', 'health', 'operations', 's8', 'requested', '2026-10-20');
   stock('k2', 'Teh melati', 5, 'packs', 'kitchen', 'fnb', 's2', 'requested', '2026-10-20');
   stock('k3', 'Batik wax', 1, 'kg', 'activities', 'activities', 's6', 'approved', '2026-10-19', 's9');
   stock('k4', 'Beras merah', 25, 'kg', 'kitchen', 'fnb', 's3', 'received', '2026-10-16', 's2');
-  if (done('09:00')) stock('k5', 'Hand soap refills', 6, 'bottles', 'housekeeping', 'operations', 's4', 'requested', DEMO_TODAY); // today
+  if (done('09:00')) stock('k5', 'Hand soap refills', 6, 'bottles', 'health', 'operations', 's1', 'requested', DEMO_TODAY); // today
   put('budgetSections', { ...base(C, 'fnb', '2024-07-01T10:00', 'staff:s10'), name: 'F&B', nameId: 'Makanan & minuman', limits: [{ fromWeek: '2026-01-05', weekly: 9500000 }] });
   put('budgetSections', { ...base(C, 'activities', '2024-07-01T10:00', 'staff:s10'), name: 'Activities', nameId: 'Aktivitas', limits: [{ fromWeek: '2026-01-05', weekly: 2000000 }] });
   put('budgetSections', { ...base(C, 'operations', '2024-07-01T10:00', 'staff:s10'), name: 'Operations', nameId: 'Operasional', limits: [{ fromWeek: '2026-01-05', weekly: 2700000 }] });
   put('budgetRequests', { ...base(C, 'b1', at('2026-10-20T10:00'), 'staff:s5'), sectionId: 'activities', item: 'Angklung tuning', amount: 450000, weekStart: monday, requestedBy: 's5', status: 'pending' });
   if (done('08:30')) put('budgetRequests', { ...base(C, 'b2', `${T}T08:30`, 'staff:s2'), sectionId: 'fnb', item: 'Extra fruit for Friday', amount: 300000, weekStart: monday, requestedBy: 's2', status: 'pending' });
-  put('budgetRequests', { ...base(C, 'b3', `${monday}T09:00`, 'staff:s7'), sectionId: 'operations', item: 'Wheelchair tyre repair', amount: 250000, weekStart: monday, requestedBy: 's7', status: 'approved', decidedBy: 'staff:s10', decidedAt: `${monday}T13:00` });
+  put('budgetRequests', { ...base(C, 'b3', `${monday}T09:00`, 'staff:s1'), sectionId: 'operations', item: 'Wheelchair tyre repair', amount: 250000, weekStart: monday, requestedBy: 's1', status: 'approved', decidedBy: 'staff:s10', decidedAt: `${monday}T13:00` });
   put('budgetAdjustments', { ...base(C, 'adj-fnb-1019', `${monday}T08:00`, 'staff:s10'), sectionId: 'fnb', weekStart: monday, amount: 2020000, note: 'Opening balance' });
   put('budgetAdjustments', { ...base(C, 'adj-act-1019', `${monday}T08:00`, 'staff:s10'), sectionId: 'activities', weekStart: monday, amount: 840000, note: 'Opening balance' });
   put('budgetAdjustments', { ...base(C, 'adj-ops-1019', `${monday}T08:00`, 'staff:s10'), sectionId: 'operations', weekStart: monday, amount: 760000, note: 'Opening balance' });
@@ -520,12 +524,12 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   // surveys
   const RECIP = ['f1', 'fm2_0', 'fm10_0', 'fm20_0'];
   put('surveys', { ...base(C, 'sv0', at('2026-09-21T10:00'), 'staff:s9'), title: `${MONTH_FULL[+addMonths(month, -1).slice(5) - 1]} check-in`, questions: ['overall', 'team', 'recommend', 'comment'], teamStaffIds: ['s1', 's8', 's5', 's3'], recipients: RECIP, sentOn: sh('2026-09-21'), status: 'closed', closedOn: sh('2026-10-19') });
-  put('surveys', { ...base(C, 'sv1', at('2026-10-19T10:00'), 'staff:s9'), title: `${MONTH_FULL[+month.slice(5) - 1]} check-in`, questions: ['overall', 'team', 'recommend', 'comment'], teamStaffIds: ['s1', 's8', 's5', 's6', 's3', 's7'], recipients: RECIP, sentOn: sh('2026-10-19'), status: 'live' });
-  const OV = [5, 5, 4], T1 = [5, 5, 5], T5 = [5, 5, 5], T6 = [5, 4, 5], T3 = [4, 5, 4], T7 = [5, 4, 4];
+  put('surveys', { ...base(C, 'sv1', at('2026-10-19T10:00'), 'staff:s9'), title: `${MONTH_FULL[+month.slice(5) - 1]} check-in`, questions: ['overall', 'team', 'recommend', 'comment'], teamStaffIds: ['s1', 's8', 's5', 's6', 's3'], recipients: RECIP, sentOn: sh('2026-10-19'), status: 'live' });
+  const OV = [5, 5, 4], T1 = [5, 5, 5], T5 = [5, 5, 5], T6 = [5, 4, 5], T3 = [4, 5, 4];
   const SVC = ['Papa is happier on club days.', 'Lunch portions could be a little smaller.', 'Please send more photos of the afternoon sessions.'];
   ['fm2_0', 'fm10_0', 'fm20_0'].forEach((fid, i) => {
     put('surveyResponses', { ...base(C, `sr0-${fid}`, at('2026-09-22T19:00'), `family:${fid}`), surveyId: 'sv0', familyId: fid, overall: OV[i], team: { s1: T1[i], s8: 5, s5: T5[i], s3: T3[i] }, recommend: true, comment: '', on: sh('2026-09-22') });
-    put('surveyResponses', { ...base(C, `sr1-${fid}`, at(`2026-10-${19 + i}T19:00`), `family:${fid}`), surveyId: 'sv1', familyId: fid, overall: OV[i], team: { s1: T1[i], s8: 5, s5: T5[i], s6: T6[i], s3: T3[i], s7: T7[i] }, recommend: true, comment: SVC[i], on: sh(`2026-10-${19 + i}`) });
+    put('surveyResponses', { ...base(C, `sr1-${fid}`, at(`2026-10-${19 + i}T19:00`), `family:${fid}`), surveyId: 'sv1', familyId: fid, overall: OV[i], team: { s1: T1[i], s8: 5, s5: T5[i], s6: T6[i], s3: T3[i] }, recommend: true, comment: SVC[i], on: sh(`2026-10-${19 + i}`) });
   });
   put('broadcasts', { ...base(C, 'bc1', at('2026-10-12T10:00'), 'staff:s9'), template: 'closure', message: `${longDay(closedDay)} for staff first-aid training`, audiences: ['families'], recipients: 6, sendAt: at('2026-10-12T10:00'), status: 'sent', sentAt: at('2026-10-12T10:00') });
 

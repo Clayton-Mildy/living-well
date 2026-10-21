@@ -73,13 +73,13 @@ export function CareTab({ p }: { p: P }) {
           <Group title={t('profile.moodTitle')} gap={8}>{moodBody}</Group>
         </>
       ) : (
-        <div style={{ ...cardStyle, gap: 18, maxWidth: 760 }}>
+        <div className="cp-grey" style={{ ...cardStyle, gap: 18, maxWidth: 760 }}>
           <Block first title={t('profile.cognitive')} gap={6}>{cogBody}</Block>
           <Block title={t('profile.moodTitle')} gap={8}>{moodBody}</Block>
         </div>
       )}
       {ph ? <Group title={t('profile.byDay')} pad="0 16px" gap={0}><div data-testid="care-days">{dayRows}</div></Group> : (
-        <div style={listCardStyle} data-testid="care-days">
+        <div className="cp-grey" style={listCardStyle} data-testid="care-days">
           <ListHead title={t('profile.byDay')} />
           {dayRows}
         </div>
@@ -88,7 +88,7 @@ export function CareTab({ p }: { p: P }) {
   );
 }
 
-const smallCaps = { fontSize: 12, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' } as const;
+const smallCaps = { fontSize: 12, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' } as const;
 
 /** Every number of a reading, in the station's words. */
 export function values(r: Reading, t: P['t']): string {
@@ -133,7 +133,7 @@ function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date
     else if (staff) chips.push({ icon: 'restaurant', label: t('activity.lunchNotMarked'), muted: true });
     const sessions = roundsOf(s, date).filter((r) => r.kind === 'session');
     for (const r of sessions) {
-      const v = log.sessions?.[r.id as '10:30' | '13:30'];
+      const v = log.sessions?.[r.id];
       if (v) chips.push({ icon: v === 'joined' ? 'groups' : 'chair', label: `${activityName(r.session?.activity, p.lang) || r.time} · ${t('activity.opt.session.' + v)}` });
     }
     if (!log.sessions && log.joined) chips.push({ icon: log.joined === 'yes' ? 'groups' : 'chair', label: t('profile.joined_' + log.joined) }); // logs from before the rounds
@@ -155,7 +155,7 @@ function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
         {p.isPhone ? <div style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{date === today ? `${t('common.today')} · ` : ''}{fmt.fd(date, { weekday: 'short', day: 'numeric', month: 'short' })}</div> : null}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: visit ? '#24201C' : '#5E5852', lineHeight: 1.4 }}>
-          <Icon name={visit ? 'how_to_reg' : 'event_busy'} size={18} color="#75624B" />{where}
+          <Icon name={visit ? 'how_to_reg' : 'event_busy'} size={18} color="var(--accent, #75624B)" />{where}
         </div>
         {/* health */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -188,7 +188,7 @@ function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 16px' }}>
                 {chips.map((c) => (
                   <span key={c.icon + c.label} style={{ fontSize: 14, color: c.muted ? '#8A8078' : '#6B6259', display: 'inline-flex', alignItems: 'center', gap: 5, lineHeight: 1.3 }}>
-                    <Icon name={c.icon} size={17} color={c.muted ? '#B3A99C' : '#75624B'} />
+                    <Icon name={c.icon} size={17} color={c.muted ? '#B3A99C' : 'var(--accent, #75624B)'} />
                     {c.label}
                   </span>
                 ))}
@@ -196,8 +196,8 @@ function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date
               </div>
               {log.mood !== undefined || log.note ? <div style={{ fontSize: 15, lineHeight: '23px', textWrap: 'pretty' }}>{logNote(s, t, p.lang, m, log)}</div> : null}
               {!p.family && log.staffNote ? (
-                <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 15, lineHeight: '22px', padding: '10px 14px', borderRadius: 10, background: '#F3EEE8' }}>
-                  <Icon name="lock" size={18} color="#75624B" style={{ marginTop: 2 }} />
+                <div className="cp-fill" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 15, lineHeight: '22px', padding: '10px 14px', borderRadius: 10, background: 'var(--fill, #F4F4F5)' }}>
+                  <Icon name="lock" size={18} color="var(--accent, #75624B)" style={{ marginTop: 2 }} />
                   <span style={{ flex: 1, minWidth: 0 }}><StaffOnlyTag /> {log.staffNote}</span>
                 </div>
               ) : null}

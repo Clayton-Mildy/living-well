@@ -270,33 +270,9 @@ test.describe('who gets the screen', () => {
       await expect(page.getByRole('heading', { name: 'Requests' })).toBeVisible();
     });
   }
-  test('housekeeping and driver get Requests as their home once app access is on', async ({ page }) => {
-    await signIn(page, 's9', '/today');
-    for (const staffId of ['s4', 's7']) {
-      const r = await act(page, 's9', 'staff.setAppAccess', { staffId, on: true });
-      test.skip(!r.ok() && (await r.json()).code === 'err.unknownAction', 'staff.setAppAccess is not registered yet (people area)');
-      expect(r.ok()).toBeTruthy();
-    }
-    for (const id of ['s4', 's7']) {
-      await signIn(page, id, '/today');
-      await expect(page).toHaveURL(/\/today$/);
-      await expect(page.getByRole('heading', { name: 'Requests' })).toBeVisible();
-      await expect(page.getByTestId('tile-stock')).toBeVisible();
-    }
-    // a housekeeping request goes to approvers, the same as everyone's
-    await signIn(page, 's4', '/today');
-    await page.getByTestId('tile-stock').click();
-    await expect(page.getByRole('button', { name: 'Housekeeping', exact: true })).toHaveAttribute('aria-pressed', 'true');
-    await page.getByLabel('Item', { exact: true }).fill('Floor cleaner');
-    await page.getByLabel('Quantity').fill('2');
-    await page.getByRole('button', { name: 'litres', exact: true }).click();
-    await page.getByRole('button', { name: 'Send request' }).click();
-    await expect(toast(page)).toContainText('Request sent for approval');
-    await expect(mine(page).filter({ hasText: 'Floor cleaner' })).toContainText('Requested');
-  });
   test('finance and management requests wait for approval like everyone else\'s', async ({ page }) => {
     for (const id of ['s9', 's10']) {
-      const r = await act(page, id, 'stock.request', { item: `Paper ${id}`, qty: 1, unit: 'packs', area: 'housekeeping', sectionId: 'operations' });
+      const r = await act(page, id, 'stock.request', { item: `Paper ${id}`, qty: 1, unit: 'packs', area: 'health', sectionId: 'operations' });
       expect(r.ok()).toBeTruthy();
     }
     const st = await stateOf(page, 's9');

@@ -104,14 +104,16 @@ describe('lead search', () => {
 });
 
 describe('joining needs the signed paper registration form', () => {
-  it('there is no online form on a lead: no Send form, Review form or form link, only Join', async () => {
+  it('KC round 10: every open lead can send the online form link; a filled-in form shows on the card; there is no separate review step', async () => {
     openClub('mgmt');
     await show(<Enquiries />);
-    for (const id of ['e1', 'e2', 'e3', 'e5']) {
+    for (const id of ['e1', 'e2']) {
       const card = document.querySelector<HTMLElement>(`[data-lead="${id}"]`)!;
-      for (const gone of ['Send form link', 'Review form', 'View form', 'Form link', 'Fill as family (demo)']) expect(button(gone, card), `${gone} on ${id}`).toBeUndefined();
-      expect(card.textContent).not.toMatch(/Form (sent|opened|in progress|ready)/);
+      expect(button('Send form link', card), `Send form link on ${id}`).toBeTruthy();
+      for (const gone of ['Review form', 'View form', 'Fill as family (demo)']) expect(button(gone, card), `${gone} on ${id}`).toBeUndefined();
     }
+    expect(document.querySelector<HTMLElement>('[data-lead="e3"]')!.textContent).toMatch(/Form filled in/); // Kevin sent it in (seed)
+    expect(document.querySelector<HTMLElement>('[data-lead="e5"]')!.textContent).toMatch(/Form opened/);
     expect(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!)).toBeTruthy(); // the trial lead
   });
   it('the Join button stays off until a form is attached (management creates the member)', async () => {

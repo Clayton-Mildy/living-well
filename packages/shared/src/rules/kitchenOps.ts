@@ -27,7 +27,7 @@ export const DISH_ALLERGENS: DishAllergen[] = ['fish', 'shellfish', 'peanuts', '
 export const DISH_TAGS: Dish['tags'] = ['soft', 'lowSalt', 'sugarFree', 'vegetarian'];
 export const COURSES: Course[] = ['lunch', 'soft', 'tea'];
 export const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5];
-export const STOCK_AREAS: StockRequest['area'][] = ['kitchen', 'health', 'activities', 'housekeeping', 'transport'];
+export const STOCK_AREAS: StockRequest['area'][] = ['kitchen', 'health', 'activities'];
 export const KNOWN_UNITS = ['pcs', 'boxes', 'packs', 'kg', 'litres', 'bottles', 'rolls', 'sets'];
 
 // ---------- diners, conflicts, safety ----------
@@ -321,7 +321,7 @@ export function defaultSectionFor(s: ClubState, area: StockRequest['area']): str
 }
 /** The role a staff member belongs to for choosing the stock area they most likely request for. */
 export function defaultAreaFor(role: string | null | undefined): StockRequest['area'] {
-  return ({ kitchen: 'kitchen', nurse: 'health', activity: 'activities', housekeeping: 'housekeeping', lobby: 'housekeeping', driver: 'transport' } as Record<string, StockRequest['area']>)[role || ''] ?? 'kitchen';
+  return ({ kitchen: 'kitchen', nurse: 'health', activity: 'activities', lobby: 'health' } as Record<string, StockRequest['area']>)[role || ''] ?? 'kitchen';
 }
 
 // ---------- feedback ----------

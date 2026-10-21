@@ -26,8 +26,8 @@ export function ReadingCard({ r, s, t, meta, name, defaultOpen, first, onEdit, o
   const { isPhone } = useDevice();
   // round 6, phone: a row of an iOS group (16px inset, a hairline from the text on, a tint while pressed); it sits in a Group with pad 0
   const wrap: React.CSSProperties = isPhone
-    ? { backgroundColor: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', overflow: 'hidden' }
-    : { borderTop: '1px solid #F0EAE1', background: '#FFFFFF', overflow: 'hidden' };
+    ? { backgroundColor: 'transparent', backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', overflow: 'hidden' }
+    : { borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', overflow: 'hidden' };
   return (
     <div data-testid="reading-card" data-reading={r.id} style={wrap}>
       <button type="button" aria-expanded={open} onClick={() => setOpen((o) => !o)} className={isPhone ? 'cp-tap-self' : 'h-row cp-bleed'}
@@ -65,7 +65,7 @@ export function ReadingBody({ r, s, t, onEdit, onVoid }: { r: Reading; s: ClubSt
     <div style={{ padding: isPhone ? '4px 16px 16px' : '4px 0 16px', display: 'flex', flexDirection: 'column', gap: 14 }}>
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(2, minmax(0, 1fr))' : 'repeat(auto-fit,minmax(130px,1fr))', gap: 8 }}>
         {tiles.map((v) => (
-          <div key={v.label} style={{ padding: '10px 12px', borderRadius: isPhone ? 10 : 8, background: isPhone ? '#F5F5F3' : '#FFFFFF', border: isPhone ? 'none' : '1px solid #DDD1C2', display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <div key={v.label} className="cp-grey" style={{ padding: '10px 12px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ ...smallCaps('1.2px'), fontWeight: 600, color: '#5E5852' }}>{v.label}</span>
             <span style={{ fontSize: 26, lineHeight: '30px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>{v.value}</span>
             {v.st ? <span style={{ alignSelf: 'flex-start' }}><Badge kind={v.st} /></span> : null}
@@ -77,10 +77,10 @@ export function ReadingBody({ r, s, t, onEdit, onVoid }: { r: Reading; s: ClubSt
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {r.noteKeys.length ? (
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-              {r.noteKeys.map((k) => <span key={k} style={{ minHeight: 30, padding: '3px 12px', borderRadius: 12, background: '#F3EEE8', fontSize: 14, lineHeight: 1.3, display: 'inline-flex', alignItems: 'center' }}>{t('health.note.' + k)}</span>)}
+              {r.noteKeys.map((k) => <span key={k} className="cp-fill" style={{ minHeight: 30, padding: '3px 12px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', fontSize: 14, lineHeight: 1.3, display: 'inline-flex', alignItems: 'center' }}>{t('health.note.' + k)}</span>)}
             </div>
           ) : null}
-          {r.note ? <div style={{ fontSize: 15, lineHeight: '22px', padding: '10px 14px', borderRadius: 8, background: '#FBF8F4' }}>{r.note}</div> : null}
+          {r.note ? <div className="cp-grey" style={{ fontSize: 15, lineHeight: '22px', padding: '10px 14px', borderRadius: 12, background: 'var(--fill, #F4F4F5)' }}>{r.note}</div> : null}
         </div>
       ) : null}
       {r.approval?.status === 'pending' && r.approval.prev ? <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('approvals.familiesSeeEarlier')}</div> : null}

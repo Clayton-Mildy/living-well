@@ -62,9 +62,6 @@ export function useFamilyCtx() {
   return { s, t, fmt, now, user, pron };
 }
 
-/** Page padding the design uses for the family pages. */
-export const famPad = (isPhone: boolean) => (isPhone ? '16px 16px 24px' : '28px 24px 40px');
-
 /** A stable callback that always calls the latest function (the overlay primitives re-run their focus effect when `onClose` changes). */
 export function useStableFn(fn: () => void): () => void {
   const ref = useRef(fn);

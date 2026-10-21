@@ -11,6 +11,8 @@ import { dow } from '../util';
 const T = '2026-10-21';
 const NOW = 598; // 09:58
 const seed = () => buildSeed().citra;
+/** KC round 9: families only see photos with a real picture; tests about the order and kinds give every seeded photo one */
+const withPictures = (st: ReturnType<typeof seed>) => { for (const p of Object.values(st.photos)) if (!p.mediaId) p.mediaId = `md_test_${p.id}`; return st; };
 const as = (s: ClubState, uid: string, name: string, input: unknown, mid: string, clk = { today: T, nowMin: 600 }) => execute(s, name, input, getUser({ citra: s }, uid)!, clk, mid);
 type Ms = { start: string; lastDay?: string }[];
 const setMemberships = (s: ClubState, id: string, ms: Ms) => { (s.members[id] as { memberships: Ms }).memberships = ms; };
@@ -165,6 +167,19 @@ describe('timeline: the club programme either way', () => {
     expect(at(930)).toContain('tea:now');
     expect(timelineOf(s, [s.members.m10], T, 600)[1]).toMatchObject({ kind: 'health', arrival: { sys: 122, dia: 73 } });
   });
+  it('an extra session (KC round 7) is a step of its own, in time order beside lunch and tea; at 15:00 it comes before tea and both run until home time', () => {
+    const s = seed();
+    s.scheduleDays[T] = { id: T, clubId: s.clubId, createdAt: `${T}T09:00`, createdBy: 'staff:s9', date: T, slots: {}, extra: [{ time: '15:00', cell: { activityId: 'act-karaoke', staffId: 's6', roomId: 'room-music' } }, { time: '09:00', cell: { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' } }] };
+    const ids = (min: number) => timelineOf(s, [s.members.m10], T, min).map((x) => `${x.id}:${x.state}`);
+    expect(ids(NOW)).toEqual(['arrival:done', 'health:done', 'session-09:00:now', 'session-10:30:up', 'lunch:up', 'session-13:30:up', 'session-15:00:up', 'tea:up', 'home:up']);
+    expect(ids(910)).toEqual(['arrival:done', 'health:done', 'session-09:00:done', 'session-10:30:done', 'lunch:done', 'session-13:30:done', 'session-15:00:now', 'tea:now', 'home:up']); // 15:10
+    expect(timelineOf(s, [s.members.m10], T, 910).find((x) => x.id === 'session-15:00')).toMatchObject({ kind: 'session', slot: '15:00', activityId: 'act-karaoke', start: 900, end: 960 });
+    // the day story lists it as a session with the member’s mark for it
+    const log = { ...seed().dailyLogs[`log-m10-${T}`] };
+    expect(dayStory(s, s.members.m10, T, 1000).sessions.map((x) => x.id)).toEqual(['session-09:00', 'session-10:30', 'session-13:30', 'session-15:00']);
+    expect(tookPart({ ...log, sessions: { '15:00': 'joined' } } as never, '15:00')).toBe('joined');
+    expect(tookPart({ ...log, sessions: { '10:30': 'joined' } } as never, '15:00')).toBeNull(); // other sessions were marked, this one was not
+  });
   it('if the lobby undoes a check-in the day is empty again, even though a reading was taken', () => {
     const s = seed();
     const r = as(s, 's1', 'attendance.undoCheckIn', { memberId: 'm10' }, 't2');
@@ -265,7 +280,7 @@ describe('photos', () => {
     expect(photosInOrder(familyPhotoDays(r.state, ['m1'])).some((p) => p.kind === 'arrival')).toBe(false);
   });
   it('Both mode: each parent’s solo photos, then group photos with both, then the rest; a photo shows once', () => {
-    const s = seed();
+    const s = withPictures(seed());
     const days = familyPhotoDays(s, ['m1', 'm46']);
     const ids = photosInOrder(days).map((p) => p.id);
     expect(new Set(ids).size).toBe(ids.length);
@@ -279,9 +294,9 @@ describe('photos', () => {
     expect(photosInOrder(familyPhotoDays(p, ['m1', 'm46'])).map((x) => x.id)).toEqual(photosInOrder(familyPhotoDays(s, ['m1', 'm46'])).map((x) => x.id));
   });
   it('KC round 7: a day’s activity pictures come after the member photos, one set per activity, only for days one of the members came', () => {
-    const s0 = seed();
+    const s0 = withPictures(seed());
     const put = (s: ClubState, id: string, date: string, activity: string, visibility: 'visible' | 'pending' | 'hidden' = 'visible') => {
-      s.photos[id] = { id, clubId: s.clubId, createdAt: `${date}T10:50`, createdBy: 'staff:s5', date, time: '10:50', kind: 'activity', media: 'photo', activity, memberIds: [], tone: 1, takenBy: 's5', visibility };
+      s.photos[id] = { id, clubId: s.clubId, createdAt: `${date}T10:50`, createdBy: 'staff:s5', date, time: '10:50', kind: 'activity', media: 'photo', activity, memberIds: [], tone: 1, takenBy: 's5', mediaId: `md_t_${id}`, visibility };
     };
     const s = seed();
     expect(s0.attendance[`${T}:m10`]?.checkIn).toBeTruthy(); // Bambang came today; Oma Lina did not
@@ -514,10 +529,9 @@ describe('dayStory: a past day, today, a day she did not come, and what waits fo
     expect(familyPhotosOn(s, ['m1'], d).length).toBeGreaterThan(0);
     // the seed: a session picture is a real demo scene and is the cover; her solo and group photos stay placeholders (no real face on a made-up member)
     expect(bestPhotoOf(s, ['m1'], d)?.mediaId).toMatch(/^md_demo_/);
-    expect(familyPhotosOn(s, ['m1'], d).filter((p) => p.kind === 'solo' || p.kind === 'group').every((p) => !p.mediaId)).toBe(true);
+    expect(familyPhotosOn(s, ['m1'], d).every((p) => !!p.mediaId)).toBe(true); // KC round 9: the placeholder portraits never reach the family
     for (const p of Object.values(s.photos)) if (p.kind === 'activity') delete p.mediaId; // from here every seeded photo is a placeholder
-    const placeholder = bestPhotoOf(s, ['m1'], d)!;
-    expect(placeholder.mediaId).toBeUndefined();
+    expect(bestPhotoOf(s, ['m1'], d)).toBeNull(); // no real picture, no cover
     s.photos.v1 = solo('v1', { media: 'video', mediaId: 'vid', durationSec: 9 });
     expect(bestPhotoOf(s, ['m1'], d)?.id).not.toBe('v1');
     s.photos.g1 = solo('g1', { kind: 'group', memberIds: ['m1', 'm46'], mediaId: 'img-g' });

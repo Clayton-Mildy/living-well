@@ -58,7 +58,7 @@ export function PhotoLibraryBody({ title }: { title?: ReactNode }) {
 
   const chip = (label: string, on: boolean, onClick: () => void) => {
     const sel = on;
-    return <button key={label} type="button" className="cp-chip" aria-pressed={sel} onClick={onClick} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: sel ? '1px solid #24201C' : '1px solid #DCD3C8', background: sel ? '#24201C' : '#FFFFFF', color: sel ? '#FFFFFF' : '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{label}</button>;
+    return <button key={label} type="button" className={sel ? 'cp-chip' : 'cp-chip cp-fill'} aria-pressed={sel} onClick={onClick} style={{ height: 44, padding: '0 16px', borderRadius: 999, border: 'none', background: sel ? '#24201C' : 'var(--fill, #F4F4F5)', color: sel ? '#FFFFFF' : '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{label}</button>;
   };
   // KC round 7: filter to the activity pictures (pictures of a session, no member tags)
   const typeSelect = (
@@ -104,7 +104,7 @@ export function PhotoLibraryBody({ title }: { title?: ReactNode }) {
     <>
       {d.groups.map((g) => (
         <div key={g.activity} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <span style={{ fontSize: 14, fontWeight: 500, color: '#6E5A43', lineHeight: 1.4 }}>{activityLabel(s, g.activity, t, lang)}</span>
+          <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: 1.4 }}>{activityLabel(s, g.activity, t, lang)}</span>
           <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(3,minmax(0,1fr))' : 'repeat(auto-fill,minmax(120px,1fr))', gap: 8 }}>
             {g.photos.map((p) => {
               const who = p.memberIds.map((id) => (s.members[id] ? memberShort(s.members[id]) : '')).filter(Boolean).join(', ');

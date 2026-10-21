@@ -68,8 +68,8 @@ export function Block({ title, meta, children, pad = 0 }: { title?: ReactNode; m
   if (isPhone) return <Group title={title} meta={meta} pad={pad} gap={0}>{children}</Group>;
   return (
     <section style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-      {title ? <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}><span style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' }}>{title}</span>{meta ? <span style={{ fontSize: 13, color: '#6B6259' }}>{meta}</span> : null}</div> : null}
-      <div style={{ border: '1px solid #EFE7DC', borderRadius: 14, overflow: 'hidden', background: '#FFFFFF', padding: pad }}>{children}</div>
+      {title ? <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}><span style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' }}>{title}</span>{meta ? <span style={{ fontSize: 13, color: '#6B6259' }}>{meta}</span> : null}</div> : null}
+      <div className="cp-grey" style={{ borderRadius: 16, overflow: 'hidden', background: 'var(--fill, #F4F4F5)', padding: pad }}>{children}</div>
     </section>
   );
 }
@@ -84,7 +84,7 @@ const kv = (label: ReactNode, value: ReactNode, first: boolean, phone: boolean, 
   </div>
 );
 const pill = (href: string, icon: string, label: string) => (
-  <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noopener" aria-label={label} title={label} className="cp-press" style={{ width: 36, height: 36, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', textDecoration: 'none' }}><Icon name={icon} size={19} /></a>
+  <a href={href} target={href.startsWith('http') ? '_blank' : undefined} rel="noopener" aria-label={label} title={label} className="cp-press cp-fill" style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none', textDecoration: 'none' }}><Icon name={icon} size={19} /></a>
 );
 
 export function HostDetail({ hostId, onClose, onBook, onEdit, onOpenSession }: { hostId: string | null; onClose: () => void; onBook: (hostId: string) => void; onEdit: (h: GuestHost) => void; onOpenSession: (id: string) => void }) {

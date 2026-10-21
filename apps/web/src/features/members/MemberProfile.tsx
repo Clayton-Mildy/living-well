@@ -153,7 +153,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
   const membershipActions = (
     <>
       {!family && mgmt && !ended && !isPending && !ending ? <button type="button" onClick={() => setDlg({ kind: 'end' })} style={{ height: 40, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color: '#9A3D24', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('profile.endMembership')}</button> : null}
-      {!family && mgmt && ending && !ended ? <button type="button" onClick={cancelEnding} style={{ height: 40, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('profile.cancelEnding')}</button> : null}
+      {!family && mgmt && ending && !ended ? <button type="button" onClick={cancelEnding} style={{ height: 40, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('profile.cancelEnding')}</button> : null}
       {!family && mgmt && ended ? <Button variant="secondary" size={44} icon="person_check" onClick={() => setDlg({ kind: 'reactivate' })}>{t('profile.reactivate')}</Button> : null}
     </>
   );
@@ -167,7 +167,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
           sub={[t('profile.eyebrow', { p: plan === 'flex' ? t('profile.planFlex') : t('profile.planGold'), d: since ? fmt.fmonth(ym(since), true) : '—' }), sub].filter(Boolean).join(' · ')} />
       ) : null}
       {!family && !native ? (
-        <button type="button" className="dh37" onClick={() => (canGoBack() ? navigate(-1) : navigate('/members'))} style={{ alignSelf: 'flex-start', height: isPhone ? 36 : 44, padding: '0 16px 0 10px', margin: isPhone ? '-6px 0 -6px -10px' : '-6px 0 -8px -10px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" className="dh37" onClick={() => (canGoBack() ? navigate(-1) : navigate('/members'))} style={{ alignSelf: 'flex-start', height: isPhone ? 36 : 44, padding: '0 16px 0 10px', margin: isPhone ? '-6px 0 -6px -10px' : '-6px 0 -8px -10px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="arrow_back" size={19} />
           {backLabel}
         </button>
@@ -175,25 +175,25 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
       {phoneUi ? null : <div style={{ display: 'flex', alignItems: isPhone ? 'flex-start' : 'center', gap: isPhone ? '10px 14px' : '12px 28px', flexWrap: 'wrap' }}>
         {(() => {
           const size = isPhone ? 68 : 104;
-          const look = { width: size, height: size, borderRadius: 999, background: photoFill(memberPhoto(m), photoBg(m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isPhone ? 22 : 34, fontWeight: 400, flex: 'none', boxShadow: `inset 0 0 0 ${isPhone ? 3 : 4}px #FFFFFF, 0 0 0 1px #E4DACD, 0 8px 22px rgba(60,40,20,.10)` } as const;
+          const look = { width: size, height: size, borderRadius: 999, background: photoFill(memberPhoto(m), photoBg(m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isPhone ? 22 : 34, fontWeight: 400, flex: 'none', boxShadow: `inset 0 0 0 ${isPhone ? 3 : 4}px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)` } as const;
           const face = m.photoMediaId ? null : initials(memberName(m));
           if (!canPhoto) return <div aria-hidden="true" style={look}>{face}</div>;
           return (
             <button type="button" onClick={() => setPhotoSheet(true)} aria-label={t('profile.photoTitle')} title={t('profile.photoTitle')} data-testid="profile-avatar" style={{ ...look, position: 'relative', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Inter' }}>
               {face}
-              <span aria-hidden="true" style={{ position: 'absolute', right: -2, bottom: -2, width: isPhone ? 24 : 32, height: isPhone ? 24 : 32, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #F5F5F3' }}><Icon name="photo_camera" size={isPhone ? 14 : 18} /></span>
+              <span aria-hidden="true" style={{ position: 'absolute', right: -2, bottom: -2, width: isPhone ? 24 : 32, height: isPhone ? 24 : 32, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #FFFFFF' }}><Icon name="photo_camera" size={isPhone ? 14 : 18} /></span>
             </button>
           );
         })()}
         <div style={{ flex: isPhone ? '1 1 0' : '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 3 : 6 }}>
-          <div className="cp-eyebrow1" style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' }}>
+          <div className="cp-eyebrow1" style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' }}>
             {t('profile.eyebrow', { p: plan === 'flex' ? t('profile.planFlex') : t('profile.planGold'), d: since ? fmt.fmonth(ym(since), true) : '—' })}
           </div>
           <h1 style={{ margin: 0, fontSize: isPhone ? 26 : 'clamp(30px, 3.2vw, 40px)', lineHeight: 1.1, fontWeight: 400, letterSpacing: '-1px', color: '#2B231C', overflowWrap: 'anywhere' }}>{memberName(m)}</h1>
           {sub ? <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{sub}</div> : null}
         </div>
         {isPhone && hasEditBar && canEdit ? (
-          <button type="button" className="dh38" aria-label={editLabel} title={editLabel} onClick={() => setDlg({ kind: editCfg!.dlg })} style={{ width: 40, height: 40, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 }}>
+          <button type="button" className="h-fill" aria-label={editLabel} title={editLabel} onClick={() => setDlg({ kind: editCfg!.dlg })} style={{ width: 40, height: 40, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 }}>
             <Icon name={tab === 'family' ? 'person_add' : 'edit'} size={20} />
           </button>
         ) : null}
@@ -224,19 +224,19 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
         </div>
       ) : null}
       {/* phone: the tabs stick under the top bar (the family has none: they stick to the top) */}
-      <div style={phoneUi ? { position: 'sticky', top: native ? BAR_H : 0, zIndex: 5, margin: '0 -16px', padding: '0 16px', background: '#F5F5F3' } : { display: 'contents' }}>
+      <div style={phoneUi ? { position: 'sticky', top: native ? BAR_H : 0, zIndex: 5, margin: '0 -16px', padding: '0 16px', background: '#FFFFFF' } : { display: 'contents' }}>
         <ScrollTabs tabs={tabItems} current={tab} onChange={(k) => go(k as ProfileTab)} wrap={false} phone={isPhone} label={t('profile.tabs')} pendingLabel={t('common.pendingReview')} leftLabel={t('profile.scrollLeft')} rightLabel={t('profile.scrollRight')} />
       </div>
       {hasEditBar && !isPhone && (editNote || canEdit) ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', marginTop: -10 }}>
           {editNote ? (
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>
-              <Icon name="lock" size={17} color="#75624B" />
+              <Icon name="lock" size={17} color="var(--accent, #75624B)" />
               {editNote}
             </span>
           ) : <span />}
           {canEdit ? (
-            <button type="button" className="dh38" onClick={() => setDlg({ kind: editCfg!.dlg })} style={{ height: 40, padding: '0 16px 0 12px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+            <button type="button" className="h-fill" onClick={() => setDlg({ kind: editCfg!.dlg })} style={{ height: 40, padding: '0 16px 0 12px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
               <Icon name={tab === 'family' ? 'person_add' : 'edit'} size={18} />
               {editLabel}
             </button>
@@ -274,8 +274,8 @@ function useScrolledPast(ref: React.RefObject<HTMLElement>, on: boolean) {
 /** Round 6, phone: a native top bar, "‹ Members" on the left, the name fading in once the header has scrolled away, the tab's edit on the right. */
 function TopBar({ back, onBack, title, showTitle, action }: { back: string; onBack: () => void; title: string; showTitle: boolean; action: ReactNode }) {
   return (
-    <div style={{ position: 'sticky', top: 0, zIndex: 6, height: BAR_H, margin: '-14px -16px -14px', padding: '0 6px 0 2px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', alignItems: 'center', gap: 4, background: '#F5F5F3' }}>
-      <button type="button" className="cp-press" onClick={onBack} aria-label={back} style={{ justifySelf: 'start', maxWidth: '100%', height: 44, padding: '0 8px 0 0', border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: 'Inter' }}>
+    <div style={{ position: 'sticky', top: 0, zIndex: 6, height: BAR_H, margin: '-14px -16px -14px', padding: '0 6px 0 2px', display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto minmax(0, 1fr)', alignItems: 'center', gap: 4, background: '#FFFFFF' }}>
+      <button type="button" className="cp-press" onClick={onBack} aria-label={back} style={{ justifySelf: 'start', maxWidth: '100%', height: 44, padding: '0 8px 0 0', border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', cursor: 'pointer', fontFamily: 'Inter' }}>
         <Icon name="chevron_left" size={32} weight={300} />
         <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{back}</span>
       </button>
@@ -289,14 +289,14 @@ function TopBar({ back, onBack, title, showTitle, action }: { back: string; onBa
 function NativeHead({ m, canPhoto, onPhoto, titleRef, sub }: { m: Member; canPhoto: boolean; onPhoto: () => void; titleRef: React.RefObject<HTMLHeadingElement>; sub: string }) {
   const t = useT();
   const size = 88;
-  const look = { width: size, height: size, borderRadius: 999, background: photoFill(memberPhoto(m), photoBg(m.photoTone)), color: TONES[m.photoTone % 5][1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 400, flex: 'none', boxShadow: 'inset 0 0 0 3px #FFFFFF, 0 0 0 1px #E4DACD' } as const;
+  const look = { width: size, height: size, borderRadius: 999, background: photoFill(memberPhoto(m), photoBg(m.photoTone)), color: TONES[m.photoTone % 5][1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 400, flex: 'none', boxShadow: 'inset 0 0 0 3px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' } as const;
   const face = m.photoMediaId ? null : initials(memberName(m));
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8, paddingTop: 2 }}>
       {canPhoto ? (
         <button type="button" onClick={onPhoto} aria-label={t('profile.photoTitle')} title={t('profile.photoTitle')} data-testid="profile-avatar" className="cp-press" style={{ ...look, position: 'relative', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Inter' }}>
           {face}
-          <span aria-hidden="true" style={{ position: 'absolute', right: -1, bottom: -1, width: 28, height: 28, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #F5F5F3' }}><Icon name="photo_camera" size={15} /></span>
+          <span aria-hidden="true" style={{ position: 'absolute', right: -1, bottom: -1, width: 28, height: 28, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #FFFFFF' }}><Icon name="photo_camera" size={15} /></span>
         </button>
       ) : <div aria-hidden="true" style={look}>{face}</div>}
       <h1 ref={titleRef} style={{ margin: '2px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C', overflowWrap: 'anywhere' }}>{memberName(m)}</h1>

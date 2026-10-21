@@ -1,10 +1,7 @@
 // Members: lifecycle status, list rows, filters and search, id allocation, documents and consent, validation,
 // pending reviews and the final invoice. Members drop in on any open day, so there are no bookings, leave or "expected" days here:
 // status comes from check-ins, and the Flex plan counts visits. Pure selectors shared by the actions and the screens.
-import type {
-  ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument,
-  Mobility, MedTiming, Photo, Plan, Reading, Relation, Row, Title, YM,
-} from '../types';
+import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
 import { currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
@@ -21,13 +18,19 @@ export const MOBILITIES: Mobility[] = ['walkingStick', 'walker', 'wheelchair'];
 export const DIETS: Diet[] = ['softFood', 'lowSalt', 'vegetarian', 'sugarFree'];
 export const MED_TIMINGS: MedTiming[] = ['morningHome', 'lunchClub', 'eveningHome', 'asPrescribed'];
 export const END_REASONS = ['movedAway', 'careNeeds', 'careHome', 'passedAway', 'familyDecision'] as const;
-export const DOC_TYPES: DocType[] = ['ktp', 'nannyKtp', 'membershipForm', 'healthInfo'];
+export const DOC_TYPES: DocType[] = ['ktp', 'nannyKtp', 'guarantorKtp', 'membershipForm', 'healthInfo'];
+/** KC round 10: the ID cards a registration photographs, in form order. */
+export const KTP_KINDS: KtpKind[] = ['ktp', 'guarantorKtp', 'nannyKtp'];
 export const NEW_TAG_DAYS = 30;
 /** Simulated PC-303 baseline for a newly added member (design: new-member base). */
 export const DEFAULT_SIM = { sys: 128, dia: 80, pulse: 74, spo2: 97, glucose: 110, weight: 58, temp: 36.6, grip: 18 };
-export const SIM_FILE: Record<DocType, string> = { ktp: 'ktp.jpg', nannyKtp: 'ktp-nanny.jpg', membershipForm: 'membership-form.pdf', healthInfo: 'health-info.jpg', other: 'document.pdf' };
-const DOC_SHORT: Record<DocType, string> = { ktp: 'ktp', nannyKtp: 'nktp', membershipForm: 'form', healthInfo: 'health', other: 'other' };
+export const SIM_FILE: Record<DocType, string> = { ktp: 'ktp.jpg', nannyKtp: 'ktp-nanny.jpg', guarantorKtp: 'ktp-family.jpg', membershipForm: 'membership-form.pdf', healthInfo: 'health-info.jpg', other: 'document.pdf' };
+const DOC_SHORT: Record<DocType, string> = { ktp: 'ktp', nannyKtp: 'nktp', guarantorKtp: 'gktp', membershipForm: 'form', healthInfo: 'health', other: 'other' };
 export const docIdFor = (memberId: string, type: DocType) => `${memberId}-doc-${DOC_SHORT[type]}`;
+/** The uploaded ID-card photos as documents on file (a carer's only when there is a carer). */
+export function ktpDocuments(memberId: string, ktp: KtpUploads | undefined, hasCarer: boolean, on: ISODate, by: Actor, via: MemberDocument['via']): MemberDocument[] {
+  return KTP_KINDS.filter((k) => ktp?.[k] && (k !== 'nannyKtp' || hasCarer)).map((type) => ({ id: docIdFor(memberId, type), type, status: 'onFile' as const, mediaId: ktp![type]!.mediaId, fileName: ktp![type]!.fileName, on, via, by }));
+}
 
 // ---------- small validators ----------
 export const isHM = (v: unknown): v is HM => typeof v === 'string' && /^([01]\d|2[0-3]):[0-5]\d$/.test(v);
@@ -320,7 +323,9 @@ export interface NewMemberInput {
   address: string;
   /** informational only (members drop in on any open day); '' when not given */
   usualArrival: HM | '';
-  nanny: { name: string; phone?: string } | null;
+  nanny: { name: string; phone?: string; nik?: string } | null;
+  /** KC round 10: photos of the ID cards, uploaded first (POST /api/media) */
+  ktp?: KtpUploads;
   spouseId: string | null;
   /** profile picture, uploaded first (POST /api/media) */
   photoMediaId?: string;
@@ -360,5 +365,6 @@ export function validateNewMember(d: Partial<NewMemberInput>, today?: ISODate): 
   if (!d.consent?.data) bad('consentData', 'consentRequired');
   for (const med of d.health?.meds || []) if (!med.name?.trim()) { bad('meds', 'medNameRequired'); break; }
   if (d.nanny && !d.nanny.name?.trim()) bad('nannyName', 'nannyNameRequired');
+  if (d.nanny && !/^\d{16}$/.test((d.nanny.nik || '').replace(/\s/g, ''))) bad('nannyNik', 'nannyNikRequired'); // KC round 10: with a carer, the carer's NIK
   return out;
 }

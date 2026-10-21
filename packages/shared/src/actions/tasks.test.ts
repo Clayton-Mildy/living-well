@@ -27,13 +27,13 @@ describe('task.done and task.undo', () => {
     fails(s0, 'task.done', { templateId: 'task-lobby-photo', photoMediaId: 'not-a-media-id' }, 's1', 'err.invalid');
   });
 
-  it('is for the role’s own staff, or management (for people with no login); not for families or other roles', () => {
+  it('is for the role’s own staff, or management; not for families or other roles', () => {
     const s = fresh();
     fails(s, 'task.done', { templateId: 'task-lobby-photo', photoMediaId: MEDIA }, 's8', 'err.forbidden'); // the nurse cannot tick the lobby's task
     fails(s, 'task.done', { templateId: 'task-lobby-photo', photoMediaId: MEDIA }, 'f1', 'err.forbidden');
     fails(s, 'task.done', { templateId: 'task-ghost' }, 's1', 'err.notFound');
-    const hk = step(s, 'task.done', { templateId: 'task-hk-toilets', photoMediaId: MEDIA }, 's9'); // Ega ticks for housekeeping
-    expect(hk.taskDone[`td-task-hk-toilets-${T}`].by).toBe('s9');
+    const mat = step(s, 'task.done', { templateId: 'task-activity-materials' }, 's9'); // Ega ticks for the activity teachers
+    expect(mat.taskDone[`td-task-activity-materials-${T}`].by).toBe('s9');
   });
 
   it('a weekly task counts for its week, a monthly one for its month', () => {
@@ -71,14 +71,14 @@ describe('task.done and task.undo', () => {
 });
 
 describe('task.saveTemplate and task.archiveTemplate', () => {
-  const input = { title: 'Wipe the handrails', role: 'housekeeping', every: 'daily', dueBy: '11:00', proof: 'photo', active: true };
+  const input = { title: 'Wipe the handrails', role: 'lobby', every: 'daily', dueBy: '11:00', proof: 'photo', active: true };
 
   it('management adds a task for a role; it shows at once for that role', () => {
     const r = run(fresh(), 'task.saveTemplate', input, 's9');
     const id = r.result.id as string;
     expect(r.state.taskTemplates[id]).toMatchObject({ ...input, createdBy: 'staff:s9' });
     expect(r.state.taskTemplates[id].weekday).toBeUndefined();
-    expect(customTasks(r.state, 'housekeeping', T, T, 600).map((i) => i.template.title)).toContain('Wipe the handrails');
+    expect(customTasks(r.state, 'lobby', T, T, 600).map((i) => i.template.title)).toContain('Wipe the handrails');
   });
 
   it('weekly needs its weekday, monthly its day (1–28 or the last open day); extra fields are dropped; editing keeps the row', () => {

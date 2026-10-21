@@ -87,7 +87,7 @@ export function Plans() {
   const factRows = (rows: [string, string][]) => (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {rows.map(([k, v]) => (
-        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 15, lineHeight: 1.4 }}>
+        <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, lineHeight: 1.4 }}>
           <span style={{ color: '#6B6259' }}>{k}</span>
           <span style={{ textAlign: 'right' }}>{v}</span>
         </div>
@@ -102,8 +102,8 @@ export function Plans() {
   const priceField = (k: PriceKey, name: string, unit: string) => (
     <label style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
       <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{unit}</span>
-      <span style={{ display: 'flex', alignItems: 'center', height: 52, border: show(k) ? '2px solid #9A3D24' : '1px solid #DDD1C2', borderRadius: 10, background: '#FFFFFF', overflow: 'hidden' }}>
-        <span style={{ padding: '0 14px', height: '100%', display: 'flex', alignItems: 'center', background: '#F5F5F3', borderRight: '1px solid #DCD3C8', fontSize: 15 }}>Rp</span>
+      <span className={`cp-input-wrap cp-fill${show(k) ? ' cp-err' : ''}`} style={{ display: 'flex', alignItems: 'center', height: 52, borderRadius: 12, background: 'var(--fill, #F4F4F5)', boxShadow: show(k) ? 'inset 0 0 0 2px #9A3D24' : undefined, overflow: 'hidden' }}>
+        <span style={{ padding: '0 14px', height: '100%', display: 'flex', alignItems: 'center', background: 'var(--press, #EEEEF0)', fontSize: 15 }}>Rp</span>
         <input value={d[k]} onChange={(e) => set({ [k]: fmtN(e.target.value) })} inputMode="numeric" aria-label={t('mgmt.priceAria', { name })} aria-invalid={show(k) || undefined}
           style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', height: '100%', padding: '0 14px', fontSize: 18, fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter', color: '#24201C', background: 'transparent' }} />
       </span>
@@ -117,7 +117,7 @@ export function Plans() {
       {factRows(facts)}
     </Group>
   ) : (
-    <div key={k} className="cp-card-pad" style={{ ...heroCard, padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <div key={k} className="cp-card-pad cp-grey" style={{ ...heroCard, padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
         <span style={{ fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C' }}>{name}</span>
         {sampleBadge(k)}
@@ -136,12 +136,12 @@ export function Plans() {
           {previewDraft ? <span style={{ fontSize: FONT_BODY, color: '#7A5510', lineHeight: 1.4 }}>{t('mgmt.plUnsaved')}</span> : null}
           <div style={{ display: 'flex', flexDirection: 'column' }}>
             {preview.lines.map((l) => (
-              <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 15, lineHeight: 1.4 }}>
+              <div key={l.id} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '10px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, lineHeight: 1.4 }}>
                 <span>{t(l.label, { ...(l.params || {}), month: l.params?.month ? fmonth(String(l.params.month)) : '' })}</span>
                 <span style={{ fontVariantNumeric: 'tabular-nums' }}>{rp(l.amount)}</span>
               </div>
             ))}
-            {!preview.lines.length ? <div style={{ padding: '10px 0', borderTop: '1px solid #F0EAE1', fontSize: 16, color: '#5E5852' }}>{t('mgmt.plNothing')}</div> : null}
+            {!preview.lines.length ? <div style={{ padding: '10px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 16, color: '#5E5852' }}>{t('mgmt.plNothing')}</div> : null}
             <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '12px 0 0', borderTop: '2px solid #24201C', fontSize: 18, fontWeight: 600 }}>
               <span>{t('mgmt.plTotal')}</span>
               <span style={{ fontVariantNumeric: 'tabular-nums' }} data-testid="plan-preview-total">{rp(preview.total)}</span>
@@ -193,11 +193,11 @@ export function Plans() {
         </>
       ) : (
       <div style={{ ...splitRow, gap: 'clamp(16px, 2.4vw, 32px)' }}>
-        <div className="cp-card-pad" style={{ ...heroCard, flex: '0 1 320px', width: '100%', padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div className="cp-card-pad cp-grey" style={{ ...heroCard, flex: '0 1 320px', width: '100%', padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
           <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C' }}>{t('mgmt.plRules')}</span>
           {rulesBody}
         </div>
-      <div style={{ ...heroCard, flex: '1 1 420px', minWidth: 0, padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+      <div className="cp-grey" style={{ ...heroCard, flex: '1 1 420px', minWidth: 0, padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={labelStyle}>{t('mgmt.plPreview')}</div>
         {previewBody}
       </div>
@@ -205,7 +205,7 @@ export function Plans() {
       )}
 
       {dirty ? (
-        <div style={{ position: 'sticky', bottom: 0, zIndex: 4, margin: '0 -4px', padding: '12px 4px 14px', background: 'linear-gradient(to top, #F5F5F3 72%, rgba(246,245,245,0))', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+        <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '0 -4px', padding: '12px 4px 14px', background: 'linear-gradient(to top, #FFFFFF 72%, rgba(255,255,255,0))', display: 'flex', gap: 10, flexWrap: 'wrap' }}>
           <Button size={56} onClick={save} disabled={busy} style={{ flex: '1 1 200px' }}>{t('common.saveChanges')}</Button>
           <Button size={56} variant="secondary" onClick={cancel} style={{ flex: '0 1 160px' }}>{t('common.cancel')}</Button>
         </div>

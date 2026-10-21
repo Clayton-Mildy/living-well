@@ -31,19 +31,19 @@ export const status: Same<typeof EN.status> = {
 export const nav: Same<typeof EN.nav> = {
   arrivals: 'Kedatangan', enquiries: 'Calon anggota', members: 'Anggota', health: 'Cek kesehatan', readings: 'Hasil ukur', today: 'Hari ini', camera: 'Kamera', log: 'Catatan harian',
   menu: 'Menu', feedback: 'Masukan', stock: 'Stok', billing: 'Tagihan', payments: 'Pembayaran', budget: 'Anggaran', receipts: 'Kuitansi', overview: 'Ringkasan', broadcast: 'Siaran',
-  calendar: 'Kalender dan jadwal', calShort: 'Kalender', people: 'SDM', photos: 'Foto', healthF: 'Kesehatan', venue: 'Venue', more: 'Lainnya', directory: 'Direktori', contacts: 'Kontak',
+  calendar: 'Kalender dan jadwal', calShort: 'Kalender', me: 'Saya', people: 'SDM', photos: 'Foto', healthF: 'Kesehatan', venue: 'Venue', more: 'Lainnya', directory: 'Direktori', contacts: 'Kontak',
   surveys: 'Survei', plans: 'Paket dan harga', reviews: 'Persetujuan', requests: 'Permintaan',
   g_front: 'Resepsionis', g_care: 'Perawatan', g_kitchen: 'Dapur', g_finance: 'Keuangan', g_club: 'Klub', allModules: 'Semua modul',
   s_overview: 'Beranda', s_arrivals: 'Datang', s_enquiries: 'Calon', s_members: 'Anggota', s_health: 'Cek', s_readings: 'Tren', s_today: 'Hari ini', s_camera: 'Kamera',
   s_log: 'Catatan', s_menu: 'Menu', s_feedback: 'Masukan', s_stock: 'Stok', s_billing: 'Tagihan', s_payments: 'Bayar', s_budget: 'Anggaran', s_receipts: 'Kuitansi', s_directory: 'Kontak',
-  s_calendar: 'Kalender', s_calShort: 'Kalender', s_photos: 'Foto', s_healthF: 'Kesehatan', s_more: 'Lainnya', s_requests: 'Permintaan', s_reviews: 'Persetujuan', s_contacts: 'Kontak',
+  s_calendar: 'Kalender', s_calShort: 'Kalender', s_me: 'Saya', s_photos: 'Foto', s_healthF: 'Kesehatan', s_more: 'Lainnya', s_requests: 'Permintaan', s_reviews: 'Persetujuan', s_contacts: 'Kontak',
   // KC round 7
-  renewals: 'Perpanjangan', tasks: 'Tugas', guests: 'Pengisi acara', insights: 'Insight kunjungan', memories: 'Kenangan', report: 'Laporan harian', s_report: 'Laporan', s_renewals: 'Perpanjang', s_tasks: 'Tugas', s_guests: 'Pengisi', s_insights: 'Insight', s_memories: 'Kenangan',
+  renewals: 'Perpanjangan', tasks: 'Tugas', guests: 'Pengisi acara', insights: 'Insight', memories: 'Kenangan', report: 'Laporan harian', s_report: 'Laporan', s_renewals: 'Perpanjang', s_tasks: 'Tugas', s_guests: 'Pengisi', s_insights: 'Insight', s_memories: 'Kenangan',
 };
 export const roles: Same<typeof EN.roles> = {
-  lobby: 'Lobi', nurse: 'Perawat', activity: 'Pengajar aktivitas', kitchen: 'Dapur & F&B', finance: 'Keuangan', mgmt: 'Manajemen', family: 'Keluarga', housekeeping: 'Kebersihan', driver: 'Sopir',
+  lobby: 'Lobi', nurse: 'Perawat', activity: 'Pengajar aktivitas', kitchen: 'Dapur & F&B', finance: 'Keuangan', mgmt: 'Manajemen', family: 'Keluarga',
   lands_lobby: 'Papan kedatangan', lands_nurse: 'Pos kesehatan', lands_activity: 'Aktivitas hari ini', lands_kitchen: 'Menu hari ini', lands_finance: 'Papan tagihan', lands_mgmt: 'Papan kedatangan',
-  lands_family: 'Halaman hari ini', lands_housekeeping: 'Permintaan', lands_driver: 'Permintaan', billing: 'tagihan',
+  lands_family: 'Halaman hari ini', billing: 'tagihan',
 };
 export const login: Same<typeof EN.login> = {
   signIn: 'Masuk', welcome: 'Selamat datang', loginSub: 'Satu akses masuk untuk tim klub dan keluarga. Gunakan nama pengguna dan kata sandi Anda.',

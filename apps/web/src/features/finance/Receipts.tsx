@@ -103,8 +103,8 @@ function ReceiptFields({ v, set, selfId }: { v: Fields; set: (p: Partial<Fields>
       <TextField label={t('finance.rc.supplier')} value={v.supplier} onChange={(x) => set({ supplier: x, directoryId: suppliers.find((d) => d.name === x)?.id })} maxLength={120} />
       <div role="group" aria-label={t('finance.rc.suppliers')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {suppliers.map((d) => (
-          <button key={d.id} type="button" className="cp-chip" onClick={() => set({ supplier: d.name, directoryId: d.id })} aria-pressed={v.directoryId === d.id}
-            style={{ height: 44, padding: '0 12px', borderRadius: 12, border: v.directoryId === d.id ? '1px solid #24201C' : '1px solid #DCD3C8', background: v.directoryId === d.id ? '#24201C' : '#FFFFFF', color: v.directoryId === d.id ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
+          <button key={d.id} type="button" className={v.directoryId === d.id ? 'cp-chip' : 'cp-chip cp-fill'} onClick={() => set({ supplier: d.name, directoryId: d.id })} aria-pressed={v.directoryId === d.id}
+            style={{ height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: v.directoryId === d.id ? '#24201C' : 'var(--fill, #F4F4F5)', color: v.directoryId === d.id ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
         ))}
       </div>
       <RpField label={t('finance.rc.amount')} ariaLabel={t('finance.rc.amount')} value={v.amount} onChange={(x) => set({ amount: x })} />
@@ -159,17 +159,17 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
     return (
       <PGroup gap={14}>
         {!snapped ? (
-          <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} className="cp-press" style={{ height: 64, borderRadius: 12, border: 'none', background: '#2E2924', color: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter' }}>
+          <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} className="cp-press" style={{ height: 64, borderRadius: 12, border: 'none', background: '#2E2924', color: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter' }}>
             <Icon name="receipt_long" size={28} color="#CAB8A2" />
             <span style={{ fontSize: 16, lineHeight: 1.4 }}>{uploading ? t('common.processing') : t('finance.rc.tap')}</span>
           </button>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: 84, flex: 'none', aspectRatio: '3/4', borderRadius: 10, background: PAPER, border: '1px solid #E4DACD', position: 'relative', overflow: 'hidden' }}>
+            <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: 84, flex: 'none', aspectRatio: '3/4', borderRadius: 10, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
               <PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} />
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', minWidth: 0 }}>
-              <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#F3EEE8', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+              <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: 'var(--on-card, #FFFFFF)', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                 <Icon name="check_circle" size={17} color="#3D6B4F" />{file}
               </span>
               <PillBtn icon="refresh" onClick={() => setCam(true)}>{t('common.retake')}</PillBtn>
@@ -188,13 +188,13 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
   return (
     <Hero visible style={{ padding: '22px clamp(18px, 3vw, 36px)', display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', animation: 'cpUp .2s ease-out' }}>
       {!snapped ? (
-        <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 14, border: 'none', background: '#2E2924', color: '#F3EEE8', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 14, border: 'none', background: '#2E2924', color: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="receipt_long" size={40} color="#CAB8A2" />
           <span style={{ fontSize: 16, lineHeight: 1.4 }}>{uploading ? t('common.processing') : t('finance.rc.tap')}</span>
         </button>
       ) : (
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-        <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: '100%', aspectRatio: '3/4', borderRadius: 14, background: PAPER, border: '1px solid #E4DACD', position: 'relative', overflow: 'hidden' }}>
+        <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: '100%', aspectRatio: '3/4', borderRadius: 14, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
           <PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} />
           <span style={{ position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
             <Icon name="check_circle" size={17} color="#3D6B4F" />{file}
@@ -258,7 +258,7 @@ function ReceiptRow({ r, canApprove, onEdit, first }: { r: Receipt; canApprove: 
   };
   const rejectStrip = rejecting ? (
     <div style={dangerStrip}>
-      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
+      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} className="cp-input cp-fill" style={{ ...inputBox, flex: '1 1 200px' }} />
       <Button variant="secondary" size={48} onClick={() => setRejecting(false)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
       <Button variant="danger" size={48} disabled={!note.trim()} onClick={reject} style={{ padding: '0 20px' }}>{t('finance.rc.rejectConfirm')}</Button>
     </div>
@@ -272,7 +272,7 @@ function ReceiptRow({ r, canApprove, onEdit, first }: { r: Receipt; canApprove: 
     return (
       <div style={{ ...prow(first), display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span aria-hidden="true" style={{ width: 36, height: 46, borderRadius: 7, background: PAPER, border: '1px solid #E4DACD', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
+          <span aria-hidden="true" style={{ width: 36, height: 46, borderRadius: 7, background: PAPER, boxShadow: 'inset 0 0 0 0.5px var(--field-bd, #E0E0E4)', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ ...rowTitle, fontSize: 16 }}>{r.supplier} · {rp(r.amount)}</span>
             <span style={{ ...rowSub, fontSize: 13 }}>{sectionName(s, r.sectionId, lang)} · {actorName(s, `staff:${r.by}`)} · {r.date === today ? t('common.today').toLowerCase() : fds(r.date)}</span>
@@ -300,7 +300,7 @@ function ReceiptRow({ r, canApprove, onEdit, first }: { r: Receipt; canApprove: 
   return (
     <div style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px 14px', flexWrap: 'wrap' }}>
-        <span aria-hidden="true" style={{ width: 40, height: 52, borderRadius: 8, background: PAPER, border: '1px solid #E4DACD', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
+        <span aria-hidden="true" style={{ width: 40, height: 52, borderRadius: 8, background: PAPER, boxShadow: 'inset 0 0 0 0.5px var(--field-bd, #E0E0E4)', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
         <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={rowTitle}>{r.supplier} · {rp(r.amount)}</span>
           <span style={rowSub}>{sectionName(s, r.sectionId, lang)} · {actorName(s, `staff:${r.by}`)} · {r.date === today ? t('common.today').toLowerCase() : fds(r.date)}</span>
@@ -346,7 +346,7 @@ function VendorRow({ v, canApprove, onEdit, first }: { v: VendorInvoice; canAppr
   };
   const rejectStrip = rejecting ? (
     <div style={dangerStrip}>
-      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
+      <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} className="cp-input cp-fill" style={{ ...inputBox, flex: '1 1 200px' }} />
       <Button variant="secondary" size={48} onClick={() => setRejecting(false)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
       <Button variant="danger" size={48} disabled={!note.trim()} onClick={reject} style={{ padding: '0 20px' }}>{t('finance.rc.rejectConfirm')}</Button>
     </div>
@@ -447,8 +447,8 @@ function VendorForm({ value, onClose }: { value: null | 'new' | VendorInvoice; o
       <TextField label={t('finance.rc.supplier')} value={v.supplier} onChange={(x) => set({ supplier: x, directoryId: suppliers.find((d) => d.name === x)?.id })} maxLength={120} />
       <div role="group" aria-label={t('finance.rc.suppliers')} style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
         {suppliers.map((d) => (
-          <button key={d.id} type="button" className="cp-chip" aria-pressed={v.directoryId === d.id} onClick={() => set({ supplier: d.name, directoryId: d.id })}
-            style={{ height: 44, padding: '0 12px', borderRadius: 12, border: v.directoryId === d.id ? '1px solid #24201C' : '1px solid #DCD3C8', background: v.directoryId === d.id ? '#24201C' : '#FFFFFF', color: v.directoryId === d.id ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
+          <button key={d.id} type="button" className={v.directoryId === d.id ? 'cp-chip' : 'cp-chip cp-fill'} aria-pressed={v.directoryId === d.id} onClick={() => set({ supplier: d.name, directoryId: d.id })}
+            style={{ height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: v.directoryId === d.id ? '#24201C' : 'var(--fill, #F4F4F5)', color: v.directoryId === d.id ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
         ))}
       </div>
       <TextField label={t('finance.rc.number')} value={v.number} onChange={(x) => set({ number: x })} maxLength={60} />
@@ -459,6 +459,6 @@ function VendorForm({ value, onClose }: { value: null | 'new' | VendorInvoice; o
   );
 }
 
-const TextBtn = ({ children, onClick, color = '#75624B', label }: { children: React.ReactNode; onClick: () => void; color?: string; label?: string }) => (
-  <button type="button" onClick={onClick} aria-label={label} style={{ height: 40, padding: '0 8px', borderRadius: 12, border: 'none', background: 'transparent', color, fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{children}</button>
+const TextBtn = ({ children, onClick, color = 'var(--accent, #75624B)', label }: { children: React.ReactNode; onClick: () => void; color?: string; label?: string }) => (
+  <button type="button" onClick={onClick} aria-label={label} style={{ height: 40, padding: '0 8px', borderRadius: 12, border: 'none', background: 'transparent', color, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{children}</button>
 );

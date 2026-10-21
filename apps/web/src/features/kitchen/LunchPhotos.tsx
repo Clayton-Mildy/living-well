@@ -17,7 +17,7 @@ import { ConfirmDialog, cardLabel } from './parts';
 const STATUS: Record<'visible' | 'pending' | 'hidden', { icon: string; fg: string; bg: string }> = {
   visible: { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6' },
   pending: { icon: 'hourglass_top', fg: '#7A5510', bg: '#F6ECD6' },
-  hidden: { icon: 'visibility_off', fg: '#5E5852', bg: '#F0EAE1' },
+  hidden: { icon: 'visibility_off', fg: '#5E5852', bg: 'var(--press, #EEEEF0)' },
 };
 
 export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: ISODate; readOnly?: boolean; meal?: Meal }) {
@@ -62,13 +62,13 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: 
     <div data-testid={`${meal}-photos`} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: photos.length ? (tea ? '4px 16px 16px' : '16px 16px 4px') : tea ? '0 16px 16px' : 0 }}>
       {/* round 6, phone: the add row has a plain hairline under it (the dashed edge is the desktop look) */}
       {!photos.length && !busy && tea ? (
-        <button type="button" onClick={() => setCamera(true)} className="h-cream" data-testid="tea-photo-add" style={{ alignSelf: 'flex-start', maxWidth: '100%', minHeight: 44, padding: '0 16px 0 12px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', fontSize: 15, fontWeight: 500, textAlign: 'left' }}>
-          <Icon name="add_a_photo" size={22} color="#75624B" />
+        <button type="button" onClick={() => setCamera(true)} className="h-fill cp-fill" data-testid="tea-photo-add" style={{ alignSelf: 'flex-start', maxWidth: '100%', minHeight: 44, padding: '0 16px 0 12px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', fontSize: 15, fontWeight: 500, textAlign: 'left' }}>
+          <Icon name="add_a_photo" size={22} color="var(--accent, #75624B)" />
           <span>{t(K.add)}</span>
         </button>
       ) : !photos.length && !busy ? (
-        <button type="button" onClick={() => setCamera(true)} className="h-row cp-addphoto" data-testid="lunch-photo-add" style={{ width: '100%', aspectRatio: '16/9', border: 'none', borderBottom: isPhone ? '1px solid #EFEAE3' : '2px dashed #CAB8A2', background: '#FBF8F4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', padding: 12 }}>
-          <Icon name="add_a_photo" size={36} color="#75624B" />
+        <button type="button" onClick={() => setCamera(true)} className="h-row cp-addphoto" data-testid="lunch-photo-add" style={{ width: '100%', aspectRatio: '16/9', border: 'none', borderBottom: isPhone ? '0.5px solid var(--hairline, #E2E2E6)' : '2px dashed var(--field-bd, #E0E0E4)', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', padding: 12 }}>
+          <Icon name="add_a_photo" size={36} color="var(--accent, #75624B)" />
           <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t(K.add)}</span>
         </button>
       ) : (
@@ -79,7 +79,7 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: 
             const st = STATUS[p.visibility as keyof typeof STATUS] ?? STATUS.hidden;
             return (
               <div key={p.id} role="group" aria-label={t(K.alt, { time: p.time })} data-testid={`${meal}-photo`} data-photo-id={p.id} data-status={p.visibility}
-                style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 12, overflow: 'hidden', background: '#F3EEE8' }}>
+                style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 12, overflow: 'hidden', background: 'var(--press, #EEEEF0)' }}>
                 <PhotoImg photo={p} />
                 <span style={{ position: 'absolute', left: 8, top: 8, height: 26, padding: '0 10px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 600, display: 'inline-flex', alignItems: 'center', fontVariantNumeric: 'tabular-nums' }}>{p.time}</span>
                 {readOnly ? null : (<button type="button" onClick={() => setRemoving(p)} aria-label={t('kitchen.photo.removeAria', { time: p.time })} title={t('kitchen.photo.remove')} className="h-cream"
@@ -94,10 +94,10 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: 
             );
           })}
           {busy ? (
-            <div aria-live="polite" style={{ aspectRatio: '4/3', borderRadius: 12, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 8, fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.photo.uploading')}</div>
+            <div aria-live="polite" style={{ aspectRatio: '4/3', borderRadius: 12, background: 'var(--press, #EEEEF0)', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', padding: 8, fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.photo.uploading')}</div>
           ) : !full && !readOnly ? (
-            <button type="button" onClick={() => setCamera(true)} className="h-row" data-testid={`${meal}-photo-add`} style={{ aspectRatio: '4/3', borderRadius: 12, border: '2px dashed #CAB8A2', background: '#FBF8F4', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', padding: 8, minHeight: 44 }}>
-              <Icon name="add_a_photo" size={28} color="#75624B" />
+            <button type="button" onClick={() => setCamera(true)} className="h-fill cp-fill" data-testid={`${meal}-photo-add`} style={{ aspectRatio: '4/3', borderRadius: 12, border: '2px dashed var(--field-bd, #E0E0E4)', background: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 4, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', padding: 8, minHeight: 44 }}>
+              <Icon name="add_a_photo" size={28} color="var(--accent, #75624B)" />
               <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('kitchen.photo.addMore')}</span>
             </button>
           ) : null}

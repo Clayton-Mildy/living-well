@@ -1,4 +1,4 @@
-// Visit insights, Per person: search, sort (most visits, fewest visits, last visit) and one quiet row per member (name, plan, usual days, visits). A tap
+// Insights, Per person: search, sort (most visits, fewest visits, last visit) and one quiet row per member (name, plan, usual days, visits). A tap
 // opens that member's detail (monthly visits, usual days, arrival trend, last 10 visits).
 import { useMemo, useState } from 'react';
 import { memberName } from '@cp/shared';
@@ -26,7 +26,7 @@ export function PerPerson({ data, onOpen }: { data: VisitInsights; onOpen: (memb
 
   return (
     <>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0' }}>
+      <label className="cp-fill" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 12, background: 'var(--fill, #F4F4F5)' }}>
         <Icon name="search" size={19} color="#6B6259" />
         <input value={q} onChange={(e) => setQ(e.target.value)} inputMode="search" autoComplete="off" placeholder={t('insights.searchPh')} aria-label={t('insights.searchLabel')}
           style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', height: '100%', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16', background: 'transparent' }} />
@@ -48,7 +48,7 @@ export function PerPerson({ data, onOpen }: { data: VisitInsights; onOpen: (memb
             const days = p.usual.map((w) => wd.short[w]).join(', ');
             return (
               <button key={p.memberId} type="button" onClick={() => onOpen(p.memberId)} className="h-row cp-bleed" data-member={p.memberId} aria-label={name}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 60, border: 'none', borderTop: i ? '1px solid #F0EAE1' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 60, border: 'none', borderTop: i ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <Avatar name={name} tone={m.photoTone} size={38} src={memberPhoto(m)} />
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '21px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
@@ -60,7 +60,7 @@ export function PerPerson({ data, onOpen }: { data: VisitInsights; onOpen: (memb
                   <span style={{ fontSize: 17, fontWeight: 500, lineHeight: '21px' }}>{p.visits}</span>
                   <span style={{ fontSize: 12, color: '#6B6259', lineHeight: '16px' }}>{t('insights.perMo', { n: num1(p.perMonth) })}</span>
                 </span>
-                <Icon name="chevron_right" size={20} color="#B5A999" />
+                <Icon name="chevron_right" size={20} color="#A89C8E" />
               </button>
             );
           })}

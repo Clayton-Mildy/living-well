@@ -144,12 +144,12 @@ export function Broadcast() {
       options={recipients.map((r) => ({ value: r.key, label: `${r.name} · ${t('mgmt.aud_' + r.audience)}` }))} />
   ) : null;
   const bubbleBox = (
-    <div style={{ borderRadius: 14, background: '#E6DDD1', padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
+    <div style={{ borderRadius: 14, background: 'var(--hairline, #E2E2E6)', padding: 14, display: 'flex', flexDirection: 'column', alignItems: 'flex-start' }}>
       <div style={{ maxWidth: '92%', background: '#FFFFFF', borderRadius: 10, padding: '12px 14px 8px', display: 'flex', flexDirection: 'column', gap: 6, boxShadow: '0 1px 2px rgba(40,30,20,0.1)' }}>
         <span style={{ fontSize: 12, fontWeight: 600, color: '#3D6B4F', lineHeight: 1.4 }}>CitraPremier</span>
         <span data-testid="bc-preview" style={{ fontSize: 15, lineHeight: 1.45, whiteSpace: 'pre-wrap', overflowWrap: 'anywhere' }}>{bubble}</span>
         <span style={{ alignSelf: 'flex-end', fontSize: 12, color: '#5E5852' }}>{now}</span>
-        <div style={{ borderTop: '1px solid #F0EAE1', paddingTop: 8, textAlign: 'center', fontSize: 14, fontWeight: 500, color: '#75624B', lineHeight: 1.4 }}>{t('mgmt.openApp')}</div>
+        <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)', paddingTop: 8, textAlign: 'center', fontSize: 14, fontWeight: 500, color: 'var(--accent, #75624B)', lineHeight: 1.4 }}>{t('mgmt.openApp')}</div>
       </div>
     </div>
   );
@@ -180,7 +180,7 @@ export function Broadcast() {
         </>
       ) : (
       <div style={{ ...splitRow, gap: 'clamp(20px, 3.4vw, 44px)' }}>
-        <div style={{ ...heroCard, flex: '1 1 440px', minWidth: 0, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <div className="cp-grey" style={{ ...heroCard, flex: '1 1 440px', minWidth: 0, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 18 }}>
           {editNote}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionLabel>{t('mgmt.audience')}</SectionLabel>
@@ -192,8 +192,8 @@ export function Broadcast() {
           </div>
           <label style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <span style={labelStyle}>{t('mgmt.message')}</span>
-            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={msgPh}
-              style={{ minHeight: 96, resize: 'vertical', border: '1px solid #DDD1C2', borderRadius: 10, padding: '12px 14px', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#24201C', outline: 'none', background: '#FFFFFF' }} />
+            <textarea value={msg} onChange={(e) => setMsg(e.target.value)} placeholder={msgPh} className="cp-input cp-fill"
+              style={{ minHeight: 96, resize: 'vertical', border: 'none', borderRadius: 12, padding: '12px 14px', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#24201C', outline: 'none', background: 'var(--fill, #F4F4F5)' }} />
           </label>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SectionLabel>{t('mgmt.when')}</SectionLabel>
@@ -219,7 +219,7 @@ export function Broadcast() {
           if (isPhone) {
             // round 6, phone: the message and its status on one line, one meta line, then small pill actions for a scheduled one
             return (
-              <div key={b.id} data-bc={b.status} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 0', borderTop: '1px solid #F0EAE1' }}>
+              <div key={b.id} data-bc={b.status} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
                 <div style={{ display: 'flex', alignItems: 'flex-start', gap: 10 }}>
                   <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{title}</span>
                   <BadgePill kind={b.status === 'sent' ? 'paid' : b.status === 'scheduled' ? 'pending' : 'void'} label={t('mgmt.st_' + b.status)} />
@@ -236,7 +236,7 @@ export function Broadcast() {
           }
           return (
             <Fragment key={b.id}>
-              <div data-bc={b.status} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '16px 0', borderTop: '1px solid #F0EAE1', minHeight: 64 }}>
+              <div data-bc={b.status} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '16px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: 64 }}>
                 <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{title}</span>
                   <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span>
@@ -251,7 +251,7 @@ export function Broadcast() {
               </div>
             </Fragment>
           );
-        }) : <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('mgmt.bcEmpty')}</div>}
+        }) : <div style={{ padding: '14px 0 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, color: '#6B6259' }}>{t('mgmt.bcEmpty')}</div>}
         <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('mgmt.pgBroadcasts')} />
       </ListCard>
       <TemplatesDialog open={tplOpen} onClose={() => setTplOpen(false)} tpls={tpls} tplTitle={tplTitle} tplText={tplText} />
@@ -295,7 +295,7 @@ function TemplatesDialog({ open, onClose, tpls, tplTitle, tplText }: { open: boo
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {paged.rows.map((x) => (
-            <div key={x.id} style={{ borderTop: '1px solid #F0EAE1', padding: '14px 0 4px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
+            <div key={x.id} style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)', padding: '14px 0 4px', display: 'flex', gap: 12, alignItems: 'flex-start' }}>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500 }}>{tplTitle(x)}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px', overflowWrap: 'anywhere' }}>{tplText(x)}</span>

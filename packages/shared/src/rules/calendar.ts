@@ -1,11 +1,11 @@
 // Calendar and weekly schedule builder selectors: day info for the list / month views, schedule drafts and versions.
 // Pure functions over ClubState. Family audiences never see venue clients; trials and visits are staff-only.
-import type { ClubState, HM, ISODate, Lang, ScheduleCell, ScheduleVersion, Slot, Staff, Weekday, YM } from '../types';
+import type { ClubState, ExtraSession, HM, ISODate, Lang, ScheduleCell, ScheduleVersion, Slot, Staff, Weekday, WeekSlot, YM } from '../types';
 import { dayStatus, eventsOn, staffByRole } from './core';
 import { guestsOn } from './attendance';
-import { scheduleDayOf, scheduleVersionFor, sessionsOn } from './kitchen';
+import { WEEK_SLOTS, extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from './kitchen';
 import { guestOn } from './guests';
-import { addDays, dow, isWeekday, live, monthDays, sortBy } from '../util';
+import { addDays, dow, isWeekday, live, monthDays, sortBy, toHM, toMin } from '../util';
 
 export type CalAudience = 'staff' | 'family';
 export type CalKind = 'closed' | 'holiday' | 'outing' | 'venue' | 'guest' | 'activity';
@@ -33,6 +33,8 @@ export interface DayItem {
   note?: string;
   /** KC round 7: a guest host leads this session (also shown to families: name and what they do only) */
   guest?: { hostId: string; sessionId: string; name: string; what: string };
+  /** KC round 7: an extra session of this date (not in the weekly plan); staff see an "Extra" tag, its note rides in `note` (staff only) */
+  extra?: boolean;
   /** a pseudo item the day view adds for a slot with no session (never produced by `dayInfo`) */
   empty?: boolean;
 }
@@ -46,7 +48,7 @@ export interface DayInfo {
   items: DayItem[];
   hasOuting: boolean;
   /** KC round 7, staff only: slots of an open day that have no session (`changed`: removed for this day only), so the day view can offer to add one */
-  noSession: { slot: Slot; changed: boolean }[];
+  noSession: { slot: WeekSlot; changed: boolean }[];
 }
 const ORDER: Record<CalKind, number> = { closed: 0, holiday: 1, outing: 2, venue: 3, guest: 4, activity: 5 };
 
@@ -81,16 +83,18 @@ export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'st
   }
   const noSession: DayInfo['noSession'] = [];
   if (open && !events.some((e) => e.kind === 'outing')) {
+    const extraNote = new Map(extrasOn(s, date).map((e) => [e.time, e.note]));
     for (const x of sessionsOn(s, date)) {
       if (!x.cell) {
-        if (audience === 'staff') noSession.push({ slot: x.slot, changed: slotChanged(s, date, x.slot) });
+        if (audience === 'staff' && isWeekSlot(x.slot)) noSession.push({ slot: x.slot, changed: slotChanged(s, date, x.slot) });
         continue;
       }
       const a = s.activities[x.cell.activityId];
       const g = guestOn(s, date, x.slot);
       items.push({
         key: 'a:' + x.slot, kind: 'activity', time: x.slot, title: a?.name ?? '', titleId: a?.nameId, activityId: x.cell.activityId, roomId: x.cell.roomId, staffId: x.cell.staffId,
-        ...(audience === 'staff' && slotChanged(s, date, x.slot) ? { changed: true } : {}),
+        ...(audience === 'staff' && !x.extra && slotChanged(s, date, x.slot) ? { changed: true } : {}),
+        ...(x.extra && audience === 'staff' ? { extra: true, ...(extraNote.get(x.slot) ? { note: extraNote.get(x.slot) } : {}) } : {}), // families see an extra session like any other
         ...(g ? { guest: { hostId: g.host.id, sessionId: g.session.id, name: g.host.name, what: g.host.what } } : {}),
       });
     }
@@ -141,14 +145,15 @@ export function eventTitle(e: { title: string; titleId?: string }, lang: Lang, s
 }
 
 // ---------- schedule drafts and versions ----------
-export const SLOTS: Slot[] = ['10:30', '13:30'];
+/** The weekly plan's two session times (extra sessions of a date are not part of it). */
+export const SLOTS: WeekSlot[] = WEEK_SLOTS;
 export const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5];
 export type Days = ScheduleVersion['days'];
 export const DRAFT_ID = 'sched-draft';
 
 export const emptyDays = (): Days => ({ 1: { '10:30': null, '13:30': null }, 2: { '10:30': null, '13:30': null }, 3: { '10:30': null, '13:30': null }, 4: { '10:30': null, '13:30': null }, 5: { '10:30': null, '13:30': null } });
 /** Fill missing weekdays/slots with null so every cell exists. */
-export function normalizeDays(raw: Partial<Record<number, Partial<Record<Slot, ScheduleCell | null>>>> | undefined): Days {
+export function normalizeDays(raw: Partial<Record<number, Partial<Record<WeekSlot, ScheduleCell | null>>>> | undefined): Days {
   const out = emptyDays();
   for (const w of WEEKDAYS) for (const sl of SLOTS) {
     const c = raw?.[w]?.[sl];
@@ -161,20 +166,20 @@ export const sameCell = (a: ScheduleCell | null | undefined, b: ScheduleCell | n
   (!a && !b) || (!!a && !!b && a.activityId === b.activityId && a.staffId === b.staffId && a.roomId === b.roomId);
 /** KC round 7: the weekly plan's cell for a date and slot (a one-day change is ignored). */
 export function weeklyCell(s: ClubState, date: ISODate, slot: Slot): ScheduleCell | null {
-  return scheduleVersionFor(s, date)?.days[dow(date) as Weekday]?.[slot] ?? null;
+  return isWeekSlot(slot) ? scheduleVersionFor(s, date)?.days[dow(date) as Weekday]?.[slot] ?? null : null; // an extra session is not in the weekly plan
 }
 /** KC round 7: does a one-day change make this slot differ from the weekly plan? */
 export function slotChanged(s: ClubState, date: ISODate, slot: Slot): boolean {
   const over = scheduleDayOf(s, date);
-  return !!over && slot in over.slots && !sameCell(over.slots[slot], weeklyCell(s, date, slot));
+  return !!over && isWeekSlot(slot) && slot in over.slots && !sameCell(over.slots[slot], weeklyCell(s, date, slot));
 }
 /** KC round 7: can the programme of this day be changed? An open day with no outing, today or later. */
 export function dayChangeable(s: ClubState, date: ISODate, today: ISODate): boolean {
   const st = dayStatus(s, date);
   return date >= today && st.open && !st.outing;
 }
-export function changedCells(a: Days, b: Days): { w: Weekday; slot: Slot }[] {
-  const out: { w: Weekday; slot: Slot }[] = [];
+export function changedCells(a: Days, b: Days): { w: Weekday; slot: WeekSlot }[] {
+  const out: { w: Weekday; slot: WeekSlot }[] = [];
   for (const w of WEEKDAYS) for (const slot of SLOTS) if (!sameCell(a[w]?.[slot], b[w]?.[slot])) out.push({ w, slot });
   return out;
 }
@@ -231,21 +236,23 @@ export function weekVersions(s: ClubState, monday: ISODate): ScheduleVersion[] {
   }
   return out;
 }
-/** A week can be changed only while it has not started: a published version always starts after today. */
-export const weekEditable = (monday: ISODate, today: ISODate): boolean => monday > today;
+/** KC round 7: a week can be changed until it is over (its Friday has not passed): the current week is editable from today on, and a version published for it starts today. */
+export const weekEditable = (monday: ISODate, today: ISODate): boolean => addDays(monday, 4) >= today;
+/** KC round 7: in an editable week, a day before today has already happened and stays as it was. */
+export const dayEditable = (date: ISODate, today: ISODate): boolean => date >= today;
 /** The week a saved draft is for (the Monday on or before its effective date). */
 export const draftWeek = (draft: Pick<ScheduleVersion, 'effectiveFrom'>): ISODate => mondayOf(draft.effectiveFrom);
 
 export interface WeekView {
   monday: ISODate;
   dates: ISODate[];
-  /** false once the week has started: it shows what ran, and changes start from a later week */
+  /** false once the week is over: it shows what ran. The current week is editable from today on (`dayEditable`) */
   editable: boolean;
   /** the cells that run this week */
   base: Days;
   /** what the grid shows: the draft when it is for this week, else `base` */
   days: Days;
-  changes: { w: Weekday; slot: Slot }[];
+  changes: { w: Weekday; slot: WeekSlot }[];
   versions: ScheduleVersion[];
   /** the draft is for this week */
   draftHere: boolean;
@@ -275,7 +282,7 @@ export function publishedCellKeys(s: ClubState): Set<string> {
   }
   return keys;
 }
-export const cellKey = (w: Weekday, slot: Slot, c: ScheduleCell) => `${w}|${slot}|${c.activityId}|${c.staffId}|${c.roomId}`;
+export const cellKey = (w: Weekday, slot: WeekSlot, c: ScheduleCell) => `${w}|${slot}|${c.activityId}|${c.staffId}|${c.roomId}`;
 
 // ---------- upcoming closures (family Today) ----------
 export interface UpcomingClosure {
@@ -307,4 +314,30 @@ export function upcomingClosures(s: ClubState, today: ISODate, days = 7): Upcomi
     out.push({ eventId: e.id, kind: e.kind === 'holiday' ? 'holiday' : 'closed', from: date, to, title: e.title, ...(e.titleId ? { titleId: e.titleId } : {}) });
   }
   return out;
+}
+
+// ---------- extra sessions (KC round 7): one-day sessions at any time, beside the two weekly ones ----------
+/** Two sessions of a date must start at least this many minutes apart (an extra cannot clash with another session). */
+export const MIN_SESSION_GAP = 30;
+/** The last start time of an extra session is this many minutes before the club closes. */
+export const LAST_START_BEFORE_CLOSE = 30;
+/** The starts of the sessions that run on a date (the weekly slots that have a session, and the extras), except `ignore` (the extra being edited). */
+export const sessionStarts = (s: ClubState, date: ISODate, ignore?: HM): HM[] => sessionsOn(s, date).filter((x) => !!x.cell && x.slot !== ignore).map((x) => x.slot);
+/** Why an extra session cannot start at `time` on `date` (null = fine): outside the club's hours, on a weekly session time, or too close to another session. `ignore` is the extra being moved. */
+export function extraTimeIssue(s: ClubState, date: ISODate, time: HM, ignore?: HM): { code: string; params: Record<string, string> } | null {
+  const { open, close } = s.club.settings;
+  const m = toMin(time);
+  const last = toMin(close) - LAST_START_BEFORE_CLOSE;
+  if (m < toMin(open) || m > last) return { code: 'cal.err.sessionHours', params: { from: open, to: toHM(last) } };
+  if (isWeekSlot(time)) return { code: 'cal.err.sessionFixedTime', params: { time } };
+  const near = sessionStarts(s, date, ignore).find((x) => Math.abs(toMin(x) - m) < MIN_SESSION_GAP);
+  return near ? { code: 'cal.err.sessionClash', params: { time: near, min: String(MIN_SESSION_GAP) } } : null;
+}
+/** Is this time an extra session of the date? */
+export const isExtraSlot = (s: ClubState, date: ISODate, slot: Slot): boolean => extrasOn(s, date).some((x) => x.time === slot);
+/** The extra session of a date at a time. */
+export const extraAt = (s: ClubState, date: ISODate, time: HM): ExtraSession | undefined => extrasOn(s, date).find((x) => x.time === time);
+/** A start time to offer first when adding an extra session on a date: the first of the usual gaps in the day (11:30, 15:00, 09:00 …) that is free; '' when none is. */
+export function suggestExtraTime(s: ClubState, date: ISODate): HM {
+  return ['11:30', '15:00', '09:00', '12:30', '14:30', '16:00', '09:45', '10:00'].find((t) => !extraTimeIssue(s, date, t)) ?? '';
 }

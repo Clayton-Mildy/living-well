@@ -1,5 +1,5 @@
 // Forms used in more than one place: record a payment, refund a payment, add an adjustment.
-import { useEffect, useMemo, useState } from 'react';
+import { useMemo, useState } from 'react';
 import { balanceOf, memberShort, rp, sortBy, type Invoice } from '@cp/shared';
 import { invoicePeriod, invoiceViews, type PaymentView } from '@cp/shared/rules/finance';
 import { Button, Chip, Note, TextField, Toggle, FONT_BODY } from '../../components/ui';
@@ -10,10 +10,10 @@ import { useClub } from '../../store/replica';
 import { digits, matches } from './lib';
 import { RpField, SearchField, dangerStrip, fieldLabel } from './parts';
 
-const MANUAL = ['bankTransferSgd', 'revolut', 'cash', 'other'] as const;
+const MANUAL = ['bankTransfer', 'cash', 'other'] as const;
 type Manual = (typeof MANUAL)[number];
 
-/** Record a payment received outside the virtual account. With `fixed`, the invoice is already chosen (invoice sheet). */
+/** Record a payment received outside the virtual account (a bank transfer, cash or something else, always in rupiah). With `fixed`, the invoice is already chosen (invoice sheet). */
 export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () => void }) {
   const s = useClub();
   const t = useT();
@@ -22,10 +22,8 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
   const act = useAct();
   const [q, setQ] = useState('');
   const [invId, setInvId] = useState<string | null>(fixed?.id ?? null);
-  const [method, setMethod] = useState<Manual>('bankTransferSgd');
+  const [method, setMethod] = useState<Manual>('bankTransfer');
   const [amt, setAmt] = useState(fixed ? String(Math.max(0, balanceOf(s, fixed))) : '');
-  const [ccy, setCcy] = useState<'SGD' | 'EUR'>('SGD');
-  const [fx, setFx] = useState('');
   const [ref, setRef] = useState('');
 
   // every invoice that can still take a payment, whole list: search narrows it, nothing is cut off
@@ -37,19 +35,16 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
   const sel = invId ? s.invoices[invId] : undefined;
   const balance = sel ? balanceOf(s, sel) : 0;
   const amount = digits(amt);
-  const foreign = method === 'bankTransferSgd' || method === 'revolut';
-  const needsRef = foreign;
+  const needsRef = method === 'bankTransfer'; // a bank transfer is matched to the statement by its reference
   const ok = !!sel && amount > 0 && (!needsRef || !!ref.trim());
   const choose = (id: string) => { setInvId(id); setAmt(String(Math.max(0, balanceOf(s, s.invoices[id])))); };
-  useEffect(() => { if (method === 'bankTransferSgd') setCcy('SGD'); }, [method]);
 
   const submit = async () => {
     if (!ok || !sel) return;
-    const fxn = parseFloat(fx);
     const r = await act('payment.record', {
-      memberId: sel.memberId, amount, method, invoiceId: sel.id, ...(ref.trim() ? { ref: ref.trim() } : {}), ...(foreign && fxn > 0 ? { foreign: { ccy, amount: fxn } } : {}),
+      memberId: sel.memberId, amount, method, invoiceId: sel.id, ...(ref.trim() ? { ref: ref.trim() } : {}),
     }, { ok: t('finance.toast.paymentRecorded', { name: memberShort(s.members[sel.memberId]) }) });
-    if (r.ok) { if (!fixed) setInvId(null); setAmt(''); setRef(''); setFx(''); onDone?.(); }
+    if (r.ok) { if (!fixed) setInvId(null); setAmt(''); setRef(''); onDone?.(); }
   };
 
   return (
@@ -58,12 +53,12 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span style={fieldLabel}>{t('finance.pay.invoice')}</span>
           <SearchField value={q} onChange={setQ} label={t('finance.pay.findInvoice')} placeholder={t('finance.pay.findInvoice')} />
-          <div role="radiogroup" aria-label={t('finance.pay.invoice')} style={{ display: 'flex', flexDirection: 'column', maxHeight: 264, overflowY: 'auto', borderTop: '1px solid #F0EAE1' }}>
+          <div role="radiogroup" aria-label={t('finance.pay.invoice')} style={{ display: 'flex', flexDirection: 'column', maxHeight: 264, overflowY: 'auto', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
             {shown.map((v) => {
               const on = v.inv.id === invId;
               return (
                 <button key={v.inv.id} type="button" role="radio" aria-checked={on} onClick={() => choose(v.inv.id)}
-                  style={{ minHeight: 48, padding: '8px 12px', border: 'none', borderBottom: '1px solid #F0EAE1', background: on ? '#FBF8F4' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : undefined, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left', color: '#24201C' }}>
+                  style={{ minHeight: 48, padding: '8px 12px', border: 'none', borderBottom: '0.5px solid var(--hairline, #E2E2E6)', background: on ? 'var(--fill, #F4F4F5)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : undefined, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left', color: '#24201C' }}>
                   <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.35 }}>{v.member ? memberShort(v.member) : v.inv.memberId} · {fmonth(invoicePeriod(v.inv))}</span>
                   <span style={{ fontSize: 14, color: '#6B6259', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{rp(v.balance)}</span>
                 </button>
@@ -81,16 +76,6 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
       </div>
       <RpField label={t('finance.pay.amountCredited')} ariaLabel={t('finance.pay.amountCredited')} value={amt} onChange={setAmt} hint={sel ? t('finance.pay.balanceHint', { amount: rp(balance) }) : undefined} />
       {sel && amount > balance ? <Note tone="ochre" icon="info">{t('finance.pay.overpay', { extra: rp(amount - balance) })}</Note> : null}
-      {foreign ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          {method === 'revolut' ? (
-            <div role="group" aria-label={t('finance.pay.currency')} style={{ display: 'flex', gap: 8 }}>
-              {(['SGD', 'EUR'] as const).map((c) => <Chip key={c} size={40} selected={ccy === c} onClick={() => setCcy(c)}>{c}</Chip>)}
-            </div>
-          ) : null}
-          <RpField label={t('finance.pay.foreignAmount', { ccy })} ariaLabel={t('finance.pay.foreignAmount', { ccy })} prefix={ccy} decimal value={fx} onChange={setFx} placeholder="0.00" />
-        </div>
-      ) : null}
       <TextField label={t('finance.pay.reference')} value={ref} onChange={setRef} placeholder={needsRef ? t('finance.pay.refPlaceholder') : t('finance.pay.refOptional')} />
       <Button size={48} disabled={!ok} onClick={submit} full>{t('finance.pay.record')}</Button>
     </div>

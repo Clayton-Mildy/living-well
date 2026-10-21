@@ -116,6 +116,18 @@ describe('TrendChart', () => {
     expect(tip()!.textContent).toContain('Pantau');
     expect(parseFloat(tip()!.style.left)).toBeGreaterThanOrEqual(2);
   });
+  it('a series can carry its own colour (a plan line): on the line, in the key and in the card, which tells both values for the date', async () => {
+    const flex: TrendSeries = { key: 'flex', label: 'Flex', color: '#75624B', points: [{ date: '2026-10-05', value: 6 }, { date: '2026-10-06', value: 9 }] };
+    const gold: TrendSeries = { key: 'gold', label: 'Gold', color: '#C9A24D', points: [{ date: '2026-10-05', value: 12 }, { date: '2026-10-06', value: 14 }] };
+    await show(<TrendChart series={[flex, gold]} from="2026-10-05" to="2026-10-06" ariaLabel="Visits per plan" legend />);
+    const strokes = [...document.querySelectorAll('path')].map((p) => p.getAttribute('stroke'));
+    expect(strokes).toEqual(['#75624B', '#C9A24D']);
+    expect(document.querySelectorAll('[style*="border-top: 2px solid rgb(201, 162, 77)"]').length).toBeGreaterThan(0); // Gold's swatch in the key
+    await pointer('pointermove', 9999);
+    expect(tip()!.textContent).toContain('Tue 6 Oct 2026');
+    expect(tip()!.textContent).toMatch(/Flex\s*9/);
+    expect(tip()!.textContent).toMatch(/Gold\s*14/);
+  });
   it('the compact chart has no card: its readout is a line under the chart, which shows the caption until touched', async () => {
     await show(<TrendChart compact height={44} series={[sys]} {...props} caption="Systolic, last 4 weeks" />);
     expect(document.body.textContent).toContain('Systolic, last 4 weeks');

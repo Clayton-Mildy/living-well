@@ -76,7 +76,7 @@ function Guests({ r }: { r: DayReport }) {
           : x.state === 'noShow' ? t('report.gNoShow') : [t('report.gExpected'), x.g.time].filter(Boolean).join(' ');
         return (
           <Line key={x.g.id} first={i === 0} inset={66}>
-            <span aria-hidden="true" style={{ width: 38, height: 38, borderRadius: 999, background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={x.g.kind === 'trial' ? 'badge' : 'person'} size={20} /></span>
+            <span aria-hidden="true" className="cp-fill" style={{ width: 38, height: 38, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={x.g.kind === 'trial' ? 'badge' : 'person'} size={20} /></span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{x.g.name}</span>
               <span style={sub}>{[t(x.g.kind === 'trial' ? 'report.kindTrial' : 'report.kindVisit'), when].filter(Boolean).join(' · ')}</span>
@@ -106,14 +106,15 @@ function SessionLine({ x, first, lang, openPhotos, t }: { x: ReportSession; firs
   const who = x.guest ? t('report.guestHost', { name: x.guest.host.name }) : x.staff ? (x.staff.knownAs || x.staff.name) : '';
   const place = roomName(x.room, lang);
   return (
-    <div data-session={x.slot} style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '12px 16px', backgroundColor: '#FFFFFF', ...rowLine(first) }}>
+    <div data-session={x.slot} style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '12px 16px', backgroundColor: 'transparent', ...rowLine(first) }}>
       <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, minWidth: 0 }}>
         <span style={{ fontSize: 13, fontVariantNumeric: 'tabular-nums', color: MUTED, flex: 'none' }}>{x.slot}</span>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, minWidth: 0, overflowWrap: 'anywhere' }}>{name}</span>
         {x.changed ? <Tag>{t('report.changed')}</Tag> : null}
+        {x.extra ? <Tag>{t('cal.extra')}</Tag> : null}
       </div>
       {who || place ? <span style={sub}>{[who, place].filter(Boolean).join(' · ')}</span> : null}
-      {x.changed && x.note ? <span style={{ ...sub, color: OCHRE }}>{x.note}</span> : null}
+      {(x.changed || x.extra) && x.note ? <span style={{ ...sub, color: OCHRE }}>{x.note}</span> : null}
       <span style={{ ...sub, color: '#4A4038', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 10px' }}>
         {x.state === 'later' ? <span style={{ color: MUTED }}>{t('report.notStarted')}</span> : (
           <>
@@ -165,7 +166,7 @@ function LunchTea({ r, openPhotos }: { r: DayReport; openPhotos: OpenPhotos }) {
           {!l.served ? <span style={{ color: MUTED }}>{t('report.lunchAt', { t: FIXED_SLOTS.find((f) => f.kind === 'lunch')!.time })}</span> : (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 7 }}>
               {total ? (
-                <div role="img" aria-label={LUNCH_AMOUNTS.filter((a) => l.eaten[a]).map((a) => `${t('report.' + LUNCH_KEY[a])} ${l.eaten[a]}`).join(', ')} style={{ display: 'flex', height: 8, borderRadius: 999, overflow: 'hidden', background: '#F0EAE1' }}>
+                <div role="img" aria-label={LUNCH_AMOUNTS.filter((a) => l.eaten[a]).map((a) => `${t('report.' + LUNCH_KEY[a])} ${l.eaten[a]}`).join(', ')} style={{ display: 'flex', height: 8, borderRadius: 999, overflow: 'hidden', background: 'var(--hairline, #E2E2E6)' }}>
                   {LUNCH_AMOUNTS.filter((a) => l.eaten[a]).map((a) => <span key={a} style={{ width: `${(l.eaten[a] / total) * 100}%`, background: LUNCH_DOT[a] }} />)}
                 </div>
               ) : null}
@@ -244,7 +245,7 @@ function MoodNotes({ r }: { r: DayReport }) {
       </Line>
       {!m.notes.length ? <Line><span style={sub}>{t('report.noNotes')}</span></Line> : null}
       {cap.shown.map((n, i) => (
-        <div key={n.m.id + (n.staff ? 's' : 'f') + i} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 16px', backgroundColor: '#FFFFFF', ...rowLine(false) }}>
+        <div key={n.m.id + (n.staff ? 's' : 'f') + i} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 16px', backgroundColor: 'transparent', ...rowLine(false) }}>
           <span style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px 8px', fontSize: 15, fontWeight: 500 }}>
             {memberName(n.m)}
             {n.staff ? <StaffOnlyTag /> : null}
@@ -265,7 +266,7 @@ function Duties({ r }: { r: DayReport }) {
   if (!r.duties.length) return null;
   const link = (
     <button type="button" onClick={() => go('/tasks?view=team')} className="h-ink"
-      style={{ border: 'none', background: 'transparent', padding: 0, color: '#75624B', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('report.teamView')}</button>
+      style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 13, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('report.teamView')}</button>
   );
   return (
     <Group title={t('report.duties')} meta={link} pad={0} gap={0}>

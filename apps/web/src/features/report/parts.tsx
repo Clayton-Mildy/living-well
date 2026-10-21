@@ -11,20 +11,20 @@ export const OCHRE = '#7A5510';
 export const MUTED = '#6B6259';
 /** The dot of a reading's status: normal sage, watch ochre, alert rust. */
 export const HEALTH_DOT: Record<Health, string> = { normal: '#3F7A55', watch: '#8A6216', alert: RUST };
-export const MOOD_DOT = { cheerful: SAGE, calm: '#75624B', quiet: '#8A6216', agitated: RUST } as const;
+export const MOOD_DOT = { cheerful: SAGE, calm: 'var(--accent, #75624B)', quiet: '#8A6216', agitated: RUST } as const;
 export const LUNCH_DOT = { all: SAGE, most: '#8FB59B', half: '#E0C27A', little: '#D08A5E', none: RUST } as const;
 export const LUNCH_KEY = { all: 'eatAll', most: 'eatMost', half: 'eatHalf', little: 'eatLittle', none: 'eatNone' } as const;
 
 /** One row of a grouped list: 16px inset, a hairline above it (none on the first), a soft hover and press tint when it opens something. `inset` is where the hairline starts. */
 export function Line({ first, inset = 16, onClick, children, style, label }: { first?: boolean; inset?: number; onClick?: () => void; children: ReactNode; style?: CSSProperties; label?: string }) {
-  const base: CSSProperties = { width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 52, backgroundColor: '#FFFFFF', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', ...rowLine(!!first, inset), ...style };
+  const base: CSSProperties = { width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 52, backgroundColor: 'transparent', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', ...rowLine(!!first, inset), ...style };
   if (onClick) return <button type="button" onClick={onClick} aria-label={label} className="h-row cp-tap-self" style={{ ...base, border: 'none', cursor: 'pointer' }}>{children}</button>;
   return <div style={base}>{children}</div>;
 }
 /** A label over its text (a menu line, an alternative), inside a group. */
 export function Fact({ first, label, children }: { first?: boolean; label: ReactNode; children: ReactNode }) {
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '10px 16px', backgroundColor: '#FFFFFF', ...rowLine(!!first) }}>
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '10px 16px', backgroundColor: 'transparent', ...rowLine(!!first) }}>
       <span style={{ fontSize: 13, lineHeight: '18px', color: MUTED }}>{label}</span>
       <div style={{ fontSize: 15, lineHeight: '21px', color: '#24201C', overflowWrap: 'anywhere' }}>{children}</div>
     </div>
@@ -44,7 +44,7 @@ export function MoreRow({ cap, total, t }: { cap: { over: boolean; all: boolean;
   if (!cap.over) return null;
   return (
     <button type="button" onClick={cap.toggle} className="h-row cp-tap-self"
-      style={{ width: '100%', height: 44, border: 'none', backgroundColor: '#FFFFFF', color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', ...rowLine(false) }}>
+      style={{ width: '100%', height: 44, border: 'none', backgroundColor: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', ...rowLine(false) }}>
       {cap.all ? t('report.showFewer') : t('report.showAll', { n: total })}
     </button>
   );

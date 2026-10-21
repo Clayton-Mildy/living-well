@@ -9,7 +9,7 @@ import { AppShell } from '../shell/AppShell';
 import { Login } from '../features/auth/Login';
 import { RatePage } from '../features/rate/RatePage';
 import { PageSkeleton, EmptyState, Button } from '../components/ui';
-import { SCREENS, MemberProfileScreen, DesignSystemScreen } from './screens';
+import { SCREENS, MemberProfileScreen, DesignSystemScreen, PublicFormScreen } from './screens';
 import { screenFor } from './nav';
 import { useT } from '../lib/i18n';
 import { routerRef } from './routerRef';
@@ -37,8 +37,9 @@ function NavScreen() {
 }
 function ProfileRoute() {
   const { role } = useMe();
+  const { id } = useParams();
   if (!role) return <PageSkeleton />;
-  if (role === 'family') return <Navigate to="/health" replace />;
+  if (role === 'family') return <Navigate to={`/profile?member=${encodeURIComponent(id || '')}`} replace />; // round 8: the family's own profile page
   if (!screenFor(role, 'members')) return <Navigate to="/today" replace />;
   return <MemberProfileScreen />;
 }
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
   { path: '/login', element: <LoginRoute />, errorElement: <RouteError /> },
   // KC round 7: a renter rates their event through a link from WhatsApp, no sign-in
   { path: '/rate/:token', element: <RatePage />, errorElement: <RouteError /> },
+  { path: '/form/:token', element: <Suspense fallback={<PageSkeleton />}><PublicFormScreen /></Suspense>, errorElement: <RouteError /> }, // KC round 10: the family's online registration
   { path: '/design-system', element: <Suspense fallback={<PageSkeleton />}><DesignSystemScreen /></Suspense>, errorElement: <RouteError /> },
   {
     path: '/',

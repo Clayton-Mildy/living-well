@@ -1,78 +1,104 @@
-// The day strip (KC round 7): a swipeable row of the member's visit days, newest on the right, each a rounded thumbnail of that day's best
-// photo (or a warm tone tile) with the weekday and the day number; today is always there. A calendar button jumps further back.
-import { Fragment, useEffect, useRef, useState } from 'react';
+// The day strip (round 8): the last days as 44px circles with the weekday above. A day the parent came is filled with that day's best picture (a scrim keeps the
+// number readable), the day being read is ink, today has a ring; KC round 10: only days they came are shown (plus today, a grey outline when they stayed home).
+// KC round 9: the day ahead goes last ("Tomorrow", or Monday after a Friday) as a dashed circle, so families can see tomorrow's plan.
+import { useState, type CSSProperties, type ReactNode } from 'react';
 import type { ISODate } from '@cp/shared';
 import type { StripDay } from '@cp/shared/rules/family';
-import { DateField, Icon, PhotoImg, photoBg } from '../../components/ui';
-import { useDevice } from '../../hooks/useDevice';
+import { addDays } from '@cp/shared';
+import { DateField, Icon, PhotoImg } from '../../components/ui';
+import { F } from './kit';
 import { useFamilyCtx } from './useFamily';
 
-const TILE_W = 56;
-const TILE_H = 68;
+const SCRIM = 'rgba(28,22,16,.4)';
+const BRONZE = 'linear-gradient(160deg, #B3A28A 0%, #75624B 100%)';
 
-export function DayStrip({ days, selected, tone, onPick }: { days: StripDay[]; selected: ISODate; tone: number; onPick: (d: ISODate) => void }) {
+/**
+ * `picker`: the calendar button, last in the row (a day older than the strip).
+ * `tiles` (round 8c, the laptop under Today's picture): six rounded grey tiles, the day's circle and its weekday side by side; the day being read is a
+ * darker tile.
+ */
+export function DayStrip({ days, selected, onPick, picker, tiles }: { days: StripDay[]; selected: ISODate; onPick: (d: ISODate) => void; picker?: ReactNode; tiles?: boolean }) {
   const { t, fmt, now } = useFamilyCtx();
-  const { isPhone } = useDevice();
-  const box = useRef<HTMLDivElement>(null);
-  const first = useRef(true);
-  // keep the selected day in view (a quiet jump the first time, a smooth glide afterwards); `inline` only: the page itself never scrolls
-  useEffect(() => {
-    const el = box.current?.querySelector<HTMLElement>('[data-selected="true"]');
-    if (!el) return;
-    el.scrollIntoView({ inline: 'center', block: 'nearest', behavior: first.current ? 'auto' : 'smooth' });
-    first.current = false;
-  }, [selected, days.length]);
-  const bleed = isPhone ? 16 : 0;
-  return (
-    <div role="group" aria-label={t('family.storyStrip')} data-testid="day-strip" style={{ margin: `0 -${bleed}px` }}>
-      <div ref={box} style={{ display: 'flex', gap: 10, overflowX: 'auto', scrollbarWidth: 'none', padding: `6px ${bleed || 4}px 8px`, scrollSnapType: 'x proximity', WebkitOverflowScrolling: 'touch' }}>
-        {days.map((d, i) => {
+  /** "Tomorrow", or the day's name when the next open day is further away (Monday after a Friday) */
+  const planWord = (d: ISODate) => (d === addDays(now.today, 1) ? t('common.tomorrow') : fmt.fd(d, { weekday: 'short' }).replace(/\.$/, ''));
+  if (tiles) {
+    return (
+      <div role="group" aria-label={t('family.storyStrip')} data-testid="day-strip" data-layout="tiles" style={{ display: 'grid', gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`, gap: 6 }}>
+        {days.map((d) => {
           const on = d.date === selected;
-          const newMonth = i === 0 || d.date.slice(0, 7) !== days[i - 1].date.slice(0, 7);
           const isToday = d.date === now.today;
-          const label = fmt.fd(d.date, { weekday: 'short' }).replace(/\.$/, '');
+          const photo = !on && d.visited && d.photo?.mediaId ? d.photo : null;
+          const filled = !on && d.visited;
+          const ahead = !!d.plan && !on;
           return (
-            <Fragment key={d.date}>
-            {newMonth ? <span aria-hidden="true" style={{ flex: 'none', alignSelf: 'flex-start', height: TILE_H, display: 'flex', alignItems: 'center', fontSize: 11, fontWeight: 600, letterSpacing: '1px', textTransform: 'uppercase', color: '#A89C8E', writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}>{fmt.fd(d.date, { month: 'short' }).replace(/\.$/, '')}</span> : null}
-            <button type="button" data-date={d.date} data-selected={on} aria-current={on ? 'date' : undefined} aria-label={fmt.fdl(d.date)} onClick={() => onPick(d.date)} className="cp-press"
-              style={{ flex: 'none', width: TILE_W + 4, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'Inter', scrollSnapAlign: 'center' }}>
-              <span style={{ width: TILE_W, height: TILE_H, borderRadius: 18, overflow: 'hidden', position: 'relative', display: 'block', flex: 'none',
-                background: d.visited ? photoBg(d.photo?.tone ?? tone) : 'transparent', border: d.visited ? 'none' : '1.5px dashed #D3C7B8', opacity: on || d.visited ? 1 : 0.9,
-                boxShadow: on ? '0 0 0 2px #FFFFFF, 0 0 0 4px #24201C' : 'none', transition: 'box-shadow .15s' }}>
-                {d.photo ? <PhotoImg photo={d.photo} /> : null}
-                {/* how many photos the day has, so a tile still says something before real pictures load (or in a demo without them) */}
-                {d.visited && d.count > 0 ? (
-                  <span aria-hidden="true" style={{ position: 'absolute', right: 5, bottom: 5, display: 'inline-flex', alignItems: 'center', gap: 2, padding: '1px 6px 1px 4px', borderRadius: 999, background: 'rgba(36,32,28,0.55)', color: '#FFFFFF', fontSize: 11, lineHeight: '16px', fontWeight: 600 }}>
-                    <Icon name="photo_camera" size={11} fill={1} color="#FFFFFF" />{d.count}
-                  </span>
-                ) : null}
-                {!d.visited ? <span style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="today" size={22} color="#A89C8E" weight={300} /></span> : null}
+            <button key={d.date} type="button" data-date={d.date} data-selected={on} data-visited={d.visited} data-plan={d.plan || undefined} aria-pressed={on} aria-current={isToday ? 'date' : undefined} aria-label={d.plan ? `${planWord(d.date)} · ${fmt.fdl(d.date)}` : fmt.fdl(d.date)} onClick={() => onPick(d.date)} className="cp-fam-press"
+              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 6px', border: 'none', borderRadius: 16, background: on ? F.press : '#F7F7F8', cursor: 'pointer', fontFamily: 'Inter', minWidth: 0 }}>
+              <span style={{ position: 'relative', width: 40, height: 40, borderRadius: 999, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+                background: on ? F.ink : filled ? BRONZE : '#FFFFFF', color: on || filled ? '#FFFFFF' : '#8A8078', fontSize: 14, fontWeight: 600,
+                boxShadow: isToday && !on ? `0 0 0 2px #F7F7F8, 0 0 0 3.5px ${F.bronze}` : !on && !filled && !ahead ? `inset 0 0 0 1.5px ${F.line}` : 'none', border: ahead ? `1.5px dashed ${F.bronze}` : undefined, boxSizing: 'border-box' }}>
+                {photo ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0 }}><PhotoImg photo={photo} /></span> : null}
+                {photo ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: SCRIM }} /> : null}
+                <span style={{ position: 'relative', fontVariantNumeric: 'tabular-nums', textShadow: filled ? '0 1px 2px rgba(0,0,0,.4)' : 'none' }}>{+d.date.slice(8, 10)}</span>
               </span>
-              <span style={{ fontSize: 12, lineHeight: '14px', color: on ? '#24201C' : '#8A8078', fontWeight: on ? 600 : 500 }}>{isToday ? t('common.today') : label}</span>
-              <span style={{ fontSize: 16, lineHeight: '18px', color: on ? '#24201C' : '#6B6259', fontWeight: on ? 600 : 500, fontVariantNumeric: 'tabular-nums' }}>{+d.date.slice(8, 10)}</span>
+              <span style={{ fontSize: 13, fontWeight: on ? 600 : 500, color: F.soft, whiteSpace: 'nowrap' }}>{d.plan ? planWord(d.date) : fmt.fd(d.date, { weekday: 'short' }).replace(/\.$/, '')}</span>
             </button>
-            </Fragment>
           );
         })}
       </div>
+    );
+  }
+  return (
+    <div role="group" aria-label={t('family.storyStrip')} data-testid="day-strip" style={{ display: 'grid', gridTemplateColumns: `repeat(${days.length + (picker ? 1 : 0)}, minmax(0, 1fr))`, gap: 4, padding: '0 4px' }}>
+      {days.map((d) => {
+        const on = d.date === selected;
+        const isToday = d.date === now.today;
+        const label = isToday ? t('common.today') : d.plan ? planWord(d.date) : fmt.fd(d.date, { weekday: 'short' }).replace(/\.$/, '');
+        const photo = !on && d.visited && d.photo?.mediaId ? d.photo : null;
+        const filled = !on && d.visited;
+        const ahead = !!d.plan && !on;
+        return (
+          <button key={d.date} type="button" data-date={d.date} data-selected={on} data-visited={d.visited} data-plan={d.plan || undefined} aria-pressed={on} aria-current={isToday ? 'date' : undefined} aria-label={d.plan ? `${planWord(d.date)} · ${fmt.fdl(d.date)}` : fmt.fdl(d.date)} onClick={() => onPick(d.date)} className="cp-press"
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'Inter', minWidth: 0 }}>
+            <span style={{ fontSize: 12, lineHeight: '14px', color: on ? F.ink : F.muted, fontWeight: on ? 600 : 500 }}>{label}</span>
+            <span style={{ position: 'relative', width: 44, height: 44, borderRadius: 999, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
+              background: on ? F.ink : filled ? BRONZE : 'transparent', color: on || filled ? '#FFFFFF' : ahead ? F.bronze : '#8A8078', fontSize: 15, fontWeight: 600,
+              boxShadow: isToday && !on ? `0 0 0 2px #FFFFFF, 0 0 0 3.5px ${F.bronze}` : !on && !filled && !ahead ? `inset 0 0 0 1.5px ${F.line}` : 'none', border: ahead ? `1.5px dashed ${F.bronze}` : undefined, boxSizing: 'border-box' }}>
+              {photo ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0 }}><PhotoImg photo={photo} /></span> : null}
+              {photo ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: SCRIM }} /> : null}
+              <span style={{ position: 'relative', fontVariantNumeric: 'tabular-nums', textShadow: filled ? '0 1px 2px rgba(0,0,0,.4)' : 'none' }}>{+d.date.slice(8, 10)}</span>
+            </span>
+          </button>
+        );
+      })}
+      {picker ? <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6 }}><span aria-hidden="true" style={{ height: 14 }} />{picker}</span> : null}
     </div>
   );
 }
 
 /**
- * The calendar button: a round icon over a real DateField (invisible, same tap area) limited to the days the member came and today, so the
- * date picker, its keyboard handling and its phone sheet are the app's own.
+ * The day picker: a real DateField (invisible, same tap area) under a visible face, limited to the days the member came and today, so the date
+ * picker, its keyboard handling and its phone sheet are the app's own. `chip` (round 8, Today's header): a frosted "📅 Tue 13 Oct" chip floating
+ * on the day's picture; without it, a round grey calendar button.
  */
-export function DayPicker({ value, visits, today, onPick }: { value: ISODate; visits: Set<ISODate>; today: ISODate; onPick: (d: ISODate) => void }) {
+export function DayPicker({ value, visits, today, onPick, chip }: { value: ISODate; visits: Set<ISODate>; today: ISODate; onPick: (d: ISODate) => void; chip?: string }) {
   const { t } = useFamilyCtx();
   const [focus, setFocus] = useState(false);
   const min = Array.from(visits).sort()[0] || today;
+  const ring = focus ? (chip ? '0 0 0 2px #FFFFFF' : '0 0 0 2px #FFFFFF, 0 0 0 4px #24201C') : 'none';
+  const box: CSSProperties = chip
+    ? { pointerEvents: 'auto', position: 'relative', height: 36, padding: '0 14px 0 10px', flex: 'none', borderRadius: 999, background: 'rgba(255,255,255,.22)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)', boxShadow: ring }
+    : { position: 'relative', width: 44, height: 44, flex: 'none', borderRadius: 999, background: F.fill, boxShadow: ring };
   return (
-    <div style={{ position: 'relative', width: 44, height: 44, flex: 'none', borderRadius: 999, background: '#F3EEE8', boxShadow: focus ? '0 0 0 2px #FFFFFF, 0 0 0 4px #24201C' : 'none' }}
-      onFocusCapture={() => setFocus(true)} onBlurCapture={() => setFocus(false)} data-testid="day-picker">
-      <span aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
-        <Icon name="calendar_month" size={22} color="#75624B" />
-      </span>
+    <div style={box} onFocusCapture={() => setFocus(true)} onBlurCapture={() => setFocus(false)} data-testid="day-picker">
+      {chip ? (
+        <span aria-hidden="true" style={{ height: '100%', display: 'flex', alignItems: 'center', gap: 6, color: '#FFFFFF', fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+          <Icon name="calendar_today" size={18} color="#FFFFFF" />{chip}
+        </span>
+      ) : (
+        <span aria-hidden="true" style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', pointerEvents: 'none' }}>
+          <Icon name="calendar_month" size={22} color={F.text} />
+        </span>
+      )}
       <div style={{ position: 'absolute', inset: 0, opacity: 0, overflow: 'hidden', borderRadius: 999 }}>
         <DateField ariaLabel={t('family.storyPickDay')} value={value} onChange={(v) => { if (v) onPick(v); }} min={min < today ? min : today} max={today} disabledDate={(d) => d !== today && !visits.has(d)} />
       </div>

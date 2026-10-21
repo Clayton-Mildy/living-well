@@ -1,5 +1,5 @@
 // CameraCapture: a real camera (getUserMedia: localhost and HTTPS). Photo mode: shutter, retake, use photo.
-// Video mode: record from the camera (with sound when the microphone is allowed) for up to 15 seconds with a visible timer, stop, preview, retake or use.
+// Video mode: record from the camera (with sound when the microphone is allowed) for up to 60 seconds (KC round 11, was 15) with a visible timer, stop, preview, retake or use.
 // With no camera, no permission, no MediaRecorder or no secure context it falls back to a file picker (images, or video/*), so the same flow always works.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
@@ -10,13 +10,13 @@ import { FONT_BODY, Icon, IconButton, useOverlayA11y } from './index';
 
 type Stage = 'starting' | 'live' | 'recording' | 'review' | 'fallback';
 type Why = 'denied' | 'none' | null;
-/** What came back with the blob: a photo is a JPEG no larger than 1600px; a video is WebM or MP4 (up to 15 s, 25 MB). */
+/** What came back with the blob: a photo is a JPEG no larger than 1600px; a video is WebM or MP4 (up to 60 s, 100 MB). */
 export interface CaptureInfo { media: 'photo' | 'video'; durationSec?: number }
 type Shot = { blob: Blob; url: string; media: 'photo' | 'video'; durationSec?: number };
 
 /** The first video format this browser can record (WebM in Chrome and Firefox, MP4 in Safari). */
-const recordMime = () => ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4;codecs=avc1,mp4a', 'video/mp4'].find((m) => { try { return MediaRecorder.isTypeSupported(m); } catch { return false; } });
-const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec) % 60).padStart(2, '0')}`;
+export const recordMime = () => ['video/webm;codecs=vp9,opus', 'video/webm;codecs=vp8,opus', 'video/webm', 'video/mp4;codecs=avc1,mp4a', 'video/mp4'].find((m) => { try { return MediaRecorder.isTypeSupported(m); } catch { return false; } });
+export const clock = (sec: number) => `${Math.floor(sec / 60)}:${String(Math.floor(sec) % 60).padStart(2, '0')}`;
 
 export function CameraCapture({ open, onClose, onCapture, facing = 'environment', allowUpload = true, mode = 'photo' }: {
   open: boolean;
@@ -26,7 +26,7 @@ export function CameraCapture({ open, onClose, onCapture, facing = 'environment'
   facing?: 'user' | 'environment';
   /** also offer "Upload a photo" next to the shutter (always on when there is no camera) */
   allowUpload?: boolean;
-  /** 'video': record up to 15 seconds instead of taking a photo */
+  /** 'video': record up to 60 seconds instead of taking a photo */
   mode?: 'photo' | 'video';
 }) {
   const t = useT();
@@ -116,7 +116,7 @@ export function CameraCapture({ open, onClose, onCapture, facing = 'environment'
   const retake = () => { abort(); setPhoto(null); setErr(null); setSecs(0); setStage('starting'); setAttempt((a) => a + 1); };
   const use = () => { if (!shot) return; onCapture(shot.blob, { media: shot.media, ...(shot.durationSec ? { durationSec: shot.durationSec } : {}) }); onClose(); };
 
-  /** Start recording from the live camera; it stops by itself at 15 seconds. */
+  /** Start recording from the live camera; it stops by itself at 60 seconds. */
   const record = () => {
     const s = stream.current;
     if (!s || stage !== 'live') return;

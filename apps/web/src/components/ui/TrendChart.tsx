@@ -26,6 +26,8 @@ export interface TrendSeries {
   points: TrendPoint[];
   dashed?: boolean;
   tone?: 'ink' | 'bronze' | 'muted';
+  /** an exact colour for the line, its dots and its key, when a tone is not the right one (a plan colour) */
+  color?: string;
 }
 export interface TrendChartProps {
   series: TrendSeries[];
@@ -82,12 +84,12 @@ export function TrendRangeControl({ value, onChange, today, firstDate, label }: 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8, minWidth: 0 }}>
       {isPhone ? (
-        <div role="tablist" aria-label={label ?? t('health.rangeL')} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>
+        <div role="tablist" aria-label={label ?? t('health.rangeL')} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>
           {items.map((it) => {
             const on = it.value === value.choice;
             return (
               <button key={it.value} type="button" role="tab" aria-selected={on} onClick={() => pick(it.value)}
-                style={{ minWidth: 0, height: 36, padding: '0 4px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'background-color .15s' }}>
+                style={{ minWidth: 0, height: 36, padding: '0 4px', borderRadius: 7, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', transition: 'background-color .15s' }}>
                 {it.label}
               </button>
             );
@@ -183,7 +185,7 @@ export function TrendChart({ series, band, format, unit, from, to, kind = 'line'
       const p = same.find((q) => (q.time ?? '') === (act.time ?? '')) ?? same[same.length - 1];
       if (!p) return;
       rows.push({
-        key: s.key, label: s.label, color: TONE[s.tone ?? (i === 0 ? 'bronze' : 'muted')], dashed: !!s.dashed, text: p.text ?? withUnit(fmtV(p.value), unit),
+        key: s.key, label: s.label, color: s.color ?? TONE[s.tone ?? (i === 0 ? 'bronze' : 'muted')], dashed: !!s.dashed, text: p.text ?? withUnit(fmtV(p.value), unit),
         time: (p.time ?? '') !== (act.time ?? '') ? p.time : undefined, status: p.status, note: p.note,
       });
     });
@@ -264,7 +266,7 @@ export function TrendChart({ series, band, format, unit, from, to, kind = 'line'
   // many readings (a long range): quiet dots, a Watch is small and an Alert stands out
   const rN = compact ? 2.4 : dense ? 1.7 : 3.2;
   const rF = (st: Health) => (st === 'alert' ? (compact || dense ? 3.8 : 4.8) : compact ? 3.2 : dense ? 2.6 : 4.2);
-  const toneOf = (s: TrendSeries, i: number) => TONE[s.tone ?? (i === 0 ? 'bronze' : 'muted')];
+  const toneOf = (s: TrendSeries, i: number) => s.color ?? TONE[s.tone ?? (i === 0 ? 'bronze' : 'muted')];
   const slot = plotW / sc.days;
   const bw = Math.max(2, Math.min(22, (slot * 0.7) / Math.max(1, vis.length)));
   const bandTop = band ? Math.min(band.to, yHi) : 0, bandBot = band ? Math.max(band.from, yLo) : 0;
@@ -290,19 +292,19 @@ export function TrendChart({ series, band, format, unit, from, to, kind = 'line'
             {band && bandTop > bandBot ? <rect x={padL} y={y(bandTop)} width={Math.max(0, W - padL - padR)} height={y(bandBot) - y(bandTop)} rx={4} fill="#E3EFE6" /> : null}
             {ticks.map((v, i) => (
               <g key={v}>
-                <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} stroke="#EDE7DE" strokeWidth={1} />
+                <line x1={padL} x2={W - padR} y1={y(v)} y2={y(v)} style={{ stroke: 'var(--hairline, #E2E2E6)' }} strokeWidth={1} />
                 <text x={padL - 6} y={y(v) + 4} textAnchor="end" fontSize={12} fontFamily="Inter" fill="#6B6259" style={{ fontVariantNumeric: 'tabular-nums' }}>{tickText[i]}</text>
               </g>
             ))}
             {xLabels.map((l, i) => (
               <g key={i}>
-                {l.tick ? <line x1={l.x - 3} x2={l.x - 3} y1={plotB} y2={plotB + 5} stroke="#CFC5B8" strokeWidth={1} /> : null}
+                {l.tick ? <line x1={l.x - 3} x2={l.x - 3} y1={plotB} y2={plotB + 5} style={{ stroke: 'var(--outline, #D4D4D8)' }} strokeWidth={1} /> : null}
                 <text x={l.x} y={height - 6} textAnchor={l.anchor} fontSize={12} fontFamily="Inter" fill="#6B6259">{l.text}</text>
               </g>
             ))}
             {bars ? (
               <>
-                {act ? <rect x={act.x - Math.max(6, slot) / 2} y={padT} width={Math.max(6, slot)} height={plotH} rx={4} fill="#F5F2ED" /> : null}
+                {act ? <rect x={act.x - Math.max(6, slot) / 2} y={padT} width={Math.max(6, slot)} height={plotH} rx={4} style={{ fill: 'var(--fill, #F4F4F5)' }} /> : null}
                 {vis.map((s, si) => s.points.map((p, pi) => {
                   const cx = sc.x(p.date, p.time);
                   const h = Math.max(p.value > 0 ? 1.5 : 0, plotB - y(p.value));
@@ -321,10 +323,10 @@ export function TrendChart({ series, band, format, unit, from, to, kind = 'line'
                   if (!flagged && dense) return null;
                   const hollow = !flagged && (s.dashed || s.tone === 'muted' || (!s.tone && si > 0));
                   return <circle key={`${si}-${pi}`} cx={sc.x(p.date, p.time)} cy={y(p.value)} r={flagged ? rF(p.status as Health) : rN}
-                    fill={flagged ? FLAG[p.status as 'watch' | 'alert'] : hollow ? '#FFFFFF' : INK} stroke={flagged ? '#FFFFFF' : hollow ? toneOf(s, si) : 'none'} strokeWidth={flagged ? 1.5 : hollow ? 1.5 : 0} />;
+                    fill={flagged ? FLAG[p.status as 'watch' | 'alert'] : hollow ? '#FFFFFF' : s.color ?? INK} stroke={flagged ? '#FFFFFF' : hollow ? toneOf(s, si) : 'none'} strokeWidth={flagged ? 1.5 : hollow ? 1.5 : 0} />;
                 }))}
                 {act ? vis.map((s, si) => s.points.filter((p) => p.date === act.date && (p.time ?? '') === (act.time ?? '')).map((p, pi) => {
-                  const col = p.status && p.status !== 'normal' ? FLAG[p.status] : INK;
+                  const col = p.status && p.status !== 'normal' ? FLAG[p.status] : s.color ?? INK;
                   return (
                     <g key={`${si}-${pi}`}>
                       <circle cx={act.x} cy={y(p.value)} r={compact ? 5.5 : 7} fill="#FFFFFF" stroke={toneOf(s, si)} strokeWidth={compact ? 1.5 : 2} />
@@ -350,7 +352,7 @@ export function TrendChart({ series, band, format, unit, from, to, kind = 'line'
               {act ? <><span>{head}</span><span> · </span><strong style={{ fontWeight: 600, color: INK }}>{rows.map((r) => r.text).join(' · ')}</strong>{rows.some((r) => r.status) ? ` · ${statusWord(rows.find((r) => r.status)?.status)}` : ''}</> : caption}
             </div>
           ) : act ? (
-            <div ref={card} data-testid="trend-tip" style={{ position: 'absolute', top: 4, left: cardLeft, zIndex: 4, pointerEvents: 'none', minWidth: 120, maxWidth: Math.max(140, Math.min(240, W - 4)), padding: '8px 11px 9px', background: '#FFFFFF', border: '1px solid #E4DACD', borderRadius: 10, boxShadow: '0 6px 18px rgba(40,30,20,0.14)', fontSize: 13, lineHeight: '18px', color: INK, fontFamily: 'Inter', display: 'flex', flexDirection: 'column', gap: 3 }}>
+            <div ref={card} data-testid="trend-tip" style={{ position: 'absolute', top: 4, left: cardLeft, zIndex: 4, pointerEvents: 'none', minWidth: 120, maxWidth: Math.max(140, Math.min(240, W - 4)), padding: '8px 11px 9px', background: '#FFFFFF', borderRadius: 12, boxShadow: '0 1px 3px rgba(40,30,20,0.1), 0 8px 24px rgba(40,30,20,0.16)', fontSize: 13, lineHeight: '18px', color: INK, fontFamily: 'Inter', display: 'flex', flexDirection: 'column', gap: 3 }}>
               <span style={{ fontWeight: 600, whiteSpace: 'nowrap' }}>{head}</span>
               {rows.map((r) => (
                 <span key={r.key} style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -368,7 +370,7 @@ export function TrendChart({ series, band, format, unit, from, to, kind = 'line'
           ) : null}
         </>
       ) : empty ? (
-        <div style={{ minHeight: compact ? 36 : Math.min(height, 90), display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, lineHeight: 1.4, color: '#6B6259', background: '#FAF9F7', borderRadius: 10, padding: '10px 12px' }}>{empty}</div>
+        <div className="cp-grey" style={{ minHeight: compact ? 36 : Math.min(height, 90), display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize: 14, lineHeight: 1.4, color: '#6B6259', background: 'var(--fill, #F4F4F5)', borderRadius: 14, padding: '10px 12px' }}>{empty}</div>
       ) : null}
       <span className="sr-only" aria-live="polite" aria-atomic="true">{liveText}</span>
     </div>

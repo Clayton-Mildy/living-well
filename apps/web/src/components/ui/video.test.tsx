@@ -1,5 +1,5 @@
 // Video in the kit: the media helpers (types, size, length, upload without the image downscale), PhotoImg for a real video, and CameraCapture's video mode
-// (recording with a fake camera and recorder: timer, auto-stop at 15 s, preview; and the file fallback). jsdom, English.
+// (recording with a fake camera and recorder: timer, auto-stop at 60 s, preview; and the file fallback). jsdom, English.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
@@ -79,7 +79,7 @@ describe('uploadMedia for a video', () => {
     expect(body.mime).toBe('video/webm');
     expect(body.data).toBe(btoa(String.fromCharCode(...WEBM))); // the same bytes, not a re-encoded JPEG
   });
-  it('refuses a type the server does not take, and a clip above 25 MB, before uploading', async () => {
+  it('refuses a type the server does not take, and a clip above 100 MB, before uploading', async () => {
     const fetchMock = post();
     vi.stubGlobal('fetch', fetchMock);
     await expect(uploadMedia(new Blob([new Uint8Array(4)], { type: 'video/ogg' }))).rejects.toMatchObject({ code: 'ds.videoType' });
@@ -99,11 +99,11 @@ describe('readVideoFile (the file fallback)', () => {
     const r = await readVideoFile(new File([new Uint8Array(8)], 'IMG_1.mov', { type: 'video/quicktime' }));
     expect(r.blob.type).toBe('video/mp4');
   });
-  it('rejects a wrong type, a file above 25 MB, and a clip longer than 15 seconds', async () => {
+  it('rejects a wrong type, a file above 100 MB, and a clip longer than 60 seconds', async () => {
     await expect(readVideoFile(new File(['hello'], 'a.txt', { type: 'text/plain' }))).rejects.toBeInstanceOf(ApiError);
     await expect(readVideoFile(new File([new Uint8Array(MAX_VIDEO_BYTES + 1)], 'big.mp4', { type: 'video/mp4' }))).rejects.toMatchObject({ code: 'ds.videoTooBig' });
-    stubMedia(20);
-    await expect(readVideoFile(new File([new Uint8Array(WEBM)], 'long.webm', { type: 'video/webm' }))).rejects.toMatchObject({ code: 'ds.videoTooLong', params: { n: 15 } });
+    stubMedia(75);
+    await expect(readVideoFile(new File([new Uint8Array(WEBM)], 'long.webm', { type: 'video/webm' }))).rejects.toMatchObject({ code: 'ds.videoTooLong', params: { n: 60 } });
   });
   it('still accepts a clip whose length the browser cannot read', async () => {
     stubMedia(null);
@@ -165,7 +165,7 @@ describe('CameraCapture video mode', () => {
     expect(onCapture).not.toHaveBeenCalled();
   });
 
-  it('records from the camera with a timer, stops by itself at 15 seconds, previews, and uses the clip', async () => {
+  it('records from the camera with a timer, stops by itself at 60 seconds, previews, and uses the clip', async () => {
     stubMedia(null);
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval', 'setTimeout', 'clearTimeout', 'performance'] });
     const tracks = [{ stop: vi.fn() }];
@@ -189,18 +189,18 @@ describe('CameraCapture video mode', () => {
     await click(rec);
     expect(recorders).toHaveLength(1);
     expect(recorders[0].opts.mimeType).toBe('video/webm;codecs=vp9,opus');
-    expect(q('[role="timer"]')!.textContent).toContain('0:00 / 0:15');
+    expect(q('[role="timer"]')!.textContent).toContain('0:00 / 1:00');
     await act(async () => { await vi.advanceTimersByTimeAsync(6200); });
-    expect(q('[role="timer"]')!.textContent).toContain('0:06 / 0:15');
+    expect(q('[role="timer"]')!.textContent).toContain('0:06 / 1:00');
     expect(q('button[aria-label="Stop recording"]')).toBeTruthy();
-    await act(async () => { await vi.advanceTimersByTimeAsync(9000); }); // past 15 s: it stops by itself
+    await act(async () => { await vi.advanceTimersByTimeAsync(54000); }); // past 60 s: it stops by itself
     expect(q('[role="timer"]')).toBeNull();
     expect(recorders[0].state).toBe('inactive');
     expect(q('video[aria-label="Preview of the video"]')).toBeTruthy();
     expect(tracks[0].stop).toHaveBeenCalled(); // the camera is released
     await click([...document.querySelectorAll('button')].find((b) => b.textContent?.endsWith('Use video')) ?? null);
     expect(onCapture.mock.calls[0][0].type).toBe('video/webm');
-    expect(onCapture.mock.calls[0][1]).toEqual({ media: 'video', durationSec: 15 });
+    expect(onCapture.mock.calls[0][1]).toEqual({ media: 'video', durationSec: 60 });
   });
   it('stopping early keeps the length recorded so far; closing while recording keeps nothing', async () => {
     stubMedia(null);

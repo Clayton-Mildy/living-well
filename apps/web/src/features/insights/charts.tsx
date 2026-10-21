@@ -1,4 +1,4 @@
-// Visit insights: the small charts that are not time series (those use TrendChart): the weekday x hour heat map, vertical bars, a share bar and a thin
+// Insights: the small charts that are not time series (those use TrendChart): the weekday x hour heat map, vertical bars, a share bar and a thin
 // progress bar. Every cell and bar can be hovered, focused or tapped; the text shows underneath ("Tue 10:00 · 21 in the club on average").
 // Events are per element (no pointer maths), so the CSS zoom needs no correction here.
 import { useState, type CSSProperties } from 'react';
@@ -66,7 +66,7 @@ export function HeatMap({ rows, hours, rowLabels, max, tip, peak, ariaLabel, com
 
 // ---------- vertical bars ----------
 export interface BarItem { key: string; label: string; value: number; /** the number written above the bar */ shown?: string; tip: string; color?: string }
-export function Bars({ items, height = 104, color = '#75624B', ariaLabel, idle }: { items: BarItem[]; height?: number; color?: string; ariaLabel: string; /** the text before anything is tapped */ idle?: string }) {
+export function Bars({ items, height = 104, color = 'var(--accent, #75624B)', ariaLabel, idle }: { items: BarItem[]; height?: number; color?: string; ariaLabel: string; /** the text before anything is tapped */ idle?: string }) {
   const [sel, setSel] = useState<string | null>(null);
   const max = Math.max(1e-9, ...items.map((i) => i.value));
   const cur = items.find((i) => i.key === sel);
@@ -80,7 +80,7 @@ export function Bars({ items, height = 104, color = '#75624B', ariaLabel, idle }
             <button key={it.key} type="button" title={it.tip} aria-label={it.tip} aria-pressed={on}
               onMouseEnter={() => setSel(it.key)} onFocus={() => setSel(it.key)} onClick={() => setSel(it.key)}
               style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Inter' }}>
-              <span style={{ height, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 2, borderBottom: '1px solid #E4DACD' }}>
+              <span style={{ height, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', alignItems: 'center', gap: 2, borderBottom: '0.5px solid var(--hairline, #E2E2E6)' }}>
                 <span style={{ fontSize: 11, lineHeight: '14px', color: on ? INK : MUTED, fontWeight: on ? 600 : 400, fontVariantNumeric: 'tabular-nums' }}>{it.shown ?? it.value}</span>
                 <span style={{ width: '70%', maxWidth: 34, height: it.value > 0 ? Math.max(3, (it.value / max) * room) : 0, background: on ? INK : it.color || color, borderRadius: '5px 5px 1px 1px', transition: 'background .12s' }} />
               </span>
@@ -128,9 +128,52 @@ export function ThinBar({ used, quota, extra = 0 }: { used: number; quota: numbe
   const whole = Math.max(quota + extra, 1);
   const fill = Math.min(used, quota);
   return (
-    <div aria-hidden="true" style={{ display: 'flex', height: 5, borderRadius: 999, background: '#EDE5DA', overflow: 'hidden' }}>
+    <div aria-hidden="true" style={{ display: 'flex', height: 5, borderRadius: 999, background: 'var(--hairline, #E2E2E6)', overflow: 'hidden' }}>
       <span style={{ width: `${(fill / whole) * 100}%`, background: INK }} />
       {extra > 0 ? <span style={{ width: `${(extra / whole) * 100}%`, background: '#C9A24D' }} /> : null}
+    </div>
+  );
+}
+
+// ---------- in / out bars (KC round 9): per week or month a stack above the line (in) and a stack below it (out) ----------
+export interface InOutPart { value: number; color: string }
+export interface InOutItem { key: string; label: string; up: InOutPart[]; down: InOutPart[]; tip: string }
+export function InOutBars({ items, height = 160, ariaLabel, idle }: { items: InOutItem[]; height?: number; ariaLabel: string; /** the text before anything is tapped */ idle?: string }) {
+  const [sel, setSel] = useState<string | null>(null);
+  const total = (ps: InOutPart[]) => ps.reduce((a, p) => a + p.value, 0);
+  const max = Math.max(1, ...items.map((i) => Math.max(total(i.up), total(i.down))));
+  const half = Math.max(30, (height - 32) / 2);
+  const cur = items.find((i) => i.key === sel);
+  const every = items.length > 12 ? 3 : items.length > 7 ? 2 : 1; // a label under every bar would run together on a phone
+  const stack = (ps: InOutPart[], up: boolean, on: boolean) => (
+    <span style={{ height: half, width: '100%', display: 'flex', flexDirection: 'column', justifyContent: up ? 'flex-end' : 'flex-start', alignItems: 'center' }}>
+      {total(ps) > 0 ? (
+        <span style={{ width: '70%', maxWidth: 30, display: 'flex', flexDirection: up ? 'column-reverse' : 'column', borderRadius: up ? '5px 5px 1px 1px' : '1px 1px 5px 5px', overflow: 'hidden', opacity: sel && !on ? 0.5 : 1, transition: 'opacity .12s' }}>
+          {ps.map((p, i) => (p.value > 0 ? <span key={i} style={{ height: Math.max(3, (p.value / max) * half), background: p.color }} /> : null))}
+        </span>
+      ) : null}
+    </span>
+  );
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <div role="group" aria-label={ariaLabel} style={{ display: 'flex', gap: items.length > 12 ? 2 : 4 }}>
+        {items.map((it, i) => {
+          const on = sel === it.key, u = total(it.up), d = total(it.down);
+          return (
+            <button key={it.key} type="button" title={it.tip} aria-label={it.tip} aria-pressed={on}
+              onMouseEnter={() => setSel(it.key)} onFocus={() => setSel(it.key)} onClick={() => setSel(it.key)}
+              style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 2, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Inter' }}>
+              <span style={{ fontSize: 11, lineHeight: '14px', color: on ? INK : MUTED, fontWeight: on ? 600 : 400, fontVariantNumeric: 'tabular-nums', visibility: u ? 'visible' : 'hidden' }}>{u}</span>
+              {stack(it.up, true, on)}
+              <span aria-hidden="true" style={{ width: '100%', height: 1, background: 'var(--outline, #D4D4D8)' }} />
+              {stack(it.down, false, on)}
+              <span style={{ fontSize: 11, lineHeight: '14px', color: on ? INK : MUTED, fontWeight: on ? 600 : 400, fontVariantNumeric: 'tabular-nums', visibility: d ? 'visible' : 'hidden' }}>{d}</span>
+              <span style={{ fontSize: 12, color: on ? INK : MUTED, fontWeight: on ? 600 : 400, whiteSpace: 'nowrap', visibility: i % every === 0 || on ? 'visible' : 'hidden' }}>{it.label}</span>
+            </button>
+          );
+        })}
+      </div>
+      {cur || idle ? <div style={readout} aria-live="polite">{cur ? cur.tip : idle}</div> : null}
     </div>
   );
 }

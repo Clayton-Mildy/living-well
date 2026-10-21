@@ -85,13 +85,13 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
       <PhoneScreen open={open} onClose={onClose} label={heading} back={t('common.cancel')}
         footer={confirmDel ? (
           <div style={{ display: 'flex', gap: 8 }}>
-            <button type="button" className="cp-press" onClick={() => setConfirmDel(false)} style={{ flex: 1, height: 50, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('cal.keep')}</button>
+            <button type="button" className="cp-press cp-fill" onClick={() => setConfirmDel(false)} style={{ flex: 1, height: 50, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('cal.keep')}</button>
             <div style={{ flex: 1 }}>{pill(t('cal.confirmDelete'), remove, true)}</div>
           </div>
         ) : pill(t('common.save'), save)}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4 }}>
           <Eyebrow>{t('cal.eventsEditor')}</Eyebrow>
-          <h2 style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{heading}</h2>
+          <h2 className="cp-serif" style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{heading}</h2>
         </div>
         {confirmDel ? (
           <>
@@ -124,7 +124,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
             {err ? <Note tone="rust" icon="error">{err}</Note> : null}
             <Group pad="10px 12px"><Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} /></Group>
             {event ? (
-              <button type="button" className="cp-tap-self cp-press" onClick={() => setConfirmDel(true)} style={{ height: 50, borderRadius: 14, border: 'none', background: '#FFFFFF', color: '#9A3D24', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>{t('common.delete')}</button>
+              <button type="button" className="cp-tap-self cp-press cp-fill" onClick={() => setConfirmDel(true)} style={{ height: 50, borderRadius: 14, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#9A3D24', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>{t('common.delete')}</button>
             ) : null}
           </>
         )}

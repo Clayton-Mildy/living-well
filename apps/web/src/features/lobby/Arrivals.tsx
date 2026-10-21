@@ -234,7 +234,7 @@ export function Arrivals() {
         </div>
 
         {!status.open ? (
-          <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 20, boxShadow: 'var(--card-shadow)' }}>
+          <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 20 }}>
             <EmptyState icon="event_busy" title={status.event ? (lang === 'id' && status.event.titleId ? status.event.titleId : status.event.title) : t('common.clubClosed')}
               sub={t(status.reason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })} />
           </div>

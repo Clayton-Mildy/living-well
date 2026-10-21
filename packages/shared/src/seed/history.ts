@@ -76,7 +76,7 @@ const NOTE_ANY = [
   'Walked a full lap of the garden today.', 'Laughed a lot at lunch with {friend}.', 'Showed everyone photos of the grandchildren.', 'Wore a lovely batik outfit today and got many compliments.',
   'Sat by the window and watched the rain with a warm cup of tea.', 'Helped set the tables before lunch.', 'In good spirits all day.', 'Asked after {friend} and was glad to see them today.',
   'Had a long chat with Ns. Dewi about the garden at home.', 'Enjoyed the soup at lunch and asked for the recipe.', 'Hummed a favourite song while waiting for the car.',
-  'Shared the story of how {his} family first came to Jakarta.', 'Helped fold the napkins and chatted with Bu Siti.',
+  'Shared the story of how {his} family first came to Jakarta.', 'Helped fold the napkins and chatted with Chef Agus.',
 ];
 const NOTE_QUIET = [
   'Quieter than usual today; sat out of the afternoon session.', 'Quieter than usual today; stayed close to the team and rested after lunch.', 'Felt a little tired after lunch and had a rest in the lounge.',
@@ -96,7 +96,7 @@ const NOTE_LITTLE = [
   'Small appetite today; enjoyed the pudding and a cup of tea.',
 ];
 const STAFF_NOTES = [
-  'Walker brakes felt loose; checked with Pak Joko.', 'Family brought the monthly medicine box; stored with the nurse.', 'Asked for an extra cushion on the chair; added to the care plan.',
+  'Walker brakes felt loose; checked with Ns. Dewi.', 'Family brought the monthly medicine box; stored with the nurse.', 'Asked for an extra cushion on the chair; added to the care plan.',
   'Needed an arm on the stairs after lunch.', 'The car was late at pick-up; front desk told the family.', 'Hearing aid battery ran out at 2 pm; the spare was used.',
   'Declined the afternoon walk; nurse knows.', 'Likes the tea warm, not hot.', 'Changed into a spare shirt after lunch; the family has been told.',
 ];

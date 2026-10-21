@@ -20,7 +20,7 @@ export function Tiles({ s, sv, compact }: { s: ReturnType<typeof useClub>; sv: S
   // round 6, phone (compact): plain numbers in the summary group, no underlines
   if (compact) {
     return (
-      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(tiles.length, 3)}, minmax(0, 1fr))`, gap: 12, paddingTop: 6, borderTop: '1px solid #F0EAE1' }}>
+      <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(tiles.length, 3)}, minmax(0, 1fr))`, gap: 12, paddingTop: 6, borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
         {tiles.map((x) => (
           <div key={x.label} style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, paddingTop: 8 }}>
             <span style={{ fontSize: 26, lineHeight: '30px', fontWeight: 300, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>{x.value}</span>
@@ -34,7 +34,7 @@ export function Tiles({ s, sv, compact }: { s: ReturnType<typeof useClub>; sv: S
   return (
     <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(tiles.length, 3)}, minmax(0, 1fr))`, gap: 'clamp(10px, 2.4vw, 32px)', maxWidth: 640 }}>
       {tiles.map((x) => (
-        <div key={x.label} style={{ padding: '0 0 12px', borderBottom: '2px solid #E6DDD1', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+        <div key={x.label} style={{ padding: '0 0 12px', borderBottom: '2px solid var(--hairline, #E2E2E6)', display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
           <span style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>{x.value}</span>
           <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.3 }}>{x.label}</span>
           <span style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259' }}>{x.sub}</span>
@@ -55,7 +55,7 @@ export function TeamBars({ sv, staffName, staffRole, native }: { sv: Survey; sta
       <Group title={t('mgmt.svTeamRatings')} pad="0 16px" gap={0}>
         <div style={{ marginTop: -1 }}>
           {st.team.map((r) => (
-            <div key={r.staffId} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 0', borderTop: '1px solid #F0EAE1' }}>
+            <div key={r.staffId} style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
               <div style={{ display: 'flex', alignItems: 'baseline', gap: 12 }}>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
                   <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{staffName(r.staffId)}</span>
@@ -63,7 +63,7 @@ export function TeamBars({ sv, staffName, staffRole, native }: { sv: Survey; sta
                 </div>
                 <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.n ? `${r.avg.toFixed(1)} / 5` : '—'}</span>
               </div>
-              <div style={{ height: 6, borderRadius: 999, background: '#F0EAE1', overflow: 'hidden' }} role="img" aria-label={r.n ? `${r.avg.toFixed(1)} / 5` : '—'}>
+              <div style={{ height: 6, borderRadius: 999, background: 'var(--hairline, #E2E2E6)', overflow: 'hidden' }} role="img" aria-label={r.n ? `${r.avg.toFixed(1)} / 5` : '—'}>
                 <div style={{ height: '100%', width: r.n ? `${Math.round((r.avg / 5) * 100)}%` : '0%', background: '#3D6B4F' }} />
               </div>
             </div>
@@ -76,12 +76,12 @@ export function TeamBars({ sv, staffName, staffRole, native }: { sv: Survey; sta
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <span style={labelStyle}>{t('mgmt.svTeamRatings')}</span>
       {st.team.map((r) => (
-        <div key={r.staffId} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 0', borderTop: '1px solid #F0EAE1' }}>
+        <div key={r.staffId} style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '12px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
           <div style={{ flex: '1 1 160px', display: 'flex', flexDirection: 'column' }}>
             <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{staffName(r.staffId)}</span>
             <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{staffRole(r.staffId)} · {r.n ? tn(t, 'mgmt.svRatings', r.n) : t('mgmt.svNoRatings')}</span>
           </div>
-          <div style={{ flex: '0 1 140px', height: 8, borderRadius: 999, background: '#F0EAE1', overflow: 'hidden' }} role="img" aria-label={r.n ? `${r.avg.toFixed(1)} / 5` : '—'}>
+          <div style={{ flex: '0 1 140px', height: 8, borderRadius: 999, background: 'var(--hairline, #E2E2E6)', overflow: 'hidden' }} role="img" aria-label={r.n ? `${r.avg.toFixed(1)} / 5` : '—'}>
             <div style={{ height: '100%', width: r.n ? `${Math.round((r.avg / 5) * 100)}%` : '0%', background: '#3D6B4F' }} />
           </div>
           <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.n ? `${r.avg.toFixed(1)} / 5` : '—'}</span>
@@ -102,7 +102,7 @@ export function Comments({ sv, max, native }: { sv: Survey; max?: number; native
   const items = (
     <>
       {paged.rows.map((c) => (
-        <div key={c.id} style={{ padding: '10px 14px', borderRadius: 10, background: '#F5F5F3', display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div key={c.id} className="cp-grey" style={{ padding: '10px 14px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', gap: 3 }}>
           <span style={{ fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>“{c.comment}”</span>
           <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{responseWho(s, c)} · {fds(c.on)}</span>
         </div>
@@ -140,7 +140,7 @@ function ResultBlock({ r }: { r: CustomResult }) {
   const t = useT();
   const q = r.q;
   return (
-    <div data-result={q.id} style={{ padding: '14px 16px', borderRadius: 12, background: '#F5F5F3', display: 'flex', flexDirection: 'column', gap: 10 }}>
+    <div data-result={q.id} className="cp-grey" style={{ padding: '14px 16px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{q.text}</span>
         <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{t('mgmt.svQKind_' + q.kind)} · {tn(t, 'mgmt.svAnswers', r.n)}{q.required ? ` · ${t('mgmt.svQReqTag')}` : ''}</span>
@@ -148,7 +148,7 @@ function ResultBlock({ r }: { r: CustomResult }) {
       {r.n === 0 ? <span style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{t('mgmt.svResNone')}</span> : null}
       {r.n > 0 && q.kind === 'rating' ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <Icon name="star" size={24} fill={1} color="#75624B" />
+          <Icon name="star" size={24} fill={1} color="var(--accent, #75624B)" />
           <span style={{ fontSize: 24, lineHeight: '30px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.avg.toFixed(1)} / 5</span>
           <Bar grow pct={Math.round((r.avg / 5) * 100)} label={`${r.avg.toFixed(1)} / 5`} />
         </div>
@@ -167,7 +167,7 @@ function ResultBlock({ r }: { r: CustomResult }) {
 /** A share bar. `grow` lets it fill the rest of a row; otherwise it is the full width of its column. */
 function Bar({ pct, label, grow }: { pct: number; label: string; grow?: boolean }) {
   return (
-    <div style={{ flex: grow ? 1 : 'none', width: grow ? undefined : '100%', minWidth: 60, height: 8, borderRadius: 999, background: '#E3DCD3', overflow: 'hidden' }} role="img" aria-label={label}>
+    <div style={{ flex: grow ? 1 : 'none', width: grow ? undefined : '100%', minWidth: 60, height: 8, borderRadius: 999, background: 'var(--hairline, #E2E2E6)', overflow: 'hidden' }} role="img" aria-label={label}>
       <div style={{ height: '100%', width: `${pct}%`, background: '#3D6B4F' }} />
     </div>
   );
@@ -193,7 +193,7 @@ function TextAnswers({ r }: { r: CustomResult }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       {paged.rows.map((a) => (
-        <div key={a.id} style={{ padding: '10px 12px', borderRadius: 10, background: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <div key={a.id} className="cp-fill" style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 16, lineHeight: '24px', overflowWrap: 'anywhere' }}>“{a.text}”</span>
           <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{(s.surveyResponses[a.id] ? responseWho(s, s.surveyResponses[a.id]) : a.familyId)} · {fds(a.on)}</span>
         </div>

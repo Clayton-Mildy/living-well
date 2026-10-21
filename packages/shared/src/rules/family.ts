@@ -204,7 +204,9 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
   const blocks = scheduleBlocks(s, today).filter((b) => leftMin === null || b.start < leftMin);
   const home = toMin(homeTime(s));
   blocks.forEach((b, i) => {
-    const end = b.end ?? (i < blocks.length - 1 ? blocks[i + 1].start : Math.max(home, b.start + 30));
+    // a block ends when the next one starts (KC round 7: two blocks that start together, an extra session at tea time, both run until the one after them)
+    const nextStart = blocks.slice(i + 1).find((x) => x.start > b.start)?.start;
+    const end = b.end ?? (nextStart !== undefined ? nextStart : Math.max(home, b.start + 30));
     // KC round 6 (a progress bar): what is over is 'done' even when the member is not in; 'now' only for someone at the club
     const state: TlState = leftMin !== null ? 'done' : nowMin >= end ? 'done' : !present ? 'up' : nowMin >= b.start ? 'now' : 'up';
     items.push(b.build(state, b.start, end));
@@ -245,9 +247,11 @@ export const latestNote = (s: ClubState, memberId: string, today: ISODate): Dail
 export interface PhotoSet { key: string; kind: 'solo' | 'both' | 'group' | 'activity'; memberId?: string; /** activity sets: the activity's stored name */ activity?: string; photos: Photo[] }
 export interface PhotoDay { date: ISODate; count: number; sets: PhotoSet[] }
 /** Photos families see: staff-taken solo and group photos that are visible (not door captures or lunch photos). */
-export const isFamilyPhoto = (p: Photo) => p.visibility === 'visible' && (p.kind === 'solo' || p.kind === 'group');
+/** KC round 9 ("don't use the blank white-brown image"): families only ever see a photo that has a real picture (never the tone placeholder). */
+export const hasPicture = (p: Pick<Photo, 'mediaId'>) => !!p.mediaId;
+export const isFamilyPhoto = (p: Photo) => p.visibility === 'visible' && (p.kind === 'solo' || p.kind === 'group') && hasPicture(p);
 /** KC round 7: an approved activity picture (of a session, no member tags) is the family's on the days one of `who` came to the club. */
-export const isFamilyActivityPic = (s: ClubState, p: Photo, who: string[]) => p.kind === 'activity' && p.visibility === 'visible' && cameOn(s, who, p.date);
+export const isFamilyActivityPic = (s: ClubState, p: Photo, who: string[]) => p.kind === 'activity' && p.visibility === 'visible' && hasPicture(p) && cameOn(s, who, p.date);
 const byTime = (a: Photo, b: Photo) => (a.time < b.time ? -1 : a.time > b.time ? 1 : a.id < b.id ? -1 : 1);
 /** Photos of the given members by day, newest day first. Solo photos come first each day, then group photos, then the day's activity pictures (one set per activity). */
 export function familyPhotoDays(s: ClubState, who: string[], limit = 10): PhotoDay[] {
@@ -386,12 +390,12 @@ export function dayStory(s: ClubState, m: Member, date: ISODate, nowMin: number)
       id: it.id, slot: it.slot, time: it.time, state: it.state, activityId: it.activityId, roomId: it.roomId, staffId: it.staffId,
       guest: g ? { id: g.host.id, name: g.host.name, what: g.host.what, kind: g.host.kind, photoMediaId: g.host.photoMediaId } : null,
       took: visited ? tookPart(log, it.slot) : null,
-      photos: visited ? sessionPhotos(s, date, act, { familyOnly: true }) : [],
+      photos: visited ? sessionPhotos(s, date, act, { familyOnly: true }).filter(hasPicture) : [],
     });
   }
   const lunchItem = items.find((i) => i.kind === 'lunch');
   const dishIds = lunchItem ? servedLunch(s, m, date) : [];
-  const lunch: StoryLunch | null = lunchItem ? { dishIds, dishes: dishNamesOf(s, dishIds), amount: visited && log?.lunch ? log.lunch : null, photos: visibleLunchPhotos(s, date) } : null;
+  const lunch: StoryLunch | null = lunchItem ? { dishIds, dishes: dishNamesOf(s, dishIds), amount: visited && log?.lunch ? log.lunch : null, photos: visibleLunchPhotos(s, date).filter(hasPicture) } : null;
   const tea = items.find((i): i is Extract<TlItem, { kind: 'tea' }> => i.kind === 'tea');
   const ds = dayStatus(s, date);
   const event = ds.open ? ds.outing ?? null : ds.event ?? null;
@@ -408,7 +412,7 @@ export function dayStory(s: ClubState, m: Member, date: ISODate, nowMin: number)
 }
 
 /** The day strip: the member(s)' visit days (newest last) with today always present, the cover picture of each, and how many photos it holds. */
-export interface StripDay { date: ISODate; visited: boolean; photo: Photo | null; count: number }
+export interface StripDay { date: ISODate; visited: boolean; photo: Photo | null; count: number; /** KC round 9: the day ahead (tomorrow's plan) */ plan?: boolean }
 export function dayStrip(s: ClubState, who: string[], today: ISODate, limit = 45): StripDay[] {
   const visits = new Set<ISODate>();
   for (const id of who) for (const d of visitDays(s, id, today)) visits.add(d);

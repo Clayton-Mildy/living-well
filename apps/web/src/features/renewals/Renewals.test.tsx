@@ -50,9 +50,24 @@ describe('Renewals', () => {
     expect(seg('decided')?.textContent).toBe('Decided · 2');
     // the to-do list: Hendra has not answered twice, Tjahjadi asked to be called back
     expect(Array.from(document.querySelectorAll('[data-renewal]')).map((r) => r.getAttribute('data-renewal'))).toEqual(['m2', 'm20']);
-    expect(document.querySelector('[data-renewal="m2"]')?.textContent).toContain('No answer · 2 calls');
+    // KC round 8d: the plan, the status and the next step each have their own cell
+    const cell = (id: string, k: 'plan' | 'status' | 'next') => document.querySelector(`[data-renewal="${id}"] [data-testid="renewal-${k}"]`);
+    expect(cell('m2', 'plan')?.textContent).toContain('Gold');
+    expect(cell('m2', 'status')?.textContent).toContain('No answer');
+    expect(cell('m2', 'next')?.textContent).toBe('Call again · 2 calls');
+    expect(cell('m20', 'next')?.textContent).toBe('Call again · 1 call');
     await click(seg('decided'));
-    expect(document.querySelector('[data-renewal="m10"]')?.textContent).toContain('Asked in the app');
+    expect(cell('m10', 'plan')?.textContent).toContain('Flex');
+    expect(cell('m10', 'status')?.textContent).toContain('Asked in the app');
+    expect(cell('m10', 'next')?.textContent).toBe('Answer the plan request');
+    expect(cell('m46', 'status')?.textContent).toContain('Continue');
+    expect(cell('m46', 'next')?.textContent).toBe('Renews 1 Nov');
+    await click(seg('waiting'));
+    expect(cell('m1', 'status')?.textContent).toContain('Upgrade to Gold'); // the pending change shows its outcome ...
+    expect(cell('m1', 'status')?.getAttribute('data-pending')).toBe('true');
+    expect(cell('m1', 'next')?.textContent).toBe('Waiting for approval'); // ... and what happens next
+    expect(document.body.textContent).toContain('Member'); // the table header
+    expect(document.body.textContent).toContain('Next step');
   });
 
   it('a change by the front desk is sent for approval: pick the outcome, then Send for approval', async () => {

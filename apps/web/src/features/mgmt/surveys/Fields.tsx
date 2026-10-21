@@ -73,7 +73,7 @@ export function AudiencePicker({ value, onChange, count }: { value: AudDraft; on
             {shown.length ? <Button size={44} variant="secondary" disabled={allShown} onClick={() => setPicked([...new Set([...picked, ...shown.map((x) => x.id)])])}>{t('mgmt.svSelectResults')}</Button> : null}
             {picked.length ? <Button size={44} variant="ghost" onClick={() => setPicked([])}>{t('mgmt.svClearPicked')}</Button> : null}
           </div>
-          <div style={isPhone ? { borderRadius: 12, overflow: 'hidden', background: '#F5F5F3' } : { border: '1px solid #EFE7DC', borderRadius: 12, overflow: 'hidden', background: '#FFFFFF' }}>
+          <div className="cp-grey" style={{ borderRadius: 12, overflow: 'hidden', background: 'var(--fill, #F4F4F5)' }}>
             {shown.length ? paged.rows.map((x, i) => (
               <PickRow key={x.id} item={x} checked={picked.includes(x.id)} first={i === 0} onToggle={() => toggle(x.id)} />
             )) : <div style={{ padding: '14px 16px', fontSize: 16, lineHeight: 1.4, color: '#5E5852' }}>{t('mgmt.svNoMatch')}</div>}
@@ -86,12 +86,11 @@ export function AudiencePicker({ value, onChange, count }: { value: AudDraft; on
   );
 }
 function PickRow({ item, checked, first, onToggle }: { item: PickItem; checked: boolean; first: boolean; onToggle: () => void }) {
-  const { isPhone } = useDevice();
   // round 6, phone: the list sits as a tinted cell inside the white group, so its rows are transparent with a hairline
   return (
     <button type="button" role="checkbox" aria-checked={checked} data-pick={item.id} onClick={onToggle} className="h-row"
-      style={{ width: '100%', minHeight: 56, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', border: 'none', borderTop: first ? 'none' : isPhone ? '1px solid #E6E1DA' : '1px solid #F0EAE1', background: isPhone ? (checked ? '#EDE8E1' : 'transparent') : checked ? '#FBF8F4' : '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-      <Icon name={checked ? 'check_box' : 'check_box_outline_blank'} size={24} color={checked ? '#75624B' : '#5E5852'} fill={checked ? 1 : 0} />
+      style={{ width: '100%', minHeight: 56, display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', border: 'none', borderTop: first ? 'none' : '0.5px solid var(--hairline, #E2E2E6)', background: checked ? 'var(--press, #EEEEF0)' : 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+      <Icon name={checked ? 'check_box' : 'check_box_outline_blank'} size={24} color={checked ? 'var(--accent, #75624B)' : '#5E5852'} fill={checked ? 1 : 0} />
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{item.title}</span>
         {item.sub ? <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#5E5852', overflowWrap: 'anywhere' }}>{item.sub}</span> : null}
@@ -127,11 +126,11 @@ export function CustomQuestions({ list, onChange }: { list: SurveyCustomQuestion
       <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{t('mgmt.svCustom')}</span>
       {list.length ? null : <span style={{ fontSize: 14, lineHeight: '20px', color: '#5E5852' }}>{t('mgmt.svCustomNone')}</span>}
       {list.map((q, i) => (
-        <div key={q.id} data-custom-q={q.id} style={isPhone ? { borderRadius: 12, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6, background: '#F5F5F3' } : { border: '1px solid #EFE7DC', borderRadius: 12, padding: 12, display: 'flex', alignItems: 'flex-start', gap: 12, background: '#FFFFFF' }}>
+        <div key={q.id} data-custom-q={q.id} className="cp-grey" style={isPhone ? { borderRadius: 12, padding: '10px 12px', display: 'flex', flexDirection: 'column', gap: 6, background: 'var(--fill, #F4F4F5)' } : { borderRadius: 12, padding: 12, display: 'flex', alignItems: 'flex-start', gap: 12, background: 'var(--fill, #F4F4F5)' }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: '2px 8px', flexWrap: 'wrap', fontSize: FONT_SMALL, lineHeight: '20px', color: '#5E5852' }}>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}><IconBox name={KIND_ICON[q.kind]} size={18} />{t('mgmt.svQKind_' + q.kind)}</span>
-              <span style={{ height: 22, padding: '0 8px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', fontWeight: 600, background: q.required ? '#F9E3DB' : '#F3EEE8', color: q.required ? '#9A3D24' : '#5E5852' }}>{q.required ? t('mgmt.svQReqTag') : t('mgmt.svQOptTag')}</span>
+              <span style={{ height: 22, padding: '0 8px', borderRadius: 8, display: 'inline-flex', alignItems: 'center', fontWeight: 600, background: q.required ? '#F9E3DB' : 'var(--press, #EEEEF0)', color: q.required ? '#9A3D24' : '#5E5852' }}>{q.required ? t('mgmt.svQReqTag') : t('mgmt.svQOptTag')}</span>
             </span>
             <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{q.text}</span>
             {q.kind === 'choice' ? <span style={{ fontSize: FONT_BODY, lineHeight: '20px', color: '#5E5852', overflowWrap: 'anywhere' }}>{(q.options ?? []).join(' · ')}</span> : null}

@@ -1,4 +1,4 @@
-// Tab bar (prototype v3: quiet underline row). Tablet and laptop scroll sideways with edge fades and arrow buttons; a phone gets one swipeable row
+// Tab bar (round 8c: the family's segmented look — a var(--press, #EEEEF0) track, the selected tab a white chip). Tablet and laptop scroll sideways with edge fades and arrow buttons; a phone gets one swipeable row
 // (no arrows, a soft fade on the right edge, the active tab scrolled into view).
 import { useEffect, useRef, useState } from 'react';
 import { Icon } from '../../../components/ui';
@@ -33,19 +33,19 @@ export function ScrollTabs({ tabs, current, onChange, wrap, label, pendingLabel,
   }, [current, wrap]);
   const arrow = (dir: -1 | 1) => (
     <button type="button" aria-label={dir < 0 ? leftLabel : rightLabel} onClick={() => ref.current?.scrollBy({ left: dir * 240, behavior: 'smooth' })}
-      style={{ position: 'absolute', top: 0, bottom: 1, [dir < 0 ? 'left' : 'right']: 0, width: 48, border: 'none', background: `linear-gradient(to ${dir < 0 ? 'right' : 'left'}, #F5F5F3 55%, rgba(246,241,234,0))`, color: '#75624B', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: dir < 0 ? 'flex-start' : 'flex-end', padding: 0, zIndex: 2 }}>
+      style={{ position: 'absolute', top: 2, bottom: 2, [dir < 0 ? 'left' : 'right']: 0, width: 48, border: 'none', background: `linear-gradient(to ${dir < 0 ? 'right' : 'left'}, #EEEEF0 55%, rgba(238,238,240,0))`, color: 'var(--accent, #75624B)', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: dir < 0 ? 'flex-start' : 'flex-end', padding: 0, zIndex: 2 }}>
       <Icon name={dir < 0 ? 'chevron_left' : 'chevron_right'} size={22} />
     </button>
   );
-  // v3 quiet underline tab row: 14-15px text, a 2px ink underline on the selected tab, one hairline under the row.
+  // round 8c: the Segmented primitive's look (track var(--press, #EEEEF0), radius 9, padding 2; the selected tab white with a soft shadow), scrolling sideways when there are more tabs than room.
   return (
     <div style={{ position: 'relative', flex: 'none' }}>
-      <div ref={ref} role="tablist" aria-label={label} className="scroll-x" style={{ display: 'flex', flexWrap: wrap ? 'wrap' : 'nowrap', gap: phone ? 20 : 28, borderBottom: '1px solid #E6DDD1', overflowX: wrap ? 'visible' : 'auto', scrollbarWidth: 'none' }}>
+      <div ref={ref} role="tablist" aria-label={label} className="scroll-x" style={{ display: 'flex', flexWrap: wrap ? 'wrap' : 'nowrap', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', width: 'fit-content', maxWidth: '100%', overflowX: wrap ? 'visible' : 'auto', scrollbarWidth: 'none' }}>
         {tabs.map((b) => {
           const sel = b.key === current;
           return (
             <button key={b.key} type="button" role="tab" aria-selected={sel} aria-label={b.dot ? `${b.label}, ${pendingLabel}` : undefined} onClick={() => onChange(b.key)} data-tab={b.key}
-              style={{ flex: 'none', height: phone ? 42 : 46, padding: 0, border: 'none', borderBottom: sel ? '2px solid #24201C' : '2px solid transparent', marginBottom: -1, background: 'transparent', color: sel ? '#24201C' : '#6B6259', fontSize: phone ? 14 : 15, fontWeight: sel ? 500 : 400, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter' }}>
+              style={{ flex: 'none', height: 36, padding: phone ? '0 13px' : '0 16px', borderRadius: 7, border: 'none', background: sel ? '#FFFFFF' : 'transparent', boxShadow: sel ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: sel ? '#1E1A16' : '#5E5852', fontSize: phone ? 14 : 15, fontWeight: sel ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter' }}>
               {b.label}
               {b.dot ? <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: '#7A5510' }} /> : null}
             </button>
@@ -54,7 +54,7 @@ export function ScrollTabs({ tabs, current, onChange, wrap, label, pendingLabel,
       </div>
       {!wrap && !phone && edge.l ? arrow(-1) : null}
       {!wrap && !phone && edge.r ? arrow(1) : null}
-      {phone && edge.r ? <div aria-hidden="true" style={{ position: 'absolute', top: 0, bottom: 1, right: 0, width: 28, background: 'linear-gradient(to left, #F5F5F3 25%, rgba(246,241,234,0))', pointerEvents: 'none' }} /> : null}
+      {phone && edge.r ? <div aria-hidden="true" style={{ position: 'absolute', top: 2, bottom: 2, right: 2, width: 28, background: 'linear-gradient(to left, #EEEEF0 25%, rgba(238,238,240,0))', pointerEvents: 'none' }} /> : null}
     </div>
   );
 }

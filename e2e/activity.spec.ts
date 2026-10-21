@@ -17,7 +17,10 @@ type State = { attendance: Record<string, Record<string, unknown>>; dailyLogs: R
 async function snapshot(page: Page, uid: string): Promise<State> {
   const r = await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': uid } });
   expect(r.ok()).toBeTruthy();
-  return (await r.json()).state;
+  const state = (await r.json()).state as State;
+  // KC round 7: Dinar's seeded quick-camera drafts are private and not sent photos: these tests are about what was sent (e2e/drafts.spec.ts covers drafts)
+  state.photos = Object.fromEntries(Object.entries(state.photos).filter(([, p]) => p.visibility !== 'draft'));
+  return state;
 }
 /** Run an action as another user straight against the API (the same call the app makes). */
 async function actAs(page: Page, uid: string, name: string, input: object, mutationId: string) {
@@ -132,9 +135,9 @@ test('drop-in: a member who checks in shows on Today, in the Camera faces and th
   await expect(page.getByRole('button', { name: /Oma Lina[^:]*: Not logged/ })).toBeVisible();
   await expect(page.getByText(/4 members in the club/)).toBeVisible();
   // the camera lists her (solo list and the suggested faces), and the daily log lists her
-  await page.goto('/camera');
+  await page.goto('/camera?tab=manual'); // KC round 7: the older ways to take a photo are under Camera ▸ More ways
   await expect(page.getByRole('button', { name: 'Take a photo of Oma Lina' })).toBeVisible();
-  await page.getByRole('button', { name: 'Take group photo' }).click();
+  await page.getByRole('button', { name: 'Take a photo', exact: true }).click();
   await takePhotoWithFile(page);
   const faces = page.getByRole('dialog', { name: 'Who is in this photo?' });
   await faces.getByRole('button', { name: /Add suggested faces \(4\)/ }).click();
@@ -194,13 +197,13 @@ test('Today follows the clock: Now, then the next session, then done for the day
 
 test('Camera: a teacher takes a group photo with the camera, picks who is in it with a search, and it waits for approval', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's5', '/camera');
+  await signIn(page, 's5', '/camera?tab=manual');
   await expect(page.getByText('Next · 10:30 · Keroncong sing-along · Music room')).toBeVisible();
   await expect(page.getByText('Sent today')).toHaveCount(0);
   await expect(page.getByText(/go to management for approval first/)).toBeVisible();
   await noHScroll(page);
   // the real camera dialog (no camera in the test browser: the file picker takes over); then who is in it
-  await page.getByRole('button', { name: 'Take group photo' }).click();
+  await page.getByRole('button', { name: 'Take a photo', exact: true }).click();
   await takePhotoWithFile(page);
   const sheet = page.getByRole('dialog', { name: 'Who is in this photo?' });
   await expect(sheet).toBeVisible();
@@ -246,7 +249,7 @@ test('Camera: a teacher takes a group photo with the camera, picks who is in it 
   await expect(viewer.locator('img[src^="/api/media/"]')).toBeVisible();
   await expect(viewer.getByText('Waiting for approval').first()).toBeVisible();
   await expect(viewer.getByText(/Tagged: Opa Hendra, Bapak Bambang/)).toBeVisible();
-  await expect(viewer.getByRole('button', { name: 'Edit tags' })).toBeVisible();
+  await expect(viewer.getByRole('button', { name: 'Type and people' })).toBeVisible();
   await expect(viewer.getByRole('button', { name: 'Remove photo' })).toBeVisible();
   await expect(viewer.getByRole('button', { name: /Hide from families|Approve|Reject/ })).toHaveCount(0);
   await expect(viewer.getByRole('button', { name: 'Save' })).toHaveCount(0);
@@ -257,7 +260,7 @@ test('Camera: a teacher takes a group photo with the camera, picks who is in it 
 
 test('Camera: a solo photo with the camera and a short video, found by searching for the member', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's5', '/camera');
+  await signIn(page, 's5', '/camera?tab=manual');
   await expect(page.getByText('No photos yet today').first()).toBeVisible();
   await page.getByLabel('Search members').fill('opa hendra');
   await expect(page.getByRole('button', { name: 'Take a photo of Opa Tjahjadi' })).toHaveCount(0);
@@ -290,10 +293,10 @@ test('Camera: a solo photo with the camera and a short video, found by searching
   c.assertClean();
 });
 
-test('Camera: a group video is recorded, who is in it is picked, it waits for approval and then the family sees a real video', async ({ page }) => {
+test('Camera: a video is recorded, who is in it is picked (one person: a personal video), it waits for approval and then the family sees a real video', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's5', '/camera');
-  await page.getByRole('button', { name: 'Record a short group video' }).click();
+  await signIn(page, 's5', '/camera?tab=manual');
+  await page.getByRole('button', { name: 'Record a short video', exact: true }).click();
   await takeVideoWithFile(page);
   const sheet = page.getByRole('dialog', { name: 'Who is in this video?' });
   await expect(sheet).toBeVisible();
@@ -303,10 +306,11 @@ test('Camera: a group video is recorded, who is in it is picked, it waits for ap
   await sheet.getByLabel('Search members').fill('hend');
   await sheet.getByRole('button', { name: 'Opa Hendra Gunawan' }).click();
   await sheet.getByRole('button', { name: 'Send for approval' }).click();
-  await expect(page.getByRole('status')).toContainText('Group video sent for approval');
+  // KC round 7: one person tagged makes it a personal video, so it is saved and told as one
+  await expect(page.getByRole('status')).toContainText('Short video of Opa Hendra sent for approval');
   await expect(sheet).toHaveCount(0);
   const staff = await snapshot(page, 's5');
-  const v = Object.values(staff.photos).find((x) => x.kind === 'group' && x.media === 'video' && x.mediaId)!; // (the seed has simulated videos without a file)
+  const v = Object.values(staff.photos).find((x) => x.kind === 'solo' && x.media === 'video' && x.mediaId)!; // (the seed has simulated videos without a file)
   expect(v).toMatchObject({ media: 'video', visibility: 'pending', takenBy: 's5', date: '2026-10-21' });
   expect(v.mediaId).toBeTruthy();
   expect(v.memberIds).toEqual(['m2']);
@@ -323,9 +327,9 @@ test('Camera: a member who opted out of face tagging is never suggested, but can
   const c = watchConsole(page);
   const r = await request.post('/api/actions/members.setConsent', { headers: { 'x-user-id': 's9' }, data: { mutationId: 'e2e-face-optout', club: 'citra', input: { memberId: 'm10', face: false } } });
   expect(r.ok()).toBeTruthy();
-  await signIn(page, 's5', '/camera');
+  await signIn(page, 's5', '/camera?tab=manual');
   await expect(page.getByText('Tagged by name')).toBeVisible(); // Bambang's row in the solo list
-  await page.getByRole('button', { name: 'Take group photo' }).click();
+  await page.getByRole('button', { name: 'Take a photo', exact: true }).click();
   await takePhotoWithFile(page);
   const sheet = page.getByRole('dialog', { name: 'Who is in this photo?' });
   await sheet.getByRole('button', { name: 'Add suggested faces (2)' }).click(); // Hendra and Tjahjadi, not Bambang
@@ -348,7 +352,7 @@ test('Activity pictures (KC round 7): a picture of a session shows on that sessi
   expect((await request.post('/api/demo/clock', { data: { hm: '10:45' } })).ok()).toBe(true);
   // a solo photo of Bambang tagged with the same activity is his photo: it is not a picture of the session
   const solo = await actAs(page, 's9', 'photo.take', { kind: 'solo', memberIds: ['m10'], media: 'photo', activity: 'Keroncong sing-along' }, 'e2e-session-solo');
-  const a = await actAs(page, 's5', 'photo.addActivity', { date: '2026-10-21', activity: 'Keroncong sing-along' }, 'e2e-session-a');
+  const a = await actAs(page, 's5', 'photo.addActivity', { date: '2026-10-21', activity: 'Keroncong sing-along', mediaId: 'md_demo_act-keroncong-1' }, 'e2e-session-a'); // KC round 9: families only see real pictures
   const pid = a.result.photoId as string;
   expect(Object.values((await snapshot(page, 's5')).photos).find((x) => x.id === pid)).toMatchObject({ kind: 'activity', memberIds: [], visibility: 'pending', takenBy: 's5' });
   // the teacher: on the Keroncong row of today's programme at once (waiting for approval); not on Batik; not the solo photo
@@ -362,14 +366,18 @@ test('Activity pictures (KC round 7): a picture of a session shows on that sessi
   await signIn(page, 'fm10_0', '/today');
   const session = page.getByTestId('timeline').locator('[data-tl="session-10:30"]');
   await expect(session).toBeVisible();
-  await expect(session.locator(`[data-photo-id="${pid}"]`)).toHaveCount(0);
-  await expect(session.locator(`[data-photo-id="${solo.result.photoId}"]`)).toHaveCount(0);
+  await expect(session.getByTestId('session-photos')).toHaveCount(0); // no "View image" yet, and the solo photo is not a picture of the session
   expect(Object.keys((await snapshot(page, 'fm10_0')).photos)).not.toContain(pid);
-  // …then it is on Keroncong in his timeline, and opens in the viewer
+  // …then it is on Keroncong in his timeline (KC round 9: the picture itself on the row, fading in), a tap opens the row's pictures and a picture opens in the viewer
   await actAs(page, 's9', 'photo.approve', { photoIds: [pid], notify: false }, 'e2e-session-ok'); // actAs checks the answer
-  await expect(session.getByTestId('session-photos').locator(`[data-photo-id="${pid}"]`)).toBeVisible();
-  await session.locator(`[data-photo-id="${pid}"]`).click();
+  await expect(session.getByTestId('session-photos')).toBeVisible();
+  await expect(session.getByTestId('session-photos')).toHaveAttribute('data-count', '1');
+  await session.getByTestId('session-photos').click();
+  await expect(session.getByTestId('session-photos')).toHaveAttribute('aria-expanded', 'true');
+  await session.getByTestId('session-photos-open').locator(`[data-photo-id="${pid}"]`).click();
   await expect(page.getByRole('dialog', { name: 'Keroncong sing-along' })).toBeVisible();
+  await expect(page.getByTestId('family-viewer')).toHaveAttribute('data-photo-id', pid);
+  await page.keyboard.press('Escape');
   expect(Object.keys((await snapshot(page, 'fm10_0')).photos)).toContain(pid);
   // nobody is told (nobody is tagged)
   expect(Object.values((await snapshot(page, 'fm10_0')).notifications).filter((n) => String(n.kind).startsWith('activity.notif.new')).map((n) => (n.ref as { id: string } | undefined)?.id)).not.toContain(pid);
@@ -377,6 +385,7 @@ test('Activity pictures (KC round 7): a picture of a session shows on that sessi
   expect(Object.keys((await snapshot(page, 'f1')).photos)).not.toContain(pid);
   await signIn(page, 'f1', '/today');
   await expect(page.getByTestId('timeline').locator('[data-tl="session-10:30"]')).toBeVisible();
+  await expect(page.getByTestId('session-photos')).toHaveCount(0);
   await expect(page.locator(`[data-photo-id="${pid}"]`)).toHaveCount(0);
   c.assertClean();
 });
@@ -384,9 +393,8 @@ test('Activity pictures (KC round 7): a picture of a session shows on that sessi
 test('Camera ▸ Activity pictures: pick a day and an activity, add a picture with the camera or a file, see it wait for approval; a rejected one shows its reason, the bell leads back, and the teacher uploads another', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's5', '/camera');
-  await page.getByRole('tab', { name: /^Activity( pictures)?$/ }).click();
+  await page.getByRole('button', { name: 'Pictures of a session' }).click(); // KC round 7: under Camera ▸ More ways
   await expect(page).toHaveURL(/tab=activity/);
-  await expect(page.getByRole('tab', { name: /^Activity( pictures)?$/ })).toHaveAttribute('aria-selected', 'true');
   // today and the session that is next (10:30 Keroncong) are picked
   await expect(page.getByRole('combobox', { name: 'Day' })).toContainText('Today');
   await expect(page.getByRole('combobox', { name: 'Activity' })).toContainText('Keroncong sing-along');
@@ -416,7 +424,7 @@ test('Camera ▸ Activity pictures: pick a day and an activity, add a picture wi
   await tile.click();
   const viewer = page.getByRole('dialog', { name: 'Keroncong sing-along' });
   await expect(viewer.getByText('Waiting for approval').first()).toBeVisible();
-  await expect(viewer.getByRole('button', { name: 'Edit tags' })).toHaveCount(0);
+  await expect(viewer.getByRole('button', { name: 'Type and people' })).toBeVisible(); // KC round 7: a session picture can be switched to people
   await expect(viewer.getByRole('button', { name: 'Remove photo' })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(viewer).toHaveCount(0);
@@ -498,7 +506,7 @@ test('Today: the picture of the session (the Now / Next banner and the dot) open
   const plain = page.getByRole('dialog', { name: 'Batik painting' });
   await expect(plain).toBeVisible();
   await expect(plain.locator('img[src^="/api/media/"]')).toBeVisible();
-  await expect(plain.getByRole('button', { name: /Remove photo|Hide from families|Edit tags/ })).toHaveCount(0);
+  await expect(plain.getByRole('button', { name: /Remove photo|Hide from families|Type and people/ })).toHaveCount(0);
   await page.keyboard.press('Escape');
   await expect(plain).toHaveCount(0);
   c.assertClean();
@@ -522,7 +530,7 @@ test('Photo library: filter to activity pictures; they open in the viewer with n
   await page.locator(`[data-photo-id="${pa}"]`).click();
   const viewer = page.getByRole('dialog', { name: 'Keroncong sing-along' });
   await expect(viewer.getByText('Waiting for approval').first()).toBeVisible();
-  await expect(viewer.getByRole('button', { name: 'Edit tags' })).toHaveCount(0);
+  await expect(viewer.getByRole('button', { name: 'Type and people' })).toBeVisible(); // KC round 7: management can switch it to people
   await viewer.getByRole('button', { name: 'Approve' }).click();
   await page.getByRole('dialog', { name: 'Approve this photo?' }).getByRole('button', { name: 'Approve photo' }).click();
   await expect(page.getByRole('status').first()).toContainText('Photo approved');
@@ -574,7 +582,7 @@ test('Review: management approves a teacher’s photo from the library; the fami
   expect(staff.photos[pb]).toMatchObject({ visibility: 'visible', approved: { by: 's9' } });
   c.assertClean();
   // the teacher no longer sees a "waiting" badge on them
-  const { page: t, ctx } = await otherUser(browser, 's5', '/camera');
+  const { page: t, ctx } = await otherUser(browser, 's5', '/camera?tab=manual');
   await expect(t.getByRole('button', { name: /Waiting for approval/ })).toHaveCount(0);
   await ctx.close();
 });
@@ -660,7 +668,7 @@ test('Daily log: save Bambang as quiet / ate most, then everyone else as normal 
   await expect(page.getByRole('heading', { level: 1, name: 'Daily log' })).toBeVisible();
   // the rounds of today's programme, in the order of the day (the app opens on the first session at 09:58)
   const rounds = page.getByRole('tablist', { name: 'Log rounds' }).getByRole('tab');
-  await expect(rounds).toHaveText([/^10:30 · Keroncong sing-along/, /^Lunch/, /^13:30 · Batik painting/, /^Mood & notes/]);
+  await expect(rounds).toHaveText([/10:30 · Keroncong sing-along$/, /Lunch$/, /13:30 · Batik painting$/, /Mood & notes$/]);
   await expect(progress(page)).toHaveText('0 of 3 marked');
   await noHScroll(page);
   const bambang = logRow(page, 'Bapak Bambang Purnomo');
@@ -797,27 +805,26 @@ test('Photo library (s9): hide a photo, and the family no longer sees it on /pho
   await signIn(page, 's9', '/photos');
   await expect(page.getByRole('heading', { level: 1, name: 'Photo library' })).toBeVisible();
   await noHScroll(page);
+  // KC round 9: families only see photos with a real picture (the seed's portraits are placeholders), so take a real one of Oma Lina first
+  const taken = await actAs(page, 's9', 'photo.take', { kind: 'solo', memberIds: ['m1'], media: 'photo', mediaId: 'md_demo_club-chat-1', notify: false }, 'e2e-lib-real');
+  const id = taken.result.photoId as string;
   const before = Object.keys((await snapshot(page, 'f1')).photos);
   expect(before.length).toBeGreaterThan(3);
-  // filter to Oma Lina; the first photo is the one we hide
+  // filter to Oma Lina; the new photo is the one we hide
   await pickOption(page, 'Member', 'Oma Lina');
-  const tile = page.getByRole('button', { name: /Oma Lina/ }).first();
+  const tile = page.locator(`[data-photo-id="${id}"]`).first();
   await expect(tile).toBeVisible();
-  const id = (await tile.getAttribute('data-photo-id'))!;
-  // her family sees it on /photos, in the family viewer (Save and Share, no staff actions)
+  // her family sees it on /photos, in the family viewer (Share, no staff actions)
   const { page: fam, ctx: famCtx } = await otherUser(browser, 'f1', '/photos');
   const fc = watchConsole(fam);
   const famTile = fam.locator(`[data-photo-id="${id}"]`);
   await expect(famTile).toHaveCount(1);
   await famTile.click();
-  const famViewer = fam.getByRole('dialog');
-  await expect(famViewer.getByRole('button', { name: 'Save' })).toBeVisible();
-  await expect(famViewer.getByRole('button', { name: 'Share' })).toBeVisible();
-  await expect(famViewer.getByRole('button', { name: /Hide from families|Edit tags|Remove photo/ })).toHaveCount(0);
-  await famViewer.getByRole('button', { name: 'Save' }).click();
-  await expect(fam.getByRole('status')).toContainText('Photo saved to your phone.');
-  await famViewer.getByRole('button', { name: 'Share' }).click();
-  await expect(fam.getByRole('status')).toContainText('Share sheet opened.');
+  const famViewer = fam.getByTestId('family-viewer');
+  await expect(famViewer).toBeVisible();
+  await expect(famViewer.getByRole('button', { name: 'Share this photo' })).toBeVisible(); // round 8: Share only (no Save)
+  await expect(famViewer.getByRole('button', { name: 'Save' })).toHaveCount(0);
+  await expect(famViewer.getByRole('button', { name: /Hide from families|Type and people|Remove photo/ })).toHaveCount(0);
   await fam.keyboard.press('Escape');
   await expect(famViewer).toHaveCount(0);
   // the teacher side: open it, hide it from families with a reason
@@ -863,14 +870,14 @@ test('Photo library: retag (untag and tag), remove with undo', async ({ page }) 
   await page.getByRole('button', { name: /Opa Hendra/ }).first().click();
   const viewer = page.getByRole('dialog').first();
   const tagged = await viewer.getByText(/Tagged:/).innerText();
-  await viewer.getByRole('button', { name: 'Edit tags' }).click();
-  const sheet = page.getByRole('dialog', { name: 'Who is in this photo?' });
-  await expect(sheet.getByRole('button', { name: 'Save tags' })).toBeDisabled();
+  await viewer.getByRole('button', { name: 'Type and people' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Type and people' });
+  await expect(sheet.getByRole('button', { name: 'Save', exact: true })).toBeDisabled();
   await sheet.getByLabel('Search members').fill('bambang');
   await sheet.getByRole('button', { name: 'Bapak Bambang Purnomo' }).click();
   await expect(sheet.getByRole('button', { name: 'Remove Bapak Bambang' })).toBeVisible();
-  await sheet.getByRole('button', { name: 'Save tags' }).click();
-  await expect(page.getByRole('status')).toContainText('Tags saved');
+  await sheet.getByRole('button', { name: 'Save', exact: true }).click();
+  await expect(page.getByRole('status')).toContainText('Saved as');
   await expect(viewer.getByText(/Tagged:/)).not.toHaveText(tagged);
   // remove, then undo
   await viewer.getByRole('button', { name: 'Remove photo' }).click();
@@ -935,7 +942,7 @@ for (const [uid, path, text] of [
     await expect(page.locator('#main')).toContainText(text);
     const body = await page.locator('#main').innerText();
     expect(body).not.toMatch(RAW_KEY);
-    expect(body).not.toMatch(/In the club|Later today|Take group photo|Save log|Photo library|Sent today|Daily log|All members/);
+    expect(body).not.toMatch(/In the club|Later today|Take a photo|Save log|Photo library|Sent today|Daily log|All members/);
     await noHScroll(page);
     c.assertClean();
   });

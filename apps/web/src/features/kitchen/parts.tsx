@@ -13,8 +13,10 @@ export function useResetOn<K>(key: K, reset: () => void) {
 
 /** The design's inline status pill: 28px, icon + label (rust only for declined/overdue). */
 export function Pill({ icon, fg, bg, label }: { icon: string; fg: string; bg: string; label: ReactNode }) {
+  // the neutral kinds (outstanding, pending, void) are linen / cream in the shared table: here they are the family's soft grey
+  const neutral = bg === BADGE.outstanding[2] || bg === BADGE.void[2];
   return (
-    <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: bg, color: fg, fontSize: FONT_SMALL, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', whiteSpace: 'nowrap' }}>
+    <span className={neutral ? 'cp-fill' : undefined} style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: neutral ? 'var(--press, #EEEEF0)' : bg, color: fg, fontSize: FONT_SMALL, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, flex: 'none', whiteSpace: 'nowrap' }}>
       <Icon name={icon} size={17} fill={1} />
       {label}
     </span>
@@ -37,13 +39,13 @@ export function FeedbackBadge({ status }: { status: Feedback['status'] }) {
 }
 
 /** Eyebrow label used inside cards (v3: 12px caps, 2px tracking, bronze-brown). */
-export const cardLabel: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };
-/** v3 hero card: white, 24px radius, soft lifted shadow; rows inside sit between inset hairlines. */
-export const heroCard: CSSProperties = { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '8px clamp(18px, 3vw, 32px) 12px', minWidth: 0 };
+export const cardLabel: CSSProperties = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, lineHeight: '18px', color: 'var(--eyebrow, #6E5A43)' };
+/** Hero card: soft grey (var(--fill, #F4F4F5)), no border or shadow; rows inside sit between inset hairlines. Callers add className "cp-grey". */
+export const heroCard: CSSProperties = { background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '8px clamp(18px, 3vw, 32px) 12px', minWidth: 0 };
 /** An inset hairline row inside a hero card. */
-export const heroRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 14, padding: '16px 0', borderTop: '1px solid #F0EAE1' };
+export const heroRow: CSSProperties = { display: 'flex', alignItems: 'center', gap: 14, padding: '16px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' };
 /** The v3 rule between plain aside blocks. */
-export const asideRule: CSSProperties = { height: 1, background: '#E6DDD1' };
+export const asideRule: CSSProperties = { height: 1, background: 'var(--hairline, #E2E2E6)' };
 export const asideTitle: CSSProperties = { fontSize: 19, lineHeight: 1.3, fontWeight: 500, color: '#2B231C' };
 export const asideSub: CSSProperties = { fontSize: 14, color: '#6B6259', lineHeight: 1.4 };
 
@@ -60,7 +62,7 @@ export function NumTabs<V extends string>({ items, value, onChange, label, maxWi
         const on = it.value === value;
         return (
           <button key={it.value} type="button" role="tab" aria-selected={on} aria-label={`${it.label} ${it.n}`} onClick={() => onChange(it.value)}
-            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '0 0 10px', border: 'none', borderBottom: `2px solid ${on ? '#24201C' : '#E6DDD1'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', minWidth: 0 }}>
+            style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, padding: '0 0 10px', border: 'none', borderBottom: `2px solid ${on ? '#24201C' : 'var(--hairline, #E2E2E6)'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', minWidth: 0 }}>
             <span style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', color: on ? '#24201C' : '#8A8078', fontVariantNumeric: 'tabular-nums' }}>{it.n}</span>
             <span style={{ fontSize: 13, fontWeight: on ? 600 : 500, color: on ? '#24201C' : '#8A8078', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', maxWidth: '100%' }}>{it.label}</span>
           </button>
@@ -70,15 +72,16 @@ export function NumTabs<V extends string>({ items, value, onChange, label, maxWi
   );
 }
 export const mutedBody: CSSProperties = { fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 };
-export const bronzeInput: CSSProperties = { height: 'var(--cp-field-h, 52px)', border: '1px solid #DDD1C2', borderRadius: 12, padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', background: '#FFFFFF', minWidth: 0 };
+/** A soft grey field, no border (add className "cp-input cp-fill": white on a grey card, an ink ring on focus). */
+export const bronzeInput: CSSProperties = { height: 'var(--cp-field-h, 52px)', border: 'none', borderRadius: 12, padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', background: 'var(--fill, #F4F4F5)', minWidth: 0 };
 
-/** Design button-state colours (btnS): ink when ready, linen when not. */
-export const btnState = (on: boolean) => (on ? { bg: '#24201C', fg: '#FFFFFF' } : { bg: '#E8E1D8', fg: '#5E5852' });
+/** Design button-state colours (btnS): ink when ready, a grey press fill when not. */
+export const btnState = (on: boolean) => (on ? { bg: '#24201C', fg: '#FFFFFF' } : { bg: 'var(--press, #EEEEF0)', fg: '#8A8078' });
 /** Pill button in the design's inline style (used where the design hand-rolls its buttons). */
 export function PillButton({ children, onClick, on = true, height = 48, pad = '0 22px', icon, type = 'button', label, grow }: { children: ReactNode; onClick?: () => void; on?: boolean; height?: number; pad?: string; icon?: string; type?: 'button' | 'submit'; label?: string; grow?: boolean }) {
   const c = btnState(on);
   return (
-    <button type={type} onClick={onClick} aria-disabled={!on || undefined} aria-label={label} className={on ? 'h-bronze cp-btn' : 'cp-btn'}
+    <button type={type} onClick={onClick} aria-disabled={!on || undefined} aria-label={label} className={on ? 'h-bronze cp-btn' : 'cp-btn cp-fill'}
       style={{ height, padding: pad, borderRadius: 999, border: 'none', background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: on ? 'pointer' : 'not-allowed', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8, whiteSpace: 'nowrap', fontFamily: 'Inter', flex: grow ? '1' : 'none' }}>
       {icon ? <Icon name={icon} size={20} /> : null}
       {children}
@@ -86,17 +89,17 @@ export function PillButton({ children, onClick, on = true, height = 48, pad = '0
   );
 }
 /** Underlined text button, 44px target (design's "Retake photo" / "Decline" style). */
-export function TextButton({ children, onClick, color = '#75624B', label, size }: { children: ReactNode; onClick?: () => void; color?: string; label?: string; size?: number }) {
+export function TextButton({ children, onClick, color = 'var(--accent, #75624B)', label, size }: { children: ReactNode; onClick?: () => void; color?: string; label?: string; size?: number }) {
   return (
-    <button type="button" onClick={onClick} aria-label={label} className="h-cream" style={{ height: 44, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color, fontSize: size ?? FONT_BODY, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter', flex: 'none' }}>
+    <button type="button" onClick={onClick} aria-label={label} className="h-fill" style={{ height: 44, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color, fontSize: size ?? FONT_BODY, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter', flex: 'none' }}>
       {children}
     </button>
   );
 }
-/** Outlined pill button, 44px (design's "Mark received"). */
-export function OutlineButton({ children, onClick, icon, label }: { children: ReactNode; onClick?: () => void; icon?: string; label?: string }) {
+/** Soft grey button, 44px (design's "Mark received"; was outlined). */
+export function OutlineButton({ children, onClick, icon, label, white }: { children: ReactNode; onClick?: () => void; icon?: string; label?: string; /** white, for a button that sits on a tinted note (ochre, sage) */ white?: boolean }) {
   return (
-    <button type="button" onClick={onClick} aria-label={label} className="h-cream cp-btn" style={{ height: 44, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', flex: 'none' }}>
+    <button type="button" onClick={onClick} aria-label={label} className={white ? 'h-fill cp-btn' : 'h-fill cp-fill cp-btn'} style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: white ? '#FFFFFF' : 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', flex: 'none' }}>
       {icon ? <Icon name={icon} size={18} /> : null}
       {children}
     </button>
@@ -107,8 +110,8 @@ export function OutlineButton({ children, onClick, icon, label }: { children: Re
 export function FilterChip({ label, selected, onClick }: { label: ReactNode; selected: boolean; onClick: () => void }) {
   const c = chipStyle(selected, false);
   return (
-    <button type="button" aria-pressed={selected} onClick={onClick}
-      style={{ height: 44, padding: '0 16px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter', flex: 'none' }}>
+    <button type="button" aria-pressed={selected} onClick={onClick} className={selected ? undefined : 'cp-fill'}
+      style={{ height: 44, padding: '0 16px', borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter', flex: 'none' }}>
       {label}
     </button>
   );
@@ -117,8 +120,8 @@ export function FilterChip({ label, selected, onClick }: { label: ReactNode; sel
 export function ChoiceChip({ label, selected, onClick }: { label: ReactNode; selected: boolean; onClick: () => void }) {
   const c = chipStyle(selected, false);
   return (
-    <button type="button" aria-pressed={selected} onClick={onClick} className="cp-chip"
-      style={{ height: 44, padding: '0 16px', borderRadius: 12, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter', flex: 'none' }}>
+    <button type="button" aria-pressed={selected} onClick={onClick} className={selected ? 'cp-chip' : 'cp-chip cp-fill'}
+      style={{ height: 44, padding: '0 16px', borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter', flex: 'none' }}>
       {label}
     </button>
   );
@@ -135,15 +138,15 @@ export function ConfirmDialog({ open, onClose, title, body, confirmLabel, cancel
 }
 
 /** Round 6 (phone, native look): a small pill for row actions: 34px, a press fade. `ink` is the main action, `outline` a secondary one, `quiet` / `danger` a text-only one. */
-export function RowPill({ children, onClick, icon, tone = 'outline', label, disabled }: { children: ReactNode; onClick?: () => void; icon?: string; tone?: 'ink' | 'outline' | 'quiet' | 'danger'; label?: string; disabled?: boolean }) {
+export function RowPill({ children, onClick, icon, tone = 'outline', label, disabled, white }: { children: ReactNode; onClick?: () => void; icon?: string; tone?: 'ink' | 'outline' | 'quiet' | 'danger'; label?: string; disabled?: boolean; /** white, for a pill that sits on a tinted note (ochre, sage) */ white?: boolean }) {
   const v: Record<string, CSSProperties> = {
-    ink: { background: disabled ? '#E8E1D8' : '#24201C', color: disabled ? '#5E5852' : '#FFFFFF', border: 'none' },
-    outline: { background: '#FFFFFF', color: '#24201C', border: '1px solid #DCD3C8' },
-    quiet: { background: 'transparent', color: '#75624B', border: 'none' },
+    ink: { background: disabled ? 'var(--press, #EEEEF0)' : '#24201C', color: disabled ? '#8A8078' : '#FFFFFF', border: 'none' },
+    outline: { background: white ? '#FFFFFF' : 'var(--fill, #F4F4F5)', color: '#24201C', border: 'none' },
+    quiet: { background: 'transparent', color: 'var(--accent, #75624B)', border: 'none' },
     danger: { background: 'transparent', color: '#9A3D24', border: 'none' },
   };
   return (
-    <button type="button" onClick={onClick} aria-label={label} aria-disabled={disabled || undefined} className="cp-press"
+    <button type="button" onClick={onClick} aria-label={label} aria-disabled={disabled || undefined} className={(tone === 'outline' && !white) || (tone === 'ink' && disabled) ? 'cp-press cp-fill' : 'cp-press'}
       style={{ height: 34, padding: tone === 'quiet' || tone === 'danger' ? '0 8px' : '0 14px', borderRadius: 999, fontSize: 14, fontWeight: 500, cursor: disabled ? 'not-allowed' : 'pointer', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', gap: 5, fontFamily: 'Inter', flex: 'none', ...v[tone] }}>
       {icon ? <Icon name={icon} size={17} /> : null}
       {children}
@@ -153,12 +156,12 @@ export function RowPill({ children, onClick, icon, tone = 'outline', label, disa
 /** Round 6 (phone): an iOS segmented control (a grey track, a white thumb). `role` "tab" = tablist with aria-selected; "group" = pressed buttons. An item may carry a count. */
 export function PhoneSeg<V extends string>({ items, value, onChange, label, role = 'tab' }: { items: { value: V; label: ReactNode; count?: number }[]; value: V; onChange: (v: V) => void; label: string; role?: 'tab' | 'group' }) {
   return (
-    <div role={role === 'tab' ? 'tablist' : 'group'} aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 3, borderRadius: 11, background: '#EAE6E0' }}>
+    <div role={role === 'tab' ? 'tablist' : 'group'} aria-label={label} style={{ display: 'grid', gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))`, gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>
       {items.map((it) => {
         const on = it.value === value;
         return (
           <button key={it.value} type="button" role={role === 'tab' ? 'tab' : undefined} aria-selected={role === 'tab' ? on : undefined} aria-pressed={role === 'group' ? on : undefined} onClick={() => onChange(it.value)}
-            style={{ minWidth: 0, height: 36, padding: '0 6px', borderRadius: 9, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, transition: 'background-color .15s' }}>
+            style={{ minWidth: 0, height: 36, padding: '0 6px', borderRadius: 7, border: 'none', background: on ? '#FFFFFF' : 'transparent', boxShadow: on ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, fontWeight: on ? 600 : 500, color: on ? '#1E1A16' : '#5E5852', whiteSpace: 'nowrap', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 5, transition: 'background-color .15s' }}>
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{it.label}</span>
             {it.count !== undefined ? <span style={{ fontVariantNumeric: 'tabular-nums', color: on ? '#1E1A16' : '#8A8078' }}>{it.count}</span> : null}
           </button>
@@ -167,10 +170,10 @@ export function PhoneSeg<V extends string>({ items, value, onChange, label, role
     </div>
   );
 }
-/** Round 6 (phone): the iOS grey search bar (#EAE6E0, radius 11, 40px) with a search icon. */
+/** Round 6 (phone): the grey search bar (var(--fill, #F4F4F5), radius 12, 40px) with a search icon. */
 export function PhoneSearch({ value, onChange, label, placeholder }: { value: string; onChange: (v: string) => void; label: string; placeholder?: string }) {
   return (
-    <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0' }}>
+    <label className="cp-fill" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 12, background: 'var(--fill, #F4F4F5)' }}>
       <Icon name="search" size={19} color="#6B6259" />
       <input value={value} aria-label={label} onChange={(e) => onChange(e.target.value)} inputMode="search" placeholder={placeholder} autoComplete="off"
         style={{ flex: 1, minWidth: 0, height: '100%', border: 'none', outline: 'none', background: 'transparent', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16' }} />

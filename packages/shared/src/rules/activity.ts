@@ -4,7 +4,7 @@ import type { Activity, CalendarEvent, ClubState, DailyLog, HM, ISODate, Lang, M
 import { dayStatus, isPendingRow, memberName } from './core';
 import { lobbyGroups, attId } from './attendance';
 import { sessionsOn } from './kitchen';
-import { addDays, live, sortBy, toMin } from '../util';
+import { addDays, live, sortBy, toHM, toMin } from '../util';
 
 /** Length of one activity session; a session is "Now" from its start until start + SESSION_MIN. */
 export const SESSION_MIN = 75;
@@ -82,7 +82,7 @@ export function sessionPictures(s: ClubState, date: ISODate, activity: Pick<Acti
   if (!activity) return [];
   const out: SessionPicture[] = [];
   for (const p of Object.values(s.photos)) {
-    if (p.kind !== 'activity' || p.date !== date || p.activity !== activity.name) continue;
+    if (p.kind !== 'activity' || p.date !== date || p.activity !== activity.name || p.visibility === 'draft') continue; // a draft is nobody's picture until it is sent
     if (p.deletedAt || p.visibility === 'removed') {
       if (p.visibility === 'removed' && p.moderated && s.staff[p.moderated.by]?.role === 'mgmt') out.push({ photo: p, state: 'rejected', reason: p.moderated.reason });
       continue;
@@ -95,7 +95,9 @@ export function sessionPictures(s: ClubState, date: ISODate, activity: Pick<Acti
 export function nowNext(s: ClubState, date: ISODate, nowMin: number): NowNext {
   const plan = dayPlan(s, date);
   const sessions = plan.filter((x): x is SessionItem => x.kind === 'session');
-  const current = sessions.find((x) => toMin(x.time) + SESSION_MIN > nowMin);
+  // KC round 7: extra sessions can overlap a weekly one; when several run, the one that started last is "Now" (else the first one still to start)
+  const running = sessions.filter((x) => toMin(x.time) <= nowMin && nowMin < toMin(x.time) + SESSION_MIN);
+  const current = running.length ? running[running.length - 1] : sessions.find((x) => toMin(x.time) > nowMin);
   const phase: NowNext['phase'] = !sessions.length ? 'none' : !current ? 'done' : nowMin >= toMin(current.time) ? 'now' : 'next';
   return { phase, current, later: plan.filter((x) => x !== current && toMin(x.time) > nowMin) };
 }
@@ -206,14 +208,18 @@ export type SessionMark = (typeof SESSION_MARKS)[number];
 /** The i18n key of what a lunch amount reads like to families and in summaries ("Ate all of lunch", "Didn't eat"). */
 export const lunchLabelKey = (v: LunchAmount): string => (v === 'none' ? 'activity.opt.lunch.none' : `family.lunch_${v}`);
 
-/** A round of the daily log: 'lunch', 'mood' (mood & notes), or a session slot ('10:30', '13:30'). */
+/** A round of the daily log: 'lunch', 'mood' (mood & notes), or a session's start time ('10:30', '13:30', or the time of an extra session such as '15:00'). */
 export type RoundId = 'lunch' | 'mood' | Slot;
 export interface Round { id: RoundId; kind: 'session' | 'lunch' | 'mood'; time: HM; session?: SessionItem }
-/** The rounds of a day in time order: each scheduled session (a slot without a session is skipped), lunch, and mood & notes at the end of the day. */
+/** The rounds of a day in time order: each scheduled session (a slot without a session is skipped; an extra session is a round like any other), lunch, and mood & notes at
+ *  the end of the day: from 15:00, or once the last session is over when an extra one runs later. At the same time a session comes before lunch and mood & notes. */
 export function roundsOf(s: ClubState, date: ISODate): Round[] {
   const out: Round[] = [];
-  for (const x of dayPlan(s, date)) if (x.kind === 'session') out.push({ id: x.slot, kind: 'session', time: x.time, session: x });
-  out.push({ id: 'lunch', kind: 'lunch', time: FIXED_SLOTS.find((f) => f.kind === 'lunch')!.time }, { id: 'mood', kind: 'mood', time: FIXED_SLOTS.find((f) => f.kind === 'tea')!.time });
+  const sessions = dayPlan(s, date).filter((x): x is SessionItem => x.kind === 'session');
+  for (const x of sessions) out.push({ id: x.slot, kind: 'session', time: x.time, session: x });
+  out.push({ id: 'lunch', kind: 'lunch', time: FIXED_SLOTS.find((f) => f.kind === 'lunch')!.time });
+  const lastEnd = sessions.length ? toMin(sessions[sessions.length - 1].time) + SESSION_MIN : 0;
+  out.push({ id: 'mood', kind: 'mood', time: toHM(Math.max(toMin(FIXED_SLOTS.find((f) => f.kind === 'tea')!.time), lastEnd)) });
   return sortBy(out, (r) => r.time);
 }
 const roundIdOf = (r: Round | RoundId): RoundId => (typeof r === 'string' ? r : r.id);
@@ -256,6 +262,7 @@ export function libraryPhotos(s: ClubState, f: PhotoFilter = {}): Photo[] {
     live(s.photos).filter(
       (p) =>
         p.visibility !== 'removed' &&
+        p.visibility !== 'draft' && // KC round 7: a shot nobody has sent is not in the library
         (vis === 'all' || p.visibility === vis) &&
         (!f.memberId || p.memberIds.includes(f.memberId)) &&
         (!f.kind || p.kind === f.kind) &&
@@ -306,7 +313,7 @@ export const sortByPhotoCount = <M extends { id: string }>(members: M[], counts:
 export const pendingPhotos = (s: ClubState): Photo[] => sortBy(live(s.photos).filter((p) => p.visibility === 'pending'), (p) => p.date + p.time);
 export const isPendingPhoto = (p: Pick<Photo, 'visibility'>) => p.visibility === 'pending';
 /** Distinct activity strings in the library (for the filter). */
-export const photoActivities = (s: ClubState): string[] => Array.from(new Set(live(s.photos).filter((p) => p.visibility !== 'removed').map(photoActivity))).sort();
+export const photoActivities = (s: ClubState): string[] => Array.from(new Set(live(s.photos).filter((p) => p.visibility !== 'removed' && p.visibility !== 'draft').map(photoActivity))).sort();
 
 /** Deterministic 0–4 tone and small numbers from an id string (no randomness in actions). */
 export function hashOf(str: string): number {

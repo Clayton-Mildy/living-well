@@ -61,17 +61,17 @@ export function CatalogEditor({ open, onClose }: { open: boolean; onClose: () =>
   const row = (key: string, icon: string, title: string, sub: string, extra: ReactNode, onEdit: () => void, editLabel: string, i = 1, src?: string) => isPhone ? (
     // round 6, phone: a grouped row (tinted icon tile, the name over its room, a 34px edit pill), the hairline starting at the text
     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px 8px 16px', minHeight: 58, ...rowLine(i === 0, 62) }}>
-      <span aria-hidden="true" style={{ width: 34, height: 34, borderRadius: 9, background: photoFill(src, '#F3EEE8'), color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{src ? null : <Icon name={icon} size={19} />}</span>
+      <span aria-hidden="true" className="cp-fill" style={{ width: 34, height: 34, borderRadius: 9, background: photoFill(src, 'var(--fill, #F4F4F5)'), color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{src ? null : <Icon name={icon} size={19} />}</span>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35 }}>{title}</span>
         <span style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{sub}</span>
       </div>
       {extra}
-      <button type="button" className="cp-press" onClick={onEdit} aria-label={editLabel} title={editLabel} style={{ width: 34, height: 34, borderRadius: 999, border: 'none', background: '#F3EEE8', color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 }}><Icon name="edit" size={19} /></button>
+      <button type="button" className="cp-press cp-fill" onClick={onEdit} aria-label={editLabel} title={editLabel} style={{ width: 34, height: 34, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 }}><Icon name="edit" size={19} /></button>
     </div>
   ) : (
-    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px', borderTop: '1px solid #F0EAE1', minHeight: 64 }}>
-      <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: photoFill(src, '#F3EEE8'), color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{src ? null : <Icon name={icon} size={20} />}</span>
+    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 4px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: 64 }}>
+      <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: photoFill(src, 'var(--fill, #F4F4F5)'), color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{src ? null : <Icon name={icon} size={20} />}</span>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{title}</span>
         <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: '20px' }}>{sub}</span>
@@ -93,7 +93,7 @@ export function CatalogEditor({ open, onClose }: { open: boolean; onClose: () =>
         footer={form ? <button type="button" className="h-bronze cp-press" aria-disabled={busy || undefined} onClick={busy ? undefined : save} style={{ width: '100%', height: 50, borderRadius: 999, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.save')}</button> : undefined}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4 }}>
           <Eyebrow>{t('cal.catalog')}</Eyebrow>
-          <h2 style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{heading}</h2>
+          <h2 className="cp-serif" style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{heading}</h2>
         </div>
         {form ? (
           <>
@@ -107,7 +107,7 @@ export function CatalogEditor({ open, onClose }: { open: boolean; onClose: () =>
                 <Group title={t('cal.icon')} pad="12px 14px">
                   <div role="group" aria-label={t('cal.icon')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                     {ICONS.map((i) => (
-                      <button key={i} type="button" className="cp-press" aria-pressed={form.icon === i} aria-label={t('cal.icon_' + i)} title={t('cal.icon_' + i)} onClick={() => set({ icon: i })} style={{ width: 44, height: 44, borderRadius: 999, border: form.icon === i ? '1px solid #24201C' : '1px solid #DCD3C8', background: form.icon === i ? '#24201C' : '#FFFFFF', color: form.icon === i ? '#FFFFFF' : '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                      <button key={i} type="button" className={form.icon === i ? 'cp-press' : 'cp-press cp-fill'} aria-pressed={form.icon === i} aria-label={t('cal.icon_' + i)} title={t('cal.icon_' + i)} onClick={() => set({ icon: i })} style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: form.icon === i ? '#24201C' : 'var(--fill, #F4F4F5)', color: form.icon === i ? '#FFFFFF' : '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
                         <Icon name={i} size={22} />
                       </button>
                     ))}
@@ -126,13 +126,13 @@ export function CatalogEditor({ open, onClose }: { open: boolean; onClose: () =>
         ) : (
           <>
             {canRooms ? <NativeSeg label={t('cal.catalog')} value={tab} onChange={setTab} items={[{ value: 'activities', label: t('cal.activities'), n: acts.length }, { value: 'rooms', label: t('cal.rooms'), n: rooms.length }]} /> : null}
-            <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' }}>
-              <button type="button" className="cp-tap-self" onClick={() => setForm(tab === 'rooms' ? newRoom() : newActivity())} style={{ width: '100%', minHeight: 50, padding: '6px 10px 6px 16px', border: 'none', backgroundColor: '#FFFFFF', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+            <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
+              <button type="button" className="cp-tap-self" onClick={() => setForm(tab === 'rooms' ? newRoom() : newActivity())} style={{ width: '100%', minHeight: 50, padding: '6px 10px 6px 16px', border: 'none', backgroundColor: 'transparent', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
                 <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: 8, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="add" size={19} /></span>
                 <span style={{ flex: 1, minWidth: 0 }}>{t(tab === 'rooms' ? 'cal.addRoom' : 'cal.addActivity')}</span>
               </button>
             </div>
-            <div style={{ background: '#FFFFFF', borderRadius: 14, overflow: 'hidden' }}>
+            <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
               {tab === 'activities' ? activityRows : roomRows}
               {paged.total === 0 ? <EmptyState icon="interests" title={t('common.empty')} /> : null}
               {pager}
@@ -156,7 +156,7 @@ export function CatalogEditor({ open, onClose }: { open: boolean; onClose: () =>
                 <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('cal.icon')}</span>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                   {ICONS.map((i) => (
-                    <button key={i} type="button" aria-pressed={form.icon === i} aria-label={t('cal.icon_' + i)} title={t('cal.icon_' + i)} onClick={() => set({ icon: i })} style={{ width: 44, height: 44, borderRadius: 999, border: form.icon === i ? '1px solid #24201C' : '1px solid #DCD3C8', background: form.icon === i ? '#24201C' : '#FFFFFF', color: form.icon === i ? '#FFFFFF' : '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
+                    <button key={i} type="button" className={form.icon === i ? undefined : 'cp-fill'} aria-pressed={form.icon === i} aria-label={t('cal.icon_' + i)} title={t('cal.icon_' + i)} onClick={() => set({ icon: i })} style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: form.icon === i ? '#24201C' : 'var(--fill, #F4F4F5)', color: form.icon === i ? '#FFFFFF' : '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', padding: 0 }}>
                       <Icon name={i} size={22} />
                     </button>
                   ))}
@@ -197,7 +197,7 @@ function ActivityPhotoField({ icon, value, onChange }: { icon: string; value: st
   };
   return (
     <div role="group" aria-label={t('cal.photo')} data-testid="activity-photo" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-      <span aria-hidden="true" style={{ width: 96, height: 72, borderRadius: 12, background: photoFill(value ? mediaUrl(value) : undefined, '#F3EEE8'), color: '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{value ? null : <Icon name={icon} size={30} />}</span>
+      <span aria-hidden="true" className="cp-fill" style={{ width: 96, height: 72, borderRadius: 12, background: photoFill(value ? mediaUrl(value) : undefined, 'var(--fill, #F4F4F5)'), color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{value ? null : <Icon name={icon} size={30} />}</span>
       <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('cal.photo')}</span>
         <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('cal.photoHint')}</span>

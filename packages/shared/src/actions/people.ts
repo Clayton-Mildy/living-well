@@ -9,7 +9,7 @@ import { mediaIdOf } from './members';
 
 const mgmtOnly = (u: User) => isMgmt(u);
 const id80 = (v: unknown, field: string) => str(v, 80, { required: true, field });
-const RATEABLE_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'driver'];
+const RATEABLE_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity'];
 function need<T>(v: T | null | undefined | false, ctx: Ctx, code = 'err.notFound'): T {
   if (!v) ctx.fail(code);
   return v as T;
@@ -149,7 +149,6 @@ export const peopleActions = [
       ctx.feed({ icon: 'person_check', key: 'people.feed.reactivated', params: { name: st.name } });
     },
   }),
-  // Housekeeping and driver get Requests as their home screen once this is on.
   defineAction<{ staffId: string; on: boolean }>({
     name: 'staff.setAppAccess',
     can: mgmtOnly,

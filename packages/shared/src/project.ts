@@ -69,7 +69,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   out.activities = pick(live(s.activities));
   out.scheduleVersions = pick(live(s.scheduleVersions).filter((v) => v.status === 'published'));
   // KC round 7: one-day programme changes, and who leads a session that is on (a guest host's name and what they do; never fees, phones, bank details or notes)
-  out.scheduleDays = pick(live(s.scheduleDays || {}).map(({ note: _note, ...d }) => d)); // the day's note ("… is off sick") is for staff
+  out.scheduleDays = pick(live(s.scheduleDays || {}).map(({ note: _note, extra, ...d }) => ({ ...d, ...(extra?.length ? { extra: extra.map(({ note: _n, ...x }) => x) } : {}) }))); // the day's note ("… is off sick") and an extra session's note are for staff; families see the extra sessions themselves
   const guestSessions = live(s.guestSessions || {}).filter((g) => g.status !== 'cancelled');
   out.guestSessions = pick(guestSessions.map((g): GuestSession => ({ ...g, fee: 0, vendorInvoiceId: undefined, note: undefined })));
   const hostIds = new Set(guestSessions.map((g) => g.hostId));

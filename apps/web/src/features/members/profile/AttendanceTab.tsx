@@ -31,15 +31,15 @@ export function AttendanceTab({ p }: { p: P }) {
     const ds = dayStatus(s, d);
     const a = attOf(s, d, m.id);
     const member = d >= cur.start && (!cur.lastDay || d <= cur.lastDay);
-    let c: Cell = { day: String(i), label: '', bg: '#FFFFFF', bd: '1px solid #F0EAE1', fg: '#24201C', vis: 'visible' };
+    let c: Cell = { day: String(i), label: '', bg: '#FFFFFF', bd: 'none', fg: '#24201C', vis: 'visible' };
     if (a?.checkIn) {
       const extra = extraSet.has(d);
       c = extra
         ? { ...c, bg: '#24201C', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.extra'), extra: true, full: `${t('profile.cal.in', { t: a.checkIn.at })} · ${t('profile.cal.extra')}` }
-        : { ...c, bg: '#75624B', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.in', { t: a.checkIn.at }), full: t('profile.cal.in', { t: a.checkIn.at }) };
-    } else if (w === 0 || w === 6) c = { ...c, bg: '#F5F5F3', bd: 'none', fg: '#5E5852' };
-    else if (!ds.open) c = { ...c, bg: '#F0EAE1', bd: 'none', fg: '#5E5852', label: ds.reason === 'holiday' ? t('profile.cal.holiday') : t('profile.cal.closed') };
-    else if (!member) c = { ...c, bg: '#F5F5F3', bd: 'none', fg: '#5E5852', label: cur.lastDay && d > cur.lastDay ? t('profile.cal.ended') : '' };
+        : { ...c, bg: 'var(--accent, #75624B)', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.in', { t: a.checkIn.at }), full: t('profile.cal.in', { t: a.checkIn.at }) };
+    } else if (w === 0 || w === 6) c = { ...c, bg: 'var(--press, #EEEEF0)', bd: 'none', fg: '#5E5852' };
+    else if (!ds.open) c = { ...c, bg: 'var(--hairline, #E2E2E6)', bd: 'none', fg: '#5E5852', label: ds.reason === 'holiday' ? t('profile.cal.holiday') : t('profile.cal.closed') };
+    else if (!member) c = { ...c, bg: 'var(--press, #EEEEF0)', bd: 'none', fg: '#5E5852', label: cur.lastDay && d > cur.lastDay ? t('profile.cal.ended') : '' };
     else if (d === today) c = { ...c, label: t('common.today') };
     if (d === today) c.bd = '2px solid #24201C';
     cells.push(c);
@@ -57,9 +57,9 @@ export function AttendanceTab({ p }: { p: P }) {
         usualTile,
       ];
   const legend = [
-    { bg: '#75624B', bd: 'none', label: t('profile.legend.visited') },
+    { bg: 'var(--accent, #75624B)', bd: 'none', label: t('profile.legend.visited') },
     ...(gold ? [] : [{ bg: '#24201C', bd: 'none', label: t('profile.legend.extra') }]),
-    { bg: '#F0EAE1', bd: 'none', label: t('profile.legend.closed') },
+    { bg: 'var(--hairline, #E2E2E6)', bd: 'none', label: t('profile.legend.closed') },
   ];
   const dows = Array.from({ length: 7 }, (_, i) => fmt.fd(`2024-01-0${i + 1}`, { weekday: 'short' }));
   const tilesEl = (
@@ -76,9 +76,9 @@ export function AttendanceTab({ p }: { p: P }) {
   const calEl = (
     <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
-        <button type="button" onClick={() => setMonth(addMonths(month, -1))} aria-label={t('profile.prevMonth')} className="h-cream" style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#24201C' }}><Icon name="chevron_left" size={22} /></button>
-        <h2 style={{ margin: 0, fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', textAlign: 'center' }}>{fmt.fmonth(month, true)}</h2>
-        <button type="button" onClick={() => setMonth(addMonths(month, 1))} aria-label={t('profile.nextMonth')} className="h-cream" style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#24201C' }}><Icon name="chevron_right" size={22} /></button>
+        <button type="button" onClick={() => setMonth(addMonths(month, -1))} aria-label={t('profile.prevMonth')} className="h-fill cp-fill" style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#24201C' }}><Icon name="chevron_left" size={22} /></button>
+        <h2 className="cp-serif" style={{ margin: 0, fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', textAlign: 'center' }}>{fmt.fmonth(month, true)}</h2>
+        <button type="button" onClick={() => setMonth(addMonths(month, 1))} aria-label={t('profile.nextMonth')} className="h-fill cp-fill" style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', color: '#24201C' }}><Icon name="chevron_right" size={22} /></button>
       </div>
       {month !== ym(today) ? <div><Button variant="ghost" size={44} onClick={() => setMonth(ym(today))}>{t('profile.thisMonth')}</Button></div> : null}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 6 }}>
@@ -109,7 +109,7 @@ export function AttendanceTab({ p }: { p: P }) {
     </>
   );
   return (
-    <div style={{ ...cardStyle, gap: 22, maxWidth: 980 }}>
+    <div className="cp-grey" style={{ ...cardStyle, gap: 22, maxWidth: 980 }}>
       {tilesEl}
       <div style={{ borderTop: HAIR, paddingTop: 18, display: 'flex', flexDirection: 'column', gap: 14 }}>
         {calEl}

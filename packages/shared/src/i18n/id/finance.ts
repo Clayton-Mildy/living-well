@@ -45,8 +45,7 @@ export const finance: Same<typeof EN> = {
   'feed.adjusted': 'Tagihan {number} diperbarui: {label} ({amount})',
   'feed.voided': 'Tagihan {number} dibatalkan',
   'feed.pay_dokuVa': 'Dibayar lewat virtual account DOKU: {number} · {amount}',
-  'feed.pay_bankTransferSgd': 'Transfer bank SGD dicatat: {number} · {amount}',
-  'feed.pay_revolut': 'Pembayaran Revolut dicatat: {number} · {amount}',
+  'feed.pay_bankTransfer': 'Transfer bank dicatat: {number} · {amount}',
   'feed.pay_cash': 'Pembayaran tunai dicatat: {number} · {amount}',
   'feed.pay_other': 'Pembayaran dicatat: {number} · {amount}',
   'feed.refund': 'Pengembalian dana {amount} · {number}',
@@ -59,7 +58,7 @@ export const finance: Same<typeof EN> = {
 
   // ---- shared words ----
   'line.creditNote': 'Nota kredit: {reason}',
-  'method.dokuVa': 'VA DOKU', 'method.bankTransferSgd': 'Transfer bank SGD', 'method.revolut': 'Revolut', 'method.cash': 'Tunai', 'method.other': 'Lainnya',
+  'method.dokuVa': 'VA DOKU', 'method.bankTransfer': 'Transfer bank', 'method.cash': 'Tunai', 'method.other': 'Lainnya',
   'kind.doctor': 'Dokter', 'kind.service': 'Layanan', 'kind.supplier': 'Pemasok',
   'xero.synced': 'Xero tersinkron', 'xero.pending': 'Menunggu Xero',
 
@@ -92,11 +91,11 @@ export const finance: Same<typeof EN> = {
   'pay.listTitle': 'Pembayaran yang masuk', 'pay.newest': 'terbaru dulu', 'pay.search': 'Cari anggota, tagihan, referensi, atau bank', 'pay.empty': 'Belum ada pembayaran',
   'pay.refund': 'Kembalikan dana', 'pay.refundedLine': 'Dikembalikan {amount} · {date} · {reason}', 'pay.noReason': 'tanpa alasan', 'pay.creditNoteTag': 'nota kredit',
   'pay.creditOnly': 'Saldo akun', 'pay.creditPart': 'ditambah saldo akun {amount}', 'pay.ref': 'ref {ref}',
-  'pay.manualTitle': 'Pembayaran manual · SGD, Revolut, atau tunai', 'pay.manualSub': 'Untuk keluarga yang membayar dari Singapura, lewat Revolut, atau tunai, bukan lewat virtual account.',
+  'pay.manualTitle': 'Pembayaran manual · transfer bank atau tunai', 'pay.manualSub': 'Untuk keluarga yang membayar lewat transfer bank atau tunai, bukan lewat virtual account.',
   'pay.invoice': 'Tagihan', 'pay.findInvoice': 'Cari anggota atau tagihan', 'pay.nothingOpen': 'Tidak ada tagihan terbuka',
   'pay.paidBy': 'Dibayar lewat', 'pay.amountCredited': 'Jumlah yang dikreditkan (Rp)', 'pay.balanceHint': 'Sisa tagihan: {amount}',
   'pay.overpay': 'Lebih {extra} dari tagihan. Sisanya tetap di akun sebagai saldo dan dipotong dari tagihan berikutnya.',
-  'pay.currency': 'Mata uang', 'pay.foreignAmount': 'Jumlah diterima dalam {ccy} (opsional)', 'pay.reference': 'Referensi', 'pay.refPlaceholder': 'Referensi bank atau Revolut', 'pay.refOptional': 'Opsional',
+  'pay.reference': 'Referensi', 'pay.refPlaceholder': 'Referensi transfer bank', 'pay.refOptional': 'Opsional',
   'pay.record': 'Catat pembayaran',
   'refund.invoice': 'Kembalikan dari tagihan', 'refund.amount': 'Jumlah pengembalian', 'refund.upTo': 'Maksimal {max}', 'refund.reason': 'Alasan pengembalian dana',
   'refund.creditNote': 'Terbitkan nota kredit', 'refund.creditNoteSub': 'Mengurangi jumlah dari tagihan agar tetap lunas. Tanpa nota kredit, tagihan terbuka lagi sebesar jumlah itu.',

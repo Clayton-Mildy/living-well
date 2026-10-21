@@ -5,7 +5,7 @@ import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { contactsOfMember, flexMonth, fmtPhone, isPendingRow, memberName, initials, ym } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
-import { FilterChips, Group, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
+import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
@@ -96,8 +96,8 @@ export function MembersList() {
     const c = contactOf(r.m.id);
     if (!c) return null;
     return (
-      <a href={`tel:${c.contact.phone}`} data-testid="member-call" aria-label={`${t('common.call')} ${c.contact.name}`} className={isPhone ? 'cp-press' : 'h-cream'}
-        style={{ width: size, height: size, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flex: 'none' }}>
+      <a href={`tel:${c.contact.phone}`} data-testid="member-call" aria-label={`${t('common.call')} ${c.contact.name}`} className={isPhone ? 'cp-press cp-fill' : 'h-fill cp-fill'}
+        style={{ width: size, height: size, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flex: 'none' }}>
         <Icon name="call" size={size >= 40 ? 21 : 19} />
       </a>
     );
@@ -111,7 +111,7 @@ export function MembersList() {
       <>
         <div className="cp-native" style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 14 }}>
           <PageHead size={40} eyebrow={`${t('members.eyebrow', { n: counts.active })}${pendingN ? ' · ' + t('members.eyebrowPending', { n: pendingN }) : ''}`} title={t('nav.members')} />
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 11, background: '#EAE6E0' }}>
+          <label className="cp-input-wrap cp-fill" style={{ display: 'flex', alignItems: 'center', gap: 6, height: 40, padding: '0 12px', borderRadius: 12, background: 'var(--fill, #F4F4F5)' }}>
             <Icon name="search" size={19} color="#6B6259" />
             <input value={q} onChange={(e) => setQ(e.target.value)} inputMode="search" autoComplete="off" placeholder={t('members.searchPh')} aria-label={t('members.searchLabel')} style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', height: '100%', fontSize: 16, fontFamily: 'Inter', color: '#1E1A16', background: 'transparent' }} />
           </label>
@@ -131,12 +131,12 @@ export function MembersList() {
               return (
                 // round 7: the row is a div; the profile opens from its main button, the family contact has its own call button before the chevron
                 <div key={r.m.id} className="cp-tap" data-member={r.m.id}
-                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', minHeight: 62, backgroundColor: '#FFFFFF', backgroundImage: i ? 'linear-gradient(#EFEAE3, #EFEAE3)' : 'none', backgroundSize: 'calc(100% - 70px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', color: '#24201C', fontFamily: 'Inter', transition: 'background-color .15s' }}>
+                  style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', minHeight: 62, backgroundColor: 'transparent', backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 70px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', color: '#24201C', fontFamily: 'Inter', transition: 'background-color .15s' }}>
                   <button type="button" className="cp-tap-target" onClick={() => open(r)}
                     style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                   <span style={{ position: 'relative', width: 42, height: 42, flex: 'none' }}>
-                    <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px #E4DACD' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
-                    {dot ? <span aria-hidden="true" style={{ position: 'absolute', right: -2, bottom: -2, width: 13, height: 13, borderRadius: 999, background: dot, border: '2px solid #FFFFFF' }} /> : null}
+                    <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
+                    {dot ? <span aria-hidden="true" style={{ position: 'absolute', right: -2, bottom: -2, width: 13, height: 13, borderRadius: 999, background: dot, border: '2px solid var(--fill, #F4F4F5)' }} /> : null}
                   </span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
@@ -158,7 +158,7 @@ export function MembersList() {
             })}
             {!visible.length ? (
               <div style={{ padding: '32px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
-                <div style={{ width: 52, height: 52, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="person_search" size={26} color="#8A755B" /></div>
+                <div className="cp-fill" style={{ width: 52, height: 52, borderRadius: 999, background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="person_search" size={26} color="#8A755B" /></div>
                 <div style={{ fontSize: 18, letterSpacing: '-0.3px' }}>{t('members.noMatch')}</div>
               </div>
             ) : null}
@@ -189,11 +189,11 @@ export function MembersList() {
         ) : (
           <FilterChips label={t('members.filter')} value={f} onChange={setF} options={MEMBER_FILTERS.map((k) => ({ value: k, label: t('members.f.' + k), count: counts[k] }))} />
         )}
-        <div style={{ background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: isPhone ? 24 : 28, boxShadow: 'var(--card-shadow)', padding: '8px clamp(18px, 3vw, 36px) 12px', overflow: 'hidden' }}>
+        <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: isPhone ? 24 : 28, padding: '8px clamp(18px, 3vw, 36px) 12px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px 20px', flexWrap: 'wrap', padding: '14px 0 6px' }}>
             {isPhone ? null : <div style={{ flex: '0 1 220px', minWidth: 0, marginRight: 'auto' }}>{sortEl}</div>}
-            <label style={{ flex: isPhone ? '1 1 100%' : '0 1 340px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, height: 44, borderBottom: '1px solid #DDD1C2' }}>
-              <Icon name="search" size={20} color="#75624B" />
+            <label className="cp-input-wrap cp-fill" style={{ flex: isPhone ? '1 1 100%' : '0 1 340px', minWidth: 0, display: 'flex', alignItems: 'center', gap: 8, height: 44, padding: '0 14px', borderRadius: 12, background: 'var(--fill, #F4F4F5)' }}>
+              <Icon name="search" size={20} color="var(--accent, #75624B)" />
               <input value={q} onChange={(e) => setQ(e.target.value)} placeholder={t('members.searchPh')} aria-label={t('members.searchLabel')} style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', height: '100%', fontSize: 16, fontFamily: 'Inter', color: '#24201C', background: 'transparent' }} />
             </label>
           </div>
@@ -205,11 +205,11 @@ export function MembersList() {
             const sd = subDates(r);
             return (
               // round 7: the row is a div; the profile opens from its main button, the family contact (name, relation, number) and its call button sit on the right
-              <div key={r.m.id} className="dh34 cp-bleed" data-member={r.m.id}
-                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, minHeight: 72, borderTop: i ? '1px solid #F0EAE1' : 'none', background: 'transparent', color: '#24201C', fontFamily: 'Inter' }}>
+              <div key={r.m.id} className="cp-bleed" data-member={r.m.id}
+                style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, minHeight: 72, borderTop: i ? HAIRLINE : 'none', background: 'transparent', color: '#24201C', fontFamily: 'Inter' }}>
                 <button type="button" onClick={() => open(r)}
                   style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-                <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500, flex: 'none', boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px #E4DACD' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
+                <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500, flex: 'none', boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{memberName(r.m)}</span>
                   <span style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>
@@ -235,13 +235,13 @@ export function MembersList() {
                 <span style={{ flex: '0 1 230px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>{contactLine(r, 14)}</span>
                 </button>
                 {callBtn(r, 40)}
-                <span aria-hidden="true" onClick={() => open(r)} style={{ display: 'flex', flex: 'none', cursor: 'pointer' }}><Icon name="chevron_right" size={22} color="#75624B" /></span>
+                <span aria-hidden="true" onClick={() => open(r)} style={{ display: 'flex', flex: 'none', cursor: 'pointer' }}><Icon name="chevron_right" size={22} color="var(--accent, #75624B)" /></span>
               </div>
             );
           })}
           {!visible.length ? (
             <div style={{ padding: '44px 24px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 10, textAlign: 'center' }}>
-              <div style={{ width: 60, height: 60, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="person_search" size={28} color="#8A755B" /></div>
+              <div className="cp-fill" style={{ width: 60, height: 60, borderRadius: 999, background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="person_search" size={28} color="#8A755B" /></div>
               <div style={{ fontSize: 20, letterSpacing: '-0.3px' }}>{t('members.noMatch')}</div>
             </div>
           ) : null}

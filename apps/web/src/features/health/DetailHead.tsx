@@ -45,9 +45,9 @@ export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: 
   // KC round 7: a member with limits of their own is graded with them; a small note says so (the lines are in the tooltip)
   const ownKeys = ownLimitKeys(who.kind === 'member' ? s.members[who.id] ?? who.member : null);
   const ownNote = ownKeys.length ? (
-    <span data-testid="own-limits" title={t('health.ownLimitsTip', { n: who.short, k: ownKeys.map((k) => t('health.lim.' + k)).join(', ') })}
-      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, alignSelf: 'center', padding: '2px 10px 2px 7px', borderRadius: 999, background: '#F3EEE8', color: '#75624B', fontSize: 13, fontWeight: 500, lineHeight: '20px', whiteSpace: 'nowrap' }}>
-      <Icon name="tune" size={15} weight={300} color="#75624B" />{t('health.ownLimits')}
+    <span data-testid="own-limits" className="cp-fill" title={t('health.ownLimitsTip', { n: who.short, k: ownKeys.map((k) => t('health.lim.' + k)).join(', ') })}
+      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, alignSelf: 'center', padding: '2px 10px 2px 7px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', fontSize: 13, fontWeight: 500, lineHeight: '20px', whiteSpace: 'nowrap' }}>
+      <Icon name="tune" size={15} weight={300} color="var(--accent, #75624B)" />{t('health.ownLimits')}
     </span>
   ) : null;
   const links = (
@@ -60,8 +60,8 @@ export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: 
   if (isPhone) {
     const linkRow = (icon: string, text: string, to: string, first?: boolean) => (
       <button type="button" className="cp-tap-self" onClick={() => navigate(to)}
-        style={{ height: 50, padding: '0 10px 0 16px', border: 'none', borderTop: first ? 'none' : '1px solid #EFEAE3', background: '#FFFFFF', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
-        <Icon name={icon} size={21} color="#75624B" />
+        style={{ height: 50, padding: '0 10px 0 16px', border: 'none', borderTop: first ? 'none' : '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+        <Icon name={icon} size={21} color="var(--accent, #75624B)" />
         <span style={{ flex: 1 }}>{text}</span>
         <Icon name="chevron_right" size={22} color="#A89C8E" />
       </button>
@@ -71,7 +71,7 @@ export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, minWidth: 0 }}>
           <Av name={who.name} tone={who.tone} src={who.photo} size={72} font={26} />
           <Eyebrow style={{ marginTop: 6 }}>{eyebrow}</Eyebrow>
-          <h2 style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{who.name}</h2>
+          <h2 className="cp-serif" style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{who.name}</h2>
           <div style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px', maxWidth: '100%' }}>{sub}</div>
           {ownNote}
         </div>
@@ -108,17 +108,17 @@ export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: 
   const pad = isPhone ? '14px 16px' : '16px clamp(18px, 2.4vw, 28px)';
   return (
     <>
-      <div style={{ padding: pad, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: isPhone ? 12 : 16, borderBottom: '1px solid #F0EAE1' }}>
+      <div style={{ padding: pad, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: isPhone ? 12 : 16, borderBottom: '0.5px solid var(--hairline, #E2E2E6)' }}>
         <Av name={who.name} tone={who.tone} src={who.photo} size={isPhone ? 52 : 56} font={isPhone ? 18 : 20} />
         <div style={{ flex: '1 1 180px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Eyebrow>{eyebrow}</Eyebrow>
-          <h2 style={{ margin: 0, fontSize: isPhone ? 22 : 'clamp(22px, 2vw, 26px)', lineHeight: 1.2, fontWeight: 500, letterSpacing: '-0.3px', color: '#24201C' }}>{who.name}</h2>
+          <h2 className="cp-serif" style={{ margin: 0, fontSize: isPhone ? 22 : 'clamp(22px, 2vw, 26px)', lineHeight: 1.2, fontWeight: 500, letterSpacing: '-0.3px', color: '#24201C' }}>{who.name}</h2>
           <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>
           {ownNote ? <div style={{ marginTop: 4, display: 'flex' }}>{ownNote}</div> : null}
         </div>
         {who.kind === 'member' ? <div style={isPhone ? { flex: '1 1 100%' } : undefined}>{links}</div> : null}
       </div>
-      {flags.length || internal || spark ? <div style={{ padding: isPhone ? '12px 16px' : '12px clamp(18px, 2.4vw, 28px)', display: 'flex', flexWrap: 'wrap', gap: '10px 20px', alignItems: 'center', background: '#FBFAF8', borderBottom: '1px solid #F0EAE1' }}>
+      {flags.length || internal || spark ? <div style={{ padding: isPhone ? '12px 16px' : '12px clamp(18px, 2.4vw, 28px)', display: 'flex', flexWrap: 'wrap', gap: '10px 20px', alignItems: 'center', borderBottom: '0.5px solid var(--hairline, #E2E2E6)' }}>
         <div style={{ flex: '1 1 260px', minWidth: 0, display: 'flex', flexWrap: 'wrap', gap: '6px 16px', alignItems: 'center' }}>
           {flags.map((f, i) => (
             <span key={i} data-testid="care-flag" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, fontWeight: f.dot ? 500 : 400, lineHeight: 1.4, color: f.fg, maxWidth: '100%' }}>

@@ -25,7 +25,7 @@ afterAll(async () => { await sql.end(); });
 const login = (username: string, password: string) => app.request('/api/login', json({ username, password }));
 const bearer = (token: string, extra: Record<string, string> = {}) => ({ headers: { authorization: `Bearer ${token}`, ...extra } });
 const tokenOf = async (username: string, password = 'citra123') => (await j(await login(username, password))).token as string;
-const SEED_NAMES = ['caca', 'yohanes', 'agus', 'siti', 'dinar', 'dimas', 'joko', 'dewi', 'ega', 'fransiska', 'maria', 'daniel', 'cynthia', 'stephanie', 'laras', 'yohana'];
+const SEED_NAMES = ['caca', 'yohanes', 'agus', 'dinar', 'dimas', 'dewi', 'ega', 'fransiska', 'maria', 'daniel', 'cynthia', 'stephanie', 'laras', 'yohana'];
 
 describe('auth: username and password', () => {
   it('signs in with the seed username and the demo password, returns the user and a session token', async () => {
@@ -43,13 +43,16 @@ describe('auth: username and password', () => {
   it('every seed account has a credential; staff without app access are told so', async () => {
     const [n] = await sql`select count(*)::int as n from credentials`;
     expect(n.n).toBe(SEED_NAMES.length);
-    for (const name of SEED_NAMES) {
-      const r = await login(name, 'citra123');
-      if (name === 'siti' || name === 'joko') {
-        expect(r.status).toBe(403);
-        expect(await j(r)).toMatchObject({ ok: false, reason: 'noAccess', code: 'login.noAccess' });
-      } else expect((await j(r)).ok, name).toBe(true);
-    }
+    for (const name of SEED_NAMES) expect((await j(await login(name, 'citra123'))).ok, name).toBe(true);
+    // management switches a person's app access off: they are told so at the next sign-in, and the one-tap demo sign-in refuses too
+    const setAccess = (on: boolean) => app.request('/api/actions/staff.setAppAccess', json({ mutationId: `noacc-${on}`, club: 'citra', input: { staffId: 's10', on } }, 's9'));
+    expect((await setAccess(false)).status).toBe(200);
+    const r = await login('fransiska', 'citra123');
+    expect(r.status).toBe(403);
+    expect(await j(r)).toMatchObject({ ok: false, reason: 'noAccess', code: 'login.noAccess' });
+    expect((await app.request('/api/verify', json({ userId: 's10', code: '000000' }))).status).toBe(401);
+    expect((await setAccess(true)).status).toBe(200);
+    expect((await j(await login('fransiska', 'citra123'))).ok).toBe(true);
   });
   it('a wrong password and an unknown username get the same clear error', async () => {
     const wrong = await login('caca', 'citra124');
@@ -72,7 +75,6 @@ describe('auth: username and password', () => {
     expect(r).toMatchObject({ ok: true, user: { id: 's1' } });
     expect(typeof r.token).toBe('string');
     expect((await app.request('/api/verify', json({ userId: 's1', code: '12345' }))).status).toBe(400);
-    expect((await app.request('/api/verify', json({ userId: 's4', code: '000000' }))).status).toBe(401); // no app access
     process.env.CP_DEMO_LOGIN = '0';
     expect((await app.request('/api/verify', json({ userId: 's1', code: '000000' }))).status).toBe(403);
     delete process.env.CP_DEMO_LOGIN;
@@ -481,11 +483,11 @@ describe('media (videos)', () => {
     expect(asImage.status).toBe(415);
     expect((await j(asImage)).code).toBe('common.mediaType');
   });
-  it('allows a video up to 25 MB (images stay at 5 MB) and refuses more', async () => {
+  it('allows a video up to 100 MB (images stay at 5 MB) and refuses more', async () => {
     const six = Buffer.concat([webmBytes(0), Buffer.alloc(6 * 1024 * 1024, 9)]);
     const ok = await app.request('/api/media', json({ mime: 'video/webm', data: six.toString('base64') }, 's6'));
     expect(ok.status).toBe(201);
-    const big = Buffer.concat([webmBytes(0), Buffer.alloc(25 * 1024 * 1024, 9)]).toString('base64');
+    const big = Buffer.concat([webmBytes(0), Buffer.alloc(100 * 1024 * 1024, 9)]).toString('base64');
     const r = await app.request('/api/media', json({ mime: 'video/webm', data: big }, 's6'));
     expect(r.status).toBe(413);
     expect((await j(r)).code).toBe('ds.videoTooBig');

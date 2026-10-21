@@ -4,8 +4,8 @@ import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import type { Enquiry } from '@cp/shared';
-import { ENQ_STAGES, archivedEnquiries, enquiriesByStage, seniorName, type EnqStage } from '@cp/shared/rules/enquiries';
-import { Button, Dialog, FilterChips, Icon, IconButton, PageHead, Pager, Pin, TextField, uiZoom, usePaged } from '../../components/ui';
+import { ENQ_STAGES, archivedEnquiries, enquiriesByStage, formLinkState, seniorName, type EnqStage } from '@cp/shared/rules/enquiries';
+import { Button, Dialog, FilterChips, HAIRLINE, Icon, IconButton, PageHead, Pager, Pin, TextField, uiZoom, usePaged } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -79,7 +79,7 @@ export function Enquiries() {
     edit: (e: Enquiry) => setDlg({ mode: 'edit', id: e.id }),
     move: moveTo,
     openMove: (e: Enquiry) => setMoveFor(e),
-    dialog: (mode: 'visit' | 'trial' | 'join' | 'lost', e: Enquiry) => setDlg({ mode, id: e.id }),
+    dialog: (mode: 'visit' | 'trial' | 'join' | 'lost' | 'link', e: Enquiry) => setDlg({ mode, id: e.id }),
     reopen: async (e: Enquiry) => { const r = await act('enquiry.reopen', { enquiryId: e.id }, { ok: t('enq.reopened', { name: seniorName(e) }) }); return r.ok; },
     profile: (e: Enquiry) => e.memberId && navigate(`/members/${e.memberId}`),
   };
@@ -116,11 +116,11 @@ export function Enquiries() {
           <FilterChips label={t('enq.stageLabel')} value={stage} onChange={setStage} options={ENQ_STAGES.map((k) => ({ value: k, label: t('enq.stage.' + k), count: by[k].length }))} />
           {phonePaged.rows.map((e) => <LeadCard key={e.id} e={e} phone h={handlers} />)}
           <Pager page={phonePaged.page} pages={phonePaged.pages} onPage={phonePaged.setPage} label={t('enq.pgColumn', { stage: t('enq.stage.' + stage) })} />
-          {!by[stage].length ? <div style={{ padding: '28px 16px', borderRadius: 14, background: '#FFFFFF', textAlign: 'center', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{searching ? t('enq.noMatch', { q: q.trim() }) : t('enq.nobody')}</div> : null}
+          {!by[stage].length ? <div style={{ padding: '28px 16px', borderRadius: 16, background: 'var(--fill, #F4F4F5)', textAlign: 'center', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{searching ? t('enq.noMatch', { q: q.trim() }) : t('enq.nobody')}</div> : null}
         </div>
       ) : (
         <DndContext sensors={sensors} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => setActive(null)}>
-          <div style={{ display: 'flex', gap: 14, overflowX: 'auto', alignItems: 'flex-start', paddingBottom: 8 }}>
+          <div className="cp-pillrow" style={{ display: 'flex', gap: 14, overflowX: 'auto', alignItems: 'flex-start', paddingBottom: 8 }}>
             {ENQ_STAGES.map((k) => (
               <Column key={k} stage={k} items={by[k]} resetKey={q} searching={searching} hint="" dragging={!!active} render={(e) => <DraggableCard key={e.id} e={e} h={handlers} />} />
             ))}
@@ -134,7 +134,7 @@ export function Enquiries() {
         // round 6, phone: the archive is a grouped list under a small header
         <ListCard title={t('enq.archivedTitle')}>
           {archivedPaged.rows.map((e) => (
-            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: '1px solid #F0EAE1' }}>
+            <div key={e.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 0', borderTop: HAIRLINE }}>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{seniorName(e)}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{e.contact.name} · {t('enq.stage.' + e.stage)} · {fds(e.archivedAt!.slice(0, 10))}</span>
@@ -145,11 +145,11 @@ export function Enquiries() {
           <Pager page={archivedPaged.page} pages={archivedPaged.pages} onPage={archivedPaged.setPage} label={t('enq.pgArchived')} />
         </ListCard>
       ) : (
-        <div style={{ ...heroCard, padding: `0 ${HPAD} 8px` }}>
+        <div className="cp-grey" style={{ ...heroCard, padding: `0 ${HPAD} 8px` }}>
           <div style={{ padding: '18px 0 8px' }}><span style={labelStyle}>{t('enq.archivedTitle')}</span></div>
           {archivedPaged.rows.map((e) => (
             <Fragment key={e.id}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '16px 0', borderTop: '1px solid #F0EAE1' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', padding: '16px 0', borderTop: HAIRLINE }}>
                 <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
                   <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{seniorName(e)}</span>
                   <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{e.contact.name} · {t('enq.stage.' + e.stage)} · {fds(e.archivedAt!.slice(0, 10))}</span>
@@ -162,7 +162,7 @@ export function Enquiries() {
         </div>
       )) : null}
 
-      <EnquiryDialogs dlg={dlg} onClose={() => setDlg(null)} />
+      <EnquiryDialogs dlg={dlg} onClose={() => setDlg(null)} onSwitch={setDlg} />
       <Dialog open={!!moveFor} onClose={() => setMoveFor(null)} eyebrow={t('enq.moveTo')} title={moveFor ? seniorName(moveFor) : ''} maxWidth={420}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {moveFor ? ENQ_STAGES.filter((k) => k !== moveFor.stage || k === 'visit' || k === 'trial').map((k) => (
@@ -180,7 +180,7 @@ interface H {
   edit: (e: Enquiry) => void;
   move: (e: Enquiry, to: EnqStage) => Promise<void>;
   openMove: (e: Enquiry) => void;
-  dialog: (mode: 'visit' | 'trial' | 'join' | 'lost', e: Enquiry) => void;
+  dialog: (mode: 'visit' | 'trial' | 'join' | 'lost' | 'link', e: Enquiry) => void;
   reopen: (e: Enquiry) => Promise<boolean>;
   profile: (e: Enquiry) => void;
 }
@@ -192,16 +192,16 @@ function Column({ stage, items, resetKey, searching, hint, dragging, render }: {
   const count = items.length;
   const paged = usePaged(items, 6, resetKey);
   return (
-    <div ref={setNodeRef} data-stage={stage} role="region" aria-label={t('enq.stage.' + stage)}
-      style={{ flex: '1 0 250px', minWidth: 250, maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 10, padding: 10, borderRadius: 14, background: over ? '#E8E1D8' : '#F0EAE1', border: over ? '2px dashed #75624B' : '2px solid transparent' }}>
+    <div ref={setNodeRef} data-stage={stage} role="region" aria-label={t('enq.stage.' + stage)} className="cp-grey"
+      style={{ flex: '1 0 250px', minWidth: 250, maxWidth: 340, display: 'flex', flexDirection: 'column', gap: 10, padding: 10, borderRadius: 16, background: over ? 'var(--press, #EEEEF0)' : 'var(--fill, #F4F4F5)', border: over ? '2px dashed var(--accent, #75624B)' : '2px solid transparent' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '4px 6px 0' }}>
         <span style={{ fontSize: 12, letterSpacing: '1.4px', textTransform: 'uppercase', fontWeight: 600, lineHeight: '18px', color: STAGE_COLOR[stage] }}>{t('enq.stage.' + stage)}</span>
-        <span style={{ minWidth: 24, height: 24, padding: '0 7px', borderRadius: 8, background: '#FFFFFF', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
+        <span style={{ minWidth: 24, height: 24, padding: '0 7px', borderRadius: 8, background: 'var(--on-card, #FFFFFF)', fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{count}</span>
       </div>
       {hint ? <div style={{ fontSize: 13, color: '#6B6259', padding: '0 6px', lineHeight: 1.4 }}>{hint}</div> : null}
       {paged.rows.map(render)}
       <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('enq.pgColumn', { stage: t('enq.stage.' + stage) })} />
-      {!count ? <div style={{ padding: '20px 8px', borderRadius: 12, border: '1px dashed #CAB8A2', textAlign: 'center', fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{searching ? t('enq.noMatchShort') : t('enq.dropHere')}</div> : null}
+      {!count ? <div style={{ padding: '20px 8px', borderRadius: 12, border: '1px dashed var(--outline, #D4D4D8)', textAlign: 'center', fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{searching ? t('enq.noMatchShort') : t('enq.dropHere')}</div> : null}
     </div>
   );
 }
@@ -225,6 +225,9 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
   const pending = e.stage === 'joined' && e.memberId && s.members[e.memberId]?.review?.status === 'pending';
   const open = e.stage === 'new' || e.stage === 'visit' || e.stage === 'trial';
   const sz = phone ? 15 : 13;
+  // KC round 10: where the online registration link stands (sent, opened, filled in, expired)
+  const { today, now } = useNow();
+  const formState = open ? formLinkState(e.form, `${today}T${now}`) : null;
   // round 6, phone: the actions are small 34px pills (ink for the main step, white for the next, tinted for the quiet ones)
   const A = (variant: 'primary' | 'secondary' | 'ghost', label: string, onClick: () => void, key = label) => phone
     ? <PillBtn key={key} tone={variant === 'ghost' ? 'quiet' : variant} onClick={onClick}>{label}</PillBtn>
@@ -237,11 +240,12 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
   if (e.stage === 'lost') actions.push(A('primary', t('enq.reopen'), () => void h.reopen(e)));
   if (e.stage === 'new' || e.stage === 'visit') actions.push(A('ghost', t('enq.join'), () => h.dialog('join', e)));
   if ((e.stage === 'visit' || e.stage === 'trial') && e.next?.date) actions.push(A('ghost', t(e.stage === 'trial' ? 'enq.changeDay' : 'enq.changeTime'), () => h.dialog(e.stage as 'visit' | 'trial', e)));
+  if (open) actions.push(A('ghost', formState === 'submitted' ? t('enq.formState_submitted') : t('enq.sendForm'), () => h.dialog('link', e), 'form'));
   if (open) actions.push(A('ghost', t('enq.lostAction'), () => h.dialog('lost', e)));
   return (
-    <div data-lead={e.id} style={phone
+    <div data-lead={e.id} className="cp-grey" style={phone
       ? { ...groupCard, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 8, cursor: 'default' }
-      : { background: '#FFFFFF', border: '1px solid #E4DACD', borderRadius: 12, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, cursor: overlay ? 'default' : 'grab', boxShadow: overlay ? '0 12px 28px rgba(117,98,75,0.22)' : '0 1px 3px rgba(60,45,30,.05)' }}>
+      : { background: overlay ? 'var(--fill, #F4F4F5)' : '#FFFFFF', borderRadius: 14, padding: 12, display: 'flex', flexDirection: 'column', gap: 8, cursor: overlay ? 'default' : 'grab', boxShadow: overlay ? '0 12px 28px rgba(40,30,20,0.18)' : 'none' }}>
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: phone ? 17 : 15, fontWeight: 600, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{seniorName(e)}</span>
@@ -249,8 +253,11 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
         </div>
         <IconButton icon="edit" label={t('enq.editLead')} bordered={false} onClick={() => h.edit(e)} style={{ margin: '-6px -6px 0 0' }} />
       </div>
-      {member || pending ? (
+      {member || pending || formState ? (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+          {formState === 'submitted' ? <Pill icon="assignment_turned_in" fg="#3D6B4F" bg="#E3EFE6" label={t('enq.formState_submitted')} size={16} /> : null}
+          {formState === 'sent' || formState === 'opened' ? <Pill icon={formState === 'opened' ? 'drafts' : 'send'} fg="#7A5510" bg="#F6ECD6" label={t('enq.formState_' + formState)} size={16} /> : null}
+          {formState === 'expired' ? <Pill icon="link_off" fg="#6B6259" bg="var(--fill, #F4F4F5)" label={t('enq.formState_expired')} size={16} /> : null}
           {member ? (regAttached
             ? <Pill icon="check_circle" fg="#3D6B4F" bg="#E3EFE6" label={t('enq.regAttached')} size={16} />
             : <Pill icon="description" fg="#7A5510" bg="#F6ECD6" label={t('enq.regMissing')} size={16} />) : null}
@@ -258,7 +265,7 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
         </div>
       ) : null}
       <div style={{ display: 'flex', gap: 6, alignItems: 'flex-start', fontSize: phone ? 15 : 13, lineHeight: phone ? '22px' : '19px' }}>
-        <Icon name={STAGE_ICON[e.stage]} size={phone ? 19 : 17} color="#75624B" />
+        <Icon name={STAGE_ICON[e.stage]} size={phone ? 19 : 17} color="var(--accent, #75624B)" />
         <span>{nextText(t, fds, e)}</span>
       </div>
       {e.stage === 'lost' && e.lost?.note ? <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4 }}>{e.lost.note}</span> : null}
@@ -266,11 +273,11 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
       {actions.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{actions}</div> : null}
       {e.stage !== 'joined' && !overlay ? (
         phone ? (
-          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingTop: 8, borderTop: '1px solid #F0EAE1' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 6, paddingTop: 8, borderTop: HAIRLINE }}>
             <span style={{ fontSize: 13, fontWeight: 500, color: '#6B6259', lineHeight: 1.4, paddingRight: 2 }}>{t('enq.moveTo')}</span>
             <div style={{ display: 'contents' }}>
               {ENQ_STAGES.filter((k) => k !== e.stage).map((k) => (
-                <button key={k} type="button" data-move={k} className="cp-press" onClick={() => void h.move(e, k)} style={{ height: 34, padding: '0 14px', borderRadius: 999, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('enq.stage.' + k)}</button>
+                <button key={k} type="button" data-move={k} className="cp-press cp-fill" onClick={() => void h.move(e, k)} style={{ height: 34, padding: '0 14px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('enq.stage.' + k)}</button>
               ))}
             </div>
           </div>

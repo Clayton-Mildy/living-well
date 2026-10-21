@@ -61,9 +61,9 @@ async function otherUser(browser: Browser, uid: string, path: string, lang: 'en'
 async function goDay(page: Page, short: string) {
   if (isPhone(page)) await page.getByRole('tab', { name: new RegExp('^' + short) }).click(); // phones show one day at a time
 }
-/** The schedule opens on this week, which has started: go to next week (Mon 26 Oct), where changes can be made. */
+/** The schedule opens on this week (editable from today on, KC round 7): go to next week (Mon 26 Oct), where every day can be changed and a publish starts on that Monday. */
 async function editNextWeek(page: Page) {
-  await page.getByRole('button', { name: 'Edit next week' }).click();
+  await page.getByRole('button', { name: 'Next week', exact: true }).click();
   await expect(page.getByText('26 Oct – 30 Oct 2026')).toBeVisible();
 }
 /** Open a day in the month view (any month already shown) so its detail card shows. */
@@ -238,14 +238,13 @@ test('list view (s9): the next 3 days only, each activity has an "Edit activity"
   await expect(block(page, '2026-10-26')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Show more days' })).toHaveCount(0);
   await noHScroll(page);
-  // every activity (two a day) has the button (management only: a teacher just views, see the s5 test below)
-  await expect(page.getByRole('button', { name: /Edit activity/ })).toHaveCount(6);
+  // every activity (two a day, and Thursday's extra tea-time karaoke) has the button (management only: a teacher just views, see the s5 test below)
+  await expect(page.getByRole('button', { name: /Edit activity/ })).toHaveCount(7);
   await expect(block(page, '2026-10-21').getByRole('button', { name: /Edit activity: Keroncong sing-along/ })).toBeVisible();
-  // Thursday's first session: this week has started, so next week's schedule opens with that slot's editor
+  // Thursday's first session: this week's schedule opens with that slot's editor (round 7: the current week can be edited from today on)
   await block(page, '2026-10-22').getByRole('button', { name: /Edit activity: Gardening club/ }).click();
   await page.getByRole('button', { name: /Change the weekly plan/ }).click(); // round 7: "Edit activity" first asks: just this day, or the weekly plan
-  await expect(page.getByRole('status')).toContainText('the week of Monday 26 October is shown');
-  await expect(page.getByText('26 Oct – 30 Oct 2026')).toBeVisible();
+  await expect(page.getByText('19 Oct – 23 Oct 2026')).toBeVisible();
   await expect(page.getByRole('combobox', { name: 'Activity' })).toBeVisible(); // the slot's editor is open (on a phone, on that day)
   await expect(page.getByRole('radio', { name: 'Garden', exact: true })).toHaveAttribute('aria-checked', 'true');
   await pickOption(page, 'Activity', 'Angklung ensemble');
@@ -366,24 +365,29 @@ test('month view: any month, translated headers, closures, outings and holidays'
   c.assertClean();
 });
 
-test('builder (s9): this week is read-only; next week: tap an activity then a slot, publish from that Monday: today stays as it is', async ({ page, browser }) => {
+test('builder (s9): this week is editable from today (earlier days read-only), a week that is over is not; next week: tap an activity then a slot, publish from that Monday: today stays as it is', async ({ page, browser }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/calendar');
   await openBuilder(page);
-  // the version in force this week; a week that has started cannot be changed
+  // the version in force this week; KC round 7: the current week can be edited from today on, the days before today cannot
   await expect(page.getByText(/Published Mon 19 Oct, 16:10 by Ega/).first()).toBeVisible();
   await expect(page.getByText('19 Oct – 23 Oct 2026')).toBeVisible();
-  await expect(page.getByText('This week has already started, so it cannot be changed.')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Angklung ensemble', exact: true })).toHaveCount(0); // no palette
-  await expect(publishPage(page)).toHaveAttribute('aria-disabled', 'true');
+  await expect(page.getByText('This week is over, so it cannot be changed.')).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Angklung ensemble', exact: true })).toBeVisible(); // the palette is there
+  await expect(publishPage(page)).toHaveAttribute('aria-disabled', 'true'); // nothing changed yet
+  await goDay(page, 'Mon');
+  await expect(page.getByRole('group', { name: 'Monday 10:30: Angklung ensemble' })).toBeVisible(); // Monday has passed: read-only
+  if (!isPhone(page)) await expect(page.getByText('Days before today have passed and cannot be changed.')).toBeVisible();
   await goDay(page, 'Wed');
-  await expect(page.getByRole('group', { name: 'Wednesday 10:30: Keroncong sing-along' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Wednesday 10:30: Keroncong sing-along' })).toBeVisible(); // today can be changed
   if (!isPhone(page)) await expect(page.getByText('21 Oct', { exact: true })).toBeVisible(); // the date under each day name
   await noHScroll(page);
-  // previous / next week; "This week" comes back
+  // previous week: it is over, so only what ran shows; "Edit this week" and "This week" come back
   await page.getByRole('button', { name: 'Previous week' }).click();
   await expect(page.getByText('12 Oct – 16 Oct 2026')).toBeVisible();
-  await page.getByRole('button', { name: 'This week' }).click();
+  await expect(page.getByText('This week is over, so it cannot be changed.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Angklung ensemble', exact: true })).toHaveCount(0); // no palette
+  await page.getByRole('button', { name: 'Edit this week' }).click();
   await expect(page.getByText('19 Oct – 23 Oct 2026')).toBeVisible();
   await editNextWeek(page);
   await goDay(page, 'Wed');
@@ -397,7 +401,9 @@ test('builder (s9): this week is read-only; next week: tap an activity then a sl
   await expect(page.getByText('1 change not yet published')).toBeVisible();
   await expect(page.getByText('Draft')).toBeVisible();
   await expect(publishPage(page)).not.toHaveAttribute('aria-disabled', 'true');
-  // the room and teacher editor opens on the placed slot
+  // KC round 8d: placing an activity doesn't open the side panel; tapping the placed activity does
+  await expect(page.getByRole('radio', { name: 'Music room' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Wednesday 10:30: Angklung ensemble' }).click();
   await expect(page.getByRole('radio', { name: 'Music room' })).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByRole('radio', { name: 'Dinar' })).toHaveAttribute('aria-checked', 'true');
   await page.getByRole('radio', { name: 'Kak Dimas' }).click();
@@ -433,7 +439,7 @@ test('builder (s9): this week is read-only; next week: tap an activity then a sl
   // this week still shows the old version; next week the new one; the week after follows it too
   await page.getByRole('button', { name: 'This week' }).click();
   await goDay(page, 'Wed');
-  await expect(page.getByRole('group', { name: 'Wednesday 10:30: Keroncong sing-along' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Wednesday 10:30: Keroncong sing-along' })).toBeVisible();
   await page.getByRole('button', { name: 'Next week', exact: true }).click();
   await page.getByRole('button', { name: 'Next week', exact: true }).click();
   await expect(page.getByText('2 Nov – 6 Nov 2026')).toBeVisible();
@@ -486,6 +492,42 @@ test('builder: the quick ✕ removes a placed activity, publishing with "notify"
   await expect(t.getByText('Batik painting')).toBeVisible();
   tc.assertClean();
   await ctx.close();
+  c.assertClean();
+});
+
+test('builder (KC round 9): a tap on an empty slot opens the activity list (placed at once, no side panel); on a phone a long press drags an activity onto a slot', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/calendar');
+  await openBuilder(page);
+  await editNextWeek(page);
+  await goDay(page, 'Thu');
+  await page.getByRole('button', { name: 'Remove Mahjong and cards from Thursday at 13:30' }).click();
+  const empty = page.getByRole('button', { name: 'Thursday 13:30: empty' });
+  await expect(empty).toContainText('Add an activity'); // an empty slot that can be changed invites a tap
+  await empty.click();
+  const list = page.getByRole('dialog', { name: /Choose an activity · Thursday 29 Oct, 13:30/ });
+  await expect(list).toBeVisible();
+  await list.getByRole('listitem').filter({ hasText: 'Reading circle' }).click();
+  await expect(list).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Thursday 13:30: Reading circle' })).toBeVisible();
+  await expect(page.getByRole('radio', { name: 'Music room' })).toHaveCount(0); // KC round 8d: adding never opens the side panel
+  if (isPhone(page)) {
+    // the browser's own drag and drop needs a mouse: on a phone, hold an activity, drag it onto a slot and let go
+    const cdp = await page.context().newCDPSession(page);
+    const touch = (type: 'touchStart' | 'touchMove' | 'touchEnd', x: number, y: number) => cdp.send('Input.dispatchTouchEvent', { type, touchPoints: type === 'touchEnd' ? [] : [{ x, y }] });
+    const chip = page.getByRole('button', { name: 'Karaoke', exact: true });
+    await chip.scrollIntoViewIfNeeded();
+    const a = (await chip.boundingBox())!;
+    const b = (await page.getByRole('button', { name: 'Thursday 10:30: Gardening club' }).boundingBox())!;
+    const [ax, ay, bx, by] = [a.x + a.width / 2, a.y + a.height / 2, b.x + b.width / 2, b.y + b.height / 2];
+    await touch('touchStart', ax, ay);
+    await page.waitForTimeout(450); // the long press picks it up
+    for (let i = 1; i <= 10; i++) await touch('touchMove', ax + ((bx - ax) * i) / 10, ay + ((by - ay) * i) / 10);
+    await touch('touchEnd', bx, by);
+    await expect(page.getByRole('button', { name: 'Thursday 10:30: Karaoke' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Karaoke', exact: true })).toHaveAttribute('aria-pressed', 'false'); // the drag did not also "tap" the chip
+    await expect(page.getByText('2 changes not yet published')).toBeVisible();
+  }
   c.assertClean();
 });
 
@@ -667,36 +709,37 @@ test('s5 (activity teacher) only views the calendar: list and month, no builder,
   c.assertClean();
 });
 
-test('f1 sees the calendar read-only: no editor, no builder, no venue clients, trials or visits; the Today link works', async ({ page }) => {
+test('f1 sees the calendar read-only: no editor, no builder, no venue clients, trials or visits; the tab bar leads back to Today', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 'f1', '/calendar');
-  await expect(page.getByRole('heading', { level: 1, name: 'Club calendar' })).toBeVisible();
+  const day = (d: string) => page.locator(`[data-testid="cal-agenda"][data-date="${d}"]`);
+  await expect(page.getByRole('heading', { level: 1, name: 'Calendar' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Add event' })).toHaveCount(0);
   await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /^Edit / })).toHaveCount(0);
-  await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
-  await expect(block(page, '2026-10-21')).toContainText('Dinar');
+  await expect(day('2026-10-21')).toContainText('Keroncong sing-along');
+  await expect(day('2026-10-21')).toContainText('Dinar');
   await expect(page.getByRole('button', { name: /Edit activity/ })).toHaveCount(0);
-  await expect(page.locator('div[data-date]')).toHaveCount(3); // the next 3 days
+  await expect(page.getByTestId('cal-day')).toHaveCount(5); // the week's five open days
   await expect(page.getByText(/Siu Lan|Yusuf Hamid|Trial day|Visit ·/)).toHaveCount(0); // trials and visits are staff only
   await noHScroll(page);
   // month views of October and November: still no venue client names anywhere
-  await page.getByRole('tab', { name: 'Calendar' }).click();
-  await cell(page, '2026-10-30').click();
-  await expect(block(page, '2026-10-30')).toContainText('Closed'); // the closure is public
+  await page.getByTestId('cal-view').getByRole('tab', { name: 'Month' }).click();
+  await page.locator('[data-testid="cal-cell"][data-date="2026-10-30"]').click();
+  await expect(day('2026-10-30')).toContainText('Club closed'); // the closure is public
   await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0);
-  await cell(page, '2026-10-24').click(); // a Saturday with a venue booking for staff
-  await expect(block(page, '2026-10-24')).toContainText('Closed · weekend');
+  await page.locator('[data-testid="cal-cell"][data-date="2026-10-24"]').click(); // a Saturday with a venue booking for staff
+  await expect(day('2026-10-24')).toContainText('The club is closed on weekends');
   expect(await page.locator('#main').innerText()).not.toMatch(VENUE_CLIENTS);
-  await page.getByRole('button', { name: 'Next month' }).click();
-  await cell(page, '2026-11-26').click();
+  await page.getByTestId('cal-next-month').click();
+  await page.locator('[data-testid="cal-cell"][data-date="2026-11-26"]').click();
   expect(await page.locator('#main').innerText()).not.toMatch(VENUE_CLIENTS);
   // what the family's browser receives has no venue bookings, guests or leads
   const fam = JSON.stringify(await snapshot(page, 'f1'));
   expect(fam).not.toMatch(VENUE_CLIENTS);
   expect(fam).not.toMatch(/Siu Lan|Yusuf Hamid/);
-  // the "← Today" link
-  await page.locator('#main').getByRole('button', { name: 'Today', exact: true }).click();
+  // the tab bar leads back to Today (there is no "← Today" link any more)
+  await page.locator('[data-nav-key="today"]').click();
   await expect(page).toHaveURL(/\/today$/);
   c.assertClean();
 });
@@ -724,6 +767,101 @@ test('staff roles: management sees venue clients and edits; lobby sees trials an
   await lCtx.close();
 });
 
+// KC round 7: "edit this week's activity plan"
+test('builder (s9): this week’s plan is edited from today: a publish starts today, earlier days keep their version and stay read-only', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/calendar');
+  await openBuilder(page);
+  await expect(page.getByText('19 Oct – 23 Oct 2026')).toBeVisible();
+  // Thursday morning: Gardening club -> Reading circle (tap the activity, then the slot)
+  await goDay(page, 'Thu');
+  await page.getByRole('button', { name: 'Reading circle', exact: true }).click();
+  await page.getByRole('button', { name: 'Thursday 10:30: Gardening club' }).click();
+  await expect(page.getByRole('button', { name: 'Thursday 10:30: Reading circle' })).toBeVisible();
+  await expect(page.getByText('1 change not yet published')).toBeVisible();
+  // a day before today cannot take it (no remove button on Monday's session)
+  await goDay(page, 'Mon');
+  await expect(page.getByRole('group', { name: 'Monday 10:30: Angklung ensemble' })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Remove .* from Monday at/ })).toHaveCount(0);
+  // publish: the date starts at today (not next Monday)
+  await publishPage(page).click();
+  const sheet = page.getByRole('dialog', { name: 'Publish the weekly schedule' });
+  await expect(fieldText(page, 'Takes effect on')).toContainText('21 Oct');
+  await expect(sheet.getByText('The new schedule starts today.')).toBeVisible();
+  await expect(sheet.getByRole('button', { name: 'From today' })).toBeVisible();
+  await sheet.getByRole('button', { name: 'Publish to staff and families' }).click();
+  await expect(page.getByRole('status')).toContainText('Schedule published from today.');
+  // stored from today; the old version stays for the days before it
+  const s = await snapshot(page, 's9');
+  const published = Object.values(s.scheduleVersions).filter((v) => v.status === 'published');
+  expect(published.map((v) => v.effectiveFrom).sort()).toEqual(['2024-07-01', '2026-10-21']);
+  expect(published.find((v) => v.effectiveFrom === '2026-10-21')!.days['4']['10:30']).toMatchObject({ activityId: 'act-reading' });
+  expect(published.find((v) => v.effectiveFrom === '2024-07-01')!.days['4']['10:30'].activityId).toBe('act-garden');
+  // today is as it was, Thursday follows the new plan
+  await expect(block(page, '2026-10-21')).toContainText('Batik painting');
+  await expect(block(page, '2026-10-22')).toContainText('Reading circle');
+  c.assertClean();
+});
+
+// KC round 7: "add an extra activity session at any time"
+test('extra session (s9): added from Edit activity at any time, tagged Extra, in the teacher’s plan and the log rounds; edited, removed; a clash is refused', async ({ page, browser }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/calendar');
+  const today = block(page, '2026-10-21');
+  await today.getByRole('button', { name: /Edit activity: Keroncong sing-along/ }).click();
+  await page.getByRole('button', { name: /Add a session/ }).click();
+  const dlg = page.getByRole('dialog', { name: /^Extra session/ });
+  await expect(dlg).toBeVisible();
+  await expect(fieldText(page, 'Time')).toContainText('11:30'); // starts on a free time
+  // too close to the 10:30 session: refused before saving, with the reason
+  await pickOption(page, 'Activity', 'Reading circle');
+  await pickTime(page, 'Time', '10:45');
+  await expect(dlg.getByText(/Too close to the session at 10:30/)).toBeVisible();
+  await expect(dlg.getByRole('button', { name: 'Add session' })).toBeDisabled();
+  await pickTime(page, 'Time', '11:30');
+  await expect(dlg.getByText(/Too close/)).toHaveCount(0);
+  await expect(dlg.getByRole('switch', { name: /Tell teachers and families/ })).toHaveAttribute('aria-checked', 'true');
+  await noHScroll(page);
+  await dlg.getByRole('button', { name: 'Add session' }).click();
+  await expect(page.getByRole('status')).toContainText('Session added on');
+  await expect(dlg).toHaveCount(0);
+  // the day lists it with its time and the Extra tag (staff)
+  await expect(today).toContainText('11:30');
+  await expect(today).toContainText('Reading circle');
+  await expect(today).toContainText('Extra');
+  const s = await snapshot(page, 's9');
+  expect(s.scheduleDays['2026-10-21'].extra).toEqual([expect.objectContaining({ time: '11:30', cell: expect.objectContaining({ activityId: 'act-reading' }) })]);
+  const fam = await snapshot(page, 'f1');
+  expect(Object.values(fam.notifications).filter((n) => n.kind === 'cal.notif.extraAdded')).toHaveLength(1);
+  // the teacher's plan for today and the daily log's rounds have it
+  const { page: t, ctx } = await otherUser(browser, 's5', '/today');
+  const tc = watchConsole(t);
+  await expect(t.getByTestId('today-plan').getByText('Reading circle')).toBeVisible();
+  await t.goto('/log');
+  await expect(t.getByRole('tablist', { name: 'Log rounds' }).getByRole('tab', { name: /^11:30 · Reading circle/ })).toBeVisible();
+  tc.assertClean();
+  await ctx.close();
+  // edit it: add a note (staff only, nobody is told about a note alone)
+  await today.getByRole('button', { name: /Edit activity: Reading circle/ }).click();
+  await page.getByRole('button', { name: /Edit this session/ }).click();
+  const edit = page.getByRole('dialog', { name: /^Extra · .* · 11:30/ });
+  await edit.getByLabel('Note').fill('Bring the books');
+  await edit.getByRole('button', { name: 'Save changes' }).click();
+  await expect(page.getByRole('status')).toContainText('Session updated');
+  await expect(today).toContainText('Extra · Bring the books');
+  const famNote = (await snapshot(page, 'f1')).scheduleDays['2026-10-21'].extra[0];
+  expect(famNote.note).toBeUndefined(); // families never get the note
+  expect(Object.values((await snapshot(page, 'f1')).notifications).filter((n) => n.kind === 'cal.notif.extraChanged')).toHaveLength(0);
+  // remove it
+  await today.getByRole('button', { name: /Edit activity: Reading circle/ }).click();
+  await page.getByRole('button', { name: /Edit this session/ }).click();
+  await edit.getByRole('button', { name: 'Remove this session' }).click();
+  await expect(page.getByRole('status')).toContainText('Session removed');
+  await expect(today).not.toContainText('11:30');
+  expect((await snapshot(page, 's9')).scheduleDays['2026-10-21']).toBeUndefined();
+  c.assertClean();
+});
+
 test('Indonesian: month and weekday names, labels and activity names follow the language', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/calendar', 'id');
@@ -738,9 +876,10 @@ test('Indonesian: month and weekday names, labels and activity names follow the 
   await noHScroll(page);
   // the builder and the editors are Indonesian too
   await expect(page.getByRole('heading', { name: 'Jadwal mingguan' })).toBeVisible();
-  await expect(page.getByText('Minggu ini sudah berjalan, jadi tidak bisa diubah.')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Minggu sebelumnya' })).toBeVisible();
-  await page.getByRole('button', { name: 'Ubah minggu depan' }).click();
+  await page.getByRole('button', { name: 'Minggu sebelumnya' }).click();
+  await expect(page.getByText('Minggu ini sudah lewat, jadi tidak bisa diubah.')).toBeVisible();
+  await page.getByRole('button', { name: 'Ubah minggu ini' }).click();
   await expect(page.getByRole('button', { name: 'Ansambel angklung', exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Publikasikan ke staf dan keluarga' })).toBeVisible();
   await page.getByRole('tab', { name: 'Kalender' }).click();
@@ -766,11 +905,15 @@ test('Indonesian: month and weekday names, labels and activity names follow the 
 test('Indonesian: the family calendar has no raw keys and no English leftovers', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 'f1', '/calendar', 'id');
-  await expect(page.getByRole('heading', { level: 1, name: 'Kalender klub' })).toBeVisible();
-  await expect(block(page, '2026-10-21')).toContainText('Bernyanyi keroncong');
+  await expect(page.getByRole('heading', { level: 1, name: 'Kalender' })).toBeVisible();
+  await expect(page.locator('[data-testid="cal-agenda"][data-date="2026-10-21"]')).toContainText('Bernyanyi keroncong');
   const body = await page.locator('#main').innerText();
   expect(body).not.toMatch(RAW_KEY);
   expect(body).not.toMatch(/Club calendar|Open Monday|National holiday|Closed|Keroncong sing-along/);
+  await page.getByTestId('cal-view').getByRole('tab', { name: 'Bulan' }).click();
+  const month = await page.getByTestId('cal-month').innerText();
+  expect(month).not.toMatch(RAW_KEY);
+  expect(month).not.toMatch(/Photo days|came|closed/);
   await noHScroll(page);
   c.assertClean();
 });

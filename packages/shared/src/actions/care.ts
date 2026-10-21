@@ -34,7 +34,8 @@ const isoDate = z.string().refine((s) => {
 const moodEnum = z.enum(['cheerful', 'calm', 'quiet', 'agitated']);
 const lunchEnum = z.enum(LUNCH_AMOUNTS);
 const markEnum = z.enum(SESSION_MARKS);
-const slotEnum = z.enum(['10:30', '13:30']);
+/** A session's start time: 10:30, 13:30 or the time of an extra session (it must be one of the date's rounds, checked when it runs). */
+const slotEnum = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const logSchema = z.object({
   memberId: z.string().min(1),
   date: isoDate,
@@ -167,10 +168,11 @@ export type MarkInput = z.infer<typeof markSchema>;
 const reasonSchema = z.object({ photoId: z.string().min(1), reason: z.string().trim().min(1).max(200) });
 const photoIdSchema = z.object({ photoId: z.string().min(1) });
 const retagSchema = z.object({ photoId: z.string().min(1), memberIds: z.array(z.string().min(1)).min(1).max(60) });
+const typeSchema = z.object({ photoId: z.string().min(1), type: z.enum(['people', 'session']), memberIds: z.array(z.string().min(1)).max(60).optional(), activity: z.string().min(1).max(120).optional() });
 
 function photoRow(d: Draft<ClubState>, id: string, ctx: Ctx, allowRemoved = false) {
   const p = d.photos[id];
-  if (!p || (!allowRemoved && (p.deletedAt || p.visibility === 'removed'))) ctx.fail('err.notFound');
+  if (!p || p.visibility === 'draft' || (!allowRemoved && (p.deletedAt || p.visibility === 'removed'))) ctx.fail('err.notFound'); // a draft is only its taker's: moderation never touches it
   return p;
 }
 
@@ -255,8 +257,39 @@ export const careActions = [
       const before = new Set<string>(p.memberIds);
       if (ids.length === before.size && ids.every((id) => before.has(id))) ctx.fail('err.noChanges');
       p.memberIds = ids;
-      if (p.kind === 'solo' && ids.length > 1) p.kind = 'group';
+      if (p.kind === 'solo' || p.kind === 'group') p.kind = ids.length === 1 ? 'solo' : 'group'; // KC round 7: one person is a personal photo, more a group photo
       if (p.visibility === 'visible') notifyPhotoFamilies(d, ctx, ids.filter((id) => !before.has(id)), { id: p.id, media: p.media });
+    },
+  }),
+  // KC round 7: in Approvals (or the library) a photo's type can change: a picture of the session (no names), or of people, where the number of names
+  // decides it (one: a personal photo; more: a group photo). Lunch and arrival photos keep their own type.
+  defineAction<z.infer<typeof typeSchema>>({
+    name: 'photo.setType',
+    can: (u) => photoWriters(u),
+    parse: (raw) => parseWith(typeSchema, raw),
+    run(d, input, ctx) {
+      const p = photoRow(d, input.photoId, ctx);
+      if (p.kind !== 'solo' && p.kind !== 'group' && p.kind !== 'activity') ctx.fail('err.invalid');
+      const before = { kind: p.kind, memberIds: [...p.memberIds], activity: p.activity };
+      if (input.type === 'people') {
+        const ids = uniq(input.memberIds ?? []);
+        if (!ids.length) ctx.fail('activity.err.needPeople');
+        for (const id of ids) {
+          const m = requireMember(d, id, ctx);
+          if (isPendingRow(m)) ctx.fail('err.memberPending');
+        }
+        p.kind = ids.length === 1 ? 'solo' : 'group';
+        p.memberIds = ids;
+      } else {
+        const activity = input.activity ?? p.activity;
+        if (!activity || !Object.values(d.activities).some((a) => !a.deletedAt && a.name === activity)) ctx.fail('activity.err.needSession');
+        p.kind = 'activity';
+        p.memberIds = [];
+        p.activity = activity;
+      }
+      if (before.kind === p.kind && before.activity === p.activity && before.memberIds.length === p.memberIds.length && before.memberIds.every((id) => p.memberIds.includes(id))) ctx.fail('err.noChanges');
+      if (p.visibility === 'visible') notifyPhotoFamilies(d, ctx, p.memberIds.filter((id) => !before.memberIds.includes(id)), { id: p.id, media: p.media });
+      ctx.result.kind = p.kind;
     },
   }),
   defineAction<z.infer<typeof reasonSchema>>({

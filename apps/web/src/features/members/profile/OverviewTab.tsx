@@ -43,7 +43,7 @@ export function OverviewTab({ p }: { p: P }) {
   const showClinical = p.role !== 'finance';
   const reg = m.registration;
   const yn = (v: boolean | undefined) => (v === undefined ? '' : v ? t('common.yes') : t('common.no'));
-  const careQs = ([['q.commShort', reg?.commDifficulty], ['q.selfShort', reg?.selfCare], ['q.bathShort', reg?.bathroomHelp]] as const).filter(([, v]) => v !== undefined);
+  const careQs = ([['q.commShort', reg?.commDifficulty], ['q.selfShort', reg?.selfCare], ['q.bathShort', reg?.bathroomHelp], ['q.dementiaShort', reg?.dementia]] as const).filter(([, v]) => v !== undefined);
   const ids = (['guarantor', 'member', 'carer'] as const).filter((k) => reg?.ids?.[k]).map((k) => t('profile.ids.' + k));
   const place = [reg?.rtRw ? `${t('profile.f.rtRw')} ${reg.rtRw}` : '', reg?.city, reg?.postcode].filter(Boolean).join(' · ');
   const phones = [reg?.mobile, reg?.phone].filter(Boolean).join(' · ');
@@ -78,7 +78,7 @@ export function OverviewTab({ p }: { p: P }) {
       {plan === 'flex' ? (
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${segN},minmax(0,1fr))`, gap: 4 }} role="img" aria-label={t('profile.visitsUsed', { n: used, q: quota })}>
           {segs.map((k, i) => (
-            <span key={i} style={{ height: 8, borderRadius: 999, background: k === 'used' ? '#75624B' : '#F0EAE1' }} />
+            <span key={i} style={{ height: 8, borderRadius: 999, background: k === 'used' ? 'var(--accent, #75624B)' : '#FFFFFF' }} />
           ))}
         </div>
       ) : null}
@@ -92,7 +92,7 @@ export function OverviewTab({ p }: { p: P }) {
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 18px', fontSize: 14, color: '#6B6259' }}>
         {([['sentiment_satisfied', lg.mood ? t('family.mood_' + lg.mood) : ''], ['restaurant', lg.lunch ? t(lunchLabelKey(lg.lunch)) : '']] as const).filter(([, label]) => label).map(([icon, label]) => (
           <span key={icon} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
-            <Icon name={icon} size={18} color="#75624B" />
+            <Icon name={icon} size={18} color="var(--accent, #75624B)" />
             {label}
           </span>
         ))}
@@ -109,7 +109,9 @@ export function OverviewTab({ p }: { p: P }) {
       {phones ? <Fact k={t('profile.f.phones')}>{phones}</Fact> : null}
       {reg?.email ? <Fact k={t('profile.f.email')}>{reg.email}</Fact> : null}
       <Fact k={t('profile.f.usual')}>{m.usualArrival || t('common.notSet')}</Fact>
-      <Fact k={t('profile.f.nanny')}>{m.nanny ? `${m.nanny.name}${m.nanny.phone ? ' · ' + fmtPhone(m.nanny.phone) : ''}` : t('profile.noNanny')}</Fact>
+      <Fact k={t('profile.f.nanny')}>{m.nanny ? `${m.nanny.name}${m.nanny.phone ? ' · ' + fmtPhone(m.nanny.phone) : ''}${!p.family && m.nanny.nik ? ' · NIK ' + m.nanny.nik : ''}` : t('profile.noNanny')}</Fact>
+      {!p.family && reg?.nik ? <Fact k={t('profile.f.nik')}>{reg.nik}</Fact> : null}
+      {!p.family && reg?.guarantorNik ? <Fact k={t('profile.f.guarantorNik')}>{reg.guarantorNik}</Fact> : null}
       <Fact k={t('profile.f.spouse')}>
         {spouse && !spouse.deletedAt && !p.family ? (
           <button type="button" onClick={() => navigate(`/members/${spouse.id}`)} style={{ ...linkBtn, fontSize: 15, minHeight: 28 }}>{memberName(spouse)}</button>
@@ -136,10 +138,10 @@ export function OverviewTab({ p }: { p: P }) {
     <>
       <PendingBanner p={p} tab="overview" />
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(18px, 3vw, 36px)', alignItems: 'flex-start' }}>
-        <div style={{ ...cardStyle, flex: '1 1 440px', minWidth: 0, gap: 18 }}>
+        <div className="cp-grey" style={{ ...cardStyle, flex: '1 1 440px', minWidth: 0, gap: 18 }}>
           {sections.map((x, i) => <Block key={x.key} first={i === 0} title={x.title} meta={x.meta}>{x.body}</Block>)}
         </div>
-        <div style={{ ...cardStyle, flex: '0 1 340px', minWidth: 0, gap: 4 }}>
+        <div className="cp-grey" style={{ ...cardStyle, flex: '0 1 340px', minWidth: 0, gap: 4 }}>
           <SectionLabel>{t('profile.personal')}</SectionLabel>
           {facts}
         </div>

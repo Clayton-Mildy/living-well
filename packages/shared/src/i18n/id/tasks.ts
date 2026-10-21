@@ -9,6 +9,8 @@ export const tasks: Same<typeof EN> = {
   duties: 'Tugas rutin hari ini', additional: 'Tugas tambahan', thisWeek: 'Minggu ini', thisMonth: 'Bulan ini', checklist: 'Hari ini',
   closed: 'Klub tutup hari ini, jadi tidak ada tugas.', empty: 'Belum ada tugas untuk Anda.',
   left: '{n} lagi', late: 'Terlambat',
+  // KC round 10: tombol tugas cepat di samping kamera dan popupnya
+  quick: 'Tugas hari ini', quickN: 'Tugas hari ini, {n} belum selesai', quickAll: 'Semua tugas', quickCamera: 'Buka kamera', quickGo: 'Buka halamannya', quickEmpty: 'Tidak ada yang perlu dikerjakan sekarang.', quickClose: 'Tutup',
   by: 'Sebelum {t}', dueDay: 'Tenggat {d}', overdue: 'Terlambat', photoProof: 'Foto', doneBy: '{name} · {t}', doneByOn: '{name} · {d}, {t}', doneAtOnly: 'Selesai {t}',
   markDone: 'Tandai selesai', takePhoto: 'Ambil foto dan tandai selesai', markUndone: 'Tandai belum selesai', note: 'Catatan (opsional)', noteFrom: 'Catatan',
   doneToast: 'Selesai: {title}', undoneToast: 'Kembali terbuka: {title}', uploading: 'Mengunggah foto…', uploadFailed: 'Foto tidak dapat diunggah. Coba lagi.',

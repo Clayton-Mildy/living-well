@@ -1,13 +1,13 @@
 // Family contact actions (all gated for non-management staff) and the family's own document upload (gated).
 // A contact belongs to a member through a link; the billing flag (primary) and app access live on the link, per member.
 import type { Draft } from 'immer';
-import type { ChangeRequest, ClubState, DocType, FamilyLink, Lang, MemberDocument, Relation } from '../types';
+import type { ChangeRequest, ClubState, DocType, FamilyLink, HM, Lang, MemberDocument, MemberRegistration, Relation } from '../types';
 import { e164 } from '../util';
 import { defineAction, hasRole, isFamily, DomainError, type ActionDef, type Ctx } from './framework';
 import { shortOf } from './helpers';
 import { isPendingRow, linksOfMember, memberShort } from '../rules/core';
-import { DOC_TYPES, RELATIONS, SIM_FILE, docIdFor, firstWord, isPhone, lastContactId, lastLinkId, nextContactId, nextLinkId } from '../rules/members';
-import { editable, makePrimary, mediaIdOf, obj, oneOf, phoneTaken, txt } from './members';
+import { DOC_TYPES, RELATIONS, SIM_FILE, docIdFor, firstWord, isHM, isPhone, lastContactId, lastLinkId, nextContactId, nextLinkId } from '../rules/members';
+import { editable, makePrimary, mediaIdOf, obj, oneOf, parseNanny, phoneTaken, txt } from './members';
 
 const frontDesk = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'lobby', 'mgmt');
 const badCode = (code: string) => new DomainError(code);
@@ -225,4 +225,64 @@ export const familyActions: ActionDef[] = [
       feed(ctx, d, m.id, 'upload_file', 'docUploaded', { type: input.type, by: ctx.actor });
     },
   }),
+
+  // ----- round 8: the family edits a parent's personal and contact details; it waits for the club (gated, section "details") -----
+  defineAction<{ memberId: string; patch: FamilyDetailsPatch }>({
+    name: 'family.updateDetails',
+    can: (u, i) => u.kind === 'family' && u.memberIds.includes(i.memberId),
+    parse: (raw) => {
+      const o = obj(raw);
+      const p = obj(o.patch);
+      const patch: FamilyDetailsPatch = {};
+      if (p.address !== undefined) patch.address = txt(p.address, 200);
+      if (p.usualArrival !== undefined) { const v = txt(p.usualArrival, 5); if (v && !isHM(v)) throw badCode('members.err.arrivalInvalid'); patch.usualArrival = v; }
+      if (p.nanny !== undefined) patch.nanny = parseNanny(p.nanny);
+      for (const k of FAMILY_REG_KEYS) if (p[k] !== undefined) patch[k] = txt(p[k], k === 'email' ? 120 : 60);
+      if (!Object.keys(patch).length) throw badCode('err.noChanges');
+      return { memberId: txt(o.memberId, 60), patch };
+    },
+    review: { policy: 'gate', section: 'details', op: 'update', target: (i) => ({ type: 'member', id: i.memberId, memberId: i.memberId }) },
+    run(d, input, ctx) {
+      const m = editable(d, input.memberId, ctx);
+      const p = input.patch;
+      const fields: string[] = [];
+      if (p.address !== undefined && (p.address || null) !== m.address) { m.address = p.address || null; fields.push('address'); }
+      if (p.usualArrival !== undefined && p.usualArrival !== m.usualArrival) {
+        const { open, close } = d.club.settings;
+        if (p.usualArrival && (p.usualArrival < open || p.usualArrival >= close)) ctx.fail('members.err.arrivalHours', { open, close });
+        m.usualArrival = p.usualArrival; fields.push('usualArrival');
+      }
+      if (p.nanny !== undefined && JSON.stringify(p.nanny) !== JSON.stringify(m.nanny)) { m.nanny = p.nanny ? { ...p.nanny } : null; fields.push('nanny'); }
+      const reg: MemberRegistration = { ...(m.registration || {}) };
+      let regChanged = false;
+      for (const k of FAMILY_REG_KEYS) {
+        const v = p[k];
+        if (v === undefined || (v || undefined) === reg[k]) continue;
+        if (v) reg[k] = v; else delete reg[k];
+        regChanged = true;
+      }
+      if (regChanged) { m.registration = reg; fields.push('registration'); }
+      if (!fields.length) ctx.fail('err.noChanges');
+      feed(ctx, d, m.id, 'edit', 'details', { fields: fields.join(','), by: ctx.actor });
+    },
+  }),
+
+  // ----- round 8: the family's "Notifications" switch in Me = health alerts for that parent (their own link; no review) -----
+  defineAction<{ memberId: string; on: boolean }>({
+    name: 'family.setHealthAlerts',
+    can: (u, i) => u.kind === 'family' && u.memberIds.includes(i.memberId),
+    parse: (raw) => { const o = obj(raw); return { memberId: txt(o.memberId, 60), on: o.on === true }; },
+    run(d, input, ctx) {
+      const l = linkFor(d, ctx.user.id, input.memberId, ctx);
+      if (l.healthAlerts === input.on) ctx.fail('err.noChanges');
+      l.healthAlerts = input.on;
+    },
+  }),
 ];
+
+/** Round 8: what a family may change on a parent's profile (the rest stays with the front desk). */
+export interface FamilyDetailsPatch {
+  address?: string; usualArrival?: HM | ''; nanny?: { name: string; phone?: string } | null;
+  nickname?: string; rtRw?: string; city?: string; postcode?: string; phone?: string; mobile?: string; email?: string;
+}
+const FAMILY_REG_KEYS = ['nickname', 'rtRw', 'city', 'postcode', 'phone', 'mobile', 'email'] as const;

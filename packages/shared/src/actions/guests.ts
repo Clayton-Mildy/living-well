@@ -8,13 +8,14 @@ import type { ClubState, GuestHost, GuestSession, ISODate, Slot } from '../types
 import { DomainError, defineAction, hasRole, type ActionDef, type Ctx } from './framework';
 import { parseWith, isoDate, setDayCell, openDayOrFail, effectiveCell, clearDaySlot } from './schedule';
 import { activityTeachers, sameCell, weeklyCell } from '../rules/calendar';
-import { scheduleDayOf } from '../rules/kitchen';
+import { isWeekSlot, scheduleDayOf } from '../rules/kitchen';
 import { guestInvoiceNumber, guestOn } from '../rules/guests';
 import { e164, live, rp } from '../util';
 
 const mgmtOnly = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'mgmt');
 type D = Draft<ClubState>;
-const slotSchema = z.enum(['10:30', '13:30']);
+/** A session time on the date: 10:30, 13:30 or the time of an extra session (checked against the date's sessions when it runs). */
+const slotSchema = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/);
 const kindSchema = z.enum(['teacher', 'entertainer', 'speaker', 'other']);
 const fee = z.number().int().min(1).max(100_000_000);
 const text = (max: number) => z.string().trim().max(max);
@@ -47,7 +48,7 @@ function placeSession(d: D, ctx: Ctx, o: { date: ISODate; slot: Slot; activityId
 /** The booking changed the slot's activity for that day: give the slot back to the weekly plan (quietly), unless it was changed again since. */
 function releaseSlot(d: D, g: Pick<GuestSession, 'date' | 'slot' | 'activityId'>) {
   const view = d as unknown as ClubState;
-  const over = scheduleDayOf(view, g.date)?.slots[g.slot];
+  const over = isWeekSlot(g.slot) ? scheduleDayOf(view, g.date)?.slots[g.slot] : undefined; // an extra session has no weekly plan to go back to
   if (over && over.activityId === g.activityId && !sameCell(over, weeklyCell(view, g.date, g.slot))) clearDaySlot(d, g.date, g.slot);
 }
 const tellTeachers = (ctx: Ctx, kind: string, params: Record<string, string | number>) => ctx.notify({ toRoles: ['activity'], kind, params, link: '/calendar' });

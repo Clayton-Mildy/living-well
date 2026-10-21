@@ -1,7 +1,7 @@
-// Small shared pieces of the family "day story" and the monthly memories (KC round 7): mood colours and words, day wording, titles.
-import type { DailyLog, ISODate, Member } from '@cp/shared';
+// Small shared pieces of the family day story and the monthly memories: mood colours, day wording, names, how much was eaten.
+import type { ClubState, DailyLog, ISODate, Member } from '@cp/shared';
 import { daysBetween, memberShort } from '@cp/shared';
-import type { DayStory } from '@cp/shared/rules/family';
+import type { TlItem } from '@cp/shared/rules/family';
 import type { TFn } from '../../lib/i18n';
 
 export type Mood = NonNullable<DailyLog['mood']>;
@@ -12,17 +12,20 @@ export const MOOD_INK: Record<Mood, string> = { cheerful: '#FFFFFF', calm: '#242
 
 type Fmt = { fd: (d: string, o: Intl.DateTimeFormatOptions) => string };
 
-/** The mood in warm words ("Cheerful and chatty today"). */
-export const moodWords = (t: TFn, mood: Mood, isToday: boolean) => {
-  const w = t('family.storyMood_' + mood);
-  return isToday ? t('family.storyMoodToday', { m: w }) : w;
-};
 /** How much was eaten, as one kind line ("Finished all of lunch"). */
 export const lunchWords = (t: TFn, amount: string) => t('family.storyAte_' + amount);
 
 /** "Tuesday" within the last week, else "Tuesday 6 Oct". */
 export function dayWord(fmt: Fmt, date: ISODate, today: ISODate): string {
   return daysBetween(date, today) < 7 ? fmt.fd(date, { weekday: 'long' }) : fmt.fd(date, { weekday: 'long', day: 'numeric', month: 'short' }).replace(/,/g, '');
+}
+
+/** The hero's title (KC, round 8): "Today with Oma Lina", "Yesterday with …", "Oma Lina’s Tuesday", "Tuesday 6 Oct with Oma Lina". */
+export function dayTitle(t: TFn, fmt: Fmt, names: string, date: ISODate, today: ISODate): string {
+  if (date === today) return t('family.storyTitleToday', { n: names });
+  const gap = daysBetween(date, today);
+  if (gap === 1) return t('family.storyTitleYesterday', { n: names });
+  return t(gap < 7 ? 'family.storyTitleWeek' : 'family.storyTitleOld', { n: names, d: dayWord(fmt, date, today) });
 }
 
 /** "Oma Lina", "Oma Lina and Opa Budi", "Oma Lina, Opa Budi and Opa Tan". */
@@ -32,22 +35,16 @@ export function namesOf(t: TFn, members: Member[]): string {
   return `${names.slice(0, -1).join(', ')} ${t('common.and')} ${names[names.length - 1]}`;
 }
 
-/** "Today with Oma Lina", "Yesterday with …", "Oma Lina’s Tuesday", "Tuesday 6 Oct with Oma Lina". */
-export function dayTitle(t: TFn, fmt: Fmt, names: string, date: ISODate, today: ISODate): string {
-  if (date === today) return t('family.storyTitleToday', { n: names });
-  const gap = daysBetween(date, today);
-  if (gap === 1) return t('family.storyTitleYesterday', { n: names });
-  return t(gap < 7 ? 'family.storyTitleWeek' : 'family.storyTitleOld', { n: names, d: dayWord(fmt, date, today) });
+/** A Material icon for a step of the day (the dots on the hero's rail and on the list's timeline): the activity's own icon for a session. */
+const STEP_ICON: Record<string, string> = { arrival: 'how_to_reg', health: 'monitor_heart', outing: 'directions_bus', lunch: 'restaurant', tea: 'local_cafe', home: 'home' };
+export const stepIcon = (s: ClubState, it: TlItem): string => (it.kind === 'session' ? s.activities[it.activityId]?.icon || 'interests' : STEP_ICON[it.kind] || 'circle');
+
+/** "Oma", "Oma and Opa", "A, B and C" ; past `max` names the rest are counted ("A, B, C +2"). */
+export function listNames(t: TFn, names: string[], max = 3): string {
+  if (names.length <= 1) return names[0] || '';
+  if (names.length > max) return `${names.slice(0, max).join(', ')} +${names.length - max}`;
+  return `${names.slice(0, -1).join(', ')} ${t('common.and')} ${names[names.length - 1]}`;
 }
 
-/** The hero's title: the day's name, or, on an earlier day the member did not come or the club was closed, a gentle sentence about that. */
-export function storyTitle(t: TFn, fmt: Fmt, names: string, story: Pick<DayStory, 'date' | 'state'>, today: ISODate, single: boolean): string {
-  if (story.date < today && single) {
-    if (story.state.kind === 'away') return t('family.storyDidntCome', { n: names, d: dayWord(fmt, story.date, today) });
-    if (story.state.kind === 'closed') return t('family.storyClosedOn', { d: dayWord(fmt, story.date, today) });
-  }
-  return dayTitle(t, fmt, names, story.date, today);
-}
-
-/** An icon-less bronze text link that is a button (a quiet "see that day"). */
-export const quietLink = { border: 'none', background: 'transparent', padding: '0 2px', minHeight: 40, color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 3, fontFamily: 'Inter' } as const;
+/** First letter up (a quiet line that starts a sentence: "Last visit Monday"). */
+export const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);

@@ -17,7 +17,7 @@ export function PhotosTab({ p }: { p: P }) {
   const [camera, setCamera] = useState(false);
   const [saving, setSaving] = useState(false);
   const canTake = !p.family && p.st.key !== 'pending' && p.st.key !== 'ended' && !!getAction('photo.take')?.can(p.me, { kind: 'solo', memberIds: [m.id], media: 'photo' }, s);
-  const mine = live(s.photos).filter((x) => x.memberIds.includes(m.id) && (p.family ? x.visibility === 'visible' : x.visibility !== 'removed'));
+  const mine = live(s.photos).filter((x) => x.memberIds.includes(m.id) && (p.family ? x.visibility === 'visible' : x.visibility !== 'removed' && x.visibility !== 'draft'));
   const dates = Array.from(new Set(mine.map((x) => x.date))).sort().reverse();
   const days = dates.map((d) => {
     const ps = mine.filter((x) => x.date === d).sort((a, b) => (a.time < b.time ? -1 : 1));
@@ -80,7 +80,7 @@ export function PhotosTab({ p }: { p: P }) {
           </div>
         );
       })}
-      {!days.length ? (phone ? <Group pad="40px 24px"><div style={{ textAlign: 'center', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noPhotos')}</div></Group> : <div style={{ ...cardStyle, padding: '40px 24px', textAlign: 'center', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noPhotos')}</div>) : null}
+      {!days.length ? (phone ? <Group pad="40px 24px"><div style={{ textAlign: 'center', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noPhotos')}</div></Group> : <div className="cp-grey" style={{ ...cardStyle, padding: '40px 24px', textAlign: 'center', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noPhotos')}</div>) : null}
       {paged.pages > 1 ? <Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('profile.photosPager')} /> : null}
       {camera ? <CameraCapture open onClose={() => setCamera(false)} onCapture={take} facing="environment" allowUpload /> : null}
       {viewer ? <PhotoViewer photos={viewer.photos} startId={viewer.startId} onClose={() => setViewer(null)} audience={p.family ? 'family' : 'staff'} /> : null}

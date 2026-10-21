@@ -28,7 +28,7 @@ const KIND_ICON: Record<SurveyKind, string> = { family: 'groups', venue: 'storef
 function KindDot({ kind }: { kind: SurveyKind }) {
   const { isPhone } = useDevice();
   const size = isPhone ? 40 : 46;
-  return <span aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', flex: 'none' }}><IconBox name={KIND_ICON[kind]} size={isPhone ? 20 : 21} /></span>;
+  return <span aria-hidden="true" className="cp-fill" style={{ width: size, height: size, borderRadius: 999, background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent, #75624B)', flex: 'none' }}><IconBox name={KIND_ICON[kind]} size={isPhone ? 20 : 21} /></span>;
 }
 /** A tappable list row that fills the line, with a sibling action (never a button inside a button). */
 const rowBtn = (isPhone: boolean) => ({ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16, padding: isPhone ? '10px 0' : '16px 0', minHeight: isPhone ? 58 : 64, border: 'none', background: 'transparent', textAlign: 'left' as const, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' });
@@ -93,7 +93,7 @@ export function Surveys() {
     );
     if (isPhone) return <Group key={sv.id} title={kindName(kind)} meta={t('mgmt.svLiveSent', { date: fds(sv.sentOn) })} gap={10}>{body}</Group>;
     return (
-      <div key={sv.id} data-live={sv.id} style={{ ...heroCard, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
+      <div key={sv.id} data-live={sv.id} className="cp-grey" style={{ ...heroCard, padding: `22px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
           <span style={labelStyle}>{kindName(kind)}</span>
           <span style={{ height: 26, padding: '0 12px', borderRadius: 8, background: TONE.sage.bg, color: TONE.sage.fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', whiteSpace: 'nowrap' }}>{t('mgmt.svLiveSent', { date: fds(sv.sentOn) })}</span>
@@ -115,7 +115,7 @@ export function Surveys() {
         const kind = surveyKind(x);
         const parts = [kindName(kind), tn(t, 'mgmt.svQuestionsN', x.questions.length + (x.custom?.length ?? 0)), kind === 'family' ? audienceText(t, x, resolveSurveyAudience(s, x.audience, today).length) : ''].filter(Boolean);
         return (
-          <div key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 4, borderTop: '1px solid #F0EAE1' }}>
+          <div key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 4, borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
             <button type="button" data-draft={x.id} onClick={() => setEditing(draftOf(x))} className={isPhone ? 'cp-press' : undefined} style={rowBtn(isPhone)}>
               <KindDot kind={kind} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -135,7 +135,7 @@ export function Surveys() {
   const templatesTab = (
     <ListCard title={t('mgmt.svTemplates')} right={isPhone ? <PillBtn icon="add" onClick={() => setTplEdit({ kind: 'family' })}>{t('mgmt.svTplNew')}</PillBtn> : <Button size={44} variant="secondary" icon="add" onClick={() => setTplEdit({ kind: 'family' })}>{t('mgmt.svTplNew')}</Button>}>
       {templates.length ? templates.map((x) => (
-        <div key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid #F0EAE1' }}>
+        <div key={x.id} style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
           <button type="button" data-template={x.id} onClick={() => setTplEdit({ tpl: x, kind: x.kind })} className={isPhone ? 'cp-press' : undefined} style={rowBtn(isPhone)}>
             <KindDot kind={x.kind} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -146,7 +146,7 @@ export function Surveys() {
           </button>
           {isPhone ? <PillBtn tone="quiet" onClick={() => startFrom(x)}>{t('mgmt.svTplUse')}</PillBtn> : <Button size={44} variant="secondary" onClick={() => startFrom(x)}>{t('mgmt.svTplUse')}</Button>}
         </div>
-      )) : <div style={{ padding: '14px 0 16px', borderTop: '1px solid #F0EAE1', fontSize: 15, color: '#6B6259' }}>{t('mgmt.svTplNone')}</div>}
+      )) : <div style={{ padding: '14px 0 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, color: '#6B6259' }}>{t('mgmt.svTplNone')}</div>}
     </ListCard>
   );
 
@@ -162,7 +162,7 @@ export function Surveys() {
           const sv = r.survey;
           return (
             <button key={sv.id} type="button" data-survey={sv.id} onClick={() => setDetail({ id: sv.id, tab: 'summary' })} className={isPhone ? 'cp-press' : undefined}
-              style={{ ...rowBtn(isPhone), width: '100%', borderTop: '1px solid #F0EAE1' }}>
+              style={{ ...rowBtn(isPhone), width: '100%', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
               <KindDot kind={r.kind} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: isPhone ? 16 : 17, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{sv.title}</span>
@@ -170,7 +170,7 @@ export function Surveys() {
                 <span style={{ fontSize: 14, lineHeight: '20px', color: '#24201C', fontVariantNumeric: 'tabular-nums' }}>{t('mgmt.svLogMeta', { sent: r.sent, answered: r.answered, rate: r.rate })}</span>
               </span>
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>
-                {r.avgN ? <><Icon name="star" size={17} fill={1} color="#75624B" />{r.avg.toFixed(1)}</> : '—'}
+                {r.avgN ? <><Icon name="star" size={17} fill={1} color="var(--accent, #75624B)" />{r.avg.toFixed(1)}</> : '—'}
               </span>
               <Icon name="chevron_right" size={20} color="#8A8078" />
             </button>
@@ -210,7 +210,7 @@ function NewSurveySheet({ open, onClose, templates, onBlank, onTemplate }: { ope
   const t = useT();
   const item = (key: string, kind: SurveyKind, title: string, sub: string, onClick: () => void) => (
     <button key={key} type="button" data-pick-survey={key} onClick={onClick} className="cp-press"
-      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '8px 0', border: 'none', borderTop: '1px solid #F0EAE1', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+      style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '8px 0', border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
       <KindDot kind={kind} />
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{title}</span>
@@ -230,7 +230,7 @@ function NewSurveySheet({ open, onClose, templates, onBlank, onTemplate }: { ope
         <span style={labelStyle}>{t('mgmt.svPickTemplates')}</span>
         {templates.length
           ? templates.map((x) => item(x.id, x.kind, x.title, `${t('mgmt.svKind_' + x.kind)} · ${tn(t, 'mgmt.svQuestionsN', x.questions.length + x.custom.length)}`, () => onTemplate(x)))
-          : <span style={{ padding: '12px 0', fontSize: 15, color: '#6B6259', borderTop: '1px solid #F0EAE1' }}>{t('mgmt.svTplNone')}</span>}
+          : <span style={{ padding: '12px 0', fontSize: 15, color: '#6B6259', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>{t('mgmt.svTplNone')}</span>}
       </div>
     </Sheet>
   );

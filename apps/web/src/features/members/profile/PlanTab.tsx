@@ -94,7 +94,7 @@ export function PlanTab({ p }: { p: P }) {
       ) : null}
       <div style={ph ? { display: 'flex', flexDirection: 'column', gap: 14 } : { display: 'flex', flexWrap: 'wrap', gap: 'clamp(18px, 3vw, 36px)', alignItems: 'flex-start' }}>
         {ph ? <Group title={t('profile.planCard')} pad="14px 16px 12px" gap={8}>{planTitle}{facts}{leaveBlock}</Group> : (
-          <div style={{ ...cardStyle, flex: '1 1 380px', minWidth: 0, gap: 8 }}>
+          <div className="cp-grey" style={{ ...cardStyle, flex: '1 1 380px', minWidth: 0, gap: 8 }}>
             <SectionLabel>{t('profile.planCard')}</SectionLabel>
             {planTitle}
             {facts}
@@ -107,7 +107,7 @@ export function PlanTab({ p }: { p: P }) {
             const titleText = i.kind === 'final' ? t('profile.finalInvoice') : i.period ? fmt.fmonth(i.period, true) : i.number;
             const subText = `${i.number} · ${st === 'paid' ? t('profile.paidOn', { d: fmt.fds(paidDate(s, i.id) || i.issueDate) }) : t('profile.dueOn', { d: fmt.fds(i.dueDate) })}${p.family ? '' : ' · ' + xeroLabel(i.xero)}`;
             return (
-              <button key={i.id} type="button" onClick={() => setInv(i.id)} className="h-row cp-bleed" aria-label={`${titleText} ${i.number}`} style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '8px 12px', alignItems: 'center', padding: '14px 0', border: 'none', borderTop: ph && !ix ? 'none' : HAIR, background: '#FFFFFF', minHeight: 64, textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+              <button key={i.id} type="button" onClick={() => setInv(i.id)} className="h-row cp-bleed" aria-label={`${titleText} ${i.number}`} style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '8px 12px', alignItems: 'center', padding: '14px 0', border: 'none', borderTop: ph && !ix ? 'none' : HAIR, background: 'transparent', minHeight: 64, textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <div style={{ flex: '1 1 150px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{titleText}</span>
                   <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{subText}</span>
@@ -116,7 +116,7 @@ export function PlanTab({ p }: { p: P }) {
                 <span style={{ display: 'inline-flex', alignItems: 'center', gap: 12, flex: 'none', marginLeft: 'auto' }}>
                   <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', flex: 'none', lineHeight: 1.4 }}>{rp(invoiceTotal(i))}</span>
                   <StatusBadge kind={st === 'partial' ? 'partial' : st} small />
-                  <Icon name="chevron_right" size={20} color="#75624B" />
+                  <Icon name="chevron_right" size={20} color="var(--accent, #75624B)" />
                 </span>
               </button>
             );

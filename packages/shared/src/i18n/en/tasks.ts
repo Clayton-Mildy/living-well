@@ -6,6 +6,8 @@ export const tasks = {
   duties: 'Today’s duties', additional: 'Additional tasks', thisWeek: 'This week', thisMonth: 'This month', checklist: 'Today',
   closed: 'The club is closed today, so there are no tasks.', empty: 'No tasks for you yet.',
   left: '{n} left', late: 'Late',
+  // KC round 10: the floating quick-tasks button beside the camera and its popup
+  quick: 'Today’s tasks', quickN: 'Today’s tasks, {n} to do', quickAll: 'All tasks', quickCamera: 'Open the camera', quickGo: 'Go there', quickEmpty: 'Nothing to do right now.', quickClose: 'Close',
   // a row's one meta line
   by: 'By {t}', dueDay: 'Due {d}', overdue: 'Overdue', photoProof: 'Photo', doneBy: '{name} · {t}', doneByOn: '{name} · {d}, {t}', doneAtOnly: 'Done {t}',
   // ticking a task

@@ -4,8 +4,8 @@ import { useEffect, useMemo, useRef, useState, type KeyboardEvent as RKE } from 
 import { addMonths } from '@cp/shared';
 import { useFmt, useT } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
-import { FONT_SMALL, Icon } from './index';
-import { FieldFrame, PopLayer, triggerStyle, useFieldIds } from './field';
+import { FONT_SMALL, HAIRLINE, Icon } from './index';
+import { FieldFrame, PopLayer, triggerClass, triggerStyle, useFieldIds } from './field';
 import { clampDate, dateAllowed, monthAllowed, monthGrid, shiftMonth, stepDate, withMonth, yearAllowed, yearPageStart, type ISODate, type YM } from './dates';
 
 type View = 'day' | 'month' | 'year';
@@ -19,13 +19,16 @@ interface CalProps {
   clearable?: boolean;
   /** where an empty field opens (a date for 'date' mode, a month for 'month' mode); default today */
   startAt?: string;
+  /** KC round 10: quick picks beside Today ("Last week", "Last month"…): each runs its own action and closes the picker */
+  quick?: QuickPick[];
   onPick: (v: string) => void;
 }
+export interface QuickPick { key: string; label: string; run: () => void }
 
-const navBtn = (disabled?: boolean) => ({ width: 44, height: 44, borderRadius: 12, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#B5B0AC' : '#24201C', flex: 'none' as const, padding: 0 });
+const navBtn = (disabled?: boolean) => ({ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: disabled ? 'not-allowed' : 'pointer', color: disabled ? '#B5B0AC' : '#24201C', flex: 'none' as const, padding: 0 });
 const cellBase = { height: 44, minWidth: 0, borderRadius: 10, border: '1px solid transparent', background: 'transparent', fontSize: 16, fontFamily: 'Inter', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0, color: '#24201C', cursor: 'pointer' } as const;
 
-function Calendar({ mode, value, min, max, disabledDate, today, clearable, startAt, onPick }: CalProps) {
+function Calendar({ mode, value, min, max, disabledDate, today, clearable, startAt, quick, onPick }: CalProps) {
   const t = useT();
   const { lang, fd } = useFmt();
   const [cursor, setCursor] = useState<ISODate>(() => clampDate(mode === 'month' ? `${(value || startAt || today).slice(0, 7)}-01` : value || (startAt && /^\d{4}-\d{2}-\d{2}$/.test(startAt) ? startAt : today), min && mode === 'month' ? `${min.slice(0, 7)}-01` : min, max && mode === 'month' ? `${max.slice(0, 7)}-28` : max));
@@ -91,7 +94,7 @@ function Calendar({ mode, value, min, max, disabledDate, today, clearable, start
                   <span key={d} role="gridcell" aria-selected={on}>
                     <button type="button" data-date={d} tabIndex={d === cursor ? 0 : -1} aria-label={longDate(d)} aria-disabled={!ok || undefined} aria-current={isToday ? 'date' : undefined}
                       onClick={() => { if (ok) onPick(d); }} className={on || !ok ? undefined : 'h-cream'}
-                      style={{ ...cellBase, width: '100%', background: on ? '#75624B' : 'transparent', color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#24201C', fontWeight: on || isToday ? 600 : 400, border: isToday && !on ? '1px solid #75624B' : '1px solid transparent', cursor: ok ? 'pointer' : 'not-allowed', textDecoration: !ok && !on ? 'line-through' : undefined }}>
+                      style={{ ...cellBase, width: '100%', background: on ? 'var(--accent, #75624B)' : 'transparent', color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#24201C', fontWeight: on || isToday ? 600 : 400, border: isToday && !on ? '1px solid var(--accent, #75624B)' : '1px solid transparent', cursor: ok ? 'pointer' : 'not-allowed', textDecoration: !ok && !on ? 'line-through' : undefined }}>
                       {+d.slice(8, 10)}
                     </button>
                   </span>
@@ -117,7 +120,7 @@ function Calendar({ mode, value, min, max, disabledDate, today, clearable, start
             return (
               <button key={m} type="button" aria-label={`${monthName(m)} ${year}`} aria-pressed={on} aria-disabled={!ok || undefined} data-first={i === 0 ? '' : undefined}
                 onClick={() => { if (!ok) return; if (mode === 'month') onPick(m); else { wantFocus.current = true; setCursor(clampDate(withMonth(cursor, m), min, max)); setView('day'); } }} className={on || !ok ? undefined : 'h-cream'}
-                style={{ ...cellBase, height: 48, borderRadius: 12, background: on ? '#75624B' : 'transparent', color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#24201C', fontWeight: on || isNow ? 600 : 400, border: isNow && !on ? '1px solid #75624B' : '1px solid transparent', cursor: ok ? 'pointer' : 'not-allowed' }}>
+                style={{ ...cellBase, height: 48, borderRadius: 12, background: on ? 'var(--accent, #75624B)' : 'transparent', color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#24201C', fontWeight: on || isNow ? 600 : 400, border: isNow && !on ? '1px solid var(--accent, #75624B)' : '1px solid transparent', cursor: ok ? 'pointer' : 'not-allowed' }}>
                 {monthName(m, 'short').replace(/\.$/, '')}
               </button>
             );
@@ -139,7 +142,7 @@ function Calendar({ mode, value, min, max, disabledDate, today, clearable, start
             return (
               <button key={y} type="button" aria-label={String(y)} aria-pressed={on} aria-disabled={!ok || undefined} data-first={i === 0 ? '' : undefined}
                 onClick={() => { if (!ok) return; setCursor(clampDate(withMonth(cursor, `${y}-${cursor.slice(5, 7)}`), min, max)); setView('month'); }} className={on || !ok ? undefined : 'h-cream'}
-                style={{ ...cellBase, height: 48, borderRadius: 12, background: on ? '#75624B' : 'transparent', color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#24201C', fontWeight: on || y === +today.slice(0, 4) ? 600 : 400, cursor: ok ? 'pointer' : 'not-allowed' }}>{y}</button>
+                style={{ ...cellBase, height: 48, borderRadius: 12, background: on ? 'var(--accent, #75624B)' : 'transparent', color: on ? '#FFFFFF' : !ok ? '#B5B0AC' : '#24201C', fontWeight: on || y === +today.slice(0, 4) ? 600 : 400, cursor: ok ? 'pointer' : 'not-allowed' }}>{y}</button>
             );
           })}
         </div>
@@ -148,17 +151,21 @@ function Calendar({ mode, value, min, max, disabledDate, today, clearable, start
   }
 
   const todayOk = mode === 'month' ? monthAllowed(today.slice(0, 7), min, max) : allowed(today);
+  const chip = (ok: boolean) => ({ height: 40, padding: '0 14px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: ok ? 'pointer' : 'not-allowed', opacity: ok ? 1 : 0.5, fontFamily: 'Inter', whiteSpace: 'nowrap' as const, flex: 'none' as const });
   return (
     <div style={{ padding: 12, display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }} lang={lang}>
       {body}
       {mode === 'date' || clearable ? (
-        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', paddingTop: 6, borderTop: '1px solid #F0EAE1', marginTop: 4 }}>
+        <div style={{ display: 'flex', gap: 8, justifyContent: 'space-between', alignItems: 'center', paddingTop: 8, borderTop: HAIRLINE, marginTop: 4, minWidth: 0 }}>
           {mode === 'date' ? (
-            <button type="button" aria-disabled={!todayOk || undefined} onClick={() => { if (todayOk) onPick(today); }} className="h-cream"
-              style={{ height: 44, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: todayOk ? 'pointer' : 'not-allowed', opacity: todayOk ? 1 : 0.5, fontFamily: 'Inter' }}>{t('common.today')}</button>
+            // Today, then the caller's quick picks; the row scrolls sideways when they do not fit
+            <div data-testid="date-quick" className="cp-pillrow" style={{ display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none', minWidth: 0, flex: 1, margin: '0 -12px', padding: '2px 12px' }}>
+              <button type="button" aria-disabled={!todayOk || undefined} onClick={() => { if (todayOk) onPick(today); }} className="h-fill" style={chip(todayOk)}>{t('common.today')}</button>
+              {(quick ?? []).map((q) => <button key={q.key} type="button" data-quick={q.key} onClick={q.run} className="h-fill" style={chip(true)}>{q.label}</button>)}
+            </div>
           ) : <span />}
           {clearable && value ? (
-            <button type="button" onClick={() => onPick('')} className="h-cream" style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 15, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.clear')}</button>
+            <button type="button" onClick={() => onPick('')} className="h-cream" style={{ height: 44, padding: '0 16px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 15, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{t('common.clear')}</button>
           ) : null}
         </div>
       ) : null}
@@ -168,8 +175,8 @@ function Calendar({ mode, value, min, max, disabledDate, today, clearable, start
 
 interface FieldBase { label?: string; error?: string | false; placeholder?: string; disabled?: boolean; ariaLabel?: string; hint?: string; clearable?: boolean; id?: string; startAt?: string; /** a slim 40px box without the leading icon and the weekday, for two fields side by side (a date range) */ compact?: boolean }
 
-function PickerField({ mode, value, onChange, min, max, disabledDate, label, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact }: FieldBase & {
-  mode: 'date' | 'month'; value: string; onChange: (v: string) => void; min?: string; max?: string; disabledDate?: (d: ISODate) => boolean;
+function PickerField({ mode, value, onChange, min, max, disabledDate, label, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact, quick }: FieldBase & {
+  mode: 'date' | 'month'; value: string; onChange: (v: string) => void; min?: string; max?: string; disabledDate?: (d: ISODate) => boolean; quick?: QuickPick[];
 }) {
   const t = useT();
   const { fd, fmonth } = useFmt();
@@ -183,13 +190,14 @@ function PickerField({ mode, value, onChange, min, max, disabledDate, label, err
     <FieldFrame ids={ids} label={label} error={error} hint={hint}>
       <button ref={trigger} id={ids.trigger} type="button" aria-haspopup="dialog" aria-expanded={open} aria-labelledby={label ? `${ids.label} ${ids.value}` : undefined} aria-label={label ? undefined : `${title}${text ? ', ' + text : ''}`}
         aria-describedby={error || hint ? ids.msg : undefined} aria-invalid={error ? true : undefined} disabled={disabled} onClick={() => setOpen((o) => !o)}
-        onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); } }} style={{ ...triggerStyle({ error: !!error, disabled, open }), ...(compact ? { height: 40, gap: 6, fontSize: 15, padding: open || error ? '0 9px' : '0 10px' } : {}) }}>
+        onKeyDown={(e) => { if (e.key === 'ArrowDown') { e.preventDefault(); setOpen(true); } }} className={triggerClass(disabled)} style={{ ...triggerStyle({ error: !!error, disabled, open }), ...(compact ? { height: 40, gap: 6, fontSize: 15, padding: '0 10px' } : {}) }}>
         {compact ? null : <Icon name={mode === 'date' ? 'calendar_month' : 'calendar_view_month'} size={22} color="#5E5852" />}
         <span id={ids.value} style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: text ? undefined : '#5E5852' }}>{text || placeholder || (mode === 'date' ? t('common.pickDate') : t('common.pickMonth'))}</span>
         <Icon name="expand_more" size={compact ? 20 : 22} color="#5E5852" style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
       </button>
       <PopLayer open={open} onClose={() => setOpen(false)} anchorRef={trigger} title={title} minWidth={330} maxHeight={480}>
-        <Calendar mode={mode} value={value} min={min} max={max} disabledDate={disabledDate} today={today} clearable={clearable} startAt={startAt} onPick={(v) => { setOpen(false); onChange(v); }} />
+        <Calendar mode={mode} value={value} min={min} max={max} disabledDate={disabledDate} today={today} clearable={clearable} startAt={startAt} onPick={(v) => { setOpen(false); onChange(v); }}
+          quick={quick?.map((q) => ({ ...q, run: () => { setOpen(false); q.run(); } }))} />
       </PopLayer>
     </FieldFrame>
   );
@@ -199,10 +207,10 @@ function PickerField({ mode, value, onChange, min, max, disabledDate, label, err
  * Pick a day. `value` is 'YYYY-MM-DD' or ''. `min`/`max` are inclusive 'YYYY-MM-DD'; `disabledDate` greys out single days.
  * `startAt` ('YYYY-MM-DD') is the day the calendar opens on while the field is empty (a date of birth: around 1950, not today).
  */
-export function DateField({ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact }: FieldBase & {
-  value: string; onChange: (v: string) => void; min?: string; max?: string; disabledDate?: (d: ISODate) => boolean;
+export function DateField({ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact, quick }: FieldBase & {
+  value: string; onChange: (v: string) => void; min?: string; max?: string; disabledDate?: (d: ISODate) => boolean; /** quick picks in the footer, beside Today */ quick?: QuickPick[];
 }) {
-  return <PickerField mode="date" {...{ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact }} />;
+  return <PickerField mode="date" {...{ label, value, onChange, min, max, disabledDate, error, placeholder, disabled, ariaLabel, hint, clearable, id, startAt, compact, quick }} />;
 }
 /** Pick a month. `value`, `min` and `max` are 'YYYY-MM'. */
 export function MonthField({ label, value, onChange, min, max, error, placeholder, disabled, ariaLabel, hint, clearable, id }: FieldBase & {

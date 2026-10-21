@@ -138,12 +138,12 @@ export function DishPicker({ open, onClose, title, course, picked, onToggle, onC
     <>
       <Sheet open={open && !creating} onClose={onClose} title={title} footer={<Button full style={{ flex: 'none' }} onClick={onClose}>{t('common.done')}</Button>}>
         <TextField label={t('kitchen.picker.search')} value={q} onChange={setQ} placeholder={t('kitchen.picker.ph')} inputMode="search" autoFocus />
-        <div style={{ display: 'flex', flexDirection: 'column', border: '1px solid #E4DACD', borderRadius: 14, overflow: 'hidden', flexShrink: 0 }}>
+        <div className="cp-grey" style={{ display: 'flex', flexDirection: 'column', background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden', flexShrink: 0 }}>
           {shown.map((d, k) => {
             const on = picked.includes(d.id);
             return (
               <button key={d.id} type="button" role="checkbox" aria-checked={on} onClick={() => onToggle(d.id)} className="h-row"
-                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: k ? '1px solid #F0EAE1' : 'none', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
+                style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: k ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
                 <Icon name={on ? 'check_circle' : 'radio_button_unchecked'} size={24} fill={on ? 1 : 0} color={on ? '#3D6B4F' : '#8A755B'} />
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
@@ -160,7 +160,7 @@ export function DishPicker({ open, onClose, title, course, picked, onToggle, onC
           })}
           {!shown.length ? <div style={{ padding: '16px 14px', fontSize: 16, color: '#5E5852' }}>{t('kitchen.picker.none')}</div> : null}
           {needle && !exact ? (
-            <button type="button" onClick={() => setCreating(true)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: '1px solid #F0EAE1', background: '#FBF8F4', textAlign: 'left', cursor: 'pointer', color: '#75624B', fontFamily: 'Inter', fontSize: 16, fontWeight: 500, width: '100%' }}>
+            <button type="button" onClick={() => setCreating(true)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: 'var(--accent, #75624B)', fontFamily: 'Inter', fontSize: 16, fontWeight: 500, width: '100%' }}>
               <Icon name="add_circle" size={24} />
               {t('kitchen.picker.create', { name: q.trim() })}
             </button>
@@ -182,7 +182,7 @@ export function DishField({ label, course, ids, onRemove, onAdd, flex, testId, d
   return (
     <div role="group" aria-label={label} data-testid={testId} style={{ flex, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
       <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{label}</span>
-      <div style={{ minHeight: 48, border: '1px solid #E4DACD', borderRadius: 10, padding: 6, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', background: '#FFFFFF' }}>
+      <div className="cp-grey" style={{ minHeight: 48, borderRadius: 12, padding: 6, display: 'flex', flexWrap: 'wrap', gap: 6, alignItems: 'center', background: 'var(--fill, #F4F4F5)' }}>
         {ids.map((id) => {
           const d = s.dishes[id];
           if (!d || d.deletedAt) return null;
@@ -190,7 +190,7 @@ export function DishField({ label, course, ids, onRemove, onAdd, flex, testId, d
           const reach = hit ? reachOf(d, date) : null;
           const clash = hit ? `${reach ? reach.label + '. ' : ''}${t('kitchen.plan.affects', { names: hit })}` : '';
           const name = t('kitchen.plan.remove', { name: d.name }) + (clash ? `. ${clash}` : '');
-          const chip: React.CSSProperties = { minHeight: 44, padding: reach ? '6px 10px 6px 14px' : '0 10px 0 14px', borderRadius: 12, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', textAlign: 'left', maxWidth: '100%' };
+          const chip: React.CSSProperties = { minHeight: 44, padding: reach ? '6px 10px 6px 14px' : '0 10px 0 14px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', textAlign: 'left', maxWidth: '100%' };
           const inner = (
             <>
               {reach ? <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, alignItems: 'flex-start' }}><span>{d.name}</span><ReachChip reach={reach} bare /></span> : <span>{d.name}</span>}
@@ -199,17 +199,17 @@ export function DishField({ label, course, ids, onRemove, onAdd, flex, testId, d
             </>
           );
           // view only (the front desk): the dish and its allergy warning, nothing to tap
-          if (readOnly) return <span key={id} data-testid="plan-dish" title={clash || undefined} data-clash={hit ? 'yes' : undefined} style={chip}>{inner}</span>;
+          if (readOnly) return <span key={id} data-testid="plan-dish" title={clash || undefined} data-clash={hit ? 'yes' : undefined} className="cp-fill" style={chip}>{inner}</span>;
           return (
-            <button key={id} type="button" onClick={() => onRemove(id)} aria-label={name} title={name} data-clash={hit ? 'yes' : undefined} className="h-cream" style={{ ...chip, cursor: 'pointer' }}>
+            <button key={id} type="button" onClick={() => onRemove(id)} aria-label={name} title={name} data-clash={hit ? 'yes' : undefined} className="h-fill cp-fill" style={{ ...chip, cursor: 'pointer' }}>
               {inner}
               <Icon name="close" size={18} color="#5E5852" />
             </button>
           );
         })}
         {readOnly && !ids.some((id) => s.dishes[id] && !s.dishes[id].deletedAt) ? <span style={{ padding: '0 8px', fontSize: 15, color: '#8A8078' }}>{t('kitchen.plan.nothing')}</span> : null}
-        {readOnly ? null : <button type="button" onClick={onAdd} aria-label={t('kitchen.plan.addTo', { course: t('kitchen.course.' + course) })} className="h-cream"
-          style={{ minHeight: 44, padding: '0 14px 0 10px', borderRadius: 12, border: '1px dashed #CAB8A2', background: '#FFFFFF', color: '#75624B', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontFamily: 'Inter' }}>
+        {readOnly ? null : <button type="button" onClick={onAdd} aria-label={t('kitchen.plan.addTo', { course: t('kitchen.course.' + course) })} className="h-fill cp-fill"
+          style={{ minHeight: 44, padding: '0 14px 0 10px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="add" size={20} />
           {t('kitchen.plan.add')}
         </button>}

@@ -55,7 +55,7 @@ export function Directory() {
     const toggle = () => act('directory.togglePublic', { id: d.id }, { ok: t(d.public ? 'finance.toast.nowInternal' : 'finance.toast.nowPublic', { name: d.name }) });
     const manage = canEdit;
     const tel = (
-      <a href={telOf(d.phone)} aria-label={`${t('common.call')} ${d.name}`} className={isPhone ? 'h-cream cp-press' : 'h-cream'} style={{ height: isPhone ? 34 : 40, padding: '0 16px', borderRadius: isPhone ? 999 : 12, border: '1px solid #DCD3C8', background: '#FFFFFF', display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 14, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textDecoration: 'none', color: '#24201C', flex: 'none' }}>
+      <a href={telOf(d.phone)} aria-label={`${t('common.call')} ${d.name}`} className={isPhone ? 'h-fill cp-fill cp-press' : 'h-fill cp-fill'} style={{ height: isPhone ? 34 : 40, padding: '0 16px', borderRadius: isPhone ? 999 : 12, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'inline-flex', alignItems: 'center', gap: 7, fontSize: 14, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', textDecoration: 'none', color: '#24201C', flex: 'none' }}>
         <Icon name="call" size={18} weight={300} />{fmtPhone(d.phone)}
       </a>
     );
@@ -65,7 +65,7 @@ export function Directory() {
     const toggleBtn = manage ? (
       isPhone ? <PillBtn label={`${toggleLabel}: ${d.name}`} onClick={toggle}>{toggleLabel}</PillBtn> : (
         <button type="button" aria-label={`${toggleLabel}: ${d.name}`} onClick={toggle}
-          style={{ height: 40, padding: '0 6px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+          style={{ height: 40, padding: '0 6px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
           {toggleLabel}
         </button>
       )
@@ -81,7 +81,7 @@ export function Directory() {
       return (
         <div key={d.id} style={{ ...prow(i === 0), display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6E5A43', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={19} weight={300} /></span>
+            <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--eyebrow, #6E5A43)', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={19} weight={300} /></span>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               {nameEl}
               <span style={{ ...rowSub, fontSize: 13 }}>{t('finance.kind.' + d.kind)} · {what(d)}</span>
@@ -99,7 +99,7 @@ export function Directory() {
     return (
       <div key={d.id} style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-          <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#6E5A43', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={22} weight={300} /></span>
+          <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--eyebrow, #6E5A43)', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={22} weight={300} /></span>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
             {nameEl}
             <span style={rowSub}>{t('finance.kind.' + d.kind)} · {what(d)}</span>
@@ -117,8 +117,8 @@ export function Directory() {
     <>
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 'clamp(18px, 2.8vw, 28px)' }}>
       {fam ? (
-        <button type="button" onClick={() => navigate('/today')} className={isPhone ? 'cp-press' : undefined} style={{ alignSelf: 'flex-start', height: 44, padding: isPhone ? '0 16px 0 0' : '0 16px 0 10px', margin: isPhone ? '-6px 0 -8px -8px' : '-6px 0 -8px -10px', borderRadius: 12, border: 'none', background: 'transparent', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
-          {isPhone ? <Icon name="chevron_left" size={30} weight={300} color="#75624B" /> : <Icon name="arrow_back" size={20} color="#75624B" />}{t('common.today')}
+        <button type="button" onClick={() => navigate('/today')} className={isPhone ? 'cp-press' : undefined} style={{ alignSelf: 'flex-start', height: 44, padding: isPhone ? '0 16px 0 0' : '0 16px 0 10px', margin: isPhone ? '-6px 0 -8px -8px' : '-6px 0 -8px -10px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
+          {isPhone ? <Icon name="chevron_left" size={30} weight={300} color="var(--accent, #75624B)" /> : <Icon name="arrow_back" size={20} color="var(--accent, #75624B)" />}{t('common.today')}
         </button>
       ) : null}
       <PageHead eyebrow={t('nav.contacts')} title={simple ? t('finance.dir.famTitle') : t('nav.directory')}

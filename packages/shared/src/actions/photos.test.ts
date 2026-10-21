@@ -20,6 +20,14 @@ const famPhotos = (s: ClubState, uid: string) => Object.keys(projectForFamily(s,
 const take = (s: ClubState, input: object, uid = 's5', clk = clock) => { const r = run(s, 'photo.take', input, uid, clk); return { s: r.state, id: r.result.photoId as string }; };
 
 describe('photo.take', () => {
+  it('KC round 7: the number of people decides the type — a group shot with one person is personal, a personal shot with more people is a group', () => {
+    const one = run(fresh(), 'photo.take', { kind: 'group', memberIds: ['m10'], media: 'photo' }, 's5');
+    expect(one.state.photos[one.result.photoId as string]).toMatchObject({ kind: 'solo', memberIds: ['m10'] });
+    expect(one.result.kind).toBe('solo');
+    const more = run(fresh(), 'photo.take', { kind: 'solo', memberIds: ['m10', 'm2'], media: 'photo' }, 's5');
+    expect(more.state.photos[more.result.photoId as string]).toMatchObject({ kind: 'group', memberIds: ['m10', 'm2'] });
+    fails(fresh(), 'photo.take', { kind: 'solo', memberIds: [], media: 'photo' }, 's5', 'err.invalid'); // nobody tagged
+  });
   it('a teacher’s solo photo is pending: nobody is told, families do not see it, the image id is kept', () => {
     const r = run(fresh(), 'photo.take', { kind: 'solo', memberIds: ['m10'], media: 'photo', mediaId: 'abc123-DEF_45.x' }, 's5');
     const p = r.state.photos[r.result.photoId as string];
@@ -96,7 +104,6 @@ describe('photo.take', () => {
 
   it('validates tags and the image id', () => {
     const s = fresh();
-    fails(s, 'photo.take', { kind: 'solo', memberIds: ['m2', 'm10'], media: 'photo' }, 's5', 'activity.err.soloOne');
     fails(s, 'photo.take', { kind: 'group', memberIds: [], media: 'photo' }, 's5', 'err.invalid');
     fails(s, 'photo.take', { kind: 'group', memberIds: ['ghost'], media: 'photo' }, 's5', 'err.notFound');
     fails(s, 'photo.take', { kind: 'selfie', memberIds: ['m2'], media: 'photo' }, 's5', 'err.invalid');
@@ -176,7 +183,7 @@ describe('photo.approve', () => {
 
   it('a lunch photo goes through the kitchen announcement, and only when notify is on', () => {
     const s0 = produce(fresh(), (d) => {
-      d.photos['p-lunch'] = { id: 'p-lunch', clubId: 'citra', createdAt: '2026-10-21T10:00', createdBy: 'staff:s7', date: '2026-10-21', time: '10:00', kind: 'lunch', media: 'photo', activity: 'lunch', memberIds: [], tone: 3, takenBy: 's7', visibility: 'pending' };
+      d.photos['p-lunch'] = { id: 'p-lunch', clubId: 'citra', createdAt: '2026-10-21T10:00', createdBy: 'staff:s3', date: '2026-10-21', time: '10:00', kind: 'lunch', media: 'photo', activity: 'lunch', memberIds: [], tone: 3, takenBy: 's3', visibility: 'pending' };
     });
     expect(famPhotos(s0, 'fm10_0')).not.toContain('p-lunch');
     const loud = run(s0, 'photo.approve', { photoIds: ['p-lunch'], notify: true }, 's9');

@@ -126,6 +126,19 @@ describe('a one-day change of the programme', () => {
   });
 });
 
+describe('an extra session (KC round 7)', () => {
+  it('is a session of the day with its own marks, flagged as extra, with its note', () => {
+    const thu = dailyReport(s, '2026-10-22', T, NOW); // the demo seed's tea-time karaoke
+    expect(thu.sessions.map((x) => x.slot)).toEqual(['10:30', '13:30', '15:00']);
+    expect(thu.sessions[2]).toMatchObject({ extra: true, changed: false, state: 'later', note: expect.stringMatching(/birthdays/) });
+    expect(thu.sessions[2].activity?.name).toBe('Karaoke');
+    expect(thu.sessions[0].extra).toBeUndefined();
+    const today = dailyReport(s, T, T, 16 * 60);
+    expect(today.sessions.map((x) => x.slot)).toEqual(['10:30', '13:30']);
+    expect(today.members[0].sessions.map((x) => x.slot)).toEqual(['10:30', '13:30']);
+  });
+});
+
 describe('a closed day and a weekend', () => {
   it('says so and has nothing else', () => {
     const closed = dailyReport(s, '2026-10-30', T, NOW);

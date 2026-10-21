@@ -14,9 +14,8 @@ export const NAVS: Record<Role, NavItem[]> = {
   kitchen: [n('today', 'menu', 'restaurant'), n('feedback', 'feedback', 'forum'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
   finance: [n('today', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('stock', 'stock', 'inventory_2'), n('guests', 'guests', 'co_present'), n('members', 'members', 'groups'), n('tasks', 'tasks', 'checklist'), n('directory', 'directory', 'contacts')], // round 7: Guests to pay the guest hosts' fees
   mgmt: [],
-  family: [n('today', 'today', 'wb_sunny'), n('photos', 'photos', 'photo_library'), n('health', 'healthF', 'favorite'), n('billing', 'billing', 'receipt_long'), n('contacts', 'contacts', 'contacts')],
-  housekeeping: [n('today', 'requests', 'add_shopping_cart'), n('tasks', 'tasks', 'checklist'), n('contacts', 'contacts', 'contacts')],
-  driver: [n('today', 'requests', 'add_shopping_cart'), n('tasks', 'tasks', 'checklist'), n('contacts', 'contacts', 'contacts')],
+  // round 8 (Family App prototype): Today · Photos · Calendar · Health · Me; Billing and Contacts open from Me
+  family: [n('today', 'today', 'wb_sunny'), n('photos', 'photos', 'photo_library'), n('calendar', 'calShort', 'calendar_month'), n('health', 'healthF', 'favorite'), n('me', 'me', 'person')],
 };
 export const NAVG: Record<string, [string | null, NavItem[]][]> = {
   mgmt: [
@@ -36,6 +35,9 @@ export const PHONE_NAV: Partial<Record<Role, NavItem[]>> = {
 };
 export const MORE: NavItem = n('more', 'more', 'menu');
 
+/** Round 8: the family tab a pushed family page belongs to (its tab stays lit in the bar). */
+export const FAMILY_TAB_OF: Record<string, string> = { billing: 'me', contacts: 'me', profile: 'me', history: 'health', memories: 'photos' };
+
 /** Phone bottom bar: role's phone nav (≤5) or first 4 + More. */
 export function phoneNav(role: Role): { items: NavItem[]; more: boolean } {
   if (PHONE_NAV[role]) return { items: [...PHONE_NAV[role]!, MORE], more: true };
@@ -46,32 +48,32 @@ export function phoneNav(role: Role): { items: NavItem[]; more: boolean } {
 /** Extra keys a role may open through links (not in its nav). */
 // KC round 6: Contacts (the family app's "Useful contacts") is a menu item for every role; management and finance have the full Directory
 const EXTRA: Partial<Record<Role, string[]>> = {
-  family: ['calendar', 'contacts', 'memories'], // KC round 7: the monthly memories recap
+  // round 8: pushed pages of the family app (Billing and Contacts from Me, a parent's profile, health history) and the monthly memories
+  family: ['billing', 'contacts', 'memories', 'profile', 'history'],
   lobby: ['calendar', 'photos'],
   nurse: ['calendar', 'contacts'],
-  kitchen: ['calendar', 'contacts'],
+  kitchen: ['calendar', 'contacts', 'drafts'], // KC round 7: the quick camera's Drafts (activity and management have them in the Camera)
   finance: ['calendar', 'contacts'],
-  activity: ['photos', 'contacts'],
-  mgmt: ['photos', 'contacts'], // photos: old links to the standalone library
-  housekeeping: ['contacts'],
-  driver: ['contacts'],
+  activity: ['photos', 'contacts', 'drafts'],
+  mgmt: ['photos', 'contacts', 'drafts'], // photos: old links to the standalone library
 };
 export const allowedKeys = (role: Role) => new Set([...NAVS[role].map((x) => x.key), ...(EXTRA[role] || [])]);
 
 export type ScreenId =
   | 'arrivals' | 'health' | 'activityToday' | 'kmenu' | 'fin' | 'overview' | 'familyToday' | 'requests' | 'enq' | 'members' | 'readings' | 'camera' | 'dlog'
   | 'cal' | 'kfeed' | 'kstock' | 'pay' | 'budget' | 'rcpt' | 'dir' | 'venue' | 'bc' | 'hr' | 'surveys' | 'plans' | 'reviews' | 'photoLib' | 'fphotos' | 'familyHealth' | 'fbill'
-  | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report';
+  | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'drafts'
+  | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts';
 
 export function screenFor(role: Role, key: string): ScreenId | null {
   if (!allowedKeys(role).has(key)) return null;
-  if (key === 'today') return ({ lobby: 'arrivals', nurse: 'health', activity: 'activityToday', kitchen: 'kmenu', finance: 'fin', mgmt: 'arrivals', family: 'familyToday', housekeeping: 'requests', driver: 'requests' } as const)[role];
-  if (role === 'family') return ({ photos: 'fphotos', health: 'familyHealth', billing: 'fbill', calendar: 'cal', contacts: 'dir', memories: 'fmemories' } as Record<string, ScreenId>)[key] || null;
+  if (key === 'today') return ({ lobby: 'arrivals', nurse: 'health', activity: 'activityToday', kitchen: 'kmenu', finance: 'fin', mgmt: 'arrivals', family: 'familyToday' } as const)[role];
+  if (role === 'family') return ({ photos: 'fphotos', health: 'familyHealth', billing: 'fbill', calendar: 'fcal', contacts: 'fcontacts', memories: 'fmemories', me: 'fme', profile: 'fprofile', history: 'fhistory' } as Record<string, ScreenId>)[key] || null;
   const map: Record<string, ScreenId> = {
     arrivals: 'arrivals', hchecks: 'health', menu: 'kmenu', readings: 'readings', log: 'dlog', camera: 'camera', photos: 'photoLib', feedback: 'kfeed', stock: 'kstock',
     billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', directory: 'dir', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
     enquiries: 'enq', calendar: 'cal', plans: 'plans', surveys: 'surveys', reviews: 'reviews', requests: 'requests',
-    renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report',
+    renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', drafts: 'drafts',
   };
   return map[key] || null;
 }

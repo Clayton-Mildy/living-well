@@ -37,16 +37,16 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
             <Icon name={box.icon} size={22} color={box.fg} fill={1} />
             <span style={{ flex: '1 1 160px', fontSize: 15, lineHeight: '21px', color: '#24201C' }}>{depText}</span>
             {dep.kind === 'missing' ? (
-              <button type="button" className="h-cream" onClick={() => void onAskDeparture(m.id)} style={{ height: 40, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', flex: 'none', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+              <button type="button" className="h-fill cp-fill" onClick={() => void onAskDeparture(m.id)} style={{ height: 40, padding: '0 16px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', flex: 'none', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
                 {t('lobby.sendNurse')}
               </button>
             ) : null}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
-          <button type="button" className="h-cream" onClick={onClose} style={{ height: 48, padding: '0 22px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>
+          <button type="button" className="h-fill" onClick={onClose} style={{ height: 48, padding: '0 22px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>
           <button type="button" className={busy ? undefined : 'h-bronze'} onClick={busy ? undefined : () => void confirm()} aria-disabled={busy || undefined}
-            style={{ height: 48, padding: '0 24px', borderRadius: 12, border: 'none', background: busy ? '#EDE5DA' : '#24201C', color: busy ? '#8A8078' : '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
+            style={{ height: 48, padding: '0 24px', borderRadius: 12, border: 'none', background: busy ? 'var(--press, #EEEEF0)' : '#24201C', color: busy ? '#8A8078' : '#FFFFFF', fontSize: 15, fontWeight: 500, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
             {t('lobby.coConfirm')}
           </button>
         </div>

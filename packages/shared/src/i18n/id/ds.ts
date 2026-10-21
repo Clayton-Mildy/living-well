@@ -7,5 +7,5 @@ export const ds: Same<typeof EN> = {
   cameraNoneVideo: 'Kamera tidak ditemukan. Pilih video saja.',
   cameraDeniedVideo: 'Akses kamera diblokir. Izinkan di pengaturan peramban Anda, atau pilih video.',
   recordingTime: 'Merekam: {s} dari {max} detik', maxLength: 'Maksimal {n} detik', recordFailed: 'Perekaman berhenti. Silakan coba lagi.',
-  videoType: 'Gunakan video WebM atau MP4.', videoTooBig: 'Video terlalu besar (maks. 25 MB).', videoTooLong: 'Video lebih panjang dari {n} detik. Silakan pilih yang lebih pendek.',
+  videoType: 'Gunakan video WebM atau MP4.', videoTooBig: 'Video terlalu besar (maks. 100 MB).', videoTooLong: 'Video lebih panjang dari {n} detik. Silakan pilih yang lebih pendek.',
 };

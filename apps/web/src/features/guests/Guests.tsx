@@ -43,7 +43,7 @@ export function Guests() {
     const b = params.get('book');
     const sid = params.get('session');
     if (!b && !sid) return;
-    if (b && canEdit) { const [date, slot] = b.split('|'); setBook({ date, slot: slot === '13:30' ? '13:30' : '10:30' }); }
+    if (b && canEdit) { const [date, slot] = b.split('|'); setBook({ date, slot: /^\d{2}:\d{2}$/.test(slot ?? '') ? slot : '10:30' }); } // slot: a session time of that date (an extra session's too)
     if (sid) { setTab('sessions'); setOpenId(sid); }
     setParams({}, { replace: true });
   }, [params, setParams, canEdit]);

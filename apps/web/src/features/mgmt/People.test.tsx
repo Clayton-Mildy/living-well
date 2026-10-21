@@ -27,7 +27,8 @@ afterEach(async () => {
 function openClub(lang: 'en' | 'id' = 'en') {
   const state = buildSeed().citra;
   state.staff.s1.username = 'caca'; // the server sets usernames
-  delete state.staff.s4.username; // Siti has no account yet
+  state.staff.s10.appAccess = false; // Fransiska has no app access, so no account yet
+  delete state.staff.s10.username;
   useSession.setState({ lang, club: 'citra', user: { kind: 'staff', id: 's9', name: 'Ega', role: 'mgmt', clubId: 'citra', clubs: ['citra', 'adina'] } });
   useReplica.setState({ club: 'citra', userId: 's9', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 } });
 }
@@ -51,7 +52,7 @@ describe('username and reset password', () => {
   });
   it('a person without app access has no username and nothing to reset', async () => {
     openClub();
-    await show(<People />, '/hr?staff=s4'); // Siti: no app access
+    await show(<People />, '/hr?staff=s10'); // Fransiska: no app access
     expect(document.body.textContent).toContain('Created when app access is on');
     expect(button('Reset password')).toBeUndefined();
   });

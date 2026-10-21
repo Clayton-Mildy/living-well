@@ -1,39 +1,46 @@
-// Full-screen photo / video viewer (design OvPhoto). Family: Save and Share (demo toasts). Staff: tags, hide from families, show again, remove (activity and management).
+// Full-screen photo / video viewer (design OvPhoto). Family (round 8): FamilyPhotoViewer, the prototype's black viewer, takes over. Staff: tags, hide from families, show again, remove (activity and management).
 // Photos waiting for approval show to staff only (with a badge); management approves or rejects them here too.
 // It follows the live rows, so a retag, hide or remove shows at once and removed photos drop out of the carousel.
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as RKE } from 'react';
 import { useResetOn } from '../../lib/useResetOn';
 import { createPortal } from 'react-dom';
-import { live, isPendingRow, memberShort, staffCall, type Photo } from '@cp/shared';
-import { fmtDuration } from '@cp/shared/rules/activity';
-import { Button, Chip, Dialog, Icon, Note, PhotoImg, Sheet, TextField, Toggle, FONT_BODY } from '../../components/ui';
+import { live, isPendingRow, memberShort, sessionsOn, staffCall, uniq, type Photo } from '@cp/shared';
+import { activityName, fmtDuration } from '@cp/shared/rules/activity';
+import { Button, Chip, Dialog, Icon, Note, PhotoImg, Segmented, Select, Sheet, TextField, Toggle, FONT_BODY } from '../../components/ui';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { useMe } from '../../lib/me';
 import { useAct } from '../../lib/act';
 import { say } from '../../store/ui';
+import { savePhotos } from '../../lib/saveMedia';
 import { MemberPicker } from './MemberPicker';
+import { FamilyPhotoViewer } from '../family/FamilyPhotoViewer';
 import { PHOTO_REASONS, isCatalogPhoto, photoCaption, reasonText } from './lib';
 
 type Sheets = null | 'tags' | 'hide' | 'remove' | 'approve' | 'reject';
 const ctl = { width: 44, height: 44, borderRadius: 999, border: 'none', background: 'rgba(255,255,255,0.12)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 } as const;
 
-export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Photo[]; startId: string; onClose: () => void; audience: 'staff' | 'family' }) {
+type ViewerProps = { photos: Photo[]; startId: string; onClose: () => void; audience: 'staff' | 'family' };
+/** Families get their own look (features/family/FamilyPhotoViewer); everything below is the staff viewer. */
+export function PhotoViewer(props: ViewerProps) {
+  return props.audience === 'family' ? <FamilyPhotoViewer photos={props.photos} startId={props.startId} onClose={props.onClose} /> : <StaffPhotoViewer {...props} />;
+}
+
+function StaffPhotoViewer({ photos, startId, onClose }: Omit<ViewerProps, 'audience'>) {
   const s = useClub();
   const t = useT();
   const lang = useLang();
   const { fdl } = useFmt();
-  const { user, role } = useMe();
+  const { role } = useMe();
   const act = useAct();
-  const family = audience === 'family';
-  const canModerate = !family && (role === 'activity' || role === 'mgmt');
-  const canReview = !family && role === 'mgmt';
+  const canModerate = role === 'activity' || role === 'mgmt';
+  const canReview = role === 'mgmt';
 
-  // follow the live rows; families only ever see visible photos that are still in their data
+  // follow the live rows
   // an activity's catalog picture (catalogPhoto) has no row of its own: it just opens, with no actions
   const list = useMemo(
-    () => photos.map((p) => s.photos[p.id] ?? p).filter((p) => isCatalogPhoto(p) || (family ? !!s.photos[p.id] && p.visibility === 'visible' && !p.deletedAt : p.visibility !== 'removed' && !p.deletedAt)),
-    [photos, s.photos, family],
+    () => photos.map((p) => s.photos[p.id] ?? p).filter((p) => isCatalogPhoto(p) || (p.visibility !== 'removed' && p.visibility !== 'draft' && !p.deletedAt)),
+    [photos, s.photos],
   );
   const [idx, setIdx] = useState(() => Math.max(0, list.findIndex((p) => p.id === startId)));
   useEffect(() => { const i = list.findIndex((p) => p.id === startId); if (i >= 0) setIdx(i); }, [startId]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -43,6 +50,7 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
   useEffect(() => { if (!n) onClose(); }, [n]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const [sheet, setSheet] = useState<Sheets>(null);
+  const [saving, setSaving] = useState(false);
   // Feedback for actions taken inside the viewer shows in the viewer itself: the shell's toast sits under full-screen overlays.
   const [toast, setToast] = useState<null | { id: number; text: string; tone?: 'error'; action?: { label: string; run: () => void } }>(null);
   const toastTimer = useRef<ReturnType<typeof setTimeout>>();
@@ -109,10 +117,7 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
   const caption = photoCaption(s, p, t, lang);
   const by = staffCall(s.staff[p.takenBy]) || t('activity.theClub');
   const names = (ids: string[]) => ids.map((id) => (s.members[id] ? memberShort(s.members[id]) : '')).filter(Boolean).join(', ');
-  const own = user?.kind === 'family' ? user.memberIds : [];
-  const subject = family ? p.memberIds.find((id) => own.includes(id)) ?? p.memberIds[0] : undefined;
-  const others = family ? names(p.memberIds.filter((id) => id !== subject)) : '';
-  const meta = `${fdl(p.date)} · ${p.time}` + (family ? (others ? ' · ' + t('activity.withNames', { names: others }) : '') : p.memberIds.length ? ' · ' + t('activity.tagged', { names: names(p.memberIds) }) : '');
+  const meta = `${fdl(p.date)} · ${p.time}` + (p.memberIds.length ? ' · ' + t('activity.tagged', { names: names(p.memberIds) }) : '');
   const hidden = p.visibility === 'hidden';
   const pending = p.visibility === 'pending';
   const modBy = hidden && p.moderated ? staffCall(s.staff[p.moderated.by]) : '';
@@ -126,16 +131,28 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
     flash(t('activity.removedToast'), { action: { label: t('common.undo'), run: () => { void restore(id, t('activity.restoredToast')); } } });
   };
 
+  // KC round 10: Save to the gallery (the share sheet on a phone; a download elsewhere)
+  const save = async () => {
+    if (!p.mediaId || saving) return;
+    setSaving(true);
+    try { const r = await savePhotos([p]); if (r.how === 'download' && r.n) flash(t('fphotos.savedOne')); }
+    catch { flash(t('fphotos.saveFailed'), { tone: 'error' }); }
+    setSaving(false);
+  };
+
   return createPortal(
     <>
       <div ref={root} role="dialog" aria-modal="true" aria-label={caption} tabIndex={-1} onKeyDown={trap} style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#1F1C19', display: 'flex', flexDirection: 'column', color: '#FFFFFF', outline: 'none' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 16px' }}>
           <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{i + 1} / {n}</span>
-          <button ref={closeBtn} type="button" onClick={onClose} aria-label={t('common.close')} style={ctl}><Icon name="close" size={24} /></button>
+          <span style={{ display: 'flex', gap: 8 }}>
+            {p.mediaId ? <button type="button" onClick={() => void save()} aria-label={t('fphotos.viewerSaveAria')} data-testid="viewer-save" aria-busy={saving || undefined} style={ctl}><Icon name={saving ? 'progress_activity' : 'download'} size={22} style={saving ? { animation: 'cpSpin 0.9s linear infinite' } : undefined} /></button> : null}
+            <button ref={closeBtn} type="button" onClick={onClose} aria-label={t('common.close')} style={ctl}><Icon name="close" size={24} /></button>
+          </span>
         </div>
         <div style={{ flex: 1, minHeight: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, padding: '0 8px' }}>
           <button type="button" onClick={() => go(-1)} aria-label={t('activity.prevPhoto')} style={{ ...ctl, visibility: n > 1 ? 'visible' : 'hidden' }}><Icon name="chevron_left" size={24} /></button>
-          <div style={{ flex: 1, maxWidth: 640, aspectRatio: '4/5', maxHeight: '100%', borderRadius: 14, background: '#E8E1D8', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: '#75624B' }}>
+          <div style={{ flex: 1, maxWidth: 640, aspectRatio: '4/5', maxHeight: '100%', borderRadius: 14, background: '#E8E1D8', position: 'relative', overflow: 'hidden', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 8, color: 'var(--accent, #75624B)' }}>
             <span style={{ position: 'absolute', inset: 0 }}><PhotoImg photo={p} alt={caption} controls={real} /></span>
             {plain ? null : <span style={{ position: 'relative', marginTop: 'auto', marginBottom: real ? 64 : 16, pointerEvents: real ? 'none' : undefined, height: 30, padding: '0 12px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_BODY, color: '#24201C', display: 'flex', alignItems: 'center' }}>{isVideo ? t('activity.videoFrom') : t('activity.photoFrom')}{' '}{by}</span>}
             {real ? (
@@ -151,12 +168,12 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
                 {live1 ? <div key={'pg' + playKey} style={{ position: 'absolute', left: 0, right: 0, bottom: 0, height: 6, background: '#FFFFFF', transformOrigin: 'left center', animation: `cpProg ${p.durationSec || 10}s linear forwards` }} /> : null}
               </>
             ) : null}
-            {!family && hidden ? (
+            {hidden ? (
               <span style={{ position: 'absolute', top: 12, right: 12, height: 30, padding: '0 12px 0 8px', borderRadius: 8, background: '#24201C', color: '#FFFFFF', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                 <Icon name="visibility_off" size={18} fill={1} />{t('activity.hiddenBadge')}
               </span>
             ) : null}
-            {!family && pending ? (
+            {pending ? (
               <span style={{ position: 'absolute', top: 12, right: 12, height: 30, padding: '0 12px 0 8px', borderRadius: 8, background: '#F6ECD6', color: '#7A5510', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
                 <Icon name="hourglass_top" size={18} fill={1} />{t('activity.pendingBadge')}
               </span>
@@ -168,19 +185,10 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
             <span style={{ fontSize: 18 }}>{caption}</span>
             {plain ? null : <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{meta}</span>}
-            {!family && pending ? <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{t('activity.pendingMeta', { name: by })}</span> : null}
-            {!family && hidden && p.moderated ? <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{t('activity.hiddenBy', { name: modBy || t('activity.theClub') })}{p.moderated.reason ? ' · ' + reasonText(p.moderated.reason, t) : ''}</span> : null}
+            {pending ? <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{t('activity.pendingMeta', { name: by })}</span> : null}
+            {hidden && p.moderated ? <span style={{ fontSize: FONT_BODY, color: '#E8E1D8', lineHeight: 1.4 }}>{t('activity.hiddenBy', { name: modBy || t('activity.theClub') })}{p.moderated.reason ? ' · ' + reasonText(p.moderated.reason, t) : ''}</span> : null}
           </div>
-          {plain ? null : family ? (
-            <div style={{ display: 'flex', gap: 8 }}>
-              <button type="button" onClick={() => flash(t('activity.savedPhoto'))} style={{ flex: 1, height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
-                <Icon name="download" size={20} />{t('common.save')}
-              </button>
-              <button type="button" onClick={() => flash(t('activity.sharedPhoto'))} style={{ flex: 1, height: 48, borderRadius: 999, border: '1px solid #FFFFFF', background: 'transparent', color: '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer' }}>
-                <Icon name="share" size={20} />{t('common.share')}
-              </button>
-            </div>
-          ) : canModerate ? (
+          {plain ? null : canModerate ? (
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               {pending && canReview ? (
                 <>
@@ -192,11 +200,11 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
                   </button>
                 </>
               ) : null}
-              {p.kind === 'activity' ? null : ( // an activity picture is of the session: it has no member tags
+              {p.kind === 'solo' || p.kind === 'group' || p.kind === 'activity' ? ( // KC round 7: switch between a session picture and people (one: personal, more: group)
                 <button type="button" onClick={() => setSheet('tags')} style={{ flex: '1 1 140px', height: 48, borderRadius: 999, border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                  <Icon name="sell" size={20} />{t('activity.editTags')}
+                  <Icon name="sell" size={20} />{t('activity.editType')}
                 </button>
-              )}
+              ) : null}
               {!pending ? (
                 <button type="button" onClick={() => (hidden ? void restore(p.id, t('activity.shownToast')) : setSheet('hide'))} style={{ flex: '1 1 180px', height: 48, borderRadius: 999, border: '1px solid #FFFFFF', background: 'transparent', color: '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap' }}>
                   <Icon name={hidden ? 'visibility' : 'visibility_off'} size={20} />{hidden ? t('activity.showToFamilies') : t('activity.hideFromFamilies')}
@@ -234,26 +242,52 @@ export function PhotoViewer({ photos, startId, onClose, audience }: { photos: Ph
   );
 }
 
-/** Who is in the photo: toggle members, save as one retag. */
+/**
+ * KC round 7: the photo's type and who is in it. People: pick the names; one name makes it a personal photo, more a group photo. Session: a picture of the
+ * session itself (no names), and which session. Saved as one photo.setType.
+ */
 function TagsSheet({ open, onClose, photo, flash }: { open: boolean; onClose: () => void; photo: Photo; flash: (text: string) => void }) {
   const s = useClub();
   const t = useT();
+  const lang = useLang();
   const act = useAct();
+  const startType = photo.kind === 'activity' ? 'session' : 'people';
+  const [type, setType] = useState<'people' | 'session'>(startType);
   const [sel, setSel] = useState<string[]>(photo.memberIds);
+  const [activity, setActivity] = useState<string>(photo.activity ?? '');
   const [err, setErr] = useState('');
-  useResetOn(open ? photo.id : null, () => { setSel(photo.memberIds); setErr(''); });
+  useResetOn(open ? photo.id : null, () => { setType(startType); setSel(photo.memberIds); setActivity(photo.activity ?? ''); setErr(''); });
   const members = useMemo(() => live(s.members).filter((m) => !isPendingRow(m)).sort((a, b) => a.firstName.localeCompare(b.firstName)), [s.members]);
-  const same = sel.length === photo.memberIds.length && sel.every((id) => photo.memberIds.includes(id));
+  // the sessions on the photo's day first, then the photo's own, then the rest of the catalogue
+  const sessionNames = useMemo(() => {
+    const day = sessionsOn(s, photo.date).flatMap((x) => (x.cell && s.activities[x.cell.activityId] ? [s.activities[x.cell.activityId].name] : []));
+    const rest = live(s.activities).filter((a) => a.active).map((a) => a.name);
+    return uniq([...day, ...(photo.activity ? [photo.activity] : []), ...rest]);
+  }, [s, photo.date, photo.activity]);
+  const label = (name: string) => { const a = live(s.activities).find((x) => x.name === name); return a ? activityName(a, lang) : name; };
+  const same = type === startType && (type === 'people' ? sel.length === photo.memberIds.length && sel.every((id) => photo.memberIds.includes(id)) : activity === (photo.activity ?? ''));
+  const ok = type === 'people' ? sel.length > 0 : !!activity;
+  const typeName = type === 'session' ? t('activity.typeSession') : sel.length === 1 ? t('activity.typeSolo') : t('activity.typeGroup', { n: sel.length });
   const save = async () => {
-    const r = await act('photo.retag', { photoId: photo.id, memberIds: sel }, { silent: true });
-    if (r.ok) { flash(t('activity.tagsSaved')); onClose(); } else setErr(t(r.code, r.params));
+    const r = await act('photo.setType', type === 'people' ? { photoId: photo.id, type, memberIds: sel } : { photoId: photo.id, type, activity }, { silent: true });
+    if (r.ok) { flash(t('activity.typeSaved', { type: typeName })); onClose(); } else setErr(t(r.code, r.params));
   };
   return (
-    <Sheet open={open} onClose={onClose} title={t('activity.tagsTitle')}>
-      <MemberPicker members={members} value={sel} onChange={setSel} selectedLabel={t('activity.tagsTitle')} emptyLabel={t('activity.nobodyAdded')} />
-      {!sel.length ? <Note tone="ochre" icon="info">{t('activity.tagsNone')}</Note> : null}
+    <Sheet open={open} onClose={onClose} title={t('activity.typeTitle')} footer={<Button full disabled={same || !ok} onClick={save}>{t('activity.typeSave')}</Button>}>
+      <Segmented<'people' | 'session'> label={t('activity.typeTitle')} value={type} onChange={setType}
+        items={[{ value: 'people', label: t('activity.typePeople') }, { value: 'session', label: t('activity.typeSession') }]} />
+      {type === 'people' ? (
+        <>
+          <MemberPicker members={members} value={sel} onChange={setSel} selectedLabel={t('activity.tagsTitle')} emptyLabel={t('activity.nobodyAdded')} />
+          {sel.length ? <Note tone="cream" icon={sel.length === 1 ? 'person' : 'groups'}>{typeName}</Note> : <Note tone="ochre" icon="info">{t('activity.err.needPeople')}</Note>}
+        </>
+      ) : (
+        <>
+          <Select label={t('activity.typeWhich')} value={activity} onChange={setActivity} placeholder={t('activity.typeWhich')} options={sessionNames.map((n) => ({ value: n, label: label(n) }))} />
+          <Note tone="cream" icon="photo_camera">{t('activity.typeSessionHint')}</Note>
+        </>
+      )}
       {err ? <Note tone="rust" icon="error">{err}</Note> : null}
-      <Button full disabled={same || !sel.length} onClick={save}>{t('activity.saveTags')}</Button>
     </Sheet>
   );
 }

@@ -117,31 +117,33 @@ describe('Tasks: my day', () => {
 });
 
 describe('Tasks: management', () => {
-  it('Team: the roles in a list with their people and duty score, the chosen role beside it with tabs; housekeeping has no app login (additional tasks only)', async () => {
+  it('Team: the roles in a list with their people and duty score, the chosen role beside it with tabs; a role with no app login and no duties on shows its additional tasks only', async () => {
     openClub('s9', 'mgmt');
+    // finance: Fransiska has no app access and every finance duty is switched off
+    const fin = produce(useReplica.getState().view!, (d) => { d.staff.s10.appAccess = false; d.club.settings.duties = Object.fromEntries(DUTIES.filter((x) => x.role === 'finance').map((x) => [x.id, { off: true }])); });
+    useReplica.setState({ confirmed: fin, view: fin });
     await show(<Tasks />, '/tasks?view=team');
     expect(tab(/Team/)?.getAttribute('aria-selected')).toBe('true');
     const roles = Array.from(document.querySelectorAll('[data-role-row]')).map((e) => e.getAttribute('data-role-row'));
-    expect(roles).toEqual(['lobby', 'nurse', 'activity', 'kitchen', 'housekeeping', 'driver', 'finance', 'mgmt']);
-    const hk = document.querySelector('[data-role-row="housekeeping"]')!;
-    expect(hk.textContent).toContain('no app login');
-    expect(hk.textContent).toContain('0 of 2 done');
+    expect(roles).toEqual(['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt']);
+    const fr = document.querySelector('[data-role-row="finance"]')!;
+    expect(fr.textContent).toContain('no app login');
+    expect(fr.textContent).toContain('0 of 1 done');
     expect(document.querySelector('[data-role-row="activity"]')?.textContent).toMatch(/0 of 6 done/); // two session pictures, two joined marks, lunch, mood
     // one role's details at a time, beside the list (the first late role opens first)
     expect(document.querySelectorAll('[data-role]')).toHaveLength(1);
     await click(document.querySelector('[data-role-row="finance"]'));
     expect(document.querySelector('[data-role]')?.getAttribute('data-role')).toBe('finance');
-    await click(tab(/^Additional tasks/));
+    // no duties on: no tabs, the additional tasks straight away
+    expect(tab(/^Duties/)).toBeUndefined();
     expect(document.querySelector('[data-role="finance"] [data-task="task-finance-bank"]')?.textContent).toContain('Overdue');
     await click(document.querySelector('[data-role-row="kitchen"]'));
-    expect(document.querySelector('[data-task="task-kitchen-fridge"]')?.textContent).toContain('08:12'); // the tab stays on additional tasks
+    await click(tab(/^Additional tasks/));
+    expect(document.querySelector('[data-task="task-kitchen-fridge"]')?.textContent).toContain('08:12');
     await click(tab(/^Duties/));
     const lunch = document.querySelector('[data-role="kitchen"] [data-duty="kitchen.lunchPhoto"]')!;
     expect(lunch.textContent).toContain('Photo of lunch');
     expect(lunch.textContent).toContain('0 of 1');
-    // housekeeping has only additional tasks: no tabs, the tasks straight away
-    await click(document.querySelector('[data-role-row="housekeeping"]'));
-    expect(document.querySelectorAll('[data-role="housekeeping"] [data-task]').length).toBe(2);
   });
 
   it('Team: a day, a week or a month; a past day is read from the data and a duty only today can tell shows a dash', async () => {
@@ -164,7 +166,7 @@ describe('Tasks: management', () => {
   it('Manage: the roles in a list; a role’s general duties (switch and time) and its additional tasks in tabs; Add a task for that role', async () => {
     openClub('s9', 'mgmt');
     await show(<Tasks />, '/tasks?view=manage');
-    expect(document.querySelectorAll('[data-role-row]')).toHaveLength(8);
+    expect(document.querySelectorAll('[data-role-row]')).toHaveLength(6);
     expect(document.querySelector('[data-role-row="nurse"]')?.textContent).toMatch(/2 of 2 duties on · 3 additional tasks/);
     // the first role is open on its general duties, every one with a switch and (while on) a time
     expect(document.querySelector('[data-role]')?.getAttribute('data-role')).toBe('lobby');

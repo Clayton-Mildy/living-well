@@ -18,16 +18,18 @@ import { useMe } from '../../../lib/me';
 import { docLabel } from '../lib';
 import { ProfilePhotoField } from '../ProfilePhoto';
 import { PaperFormField, type PaperFile } from '../PaperForm';
+import type { KtpKind, KtpUploads } from '@cp/shared';
 import { useApplicationForm } from '../ApplicationForm';
-import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, PeSection, OptionalTime, RegCareFields, RegPersonalFields, RelationChips, SelectField, TitleName, YesNo, joinDrugs, regDraftOf, regOfDraft, useDraft, type MedRow, type RegDraft } from './forms';
+import { AllergyFields, CarerFields, DementiaFields, DialogBody, ktpFor, TextField, HealthFields, MedsEditor, PeSection, OptionalTime, RegCareFields, RegPersonalFields, RelationChips, SelectField, TitleName, joinDrugs, regDraftOf, regOfDraft, useDraft, type MedRow, type RegDraft } from './forms';
 
 interface AddDraft {
-  title: Title; name: string; dob: string; address: string; usual: string; nanny: boolean; nannyName: string; spouseId: string; photo: string;
+  title: Title; name: string; dob: string; address: string; usual: string; nanny: boolean; nannyName: string; nannyNik: string; spouseId: string; photo: string;
   contactMode: 'new' | 'existing'; existingId: string; contact: string; rel: Relation; phone: string; primary: boolean;
   plan: Plan; start: string;
   conditions: string[]; diabetic: boolean; meds: MedRow[]; food: FoodAllergen[]; foodOther: string; drug: string[]; drugOther: string; mobility: Mobility | 'none'; diet: Diet[]; care: string;
   docs: DocType[]; form: PaperFile | null; consentData: boolean; consentFace: boolean; note: string;
   /** the application form's extra answers */ reg: RegDraft;
+  /** KC round 10: photos of the ID cards */ ktp: KtpUploads;
 }
 
 export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -42,10 +44,11 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
   const hours = { open: s.club.settings.open, last: toHM(toMin(s.club.settings.close) - 1) };
   const firstDay = useMemo(() => nextOpenDay(s, nextMonday(today), true), [s, today]);
   const [d, set] = useDraft<AddDraft>(() => ({
-    title: 'Oma', name: '', dob: '', address: '', usual: '', nanny: false, nannyName: '', spouseId: '', photo: '',
+    title: 'Oma', name: '', dob: '', address: '', usual: '', nanny: false, nannyName: '', nannyNik: '', spouseId: '', photo: '',
     contactMode: 'new', existingId: '', contact: '', rel: 'daughter', phone: '', primary: true, plan: 'flex', start: firstDay,
-    conditions: [], diabetic: false, meds: [], food: [], foodOther: '', drug: [], drugOther: '', mobility: 'none', diet: [], care: '', docs: [], form: null, consentData: false, consentFace: true, note: '', reg: regDraftOf(),
+    conditions: [], diabetic: false, meds: [], food: [], foodOther: '', drug: [], drugOther: '', mobility: 'none', diet: [], care: '', docs: [], form: null, consentData: false, consentFace: true, note: '', reg: regDraftOf(), ktp: {},
   }));
+  const setKtp = (kind: KtpKind, f: PaperFile | null) => set({ ktp: { ...d.ktp, [kind]: f ?? undefined } });
   const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
   const printer = useApplicationForm();
   const [tried, setTried] = useState(false);
@@ -55,16 +58,16 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
 
   const input = (): NewMemberInput & { registration?: MemberRegistration } => ({
     ...(d.photo ? { photoMediaId: d.photo } : {}),
-    title: d.title, name: d.name.trim(), dob: d.dob, address: d.address.trim(), usualArrival: d.usual, nanny: d.nanny ? { name: d.nannyName.trim() } : null, spouseId: d.spouseId || null,
+    title: d.title, name: d.name.trim(), dob: d.dob, address: d.address.trim(), usualArrival: d.usual, nanny: d.nanny ? { name: d.nannyName.trim(), nik: d.nannyNik.replace(/\s/g, '') } : null, spouseId: d.spouseId || null, ...(ktpFor(d.ktp, d.reg.ids, d.nanny) ? { ktp: ktpFor(d.ktp, d.reg.ids, d.nanny) } : {}),
     plan: d.plan, start: d.start,
     contact: d.contactMode === 'existing' ? { existingId: d.existingId, name: '', phone: '', relation: d.rel, primary: d.primary } : { name: d.contact.trim(), phone: d.phone.trim() ? e164(d.phone) : '', relation: d.rel, primary: d.primary },
     health: {
       conditions: d.conditions, diabetic: d.diabetic, food: d.food, foodOther: d.foodOther.trim(), drugs: joinDrugs(d), mobility: d.mobility === 'none' ? null : d.mobility, diet: d.diet,
       meds: d.meds.filter((x) => x.name.trim()).map((x) => ({ name: x.name.trim(), dose: x.dose.trim(), timing: x.timing })),
     },
-    careInstructions: d.care.trim(), docs: d.docs.filter((x) => (x !== 'nannyKtp' || d.nanny) && x !== 'membershipForm'), formMediaId: d.form?.mediaId ?? '', formFileName: d.form?.fileName ?? '', consent: { data: d.consentData, face: d.consentFace }, ...(regOfDraft(d.reg) ? { registration: regOfDraft(d.reg) } : {}), ...(d.note.trim() ? { note: d.note.trim() } : {}),
+    careInstructions: d.care.trim(), docs: d.docs.filter((x) => (x !== 'nannyKtp' || d.nanny) && x !== 'membershipForm'), formMediaId: d.form?.mediaId ?? '', formFileName: d.form?.fileName ?? '', consent: { data: d.consentData, face: d.consentFace }, ...(regOfDraft(d.reg, d.nanny) ? { registration: regOfDraft(d.reg, d.nanny) } : {}), ...(d.note.trim() ? { note: d.note.trim() } : {}),
   });
-  const issues: FieldIssue[] = validateNewMember(input(), today).concat(validateRegistration(regOfDraft(d.reg)), d.contactMode === 'existing' && !d.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []);
+  const issues: FieldIssue[] = validateNewMember(input(), today).concat(validateRegistration(regOfDraft(d.reg, d.nanny)), d.contactMode === 'existing' && !d.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []);
   const err = (...fields: string[]) => (tried ? (() => { const i = issues.find((x) => fields.includes(x.field)); return i ? t(i.code, i.params) : ''; })() : '');
   const mgmt = role === 'mgmt';
   const { isPhone } = useDevice();
@@ -90,8 +93,8 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
         <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} error={err('dob')} />
         <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} />
         <OptionalTime label={t('profile.f.usualOpt')} value={d.usual} onChange={(v) => set({ usual: v })} min={hours.open} max={hours.last} error={err('usualArrival')} t={t} />
-        <YesNo label={t('profile.comesWithNanny')} value={d.nanny} onChange={(v) => set({ nanny: v })} t={t} />
-        {d.nanny ? <TextField label={t('profile.nannyName')} value={d.nannyName} onChange={(v) => set({ nannyName: v })} error={err('nannyName')} /> : null}
+        {/* KC round 10: with a nanny (suster), the nanny's NIK is required */}
+        <CarerFields d={d} set={set} t={t} tried={tried} ktp={d.ktp} setKtp={setKtp} />
         <SelectField label={t('profile.f.spouse')} value={d.spouseId} onChange={(v) => set({ spouseId: v })} placeholder={t('profile.noSpouse')} options={members.map((m) => ({ value: m.id, label: memberName(m) }))} />
       </PeSection>
       <PeSection native={isPhone} label={t('profile.sec.regPersonal')}>
@@ -118,7 +121,8 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
         <DateField label={t('profile.f.start')} value={d.start} onChange={(v) => set({ start: v })} min={today} disabledDate={(x) => !isWeekday(x) || !isOpen(s, x)} error={err('start')} />
       </PeSection>
       <PeSection native={isPhone} label={t('profile.sec.health')}>
-        <HealthFields d={d} set={set} t={t} />
+        {/* KC round 10: dementia (it affects the fee) in place of the Diabetic toggle at registration */}
+        <HealthFields d={d} set={set} t={t} instead={<DementiaFields d={d.reg} set={setReg} t={t} />} />
         <div style={{ fontWeight: 500 }}>{t('profile.medicines')}</div>
         <MedsEditor rows={d.meds} onChange={(meds) => set({ meds })} t={t} showErrors={tried} />
       </PeSection>
@@ -127,7 +131,7 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
         <TextField label={t('profile.careInstructions')} value={d.care} onChange={(v) => set({ care: v })} multiline rows={3} hint={t('profile.careHint')} />
       </PeSection>
       <PeSection native={isPhone} label={t('profile.sec.regCare')}>
-        <RegCareFields d={d.reg} set={setReg} t={t} />
+        <RegCareFields d={d.reg} set={setReg} t={t} err={err} dementia={false} ktp={d.ktp} setKtp={setKtp} />
       </PeSection>
       <PeSection native={isPhone} label={t('profile.paperTitle')}>
         <div><Button variant="secondary" size={44} icon="print" onClick={() => printer.open(applicationDataFromInput(s, input(), today))}>{t('form.printToSign')}</Button></div>
@@ -152,7 +156,7 @@ export function AddMemberDialog({ open, onClose }: { open: boolean; onClose: () 
         <PhoneScreen open={open} onClose={onClose} label={t('members.addTitle')} back={t('nav.members')} footer={<div style={{ display: 'flex', gap: 10 }}>{foot({ flex: '1 1 0' })}</div>}>
           <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4 }}>
             <Eyebrow>{t('members.newMember')}</Eyebrow>
-            <h2 style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{t('members.addTitle')}</h2>
+            <h2 className="cp-serif" style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{t('members.addTitle')}</h2>
           </div>
           {body}
         </PhoneScreen>

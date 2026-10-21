@@ -8,7 +8,7 @@ import { requireMember, shortOf } from './helpers';
 import { allocate, balanceOf, invoiceTotal, nextInvoiceNumber, paidOn, runDone } from '../rules/billing';
 import { isPrimaryFor, primaryContact } from '../rules/core';
 import { BANKS, XERO_DELAY_MIN, dtMinutes, invoiceVa, receiptOfRequest, refundableOn, runPlan } from '../rules/finance';
-import { bool, idList, isoDate, obj, oneOf, optText, pickId, rupiah, rupiahOrZero, signedRupiah, text, yearMonth, bad } from '../rules/financeInput';
+import { bool, idList, isoDate, obj, oneOf, optText, pickId, rupiah, rupiahOrZero, signedRupiah, text, yearMonth } from '../rules/financeInput';
 import { addDays, rp, uniq, weekStart, ym } from '../util';
 
 const finMgmt = (u: User) => hasRole(u, 'finance', 'mgmt');
@@ -109,12 +109,12 @@ function issueRun(d: D, ctx: Ctx, period: YM, auto: boolean) {
 }
 
 // ---------- payments ----------
-const METHODS = ['dokuVa', 'bankTransferSgd', 'revolut', 'cash', 'other'] as const;
-function addPayment(d: D, ctx: Ctx, p: { memberId: string; amount: number; method: Payment['method']; ref?: string; bank?: Bank; foreign?: Payment['foreign']; allocations: Payment['allocations'] }): Payment {
+const METHODS = ['dokuVa', 'bankTransfer', 'cash', 'other'] as const;
+function addPayment(d: D, ctx: Ctx, p: { memberId: string; amount: number; method: Payment['method']; ref?: string; bank?: Bank; allocations: Payment['allocations'] }): Payment {
   const id = ctx.id('pay');
   const pay: Payment = {
     ...base(ctx, id), memberId: p.memberId, method: p.method, amount: p.amount,
-    ...(p.foreign ? { foreign: p.foreign } : {}), ...(p.ref ? { ref: p.ref } : {}), ...(p.bank ? { bank: p.bank } : {}),
+    ...(p.ref ? { ref: p.ref } : {}), ...(p.bank ? { bank: p.bank } : {}),
     receivedOn: ctx.today, receivedAt: ctx.now, allocations: p.allocations, xero: 'pending', by: ctx.actor,
   };
   d.payments[id] = pay;
@@ -238,18 +238,12 @@ export const financeActions: ActionDef[] = [
   }),
 
   // ---------- payments ----------
-  defineAction<{ memberId: string; amount: number; method: Payment['method']; ref?: string; invoiceId?: string; foreign?: { ccy: 'SGD' | 'EUR'; amount: number } }>({
+  defineAction<{ memberId: string; amount: number; method: Payment['method']; ref?: string; invoiceId?: string }>({
     name: 'payment.record',
     can: finMgmt,
     parse: (raw) => {
       const o = obj(raw);
-      let foreign: { ccy: 'SGD' | 'EUR'; amount: number } | undefined;
-      if (o.foreign !== undefined && o.foreign !== null) {
-        const f = obj(o.foreign);
-        if (typeof f.amount !== 'number' || !Number.isFinite(f.amount) || f.amount <= 0 || f.amount > 1e9) bad();
-        foreign = { ccy: oneOf(f.ccy, ['SGD', 'EUR'] as const), amount: Math.round((f.amount as number) * 100) / 100 };
-      }
-      return { memberId: text(o.memberId, 80), amount: rupiah(o.amount), method: oneOf(o.method, METHODS), ref: optText(o.ref, 120), invoiceId: optText(o.invoiceId, 80), foreign };
+      return { memberId: text(o.memberId, 80), amount: rupiah(o.amount), method: oneOf(o.method, METHODS), ref: optText(o.ref, 120), invoiceId: optText(o.invoiceId, 80) };
     },
     run(d, input, ctx) {
       requireMember(d, input.memberId, ctx);
@@ -262,7 +256,7 @@ export const financeActions: ActionDef[] = [
       }
       // the chosen invoice first, then the oldest due; what is left over stays on the account as credit
       const { allocations, credit } = allocate(s, input.memberId, input.amount, ctx.today, input.invoiceId);
-      const pay = addPayment(d, ctx, { memberId: input.memberId, amount: input.amount, method: input.method, ref: input.ref, foreign: input.foreign, allocations });
+      const pay = addPayment(d, ctx, { memberId: input.memberId, amount: input.amount, method: input.method, ref: input.ref, allocations });
       const numbers = allocations.map((a) => a.invoiceId).join(', ') || '—';
       const name = shortOf(d, input.memberId);
       const amount = rp(input.amount);

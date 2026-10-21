@@ -53,7 +53,7 @@ export function HistoryTab({ p }: { p: P }) {
           const d = detail(a);
           return (
             <div key={a.id} style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 0', borderTop: ai ? HAIR : 'none' }}>
-              <Icon name={a.icon || 'history'} size={20} color="#75624B" style={{ paddingTop: 1 }} />
+              <Icon name={a.icon || 'history'} size={20} color="var(--accent, #75624B)" style={{ paddingTop: 1 }} />
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
                 <span style={{ fontSize: 15, lineHeight: '22px' }}>{text(a)}</span>
                 {d ? <span style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{d}</span> : null}
@@ -64,7 +64,7 @@ export function HistoryTab({ p }: { p: P }) {
         })}
         {!hasCreated && mode === 'changes' ? (
           <div style={{ display: 'flex', gap: 12, alignItems: 'flex-start', padding: '14px 0', borderTop: paged.rows.length ? HAIR : 'none' }}>
-            <Icon name="person_add" size={20} color="#75624B" style={{ paddingTop: 1 }} />
+            <Icon name="person_add" size={20} color="var(--accent, #75624B)" style={{ paddingTop: 1 }} />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 15, lineHeight: '22px' }}>{t('profile.history.recordCreated')}</span>
               <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{actorName(s, m.createdBy)} · {whenText(fmt.fds, today, m.createdAt, t)}</span>

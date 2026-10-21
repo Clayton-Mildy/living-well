@@ -22,7 +22,7 @@ export function Field({ label, value, onChange, hint, autoFocus, inputMode, maxL
     <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>
       {label ? <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{label}</span> : null}
       <input ref={ref} value={value} onChange={(e) => onChange(e.target.value)} inputMode={inputMode} maxLength={maxLength} placeholder={placeholder}
-        style={{ height: 52, flex: 'none', border: '1px solid #DDD1C2', borderRadius: 12, background: '#FFFFFF', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', width: '100%', minWidth: 0 }} />
+        className="cp-input cp-fill" style={{ height: 52, flex: 'none', border: 'none', borderRadius: 12, background: 'var(--fill, #F4F4F5)', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', width: '100%', minWidth: 0 }} />
       {hint ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{hint}</span> : null}
     </label>
   );
@@ -54,7 +54,7 @@ export const drugLabel = (t: TFn, d: DrugAllergy) => (d.startsWith('other:') ? d
 /** `food` = false leaves out food allergies and diets (the Arrivals list rows: the kitchen has them). */
 export function memberFlags(t: TFn, m: Member, full = false, food = true): Flag[] {
   const rust = { bg: '#F9E3DB', ic: '#9A3D24' };
-  const linen = { bg: '#F3EEE8', ic: '#24201C' };
+  const linen = { bg: 'var(--fill, #F4F4F5)', ic: '#24201C' };
   const out: Flag[] = food ? m.health.food.map((a) => ({ icon: 'no_food', label: t('lobby.food.' + a), ...rust })) : [];
   if (food && m.health.foodOther) out.push({ icon: 'no_food', label: m.health.foodOther, ...rust });
   if (m.health.mobility) out.push({ icon: MOBILITY_ICON[m.health.mobility], label: t('lobby.mobility.' + m.health.mobility), ...linen });
@@ -89,7 +89,7 @@ export function DotItem({ color, children }: { color: string; children: ReactNod
 export function FlagChip({ f, size = 'card' }: { f: Flag; size?: 'card' | 'row' }) {
   const row = size === 'row';
   return (
-    <span style={{ minHeight: row ? 28 : 32, padding: row ? '4px 10px' : '5px 12px', borderRadius: 10, background: f.bg, color: '#24201C', fontSize: row ? FONT_SMALL : FONT_BODY, lineHeight: 1.3, display: 'inline-flex', alignItems: 'center', gap: row ? 4 : 6, maxWidth: '100%', boxSizing: 'border-box' }}>
+    <span className={f.bg === 'var(--fill, #F4F4F5)' ? 'cp-fill' : undefined} style={{ minHeight: row ? 28 : 32, padding: row ? '4px 10px' : '5px 12px', borderRadius: 10, background: f.bg, color: '#24201C', fontSize: row ? FONT_SMALL : FONT_BODY, lineHeight: 1.3, display: 'inline-flex', alignItems: 'center', gap: row ? 4 : 6, maxWidth: '100%', boxSizing: 'border-box' }}>
       <Icon name={f.icon} size={row ? 16 : 18} color={f.ic} />
       {f.label}
     </span>
@@ -107,11 +107,11 @@ export function ReadingBadge({ t, r }: { t: TFn; r: Reading }) {
   );
 }
 
-const callStyle: CSSProperties = { width: 44, height: 44, borderRadius: 999, border: '1px solid #E4DACD', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', textDecoration: 'none', flex: 'none', background: '#FFFFFF' };
+const callStyle: CSSProperties = { width: 44, height: 44, borderRadius: 999, border: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent, #75624B)', textDecoration: 'none', flex: 'none', background: 'var(--fill, #F4F4F5)' };
 /** A real tel: link (44px round button) for any phone number we show. */
 export function CallLink({ t, name, phone }: { t: TFn; name: string; phone: string }) {
   return (
-    <a href={`tel:${phone}`} aria-label={t('lobby.callAria', { name })} className="h-cream" style={callStyle}>
+    <a href={`tel:${phone}`} aria-label={t('lobby.callAria', { name })} className="h-fill cp-fill" style={callStyle}>
       <Icon name="call" size={20} />
     </a>
   );

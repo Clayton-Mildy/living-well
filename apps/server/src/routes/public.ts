@@ -2,8 +2,11 @@
 // (simulated): GET shows what to answer, POST sends the answer. The answer goes through the normal action path as the system, so it is
 // checked, saved, and broadcast to everyone signed in like any other change (venue.rate in packages/shared/src/actions/club.ts).
 import type { Context, Hono } from 'hono';
-import { DomainError, ratingLinkOf, systemUser } from '@cp/shared';
+import { DomainError, priceOn, ratingLinkOf, systemUser } from '@cp/shared';
+import { enquiryByFormToken, formLinkState, onlineDraftOf } from '@cp/shared/rules/enquiries';
 import { getClubs, runAction } from '../state';
+import { clockInfo } from '../clock';
+import { checkUpload, saveMedia } from '../media';
 
 /** The clubhouse and rating link a token belongs to. A token matches at most one booking. */
 function findLink(token: string) {
@@ -16,7 +19,63 @@ function findLink(token: string) {
 /** A rating link is private: never cached, never indexed. */
 const priv = (c: Context) => { c.header('Cache-Control', 'no-store'); c.header('X-Robots-Tag', 'noindex'); };
 
+/** KC round 10: the lead an online registration token belongs to. */
+function findForm(token: string) {
+  for (const s of Object.values(getClubs())) {
+    const e = enquiryByFormToken(s, token);
+    if (e) return { s, e };
+  }
+  return null;
+}
+
 export function registerPublicRoutes(app: Hono) {
+  // ----- the online registration form (/form/:token): a pre-fill for the paper form -----
+  app.get('/api/public/form/:token', (c) => {
+    priv(c);
+    const found = findForm(c.req.param('token'));
+    if (!found) return c.json({ code: 'err.notFound' }, 404);
+    const { s, e } = found;
+    const clk = clockInfo();
+    const f = e.form!;
+    const state = formLinkState(f, `${clk.today}T${clk.now}`);
+    const price = priceOn(s, clk.today);
+    // anyone holding the link sees only what the form itself holds: the lead's name and contact, and what the family typed in before
+    return c.json({ state, club: s.club.name, today: clk.today, draft: onlineDraftOf(e), submittedAt: f.submittedAt ?? null, expiresAt: f.expiresAt, prices: { flex: price.flex, gold: price.gold, flexQuota: s.club.settings.flexQuota } });
+  });
+  // the family photographs the ID cards from the form: an image or a PDF (never a video), saved as the club's media like any upload
+  app.post('/api/public/form/:token/media', async (c) => {
+    priv(c);
+    const found = findForm(c.req.param('token'));
+    if (!found) return c.json({ code: 'err.notFound' }, 404);
+    const clk = clockInfo();
+    const state = formLinkState(found.e.form!, `${clk.today}T${clk.now}`);
+    if (state !== 'sent' && state !== 'opened') return c.json({ code: 'enq.err.formExpired' }, 422);
+    const body = (await c.req.json().catch(() => ({}))) as { mime?: unknown; data?: unknown };
+    if (typeof body.mime === 'string' && body.mime.startsWith('video/')) return c.json({ code: 'common.mediaType' }, 415);
+    const r = checkUpload(body ?? {});
+    if (!r.ok) return c.json({ code: r.code }, r.status);
+    const id = await saveMedia(found.s.clubId, 'system', r.mime, r.bytes);
+    return c.json({ id, url: `/api/media/${id}`, bytes: r.bytes.length }, 201);
+  });
+  app.post('/api/public/form/:token', async (c) => {
+    priv(c);
+    const token = c.req.param('token');
+    const found = findForm(token);
+    if (!found) return c.json({ code: 'err.notFound' }, 404);
+    if (Number(c.req.header('content-length') || 0) > 40000) return c.json({ code: 'err.invalid', params: { field: 'body' } }, 413);
+    const body = ((await c.req.json().catch(() => ({}))) ?? {}) as { action?: string; draft?: unknown };
+    const name = body.action === 'open' ? 'enquiry.formOpen' : body.action === 'submit' ? 'enquiry.formSubmit' : null;
+    if (!name) return c.json({ code: 'err.invalid', params: { field: 'action' } }, 422);
+    try {
+      const r = await runAction(found.s.clubId, name, { token, ...(body.draft !== undefined ? { draft: body.draft } : {}) }, systemUser(found.s.clubId), `form-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`);
+      return c.json({ ok: true, rev: r.rev });
+    } catch (e) {
+      if (e instanceof DomainError) return c.json({ code: e.code, params: e.params }, 422);
+      console.error('form failed:', e instanceof Error ? e.message : e);
+      return c.json({ code: 'err.server' }, 500);
+    }
+  });
+
   app.get('/api/public/rate/:token', (c) => {
     priv(c);
     const found = findLink(c.req.param('token'));

@@ -43,5 +43,5 @@ export const members: Same<typeof EN> = {
   'err.notEnded': 'Keanggotaan ini masih aktif.',
   'err.formRequired': 'Lampirkan formulir pendaftaran bertanda tangan.',
   'err.emailInvalid': 'Alamat email itu tampaknya tidak benar.', 'err.regPhoneInvalid': 'Nomor telepon itu tampaknya tidak benar. Gunakan +62… atau 08….',
-  'err.postcodeInvalid': 'Kodepos terdiri dari 5 angka.', 'err.rtRwInvalid': 'Periksa RT/RW, misalnya 004/002.',
+  'err.nikInvalid': 'NIK terdiri dari 16 angka.', 'err.nannyNikRequired': 'Isi NIK pengasuh (16 angka).', 'err.postcodeInvalid': 'Kodepos terdiri dari 5 angka.', 'err.rtRwInvalid': 'Periksa RT/RW, misalnya 004/002.',
 };

@@ -33,6 +33,7 @@ async function otherSession(browser: Browser) {
 /** A staff row in the People list (eight a page): look on the pages until it shows. */
 async function staffRow(page: Page, id: string) {
   const row = page.locator(`[data-staff="${id}"]`);
+  await page.locator('[data-staff]').first().waitFor(); // the list has loaded
   for (const n of [0, 1, 2]) {
     if (n) await goToPage(page, n, 'Staff pages');
     if (await row.count()) return row;
@@ -203,13 +204,13 @@ test('broadcast: audiences are people, the preview follows the chosen recipient,
   const c = watchConsole(page);
   await signIn(page, 's9', '/broadcast');
   await expect(page.getByRole('heading', { name: 'Broadcast', level: 1 })).toBeVisible();
-  // audience counts are real people with a phone (6 families, 4 open leads, 10 staff)
+  // audience counts are real people with a phone (6 families, 4 open leads, 8 staff)
   await expect(page.getByRole('button', { name: 'Families · 6' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Enquiries · 4' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Staff · 10' })).toBeVisible();
-  await page.getByRole('button', { name: 'Staff · 10' }).click();
+  await expect(page.getByRole('button', { name: 'Staff · 8' })).toBeVisible();
+  await page.getByRole('button', { name: 'Staff · 8' }).click();
   await expect(page.getByRole('button', { name: 'Families · 6' })).toBeVisible();
-  await page.getByRole('button', { name: 'Staff · 10' }).click(); // off again
+  await page.getByRole('button', { name: 'Staff · 8' }).click(); // off again
   // the preview is for a chosen recipient, not a fixed name
   await page.getByRole('button', { name: 'Club update' }).click();
   await page.getByPlaceholder('Our new garden room opens on Monday.').fill('the garden room opens on Monday');
@@ -297,10 +298,7 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   const c = watchConsole(page);
   await signIn(page, 's9', '/hr');
   await expect(page.getByRole('heading', { name: 'People', level: 1 })).toBeVisible();
-  await expect(page.locator('[data-staff]')).toHaveCount(8); // eight a page, ten people
-  await goToPage(page, 2, 'Staff pages');
-  await expect(page.locator('[data-staff]')).toHaveCount(2);
-  await goToPage(page, 1, 'Staff pages');
+  await expect(page.locator('[data-staff]')).toHaveCount(8); // eight people: one page
   await assertNoHorizontalScroll(page);
 
   await page.getByRole('button', { name: 'Add staff member' }).click();
@@ -309,9 +307,9 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   await expect(dlg.getByText('Please check the highlighted fields.').first()).toBeVisible();
   await dlg.getByLabel(/^Name/).fill('Wulan Sari');
   await dlg.getByLabel('Known as').fill('Bu Wulan');
-  await dlg.getByLabel('Job title').fill('Housekeeping');
+  await dlg.getByLabel('Job title').fill('Kitchen helper');
   await dlg.getByLabel('Mobile (WhatsApp)').fill('0811 2201 7788');
-  await dlg.getByRole('button', { name: 'Housekeeping', exact: true }).click();
+  await dlg.getByRole('button', { name: 'Kitchen & F&B', exact: true }).click();
   await pickDate(page, /^End/, '2027-10-31');
   await dlg.getByLabel('KTP, last 4 digits').fill('4411');
   await dlg.getByLabel('Monthly salary').fill('4800000');
@@ -321,7 +319,7 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   await expect(toast(page, 'Wulan Sari added to the team.')).toBeVisible();
   await expect(page.locator('[data-staff="s11"]')).toBeVisible();
   await expect(page.getByRole('heading', { name: 'Wulan Sari', level: 2 })).toBeVisible();
-  await expect(page.getByText('Housekeeping · +62 811-2201-7788')).toBeVisible();
+  await expect(page.getByText('Kitchen helper · +62 811-2201-7788')).toBeVisible();
 
   // duplicate numbers are refused (one number, one sign-in)
   if (isPhone(page)) await page.getByRole('button', { name: 'Back' }).click();
@@ -339,17 +337,20 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   await (await staffRow(page, 's11')).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   const edit = page.getByRole('dialog', { name: 'Wulan Sari' });
-  await edit.getByLabel('Job title').fill('Head of housekeeping');
+  await edit.getByLabel('Job title').fill('Senior kitchen helper');
   await edit.getByLabel('Salary').first().fill('5200000');
   await edit.getByRole('button', { name: 'Save changes' }).click();
   await expect(toast(page, 'Staff record saved.')).toBeVisible();
-  await expect(page.getByText('Head of housekeeping · +62 811-2201-7788')).toBeVisible();
+  await expect(page.getByText('Senior kitchen helper · +62 811-2201-7788')).toBeVisible();
 
   // deactivate, then reactivate
   await page.getByRole('button', { name: 'Deactivate' }).click();
   await page.getByRole('dialog', { name: 'Deactivate Wulan Sari?' }).getByRole('button', { name: 'Deactivate' }).click();
   await expect(toast(page, 'Wulan Sari is deactivated.')).toBeVisible();
-  await expect(page.locator('[data-staff="s11"]')).toContainText('Inactive');
+  // inactive people are listed last: the ninth person is on the second page
+  if (isPhone(page)) await page.getByRole('button', { name: 'Back' }).click();
+  await expect(await staffRow(page, 's11')).toContainText('Inactive');
+  if (isPhone(page)) await (await staffRow(page, 's11')).click();
   await page.getByRole('button', { name: 'Reactivate' }).click();
   await expect(toast(page, 'Wulan Sari is active again.')).toBeVisible();
   // you cannot deactivate yourself
@@ -359,42 +360,44 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   c.assertClean();
 });
 
-test('people: give housekeeping (s4) app access and she signs in to Requests; switch it off and she cannot', async ({ page, browser, request }) => {
+test('people: give a staff member app access and she signs in; switch it off and she cannot', async ({ page, browser, request }) => {
   const c = watchConsole(page);
-  // before: no access
-  const before = await request.post('/api/verify', { data: { userId: 's4', code: '000000' } });
+  // Fransiska (finance) starts without access: management has switched it off
+  const off = await request.post('/api/actions/staff.setAppAccess', { headers: { 'x-user-id': 's9' }, data: { mutationId: 'e2e-acc-off', club: 'citra', input: { staffId: 's10', on: false } } });
+  expect(off.ok()).toBeTruthy();
+  const before = await request.post('/api/verify', { data: { userId: 's10', code: '000000' } });
   expect(before.status()).toBe(401);
   await signIn(page, 's9', '/hr');
-  await (await staffRow(page, 's4')).click();
-  await expect(page.getByRole('heading', { name: 'Siti Aminah', level: 2 })).toBeVisible();
+  await (await staffRow(page, 's10')).click();
+  await expect(page.getByRole('heading', { name: 'Fransiska Tan', level: 2 })).toBeVisible();
   await expect(page.getByText('No app access').first()).toBeVisible();
   const sw = page.getByRole('switch', { name: /Can sign in to the app/ });
   await expect(sw).toHaveAttribute('aria-checked', 'false');
   await expect(page.getByRole('button', { name: 'Reset password' })).toHaveCount(0); // no account, nothing to reset
   await sw.click();
-  await expect(toast(page, 'Siti Aminah can now sign in.')).toBeVisible();
+  await expect(toast(page, 'Fransiska Tan can now sign in.')).toBeVisible();
   await expect(sw).toHaveAttribute('aria-checked', 'true');
-  // the server gives her a username from her first name; it shows read-only, and the password can now be reset
-  await expect(page.getByText('siti', { exact: true })).toBeVisible();
+  // the username is her first name; it shows read-only, and the password can now be reset
+  await expect(page.getByText('fransiska', { exact: true })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Reset password' })).toBeVisible();
 
-  // she signs in (own session) and lands on Requests
-  const s4 = await otherSession(browser);
-  const w = watchConsole(s4.page);
-  await signIn(s4.page, 's4');
-  await expect(s4.page).toHaveURL(/\/today$/);
-  await expect(s4.page.locator('[data-nav-key="today"]').first()).toContainText('Requests');
-  await expect(s4.page.locator('[data-nav-key="enquiries"]')).toHaveCount(0);
-  await expect(s4.page.locator('[data-nav-key="hr"]')).toHaveCount(0);
-  await s4.page.goto('/hr'); // forbidden for housekeeping: back to her home
-  await expect(s4.page).toHaveURL(/\/today$/);
+  // she signs in (own session) and lands on the billing board; management pages are not hers
+  const s10 = await otherSession(browser);
+  const w = watchConsole(s10.page);
+  await signIn(s10.page, 's10');
+  await expect(s10.page).toHaveURL(/\/today$/);
+  await expect(s10.page.locator('[data-nav-key="today"]').first()).toContainText(/Bills|Billing/);
+  await expect(s10.page.locator('[data-nav-key="enquiries"]')).toHaveCount(0);
+  await expect(s10.page.locator('[data-nav-key="hr"]')).toHaveCount(0);
+  await s10.page.goto('/hr'); // forbidden for finance: back to her home
+  await expect(s10.page).toHaveURL(/\/today$/);
   w.assertClean();
-  await s4.ctx.close();
+  await s10.ctx.close();
 
   // switch it off again
   await sw.click();
-  await expect(toast(page, 'Siti Aminah can no longer sign in.')).toBeVisible();
-  const after = await request.post('/api/verify', { data: { userId: 's4', code: '000000' } });
+  await expect(toast(page, 'Fransiska Tan can no longer sign in.')).toBeVisible();
+  const after = await request.post('/api/verify', { data: { userId: 's10', code: '000000' } });
   expect(after.status()).toBe(401);
   c.assertClean();
 });
@@ -488,11 +491,11 @@ test('people: pay is masked until shown, contract expiry warns, notes and warnin
   await expect(page.getByText('Dinar makes Papa laugh every day.')).toBeVisible();
   await expect(page.getByText('From 6 family ratings in surveys')).toBeVisible();
   await expect(page.getByText('October check-in')).toBeVisible();
-  // notes: Siti has a verbal warning on file
+  // notes: Dimas has none on file yet
   if (isPhone(page)) await page.getByRole('button', { name: 'Back' }).click();
-  await (await staffRow(page, 's4')).click();
+  await (await staffRow(page, 's6')).click();
   await page.getByRole('tab', { name: 'Notes and ratings' }).click();
-  await expect(page.getByText('Verbal warning: arrived 40 minutes late twice in one week.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Delete note' })).toHaveCount(0);
   await page.getByRole('button', { name: 'Praise', exact: true }).click();
   await page.getByLabel('What happened').fill('Stayed late to help with the move');
   await page.getByRole('button', { name: 'Add note' }).click();
@@ -773,18 +776,19 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
   // Maria answers on her phone: required questions first
   const fam = await otherSession(browser);
   await signIn(fam.page, 'f1', '/today?survey=1');
-  const sheet = fam.page.getByRole('dialog', { name: 'Menu check' });
+  const sheet = fam.page.getByRole('dialog', { name: 'Quick survey' }); // the sheet is titled Quick survey; the survey's own title is its first line
+  await expect(sheet).toContainText('Menu check');
   await expect(sheet).toBeVisible();
   await sheet.getByRole('group', { name: 'Overall' }).getByRole('button', { name: '5 of 5' }).click();
-  await expect(sheet.getByRole('button', { name: 'Send answers' })).toHaveAttribute('aria-disabled', 'true');
+  await expect(sheet.getByRole('button', { name: 'Send', exact: true })).toBeDisabled();
   await expect(sheet.getByText('Answer the questions marked Required to send.')).toBeVisible();
   await sheet.getByRole('group', { name: 'How was the new menu?' }).getByRole('button', { name: '4 of 5' }).click();
-  await expect(sheet.getByRole('button', { name: 'Send answers' })).toHaveAttribute('aria-disabled', 'true'); // the choice is still open
+  await expect(sheet.getByRole('button', { name: 'Send', exact: true })).toBeDisabled(); // the choice is still open
   await sheet.getByRole('radio', { name: 'Saturday' }).click();
   await sheet.getByRole('radiogroup', { name: 'Did Oma enjoy the Thursday outing at the temple?' }).getByRole('radio', { name: 'Yes' }).click();
   await sheet.getByLabel('What should we cook next month?').fill('More soto please');
   await shot(fam.page, 'family-sheet-top', sheet);
-  await sheet.getByRole('button', { name: 'Send answers' }).click();
+  await sheet.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(fam.page.getByTestId('survey-card')).toContainText('Thank you. Your answers went to the club team.');
   // the other five families answer through the API; a required question cannot be skipped
   const send = (uid: string, input: object, n: string) => page.request.post('/api/actions/survey.answer', { headers: { 'x-user-id': uid }, data: { mutationId: `e2e-cq-${n}`, input: { surveyId: 'sv2', overall: 4, ...input } } });
@@ -1046,12 +1050,26 @@ test('Indonesian: every management screen is translated, with no raw keys and no
   await noRawKeys(page, RAW_KEY_R7);
   await overlayFits(page);
   // the new screens of round 7, as management sees them
-  for (const [path, heading] of [['/renewals', 'Perpanjangan'], ['/tasks', 'Tugas'], ['/guests', 'Pengisi acara'], ['/insights', 'Insight kunjungan']]) {
+  for (const [path, heading] of [['/renewals', 'Perpanjangan'], ['/tasks', 'Tugas'], ['/guests', 'Pengisi acara'], ['/insights', 'Insight']]) {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
     await noRawKeys(page, RAW_KEY_R7);
     await assertNoHorizontalScroll(page);
   }
+  // Insights, By plan: the trend per plan, the key numbers and people of each plan and the Flex quota, in Indonesian
+  await page.goto('/insights');
+  await page.getByRole('tab', { name: 'Per paket' }).click();
+  await expect(page.getByText('Kunjungan per paket').first()).toBeVisible();
+  await expect(page.getByText('Kuota Flex').first()).toBeVisible();
+  await expect(page.getByText('Anggota Flex').first()).toBeVisible();
+  await noRawKeys(page, RAW_KEY_R7);
+  await assertNoHorizontalScroll(page);
+  // KC round 9: the Membership tab in Indonesian
+  await page.getByRole('tab', { name: 'Keanggotaan' }).click();
+  await expect(page.getByText('Bergabung dan keluar').first()).toBeVisible();
+  await expect(page.getByText('Pindah paket').first()).toBeVisible();
+  await noRawKeys(page, RAW_KEY_R7);
+  await assertNoHorizontalScroll(page);
   await page.goto('/venue');
   await expect(page.getByRole('heading', { name: 'Pemesanan venue', level: 1 })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Minta penilaian' }).first()).toBeVisible();
@@ -1067,5 +1085,29 @@ test('Indonesian: every management screen is translated, with no raw keys and no
   await page.getByRole('button', { name: 'Tambah staf' }).click();
   await expect(page.getByRole('dialog').getByText('Kontrak dan KTP')).toBeVisible();
   await noRawKeys(page);
+  c.assertClean();
+});
+
+test('insights (KC round 9): the Membership tab — joined, left and plan switches by Gold / Flex, active members, its own range (3 months, 6 months, 1 year, custom)', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/insights');
+  await page.getByRole('tab', { name: 'Membership' }).click();
+  for (const id of ['kpi-joined', 'kpi-left', 'kpi-active', 'kpi-switches']) await expect(page.getByTestId(id)).toBeVisible();
+  await expect(page.getByTestId('kpi-active')).toContainText(/Gold \d+ · Flex \d+/);
+  await expect(page.getByTestId('kpi-switches')).toContainText(/Flex → Gold \d+ · Gold → Flex \d+/);
+  await expect(page.getByText('Net change')).toHaveCount(0); // KC: no net change figure
+  for (const h of ['Joined and left', 'Active members']) await expect(page.getByText(h, { exact: true }).first()).toBeVisible();
+  await expect(page.getByText('Fri 1 May – Wed 21 Oct')).toBeVisible(); // 6 months by default: this month and the five before it
+  await page.getByRole('combobox', { name: 'Range' }).click();
+  for (const o of ['3 months', '6 months', '1 year', 'Custom range']) await expect(page.getByRole('option', { name: o, exact: true })).toBeVisible();
+  await page.getByRole('option', { name: '3 months', exact: true }).click();
+  await expect(page.getByText('Sat 1 Aug – Wed 21 Oct')).toBeVisible();
+  await expect(page.getByText('per week').first()).toBeVisible(); // about three months shows its weeks
+  await pickOption(page, 'Range', '1 year');
+  await expect(page.getByText('Sat 1 Nov – Wed 21 Oct')).toBeVisible();
+  await expect(page.getByText('per month').first()).toBeVisible();
+  await pickOption(page, 'Range', 'Custom range');
+  await expect(page.getByTestId('mrange-custom')).toBeVisible();
+  await assertNoHorizontalScroll(page);
   c.assertClean();
 });

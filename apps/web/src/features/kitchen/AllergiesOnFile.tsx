@@ -51,8 +51,8 @@ export function AllergiesOnFile({ readOnly = false }: { readOnly?: boolean } = {
             const pill = r.presence ? PRESENCE[r.presence] : null;
             const meta = [r.food.length ? t('kitchen.onfile.on', { list: r.food.map((a) => t('kitchen.food.' + a)).join(', ') }) : '', r.other ? t('kitchen.onfile.other', { text: r.other }) : ''].filter(Boolean).join(' · ');
             return (
-              <div key={r.m.id} data-testid="onfile-row" data-member={r.m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: '1px solid #EFEAE3' }}>
-                <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="no_food" size={19} color="#75624B" /></span>
+              <div key={r.m.id} data-testid="onfile-row" data-member={r.m.id} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
+                <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="no_food" size={19} color="var(--accent, #75624B)" /></span>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
@@ -87,8 +87,8 @@ export function AllergiesOnFile({ readOnly = false }: { readOnly?: boolean } = {
               </div>
             );
           })}
-          {!rows.length ? <div style={{ padding: '16px 0 18px', borderTop: '1px solid #EFEAE3', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.onfile.empty')}</div> : null}
-          {paged.pages > 1 ? <div style={{ borderTop: '1px solid #EFEAE3' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.onfile.title')} /></div> : null}
+          {!rows.length ? <div style={{ padding: '16px 0 18px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.onfile.empty')}</div> : null}
+          {paged.pages > 1 ? <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.onfile.title')} /></div> : null}
         </Group>
         <AlternativeSheet conflict={pick} date={date} onClose={() => setPick(null)} />
       </>
@@ -107,8 +107,8 @@ export function AllergiesOnFile({ readOnly = false }: { readOnly?: boolean } = {
         const pill = r.presence ? PRESENCE[r.presence] : null;
         const meta = [r.food.length ? t('kitchen.onfile.on', { list: r.food.map((a) => t('kitchen.food.' + a)).join(', ') }) : '', r.other ? t('kitchen.onfile.other', { text: r.other }) : ''].filter(Boolean).join(' · ');
         return (
-          <div key={r.m.id} data-testid="onfile-row" data-member={r.m.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: '10px 14px', margin: '0 22px', padding: '16px 0', borderTop: '1px solid #F0EAE1' }}>
-            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="no_food" size={20} color="#75624B" /></span>
+          <div key={r.m.id} data-testid="onfile-row" data-member={r.m.id} style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'flex-start', gap: '10px 14px', margin: '0 22px', padding: '16px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
+            <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="no_food" size={20} color="var(--accent, #75624B)" /></span>
             <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{memberShort(r.m)}</span>
@@ -141,8 +141,8 @@ export function AllergiesOnFile({ readOnly = false }: { readOnly?: boolean } = {
           </div>
         );
       })}
-      {!rows.length ? <div style={{ margin: '0 22px', padding: '18px 0 22px', borderTop: '1px solid #F0EAE1', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.onfile.empty')}</div> : null}
-      <div style={{ margin: '0 22px', padding: paged.pages > 1 ? '8px 0 12px' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.onfile.title')} /></div>
+      {!rows.length ? <div style={{ margin: '0 22px', padding: '18px 0 22px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 16, color: '#6B6259', lineHeight: '22px' }}>{t('kitchen.onfile.empty')}</div> : null}
+      <div style={{ margin: '0 22px', padding: paged.pages > 1 ? '8px 0 12px' : 0, borderTop: paged.pages > 1 ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.onfile.title')} /></div>
       <AlternativeSheet conflict={pick} date={date} onClose={() => setPick(null)} />
     </Card>
   );

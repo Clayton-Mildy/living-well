@@ -19,7 +19,7 @@ const fails = (s: ClubState, name: string, input: unknown, code: string, uid = '
   }
   throw new Error(`expected ${name} to fail with ${code}`);
 };
-const newStaff = { name: 'Wulan Sari', knownAs: 'Bu Wulan', role: 'housekeeping', title: 'Housekeeping', phone: '0811 2201 7788', hr: { contract: 'pkwt', start: '2026-11-01', end: '2027-10-31', salary: 4800000, allowance: 480000, bank: 'BNI', account: '1234 5678 90', ktpLast4: '4411', ktpOnFile: true, signed: true } };
+const newStaff = { name: 'Wulan Sari', knownAs: 'Bu Wulan', role: 'kitchen', title: 'Kitchen helper', phone: '0811 2201 7788', hr: { contract: 'pkwt', start: '2026-11-01', end: '2027-10-31', salary: 4800000, allowance: 480000, bank: 'BNI', account: '1234 5678 90', ktpLast4: '4411', ktpOnFile: true, signed: true } };
 
 describe('staff records', () => {
   it('management adds a staff member with a full record', () => {
@@ -28,7 +28,7 @@ describe('staff records', () => {
     const id = r.result.staffId as string;
     expect(id).toBe('s11');
     expect(r.state.staff[id]).toMatchObject({
-      name: 'Wulan Sari', knownAs: 'Bu Wulan', role: 'housekeeping', title: 'Housekeeping', phone: '+6281122017788', active: true, appAccess: false, supervisor: false, rateable: false, extraClubIds: [], createdBy: 'staff:s9',
+      name: 'Wulan Sari', knownAs: 'Bu Wulan', role: 'kitchen', title: 'Kitchen helper', phone: '+6281122017788', active: true, appAccess: false, supervisor: false, rateable: false, extraClubIds: [], createdBy: 'staff:s9',
       hr: { contract: 'pkwt', start: '2026-11-01', end: '2027-10-31', salary: 4800000, allowance: 480000, bank: 'BNI', account: '1234567890', ktpLast4: '4411', ktpOnFile: true, signed: true },
     });
     expect(activeStaff(r.state).map((x) => x.id)).toContain('s11');
@@ -58,44 +58,44 @@ describe('staff records', () => {
     const s = seed();
     for (const uid of ['s1', 's8', 's10', 's5', 'f1']) {
       expect(() => run(s, 'staff.create', newStaff, uid)).toThrow('err.forbidden');
-      expect(() => run(s, 'staff.update', { staffId: 's4', name: 'X' }, uid)).toThrow('err.forbidden');
-      expect(() => run(s, 'staff.deactivate', { staffId: 's4' }, uid)).toThrow('err.forbidden');
-      expect(() => run(s, 'staff.setAppAccess', { staffId: 's4', on: true }, uid)).toThrow('err.forbidden');
-      expect(() => run(s, 'hrNote.add', { staffId: 's4', kind: 'note', text: 'x' }, uid)).toThrow('err.forbidden');
-      expect(() => run(s, 'staffTime.upsert', { staffId: 's4', date: T, kind: 'leave' }, uid)).toThrow('err.forbidden');
+      expect(() => run(s, 'staff.update', { staffId: 's6', name: 'X' }, uid)).toThrow('err.forbidden');
+      expect(() => run(s, 'staff.deactivate', { staffId: 's6' }, uid)).toThrow('err.forbidden');
+      expect(() => run(s, 'staff.setAppAccess', { staffId: 's6', on: true }, uid)).toThrow('err.forbidden');
+      expect(() => run(s, 'hrNote.add', { staffId: 's6', kind: 'note', text: 'x' }, uid)).toThrow('err.forbidden');
+      expect(() => run(s, 'staffTime.upsert', { staffId: 's6', date: T, kind: 'leave' }, uid)).toThrow('err.forbidden');
     }
   });
   it('edit profile, contract, KTP, pay and bank; know-as can be cleared', () => {
     const s = seed();
-    const r = run(s, 'staff.update', { staffId: 's4', title: 'Head of housekeeping', knownAs: null, phone: '0811 2201 9999', rateable: true, hr: { salary: 5200000, bank: 'Mandiri', account: '9988 7766 55', ktpLast4: '0042', ktpOnFile: true, end: '2027-03-31', signed: true } });
-    const st = r.state.staff.s4;
-    expect(st).toMatchObject({ title: 'Head of housekeeping', phone: '+6281122019999', rateable: true, name: 'Siti Aminah' });
+    const r = run(s, 'staff.update', { staffId: 's10', title: 'Head of finance', knownAs: null, phone: '0811 2201 9999', rateable: true, hr: { salary: 5200000, bank: 'Mandiri', account: '9988 7766 55', ktpLast4: '0042', ktpOnFile: true, end: '2027-03-31', signed: true } });
+    const st = r.state.staff.s10;
+    expect(st).toMatchObject({ title: 'Head of finance', phone: '+6281122019999', rateable: true, name: 'Fransiska Tan' });
     expect(st.knownAs).toBeUndefined();
-    expect(st.hr).toMatchObject({ salary: 5200000, bank: 'Mandiri', account: '9988776655', ktpLast4: '0042', ktpOnFile: true, end: '2027-03-31', allowance: 500000, contract: 'pkwt' });
+    expect(st.hr).toMatchObject({ salary: 5200000, bank: 'Mandiri', account: '9988776655', ktpLast4: '0042', ktpOnFile: true, end: '2027-03-31', allowance: s.staff.s10.hr.allowance, contract: 'pkwt' });
     // changing to a permanent contract clears the end date
-    expect(run(r.state, 'staff.update', { staffId: 's4', hr: { contract: 'pkwtt' } }).state.staff.s4.hr.end).toBeNull();
-    fails(s, 'staff.update', { staffId: 's4', hr: { end: '2020-01-01' } }, 'people.err.endBeforeStart');
-    fails(s, 'staff.update', { staffId: 's4', phone: '+62 811-2201-3345' }, 'people.err.phoneTaken');
+    expect(run(r.state, 'staff.update', { staffId: 's10', hr: { contract: 'pkwtt' } }).state.staff.s10.hr.end).toBeNull();
+    fails(s, 'staff.update', { staffId: 's10', hr: { end: '2020-01-01' } }, 'people.err.endBeforeStart');
+    fails(s, 'staff.update', { staffId: 's10', phone: '+62 811-2201-3345' }, 'people.err.phoneTaken');
     fails(s, 'staff.update', { staffId: 'ghost', name: 'x' }, 'err.notFound');
     fails(s, 'staff.update', { staffId: 's9', role: 'lobby' }, 'people.err.ownRole'); // cannot demote yourself
-    expect(run(s, 'staff.update', { staffId: 's4', role: 'driver' }).state.staff.s4.role).toBe('driver');
+    expect(run(s, 'staff.update', { staffId: 's10', role: 'nurse' }).state.staff.s10.role).toBe('nurse');
     // keeping your own phone is fine
-    expect(run(s, 'staff.update', { staffId: 's4', phone: '+62 811-2201-3348' }).state.staff.s4.phone).toBe('+6281122013348');
+    expect(run(s, 'staff.update', { staffId: 's10', phone: '+62 811-2201-3354' }).state.staff.s10.phone).toBe('+6281122013354');
   });
   it('round 7: management sets, changes and removes a staff photo; only a real media id is accepted', () => {
     const s = seed();
-    expect(s.staff.s4.photoMediaId).toBeUndefined();
-    const a = run(s, 'staff.update', { staffId: 's4', photoMediaId: 'md_staffphoto0001' });
-    expect(a.state.staff.s4.photoMediaId).toBe('md_staffphoto0001');
-    expect(a.state.staff.s4).toMatchObject({ name: 'Siti Aminah', title: s.staff.s4.title }); // nothing else changed
-    const b = run(a.state, 'staff.update', { staffId: 's4', photoMediaId: 'md_staffphoto0002' });
-    expect(b.state.staff.s4.photoMediaId).toBe('md_staffphoto0002');
-    expect(run(b.state, 'staff.update', { staffId: 's4', title: 'Head of housekeeping' }).state.staff.s4.photoMediaId).toBe('md_staffphoto0002'); // other edits keep it
-    expect(run(b.state, 'staff.update', { staffId: 's4', photoMediaId: null }).state.staff.s4.photoMediaId).toBeUndefined();
-    expect(run(b.state, 'staff.update', { staffId: 's4', photoMediaId: '' }).state.staff.s4.photoMediaId).toBeUndefined();
-    fails(s, 'staff.update', { staffId: 's4', photoMediaId: 'not-a-media-id' }, 'err.invalid');
-    fails(s, 'staff.update', { staffId: 's4', photoMediaId: 42 }, 'err.invalid');
-    for (const uid of ['s1', 's8', 's5']) expect(() => run(s, 'staff.update', { staffId: 's4', photoMediaId: 'md_staffphoto0001' }, uid)).toThrow('err.forbidden');
+    expect(s.staff.s10.photoMediaId).toBeUndefined();
+    const a = run(s, 'staff.update', { staffId: 's10', photoMediaId: 'md_staffphoto0001' });
+    expect(a.state.staff.s10.photoMediaId).toBe('md_staffphoto0001');
+    expect(a.state.staff.s10).toMatchObject({ name: 'Fransiska Tan', title: s.staff.s10.title }); // nothing else changed
+    const b = run(a.state, 'staff.update', { staffId: 's10', photoMediaId: 'md_staffphoto0002' });
+    expect(b.state.staff.s10.photoMediaId).toBe('md_staffphoto0002');
+    expect(run(b.state, 'staff.update', { staffId: 's10', title: 'Head of finance' }).state.staff.s10.photoMediaId).toBe('md_staffphoto0002'); // other edits keep it
+    expect(run(b.state, 'staff.update', { staffId: 's10', photoMediaId: null }).state.staff.s10.photoMediaId).toBeUndefined();
+    expect(run(b.state, 'staff.update', { staffId: 's10', photoMediaId: '' }).state.staff.s10.photoMediaId).toBeUndefined();
+    fails(s, 'staff.update', { staffId: 's10', photoMediaId: 'not-a-media-id' }, 'err.invalid');
+    fails(s, 'staff.update', { staffId: 's10', photoMediaId: 42 }, 'err.invalid');
+    for (const uid of ['s1', 's8', 's5']) expect(() => run(s, 'staff.update', { staffId: 's10', photoMediaId: 'md_staffphoto0001' }, uid)).toThrow('err.forbidden');
   });
   it('contract dates warn before they end', () => {
     expect(contractState({ end: null }, T)).toEqual({ kind: 'permanent' });
@@ -127,17 +127,17 @@ describe('staff records', () => {
     const off = run(r.state, 'staff.setAppAccess', { staffId: 's5', on: false }).state;
     fails(off, 'staff.setAppAccess', { staffId: 's5', on: true }, 'people.err.inactive');
   });
-  it('app access: housekeeping (s4) can sign in once it is on, and not after it is off', () => {
-    const s = seed();
-    expect(getUser({ citra: s }, 's4')).toBeNull();
-    expect(findByPhone({ citra: s }, '+62 811-2201-3348')).toMatchObject({ ok: false, reason: 'noAccess' });
-    const on = run(s, 'staff.setAppAccess', { staffId: 's4', on: true });
-    const u = getUser({ citra: on.state }, 's4')!;
+  it('app access: a staff member can sign in once it is on, and not after it is off', () => {
+    const s = run(seed(), 'staff.setAppAccess', { staffId: 's10', on: false }).state; // Fransiska: no app access
+    expect(getUser({ citra: s }, 's10')).toBeNull();
+    expect(findByPhone({ citra: s }, '+62 811-2201-3354')).toMatchObject({ ok: false, reason: 'noAccess' });
+    const on = run(s, 'staff.setAppAccess', { staffId: 's10', on: true });
+    const u = getUser({ citra: on.state }, 's10')!;
     expect(u.kind).toBe('staff');
-    expect(u.kind === 'staff' && u.staff.role).toBe('housekeeping');
-    expect(findByPhone({ citra: on.state }, '0811 2201 3348')).toMatchObject({ ok: true });
-    fails(on.state, 'staff.setAppAccess', { staffId: 's4', on: true }, 'err.noChanges');
-    expect(getUser({ citra: run(on.state, 'staff.setAppAccess', { staffId: 's4', on: false }).state }, 's4')).toBeNull();
+    expect(u.kind === 'staff' && u.staff.role).toBe('finance');
+    expect(findByPhone({ citra: on.state }, '0811 2201 3354')).toMatchObject({ ok: true });
+    fails(on.state, 'staff.setAppAccess', { staffId: 's10', on: true }, 'err.noChanges');
+    expect(getUser({ citra: run(on.state, 'staff.setAppAccess', { staffId: 's10', on: false }).state }, 's10')).toBeNull();
     fails(s, 'staff.setAppAccess', { staffId: 's9', on: false }, 'people.err.selfAccess');
     // a new staff member with access can sign in at once
     const created = run(s, 'staff.create', { ...newStaff, appAccess: true });
@@ -148,21 +148,20 @@ describe('staff records', () => {
 describe('notes and warnings', () => {
   it('add and delete (soft) with an audit trail; no future dates', () => {
     const s = seed();
-    const r = run(s, 'hrNote.add', { staffId: 's4', kind: 'praise', text: 'Stayed late to help with the move' });
+    const r = run(s, 'hrNote.add', { staffId: 's6', kind: 'praise', text: 'Stayed late to help with the move' });
     const id = r.result.noteId as string;
-    expect(r.state.hrNotes[id]).toMatchObject({ staffId: 's4', kind: 'praise', on: T, text: 'Stayed late to help with the move', createdBy: 'staff:s9' });
-    expect(live(r.state.hrNotes).filter((x) => x.staffId === 's4').map((x) => x.kind).sort()).toEqual(['praise', 'warning']);
-    const dated = run(s, 'hrNote.add', { staffId: 's4', kind: 'warning', text: 'Late again', on: '2026-10-19' });
+    expect(r.state.hrNotes[id]).toMatchObject({ staffId: 's6', kind: 'praise', on: T, text: 'Stayed late to help with the move', createdBy: 'staff:s9' });
+    expect(live(r.state.hrNotes).filter((x) => x.staffId === 's6').map((x) => x.kind).sort()).toEqual(['praise']);
+    const dated = run(s, 'hrNote.add', { staffId: 's6', kind: 'warning', text: 'Late again', on: '2026-10-19' });
     expect(dated.state.hrNotes[dated.result.noteId as string].on).toBe('2026-10-19');
-    fails(s, 'hrNote.add', { staffId: 's4', kind: 'warning', text: 'x', on: '2026-10-22' }, 'people.err.futureDate');
-    fails(s, 'hrNote.add', { staffId: 's4', kind: 'gossip', text: 'x' }, 'err.invalid');
-    fails(s, 'hrNote.add', { staffId: 's4', kind: 'note', text: ' ' }, 'err.invalid');
+    fails(s, 'hrNote.add', { staffId: 's6', kind: 'warning', text: 'x', on: '2026-10-22' }, 'people.err.futureDate');
+    fails(s, 'hrNote.add', { staffId: 's6', kind: 'gossip', text: 'x' }, 'err.invalid');
+    fails(s, 'hrNote.add', { staffId: 's6', kind: 'note', text: ' ' }, 'err.invalid');
     fails(s, 'hrNote.add', { staffId: 'ghost', kind: 'note', text: 'x' }, 'err.notFound');
     const del = run(r.state, 'hrNote.delete', { noteId: id });
     expect(del.state.hrNotes[id].deletedAt).toBe('2026-10-21T10:05');
     expect(live(del.state.hrNotes).some((x) => x.id === id)).toBe(false);
     fails(del.state, 'hrNote.delete', { noteId: id }, 'err.notFound');
-    run(s, 'hrNote.delete', { noteId: 'hr-s4-1' });
   });
 });
 
@@ -201,8 +200,6 @@ describe('staff time', () => {
     expect(m.minutes).toBe(m.worked * 9 * 60);
     expect(hoursLabel(minutesBetween('08:00', '16:30'))).toBe('8:30');
     expect(minutesBetween('08:00', undefined)).toBe(0);
-    const driver = staffTimeFor(s, 's7', '2026-10');
-    expect(driver.minutes).toBe(driver.worked * (9 * 60 + 15));
   });
 });
 

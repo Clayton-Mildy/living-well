@@ -675,8 +675,8 @@ describe('meal feedback', () => {
 describe('stock requests', () => {
   const req = { item: 'Gloves', qty: 4, unit: 'boxes', area: 'health', sectionId: 'operations' };
   it('any staff with an app login can request; finance and management are not auto-approved', () => {
-    const s = produce(seed(), (d) => { d.staff.s4.appAccess = true; d.staff.s7.appAccess = true; });
-    for (const uid of ['s1', 's2', 's5', 's8', 's9', 's10', 's4', 's7']) {
+    const s = seed();
+    for (const uid of ['s1', 's2', 's3', 's5', 's6', 's8', 's9', 's10']) {
       const r = run(s, 'stock.request', req, uid);
       const k = r.state.stockRequests[r.result.stockId as string];
       expect(k).toMatchObject({ item: 'Gloves', qty: 4, unit: 'boxes', area: 'health', sectionId: 'operations', status: 'requested', requestedBy: uid });
@@ -767,10 +767,9 @@ describe('stock requests', () => {
     expect(getAction('stock.approve').can(usr(s, 's2'), { id: 'k2' }, s)).toBe(true);
     expect(getAction('stock.approve').can(usr(s, 's2'), { id: 'k1' }, s)).toBe(false);
     expect(getAction('stock.reject').can(usr(s, 's10'), { id: 'k1', note: 'x' }, s)).toBe(true);
-    const withS4 = produce(s, (d) => { d.staff.s4.appAccess = true; });
-    const declined = run(withS4, 'stock.reject', { id: 'k1', note: 'No' }, 's10').state;
+    const declined = run(s, 'stock.reject', { id: 'k1', note: 'No' }, 's10').state;
     expect(sortStock(Object.values(declined.stockRequests)).map((k) => k.id)).toEqual(['k5', 'k2', 'k3', 'k4', 'k1']);
-    const cancelled = run(declined, 'stock.cancel', { id: 'k5' }, 's4').state;
+    const cancelled = run(declined, 'stock.cancel', { id: 'k5' }, 's1').state;
     expect(sortStock(Object.values(cancelled.stockRequests)).map((k) => [k.id, k.status])).toEqual([['k2', 'requested'], ['k3', 'approved'], ['k4', 'received'], ['k1', 'rejected'], ['k5', 'cancelled']]);
   });
   it('is deterministic: the same mutation id gives the same patches on client and server', () => {

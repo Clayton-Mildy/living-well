@@ -56,10 +56,10 @@ describe('custom tasks', () => {
     const photo = lobby.find((i) => i.template.id === 'task-lobby-photo')!;
     expect(photo.done).toBeUndefined();
     expect(photo.overdue).toBe(false); // no time set: due all day
-    // a task with a time is overdue once the time has passed (housekeeping toilets, 10:00)
-    const toilets = (nowMin: number) => customTasks(base, 'housekeeping', T, T, nowMin).find((i) => i.template.id === 'task-hk-toilets')!;
-    expect(toilets(NOW).overdue).toBe(false);
-    expect(toilets(at('10:01')).overdue).toBe(true);
+    // a task with a time is overdue once the time has passed (the teachers' materials, 16:00)
+    const materials = (nowMin: number) => customTasks(base, 'activity', T, T, nowMin).find((i) => i.template.id === 'task-activity-materials')!;
+    expect(materials(NOW).overdue).toBe(false);
+    expect(materials(at('16:01')).overdue).toBe(true);
     // weekly: not overdue before its day, overdue after it (the bank reconciliation's Monday has passed)
     const bank = customTasks(base, 'finance', T, T, NOW)[0];
     expect(bank).toMatchObject({ due: '2026-10-19', overdue: true });
@@ -86,11 +86,11 @@ describe('custom tasks', () => {
     expect(templateShows(base, base.taskTemplates['task-lobby-desk'], '2026-01-05')).toBe(false); // before it existed
   });
 
-  it('the seed: history of earlier days, and the housekeeping rounds nobody ticks (no login)', () => {
-    const hk = roleSummary(base, 'housekeeping', T, T, NOW);
-    expect(hk.people.map((p) => p.id)).toEqual(['s4']);
-    expect(hk).toMatchObject({ customDone: 0, customTotal: 2, total: 0 }); // no general duties for housekeeping
-    expect(roleSummary(base, 'housekeeping', '2026-10-20', T, NOW).customDone).toBe(2); // yesterday: both done
+  it('the seed: history of earlier days, and the room set-up ticked before the demo starts', () => {
+    const act = roleSummary(base, 'activity', T, T, NOW);
+    expect(act.people.map((p) => p.id).sort()).toEqual(['s5', 's6']);
+    expect(act).toMatchObject({ customDone: 1, customTotal: 2 }); // the room is set up; the materials are for the afternoon
+    expect(roleSummary(base, 'activity', '2026-10-20', T, NOW).customDone).toBe(2); // yesterday: both done
     expect(live(base.taskDone).some((d) => d.date === T && d.at >= '09:58')).toBe(false); // nothing seeded after the demo starts
   });
 });
@@ -103,7 +103,7 @@ describe('general duties: from the data, for any day', () => {
   it('closed days have none; the catalogue has a duty set for each role that has one', () => {
     expect(dutiesOf(closeOn(base, T), 'lobby', T, T, at('16:00'))).toEqual([]);
     expect(customTasks(closeOn(base, T), 'lobby', T, T, NOW)).toEqual([]);
-    expect(new Set(DUTIES.map((d) => d.role))).toEqual(new Set(['activity', 'kitchen', 'nurse', 'lobby', 'finance', 'mgmt'])); // housekeeping and the driver: additional tasks only
+    expect(new Set(DUTIES.map((d) => d.role))).toEqual(new Set(['activity', 'kitchen', 'nurse', 'lobby', 'finance', 'mgmt']));
     expect(new Set(DUTIES.map((d) => d.id)).size).toBe(DUTIES.length);
   });
 
@@ -150,6 +150,22 @@ describe('general duties: from the data, for any day', () => {
     expect(duty(mark(base, { lunch: 'all' }), 'activity.lunch', T, at('14:00')).status).toBe('done');
     expect(duty(base, 'activity.mood', T, at('15:00')).status).toBe('late');
     expect(duty(mark(base, { mood: 'calm' }), 'activity.mood', T, at('15:30')).status).toBe('done');
+  });
+
+  it('an extra session (KC round 7) gets its own picture and joined mark, each due when it ends', () => {
+    const s = run(base, 'schedule.addSession', { date: T, time: '15:00', activityId: 'act-karaoke', staffId: 's6', roomId: 'room-music', notify: false }, 's9', at('10:00'));
+    const pics = duty(s, 'activity.pictures', T, at('15:30'));
+    expect(pics.parts.map((p) => [p.activityId, p.due])).toEqual([['act-keroncong', '11:45'], ['act-batik', '14:45'], ['act-karaoke', '16:15']]);
+    const withPhoto = produce(s, (d) => {
+      d.photos.pk = { id: 'pk', clubId: d.clubId, createdAt: `${T}T15:10`, createdBy: 'staff:s6', date: T, time: '15:10', kind: 'activity', media: 'photo', activity: 'Karaoke', memberIds: [], tone: 1, takenBy: 's6', visibility: 'pending' } as Photo;
+    });
+    expect(duty(withPhoto, 'activity.pictures', T, at('15:30')).parts[2]).toMatchObject({ activityId: 'act-karaoke', done: true, by: 's6', at: '15:10' });
+    const joined = duty(s, 'activity.joined', T, at('15:30'));
+    expect(joined.parts.map((p) => p.key)).toEqual(['joined:10:30', 'joined:13:30', 'joined:15:00']);
+    expect(joined.parts[2]).toMatchObject({ activityId: 'act-karaoke', due: '16:15', done: false, count: { done: 0, total: 3 }, link: '/log?round=15:00' });
+    const marked = run(s, 'log.mark', { date: T, memberIds: ['m2', 'm10', 'm20'], session: { slot: '15:00', value: 'joined' } }, 's6', at('15:20'));
+    expect(duty(marked, 'activity.joined', T, at('15:30')).parts[2]).toMatchObject({ done: true, count: { done: 3, total: 3 } });
+    expect(duty(marked, 'activity.joined', T, at('15:30')).parts[0].done).toBe(false); // the morning session is still to mark
   });
 
   it('nurse and front desk: the checks, the check-outs and the guests, counted from the readings and the attendance', () => {
@@ -255,10 +271,8 @@ describe('a role’s day, a week and a month', () => {
     expect(lobby.total).toBe(lobby.duties.reduce((n, d) => n + d.parts.length, 0));
     expect(lobby.late).toBeGreaterThan(0); // the trial day from opening, the renewals from 09:00
     expect(openTaskCount(base, 'lobby', T, NOW)).toBe(lobby.late + 1);
-    expect(roleSummary(base, 'housekeeping', T, T, NOW)).toMatchObject({ total: 0, done: 0, customTotal: 2, customDone: 0 });
-    expect(roleSummary(base, 'housekeeping', '2026-10-20', T, NOW).customDone).toBe(2); // yesterday: both done
     // the team lists the roles that have duties or tasks; a past day too
-    expect(teamSummary(base, T, T, NOW).map((r) => r.role)).toEqual(['lobby', 'nurse', 'activity', 'kitchen', 'housekeeping', 'driver', 'finance', 'mgmt']);
+    expect(teamSummary(base, T, T, NOW).map((r) => r.role)).toEqual(['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt']);
     const past = roleSummary(base, 'kitchen', '2026-10-20', T, NOW);
     expect(past.duties.length).toBeGreaterThan(0);
     expect(past.customDone).toBe(past.customTotal);

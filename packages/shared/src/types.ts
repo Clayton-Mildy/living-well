@@ -21,7 +21,7 @@ export type Diet = 'softFood' | 'lowSalt' | 'vegetarian' | 'sugarFree';
 export type EndReason = 'movedAway' | 'careNeeds' | 'careHome' | 'passedAway' | 'familyDecision' | 'unpaid' | 'leaveOverrun';
 export type LostReason = 'price' | 'distance' | 'notReady' | 'otherPlace' | 'health' | 'other';
 export type QuickNote = 'rested' | 'medsTaken' | 'dizzy' | 'headache' | 'rightArm';
-export type StaffRole = 'lobby' | 'nurse' | 'activity' | 'kitchen' | 'finance' | 'mgmt' | 'housekeeping' | 'driver';
+export type StaffRole = 'lobby' | 'nurse' | 'activity' | 'kitchen' | 'finance' | 'mgmt';
 export type Bank = 'BCA' | 'Mandiri' | 'BNI' | 'BRI' | 'Permata';
 export type Xero = 'synced' | 'pending' | 'awaitingPayment' | 'draft' | 'notSent';
 export type SectionId = string; // 'fnb' | 'activities' | 'operations' | custom
@@ -169,7 +169,10 @@ export interface Consent {
   via: 'form' | 'staff' | 'paper';
 }
 
-export type DocType = 'ktp' | 'nannyKtp' | 'membershipForm' | 'healthInfo' | 'other';
+export type DocType = 'ktp' | 'nannyKtp' | 'guarantorKtp' | 'membershipForm' | 'healthInfo' | 'other';
+/** KC round 10: the three ID cards a registration can photograph: the member's, the responsible family member's, the carer's. */
+export type KtpKind = 'ktp' | 'guarantorKtp' | 'nannyKtp';
+export type KtpUploads = Partial<Record<KtpKind, { mediaId: string; fileName: string }>>;
 
 export interface MemberDocument {
   id: string;
@@ -187,6 +190,10 @@ export interface MemberDocument {
  *  Name, date of birth, address, plan, conditions, dementia (cognitive), allergies, the carer (nanny) and the family contacts live on the member already. */
 export interface MemberRegistration {
   nickname?: string; // Panggilan
+  /** KC round 10: the member's NIK (the 16-digit KTP number), typed in when the member's ID is ticked */
+  nik?: string;
+  /** the responsible family member's NIK, typed in when their ID is ticked */
+  guarantorNik?: string;
   marital?: 'single' | 'married' | 'widowed' | 'divorced';
   rtRw?: string;
   city?: string;
@@ -200,7 +207,9 @@ export interface MemberRegistration {
   selfCare?: boolean;
   /** 3. needs help going to the bathroom */
   bathroomHelp?: boolean;
-  /** dementia notes that affect the monthly fee */
+  /** KC round 10: has dementia (affects the monthly fee) — a yes / no, not free text */
+  dementia?: boolean;
+  /** optional dementia notes when the answer is yes */
   dementiaNote?: string;
   /** identity documents received (berikan tanda): the responsible family member's, the member's, the carer's */
   ids?: { guarantor?: boolean; member?: boolean; carer?: boolean };
@@ -221,7 +230,8 @@ export interface Member extends Row {
   memberships: Membership[]; // last = current
   plans: PlanEntry[]; // effective-dated
   usualArrival: HM; // informational only: members drop in on any open day
-  nanny: { name: string; phone?: string } | null;
+  /** the carer (suster) who comes along; KC round 10: with a carer, the carer's NIK (16 digits) is required */
+  nanny: { name: string; phone?: string; nik?: string } | null;
   spouseId: string | null;
   health: {
     conditions: string[];
@@ -393,12 +403,32 @@ export interface Photo extends Row {
   memberIds: string[];
   tone: number;
   takenBy: string;
-  /** 'pending': taken by non-management staff, waiting for management approval before families see it */
-  visibility: 'pending' | 'visible' | 'hidden' | 'removed';
+  /** 'pending': taken by non-management staff, waiting for management approval before families see it.
+   *  'draft' (KC round 7, quick camera): a shot nobody has sent yet. Only the person who took it sees it; families, Approvals, the library,
+   *  the duties and the day's pictures never count it until `photo.sendDrafts` makes it a real photo. */
+  visibility: 'draft' | 'pending' | 'visible' | 'hidden' | 'removed';
   moderated?: { at: DT; by: string; reason: string };
   approved?: { at: DT; by: string };
   /** a real image from the camera or an upload (GET /api/media/:id); without it the design's tone placeholder shows */
   mediaId?: string;
+  /** KC round 7: what the (simulated) AI saw and suggested when the shot was taken: kept after sending, for the record. `rules/photoAi.ts` */
+  ai?: PhotoAi;
+}
+
+/** The AI's suggestion for one shot. people: faces (a memberId only for a member who allows face tagging); scene: a picture of the session running at the time; food: lunch or tea. */
+export interface PhotoAi {
+  kind: 'people' | 'scene' | 'food';
+  faces: { memberId?: string; confidence: number }[];
+  blurry?: boolean;
+  /** 0 to 1: how well the people smile; the best of a burst is the one to keep */
+  smile?: number;
+  best?: boolean;
+  /** shots taken within about 3 seconds of each other share a key (set by the camera) */
+  burst?: string;
+  meal?: 'lunch' | 'tea';
+  /** a person opened the draft and saved it: the suggestion is no longer in doubt */
+  reviewed?: boolean;
+  at: DT;
 }
 
 /** Messages were removed (families and staff use WhatsApp). Thread and Message stay only so the `threads` and `messages` collections need no DB migration: nothing seeds, reads or writes them. */
@@ -450,6 +480,38 @@ export interface Enquiry extends Row {
   /** Set while a gated conversion is pending (enquiry.convert): where the lead goes back to if management rejects. */
   prevStage?: Enquiry['stage'];
   prevNext?: Enquiry['next'];
+  /** KC round 10: the online registration link sent to this lead (a pre-fill for the paper form, never a replacement) */
+  form?: EnquiryForm;
+}
+
+/** What the family fills in through the link: the same answers staff type in when joining, plus the plan they lean to. */
+export interface OnlineRegistration {
+  title: Title;
+  name: string;
+  dob: ISODate | '';
+  address: string;
+  contact: { name: string; relation: Relation; phone: string };
+  plan?: Plan;
+  /** the carer (suster) who comes along, with the carer's NIK */
+  nanny?: { name: string; nik: string } | null;
+  /** photos of the ID cards (uploaded through the form's own route) */
+  ktp?: KtpUploads;
+  health: { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[] };
+  registration?: MemberRegistration;
+  /** the language the family filled it in */
+  lang: Lang;
+}
+/** The link's life: sent (14 days), opened, submitted (the answers wait on the lead until staff join the member). */
+export interface EnquiryForm {
+  token: string;
+  sentAt: DT;
+  sentBy: Actor;
+  expiresAt: DT;
+  openedAt?: DT;
+  submittedAt?: DT;
+  /** the family contact's name as typed in the form */
+  filledBy?: string;
+  draft?: OnlineRegistration;
 }
 
 export interface CalendarEvent extends Row {
@@ -500,7 +562,10 @@ export interface Activity extends Row {
   photoMediaId?: string;
 }
 
-export type Slot = '10:30' | '13:30';
+/** The start time of an activity session ('HH:MM'). KC round 7: the weekly plan has two fixed times (WeekSlot), but a date can also have extra sessions at any time (ScheduleDay.extra). */
+export type Slot = HM;
+/** The two session times of the weekly plan. */
+export type WeekSlot = '10:30' | '13:30';
 export interface ScheduleCell {
   activityId: string;
   staffId: string;
@@ -510,7 +575,7 @@ export interface ScheduleCell {
 export interface ScheduleVersion extends Row {
   effectiveFrom: ISODate;
   status: 'draft' | 'pending' | 'published' | 'rejected';
-  days: Record<Weekday, Record<Slot, ScheduleCell | null>>;
+  days: Record<Weekday, Record<WeekSlot, ScheduleCell | null>>;
   submittedBy?: Actor;
   publishedBy?: Actor;
   publishedAt?: DT;
@@ -569,7 +634,7 @@ export interface StockRequest extends Row {
   item: string;
   qty: number;
   unit: string;
-  area: 'kitchen' | 'health' | 'activities' | 'housekeeping' | 'transport';
+  area: 'kitchen' | 'health' | 'activities';
   sectionId: SectionId;
   status: 'requested' | 'approved' | 'received' | 'rejected' | 'cancelled';
   requestedBy: string;
@@ -672,9 +737,8 @@ export interface Invoice extends Row {
 
 export interface Payment extends Row {
   memberId: string;
-  method: 'dokuVa' | 'bankTransferSgd' | 'revolut' | 'cash' | 'other';
+  method: 'dokuVa' | 'bankTransfer' | 'cash' | 'other';
   amount: number;
-  foreign?: { ccy: 'SGD' | 'EUR'; amount: number };
   ref?: string;
   bank?: Bank;
   receivedOn: ISODate;
@@ -841,8 +905,8 @@ export interface Broadcast extends Row {
 
 // ---------------- KC round 7 ----------------
 
-/** What the family decided for the coming month, as the front desk recorded it. 'noAnswer' / 'callBack' keep the follow-up open. */
-export type FollowUpOutcome = 'continue' | 'upgrade' | 'downgrade' | 'leave' | 'stop' | 'noAnswer' | 'callBack';
+/** What the family decided for the coming month, as the front desk recorded it. 'noAnswer' keeps the follow-up open. (KC round 7: no "call back" option.) */
+export type FollowUpOutcome = 'continue' | 'upgrade' | 'downgrade' | 'leave' | 'stop' | 'noAnswer';
 export interface FollowUpCall { at: DT; by: Actor; outcome: FollowUpOutcome; note?: string }
 
 /**
@@ -869,11 +933,20 @@ export interface FollowUp extends Row {
   approval?: Approval;
 }
 
-/** KC round 7: a one-day change of the activity programme (a sudden change). id = date. A slot present here overrides the weekly schedule; null = no session then. */
+/** KC round 7: an extra activity session on one date, at any time (not part of the weekly plan). Its `time` is its slot key everywhere (the daily log's `sessions[time]`, a guest booking's `slot`). */
+export interface ExtraSession {
+  time: HM;
+  cell: ScheduleCell;
+  /** why / what (staff only) */
+  note?: string;
+}
+/** KC round 7: a one-day change of the activity programme (a sudden change). id = date. A slot present here overrides the weekly schedule; null = no session then.
+ *  `extra` holds the extra sessions of the date, sorted by time. */
 export interface ScheduleDay extends Row {
   date: ISODate;
-  slots: Partial<Record<Slot, ScheduleCell | null>>;
+  slots: Partial<Record<WeekSlot, ScheduleCell | null>>;
   note?: string;
+  extra?: ExtraSession[];
 }
 
 export type GuestHostKind = 'teacher' | 'entertainer' | 'speaker' | 'other';

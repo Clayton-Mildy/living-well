@@ -22,12 +22,12 @@ export const foodList = (t: TFn, m: Pick<Member, 'health'>) => [...m.health.food
 export interface FlagChip { icon: string; label: string; bg: string; ic: string }
 export function flagChips(t: TFn, m: Member, withMeds: boolean): FlagChip[] {
   const out: FlagChip[] = foodList(t, m).map((label) => ({ icon: 'no_food', label, bg: '#F9E3DB', ic: '#9A3D24' }));
-  if (m.health.mobility) out.push({ icon: MOB_ICON[m.health.mobility], label: mobLabel(t, m.health.mobility), bg: '#F3EEE8', ic: '#24201C' });
-  for (const d of m.health.diet) out.push({ icon: 'restaurant', label: dietLabel(t, d), bg: '#F3EEE8', ic: '#24201C' });
-  if (m.health.diabetic) out.push({ icon: 'water_drop', label: t('profile.diabetic'), bg: '#F3EEE8', ic: '#24201C' });
+  if (m.health.mobility) out.push({ icon: MOB_ICON[m.health.mobility], label: mobLabel(t, m.health.mobility), bg: 'var(--fill, #F4F4F5)', ic: '#24201C' });
+  for (const d of m.health.diet) out.push({ icon: 'restaurant', label: dietLabel(t, d), bg: 'var(--fill, #F4F4F5)', ic: '#24201C' });
+  if (m.health.diabetic) out.push({ icon: 'water_drop', label: t('profile.diabetic'), bg: 'var(--fill, #F4F4F5)', ic: '#24201C' });
   if (withMeds) {
     for (const a of m.health.drugs) out.push({ icon: 'medication', label: t('profile.drugAllergy', { d: drugLabel(t, a) }), bg: '#F9E3DB', ic: '#9A3D24' });
-    for (const x of m.health.meds.filter((q) => q.timing === 'lunchClub')) out.push({ icon: 'medication', label: t('profile.lunchMed', { m: `${x.name} ${x.dose}`.trim() }), bg: '#F3EEE8', ic: '#24201C' });
+    for (const x of m.health.meds.filter((q) => q.timing === 'lunchClub')) out.push({ icon: 'medication', label: t('profile.lunchMed', { m: `${x.name} ${x.dose}`.trim() }), bg: 'var(--fill, #F4F4F5)', ic: '#24201C' });
   }
   return out;
 }
@@ -36,12 +36,12 @@ export function flagChips(t: TFn, m: Member, withMeds: boolean): FlagChip[] {
 export interface StatusStyle { icon: string; bg: string; fg: string; dot: string }
 export const STATUS_STYLE: Record<MemberStatus['key'], StatusStyle> = {
   pending: { icon: 'hourglass_top', bg: '#F6ECD6', fg: '#7A5510', dot: '#7A5510' },
-  ended: { icon: 'archive', bg: '#F0EAE1', fg: '#24201C', dot: '#5E5852' },
-  upcoming: { icon: 'event_upcoming', bg: '#F3EEE8', fg: '#24201C', dot: '#8A755B' },
-  home: { icon: 'home', bg: '#F3EEE8', fg: '#24201C', dot: '#5E5852' },
+  ended: { icon: 'archive', bg: 'var(--press, #EEEEF0)', fg: '#24201C', dot: '#5E5852' },
+  upcoming: { icon: 'event_upcoming', bg: 'var(--fill, #F4F4F5)', fg: '#24201C', dot: '#8A755B' },
+  home: { icon: 'home', bg: 'var(--fill, #F4F4F5)', fg: '#24201C', dot: '#5E5852' },
   in: { icon: 'check_circle', bg: '#E3EFE6', fg: '#3D6B4F', dot: '#3D6B4F' },
-  closed: { icon: 'event', bg: '#F3EEE8', fg: '#24201C', dot: '#E4DACD' },
-  off: { icon: 'schedule', bg: '#F3EEE8', fg: '#24201C', dot: '#CAB8A2' },
+  closed: { icon: 'event', bg: 'var(--fill, #F4F4F5)', fg: '#24201C', dot: 'var(--outline, #D4D4D8)' },
+  off: { icon: 'schedule', bg: 'var(--fill, #F4F4F5)', fg: '#24201C', dot: '#CAB8A2' },
 };
 export function statusText(t: TFn, st: MemberStatus, fds: (d: string) => string): string {
   switch (st.key) {
@@ -77,13 +77,13 @@ export const canGoBack = () => { try { return ((window.history.state as { idx?: 
 // ---------- style atoms from the design ----------
 /** Horizontal inset of a v3 card: rows and hairlines sit inside it, never edge to edge. */
 export const CARD_PX = 'clamp(18px, 3vw, 28px)';
-export const HAIR = '1px solid #F0EAE1';
-export const cardStyle: CSSProperties = { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: `20px ${CARD_PX}`, display: 'flex', flexDirection: 'column', gap: 16 };
-/** A card whose rows carry their own hairlines: rows use `padding: 'Ypx 0'` and a top hairline, the card supplies the side inset. */
-export const listCardStyle: CSSProperties = { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: `0 ${CARD_PX}`, overflow: 'hidden' };
-export const pillBtn: CSSProperties = { height: 40, padding: '0 16px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, whiteSpace: 'nowrap' };
+export const HAIR = '0.5px solid var(--hairline, #E2E2E6)';
+export const cardStyle: CSSProperties = { background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: `20px ${CARD_PX}`, display: 'flex', flexDirection: 'column', gap: 16 };
+/** Round 8c: cards are soft grey blocks (add className "cp-grey" where they hold controls). A card whose rows carry their own hairlines: rows use `padding: 'Ypx 0'` and a top hairline, the card supplies the side inset. */
+export const listCardStyle: CSSProperties = { background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: `0 ${CARD_PX}`, overflow: 'hidden' };
+export const pillBtn: CSSProperties = { height: 40, padding: '0 16px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, whiteSpace: 'nowrap' };
 /** Quiet underlined link (bronze), used for small secondary actions. */
-export const linkBtn: CSSProperties = { border: 'none', background: 'transparent', padding: 0, color: '#75624B', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 4 };
+export const linkBtn: CSSProperties = { border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 4 };
 export const sectionOf = (cr: ChangeRequest) => cr.section;
 /** Who a request is about: the member, or for a lead that is joining, the lead. */
 export function crMemberName(s: ClubState, cr: ChangeRequest) {
@@ -95,7 +95,7 @@ export function crMemberName(s: ClubState, cr: ChangeRequest) {
 /** The family-visible note of a daily log, or the design's calm-day sentence naming the day's first activity. */
 export function logNote(s: ClubState, t: TFn, lang: Lang, m: Member, l: DailyLog) {
   if (l.note) return l.note;
-  const cell = sessionsOn(s, l.date)[0]?.cell;
+  const cell = sessionsOn(s, l.date).find((x) => x.cell)?.cell; // the day's first session (an extra one can come first)
   const a = cell ? s.activities[cell.activityId] : undefined;
   const name = a ? (lang === 'id' && a.nameId ? a.nameId : a.name).toLowerCase() : t('profile.theActivities');
   return t('family.calmDay', { n: memberShort(m), a: name });

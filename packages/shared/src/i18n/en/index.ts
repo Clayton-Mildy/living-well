@@ -23,6 +23,13 @@ import { tasks } from './tasks';
 import { guests } from './guests';
 import { insights } from './insights';
 import { report } from './report';
+import { drafts } from './drafts';
+import { fam } from './fam';
+import { ftoday } from './ftoday';
+import { fphotos } from './fphotos';
+import { fcal } from './fcal';
+import { fhealth } from './fhealth';
+import { fme } from './fme';
 
 export const en = {
   ...ns('common', common),
@@ -59,5 +66,12 @@ export const en = {
   ...ns('guests', guests),
   ...ns('insights', insights),
   ...ns('report', report),
+  ...ns('drafts', drafts),
+  ...ns('fam', fam),
+  ...ns('ftoday', ftoday),
+  ...ns('fphotos', fphotos),
+  ...ns('fcal', fcal),
+  ...ns('fhealth', fhealth),
+  ...ns('fme', fme),
 };
-export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report };
+export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, fam, ftoday, fphotos, fcal, fhealth, fme };

@@ -120,8 +120,8 @@ describe('broadcast', () => {
     const s = seed().citra;
     expect(audienceRecipients(s, 'families', T)).toHaveLength(6);
     expect(audienceRecipients(s, 'enquiries', T).map((r) => r.name)).toEqual(['Melinda Tjandra', 'Ilham Hamid', 'Kevin Sutanto', 'Felicia Gunadi']); // by next step
-    expect(audienceRecipients(s, 'staff', T)).toHaveLength(10);
-    expect(broadcastRecipients(s, ['families', 'enquiries', 'staff'], T)).toHaveLength(20);
+    expect(audienceRecipients(s, 'staff', T)).toHaveLength(8);
+    expect(broadcastRecipients(s, ['families', 'enquiries', 'staff'], T)).toHaveLength(18);
     // a lead that is also a family contact is messaged once
     const dupe = run(s, 'enquiry.create', { senior: { title: 'Opa', name: 'Tio' }, contact: { name: 'Maria W', relation: 'daughter', phone: '+62 812-1090-4471' }, source: 'other' }, 's1').state;
     expect(broadcastRecipients(dupe, ['families', 'enquiries'], T)).toHaveLength(6 + 4);
@@ -134,11 +134,10 @@ describe('broadcast', () => {
     const s = seed().citra;
     const r = run(s, 'broadcast.send', { template: 'closure', message: 'Friday 6 November for maintenance', audiences: ['families', 'staff'] }, 's9');
     const b = r.state.broadcasts[r.result.broadcastId as string];
-    expect(b).toMatchObject({ template: 'closure', status: 'sent', recipients: 16, sendAt: '2026-10-21T10:00', sentAt: '2026-10-21T10:00', audiences: ['families', 'staff'] });
+    expect(b).toMatchObject({ template: 'closure', status: 'sent', recipients: 14, sendAt: '2026-10-21T10:00', sentAt: '2026-10-21T10:00', audiences: ['families', 'staff'] });
     expect(updatesFor(r.state, user(r.state, 'f1')).some((x) => x.kind === 'mgmt.notif.bc_closure' && x.params.text === 'Friday 6 November for maintenance')).toBe(true);
     expect(updatesFor(r.state, user(r.state, 's8')).some((x) => x.kind === 'mgmt.notif.bc_closure')).toBe(true);
-    expect(Object.values(r.state.notifications).some((x) => x.toUsers.includes('s7'))).toBe(false); // the driver has no app access
-    expect(Object.values(r.state.activity).some((a) => a.key === 'mgmt.feed.broadcast' && a.params.n === 16)).toBe(true);
+    expect(Object.values(r.state.activity).some((a) => a.key === 'mgmt.feed.broadcast' && a.params.n === 14)).toBe(true);
     fails(s, 'broadcast.send', { template: 'update', message: '  ', audiences: ['families'] }, 's9', 'err.invalid');
     fails(s, 'broadcast.send', { template: 'update', message: 'Hi', audiences: [] }, 's9', 'err.invalid');
     fails(s, 'broadcast.send', { template: 'update', message: 'Hi', audiences: ['pets'] }, 's9', 'err.invalid');

@@ -17,7 +17,7 @@ import { Badge, HAIR, Hero, HeroHead, NumberTabs, PGroup, PagerBar, PillBtn, Sea
 import { memberPhoto } from '../../lib/media';
 
 type Filter = 'all' | 'paid' | 'due' | 'overdue' | 'xero';
-const FILTERS: Filter[] = ['all', 'paid', 'due', 'overdue', 'xero'];
+const FILTERS: Filter[] = ['all', 'overdue', 'due', 'paid', 'xero'];
 
 export function Billing() {
   const s = useClub();
@@ -38,10 +38,11 @@ export function Billing() {
   const setFilter = (k: Filter) => setSp((p) => { const n = new URLSearchParams(p); if (k === 'all' || k === f) n.delete('f'); else n.set('f', k); return n; }, { replace: true });
   const closeRun = () => { setRunOpen(false); if (sp.get('run')) setSp((p) => { const n = new URLSearchParams(p); n.delete('run'); return n; }, { replace: true }); };
 
+  // KC round 8d: the status tabs read from the most urgent to the least: Overdue, Not paid (outstanding), Paid, then the Xero queue
   const tiles: { key: Filter; label: string; value: number; badge: 'paid' | 'outstanding' | 'overdue' | 'pending'; sum: number }[] = [
-    { key: 'paid', label: t('finance.bill.tilePaid', { month: fmonth(board.month) }), value: board.paid.length, badge: 'paid', sum: board.sums.paid },
-    { key: 'due', label: board.nextDue ? t('finance.bill.tileDue', { date: fd(board.nextDue, { day: 'numeric', month: 'short' }) }) : t('finance.bill.tileDueNone'), value: board.due.length, badge: 'outstanding', sum: board.sums.due },
     { key: 'overdue', label: t('finance.bill.tileOverdue'), value: board.overdue.length, badge: 'overdue', sum: board.sums.overdue },
+    { key: 'due', label: board.nextDue ? t('finance.bill.tileDue', { date: fd(board.nextDue, { day: 'numeric', month: 'short' }) }) : t('finance.bill.tileDueNone'), value: board.due.length, badge: 'outstanding', sum: board.sums.due },
+    { key: 'paid', label: t('finance.bill.tilePaid', { month: fmonth(board.month) }), value: board.paid.length, badge: 'paid', sum: board.sums.paid },
     { key: 'xero', label: t('finance.bill.tileXero'), value: board.xero.length, badge: 'pending', sum: board.sums.xero },
   ];
   const dueDay = ordinal(lang, s.club.settings.dueDay);
@@ -98,7 +99,7 @@ export function Billing() {
       }))} />
 
       {isPhone ? phoneRun : !isLaptop ? (
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', borderTop: '1px solid #E6DDD1', borderBottom: '1px solid #E6DDD1', padding: isPhone ? '12px 0' : '16px 0' }}>
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', borderTop: '0.5px solid var(--hairline, #E2E2E6)', borderBottom: '0.5px solid var(--hairline, #E2E2E6)', padding: isPhone ? '12px 0' : '16px 0' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: '1 1 240px' }}>{runBlock}</div>
           {runBtn}
         </div>
@@ -219,7 +220,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
   // round 6, phone: one meta line (number and month; the family contact and phone stay in the DOM, hidden, and are in the invoice sheet), a quiet status, a chevron
   if (isPhone) {
     return (
-      <div style={prow(first, open ? { backgroundColor: '#FBF8F4', boxShadow: 'inset 3px 0 0 #2B231C', padding: 0 } : { padding: 0 })}>
+      <div style={prow(first, open ? { backgroundColor: 'var(--press, #EEEEF0)', boxShadow: 'inset 3px 0 0 #2B231C', padding: 0 } : { padding: 0 })}>
         <button type="button" onClick={onToggle} aria-expanded={open} aria-label={`${name}, ${inv.number}`} className="cp-tap-self"
           style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 12px 10px 16px', minHeight: 58, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
           <span style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -240,7 +241,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
             {timeline.length ? (
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {timeline.map((c, i) => (
-                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 12, borderLeft: '2px solid #E6DDD1' }}>
+                  <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 12, borderLeft: '2px solid var(--field-bd, #E0E0E4)' }}>
                     <span style={{ fontSize: 15, lineHeight: '21px' }}>{c.text}</span>
                     <span style={{ ...small, fontSize: 13 }}>{actorName(s, c.by)} · {stampOf(c.at, fds)}</span>
                   </div>
@@ -248,7 +249,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
               </div>
             ) : null}
             <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void saveNote(); }} placeholder={t('finance.bill.notePlaceholder')} aria-label={t('finance.bill.callNote')}
-              style={{ ...phoneField, width: '100%' }} />
+              className="cp-input cp-fill" style={{ ...phoneField, width: '100%' }} />
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
               <PillBtn onClick={saveNote}>{t('finance.bill.saveNote')}</PillBtn>
               {canRemind ? <PillBtn tone="primary" onClick={remind}>{t('finance.bill.sendReminder')}</PillBtn> : null}
@@ -264,7 +265,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
     );
   }
   return (
-    <div style={{ borderTop: HAIR, ...(open ? { background: '#FBF8F4', margin: '0 calc(var(--hp) * -1)', padding: '0 var(--hp)', boxShadow: 'inset 3px 0 0 #2B231C' } : null) }}>
+    <div style={{ borderTop: HAIR, ...(open ? { background: 'var(--press, #EEEEF0)', margin: '0 calc(var(--hp) * -1)', padding: '0 var(--hp)', boxShadow: 'inset 3px 0 0 #2B231C' } : null) }}>
       <button type="button" onClick={onToggle} aria-expanded={open} aria-label={`${name}, ${inv.number}`}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16, padding: 'clamp(13px, 2.2vw, 18px) 0', minHeight: isPhone ? 60 : 78, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
         {isPhone ? null : <Avatar name={name} tone={member?.photoTone} src={memberPhoto(member)} size={46} />}
@@ -276,14 +277,14 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
           <span style={{ fontSize: 17, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{rp(list === 'paid' || list === 'xero' ? v.total : v.balance)}</span>
           {badge}
         </span>
-        <Icon name="expand_more" size={22} color="#6E5A43" style={{ transform: open ? 'rotate(180deg)' : undefined, flex: 'none' }} />
+        <Icon name="expand_more" size={22} color="var(--eyebrow, #6E5A43)" style={{ transform: open ? 'rotate(180deg)' : undefined, flex: 'none' }} />
       </button>
       {open ? (
         <div style={{ padding: '0 0 18px', display: 'flex', flexDirection: 'column', gap: 14, paddingLeft: isPhone ? 0 : 62 }}>
           {timeline.length ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               {timeline.map((c, i) => (
-                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 12, borderLeft: '2px solid #E6DDD1' }}>
+                <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 2, paddingLeft: 12, borderLeft: '2px solid var(--field-bd, #E0E0E4)' }}>
                   <span style={{ fontSize: 15, lineHeight: '21px' }}>{c.text}</span>
                   <span style={small}>{actorName(s, c.by)} · {stampOf(c.at, fds)}</span>
                 </div>
@@ -292,7 +293,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
           ) : null}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void saveNote(); }} placeholder={t('finance.bill.notePlaceholder')} aria-label={t('finance.bill.callNote')}
-              style={{ flex: '1 1 240px', minWidth: 0, height: 44, border: 'none', borderBottom: '1px solid #DDD1C2', borderRadius: 0, background: 'transparent', padding: '0 2px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none' }} />
+              className="cp-input cp-fill" style={{ flex: '1 1 240px', minWidth: 0, height: 44, border: 'none', borderRadius: 12, background: 'var(--fill, #F4F4F5)', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C' }} />
             <Button variant="secondary" size={44} onClick={saveNote} style={{ padding: '0 18px' }}>{t('finance.bill.saveNote')}</Button>
             {canRemind ? <Button size={44} onClick={remind} style={{ padding: '0 20px' }}>{t('finance.bill.sendReminder')}</Button> : null}
           </div>

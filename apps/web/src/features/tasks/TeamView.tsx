@@ -1,7 +1,6 @@
 // Team (management): how each role is doing on its general duties. A date picker for any day and a Day / Week / Month switch; the roles in a list with their people and
 // duty score ("7 of 8 done"; for a week or month "90%"), and the chosen role's details beside it (tabs: duties, additional tasks), like the health station. Past days are worked out
-// from the data (a picture taken, a check recorded…); a duty only the live state can tell shows a dash there. Today, management can also tick an additional task off for a role
-// (housekeeping and the driver have no app login).
+// from the data (a picture taken, a check recorded…); a duty only the live state can tell shows a dash there. Today, management can also tick an additional task off for a role.
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ClubState, ISODate, Staff, StaffRole } from '@cp/shared';
 import { staffCall } from '@cp/shared';
@@ -125,7 +124,7 @@ export function Lines({ title, meta, children }: { /** a section title above the
     <section data-section={title ? 'titled' : undefined} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
       {title ? (
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, padding: '4px 0 2px' }}>
-          <span style={{ fontSize: 12, lineHeight: '16px', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43' }}>{title}</span>
+          <span style={{ fontSize: 12, lineHeight: '16px', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)' }}>{title}</span>
           {meta != null ? <span style={{ fontSize: 13, color: '#6B6259' }}>{meta}</span> : null}
         </div>
       ) : null}
@@ -135,13 +134,13 @@ export function Lines({ title, meta, children }: { /** a section title above the
 }
 
 // ---------- pieces ----------
-const lineStyle = (first: boolean): CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 8px 16px', minHeight: 52, backgroundColor: '#FFFFFF', backgroundImage: first ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 32px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' });
+const lineStyle = (first: boolean): CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 16px 8px 16px', minHeight: 52, backgroundColor: 'transparent', backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 32px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' });
 /** A duty with a score on the right (a week or month: "18 of 20 · 90%"; a day: "1 of 2"). */
 function ScoreLine({ id, icon, title, sub, right, tone, first, hint }: { id: string; icon: string; title: string; sub?: string; right: string; tone: 'good' | 'late' | 'plain' | 'muted'; first: boolean; hint?: string }) {
   const color = tone === 'good' ? GREEN : tone === 'late' ? RUST : tone === 'muted' ? '#8A8078' : '#4A4038';
   return (
     <div data-duty={id} style={lineStyle(first)} title={hint}>
-      <span aria-hidden="true" style={{ width: 28, height: 28, borderRadius: 999, background: tone === 'good' ? '#E3EFE6' : '#F3EEE8', color: tone === 'good' ? GREEN : '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={tone === 'good' ? 'check' : icon} size={17} fill={tone === 'good' ? 0 : 1} /></span>
+      <span aria-hidden="true" className={tone === 'good' ? undefined : 'cp-fill'} style={{ width: 28, height: 28, borderRadius: 999, background: tone === 'good' ? '#E3EFE6' : 'var(--fill, #F4F4F5)', color: tone === 'good' ? GREEN : 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={tone === 'good' ? 'check' : icon} size={17} fill={tone === 'good' ? 0 : 1} /></span>
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: 15, lineHeight: '21px', fontWeight: 500, overflowWrap: 'anywhere' }}>{title}</span>
         {sub ? <span style={{ fontSize: 13, lineHeight: '18px', color: tone === 'late' ? RUST : '#6B6259', overflowWrap: 'anywhere' }}>{sub}</span> : null}

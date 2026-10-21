@@ -6,9 +6,9 @@ export const MAX_DIM = 1600;
 /** The server refuses anything above this (5 MB); a 1600px JPEG is far smaller. */
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024;
 
-/** Videos are sent as they were recorded: up to 25 MB and 15 seconds (the server checks the size and the file signature). */
-export const MAX_VIDEO_BYTES = 25 * 1024 * 1024;
-export const MAX_VIDEO_SEC = 15;
+/** Videos are sent as they were recorded: up to 100 MB and 60 seconds (KC round 11: raised from 15 s / 25 MB; the server checks the size and the file signature). */
+export const MAX_VIDEO_BYTES = 100 * 1024 * 1024;
+export const MAX_VIDEO_SEC = 60;
 /** A PDF (a scanned paper form) is sent as it is: up to 10 MB. */
 export const MAX_PDF_BYTES = 10 * 1024 * 1024;
 
@@ -64,7 +64,7 @@ export async function downscaleImage(src: Blob, max = MAX_DIM, quality = 0.85): 
   }
 }
 
-function toBase64(blob: Blob): Promise<string> {
+export function toBase64(blob: Blob): Promise<string> {
   return new Promise((ok, bad) => {
     const r = new FileReader();
     r.onload = () => { const url = String(r.result); ok(url.slice(url.indexOf(';base64,') + 8)); }; // the media type may carry commas (codecs=vp9,opus)

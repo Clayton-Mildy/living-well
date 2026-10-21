@@ -34,7 +34,7 @@ export function DishesCard() {
         <Group title={t('kitchen.dishes.title')} meta={toCheck ? t('kitchen.dishes.toCheck', { n: toCheck }) : t('kitchen.dishes.allChecked')} pad={0} gap={0}>
           {paged.rows.map((d, i) => (
             <button key={d.id} type="button" onClick={() => setOpen(d.id)} className="cp-tap-self" data-testid="dish-row"
-              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 16px', minHeight: 58, border: 'none', backgroundColor: '#FFFFFF', backgroundImage: i === 0 ? 'none' : 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+              style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 16px', minHeight: 58, border: 'none', backgroundColor: 'transparent', backgroundImage: i === 0 ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
                 <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{allergenText(t, d)}</span>
@@ -45,8 +45,8 @@ export function DishesCard() {
             </button>
           ))}
           {!dishes.length ? <div style={{ padding: '16px', fontSize: 16, color: '#6B6259' }}>{t(needle ? 'common.noResults' : 'kitchen.dishes.none')}</div> : null}
-          {paged.pages > 1 ? <div style={{ borderTop: '1px solid #EFEAE3' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.dishes.title')} /></div> : null}
-          <button type="button" onClick={() => setOpen('new')} className="cp-tap-self" style={{ width: '100%', height: 52, padding: '0 16px', border: 'none', borderTop: dishes.length ? '1px solid #EFEAE3' : 'none', backgroundColor: '#FFFFFF', color: '#75624B', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+          {paged.pages > 1 ? <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.dishes.title')} /></div> : null}
+          <button type="button" onClick={() => setOpen('new')} className="cp-tap-self" style={{ width: '100%', height: 52, padding: '0 16px', border: 'none', borderTop: dishes.length ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', backgroundColor: 'transparent', color: 'var(--accent, #75624B)', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
             <Icon name="add" size={22} />
             {t('kitchen.dishes.add')}
           </button>
@@ -66,7 +66,7 @@ export function DishesCard() {
       </div>
       {paged.rows.map((d) => (
         <button key={d.id} type="button" onClick={() => setOpen(d.id)} className="h-row" data-testid="dish-row"
-          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 22px', minHeight: 60, border: 'none', borderTop: '1px solid #F0EAE1', background: '#FFFFFF', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+          style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 22px', minHeight: 60, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
             <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{allergenText(t, d)}</span>
@@ -76,9 +76,9 @@ export function DishesCard() {
           <Icon name="chevron_right" size={22} color="#5E5852" />
         </button>
       ))}
-      {!dishes.length ? <div style={{ padding: '16px 22px', borderTop: '1px solid #F0EAE1', fontSize: 16, color: '#6B6259' }}>{t(needle ? 'common.noResults' : 'kitchen.dishes.none')}</div> : null}
-      <div style={{ padding: paged.pages > 1 ? '8px 22px' : 0, borderTop: paged.pages > 1 ? '1px solid #F0EAE1' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.dishes.title')} /></div>
-      <div style={{ padding: '16px 22px 20px', borderTop: '1px solid #F0EAE1' }}>
+      {!dishes.length ? <div style={{ padding: '16px 22px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 16, color: '#6B6259' }}>{t(needle ? 'common.noResults' : 'kitchen.dishes.none')}</div> : null}
+      <div style={{ padding: paged.pages > 1 ? '8px 22px' : 0, borderTop: paged.pages > 1 ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }}><Pager page={paged.page} pages={paged.pages} onPage={paged.setPage} label={t('kitchen.dishes.title')} /></div>
+      <div style={{ padding: '16px 22px 20px', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
         <Button variant="secondary" size={44} icon="add" onClick={() => setOpen('new')}>{t('kitchen.dishes.add')}</Button>
       </div>
       <DishDialog open={open !== null} dishId={open && open !== 'new' ? open : undefined} preset={{ course }} onClose={() => setOpen(null)} />

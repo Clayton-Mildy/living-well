@@ -1,4 +1,4 @@
-// KC round 7: real demo pictures for the seed. Free Unsplash scenes (activities, food, club moments; never a member's portrait) are saved in
+// KC round 7: real demo pictures for the seed. Free Unsplash scenes (activities, food, club moments) are saved in
 // apps/web/public/demo/ (see SOURCES.md there). A seeded record points at one with a media id `md_demo_<name>`; the web app shows it from `/demo/<name>.jpg`
 // (`mediaUrl` in apps/web/src/lib/media.ts). The id has the shape of an uploaded one (`md_` + letters, digits, `_`, `-`), so every action that takes a
 // media id (the activity editor saving an activity as it is, a review, a photo) accepts it.
@@ -9,6 +9,18 @@ export const DEMO_MEDIA_PREFIX = 'md_demo_';
 export const demoMediaId = (name: string): string => DEMO_MEDIA_PREFIX + name;
 /** Where a demo media id is served from (`/demo/act-batik-1.jpg`); undefined for an uploaded picture. */
 export const demoMediaPath = (id: string): string | undefined => (id.startsWith(DEMO_MEDIA_PREFIX) ? `/demo/${id.slice(DEMO_MEDIA_PREFIX.length)}.jpg` : undefined);
+
+/** KC round 9: a free Unsplash portrait as the profile picture of each parent a demo family account follows (the faces are stock, the records made up).
+ * The family's Today shows it until staff take a newer photo of that parent on their own. */
+export const MEMBER_PORTRAITS: Readonly<Record<string, string>> = {
+  m1: 'portrait-lina',
+  m46: 'portrait-budi',
+  m2: 'portrait-hendra',
+  m10: 'portrait-bambang',
+  m20: 'portrait-tjahjadi',
+};
+/** The media id of a member's demo portrait, or undefined for a member without one. */
+export const portraitId = (memberId: string): string | undefined => (MEMBER_PORTRAITS[memberId] ? demoMediaId(MEMBER_PORTRAITS[memberId]) : undefined);
 
 const at = <T,>(list: readonly T[], n: number): T => list[((Math.floor(n) % list.length) + list.length) % list.length];
 

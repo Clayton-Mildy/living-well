@@ -88,8 +88,10 @@ test('wrong password, unknown username, empty form and no app access each get a 
   expect((await sessionOf(page)).token).toBeFalsy();
   await login(page, 'nobody', 'citra123');
   await expect(page.getByRole('alert')).toContainText('That username or password is not right');
-  // housekeeping (siti) has a password but no app access
-  await login(page, 'siti', 'citra123');
+  // management switches Fransiska's app access off: she has a password but no app access
+  const off = await page.request.post('/api/actions/staff.setAppAccess', { headers: { 'x-user-id': 's9' }, data: { mutationId: 'e2e-noaccess', club: 'citra', input: { staffId: 's10', on: false } } });
+  expect(off.ok()).toBeTruthy();
+  await login(page, 'fransiska', 'citra123');
   await expect(page.getByRole('alert')).toContainText('no app access');
   // show and hide the password
   const pw = page.getByLabel('Password', { exact: true });
@@ -104,18 +106,20 @@ test('wrong password, unknown username, empty form and no app access each get a 
   c.assertClean();
 });
 
-test('change your password in the Account sheet: wrong current, mismatch, too short and unchanged are refused; then only the new password signs in', async ({ page }) => {
+test('change your password (Me → Password for a family): wrong current, mismatch, too short and unchanged are refused; then only the new password signs in', async ({ page }) => {
   const c = watchConsole(page, REFUSED);
-  await signIn(page, 'f2');
-  const sheet = await openAccount(page);
+  await signIn(page, 'f2', '/me');
+  await page.getByTestId('me-password').click();
+  const sheet = page.getByRole('dialog', { name: 'Password' });
+  await expect(sheet).toBeVisible();
   const username = sheet.getByLabel('Username');
   await expect(username).toHaveValue('daniel');
   await expect(username).toHaveAttribute('readonly', '');
   const cur = sheet.getByLabel('Current password', { exact: true });
   const nw = sheet.getByLabel('New password', { exact: true });
   const cf = sheet.getByLabel('Confirm new password', { exact: true });
-  const go = sheet.getByRole('button', { name: 'Change password' });
-  await expect(go).toHaveAttribute('aria-disabled', 'true'); // nothing typed yet
+  const go = sheet.getByRole('button', { name: 'Save', exact: true });
+  await expect(go).toBeDisabled(); // nothing typed yet
   await cur.fill('not-my-password'); await nw.fill('brand-new-pass'); await cf.fill('brand-new-pass');
   await go.click();
   await expect(sheet.getByRole('alert')).toContainText('current password is not right');
@@ -131,10 +135,8 @@ test('change your password in the Account sheet: wrong current, mismatch, too sh
   await nw.fill('brand-new-pass'); await cf.fill('brand-new-pass');
   await go.click();
   await expect(toast(page, 'Your password is changed.')).toBeVisible();
-  await expect(cur).toHaveValue('');
-  await expect(nw).toHaveValue('');
-  await expect(username).toHaveValue('daniel'); // the username never changes
-  await sheet.getByRole('button', { name: 'Sign out' }).click();
+  await expect(sheet).toHaveCount(0); // the sheet closes; the username never changes
+  await page.getByTestId('me-signout').click();
   await expect(page).toHaveURL(/\/login$/);
   await login(page, 'daniel', 'citra123');
   await expect(page.getByRole('alert')).toContainText('not right'); // the old password is gone
@@ -181,11 +183,13 @@ test('change your display name in the Account sheet: saved at once for staff, se
   await expect(sheet.getByLabel('Username')).toHaveValue('caca');
   await expect(sheet).toContainText('Caca Putri');
   await page.keyboard.press('Escape');
-  // a family member's change goes to management first; the name stays until approved
+  // a family member's change goes to management first (Me → Your details); the name stays until approved
   const { page: fp, ctx: fam } = await otherUser(browser, 'f1');
-  sheet = await openAccount(fp);
-  await sheet.getByLabel('Your name').fill('Maria W. Wijaya');
-  await sheet.getByRole('button', { name: 'Submit for review' }).click();
+  await fp.locator('[data-nav-key="me"]').click();
+  await fp.getByTestId('me-details').click();
+  const details = fp.getByRole('dialog', { name: 'Your details' });
+  await details.getByLabel('Your name').fill('Maria W. Wijaya');
+  await details.getByRole('button', { name: 'Send', exact: true }).click();
   await expect(toast(fp, 'Sent to the club for approval')).toBeVisible();
   expect((await stateOf(fp, 's9')).familyContacts.f1.name).toBe('Maria Wijaya');
   expect((await stateOf(fp, 's9')).familyContacts.f1.username).toBe('maria');

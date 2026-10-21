@@ -1,96 +1,158 @@
-// Family Today, a day story you can browse back through (KC round 7): the day strip, the member over the day's best picture, a note from the team,
-// the day's rail (activities with pictures, lunch, health, home), the day's photos, the month's memories, and the club's links. `?date=YYYY-MM-DD` shows an earlier
-// day; `?member=` and `?survey=1` still work. The club is drop-in: members come on any open day, so there is no booking, leave, "expected" or "not coming".
+// Family Today (round 8, the Family App prototype with KC's immersive header): the day's picture full-bleed at the top with the date chip and the bell on it,
+// the parent(s) and the day at its foot (a row per parent, or one parent's icon rail); then a white panel slides up over it with the day strip, the day's
+// timeline, the team's daily log (every round: lunch, each session, mood, the note), the day's health checks (round 8d), its photos and a way to tell the kitchen about lunch. On a laptop (round 8b) it is two columns instead: the picture as a
+// rounded card that stays in view on the left, the day (what the panel holds) scrolling on the right. Round 8c (the prototype's desktop): a heading above
+// the columns ("Good morning, Maria"; "Looking back" and "Back to today" on an earlier day), the day strip as six tiles under the picture, the photos
+// as rounded tiles. `?date=YYYY-MM-DD` shows an earlier day;
+// `?member=` and `?survey=1` still work. The club is drop-in: members come on any open day, so there is no booking, leave, "expected" or "not coming".
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  addDays, answeredBy, firstOfRole, live, liveSurvey, memberShort, sortBy, waUrl, type ISODate, type Photo,
-} from '@cp/shared';
-import {
-  bestPhotoOf, dayStory, dayStrip, familyPhotosOn, latestNote, photoActivityLabel, sharedNoteOf, storyNowMin, visitDays, type StripDay,
-} from '@cp/shared/rules/family';
+import { addDays, answeredBy, live, liveSurvey, memberShort, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
+import { activityLabel, dayStory, dishNamesOf, END_OF_DAY, familyPhotosOn, servedLunch, storyNowMin, visitDays, type DayStory } from '@cp/shared/rules/family';
+import { openDayStrip, planDay } from '@cp/shared/rules/famToday';
 import { eventTitle as calTitle, upcomingClosures } from '@cp/shared/rules/calendar';
-import { Button, GROUP_HEAD, Group, Icon } from '../../components/ui';
-import { useDevice } from '../../hooks/useDevice';
-import { writePref } from '../../store/session';
+import { Icon, PhotoImg } from '../../components/ui';
+import { NotificationBell } from '../../shell/Notifications';
+import { useUi } from '../../store/ui';
 import { PhotoViewer } from '../activity/PhotoViewer';
-import { Cap, FamSwitch, H1, PhotoGrid, SOFT_SHADOW, fcard } from './parts';
+import { Cap, DESK_EYEBROW, F, FamPage, FillCard, HAIR, IconTile, List, TextLink, useFamWide } from './kit';
+import { DayPhotoCards } from './PhotoFeed';
+import { useDevice } from '../../hooks/useDevice';
 import { DayPicker, DayStrip } from './DayStrip';
-import { GroupStory, MemberStory, ParentStory } from './StoryHero';
-import { MemoriesTeaser } from './Memories';
+import { FrostChip, Hero, PANEL_OVERLAP } from './StoryHero';
+import { ParentSwitch } from './ParentSwitch';
 import { Timeline } from './Timeline';
-import { LogBlock } from './TeamLog';
-import { quietLink } from './storyBits';
+import { DailyLogSection } from './TeamLog';
+import { TodayHealthSection } from './TodayHealth';
+import { cap, dayWord, namesOf } from './storyBits';
 import { LunchFeedbackSheet, SurveySheet } from './sheets';
-import { famPad, useFamilyCtx, useFamilySel } from './useFamily';
+import { useFamilyCtx, useFamilySel } from './useFamily';
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const inkButton: CSSProperties = { height: 46, border: 'none', borderRadius: 999, background: F.ink, color: '#FFFFFF', fontSize: 15, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter', padding: '0 20px' };
 
-/** KC round 6: the family's recent lunch feedback (last 30 days) with the kitchen's replies, here in the app (the bell opens Today). */
-function LunchFeedback({ memberIds, phone }: { memberIds: string[]; phone: boolean }) {
-  const { s, t, fmt, now } = useFamilyCtx();
-  const since = addDays(now.today, -30);
-  const rows = sortBy(live(s.feedback).filter((f) => memberIds.includes(f.memberId) && f.createdAt.slice(0, 10) >= since), (f) => f.createdAt, -1).slice(0, 3);
-  if (!rows.length) return null;
-  const when = (at: string) => (at.slice(0, 10) === now.today ? `${t('common.today')} ${at.slice(11, 16)}` : fmt.fds(at.slice(0, 10)));
-  const status = (f: (typeof rows)[number]) => f.status === 'open' ? { text: t('family.lunchFbWaiting'), dot: '#C9A35A' } : f.status === 'answered' ? { text: t('family.lunchFbAnswered'), dot: '#3D6B4F' } : { text: t('family.lunchFbClosed'), dot: '#A89C8E' };
-  const items = rows.map((f, i) => {
-    const st = status(f);
-    const day = fmt.fd(f.mealDate, { weekday: 'long', day: 'numeric', month: 'short' });
-    return (
-      <div key={f.id} data-feedback={f.id} data-status={f.status} style={{ display: 'flex', flexDirection: 'column', gap: 8, paddingTop: i ? 14 : 0, borderTop: i ? '1px solid #F0EAE1' : 'none' }}>
-        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
-          <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4, minWidth: 0 }}>{[f.dish, day].filter(Boolean).join(' · ')}</span>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, color: '#4A4038', whiteSpace: 'nowrap', flex: 'none' }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: st.dot }} />{st.text}</span>
-        </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C' }}>“{f.text}”</span>
-          <span style={{ fontSize: 13, color: '#6B6259' }}>{t(f.source === 'staff' ? 'family.lunchFbPhone' : 'family.lunchFbYou', { when: when(f.createdAt) })}</span>
-        </div>
-        {(f.replies || []).map((r) => (
-          <div key={r.id} data-testid="kitchen-reply" style={{ padding: '10px 14px', borderRadius: 12, background: '#EAF1EC', display: 'flex', flexDirection: 'column', gap: 3 }}>
-            <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere' }}>{r.text}</span>
-            <span style={{ fontSize: 13, color: '#4A5E50' }}>{t('family.lunchFbKitchen', { when: when(r.at) })}</span>
-          </div>
-        ))}
-      </div>
-    );
-  });
-  return phone ? (
-    <div data-testid="lunch-feedback"><Group title={t('family.lunchFb')}>{items}</Group></div>
-  ) : (
-    <div data-testid="lunch-feedback" style={fcard('', 12)}><Cap>{t('family.lunchFb')}</Cap>{items}</div>
-  );
-}
-
-/** Round 7: a calm ochre note for a club closure or holiday in the next 7 days (today's is the timeline's job); several show as a short list, none shows nothing. */
-function ClosureNotice({ phone }: { phone: boolean }) {
+/** A calm ochre note for a club closure or holiday in the next 7 days (today's is the hero's job); several show as a short list, none shows nothing. */
+function ClosureNotice() {
   const { s, t, fmt, now } = useFamilyCtx();
   const rows = upcomingClosures(s, now.today);
   if (!rows.length) return null;
   const day = (d: string) => fmt.fd(d, { weekday: 'long', day: 'numeric', month: 'short' }).replace(/,/g, '');
   const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
   return (
-    <section aria-label={t('cal.famClosureLabel')} data-testid="closure-notice" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: phone ? '12px 14px' : '12px 16px', borderRadius: phone ? 14 : 10, background: '#F6ECD6', color: '#7A5510' }}>
-      {rows.map((r) => {
-        const what = r.to === r.from ? t('cal.famClosedOn', { d: day(r.from) }) : t('cal.famClosedRange', { a: day(r.from), b: day(r.to) });
-        const title = cap(calTitle(r, fmt.lang));
-        return (
-          <div key={r.eventId} data-testid="closure-row" data-event={r.eventId} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: phone ? 15 : 14, lineHeight: '21px' }}>
-            <Icon name={r.kind === 'holiday' ? 'flag' : 'event_busy'} size={20} fill={1} color="#7A5510" style={{ marginTop: 1, flex: 'none' }} />
-            <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}><span style={{ fontWeight: 600 }}>{what}</span>{title ? ` · ${title}` : ''}</span>
-          </div>
-        );
-      })}
+    <section aria-label={t('cal.famClosureLabel')} data-testid="closure-notice">
+      <FillCard radius={22} gap={10} pad="14px 16px" style={{ background: F.ochreBg, color: F.ochre }}>
+        {rows.map((r) => {
+          const what = r.to === r.from ? t('cal.famClosedOn', { d: day(r.from) }) : t('cal.famClosedRange', { a: day(r.from), b: day(r.to) });
+          const title = cap(calTitle(r, fmt.lang));
+          return (
+            <div key={r.eventId} data-testid="closure-row" data-event={r.eventId} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, fontSize: 15, lineHeight: '21px' }}>
+              <Icon name={r.kind === 'holiday' ? 'flag' : 'event_busy'} size={20} fill={1} color={F.ochre} style={{ marginTop: 1 }} />
+              <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}><span style={{ fontWeight: 600 }}>{what}</span>{title ? ` · ${title}` : ''}</span>
+            </div>
+          );
+        })}
+      </FillCard>
     </section>
   );
 }
 
+/** The recent lunch feedback (last 30 days) with the kitchen's replies, here in the app. */
+function RecentFeedback({ memberIds }: { memberIds: string[] }) {
+  const { s, t, fmt, now } = useFamilyCtx();
+  const since = addDays(now.today, -30);
+  const rows = sortBy(live(s.feedback).filter((f) => memberIds.includes(f.memberId) && f.createdAt.slice(0, 10) >= since), (f) => f.createdAt, -1).slice(0, 3);
+  if (!rows.length) return null;
+  const when = (at: string) => (at.slice(0, 10) === now.today ? `${t('common.today')} ${at.slice(11, 16)}` : fmt.fds(at.slice(0, 10)));
+  const status = (f: (typeof rows)[number]) => (f.status === 'open' ? { text: t('family.lunchFbWaiting'), dot: '#C9A35A' } : f.status === 'answered' ? { text: t('family.lunchFbAnswered'), dot: F.sageDot } : { text: t('family.lunchFbClosed'), dot: F.chev });
+  return (
+    <section data-testid="lunch-feedback" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <Cap>{t('family.lunchFb')}</Cap>
+      <List>
+        {rows.map((f, i) => {
+          const st = status(f);
+          const day = fmt.fd(f.mealDate, { weekday: 'long', day: 'numeric', month: 'short' });
+          return (
+            <div key={f.id} data-feedback={f.id} data-status={f.status} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '12px 14px', borderTop: i ? HAIR : 'none' }}>
+              <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', flexWrap: 'wrap', gap: '2px 10px' }}>
+                <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4, minWidth: 0, color: F.text }}>{[f.dish, day].filter(Boolean).join(' · ')}</span>
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 12, color: F.soft, whiteSpace: 'nowrap' }}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: st.dot }} />{st.text}</span>
+              </div>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 14, lineHeight: '20px', color: F.soft, overflowWrap: 'anywhere' }}>“{f.text}”</span>
+                <span style={{ fontSize: 12, color: F.muted }}>{t(f.source === 'staff' ? 'family.lunchFbPhone' : 'family.lunchFbYou', { when: when(f.createdAt) })}</span>
+              </div>
+              {(f.replies || []).map((r) => (
+                <div key={r.id} data-testid="kitchen-reply" style={{ padding: '10px 12px', borderRadius: 12, background: '#FFFFFF', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <span style={{ fontSize: 14, lineHeight: '20px', color: F.text, overflowWrap: 'anywhere' }}>{r.text}</span>
+                  <span style={{ fontSize: 12, color: F.sage }}>{t('family.lunchFbKitchen', { when: when(r.at) })}</span>
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </List>
+    </section>
+  );
+}
+
+/**
+ * KC round 10 (the analysis: "a day the parent stayed home shows the programme they missed first"): on a day nobody came, the last visit leads — when it was,
+ * arrived and home, the mood, how lunch went, what they joined, and its first pictures. A tap opens that day. One card: the most recent visit of any of them.
+ */
+function LastVisitCard({ members, stories, onOpen, onOpenPhoto }: { members: Member[]; stories: DayStory[]; onOpen: (d: ISODate) => void; onOpenPhoto: (p: Photo, all: Photo[]) => void }) {
+  const { s, t, fmt, now } = useFamilyCtx();
+  const wide = useFamWide();
+  const last = stories.map((st) => st.lastVisit).filter((d): d is ISODate => !!d).sort().pop();
+  const came = last ? members.filter((m) => visitDays(s, m.id, last).includes(last)) : [];
+  const story = useMemo(() => (last && came[0] ? dayStory(s, came[0], last, END_OF_DAY) : null), [s, came, last]); // eslint-disable-line react-hooks/exhaustive-deps
+  const photos = useMemo(() => (last ? familyPhotosOn(s, came.map((m) => m.id), last) : []), [s, came, last]); // eslint-disable-line react-hooks/exhaustive-deps
+  if (!last || !story) return null;
+  const when = `${cap(dayWord(fmt, last, now.today))} · ${fmt.fd(last, { day: 'numeric', month: 'short' })}`;
+  const times = story.arrivedAt && story.leftAt ? t('family.storyArrivedHome', { a: story.arrivedAt, b: story.leftAt }) : story.arrivedAt ? t('family.storyArrived', { a: story.arrivedAt }) : '';
+  const joined = Array.from(new Set(story.sessions.filter((x) => x.took !== 'satOut').map((x) => activityLabel(s, x.activityId, fmt.lang)).filter(Boolean))).slice(0, 2);
+  const bits = [story.log?.mood ? t('family.mood_' + story.log.mood) : '', story.lunch?.amount ? t('family.lunch_' + story.lunch.amount) : '', joined.length ? t('ftoday.lvSessions', { a: joined.join(` ${t('common.and')} `) }) : ''].filter(Boolean);
+  const who = came.length > 1 ? namesOf(t, came) : came[0] ? memberShort(came[0]) : '';
+  const thumbs = photos.slice(0, 3);
+  return (
+    <section data-testid="last-visit-card" data-date={last} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <Cap>{t('ftoday.lastVisit')}</Cap>
+      <FillCard radius={22} pad={14} gap={10} testId="last-visit-body">
+        {/* the header row opens that day (the card itself is not a button: the pictures inside are buttons of their own) */}
+        <button type="button" onClick={() => onOpen(last)} data-testid="last-visit-open" className="cp-press" style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', border: 'none', background: 'transparent', padding: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'inherit', color: F.text }}>
+          <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <span style={{ fontSize: 17, fontWeight: 600, color: F.text, lineHeight: 1.3 }}>{when}{came.length > 1 || members.length > 1 ? ` · ${who}` : ''}</span>
+            {times ? <span style={{ fontSize: 14, color: F.soft }}>{times}</span> : null}
+            {bits.length ? <span style={{ fontSize: 13, color: F.muted, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{bits.join(' · ')}</span> : null}
+          </span>
+          <Icon name="chevron_right" size={22} color={F.chev} />
+        </button>
+        {thumbs.length ? (
+          <div style={{ display: 'flex', gap: 6 }}>
+            {thumbs.map((p, i) => (
+              <button key={p.id} type="button" onClick={() => onOpenPhoto(p, photos)} aria-label={famPhotoAriaLite(fmt.fds(p.date), p.time)} data-photo-id={p.id}
+                style={{ position: 'relative', flex: '1 1 0', minWidth: 0, aspectRatio: wide ? '4 / 3' : '1', borderRadius: 12, overflow: 'hidden', border: 'none', padding: 0, background: '#FFFFFF', cursor: 'pointer' }}>
+                <PhotoImg photo={p} />
+                {i === thumbs.length - 1 && photos.length > thumbs.length ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'rgba(28,22,16,.45)', color: '#FFFFFF', fontSize: 15, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>+{photos.length - thumbs.length}</span> : null}
+              </button>
+            ))}
+          </div>
+        ) : null}
+        <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: F.muted }}>
+          {photos.length ? <span>{photos.length === 1 ? t('ftoday.lvPhotosOne') : t('ftoday.lvPhotosN', { n: photos.length })} · </span> : null}
+          <TextLink size={13} onClick={() => onOpen(last)} style={{ minHeight: 24 }}>{t('ftoday.lvOpen')}</TextLink>
+        </span>
+      </FillCard>
+    </section>
+  );
+}
+const famPhotoAriaLite = (day: string, time: string) => `${day} · ${time}`;
+
 export function FamilyToday() {
   const { s, t, fmt, now, user } = useFamilyCtx();
-  const { isPhone } = useDevice();
   const navigate = useNavigate();
   const { choices, sel, who, setSel, multi } = useFamilySel();
+  const { isPhone } = useDevice();
+  const wide = useFamWide();
   const [sp, setSp] = useSearchParams();
   const [survey, setSurvey] = useState(false);
   const [feedback, setFeedback] = useState(false);
@@ -110,17 +172,16 @@ export function FamilyToday() {
   const { today, nowMin } = now;
   // the day being read: `?date=` (a past day), else today
   const asked = sp.get('date');
-  const date: ISODate = asked && ISO_DAY.test(asked) && asked <= today ? asked : today;
+  // KC round 9: besides today and earlier days, the day ahead (tomorrow's plan) can be read
+  const ahead = useMemo(() => planDay(s, today), [s, today]);
+  const date: ISODate = asked && ISO_DAY.test(asked) && (asked <= today || asked === ahead) ? asked : today;
   const isToday = date === today;
+  const isPlan = date > today;
   const whoKey = who.join(',');
   const members = useMemo(() => who.map((id) => s.members[id]).filter(Boolean), [s, whoKey]); // eslint-disable-line react-hooks/exhaustive-deps
   const stories = useMemo(() => members.map((m) => dayStory(s, m, date, storyNowMin(date, today, nowMin))), [s, members, date, today, nowMin]);
   const visitSet = useMemo(() => new Set(who.flatMap((id) => visitDays(s, id, today))), [s, whoKey, today]); // eslint-disable-line react-hooks/exhaustive-deps
-  const strip = useMemo<StripDay[]>(() => {
-    const days = dayStrip(s, who, today);
-    if (days.some((d) => d.date === date)) return days;
-    return sortBy([...days, { date, visited: visitSet.has(date), photo: bestPhotoOf(s, who, date), count: familyPhotosOn(s, who, date).length }], (d) => d.date);
-  }, [s, whoKey, today, date, visitSet]); // eslint-disable-line react-hooks/exhaustive-deps
+  const strip = useMemo(() => openDayStrip(s, who, today, date, 6, true), [s, whoKey, today, date]); // eslint-disable-line react-hooks/exhaustive-deps
   const photos = useMemo(() => familyPhotosOn(s, who, date), [s, whoKey, date]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!user || !members.length) return null;
@@ -129,162 +190,131 @@ export function FamilyToday() {
     if (d === today) next.delete('date'); else next.set('date', d);
     setSp(next, { replace: true });
   };
-  const both = members.length > 1;
-  const single = members[0];
   const sv = liveSurvey(s);
   const mine = !!sv && sv.recipients.includes(user.id);
   const answered = !!sv && answeredBy(s, sv.id, user.id);
   const openPhoto = (p: Photo, all?: Photo[]) => setViewer({ photos: all ?? [p], startId: p.id });
-  const onProfile = (id: string) => { writePref(user.id, 'fam.sel', id); navigate('/health'); };
-  const greeting = t(nowMin < 12 * 60 ? 'family.goodMorning' : 'family.goodAfternoon', { n: user.contact.firstName });
-  const notes = members.map((m) => ({ m, n: sharedNoteOf(s, m.id) })).filter((x) => x.n);
+  const toTop = () => document.getElementById('main')?.scrollTo?.({ top: 0 });
+  const focus = (id: string) => { setSel(id); toTop(); };
 
-  // "WhatsApp the club" is a real link (wa.me) to the front desk's number: the first active lobby staff. The other two rows open screens.
-  const desk = waUrl(firstOfRole(s, 'lobby')?.phone);
-  const quick: { icon: string; label: string; to?: string; href?: string }[] = [
-    ...(desk ? [{ icon: 'chat', label: t('family.messageClub'), href: desk }] : []),
-    { icon: 'calendar_month', label: t('family.calendarBtn'), to: '/calendar' },
-    { icon: 'contacts', label: t('family.contactsBtn'), to: '/contacts' },
-  ];
-  const photoLabel = (p: Photo) => {
-    const a = photoActivityLabel(s, p.activity, fmt.lang) || t('family.clubPhoto');
-    return t(p.media === 'video' ? 'family.photoAriaVideo' : p.kind === 'group' ? 'family.photoAriaGroup' : p.kind === 'activity' ? 'family.photoAriaAct' : 'family.photoAria', { a, t: p.time });
-  };
-  const shown = photos.slice(0, 9);
-  const card: CSSProperties = { background: '#FFFFFF', borderRadius: 20, padding: isPhone ? '18px 18px' : '24px 28px', display: 'flex', flexDirection: 'column', gap: 14, boxShadow: isPhone ? 'none' : SOFT_SHADOW, border: isPhone ? 'none' : '1px solid #EFE7DC' };
 
-  return (
-    <div className={isPhone ? 'cp-native' : undefined} data-testid="family-today" data-date={date} style={{ padding: famPad(isPhone), display: 'flex', flexDirection: 'column', gap: isPhone ? 22 : 'clamp(18px, 3vw, 32px)', maxWidth: 680, margin: '0 auto', width: '100%' }}>
-      <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 12 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 4 : 8, minWidth: 0 }}>
-          <Cap>{fmt.fdl(date)}</Cap>
-          <H1>{isToday ? greeting : t('family.storyLooking')}</H1>
-        </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 'none' }}>
-          {!isToday ? <button type="button" onClick={() => setDate(today)} className="cp-press" style={{ height: 36, padding: '0 14px', borderRadius: 999, border: 'none', background: '#F3EEE8', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.today')}</button> : null}
-          <DayPicker value={date} visits={visitSet} today={today} onPick={setDate} />
-        </div>
+  // lunch feedback: when the day has a lunch and someone came (or it is today); the row says what was served, or that the kitchen has been told
+  const ids = members.map((m) => m.id);
+  // like the prototype: lunch feedback only on a day one of them came (and so had the lunch)
+  const hasLunch = stories.some((st: DayStory) => st.lunch) && stories.some((st) => st.visited);
+  const sent = sortBy(live(s.feedback).filter((f) => ids.includes(f.memberId) && f.mealDate === date && f.source === 'family'), (f) => f.createdAt, -1)[0];
+  const dishes = dishNamesOf(s, servedLunch(s, members[0], date)).slice(0, 2).join(', ');
+  const fbSub = sent ? t(sent.status === 'answered' ? 'ftoday.fbReplied' : 'ftoday.fbSent') : dishes ? (isToday ? t('ftoday.fbSubToday', { dish: dishes }) : t('ftoday.fbSubDay', { dish: dishes, d: dayWord(fmt, date, today) })) : t('ftoday.fbSubNone');
+
+  // laptop: the page's own heading above the columns (the prototype's "Good morning, Maria"); an earlier day reads "Looking back" with a way back
+  const first = user.contact.firstName;
+  const greeting = t(now.nowMin < 12 * 60 ? 'family.goodMorning' : now.nowMin < 18 * 60 ? 'family.goodAfternoon' : 'ftoday.goodEvening', { n: first });
+  const heading = (
+    <div key="heading" data-testid="today-heading" style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, minWidth: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
+        <span style={DESK_EYEBROW}>{fmt.fdl(date)}</span>
+        <h1 style={{ margin: 0, fontSize: 36, lineHeight: 1.05, fontWeight: 400, letterSpacing: '-1.1px', color: F.ink, overflowWrap: 'anywhere' }}>{isToday ? greeting : isPlan ? (date === addDays(today, 1) ? t('ftoday.planTitleTomorrow') : t('ftoday.planTitleDay', { d: fmt.fd(date, { weekday: 'long' }) })) : t('family.storyLooking')}</h1>
       </div>
-      {multi ? <FamSwitch segmented={isPhone} label={t('family.switcher')} value={sel} onChange={setSel} items={[...choices.map((id) => ({ key: id, label: memberShort(s.members[id]) })), { key: 'both', label: choices.length > 2 ? t('family.everyone') : t('family.both') }]} /> : null}
-      <ClosureNotice phone={isPhone} />
-      <DayStrip days={strip} selected={date} tone={single.photoTone} onPick={setDate} />
+      {!isToday ? <button type="button" onClick={() => setDate(today)} data-testid="back-to-today" className="cp-fam-press" style={{ flex: 'none', height: 40, padding: '0 16px', border: 'none', borderRadius: 999, background: F.fill, color: F.text, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter' }}>{t('ftoday.backToday')}</button> : null}
+    </div>
+  );
 
-      {both ? (
-        <>
-          <GroupStory members={members} stories={stories} onOpenPhoto={openPhoto} isPhone={isPhone} />
-          {members.map((m, i) => <ParentStory key={m.id} m={m} story={stories[i]} onProfile={onProfile} onDay={setDate} isPhone={isPhone} />)}
-        </>
-      ) : (
-        <MemberStory m={single} story={stories[0]} onProfile={onProfile} onOpenPhoto={openPhoto} onDay={setDate} isPhone={isPhone} />
-      )}
-
-      {isToday && sv && mine && isPhone ? (
-        <div data-testid="survey-card">
-          <Group title={t('family.surveyEyebrow')} gap={10}>
-            <span style={{ fontSize: 18, lineHeight: '25px', fontWeight: 400, color: '#2B231C' }}>{sv.title}</span>
-            <span style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>{answered ? t('family.surveyThanks') : t('family.surveyAsk')}</span>
-            {!answered ? <Button size={48} full onClick={() => setSurvey(true)}>{t('family.surveyBtn')}</Button> : null}
-          </Group>
-        </div>
-      ) : isToday && sv && mine ? (
-        <div style={fcard('', 12)} data-testid="survey-card">
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Icon name="rate_review" size={26} color="#6E5A43" weight={300} />
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
-              <Cap>{t('family.surveyEyebrow')}</Cap>
-              <span style={{ fontSize: 19, lineHeight: '26px', fontWeight: 400, color: '#2B231C' }}>{sv.title}</span>
-            </div>
+  const hero = (
+    <Hero key="hero" members={members} stories={stories} date={date} onFocus={focus} onProfile={(id) => navigate(`/profile?member=${id}`)} onOpenPhoto={openPhoto}
+      top={(
+        <div data-testid="today-header" data-date={date} style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, minWidth: 0 }}>
+            {/* KC round 9: one tap from Oma to Opa (or back to both), no "‹ Both parents" step in between */}
+            {multi ? <ParentSwitch members={choices.map((id) => s.members[id]).filter(Boolean)} sel={sel} onPick={(id) => (id === 'both' ? setSel('both') : focus(id))} /> : null}
+            <DayPicker chip={fmt.fd(date, { weekday: 'short', day: 'numeric', month: 'short' }).replace(/,/g, '')} value={date} visits={visitSet} today={today} onPick={setDate} />
+            {!isToday && !wide ? <FrostChip testId="back-to-today" onClick={() => setDate(today)}>{t('common.today')}</FrostChip> : null}
           </div>
-          <span style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>{answered ? t('family.surveyThanks') : t('family.surveyAsk')}</span>
-          {!answered ? <Button size={48} full onClick={() => setSurvey(true)}>{t('family.surveyBtn')}</Button> : null}
+          {/* the bell floats on the picture on a phone; the tablet and laptop sidebars have Notifications (so there is only ever one bell anchor) */}
+          {isPhone ? <NotificationBell variant="hero" onClick={() => useUi.getState().setBell(true)} /> : null}
         </div>
+      )} />
+  );
+
+  // the day: the strip, closures, timeline, daily log, health, photos, lunch feedback and, last, the quick survey (the white panel on a phone and tablet, the right column on a laptop)
+  const day = (
+    <div key="day" data-testid="today-panel" style={wide
+      ? { display: 'flex', flexDirection: 'column', gap: 22, minWidth: 0 }
+      : { position: 'relative', zIndex: 1, marginTop: -PANEL_OVERLAP, background: '#FFFFFF', borderRadius: '28px 28px 0 0', padding: '8px 16px 0', display: 'flex', flexDirection: 'column', gap: 18, minHeight: '50vh', boxShadow: '0 -1px 0 rgba(255,255,255,.4)' }}>
+      {wide ? null : <span aria-hidden="true" style={{ alignSelf: 'center', width: 36, height: 5, borderRadius: 999, background: '#D4D4D8', marginBottom: -4, flex: 'none' }} />}
+      {wide ? null : <DayStrip days={strip} selected={date} onPick={setDate} />}
+
+      <ClosureNotice />
+
+      {/* KC round 10: today, when nobody has come (and the club is shut for the day or they are simply home), the last visit comes first */}
+      {isToday && !stories.some((st) => st.visited) && stories.some((st) => st.state.kind === 'away') ? <LastVisitCard members={members} stories={stories} onOpen={setDate} onOpenPhoto={openPhoto} /> : null}
+
+      <Timeline members={members} stories={stories} date={date} onOpenPhoto={openPhoto} onDay={setDate}
+        lunchFeedback={hasLunch ? { label: sent ? fbSub : t('ftoday.fbRow'), onClick: () => setFeedback(true) } : undefined} />
+
+      {isPlan ? null : <DailyLogSection members={members} stories={stories} date={date} onOpenDay={setDate} />}
+
+      {isPlan ? null : <TodayHealthSection members={members} stories={stories} date={date} />}
+
+      {photos.length ? (
+        <section style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <Cap right={<TextLink size={14} onClick={() => navigate('/photos')} testId="photos-all" style={{ minHeight: 24 }}>{t('ftoday.allN', { n: photos.length })}</TextLink>}>{t('family.photos')}</Cap>
+          {/* KC round 9: big cards swiped sideways instead of six small tiles; a tap opens the viewer, which grows out of the card */}
+          <DayPhotoCards photos={photos} onOpen={(p) => openPhoto(p, photos)} wide={wide} testId="day-photos" />
+        </section>
       ) : null}
 
-      {/* a note from the team, as a quote with the writer's face: the day's own, or (today, before it is written) the last visit's */}
-      {!both ? (() => {
-        // KC round 7: only a note the team wrote is quoted (the mood is on the cover, lunch on the rail); today, until its note is in, the newest note
-        const log = stories[0].log?.note ? stories[0].log : isToday ? latestNote(s, single.id, today) : undefined;
-        if (!log?.note) return null;
-        const own = log === stories[0].log;
-        return (
-          <section style={card} data-testid="team-note" data-own={own}>
-            <Cap>{own ? t('family.notesTeam') : t('family.storyLastVisit', { d: log.date })}</Cap>
-            <LogBlock m={single} log={log} />
-            {!own ? <button type="button" onClick={() => setDate(log.date)} style={{ ...quietLink, alignSelf: 'flex-start' }}>{t('family.memOpenDay', { d: log.date })}</button> : null}
-          </section>
-        );
-      })() : null}
-
-      <Timeline members={members} stories={stories} date={date} onFeedback={() => setFeedback(true)} onOpenPhoto={openPhoto} />
-
-      {shown.length ? (
-        isPhone ? (
-          <div data-testid="day-photos"><Group title={t('family.storyPhotos')} meta={photos.length === 1 ? t('family.phCountOne') : t('family.phCountN', { n: photos.length })} gap={12}>
-            <PhotoGrid photos={shown} label={photoLabel} onOpen={(p) => openPhoto(p, photos)} />
-            {photos.length > shown.length ? <button type="button" onClick={() => navigate('/photos')} style={{ ...quietLink, alignSelf: 'flex-start' }}>{t('family.storyAllPhotos')}</button> : null}
-          </Group></div>
-        ) : (
-          <div style={fcard('', 12)} data-testid="day-photos">
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8 }}>
-              <Cap>{t('family.storyPhotos')}</Cap>
-              <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{photos.length === 1 ? t('family.phCountOne') : t('family.phCountN', { n: photos.length })}</span>
-            </div>
-            <PhotoGrid photos={shown} label={photoLabel} onOpen={(p) => openPhoto(p, photos)} />
-            {photos.length > shown.length ? <button type="button" onClick={() => navigate('/photos')} style={{ ...quietLink, alignSelf: 'flex-start' }}>{t('family.storyAllPhotos')}</button> : null}
-          </div>
-        )
+      {hasLunch ? (
+        <FillCard onClick={() => setFeedback(true)} testId="lunch-feedback-row" radius={18} pad={14} gap={12} style={{ flexDirection: 'row', alignItems: 'center' }}>
+          <IconTile icon="restaurant" size={36} radius={11} iconSize={20} />
+          <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+            <span style={{ fontSize: 15, fontWeight: 500, color: F.text }}>{t('ftoday.fbRow')}</span>
+            <span style={{ fontSize: 13, color: F.muted, overflowWrap: 'anywhere' }}>{fbSub}</span>
+          </span>
+          <Icon name="chevron_right" size={22} color={F.chev} />
+        </FillCard>
       ) : null}
+      <RecentFeedback memberIds={ids} />
 
-      <LunchFeedback memberIds={members.map((m) => m.id)} phone={isPhone} />
-      {members.map((m) => <MemoriesTeaser key={m.id} m={m} phone={isPhone} />)}
-      {/* KC round 6: no Plan or invoice cards on Today; the plan card, invoices and Pay live in their own tabs */}
-      {/* round 6, phone: an iOS grouped list (tinted icon tiles, chevrons), the shared notes as its footnote */}
-      {isPhone ? (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <Group pad={0} gap={0}>
-            {quick.map((q, i) => {
-              const rowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 12, minHeight: 52, padding: '0 10px 0 14px', border: 'none', background: '#FFFFFF', fontSize: 16, color: '#1E1A16', cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left', textDecoration: 'none',
-                backgroundImage: i ? 'linear-gradient(#EFEAE3, #EFEAE3)' : 'none', backgroundSize: 'calc(100% - 56px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' };
-              const inner = (
-                <>
-                  <span aria-hidden="true" style={{ width: 30, height: 30, borderRadius: 8, background: '#F3EEE8', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={q.icon} size={18} color="#75624B" /></span>
-                  <span style={{ flex: 1 }}>{q.label}</span>
-                  <Icon name="chevron_right" size={22} color="#A89C8E" />
-                </>
-              );
-              return q.href
-                ? <a key={q.href} href={q.href} target="_blank" rel="noopener" data-testid="wa-club" className="cp-tap-self" style={rowStyle}>{inner}</a>
-                : <button key={q.to} type="button" onClick={() => navigate(q.to!)} className="cp-tap-self" style={rowStyle}>{inner}</button>;
-            })}
-          </Group>
-          {notes.map(({ m, n }) => (
-            <div key={m.id} style={{ ...GROUP_HEAD, textTransform: 'none', letterSpacing: 0, whiteSpace: 'normal', fontWeight: 400, lineHeight: '19px', padding: '0 16px' }}>{both ? t('family.sharedNoteFor', { m: memberShort(m), n: n!.text }) : t('family.sharedNote', { n: n!.text })}</div>
-          ))}
-        </div>
-      ) : (
-      <div style={{ display: 'flex', flexDirection: 'column', padding: '0 0 8px' }}>
-        {quick.map((q) => {
-          const rowStyle: CSSProperties = { display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, padding: '0 2px', border: 'none', borderTop: '1px solid #E6DDD1', background: 'transparent', fontSize: 15, color: '#1E1A16', cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left', textDecoration: 'none' };
-          const inner = (
-            <>
-              <Icon name={q.icon} size={20} color="#6E5A43" weight={300} />
-              <span style={{ flex: 1 }}>{q.label}</span>
-              <Icon name="arrow_forward" size={18} color="#6E5A43" />
-            </>
-          );
-          return q.href
-            ? <a key={q.href} href={q.href} target="_blank" rel="noopener" data-testid="wa-club" className="h-row cp-bleed" style={rowStyle}>{inner}</a>
-            : <button key={q.to} type="button" onClick={() => navigate(q.to!)} className="h-row cp-bleed" style={rowStyle}>{inner}</button>;
-        })}
-        {notes.map(({ m, n }) => (
-          <div key={m.id} style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, borderTop: '1px solid #E6DDD1', paddingTop: 16 }}>{both ? t('family.sharedNoteFor', { m: memberShort(m), n: n!.text }) : t('family.sharedNote', { n: n!.text })}</div>
-        ))}
-      </div>
-      )}
-
+      {/* KC round 9: the quick survey is the last thing on the day */}
+      {isToday && sv && mine ? (
+        <FillCard testId="survey-card" radius={22} gap={8}>
+          <span style={{ fontSize: 13, letterSpacing: '0.4px', textTransform: 'uppercase', fontWeight: 600, color: F.eyebrow }}>{t('family.surveyEyebrow')}</span>
+          <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, color: F.text }}>{sv.title}</span>
+          <span style={{ fontSize: 14, lineHeight: '20px', color: F.muted }}>{answered ? t('family.surveyThanks') : t('family.surveyAsk')}</span>
+          {!answered ? <button type="button" onClick={() => setSurvey(true)} style={{ ...inkButton, marginTop: 4 }}>{t('family.surveyBtn')}</button> : null}
+        </FillCard>
+      ) : null}
+    </div>
+  );
+  const overlays = (
+    <>
       <SurveySheet open={survey} onClose={closeSurvey} />
-      <LunchFeedbackSheet memberIds={members.map((m) => m.id)} open={feedback} onClose={closeFeedback} />
+      <LunchFeedbackSheet memberIds={ids} date={date} open={feedback} onClose={closeFeedback} />
       {viewer ? <PhotoViewer photos={viewer.photos} startId={viewer.startId} onClose={closeViewer} audience="family" /> : null}
+    </>
+  );
+
+  if (wide) {
+    // laptop: the heading, then the picture and the day strip stay in view on the left while the day scrolls on the right
+    return (
+      <FamPage wide testId="family-today" gap={24}>
+        {heading}
+        <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1.2fr) minmax(340px, 1fr)', gap: 32, alignItems: 'start' }}>
+          <div style={{ position: 'sticky', top: 24, display: 'flex', flexDirection: 'column', gap: 14, minWidth: 0 }}>
+            {hero}
+            <DayStrip tiles days={strip} selected={date} onPick={setDate} />
+          </div>
+          {day}
+        </div>
+        {overlays}
+      </FamPage>
+    );
+  }
+  return (
+    <div data-testid="family-today" style={{ width: '100%', maxWidth: 600, margin: '0 auto', padding: isPhone ? 0 : '24px 16px 0', boxSizing: 'border-box' }}>
+      {hero}
+      {day}
+      {overlays}
     </div>
   );
 }

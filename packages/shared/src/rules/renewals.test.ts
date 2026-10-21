@@ -2,7 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildCitra, DEMO_START_MIN, live, type ClubState } from '../index';
 import { leaveDeadline } from './leave';
-import { askedInApp, followUpId, isDecided, leaveMonthsCheck, renewalCounts, renewalDates, renewalMembers, renewalMonth, renewalRows, renewalsLeft } from './renewals';
+import type { FollowUp } from '../types';
+import { askedInApp, followUpId, isDecided, leaveMonthsCheck, renewalCounts, renewalDates, renewalMembers, renewalMonth, renewalNext, renewalRows, renewalsLeft, renewalStatus } from './renewals';
 
 describe('the month and its dates', () => {
   it('the coming month; the leave deadline is 14 days before the end of the month before; the invoice goes out on the 21st', () => {
@@ -38,7 +39,7 @@ describe.each([['2026-10-21'], ['2026-10-08']])('the seed around %s', (T) => {
     expect(outs).toContain('upgrade');
     expect(fus.find((f) => f.outcome === 'upgrade')).toMatchObject({ status: 'pending', approval: { status: 'pending', by: 'staff:s1' } });
     expect(fus.find((f) => f.outcome === 'noAnswer')?.calls).toHaveLength(2);
-    expect(outs).toContain('callBack');
+    expect(outs).not.toContain('callBack'); // KC round 7: no "call back" option
     expect(outs).toContain('continue');
     // a leave is only seeded when the rules allow it on that day
     for (const f of fus.filter((x) => x.outcome === 'leave')) expect(leaveMonthsCheck(s, s.members[f.memberId], f.leaveMonths!, T)).toEqual({ ok: true });
@@ -63,5 +64,53 @@ describe.each([['2026-10-21'], ['2026-10-08']])('the seed around %s', (T) => {
     const c = renewalCounts(rows);
     expect(c.waiting).toBeGreaterThanOrEqual(2);
     expect(c.toDo).toBeGreaterThan(c.decided);
+  });
+});
+
+// KC round 8d: the list's Status and Next step columns
+describe('status and next step of a row', () => {
+  const fu = (f: Partial<FollowUp>): FollowUp => ({ id: 'fu-2026-11-m1', clubId: 'citra', createdAt: '2026-10-20T10:00', createdBy: 'staff:s1', memberId: 'm1', month: '2026-11', calls: [], status: 'open', ...f } as FollowUp);
+  const call = { at: '2026-10-20T10:00', by: 'staff:s1', outcome: 'noAnswer' } as FollowUp['calls'][number];
+  const T = '2026-10-21';
+  const next = (f: FollowUp | undefined, asked?: 'plan' | 'leave') => renewalNext({ f, asked }, '2026-11', T);
+  const status = (f: FollowUp | undefined, asked?: 'plan' | 'leave') => renewalStatus({ f, asked });
+
+  it('nobody reached: not contacted, call; no answer: call again with the calls so far', () => {
+    expect(status(undefined)).toBe('new');
+    expect(next(undefined)).toEqual({ kind: 'call' });
+    expect(status(fu({ outcome: 'noAnswer', calls: [call, call] }))).toBe('noAnswer');
+    expect(next(fu({ outcome: 'noAnswer', calls: [call, call] }))).toEqual({ kind: 'callAgain', calls: 2 });
+  });
+  it('a change that waits for management shows the outcome and says waiting for approval', () => {
+    const f = fu({ outcome: 'upgrade', status: 'pending', calls: [call] });
+    expect(status(f)).toBe('upgrade');
+    expect(next(f)).toEqual({ kind: 'approval' });
+  });
+  it('a decided row says what starts when', () => {
+    expect(next(fu({ outcome: 'continue', status: 'done' }))).toEqual({ kind: 'renews', date: '2026-11-01' });
+    expect(next(fu({ outcome: 'downgrade', status: 'done' }))).toEqual({ kind: 'planFrom', date: '2026-11-01', plan: 'flex' });
+    expect(next(fu({ outcome: 'upgrade', status: 'done' }))).toEqual({ kind: 'planFrom', date: '2026-11-01', plan: 'gold' });
+    expect(next(fu({ outcome: 'leave', status: 'done', leaveMonths: ['2026-12', '2027-01'] }))).toEqual({ kind: 'leaveFrom', date: '2026-12-01' });
+    expect(next(fu({ outcome: 'stop', status: 'done', lastDay: '2026-10-31' }))).toEqual({ kind: 'lastDay', date: '2026-10-31' });
+    expect(status(fu({ outcome: 'stop', status: 'done', lastDay: '2026-10-31' }))).toBe('stop');
+  });
+  it('turned down: ask the family again; asked in the app: answer the request / leave is on the list', () => {
+    const rej = fu({ outcome: 'leave', status: 'rejected', leaveMonths: ['2026-11'] });
+    expect(status(rej)).toBe('rejected');
+    expect(next(rej)).toEqual({ kind: 'askAgain' });
+    expect(status(undefined, 'plan')).toBe('asked');
+    expect(next(undefined, 'plan')).toEqual({ kind: 'answerRequest' });
+    expect(next(undefined, 'leave')).toEqual({ kind: 'leaveFrom', date: '2026-11-01' });
+    // a no-answer call does not hide that the family asked in the app
+    expect(status(fu({ outcome: 'noAnswer', calls: [call] }), 'plan')).toBe('asked');
+  });
+  it('a month that has started is a read-only log: no next step', () => {
+    expect(renewalNext({ f: undefined }, '2026-10', T)).toEqual({ kind: 'none' });
+    expect(renewalNext({ f: undefined }, '2026-11', '2026-11-03')).toEqual({ kind: 'none' });
+  });
+  it('the seed rows (5 in the tests): the waiting upgrade, the decided continue, two no-answers, one asked in the app', () => {
+    const s = buildCitra(T, DEMO_START_MIN);
+    const by = Object.fromEntries(renewalRows(s, '2026-11').map((r) => [r.m.id, [renewalStatus(r), renewalNext(r, '2026-11', T).kind]]));
+    expect(by).toEqual({ m1: ['upgrade', 'approval'], m2: ['noAnswer', 'callAgain'], m10: ['asked', 'answerRequest'], m20: ['noAnswer', 'callAgain'], m46: ['continue', 'renews'] });
   });
 });

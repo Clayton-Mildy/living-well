@@ -10,7 +10,7 @@ import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { CallLink, FlagChip, MemberAvatar, ReadingBadge, Stack, cap, memberFlags, relText } from './parts';
 
-const label = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase' as const, fontWeight: 500, lineHeight: '18px', color: '#6E5A43' };
+const label = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase' as const, fontWeight: 500, lineHeight: '18px', color: 'var(--eyebrow, #6E5A43)' };
 
 export interface DrawerActions {
   onCheckIn(id: string): void;
@@ -65,22 +65,22 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
   const careBody = flags.length || m.nanny ? (
     <>
       {flags.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{flags.map((f, i) => <FlagChip key={i} f={f} />)}</div> : null}
-      {m.nanny ? <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, lineHeight: '22px' }}><Icon name="supervisor_account" size={20} color="#75624B" />{t('lobby.nannyNote', { name: m.nanny.name, p: pron(m).p })}</span> : null}
+      {m.nanny ? <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, lineHeight: '22px' }}><Icon name="supervisor_account" size={20} color="var(--accent, #75624B)" />{t('lobby.nannyNote', { name: m.nanny.name, p: pron(m).p })}</span> : null}
     </>
   ) : null;
   const notesBody = (
     <>
       <div style={{ display: 'flex', gap: 8, fontSize: 16, lineHeight: '22px' }}>
-        <Icon name="group" size={20} color="#75624B" />
+        <Icon name="group" size={20} color="var(--accent, #75624B)" />
         <span><strong style={{ fontWeight: 600 }}>{t('common.sharedFam')}:</strong> {sharedNote?.text || t('lobby.noNotes')}</span>
       </div>
       <div style={{ display: 'flex', gap: 8, fontSize: 16, lineHeight: '22px' }}>
-        <Icon name="lock" size={20} color="#75624B" />
+        <Icon name="lock" size={20} color="var(--accent, #75624B)" />
         <span><strong style={{ fontWeight: 600 }}>{t('common.staffOnly')}:</strong> {staffNote?.text || t('lobby.noNotes')}</span>
       </div>
       {m.care.instructions ? (
         <div style={{ display: 'flex', gap: 8, fontSize: 16, lineHeight: '22px' }}>
-          <Icon name="health_and_safety" size={20} color="#75624B" />
+          <Icon name="health_and_safety" size={20} color="var(--accent, #75624B)" />
           <span style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
             <span style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}><strong style={{ fontWeight: 600 }}>{t('lobby.careInstructions')}</strong><StaffOnlyTag /></span>
             <span>{m.care.instructions}</span>
@@ -90,7 +90,7 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
     </>
   );
   const person = (key: string, name: string, line: string, phone: string | undefined, first: boolean) => (
-    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '11px 0' : '10px 0', borderTop: first ? 'none' : '1px solid #F0EAE1' }}>
+    <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '11px 0' : '10px 0', borderTop: first ? 'none' : '0.5px solid var(--hairline, #E2E2E6)' }}>
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{name}</span>
         <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{line}</span>
@@ -109,12 +109,12 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
       <PhoneScreen open onClose={onClose} label={memberName(m)} back={t('lobby.arrivals')} footer={primaryBtn}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}>
           <MemberAvatar m={m} size={80} font={28} />
-          <h2 style={{ margin: '2px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{memberName(m)}</h2>
+          <h2 className="cp-serif" style={{ margin: '2px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{memberName(m)}</h2>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{sub}</span>
         </div>
         <Group pad={0} gap={0}>
-          <button type="button" onClick={openProfile} className="cp-press" style={{ height: 50, padding: '0 10px 0 16px', border: 'none', background: '#FFFFFF', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
-            <Icon name="person" size={21} color="#75624B" />
+          <button type="button" onClick={openProfile} className="cp-press" style={{ height: 50, padding: '0 10px 0 16px', border: 'none', background: 'transparent', color: '#24201C', fontSize: 16, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+            <Icon name="person" size={21} color="var(--accent, #75624B)" />
             <span style={{ flex: 1 }}>{t('lobby.openProfile')}</span>
             <Icon name="chevron_right" size={22} color="#A89C8E" />
           </button>
@@ -132,16 +132,16 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <MemberAvatar m={m} size={80} font={28} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <h2 style={{ margin: 0, fontSize: 28, lineHeight: '34px', fontWeight: 400, letterSpacing: '-0.8px', color: '#2B231C' }}>{memberName(m)}</h2>
+            <h2 className="cp-serif" style={{ margin: 0, fontSize: 28, lineHeight: '34px', fontWeight: 400, letterSpacing: '-0.8px', color: '#2B231C' }}>{memberName(m)}</h2>
             <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span>
           </div>
         </div>
-        <button type="button" onClick={openProfile} className="h-cream" style={{ alignSelf: 'flex-start', height: 40, padding: '0 18px 0 14px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" onClick={openProfile} className="h-fill" style={{ alignSelf: 'flex-start', height: 40, padding: '0 18px 0 14px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
           <Icon name="person" size={19} weight={300} />
           {t('lobby.openProfile')}
         </button>
 
-        <div style={{ padding: '14px 16px', borderRadius: 12, background: '#F3EEE8', display: 'flex', flexDirection: 'column', gap: 4 }}>
+        <div className="cp-grey" style={{ padding: '14px 16px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', gap: 4 }}>
           <span style={label}>{t('lobby.todayL')}</span>
           {todayBody}
         </div>

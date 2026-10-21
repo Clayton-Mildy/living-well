@@ -50,19 +50,19 @@ export function FamilyTab({ p }: { p: P }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
                 {link.primary && !pending ? <Tag28 icon="receipt_long" label={t('profile.primaryBilling')} bg="#24201C" fg="#FFFFFF" /> : null}
                 {pending ? <Tag28 icon="hourglass_top" label={link.primary ? t('profile.pendingPrimary') : t('common.pendingApproval')} bg="#F6ECD6" fg="#7A5510" /> : null}
-                {access ? <Tag28 icon="smartphone" label={t('profile.usesApp')} bg="#F3EEE8" /> : !pending ? <Tag28 icon="phonelink_erase" label={t('profile.noApp')} bg="#F0EAE1" fg="#5E5852" /> : null}
-                {other(contact.id).map((x) => <Tag28 key={x.id} icon="link" label={t('profile.alsoFamilyOf', { n: memberShort(x) })} bg="#E8E1D8" />)}
+                {access ? <Tag28 icon="smartphone" label={t('profile.usesApp')} bg="var(--fill, #F4F4F5)" /> : !pending ? <Tag28 icon="phonelink_erase" label={t('profile.noApp')} bg="var(--press, #EEEEF0)" fg="#5E5852" /> : null}
+                {other(contact.id).map((x) => <Tag28 key={x.id} icon="link" label={t('profile.alsoFamilyOf', { n: memberShort(x) })} bg="var(--press, #EEEEF0)" />)}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                 {canEdit && !pending ? <Button variant="secondary" size={44} icon="edit" onClick={() => p.open('contact', { familyId: contact.id })} label={t('profile.editContact', { n: contact.name })}>{t('common.edit')}</Button> : null}
                 {canReset && !pending && contact.username ? <Button variant="secondary" size={44} icon="lock_reset" onClick={() => setReset(contact)} label={t('profile.resetPasswordFor', { n: contact.name })}>{t('profile.resetPassword')}</Button> : null}
                 {!p.family && !pending && waUrl(contact.phone) ? (
-                  <a href={waUrl(contact.phone)} target="_blank" rel="noopener" data-testid="wa-link" aria-label={`${t('profile.messageFamily')} · ${contact.name}`} className="h-cream cp-press"
-                    style={{ height: 40, padding: '0 14px', borderRadius: 10, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontFamily: 'Inter', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
+                  <a href={waUrl(contact.phone)} target="_blank" rel="noopener" data-testid="wa-link" aria-label={`${t('profile.messageFamily')} · ${contact.name}`} className="h-fill cp-fill cp-press"
+                    style={{ height: 40, padding: '0 14px', borderRadius: 10, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontFamily: 'Inter', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
                     <Icon name="chat" size={19} weight={300} />{t('profile.messageFamily')}
                   </a>
                 ) : null}
-                <a href={`tel:${contact.phone}`} aria-label={t('profile.callName', { n: contact.name })} style={{ width: 44, height: 44, borderRadius: 999, border: '1px solid #DCD3C8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#75624B', textDecoration: 'none', flex: 'none' }}>
+                <a href={`tel:${contact.phone}`} aria-label={t('profile.callName', { n: contact.name })} className="h-fill cp-fill" style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent, #75624B)', textDecoration: 'none', flex: 'none' }}>
                   <Icon name="call" size={20} />
                 </a>
               </div>

@@ -51,7 +51,7 @@ export function Budget() {
     <>
       <Select label={t('finance.budget.section')} value={chosen} onChange={setSec} options={sections.map((x) => ({ value: x.id, label: sectionName(s, x.id, lang) }))} />
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('finance.budget.itemPlaceholder')} aria-label={t('finance.budget.item')} maxLength={120} style={{ ...inputBox, flex: '2 1 240px' }} />
+        <input value={item} onChange={(e) => setItem(e.target.value)} placeholder={t('finance.budget.itemPlaceholder')} aria-label={t('finance.budget.item')} maxLength={120} className="cp-input cp-fill" style={{ ...inputBox, flex: '2 1 240px' }} />
         <div style={{ flex: '1 1 140px', minWidth: 0 }}><RpField value={amt} onChange={setAmt} ariaLabel={t('finance.budget.amount')} placeholder={t('finance.budget.amountPlaceholder')} /></div>
         <Button size={56} disabled={!ok} onClick={send} full={isPhone} style={{ padding: '0 24px' }}>{t('finance.budget.send')}</Button>
       </div>
@@ -170,8 +170,8 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
             </div>
             {canSet ? <IconButton icon="edit" label={t('finance.budget.rename', { name })} bordered={false} size={40} color="#6B6259" onClick={onRename} /> : null}
           </div>
-          <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={name} style={{ height: 8, borderRadius: 999, background: '#F0EAE1', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `${pct}%`, background: pct >= 90 ? '#9A3D24' : pct >= 75 ? '#7A5510' : '#75624B', borderRadius: 999 }} />
+          <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={name} style={{ height: 8, borderRadius: 999, background: 'var(--hairline, #E2E2E6)', overflow: 'hidden' }}>
+            <div style={{ height: '100%', width: `${pct}%`, background: pct >= 90 ? '#9A3D24' : pct >= 75 ? '#7A5510' : 'var(--accent, #75624B)', borderRadius: 999 }} />
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 14, lineHeight: 1.4, fontVariantNumeric: 'tabular-nums' }}>
             <span>{t('finance.budget.spent', { amount: rp(w.spent) })}{w.committed > 0 ? ` · ${t('finance.budget.committed', { amount: rp(w.committed) })}` : ''}</span>
@@ -202,7 +202,7 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
               {r.status === 'rejected' && r.note ? <span style={{ fontSize: 14, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
               {rejecting === r.id ? (
                 <div style={dangerStrip}>
-                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
+                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} className="cp-input cp-fill" style={{ ...inputBox, flex: '1 1 200px' }} />
                   <Button variant="secondary" size={48} onClick={() => setRejecting(null)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
                   <Button variant="danger" size={48} disabled={!note.trim()} onClick={() => decide(r.id, 'reject')} style={{ padding: '0 20px' }}>{t('finance.budget.rejectConfirm')}</Button>
                 </div>
@@ -210,13 +210,13 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
             </div>
           );
         })}
-        {!reqs.length ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, padding: '12px 16px 14px', backgroundImage: 'linear-gradient(#EFEAE3, #EFEAE3)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>{t('finance.budget.noRequests')}</span> : null}
+        {!reqs.length ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, padding: '12px 16px 14px', backgroundImage: 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>{t('finance.budget.noRequests')}</span> : null}
         <EditRequest request={editing} onClose={() => setEditing(null)} />
       </PGroup>
     );
   }
   return (
-    <Hero visible style={{ borderRadius: 16, boxShadow: 'var(--card-shadow)', padding: '18px clamp(16px, 2vw, 22px) 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Hero visible style={{ borderRadius: 16, padding: '18px clamp(16px, 2vw, 22px) 14px', display: 'flex', flexDirection: 'column', gap: 12 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8 }}>
         <span style={{ fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.4px', color: '#2B231C', minWidth: 0 }}>{sectionName(s, section.id, lang)}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none' }}>
@@ -237,8 +237,8 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
       ) : (
         <span style={{ fontSize: 18, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{t('finance.budget.weekRp', { amount: rp(w.limit) })}</span>
       )}
-      <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={sectionName(s, section.id, lang)} style={{ height: 8, borderRadius: 999, background: '#F0EAE1', overflow: 'hidden' }}>
-        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 90 ? '#9A3D24' : pct >= 75 ? '#7A5510' : '#75624B', borderRadius: 999 }} />
+      <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={sectionName(s, section.id, lang)} style={{ height: 8, borderRadius: 999, background: 'var(--hairline, #E2E2E6)', overflow: 'hidden' }}>
+        <div style={{ height: '100%', width: `${pct}%`, background: pct >= 90 ? '#9A3D24' : pct >= 75 ? '#7A5510' : 'var(--accent, #75624B)', borderRadius: 999 }} />
       </div>
       <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap', fontSize: 14, lineHeight: 1.4, fontVariantNumeric: 'tabular-nums' }}>
         <span>{t('finance.budget.spent', { amount: rp(w.spent) })}{w.committed > 0 ? ` · ${t('finance.budget.committed', { amount: rp(w.committed) })}` : ''}</span>
@@ -273,7 +273,7 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
               {r.status === 'rejected' && r.note ? <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
               {rejecting === r.id ? (
                 <div style={dangerStrip}>
-                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} style={{ ...inputBox, flex: '1 1 200px' }} />
+                  <input value={note} onChange={(e) => setNote(e.target.value)} placeholder={t('finance.budget.rejectReason')} aria-label={t('finance.budget.rejectReason')} className="cp-input cp-fill" style={{ ...inputBox, flex: '1 1 200px' }} />
                   <Button variant="secondary" size={48} onClick={() => setRejecting(null)} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
                   <Button variant="danger" size={48} disabled={!note.trim()} onClick={() => decide(r.id, 'reject')} style={{ padding: '0 20px' }}>{t('finance.budget.rejectConfirm')}</Button>
                 </div>
@@ -288,8 +288,8 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
   );
 }
 
-const TextBtn = ({ children, onClick, color = '#75624B' }: { children: React.ReactNode; onClick: () => void; color?: string }) => (
-  <button type="button" onClick={onClick} style={{ height: 40, padding: '0 8px', borderRadius: 12, border: 'none', background: 'transparent', color, fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, fontFamily: 'Inter' }}>{children}</button>
+const TextBtn = ({ children, onClick, color = 'var(--accent, #75624B)' }: { children: React.ReactNode; onClick: () => void; color?: string }) => (
+  <button type="button" onClick={onClick} style={{ height: 40, padding: '0 8px', borderRadius: 12, border: 'none', background: 'transparent', color, fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{children}</button>
 );
 
 function EditRequest({ request, onClose }: { request: BudgetRequest | null; onClose: () => void }) {

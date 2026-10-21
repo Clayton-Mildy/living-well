@@ -9,10 +9,14 @@ export const renewals = {
   searchPh: 'Search a member or family', searchLabel: 'Search members', pager: 'Renewal pages',
   'none.toDo': 'Everyone has been followed up', 'none.waiting': 'Nothing is waiting for management', 'none.decided': 'Nobody decided yet', noMatch: 'No match', noLog: 'No follow-ups were recorded for {month}', noMembers: 'Nobody to follow up for {month}',
   // rows
-  askedApp: 'Asked in the app', noContact: 'No contact on file', calls1: '1 call', callsN: '{n} calls',
+  noContact: 'No contact on file', calls1: '1 call', callsN: '{n} calls',
   'plan.flex': 'Flex', 'plan.gold': 'Gold',
-  'outcome.continue': 'Continue', 'outcome.upgrade': 'Upgrade to Gold', 'outcome.downgrade': 'Downgrade to Flex', 'outcome.leave': 'Leave', 'outcome.stop': 'Stop', 'outcome.noAnswer': 'No answer', 'outcome.callBack': 'Call back',
-  'meta.continue': 'Continues', 'meta.upgrade': 'Upgrade to Gold', 'meta.downgrade': 'Downgrade to Flex', 'meta.leave': 'Leave {months}', 'meta.stop': 'Stops {date}', 'meta.noAnswer': 'No answer', 'meta.callBack': 'Call back', 'meta.rejected': 'Not approved',
+  'outcome.continue': 'Continue', 'outcome.upgrade': 'Upgrade to Gold', 'outcome.downgrade': 'Downgrade to Flex', 'outcome.leave': 'Leave', 'outcome.stop': 'Stop', 'outcome.noAnswer': 'No answer',
+  // the list's columns (round 8d): who · plan · where it stands · what to do now
+  'col.member': 'Member', 'col.plan': 'Plan', 'col.status': 'Status', 'col.next': 'Next step', usageLine: '{usage} this month',
+  'status.new': 'Not contacted', 'status.asked': 'Asked in the app', 'status.rejected': 'Not approved', 'status.pending': 'Waiting for approval',
+  'next.call': 'Call the family', 'next.callAgain': 'Call again · {calls}', 'next.askAgain': 'Ask the family again', 'next.approval': 'Waiting for approval', 'next.approve': 'Approve in Approvals', 'next.answerRequest': 'Answer the plan request',
+  'next.renews': 'Renews {date}', 'next.planFrom': '{plan} starts {date}', 'next.leaveFrom': 'Leave starts {date}', 'next.lastDay': 'Last day {date}',
   // the follow-up sheet
   sheetTitle: 'Follow up {name}', 'group.contact': 'Family contact', 'group.membership': 'Membership', 'group.outcome': 'Decision for {month}', 'group.calls': 'Calls',
   whatsapp: 'WhatsApp', plan: 'Plan', usage: 'This month', usageFlex: '{used} of {quota} days', usageGold: '{n} days', usageExtra: ' · {n} extra',
@@ -32,6 +36,6 @@ export const renewals = {
   // the feed
   'feed.continue': '{name}: continues in {month}', 'feed.upgrade': '{name}: moving to Gold from {month}', 'feed.downgrade': '{name}: moving to Flex from {month}',
   'feed.leave': '{name}: leave in {month}', 'feed.leave2': '{name}: leave from {from} to {to}', 'feed.stop': '{name}: stopping, last day {date}',
-  'feed.noAnswer': '{name}: renewal call, no answer', 'feed.callBack': '{name}: renewal call, to call back',
+  'feed.noAnswer': '{name}: renewal call, no answer',
   'feed.approved': '{name}: renewal change for {month} approved', 'feed.rejected': '{name}: renewal change for {month} not approved',
 };

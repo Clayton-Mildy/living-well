@@ -10,11 +10,11 @@ export const activity = {
   logged: 'Logged', notLogged: 'Not logged', lunch: 'Lunch', tea: 'Afternoon tea',
   cogAlert: 'Alert and oriented', quietOn: 'quiet on {n}', unsettledOn: 'unsettled on {n}', ofLastDays: 'of the last {n} days', settledLastDays: 'settled on the last {n} days',
   // Camera
-  groupPhoto: 'Group photo', viewfinderNote: 'Take the photo, then choose who is in it.',
+  groupPhoto: 'Take a photo', viewfinderNote: 'Take the photo, then choose who is in it.',
   whoPhoto: 'Who is in this photo?', whoVideo: 'Who is in this video?', facesHint: 'Search for a name to add people, or add the suggested faces.', suggested: 'Suggested',
   faceOptOut: 'No face tagging', faceNotEnrolled: 'Face not enrolled', byNameOnly: 'Tagged by name',
   sendTo_one: 'Send to {n} family', sendTo_other: 'Send to {n} families', pickWho: 'Pick who is in the photo',
-  takeGroup: 'Take group photo', recordGroupVideo: 'Record a short group video',
+  takeGroup: 'Take a photo', recordGroupVideo: 'Record a short video', sendAsSession: 'Send as a picture of {activity}', sessionPicType: 'Picture of the session · {activity}', sentSessionPending: 'Picture of {activity} sent for approval.', sentSessionDone: 'Picture of {activity} added.',
   privacyNote: 'Photos go straight to each tagged family’s Today page. Nothing is saved to this phone’s gallery.',
   sentToday: 'Sent today', video: 'Video', group: 'Group', soloTitle: 'Photo of one member',
   nToday: '{n} today', noPhotosToday: 'No photos yet today', photosToday_one: '1 photo today', photosToday_other: '{n} photos today',
@@ -100,6 +100,6 @@ export const activity = {
   restMarked_one: '1 person marked.', restMarked_other: '{n} people marked.',
   lunchNotMarked: 'Lunch not marked yet', moodNotMarked: 'Mood and notes not saved yet', noSessionMarks: 'No activity marked',
   'feed.markLunch': 'Lunch marked · {names}', 'feed.markSession': '{time} session marked · {names}', 'feed.markMood': 'Mood and notes marked · {names}',
-  'err.noSession': 'That session is not on the plan that day.',
+  'err.noSession': 'That session is not on the plan that day.', 'err.needPeople': 'Add at least one person, or file it as a picture of the session.', 'err.needSession': 'Choose the session this picture is of.', editType: 'Type and people', typeTitle: 'Type and people', typePeople: 'People', typeSession: 'Session', typeSolo: 'Personal photo', typeGroup: 'Group photo · {n} people', typeWhich: 'Which session', typeSessionHint: 'A picture of the session itself: no names, and families of members who came that day see it.', typeSave: 'Save', typeSaved: 'Saved as {type}.',
   'notif.act.lunch': 'Lunch not marked for {n}', 'notif.act.session': 'The {time} session is not marked for {n}', 'notif.act.mood': 'Mood and notes are missing for {n}',
 };

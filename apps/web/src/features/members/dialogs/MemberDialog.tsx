@@ -11,7 +11,7 @@ import { Button, ChipGroup, DateField, Dialog, Note, StaffOnlyTag, Toggle } from
 import { say } from '../../../store/ui';
 import { endReasonLabel } from '../lib';
 import { ProfilePhotoField } from '../ProfilePhoto';
-import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, OptionalTime, PeSection, RegCareFields, RegPersonalFields, RelationChips, SelectField, TitleName, YesNo, joinDrugs, regDraftOf, regOfDraft, splitDrugs, useDraft, type MedRow, type RegDraft } from './forms';
+import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, OptionalTime, PeSection, RegCareFields, RegPersonalFields, RelationChips, SelectField, TitleName, joinDrugs, regDraftOf, regOfDraft, splitDrugs, useDraft, type MedRow, type RegDraft, CarerFields, carerOk } from './forms';
 import type { DialogKind, P } from '../profile/types';
 
 type Props = { p: P; kind: DialogKind; familyId?: string; onClose: () => void };
@@ -39,7 +39,7 @@ export function MemberDialog({ p, kind, familyId, onClose }: Props) {
 // ---------- shared footer ----------
 function Footer({ onClose, label, onSave, busy, danger, t }: { onClose: () => void; label: string; onSave: () => void; busy?: boolean; danger?: boolean; t: P['t'] }) {
   return (
-    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', position: 'sticky', bottom: -28, margin: '0 -28px -28px', padding: '16px 28px 24px', background: '#FFFFFF', borderTop: '1px solid #F0EAE1' }}>
+    <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap', position: 'sticky', bottom: -28, margin: '0 -28px -28px', padding: '16px 28px 24px', background: '#FFFFFF', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
       <Button variant="secondary" size={48} onClick={onClose}>{t('common.cancel')}</Button>
       <Button variant={danger ? 'danger' : 'primary'} size={48} disabled={busy} onClick={onSave}>{label}</Button>
     </div>
@@ -53,7 +53,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
   const { s, m, t, today } = p;
   const hours = { open: s.club.settings.open, last: toHM(toMin(s.club.settings.close) - 1) };
   const [d, set] = useDraft(() => ({
-    title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
+    title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyNik: m.nanny?.nik || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
     spouseId: m.spouseId || '', note: '', photo: m.photoMediaId || '', reg: regDraftOf(m.registration),
   }));
   const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
@@ -61,20 +61,19 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
   const [tried, setTried] = useState(false);
   const members = sortBy(live(s.members).filter((x) => x.id !== m.id && !isPendingRow(x)), (x) => x.firstName);
   const errName = tried && d.name.trim().length < 2 ? t('members.err.nameRequired') : '';
-  const errNanny = tried && d.nanny && !d.nannyName.trim() ? t('members.err.nannyNameRequired') : '';
-  const reg = regOfDraft(d.reg);
+  const reg = regOfDraft(d.reg, d.nanny);
   const regIssues = validateRegistration(reg);
   const regErr = (...fields: string[]) => { const i = tried ? regIssues.find((x) => fields.includes(x.field)) : undefined; return i ? t(i.code, i.params) : ''; };
   const save = async () => {
     setTried(true);
-    if (d.name.trim().length < 2 || (d.nanny && !d.nannyName.trim()) || regIssues.length || busy) return;
+    if (d.name.trim().length < 2 || !carerOk(d) || regIssues.length || busy) return;
     const patch: Record<string, unknown> = {};
     if (d.title !== m.title) patch.title = d.title;
     if (d.name.trim() !== plainName(m)) patch.name = d.name.trim();
     if (d.dob && d.dob !== (m.dob || '')) patch.dob = d.dob;
     if (d.address.trim() !== (m.address || '')) patch.address = d.address.trim();
     if (d.usual !== (m.usualArrival || '')) patch.usualArrival = d.usual;
-    const nanny = d.nanny ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}) } : null;
+    const nanny = d.nanny ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), nik: d.nannyNik.replace(/\s/g, '') } : null;
     if (JSON.stringify(nanny) !== JSON.stringify(m.nanny)) patch.nanny = nanny;
     if ((d.spouseId || null) !== m.spouseId) patch.spouseId = d.spouseId || null;
     if ((d.photo || undefined) !== m.photoMediaId) patch.photoMediaId = d.photo || null;
@@ -100,16 +99,10 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
         <RegPersonalFields d={d.reg} set={setReg} t={t} err={regErr} />
       </PeSection>
       <PeSection label={t('profile.sec.nanny')}>
-        <YesNo label={t('profile.comesWithNanny')} value={d.nanny} onChange={(v) => set({ nanny: v })} t={t} />
-        {d.nanny ? (
-          <>
-            <TextField label={t('profile.nannyName')} value={d.nannyName} onChange={(v) => set({ nannyName: v })} error={errNanny} />
-            <TextField label={t('profile.nannyPhone')} value={d.nannyPhone} onChange={(v) => set({ nannyPhone: v })} inputMode="tel" placeholder="+62" />
-          </>
-        ) : null}
+        <CarerFields d={d} set={set} t={t} tried={tried} phone={<TextField label={t('profile.nannyPhone')} value={d.nannyPhone} onChange={(v) => set({ nannyPhone: v })} inputMode="tel" placeholder="+62" />} />
       </PeSection>
       <PeSection label={t('profile.sec.regCare')}>
-        <RegCareFields d={d.reg} set={setReg} t={t} />
+        <RegCareFields d={d.reg} set={setReg} t={t} err={regErr} />
       </PeSection>
       <MgmtNote p={p} v={d.note} set={(v) => set({ note: v })} />
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={p.mgmt ? t('common.saveChanges') : t('common.submitReview')} />

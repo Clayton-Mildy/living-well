@@ -15,6 +15,8 @@ const requests = () => import('../features/requests');
 const finance = () => import('../features/finance');
 const mgmt = () => import('../features/mgmt');
 const enquiries = () => import('../features/enquiries');
+/** KC round 10: the public registration form (/form/:token), outside the signed-in shell */
+export const PublicFormScreen = L(() => import('../features/enquiries/PublicForm'), 'PublicForm');
 const family = () => import('../features/family');
 const renewals = () => import('../features/renewals');
 const tasks = () => import('../features/tasks');
@@ -60,6 +62,13 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   insights: L(insights, 'Insights'),
   fmemories: L(family, 'FamilyMemories'),
   report: L(report, 'DailyReport'),
+  // round 8: the family app (Family App prototype)
+  fme: L(family, 'FamilyMe'),
+  fprofile: L(family, 'FamilyProfile'),
+  fhistory: L(family, 'FamilyHistory'),
+  fcal: L(family, 'FamilyCalendar'),
+  fcontacts: L(family, 'FamilyContacts'),
+  drafts: L(activity, 'Drafts'), // KC round 7: the quick camera's drafts (kitchen; activity and management also have them in the Camera)
 };
 export const MemberProfileScreen = L(members, 'MemberProfile');
 export const DesignSystemScreen = lazy(() => import('../features/demo/DesignSystem').then((m) => ({ default: m.DesignSystem })));

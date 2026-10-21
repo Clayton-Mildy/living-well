@@ -31,11 +31,11 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
       {children}
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className={busy ? undefined : 'h-bronze'} onClick={busy ? undefined : onConfirm} aria-disabled={busy || undefined}
-          style={{ flex: '1 1 160px', height: 52, borderRadius: 999, border: 'none', background: busy ? '#EDE5DA' : '#24201C', color: busy ? '#8A8078' : '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
+          style={{ flex: '1 1 160px', height: 52, borderRadius: 999, border: 'none', background: busy ? 'var(--press, #EEEEF0)' : '#24201C', color: busy ? '#8A8078' : '#FFFFFF', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: busy ? 'not-allowed' : 'pointer', fontFamily: 'Inter' }}>
           <Icon name="how_to_reg" size={20} weight={300} />
           {t('lobby.confirmCheckin')}
         </button>
-        <button type="button" className="h-cream" onClick={onReject} style={{ flex: '1 1 auto', height: 52, padding: '0 20px', borderRadius: 12, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>
+        <button type="button" className="h-fill cp-fill" onClick={onReject} style={{ flex: '1 1 auto', height: 52, padding: '0 20px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>
           {rejectLabel ?? t('lobby.notThem')}
         </button>
       </div>
@@ -52,21 +52,21 @@ export function FaceCard({ t, scan, member, onSimulate, matched }: { t: TFn; sca
   // round 6, phone: an iOS grouped section, the title and the Live pill sit over the group, not inside it
   const { isPhone } = useDevice();
   return (
-    <section aria-label={t('lobby.faceCard')} style={isPhone ? { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 } : { background: '#FFFFFF', border: '1px solid #EFE7DC', borderRadius: 16, overflow: 'hidden', boxShadow: 'var(--card-shadow)', minWidth: 0 }}>
+    <section aria-label={t('lobby.faceCard')} className={isPhone ? undefined : 'cp-grey'} style={isPhone ? { display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 } : { background: 'var(--fill, #F4F4F5)', borderRadius: 20, overflow: 'hidden', minWidth: 0 }}>
       <div style={{ padding: isPhone ? '0 4px 0 16px' : '16px 20px 12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           {isPhone ? <h2 style={GROUP_HEAD}>{t('lobby.faceCheckin')}</h2> : <Eyebrow>{t('lobby.faceCheckin')}</Eyebrow>}
         </div>
-        <span style={{ height: 28, padding: '0 11px', borderRadius: 8, background: '#F3EEE8', fontSize: 13, fontWeight: 500, color: '#24201C', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flex: 'none' }}>{pulse(7, '#3D6B4F')}{t('lobby.live')}</span>
+        <span className="cp-fill" style={{ height: 28, padding: '0 11px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', fontSize: 13, fontWeight: 500, color: '#24201C', display: 'inline-flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap', flex: 'none' }}>{pulse(7, '#3D6B4F')}{t('lobby.live')}</span>
       </div>
-      <div style={isPhone ? { background: '#FFFFFF', borderRadius: 14, overflow: 'hidden', paddingTop: 16 } : { display: 'contents' }}>
+      <div className={isPhone ? 'cp-grey' : undefined} style={isPhone ? { background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden', paddingTop: 16 } : { display: 'contents' }}>
       <div style={{ position: 'relative', margin: '0 16px', height: idle ? 176 : 214, borderRadius: 14, background: '#2E2924', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
         {corner({ top: 16, left: 16 }, { borderTop: line, borderLeft: line }, { borderTopLeftRadius: 10 })}
         {corner({ top: 16, right: 16 }, { borderTop: line, borderRight: line }, { borderTopRightRadius: 10 })}
         {corner({ bottom: 16, left: 16 }, { borderBottom: line, borderLeft: line }, { borderBottomLeftRadius: 10 })}
         {corner({ bottom: 16, right: 16 }, { borderBottom: line, borderRight: line }, { borderBottomRightRadius: 10 })}
         {idle ? (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center', padding: '0 36px', color: '#F3EEE8' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, textAlign: 'center', padding: '0 36px', color: 'var(--fill, #F4F4F5)' }}>
             <Icon name="face" size={40} color="#CAB8A2" weight={300} />
             <div style={{ fontSize: 17, fontWeight: 500 }}>{t('lobby.standingBy')}</div>
           </div>
@@ -86,13 +86,13 @@ export function FaceCard({ t, scan, member, onSimulate, matched }: { t: TFn; sca
       <div style={{ padding: isPhone ? '14px 16px 16px' : '14px 20px 20px' }}>
         {idle ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            <button type="button" className="h-cream" onClick={onSimulate} style={{ height: 44, borderRadius: 999, border: '1px solid #DCD3C8', background: '#FFFFFF', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter' }}>
+            <button type="button" className="h-fill cp-fill" onClick={onSimulate} style={{ height: 44, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter' }}>
               <Icon name="play_circle" size={20} weight={300} />
               {t('lobby.simulate')}
             </button>
           </div>
         ) : null}
-        {scanning ? <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, fontSize: 16 }}>{pulse(12, '#75624B')}{t('lobby.recognising')}</div> : null}
+        {scanning ? <div role="status" style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 44, fontSize: 16 }}>{pulse(12, 'var(--accent, #75624B)')}{t('lobby.recognising')}</div> : null}
         {scan.state === 'matched' ? matched : null}
       </div>
       </div>

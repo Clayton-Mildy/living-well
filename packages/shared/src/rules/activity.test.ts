@@ -143,6 +143,53 @@ describe('daily log helpers', () => {
   });
 });
 
+describe('extra sessions in the plan (KC round 7)', () => {
+  const EXTRA = { activityId: 'act-karaoke', staffId: 's6', roomId: 'room-music' };
+  const withExtra = (times: string[]) => produce(fresh(), (d) => {
+    d.scheduleDays[T] = { id: T, clubId: d.clubId, createdAt: `${T}T09:00`, createdBy: 'staff:s9', date: T, slots: {}, extra: times.map((time) => ({ time, cell: { ...EXTRA } })) };
+  });
+
+  it('dayPlan puts an extra session in time order: a 15:00 one comes before tea, an 11:30 one before lunch', () => {
+    expect(dayPlan(withExtra(['15:00']), T).map((x) => `${x.time} ${x.kind}`)).toEqual(['10:30 session', '12:00 lunch', '13:30 session', '15:00 session', '15:00 tea']);
+    expect(dayPlan(withExtra(['11:30', '09:00']), T).map((x) => `${x.time} ${x.kind}`)).toEqual(['09:00 session', '10:30 session', '11:30 session', '12:00 lunch', '13:30 session', '15:00 tea']);
+    expect(dayPlan(fresh(), '2026-10-22').filter((x) => x.kind === 'session').map((x) => x.time)).toEqual(['10:30', '13:30', '15:00']); // the demo seed's tea-time karaoke
+  });
+
+  it('Now / Next with an extra: it is Next before it starts, Now while it runs; of two sessions that overlap, the one that started last is Now', () => {
+    const s = withExtra(['15:00']);
+    expect(nowNext(s, T, min('14:40'))).toMatchObject({ phase: 'now', current: { time: '13:30' } });
+    expect(nowNext(s, T, min('14:50'))).toMatchObject({ phase: 'next', current: { time: '15:00' } });
+    expect(nowNext(s, T, min('14:40')).later.map((x) => x.time)).toEqual(['15:00', '15:00']);
+    expect(nowNext(s, T, min('15:10'))).toMatchObject({ phase: 'now', current: { time: '15:00', activity: { id: 'act-karaoke' } } });
+    expect(nowNext(s, T, min('16:20')).phase).toBe('done');
+    const overlap = withExtra(['11:30']); // 10:30 runs until 11:45
+    expect(nowNext(overlap, T, min('11:00'))).toMatchObject({ current: { time: '10:30' } });
+    expect(nowNext(overlap, T, min('11:35'))).toMatchObject({ phase: 'now', current: { time: '11:30' } });
+    expect(curAct(s, T, min('15:10'))).toMatchObject({ kind: 'session', name: 'Karaoke' }); // the camera tags the extra session
+    expect(curAct(s, T, min('17:00'))).toMatchObject({ name: 'Karaoke' }); // after the day: the last session
+  });
+
+  it('rounds: the extra session is its own round, with its marks and progress; mood & notes stays the last round', () => {
+    const s = withExtra(['15:00']);
+    expect(roundsOf(s, T).map((r) => `${r.time} ${r.id}`)).toEqual(['10:30 10:30', '12:00 lunch', '13:30 13:30', '15:00 15:00', '16:15 mood']);
+    expect(roundsOf(withExtra(['09:00']), T).map((r) => r.id)).toEqual(['09:00', '10:30', 'lunch', '13:30', 'mood']);
+    expect(defaultRound(roundsOf(s, T), min('15:20'))).toBe('15:00');
+    expect(defaultRound(roundsOf(s, T), min('16:30'))).toBe('mood');
+    expect(roundMarked({ sessions: { '15:00': 'joined' } }, '15:00')).toBe(true);
+    expect(roundMarked({ sessions: { '13:30': 'joined' } }, '15:00')).toBe(false);
+    expect(joinedOf({ '15:00': 'satOut' })).toBe('satOut');
+    const marked = produce(s, (d) => { d.dailyLogs[logId('m2', T)] = { id: logId('m2', T), clubId: d.clubId, createdAt: `${T}T15:10`, createdBy: 'staff:s5', memberId: 'm2', date: T, note: '', status: 'saved', by: 's5', edits: [], sessions: { '15:00': 'joined' } } as never; });
+    expect(roundProgress(marked, T, '15:00')).toEqual({ marked: 1, total: 3 });
+    expect(roundProgress(marked, T, '13:30').marked).toBe(0);
+  });
+
+  it('activity pictures: an extra session of another activity is one more session to add pictures to; the same activity counts once', () => {
+    expect(pictureSessions(withExtra(['15:00']), T).map((x) => x.activity?.id)).toEqual(['act-keroncong', 'act-batik', 'act-karaoke']);
+    const same = produce(fresh(), (d) => { d.scheduleDays[T] = { id: T, clubId: d.clubId, createdAt: '', createdBy: 'staff:s9', date: T, slots: {}, extra: [{ time: '15:00', cell: { activityId: 'act-batik', staffId: 's6', roomId: 'room-studio' } }] }; });
+    expect(pictureSessions(same, T).map((x) => x.activity?.id)).toEqual(['act-keroncong', 'act-batik']);
+  });
+});
+
 describe('rounds of the daily log (KC round 7)', () => {
   const withLogs = (logs: Record<string, Partial<ClubState['dailyLogs'][string]>>) => produce(fresh(), (d) => {
     for (const [mid, l] of Object.entries(logs)) d.dailyLogs[logId(mid, T)] = { id: logId(mid, T), clubId: 'citra', createdAt: `${T}T10:00`, createdBy: 'staff:s5', memberId: mid, date: T, note: '', status: 'saved', by: 's5', edits: [], ...l } as never;

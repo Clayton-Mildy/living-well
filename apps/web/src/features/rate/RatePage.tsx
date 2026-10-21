@@ -97,12 +97,12 @@ function RateInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <h1 style={{ margin: 0, fontSize: isPhone ? 30 : 36, lineHeight: 1.15, fontWeight: 500, letterSpacing: '-0.8px', color: '#5E4E3B', textWrap: 'balance' } as CSSProperties}>{t('mgmt.rtHello')}</h1>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '14px 16px', borderRadius: 14, background: '#FFFFFF' }}>
+        <div className="cp-grey" style={{ display: 'flex', flexDirection: 'column', gap: 3, padding: '14px 16px', borderRadius: 16, background: 'var(--fill, #F4F4F5)' }}>
           <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, overflowWrap: 'anywhere' }}>{info.booking.org}</span>
           <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C' }}>{fdl(info.booking.date)} · {info.booking.from}–{info.booking.to}</span>
           <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{lang === 'id' && info.booking.roomNameId ? info.booking.roomNameId : info.booking.room}</span>
         </div>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 22, padding: '18px 16px', borderRadius: 14, background: '#FFFFFF' }}>
+        <div className="cp-grey" style={{ display: 'flex', flexDirection: 'column', gap: 22, padding: '18px 16px', borderRadius: 16, background: 'var(--fill, #F4F4F5)' }}>
           {asks('overall') ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               <span style={cap}>{t('mgmt.rtQOverall')}</span>
@@ -115,7 +115,7 @@ function RateInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
               <div role="radiogroup" aria-label={t('mgmt.rtQRecommend')} style={{ display: 'flex', gap: 8 }}>
                 {([[true, t('common.yes')], [false, t('family.surveyNotYet')]] as [boolean, string][]).map(([v, label]) => {
                   const c = chipStyle(recommend === v, false);
-                  return <button key={String(v)} type="button" role="radio" aria-checked={recommend === v} onClick={() => setRecommend(v)} style={{ flex: 1, height: 48, borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{label}</button>;
+                  return <button key={String(v)} type="button" role="radio" aria-checked={recommend === v} onClick={() => setRecommend(v)} className={recommend === v ? undefined : 'cp-fill'} style={{ flex: 1, height: 48, borderRadius: 999, border: c.bd, background: c.bg, color: c.fg, fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{label}</button>;
                 })}
               </div>
             </div>
@@ -132,13 +132,13 @@ function RateInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   })();
 
   return (
-    <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: '#F5F5F3', ...({ '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px' } as CSSProperties) }}>
+    <div style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: '#FFFFFF', ...({ '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px' } as CSSProperties) }}>
       <div style={{ maxWidth: 540, margin: '0 auto', padding: isPhone ? '14px 16px 36px' : '28px 20px 48px', display: 'flex', flexDirection: 'column', gap: 18 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <Logo height={isPhone ? 40 : 48} />
-          <div style={{ display: 'flex', padding: 3, borderRadius: 999, background: '#EDE5DA', flex: 'none' }} role="group" aria-label={t('shell.language')}>
+          <div style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', flex: 'none' }} role="group" aria-label={t('shell.language')}>
             {(['en', 'id'] as const).map((l) => (
-              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} style={{ height: 40, minWidth: 48, padding: '0 12px', borderRadius: 12, border: 'none', background: lang === l ? '#FFFFFF' : 'transparent', boxShadow: lang === l ? '0 1px 3px rgba(40,30,20,.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: lang === l ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter' }}>{l.toUpperCase()}</button>
+              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} style={{ height: 40, minWidth: 48, padding: '0 12px', borderRadius: 7, border: 'none', background: lang === l ? '#FFFFFF' : 'transparent', boxShadow: lang === l ? '0 1px 3px rgba(40,30,20,.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: lang === l ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter' }}>{l.toUpperCase()}</button>
             ))}
           </div>
         </div>
@@ -152,15 +152,15 @@ function RateInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
 function Loading() {
   return (
     <div aria-busy="true" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      {[120, 84, 260].map((h, i) => <div key={i} style={{ height: h, borderRadius: 14, background: 'linear-gradient(90deg,#EFE9E1 0,#F7F3EE 40%,#EFE9E1 80%)', backgroundSize: '800px 100%', animation: 'cpShimmer 1.4s linear infinite' }} />)}
+      {[120, 84, 260].map((h, i) => <div key={i} style={{ height: h, borderRadius: 14, background: 'linear-gradient(90deg,rgba(30,30,36,.065) 0,rgba(30,30,36,.03) 40%,rgba(30,30,36,.065) 80%)', backgroundSize: '800px 100%', animation: 'cpShimmer 1.4s linear infinite' }} />)}
     </div>
   );
 }
 
 function Message({ icon, title, text, action, tone }: { icon: string; title: string; text: string; action?: ReactNode; tone?: 'sage' }) {
   return (
-    <div role="status" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center', padding: '36px 22px', borderRadius: 16, background: '#FFFFFF' }}>
-      <span style={{ width: 72, height: 72, borderRadius: 999, background: tone === 'sage' ? '#E3EFE6' : '#F3EEE8', color: tone === 'sage' ? '#3D6B4F' : '#75624B', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={32} weight={300} /></span>
+    <div role="status" className="cp-grey" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 12, textAlign: 'center', padding: '36px 22px', borderRadius: 20, background: 'var(--fill, #F4F4F5)' }}>
+      <span className={tone === 'sage' ? undefined : 'cp-fill'} style={{ width: 72, height: 72, borderRadius: 999, background: tone === 'sage' ? '#E3EFE6' : 'var(--fill, #F4F4F5)', color: tone === 'sage' ? '#3D6B4F' : 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name={icon} size={32} weight={300} /></span>
       <h1 style={{ margin: 0, fontSize: 26, lineHeight: '32px', fontWeight: 500, letterSpacing: '-0.5px', color: '#5E4E3B', textWrap: 'balance' } as CSSProperties}>{title}</h1>
       <p style={{ margin: 0, fontSize: 16, lineHeight: '24px', color: '#4A4038', maxWidth: 380 }}>{text}</p>
       {action}

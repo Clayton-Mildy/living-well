@@ -52,6 +52,8 @@ export interface ReportSession {
   /** a one-day change of the weekly plan, with the note management left */
   changed: boolean;
   note?: string;
+  /** KC round 7: an extra session added for this date (not in the weekly plan); its note is `note` */
+  extra?: boolean;
   /** done: over (every past day) · now: running · later: today, not started */
   state: 'done' | 'now' | 'later';
   joined: Member[];
@@ -162,7 +164,8 @@ export function dailyReport(s: ClubState, date: ISODate, today: ISODate, nowMin:
     const photos = firstOfActivity ? sessionPhotos(s, date, activity) : [];
     sessions.push({
       slot: x.slot, cell: x.cell, activity, staff: s.staff[x.cell.staffId], room: s.rooms[x.cell.roomId], guest: guestOn(s, date, x.slot),
-      changed: !!over && x.slot in over.slots, note: over && x.slot in over.slots ? over.note : undefined, state,
+      changed: !!over && !x.extra && x.slot in over.slots, note: x.extra ? over?.extra?.find((e) => e.time === x.slot)?.note : over && x.slot in over.slots ? over.note : undefined, state,
+      ...(x.extra ? { extra: true } : {}),
       joined: marks.filter((k) => k.mark === 'joined').map((k) => k.m),
       satOut: marks.filter((k) => k.mark === 'satOut').map((k) => k.m),
       notMarked: state === 'later' ? 0 : marks.filter((k) => !k.mark).length,

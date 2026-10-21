@@ -87,8 +87,8 @@ function Sheet({ n, label, children }: { n: number; label: string; children?: Re
 
 const CSS = `
 @page { size: A4; margin: 0; }
-.cp-print-root { position: fixed; inset: 0; z-index: 90; outline: none; background: #E9E4DC; display: flex; flex-direction: column; overflow: hidden; }
-.cp-print-bar { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #FFFFFF; border-bottom: 1px solid #EFE7DC; }
+.cp-print-root { position: fixed; inset: 0; z-index: 90; outline: none; background: var(--press, #EEEEF0); display: flex; flex-direction: column; overflow: hidden; }
+.cp-print-bar { flex: none; display: flex; align-items: center; gap: 10px; padding: 8px 12px; background: #FFFFFF; border-bottom: 0.5px solid var(--hairline, #E2E2E6); }
 .cp-print-bar h2 { margin: 0; flex: 1; min-width: 0; font-size: 17px; font-weight: 500; color: #2B231C; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .cp-print-scroll { flex: 1; min-height: 0; overflow: auto; padding: 14px 10px 40px; display: flex; flex-direction: column; align-items: center; gap: 14px; }
 .cp-print-sheet { position: relative; flex: none; width: min(100%, 860px); aspect-ratio: 210 / 297; background: #FFFFFF; container-type: inline-size; box-shadow: 0 2px 14px rgba(40,30,20,0.18); overflow: hidden; -webkit-print-color-adjust: exact; print-color-adjust: exact; }

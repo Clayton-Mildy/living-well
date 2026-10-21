@@ -68,7 +68,7 @@ export function Overview() {
                 style={{ minWidth: 0, padding: '10px 0', border: 'none', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 3, color: '#24201C', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
                 <span data-testid={`tile-${x.key}`} style={{ fontSize: 26, lineHeight: '30px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-0.5px' }}>{x.value}</span>
                 <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, lineHeight: 1.3, color: '#6B6259' }}>
-                  <IconBox name={x.icon} size={16} color="#75624B" />
+                  <IconBox name={x.icon} size={16} color="var(--accent, #75624B)" />
                   {x.label}
                 </span>
                 {x.badge ? <span style={{ fontSize: 13, lineHeight: '18px' }}><DotText color={x.badge.fg === '#FFFFFF' ? '#9A3D24' : x.badge.fg}>{x.badge.label}</DotText></span> : null}
@@ -80,10 +80,10 @@ export function Overview() {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(150px,1fr))', gap: 'clamp(14px, 2.4vw, 32px) clamp(14px, 2.4vw, 32px)' }}>
         {tiles.map((x) => (
           <button key={x.key} type="button" data-tile={x.key} onClick={() => navigate(x.to)}
-            style={{ minWidth: 0, padding: '0 0 12px', border: 'none', borderBottom: '2px solid #E6DDD1', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, color: '#24201C', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
+            style={{ minWidth: 0, padding: '0 0 12px', border: 'none', borderBottom: '2px solid var(--hairline, #E2E2E6)', background: 'transparent', display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, color: '#24201C', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
             <span data-testid={`tile-${x.key}`} style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{x.value}</span>
             <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, fontWeight: 500, lineHeight: 1.3, color: '#6B6259' }}>
-              <IconBox name={x.icon} size={16} color="#75624B" />
+              <IconBox name={x.icon} size={16} color="var(--accent, #75624B)" />
               {x.label}
             </span>
             {x.badge ? <span style={{ fontSize: 13, lineHeight: '18px' }}><DotText color={x.badge.fg === '#FFFFFF' ? '#9A3D24' : x.badge.fg}>{x.badge.label}</DotText></span> : null}

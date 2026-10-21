@@ -157,7 +157,7 @@ describe('attendance.checkOut', () => {
     expect(unreadUpdates(r.state, as('fm2_0')).some((x) => x.kind === 'notif.checkedOut' && x.params.time === '10:00')).toBe(true);
     expect(lobbyGroups(r.state, clock.today).goneHome.map((x) => x.m.id)).toEqual(['m2']);
     // an old client that still sends a collector gets the same result
-    const old = run(base, 'attendance.checkOut', { memberId: 'm2', escort: { kind: 'driver', staffId: 's7' } });
+    const old = run(base, 'attendance.checkOut', { memberId: 'm2', escort: { kind: 'driver', staffId: 's1' } });
     expect(att(old.state, 'm2').checkOut).not.toHaveProperty('escort');
   });
   it('needs a check-in first, once only', () => {

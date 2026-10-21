@@ -46,12 +46,12 @@ export function HealthTab({ p }: { p: P }) {
   const cur = trends.find((x) => x.k === metric) ?? trends[0];
   const food = foodList(t, m);
   const drugs = m.health.drugs.map((d) => drugLabel(t, d));
-  const none = { icon: 'check', label: t('profile.noneKnown'), bg: '#F3EEE8', ic: '#24201C' };
+  const none = { icon: 'check', label: t('profile.noneKnown'), bg: 'var(--fill, #F4F4F5)', ic: '#24201C' };
   const cog = m.health.cognitive;
   /** icon, title, sub line: one inset-hairline row of a list card */
   const item = (key: string | number, icon: string, title: string, sub?: string, first?: boolean) => (
     <div key={key} style={{ display: 'flex', gap: 12, alignItems: 'center', padding: '13px 0', borderTop: first ? 'none' : HAIR }}>
-      <Icon name={icon} size={20} color="#75624B" />
+      <Icon name={icon} size={20} color="var(--accent, #75624B)" />
       <div style={{ display: 'flex', flexDirection: 'column', gap: 1, minWidth: 0 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{title}</span>
         {sub ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span> : null}
@@ -59,7 +59,7 @@ export function HealthTab({ p }: { p: P }) {
     </div>
   );
   const chip = (a: { icon: string; label: string; bg: string; ic: string }, j: number) => (
-    <span key={j} style={{ minHeight: 30, maxWidth: '100%', padding: '3px 12px 3px 9px', borderRadius: 12, background: a.bg, color: a.ic === '#9A3D24' ? '#9A3D24' : '#24201C', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
+    <span key={j} className={a.bg === 'var(--fill, #F4F4F5)' ? 'cp-fill' : undefined} style={{ minHeight: 30, maxWidth: '100%', padding: '3px 12px 3px 9px', borderRadius: 12, background: a.bg, color: a.ic === '#9A3D24' ? '#9A3D24' : '#24201C', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
       <Icon name={a.icon} size={17} color={a.ic} />
       {a.label}
     </span>
@@ -71,7 +71,7 @@ export function HealthTab({ p }: { p: P }) {
     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(140px,1fr))', gap: '22px 20px' }}>
       {tiles.map((v, i) => (
         <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0 }}>
-          <span style={{ fontSize: 12, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: '#6E5A43', lineHeight: '18px' }}>{v.label}</span>
+          <span style={{ fontSize: 12, letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' }}>{v.label}</span>
           <span style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
             <span style={{ fontSize: 30, lineHeight: '36px', fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1px' }}>{v.value}</span>
             <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{v.unit}</span>
@@ -124,7 +124,7 @@ export function HealthTab({ p }: { p: P }) {
   );
   const mobility = (
     <>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{mobDiet.map((a, i) => chip({ ...a, bg: '#F3EEE8', ic: '#24201C' }, i))}</div>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>{mobDiet.map((a, i) => chip({ ...a, bg: 'var(--fill, #F4F4F5)', ic: '#24201C' }, i))}</div>
       {m.nanny ? <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t('profile.nannyComes', { n: m.nanny.name })}</div> : null}
     </>
   );
@@ -188,7 +188,7 @@ export function HealthTab({ p }: { p: P }) {
           <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.4 }}>{t('health.lim.' + k)} <span style={{ color: '#6B6259', fontWeight: 400 }}>· {unitOf(k)}</span></span>
           <span style={{ fontSize: 14, color: mine ? '#24201C' : '#6B6259', lineHeight: 1.4, fontVariantNumeric: 'tabular-nums' }}>{nums}</span>
         </div>
-        {mine ? <span style={{ flex: 'none', padding: '1px 9px', borderRadius: 999, background: '#F3EEE8', color: '#75624B', fontSize: 12, fontWeight: 500, lineHeight: '18px' }}>{t('profile.limOwn')}</span>
+        {mine ? <span className="cp-fill" style={{ flex: 'none', padding: '1px 9px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', fontSize: 12, fontWeight: 500, lineHeight: '18px' }}>{t('profile.limOwn')}</span>
           : <span style={{ flex: 'none', fontSize: 12, color: '#8A8078', lineHeight: '18px' }}>{t('profile.limClub')}</span>}
       </div>
     );
@@ -199,7 +199,7 @@ export function HealthTab({ p }: { p: P }) {
       {own.map((k, i) => limRow(k, true, i === 0))}
       {!own.length ? <div style={{ padding: '14px 0', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.limSameAsClub', { n: memberShort(m) })}</div> : null}
       <button type="button" aria-expanded={clubOpen} onClick={() => setClubOpen((o) => !o)} className="cp-tap-self cp-press"
-        style={{ width: '100%', minHeight: 44, padding: 0, border: 'none', borderTop: HAIR, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontFamily: 'Inter', fontSize: 15, color: '#75624B', cursor: 'pointer', textAlign: 'left' }}>
+        style={{ width: '100%', minHeight: 44, padding: 0, border: 'none', borderTop: HAIR, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontFamily: 'Inter', fontSize: 15, color: 'var(--accent, #75624B)', cursor: 'pointer', textAlign: 'left' }}>
         <span>{clubOpen ? t('profile.limHideClub') : t('profile.limShowClub', { n: clubKeys.length })}</span>
         <Icon name={clubOpen ? 'expand_less' : 'expand_more'} size={22} weight={300} color="#A89C8E" />
       </button>
@@ -242,7 +242,7 @@ export function HealthTab({ p }: { p: P }) {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 'clamp(18px, 2.8vw, 28px)' }}>
       <PendingBanner p={p} tab="health" />
-      <div style={{ ...cardStyle, gap: 22 }}>
+      <div className="cp-grey" style={{ ...cardStyle, gap: 22 }}>
         {tilesGrid}
         {cur ? (
           <Block title={t('profile.trendTitle')} meta={trendMeta} gap={12}>
@@ -251,7 +251,7 @@ export function HealthTab({ p }: { p: P }) {
         ) : null}
       </div>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(18px, 3vw, 36px)', alignItems: 'flex-start' }}>
-        <div style={{ ...cardStyle, flex: '1 1 340px', minWidth: 0, gap: 18 }}>
+        <div className="cp-grey" style={{ ...cardStyle, flex: '1 1 340px', minWidth: 0, gap: 18 }}>
           <Block first title={t('profile.allergies')} gap={12}>
             {allergies}
           </Block>
@@ -259,7 +259,7 @@ export function HealthTab({ p }: { p: P }) {
             {mobility}
           </Block>
         </div>
-        <div style={{ ...listCardStyle, flex: '1 1 340px', minWidth: 0 }}>
+        <div className="cp-grey" style={{ ...listCardStyle, flex: '1 1 340px', minWidth: 0 }}>
           <ListHead title={t('profile.conditions')} />
           {conds}
           <ListHead title={t('profile.medicines')} />
@@ -267,14 +267,14 @@ export function HealthTab({ p }: { p: P }) {
         </div>
       </div>
       {limits}
-      <div style={listCardStyle}>
+      <div className="cp-grey" style={listCardStyle}>
         <ListHead title={t('profile.recentReadings')} meta={listMeta} />
         {readingRows}
       </div>
       {!p.family ? (
-        <div style={{ background: '#F3EEE8', borderRadius: 16, padding: `18px ${CARD_PX}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: `18px ${CARD_PX}`, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-            <Icon name="lock" size={19} color="#75624B" />
+            <Icon name="lock" size={19} color="var(--accent, #75624B)" />
             <span style={{ fontWeight: 500, fontSize: 16 }}>{t('profile.careInstructions')}</span>
             <StaffOnlyTag />
           </div>

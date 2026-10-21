@@ -1,4 +1,4 @@
-// Visit insights: one member's detail over the chosen period (a pushed screen on phones, a sheet on tablet and laptop): visits per month, the days they
+// Insights: one member's detail over the chosen period (a pushed screen on phones, a sheet on tablet and laptop): visits per month, the days they
 // usually come, how their arrival time moves, and their last 10 visits.
 import { useMemo } from 'react';
 import { memberName } from '@cp/shared';

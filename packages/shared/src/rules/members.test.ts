@@ -118,8 +118,8 @@ describe('face consent', () => {
 });
 
 describe('documents', () => {
-  it('the nanny KTP is only listed when there is a nanny', () => {
-    expect(documentTypes({ nanny: null })).toEqual(['ktp', 'membershipForm', 'healthInfo']);
+  it('the carer’s KTP is only listed when there is a carer (the family member’s always is, KC round 10)', () => {
+    expect(documentTypes({ nanny: null })).toEqual(['ktp', 'guarantorKtp', 'membershipForm', 'healthInfo']);
     expect(documentTypes({ nanny: { name: 'Sari' } })).toEqual(DOC_TYPES);
   });
 });

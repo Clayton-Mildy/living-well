@@ -1,11 +1,14 @@
 // Enquiries (leads): stages, visit/trial day rules, and the lead -> member mapping.
 // Registration is on paper: staff type the key details from the signed paper form and attach a photo or PDF of it when the lead joins.
 import type {
+  EnquiryForm, OnlineRegistration, KtpUploads,
   Actor, ClubState, Consent, DT, Diet, DrugAllergy, Enquiry, FamilyContact, FamilyLink, FoodAllergen, GuestVisit, HM, ISODate, Member, MemberDocument,
   MemberRegistration, Mobility, Plan, Relation, Title,
 } from '../types';
 import { dow, e164, live, sortBy, toMin } from '../util';
 import { dayStatus, nextOpenDay } from './core';
+import { ktpDocuments } from './members';
+import { ratingTokenOf } from './surveys';
 
 // ---------- constants ----------
 export const ENQ_STAGES = ['new', 'visit', 'trial', 'joined', 'lost'] as const;
@@ -107,7 +110,7 @@ export const docHasFile = (d: Pick<MemberDocument, 'mediaId'> | undefined | null
 /** Health basics typed in when a lead joins (Add member's fields, without medicines: the nurse adds those). */
 export interface LeadHealth { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[] }
 /** What the Join dialog types in from the paper application form (KC round 6). All optional: a plan, a first day and the signed form are enough. */
-export interface LeadDetails { dob?: ISODate; address?: string; health?: LeadHealth; registration?: MemberRegistration }
+export interface LeadDetails { dob?: ISODate; address?: string; health?: LeadHealth; registration?: MemberRegistration; /** KC round 10: the carer (suster) with the carer's NIK */ nanny?: { name: string; nik: string } | null; /** photos of the ID cards */ ktp?: KtpUploads }
 export interface LeadMemberArgs {
   id: string;
   contactId: string;
@@ -127,18 +130,21 @@ export function memberFromLead(a: LeadMemberArgs): Member {
   const { enquiry: e } = a;
   const title = e.senior.title;
   const { first, last } = splitName(e.senior.name);
+  const x = a.details ?? {};
+  // KC round 10: the ID cards photographed at registration are on file; the member's is asked for when it was not
+  const uploaded = ktpDocuments(a.id, x.ktp, !!x.nanny, a.today, a.actor, 'staff');
   const documents: MemberDocument[] = [
-    { id: `${a.id}-doc-ktp`, type: 'ktp', status: 'requested', on: a.today, by: a.actor },
+    ...(uploaded.some((d) => d.type === 'ktp') ? [] : [{ id: `${a.id}-doc-ktp`, type: 'ktp' as const, status: 'requested' as const, on: a.today, by: a.actor }]),
+    ...uploaded,
     paperFormDoc(a.id, a.form, a.today, a.actor),
     { id: `${a.id}-doc-health`, type: 'healthInfo', status: 'requested', on: a.today, by: a.actor },
   ];
   const consents: Consent[] = [];
-  const x = a.details ?? {};
   const h = x.health;
   return {
     id: a.id, clubId: a.enquiry.clubId, createdAt: a.nowDT, createdBy: a.actor,
     title, firstName: first, lastName: last, gender: isFemaleTitle(title) ? 'f' : 'm', dob: x.dob || null, ageYears: null, address: x.address || null, photoTone: a.photoTone,
-    memberships: [{ start: a.start }], plans: [{ from: a.start, plan: a.plan, by: a.actor }], usualArrival: '10:00', nanny: null, spouseId: null,
+    memberships: [{ start: a.start }], plans: [{ from: a.start, plan: a.plan, by: a.actor }], usualArrival: '10:00', nanny: a.details?.nanny ?? null, spouseId: null,
     health: {
       conditions: h?.conditions ?? [], diabetic: !!h?.diabetic, food: h?.food ?? [], ...(h?.foodOther ? { foodOther: h.foodOther } : {}), drugs: h?.drugs ?? [], mobility: h?.mobility ?? null, diet: h?.diet ?? [], meds: [], cognitive: { summary: '' },
     },
@@ -159,3 +165,25 @@ export function linkFromLead(a: { contactId: string; memberId: string; enquiry: 
     relation: a.enquiry.contact.relation, primary: true, appAccess: true, healthAlerts: true,
   };
 }
+
+// ---------- KC round 10: the online registration link (/form/:token) ----------
+/** How long a link stays open. Staff can send a fresh one after. */
+export const FORM_LINK_DAYS = 14;
+export const formPath = (token: string) => `/form/${token}`;
+/** An unguessable token for a lead's form link (same recipe as the venue rating link). */
+export const formTokenOf = (seed: string) => ratingTokenOf('form|' + seed);
+export type FormLinkState = 'sent' | 'opened' | 'submitted' | 'expired';
+/** Where a lead's link stands now (null = no link was ever sent). A submitted form never expires: its answers stay for the join. */
+export function formLinkState(f: EnquiryForm | undefined, nowDT: DT): FormLinkState | null {
+  if (!f) return null;
+  if (f.submittedAt) return 'submitted';
+  if (nowDT > f.expiresAt) return 'expired';
+  return f.openedAt ? 'opened' : 'sent';
+}
+/** The lead a form token belongs to (deleted leads never match). */
+export const enquiryByFormToken = (s: ClubState, token: string | undefined | null): Enquiry | null =>
+  (token && live(s.enquiries).find((e) => e.form?.token === token)) || null;
+/** What the family's form starts from: the lead as the front desk typed it (name, title, who is asking), everything else empty. */
+export const onlineDraftOf = (e: Enquiry): OnlineRegistration => e.form?.draft ?? ({
+  title: e.senior.title, name: e.senior.name, dob: '', address: '', contact: { ...e.contact }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
+});

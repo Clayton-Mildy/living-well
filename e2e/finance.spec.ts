@@ -13,9 +13,11 @@ const toast = (page: Page, text: string | RegExp) => expect(page.getByRole('stat
 const row = (page: Page, name: RegExp | string) => page.getByRole('button', { name });
 /** What a family or staff member sees in "Updates" of the notification panel. */
 async function updatesOf(page: Page) {
-  await page.getByRole('button', { name: /Notifications/ }).first().click();
+  await page.getByRole('button', { name: /^Notifications/ }).first().click(); // not the Today tab, whose name carries the bell's count when you are elsewhere
   const panel = page.getByRole('dialog', { name: 'Notifications' });
-  await panel.getByRole('tab', { name: /Updates/ }).click();
+  await expect(panel).toBeVisible();
+  const tab = panel.getByRole('tab', { name: /Updates/ }); // the staff panel has Needs action | Updates; the family's is one list
+  if (await tab.count()) await tab.click();
   return panel;
 }
 /** Notifications addressed to one person, read from the same snapshot the app loads (for people whose screens belong to other areas). */
@@ -35,7 +37,7 @@ test.describe('billing', () => {
     await signIn(page, 's10', '/today');
     await expect(page.getByRole('heading', { name: 'Billing' })).toBeVisible();
     await expect(page.getByRole('button', { name: /^Overdue\s*1\b/ })).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Outstanding · due 28 Oct\s*3\b/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Not paid · due 28 Oct\s*3\b/ })).toBeVisible();
     await expect(row(page, /Opa Tjahjadi Lim, INV-2609-020/)).toBeVisible();
     await expect(page.getByText('23 days late')).toBeVisible();
     await expect(row(page, /INV-2610-/)).toHaveCount(3);
@@ -72,7 +74,7 @@ test.describe('billing', () => {
     await expect(page.getByText(/^Last reminder/)).toBeVisible();
 
     const fam = await context.newPage();
-    await signIn(fam, 'fm20_0', '/contacts'); // any family screen has the bell; Useful contacts is ours
+    await signIn(fam, 'fm20_0', '/today'); // the family's bell is in Today's header
     const panel = await updatesOf(fam);
     await expect(panel.getByText(/Reminder: invoice INV-2609-020 for Opa Tjahjadi/)).toBeVisible();
     c.assertClean();
@@ -127,13 +129,12 @@ test.describe('billing', () => {
 
     await sheet.getByRole('button', { name: 'Record payment' }).click();
     await sheet.getByLabel('Amount credited (Rp)').fill('2000000');
-    await sheet.getByLabel('Reference').fill('SG-4471');
-    await sheet.getByLabel('Amount received in SGD (optional)').fill('330.50');
+    await sheet.getByLabel('Reference').fill('TF-4471');
     await sheet.getByRole('button', { name: 'Record payment' }).last().click();
     await toast(page, /Payment recorded for Opa Budi/);
     await expect(sheet.getByText('Part paid').first()).toBeVisible();
     await expect(sheet.getByText('Rp 2.000.000 paid · Rp 1.950.000 left')).toBeVisible();
-    await expect(sheet.getByText(/SGD bank transfer · SGD 330.5/)).toBeVisible();
+    await expect(sheet.getByText('Bank transfer', { exact: true })).toBeVisible();
     await assertNoHorizontalScroll(page);
     await page.keyboard.press('Escape');
     await expect(sheet).toHaveCount(0);
@@ -143,7 +144,7 @@ test.describe('billing', () => {
     await page.getByRole('button', { name: 'Open invoice' }).click();
     await sheet.getByRole('button', { name: 'Record payment' }).click();
     await expect(sheet.getByLabel('Amount credited (Rp)')).toHaveValue('1.950.000'); // the balance is suggested
-    await sheet.getByLabel('Reference').fill('SG-4472');
+    await sheet.getByLabel('Reference').fill('TF-4472');
     await sheet.getByRole('button', { name: 'Record payment' }).last().click();
     await expect(sheet.getByText('Paid', { exact: true }).first()).toBeVisible();
     c.assertClean();
@@ -206,7 +207,7 @@ test.describe('billing', () => {
     await toast(page, 'Invoices issued: 5. Families have been told.');
     await expect(sheet).toHaveCount(0);
     for (const n of ['INV-2611-001', 'INV-2611-046', 'INV-2611-002', 'INV-2611-010', 'INV-2611-020']) await expect(row(page, new RegExp(n))).toBeVisible();
-    await expect(page.getByRole('button', { name: /^Outstanding · due 28 Oct\s*8\b/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Not paid · due 28 Oct\s*8\b/ })).toBeVisible();
     // every invoice has its own virtual account, and Lina's carries the extra day
     await row(page, /INV-2611-001/).click();
     await page.getByRole('button', { name: 'Open invoice' }).click();
@@ -218,7 +219,7 @@ test.describe('billing', () => {
 
     // the payer hears about it; a second run has nothing left to do
     const fam = await context.newPage();
-    await signIn(fam, 'f1', '/contacts');
+    await signIn(fam, 'f1', '/today');
     const panel = await updatesOf(fam);
     await expect(panel.getByText(/New invoice INV-2611-001 for Oma Lina: Rp 3\.350\.000/)).toBeVisible();
     await page.keyboard.press('Escape');
@@ -298,14 +299,14 @@ test.describe('payments', () => {
     await expect(page.getByRole('radio', { name: /Opa Budi/ })).toHaveCount(0);
     await page.getByRole('radio', { name: /Opa Tjahjadi · September/ }).click();
     await expect(page.getByLabel('Amount credited (Rp)')).toHaveValue('3.950.000');
-    await page.getByRole('button', { name: 'Revolut' }).click();
+    await page.getByRole('button', { name: 'Bank transfer' }).click();
     await page.getByLabel('Amount credited (Rp)').fill('5000000'); // more than September: the rest goes to October
-    await expect(page.getByRole('button', { name: 'Record payment' })).toHaveAttribute('aria-disabled', 'true'); // a Revolut payment needs its reference
-    await page.getByLabel('Reference', { exact: true }).fill('RV-9981');
+    await expect(page.getByRole('button', { name: 'Record payment' })).toHaveAttribute('aria-disabled', 'true'); // a bank transfer needs its reference
+    await page.getByLabel('Reference', { exact: true }).fill('TF-9981');
     await expect(page.getByRole('button', { name: 'Record payment' })).not.toHaveAttribute('aria-disabled', 'true');
     await page.getByRole('button', { name: 'Record payment' }).click();
     await toast(page, /Payment recorded for Opa Tjahjadi/);
-    await expect(page.getByText('INV-2609-020, INV-2610-020 · Revolut · ref RV-9981')).toBeVisible(); // two periods: no single month in the line
+    await expect(page.getByText('INV-2609-020, INV-2610-020 · Bank transfer · ref TF-9981')).toBeVisible(); // two periods: no single month in the line
     await signIn(page, 's10', '/today');
     await expect(row(page, /INV-2609-020/)).toHaveCount(0); // September is settled, no overdue list any more
     await expect(row(page, /Opa Tjahjadi Lim, INV-2610-020/)).toContainText('Part paid');
@@ -332,7 +333,7 @@ test.describe('payments', () => {
     await page.keyboard.press('Escape');
     // the payer is told that the receipt is on its way
     const fam = await context.newPage();
-    await signIn(fam, 'f1', '/contacts');
+    await signIn(fam, 'f1', '/today');
     await expect((await updatesOf(fam)).getByText(/Payment received for Oma Lina: Rp 2.700.000/)).toBeVisible();
     c.assertClean();
   });
@@ -545,12 +546,12 @@ test.describe('directory', () => {
     await expect(fam.getByText('Toko Roti Manis Kemang', { exact: true })).toHaveCount(0);
     await page.getByRole('button', { name: /^Make public: Toko Roti Manis Kemang/ }).click();
     await toast(page, /is now visible to families/);
-    await expect(fam.getByRole('link', { name: /^Call / })).toHaveCount(5); // 4 seeded public contacts + the one just published
+    await expect(fam.getByRole('link', { name: /^Call / })).toHaveCount(6); // the club's emergency line + 4 seeded public contacts + the one just published
     await page.getByRole('button', { name: 'Delete Toko Roti Manis Kemang' }).click();
     await page.getByRole('dialog', { name: 'Delete this contact?' }).getByRole('button', { name: 'Delete' }).click();
     await toast(page, 'Toko Roti Manis Kemang deleted.');
     await expect(page.getByText('Toko Roti Manis Kemang', { exact: true })).toHaveCount(0);
-    await expect(fam.getByRole('link', { name: /^Call / })).toHaveCount(4);
+    await expect(fam.getByRole('link', { name: /^Call / })).toHaveCount(5);
     c.assertClean();
   });
 
@@ -562,21 +563,23 @@ test.describe('directory', () => {
     await expect(page).toHaveURL(/\/today$/);
   });
 
-  test('family: Useful contacts shows public entries only, with the club’s emergency number and a way back', async ({ page }) => {
+  test('family: Contacts shows public entries only, with the front desk, the club’s emergency number and a way back', async ({ page }) => {
     const c = watchConsole(page);
     await signIn(page, 'f1', '/contacts');
-    await expect(page.getByRole('heading', { name: 'Useful contacts' })).toBeVisible();
+    await expect(page.getByRole('heading', { level: 1, name: 'Contacts' })).toBeVisible();
+    await expect(page.getByTestId('front-desk')).toContainText('front desk');
     await expect(page.getByText('dr. Andreas Wirawan, Sp.PD')).toBeVisible();
     await expect(page.getByText('RS Medika Kemang')).toBeVisible();
     await expect(page.getByText('Apotek Sehat Selalu')).toBeVisible();
     for (const hidden of ['Sayur Segar Kemang', 'Ikan Laut Jaya', 'Bersih Prima']) await expect(page.getByText(hidden)).toHaveCount(0);
-    await expect(page.getByRole('link', { name: /^Call / })).toHaveCount(4);
-    await expect(page.getByRole('link', { name: '+62 21 7590 1188' })).toHaveAttribute('href', 'tel:+622175901188');
+    await expect(page.getByRole('link', { name: /^Call / })).toHaveCount(5); // the emergency line + the 4 public contacts
+    await expect(page.getByTestId('contacts-emergency')).toContainText('+62 21 7590 1188');
+    await expect(page.getByRole('link', { name: 'Call Club emergency line' })).toHaveAttribute('href', 'tel:+622175901188');
     await expect(page.getByRole('button', { name: 'Add a contact' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: /Make internal|Make public/ })).toHaveCount(0);
     await assertNoHorizontalScroll(page);
-    await page.locator('#main').getByRole('button', { name: 'Today', exact: true }).click();
-    await expect(page).toHaveURL(/\/today$/);
+    await page.getByTestId('fam-back').click(); // ‹ Me
+    await expect(page).toHaveURL(/\/me$/);
     // Indonesian wording where the directory has it
     await signIn(page, 'f1', '/contacts', 'id');
     await expect(page.getByText(/Penyakit dalam · berkunjung tiap Selasa/)).toBeVisible();

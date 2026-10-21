@@ -9,6 +9,7 @@ import { membersActions } from './members';
 import { familyActions } from './family';
 import { careActions } from './care';
 import { photoActions } from './photos';
+import { photoDraftActions } from './photoDrafts';
 import { kitchenActions } from './kitchen';
 import { requestsActions } from './requests';
 import { financeActions } from './finance';
@@ -28,7 +29,7 @@ import { taskActions } from './tasks';
 
 registerActions([
   ...reviewActions, ...approvalActions, ...sessionActions, ...attendanceActions, ...healthActions, ...membersActions, ...familyActions,
-  ...careActions, ...photoActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...membershipActions, ...accountActions,
+  ...careActions, ...photoActions, ...photoDraftActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...membershipActions, ...accountActions,
   ...renewalActions, ...guestActions, ...taskActions,
 ] as never);
 
