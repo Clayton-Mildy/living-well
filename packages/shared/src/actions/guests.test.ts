@@ -43,6 +43,17 @@ describe('the demo seed', () => {
     for (const g of live(s.guestSessions)) expect(guestIssue(s, g)).toBeNull();
   });
 
+  it('on a Thursday the demo-day guest leads an activity their host teaches, and the lobby rail and the calendar agree', () => {
+    const TEACHES: Record<string, string> = { 'gh-ratna': 'act-angklung', 'gh-hendro': 'act-keroncong', 'gh-maya': 'act-talk' };
+    const s = buildSeed('2026-10-22').citra;
+    const today = guestSessionsOn(s, '2026-10-22').filter((x) => x.session.status === 'booked' && x.session.id === 'gs-5');
+    expect(today).toHaveLength(1);
+    const g = today[0];
+    expect(g.session.activityId).toBe(TEACHES[g.host.id]);
+    expect(g.activity?.id).toBe(g.session.activityId); // the rail's activity name
+    const item = dayInfo(s, '2026-10-22', 'staff').items.find((i) => i.time === g.session.slot)!; // the calendar's session
+    expect(item).toMatchObject({ activityId: g.session.activityId, guest: { sessionId: 'gs-5', name: g.host.name } });
+  });
   it('shows the guest on the calendar: staff and family see who leads; families never see fees', () => {
     const s = fresh();
     const staff = dayInfo(s, '2026-10-22', 'staff').items.find((i) => i.time === '13:30')!;
@@ -75,6 +86,17 @@ describe('round 13: the front desk sees guest hosts', () => {
     expect(gone).toHaveLength(1);
     expect(gone[0]).toMatchObject({ toRoles: ['lobby'], params: { name: 'Bu Ratna', slot: '10:30' } });
     expect(note(s, 'guests.notif.booked').filter((x) => x.toRoles.includes('lobby'))).toHaveLength(0); // the front desk's "comes on …" notice is withdrawn
+  });
+  it('moving a booking withdraws the desk\'s old "will lead" notice, so exactly one live notice remains; cancelling leaves none', () => {
+    const lobbyBooked = (st: ClubState) => note(st, 'guests.notif.booked').filter((x) => x.toRoles.length === 1 && x.toRoles[0] === 'lobby');
+    const r = run(fresh(), 'guest.book', { hostId: 'gh-ratna', date: '2026-10-22', slot: '10:30' });
+    let s = r.state;
+    expect(lobbyBooked(s)).toHaveLength(1);
+    s = step(s, 'guest.update', { id: r.result.sessionId, date: '2026-10-23', slot: '13:30', activityId: 'act-angklung' });
+    expect(lobbyBooked(s)).toHaveLength(1);
+    expect(lobbyBooked(s)[0].params).toMatchObject({ date: '2026-10-23', slot: '13:30', sessionId: r.result.sessionId });
+    s = step(s, 'guest.cancel', { id: r.result.sessionId });
+    expect(lobbyBooked(s)).toHaveLength(0);
   });
   it('a session that took place stays on the list of its day', () => {
     const s = fresh();

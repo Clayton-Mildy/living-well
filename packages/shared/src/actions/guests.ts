@@ -55,6 +55,15 @@ const tellTeachers = (ctx: Ctx, kind: string, params: Record<string, string | nu
 /** KC round 13: the front desk is told of every booking and cancellation of a guest host (they greet them; the Calendar opens on the session). */
 const tellLobby = (ctx: Ctx, kind: string, params: Record<string, string | number>) => ctx.notify({ toRoles: ['lobby'], kind, params, link: '/calendar' });
 
+/** Withdraws the front desk's earlier "will lead" notice(s) for a session (matched on the session id; notices from before the id was stored match on host name, date and slot). */
+function retractLobby(d: D, ctx: Ctx, sessionId: string, fallback?: { name: string; date: ISODate; slot: Slot }): void {
+  for (const n of Object.values(d.notifications)) {
+    if (n.deletedAt || n.kind !== 'guests.notif.booked' || n.toRoles.length !== 1 || n.toRoles[0] !== 'lobby') continue;
+    const p = n.params;
+    if (p.sessionId === sessionId || (p.sessionId === undefined && fallback && p.name === fallback.name && p.date === fallback.date && p.slot === fallback.slot)) n.deletedAt = ctx.nowDT;
+  }
+}
+
 /** The session's fee as a vendor invoice for finance (approved: management booked it). Created at booking, so it can be paid before the performance. */
 function invoiceFor(d: D, ctx: Ctx, g: Draft<GuestSession>): string {
   const host = d.guestHosts[g.hostId];
@@ -157,7 +166,7 @@ export const guestActions: ActionDef[] = [
       ctx.result.vendorInvoiceId = invoiceFor(d, ctx, d.guestSessions[id]); // finance can pay from now on, before the performance
       const act = d.activities[activityId].name;
       if (!changed) tellTeachers(ctx, 'guests.notif.booked', { name: host.name, activity: act, date: input.date, slot: input.slot });
-      tellLobby(ctx, 'guests.notif.booked', { name: host.name, activity: act, date: input.date, slot: input.slot });
+      tellLobby(ctx, 'guests.notif.booked', { name: host.name, activity: act, date: input.date, slot: input.slot, sessionId: id });
       ctx.feed({ icon: 'co_present', key: 'guests.feed.booked', params: { name: host.name, date: input.date, slot: input.slot } });
       ctx.result.sessionId = id;
     },
@@ -201,7 +210,8 @@ export const guestActions: ActionDef[] = [
       if (moved || actChanged || host.id !== prev.hostId) {
         const params = { name: host.name, activity: d.activities[activityId]?.name ?? '', date, slot };
         if (!told) tellTeachers(ctx, 'guests.notif.booked', params);
-        tellLobby(ctx, 'guests.notif.booked', params);
+        retractLobby(d, ctx, g.id, { name: d.guestHosts[prev.hostId]?.name ?? '', date: prev.date, slot: prev.slot }); // the old "will lead" notice goes before the new one is posted
+        tellLobby(ctx, 'guests.notif.booked', { ...params, sessionId: g.id });
       }
       ctx.result.sessionId = g.id;
     },
@@ -223,9 +233,7 @@ export const guestActions: ActionDef[] = [
       else if (g.vendorInvoiceId && d.vendorInvoices[g.vendorInvoiceId]?.status === 'paid') ctx.notify({ toRoles: ['finance', 'mgmt'], kind: 'guests.notif.paidCancelled', params: { name, amount: rp(g.fee) }, link: '/guests' });
       tellTeachers(ctx, 'guests.notif.cancelled', { name, date: g.date, slot: g.slot });
       // the front desk's earlier "comes on …" notice for this session is withdrawn, so only the cancellation is left to read
-      for (const n of Object.values(d.notifications)) {
-        if (!n.deletedAt && n.kind === 'guests.notif.booked' && n.toRoles.length === 1 && n.toRoles[0] === 'lobby' && n.params.name === name && n.params.date === g.date && n.params.slot === g.slot) n.deletedAt = ctx.nowDT;
-      }
+      retractLobby(d, ctx, g.id, { name, date: g.date, slot: g.slot });
       tellLobby(ctx, 'guests.notif.cancelled', { name, date: g.date, slot: g.slot });
       ctx.feed({ icon: 'event_busy', key: 'guests.feed.cancelled', params: { name, date: g.date, slot: g.slot } });
     },

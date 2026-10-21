@@ -7,7 +7,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { actorName, memberName, displayName, type ChangeRequest, type Photo } from '@cp/shared';
-import { tabForSection, photoReviewKind } from '@cp/shared/rules/members';
+import { tabForSection, photoReviewKind, splitName } from '@cp/shared/rules/members';
 import { APPROVAL_TYPES, approvalCounts, approvalHistory, pendingItems, type ApprovalItem, type ApprovalType, type HistoryItem } from '@cp/shared/rules/approvals';
 import { Avatar, Button, Dialog, EmptyState, GROUP_HEAD, Group, HAIRLINE, Icon, Note, PageHead, Pager, PhotoImg, TextField, Toggle, usePaged } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -224,6 +224,14 @@ export function Reviews() {
     const m = cr.target.memberId ? s.members[cr.target.memberId] : undefined;
     const sn = submitterNote(cr);
     const on = sel.includes(cr.id);
+    // a registration or lead with no member record yet: the avatar still takes its initials from the first and last name, never from a free-text title ("Tante Lily Tan" is LT)
+    const draft = m ? undefined : (() => {
+      const lead = cr.target.type === 'enquiry' ? s.enquiries[cr.target.id]?.senior : undefined;
+      const inp = (cr.input || {}) as { title?: unknown; name?: unknown };
+      const title = lead?.title ?? (typeof inp.title === 'string' ? inp.title : '');
+      const full = lead?.name ?? (typeof inp.name === 'string' ? inp.name : '');
+      return title && full ? { title, ...splitName(full) } : undefined;
+    })();
     const who0 = m ? (
       <button type="button" onClick={() => navigate(`/members/${m.id}/${tabForSection(cr.section)}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: isPhone ? 16 : 17, fontWeight: 500, lineHeight: '24px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{memberName(m)}</button>
     ) : <span style={{ fontSize: isPhone ? 16 : 17, fontWeight: 500, lineHeight: '24px' }}>{name || d.title}</span>;
@@ -238,7 +246,7 @@ export function Reviews() {
       <div key={cr.id} data-cr={cr.id} role="group" aria-label={`${d.title} ${name}`} className="cp-grey" style={isPhone ? { background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 } : { background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '20px clamp(18px, 3vw, 28px)', display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <Check on={on} onClick={() => toggleSel(cr.id)} label={t('approvals.checkRow', { n: name || d.title })} />
-          <Avatar name={name || d.title} member={m} tone={m?.photoTone} src={memberPhoto(m)} size={isPhone ? 40 : 46} />
+          <Avatar name={name || d.title} member={m ?? draft} tone={m?.photoTone} src={memberPhoto(m)} size={isPhone ? 40 : 46} />
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {isPhone ? <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>{who0}{chip}</div> : who0}
             <span style={{ fontSize: isPhone ? 13 : 14, color: '#6B6259', lineHeight: 1.4 }}>{`${d.title} · ${who(cr.submittedBy)} · ${whenText(fmt.fds, today, cr.createdAt, t)}`}</span>

@@ -15,7 +15,6 @@ import { useDevice } from '../../hooks/useDevice';
 import { useLang, useT } from '../../lib/i18n';
 import { occasionLine } from '../../lib/occasions';
 import { useNow } from '../../lib/clock';
-import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { CallLink, DotItem, drugLabel, relText } from './parts';
 import type { TFn } from '../../lib/i18n';
@@ -58,7 +57,6 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
   const s = useClub();
   const { today } = useNow();
   const navigate = useNavigate();
-  const { role } = useMe();
   const a = alsoToday(s, today);
   const empty = !a.guests.length;
   const guests = usePaged(a.guests, GUESTS_PER_PAGE);
@@ -140,8 +138,8 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
   // round 13: guest hosts coming today (a teacher, a singer, a speaker the front desk should expect); hidden when nobody is booked. A tap opens the Guests screen (the front desk: the read-only session).
   const guestHosts = guestSessionsOn(s, today);
   if (guestHosts.length) {
-    // management opens the Guests screen; the front desk the read-only session sheet there
-    const open = (id?: string) => navigate(role === 'mgmt' ? '/guests' : id ? `/guests?session=${id}` : '/guests');
+    // the Guests screen opens on the tapped session (management: the sheet to edit; the front desk: the read-only one)
+    const open = (id?: string) => navigate(id ? `/guests?session=${id}` : '/guests');
     blocks.push(
       <Block key="guestsToday" title={t('lobby.guestsToday')} onClick={() => open()}>
         <div data-testid="guests-today" style={{ display: 'flex', flexDirection: 'column' }}>

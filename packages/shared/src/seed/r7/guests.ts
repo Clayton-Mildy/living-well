@@ -93,16 +93,23 @@ export function seedGuests(s: ClubState, T: ISODate): void {
   s.guestSessions['gs-4'] = sess('gs-4', 'gh-hendro', nextWeek, '10:30', 'act-keroncong', 900000, 'booked');
   booked('gs-4', 'vi-gh-4', nextWeek, 'Pak Hendro', 900000, false);
   lead(nextWeek, '10:30', 'act-keroncong');
-  // round 13: a guest host on the demo day itself, so the front desk's "Guests today" has someone to show: the host whose activity the weekly plan already runs that
-  // day (Pak Hendro's keroncong on a Wednesday), else Bu Ratna in the morning session's own activity. The slot keeps its activity, so no schedule changes; paid in advance.
+  // round 13: a guest host on the demo day itself, so the front desk's "Guests today" has someone to show, leading an activity they actually teach: the first slot of
+  // the day whose weekly activity is one of the hosts' (Pak Hendro's keroncong on a Wednesday); else Bu Ratna takes the morning slot for angklung, like the other
+  // booked guests (the slot's activity changes for the day; every other seed row for the day follows the effective schedule). Paid in advance.
   if (free(T)) {
-    const slot: WeekSlot = '10:30';
-    const w = weekly(T, slot);
-    const pair = PAIRS.find(([, act]) => w?.activityId === act) ?? PAIRS[0];
-    if (w) {
-      const [hostId, , name, fee] = pair;
-      s.guestSessions['gs-5'] = sess('gs-5', hostId, T, slot, w.activityId, fee, 'booked');
+    const slots: WeekSlot[] = ['10:30', '13:30'];
+    let slot: WeekSlot = slots[0];
+    let pair = PAIRS[0];
+    let hit = false;
+    for (const sl of slots) {
+      const p = PAIRS.find(([, act]) => weekly(T, sl)?.activityId === act);
+      if (p) { slot = sl; pair = p; hit = true; break; }
+    }
+    if (weekly(T, slot)) {
+      const [hostId, activityId, name, fee] = pair;
+      s.guestSessions['gs-5'] = sess('gs-5', hostId, T, slot, activityId, fee, 'booked');
       booked('gs-5', 'vi-gh-5', T, name, fee, true);
+      if (!hit) lead(T, slot, activityId);
     }
   }
 

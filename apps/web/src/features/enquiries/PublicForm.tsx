@@ -119,7 +119,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
       <>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)' }}>{t('enq.pf_eyebrow')} · {view.info.club}</span>
-          <h1 className="cp-serif" style={{ margin: 0, fontSize: isPhone ? 28 : 32, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{d.title} {d.name || '…'}</h1>
+          <h1 className="cp-serif" style={{ margin: 0, fontSize: isPhone ? 28 : 32, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{d.title.trim() ? `${d.title} ${d.name || '…'}` : d.name || '…'}</h1>
           <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: '#5E5852' }}>{t('enq.pf_intro')}</p>
         </div>
         <PeSection label={t('enq.pf_who')}>
