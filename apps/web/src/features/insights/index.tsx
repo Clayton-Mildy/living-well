@@ -4,7 +4,9 @@
 // and To). Today only counts once the day is over.
 // KC round 9: a fourth tab, Membership — members in and out by plan, with its own range (3 months, 6 months, 1 year or a custom From and To).
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { toMin } from '@cp/shared';
+import { moodInsights } from '@cp/shared/rules/mood';
 import { MEMBER_RANGES, PERIOD_KEYS, editPeriod, memberRangeFor, memberTrend, periodFor, visitInsights, type InsightPeriod, type MemberRangeKey, type PeriodKey } from '@cp/shared/rules/insights';
 import { DateField, EmptyState, PageHead, Segmented, Select } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -13,13 +15,14 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { ByPlan } from './ByPlan';
 import { Membership } from './Membership';
+import { Mood } from './Mood';
 import { Overall } from './Overall';
 import { PerPerson } from './PerPerson';
 import { PersonDetail } from './PersonDetail';
 
-type Tab = 'overall' | 'plan' | 'person' | 'members';
-const TABS: Tab[] = ['overall', 'plan', 'person', 'members'];
-const TAB_KEY: Record<Tab, string> = { overall: 'insights.tabOverall', plan: 'insights.tabPlan', person: 'insights.tabPerson', members: 'insights.tabMembers' };
+type Tab = 'overall' | 'plan' | 'person' | 'members' | 'mood';
+const TABS: Tab[] = ['overall', 'plan', 'person', 'members', 'mood'];
+const TAB_KEY: Record<Tab, string> = { overall: 'insights.tabOverall', plan: 'insights.tabPlan', person: 'insights.tabPerson', members: 'insights.tabMembers', mood: 'insights.tabMood' };
 const M_KEY: Record<MemberRangeKey, string> = { '3m': 'insights.m3', '6m': 'insights.m6', '1y': 'insights.m1y', custom: 'insights.mCustom' };
 const PERIOD_KEY: Record<PeriodKey, string> = { thisMonth: 'insights.pThisMonth', lastMonth: 'insights.pLastMonth', last3: 'insights.pLast3', last6: 'insights.pLast6', custom: 'insights.pCustom' };
 
@@ -29,7 +32,8 @@ export function Insights() {
   const fmt = useFmt();
   const { today, nowMin } = useNow();
   const { device, isPhone } = useDevice();
-  const [tab, setTab] = useState<Tab>('overall');
+  const [params] = useSearchParams();
+  const [tab, setTab] = useState<Tab>(() => { const k = params.get('tab'); return TABS.find((x) => x === k) ?? 'overall'; });
   const [pKey, setPKey] = useState<PeriodKey>('thisMonth');
   const [custom, setCustom] = useState<InsightPeriod | null>(null);
   const [detail, setDetail] = useState<string | null>(null);
@@ -42,6 +46,7 @@ export function Insights() {
   const mPeriod = useMemo(() => memberRangeFor(mKey, today, mCustom), [mKey, today, mCustom]);
   const mTrend = useMemo(() => (tab === 'members' ? memberTrend(s, mPeriod, today) : null), [tab, s, mPeriod, today]);
   const members = tab === 'members';
+  const mood = useMemo(() => (tab === 'mood' ? moodInsights(s, period, today) : null), [tab, s, period, today]);
 
   const range = data.days.length
     ? t('insights.range', { from: fmt.fd(data.days[0], { day: 'numeric', month: 'short' }), to: fmt.fd(data.days[data.days.length - 1], { day: 'numeric', month: 'short' }), n: data.days.length })
@@ -69,7 +74,7 @@ export function Insights() {
   ) : null;
   // the person's detail follows the period
   const detailLabel = pKey === 'custom' ? `${fmt.fds(period.from)} – ${fmt.fds(period.to)}` : t(PERIOD_KEY[pKey]);
-  // four tabs do not fit one row on a phone (Indonesian least of all): two by two there
+  // five tabs do not fit one row on a phone (Indonesian least of all): two per row there
   const tabs = <Segmented label={t('insights.tabs')} value={tab} onChange={setTab} cols={isPhone ? 2 : undefined} items={TABS.map((k) => ({ value: k, label: t(TAB_KEY[k]) }))} />;
 
   return (
@@ -82,6 +87,8 @@ export function Insights() {
         <div style={{ fontSize: 13, color: '#6B6259', marginTop: isPhone ? -6 : -10 }}>{members ? t('insights.mRangeText', { from: fmt.fds(mPeriod.from), to: fmt.fds(mPeriod.to) }) : range}</div>
         {members && mTrend ? (
           <Membership trend={mTrend} />
+        ) : tab === 'mood' && mood ? (
+          <Mood data={mood} />
         ) : data.overall.visits === 0 && tab !== 'person' ? (
           <EmptyState icon="insights" title={t('insights.empty')} sub={t('insights.emptySub')} />
         ) : tab === 'overall' ? (
