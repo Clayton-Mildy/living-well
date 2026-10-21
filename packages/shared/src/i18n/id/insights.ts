@@ -122,4 +122,15 @@ export const insights: Same<typeof EN> = {
   mNone: 'Tidak ada yang bergabung atau keluar di periode ini', mNoSwitch: 'Tidak ada pindah paket di periode ini',
   mInOutAria: 'Anggota yang bergabung dan keluar, per paket', mSwitchAria: 'Pindah paket', mActiveAria: 'Anggota aktif per paket',
   mTotal: 'Semua',
+  // round 12: the Mood tab
+  tabMood: 'Suasana hati',
+  moodLift: 'Klub menaikkan suasana hati rata-rata {n}',
+  moodLiftNone: 'Suasana hati rata-rata tidak berubah',
+  moodLiftDown: 'Suasana hati rata-rata {n} lebih rendah',
+  moodNoLift: 'Belum ada penilaian datang dan pulang',
+  moodByActivity: 'Suasana hati per kegiatan', moodByActivityAria: 'Rata-rata suasana hati per kegiatan', moodActivityTip: '{name} · {avg} · {n} penilaian',
+  moodByWeekday: 'Suasana hati per hari',
+  moodByMoment: 'Suasana hati per saat',
+  moodDropping: 'Menurun', moodDropHint: '3 kunjungan terakhir', moodDropNone: 'Tidak ada yang menurun',
+  moodEmpty: 'Tidak ada penilaian suasana hati di periode ini',
 };

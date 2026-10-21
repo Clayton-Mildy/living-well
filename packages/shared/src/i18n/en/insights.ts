@@ -119,4 +119,15 @@ export const insights = {
   mNone: 'No one joined or left in this period', mNoSwitch: 'No plan switches in this period',
   mInOutAria: 'Members who joined and left, by plan', mSwitchAria: 'Plan switches', mActiveAria: 'Active members by plan',
   mTotal: 'All',
+  // round 12: the Mood tab
+  tabMood: 'Mood',
+  moodLift: 'The club lifts mood by {n} on average',
+  moodLiftNone: 'Mood is unchanged on average',
+  moodLiftDown: 'Mood is {n} lower on average',
+  moodNoLift: 'No arrival and departure marks yet',
+  moodByActivity: 'Mood by activity', moodByActivityAria: 'Average mood per activity', moodActivityTip: '{name} · {avg} · {n} marks',
+  moodByWeekday: 'Mood by weekday',
+  moodByMoment: 'Mood by moment',
+  moodDropping: 'Dropping', moodDropHint: 'Last 3 visits', moodDropNone: 'Nobody is dropping',
+  moodEmpty: 'No mood marks in this period',
 };

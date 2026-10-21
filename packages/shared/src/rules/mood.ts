@@ -3,7 +3,10 @@
 import type { Draft } from 'immer';
 import type { ClubState, Face, ISODate, MoodMark, MoodMoment, Slot } from '../types';
 import type { Ctx } from '../actions/framework';
-import { live } from '../util';
+import { dow, live } from '../util';
+import type { InsightPeriod } from './insights';
+import { activeOn } from './core';
+import { sessionsOn } from './kitchen';
 
 /** Best face first, the order they are shown in. */
 export const FACES: readonly Face[] = [5, 4, 3, 2, 1];
@@ -80,4 +83,67 @@ export function writeMark(d: Draft<ClubState>, ctx: Ctx, m: { memberId: string; 
 
 export function clearMark(d: Draft<ClubState>, date: ISODate, memberId: string, moment: MoodMoment, slot?: Slot): void {
   delete d.moodMarks[moodId(date, memberId, moment, slot)];
+}
+
+export interface MoodInsights {
+  byActivity: { activityId: string; avg: number; n: number }[];
+  /** Mon … Fri: the average face of the day's marks, null when none */
+  byWeekday: (number | null)[];
+  byMoment: Record<MoodMoment, number | null>;
+  /** average departure minus arrival over visits with both marked */
+  lift: number | null;
+  /** members whose last three visits (days with an arrival mark) have strictly falling arrival faces, oldest first */
+  drops: { memberId: string; faces: Face[] }[];
+}
+
+/** Mood over a period: which activities and weekdays lift it, the arrival-to-departure lift, and members whose arrival mood keeps falling. */
+export function moodInsights(s: ClubState, period: InsightPeriod, today: ISODate): MoodInsights {
+  const to = period.to < today ? period.to : today;
+  const marks = live(s.moodMarks ?? {}).filter((m) => m.date >= period.from && m.date <= to);
+  const cells = new Map<ISODate, Map<string, string | undefined>>();
+  const activityAt = (date: ISODate, slot: string) => {
+    let day = cells.get(date);
+    if (!day) { day = new Map(sessionsOn(s, date).map((x) => [x.slot, x.cell?.activityId])); cells.set(date, day); }
+    return day.get(slot);
+  };
+  const perActivity = new Map<string, number[]>();
+  const perWeekday: number[][] = [[], [], [], [], []];
+  const perMoment: Record<MoodMoment, number[]> = { arrival: [], health: [], activity: [], departure: [] };
+  const arrivals = new Map<string, Face>();
+  for (const m of marks) {
+    perMoment[m.moment].push(m.face);
+    const w = dow(m.date);
+    if (w >= 1 && w <= 5) perWeekday[w - 1].push(m.face);
+    if (m.moment === 'arrival') arrivals.set(`${m.date}:${m.memberId}`, m.face);
+    if (m.moment === 'activity') {
+      const id = activityAt(m.date, m.slot ?? m.time);
+      if (id) perActivity.set(id, [...(perActivity.get(id) ?? []), m.face]);
+    }
+  }
+  const lifts: number[] = [];
+  for (const m of marks) {
+    const a = m.moment === 'departure' ? arrivals.get(`${m.date}:${m.memberId}`) : undefined;
+    if (a !== undefined) lifts.push(m.face - a);
+  }
+  const byActivity = [...perActivity.entries()]
+    .filter(([, f]) => f.length >= 3)
+    .map(([activityId, f]) => ({ activityId, avg: avg1(f) as number, n: f.length }))
+    .sort((a, b) => b.avg - a.avg || b.n - a.n || (a.activityId < b.activityId ? -1 : 1));
+  const visits = new Map<string, { date: ISODate; face: Face }[]>();
+  for (const m of marks) if (m.moment === 'arrival') visits.set(m.memberId, [...(visits.get(m.memberId) ?? []), { date: m.date, face: m.face }]);
+  const drops: MoodInsights['drops'] = [];
+  for (const [memberId, v] of visits) {
+    const m = s.members[memberId];
+    if (!m || !activeOn(m, today)) continue;
+    const last = v.sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-3).map((x) => x.face);
+    if (last.length === 3 && last[0] > last[1] && last[1] > last[2]) drops.push({ memberId, faces: last });
+  }
+  drops.sort((a, b) => a.faces[2] - b.faces[2] || (a.memberId < b.memberId ? -1 : 1));
+  return {
+    byActivity,
+    byWeekday: perWeekday.map(avg1),
+    byMoment: Object.fromEntries(MOMENTS.map((k) => [k, avg1(perMoment[k])])) as MoodInsights['byMoment'],
+    lift: avg1(lifts),
+    drops,
+  };
 }
