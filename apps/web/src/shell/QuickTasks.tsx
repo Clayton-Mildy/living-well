@@ -10,7 +10,7 @@ import { dayStatus, type StaffRole, type TaskTemplate } from '@cp/shared';
 import { activityName } from '@cp/shared/rules/activity';
 import { partLate, roleSummary, TASK_ROLES, type DutyDef, type DutyPart, type TaskItem } from '@cp/shared/rules/tasks';
 import { Icon, useOverlayA11y } from '../components/ui';
-import { useTick, whoIs } from '../features/tasks/parts';
+import { countingMeta, isCountingDuty, useTick, whoIs } from '../features/tasks/parts';
 import { useNow } from '../lib/clock';
 import { useFmt, useT } from '../lib/i18n';
 import { useMe } from '../lib/me';
@@ -120,7 +120,8 @@ function QuickRow({ row, first, hasCam, busy, onGo, onCamera, onTick }: { row: R
     icon = def.icon;
     link = part.link;
     const left = part.count ? part.count.total - part.count.done : 0;
-    meta = part.done
+    meta = isCountingDuty(def, part) ? countingMeta(t, def, part, row.late)
+      : part.done
       ? (part.by && part.at ? t('tasks.doneBy', { name: whoIs(s, part.by), t: part.at }) : part.at ? t('tasks.doneAtOnly', { t: part.at }) : '')
       : [row.late ? t('tasks.late') : '', t('tasks.by', { t: part.due }), left > 0 ? t('tasks.left', { n: left }) : ''].filter(Boolean).join(' · ');
     if (!part.done) action = CAMERA_DUTY.has(def.icon) && hasCam ? { icon: 'photo_camera', label: t('tasks.quickCamera'), run: onCamera } : { icon: 'arrow_forward', label: t('tasks.quickGo'), run: () => onGo(part.link) };

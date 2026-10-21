@@ -27,7 +27,7 @@ export const lobby: Same<typeof EN> = {
   drugAllergy: 'Alergi {d}', medLunch: '{name} {dose} · makan siang', notInToday: 'Belum check-in hari ini', inOut: 'Tiba {a} · pulang {l}',
   nanny: 'Pengasuh', nannyNote: 'Bersama {name}, pengasuhnya',
   tUndoIn: 'Check-in {n} dibatalkan.', tUndoOut: 'Check-out {n} dibatalkan.',
-  menuToday: 'Menu hari ini', menuLunch: 'Makan siang · {t}', menuSoft: 'Makanan lunak', menuTea: 'Teh sore · {t}', menuNone: 'Dapur belum mengatur menu hari ini.', alsoNone: 'Tidak ada acara lain hari ini.',
+  menuToday: 'Menu hari ini', guestsToday: 'Tamu pengisi hari ini', menuLunch: 'Makan siang · {t}', menuSoft: 'Makanan lunak', menuTea: 'Teh sore · {t}', menuNone: 'Dapur belum mengatur menu hari ini.', alsoNone: 'Tidak ada acara lain hari ini.',
   guestTrial: 'Hari percobaan: {n}', guestVisit: 'Kunjungan: {n}',
   guestWith: 'Bersama {e} ({r}) · {s}', guestWithNo: 'Bersama {e}', guestAllergyUnknown: 'Alergi belum dicatat', guestHealth: 'Cek kesehatan saat tiba', guestLunch: 'Ikut makan siang',
   guestStatusIn: 'Check-in {t}', guestStatusOut: 'Pulang {t}', guestStatusNoShow: 'Tidak datang', noShow: 'Tidak datang', undoNoShow: 'Batalkan', openEnquiry: 'Buka calon anggota',

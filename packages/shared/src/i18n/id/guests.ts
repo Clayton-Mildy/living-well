@@ -7,7 +7,7 @@ export const guests: Same<typeof EN> = {
   // screen
   sessions: 'Sesi', hosts: 'Pengisi', view: 'Tampilan', filter: 'Tampilkan', book: 'Jadwalkan tamu', addHost: 'Tambah pengisi', guest: 'Tamu',
   f_all: 'Semua', f_upcoming: 'Akan datang', f_toPay: 'Belum dibayar', f_paid: 'Lunas', f_cancelled: 'Dibatalkan',
-  g_upcoming: 'Akan datang', g_toPay: 'Belum dibayar', g_paid: 'Lunas', g_cancelled: 'Dibatalkan',
+  g_upcoming: 'Akan datang', g_toPay: 'Belum dibayar', g_paid: 'Lunas', g_cancelled: 'Dibatalkan', g_done: 'Selesai',
   st_booked: 'Terjadwal', st_cancelled: 'Dibatalkan', st_paid: 'Lunas', st_toPay: 'Belum dibayar',
   late: 'Harinya sudah lewat: tandai selesai', overdue: 'Sesi ini pada {date}. Tandai selesai setelah tamu mengajar atau tampil.',
   issue_closed: 'Klub tutup pada hari itu', issue_outing: 'Hari itu diganti jalan-jalan', issue_noSession: 'Jam itu sekarang tidak ada sesi',

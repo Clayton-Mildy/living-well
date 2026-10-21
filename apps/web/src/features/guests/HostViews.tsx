@@ -99,6 +99,7 @@ export function HostDetail({ hostId, onClose, onBook, onEdit, onOpenSession }: {
   useResetOn(hostId, () => setConfirm(false));
   if (!host) return null;
   const canEdit = role === 'mgmt';
+  const money = role === 'mgmt' || role === 'finance'; // round 13: the front desk sees the contact and the sessions, not fees or bank details
   const tot = hostTotals(s, host.id);
   const mine = sessionsOfHost(s, host.id);
   const wa = waUrl(host.phone);
@@ -121,23 +122,23 @@ export function HostDetail({ hostId, onClose, onBook, onEdit, onOpenSession }: {
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35 }}>{host.what} · {kindLabel(t, host.kind)}{host.active ? '' : ` · ${t('guests.inactive')}`}</span>
         </div>
       </div>
-      <Block pad={0}>
+      {money ? <Block pad={0}>
         <div style={{ display: 'flex' }}>
           {stat(tot.sessions, t('guests.tSessions'))}
           {stat(rp(tot.paid), t('guests.tPaid'))}
           {stat(<span style={{ color: tot.owed ? '#7A5510' : undefined }}>{rp(tot.owed)}</span>, t('guests.tOwed'))}
         </div>
-      </Block>
+      </Block> : null}
       <Block title={t('guests.contact')}>
         {kv(t('guests.phone'), host.phone ? fmtPhone(host.phone) : '—', true, isPhone, host.phone ? <span style={{ display: 'flex', gap: 8 }}>{pill(telOf(host.phone), 'call', `${t('common.call')} ${host.name}`)}{wa ? pill(wa, 'chat', t('guests.whatsapp', { name: host.name })) : null}</span> : undefined)}
-        {kv(t('guests.bankDetails'), host.bank && (host.bank.bank || host.bank.account) ? [host.bank.bank, host.bank.account, host.bank.holder ? `a.n. ${host.bank.holder}` : ''].filter(Boolean).join(' · ') : '—', false, isPhone)}
-        {kv(t('guests.usualFee'), rp(host.fee), false, isPhone)}
+        {money ? kv(t('guests.bankDetails'), host.bank && (host.bank.bank || host.bank.account) ? [host.bank.bank, host.bank.account, host.bank.holder ? `a.n. ${host.bank.holder}` : ''].filter(Boolean).join(' · ') : '—', false, isPhone) : null}
+        {money ? kv(t('guests.usualFee'), rp(host.fee), false, isPhone) : null}
         {host.note ? kv(t('guests.note'), host.note, false, isPhone) : null}
       </Block>
       <Block title={t('guests.sessions')} meta={mine.length ? String(mine.length) : undefined}>
         {mine.length ? mine.map((g, i) => {
           const a = s.activities[g.activityId];
-          const st = stateOf(s, g, t);
+          const st = stateOf(s, g, t, money);
           return (
             <button key={g.id} type="button" className={isPhone ? 'cp-tap-self' : 'h-row'} onClick={() => onOpenSession(g.id)} style={{ ...rowStyle(i === 0, isPhone), minHeight: 54, padding: isPhone ? '8px 12px 8px 16px' : '10px 18px' }}>
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -145,7 +146,7 @@ export function HostDetail({ hostId, onClose, onBook, onEdit, onOpenSession }: {
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35 }}>{activityName(a, lang)}</span>
               </span>
               <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, flex: 'none' }}>
-                <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{rp(feeOfSession(s, g))}</span>
+                {money ? <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums' }}>{rp(feeOfSession(s, g))}</span> : null}
                 {st ? <span style={{ fontSize: 13 }}><StatusDot color={st.color}>{st.text}</StatusDot></span> : null}
               </span>
               <Icon name="chevron_right" size={20} color="#A89C8E" />

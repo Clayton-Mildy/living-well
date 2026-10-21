@@ -154,6 +154,14 @@ export function TaskRow({ item, date, first, who, canTick, busy, onTick, onOpen 
 }
 
 // ---------- one part of a general duty ----------
+/** The front desk's counting duties ("3" check-ins so far, "1 of 3" checked out): a count, not a deadline. */
+export const isCountingDuty = (def: DutyDef, part: DutyPart) => (def.id === 'lobby.checkin' || def.id === 'lobby.checkout') && !!part.count;
+/** The one meta line of a counting duty: the check-in total, or "m of n" with "Late · By 16:00" while open. Shared by the Tasks list and the quick popup. */
+export function countingMeta(t: TFn, def: DutyDef, part: DutyPart, late: boolean): string {
+  const c = part.count!;
+  return def.id === 'lobby.checkin' ? String(c.total) : [t('tasks.part.countOf', c), ...(part.done ? [] : [late ? t('tasks.late') : '', t('tasks.by', { t: part.due })])].filter(Boolean).join(' · ');
+}
+
 /** One row of the day's duties: a session picture, the lunch photo, a round of the log… Done: a check, greyed, with who and when if the data says. Open: the duty's icon,
  *  "By 12:30" (rust dot and "Late" once past), and how many are left. Tapping an open one goes to the place where it is done (`link` false in the team view). */
 export function DutyRow({ s, def, part, date, today, nowMin, first, link = true }: {
@@ -170,9 +178,9 @@ export function DutyRow({ s, def, part, date, today, nowMin, first, link = true 
   const late = partLate(part, date, today, nowMin);
   const left = part.count ? part.count.total - part.count.done : 0;
   // the front desk's counting rows: "3" check-ins so far, "1 of 3" checked out (a count, not a deadline); always a way into the lobby screen
-  const counting = (def.id === 'lobby.checkin' || def.id === 'lobby.checkout') && !!part.count;
+  const counting = isCountingDuty(def, part);
   const meta = counting
-    ? (def.id === 'lobby.checkin' ? String(part.count!.total) : [t('tasks.part.countOf', part.count!), ...(part.done ? [] : [late ? t('tasks.late') : '', t('tasks.by', { t: part.due })])].filter(Boolean).join(' · '))
+    ? countingMeta(t, def, part, late)
     : part.done
     ? (part.by && part.at ? t('tasks.doneBy', { name: whoIs(s, part.by), t: part.at }) : part.at ? t('tasks.doneAtOnly', { t: part.at }) : '')
     : [late ? t('tasks.late') : '', t('tasks.by', { t: part.due })].filter(Boolean).join(' · ');

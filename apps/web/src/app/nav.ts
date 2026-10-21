@@ -51,7 +51,7 @@ export function phoneNav(role: Role): { items: NavItem[]; more: boolean } {
 const EXTRA: Partial<Record<Role, string[]>> = {
   // round 8: pushed pages of the family app (Billing and Contacts from Me, a parent's profile, health history) and the monthly memories
   family: ['billing', 'contacts', 'memories', 'profile', 'history'],
-  lobby: ['calendar', 'photos'],
+  lobby: ['calendar', 'photos', 'guests'], // guests: link-only, read-only (the Arrivals rail's "Guests today")
   nurse: ['calendar', 'contacts'],
   kitchen: ['calendar', 'contacts', 'drafts'], // KC round 7: the quick camera's Drafts (activity and management have them in the Camera)
   finance: ['calendar', 'contacts'],

@@ -4,7 +4,7 @@ export const guests = {
   // screen
   sessions: 'Sessions', hosts: 'Hosts', view: 'View', filter: 'Show', book: 'Book a guest', addHost: 'Add a host', guest: 'Guest',
   f_all: 'All', f_upcoming: 'Upcoming', f_toPay: 'To pay', f_paid: 'Paid', f_cancelled: 'Cancelled',
-  g_upcoming: 'Upcoming', g_toPay: 'To pay', g_paid: 'Paid', g_cancelled: 'Cancelled',
+  g_upcoming: 'Upcoming', g_toPay: 'To pay', g_paid: 'Paid', g_cancelled: 'Cancelled', g_done: 'Done',
   st_booked: 'Booked', st_cancelled: 'Cancelled', st_paid: 'Paid', st_toPay: 'Not paid yet',
   late: 'The day has passed: mark it as done', overdue: 'This was on {date}. Mark it as done once the guest has taught or performed.',
   issue_closed: 'The club is closed that day', issue_outing: 'An outing replaces that day', issue_noSession: 'That slot has no session now',

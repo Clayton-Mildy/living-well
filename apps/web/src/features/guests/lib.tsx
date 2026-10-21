@@ -23,8 +23,9 @@ export const rowStyle = (first: boolean, phone: boolean): CSSProperties => ({
 });
 
 /** The state of a session for its row: booked ones show nothing (the group says it), the others a dot and the word. */
-export function stateOf(s: ClubState, g: GuestSession, t: TFn): { color: string; text: string } | null {
+export function stateOf(s: ClubState, g: GuestSession, t: TFn, money = true): { color: string; text: string } | null {
   if (g.status === 'cancelled') return { color: '#8A8078', text: t('guests.st_cancelled') };
+  if (!money) return null; // payments are for management and finance
   const pay = payStateOf(s, g);
   if (pay === 'paid') return { color: '#3D6B4F', text: t('guests.st_paid') };
   if (pay === 'toPay') return { color: '#7A5510', text: t('guests.st_toPay') };

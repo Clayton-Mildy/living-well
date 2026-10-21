@@ -264,7 +264,7 @@ export const DUTIES: DutyDef[] = [
     id: 'lobby.checkin', role: 'lobby', icon: 'how_to_reg', titleKey: 'tasks.duty.lobby.checkin', every: 'day', defaultDue: (s) => s.club.settings.close,
     parts: (s, date, nowMin) => {
       const n = nowMin < toMin(s.club.settings.open) ? 0 : attendedRows(s, date).length;
-      return n ? [stub('checkin', { done: true, count: { done: n, total: n }, link: linkTo('lobby', 'arrivals') })] : [];
+      return n ? [stub('checkin', { done: true, count: { done: n, total: n }, link: linkTo('lobby', 'arrivals', '?mode=in') })] : [];
     },
   },
   {

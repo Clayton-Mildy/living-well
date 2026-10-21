@@ -194,7 +194,7 @@ describe('general duties: from the data, for any day', () => {
     expect(n).toBeGreaterThan(0);
     const ci = dutiesOf(base, 'lobby', T, T, at('10:05')).find((d) => d.def.id === 'lobby.checkin')!;
     expect(ci).toMatchObject({ status: 'done', total: 1, late: 0 }); // informational: ticked once anyone is in, so it never counts against the desk
-    expect(ci.parts[0]).toMatchObject({ done: true, count: { done: n, total: n }, link: '/today' });
+    expect(ci.parts[0]).toMatchObject({ done: true, count: { done: n, total: n }, link: '/today?mode=in' });
     expect(duty(base, 'lobby.checkin', T, at('07:30')).status).toBe('none'); // before opening
     expect(duty(closeOn(base, T), 'lobby.checkin', T, at('10:05')).status).toBe('none'); // a closed day
     expect(duty(base, 'lobby.checkin', '2026-10-18', at('10:05')).status).toBe('none'); // a Sunday

@@ -1,7 +1,7 @@
 // KC round 7: guest hosts — people from outside the club who are invited and paid to lead a session.
 // A guest is booked for one date + slot (`GuestSession`); its fee becomes a vendor invoice at booking, so finance can pay before or after the
 // performance, and the payment state is always read from that invoice (never stored twice).
-import type { ClubState, GuestHost, GuestHostKind, GuestSession, ISODate, Slot, VendorInvoice } from '../types';
+import type { Activity, ClubState, GuestHost, GuestHostKind, GuestSession, ISODate, Slot, VendorInvoice } from '../types';
 import { dayStatus } from './core';
 import { sessionsOn } from './kitchen';
 import { live, sortBy, sum } from '../util';
@@ -14,6 +14,18 @@ export function guestOn(s: ClubState, date: ISODate, slot: Slot): { session: Gue
   const g = live(s.guestSessions || {}).find((x) => x.date === date && x.slot === slot && x.status !== 'cancelled');
   const host = g && s.guestHosts?.[g.hostId];
   return g && host ? { session: g, host } : null;
+}
+
+/** The guest sessions of one day that are on or took place (booked + done, not cancelled), by slot, with the host and the activity: the front desk's "Guests today". */
+export function guestSessionsOn(s: ClubState, date: ISODate): { session: GuestSession; host: GuestHost; activity?: Activity }[] {
+  const out: { session: GuestSession; host: GuestHost; activity?: Activity }[] = [];
+  for (const session of sortBy(live(s.guestSessions || {}).filter((x) => x.date === date && x.status !== 'cancelled'), (x) => x.slot)) {
+    const host = hostOfSession(s, session);
+    if (!host) continue;
+    const activity = s.activities?.[session.activityId];
+    out.push({ session, host, ...(activity && !activity.deletedAt ? { activity } : {}) });
+  }
+  return out;
 }
 
 /** Every guest session of a host, newest first. */

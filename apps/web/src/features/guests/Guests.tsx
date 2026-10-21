@@ -20,7 +20,9 @@ import { KindTile, issueText, kindLabel, rowStyle, stateOf } from './lib';
 
 type Tab = 'sessions' | 'hosts';
 type Filter = 'all' | 'upcoming' | 'toPay' | 'paid' | 'cancelled';
+type GroupKey = Exclude<Filter, 'all'> | 'done';
 const FILTERS: Filter[] = ['all', 'upcoming', 'toPay', 'paid', 'cancelled'];
+const DESK_FILTERS: Filter[] = ['all', 'upcoming', 'cancelled'];
 
 export function Guests() {
   const t = useT();
@@ -30,6 +32,7 @@ export function Guests() {
   const { today } = useNow();
   const { role } = useMe();
   const canEdit = role === 'mgmt';
+  const money = role === 'mgmt' || role === 'finance'; // round 13: the front desk sees who comes and when, not fees or payments
   const [tab, setTab] = useState<Tab>('sessions');
   const [filter, setFilter] = useState<Filter>('all');
   const [book, setBook] = useState<null | { edit?: GuestSession; hostId?: string; date?: ISODate; slot?: Slot }>(null);
@@ -56,7 +59,7 @@ export function Guests() {
   const sessionRow = (g: GuestSession, i: number) => {
     const host = hostOfSession(s, g);
     const a = s.activities[g.activityId];
-    const st = stateOf(s, g, t);
+    const st = stateOf(s, g, t, money);
     const issue = guestIssue(s, g);
     const late = g.status === 'booked' && g.date < today;
     return (
@@ -68,20 +71,23 @@ export function Guests() {
           {issue || late ? <span style={{ fontSize: 13, fontWeight: 500, color: '#7A5510', lineHeight: 1.35 }}>{issue ? issueText(t, issue) : t('guests.late')}</span> : null}
         </span>
         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flex: 'none' }}>
-          <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{rp(feeOfSession(s, g))}</span>
+          {money ? <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{rp(feeOfSession(s, g))}</span> : null}
           {st ? <span style={{ fontSize: 13 }}><StatusDot color={st.color}>{st.text}</StatusDot></span> : null}
         </span>
         <Icon name="chevron_right" size={20} color="#A89C8E" />
       </button>
     );
   };
-  const group = (key: Exclude<Filter, 'all'>, rows: GuestSession[], meta?: string) => (
+  const group = (key: GroupKey, rows: GuestSession[], meta?: string) => (
     <Block key={key} title={t('guests.g_' + key)} meta={meta ?? String(rows.length)}>{rows.map(sessionRow)}</Block>
   );
   // All: every session once (upcoming, then the past ones to pay, then the paid ones); a filter shows all of its kind (To pay includes booked sessions not paid yet)
-  const shown: [Exclude<Filter, 'all'>, GuestSession[]][] = filter === 'all'
-    ? ([['upcoming', lists.upcoming], ['toPay', lists.doneToPay], ['paid', lists.donePaid]] as [Exclude<Filter, 'all'>, GuestSession[]][]).filter(([, rows]) => rows.length > 0)
-    : ([['upcoming', lists.upcoming], ['toPay', lists.toPay], ['paid', lists.paid], ['cancelled', lists.cancelled]] as [Exclude<Filter, 'all'>, GuestSession[]][]).filter(([k]) => k === filter);
+  const shown: [GroupKey, GuestSession[]][] = filter === 'all'
+    ? (money
+      ? ([['upcoming', lists.upcoming], ['toPay', lists.doneToPay], ['paid', lists.donePaid]] as [GroupKey, GuestSession[]][])
+      : ([['upcoming', lists.upcoming], ['done', [...lists.doneToPay, ...lists.donePaid].sort((a, b) => (b.date + b.slot).localeCompare(a.date + a.slot))]] as [GroupKey, GuestSession[]][])
+    ).filter(([, rows]) => rows.length > 0)
+    : ([['upcoming', lists.upcoming], ['toPay', lists.toPay], ['paid', lists.paid], ['cancelled', lists.cancelled]] as [GroupKey, GuestSession[]][]).filter(([k]) => k === filter);
 
   const hostRow = (h: GuestHost, i: number) => {
     const tot = hostTotals(s, h.id);
@@ -93,8 +99,8 @@ export function Guests() {
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35 }}>{h.what} · {kindLabel(t, h.kind)}</span>
         </span>
         <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, flex: 'none' }}>
-          <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{rp(h.fee)}</span>
-          {!h.active ? <span style={{ fontSize: 13, color: '#6B6259' }}>{t('guests.inactive')}</span> : tot.owed ? <span style={{ fontSize: 13 }}><StatusDot color="#7A5510">{t('guests.owes', { amount: rp(tot.owed) })}</StatusDot></span> : null}
+          {money ? <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{rp(h.fee)}</span> : null}
+          {!h.active ? <span style={{ fontSize: 13, color: '#6B6259' }}>{t('guests.inactive')}</span> : money && tot.owed ? <span style={{ fontSize: 13 }}><StatusDot color="#7A5510">{t('guests.owes', { amount: rp(tot.owed) })}</StatusDot></span> : null}
         </span>
         <Icon name="chevron_right" size={20} color="#A89C8E" />
       </button>
@@ -114,7 +120,7 @@ export function Guests() {
 
         {tab === 'sessions' ? (
           <>
-            {total || lists.cancelled.length ? <FilterChips label={t('guests.filter')} value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ value: f, label: t('guests.f_' + f), count: count[f] }))} /> : null}
+            {total || lists.cancelled.length ? <FilterChips label={t('guests.filter')} value={filter} onChange={setFilter} options={(money ? FILTERS : DESK_FILTERS).map((f) => ({ value: f, label: t('guests.f_' + f), count: count[f] }))} /> : null}
             {shown.length ? shown.map(([k, rows]) => group(k, rows, k === 'toPay' && rows.length ? rp(rows.reduce((n, g) => n + feeOfSession(s, g), 0)) : undefined)) : (
               <Block pad={0}><EmptyState icon="co_present" title={t('guests.empty')} action={canEdit ? <Button icon="event_available" onClick={bookBtn}>{t('guests.book')}</Button> : undefined} /></Block>
             )}

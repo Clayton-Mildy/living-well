@@ -8,12 +8,15 @@ import { occasionsThisWeek } from '@cp/shared/rules/occasions';
 import { checkOnList } from '@cp/shared/rules/checkOn';
 import { alsoToday } from '@cp/shared/rules/lobby';
 import { menuOn } from '@cp/shared/rules/kitchen';
+import { GUEST_KIND_ICON, guestSessionsOn } from '@cp/shared/rules/guests';
+import { activityName } from '@cp/shared/rules/activity';
 import { dayPlan } from '@cp/shared/rules/activity';
 import { Button, Eyebrow, GROUP_HEAD, Icon, Pager, usePaged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useLang, useT } from '../../lib/i18n';
 import { occasionLine } from '../../lib/occasions';
 import { useNow } from '../../lib/clock';
+import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { CallLink, DotItem, drugLabel, relText } from './parts';
 import type { TFn } from '../../lib/i18n';
@@ -56,6 +59,7 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
   const s = useClub();
   const { today } = useNow();
   const navigate = useNavigate();
+  const { role } = useMe();
   const a = alsoToday(s, today);
   const empty = !a.guests.length;
   const guests = usePaged(a.guests, GUESTS_PER_PAGE);
@@ -134,6 +138,28 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
   if (guests.pages > 1) blocks.push(<Pager key="pager" page={guests.page} pages={guests.pages} onPage={guests.setPage} label={t('lobby.pagerAria', { list: t('lobby.alsoToday') })} />);
   if (empty) blocks.push(<div key="none" style={sub14}>{t('lobby.alsoNone')}</div>);
   if (menuBlock) blocks.unshift(menuBlock);
+  // round 13: guest hosts coming today (a teacher, a singer, a speaker the front desk should expect); hidden when nobody is booked. A tap opens the calendar (management: the Guests screen).
+  const guestHosts = guestSessionsOn(s, today);
+  if (guestHosts.length) {
+    const open = () => navigate(role === 'mgmt' ? '/guests' : '/calendar');
+    blocks.push(
+      <Block key="guestsToday" title={t('lobby.guestsToday')} onClick={open}>
+        <div data-testid="guests-today" style={{ display: 'flex', flexDirection: 'column' }}>
+          {guestHosts.map(({ session, host, activity }) => (
+            <button key={session.id} type="button" data-guest-session={session.id} onClick={open}
+              style={{ display: 'flex', alignItems: 'flex-start', gap: 8, minHeight: 36, padding: '6px 0', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', color: '#24201C' }}>
+              <Icon name={GUEST_KIND_ICON[host.kind]} size={18} weight={300} color="var(--eyebrow, #6E5A43)" style={{ marginTop: 2 }} />
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>
+                <span>{host.name}</span>
+                <span style={sub14}><span style={{ fontVariantNumeric: 'tabular-nums' }}>{session.slot}</span>{activity ? ` · ${activityName(activity, lang)}` : ''}</span>
+              </span>
+            </button>
+          ))}
+        </div>
+      </Block>,
+    );
+  }
+
   // round 12: members not seen for a while (up to five, longest quiet first); a tap opens the call sheet
   const quiet = checkOnList(s, today);
   if (quiet.length && onCheckOn) {

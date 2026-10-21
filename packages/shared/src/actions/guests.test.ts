@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, live, sessionsOn, projectForFamily, DomainError, type ClubState } from '../index';
 import { dayInfo } from '../rules/calendar';
-import { feeOfSession, guestInvoiceNumber, guestIssue, guestLists, guestOn, hostTotals, hostsList, owedTotal, payStateOf } from '../rules/guests';
+import { feeOfSession, guestInvoiceNumber, guestIssue, guestLists, guestOn, guestSessionsOn, hostTotals, hostsList, owedTotal, payStateOf } from '../rules/guests';
 
 const clock = { today: '2026-10-21', nowMin: 600 }; // Wed 21 Oct, 10:00
 let n = 0;
@@ -15,6 +15,7 @@ const fails = (s: ClubState, name: string, input: unknown, uid: string, code: st
   throw new Error(`expected ${name} to fail with ${code}`);
 };
 const note = (s: ClubState, kind: string) => live(s.notifications).filter((x) => x.kind === kind);
+const notLobby = (s: ClubState, kind: string) => note(s, kind).filter((x) => !(x.toRoles.length === 1 && x.toRoles[0] === 'lobby'));
 
 describe('the demo seed', () => {
   it('has three hosts, two sessions done (one paid, one waiting for finance), one booked this week (paid in advance) and one next week (to pay)', () => {
@@ -53,6 +54,30 @@ describe('the demo seed', () => {
     expect(fam.guestHosts['gh-maya'].phone).toBe('');
     expect(fam.guestHosts['gh-maya'].bank).toBeUndefined();
     expect(JSON.stringify(fam.guestSessions)).not.toContain('vi-gh');
+  });
+});
+
+describe('round 13: the front desk sees guest hosts', () => {
+  it('lists the booked and done sessions of a day by slot with host and activity; a cancelled one leaves the list and the lobby is told', () => {
+    let s = fresh();
+    expect(guestSessionsOn(s, '2026-10-22').map((x) => [x.session.id, x.host.name, x.activity?.name])).toEqual([['gs-3', 'dr. Maya Sari', 'Health talk']]);
+    expect(guestSessionsOn(s, '2026-10-23')).toEqual([]);
+    const r = run(s, 'guest.book', { hostId: 'gh-ratna', date: '2026-10-22', slot: '10:30' });
+    s = r.state;
+    expect(guestSessionsOn(s, '2026-10-22').map((x) => x.session.slot)).toEqual(['10:30', '13:30']);
+    expect(guestSessionsOn(s, '2026-10-22')[0]).toMatchObject({ host: { name: 'Bu Ratna' }, activity: { id: 'act-garden' } });
+    expect(note(s, 'guests.notif.booked').filter((x) => x.toRoles.includes('lobby'))).toHaveLength(1);
+    s = step(s, 'guest.cancel', { id: r.result.sessionId });
+    expect(guestSessionsOn(s, '2026-10-22').map((x) => x.session.slot)).toEqual(['13:30']);
+    const gone = note(s, 'guests.notif.cancelled').filter((x) => x.toRoles.includes('lobby'));
+    expect(gone).toHaveLength(1);
+    expect(gone[0]).toMatchObject({ toRoles: ['lobby'], params: { name: 'Bu Ratna', slot: '10:30' } });
+    expect(note(s, 'guests.notif.booked').filter((x) => x.toRoles.includes('lobby'))).toHaveLength(0); // the front desk's "comes on …" notice is withdrawn
+  });
+  it('a session that took place stays on the list of its day', () => {
+    const s = fresh();
+    const g = s.guestSessions['gs-1'];
+    expect(guestSessionsOn(s, g.date).map((x) => x.session.id)).toContain('gs-1');
   });
 });
 
@@ -97,7 +122,10 @@ describe('guest.book', () => {
     expect(guestOn(r.state, '2026-10-22', '10:30')?.host.name).toBe('Bu Ratna');
     // the teachers hear about it, families do not (the session is the same)
     const ns = note(r.state, 'guests.notif.booked');
-    expect(ns.at(-1)).toMatchObject({ toRoles: ['activity'], toUsers: [], params: { name: 'Bu Ratna', activity: 'Gardening club', slot: '10:30' } });
+    expect(notLobby(r.state, 'guests.notif.booked').at(-1)).toMatchObject({ toRoles: ['activity'], toUsers: [], params: { name: 'Bu Ratna', activity: 'Gardening club', slot: '10:30' } });
+    // round 13: the front desk hears too, in a notice of its own
+    expect(ns.filter((x) => x.toRoles.includes('lobby'))).toHaveLength(1);
+    expect(ns.find((x) => x.toRoles.includes('lobby'))).toMatchObject({ toRoles: ['lobby'], link: '/calendar', params: { name: 'Bu Ratna', slot: '10:30' } });
     fails(r.state, 'guest.book', { hostId: 'gh-hendro', date: '2026-10-22', slot: '10:30' }, 's9', 'guests.err.slotTaken');
     fails(fresh(), 'guest.book', { hostId: 'gh-hendro', date: '2026-10-22', slot: '13:30' }, 's9', 'guests.err.slotTaken'); // dr. Maya is booked then
     const custom = run(fresh(), 'guest.book', { hostId: 'gh-ratna', date: '2026-10-22', slot: '10:30', fee: 800000, note: 'Bring the set' }).state;
@@ -109,7 +137,7 @@ describe('guest.book', () => {
     let s = r.state;
     expect(sessionsOn(s, '2026-10-26')[1].cell).toEqual({ activityId: 'act-angklung', staffId: 's6', roomId: 'room-music' }); // Monday 13:30 was chair yoga with Kak Dimas
     expect(sessionsOn(s, '2026-11-02')[1].cell?.activityId).toBe('act-yoga');
-    const told = note(s, 'guests.notif.booked').at(-1)!;
+    const told = notLobby(s, 'guests.notif.booked').at(-1)!;
     expect(told.toUsers.length).toBeGreaterThan(0);
     expect(dayInfo(s, '2026-10-26', 'staff').items.find((i) => i.time === '13:30')).toMatchObject({ changed: true, guest: { name: 'Bu Ratna' } });
     s = step(s, 'guest.cancel', { id: r.result.sessionId });
@@ -117,7 +145,7 @@ describe('guest.book', () => {
     expect(sessionsOn(s, '2026-10-26')[1].cell?.activityId).toBe('act-yoga');
     expect(s.scheduleDays['2026-10-26']).toBeUndefined();
     expect(guestOn(s, '2026-10-26', '13:30')).toBeNull();
-    expect(note(s, 'guests.notif.cancelled')).toHaveLength(1);
+    expect(notLobby(s, 'guests.notif.cancelled')).toHaveLength(1);
     fails(s, 'guest.cancel', { id: r.result.sessionId }, 's9', 'guests.err.notBooked');
     expect(guestLists(s).cancelled.map((g) => g.id)).toEqual([r.result.sessionId]);
   });

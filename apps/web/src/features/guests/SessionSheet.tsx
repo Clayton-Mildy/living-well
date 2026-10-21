@@ -32,7 +32,8 @@ export function SessionSheet({ id, onClose, onEdit }: { id: string | null; onClo
   const a = s.activities[g.activityId];
   const inv = invoiceOfSession(s, g);
   const pay = payStateOf(s, g);
-  const st = stateOf(s, g, t);
+  const money = role === 'mgmt' || role === 'finance'; // round 13: the front desk reads who and when, not fees or payments
+  const st = stateOf(s, g, t, money);
   const issue = guestIssue(s, g);
   const mgmt = role === 'mgmt';
   const booked = g.status === 'booked';
@@ -55,19 +56,19 @@ export function SessionSheet({ id, onClose, onEdit }: { id: string | null; onClo
       <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
         {field(t('guests.when'), `${fds(g.date)} · ${g.slot}`)}
         {field(t('cal.activity'), activityName(a, lang))}
-        {field(t('guests.fee'), rp(feeOfSession(s, g)))}
+        {money ? field(t('guests.fee'), rp(feeOfSession(s, g))) : null}
         {st ? (
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12, alignItems: 'center', minHeight: 30 }}>
             <span style={{ fontSize: 14, color: '#6B6259' }}>{t('guests.status')}</span>
             <StatusDot color={st.color}>{st.text}</StatusDot>
           </div>
         ) : field(t('guests.status'), t('guests.st_booked'))}
-        {inv ? field(t('guests.invoice'), `${inv.number} · ${pay === 'paid' && inv.paidOn ? t('guests.paidOn', { date: fds(inv.paidOn) }) : t('guests.dueOn', { date: fds(inv.due) })}`) : null}
+        {money && inv ? field(t('guests.invoice'), `${inv.number} · ${pay === 'paid' && inv.paidOn ? t('guests.paidOn', { date: fds(inv.paidOn) }) : t('guests.dueOn', { date: fds(inv.due) })}`) : null}
         {g.note ? field(t('guests.note'), g.note) : null}
       </div>
       {issue ? <Note tone="ochre" icon="warning">{issueText(t, issue)}</Note> : null}
       {booked && g.date < today ? <Note tone="ochre" icon="event_available">{t('guests.overdue', { date: fdl(g.date) })}</Note> : null}
-      {pay === 'toPay' ? <Note tone="cream" icon="hourglass_top">{t('guests.waitingFinance')}</Note> : null}
+      {money && pay === 'toPay' ? <Note tone="cream" icon="hourglass_top">{t('guests.waitingFinance')}</Note> : null}
       {mgmt && booked && g.date <= today ? <Button full icon="task_alt" disabled={busy} onClick={() => run('guest.done', { id: g.id }, t('guests.doneToast', { name }))}>{t('guests.markDone')}</Button> : null}
       {(mgmt || role === 'finance') && pay === 'toPay' && inv && inv.status === 'approved' ? <Button full icon="paid" disabled={busy} onClick={() => run('vendorInvoice.markPaid', { id: inv.id }, t('guests.paidToast', { name }))}>{t('guests.markPaid')}</Button> : null}
       {wa ? (
