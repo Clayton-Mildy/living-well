@@ -7,7 +7,8 @@ const n = (key: string, labelKey: string, icon: string): NavItem => ({ key, labe
 export const NAVS: Record<Role, NavItem[]> = {
   // KC round 6: the front desk has the kitchen's Menu, view only, to see who is allergic to today's dishes
   // KC round 7: Renewals (the month-end membership follow-up) and Tasks for the front desk
-  lobby: [n('today', 'arrivals', 'how_to_reg'), n('enquiries', 'enquiries', 'contact_phone'), n('members', 'members', 'groups'), n('menu', 'menu', 'restaurant'), n('renewals', 'renewals', 'event_repeat'), n('tasks', 'tasks', 'checklist'), n('contacts', 'contacts', 'contacts'), n('requests', 'requests', 'add_shopping_cart')],
+  // round 12: Venue, because every booking comes through the front desk (the invoice stays with management and finance)
+  lobby: [n('today', 'arrivals', 'how_to_reg'), n('enquiries', 'enquiries', 'contact_phone'), n('members', 'members', 'groups'), n('menu', 'menu', 'restaurant'), n('renewals', 'renewals', 'event_repeat'), n('venue', 'venue', 'storefront'), n('tasks', 'tasks', 'checklist'), n('contacts', 'contacts', 'contacts'), n('requests', 'requests', 'add_shopping_cart')],
   nurse: [n('today', 'health', 'monitor_heart'), n('readings', 'readings', 'monitoring'), n('members', 'members', 'groups'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
   activity: [n('today', 'today', 'wb_sunny'), n('camera', 'camera', 'photo_camera'), n('log', 'log', 'edit_note'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
   // KC round 6: no Stock page for F&B (Requests has the stock request; the supervisor approves there, under Team stock requests)

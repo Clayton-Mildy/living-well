@@ -1,7 +1,7 @@
 // Club management: venue bookings, WhatsApp broadcasts (and the job that sends scheduled ones), surveys, prices and club rules.
 import type { Draft } from 'immer';
 import type { Actor, Broadcast, ClubState, HM, ISODate, PriceVersion, Survey, SurveyAnswer, SurveyCustomQuestion, User, VenueBooking } from '../types';
-import { defineAction, isFamily, isMgmt, type Ctx } from './framework';
+import { defineAction, hasRole, isFamily, isMgmt, type Ctx } from './framework';
 import { registerJob } from './jobs';
 import { feeOf, priceOn } from '../rules/billing';
 import {
@@ -9,9 +9,13 @@ import {
 } from '../rules/mgmt';
 import { arr, bad, bool, dm, hm, int, isoDate, nextNumId, obj, oneOf, phone, str, uniq } from '../rules/mgmtParse';
 import { SURVEY_BUILTINS, SURVEY_KINDS, SURVEY_KIND_LIST, SURVEY_LIMITS, answerValue, assignQuestionIds, customOf, presetsFor, questionProblem, ratingLinkOf, ratingTokenOf, surveyKind, type SurveyKind } from '../rules/surveys';
+import { actorName } from '../rules/core';
 import { live, rp, sortBy } from '../util';
 
 const mgmtOnly = (u: User) => isMgmt(u);
+// round 12: venue bookings always come through the front desk, so the lobby runs them; only management and finance invoice
+const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
+const invoicers = (u: User) => hasRole(u, 'mgmt', 'finance');
 const S = (d: Draft<ClubState>) => d as unknown as ClubState;
 const id80 = (v: unknown, field: string) => str(v, 80, { required: true, field });
 /** Explicitly typed so TypeScript narrows after ctx.fail. */
@@ -199,7 +203,7 @@ export const clubActions = [
   // ----- venue -----
   defineAction<VenueIn>({
     name: 'venue.book',
-    can: mgmtOnly,
+    can: lobbyOrMgmt,
     parse(raw) {
       const o = obj(raw);
       return {
@@ -218,11 +222,12 @@ export const clubActions = [
       };
       ctx.result.venueId = id;
       ctx.feed({ icon: 'storefront', key: 'mgmt.feed.venueBooked', params: { org: i.org, date: dm(i.date) } });
+      if (ctx.role === 'lobby') ctx.notify({ toRoles: ['mgmt'], kind: 'mgmt.notif.venueBookedBy', params: { who: actorName(S(d), ctx.actor), org: i.org, date: dm(i.date) }, link: '/venue' });
     },
   }),
   defineAction<VenueUpdateIn>({
     name: 'venue.update',
-    can: mgmtOnly,
+    can: lobbyOrMgmt,
     parse(raw) {
       const o = obj(raw);
       return {
@@ -263,7 +268,7 @@ export const clubActions = [
   }),
   defineAction<{ venueId: string }>({
     name: 'venue.cancel',
-    can: mgmtOnly,
+    can: lobbyOrMgmt,
     parse: (raw) => ({ venueId: id80(obj(raw).venueId, 'venueId') }),
     run(d, i, ctx) {
       const v = need(d.venueBookings[i.venueId], ctx);
@@ -277,7 +282,7 @@ export const clubActions = [
   // KC round 7: the review is asked through a no-login rating link (/rate/:token) that goes to the renter on WhatsApp (simulated). Asking again sends the same link.
   defineAction<{ venueId: string }>({
     name: 'venue.askReview',
-    can: mgmtOnly,
+    can: lobbyOrMgmt,
     parse: (raw) => ({ venueId: id80(obj(raw).venueId, 'venueId') }),
     run(d, i, ctx) {
       const v = need(d.venueBookings[i.venueId], ctx);
@@ -332,7 +337,7 @@ export const clubActions = [
   }),
   defineAction<{ venueId: string; stars: number; text: string }>({
     name: 'venue.recordReview',
-    can: mgmtOnly,
+    can: lobbyOrMgmt,
     parse(raw) {
       const o = obj(raw);
       return { venueId: id80(o.venueId, 'venueId'), stars: int(o.stars, 1, 5, 'stars'), text: str(o.text, 500) };
@@ -349,7 +354,7 @@ export const clubActions = [
   // Simulated: records an invoice reference for the booking (the real invoice comes from Xero).
   defineAction<{ venueId: string }>({
     name: 'venue.createInvoice',
-    can: mgmtOnly,
+    can: invoicers,
     parse: (raw) => ({ venueId: id80(obj(raw).venueId, 'venueId') }),
     run(d, i, ctx) {
       const v = need(d.venueBookings[i.venueId], ctx);

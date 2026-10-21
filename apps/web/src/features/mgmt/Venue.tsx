@@ -10,6 +10,7 @@ import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
+import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { BadgePill, HPAD, ListCard, Page, PillBtn, heroCard, labelStyle, chipRow } from './common';
@@ -52,6 +53,8 @@ export function Venue() {
   const s = useClub();
   const { today, now } = useNow();
   const act = useAct();
+  const { role } = useMe();
+  const canInvoice = role === 'mgmt' || role === 'finance'; // round 12: the front desk books, only management and finance invoice
   const rooms = venueRooms(s);
   const [open, setOpen] = useState(false);
   const [form, setForm] = useState<VForm>(() => blank(rooms));
@@ -82,8 +85,8 @@ export function Venue() {
     const ask = () => act('venue.askReview', { venueId: v.id }, { ok: t('mgmt.vnRatingSent', { name: v.contactName }) });
     const acts: Act[] = [];
     if (v.status === 'confirmed') {
-      if (needInvoice) acts.push({ key: 'invoice', icon: 'receipt_long', label: t('mgmt.vnCreateInvoice'), primary: true, run: () => { void act('venue.createInvoice', { venueId: v.id }, { ok: (r) => t('mgmt.vnInvoiced', { ref: String(r.invoiceRef ?? '') }) }); } });
-      if (done && !v.review && !v.ratingToken) acts.push({ key: 'ask', icon: 'send', label: t('mgmt.vnAskRating'), primary: !needInvoice, run: () => { void ask(); } });
+      if (needInvoice && canInvoice) acts.push({ key: 'invoice', icon: 'receipt_long', label: t('mgmt.vnCreateInvoice'), primary: true, run: () => { void act('venue.createInvoice', { venueId: v.id }, { ok: (r) => t('mgmt.vnInvoiced', { ref: String(r.invoiceRef ?? '') }) }); } });
+      if (done && !v.review && !v.ratingToken) acts.push({ key: 'ask', icon: 'send', label: t('mgmt.vnAskRating'), primary: !(needInvoice && canInvoice), run: () => { void ask(); } });
       if (done && !v.review && v.ratingToken) {
         acts.push({ key: 'copy', icon: 'content_copy', label: t('mgmt.vnCopyLink'), run: () => { void copyLink(v.ratingToken!); } });
         acts.push({ key: 'open', icon: 'open_in_new', label: t('mgmt.vnOpenLink'), run: () => { window.open(rateUrl(v.ratingToken!), '_blank', 'noopener'); } });

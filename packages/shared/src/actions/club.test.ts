@@ -25,6 +25,20 @@ const tick = (s: ClubState, clk: { today: string; nowMin: number }) => execute(s
 const booking = { org: 'Yayasan Kasih Bunda choir', contactName: 'Ibu Lusi Tan', phone: '0813 6611 2290', guests: 25, roomId: 'room-music', date: '2026-11-14', from: '13:00', to: '17:00', price: 2500000, deposit: 500000 };
 
 describe('venue', () => {
+  it('the front desk books, edits, cancels and asks for ratings; only management and finance invoice', () => {
+    const s = seed().citra;
+    const r = run(s, 'venue.book', booking, 's1');
+    expect(r.state.venueBookings.v5).toMatchObject({ org: 'Yayasan Kasih Bunda choir', createdBy: 'staff:s1' });
+    const told = updatesFor(r.state, user(r.state, 's9')).filter((x) => x.kind === 'mgmt.notif.venueBookedBy');
+    expect(told).toHaveLength(1);
+    expect(told[0].params).toMatchObject({ org: 'Yayasan Kasih Bunda choir' });
+    // management booking does not notify itself
+    expect(updatesFor(run(s, 'venue.book', booking, 's9').state, user(s, 's9')).some((x) => x.kind === 'mgmt.notif.venueBookedBy')).toBe(false);
+    expect(run(r.state, 'venue.update', { venueId: 'v5', guests: 30 }, 's1').state.venueBookings.v5.guests).toBe(30);
+    expect(run(r.state, 'venue.cancel', { venueId: 'v5' }, 's1').state.venueBookings.v5.status).toBe('cancelled');
+    fails(s, 'venue.createInvoice', { venueId: 'v1' }, 's1', 'err.forbidden');
+    expect(run(s, 'venue.createInvoice', { venueId: 'v1' }, 's10').state.venueBookings.v1.invoiceRef).toBe('VEN-2610-001');
+  });
   it('books any future date, with price and deposit, for management only', () => {
     const s = seed().citra;
     const r = run(s, 'venue.book', booking, 's9');
@@ -34,7 +48,7 @@ describe('venue', () => {
     expect(Object.values(r.state.activity).some((a) => a.key === 'mgmt.feed.venueBooked' && a.params.org === 'Yayasan Kasih Bunda choir')).toBe(true);
     // far in the future, not just the next ten days
     expect(run(s, 'venue.book', { ...booking, date: '2027-06-12' }, 's9').state.venueBookings.v5.date).toBe('2027-06-12');
-    for (const uid of ['s1', 's8', 's10', 'f1']) expect(() => run(s, 'venue.book', booking, uid)).toThrow('err.forbidden');
+    for (const uid of ['s8', 's10', 'f1']) expect(() => run(s, 'venue.book', booking, uid)).toThrow('err.forbidden');
     fails(s, 'venue.book', { ...booking, org: '' }, 's9', 'err.invalid');
     fails(s, 'venue.book', { ...booking, guests: 0 }, 's9', 'err.invalid');
     fails(s, 'venue.book', { ...booking, price: -5 }, 's9', 'err.invalid');

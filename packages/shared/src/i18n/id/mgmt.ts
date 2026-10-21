@@ -143,6 +143,7 @@ export const mgmt: Same<typeof EN> = {
   rtBadText: 'Silakan periksa pesan yang Anda terima, atau minta tim CitraPremier mengirim ulang tautannya.', rtNetTitle: 'Halaman ini tidak bisa dimuat', rtNetText: 'Periksa koneksi Anda lalu coba lagi.', rtFooter: 'CitraPremier · klub harian untuk lansia, Jakarta',
   'err.venueNeedsOverall': 'Survei venue harus menanyakan penilaian keseluruhan.', 'err.notClosed': 'Hanya survei yang sudah ditutup yang bisa dibuka lagi.',
   'feed.surveyLive': 'Survei aktif · {title}', 'feed.surveyReopened': 'Survei dibuka lagi · {title}', 'feed.venueRated': 'Venue dinilai · {org} · {stars}/5',
+  'notif.venueBookedBy': '{who} memesan {org} untuk {date}.',
   'notif.venueRated': '{org} menilai acaranya {stars}/5 lewat tautan penilaian.',
   tileCheckOn: 'Perlu dihubungi',
   tileMood: 'Suasana hati hari ini',

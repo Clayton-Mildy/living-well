@@ -141,6 +141,7 @@ export const mgmt = {
   rtBadText: 'Please check the message you received, or ask the CitraPremier team to send the link again.', rtNetTitle: 'We could not load this page', rtNetText: 'Check your connection and try again.', rtFooter: 'CitraPremier · a day club for seniors, Jakarta',
   'err.venueNeedsOverall': 'A venue survey has to ask for the overall rating.', 'err.notClosed': 'Only a closed survey can be reopened.',
   'feed.surveyLive': 'Survey live · {title}', 'feed.surveyReopened': 'Survey reopened · {title}', 'feed.venueRated': 'Venue rated · {org} · {stars}/5',
+  'notif.venueBookedBy': '{who} booked {org} for {date}.',
   'notif.venueRated': '{org} rated their event {stars}/5 through the rating link.',
   tileCheckOn: 'Check on',
   tileMood: 'Mood today',
