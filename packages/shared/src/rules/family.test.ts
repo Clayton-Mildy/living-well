@@ -6,6 +6,7 @@ import {
   openInvoiceRows, openTotal, photoActivityLabel, photosInOrder, planSummary, resolveSel, selWho, servedLunch, sharedNoteOf, timelineOf, vaFor, billingContactOf, latestLog, dishNamesOf,
   bestPhotoOf, dayStory, dayStrip, familyPhotosOn, logOn, monthRecap, recapMonths, storyNowMin, tookPart, visitDays, END_OF_DAY,
 } from './family';
+import { withMarks } from './testMarks';
 import { dow } from '../util';
 
 const T = '2026-10-21';
@@ -597,5 +598,13 @@ describe('monthRecap and recapMonths', () => {
     const ended = { ...lina, memberships: [{ ...lina.memberships[0], lastDay: '2026-08-14' }] };
     expect(recapMonths(ended, T)[0]).toBe('2026-08');
     expect(recapMonths(ended, T)).toHaveLength(6);
+  });
+});
+
+describe('mood faces on the timeline (round 12)', () => {
+  it('timeline carries the faces', () => {
+    const items = timelineOf(withMarks, [withMarks.members.m1], T, 16 * 60);
+    expect(items.find((i) => i.kind === 'arrival')).toMatchObject({ face: 3 });
+    expect(items.find((i) => i.kind === 'home')).toMatchObject({ face: 5 });
   });
 });

@@ -1,12 +1,13 @@
 // KC round 7: the daily report (management). One club day in one place: who came, the programme, lunch and tea, the health checks, mood and notes, and how each role
 // did on its duties. It is read from the data for ANY day (a past day is what the records say; today is live, up to `nowMin`): nothing here is stored, and every figure
 // comes from the helpers the rest of the app already uses (attendance, sessions, menu, logs, readings, duties). Management sees entries that still wait for approval too, marked.
-import type { Activity, AllergyPlan, ClubState, DailyLog, Dish, Feedback, GuestHost, GuestSession, GuestVisit, HM, ISODate, Member, Photo, Plan, Reading, Room, ScheduleCell, Slot, Staff, StaffRole, VenueBooking } from '../types';
+import type { Activity, AllergyPlan, ClubState, DailyLog, Dish, Face, Feedback, GuestHost, GuestSession, GuestVisit, HM, ISODate, Member, Photo, Plan, Reading, Room, ScheduleCell, Slot, Staff, StaffRole, VenueBooking } from '../types';
 import { LUNCH_AMOUNTS, SESSION_MIN, FIXED_SLOTS, attendedOn, libraryPhotos, logsOn, pendingLogMembers, sessionPhotos, type LunchAmount, type SessionMark } from './activity';
 import { attOf, flexMonth, guestsOn } from './attendance';
 import { isWaiting } from './approvals';
 import { dayStatus, isOpen, memberName, planOn, staffByRole, staffCall, type DayStatus } from './core';
 import { guestOn } from './guests';
+import { FACES, dayArc, moodStats } from './mood';
 import { daySummary, readingsOnDay } from './healthStation';
 import { lunchPhotosOn, menuOn, scheduleDayOf, sessionsOn, teaPhotosOn } from './kitchen';
 import { teamSummary } from './tasks';
@@ -34,6 +35,9 @@ export interface ReportMember {
   sessions: { slot: Slot; mark?: SessionMark }[];
   /** the arrival reading (any approval state) */
   arrival?: Reading;
+  /** round 12: the faces marked at the door */
+  arrivalFace?: Face;
+  departureFace?: Face;
 }
 export interface ReportGuest {
   g: GuestVisit;
@@ -96,6 +100,8 @@ export const MOODS: Mood[] = ['cheerful', 'calm', 'quiet', 'agitated'];
 export interface ReportNote { m: Member; text: string; /** a staff-only note (never shown to the family) */ staff: boolean; log: DailyLog; pending: boolean }
 export interface ReportMood {
   counts: Record<Mood, number>;
+  /** round 12: faces at the door (counts per face), the average arrival-to-departure lift and visits nobody marked at arrival */
+  faces: { arrival: Record<Face, number>; departure: Record<Face, number>; lift: number | null; notMarkedDoor: number };
   /** members who came and have no Mood & notes round yet */
   notMarked: number;
   notes: ReportNote[];
@@ -181,11 +187,13 @@ export function dailyReport(s: ClubState, date: ISODate, today: ISODate, nowMin:
     const fm = flexMonth(s, m, ym(date), today);
     const flexVisits = fm.visits.filter((d) => d <= date && planOn(m, d).plan === 'flex').length;
     const arrival = readings.filter((r) => r.memberId === m.id && r.kind === 'arrival').pop();
+    const arc = dayArc(s, m.id, date);
     return {
       m, checkIn: a.checkIn!.at, checkOut: a.checkOut?.at, inClub: isToday && !a.checkOut, plan,
       flex: plan === 'flex' ? { n: flexVisits, quota: fm.quota ?? 0 } : undefined, extra: fm.extraDates.includes(date),
       log, pendingLog: !!log && isWaiting(log), lunch: log?.lunch, mood: log?.mood,
       sessions: sessions.map((x) => ({ slot: x.slot, mark: log?.sessions?.[x.slot] })), arrival,
+      ...(arc.arrival !== undefined ? { arrivalFace: arc.arrival } : {}), ...(arc.departure !== undefined ? { departureFace: arc.departure } : {}),
     };
   });
 
@@ -226,6 +234,15 @@ export function dailyReport(s: ClubState, date: ISODate, today: ISODate, nowMin:
     if (r.log?.staffNote?.trim()) notes.push({ m: r.m, text: r.log.staffNote.trim(), staff: true, log: r.log, pending: r.pendingLog });
   }
 
+  const faces = { arrival: Object.fromEntries(FACES.map((f) => [f, 0])) as Record<Face, number>, departure: Object.fromEntries(FACES.map((f) => [f, 0])) as Record<Face, number>, lift: null as number | null, notMarkedDoor: 0 };
+  for (const r of members) {
+    if (r.arrivalFace !== undefined) faces.arrival[r.arrivalFace]++;
+    if (r.departureFace !== undefined) faces.departure[r.departureFace]++;
+  }
+  const ms = moodStats(s, [date]);
+  faces.lift = ms.lift;
+  faces.notMarkedDoor = ms.notMarkedAtDoor;
+
   // ----- duties (each role's score of the day) -----
   const duties: ReportDuty[] = date > today ? [] : teamSummary(s, date, today, nowMin).map((r) => ({
     role: r.role, people: staffByRole(s, r.role).map(staffCall).filter(Boolean), done: r.done, total: r.total, late: r.late,
@@ -249,7 +266,7 @@ export function dailyReport(s: ClubState, date: ISODate, today: ISODate, nowMin:
     members, guests: guestRows, sessions,
     lunch: { menu: menu ? { lunch: named(menu.lunch), soft: named(menu.soft), tea: named(menu.tea) } : null, alternatives, photos: { lunch: lunchPhotos, tea: teaPhotos }, served: lunchServed, diners, eaten, low, notMarked: lunchNotMarked },
     health: { readings: hs.readings, people: hs.people, watch: hs.watch, alert: hs.alert, flagged },
-    mood: { counts, notMarked: date > today ? 0 : pendingLogMembers(s, date).length, notes, pendingLogs: members.filter((r) => r.pendingLog).length },
+    mood: { counts, faces, notMarked: date > today ? 0 : pendingLogMembers(s, date).length, notes, pendingLogs: members.filter((r) => r.pendingLog).length },
     duties, other,
     empty: members.length === 0 && guestRows.length === 0 && readings.length === 0 && photoCount === 0 && lunchPhotos.length === 0 && teaPhotos.length === 0,
   };

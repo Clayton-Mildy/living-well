@@ -3,7 +3,7 @@
 // the daily log with every field the teacher recorded and the staff note (staff only). The activity team, nurse and
 // management write or correct the log right on its day (the last week's days they were in).
 import { useState } from 'react';
-import { addDays, actorName, attId, live, memberShort, sortBy, staffCall, type Attendance, type DailyLog, type Reading } from '@cp/shared';
+import { addDays, actorName, attId, dayArc, live, memberShort, sortBy, staffCall, type Attendance, type DailyLog, type Reading } from '@cp/shared';
 import { activityName, logDates, logDeviations, lunchLabelKey, roundsOf } from '@cp/shared/rules/activity';
 import { logForFamily, readingForFamily } from '@cp/shared/rules/approvals';
 import { PendingMark } from '../../../components/PendingMark';
@@ -11,6 +11,7 @@ import { Button, FONT_BODY, Group, Icon, Pager, StaffOnlyTag, StatusBadge, usePa
 import { CHECK_KEY } from '../../health/ReadingCard';
 import { LogFieldsForm, baseEntry, logInput, sameLog, type LogEntry } from '../../activity/LogFields';
 import { cardStyle, cogText, HAIR, listCardStyle, logNote } from '../lib';
+import { MoodArc } from '../../activity/MoodArc';
 import { Block, ListHead, PendingBanner } from './parts';
 import type { P } from './types';
 
@@ -124,6 +125,8 @@ function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date
     setDraft(null);
     setOpen(false);
   };
+  const arc = dayArc(s, m.id, date);
+  const hasArc = arc.arrival !== undefined || arc.health !== undefined || arc.departure !== undefined || arc.activity.length > 0;
   const where = visit?.checkIn ? (visit.checkOut ? t('profile.dayInOut', { a: visit.checkIn.at, b: visit.checkOut.at }) : t('profile.dayIn', { a: visit.checkIn.at })) : t('profile.dayAway');
   // what the rounds marked: lunch, each session (named by its activity), then mood, communicative and content; staff also see what is not marked yet
   const chips: { icon: string; label: string; muted?: boolean }[] = [];
@@ -157,6 +160,7 @@ function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: visit ? '#24201C' : '#5E5852', lineHeight: 1.4 }}>
           <Icon name={visit ? 'how_to_reg' : 'event_busy'} size={18} color="var(--accent, #75624B)" />{where}
         </div>
+        {hasArc ? <MoodArc arc={arc} /> : null}
         {/* health */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
           <span style={smallCaps}>{t('profile.healthHead')}</span>

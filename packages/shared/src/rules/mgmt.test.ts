@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, flexMonth, type ClubState } from '../index';
 import { comingUp, familyRequests, invoicePreview, liveToday, nextRunPeriod, overviewStats, venueLists } from './mgmt';
+import { withMarks } from './testMarks';
 import { bookableDays, bookingDayCheck, enquiriesByStage, openEnquiries, paperFormDoc, splitName, startMondays } from './enquiries';
 
 const T = '2026-10-21';
@@ -140,4 +141,11 @@ describe('enquiry rules', () => {
     });
   });
 
+});
+
+describe('overview mood (round 12)', () => {
+  it('overview has the mood index', () => {
+    expect(overviewStats(withMarks, T).mood).toEqual({ index: 4, lift: 2, n: 2 });
+    expect(overviewStats(buildSeed().citra, T).mood.index).toBeNull();
+  });
 });

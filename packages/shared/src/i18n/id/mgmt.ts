@@ -144,4 +144,5 @@ export const mgmt: Same<typeof EN> = {
   'err.venueNeedsOverall': 'Survei venue harus menanyakan penilaian keseluruhan.', 'err.notClosed': 'Hanya survei yang sudah ditutup yang bisa dibuka lagi.',
   'feed.surveyLive': 'Survei aktif · {title}', 'feed.surveyReopened': 'Survei dibuka lagi · {title}', 'feed.venueRated': 'Venue dinilai · {org} · {stars}/5',
   'notif.venueRated': '{org} menilai acaranya {stars}/5 lewat tautan penilaian.',
+  tileMood: 'Suasana hati hari ini',
 };

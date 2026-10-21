@@ -10,6 +10,7 @@ import { validReadings } from './health';
 import { liveSurvey, responsesOf, surveyStats } from './surveys';
 import { openEnquiries } from './enquiries';
 import { lunchPhotoIds } from './kitchen';
+import { moodStats } from './mood';
 import { approvalTotal, pendingItems } from './approvals';
 
 // ---------- venue ----------
@@ -221,7 +222,7 @@ export function familyRequests(s: ClubState, today: ISODate, limit = 8): FamilyR
 }
 export interface OverviewStats {
   members: number; staff: number; inClub: number; goneHome: number; visits: number; extraVisits: number; checks: number; flagged: number; overdue: number; enquiries: number; reviews: number;
-  survey: { avg: number; n: number } | null; photos: number; logsSaved: number; logsTotal: number; lunchPhoto: boolean; payments: number; stock: number; venues: number; samplePrices: boolean;
+  survey: { avg: number; n: number } | null; mood: { index: number | null; lift: number | null; n: number }; photos: number; logsSaved: number; logsTotal: number; lunchPhoto: boolean; payments: number; stock: number; venues: number; samplePrices: boolean;
 }
 /** Every number on the overview tiles, computed from the club's own data (an empty clubhouse gives zeros). */
 export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
@@ -230,6 +231,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
   const sv = liveSurvey(s);
   const st = sv ? surveyStats(s, sv) : null;
   const price = priceOn(s, today);
+  const ms = moodStats(s, [today]);
   return {
     members: approvedMembers(s).filter((m) => membershipStatus(m, today) !== 'ended').length,
     staff: live(s.staff).filter((x) => x.active).length,
@@ -243,6 +245,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
     enquiries: openEnquiries(s).length,
     reviews: approvalTotal(s) - pendingItems(s, 'stock').length, // waiting in Approvals (stock has its own tile)
     survey: st && st.overallN ? { avg: st.overall, n: st.overallN } : null,
+    mood: { index: ms.index, lift: ms.lift, n: ms.n },
     photos: live(s.photos).filter((p) => p.date === today && p.visibility === 'visible' && p.kind !== 'arrival').length,
     logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved' && l.mood !== undefined).length, // round 7: complete once the Mood & notes round is in
     logsTotal: g.inClub.length + g.goneHome.length, // a log for everyone who visited today

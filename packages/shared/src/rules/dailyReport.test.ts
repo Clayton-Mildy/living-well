@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildCitra } from '../seed/index';
 import { memberName } from './core';
+import { withMarks } from './testMarks';
 import { dailyReport, firstReportDay, nextReportDay, prevReportDay, reportDateOf } from './dailyReport';
 
 const T = '2026-10-21'; // Wednesday, the demo day
@@ -175,5 +176,21 @@ describe('moving between days', () => {
     expect(reportDateOf('soon', T)).toBe(T);
     expect(reportDateOf(null, T)).toBe(T);
     expect(reportDateOf('2026-13-45', T)).toBe(T);
+  });
+});
+
+describe('mood faces (round 12)', () => {
+  it('counts faces at the door and the lift', () => {
+    const r = dailyReport(withMarks, T, T, 16 * 60);
+    expect(r.mood.faces.arrival[3]).toBe(1);
+    expect(r.mood.faces.departure[5]).toBe(1);
+    expect(r.mood.faces.lift).toBe(2);
+    expect(r.members.find((x) => x.m.id === 'm1')).toMatchObject({ arrivalFace: 3, departureFace: 5 });
+  });
+  it('a day nobody marked has zero counts and no lift', () => {
+    const r = dailyReport(s, T, T, NOW);
+    expect(r.mood.faces.lift).toBeNull();
+    expect(Object.values(r.mood.faces.arrival).every((n) => n === 0)).toBe(true);
+    expect(r.mood.faces.notMarkedDoor).toBe(r.members.length);
   });
 });

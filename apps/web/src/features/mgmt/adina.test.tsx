@@ -15,6 +15,7 @@ import { People } from './People';
 import { Surveys } from './Surveys';
 import { Plans } from './Plans';
 import { Enquiries } from '../enquiries/Enquiries';
+import { withMarks } from '@cp/shared/rules/testMarks';
 
 let root: Root | null = null;
 let host: HTMLElement | null = null;
@@ -47,11 +48,22 @@ const body = () => host?.textContent ?? '';
 const tile = (k: string) => host?.querySelector(`[data-testid="tile-${k}"]`)?.textContent;
 const buttonLabels = () => Array.from(host?.querySelectorAll('button') ?? []).map((b) => b.textContent ?? '');
 
+describe('overview mood tile (round 12)', () => {
+  it('shows the day\'s index and the lift, and links to the Insights Mood tab', async () => {
+    openClub('citra');
+    useReplica.setState({ confirmed: withMarks, view: withMarks });
+    await show(<Overview />);
+    expect(tile('mood')).toBe('4.0');
+    expect(host?.querySelector('[data-tile="mood"]')?.textContent).toContain('+2.0');
+  });
+});
+
 describe('Adina, an empty clubhouse', () => {
   it('overview: zeros, no leftovers, empty lists', async () => {
     openClub('adina');
     await show(<Overview />);
     expect(body()).toContain('Adina Seniors Clubhouse has no members or staff yet.');
+    expect(tile('mood')).toBe('–');
     for (const k of ['inClub', 'goneHome', 'visits', 'extra', 'review', 'checks', 'overdue', 'enq', 'photos', 'pay', 'stock', 'venue']) expect(tile(k), k).toBe('0');
     expect(tile('logs')).toBe('0 / 0');
     expect(tile('survey')).toBe('No answers yet');
@@ -64,6 +76,7 @@ describe('Adina, an empty clubhouse', () => {
     expect([tile('inClub'), tile('goneHome'), tile('visits'), tile('extra')]).toEqual(['3', '0', '3', '0']);
     expect(body()).not.toMatch(/Expected|To arrive|expected/);
     expect(tile('enq')).toBe('4');
+    expect(tile('mood')).toBe('–'); // nobody marked a face yet
     expect([tile('review'), tile('checks'), tile('overdue'), tile('survey'), tile('photos'), tile('logs'), tile('lunch'), tile('pay'), tile('stock'), tile('venue'), tile('plans')])
       .toEqual(['7', '1', '1', '4.7 / 5', '0', '0 / 3', 'Not yet', '2', '3', '2', 'Sample']); // Hendra and Bambang paid this morning (invoice day)
     expect(host?.querySelector('[data-tile="checks"]')?.textContent).toContain('All normal');

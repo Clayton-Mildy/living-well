@@ -1,13 +1,14 @@
 // Family area selectors (pure): member switcher, the member's day, plan card (Flex visits / Gold), timeline, photos, invoices, daily log.
 // The club is drop-in: members come on any open date and nothing is "expected", so a member's day is only ever away, here or home.
 // Everything reads ClubState, so it works on the full state and on a family's projection.
-import type { Attendance, Bank, CalendarEvent, ClubState, DailyLog, GuestHostKind, HM, Invoice, ISODate, MemberNote, Member, Photo, Plan, Reading, Slot, YM } from '../types';
+import type { Attendance, Bank, CalendarEvent, ClubState, DailyLog, Face, GuestHostKind, HM, Invoice, ISODate, MemberNote, Member, Photo, Plan, Reading, Slot, YM } from '../types';
 import { currentMembership, dayStatus, familyMemberIds, isPendingRow, memberSince, membershipStatus, nextOpenDay, planOn } from './core';
 import { attOf, flexMonth } from './attendance';
 import { cameOn, sessionPhotos } from './activity';
 import { balanceOf, invoiceStatus, invoicesOf, priceOn, type InvoiceStatus } from './billing';
 import { menuOn, sessionsOn, visibleLunchPhotos, type SessionSlot } from './kitchen';
 import { guestOn } from './guests';
+import { dayArc } from './mood';
 import { todayReading } from './health';
 import { logForFamily, noteForFamily, readingForFamily } from './approvals';
 import { addDays, addMonths, live, sortBy, toHM, toMin, ym } from '../util';
@@ -142,13 +143,13 @@ export function planSummary(s: ClubState, m: Member, today: ISODate): PlanSummar
 // ---------- timeline ----------
 export type TlState = 'done' | 'now' | 'up';
 export type TlItem =
-  | { id: string; kind: 'arrival'; state: TlState; time: HM; att: Attendance }
-  | { id: string; kind: 'health'; state: TlState; time: HM | ''; arrival?: Reading; monthly?: Reading }
+  | { id: string; kind: 'arrival'; state: TlState; time: HM; att: Attendance; face?: Face }
+  | { id: string; kind: 'health'; state: TlState; time: HM | ''; arrival?: Reading; monthly?: Reading; face?: Face }
   | { id: string; kind: 'session'; state: TlState; time: HM; start: number; end: number; slot: SessionSlot['slot']; activityId: string; roomId: string; staffId: string }
   | { id: string; kind: 'outing'; state: TlState; time: HM; start: number; end: number; event: CalendarEvent }
   | { id: string; kind: 'lunch'; state: TlState; time: HM; start: number; end: number }
   | { id: string; kind: 'tea'; state: TlState; time: HM; start: number; end: number; dishIds: string[] }
-  | { id: string; kind: 'home'; state: TlState; time: HM; att?: Attendance; departure?: Reading };
+  | { id: string; kind: 'home'; state: TlState; time: HM; att?: Attendance; departure?: Reading; face?: Face };
 
 export const homeTime = (s: ClubState): HM => toHM(toMin(s.club.settings.close) - 30);
 
@@ -191,12 +192,13 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
 
   if (single) {
     const { st, a, m } = single;
-    if (a?.checkIn) items.push({ id: 'arrival', kind: 'arrival', state: 'done', time: a.checkIn.at, att: a });
+    const arc = dayArc(s, m.id, today);
+    if (a?.checkIn) items.push({ id: 'arrival', kind: 'arrival', state: 'done', time: a.checkIn.at, att: a, ...(arc.arrival !== undefined ? { face: arc.arrival } : {}) });
     // a reading belongs to a visit: if the check-in was undone, the day is empty again
     const visiting = st.kind === 'here' || st.kind === 'home';
     const arr = visiting ? famReading(s, m.id, today, 'arrival') : undefined;
     const mon = visiting ? famReading(s, m.id, today, 'monthly') : undefined;
-    if (arr) items.push({ id: 'health', kind: 'health', state: 'done', time: arr.time, arrival: arr, monthly: mon });
+    if (arr) items.push({ id: 'health', kind: 'health', state: 'done', time: arr.time, arrival: arr, monthly: mon, ...(arc.health !== undefined ? { face: arc.health } : {}) });
     else if (st.kind === 'here') items.push({ id: 'health', kind: 'health', state: 'up', time: '' });
   }
 
@@ -214,8 +216,9 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
 
   if (single) {
     const { a, st } = single;
-    if (a?.checkOut) items.push({ id: 'home', kind: 'home', state: 'done', time: a.checkOut.at, att: a, departure: famReading(s, single.m.id, today, 'departure') });
-    else if (st.kind === 'here') items.push({ id: 'home', kind: 'home', state: 'up', time: homeTime(s) });
+    const arc = dayArc(s, single.m.id, today);
+    if (a?.checkOut) items.push({ id: 'home', kind: 'home', state: 'done', time: a.checkOut.at, att: a, departure: famReading(s, single.m.id, today, 'departure'), ...(arc.departure !== undefined ? { face: arc.departure } : {}) });
+    else if (st.kind === 'here') items.push({ id: 'home', kind: 'home', state: 'up', time: homeTime(s), ...(arc.departure !== undefined ? { face: arc.departure } : {}) });
   }
   return items;
 }

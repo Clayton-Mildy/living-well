@@ -41,4 +41,5 @@ export const report: Same<typeof EN> = {
   colMember: 'Anggota', colTime: 'Masuk–pulang', colLunch: 'Makan siang', colActivities: 'Aktivitas', colMood: 'Suasana hati', colArrival: 'Cek kedatangan',
   satOutTag: '{name} (tidak ikut)',
   noMembers: 'Tidak ada yang hadir pada hari ini',
+  moodArrival: 'Datang', moodDeparture: 'Pulang', moodFaces: 'Wajah di pintu',
 };

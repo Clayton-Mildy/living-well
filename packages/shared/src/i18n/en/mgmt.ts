@@ -142,4 +142,5 @@ export const mgmt = {
   'err.venueNeedsOverall': 'A venue survey has to ask for the overall rating.', 'err.notClosed': 'Only a closed survey can be reopened.',
   'feed.surveyLive': 'Survey live · {title}', 'feed.surveyReopened': 'Survey reopened · {title}', 'feed.venueRated': 'Venue rated · {org} · {stars}/5',
   'notif.venueRated': '{org} rated their event {stars}/5 through the rating link.',
+  tileMood: 'Mood today',
 };

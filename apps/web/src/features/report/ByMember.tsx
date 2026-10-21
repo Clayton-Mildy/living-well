@@ -6,7 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { memberName } from '@cp/shared';
 import { activityName } from '@cp/shared/rules/activity';
 import type { DayReport, ReportMember } from '@cp/shared/rules/dailyReport';
-import { EmptyState, Group, Icon } from '../../components/ui';
+import { EmptyState, FACE_ICON, Group, Icon } from '../../components/ui';
 import { PendingMark } from '../../components/PendingMark';
 import { useFmt, useT, type TFn } from '../../lib/i18n';
 import { rowLine } from '../activity/lib';
@@ -42,6 +42,18 @@ function Bits({ bits, quiet }: { bits: { text: string; tone: 'ok' | 'out' | 'unm
 }
 const lunchText = (t: TFn, x: ReportMember) => (x.lunch ? t('activity.opt.lunch.' + x.lunch) : '');
 const moodText = (t: TFn, x: ReportMember) => (x.mood ? t('activity.opt.mood.' + x.mood) : '');
+/** The two faces at the door (arrival, departure), 16 px, in front of the mood word. */
+function DoorFaces({ x }: { x: ReportMember }) {
+  const t = useT();
+  if (x.arrivalFace === undefined && x.departureFace === undefined) return null;
+  return (
+    <span data-testid="door-faces" style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginRight: 6, verticalAlign: 'middle' }}>
+      {[x.arrivalFace, x.departureFace].map((f, i) => f !== undefined
+        ? <span key={i} data-face={f} title={t('mood.face.' + f)} style={{ display: 'inline-flex' }}><Icon name={FACE_ICON[f]} size={16} weight={300} fill={1} color="#24201C" /></span>
+        : <span key={i} aria-hidden="true" style={{ width: 16, textAlign: 'center', color: '#A89C8E' }}>·</span>)}
+    </span>
+  );
+}
 const bpOf = (x: ReportMember) => (x.arrival && x.arrival.sys != null && x.arrival.dia != null ? `${x.arrival.sys}/${x.arrival.dia}` : '');
 
 function Bp({ x }: { x: ReportMember }) {
@@ -86,7 +98,7 @@ export function ByMember({ r, wide }: { r: DayReport; wide: boolean }) {
             <span style={{ fontSize: 14, lineHeight: '20px' }}>
               {bits(x).length ? <Bits bits={bits(x)} /> : <span style={{ color: '#A89C8E' }}>—</span>}
             </span>
-            <span style={{ fontSize: 14, color: '#4A4038' }}>{moodText(t, x) || <span style={{ color: '#A89C8E' }}>—</span>}</span>
+            <span style={{ fontSize: 14, color: '#4A4038' }}><DoorFaces x={x} />{moodText(t, x) || (x.arrivalFace === undefined && x.departureFace === undefined ? <span style={{ color: '#A89C8E' }}>—</span> : null)}</span>
             <Bp x={x} />
           </button>
         ))}
@@ -97,7 +109,8 @@ export function ByMember({ r, wide }: { r: DayReport; wide: boolean }) {
   return (
     <Group pad={0} gap={0} label={t('report.tabMembers')}>
       {r.members.map((x, i) => {
-        const line2 = [visitTime(t, x), lunchText(t, x), moodText(t, x)].filter(Boolean);
+        const line2 = [visitTime(t, x), lunchText(t, x)].filter(Boolean);
+        const mood = moodText(t, x);
         const sessionBits = bits(x);
         return (
           <Line key={x.m.id} first={i === 0} inset={66} onClick={() => go(`/members/${x.m.id}`)} style={{ alignItems: 'flex-start' }}>
@@ -106,6 +119,7 @@ export function ByMember({ r, wide }: { r: DayReport; wide: boolean }) {
               <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{memberName(x.m)}</span>
               <span style={{ ...sub, fontVariantNumeric: 'tabular-nums' }}>
                 {line2.map((p, k) => <span key={k} style={{ color: p === lunchText(t, x) && (x.lunch === 'little' || x.lunch === 'none') ? RUST : undefined }}>{k ? ' · ' : ''}{p}</span>)}
+                {mood || x.arrivalFace !== undefined || x.departureFace !== undefined ? <span>{line2.length ? ' · ' : ''}<DoorFaces x={x} />{mood}</span> : null}
               </span>
               {sessionBits.length ? <span style={sub}><Bits bits={sessionBits} quiet /></span> : null}
               {x.pendingLog ? <PendingMark row={x.log} /> : null}

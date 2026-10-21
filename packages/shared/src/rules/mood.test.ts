@@ -1,16 +1,10 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
+import { withMarks } from './testMarks';
 import { buildSeed, dayArc, moodId, moodStats } from '../index';
 
 const T = '2026-10-21';
 const s0 = buildSeed().citra;
-const withMarks = produce(s0, (d) => {
-  // the seed has m1 away today; here they are in the club, so their visit is one of the day's check-ins
-  d.attendance[`${T}:m1`] = { id: `${T}:m1`, clubId: d.clubId, createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
-  for (const [moment, face, time] of [['arrival', 3, '10:00'], ['departure', 5, '15:45']] as const) {
-    d.moodMarks[moodId(T, 'm1', moment)] = { id: moodId(T, 'm1', moment), clubId: d.clubId, createdAt: `${T}T${time}`, createdBy: 'staff:s1', memberId: 'm1', date: T, time, moment, face, by: 'staff:s1' };
-  }
-});
 
 describe('mood rules', () => {
   it('moodId is stable and slot-aware', () => {

@@ -3,11 +3,11 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Photo } from '@cp/shared';
-import { memberName, memberShort } from '@cp/shared';
+import { FACES, memberName, memberShort } from '@cp/shared';
 import { FIXED_SLOTS, LUNCH_AMOUNTS, activityName, roomName } from '@cp/shared/rules/activity';
 import { MOODS, type DayReport, type ReportSession } from '@cp/shared/rules/dailyReport';
 import { readingSummary } from '@cp/shared/rules/healthStation';
-import { Group, Icon, PhotoThumbs, StaffOnlyTag } from '../../components/ui';
+import { FACE_ICON, Group, Icon, PhotoThumbs, StaffOnlyTag } from '../../components/ui';
 import { PendingMark } from '../../components/PendingMark';
 import { useFmt, useT, type TFn } from '../../lib/i18n';
 import { rowLine } from '../activity/lib';
@@ -227,15 +227,42 @@ function Health({ r }: { r: DayReport }) {
 }
 
 // ---------- mood and notes ----------
+/** One line of faces: the moment's name, then each face that was marked with its count (zeros are left out). */
+function FaceLine({ label, counts }: { label: string; counts: Record<number, number> }) {
+  const t = useT();
+  const marked = FACES.filter((f) => counts[f]);
+  return (
+    <span data-testid="face-line" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 12px', fontSize: 15 }}>
+      <span style={{ ...sub, minWidth: 78 }}>{label}</span>
+      {marked.length ? marked.map((f) => (
+        <span key={f} data-face={f} title={t('mood.face.' + f)} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, color: '#24201C', fontVariantNumeric: 'tabular-nums' }}>
+          <Icon name={FACE_ICON[f]} size={18} weight={300} fill={1} color="#24201C" />{counts[f]}
+        </span>
+      )) : <span style={sub}>—</span>}
+    </span>
+  );
+}
+
 function MoodNotes({ r }: { r: DayReport }) {
   const t = useT();
   const m = r.mood;
   const cap = useCap(m.notes, 4);
   if (!r.members.length) return null;
   const any = MOODS.some((k) => m.counts[k]);
+  const anyFace = FACES.some((f) => m.faces.arrival[f] || m.faces.departure[f]);
   return (
     <Group title={t('report.mood')} meta={m.notes.length ? plural(t, 'report.notesN', m.notes.length) : undefined} pad={0} gap={0}>
-      <Line first>
+      {anyFace || m.faces.notMarkedDoor ? (
+        <Line first>
+          <span data-testid="mood-faces" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            <FaceLine label={t('report.moodArrival')} counts={m.faces.arrival} />
+            <FaceLine label={t('report.moodDeparture')} counts={m.faces.departure} />
+            {m.faces.lift !== null ? <span data-testid="mood-lift" style={{ fontSize: 14, color: '#3D6B4F' }}>{t('mood.lift', { n: (m.faces.lift > 0 ? '+' : '') + m.faces.lift.toFixed(1) })}</span> : null}
+            {m.faces.notMarkedDoor ? <DotItem color={OCHRE}>{t('mood.notMarkedDoor', { n: m.faces.notMarkedDoor })}</DotItem> : null}
+          </span>
+        </Line>
+      ) : null}
+      <Line first={!(anyFace || m.faces.notMarkedDoor)}>
         <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 14px', fontSize: 15 }}>
           {MOODS.filter((k) => m.counts[k]).map((k) => <DotItem key={k} color={MOOD_DOT[k]}><span style={{ color: '#24201C' }}>{t('activity.opt.mood.' + k)} {m.counts[k]}</span></DotItem>)}
           {!any && !m.notMarked && !m.pendingLogs ? <span style={sub}>—</span> : null}

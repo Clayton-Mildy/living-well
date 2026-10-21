@@ -7,7 +7,7 @@
 // downwards with the step's pictures as big cards, and a card opens the full-screen viewer. Lunch has its own "Tell the kitchen about lunch" line.
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDays, firstOfRole, lunchSafety, memberShort, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
+import { FACE_KEY, addDays, firstOfRole, lunchSafety, memberShort, staffCall, visibleTeaPhotos, type Face, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
 import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, storyNowMin, type DayStory, type StorySession, type TlItem } from '@cp/shared/rules/family';
 import { listItems, listKind } from '@cp/shared/rules/famToday';
 import { Avatar, Icon, PhotoImg, RailDot } from '../../components/ui';
@@ -86,10 +86,11 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
   const foods = (m: Member) => [...m.health.food.map((f) => t('family.food_' + f)), ...(m.health.foodOther ? [m.health.foodOther] : [])].join(` ${t('common.and')} `);
   const sessionOf = (id: string) => stories.map((st, i) => ({ m: members[i], x: st.sessions.find((y) => y.id === id) })).filter((r): r is { m: Member; x: StorySession } => !!r.x);
 
+  const faceWord = (f: Face) => t(FACE_KEY[f]).toLowerCase();
   const view = (it: TlItem): Row => {
     switch (it.kind) {
       case 'arrival':
-        return { time: it.time, title: t('family.tArrived'), detail: t('family.tArrivedD', { s: staffName(it.att.checkIn?.by) }) };
+        return { time: it.time, title: it.face ? t('ftoday.arrivedMood', { face: faceWord(it.face) }) : t('family.tArrived'), detail: t('family.tArrivedD', { s: staffName(it.att.checkIn?.by) }) };
       case 'health': {
         const arr = it.arrival;
         if (!arr) return { time: '', title: t('family.tHealthUp'), detail: t('family.tHealthUpD', { n: staffCall(nurse) || t('roles.nurse') }) };
@@ -101,7 +102,7 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         if (it.monthly) { if (it.monthly.glucose != null) parts.push(`${it.monthly.glucose} mg/dL`); if (it.monthly.weight != null) parts.push(`${it.monthly.weight} kg`); }
         if (arr.shared) { for (const k of arr.noteKeys) parts.push(t('health.note.' + k)); if (arr.note) parts.push(arr.note); }
         return {
-          time: it.time, title: t('family.tHealth'), detail: parts.join(' · '),
+          time: it.time, title: it.face ? t('ftoday.healthMood', { face: faceWord(it.face) }) : t('family.tHealth'), detail: parts.join(' · '),
           extra: (
             <>
               {arr.status !== 'normal' ? <HealthPill status={arr.status} style={{ marginTop: 6 }} /> : null}
@@ -168,9 +169,9 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         if (it.att?.checkOut) {
           const dep = it.departure;
           const bp = dep ? bpLine(t, dep) : '';
-          return { time: it.time, title: t('family.tHome'), detail: t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
+          return { time: it.time, title: it.face ? t('ftoday.homeMood', { face: faceWord(it.face) }) : t('family.tHome'), detail: t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
         }
-        return { time: it.time, title: t('family.tHome'), detail: m ? t('family.tHomeD', { s: pron(m).s }) : '' };
+        return { time: it.time, title: it.face ? t('ftoday.homeMood', { face: faceWord(it.face) }) : t('family.tHome'), detail: m ? t('family.tHomeD', { s: pron(m).s }) : '' };
       }
     }
   };
