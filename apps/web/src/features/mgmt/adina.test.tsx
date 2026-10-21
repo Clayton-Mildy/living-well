@@ -58,13 +58,24 @@ describe('overview mood tile (round 12)', () => {
   });
 });
 
+describe('overview check-on tile (round 12)', () => {
+  it('counts the members not seen for a while and links to the filtered Members list', async () => {
+    openClub('citra');
+    const quiet = buildSeed().citra;
+    for (const k of Object.keys(quiet.attendance)) if (quiet.attendance[k].memberId === 'm1' && quiet.attendance[k].date > '2026-10-09') delete quiet.attendance[k];
+    useReplica.setState({ confirmed: quiet, view: quiet });
+    await show(<Overview />);
+    expect(tile('checkOn')).toBe('1');
+  });
+});
+
 describe('Adina, an empty clubhouse', () => {
   it('overview: zeros, no leftovers, empty lists', async () => {
     openClub('adina');
     await show(<Overview />);
     expect(body()).toContain('Adina Seniors Clubhouse has no members or staff yet.');
     expect(tile('mood')).toBe('–');
-    for (const k of ['inClub', 'goneHome', 'visits', 'extra', 'review', 'checks', 'overdue', 'enq', 'photos', 'pay', 'stock', 'venue']) expect(tile(k), k).toBe('0');
+    for (const k of ['inClub', 'goneHome', 'visits', 'extra', 'checkOn', 'review', 'checks', 'overdue', 'enq', 'photos', 'pay', 'stock', 'venue']) expect(tile(k), k).toBe('0');
     expect(tile('logs')).toBe('0 / 0');
     expect(tile('survey')).toBe('No answers yet');
     for (const s of ['Nothing has happened yet today.', 'Nothing planned yet.', 'No requests from families right now.', 'No open enquiries.']) expect(body()).toContain(s);

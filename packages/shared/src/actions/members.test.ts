@@ -586,7 +586,7 @@ describe('list rules: search, filters, status', () => {
   it('six filters with counts; pending members are listed; ended ones only under Ended', () => {
     const c = seed();
     const rows = rows2(c.citra, T);
-    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, flex: 2, gold: 3, ended: 0 }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
+    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, ended: 0 }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
     const r = run(c.citra, 'members.create', newMember(), who(c, 's1'));
     const rows2b = rows2(r.state, T);
     expect(rows2b.find((x) => x.m.id === 'm47')?.st.key).toBe('pending');

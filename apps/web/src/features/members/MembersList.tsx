@@ -2,7 +2,7 @@
 // (avatar, name, status, plan chip) and the primary family contact with a one-tap call, so many members fit at a glance, paged. "Add member" (the floating pin on phones).
 // Pending new members are listed as "Pending approval". The details (age, mobility, allergies, medicines) live on the profile.
 import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, memberName, initials, ym } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
@@ -26,7 +26,8 @@ export function MembersList() {
   const { device, isPhone } = useDevice();
   const navigate = useNavigate();
   const [q, setQ] = useState('');
-  const [f, setF] = useState<MemberFilter>('active');
+  const [sp] = useSearchParams();
+  const [f, setF] = useState<MemberFilter>(() => { const w = sp.get('f'); return (MEMBER_FILTERS as string[]).includes(w ?? '') ? (w as MemberFilter) : 'active'; }); // /members?f=checkOn opens a filter
   const [sort, setSort] = useState<MemberSort>('name');
   const [adding, setAdding] = useState(false);
   const rows = useMemo(() => memberRows(s, today), [s, today]);

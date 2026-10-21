@@ -15,6 +15,7 @@ import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { AlsoToday, type GuestActions } from './AlsoToday';
+import { CheckOnSheet } from './CheckOnSheet';
 import { CheckoutDialog } from './CheckoutDialog';
 import { FaceCard, MatchedPanel, SCAN_MS, type Scan } from './FaceCard';
 import { MemberDrawer, visitLine } from './MemberDrawer';
@@ -50,8 +51,10 @@ export function Arrivals() {
   const [whoFor, setWhoFor] = useState<string | null>(null); // "Not this person" on a face match: pick who it really is
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [coId, setCoId] = useState<string | null>(null);
+  const [callId, setCallId] = useState<string | null>(() => params.get('checkOn')); // the call sheet ("Check on"); /today?checkOn=<member> opens it
   const [query, setQuery] = useState(''); // the check-in list's search
   const [outQuery, setOutQuery] = useState(''); // the search of the In the club and Gone home lists (shared: switching between the two keeps it)
+  useEffect(() => { const c = params.get('checkOn'); if (c) setCallId(c); }, [params]);
   const columnsRef = useRef<HTMLDivElement>(null);
   const cameraRef = useRef<HTMLDivElement>(null);
   const { wide: twoColumns } = useAtLeast(columnsRef, TWO_COLUMNS);
@@ -251,7 +254,7 @@ export function Arrivals() {
               {/* KC round 6: "Also today" sits in the rail ABOVE the face camera (on every tab; the camera is only on Not in yet).
                   When the rail drops under the list (phones, narrow screens) the order is list, Also today, camera. */}
               <aside style={{ flex: twoColumns ? '0 1 300px' : '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 22 : 'clamp(24px, 3vw, 32px)' }}>
-                <AlsoToday guest={guest} />
+                <AlsoToday guest={guest} onCheckOn={setCallId} />
                 {mode === 'in' ? camera : null}
               </aside>
             </div>
@@ -269,6 +272,7 @@ export function Arrivals() {
         onUndoIn: (id) => void undoIn(id),
         onUndoOut: (id) => void undoOut(id),
       }} />
+      <CheckOnSheet memberId={callId} onClose={() => setCallId(null)} />
       {coId ? <CheckoutDialog key={coId} memberId={coId} onClose={() => setCoId(null)} onConfirm={doCheckOut} onAskDeparture={askDeparture} /> : null}
     </>
   );

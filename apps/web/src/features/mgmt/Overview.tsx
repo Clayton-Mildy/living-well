@@ -34,6 +34,7 @@ export function Overview() {
     { key: 'goneHome', label: t('mgmt.tileGoneHome'), value: String(st.goneHome), icon: 'home', to: '/arrivals' },
     { key: 'visits', label: t('mgmt.tileVisits'), value: String(st.visits), icon: 'event_available', to: '/arrivals' },
     { key: 'extra', label: t('mgmt.tileExtra'), value: String(st.extraVisits), icon: 'add_circle', to: '/billing', badge: st.extraVisits ? { icon: 'payments', fg: '#7A5510', bg: '#F6ECD6', label: t('mgmt.plNextInvoice') } : undefined },
+    { key: 'checkOn', label: t('mgmt.tileCheckOn'), value: String(st.checkOn), icon: 'call', to: '/members?f=checkOn' },
     { key: 'review', label: t('mgmt.tileReview'), value: String(st.reviews), icon: 'fact_check', to: '/reviews' },
     { key: 'checks', label: t('nav.health'), value: String(st.checks), icon: 'monitor_heart', to: '/hchecks', badge: st.flagged ? { icon: 'visibility', fg: '#7A5510', bg: '#F6ECD6', label: t('mgmt.toWatch', { n: st.flagged }) } : { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6', label: t('mgmt.allNormal') } },
     { key: 'overdue', label: t('mgmt.tileOverdue'), value: String(st.overdue), icon: 'receipt_long', to: '/billing', badge: { icon: 'error', fg: '#FFFFFF', bg: '#9A3D24', label: t('status.overdue') } },

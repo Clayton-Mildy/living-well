@@ -3,7 +3,8 @@
 // Guests show GUESTS_PER_PAGE at a time.
 import { Fragment, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { GuestVisit } from '@cp/shared';
+import { listName, type GuestVisit } from '@cp/shared';
+import { checkOnList } from '@cp/shared/rules/checkOn';
 import { alsoToday } from '@cp/shared/rules/lobby';
 import { menuOn } from '@cp/shared/rules/kitchen';
 import { dayPlan } from '@cp/shared/rules/activity';
@@ -47,7 +48,7 @@ function Block({ title, openLabel, onClick, children }: { title: string; openLab
   );
 }
 
-export function AlsoToday({ guest }: { guest: GuestActions }) {
+export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn?: (memberId: string) => void }) {
   const t = useT();
   const s = useClub();
   const { today } = useNow();
@@ -130,6 +131,26 @@ export function AlsoToday({ guest }: { guest: GuestActions }) {
   if (guests.pages > 1) blocks.push(<Pager key="pager" page={guests.page} pages={guests.pages} onPage={guests.setPage} label={t('lobby.pagerAria', { list: t('lobby.alsoToday') })} />);
   if (empty) blocks.push(<div key="none" style={sub14}>{t('lobby.alsoNone')}</div>);
   if (menuBlock) blocks.unshift(menuBlock);
+  // round 12: members not seen for a while (up to five, longest quiet first); a tap opens the call sheet
+  const quiet = checkOnList(s, today);
+  if (quiet.length && onCheckOn) {
+    blocks.push(
+      <Block key="checkOn" title={`${t('checkOn.title')} (${quiet.length})`} openLabel={t('checkOn.all', { n: quiet.length })} onClick={() => navigate('/members?f=checkOn')}>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          {quiet.slice(0, 5).map((r) => (
+            <button key={r.member.id} type="button" data-check-on={r.member.id} onClick={() => onCheckOn(r.member.id)} aria-label={`${t('checkOn.call')}: ${listName(r.member)}`}
+              style={{ display: 'flex', alignItems: 'baseline', gap: 8, minHeight: 36, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', color: '#24201C' }}>
+              <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>{listName(r.member)}</span>
+              <span style={{ ...sub14, flex: 'none', fontVariantNumeric: 'tabular-nums', textAlign: 'right' }}>
+                {t('checkOn.days', { n: r.daysSince })}{r.lastCall ? ` · ${t('checkOn.outcome.' + r.lastCall.outcome)}` : ''}
+              </span>
+            </button>
+          ))}
+        </div>
+        {quiet.length > 5 ? <button type="button" onClick={() => navigate('/members?f=checkOn')} style={{ ...sub14, alignSelf: 'flex-start', padding: 0, minHeight: 28, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline' }}>{t('checkOn.all', { n: quiet.length })}</button> : null}
+      </Block>,
+    );
+  }
 
   // round 6, phone: an iOS grouped section, the header over one flat white group, the blocks split by hairlines inside it
   if (isPhone) {

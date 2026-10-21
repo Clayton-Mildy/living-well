@@ -11,6 +11,7 @@ import { liveSurvey, responsesOf, surveyStats } from './surveys';
 import { openEnquiries } from './enquiries';
 import { lunchPhotoIds } from './kitchen';
 import { moodStats } from './mood';
+import { checkOnList } from './checkOn';
 import { approvalTotal, pendingItems } from './approvals';
 
 // ---------- venue ----------
@@ -221,7 +222,7 @@ export function familyRequests(s: ClubState, today: ISODate, limit = 8): FamilyR
   return sortBy(out, (r) => r.createdAt + r.id, -1).slice(0, limit);
 }
 export interface OverviewStats {
-  members: number; staff: number; inClub: number; goneHome: number; visits: number; extraVisits: number; checks: number; flagged: number; overdue: number; enquiries: number; reviews: number;
+  members: number; staff: number; inClub: number; goneHome: number; visits: number; extraVisits: number; checks: number; flagged: number; overdue: number; enquiries: number; reviews: number; checkOn: number;
   survey: { avg: number; n: number } | null; mood: { index: number | null; lift: number | null; n: number }; photos: number; logsSaved: number; logsTotal: number; lunchPhoto: boolean; payments: number; stock: number; venues: number; samplePrices: boolean;
 }
 /** Every number on the overview tiles, computed from the club's own data (an empty clubhouse gives zeros). */
@@ -244,6 +245,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
     overdue: live(s.invoices).filter((i) => invoiceStatus(s, i, today) === 'overdue').length,
     enquiries: openEnquiries(s).length,
     reviews: approvalTotal(s) - pendingItems(s, 'stock').length, // waiting in Approvals (stock has its own tile)
+    checkOn: checkOnList(s, today).length,
     survey: st && st.overallN ? { avg: st.overall, n: st.overallN } : null,
     mood: { index: ms.index, lift: ms.lift, n: ms.n },
     photos: live(s.photos).filter((p) => p.date === today && p.visibility === 'visible' && p.kind !== 'arrival').length,

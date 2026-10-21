@@ -136,7 +136,7 @@ function FamilyNotificationPanel({ open, onClose }: { open: boolean; onClose: ()
   useEffect(() => { if (open) setShown(FAM_PAGE); }, [open]);
   const day = (dt: string) => (dt.slice(0, 10) === today ? t('common.today') : fds(dt.slice(0, 10)));
   const clock = (dt: string) => (dt.slice(0, 10) === today ? dt.slice(11, 16) : fds(dt.slice(0, 10)));
-  const words = (kind: string, params: Record<string, string | number>) => t(kind, { ...params, section: params.section ? t('review.' + params.section) : undefined });
+  const words = (kind: string, params: Record<string, string | number>) => t(kind, { ...params, section: params.section ? t('review.' + params.section) : undefined, outcome: params.outcome ? t('checkOn.outcome.' + params.outcome).toLowerCase() : undefined });
   const go = (link: string, id?: string) => {
     if (id && user) void act('notifications.read', { ids: [id] }, { silent: true });
     onClose();
@@ -215,7 +215,7 @@ function StaffNotificationPanel({ open, onClose }: { open: boolean; onClose: () 
                 <span style={{ width: 40, height: 40, borderRadius: 999, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: i.severity === 'urgent' ? '#9A3D24' : '#F6ECD6', color: i.severity === 'urgent' ? '#FFFFFF' : '#7A5510' }}>
                   <Icon name={iconFor(i.kind, 'priority_high')} size={22} fill={1} />
                 </span>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px' }}>{t(i.kind, { ...i.params, section: i.params.section ? t('review.' + i.params.section) : undefined })}</span>
+                <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px' }}>{t(i.kind, { ...i.params, section: i.params.section ? t('review.' + i.params.section) : undefined, outcome: i.params.outcome ? t('checkOn.outcome.' + i.params.outcome).toLowerCase() : undefined })}</span>
                 <Icon name="chevron_right" size={22} color="#5E5852" />
               </button>
             ))}
@@ -232,7 +232,7 @@ function StaffNotificationPanel({ open, onClose }: { open: boolean; onClose: () 
                 <button key={n.id} type="button" onClick={() => openLink(n.link, n.id)} className="h-row" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px', minHeight: 60, border: 'none', borderTop: k ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: isUnread ? '#FFFFFF' : 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                   <span className={isUnread ? undefined : 'cp-fill'} style={{ width: 40, height: 40, borderRadius: 999, flex: 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)' }}><Icon name={iconFor(n.kind, 'notifications')} size={22} /></span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                    <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: isUnread ? 500 : 400 }}>{t(n.kind, { ...n.params, section: n.params.section ? t('review.' + n.params.section) : undefined })}</span>
+                    <span style={{ fontSize: 16, lineHeight: '22px', fontWeight: isUnread ? 500 : 400 }}>{t(n.kind, { ...n.params, section: n.params.section ? t('review.' + n.params.section) : undefined, outcome: n.params.outcome ? t('checkOn.outcome.' + n.params.outcome).toLowerCase() : undefined })}</span>
                     <span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{when(n.createdAt)}</span>
                   </span>
                   {isUnread ? <span aria-hidden style={{ width: 10, height: 10, borderRadius: 999, background: '#24201C', flex: 'none' }} /> : null}

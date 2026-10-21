@@ -3,7 +3,7 @@ import type { Same } from '../ns';
 import type { members as EN } from '../en/members';
 export const members: Same<typeof EN> = {
   eyebrow: '{n} anggota aktif', eyebrowPending: '{n} menunggu persetujuan', add: 'Tambah anggota', searchPh: 'Cari nama, keluarga, atau nomor ponsel', searchLabel: 'Cari anggota', filter: 'Saring anggota',
-  'f.active': 'Aktif', 'f.in': 'Di klub', 'f.att': 'Perlu perhatian', 'f.flex': 'Flex', 'f.gold': 'Gold', 'f.ended': 'Berakhir',
+  'f.active': 'Aktif', 'f.in': 'Di klub', 'f.att': 'Perlu perhatian', 'f.flex': 'Flex', 'f.gold': 'Gold', 'f.checkOn': 'Perlu dihubungi', 'f.ended': 'Berakhir',
   planGold: 'Gold', planFlex: 'Flex {n}/{q}', planFlexTip: 'Paket Flex: {n} dari {q} kunjungan terpakai bulan ini', planGoldTip: 'Paket Gold: kunjungan tanpa batas', newTag: 'anggota baru', paymentOverdue: 'Pembayaran terlambat', endingOn: 'berakhir {d}',
   since: 'Sejak {d}', renews: 'Perpanjangan {d}', endsOn: 'Berakhir {d}', endedOn: 'Berakhir {d}', sortLabel: 'Urutkan anggota', 'sort.name': 'Nama', 'sort.startNew': 'Tanggal mulai, terbaru', 'sort.startOld': 'Tanggal mulai, terlama', 'sort.endSoon': 'Tanggal berakhir, terdekat',
   lastVisit: 'Kunjungan terakhir {d}', neverVisited: 'Belum pernah datang', pagerLabel: 'Halaman anggota',

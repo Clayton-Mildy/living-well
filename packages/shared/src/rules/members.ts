@@ -8,6 +8,7 @@ import { attOf, extraDaysFor } from './attendance';
 import { invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
 import { onLeaveOn } from './leave';
 import { latestBp } from './health';
+import { checkOnList, type CheckOnRow } from './checkOn';
 
 // ---------- option lists ----------
 export const TITLES: Title[] = ['Oma', 'Opa', 'Ibu', 'Bapak'];
@@ -146,8 +147,8 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 }
 
 // ---------- list rows, filters, search ----------
-export type MemberFilter = 'active' | 'in' | 'att' | 'flex' | 'gold' | 'ended';
-export const MEMBER_FILTERS: MemberFilter[] = ['active', 'in', 'att', 'flex', 'gold', 'ended'];
+export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'ended';
+export const MEMBER_FILTERS: MemberFilter[] = ['active', 'in', 'att', 'checkOn', 'flex', 'gold', 'ended'];
 export interface MemberRow {
   m: Member;
   st: MemberStatus;
@@ -167,6 +168,8 @@ export interface MemberRow {
   leave?: YM;
   /** the latest day up to today the member checked in (today included); undefined when they never have */
   lastVisit?: ISODate;
+  /** round 12: not seen for a while (see rules/checkOn.ts) */
+  checkOn?: CheckOnRow;
 }
 /** The latest check-in day (on or before `today`) of every member, in one pass over the attendance rows. */
 export function lastVisits(s: ClubState, today: ISODate): Record<string, ISODate> {
@@ -178,19 +181,21 @@ export function memberRows(s: ClubState, today: ISODate): MemberRow[] {
   const overdue = new Set(live(s.invoices).filter((i) => invoiceStatus(s, i, today) === 'overdue').map((i) => i.memberId));
   const hold = suspensions(s, today);
   const last = lastVisits(s, today);
+  const quiet = new Map(checkOnList(s, today).map((r) => [r.member.id, r]));
   return sortBy(
     live(s.members).filter((m) => !isPendingRow(m) || m.review?.status === 'pending'),
     (m) => m.firstName + m.lastName,
   ).map((m) => {
     const lr = latestBp(s, m.id);
     const pending = isPendingRow(m);
-    return { m, st: memberStatus(s, m, today), pending, ended: !pending && isEndedMember(m, today), endsOn: pending ? undefined : endingOn(m, today), ...(pending ? {} : { subStart: subStart(m), subEnd: subEnd(m, today) }), isNew: isNewMember(m, today), plan: planOn(m, today).plan, lr, hs: lr && lr.status !== 'normal' ? lr.status : null, od: overdue.has(m.id), ...(hold[m.id] ? { sus: hold[m.id] } : {}), ...(!pending && onLeaveOn(m, today) ? { leave: ym(today) } : {}), ...(last[m.id] ? { lastVisit: last[m.id] } : {}) };
+    return { m, st: memberStatus(s, m, today), pending, ended: !pending && isEndedMember(m, today), endsOn: pending ? undefined : endingOn(m, today), ...(pending ? {} : { subStart: subStart(m), subEnd: subEnd(m, today) }), isNew: isNewMember(m, today), plan: planOn(m, today).plan, lr, hs: lr && lr.status !== 'normal' ? lr.status : null, od: overdue.has(m.id), ...(hold[m.id] ? { sus: hold[m.id] } : {}), ...(!pending && onLeaveOn(m, today) ? { leave: ym(today) } : {}), ...(last[m.id] ? { lastVisit: last[m.id] } : {}), ...(quiet.has(m.id) ? { checkOn: quiet.get(m.id) } : {}) };
   });
 }
 export const FILTERS: Record<MemberFilter, (r: MemberRow) => boolean> = {
   active: (r) => !r.ended,
   in: (r) => r.st.key === 'in',
   att: (r) => !r.ended && !r.pending && !!(r.hs || r.od || r.sus),
+  checkOn: (r) => !!r.checkOn,
   flex: (r) => !r.ended && r.plan === 'flex',
   gold: (r) => !r.ended && r.plan === 'gold',
   ended: (r) => r.ended,

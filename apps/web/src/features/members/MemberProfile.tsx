@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { listName, latestBp, live, memberAge, memberName, memberSince, onLeaveOn, planOn, suspensionOf, ym, currentMembership, membershipStatus, type Member, type Role } from '@cp/shared';
+import { checkOnList } from '@cp/shared/rules/checkOn';
 import { PROFILE_TABS, endingOn, isNewMember, memberStatus, pendingReviewsFor, tabForSection, type ProfileTab } from '@cp/shared/rules/members';
 import { Button, EmptyState, Icon, photoBg, TONES } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -14,6 +15,7 @@ import { useClub } from '../../store/replica';
 import { initials } from '@cp/shared';
 import { FullName, canGoBack, endReasonLabel, STATUS_STYLE, statusText } from './lib';
 import { MemberDialog } from './dialogs/MemberDialog';
+import { CheckOnSheet } from '../lobby/CheckOnSheet';
 import { ProfilePhotoSheet } from './ProfilePhoto';
 import { memberPhoto, photoFill } from '../../lib/media';
 import { AttendanceTab } from './profile/AttendanceTab';
@@ -91,6 +93,8 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
   const tab: ProfileTab = family ? famTab : wanted && allowed.includes(wanted) ? wanted : 'overview';
   const [dlg, setDlg] = useState<{ kind: DialogKind; familyId?: string } | null>(null);
   const [photoSheet, setPhotoSheet] = useState(false);
+  const [callSheet, setCallSheet] = useState(false);
+  const onCheckOn = useMemo(() => !family && (['lobby', 'nurse', 'mgmt'] as string[]).includes(myRole) && checkOnList(s, today).some((r) => r.member.id === id), [s, today, id, family, myRole]); // round 12: not seen for a while
   const st = memberStatus(s, m, today);
   const life = membershipStatus(m, today);
   const myActor = me.kind === 'staff' ? `staff:${me.id}` : `family:${me.id}`;
@@ -152,6 +156,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
   );
   const membershipActions = (
     <>
+      {onCheckOn ? <Button variant="secondary" size={44} icon="call" onClick={() => setCallSheet(true)}>{t('checkOn.logCall')}</Button> : null}
       {!family && mgmt && !ended && !isPending && !ending ? <button type="button" onClick={() => setDlg({ kind: 'end' })} style={{ height: 40, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color: '#9A3D24', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('profile.endMembership')}</button> : null}
       {!family && mgmt && ending && !ended ? <button type="button" onClick={cancelEnding} style={{ height: 40, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4, whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('profile.cancelEnding')}</button> : null}
       {!family && mgmt && ended ? <Button variant="secondary" size={44} icon="person_check" onClick={() => setDlg({ kind: 'reactivate' })}>{t('profile.reactivate')}</Button> : null}
@@ -249,6 +254,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
       </div>
       {/* phone: the membership actions sit below the content, not in the header */}
       {isPhone ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, justifyContent: 'center' }}>{membershipActions}</div> : null}
+      <CheckOnSheet memberId={callSheet ? id : null} onClose={() => setCallSheet(false)} />
       {photoSheet ? <ProfilePhotoSheet m={m} open onClose={() => setPhotoSheet(false)} /> : null}
       {dlg ? <MemberDialog p={p} kind={dlg.kind} familyId={dlg.familyId} onClose={() => setDlg(null)} /> : null}
     </div>

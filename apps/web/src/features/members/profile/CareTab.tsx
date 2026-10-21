@@ -3,7 +3,7 @@
 // the daily log with every field the teacher recorded and the staff note (staff only). The activity team, nurse and
 // management write or correct the log right on its day (the last week's days they were in).
 import { useState } from 'react';
-import { addDays, actorName, attId, dayArc, live, displayName, sortBy, staffCall, type Attendance, type DailyLog, type Reading } from '@cp/shared';
+import { addDays, actorName, attId, dayArc, live, displayName, sortBy, staffCall, type Attendance, type CareCall, type DailyLog, type Reading } from '@cp/shared';
 import { activityName, logDates, logDeviations, lunchLabelKey, roundsOf } from '@cp/shared/rules/activity';
 import { logForFamily, readingForFamily } from '@cp/shared/rules/approvals';
 import { PendingMark } from '../../../components/PendingMark';
@@ -22,7 +22,8 @@ export function CareTab({ p }: { p: P }) {
   const logs = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && (l.status === 'saved' || !p.family)).map((l) => (p.family ? logForFamily(l) : l)).filter((l): l is DailyLog => !!l), (l) => l.date, -1);
   const readings = sortBy(live(s.readings).filter((r) => r.memberId === m.id && !r.voided).map((r) => (p.family ? readingForFamily(r) : r)).filter((r): r is Reading => !!r), (r) => r.time);
   const visits = live(s.attendance).filter((a) => a.memberId === m.id && !!a.checkIn);
-  const days = Array.from(new Set([...logs.map((l) => l.date), ...readings.map((r) => r.date), ...visits.map((a) => a.date)])).filter((d) => d <= today).sort().reverse();
+  const calls = p.family ? [] : sortBy(live(s.careCalls).filter((c) => c.memberId === m.id), (c) => c.at, -1); // round 12: welfare calls are staff only
+  const days = Array.from(new Set([...logs.map((l) => l.date), ...readings.map((r) => r.date), ...visits.map((a) => a.date), ...calls.map((c) => c.date)])).filter((d) => d <= today).sort().reverse();
   const paged = usePaged(days, DAYS_PER_PAGE, m.id);
   const writer = !p.family && (['activity', 'nurse', 'mgmt'] as string[]).includes(p.role);
   const editable = new Set(writer ? logDates(s, today).filter((d) => !!s.attendance[attId(d, m.id)]?.checkIn) : []);
@@ -58,7 +59,7 @@ export function CareTab({ p }: { p: P }) {
   const dayRows = (
     <>
       {paged.rows.map((d, di) => (
-        <DayCard key={d} p={p} date={d} first={ph && !di} log={logs.find((l) => l.date === d)} readings={readings.filter((r) => r.date === d)} visit={visits.find((a) => a.date === d)}
+        <DayCard key={d} p={p} date={d} first={ph && !di} log={logs.find((l) => l.date === d)} readings={readings.filter((r) => r.date === d)} visit={visits.find((a) => a.date === d)} calls={calls.filter((c) => c.date === d)}
           canEdit={editable.has(d)} />
       ))}
       {!days.length ? <div style={{ padding: ph ? '14px 0' : '14px 0 20px', borderTop: ph ? 'none' : HAIR, fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.noLogsYet')}</div> : null}
@@ -105,7 +106,7 @@ export function values(r: Reading, t: P['t']): string {
 }
 
 /** One day: when they came and left, the health readings, the daily log (written or corrected here on the days that allow it). */
-function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date: string; log?: DailyLog; readings: Reading[]; visit?: Attendance; canEdit: boolean; first?: boolean }) {
+function DayCard({ p, date, log, readings, visit, calls = [], canEdit, first }: { p: P; date: string; log?: DailyLog; readings: Reading[]; visit?: Attendance; calls?: CareCall[]; canEdit: boolean; first?: boolean }) {
   const { s, m, t, fmt, today, act } = p;
   const [open, setOpen] = useState(false);
   const [draft, setDraft] = useState<LogEntry | null>(null);
@@ -160,6 +161,16 @@ function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: visit ? '#24201C' : '#5E5852', lineHeight: 1.4 }}>
           <Icon name={visit ? 'how_to_reg' : 'event_busy'} size={18} color="var(--accent, #75624B)" />{where}
         </div>
+        {calls.map((c) => (
+          <div key={c.id} data-testid="care-call" className="cp-fill" style={{ display: 'flex', gap: 8, alignItems: 'flex-start', fontSize: 15, lineHeight: '22px', padding: '10px 14px', borderRadius: 10, background: 'var(--fill, #F4F4F5)' }}>
+            <Icon name="call" size={18} color="var(--accent, #75624B)" style={{ marginTop: 2 }} />
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span><StaffOnlyTag /> {t('checkOn.callEntry', { outcome: t('checkOn.outcome.' + c.outcome) })}</span>
+              {c.note ? <span style={{ color: '#5E5852' }}>{c.note}</span> : null}
+              <span style={{ fontSize: 13, color: '#6B6259' }}>{t('checkOn.callBy', { name: c.contactName || '–', by: actorName(s, c.by) || t('profile.theTeam') })}{c.checkAgainOn ? ` · ${t('checkOn.again')} ${fmt.fd(c.checkAgainOn, { day: 'numeric', month: 'short' })}` : ''}</span>
+            </span>
+          </div>
+        ))}
         {hasArc ? <MoodArc arc={arc} /> : null}
         {/* health */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
