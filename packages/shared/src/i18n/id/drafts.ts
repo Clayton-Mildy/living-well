@@ -22,7 +22,7 @@ export const drafts: Same<typeof EN> = {
   doneBtn: 'Selesai', draftsLink: 'Draf', draftsN: 'Draf ({n})', inDrafts_one: '1 foto di Draf', inDrafts_other: '{n} foto di Draf', review: 'Tinjau', burst: 'Beruntun',
   noCamera: 'Tidak ada kamera di sini. Pilih foto dari galeri.',
   // errors
-  'err.tooLate': 'Terlambat untuk diurungkan: sudah dikirim lebih dari 10 menit lalu.', 
+  'err.tooLate': 'Terlambat untuk diurungkan: sudah dikirim lebih dari 10 menit lalu.',
   'err.gone': 'Draf itu sudah dikirim atau dihapus.', 'err.needPeople': 'Tentukan dulu siapa yang ada di foto.', 'err.needSession': 'Pilih sesinya dulu.',
   'err.notToday': 'Foto makan siang dan teh sore hanya bisa dikirim pada hari pengambilannya.',
 };

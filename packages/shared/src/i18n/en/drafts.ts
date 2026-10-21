@@ -21,7 +21,7 @@ export const drafts = {
   doneBtn: 'Done', draftsLink: 'Drafts', draftsN: 'Drafts ({n})', inDrafts_one: '1 photo in Drafts', inDrafts_other: '{n} photos in Drafts', review: 'Review', burst: 'Burst',
   noCamera: 'No camera here. Choose photos from the gallery.',
   // errors
-  'err.tooLate': 'Too late to undo: sent more than 10 minutes ago.', 
+  'err.tooLate': 'Too late to undo: sent more than 10 minutes ago.',
   'err.gone': 'That draft was already sent or deleted.', 'err.needPeople': 'Say who is in the photo first.', 'err.needSession': 'Pick the session first.',
   'err.notToday': 'Lunch and tea photos can only be sent on the day they were taken.',
 } as const;

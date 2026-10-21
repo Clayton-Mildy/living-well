@@ -275,7 +275,7 @@ export function libraryPhotos(s: ClubState, f: PhotoFilter = {}): Photo[] {
   );
 }
 /** The activity group a photo belongs to ('arrival' / 'lunch' for the door camera and the kitchen). */
-export const photoActivity = (p: Pick<Photo, 'activity' | 'kind'>): string => p.activity || (p.kind === 'arrival' ? 'arrival' : p.kind === 'lunch' ? 'lunch' : GENERAL_ACTIVITY);
+export const photoActivity = (p: Pick<Photo, 'activity' | 'kind'>): string => p.kind === 'lunch' ? 'lunch' : p.activity || (p.kind === 'arrival' ? 'arrival' : GENERAL_ACTIVITY); // tea photos (activity 'tea') sit in the lunch group
 export interface PhotoDay { date: ISODate; count: number; groups: { activity: string; photos: Photo[] }[] }
 /** Group photos by day (newest day first) and, inside a day, by activity in time order. */
 export function photoDays(photos: Photo[]): PhotoDay[] {

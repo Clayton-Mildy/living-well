@@ -337,4 +337,30 @@ describe('photo.unsend', () => {
     fails(sent, 'photo.unsend', { ids }, 's2', 'err.forbidden');
     fails(s, 'photo.unsend', { ids }, 's5', 'drafts.err.gone');
   });
+
+  it('a tea photo comes back as a tea draft, and sending it again files it under tea with the tea announcement', () => {
+    const m = shoot(fresh(), 's9');
+    const tea = step(m.s, 'photo.editDraft', { id: m.p.id, kind: 'food', meal: 'tea' }, 's9');
+    const sent = step(tea, 'photo.sendDrafts', { ids: [m.p.id] }, 's9');
+    expect(sent.dayMenus[T].teaPhotoIds).toContain(m.p.id);
+    expect(note(sent, 'kitchen.notif.teaPhoto')).toHaveLength(1);
+    const back = step(sent, 'photo.unsend', { ids: [m.p.id] }, 's9', { today: T, nowMin: 603 });
+    expect(back.photos[m.p.id]).toMatchObject({ visibility: 'draft', activity: 'tea' });
+    expect(back.dayMenus[T].teaPhotoIds ?? []).not.toContain(m.p.id);
+    expect(note(back, 'kitchen.notif.teaPhoto')).toHaveLength(0);
+    const again = step(back, 'photo.sendDrafts', { ids: [m.p.id] }, 's9');
+    expect(again.dayMenus[T].teaPhotoIds).toContain(m.p.id);
+    expect(again.dayMenus[T].photoIds ?? []).not.toContain(m.p.id);
+    expect(note(again, 'kitchen.notif.teaPhoto')).toHaveLength(1);
+    expect(note(again, 'kitchen.notif.lunchPhoto')).toHaveLength(0);
+    expect(teaPhotosOn(again, T).map((x) => x.id)).toEqual([m.p.id]);
+  });
+
+  it('the 10 minutes run across midnight: sent 23:55, back at 00:04 works, at 00:06 it is too late', () => {
+    const { s, ids } = two('s5');
+    const sent = step(s, 'photo.sendDrafts', { ids }, 's5', { today: T, nowMin: 23 * 60 + 55 });
+    const next = '2026-10-22';
+    fails(sent, 'photo.unsend', { ids }, 's5', 'drafts.err.tooLate', { today: next, nowMin: 6 });
+    expect(run(sent, 'photo.unsend', { ids }, 's5', { today: next, nowMin: 4 }).result).toMatchObject({ undone: 2 });
+  });
 });

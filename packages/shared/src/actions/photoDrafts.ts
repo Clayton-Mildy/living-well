@@ -185,7 +185,7 @@ export const photoDraftActions = [
           const tea = draftMeal(p) === 'tea';
           const list = tea ? (row.teaPhotoIds ??= []) : (row.photoIds ??= []);
           list.push(p.id);
-          p.activity = 'lunch';
+          p.activity = tea ? 'tea' : 'lunch'; // the meal stays on the photo so an unsend gives back a draft of the same meal
           p.visibility = mgmt ? 'visible' : 'pending';
           if (mgmt) {
             p.approved = { at: ctx.nowDT, by: ctx.user.id };
