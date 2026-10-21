@@ -85,9 +85,9 @@ Stock portraits for the 40 roster members m51..m90 (`MEMBER_PORTRAITS` in `packa
 | portrait-m75.jpg | m75 Oma Giok Nio Oei | https://images.unsplash.com/photo-1551876832-dd501d01e603 |
 | portrait-m76.jpg | m76 Opa Frans Lumentut | https://images.unsplash.com/photo-1623578039622-ee2d0d233382 |
 | portrait-m77.jpg | m77 Ibu Tuti Kartika | https://images.unsplash.com/photo-1595837268690-c433b3ee403f |
-| portrait-m78.jpg | m78 Bapak Darmawan Kho | https://images.unsplash.com/photo-1779883825436-0ee58e43ed0f |
+| portrait-m78.jpg | m78 Bapak Darmawan Kho | https://images.unsplash.com/photo-1592069883203-aabe051d449b |
 | portrait-m79.jpg | m79 Oma Lani Setiawan | https://images.unsplash.com/photo-1651117860079-d59586c1525f |
-| portrait-m80.jpg | m80 Opa Ferry Winata | https://images.unsplash.com/photo-1772182845616-a0e8adc9bf15 |
+| portrait-m80.jpg | m80 Opa Ferry Winata | https://images.unsplash.com/photo-1697641242017-40ee5dab38b9 |
 | portrait-m81.jpg | m81 Ibu Christina Pangestu | https://images.unsplash.com/photo-1700878032566-6114a7c1119a |
 | portrait-m82.jpg | m82 Bapak Raden Mas Soedjatmoko Hadi | https://images.unsplash.com/photo-1782105208181-c5b3b8996ad8 |
 | portrait-m83.jpg | m83 Oma Tjoa Sioe Lan | https://images.unsplash.com/photo-1556957158-a703a5cc7a76 |
