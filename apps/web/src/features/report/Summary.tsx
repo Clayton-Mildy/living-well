@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Photo } from '@cp/shared';
-import { FACES, memberName, displayName } from '@cp/shared';
+import { listName, FACES, memberName, displayName } from '@cp/shared';
 import { FIXED_SLOTS, LUNCH_AMOUNTS, activityName, roomName } from '@cp/shared/rules/activity';
 import { MOODS, type DayReport, type ReportSession } from '@cp/shared/rules/dailyReport';
 import { readingSummary } from '@cp/shared/rules/healthStation';
@@ -51,7 +51,7 @@ function Came({ r }: { r: DayReport }) {
         <Line key={x.m.id} first={i === 0} inset={66} onClick={() => go(`/members/${x.m.id}`)}>
           <MemberAvatar m={x.m} size={38} font={14} />
           <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{displayName(x.m)}</span>
+            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{listName(x.m)}</span>
             <span style={{ ...sub, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px 10px' }}>
               <span style={{ fontVariantNumeric: 'tabular-nums' }}>{visitTime(t, x)}</span>
               <span>{x.flex ? t('report.flexVisit', { n: x.flex.n, q: x.flex.quota }) : t('report.gold')}</span>

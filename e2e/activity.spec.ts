@@ -116,7 +116,7 @@ test('s5 Today: the 10:30 Keroncong session, who is in the club, the day’s pro
   // a row opens that member's entry in the daily log
   await page.getByRole('button', { name: /Bapak Bambang Purnomo: Not logged/ }).click();
   await expect(page).toHaveURL(/\/log\?member=m10$/);
-  await expect(page.getByRole('button', { name: /Bapak Bambang Purnomo/ })).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: /Bapak Bambang/ })).toHaveAttribute('aria-expanded', 'true');
   c.assertClean();
 });
 
@@ -637,20 +637,20 @@ test('Daily log: a search finds a member by name', async ({ page }) => {
   const search = page.getByLabel('Search members');
   await expect(search).toBeVisible();
   await noHScroll(page);
-  for (const n of ['Bapak Bambang Purnomo', 'Opa Hendra Gunawan', 'Opa Tjahjadi Lim']) await expect(logRow(page, n)).toBeVisible();
+  for (const n of ['Bapak Bambang', 'Opa Hendra', 'Opa Tjahjadi']) await expect(logRow(page, n)).toBeVisible();
   await search.fill('hendra');
-  await expect(logRow(page, 'Opa Hendra Gunawan')).toBeVisible();
-  await expect(logRow(page, 'Bapak Bambang Purnomo')).toHaveCount(0);
+  await expect(logRow(page, 'Opa Hendra')).toBeVisible();
+  await expect(logRow(page, 'Bapak Bambang')).toHaveCount(0);
   await expect(progress(page)).toHaveText('0 of 3 marked'); // the counts are for the whole day, not the search
   // a found member can be marked as usual: one tap in the round, then the form in Mood & notes
-  await logRow(page, 'Opa Hendra Gunawan').getByRole('button', { name: 'Joined', exact: true }).click();
+  await logRow(page, 'Opa Hendra').getByRole('button', { name: 'Joined', exact: true }).click();
   await expect(progress(page)).toHaveText('1 of 3 marked');
   await page.getByRole('tab', { name: /^Mood & notes/ }).click();
   await expect(page).toHaveURL(/round=mood/);
   await expect(search).toHaveValue(''); // a new round starts with a clear search
   await search.fill('hendra');
-  await expect(logRow(page, 'Bapak Bambang Purnomo')).toHaveCount(0);
-  await logRow(page, 'Opa Hendra Gunawan').getByRole('button', { name: /Opa Hendra Gunawan/ }).click();
+  await expect(logRow(page, 'Bapak Bambang')).toHaveCount(0);
+  await logRow(page, 'Opa Hendra').getByRole('button', { name: /Opa Hendra/ }).click();
   await page.getByRole('button', { name: 'Cheerful', exact: true }).click();
   await page.getByRole('button', { name: 'Save log' }).click();
   await expect(page.getByRole('status')).toContainText('Log saved for Opa Hendra');
@@ -658,7 +658,7 @@ test('Daily log: a search finds a member by name', async ({ page }) => {
   await search.fill('nobody called this');
   await expect(page.getByText('Nobody matches “nobody called this”.')).toBeVisible();
   await search.fill('');
-  await expect(logRow(page, 'Bapak Bambang Purnomo')).toBeVisible();
+  await expect(logRow(page, 'Bapak Bambang')).toBeVisible();
   c.assertClean();
 });
 
@@ -671,7 +671,7 @@ test('Daily log: save Bambang as quiet / ate most, then everyone else as normal 
   await expect(rounds).toHaveText([/10:30 · Keroncong sing-along$/, /Lunch$/, /13:30 · Batik painting$/, /Mood & notes$/]);
   await expect(progress(page)).toHaveText('0 of 3 marked');
   await noHScroll(page);
-  const bambang = logRow(page, 'Bapak Bambang Purnomo');
+  const bambang = logRow(page, 'Bapak Bambang');
   const log = async (uid = 's5') => (await snapshot(page, uid)).dailyLogs['log-m10-2026-10-21'];
 
   // round 1, the session: Joined / Sat out per person; he sat out
@@ -706,18 +706,18 @@ test('Daily log: save Bambang as quiet / ate most, then everyone else as normal 
   await expect.poll(async () => (await log())?.lunch).toBe('most');
   await markTheRest(page, 'Mark the rest as Ate all', 2, 'Ate all');
   await expect(progress(page)).toHaveText('All marked');
-  await expect(logRow(page, 'Opa Hendra Gunawan').getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await expect(logRow(page, 'Opa Hendra').getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect(bambang.getByRole('button', { name: 'Most', exact: true })).toHaveAttribute('aria-pressed', 'true'); // still his
   // tapping the chosen amount again clears it (Opa Tjahjadi stays without a lunch mark)
-  await logRow(page, 'Opa Tjahjadi Lim').getByRole('button', { name: 'All', exact: true }).click();
-  await expect(logRow(page, 'Opa Tjahjadi Lim').getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'false');
+  await logRow(page, 'Opa Tjahjadi').getByRole('button', { name: 'All', exact: true }).click();
+  await expect(logRow(page, 'Opa Tjahjadi').getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'false');
   await expect(progress(page)).toHaveText('2 of 3 marked');
   await expect.poll(async () => (await snapshot(page, 's5')).dailyLogs['log-m20-2026-10-21']?.lunch).toBeUndefined();
 
   // round 3, mood & notes: the form per person (mood, communicative, content, a note for the family); there is no lunch or session in it any more
   await page.getByRole('tab', { name: /^Mood & notes/ }).click();
   await expect(progress(page)).toHaveText('0 of 3 marked');
-  await bambang.getByRole('button', { name: /Bapak Bambang Purnomo/ }).click();
+  await bambang.getByRole('button', { name: /Bapak Bambang/ }).click();
   for (const m of ['Cheerful', 'Calm', 'Quiet', 'Unsettled']) await expect(page.getByRole('button', { name: m, exact: true })).toBeVisible();
   for (const m of ['Ate most', 'Ate all', 'Joined']) await expect(page.getByRole('button', { name: m, exact: true })).toHaveCount(0);
   await page.getByRole('button', { name: 'Quiet', exact: true }).click();
@@ -772,17 +772,17 @@ test('Daily log: edit yesterday’s log (the last 7 days are editable)', async (
   // lunch is its own round: Opa Hendra ate half
   await page.getByRole('tab', { name: /^Lunch/ }).click();
   const lunch = (await snapshot(page, 's5')).dailyLogs['log-m2-2026-10-20'].lunch === 'half' ? { v: 'little', label: 'Little' } : { v: 'half', label: 'Half' }; // a different amount than the seeded one (tapping the chosen one clears it)
-  await logRow(page, 'Opa Hendra Gunawan').getByRole('button', { name: lunch.label, exact: true }).click();
-  await expect(logRow(page, 'Opa Hendra Gunawan').getByRole('button', { name: lunch.label, exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await logRow(page, 'Opa Hendra').getByRole('button', { name: lunch.label, exact: true }).click();
+  await expect(logRow(page, 'Opa Hendra').getByRole('button', { name: lunch.label, exact: true })).toHaveAttribute('aria-pressed', 'true');
   await expect.poll(async () => (await snapshot(page, 's5')).dailyLogs['log-m2-2026-10-20']?.lunch).toBe(lunch.v);
   // and his Mood & notes entry is edited in place
   await page.getByRole('tab', { name: /^Mood & notes/ }).click();
-  await logRow(page, 'Opa Hendra Gunawan').getByRole('button', { name: /Opa Hendra Gunawan/ }).click();
+  await logRow(page, 'Opa Hendra').getByRole('button', { name: /Opa Hendra/ }).click();
   await page.getByRole('button', { name: 'Cheerful', exact: true }).click();
   await page.getByPlaceholder('Short note for the family (optional)').fill('Late edit from the notes.');
   await page.getByRole('button', { name: 'Save changes' }).click();
   await expect(page.getByRole('status')).toContainText('Log updated for Opa Hendra');
-  await expect(logRow(page, 'Opa Hendra Gunawan').getByText('Saved · Cheerful')).toBeVisible();
+  await expect(logRow(page, 'Opa Hendra').getByText('Saved · Cheerful')).toBeVisible();
   const s = await snapshot(page, 's5');
   const l = s.dailyLogs['log-m2-2026-10-20'];
   expect(l).toMatchObject({ mood: 'cheerful', lunch: lunch.v, note: 'Late edit from the notes.' });
@@ -956,7 +956,7 @@ test('the language switch turns the whole teacher screen Indonesian', async ({ p
   else await page.getByRole('button', { name: 'ID', exact: true }).click();
   if (isPhone(page)) await page.keyboard.press('Escape');
   await expect(page.getByRole('heading', { level: 1, name: 'Catatan harian' })).toBeVisible();
-  const bambang = logRow(page, 'Bapak Bambang Purnomo');
+  const bambang = logRow(page, 'Bapak Bambang');
   const english = /Log rounds|Mood & notes|Mark the rest|Joined|Sat out|\bmarked\b|Search members/;
   // the rounds are named in Indonesian; the first session offers Ikut / Tidak ikut
   await expect(page.getByRole('tablist', { name: 'Putaran catatan' })).toBeVisible();
@@ -969,7 +969,7 @@ test('the language switch turns the whole teacher screen Indonesian', async ({ p
   expect(await page.locator('#main').innerText()).not.toMatch(english);
   // mood & notes: the form of one person
   await page.getByRole('tab', { name: /^Suasana hati dan catatan/ }).click();
-  await bambang.getByRole('button', { name: /Bapak Bambang Purnomo/ }).click();
+  await bambang.getByRole('button', { name: /Bapak Bambang/ }).click();
   for (const m of ['Ceria', 'Tenang', 'Pendiam', 'Gelisah']) await expect(page.getByRole('button', { name: m, exact: true })).toBeVisible();
   expect(await page.locator('#main').innerText()).not.toMatch(english);
   expect(await page.locator('#main').innerText()).not.toMatch(RAW_KEY);

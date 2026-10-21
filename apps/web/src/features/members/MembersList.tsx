@@ -3,7 +3,7 @@
 // Pending new members are listed as "Pending approval". The details (age, mobility, allergies, medicines) live on the profile.
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { contactsOfMember, displayFull, displayName, flexMonth, fmtPhone, isPendingRow, memberName, initials, ym } from '@cp/shared';
+import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, memberName, initials, ym } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
@@ -13,7 +13,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
-import { relLabel, rowStatusText, STATUS_STYLE } from './lib';
+import { FullName, relLabel, rowStatusText, STATUS_STYLE } from './lib';
 
 const PAGE_SIZE = 10;
 
@@ -140,10 +140,10 @@ export function MembersList() {
                   </span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{displayName(r.m)}</span>
+                      <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{listName(r.m)}</span>
                       <span title={pc.tip} style={{ flex: 'none', fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{pc.text}</span>
                     </span>
-                    {displayFull(r.m) ? <span data-full-name="" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', overflowWrap: 'anywhere' }}>{displayFull(r.m)}</span> : null}
+                    <FullName m={r.m} size={13} />
                     {contactLine(r, 13)}
                     <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0 6px', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>
                       <span className={showSt ? undefined : 'cp-hide-phone'} style={showSt && r.st.key === 'pending' ? { color: st.fg, fontWeight: 500 } : undefined}>{stText}{showSt && sd.length ? ' ·' : ''}</span>
@@ -212,8 +212,8 @@ export function MembersList() {
                   style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500, flex: 'none', boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{displayName(r.m)}</span>
-                  {displayFull(r.m) ? <span data-full-name="" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259', ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{displayFull(r.m)}</span> : null}
+                  <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{listName(r.m)}</span>
+                  <FullName m={r.m} ellipsis={!isPhone} />
                   <span style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>
                     <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: st.dot, flex: 'none', marginTop: 7 }} />
                     <span style={{ minWidth: 0 }}>

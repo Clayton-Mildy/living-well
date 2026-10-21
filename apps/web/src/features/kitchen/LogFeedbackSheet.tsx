@@ -1,6 +1,6 @@
 // Staff log meal feedback received by phone (feedback.log): who it is about, which meal, what was said.
 import { useMemo, useState } from 'react';
-import { activeOn, displayName, listMembers, memberName, menuOn } from '@cp/shared';
+import { listName, activeOn, listMembers, memberName, menuOn } from '@cp/shared';
 import { Avatar, Button, Chip, DateField, Icon, Note, Pager, Sheet, TextField, usePaged } from '../../components/ui';
 import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -23,7 +23,7 @@ export function LogFeedbackSheet({ open, onClose, memberId: preset }: { open: bo
   useResetOn(open, () => { if (open) { setQ(''); setMemberId(preset ?? null); setDate(today); setDish(''); setText(''); } });
   const members = useMemo(() => listMembers(s).filter((m) => activeOn(m, today) && !m.deletedAt), [s.members, today]); // eslint-disable-line react-hooks/exhaustive-deps
   const needle = q.trim().toLocaleLowerCase();
-  const found = useMemo(() => members.filter((m) => !needle || `${memberName(m)} ${displayName(m)}`.toLocaleLowerCase().includes(needle)), [members, needle]);
+  const found = useMemo(() => members.filter((m) => !needle || `${memberName(m)} ${listName(m)}`.toLocaleLowerCase().includes(needle)), [members, needle]);
   const paged = usePaged(found, 6, needle); // searching starts again on page 1
   const shown = paged.rows;
   const picked = memberId ? s.members[memberId] : undefined;
@@ -46,7 +46,7 @@ export function LogFeedbackSheet({ open, onClose, memberId: preset }: { open: bo
       {picked ? (
         <div className="cp-grey" style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 12px', background: 'var(--fill, #F4F4F5)', borderRadius: 12 }}>
           <Avatar name={memberName(picked)} tone={picked.photoTone} src={memberPhoto(picked)} size={40} />
-          <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>{displayName(picked)}</span>
+          <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>{listName(picked)}</span>
           {!preset ? <Button variant="ghost" size={44} onClick={() => setMemberId(null)}>{t('kitchen.log.change')}</Button> : null}
         </div>
       ) : (
@@ -57,7 +57,7 @@ export function LogFeedbackSheet({ open, onClose, memberId: preset }: { open: bo
               <button key={m.id} type="button" onClick={() => setMemberId(m.id)} className="h-row"
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '8px 14px', minHeight: 56, border: 'none', borderTop: k ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
                 <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={40} />
-                <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>{displayName(m)}</span>
+                <span style={{ flex: 1, fontSize: 16, fontWeight: 500 }}>{listName(m)}</span>
                 <Icon name="chevron_right" size={22} color="#5E5852" />
               </button>
             ))}

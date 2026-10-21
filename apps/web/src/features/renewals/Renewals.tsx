@@ -5,7 +5,7 @@
 // | quick answers (Continue, No answer) and Call / WhatsApp. A laptop gets a table with a header row; a tablet puts the answers on a line under the row; a phone stacks
 // the pills and the next step under the name. A tap opens the follow-up sheet. Past months are a read-only log (no next step, no actions).
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { addMonths, flexMonth, fmtPhone, memberName, displayName, waUrl, ym, type Plan, type YM } from '@cp/shared';
+import { listName, addMonths, flexMonth, fmtPhone, memberName, displayName, waUrl, ym, type Plan, type YM } from '@cp/shared';
 import { RENEWAL_STATES, renewalCounts, renewalDates, renewalFilter, renewalMonth, renewalNext, renewalRows, type RenewalRow, type RenewalState } from '@cp/shared/rules/renewals';
 import { Avatar, EmptyState, GROUP_HEAD, HAIRLINE, Icon, IconButton, InfoChip, PageHead, Pager, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -134,7 +134,7 @@ export function Renewals() {
   const stacked = room < TABLE_MIN;
   const inlineActions = !stacked && !past && room >= INLINE_MIN;
   const rowEl = (r: RenewalRow, i: number) => {
-    const name = displayName(r.m);
+    const name = listName(r.m);
     const phone = r.contact?.phone ? fmtPhone(r.contact.phone) : '';
     const look = statusLook(t, fmt, r);
     const next = renewalNext(r, month, today);

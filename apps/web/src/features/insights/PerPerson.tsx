@@ -1,7 +1,7 @@
 // Insights, Per person: search, sort (most visits, fewest visits, last visit) and one quiet row per member (name, plan, usual days, visits). A tap
 // opens that member's detail (monthly visits, usual days, arrival trend, last 10 visits).
 import { useMemo, useState } from 'react';
-import { displayName, memberName } from '@cp/shared';
+import { listName, memberName } from '@cp/shared';
 import { matchesQuery } from '@cp/shared/rules/members';
 import { PERSON_SORTS, sortPeople, type PersonSort, type VisitInsights } from '@cp/shared/rules/insights';
 import { Avatar, Group, Icon, Pager, Select, usePaged } from '../../components/ui';
@@ -44,7 +44,7 @@ export function PerPerson({ data, onOpen }: { data: VisitInsights; onOpen: (memb
           {paged.rows.map((p, i) => {
             const m = s.members[p.memberId];
             if (!m) return null;
-            const name = displayName(m);
+            const name = listName(m);
             const days = p.usual.map((w) => wd.short[w]).join(', ');
             return (
               <button key={p.memberId} type="button" onClick={() => onOpen(p.memberId)} className="h-row cp-bleed" data-member={p.memberId} aria-label={name}

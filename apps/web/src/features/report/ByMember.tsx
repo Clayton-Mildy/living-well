@@ -3,7 +3,7 @@
 // Tapping a member opens the profile.
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { displayName } from '@cp/shared';
+import { listName } from '@cp/shared';
 import { activityName } from '@cp/shared/rules/activity';
 import type { DayReport, ReportMember } from '@cp/shared/rules/dailyReport';
 import { EmptyState, FACE_ICON, Group, Icon } from '../../components/ui';
@@ -89,7 +89,7 @@ export function ByMember({ r, wide }: { r: DayReport; wide: boolean }) {
             <span style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
               <MemberAvatar m={x.m} size={36} font={13} />
               <span style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{displayName(x.m)}</span>
+                <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{listName(x.m)}</span>
                 {x.pendingLog ? <PendingMark row={x.log} /> : null}
               </span>
             </span>
@@ -116,7 +116,7 @@ export function ByMember({ r, wide }: { r: DayReport; wide: boolean }) {
           <Line key={x.m.id} first={i === 0} inset={66} onClick={() => go(`/members/${x.m.id}`)} style={{ alignItems: 'flex-start' }}>
             <MemberAvatar m={x.m} size={38} font={14} />
             <span data-member={x.m.id} style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{displayName(x.m)}</span>
+              <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{listName(x.m)}</span>
               <span style={{ ...sub, fontVariantNumeric: 'tabular-nums' }}>
                 {line2.map((p, k) => <span key={k} style={{ color: p === lunchText(t, x) && (x.lunch === 'little' || x.lunch === 'none') ? RUST : undefined }}>{k ? ' · ' : ''}{p}</span>)}
                 {mood || x.arrivalFace !== undefined || x.departureFace !== undefined ? <span>{line2.length ? ' · ' : ''}<DoorFaces x={x} />{mood}</span> : null}

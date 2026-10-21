@@ -2,7 +2,7 @@
 // a search box finds the rest, and the matches are paged. Used for the group photo and for editing a photo's tags.
 // Round 6 (phone): the grey iOS search bar and a flat list with inset hairlines and a press tint (no bordered box).
 import { useMemo, useState, type ReactNode } from 'react';
-import { displayName, memberName, type Member } from '@cp/shared';
+import { listName, displayName, memberName, type Member } from '@cp/shared';
 import { searchMembers } from '@cp/shared/rules/activity';
 import { Icon, Pager, TextField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useT } from '../../lib/i18n';
@@ -67,7 +67,7 @@ export function MemberPicker({ members, value, onChange, suggested = [], sub, se
                   <button type="button" aria-pressed={on} aria-label={memberName(m)} onClick={() => toggle(m.id)} className={isPhone ? 'cp-tap-self' : 'h-row'} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: isPhone ? '8px 12px 8px 14px' : '8px 14px', minHeight: 56, border: 'none', background: on ? 'var(--press, #EEEEF0)' : 'transparent', cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
                     <Av m={m} size={36} fs={FONT_SMALL} />
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(m)}</span>
+                      <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listName(m)}</span>
                       {sub ? <span style={{ fontSize: 12, color: '#5E5852' }}>{sub(m)}</span> : null}
                     </span>
                     <Icon name={on ? 'check_circle' : 'add_circle'} size={24} fill={on ? 1 : 0} color="var(--accent, #75624B)" />

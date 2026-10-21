@@ -128,7 +128,7 @@ test.describe('leave (cuti)', () => {
     await page.keyboard.press('Escape');
     // the lobby: her row says so, and the check-in is refused with a clear message (the server too)
     await signIn(page, 's1', '/today');
-    await expect(page.getByRole('button', { name: /^Oma Lina Wijaya\b/ })).toContainText('On leave · Dec');
+    await expect(page.getByRole('button', { name: /^Oma Lina\b/ })).toContainText('On leave · Dec');
     await page.getByRole('button', { name: /^Check in: Oma Lina Wijaya/ }).click();
     await page.getByRole('button', { name: 'Confirm check-in' }).click();
     await toast(page, /Oma Lina is on leave in December 2026/);
@@ -179,7 +179,7 @@ test.describe('an unpaid invoice: on hold on the 1st, stopped on the 3rd', () =>
     await setDay(request, '2026-11-02');
     // Arrivals: the row says "Suspended · unpaid"
     await signIn(page, 's1', '/today');
-    await expect(page.getByRole('button', { name: /^Oma Lina Wijaya\b/ })).toContainText('Suspended · unpaid');
+    await expect(page.getByRole('button', { name: /^Oma Lina\b/ })).toContainText('Suspended · unpaid');
     await page.getByRole('button', { name: /^Check in: Oma Lina Wijaya/ }).click();
     await page.getByRole('button', { name: 'Confirm check-in' }).click();
     await toast(page, /Membership on hold: invoice INV-2610-001 \(Rp 2\.700\.000\) is still unpaid/);
@@ -208,7 +208,7 @@ test.describe('an unpaid invoice: on hold on the 1st, stopped on the 3rd', () =>
     // paying lifts the hold at once, and she can check in
     await ok(request, 's10', 'payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001' });
     await signIn(page, 's1', '/today');
-    await expect(page.getByRole('button', { name: /^Oma Lina Wijaya\b/ })).not.toContainText('Suspended');
+    await expect(page.getByRole('button', { name: /^Oma Lina\b/ })).not.toContainText('Suspended');
     expect((await api(request, 's1', 'attendance.checkIn', { memberId: 'm1', method: 'manual' })).ok()).toBeTruthy();
     c.assertClean();
   });

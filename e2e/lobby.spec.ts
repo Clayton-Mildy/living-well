@@ -107,7 +107,7 @@ test('In the club: the camera goes, a searchable list of members in the club wit
   const inClub = inClubList(page);
   await expect(inClub.getByRole('heading', { name: 'In the club', level: 2 })).toBeVisible();
   // the three who arrived, newest first, each with a Check out button and the arrival time
-  for (const [n, at] of [['Bapak Bambang Purnomo', '09:48'], ['Opa Hendra Gunawan', '09:40'], ['Opa Tjahjadi Lim', '09:38']]) {
+  for (const [n, at] of [['Bapak Bambang', '09:48'], ['Opa Hendra', '09:40'], ['Opa Tjahjadi', '09:38']]) {
     await expect(inClub.getByRole('button', { name: new RegExp(`^${n}\\b`) })).toContainText(`Arrived ${at}`);
     await expect(inClub.getByRole('button', { name: `Check out: ${n}` })).toHaveText('Check out');
   }
@@ -227,8 +227,8 @@ test('check in by name from the list: Opa Budi (Gold, unlimited) confirms in a d
   await expect(tile(page, 'inClub')).toHaveText('4');
   await expect(rowOf(page, 'Opa Budi Wijaya')).toHaveCount(0); // checked in: off the check-in list
   await checkOutMode(page);
-  await expect(openRow(page, 'Opa Budi Wijaya')).toContainText(/Arrived \d\d:\d\d/);
-  await expect(openRow(page, 'Opa Budi Wijaya')).not.toContainText('·'); // just the time: nobody "brought" him
+  await expect(openRow(page, 'Opa Budi')).toContainText(/Arrived \d\d:\d\d/);
+  await expect(openRow(page, 'Opa Budi')).not.toContainText('·'); // just the time: nobody "brought" him
   await expect(page.getByRole('button', { name: 'Confirm check-in' })).toHaveCount(0);
   await assertNoHorizontalScroll(page);
   c.assertClean();
@@ -267,7 +267,7 @@ test('search the check-in list by name, family or phone, then check in; undo fro
   await expect(tile(page, 'inClub')).toHaveText('4');
   // undo from the drawer (she is on the check-out list now)
   await checkOutMode(page);
-  await openRow(page, 'Oma Lina Wijaya').click();
+  await openRow(page, 'Oma Lina').click();
   const drawer = page.getByRole('dialog', { name: 'Oma Lina Wijaya' });
   await expect(drawer.getByText(/Arrived \d\d:\d\d$/).first()).toBeVisible();
   await drawer.getByRole('button', { name: 'Undo check-in' }).click();
@@ -348,8 +348,8 @@ test('face opt-out: once management records it, Simulate skips Oma Lina and she 
   // "Not this person" asks who it really is: pick Oma Lina, then confirm as a manual check-in
   await page.getByRole('button', { name: 'Not this person' }).click();
   const who = page.getByRole('dialog', { name: 'Who is this?' });
-  await expect(who.getByRole('button', { name: /Opa Budi Wijaya/ })).toHaveCount(0); // the wrong match is not offered
-  await who.getByRole('button', { name: /Oma Lina Wijaya/ }).click();
+  await expect(who.getByRole('button', { name: /Opa Budi/ })).toHaveCount(0); // the wrong match is not offered
+  await who.getByRole('button', { name: /Oma Lina/ }).click();
   await page.getByRole('dialog', { name: 'Check in' }).getByRole('button', { name: 'Confirm check-in' }).click();
   await expect(toast(page, /Oma Lina checked in at \d\d:\d\d\./)).toBeVisible();
   await expect(tile(page, 'inClub')).toHaveText('4');
@@ -385,10 +385,10 @@ test('check out Opa Hendra: send to the health station, then one confirmation; u
   await expect(inClubList(page).getByRole('button', { name: /Opa Hendra/ })).toHaveCount(0); // off the check-out list…
   await openTile(page, 'goneHome');
   await expect(goneHomeList(page)).toBeInViewport();
-  await expect(goneHomeList(page).getByRole('button', { name: /^Opa Hendra Gunawan/ })).toContainText(/Arrived 09:40 · left \d\d:\d\d/); // …and on Gone home
-  await expect(openRow(page, 'Opa Hendra Gunawan')).toContainText(/Arrived 09:40 · left \d\d:\d\d/);
+  await expect(goneHomeList(page).getByRole('button', { name: /^Opa Hendra/ })).toContainText(/Arrived 09:40 · left \d\d:\d\d/); // …and on Gone home
+  await expect(openRow(page, 'Opa Hendra')).toContainText(/Arrived 09:40 · left \d\d:\d\d/);
   // undo the check-out from the drawer
-  await openRow(page, 'Opa Hendra Gunawan').click();
+  await openRow(page, 'Opa Hendra').click();
   const drawer = page.getByRole('dialog', { name: 'Opa Hendra Gunawan' });
   await expect(drawer).not.toContainText(/Collected by/i);
   await drawer.getByRole('button', { name: 'Undo check-out' }).click();
@@ -403,9 +403,9 @@ test('the member drawer: today, care, notes and family with tel: links; no Broug
   const c = watchConsole(page);
   await signIn(page, 's1');
   await checkOutMode(page);
-  await openRow(page, 'Opa Hendra Gunawan').click();
+  await openRow(page, 'Opa Hendra').click();
   const drawer = page.getByRole('dialog', { name: 'Opa Hendra Gunawan' });
-  await expect(drawer.getByRole('heading', { name: 'Opa Hendra Gunawan' })).toBeVisible();
+  await expect(drawer.getByRole('heading', { name: 'Opa Hendra' })).toBeVisible();
   await expect(drawer.getByText('84 · Gold · unlimited days')).toBeVisible();
   await expect(drawer.getByText('Arrived 09:40', { exact: true })).toBeVisible();
   await expect(drawer).toContainText('Walker');
@@ -433,7 +433,7 @@ test('the member drawer: today, care, notes and family with tel: links; no Broug
 
 test('the drawer of a member who has not come in: usual arrival, the nanny as care information, and Check in', async ({ page }) => {
   await signIn(page, 's1');
-  await openRow(page, 'Oma Lina Wijaya').click();
+  await openRow(page, 'Oma Lina').click();
   const drawer = page.getByRole('dialog', { name: 'Oma Lina Wijaya' });
   await expect(drawer.getByText('Flex · visit 11 of 10 this month')).toBeVisible();
   await expect(drawer.getByText('Not checked in today · Usually arrives around 10:05')).toBeVisible();
@@ -585,7 +585,7 @@ test('Indonesian: the board, check-in list, drawer, check-out and the extra-day 
   expect(t).not.toMatch(RAW_KEY);
   expect(t).not.toMatch(GENERIC_KEY);
   await assertNoHorizontalScroll(page);
-  await openRow(page, 'Opa Hendra Gunawan').click();
+  await openRow(page, 'Opa Hendra').click();
   t = await text();
   expect(t).not.toMatch(RAW_KEY);
   expect(t).toContain('Petunjuk perawatan');
@@ -630,7 +630,7 @@ test('layout: the board fits the screen with its confirm, drawer and dialog open
   await page.getByRole('dialog', { name: 'Check in' }).getByRole('button', { name: 'Cancel' }).click();
   await checkOutMode(page);
   await assertNoHorizontalScroll(page);
-  await openRow(page, 'Bapak Bambang Purnomo').click();
+  await openRow(page, 'Bapak Bambang').click();
   const drawer = page.getByRole('dialog', { name: 'Bapak Bambang Purnomo' });
   await expect(drawer).toBeVisible();
   await page.waitForTimeout(400); // the drawer slides in

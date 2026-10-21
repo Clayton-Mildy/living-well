@@ -480,7 +480,7 @@ test('join: the form questions are asked, the trial day fills in the allergies, 
   const j = page.getByRole('dialog', { name: 'Opa Leo Gunadi' });
   await expect(j.getByText('Allergies and needs from the trial day are filled in.')).toBeVisible();
   await expect(j.getByRole('button', { name: 'Shellfish', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await j.getByLabel('Nickname (Panggilan)').fill('Opa Leo');
+  await j.getByLabel('Called', { exact: true }).fill('Opa Leo');
   await j.getByLabel('Home address').fill('Jl. Kenanga 3');
   // the four brochure pages with the answers, before the member exists
   await page.evaluate(() => { const w = window as unknown as { __prints: number }; w.__prints = 0; window.print = () => { w.__prints += 1; }; });
@@ -496,7 +496,7 @@ test('join: the form questions are asked, the trial day fills in the allergies, 
   expect(await page.evaluate(() => (window as unknown as { __prints: number }).__prints)).toBe(1);
   await page.keyboard.press('Escape'); // closes the printed form; the Join dialog keeps what was typed
   await expect(page.getByTestId('application-form')).toHaveCount(0);
-  await expect(j.getByLabel('Nickname (Panggilan)')).toHaveValue('Opa Leo');
+  await expect(j.getByLabel('Called', { exact: true })).toHaveValue('Opa Leo');
   await attachForm(j);
   await j.getByRole('button', { name: 'Create member · Flex' }).click();
   await expect(toast(page, /Opa Leo Gunadi is now a member/)).toBeVisible();

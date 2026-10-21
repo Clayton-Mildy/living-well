@@ -97,7 +97,7 @@ test('members list: compact rows (name, status, plan), search finds family names
   await expect(page.locator('[data-member="m46"]')).toContainText('Gold');
   await expect(page.locator('[data-member="m46"]')).toContainText('Last visit Tue 20 Oct');
   await expect(page.locator('[data-member="m1"]')).not.toContainText(/years|Walker|Walking|allerg|Amlodipine|Penicillin|Shellfish|Peanuts|new member/i);
-  for (const id of ['m1', 'm2', 'm10', 'm20', 'm46']) expect((await page.locator(`[data-member="${id}"]`).boundingBox())!.height, id).toBeLessThanOrEqual(isPhone(page) ? 104 : 80); // a compact row
+  for (const id of ['m1', 'm2', 'm10', 'm20', 'm46']) expect((await page.locator(`[data-member="${id}"]`).boundingBox())!.height, id).toBeLessThanOrEqual(isPhone(page) ? 112 : 80); // a compact row
   // what needs a look is an icon, with the reading or the reason as its name
   await expect(page.locator('[data-member="m2"]').getByRole('img', { name: /^Watch · BP \d+\/\d+$/ })).toBeVisible();
   // Tjahjadi's overdue invoice has put his membership on hold (the brochure's terms): "Suspended · unpaid" says more than "Payment overdue"
@@ -170,7 +170,7 @@ test("Lina's profile: every tab renders, back returns to the list", async ({ pag
   const c = watchConsole(page);
   await signIn(page, 's1', '/members');
   await openFromList(page, 'Oma Lina');
-  await expect(page.getByRole('heading', { name: 'Oma Lina Wijaya', level: 1 })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Oma Lina', level: 1 })).toBeVisible();
   await expect(page.getByRole('tab')).toHaveCount(10);
   for (const name of TABS) {
     await page.getByRole('tab', { name, exact: true }).click();
@@ -1164,7 +1164,7 @@ test('application form: add a member with the new answers, print the form to sig
   const d = dialog(page);
   await d.getByLabel('Full name, as on the KTP').fill('Siti Rahma');
   await pickDate(page, 'Date of birth', '1946-03-12');
-  await d.getByLabel('Nickname (Panggilan)').fill('Oma Siti');
+  await d.getByLabel('Called', { exact: true }).fill('Oma Siti');
   await d.getByRole('button', { name: 'Widowed', exact: true }).click();
   await d.getByLabel('RT/RW').fill('004/002');
   await d.getByLabel('Postcode').fill('12730');
@@ -1212,7 +1212,7 @@ test('application form: add a member with the new answers, print the form to sig
   await page.keyboard.press('Escape'); // closes the printed form only; the member form stays open with what was typed
   await expect(page.getByTestId('application-form')).toHaveCount(0);
   await expect(d).toBeVisible();
-  await expect(d.getByLabel('Nickname (Panggilan)')).toHaveValue('Oma Siti');
+  await expect(d.getByLabel('Called', { exact: true })).toHaveValue('Oma Siti');
   // the signed form is scanned and attached as before (still required)
   await d.getByRole('switch', { name: /Use of information/ }).click();
   await d.getByRole('button', { name: 'Create member' }).click();
@@ -1293,8 +1293,8 @@ test('application form: Edit details changes the answers; they show on Overview;
   await expect(main(page)).toContainText('RT/RW 004/002 · Jakarta Selatan · 12730');
   await page.getByRole('button', { name: /Edit details/ }).first().click();
   const d = dialog(page);
-  await expect(d.getByLabel('Nickname (Panggilan)')).toHaveValue('Oma Lina');
-  await d.getByLabel('Nickname (Panggilan)').fill('Oma Lin');
+  await expect(d.getByLabel('Called', { exact: true })).toHaveValue('Oma Lina');
+  await d.getByLabel('Called', { exact: true }).fill('Oma Lin');
   await d.getByRole('button', { name: 'Widowed', exact: true }).click();
   await d.getByLabel('Home phone').fill('021 5550 9988');
   await d.getByLabel('Postcode').fill('12');
@@ -1314,7 +1314,7 @@ test('application form: Edit details changes the answers; they show on Overview;
   // the front desk's change waits for management, which sees the old and the new answer
   await signIn(page, 's1', '/members/m2');
   await page.getByRole('button', { name: /Edit details/ }).first().click();
-  await dialog(page).getByLabel('Nickname (Panggilan)').fill('Opa H');
+  await dialog(page).getByLabel('Called', { exact: true }).fill('Opa H');
   await dialog(page).getByRole('button', { name: 'Submit for review' }).click();
   await expect(dialog(page)).toHaveCount(0);
   await expect(main(page)).toContainText('Opa Hendra'); // still the old answer

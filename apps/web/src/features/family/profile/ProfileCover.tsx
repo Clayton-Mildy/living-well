@@ -2,7 +2,7 @@
 // top (sticky, so the white panel below slides up over it) with ‹ back and Edit floating on it, and the plan, name and age at its foot.
 // The picture is their profile picture (the demo's stock portrait); without one, the newest photo of them; without that, the bronze gradient and their initials.
 import type { ReactNode } from 'react';
-import { displayName } from '@cp/shared';
+import { listName } from '@cp/shared';
 import { ownPicture } from '@cp/shared/rules/famPhotos';
 import { PhotoImg } from '../../../components/ui';
 import { useDevice } from '../../../hooks/useDevice';
@@ -28,7 +28,7 @@ export function ProfileCover({ p, top }: { p: PCtx; /** the floating ‹ back an
       <div data-testid="pf-head" style={{ position: 'relative', padding: `20px 20px ${PANEL_OVERLAP + 20}px`, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
         {pic ? null : <span style={{ marginBottom: 6 }}><MemberFace m={m} size={72} ring /></span>}
         <span style={{ fontSize: 12, letterSpacing: '1.6px', textTransform: 'uppercase', fontWeight: 600, opacity: 0.9 }}>{eyebrow}</span>
-        <h1 style={{ margin: 0, fontSize: 36, lineHeight: 1.04, fontWeight: 300, letterSpacing: '-1.1px', overflowWrap: 'anywhere' }}>{displayName(m)}</h1>
+        <h1 style={{ margin: 0, fontSize: 36, lineHeight: 1.04, fontWeight: 300, letterSpacing: '-1.1px', overflowWrap: 'anywhere' }}>{listName(m)}</h1>
         {sub ? <span style={{ fontSize: 15, lineHeight: 1.35, opacity: 0.9 }}>{sub}</span> : null}
       </div>
     </section>

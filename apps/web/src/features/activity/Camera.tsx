@@ -9,7 +9,7 @@
 // Round 6 (phone, native look): an iOS segmented Camera | Library, the video action as a list row, "Sent today" and the solo list under small grey headers, a grey search bar.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { famNames, displayName, primaryContact, type Photo } from '@cp/shared';
+import { listName, famNames, displayName, primaryContact, type Photo } from '@cp/shared';
 import { draftsOf } from '@cp/shared/rules/photoAi';
 import { curAct, faceTagging, inClubMembers, photoCountByMember, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, activityName, roomName } from '@cp/shared/rules/activity';
 import { Button, CameraCapture, GROUP_HEAD, Icon, PageHead, Pager, Pin, PhotoImg, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
@@ -255,7 +255,7 @@ export function Camera() {
                     <Av m={m} size={40} fs={15} />
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                        <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, minWidth: 0 }}>{displayName(m)}</span>
+                        <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, minWidth: 0 }}>{listName(m)}</span>
                         {n ? <span data-today-count={n} style={{ flex: 'none', color: '#3D6B4F', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#3D6B4F' }} />{t('activity.nToday', { n })}</span> : null}
                       </span>
                       {sub ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span> : null}
@@ -289,7 +289,7 @@ export function Camera() {
                 <Av m={m} size={44} fs={16} />
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, minWidth: 0 }}>{displayName(m)}</span>
+                    <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, minWidth: 0 }}>{listName(m)}</span>
                     {n ? <span data-today-count={n} style={{ flex: 'none', color: '#3D6B4F', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#3D6B4F' }} />{t('activity.nToday', { n })}</span> : null}
                   </span>
                   {sub ? <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6B6259', lineHeight: 1.4 }}>{sub}</span> : null}

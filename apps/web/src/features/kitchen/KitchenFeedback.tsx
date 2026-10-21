@@ -1,7 +1,7 @@
 // Kitchen feedback (design ScrKfeed): meal feedback from families and staff-logged calls, a reply that reaches the family on WhatsApp
 // (simulated in the demo; the replies are kept on the card), edit a reply, reopen or close an item.
 import { useState } from 'react';
-import { actorName, displayName, memberName } from '@cp/shared';
+import { listName, actorName, memberName } from '@cp/shared';
 import { feedbackReplies, replyTarget } from '@cp/shared/rules/kitchenOps';
 import type { Feedback } from '@cp/shared';
 import { Avatar, Button, EmptyState, GROUP_HEAD, Icon, Note, PageHead, Pager, Pin, usePaged, FONT_SMALL } from '../../components/ui';
@@ -97,7 +97,7 @@ function FeedbackCard({ f }: { f: Feedback }) {
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         {m ? <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={44} /> : null}
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{m ? displayName(m) : '—'}</span>
+          <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{m ? listName(m) : '—'}</span>
           <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{from}</span>
         </div>
         <FeedbackBadge status={f.status} />

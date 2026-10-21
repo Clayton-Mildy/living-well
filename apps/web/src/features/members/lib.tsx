@@ -1,6 +1,6 @@
 // Members area: shared labels, status styles and small helpers used by the list, the profile and the reviews screen.
 import type { CSSProperties } from 'react';
-import { memberName, displayName, sessionsOn, type ChangeRequest, type ClubState, type DailyLog, type Diet, type DocType, type DrugAllergy, type EndReason, type FoodAllergen, type Health, type Lang, type Member, type MedTiming, type Mobility, type Relation } from '@cp/shared';
+import { displayFull, memberName, displayName, sessionsOn, type ChangeRequest, type ClubState, type DailyLog, type Diet, type DocType, type DrugAllergy, type EndReason, type FoodAllergen, type Health, type Lang, type Member, type MedTiming, type Mobility, type Relation } from '@cp/shared';
 import { plainName, type MemberStatus } from '@cp/shared/rules/members';
 import type { TFn } from '../../lib/i18n';
 
@@ -64,6 +64,12 @@ export const healthLabel = (t: TFn, h: Health) => t('status.' + h);
 
 // ---------- text helpers ----------
 export const fullName = (m: Member) => memberName(m);
+/** The registered full name, small and muted under the nickname a member goes by; nothing when there is no nickname. */
+export function FullName({ m, size = 14, ellipsis = false }: { m: Parameters<typeof displayFull>[0]; size?: number; ellipsis?: boolean }) {
+  const full = displayFull(m);
+  if (!full) return null;
+  return <div data-full-name="" style={{ fontSize: size, lineHeight: `${size + 6}px`, color: '#6B6259', ...(ellipsis ? { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } : { overflowWrap: 'anywhere' }) }}>{full}</div>;
+}
 export const nameField = (m: Member) => plainName(m);
 export const mmss = (sec?: number) => (sec == null ? '' : `${Math.floor(sec / 60)}:${String(sec % 60).padStart(2, '0')}`);
 /** Today shows only the time; other days show date and time. */

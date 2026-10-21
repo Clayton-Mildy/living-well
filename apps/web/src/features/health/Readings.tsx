@@ -137,7 +137,7 @@ export function Readings() {
             <>
               <Av name={who?.name || ''} tone={who?.tone} src={who?.photo} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.short}</span>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.lead}</span>
                 <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{readingTitle(r, t)}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{`${t(CHECK_KEY[r.kind])} · ${r.time}`}</span>
               </span>
@@ -205,7 +205,7 @@ export function Readings() {
             <>
               <Av name={who?.name || ''} tone={who?.tone} src={who?.photo} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.short}</span>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.lead}</span>
                 <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{readingTitle(r, t)}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{`${t(CHECK_KEY[r.kind])} · ${r.time}`}</span>
               </span>

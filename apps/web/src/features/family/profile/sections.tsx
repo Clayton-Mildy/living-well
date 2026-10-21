@@ -3,7 +3,7 @@
 // jump chips can scroll to it (the page itself is in ../FamilyProfile.tsx).
 import { cloneElement, type CSSProperties, type ReactNode } from 'react';
 import {
-  actorName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, displayName, memberSince, primaryContact, priceOn, rp, sortBy, staffCall, waUrl, ym,
+  actorName, listName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, displayName, memberSince, primaryContact, priceOn, rp, sortBy, staffCall, waUrl, ym,
   type ClubState, type DocType, type Health, type ISODate, type Member, type MemberNote,
 } from '@cp/shared';
 import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/members';
@@ -72,7 +72,7 @@ export function ProfileHead({ p, column }: { p: PCtx; /** the laptop's left colu
       <MemberFace m={m} size={column ? 96 : 72} ring />
       <span style={{ display: 'flex', flexDirection: 'column', gap: column ? 3 : 2, minWidth: 0 }}>
         <span style={{ fontSize: 12, letterSpacing: '1.6px', textTransform: 'uppercase', fontWeight: 600, color: F.eyebrow }}>{eyebrow}</span>
-        <h1 style={{ margin: 0, fontSize: column ? 28 : 26, lineHeight: 1.1, fontWeight: 400, letterSpacing: column ? '-0.7px' : '-0.6px', color: F.ink, overflowWrap: 'anywhere' }}>{displayName(m)}</h1>
+        <h1 style={{ margin: 0, fontSize: column ? 28 : 26, lineHeight: 1.1, fontWeight: 400, letterSpacing: column ? '-0.7px' : '-0.6px', color: F.ink, overflowWrap: 'anywhere' }}>{listName(m)}</h1>
         {sub ? <span style={{ fontSize: 14, lineHeight: column ? '20px' : 1.4, color: F.muted }}>{sub}</span> : null}
       </span>
     </div>

@@ -5,7 +5,7 @@
 // Both parents: a row each (tap to focus on one). One parent: the day's icon rail. A day the parent did not come shows the last visit's picture,
 // dimmed; no picture at all is the warm bronze gradient, so a morning before the first photo never looks empty.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { FACE_KEY, addDays, dayArc, flexMonth, memberName, displayName, planOn, ym, type ISODate, type Member, type Photo } from '@cp/shared';
+import { listName, FACE_KEY, addDays, dayArc, flexMonth, memberName, displayName, planOn, ym, type ISODate, type Member, type Photo } from '@cp/shared';
 import { activityLabel, bestPhotoOf, eventTitle, mayStillCome, type DayStory } from '@cp/shared/rules/family';
 import { railFill } from '@cp/shared/rules/famToday';
 import { famPhotoDays, ownPicture } from '@cp/shared/rules/famPhotos';
@@ -345,7 +345,7 @@ function SingleHero({ m, story, date, top, onProfile, onOpenPhoto }: { m: Member
           style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, border: 'none', background: 'transparent', color: '#FFFFFF', padding: 0, cursor: 'pointer', fontFamily: 'Inter' }}>
           <span style={{ display: 'flex', borderRadius: 999, boxShadow: '0 0 0 2px #FFFFFF' }}><Face m={m} size={34} /></span>
           <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, lineHeight: 1.2 }}>
-            <span style={{ maxWidth: '100%', fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName(m)}</span>
+            <span style={{ maxWidth: '100%', fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{listName(m)}</span>
             <span data-testid="hero-plan" style={{ maxWidth: '100%', fontSize: 12, fontWeight: 500, opacity: 0.86, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{planLine(c, m)}</span>
           </span>
         </button>

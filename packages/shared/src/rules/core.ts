@@ -43,6 +43,8 @@ export const displayName = (m: Pick<Member, 'title' | 'firstName' | 'registratio
   if (!nick) return memberShort(m);
   return nick.toLowerCase().startsWith(m.title.toLowerCase() + ' ') || TITLE_WORDS.test(nick) ? nick : `${m.title} ${nick}`;
 };
+/** The name a list or header leads with: the nickname with the title when there is one, otherwise the full registered name (so two members who share a first name stay apart). */
+export const listName = (m: Pick<Member, 'title' | 'firstName' | 'lastName' | 'registration'>) => (m.registration?.nickname?.trim() ? displayName(m) : memberName(m));
 /** The full name, shown small beneath the display name; null when it adds nothing. */
 export const displayFull = (m: Pick<Member, 'title' | 'firstName' | 'lastName' | 'registration'>) => {
   if (!m.registration?.nickname?.trim()) return null;

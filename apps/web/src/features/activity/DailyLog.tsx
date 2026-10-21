@@ -6,7 +6,7 @@
 // and the day's attendees (people still in the club first). A pin marks the rest of a round at once. Marks save as you tap (the replica applies them at once).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { actorName, addDays, attId, dayArc, marksOn, displayName, memberName, staffCall, type DailyLog as LogRow, type Face, type Member } from '@cp/shared';
+import { listName, actorName, addDays, attId, dayArc, marksOn, displayName, memberName, staffCall, type DailyLog as LogRow, type Face, type Member } from '@cp/shared';
 import { PendingMark } from '../../components/PendingMark';
 import { approvalState } from '@cp/shared/rules/approvals';
 import {
@@ -241,7 +241,7 @@ function MarkRow({ m, i, log, stacked, choices, value, onPick, label, lunch, fac
         <Av m={m} size={isPhone ? 40 : 44} fs={isPhone ? 14 : 15} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(m)}</span>
+            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{listName(m)}</span>
             <PendingDot log={log} />
           </span>
           {allergies.length || diets.length ? (
@@ -274,7 +274,7 @@ function MoodRow({ m, i, log, entry, dirty, open, busy, s, today, date, onToggle
       <button type="button" className={isPhone ? 'cp-tap-self' : undefined} onClick={onToggle} aria-expanded={open} aria-controls={'log-body-' + m.id} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '10px 14px 10px 16px' : '12px 22px', minHeight: isPhone ? 60 : 68, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
         <Av m={m} size={isPhone ? 40 : 44} fs={isPhone ? 14 : 15} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35 }}>{displayName(m)}</span>
+          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35 }}>{listName(m)}</span>
           <span className="cp-hide-phone" style={{ fontSize: 'max(13px, var(--cp-body, 0px))', lineHeight: '18px', color: '#6B6259' }}>{cogLine(t, cogSummary(s, m))}</span>
           <span style={{ display: 'flex', flexWrap: 'wrap', gap: '2px 14px' }}>
             <StatusDot color={saved && !dirty ? '#3D6B4F' : '#8A8078'}>{status}</StatusDot>
