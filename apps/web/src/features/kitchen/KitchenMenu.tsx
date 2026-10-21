@@ -33,7 +33,15 @@ export function KitchenMenu() {
   const names = (list: { name: string }[]) => list.map((d) => d.name).join(', ') || t('kitchen.menu.none');
   // "3 in the club + 1 guest": members who are in, members who already left (they still had lunch), booked guests
   const { inClub, gone } = v.members;
-  const coversSplit = [inClub ? t('kitchen.inClub', { n: inClub }) : '', gone ? t('kitchen.goneHome', { n: gone }) : '', v.covers.guests ? t(v.covers.guests === 1 ? 'kitchen.guest1' : 'kitchen.guestsN', { n: v.covers.guests }) : ''].filter(Boolean).join(' + ') || t('kitchen.inClub', { n: 0 });
+  const coversSplit = [inClub ? t('kitchen.inClub', { n: inClub }) : '', gone ? t('kitchen.goneHome', { n: gone }) : '', v.covers.guests ? t(v.covers.guests === 1 ? 'kitchen.guest1' : 'kitchen.guestsN', { n: v.covers.guests }) : '', v.covers.celebration ? t('kitchen.celebGuests', { n: v.covers.celebration }) : ''].filter(Boolean).join(' + ') || t('kitchen.inClub', { n: 0 });
+
+  // round 12: a confirmed celebration today: time · title · guests · what to prepare (the cake)
+  const celebLines = v.celebrations.map((c) => (
+    <div key={c.id} data-testid="celebration-line" style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 15, lineHeight: '22px', color: '#24201C' }}>
+      <Icon name="cake" size={18} color="var(--accent, #75624B)" style={{ marginTop: 2 }} />
+      <span style={{ minWidth: 0, overflowWrap: 'anywhere' }}>{[c.from, c.title, t(c.guests === 1 ? 'celeb.guest1' : 'celeb.guests', { n: c.guests }), c.cateringNote].filter(Boolean).join(' · ')}</span>
+    </div>
+  ));
 
   return (
     <>
@@ -60,6 +68,7 @@ export function KitchenMenu() {
                     <LunchPhotos date={v.today} readOnly={readOnly} />
                     <div style={{ padding: '14px 16px 16px', display: 'flex', flexDirection: 'column', gap: 6 }}>
                       <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
+{celebLines}
                       <div style={{ fontSize: 22, lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', marginTop: 2 }}>{names(v.menu.lunch)}</div>
                       <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.softLine', { dishes: names(v.menu.soft) })}</div>
                       <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.teaLine', { dishes: names(v.menu.tea) })}</div>
@@ -94,6 +103,7 @@ export function KitchenMenu() {
                 <div className="cp-card-pad" style={{ padding: '20px 22px 22px', display: 'flex', flexDirection: 'column', gap: 8 }}>
                   <div style={cardLabel} data-testid="covers">{t(v.covers.total === 1 ? 'kitchen.cover1' : 'kitchen.covers', { n: v.covers.total })}</div>
                   <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
+{celebLines}
                   <div style={{ fontSize: 'clamp(20px, 2.4vw, 24px)', lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', marginTop: 4 }}>{names(v.menu.lunch)}</div>
                   <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.softLine', { dishes: names(v.menu.soft) })}</div>
                   <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.teaLine', { dishes: names(v.menu.tea) })}</div>

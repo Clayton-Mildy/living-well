@@ -1,6 +1,6 @@
 // Small building blocks shared by the management screens (design: light template cards, rows, badges, section labels).
-import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { BADGE, hasKey, type BadgeKey } from '@cp/shared';
+import { useCallback, useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { BADGE, hasKey, type BadgeKey, type Room } from '@cp/shared';
 import { Group, Icon, FONT_BODY } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, type TFn } from '../../lib/i18n';
@@ -258,3 +258,20 @@ export const wrapChip: CSSProperties = { height: 'auto', minHeight: 44, padding:
 export const chipRow: CSSProperties = { display: 'flex', flexWrap: 'wrap', gap: 8 };
 /** v3 underline-style text field label (small caps eyebrow) used above textareas. */
 export const fieldBox: CSSProperties = { border: 'none', borderRadius: 12, padding: '12px 14px', fontSize: 16, lineHeight: '24px', fontFamily: 'Inter', color: '#24201C', outline: 'none', background: 'var(--fill, #F4F4F5)' };
+
+/** A double tap must not send an action twice: `run` ignores a second call while the first is still going, and `busy` disables the buttons meanwhile. */
+export function useBusy() {
+  const [busy, setBusy] = useState(false);
+  const going = useRef(false);
+  const run = useCallback(async <T,>(fn: () => Promise<T>): Promise<T | undefined> => {
+    if (going.current) return undefined;
+    going.current = true;
+    setBusy(true);
+    try { return await fn(); } finally { going.current = false; setBusy(false); }
+  }, []);
+  return { busy, run };
+}
+
+/** The time ranges offered as one tap when booking a room (venue bookings and celebrations). */
+export const SLOTS: [string, string][] = [['08:00', '12:00'], ['13:00', '17:00'], ['17:00', '21:00']];
+export const roomName = (r: Room | undefined, lang: string) => (r ? (lang === 'id' && r.nameId ? r.nameId : r.name) : '');

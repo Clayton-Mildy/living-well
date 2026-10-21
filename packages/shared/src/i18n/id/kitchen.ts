@@ -6,7 +6,7 @@ export const kitchen: Same<typeof EN> = {
   // ---- menu hari ini
   menuTitle: 'Menu hari ini',
   cover1: '{n} porsi sejauh ini · makan siang 12.00', covers: '{n} porsi sejauh ini · makan siang 12.00',
-  inClub: '{n} di klub', goneHome: '{n} sudah pulang', guest1: '1 tamu', guestsN: '{n} tamu',
+  inClub: '{n} di klub', goneHome: '{n} sudah pulang', guest1: '1 tamu', guestsN: '{n} tamu', celebGuests: '{n} di perayaan',
   softLine: 'Pilihan lunak: {dishes}', teaLine: 'Teh sore · 15.00: {dishes}',
   'menu.none': 'Belum ada', 'menu.changeToday': 'Ubah menu hari ini', 'menu.overridden': 'Menu hari ini berbeda dari rencana mingguan.',
   'photo.title': 'Foto makan siang', 'photo.add': 'Tambah foto makan siang hari ini',

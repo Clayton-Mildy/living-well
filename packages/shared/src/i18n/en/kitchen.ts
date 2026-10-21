@@ -4,7 +4,7 @@ export const kitchen = {
   // ---- menu of the day
   menuTitle: 'Menu of the day',
   cover1: '{n} cover so far · lunch 12:00', covers: '{n} covers so far · lunch 12:00',
-  inClub: '{n} in the club', goneHome: '{n} gone home', guest1: '1 guest', guestsN: '{n} guests',
+  inClub: '{n} in the club', goneHome: '{n} gone home', guest1: '1 guest', guestsN: '{n} guests', celebGuests: '{n} at a celebration',
   softLine: 'Soft option: {dishes}', teaLine: 'Afternoon tea · 15:00: {dishes}',
   'menu.none': 'None planned', 'menu.changeToday': 'Change today’s menu', 'menu.overridden': 'Today’s menu differs from the weekly plan.',
   'photo.title': 'Lunch photos', 'photo.add': 'Add a photo of today’s lunch',

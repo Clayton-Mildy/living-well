@@ -5,10 +5,11 @@ import { dayStatus, eventsOn, staffByRole } from './core';
 import { guestsOn } from './attendance';
 import { WEEK_SLOTS, extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from './kitchen';
 import { guestOn } from './guests';
+import { celebrationsOn } from './celebrations';
 import { addDays, dow, isWeekday, live, monthDays, sortBy, toHM, toMin } from '../util';
 
 export type CalAudience = 'staff' | 'family';
-export type CalKind = 'closed' | 'holiday' | 'outing' | 'venue' | 'guest' | 'activity';
+export type CalKind = 'closed' | 'holiday' | 'outing' | 'venue' | 'celebration' | 'guest' | 'activity';
 export interface DayItem {
   key: string;
   kind: CalKind;
@@ -20,6 +21,9 @@ export interface DayItem {
   titleId?: string;
   eventId?: string;
   venueId?: string;
+  /** round 12: a celebration (birthday ...) booked for a member; staff also see requested ones, with `note: 'requested'` */
+  celebrationId?: string;
+  memberId?: string;
   guestId?: string;
   enquiryId?: string;
   activityId?: string;
@@ -50,7 +54,7 @@ export interface DayInfo {
   /** KC round 7, staff only: slots of an open day that have no session (`changed`: removed for this day only), so the day view can offer to add one */
   noSession: { slot: WeekSlot; changed: boolean }[];
 }
-const ORDER: Record<CalKind, number> = { closed: 0, holiday: 1, outing: 2, venue: 3, guest: 4, activity: 5 };
+const ORDER: Record<CalKind, number> = { closed: 0, holiday: 1, outing: 2, venue: 3, celebration: 4, guest: 5, activity: 6 };
 
 /** Everything that happens on a date, for the list, month and day views. */
 export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'staff'): DayInfo {
@@ -67,6 +71,9 @@ export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'st
     items.push(audience === 'staff'
       ? { key: 'v:' + v.id, kind: 'venue', time: v.from, to: v.to, title: v.org, venueId: v.id, roomId: v.roomId }
       : { key: 'v:' + v.id, kind: 'venue', time: v.from, to: v.to, title: '', private: true, roomId: v.roomId });
+  }
+  for (const c of celebrationsOn(s, date, audience === 'staff' ? ['confirmed', 'requested'] : ['confirmed'])) {
+    items.push({ key: 'cel:' + c.id, kind: 'celebration', time: c.from, to: c.to, title: c.title, celebrationId: c.id, memberId: c.memberId, roomId: c.roomId, ...(c.status === 'requested' ? { note: 'requested' } : {}) });
   }
   if (audience === 'staff') {
     const booked = new Set<string>();

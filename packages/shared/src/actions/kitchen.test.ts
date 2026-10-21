@@ -84,19 +84,19 @@ describe('covers and dietary needs', () => {
   const checkIn = (st: ClubState, memberId: string) => run(st, 'attendance.checkIn', { memberId, method: 'manual' }, 's1').state;
   it('covers are the members checked in so far plus the booked guests, and grow as people arrive', () => {
     const s = seed();
-    expect(coversOn(s, T)).toEqual({ total: 4, members: 3, guests: 1 }); // Hendra, Tjahjadi and Bambang are in, plus the trial guest
+    expect(coversOn(s, T)).toEqual({ total: 4, members: 3, guests: 1, celebration: 0 }); // Hendra, Tjahjadi and Bambang are in, plus the trial guest
     const noShow = produce(s, (d) => { d.guestVisits['g-e1'].status = 'noShow'; });
-    expect(coversOn(noShow, T)).toEqual({ total: 3, members: 3, guests: 0 });
+    expect(coversOn(noShow, T)).toEqual({ total: 3, members: 3, guests: 0, celebration: 0 });
     const visitLunch = produce(s, (d) => { d.guestVisits['g-e2'].lunch = true; });
     expect(coversOn(visitLunch, T).total).toBe(5);
     // Oma Lina drops in: one more cover, the same guest
     const arrived = checkIn(s, 'm1');
-    expect(coversOn(arrived, T)).toEqual({ total: 5, members: 4, guests: 1 });
+    expect(coversOn(arrived, T)).toEqual({ total: 5, members: 4, guests: 1, celebration: 0 });
     // leaving after lunch does not take her out of the covers
     const gone = run(arrived, 'attendance.checkOut', { memberId: 'm1' }, 's1').state;
     expect(coversOn(gone, T).total).toBe(5);
     // a day nobody has checked in on has no covers
-    expect(coversOn(s, '2026-10-22')).toEqual({ total: 0, members: 0, guests: 0 });
+    expect(coversOn(s, '2026-10-22')).toEqual({ total: 0, members: 0, guests: 0, celebration: 0 });
   });
   it('groups the needs of whoever is here; unknown guests and free-text allergies get their own rows; late arrivals join live', () => {
     const s = produce(seed(), (d) => { d.guestVisits['g-e2'].lunch = true; d.members.m10.health.foodOther = 'mushrooms'; });

@@ -4,6 +4,7 @@ import { dayStatus, lobbyGroups, live, lunchPhotosOn, nextOpenDay, type DayStatu
 import {
   coversOn, dietaryRows, dishesByCourse, kitchenConflicts, menuDishesOn, overridesFrom, scheduledVersions, sortFeedback, sortStock, templateForWeek, templateOn, unknownAllergyGuests, unreviewedDishesOn,
 } from '@cp/shared/rules/kitchenOps';
+import { celebrationsOn } from '@cp/shared/rules/celebrations';
 import { useClub } from '../../store/replica';
 import { useNow } from '../../lib/clock';
 
@@ -23,6 +24,7 @@ export function useMenuVals() {
       nextOpen: nextOpenDay(s, today),
       menu,
       covers: coversOn(s, today),
+      celebrations: celebrationsOn(s, today), // round 12: confirmed ones (their guests are in the covers)
       // members who have checked in so far: still in the club, and already gone home
       members: (() => { const g = lobbyGroups(s, today); return { inClub: g.inClub.length, gone: g.goneHome.length }; })(),
       photos: lunchPhotosOn(s, today), // pending, shown and hidden ones, oldest first

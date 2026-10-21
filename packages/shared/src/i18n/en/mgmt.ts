@@ -87,7 +87,7 @@ export const mgmt = {
   notifyTeam: 'Notify the team', notifyTeamSub: 'Finance gets a notification about the new prices.',
 
   // ----- errors (action codes) -----
-  'err.venueClash': '{room} is already booked from {from} to {to} by {org}.', 'err.venueClubHours': 'The club is open {open}–{close} that day. Events need to be before {open} or after {close}.',
+  'err.venueClash': '{room} is already booked from {from} to {to} by {title}.', 'err.venueClubHours': 'The club is open {open}–{close} that day. Events need to be before {open} or after {close}.',
   'err.venueOuting': 'That day is an outing, so the club cannot take a booking.', 'err.venueClosed': 'The club is closed that day for its own reasons, so it cannot take a booking.',
   'err.venuePast': 'That time has already passed.', 'err.venueTimes': 'The end time must be after the start time.', 'err.venueLate': 'Events must fall between {from} and {to}.',
   'err.venueRoom': 'Choose a room that can be booked for events.', 'err.venueCancelled': 'That booking is cancelled.', 'err.venueDone': 'That event has already happened.',

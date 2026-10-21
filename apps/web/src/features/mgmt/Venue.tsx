@@ -2,7 +2,7 @@
 // create the invoice (simulated). KC round 7: after the event, "Ask for rating" sends the renter a no-login rating link (WhatsApp, simulated);
 // the page can copy or open that link, and shows the rating that came back, with a link to the answers in Surveys. A rating can still be entered by hand.
 import { Fragment, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { dayStatus, fmtN, fmtPhone, parseN, ratePath, ratingLinkOf, rp, venueResponseOf, type Room, type VenueBooking } from '@cp/shared';
 import { VENUE_EARLIEST, VENUE_LATEST, checkVenueSlot, venueLists, venueRooms } from '@cp/shared/rules/mgmt';
 import { Button, Chip, DateField, Dialog, Group, Icon, Note, PageHead, Pager, Pin, SectionLabel, TextField, TimeField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
@@ -13,13 +13,15 @@ import { useAct } from '../../lib/act';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
-import { BadgePill, HPAD, ListCard, Page, PillBtn, heroCard, labelStyle, chipRow } from './common';
+import { BadgePill, HPAD, ListCard, Page, PillBtn, SLOTS, SegTabs, heroCard, labelStyle, chipRow, roomName, useBusy } from './common';
+import { Celebrations } from './Celebrations';
+import { celebrationLists } from '@cp/shared/rules/celebrations';
+
+export { roomName };
 
 interface VForm { org: string; contactName: string; phone: string; guests: string; roomId: string; date: string; from: string; to: string; price: string; deposit: string }
-const SLOTS: [string, string][] = [['08:00', '12:00'], ['13:00', '17:00'], ['17:00', '21:00']];
 const blank = (rooms: Room[]): VForm => ({ org: '', contactName: '', phone: '', guests: '20', roomId: rooms[0]?.id ?? '', date: '', from: '', to: '', price: '', deposit: '' });
 const fromBooking = (v: VenueBooking): VForm => ({ org: v.org, contactName: v.contactName, phone: v.phone ? fmtPhone(v.phone) : '', guests: String(v.guests), roomId: v.roomId, date: v.date, from: v.from, to: v.to, price: v.price ? fmtN(v.price) : '', deposit: v.deposit ? fmtN(v.deposit) : '' });
-export const roomName = (r: Room | undefined, lang: string) => (r ? (lang === 'id' && r.nameId ? r.nameId : r.name) : '');
 
 /** One action under a booking: a small pill on phones, a button on wider screens. */
 interface Act { key: string; icon: string; label: string; run: () => void; primary?: boolean }
@@ -29,6 +31,7 @@ function RatingLine({ v }: { v: VenueBooking }) {
   const t = useT();
   const s = useClub();
   const navigate = useNavigate();
+  const { role } = useMe();
   const resp = venueResponseOf(s, v.id);
   if (!v.review) return null;
   return (
@@ -39,7 +42,7 @@ function RatingLine({ v }: { v: VenueBooking }) {
       </span>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', fontSize: 13, lineHeight: '18px', color: '#6B6259' }}>
         {resp ? t('mgmt.vnRatingFrom', { name: resp.respondentName || v.contactName }) : t('mgmt.vnEnteredByHand')}
-        {resp ? <button type="button" onClick={() => navigate(`/surveys?survey=${resp.surveyId}&tab=responses`)} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 13, fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'Inter' }}>{t('mgmt.vnViewAnswers')}</button> : null}
+        {resp && role === 'mgmt' ? <button type="button" onClick={() => navigate(`/surveys?survey=${resp.surveyId}&tab=responses`)} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 13, fontWeight: 500, textDecoration: 'underline', textUnderlineOffset: 3, cursor: 'pointer', fontFamily: 'Inter' }}>{t('mgmt.vnViewAnswers')}</button> : null}
       </span>
     </div>
   );
@@ -61,14 +64,20 @@ export function Venue() {
   const [edit, setEdit] = useState<VenueBooking | null>(null);
   const [cancel, setCancel] = useState<VenueBooking | null>(null);
   const [review, setReview] = useState<VenueBooking | null>(null);
+  const { busy, run } = useBusy();
+  const [sp, setSp] = useSearchParams();
+  const seg: 'venue' | 'celebrations' = sp.get('tab') === 'celebrations' ? 'celebrations' : 'venue';
+  const setSeg = (v: 'venue' | 'celebrations') => setSp(v === 'venue' ? {} : { tab: v }, { replace: true });
+  const [celOpen, setCelOpen] = useState(false);
+  const waiting = celebrationLists(s, today, now).requested.length;
   const { upcoming, past } = venueLists(s, today, now);
   const upPaged = usePaged(upcoming, 6);
   const pastPaged = usePaged(past, 6);
 
-  const book = async () => {
+  const book = () => run(async () => {
     const r = await act('venue.book', payload(form), { ok: t('mgmt.vnBooked', { date: fds(form.date), time: `${form.from}–${form.to}` }) });
     if (r.ok) { setOpen(false); setForm(blank(rooms)); }
-  };
+  });
   const rateUrl = (token: string) => `${window.location.origin}${ratePath(token)}`;
   const copyLink = async (token: string) => {
     try { await navigator.clipboard.writeText(rateUrl(token)); say(t('mgmt.vnLinkCopied')); } catch { say(t('mgmt.vnLinkManual', { url: rateUrl(token) })); }
@@ -146,10 +155,14 @@ export function Venue() {
   };
 
   const startNew = () => { setForm(blank(rooms)); setOpen(true); };
+  const onCel = seg === 'celebrations';
+  const newBtn = () => (onCel ? setCelOpen(true) : startNew());
   return (
     <>
     <Page max={1000} gap={18}>
-      <PageHead eyebrow={t('mgmt.vnEyebrow')} title={t('mgmt.vnTitle')} right={!open && !isPhone ? <Button size={48} icon="add" onClick={startNew}>{t('mgmt.vnNew')}</Button> : undefined} />
+      <PageHead eyebrow={t('mgmt.vnEyebrow')} title={t('mgmt.vnTitle')} right={!(onCel ? celOpen : open) && !isPhone ? <Button size={48} icon="add" onClick={newBtn}>{t(onCel ? 'celeb.new' : 'mgmt.vnNew')}</Button> : undefined} />
+      <SegTabs label={t('mgmt.vnTitle')} value={seg} onChange={setSeg} items={[{ value: 'venue', label: t('celeb.tabVenue') }, { value: 'celebrations', label: waiting && role === 'mgmt' ? t('celeb.tabCelebrationsN', { n: waiting }) : t('celeb.tabCelebrations') }]} />
+      {onCel ? <Celebrations open={celOpen} setOpen={setCelOpen} /> : <>
 
       {open ? (isPhone ? (
         // round 6, phone: the booking form is one thing: one flat group under its header, the two actions below it
@@ -157,7 +170,7 @@ export function Venue() {
           <Group title={t('mgmt.vnBooking')} gap={16}><VenueForm value={form} onChange={setForm} rooms={rooms} /></Group>
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
             <Button variant="secondary" onClick={() => setOpen(false)}>{t('common.cancel')}</Button>
-            <FormSubmit value={form} onClick={book}>{t('mgmt.vnConfirm')}</FormSubmit>
+            <FormSubmit value={form} busy={busy} onClick={book}>{t('mgmt.vnConfirm')}</FormSubmit>
           </div>
         </>
       ) : (
@@ -166,7 +179,7 @@ export function Venue() {
           <VenueForm value={form} onChange={setForm} rooms={rooms} />
           <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
             <Button variant="secondary" onClick={() => setOpen(false)}>{t('common.cancel')}</Button>
-            <FormSubmit value={form} onClick={book}>{t('mgmt.vnConfirm')}</FormSubmit>
+            <FormSubmit value={form} busy={busy} onClick={book}>{t('mgmt.vnConfirm')}</FormSubmit>
           </div>
         </div>
       )) : null}
@@ -182,16 +195,18 @@ export function Venue() {
         </ListCard>
       ) : null}
 
+      </>}
+
       <Dialog open={!!edit} onClose={() => setEdit(null)} eyebrow={t('mgmt.vnBooking')} title={edit?.org || ''} maxWidth={640}>
         {edit ? <EditBody key={edit.id} v={edit} rooms={rooms} onClose={() => setEdit(null)} /> : null}
       </Dialog>
       <Dialog open={!!cancel} onClose={() => setCancel(null)} title={t('mgmt.vnCancelTitle')} maxWidth={480}
-        footer={<><Button variant="secondary" onClick={() => setCancel(null)}>{t('mgmt.vnKeep')}</Button><Button variant="danger" onClick={async () => { if (!cancel) return; const r = await act('venue.cancel', { venueId: cancel.id }, { ok: t('mgmt.vnCancelled') }); if (r.ok) setCancel(null); }}>{t('mgmt.vnCancel')}</Button></>}>
+        footer={<><Button variant="secondary" onClick={() => setCancel(null)}>{t('mgmt.vnKeep')}</Button><Button variant="danger" disabled={busy} onClick={() => { if (!cancel) return; void run(async () => { const r = await act('venue.cancel', { venueId: cancel.id }, { ok: t('mgmt.vnCancelled') }); if (r.ok) setCancel(null); }); }}>{t('mgmt.vnCancel')}</Button></>}>
         <div style={{ fontSize: 16, lineHeight: '24px' }}>{cancel ? t('mgmt.vnCancelText', { org: cancel.org, date: fdl(cancel.date) }) : null}</div>
       </Dialog>
       <ReviewDialog v={review} onClose={() => setReview(null)} />
     </Page>
-    {isPhone && !open ? <Pin icon="add" label={t('mgmt.vnNew')} onClick={startNew} /> : null}
+    {isPhone && !open && !onCel ? <Pin icon="add" label={t('mgmt.vnNew')} onClick={startNew} /> : null}
     </>
   );
 }
@@ -202,11 +217,11 @@ const payload = (f: VForm) => ({
 });
 
 /** Confirm button: disabled until the form is complete and the slot is free. */
-function FormSubmit({ value, onClick, ignoreId, children }: { value: VForm; onClick: () => void; ignoreId?: string; children: string }) {
+function FormSubmit({ value, onClick, ignoreId, busy, children }: { value: VForm; onClick: () => void; ignoreId?: string; busy?: boolean; children: string }) {
   const s = useClub();
   const { today, now } = useNow();
   const ok = formOk(value) && checkVenueSlot(s, { roomId: value.roomId, date: value.date, from: value.from, to: value.to }, today, now, ignoreId).ok;
-  return <Button disabled={!ok} onClick={onClick}>{children}</Button>;
+  return <Button disabled={!ok || !!busy} onClick={onClick}>{children}</Button>;
 }
 const formOk = (f: VForm) => !!(f.org.trim() && f.contactName.trim() && f.roomId && f.date && f.from && f.to && Number(f.guests) >= 1);
 
@@ -277,29 +292,30 @@ function EditBody({ v, rooms, onClose }: { v: VenueBooking; rooms: Room[]; onClo
   const t = useT();
   const act = useAct();
   const [f, setF] = useState<VForm>(() => fromBooking(v));
-  const save = async () => {
+  const { busy, run } = useBusy();
+  const save = () => run(async () => {
     const p = payload(f);
     const r = await act('venue.update', { venueId: v.id, ...p, price: p.price ?? null, deposit: p.deposit ?? null }, { ok: t('mgmt.vnUpdated') });
     if (r.ok) onClose();
-  };
+  });
   return (
     <>
       <VenueForm value={f} onChange={setF} rooms={rooms} ignoreId={v.id} />
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         <Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
-        <EditSubmit value={f} v={v} onClick={save} />
+        <EditSubmit value={f} v={v} busy={busy} onClick={save} />
       </div>
     </>
   );
 }
 /** Saving an unchanged date/time on a finished event is allowed; moving needs a free slot. */
-function EditSubmit({ value, v, onClick }: { value: VForm; v: VenueBooking; onClick: () => void }) {
+function EditSubmit({ value, v, busy, onClick }: { value: VForm; v: VenueBooking; busy: boolean; onClick: () => void }) {
   const t = useT();
   const s = useClub();
   const { today, now } = useNow();
   const moved = value.roomId !== v.roomId || value.date !== v.date || value.from !== v.from || value.to !== v.to;
   const ok = formOk(value) && (!moved || checkVenueSlot(s, { roomId: value.roomId, date: value.date, from: value.from, to: value.to }, today, now, v.id).ok);
-  return <Button disabled={!ok} onClick={onClick}>{t('common.saveChanges')}</Button>;
+  return <Button disabled={!ok || busy} onClick={onClick}>{t('common.saveChanges')}</Button>;
 }
 
 function ReviewDialog({ v, onClose }: { v: VenueBooking | null; onClose: () => void }) {

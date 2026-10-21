@@ -9,6 +9,7 @@ export const cal: Same<typeof EN> = {
   prevMonth: 'Bulan sebelumnya', nextMonth: 'Bulan berikutnya', thisMonth: 'Bulan ini', holiday: 'Libur', closedShort: 'Tutup', allDay: 'Seharian',
   stOpen: 'Buka · {from}–{to}', stClosed: 'Tutup', stHoliday: 'Libur nasional · tutup', stWeekend: 'Tutup · akhir pekan',
   k_activity: 'Aktivitas', k_closed: 'Klub tutup', k_holiday: 'Libur nasional', k_outing: 'Jalan-jalan', k_venue: 'Pemesanan tempat', k_private: 'Acara pribadi', k_guest: 'Uji coba atau kunjungan', k_trial: 'Hari uji coba', k_visit: 'Kunjungan',
+  k_celebration: 'Perayaan', waiting: 'Menunggu manajemen', 
   private: 'Acara pribadi', membersNotAffected: 'anggota tidak terpengaruh',
   // events editor (management)
   addEvent: 'Tambah acara', addEventOn: 'Tambah acara pada {date}', eventsEditor: 'Acara kalender', addEventTitle: 'Tambah ke kalender', editEventTitle: 'Ubah acara', editEvent: 'Ubah {title}',

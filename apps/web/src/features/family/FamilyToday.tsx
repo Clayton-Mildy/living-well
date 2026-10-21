@@ -8,9 +8,10 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { addDays, answeredBy, live, liveSurvey, displayName, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
-import { activityLabel, dayStory, dishNamesOf, END_OF_DAY, familyPhotosOn, servedLunch, storyNowMin, visitDays, type DayStory } from '@cp/shared/rules/family';
+import { activityLabel, roomLabel, dayStory, dishNamesOf, END_OF_DAY, familyPhotosOn, servedLunch, storyNowMin, visitDays, type DayStory } from '@cp/shared/rules/family';
 import { openDayStrip, planDay } from '@cp/shared/rules/famToday';
 import { eventTitle as calTitle, upcomingClosures } from '@cp/shared/rules/calendar';
+import { celebrationsOn } from '@cp/shared/rules/celebrations';
 import { Icon, PhotoImg } from '../../components/ui';
 import { NotificationBell } from '../../shell/Notifications';
 import { useUi } from '../../store/ui';
@@ -147,6 +148,33 @@ function LastVisitCard({ members, stories, onOpen, onOpenPhoto }: { members: Mem
 }
 const famPhotoAriaLite = (day: string, time: string) => `${day} · ${time}`;
 
+/** Round 12: a confirmed celebration of one of these parents on the day shown (the club has said yes): what, when, where, and the cake. Only confirmed ones reach a family. */
+function CelebrationCard({ members, date }: { members: Member[]; date: ISODate }) {
+  const { s, t, fmt } = useFamilyCtx();
+  const navigate = useNavigate();
+  const ids = members.map((m) => m.id);
+  const list = celebrationsOn(s, date).filter((c) => ids.includes(c.memberId));
+  if (!list.length) return null;
+  return (
+    <section data-testid="celebration-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <Cap>{t('celeb.famCard')}</Cap>
+      {list.map((c) => (
+        <FillCard key={c.id} radius={22} pad={14} gap={10} testId="celebration-body">
+          <span style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
+            <IconTile icon="cake" size={40} iconSize={22} />
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <span style={{ fontSize: 17, fontWeight: 600, color: F.text, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{c.title}</span>
+              <span style={{ fontSize: 14, color: F.soft }}>{t('celeb.famSub', { from: c.from, to: c.to, room: roomLabel(s, c.roomId, fmt.lang) })}</span>
+              <span style={{ fontSize: 13, color: F.muted, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{[t(c.guests === 1 ? 'celeb.guest1' : 'celeb.guests', { n: c.guests }), c.cateringNote].filter(Boolean).join(' · ')}</span>
+            </span>
+          </span>
+          <TextLink size={13} onClick={() => navigate(`/calendar?date=${c.date}`)} style={{ minHeight: 24 }}>{t('celeb.famOpen')}</TextLink>
+        </FillCard>
+      ))}
+    </section>
+  );
+}
+
 export function FamilyToday() {
   const { s, t, fmt, now, user } = useFamilyCtx();
   const navigate = useNavigate();
@@ -247,6 +275,8 @@ export function FamilyToday() {
 
       {/* KC round 10: today, when nobody has come (and the club is shut for the day or they are simply home), the last visit comes first */}
       {isToday && !stories.some((st) => st.visited) && stories.some((st) => st.state.kind === 'away') ? <LastVisitCard members={members} stories={stories} onOpen={setDate} onOpenPhoto={openPhoto} /> : null}
+
+      <CelebrationCard members={members} date={date} />
 
       <Timeline members={members} stories={stories} date={date} onOpenPhoto={openPhoto} onDay={setDate}
         lunchFeedback={hasLunch ? { label: sent ? fbSub : t('ftoday.fbRow'), onClick: () => setFeedback(true) } : undefined} />

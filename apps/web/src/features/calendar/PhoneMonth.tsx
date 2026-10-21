@@ -8,7 +8,7 @@ import { Button, Icon } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { KIND, MON_FIRST, dayState, weekdayName } from './lib';
 
-const DOT_ORDER: CalKind[] = ['closed', 'holiday', 'outing', 'venue', 'guest', 'activity'];
+const DOT_ORDER: CalKind[] = ['closed', 'holiday', 'outing', 'venue', 'celebration', 'guest', 'activity'];
 const MAX_DOTS = 4;
 
 export function PhoneMonth({ month, onMonth, today, sel, onSelect, info, hours, legend }: {

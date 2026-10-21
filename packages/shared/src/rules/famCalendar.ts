@@ -10,7 +10,7 @@ import { extrasOn, menuOn, teaPhotosOn, visibleLunchPhotos } from './kitchen';
 import { bestPhotoOf, familyPhotosOn, logOn, servedLunch, dishNamesOf, tookPart, visitDays, LUNCH_AT, TEA_AT } from './family';
 import { addDays, addMonths, live, toMin, ym } from '../util';
 
-export type FamRowKind = 'session' | 'lunch' | 'tea' | 'outing' | 'venue';
+export type FamRowKind = 'session' | 'lunch' | 'tea' | 'outing' | 'venue' | 'celebration';
 export interface FamDishes {
   /** the parents these dishes are for; undefined when everyone is served the same */
   memberIds?: string[];
@@ -33,7 +33,10 @@ export interface FamRow {
   /** outing: the event title (and its Indonesian title) */
   title?: string;
   titleId?: string;
-  /** venue / outing: the end time when there is one */
+  /** round 12, celebration: which celebration (title, guests and the catering note are read from it) and whose it is */
+  celebrationId?: string;
+  memberId?: string;
+  /** venue / outing / celebration: the end time when there is one */
   to?: HM | null;
   /** lunch and tea: the dishes */
   dishes?: FamDishes[];
@@ -99,6 +102,10 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
         rows.push({ key: it.key, kind: 'outing', time: it.time ?? open, to: it.to ?? null, accent: true, title: it.title, titleId: it.titleId, took: [], photos: [] });
       } else if (it.kind === 'venue') {
         rows.push({ key: it.key, kind: 'venue', time: it.time ?? open, to: it.to ?? null, accent: false, roomId: it.roomId, took: [], photos: [] });
+      } else if (it.kind === 'celebration') {
+        // only the celebrations of the parents this view is about
+        if (!it.memberId || !who.includes(it.memberId)) continue;
+        rows.push({ key: it.key, kind: 'celebration', time: it.time ?? open, to: it.to ?? null, accent: true, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
       } else if (it.kind === 'activity' && it.time) {
         const slot = it.time as Slot;
         const over = came.length > 0 && isPast(date, slot, today, nowMin);
@@ -128,7 +135,7 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
         rows.push({ key: 'tea', kind: 'tea', time: TEA_AT, accent: false, dishes: [{ names: tea }], took: [], photos });
       }
     }
-    const rank: Record<FamRowKind, number> = { outing: 0, venue: 1, session: 2, lunch: 3, tea: 4 };
+    const rank: Record<FamRowKind, number> = { outing: 0, venue: 1, celebration: 2, session: 3, lunch: 4, tea: 5 };
     rows.sort((a, b) => a.time.localeCompare(b.time) || rank[a.kind] - rank[b.kind]);
     const others = came.length ? familyPhotosOn(s, who, date).filter((p) => !used.has(p.id)) : [];
     return { date, state: info.state, banner, rows, came, others };

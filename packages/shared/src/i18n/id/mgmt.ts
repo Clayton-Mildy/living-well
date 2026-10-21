@@ -90,7 +90,7 @@ export const mgmt: Same<typeof EN> = {
   notifyTeam: 'Beri tahu tim', notifyTeamSub: 'Tim keuangan menerima pemberitahuan tentang harga baru.',
 
   // ----- galat -----
-  'err.venueClash': '{room} sudah dipesan pukul {from}–{to} oleh {org}.', 'err.venueClubHours': 'Klub buka pukul {open}–{close} pada hari itu. Acara harus sebelum {open} atau sesudah {close}.',
+  'err.venueClash': '{room} sudah dipesan pukul {from}–{to} oleh {title}.', 'err.venueClubHours': 'Klub buka pukul {open}–{close} pada hari itu. Acara harus sebelum {open} atau sesudah {close}.',
   'err.venueOuting': 'Hari itu jalan-jalan, jadi klub tidak bisa menerima pemesanan.', 'err.venueClosed': 'Klub tutup pada hari itu karena urusan sendiri, jadi tidak bisa menerima pemesanan.',
   'err.venuePast': 'Jam itu sudah lewat.', 'err.venueTimes': 'Jam selesai harus setelah jam mulai.', 'err.venueLate': 'Acara harus berlangsung antara pukul {from} dan {to}.',
   'err.venueRoom': 'Pilih ruangan yang bisa dipesan untuk acara.', 'err.venueCancelled': 'Pemesanan itu sudah dibatalkan.', 'err.venueDone': 'Acara itu sudah berlangsung.',

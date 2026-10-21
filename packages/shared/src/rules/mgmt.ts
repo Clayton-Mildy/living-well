@@ -23,16 +23,24 @@ export const venueRooms = (s: ClubState): Room[] => sortBy(live(s.rooms).filter(
 export const timesOverlap = (a1: HM, a2: HM, b1: HM, b2: HM) => a1 < b2 && b1 < a2;
 export const venueIsPast = (v: Pick<VenueBooking, 'date' | 'to'>, today: ISODate, now: HM) => v.date < today || (v.date === today && v.to <= now);
 
-/** A confirmed booking in the same room (or any room when either is "Whole club") that overlaps in time. */
-export function venueClash(s: ClubState, slot: { roomId: string; date: ISODate; from: HM; to: HM }, ignoreId?: string): VenueBooking | undefined {
+/** What a slot runs into: a confirmed venue booking or a confirmed celebration (round 12: they share the rooms). */
+export interface SlotClash { kind: 'venue' | 'celebration'; id: string; title: string; roomId: string; from: HM; to: HM }
+/** A confirmed booking or celebration in the same room (or any room when either is "Whole club") that overlaps in time. */
+export function venueClash(s: ClubState, slot: { roomId: string; date: ISODate; from: HM; to: HM }, ignoreId?: string): SlotClash | undefined {
   const room = s.rooms[slot.roomId];
-  return live(s.venueBookings).find(
-    (v) => v.status === 'confirmed' && v.id !== ignoreId && v.date === slot.date && timesOverlap(v.from, v.to, slot.from, slot.to) && (v.roomId === slot.roomId || isWholeClub(room) || isWholeClub(s.rooms[v.roomId])),
-  );
+  const hit = (x: { id: string; date: ISODate; from: HM; to: HM; roomId: string }) =>
+    x.id !== ignoreId && x.date === slot.date && timesOverlap(x.from, x.to, slot.from, slot.to) && (x.roomId === slot.roomId || isWholeClub(room) || isWholeClub(s.rooms[x.roomId]));
+  const v = live(s.venueBookings).find((x) => x.status === 'confirmed' && hit(x));
+  if (v) return { kind: 'venue', id: v.id, title: v.org, roomId: v.roomId, from: v.from, to: v.to };
+  const c = live(s.celebrations || {}).find((x) => x.status === 'confirmed' && hit(x));
+  return c ? { kind: 'celebration', id: c.id, title: c.title, roomId: c.roomId, from: c.from, to: c.to } : undefined;
 }
 export type SlotCheck = { ok: true } | { ok: false; code: string; params?: Record<string, string | number> };
-/** Can a private event take this room at this time? Outings and closures block the day; on club days it must stay out of club hours. */
-export function checkVenueSlot(s: ClubState, slot: { roomId: string; date: ISODate; from: HM; to: HM }, today: ISODate, now: HM, ignoreId?: string): SlotCheck {
+/**
+ * Can a private event take this room at this time? Outings and closures block the day; on club days it must stay out of club hours.
+ * A celebration is the exception to the last rule (`duringClub`): it is a few family members at the club while it is open.
+ */
+export function checkVenueSlot(s: ClubState, slot: { roomId: string; date: ISODate; from: HM; to: HM }, today: ISODate, now: HM, ignoreId?: string, duringClub = false): SlotCheck {
   const room = s.rooms[slot.roomId];
   if (!room || room.deletedAt || !room.venue) return { ok: false, code: 'mgmt.err.venueRoom' };
   if (slot.date < today || (slot.date === today && slot.to <= now)) return { ok: false, code: 'mgmt.err.venuePast' };
@@ -42,10 +50,10 @@ export function checkVenueSlot(s: ClubState, slot: { roomId: string; date: ISODa
   if (st.open) {
     if (st.outing) return { ok: false, code: 'mgmt.err.venueOuting' };
     const { open, close } = s.club.settings;
-    if (timesOverlap(slot.from, slot.to, open, close)) return { ok: false, code: 'mgmt.err.venueClubHours', params: { open, close } };
+    if (!duringClub && timesOverlap(slot.from, slot.to, open, close)) return { ok: false, code: 'mgmt.err.venueClubHours', params: { open, close } };
   } else if (st.reason === 'closed') return { ok: false, code: 'mgmt.err.venueClosed' };
   const clash = venueClash(s, slot, ignoreId);
-  if (clash) return { ok: false, code: 'mgmt.err.venueClash', params: { org: clash.org, from: clash.from, to: clash.to, room: s.rooms[clash.roomId]?.name || '' } };
+  if (clash) return { ok: false, code: 'mgmt.err.venueClash', params: { org: clash.title, title: clash.title, from: clash.from, to: clash.to, room: s.rooms[clash.roomId]?.name || '' } };
   return { ok: true };
 }
 export function venueLists(s: ClubState, today: ISODate, now: HM) {

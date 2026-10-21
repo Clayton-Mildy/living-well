@@ -18,6 +18,7 @@
 //  - stock permissions shared by the actions and the screens, and the feedback helpers.
 import type { ClubState, Dish, DishAllergen, Feedback, FoodAllergen, GuestVisit, ISODate, Member, MenuDay, MenuVersion, StockRequest, User, Weekday } from '../types';
 import { conflictsOn, dietaryGroups, dinersOn, memberConflictsOn, menuOn, menuVersionFor, ALLERGY_COVERS, type Conflict, type Diner } from './kitchen';
+import { celebrationGuestsOn } from './celebrations';
 import { attOf, isCheckedIn } from './attendance';
 import { activeOn, contactsOfMember, isPendingRow, displayName } from './core';
 import { addDays, dow, live, sortBy, uniq } from '../util';
@@ -35,11 +36,12 @@ export type PersonKey = `member:${string}` | `guest:${string}`;
 export const personKey = (d: Diner): PersonKey => (d.type === 'member' ? `member:${d.id}` : `guest:${d.id}`);
 export const dinerName = (d: Diner) => (d.type === 'member' ? displayName(d.m) : d.g.name);
 
-/** Covers: members who have checked in that day (so far) plus the guests booked for lunch. */
+/** Covers: members who have checked in that day (so far) plus the guests booked for lunch, plus the guests of confirmed celebrations (round 12; `celebration` is that part of the total). */
 export function coversOn(s: ClubState, date: ISODate) {
   const all = dinersOn(s, date);
   const guests = all.filter((x) => x.type === 'guest').length;
-  return { total: all.length, members: all.length - guests, guests };
+  const celebration = celebrationGuestsOn(s, date);
+  return { total: all.length + celebration, members: all.length - guests, guests, celebration };
 }
 
 export interface KitchenConflict extends Conflict {
