@@ -229,7 +229,11 @@ export function DraftsBody({ onMore }: { /** the Camera page offers its older wa
     setBusy(false);
     if (!r.ok) return; // the toast says why (nobody named, no session…)
     const sent = Number(r.result.sent ?? 0), left = Array.isArray(r.result.skipped) ? r.result.skipped.length : 0;
-    say([plural(t, review ? 'drafts.sentReviewN' : 'drafts.sentN', sent), left ? plural(t, 'drafts.notAll', left) : ''].filter(Boolean).join(' '), { icon: review ? 'hourglass_top' : 'check_circle' });
+    const sentIds = Array.isArray(r.result.photoIds) ? (r.result.photoIds as string[]) : [];
+    say([plural(t, review ? 'drafts.sentReviewN' : 'drafts.sentN', sent), left ? plural(t, 'drafts.notAll', left) : ''].filter(Boolean).join(' '), {
+      icon: review ? 'hourglass_top' : 'check_circle',
+      ...(sentIds.length ? { action: { label: t('common.undo'), run: () => void act('photo.unsend', { ids: sentIds }, { ok: t('drafts.undone') }) } } : {}),
+    });
     setSelecting(false); setSel([]);
   };
   const removeSel = async () => {

@@ -61,11 +61,12 @@ export function notifyNewPhotos(d: Draft<ClubState>, ctx: Ctx, items: { photo: {
 export const notifyPhotoFamilies = (d: Draft<ClubState>, ctx: Ctx, memberIds: string[], p: { id: string; media: 'photo' | 'video' }) =>
   notifyNewPhotos(d, ctx, [{ photo: p, memberIds }]);
 
-export const feedFor = (d: Draft<ClubState>, ctx: Ctx, p: Pick<Photo, 'kind' | 'media' | 'memberIds' | 'activity'>) => {
+export const feedFor = (d: Draft<ClubState>, ctx: Ctx, p: Pick<Photo, 'kind' | 'media' | 'memberIds' | 'activity'> & { id?: string }) => {
+  const pid: Record<string, string> = p.id ? { photoId: p.id } : {}; // lets `photo.unsend` take the line back
   // an activity picture is of the session, not of people: its feed line names the activity
-  if (p.kind === 'activity') { ctx.feed({ icon: 'photo_camera', key: 'activity.feed.activityPhoto', params: { activity: p.activity || '' } }); return; }
+  if (p.kind === 'activity') { ctx.feed({ icon: 'photo_camera', key: 'activity.feed.activityPhoto', params: { activity: p.activity || '', ...pid } }); return; }
   const kindKey = p.kind === 'group' ? (p.media === 'video' ? 'groupVideo' : 'groupPhoto') : p.media === 'video' ? 'video' : 'photo';
-  ctx.feed({ icon: p.media === 'video' ? 'videocam' : 'photo_camera', key: 'activity.feed.' + kindKey, params: { names: namesOf(d, p.memberIds) }, memberId: p.kind === 'solo' ? p.memberIds[0] : undefined });
+  ctx.feed({ icon: p.media === 'video' ? 'videocam' : 'photo_camera', key: 'activity.feed.' + kindKey, params: { names: namesOf(d, p.memberIds), ...pid }, memberId: p.kind === 'solo' ? p.memberIds[0] : undefined });
 };
 
 // ---------- take ----------
