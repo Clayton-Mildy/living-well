@@ -125,6 +125,8 @@ export const insights: Same<typeof EN> = {
   // round 12: the Mood tab
   tabMood: 'Suasana hati',
   moodLift: 'Klub menaikkan suasana hati rata-rata {n}',
+  moodLiftNone: 'Suasana hati rata-rata tidak berubah',
+  moodLiftDown: 'Suasana hati rata-rata {n} lebih rendah',
   moodNoLift: 'Belum ada penilaian datang dan pulang',
   moodByActivity: 'Suasana hati per kegiatan', moodByActivityAria: 'Rata-rata suasana hati per kegiatan', moodActivityTip: '{name} · {avg} · {n} penilaian',
   moodByWeekday: 'Suasana hati per hari',

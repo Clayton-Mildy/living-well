@@ -8,7 +8,7 @@ import type { MoodMoment } from '@cp/shared/types';
 import { EmptyState, Group } from '../../components/ui';
 import { useLang, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
-import { Bars, type BarItem } from './charts';
+import { ThinBar } from './charts';
 import { INK, Line, MUTED, num1, Panel, useWeekdays } from './lib';
 
 const MOMENTS: MoodMoment[] = ['arrival', 'health', 'activity', 'departure'];
@@ -18,18 +18,28 @@ export function Mood({ data }: { data: MoodInsights }) {
   const t = useT();
   const lang = useLang();
   const wd = useWeekdays();
-  const items: BarItem[] = data.byActivity.map((a) => {
-    const name = activityName(s.activities[a.activityId], lang) || a.activityId;
-    return { key: a.activityId, label: name, value: a.avg, shown: num1(a.avg), tip: t('insights.moodActivityTip', { name, avg: num1(a.avg), n: a.n }) };
-  });
-  const lift = data.lift === null ? t('insights.moodNoLift') : t('insights.moodLift', { n: (data.lift > 0 ? '+' : '') + num1(data.lift) });
+  const lift = data.lift === null ? t('insights.moodNoLift')
+    : data.lift > 0 ? t('insights.moodLift', { n: num1(data.lift) })
+    : data.lift < 0 ? t('insights.moodLiftDown', { n: num1(-data.lift) })
+    : t('insights.moodLiftNone');
   if (MOMENTS.every((k) => data.byMoment[k] === null)) return <EmptyState icon="insights" title={t('insights.moodEmpty')} />;
   return (
     <>
       <div data-testid="mood-lift" style={{ fontSize: 17, fontWeight: 500, color: INK }}>{lift}</div>
-      {items.length ? (
-        <Panel title={t('insights.moodByActivity')}>
-          <Bars items={items} ariaLabel={t('insights.moodByActivityAria')} />
+      {data.byActivity.length ? (
+        <Panel title={t('insights.moodByActivity')} pad="4px 16px" gap={0}>
+          {data.byActivity.map((a, i) => {
+            const name = activityName(s.activities[a.activityId], lang) || a.activityId;
+            return (
+              <div key={a.activityId} data-activity={a.activityId} aria-label={t('insights.moodActivityTip', { name, avg: num1(a.avg), n: a.n })}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 44, borderTop: i ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', fontSize: 15, color: INK }}>
+                <span style={{ flex: '1 1 0', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
+                <span style={{ flex: '0 0 72px' }}><ThinBar used={a.avg - 1} quota={4} /></span>
+                <span style={{ flex: 'none', minWidth: 28, textAlign: 'right', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{num1(a.avg)}</span>
+                <span style={{ flex: 'none', minWidth: 24, textAlign: 'right', fontSize: 13, color: MUTED, fontVariantNumeric: 'tabular-nums' }}>{a.n}</span>
+              </div>
+            );
+          })}
         </Panel>
       ) : null}
       <Panel title={t('insights.moodByWeekday')}>

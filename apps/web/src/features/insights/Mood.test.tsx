@@ -48,7 +48,7 @@ describe('Insights › Mood', () => {
   it('?tab=mood opens the tab with the lift line and the dropping member', async () => {
     open();
     await show('/insights?tab=mood');
-    expect(document.querySelector('[data-testid="mood-lift"]')?.textContent).toBe('The club lifts mood by +1 on average');
+    expect(document.querySelector('[data-testid="mood-lift"]')?.textContent).toBe('The club lifts mood by 1 on average');
     const link = document.querySelector('a[data-member="m2"]') as HTMLAnchorElement;
     expect(link).toBeTruthy();
     expect(link.getAttribute('href')).toBe('/today?checkOn=m2');

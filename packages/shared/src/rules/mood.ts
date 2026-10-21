@@ -5,6 +5,7 @@ import type { ClubState, Face, ISODate, MoodMark, MoodMoment, Slot } from '../ty
 import type { Ctx } from '../actions/framework';
 import { dow, live } from '../util';
 import type { InsightPeriod } from './insights';
+import { activeOn } from './core';
 import { sessionsOn } from './kitchen';
 
 /** Best face first, the order they are shown in. */
@@ -132,6 +133,8 @@ export function moodInsights(s: ClubState, period: InsightPeriod, today: ISODate
   for (const m of marks) if (m.moment === 'arrival') visits.set(m.memberId, [...(visits.get(m.memberId) ?? []), { date: m.date, face: m.face }]);
   const drops: MoodInsights['drops'] = [];
   for (const [memberId, v] of visits) {
+    const m = s.members[memberId];
+    if (!m || !activeOn(m, today)) continue;
     const last = v.sort((a, b) => (a.date < b.date ? -1 : 1)).slice(-3).map((x) => x.face);
     if (last.length === 3 && last[0] > last[1] && last[1] > last[2]) drops.push({ memberId, faces: last });
   }

@@ -51,6 +51,10 @@ describe('mood rules', () => {
       expect(moodInsights(arrivals([3, 3, 2]), period, T).drops).toEqual([]);
       expect(moodInsights(arrivals([4, 3]), period, T).drops).toEqual([]);
     });
+    it('drops skips members who are not active today', () => {
+      const s = produce(arrivals([4, 3, 2]), (d) => { d.members.m2.memberships = d.members.m2.memberships.map((p) => ({ ...p, lastDay: '2026-10-14' })); });
+      expect(moodInsights(s, period, T).drops).toEqual([]);
+    });
     it('byWeekday has five entries Mon to Fri, null without marks', () => {
       const r = moodInsights(arrivals([4, 3, 2]), period, T);
       expect(r.byWeekday).toEqual([4, 3, 2, null, null]);
