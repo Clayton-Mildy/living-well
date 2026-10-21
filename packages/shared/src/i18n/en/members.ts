@@ -31,7 +31,7 @@ export const members = {
   'notif.ending': '{name}’s membership ends on {date}.', 'notif.reactivated': '{name}’s membership is active again from {date}.', 'notif.contactAdded': 'You are now a family contact for {name}.',
   'notif.appInvite': 'You can now use the CitraPremier app for {name}.',
   // errors
-  'err.nameRequired': 'Please enter the full name.', 'err.dobRequired': 'Please enter the date of birth.', 'err.dobInvalid': 'Check the date of birth. We work out the age from it.',
+  'err.nameRequired': 'Please enter the full name.', 'err.titleRequired': 'Title is needed.', 'err.dobRequired': 'Please enter the date of birth.', 'err.dobInvalid': 'Check the date of birth. We work out the age from it.',
   'err.arrivalInvalid': 'Check the usual arrival time, for example 10:00.', 'err.arrivalHours': 'The usual arrival must be between {open} and {close}.', 'err.planInvalid': 'Choose a plan.',
   'err.startInvalid': 'Pick an open club day, today or later.', 'err.contactRequired': 'Please enter the contact’s name.',
   'err.phoneRequired': 'Please enter a mobile number.', 'err.phoneInvalid': 'That mobile number doesn’t look right. Use +62… or 08….',

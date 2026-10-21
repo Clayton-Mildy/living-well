@@ -1,6 +1,6 @@
 // Small pieces shared by the lobby screens: member avatar, care flags, reading badge, call link, labels.
 import { useEffect, useRef, type CSSProperties, type ReactNode } from 'react';
-import { BADGE, initials, memberName, type DrugAllergy, type Member, type Reading } from '@cp/shared';
+import { BADGE, initials, type DrugAllergy, type Member, type Reading } from '@cp/shared';
 import { FONT_BODY, FONT_SMALL, Icon, TONES } from '../../components/ui';
 import type { TFn } from '../../lib/i18n';
 import { memberPhoto, photoFill } from '../../lib/media';
@@ -42,7 +42,7 @@ export function MemberAvatar({ m, size, font, ring }: { m: Pick<Member, 'photoTo
   const photo = memberPhoto(m);
   return (
     <div aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(photo, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: font, fontWeight: 500, flex: 'none', ...(ring ? { boxShadow: `0 0 0 4px ${ring}` } : {}) }}>
-      {photo ? null : initials(memberName(m))}
+      {photo ? null : initials(m)}
     </div>
   );
 }

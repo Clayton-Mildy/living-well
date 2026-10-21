@@ -28,7 +28,7 @@ export const members: Same<typeof EN> = {
   'notif.health': '{who} memperbarui catatan kesehatan {name}.', 'notif.planApplied': 'Perubahan paket {name} diterapkan mulai {date}.', 'notif.planDeclined': 'Permintaan perubahan paket {name} tidak diterapkan.',
   'notif.ending': 'Keanggotaan {name} berakhir pada {date}.', 'notif.reactivated': 'Keanggotaan {name} aktif kembali mulai {date}.', 'notif.contactAdded': 'Anda kini menjadi kontak keluarga untuk {name}.',
   'notif.appInvite': 'Sekarang Anda bisa memakai aplikasi CitraPremier untuk {name}.',
-  'err.nameRequired': 'Mohon isi nama lengkap.', 'err.dobRequired': 'Mohon isi tanggal lahir.', 'err.dobInvalid': 'Periksa tanggal lahir. Usia dihitung dari tanggal ini.',
+  'err.titleRequired': 'Sapaan harus diisi.', 'err.nameRequired': 'Mohon isi nama lengkap.', 'err.dobRequired': 'Mohon isi tanggal lahir.', 'err.dobInvalid': 'Periksa tanggal lahir. Usia dihitung dari tanggal ini.',
   'err.arrivalInvalid': 'Periksa jam kedatangan yang biasa, misalnya 10:00.', 'err.arrivalHours': 'Jam kedatangan harus antara {open} dan {close}.', 'err.planInvalid': 'Pilih paket.',
   'err.startInvalid': 'Pilih hari klub yang buka, hari ini atau setelahnya.', 'err.contactRequired': 'Mohon isi nama kontak.',
   'err.phoneRequired': 'Mohon isi nomor ponsel.', 'err.phoneInvalid': 'Nomor ponsel tampaknya belum benar. Gunakan +62… atau 08….',

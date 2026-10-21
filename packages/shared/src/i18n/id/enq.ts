@@ -47,7 +47,7 @@ export const enq: Same<typeof EN> = {
   'err.hours': 'Pilih jam saat klub buka ({open}–{close}).', 'err.alreadyMember': 'Calon ini sudah menjadi anggota.', 'err.notOpen': 'Buka kembali calon ini terlebih dahulu.',
   'err.reopenFirst': 'Buka kembali calon ini sebelum memindahkannya.', 'err.notLost': 'Hanya calon yang batal yang bisa dibuka kembali.',
 
-  'err.startPast': 'Tanggal mulai tidak boleh di masa lalu.',
+  'err.titleRequired': 'Sapaan harus diisi.', 'err.startPast': 'Tanggal mulai tidak boleh di masa lalu.',
 
   // ----- catatan kegiatan -----
   'feed.leadAdded': 'Calon baru · {name}', 'feed.moved_new': '{name} dikembalikan ke Baru', 'feed.moved_visit': '{name} dipindahkan ke Kunjungan', 'feed.moved_trial': '{name} dipindahkan ke Percobaan terjadwal',

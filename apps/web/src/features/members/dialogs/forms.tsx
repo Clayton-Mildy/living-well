@@ -1,12 +1,13 @@
 // Form building blocks for the member dialogs (design OvPe): sections, selects, the medicines list, allergy chips, and the field groups
 // that the add dialog and the edit dialogs share.
 import { useState, type CSSProperties, type ReactNode } from 'react';
-import { DIETS, FOODS, MED_TIMINGS, MOBILITIES, RELATIONS, TITLES } from '@cp/shared/rules/members';
+import { DIETS, FOODS, MED_TIMINGS, MOBILITIES, RELATIONS } from '@cp/shared/rules/members';
 import type { Diet, DrugAllergy, FoodAllergen, KtpKind, KtpUploads, MedTiming, MemberRegistration, Mobility, Relation, Title } from '@cp/shared';
 import { KtpField, type PaperFile } from '../PaperForm';
 import { MARITALS, REG_IDS, cleanRegistration, type Marital } from '@cp/shared/rules/applicationForm';
 import { Button, Chip, ChipGroup, FONT_BODY, GROUP_HEAD, Icon, IconButton, Select, TimeField, Toggle } from '../../../components/ui';
 import type { TFn } from '../../../lib/i18n';
+import { TitleField } from './TitleField';
 import { dietLabel, foodLabel, mobLabel, relLabel, timingLabel } from '../lib';
 
 /**
@@ -91,7 +92,7 @@ export function MedsEditor({ rows, onChange, t, showErrors }: { rows: MedRow[]; 
 export function TitleName({ d, set, t, errors }: { d: { title: Title; name: string }; set: (p: { title?: Title; name?: string }) => void; t: TFn; errors: Record<string, string> }) {
   return (
     <>
-      <ChipGroup label={t('profile.f.title')} value={d.title} onChange={(v) => set({ title: v as Title })} options={TITLES.map((x) => ({ value: x, label: x }))} />
+      <TitleField value={d.title} onChange={(v) => set({ title: v })} error={errors.title} />
       <TextField label={t('profile.nameLabel')} value={d.name} onChange={(v) => set({ name: v })} error={errors.name} name="name" />
     </>
   );

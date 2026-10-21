@@ -12,7 +12,7 @@ import { currentMembership, isOpen, isPendingRow, membershipStatus, displayName,
 import { paidOn } from '../rules/billing';
 import { cleanRegistration, validateRegistration } from '../rules/applicationForm';
 import {
-  DEFAULT_SIM, DIETS, DOC_TYPES, END_REASONS, FOODS, KTP_KINDS, MED_TIMINGS, MOBILITIES, RELATIONS, SIM_FILE, TITLES, docIdFor, ktpDocuments,
+  DEFAULT_SIM, DIETS, DOC_TYPES, END_REASONS, FOODS, KTP_KINDS, MED_TIMINGS, MOBILITIES, RELATIONS, SIM_FILE, TITLE_MAX, docIdFor, ktpDocuments,
   finalInvoiceFor, firstOfNextMonth, firstWord, genderOf, isHM, isISO, nextContactId, nextMemberId, lastMemberId, nextMemberNumber, splitName,
   validateNewMember, vaFor, consentOf, type NewMemberInput,
 } from '../rules/members';
@@ -22,6 +22,14 @@ import type { LeadHealth } from '../rules/enquiries';
 const bad = (code: string, params?: Record<string, string | number>): never => { throw new DomainError(code, params); };
 export const obj = (v: unknown): Record<string, unknown> => (v && typeof v === 'object' && !Array.isArray(v) ? (v as Record<string, unknown>) : bad('err.invalid'));
 export const txt = (v: unknown, max = 200): string => (typeof v === 'string' ? v.trim().slice(0, max) : '');
+/** A title: one of the presets or free text ("Other"), trimmed. Too long is invalid; empty is left for the caller's required-check (`code`). */
+export const titleOf = (v: unknown, emptyCode?: string): Title => {
+  if (typeof v !== 'string') return bad('err.invalid');
+  const t = v.trim();
+  if (t.length > TITLE_MAX) return bad('err.invalid');
+  if (!t && emptyCode) return bad(emptyCode);
+  return t;
+};
 export const oneOf = <T extends string>(v: unknown, list: readonly T[], code = 'err.invalid'): T => ((list as readonly string[]).includes(v as string) ? (v as T) : bad(code));
 const strList = (v: unknown, max = 120, cap = 30): string[] => (Array.isArray(v) ? v.map((x) => txt(x, max)).filter(Boolean).slice(0, cap) : []);
 const enumList = <T extends string>(v: unknown, list: readonly T[]): T[] => (Array.isArray(v) ? Array.from(new Set(v.filter((x): x is T => (list as readonly string[]).includes(x as string)))) : []);
@@ -165,7 +173,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
   const registration = parseRegistration(o.registration);
   const input: NewMemberFull = {
     ...(photo ? { photoMediaId: photo } : {}),
-    title: oneOf(o.title, TITLES),
+    title: titleOf(o.title), // empty is reported by validateNewMember (members.err.titleRequired)
     name: txt(o.name, 80),
     dob: txt(o.dob, 10),
     address: txt(o.address, 200),
@@ -224,7 +232,7 @@ export interface DetailsPatch {
 function parseDetailsPatch(raw: unknown): DetailsPatch {
   const p = obj(raw);
   const out: DetailsPatch = {};
-  if (p.title !== undefined) out.title = oneOf(p.title, TITLES);
+  if (p.title !== undefined) out.title = titleOf(p.title, 'members.err.titleRequired');
   if (p.name !== undefined) { const n = txt(p.name, 80); if (n.length < 2) bad('members.err.nameRequired'); out.name = n; }
   if (p.dob !== undefined) { const v = txt(p.dob, 10); if (!isISO(v)) bad('members.err.dobInvalid'); out.dob = v; }
   if (p.address !== undefined) out.address = txt(p.address, 200);

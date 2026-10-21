@@ -59,7 +59,7 @@ export function initialState(s: ClubState, mode: RegMode, today: ISODate): RegSt
 }
 
 const FIELDS: Record<RegStep, string[]> = {
-  person: ['name', 'dob', 'usualArrival', 'nik', 'rtRw', 'postcode', 'regPhone', 'regMobile', 'email'],
+  person: ['title', 'name', 'dob', 'usualArrival', 'nik', 'rtRw', 'postcode', 'regPhone', 'regMobile', 'email'],
   family: ['contact', 'contactName', 'phone', 'guarantorNik', 'nannyName', 'nannyNik'],
   health: ['meds'],
   plan: ['plan', 'start'],

@@ -56,7 +56,7 @@ export function PersonStep({ p, onPickLead }: { p: StepProps; onPickLead: (id: s
       {online && e?.form ? <Note tone="sage" icon="assignment_turned_in">{t('enq.formFilledBy', { name: e.form.filledBy || online.contact.name, date: fds(e.form.submittedAt!.slice(0, 10)) })}</Note> : null}
       <Sec p={p} label={t('profile.sec.details')}>
         {isNew ? <ProfilePhotoField name={st.name ? `${st.title} ${st.name}` : '?'} value={st.photo || null} onChange={(id) => set({ photo: id || '' })} /> : null}
-        <TitleName d={st} set={(x) => set({ ...x, ...(x.title ? { gender: genderOf(x.title) } : {}) })} t={t} errors={{ name: p.err('name') }} />
+        <TitleName d={st} set={(x) => set({ ...x, ...(x.title ? { gender: genderOf(x.title) } : {}) })} t={t} errors={{ title: p.err('title'), name: p.err('name') }} />
         <DateField label={t('profile.f.dob')} value={st.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} error={p.err('dob')} />
         <TextField label={t('profile.f.address')} value={st.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} name="address" />
         <OneId p={p} who="member" />

@@ -185,7 +185,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
         {(() => {
           const size = isPhone ? 68 : 104;
           const look = { width: size, height: size, borderRadius: 999, background: photoFill(memberPhoto(m), photoBg(m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isPhone ? 22 : 34, fontWeight: 400, flex: 'none', boxShadow: `inset 0 0 0 ${isPhone ? 3 : 4}px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)` } as const;
-          const face = m.photoMediaId ? null : initials(memberName(m));
+          const face = m.photoMediaId ? null : initials(m);
           if (!canPhoto) return <div aria-hidden="true" style={look}>{face}</div>;
           return (
             <button type="button" onClick={() => setPhotoSheet(true)} aria-label={t('profile.photoTitle')} title={t('profile.photoTitle')} data-testid="profile-avatar" style={{ ...look, position: 'relative', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Inter' }}>
@@ -301,7 +301,7 @@ function NativeHead({ m, canPhoto, onPhoto, titleRef, sub }: { m: Member; canPho
   const t = useT();
   const size = 88;
   const look = { width: size, height: size, borderRadius: 999, background: photoFill(memberPhoto(m), photoBg(m.photoTone)), color: TONES[m.photoTone % 5][1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 400, flex: 'none', boxShadow: 'inset 0 0 0 3px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' } as const;
-  const face = m.photoMediaId ? null : initials(memberName(m));
+  const face = m.photoMediaId ? null : initials(m);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8, paddingTop: 2 }}>
       {canPhoto ? (

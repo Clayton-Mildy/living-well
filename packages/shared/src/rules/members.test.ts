@@ -195,11 +195,12 @@ describe('reviews', () => {
 });
 
 describe('validateNewMember', () => {
-  const ok = { name: 'Siti Rahma', dob: '1946-03-12', usualArrival: '10:00', plan: 'flex' as const, start: '2026-10-26', contact: { name: 'Rudi', phone: '+6281340007777', relation: 'son' as const, primary: true }, formMediaId: 'md_testregistrationform01', consent: { data: true, face: true } };
+  const ok = { title: 'Oma', name: 'Siti Rahma', dob: '1946-03-12', usualArrival: '10:00', plan: 'flex' as const, start: '2026-10-26', contact: { name: 'Rudi', phone: '+6281340007777', relation: 'son' as const, primary: true }, formMediaId: 'md_testregistrationform01', consent: { data: true, face: true } };
   it('accepts a complete form and reports each field when it is not', () => {
     expect(validateNewMember(ok, T)).toEqual([]);
-    expect(validateNewMember({}, T).map((i) => i.field).sort()).toEqual(['consentData', 'contact', 'dob', 'form', 'name', 'plan', 'start']); // the usual arrival is optional; the signed paper form is required
+    expect(validateNewMember({}, T).map((i) => i.field).sort()).toEqual(['consentData', 'contact', 'dob', 'form', 'name', 'plan', 'start', 'title']); // the usual arrival is optional; the signed paper form is required
     expect(validateNewMember({ ...ok, formMediaId: '' }, T)[0]).toMatchObject({ field: 'form', code: 'members.err.formRequired' });
+    expect(validateNewMember({ ...ok, title: ' ' }, T)[0]).toEqual({ field: 'title', code: 'members.err.titleRequired', params: undefined });
     expect(validateNewMember({ ...ok, name: 'A' }, T)[0]).toEqual({ field: 'name', code: 'members.err.nameRequired', params: undefined });
     expect(validateNewMember({ ...ok, dob: '2015-01-01' }, T)[0].code).toBe('members.err.dobInvalid'); // age 11
     expect(validateNewMember({ ...ok, usualArrival: '' }, T)).toEqual([]);

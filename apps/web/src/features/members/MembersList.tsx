@@ -3,7 +3,7 @@
 // Pending new members are listed as "Pending approval". The details (age, mobility, allergies, medicines) live on the profile.
 import { useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, memberName, initials, ym } from '@cp/shared';
+import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
@@ -136,7 +136,7 @@ export function MembersList() {
                   <button type="button" className="cp-tap-target" onClick={() => open(r)}
                     style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 12, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                   <span style={{ position: 'relative', width: 42, height: 42, flex: 'none' }}>
-                    <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
+                    <span aria-hidden="true" style={{ width: 42, height: 42, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 15, fontWeight: 500, boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(r.m)}</span>
                     {dot ? <span aria-hidden="true" style={{ position: 'absolute', right: -2, bottom: -2, width: 13, height: 13, borderRadius: 999, background: dot, border: '2px solid var(--fill, #F4F4F5)' }} /> : null}
                   </span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -211,7 +211,7 @@ export function MembersList() {
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 16, minHeight: 72, borderTop: i ? HAIRLINE : 'none', background: 'transparent', color: '#24201C', fontFamily: 'Inter' }}>
                 <button type="button" onClick={() => open(r)}
                   style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-                <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500, flex: 'none', boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(memberName(r.m))}</span>
+                <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500, flex: 'none', boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(r.m)}</span>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{listName(r.m)}</span>
                   <FullName m={r.m} ellipsis={!isPhone} />

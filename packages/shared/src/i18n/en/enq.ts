@@ -44,7 +44,7 @@ export const enq = {
   'err.hours': 'Choose a time while the club is open ({open}–{close}).', 'err.alreadyMember': 'This lead is already a member.', 'err.notOpen': 'Reopen this lead first.',
   'err.reopenFirst': 'Reopen this lead before moving it.', 'err.notLost': 'Only lost leads can be reopened.',
 
-  'err.startPast': 'The start date cannot be in the past.',
+  'err.titleRequired': 'Title is needed.', 'err.startPast': 'The start date cannot be in the past.',
 
   // ----- activity feed -----
   'feed.leadAdded': 'New lead · {name}', 'feed.moved_new': '{name} moved back to New', 'feed.moved_visit': '{name} moved to Visit', 'feed.moved_trial': '{name} moved to Trial booked',

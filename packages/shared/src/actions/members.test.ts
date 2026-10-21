@@ -1,7 +1,7 @@
 // Members actions: gating per role, flagged health edits, afterApprove, validation, end and reactivate, notes, dates.
 // The club is drop-in: nothing is booked or expected, Flex counts visits, and an extra day comes from check-ins.
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, findByPhone, live, lobbyGroups, planOn, membershipStatus, type ClubState, type User } from '../index';
+import { buildSeed, execute, getUser, findByPhone, live, lobbyGroups, memberName, planOn, membershipStatus, type ClubState, type User } from '../index';
 import { faceConsent, faceReady, FILTERS, filterCounts, matchesQuery, memberRows as rows2, memberStatus, isNewMember, nextMemberId, finalInvoiceFor } from '../rules/members';
 
 const T = '2026-10-21';
@@ -98,6 +98,15 @@ describe('members.create', () => {
     expect(Object.keys(r.state.changeRequests).length).toBe(2); // only the seeded ones
   });
 
+  it('a free-text title ("Other") is stored as typed, trimmed', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.create', newMember({ title: ' Tante ', name: 'Lily Tan' }), who(c, 's1'));
+    const m = r.state.members[r.result.memberId as string];
+    expect(m).toMatchObject({ title: 'Tante', firstName: 'Lily', lastName: 'Tan', gender: 'f' });
+    expect(memberName(m)).toBe('Tante Lily Tan');
+    expect(run(c.citra, 'members.create', newMember({ title: 'T'.repeat(20) }), who(c, 's1')).state.members).toBeTruthy();
+  });
+
   it('only the front desk may add members', () => {
     const c = seed();
     for (const u of ['s8', 's5', 's3', 's10', 'f1']) expect(() => run(c.citra, 'members.create', newMember(), who(c, u))).toThrow('err.forbidden');
@@ -107,6 +116,9 @@ describe('members.create', () => {
     const c = seed();
     const go = (over: Record<string, unknown>) => () => run(c.citra, 'members.create', newMember(over), who(c, 's1'));
     expect(go({ name: ' ' })).toThrow('members.err.nameRequired');
+    expect(go({ title: '' })).toThrow('members.err.titleRequired');
+    expect(go({ title: '   ' })).toThrow('members.err.titleRequired');
+    expect(go({ title: 'T'.repeat(21) })).toThrow('err.invalid');
     expect(go({ dob: '' })).toThrow('members.err.dobRequired');
     expect(go({ dob: '2026-13-40' })).toThrow('members.err.dobInvalid');
     expect(go({ dob: '2030-01-01' })).toThrow('members.err.dobInvalid');

@@ -51,8 +51,9 @@ export const displayFull = (m: Pick<Member, 'title' | 'firstName' | 'lastName' |
   const full = memberName(m);
   return full === displayName(m) ? null : full;
 };
-export const initials = (n: string) => {
-  const p = n.replace(/^(Oma|Opa|Ibu|Bapak|Ns\.|Kak|Pak|Chef|Mbak|dr\.)\s+/, '').split(/\s+/).filter(Boolean);
+/** Initials of a name, or of a member: a member's title is never part of them (whatever it is, "Tante" included); a plain string has the usual titles stripped. */
+export const initials = (n: string | Pick<Member, 'title' | 'firstName' | 'lastName'>) => {
+  const p = (typeof n === 'string' ? n.replace(/^(Oma|Opa|Ibu|Bapak|Ns\.|Kak|Pak|Chef|Mbak|dr\.)\s+/, '') : memberName(n).slice(n.title.length + 1)).split(/\s+/).filter(Boolean);
   return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
 };
 export const memberAge = (m: Member, today: ISODate) => (m.dob ? ageOn(m.dob, today) : m.ageYears ?? null);

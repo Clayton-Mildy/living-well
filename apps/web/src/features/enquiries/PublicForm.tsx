@@ -27,7 +27,7 @@ const fromOnline = (o: OnlineRegistration): FDraft => ({
   nanny: !!o.nanny, nannyName: o.nanny?.name ?? '', nannyNik: o.nanny?.nik ?? '', ktp: o.ktp ?? {},
 });
 const toOnline = (d: FDraft, lang: Lang): OnlineRegistration => ({
-  title: d.title, name: d.name.trim(), dob: d.dob, address: d.address.trim(), contact: { name: d.cName.trim(), relation: d.rel, phone: d.phone.trim() }, ...(d.plan ? { plan: d.plan } : {}),
+  title: d.title.trim(), name: d.name.trim(), dob: d.dob, address: d.address.trim(), contact: { name: d.cName.trim(), relation: d.rel, phone: d.phone.trim() }, ...(d.plan ? { plan: d.plan } : {}),
   health: { conditions: d.conditions, diabetic: d.diabetic, food: d.food, foodOther: d.foodOther.trim(), drugs: joinDrugs(d), mobility: d.mobility === 'none' ? null : d.mobility, diet: d.diet },
   ...(regOfDraft(d.reg, d.nanny) ? { registration: regOfDraft(d.reg, d.nanny) } : {}), nanny: carerOf(d), ...(ktpFor(d.ktp, d.reg.ids, d.nanny) ? { ktp: ktpFor(d.ktp, d.reg.ids, d.nanny) } : {}), lang,
 });
@@ -91,7 +91,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   const phoneOk = d.phone.replace(/\D/g, '').length >= 8;
   const regIssues = validateRegistration(regOfDraft(d.reg, d.nanny));
   const errFor = (...fields: string[]) => (tried ? (() => { const i = regIssues.find((x) => fields.includes(x.field)); return i ? t(i.code, i.params) : ''; })() : '');
-  const problems = !d.name.trim() || !d.cName.trim() || !phoneOk || regIssues.length > 0 || !carerOk(d);
+  const problems = !d.title.trim() || !d.name.trim() || !d.cName.trim() || !phoneOk || regIssues.length > 0 || !carerOk(d);
   const submit = async () => {
     setTried(true);
     if (problems || busy) return;
@@ -123,7 +123,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
           <p style={{ margin: 0, fontSize: 15, lineHeight: 1.5, color: '#5E5852' }}>{t('enq.pf_intro')}</p>
         </div>
         <PeSection label={t('enq.pf_who')}>
-          <TitleName d={d} set={set} t={t} errors={{ name: tried && !d.name.trim() ? t('err.invalid') : '' }} />
+          <TitleName d={d} set={set} t={t} errors={{ title: tried && !d.title.trim() ? t('enq.err.titleRequired') : '', name: tried && !d.name.trim() ? t('err.invalid') : '' }} />
           <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={view.info.today} startAt={`${+view.info.today.slice(0, 4) - 80}${view.info.today.slice(4)}`} />
           <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} />
         </PeSection>

@@ -1,6 +1,6 @@
 // Small shared pieces for the activity screens: avatar, status badge, photo tile, labels that follow the language.
 import { type CSSProperties, type ReactNode } from 'react';
-import { BADGE, initials, memberName, type Activity, type BadgeKey, type ClubState, type ISODate, type Lang, type Member, type Photo } from '@cp/shared';
+import { BADGE, initials, type Activity, type BadgeKey, type ClubState, type ISODate, type Lang, type Member, type Photo } from '@cp/shared';
 import { activityName, photoActivity, fmtDuration } from '@cp/shared/rules/activity';
 import { Icon, PhotoImg, TONES, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -13,7 +13,7 @@ export function Av({ m, size = 40, fs, style }: { m: Pick<Member, 'title' | 'fir
   const photo = memberPhoto(m);
   return (
     <span aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(photo, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: fs ?? FONT_BODY, fontWeight: 500, flex: 'none', whiteSpace: 'nowrap', ...style }}>
-      {photo ? null : initials(memberName(m))}
+      {photo ? null : initials(m)}
     </span>
   );
 }

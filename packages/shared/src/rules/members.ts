@@ -57,7 +57,11 @@ export function splitName(full: string): { firstName: string; lastName: string }
 }
 /** The name as typed in forms (without title). */
 export const plainName = (m: Pick<Member, 'firstName' | 'lastName'>) => (m.firstName === m.lastName || !m.lastName ? m.firstName : `${m.firstName} ${m.lastName}`);
-export const genderOf = (t: Title): 'f' | 'm' => (t === 'Oma' || t === 'Ibu' ? 'f' : 'm');
+/** Longest title a front-desk user may type under "Other". */
+export const TITLE_MAX = 20;
+/** Titles read as female (pronouns); a free-text title that is not here counts as male until the profile says otherwise. */
+const FEMALE_TITLES = ['oma', 'ibu', 'tante', 'bu', 'nyonya', 'nenek', 'mbak', 'mama'];
+export const genderOf = (t: Title): 'f' | 'm' => (FEMALE_TITLES.includes(t.trim().toLowerCase()) ? 'f' : 'm');
 
 // ---------- ids ----------
 const numOf = (id: string, re: RegExp) => { const x = re.exec(id); return x ? Number(x[1]) : 0; };
@@ -373,6 +377,7 @@ export const ageRange = { min: 18, max: 120 };
 export function validateNewMember(d: Partial<NewMemberInput>, today?: ISODate): FieldIssue[] {
   const out: FieldIssue[] = [];
   const bad = (field: string, code: string, params?: Record<string, string | number>) => out.push({ field, code: `members.err.${code}`, params });
+  if (!d.title || !d.title.trim()) bad('title', 'titleRequired');
   if (!d.name || d.name.trim().length < 2) bad('name', 'nameRequired');
   if (!d.dob) bad('dob', 'dobRequired');
   else if (!isISO(d.dob) || (today && d.dob > today)) bad('dob', 'dobInvalid');

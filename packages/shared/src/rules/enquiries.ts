@@ -7,7 +7,7 @@ import type {
 } from '../types';
 import { dow, e164, live, sortBy, toMin } from '../util';
 import { dayStatus, nextOpenDay } from './core';
-import { ktpDocuments } from './members';
+import { genderOf, ktpDocuments } from './members';
 import { ratingTokenOf } from './surveys';
 
 // ---------- constants ----------
@@ -22,7 +22,7 @@ export const FOODS: FoodAllergen[] = ['shellfish', 'seafood', 'fish', 'peanuts',
 export const DRUGS = ['penicillin', 'sulfa', 'aspirin', 'ibuprofen'] as const;
 export const MOBILITIES: Mobility[] = ['walkingStick', 'walker', 'wheelchair'];
 export const DIETS: Diet[] = ['softFood', 'lowSalt', 'vegetarian', 'sugarFree'];
-export const isFemaleTitle = (t: Title) => t === 'Oma' || t === 'Ibu';
+export const isFemaleTitle = (t: Title) => genderOf(t) === 'f';
 
 // ---------- leads ----------
 export const isOpenStage = (s: EnqStage) => OPEN_STAGES.includes(s);

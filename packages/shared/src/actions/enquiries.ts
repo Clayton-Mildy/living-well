@@ -7,11 +7,12 @@ import { familyUserIds, shortOf } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
 import { FEE_DEFAULTS, priceOn } from '../rules/billing';
 import {
-  ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
+  ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
 } from '../rules/enquiries';
+import { TITLE_MAX } from '../rules/members';
 import { parseCarer, parseHealthBasics, parseKtp, parseRegistration } from './members';
 import { FORM_LINK_DAYS, enquiryByFormToken, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
-import { arr, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
+import { arr, bad, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { e164, live, sortBy, addDays } from '../util';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
@@ -21,9 +22,16 @@ const S = (d: Draft<ClubState>) => d as unknown as ClubState;
 const NEXT_KINDS = ['callBack', 'sendPrices', 'visit', 'trial', 'followUp', 'starts', 'custom'] as const;
 
 // ---------- parsing ----------
+/** A title: a preset or free text ("Other"), trimmed, 1 to 20 characters. */
+const titleOf = (v: unknown, field: string): string => {
+  if (typeof v !== 'string') return bad(field);
+  const t = v.trim();
+  if (!t) return bad(field, 'enq.err.titleRequired');
+  return t.length > TITLE_MAX ? bad(field) : t;
+};
 const parseSenior = (v: unknown) => {
   const o = obj(v, 'senior');
-  return { title: oneOf(o.title, TITLES, 'senior.title'), name: str(o.name, 80, { required: true, field: 'senior.name' }) };
+  return { title: titleOf(o.title, 'senior.title'), name: str(o.name, 80, { required: true, field: 'senior.name' }) };
 };
 const parseContact = (v: unknown) => {
   const o = obj(v, 'contact');
@@ -404,7 +412,7 @@ export const enquiriesActions = [
       return {
         token: str(o.token, 80, { required: true, field: 'token' }),
         draft: {
-          title: oneOf(dr.title, TITLES, 'title'), name: str(dr.name, 80, { required: true, field: 'name' }), dob: dr.dob ? isoDate(dr.dob, 'dob') : '', address: str(dr.address, 200),
+          title: titleOf(dr.title, 'title'), name: str(dr.name, 80, { required: true, field: 'name' }), dob: dr.dob ? isoDate(dr.dob, 'dob') : '', address: str(dr.address, 200),
           contact: { name: str(c.name, 80, { required: true, field: 'contact.name' }), relation: oneOf(c.relation, ALL_RELATIONS, 'contact.relation'), phone: phone(c.phone, 'contact.phone') },
           ...(plan ? { plan } : {}), ...(dr.nanny !== undefined ? { nanny: parseCarer(dr.nanny) as { name: string; nik: string } | null } : {}), ...(dr.ktp !== undefined ? { ktp: parseKtp(dr.ktp) } : {}), health: h, ...(registration ? { registration } : {}), lang: oneOf(dr.lang ?? 'en', ['en', 'id'] as const, 'lang'),
         },

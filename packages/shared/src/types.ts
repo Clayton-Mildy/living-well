@@ -10,7 +10,8 @@ export type Actor = `staff:${string}` | `family:${string}` | 'system' | 'doorCam
 export type Health = 'normal' | 'watch' | 'alert';
 export type Weekday = 1 | 2 | 3 | 4 | 5;
 export type Lang = 'en' | 'id';
-export type Title = 'Oma' | 'Opa' | 'Ibu' | 'Bapak';
+/** The four presets, or any short free text the front desk types under "Other" (e.g. Tante). */
+export type Title = 'Oma' | 'Opa' | 'Ibu' | 'Bapak' | (string & {});
 export type Relation = 'daughter' | 'son' | 'daughterInLaw' | 'sonInLaw' | 'granddaughter' | 'grandson' | 'grandchild' | 'spouse' | 'sibling' | 'other';
 export type FoodAllergen = 'shellfish' | 'seafood' | 'fish' | 'peanuts' | 'eggs' | 'dairy' | 'gluten';
 export type DishAllergen = 'fish' | 'shellfish' | 'peanuts' | 'treeNuts' | 'eggs' | 'dairy' | 'gluten' | 'soy';

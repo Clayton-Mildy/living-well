@@ -5,7 +5,7 @@ import {
   addDays, dayStatus, feeOf, fmtPhone, priceOn, rp, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Relation, type Title,
 } from '@cp/shared';
 import {
-  ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, TITLES, bookableDays, bookingDayCheck, formLinkState, formPath, openGuest, seniorName, trialDays,
+  ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookableDays, bookingDayCheck, formLinkState, formPath, openGuest, seniorName, trialDays,
 } from '@cp/shared/rules/enquiries';
 import { Button, DateField, Dialog, Icon, Note, TimeField } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -17,6 +17,7 @@ import { say } from '../../store/ui';
 import { RegistrationFlow } from '../members/register/RegistrationFlow';
 import { StackChip } from '../members/register/parts';
 import { DialogBody, PeSection, TextField } from '../members/dialogs/forms';
+import { TitleField } from '../members/dialogs/TitleField';
 
 export type Dlg =
   | { mode: 'new' }
@@ -70,7 +71,7 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
   const s = useClub();
   const act = useAct();
   const e = id ? s.enquiries[id] : undefined;
-  const [title, setTitle] = useState<Title>(e?.senior.title ?? 'Oma');
+  const [title, setTitle] = useState<string>(e?.senior.title ?? 'Oma');
   const [name, setName] = useState(e?.senior.name ?? '');
   const [cName, setCName] = useState(e?.contact.name ?? '');
   const [rel, setRel] = useState<Relation>(e?.contact.relation ?? 'daughter');
@@ -80,19 +81,19 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const phoneOk = phone.replace(/\D/g, '').length >= 8;
-  const ok = !!name.trim() && !!cName.trim() && phoneOk;
+  const ok = !!title.trim() && !!name.trim() && !!cName.trim() && phoneOk;
   const rels = ALL_RELATIONS.filter((r) => ['daughter', 'son', 'spouse', 'daughterInLaw', 'sonInLaw', 'grandson', 'granddaughter', 'sibling', 'other'].includes(r));
   const save = async () => {
     setTouched(true);
     if (!ok || busy) return;
     setBusy(true);
     try {
-      const body = { senior: { title, name: name.trim() }, contact: { name: cName.trim(), relation: rel, phone }, source, notes: notes.trim() };
+      const body = { senior: { title: title.trim(), name: name.trim() }, contact: { name: cName.trim(), relation: rel, phone }, source, notes: notes.trim() };
       if (e) {
         const r = await act('enquiry.update', { enquiryId: e.id, ...body }, { ok: t('enq.leadSaved') });
         if (r.ok) onClose();
       } else {
-        const r = await act('enquiry.create', body, { ok: t('enq.leadCreated', { name: `${title} ${name.trim()}` }) });
+        const r = await act('enquiry.create', body, { ok: t('enq.leadCreated', { name: `${title.trim()} ${name.trim()}` }) });
         if (r.ok) onClose();
       }
     } finally { setBusy(false); }
@@ -111,9 +112,7 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
       </>}>
       <DialogBody>
       <Sec label={t('enq.fSenior')}>
-        <div style={row} role="radiogroup" aria-label={t('enq.fSeniorTitle')}>
-          {TITLES.map((x) => <Pick key={x} selected={title === x} onClick={() => setTitle(x)}>{x}</Pick>)}
-        </div>
+        <TitleField value={title} onChange={setTitle} error={touched && !title.trim() ? t('enq.err.titleRequired') : undefined} />
         <TextField label={t('enq.fSeniorName')} value={name} onChange={setName} error={touched && !name.trim() && t('err.invalid')} />
       </Sec>
       <Sec label={t('enq.fContact')}>

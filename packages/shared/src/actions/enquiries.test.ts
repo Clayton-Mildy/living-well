@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, findByPhone, guestsOn, live, updatesFor, actionItems, DomainError, systemUser, type ClubState } from '../index';
-import { enquiryByFormToken, formLinkState } from '../rules/enquiries';
+import { enquiryByFormToken, formLinkState, seniorName } from '../rules/enquiries';
 
 const T = '2026-10-21'; // Wednesday
 const clock = { today: T, nowMin: 10 * 60 };
@@ -38,6 +38,16 @@ describe('leads', () => {
     expect(() => run(s, 'enquiry.create', lead, 'f1')).toThrow('err.forbidden');
     fails(s, 'enquiry.create', { ...lead, senior: { title: 'Oma', name: ' ' } }, 's1', 'err.invalid');
     fails(s, 'enquiry.create', { ...lead, contact: { ...lead.contact, phone: '12' } }, 's1', 'err.invalid');
+  });
+  it('a free-text title ("Other") is kept as typed on create and edit; empty or too long is refused', () => {
+    const s = seed().citra;
+    const r = run(s, 'enquiry.create', { ...lead, senior: { title: ' Tante ', name: 'Lily Tan' } }, 's1');
+    const e = r.state.enquiries[r.result.enquiryId as string];
+    expect(e.senior).toEqual({ title: 'Tante', name: 'Lily Tan' });
+    expect(seniorName(e)).toBe('Tante Lily Tan');
+    expect(run(r.state, 'enquiry.update', { enquiryId: e.id, senior: { title: 'Nyonya', name: 'Lily Tan' } }, 's1').state.enquiries[e.id].senior.title).toBe('Nyonya');
+    fails(s, 'enquiry.create', { ...lead, senior: { title: '', name: 'Lily Tan' } }, 's1', 'enq.err.titleRequired');
+    fails(s, 'enquiry.create', { ...lead, senior: { title: 'T'.repeat(21), name: 'Lily Tan' } }, 's1', 'err.invalid');
   });
   it('edit changes the lead and keeps booked visit names in step', () => {
     const s = seed().citra;
@@ -190,6 +200,13 @@ describe('joining a lead (registration is on paper)', () => {
     fails(s, 'enquiry.convert', { ...input, formMediaId: 'not-a-media-id' }, 's9', 'err.invalid');
     expect(s.enquiries.e1.stage).toBe('trial');
   });
+  it('Join keeps a free-text title: the member is "Tante ..." with a female gender', () => {
+    const s = seed().citra;
+    const made = run(s, 'enquiry.create', { ...lead, senior: { title: 'Tante', name: 'Lily Tan' } }, 's9');
+    const id = made.result.enquiryId as string;
+    const r = run(made.state, 'enquiry.convert', { ...input, enquiryId: id }, 's9');
+    expect(r.state.members[r.result.memberId as string]).toMatchObject({ title: 'Tante', firstName: 'Lily', lastName: 'Tan', gender: 'f' });
+  });
   it('management joins a lead at once: the lead details land on the member with the paper form on file, the contact can sign in', () => {
     const s = seed().citra;
     const r = run(s, 'enquiry.convert', input, 's9');
@@ -329,6 +346,16 @@ describe('online registration link', () => {
     // once sent in, it cannot be sent twice or re-linked
     fails(done.state, 'enquiry.sendForm', { enquiryId: id }, 's1', 'enq.err.formDone');
     expect(() => sys(done.state, 'enquiry.formSubmit', { token, draft: draft() })).toThrow(DomainError);
+  });
+  it('the online form accepts a free-text title; empty or too long is refused', () => {
+    const made = run(seed().citra, 'enquiry.create', lead, 's1');
+    const id = made.result.enquiryId as string;
+    const sent = run(made.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    const token = sent.result.token as string;
+    const done = sys(sent.state, 'enquiry.formSubmit', { token, draft: draft({ title: 'Tante' }) });
+    expect(done.state.enquiries[id].form!.draft).toMatchObject({ title: 'Tante' });
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft({ title: '' }) })).toThrow('enq.err.titleRequired');
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft({ title: 'T'.repeat(21) }) })).toThrow('err.invalid');
   });
   it('only the system submits, a wrong token is not found, an expired link is refused, and a bad answer is rejected', () => {
     const made = run(seed().citra, 'enquiry.create', lead, 's1');

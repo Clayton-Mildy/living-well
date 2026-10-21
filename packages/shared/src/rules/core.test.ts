@@ -1,7 +1,7 @@
 // Display names: the nickname (Panggilan) is what staff and family call a member.
 import { describe, it, expect } from 'vitest';
 import type { Member } from '../index';
-import { displayFull, displayName, memberShort } from './core';
+import { displayFull, displayName, initials, memberName, memberShort } from './core';
 
 describe('displayName', () => {
   const m = { title: 'Oma', firstName: 'Giok Nio', lastName: 'Oei', registration: { nickname: 'Nio' } } as Member;
@@ -16,5 +16,15 @@ describe('displayName', () => {
     expect(displayName(lina)).toBe('Oma Lina');
     expect(displayName({ ...lina, registration: { nickname: 'Pak Bambang' } })).toBe('Pak Bambang');
     expect(displayName({ ...lina, registration: { nickname: '  ' } })).toBe('Oma Lina');
+  });
+});
+
+describe('initials', () => {
+  it('works with any title: given a member it uses the first and last name, never the title', () => {
+    expect(initials({ title: 'Tante', firstName: 'Lily', lastName: 'Tan' })).toBe('LT');
+    expect(initials({ title: 'Oma', firstName: 'Giok Nio', lastName: 'Oei' })).toBe('GO');
+    expect(initials({ title: 'Tante', firstName: 'Lily', lastName: 'Lily' })).toBe('L');
+    expect(initials(memberName({ title: 'Oma', firstName: 'Lina', lastName: 'Wijaya' }))).toBe('LW'); // a plain name still strips the presets
+    expect(memberName({ title: 'Tante', firstName: 'Lily', lastName: 'Tan' })).toBe('Tante Lily Tan');
   });
 });
