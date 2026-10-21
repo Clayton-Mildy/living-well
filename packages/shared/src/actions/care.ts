@@ -2,7 +2,7 @@
 // Taking photos and the management review (approve / reject) live in photos.ts.
 import { z } from 'zod';
 import type { Draft } from 'immer';
-import type { ClubState, DailyLog, ISODate, Slot } from '../types';
+import type { ClubState, DailyLog, Face, ISODate, Slot } from '../types';
 import { DomainError, defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { namesOf, notifyPhotoFamilies } from './photos';
@@ -10,6 +10,7 @@ import { isPendingRow } from '../rules/core';
 import { LUNCH_AMOUNTS, NORMAL_LOG, SESSION_MARKS, attendedOn, joinedOf, logDateOk, logId, logsOn, roundsOf, type LunchAmount, type SessionMark } from '../rules/activity';
 import { fmtDMY } from '../rules/calendar';
 import { attId } from '../rules/attendance';
+import { writeMark } from '../rules/mood';
 import { uniq } from '../util';
 import { LOG_KEYS, approvedVersion } from '../rules/approvals';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
@@ -161,7 +162,10 @@ const markSchema = z.object({
   communicative: z.enum(['normal', 'withdrawn']).nullable().optional(),
   content: z.enum(['normal', 'low']).nullable().optional(),
   onlyEmpty: z.boolean().optional(),
-}).refine((x) => x.lunch !== undefined || x.session !== undefined || x.mood !== undefined || x.communicative !== undefined || x.content !== undefined);
+  // round 12: how the member was in this session, 1-5 (a mood mark per member); only with a session
+  face: z.union([z.literal(1), z.literal(2), z.literal(3), z.literal(4), z.literal(5)]).optional(),
+}).refine((x) => x.lunch !== undefined || x.session !== undefined || x.mood !== undefined || x.communicative !== undefined || x.content !== undefined)
+  .refine((x) => x.face === undefined || x.session !== undefined);
 export type MarkInput = z.infer<typeof markSchema>;
 
 // ---------- photos (taking and reviewing photos is in photos.ts; here the moderation of what is already stored) ----------
@@ -206,6 +210,10 @@ export const careActions = [
         ...(input.session ? { sessions: { [input.session.slot]: input.session.value } } : {}),
       };
       const done = ids.filter((id) => applyMarks(d, ctx, id, input.date, marks, !!input.onlyEmpty));
+      // a face rides with a joined / sat-out mark: one activity mark per member (today's sessions only, like every mood mark)
+      if (input.face && input.session && (input.session.value === 'joined' || input.session.value === 'satOut') && input.date === ctx.today) {
+        for (const id of ids) writeMark(d, ctx, { memberId: id, moment: 'activity', face: input.face as Face, slot: input.session.slot });
+      }
       if (done.length > 1) {
         const names = namesOf(d, done);
         if (input.lunch !== undefined) ctx.feed({ icon: 'restaurant', key: 'activity.feed.markLunch', params: { names, n: done.length } });

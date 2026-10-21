@@ -26,11 +26,12 @@ import { accountActions } from './accounts';
 import { renewalActions } from './renewals';
 import { guestActions } from './guests';
 import { taskActions } from './tasks';
+import { moodActions } from './mood';
 
 registerActions([
   ...reviewActions, ...approvalActions, ...sessionActions, ...attendanceActions, ...healthActions, ...membersActions, ...familyActions,
   ...careActions, ...photoActions, ...photoDraftActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...membershipActions, ...accountActions,
-  ...renewalActions, ...guestActions, ...taskActions,
+  ...renewalActions, ...guestActions, ...taskActions, ...moodActions,
 ] as never);
 
 export * from './framework';

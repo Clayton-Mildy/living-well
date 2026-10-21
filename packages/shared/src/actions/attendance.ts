@@ -3,7 +3,7 @@
 // recorded as bringing or collecting. Trial guests (a date, no time) and visit guests (a date and time) are checked in from
 // "Also today". None of these are customer-detail edits, so none go through management review.
 import type { Draft } from 'immer';
-import type { ClubState, GuestVisit, Member } from '../types';
+import type { ClubState, Face, GuestVisit, Member } from '../types';
 import { DomainError, defineAction, hasRole, type Ctx } from './framework';
 import { ensureAttendance, familyUserIds, shortOf, requireMember } from './helpers';
 import { activeOn, dayStatus, isPendingRow } from '../rules/core';
@@ -11,6 +11,8 @@ import { attId } from '../rules/attendance';
 import { priceOn, suspensionOf } from '../rules/billing';
 import { onLeaveOn } from '../rules/leave';
 import { faceOptedOut, visitInfo } from '../rules/lobby';
+import { clearMark, writeMark } from '../rules/mood';
+import { optFace } from './mood';
 import { rp, ym } from '../util';
 
 const lobbyOrMgmt = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'lobby', 'mgmt');
@@ -24,9 +26,14 @@ const str = (x: unknown): string => {
 const parseMember = (raw: unknown) => ({ memberId: str((raw as { memberId?: unknown })?.memberId) });
 const parseGuest = (raw: unknown) => ({ guestId: str((raw as { guestId?: unknown })?.guestId) });
 function parseArrival(raw: unknown) {
-  const r = raw as { memberId?: unknown; method?: unknown };
+  const r = raw as { memberId?: unknown; method?: unknown; face?: unknown };
   if (r?.method !== 'face' && r?.method !== 'manual') throw bad();
-  return { memberId: str(r.memberId), method: r.method as 'face' | 'manual' };
+  const face = optFace(r.face);
+  return { memberId: str(r.memberId), method: r.method as 'face' | 'manual', ...(face ? { face } : {}) };
+}
+function parseDeparture(raw: unknown) {
+  const face = optFace((raw as { face?: unknown })?.face);
+  return { memberId: str((raw as { memberId?: unknown })?.memberId), ...(face ? { face } : {}) };
 }
 
 /** Soft-delete today's earlier notification about this member (family "checked in/out", or the extra-day note to management and
@@ -48,7 +55,7 @@ const guestOf = (d: Draft<ClubState>, id: string, ctx: Ctx): Draft<GuestVisit> =
 export const attendanceActions = [
   // Check a member in: any active, approved member on any open day. `result.extra` says whether this visit is an extra Flex day
   // (the 11th visit of a month on Flex): the feed notes it and management and finance are told, for the next month's invoice.
-  defineAction<{ memberId: string; method: 'face' | 'manual' }>({
+  defineAction<{ memberId: string; method: 'face' | 'manual'; face?: Face }>({
     name: 'attendance.checkIn',
     can: (u) => lobbyOrMgmt(u),
     parse: parseArrival,
@@ -78,13 +85,14 @@ export const attendanceActions = [
         ctx.feed({ icon: 'payments', key: 'lobby.feed.extraVisit', params: { name, n: visit.n }, memberId: m.id });
         ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'lobby.notif.extraVisit', params: { name, n: visit.n, price: rp(priceOn(d as ClubState, ctx.today).extra) }, link: `/members/${m.id}`, memberId: m.id });
       }
+      if (input.face) writeMark(d, ctx, { memberId: m.id, moment: 'arrival', face: input.face });
       ctx.result.time = ctx.now;
     },
   }),
-  defineAction<{ memberId: string }>({
+  defineAction<{ memberId: string; face?: Face }>({
     name: 'attendance.checkOut',
     can: (u) => lobbyOrMgmt(u),
-    parse: parseMember,
+    parse: parseDeparture,
     run(d, input, ctx) {
       requireMember(d, input.memberId, ctx); // no membership check: someone whose last day is today can still be checked out
       const a = d.attendance[attId(ctx.today, input.memberId)];
@@ -94,6 +102,7 @@ export const attendanceActions = [
       a.edits.push({ at: ctx.nowDT, by: ctx.actor, what: 'checkOut' });
       ctx.feed({ icon: 'home', key: 'feed.checkedOut', params: { name: shortOf(d, input.memberId) }, memberId: input.memberId });
       ctx.notify({ toUsers: familyUserIds(d, input.memberId), kind: 'notif.checkedOut', params: { name: shortOf(d, input.memberId), time: ctx.now }, link: '/today', memberId: input.memberId });
+      if (input.face) writeMark(d, ctx, { memberId: input.memberId, moment: 'departure', face: input.face });
       ctx.result.time = ctx.now;
     },
   }),
@@ -115,6 +124,7 @@ export const attendanceActions = [
       retractNotice(d, ctx, input.memberId, 'lobby.notif.extraVisit'); // a visit that did not happen is not billed: management and finance are no longer told
       delete a.checkIn;
       delete a.departureAsked;
+      clearMark(d, ctx.today, input.memberId, 'arrival');
       a.edits.push({ at: ctx.nowDT, by: ctx.actor, what: 'undoCheckIn' });
       ctx.feed({ icon: 'undo', key: 'lobby.feed.undoIn', params: { name: shortOf(d, input.memberId) }, memberId: input.memberId });
     },
@@ -130,6 +140,7 @@ export const attendanceActions = [
       if (!a.checkOut) return ctx.fail('lobby.err.notCheckedOut', { name: shortOf(d, input.memberId) });
       retractNotice(d, ctx, input.memberId, 'notif.checkedOut', a.checkOut.at);
       delete a.checkOut;
+      clearMark(d, ctx.today, input.memberId, 'departure');
       a.edits.push({ at: ctx.nowDT, by: ctx.actor, what: 'undoCheckOut' });
       ctx.feed({ icon: 'undo', key: 'lobby.feed.undoOut', params: { name: shortOf(d, input.memberId) }, memberId: input.memberId });
     },

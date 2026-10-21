@@ -3,10 +3,12 @@
 // The club is drop-in: a member can be checked at any time (checked in or not, still here or gone home), so a reading only needs an
 // active membership. Trial guests are different: they are checked while they are in the club.
 import type { Draft } from 'immer';
-import type { Attendance, ClubState, GuestVisit, Health, HealthLimits, HM, LimitKey, Member, QueueKind, QuickNote, Reading, User } from '../types';
+import type { Attendance, ClubState, Face, GuestVisit, Health, HealthLimits, HM, LimitKey, Member, QueueKind, QuickNote, Reading, User } from '../types';
 import { DomainError, defineAction, hasRole, nameOfUser, type ActionDef, type Ctx } from './framework';
 import { ensureAttendance, requireMember, shortOf } from './helpers';
 import { attId } from '../rules/attendance';
+import { writeMark } from '../rules/mood';
+import { optFace } from './mood';
 import { activeOn, isPendingRow, memberShort } from '../rules/core';
 import { LIMIT_KEYS, LIMIT_RANGE, evaluateReading, lastBefore, limitOrderOk, limitsFor, limitsOf, todayReading, validReadings, worst } from '../rules/health';
 import {
@@ -33,6 +35,8 @@ export interface ReadingSaveInput extends NumericValues {
   recheck: boolean;
   deferMonthly: boolean;
   source: Reading['source'];
+  /** round 12: how the member looked at the health check, 1-5; saved as a mood mark tied to the reading */
+  face?: Face;
 }
 export interface ReadingEditInput { readingId: string; values: NumericValues; reason: EditReason; note?: string }
 export interface ReadingVoidInput { readingId: string; reason: VoidReason; note?: string; withMonthly?: boolean }
@@ -128,8 +132,9 @@ export const healthActions: ActionDef[] = [
       if (kind === 'monthly' && !hasAny(v, MONTHLY_FIELDS)) throw new DomainError('health.err.needValue');
       const noteKeys = Array.isArray(i.noteKeys) ? QUICK_NOTES.filter((k) => (i.noteKeys as unknown[]).includes(k)) : [];
       const note = str(i.note)?.slice(0, 500);
+      const face = optFace(i.face);
       return {
-        ...v, ...(memberId ? { memberId } : {}), ...(guestId ? { guestId } : {}), kind, noteKeys, ...(note ? { note } : {}),
+        ...v, ...(memberId ? { memberId } : {}), ...(guestId ? { guestId } : {}), ...(face && memberId ? { face } : {}), kind, noteKeys, ...(note ? { note } : {}),
         shared: i.shared === true, tellFamily: i.tellFamily === true, recheck: i.recheck === true, deferMonthly: i.deferMonthly === true, source: oneOf(i.source, ['device', 'keypad', 'mixed'] as const) ?? 'keypad',
       };
     },
@@ -171,6 +176,7 @@ export const healthActions: ActionDef[] = [
       }
       const overall = worst([main.status, companion?.status ?? 'normal']);
       d.readings[main.id] = main;
+      if (m && input.face) writeMark(d, ctx, { memberId: m.id, moment: 'health', face: input.face, readingId: main.id });
       if (companion) d.readings[companion.id] = companion;
       const row = d.readings[main.id];
 
@@ -281,6 +287,7 @@ export const healthActions: ActionDef[] = [
       if (r.voided) ctx.fail('health.err.alreadyVoided');
       const stamp = { at: ctx.nowDT, by: ctx.user.id, reason: input.reason, ...(input.note ? { note: input.note } : {}) };
       r.voided = stamp;
+      for (const [k, mk] of Object.entries(d.moodMarks)) if (mk.readingId === r.id) delete d.moodMarks[k]; // the face went with the reading
       let withMonthly = false;
       if (input.withMonthly && r.kind !== 'monthly') {
         const twin = Object.values(d.readings).find((x) => x !== r && !x.deletedAt && !x.voided && x.kind === 'monthly' && x.date === r.date && x.time === r.time && x.memberId === r.memberId && x.guestId === r.guestId);

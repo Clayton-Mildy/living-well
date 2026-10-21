@@ -24,6 +24,7 @@ import { guests } from './guests';
 import { insights } from './insights';
 import { report } from './report';
 import { drafts } from './drafts';
+import { mood } from './mood';
 import { fam } from './fam';
 import { ftoday } from './ftoday';
 import { fphotos } from './fphotos';
@@ -67,6 +68,7 @@ export const id = {
   ...ns('insights', insights),
   ...ns('report', report),
   ...ns('drafts', drafts),
+  ...ns('mood', mood),
   ...ns('fam', fam),
   ...ns('ftoday', ftoday),
   ...ns('fphotos', fphotos),
