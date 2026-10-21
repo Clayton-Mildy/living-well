@@ -3,7 +3,7 @@
 import type { Draft } from 'immer';
 import type { ClubState, Member } from '../types';
 import { defineAction, DomainError, type Ctx } from './framework';
-import { currentMembership, isPendingRow, memberShort, primaryContact } from '../rules/core';
+import { currentMembership, isPendingRow, displayName, primaryContact } from '../rules/core';
 import { stopsDue, suspensions } from '../rules/billing';
 import { leaveOverrunMonth } from '../rules/leave';
 import { finalInvoiceFor } from '../rules/members';
@@ -36,7 +36,7 @@ registerJob('membership.daily', (d, ctx) => {
     for (const [memberId, sus] of Object.entries(suspensions(s, today))) {
       if (toldAlready(d, 'finance.notif.suspended', sus.invoiceId)) continue;
       const m = d.members[memberId];
-      const name = memberShort(m);
+      const name = displayName(m);
       const params = { name, number: sus.number, amount: rp(sus.balance), date: sus.stopOn };
       const tail = sus.told ? 'Told' : ''; // the family gave notice: no stop date to warn about
       ctx.notify({ toRoles: ['mgmt', 'finance'], kind: `finance.notif.suspended${tail}`, params, link: `/members/${memberId}`, memberId, severity: 'attention', ref: { type: 'invoice', id: sus.invoiceId } });
@@ -53,7 +53,7 @@ registerJob('membership.daily', (d, ctx) => {
       for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending') { r.status = 'declined'; r.decidedBy = 'system'; r.decidedAt = ctx.nowDT; }
       const fin = finalInvoiceFor(s, m as Member, lastDay, today); // extra days no invoice has billed yet
       if (fin) d.invoices[fin.number] = { id: fin.number, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: 'system', ...fin };
-      const name = memberShort(m);
+      const name = displayName(m);
       const params = { name, number: x.number, amount: rp(x.balance) };
       ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'finance.notif.stopped', params, link: `/members/${m.id}`, memberId: m.id, severity: 'attention', ref: { type: 'invoice', id: x.invoiceId } });
       const payer = primaryContact(s, m.id);
@@ -68,7 +68,7 @@ registerJob('membership.daily', (d, ctx) => {
       const cur = currentMembership(m);
       const lastDay = addDays(`${month}-01`, -1) < cur.start ? cur.start : addDays(`${month}-01`, -1);
       cur.lastDay = lastDay; cur.endReason = 'leaveOverrun'; cur.endedBy = 'system'; cur.endedAt = ctx.nowDT;
-      const name = memberShort(m);
+      const name = displayName(m);
       ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'family.notif.leaveOverrun', params: { name, month }, link: `/members/${m.id}`, memberId: m.id, severity: 'attention' });
       const payer = primaryContact(s, m.id);
       if (payer) ctx.notify({ toUsers: [payer.id], kind: 'family.notif.leaveOverrunFamily', params: { name, month }, link: '/billing', memberId: m.id, severity: 'attention' });

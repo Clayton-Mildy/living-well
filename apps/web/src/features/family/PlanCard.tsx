@@ -1,7 +1,7 @@
 // Round 8: "Ask the club to change the plan" and "Ask for leave", the two bronze text links under a parent's plan (Billing's Plans list and the parent's
 // profile). The billing contact sends them; everyone else reads who to ask. A request waiting for the club shows with a way to withdraw it.
 import { useState } from 'react';
-import { isPrimaryFor, memberShort, priceOn, rp, suspensionOf, type Member } from '@cp/shared';
+import { isPrimaryFor, displayName, priceOn, rp, suspensionOf, type Member } from '@cp/shared';
 import { pendingPlanRequest, planName } from '@cp/shared/actions/planRequests';
 import { billingContactOf, planSummary } from '@cp/shared/rules/family';
 import { Icon } from '../../components/ui';
@@ -26,7 +26,7 @@ export function PlanAsk({ m, quiet }: { m: Member; quiet?: boolean }) {
   const flex = p.plan === 'flex';
   const hold = suspensionOf(s, m.id, now.today);
   const line = { fontSize: 14, lineHeight: '20px', color: F.text } as const;
-  const name = memberShort(m);
+  const name = displayName(m);
   const to = flex ? 'gold' : 'flex';
   const next = new Date(Date.UTC(+now.today.slice(0, 4), +now.today.slice(5, 7), 1)).toISOString().slice(0, 10);
   const price = priceOn(s, next);

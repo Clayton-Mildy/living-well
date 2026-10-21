@@ -7,7 +7,7 @@
 // title row holds the switch. `?date=YYYY-MM-DD` selects a day, `?view=month` opens the month.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { addDays, addMonths, dayStatus, dow, isWeekday, memberName, memberShort, nextOpenDay, ym, type ISODate, type Member, type Photo, type YM } from '@cp/shared';
+import { addDays, addMonths, dayStatus, dow, isWeekday, memberName, displayName, nextOpenDay, ym, type ISODate, type Member, type Photo, type YM } from '@cp/shared';
 import { eventTitle, mondayOf, upcomingClosures } from '@cp/shared/rules/calendar';
 import { cameByDay, famDay, famRange, famWeek } from '@cp/shared/rules/famCalendar';
 import { Icon } from '../../components/ui';
@@ -141,7 +141,7 @@ export function FamilyCalendar() {
 function Tile({ d, sel, isToday, state, visited, faces = [], onPick }: { d: ISODate; sel: boolean; isToday: boolean; state: string; /** KC round 10: a parent came that day (a bronze dot under the number) */ visited?: boolean; /** round 11: who came, as tiny faces (several parents) */ faces?: Member[]; onPick: (d: ISODate) => void }) {
   const { t, fmt } = useFamilyCtx();
   const shut = state === 'closed' || state === 'holiday';
-  const who = faces.length ? `${nameList(fmt.lang, faces.map(memberShort))} ${t('fcal.cameAria')}` : visited ? t('fcal.cameAria') : '';
+  const who = faces.length ? `${nameList(fmt.lang, faces.map(displayName))} ${t('fcal.cameAria')}` : visited ? t('fcal.cameAria') : '';
   const label = [fmt.fdl(d), shut ? (state === 'holiday' ? t('cal.stHoliday') : t('cal.stClosed')) : '', isToday ? t('common.today') : '', who].filter(Boolean).join(' · ');
   return (
     <button type="button" onClick={() => onPick(d)} aria-label={label} aria-pressed={sel} aria-current={isToday ? 'date' : undefined} data-testid="cal-day" data-date={d} data-state={state} data-today={isToday ? '1' : '0'} data-visited={visited || undefined} data-came={faces.length ? faces.map((m) => m.id).join(',') : undefined} className="cp-press"

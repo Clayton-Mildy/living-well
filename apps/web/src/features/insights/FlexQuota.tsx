@@ -2,7 +2,7 @@
 // by about which day of the month the quota ran out and how many days it took from the first visit, then who and when. "Didn't use it all": how many,
 // the visits burned (the quota minus the visits made) in all and per member, then who. The running month counts as far as today and burns nothing yet.
 import { useMemo } from 'react';
-import { memberName } from '@cp/shared';
+import { displayName, memberName } from '@cp/shared';
 import { flexQuotaReport, type InsightPeriod, type QuotaMonth } from '@cp/shared/rules/insights';
 import { Avatar, GROUP_HEAD, Group, Pager, usePaged } from '../../components/ui';
 import { memberPhoto } from '../../lib/media';
@@ -35,11 +35,11 @@ export function FlexQuota({ period, today, gap, onOpen }: { period: InsightPerio
   const row = (e: QuotaMonth, side: string, meta: string) => {
     const m = s.members[e.memberId];
     if (!m) return null;
-    const name = memberName(m);
+    const name = displayName(m);
     return (
       <button key={`${e.month}:${e.memberId}`} type="button" onClick={() => onOpen(e.memberId)} className="h-row cp-bleed" data-member={e.memberId} aria-label={name}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 62, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: INK, fontFamily: 'Inter' }}>
-        <Avatar name={name} tone={m.photoTone} size={36} src={memberPhoto(m)} />
+        <Avatar name={memberName(m)} tone={m.photoTone} size={36} src={memberPhoto(m)} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 5 }}>
           <span style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '21px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>

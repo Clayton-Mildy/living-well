@@ -1,6 +1,6 @@
 // Family sheets: the survey and feedback on lunch (round 8: FamSheets). Paying happens on the Billing page's card.
 import { useMemo, useState, type CSSProperties } from 'react';
-import { liveSurvey, answeredBy, customOf, memberShort, menuOn, missingRequired, staffCall, type ISODate, type SurveyAnswer } from '@cp/shared';
+import { liveSurvey, answeredBy, customOf, displayName, menuOn, missingRequired, staffCall, type ISODate, type SurveyAnswer } from '@cp/shared';
 import { dishNamesOf, servedLunch } from '@cp/shared/rules/family';
 import { useT, useFmt } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
@@ -140,7 +140,7 @@ function FeedbackInner({ memberIds, date, onClose }: { memberIds: string[]; date
   return (
     <FamSheet open onClose={close} title={t('ftoday.fbTitle')} testId="feedback-sheet" action={{ label: t('fam.send'), onClick: send, disabled: !ok || busy }}>
       <span style={{ fontSize: 15, lineHeight: '21px', color: F.muted }}>{t('ftoday.fbLine', { what, d: fdl(mealDate) })}</span>
-      {memberIds.length > 1 ? <Chips label={t('family.fbMember')} bleed={18} value={memberId} onChange={(id) => { setMemberId(id); setDish(''); }} items={memberIds.map((id) => ({ value: id, label: memberShort(s.members[id]) }))} /> : null}
+      {memberIds.length > 1 ? <Chips label={t('family.fbMember')} bleed={18} value={memberId} onChange={(id) => { setMemberId(id); setDish(''); }} items={memberIds.map((id) => ({ value: id, label: displayName(s.members[id]) }))} /> : null}
       {days.length > 1 || dishes.length > 1 ? (
         more ? (
           <>
@@ -149,7 +149,7 @@ function FeedbackInner({ memberIds, date, onClose }: { memberIds: string[]; date
           </>
         ) : <TextLink size={14} onClick={() => setMore(true)} style={{ alignSelf: 'flex-start' }} testId="fb-change">{t('ftoday.fbChange')}</TextLink>
       ) : null}
-      <textarea aria-label={t('family.fbText')} value={text} onChange={(e) => setText(e.target.value)} placeholder={t('ftoday.fbPh', { n: memberShort(m) })} rows={5} maxLength={1000} style={greyBox} autoFocus />
+      <textarea aria-label={t('family.fbText')} value={text} onChange={(e) => setText(e.target.value)} placeholder={t('ftoday.fbPh', { n: displayName(m) })} rows={5} maxLength={1000} style={greyBox} autoFocus />
     </FamSheet>
   );
 }

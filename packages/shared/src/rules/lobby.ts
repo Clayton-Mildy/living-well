@@ -49,13 +49,13 @@ export function visitInfo(s: ClubState, m: Member, date: ISODate): VisitInfo {
 // ---------- member search and the three lobby lists ----------
 const norm = (v: string) => v.toLowerCase().normalize('NFKD').replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
 const digits = (v: string) => v.replace(/\D/g, '');
-/** Does what was typed find this member: their name, a family contact's name, or (3+ digits) a contact's phone number? Nothing typed finds everyone. */
+/** Does what was typed find this member: their name or nickname, a family contact's name, or (3+ digits) a contact's phone number? Nothing typed finds everyone. */
 export function memberMatchesQuery(s: ClubState, m: Member, query: string): boolean {
   const q = norm(query);
   if (!q) return true;
   const qd = digits(query);
   const contacts = contactsOfMember(s, m.id);
-  const hay = [memberName(m), ...contacts.map((x) => x.contact.name)].map(norm).join(' | ');
+  const hay = [memberName(m), m.registration?.nickname ?? '', ...contacts.map((x) => x.contact.name)].map(norm).join(' | ');
   return hay.includes(q) || (qd.length >= 3 && contacts.some((x) => digits(x.contact.phone).includes(qd)));
 }
 const search = (s: ClubState, rows: BoardRow[], query: string) => (norm(query) ? rows.filter((r) => memberMatchesQuery(s, r.m, query)) : rows);

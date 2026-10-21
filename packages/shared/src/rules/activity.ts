@@ -142,12 +142,12 @@ export const suggestedFaces = (people: Member[]): string[] => people.filter(face
 
 // ---------- member search (daily log, camera, tag pickers) ----------
 const fold = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
-/** Members whose name matches every word of the query (title, first and last name; accents and case ignored). An empty query keeps everyone. */
-export function searchMembers<M extends Pick<Member, 'title' | 'firstName' | 'lastName'>>(members: M[], query: string): M[] {
+/** Members whose name matches every word of the query (title, first and last name, nickname; accents and case ignored). An empty query keeps everyone. */
+export function searchMembers<M extends Pick<Member, 'title' | 'firstName' | 'lastName' | 'registration'>>(members: M[], query: string): M[] {
   const words = fold(query).split(/\s+/).filter(Boolean);
   if (!words.length) return members;
   return members.filter((m) => {
-    const hay = fold(`${memberName(m)} ${m.title} ${m.firstName} ${m.lastName}`);
+    const hay = fold(`${memberName(m)} ${m.title} ${m.firstName} ${m.lastName} ${m.registration?.nickname ?? ''}`);
     return words.every((w) => hay.includes(w));
   });
 }

@@ -6,7 +6,7 @@
 // KC round 7: the Renewals tab lists the changes the front desk recorded after calling a family (upgrade, downgrade, leave, stop); approving applies them from the 1st.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { actorName, memberName, memberShort, type ChangeRequest, type Photo } from '@cp/shared';
+import { actorName, memberName, displayName, type ChangeRequest, type Photo } from '@cp/shared';
 import { tabForSection, photoReviewKind } from '@cp/shared/rules/members';
 import { APPROVAL_TYPES, approvalCounts, approvalHistory, pendingItems, type ApprovalItem, type ApprovalType, type HistoryItem } from '@cp/shared/rules/approvals';
 import { Avatar, Button, Dialog, EmptyState, GROUP_HEAD, Group, HAIRLINE, Icon, Note, PageHead, Pager, PhotoImg, TextField, Toggle, usePaged } from '../../components/ui';
@@ -189,7 +189,7 @@ export function Reviews() {
   const photoNames = (ph: Photo) => {
     if (ph.kind === 'lunch') return t(s.dayMenus[ph.date]?.teaPhotoIds?.includes(ph.id) ? 'reviews.photoKind.tea' : 'reviews.photoKind.lunch'); // round 7: afternoon tea photos are lunch-kind rows listed under the day's tea
     if (ph.kind === 'activity') return photoCaption(s, ph, t, fmt.lang); // KC round 7: an activity picture is of a session: its name is the activity's
-    const names = ph.memberIds.filter((id) => s.members[id]).map((id) => memberShort(s.members[id]));
+    const names = ph.memberIds.filter((id) => s.members[id]).map((id) => displayName(s.members[id]));
     return names.length ? names.slice(0, 3).join(', ') + (names.length > 3 ? ` +${names.length - 3}` : '') : t('reviews.photoKind.' + photoReviewKind(ph));
   };
   const photoTile = (ph: Photo) => {
@@ -452,7 +452,7 @@ export function Reviews() {
     const photoIds = g.items.filter((x) => x.type === 'photos').map((x) => x.id);
     if (photoIds.length) { const r = await act('photo.approve', { photoIds, notify }, { silent: true }); if (r.ok) n += photoIds.length; }
     setBulkBusy(false);
-    say(t('approvals.approvedAllFor', { n, name: memberShort(s.members[g.memberId]) }), { icon: n ? 'task_alt' : 'info' });
+    say(t('approvals.approvedAllFor', { n, name: displayName(s.members[g.memberId]) }), { icon: n ? 'task_alt' : 'info' });
   };
   const sectionCard = (key: string, head: ReactNode, rows: ReactNode) => (
     <section key={key} data-person={key} className="cp-grey" style={isPhone ? { background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' } : { background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '6px clamp(18px, 3vw, 28px) 4px' }}>

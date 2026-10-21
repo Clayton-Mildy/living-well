@@ -3,7 +3,7 @@
 // Club mode sets the club's limits. Member mode (KC round 7, `member`) shows the member's effective limits: a line changed from the club's
 // becomes their own, the other lines keep following the club; saving grades that member's readings again.
 import { useState } from 'react';
-import { DEFAULT_LIMITS, LIMIT_CMP, LIMIT_RANGE, limitOrderOk, limitsFor, limitsOf, live, memberShort, ownLimitKeys, type HealthLimits, type LimitKey, type Member } from '@cp/shared';
+import { DEFAULT_LIMITS, LIMIT_CMP, LIMIT_RANGE, limitOrderOk, limitsFor, limitsOf, live, displayName, ownLimitKeys, type HealthLimits, type LimitKey, type Member } from '@cp/shared';
 import { Button, GROUP_HEAD, Sheet, TextField, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
@@ -74,7 +74,7 @@ export function LimitsSheet({ open, onClose, member }: { open: boolean; onClose:
     setBusy(true);
     const L = typed();
     const r = mem
-      ? await act('health.setMemberLimits', { memberId: mem.id, limits: ownOf(L) }, { ok: () => t(ownOf(L) ? 'health.limSavedMember' : 'health.limClearedMember', { n: memberShort(mem) }) })
+      ? await act('health.setMemberLimits', { memberId: mem.id, limits: ownOf(L) }, { ok: () => t(ownOf(L) ? 'health.limSavedMember' : 'health.limClearedMember', { n: displayName(mem) }) })
       : await act('health.setLimits', { limits: L }, { ok: () => t('health.limSaved') });
     setBusy(false);
     if (r.ok) onClose();
@@ -82,7 +82,7 @@ export function LimitsSheet({ open, onClose, member }: { open: boolean; onClose:
   const set = (k: LimitKey, f: 'watch' | 'alert', v: string) => setD((x) => ({ ...x, [k]: { ...x[k], [f]: v.replace(/[^0-9.,]/g, '').slice(0, 5) } }));
 
   return (
-    <Sheet open={open} onClose={onClose} title={mem ? t('health.limitsForTitle', { n: memberShort(mem) }) : t('health.limitsTitle')} maxWidth={640}
+    <Sheet open={open} onClose={onClose} title={mem ? t('health.limitsForTitle', { n: displayName(mem) }) : t('health.limitsTitle')} maxWidth={640}
       footer={(
         <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', justifyContent: 'space-between', width: '100%' }}>
           {mem ? <Button variant="ghost" size={44} onClick={() => setD(toText(club))}>{t('health.limResetClub')}</Button>
@@ -91,7 +91,7 @@ export function LimitsSheet({ open, onClose, member }: { open: boolean; onClose:
         </div>
       )}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 22 : 18 }}>
-        {mem ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, marginBottom: isPhone ? -10 : -6 }}>{t('health.limMemberNote', { n: memberShort(mem) })}</span> : null}
+        {mem ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, marginBottom: isPhone ? -10 : -6 }}>{t('health.limMemberNote', { n: displayName(mem) })}</span> : null}
         {withOwn ? <span data-testid="limits-own-count" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, marginBottom: isPhone ? -10 : -6 }}>{t('health.limOwnCount', { n: withOwn })}</span> : null}
         {SECTIONS.map((sec) => (
           <section key={sec.title} style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 6 : 10 }}>

@@ -1,6 +1,6 @@
 // Members area: shared labels, status styles and small helpers used by the list, the profile and the reviews screen.
 import type { CSSProperties } from 'react';
-import { memberName, memberShort, sessionsOn, type ChangeRequest, type ClubState, type DailyLog, type Diet, type DocType, type DrugAllergy, type EndReason, type FoodAllergen, type Health, type Lang, type Member, type MedTiming, type Mobility, type Relation } from '@cp/shared';
+import { memberName, displayName, sessionsOn, type ChangeRequest, type ClubState, type DailyLog, type Diet, type DocType, type DrugAllergy, type EndReason, type FoodAllergen, type Health, type Lang, type Member, type MedTiming, type Mobility, type Relation } from '@cp/shared';
 import { plainName, type MemberStatus } from '@cp/shared/rules/members';
 import type { TFn } from '../../lib/i18n';
 
@@ -98,7 +98,7 @@ export function logNote(s: ClubState, t: TFn, lang: Lang, m: Member, l: DailyLog
   const cell = sessionsOn(s, l.date).find((x) => x.cell)?.cell; // the day's first session (an extra one can come first)
   const a = cell ? s.activities[cell.activityId] : undefined;
   const name = a ? (lang === 'id' && a.nameId ? a.nameId : a.name).toLowerCase() : t('profile.theActivities');
-  return t('family.calmDay', { n: memberShort(m), a: name });
+  return t('family.calmDay', { n: displayName(m), a: name });
 }
 /** An activity name stored as English text, shown in the current language when the catalog knows it. */
 export function activityLabel(s: ClubState, lang: Lang, name: string | undefined) {

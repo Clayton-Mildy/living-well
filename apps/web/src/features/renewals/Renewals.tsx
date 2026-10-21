@@ -5,7 +5,7 @@
 // | quick answers (Continue, No answer) and Call / WhatsApp. A laptop gets a table with a header row; a tablet puts the answers on a line under the row; a phone stacks
 // the pills and the next step under the name. A tap opens the follow-up sheet. Past months are a read-only log (no next step, no actions).
 import { useLayoutEffect, useMemo, useRef, useState, type CSSProperties } from 'react';
-import { addMonths, flexMonth, fmtPhone, memberName, memberShort, waUrl, ym, type Plan, type YM } from '@cp/shared';
+import { addMonths, flexMonth, fmtPhone, memberName, displayName, waUrl, ym, type Plan, type YM } from '@cp/shared';
 import { RENEWAL_STATES, renewalCounts, renewalDates, renewalFilter, renewalMonth, renewalNext, renewalRows, type RenewalRow, type RenewalState } from '@cp/shared/rules/renewals';
 import { Avatar, EmptyState, GROUP_HEAD, HAIRLINE, Icon, IconButton, InfoChip, PageHead, Pager, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -122,7 +122,7 @@ export function Renewals() {
   const quick = async (r: RenewalRow, outcome: 'continue' | 'noAnswer') => {
     if (busy) return;
     setBusy(r.m.id + outcome);
-    await act('followUp.record', { memberId: r.m.id, month, outcome }, { ok: t('renewals.quickSaved', { name: memberShort(r.m), outcome: outcomeLabel(t, outcome) }) });
+    await act('followUp.record', { memberId: r.m.id, month, outcome }, { ok: t('renewals.quickSaved', { name: displayName(r.m), outcome: outcomeLabel(t, outcome) }) });
     setBusy(null);
   };
   const round: CSSProperties = { width: 36, height: 36, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flex: 'none', cursor: 'pointer', padding: 0 };
@@ -134,7 +134,7 @@ export function Renewals() {
   const stacked = room < TABLE_MIN;
   const inlineActions = !stacked && !past && room >= INLINE_MIN;
   const rowEl = (r: RenewalRow, i: number) => {
-    const name = memberName(r.m);
+    const name = displayName(r.m);
     const phone = r.contact?.phone ? fmtPhone(r.contact.phone) : '';
     const look = statusLook(t, fmt, r);
     const next = renewalNext(r, month, today);
@@ -189,7 +189,7 @@ export function Renewals() {
             : { display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 0', fontFamily: 'Inter', color: '#24201C', borderTop: i ? HAIRLINE : 'none' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
             <button type="button" className="cp-tap-target" onClick={() => setOpenId(r.m.id)} aria-label={label} style={openStyle}>
-              <Avatar name={name} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} />
+              <Avatar name={memberName(r.m)} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 {nameEl}
                 {contactLine}
@@ -213,7 +213,7 @@ export function Renewals() {
         style={{ display: 'grid', gridTemplateColumns: gridCols, columnGap: 14, rowGap: 8, alignItems: 'center', minHeight: 66, fontFamily: 'Inter', color: '#24201C', padding: '11px 0', borderTop: HAIRLINE, cursor: 'pointer' }}>
         <div role="cell" style={{ display: 'flex', minWidth: 0 }}>
           <button type="button" className="cp-tap-target" onClick={(e) => { e.stopPropagation(); setOpenId(r.m.id); }} aria-label={name} style={{ ...openStyle, alignItems: 'center' }}>
-            <Avatar name={name} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} />
+            <Avatar name={memberName(r.m)} tone={r.m.photoTone} src={memberPhoto(r.m)} size={42} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>{nameEl}{contactLine}</span>
           </button>
         </div>

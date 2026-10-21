@@ -317,3 +317,11 @@ describe('subscription start and end (month to month)', () => {
     expect(sortMemberRows([mk('a'), mk('b', '2025-01-01'), mk('c', '2025-01-01'), mk('d', '2026-01-01')], 'startNew').map((r) => r.m.id)).toEqual(['d', 'b', 'c', 'a']);
   });
 });
+
+describe('nickname search', () => {
+  it('search matches the nickname', () => {
+    const s = buildSeed(undefined, undefined, { roster: true }).citra;
+    const nio = Object.values(s.members).find((m) => m.registration?.nickname === 'Nio')!;
+    expect(matchesQuery(s, nio, 'nio')).toBe(true);
+  });
+});

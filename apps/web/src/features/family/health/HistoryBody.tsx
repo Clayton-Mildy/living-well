@@ -4,7 +4,7 @@
 // Health tab (the prototype's desktop), where it is the right-hand column under a "History" title: measurement chips, a 420px range control, the average, a 240px
 // chart, the legend and the readings in two columns (one column under a 1280px window). The measurement is the caller's (the page keeps it in the URL, the Health tab in its own state).
 import { useMemo, useState } from 'react';
-import { limitsFor, memberShort, type Health, type Member } from '@cp/shared';
+import { limitsFor, displayName, type Health, type Member } from '@cp/shared';
 import { HIST_METRICS, METRIC_UNIT, averageText, bandOf, familyReadings, isMetric, metricRows, metricsWithData, type HMetric, type MetricRow } from '@cp/shared/rules/famHealth';
 import { Icon, TrendChart, inWindow, rangeValue, windowOf, type RangeChoice, type RangeValue, type TrendPoint } from '../../../components/ui';
 import { useDevice } from '../../../hooks/useDevice';
@@ -28,7 +28,7 @@ export function HistoryBody({ m, asked, onMetric, inline }: { m: Member; /** the
   const rs = useMemo(() => familyReadings(s, m.id), [s, m]);
   const L = useMemo(() => limitsFor(s, m), [s, m]);
 
-  const short = memberShort(m);
+  const short = displayName(m);
   const avail = metricsWithData(rs);
   const metric: HMetric = isMetric(asked) && avail.includes(asked) ? asked : avail[0] ?? 'bp';
   const rows = metricRows(rs, metric, L);

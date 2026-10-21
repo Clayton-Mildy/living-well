@@ -147,5 +147,5 @@ export const profile: Same<typeof EN> = {
   'q.commShort': 'Sulit berkomunikasi', 'q.selfShort': 'Makan dan beraktivitas sendiri', 'q.bathShort': 'Butuh bantuan kamar mandi',
   'f.dementiaNote': 'Catatan demensia (opsional)', 'f.dementiaShort': 'Catatan demensia', 'f.idsReceived': 'Identitas diterima (KTP/KK)', 'f.idsShort': 'Identitas diterima',
   'ids.guarantor': 'Penanggung jawab', 'ids.member': 'Anggota', 'ids.carer': 'Pengasuh (suster)',
-  'f.area': 'Wilayah', 'f.knownAs': 'Dipanggil', 'f.phones': 'Telepon', 'f.regForm': 'Formulir pendaftaran', regNone: 'Belum diisi', 'f.regAnswers': 'Formulir pendaftaran',
+  'f.area': 'Wilayah', 'f.knownAs': 'Dipanggil', 'f.called': 'Panggilan', 'f.phones': 'Telepon', 'f.regForm': 'Formulir pendaftaran', regNone: 'Belum diisi', 'f.regAnswers': 'Formulir pendaftaran',
 };

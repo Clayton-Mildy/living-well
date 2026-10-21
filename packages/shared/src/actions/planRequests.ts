@@ -2,7 +2,7 @@
 // Finance or management applies or declines it from the member's Plan tab (planChange.apply / planChange.decline in members.ts).
 import type { ClubState, Plan } from '../types';
 import { defineAction, DomainError, type ActionDef } from './framework';
-import { currentMembership, isPendingRow, isPrimaryFor, membershipStatus, memberShort, planOn } from '../rules/core';
+import { currentMembership, isPendingRow, isPrimaryFor, membershipStatus, displayName, planOn } from '../rules/core';
 import { addMonths, live, ym } from '../util';
 
 const obj = (raw: unknown) => (raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {});
@@ -30,7 +30,7 @@ export const planRequestActions: ActionDef[] = [
       if (pendingPlanRequest(s, m.id)) ctx.fail('err.planRequestPending');
       const id = ctx.id('pcr');
       d.planChangeRequests[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: m.id, to: input.to, from, status: 'pending' };
-      ctx.feed({ icon: 'sell', key: 'feed.planRequested', params: { name: memberShort(m), plan: planName(input.to) }, memberId: m.id });
+      ctx.feed({ icon: 'sell', key: 'feed.planRequested', params: { name: displayName(m), plan: planName(input.to) }, memberId: m.id });
       ctx.result.requestId = id;
     },
   }),
@@ -45,7 +45,7 @@ export const planRequestActions: ActionDef[] = [
       if (r.status !== 'pending') ctx.fail('err.planRequestDone');
       r.deletedAt = ctx.nowDT;
       const m = d.members[r.memberId];
-      ctx.feed({ icon: 'sell', key: 'feed.planWithdrawn', params: { name: m ? memberShort(m) : '' }, memberId: r.memberId });
+      ctx.feed({ icon: 'sell', key: 'feed.planWithdrawn', params: { name: m ? displayName(m) : '' }, memberId: r.memberId });
     },
   }),
 ];

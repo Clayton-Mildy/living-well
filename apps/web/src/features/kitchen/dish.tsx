@@ -1,7 +1,7 @@
 // Dish pieces: the allergen editor dialog, the "add a dish" picker sheet, and the chip field used for each course of a day.
 import { useMemo, useState } from 'react';
 import type { Dish, DishAllergen, ISODate } from '@cp/shared';
-import { actorName, memberShort } from '@cp/shared';
+import { actorName, displayName } from '@cp/shared';
 import { COURSES, DISH_ALLERGENS, DISH_TAGS, allergyReachOf, dishesByCourse, membersAffectedBy, type Course } from '@cp/shared/rules/kitchenOps';
 import { Button, ChipGroup, Dialog, Icon, Note, Pager, Sheet, TextField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
 import { useT, useFmt, type TFn } from '../../lib/i18n';
@@ -128,7 +128,7 @@ export function DishPicker({ open, onClose, title, course, picked, onToggle, onC
   const all = useMemo(() => dishesByCourse(s, course), [s.dishes, course]); // eslint-disable-line react-hooks/exhaustive-deps
   const { today } = useNow();
   // planning hint: members on file whose allergy this dish would meet
-  const affectedNames = (d: Dish) => membersAffectedBy(s, d, today).map(memberShort).join(', ');
+  const affectedNames = (d: Dish) => membersAffectedBy(s, d, today).map(displayName).join(', ');
   const needle = q.trim().toLocaleLowerCase();
   const found = all.filter((d) => !needle || d.name.toLocaleLowerCase().includes(needle));
   const paged = usePaged(found, 8, needle); // searching starts again on page 1
@@ -186,7 +186,7 @@ export function DishField({ label, course, ids, onRemove, onAdd, flex, testId, d
         {ids.map((id) => {
           const d = s.dishes[id];
           if (!d || d.deletedAt) return null;
-          const hit = membersAffectedBy(s, d, today).map(memberShort).join(', ');
+          const hit = membersAffectedBy(s, d, today).map(displayName).join(', ');
           const reach = hit ? reachOf(d, date) : null;
           const clash = hit ? `${reach ? reach.label + '. ' : ''}${t('kitchen.plan.affects', { names: hit })}` : '';
           const name = t('kitchen.plan.remove', { name: d.name }) + (clash ? `. ${clash}` : '');

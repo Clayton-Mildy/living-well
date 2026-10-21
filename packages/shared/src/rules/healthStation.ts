@@ -160,7 +160,7 @@ export function nameMatches(name: string, query: string): boolean {
   const hay = fold(name);
   return words.every((w) => hay.includes(w));
 }
-export const filterRows = (rows: StationRow[], query: string) => (query.trim() ? rows.filter((r) => nameMatches(rowName(r), query)) : rows);
+export const filterRows = (rows: StationRow[], query: string) => (query.trim() ? rows.filter((r) => nameMatches(r.person.type === 'member' ? `${rowName(r)} ${r.person.m.registration?.nickname ?? ''}` : rowName(r), query)) : rows);
 
 /**
  * The health station's list on `date` at `nowMin`: every active member (approved, membership running that day) plus the guests who are

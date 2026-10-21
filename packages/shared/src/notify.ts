@@ -12,7 +12,7 @@ import { conflictsOn } from './rules/kitchen';
 import { dutyReminders } from './rules/tasks';
 import { invoiceStatus, runDone } from './rules/billing';
 import { liveSurvey, answeredBy } from './rules/surveys';
-import { memberShort, linksOfFamily, isPrimaryFor, isPendingRow } from './rules/core';
+import { displayName, linksOfFamily, isPrimaryFor, isPendingRow } from './rules/core';
 
 export interface ActionItem {
   id: string;
@@ -41,13 +41,13 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
       if (!mids.includes(inv.memberId) || !isPrimaryFor(s, user.id, inv.memberId)) continue;
       const st = invoiceStatus(s, inv, today);
       if (st === 'overdue' || st === 'outstanding' || st === 'partial')
-        add({ id: 'inv:' + inv.id, kind: st === 'overdue' ? 'notif.act.invoiceOverdue' : 'notif.act.invoiceDue', params: { name: memberShort(s.members[inv.memberId]), number: inv.number, due: inv.dueDate }, link: '/billing', severity: st === 'overdue' ? 'urgent' : 'attention', at: at(inv.createdAt), memberId: inv.memberId });
+        add({ id: 'inv:' + inv.id, kind: st === 'overdue' ? 'notif.act.invoiceOverdue' : 'notif.act.invoiceDue', params: { name: displayName(s.members[inv.memberId]), number: inv.number, due: inv.dueDate }, link: '/billing', severity: st === 'overdue' ? 'urgent' : 'attention', at: at(inv.createdAt), memberId: inv.memberId });
     }
     const sv = liveSurvey(s);
     if (sv && sv.recipients.includes(user.id) && !answeredBy(s, sv.id, user.id)) add({ id: 'survey:' + sv.id, kind: 'notif.act.survey', params: { title: sv.title }, link: '/today?survey=1', severity: 'attention', at: at(sv.createdAt) });
     for (const id of mids) {
       const m = s.members[id];
-      for (const doc of m?.documents || []) if (doc.status === 'requested') add({ id: `doc:${id}:${doc.id}`, kind: 'notif.act.docRequested', params: { name: memberShort(m), doc: doc.type }, link: `/health?member=${id}&tab=docs`, severity: 'attention', at: at(m.createdAt), memberId: id });
+      for (const doc of m?.documents || []) if (doc.status === 'requested') add({ id: `doc:${id}:${doc.id}`, kind: 'notif.act.docRequested', params: { name: displayName(m), doc: doc.type }, link: `/health?member=${id}&tab=docs`, severity: 'attention', at: at(m.createdAt), memberId: id });
     }
     return sortBy(out, (x) => x.at, -1);
   }
@@ -63,22 +63,22 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
     }
     for (const c of live(s.changeRequests)) {
       if (c.status !== 'pending') continue;
-      add({ id: 'cr:' + c.id, kind: c.kind === 'approval' ? 'notif.act.review' : 'notif.act.reviewFlagged', params: { section: c.section, name: c.target.memberId && s.members[c.target.memberId] ? memberShort(s.members[c.target.memberId]) : '' }, link: '/reviews', severity: 'attention', at: c.createdAt, memberId: c.target.memberId });
+      add({ id: 'cr:' + c.id, kind: c.kind === 'approval' ? 'notif.act.review' : 'notif.act.reviewFlagged', params: { section: c.section, name: c.target.memberId && s.members[c.target.memberId] ? displayName(s.members[c.target.memberId]) : '' }, link: '/reviews', severity: 'attention', at: c.createdAt, memberId: c.target.memberId });
     }
     for (const r of validReadings(s).filter((x) => x.date === today && x.status === 'alert' && x.memberId))
-      add({ id: 'alert:' + r.id, kind: 'notif.act.alertReading', params: { name: memberShort(s.members[r.memberId!]), value: r.sys ? `${r.sys}/${r.dia}` : String(r.glucose ?? r.spo2 ?? '') }, link: `/members/${r.memberId}/health`, severity: 'urgent', at: `${r.date}T${r.time}`, memberId: r.memberId! });
+      add({ id: 'alert:' + r.id, kind: 'notif.act.alertReading', params: { name: displayName(s.members[r.memberId!]), value: r.sys ? `${r.sys}/${r.dia}` : String(r.glucose ?? r.spo2 ?? '') }, link: `/members/${r.memberId}/health`, severity: 'urgent', at: `${r.date}T${r.time}`, memberId: r.memberId! });
     for (const st of live(s.staff)) {
       if (!st.active || !st.hr.end) continue;
       if (st.hr.end >= today && st.hr.end <= addDays(today, 30)) add({ id: 'contract:' + st.id, kind: 'notif.act.contract', params: { name: st.name, date: st.hr.end }, link: `/hr?staff=${st.id}`, severity: 'attention', at: `${today}T08:00` });
     }
-    for (const f of live(s.feedback).filter((x) => x.status === 'open')) add({ id: 'fb:' + f.id, kind: 'notif.act.complaint', params: { name: memberShort(s.members[f.memberId]), dish: f.dish }, link: '/feedback', severity: 'attention', at: f.createdAt, memberId: f.memberId });
+    for (const f of live(s.feedback).filter((x) => x.status === 'open')) add({ id: 'fb:' + f.id, kind: 'notif.act.complaint', params: { name: displayName(s.members[f.memberId]), dish: f.dish }, link: '/feedback', severity: 'attention', at: f.createdAt, memberId: f.memberId });
   }
   if (role === 'mgmt' || role === 'finance') {
     for (const r of live(s.planChangeRequests).filter((x) => x.status === 'pending')) {
       const m = s.members[r.memberId];
-      if (m) add({ id: 'pcr:' + r.id, kind: 'notif.act.planRequest', params: { name: memberShort(m), plan: r.to === 'gold' ? 'Gold' : 'Flex', date: r.from }, link: `/members/${m.id}/plan`, severity: 'attention', at: r.createdAt, memberId: m.id });
+      if (m) add({ id: 'pcr:' + r.id, kind: 'notif.act.planRequest', params: { name: displayName(m), plan: r.to === 'gold' ? 'Gold' : 'Flex', date: r.from }, link: `/members/${m.id}/plan`, severity: 'attention', at: r.createdAt, memberId: m.id });
     }
-    for (const inv of live(s.invoices)) if (invoiceStatus(s, inv, today) === 'overdue') add({ id: 'od:' + inv.id, kind: 'notif.act.overdue', params: { name: memberShort(s.members[inv.memberId]), number: inv.number }, link: linkTo(role, 'billing', '?f=overdue'), severity: 'urgent', at: `${inv.dueDate}T23:59`, memberId: inv.memberId });
+    for (const inv of live(s.invoices)) if (invoiceStatus(s, inv, today) === 'overdue') add({ id: 'od:' + inv.id, kind: 'notif.act.overdue', params: { name: displayName(s.members[inv.memberId]), number: inv.number }, link: linkTo(role, 'billing', '?f=overdue'), severity: 'urgent', at: `${inv.dueDate}T23:59`, memberId: inv.memberId });
     for (const b of live(s.budgetRequests).filter((x) => x.status === 'pending')) add({ id: 'br:' + b.id, kind: 'notif.act.budgetApprove', params: { item: b.item, amount: b.amount }, link: '/budget', severity: 'attention', at: b.createdAt });
     for (const r of live(s.receipts).filter((x) => x.status === 'submitted' && !x.voidedAt)) add({ id: 'rc:' + r.id, kind: 'notif.act.receiptApprove', params: { supplier: r.supplier, amount: r.amount }, link: '/receipts', severity: 'attention', at: r.createdAt });
     for (const v of live(s.vendorInvoices).filter((x) => x.status === 'toApprove')) add({ id: 'vi:' + v.id, kind: 'notif.act.vendorApprove', params: { supplier: v.supplier, amount: v.amount }, link: '/receipts', severity: 'attention', at: v.createdAt });
@@ -104,7 +104,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
   if (role === 'lobby' || role === 'mgmt') {
     if (nowMin >= toMin(s.club.settings.departureFrom)) {
       for (const r of lobbyGroups(s, today).inClub) {
-        if (todayReading(s, r.m.id, today, 'departure')) add({ id: 'ready:' + r.m.id, kind: 'notif.act.readyCheckout', params: { name: memberShort(r.m) }, link: linkTo(role, 'arrivals'), severity: 'attention', at: `${today}T15:30`, memberId: r.m.id });
+        if (todayReading(s, r.m.id, today, 'departure')) add({ id: 'ready:' + r.m.id, kind: 'notif.act.readyCheckout', params: { name: displayName(r.m) }, link: linkTo(role, 'arrivals'), severity: 'attention', at: `${today}T15:30`, memberId: r.m.id });
       }
     }
   }
@@ -115,10 +115,10 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
   }
   if (role === 'kitchen' || role === 'mgmt') {
     for (const c of conflictsOn(s, today).filter((x) => !x.plan)) {
-      const name = c.diner.type === 'member' ? memberShort(c.diner.m) : c.diner.g.name;
+      const name = c.diner.type === 'member' ? displayName(c.diner.m) : c.diner.g.name;
       add({ id: `allergen:${c.diner.id}:${c.dish.id}`, kind: 'notif.act.allergen', params: { name, dish: c.dish.name, allergy: c.allergy }, link: linkTo(role, 'menu'), severity: 'urgent', at: `${today}T08:00`, memberId: c.diner.type === 'member' ? c.diner.id : undefined });
     }
-    if (role === 'kitchen') for (const f of live(s.feedback).filter((x) => x.status === 'open')) add({ id: 'fb:' + f.id, kind: 'notif.act.complaint', params: { name: memberShort(s.members[f.memberId]), dish: f.dish }, link: '/feedback', severity: 'attention', at: f.createdAt, memberId: f.memberId });
+    if (role === 'kitchen') for (const f of live(s.feedback).filter((x) => x.status === 'open')) add({ id: 'fb:' + f.id, kind: 'notif.act.complaint', params: { name: displayName(s.members[f.memberId]), dish: f.dish }, link: '/feedback', severity: 'attention', at: f.createdAt, memberId: f.memberId });
   }
   return sortBy(out, (x) => (x.severity === 'urgent' ? '1' : '0') + x.at, -1);
 }

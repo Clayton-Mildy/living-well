@@ -1,7 +1,7 @@
 // Family Calendar: one day's agenda. A banner for a closure, holiday or weekend; else rows of time | bar | title and sub. The bar is bronze for a guest-hosted,
 // extra or outing row. On a day a parent came, a finished session says who joined in or sat out and shows the family's pictures of it (64px thumbnails).
 import type { Photo } from '@cp/shared';
-import { memberShort } from '@cp/shared';
+import { displayName } from '@cp/shared';
 import { eventTitle } from '@cp/shared/rules/calendar';
 import { activityLabel, roomLabel, staffFirst } from '@cp/shared/rules/family';
 import type { FamDay, FamRow } from '@cp/shared/rules/famCalendar';
@@ -36,7 +36,7 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
   // a laptop: the day's title as the prototype's 22px line ("Today · Tuesday 13 October"); a phone: the small caps line
   const when = wide ? fmt.fdl(day.date) : fmt.fd(day.date, { weekday: 'long' }) + ' ' + Number(day.date.slice(8));
   const head = `${day.date === now.today ? t('common.today') + ' · ' : ''}${when}`;
-  const name = (id: string) => memberShort(s.members[id]);
+  const name = (id: string) => displayName(s.members[id]);
 
   const banner = day.banner;
   const bannerText = !banner ? '' : banner.kind === 'weekend' ? t('fcal.weekend') : banner.title ? t('fcal.closedFor', { title: cap(eventTitle({ title: banner.title, titleId: banner.titleId }, lang)) }) : t('fcal.closed');

@@ -36,21 +36,21 @@ const ROWS: Row5[] = [
   ['Bapak', 'Made', 'Wirawan', '1949-05-28', 'f', '10:05', '2025-06-02', 'chol'],
   ['Oma', 'Angela', 'Chandra', '1945-08-07', 'g', '09:35', '2024-12-02', 'oa htn'],
   ['Opa', 'Paulus', 'Gondokusumo', '1940-02-16', 'g', '08:50', '2025-07-14', 'stroke htn'],
-  ['Ibu', 'Yuliana', 'Hadiwijaya', '1956-11-30', 'f', '10:30', '2025-08-04', 'asthma'],
+  ['Ibu', 'Soekartini', 'Wirjo', '1956-11-30', 'f', '10:30', '2025-08-04', 'asthma'],
   ['Bapak', 'Joko', 'Prasetyo', '1952-09-13', 'f', '09:25', '2025-09-15', 'htn'],
   ['Oma', 'Hana', 'Lukito', '1946-12-22', 'g', '09:45', '2025-10-06', 'osteo gerd'],
   ['Opa', 'Budiman', 'Kurniawan', '1938-06-05', 'g', '09:50', '2024-08-19', 'heart htn hear'],
   ['Ibu', 'Margaretha', 'Sitompul', '1954-04-02', 'f', '10:10', '2025-11-03', 'oa dm'],
   ['Bapak', 'Rudy', 'Tanoto', '1945-07-24', 'f', '09:05', '2025-12-01', 'htn chol'],
-  ['Oma', 'Aisyah', 'Harahap', '1950-01-18', 'f', '08:30', '2026-01-12', 'thy osteo'],
+  ['Oma', 'Giok Nio', 'Oei', '1950-01-18', 'f', '08:30', '2026-01-12', 'thy osteo'],
   ['Opa', 'Frans', 'Lumentut', '1944-09-29', 'g', '10:15', '2025-01-20', 'park'],
   ['Ibu', 'Tuti', 'Kartika', '1957-05-09', 'f', '09:55', '2026-02-02', 'mem'],
   ['Bapak', 'Darmawan', 'Kho', '1942-03-27', 'g', '09:50', '2024-10-28', 'htn hear'],
   ['Oma', 'Lani', 'Setiawan', '1937-10-14', 'g', '09:20', '2024-07-22', 'oa osteo mem'],
   ['Opa', 'Ferry', 'Winata', '1948-02-06', 'f', '10:00', '2026-03-16', 'gout'],
   ['Ibu', 'Christina', 'Pangestu', '1951-12-11', 'f', '09:35', '2026-04-13', 'htn asthma'],
-  ['Bapak', 'Wayan', 'Suardana', '1955-06-03', 'f', '10:25', '2026-05-04', 'chol'],
-  ['Oma', 'Rosalina', 'Tedjo', '1943-08-19', 'g', '08:40', '2025-03-03', 'stroke fracture'],
+  ['Bapak', 'Raden Mas Soedjatmoko', 'Hadi', '1955-06-03', 'f', '10:25', '2026-05-04', 'chol'],
+  ['Oma', 'Tjoa Sioe', 'Lan', '1943-08-19', 'g', '08:40', '2025-03-03', 'stroke fracture'],
   ['Opa', 'Handoko', 'Gani', '1940-11-25', 'f', '09:45', '2024-08-12', 'htn dm'],
   ['Ibu', 'Nurhayati', 'Lubis', '1953-09-07', 'f', '10:10', 'M1', 'gerd htn'],
   ['Bapak', 'Agung', 'Nugroho', '1949-03-15', 'f', '09:15', '2026-07-06', 'chol htn'],
@@ -59,6 +59,8 @@ const ROWS: Row5[] = [
   ['Ibu', 'Maya', 'Sari', '1961-02-04', 'f', '09:30', 'M3', 'thy'],
   ['Bapak', 'Hendrik', 'Wongso', '1934-07-12', 'g', '09:00', '2024-07-01', 'mem htn hear'],
 ];
+/** Panggilan: members known by a short nickname though their registered name is long (shown as "Oma Nio"; the full name sits beneath) */
+const NICK: Record<string, string> = { 'Giok Nio': 'Nio', Soekartini: 'Tini', 'Tjoa Sioe': 'Lan', 'Raden Mas Soedjatmoko': 'Djat' };
 const SPOUSE: Record<number, number> = { 1: 0, 3: 2, 28: 9 }; // second spouse -> first (couples share an address, family and visit days)
 /** plan changes: the date it took effect ('M' = first open day this month) and the plan from then on (the plan before it is the other one) */
 const PLAN_CHANGE: Record<number, string> = { 4: '2025-09-01', 8: '2026-03-02', 17: '2026-07-01', 36: 'M', 33: '2026-01-05' };
@@ -239,7 +241,7 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<stri
       glucose: diabetic ? between(136, 168) : between(94, 114), weight: f ? between(44, 64) : between(54, 76), temp: Math.round((36.4 + r() * 0.4) * 10) / 10, grip: f ? between(12, 20) : between(18, 30),
     };
     const m: Member = {
-      ...base(mid, start + 'T10:00'), title, firstName: first, lastName: last, gender: f ? 'f' : 'm', dob, ageYears: null, address: addr[i], photoTone: between(0, 4),
+      ...base(mid, start + 'T10:00'), title, firstName: first, lastName: last, ...(NICK[first] ? { registration: { nickname: NICK[first] } } : {}), gender: f ? 'f' : 'm', dob, ageYears: null, address: addr[i], photoTone: between(0, 4),
       memberships: [ms], plans, usualArrival: usual, nanny: NANNY[i] ? { name: NANNY[i] } : null, spouseId: spouseOf(i) !== undefined ? id(spouseOf(i)) : null,
       health: { conditions, diabetic, food, drugs, mobility, diet, meds,
         cognitive: { summary: mem ? 'Mild memory loss; needs gentle reminders of the day’s plan' : codes.includes('park') ? 'Alert and oriented; slow to start movements' : 'Alert and oriented', reviewedBy: 's8', reviewedOn: start > addDays(T, -25) ? start : addDays(T, -25) } },

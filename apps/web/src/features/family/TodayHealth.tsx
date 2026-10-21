@@ -4,7 +4,7 @@
 // weight when the monthly check took them), a number the nurse flagged in the grade's colour. A parent who came with no check says so in one quiet line; a day nobody
 // came has no section. A button opens that parent on the Health tab (`/health?member=<id>`). Families only ever read approved readings (famHealth.dayChecks).
 import { useNavigate } from 'react-router-dom';
-import { limitsFor, memberName, memberShort, staffCall, type Health, type ISODate, type Member } from '@cp/shared';
+import { limitsFor, memberName, displayName, staffCall, type Health, type ISODate, type Member } from '@cp/shared';
 import type { DayStory } from '@cp/shared/rules/family';
 import { dayChecks, worstCheck, type DayCheck, type HMetric } from '@cp/shared/rules/famHealth';
 import { Avatar, Icon } from '../../components/ui';
@@ -62,7 +62,7 @@ function Block({ m, checks, multi, isToday }: { m: Member; checks: DayCheck[]; m
         {multi ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px 6px' }}>
             <Avatar name={memberName(m)} src={memberPhoto(m)} tone={m.photoTone} size={28} />
-            <span style={{ fontSize: 15, fontWeight: 600, color: F.text }}>{memberShort(m)}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: F.text }}>{displayName(m)}</span>
           </div>
         ) : null}
         {checks.length
@@ -70,7 +70,7 @@ function Block({ m, checks, multi, isToday }: { m: Member; checks: DayCheck[]; m
           : <p data-testid="health-none" style={{ margin: 0, padding: multi ? '4px 16px 14px' : '16px', fontSize: 14, lineHeight: '20px', color: F.muted }}>{t(isToday ? 'ftoday.hcNoneToday' : 'ftoday.hcNone')}</p>}
         <button type="button" onClick={() => navigate(`/health?member=${m.id}`)} data-testid="health-open" data-member={m.id} className="cp-press cp-fill"
           style={{ margin: '0 12px 12px', height: 44, borderRadius: 999, border: 'none', background: '#FFFFFF', color: F.ink, fontSize: 15, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4, padding: '0 16px' }}>
-          {multi ? t('ftoday.hcOpenFor', { n: memberShort(m) }) : t('ftoday.hcOpen')}
+          {multi ? t('ftoday.hcOpenFor', { n: displayName(m) }) : t('ftoday.hcOpen')}
           <Icon name="chevron_right" size={20} color={F.ink} />
         </button>
       </FillCard>

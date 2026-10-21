@@ -2,7 +2,7 @@
 // this member, each contact's sign-in username (read-only; a family member sees only their own), management's "Reset password",
 // "Message on WhatsApp" (a wa.me link per contact: the club talks to families on WhatsApp, there is no in-app inbox) and (lobby, management) edit / add / link / remove contacts.
 import { useState } from 'react';
-import { contactsOfMember, fmtPhone, hasKey, isPendingRow, linksOfFamily, memberShort, waUrl, type FamilyContact, type Member } from '@cp/shared';
+import { contactsOfMember, fmtPhone, hasKey, isPendingRow, linksOfFamily, displayName, waUrl, type FamilyContact, type Member } from '@cp/shared';
 import { Avatar, Button, Icon, Sheet } from '../../../components/ui';
 import { api, ApiError } from '../../../lib/api';
 import { say } from '../../../store/ui';
@@ -51,7 +51,7 @@ export function FamilyTab({ p }: { p: P }) {
                 {link.primary && !pending ? <Tag28 icon="receipt_long" label={t('profile.primaryBilling')} bg="#24201C" fg="#FFFFFF" /> : null}
                 {pending ? <Tag28 icon="hourglass_top" label={link.primary ? t('profile.pendingPrimary') : t('common.pendingApproval')} bg="#F6ECD6" fg="#7A5510" /> : null}
                 {access ? <Tag28 icon="smartphone" label={t('profile.usesApp')} bg="var(--fill, #F4F4F5)" /> : !pending ? <Tag28 icon="phonelink_erase" label={t('profile.noApp')} bg="var(--press, #EEEEF0)" fg="#5E5852" /> : null}
-                {other(contact.id).map((x) => <Tag28 key={x.id} icon="link" label={t('profile.alsoFamilyOf', { n: memberShort(x) })} bg="var(--press, #EEEEF0)" />)}
+                {other(contact.id).map((x) => <Tag28 key={x.id} icon="link" label={t('profile.alsoFamilyOf', { n: displayName(x) })} bg="var(--press, #EEEEF0)" />)}
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                 {canEdit && !pending ? <Button variant="secondary" size={44} icon="edit" onClick={() => p.open('contact', { familyId: contact.id })} label={t('profile.editContact', { n: contact.name })}>{t('common.edit')}</Button> : null}

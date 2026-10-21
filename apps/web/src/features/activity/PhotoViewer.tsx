@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as RKE } from 'react';
 import { useResetOn } from '../../lib/useResetOn';
 import { createPortal } from 'react-dom';
-import { live, isPendingRow, memberShort, sessionsOn, staffCall, uniq, type Photo } from '@cp/shared';
+import { live, isPendingRow, displayName, sessionsOn, staffCall, uniq, type Photo } from '@cp/shared';
 import { activityName, fmtDuration } from '@cp/shared/rules/activity';
 import { Button, Chip, Dialog, Icon, Note, PhotoImg, Segmented, Select, Sheet, TextField, Toggle, FONT_BODY } from '../../components/ui';
 import { useT, useFmt, useLang } from '../../lib/i18n';
@@ -116,7 +116,7 @@ function StaffPhotoViewer({ photos, startId, onClose }: Omit<ViewerProps, 'audie
   const live1 = playing === p.id;
   const caption = photoCaption(s, p, t, lang);
   const by = staffCall(s.staff[p.takenBy]) || t('activity.theClub');
-  const names = (ids: string[]) => ids.map((id) => (s.members[id] ? memberShort(s.members[id]) : '')).filter(Boolean).join(', ');
+  const names = (ids: string[]) => ids.map((id) => (s.members[id] ? displayName(s.members[id]) : '')).filter(Boolean).join(', ');
   const meta = `${fdl(p.date)} · ${p.time}` + (p.memberIds.length ? ' · ' + t('activity.tagged', { names: names(p.memberIds) }) : '');
   const hidden = p.visibility === 'hidden';
   const pending = p.visibility === 'pending';

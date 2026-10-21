@@ -3,7 +3,7 @@
 // help to throw the extras away. Tap a draft to fix it, then send them all (management) or send them for approval (everyone else). Private to the person who took them.
 // It is the first tab of the Camera (activity, management) and the Drafts page of the kitchen.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { memberShort, toMin, type Photo } from '@cp/shared';
+import { displayName, toMin, type Photo } from '@cp/shared';
 import { attendedOn, curAct, faceTagging, pictureDays, pictureSessions } from '@cp/shared/rules/activity';
 import { draftGroupKey, draftKindOf, draftKindsFor, draftMeal, draftNotes, draftsOf, type DraftKind } from '@cp/shared/rules/photoAi';
 import { Button, Card, EmptyState, Group, Icon, Note, PageHead, PhotoImg, Segmented, Select, Sheet, SectionLabel, FONT_BODY } from '../../components/ui';
@@ -41,7 +41,7 @@ function useTitle() {
     const kind = draftKindOf(p);
     if (kind === 'food') return t(draftMeal(p) === 'tea' ? 'drafts.teaPhoto' : 'drafts.lunchPhoto');
     if (kind === 'scene') return p.activity ? t('drafts.sessionChip', { name: activityLabel(s, p.activity, t, lang) }) : t('drafts.pickSession');
-    const names = p.memberIds.map((id) => (s.members[id] ? memberShort(s.members[id]) : '')).filter(Boolean);
+    const names = p.memberIds.map((id) => (s.members[id] ? displayName(s.members[id]) : '')).filter(Boolean);
     return names.length ? names.slice(0, 2).join(', ') + (names.length > 2 ? ` +${names.length - 2}` : '') : t('drafts.whoIsThis');
   };
 }

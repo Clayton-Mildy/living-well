@@ -1,6 +1,6 @@
 // Small shared pieces of the family day story and the monthly memories: mood colours, day wording, names, how much was eaten.
 import type { ClubState, DailyLog, ISODate, Member } from '@cp/shared';
-import { daysBetween, memberShort } from '@cp/shared';
+import { daysBetween, displayName } from '@cp/shared';
 import type { TlItem } from '@cp/shared/rules/family';
 import type { TFn } from '../../lib/i18n';
 
@@ -30,7 +30,7 @@ export function dayTitle(t: TFn, fmt: Fmt, names: string, date: ISODate, today: 
 
 /** "Oma Lina", "Oma Lina and Opa Budi", "Oma Lina, Opa Budi and Opa Tan". */
 export function namesOf(t: TFn, members: Member[]): string {
-  const names = members.map(memberShort);
+  const names = members.map(displayName);
   if (names.length < 2) return names[0] || '';
   return `${names.slice(0, -1).join(', ')} ${t('common.and')} ${names[names.length - 1]}`;
 }

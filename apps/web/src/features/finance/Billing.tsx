@@ -2,7 +2,7 @@
 // plus the invoice run (preview the 21st's run, then issue), the members on hold for an unpaid invoice (the brochure's terms) and the invoice detail sheet.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { actorName, fmtPhone, memberName, memberShort, rp, runDone, suspensions, ym } from '@cp/shared';
+import { actorName, fmtPhone, memberName, displayName, rp, runDone, suspensions, ym } from '@cp/shared';
 import { billingBoard, invoicePeriod, nextRunPeriod, runPlan, type InvoiceView } from '@cp/shared/rules/finance';
 import { Avatar, Button, EmptyState, Eyebrow, Icon, PageHead, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -159,7 +159,7 @@ function InvoiceList({ id, title, meta, rows, q, openRow, setOpenRow, onOpenInvo
 }) {
   const t = useT();
   const hits = useMemo(
-    () => rows.filter((v) => matches(q, v.member ? `${memberName(v.member)} ${memberShort(v.member)}` : '', v.inv.number, v.payer?.name, v.payer?.phone, v.payer?.phone.replace(/^\+62/, '0'))),
+    () => rows.filter((v) => matches(q, v.member ? `${memberName(v.member)} ${displayName(v.member)}` : '', v.inv.number, v.payer?.name, v.payer?.phone, v.payer?.phone.replace(/^\+62/, '0'))),
     [rows, q],
   );
   const paged = usePaged(hits, 15, q + id);

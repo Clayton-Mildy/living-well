@@ -7,7 +7,7 @@
 // downwards with the step's pictures as big cards, and a card opens the full-screen viewer. Lunch has its own "Tell the kitchen about lunch" line.
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FACE_KEY, addDays, firstOfRole, lunchSafety, memberShort, staffCall, visibleTeaPhotos, type Face, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
+import { FACE_KEY, addDays, firstOfRole, lunchSafety, displayName, staffCall, visibleTeaPhotos, type Face, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
 import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, storyNowMin, type DayStory, type StorySession, type TlItem } from '@cp/shared/rules/family';
 import { listItems, listKind } from '@cp/shared/rules/famToday';
 import { Avatar, Icon, PhotoImg, RailDot } from '../../components/ui';
@@ -124,7 +124,7 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
             <>
               {line([roomLabel(s, it.roomId, fmt.lang), staffFirst(s, it.staffId)].filter(Boolean).join(' · '), 'where')}
               {guest ? <span style={{ display: 'block', marginTop: 4 }}><Guest g={guest} /></span> : null}
-              {took.length ? <span style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>{took.map((r) => <Took key={r.m.id} took={r.x.took!} name={members.length > 1 ? memberShort(r.m) : undefined} />)}</span> : null}
+              {took.length ? <span style={{ display: 'flex', flexDirection: 'column', gap: 2, marginTop: 4 }}>{took.map((r) => <Took key={r.m.id} took={r.x.took!} name={members.length > 1 ? displayName(r.m) : undefined} />)}</span> : null}
             </>
           ),
         };
@@ -135,13 +135,13 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         const groups = new Map<string, Member[]>();
         for (const m of members) { const k = dishNamesOf(s, servedLunch(s, m, date)).join(', '); groups.set(k, [...(groups.get(k) || []), m]); }
         const lines: ReactNode[] = [];
-        for (const [dishes, ms] of groups) if (dishes) lines.push(line(groups.size > 1 ? `${ms.map(memberShort).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`, 'dish-' + dishes));
+        for (const [dishes, ms] of groups) if (dishes) lines.push(line(groups.size > 1 ? `${ms.map(displayName).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`, 'dish-' + dishes));
         if (isToday || ahead) { // the allergy line also for tomorrow's lunch
           for (const m of members) {
             const ls = lunchSafety(s, m.id, date);
             const day = fmt.fd(date, { weekday: 'long' }); // the day ahead says whose menu it is ("Monday's menu"), today says "today's"
-            if (ls.kind === 'clear') lines.push(line(ahead ? t('ftoday.planLunchSafe', { n: memberShort(m), a: foods(m), day }) : t('family.tLunchSafe', { n: memberShort(m), a: foods(m) }), 'safe-' + m.id, { color: F.sage, testId: 'lunch-safe' }));
-            else if (ls.kind === 'alternative') lines.push(line(ahead ? t('ftoday.planLunchAlt', { n: memberShort(m), a: foods(m), d: ls.dish, x: ls.alternative, day }) : t('family.tLunchAlt', { n: memberShort(m), a: foods(m), d: ls.dish, x: ls.alternative }), 'alt-' + m.id, { color: F.ochre, testId: 'lunch-alt' }));
+            if (ls.kind === 'clear') lines.push(line(ahead ? t('ftoday.planLunchSafe', { n: displayName(m), a: foods(m), day }) : t('family.tLunchSafe', { n: displayName(m), a: foods(m) }), 'safe-' + m.id, { color: F.sage, testId: 'lunch-safe' }));
+            else if (ls.kind === 'alternative') lines.push(line(ahead ? t('ftoday.planLunchAlt', { n: displayName(m), a: foods(m), d: ls.dish, x: ls.alternative, day }) : t('family.tLunchAlt', { n: displayName(m), a: foods(m), d: ls.dish, x: ls.alternative }), 'alt-' + m.id, { color: F.ochre, testId: 'lunch-alt' }));
           }
         }
         // how much was eaten, from the team's log (a kind line, one per member who has one)
@@ -151,7 +151,7 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
           detail: (
             <>
               {lines}
-              {ate.map((r) => <span key={r.m.id} data-testid="lunch-amount" data-amount={r.a} style={{ display: 'block', marginTop: 2, color: F.sage, fontWeight: 500 }}>{members.length > 1 ? `${memberShort(r.m)}: ` : ''}{lunchWords(t, r.a)}</span>)}
+              {ate.map((r) => <span key={r.m.id} data-testid="lunch-amount" data-amount={r.a} style={{ display: 'block', marginTop: 2, color: F.sage, fontWeight: 500 }}>{members.length > 1 ? `${displayName(r.m)}: ` : ''}{lunchWords(t, r.a)}</span>)}
             </>
           ),
           extra: lunchFeedback ? (

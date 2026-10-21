@@ -2,7 +2,7 @@
 // day, so this is the planning view: pick a day, see who would clash ("if they come today"), and prepare the alternative
 // before anyone arrives. Members who are already in the club are handled in the live conflicts panel above.
 import { useMemo, useState } from 'react';
-import { actorName, memberShort, nextOpenDay } from '@cp/shared';
+import { actorName, displayName, nextOpenDay } from '@cp/shared';
 import { allergiesOnFile, type KitchenConflict, type OnFileRow } from '@cp/shared/rules/kitchenOps';
 import { Card, CardHead, Group, Icon, Pager, usePaged, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -56,7 +56,7 @@ export function AllergiesOnFile({ readOnly = false }: { readOnly?: boolean } = {
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-                      <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{memberShort(r.m)}</span>
+                      <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{displayName(r.m)}</span>
                       <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{meta}</span>
                     </div>
                     {pill ? <StatusDot color={pill.fg}>{t(pill.key)}</StatusDot> : null}
@@ -111,7 +111,7 @@ export function AllergiesOnFile({ readOnly = false }: { readOnly?: boolean } = {
             <span aria-hidden="true" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name="no_food" size={20} color="var(--accent, #75624B)" /></span>
             <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{memberShort(r.m)}</span>
+                <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{displayName(r.m)}</span>
                 <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{meta}</span>
               </div>
               {r.clashes.length ? (

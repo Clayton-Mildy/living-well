@@ -222,7 +222,7 @@ const digitsVariants = (q: string): string[] => {
 /** Text a member matches on: name plus the names and phone numbers of their family contacts. */
 export function memberSearchBlob(s: ClubState, m: Member) {
   const fams = linksOfMember(s, m.id).map((l) => s.familyContacts[l.familyId]).filter((c): c is FamilyContact => !!c && !c.deletedAt);
-  return { text: [memberName(m), m.firstName, m.lastName, ...fams.map((c) => c.name)].join(' ').toLowerCase(), phones: fams.map((c) => c.phone.replace(/\D/g, '')) };
+  return { text: [memberName(m), m.firstName, m.lastName, m.registration?.nickname ?? '', ...fams.map((c) => c.name)].join(' ').toLowerCase(), phones: fams.map((c) => c.phone.replace(/\D/g, '')) };
 }
 export function matchesQuery(s: ClubState, m: Member, q: string): boolean {
   const query = q.toLowerCase().trim();

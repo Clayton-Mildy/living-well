@@ -3,7 +3,7 @@
 // the daily log with every field the teacher recorded and the staff note (staff only). The activity team, nurse and
 // management write or correct the log right on its day (the last week's days they were in).
 import { useState } from 'react';
-import { addDays, actorName, attId, dayArc, live, memberShort, sortBy, staffCall, type Attendance, type DailyLog, type Reading } from '@cp/shared';
+import { addDays, actorName, attId, dayArc, live, displayName, sortBy, staffCall, type Attendance, type DailyLog, type Reading } from '@cp/shared';
 import { activityName, logDates, logDeviations, lunchLabelKey, roundsOf } from '@cp/shared/rules/activity';
 import { logForFamily, readingForFamily } from '@cp/shared/rules/approvals';
 import { PendingMark } from '../../../components/PendingMark';
@@ -114,7 +114,7 @@ function DayCard({ p, date, log, readings, visit, canEdit, first }: { p: P; date
   const moodSaved = log?.mood !== undefined; // KC round 7: a log can hold only lunch or a session mark so far
   const e = draft ?? base;
   const editing = open || (!!draft && !sameLog(draft, base));
-  const name = memberShort(m);
+  const name = displayName(m);
   const save = async () => {
     if (busy) return;
     setBusy(true);

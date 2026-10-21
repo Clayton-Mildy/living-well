@@ -1,7 +1,7 @@
 // Health tab (design ScrProfile health): latest readings, trends (hover or tap for a date's value; 1M / 3M / 6M / All), conditions, medicines,
 // allergies, mobility and diet, the member's Watch / Alert limits (own or the club's), every reading by month, and the staff-only care instructions.
 import { useState } from 'react';
-import { actorName, bpStatus, gluStatus, LIMIT_CMP, limitsFor, memberShort, ownLimitKeys, pulseStatus, readingsOf, spo2Status, tempStatus, type Health, type LimitKey, type Reading } from '@cp/shared';
+import { actorName, bpStatus, gluStatus, LIMIT_CMP, limitsFor, displayName, ownLimitKeys, pulseStatus, readingsOf, spo2Status, tempStatus, type Health, type LimitKey, type Reading } from '@cp/shared';
 import { Button, FONT_BODY, Group, Icon, Pager, Segmented, StaffOnlyTag, StatusBadge, TrendChart, TrendRangeControl, inWindow, rangeValue, usePaged, windowOf } from '../../../components/ui';
 import { LIMIT_ORDER, LimitsSheet, unitOf } from '../../health/LimitsSheet';
 import { PhoneSeg } from '../../health/parts';
@@ -193,11 +193,11 @@ export function HealthTab({ p }: { p: P }) {
       </div>
     );
   };
-  const clearOwnLimits = () => void p.act('health.setMemberLimits', { memberId: m.id, limits: null }, { ok: () => t('profile.limCleared', { n: memberShort(m) }) });
+  const clearOwnLimits = () => void p.act('health.setMemberLimits', { memberId: m.id, limits: null }, { ok: () => t('profile.limCleared', { n: displayName(m) }) });
   const limitsBody = (
     <>
       {own.map((k, i) => limRow(k, true, i === 0))}
-      {!own.length ? <div style={{ padding: '14px 0', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.limSameAsClub', { n: memberShort(m) })}</div> : null}
+      {!own.length ? <div style={{ padding: '14px 0', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.limSameAsClub', { n: displayName(m) })}</div> : null}
       <button type="button" aria-expanded={clubOpen} onClick={() => setClubOpen((o) => !o)} className="cp-tap-self cp-press"
         style={{ width: '100%', minHeight: 44, padding: 0, border: 'none', borderTop: HAIR, background: 'transparent', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, fontFamily: 'Inter', fontSize: 15, color: 'var(--accent, #75624B)', cursor: 'pointer', textAlign: 'left' }}>
         <span>{clubOpen ? t('profile.limHideClub') : t('profile.limShowClub', { n: clubKeys.length })}</span>
@@ -212,7 +212,7 @@ export function HealthTab({ p }: { p: P }) {
       ) : null}
     </>
   );
-  const limitsTitle = t('profile.limitsFor', { n: memberShort(m) });
+  const limitsTitle = t('profile.limitsFor', { n: displayName(m) });
   const limits = !p.family ? (
     <>
       <ListCard phone={ph} title={limitsTitle}>{limitsBody}</ListCard>

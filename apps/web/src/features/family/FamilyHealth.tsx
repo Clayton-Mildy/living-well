@@ -6,7 +6,7 @@
 // A family sees approved readings only, graded against the parent's own limits first, then the club's.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { daysBetween, limitsFor, memberName, memberShort, staffCall, type Health, type Reading } from '@cp/shared';
+import { daysBetween, limitsFor, memberName, displayName, staffCall, type Health, type Reading } from '@cp/shared';
 import { healthMemberOf } from '@cp/shared/rules/family';
 import { TILE_METRICS, bpHero, familyReadings, heroBars, latestOf, metricStatus, metricText, METRIC_UNIT, type HMetric } from '@cp/shared/rules/famHealth';
 import { Icon } from '../../components/ui';
@@ -28,7 +28,7 @@ export function FamilyHealth() {
   if (!user || !m) return null;
   const rs = familyReadings(s, memberId);
   const L = limitsFor(s, m);
-  const short = memberShort(m);
+  const short = displayName(m);
   const go = (path: string) => navigate(path);
   const histPath = (metric?: HMetric) => `/history?member=${memberId}${metric ? `&metric=${metric}` : ''}`;
   // a laptop shows the history beside the card, so a tap picks the measurement there; a phone and tablet open the History page
@@ -53,7 +53,7 @@ export function FamilyHealth() {
         return (
           <button key={id} type="button" aria-pressed={on} data-member={id} onClick={() => setSel(id)} className="cp-press"
             style={{ height: 44, padding: '0 16px 0 4px', border: 'none', borderRadius: 999, background: on ? F.ink : F.fill, color: on ? '#FFFFFF' : F.text, display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter, system-ui, sans-serif', whiteSpace: 'nowrap' }}>
-            <MemberFace m={x} size={36} />{memberShort(x)}
+            <MemberFace m={x} size={36} />{displayName(x)}
           </button>
         );
       })}

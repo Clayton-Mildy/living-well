@@ -1,6 +1,6 @@
 // Payments (design ScrPay): "Sync Xero now", tiles, the payment list with partial or full refunds, and the manual-payment form.
 import { useMemo, useState } from 'react';
-import { memberName, rp, ym } from '@cp/shared';
+import { displayName, memberName, rp, ym } from '@cp/shared';
 import { invoicePeriod, paymentsBoard, type PaymentView } from '@cp/shared/rules/finance';
 import { Button, EmptyState, Eyebrow, PageHead, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -24,7 +24,7 @@ export function Payments() {
   const board = useMemo(() => paymentsBoard(s, today), [s, today]);
 
   const hits = useMemo(
-    () => board.rows.filter((r) => matches(q, r.member ? memberName(r.member) : '', ...r.allocations.map((a) => a.invoiceId), r.p.ref, r.p.bank, s.familyContacts[r.allocations[0]?.invoice?.payerFamilyId || '']?.name)),
+    () => board.rows.filter((r) => matches(q, r.member ? `${memberName(r.member)} ${displayName(r.member)}` : '', ...r.allocations.map((a) => a.invoiceId), r.p.ref, r.p.bank, s.familyContacts[r.allocations[0]?.invoice?.payerFamilyId || '']?.name)),
     [board.rows, q, s.familyContacts],
   );
   const paged = usePaged(hits, 15, q);

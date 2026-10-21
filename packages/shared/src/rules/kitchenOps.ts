@@ -19,7 +19,7 @@
 import type { ClubState, Dish, DishAllergen, Feedback, FoodAllergen, GuestVisit, ISODate, Member, MenuDay, MenuVersion, StockRequest, User, Weekday } from '../types';
 import { conflictsOn, dietaryGroups, dinersOn, memberConflictsOn, menuOn, menuVersionFor, ALLERGY_COVERS, type Conflict, type Diner } from './kitchen';
 import { attOf, isCheckedIn } from './attendance';
-import { activeOn, contactsOfMember, isPendingRow, memberShort } from './core';
+import { activeOn, contactsOfMember, isPendingRow, displayName } from './core';
 import { addDays, dow, live, sortBy, uniq } from '../util';
 
 export type Course = Dish['course'];
@@ -33,7 +33,7 @@ export const KNOWN_UNITS = ['pcs', 'boxes', 'packs', 'kg', 'litres', 'bottles', 
 // ---------- diners, conflicts, safety ----------
 export type PersonKey = `member:${string}` | `guest:${string}`;
 export const personKey = (d: Diner): PersonKey => (d.type === 'member' ? `member:${d.id}` : `guest:${d.id}`);
-export const dinerName = (d: Diner) => (d.type === 'member' ? memberShort(d.m) : d.g.name);
+export const dinerName = (d: Diner) => (d.type === 'member' ? displayName(d.m) : d.g.name);
 
 /** Covers: members who have checked in that day (so far) plus the guests booked for lunch. */
 export function coversOn(s: ClubState, date: ISODate) {
@@ -207,7 +207,7 @@ export function dietaryRows(s: ClubState, date: ISODate): DietRow[] {
     const kind: DietRow['kind'] = head === 'allergy' ? (value === 'unknown' ? 'unknown' : 'allergy') : head === 'diet' ? 'diet' : 'diabetic';
     return { key: g.key, kind, value, icon: g.icon, names: g.names, n: g.names.length };
   });
-  const other = dinersOn(s, date).flatMap((d) => (d.type === 'member' && d.m.health.foodOther?.trim() ? [{ name: memberShort(d.m), text: d.m.health.foodOther.trim() }] : []));
+  const other = dinersOn(s, date).flatMap((d) => (d.type === 'member' && d.m.health.foodOther?.trim() ? [{ name: displayName(d.m), text: d.m.health.foodOther.trim() }] : []));
   for (const o of other) {
     let r = rows.find((x) => x.key === 'allergy:other');
     if (!r) rows.push((r = { key: 'allergy:other', kind: 'other', value: '', icon: 'no_food', names: [], n: 0 }));

@@ -5,7 +5,7 @@ import type { ChangeRequest, ClubState, DocType, FamilyLink, HM, Lang, MemberDoc
 import { e164 } from '../util';
 import { defineAction, hasRole, isFamily, DomainError, type ActionDef, type Ctx } from './framework';
 import { shortOf } from './helpers';
-import { isPendingRow, linksOfMember, memberShort } from '../rules/core';
+import { isPendingRow, linksOfMember, displayName } from '../rules/core';
 import { DOC_TYPES, RELATIONS, SIM_FILE, docIdFor, firstWord, isHM, isPhone, lastContactId, lastLinkId, nextContactId, nextLinkId } from '../rules/members';
 import { editable, makePrimary, mediaIdOf, obj, oneOf, parseNanny, phoneTaken, txt } from './members';
 
@@ -43,7 +43,7 @@ interface UpdateContact { familyId: string; memberId?: string; name?: string; ph
 
 /** Welcome the contact (they see it when they first sign in). */
 function welcomeContact(d: Draft<ClubState>, familyId: string, memberId: string, ctx: Ctx) {
-  ctx.notify({ toUsers: [familyId], kind: 'members.notif.contactAdded', params: { name: memberShort(d.members[memberId]) }, link: '/today', memberId });
+  ctx.notify({ toUsers: [familyId], kind: 'members.notif.contactAdded', params: { name: displayName(d.members[memberId]) }, link: '/today', memberId });
 }
 function activateLink(d: Draft<ClubState>, l: Draft<FamilyLink>, ctx: Ctx) {
   const c = d.familyContacts[l.familyId];
@@ -204,7 +204,7 @@ export const familyActions: ActionDef[] = [
       const c = d.familyContacts[l.familyId];
       if (input.appAccess) {
         activateLink(d, l, ctx);
-        ctx.notify({ toUsers: [l.familyId], kind: 'members.notif.appInvite', params: { name: memberShort(m) }, link: '/today', memberId: m.id });
+        ctx.notify({ toUsers: [l.familyId], kind: 'members.notif.appInvite', params: { name: displayName(m) }, link: '/today', memberId: m.id });
       }
       feed(ctx, d, m.id, input.appAccess ? 'smartphone' : 'phonelink_erase', input.appAccess ? 'appAccessOn' : 'appAccessOff', { who: c?.name || '' });
     },

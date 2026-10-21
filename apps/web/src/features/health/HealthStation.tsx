@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { dayStatus, lastBefore, limitsFor, nextOpenDay, type Health, type QueueKind } from '@cp/shared';
-import { alertRecipients, filterRows, headlineValue, inClubCount, rowName, stationRows, suggestKind, type StationRow } from '@cp/shared/rules/healthStation';
+import { alertRecipients, filterRows, headlineValue, inClubCount, stationRows, suggestKind, type StationRow } from '@cp/shared/rules/healthStation';
 import { Button, Eyebrow, Group, Icon, IconButton, PageHead, Pager, usePaged, uiZoom, FONT_BODY } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
@@ -354,7 +354,7 @@ function ListRow({ r, on, first, today, t, fds, onClick }: { r: StationRow; on: 
         <Av name={w.name} tone={w.tone} src={w.photo} size={42} font={15} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-            <span style={{ minWidth: 0, fontSize: 16, fontWeight: 500, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{rowName(r)}</span>
+            <span style={{ minWidth: 0, fontSize: 16, fontWeight: 500, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{w.short}</span>
             {meta ? <span style={{ flex: 'none', fontSize: 'max(13px, var(--cp-small, 0px))', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{meta}</span> : null}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
@@ -372,7 +372,7 @@ function ListRow({ r, on, first, today, t, fds, onClick }: { r: StationRow; on: 
       <Av name={w.name} tone={w.tone} src={w.photo} size={isPhone ? 40 : 44} font={isPhone ? 14 : 16} />
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', gap: 8, alignItems: 'baseline' }}>
-          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{rowName(r)}</span>
+          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{w.short}</span>
           {meta ? <span style={{ fontSize: 'max(13px, var(--cp-small, 0px))', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap', lineHeight: 1.4 }}>{meta}</span> : null}
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>

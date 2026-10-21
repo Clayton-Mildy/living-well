@@ -33,7 +33,7 @@ test.skip('Oma Lina’s day: the guided demo runs end to end (the guided demo is
 
   // 2 · 10:08 health check: the PC-303 reads 152/94; the nurse saves it and the family is told
   await step(page, /^Open the health station$/);
-  await expect(page.getByRole('heading', { level: 2, name: 'Oma Lina Wijaya' })).toBeVisible();
+  await expect(page.getByRole('heading', { level: 2, name: 'Oma Lina' })).toBeVisible();
   await page.getByRole('button', { name: /^Save and next$/ }).click();
   await poll(page, (x) => rows(x.readings).find((r) => r.memberId === 'm1' && r.date === T && r.kind === 'arrival')?.sys).toBe(152);
 

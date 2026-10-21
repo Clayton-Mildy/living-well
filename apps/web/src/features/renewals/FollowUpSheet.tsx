@@ -3,7 +3,7 @@
 // management is sent for approval; the sheet says where a record stands (waiting, not approved, applied). A pushed full screen on phones, a bottom sheet elsewhere.
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { actorName, flexMonth, fmtPhone, memberName, memberShort, monthStart, waUrl, ym, type FollowUpOutcome, type YM } from '@cp/shared';
+import { actorName, flexMonth, fmtPhone, memberName, displayName, monthStart, waUrl, ym, type FollowUpOutcome, type YM } from '@cp/shared';
 import { END_REASONS } from '@cp/shared/rules/members';
 import { defaultLastDay, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthChoices, leaveMonthsCheck, outcomeChoices, renewalRows } from '@cp/shared/rules/renewals';
 import { Avatar, Button, Chip, DateField, GROUP_HEAD, Icon, Note, PhoneScreen, Select, Sheet, TextField } from '../../components/ui';
@@ -59,7 +59,7 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
     if (!outcome || !canSave) return;
     setBusy(true);
     const input = { memberId, month, outcome, ...(note.trim() ? { note: note.trim() } : {}), ...(outcome === 'leave' ? { leaveMonths: leaveSel } : {}), ...(outcome === 'stop' ? { lastDay, endReason: reason } : {}) };
-    const name = memberShort(m);
+    const name = displayName(m);
     const r = await act('followUp.record', input, { ok: (res) => (res.status === 'done' && isChange(outcome) ? t('renewals.savedApplied', { name, date: first }) : t('renewals.saved', { name })) });
     setBusy(false);
     if (r.ok) onClose();
@@ -166,7 +166,7 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
     </>
   ), 0);
 
-  const title = t('renewals.sheetTitle', { name: memberShort(m) });
+  const title = t('renewals.sheetTitle', { name: displayName(m) });
   const body = (
     <>
       {isPhone ? (

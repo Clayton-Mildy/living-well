@@ -2,7 +2,7 @@
 // "Take photo" opens the real camera, uploads the picture and saves it as a solo photo of this member. Photos taken by anyone but management
 // wait for approval (Reviews → Photos): staff see them tagged "Waiting for approval", families never see them.
 import { useState } from 'react';
-import { getAction, hasKey, live, memberShort, type Photo } from '@cp/shared';
+import { getAction, hasKey, live, displayName, type Photo } from '@cp/shared';
 import { Button, CameraCapture, Group, Icon, Pager, PhotoImg, SectionLabel, usePaged } from '../../../components/ui';
 import { ApiError } from '../../../lib/api';
 import { uploadMedia } from '../../../lib/media';
@@ -49,7 +49,7 @@ export function PhotosTab({ p }: { p: P }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: phone ? 14 : 'clamp(18px, 2.8vw, 28px)' }}>
       {canTake ? <div><Button variant="secondary" size={44} icon="photo_camera" disabled={saving} onClick={() => setCamera(true)}>{saving ? t('profile.photoSaving') : t('profile.takePhoto')}</Button></div> : null}
       {paged.rows.map((day) => {
-        const blocks = ([[t('profile.ownPhotos', { n: memberShort(m) }), day.solo], [t('profile.groupWith_' + m.gender), day.grp]] as [string, Photo[]][]).filter((z) => z[1].length).map(([title, items], bi) => (
+        const blocks = ([[t('profile.ownPhotos', { n: displayName(m) }), day.solo], [t('profile.groupWith_' + m.gender), day.grp]] as [string, Photo[]][]).filter((z) => z[1].length).map(([title, items], bi) => (
           <div key={title} style={{ display: 'flex', flexDirection: 'column', gap: 10, paddingTop: phone && !bi ? 0 : 16, borderTop: phone && !bi ? 'none' : HAIR }}>
             <SectionLabel>{title}</SectionLabel>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(120px,1fr))', gap: 8 }}>

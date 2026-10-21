@@ -4,7 +4,7 @@
 // Phone: the list alone, a row opens the member as a full-screen sheet.
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { addDays, limitsFor, memberAge, memberName, ym, type ClubState, type Health, type HealthLimits, type Reading } from '@cp/shared';
+import { addDays, limitsFor, displayName, memberAge, memberName, ym, type ClubState, type Health, type HealthLimits, type Reading } from '@cp/shared';
 import { NORMAL_BANDS, daySummary, memberReadingsOn, memberTrend, nameMatches, neighbourDay, readingDays, readingsOnDay, trendCharts, trendRows, type ChartSpec, type TrendRow } from '@cp/shared/rules/healthStation';
 import { Button, DateField, GROUP_HEAD, Group, Icon, PageHead, Pager, Segmented, TrendChart, TrendRangeControl, rangeValue, usePaged, windowOf } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -50,12 +50,12 @@ export function Readings() {
   // ----- trends: members with readings -----
   const rows = useMemo(() => trendRows(s, today, WEEKS * 7), [s, today]);
   const F: Record<Filter, (r: TrendRow) => boolean> = { all: () => true, watch: (r) => r.worst === 'watch', alert: (r) => r.worst === 'alert' };
-  const list = useMemo(() => rows.filter(F[filter]).filter((r) => nameMatches(memberName(r.m), q)), [rows, filter, q]); // eslint-disable-line react-hooks/exhaustive-deps
+  const list = useMemo(() => rows.filter(F[filter]).filter((r) => nameMatches(`${memberName(r.m)} ${displayName(r.m)}`, q)), [rows, filter, q]); // eslint-disable-line react-hooks/exhaustive-deps
   const pagedT = usePaged(list, PAGE, `${filter}|${q}`);
 
   // ----- by day: every reading of the chosen date -----
   const dayAll = useMemo(() => readingsOnDay(s, date), [s, date]);
-  const dayItems = useMemo(() => dayAll.map((r) => ({ r, who: whoOfReading(s, r) })).filter((x) => nameMatches(x.who?.name ?? '', q)), [dayAll, s, q]);
+  const dayItems = useMemo(() => dayAll.map((r) => ({ r, who: whoOfReading(s, r) })).filter((x) => nameMatches(`${x.who?.name ?? ''} ${x.who?.short ?? ''}`, q)), [dayAll, s, q]);
   const pagedD = usePaged(dayItems, PAGE, `${date}|${q}`);
   const sum = daySummary(dayAll);
 
@@ -137,7 +137,7 @@ export function Readings() {
             <>
               <Av name={who?.name || ''} tone={who?.tone} src={who?.photo} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.name}</span>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.short}</span>
                 <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{readingTitle(r, t)}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{`${t(CHECK_KEY[r.kind])} · ${r.time}`}</span>
               </span>
@@ -205,7 +205,7 @@ export function Readings() {
             <>
               <Av name={who?.name || ''} tone={who?.tone} src={who?.photo} size={42} font={15} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.name}</span>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{who?.short}</span>
                 <span style={{ fontSize: 15, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{readingTitle(r, t)}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{`${t(CHECK_KEY[r.kind])} · ${r.time}`}</span>
               </span>

@@ -1,7 +1,7 @@
 // Family Calendar, List view on a laptop: the week as five rows (weekday and number, what is on, a dot when a parent came) instead of five tiles, so the
 // left column says something about each day. Same testid and states as the phone's tiles: `cal-day` with data-date and data-state. Round 8d: a row keeps its own
 // look when selected (a ring, its number in an ink circle); today's weekday reads "Today" in bronze.
-import { memberShort } from '@cp/shared';
+import { displayName } from '@cp/shared';
 import type { ISODate } from '@cp/shared';
 import { eventTitle } from '@cp/shared/rules/calendar';
 import { activityLabel } from '@cp/shared/rules/family';
@@ -41,7 +41,7 @@ export function WeekRows({ days, date, onPick }: { days: FamDay[]; date: ISODate
             </span>
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{line(d)}</span>
-              {came ? <span style={{ fontSize: 13, color: F.muted }}>{t('fcal.joinedDay', { n: nameList(fmt.lang, d.came.map((id) => memberShort(s.members[id])).filter(Boolean)) })}</span> : null}
+              {came ? <span style={{ fontSize: 13, color: F.muted }}>{t('fcal.joinedDay', { n: nameList(fmt.lang, d.came.map((id) => displayName(s.members[id])).filter(Boolean)) })}</span> : null}
             </span>
             {came ? <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: F.bronze, flex: 'none' }} /> : null}
           </button>

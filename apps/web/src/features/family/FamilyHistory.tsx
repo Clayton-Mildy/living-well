@@ -2,7 +2,7 @@
 // (tap or hover for a day's value) and the readings in range with their grade. A family sees approved readings only; grades follow the parent's own limits.
 // On a laptop the chart side (measurement, range, average, chart) is the wide LEFT column and sticks; the readings list is the RIGHT one.
 // The body is health/HistoryBody (the laptop's Health tab shows the same thing inline).
-import { memberShort } from '@cp/shared';
+import { displayName } from '@cp/shared';
 import { BackLink, FamPage, PageTitle, useBack } from './kit';
 import { HistoryBody } from './health/HistoryBody';
 import { useParamMember } from './health/bits';
@@ -11,7 +11,7 @@ export function FamilyHistory() {
   const { t, user, id, m, sp, setSp } = useParamMember();
   const back = useBack(sp.get('from') === 'profile' && id ? `/profile?member=${id}` : '/health');
   if (!user || !m) return null;
-  const short = memberShort(m);
+  const short = displayName(m);
   const fromProfile = sp.get('from') === 'profile';
   const setMetric = (v: string) => {
     const next = new URLSearchParams(sp);

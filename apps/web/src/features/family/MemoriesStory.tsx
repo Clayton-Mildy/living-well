@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPE, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { memberName, memberShort, staffCall, type Member, type Photo, type YM } from '@cp/shared';
+import { memberName, displayName, staffCall, type Member, type Photo, type YM } from '@cp/shared';
 import { activityLabel, monthRecap, type MonthRecap } from '@cp/shared/rules/family';
 import { STORY_HOLD_MS, dominantMood, latestQuote, moodIsMostly, stepStoryClock, storyBackdrops, storyBarFill, storySlides, type StorySlide } from '@cp/shared/rules/famPhotos';
 import { Avatar, Icon, PhotoImg, useOverlayA11y } from '../../components/ui';
@@ -126,7 +126,7 @@ export function MemoriesStory({ memberId, month, startSlide = 0, cover, onClose 
   if (!m || !recap || !n) return null;
 
   const g = m.gender === 'f' ? 'f' : 'm';
-  const names = memberShort(m);
+  const names = displayName(m);
   const monthName = fmt.fmonth(month);
   const title = t('family.memTitle', { m: monthName, n: names });
   const visits = recap.visits.length;

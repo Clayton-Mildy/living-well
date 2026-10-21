@@ -36,6 +36,19 @@ export function openDaysInMonth(s: ClubState, month: string): ISODate[] {
 export const memberName = (m: Pick<Member, 'title' | 'firstName' | 'lastName'>) =>
   `${m.title} ${m.firstName}${m.firstName === m.lastName || !m.lastName ? '' : ' ' + m.lastName}`;
 export const memberShort = (m: Pick<Member, 'title' | 'firstName'>) => `${m.title} ${m.firstName}`;
+const TITLE_WORDS = /^(Oma|Opa|Ibu|Bapak|Pak|Bu|Ns\.|Kak|Mbak|Chef|dr\.)\s/i;
+/** What staff and family call a member: the nickname (Panggilan) with the title, e.g. "Oma Nio"; the short name when there is no nickname. A nickname that already carries a title ("Oma Lina") is used as it is. */
+export const displayName = (m: Pick<Member, 'title' | 'firstName' | 'registration'>) => {
+  const nick = m.registration?.nickname?.trim();
+  if (!nick) return memberShort(m);
+  return nick.toLowerCase().startsWith(m.title.toLowerCase() + ' ') || TITLE_WORDS.test(nick) ? nick : `${m.title} ${nick}`;
+};
+/** The full name, shown small beneath the display name; null when it adds nothing. */
+export const displayFull = (m: Pick<Member, 'title' | 'firstName' | 'lastName' | 'registration'>) => {
+  if (!m.registration?.nickname?.trim()) return null;
+  const full = memberName(m);
+  return full === displayName(m) ? null : full;
+};
 export const initials = (n: string) => {
   const p = n.replace(/^(Oma|Opa|Ibu|Bapak|Ns\.|Kak|Pak|Chef|Mbak|dr\.)\s+/, '').split(/\s+/).filter(Boolean);
   return ((p[0]?.[0] || '') + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();

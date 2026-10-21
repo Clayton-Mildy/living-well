@@ -116,7 +116,7 @@ describe('family health', () => {
   it('Profile: header, plan, health, care, visits, plan facts, family, documents, consents and notes; Edit and the jump chips', async () => {
     open('f1');
     await show(<FamilyProfile />, '/profile?member=m1&from=health');
-    expect(text()).toContain('Oma Lina Wijaya');
+    expect(text()).toContain('Oma Lina');
     for (const id of ['pf-plan-card', 'pf-personal', 'pf-care-list', 'pf-visit-tiles', 'pf-month', 'pf-plan', 'pf-family', 'pf-docs', 'pf-consents', 'pf-notes', 'pf-edit', 'pf-jump']) expect(q(id), id).toBeTruthy();
     expect(document.querySelectorAll('[data-testid="pf-jump"] [data-value]')).toHaveLength(8);
     expect(q('pf-docs')?.querySelectorAll('[data-testid="pf-doc"]')).toHaveLength(5); // KTP, carer's KTP, family member's KTP (KC round 10), the signed form, the health photo

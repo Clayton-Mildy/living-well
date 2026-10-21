@@ -3,7 +3,7 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Photo } from '@cp/shared';
-import { FACES, memberName, memberShort } from '@cp/shared';
+import { FACES, memberName, displayName } from '@cp/shared';
 import { FIXED_SLOTS, LUNCH_AMOUNTS, activityName, roomName } from '@cp/shared/rules/activity';
 import { MOODS, type DayReport, type ReportSession } from '@cp/shared/rules/dailyReport';
 import { readingSummary } from '@cp/shared/rules/healthStation';
@@ -51,7 +51,7 @@ function Came({ r }: { r: DayReport }) {
         <Line key={x.m.id} first={i === 0} inset={66} onClick={() => go(`/members/${x.m.id}`)}>
           <MemberAvatar m={x.m} size={38} font={14} />
           <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{memberName(x.m)}</span>
+            <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{displayName(x.m)}</span>
             <span style={{ ...sub, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px 10px' }}>
               <span style={{ fontVariantNumeric: 'tabular-nums' }}>{visitTime(t, x)}</span>
               <span>{x.flex ? t('report.flexVisit', { n: x.flex.n, q: x.flex.quota }) : t('report.gold')}</span>
@@ -119,7 +119,7 @@ function SessionLine({ x, first, lang, openPhotos, t }: { x: ReportSession; firs
         {x.state === 'later' ? <span style={{ color: MUTED }}>{t('report.notStarted')}</span> : (
           <>
             {x.state === 'now' ? <DotItem color={SAGE}>{t('report.running')}</DotItem> : null}
-            <span>{x.satOut.length ? `${t('report.joined', { n: x.joined.length })} · ${t('report.satOutWho', { n: x.satOut.length, names: x.satOut.map(memberShort).join(', ') })}` : t('report.joined', { n: x.joined.length })}</span>
+            <span>{x.satOut.length ? `${t('report.joined', { n: x.joined.length })} · ${t('report.satOutWho', { n: x.satOut.length, names: x.satOut.map(displayName).join(', ') })}` : t('report.joined', { n: x.joined.length })}</span>
             {x.notMarked ? <span style={{ color: OCHRE }}>{t('report.notMarked', { n: x.notMarked })}</span> : null}
           </>
         )}
@@ -175,8 +175,8 @@ function LunchTea({ r, openPhotos }: { r: DayReport; openPhotos: OpenPhotos }) {
                   {LUNCH_AMOUNTS.filter((a) => l.eaten[a]).map((a) => <DotItem key={a} color={LUNCH_DOT[a]}><span style={{ color: '#4A4038' }}>{t('report.' + LUNCH_KEY[a])} {l.eaten[a]}</span></DotItem>)}
                 </div>
               ) : null}
-              {l.low.some((x) => x.amount === 'little') ? <div style={sub}>{t('report.lowLine', { names: l.low.filter((x) => x.amount === 'little').map((x) => memberShort(x.m)).join(', ') })}</div> : null}
-              {l.low.some((x) => x.amount === 'none') ? <div style={{ ...sub, color: RUST }}>{t('report.noneLine', { names: l.low.filter((x) => x.amount === 'none').map((x) => memberShort(x.m)).join(', ') })}</div> : null}
+              {l.low.some((x) => x.amount === 'little') ? <div style={sub}>{t('report.lowLine', { names: l.low.filter((x) => x.amount === 'little').map((x) => displayName(x.m)).join(', ') })}</div> : null}
+              {l.low.some((x) => x.amount === 'none') ? <div style={{ ...sub, color: RUST }}>{t('report.noneLine', { names: l.low.filter((x) => x.amount === 'none').map((x) => displayName(x.m)).join(', ') })}</div> : null}
               {l.notMarked ? <div style={{ ...sub, color: OCHRE }}>{t('report.lunchNotMarked', { n: l.notMarked })}</div> : null}
             </div>
           )}

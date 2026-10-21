@@ -3,7 +3,7 @@
 // Round 8c, on a laptop the dark card is a 420px column on the left, Plans and Invoices the lists on the right. Round 8d: the sidebar has no Billing item any more
 // (it is pushed from Me), so the "‹ Me" link shows on every width.
 import { Fragment, useState, type ReactNode } from 'react';
-import { memberName, memberShort, paidDate, rp, type Bank, type Member } from '@cp/shared';
+import { memberName, displayName, paidDate, rp, type Bank, type Member } from '@cp/shared';
 import { BANKS, combinedVa, historyRows, isOpenStatus, nextIssueDate, planSummary, type InvRow } from '@cp/shared/rules/family';
 import { familyBill, rpShort } from '@cp/shared/rules/familyMe';
 import { Avatar, Icon } from '../../components/ui';
@@ -44,7 +44,7 @@ export function FamilyBilling() {
   const dueLine = state === 'empty' ? t('family.invNone') : state === 'paid' ? t('fme.nothingToPay')
     : state === 'overdue' ? t('fme.overdueDue', { d: fmt.fdl(b.firstDue!) }) : t('fme.toPayDue', { d: fmt.fdl(b.firstDue!) });
   const forLine = state === 'empty' ? t('fme.firstInvoice', { d: nextDate }) : state === 'paid' ? t('fme.nextInvoice', { d: nextDate })
-    : b.shown.length === 1 ? t('fme.forOne', { n: memberShort(b.shown[0].member), m: fmt.fmonth(b.shown[0].period) }) : t('fme.forMany', { n: b.shown.length });
+    : b.shown.length === 1 ? t('fme.forOne', { n: displayName(b.shown[0].member), m: fmt.fmonth(b.shown[0].period) }) : t('fme.forMany', { n: b.shown.length });
   const va = b.payable.length ? combinedVa(b.payable.map((r) => r.inv.va), bank) : '';
   const copy = () => { try { void navigator.clipboard.writeText(va.replace(/\s/g, '')); } catch { /* clipboard blocked */ } say(t('family.copied')); };
   const simulate = async () => {
@@ -63,7 +63,7 @@ export function FamilyBilling() {
       <div key={m.id} data-testid="plan-card" data-member={m.id} data-plan={p.plan} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderTop: i ? HAIR : 'none' }}>
         <Avatar name={memberName(m)} tone={m.photoTone} src={memberPhoto(m)} size={36} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontSize: 15, fontWeight: 500, overflowWrap: 'anywhere' }}>{t('fme.planName', { n: memberShort(m), p: t(flex ? 'family.planFlex' : 'family.planGold') })}</span>
+          <span style={{ fontSize: 15, fontWeight: 500, overflowWrap: 'anywhere' }}>{t('fme.planName', { n: displayName(m), p: t(flex ? 'family.planFlex' : 'family.planGold') })}</span>
           <span style={{ fontSize: 13, color: F.muted }} data-testid="plan-line">{p.ended ? t('fme.ended') : flex ? t('family.visitsUsed', { n: p.used, q: p.quota ?? 0, m: fmt.fmonth(p.month) }) : t('fme.anyOpenDay')}</span>
           {extra ? <span style={{ fontSize: 13, fontWeight: 500, color: F.ochre }} data-testid="extra-visits">{extra}</span> : null}
           <div style={{ marginTop: 4 }}><PlanAsk m={m} quiet={!b.pays} /></div>
@@ -80,7 +80,7 @@ export function FamilyBilling() {
     : r.status === 'partial' ? { c: F.ochre, l: t('fme.partPaid') } : { c: F.rust, l: t('fme.due') });
   const invRow = (r: InvRow, i: number) => {
     const st = stOf(r);
-    const title = `${memberShort(r.member)} · ${fmt.fmonth(r.period, r.period.slice(0, 4) !== year)}`;
+    const title = `${displayName(r.member)} · ${fmt.fmonth(r.period, r.period.slice(0, 4) !== year)}`;
     return (
       <button key={r.inv.id} type="button" onClick={() => setDetail(r.inv.id)} className="cp-fam-press" data-testid="invoice-row" data-invoice={r.inv.id} data-status={r.status} data-history={r.inv.id}
         aria-label={`${title}, ${r.inv.number}`}

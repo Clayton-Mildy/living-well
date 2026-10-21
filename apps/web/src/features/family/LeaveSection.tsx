@@ -1,7 +1,7 @@
 // Leave (cuti, the brochure's terms): the months of leave a member has asked for, the "Ask for leave" button with its sheet, and the word the club waits for
 // after 2 months. Used by the family plan card (the billing contact asks, takes back and confirms) and by the profile's Plan tab (finance and management record it).
 import { useState, type ReactNode } from 'react';
-import { currentMembership, feeOf, issueDateOf, leaveChoices, leaveDeadline, leaveMonths, leaveNeedsWord, leaveOpen, LEAVE_MAX_MONTHS, memberShort, membershipStatus, priceOn, rp, ym, type ClubState, type Member } from '@cp/shared';
+import { currentMembership, feeOf, issueDateOf, leaveChoices, leaveDeadline, leaveMonths, leaveNeedsWord, leaveOpen, LEAVE_MAX_MONTHS, displayName, membershipStatus, priceOn, rp, ym, type ClubState, type Member } from '@cp/shared';
 import { Button, ChipGroup, Icon, Sheet, TextField } from '../../components/ui';
 import type { TFn, useFmt } from '../../lib/i18n';
 import type { useAct } from '../../lib/act';
@@ -33,7 +33,7 @@ export function useLeaveUi({ s, m, today, t, fmt, act, canEdit, staff }: Args): 
   const active = membershipStatus(m, today) !== 'ended' && !currentMembership(m)?.lastDay;
   const feeOn = (month: string) => rp(feeOf(priceOn(s, issueDateOf(s, month)), 'leave'));
   const text = { fontSize: 15, lineHeight: '22px', color: '#24201C' } as const;
-  const name = memberShort(m);
+  const name = displayName(m);
 
   const rows = months.length || word ? (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-testid="leave">
@@ -103,7 +103,7 @@ export function useFamilyLeave({ s, m, today, t, fmt, act, canEdit }: Omit<Args,
   const chosen = choices.find((c) => c.month === (pick || firstOk) && c.ok)?.month ?? '';
   const active = membershipStatus(m, today) !== 'ended' && !currentMembership(m)?.lastDay;
   const feeOn = (month: string) => rp(feeOf(priceOn(s, issueDateOf(s, month)), 'leave'));
-  const name = memberShort(m);
+  const name = displayName(m);
   const line = { fontSize: 14, lineHeight: '20px', color: F.text } as const;
 
   const rows = months.length || word ? (

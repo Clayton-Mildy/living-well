@@ -4,7 +4,7 @@
 // (today) or "Not logged" (an earlier day) instead of disappearing. Families only ever read approved log data (the day's story is built from it). A day nobody came
 // has no section, except today before a parent arrives, which keeps the newest written note, labelled with its day.
 import type { ReactNode } from 'react';
-import { memberName, memberShort, staffCall, type DailyLog, type ISODate, type Member } from '@cp/shared';
+import { memberName, displayName, staffCall, type DailyLog, type ISODate, type Member } from '@cp/shared';
 import { activityLabel, latestNote, type DayStory } from '@cp/shared/rules/family';
 import { dailyLogBlocks, dayDigest, type DayDigest, type LogBlock } from '@cp/shared/rules/famToday';
 import { Avatar } from '../../components/ui';
@@ -104,7 +104,7 @@ function Block({ b, m, multi, past, onOpenDay }: { b: LogBlock; m: Member; multi
         {multi ? (
           <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 16px 6px' }}>
             <Avatar name={memberName(m)} src={memberPhoto(m)} tone={m.photoTone} size={28} />
-            <span style={{ fontSize: 15, fontWeight: 600, color: F.text }}>{memberShort(m)}</span>
+            <span style={{ fontSize: 15, fontWeight: 600, color: F.text }}>{displayName(m)}</span>
           </div>
         ) : null}
         {b.kind === 'day' ? <Rounds d={b.digest} m={m} multi={multi} past={past} onOpenDay={onOpenDay} /> : null}

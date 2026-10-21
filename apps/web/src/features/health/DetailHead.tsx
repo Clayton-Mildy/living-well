@@ -2,7 +2,7 @@
 // the four-week systolic chart, and what the nurse must know before touching them (allergies, mobility, diet, lunchtime medicines).
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDays, limitsFor, memberAge, ownLimitKeys, planOn, type ClubState } from '@cp/shared';
+import { addDays, displayFull, limitsFor, memberAge, ownLimitKeys, planOn, type ClubState } from '@cp/shared';
 import { NORMAL_BANDS, arrivalSystolic, careFlagsOf, type CareFlag, type StationRow } from '@cp/shared/rules/healthStation';
 import { Button, Eyebrow, Group, Icon, TrendChart } from '../../components/ui';
 import type { TFn } from '../../lib/i18n';
@@ -29,6 +29,7 @@ function flagVm(f: CareFlag, t: TFn): { icon: string; label: string; dot?: strin
 export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: StationRow; s: ClubState; today: string; t: TFn; isPhone: boolean }) {
   const navigate = useNavigate();
   const eyebrow = row.presence === 'in' ? t('health.presIn', { t: row.since ?? '' }) : row.presence === 'gone' ? t('health.presGone', { t: row.left ?? '' }) : t('health.presNo');
+  const full = who.member ? displayFull(who.member) : null;
   const sub = who.member
     ? (row.presence === 'in'
       ? t('health.ageSub', { a: memberAge(who.member, today) ?? '', p: planOn(who.member, today).plan === 'flex' ? 'Flex' : 'Gold', t: row.since ?? '' })
@@ -71,7 +72,8 @@ export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: 
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 4, minWidth: 0 }}>
           <Av name={who.name} tone={who.tone} src={who.photo} size={72} font={26} />
           <Eyebrow style={{ marginTop: 6 }}>{eyebrow}</Eyebrow>
-          <h2 className="cp-serif" style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{who.name}</h2>
+          <h2 className="cp-serif" style={{ margin: 0, fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{who.short}</h2>
+          {full ? <div data-full-name="" style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{full}</div> : null}
           <div style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px', maxWidth: '100%' }}>{sub}</div>
           {ownNote}
         </div>
@@ -112,7 +114,8 @@ export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: 
         <Av name={who.name} tone={who.tone} src={who.photo} size={isPhone ? 52 : 56} font={isPhone ? 18 : 20} />
         <div style={{ flex: '1 1 180px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <Eyebrow>{eyebrow}</Eyebrow>
-          <h2 className="cp-serif" style={{ margin: 0, fontSize: isPhone ? 22 : 'clamp(22px, 2vw, 26px)', lineHeight: 1.2, fontWeight: 500, letterSpacing: '-0.3px', color: '#24201C' }}>{who.name}</h2>
+          <h2 className="cp-serif" style={{ margin: 0, fontSize: isPhone ? 22 : 'clamp(22px, 2vw, 26px)', lineHeight: 1.2, fontWeight: 500, letterSpacing: '-0.3px', color: '#24201C' }}>{who.short}</h2>
+          {full ? <div data-full-name="" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{full}</div> : null}
           <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sub}</div>
           {ownNote ? <div style={{ marginTop: 4, display: 'flex' }}>{ownNote}</div> : null}
         </div>

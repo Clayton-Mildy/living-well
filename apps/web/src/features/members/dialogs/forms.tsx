@@ -184,11 +184,11 @@ export const regOfDraft = (d: RegDraft, carer = false): MemberRegistration | und
   ids: { ...Object.fromEntries(d.ids.filter((k) => k !== 'carer').map((k) => [k, true])), ...(carer ? { carer: true } : {}) },
 });
 type RegSet = (p: Partial<RegDraft>) => void;
-/** Panggilan, status, RT/RW, city, postcode, phones, email. `err(...fields)` gives the message for a field that has one. */
+/** Called (Panggilan, what everyone calls them), status, RT/RW, city, postcode, phones, email. `err(...fields)` gives the message for a field that has one. */
 export function RegPersonalFields({ d, set, t, err }: { d: RegDraft; set: RegSet; t: TFn; err: (...f: string[]) => string }) {
   return (
     <>
-      <TextField label={t('profile.f.nickname')} value={d.nickname} onChange={(v) => set({ nickname: v })} name="nickname" maxLength={40} />
+      <TextField label={t('profile.f.called')} value={d.nickname} onChange={(v) => set({ nickname: v })} name="nickname" maxLength={40} />
       <ChipGroup label={t('profile.f.marital')} value={d.marital || null} onChange={(v) => set({ marital: v === d.marital ? '' : (v as Marital) })} options={MARITALS.map((x) => ({ value: x, label: t('profile.marital.' + x) }))} />
       <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0,1fr) minmax(0,1fr)', gap: 12 }}>
         <TextField label={t('profile.f.rtRw')} value={d.rtRw} onChange={(v) => set({ rtRw: v })} name="rtRw" placeholder="004/002" error={err('rtRw')} maxLength={12} />

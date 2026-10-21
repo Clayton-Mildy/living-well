@@ -2,7 +2,7 @@
 // the family's Health screen renders it with audience="family" (no History, no edit bars, no staff-only fields).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
-import { latestBp, live, memberAge, memberName, memberSince, onLeaveOn, planOn, suspensionOf, ym, currentMembership, membershipStatus, type Member, type Role } from '@cp/shared';
+import { displayFull, displayName, latestBp, live, memberAge, memberName, memberSince, onLeaveOn, planOn, suspensionOf, ym, currentMembership, membershipStatus, type Member, type Role } from '@cp/shared';
 import { PROFILE_TABS, endingOn, isNewMember, memberStatus, pendingReviewsFor, tabForSection, type ProfileTab } from '@cp/shared/rules/members';
 import { Button, EmptyState, Icon, photoBg, TONES } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -161,7 +161,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
 
   return (
     <div className={phoneUi ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 24 }}>
-      {native ? <TopBar back={backLabel} onBack={goBack} title={memberName(m)} showTitle={collapsed} action={editBtn} /> : null}
+      {native ? <TopBar back={backLabel} onBack={goBack} title={displayName(m)} showTitle={collapsed} action={editBtn} /> : null}
       {phoneUi ? (
         <NativeHead m={m} canPhoto={canPhoto} onPhoto={() => setPhotoSheet(true)} titleRef={titleRef}
           sub={[t('profile.eyebrow', { p: plan === 'flex' ? t('profile.planFlex') : t('profile.planGold'), d: since ? fmt.fmonth(ym(since), true) : '—' }), sub].filter(Boolean).join(' · ')} />
@@ -189,7 +189,8 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
           <div className="cp-eyebrow1" style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' }}>
             {t('profile.eyebrow', { p: plan === 'flex' ? t('profile.planFlex') : t('profile.planGold'), d: since ? fmt.fmonth(ym(since), true) : '—' })}
           </div>
-          <h1 style={{ margin: 0, fontSize: isPhone ? 26 : 'clamp(30px, 3.2vw, 40px)', lineHeight: 1.1, fontWeight: 400, letterSpacing: '-1px', color: '#2B231C', overflowWrap: 'anywhere' }}>{memberName(m)}</h1>
+          <h1 style={{ margin: 0, fontSize: isPhone ? 26 : 'clamp(30px, 3.2vw, 40px)', lineHeight: 1.1, fontWeight: 400, letterSpacing: '-1px', color: '#2B231C', overflowWrap: 'anywhere' }}>{displayName(m)}</h1>
+          {displayFull(m) ? <div data-full-name="" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{displayFull(m)}</div> : null}
           {sub ? <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{sub}</div> : null}
         </div>
         {isPhone && hasEditBar && canEdit ? (
@@ -299,7 +300,8 @@ function NativeHead({ m, canPhoto, onPhoto, titleRef, sub }: { m: Member; canPho
           <span aria-hidden="true" style={{ position: 'absolute', right: -1, bottom: -1, width: 28, height: 28, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #FFFFFF' }}><Icon name="photo_camera" size={15} /></span>
         </button>
       ) : <div aria-hidden="true" style={look}>{face}</div>}
-      <h1 ref={titleRef} style={{ margin: '2px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C', overflowWrap: 'anywhere' }}>{memberName(m)}</h1>
+      <h1 ref={titleRef} style={{ margin: '2px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C', overflowWrap: 'anywhere' }}>{displayName(m)}</h1>
+      {displayFull(m) ? <div data-full-name="" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{displayFull(m)}</div> : null}
       <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{sub}</div>
     </div>
   );

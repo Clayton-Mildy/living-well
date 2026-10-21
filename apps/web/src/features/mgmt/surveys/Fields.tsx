@@ -1,6 +1,6 @@
 // The pieces of the survey editor that are not the form itself: who gets it (audience), the survey's own questions and the dialog for one of them.
 import { useMemo, useState } from 'react';
-import { SURVEY_KINDS, SURVEY_LIMITS, linksOfFamily, memberName, memberShort, parseOptions, questionProblem, type Survey, type SurveyCustomQuestion, type SurveyQuestionKind } from '@cp/shared';
+import { SURVEY_KINDS, SURVEY_LIMITS, linksOfFamily, memberName, displayName, parseOptions, questionProblem, type Survey, type SurveyCustomQuestion, type SurveyQuestionKind } from '@cp/shared';
 import { appFamilies, surveyMembers, type SurveyAudience } from '@cp/shared/rules/mgmt';
 import { Button, Chip, Dialog, Icon, IconButton, Select, TextField, Toggle, usePaged, Pager, FONT_BODY, FONT_SMALL } from '../../../components/ui';
 import { useDevice } from '../../../hooks/useDevice';
@@ -43,7 +43,7 @@ export function AudiencePicker({ value, onChange, count }: { value: AudDraft; on
   })), [members, families, s, t]);
   const contactItems: PickItem[] = useMemo(() => families.map((c) => ({
     id: c.id, title: c.name,
-    sub: linksOfFamily(s, c.id).filter((l) => l.appAccess && s.members[l.memberId] && !s.members[l.memberId].deletedAt).map((l) => memberShort(s.members[l.memberId])).join(', '),
+    sub: linksOfFamily(s, c.id).filter((l) => l.appAccess && s.members[l.memberId] && !s.members[l.memberId].deletedAt).map((l) => displayName(s.members[l.memberId])).join(', '),
   })), [families, s]);
   const items = mode === 'members' ? memberItems : contactItems;
   const needle = q.trim().toLowerCase();

@@ -2,7 +2,7 @@
 // the membership state, and the invoices. Invoices open the invoice sheet; Xero status is for staff only.
 import { useState } from 'react';
 import {
-  currentMembership, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, memberShort, suspensionOf,
+  currentMembership, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
 } from '@cp/shared';
 import { formatVa, openBalance } from '@cp/shared/rules/members';
 import { Button, Group, Icon, Pager, SectionLabel, Sheet, StatusBadge, TextField, Note, usePaged } from '../../../components/ui';
@@ -59,7 +59,7 @@ export function PlanTab({ p }: { p: P }) {
       <Fact k={t('profile.va')}>{m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')}</Fact>
       <Fact k={t('profile.since')}>{since ? fmt.fmonth(ym(since), true) : '—'}</Fact>
       {next ? <Fact k={t('profile.nextChange')}>{`${planText(t, next)} · ${t('profile.fromDate', { d: fmt.fdy(next.from) })}`}</Fact> : null}
-      {spouse ? <Fact k={t('profile.couple')}>{t('profile.coupleVal', { n: prim?.firstName || t('profile.theBilling'), s: memberShort(spouse) })}</Fact> : null}
+      {spouse ? <Fact k={t('profile.couple')}>{t('profile.coupleVal', { n: prim?.firstName || t('profile.theBilling'), s: displayName(spouse) })}</Fact> : null}
       {balance > 0 ? <Fact k={t('profile.balance')}><strong style={{ fontWeight: 600 }}>{rp(balance)}</strong></Fact> : null}
       {cur.lastDay ? <Fact k={t('profile.membership')}>{life === 'ended' ? t('profile.endedOn', { d: fmt.fdy(cur.lastDay) }) : t('profile.endsOn', { d: fmt.fdy(cur.lastDay) })}{cur.endReason ? ` · ${endReasonLabel(t, cur.endReason)}` : ''}</Fact> : null}
     </div>
@@ -76,7 +76,7 @@ export function PlanTab({ p }: { p: P }) {
       <PendingBanner p={p} tab="plan" />
       {hold ? (
         <Note tone="rust" icon="pause_circle">
-          <span data-testid="plan-hold" style={{ fontWeight: 500 }}>{t(hold.told ? 'family.onHoldTold' : 'family.onHold', { no: hold.number, a: rp(hold.balance), n: memberShort(m), d: fmt.fds(hold.stopOn) })}</span>
+          <span data-testid="plan-hold" style={{ fontWeight: 500 }}>{t(hold.told ? 'family.onHoldTold' : 'family.onHold', { no: hold.number, a: rp(hold.balance), n: displayName(m), d: fmt.fds(hold.stopOn) })}</span>
         </Note>
       ) : null}
       {req ? (

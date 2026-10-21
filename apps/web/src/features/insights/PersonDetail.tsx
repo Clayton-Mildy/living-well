@@ -1,7 +1,7 @@
 // Insights: one member's detail over the chosen period (a pushed screen on phones, a sheet on tablet and laptop): visits per month, the days they
 // usually come, how their arrival time moves, and their last 10 visits.
 import { useMemo } from 'react';
-import { memberName } from '@cp/shared';
+import { displayName, memberName } from '@cp/shared';
 import { visitInsights, type InsightPeriod, type PersonStats } from '@cp/shared/rules/insights';
 import { Avatar, PhoneScreen, Sheet, TrendChart } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -46,7 +46,7 @@ function Body({ memberId, period, periodLabel, today, todayDone }: { memberId: s
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <Avatar name={memberName(m)} tone={m.photoTone} size={56} src={memberPhoto(m)} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
-          <span style={{ fontSize: 20, fontWeight: 500, color: '#2B231C', lineHeight: '26px' }}>{memberName(m)}</span>
+          <span style={{ fontSize: 20, fontWeight: 500, color: '#2B231C', lineHeight: '26px' }}>{displayName(m)}</span>
           <span style={{ fontSize: 14, color: '#6B6259' }}>{t(p?.plan === 'gold' ? 'insights.planGold' : 'insights.planFlex')} · {periodLabel}</span>
         </div>
       </div>

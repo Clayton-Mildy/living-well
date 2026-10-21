@@ -160,5 +160,5 @@ export const profile = {
   'q.commShort': 'Hard to communicate', 'q.selfShort': 'Eats and does activities alone', 'q.bathShort': 'Needs bathroom help',
   'f.dementiaNote': 'Dementia notes (optional)', 'f.dementiaShort': 'Dementia notes', 'f.idsReceived': 'IDs received (KTP/KK)', 'f.idsShort': 'IDs received',
   'ids.guarantor': 'Responsible family member', 'ids.member': 'Member', 'ids.carer': 'Carer (suster)',
-  'f.area': 'Area', 'f.knownAs': 'Known as', 'f.phones': 'Phone', 'f.regForm': 'Application form', regNone: 'Not filled in yet', 'f.regAnswers': 'Application form',
+  'f.area': 'Area', 'f.knownAs': 'Known as', 'f.called': 'Called', 'f.phones': 'Phone', 'f.regForm': 'Application form', regNone: 'Not filled in yet', 'f.regAnswers': 'Application form',
 };

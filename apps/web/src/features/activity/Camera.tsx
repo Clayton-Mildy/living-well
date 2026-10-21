@@ -9,7 +9,7 @@
 // Round 6 (phone, native look): an iOS segmented Camera | Library, the video action as a list row, "Sent today" and the solo list under small grey headers, a grey search bar.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { famNames, memberName, memberShort, primaryContact, type Photo } from '@cp/shared';
+import { famNames, displayName, primaryContact, type Photo } from '@cp/shared';
 import { draftsOf } from '@cp/shared/rules/photoAi';
 import { curAct, faceTagging, inClubMembers, photoCountByMember, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, activityName, roomName } from '@cp/shared/rules/activity';
 import { Button, CameraCapture, GROUP_HEAD, Icon, PageHead, Pager, Pin, PhotoImg, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
@@ -113,7 +113,7 @@ export function Camera() {
     if (r.ok) {
       // KC round 7: one person tagged makes it a personal photo, so it is told like one
       const one = pick.length === 1 ? s.members[pick[0]] : undefined;
-      if (one) say(review ? t(group.media === 'video' ? 'activity.sentSoloVideoPending' : 'activity.sentSoloPending', { name: memberShort(one) }) : t(group.media === 'video' ? 'activity.sentSoloVideo' : 'activity.sentSoloPhoto', { name: memberShort(one), fam: famNames(s, one.id, t('common.and')) || t('activity.theFamily') }));
+      if (one) say(review ? t(group.media === 'video' ? 'activity.sentSoloVideoPending' : 'activity.sentSoloPending', { name: displayName(one) }) : t(group.media === 'video' ? 'activity.sentSoloVideo' : 'activity.sentSoloPhoto', { name: displayName(one), fam: famNames(s, one.id, t('common.and')) || t('activity.theFamily') }));
       else say(review ? t(group.media === 'video' ? 'activity.sentGroupVideoPending' : 'activity.sentGroupPending') : plural(t, group.media === 'video' ? 'activity.sentGroupVideo' : 'activity.sentGroupPhoto', households(pick)));
       setGroup(null);
     }
@@ -126,10 +126,10 @@ export function Camera() {
     if (mediaId === false) { setBusy(null); return; }
     const r = await act('photo.take', { kind: 'solo', memberIds: [id], media, activity: cur.name, ...(media === 'video' && durationSec ? { durationSec } : {}), ...(mediaId ? { mediaId } : {}) }, { silent: true });
     setBusy(null);
-    if (r.ok) say(review ? t(media === 'video' ? 'activity.sentSoloVideoPending' : 'activity.sentSoloPending', { name: memberShort(m) }) : t(media === 'video' ? 'activity.sentSoloVideo' : 'activity.sentSoloPhoto', { name: memberShort(m), fam: famNames(s, id, t('common.and')) || t('activity.theFamily') }));
+    if (r.ok) say(review ? t(media === 'video' ? 'activity.sentSoloVideoPending' : 'activity.sentSoloPending', { name: displayName(m) }) : t(media === 'video' ? 'activity.sentSoloVideo' : 'activity.sentSoloPhoto', { name: displayName(m), fam: famNames(s, id, t('common.and')) || t('activity.theFamily') }));
   };
   const todayCount = (id: string) => counts[id] ?? 0;
-  const caption = (p: Photo) => [p.visibility === 'pending' ? t('activity.pendingTag') : '', p.media === 'video' ? t('activity.video') : '', p.kind === 'group' ? t('activity.group') : ''].filter(Boolean).concat([p.memberIds.slice(0, 3).map((id) => (s.members[id] ? memberShort(s.members[id]) : '')).filter(Boolean).join(', ') + (p.memberIds.length > 3 ? ` +${p.memberIds.length - 3}` : '')]).join(' · ');
+  const caption = (p: Photo) => [p.visibility === 'pending' ? t('activity.pendingTag') : '', p.media === 'video' ? t('activity.video') : '', p.kind === 'group' ? t('activity.group') : ''].filter(Boolean).concat([p.memberIds.slice(0, 3).map((id) => (s.members[id] ? displayName(s.members[id]) : '')).filter(Boolean).join(', ') + (p.memberIds.length > 3 ? ` +${p.memberIds.length - 3}` : '')]).join(' · ');
 
   // KC round 7: Drafts | Library; the older ways (a photo of members, pictures of a session) are one tap away under "More ways" on Drafts
   const nDrafts = useMemo(() => (me ? draftsOf(s, me).length : 0), [s, me]);
@@ -255,15 +255,15 @@ export function Camera() {
                     <Av m={m} size={40} fs={15} />
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                       <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                        <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, minWidth: 0 }}>{memberName(m)}</span>
+                        <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, minWidth: 0 }}>{displayName(m)}</span>
                         {n ? <span data-today-count={n} style={{ flex: 'none', color: '#3D6B4F', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#3D6B4F' }} />{t('activity.nToday', { n })}</span> : null}
                       </span>
                       {sub ? <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span> : null}
                     </span>
-                    <button type="button" className="cp-press cp-fill" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'video' })} aria-disabled={!!busy} aria-label={t('activity.videoOf', { name: memberShort(m) })} style={{ width: 34, height: 34, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 }}>
+                    <button type="button" className="cp-press cp-fill" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'video' })} aria-disabled={!!busy} aria-label={t('activity.videoOf', { name: displayName(m) })} style={{ width: 34, height: 34, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 }}>
                       <Icon name="videocam" size={19} />
                     </button>
-                    <button type="button" className="cp-press cp-fill" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'photo' })} aria-disabled={!!busy} aria-label={t('activity.photoOf', { name: memberShort(m) })} style={{ height: 34, padding: '0 14px 0 10px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', flex: 'none', fontFamily: 'Inter' }}>
+                    <button type="button" className="cp-press cp-fill" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'photo' })} aria-disabled={!!busy} aria-label={t('activity.photoOf', { name: displayName(m) })} style={{ height: 34, padding: '0 14px 0 10px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 5, cursor: 'pointer', flex: 'none', fontFamily: 'Inter' }}>
                       <Icon name="photo_camera" size={18} />{t('activity.photo')}
                     </button>
                   </div>
@@ -289,15 +289,15 @@ export function Camera() {
                 <Av m={m} size={44} fs={16} />
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, minWidth: 0 }}>{memberName(m)}</span>
+                    <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, minWidth: 0 }}>{displayName(m)}</span>
                     {n ? <span data-today-count={n} style={{ flex: 'none', color: '#3D6B4F', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5, whiteSpace: 'nowrap' }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#3D6B4F' }} />{t('activity.nToday', { n })}</span> : null}
                   </span>
                   {sub ? <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#6B6259', lineHeight: 1.4 }}>{sub}</span> : null}
                 </span>
-                <button type="button" className="h-fill cp-fill" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'video' })} aria-disabled={!!busy} aria-label={t('activity.videoOf', { name: memberShort(m) })} style={{ width: 48, height: 48, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none' }}>
+                <button type="button" className="h-fill cp-fill" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'video' })} aria-disabled={!!busy} aria-label={t('activity.videoOf', { name: displayName(m) })} style={{ width: 48, height: 48, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none' }}>
                   <Icon name="videocam" size={22} color="var(--accent, #75624B)" />
                 </button>
-                <button type="button" className="h-fill cp-fill" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'photo' })} aria-disabled={!!busy} aria-label={t('activity.photoOf', { name: memberShort(m) })} style={{ height: 48, padding: '0 16px 0 12px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flex: 'none', fontFamily: 'Inter' }}>
+                <button type="button" className="h-fill cp-fill" onClick={() => !busy && setCap({ kind: 'solo', id: m.id, media: 'photo' })} aria-disabled={!!busy} aria-label={t('activity.photoOf', { name: displayName(m) })} style={{ height: 48, padding: '0 16px 0 12px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', flex: 'none', fontFamily: 'Inter' }}>
                   <Icon name="photo_camera" size={20} />{t('activity.photo')}
                 </button>
               </div>

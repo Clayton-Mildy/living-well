@@ -263,7 +263,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
     m46: { nickname: 'Opa Budi', marital: 'married', rtRw: '004/002', city: 'Jakarta Selatan', postcode: '12730', phone: '+62 21 7199 2210', mobile: '+62 812-1090-4471', email: 'maria.wijaya@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: true } },
     m2: { nickname: 'Opa Hendra', marital: 'widowed', rtRw: '007/001', city: 'Jakarta Selatan', postcode: '12730', mobile: '+62 815-1294-4718', email: 'cynthia.gunawan@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: true } },
     m20: { nickname: 'Opa Tjahjadi', marital: 'widowed', rtRw: '002/005', city: 'Jakarta Selatan', postcode: '12410', mobile: '+62 814-2182-3624', commDifficulty: true, selfCare: true, bathroomHelp: true, dementia: true, dementiaNote: 'Mild memory loss; may repeat questions', ids: { guarantor: true, member: true } },
-    m10: { nickname: 'Pak Bambang', marital: 'married', rtRw: '001/003', city: 'Jakarta Selatan', postcode: '12160', mobile: '+62 816-1436-6582', email: 'laras.saputra@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: false } },
+    m10: { nickname: 'Bambang', marital: 'married', rtRw: '001/003', city: 'Jakarta Selatan', postcode: '12160', mobile: '+62 816-1436-6582', email: 'laras.saputra@example.com', commDifficulty: false, selfCare: true, bathroomHelp: false, ids: { guarantor: true, member: false } },
   };
   // members
   for (const c of CAST) {

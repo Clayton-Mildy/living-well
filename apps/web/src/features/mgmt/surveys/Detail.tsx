@@ -1,7 +1,7 @@
 // One survey in full: Summary (the numbers, team ratings, answers to its own questions, comments), Responses (who answered, with their stars,
 // comment and answers) and History (what was done to the survey, and by whom). A pushed screen on phones, a dialog on wider screens.
 import { useState, type ReactNode } from 'react';
-import { actorName, customOf, live, memberShort, staffCall, surveyKind, surveyHistory, surveyStats, responseRows, responseWho, type Survey, type SurveyCustomQuestion, type SurveyResponse } from '@cp/shared';
+import { actorName, customOf, live, displayName, staffCall, surveyKind, surveyHistory, surveyStats, responseRows, responseWho, type Survey, type SurveyCustomQuestion, type SurveyResponse } from '@cp/shared';
 import { Button, Dialog, Group, Icon, PhoneScreen, Pager, usePaged } from '../../../components/ui';
 import { useDevice } from '../../../hooks/useDevice';
 import { useT, useFmt } from '../../../lib/i18n';
@@ -126,7 +126,7 @@ function Responses({ sv }: { sv: Survey }) {
       {waiting.length ? frame(tn(t, 'mgmt.svWaitingFor', waiting.length), (
         <>
           {wPaged.rows.map((fid) => {
-            const members = live(s.familyLinks).filter((l) => l.familyId === fid && l.primary && s.members[l.memberId]).map((l) => memberShort(s.members[l.memberId]));
+            const members = live(s.familyLinks).filter((l) => l.familyId === fid && l.primary && s.members[l.memberId]).map((l) => displayName(s.members[l.memberId]));
             return (
               <div key={fid} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
                 <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
@@ -150,7 +150,7 @@ function ResponseRow({ sv, r }: { sv: Survey; r: SurveyResponse }) {
   const s = useClub();
   const venue = surveyKind(sv) === 'venue';
   const b = r.venueBookingId ? s.venueBookings[r.venueBookingId] : undefined;
-  const members = venue ? [] : live(s.familyLinks).filter((l) => l.familyId === r.familyId && l.primary && s.members[l.memberId]).map((l) => memberShort(s.members[l.memberId]));
+  const members = venue ? [] : live(s.familyLinks).filter((l) => l.familyId === r.familyId && l.primary && s.members[l.memberId]).map((l) => displayName(s.members[l.memberId]));
   const sub = [venue ? b?.org : members.join(', '), fds(r.on)].filter(Boolean).join(' · ');
   const own = customOf(sv).filter((q) => r.answers && r.answers[q.id] !== undefined);
   return (

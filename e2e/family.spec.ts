@@ -699,10 +699,10 @@ test('Health shows the parent you chose: Opa Budi’s Health is Opa Budi’s', a
   await expect(page.getByTestId('hero-plan')).toHaveText('Gold plan'); // KC round 9: the plan under the name
   await page.getByTestId('hero-profile').click();
   await expect(page).toHaveURL(/\/profile\?member=m46$/);
-  await expect(page.getByTestId('family-profile')).toContainText('Opa Budi Wijaya');
+  await expect(page.getByTestId('family-profile')).toContainText('Opa Budi');
   // KC round 9: the parent's page opens like Today — their picture (the demo's stock portrait) on top with the panel over it; a slim bar docks once scrolled
   await expect(page.getByTestId('pf-cover')).toHaveAttribute('data-cover', 'photo');
-  await expect(page.getByTestId('pf-cover').getByRole('heading', { level: 1 })).toHaveText('Opa Budi Wijaya');
+  await expect(page.getByTestId('pf-cover').getByRole('heading', { level: 1 })).toHaveText('Opa Budi');
   await page.getByTestId('pf-jump').getByRole('button', { name: 'Plan' }).click();
   await expect(page.getByTestId('pf-bar')).toHaveAttribute('data-docked', 'true');
   await expect(page.getByTestId('pf-bar-back')).toBeVisible();

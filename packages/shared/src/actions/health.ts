@@ -9,7 +9,7 @@ import { ensureAttendance, requireMember, shortOf } from './helpers';
 import { attId } from '../rules/attendance';
 import { writeMark } from '../rules/mood';
 import { optFace } from './mood';
-import { activeOn, isPendingRow, memberShort } from '../rules/core';
+import { activeOn, isPendingRow, displayName } from '../rules/core';
 import { LIMIT_KEYS, LIMIT_RANGE, evaluateReading, lastBefore, limitOrderOk, limitsFor, limitsOf, todayReading, validReadings, worst } from '../rules/health';
 import {
   MONTHLY_FIELDS, READING_FIELDS, VITAL_FIELDS, alertRecipients, headlineValue, inRange, monthlyNeeds, readingSummary, roundField, stationQueue, type ReadingField,
@@ -108,7 +108,7 @@ export function noticeFamilies(d: Draft<ClubState>, ctx: Ctx, row: Draft<Reading
   if (o.share || told.length) {
     row.shared = true;
     const ids = alertRecipients(s, m.id).map((x) => x.contact.id);
-    if (ids.length) ctx.notify({ toUsers: ids, kind: FAMILY_KIND[o.overall], params: { name: memberShort(m), time: row.time, value: readingSummary(shown) }, link: '/health', memberId: m.id, severity: severityOf(o.overall), ref: { type: 'reading', id: row.id } });
+    if (ids.length) ctx.notify({ toUsers: ids, kind: FAMILY_KIND[o.overall], params: { name: displayName(m), time: row.time, value: readingSummary(shown) }, link: '/health', memberId: m.id, severity: severityOf(o.overall), ref: { type: 'reading', id: row.id } });
   }
   return told;
 }
@@ -211,7 +211,7 @@ export const healthActions: ActionDef[] = [
       } else if (m && (input.tellFamily || input.shared)) told = noticeFamilies(d, ctx, row, { tell: input.tellFamily, share: input.shared, overall, companion });
       // the nurses and management hear about Alerts (management also gets the derived "Needs action" item)
       if (overall === 'alert') {
-        if (m) ctx.notify({ toRoles: ['nurse'], kind: 'health.notif.alert', params: { name: memberShort(m), value: headlineValue(shown) }, link: `/readings?member=${m.id}`, memberId: m.id, severity: 'urgent', ref: { type: 'reading', id: main.id } });
+        if (m) ctx.notify({ toRoles: ['nurse'], kind: 'health.notif.alert', params: { name: displayName(m), value: headlineValue(shown) }, link: `/readings?member=${m.id}`, memberId: m.id, severity: 'urgent', ref: { type: 'reading', id: main.id } });
         else ctx.notify({ toRoles: ['nurse', 'mgmt'], kind: 'health.notif.guestAlert', params: { name: guest!.name, value: headlineValue(shown) }, link: '/today', severity: 'urgent', ref: { type: 'reading', id: main.id } });
       }
       ctx.feed({ icon: 'monitor_heart', key: `health.feed.${overall}${told.length ? 'Told' : ''}`, params: { name: m ? shortOf(d, m.id) : guest!.name, value: headlineValue(shown) }, ...(m ? { memberId: m.id } : {}) });
@@ -310,7 +310,7 @@ export const healthActions: ActionDef[] = [
       // the family was told: tell them it was a mistake (the demo shows it as an update in their bell)
       if (r.memberId && r.familyTold) {
         const m = d.members[r.memberId];
-        if (m) ctx.notify({ toUsers: r.familyTold.familyIds, kind: 'health.notif.fam.void', params: { name: memberShort(m) }, link: '/health', memberId: m.id, severity: 'attention' });
+        if (m) ctx.notify({ toUsers: r.familyTold.familyIds, kind: 'health.notif.fam.void', params: { name: displayName(m) }, link: '/health', memberId: m.id, severity: 'attention' });
       }
       const name = r.memberId ? shortOf(d, r.memberId) : d.guestVisits[r.guestId || '']?.name || '';
       ctx.feed({ icon: 'delete', key: 'health.feed.voided', params: { name }, ...(r.memberId ? { memberId: r.memberId } : {}) });
@@ -354,7 +354,7 @@ export const healthActions: ActionDef[] = [
       }
       a.queueAdds.push({ at: ctx.now, by: ctx.actor, kind: input.kind, ...(input.note ? { note: input.note } : {}) });
       a.edits.push({ at: ctx.nowDT, by: ctx.actor, what: input.kind === 'departure' ? 'departureAsked' : 'queueAdd', note: input.kind + (input.note ? `: ${input.note}` : '') });
-      ctx.feed({ icon: 'playlist_add', key: 'health.feed.queueAdd', params: { name: memberShort(m) }, memberId: m.id });
+      ctx.feed({ icon: 'playlist_add', key: 'health.feed.queueAdd', params: { name: displayName(m) }, memberId: m.id });
     },
   }),
 
@@ -390,7 +390,7 @@ export const healthActions: ActionDef[] = [
       const a = ensureAttendance(d, ctx.today, id, ctx);
       a.dismissed.push({ at: ctx.now, by: ctx.actor, kind: input.kind, reason: input.reason });
       a.edits.push({ at: ctx.nowDT, by: ctx.actor, what: 'dismiss', note: `${input.kind}: ${input.reason}` });
-      ctx.feed({ icon: 'playlist_remove', key: 'health.feed.dismissed', params: { name: memberShort(m) }, memberId: m.id });
+      ctx.feed({ icon: 'playlist_remove', key: 'health.feed.dismissed', params: { name: displayName(m) }, memberId: m.id });
     },
   }),
 

@@ -5,7 +5,7 @@ import { useMemo, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { allowedKeys } from '../../app/nav';
 import { useMe } from '../../lib/me';
-import { addDays, isPendingRow, live, memberShort } from '@cp/shared';
+import { addDays, isPendingRow, live, displayName } from '@cp/shared';
 import { libraryPhotos, photoActivities, photoDays, type PhotoFilter } from '@cp/shared/rules/activity';
 import { Button, Card, DateField, EmptyState, Eyebrow, FilterChips, Group, PageHead, Pager, Select, usePaged } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -69,7 +69,7 @@ export function PhotoLibraryBody({ title }: { title?: ReactNode }) {
     <>
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(2,minmax(0,1fr))' : 'repeat(auto-fit,minmax(200px,1fr))', gap: isPhone ? 8 : 12 }}>
         <Select label={t('activity.fMember')} value={f.memberId || ''} onChange={(v) => patch({ memberId: v || undefined })} searchable
-          options={[{ value: '', label: t('activity.allMembers') }, ...members.map((m) => ({ value: m.id, label: memberShort(m) }))]} />
+          options={[{ value: '', label: t('activity.allMembers') }, ...members.map((m) => ({ value: m.id, label: displayName(m) }))]} />
         <Select label={t('activity.fActivity')} value={f.activity || ''} onChange={(v) => patch({ activity: v || undefined })}
           options={[{ value: '', label: t('activity.allActivities') }, ...acts.map((a) => ({ value: a, label: activityLabel(s, a, t, lang) }))]} />
         {isPhone ? null : typeSelect}
@@ -107,7 +107,7 @@ export function PhotoLibraryBody({ title }: { title?: ReactNode }) {
           <span style={{ fontSize: 14, fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: 1.4 }}>{activityLabel(s, g.activity, t, lang)}</span>
           <div style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(3,minmax(0,1fr))' : 'repeat(auto-fill,minmax(120px,1fr))', gap: 8 }}>
             {g.photos.map((p) => {
-              const who = p.memberIds.map((id) => (s.members[id] ? memberShort(s.members[id]) : '')).filter(Boolean).join(', ');
+              const who = p.memberIds.map((id) => (s.members[id] ? displayName(s.members[id]) : '')).filter(Boolean).join(', ');
               const aria = [activityLabel(s, g.activity, t, lang), p.time, who, p.media === 'video' ? t('activity.video') : '', p.kind === 'activity' ? t('activity.picKind') : '', p.visibility === 'hidden' ? t('activity.hidden') : p.visibility === 'pending' ? t('activity.pendingTag') : ''].filter(Boolean).join(', ');
               return <PhotoTile key={p.id} p={p} aria={aria} hiddenLabel={t('activity.hidden')} pendingLabel={t('activity.pendingTag')} onClick={() => setViewer(p.id)} />;
             })}

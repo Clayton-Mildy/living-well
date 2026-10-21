@@ -5,7 +5,7 @@
 // Round 8c, on a laptop (the prototype's desktop): the weekday NAMES (Mon … Sun) over wider cells (aspect 1.15, radius 14, 6px gaps), the day number top left.
 import { useMemo } from 'react';
 import type { ISODate, Photo, YM } from '@cp/shared';
-import { addDays, memberShort, type Member } from '@cp/shared';
+import { addDays, displayName, type Member } from '@cp/shared';
 import { famMonth, type FamMonthCell } from '@cp/shared/rules/famCalendar';
 import { PhotoImg } from '../../../components/ui';
 import { useFamilyCtx } from '../useFamily';
@@ -22,10 +22,10 @@ export function MonthPanel({ month, who, faces, date, onPick }: { month: YM; who
   const whoKey = who.join(',');
   const cells = useMemo(() => famMonth(s, who, month, today), [s, whoKey, month, today]); // eslint-disable-line react-hooks/exhaustive-deps
   const letters = Array.from({ length: 7 }, (_, i) => fmt.fd(addDays(WEEK_REF, i), { weekday: wide ? 'short' : 'narrow' }));
-  const names = nameList(fmt.lang, who.map((id) => memberShort(s.members[id])).filter(Boolean), 'disjunction');
+  const names = nameList(fmt.lang, who.map((id) => displayName(s.members[id])).filter(Boolean), 'disjunction');
   const stateLabel = (c: FamMonthCell) => (c.state === 'closed' ? t('cal.stClosed') : c.state === 'holiday' ? t('cal.stHoliday') : c.state === 'weekend' ? t('cal.stWeekend') : '');
   const cameOf = (c: FamMonthCell): Member[] => (faces ? c.came.map((id) => s.members[id]).filter(Boolean) : []);
-  const label = (c: FamMonthCell) => [fmt.fdl(c.date), stateLabel(c), faces && c.came.length ? `${nameList(fmt.lang, cameOf(c).map(memberShort))} ${t('fcal.cameDay')}` : c.visited ? t('fcal.cameDay') : ''].filter(Boolean).join(' · ');
+  const label = (c: FamMonthCell) => [fmt.fdl(c.date), stateLabel(c), faces && c.came.length ? `${nameList(fmt.lang, cameOf(c).map(displayName))} ${t('fcal.cameDay')}` : c.visited ? t('fcal.cameDay') : ''].filter(Boolean).join(' · ');
 
   return (
     <div data-testid="cal-month" style={{ background: F.fill, borderRadius: 26, padding: wide ? 16 : 12, display: 'flex', flexDirection: 'column', gap: wide ? 8 : 6, margin: wide ? 0 : '0 -6px' }}>

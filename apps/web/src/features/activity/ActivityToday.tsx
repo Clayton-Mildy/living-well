@@ -2,7 +2,7 @@
 // Round 6 (phone, native look): the hero is one flat group with its label outside; who is in the club is a grouped list; the day's programme is a progress timeline.
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { dayStatus, nextOpenDay, memberName, scheduleDayOf, staffCall, toMin, type Activity, type Photo } from '@cp/shared';
+import { displayName, memberName, dayStatus, nextOpenDay, scheduleDayOf, staffCall, toMin, type Activity, type Photo } from '@cp/shared';
 import { SESSION_MIN, activityName, cogSummary, dayPlan, inClubMembers, logOf, nowNext, roomName, sessionPhotos, type PlanItem, type SessionItem } from '@cp/shared/rules/activity';
 import { SLOTS, dayInfo, eventTitle, slotChanged } from '@cp/shared/rules/calendar';
 import { guestOn } from '@cp/shared/rules/guests';
@@ -165,7 +165,7 @@ export function ActivityToday() {
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px 8px 16px', border: 'none', minHeight: 58, backgroundColor: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', ...rowLine(i === 0, 68) }}>
         <Av m={m} size={40} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{memberName(m)}</span>
+          <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{displayName(m)}</span>
           <span className="cp-hide-phone" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{cogLine(t, cogSummary(s, m))}</span>
         </span>
         {logged ? <StatusDot color="#3D6B4F">{t('activity.logged')}</StatusDot> : <StatusDot color="#7A5510">{t('activity.notLogged')}</StatusDot>}
@@ -214,7 +214,7 @@ export function ActivityToday() {
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: isPhone ? '12px 0' : '16px 0', border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: isPhone ? 56 : 64, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                   <Av m={m} size={isPhone ? 40 : 46} />
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-                    <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{memberName(m)}</span>
+                    <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.3 }}>{displayName(m)}</span>
                     <span className="cp-hide-phone" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{cogLine(t, cogSummary(s, m))}</span>
                   </span>
                   {logged ? <StatusDot color="#3D6B4F">{t('activity.logged')}</StatusDot> : <StatusDot color="#7A5510">{t('activity.notLogged')}</StatusDot>}

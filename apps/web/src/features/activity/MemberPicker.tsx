@@ -2,7 +2,7 @@
 // a search box finds the rest, and the matches are paged. Used for the group photo and for editing a photo's tags.
 // Round 6 (phone): the grey iOS search bar and a flat list with inset hairlines and a press tint (no bordered box).
 import { useMemo, useState, type ReactNode } from 'react';
-import { memberName, memberShort, type Member } from '@cp/shared';
+import { displayName, memberName, type Member } from '@cp/shared';
 import { searchMembers } from '@cp/shared/rules/activity';
 import { Icon, Pager, TextField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useT } from '../../lib/i18n';
@@ -39,8 +39,8 @@ export function MemberPicker({ members, value, onChange, suggested = [], sub, se
           <ul style={{ margin: 0, padding: 0, listStyle: 'none', display: 'flex', flexWrap: 'wrap', gap: 6 }}>
             {chosen.map((m) => (
               <li key={m.id}>
-                <button type="button" onClick={() => toggle(m.id)} aria-label={t('activity.removeName', { name: memberShort(m) })} style={{ height: 40, padding: '0 10px 0 14px', borderRadius: 999, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
-                  {memberShort(m)}<Icon name="close" size={18} />
+                <button type="button" onClick={() => toggle(m.id)} aria-label={t('activity.removeName', { name: displayName(m) })} style={{ height: 40, padding: '0 10px 0 14px', borderRadius: 999, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: FONT_BODY, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+                  {displayName(m)}<Icon name="close" size={18} />
                 </button>
               </li>
             ))}
@@ -64,10 +64,10 @@ export function MemberPicker({ members, value, onChange, suggested = [], sub, se
               const on = value.includes(m.id);
               return (
                 <li key={m.id} style={isPhone ? { ...rowLine(i === 0, 62) } : { borderTop: i ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }}>
-                  <button type="button" aria-pressed={on} aria-label={`${memberName(m)}`} onClick={() => toggle(m.id)} className={isPhone ? 'cp-tap-self' : 'h-row'} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: isPhone ? '8px 12px 8px 14px' : '8px 14px', minHeight: 56, border: 'none', background: on ? 'var(--press, #EEEEF0)' : 'transparent', cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
+                  <button type="button" aria-pressed={on} aria-label={memberName(m)} onClick={() => toggle(m.id)} className={isPhone ? 'cp-tap-self' : 'h-row'} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: isPhone ? '8px 12px 8px 14px' : '8px 14px', minHeight: 56, border: 'none', background: on ? 'var(--press, #EEEEF0)' : 'transparent', cursor: 'pointer', color: '#24201C', textAlign: 'left', fontFamily: 'Inter' }}>
                     <Av m={m} size={36} fs={FONT_SMALL} />
                     <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-                      <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{memberName(m)}</span>
+                      <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{displayName(m)}</span>
                       {sub ? <span style={{ fontSize: 12, color: '#5E5852' }}>{sub(m)}</span> : null}
                     </span>
                     <Icon name={on ? 'check_circle' : 'add_circle'} size={24} fill={on ? 1 : 0} color="var(--accent, #75624B)" />

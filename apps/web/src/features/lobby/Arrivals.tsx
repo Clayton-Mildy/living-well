@@ -5,7 +5,7 @@
 // confirmed and in the toast. When the rail drops below the list (narrow screens) a manual check-in is confirmed in a bottom sheet instead.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import { dayStatus, famNames, type Face, lobbyGroups, memberShort, nextOpenDay, priceOn, rp, toMin, type GuestVisit } from '@cp/shared';
+import { dayStatus, famNames, type Face, lobbyGroups, displayName, nextOpenDay, priceOn, rp, toMin, type GuestVisit } from '@cp/shared';
 import { checkoutCandidates, faceRecognisable, goneHomeRows, manualCandidates, nextFaceArrival, visitInfo } from '@cp/shared/rules/lobby';
 import { Dialog, EmptyState, Eyebrow, Note, Sheet } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -69,17 +69,17 @@ export function Arrivals() {
   // ----- toasts and actions -----
   const checkedInText = (memberId: string, time: string) => {
     const cur = latest.current;
-    const n = memberShort(cur.s.members[memberId]);
+    const n = displayName(cur.s.members[memberId]);
     const f = famNames(cur.s, memberId, t('common.and'));
     return f ? t('lobby.tCheckedIn', { n, t: time, f }) : t('lobby.checkInPlain', { n, t: time });
   };
   const undoIn = useCallback(async (memberId: string) => {
     const m = latest.current.s.members[memberId];
-    await act('attendance.undoCheckIn', { memberId }, { ok: t('lobby.tUndoIn', { n: memberShort(m) }) });
+    await act('attendance.undoCheckIn', { memberId }, { ok: t('lobby.tUndoIn', { n: displayName(m) }) });
   }, [act, t]);
   const undoOut = useCallback(async (memberId: string) => {
     const m = latest.current.s.members[memberId];
-    await act('attendance.undoCheckOut', { memberId }, { ok: t('lobby.tUndoOut', { n: memberShort(m) }) });
+    await act('attendance.undoCheckOut', { memberId }, { ok: t('lobby.tUndoOut', { n: displayName(m) }) });
   }, [act, t]);
 
   /** Check a member in. The toast carries Undo, and says when the visit is an extra day. */
@@ -97,12 +97,12 @@ export function Arrivals() {
     const r = await act('attendance.checkOut', { memberId, face }, { silent: true });
     if (!r.ok) return false;
     setOutQuery(''); // ready for the next person
-    say(t('lobby.tCheckedOut', { n: memberShort(m), t: String(r.result.time || '') }), { action: { label: t('common.undo'), run: () => void undoOut(memberId) } });
+    say(t('lobby.tCheckedOut', { n: displayName(m), t: String(r.result.time || '') }), { action: { label: t('common.undo'), run: () => void undoOut(memberId) } });
     return true;
   };
   const askDeparture = async (memberId: string) => {
     const m = latest.current.s.members[memberId];
-    await act('attendance.askDeparture', { memberId }, { ok: t('lobby.nurseQ', { n: memberShort(m) }) });
+    await act('attendance.askDeparture', { memberId }, { ok: t('lobby.nurseQ', { n: displayName(m) }) });
   };
 
   // ----- door camera -----

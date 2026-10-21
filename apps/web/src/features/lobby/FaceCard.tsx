@@ -1,7 +1,7 @@
 // The face check-in camera card (Prototype v3 secondary card, sits in the Arrivals side rail): idle / scanning / matched.
 // MatchedPanel (name, visit line, care flags, extra-day note, confirm) is shared with the bottom sheet that confirms a manual check-in on narrow screens.
 import type { ReactNode } from 'react';
-import { memberName, memberShort, type Face, type Member } from '@cp/shared';
+import { displayName, memberName, type Face, type Member } from '@cp/shared';
 import { Eyebrow, GROUP_HEAD, Icon, MoodFaces } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import type { TFn } from '../../lib/i18n';
@@ -31,8 +31,8 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
       {flags.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{flags.map((f, i) => <FlagChip key={i} f={f} />)}</div> : null}
       {children}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.ask', { name: memberShort(m) })}</div>
-        <MoodFaces value={face} onChange={onFace} name={memberShort(m)} />
+        <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.ask', { name: displayName(m) })}</div>
+        <MoodFaces value={face} onChange={onFace} name={displayName(m)} />
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className={off ? undefined : 'h-bronze'} onClick={off ? undefined : onConfirm} aria-disabled={off || undefined}

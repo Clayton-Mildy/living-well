@@ -1,6 +1,6 @@
 // What one entry waiting for approval looks like in the Approvals screen: a short summary line and the full view (old → new for edits).
 // Pure view-model: the screen renders the pieces. Profile changes use describeCr (reviewDiff.ts).
-import { memberName, memberShort, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type Slot } from '@cp/shared';
+import { memberName, displayName, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type Slot } from '@cp/shared';
 import type { ApprovalItem, ApprovalType, HistoryItem } from '@cp/shared/rules/approvals';
 import { APPROVAL_TYPES, DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approvals';
 import { diffTemplates, templateOn, weekDate, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
@@ -175,6 +175,6 @@ export function groupByPerson(s: ClubState, items: Record<ApprovalType, Approval
     }
   }
   const people = [...by].map(([memberId, list]) => ({ memberId, items: list }))
-    .sort((a, b) => (s.members[a.memberId].firstName || '').localeCompare(s.members[b.memberId].firstName || '') || memberShort(s.members[a.memberId]).localeCompare(memberShort(s.members[b.memberId]))); // by first name, not by title (Bapak / Ibu / Oma)
+    .sort((a, b) => (s.members[a.memberId].firstName || '').localeCompare(s.members[b.memberId].firstName || '') || displayName(s.members[a.memberId]).localeCompare(displayName(s.members[b.memberId]))); // by first name, not by title (Bapak / Ibu / Oma)
   return { people, groupPhotos, other };
 }

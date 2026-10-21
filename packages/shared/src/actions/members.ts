@@ -8,7 +8,7 @@ import { defineAction, hasRole, isMgmt, actorOf, DomainError, type ActionDef, ty
 import { requireMember, shortOf, familyUserIds } from './helpers';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 import { NOTE_KEYS } from '../rules/approvals';
-import { currentMembership, isOpen, isPendingRow, membershipStatus, memberShort, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
+import { currentMembership, isOpen, isPendingRow, membershipStatus, displayName, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
 import { paidOn } from '../rules/billing';
 import { cleanRegistration, validateRegistration } from '../rules/applicationForm';
 import {
@@ -99,7 +99,7 @@ export function activateMember(d: Draft<ClubState>, memberId: string, ctx: Ctx) 
   if (m.spouseId && d.members[m.spouseId] && !d.members[m.spouseId].spouseId) d.members[m.spouseId].spouseId = memberId;
   const start = currentMembership(m).start;
   const to = familyUserIds(d, memberId);
-  if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.welcome', params: { name: memberShort(m), date: dmy(start) }, link: '/today', memberId });
+  if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.welcome', params: { name: displayName(m), date: dmy(start) }, link: '/today', memberId });
 }
 
 // ---------- parse: add member ----------
@@ -442,7 +442,7 @@ export const membersActions: ActionDef[] = [
       const doc: MemberDocument = { id: docIdFor(m.id, input.type), type: input.type, status: 'requested', on: ctx.today, by: ctx.actor };
       if (i >= 0) m.documents[i] = doc; else m.documents.push(doc);
       const p = primaryContact(d as unknown as ClubState, m.id);
-      if (p) ctx.notify({ toUsers: [p.id], kind: 'members.notif.docRequested', params: { name: memberShort(m) }, link: `/health?member=${m.id}&tab=docs`, memberId: m.id });
+      if (p) ctx.notify({ toUsers: [p.id], kind: 'members.notif.docRequested', params: { name: displayName(m) }, link: `/health?member=${m.id}&tab=docs`, memberId: m.id });
       feed(ctx, d, m.id, 'upload_file', 'docRequested', { type: input.type });
     },
   }),
@@ -542,7 +542,7 @@ export const membersActions: ActionDef[] = [
       addPlanEntry(m, { from: effective, plan: req.to, by: ctx.actor, requestId: req.id }, ctx.today);
       req.status = 'applied'; req.decidedBy = ctx.actor; req.decidedAt = ctx.nowDT;
       const asker = req.createdBy.startsWith('family:') ? req.createdBy.slice(7) : '';
-      if (asker) ctx.notify({ toUsers: [asker], kind: 'members.notif.planApplied', params: { name: memberShort(m), plan: req.to, date: dmy(effective) }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
+      if (asker) ctx.notify({ toUsers: [asker], kind: 'members.notif.planApplied', params: { name: displayName(m), plan: req.to, date: dmy(effective) }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
       feed(ctx, d, m.id, 'sell', 'planApplied', { plan: req.to, from: effective, by: ctx.actor });
     },
   }),
@@ -559,7 +559,7 @@ export const membersActions: ActionDef[] = [
       if (holdForReview(d, ctx, { action: 'planChange.decline', input, section: 'plan', target: target(m.id) })) return;
       req.status = 'declined'; req.decidedBy = ctx.actor; req.decidedAt = ctx.nowDT;
       const asker = req.createdBy.startsWith('family:') ? req.createdBy.slice(7) : '';
-      if (asker) ctx.notify({ toUsers: [asker], kind: 'members.notif.planDeclined', params: { name: memberShort(m) }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
+      if (asker) ctx.notify({ toUsers: [asker], kind: 'members.notif.planDeclined', params: { name: displayName(m) }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
       feed(ctx, d, m.id, 'sell', 'planDeclined', { plan: req.to, by: ctx.actor });
     },
   }),
@@ -616,7 +616,7 @@ export const membersActions: ActionDef[] = [
       if (start < ctx.today || !isOpen(d as unknown as ClubState, start)) ctx.fail('members.err.startInvalid');
       m.memberships.push({ start });
       const to = familyUserIds(d, m.id);
-      if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.reactivated', params: { name: memberShort(m), date: dmy(start) }, link: '/today', memberId: m.id });
+      if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.reactivated', params: { name: displayName(m), date: dmy(start) }, link: '/today', memberId: m.id });
       feed(ctx, d, m.id, 'person_check', 'reactivated', { from: start });
     },
   }),
@@ -712,7 +712,7 @@ export function applyEnding(d: Draft<ClubState>, m: Draft<Member>, input: { last
     ctx.result.finalInvoice = { number: inv.number, total: inv.lines.reduce((t, l) => t + l.amount, 0) };
   }
   const p = primaryContact(d as unknown as ClubState, m.id);
-  if (p) ctx.notify({ toUsers: [p.id], kind: 'members.notif.ending', params: { name: memberShort(m), date: dmy(input.lastDay) }, link: '/today', memberId: m.id });
+  if (p) ctx.notify({ toUsers: [p.id], kind: 'members.notif.ending', params: { name: displayName(m), date: dmy(input.lastDay) }, link: '/today', memberId: m.id });
   feed(ctx, d, m.id, 'archive', 'ending', { reason: input.reason, date: input.lastDay });
 }
 

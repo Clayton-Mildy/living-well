@@ -5,7 +5,7 @@
 // Both parents: a row each (tap to focus on one). One parent: the day's icon rail. A day the parent did not come shows the last visit's picture,
 // dimmed; no picture at all is the warm bronze gradient, so a morning before the first photo never looks empty.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { FACE_KEY, addDays, dayArc, flexMonth, memberName, memberShort, planOn, ym, type ISODate, type Member, type Photo } from '@cp/shared';
+import { FACE_KEY, addDays, dayArc, flexMonth, memberName, displayName, planOn, ym, type ISODate, type Member, type Photo } from '@cp/shared';
 import { activityLabel, bestPhotoOf, eventTitle, mayStillCome, type DayStory } from '@cp/shared/rules/family';
 import { railFill } from '@cp/shared/rules/famToday';
 import { famPhotoDays, ownPicture } from '@cp/shared/rules/famPhotos';
@@ -119,7 +119,7 @@ function planLine({ s, t, now }: Ctx, m: Member): string {
 /** A row of the both-parents card: who, where they are, and how far the day has got. */
 function rowText(c: Ctx, m: Member, story: DayStory) {
   const { t, fmt, now } = c;
-  const n = memberShort(m);
+  const n = displayName(m);
   const st = story.state;
   const isToday = story.date === now.today;
   const span = story.arrivedAt && story.leftAt ? `${story.arrivedAt}–${story.leftAt}` : story.arrivedAt || '';
@@ -147,7 +147,7 @@ function plainState(c: Ctx, m: Member, story: DayStory): { title: string; sub: s
       const d = fmt.fdl(st.next);
       return { title: t('family.stClosed'), sub: st.reason === 'weekend' ? t('common.weekendSub', { date: d }) : `${ev ? ev + '. ' : ''}${t('common.clubClosedSub', { date: d })}` };
     }
-    case 'ended': return { title: t('family.stEnded', { d: fmt.fds(st.lastDay) }), sub: t('family.endedSub', { n: memberShort(m), d: fmt.fds(st.lastDay) }) };
+    case 'ended': return { title: t('family.stEnded', { d: fmt.fds(st.lastDay) }), sub: t('family.endedSub', { n: displayName(m), d: fmt.fds(st.lastDay) }) };
     case 'upcoming': return { title: t('family.stUpcoming', { d: fmt.fds(st.start) }), sub: '' };
     default: return { title: '', sub: '' };
   }
@@ -325,7 +325,7 @@ function SingleHero({ m, story, date, top, onProfile, onOpenPhoto }: { m: Member
   const cover = coverFor(s, [m], [story], date);
   const st = story.state;
   const isToday = date === now.today;
-  const n = memberShort(m);
+  const n = displayName(m);
   const photoFrom = cover.fromDay ? t(m.gender === 'f' ? 'ftoday.photoFromF' : 'ftoday.photoFromM', { d: dayWord(fmt, cover.fromDay, now.today) }) : '';
   const arrivalFace = dayArc(s, m.id, date).arrival; // round 12: the face marked at the door
   const face = arrivalFace !== undefined ? t(FACE_KEY[arrivalFace]).toLowerCase() : '';
@@ -345,7 +345,7 @@ function SingleHero({ m, story, date, top, onProfile, onOpenPhoto }: { m: Member
           style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 10, minWidth: 0, border: 'none', background: 'transparent', color: '#FFFFFF', padding: 0, cursor: 'pointer', fontFamily: 'Inter' }}>
           <span style={{ display: 'flex', borderRadius: 999, boxShadow: '0 0 0 2px #FFFFFF' }}><Face m={m} size={34} /></span>
           <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', minWidth: 0, lineHeight: 1.2 }}>
-            <span style={{ maxWidth: '100%', fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{memberName(m)}</span>
+            <span style={{ maxWidth: '100%', fontSize: 15, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{displayName(m)}</span>
             <span data-testid="hero-plan" style={{ maxWidth: '100%', fontSize: 12, fontWeight: 500, opacity: 0.86, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{planLine(c, m)}</span>
           </span>
         </button>

@@ -1,6 +1,6 @@
 // Forms used in more than one place: record a payment, refund a payment, add an adjustment.
 import { useMemo, useState } from 'react';
-import { balanceOf, memberShort, rp, sortBy, type Invoice } from '@cp/shared';
+import { balanceOf, displayName, rp, sortBy, type Invoice } from '@cp/shared';
 import { invoicePeriod, invoiceViews, type PaymentView } from '@cp/shared/rules/finance';
 import { Button, Chip, Note, TextField, Toggle, FONT_BODY } from '../../components/ui';
 import { useAct } from '../../lib/act';
@@ -31,7 +31,7 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
     () => sortBy(invoiceViews(s, today).filter((v) => v.balance > 0), (v) => (v.member?.firstName || '') + v.inv.dueDate),
     [s, today],
   );
-  const shown = open.filter((v) => matches(q, v.member ? `${v.member.title} ${v.member.firstName} ${v.member.lastName}` : '', v.inv.number, v.payer?.name));
+  const shown = open.filter((v) => matches(q, v.member ? `${v.member.title} ${v.member.firstName} ${v.member.lastName} ${displayName(v.member)}` : '', v.inv.number, v.payer?.name));
   const sel = invId ? s.invoices[invId] : undefined;
   const balance = sel ? balanceOf(s, sel) : 0;
   const amount = digits(amt);
@@ -43,7 +43,7 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
     if (!ok || !sel) return;
     const r = await act('payment.record', {
       memberId: sel.memberId, amount, method, invoiceId: sel.id, ...(ref.trim() ? { ref: ref.trim() } : {}),
-    }, { ok: t('finance.toast.paymentRecorded', { name: memberShort(s.members[sel.memberId]) }) });
+    }, { ok: t('finance.toast.paymentRecorded', { name: displayName(s.members[sel.memberId]) }) });
     if (r.ok) { if (!fixed) setInvId(null); setAmt(''); setRef(''); onDone?.(); }
   };
 
@@ -59,7 +59,7 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
               return (
                 <button key={v.inv.id} type="button" role="radio" aria-checked={on} onClick={() => choose(v.inv.id)}
                   style={{ minHeight: 48, padding: '8px 12px', border: 'none', borderBottom: '0.5px solid var(--hairline, #E2E2E6)', background: on ? 'var(--fill, #F4F4F5)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : undefined, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left', color: '#24201C' }}>
-                  <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.35 }}>{v.member ? memberShort(v.member) : v.inv.memberId} · {fmonth(invoicePeriod(v.inv))}</span>
+                  <span style={{ fontSize: 15, fontWeight: 500, lineHeight: 1.35 }}>{v.member ? displayName(v.member) : v.inv.memberId} · {fmonth(invoicePeriod(v.inv))}</span>
                   <span style={{ fontSize: 14, color: '#6B6259', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{rp(v.balance)}</span>
                 </button>
               );

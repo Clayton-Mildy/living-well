@@ -7,7 +7,7 @@
 // list, "Suggest a change" = Edit), the sections a 720px column beside it (plan and team side by side, the personal details and the documents in two columns).
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { memberShort, membershipStatus } from '@cp/shared';
+import { displayName, membershipStatus } from '@cp/shared';
 import { Icon } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
@@ -139,7 +139,7 @@ export function FamilyProfile() {
                 <Icon name="chevron_left" size={30} weight={300} color={F.bronze} />
                 <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{backLabel}</span>
               </button>
-              <span style={{ fontSize: 17, fontWeight: 600, color: '#1E1A16', textAlign: 'center', whiteSpace: 'nowrap' }}>{memberShort(m)}</span>
+              <span style={{ fontSize: 17, fontWeight: 600, color: '#1E1A16', textAlign: 'center', whiteSpace: 'nowrap' }}>{displayName(m)}</span>
               {canEdit ? <button type="button" onClick={() => setEdit(true)} data-testid="pf-bar-edit" className="cp-press" style={{ ...barBtn, justifySelf: 'end', fontWeight: 500 }}>{t('fhealth.edit')}</button> : <span />}
             </div>
           ) : <span aria-hidden="true" style={{ alignSelf: 'center', width: 36, height: 5, borderRadius: 999, background: '#D4D4D8', flex: 'none' }} />}

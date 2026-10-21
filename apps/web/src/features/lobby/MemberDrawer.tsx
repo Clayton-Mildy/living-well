@@ -1,7 +1,7 @@
 // Member drawer (design OvDrawer): who they are, today's status (usual arrival time, arrived / left), care flags, notes,
 // family and nanny with real tel: links, and the actions: check in / check out, undo.
 import { useNavigate } from 'react-router-dom';
-import { contactsOfMember, fmtPhone, live, memberAge, memberName, pron, sortBy, todayReading, attOf, type ClubState, type Member } from '@cp/shared';
+import { contactsOfMember, displayFull, displayName, fmtPhone, live, memberAge, memberName, pron, sortBy, todayReading, attOf, type ClubState, type Member } from '@cp/shared';
 import { visitInfo } from '@cp/shared/rules/lobby';
 import { Button, Drawer, FONT_BODY, Group, Icon, PhoneScreen, StaffOnlyTag } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -109,7 +109,8 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
       <PhoneScreen open onClose={onClose} label={memberName(m)} back={t('lobby.arrivals')} footer={primaryBtn}>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8 }}>
           <MemberAvatar m={m} size={80} font={28} />
-          <h2 className="cp-serif" style={{ margin: '2px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{memberName(m)}</h2>
+          <h2 className="cp-serif" style={{ margin: '2px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{displayName(m)}</h2>
+          {displayFull(m) ? <span data-full-name="" style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{displayFull(m)}</span> : null}
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{sub}</span>
         </div>
         <Group pad={0} gap={0}>
@@ -132,7 +133,8 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <MemberAvatar m={m} size={80} font={28} />
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 }}>
-            <h2 className="cp-serif" style={{ margin: 0, fontSize: 28, lineHeight: '34px', fontWeight: 400, letterSpacing: '-0.8px', color: '#2B231C' }}>{memberName(m)}</h2>
+            <h2 className="cp-serif" style={{ margin: 0, fontSize: 28, lineHeight: '34px', fontWeight: 400, letterSpacing: '-0.8px', color: '#2B231C' }}>{displayName(m)}</h2>
+            {displayFull(m) ? <span data-full-name="" style={{ fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>{displayFull(m)}</span> : null}
             <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{sub}</span>
           </div>
         </div>

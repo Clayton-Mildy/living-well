@@ -2,7 +2,7 @@
 // (Photos, a notification). A month with no visits shows a gentle line instead.
 import { useMemo } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { memberShort, type Member, type YM } from '@cp/shared';
+import { displayName, type Member, type YM } from '@cp/shared';
 import { healthMemberOf, monthRecap, recapMonths } from '@cp/shared/rules/family';
 import { BackLink, FamPage, PageTitle, useBack } from './kit';
 import { MemoriesStory } from './MemoriesStory';
@@ -26,8 +26,8 @@ export function FamilyMemories() {
       {hasVisits ? <MemoriesStory memberId={m.id} month={month} startSlide={slide} onClose={back} /> : (
         <FamPage gap={16}>
           <BackLink label={t('nav.photos')} onClick={back} />
-          <PageTitle>{t('family.memTitle', { m: fmt.fmonth(month), n: memberShort(m) })}</PageTitle>
-          <span data-testid="memories-empty" style={{ fontSize: 16, lineHeight: 1.4, color: '#6B6259', padding: '0 4px' }}>{t('family.memEmpty', { n: memberShort(m), m: fmt.fmonth(month, true) })}</span>
+          <PageTitle>{t('family.memTitle', { m: fmt.fmonth(month), n: displayName(m) })}</PageTitle>
+          <span data-testid="memories-empty" style={{ fontSize: 16, lineHeight: 1.4, color: '#6B6259', padding: '0 4px' }}>{t('family.memEmpty', { n: displayName(m), m: fmt.fmonth(month, true) })}</span>
         </FamPage>
       )}
     </div>

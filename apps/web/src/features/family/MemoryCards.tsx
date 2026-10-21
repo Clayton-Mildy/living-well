@@ -2,7 +2,7 @@
 // and bleed to the screen edges. Round 8c, on a laptop (the prototype's desktop): a grid that fills the width (190px tall cards, radius 24, a small lift on
 // hover), the first row to start with and "Earlier months" for the rest.
 import { useState } from 'react';
-import { memberShort } from '@cp/shared';
+import { displayName } from '@cp/shared';
 import type { MemoryCard } from '@cp/shared/rules/famPhotos';
 import { Icon, PhotoImg } from '../../components/ui';
 import { F, TextLink, useFamWide } from './kit';
@@ -16,7 +16,7 @@ export function MemoryCards({ cards, onOpen }: { cards: MemoryCard[]; onOpen: (c
   const count = (n: number) => (n === 1 ? t('family.phCountOne') : t('family.phCountN', { n }));
   const cardText = (c: MemoryCard) => {
     const m = s.members[c.memberId];
-    const title = t('family.memTitle', { m: fmt.fmonth(c.month), n: memberShort(m) });
+    const title = t('family.memTitle', { m: fmt.fmonth(c.month), n: displayName(m) });
     const sub = [c.visits === 1 ? t('family.storyVisitsOne') : t('family.storyVisitsN', { n: c.visits }), c.photos ? count(c.photos) : ''].filter(Boolean).join(' · ');
     return { m, title, sub };
   };

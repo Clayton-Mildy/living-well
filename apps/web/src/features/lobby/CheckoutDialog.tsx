@@ -1,7 +1,7 @@
 // Check-out dialog (design OvCheckout): the departure-check status (done with BP / waiting at the health station / missing,
 // with "Send to health station") and the confirm. Nobody is recorded as collecting the member.
 import { useState } from 'react';
-import { memberShort, type Face } from '@cp/shared';
+import { displayName, type Face } from '@cp/shared';
 import { departureStatus } from '@cp/shared/rules/lobby';
 import { Dialog, Icon, MoodFaces } from '../../components/ui';
 import { useT } from '../../lib/i18n';
@@ -32,7 +32,7 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
     if (ok) onClose();
   };
   return (
-    <Dialog open onClose={onClose} title={`${t('lobby.checkOut')} · ${memberShort(m)}`} maxWidth={520}>
+    <Dialog open onClose={onClose} title={`${t('lobby.checkOut')} · ${displayName(m)}`} maxWidth={520}>
       <Stack gap={20}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
           <MemberAvatar m={m} size={46} font={15} />
@@ -47,8 +47,8 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
           </div>
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.askOut', { name: memberShort(m) })}</div>
-          <MoodFaces value={face} onChange={setFace} name={memberShort(m)} label={t('mood.askOut', { name: memberShort(m) })} />
+          <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.askOut', { name: displayName(m) })}</div>
+          <MoodFaces value={face} onChange={setFace} name={displayName(m)} label={t('mood.askOut', { name: displayName(m) })} />
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button type="button" className="h-fill" onClick={onClose} style={{ height: 48, padding: '0 22px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>

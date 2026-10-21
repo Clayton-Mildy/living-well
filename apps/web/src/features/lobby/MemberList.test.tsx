@@ -193,7 +193,7 @@ describe('check-out list and gone home', () => {
     await type('maria', 0); // Oma Lina's daughter: she is on the gone-home list
     expect(names('Check out')).toEqual([]);
     expect(host!.textContent).toContain('Nobody in the club matches “maria”.');
-    expect(host!.textContent).toContain('Oma Lina Wijaya');
+    expect(host!.textContent).toContain('Oma Lina');
     await type('');
     expect(names('Check out')).toHaveLength(3);
   });

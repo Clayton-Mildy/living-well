@@ -1,7 +1,7 @@
 // "Not this person" on a face match: the desk picks who it really is from the members not in yet, then confirms as usual.
 import { useState } from 'react';
 import { manualCandidates } from '@cp/shared/rules/lobby';
-import { memberName, type ISODate } from '@cp/shared';
+import { displayName, type ISODate } from '@cp/shared';
 import { Button, Dialog, Sheet, TextField } from '../../components/ui';
 import { useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
@@ -23,7 +23,7 @@ export function WhoPicker({ open, phone, today, exclude, onPick, onClose }: { op
             style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '10px 6px', border: 'none', borderRadius: 10, background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', color: '#24201C' }}>
             <MemberAvatar m={r.m} size={40} font={14} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
-              <span style={{ fontSize: 15, fontWeight: 500 }}>{memberName(r.m)}</span>
+              <span style={{ fontSize: 15, fontWeight: 500 }}>{displayName(r.m)}</span>
               <span style={{ fontSize: 13, color: '#6B6259' }}>{t('lobby.est', { t: r.m.usualArrival })}</span>
             </span>
           </button></div>

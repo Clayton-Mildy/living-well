@@ -1,7 +1,7 @@
 // Insights, By plan: the people of one plan in the period. One quiet row per member (name, usual days and the share of open days they came, visits and
 // visits per week), most or fewest visits first. A tap opens that member's detail.
 import { useMemo, useState } from 'react';
-import { memberName } from '@cp/shared';
+import { displayName, memberName } from '@cp/shared';
 import { PLAN_SORTS, sortPeople, type PersonSort, type PlanStats } from '@cp/shared/rules/insights';
 import { Avatar, Group, Icon, Pager, Select, usePaged } from '../../components/ui';
 import { memberPhoto } from '../../lib/media';
@@ -33,12 +33,12 @@ export function PlanPeople({ plan, stats, onOpen }: { plan: string; stats: PlanS
             {paged.rows.map((p) => {
               const m = s.members[p.memberId];
               if (!m) return null;
-              const name = memberName(m);
+              const name = displayName(m);
               const days = p.usual.map((w) => wd.short[w]).join(', ');
               return (
                 <button key={p.memberId} type="button" onClick={() => onOpen(p.memberId)} className="h-row cp-bleed" data-member={p.memberId} aria-label={name}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '10px 16px', minHeight: 60, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-                  <Avatar name={name} tone={m.photoTone} size={38} src={memberPhoto(m)} />
+                  <Avatar name={memberName(m)} tone={m.photoTone} size={38} src={memberPhoto(m)} />
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '21px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                     <span style={{ fontSize: 13, color: MUTED, lineHeight: '18px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>

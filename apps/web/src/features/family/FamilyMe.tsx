@@ -4,7 +4,7 @@
 // (Billing and Contacts are pushed from here and have their "‹ Me" link on every width too).
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { initials, isPrimaryFor, live, memberShort, rp, type Member } from '@cp/shared';
+import { initials, isPrimaryFor, live, displayName, rp, type Member } from '@cp/shared';
 import { dayStateOf } from '@cp/shared/rules/family';
 import { familyBill } from '@cp/shared/rules/familyMe';
 import { useAct } from '../../lib/act';
@@ -64,7 +64,7 @@ export function FamilyMe() {
   // one row per parent: the health-alerts switch (they sit with Billing and Contacts on a phone, with the settings on a laptop)
   const alertRows = alertMembers.map((m) => {
     const on = alertOn(m.id);
-    const label = alertMembers.length > 1 ? t('fme.healthAlertsFor', { n: memberShort(m) }) : t('fme.healthAlerts');
+    const label = alertMembers.length > 1 ? t('fme.healthAlertsFor', { n: displayName(m) }) : t('fme.healthAlerts');
     return <ListRow key={m.id} icon="notifications" label={label} testId={`me-alerts-${m.id}`} right={<Switch on={on} label={label} onClick={() => void act('family.setHealthAlerts', { memberId: m.id, on: !on }, { silent: true })} />} />;
   });
 
@@ -81,7 +81,7 @@ export function FamilyMe() {
     <Group title={t(members.length > 1 ? 'fme.yourFamily' : 'fme.yourParent')} testId="me-parents">
       {members.map((m, i) => {
         const w = where(m);
-        return <ListRow key={m.id} first={!i} icon="person" label={memberShort(m)} value={w.v} valueColor={w.color} valueWeight={w.weight} onClick={() => navigate('/profile?member=' + m.id)} testId={`me-parent-${m.id}`} />;
+        return <ListRow key={m.id} first={!i} icon="person" label={displayName(m)} value={w.v} valueColor={w.color} valueWeight={w.weight} onClick={() => navigate('/profile?member=' + m.id)} testId={`me-parent-${m.id}`} />;
       })}
     </Group>
   ) : null;

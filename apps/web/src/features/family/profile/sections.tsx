@@ -3,7 +3,7 @@
 // jump chips can scroll to it (the page itself is in ../FamilyProfile.tsx).
 import { cloneElement, type CSSProperties, type ReactNode } from 'react';
 import {
-  actorName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, memberShort, memberSince, primaryContact, priceOn, rp, sortBy, staffCall, waUrl, ym,
+  actorName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, displayName, memberSince, primaryContact, priceOn, rp, sortBy, staffCall, waUrl, ym,
   type ClubState, type DocType, type Health, type ISODate, type Member, type MemberNote,
 } from '@cp/shared';
 import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/members';
@@ -58,7 +58,7 @@ export function headText(p: PCtx): { eyebrow: string; sub: string } {
   const sub = [
     age != null ? t('profile.years', { n: age }) : '',
     m.nanny ? t('profile.withNanny_' + m.gender, { n: m.nanny.name }) : '',
-    spouse && !spouse.deletedAt ? t('profile.marriedTo', { n: memberShort(spouse) }) : '',
+    spouse && !spouse.deletedAt ? t('profile.marriedTo', { n: displayName(spouse) }) : '',
   ].filter(Boolean).join(' · ');
   return { eyebrow: t('fhealth.eyebrow', { p: t('profile.plan.' + ps.plan), d: since ? fmt.fmonth(ym(since), true) : '—' }), sub };
 }
@@ -72,7 +72,7 @@ export function ProfileHead({ p, column }: { p: PCtx; /** the laptop's left colu
       <MemberFace m={m} size={column ? 96 : 72} ring />
       <span style={{ display: 'flex', flexDirection: 'column', gap: column ? 3 : 2, minWidth: 0 }}>
         <span style={{ fontSize: 12, letterSpacing: '1.6px', textTransform: 'uppercase', fontWeight: 600, color: F.eyebrow }}>{eyebrow}</span>
-        <h1 style={{ margin: 0, fontSize: column ? 28 : 26, lineHeight: 1.1, fontWeight: 400, letterSpacing: column ? '-0.7px' : '-0.6px', color: F.ink, overflowWrap: 'anywhere' }}>{memberName(m)}</h1>
+        <h1 style={{ margin: 0, fontSize: column ? 28 : 26, lineHeight: 1.1, fontWeight: 400, letterSpacing: column ? '-0.7px' : '-0.6px', color: F.ink, overflowWrap: 'anywhere' }}>{displayName(m)}</h1>
         {sub ? <span style={{ fontSize: 14, lineHeight: column ? '20px' : 1.4, color: F.muted }}>{sub}</span> : null}
       </span>
     </div>
@@ -328,7 +328,7 @@ export function PlanSection({ p, id }: SecProps) {
         {prim ? <KV k={t('profile.billingContact')} v={prim.name} /> : null}
         <KV k={t('profile.va')} v={m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')} />
         {upcoming ? <KV k={t('profile.nextChange')} v={`${t('profile.plan.' + upcoming.plan)} · ${t('profile.fromDate', { d: fmt.fdy(upcoming.from) })}`} /> : null}
-        {spouse && !spouse.deletedAt ? <KV k={t('profile.couple')} v={t('fhealth.coupleVal', { n: memberShort(spouse) })} /> : null}
+        {spouse && !spouse.deletedAt ? <KV k={t('profile.couple')} v={t('fhealth.coupleVal', { n: displayName(spouse) })} /> : null}
         <KV k={t('profile.membership')} v={last ? t(last < today ? 'profile.endedOn' : 'profile.endsOn', { d: fmt.fdy(last) }) : t('fhealth.monthly', { d: fmt.fd(nextInvoice(s, today), { day: 'numeric', month: 'short' }) })} />
       </List>
       <PlanAsk m={m} />
