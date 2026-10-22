@@ -9,6 +9,7 @@ import { EmptyState, Group } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
+import { MyLeave } from '../staffLeave/MyLeave';
 import { DutyRow, Progress, TaskRow, TaskSheet, useTick, whoIs } from './parts';
 
 export function MineView({ s, role, today, nowMin }: { s: ClubState; role: StaffRole; today: ISODate; nowMin: number }) {
@@ -35,8 +36,10 @@ export function MineView({ s, role, today, nowMin }: { s: ClubState; role: Staff
   const done = sum.total ? sum.done : sum.customDone;
   const total = sum.total ? sum.total : sum.customTotal;
 
-  if (!status.open) return <EmptyState icon="event_busy" title={t('tasks.closed')} />;
-  if (!parts.length && !sum.custom.length) return <EmptyState icon="checklist" title={t('tasks.empty')} />;
+  // round 13: the last group is your own leave (what is left this year, ask for days off), also on a closed or empty day
+  const leave = <Group title={t('tasks.leaveGroup')} pad="14px 16px" gap={0}><MyLeave /></Group>;
+  if (!status.open) return <><EmptyState icon="event_busy" title={t('tasks.closed')} />{leave}</>;
+  if (!parts.length && !sum.custom.length) return <><EmptyState icon="checklist" title={t('tasks.empty')} />{leave}</>;
   return (
     <>
       <Progress done={done} total={total} />
@@ -54,6 +57,7 @@ export function MineView({ s, role, today, nowMin }: { s: ClubState; role: Staff
             ))}
           </Group>
         ))}
+        {leave}
       </div>
       {open ? (
         <TaskSheet key={open.template.id + open.period} item={open} date={today} who={who} canTick canUndo={!!open.done && (myRole === 'mgmt' || (open.done.by === me && open.done.date === today))}

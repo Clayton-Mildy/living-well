@@ -1,5 +1,5 @@
 // People / HR (design ScrHr, now real staff records): list + detail with Profile, Contract and KTP, Salary and bank,
-// Notes and ratings, Attendance. Add, edit, deactivate; app access; masked pay; contract expiry warnings.
+// Notes and ratings, Leave (round 13: requests and the 5 days a year), Hours (the old Attendance tab: clock in and out). Add, edit, deactivate; app access; masked pay; contract expiry warnings.
 // On phone the list opens the detail as a full-screen panel with a back button.
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useResetOn } from '../../lib/useResetOn';
@@ -12,6 +12,8 @@ import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { api, ApiError } from '../../lib/api';
+import { pendingLeave } from '@cp/shared/rules/staffLeave';
+import { LeaveTab } from '../staffLeave/LeaveTab';
 import { memberPhoto } from '../../lib/media';
 import { ProfilePhotoField } from '../members/ProfilePhoto';
 import { useMe } from '../../lib/me';
@@ -22,8 +24,8 @@ const titleOf = (t: (k: string) => string, x: Pick<Staff, 'title' | 'role'>) => 
 import { useClub } from '../../store/replica';
 import { Fact, ListCard, Page, PillBtn, PushPanel, SegTabs, SwitchRow, groupCard, labelStyle, chipRow, tn } from './common';
 
-type Tab = 'profile' | 'contract' | 'pay' | 'notes' | 'att';
-const TABS: Tab[] = ['profile', 'contract', 'pay', 'notes', 'att'];
+type Tab = 'profile' | 'contract' | 'pay' | 'notes' | 'leave' | 'att';
+const TABS: Tab[] = ['profile', 'contract', 'pay', 'notes', 'leave', 'att'];
 
 export function People() {
   const t = useT();
@@ -69,6 +71,8 @@ function StaffRow({ staff: x, selected, first, onClick }: { staff: Staff; select
   const { isPhone } = useDevice();
   const { today } = useNow();
   const c = contractState(x.hr, today);
+  const s = useClub();
+  const asked = pendingLeave(s).some((r) => r.staffId === x.id);
   // round 6, phone: an iOS grouped row: a hairline that starts at the name (not under the avatar), a tint while pressed
   const look: React.CSSProperties = isPhone
     ? { border: 'none', background: 'transparent', backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 68px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', transition: 'background-color .15s' }
@@ -79,7 +83,7 @@ function StaffRow({ staff: x, selected, first, onClick }: { staff: Staff; select
       <Avatar name={x.name} size={40} src={memberPhoto(x)} />
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{x.name}</span>
-        <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)}{!x.active ? ` · ${t('people.inactive')}` : ''}</span>
+        <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)}{!x.active ? ` · ${t('people.inactive')}` : ''}{asked ? ` · ${t('people.leave.askedSub')}` : ''}</span>
       </span>
       {x.active && (c.kind === 'soon' || c.kind === 'ended') ? <Icon name="schedule" size={22} color={c.kind === 'ended' ? '#9A3D24' : '#7A5510'} fill={1} /> : null}
       <Icon name="chevron_right" size={20} color="#8A8078" />
@@ -96,7 +100,12 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
   const act = useAct();
   const { id: meId } = useMe();
   const { today } = useNow();
-  const [tab, setTab] = useState<Tab>('profile');
+  const [params, setParams] = useSearchParams();
+  const urlTab = params.get('tab');
+  const [tab, setTab] = useState<Tab>((TABS as string[]).includes(urlTab || '') ? (urlTab as Tab) : 'profile');
+  // a link to /hr?staff=…&tab=leave (the bell) opens that tab, also when this person is already open
+  useEffect(() => { if (urlTab && (TABS as string[]).includes(urlTab)) setTab(urlTab as Tab); }, [urlTab]);
+  const chooseTab = (k: Tab) => { setTab(k); setParams({ staff: x.id, tab: k }, { replace: true }); };
   const [reveal, setReveal] = useState(false);
   const [editing, setEditing] = useState(false);
   const [off, setOff] = useState(false);
@@ -196,10 +205,10 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
         {c.kind === 'soon' ? <InfoChip icon="schedule" label={c.days === 0 ? t('people.endsToday') : tn(t, 'people.endsIn', c.days)} tone="ochre" /> : null}
         {c.kind === 'ended' ? <InfoChip icon="event_busy" label={tn(t, 'people.endedAgo', c.days)} tone="rust" /> : null}
       </div>
-      {isPhone ? <SegTabs scroll label={t('nav.people')} value={tab} onChange={setTab} items={TABS.map((k) => ({ value: k, label: t('people.tab_' + k) }))} /> : (
+      {isPhone ? <SegTabs scroll label={t('nav.people')} value={tab} onChange={chooseTab} items={TABS.map((k) => ({ value: k, label: t('people.tab_' + k) }))} /> : (
       <div role="tablist" aria-label={t('nav.people')} style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', overflowX: 'auto', scrollbarWidth: 'none', maxWidth: '100%', alignSelf: 'flex-start' }}>
         {TABS.map((k) => (
-          <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => setTab(k)}
+          <button key={k} type="button" role="tab" aria-selected={tab === k} onClick={() => chooseTab(k)}
             style={{ flex: 'none', height: 36, padding: '0 14px', borderRadius: 7, border: 'none', background: tab === k ? '#FFFFFF' : 'transparent', boxShadow: tab === k ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: tab === k ? 600 : 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{t('people.tab_' + k)}</button>
         ))}
       </div>
@@ -251,6 +260,7 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
       ) : null}
 
       {tab === 'notes' ? <NotesTab staff={x} /> : null}
+      {tab === 'leave' ? <LeaveTab staff={x} /> : null}
       {tab === 'att' ? <AttendanceTab staff={x} /> : null}
 
       <StaffDialog open={editing} onClose={() => setEditing(false)} staff={x} onSaved={() => setEditing(false)} />

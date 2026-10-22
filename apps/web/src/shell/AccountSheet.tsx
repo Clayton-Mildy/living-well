@@ -11,6 +11,7 @@ import { api, ApiError } from '../lib/api';
 import { useSession } from '../store/session';
 import { useClub } from '../store/replica';
 import { SignOutButton } from './AppShell';
+import { MyLeave } from '../features/staffLeave/MyLeave';
 import { say } from '../store/ui';
 import { memberPhoto } from '../lib/media';
 
@@ -86,6 +87,12 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
       <TextField label={t('shell.yourName')} value={name} onChange={setName} />
       <TextField label={t('shell.yourPhone')} value={phone} onChange={setPhone} inputMode="tel" />
       <div><Button disabled={!changed || !name.trim()} onClick={save}>{user.kind === 'family' ? t('common.submitReview') : t('common.saveChanges')}</Button></div>
+      {user.kind === 'staff' ? (
+        <>
+          <SectionLabel>{t('people.leave.title')}</SectionLabel>
+          <MyLeave />
+        </>
+      ) : null}
       <SectionLabel>{t('login.signInSection')}</SectionLabel>
       <form onSubmit={(e) => void changePassword(e)} noValidate style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <label style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0 }}>

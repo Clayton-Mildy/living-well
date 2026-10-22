@@ -1,7 +1,7 @@
 // people strings (EN): staff records, contract, pay, notes, attendance.
 export const people = {
   eyebrow: 'Staff records', add: 'Add staff member', mgmtOnly: 'Management only. Contracts, salaries, bank details and disciplinary notes are hidden from every other role.', empty: 'No staff yet.',
-  inactive: 'Inactive', tab_profile: 'Profile', tab_contract: 'Contract and KTP', tab_pay: 'Salary and bank', tab_notes: 'Notes and ratings', tab_att: 'Attendance',
+  inactive: 'Inactive', tab_profile: 'Profile', tab_contract: 'Contract and KTP', tab_pay: 'Salary and bank', tab_notes: 'Notes and ratings', tab_att: 'Hours', tab_leave: 'Leave',
   appOn: 'App access on', appOff: 'No app access', endsToday: 'Contract ends today', endsIn: 'Contract ends in {n} days', endsInOne: 'Contract ends in {n} day', endedAgo: 'Contract ended {n} days ago', endedAgoOne: 'Contract ended {n} day ago',
   fRole: 'Role', fApp: 'App access', fClub: 'Clubhouse', fKnown: 'Known as', fSupervisor: 'Supervisor', fRated: 'Rated by families', fContract: 'Contract', contract_pkwtt: 'Permanent (PKWTT)', contract_pkwt: 'Fixed term (PKWT)',
   fStart: 'Start', fEnd: 'End', noEnd: 'No end date', fKtp: 'KTP number', fKtpFile: 'KTP on file', onFile: 'On file', missing: 'Missing', missingLc: 'missing', fSalary: 'Monthly salary',
@@ -31,4 +31,17 @@ export const people = {
   'err.inactive': 'Reactivate this person first.', 'err.phoneRequired': 'Add a mobile number first.', 'err.futureDate': 'That time has not happened yet.', 'err.timeOrder': 'Clock out must be after clock in.',
   'feed.added': '{name} added to the team', 'feed.updated': 'Staff record updated · {name}', 'feed.deactivated': '{name} deactivated', 'feed.reactivated': '{name} reactivated',
   'feed.accessOn': 'App access on · {name}', 'feed.accessOff': 'App access off · {name}',
+  // KC round 13: staff leave (5 days a year), the Leave tab in People, Account and Tasks
+  'leave.title': 'Leave', 'leave.left': '{left} of {n} days left this year', 'leave.waiting': '{n} waiting',
+  'leave.ask': 'Ask for leave', 'leave.sheetTitle': 'Ask for leave', 'leave.from': 'From', 'leave.to': 'To', 'leave.reason': 'Reason', 'leave.reasonPh': 'What is it for?',
+  'leave.days': '{n} club days', 'leave.daysOne': '{n} club day', 'leave.after': '{n} left after', 'leave.send': 'Send', 'leave.sent': 'Sent to management.',
+  'leave.cancel': 'Cancel request', 'leave.cancelLeave': 'Cancel leave', 'leave.cancelled': 'Leave cancelled.', 'leave.approve': 'Approve', 'leave.decline': 'Decline',
+  'leave.approved': 'Leave approved.', 'leave.declined': 'Leave declined.', 'leave.declineTitle': 'Decline this request?', 'leave.declineNote': 'Note for {name} (optional)', 'leave.declineGo': 'Decline',
+  'leave.stLeft': 'Left', 'leave.stUsed': 'Used', 'leave.stWaiting': 'Waiting', 'leave.pendingTitle': 'Waiting for a decision', 'leave.historyTitle': 'This year',
+  'leave.st_pending': 'Waiting', 'leave.st_approved': 'Approved', 'leave.st_declined': 'Declined', 'leave.st_cancelled': 'Cancelled',
+  'leave.none': 'No leave asked this year.', 'leave.askedSub': 'Leave asked', 'leave.onLeave': '{name} (on leave)', 'leave.mine': 'Your leave', 'leave.byWhom': 'By {name}', 'leave.noteIs': 'Note: {note}',
+  'err.leaveReason': 'Write what the leave is for.', 'err.leavePast': 'Leave cannot start in the past.', 'err.leaveNoDays': 'None of those days is a club day.', 'err.leaveYear': 'Leave has to stay inside one calendar year. Ask for each year separately.',
+  'err.leaveOverlap': 'You already have leave on some of those days.', 'err.leaveTooMany': 'That is more than you have left this year.', 'err.leaveDecided': 'That request has already been answered.', 'err.leaveStarted': 'That leave has already started.',
+  'notif.leaveApproved': 'Your leave from {from} is approved.', 'notif.leaveDeclined': 'Your leave from {from} was declined. {note}', 'notif.leaveCancelled': 'Your leave from {from} was cancelled by management.',
+  'feed.leaveAsked': '{name} asks for leave from {from}', 'feed.leaveApproved': 'Leave approved · {name} from {from}', 'feed.leaveDeclined': 'Leave declined · {name} from {from}', 'feed.leaveCancelled': 'Leave cancelled · {name} from {from}',
 };

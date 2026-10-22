@@ -54,6 +54,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const mine = <T extends { memberId?: string | null }>(rows: T[]) => rows.filter((r) => r.memberId && mids.includes(r.memberId));
   out.memberNotes = pick(mine(live(s.memberNotes)).filter((n) => n.visibility === 'family').map(noteForFamily).filter(present));
   out.attendance = pick(mine(live(s.attendance)));
+  // round 13: staff leave requests are staff-only (leaveRequests stays {})
   // round 12: mood marks for the family's own members; celebrations only once the club has confirmed them; care calls are staff-only (left {})
   out.moodMarks = pick(mine(live(s.moodMarks || {})));
   out.celebrations = pick(mine(live(s.celebrations || {})).filter((c) => c.status === 'confirmed'));

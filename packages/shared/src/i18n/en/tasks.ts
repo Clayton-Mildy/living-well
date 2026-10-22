@@ -2,6 +2,7 @@
 export const tasks = {
   title: 'Tasks',
   progress: '{done} of {total} done', allDone: 'All done', nothingDue: 'Nothing due yet',
+  leaveGroup: 'Leave',
   mine: 'Mine', team: 'Team', manage: 'Manage',
   duties: 'Today’s duties', additional: 'Additional tasks', thisWeek: 'This week', thisMonth: 'This month', checklist: 'Today',
   closed: 'The club is closed today, so there are no tasks.', empty: 'No tasks for you yet.',

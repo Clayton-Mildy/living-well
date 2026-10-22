@@ -4,7 +4,7 @@ import type { people as EN } from '../en/people';
 
 export const people: Same<typeof EN> = {
   eyebrow: 'Data staf', add: 'Tambah staf', mgmtOnly: 'Hanya manajemen. Kontrak, gaji, data bank, dan catatan disiplin disembunyikan dari peran lain.', empty: 'Belum ada staf.',
-  inactive: 'Nonaktif', tab_profile: 'Profil', tab_contract: 'Kontrak dan KTP', tab_pay: 'Gaji dan bank', tab_notes: 'Catatan dan penilaian', tab_att: 'Kehadiran',
+  inactive: 'Nonaktif', tab_profile: 'Profil', tab_contract: 'Kontrak dan KTP', tab_pay: 'Gaji dan bank', tab_notes: 'Catatan dan penilaian', tab_att: 'Jam kerja', tab_leave: 'Cuti',
   appOn: 'Akses aplikasi aktif', appOff: 'Tanpa akses aplikasi', endsToday: 'Kontrak berakhir hari ini', endsIn: 'Kontrak berakhir dalam {n} hari', endsInOne: 'Kontrak berakhir dalam {n} hari', endedAgo: 'Kontrak berakhir {n} hari lalu', endedAgoOne: 'Kontrak berakhir {n} hari lalu',
   fRole: 'Peran', fApp: 'Akses aplikasi', fClub: 'Klub', fKnown: 'Nama panggilan', fSupervisor: 'Penyelia', fRated: 'Dinilai keluarga', fContract: 'Kontrak', contract_pkwtt: 'Tetap (PKWTT)', contract_pkwt: 'Kontrak waktu tertentu (PKWT)',
   fStart: 'Mulai', fEnd: 'Berakhir', noEnd: 'Tanpa tanggal berakhir', fKtp: 'Nomor KTP', fKtpFile: 'KTP tersimpan', onFile: 'Tersimpan', missing: 'Belum ada', missingLc: 'belum ada', fSalary: 'Gaji bulanan',
@@ -34,4 +34,17 @@ export const people: Same<typeof EN> = {
   'err.inactive': 'Aktifkan orang ini terlebih dahulu.', 'err.phoneRequired': 'Tambahkan nomor ponsel terlebih dahulu.', 'err.futureDate': 'Waktu itu belum terjadi.', 'err.timeOrder': 'Jam pulang harus setelah jam masuk.',
   'feed.added': '{name} ditambahkan ke tim', 'feed.updated': 'Data staf diperbarui · {name}', 'feed.deactivated': '{name} dinonaktifkan', 'feed.reactivated': '{name} diaktifkan kembali',
   'feed.accessOn': 'Akses aplikasi aktif · {name}', 'feed.accessOff': 'Akses aplikasi mati · {name}',
+  // KC round 13: cuti staf (5 hari setahun), tab Cuti di Staf, Akun dan Tugas
+  'leave.title': 'Cuti', 'leave.left': 'Sisa cuti tahun ini {left} dari {n} hari', 'leave.waiting': '{n} menunggu',
+  'leave.ask': 'Ajukan cuti', 'leave.sheetTitle': 'Ajukan cuti', 'leave.from': 'Dari', 'leave.to': 'Sampai', 'leave.reason': 'Alasan', 'leave.reasonPh': 'Untuk apa?',
+  'leave.days': '{n} hari kerja klub', 'leave.daysOne': '{n} hari kerja klub', 'leave.after': 'sisa {n} hari setelahnya', 'leave.send': 'Kirim', 'leave.sent': 'Terkirim ke manajemen.',
+  'leave.cancel': 'Batalkan pengajuan', 'leave.cancelLeave': 'Batalkan cuti', 'leave.cancelled': 'Cuti dibatalkan.', 'leave.approve': 'Setujui', 'leave.decline': 'Tolak',
+  'leave.approved': 'Cuti disetujui.', 'leave.declined': 'Cuti ditolak.', 'leave.declineTitle': 'Tolak pengajuan ini?', 'leave.declineNote': 'Catatan untuk {name} (boleh kosong)', 'leave.declineGo': 'Tolak',
+  'leave.stLeft': 'Sisa', 'leave.stUsed': 'Terpakai', 'leave.stWaiting': 'Menunggu', 'leave.pendingTitle': 'Menunggu keputusan', 'leave.historyTitle': 'Tahun ini',
+  'leave.st_pending': 'Menunggu', 'leave.st_approved': 'Disetujui', 'leave.st_declined': 'Ditolak', 'leave.st_cancelled': 'Dibatalkan',
+  'leave.none': 'Belum ada pengajuan cuti tahun ini.', 'leave.askedSub': 'Mengajukan cuti', 'leave.onLeave': '{name} (cuti)', 'leave.mine': 'Cuti Anda', 'leave.byWhom': 'Oleh {name}', 'leave.noteIs': 'Catatan: {note}',
+  'err.leaveReason': 'Tulis untuk apa cuti ini.', 'err.leavePast': 'Cuti tidak bisa dimulai di masa lalu.', 'err.leaveNoDays': 'Tidak ada hari kerja klub pada tanggal itu.', 'err.leaveYear': 'Cuti harus dalam satu tahun kalender. Ajukan per tahun.',
+  'err.leaveOverlap': 'Anda sudah punya cuti pada sebagian tanggal itu.', 'err.leaveTooMany': 'Itu lebih dari sisa cuti Anda tahun ini.', 'err.leaveDecided': 'Pengajuan itu sudah dijawab.', 'err.leaveStarted': 'Cuti itu sudah dimulai.',
+  'notif.leaveApproved': 'Cuti Anda mulai {from} disetujui.', 'notif.leaveDeclined': 'Cuti Anda mulai {from} ditolak. {note}', 'notif.leaveCancelled': 'Cuti Anda mulai {from} dibatalkan oleh manajemen.',
+  'feed.leaveAsked': '{name} mengajukan cuti mulai {from}', 'feed.leaveApproved': 'Cuti disetujui · {name} mulai {from}', 'feed.leaveDeclined': 'Cuti ditolak · {name} mulai {from}', 'feed.leaveCancelled': 'Cuti dibatalkan · {name} mulai {from}',
 };

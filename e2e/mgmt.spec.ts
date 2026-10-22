@@ -509,11 +509,11 @@ test('people: pay is masked until shown, contract expiry warns, notes and warnin
   c.assertClean();
 });
 
-test('people: attendance tab clocks in and out and edits a day; the contract-expiry link opens that person', async ({ page }) => {
+test('people: hours tab (was Attendance) clocks in and out and edits a day; the contract-expiry link opens that person', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/hr?staff=s1');
   await expect(page.getByRole('heading', { name: 'Caca', level: 2 })).toBeVisible();
-  await page.getByRole('tab', { name: 'Attendance' }).click();
+  await page.getByRole('tab', { name: 'Hours' }).click();
   await expect(page.getByText('Days worked')).toBeVisible();
   await expect(page.locator('[data-att="2026-10-20"]')).toContainText('08:00 – 17:00 · 9:00');
   await page.getByRole('button', { name: 'Clock in now' }).click();

@@ -295,6 +295,8 @@ describe('snapshots', () => {
     const famMembers = new Set(Object.keys(fam.state.members));
     for (const r of Object.values(fam.state.moodMarks) as any[]) expect(famMembers.has(r.memberId)).toBe(true);
     for (const r of Object.values(fam.state.celebrations) as any[]) { expect(famMembers.has(r.memberId)).toBe(true); expect(r.status).toBe('confirmed'); }
+    // round 13: staff leave requests never reach a family
+    expect(fam.state.leaveRequests).toEqual({});
   });
   it('club access is enforced', async () => {
     expect((await app.request('/api/snapshot?club=adina', { headers: { 'x-user-id': 's1' } })).status).toBe(403);
@@ -334,6 +336,19 @@ describe('actions', () => {
     const dup = await app.request('/api/actions/attendance.checkIn', json({ mutationId: 'srv-4', input: { memberId: 'm1', method: 'manual' } }, 's1'));
     expect(dup.status).toBe(422);
     expect((await j(dup)).code).toBe('err.alreadyCheckedIn');
+  });
+  it('staff leave: any staff asks, only management decides (403), a family cannot ask', async () => {
+    const ask = await app.request('/api/actions/leave.request', json({ mutationId: 'srv-lv-1', input: { from: '2026-11-16', to: '2026-11-17', reason: 'Visiting family' } }, 's5'));
+    expect(ask.status).toBe(200);
+    const id = (await j(ask)).result.requestId as string;
+    expect(id).toBeTruthy();
+    expect((await app.request('/api/actions/leave.decide', json({ mutationId: 'srv-lv-2', input: { requestId: id, approve: true } }, 's5'))).status).toBe(403);
+    expect((await app.request('/api/actions/leave.decide', json({ mutationId: 'srv-lv-3', input: { requestId: id, approve: true } }, 's10'))).status).toBe(403);
+    expect((await app.request('/api/actions/leave.request', json({ mutationId: 'srv-lv-4', input: { from: '2026-11-18', to: '2026-11-18', reason: 'x' } }, 'f1'))).status).toBe(403);
+    expect((await app.request('/api/actions/leave.decide', json({ mutationId: 'srv-lv-5', input: { requestId: id, approve: true } }, 's9'))).status).toBe(200);
+    expect(state.getClub('citra').leaveRequests[id].status).toBe('approved');
+    const [n] = await sql`select count(*)::int as n from leave_requests where id = ${id}`;
+    expect(n.n).toBe(1);
   });
   it('demo reset restores the seed', async () => {
     expect((await app.request('/api/demo/reset', json({}))).status).toBe(200);

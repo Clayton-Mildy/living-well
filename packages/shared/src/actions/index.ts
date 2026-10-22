@@ -29,11 +29,12 @@ import { taskActions } from './tasks';
 import { moodActions } from './mood';
 import { checkOnActions } from './checkOn';
 import { celebrationActions } from './celebrations';
+import { staffLeaveActions } from './staffLeave';
 
 registerActions([
   ...reviewActions, ...approvalActions, ...sessionActions, ...attendanceActions, ...healthActions, ...membersActions, ...familyActions,
   ...careActions, ...photoActions, ...photoDraftActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...membershipActions, ...accountActions,
-  ...renewalActions, ...guestActions, ...taskActions, ...moodActions, ...checkOnActions, ...celebrationActions,
+  ...renewalActions, ...guestActions, ...taskActions, ...moodActions, ...checkOnActions, ...celebrationActions, ...staffLeaveActions,
 ] as never);
 
 export * from './framework';
