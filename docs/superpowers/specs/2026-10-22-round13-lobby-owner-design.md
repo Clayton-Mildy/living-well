@@ -58,8 +58,14 @@ Above the four groups, four hero tiles: revenue collected, active members, mood 
 - New collection `leaveRequests { staffId, from, to, days, reason, status: 'pending'|'approved'|'declined', decidedBy?, decidedAt?, note? }`; 5 days a year per staff member (`settings.leaveDays = 5`).
 - Any staff member requests leave from Account (or Tasks → Leave): dates, reason (required). Management approves or declines from People → **Leave** tab (replaces the Attendance tab): per person the balance ("3 of 5 left"), pending requests with Approve / Decline, and the year's history. Approval writes `staffTime` rows (`kind: 'leave'`) for the days so the duty tracker and team views see them. Notifications both ways.
 
-### 11. Plans and billing sections
-KC: "section the plans and billing better". To be detailed with KC after the review (which page, which groups); not planned yet.
+### 11. Plans page sections (KC 22 Oct: "section the plan and pricing better")
+Manage → Plans (`mgmt/Plans.tsx`) stops being one flat grid of six equal price cards. Five sections, in this order:
+- **Plans**: Flex and Gold side by side; the "Flex visits per month" rule moves into the Flex card (the separate "Club rules" card goes).
+- **Extra charges**: Extra day and Leave month (what lands on an invoice on top of, or instead of, the plan).
+- **One-off fees**: Registration and the 2-day trial.
+- **Changes**: "Takes effect from" and "Tell the team", shown whenever something is edited; Save / Cancel stay pinned at the bottom.
+- **Next invoice preview**: unchanged, last.
+Phone: five grouped sections. Wide: Plans is a row of two cards; Extra charges and One-off fees share the next row; preview below. Behaviour (validation, preview with unsaved prices, notify) unchanged.
 
 ## Out of scope
 Finance invoice issuing by lobby, survey creation by lobby, payroll, leave carry-over between years.
