@@ -130,8 +130,8 @@ export function MonthReport() {
       <Stat first label={t('month.leads')} value={p.funnel.new} onClick={open('/enquiries')} />
       <Stat label={t('month.visits')} value={p.funnel.visit} sub={p.conversion.toVisit !== null ? pct(p.conversion.toVisit) : undefined} onClick={open('/enquiries')} />
       <Stat label={t('month.trials')} value={p.funnel.trial} sub={p.conversion.toTrial !== null ? pct(p.conversion.toTrial) : undefined} onClick={open('/enquiries')} />
-      <Stat label={t('month.converted')} value={p.funnel.joined} sub={p.conversion.toJoined !== null ? pct(p.conversion.toJoined) : undefined} onClick={open('/enquiries')} />
-      <Stat label={t('month.lost')} value={lostN} sub={[lost, t('month.leadsCaption')].filter(Boolean).join(' · ')} onClick={open('/enquiries')} />
+      <Stat label={t('month.converted')} value={p.funnel.joined} sub={p.conversion.toJoined !== null ? `${pct(p.conversion.toJoined)} ${t('month.leadsCaption')}` : undefined} onClick={open('/enquiries')} />
+      <Stat label={t('month.lost')} value={lostN} sub={lost || undefined} onClick={open('/enquiries')} />
       {duties.map((x) => <Stat key={x.role} label={`${t('month.duties')} · ${t('roles.' + x.role)}`} value={`${x.done}/${x.total}`} sub={pct(x.done / x.total)} onClick={open('/tasks')} />)}
       <Stat label={t('month.surveyFamily')} value={p.surveys.family === null ? '—' : `${one(p.surveys.family)} / 5`} onClick={open('/surveys')} />
       <Stat label={t('month.surveyVenue')} value={p.surveys.venue === null ? '—' : `${one(p.surveys.venue)} / 5`} onClick={open('/surveys')} />

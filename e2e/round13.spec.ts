@@ -11,8 +11,10 @@ test('lead history: the Enquiries History view lists the months, Leads comes bac
   await page.getByRole('tab', { name: 'History' }).click();
   const oct = page.getByRole('region', { name: 'October 2026' });
   await expect(oct).toContainText('4 opened'); // e1, e2, e3 and e5
+  await expect(oct).toContainText('Chose another place 1'); // Ibu Nyoman Sari, lost on 8 Oct (a move of this month)
   const sep = page.getByRole('region', { name: 'September 2026' });
-  await expect(sep).toContainText('Chose another place 1'); // Ibu Nyoman Sari
+  await expect(sep).toContainText('1 opened'); // Ibu Nyoman Sari was opened on 28 Sep
+  await expect(sep).not.toContainText('Chose another place');
   await oct.getByRole('button', { name: /^Leads \(4\)$/ }).click();
   await expect(oct).toContainText('Oma Siu Lan Tjandra');
   await expect(oct).toContainText('New 8 Oct · Trial 12 Oct');

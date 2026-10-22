@@ -19,8 +19,6 @@ export function LeadTimeline({ e, size = 13 }: { e: Enquiry; size?: number }) {
   return <span data-timeline={e.id} style={{ fontSize: size, color: '#6B6259', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{text}</span>;
 }
 
-const pct = (n: number, of: number) => (of ? `${Math.round((n / of) * 100)}%` : '');
-
 function Line({ label, value, sub }: { label: string; value: string | number; sub?: string }) {
   return (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, minHeight: 28 }}>
@@ -36,21 +34,23 @@ function MonthGroup({ m, onOpen }: { m: LeadMonth; onOpen: (id: string) => void 
   const t = useT();
   const { fmonth } = useFmt();
   const [open, setOpen] = useState(false);
-  const f = m.funnel;
+  const f = m.moves, c = m.conversion;
+  const rate = (n: number | null) => (n === null ? undefined : `${Math.round(n * 100)}%`);
   const reasons = LOST_REASONS.filter((k) => f.lostReasons[k] > 0).map((k) => `${t('enq.lost.' + k)} ${f.lostReasons[k]}`).join(', ');
   return (
     <Group title={fmonth(m.month, true)} meta={t('enq.hist.opened_n', { n: f.opened })} label={fmonth(m.month, true)} gap={4}>
-      {f.opened ? (
+      {f.opened || f.visit || f.trial || f.joined || f.lost ? (
         <>
           <Line label={t('enq.hist.opened')} value={f.opened} />
-          <Line label={t('enq.hist.visited')} value={f.visit} sub={pct(f.visit, f.opened)} />
-          <Line label={t('enq.hist.trial')} value={f.trial} sub={pct(f.trial, f.opened)} />
-          <Line label={t('enq.hist.joined')} value={f.joined} sub={pct(f.joined, f.opened)} />
+          <Line label={t('enq.hist.visited')} value={f.visit} sub={rate(c.toVisit)} />
+          <Line label={t('enq.hist.trial')} value={f.trial} sub={rate(c.toTrial)} />
+          <Line label={t('enq.hist.joined')} value={f.joined} sub={rate(c.toJoined)} />
           <Line label={t('enq.hist.lost')} value={f.lost} sub={reasons || undefined} />
-          <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="cp-press"
+          {c.opened ? <span style={{ fontSize: 12, color: '#6B6259', lineHeight: 1.4 }}>{t('enq.hist.convCaption')}</span> : null}
+          {f.leads.length ? <button type="button" aria-expanded={open} onClick={() => setOpen(!open)} className="cp-press"
             style={{ marginTop: 6, height: 44, border: 'none', borderTop: HAIRLINE, background: 'transparent', color: '#24201C', fontSize: 14, fontWeight: 500, cursor: 'pointer', textAlign: 'left', padding: 0, fontFamily: 'Inter' }}>
             {t('enq.hist.leads', { n: f.leads.length })}
-          </button>
+          </button> : null}
           {open ? f.leads.map((e) => (
             <button key={e.id} type="button" data-hist-lead={e.id} onClick={() => onOpen(e.id)} className="cp-press"
               style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'flex-start', textAlign: 'left', padding: '10px 0', border: 'none', borderTop: HAIRLINE, background: 'transparent', color: '#24201C', cursor: 'pointer', fontFamily: 'Inter', minHeight: 44 }}>

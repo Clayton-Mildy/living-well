@@ -3,7 +3,7 @@
 import type { ClubState, EndReason, ISODate, LostReason, MoodMoment, StaffRole, YM } from '../types';
 import { activeOn, currentMembership, isPendingRow } from './core';
 import { checkOnList } from './checkOn';
-import { leadFunnel } from './enquiries';
+import { leadConversion, leadMoves } from './enquiries';
 import { invoicePeriod } from './finance';
 import { invoiceTotal } from './billing';
 import { monthsOf, observedDays, type InsightPeriod } from './insights';
@@ -114,14 +114,16 @@ function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, t
 }
 
 function pipeline(s: ClubState, p: InsightPeriod, today: ISODate, nowMin: number): PipelineGroup {
-  // round 13: a cohort from the lead history: the leads opened in the period and how far each got (the same numbers as the Enquiries History view)
-  const lf = leadFunnel(s, p.from, p.to);
-  const funnel = { new: lf.opened, visit: lf.visit, trial: lf.trial, joined: lf.joined };
-  const lostReasons = lf.lostReasons;
+  // round 13: what happened in the period, from the lead history (the same numbers as the Enquiries History view); joined reconciles with the Members group.
+  // The conversion is of the leads opened in the three whole months before the period's month (a lead needs time to decide).
+  const lm = leadMoves(s, p.from, p.to);
+  const funnel = { new: lm.opened, visit: lm.visit, trial: lm.trial, joined: lm.joined };
+  const lostReasons = lm.lostReasons;
+  const lc = leadConversion(s, p.from.slice(0, 7));
   const rated = (kind: 'family' | 'venue') => avg(live(s.surveyResponses).filter((r) => r.overall > 0 && within(r.on, p) && s.surveys[r.surveyId] && surveyKind(s.surveys[r.surveyId]) === kind).map((r) => r.overall));
   return {
     funnel,
-    conversion: { toVisit: ratio(funnel.visit, funnel.new), toTrial: ratio(funnel.trial, funnel.new), toJoined: ratio(funnel.joined, funnel.new) },
+    conversion: { toVisit: lc.toVisit, toTrial: lc.toTrial, toJoined: lc.toJoined },
     lostReasons,
     duties: teamRange(s, p.from, p.to, today, nowMin).map((r) => ({ role: r.role, done: r.done, total: r.total })),
     surveys: { family: rated('family'), venue: rated('venue') },

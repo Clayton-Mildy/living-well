@@ -2,7 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed } from '../seed';
 import type { ClubState, Enquiry, LeadMove } from '../types';
-import { leadFunnel, leadHistory, leadMonths, openedAt } from './enquiries';
+import { buildSeed as seedOf, DEMO_START_MIN, DEMO_TODAY } from '../index';
+import { leadConversion, leadFunnel, leadHistory, leadMonths, leadMoves, openedAt } from './enquiries';
 
 const mv = (stage: LeadMove['stage'], at: string, extra: Partial<LeadMove> = {}): LeadMove => ({ stage, at, by: 'staff:s1', ...extra });
 const lead = (id: string, stage: Enquiry['stage'], history: LeadMove[], extra: Partial<Enquiry> = {}): Enquiry => ({
@@ -68,6 +69,55 @@ describe('leadFunnel (a cohort: the leads opened in the period and how far each 
   });
 });
 
+describe('leadMoves (what happened in a period, by the day of each move)', () => {
+  const s = state(
+    lead('a', 'visit', [mv('new', '2026-09-28T10:00'), mv('visit', '2026-10-02T10:00', { date: '2026-10-05' }), mv('visit', '2026-10-03T10:00', { undo: true })]),
+    lead('b', 'trial', [mv('new', '2026-10-03T10:00'), mv('visit', '2026-10-04T10:00'), mv('trial', '2026-10-10T10:00')]),
+    lead('c', 'lost', [mv('new', '2026-08-03T10:00'), mv('visit', '2026-08-05T10:00'), mv('lost', '2026-10-12T10:00', { reason: 'price' })], { lost: { reason: 'price', prevStage: 'visit' } }),
+    lead('d', 'new', [mv('new', '2026-10-06T10:00'), mv('lost', '2026-10-07T10:00', { reason: 'health' }), mv('new', '2026-10-09T10:00', { undo: true })]),
+    lead('j', 'joined', [mv('new', '2026-08-20T10:00'), mv('joined', '2026-09-28T10:00')], { memberId: 'm1' }),
+    lead('k', 'joined', [mv('new', '2026-10-01T10:00'), mv('joined', '2026-10-02T10:00')], { memberId: 'm2' }),
+  );
+  s.members.m1.memberships[s.members.m1.memberships.length - 1].start = '2026-10-05';
+  s.members.m2.memberships[s.members.m2.memberships.length - 1].start = '2026-11-02';
+  it('counts each stage by the date of its (non-undo) move, once per lead, the lost reason from the move', () => {
+    const m = leadMoves(s, '2026-10-01', '2026-10-31');
+    expect(m).toMatchObject({ opened: 3, visit: 2, trial: 1, lost: 2 });
+    expect(m.leads.map((e) => e.id).sort()).toEqual(['b', 'd', 'k']);
+    expect(m.lostReasons).toMatchObject({ price: 1, health: 1 });
+    expect(leadMoves(s, '2026-09-01', '2026-09-30')).toMatchObject({ opened: 1, visit: 0, lost: 0 });
+  });
+  it('counts joined by the approved member’s membership start, not by when the lead was opened or joined', () => {
+    expect(leadMoves(s, '2026-10-01', '2026-10-31').joined).toBe(1); // m1 starts 5 Oct (opened in August); m2 starts in November
+    expect(leadMoves(s, '2026-11-01', '2026-11-30').joined).toBe(1);
+    s.members.m1.review = { status: 'pending', crId: 'cr1' };
+    expect(leadMoves(s, '2026-10-01', '2026-10-31').joined).toBe(0);
+    s.members.m1.review = undefined;
+  });
+  it('an empty period is all zeros', () => expect(leadMoves(s, '2020-01-01', '2020-01-31')).toMatchObject({ opened: 0, visit: 0, trial: 0, joined: 0, lost: 0 }));
+});
+
+describe('leadConversion (the leads opened in the three whole months before)', () => {
+  it('is the cohort of those months: visited, trial and joined of the opened, null when nothing was opened', () => {
+    const s = state(
+      lead('a', 'new', [mv('new', '2026-06-30T10:00')]),
+      lead('b', 'trial', [mv('new', '2026-07-01T10:00'), mv('trial', '2026-07-04T10:00')]),
+      lead('c', 'lost', [mv('new', '2026-09-30T10:00'), mv('visit', '2026-10-02T10:00'), mv('lost', '2026-10-05T10:00', { reason: 'price' })], { lost: { reason: 'price', prevStage: 'visit' } }),
+      lead('d', 'new', [mv('new', '2026-10-01T10:00')]),
+    );
+    expect(leadConversion(s, '2026-10')).toMatchObject({ opened: 2, visit: 2, trial: 1, joined: 0, toVisit: 1, toTrial: 0.5, toJoined: 0 });
+    expect(leadConversion(s, '2020-01')).toMatchObject({ opened: 0, toVisit: null, toTrial: null, toJoined: null });
+  });
+  it('the demo October: 2 joined and 4 opened; the conversion is the July to September cohort (8 opened, 3 joined, 38%)', () => {
+    const s = seedOf(DEMO_TODAY, DEMO_START_MIN, { roster: true }).citra;
+    expect(DEMO_TODAY).toBe('2026-10-21');
+    const oct = leadMonths(s, DEMO_TODAY, 6)[0];
+    expect(oct.moves).toMatchObject({ opened: 4, joined: 2 });
+    expect(oct.conversion).toMatchObject({ opened: 8, joined: 3, toJoined: 0.38 });
+    expect(oct.moves.lostReasons.otherPlace).toBe(1); // Ibu Nyoman Sari, lost on 8 Oct
+  });
+});
+
 describe('leadMonths', () => {
   it('lists six months, newest first, each with its own funnel', () => {
     const s = state(lead('a', 'new', [mv('new', '2026-10-02T10:00')]), lead('b', 'new', [mv('new', '2026-05-30T10:00')]));
@@ -75,5 +125,6 @@ describe('leadMonths', () => {
     expect(m.map((x) => x.month)).toEqual(['2026-10', '2026-09', '2026-08', '2026-07', '2026-06', '2026-05']);
     expect(m[0]).toMatchObject({ from: '2026-10-01', to: '2026-10-31' });
     expect(m.map((x) => x.funnel.opened)).toEqual([1, 0, 0, 0, 0, 1]);
+    expect(m.map((x) => x.moves.opened)).toEqual([1, 0, 0, 0, 0, 1]);
   });
 });

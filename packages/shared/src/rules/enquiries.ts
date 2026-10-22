@@ -3,10 +3,10 @@
 import type {
   EnquiryForm, OnlineRegistration, KtpUploads,
   Actor, ClubState, Consent, DT, Diet, DrugAllergy, Enquiry, FamilyContact, FamilyLink, FoodAllergen, GuestVisit, HM, ISODate, LeadMove, LostReason, Member, MemberDocument,
-  MemberRegistration, Mobility, Plan, Relation, Title,
+  MemberRegistration, Mobility, Plan, Relation, Title, YM,
 } from '../types';
 import { addMonths, daysInMonth, dow, e164, live, sortBy, toMin, ym } from '../util';
-import { dayStatus, isPendingRow, nextOpenDay } from './core';
+import { currentMembership, dayStatus, isPendingRow, nextOpenDay } from './core';
 import { genderOf, ktpDocuments } from './members';
 import { ratingTokenOf } from './surveys';
 
@@ -77,13 +77,54 @@ export function leadFunnel(s: ClubState, from: ISODate, to: ISODate): LeadFunnel
   out.conversion = out.opened ? out.joined / out.opened : null;
   return out;
 }
-export interface LeadMonth { month: string; from: ISODate; to: ISODate; funnel: LeadFunnel }
-/** The `n` calendar months ending with the one `today` is in, newest first, each with its lead funnel. */
+/** What happened in a period (round 13 ruling): per stage, the distinct leads with a (non-undo) move of that stage dated in the period. */
+export interface LeadMoves {
+  /** leads opened in the period (their first move) */
+  opened: number; visit: number; trial: number;
+  /** members who joined from a lead, by the day their membership starts (reconciles with the Members group's `joined`) */
+  joined: number;
+  /** leads with a lost move in the period, the reason read from that move */
+  lost: number; lostReasons: Record<LostReason, number>;
+  /** the leads opened in the period, oldest first */
+  leads: Enquiry[];
+}
+export function leadMoves(s: ClubState, from: ISODate, to: ISODate): LeadMoves {
+  const within = (d: ISODate | undefined) => !!d && d >= from && d <= to;
+  const all = live(s.enquiries);
+  const out: LeadMoves = {
+    opened: 0, visit: 0, trial: 0, joined: 0, lost: 0, lostReasons: Object.fromEntries(LOST_REASONS.map((k) => [k, 0])) as Record<LostReason, number>,
+    leads: sortBy(all.filter((e) => within(openedAt(e))), (e) => leadHistory(e)[0].at),
+  };
+  out.opened = out.leads.length;
+  const members = new Set<string>();
+  for (const e of all) {
+    const moves = leadHistory(e).filter((m) => !m.undo);
+    if (moves.some((m) => m.stage === 'visit' && within(m.at.slice(0, 10)))) out.visit++;
+    if (moves.some((m) => m.stage === 'trial' && within(m.at.slice(0, 10)))) out.trial++;
+    const lost = moves.find((m) => m.stage === 'lost' && within(m.at.slice(0, 10)));
+    if (lost) { out.lost++; const r = lost.reason ?? e.lost?.reason; if (r) out.lostReasons[r]++; }
+    const m = e.stage === 'joined' && e.memberId ? s.members[e.memberId] : undefined;
+    if (m && !m.deletedAt && !isPendingRow(m) && within(currentMembership(m)?.start)) members.add(m.id);
+  }
+  out.joined = members.size;
+  return out;
+}
+
+/** The conversion shown beside a month: of the leads opened in the three whole months before `month`, how many visited, had a trial and joined. */
+export interface LeadConversion { opened: number; visit: number; trial: number; joined: number; toVisit: number | null; toTrial: number | null; toJoined: number | null }
+export function leadConversion(s: ClubState, month: YM): LeadConversion {
+  const f = leadFunnel(s, `${addMonths(month, -3)}-01`, `${addMonths(month, -1)}-${String(daysInMonth(addMonths(month, -1))).padStart(2, '0')}`);
+  const r = (n: number) => (f.opened ? Math.round((n / f.opened) * 100) / 100 : null);
+  return { opened: f.opened, visit: f.visit, trial: f.trial, joined: f.joined, toVisit: r(f.visit), toTrial: r(f.trial), toJoined: r(f.joined) };
+}
+
+export interface LeadMonth { month: YM; from: ISODate; to: ISODate; /** the cohort opened in the month */ funnel: LeadFunnel; /** what happened in the month */ moves: LeadMoves; conversion: LeadConversion }
+/** The `n` calendar months ending with the one `today` is in, newest first. */
 export function leadMonths(s: ClubState, today: ISODate, n: number): LeadMonth[] {
   return Array.from({ length: n }, (_, i) => {
     const month = addMonths(ym(today), -i);
     const from = `${month}-01`, to = `${month}-${String(daysInMonth(month)).padStart(2, '0')}`;
-    return { month, from, to, funnel: leadFunnel(s, from, to) };
+    return { month, from, to, funnel: leadFunnel(s, from, to), moves: leadMoves(s, from, to), conversion: leadConversion(s, month) };
   });
 }
 

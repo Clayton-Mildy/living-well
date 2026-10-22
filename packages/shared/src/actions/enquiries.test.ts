@@ -397,6 +397,20 @@ describe('lead history (round 13)', () => {
     s = run(s, 'enquiry.archive', { enquiryId: id }, 's1').state;
     expect(s.enquiries[id].history).toHaveLength(n); // archiving is not a move
   });
+  it('booking the same stage again changes the last move instead of adding a second one', () => {
+    let s = seed().citra;
+    s = run(s, 'enquiry.bookVisit', { enquiryId: 'e3', date: '2026-10-23', time: '11:00' }, 's1').state;
+    s = run(s, 'enquiry.bookVisit', { enquiryId: 'e3', date: '2026-10-27', time: '14:00' }, 's9').state;
+    expect(stages(s, 'e3')).toEqual(['new', 'visit']);
+    expect(s.enquiries.e3.history!.at(-1)).toMatchObject({ stage: 'visit', date: '2026-10-27', by: 'staff:s9' });
+    s = run(s, 'enquiry.bookTrial', { enquiryId: 'e3', date: '2026-10-26', food: [], drugs: [], mobility: null, diet: [] }, 's1').state;
+    s = run(s, 'enquiry.bookTrial', { enquiryId: 'e3', date: '2026-10-27', food: [], drugs: [], mobility: null, diet: [] }, 's1').state;
+    expect(stages(s, 'e3')).toEqual(['new', 'visit', 'trial']);
+    expect(s.enquiries.e3.history!.at(-1)).toMatchObject({ stage: 'trial', date: '2026-10-27' });
+    // e2 (a seeded visit) rebooked: still one visit move
+    const e2 = run(seed().citra, 'enquiry.bookVisit', { enquiryId: 'e2', date: '2026-10-27', time: '15:00' }, 's1').state;
+    expect(stages(e2, 'e2')).toEqual(['new', 'visit']);
+  });
   it('a move back to an earlier stage is an undo move; a lead without a history gets the first move filled in', () => {
     let s = seed().citra;
     delete s.enquiries.e1.history;

@@ -6,7 +6,7 @@ import { checkOnList } from './checkOn';
 import { invoicePeriod, invoiceViews } from './finance';
 import { periodFor } from './insights';
 import { monthReport, prevPeriod } from './monthReport';
-import { leadFunnel } from './enquiries';
+import { leadConversion, leadMoves } from './enquiries';
 
 const T = '2026-10-21';
 const s = buildSeed().citra;
@@ -33,13 +33,22 @@ describe('month report', () => {
     expect(r.money.outstanding.cur).toBeLessThan(r.money.notYetDue.cur);
     expect(monthReport(s, periodFor('last3', T), T, 600).months.prev).toEqual(['2026-05', '2026-06', '2026-07']);
   });
-  it('the pipeline is the lead funnel of the period: a cohort, from the lead history', () => {
+  it('the pipeline is what happened in the period, from the lead history, with the conversion of the three months before', () => {
     const p = periodFor('thisMonth', T);
-    const f = leadFunnel(s, p.from, p.to);
+    const f = leadMoves(s, p.from, p.to);
+    const c = leadConversion(s, '2026-10');
     const pl = monthReport(s, p, T, 600).pipeline;
     expect(pl.funnel).toEqual({ new: f.opened, visit: f.visit, trial: f.trial, joined: f.joined });
     expect(pl.lostReasons).toEqual(f.lostReasons);
-    expect(pl.conversion.toJoined).toBe(f.opened ? Math.round((f.joined / f.opened) * 100) / 100 : null);
+    expect(pl.conversion).toEqual({ toVisit: c.toVisit, toTrial: c.toTrial, toJoined: c.toJoined });
     expect(f.opened).toBe(4); // e1, e2, e3 and e5 were opened in October
+    expect(f.lostReasons.otherPlace).toBe(1); // e9 was lost on 8 October
+  });
+  it('the roster’s joined agrees with the Members group: October 2 joined, 4 opened, 38% of the three months before', () => {
+    const r = buildSeed(T, 598, { roster: true }).citra;
+    const rep = monthReport(r, periodFor('thisMonth', T), T, 600);
+    expect(rep.pipeline.funnel).toMatchObject({ new: 4, joined: 2 });
+    expect(rep.pipeline.funnel.joined).toBe(rep.members.joined.cur);
+    expect(rep.pipeline.conversion.toJoined).toBe(0.38);
   });
 });

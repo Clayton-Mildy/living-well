@@ -106,6 +106,12 @@ function pushMove(e: Draft<Enquiry>, ctx: Ctx, stage: LeadMove['stage'], extra: 
   e.history ??= [{ stage: 'new', at: e.createdAt, by: e.createdBy }];
   e.history.push({ stage, at: ctx.nowDT, by: ctx.actor, ...extra });
 }
+/** A booking move: booking the same stage again (a new day or time) updates the lead's last move instead of adding a second one. */
+function bookMove(e: Draft<Enquiry>, ctx: Ctx, stage: 'visit' | 'trial', date: string) {
+  const last = e.history?.at(-1);
+  if (last && !last.undo && last.stage === stage) Object.assign(last, { at: ctx.nowDT, by: ctx.actor, date });
+  else pushMove(e, ctx, stage, { date });
+}
 const STAGE_RANK: Record<Enquiry['stage'], number> = { new: 0, visit: 1, trial: 2, joined: 3, lost: 4 };
 
 export const enquiriesActions = [
@@ -187,7 +193,7 @@ export const enquiriesActions = [
       const chk = bookingDayCheck(S(d), 'visit', i.date, i.time, ctx.today, ctx.now);
       if (!chk.ok) ctx.fail(chk.code, chk.params);
       upsertGuest(d, ctx, e, 'visit', { date: i.date, time: i.time });
-      pushMove(e, ctx, 'visit', { date: i.date });
+      bookMove(e, ctx, 'visit', i.date);
       e.stage = 'visit';
       e.next = { kind: 'visit', date: i.date, time: i.time };
       ctx.feed({ icon: 'meeting_room', key: 'enq.feed.visitBooked', params: { name: seniorName(e), date: dm(i.date), time: i.time } });
@@ -215,7 +221,7 @@ export const enquiriesActions = [
       const [day1, day2] = trialDays(S(d), i.date);
       const g1 = upsertGuest(d, ctx, e, 'trial', { date: day1, food: i.food, drugs: i.drugs, mobility: i.mobility, diet: i.diet });
       upsertSecondDay(d, g1, day2);
-      pushMove(e, ctx, 'trial', { date: day1 });
+      bookMove(e, ctx, 'trial', day1);
       e.stage = 'trial';
       e.next = { kind: 'trial', date: day1 };
       const name = seniorName(e);
