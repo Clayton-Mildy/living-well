@@ -78,6 +78,15 @@ Any photo or scan thumbnail a staff member or family sees opens in the viewer on
 ### 14. The online registration form is stepped, with a resumable draft (KC, 22 Oct 09:xx)
 `/form/:token` (`enquiries/PublicForm.tsx`) stops being one long page. It becomes the same stepped flow the staff use (round 12 §5): **Who is joining → Family contact → Health → Plan → Review and send** (no Paper step: the family signs at the club), one step per screen with the step bar, Back / Continue, and validation per step. The draft is saved as the family types: on the device (like the staff flow, key `cp.form.<token>`) AND on the server through the link (`enquiry.formSave`, system action via `POST /api/public/form/:token/draft`, storing the partial `OnlineRegistration` + the current step on `Enquiry.form`), so reopening the link on any phone continues where they left off (the newer of the two wins). The lead card's form pill reads "In progress · step 2 of 5" until it is submitted; the Join dialog pre-fills from a partial draft too. Submit stays `enquiry.formSubmit`.
 
+### 15. Sidebar sections for every staff role (KC, 22 Oct 11:xx)
+Only management's sidebar (tablet/laptop) has section headers. Every staff role gets the same treatment, as a regrouping of the items it already has (`NAVG[role]`), the phone bar order unchanged:
+- **Front desk (lobby):** (untitled) Arrivals, Members, Tasks · *Front desk* Enquiries, Renewals, Venue, Surveys · *Kitchen* Menu · *Club* Contacts, Requests.
+- **Nurse:** (untitled) Health checks, Readings, Members, Tasks · *Club* Requests, Contacts.
+- **Activity:** (untitled) Today, Camera, Log, Tasks · *Club* Members, Calendar, Requests, Contacts.
+- **Kitchen:** (untitled) Menu, Feedback, Tasks · *Club* Requests, Contacts.
+- **Finance:** (untitled) Billing, Payments, Budget, Receipts · *Kitchen* Stock · *Club* Guests, Members, Tasks, Directory.
+The phone "All modules" sheet shows the same groups where it already shows management's.
+
 ## Out of scope
 Finance invoice issuing by lobby, survey creation by lobby, payroll, leave carry-over between years.
 
