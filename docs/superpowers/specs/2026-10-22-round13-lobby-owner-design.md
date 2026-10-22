@@ -67,6 +67,14 @@ Manage → Plans (`mgmt/Plans.tsx`) stops being one flat grid of six equal price
 - **Next invoice preview**: unchanged, last.
 Phone: five grouped sections. Wide: Plans is a row of two cards; Extra charges and One-off fees share the next row; preview below. Behaviour (validation, preview with unsaved prices, notify) unchanged.
 
+## Phase 2b (KC, 22 Oct morning, while reviewing)
+
+### 12. Leave requests in the Approvals list
+Management approves staff leave from the Approvals page too: a new approval type `leave` (tab **Leave** after Payments) listing pending leave requests (who, dates, days, reason, "3 of 5 left"), with Approve / Reject (reject = decline with an optional note) and "Approve all". It uses the same rules as `leave.decide` (balance re-check, `staffTime` rows, notices) so People → Leave and Approvals never disagree; the management bell item and badge point at the Approvals tab. People → Leave stays.
+
+### 13. Every picture opens full size
+Any photo or scan thumbnail a staff member or family sees opens in the viewer on tap: the kitchen's lunch and tea photo tiles (today they only show time, a remove ✕ and "Shown to families"), activity and session pictures, camera drafts, approval rows, profile and staff photos, document/KTP/form scans, the activity catalog picture. One shared behaviour (`PhotoViewer` for photos, a plain image lightbox for scans), 44 px targets, the ✕ / remove controls keep working without opening the picture.
+
 ## Out of scope
 Finance invoice issuing by lobby, survey creation by lobby, payroll, leave carry-over between years.
 
