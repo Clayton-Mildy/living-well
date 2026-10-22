@@ -453,7 +453,11 @@ test('Camera ▸ Activity pictures: pick a day and an activity, add a picture wi
   await expect(rejected).toHaveAttribute('data-state', 'rejected');
   await expect(rejected).toContainText('Rejected');
   await expect(rejected).toContainText('Reason: Blurry');
-  await expect(rejected.getByRole('button', { name: /Keroncong|Batik/ })).toHaveCount(0); // a rejected picture no longer opens
+  // round 13: a rejected picture stays dimmed but still opens full size; closing it leaves the list as it was
+  await rejected.getByRole('button', { name: /Keroncong|Batik/ }).click();
+  await expect(page.getByTestId('image-lightbox')).toBeVisible();
+  await page.getByTestId('image-lightbox-close').click();
+  await expect(page.getByTestId('image-lightbox')).toHaveCount(0);
   // the bell tells her too, and leads back to that session (from anywhere)
   await page.goto('/today');
   await page.getByRole('button', { name: /Notifications/ }).first().click();

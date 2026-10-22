@@ -427,7 +427,7 @@ test.describe('receipts', () => {
     await page.getByRole('button', { name: 'Snap a receipt (nota)' }).click();
     await page.getByRole('button', { name: 'Tap to take the photo' }).click();
     await takePhotoWithFile(page); // no camera in a headless browser: the file picker is the fallback
-    await expect(page.getByRole('img', { name: 'Photo of receipt nota_2110.jpg' })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open full size · nota_2110.jpg' })).toBeVisible(); // round 13: the receipt picture opens full size
     await page.getByRole('button', { name: 'Sayur Segar Kemang', exact: true }).click();
     await expect(page.getByLabel('Supplier', { exact: true })).toHaveValue('Sayur Segar Kemang');
     await page.getByLabel('Amount (Rp)').fill('150000');
