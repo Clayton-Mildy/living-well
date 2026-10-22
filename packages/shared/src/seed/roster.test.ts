@@ -7,6 +7,7 @@ import {
   projectForFamily, runPreview, flexMonth, suspensions, ym, toMin, type ClubState,
 } from '../index';
 import { portraitId, demoMediaPath } from './demoMedia';
+import { leadMonths } from '../rules/enquiries';
 
 const build = (T = DEMO_TODAY, nowMin = DEMO_START_MIN) => buildSeed(T, nowMin, { roster: true }).citra;
 const extra = (s: ClubState) => live(s.members).filter((m) => /^m(5\d|[6-8]\d|90)$/.test(m.id));
@@ -135,4 +136,35 @@ describe('demo roster', () => {
       expect(() => runPreview(s, ym(addDays(T, 31)), T)).not.toThrow();
     }
   }, 30000);
+});
+
+describe('lead history seed (round 13)', () => {
+  it('every live lead has a history that starts with new at createdAt, in time order, and the funnel adds up', () => {
+    for (const s of [build(), buildSeed().citra]) {
+      for (const e of live(s.enquiries)) {
+        expect(e.history?.[0], e.id).toEqual({ stage: 'new', at: e.createdAt, by: e.createdBy });
+        const ats = e.history!.map((m) => m.at);
+        expect([...ats].sort(), e.id).toEqual(ats);
+        expect(e.history!.at(-1)!.stage, e.id).toBe(e.stage);
+      }
+    }
+    const e = buildSeed().citra.enquiries;
+    expect(e.e1.history!.map((m) => m.stage)).toEqual(['new', 'trial']);
+    expect(e.e5.history!.map((m) => m.stage)).toEqual(['new', 'visit']);
+    expect(e.e9.history!.map((m) => m.stage)).toEqual(['new', 'visit', 'lost']);
+    expect(e.e9.history!.at(-1)).toMatchObject({ reason: 'otherPlace' });
+  });
+  it('the roster has leads opened in each of the five months before today, none with a next step, and they add no lead to the small seed', () => {
+    const s = build();
+    const hist = live(s.enquiries).filter((e) => e.id.startsWith('e-h-'));
+    expect(hist.length).toBeGreaterThanOrEqual(10);
+    for (const e of hist) { expect(e.next, e.id).toBeUndefined(); expect(e.id).not.toMatch(/^e\d+$/); }
+    const months = leadMonths(s, DEMO_TODAY, 6);
+    for (const m of months.slice(1)) expect(m.funnel.opened, m.month).toBeGreaterThanOrEqual(1);
+    const phones = new Set([...live(s.familyContacts), ...live(s.staff)].map((x) => x.phone));
+    for (const e of hist.filter((x) => x.stage === 'lost')) expect(phones.has(e.contact.phone), e.id).toBe(false);
+    expect(Object.keys(buildSeed().citra.enquiries).sort()).toEqual(['e1', 'e2', 'e3', 'e5', 'e9']);
+    // the joined leads are the members who joined in the last months, counted as joined in the cohort of their opening month
+    expect(months.reduce((a, m) => a + m.funnel.joined, 0)).toBeGreaterThanOrEqual(3);
+  });
 });

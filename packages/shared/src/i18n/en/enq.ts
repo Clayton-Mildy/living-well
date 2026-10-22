@@ -10,6 +10,10 @@ export const enq = {
   // ----- board -----
   intro: 'Move a card with its button, or drag it. Trials are booked at least one day ahead. Joining copies everything into a new member record.',
   stageLabel: 'Stage',
+  // ----- lead history (round 13) -----
+  viewBoard: 'Leads', viewHistory: 'History', viewLabel: 'View',
+  'hist.opened': 'Opened', 'hist.visited': 'Visited', 'hist.trial': 'Trial', 'hist.joined': 'Joined', 'hist.lost': 'Lost', 'hist.leads': 'Leads ({n})', 'hist.back': 'Back to {stage}',
+  'hist.none': 'No leads this month', 'hist.monthsLabel': 'Leads by month', 'hist.opened_n': '{n} opened',
   pgColumn: '{stage} pages', pgArchived: 'Archived lead pages', newLead: 'New lead', archivedN: 'Archived · {n}', archivedTitle: 'Archived leads', restore: 'Restore', restored: '{name} is back on the board.', archive: 'Archive', archived: '{name} archived.',
   nobody: 'Nobody at this stage.', dropHere: 'Drop a card here', trialHint: 'Booked at least 1 day ahead', moveTo: 'Move to', reschedule: 'Change the {stage} time', alreadyMember: '{name} is already a member.',
   moved: '{name} moved to {stage}.', reopened: '{name} is back as an open lead.',

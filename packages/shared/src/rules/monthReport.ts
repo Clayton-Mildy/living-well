@@ -3,6 +3,7 @@
 import type { ClubState, EndReason, ISODate, LostReason, MoodMoment, StaffRole, YM } from '../types';
 import { activeOn, currentMembership, isPendingRow } from './core';
 import { checkOnList } from './checkOn';
+import { leadFunnel } from './enquiries';
 import { invoicePeriod } from './finance';
 import { invoiceTotal } from './billing';
 import { monthsOf, observedDays, type InsightPeriod } from './insights';
@@ -113,14 +114,10 @@ function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, t
 }
 
 function pipeline(s: ClubState, p: InsightPeriod, today: ISODate, nowMin: number): PipelineGroup {
-  const leads = live(s.enquiries).filter((e) => within(e.createdAt.slice(0, 10), p));
-  const came = (kind: 'visit' | 'trial') => new Set(live(s.guestVisits).filter((g) => g.kind === kind && g.status === 'booked' && within(g.date, p) && g.date <= today).map((g) => g.enquiryId)).size;
-  // members (not leads: two enquiries for one person are one join) whose lead started a membership in the period
-  const joined = new Set(live(s.enquiries).filter((e) => { const m = e.memberId ? s.members[e.memberId] : undefined; return !!m && !m.deletedAt && !isPendingRow(m) && within(currentMembership(m)?.start, p); }).map((e) => e.memberId)).size;
-  const funnel = { new: leads.length, visit: came('visit'), trial: came('trial'), joined };
-  const lostReasons = Object.fromEntries(LOST_REASONS.map((k) => [k, 0])) as Record<LostReason, number>;
-  // there is no date a lead was lost on: these are the leads opened this period that are lost now
-  for (const e of leads) if (e.stage === 'lost' && e.lost) lostReasons[e.lost.reason]++;
+  // round 13: a cohort from the lead history: the leads opened in the period and how far each got (the same numbers as the Enquiries History view)
+  const lf = leadFunnel(s, p.from, p.to);
+  const funnel = { new: lf.opened, visit: lf.visit, trial: lf.trial, joined: lf.joined };
+  const lostReasons = lf.lostReasons;
   const rated = (kind: 'family' | 'venue') => avg(live(s.surveyResponses).filter((r) => r.overall > 0 && within(r.on, p) && s.surveys[r.surveyId] && surveyKind(s.surveys[r.surveyId]) === kind).map((r) => r.overall));
   return {
     funnel,

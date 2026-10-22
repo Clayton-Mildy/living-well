@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, findByPhone, guestsOn, live, updatesFor, actionItems, DomainError, systemUser, type ClubState } from '../index';
-import { enquiryByFormToken, formLinkState, seniorName } from '../rules/enquiries';
+import { enquiryByFormToken, formLinkState, leadFunnel, seniorName } from '../rules/enquiries';
 
 const T = '2026-10-21'; // Wednesday
 const clock = { today: T, nowMin: 10 * 60 };
@@ -373,5 +373,53 @@ describe('online registration link', () => {
     // a fresh link after expiry is a new token
     const renewed = run(sent.state, 'enquiry.sendForm', { enquiryId: id }, 's1', late);
     expect(renewed.result.token).not.toBe(token);
+  });
+});
+
+describe('lead history (round 13)', () => {
+  const stages = (s: ClubState, id: string) => (s.enquiries[id].history ?? []).map((m) => m.stage + (m.undo ? '*' : ''));
+  it('create starts the history with the new move; every stage move, booking, lost and reopen appends one', () => {
+    const made = run(seed().citra, 'enquiry.create', lead, 's1');
+    const id = made.result.enquiryId as string;
+    expect(made.state.enquiries[id].history).toEqual([{ stage: 'new', at: '2026-10-21T10:00', by: 'staff:s1' }]);
+    let s = run(made.state, 'enquiry.move', { enquiryId: id, stage: 'visit' }, 's1').state;
+    expect(stages(s, id)).toEqual(['new', 'visit']);
+    s = run(s, 'enquiry.bookVisit', { enquiryId: id, date: '2026-10-23', time: '11:00' }, 's1').state;
+    expect(s.enquiries[id].history!.at(-1)).toMatchObject({ stage: 'visit', date: '2026-10-23', by: 'staff:s1', at: '2026-10-21T10:00' });
+    s = run(s, 'enquiry.bookTrial', { enquiryId: id, date: '2026-10-26', food: [], drugs: [], mobility: null, diet: [] }, 's1').state;
+    expect(s.enquiries[id].history!.at(-1)).toMatchObject({ stage: 'trial', date: '2026-10-26' });
+    s = run(s, 'enquiry.markLost', { enquiryId: id, reason: 'price', note: 'Too dear' }, 's9').state;
+    expect(s.enquiries[id].history!.at(-1)).toMatchObject({ stage: 'lost', reason: 'price', by: 'staff:s9' });
+    expect(s.enquiries[id].lost?.note).toBe('Too dear');
+    s = run(s, 'enquiry.reopen', { enquiryId: id }, 's9').state;
+    expect(s.enquiries[id].history!.at(-1)).toMatchObject({ stage: 'new', undo: true });
+    const n = s.enquiries[id].history!.length;
+    s = run(s, 'enquiry.archive', { enquiryId: id }, 's1').state;
+    expect(s.enquiries[id].history).toHaveLength(n); // archiving is not a move
+  });
+  it('a move back to an earlier stage is an undo move; a lead without a history gets the first move filled in', () => {
+    let s = seed().citra;
+    delete s.enquiries.e1.history;
+    s = run(s, 'enquiry.move', { enquiryId: 'e1', stage: 'visit' }, 's1').state;
+    expect(stages(s, 'e1')).toEqual(['new', 'visit*']);
+    expect(s.enquiries.e1.history![0]).toMatchObject({ stage: 'new', at: s.enquiries.e1.createdAt, by: s.enquiries.e1.createdBy });
+  });
+  it('a join by management is a joined move; a lobby join that is rejected or withdrawn leaves an undo move and is not counted', () => {
+    const input = { enquiryId: 'e1', plan: 'flex', start: '2026-10-26', ...paper };
+    const direct = run(seed().citra, 'enquiry.convert', input, 's9');
+    expect(direct.state.enquiries.e1.history!.at(-1)).toMatchObject({ stage: 'joined', by: 'staff:s9' });
+    expect(leadFunnel(direct.state, '2026-10-01', '2026-10-31').joined).toBe(1);
+
+    const gated = run(seed().citra, 'enquiry.convert', input, 's1');
+    expect(gated.state.enquiries.e1.history!.at(-1)).toMatchObject({ stage: 'joined', by: 'staff:s1' });
+    expect(leadFunnel(gated.state, '2026-10-01', '2026-10-31').joined).toBe(0); // waiting for management
+    const crId = gated.result.changeRequestId as string;
+    const rej = run(gated.state, 'review.reject', { crId, note: 'No' }, 's9').state;
+    expect(rej.enquiries.e1.history!.at(-1)).toMatchObject({ stage: 'trial', undo: true, by: 'staff:s9' });
+    expect(leadFunnel(rej, '2026-10-01', '2026-10-31').joined).toBe(0);
+    const wd = run(gated.state, 'review.withdraw', { crId }, 's1').state;
+    expect(wd.enquiries.e1.history!.at(-1)).toMatchObject({ stage: 'trial', undo: true, by: 'staff:s1' });
+    const ok = run(gated.state, 'review.approve', { crId }, 's9').state;
+    expect(leadFunnel(ok, '2026-10-01', '2026-10-31').joined).toBe(1);
   });
 });

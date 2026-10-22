@@ -477,6 +477,19 @@ export interface Feedback extends Row {
   source: 'family' | 'staff';
 }
 
+/** One move of a lead (round 13): the stage it went to, when and who. A visit or trial move carries the day booked; a lost move its reason. */
+export interface LeadMove {
+  stage: 'new' | 'visit' | 'trial' | 'joined' | 'lost';
+  at: DT;
+  by: Actor;
+  /** the visit or trial day booked */
+  date?: ISODate;
+  reason?: LostReason;
+  note?: string;
+  /** a move back: reopened, moved to an earlier stage, or a join that management rejected or the desk withdrew */
+  undo?: true;
+}
+
 export interface Enquiry extends Row {
   senior: { title: Title; name: string };
   contact: { name: string; relation: Relation; phone: string };
@@ -490,6 +503,8 @@ export interface Enquiry extends Row {
   /** Set while a gated conversion is pending (enquiry.convert): where the lead goes back to if management rejects. */
   prevStage?: Enquiry['stage'];
   prevNext?: Enquiry['next'];
+  /** Round 13: every move of the lead, oldest first (older rows have none: the rules read them as one `new` move at createdAt) */
+  history?: LeadMove[];
   /** KC round 10: the online registration link sent to this lead (a pre-fill for the paper form, never a replacement) */
   form?: EnquiryForm;
 }

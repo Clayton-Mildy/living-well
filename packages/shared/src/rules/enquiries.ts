@@ -2,11 +2,11 @@
 // Registration is on paper: staff type the key details from the signed paper form and attach a photo or PDF of it when the lead joins.
 import type {
   EnquiryForm, OnlineRegistration, KtpUploads,
-  Actor, ClubState, Consent, DT, Diet, DrugAllergy, Enquiry, FamilyContact, FamilyLink, FoodAllergen, GuestVisit, HM, ISODate, Member, MemberDocument,
+  Actor, ClubState, Consent, DT, Diet, DrugAllergy, Enquiry, FamilyContact, FamilyLink, FoodAllergen, GuestVisit, HM, ISODate, LeadMove, LostReason, Member, MemberDocument,
   MemberRegistration, Mobility, Plan, Relation, Title,
 } from '../types';
-import { dow, e164, live, sortBy, toMin } from '../util';
-import { dayStatus, nextOpenDay } from './core';
+import { addMonths, daysInMonth, dow, e164, live, sortBy, toMin, ym } from '../util';
+import { dayStatus, isPendingRow, nextOpenDay } from './core';
 import { genderOf, ktpDocuments } from './members';
 import { ratingTokenOf } from './surveys';
 
@@ -41,6 +41,51 @@ export function enquiriesByStage(s: ClubState): Record<EnqStage, Enquiry[]> {
 export const archivedEnquiries = (s: ClubState) => sortBy(live(s.enquiries).filter((e) => !!e.archivedAt), (e) => e.archivedAt || '', -1);
 export const openEnquiries = (s: ClubState) => sortBy(live(s.enquiries).filter((e) => !e.archivedAt && isOpenStage(e.stage)), (e) => nextKey(e) + e.createdAt);
 export const seniorName = (e: Pick<Enquiry, 'senior'>) => `${e.senior.title} ${e.senior.name}`;
+
+// ---------- lead history (round 13) ----------
+/** A lead's moves, oldest first. A row from before the history reads as one `new` move at createdAt. */
+export const leadHistory = (e: Pick<Enquiry, 'history' | 'createdAt' | 'createdBy'>): LeadMove[] => (e.history?.length ? e.history : [{ stage: 'new', at: e.createdAt, by: e.createdBy }]);
+/** The day the lead was opened: the date of its first move. */
+export const openedAt = (e: Pick<Enquiry, 'history' | 'createdAt' | 'createdBy'>): ISODate => leadHistory(e)[0].at.slice(0, 10);
+
+export interface LeadFunnel {
+  opened: number; visit: number; trial: number; joined: number; lost: number;
+  lostReasons: Record<LostReason, number>;
+  /** joined / opened (null when nothing was opened) */
+  conversion: number | null;
+  /** the cohort, oldest first */
+  leads: Enquiry[];
+}
+/**
+ * The lead funnel as a cohort: the leads opened between `from` and `to` (archived ones too) and how far each got, so no step ever exceeds the one before it.
+ * "Visit" is a lead that reached a visit or went further, "trial" one that reached a trial or joined. Joined needs the lead to be a member now and approved (a join waiting
+ * for management, rejected or withdrawn does not count); an undo move never counts as reaching a stage. Lost reasons are the lost leads' current reasons.
+ */
+export function leadFunnel(s: ClubState, from: ISODate, to: ISODate): LeadFunnel {
+  const leads = sortBy(live(s.enquiries).filter((e) => { const d = openedAt(e); return d >= from && d <= to; }), (e) => leadHistory(e)[0].at);
+  const out: LeadFunnel = { opened: leads.length, visit: 0, trial: 0, joined: 0, lost: 0, lostReasons: Object.fromEntries(LOST_REASONS.map((k) => [k, 0])) as Record<LostReason, number>, conversion: null, leads };
+  for (const e of leads) {
+    const m = e.memberId ? s.members[e.memberId] : undefined;
+    const joined = e.stage === 'joined' && !!m && !m.deletedAt && !isPendingRow(m);
+    const seen = new Set(leadHistory(e).filter((x) => !x.undo).map((x) => x.stage));
+    const trial = joined || seen.has('trial');
+    if (trial || seen.has('visit')) out.visit++;
+    if (trial) out.trial++;
+    if (joined) out.joined++;
+    if (e.stage === 'lost') { out.lost++; if (e.lost) out.lostReasons[e.lost.reason]++; }
+  }
+  out.conversion = out.opened ? out.joined / out.opened : null;
+  return out;
+}
+export interface LeadMonth { month: string; from: ISODate; to: ISODate; funnel: LeadFunnel }
+/** The `n` calendar months ending with the one `today` is in, newest first, each with its lead funnel. */
+export function leadMonths(s: ClubState, today: ISODate, n: number): LeadMonth[] {
+  return Array.from({ length: n }, (_, i) => {
+    const month = addMonths(ym(today), -i);
+    const from = `${month}-01`, to = `${month}-${String(daysInMonth(month)).padStart(2, '0')}`;
+    return { month, from, to, funnel: leadFunnel(s, from, to) };
+  });
+}
 
 // ---------- guests (visits and trials) ----------
 export const guestsOfEnquiry = (s: ClubState, enquiryId: string) => sortBy(live(s.guestVisits).filter((g) => g.enquiryId === enquiryId && g.status !== 'cancelled'), (g) => g.date + g.time);

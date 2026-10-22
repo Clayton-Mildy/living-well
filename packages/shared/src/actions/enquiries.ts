@@ -1,7 +1,7 @@
 // Enquiries (leads), visits and trials, and joining a lead as a member.
 // Registration is on paper: lobby and management type the key details in and attach the signed paper form (a photo or PDF uploaded to /api/media) when the lead joins.
 import type { Draft } from 'immer';
-import type { ClubState, DrugAllergy, Enquiry, FamilyContact, FoodAllergen, GuestVisit, OnlineRegistration, Plan, User } from '../types';
+import type { ClubState, DrugAllergy, Enquiry, LeadMove, FamilyContact, FoodAllergen, GuestVisit, OnlineRegistration, Plan, User } from '../types';
 import { defineAction, hasRole, DomainError, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
@@ -101,6 +101,13 @@ function finishJoin(d: Draft<ClubState>, memberId: string, input: ConvertIn, ctx
   ctx.notify({ toUsers: familyUserIds(d, memberId), kind: 'enq.notif.welcome', params: { name: shortOf(d, memberId), date: dm(input.start) }, link: '/today', memberId });
 }
 
+/** Append a move to the lead's history (a row from before round 13 gets its first `new` move filled in first). */
+function pushMove(e: Draft<Enquiry>, ctx: Ctx, stage: LeadMove['stage'], extra: Partial<Omit<LeadMove, 'stage' | 'at' | 'by'>> = {}) {
+  e.history ??= [{ stage: 'new', at: e.createdAt, by: e.createdBy }];
+  e.history.push({ stage, at: ctx.nowDT, by: ctx.actor, ...extra });
+}
+const STAGE_RANK: Record<Enquiry['stage'], number> = { new: 0, visit: 1, trial: 2, joined: 3, lost: 4 };
+
 export const enquiriesActions = [
   defineAction<CreateIn>({
     name: 'enquiry.create',
@@ -114,6 +121,7 @@ export const enquiriesActions = [
       d.enquiries[id] = {
         id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, senior: i.senior, contact: i.contact, source: i.source, stage: 'new',
         next: i.next ?? { kind: 'callBack', date: nextOpenDay(S(d), ctx.today) }, ...(i.notes ? { notes: i.notes } : {}),
+        history: [{ stage: 'new', at: ctx.nowDT, by: ctx.actor }],
       };
       ctx.result.enquiryId = id;
       ctx.feed({ icon: 'contact_phone', key: 'enq.feed.leadAdded', params: { name: seniorName(i) } });
@@ -159,6 +167,7 @@ export const enquiriesActions = [
       // going back drops the bookings of the stages the lead leaves
       if (i.stage === 'new') cancelPendingGuests(d, e.id, ctx.today);
       else if (i.stage === 'visit') cancelPendingGuests(d, e.id, ctx.today, ['trial']);
+      pushMove(e, ctx, i.stage, STAGE_RANK[i.stage] < STAGE_RANK[e.stage] ? { undo: true } : {});
       e.stage = i.stage;
       e.next = nextFor(d, i.stage, e.id, ctx.today);
       ctx.feed({ icon: 'swap_horiz', key: 'enq.feed.moved_' + i.stage, params: { name: seniorName(e) } });
@@ -178,6 +187,7 @@ export const enquiriesActions = [
       const chk = bookingDayCheck(S(d), 'visit', i.date, i.time, ctx.today, ctx.now);
       if (!chk.ok) ctx.fail(chk.code, chk.params);
       upsertGuest(d, ctx, e, 'visit', { date: i.date, time: i.time });
+      pushMove(e, ctx, 'visit', { date: i.date });
       e.stage = 'visit';
       e.next = { kind: 'visit', date: i.date, time: i.time };
       ctx.feed({ icon: 'meeting_room', key: 'enq.feed.visitBooked', params: { name: seniorName(e), date: dm(i.date), time: i.time } });
@@ -205,6 +215,7 @@ export const enquiriesActions = [
       const [day1, day2] = trialDays(S(d), i.date);
       const g1 = upsertGuest(d, ctx, e, 'trial', { date: day1, food: i.food, drugs: i.drugs, mobility: i.mobility, diet: i.diet });
       upsertSecondDay(d, g1, day2);
+      pushMove(e, ctx, 'trial', { date: day1 });
       e.stage = 'trial';
       e.next = { kind: 'trial', date: day1 };
       const name = seniorName(e);
@@ -229,6 +240,7 @@ export const enquiriesActions = [
       if (e.stage === 'joined') ctx.fail('enq.err.alreadyMember');
       if (e.stage === 'lost') ctx.fail('err.noChanges');
       e.lost = { reason: i.reason, ...(i.note ? { note: i.note } : {}), prevStage: e.stage };
+      pushMove(e, ctx, 'lost', { reason: i.reason, ...(i.note ? { note: i.note } : {}) });
       e.stage = 'lost';
       delete e.next;
       cancelPendingGuests(d, e.id, ctx.today);
@@ -246,6 +258,7 @@ export const enquiriesActions = [
       const e = enq(d, i.enquiryId, ctx);
       if (e.stage !== 'lost') ctx.fail('enq.err.notLost');
       e.stage = i.stage ?? 'new';
+      pushMove(e, ctx, e.stage, { undo: true });
       delete e.lost;
       e.next = nextFor(d, e.stage, e.id, ctx.today);
       delete e.archivedAt;
@@ -325,6 +338,7 @@ export const enquiriesActions = [
         e.prevStage = e.stage;
         if (e.next) e.prevNext = JSON.parse(JSON.stringify(e.next));
       }
+      pushMove(e, ctx, 'joined');
       e.stage = 'joined';
       e.memberId = memberId;
       e.next = { kind: 'starts', date: i.start };
@@ -347,6 +361,7 @@ export const enquiriesActions = [
       const e = d.enquiries[i.enquiryId];
       if (!e || e.stage !== 'joined') return;
       e.stage = e.prevStage ?? 'new';
+      pushMove(e, ctx, e.stage, { undo: true });
       if (e.prevNext) e.next = e.prevNext;
       else delete e.next;
       delete e.memberId;

@@ -5,7 +5,7 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { DndContext, DragOverlay, MouseSensor, TouchSensor, useDraggable, useDroppable, useSensor, useSensors, type DragEndEvent, type DragStartEvent } from '@dnd-kit/core';
 import type { Enquiry } from '@cp/shared';
 import { ENQ_STAGES, archivedEnquiries, enquiriesByStage, formLinkState, seniorName, type EnqStage } from '@cp/shared/rules/enquiries';
-import { Button, Dialog, FilterChips, HAIRLINE, Icon, IconButton, PageHead, Pager, Pin, TextField, uiZoom, usePaged } from '../../components/ui';
+import { Button, Dialog, FilterChips, HAIRLINE, Icon, IconButton, PageHead, Pager, Pin, Segmented, TextField, uiZoom, usePaged } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -15,6 +15,7 @@ import { say } from '../../store/ui';
 import { Pill, BadgePill, ListCard, PillBtn, SearchBar, HPAD, groupCard, heroCard, labelStyle } from '../mgmt/common';
 import { EnquiryDialogs, type Dlg } from './dialogs';
 import { nextText } from './text';
+import { LeadHistory, LeadTimeline } from './History';
 
 const STAGE_ICON: Record<EnqStage, string> = { new: 'call', visit: 'meeting_room', trial: 'waving_hand', joined: 'how_to_reg', lost: 'block' };
 const norm = (x: string) => x.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
@@ -42,6 +43,9 @@ export function Enquiries() {
   const [active, setActive] = useState<string | null>(null);
   const [q, setQ] = useState('');
   const searching = q.trim() !== '';
+  // round 13: Leads (the board) or History (per month, how far each lead got); ?view=history, cleared on Leads
+  const history = params.get('view') === 'history';
+  const setView = (v: 'board' | 'history') => { const p = new URLSearchParams(params); if (v === 'history') p.set('view', 'history'); else p.delete('view'); setParams(p, { replace: true }); };
   const all = useMemo(() => enquiriesByStage(s), [s]);
   // the search narrows every column (and the archive) to the leads whose senior or contact name matches; paging starts over on a new search
   const by = useMemo(() => (searching ? (Object.fromEntries(ENQ_STAGES.map((k) => [k, all[k].filter((e) => leadMatches(e, q))])) as typeof all) : all), [all, q, searching]);
@@ -98,20 +102,24 @@ export function Enquiries() {
     {/* round 6, phone: cp-native flattens the cards; the lead cards and the archive are iOS-style groups */}
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 20 }}>
       <PageHead eyebrow={fdl(today)} title={t('nav.enquiries')} size={40}
-        right={isPhone && !archivedAll.length ? undefined : (
+        right={history || (isPhone && !archivedAll.length) ? undefined : (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             {archivedAll.length ? <Button variant="secondary" icon="inventory_2" onClick={() => setShowArchived(!showArchived)}>{t('enq.archivedN', { n: archived.length })}</Button> : null}
             {isPhone ? null : <Button icon="add" onClick={() => setDlg({ mode: 'new' })}>{t('enq.newLead')}</Button>}
           </div>
         )} />
 
-      {isPhone ? <SearchBar value={q} onChange={setQ} label={t('enq.searchLabel')} placeholder={t('enq.searchPh')} /> : (
+      <Segmented<'board' | 'history'> label={t('enq.viewLabel')} value={history ? 'history' : 'board'} onChange={setView} items={[{ value: 'board', label: t('enq.viewBoard') }, { value: 'history', label: t('enq.viewHistory') }]} />
+
+      {history ? <LeadHistory wide={!isPhone} onOpen={(id) => setDlg({ mode: 'edit', id })} /> : null}
+
+      {history ? null : isPhone ? <SearchBar value={q} onChange={setQ} label={t('enq.searchLabel')} placeholder={t('enq.searchPh')} /> : (
       <div style={{ maxWidth: 460 }}>
         <TextField label={t('enq.searchLabel')} type="search" inputMode="search" value={q} onChange={setQ} placeholder={t('enq.searchPh')} />
       </div>
       )}
 
-      {isPhone ? (
+      {history ? null : isPhone ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <FilterChips label={t('enq.stageLabel')} value={stage} onChange={setStage} options={ENQ_STAGES.map((k) => ({ value: k, label: t('enq.stage.' + k), count: by[k].length }))} />
           {phonePaged.rows.map((e) => <LeadCard key={e.id} e={e} phone h={handlers} />)}
@@ -130,7 +138,7 @@ export function Enquiries() {
         </DndContext>
       )}
 
-      {showArchived && archived.length ? (isPhone ? (
+      {!history && showArchived && archived.length ? (isPhone ? (
         // round 6, phone: the archive is a grouped list under a small header
         <ListCard title={t('enq.archivedTitle')}>
           {archivedPaged.rows.map((e) => (
@@ -268,6 +276,7 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
         <Icon name={STAGE_ICON[e.stage]} size={phone ? 19 : 17} color="var(--accent, #75624B)" />
         <span>{nextText(t, fds, e)}</span>
       </div>
+      <LeadTimeline e={e} size={phone ? 14 : 13} />
       {e.stage === 'lost' && e.lost?.note ? <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4 }}>{e.lost.note}</span> : null}
       {e.notes ? <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{e.notes}</span> : null}
       {actions.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{actions}</div> : null}
