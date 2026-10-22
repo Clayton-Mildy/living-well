@@ -1,6 +1,6 @@
-// Plans and pricing (design ScrPlans): Flex, Gold and extra-day prices, the brochure's registration fee, 2-day trial and leave fee, plus the club rule (Flex visits per month, counted from check-ins),
-// edited with Save / Cancel and validation; next-invoice preview for a chosen member (with the unsaved prices).
-import { useMemo, useState } from 'react';
+// Plans and pricing (design ScrPlans), round 13 §11, five sections: Plans (Flex with its visits rule, Gold), Extra charges (extra day, leave month), One-off fees (registration, 2-day trial),
+// Changes (takes effect from + tell the team, only while something is edited) and the next-invoice preview for a chosen member (with the unsaved prices). Save / Cancel stay pinned.
+import { useMemo, useState, type ReactNode } from 'react';
 import { approvedMembers, feeOf, fmtN, memberName, membershipStatus, parseN, priceOn, rp } from '@cp/shared';
 import { invoicePreview, type PriceDraft } from '@cp/shared/rules/mgmt';
 import { Button, DateField, Group, Icon, PageHead, Select, TextField, Toggle, FONT_BODY } from '../../components/ui';
@@ -10,7 +10,7 @@ import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
-import { Page, SwitchRow, HPAD, heroCard, labelStyle, splitRow, tn } from './common';
+import { Page, SwitchRow, HPAD, heroCard, labelStyle, tn } from './common';
 
 type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave';
 const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave'];
@@ -110,21 +110,32 @@ export function Plans() {
       {show(k) ? <span role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}><Icon name="error" size={18} fill={1} />{t('mgmt.err.priceInvalid')}</span> : null}
     </label>
   );
-  const priceCard = (k: PriceKey, name: string, unit: string, facts: [string, string][]) => isPhone ? (
-    // round 6, phone: the plan's name is the group header (sample badge on its right); the price field and its facts sit in one flat group
-    <Group key={k} title={name} meta={sampleBadge(k)} gap={12}>
-      {priceField(k, name, unit)}
-      {factRows(facts)}
-    </Group>
-  ) : (
-    <div key={k} className="cp-card-pad cp-grey" style={{ ...heroCard, padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
+  // one price: name + sample badge, the price field, an optional extra field (the Flex visits rule), then its facts
+  const priceBlock = (k: PriceKey, name: string, unit: string, facts: [string, string][], extra?: ReactNode) => (
+    <>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C' }}>{name}</span>
+        {isPhone
+          ? <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 600, color: '#24201C' }}>{name}</span>
+          : <span style={{ fontSize: 22, lineHeight: '30px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C' }}>{name}</span>}
         {sampleBadge(k)}
       </div>
       {priceField(k, name, unit)}
+      {extra}
       {factRows(facts)}
-    </div>
+    </>
+  );
+  // a section: phone = one grouped list (prices separated by a hairline, no grey inside grey); wide = eyebrow over grey cards
+  const section = (label: string, blocks: ReactNode[], cols?: string) => isPhone ? (
+    <Group title={label} label={label} gap={16}>
+      {blocks.map((b, i) => <div key={i} style={{ display: 'flex', flexDirection: 'column', gap: 12, paddingTop: i ? 16 : 0, borderTop: i ? '0.5px solid var(--hairline, #E2E2E6)' : undefined }}>{b}</div>)}
+    </Group>
+  ) : (
+    <section aria-label={label} style={{ display: 'flex', flexDirection: 'column', gap: 10, minWidth: 0 }}>
+      <h2 style={{ ...labelStyle, margin: 0 }}>{label}</h2>
+      <div style={{ display: 'grid', gridTemplateColumns: cols ?? '1fr', gap: 16, alignItems: 'start' }}>
+        {blocks.map((b, i) => <div key={i} className="cp-card-pad cp-grey" style={{ ...heroCard, padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 12 }}>{b}</div>)}
+      </div>
+    </section>
   );
 
   const previewBody = members.length ? (
@@ -158,50 +169,51 @@ export function Plans() {
   ) : <div style={{ fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('mgmt.plNoMembers')}</div>;
   const rulesBody = <TextField label={t('mgmt.plQuotaL')} value={d.quota} inputMode="numeric" maxLength={2} onChange={(v) => set({ quota: v.replace(/\D/g, '') })} error={show('quota') && t('mgmt.err.quotaInvalid')} />;
 
+  // price edits need a date and the notify choice; a visits-only edit just applies from the next invoice (no date, no notify)
+  const changesBody = priceChanged ? (
+    <>
+      <DateField label={t('mgmt.plFrom')} value={d.from} min={today} onChange={(v) => set({ from: v })} error={show('from') && t('mgmt.err.pricePast')} hint={t('mgmt.plFromHint')} />
+      {isPhone ? <SwitchRow on={notify} onClick={() => setNotify(!notify)} label={t('mgmt.notifyTeam')} /> : <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('mgmt.notifyTeam')} />}
+    </>
+  ) : factRows([[t('mgmt.plFrom'), t('mgmt.plNextInvoice')]]);
+
   return (
     <Page gap={20}>
       <PageHead eyebrow={t('mgmt.plEyebrow')} title={t('nav.plans')} size={40} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: isPhone ? 18 : 16, alignItems: 'start' }}>
-        {priceCard('flex', t('mgmt.plan_flex'), t('mgmt.perMonth'), [
-          [t('mgmt.plQuota'), tn(t, 'mgmt.plQuotaV', quotaShown)], [t('mgmt.plUnused'), t('mgmt.plNoRoll')],
+      {section(t('mgmt.plSecPlans'), [
+        priceBlock('flex', t('mgmt.plan_flex'), t('mgmt.perMonth'), [[t('mgmt.plQuota'), tn(t, 'mgmt.plQuotaV', quotaShown)], [t('mgmt.plUnused'), t('mgmt.plNoRoll')]], rulesBody),
+        priceBlock('gold', t('mgmt.plan_gold'), t('mgmt.perMonth'), [[t('mgmt.plQuota'), t('mgmt.plUnlimited')], [t('mgmt.plExtra'), t('common.none')]]),
+      ], 'repeat(auto-fit,minmax(min(100%,300px),1fr))')}
+
+      <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: isPhone ? 18 : 16, alignItems: 'start' }}>
+        {section(t('mgmt.plSecExtra'), [
+          priceBlock('extra', t('mgmt.plExtra'), t('mgmt.perDay'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')], [t('mgmt.plCounted'), t('mgmt.plCheckIns')]]),
+          priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), t('mgmt.plLeaveAskV')]]),
         ])}
-        {priceCard('gold', t('mgmt.plan_gold'), t('mgmt.perMonth'), [[t('mgmt.plQuota'), t('mgmt.plUnlimited')], [t('mgmt.plExtra'), t('common.none')]])}
-        {priceCard('extra', t('mgmt.plExtra'), t('mgmt.perDay'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')], [t('mgmt.plCounted'), t('mgmt.plCheckIns')]])}
         {/* KC round 6: the brochure's other fees */}
-        {priceCard('registration', t('mgmt.plan_registration'), t('mgmt.perOnce'), [[t('mgmt.plRegWhen'), t('mgmt.plRegWhenV')], [t('mgmt.plRegAgain'), t('mgmt.plRegAgainV')]])}
-        {priceCard('trial', t('mgmt.plan_trial'), t('mgmt.perTrial'), [[t('mgmt.plTrialDays'), t('mgmt.plTrialDaysV')], [t('mgmt.plTrialCollect'), t('mgmt.plTrialCollectV')]])}
-        {priceCard('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), t('mgmt.plLeaveAskV')]])}
+        {section(t('mgmt.plSecOnce'), [
+          priceBlock('registration', t('mgmt.plan_registration'), t('mgmt.perOnce'), [[t('mgmt.plRegWhen'), t('mgmt.plRegWhenV')], [t('mgmt.plRegAgain'), t('mgmt.plRegAgainV')]]),
+          priceBlock('trial', t('mgmt.plan_trial'), t('mgmt.perTrial'), [[t('mgmt.plTrialDays'), t('mgmt.plTrialDaysV')], [t('mgmt.plTrialCollect'), t('mgmt.plTrialCollectV')]]),
+        ])}
       </div>
 
-      {priceChanged ? (isPhone ? (
-        <Group gap={10}>
-          <DateField label={t('mgmt.plFrom')} value={d.from} min={today} onChange={(v) => set({ from: v })} error={show('from') && t('mgmt.err.pricePast')} hint={t('mgmt.plFromHint')} />
-          <SwitchRow on={notify} onClick={() => setNotify(!notify)} label={t('mgmt.notifyTeam')} />
-        </Group>
+      {dirty ? (isPhone ? (
+        <Group title={t('mgmt.plSecChanges')} label={t('mgmt.plSecChanges')} gap={10}>{changesBody}</Group>
       ) : (
-        <div style={{ maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <DateField label={t('mgmt.plFrom')} value={d.from} min={today} onChange={(v) => set({ from: v })} error={show('from') && t('mgmt.err.pricePast')} hint={t('mgmt.plFromHint')} />
-          <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('mgmt.notifyTeam')} />
-        </div>
+        <section aria-label={t('mgmt.plSecChanges')} style={{ maxWidth: 420, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <h2 style={{ ...labelStyle, margin: 0 }}>{t('mgmt.plSecChanges')}</h2>
+          {changesBody}
+        </section>
       )) : null}
 
       {isPhone ? (
-        <>
-          <Group title={t('mgmt.plRules')} gap={12}>{rulesBody}</Group>
-          <Group title={t('mgmt.plPreview')} gap={10}>{previewBody}</Group>
-        </>
+        <Group title={t('mgmt.plPreview')} label={t('mgmt.plPreview')} gap={10}>{previewBody}</Group>
       ) : (
-      <div style={{ ...splitRow, gap: 'clamp(16px, 2.4vw, 32px)' }}>
-        <div className="cp-card-pad cp-grey" style={{ ...heroCard, flex: '0 1 320px', width: '100%', padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <span style={{ fontSize: 20, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.3px', color: '#2B231C' }}>{t('mgmt.plRules')}</span>
-          {rulesBody}
-        </div>
-      <div className="cp-grey" style={{ ...heroCard, flex: '1 1 420px', minWidth: 0, padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={labelStyle}>{t('mgmt.plPreview')}</div>
-        {previewBody}
-      </div>
-      </div>
+        <section aria-label={t('mgmt.plPreview')} className="cp-grey" style={{ ...heroCard, padding: `20px ${HPAD}`, display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <h2 style={{ ...labelStyle, margin: 0 }}>{t('mgmt.plPreview')}</h2>
+          {previewBody}
+        </section>
       )}
 
       {dirty ? (
