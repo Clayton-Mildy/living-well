@@ -68,4 +68,19 @@ describe('seed', () => {
     const { citra, adina } = buildSeed();
     for (const k of ['moodMarks', 'careCalls', 'celebrations'] as const) { expect(citra[k]).toBeTypeOf('object'); expect(adina[k]).toEqual({}); }
   });
+  it('round 13 staff leave: the collection exists, Adina has none, Citra has the four seeded requests with their leave rows', () => {
+    const { citra, adina } = buildSeed();
+    expect(adina.leaveRequests).toEqual({});
+    expect(citra.club.settings.leaveDays).toBe(5);
+    expect(Object.keys(citra.leaveRequests).sort()).toEqual(['lv-1', 'lv-2', 'lv-3', 'lv-4']);
+    expect(Object.values(citra.leaveRequests).map((x) => [x.staffId, x.status, x.days])).toEqual([['s5', 'approved', 2], ['s1', 'approved', 1], ['s1', 'pending', 2], ['s3', 'declined', 1]]);
+    expect(citra.leaveRequests['lv-4'].note).toBe('Menu tasting that day; please pick another day');
+    // an approved request has one staffTime leave row per day; a pending or declined one has none
+    const rows = live(citra.staffTime).filter((t) => t.kind === 'leave');
+    expect(rows).toHaveLength(3);
+    for (const id of ['lv-1', 'lv-2']) {
+      const lv = citra.leaveRequests[id];
+      expect(rows.filter((t) => t.staffId === lv.staffId && t.date >= lv.from && t.date <= lv.to)).toHaveLength(lv.days);
+    }
+  });
 });

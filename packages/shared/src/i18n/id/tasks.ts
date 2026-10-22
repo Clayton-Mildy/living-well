@@ -5,6 +5,7 @@ import type { tasks as EN } from '../en/tasks';
 export const tasks: Same<typeof EN> = {
   title: 'Tugas',
   progress: '{done} dari {total} selesai', allDone: 'Semua selesai', nothingDue: 'Belum ada yang jatuh tempo',
+  leaveGroup: 'Cuti',
   mine: 'Saya', team: 'Tim', manage: 'Kelola',
   duties: 'Tugas rutin hari ini', additional: 'Tugas tambahan', thisWeek: 'Minggu ini', thisMonth: 'Bulan ini', checklist: 'Hari ini',
   closed: 'Klub tutup hari ini, jadi tidak ada tugas.', empty: 'Belum ada tugas untuk Anda.',

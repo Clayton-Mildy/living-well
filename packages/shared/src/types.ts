@@ -86,6 +86,8 @@ export interface ClubSettings {
   limits?: HealthLimits;
   /** KC round 7: management's switches for the general duties (rules/tasks.ts `DUTIES`): off = the duty is not tracked or reminded, dueBy = its time (missing = the default) */
   duties?: Record<string, { off?: boolean; dueBy?: HM }>;
+  /** KC round 13: days of leave a staff member may take in a calendar year (missing = 5) */
+  leaveDays?: number;
 }
 
 /** One Watch / Alert pair; null = not used. */
@@ -861,6 +863,21 @@ export interface StaffTime extends Row {
   to?: HM;
 }
 
+/** KC round 13: a staff member's request for days off (open club days only, inside one calendar year). Approval writes a `leave` StaffTime row per day. */
+export interface LeaveRequest extends Row {
+  staffId: string;
+  from: ISODate;
+  to: ISODate;
+  /** open club days between from and to */
+  days: number;
+  reason: string;
+  status: 'pending' | 'approved' | 'declined' | 'cancelled';
+  decidedBy?: Actor;
+  decidedAt?: DT;
+  /** the reason given when declining */
+  note?: string;
+}
+
 /** Kinds of question management can write: 1 to 5 stars, yes or no, one option out of several, free text. */
 export type SurveyQuestionKind = 'rating' | 'yesno' | 'choice' | 'text';
 /** An answer to a custom question: stars (number), yes or no (boolean), the chosen option or the text (string). */
@@ -1144,6 +1161,8 @@ export interface ClubState {
   moodMarks: Record<string, MoodMark>;
   careCalls: Record<string, CareCall>;
   celebrations: Record<string, Celebration>;
+  // round 13
+  leaveRequests: Record<string, LeaveRequest>;
 }
 
 /** Collections stored as one Postgres table each (everything except clubId/rev/club). */
@@ -1155,7 +1174,7 @@ export const COLLECTIONS = [
   'invoices', 'payments', 'refunds', 'pendingCharges', 'invoiceRuns', 'directory', 'staff', 'hrNotes', 'staffTime',
   'surveys', 'surveyResponses', 'broadcasts', 'changeRequests', 'notifications', 'activity',
   'followUps', 'scheduleDays', 'guestHosts', 'guestSessions', 'surveyTemplates', 'taskTemplates', 'taskDone',
-  'moodMarks', 'careCalls', 'celebrations',
+  'moodMarks', 'careCalls', 'celebrations', 'leaveRequests',
 ] as const;
 export type CollectionName = (typeof COLLECTIONS)[number];
 

@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import { live } from '@cp/shared';
 import { approvalTotal, pendingItems } from '@cp/shared/rules/approvals';
 import { openTaskCount } from '@cp/shared/rules/tasks';
+import { pendingLeave } from '@cp/shared/rules/staffLeave';
 import { useClub } from '../store/replica';
 import { useNow } from '../lib/clock';
 import { useMe } from '../lib/me';
@@ -14,6 +15,7 @@ export function useNavCounts(): Record<string, number> {
   return useMemo(() => {
     if (!s || !role || !id) return {};
     const out: Record<string, number> = {};
+    if (role === 'mgmt') out.hr = pendingLeave(s).length; // round 13: staff leave requests waiting in People → Leave
     if (role === 'mgmt') out.reviews = approvalTotal(s); // everything waiting in Approvals: profile changes, care log, readings, photos, menu, stock
     const approver = role === 'mgmt' || role === 'finance' || (user?.kind === 'staff' && user.staff.supervisor);
     if (approver) out.stock = live(s.stockRequests).filter((k) => k.status === 'requested' && (role !== 'kitchen' || k.area === 'kitchen')).length;

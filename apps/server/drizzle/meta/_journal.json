@@ -43,6 +43,13 @@
       "when": 1792590190929,
       "tag": "0005_round12_collections",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1792631911654,
+      "tag": "0006_round13_leave",
+      "breakpoints": true
     }
   ]
 }

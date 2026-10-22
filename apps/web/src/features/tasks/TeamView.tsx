@@ -5,6 +5,7 @@ import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ClubState, ISODate, Staff, StaffRole } from '@cp/shared';
 import { staffCall } from '@cp/shared';
 import { activityName } from '@cp/shared/rules/activity';
+import { onLeave } from '@cp/shared/rules/staffLeave';
 import { spanOf, teamRange, teamSummary, type DutyState, type TeamSpan } from '@cp/shared/rules/tasks';
 import { DateField, EmptyState, Group, Icon, Segmented } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -34,7 +35,8 @@ export function TeamView({ s, today, nowMin }: { s: ClubState; today: ISODate; n
 
   const spanText = span === 'week' ? `${fmt.fds(from)} – ${fmt.fds(to)}` : span === 'month' ? fmt.fmonth(cur.slice(0, 7), true) : '';
   const peopleOf = (people: Staff[]) => {
-    const names = people.map((p) => staffCall(p)).filter(Boolean).join(', ');
+    // round 13: on a single day, a person with approved leave that day reads "Caca (on leave)"
+    const names = people.map((p) => (span === 'day' && onLeave(s, p.id, cur) ? t('people.leave.onLeave', { name: staffCall(p) }) : staffCall(p))).filter(Boolean).join(', ');
     const noLogin = people.length > 0 && people.every((p) => !p.appAccess);
     return [names, noLogin ? t('tasks.noLogin') : ''].filter(Boolean).join(' · ');
   };

@@ -54,7 +54,7 @@ describe('Tasks: my day', () => {
     await show(<Tasks />);
     expect(document.querySelector('[role="status"]')?.textContent).toMatch(/^1 of 5 done/); // the duty score: the check-ins (ticked once anyone is in), the check-out, two guests, the renewals
     const heads = Array.from(document.querySelectorAll('h2')).map((h) => h.textContent);
-    expect(heads).toEqual(['Today’s duties', 'Additional tasks']); // duties first
+    expect(heads).toEqual(['Today’s duties', 'Additional tasks', 'Leave']); // duties first, the staff member's own leave last (round 13)
     const renewals = document.querySelector('[data-duty="lobby.renewals"]')!;
     expect(renewals.textContent).toContain('Renewals followed up');
     expect(renewals.textContent).toContain('Late · By 09:00'); // 09:58 now

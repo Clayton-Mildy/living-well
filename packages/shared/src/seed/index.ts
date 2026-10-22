@@ -31,7 +31,7 @@ const base = (clubId: string, id: string, createdAt: DT, createdBy: Actor = 'sys
 export const PRICES = { flex: 2_700_000, gold: 3_950_000, extra: 650_000, registration: 2_500_000, trial: 450_000, leave: 250_000, sample: { flex: false, gold: false, extra: true } } as const;
 
 export const SETTINGS: ClubSettings = {
-  open: '08:30', close: '16:30', departureFrom: '15:30', recheckMin: 15, flexQuota: 10, issueDay: 21, dueDay: 28, suspendDay: 1, stopDay: 3, finalDueDays: 14,
+  open: '08:30', close: '16:30', departureFrom: '15:30', recheckMin: 15, flexQuota: 10, leaveDays: 5, issueDay: 21, dueDay: 28, suspendDay: 1, stopDay: 3, finalDueDays: 14,
   emergencyPhone: '+62 21 7590 1188', hoursLabel: 'Mon–Fri 08:30–16:30',
   broadcastTemplates: [
     { id: 'tpl-update', key: 'update', title: 'Club update', text: 'Hello {name}, news from CitraPremier: {msg}' },
