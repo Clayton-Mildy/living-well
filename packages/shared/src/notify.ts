@@ -72,10 +72,10 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
       if (!st.active || !st.hr.end) continue;
       if (st.hr.end >= today && st.hr.end <= addDays(today, 30)) add({ id: 'contract:' + st.id, kind: 'notif.act.contract', params: { name: st.name, date: st.hr.end }, link: `/hr?staff=${st.id}`, severity: 'attention', at: `${today}T08:00` });
     }
-    // round 13: one item per staff leave request waiting for a decision (clears when decided)
+    // round 13: one item per staff leave request waiting for a decision opening Approvals → Leave (clears when decided)
     for (const l of pendingLeave(s)) {
       const who = s.staff[l.staffId];
-      if (who && !who.deletedAt) add({ id: 'leave:' + l.id, kind: l.days === 1 ? 'notif.act.leaveRequestOne' : 'notif.act.leaveRequest', params: { name: who.knownAs || who.name.split(' ')[0], from: l.from, days: l.days }, link: `/hr?staff=${l.staffId}&tab=leave`, severity: 'attention', at: l.createdAt });
+      if (who && !who.deletedAt) add({ id: 'leave:' + l.id, kind: l.days === 1 ? 'notif.act.leaveRequestOne' : 'notif.act.leaveRequest', params: { name: who.knownAs || who.name.split(' ')[0], from: l.from, days: l.days }, link: '/reviews?tab=leave', severity: 'attention', at: l.createdAt });
     }
     for (const f of live(s.feedback).filter((x) => x.status === 'open')) add({ id: 'fb:' + f.id, kind: 'notif.act.complaint', params: { name: displayName(s.members[f.memberId]), dish: f.dish }, link: '/feedback', severity: 'attention', at: f.createdAt, memberId: f.memberId });
   }

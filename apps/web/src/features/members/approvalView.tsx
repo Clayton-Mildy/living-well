@@ -6,6 +6,7 @@ import { APPROVAL_TYPES, DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approv
 import { diffTemplates, templateOn, weekDate, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
 import type { TFn } from '../../lib/i18n';
 import { activityName, roundsOf } from '@cp/shared/rules/activity';
+import { leaveBalance } from '@cp/shared/rules/staffLeave';
 import { CHECK_KEY } from '../health/ReadingCard';
 import { values as readingValues } from './profile/CareTab';
 import { describeCr, type Described, type DiffRow } from './reviewDiff';
@@ -146,6 +147,27 @@ function payView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   return { who: m ? memberName(m) : '', kind: t('approvals.kind.payment'), summary, detail: { title: t('approvals.kind.payment'), rows: [], summary: rows }, edit: false };
 }
 
+/** Round 13: a staff member's leave request: "9 Nov – 10 Nov · 2 days · reason · 4 of 5 left". Pending and decided requests look the same. */
+function leaveView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
+  const r = s.leaveRequests?.[id];
+  const blank = { who: '', kind: t('approvals.kind.leave'), summary: '', detail: { title: '', rows: [], summary: [] }, edit: false };
+  if (!r) return blank;
+  const st = s.staff[r.staffId];
+  const who = st ? st.knownAs || st.name.split(' ')[0] : r.staffId;
+  const b = leaveBalance(s, r.staffId, Number(r.from.slice(0, 4)));
+  const range = r.from === r.to ? fmt.fds(r.from) : `${fmt.fds(r.from)} – ${fmt.fds(r.to)}`;
+  const days = t(r.days === 1 ? 'approvals.sum.leaveDay' : 'approvals.sum.leaveDays', { n: r.days });
+  const summary = t('approvals.sum.leave', { range, days, reason: r.reason, left: b.left, n: b.allowance });
+  const rows: DiffRow[] = [
+    { label: t('people.leave.from'), to: fmt.fds(r.from) },
+    { label: t('people.leave.to'), to: fmt.fds(r.to) },
+    { label: t('people.leave.stLeft'), to: t('people.leave.left', { left: b.left, n: b.allowance }) },
+    { label: t('people.leave.reason'), to: r.reason },
+    ...(r.note ? [{ label: t('common.note'), to: r.note }] : []),
+  ];
+  return { who, kind: t('approvals.kind.leave'), summary, detail: { title: t('approvals.kind.leave'), rows: [], summary: rows }, edit: false };
+}
+
 /** The view of one entry: pending (ApprovalItem) or handled (HistoryItem). Profile changes are described by describeCr. */
 export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
   switch (it.sub) {
@@ -157,6 +179,7 @@ export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
     case 'stock': return stockView(s, it.id, t);
     case 'renewal': return renewalView(s, it.id, t, fmt);
     case 'payment': return payView(s, it.id, t, fmt);
+    case 'leave': return leaveView(s, it.id, t, fmt);
     case 'cr': case 'flag': {
       const cr = s.changeRequests[it.id];
       if (cr) {
@@ -182,7 +205,7 @@ export function groupByPerson(s: ClubState, items: Record<ApprovalType, Approval
   const other: ApprovalItem[] = [];
   for (const type of APPROVAL_TYPES) {
     for (const it of items[type] || []) {
-      if (type === 'menu' || type === 'stock') { other.push(it); continue; }
+      if (type === 'menu' || type === 'stock' || type === 'leave') { other.push(it); continue; }
       let mid = it.memberId;
       if (type === 'photos') {
         const ph = s.photos[it.id];

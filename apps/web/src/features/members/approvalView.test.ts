@@ -27,7 +27,7 @@ describe('groupByPerson', () => {
       }
     }
     for (const it of g.groupPhotos) expect(s.photos[it.id].kind === 'solo' && s.photos[it.id].memberIds.length === 1).toBe(false);
-    for (const it of g.other) expect(['menu', 'stock']).toContain(it.type);
+    for (const it of g.other) expect(['menu', 'stock', 'leave']).toContain(it.type);
   });
 
   it('KC round 7: a waiting activity picture (a session, no members) goes to the "Group & activity photos" section', () => {

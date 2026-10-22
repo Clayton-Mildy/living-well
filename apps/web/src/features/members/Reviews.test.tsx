@@ -45,7 +45,7 @@ describe('Approvals', () => {
     openClub();
     await show(<Reviews />);
     const labels = Array.from(document.querySelectorAll('[role="tablist"][aria-label="Approval types"] [role="tab"]')).map((t) => t.textContent);
-    expect(labels).toEqual(['Profile · 2', 'Care log · 2', 'Health · 1', 'Photos · 0', 'Menu · 1', 'Stock · 3', 'Renewals · 1', 'Payments · 0', 'History']);
+    expect(labels).toEqual(['Profile · 2', 'Care log · 2', 'Health · 1', 'Photos · 0', 'Menu · 1', 'Stock · 3', 'Renewals · 1', 'Payments · 0', 'Leave · 1', 'History']);
     expect(tab(/^Profile/)?.getAttribute('aria-selected')).toBe('true');
     expect(document.querySelectorAll('[data-cr]')).toHaveLength(2); // a change to approve and a health edit applied at once
     expect(document.body.textContent).toContain('Acknowledge');
@@ -104,6 +104,68 @@ describe('Approvals', () => {
     expect(actMock.mock.calls[0][1]).toMatchObject({ type: 'readings', reason: 'Re-measure please' });
   });
 
+  it('Leave tab: the waiting request with dates, days, reason and balance; Approve sends one hub action', async () => {
+    openClub();
+    await show(<Reviews />);
+    await click(tab(/^Leave/));
+    const rows = document.querySelectorAll('[data-approval][data-type="leave"]');
+    expect(rows).toHaveLength(1);
+    expect(rows[0].textContent).toContain('Caca');
+    expect(rows[0].textContent).toContain('2 days');
+    expect(rows[0].textContent).toContain('Taking my mother to a check-up in Bandung');
+    expect(rows[0].textContent).toContain('4 of 5 left');
+    await click(Array.from(rows[0].querySelectorAll('button')).find((b) => /Approve$/.test(b.textContent || '')));
+    expect(actMock).toHaveBeenCalledWith('approval.approve', { type: 'leave', ids: ['lv-3'] });
+  });
+
+  it('Leave tab: "Approve all" approves every waiting request in one action', async () => {
+    openClub();
+    await show(<Reviews />);
+    await click(tab(/^Leave/));
+    await click(btn(/Approve all/));
+    expect(actMock).toHaveBeenCalledTimes(1);
+    expect(actMock).toHaveBeenCalledWith('approval.approve', { type: 'leave', ids: ['lv-3'] });
+  });
+
+  it('Leave tab: Reject opens a sheet where the note is optional and sends the decline with it (or without)', async () => {
+    openClub();
+    await show(<Reviews />);
+    await click(tab(/^Leave/));
+    const row = document.querySelector('[data-approval="lv-3"]')!;
+    await click(Array.from(row.querySelectorAll('button')).find((b) => /Reject$/.test(b.textContent || '')));
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.textContent).toContain('Note for Caca (optional)');
+    await click(Array.from(dialog.querySelectorAll('button')).find((b) => /Reject$/.test(b.textContent || ''))); // no note: still sent
+    expect(actMock).toHaveBeenCalledTimes(1);
+    expect(actMock.mock.calls[0]).toEqual(['approval.reject', { type: 'leave', ids: ['lv-3'], reason: '' }]);
+    actMock.mockClear();
+    await click(Array.from(row.querySelectorAll('button')).find((b) => /Reject$/.test(b.textContent || '')));
+    const d2 = document.querySelector('[role="dialog"]')!;
+    const ta = d2.querySelector('textarea')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(ta, 'We are short that week');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await click(Array.from(d2.querySelectorAll('button')).find((b) => /Reject$/.test(b.textContent || '')));
+    expect(actMock.mock.calls[0]).toEqual(['approval.reject', { type: 'leave', ids: ['lv-3'], reason: 'We are short that week' }]);
+  });
+
+  it('Leave tab opens from the bell link, shows the empty state when none wait, and History lists decided requests', async () => {
+    openClub();
+    const v0 = useReplica.getState().view!;
+    // no request waits; the declined one was answered a moment ago, so it heads the History list
+    const left = Object.fromEntries(Object.entries(v0.leaveRequests).filter(([k]) => k !== 'lv-3').map(([k, r]) => [k, k === 'lv-4' ? { ...r, decidedAt: '2026-10-21T09:59' } : r]));
+    useReplica.setState({ view: { ...v0, leaveRequests: left } });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/reviews?tab=leave']}><Reviews /></MemoryRouter>); });
+    expect(tab(/^Leave/)?.getAttribute('aria-selected')).toBe('true');
+    expect(document.body.textContent).toContain('No leave requests to decide');
+    await click(tab(/^History/));
+    expect(document.querySelector('[data-history="leave:leave:lv-4"]')?.textContent).toContain('Rejected');
+  });
+
   it('shows a row\'s old → new values in its full view and lists handled entries only in History', async () => {
     openClub();
     await show(<Reviews />);
@@ -141,7 +203,7 @@ describe('the marker staff see on their own entries', () => {
     expect(document.querySelector('[role="tablist"][aria-label="Approval types"]')).toBeNull(); // the type tabs belong to "Per item"
     const cards = Array.from(document.querySelectorAll('[data-person]')).filter((c) => !['group-photos', 'other'].includes(c.getAttribute('data-person') || ''));
     expect(cards.length).toBeGreaterThan(0);
-    expect(document.querySelector('[data-person="other"]')?.textContent).toContain('Other · menu and stock');
+    expect(document.querySelector('[data-person="other"]')?.textContent).toContain('Other · menu, stock and leave');
     const first = cards[0] as HTMLElement;
     const allBtn = Array.from(first.querySelectorAll('button')).find((b) => /Approve all \(\d+\)$/.test(b.textContent || ''))!; // the icon's ligature text comes first
     expect(allBtn).toBeTruthy();

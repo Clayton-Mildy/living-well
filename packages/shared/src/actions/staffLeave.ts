@@ -33,6 +33,30 @@ function clearRows(d: Draft<ClubState>, r: LeaveRequest, ctx: Ctx) {
   }
 }
 
+/**
+ * Approve or decline one waiting request: the balance is checked again, an approval writes the `leave` rows, the requester is told.
+ * Used by `leave.decide` (People → Leave) and by the Approvals list (`approval.approve` / `approval.reject` with type `leave`), so they never disagree.
+ * Fails with `err.notFound`, `people.err.leaveDecided` (not waiting any more) or `people.err.leaveTooMany` (the balance no longer covers it).
+ */
+export function decideLeave(d: Draft<ClubState>, ctx: Ctx, requestId: string, approve: boolean, note?: string): void {
+  const r = request(d, requestId, ctx);
+  if (r.status !== 'pending') ctx.fail('people.err.leaveDecided');
+  const name = nameOf(d, r.staffId);
+  if (approve) {
+    // the balance is checked again: other days may have been approved since it was asked
+    const b = leaveBalance(S(d), r.staffId, Number(r.from.slice(0, 4)), r.id);
+    if (r.days > b.left) ctx.fail('people.err.leaveTooMany', { left: b.left });
+    r.status = 'approved';
+    putRows(d, r, ctx);
+  } else r.status = 'declined';
+  r.decidedBy = ctx.actor;
+  r.decidedAt = ctx.nowDT;
+  if (!approve && note) r.note = note;
+  ctx.feed({ icon: 'beach_access', key: approve ? 'people.feed.leaveApproved' : 'people.feed.leaveDeclined', params: { name, from: dm(r.from) } });
+  if (d.staff[r.staffId] && r.staffId !== ctx.user.id)
+    ctx.notify({ toUsers: [r.staffId], kind: approve ? 'people.notif.leaveApproved' : 'people.notif.leaveDeclined', params: { from: r.from, days: r.days, note: approve ? '' : note ?? '' }, link: '/today', severity: 'attention' });
+}
+
 export const staffLeaveActions = [
   defineAction<{ from: string; to: string; reason: string }>({
     name: 'leave.request',
@@ -72,24 +96,7 @@ export const staffLeaveActions = [
       const note = str(o.note, 200);
       return { requestId: id80(o.requestId, 'requestId'), approve: bool(o.approve), ...(note ? { note } : {}) };
     },
-    run(d, i, ctx) {
-      const r = request(d, i.requestId, ctx);
-      if (r.status !== 'pending') ctx.fail('people.err.leaveDecided');
-      const name = nameOf(d, r.staffId);
-      if (i.approve) {
-        // the balance is checked again: other days may have been approved since it was asked
-        const b = leaveBalance(S(d), r.staffId, Number(r.from.slice(0, 4)), r.id);
-        if (r.days > b.left) ctx.fail('people.err.leaveTooMany', { left: b.left });
-        r.status = 'approved';
-        putRows(d, r, ctx);
-      } else r.status = 'declined';
-      r.decidedBy = ctx.actor;
-      r.decidedAt = ctx.nowDT;
-      if (!i.approve && i.note) r.note = i.note;
-      ctx.feed({ icon: 'beach_access', key: i.approve ? 'people.feed.leaveApproved' : 'people.feed.leaveDeclined', params: { name, from: dm(r.from) } });
-      if (d.staff[r.staffId] && r.staffId !== ctx.user.id)
-        ctx.notify({ toUsers: [r.staffId], kind: i.approve ? 'people.notif.leaveApproved' : 'people.notif.leaveDeclined', params: { from: r.from, days: r.days, note: i.approve ? '' : i.note ?? '' }, link: '/today', severity: 'attention' });
-    },
+    run(d, i, ctx) { decideLeave(d, ctx, i.requestId, i.approve, i.note); },
   }),
   defineAction<{ requestId: string }>({
     name: 'leave.cancel',
