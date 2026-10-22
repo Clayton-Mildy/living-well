@@ -9,6 +9,7 @@ export const kitchen = {
   'menu.none': 'None planned', 'menu.changeToday': 'Change today’s menu', 'menu.overridden': 'Today’s menu differs from the weekly plan.',
   'photo.title': 'Lunch photos', 'photo.add': 'Add a photo of today’s lunch',
   'photo.addMore': 'Add a photo', 'photo.alt': 'Lunch photo, taken {time}', 'photo.uploading': 'Sending the photo…', 'photo.full': 'Today’s lunch photos are full. Remove one to add another.',
+  'photo.open': 'Open the photo taken at {time} full size',
   'photo.status.visible': 'Shown to families', 'photo.status.pending': 'Waiting for approval', 'photo.status.hidden': 'Hidden from families',
   'photo.pendingNote': 'Management approves photos from the kitchen before families see them.',
   'photo.postedOk': 'Lunch photo posted. Families see it on the Today page.', 'photo.postedQuiet': 'Lunch photo posted. Families were not notified.', 'photo.sentOk': 'Photo sent to management. Families see it once it is approved.',

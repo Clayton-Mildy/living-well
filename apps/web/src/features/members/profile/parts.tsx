@@ -3,7 +3,7 @@ import { Fragment, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { actorName, type ChangeRequest } from '@cp/shared';
 import { tabForSection, type ProfileTab } from '@cp/shared/rules/members';
-import { Button, FONT_BODY, FONT_SMALL, Group, Icon, SectionLabel } from '../../../components/ui';
+import { Button, FONT_BODY, FONT_SMALL, Group, Icon, ImageOpen, SectionLabel } from '../../../components/ui';
 import type { TFn } from '../../../lib/i18n';
 import { describeCr, type Described, type DiffRow } from '../reviewDiff';
 import { HAIR, listCardStyle, whenText, type FlagChip } from '../lib';
@@ -73,7 +73,7 @@ export const ListCard = ({ phone, title, style, children }: { phone?: boolean; t
 export function DiffList({ d, t, proposed = true }: { d: Described; t: TFn; proposed?: boolean }) {
   const rows: DiffRow[] = [...d.summary, ...d.rows];
   if (!rows.length) return null;
-  const pic = (url: string | undefined, text: string | undefined) => (url ? <img src={url} alt={text || ''} style={{ width: 56, height: 56, borderRadius: 999, objectFit: 'cover', verticalAlign: 'middle' }} /> : text);
+  const pic = (url: string | undefined, text: string | undefined) => (url ? <ImageOpen src={url} label={`${t('common.openFull')}${text ? ` · ${text}` : ''}`} style={{ display: 'inline-block', borderRadius: 999, verticalAlign: 'middle' }}><img src={url} alt={text || ''} style={{ width: 56, height: 56, borderRadius: 999, objectFit: 'cover', verticalAlign: 'middle', display: 'block' }} /></ImageOpen> : text);
   return (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {rows.map((r, i) => {

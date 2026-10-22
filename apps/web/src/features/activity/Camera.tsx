@@ -12,7 +12,7 @@ import { useSearchParams } from 'react-router-dom';
 import { listName, famNames, displayName, primaryContact, type Photo } from '@cp/shared';
 import { draftsOf } from '@cp/shared/rules/photoAi';
 import { curAct, faceTagging, inClubMembers, photoCountByMember, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, activityName, roomName } from '@cp/shared/rules/activity';
-import { Button, CameraCapture, GROUP_HEAD, Icon, PageHead, Pager, Pin, PhotoImg, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
+import { Button, CameraCapture, GROUP_HEAD, Icon, PageHead, Pager, Pin, PhotoImg, ImageOpen, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useLang, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -321,7 +321,7 @@ export function Camera() {
         )}>
         {preview ? (group?.media === 'video'
           ? <video src={preview} controls playsInline preload="metadata" aria-label={t('ds.videoPreview')} style={{ width: '100%', maxHeight: 180, objectFit: 'contain', borderRadius: 12, background: '#000000' }} />
-          : <img src={preview} alt={t('common.photoPreview')} style={{ width: '100%', maxHeight: 140, objectFit: 'cover', borderRadius: 12, background: '#E8E1D8' }} />) : null}
+          : <ImageOpen src={preview} label={t('common.openFull')} style={{ width: '100%' }}><img src={preview} alt={t('common.photoPreview')} style={{ width: '100%', maxHeight: 140, objectFit: 'cover', borderRadius: 12, background: '#E8E1D8', display: 'block' }} /></ImageOpen>) : null}
         {pick.length || sessionPic ? ( // what it will be saved as: nobody is a picture of the session, one person a personal photo, more a group photo
           <span data-testid="photo-type" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 14, color: '#5E5852' }}>
             <Icon name={!pick.length ? 'photo_camera' : pick.length === 1 ? 'person' : 'groups'} size={18} />{!pick.length ? t('activity.sessionPicType', { activity: sessionLabel }) : pick.length === 1 ? t('activity.typeSolo') : t('activity.typeGroup', { n: pick.length })}

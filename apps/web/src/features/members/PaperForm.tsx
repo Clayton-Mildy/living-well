@@ -2,7 +2,7 @@
 // and kept as the member's document. This file has the picker (used by Add member, joining a lead and the Docs tab) and the viewer.
 import { useRef, useState, type ReactNode } from 'react';
 import { hasKey, type MemberDocument } from '@cp/shared';
-import { Button, CameraCapture, Dialog, Icon, Note } from '../../components/ui';
+import { Button, CameraCapture, Dialog, Icon, ImageOpen, Note } from '../../components/ui';
 import { ApiError } from '../../lib/api';
 import { useT } from '../../lib/i18n';
 import { isPdfName, mediaUrl, uploadDocument } from '../../lib/media';
@@ -91,7 +91,7 @@ export function KtpField({ label, value, onChange, name, uploader, testId }: { l
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
         {value ? (
           <span style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-            {img ? <img src={img} alt={label} style={{ width: 72, height: 48, objectFit: 'cover', borderRadius: 8, background: 'var(--fill, #F4F4F5)', flex: 'none' }} /> : <Icon name="picture_as_pdf" size={28} color="#75624B" />}
+            {img ? <ImageOpen src={img} label={`${t('common.openFull')} · ${label}`}><img src={img} alt={label} style={{ display: 'block', width: 72, height: 48, objectFit: 'cover', borderRadius: 8, background: 'var(--fill, #F4F4F5)' }} /></ImageOpen> : <Icon name="picture_as_pdf" size={28} color="#75624B" />}
             <span style={{ display: 'flex', alignItems: 'center', gap: 5, fontSize: 14, color: '#3D6B4F', fontWeight: 500 }}><Icon name="check_circle" size={18} fill={1} />{t('profile.ktpAttached')}</span>
           </span>
         ) : null}

@@ -483,6 +483,8 @@ export { TimeField } from './TimeField';
 export { usePaged, Pager, type Paged } from './Pager';
 export { CameraCapture, type CaptureInfo } from './CameraCapture';
 export { PhotoImg, PhotoThumbs } from './PhotoImg';
+export { ImageLightbox, ImageOpen } from './ImageLightbox';
+export { useBackClose } from './useBackClose';
 export { uiZoom } from './field';
 export { TrendChart, TrendRangeTabs, TrendRangeControl, rangeFrom, rangeValue, windowOf, inWindow, TREND_RANGES, type TrendChartProps, type TrendPoint, type TrendSeries, type TrendRange, type RangeValue, type RangeChoice, type DateWindow } from './TrendChart';
 export { MoodFaces, FACE_ICON } from './MoodFaces';

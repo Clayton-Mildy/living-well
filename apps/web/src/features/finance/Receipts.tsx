@@ -3,11 +3,11 @@
 import { useMemo, useState } from 'react';
 import { actorName, live, rp, sortBy, type Receipt, type VendorInvoice } from '@cp/shared';
 import { activeSections, receiptOfRequest, receiptsList, sectionName, vendorInvoicesList } from '@cp/shared/rules/finance';
-import { Button, CameraCapture, Chip, DateField, EmptyState, Icon, PageHead, PhotoImg, Pin, Select, TextField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, CameraCapture, Chip, DateField, EmptyState, Icon, PageHead, PhotoImg, ImageOpen, Pin, Select, TextField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { ApiError } from '../../lib/api';
-import { uploadMedia } from '../../lib/media';
+import { mediaUrl, uploadMedia } from '../../lib/media';
 import { say } from '../../store/ui';
 import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
@@ -166,7 +166,7 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: 84, flex: 'none', aspectRatio: '3/4', borderRadius: 10, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
-              <PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} />
+              <ImageOpen src={mediaId ? mediaUrl(mediaId) : null} label={t('common.openFull')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} /></ImageOpen>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', minWidth: 0 }}>
               <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: 'var(--on-card, #FFFFFF)', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
@@ -195,8 +195,8 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
       ) : (
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
         <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: '100%', aspectRatio: '3/4', borderRadius: 14, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
-          <PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} />
-          <span style={{ position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
+          <ImageOpen src={mediaId ? mediaUrl(mediaId) : null} label={t('common.openFull')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} /></ImageOpen>
+          <span style={{ pointerEvents: 'none', position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
             <Icon name="check_circle" size={17} color="#3D6B4F" />{file}
           </span>
         </div>
@@ -272,7 +272,7 @@ function ReceiptRow({ r, canApprove, onEdit, first }: { r: Receipt; canApprove: 
     return (
       <div style={{ ...prow(first), display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <span aria-hidden="true" style={{ width: 36, height: 46, borderRadius: 7, background: PAPER, boxShadow: 'inset 0 0 0 0.5px var(--field-bd, #E0E0E4)', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
+          <span style={{ width: 36, height: 46, borderRadius: 7, background: PAPER, boxShadow: 'inset 0 0 0 0.5px var(--field-bd, #E0E0E4)', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <ImageOpen src={mediaUrl(r.mediaId)} label={`${t('common.openFull')} · ${r.supplier}`} style={{ width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /></ImageOpen> : null}</span>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ ...rowTitle, fontSize: 16 }}>{r.supplier} · {rp(r.amount)}</span>
             <span style={{ ...rowSub, fontSize: 13 }}>{sectionName(s, r.sectionId, lang)} · {actorName(s, `staff:${r.by}`)} · {r.date === today ? t('common.today').toLowerCase() : fds(r.date)}</span>
@@ -300,7 +300,7 @@ function ReceiptRow({ r, canApprove, onEdit, first }: { r: Receipt; canApprove: 
   return (
     <div style={{ ...hrow, display: 'flex', flexDirection: 'column', gap: 8 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px 14px', flexWrap: 'wrap' }}>
-        <span aria-hidden="true" style={{ width: 40, height: 52, borderRadius: 8, background: PAPER, boxShadow: 'inset 0 0 0 0.5px var(--field-bd, #E0E0E4)', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /> : null}</span>
+        <span style={{ width: 40, height: 52, borderRadius: 8, background: PAPER, boxShadow: 'inset 0 0 0 0.5px var(--field-bd, #E0E0E4)', flex: 'none', overflow: 'hidden' }}>{r.mediaId ? <ImageOpen src={mediaUrl(r.mediaId)} label={`${t('common.openFull')} · ${r.supplier}`} style={{ width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: r.mediaId, tone: 0 }} /></ImageOpen> : null}</span>
         <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={rowTitle}>{r.supplier} · {rp(r.amount)}</span>
           <span style={rowSub}>{sectionName(s, r.sectionId, lang)} · {actorName(s, `staff:${r.by}`)} · {r.date === today ? t('common.today').toLowerCase() : fds(r.date)}</span>

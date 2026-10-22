@@ -6,7 +6,8 @@ import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from
 import { displayName, toMin, type Photo } from '@cp/shared';
 import { attendedOn, curAct, faceTagging, pictureDays, pictureSessions } from '@cp/shared/rules/activity';
 import { draftGroupKey, draftKindOf, draftKindsFor, draftMeal, draftNotes, draftsOf, type DraftKind } from '@cp/shared/rules/photoAi';
-import { Button, Card, EmptyState, Group, Icon, Note, PageHead, PhotoImg, Segmented, Select, Sheet, SectionLabel, FONT_BODY } from '../../components/ui';
+import { mediaUrl } from '../../lib/media';
+import { Button, Card, EmptyState, Group, Icon, Note, PageHead, PhotoImg, ImageOpen, Segmented, Select, Sheet, SectionLabel, FONT_BODY } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useT, useLang, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -150,7 +151,9 @@ function DraftSheet({ draft, onClose }: { draft: Photo; onClose: () => void }) {
       )}>
       <div data-testid="draft-sheet" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
         <div style={{ position: 'relative', height: 150, borderRadius: 12, overflow: 'hidden', background: '#E8E1D8' }}>
-          <span role="img" aria-label={t('drafts.preview')} style={{ position: 'absolute', inset: 0 }}><PhotoImg photo={draft} controls={draft.media === 'video'} /></span>
+          <ImageOpen src={draft.mediaId && draft.media !== 'video' ? mediaUrl(draft.mediaId) : null} label={t('common.openFull')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}>
+            <span role="img" aria-label={t('drafts.preview')} style={{ position: 'absolute', inset: 0 }}><PhotoImg photo={draft} controls={draft.media === 'video'} /></span>
+          </ImageOpen>
         </div>
         {ai ? <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: 'var(--eyebrow, #6E5A43)' }}><AiMark label={t('drafts.aiSuggested')} />{sure ? <span>{t('drafts.aiLine', { pct: sure })}</span> : null}</div> : null}
         {kinds.length > 1 ? (

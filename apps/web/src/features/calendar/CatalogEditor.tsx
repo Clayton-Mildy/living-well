@@ -5,7 +5,7 @@ import { useState, type ReactNode } from 'react';
 import { useResetOn } from '../../lib/useResetOn';
 import { live } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
-import { Button, CameraCapture, Dialog, EmptyState, Eyebrow, Group, Icon, IconButton, InfoChip, Note, Pager, PhoneScreen, Segmented, Select, TextField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, CameraCapture, Dialog, EmptyState, Eyebrow, Group, Icon, IconButton, ImageOpen, InfoChip, Note, Pager, PhoneScreen, Segmented, Select, TextField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
 import { activityPhoto, mediaUrl, photoFill, uploadMedia } from '../../lib/media';
 import { ApiError } from '../../lib/api';
 import { say } from '../../store/ui';
@@ -197,7 +197,9 @@ function ActivityPhotoField({ icon, value, onChange }: { icon: string; value: st
   };
   return (
     <div role="group" aria-label={t('cal.photo')} data-testid="activity-photo" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-      <span aria-hidden="true" className="cp-fill" style={{ width: 96, height: 72, borderRadius: 12, background: photoFill(value ? mediaUrl(value) : undefined, 'var(--fill, #F4F4F5)'), color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{value ? null : <Icon name={icon} size={30} />}</span>
+      <ImageOpen src={value ? mediaUrl(value) : null} label={t('common.openFull')} style={{ borderRadius: 12 }}>
+        <span aria-hidden={value ? undefined : true} className="cp-fill" style={{ width: 96, height: 72, borderRadius: 12, background: photoFill(value ? mediaUrl(value) : undefined, 'var(--fill, #F4F4F5)'), color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>{value ? null : <Icon name={icon} size={30} />}</span>
+      </ImageOpen>
       <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('cal.photo')}</span>
         <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('cal.photoHint')}</span>
