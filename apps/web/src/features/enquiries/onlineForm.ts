@@ -35,11 +35,11 @@ const REG_FIELDS: Record<OnlineStep, string[]> = { who: ['rtRw', 'postcode', 're
 
 export function onlineIssues(step: OnlineStep, d: FDraft): FieldIssue[] {
   const reg = validateRegistration(regOfDraft(d.reg, d.nanny)).filter((i) => REG_FIELDS[step].includes(i.field));
-  if (step === 'who') return [...(d.title.trim() ? [] : [{ field: 'title', code: 'enq.err.titleRequired' }]), ...(d.name.trim() ? [] : [{ field: 'name', code: 'err.invalid' }]), ...reg];
+  if (step === 'who') return [...(d.title.trim() ? [] : [{ field: 'title', code: 'enq.err.titleRequired' }]), ...(d.name.trim() ? [] : [{ field: 'name', code: 'members.err.nameRequired' }]), ...reg];
   if (step === 'family') {
     return [
-      ...(d.cName.trim() ? [] : [{ field: 'contact', code: 'err.invalid' }]),
-      ...(d.phone.replace(/\D/g, '').length >= 8 ? [] : [{ field: 'phone', code: 'err.invalid' }]),
+      ...(d.cName.trim() ? [] : [{ field: 'contact', code: 'members.err.contactRequired' }]),
+      ...(d.phone.replace(/\D/g, '').length >= 8 ? [] : [{ field: 'phone', code: 'members.err.phoneRequired' }]),
       ...(carerOk(d) ? [] : [{ field: 'nanny', code: 'members.err.nannyNikRequired' }]),
       ...reg,
     ];

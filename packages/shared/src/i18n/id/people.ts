@@ -44,7 +44,7 @@ export const people: Same<typeof EN> = {
   'leave.st_pending': 'Menunggu', 'leave.st_approved': 'Disetujui', 'leave.st_declined': 'Ditolak', 'leave.st_cancelled': 'Dibatalkan',
   'leave.none': 'Belum ada pengajuan cuti tahun ini.', 'leave.askedSub': 'Mengajukan cuti', 'leave.onLeave': '{name} (cuti)', 'leave.noteIs': 'Catatan: {note}',
   'err.leaveReason': 'Tulis untuk apa cuti ini.', 'err.leavePast': 'Cuti tidak bisa dimulai di masa lalu.', 'err.leaveNoDays': 'Tidak ada hari kerja klub pada tanggal itu.', 'err.leaveYear': 'Cuti harus dalam satu tahun kalender. Ajukan per tahun.',
-  'err.leaveOverlap': 'Anda sudah punya cuti pada sebagian tanggal itu.', 'err.leaveTooMany': 'Itu melebihi sisa cuti yang dapat Anda ajukan tahun ini ({left} hari tersisa setelah yang menunggu)', 'err.leaveDecided': 'Pengajuan itu sudah dijawab.', 'err.leaveStarted': 'Cuti itu sudah dimulai.',
+  'err.leaveOverlap': 'Anda sudah punya cuti pada sebagian tanggal itu.', 'err.leaveTooMany': 'Itu melebihi sisa cuti yang dapat Anda ajukan tahun ini ({left} hari tersisa setelah yang menunggu)', 'err.leaveTooManyDecide': 'Itu melebihi sisa cuti {name} tahun ini ({left} hari tersisa)', 'err.leaveDecided': 'Pengajuan itu sudah dijawab.', 'err.leaveStarted': 'Cuti itu sudah dimulai.',
   'notif.leaveApproved': 'Cuti Anda mulai {from} disetujui.', 'notif.leaveDeclined': 'Cuti Anda mulai {from} ditolak. {note}', 'notif.leaveCancelled': 'Cuti Anda mulai {from} dibatalkan oleh manajemen.',
   'feed.leaveAsked': '{name} mengajukan cuti mulai {from}', 'feed.leaveApproved': 'Cuti disetujui · {name} mulai {from}', 'feed.leaveDeclined': 'Cuti ditolak · {name} mulai {from}', 'feed.leaveCancelled': 'Cuti dibatalkan · {name} mulai {from}',
 };

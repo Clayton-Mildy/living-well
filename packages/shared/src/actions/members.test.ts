@@ -336,6 +336,18 @@ describe('documents, consent and plan (gated)', () => {
     expect(planNotes(m.state)).toHaveLength(1);
   });
 
+  it('a desk plan change approved after the 1st it asked for is applied from that 1st, the family told once', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: '2026-11-01' }, who(c, 's1'));
+    const crId = Object.values(r.state.changeRequests).find((x) => x.status === 'pending' && x.section === 'plan' && x.target.id === 'm1')!.id;
+    const a = run(r.state, 'review.approve', { crId }, who(c, 's9'), { today: '2026-11-03', nowMin: 600 });
+    expect(a.state.members.m1.plans.map((p) => [p.from, p.plan])).toEqual([['2025-03-03', 'flex'], ['2026-11-01', 'gold']]);
+    expect(a.state.changeRequests[crId].status).toBe('approved');
+    expect(Object.values(a.state.notifications || {}).filter((x) => x.kind === 'members.notif.planChanged')).toHaveLength(1);
+    // a direct run still refuses a past date
+    expect(() => run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: '2026-11-01' }, who(c, 's9'), { today: '2026-11-03', nowMin: 600 })).toThrow('members.err.effectiveInvalid');
+  });
+
   it('a scheduled change is replaced by a new one; a matching pending request is marked applied', () => {
     const c = seed();
     const a = run(c.citra, 'members.changePlan', { memberId: 'm10', plan: 'gold' }, who(c, 's9'));

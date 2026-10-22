@@ -22,7 +22,7 @@ import { Rows, StepBar } from '../members/register/parts';
 import { AllergyFields, CarerFields, DementiaFields, HealthFields, IdFields, PeSection, RegCareFields, RegPersonalFields, RelationChips, TextField, TitleName, type RegDraft } from '../members/dialogs/forms';
 import { ONLINE_STEPS, STEP_NAME_KEY, blankOnline, clearDevice, firstOpenOnlineStep, fromOnline, loadDevice, onlineIssues, pickDraft, resumeStep, saveDevice, toOnline, type FDraft, type OnlineStep } from './onlineForm';
 
-interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; flexQuota: number } }
+interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; extra: number; flexQuota: number } }
 type View = { kind: 'loading' } | { kind: 'ready'; info: Info } | { kind: 'bad' } | { kind: 'network' } | { kind: 'expired' } | { kind: 'done'; date: string } | { kind: 'thanks'; name: string };
 type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
 /** This phone's answers and the lead's, when both changed since they last met: the family picks one. */
@@ -265,7 +265,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
       return sec(t('enq.pf_plan'), <>
         <ChipGroup label={t('enq.plan')} value={d.plan || 'unsure'} onChange={(v) => set({ plan: v === 'unsure' ? '' : (v as Plan) })}
           options={[{ value: 'flex', label: `${t('mgmt.plan_flex')} · ${rp(prices.flex)}` }, { value: 'gold', label: `${t('mgmt.plan_gold')} · ${rp(prices.gold)}` }, { value: 'unsure', label: t('enq.pf_planUnsure') }]} />
-        <div style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{d.plan === 'gold' ? t('profile.planNoteGold') : t('profile.planNoteFlex', { q: prices.flexQuota, p: '' }).replace(/\s*\(\s*\)|\s+·\s*$/g, '')}</div>
+        <div style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{d.plan === 'gold' ? t('profile.planNoteGold') : d.plan === 'flex' ? t('profile.planNoteFlex', { q: prices.flexQuota, p: rp(prices.extra) }) : null}</div>
       </>);
     }
     // review: what was typed, one group per step with an Edit link back to it
@@ -337,7 +337,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
               : <Button size={48} iconRight="chevron_right" onClick={next} style={{ flex: '2 1 0' }}>{fromReview && firstOpenOnlineStep(d) === last ? t('reg.review') : t('enq.pf_continue')}</Button>}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 10, minHeight: 36 }}>
-            <Button variant="quiet" size={44} disabled={saveState === 'saving'} onClick={() => void pushDraft(true)} style={{ fontSize: 14 }}>{saveState === 'saving' ? t('enq.pf_saving') : t('enq.pf_saveLater')}</Button>
+            <Button variant="quiet" size={44} disabled={saveState === 'saving'} onClick={() => void pushDraft(true)} style={{ fontSize: 14, minHeight: 44 }}>{saveState === 'saving' ? t('enq.pf_saving') : t('enq.pf_saveLater')}</Button>
           </div>
           {saveState === 'saved' || saveState === 'failed' ? <span role="status" style={{ fontSize: 13, lineHeight: '18px', textAlign: 'center', color: saveState === 'saved' ? '#3D6B4F' : '#9A3D24' }}>{t(saveState === 'saved' ? 'enq.pf_saved' : 'enq.pf_saveFailed')}</span> : null}
         </div>
@@ -347,12 +347,14 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
 
   return (
     <div data-testid="public-form" style={{ position: 'fixed', inset: 0, overflowY: 'auto', background: '#FFFFFF', ...({ '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px' } as CSSProperties) }}>
+      {/* the family's phone: true size (no UI zoom) so every tap target is 44 px or more */}
+      <style>{'html { zoom: 1 !important; } [data-testid="public-form"] .cp-chip { min-height: 44px; }'}</style>
       <div style={{ maxWidth: 600, margin: '0 auto', padding: isPhone ? '14px 16px 0' : '28px 20px 0', display: 'flex', flexDirection: 'column', gap: 22 }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
           <Logo height={isPhone ? 40 : 48} />
           <div style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', flex: 'none' }} role="group" aria-label={t('shell.language')}>
             {(['en', 'id'] as const).map((l) => (
-              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} style={{ height: 40, minWidth: 48, padding: '0 12px', borderRadius: 7, border: 'none', background: lang === l ? '#FFFFFF' : 'transparent', boxShadow: lang === l ? '0 1px 3px rgba(40,30,20,.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: lang === l ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter' }}>{l.toUpperCase()}</button>
+              <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} style={{ height: 44, minWidth: 48, padding: '0 12px', borderRadius: 9, border: 'none', background: lang === l ? '#FFFFFF' : 'transparent', boxShadow: lang === l ? '0 1px 3px rgba(40,30,20,.14)' : 'none', color: '#24201C', fontSize: 14, fontWeight: lang === l ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter' }}>{l.toUpperCase()}</button>
             ))}
           </div>
         </div>

@@ -398,7 +398,7 @@ describe('the front desk records a payment (round 13): saved waiting for finance
     expect(fam.some((x) => x.kind === 'finance.notif.paid' && x.params.amount !== undefined && x.createdAt.startsWith(T) && x.ref?.id === pay.id)).toBe(false);
     const all = Object.values(w.s.notifications);
     expect(all.filter((x) => x.kind === 'finance.notif.paymentToConfirm')).toHaveLength(1);
-    expect(all.find((x) => x.kind === 'finance.notif.paymentToConfirm')!.toRoles).toEqual(['finance', 'mgmt']);
+    expect(all.find((x) => x.kind === 'finance.notif.paymentToConfirm')!.toRoles).toEqual(['finance']);
     expect(all.some((x) => x.kind === 'finance.notif.paid' && x.ref?.id === pay.id)).toBe(false);
     expect(paymentsBoard(w.s, T).waiting.map((v) => v.p.id)).toEqual([pay.id]);
     expect(paymentsBoard(w.s, T).month.sum).toBe(paymentsBoard(world().s, T).month.sum);

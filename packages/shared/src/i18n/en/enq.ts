@@ -12,7 +12,7 @@ export const enq = {
   stageLabel: 'Stage',
   // ----- lead history (round 13) -----
   viewBoard: 'Leads', viewHistory: 'History', viewLabel: 'View',
-  'hist.opened': 'Opened', 'hist.visited': 'Visited', 'hist.trial': 'Trial', 'hist.joined': 'Joined', 'hist.lost': 'Lost', 'hist.leads': 'Leads ({n})', 'hist.back': 'Back to {stage}',
+  'hist.opened': 'Opened', 'hist.visited': 'Visit booked', 'hist.trial': 'Trial booked', 'hist.joined': 'Joined', 'hist.lost': 'Lost', 'hist.leads': 'Leads ({n})', 'hist.back': 'Back to {stage}',
   'hist.none': 'No leads this month', 'hist.monthsLabel': 'Leads by month', 'hist.opened_n': '{n} opened', 'hist.convCaption': 'of leads opened in the 3 months before',
   pgColumn: '{stage} pages', pgArchived: 'Archived lead pages', newLead: 'New lead', archivedN: 'Archived · {n}', archivedTitle: 'Archived leads', restore: 'Restore', restored: '{name} is back on the board.', archive: 'Archive', archived: '{name} archived.',
   nobody: 'Nobody at this stage.', dropHere: 'Drop a card here', trialHint: 'Booked at least 1 day ahead', moveTo: 'Move to', reschedule: 'Change the {stage} time', alreadyMember: '{name} is already a member.',

@@ -32,7 +32,7 @@ test('lead history: the Enquiries History view lists the months, Leads comes bac
   await expect(sep).not.toContainText('Chose another place');
   await oct.getByRole('button', { name: /^Leads \(4\)$/ }).click();
   await expect(oct).toContainText('Oma Siu Lan Tjandra');
-  await expect(oct).toContainText('New 8 Oct · Trial 12 Oct');
+  await expect(oct).toContainText('New 8 Oct · Trial booked 12 Oct');
   await assertNoHorizontalScroll(page);
   // back on Leads the stage chips are unchanged
   await page.getByRole('tab', { name: 'Leads' }).click();

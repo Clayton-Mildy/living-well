@@ -137,7 +137,7 @@ const APPROVE: Record<ApprovalType, Handler> = {
     if (!c || c.deletedAt || c.status !== 'pending') return 'skip';
     const run = (x: Draft<ClubState>, k: Ctx) => { const row = x.changeRequests[id]; if (c.kind === 'approval') approveChange(x, row, k); else acknowledgeChange(row, k); };
     const err = tryRun(d, ctx, run);
-    if (err) return err === 'err.reviewConflict' ? 'conflict' : 'skip';
+    if (err) return err === 'err.reviewConflict' || err === 'members.err.effectiveInvalid' ? 'conflict' : 'skip';
     run(d, ctx);
     return 'done';
   },

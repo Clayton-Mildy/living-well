@@ -45,7 +45,7 @@ describe('lead history', () => {
     openClub();
     await show(<Enquiries />);
     const e1 = document.querySelector('[data-lead="e1"]')!;
-    expect(e1.querySelector('[data-timeline="e1"]')?.textContent).toBe('New 8 Oct · Trial 12 Oct');
+    expect(e1.querySelector('[data-timeline="e1"]')?.textContent).toBe('New 8 Oct · Trial booked 12 Oct');
     expect(document.querySelector('[data-lead="e9"] [data-timeline]')?.textContent).toMatch(/^New 28 Sept? · Visit 1 Oct · Lost 8 Oct$/);
   });
 

@@ -271,7 +271,8 @@ export const financeActions: ActionDef[] = [
       const payer = primaryContact(s, input.memberId);
       if (desk) {
         // saved waiting: nobody is told it was paid until finance or management confirms (approval.approve, type payments)
-        tellFinance(ctx, 'finance.notif.paymentToConfirm', { who: actorName(s, ctx.actor), name, amount, method: input.method }, '/payments', input.memberId);
+        // finance only: management already has the "payments waiting" action item
+        ctx.notify({ toRoles: ['finance'], kind: 'finance.notif.paymentToConfirm', params: { who: actorName(s, ctx.actor), name, amount, method: input.method }, link: '/payments', memberId: input.memberId });
         ctx.feed({ icon: 'payments', key: 'finance.feed.pay_' + input.method, params: { name, number: numbers, amount }, memberId: input.memberId });
         ctx.result.paymentId = pay.id;
         ctx.result.waiting = true;

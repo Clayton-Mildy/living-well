@@ -92,7 +92,7 @@ describe('staff leave (actions)', () => {
   it('the balance is checked again when management approves', () => {
     const s = seed();
     s.leaveRequests['lv-2'].days = 4; // Caca has used 4 of 5, so her 2 waiting days no longer fit
-    fails(s, 'leave.decide', { requestId: 'lv-3', approve: true }, 's9', 'people.err.leaveTooMany');
+    fails(s, 'leave.decide', { requestId: 'lv-3', approve: true }, 's9', 'people.err.leaveTooManyDecide');
     expect(() => run(s, 'leave.decide', { requestId: 'lv-3', approve: false }, 's9')).not.toThrow(); // declining is always possible
   });
   it('management may decide its own request (one manager in the club)', () => {

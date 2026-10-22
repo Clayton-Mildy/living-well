@@ -15,7 +15,7 @@ export const enq: Same<typeof EN> = {
   stageLabel: 'Tahap',
   // ----- riwayat calon (putaran 13) -----
   viewBoard: 'Calon', viewHistory: 'Riwayat', viewLabel: 'Tampilan',
-  'hist.opened': 'Masuk', 'hist.visited': 'Berkunjung', 'hist.trial': 'Percobaan', 'hist.joined': 'Bergabung', 'hist.lost': 'Batal', 'hist.leads': 'Calon ({n})', 'hist.back': 'Kembali ke {stage}',
+  'hist.opened': 'Masuk', 'hist.visited': 'Kunjungan dijadwalkan', 'hist.trial': 'Percobaan dijadwalkan', 'hist.joined': 'Bergabung', 'hist.lost': 'Batal', 'hist.leads': 'Calon ({n})', 'hist.back': 'Kembali ke {stage}',
   'hist.none': 'Tidak ada calon bulan ini', 'hist.monthsLabel': 'Calon per bulan', 'hist.opened_n': '{n} masuk', 'hist.convCaption': 'dari calon yang masuk 3 bulan sebelumnya',
   pgColumn: 'Halaman {stage}', pgArchived: 'Halaman calon yang diarsipkan', newLead: 'Calon baru', archivedN: 'Diarsipkan · {n}', archivedTitle: 'Calon yang diarsipkan', restore: 'Pulihkan', restored: '{name} kembali ke papan.', archive: 'Arsipkan', archived: '{name} diarsipkan.',
   nobody: 'Tidak ada orang di tahap ini.', dropHere: 'Letakkan kartu di sini', trialHint: 'Dipesan paling lambat 1 hari sebelumnya', moveTo: 'Pindahkan ke', reschedule: 'Ubah jam {stage}', alreadyMember: '{name} sudah menjadi anggota.',

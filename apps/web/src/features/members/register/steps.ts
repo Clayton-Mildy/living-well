@@ -57,8 +57,11 @@ export function initialState(s: ClubState, mode: RegMode, today: ISODate): RegSt
   const onlineHealth = onlineHealthOf(e);
   const trial = sortBy(live(s.guestVisits).filter((g) => g.enquiryId === e.id && g.kind === 'trial'), (g) => g.date).pop();
   const h = onlineHealth;
+  // the family's own edit of the name in the online form wins over the lead's
+  const title = online?.name?.trim() && online.title ? online.title : e.senior.title;
+  const name = online?.name?.trim() || e.senior.name;
   return {
-    ...base, title: e.senior.title, name: e.senior.name, gender: genderOf(e.senior.title), dob: online?.dob || '', address: online?.address || '',
+    ...base, title, name, gender: genderOf(title), dob: online?.dob || '', address: online?.address || '',
     contact: e.contact.name, rel: e.contact.relation, phone: e.contact.phone,
     health: h
       ? { conditions: h.conditions, diabetic: h.diabetic, mobility: h.mobility ?? 'none', diet: h.diet, food: h.food, foodOther: h.foodOther, ...splitDrugs(h.drugs) }

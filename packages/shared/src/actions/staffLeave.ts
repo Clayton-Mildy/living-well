@@ -36,7 +36,7 @@ function clearRows(d: Draft<ClubState>, r: LeaveRequest, ctx: Ctx) {
 /**
  * Approve or decline one waiting request: the balance is checked again, an approval writes the `leave` rows, the requester is told.
  * Used by `leave.decide` (People → Leave) and by the Approvals list (`approval.approve` / `approval.reject` with type `leave`), so they never disagree.
- * Fails with `err.notFound`, `people.err.leaveDecided` (not waiting any more) or `people.err.leaveTooMany` (the balance no longer covers it).
+ * Fails with `err.notFound`, `people.err.leaveDecided` (not waiting any more) or `people.err.leaveTooManyDecide` (the balance no longer covers it).
  */
 export function decideLeave(d: Draft<ClubState>, ctx: Ctx, requestId: string, approve: boolean, note?: string): void {
   const r = request(d, requestId, ctx);
@@ -45,7 +45,7 @@ export function decideLeave(d: Draft<ClubState>, ctx: Ctx, requestId: string, ap
   if (approve) {
     // the balance is checked again: other days may have been approved since it was asked
     const b = leaveBalance(S(d), r.staffId, Number(r.from.slice(0, 4)), r.id);
-    if (r.days > b.left) ctx.fail('people.err.leaveTooMany', { left: b.left });
+    if (r.days > b.left) ctx.fail('people.err.leaveTooManyDecide', { name, left: b.left });
     r.status = 'approved';
     putRows(d, r, ctx);
   } else r.status = 'declined';

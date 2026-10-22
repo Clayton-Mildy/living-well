@@ -16,7 +16,7 @@ export const pct = (n: number | null) => (n === null ? '—' : `${Math.round(n *
 export const signed = (n: number | null, f: (n: number) => string = String): string => (n === null || n === 0 ? '' : n > 0 ? `+${f(n)}` : `−${f(-n)}`);
 
 /** The summary for the owner, one line each: a heading, then the key numbers per group with their change since the period before. */
-export function ownerSummaryLines(r: MonthReport, t: TFn, fmt: SummaryFmt): string[] {
+export function ownerSummaryLines(r: MonthReport, t: TFn, fmt: SummaryFmt, today: string = r.period.to): string[] {
   const range = fmt.range ? fmt.range(r.period) : `${r.period.from} – ${r.period.to}`;
   const one = (n: number) => String(Math.round(n * 10) / 10);
   const pts = (n: number) => `${Math.round(n * 100)} pt`;
@@ -25,15 +25,18 @@ export function ownerSummaryLines(r: MonthReport, t: TFn, fmt: SummaryFmt): stri
     return diff ? t('month.sum.rowDiff', { label, cur, diff }) : t('month.sum.row', { label, cur });
   };
   const n = String;
+  // same test as the hero tiles: "so far this month" only when the period runs from the 1st of the current month
+  const thisMonth = r.period.from === `${today.slice(0, 7)}-01` && r.period.to.slice(0, 7) === today.slice(0, 7);
+  const soFar = isPartialMonth(r.period) ? t(thisMonth ? 'month.heroSoFar' : 'month.heroSoFarAny') : undefined;
   const { money: m, members: mb, care: c, pipeline: p, hero: h } = r;
   return [
     `*${t('month.sum.head', { period: range })}*`,
     '',
     // round 13: the same four numbers the page leads with
-    row('heroCollected', h.collected, fmt.rp, undefined, isPartialMonth(r.period) ? t('month.heroSoFar') : undefined), row('heroActive', h.active, n), row('heroMood', h.index, one), row('heroConversion', h.conversion, (x) => fmt.pct(x), pts),
+    row('heroCollected', h.collected, fmt.rp, undefined, soFar), row('heroActive', h.active, n), row('heroMood', h.index, one), row('heroConversion', h.conversion, (x) => fmt.pct(x), pts),
     '',
     `*${t('month.money')}*`,
-    row('billed', m.billed, fmt.rp), row('collected', m.collected, fmt.rp, undefined, isPartialMonth(r.period) ? t('month.heroSoFar') : undefined), row('outstanding', m.outstanding, fmt.rp), row('notYetDue', m.notYetDue, fmt.rp),
+    row('billed', m.billed, fmt.rp), row('collected', m.collected, fmt.rp, undefined, soFar), row('outstanding', m.outstanding, fmt.rp), row('notYetDue', m.notYetDue, fmt.rp),
     '',
     `*${t('month.members')}*`,
     row('active', mb.active, n), row('joined', mb.joined, n), row('ended', mb.ended, n), row('utilisation', mb.utilisation, (x) => fmt.pct(x), pts),
@@ -48,9 +51,9 @@ export function ownerSummaryLines(r: MonthReport, t: TFn, fmt: SummaryFmt): stri
 
 export function OwnerSummary({ open, onClose, r, fmt }: { open: boolean; onClose: () => void; r: MonthReport; fmt: SummaryFmt }) {
   const t = useT();
-  const { now } = useNow();
+  const { now, today } = useNow();
   if (!open) return null;
-  const text = ownerSummaryLines(r, t, fmt).join('\n');
+  const text = ownerSummaryLines(r, t, fmt, today).join('\n');
   const copy = () => {
     const failed = () => say(t('month.copyFailed'), { tone: 'error' });
     // no clipboard (an old browser, an insecure page) or a refusal: say so rather than nothing

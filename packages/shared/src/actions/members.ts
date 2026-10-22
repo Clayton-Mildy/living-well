@@ -431,7 +431,9 @@ export const membersActions: ActionDef[] = [
     run(d, input, ctx) {
       const m = editable(d, input.memberId, ctx);
       const effective = input.effective || firstOfNextMonth(ctx.today);
-      if (effective < ctx.today) ctx.fail('members.err.effectiveInvalid');
+      // a replay on approval (actor is the submitter, not the approving manager) may land after the 1st it asked for: back-date to that 1st
+      const replay = ctx.actor !== actorOf(ctx.user);
+      if (effective < (replay && effective.endsWith('-01') ? effective : ctx.today)) ctx.fail('members.err.effectiveInvalid');
       // the replay on approval runs as management, so this only bites when the desk submits
       if (roleOf(ctx.user) === 'lobby' && effective !== firstOfNextMonth(ctx.today)) ctx.fail('members.err.effectiveInvalid');
       const cur = planOn(m as Member, effective);
