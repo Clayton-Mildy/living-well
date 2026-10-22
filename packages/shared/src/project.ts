@@ -6,6 +6,7 @@ import { approvedDayMenu, logForFamily, menuVersionForFamily, noteForFamily, rea
 import { firstOfRole, isPendingRow } from './rules/core';
 import { replyTarget } from './rules/kitchenOps';
 import { cameOn } from './rules/activity';
+import { isConfirmed } from './rules/finance';
 
 const pick = <T extends { id: string }>(rows: T[]) => Object.fromEntries(rows.map((r) => [r.id, r])) as Record<string, T>;
 const present = <T>(x: T | null): x is T => x !== null;
@@ -63,7 +64,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const invoices = mine(live(s.invoices)).map((i) => ({ ...i, xero: 'synced' as const, callNotes: [] }));
   out.invoices = pick(invoices);
   const invIds = new Set(invoices.map((i) => i.id));
-  out.payments = pick(mine(live(s.payments)).map((p) => ({ ...p, xero: 'synced' as const })));
+  out.payments = pick(mine(live(s.payments)).filter(isConfirmed).map((p) => ({ ...p, approval: undefined, xero: 'synced' as const })));
   out.refunds = pick(live(s.refunds).filter((r) => invIds.has(r.invoiceId)));
   // their own feedback, and feedback the kitchen logged from a phone call whose replies go to them (KC round 6: replies show in the family app)
   out.feedback = pick(live(s.feedback).filter((f) => f.familyId === familyId || (!f.familyId && replyTarget(s, f) === familyId)));

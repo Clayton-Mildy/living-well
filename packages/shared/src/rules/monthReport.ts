@@ -3,7 +3,7 @@
 import type { ClubState, EndReason, ISODate, LostReason, MoodMoment, StaffRole, YM } from '../types';
 import { activeOn, currentMembership, isPendingRow } from './core';
 import { checkOnList } from './checkOn';
-import { invoicePeriod } from './finance';
+import { invoicePeriod, isConfirmed } from './finance';
 import { invoiceTotal } from './billing';
 import { monthsOf, observedDays, type InsightPeriod } from './insights';
 import { onLeaveOn } from './leave';
@@ -60,7 +60,7 @@ function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, t
   const months = new Set(monthList);
   const invs = live(s.invoices).filter((i) => !i.voided && months.has(invoicePeriod(i)));
   const extra = invs.flatMap((i) => i.lines).filter((l) => l.kind === 'extraDay');
-  const payments = live(s.payments).filter((x) => within(x.receivedOn, p));
+  const payments = live(s.payments).filter((x) => isConfirmed(x) && within(x.receivedOn, p)); // a payment the desk recorded counts as collected once finance confirmed it
   const refunds = live(s.refunds).filter((r) => within(r.createdAt.slice(0, 10), p));
   // what was still owed at the end of the period: invoices issued by then, less what had been paid (and not refunded) by then;
   // "outstanding" is the part already past its due date at the end of the period, "not yet due" the rest (an invoice due on the 28th is not a collections problem on the 21st)

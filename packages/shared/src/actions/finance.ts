@@ -6,7 +6,7 @@ import { defineAction, DomainError, hasRole, isFamily, isStaff, type ActionDef, 
 import { registerJob } from './jobs';
 import { requireMember, shortOf } from './helpers';
 import { allocate, balanceOf, invoiceTotal, nextInvoiceNumber, paidOn, runDone } from '../rules/billing';
-import { isPrimaryFor, primaryContact } from '../rules/core';
+import { actorName, isPrimaryFor, primaryContact } from '../rules/core';
 import { BANKS, XERO_DELAY_MIN, dtMinutes, invoiceVa, receiptOfRequest, refundableOn, runPlan } from '../rules/finance';
 import { bool, idList, isoDate, obj, oneOf, optText, pickId, rupiah, rupiahOrZero, signedRupiah, text, yearMonth } from '../rules/financeInput';
 import { addDays, rp, uniq, weekStart, ym } from '../util';
@@ -110,16 +110,18 @@ function issueRun(d: D, ctx: Ctx, period: YM, auto: boolean) {
 
 // ---------- payments ----------
 const METHODS = ['dokuVa', 'bankTransfer', 'cash', 'other'] as const;
-function addPayment(d: D, ctx: Ctx, p: { memberId: string; amount: number; method: Payment['method']; ref?: string; bank?: Bank; allocations: Payment['allocations'] }): Payment {
+/** `hold`: the front desk's payment waits for finance, so Xero is not told yet and the invoice's Xero state is left alone. */
+function addPayment(d: D, ctx: Ctx, p: { memberId: string; amount: number; method: Payment['method']; ref?: string; bank?: Bank; allocations: Payment['allocations'] }, opts: { hold?: boolean } = {}): Payment {
   const id = ctx.id('pay');
   const pay: Payment = {
     ...base(ctx, id), memberId: p.memberId, method: p.method, amount: p.amount,
     ...(p.ref ? { ref: p.ref } : {}), ...(p.bank ? { bank: p.bank } : {}),
-    receivedOn: ctx.today, receivedAt: ctx.now, allocations: p.allocations, xero: 'pending', by: ctx.actor,
+    receivedOn: ctx.today, receivedAt: ctx.now, allocations: p.allocations, xero: opts.hold ? 'notSent' : 'pending', by: ctx.actor,
+    ...(opts.hold ? { approval: { status: 'pending' as const, by: ctx.actor, at: ctx.nowDT } } : {}),
   };
   d.payments[id] = pay;
   // an invoice this payment settles waits for Xero to hear about it
-  for (const a of p.allocations) {
+  if (!opts.hold) for (const a of p.allocations) {
     const inv = d.invoices[a.invoiceId];
     if (inv && balanceOf(d as unknown as ClubState, inv) <= 0) inv.xero = 'pending';
   }
@@ -240,7 +242,7 @@ export const financeActions: ActionDef[] = [
   // ---------- payments ----------
   defineAction<{ memberId: string; amount: number; method: Payment['method']; ref?: string; invoiceId?: string }>({
     name: 'payment.record',
-    can: finMgmt,
+    can: (u) => finMgmt(u) || hasRole(u, 'lobby'), // round 13: the front desk records cash or transfer on an open invoice; it waits for finance
     parse: (raw) => {
       const o = obj(raw);
       return { memberId: text(o.memberId, 80), amount: rupiah(o.amount), method: oneOf(o.method, METHODS), ref: optText(o.ref, 120), invoiceId: optText(o.invoiceId, 80) };
@@ -248,19 +250,34 @@ export const financeActions: ActionDef[] = [
     run(d, input, ctx) {
       requireMember(d, input.memberId, ctx);
       const s = current(d) as ClubState;
+      const desk = hasRole(ctx.user, 'lobby');
+      if (desk) {
+        if (!input.invoiceId) ctx.fail('finance.err.deskInvoice');
+        if (input.method !== 'cash' && input.method !== 'bankTransfer') ctx.fail('finance.err.deskMethod');
+      }
       if (input.invoiceId) {
         const inv = s.invoices[input.invoiceId];
         if (!inv || inv.deletedAt || inv.memberId !== input.memberId) ctx.fail('err.notFound');
         if (inv.voided) ctx.fail('finance.err.invoiceVoid');
         if (balanceOf(s, inv) <= 0) ctx.fail('finance.err.invoicePaid');
+        if (desk && input.amount > balanceOf(s, inv)) ctx.fail('finance.err.deskOverpay');
       }
       // the chosen invoice first, then the oldest due; what is left over stays on the account as credit
       const { allocations, credit } = allocate(s, input.memberId, input.amount, ctx.today, input.invoiceId);
-      const pay = addPayment(d, ctx, { memberId: input.memberId, amount: input.amount, method: input.method, ref: input.ref, allocations });
+      const pay = addPayment(d, ctx, { memberId: input.memberId, amount: input.amount, method: input.method, ref: input.ref, allocations }, { hold: desk });
       const numbers = allocations.map((a) => a.invoiceId).join(', ') || '—';
       const name = shortOf(d, input.memberId);
       const amount = rp(input.amount);
       const payer = primaryContact(s, input.memberId);
+      if (desk) {
+        // saved waiting: nobody is told it was paid until finance or management confirms (approval.approve, type payments)
+        tellFinance(ctx, 'finance.notif.paymentToConfirm', { who: actorName(s, ctx.actor), name, amount, method: input.method }, '/payments', input.memberId);
+        ctx.feed({ icon: 'payments', key: 'finance.feed.pay_' + input.method, params: { name, number: numbers, amount }, memberId: input.memberId });
+        ctx.result.paymentId = pay.id;
+        ctx.result.waiting = true;
+        ctx.result.allocations = allocations.length;
+        return;
+      }
       tellFinance(ctx, 'notif.paymentReceived', { name: payer?.name || name, invoice: numbers, amount }, '/payments', input.memberId);
       if (payer) ctx.notify({ toUsers: [payer.id], kind: 'finance.notif.paid', params: { name, invoice: numbers, amount }, link: '/billing', memberId: input.memberId, ref: { type: 'payment', id: pay.id } });
       ctx.feed({ icon: 'payments', key: 'finance.feed.pay_' + input.method, params: { name, number: numbers, amount }, memberId: input.memberId });

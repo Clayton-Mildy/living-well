@@ -45,7 +45,7 @@ describe('Approvals', () => {
     openClub();
     await show(<Reviews />);
     const labels = Array.from(document.querySelectorAll('[role="tablist"][aria-label="Approval types"] [role="tab"]')).map((t) => t.textContent);
-    expect(labels).toEqual(['Profile · 2', 'Care log · 2', 'Health · 1', 'Photos · 0', 'Menu · 1', 'Stock · 3', 'Renewals · 1', 'History']);
+    expect(labels).toEqual(['Profile · 2', 'Care log · 2', 'Health · 1', 'Photos · 0', 'Menu · 1', 'Stock · 3', 'Renewals · 1', 'Payments · 0', 'History']);
     expect(tab(/^Profile/)?.getAttribute('aria-selected')).toBe('true');
     expect(document.querySelectorAll('[data-cr]')).toHaveLength(2); // a change to approve and a health edit applied at once
     expect(document.body.textContent).toContain('Acknowledge');

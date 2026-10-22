@@ -6,9 +6,9 @@ import { live, sortBy } from '../util';
 import { allPendingReviews, appliedReviews, pendingPhotos } from './members';
 import { READING_FIELDS } from './healthStation';
 
-export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'stock' | 'renewals';
+export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'stock' | 'renewals' | 'payments';
 /** Tab order of the management Approvals screen. */
-export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'stock', 'renewals'];
+export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'stock', 'renewals', 'payments'];
 
 // ---------- the mark ----------
 export type ApprovalState = 'pending' | 'rejected' | null;
@@ -64,7 +64,7 @@ export interface ApprovalItem {
   /** the row id (a change request id for 'profile') */
   id: string;
   type: ApprovalType;
-  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'stock' | 'photo' | 'renewal';
+  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'stock' | 'photo' | 'renewal' | 'payment';
   at: DT;
   by: Actor;
   memberId?: string;
@@ -92,6 +92,9 @@ export const pendingStock = (s: ClubState): ApprovalItem[] =>
 /** KC round 7: a renewal follow-up whose change (upgrade, downgrade, leave, stop) the front desk recorded and management has yet to approve. */
 export const pendingRenewals = (s: ClubState): ApprovalItem[] =>
   sortNew(live(s.followUps ?? {}).filter((f) => f.status === 'pending' && isWaiting(f)).map((f): ApprovalItem => ({ id: f.id, type: 'renewals', sub: 'renewal', at: f.approval!.at, by: f.approval!.by, memberId: f.memberId, edit: false })));
+/** Round 13: a cash or transfer payment the front desk recorded, saved waiting for finance or management to confirm. */
+export const pendingPayments = (s: ClubState): ApprovalItem[] =>
+  sortNew(live(s.payments).filter((p) => isWaiting(p)).map((p): ApprovalItem => ({ id: p.id, type: 'payments', sub: 'payment', at: p.approval!.at, by: p.approval!.by, memberId: p.memberId, edit: false })));
 export const pendingPhotoItems = (s: ClubState): ApprovalItem[] =>
   pendingPhotos(s).map((p) => ({ id: p.id, type: 'photos' as const, sub: 'photo' as const, at: p.createdAt, by: staffActor(p.takenBy), memberId: p.memberIds[0], edit: false }));
 /** Change requests: gated ones wait for approval; flagged ones were applied at once and wait for a review. */
@@ -99,7 +102,7 @@ export const pendingProfile = (s: ClubState): ApprovalItem[] =>
   sortNew([...allPendingReviews(s), ...appliedReviews(s)].map((c) => ({ id: c.id, type: 'profile' as const, sub: c.kind === 'approval' ? ('cr' as const) : ('flag' as const), at: c.createdAt, by: c.submittedBy, memberId: c.target.memberId, edit: c.op !== 'create' })));
 
 export const pendingItems = (s: ClubState, type: ApprovalType): ApprovalItem[] =>
-  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, stock: pendingStock, renewals: pendingRenewals } as const)[type](s);
+  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments } as const)[type](s);
 export function approvalCounts(s: ClubState): Record<ApprovalType, number> {
   return Object.fromEntries(APPROVAL_TYPES.map((t) => [t, pendingItems(s, t).length])) as Record<ApprovalType, number>;
 }
@@ -134,6 +137,7 @@ export function approvalHistory(s: ClubState): HistoryItem[] {
   for (const r of Object.values(s.readings)) if (!r.approval?.companionOf) fromMark('readings', 'reading', r.id, r.approval, r.memberId ?? undefined);
   for (const v of Object.values(s.menuVersions)) fromMark('menu', 'version', v.id, v.approval);
   for (const f of Object.values(s.followUps ?? {})) fromMark('renewals', 'renewal', f.id, f.approval, f.memberId);
+  for (const x of Object.values(s.payments)) fromMark('payments', 'payment', x.id, x.approval, x.memberId);
   for (const o of Object.values(s.dayMenus)) fromMark('menu', 'dayMenu', o.id, o.approval);
   for (const c of Object.values(s.changeRequests)) {
     if (c.status === 'pending' || !c.reviewedAt && !['withdrawn', 'superseded'].includes(c.status)) continue;

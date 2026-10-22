@@ -14,7 +14,8 @@ const MANUAL = ['bankTransfer', 'cash', 'other'] as const;
 type Manual = (typeof MANUAL)[number];
 
 /** Record a payment received outside the virtual account (a bank transfer, cash or something else, always in rupiah). With `fixed`, the invoice is already chosen (invoice sheet). */
-export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () => void }) {
+/** `desk`: the front desk records it (cash or bank transfer, up to the balance); it is saved waiting for finance to confirm. */
+export function PaymentForm({ fixed, onDone, desk }: { fixed?: Invoice; onDone?: () => void; desk?: boolean }) {
   const s = useClub();
   const t = useT();
   const { fmonth } = useFmt();
@@ -22,7 +23,7 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
   const act = useAct();
   const [q, setQ] = useState('');
   const [invId, setInvId] = useState<string | null>(fixed?.id ?? null);
-  const [method, setMethod] = useState<Manual>('bankTransfer');
+  const [method, setMethod] = useState<Manual>(desk ? 'cash' : 'bankTransfer');
   const [amt, setAmt] = useState(fixed ? String(Math.max(0, balanceOf(s, fixed))) : '');
   const [ref, setRef] = useState('');
 
@@ -36,14 +37,15 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
   const balance = sel ? balanceOf(s, sel) : 0;
   const amount = digits(amt);
   const needsRef = method === 'bankTransfer'; // a bank transfer is matched to the statement by its reference
-  const ok = !!sel && amount > 0 && (!needsRef || !!ref.trim());
+  const tooMuch = !!desk && !!sel && amount > balance; // the desk cannot record more than the invoice owes
+  const ok = !!sel && amount > 0 && !tooMuch && (!needsRef || !!ref.trim());
   const choose = (id: string) => { setInvId(id); setAmt(String(Math.max(0, balanceOf(s, s.invoices[id])))); };
 
   const submit = async () => {
     if (!ok || !sel) return;
     const r = await act('payment.record', {
       memberId: sel.memberId, amount, method, invoiceId: sel.id, ...(ref.trim() ? { ref: ref.trim() } : {}),
-    }, { ok: t('finance.toast.paymentRecorded', { name: displayName(s.members[sel.memberId]) }) });
+    }, { ok: desk ? t('finance.toast.sentToFinance') : t('finance.toast.paymentRecorded', { name: displayName(s.members[sel.memberId]) }) });
     if (r.ok) { if (!fixed) setInvId(null); setAmt(''); setRef(''); onDone?.(); }
   };
 
@@ -71,11 +73,12 @@ export function PaymentForm({ fixed, onDone }: { fixed?: Invoice; onDone?: () =>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={fieldLabel}>{t('finance.pay.paidBy')}</span>
         <div role="group" aria-label={t('finance.pay.paidBy')} style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
-          {MANUAL.map((m) => <Chip key={m} selected={method === m} onClick={() => setMethod(m)}>{t('finance.method.' + m)}</Chip>)}
+          {(desk ? (['cash', 'bankTransfer'] as const) : MANUAL).map((m) => <Chip key={m} selected={method === m} onClick={() => setMethod(m)}>{t('finance.method.' + m)}</Chip>)}
         </div>
       </div>
       <RpField label={t('finance.pay.amountCredited')} ariaLabel={t('finance.pay.amountCredited')} value={amt} onChange={setAmt} hint={sel ? t('finance.pay.balanceHint', { amount: rp(balance) }) : undefined} />
-      {sel && amount > balance ? <Note tone="ochre" icon="info">{t('finance.pay.overpay', { extra: rp(amount - balance) })}</Note> : null}
+      {sel && amount > balance ? <Note tone="ochre" icon="info">{desk ? t('finance.err.deskOverpay') : t('finance.pay.overpay', { extra: rp(amount - balance) })}</Note> : null}
+      {desk ? <Note icon="hourglass_top">{t('finance.pay.deskNote')}</Note> : null}
       <TextField label={t('finance.pay.reference')} value={ref} onChange={setRef} placeholder={needsRef ? t('finance.pay.refPlaceholder') : t('finance.pay.refOptional')} />
       <Button size={48} disabled={!ok} onClick={submit} full>{t('finance.pay.record')}</Button>
     </div>

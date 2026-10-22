@@ -39,7 +39,7 @@ const EDIT: Partial<Record<ProfileTab, { roles: Role[]; dlg: DialogKind; flagged
   health: { roles: ['nurse', 'mgmt'], dlg: 'health', flagged: true },
   care: { roles: ['nurse', 'activity', 'mgmt'], dlg: 'care', flagged: true },
   docs: { roles: ['lobby', 'mgmt'], dlg: 'consent' },
-  plan: { roles: ['finance', 'mgmt'], dlg: 'plan' },
+  plan: { roles: ['lobby', 'finance', 'mgmt'], dlg: 'plan' }, // round 13: the front desk starts a change too (gated, from next month)
   family: { roles: ['lobby', 'mgmt'], dlg: 'contact' },
 };
 /** Other areas link to /members/:id/attendance, /documents or /billing; the profile's own keys are att, docs and plan. */

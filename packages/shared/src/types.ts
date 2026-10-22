@@ -760,6 +760,8 @@ export interface Payment extends Row {
   allocations: { invoiceId: string; amount: number }[];
   xero: Xero;
   by: Actor;
+  /** round 13: a payment the front desk recorded waits for finance or management; no mark = confirmed (rules/finance.ts `isConfirmed`) */
+  approval?: Approval;
 }
 
 export interface Refund extends Row {

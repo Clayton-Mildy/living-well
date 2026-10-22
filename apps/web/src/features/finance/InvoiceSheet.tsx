@@ -4,7 +4,7 @@
 import { useState, type ReactNode } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { actorName, fmtPhone, isPrimaryFor, memberName, rp, sortBy, live, type Bank, type Invoice } from '@cp/shared';
-import { BANKS, bankVa, groupVa, invoicePeriod, invoiceView, paymentView, refundsOfInvoice } from '@cp/shared/rules/finance';
+import { BANKS, bankVa, groupVa, invoicePeriod, invoiceView, isConfirmed, paymentView, refundsOfInvoice } from '@cp/shared/rules/finance';
 import { Avatar, Button, Chip, Drawer, Eyebrow, Icon, Note, Sheet, StatusBadge, TextField, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
@@ -61,6 +61,8 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
   const staff = audience === 'staff';
   // only finance and management act on invoices (the server enforces it; other staff just read the invoice)
   const canAct = staff && (role === 'finance' || role === 'mgmt');
+  // round 13: the front desk may only record cash or a transfer, which then waits for finance
+  const desk = staff && role === 'lobby';
   const [bank, setBank] = useState<Bank>('BCA');
   const [panelOpen, setPanel] = useState<null | 'pay' | 'adjust' | 'void'>(null);
   const [refundFor, setRefundFor] = useState<string | null>(null);
@@ -71,6 +73,7 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
   const m = v.member;
   const isOpen = v.balance > 0 && !inv.voided;
   const pays = sortBy(live(s.payments).filter((p) => p.allocations.some((a) => a.invoiceId === inv.id)), (p) => `${p.receivedOn}T${p.receivedAt || ''}${p.createdAt}`, -1).map((p) => paymentView(s, p));
+  const waiting = pays.some((pv) => !isConfirmed(pv.p));
   const refunds = refundsOfInvoice(s, inv.id);
   const primary = !staff && user?.kind === 'family' && isPrimaryFor(s, user.id, inv.memberId);
   const payerName = v.payer?.name || '';
@@ -188,9 +191,10 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
                     <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <span style={{ fontSize: 16, lineHeight: 1.4 }}>{methodLabel(t, pv.p)}</span>
                       <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{fds(pv.p.receivedOn)}{pv.p.receivedAt ? `, ${pv.p.receivedAt}` : ''}{pv.p.ref ? ` · ${t('finance.pay.ref', { ref: pv.p.ref })}` : ''}</span>
+                      {!isConfirmed(pv.p) ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.pay.waitingBy', { name: actorName(s, pv.p.by) })}</span> : null}
                     </div>
                     <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(a.amount)}</span>
-                    {canAct ? <Badge kind={pv.p.xero === 'synced' ? 'paid' : 'pending'} label={t(pv.p.xero === 'synced' ? 'finance.xero.synced' : 'finance.xero.pending')} /> : null}
+                    {!isConfirmed(pv.p) ? <Badge kind="pending" label={t('finance.pay.waiting')} /> : canAct ? <Badge kind={pv.p.xero === 'synced' ? 'paid' : 'pending'} label={t(pv.p.xero === 'synced' ? 'finance.xero.synced' : 'finance.xero.pending')} /> : null}
                     {canAct && a.refundable > 0 && refundFor !== pv.p.id ? (
                       <button type="button" onClick={() => setRefundFor(pv.p.id)} style={{ height: 44, padding: '0 12px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: FONT_BODY, fontWeight: 500, cursor: 'pointer', textDecoration: 'underline', textUnderlineOffset: 4 }}>{t('finance.pay.refund')}</button>
                     ) : null}
@@ -208,6 +212,12 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
         </Section>
       ) : null}
 
+      {desk && isOpen && !waiting ? (
+        <Section label={t('finance.inv.actions')}>
+          <div><Button variant="secondary" size={48} icon="payments" onClick={() => toggle('pay')} style={{ padding: '0 16px' }}>{t('finance.inv.recordPayment')}</Button></div>
+          {panelOpen === 'pay' ? <div style={panel}><PaymentForm fixed={inv} desk onDone={() => setPanel(null)} /></div> : null}
+        </Section>
+      ) : null}
       {canAct && !inv.voided ? (
         <Section label={t('finance.inv.actions')}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>

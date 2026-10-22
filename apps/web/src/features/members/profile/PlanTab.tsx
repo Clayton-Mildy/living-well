@@ -2,9 +2,10 @@
 // the membership state, and the invoices. Invoices open the invoice sheet; Xero status is for staff only.
 import { useState } from 'react';
 import {
-  currentMembership, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
+  actorName, currentMembership, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
 } from '@cp/shared';
 import { formatVa, openBalance } from '@cp/shared/rules/members';
+import { isConfirmed } from '@cp/shared/rules/finance';
 import { Button, Group, Icon, Pager, SectionLabel, Sheet, StatusBadge, TextField, Note, usePaged } from '../../../components/ui';
 import { say } from '../../../store/ui';
 import { InvoiceSheet } from '../../finance/InvoiceSheet';
@@ -105,7 +106,8 @@ export function PlanTab({ p }: { p: P }) {
           {pagedInv.rows.map((i, ix) => {
             const st = invoiceStatus(s, i, today);
             const titleText = i.kind === 'final' ? t('profile.finalInvoice') : i.period ? fmt.fmonth(i.period, true) : i.number;
-            const subText = `${i.number} · ${st === 'paid' ? t('profile.paidOn', { d: fmt.fds(paidDate(s, i.id) || i.issueDate) }) : t('profile.dueOn', { d: fmt.fds(i.dueDate) })}${p.family ? '' : ' · ' + xeroLabel(i.xero)}`;
+            const waitingPay = p.family ? undefined : live(s.payments).find((x) => !isConfirmed(x) && x.allocations.some((a) => a.invoiceId === i.id)); // the front desk recorded it, finance has not confirmed yet
+            const subText = waitingPay ? `${i.number} · ${t('finance.pay.waitingBy', { name: actorName(s, waitingPay.by) })}` : `${i.number} · ${st === 'paid' ? t('profile.paidOn', { d: fmt.fds(paidDate(s, i.id) || i.issueDate) }) : t('profile.dueOn', { d: fmt.fds(i.dueDate) })}${p.family ? '' : ' · ' + xeroLabel(i.xero)}`;
             return (
               <button key={i.id} type="button" onClick={() => setInv(i.id)} className="h-row cp-bleed" aria-label={`${titleText} ${i.number}`} style={{ width: '100%', display: 'flex', flexWrap: 'wrap', gap: '8px 12px', alignItems: 'center', padding: '14px 0', border: 'none', borderTop: ph && !ix ? 'none' : HAIR, background: 'transparent', minHeight: 64, textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <div style={{ flex: '1 1 150px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>

@@ -11,6 +11,7 @@ import { liveSurvey, responsesOf, surveyStats } from './surveys';
 import { openEnquiries } from './enquiries';
 import { lunchPhotoIds } from './kitchen';
 import { moodStats } from './mood';
+import { isConfirmed } from './finance';
 import { checkOnList } from './checkOn';
 import { approvalTotal, pendingItems } from './approvals';
 
@@ -260,7 +261,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
     logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved' && l.mood !== undefined).length, // round 7: complete once the Mood & notes round is in
     logsTotal: g.inClub.length + g.goneHome.length, // a log for everyone who visited today
     lunchPhoto: lunchPhotoIds(s, today).length > 0,
-    payments: live(s.payments).filter((p) => p.receivedOn === today).length,
+    payments: live(s.payments).filter((p) => p.receivedOn === today && isConfirmed(p)).length,
     stock: live(s.stockRequests).filter((k) => k.status === 'requested').length,
     venues: live(s.venueBookings).filter((v) => v.status === 'confirmed' && v.date >= today).length,
     samplePrices: !!price && Object.values(price.sample).some(Boolean),

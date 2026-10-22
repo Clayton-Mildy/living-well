@@ -191,6 +191,7 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
   const [d, set] = useDraft(() => ({ plan: cur.plan as Plan, effective: firstOfNextMonth(today), note: '' }));
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
+  const desk = p.role === 'lobby'; // round 13: the front desk changes a plan from the 1st of next month only; management approves
   const errEff = tried && (!d.effective || d.effective < today) ? t('members.err.effectiveInvalid') : '';
   const save = async () => {
     setTried(true);
@@ -207,7 +208,12 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
       <PeSection label={t('profile.sec.plan')}>
         <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={[{ value: 'flex', label: `${t('profile.planFlex')} · ${rp(price.flex)}` }, { value: 'gold', label: `${t('profile.planGold')} · ${rp(price.gold)}` }]} />
         <div style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{d.plan === 'flex' ? t('profile.planNoteFlex', { q: s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold')}</div>
-        <DateField label={t('profile.effective')} value={d.effective} onChange={(v) => set({ effective: v })} min={today} error={errEff} />
+        {desk ? (
+          <div data-testid="plan-effective-fixed" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, minHeight: 44, alignItems: 'center', fontSize: 16, lineHeight: '22px' }}>
+            <span style={{ color: '#6B6259' }}>{t('profile.effective')}</span>
+            <span style={{ fontWeight: 500 }}>{fmt.fdy(firstOfNextMonth(today))}</span>
+          </div>
+        ) : <DateField label={t('profile.effective')} value={d.effective} onChange={(v) => set({ effective: v })} min={today} error={errEff} />}
       </PeSection>
       <MgmtNote p={p} v={d.note} set={(v) => set({ note: v })} />
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={p.mgmt ? t('common.saveChanges') : t('common.submitReview')} />

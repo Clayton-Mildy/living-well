@@ -30,4 +30,7 @@ export const approvals: Same<typeof EN> = {
   'tab.renewals': 'Perpanjangan', 'none.renewals': 'Tidak ada perubahan perpanjangan untuk disetujui', 'none.renewalsSub': 'Perubahan yang dicatat meja depan setelah menelepon keluarga (naik paket, turun paket, cuti, berhenti) muncul di sini.', 'kind.renewal': 'Perpanjangan',
   'sum.renewalUpgrade': 'Naik ke Gold mulai {month}', 'sum.renewalDowngrade': 'Turun ke Flex mulai {month}', 'sum.renewalLeave': 'Cuti di {months}', 'sum.renewalStop': 'Berhenti · hari terakhir {date}',
   renewalChange: 'Perubahan', renewalMonth: 'Bulan', renewalReason: 'Alasan', 'notif.rejected.renewals': 'Manajemen tidak menyetujui {n} perubahan perpanjangan Anda: {reason}',
+  // round 13: pembayaran yang dicatat meja depan
+  'tab.payments': 'Pembayaran', 'none.payments': 'Tidak ada pembayaran untuk dikonfirmasi', 'none.paymentsSub': 'Tunai dan transfer bank yang dicatat meja depan muncul di sini sampai keuangan atau manajemen mengonfirmasinya.', 'kind.payment': 'Pembayaran',
+  'sum.payment': '{amount} {method} · {invoice} · dicatat {who}', 'notif.rejected.payments': 'Keuangan tidak mengonfirmasi {n} catatan pembayaran Anda: {reason}',
 };

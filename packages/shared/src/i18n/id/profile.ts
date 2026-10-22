@@ -15,7 +15,7 @@ export const profile: Same<typeof EN> = {
   scrollLeft: 'Geser tab ke kiri', scrollRight: 'Geser tab ke kanan',
   'edit.overview': 'Ubah data diri', 'edit.health': 'Ubah catatan kesehatan', 'edit.care': 'Ubah status kognitif', 'edit.docs': 'Ubah persetujuan', 'edit.plan': 'Ubah paket', 'edit.family': 'Tambah kontak keluarga',
   'who.overview': 'lobi dan manajemen', 'who.health': 'perawat dan manajemen', 'who.care': 'perawat, pengajar, dan manajemen', 'who.docs': 'lobi dan manajemen',
-  'who.plan': 'keuangan dan manajemen', 'who.family': 'lobi dan manajemen', editOnly: 'Hanya {w} yang bisa mengubah ini.',
+  'who.plan': 'lobi, keuangan dan manajemen', 'who.family': 'lobi dan manajemen', editOnly: 'Hanya {w} yang bisa mengubah ini.',
   editEnded: 'Keanggotaan sudah berakhir. Data hanya bisa dibaca dan disimpan sebagai riwayat.', editPending: 'Menunggu persetujuan. Data bisa diubah setelah manajemen menyetujui.',
   editGated: 'Perubahan dikirim ke manajemen untuk disetujui. Sampai saat itu, data yang sekarang tetap berlaku.', editFlagged: 'Langsung berlaku. Manajemen meninjau perubahan kesehatan setelahnya.',
   appliedReview: 'Sudah berlaku · sedang ditinjau', sentBy: 'Dikirim oleh {n} · {w}', stillInForce: 'Data yang sekarang tetap berlaku sampai disetujui', appliedNote: 'sudah berlaku, manajemen akan meninjaunya',

@@ -4,7 +4,7 @@
 import type { Draft } from 'immer';
 import type { Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
 import { e164, toMin } from '../util';
-import { defineAction, hasRole, isMgmt, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
+import { defineAction, hasRole, isMgmt, roleOf, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
 import { requireMember, shortOf, familyUserIds } from './helpers';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 import { NOTE_KEYS } from '../rules/approvals';
@@ -416,7 +416,8 @@ export const membersActions: ActionDef[] = [
   }),
   defineAction<{ memberId: string; plan: Plan; effective?: ISODate; note?: string }>({
     name: 'members.changePlan',
-    can: (u) => planPeople(u),
+    // round 13: the front desk starts a change too (gated: management approves it in Approvals), from the 1st of next month only
+    can: (u) => hasRole(u, 'lobby', 'finance', 'mgmt'),
     parse: (raw) => {
       const o = obj(raw);
       const plan: Plan = o.plan === 'gold' ? 'gold' : o.plan === 'flex' ? 'flex' : bad('members.err.planInvalid');
@@ -429,10 +430,14 @@ export const membersActions: ActionDef[] = [
       const m = editable(d, input.memberId, ctx);
       const effective = input.effective || firstOfNextMonth(ctx.today);
       if (effective < ctx.today) ctx.fail('members.err.effectiveInvalid');
+      // the replay on approval runs as management, so this only bites when the desk submits
+      if (roleOf(ctx.user) === 'lobby' && effective !== firstOfNextMonth(ctx.today)) ctx.fail('members.err.effectiveInvalid');
       const cur = planOn(m as Member, effective);
       if (cur.plan === input.plan) ctx.fail('err.noChanges');
       addPlanEntry(m, { from: effective, plan: input.plan, by: ctx.actor }, ctx.today);
       for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending' && r.to === input.plan) { r.status = 'applied'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }
+      const to = familyUserIds(d, m.id);
+      if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.planChanged', params: { name: displayName(m), plan: input.plan, date: dmy(effective) }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
       feed(ctx, d, m.id, 'sell', 'plan', { plan: input.plan, from: effective, by: ctx.actor });
     },
   }),

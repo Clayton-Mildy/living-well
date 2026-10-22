@@ -1,6 +1,6 @@
 // What one entry waiting for approval looks like in the Approvals screen: a short summary line and the full view (old → new for edits).
 // Pure view-model: the screen renders the pieces. Profile changes use describeCr (reviewDiff.ts).
-import { memberName, displayName, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type Slot } from '@cp/shared';
+import { memberName, displayName, actorName, rp, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type Slot } from '@cp/shared';
 import type { ApprovalItem, ApprovalType, HistoryItem } from '@cp/shared/rules/approvals';
 import { APPROVAL_TYPES, DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approvals';
 import { diffTemplates, templateOn, weekDate, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
@@ -127,6 +127,25 @@ function renewalView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   return { who: m ? memberName(m) : '', kind: t('approvals.kind.renewal'), summary: f.note ? `${summary} · ${f.note}` : summary, detail: { title: t('approvals.kind.renewal'), rows: [], summary: rows }, edit: false };
 }
 
+/** Round 13: a cash or transfer payment the front desk recorded, waiting for finance or management to confirm. */
+function payView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
+  const p = s.payments[id];
+  const blank = { who: '', kind: t('approvals.kind.payment'), summary: '', detail: { title: '', rows: [], summary: [] }, edit: false };
+  if (!p) return blank;
+  const m = s.members[p.memberId];
+  const invoice = p.allocations.map((a) => a.invoiceId).join(', ');
+  const method = t('finance.method.' + p.method).toLowerCase();
+  const summary = t('approvals.sum.payment', { amount: rp(p.amount), method, invoice, who: actorName(s, p.by) });
+  const rows: DiffRow[] = [
+    { label: t('finance.pay.amountCredited'), to: rp(p.amount) },
+    { label: t('finance.pay.paidBy'), to: t('finance.method.' + p.method) },
+    { label: t('finance.pay.invoice'), to: invoice },
+    ...(p.ref ? [{ label: t('finance.pay.reference'), to: p.ref }] : []),
+    { label: t('approvals.requestedBy'), to: `${actorName(s, p.by)} · ${fmt.fds(p.receivedOn)}${p.receivedAt ? `, ${p.receivedAt}` : ''}` },
+  ];
+  return { who: m ? memberName(m) : '', kind: t('approvals.kind.payment'), summary, detail: { title: t('approvals.kind.payment'), rows: [], summary: rows }, edit: false };
+}
+
 /** The view of one entry: pending (ApprovalItem) or handled (HistoryItem). Profile changes are described by describeCr. */
 export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
   switch (it.sub) {
@@ -137,6 +156,7 @@ export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
     case 'dayMenu': return dayMenuView(s, it.id, t, fmt);
     case 'stock': return stockView(s, it.id, t);
     case 'renewal': return renewalView(s, it.id, t, fmt);
+    case 'payment': return payView(s, it.id, t, fmt);
     case 'cr': case 'flag': {
       const cr = s.changeRequests[it.id];
       if (cr) {

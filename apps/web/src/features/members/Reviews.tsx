@@ -2,7 +2,7 @@
 // the health edits that were applied at once), care log (daily logs and notes for families), health readings, photos, menu (weekly versions and
 // one-day changes) and stock requests; History lists what was handled. Each row has a checkbox: select some or all, then Approve (N) or Reject (N)
 // (one reason for the whole batch; one server action per batch). Rows also have their own Approve and Reject. Photos are a grid with the
-// "Notify families" switch. /reviews?tab=photos (or logs, readings, menu, stock, renewals, profile, history) opens a tab.
+// "Notify families" switch. /reviews?tab=photos (or logs, readings, menu, stock, renewals, payments, profile, history) opens a tab.
 // KC round 7: the Renewals tab lists the changes the front desk recorded after calling a family (upgrade, downgrade, leave, stop); approving applies them from the 1st.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -28,7 +28,7 @@ import { memberPhoto } from '../../lib/media';
 type Tab = ApprovalType | 'history';
 const TABS: Tab[] = [...APPROVAL_TYPES, 'history'];
 const STATUS_ICON: Record<string, string> = { approved: 'task_alt', rejected: 'block', withdrawn: 'undo', superseded: 'swap_horiz', acknowledged: 'done_all', reverted: 'undo' };
-const TAB_FOR_SUB: Record<string, string> = { log: 'care', note: 'notes', reading: 'care', renewal: 'plan' };
+const TAB_FOR_SUB: Record<string, string> = { log: 'care', note: 'notes', reading: 'care', renewal: 'plan', payment: 'plan' };
 const LEGACY_TABS: Record<string, Tab> = { pending: 'profile', applied: 'profile' };
 
 /** A checkbox in the v3 quiet style (also used on photo tiles' own button). */
@@ -70,6 +70,7 @@ export function Reviews() {
     menu: usePaged(items.menu, 10, 'menu'),
     stock: usePaged(items.stock, 10, 'stock'),
     renewals: usePaged(items.renewals, 10, 'renewals'),
+    payments: usePaged(items.payments, 10, 'payments'),
     history: usePaged(history, 10, 'history'),
   };
   const [sels, setSels] = useState<Partial<Record<Tab, string[]>>>({});
@@ -451,7 +452,7 @@ export function Reviews() {
       if (r.ok) n++;
       else if (r.code === 'err.reviewConflict') setConflict((c) => ({ ...c, [cr.id]: String(r.params.fields || '') }));
     }
-    for (const type of ['logs', 'readings', 'renewals'] as const) {
+    for (const type of ['logs', 'readings', 'renewals', 'payments'] as const) {
       const ids = g.items.filter((x) => x.type === type).map((x) => x.id);
       if (!ids.length) continue;
       const r = await act('approval.approve', { type, ids }, { silent: true });
@@ -542,6 +543,7 @@ export function Reviews() {
       {current === 'menu' ? (items.menu.length ? card(paged.menu.rows.map(quietRow)) : empty('menu')) : null}
       {current === 'stock' ? (items.stock.length ? card(paged.stock.rows.map(quietRow)) : empty('stock')) : null}
       {current === 'renewals' ? (items.renewals.length ? card(paged.renewals.rows.map(quietRow)) : empty('renewals')) : null}
+      {current === 'payments' ? (items.payments.length ? card(paged.payments.rows.map(quietRow)) : empty('payments')) : null}
       {current === 'photos' ? (
         photos.length ? (
           <>

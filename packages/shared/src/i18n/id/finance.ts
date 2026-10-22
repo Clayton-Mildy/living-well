@@ -170,4 +170,13 @@ export const finance: Same<typeof EN> = {
   'notif.stoppedFamily': 'Keanggotaan {name} dihentikan: invoice {number} ({amount}) masih belum dibayar pada tanggal 3. Silakan hubungi klub; untuk kembali perlu mendaftar ulang.',
   'feed.suspended': '{name} ditangguhkan: invoice {number} belum dibayar', 'feed.stopped': 'Keanggotaan {name} dihentikan: invoice {number} belum dibayar',
   'bill.holdTitle': 'Ditangguhkan · belum dibayar', 'bill.holdMeta': '{n}', 'bill.holdRow': '{number} · {amount} · dihentikan {date}', 'bill.holdRowTold': '{number} · {amount} · ditangguhkan sampai dibayar', 'bill.holdOne': '1 anggota', 'bill.holdMany': '{n} anggota',
+  // round 13: meja depan mencatat tunai atau transfer; keuangan mengonfirmasi
+  'pay.waitingBy': 'Dicatat {name}, menunggu keuangan', 'pay.waiting': 'Menunggu keuangan', 'pay.waitingTitle': 'Menunggu Anda', 'pay.waitingRow': 'Dicatat {name} · {time}',
+  'pay.confirm': 'Konfirmasi', 'pay.reject': 'Tolak', 'pay.rejectWhy': 'Apa yang tidak sesuai?', 'pay.rejectTitle': 'Tolak pembayaran ini',
+  'pay.deskNote': 'Hanya tunai atau transfer. Keuangan mengonfirmasi sebelum keluarga melihatnya.', 'pay.waitingTag': 'Menunggu',
+  'toast.sentToFinance': 'Dikirim ke keuangan untuk dikonfirmasi.', 'toast.confirmed': 'Pembayaran dikonfirmasi. Keluarga sudah diberi tahu.', 'toast.paymentRejected': 'Pembayaran ditolak.',
+  'notif.paymentToConfirm': '{who} mencatat {amount} untuk {name}. Mohon konfirmasi di Pembayaran.',
+  'notif.paymentConfirmed': 'Catatan pembayaran Anda untuk {name} ({amount}, {invoice}) sudah dikonfirmasi.',
+  'feed.paymentConfirmed': 'Pembayaran dikonfirmasi: {number} · {amount}',
+  'err.deskInvoice': 'Pilih tagihan untuk pembayaran ini.', 'err.deskMethod': 'Meja depan hanya mencatat tunai atau transfer bank.', 'err.deskOverpay': 'Jumlah itu melebihi sisa tagihan.',
 };

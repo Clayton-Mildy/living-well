@@ -1,6 +1,8 @@
 // Finance actions: invoice run, invoices, payments, refunds, Xero, budget, receipts, vendor invoices.
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, systemUser, projectForFamily, live, invoiceStatus, balanceOf, paidOn, accountCredit, invoiceTotal, budgetWeek, updatesFor, dueDateFor, type Attendance, type ClubState } from '../index';
+import { monthReport } from '../rules/monthReport';
+import { periodFor } from '../rules/insights';
 import { runPlan, paymentsBoard, billingBoard, budgetWeekOf, availableCredit, creditApplied, invoiceVa, bankVa, groupVa, refundableOn, dtMinutes, nextRunPeriod, budgetRange, invoicePeriod, payerOf } from '../rules/finance';
 
 const T = '2026-10-21';
@@ -359,7 +361,7 @@ describe('payments', () => {
   });
   it('validates and checks permissions', () => {
     const w = world();
-    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash' }, 's1', 'err.forbidden');
+    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash' }, 's5', 'err.forbidden'); // the front desk records, but only against an invoice (the desk tests)
     w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash' }, 'f1', 'err.forbidden');
     w.fail('payment.record', { memberId: 'm46', amount: 0, method: 'cash' }, 's10', 'err.invalid');
     w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'bitcoin' }, 's10', 'err.invalid');
@@ -377,6 +379,60 @@ describe('payments', () => {
     expect(mgmt?.params).toMatchObject({ name: 'Maria Wijaya', amount: 'Rp 3.950.000' });
     expect(updatesFor(w.s, getUser(clubs, 'f1')!).some((x) => x.kind === 'finance.notif.paid')).toBe(true);
     expect(Object.values(w.s.activity).some((a) => a.key === 'finance.feed.pay_cash' && a.memberId === 'm46')).toBe(true);
+  });
+});
+
+describe('the front desk records a payment (round 13): saved waiting for finance', () => {
+  const desk = { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001' };
+  it('a cash payment by the lobby counts for staff but not for the family, Xero, refunds or the notice', () => {
+    const w = world();
+    const r = w.run('payment.record', desk, 's1');
+    const pay = w.s.payments[r.result.paymentId as string];
+    expect(r.result.waiting).toBe(true);
+    expect(pay.approval).toMatchObject({ status: 'pending', by: 'staff:s1' });
+    expect(pay.xero).toBe('notSent');
+    expect(balanceOf(w.s, w.s.invoices['INV-2610-001'])).toBe(0);
+    expect(w.s.invoices['INV-2610-001'].xero).not.toBe('pending');
+    expect(Object.values(projectForFamily(w.s, 'f1').payments).some((x) => x.id === pay.id)).toBe(false);
+    const fam = updatesFor(w.s, getUser(clubs, 'f1')!);
+    expect(fam.some((x) => x.kind === 'finance.notif.paid' && x.params.amount !== undefined && x.createdAt.startsWith(T) && x.ref?.id === pay.id)).toBe(false);
+    const all = Object.values(w.s.notifications);
+    expect(all.filter((x) => x.kind === 'finance.notif.paymentToConfirm')).toHaveLength(1);
+    expect(all.find((x) => x.kind === 'finance.notif.paymentToConfirm')!.toRoles).toEqual(['finance', 'mgmt']);
+    expect(all.some((x) => x.kind === 'finance.notif.paid' && x.ref?.id === pay.id)).toBe(false);
+    expect(paymentsBoard(w.s, T).waiting.map((v) => v.p.id)).toEqual([pay.id]);
+    expect(paymentsBoard(w.s, T).month.sum).toBe(paymentsBoard(world().s, T).month.sum);
+    expect(paymentsBoard(w.s, T).xeroPending).toBe(paymentsBoard(world().s, T).xeroPending);
+    expect(refundableOn(w.s, pay.id, 'INV-2610-001')).toBe(0);
+    w.fail('payment.record', desk, 's1', 'finance.err.invoicePaid'); // nobody records it twice
+    w.fail('refund.record', { paymentId: pay.id, invoiceId: 'INV-2610-001', amount: 1000, reason: 'x', creditNote: false }, 's10', 'finance.err.refundTooMuch');
+  });
+  it('the Month report counts it as collected only once finance confirmed it', () => {
+    const w = world();
+    const collected = () => monthReport(w.s, periodFor('thisMonth', T), T, 600).money.collected.cur;
+    const before = collected();
+    const id = w.run('payment.record', desk, 's1').result.paymentId as string;
+    expect(collected()).toBe(before);
+    w.run('approval.approve', { type: 'payments', ids: [id] }, 's10');
+    expect(collected()).toBe(before + 2_700_000);
+  });
+  it('a transfer is allowed; DOKU, other, no invoice or more than the balance are refused', () => {
+    const w = world();
+    w.fail('payment.record', { ...desk, method: 'dokuVa' }, 's1', 'finance.err.deskMethod');
+    w.fail('payment.record', { ...desk, method: 'other' }, 's1', 'finance.err.deskMethod');
+    w.fail('payment.record', { memberId: 'm1', amount: 100_000, method: 'cash' }, 's1', 'finance.err.deskInvoice');
+    w.fail('payment.record', { ...desk, amount: 2_700_001 }, 's1', 'finance.err.deskOverpay');
+    w.fail('payment.record', desk, 's5', 'err.forbidden');
+    w.fail('payment.record', desk, 'f1', 'err.forbidden');
+    expect(() => w.run('payment.record', { ...desk, amount: 1_000_000, method: 'bankTransfer', ref: 'TF-1' }, 's1')).not.toThrow();
+    expect(balanceOf(w.s, w.s.invoices['INV-2610-001'])).toBe(1_700_000);
+  });
+  it('finance and management still record as before, confirmed at once', () => {
+    const w = world();
+    const r = w.run('payment.record', desk, 's10');
+    expect(w.s.payments[r.result.paymentId as string].approval).toBeUndefined();
+    expect(w.s.payments[r.result.paymentId as string].xero).toBe('pending');
+    expect(Object.values(projectForFamily(w.s, 'f1').payments).some((x) => x.id === r.result.paymentId)).toBe(true);
   });
 });
 

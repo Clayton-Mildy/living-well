@@ -104,10 +104,12 @@ export interface PaymentView {
 }
 export const refundsOfPayment = (s: ClubState, paymentId: string) => sortBy(live(s.refunds).filter((r) => r.paymentId === paymentId), (r) => r.createdAt);
 export const refundsOfInvoice = (s: ClubState, invoiceId: string) => sortBy(live(s.refunds).filter((r) => r.invoiceId === invoiceId), (r) => r.createdAt);
+/** A payment the front desk recorded counts for the family, Xero, refunds and the reports only once finance or management confirmed it (no mark = confirmed). */
+export const isConfirmed = (p: Payment) => !p.approval || p.approval.status === 'approved';
 /** What of a payment's allocation to one invoice can still be refunded. */
 export function refundableOn(s: ClubState, paymentId: string, invoiceId: string): number {
   const p = s.payments[paymentId];
-  if (!p || p.deletedAt) return 0;
+  if (!p || p.deletedAt || !isConfirmed(p)) return 0;
   const allocated = sum(p.allocations.filter((a) => a.invoiceId === invoiceId).map((a) => a.amount));
   const refunded = sum(live(s.refunds).filter((r) => r.paymentId === paymentId && r.invoiceId === invoiceId).map((r) => r.amount));
   return Math.max(0, allocated - refunded);
@@ -117,7 +119,7 @@ export function paymentView(s: ClubState, p: Payment): PaymentView {
   const refunded = sum(refunds.map((r) => r.amount));
   const allocations = p.allocations.map((a) => {
     const r = sum(refunds.filter((x) => x.invoiceId === a.invoiceId).map((x) => x.amount));
-    return { invoiceId: a.invoiceId, invoice: s.invoices[a.invoiceId], amount: a.amount, refunded: r, refundable: Math.max(0, a.amount - r) };
+    return { invoiceId: a.invoiceId, invoice: s.invoices[a.invoiceId], amount: a.amount, refunded: r, refundable: isConfirmed(p) ? Math.max(0, a.amount - r) : 0 };
   });
   return { p, member: s.members[p.memberId], refunds, refunded, net: p.amount - refunded, credit: p.amount - sum(p.allocations.map((a) => a.amount)), allocations, refundable: sum(allocations.map((a) => a.refundable)) };
 }
@@ -129,13 +131,15 @@ export interface PaymentsBoard {
   rows: PaymentView[];
   today: { n: number; sum: number };
   month: { n: number; sum: number };
+  /** recorded at the front desk, waiting for finance to confirm (oldest first) */
+  waiting: PaymentView[];
   xeroPending: number;
   refunds: { n: number; sum: number };
 }
 /** Totals are net of refunds: a payment that was refunded in full no longer counts. */
 export function paymentsBoard(s: ClubState, today: ISODate): PaymentsBoard {
   const rows = paymentViews(s);
-  const counted = rows.filter((r) => r.net > 0);
+  const counted = rows.filter((r) => r.net > 0 && isConfirmed(r.p));
   const m = ym(today);
   const t = counted.filter((r) => r.p.receivedOn === today && r.p.method === 'dokuVa');
   const mo = counted.filter((r) => ym(r.p.receivedOn) === m);
@@ -144,6 +148,7 @@ export function paymentsBoard(s: ClubState, today: ISODate): PaymentsBoard {
     rows,
     today: { n: t.length, sum: sum(t.map((r) => r.net)) },
     month: { n: mo.length, sum: sum(mo.map((r) => r.net)) },
+    waiting: sortBy(rows.filter((r) => !isConfirmed(r.p) && r.p.approval!.status === 'pending'), (r) => r.p.approval!.at + r.p.id),
     xeroPending: live(s.payments).filter((p) => p.xero === 'pending').length + live(s.refunds).filter((r) => r.xero === 'pending').length,
     refunds: { n: refunds.length, sum: sum(refunds.map((r) => r.amount)) },
   };

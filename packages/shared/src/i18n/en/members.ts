@@ -27,7 +27,7 @@ export const members = {
   // notifications (updates)
   'notif.welcome': 'Welcome to CitraPremier. {name}’s membership starts on {date}.', 'notif.docRequested': 'The club asked you to upload a document for {name}.',
   'notif.allergies': '{who} updated the allergies of {name}.', 'notif.meds': '{who} updated the medicines of {name}.', 'notif.care': '{who} updated the care instructions of {name}.',
-  'notif.health': '{who} updated the health record of {name}.', 'notif.planApplied': '{name}’s plan change was applied from {date}.', 'notif.planDeclined': '{name}’s plan change request was not applied.',
+  'notif.health': '{who} updated the health record of {name}.', 'notif.planApplied': '{name}’s plan change was applied from {date}.', 'notif.planChanged': '{name}’s plan changes to {plan} from {date}.', 'notif.planDeclined': '{name}’s plan change request was not applied.',
   'notif.ending': '{name}’s membership ends on {date}.', 'notif.reactivated': '{name}’s membership is active again from {date}.', 'notif.contactAdded': 'You are now a family contact for {name}.',
   'notif.appInvite': 'You can now use the CitraPremier app for {name}.',
   // errors

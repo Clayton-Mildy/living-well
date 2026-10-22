@@ -1,7 +1,7 @@
 // Nav badge counts per role (shown in the sidebar and the phone bottom bar).
 import { useMemo } from 'react';
 import { live } from '@cp/shared';
-import { approvalTotal } from '@cp/shared/rules/approvals';
+import { approvalTotal, pendingItems } from '@cp/shared/rules/approvals';
 import { openTaskCount } from '@cp/shared/rules/tasks';
 import { useClub } from '../store/replica';
 import { useNow } from '../lib/clock';
@@ -17,6 +17,7 @@ export function useNavCounts(): Record<string, number> {
     if (role === 'mgmt') out.reviews = approvalTotal(s); // everything waiting in Approvals: profile changes, care log, readings, photos, menu, stock
     const approver = role === 'mgmt' || role === 'finance' || (user?.kind === 'staff' && user.staff.supervisor);
     if (approver) out.stock = live(s.stockRequests).filter((k) => k.status === 'requested' && (role !== 'kitchen' || k.area === 'kitchen')).length;
+    if (role === 'finance') out.payments = pendingItems(s, 'payments').length; // front-desk payments waiting for finance
     if (role === 'mgmt' || role === 'finance') {
       out.budget = live(s.budgetRequests).filter((b) => b.status === 'pending').length;
       out.receipts = live(s.receipts).filter((r) => r.status === 'submitted' && !r.voidedAt).length + live(s.vendorInvoices).filter((v) => v.status === 'toApprove').length;

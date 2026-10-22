@@ -2,7 +2,7 @@
 // (projectForFamily and the client rules); the bulk hub actions (one action per batch, stale ids skipped); and the per-type selectors.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { buildSeed, execute, getUser, projectForFamily, actionItems, unreadUpdates, toMin, DomainError, type ClubState } from '../index';
+import { buildSeed, execute, getUser, projectForFamily, invoiceStatus, actionItems, unreadUpdates, toMin, DomainError, type ClubState } from '../index';
 import { approvalCounts, approvalHistory, approvalTotal, approvedDayMenu, approvedVersion, pendingItems } from '../rules/approvals';
 import { latestLog, sharedNoteOf, servedLunch } from '../rules/family';
 import { menuOn } from '../rules/kitchen';
@@ -285,6 +285,7 @@ describe('selectors: counts, the derived items and the history', () => {
     expect(c.menu).toBe(1);
     expect(c.stock).toBeGreaterThanOrEqual(2);
     expect(c.photos).toBe(0);
+    expect(c.payments).toBe(0);
     expect(approvalTotal(s)).toBe(Object.values(c).reduce((a, b) => a + b, 0));
   });
 
@@ -317,5 +318,48 @@ describe('selectors: counts, the derived items and the history', () => {
     expect(approvedVersion(mark({ ...base, status: 'pending', prev: { a: 0 } }), ['a'])).toMatchObject({ a: 0, approval: undefined });
     expect(approvedVersion(mark({ ...base, status: 'rejected' }), ['a'])).toBeNull();
     expect(approvedVersion(mark({ ...base, status: 'rejected', prev: { a: 0 } }), ['a'])).toMatchObject({ a: 1 });
+  });
+});
+
+describe('payments the front desk recorded (round 13)', () => {
+  const rec = () => run(fresh(), 'payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's1');
+  const kinds = (s: ClubState, uid: string, kind: string) => unreadUpdates(s, as(s, uid)).filter((x) => x.kind === kind);
+  it('finance confirms: Xero hears of it, the family sees it and gets the receipt notice', () => {
+    const r = rec();
+    const id = r.result.paymentId as string;
+    expect(approvalCounts(r.state).payments).toBe(1);
+    expect(pendingItems(r.state, 'payments')[0]).toMatchObject({ id, sub: 'payment', by: 'staff:s1', memberId: 'm1' });
+    const a = run(r.state, 'approval.approve', { type: 'payments', ids: [id] }, 's10');
+    expect(a.result).toMatchObject({ approved: 1 });
+    expect(a.state.payments[id]).toMatchObject({ xero: 'pending', approval: { status: 'approved', decidedBy: 'staff:s10' } });
+    expect(a.state.invoices['INV-2610-001'].xero).toBe('pending');
+    expect(Object.values(projectForFamily(a.state, 'f1').payments).some((p) => p.id === id)).toBe(true);
+    expect(kinds(a.state, 'f1', 'finance.notif.paid').some((x) => x.ref?.id === id)).toBe(true);
+    expect(kinds(a.state, 's1', 'finance.notif.paymentConfirmed')).toHaveLength(1);
+    expect(approvalCounts(a.state).payments).toBe(0);
+    expect(approvalHistory(a.state).some((h) => h.type === 'payments' && h.status === 'approved' && h.id === id)).toBe(true);
+    expect(run(a.state, 'approval.approve', { type: 'payments', ids: [id] }, 's9').result).toMatchObject({ approved: 0, skipped: [id] });
+  });
+  it('management can confirm too; finance may decide nothing but payments', () => {
+    const r = rec();
+    const id = r.result.paymentId as string;
+    expect(run(r.state, 'approval.approve', { type: 'payments', ids: [id] }, 's9').state.payments[id].approval?.status).toBe('approved');
+    fails(r.state, 'approval.approve', { type: 'logs', ids: ['x'] }, 's10', 'err.forbidden');
+    fails(r.state, 'approval.reject', { type: 'logs', ids: ['x'], reason: 'no' }, 's10', 'err.forbidden');
+    fails(r.state, 'approval.approve', { type: 'payments', ids: [id] }, 's1', 'err.forbidden');
+    fails(r.state, 'approval.approve', { type: 'payments', ids: [id] }, 'f1', 'err.forbidden');
+  });
+  it('a rejection soft-deletes the payment, re-opens the invoice and tells the recorder why', () => {
+    const r = rec();
+    const id = r.result.paymentId as string;
+    const x = run(r.state, 'approval.reject', { type: 'payments', ids: [id], reason: 'No cash in the drawer' }, 's10');
+    expect(x.state.payments[id].deletedAt).toBeTruthy();
+    expect(x.state.payments[id].approval).toMatchObject({ status: 'rejected', reason: 'No cash in the drawer' });
+    const inv = x.state.invoices['INV-2610-001'];
+    expect(invoiceStatus(x.state, inv, T)).toBe('outstanding');
+    expect(Object.values(projectForFamily(x.state, 'f1').payments).some((p) => p.id === id)).toBe(false);
+    expect(kinds(x.state, 's1', 'approvals.notif.rejected.payments')).toHaveLength(1);
+    expect(approvalHistory(x.state).some((h) => h.type === 'payments' && h.status === 'rejected' && h.reason === 'No cash in the drawer')).toBe(true);
+    expect(approvalCounts(x.state).payments).toBe(0);
   });
 });

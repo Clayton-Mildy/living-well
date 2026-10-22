@@ -1,8 +1,9 @@
 // Payments (design ScrPay): "Sync Xero now", tiles, the payment list with partial or full refunds, and the manual-payment form.
 import { useMemo, useState } from 'react';
 import { displayName, memberName, rp, ym } from '@cp/shared';
-import { invoicePeriod, paymentsBoard, type PaymentView } from '@cp/shared/rules/finance';
-import { Button, EmptyState, Eyebrow, PageHead, usePaged } from '../../components/ui';
+import { actorName } from '@cp/shared';
+import { invoicePeriod, isConfirmed, paymentsBoard, type PaymentView } from '@cp/shared/rules/finance';
+import { Button, EmptyState, Eyebrow, PageHead, Sheet, TextField, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -21,6 +22,8 @@ export function Payments() {
   const { device, isPhone } = useDevice();
   const [q, setQ] = useState('');
   const [refundFor, setRefundFor] = useState<string | null>(null);
+  const [rejecting, setRejecting] = useState<PaymentView | null>(null);
+  const [why, setWhy] = useState('');
   const board = useMemo(() => paymentsBoard(s, today), [s, today]);
 
   const hits = useMemo(
@@ -35,6 +38,15 @@ export function Payments() {
     { id: 'refunds', label: t('finance.pay.tileRefunds'), value: board.refunds.n, sub: rp(board.refunds.sum), short: rp(board.refunds.sum) },
   ];
   const sync = () => act('xero.sync', {}, { ok: t('finance.toast.xeroSynced') });
+  const confirm = (pv: PaymentView) => act('approval.approve', { type: 'payments', ids: [pv.p.id] }, { ok: t('finance.toast.confirmed') });
+  const reject = async () => {
+    if (!rejecting || !why.trim()) return;
+    const r = await act('approval.reject', { type: 'payments', ids: [rejecting.p.id], reason: why.trim() }, { ok: t('finance.toast.paymentRejected') });
+    if (r.ok) { setRejecting(null); setWhy(''); }
+  };
+  // round 13: cash and transfers the front desk recorded wait here for finance
+  const waitingRows = board.waiting.map((pv, i) => <WaitingRow key={pv.p.id} pv={pv} first={i === 0} onConfirm={() => confirm(pv)} onReject={() => { setRejecting(pv); setWhy(''); }} />);
+  const waitingTitle = `${t('finance.pay.waitingTitle')} · ${board.waiting.length}`;
 
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 18 : 'clamp(18px, 2.8vw, 36px)' }}>
@@ -43,6 +55,10 @@ export function Payments() {
 
       <NumberTabs cols={isPhone ? 2 : 4} maxWidth={isPhone ? 480 : 820}
         items={tiles.map((x) => ({ key: x.id, testId: `pay-tile-${x.id}`, label: x.label, value: x.value, sub: (isPhone ? x.short ?? x.sub : x.sub) || undefined }))} />
+
+      {board.waiting.length ? (isPhone ? <PGroup title={waitingTitle} pad={0} gap={0} label={waitingTitle}>{waitingRows}</PGroup> : (
+        <Hero><HeroHead title={waitingTitle} />{waitingRows}</Hero>
+      )) : null}
 
       {isPhone ? (
         // round 6, phone: the search bar on its own, the payments as a grouped list, the manual-payment form as its own group
@@ -70,6 +86,36 @@ export function Payments() {
         </Hero>
       </div>
       )}
+      <Sheet open={!!rejecting} onClose={() => setRejecting(null)} title={t('finance.pay.rejectTitle')}
+        footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" size={48} onClick={() => setRejecting(null)}>{t('common.cancel')}</Button><Button variant="danger" size={48} disabled={!why.trim()} onClick={reject}>{t('finance.pay.reject')}</Button></div>}>
+        <TextField label={t('finance.pay.rejectWhy')} value={why} onChange={setWhy} maxLength={240} name="payment-reject-why" />
+      </Sheet>
+    </div>
+  );
+}
+
+/** A payment the front desk recorded: who, what it pays, how much and who recorded it, with Confirm and Reject. */
+function WaitingRow({ pv, first, onConfirm, onReject }: { pv: PaymentView; first?: boolean; onConfirm: () => void; onReject: () => void }) {
+  const t = useT();
+  const s = useClub();
+  const { fmonth } = useFmt();
+  const { isPhone } = useDevice();
+  const { p, member } = pv;
+  const periods = Array.from(new Set(pv.allocations.map((a) => (a.invoice ? fmonth(invoicePeriod(a.invoice), true) : '')).filter(Boolean)));
+  const sub = [pv.allocations.map((a) => a.invoiceId).join(', '), periods.length === 1 ? periods[0] : '', methodLabel(t, p)].filter(Boolean).join(' · ');
+  const who = member ? memberName(member) : p.memberId;
+  return (
+    <div data-testid="payment-waiting" style={{ ...(isPhone ? prow(first) : hrow), display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 10 }}>
+        <span style={{ ...rowTitle, fontSize: 16, minWidth: 0 }}>{who}</span>
+        <span style={{ fontSize: 16, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, textAlign: 'right' }}>{rp(p.amount)}</span>
+      </div>
+      <span style={{ ...rowSub, fontSize: 13 }}>{sub}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', minHeight: 34 }}>
+        <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4, flex: '1 1 140px' }}>{t('finance.pay.waitingRow', { name: actorName(s, p.by), time: p.receivedAt || p.approval?.at.slice(11) || '' })}</span>
+        <PillBtn tone="primary" label={`${t('finance.pay.confirm')} ${who}`} onClick={onConfirm}>{t('finance.pay.confirm')}</PillBtn>
+        <PillBtn label={`${t('finance.pay.reject')} ${who}`} onClick={onReject}>{t('finance.pay.reject')}</PillBtn>
+      </div>
     </div>
   );
 }
@@ -100,7 +146,7 @@ function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentVi
         <span style={{ ...rowSub, fontSize: 13 }}>{sub}</span>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', minHeight: 24 }}>
           <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{p.receivedOn === today ? t('common.today') : fds(p.receivedOn)}{p.receivedAt ? `, ${p.receivedAt}` : ''}</span>
-          {p.xero === 'synced' ? <Badge kind="paid" label={t('finance.xero.synced')} /> : <Badge kind="pending" label={t('finance.xero.pending')} />}
+          {!isConfirmed(p) ? <Badge kind="pending" label={t('finance.pay.waitingTag')} /> : p.xero === 'synced' ? <Badge kind="paid" label={t('finance.xero.synced')} /> : <Badge kind="pending" label={t('finance.xero.pending')} />}
           {pv.refundable > 0 && !refunding ? (
             <span style={{ marginLeft: 'auto' }}>
               <PillBtn label={`${t('finance.pay.refund')} ${member ? memberName(member) : ''} ${numbers.join(' ')}`.trim()} onClick={onRefund}>{t('finance.pay.refund')}</PillBtn>
@@ -128,7 +174,7 @@ function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentVi
             <span style={{ fontSize: 17, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{rp(p.amount)}</span>
             <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{p.receivedOn === today ? t('common.today') : fds(p.receivedOn)}{p.receivedAt ? `, ${p.receivedAt}` : ''}</span>
           </div>
-          {p.xero === 'synced' ? <Badge kind="paid" label={t('finance.xero.synced')} /> : <Badge kind="pending" label={t('finance.xero.pending')} />}
+          {!isConfirmed(p) ? <Badge kind="pending" label={t('finance.pay.waitingTag')} /> : p.xero === 'synced' ? <Badge kind="paid" label={t('finance.xero.synced')} /> : <Badge kind="pending" label={t('finance.xero.pending')} />}
         </div>
         {pv.refundable > 0 && !refunding ? (
           <button type="button" onClick={onRefund} aria-label={`${t('finance.pay.refund')} ${member ? memberName(member) : ''} ${numbers.join(' ')}`.trim()}

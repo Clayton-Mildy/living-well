@@ -5,8 +5,8 @@
 // Families never see an entry before this approves it (rules/approvals.ts, project.ts); the notices that would tell them go out here.
 import { z } from 'zod';
 import { produce, current, type Draft } from 'immer';
-import type { Approval, ClubState, DailyLog, DayMenu, MemberNote, MenuVersion, Photo, Reading, StockRequest } from '../types';
-import { DomainError, defineAction, isMgmt, type Ctx } from './framework';
+import type { Approval, ClubState, DailyLog, DayMenu, MemberNote, MenuVersion, Payment, Photo, Reading, StockRequest } from '../types';
+import { DomainError, defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { acknowledgeChange, approveChange, rejectChange, revertChange } from './review';
 import { approvePhotoRows, rejectPhotoRows } from './photos';
@@ -15,7 +15,9 @@ import { approveStockRow, rejectStockRow } from './kitchen';
 import { noticeFamilies } from './health';
 import { menuAudience } from '../rules/kitchenOps';
 import { DAYMENU_KEYS, LOG_KEYS, NOTE_KEYS, READING_KEYS, isWaiting, snapshotOf, type ApprovalType, APPROVAL_TYPES, type SnapKeys } from '../rules/approvals';
-import { uniq } from '../util';
+import { balanceOf } from '../rules/billing';
+import { primaryContact } from '../rules/core';
+import { uniq, rp } from '../util';
 
 const approveSchema = z.object({ type: z.enum(APPROVAL_TYPES as [ApprovalType, ...ApprovalType[]]), ids: z.array(z.string().min(1)).min(1).max(300), notify: z.boolean().optional() });
 const rejectSchema = z.object({ type: z.enum(APPROVAL_TYPES as [ApprovalType, ...ApprovalType[]]), ids: z.array(z.string().min(1)).min(1).max(300), reason: z.string().trim().min(1, 'err.noteRequired').max(240) });
@@ -107,6 +109,25 @@ const approveVersion = (d: Draft<ClubState>, ctx: Ctx, v: Draft<MenuVersion>) =>
   }
 };
 
+const confirmPayment = (d: Draft<ClubState>, ctx: Ctx, p: Draft<Payment>) => {
+  const recorder = p.approval!.by;
+  decide(p.approval!, ctx, 'approved');
+  p.xero = 'pending';
+  const s = current(d) as ClubState;
+  for (const a of p.allocations) {
+    const inv = d.invoices[a.invoiceId];
+    if (inv && balanceOf(s, inv) <= 0) inv.xero = 'pending';
+  }
+  const name = shortOf(d, p.memberId);
+  const numbers = p.allocations.map((a) => a.invoiceId).join(', ') || '—';
+  const amount = rp(p.amount);
+  const payer = primaryContact(s, p.memberId);
+  if (payer) ctx.notify({ toUsers: [payer.id], kind: 'finance.notif.paid', params: { name, invoice: numbers, amount }, link: '/billing', memberId: p.memberId, ref: { type: 'payment', id: p.id } });
+  const by = staffIdOfActor(recorder);
+  if (by && d.staff[by] && !d.staff[by].deletedAt) ctx.notify({ toUsers: [by], kind: 'finance.notif.paymentConfirmed', params: { name, invoice: numbers, amount }, link: `/members/${p.memberId}`, memberId: p.memberId });
+  ctx.feed({ icon: 'payments', key: 'finance.feed.paymentConfirmed', params: { name, number: numbers, amount }, memberId: p.memberId });
+};
+
 const APPROVE: Record<ApprovalType, Handler> = {
   profile(d, ctx, id) {
     const c = d.changeRequests[id];
@@ -160,6 +181,13 @@ const APPROVE: Record<ApprovalType, Handler> = {
     f.status = 'done';
     decide(f.approval, ctx, 'approved');
     ctx.feed({ icon: 'event_repeat', key: 'renewals.feed.approved', params: { name: shortOf(d, f.memberId), month: f.month }, memberId: f.memberId });
+    return 'done';
+  },
+  // round 13: a cash or transfer payment from the front desk: Xero, the family and the receipt notice only now
+  payments(d, ctx, id) {
+    const p = d.payments[id];
+    if (!p || p.deletedAt || !isWaiting(p)) return 'skip';
+    confirmPayment(d, ctx, p as Draft<Payment>);
     return 'done';
   },
 };
@@ -245,10 +273,20 @@ const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
     note(out, by);
     return 'done';
   },
+  // round 13: turned down, the payment is gone and the invoice is open again; the recorder hears why
+  payments: (out) => (d, ctx, id, o) => {
+    const p = d.payments[id];
+    if (!p || p.deletedAt || !isWaiting(p)) return 'skip';
+    const by = p.approval!.by;
+    p.deletedAt = ctx.nowDT;
+    decide(p.approval!, ctx, 'rejected', o.reason);
+    note(out, by);
+    return 'done';
+  },
 };
 const note = (out: Outcome, by: string) => { const s = staffIdOfActor(by); if (s) out.rejectedBy.set(s, (out.rejectedBy.get(s) || 0) + 1); };
 
-const REJECT_LINK: Partial<Record<ApprovalType, string>> = { logs: '/log', readings: '/readings', menu: '/menu', renewals: '/renewals' };
+const REJECT_LINK: Partial<Record<ApprovalType, string>> = { logs: '/log', readings: '/readings', menu: '/menu', renewals: '/renewals', payments: '/members' };
 
 function run(d: Draft<ClubState>, ctx: Ctx, type: ApprovalType, ids: string[], mode: 'approve' | 'reject', o: { reason?: string; notify?: boolean }): Outcome {
   const out: Outcome = { done: [], skipped: [], conflicts: [], rejectedBy: new Map() };
@@ -271,13 +309,13 @@ function run(d: Draft<ClubState>, ctx: Ctx, type: ApprovalType, ids: string[], m
 export const approvalActions = [
   defineAction<{ type: ApprovalType; ids: string[]; notify?: boolean }>({
     name: 'approval.approve',
-    can: (u) => isMgmt(u),
+    can: (u, i) => isMgmt(u) || (hasRole(u, 'finance') && i?.type === 'payments'), // finance confirms the front desk's payments, nothing else
     parse: (raw) => parseWith(approveSchema, raw),
     run: (d, i, ctx) => { run(d, ctx, i.type, i.ids, 'approve', { notify: i.notify }); },
   }),
   defineAction<{ type: ApprovalType; ids: string[]; reason: string }>({
     name: 'approval.reject',
-    can: (u) => isMgmt(u),
+    can: (u, i) => isMgmt(u) || (hasRole(u, 'finance') && i?.type === 'payments'),
     parse: (raw) => parseWith(rejectSchema, raw),
     run: (d, i, ctx) => { run(d, ctx, i.type, i.ids, 'reject', { reason: i.reason }); },
   }),

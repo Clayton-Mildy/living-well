@@ -16,7 +16,7 @@ export const profile = {
   // edit bar
   'edit.overview': 'Edit details', 'edit.health': 'Edit health record', 'edit.care': 'Edit cognitive status', 'edit.docs': 'Edit consent', 'edit.plan': 'Change plan', 'edit.family': 'Add family contact',
   'who.overview': 'the lobby and management', 'who.health': 'the nurse and management', 'who.care': 'nurses, teachers and management', 'who.docs': 'the lobby and management',
-  'who.plan': 'finance and management', 'who.family': 'the lobby and management', editOnly: 'Only {w} can edit this.',
+  'who.plan': 'the lobby, finance and management', 'who.family': 'the lobby and management', editOnly: 'Only {w} can edit this.',
   editEnded: 'Membership ended. The record is read-only and kept for history.', editPending: 'Waiting for approval. The record can be edited once management approves.',
   editGated: 'Changes go to management for approval. Until then the current details stay in effect.', editFlagged: 'Applies now. Management reviews health changes afterwards.',
   // pending review chips

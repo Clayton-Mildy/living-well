@@ -57,7 +57,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
     const waiting = pendingPhotos(s);
     if (waiting.length) add({ id: 'photos:pending', kind: 'notif.act.photosReview', params: { n: waiting.length }, link: '/reviews?tab=photos', severity: 'attention', at: waiting[0].createdAt });
     // what the team enters waits for approval before families see it: one item per type, however many entries
-    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu'], ['renewals', 'renewals.notif.act.approve']] as const) {
+    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu'], ['renewals', 'renewals.notif.act.approve'], ['payments', 'notif.act.approvalsPayments']] as const) {
       const items = pendingItems(s, type);
       if (items.length) add({ id: `approvals:${type}`, kind, params: { n: items.length }, link: `/reviews?tab=${type}`, severity: 'attention', at: items[0].at });
     }
@@ -72,6 +72,11 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
       if (st.hr.end >= today && st.hr.end <= addDays(today, 30)) add({ id: 'contract:' + st.id, kind: 'notif.act.contract', params: { name: st.name, date: st.hr.end }, link: `/hr?staff=${st.id}`, severity: 'attention', at: `${today}T08:00` });
     }
     for (const f of live(s.feedback).filter((x) => x.status === 'open')) add({ id: 'fb:' + f.id, kind: 'notif.act.complaint', params: { name: displayName(s.members[f.memberId]), dish: f.dish }, link: '/feedback', severity: 'attention', at: f.createdAt, memberId: f.memberId });
+  }
+  if (role === 'finance') {
+    // round 13: cash and transfer payments the front desk recorded wait for finance (management sees the same count in Approvals)
+    const waiting = pendingItems(s, 'payments');
+    if (waiting.length) add({ id: 'approvals:payments', kind: 'notif.act.approvalsPayments', params: { n: waiting.length }, link: '/payments', severity: 'attention', at: waiting[0].at });
   }
   if (role === 'mgmt' || role === 'finance') {
     for (const r of live(s.planChangeRequests).filter((x) => x.status === 'pending')) {

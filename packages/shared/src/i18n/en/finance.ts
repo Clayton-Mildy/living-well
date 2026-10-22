@@ -169,4 +169,13 @@ export const finance = {
   'notif.stoppedFamily': '{name}’s membership has stopped: invoice {number} ({amount}) was still unpaid on the 3rd. Please call the club; coming back needs a new registration.',
   'feed.suspended': '{name} on hold: invoice {number} unpaid', 'feed.stopped': '{name}’s membership stopped: invoice {number} unpaid',
   'bill.holdTitle': 'On hold · unpaid', 'bill.holdMeta': '{n}', 'bill.holdRow': '{number} · {amount} · stops {date}', 'bill.holdRowTold': '{number} · {amount} · on hold until paid', 'bill.holdOne': '1 member', 'bill.holdMany': '{n} members',
+  // round 13: the front desk records cash or transfer; finance confirms
+  'pay.waitingBy': 'Recorded by {name}, waiting for finance', 'pay.waiting': 'Waiting for finance', 'pay.waitingTitle': 'Waiting for you', 'pay.waitingRow': 'Recorded by {name} · {time}',
+  'pay.confirm': 'Confirm', 'pay.reject': 'Reject', 'pay.rejectWhy': 'Why is it not right?', 'pay.rejectTitle': 'Reject this payment',
+  'pay.deskNote': 'Cash or transfer only. Finance confirms it before the family sees it.', 'pay.waitingTag': 'Waiting',
+  'toast.sentToFinance': 'Sent to finance to confirm.', 'toast.confirmed': 'Payment confirmed. The family has been told.', 'toast.paymentRejected': 'Payment rejected.',
+  'notif.paymentToConfirm': '{who} recorded {amount} for {name}. Please confirm it on Payments.',
+  'notif.paymentConfirmed': 'Your payment entry for {name} ({amount}, {invoice}) was confirmed.',
+  'feed.paymentConfirmed': 'Payment confirmed: {number} · {amount}',
+  'err.deskInvoice': 'Choose the invoice this payment is for.', 'err.deskMethod': 'The front desk records cash or bank transfer only.', 'err.deskOverpay': 'That is more than the invoice still owes.',
 };
