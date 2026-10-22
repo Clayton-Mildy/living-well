@@ -78,7 +78,7 @@ export const mgmt = {
   samplePrice: 'Sample price', plFlexDesc: '{n} visits a month. A visit counts when the member checks in.', plFlexDescOne: '{n} visit a month. A visit counts when the member checks in.', plGoldDesc: 'Come on any open day, as often as you like.', plExtra: 'Extra day', plExtraDesc: 'Charged for each Flex visit beyond {n} in a month.', plExtraDescOne: 'Charged for each Flex visit beyond {n} in a month.',
   perMonth: 'Per month', perDay: 'Per day', plQuota: 'Visits', plQuotaV: '{n} visits a month', plQuotaVOne: '{n} visit a month', plUnused: 'Unused visits', plNoRoll: 'Do not roll over',
   plUnlimited: 'Unlimited', plBilled: 'Billed', plNextInvoice: 'On next month’s invoice', plCounted: 'Counted from', plCheckIns: 'Check-ins at the door', priceAria: '{name} price in rupiah',
-  plRules: 'Club rules', plRulesDesc: 'Members come on any open day. This rule decides when a Flex visit is an extra day.', plQuotaL: 'Flex visits per month', plFrom: 'Takes effect from',
+  plSecPlans: 'Plans', plSecExtra: 'Extra charges', plSecOnce: 'One-off fees', plSecChanges: 'Changes', plQuotaL: 'Flex visits per month', plFrom: 'Takes effect from',
   plFromHint: 'Invoices already sent keep their old amounts.', plPreview: 'Next invoice preview', plPreviewFor: 'Preview for', plPreviewTitle: '{name} · invoice of {day} {month}',
   plUnsaved: 'Showing what you typed. Not saved yet.', plNothing: 'Nothing to bill for this member yet.', plTotal: 'Total', plOthers: 'Separate invoices on the same account: {others}. {payer} can pay them together.',
   plSentKeep: 'Invoices already sent keep their old amounts.', plNoMembers: 'No members yet, so there is nothing to preview.', plansSaved: 'Saved. The next invoice uses these prices and rules.',
