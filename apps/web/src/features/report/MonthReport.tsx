@@ -5,7 +5,7 @@ import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'r
 import { useNavigate } from 'react-router-dom';
 import { rp } from '@cp/shared';
 import { PERIOD_KEYS, editPeriod, periodFor, type InsightPeriod, type PeriodKey } from '@cp/shared/rules/insights';
-import { END_REASONS, LOST_REASONS, monthReport, type Delta, type MonthReport as Report } from '@cp/shared/rules/monthReport';
+import { END_REASONS, LOST_REASONS, heroTrend, monthReport, type Delta, type MonthReport as Report } from '@cp/shared/rules/monthReport';
 import { Button, DateField, EmptyState, Group, Icon, PageHead, Pin, Select } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
@@ -14,7 +14,8 @@ import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { useAtLeast } from '../lobby/useAtLeast';
 import { OwnerSummary, pct, signed, type SummaryFmt } from './OwnerSummary';
-import { Line, MUTED, RUST, SAGE } from './parts';
+import { HeroTiles } from './HeroTiles';
+import { Line, MUTED, tone } from './parts';
 
 /** The container width from which the four groups sit in two columns. */
 const WIDE = 860;
@@ -22,12 +23,6 @@ const PERIOD_KEY: Record<PeriodKey, string> = { thisMonth: 'insights.pThisMonth'
 const one = (n: number) => String(Math.round(n * 10) / 10);
 const pts = (n: number) => `${Math.round(n * 100)} pt`;
 const count = (n: number) => String(n);
-
-/** The colour of a change: sage when it moved the good way, rust when not, grey when there is no good way (or no change). */
-function tone(d: Delta<number | null>): string {
-  if (!d.diff || d.good === 'none') return MUTED;
-  return (d.diff > 0) === (d.good === 'up') ? SAGE : RUST;
-}
 
 /** One row: the label on the left, the number on the right in 17px with its change under it in 13px. */
 function Stat({ first, label, value, d, df, sub, onClick }: { first?: boolean; label: string; value: ReactNode; d?: Delta<number | null>; df?: (n: number) => string; sub?: ReactNode; onClick?: () => void }) {
@@ -66,7 +61,8 @@ export function MonthReport() {
   const [sending, setSending] = useState(false);
   const period = useMemo(() => periodFor(pKey, today, custom), [pKey, today, custom]);
   const r = useMemo(() => (s ? monthReport(s, period, today, nowMin) : null), [s, period, today, nowMin]);
-  if (!s || !r || role !== 'mgmt') return <div ref={boxRef} />;
+  const trend = useMemo(() => (s ? heroTrend(s, period, today, nowMin) : null), [s, period, today, nowMin]);
+  if (!s || !r || !trend || role !== 'mgmt') return <div ref={boxRef} />;
 
   const short = (d: string) => fmt.fd(d, { day: 'numeric', month: 'short' });
   const range = (p: InsightPeriod) => (p.from === p.to ? short(p.from) : `${short(p.from)} – ${short(p.to)}`);
@@ -147,7 +143,9 @@ export function MonthReport() {
       <div data-testid="month-range" style={{ fontSize: 13, color: MUTED, marginTop: isPhone ? -6 : -10 }}>{`${range(r.period)} · ${t('month.vsPrev', { period: range(r.prev) })}`}</div>
       {r.empty ? (
         <EmptyState icon="query_stats" title={t('month.empty')} />
-      ) : wide ? (
+      ) : null}
+      {!r.empty ? <HeroTiles r={r} trend={trend} wide={wide} /> : null}
+      {r.empty ? null : wide ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 28, alignItems: 'start' }}>
           <div style={col}>{[money, care]}</div>
           <div style={col}>{[members, pipeline]}</div>

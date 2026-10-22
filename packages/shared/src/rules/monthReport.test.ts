@@ -5,7 +5,7 @@ import { activeOn } from './core';
 import { checkOnList } from './checkOn';
 import { invoicePeriod, invoiceViews } from './finance';
 import { periodFor } from './insights';
-import { monthReport, prevPeriod } from './monthReport';
+import { heroTrend, monthReport, prevPeriod } from './monthReport';
 import { leadConversion, leadMoves } from './enquiries';
 
 const T = '2026-10-21';
@@ -50,5 +50,57 @@ describe('month report', () => {
     expect(rep.pipeline.funnel).toMatchObject({ new: 4, joined: 2 });
     expect(rep.pipeline.funnel.joined).toBe(rep.members.joined.cur);
     expect(rep.pipeline.conversion.toJoined).toBe(0.38);
+  });
+
+  describe('hero numbers (round 13)', () => {
+    const roster = buildSeed(T, 598, { roster: true }).citra;
+    it('the four tiles are the groups’ own numbers; conversion is the pipeline’s', () => {
+      for (const st of [s, roster]) {
+        const r = monthReport(st, periodFor('thisMonth', T), T, 600);
+        expect(r.hero.collected).toEqual(r.money.collected);
+        expect(r.hero.active).toEqual(r.members.active);
+        expect(r.hero.index).toEqual(r.care.index);
+        expect(r.hero.conversion.cur).toBe(r.pipeline.conversion.toJoined);
+        expect(r.hero.conversion.prev).toBe(leadConversion(st, '2026-09').toJoined);
+        expect(r.hero.conversion.diff).toBe(r.hero.conversion.cur === null || r.hero.conversion.prev === null ? null : Math.round((r.hero.conversion.cur - r.hero.conversion.prev) * 1000) / 1000);
+        expect(r.hero.conversion.good).toBe('up');
+      }
+    });
+    it('the roster’s October numbers: 38% conversion against the three months before', () => {
+      const r = monthReport(roster, periodFor('thisMonth', T), T, 600);
+      expect(r.hero.conversion.cur).toBe(0.38);
+      expect(r.hero.active.cur).toBe(r.members.active.cur);
+      expect(r.hero.collected.cur).toBeGreaterThan(0);
+    });
+    it('the trend is the six whole months ending with the last whole month on or before the period’s end', () => {
+      const six = ['2026-04', '2026-05', '2026-06', '2026-07', '2026-08', '2026-09'];
+      const tm = heroTrend(roster, periodFor('thisMonth', T), T, 600);
+      expect(tm.months).toEqual(six);
+      for (const k of ['collected', 'active', 'index', 'conversion'] as const) expect(tm[k]).toHaveLength(6);
+      expect(heroTrend(roster, periodFor('lastMonth', T), T, 600).months).toEqual(six);
+      expect(heroTrend(roster, { from: '2026-06-01', to: '2026-08-31' }, T, 600).months).toEqual(['2026-03', '2026-04', '2026-05', '2026-06', '2026-07', '2026-08']);
+      expect(heroTrend(roster, { from: '2026-08-10', to: '2026-08-30' }, T, 600).months.at(-1)).toBe('2026-07'); // August is not whole by the 30th
+      expect(heroTrend(roster, { from: '2026-10-01', to: '2026-10-31' }, T, 600).months.at(-1)).toBe('2026-09'); // nor is the month today is in
+    });
+    it('each point is that month’s own figure, collected counted like the group', () => {
+      const t = heroTrend(roster, periodFor('thisMonth', T), T, 600);
+      const sep = monthReport(roster, { from: '2026-09-01', to: '2026-09-30' }, T, 600);
+      expect(t.collected[5]).toBe(sep.money.collected.cur);
+      expect(t.active[5]).toBe(sep.members.active.cur);
+      expect(t.index[5]).toBe(sep.care.index.cur);
+      expect(t.conversion[5]).toBe(leadConversion(roster, '2026-09').toJoined);
+      expect(t.conversion[5]).toBe(sep.pipeline.conversion.toJoined);
+      expect(t.collected.every((n) => n >= 0)).toBe(true);
+    });
+    it('an empty period gives nulls and zeros, no NaN', () => {
+      const e = buildSeed().citra;
+      const r = monthReport(e, { from: '2020-01-01', to: '2020-01-31' }, T, 600);
+      expect(r.hero.index.cur).toBeNull();
+      expect(r.hero.collected.cur).toBe(0);
+      const t = heroTrend(e, { from: '2020-01-01', to: '2020-01-31' }, T, 600);
+      expect(t.months).toEqual(['2019-08', '2019-09', '2019-10', '2019-11', '2019-12', '2020-01']);
+      expect(t.collected).toEqual([0, 0, 0, 0, 0, 0]);
+      expect(JSON.stringify(t)).not.toContain('NaN');
+    });
   });
 });

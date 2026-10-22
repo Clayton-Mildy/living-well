@@ -2,6 +2,7 @@
 import { useState, type CSSProperties, type ReactNode } from 'react';
 import type { Health } from '@cp/shared';
 import type { ReportMember } from '@cp/shared/rules/dailyReport';
+import type { Delta } from '@cp/shared/rules/monthReport';
 import type { TFn } from '../../lib/i18n';
 import { rowLine } from '../activity/lib';
 
@@ -14,6 +15,12 @@ export const HEALTH_DOT: Record<Health, string> = { normal: '#3F7A55', watch: '#
 export const MOOD_DOT = { cheerful: SAGE, calm: 'var(--accent, #75624B)', quiet: '#8A6216', agitated: RUST } as const;
 export const LUNCH_DOT = { all: SAGE, most: '#8FB59B', half: '#E0C27A', little: '#D08A5E', none: RUST } as const;
 export const LUNCH_KEY = { all: 'eatAll', most: 'eatMost', half: 'eatHalf', little: 'eatLittle', none: 'eatNone' } as const;
+
+/** The colour of a change: sage when it moved the good way, rust when not, grey when there is no good way (or no change). */
+export function tone(d: Delta<number | null>): string {
+  if (!d.diff || d.good === 'none') return MUTED;
+  return (d.diff > 0) === (d.good === 'up') ? SAGE : RUST;
+}
 
 /** One row of a grouped list: 16px inset, a hairline above it (none on the first), a soft hover and press tint when it opens something. `inset` is where the hairline starts. */
 export function Line({ first, inset = 16, onClick, children, style, label }: { first?: boolean; inset?: number; onClick?: () => void; children: ReactNode; style?: CSSProperties; label?: string }) {

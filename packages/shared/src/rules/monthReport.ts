@@ -12,7 +12,7 @@ import { moodStats } from './mood';
 import { renewalRows } from './renewals';
 import { surveyKind } from './surveys';
 import { teamRange } from './tasks';
-import { addDays, addMonths, diffDays, live, sum, toMin } from '../util';
+import { addDays, addMonths, daysInMonth, diffDays, live, sum, toMin, ym } from '../util';
 
 /** A number now and in the period before. `diff` is cur − prev (null when either side is unknown); `good` says which way is good news. */
 export interface Delta<T = number> { cur: T; prev: T; diff: T | null; good: 'up' | 'down' | 'none' }
@@ -20,8 +20,12 @@ export interface MoneyGroup { billed: Delta; collected: Delta; outstanding: Delt
 export interface MembersGroup { active: Delta; joined: Delta; ended: Delta & { byReason: Record<EndReason, number> }; renewalsKept: Delta; renewalsLost: Delta; onLeave: Delta; checkOn: number; visitsPerMember: Delta<number | null>; utilisation: Delta<number | null> }
 export interface CareGroup { index: Delta<number | null>; lift: Delta<number | null>; byMoment: Record<MoodMoment, number | null>; alerts: Delta; watches: Delta; rechecks: Delta; lunchEaten: Delta<number | null> }
 export interface PipelineGroup { funnel: { new: number; visit: number; trial: number; joined: number }; conversion: { toVisit: number | null; toTrial: number | null; toJoined: number | null }; lostReasons: Record<LostReason, number>; duties: { role: StaffRole; done: number; total: number }[]; surveys: { family: number | null; venue: number | null } }
+/** The four numbers the page leads with (round 13): revenue collected, active members, mood index, and the share of earlier leads who joined. */
+export interface HeroGroup { collected: Delta; active: Delta; index: Delta<number | null>; conversion: Delta<number | null> }
+/** The same four, month by month: `months` ascending, one value per month (null where there is nothing to say). */
+export interface HeroTrend { months: YM[]; collected: number[]; active: number[]; index: (number | null)[]; conversion: (number | null)[] }
 /** `months`: the billing months that billed, extra days and renewals compare (the period's months against as many months just before them). */
-export interface MonthReport { period: InsightPeriod; prev: InsightPeriod; months: { cur: YM[]; prev: YM[] }; money: MoneyGroup; members: MembersGroup; care: CareGroup; pipeline: PipelineGroup; empty: boolean }
+export interface MonthReport { period: InsightPeriod; prev: InsightPeriod; months: { cur: YM[]; prev: YM[] }; money: MoneyGroup; members: MembersGroup; care: CareGroup; pipeline: PipelineGroup; hero: HeroGroup; empty: boolean }
 
 export const END_REASONS: EndReason[] = ['movedAway', 'careNeeds', 'careHome', 'passedAway', 'familyDecision', 'unpaid', 'leaveOverrun'];
 export const LOST_REASONS: LostReason[] = ['price', 'distance', 'notReady', 'otherPlace', 'health', 'other'];
@@ -130,6 +134,21 @@ function pipeline(s: ClubState, p: InsightPeriod, today: ISODate, nowMin: number
   };
 }
 
+/**
+ * The six whole months ending with the last month whose last day falls on or before the period's end (and today): "This month" on 22 Oct is Apr–Sep.
+ * Each month is read the way the page reads a period (`side`, and the lead conversion of the three months before it), without the duty and renewal work of a whole report.
+ */
+export function heroTrend(s: ClubState, period: InsightPeriod, today: ISODate, nowMin: number): HeroTrend {
+  const todayDone = nowMin >= toMin(s.club.settings.close);
+  const end = period.to < today ? period.to : today;
+  const lastDay = (m: YM) => `${m}-${String(daysInMonth(m)).padStart(2, '0')}`;
+  let last = ym(end);
+  if (lastDay(last) > end) last = addMonths(last, -1);
+  const months = Array.from({ length: 6 }, (_, i) => addMonths(last, i - 5));
+  const sides = months.map((m) => side(s, { from: `${m}-01`, to: lastDay(m) }, [m], today, todayDone));
+  return { months, collected: sides.map((x) => x.collected), active: sides.map((x) => x.active), index: sides.map((x) => x.index), conversion: months.map((m) => leadConversion(s, m).toJoined) };
+}
+
 /** The month report for `period` (and the period before it) as of `today` at `nowMin`. */
 export function monthReport(s: ClubState, period: InsightPeriod, today: ISODate, nowMin: number): MonthReport {
   const prev = prevPeriod(period);
@@ -137,6 +156,10 @@ export function monthReport(s: ClubState, period: InsightPeriod, today: ISODate,
   const months = { cur: monthsOf(period), prev: prevMonths(monthsOf(period)) };
   const c = side(s, period, months.cur, today, todayDone), b = side(s, prev, months.prev, today, todayDone);
   const pl = pipeline(s, period, today, nowMin);
+  const hero: HeroGroup = {
+    collected: delta(c.collected, b.collected, 'up'), active: delta(c.active, b.active, 'up'), index: delta(c.index, b.index, 'up'),
+    conversion: delta(pl.conversion.toJoined, leadConversion(s, prev.from.slice(0, 7)).toJoined, 'up'),
+  };
   const empty = !c.visits && !c.invoices && !c.payments && !c.enquiries && !c.marks && !c.readings && !c.joined && !c.ended;
   return {
     period, prev, months,
@@ -157,6 +180,7 @@ export function monthReport(s: ClubState, period: InsightPeriod, today: ISODate,
       lunchEaten: delta(c.lunchEaten, b.lunchEaten, 'up'),
     },
     pipeline: pl,
+    hero,
     empty,
   };
 }

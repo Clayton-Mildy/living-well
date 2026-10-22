@@ -25,9 +25,12 @@ export function ownerSummaryLines(r: MonthReport, t: TFn, fmt: SummaryFmt): stri
     return diff ? t('month.sum.rowDiff', { label, cur, diff }) : t('month.sum.row', { label, cur });
   };
   const n = String;
-  const { money: m, members: mb, care: c, pipeline: p } = r;
+  const { money: m, members: mb, care: c, pipeline: p, hero: h } = r;
   return [
     `*${t('month.sum.head', { period: range })}*`,
+    '',
+    // round 13: the same four numbers the page leads with
+    row('heroCollected', h.collected, fmt.rp), row('heroActive', h.active, n), row('heroMood', h.index, one), row('heroConversion', h.conversion, (x) => fmt.pct(x), pts),
     '',
     `*${t('month.money')}*`,
     row('billed', m.billed, fmt.rp), row('collected', m.collected, fmt.rp), row('outstanding', m.outstanding, fmt.rp), row('notYetDue', m.notYetDue, fmt.rp),
