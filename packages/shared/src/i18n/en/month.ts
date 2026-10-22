@@ -1,7 +1,7 @@
 // month report strings (EN): KC round 12, the business view for management and the summary sent to the owner.
 export const month = {
   title: 'Month report', period: 'Period', vsPrev: 'vs {period}', empty: 'Nothing recorded in this period',
-  hero: 'Key numbers', heroCollected: 'Revenue collected', heroActive: 'Active members', heroMood: 'Mood index', heroConversion: 'Enquiry → joined', trendAria: '{label}, six months', trendNone: 'No data yet',
+  hero: 'Key numbers', heroCollected: 'Revenue collected', heroActive: 'Active members', heroMood: 'Mood index', heroConversion: 'Enquiry → joined', trendAria: '{label}, six months', heroSoFar: 'so far this month', trendNone: 'No data yet',
   money: 'Money', members: 'Members', care: 'Care and mood', pipeline: 'Pipeline and team',
   billed: 'Billed', collected: 'Collected', outstanding: 'Overdue', notYetDue: 'Not yet due', extraDays: 'Extra days', venueIncome: 'Venue income', refunds: 'Refunds',
   active: 'Active members', joined: 'Joined', ended: 'Ended', renewalsKept: 'Renewals kept', renewalsLost: 'Renewals lost', onLeave: 'On leave', checkOn: "Haven't come lately",

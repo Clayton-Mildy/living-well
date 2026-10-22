@@ -5,7 +5,7 @@ import { activeOn } from './core';
 import { checkOnList } from './checkOn';
 import { invoicePeriod, invoiceViews } from './finance';
 import { periodFor } from './insights';
-import { heroTrend, monthReport, prevPeriod } from './monthReport';
+import { heroTrend, isPartialMonth, monthReport, prevPeriod } from './monthReport';
 import { leadConversion, leadMoves } from './enquiries';
 
 const T = '2026-10-21';
@@ -91,6 +91,12 @@ describe('month report', () => {
       expect(t.conversion[5]).toBe(leadConversion(roster, '2026-09').toJoined);
       expect(t.conversion[5]).toBe(sep.pipeline.conversion.toJoined);
       expect(t.collected.every((n) => n >= 0)).toBe(true);
+    });
+    it('a period is partial while it ends before the last day of its month', () => {
+      expect(isPartialMonth(periodFor('thisMonth', T))).toBe(true);
+      expect(isPartialMonth(periodFor('lastMonth', T))).toBe(false);
+      expect(isPartialMonth({ from: '2026-08-10', to: '2026-08-31' })).toBe(false);
+      expect(isPartialMonth({ from: '2026-08-10', to: '2026-08-30' })).toBe(true);
     });
     it('an empty period gives nulls and zeros, no NaN', () => {
       const e = buildSeed().citra;

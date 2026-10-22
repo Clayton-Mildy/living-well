@@ -4,7 +4,7 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { rp } from '@cp/shared';
-import type { Delta, MonthReport, HeroTrend } from '@cp/shared/rules/monthReport';
+import { isPartialMonth, type Delta, type MonthReport, type HeroTrend } from '@cp/shared/rules/monthReport';
 import { TrendChart } from '../../components/ui';
 import { useFmt, useT } from '../../lib/i18n';
 import { pct, signed } from './OwnerSummary';
@@ -17,7 +17,7 @@ const count = (n: number) => String(n);
 const jt = (n: number) => `Rp ${one(n / 1e6).replace('.', ',')} jt`;
 
 type Key = 'collected' | 'active' | 'index' | 'conversion';
-interface Spec { key: Key; label: string; d: Delta<number | null>; show: (n: number | null) => string; diff: (n: number) => string; to: string; sub?: string }
+interface Spec { key: Key; label: string; d: Delta<number | null>; show: (n: number | null) => string; diff: (n: number) => string; to: string; sub?: string; soFar?: boolean }
 
 export function HeroTiles({ r, trend, wide }: { r: MonthReport; trend: HeroTrend; wide: boolean }) {
   const t = useT();
@@ -26,8 +26,10 @@ export function HeroTiles({ r, trend, wide }: { r: MonthReport; trend: HeroTrend
   const mon = (m: string) => fmt.fd(`${m}-01`, { month: 'short' });
   const span = `${mon(trend.months[0])}–${mon(trend.months[trend.months.length - 1])}`;
   const dash = (f: (n: number) => string) => (n: number | null) => (n === null ? '—' : f(n));
+  // a partial month ("This month" today) has no honest comparison with the whole month before: say "so far" where the revenue change would be
+  const partial = isPartialMonth(r.period);
   const specs: Spec[] = [
-    { key: 'collected', label: t('month.heroCollected'), d: r.hero.collected, show: dash(rp), diff: rp, to: '/payments' },
+    { key: 'collected', label: t('month.heroCollected'), d: r.hero.collected, show: dash(rp), diff: rp, to: '/payments', soFar: partial },
     { key: 'active', label: t('month.heroActive'), d: r.hero.active, show: dash(count), diff: count, to: '/members' },
     { key: 'index', label: t('month.heroMood'), d: r.hero.index, show: dash(one), diff: one, to: '/insights?tab=mood' },
     { key: 'conversion', label: t('month.heroConversion'), d: r.hero.conversion, show: (n) => pct(n), diff: pts, to: '/enquiries?view=history', sub: r.hero.conversion.cur !== null ? t('month.leadsCaption') : undefined },
@@ -38,18 +40,19 @@ export function HeroTiles({ r, trend, wide }: { r: MonthReport; trend: HeroTrend
     <section aria-label={t('month.hero')}>
       <div data-grid style={{ display: 'grid', gridTemplateColumns: wide ? 'repeat(4, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: wide ? 12 : 8 }}>
         {specs.map((x) => {
-          const diff = signed(x.d.diff, x.diff);
+          const diff = x.soFar ? t('month.heroSoFar') : signed(x.d.diff, x.diff);
+          // a month with nothing to say is left out of the line; the range stays the six months so the others keep their places
           const points = trend.months.flatMap((m, i) => { const v = trend[x.key][i]; return v === null ? [] : [{ date: `${m}-15`, value: v }]; });
           return (
             <div key={x.key} data-tile={x.key} className="cp-grey" style={{ ...tile, background: 'var(--fill, #F4F4F5)', borderRadius: 16 }}>
-              <button type="button" onClick={() => go(x.to)} aria-label={x.label} className="h-row cp-tap-self"
-                style={{ all: 'unset', boxSizing: 'border-box', cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 1, minHeight: 44, color: '#24201C', fontFamily: 'Inter' }}>
+              <button type="button" onClick={() => go(x.to)} className="h-row cp-tap-self"
+                style={{ boxSizing: 'border-box', border: 'none', background: 'transparent', padding: 0, margin: 0, textAlign: 'left', borderRadius: 8, cursor: 'pointer', display: 'flex', flexDirection: 'column', gap: 1, minHeight: 44, color: '#24201C', fontFamily: 'Inter' }}>
                 <span style={{ fontSize: 13, lineHeight: '18px', color: MUTED }}>{x.label}</span>
                 <span style={{ fontSize: wide ? 24 : 20, fontWeight: 300, lineHeight: '30px', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{x.show(x.d.cur)}</span>
-                <span data-delta style={{ fontSize: 13, lineHeight: '18px', color: diff ? tone(x.d) : MUTED, minHeight: 18 }}>{diff}</span>
+                <span data-delta style={{ fontSize: 13, lineHeight: '18px', color: diff && !x.soFar ? tone(x.d) : MUTED, minHeight: 18 }}>{diff}</span>
                 {x.sub ? <span style={{ fontSize: 12, lineHeight: '16px', color: MUTED }}>{x.sub}</span> : null}
               </button>
-              <div style={{ marginTop: 'auto' }}><TrendChart compact height={36} series={[{ key: x.key, label: x.label, points }]} format={fmtOf[x.key]}
+              <div style={{ marginTop: 'auto' }}><TrendChart compact height={36} from={`${trend.months[0]}-15`} to={`${trend.months[trend.months.length - 1]}-15`} dateLabel={(d) => fmt.fd(d, { month: 'long', year: 'numeric' })} series={[{ key: x.key, label: x.label, points }]} format={fmtOf[x.key]}
                 ariaLabel={t('month.trendAria', { label: x.label })} caption={span} empty={t('month.trendNone')} /></div>
             </div>
           );

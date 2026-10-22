@@ -74,6 +74,7 @@ describe('the month report page', () => {
     await click(button(/Send to owner/));
     const lines = (document.querySelector('[data-testid="owner-summary"]')?.textContent ?? '');
     const at = (k: string) => lines.indexOf(k);
+    expect(lines).toContain(`Revenue collected: ${rp(r.hero.collected.cur)} (so far this month)`); // a partial month is not compared with the whole month before
     expect(at('Revenue collected:')).toBeGreaterThan(-1);
     expect(at('Revenue collected:')).toBeLessThan(at('Active members:'));
     expect(at('Active members:')).toBeLessThan(at('Mood index:'));

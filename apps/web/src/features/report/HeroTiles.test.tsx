@@ -22,12 +22,12 @@ const s = buildSeed(T, 598, { roster: true }).citra;
 const r = monthReport(s, periodFor('thisMonth', T), T, 600);
 const trend = heroTrend(s, r.period, T, 600);
 function Where() { const l = useLocation(); return <span data-testid="where">{l.pathname}{l.search}</span>; }
-async function show(wide: boolean) {
+async function show(wide: boolean, rep = r) {
   useSession.setState({ lang: 'en' });
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => { root!.render(<MemoryRouter><Routes><Route path="/" element={<><Where /><HeroTiles r={r} trend={trend} wide={wide} /></>} /><Route path="*" element={<Where />} /></Routes></MemoryRouter>); });
+  await act(async () => { root!.render(<MemoryRouter><Routes><Route path="/" element={<><Where /><HeroTiles r={rep} trend={trend} wide={wide} /></>} /><Route path="*" element={<Where />} /></Routes></MemoryRouter>); });
 }
 const region = () => document.querySelector('section[aria-label="Key numbers"]')!;
 
@@ -56,5 +56,30 @@ describe('the hero tiles', () => {
     await show(false);
     await act(async () => { (region().querySelector('[data-tile="index"] button') as HTMLElement).click(); });
     expect(document.querySelector('[data-testid="where"]')?.textContent).toBe('/insights?tab=mood');
+  });
+  it('a tap on a line reads the month, not a day', async () => {
+    await show(false);
+    const g = region().querySelector('[data-tile="index"] [role="group"]')!;
+    await act(async () => { g.dispatchEvent(new PointerEvent('pointermove', { bubbles: true, clientX: 9999, clientY: 20, pointerType: 'touch', buttons: 1 })); });
+    const t = region().querySelector('[data-tile="index"]')!.textContent!;
+    expect(t).toContain('September 2026');
+    expect(t).not.toMatch(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/);
+  });
+  it('a partial month says "so far this month" where the revenue change would be; the other tiles keep theirs; a whole month keeps its change', async () => {
+    await show(false);
+    const tile = (k: string) => region().querySelector(`[data-tile="${k}"]`)!.textContent!;
+    expect(tile('collected')).toContain('so far this month');
+    expect(tile('collected')).not.toMatch(/[−+]Rp/);
+    expect(tile('index')).toContain('+0.1');
+    await act(async () => { root!.unmount(); }); host!.remove();
+    await show(false, monthReport(s, periodFor('lastMonth', T), T, 600));
+    expect(tile('collected')).not.toContain('so far');
+    expect(tile('collected')).toMatch(/[−+]Rp/);
+  });
+  it('the tile button names its value and change (no label overriding them)', async () => {
+    await show(false);
+    const b = region().querySelector('[data-tile="collected"] button')!;
+    expect(b.hasAttribute('aria-label')).toBe(false);
+    expect(b.textContent).toContain(rp(r.hero.collected.cur));
   });
 });

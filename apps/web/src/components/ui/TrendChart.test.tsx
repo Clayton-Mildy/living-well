@@ -137,6 +137,13 @@ describe('TrendChart', () => {
     expect(document.body.textContent).toContain('134/82 mmHg');
     expect(document.body.textContent).not.toContain('Systolic, last 4 weeks');
   });
+  it('dateLabel changes how the readout head and the live text name a moment (a monthly line says the month)', async () => {
+    await show(<TrendChart compact height={44} series={[sys]} {...props} dateLabel={(d) => `Month of ${d.slice(0, 7)}`} />);
+    await pointer('pointermove', 9999);
+    expect(document.body.textContent).toContain('Month of 2026-10');
+    expect(document.body.textContent).not.toContain('Tue 20 Oct');
+    expect(live()).toContain('Month of 2026-10');
+  });
   it('bars: a count per day; empty ranges show the empty text', async () => {
     const bars: TrendSeries = { key: 'n', label: 'Visits', points: [{ date: '2026-10-05', value: 12 }, { date: '2026-10-06', value: 18 }] };
     await show(<TrendChart kind="bars" series={[bars]} from="2026-10-01" to="2026-10-10" ariaLabel="Visits per day" />);

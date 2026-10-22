@@ -134,6 +134,9 @@ function pipeline(s: ClubState, p: InsightPeriod, today: ISODate, nowMin: number
   };
 }
 
+/** True while the period ends before the last day of its month ("This month" today): the month is not whole yet, so no comparison with a whole month is fair. */
+export const isPartialMonth = (p: InsightPeriod): boolean => p.to < `${ym(p.to)}-${String(daysInMonth(ym(p.to))).padStart(2, '0')}`;
+
 /**
  * The six whole months ending with the last month whose last day falls on or before the period's end (and today): "This month" on 22 Oct is Apr–Sep.
  * Each month is read the way the page reads a period (`side`, and the lead conversion of the three months before it), without the duty and renewal work of a whole report.
