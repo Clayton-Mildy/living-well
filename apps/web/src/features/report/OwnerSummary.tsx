@@ -33,7 +33,7 @@ export function ownerSummaryLines(r: MonthReport, t: TFn, fmt: SummaryFmt): stri
     row('heroCollected', h.collected, fmt.rp, undefined, isPartialMonth(r.period) ? t('month.heroSoFar') : undefined), row('heroActive', h.active, n), row('heroMood', h.index, one), row('heroConversion', h.conversion, (x) => fmt.pct(x), pts),
     '',
     `*${t('month.money')}*`,
-    row('billed', m.billed, fmt.rp), row('collected', m.collected, fmt.rp), row('outstanding', m.outstanding, fmt.rp), row('notYetDue', m.notYetDue, fmt.rp),
+    row('billed', m.billed, fmt.rp), row('collected', m.collected, fmt.rp, undefined, isPartialMonth(r.period) ? t('month.heroSoFar') : undefined), row('outstanding', m.outstanding, fmt.rp), row('notYetDue', m.notYetDue, fmt.rp),
     '',
     `*${t('month.members')}*`,
     row('active', mb.active, n), row('joined', mb.joined, n), row('ended', mb.ended, n), row('utilisation', mb.utilisation, (x) => fmt.pct(x), pts),

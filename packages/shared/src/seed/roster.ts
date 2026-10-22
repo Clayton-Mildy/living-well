@@ -405,7 +405,9 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<stri
         reminders: overdue && addDays(due, 1) < T ? [{ at: `${addDays(due, 1)}T10:00`, by: 'staff:s10' }] : [],
         callNotes: [] }; // no word from the family: that is why the stop went through
       put('invoices', inv);
-      if (paid) put('payments', { ...base(`pay-${number}`, paid + `T${paid === issue ? at : '11:20'}`, `family:${fid}`), memberId: m.id, method: 'dokuVa', amount: invoiceTotal(inv), bank: bank[(i + (p === cur ? 1 : 0)) % 4], receivedOn: paid, receivedAt: paid === issue ? at : '11:20', allocations: [{ invoiceId: number, amount: invoiceTotal(inv) }], xero: 'synced', by: `family:${fid}` } satisfies Payment);
+      // a payment made today carries the morning time it was admitted by (`done(at)` above), never the 11:20 of the older ones, so it is not stamped after the demo clock
+      const payAt = paid === issue || paid === T ? at : '11:20';
+      if (paid) put('payments', { ...base(`pay-${number}`, paid + `T${payAt}`, `family:${fid}`), memberId: m.id, method: 'dokuVa', amount: invoiceTotal(inv), bank: bank[(i + (p === cur ? 1 : 0)) % 4], receivedOn: paid, receivedAt: payAt, allocations: [{ invoiceId: number, amount: invoiceTotal(inv) }], xero: 'synced', by: `family:${fid}` } satisfies Payment);
       const run = s.invoiceRuns[`run-${p}`];
       if (run) run.invoiceIds.push(number);
     }

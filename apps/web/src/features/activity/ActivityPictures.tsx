@@ -6,13 +6,13 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { staffCall, type Activity, type ISODate } from '@cp/shared';
 import { activityName, curAct, logDateOk, pictureDays, pictureSessions, sessionPictures, type PictureState, type SessionPicture } from '@cp/shared/rules/activity';
-import { Button, Card, CameraCapture, EmptyState, Group, Icon, PhotoImg, Pin, Select } from '../../components/ui';
+import { Button, Card, CameraCapture, EmptyState, Group, Icon, ImageOpen, PhotoImg, Pin, Select } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useLang, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { ApiError } from '../../lib/api';
 import { useMe } from '../../lib/me';
-import { uploadMedia } from '../../lib/media';
+import { mediaUrl, uploadMedia } from '../../lib/media';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
@@ -91,7 +91,7 @@ export function ActivityPicturesBody() {
     return (
       <div key={p.id} data-picture={p.id} data-state={x.state} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '10px 12px 10px 16px' : '12px 0', minHeight: size + 20, ...(isPhone ? rowLine(i === 0, 80) : { borderTop: i ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }) }}>
         {rejected
-          ? <span aria-hidden="true" style={{ ...thumb, opacity: 0.45 }}><PhotoImg photo={p} /></span>
+          ? <span style={{ ...thumb, opacity: 0.45 }}><ImageOpen src={p.mediaId ? mediaUrl(p.mediaId) : null} kind={p.media === 'video' ? 'video' : 'image'} label={aria} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={p} /></ImageOpen></span> /* round 13: a rejected picture still opens full size (the staff viewer drops removed photos) */
           : <button type="button" className="cp-press" onClick={() => setViewer(p.id)} aria-label={aria} data-photo-id={p.id} style={{ ...thumb, cursor: 'pointer' }}><PhotoImg photo={p} /></button>}
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, fontVariantNumeric: 'tabular-nums' }}>{p.time}{who ? <span style={{ fontWeight: 400, color: '#6B6259' }}> · {who}</span> : null}</span>

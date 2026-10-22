@@ -165,8 +165,8 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
           </button>
         ) : (
           <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: 84, flex: 'none', aspectRatio: '3/4', borderRadius: 10, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
-              <ImageOpen src={mediaId ? mediaUrl(mediaId) : null} label={t('common.openFull')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} /></ImageOpen>
+            <div role={mediaId ? undefined : 'img'} aria-label={mediaId ? undefined : t('finance.rc.photoAlt', { file })} style={{ width: 84, flex: 'none', aspectRatio: '3/4', borderRadius: 10, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
+              <ImageOpen src={mediaId ? mediaUrl(mediaId) : null} alt={t('finance.rc.photoAlt', { file })} label={`${t('common.openFull')} · ${file}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} /></ImageOpen>
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', minWidth: 0 }}>
               <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: 'var(--on-card, #FFFFFF)', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
@@ -194,8 +194,8 @@ function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
         </button>
       ) : (
         <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-        <div role="img" aria-label={t('finance.rc.photoAlt', { file })} style={{ width: '100%', aspectRatio: '3/4', borderRadius: 14, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
-          <ImageOpen src={mediaId ? mediaUrl(mediaId) : null} label={t('common.openFull')} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} /></ImageOpen>
+        <div role={mediaId ? undefined : 'img'} aria-label={mediaId ? undefined : t('finance.rc.photoAlt', { file })} style={{ width: '100%', aspectRatio: '3/4', borderRadius: 14, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
+          <ImageOpen src={mediaId ? mediaUrl(mediaId) : null} alt={t('finance.rc.photoAlt', { file })} label={`${t('common.openFull')} · ${file}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} /></ImageOpen>
           <span style={{ pointerEvents: 'none', position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
             <Icon name="check_circle" size={17} color="#3D6B4F" />{file}
           </span>

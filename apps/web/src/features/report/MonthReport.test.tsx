@@ -81,4 +81,15 @@ describe('the month report page', () => {
     expect(at('Mood index:')).toBeLessThan(at('Enquiry → joined:'));
     expect(at('Enquiry → joined:')).toBeLessThan(at('Money'));
   });
+
+  it('on a partial month the Money Collected row says "so far this month" like the hero tile, and so does the owner summary', async () => {
+    open();
+    await show(<MonthReport />, '/monthReport');
+    const row = Array.from(document.querySelectorAll('section[aria-label="Money"] button')).find((b) => /Collected/.test(b.textContent || ''))!;
+    expect(row.textContent).toContain('so far this month');
+    expect(row.textContent).not.toMatch(/[−-]\s?Rp/);
+    await click(button(/Send to owner/));
+    const lines = (document.querySelector('[data-testid="owner-summary"]')?.textContent ?? '');
+    expect(lines).toMatch(/\nCollected: [^\n]*\(so far this month\)/);
+  });
 });

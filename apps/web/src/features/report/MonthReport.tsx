@@ -5,7 +5,7 @@ import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'r
 import { useNavigate } from 'react-router-dom';
 import { rp } from '@cp/shared';
 import { PERIOD_KEYS, editPeriod, periodFor, type InsightPeriod, type PeriodKey } from '@cp/shared/rules/insights';
-import { END_REASONS, LOST_REASONS, heroTrend, monthReport, type Delta } from '@cp/shared/rules/monthReport';
+import { END_REASONS, LOST_REASONS, heroTrend, isPartialMonth, monthReport, type Delta } from '@cp/shared/rules/monthReport';
 import { Button, DateField, EmptyState, Group, Icon, PageHead, Pin, Select } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
@@ -24,8 +24,8 @@ const one = (n: number) => String(Math.round(n * 10) / 10);
 const pts = (n: number) => `${Math.round(n * 100)} pt`;
 
 /** One row: the label on the left, the number on the right in 17px with its change under it in 13px. */
-function Stat({ first, label, value, d, df, sub, onClick }: { first?: boolean; label: string; value: ReactNode; d?: Delta<number | null>; df?: (n: number) => string; sub?: ReactNode; onClick?: () => void }) {
-  const diff = d ? signed(d.diff, df) : '';
+function Stat({ first, label, value, d, df, sub, soFar, onClick }: { first?: boolean; label: string; value: ReactNode; d?: Delta<number | null>; df?: (n: number) => string; sub?: ReactNode; /** a partial period: this caption stands where the change would be */ soFar?: string; onClick?: () => void }) {
+  const diff = soFar ?? (d ? signed(d.diff, df) : '');
   return (
     <Line first={first} onClick={onClick} label={onClick ? label : undefined}>
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -34,7 +34,7 @@ function Stat({ first, label, value, d, df, sub, onClick }: { first?: boolean; l
       </span>
       <span style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', flex: 'none', fontVariantNumeric: 'tabular-nums' }}>
         <span style={{ fontSize: 17, fontWeight: 500, lineHeight: '22px' }}>{value}</span>
-        {diff ? <span data-delta style={{ fontSize: 13, lineHeight: '18px', color: tone(d!) }}>{diff}</span> : null}
+        {diff ? <span data-delta style={{ fontSize: 13, lineHeight: '18px', color: soFar ? MUTED : tone(d!) }}>{diff}</span> : null}
       </span>
       {onClick ? <Icon name="chevron_right" size={18} color="#A8A29C" /> : null}
     </Line>
@@ -77,6 +77,8 @@ export function MonthReport() {
   const sendBtn = !isPhone && !r.empty ? <Button size={44} icon="send" onClick={() => setSending(true)}>{t('month.sendOwner')}</Button> : null;
 
   const { money: m, members: mb, care: c, pipeline: p } = r;
+  // same wording as the hero tile: "so far this month" only when the period runs from the 1st of the current month, else "so far"
+  const thisMonth = period.from === `${today.slice(0, 7)}-01` && period.to.slice(0, 7) === today.slice(0, 7);
   // billed, extra days and renewals go by billing month: say which months they compare ("Oct vs Sep")
   const mon = (x: string) => fmt.fd(`${x}-01`, { month: 'short' });
   const months = (list: string[]) => (list.length > 1 ? `${mon(list[0])}–${mon(list[list.length - 1])}` : mon(list[0]));
@@ -85,7 +87,7 @@ export function MonthReport() {
   const money = (
     <Group key="money" title={t('month.money')} label={t('month.money')} pad={0} gap={0}>
       <Stat first label={t('month.billed')} value={rp(m.billed.cur)} d={m.billed} df={rp} sub={basis} onClick={open('/billing')} />
-      <Stat label={t('month.collected')} value={rp(m.collected.cur)} d={m.collected} df={rp} onClick={open('/payments')} />
+      <Stat label={t('month.collected')} value={rp(m.collected.cur)} d={m.collected} df={rp} soFar={isPartialMonth(period) ? t(thisMonth ? 'month.heroSoFar' : 'month.heroSoFarAny') : undefined} onClick={open('/payments')} />
       <Stat label={t('month.outstanding')} value={rp(m.outstanding.cur)} d={m.outstanding} df={rp} onClick={open('/billing')} />
       <Stat label={t('month.notYetDue')} value={rp(m.notYetDue.cur)} d={m.notYetDue} df={rp} onClick={open('/billing')} />
       <Stat label={t('month.extraDays')} value={m.extraDays.cur ? `${m.extraDays.cur} · ${rp(m.extraDays.amount.cur)}` : '0'} d={m.extraDays} sub={basis} onClick={open('/billing')} />
