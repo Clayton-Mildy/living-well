@@ -22,9 +22,12 @@ import { Rows, StepBar } from '../members/register/parts';
 import { AllergyFields, CarerFields, DementiaFields, HealthFields, IdFields, PeSection, RegCareFields, RegPersonalFields, RelationChips, TextField, TitleName, type RegDraft } from '../members/dialogs/forms';
 import { ONLINE_STEPS, STEP_NAME_KEY, blankOnline, clearDevice, firstOpenOnlineStep, fromOnline, loadDevice, onlineIssues, pickDraft, resumeStep, saveDevice, toOnline, type FDraft, type OnlineStep } from './onlineForm';
 
-interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; flexQuota: number } }
+interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; flexQuota: number } }
 type View = { kind: 'loading' } | { kind: 'ready'; info: Info } | { kind: 'bad' } | { kind: 'network' } | { kind: 'expired' } | { kind: 'done'; date: string } | { kind: 'thanks'; name: string };
 type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
+/** This phone's answers and the lead's, when both changed since they last met: the family picks one. */
+interface Choice { mine: { d: FDraft; step: number; lang?: Lang }; server: { d: FDraft; step: number | null; rev: number; lang: Lang } }
+const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 const initialLang = (): Lang => (typeof navigator !== 'undefined' && /^(id|in)\b/i.test(navigator.language || '') ? 'id' : 'en');
 /** The family's own upload route: the form token is the key (no sign-in). Images are shrunk like any photo; a PDF goes as it is. */
@@ -61,19 +64,23 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   const [err, setErr] = useState('');
   const [saveState, setSaveState] = useState<SaveState>('idle');
   const [resumed, setResumed] = useState(false);
+  const [choice, setChoice] = useState<Choice | null>(null);
   const step = ONLINE_STEPS[stepI];
   const last = ONLINE_STEPS.length - 1;
   const top = useRef<HTMLDivElement>(null);
 
   // the draft: `touched` once the family typed or moved (an untouched, lead-filled form is never written to the device), `dirty` = typed since the
-  // lead last had it, `base` = the lead's savedAt this copy was last in step with
+  // lead last had it, `base` = the lead's save counter this copy was last in step with
   const live = useRef({ d, stepI, lang });
   live.current = { d, stepI, lang };
   const ready = useRef(false);
   const touched = useRef(false);
   const dirty = useRef(false);
   const finished = useRef(false);
-  const base = useRef<string | null>(null);
+  const base = useRef<number | null>(null);
+  const submitting = useRef(false);
+  const feedback = useRef(false);
+  const pushAfter = useRef(false);
   const flight = useRef(false);
   const again = useRef(false);
   const lastPush = useRef(0);
@@ -83,41 +90,54 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   const uploader = publicUploader(token);
   const writeDevice = useCallback(() => {
     if (!ready.current || finished.current || !touched.current) return;
-    saveDevice(token, { d: live.current.d, step: live.current.stepI + 1, base: base.current, dirty: dirty.current });
+    saveDevice(token, { d: live.current.d, step: live.current.stepI + 1, base: base.current, dirty: dirty.current, lang: live.current.lang });
   }, [token]);
   useEffect(() => { writeDevice(); }, [d, stepI, writeDevice]); // on every change
 
-  /** The draft to the lead through the link. One at a time (a change made while it flies goes in a second round); a tap within a second of the last is ignored. */
+  /**
+   * The draft to the lead through the link. One at a time (a change made while it flies goes in a second round, and a Save for later tapped meanwhile
+   * still ends with "Saved."); a tap within a second of the last is ignored. The save names the counter this page last saw (`expect`): if another phone
+   * saved since, the lead answers 409 and the family chooses (nothing is overwritten). A 429 waits and tries again.
+   */
   const pushDraft = useCallback(async (explicit: boolean, stepNo?: number) => {
-    if (!ready.current || finished.current) return;
+    if (!ready.current || finished.current || submitting.current) return;
+    if (!flight.current && explicit && Date.now() - lastPush.current < 1000) return;
+    if (explicit) { feedback.current = true; setSaveState('saving'); }
     if (flight.current) { again.current = true; return; }
-    if (explicit && Date.now() - lastPush.current < 1000) return;
     flight.current = true; lastPush.current = Date.now();
-    if (explicit) setSaveState('saving');
     let ok = false;
     let first = stepNo;
+    let waits = 0;
     try {
-      do {
+      for (;;) {
         again.current = false;
         const sent = live.current;
         const at = first ?? sent.stepI + 1;
         first = undefined;
-        const res = await fetch(`/api/public/form/${encodeURIComponent(token)}/draft`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ step: at, draft: toOnline(sent.d, sent.lang) }) });
+        const res = await fetch(`/api/public/form/${encodeURIComponent(token)}/draft`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ step: at, expect: base.current, draft: toOnline(sent.d, sent.lang) }) });
+        if (finished.current || submitting.current) return; // an answer that arrives after Send is none of our business
         if (res.ok) {
-          const data = (await res.json().catch(() => ({}))) as { savedAt?: string | null };
-          if (data.savedAt) base.current = data.savedAt;
+          const data = (await res.json().catch(() => ({}))) as { draftRev?: number };
+          if (typeof data.draftRev === 'number' && data.draftRev > 0) base.current = data.draftRev;
           dirty.current = live.current.d !== sent.d; // typed while it flew: still unsaved
           ok = true;
           writeDevice();
-        } else {
-          const data = (await res.json().catch(() => ({}))) as { code?: string };
-          if (data.code === 'enq.err.formExpired') { setView({ kind: 'expired' }); return; }
-          if (data.code === 'enq.err.formDone') { setView({ kind: 'done', date: '' }); return; }
-          ok = false;
+          if (again.current) continue;
+          break;
         }
-      } while (again.current && ok);
+        const data = (await res.json().catch(() => ({}))) as { code?: string; draft?: OnlineRegistration; step?: number | null; draftRev?: number };
+        if (res.status === 429 && waits++ < 3) { await sleep(2100); if (finished.current || submitting.current) return; continue; }
+        if (res.status === 409 && data.draft) {
+          ready.current = false; feedback.current = false; setSaveState('idle');
+          setChoice({ mine: { d: live.current.d, step: live.current.stepI + 1, lang: live.current.lang }, server: { d: fromOnline(data.draft), step: data.step ?? null, rev: data.draftRev ?? 0, lang: data.draft.lang } });
+          return;
+        }
+        if (data.code === 'enq.err.formExpired') { setView({ kind: 'expired' }); return; }
+        if (data.code === 'enq.err.formDone') { setView({ kind: 'done', date: '' }); return; }
+        break;
+      }
     } catch { ok = false; } finally { flight.current = false; }
-    if (explicit) setSaveState(ok ? 'saved' : 'failed');
+    if (feedback.current) { feedback.current = false; setSaveState(ok ? 'saved' : 'failed'); }
   }, [token, writeDevice]);
 
   const load = useCallback(async () => {
@@ -130,23 +150,40 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
       if (info.state === 'submitted') { clearDevice(token); setView({ kind: 'done', date: info.submittedAt ? info.submittedAt.slice(0, 10) : info.today }); return; }
       if (info.state === 'expired') { setView({ kind: 'expired' }); return; }
       const device = loadDevice(token);
-      const pick = pickDraft(device, { savedAt: info.savedAt, step: info.step, draft: info.draft });
+      const rev = info.draftRev ?? 0;
+      const pick = pickDraft(device, { rev, step: info.step, draft: info.draft });
       const at = resumeStep(pick.d, pick.step);
-      base.current = pick.from === 'device' ? device!.base : info.savedAt;
-      dirty.current = pick.from === 'device' ? device!.dirty : false;
+      base.current = pick.from === 'device' || pick.from === 'conflict' ? device!.base : rev || null;
+      dirty.current = pick.from === 'device' || pick.from === 'conflict' ? device!.dirty : false;
       touched.current = pick.from === 'device';
-      setD(pick.d); setStepI(at); setTried(new Set()); setResumed(pick.from !== 'lead' && at > 0);
-      ready.current = true;
+      setD(pick.d); setStepI(at); setTried(new Set()); setResumed(pick.from !== 'lead' && pick.from !== 'conflict' && at > 0);
+      if (pick.from === 'conflict') setChoice({ mine: { d: pick.d, step: pick.step, lang: pick.lang }, server: pick.server }); // both changed: the family chooses first, nothing is written until then
+      else { setChoice(null); ready.current = true; if (pick.from !== 'lead' && pick.lang) setLang(pick.lang); } // a saved draft brings back the language it was filled in
       setView({ kind: 'ready', info });
       if (info.state === 'sent') void fetch(`/api/public/form/${encodeURIComponent(token)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'open' }) }).catch(() => undefined);
     } catch { setView({ kind: 'network' }); }
-  }, [token]);
+  }, [token]); // eslint-disable-line react-hooks/exhaustive-deps
   useEffect(() => { void load(); }, [load]);
   useEffect(() => {
     const was = document.title;
     document.title = `${t('enq.pf_tab')} · CitraPremier`;
     return () => { document.title = was; };
   }, [t]);
+  const adoptSaved = () => {
+    if (!choice) return;
+    const sv = choice.server;
+    clearDevice(token);
+    base.current = sv.rev; dirty.current = false; touched.current = false;
+    setD(sv.d); setStepI(resumeStep(sv.d, sv.step)); setTried(new Set()); setResumed(true); setChoice(null); ready.current = true; setLang(sv.lang);
+  };
+  const keepMine = () => {
+    if (!choice) return;
+    const m = choice.mine;
+    base.current = choice.server.rev; dirty.current = true; touched.current = true; // sent against the counter the lead is at now
+    setD(m.d); setStepI(resumeStep(m.d, m.step)); setTried(new Set()); setChoice(null); ready.current = true; pushAfter.current = true;
+    if (m.lang) setLang(m.lang);
+  };
+  useEffect(() => { if (pushAfter.current && ready.current) { pushAfter.current = false; void pushDraft(false); } }, [d, stepI, choice, pushDraft]);
   // a new step starts at the top of the page
   useEffect(() => { top.current?.closest<HTMLElement>('[data-testid="public-form"]')?.scrollTo?.({ top: 0 }); }, [stepI]);
 
@@ -172,7 +209,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
     const open = firstOpenOnlineStep(d);
     if (open < last) { setTried((x) => new Set(x).add(ONLINE_STEPS[open])); goTo(open); return; }
     if (busy) return;
-    setBusy(true); setErr('');
+    setBusy(true); setErr(''); submitting.current = true;
     try {
       const res = await fetch(`/api/public/form/${encodeURIComponent(token)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'submit', draft: toOnline(d, lang) }) });
       if (res.ok) { finished.current = true; clearDevice(token); setView({ kind: 'thanks', name: d.cName.trim().split(' ')[0] }); window.scrollTo?.({ top: 0 }); return; }
@@ -181,6 +218,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
       if (data.code === 'enq.err.formDone') { finished.current = true; clearDevice(token); setView({ kind: 'done', date: '' }); return; }
       setErr(data.code ? t(data.code, data.params) : t('err.invalid'));
     } catch { setErr(t('mgmt.rtNetText')); }
+    submitting.current = false;
     setBusy(false);
   };
 
@@ -261,6 +299,17 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
     if (view.kind === 'network') return <Message icon="cloud_off" title={t('mgmt.rtNetTitle')} text={t('mgmt.rtNetText')} action={<Button size={48} onClick={() => void load()}>{t('common.retry')}</Button>} />;
     if (view.kind === 'done') return <Message icon="task_alt" tone="sage" title={t('enq.pf_doneTitle')} text={view.date ? t('enq.pf_doneText', { date: fds(view.date) }) : t('enq.pf_doneText', { date: '' })} />;
     if (view.kind === 'thanks') return <Message icon="favorite" tone="sage" title={t('enq.pf_thanksTitle', { name: view.name })} text={t('enq.pf_thanksText')} />;
+    if (choice) {
+      return (
+        <div data-testid="form-conflict" role="alertdialog" aria-label={t('enq.pf_conflictTitle')} style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '24px 16px', borderRadius: 20, background: 'var(--fill, #F4F4F5)' }}>
+          <Icon name="devices" size={32} weight={300} color="#75624B" />
+          <span style={{ fontSize: 20, fontWeight: 500, lineHeight: 1.25, color: '#24201C' }}>{t('enq.pf_conflictTitle')}</span>
+          <span style={{ fontSize: 15, lineHeight: 1.5, color: '#5E5852' }}>{t('enq.pf_conflictText')}</span>
+          <Button size={48} full onClick={adoptSaved}>{t('enq.pf_useSaved')}</Button>
+          <Button size={48} full variant="secondary" onClick={keepMine}>{t('enq.pf_keepMine')}</Button>
+        </div>
+      );
+    }
     const stepOf = t('reg.stepOf', { n: stepI + 1, total: FORM_STEPS, step: t(STEP_NAME_KEY[step]) });
     const isLast = stepI === last;
     return (

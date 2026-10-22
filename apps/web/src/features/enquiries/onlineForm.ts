@@ -54,8 +54,8 @@ export function firstOpenOnlineStep(d: FDraft): number {
 
 // ---------- the draft on this device ----------
 export const formDraftKey = (token: string) => `cp.form.${token}`;
-/** `step` is 1 to 5 (as on the lead); `base` is the server's `savedAt` this copy was last in step with; `dirty` = typed since then. */
-export interface DeviceDraft { d: FDraft; step: number; base: string | null; dirty: boolean }
+/** `step` is 1 to 5 (as on the lead); `base` is the lead's save counter (`draftRev`) this copy was last in step with; `dirty` = typed since then. */
+export interface DeviceDraft { d: FDraft; step: number; base: number | null; dirty: boolean; lang?: Lang }
 
 export function loadDevice(token: string): DeviceDraft | null {
   try {
@@ -64,7 +64,7 @@ export function loadDevice(token: string): DeviceDraft | null {
     const v = JSON.parse(raw) as Partial<DeviceDraft> | null;
     if (!v || typeof v !== 'object' || !v.d || typeof v.d !== 'object' || typeof v.d.name !== 'string' || !v.d.reg || typeof v.d.reg !== 'object') return null;
     const b = fromOnline(blankOnline());
-    return { d: { ...b, ...v.d, reg: { ...b.reg, ...v.d.reg } }, step: typeof v.step === 'number' ? Math.min(ONLINE_STEPS.length, Math.max(1, Math.round(v.step))) : 1, base: typeof v.base === 'string' ? v.base : null, dirty: v.dirty !== false };
+    return { d: { ...b, ...v.d, reg: { ...b.reg, ...v.d.reg } }, step: typeof v.step === 'number' ? Math.min(ONLINE_STEPS.length, Math.max(1, Math.round(v.step))) : 1, base: typeof v.base === 'number' ? v.base : null, dirty: v.dirty !== false, ...(v.lang === 'en' || v.lang === 'id' ? { lang: v.lang } : {}) };
   } catch {
     return null;
   }
@@ -76,15 +76,25 @@ export function clearDevice(token: string): void {
   try { localStorage.removeItem(formDraftKey(token)); } catch { /* storage blocked */ }
 }
 
+/** What the lead holds: its save counter (0 = nothing saved), the step and the draft. */
+export interface ServerDraft { rev: number; step: number | null; draft: OnlineRegistration }
+export type Picked =
+  | { from: 'device' | 'server' | 'lead'; d: FDraft; step: number | null; lang?: Lang }
+  /** this phone has typing the lead has not seen AND the lead was saved from another phone since: the family chooses (nothing is overwritten) */
+  | { from: 'conflict'; d: FDraft; step: number; lang?: Lang; server: { d: FDraft; step: number | null; rev: number; lang: Lang } };
+
 /**
- * Which draft the page opens with: the newer of the device's and the lead's. The two clocks differ, so this goes by what each has seen: a device
- * copy wins when it holds changes not saved to the lead yet, or when the lead has nothing newer than what the device last synced (`base`); the lead's
- * wins when another phone saved after this device's last sync and this device has typed nothing since.
+ * Which draft the page opens with. The two clocks differ, so this goes by the lead's save counter: the device copy remembers the counter it last
+ * synced with (`base`). A device copy wins when the lead has no draft or nothing newer than `base`; the lead's wins when another phone saved since and
+ * this one typed nothing; with both changed it is a conflict.
  */
-export function pickDraft(device: DeviceDraft | null, server: { savedAt: string | null; step: number | null; draft: OnlineRegistration }): { d: FDraft; step: number | null; from: 'device' | 'server' | 'lead' } {
-  if (device && (!server.savedAt || device.dirty || device.base === server.savedAt)) return { d: device.d, step: device.step, from: 'device' };
-  if (server.savedAt) return { d: fromOnline(server.draft), step: server.step, from: 'server' };
-  return { d: fromOnline(server.draft), step: null, from: 'lead' };
+export function pickDraft(device: DeviceDraft | null, server: ServerDraft): Picked {
+  const fromServer = (): Picked => (server.rev > 0 ? { from: 'server', d: fromOnline(server.draft), step: server.step, lang: server.draft.lang } : { from: 'lead', d: fromOnline(server.draft), step: null });
+  if (!device) return fromServer();
+  const mine: Picked = { from: 'device', d: device.d, step: device.step, lang: device.lang };
+  if (server.rev === 0 || device.base === server.rev) return mine;
+  if (!device.dirty) return fromServer();
+  return { from: 'conflict', d: device.d, step: device.step, lang: device.lang, server: { d: fromOnline(server.draft), step: server.step, rev: server.rev, lang: server.draft.lang } };
 }
 
 /** The step to open on: the saved one, but never past the first step that is still incomplete (no saved step = the first). */

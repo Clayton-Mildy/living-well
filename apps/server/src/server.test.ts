@@ -1,5 +1,5 @@
 // Server routes against a separate test database (citrapremier_test on the Homebrew Postgres, port 5434).
-import { describe, it, expect, beforeAll, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
 
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://localhost:5434/citrapremier_test';
 // Tests call the API without a browser session: they may name the user with `x-user-id`. The auth tests below switch this off to prove a browser cannot.
@@ -360,37 +360,99 @@ describe('actions', () => {
 });
 
 describe('online registration form: the draft route (round 13)', () => {
-  const post = (path: string, body: unknown) => app.request(path, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
+  const post = (path: string, body: unknown, headers: Record<string, string> = {}) => {
+    const raw = JSON.stringify(body);
+    return app.request(path, { method: 'POST', headers: { 'content-type': 'application/json', 'content-length': String(Buffer.byteLength(raw)), ...headers }, body: raw });
+  };
+  // the route lets one save through per link every 2 s: the tests move the clock instead of waiting
+  let skew = 0;
+  const realNow = Date.now.bind(Date);
+  beforeAll(() => { vi.spyOn(Date, 'now').mockImplementation(() => realNow() + skew); });
+  afterAll(() => { vi.restoreAllMocks(); });
+  const later = () => { skew += 3000; };
+  const mk = async (tag: string) => {
+    const made = await j(await app.request('/api/actions/enquiry.create', json({ mutationId: `srv-fd-${tag}-1`, input: { senior: { title: 'Oma', name: `Draft ${tag}` }, contact: { name: 'Dina Test', relation: 'daughter', phone: '0812 5550 7777' }, source: 'referral' } }, 's1')));
+    const sent = await j(await app.request('/api/actions/enquiry.sendForm', json({ mutationId: `srv-fd-${tag}-2`, input: { enquiryId: made.result.enquiryId } }, 's1')));
+    return { id: made.result.enquiryId as string, token: sent.result.token as string };
+  };
   let token = '';
   let id = '';
   it('a link is made for a lead; GET gives the lead as the starting draft and no saved step', async () => {
-    const made = await j(await app.request('/api/actions/enquiry.create', json({ mutationId: 'srv-fd-1', input: { senior: { title: 'Oma', name: 'Draft Test' }, contact: { name: 'Dina Test', relation: 'daughter', phone: '0812 5550 7777' }, source: 'referral' } }, 's1')));
-    id = made.result.enquiryId as string;
-    const sent = await j(await app.request('/api/actions/enquiry.sendForm', json({ mutationId: 'srv-fd-2', input: { enquiryId: id } }, 's1')));
-    token = sent.result.token as string;
+    ({ id, token } = await mk('a'));
     const got = await j(await app.request(`/api/public/form/${token}`));
-    expect(got).toMatchObject({ state: 'sent', step: null, savedAt: null, draft: { name: 'Draft Test', contact: { name: 'Dina Test' } } });
+    expect(got).toMatchObject({ state: 'sent', step: null, savedAt: null, draftRev: 0, draft: { name: 'Draft a', contact: { name: 'Dina Test' } } });
   });
   it('POST .../draft saves a partial draft and the step with no sign-in; GET then returns them and the link reads in progress', async () => {
-    const r = await post(`/api/public/form/${token}/draft`, { step: 2, draft: { name: 'Draft Test', address: 'Jl. Me', registration: { postcode: '12' }, contact: { name: 'Din', relation: 'daughter', phone: '08' } } });
+    const r = await post(`/api/public/form/${token}/draft`, { step: 2, expect: null, draft: { name: 'Draft a', address: 'Jl. Me', registration: { postcode: '12' }, contact: { name: 'Din', relation: 'daughter', phone: '08' } } });
     expect(r.status).toBe(200);
-    expect(await j(r)).toMatchObject({ ok: true, savedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT\d\d:\d\d$/) });
+    expect(await j(r)).toMatchObject({ ok: true, draftRev: 1, savedAt: expect.stringMatching(/^\d{4}-\d\d-\d\dT\d\d:\d\d$/) });
     const got = await j(await app.request(`/api/public/form/${token}`));
-    expect(got).toMatchObject({ state: 'inProgress', step: 2, draft: { address: 'Jl. Me', registration: { postcode: '12' }, contact: { name: 'Din', phone: '08' } } });
+    expect(got).toMatchObject({ state: 'inProgress', step: 2, draftRev: 1, draft: { address: 'Jl. Me', registration: { postcode: '12' }, contact: { name: 'Din', phone: '08' } } });
     expect(got.savedAt).toBeTruthy();
     const [row] = await sql`select data->'form'->>'step' as step from enquiries where club_id = 'citra' and id = ${id}`;
     expect(row.step).toBe('2');
   });
+  it('a second save within 2 s is 429 with Retry-After; after that it goes through', async () => {
+    const quick = await post(`/api/public/form/${token}/draft`, { step: 3, expect: 1, draft: { name: 'Draft a', address: 'Jl. Me 2' } });
+    expect(quick.status).toBe(429);
+    expect(quick.headers.get('retry-after')).toBeTruthy();
+    expect((await j(await app.request(`/api/public/form/${token}`))).draft.address).toBe('Jl. Me'); // not written
+    later();
+    const ok = await post(`/api/public/form/${token}/draft`, { step: 3, expect: 1, draft: { name: 'Draft a', address: 'Jl. Me 2' } });
+    expect(ok.status).toBe(200);
+    expect((await j(ok)).draftRev).toBe(2);
+  });
+  it('saving what the lead already has writes nothing: no revision bump, no broadcast, same save counter', async () => {
+    later();
+    const events: string[] = [];
+    const unsub = state.subscribe({ clubId: 'citra', user: state.userById('s9')!, send: (e) => events.push(e.type) });
+    const before = state.getClub('citra').rev;
+    const r = await post(`/api/public/form/${token}/draft`, { step: 3, expect: 2, draft: { name: 'Draft a', address: 'Jl. Me 2' } });
+    expect(r.status).toBe(200);
+    expect(await j(r)).toMatchObject({ draftRev: 2 });
+    expect(state.getClub('citra').rev).toBe(before);
+    expect(events).toEqual([]);
+    unsub();
+    // and right after, a real change is not held back by it
+    const next = await post(`/api/public/form/${token}/draft`, { step: 3, expect: 2, draft: { name: 'Draft a', address: 'Jl. Me 3' } });
+    expect(next.status).toBe(200);
+    expect(state.getClub('citra').rev).toBe(before + 1);
+  });
+  it('a save from a page that has not seen the latest one is a 409 with what the lead has, and nothing is overwritten', async () => {
+    later();
+    const stale = await post(`/api/public/form/${token}/draft`, { step: 2, expect: 1, draft: { name: 'Draft stale' } });
+    expect(stale.status).toBe(409);
+    expect(await j(stale)).toMatchObject({ code: 'enq.err.formConflict', draftRev: 3, step: 3, draft: { address: 'Jl. Me 3' } });
+    expect((await j(await app.request(`/api/public/form/${token}`))).draft.name).toBe('Draft a');
+    // the family keeps this phone's: resent against the counter the 409 gave
+    later();
+    const keep = await post(`/api/public/form/${token}/draft`, { step: 2, expect: 3, draft: { name: 'Draft stale' } });
+    expect(keep.status).toBe(200);
+    expect((await j(keep)).draftRev).toBe(4);
+  });
+  it('a body with no content-length, or over 40 000 bytes, is 413 (draft and submit)', async () => {
+    later();
+    const raw = JSON.stringify({ step: 1, expect: 4, draft: { name: 'x' } });
+    const noLen = await app.request(`/api/public/form/${token}/draft`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: raw });
+    expect(noLen.status).toBe(413);
+    const big = await post(`/api/public/form/${token}/draft`, { step: 1, expect: 4, draft: { name: 'x', address: 'y'.repeat(41000) } });
+    expect(big.status).toBe(413);
+    expect((await app.request(`/api/public/form/${token}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'open' }) })).status).toBe(413);
+    expect((await post(`/api/public/form/${token}`, { action: 'submit', draft: { name: 'y'.repeat(41000) } })).status).toBe(413);
+    expect((await j(await app.request(`/api/public/form/${token}`))).draft.name).toBe('Draft stale'); // nothing got through
+  });
   it('an unknown token is 404, a junk body is 422, the media route still accepts a link in progress, and a sent form is refused another draft', async () => {
+    later();
     expect((await post('/api/public/form/nope/draft', { step: 1, draft: {} })).status).toBe(404);
-    expect((await post(`/api/public/form/${token}/draft`, { step: 1, draft: 'x' })).status).toBe(422);
+    expect((await post(`/api/public/form/${token}/draft`, { step: 1, expect: 4, draft: 'x' })).status).toBe(422);
     const png = Buffer.from('/9j/4AAQSkZJRgABAQEASABIAAD/2wBDAP//////////////////////////////////////////////////////////////////////////////////////wgALCAABAAEBAREA/8QAFBABAAAAAAAAAAAAAAAAAAAAAP/aAAgBAQABPxA=', 'base64');
     const up = await post(`/api/public/form/${token}/media`, { mime: 'image/jpeg', data: png.toString('base64') });
     expect([201, 415, 422]).toContain(up.status);
     expect(up.status).not.toBe(404);
     const full = { title: 'Oma', name: 'Draft Test', dob: '', address: '', contact: { name: 'Dina Test', relation: 'daughter', phone: '0812 5550 7777' }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en' };
     expect((await post(`/api/public/form/${token}`, { action: 'submit', draft: full })).status).toBe(200);
-    const after = await post(`/api/public/form/${token}/draft`, { step: 3, draft: {} });
+    later();
+    const after = await post(`/api/public/form/${token}/draft`, { step: 3, expect: 4, draft: {} });
     expect(after.status).toBe(422);
     expect((await j(after)).code).toBe('enq.err.formDone');
   });

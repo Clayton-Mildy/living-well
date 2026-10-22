@@ -26,16 +26,23 @@ afterEach(async () => {
 });
 
 const lead = (): OnlineRegistration => ({ ...blankOnline(), title: 'Oma', name: 'Rosa Santoso', contact: { name: 'Dina Santoso', relation: 'daughter', phone: '+6281255550101' } });
-interface Server { state?: string; draft?: OnlineRegistration; step?: number | null; savedAt?: string | null }
+interface Server { state?: string; draft?: OnlineRegistration; step?: number | null; savedAt?: string | null; rev?: number; /** a save that comes in with a different `expect` is answered 409 */ strict?: boolean; /** answer the draft POST only when released (a save in flight) */ hold?: boolean }
 /** The public routes: GET gives the link, POST …/draft saves, POST … opens or sends. Returns the calls made. */
+let release: () => void = () => undefined;
 function serve(srv: Server = {}) {
   const calls: { url: string; method: string; body: Record<string, unknown> }[] = [];
   vi.stubGlobal('fetch', vi.fn(async (url: string, init?: RequestInit) => {
     const method = init?.method ?? 'GET';
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
     calls.push({ url, method, body });
-    if (method === 'GET') return { ok: true, status: 200, json: async () => ({ state: srv.state ?? 'sent', club: 'CitraPremier', today: '2026-10-22', draft: srv.draft ?? lead(), step: srv.step ?? null, savedAt: srv.savedAt ?? null, submittedAt: null, expiresAt: '2026-11-05T09:00', prices: { flex: 2500000, gold: 4500000, flexQuota: 8 } }) };
-    if (url.endsWith('/draft')) return { ok: true, status: 200, json: async () => ({ ok: true, rev: 5, savedAt: '2026-10-22T10:00' }) };
+    if (method === 'GET') return { ok: true, status: 200, json: async () => ({ state: srv.state ?? 'sent', club: 'CitraPremier', today: '2026-10-22', draft: srv.draft ?? lead(), step: srv.step ?? null, savedAt: srv.savedAt ?? null, draftRev: srv.rev ?? (srv.savedAt ? 1 : 0), submittedAt: null, expiresAt: '2026-11-05T09:00', prices: { flex: 2500000, gold: 4500000, flexQuota: 8 } }) };
+    if (url.endsWith('/draft')) {
+      if (srv.hold) await new Promise<void>((r) => { release = r; });
+      const cur = srv.rev ?? (srv.savedAt ? 1 : 0);
+      if (srv.strict && (body.expect ?? 0) !== cur) return { ok: false, status: 409, json: async () => ({ code: 'enq.err.formConflict', draft: srv.draft ?? lead(), step: srv.step ?? null, savedAt: srv.savedAt ?? null, draftRev: cur }) };
+      srv.rev = cur + 1; srv.draft = body.draft as OnlineRegistration; srv.step = body.step as number; srv.savedAt = '2026-10-22T10:00';
+      return { ok: true, status: 200, json: async () => ({ ok: true, rev: 5, savedAt: srv.savedAt, draftRev: srv.rev }) };
+    }
     return { ok: true, status: 200, json: async () => ({ ok: true, rev: 6 }) };
   }));
   return calls;
@@ -60,7 +67,7 @@ const stepEl = () => document.querySelector<HTMLElement>('[data-form-step]');
 const step = () => stepEl()?.dataset.formStep;
 const input = (name: string) => stepEl()?.querySelector<HTMLInputElement>(`input[name="${name}"]`) ?? null;
 const drafts = (calls: ReturnType<typeof serve>) => calls.filter((c) => c.url.endsWith('/draft'));
-const stored = () => JSON.parse(localStorage.getItem(formDraftKey(TOKEN)) ?? 'null') as { d: { name: string }; step: number; base: string | null; dirty: boolean } | null;
+const stored = () => JSON.parse(localStorage.getItem(formDraftKey(TOKEN)) ?? 'null') as { d: { name: string }; step: number; base: number | null; dirty: boolean; lang?: string } | null;
 
 describe('the online form: five steps', () => {
   it('opens on Who is joining with the step bar; Continue waits for the step, then moves on and saves to the lead', async () => {
@@ -80,7 +87,7 @@ describe('the online form: five steps', () => {
     expect(step()).toBe('family');
     expect(document.querySelector('[role="progressbar"]')?.getAttribute('aria-label')).toBe('Step 2 of 5 · Family contact');
     expect(drafts(calls)).toHaveLength(1);
-    expect(drafts(calls)[0].body).toMatchObject({ step: 2, draft: { name: 'Rosa Santoso', contact: { name: 'Dina Santoso' } } });
+    expect(drafts(calls)[0].body).toMatchObject({ step: 2, expect: null, draft: { name: 'Rosa Santoso', contact: { name: 'Dina Santoso' } } });
     await click(button('Back'));
     expect(step()).toBe('who');
   });
@@ -146,19 +153,102 @@ describe('the online form: the draft', () => {
   });
   it('the lead’s draft wins when it is newer than what this device last saved, and the device wins when it has unsaved typing', async () => {
     const server = { ...lead(), name: 'Rosa Server', address: 'Jl. Server' };
-    serve({ state: 'inProgress', draft: server, step: 2, savedAt: '2026-10-22T09:30' });
-    saveDevice(TOKEN, { d: { ...fromOnline(lead()), name: 'Rosa Device' }, step: 1, base: '2026-10-21T18:00', dirty: false });
+    serve({ state: 'inProgress', draft: server, step: 2, savedAt: '2026-10-22T09:30', rev: 3 });
+    saveDevice(TOKEN, { d: { ...fromOnline(lead()), name: 'Rosa Device' }, step: 1, base: 2, dirty: false });
     await show();
     expect(step()).toBe('family'); // resumes at the saved step, 2
     await click(button('Back'));
     expect(input('name')?.value).toBe('Rosa Server');
   });
-  it('the device wins when it holds typing the lead has not seen', async () => {
-    serve({ state: 'inProgress', draft: { ...lead(), name: 'Rosa Server' }, step: 2, savedAt: '2026-10-22T09:30' });
-    saveDevice(TOKEN, { d: { ...fromOnline(lead()), name: 'Rosa Device' }, step: 1, base: '2026-10-21T18:00', dirty: true });
+  it('the device wins when it holds typing and the lead has nothing newer than what it last synced', async () => {
+    serve({ state: 'inProgress', draft: { ...lead(), name: 'Rosa Server' }, step: 2, savedAt: '2026-10-22T09:30', rev: 2 });
+    saveDevice(TOKEN, { d: { ...fromOnline(lead()), name: 'Rosa Device' }, step: 1, base: 2, dirty: true });
     await show();
     expect(step()).toBe('who');
     expect(input('name')?.value).toBe('Rosa Device');
+    expect(document.querySelector('[data-testid="form-conflict"]')).toBeNull();
+  });
+  it('a phone with unsent typing that opens after another phone saved gets the choice, and nothing is written until it picks', async () => {
+    const calls = serve({ state: 'inProgress', draft: { ...lead(), name: 'Rosa Laptop' }, step: 2, savedAt: '2026-10-22T09:30', rev: 3, strict: true });
+    saveDevice(TOKEN, { d: { ...fromOnline(lead()), name: 'Rosa Offline' }, step: 1, base: 1, dirty: true });
+    await show();
+    expect(document.querySelector('[data-testid="form-conflict"]')?.textContent).toContain('This form was continued on another phone');
+    expect(document.querySelector('[data-form-step]')).toBeNull();
+    expect(stored()).toMatchObject({ d: { name: 'Rosa Offline' }, dirty: true, base: 1 }); // the phone's copy is untouched
+    expect(drafts(calls)).toHaveLength(0);
+    await click(button('Use the saved one'));
+    expect(step()).toBe('family');
+    await click(button('Back'));
+    expect(input('name')?.value).toBe('Rosa Laptop');
+    expect(stored() === null || stored()!.dirty === false).toBe(true);
+    expect(drafts(calls)).toHaveLength(0);
+  });
+  it('Keep this phone’s resends against the lead’s counter and the lead then holds this phone’s answers', async () => {
+    const calls = serve({ state: 'inProgress', draft: { ...lead(), name: 'Rosa Laptop' }, step: 2, savedAt: '2026-10-22T09:30', rev: 3, strict: true });
+    saveDevice(TOKEN, { d: { ...fromOnline(lead()), name: 'Rosa Offline' }, step: 1, base: 1, dirty: true });
+    await show();
+    await click(button('Keep this phone’s'));
+    await settle();
+    expect(step()).toBe('who');
+    expect(input('name')?.value).toBe('Rosa Offline');
+    expect(drafts(calls)).toHaveLength(1);
+    expect(drafts(calls)[0].body).toMatchObject({ expect: 3, step: 1, draft: { name: 'Rosa Offline' } });
+    expect(stored()).toMatchObject({ base: 4, dirty: false });
+  });
+  it('A types, B saves, A continues: a 409 gives the choice and nothing is lost until the family picks', async () => {
+    const srv: Server = { state: 'opened', rev: 0 };
+    const calls = serve(srv);
+    await show();
+    await type(input('name'), 'Rosa A typed');
+    // phone B saves meanwhile
+    srv.draft = { ...lead(), name: 'Rosa B' }; srv.step = 2; srv.savedAt = '2026-10-22T09:50'; srv.rev = 2; srv.strict = true;
+    await click(button('Continue'));
+    expect(drafts(calls)).toHaveLength(1);
+    expect(document.querySelector('[data-testid="form-conflict"]')).toBeTruthy();
+    expect(srv.draft.name).toBe('Rosa B'); // not overwritten
+    expect(stored()).toMatchObject({ d: { name: 'Rosa A typed' }, dirty: true }); // this phone's typing is still on the phone
+    await click(button('Keep this phone’s'));
+    await settle();
+    expect(drafts(calls)).toHaveLength(2);
+    expect(drafts(calls)[1].body).toMatchObject({ expect: 2, draft: { name: 'Rosa A typed' } });
+    expect(srv.draft.name).toBe('Rosa A typed');
+    expect(document.querySelector('[data-testid="form-conflict"]')).toBeNull();
+  });
+  it('a saved draft brings back the language it was filled in', async () => {
+    serve({ state: 'inProgress', draft: { ...lead(), lang: 'id' }, step: 2, savedAt: '2026-10-22T09:30', rev: 1 });
+    await show();
+    const idBtn = Array.from(document.querySelectorAll<HTMLElement>('[role="group"] button')).find((b) => b.textContent === 'ID');
+    expect(idBtn?.getAttribute('aria-pressed')).toBe('true');
+    expect(step()).toBe('family');
+  });
+  it('Save for later tapped while a push is in flight still ends with "Saved."', async () => {
+    const calls = serve({ hold: true });
+    await show();
+    await type(input('name'), 'Rosa Busy');
+    await click(button('Continue')); // push 1 flies (held)
+    await click(button('Save for later')); // tapped meanwhile
+    expect(button('Saving…')).toBeTruthy();
+    await act(async () => { release(); });
+    await settle();
+    await act(async () => { release(); });
+    await settle();
+    expect(document.body.textContent).toContain('Saved.');
+    expect(drafts(calls).length).toBeGreaterThanOrEqual(1);
+  });
+  it('an answer to a draft save that comes after Send is ignored (Thanks stays)', async () => {
+    const srv: Server = {};
+    serve(srv);
+    await show();
+    srv.hold = true;
+    await click(button('Continue')); // a push is in flight
+    for (let i = 0; i < 3; i++) await click(button('Continue'));
+    expect(step()).toBe('review');
+    await click(button('Send to the club'));
+    expect(document.querySelector('[data-testid="public-form-message"]')?.textContent).toContain('Thank you');
+    await act(async () => { release(); });
+    await settle();
+    expect(document.querySelector('[data-testid="public-form-message"]')?.textContent).toContain('Thank you');
+    expect(localStorage.getItem(formDraftKey(TOKEN))).toBeNull();
   });
   it('Save for later posts the draft to the lead and says it is saved', async () => {
     const calls = serve();
@@ -168,14 +258,19 @@ describe('the online form: the draft', () => {
     expect(drafts(calls)).toHaveLength(1);
     expect(drafts(calls)[0].body).toMatchObject({ step: 1, draft: { name: 'Rosa Later' } });
     expect(document.body.textContent).toContain('Saved.');
-    expect(stored()).toMatchObject({ base: '2026-10-22T10:00', dirty: false });
+    expect(stored()).toMatchObject({ base: 1, dirty: false });
   });
-  it('pickDraft and resumeStep: the lead alone, a device alone, never past the first incomplete step', () => {
-    const base = { d: fromOnline(lead()), step: 3, base: 's1', dirty: false };
-    expect(pickDraft(null, { savedAt: null, step: null, draft: lead() })).toMatchObject({ from: 'lead', step: null });
-    expect(pickDraft(base, { savedAt: null, step: null, draft: lead() }).from).toBe('device');
-    expect(pickDraft(base, { savedAt: 's1', step: 2, draft: lead() }).from).toBe('device'); // in step with the lead
-    expect(pickDraft(base, { savedAt: 's2', step: 2, draft: lead() })).toMatchObject({ from: 'server', step: 2 });
+  it('pickDraft and resumeStep: the lead alone, a device alone, in step, newer lead, both changed; never past the first incomplete step', () => {
+    const dev = { d: fromOnline(lead()), step: 3, base: 1, dirty: false };
+    const srv = (rev: number) => ({ rev, step: 2, draft: lead() });
+    expect(pickDraft(null, srv(0))).toMatchObject({ from: 'lead', step: null });
+    expect(pickDraft(null, srv(2)).from).toBe('server');
+    expect(pickDraft(dev, srv(0)).from).toBe('device');
+    expect(pickDraft(dev, srv(1)).from).toBe('device'); // in step with the lead
+    expect(pickDraft(dev, srv(2))).toMatchObject({ from: 'server', step: 2 });
+    expect(pickDraft({ ...dev, dirty: true }, srv(1)).from).toBe('device');
+    expect(pickDraft({ ...dev, dirty: true }, srv(2)).from).toBe('conflict'); // typed here, saved elsewhere
+    expect(pickDraft({ ...dev, dirty: true, base: null }, srv(1)).from).toBe('conflict'); // never synced, the lead has one
     const empty = fromOnline({ ...lead(), name: '' });
     expect(resumeStep(fromOnline(lead()), null)).toBe(0);
     expect(resumeStep(empty, 4)).toBe(0); // the name is missing: back to step 1

@@ -74,7 +74,7 @@ export const enq = {
   formSentOn: 'Sent {date} · valid until {until}', formOpenedOn: 'Opened {date} · valid until {until}', formExpiredOn: 'The link expired on {until}.', formFilledBy: 'Filled in online by {name} on {date}',
   formSavedOn: 'Filling it in: step {n} of 5, saved {date} · valid until {until}',
   formOpenJoin: 'Open in Join', jn_fromOnline: 'From the online form', formSentToast: 'Form link ready for {contact}.',
-  'err.formDone': 'The family has already sent this form. Open Join to use the answers.', 'err.formExpired': 'This link has expired. Ask the club for a new one.',
+  'err.formConflict': 'This form was continued on another phone. Choose which answers to keep.', 'err.formDone': 'The family has already sent this form. Open Join to use the answers.', 'err.formExpired': 'This link has expired. Ask the club for a new one.',
   'feed.formSent': 'Registration form link sent · {name}', 'feed.formSubmitted': 'Registration form filled in online · {name}',
   'feed.formSaved': 'Registration form started online · {name}',
   'notif.formSubmitted': '{by} filled in the registration form for {name} online.',
@@ -85,5 +85,5 @@ export const enq = {
   pf_doneTitle: 'Already sent', pf_doneText: 'This form reached the club on {date}. To change something, ask the front desk for a new link.',
   pf_badTitle: 'This link does not work', pf_badText: 'Check the link you received, or ask the club to send it again.', pf_expiredTitle: 'This link has expired', pf_expiredText: 'Links stay open for 14 days. Ask the front desk to send a new one.',
   pf_privacy: 'Only the club sees these answers.',
-  pf_stepHealth: 'Health', pf_stepPlan: 'Plan', pf_stepReview: 'Review and send', pf_continue: 'Continue', pf_saveLater: 'Save for later', pf_saving: 'Saving…', pf_saved: 'Saved. You can close this page and carry on later from the same link.', pf_saveFailed: 'Could not save to the club just now. Your answers are kept on this phone.', pf_resumed: 'Welcome back: carrying on where you left off.', pf_reviewIntro: 'Check your answers, then send them to the club.', pf_none: 'None',
+  pf_conflictTitle: 'This form was continued on another phone', pf_conflictText: 'Newer answers were saved from another phone. Which should we keep?', pf_useSaved: 'Use the saved one', pf_keepMine: 'Keep this phone’s', pf_stepHealth: 'Health', pf_stepPlan: 'Plan', pf_stepReview: 'Review and send', pf_continue: 'Continue', pf_saveLater: 'Save for later', pf_saving: 'Saving…', pf_saved: 'Saved. You can close this page and carry on later from the same link.', pf_saveFailed: 'Could not save to the club just now. Your answers are kept on this phone.', pf_resumed: 'Welcome back: carrying on where you left off.', pf_reviewIntro: 'Check your answers, then send them to the club.', pf_none: 'None',
 };

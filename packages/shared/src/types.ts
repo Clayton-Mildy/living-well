@@ -543,6 +543,8 @@ export interface EnquiryForm {
   /** round 13: the step (1 to 5) the family was on when the draft was last saved, and when (the newer of device and server draft wins) */
   step?: number;
   savedAt?: DT;
+  /** how many times the draft was saved: a save names the one it last saw, so a second phone never overwrites the first unseen */
+  rev?: number;
 }
 
 export interface CalendarEvent extends Row {

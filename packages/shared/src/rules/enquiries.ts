@@ -269,6 +269,8 @@ export function formLinkState(f: EnquiryForm | undefined, nowDT: DT): FormLinkSt
   if (f.savedAt) return 'inProgress'; // round 13: the family saved a draft through the link
   return f.openedAt ? 'opened' : 'sent';
 }
+/** The draft's save counter (0 = nothing saved yet). Minute-stamped `savedAt` can tie; this cannot. */
+export const formRevOf = (f: EnquiryForm | undefined): number => (f?.savedAt ? Math.max(f.rev ?? 0, 1) : 0);
 /** The lead a form token belongs to (deleted leads never match). */
 export const enquiryByFormToken = (s: ClubState, token: string | undefined | null): Enquiry | null =>
   (token && live(s.enquiries).find((e) => e.form?.token === token)) || null;

@@ -11,7 +11,7 @@ import {
 } from '../rules/enquiries';
 import { parseCarer, parseHealthBasics, parseKtp, parseRegistration, titleOf, txt } from './members';
 import { cleanRegistration } from '../rules/applicationForm';
-import { FORM_LINK_DAYS, FORM_STEPS, enquiryByFormToken, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
+import { FORM_LINK_DAYS, FORM_STEPS, enquiryByFormToken, formRevOf, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
 import { arr, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { e164, live, sortBy, addDays } from '../util';
 
@@ -395,7 +395,10 @@ export const enquiriesActions = [
       } else {
         let token = formTokenOf(`${ctx.clubId}|${e.id}|${ctx.mutationId}`);
         for (let n = 1; enquiryByFormToken(S(d), token); n++) token = formTokenOf(`${token}|${n}`);
+        const old = e.form;
         e.form = { token, sentAt: ctx.nowDT, sentBy: ctx.actor, expiresAt };
+        // an expired link's half-filled draft moves to the new link (a submitted one never gets here)
+        if (old?.draft && old.savedAt) Object.assign(e.form, { draft: JSON.parse(JSON.stringify(old.draft)), step: old.step, savedAt: old.savedAt, rev: formRevOf(old) });
       }
       ctx.result.token = e.form.token;
       ctx.result.path = formPath(e.form.token);
@@ -415,7 +418,7 @@ export const enquiriesActions = [
   }),
   // round 13 (KC): the family's half-filled form is saved through the link, so reopening it on any phone continues where they left off.
   // The answers are only checked for shape (a postcode half typed is fine); formSubmit still checks everything.
-  defineAction<{ token: string; step: number; draft: Partial<OnlineRegistration> }>({
+  defineAction<{ token: string; step: number; expect: number | null; draft: Partial<OnlineRegistration> }>({
     name: 'enquiry.formSave',
     can: (u, i, s) => system(u) && !!enquiryByFormToken(s, i.token),
     parse(raw) {
@@ -430,6 +433,7 @@ export const enquiriesActions = [
       return {
         token: str(o.token, 80, { required: true, field: 'token' }),
         step,
+        expect: typeof o.expect === 'number' && Number.isInteger(o.expect) && o.expect > 0 ? o.expect : null, // the save counter this page last saw (null = it has seen none)
         draft: {
           ...(typeof dr.title === 'string' ? { title: txt(dr.title, 20) } : {}), ...(dr.name !== undefined ? { name: txt(dr.name, 80) } : {}),
           ...(typeof dr.dob === 'string' ? { dob: /^\d{4}-\d{2}-\d{2}$/.test(dr.dob) ? dr.dob : '' } : {}), ...(dr.address !== undefined ? { address: txt(dr.address, 200) } : {}),
@@ -452,14 +456,22 @@ export const enquiriesActions = [
       const f = row.form!;
       const first = !f.savedAt;
       // the page sends the whole draft each time (so a cleared answer stays cleared); what it leaves out starts from the lead as the front desk typed it
-      f.draft = {
+      const next: OnlineRegistration = {
         title: row.senior.title, name: row.senior.name, dob: '', address: '', contact: { ...row.contact }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
         ...i.draft,
       };
+      const cur = formRevOf(f);
+      ctx.result.draftRev = cur;
+      ctx.result.savedAt = f.savedAt ?? null;
+      if (f.draft && !first && f.step === i.step && JSON.stringify(f.draft) === JSON.stringify(next)) return; // nothing new: no write, no bump
+      if (cur !== (i.expect ?? 0)) ctx.fail('enq.err.formConflict'); // saved from another phone since this page last looked: never overwrite unseen answers
+      f.draft = next;
       f.step = i.step;
       f.savedAt = ctx.nowDT;
+      f.rev = cur + 1;
       f.openedAt ??= ctx.nowDT;
       ctx.result.savedAt = ctx.nowDT;
+      ctx.result.draftRev = cur + 1;
       if (first) ctx.feed({ icon: 'edit_note', key: 'enq.feed.formSaved', params: { name: seniorName(row) } });
     },
   }),
