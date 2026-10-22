@@ -208,6 +208,40 @@ describe('broadcast', () => {
   });
 });
 
+describe('surveys for the front desk (round 13)', () => {
+  // sv1 went to f1, fm2_0, fm10_0, fm20_0 only: f2 and fm2_1 have the app and can still be sent it
+  it('the desk sends the live family survey to one more contact; the draft send, create and close stay with management', () => {
+    const s = seed().citra;
+    const r = run(s, 'survey.send', { surveyId: 'sv1', familyId: 'f2' }, 's1');
+    expect(r.state.surveys.sv1.recipients).toEqual(['f1', 'fm2_0', 'fm10_0', 'fm20_0', 'f2']);
+    expect(r.state.surveys.sv1.status).toBe('live');
+    expect(r.state.surveys.sv1.log!.at(-1)).toMatchObject({ what: 'sentTo', by: 'staff:s1', note: s.familyContacts.f2.name });
+    expect(r.result.name).toBe(s.familyContacts.f2.name);
+    expect(actionItems(s, user(s, 'f2'), T, 600).some((i) => i.kind === 'notif.act.survey')).toBe(false);
+    expect(actionItems(r.state, user(r.state, 'f2'), T, 600).some((i) => i.kind === 'notif.act.survey')).toBe(true);
+    expect(run(s, 'survey.send', { surveyId: 'sv1', familyId: 'fm2_1' }, 's9').state.surveys.sv1.recipients).toContain('fm2_1'); // management too
+    // without a familyId it is the draft send: management only
+    const d = run(s, 'survey.create', { title: 'November', questions: ['comment'], teamStaffIds: [] }, 's9');
+    fails(d.state, 'survey.send', { surveyId: d.result.surveyId }, 's1', 'err.forbidden');
+    fails(s, 'survey.create', { title: 'x', questions: ['comment'], teamStaffIds: [] }, 's1', 'err.forbidden');
+    fails(s, 'survey.close', { surveyId: 'sv1' }, 's1', 'err.forbidden');
+    fails(s, 'survey.send', { surveyId: 'sv1', familyId: 'f2' }, 's5', 'err.forbidden'); // other roles are refused
+  });
+  it('refuses a second send, a contact without the app, a closed or venue survey', () => {
+    const s = seed().citra;
+    const r = run(s, 'survey.send', { surveyId: 'sv1', familyId: 'f2' }, 's1');
+    fails(r.state, 'survey.send', { surveyId: 'sv1', familyId: 'f2' }, 's1', 'mgmt.err.alreadySent');
+    fails(s, 'survey.send', { surveyId: 'sv1', familyId: 'f1' }, 's1', 'mgmt.err.alreadySent');
+    const noApp = { ...s, familyLinks: { ...s.familyLinks, 'fm2_1:m2': { ...s.familyLinks['fm2_1:m2'], appAccess: false } } };
+    fails(noApp, 'survey.send', { surveyId: 'sv1', familyId: 'fm2_1' }, 's1', 'mgmt.err.noApp');
+    fails(s, 'survey.send', { surveyId: 'sv1', familyId: 'nobody' }, 's1', 'err.notFound');
+    const closed = run(s, 'survey.close', { surveyId: 'sv1' }, 's9').state;
+    fails(closed, 'survey.send', { surveyId: 'sv1', familyId: 'f2' }, 's1', 'mgmt.err.notLive');
+    const venue = Object.values(s.surveys).find((x) => x.kind === 'venue' && x.status === 'live');
+    if (venue) fails(s, 'survey.send', { surveyId: venue.id, familyId: 'f2' }, 's1', 'mgmt.err.notLive');
+  });
+});
+
 describe('surveys', () => {
   const draft = { title: 'November check-in', questions: ['team', 'comment'], teamStaffIds: ['s1', 's8', 's5'] };
   const ALL = ['f1', 'f2', 'fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']; // every family contact with the app (sorted by id)

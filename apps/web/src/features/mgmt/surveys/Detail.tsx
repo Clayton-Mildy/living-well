@@ -6,6 +6,7 @@ import { Button, Dialog, Group, Icon, PhoneScreen, Pager, usePaged } from '../..
 import { useDevice } from '../../../hooks/useDevice';
 import { useT, useFmt } from '../../../lib/i18n';
 import { useAct } from '../../../lib/act';
+import { useMe } from '../../../lib/me';
 import { useClub } from '../../../store/replica';
 import { BadgePill, IconBox, Pill, PillBtn, SegTabs, labelStyle, tn } from '../common';
 import { audienceText } from './Fields';
@@ -13,7 +14,7 @@ import { Comments, CustomResults, TeamBars, Tiles } from './Results';
 
 export type DetailTab = 'summary' | 'responses' | 'history';
 const TABS: DetailTab[] = ['summary', 'responses', 'history'];
-const LOG_ICON: Record<NonNullable<Survey['log']>[number]['what'], string> = { created: 'edit_note', edited: 'edit', sent: 'send', closed: 'lock_clock', reopened: 'lock_open' };
+const LOG_ICON: Record<NonNullable<Survey['log']>[number]['what'], string> = { created: 'edit_note', edited: 'edit', sent: 'send', sentTo: 'forward_to_inbox', closed: 'lock_clock', reopened: 'lock_open' };
 
 export function SurveyDetail({ id, initialTab = 'summary', onClose }: { id: string; initialTab?: DetailTab; onClose: () => void }) {
   const t = useT();
@@ -21,6 +22,7 @@ export function SurveyDetail({ id, initialTab = 'summary', onClose }: { id: stri
   const { fdy } = useFmt();
   const s = useClub();
   const act = useAct();
+  const desk = useMe().role === 'lobby'; // round 13: the front desk reads the results; closing, reopening and templates are management's
   const [tab, setTab] = useState<DetailTab>(initialTab);
   const sv = s.surveys[id];
   if (!sv || sv.deletedAt) return null;
@@ -47,9 +49,9 @@ export function SurveyDetail({ id, initialTab = 'summary', onClose }: { id: stri
     teamStaffIds: hasTeam ? sv.teamStaffIds : [],
   }, { ok: t('mgmt.svTplSaved') });
   const actions: { key: string; icon: string; label: string; run: () => void; show: boolean }[] = [
-    { key: 'close', icon: 'lock_clock', label: t('mgmt.svClose'), show: sv.status === 'live', run: () => { void act('survey.close', { surveyId: sv.id }, { ok: t('mgmt.svClosed', { title: sv.title }) }); } },
-    { key: 'reopen', icon: 'lock_open', label: t('mgmt.svReopen'), show: sv.status === 'closed', run: () => { void act('survey.reopen', { surveyId: sv.id }, { ok: t('mgmt.svReopened', { title: sv.title }) }); } },
-    { key: 'tpl', icon: 'bookmark_add', label: t('mgmt.svTplSaveAs'), show: sv.status !== 'draft', run: () => { void saveAsTemplate(); } },
+    { key: 'close', icon: 'lock_clock', label: t('mgmt.svClose'), show: !desk && sv.status === 'live', run: () => { void act('survey.close', { surveyId: sv.id }, { ok: t('mgmt.svClosed', { title: sv.title }) }); } },
+    { key: 'reopen', icon: 'lock_open', label: t('mgmt.svReopen'), show: !desk && sv.status === 'closed', run: () => { void act('survey.reopen', { surveyId: sv.id }, { ok: t('mgmt.svReopened', { title: sv.title }) }); } },
+    { key: 'tpl', icon: 'bookmark_add', label: t('mgmt.svTplSaveAs'), show: !desk && sv.status !== 'draft', run: () => { void saveAsTemplate(); } },
   ];
   const buttons = (
     <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -182,6 +184,7 @@ function History({ sv }: { sv: Survey }) {
   const text = (e: (typeof entries)[number]) => {
     if (e.what === 'created') return e.note ? t('mgmt.svLog_createdFrom', { who: who(e.by), tpl: e.note }) : t('mgmt.svLog_created', { who: who(e.by) });
     if (e.what === 'sent') return surveyKind(sv) === 'venue' || e.note === undefined ? t('mgmt.svLog_sentV', { who: who(e.by) }) : tn(t, 'mgmt.svLog_sent', Number(e.note), { who: who(e.by) });
+    if (e.what === 'sentTo') return t('mgmt.svLog_sentTo', { who: who(e.by), name: e.note ?? '' });
     if (e.what === 'closed') return e.note === 'replaced' ? t('mgmt.svLog_closedReplaced') : t('mgmt.svLog_closed', { who: who(e.by) });
     return t('mgmt.svLog_' + e.what, { who: who(e.by) });
   };

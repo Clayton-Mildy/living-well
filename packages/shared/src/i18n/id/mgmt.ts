@@ -97,7 +97,7 @@ export const mgmt: Same<typeof EN> = {
   'err.venueNotDone': 'Acaranya belum berlangsung.', 'err.venueReviewed': 'Acara ini sudah punya ulasan.', 'err.venueAsked': 'Tautan ulasan sudah dikirim.', 'err.svTplBuiltIn': 'Templat rating venue sudah bawaan: pertanyaannya bisa diubah, tetapi tidak bisa dihapus.', svTplBuiltIn: 'Bawaan',
   'err.venuePrice': 'Isi harga terlebih dahulu.', 'err.venueInvoiced': 'Pemesanan ini sudah punya faktur.', 'err.noRecipients': 'Tidak ada penerima.', 'err.pastTime': 'Pilih waktu setelah sekarang.',
   'err.notScheduled': 'Pesan ini sudah terkirim atau dibatalkan.', 'err.tplMsg': 'Teks harus memuat {msg} agar pesan Anda masuk.', 'err.tplBuiltIn': 'Templat bawaan boleh diubah tetapi tidak bisa dihapus.',
-  'err.teamRequired': 'Pilih setidaknya satu anggota tim untuk dinilai.', 'err.notDraft': 'Hanya survei draf yang bisa diubah.', 'err.notLive': 'Survei ini tidak sedang dibuka.',
+  'err.teamRequired': 'Pilih setidaknya satu anggota tim untuk dinilai.', 'err.notDraft': 'Hanya survei draf yang bisa diubah.', 'err.alreadySent': 'Kontak ini sudah menerima survei.', 'err.noApp': 'Kontak ini tidak memiliki aplikasi.', 'err.notLive': 'Survei ini tidak sedang dibuka.',
   'err.alreadyAnswered': 'Anda sudah menjawab survei ini.', 'err.priceInvalid': 'Isi harga di atas nol.', 'err.pricePast': 'Tanggal mulai tidak boleh di masa lalu.',
   'err.quotaInvalid': 'Gunakan bilangan bulat 1 sampai 23.', 'err.contactNoApp': 'Keluarga ini belum bisa memakai aplikasi, jadi belum bisa menjawab survei.',
   'err.qText': 'Tulis pertanyaannya, maksimal {n} karakter.', 'err.qOptions': 'Tulis 2 sampai 8 pilihan yang berbeda, satu di setiap baris.', 'err.qOptionLong': 'Setiap pilihan maksimal {n} karakter.',
@@ -107,7 +107,7 @@ export const mgmt: Same<typeof EN> = {
   'feed.broadcast': 'Siaran terkirim ke {n} orang', 'feed.broadcastScheduled': 'Siaran dijadwalkan untuk {n} orang ({date} {time})', 'feed.broadcastCancelled': 'Siaran terjadwal dibatalkan',
   'feed.venueBooked': 'Venue dipesan · {org} · {date}', 'feed.venueUpdated': 'Pemesanan venue diubah · {org} · {date}', 'feed.venueCancelled': 'Pemesanan venue dibatalkan · {org} · {date}',
   'feed.venueReviewAsked': 'Tautan ulasan terkirim · {org}', 'feed.venueReviewed': 'Ulasan venue dicatat · {org} · {stars}/5', 'feed.venueInvoice': 'Faktur venue {ref} · {org}',
-  'feed.surveySent': 'Survei dikirim · {title} · {n} keluarga', 'feed.surveyClosed': 'Survei ditutup · {title}', 'feed.surveyAnswered': '{name} menjawab survei · {overall}/5', 'feed.surveyAnsweredPlain': '{name} menjawab survei',
+  'feed.surveySent': 'Survei dikirim · {title} · {n} keluarga', 'feed.surveySentTo': 'Survei dikirim · {title} · {name}', 'feed.surveyClosed': 'Survei ditutup · {title}', 'feed.surveyAnswered': '{name} menjawab survei · {overall}/5', 'feed.surveyAnsweredPlain': '{name} menjawab survei',
   'feed.prices': 'Harga diperbarui (mulai {date})', 'feed.rules': 'Aturan klub diperbarui: Flex adalah {quota} kunjungan sebulan',
 
   // ----- notifikasi -----
@@ -121,7 +121,7 @@ export const mgmt: Same<typeof EN> = {
 
   // ----- KC round 7: templat survei, riwayat survei, survei venue, dan tautan penilaian untuk penyewa -----
   svTabLive: 'Aktif', svTabDrafts: 'Draf', svTabTemplates: 'Templat', svTabLog: 'Riwayat', svKind_family: 'Keluarga', svKind_venue: 'Penyewa venue',
-  svLiveNone: 'Tidak ada survei yang aktif.', svLinksSent: '{n} tautan penilaian terkirim', svLinksSentOne: '{n} tautan penilaian terkirim', svAnsweredOf: '{n} dari {total} menjawab', svOfAnsweredV: 'dari penyewa yang menjawab',
+  svLiveNone: 'Tidak ada survei yang aktif.', svSendContact: 'Kirim ke kontak', svSendToTitle: 'Kirim survei ke kontak', svSendToSearch: 'Cari kontak', svSendToNone: 'Tidak ada lagi yang bisa dikirimi.', svSentToT: 'Terkirim ke {name}.', svLinksSent: '{n} tautan penilaian terkirim', svLinksSentOne: '{n} tautan penilaian terkirim', svAnsweredOf: '{n} dari {total} menjawab', svOfAnsweredV: 'dari penyewa yang menjawab',
   svDraftsNone: 'Belum ada draf.', svQuestionsN: '{n} pertanyaan', svQuestionsNOne: '{n} pertanyaan', svSentOn: 'Dikirim {date}',
   svTemplates: 'Templat', svTplNone: 'Belum ada templat.', svTplNew: 'Templat baru', svTplUse: 'Pakai', svTplEdit: 'Ubah templat', svTplSave: 'Simpan templat', svTplSaved: 'Templat disimpan.', svTplDeleted: 'Templat dihapus.',
   svTplDelete: 'Hapus templat', svTplDeleteText: 'Hapus “{title}”? Survei yang sudah dibuat darinya tetap memakai pertanyaannya.', svTplSaveAs: 'Simpan sebagai templat', svTplName: 'Nama templat',
@@ -131,7 +131,7 @@ export const mgmt: Same<typeof EN> = {
   svFilterKind: 'Jenis', svFilterAll: 'Semua', svLogTitle: 'Semua survei yang pernah dikirim', svLogCount: '{n} survei', svLogCountOne: '{n} survei', svLogMeta: 'Terkirim {sent} · {answered} menjawab · {rate}%', svLogNow: 'sekarang', svLogNone: 'Belum ada survei yang dikirim.',
   svDet_summary: 'Ringkasan', svDet_responses: 'Jawaban', svDet_history: 'Riwayat', svReopen: 'Buka lagi', svReopened: '{title} aktif lagi.', svWaitingFor: 'Menunggu {n}', svWaitingForOne: 'Menunggu {n}',
   svLog_created: 'Dibuat oleh {who}', svLog_createdFrom: 'Dibuat dari templat “{tpl}” oleh {who}', svLog_edited: 'Diubah oleh {who}', svLog_sent: 'Dikirim ke {n} keluarga oleh {who}', svLog_sentOne: 'Dikirim ke {n} keluarga oleh {who}', svLog_sentV: 'Diaktifkan oleh {who}',
-  svLog_closed: 'Ditutup oleh {who}', svLog_closedReplaced: 'Ditutup saat survei yang lebih baru dikirim', svLog_reopened: 'Dibuka lagi oleh {who}',
+  svLog_sentTo: '{who} mengirimnya ke {name}', svLog_closed: 'Ditutup oleh {who}', svLog_closedReplaced: 'Ditutup saat survei yang lebih baru dikirim', svLog_reopened: 'Dibuka lagi oleh {who}',
   // venue: minta penilaian lewat tautan
   vnAskRating: 'Minta penilaian', vnSendAgain: 'Kirim lagi', vnCopyLink: 'Salin tautan', vnOpenLink: 'Buka tautan', vnLinkCopied: 'Tautan penilaian disalin.', vnLinkManual: 'Salin tautan dari sini: {url}',
   vnRatingSent: 'Tautan penilaian terkirim ke {name} lewat WhatsApp (demo).', vnWaiting: 'Menunggu {name} memberi penilaian.', vnEnterByHand: 'Isi manual', vnRatingFrom: 'Dinilai oleh {name} lewat tautan', vnEnteredByHand: 'Diisi manual', vnViewAnswers: 'Lihat jawaban', vnLinkClosed: 'Survei itu sudah ditutup. Kirim ulang tautan untuk memindahkannya ke survei yang aktif.',

@@ -876,7 +876,7 @@ export interface Survey extends Row {
   /** the template it was started from */
   templateId?: string;
   /** KC round 7: the survey's log (created, edited, sent, closed), oldest first */
-  log?: { at: DT; by: Actor; what: 'created' | 'edited' | 'sent' | 'closed' | 'reopened'; note?: string }[];
+  log?: { at: DT; by: Actor; what: 'created' | 'edited' | 'sent' | 'sentTo' | 'closed' | 'reopened'; note?: string }[];
 }
 
 /** KC round 7: a reusable survey (title and questions) management starts new surveys from. */

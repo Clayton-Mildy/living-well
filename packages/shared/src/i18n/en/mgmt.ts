@@ -94,7 +94,7 @@ export const mgmt = {
   'err.venueNotDone': 'The event has not happened yet.', 'err.venueReviewed': 'This event already has a review.', 'err.venueAsked': 'A review link was already sent.', 'err.svTplBuiltIn': 'The venue rating template is built in: you can change its questions, but it can’t be deleted.', svTplBuiltIn: 'Built in',
   'err.venuePrice': 'Add a price first.', 'err.venueInvoiced': 'This booking already has an invoice.', 'err.noRecipients': 'There is nobody to send to.', 'err.pastTime': 'Choose a time after now.',
   'err.notScheduled': 'This message was already sent or cancelled.', 'err.tplMsg': 'The text needs {msg} so that your message goes in.', 'err.tplBuiltIn': 'The built-in templates can be edited but not removed.',
-  'err.teamRequired': 'Pick at least one team member to rate.', 'err.notDraft': 'Only a draft survey can be changed.', 'err.notLive': 'This survey is not open.',
+  'err.teamRequired': 'Pick at least one team member to rate.', 'err.notDraft': 'Only a draft survey can be changed.', 'err.alreadySent': 'This contact already has the survey.', 'err.noApp': 'This contact does not have the app.', 'err.notLive': 'This survey is not open.',
   'err.alreadyAnswered': 'You have already answered this survey.', 'err.priceInvalid': 'Enter a price above zero.', 'err.pricePast': 'The start date cannot be in the past.',
   'err.quotaInvalid': 'Use a whole number from 1 to 23.', 'err.contactNoApp': 'This family cannot use the app yet, so they cannot answer a survey.',
   'err.qText': 'Write the question, up to {n} characters.', 'err.qOptions': 'Write 2 to 8 different options, one on each line.', 'err.qOptionLong': 'Keep each option under {n} characters.',
@@ -104,7 +104,7 @@ export const mgmt = {
   'feed.broadcast': 'Broadcast sent to {n} people', 'feed.broadcastScheduled': 'Broadcast scheduled for {n} people ({date} {time})', 'feed.broadcastCancelled': 'Scheduled broadcast cancelled',
   'feed.venueBooked': 'Venue booked · {org} · {date}', 'feed.venueUpdated': 'Venue booking changed · {org} · {date}', 'feed.venueCancelled': 'Venue booking cancelled · {org} · {date}',
   'feed.venueReviewAsked': 'Review link sent · {org}', 'feed.venueReviewed': 'Venue review recorded · {org} · {stars}/5', 'feed.venueInvoice': 'Venue invoice {ref} · {org}',
-  'feed.surveySent': 'Survey sent · {title} · {n} families', 'feed.surveyClosed': 'Survey closed · {title}', 'feed.surveyAnswered': '{name} answered the survey · {overall}/5', 'feed.surveyAnsweredPlain': '{name} answered the survey',
+  'feed.surveySent': 'Survey sent · {title} · {n} families', 'feed.surveySentTo': 'Survey sent · {title} · {name}', 'feed.surveyClosed': 'Survey closed · {title}', 'feed.surveyAnswered': '{name} answered the survey · {overall}/5', 'feed.surveyAnsweredPlain': '{name} answered the survey',
   'feed.prices': 'Prices updated (from {date})', 'feed.rules': 'Club rules updated: Flex is {quota} visits a month',
 
   // ----- notifications (updates) -----
@@ -119,7 +119,7 @@ export const mgmt = {
 
   // ----- KC round 7: survey templates, the survey log, venue surveys and the renter's rating link -----
   svTabLive: 'Live', svTabDrafts: 'Drafts', svTabTemplates: 'Templates', svTabLog: 'Log', svKind_family: 'Families', svKind_venue: 'Venue renters',
-  svLiveNone: 'No survey is live.', svLinksSent: '{n} rating links sent', svLinksSentOne: '{n} rating link sent', svAnsweredOf: '{n} of {total} answered', svOfAnsweredV: 'of renters who answered',
+  svLiveNone: 'No survey is live.', svSendContact: 'Send to a contact', svSendToTitle: 'Send the survey to a contact', svSendToSearch: 'Search a contact', svSendToNone: 'Nobody is left to send to.', svSentToT: 'Sent to {name}.', svLinksSent: '{n} rating links sent', svLinksSentOne: '{n} rating link sent', svAnsweredOf: '{n} of {total} answered', svOfAnsweredV: 'of renters who answered',
   svDraftsNone: 'No drafts.', svQuestionsN: '{n} questions', svQuestionsNOne: '{n} question', svSentOn: 'Sent {date}',
   svTemplates: 'Templates', svTplNone: 'No templates yet.', svTplNew: 'New template', svTplUse: 'Use', svTplEdit: 'Edit template', svTplSave: 'Save template', svTplSaved: 'Template saved.', svTplDeleted: 'Template deleted.',
   svTplDelete: 'Delete template', svTplDeleteText: 'Delete “{title}”? Surveys already made from it keep their questions.', svTplSaveAs: 'Save as template', svTplName: 'Template name',
@@ -129,7 +129,7 @@ export const mgmt = {
   svFilterKind: 'Kind', svFilterAll: 'All', svLogTitle: 'Every survey sent', svLogCount: '{n} surveys', svLogCountOne: '{n} survey', svLogMeta: 'Sent {sent} · {answered} answered · {rate}%', svLogNow: 'now', svLogNone: 'No survey has been sent yet.',
   svDet_summary: 'Summary', svDet_responses: 'Responses', svDet_history: 'History', svReopen: 'Reopen', svReopened: '{title} is live again.', svWaitingFor: 'Waiting for {n}', svWaitingForOne: 'Waiting for {n}',
   svLog_created: 'Created by {who}', svLog_createdFrom: 'Created from “{tpl}” by {who}', svLog_edited: 'Edited by {who}', svLog_sent: 'Sent to {n} families by {who}', svLog_sentOne: 'Sent to {n} family by {who}', svLog_sentV: 'Made live by {who}',
-  svLog_closed: 'Closed by {who}', svLog_closedReplaced: 'Closed when a newer survey was sent', svLog_reopened: 'Reopened by {who}',
+  svLog_sentTo: '{who} sent it to {name}', svLog_closed: 'Closed by {who}', svLog_closedReplaced: 'Closed when a newer survey was sent', svLog_reopened: 'Reopened by {who}',
   // venue: ask for a rating through a link
   vnAskRating: 'Ask for rating', vnSendAgain: 'Send again', vnCopyLink: 'Copy link', vnOpenLink: 'Open link', vnLinkCopied: 'Rating link copied.', vnLinkManual: 'Copy the link from here: {url}',
   vnRatingSent: 'Rating link sent to {name} on WhatsApp (demo).', vnWaiting: 'Waiting for {name} to rate.', vnEnterByHand: 'Enter by hand', vnRatingFrom: 'Rated by {name} through the link', vnEnteredByHand: 'Entered by hand', vnViewAnswers: 'View answers', vnLinkClosed: 'That survey is closed. Send the link again to move it to the live one.',

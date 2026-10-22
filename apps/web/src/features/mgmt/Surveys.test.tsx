@@ -3,7 +3,7 @@
 // Round 7: the page is Live | Drafts | Templates | Log; "New survey" opens the editor (blank or from a template); a survey opens in full.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { buildSeed } from '@cp/shared';
 import { useReplica } from '../../store/replica';
@@ -24,6 +24,12 @@ function openClub(club: 'citra' | 'adina' = 'citra', lang: 'en' | 'id' = 'en') {
   const state = buildSeed()[club];
   useSession.setState({ lang, club, user: { kind: 'staff', id: 's9', name: 'Ega', role: 'mgmt', clubId: 'citra', clubs: ['citra', 'adina'] } });
   useReplica.setState({ club, userId: 's9', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 } });
+}
+/** The front desk (Caca, s1). */
+function openDesk(lang: 'en' | 'id' = 'en') {
+  const state = buildSeed().citra;
+  useSession.setState({ lang, club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
+  useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 } });
 }
 async function show(ui: ReactElement) {
   host = document.createElement('div');
@@ -198,5 +204,43 @@ describe('survey templates, the log and venue surveys', () => {
     await click(button('Riwayat'));
     expect(document.body.textContent).toContain('Terkirim 3 · 2 menjawab · 67%');
     expect(document.body.textContent).not.toMatch(/\bmgmt\.[A-Za-z]/);
+  });
+});
+
+describe('surveys for the front desk (round 13)', () => {
+  it('the desk sees the live family survey with Details and Send to a contact; no tabs, New or Close; the sheet sends to one more contact', async () => {
+    openDesk();
+    await show(<Surveys />);
+    expect(document.body.textContent).toContain('3 of 4 answered');
+    expect(button('See details')).toBeTruthy();
+    expect(button('Send to a contact')).toBeTruthy();
+    expect(button(/^(New survey)$/)).toBeUndefined();
+    expect(button('Close survey')).toBeUndefined();
+    expect(button('Drafts')).toBeUndefined();
+    expect(document.querySelector('[role="tablist"]')).toBeNull();
+    await click(button('Send to a contact'));
+    const rowsOf = () => Array.from(document.querySelectorAll<HTMLElement>('[data-send-to]'));
+    expect(rowsOf().map((r) => r.getAttribute('data-send-to')).sort()).toEqual(['f2', 'fm2_1']); // the two with the app who were not sent it
+    await type(document.querySelector<HTMLInputElement>('input[type="search"]')!, 'nobody-by-this-name');
+    expect(rowsOf()).toHaveLength(0);
+    expect(document.body.textContent).toContain('Nobody is left to send to.');
+    await type(document.querySelector<HTMLInputElement>('input[type="search"]')!, '');
+    const send = vi.fn(async () => ({ ok: true as const, result: { name: 'Contact' } }));
+    await act(async () => { useReplica.setState({ act: send }); });
+    await click(rowsOf().find((r) => r.getAttribute('data-send-to') === 'f2'));
+    expect(send).toHaveBeenCalledWith('survey.send', { surveyId: 'sv1', familyId: 'f2' });
+    expect(document.querySelector('[data-send-to]')).toBeNull(); // the sheet closed
+  });
+  it('management has the same button on the live family card, next to Close', async () => {
+    openClub();
+    await show(<Surveys />);
+    expect(button('Send to a contact')).toBeTruthy();
+    expect(button('Close survey')).toBeTruthy();
+    expect(button('New survey') ?? button(/New survey/)).toBeTruthy();
+  });
+  it('Indonesian: the button is translated', async () => {
+    openDesk('id');
+    await show(<Surveys />);
+    expect(button('Kirim ke kontak')).toBeTruthy();
   });
 });

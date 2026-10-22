@@ -551,12 +551,28 @@ export const clubActions = [
       sv.deletedAt = ctx.nowDT;
     },
   }),
-  defineAction<{ surveyId: string }>({
+  // Without a familyId: a draft goes live to its audience (management). With one (round 13): the live family survey goes to one more contact (front desk or management).
+  defineAction<{ surveyId: string; familyId?: string }>({
     name: 'survey.send',
-    can: mgmtOnly,
-    parse: (raw) => ({ surveyId: id80(obj(raw).surveyId, 'surveyId') }),
+    can: (u, i) => mgmtOnly(u) || (hasRole(u, 'lobby') && !!i?.familyId),
+    parse: (raw) => {
+      const o = obj(raw);
+      return { surveyId: id80(o.surveyId, 'surveyId'), ...(o.familyId !== undefined && o.familyId !== null && o.familyId !== '' ? { familyId: id80(o.familyId, 'familyId') } : {}) };
+    },
     run(d, i, ctx) {
       const sv = survey(d, i.surveyId, ctx);
+      if (i.familyId) {
+        if (sv.status !== 'live' || surveyKind(sv as Survey) !== 'family') ctx.fail('mgmt.err.notLive');
+        const c = d.familyContacts[i.familyId];
+        if (!c || c.deletedAt) ctx.fail('err.notFound');
+        if (sv.recipients.includes(i.familyId)) ctx.fail('mgmt.err.alreadySent');
+        if (!resolveSurveyAudience(S(d), { mode: 'all' }, ctx.today).includes(i.familyId)) ctx.fail('mgmt.err.noApp');
+        sv.recipients = [...sv.recipients, i.familyId];
+        logAdd(sv, ctx, 'sentTo', c.name);
+        ctx.result.name = c.name;
+        ctx.feed({ icon: 'rate_review', key: 'mgmt.feed.surveySentTo', params: { title: sv.title, name: c.name } });
+        return;
+      }
       if (sv.status !== 'draft') ctx.fail('mgmt.err.notDraft');
       const kind = surveyKind(sv as Survey);
       // a family survey goes to families; a venue survey goes live and is answered through the rating links of bookings

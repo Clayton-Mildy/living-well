@@ -13,11 +13,13 @@ import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
+import { useMe } from '../../lib/me';
 import { HPAD, IconBox, ListCard, Page, PillBtn, SegTabs, TONE, heroCard, labelStyle, tn } from './common';
 import { audienceText } from './surveys/Fields';
 import { SurveyEditor, TemplateEditor, draftOf, newDraft, type SurveyDraft } from './surveys/Editor';
 import { SurveyDetail, type DetailTab } from './surveys/Detail';
 import { Tiles } from './surveys/Results';
+import { SendToSheet } from './surveys/SendTo';
 
 type Tab = 'live' | 'drafts' | 'templates' | 'log';
 const TABS: Tab[] = ['live', 'drafts', 'templates', 'log'];
@@ -40,6 +42,8 @@ export function Surveys() {
   const s = useClub();
   const { today } = useNow();
   const act = useAct();
+  const desk = useMe().role === 'lobby'; // round 13: the front desk sees the live family survey, its results and Send to a contact; the rest stays with management
+  const [sendTo, setSendTo] = useState<Survey | null>(null);
   const [sp, setSp] = useSearchParams();
   const [tab, setTab] = useState<Tab>(() => TABS.find((k) => k === sp.get('view')) ?? 'live');
   const [picker, setPicker] = useState(false);
@@ -52,7 +56,7 @@ export function Surveys() {
   });
   useEffect(() => { if (sp.get('survey')) setSp({}, { replace: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
-  const lives = liveSurveys(s);
+  const lives = liveSurveys(s).filter((x) => !desk || surveyKind(x) === 'family');
   const drafts = draftSurveys(s);
   const templates = surveyTemplatesOf(s);
   const log = surveyLog(s);
@@ -75,12 +79,14 @@ export function Surveys() {
     const buttons = isPhone ? (
       <div style={{ display: 'flex', gap: 8 }}>
         <PillBtn tone="primary" icon="analytics" onClick={() => setDetail({ id: sv.id, tab: 'summary' })}>{t('mgmt.svDetails')}</PillBtn>
-        <PillBtn icon="lock_clock" onClick={() => act('survey.close', { surveyId: sv.id }, { ok: t('mgmt.svClosed', { title: sv.title }) })}>{t('mgmt.svClose')}</PillBtn>
+        {kind === 'family' ? <PillBtn icon="send" onClick={() => setSendTo(sv)}>{t('mgmt.svSendContact')}</PillBtn> : null}
+        {desk ? null : <PillBtn icon="lock_clock" onClick={() => act('survey.close', { surveyId: sv.id }, { ok: t('mgmt.svClosed', { title: sv.title }) })}>{t('mgmt.svClose')}</PillBtn>}
       </div>
     ) : (
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button size={44} icon="analytics" onClick={() => setDetail({ id: sv.id, tab: 'summary' })}>{t('mgmt.svDetails')}</Button>
-        <Button size={44} variant="secondary" icon="lock_clock" onClick={() => act('survey.close', { surveyId: sv.id }, { ok: t('mgmt.svClosed', { title: sv.title }) })}>{t('mgmt.svClose')}</Button>
+        {kind === 'family' ? <Button size={44} variant="secondary" icon="send" onClick={() => setSendTo(sv)}>{t('mgmt.svSendContact')}</Button> : null}
+        {desk ? null : <Button size={44} variant="secondary" icon="lock_clock" onClick={() => act('survey.close', { surveyId: sv.id }, { ok: t('mgmt.svClosed', { title: sv.title }) })}>{t('mgmt.svClose')}</Button>}
       </div>
     );
     const body = (
@@ -105,7 +111,7 @@ export function Surveys() {
   const liveTab = lives.length ? (
     <div style={isPhone ? { display: 'flex', flexDirection: 'column', gap: 18 } : { display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(360px, 1fr))', gap: 18, alignItems: 'start' }}>{lives.map(liveCard)}</div>
   ) : (
-    <EmptyState icon="rate_review" title={t('mgmt.svLiveNone')} action={<Button size={44} icon="add" onClick={() => setPicker(true)}>{t('mgmt.svNew')}</Button>} />
+    <EmptyState icon="rate_review" title={t('mgmt.svLiveNone')} action={desk ? undefined : <Button size={44} icon="add" onClick={() => setPicker(true)}>{t('mgmt.svNew')}</Button>} />
   );
 
   // ----- Drafts -----
@@ -184,19 +190,20 @@ export function Surveys() {
   return (
     <>
       <Page gap={16}>
-        <PageHead eyebrow={isPhone ? undefined : t('mgmt.svEyebrow')} title={t('nav.surveys')} right={!isPhone ? <Button size={48} icon="add" onClick={() => setPicker(true)}>{t('mgmt.svNew')}</Button> : undefined} />
-        <div style={{ maxWidth: isPhone ? undefined : 520 }}>
+        <PageHead eyebrow={isPhone ? undefined : t('mgmt.svEyebrow')} title={t('nav.surveys')} right={!isPhone && !desk ? <Button size={48} icon="add" onClick={() => setPicker(true)}>{t('mgmt.svNew')}</Button> : undefined} />
+        {desk ? null : <div style={{ maxWidth: isPhone ? undefined : 520 }}>
           <SegTabs label={t('nav.surveys')} value={tab} onChange={setTab} items={[
             { value: 'live', label: countLabel(t('mgmt.svTabLive'), lives.length) },
             { value: 'drafts', label: countLabel(t('mgmt.svTabDrafts'), drafts.length) },
             { value: 'templates', label: t('mgmt.svTabTemplates') },
             { value: 'log', label: t('mgmt.svTabLog') },
           ]} />
-        </div>
-        {tab === 'live' ? liveTab : tab === 'drafts' ? draftsTab : tab === 'templates' ? templatesTab : logTab}
+        </div>}
+        {tab === 'live' || desk ? liveTab : tab === 'drafts' ? draftsTab : tab === 'templates' ? templatesTab : logTab}
       </Page>
-      {isPhone && !picker && !editing && !tplEdit && !detail ? <Pin icon="add" label={t('mgmt.svNew')} onClick={() => setPicker(true)} /> : null}
+      {isPhone && !desk && !picker && !editing && !tplEdit && !detail ? <Pin icon="add" label={t('mgmt.svNew')} onClick={() => setPicker(true)} /> : null}
 
+      {sendTo ? <SendToSheet sv={sendTo} open onClose={() => setSendTo(null)} /> : null}
       <NewSurveySheet open={picker} onClose={() => setPicker(false)} templates={templates} onBlank={startBlank} onTemplate={startFrom} />
       {editing ? <SurveyEditor key={editing.id ?? `new:${editing.templateId ?? editing.kind}`} draft={editing} onClose={(to) => { setEditing(null); if (to) setTab(to); }} /> : null}
       {tplEdit ? <TemplateEditor key={tplEdit.tpl?.id ?? 'new'} tpl={tplEdit.tpl} kind={tplEdit.kind} onClose={() => setTplEdit(null)} /> : null}
