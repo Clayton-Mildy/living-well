@@ -75,6 +75,9 @@ Management approves staff leave from the Approvals page too: a new approval type
 ### 13. Every picture opens full size
 Any photo or scan thumbnail a staff member or family sees opens in the viewer on tap: the kitchen's lunch and tea photo tiles (today they only show time, a remove ✕ and "Shown to families"), activity and session pictures, camera drafts, approval rows, profile and staff photos, document/KTP/form scans, the activity catalog picture. One shared behaviour (`PhotoViewer` for photos, a plain image lightbox for scans), 44 px targets, the ✕ / remove controls keep working without opening the picture.
 
+### 14. The online registration form is stepped, with a resumable draft (KC, 22 Oct 09:xx)
+`/form/:token` (`enquiries/PublicForm.tsx`) stops being one long page. It becomes the same stepped flow the staff use (round 12 §5): **Who is joining → Family contact → Health → Plan → Review and send** (no Paper step: the family signs at the club), one step per screen with the step bar, Back / Continue, and validation per step. The draft is saved as the family types: on the device (like the staff flow, key `cp.form.<token>`) AND on the server through the link (`enquiry.formSave`, system action via `POST /api/public/form/:token/draft`, storing the partial `OnlineRegistration` + the current step on `Enquiry.form`), so reopening the link on any phone continues where they left off (the newer of the two wins). The lead card's form pill reads "In progress · step 2 of 5" until it is submitted; the Join dialog pre-fills from a partial draft too. Submit stays `enquiry.formSubmit`.
+
 ## Out of scope
 Finance invoice issuing by lobby, survey creation by lobby, payroll, leave carry-over between years.
 
