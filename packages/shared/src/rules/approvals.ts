@@ -5,10 +5,11 @@ import type { Actor, Approval, ClubState, DailyLog, DayMenu, DT, MemberNote, Men
 import { live, sortBy } from '../util';
 import { allPendingReviews, appliedReviews, pendingPhotos } from './members';
 import { READING_FIELDS } from './healthStation';
+import { pendingLeave } from './staffLeave';
 
-export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'stock' | 'renewals' | 'payments';
+export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'stock' | 'renewals' | 'payments' | 'leave';
 /** Tab order of the management Approvals screen. */
-export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'stock', 'renewals', 'payments'];
+export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'stock', 'renewals', 'payments', 'leave'];
 
 // ---------- the mark ----------
 export type ApprovalState = 'pending' | 'rejected' | null;
@@ -64,7 +65,7 @@ export interface ApprovalItem {
   /** the row id (a change request id for 'profile') */
   id: string;
   type: ApprovalType;
-  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'stock' | 'photo' | 'renewal' | 'payment';
+  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'stock' | 'photo' | 'renewal' | 'payment' | 'leave';
   at: DT;
   by: Actor;
   memberId?: string;
@@ -95,6 +96,9 @@ export const pendingRenewals = (s: ClubState): ApprovalItem[] =>
 /** Round 13: a cash or transfer payment the front desk recorded, saved waiting for finance or management to confirm. */
 export const pendingPayments = (s: ClubState): ApprovalItem[] =>
   sortNew(live(s.payments).filter((p) => isWaiting(p)).map((p): ApprovalItem => ({ id: p.id, type: 'payments', sub: 'payment', at: p.approval!.at, by: p.approval!.by, memberId: p.memberId, edit: false })));
+/** Round 13: a staff member's request for days off, waiting for management (same list as People → Leave). */
+export const pendingLeaveItems = (s: ClubState): ApprovalItem[] =>
+  sortNew(pendingLeave(s).filter((r) => s.staff[r.staffId] && !s.staff[r.staffId].deletedAt).map((r): ApprovalItem => ({ id: r.id, type: 'leave', sub: 'leave', at: r.createdAt, by: staffActor(r.staffId), edit: false })));
 export const pendingPhotoItems = (s: ClubState): ApprovalItem[] =>
   pendingPhotos(s).map((p) => ({ id: p.id, type: 'photos' as const, sub: 'photo' as const, at: p.createdAt, by: staffActor(p.takenBy), memberId: p.memberIds[0], edit: false }));
 /** Change requests: gated ones wait for approval; flagged ones were applied at once and wait for a review. */
@@ -102,7 +106,7 @@ export const pendingProfile = (s: ClubState): ApprovalItem[] =>
   sortNew([...allPendingReviews(s), ...appliedReviews(s)].map((c) => ({ id: c.id, type: 'profile' as const, sub: c.kind === 'approval' ? ('cr' as const) : ('flag' as const), at: c.createdAt, by: c.submittedBy, memberId: c.target.memberId, edit: c.op !== 'create' })));
 
 export const pendingItems = (s: ClubState, type: ApprovalType): ApprovalItem[] =>
-  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments } as const)[type](s);
+  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments, leave: pendingLeaveItems } as const)[type](s);
 export function approvalCounts(s: ClubState): Record<ApprovalType, number> {
   return Object.fromEntries(APPROVAL_TYPES.map((t) => [t, pendingItems(s, t).length])) as Record<ApprovalType, number>;
 }
@@ -138,6 +142,11 @@ export function approvalHistory(s: ClubState): HistoryItem[] {
   for (const v of Object.values(s.menuVersions)) fromMark('menu', 'version', v.id, v.approval);
   for (const f of Object.values(s.followUps ?? {})) fromMark('renewals', 'renewal', f.id, f.approval, f.memberId);
   for (const x of Object.values(s.payments)) fromMark('payments', 'payment', x.id, x.approval, x.memberId);
+  // a leave request keeps its decision on the row itself; shown as a mark so it reads like the rest (a cancelled request is not a decision)
+  for (const r of Object.values(s.leaveRequests ?? {})) {
+    if (r.deletedAt || !r.decidedAt || (r.status !== 'approved' && r.status !== 'declined')) continue;
+    fromMark('leave', 'leave', r.id, { status: r.status === 'approved' ? 'approved' : 'rejected', by: staffActor(r.staffId), at: r.createdAt, decidedBy: r.decidedBy, decidedAt: r.decidedAt, reason: r.note });
+  }
   for (const o of Object.values(s.dayMenus)) fromMark('menu', 'dayMenu', o.id, o.approval);
   for (const c of Object.values(s.changeRequests)) {
     if (c.status === 'pending' || !c.reviewedAt && !['withdrawn', 'superseded'].includes(c.status)) continue;

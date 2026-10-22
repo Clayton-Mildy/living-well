@@ -2,7 +2,7 @@
 // the health edits that were applied at once), care log (daily logs and notes for families), health readings, photos, menu (weekly versions and
 // one-day changes) and stock requests; History lists what was handled. Each row has a checkbox: select some or all, then Approve (N) or Reject (N)
 // (one reason for the whole batch; one server action per batch). Rows also have their own Approve and Reject. Photos are a grid with the
-// "Notify families" switch. /reviews?tab=photos (or logs, readings, menu, stock, renewals, payments, profile, history) opens a tab.
+// "Notify families" switch. /reviews?tab=photos (or logs, readings, menu, stock, renewals, payments, leave, profile, history) opens a tab.
 // KC round 7: the Renewals tab lists the changes the front desk recorded after calling a family (upgrade, downgrade, leave, stop); approving applies them from the 1st.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -71,6 +71,7 @@ export function Reviews() {
     stock: usePaged(items.stock, 10, 'stock'),
     renewals: usePaged(items.renewals, 10, 'renewals'),
     payments: usePaged(items.payments, 10, 'payments'),
+    leave: usePaged(items.leave, 10, 'leave'),
     history: usePaged(history, 10, 'history'),
   };
   const [sels, setSels] = useState<Partial<Record<Tab, string[]>>>({});
@@ -170,7 +171,7 @@ export function Reviews() {
   };
   const rejectSelected = async () => {
     setReasonTried(true);
-    if (!rej || !rej.ids.length || !reason.trim() || bulkBusy) return;
+    if (!rej || !rej.ids.length || (rej.type !== 'leave' && !reason.trim()) || bulkBusy) return; // a rejection says why, except a leave request (the note is optional)
     setBulkBusy(true);
     let ok = false;
     if (rej.type === 'photos') {
@@ -304,12 +305,12 @@ export function Reviews() {
         <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()}
           style={{ padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, backgroundColor: on ? 'var(--press, #EEEEF0)' : 'transparent', backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 54px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
           <div style={{ paddingTop: 6 }}><Check on={on} onClick={() => toggleSel(it.id)} label={t('approvals.checkRow', { n: title })} /></div>
-          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={40} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={21} /></span>}
+          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={40} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : it.type === 'leave' ? 'beach_access' : 'fact_check'} size={21} /></span>}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
-            ) : <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '22px' }}>{v.kind}</span>}
-            <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{[m ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
+            ) : <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '22px' }}>{v.who || v.kind}</span>}
+            <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{[m || it.type === 'leave' ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
             {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
               <button type="button" className="cp-press" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : it.id)} style={{ ...textBtn, padding: '0 8px 0 0' }}>{expanded ? t('approvals.hide') : t('approvals.view')}</button>
@@ -327,12 +328,12 @@ export function Reviews() {
       <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()} style={{ borderTop: i ? HAIRLINE : 'none', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 10, background: on ? 'var(--press, #EEEEF0)' : 'transparent' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ paddingTop: 6 }}><Check on={on} onClick={() => toggleSel(it.id)} label={t('approvals.checkRow', { n: title })} /></div>
-          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={42} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 42, height: 42, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : 'fact_check'} size={22} /></span>}
+          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={42} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 42, height: 42, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : it.type === 'leave' ? 'beach_access' : 'fact_check'} size={22} /></span>}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
-            ) : <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '22px' }}>{v.kind}</span>}
-            <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[m ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
+            ) : <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '22px' }}>{v.who || v.kind}</span>}
+            <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[m || it.type === 'leave' ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
             {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
             <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : it.id)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: '4px 0', margin: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{expanded ? t('approvals.hide') : t('approvals.view')}</button>
           </div>
@@ -518,6 +519,8 @@ export function Reviews() {
   const activePager = paged[current];
   const rejN = rej?.ids.length ?? 0;
   const rejPhotos = rej?.type === 'photos';
+  const rejLeave = rej?.type === 'leave';
+  const rejLeaveName = rejLeave && rej ? itemView(s, { id: rej.ids[0], sub: 'leave' }, t, fmt).who : '';
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 22 }}>
       <PageHead size={40} eyebrow={t('nav.g_front')} title={t('nav.reviews')} />
@@ -544,6 +547,14 @@ export function Reviews() {
       {current === 'stock' ? (items.stock.length ? card(paged.stock.rows.map(quietRow)) : empty('stock')) : null}
       {current === 'renewals' ? (items.renewals.length ? card(paged.renewals.rows.map(quietRow)) : empty('renewals')) : null}
       {current === 'payments' ? (items.payments.length ? card(paged.payments.rows.map(quietRow)) : empty('payments')) : null}
+      {current === 'leave' ? (items.leave.length ? (
+        <>
+          <div style={{ display: 'flex', justifyContent: isPhone ? 'stretch' : 'flex-end' }}>
+            <Button size={48} icon="done_all" disabled={bulkBusy} onClick={() => approveSelected('leave', items.leave.map((x) => x.id))} style={isPhone ? { flex: '1 1 0' } : undefined}>{t('approvals.approveAllLeave')}</Button>
+          </div>
+          {card(paged.leave.rows.map(quietRow))}
+        </>
+      ) : empty('leave')) : null}
       {current === 'photos' ? (
         photos.length ? (
           <>
@@ -605,11 +616,11 @@ export function Reviews() {
       ) : null}
 
       {viewer ? <PhotoViewer photos={photos} startId={viewer} onClose={() => setViewer(null)} audience="staff" /> : null}
-      <Dialog open={!!rej} onClose={() => setRej(null)} eyebrow={t('reviews.reject')} title={rejPhotos ? t(rejN === 1 ? 'reviews.rejectPhotosTitleOne' : 'reviews.rejectPhotosTitleN', { n: rejN }) : t(rejN === 1 ? 'approvals.rejectTitleOne' : 'approvals.rejectTitleN', { n: rejN })} maxWidth={520}
+      <Dialog open={!!rej} onClose={() => setRej(null)} eyebrow={t('reviews.reject')} title={rejLeave ? t('approvals.rejectLeaveTitle') : rejPhotos ? t(rejN === 1 ? 'reviews.rejectPhotosTitleOne' : 'reviews.rejectPhotosTitleN', { n: rejN }) : t(rejN === 1 ? 'approvals.rejectTitleOne' : 'approvals.rejectTitleN', { n: rejN })} maxWidth={520}
         footer={<><Button variant="secondary" onClick={() => setRej(null)}>{t('common.cancel')}</Button><Button variant="danger" icon="close" disabled={bulkBusy} onClick={rejectSelected}>{t('reviews.reject')}</Button></>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0 }}>
-          <div style={{ fontSize: 15, lineHeight: '22px' }}>{rejPhotos ? t('reviews.rejectPhotosSub') : t('approvals.rejectSub')}</div>
-          <TextField label={rejPhotos ? t('reviews.rejectPhotosReason') : t(rejN === 1 ? 'approvals.rejectReasonOne' : 'approvals.rejectReasonN')} value={reason} onChange={setReason} multiline rows={3} autoFocus error={reasonTried && !reason.trim() ? t('err.noteRequired') : false} name="rejectReason" />
+          <div style={{ fontSize: 15, lineHeight: '22px' }}>{rejLeave ? t('approvals.rejectSubLeave') : rejPhotos ? t('reviews.rejectPhotosSub') : t('approvals.rejectSub')}</div>
+          <TextField label={rejLeave ? t('approvals.rejectReasonLeave', { name: rejLeaveName }) : rejPhotos ? t('reviews.rejectPhotosReason') : t(rejN === 1 ? 'approvals.rejectReasonOne' : 'approvals.rejectReasonN')} value={reason} onChange={setReason} multiline rows={3} autoFocus error={reasonTried && !rejLeave && !reason.trim() ? t('err.noteRequired') : false} name="rejectReason" />
         </div>
       </Dialog>
       <Dialog open={!!reject} onClose={() => setReject(null)} eyebrow={t('reviews.reject')} title={reject ? describeCr(reject, s, t, fmt).title : ''} maxWidth={520}

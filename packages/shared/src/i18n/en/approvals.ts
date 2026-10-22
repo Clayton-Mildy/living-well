@@ -12,7 +12,7 @@ export const approvals = {
   'none.readings': 'No health readings to approve', 'none.readingsSub': 'Readings saved by the nurse appear here before families can see them.',
   'none.menu': 'No menu changes to approve', 'none.menuSub': 'A weekly menu or a one-day change from the kitchen appears here before families can see it.',
   'none.stock': 'No stock requests to approve', 'none.stockSub': 'Requests from the team appear here. The kitchen supervisor and finance can also approve them on the Stock screen.',
-  'mode.item': 'Per item', 'mode.person': 'Per person', modeLabel: 'Show approvals', personWaiting: '{n} waiting', approveAllFor: 'Approve all ({n})', approvedAllFor: '{n} approved for {name}.', groupPhotos: 'Group & activity photos', otherSection: 'Other · menu and stock', 'none.all': 'Nothing is waiting for approval', 'none.history': 'Nothing handled yet',
+  'mode.item': 'Per item', 'mode.person': 'Per person', modeLabel: 'Show approvals', personWaiting: '{n} waiting', approveAllFor: 'Approve all ({n})', approvedAllFor: '{n} approved for {name}.', groupPhotos: 'Group & activity photos', otherSection: 'Other · menu, stock and leave', 'none.all': 'Nothing is waiting for approval', 'none.history': 'Nothing handled yet',
   historySub: 'Entries that were approved or rejected',
   groupLabel: '{kind} {who}',
   // kinds
@@ -38,4 +38,8 @@ export const approvals = {
   // round 13: payments the front desk recorded
   'tab.payments': 'Payments', 'none.payments': 'No payments to confirm', 'none.paymentsSub': 'Cash and bank transfers recorded at the front desk appear here until finance or management confirms them.', 'kind.payment': 'Payment',
   'sum.payment': '{amount} {method} · {invoice} · recorded by {who}', 'notif.rejected.payments': 'Finance did not confirm {n} of your payment entries: {reason}',
+  // round 13: staff leave requests (the same decision as People → Leave)
+  'tab.leave': 'Leave', 'none.leave': 'No leave requests to decide', 'none.leaveSub': 'Days off that staff ask for appear here until management answers.', 'kind.leave': 'Leave request',
+  'sum.leave': '{range} · {days} · {reason} · {left} of {n} left', 'sum.leaveDays': '{n} days', 'sum.leaveDay': '1 day', approveAllLeave: 'Approve all',
+  rejectSubLeave: 'The staff member is told that the request was declined, with your note if you write one.', rejectReasonLeave: 'Note for {name} (optional)', rejectLeaveTitle: 'Decline this leave request',
 };

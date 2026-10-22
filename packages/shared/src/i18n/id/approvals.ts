@@ -12,7 +12,7 @@ export const approvals: Same<typeof EN> = {
   'none.readings': 'Tidak ada hasil ukur kesehatan untuk disetujui', 'none.readingsSub': 'Hasil ukur yang disimpan perawat muncul di sini sebelum keluarga bisa melihatnya.',
   'none.menu': 'Tidak ada perubahan menu untuk disetujui', 'none.menuSub': 'Menu mingguan atau perubahan satu hari dari dapur muncul di sini sebelum keluarga bisa melihatnya.',
   'none.stock': 'Tidak ada permintaan stok untuk disetujui', 'none.stockSub': 'Permintaan dari tim muncul di sini. Supervisor dapur dan keuangan juga bisa menyetujuinya di layar Stok.',
-  'mode.item': 'Per item', 'mode.person': 'Per orang', modeLabel: 'Tampilkan persetujuan', personWaiting: '{n} menunggu', approveAllFor: 'Setujui semua ({n})', approvedAllFor: '{n} disetujui untuk {name}.', groupPhotos: 'Foto bersama & aktivitas', otherSection: 'Lainnya · menu dan stok', 'none.all': 'Tidak ada yang menunggu persetujuan', 'none.history': 'Belum ada yang ditangani',
+  'mode.item': 'Per item', 'mode.person': 'Per orang', modeLabel: 'Tampilkan persetujuan', personWaiting: '{n} menunggu', approveAllFor: 'Setujui semua ({n})', approvedAllFor: '{n} disetujui untuk {name}.', groupPhotos: 'Foto bersama & aktivitas', otherSection: 'Lainnya · menu, stok, dan cuti', 'none.all': 'Tidak ada yang menunggu persetujuan', 'none.history': 'Belum ada yang ditangani',
   historySub: 'Catatan yang disetujui atau ditolak',
   groupLabel: '{kind} {who}',
   'kind.cr': 'Perubahan', 'kind.flag': 'Sudah berlaku, tinjau', 'kind.log': 'Catatan harian', 'kind.note': 'Catatan untuk keluarga', 'kind.reading': 'Hasil ukur kesehatan', 'kind.version': 'Menu mingguan', 'kind.dayMenu': 'Menu satu hari', 'kind.stock': 'Permintaan stok', 'kind.photo': 'Foto',
@@ -33,4 +33,8 @@ export const approvals: Same<typeof EN> = {
   // round 13: pembayaran yang dicatat meja depan
   'tab.payments': 'Pembayaran', 'none.payments': 'Tidak ada pembayaran untuk dikonfirmasi', 'none.paymentsSub': 'Tunai dan transfer bank yang dicatat meja depan muncul di sini sampai keuangan atau manajemen mengonfirmasinya.', 'kind.payment': 'Pembayaran',
   'sum.payment': '{amount} {method} · {invoice} · dicatat {who}', 'notif.rejected.payments': 'Keuangan tidak mengonfirmasi {n} catatan pembayaran Anda: {reason}',
+  // round 13: permintaan cuti staf (keputusan yang sama dengan Orang → Cuti)
+  'tab.leave': 'Cuti', 'none.leave': 'Tidak ada permintaan cuti untuk diputuskan', 'none.leaveSub': 'Cuti yang diajukan staf muncul di sini sampai manajemen menjawab.', 'kind.leave': 'Permintaan cuti',
+  'sum.leave': '{range} · {days} · {reason} · sisa {left} dari {n}', 'sum.leaveDays': '{n} hari', 'sum.leaveDay': '1 hari', approveAllLeave: 'Setujui semua',
+  rejectSubLeave: 'Staf diberi tahu bahwa permintaannya ditolak, beserta catatan Anda jika ada.', rejectReasonLeave: 'Catatan untuk {name} (opsional)', rejectLeaveTitle: 'Tolak permintaan cuti ini',
 };

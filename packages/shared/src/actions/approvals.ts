@@ -9,6 +9,7 @@ import type { Approval, ClubState, DailyLog, DayMenu, MemberNote, MenuVersion, P
 import { DomainError, defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { acknowledgeChange, approveChange, rejectChange, revertChange } from './review';
+import { decideLeave } from './staffLeave';
 import { approvePhotoRows, rejectPhotoRows } from './photos';
 import { applyFollowUp } from './renewals';
 import { approveStockRow, rejectStockRow } from './kitchen';
@@ -20,7 +21,9 @@ import { primaryContact } from '../rules/core';
 import { uniq, rp } from '../util';
 
 const approveSchema = z.object({ type: z.enum(APPROVAL_TYPES as [ApprovalType, ...ApprovalType[]]), ids: z.array(z.string().min(1)).min(1).max(300), notify: z.boolean().optional() });
-const rejectSchema = z.object({ type: z.enum(APPROVAL_TYPES as [ApprovalType, ...ApprovalType[]]), ids: z.array(z.string().min(1)).min(1).max(300), reason: z.string().trim().min(1, 'err.noteRequired').max(240) });
+// a rejection always says why, except a leave request: there the note is optional (round 13)
+const rejectSchema = z.object({ type: z.enum(APPROVAL_TYPES as [ApprovalType, ...ApprovalType[]]), ids: z.array(z.string().min(1)).min(1).max(300), reason: z.string().trim().max(240).default('') })
+  .superRefine((v, c) => { if (v.type !== 'leave' && !v.reason) c.addIssue({ code: 'custom', path: ['reason'], message: 'err.noteRequired' }); });
 
 function parseWith<T>(schema: z.ZodType<T>, raw: unknown): T {
   const r = schema.safeParse(raw);
@@ -190,6 +193,15 @@ const APPROVE: Record<ApprovalType, Handler> = {
     confirmPayment(d, ctx, p as Draft<Payment>);
     return 'done';
   },
+  // round 13: staff leave, decided by the same logic as People → Leave (balance re-check, StaffTime rows, notice to the requester)
+  leave(d, ctx, id) {
+    const r = d.leaveRequests?.[id];
+    if (!r || r.deletedAt || r.status !== 'pending') return 'skip';
+    const err = tryRun(d, ctx, (x, k) => decideLeave(x, k, id, true));
+    if (err) return 'conflict'; // the balance no longer covers it
+    decideLeave(d, ctx, id, true);
+    return 'done';
+  },
 };
 
 const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
@@ -287,6 +299,13 @@ const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
       if (inv && inv.xero === 'synced' && !inv.voided && balanceOf(after, inv) > 0) inv.xero = 'awaitingPayment';
     }
     note(out, by);
+    return 'done';
+  },
+  // round 13: declined with the optional note; the requester is told by decideLeave itself
+  leave: () => (d, ctx, id, o) => {
+    const r = d.leaveRequests?.[id];
+    if (!r || r.deletedAt || r.status !== 'pending') return 'skip';
+    decideLeave(d, ctx, id, false, o.reason || undefined);
     return 'done';
   },
 };

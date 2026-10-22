@@ -370,3 +370,59 @@ describe('payments the front desk recorded (round 13)', () => {
     expect(x.state.invoices['INV-2610-001'].xero).toBe('awaitingPayment');
   });
 });
+
+describe('staff leave in the Approvals list (round 13)', () => {
+  const kinds = (s: ClubState, uid: string, kind: string) => unreadUpdates(s, as(s, uid)).filter((x) => x.kind === kind);
+  it('a waiting request is listed with who, when it was asked and the count; finance and the family are not offered it', () => {
+    const s = fresh();
+    expect(approvalCounts(s).leave).toBe(1);
+    expect(pendingItems(s, 'leave')[0]).toMatchObject({ id: 'lv-3', type: 'leave', sub: 'leave', by: 'staff:s1', edit: false });
+    expect(approvalTotal(s)).toBeGreaterThanOrEqual(1);
+    const a = run(s, 'approval.approve', { type: 'leave', ids: ['lv-3'] }, 's9');
+    expect(approvalCounts(a.state).leave).toBe(0);
+  });
+  it('management approves from the hub: the same rows and notice as leave.decide', () => {
+    const s = fresh();
+    const hub = run(s, 'approval.approve', { type: 'leave', ids: ['lv-3'] }, 's9');
+    const direct = run(s, 'leave.decide', { requestId: 'lv-3', approve: true }, 's9');
+    expect(hub.result).toMatchObject({ approved: 1, ids: ['lv-3'] });
+    expect(hub.state.leaveRequests['lv-3']).toMatchObject({ status: 'approved', decidedBy: 'staff:s9' });
+    expect(hub.state.staffTime).toEqual(direct.state.staffTime);
+    expect(Object.keys(hub.state.staffTime).filter((k) => hub.state.staffTime[k].kind === 'leave' && hub.state.staffTime[k].staffId === 's1').length).toBe(3);
+    expect(kinds(hub.state, 's1', 'people.notif.leaveApproved')).toHaveLength(1);
+    expect(run(hub.state, 'approval.approve', { type: 'leave', ids: ['lv-3'] }, 's9').result).toMatchObject({ approved: 0, skipped: ['lv-3'] });
+  });
+  it('rejecting declines it with the optional note, and the note reaches the requester; no note is fine for leave only', () => {
+    const s = fresh();
+    const x = run(s, 'approval.reject', { type: 'leave', ids: ['lv-3'], reason: 'We are short that week' }, 's9');
+    expect(x.state.leaveRequests['lv-3']).toMatchObject({ status: 'declined', note: 'We are short that week', decidedBy: 'staff:s9' });
+    expect(Object.values(x.state.staffTime).some((t) => t.staffId === 's1' && t.date === '2026-11-09' && t.kind === 'leave')).toBe(false);
+    expect(kinds(x.state, 's1', 'people.notif.leaveDeclined')).toHaveLength(1);
+    const bare = run(s, 'approval.reject', { type: 'leave', ids: ['lv-3'] }, 's9');
+    expect(bare.state.leaveRequests['lv-3']).toMatchObject({ status: 'declined' });
+    expect(bare.state.leaveRequests['lv-3'].note).toBeUndefined();
+    fails(s, 'approval.reject', { type: 'logs', ids: ['x'] }, 's9', 'err.noteRequired');
+  });
+  it('finance, front desk and families may not decide leave', () => {
+    const s = fresh();
+    for (const uid of ['s10', 's1', 'f1']) {
+      fails(s, 'approval.approve', { type: 'leave', ids: ['lv-3'] }, uid, 'err.forbidden');
+      fails(s, 'approval.reject', { type: 'leave', ids: ['lv-3'], reason: 'no' }, uid, 'err.forbidden');
+    }
+  });
+  it('a request that no longer fits the balance is a conflict, not an error, and others in the batch still go through', () => {
+    const s = produce(fresh(), (d) => { d.leaveRequests['lv-3'].days = 5; });
+    const r = run(s, 'approval.approve', { type: 'leave', ids: ['lv-3'] }, 's9');
+    expect(r.result).toMatchObject({ approved: 0, conflicts: ['lv-3'] });
+    expect(r.state.leaveRequests['lv-3'].status).toBe('pending');
+  });
+  it('the decided request shows in History with who decided and when', () => {
+    const a = run(fresh(), 'approval.approve', { type: 'leave', ids: ['lv-3'] }, 's9');
+    const h = approvalHistory(a.state).find((x) => x.type === 'leave' && x.id === 'lv-3');
+    expect(h).toMatchObject({ sub: 'leave', status: 'approved', by: 'staff:s1', decidedBy: 'staff:s9' });
+    const d = run(fresh(), 'approval.reject', { type: 'leave', ids: ['lv-3'], reason: 'Short staffed' }, 's9');
+    expect(approvalHistory(d.state).find((x) => x.type === 'leave' && x.id === 'lv-3')).toMatchObject({ status: 'rejected', reason: 'Short staffed' });
+    // the seeded decided ones (lv-1 approved, lv-4 declined) are history too
+    expect(approvalHistory(fresh()).filter((x) => x.type === 'leave').map((x) => x.id).sort()).toEqual(['lv-1', 'lv-2', 'lv-4']);
+  });
+});

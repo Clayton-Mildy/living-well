@@ -138,7 +138,7 @@ describe('staff leave (actions)', () => {
     const s = seed();
     const items = actionItems(s, user(s, 's9'), T, 600).filter((i) => i.kind === 'notif.act.leaveRequest');
     expect(items).toHaveLength(1);
-    expect(items[0]).toMatchObject({ link: '/hr?staff=s1&tab=leave', severity: 'attention', params: { name: 'Caca', from: '2026-11-09', days: 2 } });
+    expect(items[0]).toMatchObject({ link: '/reviews?tab=leave', severity: 'attention', params: { name: 'Caca', from: '2026-11-09', days: 2 } });
     expect(actionItems(s, user(s, 's1'), T, 600).some((i) => i.kind === 'notif.act.leaveRequest')).toBe(false);
     const after = run(s, 'leave.decide', { requestId: 'lv-3', approve: true }, 's9').state;
     expect(actionItems(after, user(after, 's9'), T, 600).some((i) => i.kind === 'notif.act.leaveRequest')).toBe(false);

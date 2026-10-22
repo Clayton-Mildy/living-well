@@ -161,3 +161,24 @@ test('surveys: Caca sees the live survey, no New survey, and sends it to one mor
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
+
+test('Ega approves Caca’s leave from Approvals', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/reviews?tab=leave');
+  await expect(page.getByRole('tab', { name: /^Leave · 1/ })).toHaveAttribute('aria-selected', 'true');
+  const row = page.locator('[data-approval="lv-3"]');
+  await expect(row).toContainText('Caca');
+  await expect(row).toContainText('Mon 9 Nov – Tue 10 Nov');
+  await expect(row).toContainText('2 days');
+  await expect(row).toContainText('Taking my mother to a check-up in Bandung');
+  await expect(row).toContainText('4 of 5 left');
+  await assertNoHorizontalScroll(page);
+  await row.getByRole('button', { name: 'Approve', exact: true }).click();
+  await expect(page.getByRole('status').filter({ hasText: 'Approved.' })).toBeVisible();
+  await expect(page.getByRole('tab', { name: /^Leave · 0/ })).toBeVisible();
+  // People → Leave agrees: the request is approved and Caca has 2 of 5 left
+  await page.goto('/hr?staff=s1&tab=leave');
+  await expect(page.getByTestId('leave-balance')).toHaveText('2 of 5 days left this year');
+  await expect(page.locator('[data-leave="lv-3"]')).toContainText('Approved');
+  c.assertClean();
+});
