@@ -26,6 +26,14 @@ export interface StepProps {
   /** leave the flow for another screen (the draft is kept) */
   leave: (path: string) => void;
 }
+/** The thin progress bar under the step heading (the staff flow on a phone, the family's online form): step `n` of `total`. */
+export function StepBar({ n, total, label }: { n: number; total: number; label: string }) {
+  return (
+    <div data-progress={`${n}/${total}`} role="progressbar" aria-label={label} aria-valuemin={1} aria-valuemax={total} aria-valuenow={n} style={{ height: 4, borderRadius: 2, background: 'var(--track, #E8E8EB)', overflow: 'hidden' }}>
+      <div style={{ height: '100%', width: `calc(${n}/${total}*100%)`, background: '#24201C', borderRadius: 2, transition: 'width .2s' }} />
+    </div>
+  );
+}
 export const Sec = ({ p, label, children }: { p: StepProps; label: ReactNode; children: ReactNode }) => <PeSection native={p.native} label={label}>{children}</PeSection>;
 export const setRegOf = (p: StepProps) => (x: Partial<RegDraft>) => p.set({ reg: { ...p.st.reg, ...x } });
 export const setKtpOf = (p: StepProps) => (kind: KtpKind, f: PaperFile | null) => p.set({ ktp: { ...p.st.ktp, [kind]: f ?? undefined } });

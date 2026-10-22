@@ -538,7 +538,13 @@ export interface EnquiryForm {
   submittedAt?: DT;
   /** the family contact's name as typed in the form */
   filledBy?: string;
+  /** what the family typed so far (a partial draft saved through the link: enquiry.formSave) or, once `submittedAt` is set, the sent answers */
   draft?: OnlineRegistration;
+  /** round 13: the step (1 to 5) the family was on when the draft was last saved, and when (the newer of device and server draft wins) */
+  step?: number;
+  savedAt?: DT;
+  /** how many times the draft was saved: a save names the one it last saw, so a second phone never overwrites the first unseen */
+  rev?: number;
 }
 
 export interface CalendarEvent extends Row {

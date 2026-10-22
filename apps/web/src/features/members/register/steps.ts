@@ -1,6 +1,6 @@
 // KC round 12: the registration as six steps (Join a lead and Add member share them). The state the steps edit, how it starts (empty, or
 // from a lead and the family's online form), and what still blocks each step — the add-member and application-form validators, per field group.
-import { isOpen, live, sortBy, type ClubState, type DocType, type ISODate, type KtpUploads, type Plan, type Relation, type Title } from '@cp/shared';
+import { isOpen, live, sortBy, type ClubState, type DocType, type Enquiry, type OnlineRegistration, type ISODate, type KtpUploads, type Plan, type Relation, type Title } from '@cp/shared';
 import { genderOf, validateNewMember, type FieldIssue } from '@cp/shared/rules/members';
 import { startMondays } from '@cp/shared/rules/enquiries';
 import { validateRegistration } from '@cp/shared/rules/applicationForm';
@@ -38,15 +38,25 @@ export const blankState = (): RegState => ({
   plan: '', start: '', form: null, ktp: {}, docs: [], consentData: false, consentFace: true, note: '', reg: regDraftOf(),
 });
 
+/** The health answers the family gave through the link: all of them once sent, and a half-filled draft's only when it got as far as answering something. */
+export function onlineHealthOf(e: Enquiry | undefined): OnlineRegistration['health'] | undefined {
+  const dr = e?.form?.draft;
+  if (!dr) return undefined;
+  const h = dr.health;
+  const got = h.conditions.length > 0 || h.diabetic || h.food.length > 0 || !!h.foodOther || h.drugs.length > 0 || !!h.mobility || h.diet.length > 0;
+  return e?.form?.submittedAt || got ? h : undefined;
+}
+
 /** A new member starts empty; a lead starts from its own details and the family's online form (else allergies and needs from the trial day). The first day is the next open Monday. */
 export function initialState(s: ClubState, mode: RegMode, today: ISODate): RegState {
   const base: RegState = { ...blankState(), start: startMondays(s, today, 1)[0] ?? '' };
   if (mode.kind === 'new') return base;
   const e = s.enquiries[mode.id];
   if (!e) return base;
-  const online = e.form?.submittedAt ? e.form.draft : undefined;
+  const online = e.form?.draft; // round 13: a half-filled draft saved through the link counts too
+  const onlineHealth = onlineHealthOf(e);
   const trial = sortBy(live(s.guestVisits).filter((g) => g.enquiryId === e.id && g.kind === 'trial'), (g) => g.date).pop();
-  const h = online?.health;
+  const h = onlineHealth;
   return {
     ...base, title: e.senior.title, name: e.senior.name, gender: genderOf(e.senior.title), dob: online?.dob || '', address: online?.address || '',
     contact: e.contact.name, rel: e.contact.relation, phone: e.contact.phone,

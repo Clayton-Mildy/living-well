@@ -265,6 +265,7 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
           {formState === 'submitted' ? <Pill icon="assignment_turned_in" fg="#3D6B4F" bg="#E3EFE6" label={t('enq.formState_submitted')} size={16} /> : null}
           {formState === 'sent' || formState === 'opened' ? <Pill icon={formState === 'opened' ? 'drafts' : 'send'} fg="#7A5510" bg="#F6ECD6" label={t('enq.formState_' + formState)} size={16} /> : null}
+          {formState === 'inProgress' ? <Pill icon="edit_note" fg="#7A5510" bg="#F6ECD6" label={t('enq.formState_inProgress', { n: e.form?.step ?? 1 })} size={16} /> : null}
           {formState === 'expired' ? <Pill icon="link_off" fg="#6B6259" bg="var(--fill, #F4F4F5)" label={t('enq.formState_expired')} size={16} /> : null}
           {member ? (regAttached
             ? <Pill icon="check_circle" fg="#3D6B4F" bg="#E3EFE6" label={t('enq.regAttached')} size={16} />

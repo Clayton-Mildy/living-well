@@ -376,6 +376,105 @@ describe('online registration link', () => {
   });
 });
 
+describe('online registration form: saved for later (round 13)', () => {
+  const sys = (s: ClubState, name: string, input: unknown, clk = clock) => execute(s, name, input, systemUser('citra'), clk, mid());
+  const linked = () => {
+    const made = run(seed().citra, 'enquiry.create', lead, 's1');
+    const id = made.result.enquiryId as string;
+    const sent = run(made.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    return { id, token: sent.result.token as string, state: sent.state };
+  };
+  const full = (over: Record<string, unknown> = {}) => ({
+    title: 'Oma', name: 'Rosa Santoso', dob: '1947-05-02', address: 'Jl. Melati 3', contact: { name: 'Dina Santoso', relation: 'daughter', phone: '0812 5550 1234' }, plan: 'gold',
+    health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en', ...over,
+  });
+  it('formSave stores a half-filled draft with the step and the time, leniently, and moves the link to inProgress', () => {
+    const { id, token, state } = linked();
+    const r = sys(state, 'enquiry.formSave', { token, step: 2, expect: null, draft: { title: 'Oma', name: 'Rosa', dob: '', address: 'Jl. Me', contact: { name: 'Din', relation: 'daughter', phone: '0812' }, registration: { postcode: '12', nik: '3171' }, nanny: { name: 'Sri', nik: '12' }, lang: 'id' } });
+    const f = r.state.enquiries[id].form!;
+    expect(f).toMatchObject({ step: 2, savedAt: `${T}T10:00`, openedAt: `${T}T10:00` });
+    expect(f.submittedAt).toBeUndefined();
+    expect(f.draft).toMatchObject({ name: 'Rosa', address: 'Jl. Me', contact: { name: 'Din', phone: '0812' }, registration: { postcode: '12' }, nanny: { name: 'Sri', nik: '12' }, lang: 'id' });
+    expect(formLinkState(f, `${T}T10:30`)).toBe('inProgress');
+    expect(r.result.savedAt).toBe(`${T}T10:00`);
+    // saving again replaces the draft and the step; a missing step reads as the first
+    const again = sys(r.state, 'enquiry.formSave', { token, step: 4, expect: 1, draft: { name: 'Rosa Santoso' } });
+    expect(again.state.enquiries[id].form).toMatchObject({ step: 4, draft: { name: 'Rosa Santoso', title: 'Oma' } });
+    expect(sys(r.state, 'enquiry.formSave', { token, expect: 1, draft: {} }).state.enquiries[id].form!.step).toBe(1);
+  });
+  it('a save carries what the page last saw (expect = the save counter); another phone saving in between makes it a conflict and loses nothing', () => {
+    const { id, token, state } = linked();
+    const a1 = sys(state, 'enquiry.formSave', { token, step: 1, expect: null, draft: { name: 'Rosa A' } });
+    expect(a1.state.enquiries[id].form!.rev).toBe(1);
+    expect(a1.result.draftRev).toBe(1);
+    // phone B saves on top of what A saved
+    const b = sys(a1.state, 'enquiry.formSave', { token, step: 2, expect: 1, draft: { name: 'Rosa B' } });
+    expect(b.state.enquiries[id].form).toMatchObject({ rev: 2, step: 2, draft: { name: 'Rosa B' } });
+    // phone A, still at rev 1, continues: refused, the lead keeps B's draft
+    expect(() => sys(b.state, 'enquiry.formSave', { token, step: 2, expect: 1, draft: { name: 'Rosa A longer' } })).toThrow('enq.err.formConflict');
+    expect(() => sys(b.state, 'enquiry.formSave', { token, step: 2, expect: null, draft: { name: 'Rosa A offline' } })).toThrow('enq.err.formConflict');
+    expect(b.state.enquiries[id].form!.draft!.name).toBe('Rosa B');
+    // choosing to keep A's: resend with the counter the lead is at
+    const keep = sys(b.state, 'enquiry.formSave', { token, step: 2, expect: 2, draft: { name: 'Rosa A longer' } });
+    expect(keep.state.enquiries[id].form).toMatchObject({ rev: 3, draft: { name: 'Rosa A longer' } });
+    // two saves in the same minute still differ by the counter
+    expect(keep.state.enquiries[id].form!.savedAt).toBe(b.state.enquiries[id].form!.savedAt);
+  });
+  it('saving what the lead already has changes nothing (no write, no counter bump) and is never a conflict', () => {
+    const { id, token, state } = linked();
+    const a = sys(state, 'enquiry.formSave', { token, step: 2, expect: null, draft: { name: 'Rosa A' } });
+    const same = execute(a.state, 'enquiry.formSave', { token, step: 2, expect: null, draft: { name: 'Rosa A' } }, systemUser('citra'), clock, mid());
+    expect(same.patches).toHaveLength(0);
+    expect(same.result).toMatchObject({ draftRev: 1, savedAt: `${T}T10:00` });
+    expect(same.state.enquiries[id].form!.rev).toBe(1);
+    const stepOnly = sys(a.state, 'enquiry.formSave', { token, step: 3, expect: 1, draft: { name: 'Rosa A' } });
+    expect(stepOnly.state.enquiries[id].form).toMatchObject({ rev: 2, step: 3 });
+  });
+  it('a new link after expiry keeps the saved draft, step and counter', () => {
+    const { id, token, state } = linked();
+    const saved = sys(state, 'enquiry.formSave', { token, step: 3, expect: null, draft: { name: 'Rosa Kept', address: 'Jl. Me' } });
+    const late = { today: '2026-11-20', nowMin: 600 };
+    const renewed = run(saved.state, 'enquiry.sendForm', { enquiryId: id }, 's1', late);
+    const f = renewed.state.enquiries[id].form!;
+    expect(f.token).not.toBe(token);
+    expect(f).toMatchObject({ step: 3, rev: 1, savedAt: `${T}T10:00`, draft: { name: 'Rosa Kept', address: 'Jl. Me' } });
+    expect(formLinkState(f, '2026-11-20T11:00')).toBe('inProgress');
+    // a submitted form is never carried over
+    const done = sys(saved.state, 'enquiry.formSubmit', { token, draft: full() });
+    expect(() => run(done.state, 'enquiry.sendForm', { enquiryId: id }, 's1', late)).toThrow('enq.err.formDone');
+  });
+  it('formSave notifies nobody and writes the feed once per link', () => {
+    const { id, token, state } = linked();
+    const a = sys(state, 'enquiry.formSave', { token, step: 1, expect: null, draft: { name: 'Rosa' } });
+    const saved = (st: ClubState) => Object.values(st.activity).filter((x) => x.key === 'enq.feed.formSaved');
+    expect(saved(a.state)).toHaveLength(1);
+    const b = sys(a.state, 'enquiry.formSave', { token, step: 2, expect: 1, draft: { name: 'Rosa S' } });
+    expect(saved(b.state)).toHaveLength(1);
+    expect(updatesFor(b.state, user({ citra: b.state }, 's1')).some((u) => u.kind === 'enq.notif.formSubmitted')).toBe(false);
+    expect(b.state.enquiries[id].form!.submittedAt).toBeUndefined();
+  });
+  it('only the system saves; a wrong token, a submitted or expired link and a closed lead are refused; a bad shape is invalid', () => {
+    const { id, token, state } = linked();
+    fails(state, 'enquiry.formSave', { token, step: 1, draft: {} }, 's1', 'err.forbidden');
+    expect(() => sys(state, 'enquiry.formSave', { token: 'nope', step: 1, draft: {} })).toThrow(DomainError);
+    expect(() => sys(state, 'enquiry.formSave', { token, step: 1, draft: 'x' })).toThrow('err.invalid');
+    expect(() => sys(state, 'enquiry.formSave', { token, step: 1, draft: { registration: 5, health: 7 } })).not.toThrow(); // junk fields are cleaned, not fatal
+    expect(() => sys(state, 'enquiry.formSave', { token, step: 1, draft: {} }, { today: '2026-11-20', nowMin: 600 })).toThrow('enq.err.formExpired');
+    const done = sys(state, 'enquiry.formSubmit', { token, draft: full() });
+    expect(() => sys(done.state, 'enquiry.formSave', { token, step: 1, draft: {} })).toThrow('enq.err.formDone');
+    const lost = run(state, 'enquiry.markLost', { enquiryId: id, reason: 'price' }, 's1');
+    expect(() => sys(lost.state, 'enquiry.formSave', { token, step: 1, draft: {} })).toThrow('enq.err.notOpen');
+  });
+  it('formSubmit still works after saves and replaces the partial draft', () => {
+    const { id, token, state } = linked();
+    const saved = sys(state, 'enquiry.formSave', { token, step: 3, expect: null, draft: { name: 'Ros' } });
+    const done = sys(saved.state, 'enquiry.formSubmit', { token, draft: full() });
+    const f = done.state.enquiries[id].form!;
+    expect(formLinkState(f, `${T}T11:00`)).toBe('submitted');
+    expect(f.draft).toMatchObject({ name: 'Rosa Santoso', plan: 'gold' });
+  });
+});
+
 describe('lead history (round 13)', () => {
   const stages = (s: ClubState, id: string) => (s.enquiries[id].history ?? []).map((m) => m.stage + (m.undo ? '*' : ''));
   it('create starts the history with the new move; every stage move, booking, lost and reopen appends one', () => {

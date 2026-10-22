@@ -17,7 +17,7 @@ import { DialogBody } from '../dialogs/forms';
 import { clearDraft, loadDraft, saveDraft } from './draft';
 import { FamilyStep } from './FamilyStep';
 import { HealthStep } from './HealthStep';
-import { joinLabel, type StepProps } from './parts';
+import { StepBar, joinLabel, type StepProps } from './parts';
 import { PaperStep } from './PaperStep';
 import { PersonStep } from './PersonStep';
 import { PlanStep } from './PlanStep';
@@ -172,9 +172,7 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8, flexShrink: 0 }}>
           <Eyebrow>{stepOf}</Eyebrow>
           <h2 className="cp-serif" style={{ margin: 0, fontSize: 24, lineHeight: 1.2, fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', overflowWrap: 'anywhere' }}>{title}</h2>
-          <div data-progress={progress} role="progressbar" aria-label={stepOf} aria-valuemin={1} aria-valuemax={REG_STEPS.length} aria-valuenow={stepI + 1} style={{ height: 4, borderRadius: 2, background: 'var(--track, #E8E8EB)', overflow: 'hidden' }}>
-            <div style={{ height: '100%', width: `calc(${stepI + 1}/${REG_STEPS.length}*100%)`, background: '#24201C', borderRadius: 2, transition: 'width .2s' }} />
-          </div>
+          <StepBar n={stepI + 1} total={REG_STEPS.length} label={stepOf} />
         </div>
         {content}
       </PhoneScreen>

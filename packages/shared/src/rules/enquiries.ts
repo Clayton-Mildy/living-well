@@ -258,14 +258,19 @@ export const FORM_LINK_DAYS = 14;
 export const formPath = (token: string) => `/form/${token}`;
 /** An unguessable token for a lead's form link (same recipe as the venue rating link). */
 export const formTokenOf = (seed: string) => ratingTokenOf('form|' + seed);
-export type FormLinkState = 'sent' | 'opened' | 'submitted' | 'expired';
+export type FormLinkState = 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired';
+/** How many steps the online form has (Who is joining, Family contact, Health, Plan, Review and send). */
+export const FORM_STEPS = 5;
 /** Where a lead's link stands now (null = no link was ever sent). A submitted form never expires: its answers stay for the join. */
 export function formLinkState(f: EnquiryForm | undefined, nowDT: DT): FormLinkState | null {
   if (!f) return null;
   if (f.submittedAt) return 'submitted';
   if (nowDT > f.expiresAt) return 'expired';
+  if (f.savedAt) return 'inProgress'; // round 13: the family saved a draft through the link
   return f.openedAt ? 'opened' : 'sent';
 }
+/** The draft's save counter (0 = nothing saved yet). Minute-stamped `savedAt` can tie; this cannot. */
+export const formRevOf = (f: EnquiryForm | undefined): number => (f?.savedAt ? Math.max(f.rev ?? 0, 1) : 0);
 /** The lead a form token belongs to (deleted leads never match). */
 export const enquiryByFormToken = (s: ClubState, token: string | undefined | null): Enquiry | null =>
   (token && live(s.enquiries).find((e) => e.form?.token === token)) || null;
