@@ -3,6 +3,7 @@
 import type { ClubState, EndReason, ISODate, LostReason, MoodMoment, StaffRole, YM } from '../types';
 import { activeOn, currentMembership, isPendingRow } from './core';
 import { checkOnList } from './checkOn';
+import { leadConversion, leadMoves } from './enquiries';
 import { invoicePeriod, isConfirmed } from './finance';
 import { invoiceTotal } from './billing';
 import { monthsOf, observedDays, type InsightPeriod } from './insights';
@@ -113,18 +114,16 @@ function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, t
 }
 
 function pipeline(s: ClubState, p: InsightPeriod, today: ISODate, nowMin: number): PipelineGroup {
-  const leads = live(s.enquiries).filter((e) => within(e.createdAt.slice(0, 10), p));
-  const came = (kind: 'visit' | 'trial') => new Set(live(s.guestVisits).filter((g) => g.kind === kind && g.status === 'booked' && within(g.date, p) && g.date <= today).map((g) => g.enquiryId)).size;
-  // members (not leads: two enquiries for one person are one join) whose lead started a membership in the period
-  const joined = new Set(live(s.enquiries).filter((e) => { const m = e.memberId ? s.members[e.memberId] : undefined; return !!m && !m.deletedAt && !isPendingRow(m) && within(currentMembership(m)?.start, p); }).map((e) => e.memberId)).size;
-  const funnel = { new: leads.length, visit: came('visit'), trial: came('trial'), joined };
-  const lostReasons = Object.fromEntries(LOST_REASONS.map((k) => [k, 0])) as Record<LostReason, number>;
-  // there is no date a lead was lost on: these are the leads opened this period that are lost now
-  for (const e of leads) if (e.stage === 'lost' && e.lost) lostReasons[e.lost.reason]++;
+  // round 13: what happened in the period, from the lead history (the same numbers as the Enquiries History view); joined reconciles with the Members group.
+  // The conversion is of the leads opened in the three whole months before the period's month (a lead needs time to decide).
+  const lm = leadMoves(s, p.from, p.to);
+  const funnel = { new: lm.opened, visit: lm.visit, trial: lm.trial, joined: lm.joined };
+  const lostReasons = lm.lostReasons;
+  const lc = leadConversion(s, p.from.slice(0, 7));
   const rated = (kind: 'family' | 'venue') => avg(live(s.surveyResponses).filter((r) => r.overall > 0 && within(r.on, p) && s.surveys[r.surveyId] && surveyKind(s.surveys[r.surveyId]) === kind).map((r) => r.overall));
   return {
     funnel,
-    conversion: { toVisit: ratio(funnel.visit, funnel.new), toTrial: ratio(funnel.trial, funnel.new), toJoined: ratio(funnel.joined, funnel.new) },
+    conversion: { toVisit: lc.toVisit, toTrial: lc.toTrial, toJoined: lc.toJoined },
     lostReasons,
     duties: teamRange(s, p.from, p.to, today, nowMin).map((r) => ({ role: r.role, done: r.done, total: r.total })),
     surveys: { family: rated('family'), venue: rated('venue') },

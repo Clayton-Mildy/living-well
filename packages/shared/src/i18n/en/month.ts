@@ -6,7 +6,7 @@ export const month = {
   active: 'Active members', joined: 'Joined', ended: 'Ended', renewalsKept: 'Renewals kept', renewalsLost: 'Renewals lost', onLeave: 'On leave', checkOn: "Haven't come lately",
   visitsPerMember: 'Visits per member', utilisation: 'Utilisation',
   index: 'Mood', lift: 'Lift arrival to departure', alerts: 'Alert readings', watches: 'Watch readings', rechecks: 'Re-checks', lunchEaten: 'Ate most of lunch',
-  leads: 'New leads', leadsCaption: 'leads opened this period', visits: 'Visited', trials: 'Trial day', converted: 'Joined', lost: 'Lost',
+  leads: 'New leads', leadsCaption: 'of leads opened in the 3 months before', visits: 'Visited', trials: 'Trial day', converted: 'Joined', lost: 'Lost',
   duties: 'Duties done', surveyFamily: 'Family rating', surveyVenue: 'Venue rating', monthsVs: '{cur} vs {prev}',
   sendOwner: 'Send to owner', summaryTitle: 'Summary for the owner', copy: 'Copy', copied: 'Copied', copyFailed: 'Could not copy. Select the text and copy it by hand.', sendWa: 'Send on WhatsApp', sent: 'Sent to the owner on WhatsApp',
   'sum.head': 'CitraPremier · {period}', 'sum.row': '{label}: {cur}', 'sum.rowDiff': '{label}: {cur} ({diff})',
