@@ -42,8 +42,8 @@ function MonthGroup({ m, onOpen }: { m: LeadMonth; onOpen: (id: string) => void 
       {f.opened || f.visit || f.trial || f.joined || f.lost ? (
         <>
           <Line label={t('enq.hist.opened')} value={f.opened} />
-          <Line label={t('enq.hist.visited')} value={f.visit} sub={rate(c.toVisit)} />
-          <Line label={t('enq.hist.trial')} value={f.trial} sub={rate(c.toTrial)} />
+          <Line label={t('enq.hist.visited')} value={f.visit} />
+          <Line label={t('enq.hist.trial')} value={f.trial} />
           <Line label={t('enq.hist.joined')} value={f.joined} sub={rate(c.toJoined)} />
           <Line label={t('enq.hist.lost')} value={f.lost} sub={reasons || undefined} />
           {c.opened ? <span style={{ fontSize: 12, color: '#6B6259', lineHeight: 1.4 }}>{t('enq.hist.convCaption')}</span> : null}
