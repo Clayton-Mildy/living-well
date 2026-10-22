@@ -5,11 +5,11 @@ import { useNavigate } from 'react-router-dom';
 import { staffCall, type ClubState, type ISODate, type TaskTemplate } from '@cp/shared';
 import { activityName, toneOf } from '@cp/shared/rules/activity';
 import { partLate, type DutyDef, type DutyPart, type TaskItem } from '@cp/shared/rules/tasks';
-import { Button, CameraCapture, FONT_SMALL, Icon, PhotoImg, Sheet, TextField } from '../../components/ui';
+import { Button, CameraCapture, FONT_SMALL, Icon, ImageOpen, PhotoImg, Sheet, TextField } from '../../components/ui';
 import { ApiError } from '../../lib/api';
 import { useAct } from '../../lib/act';
 import { useFmt, useT, type TFn } from '../../lib/i18n';
-import { uploadMedia } from '../../lib/media';
+import { mediaUrl, uploadMedia } from '../../lib/media';
 import { say } from '../../store/ui';
 
 const RUST = '#9A3D24';
@@ -103,7 +103,7 @@ function useMeta() {
 }
 
 /** The proof picture of a ticked-off task, small (a tone placeholder when the seed kept no picture). */
-export function ProofThumb({ item, size = 40, onOpen }: { item: TaskItem; size?: number; onOpen?: () => void }) {
+export function ProofThumb({ item, size = 40, onOpen, expand = false }: { item: TaskItem; size?: number; onOpen?: () => void; /** round 13: open the picture full size on tap (not inside a row that is already a button: there the row opens the task sheet, whose picture expands) */ expand?: boolean }) {
   const t = useT();
   if (!item.done || item.template.proof !== 'photo') return null;
   const photo = { mediaId: item.done.photoMediaId, tone: toneOf(item.done.id), media: 'photo' as const };
@@ -115,7 +115,7 @@ export function ProofThumb({ item, size = 40, onOpen }: { item: TaskItem; size?:
   );
   return onOpen
     ? <button type="button" onClick={onOpen} aria-label={t('tasks.proof') + ': ' + item.template.title} className="cp-press" style={{ flex: 'none', padding: 0, border: 'none', background: 'transparent', cursor: 'pointer' }}>{body}</button>
-    : body;
+    : <ImageOpen disabled={!expand} src={item.done.photoMediaId ? mediaUrl(item.done.photoMediaId) : null} label={t('tasks.proof') + ': ' + item.template.title} style={{ borderRadius: 10 }}>{body}</ImageOpen>; // round 13: the proof picture opens full size
 }
 
 // ---------- a custom task ----------
@@ -242,9 +242,11 @@ export function TaskSheet({ item, date, who, canTick, canUndo, tick, onClose }: 
         {done?.note ? <Line k={t('tasks.noteFrom')}>{done.note}</Line> : null}
         {done && tpl.proof === 'photo' ? (
           <div>
-            <div style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 12, overflow: 'hidden', background: '#E8E1D8' }}>
-              <PhotoImg photo={{ mediaId: done.photoMediaId, tone: toneOf(done.id), media: 'photo' }} alt={`${t('tasks.proof')}: ${tpl.title}`} />
-            </div>
+            <ImageOpen src={done.photoMediaId ? mediaUrl(done.photoMediaId) : null} label={`${t('tasks.proof')}: ${tpl.title}`} style={{ width: '100%', borderRadius: 12 }}>
+              <div style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 12, overflow: 'hidden', background: '#E8E1D8' }}>
+                <PhotoImg photo={{ mediaId: done.photoMediaId, tone: toneOf(done.id), media: 'photo' }} alt={`${t('tasks.proof')}: ${tpl.title}`} />
+              </div>
+            </ImageOpen>
             {done.photoMediaId ? null : <div style={{ ...label, marginTop: 6 }}>{t('tasks.proofNone')}</div>}
           </div>
         ) : null}

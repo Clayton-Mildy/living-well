@@ -2,7 +2,7 @@
 // Used in Add member and Edit details, and on its own when the avatar at the top of the profile is tapped.
 import { useState } from 'react';
 import { hasKey, memberName, type Member } from '@cp/shared';
-import { Avatar, Button, CameraCapture, Sheet } from '../../components/ui';
+import { Avatar, Button, CameraCapture, ImageOpen, Sheet } from '../../components/ui';
 import { ApiError } from '../../lib/api';
 import { useAct } from '../../lib/act';
 import { useT } from '../../lib/i18n';
@@ -27,7 +27,9 @@ export function ProfilePhotoField({ name, tone, value, onChange, size = 72 }: { 
   };
   return (
     <div data-testid="profile-photo" style={{ display: 'flex', alignItems: 'center', gap: 14, flexWrap: 'wrap' }}>
-      <Avatar name={name.trim() || '?'} tone={tone} size={size} src={value ? mediaUrl(value) : undefined} ring />
+      <ImageOpen src={value ? mediaUrl(value) : null} label={`${t('common.openFull')} · ${name.trim() || '?'}`} style={{ borderRadius: 999 }}>
+        <Avatar name={name.trim() || '?'} tone={tone} size={size} src={value ? mediaUrl(value) : undefined} ring />
+      </ImageOpen>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
         <Button variant="secondary" size={44} icon="photo_camera" disabled={busy} onClick={() => setCamera(true)}>{busy ? t('profile.photoUploading') : value ? t('profile.photoChange') : t('profile.photoAdd')}</Button>
         {value && !busy ? <Button variant="ghost" size={44} onClick={() => onChange(null)}>{t('profile.photoRemove')}</Button> : null}

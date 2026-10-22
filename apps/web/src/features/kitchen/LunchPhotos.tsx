@@ -12,6 +12,7 @@ import { useAct } from '../../lib/act';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
+import { PhotoViewer } from '../activity/PhotoViewer';
 import { ConfirmDialog, cardLabel } from './parts';
 
 const STATUS: Record<'visible' | 'pending' | 'hidden', { icon: string; fg: string; bg: string }> = {
@@ -37,6 +38,7 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: 
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [removing, setRemoving] = useState<Photo | null>(null);
+  const [viewer, setViewer] = useState<string | null>(null); // round 13: a tap on a tile opens the picture full size
   const full = photos.length >= MAX_LUNCH_PHOTOS;
 
   const onCapture = async (blob: Blob) => {
@@ -81,12 +83,15 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: 
               <div key={p.id} role="group" aria-label={t(K.alt, { time: p.time })} data-testid={`${meal}-photo`} data-photo-id={p.id} data-status={p.visibility}
                 style={{ position: 'relative', aspectRatio: '4/3', borderRadius: 12, overflow: 'hidden', background: 'var(--press, #EEEEF0)' }}>
                 <PhotoImg photo={p} />
-                <span style={{ position: 'absolute', left: 8, top: 8, height: 26, padding: '0 10px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 600, display: 'inline-flex', alignItems: 'center', fontVariantNumeric: 'tabular-nums' }}>{p.time}</span>
+                {/* the whole tile opens the picture; the time, the badge and the X sit above it (the X is its own 44 px target) */}
+                <button type="button" onClick={() => setViewer(p.id)} aria-label={t('kitchen.photo.open', { time: p.time })} data-testid="photo-open" className="cp-press"
+                  style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in' }} />
+                <span style={{ pointerEvents: 'none', position: 'absolute', left: 8, top: 8, height: 26, padding: '0 10px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 600, display: 'inline-flex', alignItems: 'center', fontVariantNumeric: 'tabular-nums' }}>{p.time}</span>
                 {readOnly ? null : (<button type="button" onClick={() => setRemoving(p)} aria-label={t('kitchen.photo.removeAria', { time: p.time })} title={t('kitchen.photo.remove')} className="h-cream"
                   style={{ position: 'absolute', right: 4, top: 4, width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
                   <span aria-hidden="true" style={{ width: 32, height: 32, borderRadius: 999, background: 'rgba(255,255,255,0.94)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="close" size={20} color="#24201C" /></span>
                 </button>)}
-                <span style={{ position: 'absolute', left: 8, bottom: 8, right: 8, width: 'max-content', maxWidth: 'calc(100% - 16px)', minHeight: 28, padding: '4px 10px 4px 6px', borderRadius: 10, background: st.bg, color: st.fg, fontSize: FONT_SMALL, fontWeight: 600, lineHeight: 1.25, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
+                <span style={{ pointerEvents: 'none', position: 'absolute', left: 8, bottom: 8, right: 8, width: 'max-content', maxWidth: 'calc(100% - 16px)', minHeight: 28, padding: '4px 10px 4px 6px', borderRadius: 10, background: st.bg, color: st.fg, fontSize: FONT_SMALL, fontWeight: 600, lineHeight: 1.25, display: 'inline-flex', alignItems: 'center', gap: 4 }}>
                   <Icon name={st.icon} size={17} fill={1} />
                   {t('kitchen.photo.status.' + p.visibility)}
                 </span>
@@ -111,6 +116,7 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: 
         </div>
       ) : photos.length && !tea ? <Note tone="cream" icon="hourglass_top">{t('kitchen.photo.pendingNote')}</Note> : null}
 
+      {viewer ? <PhotoViewer photos={photos} startId={viewer} onClose={() => setViewer(null)} audience="staff" /> : null}
       <CameraCapture open={camera} onClose={() => setCamera(false)} onCapture={(b) => void onCapture(b)} facing="environment" />
       <ConfirmDialog open={!!removing} onClose={() => setRemoving(null)} title={t('kitchen.photo.removeTitle')} body={t(K.removeAsk)} confirmLabel={t('kitchen.photo.remove')} cancelLabel={t('kitchen.photo.keep')} onConfirm={remove} />
     </div>

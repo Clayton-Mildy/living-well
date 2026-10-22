@@ -20,7 +20,7 @@ export const common: Same<typeof EN.common> = {
   pages: 'Halaman', pagePrev: 'Halaman sebelumnya', pageNext: 'Halaman berikutnya', pageOf: 'Halaman {page} dari {pages}', pageGo: 'Halaman {n}',
   camera: 'Kamera', cameraStarting: 'Menyalakan kamera…', cameraDenied: 'Akses kamera diblokir. Izinkan di pengaturan peramban Anda, atau pilih foto.',
   cameraNone: 'Kamera tidak ditemukan. Pilih foto saja.', takePhoto: 'Ambil foto', retake: 'Ulangi', usePhoto: 'Pakai foto', choosePhoto: 'Pilih foto',
-  uploadInstead: 'Unggah foto', switchCamera: 'Ganti kamera', photoPreview: 'Pratinjau foto', processing: 'Menyiapkan foto…',
+  uploadInstead: 'Unggah foto', switchCamera: 'Ganti kamera', photoPreview: 'Pratinjau foto', photoFull: 'Gambar, ukuran penuh', openFull: 'Buka ukuran penuh', processing: 'Menyiapkan foto…',
   mediaType: 'Gunakan foto JPEG, PNG, atau WebP.', mediaTooBig: 'Foto terlalu besar (maks. 5 MB).', mediaFailed: 'Foto tidak dapat diunggah.', docTooBig: 'Berkas terlalu besar (maks. 10 MB).', docType: 'Gunakan foto atau berkas PDF.',
 };
 export const status: Same<typeof EN.status> = {

@@ -11,6 +11,7 @@ import { useDevice } from '../../hooks/useDevice';
 import { pressProps, SelectMark, tileSelectStyle, type PhotoSelect } from './select';
 import { useT } from '../../lib/i18n';
 import { durText } from './parts';
+import { useBackClose } from '../../components/ui/useBackClose';
 
 /** The prototype's palette. */
 export const F = {
@@ -261,29 +262,7 @@ export function BackLink({ label, onClick, testId = 'fam-back' }: { label: React
  * The prototype's bottom sheet: white, 28px top corners, a grab handle. With `action` the header is Cancel · title · action (bronze, grey while
  * disabled); without, the title sits left and Done closes it. Round 8c, on a laptop it is a centred 460px dialog (radius 24, no handle) over the dimmed page.
  */
-/**
- * KC round 9 ("too many clicks… we still need to press back"): the phone's own back gesture closes an overlay. While it is open there is one extra
- * history entry (same address); Android's back button or the iPhone's edge swipe pops it and closes the overlay instead of leaving the page. When the
- * overlay closes another way, its entry is taken back off. The push waits a tick (React's strict mode mounts twice) and the clean-up checks a moment later
- * (a close that also navigates must not undo the navigation; the entry then simply stays behind).
- */
-export function useBackClose(open: boolean, onClose: () => void) {
-  const cb = useRef(onClose);
-  cb.current = onClose;
-  useEffect(() => {
-    if (!open) return;
-    const token = 'o' + Math.random().toString(36).slice(2);
-    let pushed = false, byBack = false;
-    const push = window.setTimeout(() => { window.history.pushState({ ...(window.history.state || {}), cpOverlay: token }, ''); pushed = true; }, 0);
-    const onPop = () => { if (pushed && window.history.state?.cpOverlay !== token) { byBack = true; pushed = false; cb.current(); } };
-    window.addEventListener('popstate', onPop);
-    return () => {
-      window.clearTimeout(push);
-      window.removeEventListener('popstate', onPop);
-      if (pushed && !byBack) window.setTimeout(() => { if (window.history.state?.cpOverlay === token) window.history.back(); }, 40);
-    };
-  }, [open]);
-}
+export { useBackClose }; // moved to components/ui so the shared lightbox can use it
 
 /**
  * KC round 9: a bottom sheet follows a downward swipe and closes when it is let go far enough (or flicked), like the phone's own sheets. The swipe starts

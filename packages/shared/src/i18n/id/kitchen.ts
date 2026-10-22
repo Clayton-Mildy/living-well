@@ -11,6 +11,7 @@ export const kitchen: Same<typeof EN> = {
   'menu.none': 'Belum ada', 'menu.changeToday': 'Ubah menu hari ini', 'menu.overridden': 'Menu hari ini berbeda dari rencana mingguan.',
   'photo.title': 'Foto makan siang', 'photo.add': 'Tambah foto makan siang hari ini',
   'photo.addMore': 'Tambah foto', 'photo.alt': 'Foto makan siang, diambil pukul {time}', 'photo.uploading': 'Mengirim foto…', 'photo.full': 'Foto makan siang hari ini sudah penuh. Hapus satu untuk menambah.',
+  'photo.open': 'Buka foto pukul {time} ukuran penuh',
   'photo.status.visible': 'Terlihat oleh keluarga', 'photo.status.pending': 'Menunggu persetujuan', 'photo.status.hidden': 'Disembunyikan dari keluarga',
   'photo.pendingNote': 'Manajemen menyetujui foto dari dapur sebelum keluarga melihatnya.',
   'photo.postedOk': 'Foto makan siang terkirim. Keluarga melihatnya di halaman Hari ini.', 'photo.postedQuiet': 'Foto makan siang terkirim. Keluarga tidak diberi tahu.', 'photo.sentOk': 'Foto dikirim ke manajemen. Keluarga melihatnya setelah disetujui.',

@@ -5,7 +5,7 @@
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPE } from 'react';
 import { createPortal } from 'react-dom';
 import { BURST_GAP_MS, draftsOf } from '@cp/shared/rules/photoAi';
-import { Icon, useOverlayA11y, FONT_BODY } from '../components/ui';
+import { Icon, ImageLightbox, useOverlayA11y, FONT_BODY } from '../components/ui';
 import { recordMime, clock } from '../components/ui/CameraCapture';
 import { useT } from '../lib/i18n';
 import { useMe } from '../lib/me';
@@ -291,9 +291,11 @@ function Thumb({ shot }: { shot: QShot }) {
   const t = useT();
   const retry = useQuickCam((q) => q.retry);
   const failed = shot.state === 'failed';
+  const [full, setFull] = useState(false); // round 13: a tap on a shot opens it full size (a failed one still retries)
   return (
-    <button type="button" role="listitem" data-shot={shot.key} data-state={shot.state} onClick={failed ? () => retry(shot.key) : undefined} aria-label={failed ? t('drafts.retry') : shot.state === 'uploading' ? t('drafts.uploading') : t('drafts.saved1')}
-      style={{ position: 'relative', flex: 'none', width: 50, height: 50, borderRadius: 10, overflow: 'hidden', border: failed ? '2px solid #E5484D' : '1px solid rgba(255,255,255,0.3)', padding: 0, background: '#2E2924', cursor: failed ? 'pointer' : 'default' }}>
+    <>
+    <button type="button" role="listitem" data-shot={shot.key} data-state={shot.state} onClick={failed ? () => retry(shot.key) : () => setFull(true)} aria-label={failed ? t('drafts.retry') : shot.state === 'uploading' ? t('drafts.uploading') : t('drafts.saved1')}
+      style={{ position: 'relative', flex: 'none', width: 50, height: 50, borderRadius: 10, overflow: 'hidden', border: failed ? '2px solid #E5484D' : '1px solid rgba(255,255,255,0.3)', padding: 0, background: '#2E2924', cursor: failed ? 'pointer' : 'zoom-in' }}>
       {shot.media === 'video'
         ? <video src={`${shot.url}#t=0.1`} muted playsInline preload="metadata" aria-hidden="true" tabIndex={-1} style={{ width: '100%', height: '100%', objectFit: 'cover', pointerEvents: 'none' }} />
         : <img src={shot.url} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }} />}
@@ -301,5 +303,7 @@ function Thumb({ shot }: { shot: QShot }) {
       {failed ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0, background: 'rgba(29,26,22,0.55)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="refresh" size={22} color="#FFFFFF" /></span> : null}
       {shot.media === 'video' ? <span aria-hidden="true" style={{ position: 'absolute', left: 3, bottom: 3, color: '#FFFFFF' }}><Icon name="videocam" size={14} fill={1} /></span> : null}
     </button>
+    {full ? <ImageLightbox src={shot.url} kind={shot.media === 'video' ? 'video' : 'image'} alt={t('drafts.saved1')} onClose={() => setFull(false)} /> : null}
+    </>
   );
 }

@@ -17,7 +17,7 @@ export const common = {
   pages: 'Pages', pagePrev: 'Previous page', pageNext: 'Next page', pageOf: 'Page {page} of {pages}', pageGo: 'Page {n}',
   camera: 'Camera', cameraStarting: 'Starting the camera…', cameraDenied: 'Camera access is blocked. Allow it in your browser settings, or choose a photo instead.',
   cameraNone: 'No camera was found here. Choose a photo instead.', takePhoto: 'Take photo', retake: 'Retake', usePhoto: 'Use photo', choosePhoto: 'Choose a photo',
-  uploadInstead: 'Upload a photo', switchCamera: 'Switch camera', photoPreview: 'Preview of the photo', processing: 'Preparing the photo…',
+  uploadInstead: 'Upload a photo', switchCamera: 'Switch camera', photoPreview: 'Preview of the photo', photoFull: 'Picture, full size', openFull: 'Open full size', processing: 'Preparing the photo…',
   mediaType: 'Please use a JPEG, PNG or WebP photo.', mediaTooBig: 'That photo is too large (max 5 MB).', mediaFailed: 'The photo could not be uploaded.', docTooBig: 'That file is too large (max 10 MB).', docType: 'Please use a photo or a PDF file.',
 };
 export const status = {
