@@ -174,3 +174,16 @@ describe('Join a lead: the same flow, filled in from the online form', () => {
     expect(onDone).toHaveBeenCalledWith('m99');
   });
 });
+
+describe('Join a lead: a half-filled online form pre-fills too (round 13)', () => {
+  it('the person, address and plan come from the saved draft; health stays with the trial day until the family answered it', async () => {
+    const st = openClub('lobby');
+    const e = st.enquiries.e5;
+    const view = { ...st, enquiries: { ...st.enquiries, e5: { ...e, stage: 'trial' as const, form: { token: 'tok-e5', sentAt: `${T}T09:00`, sentBy: 'staff:s1' as const, expiresAt: '2026-11-04T09:00', openedAt: `${T}T09:30`, savedAt: `${T}T09:40`, step: 2, draft: { title: e.senior.title, name: e.senior.name, dob: '1950-04-02', address: 'Jl. Melati 3', contact: { ...e.contact }, plan: 'gold' as const, registration: { nickname: 'Oma Lin' }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en' as const } } } } };
+    useReplica.setState({ confirmed: view, view });
+    await show(<RegistrationFlow mode={{ kind: 'lead', id: 'e5' }} onDone={() => {}} />);
+    expect(input('nickname')?.value).toBe('Oma Lin');
+    expect(input('address')?.value).toBe('Jl. Melati 3');
+    expect(flow().textContent).not.toContain('Filled in online by'); // only a sent form says so
+  });
+});

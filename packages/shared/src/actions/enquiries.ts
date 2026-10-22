@@ -9,8 +9,9 @@ import { FEE_DEFAULTS, priceOn } from '../rules/billing';
 import {
   ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
 } from '../rules/enquiries';
-import { parseCarer, parseHealthBasics, parseKtp, parseRegistration, titleOf } from './members';
-import { FORM_LINK_DAYS, enquiryByFormToken, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
+import { parseCarer, parseHealthBasics, parseKtp, parseRegistration, titleOf, txt } from './members';
+import { cleanRegistration } from '../rules/applicationForm';
+import { FORM_LINK_DAYS, FORM_STEPS, enquiryByFormToken, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
 import { arr, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { e164, live, sortBy, addDays } from '../util';
 
@@ -410,6 +411,56 @@ export const enquiriesActions = [
       if (!e) return ctx.fail('err.notFound');
       const f = d.enquiries[e.id].form!;
       if (formLinkState(f, ctx.nowDT) === 'sent') f.openedAt = ctx.nowDT;
+    },
+  }),
+  // round 13 (KC): the family's half-filled form is saved through the link, so reopening it on any phone continues where they left off.
+  // The answers are only checked for shape (a postcode half typed is fine); formSubmit still checks everything.
+  defineAction<{ token: string; step: number; draft: Partial<OnlineRegistration> }>({
+    name: 'enquiry.formSave',
+    can: (u, i, s) => system(u) && !!enquiryByFormToken(s, i.token),
+    parse(raw) {
+      const o = obj(raw);
+      const dr = obj(o.draft, 'draft');
+      const c = dr.contact === undefined ? {} : obj(dr.contact, 'contact');
+      const h = dr.health === undefined || typeof dr.health !== 'object' ? undefined : parseHealthBasics(dr.health);
+      const registration = dr.registration !== null && typeof dr.registration === 'object' ? cleanRegistration(dr.registration) : undefined;
+      const nn = dr.nanny !== null && typeof dr.nanny === 'object' ? (dr.nanny as Record<string, unknown>) : null;
+      const rawPhone = txt(c.phone, 40);
+      const step = typeof o.step === 'number' && Number.isFinite(o.step) ? Math.min(FORM_STEPS, Math.max(1, Math.round(o.step))) : 1;
+      return {
+        token: str(o.token, 80, { required: true, field: 'token' }),
+        step,
+        draft: {
+          ...(typeof dr.title === 'string' ? { title: txt(dr.title, 20) } : {}), ...(dr.name !== undefined ? { name: txt(dr.name, 80) } : {}),
+          ...(typeof dr.dob === 'string' ? { dob: /^\d{4}-\d{2}-\d{2}$/.test(dr.dob) ? dr.dob : '' } : {}), ...(dr.address !== undefined ? { address: txt(dr.address, 200) } : {}),
+          ...(dr.contact !== undefined ? { contact: { name: txt(c.name, 80), relation: ALL_RELATIONS.includes(c.relation as never) ? (c.relation as (typeof ALL_RELATIONS)[number]) : 'daughter', phone: rawPhone.replace(/\D/g, '').length >= 8 ? e164(rawPhone) : rawPhone } } : {}),
+          ...(dr.plan === 'flex' || dr.plan === 'gold' ? { plan: dr.plan as Plan } : {}),
+          ...(dr.nanny !== undefined ? { nanny: nn ? { name: txt(nn.name, 80), nik: txt(nn.nik, 24).replace(/\s/g, '') } : null } : {}),
+          ...(dr.ktp !== undefined && dr.ktp !== null ? { ktp: parseKtp(dr.ktp) } : {}), ...(h ? { health: h } : {}), ...(registration ? { registration } : {}),
+          ...(dr.lang === 'id' || dr.lang === 'en' ? { lang: dr.lang } : {}),
+        },
+      };
+    },
+    run(d, i, ctx) {
+      const e = enquiryByFormToken(S(d), i.token);
+      if (!e) return ctx.fail('err.notFound');
+      const row = d.enquiries[e.id];
+      const state = formLinkState(row.form, ctx.nowDT);
+      if (state === 'expired') ctx.fail('enq.err.formExpired');
+      if (state === 'submitted') ctx.fail('enq.err.formDone');
+      if (row.stage === 'joined' || row.stage === 'lost' || row.archivedAt) ctx.fail('enq.err.notOpen');
+      const f = row.form!;
+      const first = !f.savedAt;
+      // the page sends the whole draft each time (so a cleared answer stays cleared); what it leaves out starts from the lead as the front desk typed it
+      f.draft = {
+        title: row.senior.title, name: row.senior.name, dob: '', address: '', contact: { ...row.contact }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
+        ...i.draft,
+      };
+      f.step = i.step;
+      f.savedAt = ctx.nowDT;
+      f.openedAt ??= ctx.nowDT;
+      ctx.result.savedAt = ctx.nowDT;
+      if (first) ctx.feed({ icon: 'edit_note', key: 'enq.feed.formSaved', params: { name: seniorName(row) } });
     },
   }),
   defineAction<{ token: string; draft: OnlineRegistration }>({

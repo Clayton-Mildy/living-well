@@ -182,3 +182,27 @@ test('Ega approves Caca’s leave from Approvals', async ({ page }) => {
   await expect(page.locator('[data-leave="lv-3"]')).toContainText('Approved');
   c.assertClean();
 });
+
+test('the family’s online form is five steps and keeps the draft: fill step 1, reload, still on step 2 with the name kept', async ({ page }) => {
+  const c = watchConsole(page);
+  const token = 'demo-leo-gunadi-3m8x2v'; // Opa Leo's link (the seeded, opened one)
+  await page.goto(`/form/${token}`);
+  const bar = page.getByRole('progressbar');
+  await expect(bar).toHaveAttribute('aria-label', 'Step 1 of 5 · Who is joining');
+  await assertNoHorizontalScroll(page);
+  await page.getByLabel('Full name, as on the KTP').fill('Leo Gunadi Senior');
+  const saved = page.waitForResponse((r) => r.url().endsWith(`/api/public/form/${token}/draft`) && r.request().method() === 'POST');
+  await page.getByRole('button', { name: 'Continue' }).click();
+  expect((await saved).ok()).toBeTruthy();
+  await expect(bar).toHaveAttribute('aria-label', 'Step 2 of 5 · Family contact');
+  // the link now reads in progress on the lead, and reopening it resumes
+  const info = await (await page.request.get(`/api/public/form/${token}`)).json();
+  expect(info).toMatchObject({ state: 'inProgress', step: 2, draft: { name: 'Leo Gunadi Senior' } });
+  await page.reload();
+  await expect(bar).toHaveAttribute('aria-label', 'Step 2 of 5 · Family contact');
+  await expect(page.getByRole('heading', { level: 1 })).toContainText('Leo Gunadi Senior');
+  await page.getByRole('button', { name: 'Back' }).click();
+  await expect(page.getByLabel('Full name, as on the KTP')).toHaveValue('Leo Gunadi Senior');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+});

@@ -69,11 +69,14 @@ export const enq = {
   sendForm: 'Send form link', formLinkEyebrow: 'Online registration', formLinkIntro: 'The family fills in the registration on their phone. The answers come back to this lead and fill in the Join step. The signed paper form is still needed at the club.',
   formLinkLabel: 'Link', formLinkCopy: 'Copy link', formLinkCopied: 'Link copied.', formLinkWa: 'Send on WhatsApp', formLinkAgain: 'Send a new link', formLinkMaking: 'Preparing the link…',
   formLinkWaText: 'Hello {contact}, here is the CitraPremier registration form for {name}. Please fill it in before your visit: {link}',
-  formState_sent: 'Form sent', formState_opened: 'Form opened', formState_submitted: 'Form filled in', formState_expired: 'Form link expired',
+  formState_sent: 'Form sent', formState_opened: 'Form opened', formState_submitted: 'Form filled in', formState_inProgress: 'In progress · step {n} of 5',
+  formState_expired: 'Form link expired',
   formSentOn: 'Sent {date} · valid until {until}', formOpenedOn: 'Opened {date} · valid until {until}', formExpiredOn: 'The link expired on {until}.', formFilledBy: 'Filled in online by {name} on {date}',
+  formSavedOn: 'Filling it in: step {n} of 5, saved {date} · valid until {until}',
   formOpenJoin: 'Open in Join', jn_fromOnline: 'From the online form', formSentToast: 'Form link ready for {contact}.',
   'err.formDone': 'The family has already sent this form. Open Join to use the answers.', 'err.formExpired': 'This link has expired. Ask the club for a new one.',
   'feed.formSent': 'Registration form link sent · {name}', 'feed.formSubmitted': 'Registration form filled in online · {name}',
+  'feed.formSaved': 'Registration form started online · {name}',
   'notif.formSubmitted': '{by} filled in the registration form for {name} online.',
   // the public page
   pf_tab: 'Registration', pf_eyebrow: 'Membership registration', pf_intro: 'Fill this in before your visit. It takes about five minutes and saves the front desk retyping it. At the club you will sign the printed form.',
@@ -82,4 +85,5 @@ export const enq = {
   pf_doneTitle: 'Already sent', pf_doneText: 'This form reached the club on {date}. To change something, ask the front desk for a new link.',
   pf_badTitle: 'This link does not work', pf_badText: 'Check the link you received, or ask the club to send it again.', pf_expiredTitle: 'This link has expired', pf_expiredText: 'Links stay open for 14 days. Ask the front desk to send a new one.',
   pf_privacy: 'Only the club sees these answers.',
+  pf_stepHealth: 'Health', pf_stepPlan: 'Plan', pf_stepReview: 'Review and send', pf_continue: 'Continue', pf_saveLater: 'Save for later', pf_saving: 'Saving…', pf_saved: 'Saved. You can close this page and carry on later from the same link.', pf_saveFailed: 'Could not save to the club just now. Your answers are kept on this phone.', pf_resumed: 'Welcome back: carrying on where you left off.', pf_reviewIntro: 'Check your answers, then send them to the club.', pf_none: 'None',
 };

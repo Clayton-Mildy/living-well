@@ -4,13 +4,14 @@ import { live } from '@cp/shared';
 import { Note } from '../../../components/ui';
 import { AllergyFields, DementiaFields, HealthFields, MedsEditor, RegCareFields, TextField } from '../dialogs/forms';
 import { Sec, setRegOf, type StepProps } from './parts';
+import { onlineHealthOf } from './steps';
 
 export function HealthStep({ p }: { p: StepProps }) {
   const { st, set, t, s, mode } = p;
   const setH = (x: Partial<typeof st.health>) => set({ health: { ...st.health, ...x } });
   const setReg = setRegOf(p);
   const e = mode.kind === 'lead' ? s.enquiries[mode.id] : undefined;
-  const fromTrial = !!e && !e.form?.submittedAt && live(s.guestVisits).some((g) => g.enquiryId === e.id && g.kind === 'trial');
+  const fromTrial = !!e && !onlineHealthOf(e) && live(s.guestVisits).some((g) => g.enquiryId === e.id && g.kind === 'trial');
   const isNew = mode.kind === 'new';
   return (
     <>

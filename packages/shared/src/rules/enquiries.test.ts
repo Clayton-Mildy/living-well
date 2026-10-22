@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { buildSeed } from '../seed';
 import type { ClubState, Enquiry, LeadMove } from '../types';
 import { buildSeed as seedOf, DEMO_START_MIN, DEMO_TODAY } from '../index';
-import { leadConversion, leadFunnel, leadHistory, leadMonths, leadMoves, openedAt } from './enquiries';
+import { formLinkState, leadConversion, leadFunnel, leadHistory, leadMonths, leadMoves, openedAt } from './enquiries';
 
 const mv = (stage: LeadMove['stage'], at: string, extra: Partial<LeadMove> = {}): LeadMove => ({ stage, at, by: 'staff:s1', ...extra });
 const lead = (id: string, stage: Enquiry['stage'], history: LeadMove[], extra: Partial<Enquiry> = {}): Enquiry => ({
@@ -126,5 +126,16 @@ describe('leadMonths', () => {
     expect(m[0]).toMatchObject({ from: '2026-10-01', to: '2026-10-31' });
     expect(m.map((x) => x.funnel.opened)).toEqual([1, 0, 0, 0, 0, 1]);
     expect(m.map((x) => x.moves.opened)).toEqual([1, 0, 0, 0, 0, 1]);
+  });
+});
+
+describe('formLinkState (round 13: a saved draft)', () => {
+  const base = { token: 't', sentAt: '2026-10-20T09:00', sentBy: 'staff:s1' as const, expiresAt: '2026-11-03T09:00' };
+  it('a draft saved through the link reads inProgress until it is submitted or expires', () => {
+    expect(formLinkState({ ...base }, '2026-10-21T10:00')).toBe('sent');
+    expect(formLinkState({ ...base, openedAt: '2026-10-20T10:00' }, '2026-10-21T10:00')).toBe('opened');
+    expect(formLinkState({ ...base, openedAt: '2026-10-20T10:00', savedAt: '2026-10-21T09:00', step: 2 }, '2026-10-21T10:00')).toBe('inProgress');
+    expect(formLinkState({ ...base, openedAt: '2026-10-20T10:00', savedAt: '2026-10-21T09:00', step: 2 }, '2026-11-04T10:00')).toBe('expired');
+    expect(formLinkState({ ...base, savedAt: '2026-10-21T09:00', step: 2, submittedAt: '2026-10-21T09:30' }, '2026-10-21T10:00')).toBe('submitted');
   });
 });

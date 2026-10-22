@@ -301,7 +301,7 @@ function FormLinkDialog({ id, onClose, onJoin }: { id: string; onClose: () => vo
   const copy = async () => { try { await navigator.clipboard.writeText(url); say(t('enq.formLinkCopied'), { icon: 'content_copy' }); } catch { /* clipboard blocked */ } };
   const wa = () => window.open(`${waUrl(e.contact.phone)}?text=${encodeURIComponent(t('enq.formLinkWaText', { contact: e.contact.name.split(' ')[0], name: seniorName(e), link: url }))}`, '_blank', 'noopener');
   const line = !f || !state ? '' : state === 'submitted' ? t('enq.formFilledBy', { name: f.filledBy || e.contact.name, date: day(f.submittedAt!) })
-    : state === 'expired' ? t('enq.formExpiredOn', { until: day(f.expiresAt) }) : t(state === 'opened' ? 'enq.formOpenedOn' : 'enq.formSentOn', { date: day(f.sentAt), until: day(f.expiresAt) });
+    : state === 'expired' ? t('enq.formExpiredOn', { until: day(f.expiresAt) }) : state === 'inProgress' ? t('enq.formSavedOn', { n: f.step ?? 1, date: day(f.savedAt ?? f.sentAt), until: day(f.expiresAt) }) : t(state === 'opened' ? 'enq.formOpenedOn' : 'enq.formSentOn', { date: day(f.sentAt), until: day(f.expiresAt) });
   const dr = state === 'submitted' ? f?.draft : undefined;
   const summary: [string, string][] = dr ? [
     [t('enq.jn_member'), `${dr.title} ${dr.name}`], ...(dr.dob ? [[t('profile.f.dob'), fdy(dr.dob)] as [string, string]] : []), ...(dr.address ? [[t('profile.f.address'), dr.address] as [string, string]] : []),
@@ -315,7 +315,7 @@ function FormLinkDialog({ id, onClose, onJoin }: { id: string; onClose: () => vo
       </>}>
       <DialogBody>
         <Note>{t('enq.formLinkIntro')}</Note>
-        {line ? <div data-testid="form-link-state" data-state={state} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: state === 'submitted' ? '#3D6B4F' : '#5E5852' }}><Icon name={state === 'submitted' ? 'assignment_turned_in' : state === 'expired' ? 'link_off' : state === 'opened' ? 'drafts' : 'send'} size={18} />{line}</div> : null}
+        {line ? <div data-testid="form-link-state" data-state={state} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: state === 'submitted' ? '#3D6B4F' : '#5E5852' }}><Icon name={state === 'submitted' ? 'assignment_turned_in' : state === 'expired' ? 'link_off' : state === 'inProgress' ? 'edit_note' : state === 'opened' ? 'drafts' : 'send'} size={18} />{line}</div> : null}
         {dr ? <Sec label={t('enq.jn_fromOnline')}><Rows rows={summary} /></Sec> : null}
         {state !== 'submitted' ? (
           <Sec label={t('enq.formLinkLabel')}>

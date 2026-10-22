@@ -71,11 +71,14 @@ export const enq: Same<typeof EN> = {
   sendForm: 'Kirim tautan formulir', formLinkEyebrow: 'Pendaftaran online', formLinkIntro: 'Keluarga mengisi pendaftaran di ponsel mereka. Jawabannya kembali ke prospek ini dan mengisi langkah Bergabung. Formulir kertas bertanda tangan tetap diperlukan di klub.',
   formLinkLabel: 'Tautan', formLinkCopy: 'Salin tautan', formLinkCopied: 'Tautan disalin.', formLinkWa: 'Kirim lewat WhatsApp', formLinkAgain: 'Kirim tautan baru', formLinkMaking: 'Menyiapkan tautan…',
   formLinkWaText: 'Halo {contact}, ini formulir pendaftaran CitraPremier untuk {name}. Mohon diisi sebelum kunjungan: {link}',
-  formState_sent: 'Formulir terkirim', formState_opened: 'Formulir dibuka', formState_submitted: 'Formulir sudah diisi', formState_expired: 'Tautan formulir kedaluwarsa',
+  formState_sent: 'Formulir terkirim', formState_opened: 'Formulir dibuka', formState_submitted: 'Formulir sudah diisi', formState_inProgress: 'Sedang diisi · langkah {n} dari 5',
+  formState_expired: 'Tautan formulir kedaluwarsa',
   formSentOn: 'Dikirim {date} · berlaku sampai {until}', formOpenedOn: 'Dibuka {date} · berlaku sampai {until}', formExpiredOn: 'Tautan kedaluwarsa pada {until}.', formFilledBy: 'Diisi online oleh {name} pada {date}',
+  formSavedOn: 'Sedang diisi: langkah {n} dari 5, disimpan {date} · berlaku sampai {until}',
   formOpenJoin: 'Buka di Bergabung', jn_fromOnline: 'Dari formulir online', formSentToast: 'Tautan formulir siap untuk {contact}.',
   'err.formDone': 'Keluarga sudah mengirim formulir ini. Buka Bergabung untuk memakai jawabannya.', 'err.formExpired': 'Tautan ini sudah kedaluwarsa. Minta tautan baru ke klub.',
   'feed.formSent': 'Tautan formulir pendaftaran dikirim · {name}', 'feed.formSubmitted': 'Formulir pendaftaran diisi online · {name}',
+  'feed.formSaved': 'Formulir pendaftaran mulai diisi online · {name}',
   'notif.formSubmitted': '{by} mengisi formulir pendaftaran untuk {name} secara online.',
   // halaman publik
   pf_tab: 'Pendaftaran', pf_eyebrow: 'Pendaftaran keanggotaan', pf_intro: 'Isi sebelum kunjungan Anda. Butuh sekitar lima menit dan resepsionis tidak perlu mengetik ulang. Di klub Anda akan menandatangani formulir cetaknya.',
@@ -84,4 +87,5 @@ export const enq: Same<typeof EN> = {
   pf_doneTitle: 'Sudah terkirim', pf_doneText: 'Formulir ini sampai di klub pada {date}. Untuk mengubah sesuatu, minta tautan baru ke resepsionis.',
   pf_badTitle: 'Tautan ini tidak berfungsi', pf_badText: 'Periksa tautan yang Anda terima, atau minta klub mengirim ulang.', pf_expiredTitle: 'Tautan ini sudah kedaluwarsa', pf_expiredText: 'Tautan berlaku 14 hari. Minta tautan baru ke resepsionis.',
   pf_privacy: 'Hanya klub yang melihat jawaban ini.',
+  pf_stepHealth: 'Kesehatan', pf_stepPlan: 'Paket', pf_stepReview: 'Periksa dan kirim', pf_continue: 'Lanjut', pf_saveLater: 'Simpan untuk nanti', pf_saving: 'Menyimpan…', pf_saved: 'Tersimpan. Anda boleh menutup halaman ini dan melanjutkan nanti dari tautan yang sama.', pf_saveFailed: 'Belum bisa menyimpan ke klub. Jawaban Anda tersimpan di ponsel ini.', pf_resumed: 'Selamat datang kembali: melanjutkan dari terakhir Anda berhenti.', pf_reviewIntro: 'Periksa jawaban Anda, lalu kirim ke klub.', pf_none: 'Tidak ada',
 };
