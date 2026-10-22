@@ -39,9 +39,9 @@ export const people = {
   'leave.approved': 'Leave approved.', 'leave.declined': 'Leave declined.', 'leave.declineTitle': 'Decline this request?', 'leave.declineNote': 'Note for {name} (optional)', 'leave.declineGo': 'Decline',
   'leave.stLeft': 'Left', 'leave.stUsed': 'Used', 'leave.stWaiting': 'Waiting', 'leave.pendingTitle': 'Waiting for a decision', 'leave.historyTitle': 'This year',
   'leave.st_pending': 'Waiting', 'leave.st_approved': 'Approved', 'leave.st_declined': 'Declined', 'leave.st_cancelled': 'Cancelled',
-  'leave.none': 'No leave asked this year.', 'leave.askedSub': 'Leave asked', 'leave.onLeave': '{name} (on leave)', 'leave.mine': 'Your leave', 'leave.byWhom': 'By {name}', 'leave.noteIs': 'Note: {note}',
+  'leave.none': 'No leave asked this year.', 'leave.askedSub': 'Leave asked', 'leave.onLeave': '{name} (on leave)', 'leave.noteIs': 'Note: {note}',
   'err.leaveReason': 'Write what the leave is for.', 'err.leavePast': 'Leave cannot start in the past.', 'err.leaveNoDays': 'None of those days is a club day.', 'err.leaveYear': 'Leave has to stay inside one calendar year. Ask for each year separately.',
-  'err.leaveOverlap': 'You already have leave on some of those days.', 'err.leaveTooMany': 'That is more than you have left this year.', 'err.leaveDecided': 'That request has already been answered.', 'err.leaveStarted': 'That leave has already started.',
+  'err.leaveOverlap': 'You already have leave on some of those days.', 'err.leaveTooMany': 'That is more than you can still ask for this year ({left} left after the ones waiting)', 'err.leaveDecided': 'That request has already been answered.', 'err.leaveStarted': 'That leave has already started.',
   'notif.leaveApproved': 'Your leave from {from} is approved.', 'notif.leaveDeclined': 'Your leave from {from} was declined. {note}', 'notif.leaveCancelled': 'Your leave from {from} was cancelled by management.',
   'feed.leaveAsked': '{name} asks for leave from {from}', 'feed.leaveApproved': 'Leave approved · {name} from {from}', 'feed.leaveDeclined': 'Leave declined · {name} from {from}', 'feed.leaveCancelled': 'Leave cancelled · {name} from {from}',
 };

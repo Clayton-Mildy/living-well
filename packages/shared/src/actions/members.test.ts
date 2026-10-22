@@ -330,7 +330,7 @@ describe('documents, consent and plan (gated)', () => {
     const told = planNotes(a.state);
     expect(told).toHaveLength(1);
     expect(told[0].toUsers).toContain('f1');
-    expect(told[0].params).toMatchObject({ plan: 'gold', date: '01/11/2026' });
+    expect(told[0].params).toMatchObject({ plan: 'Gold', date: '2026-11-01' });
     // a direct change by management tells the family once too
     const m = run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold' }, who(c, 's9'));
     expect(planNotes(m.state)).toHaveLength(1);

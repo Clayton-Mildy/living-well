@@ -2,7 +2,7 @@
 // shared with Add member, members/register), and mark lost. Registration is on paper: staff type the key details in and attach a photo or PDF of the signed form.
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
-  addDays, dayStatus, feeOf, fmtPhone, priceOn, rp, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Relation, type Title,
+  addDays, dayStatus, feeOf, fmtPhone, priceOn, rp, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Relation,
 } from '@cp/shared';
 import {
   ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookableDays, bookingDayCheck, formLinkState, formPath, openGuest, seniorName, trialDays,

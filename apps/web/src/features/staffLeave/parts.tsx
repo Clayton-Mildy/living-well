@@ -14,7 +14,7 @@ export function useDays() {
 }
 
 /** One request as a quiet row: dates and length, the reason, a status word (and a declined note), then whatever action the caller offers. */
-export function LeaveRow({ r, first, action, who }: { r: LeaveRequest; first?: boolean; action?: React.ReactNode; who?: string }) {
+export function LeaveRow({ r, first, action }: { r: LeaveRequest; first?: boolean; action?: React.ReactNode }) {
   const t = useT();
   const range = useRange();
   const days = useDays();
@@ -25,7 +25,7 @@ export function LeaveRow({ r, first, action, who }: { r: LeaveRequest; first?: b
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, minWidth: 0, overflowWrap: 'anywhere' }}>{range(r)}</span>
         <span style={{ fontSize: 14, fontWeight: 500, color: tone, whiteSpace: 'nowrap' }}>{t('people.leave.st_' + r.status)}</span>
       </div>
-      <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{days(r.days)}{who ? ` · ${who}` : ''}</span>
+      <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{days(r.days)}</span>
       <span style={{ fontSize: 15, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{r.reason}</span>
       {r.note ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{t('people.leave.noteIs', { note: r.note })}</span> : null}
       {action ? <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', paddingTop: 6 }}>{action}</div> : null}

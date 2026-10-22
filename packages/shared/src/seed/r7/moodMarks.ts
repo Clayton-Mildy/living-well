@@ -1,7 +1,7 @@
 // Round 12 seed: the mood marks of every seeded visit, so the profile arcs, the overview tile and the lift figure have six months behind them.
 // Marks are stamps: arrival and departure by Caca at the lobby (the visit's own check-in / check-out time), the health mark by Ns. Dewi with the arrival
 // reading, an activity mark by Dinar at the slot of a joined session. Every draw is `unit('mood:<member>:<date>:<moment>')`, so no other seed stream shifts.
-import type { Actor, ClubState, Face, HM, ISODate, MoodMark, MoodMoment, Slot } from '../../types';
+import type { Actor, ClubState, Face, HM, ISODate, MoodMoment, Slot } from '../../types';
 import { live } from '../../util';
 import { moodId } from '../../rules/mood';
 import { unit } from '../history';

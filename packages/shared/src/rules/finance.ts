@@ -123,6 +123,16 @@ export function paymentView(s: ClubState, p: Payment): PaymentView {
   });
   return { p, member: s.members[p.memberId], refunds, refunded, net: p.amount - refunded, credit: p.amount - sum(p.allocations.map((a) => a.amount)), allocations, refundable: sum(allocations.map((a) => a.refundable)) };
 }
+/** The invoice has payments the front desk recorded that finance has not confirmed yet, and nothing confirmed. */
+export const onlyWaitingPayments = (s: ClubState, invoiceId: string): boolean => {
+  let waiting = false;
+  for (const p of live(s.payments)) {
+    if (!p.allocations.some((a) => a.invoiceId === invoiceId)) continue;
+    if (isConfirmed(p)) return false;
+    if (p.approval!.status === 'pending') waiting = true;
+  }
+  return waiting;
+};
 const paymentStamp = (p: Payment) => `${p.receivedOn}T${p.receivedAt || '00:00'}`;
 /** Newest first. */
 export const paymentViews = (s: ClubState): PaymentView[] => sortBy(live(s.payments), (p) => paymentStamp(p) + p.createdAt + p.id, -1).map((p) => paymentView(s, p));

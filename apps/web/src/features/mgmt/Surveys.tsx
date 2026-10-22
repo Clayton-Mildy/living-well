@@ -52,7 +52,9 @@ export function Surveys() {
   // /surveys?survey=<id>&tab=responses opens one survey (the Venue page links to a renter's answer this way)
   const [detail, setDetail] = useState<{ id: string; tab: DetailTab } | null>(() => {
     const id = sp.get('survey');
-    return id && s.surveys[id] ? { id, tab: DETAIL_TABS.find((k) => k === sp.get('tab')) ?? 'summary' } : null;
+    const sv = id ? s.surveys[id] : undefined;
+    // the front desk only opens a live family survey this way (the venue / team ones stay with management)
+    return id && sv && (!desk || (sv.status === 'live' && surveyKind(sv) === 'family')) ? { id, tab: DETAIL_TABS.find((k) => k === sp.get('tab')) ?? 'summary' } : null;
   });
   useEffect(() => { if (sp.get('survey')) setSp({}, { replace: true }); }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

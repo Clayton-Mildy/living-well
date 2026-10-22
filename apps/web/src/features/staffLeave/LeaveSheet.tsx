@@ -40,7 +40,7 @@ export function LeaveSheet({ onClose }: { onClose: () => void }) {
       </div>
       {n !== null ? (
         <span data-testid="leave-count" style={{ fontSize: 15, color: after !== null && after < 0 ? '#9A3D24' : '#5E5852', lineHeight: 1.4 }}>
-          {days(n)}{after !== null ? ` · ${t('people.leave.after', { n: Math.max(0, after) })}` : ''}{after !== null && after < 0 ? ` · ${t('people.err.leaveTooMany')}` : ''}
+          {days(n)}{after !== null ? ` · ${t('people.leave.after', { n: Math.max(0, after) })}` : ''}{after !== null && after < 0 ? ` · ${t('people.err.leaveTooMany', { left: Math.max(0, b ? b.left - b.waiting : 0) })}` : ''}
         </span>
       ) : null}
       <TextField label={t('people.leave.reason')} value={reason} onChange={setReason} placeholder={t('people.leave.reasonPh')} maxLength={200} multiline rows={2} />

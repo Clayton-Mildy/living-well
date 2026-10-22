@@ -34,6 +34,8 @@ export const oneOf = <T extends string>(v: unknown, list: readonly T[], code = '
 const strList = (v: unknown, max = 120, cap = 30): string[] => (Array.isArray(v) ? v.map((x) => txt(x, max)).filter(Boolean).slice(0, cap) : []);
 const enumList = <T extends string>(v: unknown, list: readonly T[]): T[] => (Array.isArray(v) ? Array.from(new Set(v.filter((x): x is T => (list as readonly string[]).includes(x as string)))) : []);
 /** dd/mm/yyyy: the same in English and Indonesian, safe inside stored notification text. */
+/** Plan names are brand words (the app shows Gold / Flex in both languages); the notice carries the label, the reader's app formats the ISO date. */
+const planLabel = (p: Plan) => (p === 'gold' ? 'Gold' : 'Flex');
 export const dmy = (d: ISODate) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
 export const staffIdOf = (a: Actor) => (a.startsWith('staff:') ? a.slice(6) : '');
 /** Full name of an actor (consent records keep who and when). */
@@ -437,7 +439,7 @@ export const membersActions: ActionDef[] = [
       addPlanEntry(m, { from: effective, plan: input.plan, by: ctx.actor }, ctx.today);
       for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending' && r.to === input.plan) { r.status = 'applied'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }
       const to = familyUserIds(d, m.id);
-      if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.planChanged', params: { name: displayName(m), plan: input.plan, date: dmy(effective) }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
+      if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.planChanged', params: { name: displayName(m), plan: planLabel(input.plan), date: effective }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
       feed(ctx, d, m.id, 'sell', 'plan', { plan: input.plan, from: effective, by: ctx.actor });
     },
   }),
@@ -555,7 +557,7 @@ export const membersActions: ActionDef[] = [
       addPlanEntry(m, { from: effective, plan: req.to, by: ctx.actor, requestId: req.id }, ctx.today);
       req.status = 'applied'; req.decidedBy = ctx.actor; req.decidedAt = ctx.nowDT;
       const asker = req.createdBy.startsWith('family:') ? req.createdBy.slice(7) : '';
-      if (asker) ctx.notify({ toUsers: [asker], kind: 'members.notif.planApplied', params: { name: displayName(m), plan: req.to, date: dmy(effective) }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
+      if (asker) ctx.notify({ toUsers: [asker], kind: 'members.notif.planApplied', params: { name: displayName(m), plan: planLabel(req.to), date: effective }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
       feed(ctx, d, m.id, 'sell', 'planApplied', { plan: req.to, from: effective, by: ctx.actor });
     },
   }),

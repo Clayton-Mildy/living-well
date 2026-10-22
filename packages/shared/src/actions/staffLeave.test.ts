@@ -52,6 +52,15 @@ describe('staff leave (actions)', () => {
     fails(s, 'leave.request', { from: '2026-11-16', to: '2026-11-19', reason: 'x' }, 's5', 'people.err.leaveTooMany');
     expect(() => run(s, 'leave.request', { from: '2026-11-16', to: '2026-11-18', reason: 'x' }, 's5')).not.toThrow();
   });
+  it('approving never overwrites a worked / sick / off row: that day keeps it and the request is still approved', () => {
+    const s0 = seed();
+    const id = staffTimeId('s1', '2026-11-09');
+    const s = { ...s0, staffTime: { ...s0.staffTime, [id]: { id, clubId: s0.clubId, createdAt: '2026-10-21T08:00', createdBy: 'staff:s1', staffId: 's1', date: '2026-11-09', kind: 'sick' as const } } } as ClubState;
+    const r = run(s, 'leave.decide', { requestId: 'lv-3', approve: true }, 's9');
+    expect(r.state.leaveRequests['lv-3'].status).toBe('approved');
+    expect(r.state.staffTime[id].kind).toBe('sick');
+    expect(r.state.staffTime[staffTimeId('s1', '2026-11-10')].kind).toBe('leave');
+  });
   it('only management decides; approving writes one leave row per open day and tells the requester', () => {
     const s = seed();
     fails(s, 'leave.decide', { requestId: 'lv-3', approve: true }, 's1', 'err.forbidden');

@@ -27,7 +27,7 @@ async function show(wide: boolean, rep = r) {
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => { root!.render(<MemoryRouter><Routes><Route path="/" element={<><Where /><HeroTiles r={rep} trend={trend} wide={wide} /></>} /><Route path="*" element={<Where />} /></Routes></MemoryRouter>); });
+  await act(async () => { root!.render(<MemoryRouter><Routes><Route path="/" element={<><Where /><HeroTiles r={rep} trend={trend} wide={wide} today={T} /></>} /><Route path="*" element={<Where />} /></Routes></MemoryRouter>); });
 }
 const region = () => document.querySelector('section[aria-label="Key numbers"]')!;
 
@@ -75,6 +75,11 @@ describe('the hero tiles', () => {
     await show(false, monthReport(s, periodFor('lastMonth', T), T, 600));
     expect(tile('collected')).not.toContain('so far');
     expect(tile('collected')).toMatch(/[−+]Rp/);
+    // a partial range that is not the current month ("Last 3 months" ends today) says just "so far"
+    await act(async () => { root!.unmount(); }); host!.remove();
+    await show(false, monthReport(s, periodFor('last3', T), T, 600));
+    expect(tile('collected')).toContain('so far');
+    expect(tile('collected')).not.toContain('so far this month');
   });
   it('the tile button names its value and change (no label overriding them)', async () => {
     await show(false);

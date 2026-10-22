@@ -66,7 +66,7 @@ export const finance = {
   'bill.tilePaid': 'Paid · {month}', 'bill.tileDue': 'Not paid · due {date}', 'bill.tileDueNone': 'Not paid', 'bill.tileOverdue': 'Overdue', 'bill.tileXero': 'Xero pending',
   'bill.dueTitle': 'Due on the {day}', 'bill.dueMeta': 'Open: {n} · {total}', 'bill.overdueMeta': 'Tap a row for call notes and reminders', 'bill.paidMeta': '{total} received', 'bill.xeroMeta': 'Paid, waiting for Xero',
   'bill.search': 'Search by member, invoice or family', 'bill.matches': '{n} of {of}', 'bill.emptyList': 'Nothing here right now',
-  'bill.daysLate': '{n} days late', 'bill.dayLate': '{n} day late', 'bill.due': 'Due {date}', 'bill.dueShort': 'due {date}',
+  'bill.daysLate': '{n} days late', 'bill.dayLate': '{n} day late', 'bill.due': 'Due {date}', 'bill.dueShort': 'due {date}', 'bill.waitingFinance': 'waiting for finance',
   'bill.notePlaceholder': 'Call note, e.g. spoke to Maria, paying on Friday', 'bill.callNote': 'Call note', 'bill.saveNote': 'Save note', 'bill.sendReminder': 'Send reminder',
   'bill.lastReminder': 'Last reminder {when}', 'bill.reminderSent': 'WhatsApp reminder sent with the virtual account number', 'bill.openInvoice': 'Open invoice', 'bill.openProfile': 'Open profile',
 

@@ -280,6 +280,12 @@ const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
     const by = p.approval!.by;
     p.deletedAt = ctx.nowDT;
     decide(p.approval!, ctx, 'rejected', o.reason);
+    // an invoice the waiting payment had counted as settled (a sweep marks it synced) is owed again
+    const after = current(d) as ClubState;
+    for (const a of p.allocations) {
+      const inv = d.invoices[a.invoiceId];
+      if (inv && inv.xero === 'synced' && !inv.voided && balanceOf(after, inv) > 0) inv.xero = 'awaitingPayment';
+    }
     note(out, by);
     return 'done';
   },

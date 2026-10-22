@@ -5,7 +5,7 @@ import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'r
 import { useNavigate } from 'react-router-dom';
 import { rp } from '@cp/shared';
 import { PERIOD_KEYS, editPeriod, periodFor, type InsightPeriod, type PeriodKey } from '@cp/shared/rules/insights';
-import { END_REASONS, LOST_REASONS, heroTrend, monthReport, type Delta, type MonthReport as Report } from '@cp/shared/rules/monthReport';
+import { END_REASONS, LOST_REASONS, heroTrend, monthReport, type Delta } from '@cp/shared/rules/monthReport';
 import { Button, DateField, EmptyState, Group, Icon, PageHead, Pin, Select } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
@@ -22,7 +22,6 @@ const WIDE = 860;
 const PERIOD_KEY: Record<PeriodKey, string> = { thisMonth: 'insights.pThisMonth', lastMonth: 'insights.pLastMonth', last3: 'insights.pLast3', last6: 'insights.pLast6', custom: 'insights.pCustom' };
 const one = (n: number) => String(Math.round(n * 10) / 10);
 const pts = (n: number) => `${Math.round(n * 100)} pt`;
-const count = (n: number) => String(n);
 
 /** One row: the label on the left, the number on the right in 17px with its change under it in 13px. */
 function Stat({ first, label, value, d, df, sub, onClick }: { first?: boolean; label: string; value: ReactNode; d?: Delta<number | null>; df?: (n: number) => string; sub?: ReactNode; onClick?: () => void }) {
@@ -144,7 +143,7 @@ export function MonthReport() {
       {r.empty ? (
         <EmptyState icon="query_stats" title={t('month.empty')} />
       ) : null}
-      {!r.empty ? <HeroTiles r={r} trend={trend} wide={wide} /> : null}
+      {!r.empty ? <HeroTiles r={r} trend={trend} wide={wide} today={today} /> : null}
       {r.empty ? null : wide ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 28, alignItems: 'start' }}>
           <div style={col}>{[money, care]}</div>

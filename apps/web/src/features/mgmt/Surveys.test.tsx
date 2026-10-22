@@ -31,11 +31,11 @@ function openDesk(lang: 'en' | 'id' = 'en') {
   useSession.setState({ lang, club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
   useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 } });
 }
-async function show(ui: ReactElement) {
+async function show(ui: ReactElement, route = '/') {
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => { root!.render(<MemoryRouter>{ui}</MemoryRouter>); });
+  await act(async () => { root!.render(<MemoryRouter initialEntries={[route]}>{ui}</MemoryRouter>); });
 }
 const textOf = (b: HTMLElement) => { const c = b.cloneNode(true) as HTMLElement; c.querySelectorAll('.ms').forEach((x) => x.remove()); return (c.textContent ?? '').trim() || b.getAttribute('aria-label') || ''; };
 const button = (label: string | RegExp) => Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => { const x = textOf(b); return typeof label === 'string' ? x === label || b.getAttribute('aria-label') === label : label.test(x); });
@@ -230,6 +230,14 @@ describe('surveys for the front desk (round 13)', () => {
     await click(rowsOf().find((r) => r.getAttribute('data-send-to') === 'f2'));
     expect(send).toHaveBeenCalledWith('survey.send', { surveyId: 'sv1', familyId: 'f2' });
     expect(document.querySelector('[data-send-to]')).toBeNull(); // the sheet closed
+  });
+  it('a ?survey= link to a venue survey does not open it for the desk, a family one does', async () => {
+    openDesk();
+    await show(<Surveys />, '/surveys?survey=svv1');
+    expect(document.body.textContent).not.toContain('Responses'); // still the list, no detail
+    await act(async () => { root!.unmount(); }); host!.remove();
+    await show(<Surveys />, '/surveys?survey=sv1');
+    expect(document.body.textContent).toContain('Responses'); // the detail of sv1
   });
   it('management has the same button on the live family card, next to Close', async () => {
     openClub();

@@ -68,7 +68,7 @@ export const finance: Same<typeof EN> = {
   'bill.tilePaid': 'Lunas · {month}', 'bill.tileDue': 'Belum dibayar · jatuh tempo {date}', 'bill.tileDueNone': 'Belum dibayar', 'bill.tileOverdue': 'Terlambat', 'bill.tileXero': 'Menunggu Xero',
   'bill.dueTitle': 'Jatuh tempo tanggal {day}', 'bill.dueMeta': 'Terbuka: {n} · {total}', 'bill.overdueMeta': 'Ketuk baris untuk catatan telepon dan pengingat', 'bill.paidMeta': '{total} diterima', 'bill.xeroMeta': 'Sudah dibayar, menunggu Xero',
   'bill.search': 'Cari anggota, tagihan, atau keluarga', 'bill.matches': '{n} dari {of}', 'bill.emptyList': 'Belum ada apa-apa di sini',
-  'bill.daysLate': 'Terlambat {n} hari', 'bill.dayLate': 'Terlambat {n} hari', 'bill.due': 'Jatuh tempo {date}', 'bill.dueShort': 'jatuh tempo {date}',
+  'bill.daysLate': 'Terlambat {n} hari', 'bill.dayLate': 'Terlambat {n} hari', 'bill.due': 'Jatuh tempo {date}', 'bill.dueShort': 'jatuh tempo {date}', 'bill.waitingFinance': 'menunggu keuangan',
   'bill.notePlaceholder': 'Catatan telepon, mis. bicara dengan Maria, bayar hari Jumat', 'bill.callNote': 'Catatan telepon', 'bill.saveNote': 'Simpan catatan', 'bill.sendReminder': 'Kirim pengingat',
   'bill.lastReminder': 'Pengingat terakhir {when}', 'bill.reminderSent': 'Pengingat WhatsApp terkirim bersama nomor virtual account', 'bill.openInvoice': 'Buka tagihan', 'bill.openProfile': 'Buka profil',
 

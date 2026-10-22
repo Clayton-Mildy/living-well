@@ -17,11 +17,12 @@ function request(d: Draft<ClubState>, id: string, ctx: Ctx): Draft<LeaveRequest>
   return r;
 }
 const nameOf = (d: Draft<ClubState>, staffId: string) => d.staff[staffId]?.knownAs || d.staff[staffId]?.name.split(' ')[0] || staffId;
-/** Write (or clear) the `leave` rows of an approved request. */
+/** Write the `leave` rows of an approved request, never over a worked / sick / off row that is already there. */
 function putRows(d: Draft<ClubState>, r: LeaveRequest, ctx: Ctx) {
   for (const date of leaveDates(S(d), r.from, r.to)) {
     const id = staffTimeId(r.staffId, date);
     const cur = d.staffTime[id];
+    if (cur && !cur.deletedAt && cur.kind !== 'leave') continue; // a worked, sick or day-off row stays as it is; the request is still approved
     d.staffTime[id] = { id, clubId: ctx.clubId, createdAt: cur?.createdAt ?? ctx.nowDT, createdBy: cur?.createdBy ?? ctx.actor, staffId: r.staffId, date, kind: 'leave' };
   }
 }

@@ -19,7 +19,7 @@ const jt = (n: number) => `Rp ${one(n / 1e6).replace('.', ',')} jt`;
 type Key = 'collected' | 'active' | 'index' | 'conversion';
 interface Spec { key: Key; label: string; d: Delta<number | null>; show: (n: number | null) => string; diff: (n: number) => string; to: string; sub?: string; soFar?: boolean }
 
-export function HeroTiles({ r, trend, wide }: { r: MonthReport; trend: HeroTrend; wide: boolean }) {
+export function HeroTiles({ r, trend, wide, today }: { r: MonthReport; trend: HeroTrend; wide: boolean; today: string }) {
   const t = useT();
   const fmt = useFmt();
   const go = useNavigate();
@@ -28,6 +28,8 @@ export function HeroTiles({ r, trend, wide }: { r: MonthReport; trend: HeroTrend
   const dash = (f: (n: number) => string) => (n: number | null) => (n === null ? '—' : f(n));
   // a partial month ("This month" today) has no honest comparison with the whole month before: say "so far" where the revenue change would be
   const partial = isPartialMonth(r.period);
+  // "so far this month" is only true when the period runs from the 1st of the current month to a day in it; any other partial range just says "so far"
+  const thisMonth = r.period.from === `${today.slice(0, 7)}-01` && r.period.to.slice(0, 7) === today.slice(0, 7);
   const specs: Spec[] = [
     { key: 'collected', label: t('month.heroCollected'), d: r.hero.collected, show: dash(rp), diff: rp, to: '/payments', soFar: partial },
     { key: 'active', label: t('month.heroActive'), d: r.hero.active, show: dash(count), diff: count, to: '/members' },
@@ -40,7 +42,7 @@ export function HeroTiles({ r, trend, wide }: { r: MonthReport; trend: HeroTrend
     <section aria-label={t('month.hero')}>
       <div data-grid style={{ display: 'grid', gridTemplateColumns: wide ? 'repeat(4, minmax(0, 1fr))' : 'repeat(2, minmax(0, 1fr))', gap: wide ? 12 : 8 }}>
         {specs.map((x) => {
-          const diff = x.soFar ? t('month.heroSoFar') : signed(x.d.diff, x.diff);
+          const diff = x.soFar ? t(thisMonth ? 'month.heroSoFar' : 'month.heroSoFarAny') : signed(x.d.diff, x.diff);
           // a month with nothing to say is left out of the line; the range stays the six months so the others keep their places
           const points = trend.months.flatMap((m, i) => { const v = trend[x.key][i]; return v === null ? [] : [{ date: `${m}-15`, value: v }]; });
           return (

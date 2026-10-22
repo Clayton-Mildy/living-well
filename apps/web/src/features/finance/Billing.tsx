@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { actorName, fmtPhone, memberName, displayName, rp, runDone, suspensions, ym } from '@cp/shared';
-import { billingBoard, invoicePeriod, nextRunPeriod, runPlan, type InvoiceView } from '@cp/shared/rules/finance';
+import { billingBoard, invoicePeriod, onlyWaitingPayments, nextRunPeriod, runPlan, type InvoiceView } from '@cp/shared/rules/finance';
 import { Avatar, Button, EmptyState, Eyebrow, Icon, PageHead, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
@@ -197,8 +197,9 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
   const { isPhone } = useDevice();
   const [note, setNote] = useState('');
   const { inv, member, payer } = v;
+  const waiting = onlyWaitingPayments(s, inv.id);
   const name = member ? memberName(member) : inv.memberId;
-  const sub = [inv.number, fmonth(invoicePeriod(inv), true), payer ? `${payer.name} · ${fmtPhone(payer.phone)}` : '', v.status === 'partial' ? t('finance.bill.dueShort', { date: fds(inv.dueDate) }) : ''].filter(Boolean).join(' · ');
+  const sub = [inv.number, fmonth(invoicePeriod(inv), true), payer ? `${payer.name} · ${fmtPhone(payer.phone)}` : '', v.status === 'partial' ? t('finance.bill.dueShort', { date: fds(inv.dueDate) }) : '', waiting ? t('finance.bill.waitingFinance') : ''].filter(Boolean).join(' · ');
   const badge =
     v.status === 'overdue' ? <Badge kind="overdue" label={t(v.late === 1 ? 'finance.bill.dayLate' : 'finance.bill.daysLate', { n: v.late })} />
     : v.status === 'partial' ? <Badge kind="partial" label={t('status.partial')} />
@@ -226,7 +227,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
           <span style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ ...rowTitle, fontSize: 16, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
             <span style={{ ...rowSub, fontSize: 13, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-              {[inv.number, fmonth(invoicePeriod(inv), true), v.status === 'partial' ? t('finance.bill.dueShort', { date: fds(inv.dueDate) }) : ''].filter(Boolean).join(' · ')}
+              {[inv.number, fmonth(invoicePeriod(inv), true), v.status === 'partial' ? t('finance.bill.dueShort', { date: fds(inv.dueDate) }) : '', waiting ? t('finance.bill.waitingFinance') : ''].filter(Boolean).join(' · ')}
               {payer ? <span className="cp-hide-phone"> · {payer.name} · {fmtPhone(payer.phone)}</span> : null}
             </span>
           </span>

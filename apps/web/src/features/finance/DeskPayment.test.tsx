@@ -8,6 +8,7 @@ import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { InvoiceSheet } from './InvoiceSheet';
 import { Payments } from './Payments';
+import { Billing } from './Billing';
 
 let root: Root | null = null;
 let host: HTMLElement | null = null;
@@ -56,6 +57,15 @@ describe('the front desk records a payment', () => {
     expect(document.body.textContent).toContain('Waiting for finance');
     expect(button('Record payment')).toBeUndefined(); // nobody records it twice
     expect(button(/^Refund/)).toBeUndefined();
+  });
+  it('the Invoices list says "waiting for finance" on an invoice whose only payment is waiting, and not on the others', async () => {
+    openAs('s1', true);
+    await show(<Billing />);
+    const meta = (num: string) => Array.from(document.querySelectorAll<HTMLElement>('button[aria-label$=", ' + num + '"]')).map((b) => b.textContent ?? '');
+    expect(meta('INV-2610-001').join('|')).toContain('waiting for finance');
+    const others = Array.from(document.querySelectorAll<HTMLElement>('button[aria-label*=", INV-"]')).filter((b) => !(b.getAttribute('aria-label') ?? '').endsWith('INV-2610-001'));
+    expect(others.length).toBeGreaterThan(0);
+    expect(others.some((b) => (b.textContent ?? '').includes('waiting for finance'))).toBe(false);
   });
   it('finance sees "Waiting for you · 1" on Payments with Confirm', async () => {
     openAs('s10', true);

@@ -362,4 +362,11 @@ describe('payments the front desk recorded (round 13)', () => {
     expect(approvalHistory(x.state).some((h) => h.type === 'payments' && h.status === 'rejected' && h.reason === 'No cash in the drawer')).toBe(true);
     expect(approvalCounts(x.state).payments).toBe(0);
   });
+  it('a rejection puts an invoice the waiting payment had left synced back to awaiting payment', () => {
+    const r = rec();
+    const id = r.result.paymentId as string;
+    const synced = { ...r.state, invoices: { ...r.state.invoices, 'INV-2610-001': { ...r.state.invoices['INV-2610-001'], xero: 'synced' as const } } };
+    const x = run(synced, 'approval.reject', { type: 'payments', ids: [id], reason: 'No cash in the drawer' }, 's10');
+    expect(x.state.invoices['INV-2610-001'].xero).toBe('awaitingPayment');
+  });
 });
