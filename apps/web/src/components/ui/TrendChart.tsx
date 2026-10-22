@@ -48,6 +48,8 @@ export interface TrendChartProps {
   /** small and without axes (a header sparkline); the readout goes in a line under the chart, which shows `caption` until you touch it */
   compact?: boolean;
   caption?: ReactNode;
+  /** how a moment's date reads in the tooltip head and the live text (default: "Sat 15 Aug"); a monthly line says "September 2026" */
+  dateLabel?: (d: ISODate) => string;
   /** a key to the lines (solid / dashed) under the chart, when there is more than one */
   legend?: boolean;
   /** shown in place of the chart when nothing falls inside the range */
@@ -138,7 +140,7 @@ function useMeasuredWidth(ref: RefObject<HTMLElement>): number {
 
 interface TipRow { key: string; label: string; color: string; dashed: boolean; text: string; time?: HM; status?: Health; note?: string }
 
-export function TrendChart({ series, band, format, unit, from, to, kind = 'line', height = 140, ariaLabel, describe, compact = false, caption, legend, empty }: TrendChartProps) {
+export function TrendChart({ series, band, format, unit, from, to, kind = 'line', height = 140, ariaLabel, describe, compact = false, caption, dateLabel, legend, empty }: TrendChartProps) {
   const t = useT();
   const { fd } = useFmt();
   const wrap = useRef<HTMLDivElement>(null);
@@ -191,7 +193,7 @@ export function TrendChart({ series, band, format, unit, from, to, kind = 'line'
     });
   }
   const extra = act ? describe?.(act.date) : undefined;
-  const head = act ? dayLabel(act.date, !compact) + (act.time && !compact ? ` · ${act.time}` : '') : '';
+  const head = act ? (dateLabel ? dateLabel(act.date) : dayLabel(act.date, !compact)) + (act.time && !compact ? ` · ${act.time}` : '') : '';
   const statusWord = (s?: Health) => (s ? t('status.' + s) : '');
   const rowText = (r: TipRow) => [vis.length > 1 ? r.label : '', r.time ?? '', r.text, statusWord(r.status)].filter(Boolean).join(' ');
   const liveText = act ? [head, ...rows.map(rowText), ...rows.flatMap((r) => (r.note ? [r.note] : [])), extra].filter(Boolean).join('. ') : '';

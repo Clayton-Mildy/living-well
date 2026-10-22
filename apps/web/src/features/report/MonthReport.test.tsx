@@ -62,4 +62,23 @@ describe('the month report page', () => {
     await click(Array.from(document.querySelectorAll('section[aria-label="Money"] button')).find((b) => /Billed/.test(b.textContent || '')));
     expect(document.querySelector('[data-testid="where"]')?.textContent).toBe('/billing');
   });
+
+  it('four key numbers lead the page without a heading of their own, and the owner summary starts with them', async () => {
+    open();
+    await show(<MonthReport />, '/monthReport');
+    const hero = document.querySelector('section[aria-label="Key numbers"]')!;
+    expect(hero.querySelectorAll('[data-tile]')).toHaveLength(4);
+    const r = monthReport(state, periodFor('thisMonth', T), T, 598);
+    expect(hero.textContent).toContain(`Revenue collected${rp(r.hero.collected.cur)}`);
+    expect(heads()).toEqual(['Money', 'Members', 'Care and mood', 'Pipeline and team']);
+    await click(button(/Send to owner/));
+    const lines = (document.querySelector('[data-testid="owner-summary"]')?.textContent ?? '');
+    const at = (k: string) => lines.indexOf(k);
+    expect(lines).toContain(`Revenue collected: ${rp(r.hero.collected.cur)} (so far this month)`); // a partial month is not compared with the whole month before
+    expect(at('Revenue collected:')).toBeGreaterThan(-1);
+    expect(at('Revenue collected:')).toBeLessThan(at('Active members:'));
+    expect(at('Active members:')).toBeLessThan(at('Mood index:'));
+    expect(at('Mood index:')).toBeLessThan(at('Enquiry → joined:'));
+    expect(at('Enquiry → joined:')).toBeLessThan(at('Money'));
+  });
 });

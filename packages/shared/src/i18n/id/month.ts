@@ -4,6 +4,7 @@ import type { month as EN } from '../en/month';
 
 export const month: Same<typeof EN> = {
   title: 'Laporan bulanan', period: 'Periode', vsPrev: 'vs {period}', empty: 'Belum ada catatan di periode ini',
+  hero: 'Angka utama', heroCollected: 'Pendapatan diterima', heroActive: 'Anggota aktif', heroMood: 'Indeks suasana hati', heroConversion: 'Calon → bergabung', trendAria: '{label}, enam bulan', heroSoFar: 'sejauh ini bulan ini', trendNone: 'Belum ada data',
   money: 'Keuangan', members: 'Anggota', care: 'Perawatan dan suasana hati', pipeline: 'Calon anggota dan tim',
   billed: 'Ditagihkan', collected: 'Diterima', outstanding: 'Lewat jatuh tempo', notYetDue: 'Belum jatuh tempo', extraDays: 'Hari tambahan', venueIncome: 'Pendapatan sewa ruang', refunds: 'Pengembalian dana',
   active: 'Anggota aktif', joined: 'Bergabung', ended: 'Berhenti', renewalsKept: 'Perpanjangan lanjut', renewalsLost: 'Perpanjangan berhenti', onLeave: 'Cuti', checkOn: 'Lama tidak datang',

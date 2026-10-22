@@ -1,7 +1,7 @@
 // Round 12: "Send to owner" from the month report. A short WhatsApp-style summary of the period (key numbers and how they moved since the period before),
 // shown in the Broadcast bubble, with Copy and a simulated Send on WhatsApp.
 import type { InsightPeriod } from '@cp/shared/rules/insights';
-import type { Delta, MonthReport } from '@cp/shared/rules/monthReport';
+import { isPartialMonth, type Delta, type MonthReport } from '@cp/shared/rules/monthReport';
 import { Button, Dialog } from '../../components/ui';
 import { useNow } from '../../lib/clock';
 import { useT, type TFn } from '../../lib/i18n';
@@ -20,14 +20,17 @@ export function ownerSummaryLines(r: MonthReport, t: TFn, fmt: SummaryFmt): stri
   const range = fmt.range ? fmt.range(r.period) : `${r.period.from} – ${r.period.to}`;
   const one = (n: number) => String(Math.round(n * 10) / 10);
   const pts = (n: number) => `${Math.round(n * 100)} pt`;
-  const row = (key: string, d: Delta<number | null>, f: (n: number) => string, df: (n: number) => string = f) => {
-    const label = t(`month.${key}`), cur = d.cur === null ? '—' : f(d.cur), diff = signed(d.diff, df);
+  const row = (key: string, d: Delta<number | null>, f: (n: number) => string, df: (n: number) => string = f, note?: string) => {
+    const label = t(`month.${key}`), cur = d.cur === null ? '—' : f(d.cur), diff = note ?? signed(d.diff, df);
     return diff ? t('month.sum.rowDiff', { label, cur, diff }) : t('month.sum.row', { label, cur });
   };
   const n = String;
-  const { money: m, members: mb, care: c, pipeline: p } = r;
+  const { money: m, members: mb, care: c, pipeline: p, hero: h } = r;
   return [
     `*${t('month.sum.head', { period: range })}*`,
+    '',
+    // round 13: the same four numbers the page leads with
+    row('heroCollected', h.collected, fmt.rp, undefined, isPartialMonth(r.period) ? t('month.heroSoFar') : undefined), row('heroActive', h.active, n), row('heroMood', h.index, one), row('heroConversion', h.conversion, (x) => fmt.pct(x), pts),
     '',
     `*${t('month.money')}*`,
     row('billed', m.billed, fmt.rp), row('collected', m.collected, fmt.rp), row('outstanding', m.outstanding, fmt.rp), row('notYetDue', m.notYetDue, fmt.rp),
