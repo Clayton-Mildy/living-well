@@ -34,6 +34,8 @@ Phase 1 is on `main` (merged this morning). Phase 2 is on branch `round13` (comp
 15. **The online registration form is stepped** (your review note). Five steps like the staff flow, Back / Continue, per-step errors; the draft is saved on the phone and through the link, so the family can continue on any phone; if two phones edit, a choice appears; the lead card reads "In progress · step n of 5"; Join pre-fills from the partial draft.
     *Ruling:* the form renders at zoom 1 (about 14% larger than the app) so chips and buttons reach 44 px.
 
+16. **Sidebar sections for every staff role** (your review note). Front desk, nurse, activity, kitchen and finance sidebars are grouped like management's: the role's own daily work first, then Front desk / Kitchen / Club headers. Phone bars unchanged.
+
 ## Things to decide or overrule
 - Gender from title (3) — add a gender choice under "Other"?
 - Revenue tile "so far this month" (10) — or show the delta anyway?

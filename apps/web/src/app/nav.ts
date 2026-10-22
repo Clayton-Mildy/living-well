@@ -29,6 +29,13 @@ export const NAVG: Record<string, [string | null, NavItem[]][]> = {
   ],
 };
 NAVS.mgmt = NAVG.mgmt.reduce<NavItem[]>((a, g) => a.concat(g[1]), []);
+// KC round 13 §15: every staff role's sidebar is sectioned like management's — a regrouping of the SAME items (the phone bar keeps NAVS order)
+const pick = (role: Role, keys: string[]): NavItem[] => keys.map((k) => { const x = NAVS[role].find((i) => i.key === k); if (!x) throw new Error(`nav: ${role} has no "${k}"`); return x; });
+NAVG.lobby = [[null, pick('lobby', ['today', 'members', 'tasks'])], ['nav.g_front', pick('lobby', ['enquiries', 'renewals', 'venue', 'surveys'])], ['nav.g_kitchen', pick('lobby', ['menu'])], ['nav.g_club', pick('lobby', ['contacts', 'requests'])]];
+NAVG.nurse = [[null, pick('nurse', ['today', 'readings', 'members', 'tasks'])], ['nav.g_club', pick('nurse', ['requests', 'contacts'])]];
+NAVG.activity = [[null, pick('activity', ['today', 'camera', 'log', 'tasks'])], ['nav.g_club', pick('activity', ['members', 'calendar', 'requests', 'contacts'])]];
+NAVG.kitchen = [[null, pick('kitchen', ['today', 'feedback', 'tasks'])], ['nav.g_club', pick('kitchen', ['requests', 'contacts'])]];
+NAVG.finance = [[null, pick('finance', ['today', 'payments', 'budget', 'receipts'])], ['nav.g_kitchen', pick('finance', ['stock'])], ['nav.g_club', pick('finance', ['guests', 'members', 'tasks', 'directory'])]];
 export const PHONE_NAV: Partial<Record<Role, NavItem[]>> = {
   mgmt: [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month')],
   // KC round 6: the teacher's bar has Calendar instead of Members (Members and Requests sit under More)
