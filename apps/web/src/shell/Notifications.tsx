@@ -26,7 +26,7 @@ const KIND_ICON: Record<string, string> = {
   // KC round 7
   'renewals.notif.act.approve': 'fact_check', 'renewals.notif.plan': 'sell', 'renewals.notif.leave': 'beach_access', 'renewals.notif.leave2': 'beach_access',
   'tasks.notif.act.lunch': 'restaurant', 'activity.notif.act.session': 'groups',
-  'guests.notif.booked': 'co_present', 'guests.notif.cancelled': 'event_busy', 'guests.notif.toPay': 'request_quote', 'guests.notif.paidCancelled': 'currency_exchange', 'mgmt.notif.venueRated': 'star',
+  'guests.notif.booked': 'co_present', 'guests.notif.cancelled': 'event_busy', 'guests.notif.toPay': 'request_quote', 'guests.notif.paidCancelled': 'currency_exchange', 'mgmt.notif.venueRated': 'star', 'occ.notif.birthdaySoon': 'cake',
 };
 // kinds without their own icon fall back to their area's icon
 const AREA_ICON: Record<string, string> = {

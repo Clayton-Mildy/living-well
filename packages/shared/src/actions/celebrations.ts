@@ -8,6 +8,8 @@ import { CELEBRATION_GUESTS_MAX, CELEBRATION_KINDS, celebrationIsPast, checkCele
 import { dm, hm, int, isoDate, obj, oneOf, str } from '../rules/mgmtParse';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
+/** Round 14: the activity team prepares a birthday too (Prepare on its Today); what it asks for is requested, like the front desk's. */
+const canRequest = (u: User) => hasRole(u, 'lobby', 'activity', 'mgmt');
 const id80 = (v: unknown, field: string) => str(v, 80, { required: true, field });
 const S = (d: Draft<ClubState>) => d as unknown as ClubState;
 
@@ -42,7 +44,7 @@ const slotOf = (c: { roomId: string; date: ISODate; from: HM; to: HM }) => ({ ro
 export const celebrationActions = [
   defineAction<CelIn>({
     name: 'celebration.request',
-    can: lobbyOrMgmt,
+    can: canRequest,
     parse(raw) {
       const o = obj(raw);
       return { memberId: id80(o.memberId, 'memberId'), ...common(o, false) } as CelIn;

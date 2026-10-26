@@ -1,7 +1,7 @@
 // Round 12 seed: two celebrations booked at the front desk. Opa Budi's birthday party (m46, confirmed by management: Garden room, 12 guests, a chocolate
 // cake without nuts) on the third open day after T, so the kitchen, the calendar and his family's Today all show it; and an anniversary lunch for Opa Tjahjadi
 // (m20) that Caca has asked for and management has not answered yet. Both land on open club days, so they hold for T = 21 Oct (tests) and any other demo day.
-// No random draws. The same date is Opa Budi's real birthday (Task 14: he turns 80 that day), so the occasions on Arrivals, the menu and the calendar agree with the party.
+// No random draws. Round 14 adds Opa Hendra's birthday about ten days out, without a celebration. The same date is Opa Budi's real birthday (Task 14: he turns 80 that day), so the occasions on Arrivals, the menu and the calendar agree with the party.
 import type { Celebration, ClubState, ISODate } from '../../types';
 import { dayStatus } from '../../rules/core';
 import { celebrationTitle } from '../../rules/celebrations';
@@ -28,6 +28,9 @@ export function seedCelebrations(s: ClubState, T: ISODate): void {
   const row = (id: string, c: Omit<Celebration, 'id' | 'clubId' | 'createdAt' | 'createdBy' | 'requestedBy'>): Celebration => ({ id, clubId: C, createdAt: `${addDays(T, -1)}T15:20`, createdBy: 'staff:s1', requestedBy: 'staff:s1', ...c });
   const budi = addOpenDays(s, T, 3);
   if (s.members.m46) s.members.m46.dob = `1946-${budi.slice(5).replace('02-29', '02-28')}`; // turns 80 on the party day
+  // round 14: Opa Hendra (m2) has a birthday on the first open day from ten days after T (turning 85, so his age today stays 84), with no celebration yet:
+  // the Prepare button and the two-week list show on every demo day, and the day can hold a party
+  if (s.members.m2) { const bd = openDayFrom(s, addDays(T, 10)); s.members.m2.dob = `${+bd.slice(0, 4) - 85}-${bd.slice(5)}`; }
   if (s.members.m46 && s.rooms['room-garden-room']) {
     s.celebrations['cel-seed-1'] = row('cel-seed-1', {
       memberId: 'm46', kind: 'birthday', title: celebrationTitle('birthday', 'Opa Budi', 80, 'en'), date: budi, from: '15:00', to: '17:00', roomId: 'room-garden-room', guests: 12,

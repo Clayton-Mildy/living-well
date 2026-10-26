@@ -1,13 +1,15 @@
 // Birthdays and anniversaries (round 12): the "This week" block in the Arrivals rail and the cake on the member row.
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { buildSeed, translate } from '@cp/shared';
-import { addOpenDays } from '@cp/shared/seed/r7/celebrations';
+import { addOpenDays, openDayFrom } from '@cp/shared/seed/r7/celebrations';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
+import { occasionsAhead } from '@cp/shared/rules/occasions';
 import { AlsoToday, type GuestActions } from './AlsoToday';
+import { OccasionRows } from './OccasionRows';
 import { MemberList } from './MemberList';
 
 const T = '2026-10-21';
@@ -53,5 +55,41 @@ describe('occasions on Arrivals', () => {
     expect(icons).toHaveLength(1);
     expect(icons[0].getAttribute('aria-label')).toBe('Birthday today');
     expect(icons[0].closest('button')!.textContent).toContain('Budi');
+  });
+});
+
+describe('birthday rows with Prepare (round 14)', () => {
+  // Opa Hendra (m2) has a birthday about ten days out and no celebration; Opa Budi (m46) has a confirmed party
+  const rows = (id: string) => occasionsAhead(useReplica.getState().view!, T).filter((o) => o.kind === 'birthday' && o.member.id === id);
+  beforeEach(() => { setup(T); });
+  it('Prepare opens the request form on that member and day, and a request in flight shows its status instead', async () => {
+    await show(<OccasionRows items={rows('m2')} />);
+    const day = rows('m2')[0].date;
+    expect(day).toBe(openDayFrom(useReplica.getState().view!, '2026-10-31'));
+    expect(host!.querySelector('[data-testid="celebration-status-m2"]')).toBeNull();
+    await act(async () => { host!.querySelector<HTMLButtonElement>('[data-testid="prepare-m2"] button')!.click(); });
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.textContent).toContain('New celebration');
+    expect([...dialog.querySelectorAll('input')].map((i) => i.value)).toContain("Opa Hendra's birthday");
+    expect(dialog.textContent).toContain('13:30');
+    await act(async () => { root!.unmount(); });
+    host!.remove();
+    const s = useReplica.getState().view!;
+    const withCel = { ...s, celebrations: { ...s.celebrations, c1: { id: 'c1', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s1', memberId: 'm2', kind: 'birthday', title: 'x', date: day, from: '13:30', to: '15:00', roomId: 'r', guests: 10, status: 'requested', requestedBy: 'staff:s1' } } } as typeof s;
+    useReplica.setState({ view: withCel, confirmed: withCel });
+    document.body.innerHTML = '';
+    await show(<OccasionRows items={rows('m2')} />);
+    expect(host!.querySelector('[data-testid="prepare-m2"]')).toBeNull();
+    expect(host!.querySelector('[data-testid="celebration-status-m2"]')!.textContent).toBe('Requested');
+  }, 20000);
+  it('a confirmed party shows Confirmed, and a nurse sees the birthday without Prepare', async () => {
+    await show(<OccasionRows items={rows('m46')} />);
+    expect(host!.querySelector('[data-testid="celebration-status-m46"]')!.textContent).toBe('Confirmed');
+    await act(async () => { root!.unmount(); });
+    host!.remove();
+    useSession.setState({ user: { kind: 'staff', id: 's8', name: 'Dewi', role: 'nurse', clubId: 'citra', clubs: ['citra'] } });
+    await show(<OccasionRows items={rows('m2')} />);
+    expect(host!.querySelector('[data-member="m2"]')).not.toBeNull();
+    expect(host!.querySelector('[data-testid^="prepare-"], [data-testid^="celebration-status-"]')).toBeNull();
   });
 });

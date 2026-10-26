@@ -3,7 +3,7 @@ import { addDays, buildSeed, type ClubState } from '../index';
 import { addOpenDays } from '../seed/r7/celebrations';
 import { dayInfo } from './calendar';
 import { famDay } from './famCalendar';
-import { occasionsInRange, occasionsThisWeek } from './occasions';
+import { occasionsAhead, occasionsInRange, occasionsThisWeek } from './occasions';
 
 const T = '2026-10-21';
 const roster = () => buildSeed(T, 598, { roster: true }).citra;
@@ -13,6 +13,17 @@ describe('occasions (birthdays and anniversaries)', () => {
     const s = buildSeed().citra;
     const o = occasionsThisWeek(s, T).find((x) => x.member.id === 'm46' && x.kind === 'birthday');
     expect(o).toMatchObject({ years: 80, date: addOpenDays(s, T, 3) });
+  });
+
+  it('ahead looks fourteen days out (today and the 14 days after it)', () => {
+    const s = buildSeed().citra;
+    s.members.m2.dob = `1942-${addDays(T, 14).slice(5)}`;
+    s.members.m10.dob = `1944-${addDays(T, 15).slice(5)}`;
+    const ids = occasionsAhead(s, T).filter((o) => o.kind === 'birthday').map((o) => o.member.id);
+    expect(ids).toContain('m2');
+    expect(ids).not.toContain('m10');
+    expect(occasionsAhead(s, T)).toEqual(occasionsInRange(s, T, addDays(T, 14)));
+    expect(occasionsThisWeek(s, T).some((o) => o.member.id === 'm2')).toBe(false);
   });
 
   it('a member without a date of birth never appears; inactive members are left out', () => {

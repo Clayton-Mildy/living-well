@@ -34,6 +34,14 @@ describe('celebrations (actions)', () => {
     expect(m.state.celebrations[mid2].decidedAt).toBeTruthy();
     expect(updatesFor(m.state, user(m.state, 's9')).some((x) => x.kind === 'celeb.notif.requested')).toBe(false);
   });
+  it('the activity team requests too: it comes back requested and management is told (Prepare on a birthday)', () => {
+    const s = seed();
+    const r = run(s, 'celebration.request', req, 's5');
+    const [id] = created(s, r.state);
+    expect(r.state.celebrations[id]).toMatchObject({ status: 'requested', memberId: 'm46', requestedBy: 'staff:s5' });
+    expect(updatesFor(r.state, user(r.state, 's9')).filter((x) => x.kind === 'celeb.notif.requested')).toHaveLength(1);
+    fails(r.state, 'celebration.decide', { celebrationId: id, status: 'confirmed' }, 's5', 'err.forbidden');
+  });
   it('validates and refuses what the front desk cannot hold', () => {
     const s = seed();
     fails(s, 'celebration.request', { ...req, guests: 201 }, 's1', 'err.invalid');

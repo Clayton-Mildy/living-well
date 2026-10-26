@@ -212,3 +212,24 @@ test('Maria sees the daily mood on Today: Oma Lina checked in with a Good face s
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
+
+test('Birthdays: Dinar sees Opa Hendra’s birthday two weeks ahead on Today, taps Prepare, sends the pre-filled request, and the row shows Requested', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's5', '/today');
+  // the small seed gives Opa Hendra a birthday on the first open day from 31 Oct (Mon 2 Nov), with no celebration yet; Opa Budi's party is confirmed already
+  const list = page.getByTestId('birthdays-ahead');
+  await expect(list.locator('[data-member="m2"]')).toContainText('turns 85 on Mon 2 Nov');
+  await expect(list.getByTestId('celebration-status-m46')).toHaveText('Confirmed');
+  await assertNoHorizontalScroll(page);
+  await list.getByTestId('prepare-m2').getByRole('button').click();
+  const d = page.getByRole('dialog').last();
+  await expect(d.getByLabel('Title')).toHaveValue("Opa Hendra's birthday");
+  await expect(d).toContainText('13:30');
+  await expect(d).toContainText('15:00');
+  await assertNoHorizontalScroll(page);
+  await d.getByRole('button', { name: 'Send request' }).click();
+  await expect(page.getByRole('dialog')).toHaveCount(0);
+  await expect(list.getByTestId('celebration-status-m2')).toHaveText('Requested');
+  await expect(list.getByTestId('prepare-m2')).toHaveCount(0);
+  c.assertClean();
+});

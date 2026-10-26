@@ -58,12 +58,12 @@ export function phoneNav(role: Role): { items: NavItem[]; more: boolean } {
 const EXTRA: Partial<Record<Role, string[]>> = {
   // round 8: pushed pages of the family app (Billing and Contacts from Me, a parent's profile, health history) and the monthly memories
   family: ['billing', 'contacts', 'memories', 'profile', 'history'],
-  lobby: ['calendar', 'photos', 'guests', 'surveys'], // guests: link-only, read-only (the Arrivals rail's "Guests today")
+  lobby: ['calendar', 'photos', 'guests', 'surveys', 'celebrations'], // guests: link-only, read-only (the Arrivals rail's "Guests today"); celebrations: link-only, the birthday reminder's request form (round 14)
   nurse: ['calendar', 'contacts'],
   kitchen: ['calendar', 'contacts', 'drafts'], // KC round 7: the quick camera's Drafts (activity and management have them in the Camera)
   finance: ['calendar', 'contacts', 'renewals'], // round 14: renewals is link-only, for the Unpaid list (the Month report, the duty)
-  activity: ['photos', 'contacts', 'drafts'],
-  mgmt: ['photos', 'contacts', 'drafts', 'lunch'], // photos: old links to the standalone library; lunch: the kitchen duty's link (round 14)
+  activity: ['photos', 'contacts', 'drafts', 'celebrations'],
+  mgmt: ['photos', 'contacts', 'drafts', 'lunch', 'celebrations'], // photos: old links to the standalone library; lunch: the kitchen duty's link (round 14)
 };
 export const allowedKeys = (role: Role) => new Set([...NAVS[role].map((x) => x.key), ...(EXTRA[role] || [])]);
 
@@ -71,7 +71,7 @@ export type ScreenId =
   | 'arrivals' | 'health' | 'activityToday' | 'kmenu' | 'klunch' | 'fin' | 'overview' | 'familyToday' | 'requests' | 'enq' | 'members' | 'readings' | 'camera' | 'dlog'
   | 'cal' | 'kfeed' | 'kstock' | 'pay' | 'budget' | 'rcpt' | 'dir' | 'venue' | 'bc' | 'hr' | 'surveys' | 'plans' | 'reviews' | 'photoLib' | 'fphotos' | 'familyHealth' | 'fbill'
   | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'monthReport' | 'drafts'
-  | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts';
+  | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts' | 'celebrations';
 
 export function screenFor(role: Role, key: string): ScreenId | null {
   if (!allowedKeys(role).has(key)) return null;
@@ -81,7 +81,7 @@ export function screenFor(role: Role, key: string): ScreenId | null {
     arrivals: 'arrivals', hchecks: 'health', menu: 'kmenu', lunch: 'klunch', readings: 'readings', log: 'dlog', camera: 'camera', photos: 'photoLib', feedback: 'kfeed', stock: 'kstock',
     billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', directory: 'dir', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
     enquiries: 'enq', calendar: 'cal', plans: 'plans', surveys: 'surveys', reviews: 'reviews', requests: 'requests',
-    renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', monthReport: 'monthReport', drafts: 'drafts',
+    renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', monthReport: 'monthReport', drafts: 'drafts', celebrations: 'celebrations',
   };
   return map[key] || null;
 }
