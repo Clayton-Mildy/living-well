@@ -14,7 +14,7 @@ describe('overview numbers come from the data', () => {
   it('CitraPremier on the demo morning', () => {
     const o = overviewStats(s, T);
     expect(o).toMatchObject({
-      members: 5, staff: 8, inClub: 3, goneHome: 0, visits: 3, extraVisits: 0, checks: 1, flagged: 0, overdue: 1, enquiries: 4, reviews: 9, photos: 0, // reviews: round 7 adds a renewal change waiting; round 13 adds Caca's leave request; round 14 the Sunday programme waiting for Ega
+      members: 5, staff: 8, inClub: 3, goneHome: 0, visits: 3, extraVisits: 0, checks: 1, flagged: 0, overdue: 1, enquiries: 4, reviews: 8, photos: 0, // reviews: round 13 adds Caca's leave request; round 14 the Sunday programme waiting for Ega
       logsSaved: 0, logsTotal: 3, lunchPhoto: false,
       payments: 2, stock: 3, venues: 2, samplePrices: true, // Hendra and Bambang paid this morning (invoice day); only the extra-day price is still a sample
     });

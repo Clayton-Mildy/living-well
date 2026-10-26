@@ -28,15 +28,16 @@ describe('the month-end list', () => {
     const s = buildSeed().citra;
     const rows = renewalRows(s, MONTH);
     const by = (st: string) => rows.filter((r) => r.state === st).map((r) => r.m.id).sort();
-    expect(by('waiting')).toEqual(['m1']); // Caca's upgrade waits for Ega
-    expect(by('toDo')).toEqual(['m2', 'm20']); // no answer after 2 calls; call back
+    expect(by('waiting')).toEqual([]); // round 14 (R25, R31): nothing waits for Ega; Oma Lina is not called yet (her family asks for Gold in the app)
+    expect(by('toDo')).toEqual(['m1', 'm2', 'm20']); // not called yet; no answer after 2 calls; no answer once
     expect(by('decided')).toEqual(['m10', 'm46']); // Bambang's family asked for Gold in the app; Opa Budi continues
     expect(rows.find((r) => r.m.id === 'm10')?.asked).toBe('plan');
     expect(rows.find((r) => r.m.id === 'm2')).toMatchObject({ calls: 2 });
-    expect(renewalCounts(rows)).toMatchObject({ total: 5, toDo: 2, waiting: 1, decided: 2, done: 3 });
+    expect(renewalCounts(rows)).toMatchObject({ total: 5, toDo: 3, waiting: 0, decided: 2, done: 2 });
     // round 14: membership rolls on, so nobody is told "N members to follow up" any more (the front desk has the Unpaid duty instead)
     for (const uid of ['s1', 's9']) expect(actionItems(s, as(s, uid), T, 600).some((i) => i.kind === 'renewals.notif.act.followUp')).toBe(false);
-    expect(actionItems(s, as(s, 's9'), T, 600).some((i) => i.kind === 'renewals.notif.act.approve')).toBe(true);
+    expect(actionItems(s, as(s, 's9'), T, 600).some((i) => i.kind === 'renewals.notif.act.approve')).toBe(false); // and no renewals wait for approval
+    expect(pendingItems(s, 'renewals')).toEqual([]);
   });
 });
 
@@ -76,7 +77,11 @@ describe('a change applies at once', () => {
   });
 
   it('rows that were already waiting can still be approved (applies from the 1st) or rejected', () => {
-    let s = buildSeed().citra; // Caca's upgrade for Oma Lina was recorded before round 14
+    // Caca's upgrade for Oma Lina, recorded before round 14 and still waiting (old data: the seed no longer has one)
+    let s = produce(buildSeed().citra, (d) => {
+      const id = followUpId(MONTH, 'm1');
+      d.followUps[id] = { id, clubId: d.clubId, createdAt: '2026-10-20T10:15', createdBy: 'staff:s1', memberId: 'm1', month: MONTH, outcome: 'upgrade', calls: [{ at: '2026-10-20T10:15', by: 'staff:s1', outcome: 'upgrade' }], status: 'pending', approval: { status: 'pending', by: 'staff:s1', at: '2026-10-20T10:15' } };
+    });
     const f = fu(s, 'm1');
     expect(f).toMatchObject({ outcome: 'upgrade', status: 'pending' });
     expect(pendingItems(s, 'renewals')).toMatchObject([{ id: f.id, memberId: 'm1' }]);

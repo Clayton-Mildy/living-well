@@ -89,7 +89,7 @@ describe('Adina, an empty clubhouse', () => {
     expect(tile('enq')).toBe('4');
     expect(tile('mood')).toBe('3.3'); // today's seeded arrivals carry their door faces
     expect([tile('review'), tile('checks'), tile('overdue'), tile('survey'), tile('photos'), tile('logs'), tile('lunch'), tile('pay'), tile('stock'), tile('venue'), tile('plans')])
-      .toEqual(['9', '1', '1', '4.7 / 5', '0', '0 / 3', 'Not yet', '2', '3', '2', 'Sample']); // Hendra and Bambang paid this morning (invoice day); round 14: the Sunday programme waits for Ega
+      .toEqual(['8', '1', '1', '4.7 / 5', '0', '0 / 3', 'Not yet', '2', '3', '2', 'Sample']); // Hendra and Bambang paid this morning (invoice day); round 14: the Sunday programme waits for Ega, no renewal waits (R31)
     expect(host?.querySelector('[data-tile="checks"]')?.textContent).toContain('All normal');
     expect(host?.querySelector('[data-tile="survey"]')?.textContent).toContain('3 answers');
     // Live today: today's activity, newest first
