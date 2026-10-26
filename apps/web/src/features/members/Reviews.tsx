@@ -155,8 +155,8 @@ export function Reviews() {
     const skipped = (res.skipped as string[] | undefined)?.length ?? 0;
     const conflicts = (res.conflicts as string[] | undefined)?.length ?? 0;
     const forFamilies = type === 'logs' || type === 'readings' || type === 'menu' || type === 'programme';
-    const done = n === 0 ? t('approvals.nothingDone') : mode === 'approved' ? t(forFamilies ? (n === 1 ? 'approvals.approvedOne' : 'approvals.approvedN') : n === 1 ? 'approvals.approvedStaffOne' : 'approvals.approvedStaffN', { n }) : t(n === 1 ? 'approvals.rejectedOne' : 'approvals.rejectedN', { n });
-    say([done, n && skipped ? t('approvals.skippedN', { n: skipped }) : '', conflicts ? t('approvals.conflictN', { n: conflicts }) : ''].filter(Boolean).join(' '), { icon: n ? 'task_alt' : 'info' });
+    const done = n === 0 ? (conflicts ? '' : t('approvals.nothingDone')) : mode === 'approved' ? t(forFamilies ? (n === 1 ? 'approvals.approvedOne' : 'approvals.approvedN') : n === 1 ? 'approvals.approvedStaffOne' : 'approvals.approvedStaffN', { n }) : t(n === 1 ? 'approvals.rejectedOne' : 'approvals.rejectedN', { n });
+    say([done, n && skipped ? t('approvals.skippedN', { n: skipped }) : '', conflicts ? t(type === 'programme' ? 'approvals.conflictProgramme' : 'approvals.conflictN', { n: conflicts }) : ''].filter(Boolean).join(' '), { icon: n ? 'task_alt' : 'info' });
   };
   const approveSelected = async (type: ApprovalType, ids: string[]) => {
     if (!ids.length || bulkBusy) return;

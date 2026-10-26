@@ -40,5 +40,5 @@ export const approvals: Same<typeof EN> = {
   // round 14 (B1): jadwal mingguan dan perubahan satu hari dari tim aktivitas
   'tab.programme': 'Program', 'none.programme': 'Tidak ada perubahan program untuk disetujui', 'none.programmeSub': 'Jadwal mingguan atau perubahan satu hari dari tim aktivitas muncul di sini sebelum orang lain melihatnya.',
   'kind.programme': 'Jadwal mingguan', 'kind.day': 'Program satu hari', 'sum.programmeFrom': 'Mulai {date}', 'sum.programmeSame': 'Sesi sama, tanggal mulai baru', 'sum.programmeDay': 'Program {date}',
-  'notif.rejected.programme': 'Manajemen tidak menyetujui {n} perubahan program Anda: {reason}',
+  'notif.rejected.programme': 'Manajemen tidak menyetujui {n} perubahan program Anda: {reason}', conflictProgramme: '{n} tidak disetujui: hari itu sudah berubah di kalender sejak dikirim. Kembalikan agar tim aktivitas bisa mengirim ulang.',
 };

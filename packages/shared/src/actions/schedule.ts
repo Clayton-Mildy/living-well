@@ -231,12 +231,18 @@ function editableDay(d: Draft<ClubState>, ctx: Ctx, date: ISODate, edit: (c: Ctx
   const after = d.scheduleDays[date] && !d.scheduleDays[date].deletedAt ? clone(d.scheduleDays[date] as ScheduleDay) : undefined;
   const sent = dayKey(after) !== dayKey(liveRow);
   const { pending: had, returned: _r, ...base } = liveRow ?? { id: date, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, date, slots: {} };
-  const row: ScheduleDay = { ...base, ...(sent ? { pending: { slots: after?.slots ?? {}, ...(after?.extra?.length ? { extra: after.extra } : {}), ...(after?.note ? { note: after.note } : {}), by: ctx.actor, at: ctx.nowDT } } : {}) };
+  const since = had ? had.base : dayKey(liveRow); // the live day the team started from (kept across its later edits)
+  const row: ScheduleDay = { ...base, ...(sent ? { pending: { slots: after?.slots ?? {}, ...(after?.extra?.length ? { extra: after.extra } : {}), ...(after?.note ? { note: after.note } : {}), by: ctx.actor, at: ctx.nowDT, ...(since ? { base: since } : {}) } } : {}) };
   if (!emptyDay(row)) d.scheduleDays[date] = row;
   else if (orig?.deletedAt) d.scheduleDays[date] = orig; // a deleted row stays as it was
   else delete d.scheduleDays[date];
   if (sent && !had) ctx.notify({ toRoles: ['mgmt'], kind: 'cal.notif.dayAsked', params: { date }, link: '/reviews?tab=programme', severity: 'attention' });
   ctx.result.pending = sent;
+}
+/** Has the live day moved on since the team's waiting edit was made (Ega's own change, a guest booking)? Then approving it would undo that: it is sent back instead. */
+export function programmeDayStale(d: Draft<ClubState>, date: ISODate): boolean {
+  const row = d.scheduleDays[date];
+  return !!row?.pending?.base && row.pending.base !== dayKey(row as ScheduleDay);
 }
 /** Ega approves a day: the waiting edit becomes the live day; teachers and families hear that the day's programme changed. */
 export function approveProgrammeDay(d: Draft<ClubState>, ctx: Ctx, date: ISODate, notify = true): void {

@@ -828,6 +828,28 @@ describe('round 14: every programme change by the activity team waits for Ega', 
     expect(next.scheduleDays[TODAY].pending?.slots).toEqual({ '13:30': MEMORY });
   });
 
+  it('a waiting day edit cannot be approved once the live day moved on (Ega changed it, or a guest was booked): the live change is kept', () => {
+    const KERONCONG = { activityId: 'act-keroncong', staffId: 's5', roomId: 'room-music' };
+    const sent = step(fresh(), 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's5');
+    expect(sent.scheduleDays[TODAY].pending?.base).toBeTruthy();
+    // with nothing in between, approve merges it
+    expect(run(sent, 'approval.approve', { type: 'programme', ids: [TODAY] }, 's9').state.scheduleDays[TODAY].slots).toEqual({ '13:30': MEMORY });
+    // Ega changes 10:30 herself while it waits: approving would undo that, so it is a conflict and nothing moves
+    const moved = step(sent, 'schedule.changeDay', { date: TODAY, slot: '10:30', cell: { ...KERONCONG, activityId: 'act-reading', roomId: 'room-lounge' } }, 's9');
+    expect(moved.scheduleDays[TODAY].pending?.slots).toEqual({ '13:30': MEMORY }); // still waiting beside her change
+    const a = run(moved, 'approval.approve', { type: 'programme', ids: [TODAY] }, 's9');
+    expect(a.result).toMatchObject({ approved: 0, conflicts: [TODAY] });
+    expect(a.state.scheduleDays[TODAY].slots['10:30']?.activityId).toBe('act-reading');
+    expect(sessionsOn(a.state, TODAY)[1].cell).toEqual(BATIK);
+    expect(a.state.scheduleDays[TODAY].pending).toBeDefined();
+    // Ega sends it back; the team's next edit starts from the live day as it is now and can be approved
+    const back = step(moved, 'approval.reject', { type: 'programme', ids: [TODAY], reason: 'I changed the morning; please send again' }, 's9');
+    const again = step(back, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's5');
+    const ok = run(again, 'approval.approve', { type: 'programme', ids: [TODAY] }, 's9');
+    expect(ok.result.approved).toBe(1);
+    expect(sessionsOn(ok.state, TODAY).map((x) => x.cell?.activityId)).toEqual(['act-reading', 'act-memory']);
+  });
+
   it('extra sessions and resets wait too; an edit that brings the day back to the live one clears `pending` (Review Focus 5)', () => {
     const s0 = fresh();
     const TOMORROW = '2026-10-22'; // the seed's tea-time karaoke at 15:00

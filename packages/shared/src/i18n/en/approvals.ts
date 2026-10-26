@@ -45,5 +45,5 @@ export const approvals = {
   // round 14 (B1): the weekly programme and one-day changes sent by the activity team
   'tab.programme': 'Programme', 'none.programme': 'No programme changes to approve', 'none.programmeSub': 'A weekly schedule or a one-day change from the activity team appears here before anyone else sees it.',
   'kind.programme': 'Weekly schedule', 'kind.day': 'Programme for one day', 'sum.programmeFrom': 'From {date}', 'sum.programmeSame': 'Same sessions, new start date', 'sum.programmeDay': 'Programme for {date}',
-  'notif.rejected.programme': 'Management did not approve {n} of your programme changes: {reason}',
+  'notif.rejected.programme': 'Management did not approve {n} of your programme changes: {reason}', conflictProgramme: '{n} not approved: the day changed on the calendar since it was sent. Send it back so the activity team can send it again.',
 };

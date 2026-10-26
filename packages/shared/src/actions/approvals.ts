@@ -14,7 +14,7 @@ import { decideLeave } from './staffLeave';
 import { approvePhotoRows, rejectPhotoRows } from './photos';
 import { applyFollowUp } from './renewals';
 import { approveStockRow, rejectStockRow } from './kitchen';
-import { approveProgrammeDay, approveProgrammeVersion, returnProgrammeDay } from './schedule';
+import { approveProgrammeDay, approveProgrammeVersion, programmeDayStale, returnProgrammeDay } from './schedule';
 import { noticeFamilies } from './health';
 import { menuAudience } from '../rules/kitchenOps';
 import { DAYMENU_KEYS, LOG_KEYS, NOTE_KEYS, READING_KEYS, isWaiting, snapshotOf, type ApprovalType, APPROVAL_TYPES, type SnapKeys } from '../rules/approvals';
@@ -180,6 +180,7 @@ const APPROVE: Record<ApprovalType, Handler> = {
     const day = d.scheduleDays?.[id];
     if (!day || day.deletedAt || !day.pending) return 'skip';
     if (!dayChangeable(d as unknown as ClubState, id, ctx.today)) return 'conflict'; // passed, or closed since
+    if (programmeDayStale(d, id)) return 'conflict'; // the live day changed since it was sent (Ega's own change, a guest booking): approving would undo that
     approveProgrammeDay(d, ctx, id, o.notify !== false);
     return 'done';
   },
