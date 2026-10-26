@@ -71,7 +71,7 @@ export const cal = {
   daySaved: 'Changed for {date}. Teachers and families are told.', daySavedQuiet: 'Changed for {date}. Nobody was notified.', dayBackDone: 'Back to the weekly plan on {date}.',
   changedNote: 'Changed · {note}', changedToday: 'Changed today: {note}', changedTodayPlain: 'Changed today',
   guestBook: 'Book a guest host', guestBookSub: 'Someone from outside leads this session', guestOpen: 'Guest host booked',
-  'err.pastDay': 'Only today and later days can be changed.', 'err.dayClosed': 'The club is closed that day.', 'err.dayOuting': 'There is an outing that day, so no sessions run at the club.',
+  'err.pastDay': 'Only today and later days can be changed.', 'err.dayClosed': 'The club is closed that day.', 'err.dayRented': '{org} has the club booked that day ({from}–{to}), so no sessions can run.', 'err.dayOuting': 'There is an outing that day, so no sessions run at the club.',
   'notif.dayChanged': 'On {date} the {slot} activity is now {name}.', 'notif.dayNoSession': 'On {date} there is no {slot} activity.',
   'notif.dayBack': 'On {date} the {slot} activity is back to the usual plan.', 'notif.dayBackAll': 'On {date} the activities are back to the usual plan.',
   'feed.dayChanged': 'Activity changed for {date} · {slot}: {name}', 'feed.dayNoSession': 'No activity on {date} · {slot}',

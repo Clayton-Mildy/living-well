@@ -1,5 +1,5 @@
 // Core selectors: day status, members, plans, family links, staff lookups.
-import type { ClubState, ISODate, Member, PlanEntry, FamilyLink, FamilyContact, Staff, StaffRole, CalendarEvent } from '../types';
+import type { ClubState, HM, ISODate, Member, PlanEntry, FamilyLink, FamilyContact, Staff, StaffRole, CalendarEvent, VenueBooking } from '../types';
 import { addDays, ageOn, asWeekday, isWeekday, live, sortBy, ym } from '../util';
 
 // ---------- days ----------
@@ -35,6 +35,13 @@ export function dayStatus(s: ClubState, date: ISODate): DayStatus {
   return { open: true, outing: events.find((e) => e.kind === 'outing'), events };
 }
 export const isOpen = (s: ClubState, date: ISODate) => dayStatus(s, date).open;
+/** Two time ranges overlap (touching ends do not). */
+export const timesOverlap = (a1: HM, a2: HM, b1: HM, b2: HM) => a1 < b2 && b1 < a2;
+/** A time range runs into the club's opening hours (a private event may not, on a day the club is open: rules/mgmt.ts checkVenueSlot). */
+export const overlapsClubHours = (s: ClubState, from: HM, to: HM) => timesOverlap(from, to, s.club.settings.open, s.club.settings.close);
+/** Round 14 (B2): a confirmed venue booking on a date that runs into club hours. Such a weekend stays a rental day: it cannot be programmed. */
+export const clubHoursRental = (s: ClubState, date: ISODate): VenueBooking | undefined =>
+  live(s.venueBookings ?? {}).find((v) => v.date === date && v.status === 'confirmed' && overlapsClubHours(s, v.from, v.to));
 export function nextOpenDay(s: ClubState, from: ISODate, inclusive = false): ISODate {
   let d = inclusive ? from : addDays(from, 1);
   for (let i = 0; i < 60 && !isOpen(s, d); i++) d = addDays(d, 1);

@@ -4,7 +4,7 @@ import type { Draft } from 'immer';
 import type { CalendarEvent, ClubState, HM, ISODate, Member, ScheduleCell, ScheduleDay, Slot, StaffRole, WeekSlot } from '../types';
 import { DomainError, defineAction, hasRole, type Ctx } from './framework';
 import { needsApproval } from './approvalGate';
-import { dayStatus, membershipStatus } from '../rules/core';
+import { clubHoursRental, dayStatus, membershipStatus } from '../rules/core';
 import { extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from '../rules/kitchen';
 import { ALL_DAYS, DRAFT_ID, SLOTS, cellKey, dayProgrammable, daysEqual, extraTimeIssue, fmtDMY, nextMonday, normalizeDays, pendingDayRow, publishedCellKeys, sameCell, storedDays, weeklyCell, type Days } from '../rules/calendar';
 import { guestOn } from '../rules/guests';
@@ -143,7 +143,12 @@ export function openDayOrFail(d: Draft<ClubState>, ctx: Ctx, date: ISODate) {
 }
 /** Round 14 (B2): the programme of a day can be made on an open day, or on a weekend with nothing programmed yet (its first session opens it). */
 function programmableOrFail(d: Draft<ClubState>, ctx: Ctx, date: ISODate) {
-  if (!dayProgrammable(d as unknown as ClubState, date, ctx.today)) openDayOrFail(d, ctx, date);
+  const view = d as unknown as ClubState;
+  if (dayProgrammable(view, date, ctx.today)) return;
+  const st = dayStatus(view, date);
+  const rented = date >= ctx.today && !st.open && st.reason === 'weekend' ? clubHoursRental(view, date) : undefined;
+  if (rented) ctx.fail('cal.err.dayRented', { org: rented.org, from: rented.from, to: rented.to }); // a rental in club hours keeps the weekend closed
+  openDayOrFail(d, ctx, date);
 }
 /** The session that runs on a date and slot right now (weekly plan with the one-day changes applied). */
 export const effectiveCell = (d: Draft<ClubState>, date: ISODate, slot: Slot): ScheduleCell | null =>

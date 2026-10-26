@@ -3,7 +3,7 @@ import type {
   ActivityEntry, Bank, ClubState, DT, FamilyContact, HM, InvoiceLine, ISODate, Lang, Member, Plan, Room, Staff, StaffHr, StaffRole, StaffTime, Survey, VenueBooking, YM,
 } from '../types';
 import { addDays, addMonths, diffDays, live, sortBy, sum, toMin, ym } from '../util';
-import { approvedMembers, contactsOfMember, dayStatus, membershipStatus, primaryContact, isPendingRow } from './core';
+import { approvedMembers, contactsOfMember, dayStatus, membershipStatus, overlapsClubHours, primaryContact, isPendingRow, timesOverlap } from './core';
 import { flexMonth, lobbyGroups } from './attendance';
 import { feeOf, invoiceStatus, priceOn, runDone, runLinesFor } from './billing';
 import { validReadings } from './health';
@@ -22,7 +22,7 @@ export const VENUE_EARLIEST: HM = '06:00';
 export const VENUE_LATEST: HM = '23:00';
 export const isWholeClub = (r: Pick<Room, 'id' | 'name'> | undefined) => !!r && (r.id === WHOLE_CLUB_ID || /^whole club$/i.test(r.name));
 export const venueRooms = (s: ClubState): Room[] => sortBy(live(s.rooms).filter((r) => r.venue), (r) => r.name);
-export const timesOverlap = (a1: HM, a2: HM, b1: HM, b2: HM) => a1 < b2 && b1 < a2;
+export { timesOverlap };
 export const venueIsPast = (v: Pick<VenueBooking, 'date' | 'to'>, today: ISODate, now: HM) => v.date < today || (v.date === today && v.to <= now);
 
 /** What a slot runs into: a confirmed venue booking or a confirmed celebration (round 12: they share the rooms). */
@@ -52,7 +52,7 @@ export function checkVenueSlot(s: ClubState, slot: { roomId: string; date: ISODa
   if (st.open) {
     if (st.outing) return { ok: false, code: 'mgmt.err.venueOuting' };
     const { open, close } = s.club.settings;
-    if (!duringClub && timesOverlap(slot.from, slot.to, open, close)) return { ok: false, code: 'mgmt.err.venueClubHours', params: { open, close } };
+    if (!duringClub && overlapsClubHours(s, slot.from, slot.to)) return { ok: false, code: 'mgmt.err.venueClubHours', params: { open, close } };
   } else if (st.reason === 'closed') return { ok: false, code: 'mgmt.err.venueClosed' };
   const clash = venueClash(s, slot, ignoreId);
   if (clash) return { ok: false, code: 'mgmt.err.venueClash', params: { org: clash.title, title: clash.title, from: clash.from, to: clash.to, room: s.rooms[clash.roomId]?.name || '' } };

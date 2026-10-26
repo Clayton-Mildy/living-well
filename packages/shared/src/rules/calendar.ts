@@ -1,7 +1,7 @@
 // Calendar and weekly schedule builder selectors: day info for the list / month views, schedule drafts and versions.
 // Pure functions over ClubState. Family audiences never see venue clients; trials and visits are staff-only.
 import type { ClubState, ExtraSession, HM, ISODate, Lang, ScheduleCell, ScheduleDay, ScheduleVersion, Slot, Staff, Weekday, WeekSlot, WorkWeekday, YM } from '../types';
-import { dayStatus, eventsOn, listName, programmedWeekend, staffByRole } from './core';
+import { clubHoursRental, dayStatus, eventsOn, listName, programmedWeekend, staffByRole } from './core';
 import { guestsOn } from './attendance';
 import { WEEK_SLOTS, extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from './kitchen';
 import { guestOn } from './guests';
@@ -115,7 +115,7 @@ export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'st
     const note = audience === 'staff' ? scheduleDayOf(s, date)?.note : undefined;
     const first = note ? items.filter((i) => i.changed).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''))[0] : undefined;
     if (first && note) first.note = note;
-  } else if (audience === 'staff' && state === 'weekend' && !events.length) for (const slot of WEEK_SLOTS) noSession.push({ slot, changed: false }); // round 14: a weekend with nothing on can be programmed from its empty slots
+  } else if (audience === 'staff' && state === 'weekend' && !events.length && !clubHoursRental(s, date)) for (const slot of WEEK_SLOTS) noSession.push({ slot, changed: false }); // round 14: a weekend with nothing on (no event, no rental in club hours) can be programmed from its empty slots
   items.sort((a, b) => ((a.time ?? '00:00') + ORDER[a.kind]).localeCompare((b.time ?? '00:00') + ORDER[b.kind]));
   return { date, weekday: dow(date), weekend, open, state, items, hasOuting: events.some((e) => e.kind === 'outing'), noSession };
 }
@@ -201,13 +201,13 @@ export function dayChangeable(s: ClubState, date: ISODate, today: ISODate): bool
   return date >= today && st.open && !st.outing;
 }
 /**
- * Round 14 (B2): can a programme be made for this day? A changeable day, or a Saturday or Sunday with nothing programmed yet and no closure,
- * holiday or outing on it, today or later: programming it (or approving its programme) is what opens it.
+ * Round 14 (B2): can a programme be made for this day? A changeable day, or a Saturday or Sunday with nothing programmed yet, no closure,
+ * holiday or outing on it and no venue booking in club hours (it stays a rental day), today or later: programming it (or approving its programme) is what opens it.
  */
 export function dayProgrammable(s: ClubState, date: ISODate, today: ISODate): boolean {
   if (dayChangeable(s, date, today)) return true;
   const st = dayStatus(s, date);
-  return date >= today && !st.open && st.reason === 'weekend' && !st.events.some((e) => e.kind === 'closed' || e.kind === 'holiday' || e.kind === 'outing');
+  return date >= today && !st.open && st.reason === 'weekend' && !st.events.some((e) => e.kind === 'closed' || e.kind === 'holiday' || e.kind === 'outing') && !clubHoursRental(s, date);
 }
 export function changedCells(a: ScheduleVersion['days'], b: ScheduleVersion['days']): { w: Weekday; slot: WeekSlot }[] {
   const out: { w: Weekday; slot: WeekSlot }[] = [];

@@ -487,7 +487,7 @@ describe('schedule.changeDay (one day only)', () => {
   it('refuses a day that has passed, a closed day and an outing day; changes nothing when nothing changes', () => {
     const s = fresh();
     fails(s, 'schedule.changeDay', { date: '2026-10-20', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.pastDay');
-    expect(run(s, 'schedule.changeDay', { date: '2026-10-24', slot: '10:30', cell: MEMORY }, 's9').state.scheduleDays['2026-10-24'].slots).toEqual({ '10:30': MEMORY }); // round 14: a Saturday can be programmed (no longer refused)
+    expect(run(s, 'schedule.changeDay', { date: '2026-11-14', slot: '10:30', cell: MEMORY }, 's9').state.scheduleDays['2026-11-14'].slots).toEqual({ '10:30': MEMORY }); // round 14: a Saturday can be programmed (no longer refused)
     fails(s, 'schedule.changeDay', { date: '2026-10-30', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayClosed'); // club closed
     fails(s, 'schedule.changeDay', { date: '2026-10-29', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayOuting');
     fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: BATIK }, 's9', 'err.noChanges'); // the weekly plan already runs
@@ -627,7 +627,7 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
   it('only on an open day today or later; a valid activity and an active activity teacher; management and the activity team only', () => {
     const s = fresh();
     fails(s, 'schedule.addSession', { date: '2026-10-20', time: '15:00', ...KARAOKE }, 's9', 'cal.err.pastDay');
-    expect(run(s, 'schedule.addSession', { date: '2026-10-24', time: '15:00', ...KARAOKE }, 's9').state.scheduleDays['2026-10-24'].extra).toHaveLength(1); // round 14: a Saturday can be programmed (no longer refused)
+    expect(run(s, 'schedule.addSession', { date: '2026-11-14', time: '15:00', ...KARAOKE }, 's9').state.scheduleDays['2026-11-14'].extra).toHaveLength(1); // round 14: a Saturday can be programmed (no longer refused)
     fails(s, 'schedule.addSession', { date: '2026-10-30', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayClosed'); // the club is closed
     fails(s, 'schedule.addSession', { date: '2026-10-29', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayOuting');
     fails(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE, activityId: 'act-ghost' }, 's9', 'cal.err.badActivity');
@@ -912,23 +912,36 @@ describe('round 14: weekends open when a programme is approved', () => {
   });
   it('the activity team programmes an empty weekend: it waits and stays closed; a weekend holiday or a passed weekend is not approved', () => {
     const s0 = fresh();
-    const r = run(s0, 'schedule.addSession', { date: '2026-10-31', time: '11:30', ...MEMORY }, 's5');
+    const r = run(s0, 'schedule.addSession', { date: '2026-11-14', time: '11:30', ...MEMORY }, 's5');
     expect(r.result.pending).toBe(true);
-    expect(dayStatus(r.state, '2026-10-31').open).toBe(false);
-    const hol = step(r.state, 'calendarEvent.create', { date: '2026-10-31', kind: 'holiday', title: 'Holiday' }, 's9');
-    expect(run(hol, 'approval.approve', { type: 'programme', ids: ['2026-10-31'] }, 's9').result.conflicts).toEqual(['2026-10-31']);
-    expect(run(r.state, 'approval.approve', { type: 'programme', ids: ['2026-10-31'] }, 's9', { today: '2026-11-02', nowMin: 600 }).result.conflicts).toEqual(['2026-10-31']);
-    const ok = run(r.state, 'approval.approve', { type: 'programme', ids: ['2026-10-31'] }, 's9');
-    expect(dayStatus(ok.state, '2026-10-31').open).toBe(true);
+    expect(dayStatus(r.state, '2026-11-14').open).toBe(false);
+    const hol = step(r.state, 'calendarEvent.create', { date: '2026-11-14', kind: 'holiday', title: 'Holiday' }, 's9');
+    expect(run(hol, 'approval.approve', { type: 'programme', ids: ['2026-11-14'] }, 's9').result.conflicts).toEqual(['2026-11-14']);
+    expect(run(r.state, 'approval.approve', { type: 'programme', ids: ['2026-11-14'] }, 's9', { today: '2026-11-16', nowMin: 600 }).result.conflicts).toEqual(['2026-11-14']);
+    const ok = run(r.state, 'approval.approve', { type: 'programme', ids: ['2026-11-14'] }, 's9');
+    expect(dayStatus(ok.state, '2026-11-14').open).toBe(true);
   });
   it('a Saturday cell in the weekly plan opens every Saturday from its date; management changes a programmed Saturday at once', () => {
     const s0 = fresh();
     const days = { ...builderDays(s0), 6: { '10:30': MEMORY, '13:30': null } };
     const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's9');
-    expect(dayStatus(s, '2026-10-31').open).toBe(true);
-    expect(dayStatus(s, '2026-11-01').open).toBe(false);
-    expect(sessionsOn(s, '2026-10-31')[0].cell).toEqual(MEMORY);
+    expect(dayStatus(s, '2026-11-14').open).toBe(true);
+    expect(dayStatus(s, '2026-11-15').open).toBe(false);
+    expect(sessionsOn(s, '2026-11-14')[0].cell).toEqual(MEMORY);
     const c = step(s0, 'schedule.changeDay', { date: SAT, slot: '13:30', cell: null }, 's9');
     expect(sessionsOn(c, SAT).filter((x) => x.cell).map((x) => x.cell!.activityId)).toEqual(['act-angklung']);
+  });
+  it('a weekend rented out in club hours stays a rental day: no empty slots on offer, programming it is refused, a waiting programme is not approved', () => {
+    const s0 = fresh();
+    const RENTED = '2026-10-24'; // PT Arunika Farma, the whole club 09:00–13:00
+    expect(dayInfo(s0, RENTED, 'staff').noSession).toEqual([]);
+    expect(dayInfo(s0, '2026-11-14', 'staff').noSession.map((x) => x.slot)).toEqual(['10:30', '13:30']); // a free weekend offers both
+    fails(s0, 'schedule.changeDay', { date: RENTED, slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayRented');
+    fails(s0, 'schedule.addSession', { date: RENTED, time: '15:00', ...MEMORY }, 's5', 'cal.err.dayRented');
+    fails(s0, 'schedule.changeDay', { date: '2026-10-31', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayRented'); // a garden-room breakfast 08:00–12:00 counts too
+    const waiting = { ...s0, scheduleDays: { ...s0.scheduleDays, [RENTED]: { id: RENTED, clubId: s0.clubId, createdAt: '2026-10-20T16:00', createdBy: 'staff:s5' as const, date: RENTED, slots: {}, pending: { slots: { '10:30': MEMORY }, by: 'staff:s5' as const, at: '2026-10-20T16:00' } } } };
+    const a = run(waiting, 'approval.approve', { type: 'programme', ids: [RENTED] }, 's9');
+    expect(a.result.conflicts).toEqual([RENTED]);
+    expect(dayStatus(a.state, RENTED).open).toBe(false);
   });
 });
