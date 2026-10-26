@@ -145,7 +145,7 @@ describe('enquiry rules', () => {
 
 describe('overview mood (round 12)', () => {
   it('overview has the mood index', () => {
-    expect(overviewStats(withMarks, T).mood).toEqual({ index: 4, lift: 2, n: 2 });
+    expect(overviewStats(withMarks, T).mood).toEqual({ index: 4, lift: 2, n: 1 }); // round 14: the average of the daily moods (Lina's 3 and 5 make one 4)
     expect(overviewStats(buildSeed().citra, T).mood.index).toBe(3.3); // today's seeded arrivals are marked at the door (Lina's is live)
   });
 });

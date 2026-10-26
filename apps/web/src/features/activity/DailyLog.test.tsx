@@ -1,5 +1,5 @@
 // Round 12: each row of an activity round carries five faces. A face on a row that is still unmarked marks the session joined and the face together
-// (one log.mark); on a marked row it rides with the existing value. The Mood & notes round shows each person's day arc.
+// (one log.mark); on a marked row it rides with the existing value. Round 14: the Morning round marks a morning face per person and shows each person's day arc.
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -63,13 +63,16 @@ describe('DailyLog faces', () => {
     expect(mock).toHaveBeenCalledWith('log.mark', { date: T, memberIds: ['m2'], session: { slot: '10:30', value: 'satOut' }, face: 1 });
   });
 
-  it('the Mood & notes round shows the arc of a person with faces', async () => {
-    openClub((s) => {
+  it('the Morning round marks a morning face with mood.mark and shows the arc of a person with faces', async () => {
+    const mock = openClub((s) => {
       s.moodMarks[moodId(T, 'm2', 'arrival')] = { id: moodId(T, 'm2', 'arrival'), clubId: 'citra', createdAt: `${T}T09:30`, createdBy: 'staff:s1', memberId: 'm2', date: T, time: '09:30', moment: 'arrival', face: 3, by: 'staff:s1' };
     });
-    await show('/log?round=mood&member=m2');
+    await show('/log?round=morning&member=m2');
+    await act(async () => { faceBtn('m2', 4).click(); });
+    expect(mock).toHaveBeenCalledWith('mood.mark', { memberId: 'm2', moment: 'morning', face: 4 });
     const arc = row('m2').querySelector('[data-testid="mood-arc"]');
     expect(arc).toBeTruthy();
-    expect(arc!.textContent).toContain('Arrival');
+    expect(arc!.textContent).toContain('Check-in');
+    expect(row('m2').textContent).not.toContain('Cheerful'); // the old mood word is gone from the form
   });
 });

@@ -1,4 +1,4 @@
-// The check-out dialog asks for a face: confirm stays disabled until one is tapped, then reports (member, face).
+// The check-out dialog asks for a face but never blocks (round 14): confirm works without one, and a tapped face goes with it.
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -31,7 +31,7 @@ function openClubWithMemberIn(id: string) {
 }
 
 describe('CheckoutDialog', () => {
-  it('keeps confirm disabled until a face is tapped, then confirms with it', async () => {
+  it('confirms without a face, and with the face once one is tapped', async () => {
     openClubWithMemberIn('m1');
     const onConfirm = vi.fn(async () => true);
     host = document.createElement('div');
@@ -39,12 +39,11 @@ describe('CheckoutDialog', () => {
     root = createRoot(host);
     await act(async () => { root!.render(<MemoryRouter><CheckoutDialog memberId="m1" onClose={() => {}} onConfirm={onConfirm} onAskDeparture={async () => {}} /></MemoryRouter>); });
     const confirm = () => document.querySelector<HTMLElement>('[data-testid="co-confirm"]')!;
-    expect(confirm().getAttribute('aria-disabled')).toBe('true');
-    await act(async () => { confirm().click(); });
-    expect(onConfirm).not.toHaveBeenCalled();
-    await act(async () => { document.querySelector<HTMLElement>('[role=radio][data-face="5"]')!.click(); });
     expect(confirm().getAttribute('aria-disabled')).toBeNull();
     await act(async () => { confirm().click(); });
-    expect(onConfirm).toHaveBeenCalledWith('m1', 5);
+    expect(onConfirm).toHaveBeenCalledWith('m1', null);
+    await act(async () => { document.querySelector<HTMLElement>('[role=radio][data-face="5"]')!.click(); });
+    await act(async () => { confirm().click(); });
+    expect(onConfirm).toHaveBeenLastCalledWith('m1', 5);
   });
 });

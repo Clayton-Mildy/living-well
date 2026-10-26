@@ -6,7 +6,7 @@ import { live } from '../../util';
 import { moodId } from '../../rules/mood';
 import { unit } from '../history';
 
-const BY: Record<MoodMoment, Actor> = { arrival: 'staff:s1', departure: 'staff:s1', health: 'staff:s8', activity: 'staff:s5' };
+const BY: Record<MoodMoment, Actor> = { arrival: 'staff:s1', departure: 'staff:s1', health: 'staff:s8', morning: 'staff:s5', lunch: 'staff:s2', activity: 'staff:s5' }; // round 14: the seed writes no morning or lunch marks
 const clampFace = (n: number): Face => Math.max(1, Math.min(5, n)) as Face;
 
 /** Arrival: 5 for 15%, 4 for 40%, 3 for 35%, 2 for 8%, 1 for 2%. */

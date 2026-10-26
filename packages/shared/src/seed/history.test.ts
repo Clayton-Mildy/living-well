@@ -222,7 +222,7 @@ describe('mood history (round 12)', () => {
     for (const m of some) {
       expect(m.id).toBe(moodId(m.date, m.memberId, m.moment, m.slot));
       expect(m.createdAt).toBe(`${m.date}T${m.time}`);
-      expect(m.by).toBe({ arrival: 'staff:s1', departure: 'staff:s1', health: 'staff:s8', activity: 'staff:s5' }[m.moment]);
+      expect(m.by).toBe(({ arrival: 'staff:s1', departure: 'staff:s1', health: 'staff:s8', activity: 'staff:s5' } as Record<string, string>)[m.moment]);
     }
   });
 });

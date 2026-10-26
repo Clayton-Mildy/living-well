@@ -1,4 +1,5 @@
 // Mood marks (round 12): any staff member can mark how a member is, at the door, at the health check, in a session, on leaving.
+// Round 14: also in the activity team's Morning round and the kitchen's lunch round (neither needs a slot).
 // The same marks are also written by check-in / check-out, reading.save and log.mark (those call writeMark directly).
 import type { Face, MoodMoment, Slot } from '../types';
 import { defineAction, isStaff } from './framework';
@@ -7,7 +8,7 @@ import { clearMark, writeMark } from '../rules/mood';
 import { requireMember } from './helpers';
 import { bad, hm, int, obj, oneOf, str } from '../rules/mgmtParse';
 
-const MOMENTS = ['arrival', 'health', 'activity', 'departure'] as const;
+const MOMENTS = ['arrival', 'health', 'morning', 'lunch', 'activity', 'departure'] as const;
 
 export const parseFace = (v: unknown): Face => int(v, 1, 5, 'face') as Face;
 /** An optional face: absent stays absent, anything else must be 1-5. */

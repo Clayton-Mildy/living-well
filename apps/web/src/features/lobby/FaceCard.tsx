@@ -23,9 +23,9 @@ const corner = (pos: Record<string, number | string>, borders: Record<string, st
 
 /** Name, visit line (Flex visit n of 10 / Gold), care flags, a note when the visit is an extra day, and the confirm / "not this person" buttons. */
 export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, children, rejectLabel, face, onFace }: {
-  t: TFn; m: Member; plan: string; flags: Flag[]; onConfirm: () => void; onReject: () => void; busy?: boolean; /** the arrival face; confirm stays off until one is chosen */ face: Face | null; onFace: (f: Face) => void; children?: ReactNode; /** a face match says "Not this person"; a manual pick just cancels */ rejectLabel?: string;
+  t: TFn; m: Member; plan: string; flags: Flag[]; onConfirm: () => void; onReject: () => void; busy?: boolean; /** the arrival face; optional (round 14: the face row shows, confirming without one is allowed) */ face: Face | null; onFace: (f: Face) => void; children?: ReactNode; /** a face match says "Not this person"; a manual pick just cancels */ rejectLabel?: string;
 }) {
-  const off = busy || face === null;
+  const off = !!busy;
   const { isPhone } = useDevice();
   const s = useClub();
   const { today } = useNow();
@@ -42,7 +42,7 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
       {children}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.ask', { name: displayName(m) })}</div>
-        <MoodFaces value={face} onChange={onFace} name={displayName(m)} labels={!isPhone} />
+        <MoodFaces value={face} onChange={onFace} name={displayName(m)} labels={!isPhone} hints />
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className={off ? undefined : 'h-bronze'} onClick={off ? undefined : onConfirm} aria-disabled={off || undefined}

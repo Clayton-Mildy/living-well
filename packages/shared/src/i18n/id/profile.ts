@@ -41,7 +41,7 @@ export const profile: Same<typeof EN> = {
   'mobility.none': 'Tanpa alat bantu jalan', 'mobility.walkingStick': 'Tongkat', 'mobility.walker': 'Walker', 'mobility.wheelchair': 'Kursi roda',
   'diet.softFood': 'Makanan lunak', 'diet.lowSalt': 'Rendah garam', 'diet.vegetarian': 'Vegetarian', 'diet.sugarFree': 'Bebas gula',
   'timing.morningHome': 'Pagi, di rumah', 'timing.lunchClub': 'Saat makan siang, di klub', 'timing.eveningHome': 'Malam, di rumah', 'timing.asPrescribed': 'Sesuai resep',
-  reviewedBy: 'Ditinjau oleh {n} · {d}', notReviewed: 'Belum ditinjau', moodTitle: 'Suasana hati dan perilaku · 4 minggu terakhir', noLogsYet: 'Belum ada catatan harian.',
+  reviewedBy: 'Ditinjau oleh {n} · {d}', notReviewed: 'Belum ditinjau', moodTitle: 'Suasana hati dan perilaku · 4 minggu terakhir', noLogsYet: 'Belum ada catatan harian.', noMoodYet: 'Belum ada wajah yang ditandai.',
   unsettledOn: 'Gelisah pada {n} hari; berjalan di taman biasanya membantu.', settled: 'Tenang dan ramah di hari-hari klub.', dailyLogs: 'Catatan harian',
   joined_yes: 'Ikut kegiatan', joined_satOut: 'Tidak ikut kegiatan', comm_normal: 'Mau berbincang', comm_withdrawn: 'Menarik diri', content_normal: 'Senang', content_low: 'Suasana hati kurang baik', draft: 'Draf', loggedBy: 'Dicatat oleh {n}',
   photosIntro_f: 'Foto {n} sendiri tampil lebih dulu setiap hari, lalu foto kelompok yang memuatnya.', photosIntro_m: 'Foto {n} sendiri tampil lebih dulu setiap hari, lalu foto kelompok yang memuatnya.',

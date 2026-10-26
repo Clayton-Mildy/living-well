@@ -221,7 +221,7 @@ test('check in by name from the list: Opa Budi (Gold, unlimited) confirms in a d
   await expect(page.getByText('Gold · unlimited days')).toBeVisible();
   await expect(page.getByText(/an extra day/)).toHaveCount(0);
   await expect(page.getByRole('radio')).toHaveCount(5); // the five mood faces, no escort pick
-  await expect(confirm).toBeDisabled(); // confirm waits for a face
+  await expect(confirm).toBeEnabled(); // round 14: the face is optional, nothing blocks
   await tapFace(page);
   await expect(confirm).toBeEnabled();
   await confirm.click();
@@ -377,7 +377,7 @@ test('check out Opa Hendra: send to the health station, then one confirmation; u
   const snap = await request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's8' } });
   const state = (await snap.json()).state;
   expect(state.attendance['2026-10-21:m2'].departureAsked).toMatchObject({ by: 'staff:s1' });
-  await expect(dialog.getByRole('button', { name: 'Check out and tell family' })).toBeDisabled(); // waits for the departure face
+  await expect(dialog.getByRole('button', { name: 'Check out and tell family' })).toBeEnabled(); // round 14: the departure face is optional
   await tapFace(dialog);
   await dialog.getByRole('button', { name: 'Check out and tell family' }).click();
   await expect(toast(page, /Opa Hendra checked out at \d\d:\d\d\. Family told\./)).toBeVisible();

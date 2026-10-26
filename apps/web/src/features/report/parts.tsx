@@ -12,7 +12,6 @@ export const OCHRE = '#7A5510';
 export const MUTED = '#6B6259';
 /** The dot of a reading's status: normal sage, watch ochre, alert rust. */
 export const HEALTH_DOT: Record<Health, string> = { normal: '#3F7A55', watch: '#8A6216', alert: RUST };
-export const MOOD_DOT = { cheerful: SAGE, calm: 'var(--accent, #75624B)', quiet: '#8A6216', agitated: RUST } as const;
 export const LUNCH_DOT = { all: SAGE, most: '#8FB59B', half: '#E0C27A', little: '#D08A5E', none: RUST } as const;
 export const LUNCH_KEY = { all: 'eatAll', most: 'eatMost', half: 'eatHalf', little: 'eatLittle', none: 'eatNone' } as const;
 

@@ -3,15 +3,14 @@
 import { Link } from 'react-router-dom';
 import { listName } from '@cp/shared';
 import { activityName } from '@cp/shared/rules/activity';
-import type { MoodInsights } from '@cp/shared/rules/mood';
-import type { MoodMoment } from '@cp/shared/types';
+import { MOOD_MOMENTS, type MoodInsights } from '@cp/shared/rules/mood';
 import { EmptyState, Group } from '../../components/ui';
 import { useLang, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { ThinBar } from './charts';
 import { INK, Line, MUTED, num1, Panel, useWeekdays } from './lib';
 
-const MOMENTS: MoodMoment[] = ['arrival', 'health', 'activity', 'departure'];
+const MOMENTS = MOOD_MOMENTS; // round 14: six moments
 
 export function Mood({ data }: { data: MoodInsights }) {
   const s = useClub();

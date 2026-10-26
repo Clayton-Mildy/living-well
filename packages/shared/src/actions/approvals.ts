@@ -18,6 +18,7 @@ import { menuAudience } from '../rules/kitchenOps';
 import { DAYMENU_KEYS, LOG_KEYS, NOTE_KEYS, READING_KEYS, isWaiting, snapshotOf, type ApprovalType, APPROVAL_TYPES, type SnapKeys } from '../rules/approvals';
 import { balanceOf } from '../rules/billing';
 import { primaryContact } from '../rules/core';
+import { notesSaved } from '../rules/activity';
 import { uniq, rp } from '../util';
 
 const approveSchema = z.object({ type: z.enum(APPROVAL_TYPES as [ApprovalType, ...ApprovalType[]]), ids: z.array(z.string().min(1)).min(1).max(300), notify: z.boolean().optional() });
@@ -73,10 +74,10 @@ type Handler = (d: Draft<ClubState>, ctx: Ctx, id: string, o: { reason?: string;
 
 const approveLog = (d: Draft<ClubState>, ctx: Ctx, l: Draft<DailyLog>) => {
   const a = l.approval!;
-  // KC round 7: a log fills in round by round; families hear about it once the Mood & notes round is in, not for a lunch or session mark alone
-  const edit = !!a.prev && a.prev.mood !== undefined;
+  // KC round 7: a log fills in round by round; families hear about it once the notes are in, not for a lunch or session mark alone
+  const edit = !!a.prev && notesSaved(a.prev as Partial<DailyLog>);
   decide(a, ctx, 'approved');
-  const to = l.mood !== undefined ? familyUserIds(d, l.memberId) : [];
+  const to = notesSaved(l) ? familyUserIds(d, l.memberId) : [];
   if (to.length) ctx.notify({ toUsers: to, kind: edit ? 'activity.notif.logUpdated' : 'activity.notif.logSaved', params: { name: shortOf(d, l.memberId) }, link: '/today', memberId: l.memberId, ref: { type: 'dailyLog', id: l.id } });
 };
 const approveNote = (d: Draft<ClubState>, ctx: Ctx, n: Draft<MemberNote>) => {

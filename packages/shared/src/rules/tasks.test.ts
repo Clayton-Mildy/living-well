@@ -147,8 +147,6 @@ describe('general duties: from the data, for any day', () => {
     expect(duty(base, 'activity.lunch', T, at('13:29')).status).toBe('open');
     expect(duty(base, 'activity.lunch', T, at('13:30'))).toMatchObject({ status: 'late', parts: [{ count: { done: 0, total: 3 } }] });
     expect(duty(mark(base, { lunch: 'all' }), 'activity.lunch', T, at('14:00')).status).toBe('done');
-    expect(duty(base, 'activity.mood', T, at('15:00')).status).toBe('late');
-    expect(duty(mark(base, { mood: 'calm' }), 'activity.mood', T, at('15:30')).status).toBe('done');
   });
 
   it('an extra session (KC round 7) gets its own picture and joined mark, each due when it ends', () => {
@@ -230,7 +228,6 @@ describe('general duties: from the data, for any day', () => {
     const y = '2026-10-20';
     expect(duty(base, 'lobby.checkout', y)).toMatchObject({ status: 'done' }); // everyone left that day
     expect(duty(base, 'nurse.arrival', y).status).toBe('done');
-    expect(duty(base, 'activity.mood', y).status).toBe('done');
     expect(duty(base, 'finance.unpaid', y)).toMatchObject({ status: 'past', parts: [] });
     expect(duty(base, 'mgmt.approvals', y).status).toBe('past');
     expect(duty(base, 'lobby.unpaid', y).status).toBe('past');
@@ -262,7 +259,7 @@ describe('general duties: from the data, for any day', () => {
     const off = withCfg(base, { 'nurse.arrival': { off: true } });
     expect(duty(off, 'nurse.arrival', '2026-10-20').status).toBe('none');
     const [from, to] = spanOf('week', T);
-    expect(roleRange(off, 'nurse', from, to, T, NOW).duties.map((d) => d.def.id)).toEqual(['nurse.departure']);
+    expect(roleRange(off, 'nurse', from, to, T, NOW).duties.map((d) => d.def.id)).toEqual(['nurse.departure', 'mood.nurse']);
   });
 
   it('the bell: one reminder per late part for the person on duty, gone when done, and nobody else gets it', () => {
@@ -276,14 +273,13 @@ describe('general duties: from the data, for any day', () => {
     for (const uid of ['s1', 's8', 's9', 's10']) expect(ids(base, user(base, uid), at('12:31'))).not.toContain('duty:kitchen.lunchPhoto:lunchPhoto');
     // the activity round items are the duty reminders now (same ids as before), one for each late session picture
     const act = actionItems(base, user(base, 's5'), T, at('15:05'));
-    expect(act.filter((i) => i.id.startsWith('round:')).map((i) => `${i.id}:${i.params.n}`)).toEqual(['round:mood:3', 'round:13:30:3', 'round:lunch:3', 'round:10:30:3']);
+    expect(act.filter((i) => i.id.startsWith('round:')).map((i) => `${i.id}:${i.params.n}`)).toEqual(['round:13:30:3', 'round:lunch:3', 'round:10:30:3']);
     expect(act.filter((i) => i.id.startsWith('duty:pic:'))).toHaveLength(2);
     expect(act.find((i) => i.id.startsWith('duty:pic:'))).toMatchObject({ kind: 'tasks.notif.act.picture', link: expect.stringContaining('/camera?tab=activity&date=' + T) });
     // switched off: gone
-    const off = produce(base, (d) => { d.club.settings.duties = { 'activity.pictures': { off: true }, 'activity.mood': { off: true } }; });
+    const off = produce(base, (d) => { d.club.settings.duties = { 'activity.pictures': { off: true } }; });
     const left = actionItems(off, user(off, 's5'), T, at('15:05')).map((i) => i.id);
     expect(left.some((i) => i.startsWith('duty:pic:'))).toBe(false);
-    expect(left).not.toContain('round:mood');
     // the front desk's guest reminders are duties too (ids and messages as before); round 14: nobody gets the "members to follow up" item any more
     const lobby = actionItems(base, user(base, 's1'), T, at('10:00'));
     expect(lobby.some((i) => i.id.startsWith('guest:'))).toBe(true);
@@ -291,11 +287,34 @@ describe('general duties: from the data, for any day', () => {
   });
 });
 
+describe('mood duties (round 14)', () => {
+  const duty = (s: ClubState, id: string, nowMin = NOW) => dutyState(s, dutyById(id)!, T, T, nowMin);
+  it('one per marking role, titled Mood, counted from the missing faces, never late', () => {
+    expect(DUTIES.filter((d) => d.id.startsWith('mood.')).map((d) => [d.id, d.role, d.titleKey])).toEqual([
+      ['mood.lobby', 'lobby', 'tasks.duty.mood'], ['mood.nurse', 'nurse', 'tasks.duty.mood'], ['mood.activity', 'activity', 'tasks.duty.mood'], ['mood.kitchen', 'kitchen', 'tasks.duty.mood'],
+    ]);
+    expect(duty(base, 'mood.lobby')).toMatchObject({ status: 'done', parts: [{ count: { done: 3, total: 3 }, link: '/today' }] }); // every arrival has its face in the seed
+    const act = duty(base, 'mood.activity', at('16:30'));
+    expect(act).toMatchObject({ status: 'open', late: 0, parts: [{ done: false, count: { done: 0, total: 3 }, link: '/log?round=morning' }] });
+    expect(duty(base, 'mood.nurse').parts[0]).toMatchObject({ done: true, link: '/today' });
+    expect(duty(base, 'mood.kitchen').status).toBe('none'); // no lunch marked yet
+    const reminders = dutyReminders(base, 'activity', T, at('16:30')).map((r) => r.id);
+    expect(reminders.some((id) => id.includes('mood.activity'))).toBe(false);
+    expect(openTaskCount(base, 'activity', T, at('16:30'))).toBe(openTaskCount(produce(base, (d) => { d.club.settings.duties = { 'mood.activity': { off: true } }; }), 'activity', T, at('16:30')));
+  });
+  it('the kitchen duty links to the lunch round', () => {
+    const s = produce(base, (d) => {
+      d.dailyLogs[`log-m2-${T}`] = { id: `log-m2-${T}`, clubId: d.clubId, createdAt: `${T}T12:10`, createdBy: 'staff:s2', memberId: 'm2', date: T, note: '', status: 'saved', by: 's2', edits: [], lunch: 'all' } as DailyLog;
+    });
+    expect(duty(s, 'mood.kitchen').parts[0]).toMatchObject({ done: false, count: { done: 0, total: 1 }, link: '/lunch' });
+  });
+});
+
 describe('a role’s day, a week and a month', () => {
   it('the day: duty score and additional tasks apart; the badge counts late duties and tasks due', () => {
     const lobby = roleSummary(base, 'lobby', T, T, NOW);
     expect(lobby.people.map((p) => p.id)).toEqual(['s1']);
-    expect(lobby).toMatchObject({ role: 'lobby', done: 1, customDone: 1, customTotal: 2 }); // the desk is ticked; the lobby photo is open
+    expect(lobby).toMatchObject({ role: 'lobby', done: 2, customDone: 1, customTotal: 2 }); // the check-ins and (round 14) their faces are done; the desk is ticked; the lobby photo is open
     expect(lobby.total).toBe(lobby.duties.reduce((n, d) => n + d.parts.length, 0));
     expect(lobby.late).toBeGreaterThan(0); // the trial day from opening, the renewals from 09:00
     expect(openTaskCount(base, 'lobby', T, NOW)).toBe(lobby.late + 1);

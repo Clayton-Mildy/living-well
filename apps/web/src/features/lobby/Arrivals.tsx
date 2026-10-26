@@ -93,18 +93,18 @@ export function Arrivals() {
   }, [act, t]);
 
   /** Check a member in. The toast carries Undo, and says when the visit is an extra day. */
-  const doCheckIn = async (memberId: string, method: 'face' | 'manual', face: Face): Promise<boolean> => {
+  const doCheckIn = async (memberId: string, method: 'face' | 'manual', face: Face | null): Promise<boolean> => {
     const cur = latest.current;
-    const r = await act('attendance.checkIn', { memberId, method, face }, { silent: true });
+    const r = await act('attendance.checkIn', { memberId, method, ...(face !== null ? { face } : {}) }, { silent: true });
     if (!r.ok) return false;
     let text = checkedInText(memberId, String(r.result.time || ''));
     if (r.result.extra) text += ' ' + t('lobby.extraToast', { p: price(priceOn(cur.s, cur.today).extra) });
     say(text, { action: { label: t('common.undo'), run: () => void undoIn(memberId) } });
     return true;
   };
-  const doCheckOut = async (memberId: string, face: Face): Promise<boolean> => {
+  const doCheckOut = async (memberId: string, face: Face | null): Promise<boolean> => {
     const m = latest.current.s.members[memberId];
-    const r = await act('attendance.checkOut', { memberId, face }, { silent: true });
+    const r = await act('attendance.checkOut', { memberId, ...(face !== null ? { face } : {}) }, { silent: true });
     if (!r.ok) return false;
     setOutQuery(''); // ready for the next person
     say(t('lobby.tCheckedOut', { n: displayName(m), t: String(r.result.time || '') }), { action: { label: t('common.undo'), run: () => void undoOut(memberId) } });
@@ -135,7 +135,7 @@ export function Arrivals() {
   const rejectScan = () => { clearTimeout(scanTimer.current); setScan({ state: 'idle' }); };
   const confirmScan = async () => {
     const cur = latest.current;
-    if (cur.scan.state !== 'matched' || cur.face === null) return;
+    if (cur.scan.state !== 'matched') return;
     setBusy(true);
     const ok = await doCheckIn(cur.scan.id, cur.scan.manual ? 'manual' : 'face', cur.face);
     setBusy(false);

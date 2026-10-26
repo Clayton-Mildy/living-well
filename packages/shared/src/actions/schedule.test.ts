@@ -686,9 +686,7 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
 
   it('a round of the daily log for the extra session: people are marked in it, it counts in the progress, and it cannot move or go while marked', () => {
     const s0 = add(fresh()).state;
-    expect(roundsOf(s0, TODAY).map((r) => `${r.id}:${r.kind}`)).toEqual(['10:30:session', 'lunch:lunch', '13:30:session', '15:00:session', 'mood:mood']); // mood & notes stays last
-    expect(roundsOf(s0, TODAY).find((r) => r.id === 'mood')!.time).toBe('16:15'); // once the last session is over
-    expect(roundsOf(fresh(), TODAY).find((r) => r.id === 'mood')!.time).toBe('15:00'); // unchanged without an extra
+    expect(roundsOf(s0, TODAY).map((r) => `${r.id}:${r.kind}`)).toEqual(['morning:morning', '10:30:session', 'lunch:lunch', '13:30:session', '15:00:session']);
     const m = run(s0, 'log.mark', { date: TODAY, memberIds: ['m2', 'm10'], session: { slot: '15:00', value: 'joined' } }, 's5');
     expect(m.state.dailyLogs[`log-m2-${TODAY}`].sessions).toEqual({ '15:00': 'joined' });
     expect(m.state.dailyLogs[`log-m2-${TODAY}`].joined).toBe('yes');

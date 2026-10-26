@@ -52,7 +52,7 @@ describe('Tasks: my day', () => {
   it('shows today’s duties first (late ones with a rust dot and their time), then the additional tasks with who ticked what', async () => {
     openClub('s1', 'lobby');
     await show(<Tasks />);
-    expect(document.querySelector('[role="status"]')?.textContent).toMatch(/^1 of 5 done/); // the duty score: the check-ins (ticked once anyone is in), the check-out, two guests, the unpaid list
+    expect(document.querySelector('[role="status"]')?.textContent).toMatch(/^2 of 6 done/); // the duty score: the check-ins (ticked once anyone is in), the check-out, two guests, the unpaid list, (round 14) the door faces
     const heads = Array.from(document.querySelectorAll('h2')).map((h) => h.textContent);
     expect(heads).toEqual(['Today’s duties', 'Additional tasks', 'Leave']); // duties first, the staff member's own leave last (round 13)
     const unpaid = document.querySelector('[data-duty="lobby.unpaid"]')!;
@@ -167,7 +167,7 @@ describe('Tasks: management', () => {
     openClub('s9', 'mgmt');
     await show(<Tasks />, '/tasks?view=manage');
     expect(document.querySelectorAll('[data-role-row]')).toHaveLength(6);
-    expect(document.querySelector('[data-role-row="nurse"]')?.textContent).toMatch(/2 of 2 duties on · 3 additional tasks/);
+    expect(document.querySelector('[data-role-row="nurse"]')?.textContent).toMatch(/3 of 3 duties on · 3 additional tasks/);
     // the first role is open on its general duties, every one with a switch and (while on) a time
     expect(document.querySelector('[data-role]')?.getAttribute('data-role')).toBe('lobby');
     expect(document.querySelectorAll('[data-role="lobby"] [data-duty] [role="switch"]').length).toBe(DUTIES.filter((d) => d.role === 'lobby').length);

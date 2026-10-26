@@ -46,7 +46,7 @@ export const profile = {
   'diet.softFood': 'Soft food', 'diet.lowSalt': 'Low salt', 'diet.vegetarian': 'Vegetarian', 'diet.sugarFree': 'Sugar-free',
   'timing.morningHome': 'Morning, at home', 'timing.lunchClub': 'With lunch, at the club', 'timing.eveningHome': 'Evening, at home', 'timing.asPrescribed': 'As prescribed',
   // care log
-  reviewedBy: 'Reviewed by {n} · {d}', notReviewed: 'Not reviewed yet', moodTitle: 'Mood and behaviour · last 4 weeks', noLogsYet: 'No daily logs yet.',
+  reviewedBy: 'Reviewed by {n} · {d}', notReviewed: 'Not reviewed yet', moodTitle: 'Mood and behaviour · last 4 weeks', noLogsYet: 'No daily logs yet.', noMoodYet: 'No faces marked yet.',
   unsettledOn: 'Unsettled on {n} day(s); a garden walk usually helps.', settled: 'Settled and sociable on club days.', dailyLogs: 'Daily logs',
   joined_yes: 'Joined the activities', joined_satOut: 'Sat out', comm_normal: 'Talkative', comm_withdrawn: 'Withdrawn', content_normal: 'Content', content_low: 'Low in mood', draft: 'Draft', loggedBy: 'Logged by {n}',
   // photos

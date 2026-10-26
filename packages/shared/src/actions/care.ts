@@ -7,7 +7,7 @@ import { DomainError, defineAction, hasRole, isMgmt, type Ctx } from './framewor
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { namesOf, notifyPhotoFamilies } from './photos';
 import { isPendingRow } from '../rules/core';
-import { LUNCH_AMOUNTS, NORMAL_LOG, SESSION_MARKS, attendedOn, joinedOf, logDateOk, logId, logsOn, roundsOf, type LunchAmount, type SessionMark } from '../rules/activity';
+import { LUNCH_AMOUNTS, NORMAL_LOG, SESSION_MARKS, attendedOn, joinedOf, logDateOk, logId, logsOn, notesSaved, roundsOf, type LunchAmount, type SessionMark } from '../rules/activity';
 import { fmtDMY } from '../rules/calendar';
 import { attId } from '../rules/attendance';
 import { writeMark } from '../rules/mood';
@@ -66,9 +66,9 @@ function writeLog(d: Draft<ClubState>, ctx: Ctx, i: LogInput): 'created' | 'edit
   let before: Record<string, unknown> | undefined;
   let seen = false; // the family has (had) an approved version of this round
   if (prev) {
-    kind = prev.status === 'saved' && prev.mood !== undefined ? 'edited' : 'created'; // a row that only has lunch or a session marked is a new Mood & notes entry
+    kind = prev.status === 'saved' && notesSaved(prev) ? 'edited' : 'created'; // a row that only has lunch or a session marked is a new notes entry
     before = priorOf(prev, LOG_KEYS);
-    seen = approvedVersion(prev, LOG_KEYS)?.mood !== undefined;
+    seen = notesSaved(approvedVersion(prev, LOG_KEYS) ?? undefined);
     if (i.mood !== undefined) prev.mood = i.mood;
     if (i.lunch !== undefined) prev.lunch = i.lunch;
     if (i.communicative !== undefined) prev.communicative = i.communicative;
@@ -95,7 +95,7 @@ function writeLog(d: Draft<ClubState>, ctx: Ctx, i: LogInput): 'created' | 'edit
   else {
     clearApproval(row);
     const to = familyUserIds(d, i.memberId);
-    if (to.length && row.mood !== undefined) ctx.notify({ toUsers: to, kind: seen ? 'activity.notif.logUpdated' : 'activity.notif.logSaved', params: { name }, link: '/today', memberId: i.memberId, ref: { type: 'dailyLog', id } });
+    if (to.length && notesSaved(row)) ctx.notify({ toUsers: to, kind: seen ? 'activity.notif.logUpdated' : 'activity.notif.logSaved', params: { name }, link: '/today', memberId: i.memberId, ref: { type: 'dailyLog', id } });
   }
   ctx.feed({ icon: 'edit_note', key: kind === 'edited' ? 'activity.feed.logEdited' : 'activity.feed.log', params: { name, date: fmtDMY(i.date) }, memberId: i.memberId });
   return kind;
@@ -147,7 +147,7 @@ function applyMarks(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODa
   if (needsApproval(ctx)) markPending(row, ctx, before);
   else {
     clearApproval(row);
-    const to = row0?.mood === undefined && row.mood !== undefined ? familyUserIds(d, memberId) : []; // management completed the Mood & notes round: the family hears now
+    const to = !notesSaved(row0) && notesSaved(row) ? familyUserIds(d, memberId) : []; // management completed the notes: the family hears now
     if (to.length) ctx.notify({ toUsers: to, kind: 'activity.notif.logSaved', params: { name: shortOf(d, memberId) }, link: '/today', memberId, ref: { type: 'dailyLog', id } });
   }
   return true;
@@ -238,7 +238,7 @@ export const careActions = [
       const view = d as unknown as ClubState;
       // only members who were here and whose Mood & notes round is not done yet; never overwrite what somebody already marked
       const logs = logsOn(view, date);
-      const todo = attendedOn(view, date).filter((m) => logs.get(m.id)?.mood === undefined);
+      const todo = attendedOn(view, date).filter((m) => !notesSaved(logs.get(m.id)));
       if (!todo.length) ctx.fail('activity.err.nothingToLog');
       const sessions = Object.fromEntries(roundsOf(view, date).filter((r) => r.kind === 'session').map((r) => [r.id, 'joined' as const]));
       const marks: Marks = { mood: NORMAL_LOG.mood, lunch: NORMAL_LOG.lunch, communicative: NORMAL_LOG.communicative, content: NORMAL_LOG.content, sessions };

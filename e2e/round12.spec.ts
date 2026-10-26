@@ -1,4 +1,4 @@
-// Round 12 in one pass (small seed, demo day Wed 21 Oct 2026): the mood face at the door (confirm waits for a face), no Check on block when
+// Round 12 in one pass (small seed, demo day Wed 21 Oct 2026): the mood face at the door (round 14: optional), no Check on block when
 // nobody is quiet, the front desk books the venue from More, management's Month report (four groups, Send to owner), and the family sees how
 // their parent arrived. Isolated env: E2E_NAME=r12 E2E_PORT=8851 scripts/e2e-all.sh 1 "phone" round12
 import { test, expect } from '@playwright/test';
@@ -7,17 +7,17 @@ import { pickDate } from './kit';
 
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
 
-test('front desk: Opa Budi’s check-in waits for a face; nobody is quiet; the venue is booked from More', async ({ page }) => {
+test('front desk: Opa Budi’s check-in offers the faces; nobody is quiet; the venue is booked from More', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's1'); // Caca
   // nobody has been away long enough to need a call in the small seed
   await expect(page.locator('[data-check-on]')).toHaveCount(0);
   await expect(page.getByText(/^Haven't come lately \(/)).toHaveCount(0);
-  // manual check-in: five faces, Confirm stays off until one is tapped
+  // manual check-in: five faces; round 14: Confirm works without one
   await page.getByRole('button', { name: /^Check in: Opa Budi Wijaya/ }).click();
   const confirm = page.getByRole('button', { name: 'Confirm check-in' });
   await expect(page.getByRole('radio')).toHaveCount(5);
-  await expect(confirm).toBeDisabled();
+  await expect(confirm).toBeEnabled();
   await tapFace(page, 4);
   await expect(confirm).toBeEnabled();
   await confirm.click();

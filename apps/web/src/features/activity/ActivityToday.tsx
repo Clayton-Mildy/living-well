@@ -3,7 +3,7 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listName, memberName, dayStatus, nextOpenDay, scheduleDayOf, staffCall, toMin, type Activity, type Photo } from '@cp/shared';
-import { SESSION_MIN, activityName, cogSummary, dayPlan, inClubMembers, logOf, nowNext, roomName, sessionPhotos, type PlanItem, type SessionItem } from '@cp/shared/rules/activity';
+import { SESSION_MIN, activityName, cogSummary, dayPlan, inClubMembers, logOf, morningFaced, notesSaved, nowNext, roomName, sessionPhotos, type PlanItem, type SessionItem } from '@cp/shared/rules/activity';
 import { SLOTS, dayInfo, eventTitle, slotChanged } from '@cp/shared/rules/calendar';
 import { guestOn } from '@cp/shared/rules/guests';
 import { Card, EmptyState, Group, Icon, PageHead, PhotoThumbs, RailDot, SectionLabel, type RailState } from '../../components/ui';
@@ -159,7 +159,7 @@ export function ActivityToday() {
 
   // round 6, phone: a member row in the grouped list: avatar, name, logged / not logged, a chevron; the care line stays hidden on phones as before
   const memberRowPhone = (m: (typeof people)[number], i: number) => {
-    const logged = logOf(s, m.id, today)?.mood !== undefined; // round 7: logged once the Mood & notes round is in
+    const logged = morningFaced(s, m.id, today) || notesSaved(logOf(s, m.id, today)); // round 14 (Ruling 5): logged once there is a morning face or the notes are in
     return (
       <button key={m.id} type="button" onClick={() => navigate(`/log?member=${m.id}`)} className="cp-tap-self" aria-label={`${memberName(m)}: ${t(logged ? 'activity.logged' : 'activity.notLogged')}`}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px 8px 16px', border: 'none', minHeight: 58, backgroundColor: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', ...rowLine(i === 0, 68) }}>
@@ -208,7 +208,7 @@ export function ActivityToday() {
           <section className="cp-grey" style={{ ...heroCardStyle, flex: '1 1 440px' }}>
             {listHead(t('activity.inClub'), String(people.length))}
             {people.length ? people.map((m) => {
-              const logged = logOf(s, m.id, today)?.mood !== undefined; // round 7: logged once the Mood & notes round is in
+              const logged = morningFaced(s, m.id, today) || notesSaved(logOf(s, m.id, today)); // round 14 (Ruling 5): logged once there is a morning face or the notes are in
               return (
                 <button key={m.id} type="button" onClick={() => navigate(`/log?member=${m.id}`)} className="h-row cp-bleed" aria-label={`${memberName(m)}: ${t(logged ? 'activity.logged' : 'activity.notLogged')}`}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: isPhone ? '12px 0' : '16px 0', border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: isPhone ? 56 : 64, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>

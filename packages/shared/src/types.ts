@@ -332,7 +332,7 @@ export interface Attendance extends Row {
   edits: AttendanceEdit[];
 }
 
-export type MoodMoment = 'arrival' | 'health' | 'activity' | 'departure';
+export type MoodMoment = 'arrival' | 'health' | 'morning' | 'lunch' | 'activity' | 'departure';
 export type Face = 1 | 2 | 3 | 4 | 5;
 export interface MoodMark extends Row { memberId: string; date: ISODate; time: HM; moment: MoodMoment; face: Face; slot?: Slot; readingId?: string; by: Actor }
 

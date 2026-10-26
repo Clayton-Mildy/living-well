@@ -3,7 +3,7 @@
 // The period is the Insights one (This month, Last month, Last 3 / 6 months, or a custom From and To). "Send to owner" opens a WhatsApp-style summary.
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { rp } from '@cp/shared';
+import { MOOD_MOMENTS, rp } from '@cp/shared';
 import { PERIOD_KEYS, editPeriod, periodFor, type InsightPeriod, type PeriodKey } from '@cp/shared/rules/insights';
 import { END_REASONS, LOST_REASONS, heroTrend, isPartialMonth, monthReport, type Delta } from '@cp/shared/rules/monthReport';
 import { Button, DateField, EmptyState, Group, Icon, PageHead, Pin, Select } from '../../components/ui';
@@ -108,7 +108,7 @@ export function MonthReport() {
       <Stat label={t('month.utilisation')} value={pct(mb.utilisation.cur)} d={mb.utilisation} df={pts} onClick={open('/insights')} />
     </Group>
   );
-  const moments = (['arrival', 'health', 'activity', 'departure'] as const).filter((k) => c.byMoment[k] !== null).map((k) => `${t('mood.moment.' + k)} ${one(c.byMoment[k]!)}`).join(' · ');
+  const moments = MOOD_MOMENTS.filter((k) => c.byMoment[k] !== null).map((k) => `${t('mood.moment.' + k)} ${one(c.byMoment[k]!)}`).join(' · ');
   const care = (
     <Group key="care" title={t('month.care')} label={t('month.care')} pad={0} gap={0}>
       <Stat first label={t('month.index')} value={val(c.index, one)} d={c.index} df={one} sub={moments || undefined} onClick={open('/insights?tab=mood')} />

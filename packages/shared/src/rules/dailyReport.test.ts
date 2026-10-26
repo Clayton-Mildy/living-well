@@ -5,6 +5,7 @@ import { produce } from 'immer';
 import { buildCitra } from '../seed/index';
 import { memberName } from './core';
 import { withMarks } from './testMarks';
+import { dailyMood } from './mood';
 import { dailyReport, firstReportDay, nextReportDay, prevReportDay, reportDateOf } from './dailyReport';
 
 const T = '2026-10-21'; // Wednesday, the demo day
@@ -51,8 +52,15 @@ describe('a past day', () => {
     expect(r.health.flagged[0].name).toBe(memberName(s.members.m2));
     expect(r.members.find((x) => x.m.id === 'm2')!.arrival?.status).toBe('watch');
   });
-  it('mood and notes: the counts and the note written for the family', () => {
-    expect(r.mood.counts).toEqual({ cheerful: 3, calm: 2, quiet: 0, agitated: 0 });
+  it('mood and notes: the daily moods by face (round 14, not the old mood word) and the note written for the family', () => {
+    expect(r.mood.counts).toEqual({ 5: 1, 4: 2, 3: 0, 2: 1, 1: 1 });
+    for (const x of r.members) expect(x.dailyFace).toBe(dailyMood(s, x.m.id, '2026-10-19')!.face);
+    // a member with the old mood word but no faces that day shows no mood (not "Okay") and is not counted
+    const noFaces = produce(s, (d) => { for (const [id, mk] of Object.entries(d.moodMarks)) if (mk.memberId === 'm1' && mk.date === '2026-10-19') delete d.moodMarks[id]; });
+    const r2 = dailyReport(noFaces, '2026-10-19', T, NOW);
+    expect(r2.members.find((x) => x.m.id === 'm1')!.log?.mood).toBeDefined();
+    expect(r2.members.find((x) => x.m.id === 'm1')!.dailyFace).toBeUndefined();
+    expect(Object.values(r2.mood.counts).reduce((a, n) => a + n, 0)).toBe(4);
     expect(r.mood.notMarked).toBe(0);
     expect(r.mood.notes).toHaveLength(1);
     expect(r.mood.notes[0]).toMatchObject({ staff: false, pending: false });

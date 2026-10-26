@@ -13,6 +13,7 @@ import { SESSION_MIN, attendedOn, pictureSessions, roundProgress, roundsOf, sess
 import { conflictsOn, dinersOn, lunchPhotosOn, teaPhotosOn } from './kitchen';
 import { lastContactOn, unpaidRows } from './unpaid';
 import { approvalTotal } from './approvals';
+import { missingMarks } from './mood';
 
 /** Every staff role that can have tasks, in the order the Team view lists them. */
 export const TASK_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt'];
@@ -128,6 +129,8 @@ export interface DutyPart {
   link: string;
   /** the bell reminder; missing = the duty's own `bellKind` (or none) */
   bell?: { id: string; kind: string; params: Record<string, string | number>; at?: HM };
+  /** round 14: a reminder that never turns late (no bell, no badge), such as the mood faces */
+  neverLate?: boolean;
 }
 type PartIn = Omit<DutyPart, 'titleKey' | 'due'> & { due?: HM };
 
@@ -197,13 +200,6 @@ export const DUTIES: DutyDef[] = [
     parts: (s, date) => {
       const { marked, total } = roundProgress(s, date, 'lunch');
       return total ? [stub('lunch', { done: marked >= total, count: { done: marked, total }, link: '/log?round=lunch', bell: { id: 'round:lunch', kind: 'activity.notif.act.lunch', params: { n: total - marked, time: '12:00' }, at: '12:00' } })] : [];
-    },
-  },
-  {
-    id: 'activity.mood', role: 'activity', icon: 'edit_note', titleKey: 'tasks.duty.activity.mood', every: 'day', defaultDue: () => '15:00',
-    parts: (s, date) => {
-      const { marked, total } = roundProgress(s, date, 'mood');
-      return total ? [stub('mood', { done: marked >= total, count: { done: marked, total }, link: '/log?round=mood', bell: { id: 'round:mood', kind: 'activity.notif.act.mood', params: { n: total - marked, time: '15:00' }, at: '15:00' } })] : [];
     },
   },
 
@@ -319,6 +315,15 @@ export const DUTIES: DutyDef[] = [
     },
   },
 
+  // ----- mood faces (round 14): one per role that marks them, "Mood · N not marked"; nothing blocks, so it never turns late -----
+  ...([['lobby', linkTo('lobby', 'arrivals')], ['nurse', linkTo('nurse', 'hchecks')], ['activity', '/log?round=morning'], ['kitchen', '/lunch']] as const).map(([role, link]): DutyDef => ({
+    id: 'mood.' + role, role, icon: 'sentiment_satisfied', titleKey: 'tasks.duty.mood', every: 'day', defaultDue: (s) => s.club.settings.close,
+    parts: (s, date) => {
+      const { missing, total } = missingMarks(s, date, role);
+      return total ? [stub('mood', { done: missing === 0, count: { done: total - missing, total }, link, neverLate: true })] : [];
+    },
+  })),
+
   // ----- management -----
   {
     id: 'mgmt.approvals', role: 'mgmt', icon: 'fact_check', titleKey: 'tasks.duty.mgmt.approvals', every: 'day', defaultDue: () => '16:00', todayOnly: true,
@@ -353,8 +358,8 @@ export interface DutyState {
   status: DutyStatus;
 }
 /** Not done, and past its time: its time today, or any time on an earlier day. Never on a coming day. */
-export const partLate = (p: Pick<DutyPart, 'done' | 'due'>, date: ISODate, today: ISODate, nowMin: number): boolean =>
-  !p.done && (date < today || (date === today && nowMin >= toMin(p.due)));
+export const partLate = (p: Pick<DutyPart, 'done' | 'due' | 'neverLate'>, date: ISODate, today: ISODate, nowMin: number): boolean =>
+  !p.done && !p.neverLate && (date < today || (date === today && nowMin >= toMin(p.due)));
 
 /** A duty on a date. The club being closed, the duty being off or a past day it cannot tell all give no parts. */
 export function dutyState(s: ClubState, def: DutyDef, date: ISODate, today: ISODate, nowMin: number): DutyState {

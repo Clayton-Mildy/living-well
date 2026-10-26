@@ -21,6 +21,13 @@ describe('mood actions', () => {
     expect(marks[0].face).toBe(2);
     expect(marks[0].time).toBe('10:00');
   });
+  it('mood.mark takes the morning and lunch moments without a slot (round 14)', () => {
+    let s = run(seed(), 'mood.mark', { memberId: 'm2', moment: 'morning', face: 4 }, 's5').state; // m2 is in today in the seed
+    s = run(s, 'mood.mark', { memberId: 'm2', moment: 'lunch', face: 2 }, 's2').state;
+    expect(s.moodMarks[moodId(T, 'm2', 'morning')]).toMatchObject({ moment: 'morning', face: 4 });
+    expect(s.moodMarks[moodId(T, 'm2', 'lunch')]).toMatchObject({ moment: 'lunch', face: 2 });
+    expect(s.moodMarks[moodId(T, 'm2', 'lunch')].slot).toBeUndefined();
+  });
   it('mood.mark refuses a non-arrival mark before check-in', () => fails(seed(), 'mood.mark', { memberId: 'm1', moment: 'health', face: 3 }, 's8', 'mood.err.notIn'));
   it('mood.mark rejects face 6', () => fails(seed(), 'mood.mark', { memberId: 'm1', moment: 'arrival', face: 6 }, 's1', 'err.invalid'));
   it('mood.clear removes a mark', () => {

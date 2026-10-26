@@ -41,4 +41,12 @@ describe('MoodFaces', () => {
     act(() => { root!.render(<MoodFaces value={null} onChange={() => {}} name="t" labels />); });
     expect(host!.textContent).toContain('Great');
   });
+  it('shows the chosen face\'s meaning under the row only with hints (round 14)', () => {
+    mount(<MoodFaces value={4} onChange={() => {}} name="t" />);
+    expect(host!.textContent).not.toContain('Engaged and content');
+    act(() => { root!.render(<MoodFaces value={4} onChange={() => {}} name="t" hints />); });
+    expect(host!.querySelector('[data-testid="mood-hint"]')?.textContent).toBe('Engaged and content');
+    act(() => { root!.render(<MoodFaces value={null} onChange={() => {}} name="t" hints />); });
+    expect(host!.querySelector('[data-testid="mood-hint"]')).toBeNull();
+  });
 });

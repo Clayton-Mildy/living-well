@@ -2,8 +2,8 @@
 // team, plus the personal details (with the answers of the paper application form). The club is drop-in, so nothing here is booked or expected.
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fmtPhone, live, memberAge, memberName, memberSince, sortBy, staffCall, flexMonth, planOn, todayReading, ym, type DailyLog, type Member } from '@cp/shared';
-import { lunchLabelKey } from '@cp/shared/rules/activity';
+import { FACE_KEY, dailyMood, fmtPhone, live, memberAge, memberName, memberSince, sortBy, staffCall, flexMonth, planOn, todayReading, ym, type DailyLog, type Member } from '@cp/shared';
+import { lunchLabelKey, notesSaved } from '@cp/shared/rules/activity';
 import { logForFamily, readingForFamily } from '@cp/shared/rules/approvals';
 import { Group, Icon, SectionLabel } from '../../../components/ui';
 import { cardStyle, cogText, flagChips, linkBtn, mobLabel, dietLabel, logNote, STATUS_STYLE, statusText } from '../lib';
@@ -37,7 +37,8 @@ export function OverviewTab({ p }: { p: P }) {
   const healthLine = ar
     ? t('profile.arrivalLine', { t: ar.time, b: `${ar.sys}/${ar.dia}`, o: ar.spo2 ?? '—' }) + (ar.temp ? ` · ${ar.temp} °C` : '')
     : att?.checkIn ? t('profile.arrivalWaiting') : t('profile.noCheckToday');
-  const lg = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && l.status === 'saved').map((l) => (p.family ? logForFamily(l) : l)).filter((l): l is DailyLog => !!l && l.mood !== undefined), (l) => l.date, -1)[0]; // the latest Mood & notes round
+  const lg = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && l.status === 'saved').map((l) => (p.family ? logForFamily(l) : l)).filter((l): l is DailyLog => !!l && (p.family ? l.mood !== undefined : notesSaved(l))), (l) => l.date, -1)[0]; // the latest notes (round 14, staff: the Morning round; the family keeps the mood word for now)
+  const lgFace = lg && !p.family ? dailyMood(s, m.id, lg.date)?.face : undefined; // round 14: staff see that day's mood from the faces
   const spouse: Member | undefined = m.spouseId ? s.members[m.spouseId] : undefined;
   const since = memberSince(m);
   const age = memberAge(m, today);
@@ -91,7 +92,7 @@ export function OverviewTab({ p }: { p: P }) {
     <>
       <Quote>{logNote(s, t, p.lang, m, lg)}</Quote>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 18px', fontSize: 14, color: '#6B6259' }}>
-        {([['sentiment_satisfied', lg.mood ? t('family.mood_' + lg.mood) : ''], ['restaurant', lg.lunch ? t(lunchLabelKey(lg.lunch)) : '']] as const).filter(([, label]) => label).map(([icon, label]) => (
+        {([['sentiment_satisfied', p.family ? (lg.mood ? t('family.mood_' + lg.mood) : '') : lgFace !== undefined ? t(FACE_KEY[lgFace]) : ''], ['restaurant', lg.lunch ? t(lunchLabelKey(lg.lunch)) : '']] as const).filter(([, label]) => label).map(([icon, label]) => (
           <span key={icon} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
             <Icon name={icon} size={18} color="var(--accent, #75624B)" />
             {label}

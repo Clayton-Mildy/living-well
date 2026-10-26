@@ -4,7 +4,7 @@ import type { Activity, CalendarEvent, ClubState, DailyLog, HM, ISODate, Lang, M
 import { dayStatus, isPendingRow, memberName } from './core';
 import { lobbyGroups, attId } from './attendance';
 import { sessionsOn } from './kitchen';
-import { addDays, live, sortBy, toHM, toMin } from '../util';
+import { addDays, live, sortBy, toMin } from '../util';
 
 /** Length of one activity session; a session is "Now" from its start until start + SESSION_MIN. */
 export const SESSION_MIN = 75;
@@ -175,10 +175,10 @@ export function logDates(s: ClubState, today: ISODate): ISODate[] {
   }
   return out;
 }
-/** Present on the date and the Mood & notes round not done yet (KC round 7: a log may exist with only lunch or a session marked). */
+/** Present on the date and the notes not in yet (KC round 7: a log may exist with only lunch or a session marked). */
 export function pendingLogMembers(s: ClubState, date: ISODate): Member[] {
   const logs = logsOn(s, date);
-  return attendedOn(s, date).filter((m) => logs.get(m.id)?.mood === undefined);
+  return attendedOn(s, date).filter((m) => !notesSaved(logs.get(m.id)));
 }
 
 export interface CogSummary { base: string; isDefault: boolean; quiet: number; unsettled: number; days: number }
@@ -200,7 +200,7 @@ export function logDeviations(l: LogFields): string[] {
   return out;
 }
 
-// ---------- rounds (KC round 7): lunch, each activity session, mood & notes ----------
+// ---------- rounds (KC round 7): lunch, each activity session; round 14: the Morning round (faces and notes) replaces mood & notes ----------
 export const LUNCH_AMOUNTS = ['all', 'most', 'half', 'little', 'none'] as const;
 export type LunchAmount = (typeof LUNCH_AMOUNTS)[number];
 export const SESSION_MARKS = ['joined', 'satOut'] as const;
@@ -208,32 +208,40 @@ export type SessionMark = (typeof SESSION_MARKS)[number];
 /** The i18n key of what a lunch amount reads like to families and in summaries ("Ate all of lunch", "Didn't eat"). */
 export const lunchLabelKey = (v: LunchAmount): string => (v === 'none' ? 'activity.opt.lunch.none' : `family.lunch_${v}`);
 
-/** A round of the daily log: 'lunch', 'mood' (mood & notes), or a session's start time ('10:30', '13:30', or the time of an extra session such as '15:00'). */
-export type RoundId = 'lunch' | 'mood' | Slot;
-export interface Round { id: RoundId; kind: 'session' | 'lunch' | 'mood'; time: HM; session?: SessionItem }
-/** The rounds of a day in time order: each scheduled session (a slot without a session is skipped; an extra session is a round like any other), lunch, and mood & notes at
- *  the end of the day: from 15:00, or once the last session is over when an extra one runs later. At the same time a session comes before lunch and mood & notes. */
+/** A round of the daily log: 'morning' (round 14: the morning faces and the notes), 'lunch', or a session's start time ('10:30', '13:30', or the time of an extra session such as '15:00'). */
+export type RoundId = 'morning' | 'lunch' | Slot;
+export interface Round { id: RoundId; kind: 'session' | 'lunch' | 'morning'; time: HM; session?: SessionItem }
+/** When the Morning round starts, and until when it is the round the clock opens. */
+const MORNING_AT: HM = '09:30';
+const MORNING_UNTIL = 11 * 60 + 30;
+/** The rounds of a day in time order: the Morning round (from 09:30), each scheduled session (a slot without a session is skipped; an extra session is a round like any
+ *  other) and lunch. At the same time a session comes before lunch. */
 export function roundsOf(s: ClubState, date: ISODate): Round[] {
-  const out: Round[] = [];
+  const out: Round[] = [{ id: 'morning', kind: 'morning', time: MORNING_AT }];
   const sessions = dayPlan(s, date).filter((x): x is SessionItem => x.kind === 'session');
   for (const x of sessions) out.push({ id: x.slot, kind: 'session', time: x.time, session: x });
   out.push({ id: 'lunch', kind: 'lunch', time: FIXED_SLOTS.find((f) => f.kind === 'lunch')!.time });
-  const lastEnd = sessions.length ? toMin(sessions[sessions.length - 1].time) + SESSION_MIN : 0;
-  out.push({ id: 'mood', kind: 'mood', time: toHM(Math.max(toMin(FIXED_SLOTS.find((f) => f.kind === 'tea')!.time), lastEnd)) });
   return sortBy(out, (r) => r.time);
 }
 const roundIdOf = (r: Round | RoundId): RoundId => (typeof r === 'string' ? r : r.id);
-/** The round to open by the clock: before 12:00 the first session, then lunch, the second session from 13:30, and mood & notes from 15:00 (rounds that are not on the plan are skipped). */
+/** The round to open by the clock: the Morning round before 11:30, then the latest round that has started (the first session until lunch, lunch, the second session from 13:30…). */
 export function defaultRound(rounds: Round[], nowMin: number): RoundId {
+  if (nowMin < MORNING_UNTIL && rounds.some((r) => r.kind === 'morning')) return 'morning';
   let pick = rounds[0];
-  rounds.forEach((r, i) => { if ((i === 0 && r.kind === 'session' ? 0 : toMin(r.time)) <= nowMin) pick = r; }); // the first session is the round from the start of the day
+  rounds.forEach((r) => { if (toMin(r.time) <= nowMin) pick = r; });
   return pick.id;
 }
-/** Has this round been marked on the log? (An unmarked part is simply missing from the row.) */
-export function roundMarked(l: Pick<DailyLog, 'mood' | 'lunch' | 'sessions'> | undefined, round: Round | RoundId): boolean {
+/** The notes of the day are in (Ruling 5): the Morning round's form was saved (communicative and content come with every save; older logs carry the mood word), or a note was written. */
+export const notesSaved = (l: Partial<Pick<DailyLog, 'mood' | 'communicative' | 'content' | 'note' | 'staffNote'>> | undefined): boolean =>
+  !!l && (l.mood !== undefined || l.communicative !== undefined || l.content !== undefined || !!l.note?.trim() || !!l.staffNote?.trim());
+/** A morning face was marked for the member that day (the key is rules/mood's `moodId`; that file imports this one). */
+export const morningFaced = (s: ClubState, memberId: string, date: ISODate): boolean => { const m = s.moodMarks?.[`${date}:${memberId}:morning`]; return !!m && !m.deletedAt; };
+/** Has this round been marked? An unmarked part is simply missing from the row; the Morning round counts once there is a morning face (`faced`) or the notes are in. */
+export function roundMarked(l: Partial<Pick<DailyLog, 'mood' | 'communicative' | 'content' | 'note' | 'staffNote' | 'lunch' | 'sessions'>> | undefined, round: Round | RoundId, faced = false): boolean {
   const id = roundIdOf(round);
+  if (id === 'morning') return faced || notesSaved(l);
   if (!l) return false;
-  return id === 'lunch' ? l.lunch !== undefined : id === 'mood' ? l.mood !== undefined : l.sessions?.[id] !== undefined;
+  return id === 'lunch' ? l.lunch !== undefined : l.sessions?.[id] !== undefined;
 }
 /** The saved logs of a date by member id (one pass over the logs; the screens and the progress counts use it instead of `logOf` per member). */
 export function logsOn(s: ClubState, date: ISODate): Map<string, DailyLog> {
@@ -245,7 +253,8 @@ export function logsOn(s: ClubState, date: ISODate): Map<string, DailyLog> {
 export function roundProgress(s: ClubState, date: ISODate, round: Round | RoundId): { marked: number; total: number } {
   const people = attendedOn(s, date);
   const logs = logsOn(s, date);
-  return { marked: people.filter((m) => roundMarked(logs.get(m.id), round)).length, total: people.length };
+  const morning = roundIdOf(round) === 'morning';
+  return { marked: people.filter((m) => roundMarked(logs.get(m.id), round, morning && morningFaced(s, m.id, date))).length, total: people.length };
 }
 /** `joined` kept in step with the session marks: yes when any session was joined, satOut when all marked ones were sat out, none while nothing is marked. */
 export function joinedOf(sessions: DailyLog['sessions']): DailyLog['joined'] {

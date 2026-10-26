@@ -10,7 +10,8 @@ import { validReadings } from './health';
 import { liveSurvey, responsesOf, surveyStats } from './surveys';
 import { openEnquiries } from './enquiries';
 import { lunchPhotoIds } from './kitchen';
-import { moodStats } from './mood';
+import { dailyMood, moodStats } from './mood';
+import { notesSaved } from './activity';
 import { isConfirmed } from './finance';
 import { checkOnList } from './checkOn';
 import { approvalTotal, pendingItems } from './approvals';
@@ -242,6 +243,9 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
   const st = sv ? surveyStats(s, sv) : null;
   const price = priceOn(s, today);
   const ms = moodStats(s, [today]);
+  // round 14: the tile's index is the average of today's daily moods (one face per member who came and was marked)
+  const daily = [...g.inClub, ...g.goneHome].map((r) => dailyMood(s, r.m.id, today)?.face).filter((f): f is NonNullable<typeof f> => f !== undefined);
+  const dailyIndex = daily.length ? Math.round((daily.reduce((a, f) => a + f, 0) / daily.length) * 10) / 10 : null;
   return {
     members: approvedMembers(s).filter((m) => membershipStatus(m, today) !== 'ended').length,
     staff: live(s.staff).filter((x) => x.active).length,
@@ -256,9 +260,9 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
     reviews: approvalTotal(s) - pendingItems(s, 'stock').length, // waiting in Approvals (stock has its own tile)
     checkOn: checkOnList(s, today).length,
     survey: st && st.overallN ? { avg: st.overall, n: st.overallN } : null,
-    mood: { index: ms.index, lift: ms.lift, n: ms.n },
+    mood: { index: dailyIndex, lift: ms.lift, n: daily.length },
     photos: live(s.photos).filter((p) => p.date === today && p.visibility === 'visible' && p.kind !== 'arrival').length,
-    logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved' && l.mood !== undefined).length, // round 7: complete once the Mood & notes round is in
+    logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved' && notesSaved(l)).length, // round 7: complete once the notes are in (round 14: the Morning round)
     logsTotal: g.inClub.length + g.goneHome.length, // a log for everyone who visited today
     lunchPhoto: lunchPhotoIds(s, today).length > 0,
     payments: live(s.payments).filter((p) => p.receivedOn === today && isConfirmed(p)).length,

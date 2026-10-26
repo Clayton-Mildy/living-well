@@ -3,7 +3,7 @@
 // Tapping a member opens the profile.
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listName } from '@cp/shared';
+import { FACE_KEY, listName } from '@cp/shared';
 import { activityName } from '@cp/shared/rules/activity';
 import type { DayReport, ReportMember } from '@cp/shared/rules/dailyReport';
 import { EmptyState, FACE_ICON, Group, Icon } from '../../components/ui';
@@ -41,8 +41,8 @@ function Bits({ bits, quiet }: { bits: { text: string; tone: 'ok' | 'out' | 'unm
   return <span>{bits.map((b, k) => <span key={k} style={{ color: b.tone === 'ok' && quiet ? MUTED : TONE[b.tone] }}>{k ? ' · ' : ''}{b.text}</span>)}</span>;
 }
 const lunchText = (t: TFn, x: ReportMember) => (x.lunch ? t('activity.opt.lunch.' + x.lunch) : '');
-const moodText = (t: TFn, x: ReportMember) => (x.mood ? t('activity.opt.mood.' + x.mood) : '');
-/** The two faces at the door (arrival, departure), 16 px, in front of the mood word. */
+const moodText = (t: TFn, x: ReportMember) => (x.dailyFace !== undefined ? t(FACE_KEY[x.dailyFace]) : ''); // round 14: the day's mood, not the old mood word
+/** The two faces at the door (arrival, departure), 16 px, in front of the day's mood. */
 function DoorFaces({ x }: { x: ReportMember }) {
   const t = useT();
   if (x.arrivalFace === undefined && x.departureFace === undefined) return null;

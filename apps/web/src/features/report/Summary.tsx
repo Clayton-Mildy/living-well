@@ -5,14 +5,14 @@ import { useNavigate } from 'react-router-dom';
 import type { Photo } from '@cp/shared';
 import { listName, FACES, memberName, displayName } from '@cp/shared';
 import { FIXED_SLOTS, LUNCH_AMOUNTS, activityName, roomName } from '@cp/shared/rules/activity';
-import { MOODS, type DayReport, type ReportSession } from '@cp/shared/rules/dailyReport';
+import type { DayReport, ReportSession } from '@cp/shared/rules/dailyReport';
 import { readingSummary } from '@cp/shared/rules/healthStation';
 import { FACE_ICON, Group, Icon, PhotoThumbs, StaffOnlyTag } from '../../components/ui';
 import { PendingMark } from '../../components/PendingMark';
 import { useFmt, useT, type TFn } from '../../lib/i18n';
 import { rowLine } from '../activity/lib';
 import { DotItem, MemberAvatar } from '../lobby/parts';
-import { Fact, HEALTH_DOT, LUNCH_DOT, LUNCH_KEY, Line, MOOD_DOT, MUTED, MoreRow, OCHRE, RUST, SAGE, Tag, useCap, visitTime } from './parts';
+import { Fact, HEALTH_DOT, LUNCH_DOT, LUNCH_KEY, Line, MUTED, MoreRow, OCHRE, RUST, SAGE, Tag, useCap, visitTime } from './parts';
 
 export type OpenPhotos = (photos: Photo[], startId: string) => void;
 const plural = (t: TFn, key: string, n: number) => t(`${key}_${n === 1 ? 'one' : 'other'}`, { n });
@@ -248,13 +248,14 @@ function MoodNotes({ r }: { r: DayReport }) {
   const m = r.mood;
   const cap = useCap(m.notes, 4);
   if (!r.members.length) return null;
-  const any = MOODS.some((k) => m.counts[k]);
-  const showFaces = FACES.some((f) => m.faces.arrival[f] || m.faces.departure[f]) || m.faces.notMarkedDoor > 0;
+  const any = FACES.some((f) => m.counts[f]); // round 14: the daily moods (one face per member), in place of the old mood words
+  const showFaces = any || FACES.some((f) => m.faces.arrival[f] || m.faces.departure[f]) || m.faces.notMarkedDoor > 0;
   return (
     <Group title={t('report.mood')} meta={m.notes.length ? plural(t, 'report.notesN', m.notes.length) : undefined} pad={0} gap={0}>
       {showFaces ? (
         <Line first>
           <span data-testid="mood-faces" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {any ? <FaceLine label={t('report.moodDaily')} counts={m.counts} /> : null}
             <FaceLine label={t('report.moodArrival')} counts={m.faces.arrival} />
             <FaceLine label={t('report.moodDeparture')} counts={m.faces.departure} />
             {m.faces.lift !== null ? <span data-testid="mood-lift" style={{ fontSize: 14, color: '#24201C' }}>{t('mood.lift', { n: (m.faces.lift > 0 ? '+' : '') + m.faces.lift.toFixed(1) })}</span> : null}
@@ -262,14 +263,15 @@ function MoodNotes({ r }: { r: DayReport }) {
           </span>
         </Line>
       ) : null}
-      <Line first={!showFaces}>
-        <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 14px', fontSize: 15 }}>
-          {MOODS.filter((k) => m.counts[k]).map((k) => <DotItem key={k} color={MOOD_DOT[k]}><span style={{ color: '#24201C' }}>{t('activity.opt.mood.' + k)} {m.counts[k]}</span></DotItem>)}
-          {!any && !m.notMarked && !m.pendingLogs ? <span style={sub}>—</span> : null}
-          {m.notMarked ? <DotItem color={OCHRE}>{t('report.moodNotLogged', { n: m.notMarked })}</DotItem> : null}
-          {m.pendingLogs ? <DotItem color={OCHRE}>{t('report.logsPending', { n: m.pendingLogs })}</DotItem> : null}
-        </span>
-      </Line>
+      {!showFaces || m.notMarked || m.pendingLogs ? (
+        <Line first={!showFaces}>
+          <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '2px 14px', fontSize: 15 }}>
+            {!m.notMarked && !m.pendingLogs ? <span style={sub}>—</span> : null}
+            {m.notMarked ? <DotItem color={OCHRE}>{t('report.moodNotLogged', { n: m.notMarked })}</DotItem> : null}
+            {m.pendingLogs ? <DotItem color={OCHRE}>{t('report.logsPending', { n: m.pendingLogs })}</DotItem> : null}
+          </span>
+        </Line>
+      ) : null}
       {!m.notes.length ? <Line><span style={sub}>{t('report.noNotes')}</span></Line> : null}
       {cap.shown.map((n, i) => (
         <div key={n.m.id + (n.staff ? 's' : 'f') + i} style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '10px 16px', backgroundColor: 'transparent', ...rowLine(false) }}>

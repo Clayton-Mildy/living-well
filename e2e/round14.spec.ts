@@ -105,3 +105,40 @@ test('Today\'s numbers: Ega sees the Today block in Insights, and In the club on
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
+
+test('Mood at six moments: Caca checks Oma Lina in and Opa Hendra out without a face; Dinar marks Lina Good in the Morning round and sees its meaning', async ({ page, browser }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's1');
+  // check-in by name: the faces show, Confirm works without one
+  await page.getByRole('button', { name: /^Check in: Oma Lina/ }).click();
+  const confirm = page.getByRole('button', { name: 'Confirm check-in' });
+  await expect(page.getByRole('radio')).toHaveCount(5);
+  await expect(confirm).toBeEnabled();
+  await confirm.click();
+  await expect(page.getByText(/Oma Lina checked in at \d\d:\d\d\./).first()).toBeVisible();
+  // check-out with no face succeeds
+  await page.getByRole('tab', { name: /^Check out/ }).click();
+  await page.getByRole('button', { name: /^Check out: Opa Hendra/ }).click();
+  const dialog = page.getByRole('dialog', { name: 'Check out · Opa Hendra' });
+  await expect(dialog.getByRole('radio')).toHaveCount(5);
+  await dialog.getByTestId('co-confirm').click();
+  await expect(page.getByText(/Opa Hendra checked out at \d\d:\d\d/).first()).toBeVisible();
+  await expect(dialog).toHaveCount(0);
+  await assertNoHorizontalScroll(page);
+  // the activity team's Morning round: a face per person, with the face's meaning under the row
+  const o = test.info().project.use as Record<string, unknown>;
+  const ctx = await browser.newContext({ baseURL: o.baseURL as string, viewport: o.viewport as { width: number; height: number }, hasTouch: o.hasTouch as boolean | undefined, isMobile: o.isMobile as boolean | undefined, deviceScaleFactor: o.deviceScaleFactor as number | undefined, userAgent: o.userAgent as string | undefined });
+  const t = await ctx.newPage();
+  const tc = watchConsole(t);
+  await signIn(t, 's5', '/log?round=morning');
+  await expect(t.getByRole('tab', { name: /^Morning/ })).toHaveAttribute('aria-selected', 'true');
+  const lina = t.getByTestId('log-row').filter({ hasText: 'Oma Lina' });
+  await lina.getByRole('radio', { name: 'Good' }).click();
+  await expect(lina.getByRole('radio', { name: 'Good' })).toHaveAttribute('aria-checked', 'true');
+  await expect(lina.getByTestId('mood-hint')).toHaveText('Engaged and content');
+  await expect(t.getByRole('button', { name: 'Cheerful', exact: true })).toHaveCount(0); // the old mood word is gone
+  await assertNoHorizontalScroll(t);
+  tc.assertClean();
+  await ctx.close();
+  c.assertClean();
+});

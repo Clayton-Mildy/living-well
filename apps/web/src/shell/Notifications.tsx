@@ -25,7 +25,7 @@ const KIND_ICON: Record<string, string> = {
   'cal.notif.schedulePublished': 'calendar_month', 'members.notif.welcome': 'waving_hand',
   // KC round 7
   'renewals.notif.act.approve': 'fact_check', 'renewals.notif.plan': 'sell', 'renewals.notif.leave': 'beach_access', 'renewals.notif.leave2': 'beach_access',
-  'activity.notif.act.lunch': 'restaurant', 'activity.notif.act.session': 'groups', 'activity.notif.act.mood': 'edit_note',
+  'activity.notif.act.lunch': 'restaurant', 'activity.notif.act.session': 'groups',
   'guests.notif.booked': 'co_present', 'guests.notif.cancelled': 'event_busy', 'guests.notif.toPay': 'request_quote', 'guests.notif.paidCancelled': 'currency_exchange', 'mgmt.notif.venueRated': 'star',
 };
 // kinds without their own icon fall back to their area's icon

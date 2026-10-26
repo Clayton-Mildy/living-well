@@ -50,7 +50,8 @@ describe('activity and calendar translations', () => {
     for (const k of ['calm', 'cheerful', 'quiet', 'agitated']) need.push('activity.opt.mood.' + k);
     for (const k of ['all', 'most', 'half', 'little', 'none']) need.push('activity.opt.lunch.' + k, 'activity.lunchShort.' + k);
     for (const k of ['joined', 'satOut']) need.push('activity.opt.session.' + k);
-    for (const k of ['lunch', 'session', 'mood']) need.push('activity.round.' + k, 'activity.restWhat.' + k, 'activity.notif.act.' + k);
+    for (const k of ['lunch', 'session']) need.push('activity.round.' + k, 'activity.restWhat.' + k, 'activity.notif.act.' + k);
+    need.push('activity.round.morning');
     for (const k of ['markLunch', 'markSession', 'markMood']) need.push('activity.feed.' + k);
     for (const k of ['yes', 'satOut']) need.push('activity.opt.joined.' + k);
     for (const k of ['normal', 'withdrawn']) need.push('activity.opt.communicative.' + k);
