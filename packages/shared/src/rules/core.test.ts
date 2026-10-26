@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, type Member } from '../index';
+import { checkVenueSlot } from './mgmt';
 import { dayStatus, displayFull, displayName, initials, memberName, memberShort, openDaysInMonth } from './core';
 
 describe('displayName', () => {
@@ -32,8 +33,9 @@ describe('initials', () => {
 
 // round 14 (B2): a weekend is a closed day unless a programme is approved for it (Ruling 9, Review Focus 4)
 describe('weekends open when programmed', () => {
-  const SAT = '2026-10-24';
-  const SUN = '2026-10-25';
+  const SAT = '2026-11-14'; // a Saturday with no rental (every October Saturday is rented out in club hours: see below)
+  const SUN = '2026-11-15';
+  const RENTED = '2026-10-24';
   /** the seed programmes the first Saturday with no venue booking (7 Nov; 24 and 31 Oct are rented out) and leaves its Sunday waiting for Ega */
   const SEED_SAT = '2026-11-07';
   const SEED_SUN = '2026-11-08';
@@ -52,6 +54,17 @@ describe('weekends open when programmed', () => {
     expect(dayStatus(extra, SAT).open).toBe(true);
     expect(dayStatus(seed(), SEED_SAT).open).toBe(true);
   });
+  it('a published Saturday cell does not open a Saturday rented out in club hours (the booking stays editable); a free Saturday opens', () => {
+    const plan = produce(seed(), (d) => { d.scheduleVersions['sched-2024-07'].days[6] = { '10:30': ANGKLUNG, '13:30': null }; });
+    expect(plan.venueBookings.v1).toMatchObject({ date: RENTED, status: 'confirmed', from: '09:00', to: '13:00' });
+    expect(dayStatus(plan, RENTED)).toMatchObject({ open: false, reason: 'weekend' });
+    expect(checkVenueSlot(plan, { roomId: plan.venueBookings.v1.roomId, date: RENTED, from: '09:00', to: '12:00' }, '2026-10-21', '10:00', 'v1')).toEqual({ ok: true }); // the rental can still be edited
+    expect(dayStatus(plan, SAT).open).toBe(true);
+    const evening = produce(plan, (d) => { d.venueBookings.v1.from = '17:00'; d.venueBookings.v1.to = '20:00'; }); // after club hours: the Saturday opens
+    expect(dayStatus(evening, RENTED).open).toBe(true);
+    const cancelled = produce(plan, (d) => { d.venueBookings.v1.status = 'cancelled'; });
+    expect(dayStatus(cancelled, RENTED).open).toBe(true);
+  });
   it('stays closed with only a waiting or a returned programme, and on a weekend holiday', () => {
     const s = seed();
     expect(s.scheduleDays[SEED_SUN].pending?.by).toBe('staff:s5');
@@ -64,8 +77,8 @@ describe('weekends open when programmed', () => {
   it('the month counts the programmed Saturday as an open day', () => {
     expect(openDaysInMonth(seed(), '2026-11')).toContain(SEED_SAT);
     expect(openDaysInMonth(seed(), '2026-11')).not.toContain(SEED_SUN);
-    expect(openDaysInMonth(seed(), '2026-10')).not.toContain(SAT);
+    expect(openDaysInMonth(seed(), '2026-11')).not.toContain(SAT);
     const day = produce(seed(), (d) => { d.scheduleDays[SAT] = { id: SAT, clubId: d.clubId, createdAt: '2026-10-20T10:00', createdBy: 'staff:s9', date: SAT, slots: { '10:30': ANGKLUNG } }; });
-    expect(openDaysInMonth(day, '2026-10')).toContain(SAT);
+    expect(openDaysInMonth(day, '2026-11')).toContain(SAT);
   });
 });

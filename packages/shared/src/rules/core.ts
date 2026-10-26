@@ -14,9 +14,11 @@ export function eventsOn(s: ClubState, date: ISODate): CalendarEvent[] {
 /**
  * Round 14 (B2, Ruling 9): is a Saturday or Sunday programmed? It is when a session runs on it: the published weekly plan in force has a cell for that
  * day, or the date's live one-day change has a session or an extra (a slot set to "no session" takes the plan's cell away). A waiting (`pending`) or
- * returned programme never counts: only what is live. Reads the collections directly (rules/kitchen.ts imports this file).
+ * returned programme never counts: only what is live. A weekend rented out in club hours is never programmed (`clubHoursRental`: the venue rule
+ * holds both ways, so the booking stays editable). Reads the collections directly (rules/kitchen.ts imports this file).
  */
 export function programmedWeekend(s: ClubState, date: ISODate): boolean {
+  if (clubHoursRental(s, date)) return false;
   const pub = live(s.scheduleVersions ?? {}).filter((v) => v.status === 'published' && v.effectiveFrom <= date);
   const plan = sortBy(pub, (v) => v.effectiveFrom + (v.publishedAt || '')).pop()?.days[asWeekday(date)];
   const row = s.scheduleDays?.[date];
