@@ -84,7 +84,25 @@ describe('Next month', () => {
     expect(row?.textContent).toContain('Oma Lina');
     expect(row?.querySelector('[data-testid="change-what"]')?.textContent).toBe('Upgrade to Gold');
     expect(row?.querySelector('[data-testid="change-when"]')?.textContent).toBe('from 1 Nov · by Caca');
-    await click(row?.querySelector('[data-testid="change-undo"]'));
+    const undoBtn = row?.querySelector('[data-testid="change-undo"]') as HTMLElement;
+    expect(undoBtn.style.height).toBe('44px');
+    await click(undoBtn); // asks first: the family is told at once
+    expect(actMock).not.toHaveBeenCalled();
+    const dlg = document.querySelector('[role="dialog"]');
+    expect(dlg?.textContent).toContain('Undo this change?');
+    expect(dlg?.textContent).toContain('The change for Oma Lina in November is cancelled');
+    await click(Array.from(dlg!.querySelectorAll('button')).find((b) => b.textContent === 'Undo'));
     expect(actMock).toHaveBeenCalledWith('followUp.undo', { memberId: 'm1', month: '2026-11' });
+  });
+
+  it('a plan switch recorded on the profile is a read-only row: who and from when, no Undo', async () => {
+    const s = buildSeed().citra;
+    const done = execute(s, 'members.changePlan', { memberId: 'm2', plan: 'flex' }, getUser({ citra: s }, 's10')!, { today: '2026-10-21', nowMin: toMin('09:58') }, 'w2').state;
+    openClub('s1', 'lobby', 'Caca', done);
+    await show(<Renewals />);
+    const row = document.querySelector('[data-change="m2"]');
+    expect(row?.querySelector('[data-testid="change-what"]')?.textContent).toBe('Downgrade to Flex');
+    expect(row?.querySelector('[data-testid="change-when"]')?.textContent).toBe('from 1 Nov · by Bu Fransiska');
+    expect(row?.querySelector('[data-testid="change-undo"]')).toBeNull();
   });
 });

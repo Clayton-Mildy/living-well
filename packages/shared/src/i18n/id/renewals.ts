@@ -5,6 +5,7 @@ import type { renewals as EN } from '../en/renewals';
 export const renewals: Same<typeof EN> = {
   title: 'Bulan depan',
   tabChanges: 'Perubahan', tabUnpaid: 'Belum bayar', record: 'Catat perubahan', from: 'mulai {d}', undo: 'Batalkan', undone: 'Perubahan {name} dibatalkan.', noChanges: 'Belum ada perubahan untuk {month}', pickMember: 'Pilih anggota', pickNone: 'Tidak ada anggota lagi untuk {month}', recordedBy: 'oleh {who}',
+  undoTitle: 'Batalkan perubahan ini?', undoAsk: 'Perubahan {name} untuk {month} dibatalkan dan keluarga langsung diberi tahu.', keep: 'Biarkan',
   prevMonth: 'Bulan sebelumnya', nextMonth: 'Bulan berikutnya', logEyebrow: '{month} · catatan',
   progress: '{n} dari {total} sudah diputuskan', progressAll: 'Semua {total} sudah diputuskan',
   datesOpen: 'Cuti {month}: kabari paling lambat {date} · Tagihan {invoice}', datesClosed: 'Cuti bisa mulai {month} · Tagihan {invoice}',

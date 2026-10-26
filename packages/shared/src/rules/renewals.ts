@@ -156,22 +156,58 @@ export interface ChangeRow {
   outcome: FollowUpOutcome;
   /** the day the change starts: the 1st for a plan switch, the first leave month's 1st, the day after a stop's last day */
   from: ISODate;
-  by: Actor;
-  at: DT;
+  /** who recorded it (a plan entry made before round 14 may not say when) */
+  by?: Actor;
+  at?: DT;
+  /** the leave months of a leave */
+  leaveMonths?: YM[];
   /** the month has not started: the change can still be undone */
   canUndo: boolean;
+  /** recorded elsewhere (the profile, a family request finance applied, a stop): shown, but undone where it was made */
+  readOnly?: boolean;
 }
-/** The changes recorded for `month` (applied at once; a row that still waits for management is not one yet), newest first. */
+/**
+ * The changes for `month`, newest first: the follow-ups recorded for it (applied at once; a row that still waits for management is not one yet), and, read-only,
+ * the changes recorded elsewhere that take effect in that month and no follow-up covers: a plan entry from the 1st (members.changePlan, planChange.apply),
+ * leave months (membership.requestLeave), and a stop whose first day away falls in the month (members.end).
+ */
 export function changeRows(s: ClubState, month: YM, today: ISODate): ChangeRow[] {
   const first = monthStart(month);
   const rows: ChangeRow[] = [];
-  for (const f of Object.values(s.followUps ?? {})) {
-    if (f.deletedAt || f.month !== month || !isApplied(f) || !f.outcome) continue;
+  const applied = Object.values(s.followUps ?? {}).filter((f) => !f.deletedAt && isApplied(f) && !!f.outcome);
+  for (const f of applied) {
+    if (f.month !== month) continue;
     const last = f.calls[f.calls.length - 1];
     const from = f.outcome === 'leave' ? monthStart(f.leaveMonths?.[0] ?? month) : f.outcome === 'stop' ? addDays(f.lastDay ?? defaultLastDay(month), 1) : first;
-    rows.push({ memberId: f.memberId, outcome: f.outcome, from, by: last?.by ?? f.createdBy, at: last?.at ?? f.createdAt, canUndo: today < first });
+    rows.push({ memberId: f.memberId, outcome: f.outcome!, from, by: last?.by ?? f.createdBy, at: last?.at ?? f.createdAt, ...(f.leaveMonths ? { leaveMonths: f.leaveMonths } : {}), canUndo: today < first });
   }
-  return rows.sort((a, b) => (a.at === b.at ? (a.memberId < b.memberId ? -1 : 1) : a.at < b.at ? 1 : -1));
+  for (const m of Object.values(s.members)) {
+    if (m.deletedAt || isPendingRow(m)) continue;
+    const mine = applied.filter((f) => f.memberId === m.id);
+    // a plan switch from the 1st (not a new member's first plan, not the same plan again)
+    const i = m.plans.findIndex((p) => p.from === first);
+    if (i > 0 && m.plans[i].plan !== m.plans[i - 1].plan) {
+      const p = m.plans[i];
+      if (!mine.some((f) => f.month === month && (f.outcome === 'upgrade' || f.outcome === 'downgrade') && planAfter(f.outcome) === p.plan)) {
+        const req = p.requestId ? s.planChangeRequests?.[p.requestId] : undefined;
+        const at = req?.decidedAt;
+        rows.push({ memberId: m.id, outcome: p.plan === 'gold' ? 'upgrade' : 'downgrade', from: first, by: p.by, ...(at ? { at } : {}), canUndo: false, readOnly: true });
+      }
+    }
+    for (const ms of m.memberships ?? []) {
+      // leave months in the month
+      const lv = (ms.leaves ?? []).find((l) => l.month === month);
+      if (lv && !mine.some((f) => f.outcome === 'leave' && (f.leaveMonths ?? []).includes(month))) {
+        rows.push({ memberId: m.id, outcome: 'leave', from: first, by: lv.by, at: lv.at, leaveMonths: [month], canUndo: false, readOnly: true });
+      }
+      // a stop: the first day away falls in the month
+      if (ms.lastDay && ym(addDays(ms.lastDay, 1)) === month && !mine.some((f) => f.outcome === 'stop' && f.lastDay === ms.lastDay)) {
+        rows.push({ memberId: m.id, outcome: 'stop', from: addDays(ms.lastDay, 1), ...(ms.endedBy ? { by: ms.endedBy } : {}), ...(ms.endedAt ? { at: ms.endedAt } : {}), canUndo: false, readOnly: true });
+      }
+    }
+  }
+  const at = (r: ChangeRow) => r.at ?? '';
+  return rows.sort((a, b) => (at(a) === at(b) ? (a.memberId < b.memberId ? -1 : a.memberId > b.memberId ? 1 : a.outcome < b.outcome ? -1 : 1) : at(a) < at(b) ? 1 : -1));
 }
 
 // ---------- dates ----------

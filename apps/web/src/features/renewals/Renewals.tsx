@@ -4,7 +4,7 @@
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { listName, addMonths, actorName, memberName, displayName, ym, type YM } from '@cp/shared';
-import { canRecord, changeRows, followUpOf, renewalMembers, renewalMonth } from '@cp/shared/rules/renewals';
+import { canRecord, changeRows, renewalMembers, renewalMonth } from '@cp/shared/rules/renewals';
 import { Avatar, EmptyState, Icon, IconButton, PageHead, Segmented } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
@@ -12,13 +12,14 @@ import { useFmt, useT } from '../../lib/i18n';
 import { memberPhoto } from '../../lib/media';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
+import { ConfirmDialog } from '../kitchen/parts';
 import { FollowUpSheet } from './FollowUpSheet';
 import { UnpaidList } from './UnpaidList';
 import { changeText } from './lib';
 
 type Tab = 'changes' | 'unpaid';
 const dm = { day: 'numeric', month: 'short' } as const;
-const pill: CSSProperties = { height: 36, padding: '0 14px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 500, fontFamily: 'Inter', whiteSpace: 'nowrap', flex: 'none', cursor: 'pointer' };
+const pill: CSSProperties = { height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 500, fontFamily: 'Inter', whiteSpace: 'nowrap', flex: 'none', cursor: 'pointer' };
 
 export function Renewals() {
   const s = useClub();
@@ -39,12 +40,15 @@ export function Renewals() {
   const setTab = (v: Tab) => setParams(v === 'unpaid' ? { tab: 'unpaid' } : {}, { replace: true });
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
+  /** the member whose change is about to be undone (Undo asks first: the family is told at once) */
+  const [undoing, setUndoing] = useState<string | null>(null);
 
   const rows = useMemo(() => changeRows(s, month, today), [s, month, today]);
   /** there is still someone a change can be recorded for */
   const canAdd = !past && renewalMembers(s, month).some((m) => canRecord(s, m, month, today));
 
   const undo = async (memberId: string) => {
+    setUndoing(null);
     if (busy) return;
     setBusy(memberId);
     const m = s.members[memberId];
@@ -64,10 +68,10 @@ export function Renewals() {
     const m = s.members[r.memberId];
     if (!m) return null;
     const name = listName(m);
-    const what = changeText(t, fmt, r.outcome, followUpOf(s, r.memberId, month)?.leaveMonths);
-    const when = `${t('renewals.from', { d: fmt.fd(r.from, dm) })} · ${t('renewals.recordedBy', { who: actorName(s, r.by) })}`;
+    const what = changeText(t, fmt, r.outcome, r.leaveMonths);
+    const when = [t('renewals.from', { d: fmt.fd(r.from, dm) }), r.by ? t('renewals.recordedBy', { who: actorName(s, r.by) }) : ''].filter(Boolean).join(' · ');
     return (
-      <div key={r.memberId} data-change={r.memberId} className="cp-tap"
+      <div key={`${r.memberId}-${r.outcome}`} data-change={r.memberId} className="cp-tap"
         style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '10px 16px' : '12px 0', fontFamily: 'Inter', color: '#24201C', borderTop: i && !isPhone ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', backgroundImage: i && isPhone ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 70px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
         <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={42} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -75,7 +79,7 @@ export function Renewals() {
           <span data-testid="change-what" style={{ fontSize: 14, lineHeight: '20px', overflowWrap: 'anywhere' }}>{what}</span>
           <span data-testid="change-when" style={{ fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{when}</span>
         </span>
-        {r.canUndo ? <button type="button" data-testid="change-undo" aria-label={`${t('renewals.undo')} ${name}`} disabled={!!busy} onClick={() => void undo(r.memberId)} className="cp-press cp-fill" style={pill}><Icon name="undo" size={17} />{t('renewals.undo')}</button> : null}
+        {r.canUndo && !r.readOnly ? <button type="button" data-testid="change-undo" aria-label={`${t('renewals.undo')} ${name}`} disabled={!!busy} onClick={() => setUndoing(r.memberId)} className="cp-press cp-fill" style={pill}><Icon name="undo" size={17} />{t('renewals.undo')}</button> : null}
       </div>
     );
   };
@@ -92,13 +96,15 @@ export function Renewals() {
         <>
           {canAdd ? (
             <div style={{ display: 'flex' }}>
-              <button type="button" data-testid="record-change" onClick={() => setRecording(true)} className="cp-press" style={{ ...pill, height: 40, background: '#24201C', color: '#FFFFFF' }}><Icon name="add" size={18} />{t('renewals.record')}</button>
+              <button type="button" data-testid="record-change" onClick={() => setRecording(true)} className="cp-press" style={{ ...pill, background: '#24201C', color: '#FFFFFF' }}><Icon name="add" size={18} />{t('renewals.record')}</button>
             </div>
           ) : null}
           {list}
         </>
       ) : <UnpaidList />}
       {recording ? <FollowUpSheet month={month} onClose={() => setRecording(false)} /> : null}
+      <ConfirmDialog open={!!undoing} onClose={() => setUndoing(null)} title={t('renewals.undoTitle')} body={undoing && s.members[undoing] ? t('renewals.undoAsk', { name: displayName(s.members[undoing]), month: fmt.fmonth(month) }) : null}
+        confirmLabel={t('renewals.undo')} cancelLabel={t('renewals.keep')} onConfirm={() => (undoing ? undo(undoing) : undefined)} />
     </div>
   );
 }

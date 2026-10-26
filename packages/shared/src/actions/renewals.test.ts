@@ -212,6 +212,22 @@ describe('undo until the 1st', () => {
   });
 });
 
+describe('changeRows: changes recorded elsewhere', () => {
+  it('a plan switch from the profile, a leave month and a stop show read-only (no Undo), with who and from when; a follow-up\'s own change is not listed twice', () => {
+    let s = run(fresh(), 'members.changePlan', { memberId: 'm2', plan: 'flex' }, 's10').state; // finance: from 1 Nov
+    s = run(s, 'membership.requestLeave', { memberId: 'm20', month: '2026-12' }, 's9').state;
+    s = run(s, 'members.end', { memberId: 'm46', lastDay: '2026-11-13', reason: 'movedAway' }, 's9').state;
+    const rows = changeRows(s, MONTH, T);
+    const ro = rows.filter((r) => r.readOnly).map((r) => [r.memberId, r.outcome, r.from, r.by, r.canUndo]);
+    expect(ro).toEqual(expect.arrayContaining([['m2', 'downgrade', '2026-11-01', 'staff:s10', false], ['m46', 'stop', '2026-11-14', 'staff:s9', false]]));
+    expect(ro.find((r) => r[0] === 'm20')).toBeUndefined(); // December's leave is not November's
+    expect(changeRows(s, '2026-12', T).find((r) => r.memberId === 'm20')).toMatchObject({ outcome: 'leave', from: '2026-12-01', by: 'staff:s9', leaveMonths: ['2026-12'], readOnly: true, canUndo: false });
+    // recorded through the follow-up instead: one row, with Undo
+    const t = record(fresh(), 'm1', 'upgrade').state;
+    expect(changeRows(t, MONTH, T).filter((r) => r.memberId === 'm1').map((r) => [r.outcome, !!r.readOnly, r.canUndo])).toEqual([['upgrade', false, true]]);
+  });
+});
+
 describe('leave keeps its notice rules', () => {
   it('November\'s notice was due 17 Oct: late on the 21st, fine on the 10th; December still works and applies at once', () => {
     const s = fresh();

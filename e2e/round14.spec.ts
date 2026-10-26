@@ -23,8 +23,11 @@ test('Next month: Caca records Oma Lina’s upgrade (in effect at once), sees th
   await expect(row).toContainText('Upgrade to Gold');
   await expect(row).toContainText('from 1 Nov');
   await assertNoHorizontalScroll(page);
-  // undo it before the 1st: the row is gone
+  // undo it before the 1st: it asks first (the family is told at once), then the row is gone
   await row.getByRole('button', { name: /^Undo/ }).click();
+  const ask = page.getByRole('dialog', { name: 'Undo this change?' });
+  await expect(ask).toContainText('The change for Oma Lina in November is cancelled');
+  await ask.getByRole('button', { name: 'Undo', exact: true }).click();
   await expect(row).toHaveCount(0);
   c.assertClean();
 });
