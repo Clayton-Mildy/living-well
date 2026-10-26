@@ -27,13 +27,13 @@ export const status = {
 };
 export const nav = {
   arrivals: 'Arrivals', enquiries: 'Enquiries', members: 'Members', health: 'Health checks', readings: 'Readings', today: 'Today', camera: 'Camera', log: 'Daily log',
-  menu: 'Menu', feedback: 'Feedback', stock: 'Stock', billing: 'Billing', payments: 'Payments', budget: 'Budget', receipts: 'Receipts', overview: 'Overview', broadcast: 'Broadcast',
+  menu: 'Menu', lunch: 'Lunch round', feedback: 'Feedback', stock: 'Stock', billing: 'Billing', payments: 'Payments', budget: 'Budget', receipts: 'Receipts', overview: 'Overview', broadcast: 'Broadcast',
   calendar: 'Calendar and schedule', calShort: 'Calendar', me: 'Me', people: 'People', photos: 'Photos', healthF: 'Health', venue: 'Venue', more: 'More', directory: 'Directory', contacts: 'Contacts',
   surveys: 'Surveys', plans: 'Plans and pricing', reviews: 'Approvals', requests: 'Requests',
   g_front: 'Front desk', g_care: 'Care', g_kitchen: 'Kitchen', g_finance: 'Finance', g_club: 'Club', allModules: 'All modules',
   // short labels for the phone bottom bar
   s_overview: 'Home', s_arrivals: 'Arrivals', s_enquiries: 'Leads', s_members: 'Members', s_health: 'Checks', s_readings: 'Trends', s_today: 'Today', s_camera: 'Camera',
-  s_log: 'Log', s_menu: 'Menu', s_feedback: 'Feedback', s_stock: 'Stock', s_billing: 'Bills', s_payments: 'Pay', s_budget: 'Budget', s_receipts: 'Receipts', s_directory: 'Contacts',
+  s_log: 'Log', s_menu: 'Menu', s_lunch: 'Lunch', s_feedback: 'Feedback', s_stock: 'Stock', s_billing: 'Bills', s_payments: 'Pay', s_budget: 'Budget', s_receipts: 'Receipts', s_directory: 'Contacts',
   s_calendar: 'Calendar', s_calShort: 'Calendar', s_me: 'Me', s_photos: 'Photos', s_healthF: 'Health', s_more: 'More', s_requests: 'Requests', s_reviews: 'Approvals', s_contacts: 'Contacts',
   // KC round 7
   renewals: 'Next month', tasks: 'Tasks', guests: 'Guest hosts', insights: 'Insights', memories: 'Memories', report: 'Daily report', s_report: 'Report', monthReport: 'Month report', s_monthReport: 'Month', s_renewals: 'Next month', s_tasks: 'Tasks', s_guests: 'Guests', s_insights: 'Insights', s_memories: 'Memories',

@@ -249,6 +249,18 @@ describe('Photos tab', () => {
     expect(first.querySelector('[data-testid="select-day-start"]')?.textContent).toMatch(/^\d+ photos?/); // the day's header: the count is also the "select this day" button (KC round 10)
   });
 
+  it('round 14: the chips are All, Meals, Activities and Portraits; Meals keeps only the lunch and tea table', async () => {
+    open('f1');
+    await show(<FamilyPhotos />, '/photos');
+    const chips = qa('[data-testid="photo-filter"] [data-value]');
+    expect(chips.map((c) => c.getAttribute('data-value'))).toEqual(['all', 'meals', 'activities', 'portraits']);
+    expect(chips.map((c) => c.textContent)).toEqual(['All', 'Meals', 'Activities', 'Portraits']);
+    await click(q('[data-testid="photo-filter"] [data-value="meals"]'));
+    const tiles = qa('[data-testid="photo-day"] [data-photo-id]');
+    expect(tiles.length).toBeGreaterThan(0);
+    expect(tiles.every((x) => x.getAttribute('data-kind') === 'lunch')).toBe(true);
+  });
+
   it('a tile opens the black viewer: "1 of N", label and "Today · time · name" for a family with two parents; ← → and Esc', async () => {
     open('f1');
     await show(<FamilyPhotos />, '/photos');

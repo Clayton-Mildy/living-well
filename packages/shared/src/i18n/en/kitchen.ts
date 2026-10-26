@@ -107,6 +107,9 @@ export const kitchen = {
   'notif.feedbackNew': 'New meal feedback about {name}.', 'notif.feedbackReply': 'The kitchen replied about {name}’s meal: “{text}”',
   'notif.stockApproved': 'Your stock request was approved: {item} ({qty}).', 'notif.stockDeclined': 'Your stock request was declined: {item}. {note}',
   'feed.lunchPhoto': 'Lunch photo posted', 'feed.lunchPhotoPending': 'Lunch photo waiting for approval', 'feed.lunchPhotoRemoved': 'Lunch photo removed', 'feed.teaPhoto': 'Tea photo posted', 'feed.teaPhotoPending': 'Tea photo waiting for approval', 'feed.teaPhotoRemoved': 'Tea photo removed', 'feed.menuPublished': 'Weekly menu published', 'feed.menuChanged': 'Menu changed for one date', 'feed.alternative': 'Alternative for {name}: {alternative} instead of {dish}',
+  'feed.lunchMarked': 'Lunch marked · {names}',
   'feed.feedback': 'Meal feedback about {name}', 'feed.feedbackLogged': 'Meal feedback logged for {name}', 'feed.feedbackReply': 'Kitchen replied about {name}’s meal',
   'feed.stockRequested': 'Stock requested: {item} ({qty})', 'feed.stockApproved': 'Stock approved: {item}', 'feed.stockDeclined': 'Stock declined: {item}', 'feed.stockReceived': 'Stock received: {item}',
+  // the lunch round (round 14)
+  'lunch.opens': 'Opens at {time}', 'lunch.markRest': 'Mark the rest as Ate all', 'lunch.restWhat': 'Ate all', 'lunch.nobody': 'Nobody has checked in yet.', 'lunch.rowAria': '{name} · lunch',
 };

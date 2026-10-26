@@ -590,9 +590,9 @@ test('Photos: everyone’s days newest first, with memory cards and filters; a t
   const filter = page.getByTestId('photo-filter');
   await expect(filter.getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const all = await page.locator('[data-photo-id]').count();
-  await expect(filter.getByRole('button', { name: 'Group', exact: true })).toHaveCount(0); // KC round 9: the seed's group photos are placeholders, which families never see
+  await expect(filter.getByRole('button', { name: 'Group', exact: true })).toHaveCount(0); // round 14: no Group chip (group pictures are Activities); the chips are All, Meals, Activities, Portraits
   await filter.getByRole('button', { name: 'Activities', exact: true }).click();
-  await expect(page.locator('[data-photo-id]:not([data-kind="activity"])')).toHaveCount(0);
+  await expect(page.locator('[data-photo-id]:not([data-kind="activity"]):not([data-kind="group"])')).toHaveCount(0);
   expect(await page.locator('[data-photo-id]').count()).toBeLessThan(all);
   await filter.getByRole('button', { name: 'All', exact: true }).click();
   await assertNoHorizontalScroll(page);

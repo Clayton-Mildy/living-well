@@ -5,7 +5,7 @@
 // approves them in Reviews (photo.approve calls announceLunchPhoto for them). Notification kinds and feed keys live in the `kitchen`
 // i18n namespace (kitchen.notif.*, kitchen.feed.*).
 import type { Draft } from 'immer';
-import type { ClubState, Dish, DishAllergen, Feedback, ISODate, MenuDay, StockRequest, User, Weekday } from '../types';
+import type { ClubState, Dish, DishAllergen, Face, Feedback, ISODate, MenuDay, StockRequest, User, Weekday } from '../types';
 import { DomainError, defineAction, hasRole, isStaff, type ActionDef, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { dayStatus } from '../rules/core';
@@ -15,6 +15,11 @@ import {
   canApproveStock, canEditStock, canReceiveStock, canRequestStock, diffTemplates, dishUsage, menuAudience, potentialConflicts, replyTarget, sameIds, templateOn,
 } from '../rules/kitchenOps';
 import { dow, live, uniq } from '../util';
+import { LUNCH_AMOUNTS, type LunchAmount } from '../rules/activity';
+import { writeMark } from '../rules/mood';
+import { applyMarks, checkLogDay, requireAttended } from './care';
+import { namesOf } from './photos';
+import { optFace } from './mood';
 import { DAYMENU_KEYS, isWaiting, snapshotOf } from '../rules/approvals';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 
@@ -512,4 +517,34 @@ const stockActions: ActionDef[] = [
   }),
 ];
 
-export const kitchenActions: ActionDef[] = [...dishActions, ...menuActions, ...planActions, ...feedbackActions, ...stockActions] as ActionDef[];
+// ---------- the lunch round (round 14: how much each person ate and their lunch face belong to the F&B team) ----------
+interface LunchMarkInput { date: ISODate; memberIds: string[]; lunch?: LunchAmount | null; face?: Face; onlyEmpty: boolean }
+
+const lunchActions: ActionDef[] = [
+  defineAction<LunchMarkInput>({
+    name: 'kitchen.lunchMark',
+    can: (u) => kitchenOrMgmt(u),
+    parse(raw) {
+      const r = rec(raw);
+      if (!Array.isArray(r.memberIds) || !r.memberIds.length || r.memberIds.length > 120 || !r.memberIds.every((x) => typeof x === 'string' && x.length > 0 && x.length < 80)) bad();
+      const lunch = r.lunch === undefined ? undefined : r.lunch === null ? null : oneOf(r.lunch, LUNCH_AMOUNTS);
+      const face = optFace(r.face);
+      if (lunch === undefined && face === undefined) bad(); // a mark of something
+      return { date: isoDate(r.date), memberIds: uniq(r.memberIds as string[]), ...(lunch !== undefined ? { lunch } : {}), ...(face ? { face } : {}), onlyEmpty: optBool(r.onlyEmpty, false) };
+    },
+    run(d, input, ctx) {
+      checkLogDay(ctx, input.date);
+      for (const id of input.memberIds) requireAttended(d, ctx, id, input.date);
+      // the amount goes on the day's log like any mark by non-management staff: it waits for approval, families hear nothing until then
+      const done = input.lunch !== undefined ? input.memberIds.filter((id) => applyMarks(d, ctx, id, input.date, { lunch: input.lunch }, input.onlyEmpty)) : input.memberIds;
+      // the face is a lunch mood mark (today's only, like every mood mark); "mark the rest" only faces the people it marked
+      if (input.face && input.date === ctx.today) for (const id of input.lunch !== undefined && input.onlyEmpty ? done : input.memberIds) writeMark(d, ctx, { memberId: id, moment: 'lunch', face: input.face });
+      if (input.lunch !== undefined && done.length > 1) ctx.feed({ icon: 'restaurant', key: 'kitchen.feed.lunchMarked', params: { names: namesOf(d, done), n: done.length } });
+      ctx.result.marked = done.length;
+      ctx.result.memberIds = done;
+      ctx.result.pending = needsApproval(ctx);
+    },
+  }),
+];
+
+export const kitchenActions: ActionDef[] = [...dishActions, ...menuActions, ...planActions, ...feedbackActions, ...stockActions, ...lunchActions] as ActionDef[];

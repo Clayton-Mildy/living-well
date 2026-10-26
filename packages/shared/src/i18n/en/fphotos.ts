@@ -1,6 +1,6 @@
 // fphotos strings (EN): family Photos and Memories story (round 8).
 export const fphotos = {
-  chipAll: 'All', chipPortraits: 'Portraits', chipGroup: 'Group', chipActivities: 'Activities', chipLunch: 'Lunch', filterAria: 'Filter photos', lunchLabel: 'Lunch',
+  chipAll: 'All', chipPortraits: 'Portraits', chipActivities: 'Activities', chipMeals: 'Meals', filterAria: 'Filter photos', lunchLabel: 'Lunch',
   memoriesAria: 'Memories', cardAria: 'Open memories: {t}',
   viewerCount: '{i} of {n}', dateAria: 'Pick a day', dateClear: 'Show every day again', qLastWeek: 'Last week', qThisMonth: 'This month', qLastMonth: 'Last month', viewGallery: 'Show as a gallery', viewFeed: 'Show as a feed', viewerShareAria: 'Share this photo', viewerSaveAria: 'Save to your gallery', savedOne: 'Picture saved', savedN: '{n} pictures saved', saveFailed: 'The picture could not be saved. Try again.', selToolbar: 'Selected pictures', selN: '{n} selected', selNone: 'Tap pictures to select them', selAll: 'All', selSave: 'Save', selDay: 'Select this day', selDayOff: 'Unselect this day', selCancel: 'Stop selecting', shareCopied: 'Copied. You can paste it in a message.',
   storyAria: 'Memories: {t}', storyPrev: 'Previous', storyNext: 'Next', storyCount: '{i} of {n}', storyShare: 'Share',

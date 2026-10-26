@@ -75,7 +75,7 @@ async function takeVideoWithFile(page: Page) {
   await cam.getByRole('button', { name: 'Use video' }).click();
   await expect(cam).toBeHidden();
 }
-/** One member's row in the open round of the Daily log (a chip row in the session and lunch rounds, a card with the morning faces in the Morning round). */
+/** One member's row in the open round of the Daily log (a chip row in a session round, a card with the morning faces in the Morning round). */
 const logRow = (page: Page, name: string) => page.getByTestId('log-row').filter({ hasText: name });
 /** The progress line of the open round, e.g. "1 of 3 marked". */
 const progress = (page: Page) => page.getByTestId('round-progress');
@@ -517,7 +517,7 @@ test('Today: the picture of the session (the Now / Next banner and the dot) open
   c.assertClean();
 });
 
-test('Photo library: filter to activity pictures; they open in the viewer with no tags; management approves one there', async ({ page }) => {
+test('Photo library: filter to Activities (and Meals); a session picture opens in the viewer with no tags; management approves one there', async ({ page }) => {
   const c = watchConsole(page);
   const a = await actAs(page, 's5', 'photo.addActivity', { date: '2026-10-21', activity: 'Keroncong sing-along' }, 'e2e-lib-a');
   const b = await actAs(page, 's9', 'photo.addActivity', { date: '2026-10-21', activity: 'Batik painting' }, 'e2e-lib-b');
@@ -525,11 +525,13 @@ test('Photo library: filter to activity pictures; they open in the viewer with n
   await signIn(page, 's9', '/photos');
   await expect(page.locator(`[data-photo-id="${pb}"]`)).toBeVisible();
   const all = await page.locator('[data-photo-id]').count();
-  await pickOption(page, 'Show', 'Activity pictures');
-  // the seed has a month of session pictures too (and group photos of members): the filter leaves only pictures of sessions, today's two among them
+  // round 14: Meals keeps the lunch and tea pictures (today's session pictures are not among them), Activities everything but the meals and the door camera
+  await pickOption(page, 'Show', 'Meals');
+  await expect(page.locator(`[data-photo-id="${pa}"]`)).toHaveCount(0);
+  await expect(page.locator(`[data-photo-id="${pb}"]`)).toHaveCount(0);
+  await pickOption(page, 'Show', 'Activities');
   await expect(page.locator(`[data-photo-id="${pa}"]`)).toHaveAttribute('aria-label', /Activity picture/);
   await expect(page.locator(`[data-photo-id="${pb}"]`)).toBeVisible();
-  await expect(page.locator('[data-photo-id]:not([aria-label*="Activity picture"])')).toHaveCount(0);
   expect(await page.locator('[data-photo-id]').count()).toBeGreaterThanOrEqual(2);
   await noHScroll(page);
   await page.locator(`[data-photo-id="${pa}"]`).click();
@@ -669,13 +671,13 @@ test('Daily log: a search finds a member by name', async ({ page }) => {
   c.assertClean();
 });
 
-test('Daily log: save Bambang as withdrawn / ate most, and morning faces (in rounds: session, lunch, morning)', async ({ page }) => {
+test('Daily log: save Bambang as withdrawn / ate most, and morning faces (in rounds: session, morning; lunch is the kitchen\'s)', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's5', '/log');
   await expect(page.getByRole('heading', { level: 1, name: 'Daily log' })).toBeVisible();
   // the rounds of today's programme, in the order of the day (round 14: the app opens on the Morning round at 09:58)
   const rounds = page.getByRole('tablist', { name: 'Log rounds' }).getByRole('tab');
-  await expect(rounds).toHaveText([/Morning$/, /10:30 · Keroncong sing-along$/, /Lunch$/, /13:30 · Batik painting$/]);
+  await expect(rounds).toHaveText([/Morning$/, /10:30 · Keroncong sing-along$/, /13:30 · Batik painting$/]);
   await expect(page.getByRole('tab', { name: /^Morning/ })).toHaveAttribute('aria-selected', 'true');
   await page.getByRole('tab', { name: /^10:30 · Keroncong sing-along/ }).click();
   await expect(progress(page)).toHaveText('0 of 3 marked');
@@ -704,26 +706,12 @@ test('Daily log: save Bambang as withdrawn / ate most, and morning faces (in rou
   await expect.poll(async () => (await snapshot(page, 's5')).dailyLogs['log-m2-2026-10-21']?.sessions).toEqual({ '10:30': 'joined' });
   expect((await snapshot(page, 's5')).dailyLogs['log-m10-2026-10-21']).toMatchObject({ joined: 'satOut' }); // untouched by "the rest"
 
-  // round 2, lunch: one tap per person, five amounts; he ate most
-  await page.getByRole('tab', { name: /^Lunch/ }).click();
-  await expect(page).toHaveURL(/round=lunch/);
-  await expect(progress(page)).toHaveText('0 of 3 marked');
-  await expect(bambang.getByRole('button')).toHaveText(['All', 'Most', 'Half', 'Little', 'None']);
-  await bambang.getByRole('button', { name: 'Most', exact: true }).click();
-  await expect(bambang.getByRole('button', { name: 'Most', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(progress(page)).toHaveText('1 of 3 marked');
+  // round 14: lunch is not one of the log's rounds any more (the F&B team marks it on /lunch); Bambang ate most, marked by the kitchen
+  await expect(page.getByRole('tab', { name: /^Lunch/ })).toHaveCount(0);
+  await actAs(page, 's2', 'kitchen.lunchMark', { date: '2026-10-21', memberIds: ['m10'], lunch: 'most' }, 'e2e-lunch-m10');
   await expect.poll(async () => (await log())?.lunch).toBe('most');
-  await markTheRest(page, 'Mark the rest as Ate all', 2, 'Ate all');
-  await expect(progress(page)).toHaveText('All marked');
-  await expect(logRow(page, 'Opa Hendra').getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
-  await expect(bambang.getByRole('button', { name: 'Most', exact: true })).toHaveAttribute('aria-pressed', 'true'); // still his
-  // tapping the chosen amount again clears it (Opa Tjahjadi stays without a lunch mark)
-  await logRow(page, 'Opa Tjahjadi').getByRole('button', { name: 'All', exact: true }).click();
-  await expect(logRow(page, 'Opa Tjahjadi').getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'false');
-  await expect(progress(page)).toHaveText('2 of 3 marked');
-  await expect.poll(async () => (await snapshot(page, 's5')).dailyLogs['log-m20-2026-10-21']?.lunch).toBeUndefined();
 
-  // round 3, the Morning round (round 14): a face per person on the row, and the notes form per person (communicative, content, a note for the family);
+  // round 2, the Morning round (round 14): a face per person on the row, and the notes form per person (communicative, content, a note for the family);
   // the old mood word, lunch and the sessions are not in it
   await page.getByRole('tab', { name: /^Morning/ }).click();
   await expect(progress(page)).toHaveText('0 of 3 marked');
@@ -759,7 +747,7 @@ test('Daily log: save Bambang as withdrawn / ate most, and morning faces (in rou
   await expect.poll(async () => (await snapshot(page, 's5')).moodMarks['2026-10-21:m2:morning']?.face).toBe(5);
   const s2 = await snapshot(page, 's5');
   expect(s2.dailyLogs['log-m10-2026-10-21']).toMatchObject({ communicative: 'withdrawn', lunch: 'most', joined: 'satOut' }); // untouched
-  expect(s2.dailyLogs['log-m20-2026-10-21'].lunch).toBeUndefined(); // cleared in the lunch round above
+  expect(s2.dailyLogs['log-m20-2026-10-21'].lunch).toBeUndefined(); // the kitchen marked only Bambang
   expect(s2.dailyLogs['log-m1-2026-10-21']).toBeUndefined(); // Oma Lina has not arrived
   c.assertClean();
 });
@@ -777,11 +765,10 @@ test('Daily log: edit yesterday’s log (the last 7 days are editable)', async (
   await page.getByRole('tab', { name: /^Morning/ }).click();
   await expect(progress(page)).toHaveText('All marked');
   await expect(page.getByTestId('log-row')).toHaveCount(there);
-  // lunch is its own round: Opa Hendra ate half
-  await page.getByRole('tab', { name: /^Lunch/ }).click();
-  const lunch = (await snapshot(page, 's5')).dailyLogs['log-m2-2026-10-20'].lunch === 'half' ? { v: 'little', label: 'Little' } : { v: 'half', label: 'Half' }; // a different amount than the seeded one (tapping the chosen one clears it)
-  await logRow(page, 'Opa Hendra').getByRole('button', { name: lunch.label, exact: true }).click();
-  await expect(logRow(page, 'Opa Hendra').getByRole('button', { name: lunch.label, exact: true })).toHaveAttribute('aria-pressed', 'true');
+  // lunch is the kitchen's (round 14): the F&B supervisor corrects what Opa Hendra ate
+  const lunch = (await snapshot(page, 's5')).dailyLogs['log-m2-2026-10-20'].lunch === 'half' ? { v: 'little' } : { v: 'half' }; // a different amount than the seeded one
+  await expect(page.getByRole('tab', { name: /^Lunch/ })).toHaveCount(0);
+  await actAs(page, 's2', 'kitchen.lunchMark', { date: '2026-10-20', memberIds: ['m2'], lunch: lunch.v }, 'e2e-lunch-m2-yesterday');
   await expect.poll(async () => (await snapshot(page, 's5')).dailyLogs['log-m2-2026-10-20']?.lunch).toBe(lunch.v);
   // and his notes are edited in place in the Morning round (a past day: no faces, those are today's only)
   await page.getByRole('tab', { name: /^Morning/ }).click();

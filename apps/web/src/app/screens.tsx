@@ -36,6 +36,7 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   dlog: L(activity, 'DailyLog'),
   cal: L(calendar, 'Calendar'),
   kmenu: L(kitchen, 'KitchenMenu'),
+  klunch: L(kitchen, 'LunchRound'),
   kfeed: L(kitchen, 'KitchenFeedback'),
   kstock: L(kitchen, 'Stock'),
   requests: L(requests, 'Requests'),

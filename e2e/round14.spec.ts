@@ -142,3 +142,57 @@ test('Mood at six moments: Caca checks Oma Lina in and Opa Hendra out without a 
   await ctx.close();
   c.assertClean();
 });
+
+test('Lunch round: Yohanes marks Bapak Bambang "Most" with a "Good" face on /lunch; Ega sees it in Approvals; his family sees the Lunch card with the dishes', async ({ page, request, browser }) => {
+  const c = watchConsole(page);
+  // the round opens at 11:30 (the demo clock starts at 09:58)
+  await request.post('/api/demo/clock', { data: { hm: '10:45', allowBack: true } });
+  await signIn(page, 's2', '/lunch');
+  await expect(page.getByRole('heading', { level: 1, name: 'Lunch round' })).toBeVisible();
+  await expect(page.getByText('Opens at 11:30')).toBeVisible();
+  await expect(page.getByTestId('lunch-row')).toHaveCount(0);
+  await request.post('/api/demo/clock', { data: { hm: '12:10', allowBack: true } });
+  await signIn(page, 's2', '/lunch');
+  const snap = async (uid: string) => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': uid } })).json()).state;
+  await expect(page.getByTestId('lunch-row')).toHaveCount(3); // the three who checked in
+  const bambang = page.getByTestId('lunch-row').filter({ hasText: 'Bapak Bambang' });
+  await expect(bambang.getByRole('button')).toHaveText(['All', 'Most', 'Half', 'Little', 'None']);
+  await bambang.getByRole('button', { name: 'Most', exact: true }).click();
+  await expect(bambang.getByRole('button', { name: 'Most', exact: true })).toHaveAttribute('aria-pressed', 'true');
+  await bambang.getByRole('radio', { name: 'Good' }).click();
+  await expect(bambang.getByRole('radio', { name: 'Good' })).toHaveAttribute('aria-checked', 'true');
+  await expect(page.getByTestId('round-progress')).toHaveText('1 of 3 marked');
+  await assertNoHorizontalScroll(page);
+  await expect.poll(async () => (await snap('s2')).dailyLogs['log-m10-2026-10-21']?.lunch).toBe('most');
+  expect((await snap('s2')).moodMarks['2026-10-21:m10:lunch']).toMatchObject({ moment: 'lunch', face: 4 });
+  // the amount waits for management: the family sees nothing yet
+  expect((await snap('s2')).dailyLogs['log-m10-2026-10-21'].approval).toMatchObject({ status: 'pending', by: 'staff:s2' });
+  const o = test.info().project.use as Record<string, unknown>;
+  const newPage = async () => {
+    const ctx = await browser.newContext({ baseURL: o.baseURL as string, viewport: o.viewport as { width: number; height: number }, hasTouch: o.hasTouch as boolean | undefined, isMobile: o.isMobile as boolean | undefined, deviceScaleFactor: o.deviceScaleFactor as number | undefined, userAgent: o.userAgent as string | undefined });
+    return { ctx, page: await ctx.newPage() };
+  };
+  const fam = await newPage();
+  const fc = watchConsole(fam.page);
+  await signIn(fam.page, 'fm10_0', '/today');
+  await expect(fam.page.getByTestId('lunch-card')).toBeVisible();
+  await expect(fam.page.getByTestId('lunch-card-dishes')).toContainText('Sop ikan kakap');
+  await expect(fam.page.getByTestId('lunch-card-amount')).toContainText('Not logged yet');
+  // Ega approves it in Approvals ▸ Daily logs, where it reads "Ate most"
+  const ega = await newPage();
+  const ec = watchConsole(ega.page);
+  await signIn(ega.page, 's9', '/reviews?tab=logs');
+  const item = ega.page.locator('[data-approval][data-type="logs"]').filter({ hasText: 'Bapak Bambang' });
+  await expect(item.first()).toContainText('Ate most');
+  await ega.page.request.post('/api/actions/approval.approve', { headers: { 'x-user-id': 's9' }, data: { mutationId: 'e2e-r14-lunch-approve', club: 'citra', input: { type: 'logs', ids: ['log-m10-2026-10-21'] } } });
+  // now the family's Lunch card says how much he ate
+  await fam.page.reload();
+  await expect(fam.page.getByTestId('lunch-card-amount')).toContainText('Ate most');
+  await expect(fam.page.getByTestId('daily-log').getByText('Lunch', { exact: true })).toHaveCount(0); // not twice: the daily log has no Lunch row any more
+  await assertNoHorizontalScroll(fam.page);
+  fc.assertClean();
+  ec.assertClean();
+  await fam.ctx.close();
+  await ega.ctx.close();
+  c.assertClean();
+});

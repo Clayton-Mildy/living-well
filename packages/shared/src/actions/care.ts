@@ -30,7 +30,7 @@ const isoDate = z.string().refine((s) => {
 });
 
 // ---------- daily log ----------
-// KC round 7: the log is filled in rounds. `log.mark` marks lunch / a session / mood for many members at once (one tap per person); `log.save` writes
+// KC round 7: the log is filled in rounds. `log.mark` marks a session / mood for many members at once (one tap per person; lunch is the F&B team's, round 14); `log.save` writes
 // the Mood & notes round of one member (mood, communicative, content, the note for the family and the staff note). Every part can be saved alone.
 const moodEnum = z.enum(['cheerful', 'calm', 'quiet', 'agitated']);
 const lunchEnum = z.enum(LUNCH_AMOUNTS);
@@ -100,16 +100,16 @@ function writeLog(d: Draft<ClubState>, ctx: Ctx, i: LogInput): 'created' | 'edit
   ctx.feed({ icon: 'edit_note', key: kind === 'edited' ? 'activity.feed.logEdited' : 'activity.feed.log', params: { name, date: fmtDMY(i.date) }, memberId: i.memberId });
   return kind;
 }
-function checkLogDay(ctx: Ctx, date: ISODate) {
+export function checkLogDay(ctx: Ctx, date: ISODate) {
   if (!logDateOk(ctx.today, date)) ctx.fail('activity.err.dateRange');
 }
-function requireAttended(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODate) {
+export function requireAttended(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODate) {
   requireMember(d, memberId, ctx);
   if (!d.attendance[attId(date, memberId)]?.checkIn) ctx.fail('activity.err.notAttended', { name: shortOf(d, memberId) });
 }
 
 /** The parts of a round to set on one member's log: a value sets it, null clears it (undefined leaves it alone). */
-interface Marks { lunch?: LunchAmount | null; mood?: DailyLog['mood'] | null; communicative?: DailyLog['communicative'] | null; content?: DailyLog['content'] | null; sessions?: Partial<Record<Slot, SessionMark | null>> }
+export interface Marks { lunch?: LunchAmount | null; mood?: DailyLog['mood'] | null; communicative?: DailyLog['communicative'] | null; content?: DailyLog['content'] | null; sessions?: Partial<Record<Slot, SessionMark | null>> }
 const SIMPLE_MARKS = ['lunch', 'mood', 'communicative', 'content'] as const;
 const logEmpty = (r: DailyLog) => r.mood === undefined && r.lunch === undefined && r.communicative === undefined && r.content === undefined && !r.sessions && r.joined === undefined && !r.note && !r.staffNote;
 /**
@@ -117,7 +117,7 @@ const logEmpty = (r: DailyLog) => r.mood === undefined && r.lunch === undefined 
  * `onlyEmpty` leaves parts that are already marked alone ("mark the rest"). Returns whether anything changed; nothing changed = no row is touched.
  * Families hear nothing from a mark: they are told when the Mood & notes round is saved and approved.
  */
-function applyMarks(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODate, m: Marks, onlyEmpty: boolean): boolean {
+export function applyMarks(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODate, m: Marks, onlyEmpty: boolean): boolean {
   const id = logId(memberId, date);
   const found = d.dailyLogs[id];
   const row0 = found && !found.deletedAt ? found : undefined;
@@ -199,6 +199,8 @@ export const careActions = [
     can: (u) => logWriters(u),
     parse: (raw) => parseWith(markSchema, withMood(raw)),
     run(d, input, ctx) {
+      // round 14: how much was eaten is the F&B team's (kitchen.lunchMark); management may still correct it here
+      if (input.lunch !== undefined && !isMgmt(ctx.user)) ctx.fail('care.err.lunchKitchen');
       checkLogDay(ctx, input.date);
       const ids = uniq(input.memberIds);
       for (const id of ids) requireAttended(d, ctx, id, input.date);

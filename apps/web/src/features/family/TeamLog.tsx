@@ -1,6 +1,6 @@
 // "Daily log" on Today (round 8b; round 8d: every round): the team's approved log of the day, right below the timeline. One soft card per parent who came (named
-// when there are several), always the same rounds in the same order: Lunch (how much was eaten), Activities (each session of the day: joined, sat out, or not
-// logged), Mood (a coloured dot and a word) and the team's note as a quote with its writer and time. A round nobody has approved yet reads "Not logged yet"
+// when there are several), always the same rounds in the same order: Activities (each session of the day: joined, sat out, or not logged), Mood (a coloured dot
+// and a word) and the team's note as a quote with its writer and time. Round 14: how much was eaten is on the Lunch card (LunchCard.tsx), not here. A round nobody has approved yet reads "Not logged yet"
 // (today) or "Not logged" (an earlier day) instead of disappearing. Families only ever read approved log data (the day's story is built from it). A day nobody came
 // has no section, except today before a parent arrives, which keeps the newest written note, labelled with its day.
 import type { ReactNode } from 'react';
@@ -82,16 +82,15 @@ export function TeamNote({ m, log, own, border, onOpenDay }: { m: Member; log: D
   );
 }
 
-/** One parent who came: Lunch, Activities, Mood, then the team's note (each says "not logged" when nothing is approved for it yet). */
+/** One parent who came: Activities, Mood, then the team's note (each says "not logged" when nothing is approved for it yet). */
 function Rounds({ d, m, multi, past, onOpenDay }: { d: DayDigest; m: Member; multi: boolean; past: boolean; onOpenDay: (d: ISODate) => void }) {
   const { t } = useFamilyCtx();
   const none = t(past ? 'ftoday.dlNonePast' : 'ftoday.dlNone');
   const first = !multi;
   return (
     <>
-      <Fact k={t('ftoday.dlLunch')} v={d.lunch ? t('ftoday.dlAte_' + d.lunch) : none} none={!d.lunch} first={first} testId="log-lunch" attrs={d.lunch ? { 'data-amount': d.lunch, 'data-logged': '1' } : { 'data-logged': '0' }} />
-      <Activities d={d} none={none} first={false} />
-      <Fact k={t('ftoday.dlMood')} v={d.mood ? t('family.mood_' + d.mood) : none} none={!d.mood} dot={d.mood ? MOOD_COLOR[d.mood] : undefined} first={false} testId="log-mood" attrs={d.mood ? { 'data-mood': d.mood, 'data-logged': '1' } : { 'data-logged': '0' }} />
+      <Activities d={d} none={none} first={first} />
+      <Fact k={t('ftoday.dlMood')} v={d.mood ? t('family.mood_' + d.mood) : none} none={!d.mood} dot={d.mood ? MOOD_COLOR[d.mood] : undefined} first={first && !d.sessions.length} testId="log-mood" attrs={d.mood ? { 'data-mood': d.mood, 'data-logged': '1' } : { 'data-logged': '0' }} />
       {d.note ? <TeamNote m={m} log={d.note} own border onOpenDay={onOpenDay} /> : <Fact k={t('ftoday.dlNote')} v={none} none first={false} testId="log-note-none" attrs={{ 'data-logged': '0' }} />}
     </>
   );

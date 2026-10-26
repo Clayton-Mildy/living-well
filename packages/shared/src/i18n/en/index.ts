@@ -37,6 +37,7 @@ import { fhealth } from './fhealth';
 import { fme } from './fme';
 import { month } from './month';
 import { unpaid } from './unpaid';
+import { care } from './care';
 
 export const en = {
   ...ns('common', common),
@@ -87,5 +88,6 @@ export const en = {
   ...ns('fme', fme),
   ...ns('month', month),
   ...ns('unpaid', unpaid),
+  ...ns('care', care),
 };
-export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, reg, celeb, occasions, fam, ftoday, fphotos, fcal, fhealth, fme, month, unpaid };
+export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, reg, celeb, occasions, fam, ftoday, fphotos, fcal, fhealth, fme, month, unpaid, care };

@@ -37,6 +37,7 @@ import { fhealth } from './fhealth';
 import { fme } from './fme';
 import { month } from './month';
 import { unpaid } from './unpaid';
+import { care } from './care';
 
 export const id = {
   ...ns('common', common),
@@ -87,4 +88,5 @@ export const id = {
   ...ns('fme', fme),
   ...ns('month', month),
   ...ns('unpaid', unpaid),
+  ...ns('care', care),
 };

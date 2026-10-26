@@ -204,7 +204,7 @@ export function logDeviations(l: LogFields): string[] {
   return out;
 }
 
-// ---------- rounds (KC round 7): lunch, each activity session; round 14: the Morning round (faces and notes) replaces mood & notes ----------
+// ---------- rounds (KC round 7): each activity session; round 14: the Morning round (faces and notes) replaces mood & notes, and lunch moves to the F&B team ----------
 export const LUNCH_AMOUNTS = ['all', 'most', 'half', 'little', 'none'] as const;
 export type LunchAmount = (typeof LUNCH_AMOUNTS)[number];
 export const SESSION_MARKS = ['joined', 'satOut'] as const;
@@ -212,23 +212,25 @@ export type SessionMark = (typeof SESSION_MARKS)[number];
 /** The i18n key of what a lunch amount reads like to families and in summaries ("Ate all of lunch", "Didn't eat"). */
 export const lunchLabelKey = (v: LunchAmount): string => (v === 'none' ? 'activity.opt.lunch.none' : `family.lunch_${v}`);
 
-/** A round of the daily log: 'morning' (round 14: the morning faces and the notes), 'lunch', or a session's start time ('10:30', '13:30', or the time of an extra session such as '15:00'). */
+/** The time the F&B team's lunch round opens (round 14: `/lunch` shows "Opens at 11:30" before it). */
+export const LUNCH_ROUND_OPENS: HM = '11:30';
+/** A round of the activity team's daily log: 'morning' (round 14: the morning faces and the notes), or a session's start time ('10:30', '13:30', or the time of an extra session such as '15:00').
+ *  'lunch' is the F&B team's round (round 14): it is not one of the daily log's rounds, but its marks count with `roundMarked` / `roundProgress`. */
 export type RoundId = 'morning' | 'lunch' | Slot;
-export interface Round { id: RoundId; kind: 'session' | 'lunch' | 'morning'; time: HM; session?: SessionItem }
+export interface Round { id: RoundId; kind: 'session' | 'morning'; time: HM; session?: SessionItem }
 /** When the Morning round starts, and until when it is the round the clock opens. */
 const MORNING_AT: HM = '09:30';
 const MORNING_UNTIL = 11 * 60 + 30;
-/** The rounds of a day in time order: the Morning round (from 09:30), each scheduled session (a slot without a session is skipped; an extra session is a round like any
- *  other) and lunch. At the same time a session comes before lunch. */
+/** The rounds of a day in time order: the Morning round (from 09:30) and each scheduled session (a slot without a session is skipped; an extra session is a round like any
+ *  other). Lunch is not one of them any more (round 14: the kitchen's lunch round, `kitchen.lunchMark`). */
 export function roundsOf(s: ClubState, date: ISODate): Round[] {
   const out: Round[] = [{ id: 'morning', kind: 'morning', time: MORNING_AT }];
   const sessions = dayPlan(s, date).filter((x): x is SessionItem => x.kind === 'session');
   for (const x of sessions) out.push({ id: x.slot, kind: 'session', time: x.time, session: x });
-  out.push({ id: 'lunch', kind: 'lunch', time: FIXED_SLOTS.find((f) => f.kind === 'lunch')!.time });
   return sortBy(out, (r) => r.time);
 }
 const roundIdOf = (r: Round | RoundId): RoundId => (typeof r === 'string' ? r : r.id);
-/** The round to open by the clock: the Morning round before 11:30, then the latest round that has started (the first session until lunch, lunch, the second session from 13:30…). */
+/** The round to open by the clock: the Morning round before 11:30, then the latest round that has started (the first session, the second session from 13:30…). */
 export function defaultRound(rounds: Round[], nowMin: number): RoundId {
   if (nowMin < MORNING_UNTIL && rounds.some((r) => r.kind === 'morning')) return 'morning';
   let pick = rounds[0];
@@ -267,7 +269,7 @@ export function joinedOf(sessions: DailyLog['sessions']): DailyLog['joined'] {
 }
 
 // ---------- photos ----------
-export interface PhotoFilter { memberId?: string; activity?: string; /** 'activity': only the activity pictures (pictures of a session, no member tags) */ kind?: 'activity'; from?: ISODate; to?: ISODate; visibility?: 'visible' | 'hidden' | 'pending' | 'all' }
+export interface PhotoFilter { memberId?: string; activity?: string; /** round 14: 'meals' = the lunch and tea pictures, 'activities' = everything else except the door camera's arrival pictures */ kind?: 'meals' | 'activities'; from?: ISODate; to?: ISODate; visibility?: 'visible' | 'hidden' | 'pending' | 'all' }
 /** Photos for the library: everything not removed (including photos still waiting for approval), newest first. */
 export function libraryPhotos(s: ClubState, f: PhotoFilter = {}): Photo[] {
   const vis = f.visibility ?? 'all';
@@ -278,7 +280,7 @@ export function libraryPhotos(s: ClubState, f: PhotoFilter = {}): Photo[] {
         p.visibility !== 'draft' && // KC round 7: a shot nobody has sent is not in the library
         (vis === 'all' || p.visibility === vis) &&
         (!f.memberId || p.memberIds.includes(f.memberId)) &&
-        (!f.kind || p.kind === f.kind) &&
+        (!f.kind || (f.kind === 'meals' ? p.kind === 'lunch' : p.kind !== 'lunch' && p.kind !== 'arrival')) &&
         (!f.activity || photoActivity(p) === f.activity) &&
         (!f.from || p.date >= f.from) &&
         (!f.to || p.date <= f.to),

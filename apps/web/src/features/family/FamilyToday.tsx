@@ -1,6 +1,6 @@
 // Family Today (round 8, the Family App prototype with KC's immersive header): the day's picture full-bleed at the top with the date chip and the bell on it,
 // the parent(s) and the day at its foot (a row per parent, or one parent's icon rail); then a white panel slides up over it with the day strip, the day's
-// timeline, the team's daily log (every round: lunch, each session, mood, the note), the day's health checks (round 8d), its photos and a way to tell the kitchen about lunch. On a laptop (round 8b) it is two columns instead: the picture as a
+// timeline, the Lunch card (round 14: dishes, the lunch pictures, how much was eaten), the team's daily log (each session, mood, the note), the day's health checks (round 8d), its photos and a way to tell the kitchen about lunch. On a laptop (round 8b) it is two columns instead: the picture as a
 // rounded card that stays in view on the left, the day (what the panel holds) scrolling on the right. Round 8c (the prototype's desktop): a heading above
 // the columns ("Good morning, Maria"; "Looking back" and "Back to today" on an earlier day), the day strip as six tiles under the picture, the photos
 // as rounded tiles. `?date=YYYY-MM-DD` shows an earlier day;
@@ -26,6 +26,7 @@ import { FrostChip, Hero, PANEL_OVERLAP } from './StoryHero';
 import { ParentSwitch } from './ParentSwitch';
 import { Timeline } from './Timeline';
 import { DailyLogSection } from './TeamLog';
+import { LunchCard } from './LunchCard';
 import { TodayHealthSection } from './TodayHealth';
 import { cap, dayWord, namesOf } from './storyBits';
 import { LunchFeedbackSheet, SurveySheet } from './sheets';
@@ -305,6 +306,8 @@ export function FamilyToday() {
 
       <Timeline members={members} stories={stories} date={date} onOpenPhoto={openPhoto} onDay={setDate}
         lunchFeedback={hasLunch ? { label: sent ? fbSub : t('ftoday.fbRow'), onClick: () => setFeedback(true) } : undefined} />
+
+      {isPlan ? null : <LunchCard members={members} stories={stories} past={!isToday} onOpenPhoto={openPhoto} />}
 
       {isPlan ? null : <DailyLogSection members={members} stories={stories} date={date} onOpenDay={setDate} />}
 

@@ -63,6 +63,15 @@ describe('DailyLog faces', () => {
     expect(mock).toHaveBeenCalledWith('log.mark', { date: T, memberIds: ['m2'], session: { slot: '10:30', value: 'satOut' }, face: 1 });
   });
 
+  it('round 14: lunch is not one of the log\'s rounds (the F&B team has it); a lunch link falls back to a session round', async () => {
+    openClub();
+    await show('/log?round=lunch');
+    expect(Array.from(document.querySelectorAll('[role=tab]')).map((x) => x.getAttribute('data-round'))).toEqual(['morning', '10:30', '13:30']);
+    expect(document.querySelector('[role=tab]')?.textContent).not.toContain('Lunch');
+    expect(document.querySelector('[data-testid="round-list"]')?.getAttribute('data-round')).not.toBe('lunch');
+    expect(document.body.textContent).not.toContain('Mark the rest as Ate all');
+  });
+
   it('the Morning round marks a morning face with mood.mark and shows the arc of a person with faces', async () => {
     const mock = openClub((s) => {
       s.moodMarks[moodId(T, 'm2', 'arrival')] = { id: moodId(T, 'm2', 'arrival'), clubId: 'citra', createdAt: `${T}T09:30`, createdBy: 'staff:s1', memberId: 'm2', date: T, time: '09:30', moment: 'arrival', face: 3, by: 'staff:s1' };

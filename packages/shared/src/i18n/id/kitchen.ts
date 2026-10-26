@@ -108,6 +108,9 @@ export const kitchen: Same<typeof EN> = {
   'notif.feedbackNew': 'Masukan makanan baru tentang {name}.', 'notif.feedbackReply': 'Dapur membalas masukan tentang makanan {name}: “{text}”',
   'notif.stockApproved': 'Permintaan stok Anda disetujui: {item} ({qty}).', 'notif.stockDeclined': 'Permintaan stok Anda ditolak: {item}. {note}',
   'feed.lunchPhoto': 'Foto makan siang terkirim', 'feed.lunchPhotoPending': 'Foto makan siang menunggu persetujuan', 'feed.lunchPhotoRemoved': 'Foto makan siang dihapus', 'feed.teaPhoto': 'Foto teh sore terkirim', 'feed.teaPhotoPending': 'Foto teh sore menunggu persetujuan', 'feed.teaPhotoRemoved': 'Foto teh sore dihapus', 'feed.menuPublished': 'Menu mingguan diterbitkan', 'feed.menuChanged': 'Menu diubah untuk satu tanggal', 'feed.alternative': 'Pengganti untuk {name}: {alternative} menggantikan {dish}',
+  'feed.lunchMarked': 'Makan siang ditandai · {names}',
   'feed.feedback': 'Masukan makanan tentang {name}', 'feed.feedbackLogged': 'Masukan makanan untuk {name} dicatat', 'feed.feedbackReply': 'Dapur membalas masukan tentang makanan {name}',
   'feed.stockRequested': 'Stok diminta: {item} ({qty})', 'feed.stockApproved': 'Stok disetujui: {item}', 'feed.stockDeclined': 'Stok ditolak: {item}', 'feed.stockReceived': 'Stok diterima: {item}',
+  // ronde makan siang (putaran 14)
+  'lunch.opens': 'Dibuka pukul {time}', 'lunch.markRest': 'Tandai sisanya Habis', 'lunch.restWhat': 'Habis', 'lunch.nobody': 'Belum ada yang check-in.', 'lunch.rowAria': '{name} · makan siang',
 };

@@ -4,6 +4,7 @@ import { produce } from 'immer';
 import { buildSeed, execute, getUser, getAction, actionItems, updatesFor, unreadUpdates, lunchSafety, menuOn, projectForFamily, live, translate, type ClubState } from '../index';
 import { defineAction, registerActions } from './framework';
 import { announceLunchPhoto } from './kitchen';
+import { moodId } from '../rules/mood';
 import { MAX_LUNCH_PHOTOS, lunchPhotosOn, teaPhotosOn, visibleLunchPhotos, visibleTeaPhotos } from '../rules/kitchen';
 import {
   allergiesOnFile, canApproveStock, canReceiveStock, coversOn, dietaryRows, dishUsage, kitchenConflicts, menuDishesOn, potentialConflicts, safetyOf, sortStock, templateOn, unknownAllergyGuests, unreviewedDishesOn,
@@ -561,6 +562,48 @@ describe('lunch photos', () => {
     const solo = Object.values(s.photos).find((p) => p.kind !== 'lunch')!;
     expect(lunchNotes(announce(s, solo.id))).toHaveLength(0);
     expect(lunchNotes(announce(s, 'nope'))).toHaveLength(0);
+  });
+});
+
+describe('kitchen.lunchMark (round 14: lunch belongs to F&B)', () => {
+  const ids = ['m2', 'm10', 'm20']; // checked in on the demo day
+  it('the kitchen marks how much each person ate; the rows wait for approval and families hear nothing yet', () => {
+    const r = run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ids, lunch: 'most' }, 's2');
+    expect(r.result).toMatchObject({ marked: 3, pending: true });
+    for (const id of ids) {
+      const l = r.state.dailyLogs[`log-${id}-${T}`];
+      expect(l).toMatchObject({ memberId: id, lunch: 'most', status: 'saved', by: 's2' });
+      expect(l.approval).toMatchObject({ status: 'pending', by: 'staff:s2' });
+    }
+    expect(projectForFamily(r.state, 'fm2_0').dailyLogs[`log-m2-${T}`]).toBeUndefined();
+    expect(Object.values(r.state.activity).filter((a) => a.key === 'kitchen.feed.lunchMarked')).toHaveLength(1);
+    expect(Object.values(r.state.moodMarks).some((m) => m.moment === 'lunch' && m.date === T && ids.includes(m.memberId))).toBe(false); // no face asked
+  });
+  it('with a face it also writes the lunch mood mark; null clears the amount; a face alone is allowed', () => {
+    let s = run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ['m2'], lunch: 'most', face: 4 }, 's2').state;
+    expect(s.moodMarks[moodId(T, 'm2', 'lunch')]).toMatchObject({ memberId: 'm2', moment: 'lunch', face: 4, by: 'staff:s2' });
+    s = run(s, 'kitchen.lunchMark', { date: T, memberIds: ['m10'], face: 2 }, 's2').state;
+    expect(s.moodMarks[moodId(T, 'm10', 'lunch')]).toMatchObject({ face: 2 });
+    expect(s.dailyLogs[`log-m10-${T}`]?.lunch).toBeUndefined();
+    s = run(s, 'kitchen.lunchMark', { date: T, memberIds: ['m2'], lunch: null }, 's2').state;
+    expect(s.dailyLogs[`log-m2-${T}`].lunch).toBeUndefined();
+  });
+  it('"mark the rest" (onlyEmpty) leaves what is marked alone; management marks are approved at once', () => {
+    let s = run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ['m10'], lunch: 'little' }, 's2').state;
+    const r = run(s, 'kitchen.lunchMark', { date: T, memberIds: ids, lunch: 'all', onlyEmpty: true }, 's2');
+    expect(r.result.marked).toBe(2);
+    expect(r.state.dailyLogs[`log-m10-${T}`].lunch).toBe('little');
+    const m = run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ['m2'], lunch: 'half' }, 's9');
+    expect(m.state.dailyLogs[`log-m2-${T}`]).toMatchObject({ lunch: 'half' });
+    expect(m.state.dailyLogs[`log-m2-${T}`].approval).toBeUndefined();
+  });
+  it('only the kitchen and management; somebody who is not in the club, a bad amount and an empty call are refused', () => {
+    for (const uid of ['s5', 's6', 's8', 's1', 's10', 'f1', 'fm2_0']) expect(() => run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ['m2'], lunch: 'all' }, uid)).toThrow('err.forbidden');
+    expect(() => run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ['m1'], lunch: 'all' }, 's2')).toThrow('activity.err.notAttended'); // Oma Lina has not arrived
+    expect(() => run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ['m2'], lunch: 'lots' }, 's2')).toThrow('err.invalid');
+    expect(() => run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ['m2'] }, 's2')).toThrow('err.invalid');
+    expect(() => run(seed(), 'kitchen.lunchMark', { date: T, memberIds: ['m2'], lunch: 'all', face: 6 }, 's2')).toThrow('err.invalid');
+    expect(() => run(seed(), 'kitchen.lunchMark', { date: '2026-10-13', memberIds: ['m2'], lunch: 'all' }, 's2')).toThrow('activity.err.dateRange');
   });
 });
 

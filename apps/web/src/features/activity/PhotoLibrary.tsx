@@ -60,10 +60,10 @@ export function PhotoLibraryBody({ title }: { title?: ReactNode }) {
     const sel = on;
     return <button key={label} type="button" className={sel ? 'cp-chip' : 'cp-chip cp-fill'} aria-pressed={sel} onClick={onClick} style={{ height: 44, padding: '0 16px', borderRadius: 999, border: 'none', background: sel ? '#24201C' : 'var(--fill, #F4F4F5)', color: sel ? '#FFFFFF' : '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{label}</button>;
   };
-  // KC round 7: filter to the activity pictures (pictures of a session, no member tags)
+  // KC round 7: a filter on the kind of picture; round 14: Meals (lunch and tea) or Activities (everything but the meals and the door camera)
   const typeSelect = (
-    <Select label={t('activity.fType')} value={f.kind || ''} onChange={(v) => patch({ kind: v === 'activity' ? 'activity' : undefined })}
-      options={[{ value: '', label: t('activity.allPics') }, { value: 'activity', label: t('activity.onlyActivity') }]} />
+    <Select label={t('activity.fType')} value={f.kind || ''} onChange={(v) => patch({ kind: v === 'meals' || v === 'activities' ? v : undefined })}
+      options={[{ value: '', label: t('activity.allPics') }, { value: 'meals', label: t('activity.onlyMeals') }, { value: 'activities', label: t('activity.onlyActivities') }]} />
   );
   const filterBody = (
     <>

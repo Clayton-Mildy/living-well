@@ -195,15 +195,15 @@ export const DUTIES: DutyDef[] = [
       })];
     }),
   },
-  {
-    id: 'activity.lunch', role: 'activity', icon: 'restaurant', titleKey: 'tasks.duty.activity.lunch', every: 'day', defaultDue: () => '13:30',
-    parts: (s, date) => {
-      const { marked, total } = roundProgress(s, date, 'lunch');
-      return total ? [stub('lunch', { done: marked >= total, count: { done: marked, total }, link: '/log?round=lunch', bell: { id: 'round:lunch', kind: 'activity.notif.act.lunch', params: { n: total - marked, time: '12:00' }, at: '12:00' } })] : [];
-    },
-  },
 
   // ----- kitchen (F&B) -----
+  {
+    id: 'kitchen.lunch', role: 'kitchen', icon: 'restaurant', titleKey: 'tasks.duty.kitchen.lunch', every: 'day', defaultDue: () => '13:30',
+    parts: (s, date) => {
+      const { marked, total } = roundProgress(s, date, 'lunch');
+      return total ? [stub('lunch', { done: marked >= total, count: { done: marked, total }, link: '/lunch', bell: { id: 'round:lunch', kind: 'tasks.notif.act.lunch', params: { n: total - marked, time: '12:00' }, at: '12:00' } })] : [];
+    },
+  },
   {
     id: 'kitchen.lunchPhoto', role: 'kitchen', icon: 'add_a_photo', titleKey: 'tasks.duty.kitchen.lunchPhoto', every: 'day', defaultDue: () => '12:30', bellKind: 'tasks.notif.act.lunchPhoto',
     parts: (s, date) => {

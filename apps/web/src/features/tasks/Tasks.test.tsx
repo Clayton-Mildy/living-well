@@ -129,7 +129,7 @@ describe('Tasks: management', () => {
     const fr = document.querySelector('[data-role-row="finance"]')!;
     expect(fr.textContent).toContain('no app login');
     expect(fr.textContent).toContain('0 of 1 done');
-    expect(document.querySelector('[data-role-row="activity"]')?.textContent).toMatch(/0 of 6 done/); // two session pictures, two joined marks, lunch, mood
+    expect(document.querySelector('[data-role-row="activity"]')?.textContent).toMatch(/0 of 5 done/); // two session pictures, two joined marks, mood (lunch is the kitchen's since round 14)
     // one role's details at a time, beside the list (the first late role opens first)
     expect(document.querySelectorAll('[data-role]')).toHaveLength(1);
     await click(document.querySelector('[data-role-row="finance"]'));

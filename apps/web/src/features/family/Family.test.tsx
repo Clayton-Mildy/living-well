@@ -106,19 +106,24 @@ describe('family Today', () => {
     expect(q('[data-testid="survey-card"]')).toBeNull(); // the survey is for today
     // the timeline is a rail: a dot per step (bronze for a step that is over) beside the time and title
     expect(qa('[data-tl]').every((x) => x.children.length === 2 && x.firstElementChild?.getAttribute('aria-hidden') === 'true')).toBe(true);
-    // the daily log below it, every round in the same order: lunch, each session, mood, then the team's note (once)
+    // round 14: the Lunch card follows the timeline (dishes and how much she ate); the daily log below it no longer has a Lunch round
+    const card = q('[data-testid="lunch-card"]')!;
+    expect(card.textContent).toContain('Lunch');
+    expect(card.querySelector('[data-testid="lunch-card-amount"]')?.getAttribute('data-amount')).toBeTruthy();
+    expect(card.querySelector('[data-testid="lunch-card-dishes"]')?.textContent).toBeTruthy();
+    expect(q('[data-testid="timeline"]')!.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // the daily log below it, every round in the same order: each session, mood, then the team's note (once)
     const log = q('[data-testid="daily-log"]')!;
     expect(log.textContent).toContain('Daily log');
-    expect(log.querySelector('[data-testid="log-lunch"]')?.getAttribute('data-amount')).toBeTruthy();
+    expect(log.querySelector('[data-testid="log-lunch"]')).toBeNull();
     const sessions = Array.from(log.querySelectorAll('[data-testid="log-session"]'));
     expect(sessions.length).toBeGreaterThan(0);
     expect(sessions.length).toBe(qa('[data-tl^="session-"]').length); // each session of that day, the same as the list above
     expect(sessions.every((x) => ['joined', 'satOut', 'none'].includes(x.getAttribute('data-took') || ''))).toBe(true);
     expect(sessions.some((x) => x.getAttribute('data-took') !== 'none')).toBe(true);
     expect(log.querySelector('[data-testid="log-mood"]')?.getAttribute('data-mood')).toBeTruthy();
-    const order = ['log-lunch', 'log-activities', 'log-mood'].map((id) => log.querySelector(`[data-testid="${id}"]`)!);
+    const order = ['log-activities', 'log-mood'].map((id) => log.querySelector(`[data-testid="${id}"]`)!);
     expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(order[1].compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(qa('[data-testid="team-log"]').length).toBeLessThanOrEqual(1); // the note is not shown twice
     expect(qa('[data-testid="log-block"]')).toHaveLength(1);
   });
@@ -181,13 +186,14 @@ describe('family Today', () => {
     expect(new Set(blocks.map((b) => b.getAttribute('data-member'))).size).toBe(blocks.length);
   });
 
-  it('in the club today before the team has logged anything: every round is there, each reading "Not logged yet"', async () => {
+  it('in the club today before the team has logged anything: every round is there, each reading "Not logged yet" (lunch on its own card)', async () => {
     open('fm10_0', 'en', 10 * 60 + 40);
     await show(<FamilyToday />, '/today');
     const log = q('[data-testid="daily-log"]')!;
     expect(log.querySelectorAll('[data-testid="log-block"]')).toHaveLength(1);
-    expect(log.querySelector('[data-testid="log-lunch"]')?.textContent).toContain('Not logged yet');
-    expect(log.querySelector('[data-testid="log-lunch"]')?.getAttribute('data-logged')).toBe('0');
+    expect(q('[data-testid="lunch-card-amount"]')?.textContent).toContain('Not logged yet'); // the Lunch card carries how much was eaten
+    expect(q('[data-testid="lunch-card-amount"]')?.getAttribute('data-amount')).toBe('');
+    expect(log.querySelector('[data-testid="log-lunch"]')).toBeNull();
     const sessions = Array.from(log.querySelectorAll('[data-testid="log-session"]'));
     expect(sessions.length).toBeGreaterThan(0);
     expect(sessions.every((x) => x.getAttribute('data-took') === 'none' && /Not logged yet/.test(x.textContent || ''))).toBe(true);

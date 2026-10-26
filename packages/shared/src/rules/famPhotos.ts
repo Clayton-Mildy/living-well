@@ -6,20 +6,23 @@ import { cameOn } from './activity';
 import { isFamilyActivityPic, isFamilyPhoto, monthRecap, recapMonths, type MonthRecap } from './family';
 
 // ---------- photos by day, with a filter ----------
-export type PhotoGroup = 'portraits' | 'group' | 'activities' | 'lunch';
+export type PhotoGroup = 'meals' | 'activities' | 'portraits';
 export type PhotoFilter = 'all' | PhotoGroup;
-export const PHOTO_GROUPS: PhotoGroup[] = ['portraits', 'group', 'activities', 'lunch'];
-/** Which chip a photo belongs to: the member's own pictures, group pictures, the day's activity pictures, the lunch (and tea) table. */
-export const photoGroupOf = (p: Pick<Photo, 'kind'>): PhotoGroup => (p.kind === 'solo' ? 'portraits' : p.kind === 'group' ? 'group' : p.kind === 'lunch' ? 'lunch' : 'activities');
+/** The chips, in order (round 14: Meals / Activities / Portraits). */
+export const PHOTO_GROUPS: PhotoGroup[] = ['meals', 'activities', 'portraits'];
+/** Which chip a photo belongs to: the lunch and tea table (Meals), the member's own and arrival pictures (Portraits), everything else, group and session pictures (Activities). */
+export const photoGroupOf = (p: Pick<Photo, 'kind'>): PhotoGroup => (p.kind === 'lunch' ? 'meals' : p.kind === 'solo' || p.kind === 'arrival' ? 'portraits' : 'activities');
+/** The order of a day's pictures inside the feed: portraits, then the activities, then the meals. */
+const DAY_ORDER: PhotoGroup[] = ['portraits', 'activities', 'meals'];
 
 /** An approved lunch or tea picture is the family's on the days one of `who` came to the club (like an activity picture). */
 export const isFamilyLunchPic = (s: ClubState, p: Photo, who: string[]) => p.kind === 'lunch' && p.visibility === 'visible' && !!p.mediaId && cameOn(s, who, p.date);
 
 export interface FamPhotoDay { date: ISODate; photos: Photo[] }
-const rank = (p: Photo) => PHOTO_GROUPS.indexOf(photoGroupOf(p));
+const rank = (p: Photo) => DAY_ORDER.indexOf(photoGroupOf(p));
 const byTime = (a: Photo, b: Photo) => (a.time < b.time ? -1 : a.time > b.time ? 1 : a.id < b.id ? -1 : 1);
 
-/** Every day the family has pictures of (newest first), each day's pictures flat: portraits, group, activities, lunch; each by time. Videos included. */
+/** Every day the family has pictures of (newest first), each day's pictures flat: portraits, activities (group and session pictures), meals; each by time. Videos included. */
 export function famPhotoDays(s: ClubState, who: string[]): FamPhotoDay[] {
   const mine = live(s.photos).filter((p) => (isFamilyPhoto(p) && p.memberIds.some((id) => who.includes(id))) || isFamilyActivityPic(s, p, who) || isFamilyLunchPic(s, p, who));
   const byDate = new Map<ISODate, Photo[]>();
@@ -43,8 +46,8 @@ export function famPhotoPosts(photos: Photo[]): PhotoPost[] {
   const map = new Map<string, PhotoPost>();
   for (const p of photos) {
     const g = photoGroupOf(p);
-    const key = g === 'lunch' ? 'lunch' : g === 'portraits' ? `solo:${[...p.memberIds].sort().join('+')}` : p.activity ? `act:${p.activity}` : `${g}:${p.time}`;
-    const post = map.get(key) ?? map.set(key, { key, group: g, activity: g === 'lunch' || g === 'portraits' ? null : p.activity ?? null, photos: [], from: p.time, to: p.time }).get(key)!;
+    const key = g === 'meals' ? 'lunch' : g === 'portraits' ? `solo:${[...p.memberIds].sort().join('+')}` : p.activity ? `act:${p.activity}` : `${g}:${p.time}`;
+    const post = map.get(key) ?? map.set(key, { key, group: g, activity: g === 'meals' || g === 'portraits' ? null : p.activity ?? null, photos: [], from: p.time, to: p.time }).get(key)!;
     post.photos.push(p);
   }
   return Array.from(map.values())

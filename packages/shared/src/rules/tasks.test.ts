@@ -144,9 +144,11 @@ describe('general duties: from the data, for any day', () => {
       }
     });
     expect(duty(mark(base, { sessions: { '10:30': 'joined' } }), 'activity.joined', T, at('12:00')).parts[0]).toMatchObject({ done: true, count: { done: 3, total: 3 } });
-    expect(duty(base, 'activity.lunch', T, at('13:29')).status).toBe('open');
-    expect(duty(base, 'activity.lunch', T, at('13:30'))).toMatchObject({ status: 'late', parts: [{ count: { done: 0, total: 3 } }] });
-    expect(duty(mark(base, { lunch: 'all' }), 'activity.lunch', T, at('14:00')).status).toBe('done');
+    // round 14: the lunch round belongs to the F&B team (kitchen.lunch, link /lunch); activity no longer has it
+    expect(dutyById('activity.lunch')).toBeUndefined();
+    expect(duty(base, 'kitchen.lunch', T, at('13:29')).status).toBe('open');
+    expect(duty(base, 'kitchen.lunch', T, at('13:30'))).toMatchObject({ status: 'late', parts: [{ link: '/lunch', count: { done: 0, total: 3 } }] });
+    expect(duty(mark(base, { lunch: 'all' }), 'kitchen.lunch', T, at('14:00')).status).toBe('done');
   });
 
   it('an extra session (KC round 7) gets its own picture and joined mark, each due when it ends', () => {
@@ -248,9 +250,9 @@ describe('general duties: from the data, for any day', () => {
     expect(dutyDueBy(s, dutyById('kitchen.lunchPhoto')!)).toBe('13:00');
     expect(duty(s, 'kitchen.lunchPhoto', T, at('12:45')).status).toBe('open');
     expect(duty(s, 'kitchen.lunchPhoto', T, at('13:00')).status).toBe('late');
-    expect(dutiesOf(s, 'kitchen', T, T, at('15:30')).map((d) => d.def.id)).toEqual(['kitchen.lunchPhoto', 'kitchen.allergy']);
+    expect(dutiesOf(s, 'kitchen', T, T, at('15:30')).map((d) => d.def.id)).toEqual(['kitchen.lunch', 'kitchen.lunchPhoto', 'kitchen.allergy']);
     expect(duty(s, 'kitchen.teaPhoto', T, at('15:30')).status).toBe('none');
-    expect(dutyReminders(s, 'kitchen', T, at('15:30')).map((r) => r.id)).toEqual(['duty:kitchen.lunchPhoto:lunchPhoto']);
+    expect(dutyReminders(s, 'kitchen', T, at('15:30')).map((r) => r.id)).toEqual(['round:lunch', 'duty:kitchen.lunchPhoto:lunchPhoto']); // and the lunch round, due 13:30
     // a session duty keeps its own times unless a time is set: then that time is the deadline for every session
     const set = withCfg(base, { 'activity.pictures': { dueBy: '15:30' } });
     expect(duty(set, 'activity.pictures', T, at('12:00')).late).toBe(0);
@@ -273,7 +275,7 @@ describe('general duties: from the data, for any day', () => {
     for (const uid of ['s1', 's8', 's9', 's10']) expect(ids(base, user(base, uid), at('12:31'))).not.toContain('duty:kitchen.lunchPhoto:lunchPhoto');
     // the activity round items are the duty reminders now (same ids as before), one for each late session picture
     const act = actionItems(base, user(base, 's5'), T, at('15:05'));
-    expect(act.filter((i) => i.id.startsWith('round:')).map((i) => `${i.id}:${i.params.n}`)).toEqual(['round:13:30:3', 'round:lunch:3', 'round:10:30:3']);
+    expect(act.filter((i) => i.id.startsWith('round:')).map((i) => `${i.id}:${i.params.n}`)).toEqual(['round:13:30:3', 'round:10:30:3']); // lunch is the kitchen's since round 14
     expect(act.filter((i) => i.id.startsWith('duty:pic:'))).toHaveLength(2);
     expect(act.find((i) => i.id.startsWith('duty:pic:'))).toMatchObject({ kind: 'tasks.notif.act.picture', link: expect.stringContaining('/camera?tab=activity&date=' + T) });
     // switched off: gone
