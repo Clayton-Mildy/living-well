@@ -5,7 +5,7 @@
 // Values follow design/data.js (same names, phones, baselines, menu, schedule) trimmed to the 5-member cast.
 import type {
   Actor, Attendance, ClubSettings, ClubState, DailyLog, Dish, DishAllergen, DT, FamilyContact, FamilyLink,
-  Invoice, ISODate, Member, MemberNote, Payment, Photo, Reading, Row, ScheduleCell, Staff, StaffRole, Weekday, WeekSlot,
+  Invoice, ISODate, Member, MemberNote, Payment, Photo, Reading, Row, ScheduleCell, Staff, StaffRole, WeekSlot, WorkWeekday,
   ChangeRequest, Notification, ActivityEntry, Relation, Bank, MemberRegistration,
 } from '../types';
 import { COLLECTIONS } from '../types';
@@ -32,7 +32,7 @@ export const PRICES = { flex: 2_700_000, gold: 3_950_000, extra: 650_000, regist
 
 export const SETTINGS: ClubSettings = {
   open: '08:30', close: '16:30', departureFrom: '15:30', recheckMin: 15, flexQuota: 10, leaveDays: 5, issueDay: 21, dueDay: 28, suspendDay: 1, stopDay: 3, finalDueDays: 14,
-  emergencyPhone: '+62 21 7590 1188', hoursLabel: 'Mon–Fri 08:30–16:30',
+  emergencyPhone: '+62 21 7590 1188', hoursLabel: 'Mon–Fri 08:30–16:30 · weekends when programmed',
   broadcastTemplates: [
     { id: 'tpl-update', key: 'update', title: 'Club update', text: 'Hello {name}, news from CitraPremier: {msg}' },
     { id: 'tpl-closure', key: 'closure', title: 'Club closed', text: 'Hello {name}, a reminder that CitraPremier is closed on {msg}. We open again on the next working day at 08:30.' },
@@ -88,7 +88,7 @@ const ACTS: [string, string, string, string, string][] = [
   ['act-cooking', 'Cooking demo with Chef Agus', 'Demo masak bersama Chef Agus', 'room-kitchen', 'skillet'],
   ['act-reading', 'Reading circle', 'Lingkar membaca', 'room-lounge', 'menu_book'],
 ];
-const SCHED: Record<Weekday, [string, string][]> = {
+const SCHED: Record<WorkWeekday, [string, string][]> = {
   1: [['act-angklung', 's5'], ['act-yoga', 's6']],
   2: [['act-batik', 's6'], ['act-memory', 's5']],
   3: [['act-keroncong', 's5'], ['act-batik', 's6']],
@@ -111,7 +111,7 @@ const DISHES: [string, string, 'lunch' | 'soft' | 'tea', DishAllergen[], ('soft'
   ['dish-gado-gado', 'Gado-gado (sauce on the side)', 'lunch', ['peanuts', 'eggs'], ['vegetarian']], ['dish-soto-bening', 'Soto ayam bening', 'lunch', [], []], ['dish-buah-naga', 'Buah naga', 'lunch', [], ['vegetarian']],
   ['dish-soto-halus', 'Soto ayam halus', 'soft', [], ['soft']], ['dish-lapis-legit', 'Lapis legit', 'tea', ['eggs', 'dairy', 'gluten'], []], ['dish-kopi-susu', 'Kopi susu', 'tea', ['dairy'], []],
 ];
-const MENU_DAYS: Record<Weekday, { lunch: string[]; soft: string[]; tea: string[] }> = {
+const MENU_DAYS: Record<WorkWeekday, { lunch: string[]; soft: string[]; tea: string[] }> = {
   1: { lunch: ['dish-ayam-bakar', 'dish-sayur-asem', 'dish-nasi-merah', 'dish-semangka'], soft: ['dish-bubur-ayam'], tea: ['dish-pisang-rebus', 'dish-teh-jahe'] },
   2: { lunch: ['dish-rawon', 'dish-telur-asin', 'dish-nasi-putih', 'dish-melon'], soft: ['dish-sup-daging'], tea: ['dish-klepon', 'dish-teh-tawar'] },
   3: { lunch: ['dish-sop-ikan', 'dish-nasi-merah', 'dish-tumis-buncis', 'dish-pepaya'], soft: ['dish-bubur-ikan'], tea: ['dish-kue-lumpur', 'dish-teh-melati'] },
@@ -254,8 +254,8 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
 
   ROOMS.forEach(([id, name, nameId, venue]) => put('rooms', { ...base(C, id, '2024-06-01T09:00'), name, nameId, venue }));
   ACTS.forEach(([id, name, nameId, roomId, icon]) => put('activities', { ...base(C, id, '2024-06-01T09:00'), name, nameId, icon, roomId, active: true, photoMediaId: activityPicId(id) })); // KC round 7: each activity has its picture (a free Unsplash scene, seed/demoMedia.ts)
-  const days = {} as Record<Weekday, Record<WeekSlot, ScheduleCell | null>>;
-  ([1, 2, 3, 4, 5] as Weekday[]).forEach((w) => { const [a, b] = SCHED[w]; days[w] = { '10:30': { activityId: a[0], staffId: a[1], roomId: actRoom(a[0]) }, '13:30': { activityId: b[0], staffId: b[1], roomId: actRoom(b[0]) } }; });
+  const days = {} as Record<WorkWeekday, Record<WeekSlot, ScheduleCell | null>>;
+  ([1, 2, 3, 4, 5] as WorkWeekday[]).forEach((w) => { const [a, b] = SCHED[w]; days[w] = { '10:30': { activityId: a[0], staffId: a[1], roomId: actRoom(a[0]) }, '13:30': { activityId: b[0], staffId: b[1], roomId: actRoom(b[0]) } }; });
   put('scheduleVersions', { ...base(C, 'sched-2024-07', at('2026-10-19T16:10'), 'staff:s9'), effectiveFrom: '2024-07-01', status: 'published', days, publishedBy: 'staff:s9', publishedAt: at('2026-10-19T16:10') });
   DISHES.forEach(([id, name, course, allergens, tags]) => put('dishes', { ...base(C, id, '2024-06-01T09:00', 'staff:s3'), name, course, allergens, tags, reviewedBy: 's3', reviewedAt: at('2026-10-01T10:00') } satisfies Dish));
   put('menuVersions', { ...base(C, 'menu-2024-07', '2024-06-20T10:00', 'staff:s3'), effectiveFrom: '2024-07-01', status: 'published', days: MENU_DAYS, publishedBy: 'staff:s3' });
@@ -331,7 +331,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   const NOTES = { quiet: 'Quieter than usual today; sat out of the afternoon session.', agitated: 'A little unsettled before lunch; calmer after a walk in the garden.', half: 'Ate about half of lunch; had extra fruit at tea.' };
   let pid = 0;
   for (const d of PAST) {
-    const w = dow(d) as Weekday;
+    const w = dow(d) as WorkWeekday;
     const here = CAST.filter((c) => attends(c.id, d));
     for (const c of here) {
       const m = memById(c.id);
@@ -368,7 +368,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
       reading(c.id, d, toHM(toMin(a.checkIn!.at) + 16), 'monthly', { glucose, weight: Math.round((m.sim.weight + (r() - 0.5) * 1.2) * 10) / 10, grip: Math.round(m.sim.grip + (r() - 0.5) * 2) });
     }
   }
-  function continue_logs(d: ISODate, c: CastRow, w: Weekday) {
+  function continue_logs(d: ISODate, c: CastRow, w: WorkWeekday) {
     const sessions = SCHED[w];
     const sAct = sessions[Math.floor(r() * sessions.length)];
     const mood = MOOD(r()); const lunch = LUNCH(r());
@@ -379,7 +379,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   }
   // photos for the last 5 club days
   for (const d of PHOTO_DAYS) {
-    const w = dow(d) as Weekday;
+    const w = dow(d) as WorkWeekday;
     const here = CAST.filter((c) => attends(c.id, d)).map((c) => c.id);
     const sessions = SCHED[w].map(([act, by], i) => ({ act, by, time: i === 0 ? '10:30' : '13:30' }));
     for (const id of here) {
@@ -556,7 +556,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
     const rd = Object.values(s.readings).find((x) => x.memberId === 'm46' && x.date === lastDay && x.kind === 'arrival');
     if (rd) rd.approval = { status: 'pending', by: 'staff:s8', at: `${lastDay}T${toHM(toMin(rd.time) + 2)}`, defer: { tell: false, share: false, overall: rd.status } };
     const planned = openOn(addDays(T, 14)); // a lunch the kitchen plans two weeks ahead
-    const base4 = MENU_DAYS[dow(planned) as Weekday]?.lunch;
+    const base4 = MENU_DAYS[dow(planned) as WorkWeekday]?.lunch;
     if (base4 && !s.dayMenus[planned]) {
       const swap = base4[base4.length - 1] === 'dish-jeruk' ? 'dish-melon' : 'dish-jeruk';
       put('dayMenus', { ...base(C, planned, `${T}T08:10`, 'staff:s3'), date: planned, lunch: [...base4.slice(0, -1), swap], allergyPlans: [], approval: { status: 'pending', by: 'staff:s3', at: `${T}T08:10`, prev: {} } });

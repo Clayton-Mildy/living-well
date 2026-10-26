@@ -268,3 +268,27 @@ test('Every programme goes to Ega: Dinar changes Friday 13:30 in the builder and
   await expect(page.getByTestId('programme-waiting')).toHaveCount(0);
   c.assertClean();
 });
+
+test('Weekends: the seeded Saturday (7 Nov) is an open day with two sessions on the calendar, and Arrivals opens on it', async ({ page, request }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/calendar');
+  await page.getByRole('tab', { name: 'Calendar' }).click();
+  await page.getByRole('button', { name: 'Next month' }).click();
+  await page.locator('button[data-date="2026-11-07"]').click();
+  const day = page.locator('div[data-date="2026-11-07"]');
+  await expect(day).toContainText('Open · 08:30–16:30');
+  await expect(day).toContainText('Angklung ensemble');
+  await expect(day).toContainText('Karaoke');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+  // on that date the front desk's board is open, not "Club closed"
+  const r = await request.post('/api/demo/clock', { data: { hm: '09:30', allowBack: true, date: '2026-11-07' } });
+  expect(r.ok()).toBeTruthy();
+  await signIn(page, 's1', '/today');
+  await expect(page.getByRole('heading', { name: 'Arrivals', level: 1 })).toBeVisible();
+  await expect(page.getByText('Saturday 7 November', { exact: true })).toBeVisible();
+  await expect(page.getByText('Club open until 16:30')).toBeVisible();
+  await expect(page.locator('#main')).not.toContainText('Club closed');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+});

@@ -16,18 +16,19 @@
 //  - template helpers for the weekly menu editor (version in force, scheduled versions, per-date overrides, diffs, the menu of a chosen week).
 //  - menuAudience(): the families told when a weekly menu is published.
 //  - stock permissions shared by the actions and the screens, and the feedback helpers.
-import type { ClubState, Dish, DishAllergen, Feedback, FoodAllergen, GuestVisit, ISODate, Member, MenuDay, MenuVersion, StockRequest, User, Weekday } from '../types';
+import type { ClubState, Dish, DishAllergen, Feedback, FoodAllergen, GuestVisit, ISODate, Member, MenuDay, MenuVersion, StockRequest, User, Weekday, WorkWeekday } from '../types';
 import { conflictsOn, dietaryGroups, dinersOn, memberConflictsOn, menuOn, menuVersionFor, ALLERGY_COVERS, type Conflict, type Diner } from './kitchen';
 import { celebrationGuestsOn } from './celebrations';
 import { attOf, isCheckedIn } from './attendance';
 import { activeOn, contactsOfMember, isPendingRow, displayName } from './core';
-import { addDays, dow, live, sortBy, uniq } from '../util';
+import { ALL_DAYS, addDays, asWeekday, dow, live, sortBy, uniq } from '../util';
 
 export type Course = Dish['course'];
 export const DISH_ALLERGENS: DishAllergen[] = ['fish', 'shellfish', 'peanuts', 'treeNuts', 'eggs', 'dairy', 'gluten', 'soy'];
 export const DISH_TAGS: Dish['tags'] = ['soft', 'lowSalt', 'sugarFree', 'vegetarian'];
 export const COURSES: Course[] = ['lunch', 'soft', 'tea'];
-export const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5];
+export const WEEKDAYS: WorkWeekday[] = [1, 2, 3, 4, 5];
+export { ALL_DAYS };
 export const STOCK_AREAS: StockRequest['area'][] = ['kitchen', 'health', 'activities'];
 export const KNOWN_UNITS = ['pcs', 'boxes', 'packs', 'kg', 'litres', 'bottles', 'rolls', 'sets'];
 
@@ -220,15 +221,22 @@ export function dietaryRows(s: ClubState, date: ISODate): DietRow[] {
 }
 
 // ---------- menu editor ----------
+/** Monday to Sunday (round 14: Saturday and Sunday are empty unless the weekend is programmed). */
 export type WeekTemplate = Record<Weekday, MenuDay>;
 export const emptyDay = (): MenuDay => ({ lunch: [], soft: [], tea: [] });
 export const sameIds = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
 
+/** A template as it is stored: Saturday and Sunday only when they have dishes (round 14). */
+export function storedTemplate(t: WeekTemplate): MenuVersion['days'] {
+  const { 6: sat, 7: sun, ...work } = t;
+  const has = (d: MenuDay | undefined) => !!d && COURSES.some((c) => d[c].length);
+  return { ...work, ...(has(sat) ? { 6: sat } : {}), ...(has(sun) ? { 7: sun } : {}) };
+}
 /** The weekly template in force on a date (empty days when no version applies). */
 export function templateOn(s: ClubState, date: ISODate): { version?: MenuVersion; days: WeekTemplate } {
   const version = menuVersionFor(s, date);
   const days = {} as WeekTemplate;
-  for (const w of WEEKDAYS) {
+  for (const w of ALL_DAYS) {
     const d = version?.days[w];
     days[w] = { lunch: [...(d?.lunch ?? [])], soft: [...(d?.soft ?? [])], tea: [...(d?.tea ?? [])] };
   }
@@ -245,7 +253,7 @@ export const weekDate = (monday: ISODate, w: Weekday): ISODate => addDays(monday
  */
 export function templateForWeek(s: ClubState, monday: ISODate, today: ISODate): WeekTemplate {
   const days = {} as WeekTemplate;
-  for (const w of WEEKDAYS) { const day = weekDate(monday, w); days[w] = templateOn(s, day < today ? today : day).days[w]; }
+  for (const w of ALL_DAYS) { const day = weekDate(monday, w); days[w] = templateOn(s, day < today ? today : day).days[w]; }
   return days;
 }
 /**
@@ -267,9 +275,9 @@ export const scheduledVersions = (s: ClubState, date: ISODate): MenuVersion[] =>
 
 export interface MenuChange { weekday: Weekday; course: Course; added: string[]; removed: string[] }
 /** What differs between two templates, as dish ids per weekday and course. */
-export function diffTemplates(a: WeekTemplate, b: WeekTemplate): MenuChange[] {
+export function diffTemplates(a: MenuVersion['days'], b: MenuVersion['days']): MenuChange[] {
   const out: MenuChange[] = [];
-  for (const w of WEEKDAYS) for (const c of COURSES) {
+  for (const w of ALL_DAYS) for (const c of COURSES) {
     const x = a[w]?.[c] ?? [], y = b[w]?.[c] ?? [];
     const added = y.filter((id) => !x.includes(id)), removed = x.filter((id) => !y.includes(id));
     if (added.length || removed.length) out.push({ weekday: w, course: c, added, removed });
@@ -293,7 +301,7 @@ export function dishUsage(s: ClubState, dishId: string, today: ISODate): DishUse
   const inForce = menuVersionFor(s, today);
   const later = scheduledVersions(s, today);
   for (const v of [...(inForce ? [inForce] : []), ...later]) {
-    for (const w of WEEKDAYS) for (const c of COURSES) if (v.days[w]?.[c]?.includes(dishId)) out.push({ where: v === inForce ? 'template' : 'scheduled', course: c, weekday: w });
+    for (const w of ALL_DAYS) for (const c of COURSES) if (v.days[w]?.[c]?.includes(dishId)) out.push({ where: v === inForce ? 'template' : 'scheduled', course: c, weekday: w });
   }
   for (const o of overridesFrom(s, today)) for (const c of COURSES) if (o[c]?.includes(dishId)) out.push({ where: 'override', course: c, date: o.date });
   return out;
@@ -301,7 +309,7 @@ export function dishUsage(s: ClubState, dishId: string, today: ISODate): DishUse
 
 export const dishesByCourse = (s: ClubState, course?: Course): Dish[] =>
   sortBy(live(s.dishes).filter((x) => !course || x.course === course), (x) => x.name.toLocaleLowerCase());
-export const weekdayOf = (date: ISODate) => dow(date) as Weekday;
+export const weekdayOf = (date: ISODate): Weekday => asWeekday(date);
 
 // ---------- stock ----------
 /** Who may approve, decline and (with the requester) receive a request: management, finance, and the F&B supervisor for kitchen-area items. */

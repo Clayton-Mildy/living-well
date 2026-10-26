@@ -487,7 +487,7 @@ describe('schedule.changeDay (one day only)', () => {
   it('refuses a day that has passed, a closed day and an outing day; changes nothing when nothing changes', () => {
     const s = fresh();
     fails(s, 'schedule.changeDay', { date: '2026-10-20', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.pastDay');
-    fails(s, 'schedule.changeDay', { date: '2026-10-24', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayClosed'); // Saturday
+    expect(run(s, 'schedule.changeDay', { date: '2026-10-24', slot: '10:30', cell: MEMORY }, 's9').state.scheduleDays['2026-10-24'].slots).toEqual({ '10:30': MEMORY }); // round 14: a Saturday can be programmed (no longer refused)
     fails(s, 'schedule.changeDay', { date: '2026-10-30', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayClosed'); // club closed
     fails(s, 'schedule.changeDay', { date: '2026-10-29', slot: '10:30', cell: MEMORY }, 's9', 'cal.err.dayOuting');
     fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: BATIK }, 's9', 'err.noChanges'); // the weekly plan already runs
@@ -627,7 +627,7 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
   it('only on an open day today or later; a valid activity and an active activity teacher; management and the activity team only', () => {
     const s = fresh();
     fails(s, 'schedule.addSession', { date: '2026-10-20', time: '15:00', ...KARAOKE }, 's9', 'cal.err.pastDay');
-    fails(s, 'schedule.addSession', { date: '2026-10-24', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayClosed'); // Saturday
+    expect(run(s, 'schedule.addSession', { date: '2026-10-24', time: '15:00', ...KARAOKE }, 's9').state.scheduleDays['2026-10-24'].extra).toHaveLength(1); // round 14: a Saturday can be programmed (no longer refused)
     fails(s, 'schedule.addSession', { date: '2026-10-30', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayClosed'); // the club is closed
     fails(s, 'schedule.addSession', { date: '2026-10-29', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayOuting');
     fails(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE, activityId: 'act-ghost' }, 's9', 'cal.err.badActivity');
@@ -726,6 +726,7 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
 // round 14 (B1): the activity team builds the programme; every change it makes waits for Ega (management). Ruling 6: a day's edit waits in `pending`
 // beside the live fields, which every rule keeps reading; Review Focus 5: an edit back to the live day clears it, an approval after the start date publishes from today.
 describe('round 14: every programme change by the activity team waits for Ega', () => {
+  const fresh = (): ClubState => { const s = buildSeed().citra; delete s.scheduleDays['2026-11-08']; return s; }; // without the seeded Sunday waiting for Ega (round 14 B2)
   const TODAY = '2026-10-21';
   const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
   const BATIK = { activityId: 'act-batik', staffId: 's6', roomId: 'room-studio' }; // Wednesday 13:30 in the weekly plan
@@ -891,5 +892,43 @@ describe('round 14: every programme change by the activity team waits for Ega', 
     fails(s0, 'calendarEvent.create', { date: '2026-11-03', kind: 'closed', title: 'Training' }, 's5', 'err.forbidden');
     fails(s0, 'room.upsert', { name: 'Terrace' }, 's5', 'err.forbidden');
     fails(s0, 'approval.approve', { type: 'programme', ids: [TODAY] }, 's5', 'err.forbidden');
+  });
+});
+
+// round 14 (B2): weekends are programmed open days. Approving a weekend's programme is what opens it (Review Focus 4).
+describe('round 14: weekends open when a programme is approved', () => {
+  const SAT = '2026-11-07'; // the seeded Saturday (the first one with no venue booking) and its Sunday waiting for Ega
+  const SUN = '2026-11-08';
+  const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
+  it('s9 approves the seeded waiting Sunday: it becomes an open day with its session', () => {
+    const s0 = fresh();
+    expect(dayStatus(s0, SUN).open).toBe(false);
+    expect(pendingItems(s0, 'programme')).toEqual(expect.arrayContaining([expect.objectContaining({ id: SUN, sub: 'day', by: 'staff:s5' })]));
+    const a = run(s0, 'approval.approve', { type: 'programme', ids: [SUN] }, 's9');
+    expect(a.result.ids).toEqual([SUN]);
+    expect(dayStatus(a.state, SUN).open).toBe(true);
+    expect(sessionsOn(a.state, SUN)[0].slot).toBe('10:30');
+    expect(sessionsOn(a.state, SUN)[0].cell).not.toBeNull();
+  });
+  it('the activity team programmes an empty weekend: it waits and stays closed; a weekend holiday or a passed weekend is not approved', () => {
+    const s0 = fresh();
+    const r = run(s0, 'schedule.addSession', { date: '2026-10-31', time: '11:30', ...MEMORY }, 's5');
+    expect(r.result.pending).toBe(true);
+    expect(dayStatus(r.state, '2026-10-31').open).toBe(false);
+    const hol = step(r.state, 'calendarEvent.create', { date: '2026-10-31', kind: 'holiday', title: 'Holiday' }, 's9');
+    expect(run(hol, 'approval.approve', { type: 'programme', ids: ['2026-10-31'] }, 's9').result.conflicts).toEqual(['2026-10-31']);
+    expect(run(r.state, 'approval.approve', { type: 'programme', ids: ['2026-10-31'] }, 's9', { today: '2026-11-02', nowMin: 600 }).result.conflicts).toEqual(['2026-10-31']);
+    const ok = run(r.state, 'approval.approve', { type: 'programme', ids: ['2026-10-31'] }, 's9');
+    expect(dayStatus(ok.state, '2026-10-31').open).toBe(true);
+  });
+  it('a Saturday cell in the weekly plan opens every Saturday from its date; management changes a programmed Saturday at once', () => {
+    const s0 = fresh();
+    const days = { ...builderDays(s0), 6: { '10:30': MEMORY, '13:30': null } };
+    const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's9');
+    expect(dayStatus(s, '2026-10-31').open).toBe(true);
+    expect(dayStatus(s, '2026-11-01').open).toBe(false);
+    expect(sessionsOn(s, '2026-10-31')[0].cell).toEqual(MEMORY);
+    const c = step(s0, 'schedule.changeDay', { date: SAT, slot: '13:30', cell: null }, 's9');
+    expect(sessionsOn(c, SAT).filter((x) => x.cell).map((x) => x.cell!.activityId)).toEqual(['act-angklung']);
   });
 });

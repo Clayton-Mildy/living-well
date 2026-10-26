@@ -1,8 +1,8 @@
 // Menu and schedule versions, diners/covers, allergen conflicts.
-import type { ClubState, ISODate, Dish, DishAllergen, FoodAllergen, Member, GuestVisit, MenuDay, Photo, ScheduleCell, Slot, Weekday, WeekSlot, ExtraSession, ScheduleVersion, MenuVersion } from '../types';
+import type { ClubState, ISODate, Dish, DishAllergen, FoodAllergen, Member, GuestVisit, MenuDay, Photo, ScheduleCell, Slot, WeekSlot, ExtraSession, ScheduleVersion, MenuVersion } from '../types';
 import { dayStatus } from './core';
 import { lobbyGroups, guestsOn } from './attendance';
-import { dow, live, sortBy, uniq } from '../util';
+import { asWeekday, live, sortBy, uniq } from '../util';
 import { approvedDayMenu, menuVersionForFamily } from './approvals';
 
 // ---------- versions ----------
@@ -37,7 +37,7 @@ export function sessionsOn(s: ClubState, date: ISODate): SessionSlot[] {
   const v = scheduleVersionFor(s, date);
   const over = scheduleDayOf(s, date);
   if (!v && !over) return [];
-  const day = v?.days[dow(date) as Weekday];
+  const day = v?.days[asWeekday(date)];
   const fixed = WEEK_SLOTS.map((slot): SessionSlot => ({ slot, cell: over && slot in over.slots ? over.slots[slot] ?? null : day?.[slot] ?? null }));
   const extra = extrasOn(s, date).map((x): SessionSlot => ({ slot: x.time, cell: x.cell, extra: true }));
   return extra.length ? sortBy([...fixed, ...extra], (x) => x.slot) : fixed;
@@ -54,7 +54,7 @@ export function menuVersionFor(s: ClubState, date: ISODate, opts: { approvedOnly
 export function menuOn(s: ClubState, date: ISODate, opts: { approvedOnly?: boolean } = {}): MenuDay | null {
   if (!dayStatus(s, date).open) return null;
   const v = menuVersionFor(s, date, opts);
-  const base: MenuDay = v?.days[dow(date) as Weekday] || { lunch: [], soft: [], tea: [] };
+  const base: MenuDay = v?.days[asWeekday(date)] || { lunch: [], soft: [], tea: [] };
   const row = s.dayMenus[date];
   const o = row && opts.approvedOnly ? approvedDayMenu(row) : row;
   return { lunch: o?.lunch ?? base.lunch, soft: o?.soft ?? base.soft, tea: o?.tea ?? base.tea };

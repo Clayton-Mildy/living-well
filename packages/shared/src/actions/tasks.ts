@@ -3,7 +3,7 @@
 // (`task.done`, with a photo when the task asks for one) and take it back (`task.undo`). Management also switches a general duty off and sets its time
 // (`duty.configure`). Nothing here waits for approval.
 import { z } from 'zod';
-import type { ClubState, HM, ISODate, TaskTemplate, Weekday } from '../types';
+import type { ClubState, HM, ISODate, TaskTemplate, WorkWeekday } from '../types';
 import { DomainError, defineAction, hasRole, isMgmt, isStaff, nameOfUser, roleOf, type ActionDef } from './framework';
 import { DUTY_IDS, TASK_ROLES, LAST_DAY, doneId, doneOf, periodOf, templateShows } from '../rules/tasks';
 import { mediaIdOf } from './members';
@@ -69,7 +69,7 @@ export const taskActions: ActionDef[] = [
       const row: TaskTemplate = {
         id, clubId: ctx.clubId, createdAt: prev?.createdAt ?? ctx.nowDT, createdBy: prev?.createdBy ?? ctx.actor,
         title: i.title, role: i.role as TaskTemplate['role'], every: i.every,
-        ...(i.every === 'weekly' ? { weekday: i.weekday as Weekday } : {}),
+        ...(i.every === 'weekly' ? { weekday: i.weekday as WorkWeekday } : {}),
         ...(i.every === 'monthly' ? { dayOfMonth: i.dayOfMonth! } : {}),
         ...(i.dueBy ? { dueBy: i.dueBy } : {}),
         proof: i.proof, active: i.active,

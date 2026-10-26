@@ -3,7 +3,7 @@ import type { Same } from '../ns';
 import type { cal as EN } from '../en/cal';
 export const cal: Same<typeof EN> = {
   // calendar
-  openHours: 'Buka Senin sampai Jumat · {open}–{close}', titleFamily: 'Kalender klub', view: 'Tampilan', vList: 'Daftar', vMonth: 'Kalender', showMore: 'Tampilkan hari lainnya',
+  openHours: 'Buka Senin sampai Jumat, dan akhir pekan bila ada program · {open}–{close}', weekendCol: 'Akhir pekan', titleFamily: 'Kalender klub', view: 'Tampilan', vList: 'Daftar', vMonth: 'Kalender', showMore: 'Tampilkan hari lainnya',
   key: 'Keterangan', tapDay: 'Ketuk tanggal untuk melihat acaranya.', openWeek: 'Buka minggu ini di jadwal',
   publishShort: 'Publikasikan',
   prevMonth: 'Bulan sebelumnya', nextMonth: 'Bulan berikutnya', thisMonth: 'Bulan ini', holiday: 'Libur', closedShort: 'Tutup', allDay: 'Seharian',

@@ -83,8 +83,8 @@ describe('celebrations (actions)', () => {
     expect(toLobby).toContain('celeb.notif.declined');
     expect(toLobby).not.toContain('celeb.notif.decided');
     // a confirmed celebration blocks a venue booking, and the other way round
-    const sat = run(s, 'celebration.request', { ...req, date: '2026-11-07' }, 's9').state; // a Saturday, where a private event may also be booked
-    fails(sat, 'venue.book', { org: 'X', contactName: 'Y', phone: '', guests: 5, roomId: 'room-garden-room', date: '2026-11-07', from: '16:00', to: '18:00' }, 's9', 'mgmt.err.venueClash');
+    const sat = run(s, 'celebration.request', { ...req, date: '2026-11-14' }, 's9').state; // a Saturday with no programme, where a private event may also be booked (round 14: the seed programmes 7 Nov)
+    fails(sat, 'venue.book', { org: 'X', contactName: 'Y', phone: '', guests: 5, roomId: 'room-garden-room', date: '2026-11-14', from: '16:00', to: '18:00' }, 's9', 'mgmt.err.venueClash');
     fails(d.state, 'celebration.request', { ...req, memberId: 'm1' }, 's1', 'mgmt.err.venueClash');
     const other = run(r.state, 'celebration.request', { ...req, memberId: 'm1' }, 's1'); // while it is only requested, the slot is free
     expect(other.state.celebrations[other.result.celebrationId as string]).toMatchObject({ memberId: 'm1', status: 'requested' });

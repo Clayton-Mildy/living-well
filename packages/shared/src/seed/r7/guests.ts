@@ -3,10 +3,10 @@
 //   hosts     Bu Ratna (angklung), Pak Hendro (keroncong), dr. Maya Sari (heart-health talk)
 //   sessions  2 done in the last days (one invoice paid, one approved and waiting for finance) · 1 booked on the demo day (paid in advance) · 1 booked on the next open day (paid in advance) · 1 booked next week (to pay)
 //   changes   the 13:30 session of the second open day after T becomes Karaoke ("Kak Dimas is off sick"); the booked talk changes the 13:30 session of its day
-import type { ClubState, DT, GuestHost, GuestSession, ISODate, ScheduleCell, ScheduleDay, Slot, VendorInvoice, Weekday, WeekSlot } from '../../types';
+import type { ClubState, DT, GuestHost, GuestSession, ISODate, ScheduleCell, ScheduleDay, Slot, VendorInvoice, WeekSlot } from '../../types';
 import { dayStatus } from '../../rules/core';
 import { guestInvoiceNumber } from '../../rules/guests';
-import { addDays, dow } from '../../util';
+import { addDays, asWeekday, dow } from '../../util';
 import { activityPicId } from '../demoMedia';
 
 export function seedGuests(s: ClubState, T: ISODate): void {
@@ -24,7 +24,7 @@ export function seedGuests(s: ClubState, T: ISODate): void {
 
   const weekly = (date: ISODate, slot: WeekSlot): ScheduleCell | null => {
     const v = Object.values(s.scheduleVersions).filter((x) => x.status === 'published' && x.effectiveFrom <= date).sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom)).pop();
-    return v?.days[dow(date) as Weekday]?.[slot] ?? null;
+    return v?.days[asWeekday(date)]?.[slot] ?? null;
   };
   /** One-day change of a slot (merged into the day's row). */
   const change = (date: ISODate, slot: WeekSlot, cell: ScheduleCell, note?: string) => {

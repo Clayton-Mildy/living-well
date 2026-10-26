@@ -7,7 +7,7 @@
 // title row holds the switch. `?date=YYYY-MM-DD` selects a day, `?view=month` opens the month.
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { addDays, addMonths, dayStatus, dow, isWeekday, memberName, displayName, nextOpenDay, ym, type ISODate, type Member, type Photo, type YM } from '@cp/shared';
+import { addDays, addMonths, dayStatus, isOpen, isWeekday, memberName, displayName, nextOpenDay, ym, type ISODate, type Member, type Photo, type YM } from '@cp/shared';
 import { eventTitle, mondayOf, upcomingClosures } from '@cp/shared/rules/calendar';
 import { cameByDay, famDay, famRange, famWeek } from '@cp/shared/rules/famCalendar';
 import { Icon } from '../../components/ui';
@@ -33,8 +33,9 @@ export function FamilyCalendar() {
   const { choices, sel, who, setSel, multi } = useFamilySel();
   const whoKey = who.join(',');
   const range = useMemo(() => famRange(s, who, today), [s, whoKey, today]); // eslint-disable-line react-hooks/exhaustive-deps
-  // the day to open on: today, or the next open day when it is a weekend
-  const home: ISODate = isWeekday(today) ? today : nextOpenDay(s, today);
+  // the day to open on: today, or the next open day when it is a weekend (round 14: a programmed weekend is a day like any other)
+  const shown = (d: ISODate) => isWeekday(d) || isOpen(s, d);
+  const home: ISODate = shown(today) ? today : nextOpenDay(s, today);
   const asked = sp.get('date');
   const askedDate = asked && ISO_DAY.test(asked) ? asked : null;
   const askedView = sp.get('view');
@@ -56,18 +57,19 @@ export function FamilyCalendar() {
   const weekDays = useMemo(() => (wide ? famWeek(s, who, monday, today, nowMin) : []), [wide, s, whoKey, monday, today, nowMin]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!user || !who.length) return null;
 
-  const week = [0, 1, 2, 3, 4].map((i) => addDays(monday, i));
+  const week = [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(monday, i)).filter(shown); // Monday to Friday, and an open Saturday or Sunday
   const came = cameByDay(s, who, today); // KC round 10: a dot on the days a parent came; round 11: who, as tiny faces when there are several parents
   const faces = (d: ISODate): Member[] => (who.length > 1 ? (came.get(d) ?? []).map((id) => s.members[id]).filter(Boolean) : []); // one parent chosen: the dot
   const switcher = multi ? <ParentSwitch tone="page" members={choices.map((id) => s.members[id]).filter(Boolean)} sel={sel} onPick={setSel} /> : undefined;
   const whoName = multi && sel !== 'both' && s.members[sel] ? memberName(s.members[sel]) : undefined;
-  const currentWeek = monday === mondayOf(isWeekday(today) ? today : home);
+  const currentWeek = monday === mondayOf(shown(today) ? today : home);
   const canPrevWeek = addDays(monday, -3) >= `${range.min}-01`;
   const canNextWeek = addDays(monday, 7) <= `${range.max}-31`;
   const dayNo = (d: ISODate) => Number(d.slice(8));
-  const weekLabel = t('cal.weekRange', { from: ym(week[0]) === ym(week[4]) ? String(dayNo(week[0])) : fmt.fd(week[0], { day: 'numeric', month: 'short' }), to: fmt.fd(week[4], { day: 'numeric', month: 'short' }) });
+  const last = week[week.length - 1];
+  const weekLabel = t('cal.weekRange', { from: ym(week[0]) === ym(last) ? String(dayNo(week[0])) : fmt.fd(week[0], { day: 'numeric', month: 'short' }), to: fmt.fd(last, { day: 'numeric', month: 'short' }) });
 
-  const toList = () => { setView('list'); if (!isWeekday(date)) setDate(addDays(date, dow(date) === 6 ? 2 : 1)); };
+  const toList = () => { setView('list'); let d = date; while (!shown(d)) d = addDays(d, 1); setDate(d); }; // a closed weekend day opens the list on the Monday
   const toMonth = () => { setView('month'); setMonth(ym(date)); };
   const stepMonth = (dir: 1 | -1) => {
     const m = addMonths(month, dir);
@@ -97,7 +99,7 @@ export function FamilyCalendar() {
   ) : wide ? (
     <WeekRows days={weekDays} date={date} onPick={setDate} />
   ) : (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8 }}>
+    <div style={{ display: 'grid', gridTemplateColumns: `repeat(${week.length}, 1fr)`, gap: 8 }}>
       {week.map((d) => <Tile key={d} d={d} sel={d === date} isToday={d === today} state={stateOf(d)} visited={came.has(d)} faces={faces(d)} onPick={setDate} />)}
     </div>
   );

@@ -20,7 +20,7 @@ import { menuAudience } from '../rules/kitchenOps';
 import { DAYMENU_KEYS, LOG_KEYS, NOTE_KEYS, READING_KEYS, isWaiting, snapshotOf, type ApprovalType, APPROVAL_TYPES, type SnapKeys } from '../rules/approvals';
 import { balanceOf } from '../rules/billing';
 import { primaryContact } from '../rules/core';
-import { dayChangeable } from '../rules/calendar';
+import { dayProgrammable } from '../rules/calendar';
 import { notesSaved } from '../rules/activity';
 import { uniq, rp } from '../util';
 
@@ -179,7 +179,7 @@ const APPROVE: Record<ApprovalType, Handler> = {
     if (v) { if (v.deletedAt || v.status !== 'pending') return 'skip'; approveProgrammeVersion(d, ctx, id, o.notify !== false); return 'done'; }
     const day = d.scheduleDays?.[id];
     if (!day || day.deletedAt || !day.pending) return 'skip';
-    if (!dayChangeable(d as unknown as ClubState, id, ctx.today)) return 'conflict'; // passed, or closed since
+    if (!dayProgrammable(d as unknown as ClubState, id, ctx.today)) return 'conflict'; // passed, or closed since (round 14: a weekend with nothing else on it can be approved: that opens it)
     if (programmeDayStale(d, id)) return 'conflict'; // the live day changed since it was sent (Ega's own change, a guest booking): approving would undo that
     approveProgrammeDay(d, ctx, id, o.notify !== false);
     return 'done';

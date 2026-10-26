@@ -1,6 +1,6 @@
 // Core selectors: day status, members, plans, family links, staff lookups.
 import type { ClubState, ISODate, Member, PlanEntry, FamilyLink, FamilyContact, Staff, StaffRole, CalendarEvent } from '../types';
-import { addDays, ageOn, isWeekday, live, sortBy, ym } from '../util';
+import { addDays, ageOn, asWeekday, isWeekday, live, sortBy, ym } from '../util';
 
 // ---------- days ----------
 export type DayStatus =
@@ -11,9 +11,23 @@ export function eventsOn(s: ClubState, date: ISODate): CalendarEvent[] {
   return live(s.calendarEvents).filter((e) => !e.cancelledAt && e.date <= date && (e.endDate || e.date) >= date);
 }
 
+/**
+ * Round 14 (B2, Ruling 9): is a Saturday or Sunday programmed? It is when a session runs on it: the published weekly plan in force has a cell for that
+ * day, or the date's live one-day change has a session or an extra (a slot set to "no session" takes the plan's cell away). A waiting (`pending`) or
+ * returned programme never counts: only what is live. Reads the collections directly (rules/kitchen.ts imports this file).
+ */
+export function programmedWeekend(s: ClubState, date: ISODate): boolean {
+  const pub = live(s.scheduleVersions ?? {}).filter((v) => v.status === 'published' && v.effectiveFrom <= date);
+  const plan = sortBy(pub, (v) => v.effectiveFrom + (v.publishedAt || '')).pop()?.days[asWeekday(date)];
+  const row = s.scheduleDays?.[date];
+  const over = row && !row.deletedAt ? row : undefined;
+  if (over?.extra?.length) return true;
+  return (['10:30', '13:30'] as const).some((slot) => (over && slot in over.slots ? over.slots[slot] : plan?.[slot]));
+}
+
 export function dayStatus(s: ClubState, date: ISODate): DayStatus {
   const events = eventsOn(s, date);
-  if (!isWeekday(date)) return { open: false, reason: 'weekend', events };
+  if (!isWeekday(date) && !programmedWeekend(s, date)) return { open: false, reason: 'weekend', events }; // a programmed weekend opens; its closures and holidays below still apply
   const closed = events.find((e) => e.kind === 'closed');
   if (closed) return { open: false, reason: 'closed', event: closed, events };
   const holiday = events.find((e) => e.kind === 'holiday');

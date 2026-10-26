@@ -5,16 +5,16 @@
 // approves them in Reviews (photo.approve calls announceLunchPhoto for them). Notification kinds and feed keys live in the `kitchen`
 // i18n namespace (kitchen.notif.*, kitchen.feed.*).
 import type { Draft } from 'immer';
-import type { ClubState, Dish, DishAllergen, Face, Feedback, ISODate, MenuDay, StockRequest, User, Weekday } from '../types';
+import type { ClubState, Dish, DishAllergen, Face, Feedback, ISODate, StockRequest, User } from '../types';
 import { DomainError, defineAction, hasRole, isStaff, type ActionDef, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { dayStatus } from '../rules/core';
 import { ALLERGY_COVERS, MAX_LUNCH_PHOTOS, dinersOn } from '../rules/kitchen';
 import {
-  COURSES, DISH_ALLERGENS, DISH_TAGS, STOCK_AREAS, WEEKDAYS, type Course, type PersonKey,
-  canApproveStock, canEditStock, canReceiveStock, canRequestStock, diffTemplates, dishUsage, menuAudience, potentialConflicts, replyTarget, sameIds, templateOn,
+  ALL_DAYS, COURSES, DISH_ALLERGENS, DISH_TAGS, STOCK_AREAS, type Course, type PersonKey, type WeekTemplate,
+  canApproveStock, canEditStock, canReceiveStock, canRequestStock, diffTemplates, dishUsage, menuAudience, potentialConflicts, replyTarget, sameIds, storedTemplate, templateOn,
 } from '../rules/kitchenOps';
-import { dow, live, uniq } from '../util';
+import { asWeekday, live, uniq } from '../util';
 import { LUNCH_AMOUNTS, type LunchAmount } from '../rules/activity';
 import { writeMark } from '../rules/mood';
 import { applyMarks, checkLogDay, requireAttended } from './care';
@@ -59,10 +59,10 @@ const optBool = (v: unknown, def: boolean): boolean => (v === undefined || v ===
 /** The id of an uploaded picture (POST /api/media). */
 const mediaIdOf = (v: unknown): string | undefined => (v === undefined || v === null || v === '' ? undefined : typeof v === 'string' && /^[\w.-]{1,80}$/.test(v) ? v : bad());
 const personKey = (v: unknown): PersonKey => (typeof v === 'string' && /^(member|guest):[\w-]{1,60}$/.test(v) ? (v as PersonKey) : bad());
-const parseDays = (v: unknown): Record<Weekday, MenuDay> => {
+const parseDays = (v: unknown): WeekTemplate => {
   const r = rec(v);
-  const out = {} as Record<Weekday, MenuDay>;
-  for (const w of WEEKDAYS) {
+  const out = {} as WeekTemplate;
+  for (const w of ALL_DAYS) { // round 14: Saturday and Sunday may be left out (empty)
     const x = rec(r[w] ?? {});
     out[w] = { lunch: idList(x.lunch ?? []), soft: idList(x.soft ?? []), tea: idList(x.tea ?? []) };
   }
@@ -162,13 +162,13 @@ interface OverrideInput { date: ISODate; lunch?: string[] | null; soft?: string[
 const menuActions: ActionDef[] = [
   // effectiveFrom: the Monday of a coming week, or today for the current one. The weekly menu is a template that repeats every week from its
   // start date until another one starts. notify (default on): tell the families of the active members that the menu changes.
-  defineAction<{ effectiveFrom: ISODate; days: Record<Weekday, MenuDay>; notify: boolean }>({
+  defineAction<{ effectiveFrom: ISODate; days: WeekTemplate; notify: boolean }>({
     name: 'menu.publish',
     can: (u) => kitchenOrMgmt(u),
     parse: (raw) => { const r = rec(raw); return { effectiveFrom: isoDate(r.effectiveFrom), days: parseDays(r.days), notify: optBool(r.notify, true) }; },
     run(d, i, ctx) {
       if (i.effectiveFrom < ctx.today) ctx.fail('kitchen.err.pastDate'); // published history never changes
-      for (const w of WEEKDAYS) for (const c of COURSES) checkDishes(d, i.days[w][c], c, ctx);
+      for (const w of ALL_DAYS) for (const c of COURSES) checkDishes(d, i.days[w][c], c, ctx);
       const st = asState(d);
       const gated = needsApproval(ctx);
       const replaced = live(st.menuVersions).filter((v) => v.status === 'published' && v.effectiveFrom >= i.effectiveFrom);
@@ -177,7 +177,7 @@ const menuActions: ActionDef[] = [
       // The kitchen's version waits for approval: it only supersedes versions that are still waiting, and replaces the approved ones when it is approved.
       for (const v of replaced) if (!gated || isWaiting(v)) d.menuVersions[v.id].deletedAt = ctx.nowDT;
       const id = ctx.id('mv');
-      d.menuVersions[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, effectiveFrom: i.effectiveFrom, status: 'published', days: i.days, publishedBy: ctx.actor };
+      d.menuVersions[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, effectiveFrom: i.effectiveFrom, status: 'published', days: storedTemplate(i.days), publishedBy: ctx.actor };
       ctx.result.versionId = id;
       if (gated) {
         markPending(d.menuVersions[id], ctx, undefined, { notify: i.notify });
@@ -202,7 +202,7 @@ const menuActions: ActionDef[] = [
       if (i.date < ctx.today) ctx.fail('kitchen.err.pastDate');
       const st = asState(d);
       if (!dayStatus(st, i.date).open) ctx.fail('err.closedDay');
-      const base = templateOn(st, i.date).days[dow(i.date) as Weekday];
+      const base = templateOn(st, i.date).days[asWeekday(i.date)];
       const row = ensureDayMenu(d, i.date, ctx);
       // the kitchen's override waits for approval: families keep seeing the menu as it was until then
       const gated = needsApproval(ctx);

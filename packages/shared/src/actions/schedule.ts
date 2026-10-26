@@ -1,14 +1,14 @@
 // Schedule and calendar actions: weekly schedule drafts and dated versions, closures / holidays / outings, activity and room catalog.
 import { z } from 'zod';
 import type { Draft } from 'immer';
-import type { CalendarEvent, ClubState, HM, ISODate, Member, ScheduleCell, ScheduleDay, Slot, StaffRole, Weekday, WeekSlot } from '../types';
+import type { CalendarEvent, ClubState, HM, ISODate, Member, ScheduleCell, ScheduleDay, Slot, StaffRole, WeekSlot } from '../types';
 import { DomainError, defineAction, hasRole, type Ctx } from './framework';
 import { needsApproval } from './approvalGate';
 import { dayStatus, membershipStatus } from '../rules/core';
 import { extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from '../rules/kitchen';
-import { DRAFT_ID, SLOTS, WEEKDAYS, cellKey, daysEqual, extraTimeIssue, fmtDMY, nextMonday, normalizeDays, pendingDayRow, publishedCellKeys, sameCell, weeklyCell, type Days } from '../rules/calendar';
+import { ALL_DAYS, DRAFT_ID, SLOTS, cellKey, dayProgrammable, daysEqual, extraTimeIssue, fmtDMY, nextMonday, normalizeDays, pendingDayRow, publishedCellKeys, sameCell, storedDays, weeklyCell, type Days } from '../rules/calendar';
 import { guestOn } from '../rules/guests';
-import { diffDays, dow, live, sortBy, uniq } from '../util';
+import { asWeekday, diffDays, live, sortBy, uniq } from '../util';
 import { mediaIdOf } from './members';
 
 const mgmtOnly = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'mgmt');
@@ -49,13 +49,13 @@ function notifyEveryone(d: Draft<ClubState>, ctx: Ctx, n: { kind: string; params
 // ---------- weekly schedule ----------
 const cellSchema = z.object({ activityId: z.string().min(1), staffId: z.string().min(1), roomId: z.string().min(1) }).nullable();
 const daySchema = z.object({ '10:30': cellSchema, '13:30': cellSchema });
-const daysSchema = z.object({ '1': daySchema, '2': daySchema, '3': daySchema, '4': daySchema, '5': daySchema });
+const daysSchema = z.object({ '1': daySchema, '2': daySchema, '3': daySchema, '4': daySchema, '5': daySchema, '6': daySchema.optional(), '7': daySchema.optional() }); // round 14: Saturday and Sunday are optional
 const toDays = (x: z.infer<typeof daysSchema>) => normalizeDays(x as never);
 
 /** Existence checks always; role / active checks only for cells that no published version already has (so old cells stay valid after a teacher or activity changes). */
 function validateDays(d: Draft<ClubState>, ctx: Ctx, days: Days) {
   const published = publishedCellKeys(d as unknown as ClubState);
-  for (const w of WEEKDAYS) for (const slot of SLOTS) {
+  for (const w of ALL_DAYS) for (const slot of SLOTS) {
     const c = days[w][slot];
     if (c) validateCell(d, ctx, c, published.has(cellKey(w, slot, c)));
   }
@@ -141,6 +141,10 @@ export function openDayOrFail(d: Draft<ClubState>, ctx: Ctx, date: ISODate) {
   if (!st.open) ctx.fail('cal.err.dayClosed');
   if (st.outing) ctx.fail('cal.err.dayOuting');
 }
+/** Round 14 (B2): the programme of a day can be made on an open day, or on a weekend with nothing programmed yet (its first session opens it). */
+function programmableOrFail(d: Draft<ClubState>, ctx: Ctx, date: ISODate) {
+  if (!dayProgrammable(d as unknown as ClubState, date, ctx.today)) openDayOrFail(d, ctx, date);
+}
 /** The session that runs on a date and slot right now (weekly plan with the one-day changes applied). */
 export const effectiveCell = (d: Draft<ClubState>, date: ISODate, slot: Slot): ScheduleCell | null =>
   sessionsOn(d as unknown as ClubState, date).find((x) => x.slot === slot)?.cell ?? null;
@@ -156,13 +160,13 @@ function tellDay(d: Draft<ClubState>, ctx: Ctx, n: { kind: string; params: Param
  * slot's change is removed; a day left with no changed slot is deleted. Fails with `err.noChanges` when nothing would change.
  */
 export function setDayCell(d: Draft<ClubState>, ctx: Ctx, c: DayChange): void {
-  openDayOrFail(d, ctx, c.date);
+  programmableOrFail(d, ctx, c.date);
   if (!isWeekSlot(c.slot)) return setExtraCell(d, ctx, c);
   const slot: WeekSlot = c.slot;
   const view = d as unknown as ClubState;
   const weekly = weeklyCell(view, c.date, slot);
   const cur = effectiveCell(d, c.date, slot);
-  if (c.cell) validateCell(d, ctx, c.cell, sameCell(cur, c.cell) || sameCell(weekly, c.cell) || publishedCellKeys(view).has(cellKey(dow(c.date) as Weekday, slot, c.cell)));
+  if (c.cell) validateCell(d, ctx, c.cell, sameCell(cur, c.cell) || sameCell(weekly, c.cell) || publishedCellKeys(view).has(cellKey(asWeekday(c.date), slot, c.cell)));
   const existing = scheduleDayOf(view, c.date);
   const slots: ScheduleDay['slots'] = {};
   for (const sl of SLOTS) if (existing && sl in existing.slots) slots[sl] = existing.slots[sl] ? { ...(existing.slots[sl] as ScheduleCell) } : null;
@@ -317,7 +321,7 @@ export const scheduleActions = [
       const effectiveFrom = input.effectiveFrom ?? (prev && !prev.deletedAt ? prev.effectiveFrom : nextMonday(ctx.today));
       d.scheduleVersions[DRAFT_ID] = {
         id: DRAFT_ID, clubId: ctx.clubId, createdAt: prev && !prev.deletedAt ? prev.createdAt : ctx.nowDT, createdBy: prev && !prev.deletedAt ? prev.createdBy : ctx.actor,
-        effectiveFrom, status: 'draft', days: input.days, submittedBy: ctx.actor,
+        effectiveFrom, status: 'draft', days: storedDays(input.days), submittedBy: ctx.actor,
       };
     },
   }),
@@ -340,7 +344,7 @@ export const scheduleActions = [
       if (inForce && daysEqual(normalizeDays(inForce.days as never), days)) ctx.fail('err.noChanges');
       const id = ctx.id('sched');
       const gated = needsApproval(ctx);
-      d.scheduleVersions[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, effectiveFrom, status: gated ? 'pending' : 'published', days, submittedBy: ctx.actor, ...(gated ? {} : { publishedBy: ctx.actor, publishedAt: ctx.nowDT }) };
+      d.scheduleVersions[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, effectiveFrom, status: gated ? 'pending' : 'published', days: storedDays(days), submittedBy: ctx.actor, ...(gated ? {} : { publishedBy: ctx.actor, publishedAt: ctx.nowDT }) };
       delete d.scheduleVersions[DRAFT_ID];
       for (const v of Object.values(d.scheduleVersions)) if (v.status === 'rejected' && !v.deletedAt) v.deletedAt = ctx.nowDT; // a version Ega sent back is replaced by this one
       if (gated) {
@@ -511,7 +515,7 @@ export const scheduleActions = [
     can: (u) => builders(u),
     parse: (raw) => parseWith(extraBase, raw),
     run: (d, input, c0) => editableDay(d, c0, input.date, (ctx) => {
-      openDayOrFail(d, ctx, input.date);
+      programmableOrFail(d, ctx, input.date);
       const issue = extraTimeIssue(d as unknown as ClubState, input.date, input.time);
       if (issue) ctx.fail(issue.code, issue.params);
       const cell = extraCell(input);
@@ -531,7 +535,7 @@ export const scheduleActions = [
     can: (u) => builders(u),
     parse: (raw) => parseWith(extraBase.extend({ toTime: hm.optional() }), raw),
     run: (d, input, c0) => editableDay(d, c0, input.date, (ctx) => {
-      openDayOrFail(d, ctx, input.date);
+      programmableOrFail(d, ctx, input.date);
       const view = d as unknown as ClubState;
       const cur = extrasOn(view, input.date).find((x) => x.time === input.time) ?? ctx.fail('err.notFound');
       const to = input.toTime ?? input.time;

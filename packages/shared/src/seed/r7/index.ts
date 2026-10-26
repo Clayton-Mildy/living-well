@@ -13,6 +13,7 @@ import { seedCelebrations } from './celebrations';
 import { seedLeads } from './leads';
 import { seedLeave } from './leave';
 import { seedUnpaid } from './unpaid';
+import { seedWeekend } from './weekend';
 
 export function seedRound7(s: ClubState, T: ISODate): void {
   seedGuests(s, T); // first: it adds activities and a one-day change that the session marks follow
@@ -28,4 +29,5 @@ export function seedRound7(s: ClubState, T: ISODate): void {
   seedLeave(s, T); // round 13: staff leave requests (Dinar and Caca approved, Caca waiting, Chef Agus declined) with the approved leave rows; no random draws
   seedUnpaid(s, T); // round 14: (roster only) a promise and a "no answer" on the two overdue invoices; no random draws
   seedMoodMarks(s, T); // round 12: a mood mark for every seeded visit (last: it walks the attendance, readings and logs above)
+  seedWeekend(s, T); // round 14: the first Saturday after T is programmed, the Sunday after it waits for Ega (after everything that looks for an open day)
 }

@@ -17,7 +17,10 @@ export const isWeekday = (s: ISODate) => {
   const w = dow(s);
   return w >= 1 && w <= 5;
 };
-export const asWeekday = (s: ISODate): Weekday | null => (isWeekday(s) ? (dow(s) as Weekday) : null);
+/** The club weekday of a date: Monday = 1 … Sunday = 7 (round 14: weekends can be programmed, so they have a column of their own). */
+export const asWeekday = (s: ISODate): Weekday => (dow(s) || 7) as Weekday;
+/** Monday to Sunday, for the weekly editors (round 14: Saturday and Sunday are empty unless programmed). */
+export const ALL_DAYS: Weekday[] = [1, 2, 3, 4, 5, 6, 7];
 export const toMin = (hm: HM) => {
   const [h, m] = hm.split(':').map(Number);
   return h * 60 + m;

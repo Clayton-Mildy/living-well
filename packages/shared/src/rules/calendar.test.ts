@@ -86,8 +86,9 @@ describe('nextDays', () => {
     // from a Friday: the Saturday with a venue booking counts for staff; for a family it is skipped
     expect(nextDays(s, '2026-10-23', 3).map((d) => d.date)).toEqual(['2026-10-23', '2026-10-24', '2026-10-26']);
     expect(nextDays(s, '2026-10-23', 3, 'family').map((d) => d.date)).toContain('2026-10-24'); // a private event is still a day with something on
-    // an empty weekend is skipped: Fri 6 Nov, then Monday
-    expect(nextDays(s, '2026-11-06', 2).map((d) => d.date)).toEqual(['2026-11-06', '2026-11-09']);
+    // an empty weekend is skipped: Fri 13 Nov, then Monday; round 14: a programmed Saturday is an open day (the seed programmes 7 Nov)
+    expect(nextDays(s, '2026-11-13', 2).map((d) => d.date)).toEqual(['2026-11-13', '2026-11-16']);
+    expect(nextDays(s, '2026-11-06', 2).map((d) => d.date)).toEqual(['2026-11-06', '2026-11-07']);
     expect(nextDays(s, '2026-10-21', 0)).toEqual([]);
     expect(nextDays(s, '2030-01-01', 3)).toHaveLength(3); // far from the seed: still 3 (a schedule version keeps applying)
   });
@@ -171,7 +172,7 @@ describe('the weekly schedule by week', () => {
     expect(mondayOf('2026-11-07')).toBe('2026-11-02'); // Saturday
     expect(mondayOf('2026-11-08')).toBe('2026-11-02'); // Sunday
     expect(mondayOf('2027-01-01')).toBe('2026-12-28'); // across the year
-    expect(weekDates('2026-11-02')).toEqual(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']);
+    expect(weekDates('2026-11-02')).toEqual(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08']); // round 14: the weekend has columns too
   });
 
   it('KC round 7: a week can be changed until it is over: the current week from today on, a future week, but not a week that has passed', () => {
@@ -179,7 +180,8 @@ describe('the weekly schedule by week', () => {
     expect(weekEditable('2026-10-26', T)).toBe(true);
     expect(weekEditable('2026-10-26', '2026-10-26')).toBe(true); // on its Monday it is the current week
     expect(weekEditable('2026-10-19', '2026-10-23')).toBe(true); // its Friday
-    expect(weekEditable('2026-10-19', '2026-10-24')).toBe(false); // Saturday: the week is over
+    expect(weekEditable('2026-10-19', '2026-10-25')).toBe(true); // round 14: its Sunday (the weekend can be programmed)
+    expect(weekEditable('2026-10-19', '2026-10-26')).toBe(false); // the next Monday: the week is over
     expect(weekEditable('2026-10-12', T)).toBe(false);
     expect(dayEditable('2026-10-20', T)).toBe(false); // a day before today stays as it was
     expect(dayEditable(T, T)).toBe(true);
@@ -212,7 +214,7 @@ describe('the weekly schedule by week', () => {
     expect(here.changes).toEqual([{ w: 2, slot: '10:30' }]);
     expect(here.days[2]['10:30']).toBeNull();
     expect(here.base[2]['10:30']?.activityId).toBeTruthy();
-    expect(here.dates).toHaveLength(5);
+    expect(here.dates).toHaveLength(7); // round 14: Monday to Sunday
     const other = weekView(d, '2026-10-26', T);
     expect(other.draftHere).toBe(false);
     expect(other.changes).toEqual([]);

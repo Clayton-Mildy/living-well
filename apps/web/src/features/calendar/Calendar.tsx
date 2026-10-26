@@ -5,7 +5,7 @@
 // Round 6 (phone, native look): an iOS segmented List | Calendar switch, days as grouped lists, "Add event" as the Pin pill, actions as list rows.
 import { Fragment, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDays, addMonths, dow, isWeekSlot, ym, type CalendarEvent, type ISODate, type Slot, type Weekday, type WeekSlot } from '@cp/shared';
+import { addDays, addMonths, asWeekday, isWeekSlot, ym, type CalendarEvent, type ISODate, type Slot, type WeekSlot } from '@cp/shared';
 import { dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, type CalKind } from '@cp/shared/rules/calendar';
 import { Button, Icon, PageHead, Pin } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -67,7 +67,7 @@ export function Calendar() {
     const wk = mondayOf(date);
     const target = weekEditable(wk, today) ? wk : nextMonday(today);
     if (target !== wk) say(t('cal.editFromWeek', { date: fdl(target) }), { icon: 'info' });
-    const w = dow(date) as Weekday;
+    const w = asWeekday(date);
     setWeek(target);
     setFocus(addDays(target, w - 1));
     setReq({ w, slot, n: Date.now() });

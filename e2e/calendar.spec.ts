@@ -79,7 +79,7 @@ test('s9 adds a closure: it shows on the month view; edit and delete it', async 
   const c = watchConsole(page);
   await signIn(page, 's9', '/calendar');
   await expect(page.getByRole('heading', { level: 1, name: 'Calendar and schedule' })).toBeVisible();
-  await expect(page.getByText('Open Monday to Friday · 08:30–16:30')).toBeVisible();
+  await expect(page.getByText('Open Monday to Friday, and on weekends when programmed · 08:30–16:30')).toBeVisible();
   await noHScroll(page);
   await page.getByRole('button', { name: 'Add event' }).click();
   const dlg = page.getByRole('dialog', { name: 'Add to the calendar' });
@@ -869,7 +869,7 @@ test('Indonesian: month and weekday names, labels and activity names follow the 
   const c = watchConsole(page);
   await signIn(page, 's9', '/calendar', 'id');
   await expect(page.getByRole('heading', { level: 1, name: 'Kalender dan jadwal' })).toBeVisible();
-  await expect(page.getByText('Buka Senin sampai Jumat · 08:30–16:30')).toBeVisible();
+  await expect(page.getByText('Buka Senin sampai Jumat, dan akhir pekan bila ada program · 08:30–16:30')).toBeVisible();
   await expect(block(page, '2026-10-21')).toContainText('Bernyanyi keroncong'); // nameId, not the English name
   await expect(block(page, '2026-10-21')).toContainText('Ruang musik · bersama Pak Hendro · tamu');
   await expect(block(page, '2026-10-21')).toContainText('Buka · 08:30–16:30');
