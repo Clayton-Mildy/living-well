@@ -1,11 +1,12 @@
 // What one entry waiting for approval looks like in the Approvals screen: a short summary line and the full view (old → new for edits).
 // Pure view-model: the screen renders the pieces. Profile changes use describeCr (reviewDiff.ts).
-import { memberName, displayName, actorName, rp, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type Slot } from '@cp/shared';
+import { memberName, displayName, actorName, rp, scheduleVersionFor, sessionsOn, staffCall, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type ScheduleCell, type ScheduleVersion, type Slot } from '@cp/shared';
 import type { ApprovalItem, ApprovalType, HistoryItem } from '@cp/shared/rules/approvals';
 import { APPROVAL_TYPES, DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approvals';
 import { diffTemplates, templateOn, weekDate, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
 import type { TFn } from '../../lib/i18n';
-import { activityName, roundsOf } from '@cp/shared/rules/activity';
+import { activityName, roomName, roundsOf } from '@cp/shared/rules/activity';
+import { changedCells, normalizeDays, sameCell, withPendingDay } from '@cp/shared/rules/calendar';
 import { leaveBalance } from '@cp/shared/rules/staffLeave';
 import { CHECK_KEY } from '../health/ReadingCard';
 import { values as readingValues } from './profile/CareTab';
@@ -80,6 +81,34 @@ function versionView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   }));
   const head = t('approvals.sum.menuVersion', { date: fmt.fdy(v.effectiveFrom) });
   return { who: '', kind: t('approvals.kind.version'), summary: `${head} · ${changes.length ? t('approvals.sum.menuChanges', { n: changes.length }) : t('approvals.sum.menuSame')}`, detail: { title: head, rows: [], summary: rows }, edit: false };
+}
+/** Round 14: a session as one line: activity · room · teacher ("No session" for an empty slot). */
+const sessionText = (s: ClubState, c: ScheduleCell | null | undefined, t: TFn, lang: Lang) =>
+  c ? [activityName(s.activities[c.activityId], lang), roomName(s.rooms[c.roomId], lang), staffCall(s.staff[c.staffId])].filter(Boolean).join(' · ') : t('cal.noSession');
+/** Round 14 (B1): a weekly schedule the activity team sent: each session it changes against the plan in force on its start date, before → after. */
+function programmeVersionView(s: ClubState, v: ScheduleVersion, t: TFn, fmt: Fmt): ItemView {
+  const lang = fmt.lang ?? 'en';
+  const before = normalizeDays(scheduleVersionFor(s, v.effectiveFrom)?.days);
+  const after = normalizeDays(v.days);
+  const cells = changedCells(after, before);
+  const rows: DiffRow[] = cells.map(({ w, slot }) => ({ label: `${fmt.fd(weekDate('2024-01-01', w), { weekday: 'long' })} · ${slot}`, from: sessionText(s, before[w][slot], t, lang), to: sessionText(s, after[w][slot], t, lang) }));
+  const head = t('approvals.sum.programmeFrom', { date: fmt.fds(v.effectiveFrom) });
+  return { who: '', kind: t('approvals.kind.programme'), summary: `${head} · ${cells.length ? t('approvals.sum.menuChanges', { n: cells.length }) : t('approvals.sum.programmeSame')}`, detail: { title: head, rows, summary: [] }, edit: false };
+}
+/** Round 14 (B1): a day's programme change the activity team sent: each session time it changes (or adds or removes), and the note, before → after. */
+function programmeDayView(s: ClubState, date: string, t: TFn, fmt: Fmt): ItemView {
+  const lang = fmt.lang ?? 'en';
+  const now = sessionsOn(s, date);
+  const next = withPendingDay(s, date);
+  const then = sessionsOn(next, date);
+  const times = Array.from(new Set([...now, ...then].map((x) => x.slot))).sort();
+  const cellAt = (list: typeof now, slot: string) => list.find((x) => x.slot === slot)?.cell ?? null;
+  const rows: DiffRow[] = times.filter((slot) => !sameCell(cellAt(now, slot), cellAt(then, slot))).map((slot) => ({ label: slot, from: sessionText(s, cellAt(now, slot), t, lang), to: sessionText(s, cellAt(then, slot), t, lang) }));
+  const noteBefore = s.scheduleDays?.[date]?.note ?? '', noteAfter = next.scheduleDays?.[date]?.note ?? '';
+  if (noteBefore !== noteAfter) rows.push({ label: t('approvals.noteLabel'), from: noteBefore || dash, to: noteAfter || dash });
+  const head = t('approvals.sum.programmeDay', { date: fmt.fds(date) });
+  const first = rows[0];
+  return { who: '', kind: t('approvals.kind.day'), summary: first ? `${head} · ${first.label}: ${first.to}` : head, detail: { title: head, rows, summary: [] }, edit: true };
 }
 function dayMenuView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   const o = s.dayMenus[id];
@@ -174,7 +203,8 @@ export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
     case 'log': { const l = s.dailyLogs[it.id]; if (l) return logView(s, l, t, fmt); break; }
     case 'note': { const n = s.memberNotes[it.id]; if (n) return noteView(s, n, t); break; }
     case 'reading': { const r = s.readings[it.id]; if (r) return readingView(s, r, t, fmt); break; }
-    case 'version': return versionView(s, it.id, t, fmt);
+    case 'version': { const v = s.scheduleVersions[it.id]; return v ? programmeVersionView(s, v, t, fmt) : versionView(s, it.id, t, fmt); }
+    case 'day': return programmeDayView(s, it.id, t, fmt);
     case 'dayMenu': return dayMenuView(s, it.id, t, fmt);
     case 'stock': return stockView(s, it.id, t);
     case 'renewal': return renewalView(s, it.id, t, fmt);
@@ -198,14 +228,14 @@ export type { HistoryItem };
 // ---------- KC round 6: the per-person view of Approvals ----------
 export interface PersonGroup { memberId: string; items: ApprovalItem[] }
 /** Everything waiting, grouped by the member it is about: profile changes, care logs and notes, health readings and solo photos.
- *  Group photos, activity pictures (of a session, no members) and other multi-member photos get their own section ("Group & activity photos"); menu and stock are not about a member, so they go to "Other". */
+ *  Group photos, activity pictures (of a session, no members) and other multi-member photos get their own section ("Group & activity photos"); menu, programme and stock are not about a member, so they go to "Other". */
 export function groupByPerson(s: ClubState, items: Record<ApprovalType, ApprovalItem[]>): { people: PersonGroup[]; groupPhotos: ApprovalItem[]; other: ApprovalItem[] } {
   const by = new Map<string, ApprovalItem[]>();
   const groupPhotos: ApprovalItem[] = [];
   const other: ApprovalItem[] = [];
   for (const type of APPROVAL_TYPES) {
     for (const it of items[type] || []) {
-      if (type === 'menu' || type === 'stock' || type === 'leave') { other.push(it); continue; }
+      if (type === 'menu' || type === 'programme' || type === 'stock' || type === 'leave') { other.push(it); continue; }
       let mid = it.memberId;
       if (type === 'photos') {
         const ph = s.photos[it.id];

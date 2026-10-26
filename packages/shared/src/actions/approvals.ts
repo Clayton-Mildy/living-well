@@ -1,6 +1,7 @@
 // Management approval hub: approve or reject what non-management staff entered, one action for a whole batch (one patch, one SSE update).
 //   approval.approve { type, ids, notify? }      approval.reject { type, ids, reason }
-// type: profile (change requests, applied-at-once flags), logs (daily logs + family notes), readings, photos, menu (weekly versions + per-day overrides), stock, renewals (a change the front desk recorded in the month-end follow-up: approving applies it from the 1st).
+// type: profile (change requests, applied-at-once flags), logs (daily logs + family notes), readings, photos, menu (weekly versions + per-day overrides), stock, renewals (a change the front desk recorded in the month-end follow-up: approving applies it from the 1st),
+// programme (round 14: a weekly schedule or a day's change the activity team sent; approving publishes it / makes it the live day).
 // Ids that were already handled, are gone or have gone stale (a profile change whose values moved on) are skipped and reported back in `skipped`.
 // Families never see an entry before this approves it (rules/approvals.ts, project.ts); the notices that would tell them go out here.
 import { z } from 'zod';
@@ -13,11 +14,13 @@ import { decideLeave } from './staffLeave';
 import { approvePhotoRows, rejectPhotoRows } from './photos';
 import { applyFollowUp } from './renewals';
 import { approveStockRow, rejectStockRow } from './kitchen';
+import { approveProgrammeDay, approveProgrammeVersion, returnProgrammeDay } from './schedule';
 import { noticeFamilies } from './health';
 import { menuAudience } from '../rules/kitchenOps';
 import { DAYMENU_KEYS, LOG_KEYS, NOTE_KEYS, READING_KEYS, isWaiting, snapshotOf, type ApprovalType, APPROVAL_TYPES, type SnapKeys } from '../rules/approvals';
 import { balanceOf } from '../rules/billing';
 import { primaryContact } from '../rules/core';
+import { dayChangeable } from '../rules/calendar';
 import { notesSaved } from '../rules/activity';
 import { uniq, rp } from '../util';
 
@@ -170,6 +173,16 @@ const APPROVE: Record<ApprovalType, Handler> = {
     decide(o.approval!, ctx, 'approved');
     return 'done';
   },
+  // round 14: a weekly schedule is published (from today once its date has passed); a day's change becomes the live day while that day can still change
+  programme(d, ctx, id, o) {
+    const v = d.scheduleVersions[id];
+    if (v) { if (v.deletedAt || v.status !== 'pending') return 'skip'; approveProgrammeVersion(d, ctx, id, o.notify !== false); return 'done'; }
+    const day = d.scheduleDays?.[id];
+    if (!day || day.deletedAt || !day.pending) return 'skip';
+    if (!dayChangeable(d as unknown as ClubState, id, ctx.today)) return 'conflict'; // passed, or closed since
+    approveProgrammeDay(d, ctx, id, o.notify !== false);
+    return 'done';
+  },
   stock(d, ctx, id) {
     const k = d.stockRequests[id];
     if (!k || k.deletedAt || k.status !== 'requested') return 'skip';
@@ -269,6 +282,21 @@ const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
     note(out, by);
     return 'done';
   },
+  // round 14: nothing was in force, so only the request changes; the sender hears why (the builder shows "Returned: …")
+  programme: (out) => (d, ctx, id, o) => {
+    const v = d.scheduleVersions[id];
+    if (v) {
+      if (v.deletedAt || v.status !== 'pending') return 'skip';
+      v.status = 'rejected';
+      v.rejectNote = o.reason!;
+      note(out, v.submittedBy ?? v.createdBy);
+      return 'done';
+    }
+    const day = d.scheduleDays?.[id];
+    if (!day || day.deletedAt || !day.pending) return 'skip';
+    note(out, returnProgrammeDay(d, ctx, id, o.reason!));
+    return 'done';
+  },
   stock: () => (d, ctx, id, o) => {
     const k = d.stockRequests[id];
     if (!k || k.deletedAt || k.status !== 'requested') return 'skip';
@@ -312,7 +340,7 @@ const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
 };
 const note = (out: Outcome, by: string) => { const s = staffIdOfActor(by); if (s) out.rejectedBy.set(s, (out.rejectedBy.get(s) || 0) + 1); };
 
-const REJECT_LINK: Partial<Record<ApprovalType, string>> = { logs: '/log', readings: '/readings', menu: '/menu', renewals: '/renewals', payments: '/members' };
+const REJECT_LINK: Partial<Record<ApprovalType, string>> = { logs: '/log', readings: '/readings', menu: '/menu', programme: '/calendar', renewals: '/renewals', payments: '/members' };
 
 function run(d: Draft<ClubState>, ctx: Ctx, type: ApprovalType, ids: string[], mode: 'approve' | 'reject', o: { reason?: string; notify?: boolean }): Outcome {
   const out: Outcome = { done: [], skipped: [], conflicts: [], rejectedBy: new Map() };

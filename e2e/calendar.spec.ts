@@ -1,6 +1,6 @@
 // Calendar area: the next-3-days list (with "Edit activity"), month view (a date opens its week in the schedule), management events editor (notify toggle),
 // weekly schedule builder by week (versions, date under each day, quick remove, tap-to-place, dated publish with notify), catalog editor (room "Other"),
-// all of that is management only: an activity teacher just views (and the server refuses her schedule changes),
+// events and the catalog are management only; round 14: an activity teacher builds too, and what she changes is sent to Ega (the server keeps her out of events and the catalog),
 // family read-only view (no venue clients), Indonesian, no console errors, no horizontal scroll.
 // Isolated env: pnpm e2e:env activity 8805 5205 ; E2E_BASE_URL=http://localhost:5205 pnpm exec playwright test e2e/calendar.spec.ts
 import { test, expect, type Browser, type Page } from '@playwright/test';
@@ -556,7 +556,7 @@ test('builder: "Clear this slot" in the editor, and an unpublished draft for ano
   c.assertClean();
 });
 
-test('builder: the draft survives a reload, is shared with the manager\'s other device and can be discarded; a teacher has no builder', async ({ page, browser }) => {
+test('builder: the draft survives a reload, is shared with the manager\'s other device and can be discarded; a teacher\'s builder sends to Ega', async ({ page, browser }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/calendar');
   await openBuilder(page);
@@ -574,12 +574,15 @@ test('builder: the draft survives a reload, is shared with the manager\'s other 
   await expect(page.getByText('1 change not yet published')).toBeVisible();
   await goDay(page, 'Tue');
   await expect(page.getByRole('button', { name: 'Tuesday 13:30: Reading circle' })).toBeVisible();
-  // a teacher sees the published schedule only: no builder, so no draft banner and nothing to discard
+  // round 14: a teacher has the builder too, on the same shared draft; her button sends it to Ega and the catalog stays management's
   const { page: teacher, ctx: teacherCtx } = await otherUser(browser, 's6', '/calendar');
   const tc = watchConsole(teacher);
   await expect(teacher.getByRole('heading', { level: 1, name: 'Calendar and schedule' })).toBeVisible();
-  await expect(teacher.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0);
-  await expect(teacher.getByText(/unpublished changes/)).toHaveCount(0);
+  await openBuilder(teacher);
+  await expect(teacher.getByText('You have unpublished changes for the week of Mon 26 Oct.')).toBeVisible();
+  await expect(teacher.getByRole('button', { name: 'Send to Ega' })).toBeVisible();
+  await expect(publishPage(teacher)).toHaveCount(0);
+  await expect(teacher.getByRole('button', { name: 'Activities and rooms' })).toHaveCount(0);
   tc.assertClean();
   await teacherCtx.close();
   // the same manager on a second device sees the same draft and discards it
@@ -660,31 +663,30 @@ test('catalog (s9): add activities with an Indonesian name and a free-text room,
   c.assertClean();
 });
 
-test('s5 (activity teacher) only views the calendar: list and month, no builder, no editors; the server refuses schedule changes', async ({ page }) => {
+test('s5 (activity teacher): no event editor or catalog, but the builder and Edit activity, which send to Ega; the server refuses events and the catalog', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's5', '/calendar');
   await expect(page.getByRole('heading', { level: 1, name: 'Calendar and schedule' })).toBeVisible();
-  // the list: the next 3 days, with the activities, the rooms and the teachers, but nothing to change
+  // the list: the next 3 days, with the activities, the rooms and the teachers; she can change an activity (round 14: it goes to Ega), not an event
   for (const d of ['2026-10-21', '2026-10-22', '2026-10-23']) await expect(block(page, d)).toBeVisible();
   await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
   await expect(block(page, '2026-10-21')).toContainText('Pak Hendro'); // round 13: the demo seed has a guest host on the demo day's keroncong session
   const none = async () => {
-    await expect(page.getByRole('button', { name: /Edit activity/ })).toHaveCount(0);
-    await expect(page.getByRole('button', { name: /^Edit / })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: /Edit activity/ }).first()).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Edit (?!activity)/ })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Add event' })).toHaveCount(0);
     await expect(page.getByRole('button', { name: 'Activities and rooms' })).toHaveCount(0);
-    await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0);
+    await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(1);
     await expect(publishPage(page)).toHaveCount(0);
-    await expect(page.getByRole('button', { name: 'Edit next week' })).toHaveCount(0);
+    await expect(page.getByRole('button', { name: 'Send to Ega' })).toHaveCount(1);
   };
   await none();
   await noHScroll(page);
-  // the month: a day opens its detail, but not a week in the schedule, and there is no "add an event" either
+  // the month: a day opens its detail, and there is no "add an event"
   await page.getByRole('tab', { name: 'Calendar' }).click();
   await expect(page.getByRole('heading', { name: 'October 2026' })).toBeVisible();
   await cell(page, '2026-10-21').click();
   await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
-  await expect(page.getByRole('button', { name: 'Open this week in the schedule' })).toHaveCount(0);
   await expect(page.getByRole('button', { name: /Add an event on/ })).toHaveCount(0);
   await none();
   await noHScroll(page);
@@ -696,16 +698,17 @@ test('s5 (activity teacher) only views the calendar: list and month, no builder,
     await expect(bar.locator('[data-nav-key="requests"]')).toHaveCount(0);
     await expect(bar.locator('[data-nav-key="more"]')).toBeVisible();
   }
-  // the server refuses her too (not just the screen): nothing is saved
-  const days = Object.fromEntries(['1', '2', '3', '4', '5'].map((w) => [w, { '10:30': null, '13:30': null }]));
-  for (const [name, input] of [['schedule.saveDraft', { days, effectiveFrom: '2026-10-26' }], ['schedule.publish', { effectiveFrom: '2026-10-26', days }], ['activity.upsert', { name: 'Tai chi', roomId: 'room-garden' }]] as const) {
+  // the server keeps her out of events and the catalog (not just the screen); her publish is stored as a request for Ega, not in force
+  for (const [name, input] of [['activity.upsert', { name: 'Tai chi', roomId: 'room-garden' }], ['calendarEvent.create', { date: '2026-11-03', kind: 'closed', title: 'Training' }]] as const) {
     const r = await rawAct(page, 's5', name, input, `e2e-forbid-${name}`);
     expect(r, name).toEqual({ status: 403, code: 'err.forbidden' });
   }
+  const days = Object.fromEntries(['1', '2', '3', '4', '5'].map((w) => [w, { '10:30': null, '13:30': null }]));
+  expect((await rawAct(page, 's5', 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 'e2e-ask-publish')).code).toBeUndefined();
   const s = await snapshot(page, 's9');
-  expect(s.scheduleVersions['sched-draft']).toBeUndefined();
   expect(Object.values(s.activities).some((a) => a.name === 'Tai chi')).toBe(false);
   expect(Object.values(s.scheduleVersions).filter((v) => v.status === 'published').map((v) => v.effectiveFrom)).toEqual(['2024-07-01']);
+  expect(Object.values(s.scheduleVersions).filter((v) => v.status === 'pending').map((v) => v.effectiveFrom)).toEqual(['2026-10-26']);
   c.assertClean();
 });
 

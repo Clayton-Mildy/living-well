@@ -1013,6 +1013,10 @@ export interface ScheduleDay extends Row {
   slots: Partial<Record<WeekSlot, ScheduleCell | null>>;
   note?: string;
   extra?: ExtraSession[];
+  /** round 14 (B1): the activity team's edit of the day, waiting for management (the whole day as it would be). Every rule reads the live fields above, never this. */
+  pending?: { slots: Partial<Record<WeekSlot, ScheduleCell | null>>; extra?: ExtraSession[]; note?: string; by: Actor; at: DT };
+  /** round 14: management sent the last edit back, with this note (cleared by the team's next edit or an approval) */
+  returned?: { note: string; by: Actor; at: DT };
 }
 
 export type GuestHostKind = 'teacher' | 'entertainer' | 'speaker' | 'other';

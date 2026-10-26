@@ -233,3 +233,38 @@ test('Birthdays: Dinar sees Opa Hendra’s birthday two weeks ahead on Today, ta
   await expect(list.getByTestId('prepare-m2')).toHaveCount(0);
   c.assertClean();
 });
+
+test('Every programme goes to Ega: Dinar changes Friday 13:30 in the builder and sends it; Ega approves it under Approvals → Programme; the schedule shows it', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's5', '/calendar');
+  await page.getByRole('heading', { name: 'Weekly schedule' }).scrollIntoViewIfNeeded();
+  await page.getByRole('tab', { name: /^Fri/ }).click();
+  await page.getByRole('button', { name: 'Friday 13:30: Cooking demo with Chef Agus' }).click();
+  await pickOption(page, 'Activity', 'Reading circle');
+  await expect(page.getByText('1 change not yet published')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Activities and rooms' })).toHaveCount(0);
+  await page.getByRole('button', { name: 'Send to Ega' }).click();
+  const sheet = page.getByRole('dialog', { name: 'Send the weekly schedule to Ega' });
+  await sheet.getByRole('button', { name: 'Send to Ega' }).click();
+  await expect(page.getByRole('status')).toContainText('Sent to Ega');
+  await expect(page.getByTestId('programme-waiting')).toContainText('Waiting for Ega');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+  // Ega approves it in the Programme tab: the row shows the week and the changed session
+  await signIn(page, 's9', '/reviews?tab=programme');
+  await expect(page.getByRole('tab', { name: /^Programme/ })).toHaveAttribute('aria-selected', 'true');
+  const row = page.locator('[data-approval][data-type="programme"]').filter({ hasText: 'From Wed 21 Oct' });
+  await expect(row).toHaveCount(1);
+  await row.getByRole('button', { name: 'View' }).click();
+  await expect(row).toContainText('Reading circle');
+  await assertNoHorizontalScroll(page);
+  await row.getByRole('button', { name: 'Approve', exact: true }).click();
+  await expect(row).toHaveCount(0);
+  // the schedule now runs the reading circle on Fridays
+  await signIn(page, 's9', '/calendar');
+  await page.getByRole('heading', { name: 'Weekly schedule' }).scrollIntoViewIfNeeded();
+  await page.getByRole('tab', { name: /^Fri/ }).click();
+  await expect(page.getByRole('button', { name: 'Friday 13:30: Reading circle' })).toBeVisible();
+  await expect(page.getByTestId('programme-waiting')).toHaveCount(0);
+  c.assertClean();
+});

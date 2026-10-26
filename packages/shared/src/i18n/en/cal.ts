@@ -91,4 +91,9 @@ export const cal = {
   'feed.extraAdded': 'Extra session added · {date} {time}: {name}', 'feed.extraChanged': 'Extra session changed · {date} {time}: {name}', 'feed.extraRemoved': 'Extra session removed · {date} {time}: {name}',
   // round 7: family Today notice for a closure or holiday in the next 7 days
   famClosureLabel: 'Upcoming closures', famClosedOn: 'Club closed on {d}', famClosedRange: 'Club closed {a} to {b}',
+  // round 14 (B1): the activity team builds the programme; every change waits for Ega (management)
+  sendForApproval: 'Send to Ega', sendTitle: 'Send the weekly schedule to Ega', sentToEga: 'Sent to Ega.', waitingEga: 'Waiting for Ega', returnedNote: 'Returned: {note}',
+  badgeWaiting: 'Waiting', badgeReturned: 'Returned', dayUnchanged: 'Nothing to send: the day is as published.', reviewBtn: 'Review',
+  'notif.programmeAsked': 'The activity team sent the weekly schedule from {date} for your approval.', 'notif.dayAsked': 'The activity team sent a programme change on {date} for your approval.',
+  'notif.dayUpdated': 'The activity programme on {date} has changed.', 'feed.dayUpdated': 'Programme changed for {date}',
 };

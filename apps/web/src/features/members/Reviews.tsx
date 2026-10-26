@@ -4,6 +4,7 @@
 // (one reason for the whole batch; one server action per batch). Rows also have their own Approve and Reject. Photos are a grid with the
 // "Notify families" switch. /reviews?tab=photos (or logs, readings, menu, stock, renewals, payments, leave, profile, history) opens a tab.
 // KC round 7: the Renewals tab lists the changes the front desk recorded after calling a family (upgrade, downgrade, leave, stop); approving applies them from the 1st.
+// Round 14: the Programme tab lists the weekly schedules and one-day changes the activity team sent (before → after of the changed sessions).
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { actorName, memberName, displayName, type ChangeRequest, type Photo } from '@cp/shared';
@@ -30,6 +31,8 @@ const TABS: Tab[] = [...APPROVAL_TYPES, 'history'];
 const STATUS_ICON: Record<string, string> = { approved: 'task_alt', rejected: 'block', withdrawn: 'undo', superseded: 'swap_horiz', acknowledged: 'done_all', reverted: 'undo' };
 const TAB_FOR_SUB: Record<string, string> = { log: 'care', note: 'notes', reading: 'care', renewal: 'plan', payment: 'plan' };
 const LEGACY_TABS: Record<string, Tab> = { pending: 'profile', applied: 'profile' };
+/** The icon tile of a row that is not about a member. */
+const TYPE_ICON: Partial<Record<ApprovalType, string>> = { menu: 'restaurant_menu', programme: 'event_note', stock: 'inventory_2', leave: 'beach_access' };
 
 /** A checkbox in the v3 quiet style (also used on photo tiles' own button). */
 function Check({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
@@ -68,6 +71,7 @@ export function Reviews() {
     readings: usePaged(items.readings, 10, 'readings'),
     photos: usePaged(photos, 12, 'photos'),
     menu: usePaged(items.menu, 10, 'menu'),
+    programme: usePaged(items.programme, 10, 'programme'),
     stock: usePaged(items.stock, 10, 'stock'),
     renewals: usePaged(items.renewals, 10, 'renewals'),
     payments: usePaged(items.payments, 10, 'payments'),
@@ -150,7 +154,7 @@ export function Reviews() {
     const n = Number(res[mode] ?? 0);
     const skipped = (res.skipped as string[] | undefined)?.length ?? 0;
     const conflicts = (res.conflicts as string[] | undefined)?.length ?? 0;
-    const forFamilies = type === 'logs' || type === 'readings' || type === 'menu';
+    const forFamilies = type === 'logs' || type === 'readings' || type === 'menu' || type === 'programme';
     const done = n === 0 ? t('approvals.nothingDone') : mode === 'approved' ? t(forFamilies ? (n === 1 ? 'approvals.approvedOne' : 'approvals.approvedN') : n === 1 ? 'approvals.approvedStaffOne' : 'approvals.approvedStaffN', { n }) : t(n === 1 ? 'approvals.rejectedOne' : 'approvals.rejectedN', { n });
     say([done, n && skipped ? t('approvals.skippedN', { n: skipped }) : '', conflicts ? t('approvals.conflictN', { n: conflicts }) : ''].filter(Boolean).join(' '), { icon: n ? 'task_alt' : 'info' });
   };
@@ -305,7 +309,7 @@ export function Reviews() {
         <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()}
           style={{ padding: '12px 16px', display: 'flex', alignItems: 'flex-start', gap: 12, backgroundColor: on ? 'var(--press, #EEEEF0)' : 'transparent', backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 54px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' }}>
           <div style={{ paddingTop: 6 }}><Check on={on} onClick={() => toggleSel(it.id)} label={t('approvals.checkRow', { n: title })} /></div>
-          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={40} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : it.type === 'leave' ? 'beach_access' : 'fact_check'} size={21} /></span>}
+          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={40} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 40, height: 40, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={TYPE_ICON[it.type] ?? 'fact_check'} size={21} /></span>}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
@@ -328,7 +332,7 @@ export function Reviews() {
       <div key={it.id} data-approval={it.id} data-type={it.type} data-selected={on} role="group" aria-label={`${v.kind} ${v.who}`.trim()} style={{ borderTop: i ? HAIRLINE : 'none', padding: '16px 0', display: 'flex', flexDirection: 'column', gap: 10, background: on ? 'var(--press, #EEEEF0)' : 'transparent' }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
           <div style={{ paddingTop: 6 }}><Check on={on} onClick={() => toggleSel(it.id)} label={t('approvals.checkRow', { n: title })} /></div>
-          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={42} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 42, height: 42, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={it.type === 'menu' ? 'restaurant_menu' : it.type === 'stock' ? 'inventory_2' : it.type === 'leave' ? 'beach_access' : 'fact_check'} size={22} /></span>}
+          {m ? <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={42} /> : <span aria-hidden="true" className="cp-fill" style={{ width: 42, height: 42, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={TYPE_ICON[it.type] ?? 'fact_check'} size={22} /></span>}
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
@@ -409,7 +413,7 @@ export function Reviews() {
     const applied = !!cr && cr.kind !== 'approval';
     const expanded = open === 'p:' + it.id;
     const kindLine = ph ? `${t('reviews.photoKind.' + photoReviewKind(ph))}${ph.kind === 'solo' ? '' : ` · ${photoNames(ph)}`}` : v.edit ? t('approvals.editOf', { kind: v.kind }) : v.kind;
-    const meta = [it.type === 'menu' || it.type === 'stock' ? '' : t('approvals.tab.' + it.type), who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ');
+    const meta = [it.type === 'menu' || it.type === 'programme' || it.type === 'stock' ? '' : t('approvals.tab.' + it.type), who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ');
     const busyRow = bulkBusy || (!!cr && busy === cr.id);
     const actions: [string, () => void, boolean][] = cr
       ? applied
@@ -544,6 +548,7 @@ export function Reviews() {
       {current === 'logs' ? (items.logs.length ? card(paged.logs.rows.map(quietRow)) : empty('logs')) : null}
       {current === 'readings' ? (items.readings.length ? card(paged.readings.rows.map(quietRow)) : empty('readings')) : null}
       {current === 'menu' ? (items.menu.length ? card(paged.menu.rows.map(quietRow)) : empty('menu')) : null}
+      {current === 'programme' ? (items.programme.length ? card(paged.programme.rows.map(quietRow)) : empty('programme')) : null}
       {current === 'stock' ? (items.stock.length ? card(paged.stock.rows.map(quietRow)) : empty('stock')) : null}
       {current === 'renewals' ? (items.renewals.length ? card(paged.renewals.rows.map(quietRow)) : empty('renewals')) : null}
       {current === 'payments' ? (items.payments.length ? card(paged.payments.rows.map(quietRow)) : empty('payments')) : null}

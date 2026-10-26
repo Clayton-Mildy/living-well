@@ -5,16 +5,20 @@
 // Drag works with a mouse; on touch, hold an activity (or a placed one) and drag it onto a slot, or tap an activity and then a slot (or use "Move to").
 // A tap on an empty slot opens a short list to choose its activity (KC round 9). Every placed activity has a quick ✕ to remove it.
 // Round 6 (phone, native look): one day is an iOS grouped list (the day's slots as rows), the slot editor is a set of groups, the versions are a list group.
+// Round 14 (B1): the activity team builds too. Its Publish is "Send to Ega": the version waits for management ("Waiting for Ega" above the builder); one Ega
+// sent back shows "Returned: …" with Edit, which loads it into the draft. The catalog stays management's.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useResetOn } from '../../lib/useResetOn';
 import { actorName, addDays, live, scheduleVersionFor, staffCall, type ISODate, type Weekday, type WeekSlot } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
-import { SLOTS, WEEKDAYS, activityTeachers, changedCells, cloneDays, dayEditable, effectiveVersions, mondayOf, nextMonday, sameCell, weekDays, weekEditable, weekView, type Days } from '@cp/shared/rules/calendar';
+import { SLOTS, WEEKDAYS, activityTeachers, changedCells, cloneDays, dayEditable, effectiveVersions, mondayOf, nextMonday, pendingVersions, returnedVersion, sameCell, weekDays, weekEditable, weekView, type Days } from '@cp/shared/rules/calendar';
 import { Button, DateField, Group, Icon, IconButton, Note, Pager, Select, Sheet, Toggle, chipStyle, uiZoom, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
+import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { Badge, plural, rowLine } from '../activity/lib';
@@ -64,8 +68,14 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const s = useClub();
   const { today } = useNow();
   const act = useAct();
+  const navigate = useNavigate();
+  const { role } = useMe();
+  /** round 14: the activity team's publish asks Ega (management publishes itself) */
+  const asks = role !== 'mgmt';
   const d = useDraft(week);
   const view = d.view;
+  const waiting = pendingVersions(s)[0];
+  const returned = asks ? returnedVersion(s) : undefined;
   const [sel, setSel] = useState<Cell | null>(null);
   const [pal, setPal] = useState<string | null>(null);
   const [drag, setDrag] = useState<null | { act: string } | { cell: Cell }>(null);
@@ -293,6 +303,13 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   /** the week "Edit" goes to from a week that is over: this one while it still has days to come, else the next */
   const editTarget = weekEditable(thisMonday, today) ? thisMonday : nextMonday(today);
   const weekLabel = `${fd(view.dates[0], { day: 'numeric', month: 'short' })} – ${fd(view.dates[4], { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  /** round 14: "Edit" on a version Ega sent back: it becomes the draft of its week (this week when its start date has passed) */
+  const editReturned = async () => {
+    if (!returned) return;
+    const from = returned.effectiveFrom > today ? returned.effectiveFrom : today;
+    const r = await act('schedule.saveDraft', { days: returned.days, effectiveFrom: from }, { silent: true });
+    if (r.ok) onWeek(mondayOf(from));
+  };
   const discardOther = async () => {
     if (!view.otherDraft) return;
     const m = view.otherDraft.monday;
@@ -343,14 +360,30 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {isPhone ? <IconButton icon="tune" label={t('cal.catalogBtn')} onClick={() => setCatalog(true)} size={40} color="var(--accent, #75624B)" /> : <Button variant="secondary" icon="tune" onClick={() => setCatalog(true)}>{t('cal.catalogBtn')}</Button>}
+          {asks ? null : isPhone ? <IconButton icon="tune" label={t('cal.catalogBtn')} onClick={() => setCatalog(true)} size={40} color="var(--accent, #75624B)" /> : <Button variant="secondary" icon="tune" onClick={() => setCatalog(true)}>{t('cal.catalogBtn')}</Button>}
           {changed ? <Button variant="ghost" size={isPhone ? 44 : 48} onClick={() => { d.discard(); setSel(null); }}>{t('cal.discard')}</Button> : null}
-          <button type="button" className={isPhone ? 'cp-press' : undefined} onClick={() => changed && canEdit && setPubOpen(true)} aria-disabled={!changed || !canEdit} aria-label={isPhone ? t('cal.publishBtn') : undefined} style={{ height: isPhone ? 40 : 52, padding: isPhone ? '0 18px' : '0 24px', borderRadius: 999, border: 'none', background: changed && canEdit ? '#24201C' : 'var(--press, #EEEEF0)', color: changed && canEdit ? '#FFFFFF' : '#5E5852', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: changed && canEdit ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
-            <Icon name="send" size={20} />{isPhone ? t('cal.publishShort') : t('cal.publishBtn')}
+          <button type="button" className={isPhone ? 'cp-press' : undefined} onClick={() => changed && canEdit && setPubOpen(true)} aria-disabled={!changed || !canEdit} aria-label={isPhone && !asks ? t('cal.publishBtn') : undefined} style={{ height: isPhone ? 40 : 52, padding: isPhone ? '0 18px' : '0 24px', borderRadius: 999, border: 'none', background: changed && canEdit ? '#24201C' : 'var(--press, #EEEEF0)', color: changed && canEdit ? '#FFFFFF' : '#5E5852', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: changed && canEdit ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+            <Icon name="send" size={20} />{asks ? t('cal.sendForApproval') : isPhone ? t('cal.publishShort') : t('cal.publishBtn')}
           </button>
         </div>
       </div>
       {!teachers.length ? <Note tone="ochre" icon="info">{t('cal.noTeachers')}</Note> : null}
+      {waiting ? (
+        <Note tone="cream" icon="hourglass_top">
+          <span data-testid="programme-waiting" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <span>{t('cal.waitingEga')} · {t('cal.fromDate', { date: fds(waiting.effectiveFrom) })}</span>
+            {asks ? null : <Button variant="secondary" size={44} onClick={() => navigate('/reviews?tab=programme')}>{t('cal.reviewBtn')}</Button>}
+          </span>
+        </Note>
+      ) : null}
+      {returned ? (
+        <Note tone="ochre" icon="undo">
+          <span data-testid="programme-returned" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ overflowWrap: 'anywhere' }}>{t('cal.returnedNote', { note: returned.rejectNote ?? '' })}</span>
+            <Button variant="secondary" size={44} onClick={() => void editReturned()}>{t('common.edit')}</Button>
+          </span>
+        </Note>
+      ) : null}
 
       <div role="group" aria-label={t('cal.weekNav')} className={isPhone ? 'cp-grey' : undefined} style={isPhone ? { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 16, background: 'var(--fill, #F4F4F5)' } : { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {navBtn('chevron_left', t('cal.prevWeek'), addDays(week, -7))}
@@ -538,13 +571,13 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
         </div>
       )}
 
-      <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, changed - summary.length)} count={changed} week={week}
+      <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, changed - summary.length)} count={changed} week={week} asks={asks}
         onPublish={async (effectiveFrom, notify) => {
           await d.flush();
-          const r = await act('schedule.publish', { effectiveFrom, days: d.draft, notify }, { silent: true });
+          const r = await act('schedule.publish', { effectiveFrom, days: d.draft, ...(asks ? {} : { notify }) }, { silent: true });
           if (r.ok) {
             d.reset(); setPubOpen(false); setSel(null);
-            const k = effectiveFrom === today ? (notify ? 'cal.publishedToastToday' : 'cal.publishedToastTodayQuiet') : notify ? 'cal.publishedToast' : 'cal.publishedToastQuiet';
+            const k = asks ? 'cal.sentToEga' : effectiveFrom === today ? (notify ? 'cal.publishedToastToday' : 'cal.publishedToastTodayQuiet') : notify ? 'cal.publishedToast' : 'cal.publishedToastQuiet';
             say(t(k, { date: fdl(effectiveFrom) }));
             return '';
           }
@@ -576,7 +609,8 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   );
 }
 
-function PublishSheet({ open, onClose, summary, more, count, week, onPublish }: { open: boolean; onClose: () => void; summary: string[]; more: number; count: number; week: ISODate; onPublish: (date: string, notify: boolean) => Promise<string> }) {
+/** `asks` (round 14, the activity team): the sheet sends the version to Ega; who is told is decided when Ega approves. */
+function PublishSheet({ open, onClose, summary, more, count, week, asks, onPublish }: { open: boolean; onClose: () => void; summary: string[]; more: number; count: number; week: ISODate; asks?: boolean; onPublish: (date: string, notify: boolean) => Promise<string> }) {
   const t = useT();
   const { fdl } = useFmt();
   const { today } = useNow();
@@ -590,7 +624,7 @@ function PublishSheet({ open, onClose, summary, more, count, week, onPublish }: 
   const min = today;
   const ok = !!date && date >= min;
   return (
-    <Sheet open={open} onClose={onClose} title={t('cal.publishTitle')}>
+    <Sheet open={open} onClose={onClose} title={t(asks ? 'cal.sendTitle' : 'cal.publishTitle')}>
       <div style={{ fontSize: 16, lineHeight: '22px' }}>{plural(t, 'cal.changesPending', count)}</div>
       <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4, fontSize: FONT_BODY, lineHeight: 1.4 }}>
         {summary.map((x) => <li key={x}>{x}</li>)}
@@ -601,10 +635,10 @@ function PublishSheet({ open, onClose, summary, more, count, week, onPublish }: 
         <Button variant="quiet" size={44} onClick={() => setDate(start)}>{t(start === today ? 'cal.fromToday' : 'cal.weekStart')}</Button>
         <Button variant="quiet" size={44} onClick={() => setDate(nextMonday(today))}>{t('cal.nextMonday')}</Button>
       </div>
-      <Note tone="cream" icon="info">{ok ? t(date === today ? 'cal.effectiveNoteToday' : 'cal.effectiveNote', { date: fdl(date) }) : t('cal.err.futureOnly')}</Note>
-      <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />
+      {asks ? (ok ? null : <Note tone="cream" icon="info">{t('cal.err.futureOnly')}</Note>) : <Note tone="cream" icon="info">{ok ? t(date === today ? 'cal.effectiveNoteToday' : 'cal.effectiveNote', { date: fdl(date) }) : t('cal.err.futureOnly')}</Note>}
+      {asks ? null : <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />}
       {err ? <Note tone="rust" icon="error">{err}</Note> : null}
-      <Button full disabled={!ok || busy} onClick={async () => { setBusy(true); setErr(await onPublish(date, notify)); setBusy(false); }}>{t('cal.publishBtn')}</Button>
+      <Button full disabled={!ok || busy} onClick={async () => { setBusy(true); setErr(await onPublish(date, notify)); setBusy(false); }}>{t(asks ? 'cal.sendForApproval' : 'cal.publishBtn')}</Button>
     </Sheet>
   );
 }

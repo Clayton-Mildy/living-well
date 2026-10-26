@@ -42,4 +42,8 @@ export const approvals = {
   'tab.leave': 'Leave', 'none.leave': 'No leave requests to decide', 'none.leaveSub': 'Days off that staff ask for appear here until management answers.', 'kind.leave': 'Leave request',
   'sum.leave': '{range} · {days} · {reason} · {left} of {n} left', 'sum.leaveDays': '{n} days', 'sum.leaveDay': '1 day', approveAllLeave: 'Approve all',
   rejectSubLeave: 'The staff member is told that the request was declined, with your note if you write one.', rejectReasonLeave: 'Note for {name} (optional)', rejectLeaveTitle: 'Decline this leave request',
+  // round 14 (B1): the weekly programme and one-day changes sent by the activity team
+  'tab.programme': 'Programme', 'none.programme': 'No programme changes to approve', 'none.programmeSub': 'A weekly schedule or a one-day change from the activity team appears here before anyone else sees it.',
+  'kind.programme': 'Weekly schedule', 'kind.day': 'Programme for one day', 'sum.programmeFrom': 'From {date}', 'sum.programmeSame': 'Same sessions, new start date', 'sum.programmeDay': 'Programme for {date}',
+  'notif.rejected.programme': 'Management did not approve {n} of your programme changes: {reason}',
 };

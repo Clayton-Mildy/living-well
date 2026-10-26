@@ -1,6 +1,6 @@
 // Calendar and weekly schedule builder selectors: day info for the list / month views, schedule drafts and versions.
 // Pure functions over ClubState. Family audiences never see venue clients; trials and visits are staff-only.
-import type { ClubState, ExtraSession, HM, ISODate, Lang, ScheduleCell, ScheduleVersion, Slot, Staff, Weekday, WeekSlot, YM } from '../types';
+import type { ClubState, ExtraSession, HM, ISODate, Lang, ScheduleCell, ScheduleDay, ScheduleVersion, Slot, Staff, Weekday, WeekSlot, YM } from '../types';
 import { dayStatus, eventsOn, listName, staffByRole } from './core';
 import { guestsOn } from './attendance';
 import { WEEK_SLOTS, extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from './kitchen';
@@ -199,6 +199,22 @@ export const daysEqual = (a: Days, b: Days) => changedCells(a, b).length === 0;
 
 export const publishedVersions = (s: ClubState): ScheduleVersion[] =>
   sortBy(live(s.scheduleVersions).filter((v) => v.status === 'published'), (v) => v.effectiveFrom + (v.publishedAt || ''));
+// round 14 (B1): what the activity team sent waits for management; none of it is in force (the rules above read published versions and live days only)
+/** Weekly versions the activity team sent, waiting for management (newest first). */
+export const pendingVersions = (s: ClubState): ScheduleVersion[] => sortBy(live(s.scheduleVersions).filter((v) => v.status === 'pending'), (v) => v.createdAt + v.id, -1);
+/** The version management sent back (sending a new one replaces it). */
+export const returnedVersion = (s: ClubState): ScheduleVersion | undefined => sortBy(live(s.scheduleVersions).filter((v) => v.status === 'rejected'), (v) => v.createdAt + v.id).pop();
+/** A day as its waiting edit would make it (the live day when nothing waits), without the waiting marks. */
+export function pendingDayRow(row: ScheduleDay): ScheduleDay {
+  const { pending, returned: _r, note: _n, extra: _x, ...rest } = row;
+  const p = pending ?? { slots: row.slots, extra: row.extra, note: row.note };
+  return { ...rest, slots: p.slots, ...(p.extra?.length ? { extra: p.extra } : {}), ...(p.note ? { note: p.note } : {}) };
+}
+/** The state with a day as its waiting edit would make it: what the activity team edits, and sees in its day sheets. */
+export function withPendingDay(s: ClubState, date: ISODate): ClubState {
+  const row = s.scheduleDays?.[date];
+  return row && !row.deletedAt && row.pending ? { ...s, scheduleDays: { ...s.scheduleDays, [date]: pendingDayRow(row) } } : s;
+}
 /** The newest published version: the one the builder starts from. */
 export const latestPublished = (s: ClubState): ScheduleVersion | undefined => publishedVersions(s).pop();
 export const scheduleDraft = (s: ClubState): ScheduleVersion | undefined => live(s.scheduleVersions).find((v) => v.status === 'draft');

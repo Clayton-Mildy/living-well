@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, dayStatus, sessionsOn, scheduleVersionFor, projectForFamily, live, DomainError, type ClubState } from '../index';
-import { DRAFT_ID, builderBase, builderDays, dayInfo, extraTimeIssue, nextMonday, normalizeDays, slotChanged, suggestExtraTime, weekView, weeklyCell, type Days } from '../rules/calendar';
+import { DRAFT_ID, builderBase, builderDays, dayInfo, extraTimeIssue, nextMonday, normalizeDays, pendingVersions, publishedVersions, returnedVersion, slotChanged, suggestExtraTime, weekView, weeklyCell, withPendingDay, type Days } from '../rules/calendar';
+import { pendingItems } from '../rules/approvals';
 import { nowNext, dayPlan, roundProgress, roundsOf } from '../rules/activity';
 import { guestOn } from '../rules/guests';
 
@@ -67,15 +68,13 @@ describe('schedule.saveDraft', () => {
     run(s, 'schedule.saveDraft', { days: builderDays(s) }, 's9'); // unchanged cells are fine
   });
 
-  it('is permissioned: management only (KC round 6: activity teachers see the schedule but cannot change it)', () => {
+  it('is permissioned: management and (round 14) the activity team; the catalog stays management only', () => {
     const s = fresh();
     const days = withCell(s, 3, '10:30', ANGKLUNG);
     run(s, 'schedule.saveDraft', { days }, 's9');
-    for (const uid of ['s5', 's6', 's1', 's8', 's3', 's10', 'f1']) fails(s, 'schedule.saveDraft', { days }, uid, 'err.forbidden');
-    for (const uid of ['s5', 's6']) {
-      fails(s, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, uid, 'err.forbidden');
-      fails(s, 'activity.upsert', { name: 'Tai chi', roomId: 'room-garden' }, uid, 'err.forbidden');
-    }
+    run(s, 'schedule.saveDraft', { days }, 's5');
+    for (const uid of ['s1', 's8', 's3', 's10', 'f1']) fails(s, 'schedule.saveDraft', { days }, uid, 'err.forbidden');
+    for (const uid of ['s5', 's6']) fails(s, 'activity.upsert', { name: 'Tai chi', roomId: 'room-garden' }, uid, 'err.forbidden');
   });
 });
 
@@ -520,9 +519,9 @@ describe('schedule.changeDay (one day only)', () => {
     expect(Object.values(r.state.activity).some((a) => a.key === 'cal.feed.dayChanged')).toBe(true);
   });
 
-  it('is management only, like the weekly schedule', () => {
+  it('is for management and the activity team, like the weekly schedule', () => {
     const s = fresh();
-    for (const uid of ['s5', 's6', 's1', 's8', 's3', 's10', 'f1']) {
+    for (const uid of ['s1', 's8', 's3', 's10', 'f1']) {
       fails(s, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, uid, 'err.forbidden');
       fails(s, 'schedule.resetDay', { date: '2026-10-23' }, uid, 'err.forbidden');
     }
@@ -625,7 +624,7 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
     expect(suggestExtraTime(add(s, { time: '11:30' }).state, TODAY)).toBe('15:00');
   });
 
-  it('only on an open day today or later; a valid activity and an active activity teacher; management only', () => {
+  it('only on an open day today or later; a valid activity and an active activity teacher; management and the activity team only', () => {
     const s = fresh();
     fails(s, 'schedule.addSession', { date: '2026-10-20', time: '15:00', ...KARAOKE }, 's9', 'cal.err.pastDay');
     fails(s, 'schedule.addSession', { date: '2026-10-24', time: '15:00', ...KARAOKE }, 's9', 'cal.err.dayClosed'); // Saturday
@@ -637,7 +636,7 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
     fails(s, 'schedule.addSession', { date: TODAY, time: '3pm', ...KARAOKE }, 's9', 'err.invalid');
     const off = step(s, 'activity.upsert', { id: 'act-karaoke', name: 'Karaoke', roomId: 'room-music', active: false }, 's9');
     fails(off, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE }, 's9', 'cal.err.inactiveActivity');
-    for (const uid of ['s5', 's6', 's1', 's8', 's3', 's10', 'f1']) {
+    for (const uid of ['s1', 's8', 's3', 's10', 'f1']) {
       fails(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE }, uid, 'err.forbidden');
       fails(s, 'schedule.editSession', { date: '2026-10-22', time: '15:00', ...KARAOKE }, uid, 'err.forbidden');
       fails(s, 'schedule.removeSession', { date: '2026-10-22', time: '15:00' }, uid, 'err.forbidden');
@@ -721,5 +720,154 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
     step(cancelled, 'schedule.removeSession', { date: TODAY, time: '15:00' }, 's9');
     // a time with no session is not bookable
     fails(s0, 'guest.book', { hostId: 'gh-ratna', date: TODAY, slot: '09:00', activityId: 'act-karaoke' }, 's9', 'cal.err.badSlot');
+  });
+});
+
+// round 14 (B1): the activity team builds the programme; every change it makes waits for Ega (management). Ruling 6: a day's edit waits in `pending`
+// beside the live fields, which every rule keeps reading; Review Focus 5: an edit back to the live day clears it, an approval after the start date publishes from today.
+describe('round 14: every programme change by the activity team waits for Ega', () => {
+  const TODAY = '2026-10-21';
+  const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
+  const BATIK = { activityId: 'act-batik', staffId: 's6', roomId: 'room-studio' }; // Wednesday 13:30 in the weekly plan
+  const KARAOKE = { activityId: 'act-karaoke', staffId: 's6', roomId: 'room-music' };
+  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'fm10_0', 'fm20_0'];
+
+  it('an s5 publish stores a pending version for Ega: management is told, families are not, and it is not in force', () => {
+    const s0 = fresh();
+    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's5');
+    const id = r.result.versionId as string;
+    expect(r.state.scheduleVersions[id]).toMatchObject({ status: 'pending', effectiveFrom: '2026-10-26', submittedBy: 'staff:s5' });
+    expect(r.state.scheduleVersions[id].publishedAt).toBeUndefined();
+    expect(r.result.pending).toBe(true);
+    expect(r.state.scheduleVersions[DRAFT_ID]).toBeUndefined();
+    expect(publishedVersions(r.state).map((v) => v.id)).not.toContain(id);
+    expect(pendingVersions(r.state).map((v) => v.id)).toEqual([id]);
+    expect(sessionsOn(r.state, '2026-10-28')[0].cell?.activityId).toBe('act-keroncong'); // the published plan still runs
+    const asked = note(r.state, 'cal.notif.programmeAsked');
+    expect(asked).toHaveLength(1);
+    expect(asked[0]).toMatchObject({ toRoles: ['mgmt'], toUsers: [], params: { date: '26/10/2026' } });
+    expect(note(r.state, 'cal.notif.schedulePublished')).toHaveLength(0);
+    expect(projectForFamily(r.state, 'f1').scheduleVersions[id]).toBeUndefined();
+    expect(pendingItems(r.state, 'programme')).toEqual([expect.objectContaining({ id, type: 'programme', sub: 'version', by: 'staff:s5' })]);
+  });
+
+  it('Ega approves a version: it is published (from today once its start date has passed) and everyone is told', () => {
+    const s0 = fresh();
+    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-22', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's5');
+    const id = r.result.versionId as string;
+    const onTime = run(r.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9');
+    expect(onTime.result.approved).toBe(1);
+    expect(onTime.state.scheduleVersions[id]).toMatchObject({ status: 'published', effectiveFrom: '2026-10-22', publishedBy: 'staff:s9', publishedAt: '2026-10-21T10:00', submittedBy: 'staff:s5' });
+    expect(sessionsOn(onTime.state, '2026-10-28')[0].cell).toEqual(ANGKLUNG);
+    const ns = note(onTime.state, 'cal.notif.schedulePublished');
+    expect(ns).toHaveLength(1);
+    expect(new Set(ns[0].toUsers)).toEqual(new Set(FAMILIES));
+    expect(pendingItems(onTime.state, 'programme')).toEqual([]);
+    // Review Focus 5: approved after its start date, it publishes from today
+    const late = run(r.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9', { today: '2026-10-26', nowMin: 600 });
+    expect(late.state.scheduleVersions[id]).toMatchObject({ status: 'published', effectiveFrom: '2026-10-26' });
+    expect(scheduleVersionFor(late.state, '2026-10-23')?.effectiveFrom).toBe('2024-07-01'); // the days that passed keep their plan
+    // handled once
+    expect(run(onTime.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9').result.skipped).toEqual([id]);
+  });
+
+  it('Ega returns a version: rejected with the note, the teacher is told, and it can be loaded back into the draft', () => {
+    const s0 = fresh();
+    const days = withCell(s0, 3, '10:30', ANGKLUNG);
+    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's5');
+    const id = r.result.versionId as string;
+    const j = run(r.state, 'approval.reject', { type: 'programme', ids: [id], reason: 'Keep Keroncong on Wednesday' }, 's9');
+    expect(j.state.scheduleVersions[id]).toMatchObject({ status: 'rejected', rejectNote: 'Keep Keroncong on Wednesday' });
+    expect(publishedVersions(j.state).map((v) => v.id)).not.toContain(id);
+    expect(pendingItems(j.state, 'programme')).toEqual([]);
+    expect(returnedVersion(j.state)?.id).toBe(id);
+    const told = note(j.state, 'approvals.notif.rejected.programme');
+    expect(told).toHaveLength(1);
+    expect(told[0]).toMatchObject({ toUsers: ['s5'], link: '/calendar', params: { n: 1, reason: 'Keep Keroncong on Wednesday' } });
+    // "Edit" loads it into the draft; sending it again replaces the returned one
+    const again = step(j.state, 'schedule.saveDraft', { days, effectiveFrom: '2026-10-26' }, 's5');
+    expect(builderDays(again)[3]['10:30']).toEqual(ANGKLUNG);
+    const sent = step(again, 'schedule.publish', { effectiveFrom: '2026-10-26' }, 's5');
+    expect(returnedVersion(sent)).toBeUndefined();
+  });
+
+  it('an s5 day change waits in `pending`: the live day, the calendar and families are untouched until Ega approves; a return leaves her note', () => {
+    const s0 = fresh();
+    const r = run(s0, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY, note: 'Kak Dimas is off sick' }, 's5');
+    expect(r.result.pending).toBe(true);
+    expect(r.state.scheduleDays[TODAY]).toMatchObject({ slots: {}, pending: { slots: { '13:30': MEMORY }, note: 'Kak Dimas is off sick', by: 'staff:s5', at: '2026-10-21T10:00' } });
+    expect(sessionsOn(r.state, TODAY)[1].cell).toEqual(BATIK);
+    expect(dayInfo(r.state, TODAY, 'staff').items.find((i) => i.time === '13:30')?.activityId).toBe('act-batik');
+    expect(withPendingDay(r.state, TODAY).scheduleDays[TODAY].slots).toEqual({ '13:30': MEMORY });
+    expect(projectForFamily(r.state, 'f1').scheduleDays[TODAY]).not.toHaveProperty('pending');
+    expect(note(r.state, 'cal.notif.dayChanged')).toHaveLength(0);
+    expect(note(r.state, 'cal.notif.dayAsked')).toEqual([expect.objectContaining({ toRoles: ['mgmt'], params: { date: TODAY } })]);
+    // a second edit builds on the first; management was told once
+    const s = step(r.state, 'schedule.changeDay', { date: TODAY, slot: '10:30', cell: null }, 's5');
+    expect(s.scheduleDays[TODAY].pending?.slots).toEqual({ '10:30': null, '13:30': MEMORY });
+    expect(note(s, 'cal.notif.dayAsked')).toHaveLength(1);
+    expect(pendingItems(s, 'programme')).toEqual([expect.objectContaining({ id: TODAY, sub: 'day', by: 'staff:s5' })]);
+    // approve: merged into the live day, teachers and families are told
+    const a = run(s, 'approval.approve', { type: 'programme', ids: [TODAY] }, 's9');
+    expect(a.state.scheduleDays[TODAY]).toMatchObject({ slots: { '10:30': null, '13:30': MEMORY }, note: 'Kak Dimas is off sick' });
+    expect(a.state.scheduleDays[TODAY].pending).toBeUndefined();
+    expect(sessionsOn(a.state, TODAY).map((x) => x.cell)).toEqual([null, MEMORY]);
+    const told = note(a.state, 'cal.notif.dayUpdated');
+    expect(told).toHaveLength(1);
+    expect(told[0]).toMatchObject({ toRoles: ['activity'], params: { date: TODAY } });
+    expect(new Set(told[0].toUsers)).toEqual(new Set(FAMILIES));
+    // return: pending goes, Ega's note stays for the teacher, the live day is as it was
+    const j = run(s, 'approval.reject', { type: 'programme', ids: [TODAY], reason: 'Kak Dimas is back' }, 's9');
+    expect(j.state.scheduleDays[TODAY].pending).toBeUndefined();
+    expect(j.state.scheduleDays[TODAY].returned).toEqual({ note: 'Kak Dimas is back', by: 'staff:s9', at: '2026-10-21T10:00' });
+    expect(sessionsOn(j.state, TODAY)[1].cell).toEqual(BATIK);
+    expect(note(j.state, 'approvals.notif.rejected.programme')).toEqual([expect.objectContaining({ toUsers: ['s5'] })]);
+    // her next edit starts a new request and clears the note
+    const next = step(j.state, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's5');
+    expect(next.scheduleDays[TODAY].returned).toBeUndefined();
+    expect(next.scheduleDays[TODAY].pending?.slots).toEqual({ '13:30': MEMORY });
+  });
+
+  it('extra sessions and resets wait too; an edit that brings the day back to the live one clears `pending` (Review Focus 5)', () => {
+    const s0 = fresh();
+    const TOMORROW = '2026-10-22'; // the seed's tea-time karaoke at 15:00
+    const added = run(s0, 'schedule.addSession', { date: TOMORROW, time: '11:30', ...MEMORY }, 's5');
+    expect(added.result.pending).toBe(true);
+    expect(added.state.scheduleDays[TOMORROW].extra?.map((x) => x.time)).toEqual(['15:00']);
+    expect(added.state.scheduleDays[TOMORROW].pending?.extra?.map((x) => x.time)).toEqual(['11:30', '15:00']);
+    expect(note(added.state, 'cal.notif.extraAdded')).toHaveLength(0);
+    const removed = step(added.state, 'schedule.removeSession', { date: TOMORROW, time: '11:30' }, 's5');
+    expect(removed.scheduleDays[TOMORROW].pending).toBeUndefined();
+    expect(removed.scheduleDays[TOMORROW].extra?.map((x) => x.time)).toEqual(['15:00']);
+    expect(pendingItems(removed, 'programme')).toEqual([]);
+    // a day with no live change: back to the plan leaves no row at all
+    const changed = step(s0, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's5');
+    expect(step(changed, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: BATIK }, 's5').scheduleDays[TODAY]).toBeUndefined();
+    // a reset of the seed's sick-day change waits; the live change still runs
+    const reset = step(s0, 'schedule.resetDay', { date: '2026-10-23' }, 's5');
+    expect(reset.scheduleDays['2026-10-23'].pending?.slots).toEqual({});
+    expect(sessionsOn(reset, '2026-10-23')[1].cell?.activityId).toBe('act-karaoke');
+    expect(note(reset, 'cal.notif.dayBackAll')).toHaveLength(0);
+  });
+
+  it('management still changes the programme at once; the lobby is refused; events and the catalog stay management only', () => {
+    const s0 = fresh();
+    const day = run(s0, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's9');
+    expect(day.result.pending).toBeUndefined();
+    expect(day.state.scheduleDays[TODAY]).toMatchObject({ slots: { '13:30': MEMORY } });
+    expect(day.state.scheduleDays[TODAY].pending).toBeUndefined();
+    const pub = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9');
+    expect(pub.state.scheduleVersions[pub.result.versionId as string].status).toBe('published');
+    const days = withCell(s0, 3, '10:30', ANGKLUNG);
+    fails(s0, 'schedule.saveDraft', { days }, 's1', 'err.forbidden');
+    fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's1', 'err.forbidden');
+    fails(s0, 'schedule.changeDay', { date: TODAY, slot: '13:30', cell: MEMORY }, 's1', 'err.forbidden');
+    fails(s0, 'schedule.addSession', { date: TODAY, time: '11:30', ...MEMORY }, 's1', 'err.forbidden');
+    fails(s0, 'schedule.editSession', { date: '2026-10-22', time: '15:00', ...KARAOKE }, 's1', 'err.forbidden');
+    fails(s0, 'schedule.removeSession', { date: '2026-10-22', time: '15:00' }, 's1', 'err.forbidden');
+    fails(s0, 'schedule.resetDay', { date: '2026-10-23' }, 's1', 'err.forbidden');
+    fails(s0, 'calendarEvent.create', { date: '2026-11-03', kind: 'closed', title: 'Training' }, 's5', 'err.forbidden');
+    fails(s0, 'room.upsert', { name: 'Terrace' }, 's5', 'err.forbidden');
+    fails(s0, 'approval.approve', { type: 'programme', ids: [TODAY] }, 's5', 'err.forbidden');
   });
 });
