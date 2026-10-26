@@ -4,7 +4,6 @@ import { buildSeed, execute, getUser, live, type ClubState, type DailyLog, type 
 import { actionItems } from '../notify';
 import { dayPlan, pictureSessions, roundProgress, type SessionItem } from './activity';
 import { guestsOn, lobbyGroups } from './attendance';
-import { renewalsLeft } from './renewals';
 import { approvalTotal } from './approvals';
 import { DUTIES, countsOn, customTasks, doneId, doneOf, dueDateOf, dutiesOf, dutyById, dutyDueBy, dutyReminders, dutyState, openTaskCount, periodOf, roleRange, roleSummary, spanOf, teamRange, teamSummary, templateShows } from './tasks';
 
@@ -213,12 +212,18 @@ describe('general duties: from the data, for any day', () => {
   });
 
   it('finance and management: waiting work is counted for today only; the invoice run follows the issue day', () => {
-    expect(duty(base, 'finance.overdue').parts[0].count!.total).toBe(1);
+    expect(duty(base, 'finance.unpaid').parts[0].count!.total).toBe(1);
+    expect(DUTIES.some((d) => d.id === 'finance.overdue')).toBe(false); // retired in round 14: finance.unpaid covers the same invoices
     expect(duty(base, 'mgmt.approvals').parts[0]).toMatchObject({ done: approvalTotal(base) === 0, link: '/reviews' });
     expect(duty(base, 'finance.run').parts[0].link).toBe('/today?run=1');
-    // chasing the overdue invoice (a reminder or a note today) ticks it
-    const chased = produce(base, (d) => { const inv = Object.values(d.invoices).find((i) => i.number === 'INV-2609-020')!; inv.callNotes.push({ at: `${T}T10:00`, by: 'staff:s10', text: 'Called' }); });
-    expect(duty(chased, 'finance.overdue').status).toBe('done');
+    // chasing the overdue invoice ticks it, whichever way it was chased in the last 7 days: a call note or a reminder from Billing, or an Unpaid call
+    const note = produce(base, (d) => { d.invoices['INV-2609-020'].callNotes.push({ at: `${T}T10:00`, by: 'staff:s10', text: 'Called' }); });
+    expect(duty(note, 'finance.unpaid').status).toBe('done');
+    const reminder = produce(base, (d) => { d.invoices['INV-2609-020'].reminders.push({ at: '2026-10-16T10:00', by: 'staff:s10' }); });
+    expect(duty(reminder, 'finance.unpaid').status).toBe('done');
+    const stale = produce(base, (d) => { d.invoices['INV-2609-020'].reminders.push({ at: '2026-10-13T10:00', by: 'staff:s10' }); }); // more than 7 days ago
+    expect(duty(stale, 'finance.unpaid').status).not.toBe('done');
+    expect(duty(run(base, 'unpaid.call', { invoiceId: 'INV-2609-020', outcome: 'noAnswer' }, 's10', NOW), 'finance.unpaid').status).toBe('done');
   });
 
   it('a past day is worked out from the data; what only the live state can tell shows as "past", not as missed', () => {
@@ -226,7 +231,7 @@ describe('general duties: from the data, for any day', () => {
     expect(duty(base, 'lobby.checkout', y)).toMatchObject({ status: 'done' }); // everyone left that day
     expect(duty(base, 'nurse.arrival', y).status).toBe('done');
     expect(duty(base, 'activity.mood', y).status).toBe('done');
-    expect(duty(base, 'finance.overdue', y)).toMatchObject({ status: 'past', parts: [] });
+    expect(duty(base, 'finance.unpaid', y)).toMatchObject({ status: 'past', parts: [] });
     expect(duty(base, 'mgmt.approvals', y).status).toBe('past');
     expect(duty(base, 'lobby.unpaid', y).status).toBe('past');
     // a duty not done on a past day is late (missed), and a picture added later for that day counts
@@ -279,11 +284,10 @@ describe('general duties: from the data, for any day', () => {
     const left = actionItems(off, user(off, 's5'), T, at('15:05')).map((i) => i.id);
     expect(left.some((i) => i.startsWith('duty:pic:'))).toBe(false);
     expect(left).not.toContain('round:mood');
-    // the front desk's guest and renewal reminders are duties too (ids and messages as before); management keeps the plain items
+    // the front desk's guest reminders are duties too (ids and messages as before); round 14: nobody gets the "members to follow up" item any more
     const lobby = actionItems(base, user(base, 's1'), T, at('10:00'));
     expect(lobby.some((i) => i.id.startsWith('guest:'))).toBe(true);
-    expect(lobby.find((i) => i.kind === 'renewals.notif.act.followUp')).toMatchObject({ params: { n: renewalsLeft(base, T) }, link: '/renewals' });
-    expect(actionItems(base, user(base, 's9'), T, at('10:00')).some((i) => i.kind === 'renewals.notif.act.followUp')).toBe(true);
+    for (const uid of ['s1', 's9']) expect(actionItems(base, user(base, uid), T, at('10:00')).some((i) => i.kind === 'renewals.notif.act.followUp')).toBe(false);
   });
 });
 
@@ -317,7 +321,7 @@ describe('a role’s day, a week and a month', () => {
     const late = roleRange(base, 'nurse', wFrom, wTo, T, at('17:00'));
     expect(late.duties.find((d) => d.def.id === 'nurse.arrival')!.total).toBe(3); // 10:30 has passed: today's counts, and is not done
     const fin = roleRange(base, 'finance', wFrom, wTo, T, NOW);
-    expect(fin.duties.find((d) => d.def.id === 'finance.overdue')).toMatchObject({ na: true });
+    expect(fin.duties.find((d) => d.def.id === 'finance.unpaid')).toMatchObject({ na: true });
     expect(teamRange(base, wFrom, wTo, T, NOW).map((r) => r.role)).toContain('mgmt');
     // additional tasks: each task of a period once
     expect(roleRange(base, 'nurse', wFrom, wTo, T, NOW).customTotal).toBeGreaterThan(0);

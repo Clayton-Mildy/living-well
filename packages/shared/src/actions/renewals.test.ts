@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { actionItems, buildSeed, execute, getUser, live, membershipStatus, planOn, toMin, updatesFor, DomainError, type ClubState } from '../index';
 import { approvalHistory, pendingItems } from '../rules/approvals';
-import { changeRows, followUpId, followUpOf, renewalCounts, renewalRows, renewalsLeft } from '../rules/renewals';
+import { changeRows, followUpId, followUpOf, renewalCounts, renewalRows } from '../rules/renewals';
 
 const T = '2026-10-21';
 const MONTH = '2026-11';
@@ -34,9 +34,8 @@ describe('the month-end list', () => {
     expect(rows.find((r) => r.m.id === 'm10')?.asked).toBe('plan');
     expect(rows.find((r) => r.m.id === 'm2')).toMatchObject({ calls: 2 });
     expect(renewalCounts(rows)).toMatchObject({ total: 5, toDo: 2, waiting: 1, decided: 2, done: 3 });
-    expect(renewalsLeft(s, T)).toBe(2);
-    for (const uid of ['s1', 's9']) expect(actionItems(s, as(s, uid), T, 600).find((i) => i.kind === 'renewals.notif.act.followUp')).toMatchObject({ params: { n: 2, month: MONTH }, link: '/renewals' });
-    expect(actionItems(s, as(s, 's1'), '2026-10-19', 600).some((i) => i.kind === 'renewals.notif.act.followUp')).toBe(false); // not before the 20th
+    // round 14: membership rolls on, so nobody is told "N members to follow up" any more (the front desk has the Unpaid duty instead)
+    for (const uid of ['s1', 's9']) expect(actionItems(s, as(s, uid), T, 600).some((i) => i.kind === 'renewals.notif.act.followUp')).toBe(false);
     expect(actionItems(s, as(s, 's9'), T, 600).some((i) => i.kind === 'renewals.notif.act.approve')).toBe(true);
   });
 });

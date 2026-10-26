@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, execute, getUser, toMin, type ClubState, type Invoice, type UnpaidFollowUp } from '../index';
-import { unpaidFollowUpId, unpaidRows } from './unpaid';
+import { callHistory, lastContactOn, unpaidFollowUpId, unpaidRows } from './unpaid';
 
 const T = '2026-10-21';
 const clock = { today: T, nowMin: toMin('10:00') };
@@ -71,5 +71,22 @@ describe('unpaidRows', () => {
     expect(unpaidRows(s, T)[0].promisedOn).toBe('2026-10-23');
     s = call(s, OLD, { outcome: 'noAnswer' });
     expect(unpaidRows(s, T)[0].promisedOn).toBeUndefined();
+  });
+});
+
+describe('callHistory and lastContactOn', () => {
+  it('an Unpaid call and its invoice call note show once; a note written in Billing shows beside it', () => {
+    let s = produce(base, (d) => { d.invoices[OLD].callNotes.push({ at: '2026-10-19T09:00', by: 'staff:s10', text: 'Spoke to the daughter' }); });
+    s = execute(s, 'unpaid.call', { invoiceId: OLD, outcome: 'promised', promisedOn: '2026-10-23' }, as(s, 's1'), clock, 'h1').state;
+    const h = callHistory(s, s.invoices[OLD]);
+    // the seeded note of 29 Sep, the Billing note of 19 Oct, and the call (its own copy as a note is not repeated)
+    expect(h.map((x) => [x.at.slice(0, 10), x.outcome ?? 'note'])).toEqual([[T, 'promised'], ['2026-10-19', 'note'], ['2026-09-29', 'note']]);
+    expect(h[1].note).toBe('Spoke to the daughter');
+  });
+  it('the last contact is the newest of an Unpaid call, a call note and a reminder', () => {
+    const r = unpaidRows(base, T)[0];
+    expect(lastContactOn(r).slice(0, 10)).toBe('2026-09-29'); // the family's word finance wrote down on the invoice
+    const s = produce(call(base, OLD, { outcome: 'noAnswer' }, '2026-10-18T09:00'), (d) => { d.invoices[OLD].reminders.push({ at: '2026-10-20T09:00', by: 'staff:s10' }); });
+    expect(lastContactOn(unpaidRows(s, T)[0])).toBe('2026-10-20T09:00');
   });
 });

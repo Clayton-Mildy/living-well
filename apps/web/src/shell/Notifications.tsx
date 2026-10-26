@@ -24,7 +24,7 @@ const KIND_ICON: Record<string, string> = {
   'kitchen.notif.stockApproved': 'task_alt', 'kitchen.notif.stockDeclined': 'block', 'finance.notif.paid': 'payments', 'enq.notif.newLead': 'person_add', 'enq.notif.formSubmitted': 'assignment_turned_in', 'mgmt.notif.broadcastSent': 'campaign',
   'cal.notif.schedulePublished': 'calendar_month', 'members.notif.welcome': 'waving_hand',
   // KC round 7
-  'renewals.notif.act.followUp': 'event_repeat', 'renewals.notif.act.approve': 'fact_check', 'renewals.notif.plan': 'sell', 'renewals.notif.leave': 'beach_access', 'renewals.notif.leave2': 'beach_access',
+  'renewals.notif.act.approve': 'fact_check', 'renewals.notif.plan': 'sell', 'renewals.notif.leave': 'beach_access', 'renewals.notif.leave2': 'beach_access',
   'activity.notif.act.lunch': 'restaurant', 'activity.notif.act.session': 'groups', 'activity.notif.act.mood': 'edit_note',
   'guests.notif.booked': 'co_present', 'guests.notif.cancelled': 'event_busy', 'guests.notif.toPay': 'request_quote', 'guests.notif.paidCancelled': 'currency_exchange', 'mgmt.notif.venueRated': 'star',
 };

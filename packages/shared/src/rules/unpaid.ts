@@ -2,7 +2,7 @@
 // who is late and by how much, the day the membership goes on hold or stops, and what the last call came to. Nothing about the list is stored but the calls
 // (UnpaidFollowUp, one row per invoice, id `uf-${invoiceId}`): an invoice that gets paid (also a payment the front desk recorded that still waits for finance)
 // or voided leaves the list at once, because the list is read from the invoices.
-import type { ClubState, ISODate, Invoice, Member, UnpaidFollowUp } from '../types';
+import type { Actor, ClubState, DT, ISODate, Invoice, Member, UnpaidFollowUp, UnpaidOutcome } from '../types';
 import { balanceOf, invoiceStatus, suspendDatesFor } from './billing';
 import { diffDays, live, sortBy } from '../util';
 
@@ -31,6 +31,19 @@ export const callsOn = (s: ClubState, invoiceId: string): UnpaidCall[] => {
   const f = s.unpaidFollowUps?.[unpaidFollowUpId(invoiceId)];
   return f && !f.deletedAt ? sortBy(f.calls, (c) => c.at) : [];
 };
+
+/** When anyone last chased this invoice: an Unpaid call, a call note or a reminder (the Billing screen writes the last two); '' = never. */
+export const lastContactOn = (r: Pick<UnpaidRow, 'invoice' | 'last'>): string =>
+  [r.last?.at ?? '', ...r.invoice.callNotes.map((c) => c.at), ...r.invoice.reminders.map((x) => x.at)].reduce((m, x) => (x > m ? x : m), '');
+
+/** One entry of the sheet's history: a call made on the Unpaid list, or a call note written elsewhere (Billing). */
+export type CallEntry = { at: DT; by: Actor; outcome?: UnpaidOutcome; promisedOn?: ISODate; note?: string };
+/** Every call about an invoice, newest first: Unpaid calls plus the call notes made outside the list. `unpaid.call` also writes a call note (so the stop rule sees it): that copy has the same time and person as its call and is left out. */
+export function callHistory(s: ClubState, invoice: Invoice): CallEntry[] {
+  const calls = callsOn(s, invoice.id);
+  const notes = invoice.callNotes.filter((n) => !calls.some((c) => c.at === n.at && c.by === n.by)).map((n): CallEntry => ({ at: n.at, by: n.by, note: n.text }));
+  return sortBy<CallEntry>([...calls, ...notes], (x) => x.at, -1);
+}
 
 /** Overdue invoices with a balance, the ones that need a call first at the top: no call yet or a promise that has passed, then the most days late; rows with a promise still to come last. */
 export function unpaidRows(s: ClubState, today: ISODate): UnpaidRow[] {

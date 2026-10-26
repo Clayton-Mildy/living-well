@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { buildCitra, DEMO_START_MIN, live, type ClubState } from '../index';
 import { leaveDeadline } from './leave';
 import type { FollowUp } from '../types';
-import { askedInApp, followUpId, isDecided, leaveMonthsCheck, renewalCounts, renewalDates, renewalMembers, renewalMonth, renewalNext, renewalRows, renewalsLeft, renewalStatus } from './renewals';
+import { askedInApp, followUpId, isDecided, leaveMonthsCheck, renewalCounts, renewalDates, renewalMembers, renewalMonth, renewalNext, renewalRows, renewalStatus } from './renewals';
 
 describe('the month and its dates', () => {
   it('the coming month; the leave deadline is 14 days before the end of the month before; the invoice goes out on the 21st', () => {
@@ -49,7 +49,6 @@ describe.each([['2026-10-21'], ['2026-10-08']])('the seed around %s', (T) => {
     const rows = renewalRows(s, month);
     const c = renewalCounts(rows);
     expect(c.toDo + c.waiting + c.decided).toBe(c.total);
-    expect(renewalsLeft(s, T)).toBe(c.toDo);
     expect(rows.filter((r) => r.state === 'decided').every((r) => isDecided(r.f) || !!r.asked)).toBe(true);
     return rows;
   };

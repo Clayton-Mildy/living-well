@@ -7,7 +7,6 @@ import { lobbyGroups, guestsOn } from './rules/attendance';
 import { todayReading, validReadings } from './rules/health';
 import { pendingPhotos } from './rules/members';
 import { pendingItems } from './rules/approvals';
-import { renewalMonth, renewalsLeft } from './rules/renewals';
 import { conflictsOn } from './rules/kitchen';
 import { dutyReminders } from './rules/tasks';
 import { invoiceStatus, runDone } from './rules/billing';
@@ -101,13 +100,6 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
       if (role === 'kitchen' && k.area !== 'kitchen') continue;
       add({ id: 'stock:' + k.id, kind: 'notif.act.stockApprove', params: { item: k.item, qty: `${k.qty} ${k.unit}` }, link: role === 'kitchen' ? '/requests' : '/stock', severity: 'attention', at: k.createdAt }); // F&B approves in Requests (no Stock page)
     }
-  }
-  if (role === 'mgmt' || role === 'lobby') {
-    // KC round 7: from the 20th the month-end follow-up of the coming month is due; it clears itself as the members are decided
-    // (round 14: the front desk's duty is now the Unpaid list, so the front desk gets this plain item too)
-    const month = renewalMonth(today);
-    const left = +today.slice(8) >= 20 ? renewalsLeft(s, today, month) : 0;
-    if (left > 0) add({ id: 'renewals:' + month, kind: 'renewals.notif.act.followUp', params: { n: left, month }, link: '/renewals', severity: 'attention', at: `${ym(today)}-20T08:00` });
   }
   if (role === 'mgmt') {
     // a trial has no booked time (the guest can come any time the club is open); a visit is due half an hour before its time

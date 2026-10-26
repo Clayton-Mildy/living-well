@@ -156,7 +156,7 @@ describe('Tasks: management', () => {
     await click(nurse);
     expect(document.querySelector('[data-role="nurse"] [data-duty="nurse.arrival"]')?.textContent).toMatch(/Arrival check for everyone who came.*\d+ of \d+ · \d+%/);
     await click(document.querySelector('[data-role-row="finance"]'));
-    expect(document.querySelector('[data-role="finance"] [data-duty="finance.overdue"]')?.textContent).toContain('—');
+    expect(document.querySelector('[data-role="finance"] [data-duty="finance.unpaid"]')?.textContent).toContain('—');
     await click(tab(/^Month$/));
     expect(document.body.textContent).toContain('October 2026');
     await click(tab(/^Day$/));

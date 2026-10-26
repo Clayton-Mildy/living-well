@@ -3,7 +3,7 @@
 // A pushed full screen on phones, a bottom sheet elsewhere.
 import { useState, type ReactNode } from 'react';
 import { actorName, displayName, memberName, type UnpaidOutcome } from '@cp/shared';
-import { callsOn, unpaidRows } from '@cp/shared/rules/unpaid';
+import { callHistory, unpaidRows } from '@cp/shared/rules/unpaid';
 import { Avatar, Button, Chip, DateField, GROUP_HEAD, PhoneScreen, Sheet, TextField } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
@@ -71,12 +71,12 @@ export function UnpaidSheet({ invoiceId, onClose }: { invoiceId: string; onClose
       <TextField label={t('common.note')} value={note} onChange={setNote} multiline rows={2} placeholder={t('renewals.notePh')} maxLength={400} />
     </>
   ));
-  const calls = [...callsOn(s, invoiceId)].reverse();
+  const calls = callHistory(s, invoice); // Unpaid calls and the call notes made in Billing, newest first, each once
   const history = Section(t('unpaid.group.calls'), (
     calls.length ? calls.map((c, i) => (
       <div key={c.at + i} style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderTop: i ? HAIR : 'none' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-          <span style={{ fontSize: 15, fontWeight: 500, lineHeight: '22px' }}>{t(`unpaid.outcome.${c.outcome}`)}{c.promisedOn ? ` · ${fmt.fd(c.promisedOn, dm)}` : ''}</span>
+          <span style={{ fontSize: 15, fontWeight: 500, lineHeight: '22px' }}>{c.outcome ? `${t(`unpaid.outcome.${c.outcome}`)}${c.promisedOn ? ` · ${fmt.fd(c.promisedOn, dm)}` : ''}` : t('unpaid.callNote')}</span>
           <span style={{ fontSize: 13, color: '#6B6259', whiteSpace: 'nowrap' }}>{whenText(fmt.fds, today, c.at, t)}</span>
         </div>
         <span style={{ fontSize: 13, color: '#6B6259' }}>{actorName(s, c.by)}</span>

@@ -55,7 +55,7 @@ describe('Unpaid list', () => {
     await show(<UnpaidList />);
     await click(btn(/Open Opa Tjahjadi/));
     expect(document.body.textContent).toContain('Unpaid · Opa Tjahjadi');
-    expect(document.body.textContent).toContain('No calls yet');
+    expect(document.body.textContent).toContain('Spoke to Yohana'); // the call note finance wrote in Billing shows in the history
     await click(btn(/^Promised$/));
     expect(btn(/Save call/)?.hasAttribute('disabled') || btn(/Save call/)?.getAttribute('aria-disabled') === 'true').toBe(true); // no day yet
     await click(document.querySelector('[aria-haspopup="dialog"]'));

@@ -35,7 +35,7 @@ export const renewals = {
   'notif.leave2': 'Leave for {name} from {from} to {to} is recorded: {fee} a month on the invoices instead of the plan.',
   'notif.undone': 'The change for {name} in {month} was cancelled.',
   // the bell
-  'notif.act.followUp': '{n} members to follow up for {month}', 'notif.act.approve': 'Renewal changes waiting for approval: {n}',
+  'notif.act.approve': 'Renewal changes waiting for approval: {n}',
   // the feed
   'feed.continue': '{name}: continues in {month}', 'feed.upgrade': '{name}: moving to Gold from {month}', 'feed.downgrade': '{name}: moving to Flex from {month}',
   'feed.leave': '{name}: leave in {month}', 'feed.leave2': '{name}: leave from {from} to {to}', 'feed.stop': '{name}: stopping, last day {date}',

@@ -150,14 +150,6 @@ export function renewalFilter(s: ClubState, rows: RenewalRow[], state: RenewalSt
 }
 export const rowName = (r: RenewalRow) => memberName(r.m);
 
-/** How many members of the coming month still have nobody's answer (the bell counts these from the 20th). Management's waiting list is not part of it. */
-export function renewalsLeft(s: ClubState, today: ISODate, month: YM = renewalMonth(today)): number {
-  return renewalMembers(s, month).filter((m) => {
-    const f = followUpOf(s, m.id, month);
-    return stateOf(f, f?.status === 'done' ? undefined : askedInApp(s, m, month)) === 'toDo';
-  }).length;
-}
-
 // ---------- changes (round 14: the Next month screen lists what was recorded, newest first) ----------
 export interface ChangeRow {
   memberId: string;

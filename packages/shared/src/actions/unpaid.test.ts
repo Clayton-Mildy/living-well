@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, execute, getUser, toMin, DomainError, type ClubState } from '../index';
 import { unpaidFollowUpId, unpaidRows } from '../rules/unpaid';
+import { stopsDue, suspensions } from '../rules/billing';
 
 const T = '2026-10-21';
 const clock = { today: T, nowMin: toMin('10:00') };
@@ -51,5 +52,24 @@ describe('unpaid.call', () => {
     const paid = run(base, { invoiceId: OLD, outcome: 'noAnswer' }, 's10').state;
     const settled = execute(paid, 'payment.record', { memberId: 'm20', method: 'cash', amount: 3_950_000, invoiceId: OLD }, as(paid, 's10'), clock, 'unp-pay').state;
     fails(settled, { invoiceId: OLD, outcome: 'noAnswer' }, 's1', 'finance.err.invoicePaid');
+  });
+
+  it('a call where the family spoke also writes an invoice call note, so the invoice counts as told and the stop rule leaves it', () => {
+    // Tjahjadi's invoice with the family's earlier word taken off: it is due to stop
+    const silent = produce(base, (d) => { d.invoices[OLD].callNotes = []; });
+    const day = '2026-10-04'; // after the stop day (the 3rd)
+    expect(stopsDue(silent, day).map((x) => x.memberId)).toEqual(['m20']);
+    const r = run(silent, { invoiceId: OLD, outcome: 'promised', promisedOn: T, note: 'Pays after payday' }, 's10');
+    expect(r.state.invoices[OLD].callNotes).toEqual([{ at: `${T}T10:00`, by: 'staff:s10', text: `Promised to pay on ${T}: Pays after payday` }]);
+    expect(suspensions(r.state, '2026-10-04').m20.told).toBe(true);
+    expect(stopsDue(r.state, day)).toEqual([]);
+    for (const outcome of ['paid', 'disputed']) expect(run(silent, { invoiceId: OLD, outcome }, 's1').state.invoices[OLD].callNotes).toHaveLength(1);
+  });
+
+  it('"no answer" is no word from the family: no call note, the invoice can still stop', () => {
+    const silent = produce(base, (d) => { d.invoices[OLD].callNotes = []; });
+    const r = run(silent, { invoiceId: OLD, outcome: 'noAnswer' }, 's1');
+    expect(r.state.invoices[OLD].callNotes).toEqual([]);
+    expect(stopsDue(r.state, '2026-10-04').map((x) => x.memberId)).toEqual(['m20']);
   });
 });
