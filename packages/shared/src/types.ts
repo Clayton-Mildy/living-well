@@ -787,6 +787,15 @@ export interface Payment extends Row {
   approval?: Approval;
 }
 
+/** Round 14: what a call about an overdue invoice came to. */
+export type UnpaidOutcome = 'promised' | 'paid' | 'disputed' | 'noAnswer';
+/** Round 14: the calls made about one overdue invoice (Next month > Unpaid); id `uf-${invoiceId}`, created by the first call. */
+export interface UnpaidFollowUp extends Row {
+  invoiceId: string;
+  memberId: string;
+  calls: { at: DT; by: Actor; outcome: UnpaidOutcome; promisedOn?: ISODate; note?: string }[];
+}
+
 export interface Refund extends Row {
   paymentId: string;
   invoiceId: string;
@@ -1169,6 +1178,8 @@ export interface ClubState {
   celebrations: Record<string, Celebration>;
   // round 13
   leaveRequests: Record<string, LeaveRequest>;
+  // round 14
+  unpaidFollowUps: Record<string, UnpaidFollowUp>;
 }
 
 /** Collections stored as one Postgres table each (everything except clubId/rev/club). */
@@ -1181,6 +1192,7 @@ export const COLLECTIONS = [
   'surveys', 'surveyResponses', 'broadcasts', 'changeRequests', 'notifications', 'activity',
   'followUps', 'scheduleDays', 'guestHosts', 'guestSessions', 'surveyTemplates', 'taskTemplates', 'taskDone',
   'moodMarks', 'careCalls', 'celebrations', 'leaveRequests',
+  'unpaidFollowUps',
 ] as const;
 export type CollectionName = (typeof COLLECTIONS)[number];
 

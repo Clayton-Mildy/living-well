@@ -297,6 +297,8 @@ describe('snapshots', () => {
     for (const r of Object.values(fam.state.celebrations) as any[]) { expect(famMembers.has(r.memberId)).toBe(true); expect(r.status).toBe('confirmed'); }
     // round 13: staff leave requests never reach a family
     expect(fam.state.leaveRequests).toEqual({});
+    // round 14: unpaid follow-up calls are staff-only too
+    expect(fam.state.unpaidFollowUps).toEqual({});
   });
   it('club access is enforced', async () => {
     expect((await app.request('/api/snapshot?club=adina', { headers: { 'x-user-id': 's1' } })).status).toBe(403);
@@ -348,6 +350,17 @@ describe('actions', () => {
     expect((await app.request('/api/actions/leave.decide', json({ mutationId: 'srv-lv-5', input: { requestId: id, approve: true } }, 's9'))).status).toBe(200);
     expect(state.getClub('citra').leaveRequests[id].status).toBe('approved');
     const [n] = await sql`select count(*)::int as n from leave_requests where id = ${id}`;
+    expect(n.n).toBe(1);
+  });
+  it('unpaid calls: the front desk and finance note a call, a family cannot, the row lands in its own table', async () => {
+    const inv = 'INV-2609-020';
+    const body = (id: string, outcome: string) => ({ mutationId: id, input: { invoiceId: inv, outcome, note: 'Rang the daughter' } });
+    expect((await app.request('/api/actions/unpaid.call', json(body('srv-up-1', 'noAnswer'), 'f1'))).status).toBe(403);
+    expect((await app.request('/api/actions/unpaid.call', json(body('srv-up-2', 'noAnswer'), 's2'))).status).toBe(403);
+    expect((await app.request('/api/actions/unpaid.call', json(body('srv-up-3', 'noAnswer'), 's1'))).status).toBe(200);
+    expect((await app.request('/api/actions/unpaid.call', json(body('srv-up-4', 'disputed'), 's10'))).status).toBe(200);
+    expect(state.getClub('citra').unpaidFollowUps['uf-' + inv].calls.map((c) => c.outcome)).toEqual(['noAnswer', 'disputed']);
+    const [n] = await sql`select count(*)::int as n from unpaid_follow_ups where id = ${'uf-' + inv}`;
     expect(n.n).toBe(1);
   });
   it('demo reset restores the seed', async () => {

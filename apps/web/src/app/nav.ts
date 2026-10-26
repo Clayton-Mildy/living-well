@@ -61,7 +61,7 @@ const EXTRA: Partial<Record<Role, string[]>> = {
   lobby: ['calendar', 'photos', 'guests', 'surveys'], // guests: link-only, read-only (the Arrivals rail's "Guests today")
   nurse: ['calendar', 'contacts'],
   kitchen: ['calendar', 'contacts', 'drafts'], // KC round 7: the quick camera's Drafts (activity and management have them in the Camera)
-  finance: ['calendar', 'contacts'],
+  finance: ['calendar', 'contacts', 'renewals'], // round 14: renewals is link-only, for the Unpaid list (the Month report, the duty)
   activity: ['photos', 'contacts', 'drafts'],
   mgmt: ['photos', 'contacts', 'drafts'], // photos: old links to the standalone library
 };

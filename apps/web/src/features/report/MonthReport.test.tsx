@@ -63,6 +63,13 @@ describe('the month report page', () => {
     expect(document.querySelector('[data-testid="where"]')?.textContent).toBe('/billing');
   });
 
+  it('the Overdue (outstanding) row opens the Unpaid list', async () => {
+    open();
+    await show(<MonthReport />, '/monthReport');
+    await click(Array.from(document.querySelectorAll('section[aria-label="Money"] button')).find((b) => /Overdue/.test(b.textContent || '')));
+    expect(document.querySelector('[data-testid="where"]')?.textContent).toBe('/renewals?tab=unpaid');
+  });
+
   it('four key numbers lead the page without a heading of their own, and the owner summary starts with them', async () => {
     open();
     await show(<MonthReport />, '/monthReport');

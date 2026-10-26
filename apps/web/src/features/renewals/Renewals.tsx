@@ -2,6 +2,7 @@
 // after talking to a family: a plan switch, leave or a stop, each in effect at once and dated from the 1st; "Record a change" adds one, Undo takes one back until
 // the month starts) and Unpaid (the month's unpaid invoices). Past months are a read-only log of their changes.
 import { useMemo, useState, type CSSProperties } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { listName, addMonths, actorName, memberName, displayName, ym, type YM } from '@cp/shared';
 import { canRecord, changeRows, followUpOf, renewalMembers, renewalMonth } from '@cp/shared/rules/renewals';
 import { Avatar, EmptyState, Icon, IconButton, PageHead, Segmented } from '../../components/ui';
@@ -32,7 +33,10 @@ export function Renewals() {
   const [picked, setPicked] = useState<YM | null>(null);
   const month: YM = picked && picked >= minMonth && picked <= maxMonth ? picked : maxMonth;
   const past = month <= ym(today);
-  const [tab, setTab] = useState<Tab>('changes');
+  // the tab is in the address (`?tab=unpaid`: the Month report's Outstanding and the Unpaid duty open it)
+  const [params, setParams] = useSearchParams();
+  const tab: Tab = params.get('tab') === 'unpaid' ? 'unpaid' : 'changes';
+  const setTab = (v: Tab) => setParams(v === 'unpaid' ? { tab: 'unpaid' } : {}, { replace: true });
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
@@ -82,7 +86,7 @@ export function Renewals() {
 
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 22 }}>
-      <PageHead size={40} eyebrow={fmt.fmonth(month, true)} title={t('renewals.title')} right={switcher} />
+      <PageHead size={40} eyebrow={fmt.fmonth(month, true)} title={t('renewals.title')} right={tab === 'changes' ? switcher : undefined} />
       {tabs}
       {tab === 'changes' ? (
         <>
@@ -93,7 +97,7 @@ export function Renewals() {
           ) : null}
           {list}
         </>
-      ) : <UnpaidList month={month} />}
+      ) : <UnpaidList />}
       {recording ? <FollowUpSheet month={month} onClose={() => setRecording(false)} /> : null}
     </div>
   );

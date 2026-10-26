@@ -12,7 +12,7 @@ import { validReadings } from './health';
 import { SESSION_MIN, attendedOn, pictureSessions, roundProgress, roundsOf, sessionPhotos } from './activity';
 import { conflictsOn, dinersOn, lunchPhotosOn, teaPhotosOn } from './kitchen';
 import { invoiceStatus } from './billing';
-import { renewalMonth, renewalMembers, renewalsLeft } from './renewals';
+import { unpaidRows } from './unpaid';
 import { approvalTotal } from './approvals';
 
 /** Every staff role that can have tasks, in the order the Team view lists them. */
@@ -157,6 +157,14 @@ const stub = (key: string, o: Omit<PartIn, 'key' | 'params'> & { params?: Record
 const attendedRows = (s: ClubState, date: ISODate) => { const g = lobbyGroups(s, date); return [...g.inClub, ...g.goneHome].map((r) => ({ m: r.m, a: r.a! })); }; // checked in today (also those gone home)
 const guestDue = (s: ClubState, g: { time?: HM }): HM => toHM(Math.max(toMin(s.club.settings.open), toMin(g.time || s.club.settings.open) - 30)); // as the bell always did: half an hour before a visit
 const CHASE_DAYS = 3;
+/** the Unpaid list as one duty part: done when every row has a call in the last 7 days */
+const unpaidPart = (s: ClubState, date: ISODate): PartIn[] => {
+  const rows = unpaidRows(s, date);
+  if (!rows.length) return [];
+  const since = addDays(date, -7);
+  const chased = rows.filter((r) => !!r.last && r.last.at.slice(0, 10) >= since).length;
+  return [stub('unpaid', { done: chased >= rows.length, count: { done: chased, total: rows.length }, link: '/renewals?tab=unpaid' })];
+};
 const lastOfDT = (a: { at: string }[]) => a.reduce<string>((m, x) => (x.at > m ? x.at : m), '');
 
 export const DUTIES: DutyDef[] = [
@@ -283,15 +291,9 @@ export const DUTIES: DutyDef[] = [
     })),
   },
   {
-    // from the 20th: the month-end follow-up of the coming month (who still has no answer is `renewalsLeft`)
-    id: 'lobby.renewals', role: 'lobby', icon: 'event_repeat', titleKey: 'tasks.duty.lobby.renewals', every: 'day', defaultDue: () => '09:00', todayOnly: true,
-    parts: (s, date) => {
-      const month = renewalMonth(date);
-      const all = +date.slice(8) >= 20 ? renewalMembers(s, month).length : 0;
-      if (!all) return [];
-      const left = renewalsLeft(s, date, month);
-      return [stub('renewals', { params: { month }, done: left === 0, count: { done: all - left, total: all }, link: '/renewals', bell: { id: 'renewals:' + month, kind: 'renewals.notif.act.followUp', params: { n: left, month } } })];
-    },
+    // round 14: the overdue invoices on the Unpaid list; a row counts as chased once someone called about it in the last week (the front desk and finance each have the duty)
+    id: 'lobby.unpaid', role: 'lobby', icon: 'payments', titleKey: 'tasks.duty.lobby.unpaid', every: 'day', defaultDue: () => '11:00', todayOnly: true,
+    parts: (s, date) => unpaidPart(s, date),
   },
 
   // ----- finance -----
@@ -305,6 +307,10 @@ export const DUTIES: DutyDef[] = [
       const chased = od.filter((i) => lastOfDT([...i.reminders, ...i.callNotes]).slice(0, 10) >= since).length;
       return [stub('overdue', { done: chased >= od.length, count: { done: chased, total: od.length }, link: linkTo('finance', 'billing', '?f=overdue') })];
     },
+  },
+  {
+    id: 'finance.unpaid', role: 'finance', icon: 'payments', titleKey: 'tasks.duty.finance.unpaid', every: 'day', defaultDue: () => '11:00', todayOnly: true,
+    parts: (s, date) => unpaidPart(s, date),
   },
   {
     id: 'finance.receipts', role: 'finance', icon: 'receipt_long', titleKey: 'tasks.duty.finance.receipts', every: 'day', defaultDue: () => '15:00', todayOnly: true,

@@ -30,11 +30,12 @@ import { moodActions } from './mood';
 import { checkOnActions } from './checkOn';
 import { celebrationActions } from './celebrations';
 import { staffLeaveActions } from './staffLeave';
+import { unpaidActions } from './unpaid';
 
 registerActions([
   ...reviewActions, ...approvalActions, ...sessionActions, ...attendanceActions, ...healthActions, ...membersActions, ...familyActions,
   ...careActions, ...photoActions, ...photoDraftActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...membershipActions, ...accountActions,
-  ...renewalActions, ...guestActions, ...taskActions, ...moodActions, ...checkOnActions, ...celebrationActions, ...staffLeaveActions,
+  ...renewalActions, ...guestActions, ...taskActions, ...moodActions, ...checkOnActions, ...celebrationActions, ...staffLeaveActions, ...unpaidActions,
 ] as never);
 
 export * from './framework';

@@ -2,7 +2,7 @@
 // Isolated env: E2E_NAME=r14 E2E_PORT=8862 scripts/e2e-all.sh 1 "phone" round14
 import { test, expect } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll } from './helpers';
-import { pickOption } from './kit';
+import { pickDate, pickOption } from './kit';
 
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
 
@@ -26,5 +26,29 @@ test('Next month: Caca records Oma Lina’s upgrade (in effect at once), sees th
   // undo it before the 1st: the row is gone
   await row.getByRole('button', { name: /^Undo/ }).click();
   await expect(row).toHaveCount(0);
+  c.assertClean();
+});
+
+test('Unpaid: Gabriel opens the list from /renewals?tab=unpaid, records "promised" for next week, and the row shows the promise', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's10', '/renewals?tab=unpaid');
+  await expect(page.getByRole('tab', { name: 'Unpaid' })).toHaveAttribute('aria-selected', 'true');
+  // the small seed has one overdue invoice (Opa Tjahjadi, 23 days late), not called yet
+  const rows = page.locator('[data-unpaid]');
+  await expect(rows).toHaveCount(1);
+  const first = rows.first();
+  await expect(first).toContainText('Opa Tjahjadi');
+  await expect(first).toContainText('23 days late');
+  await expect(first).toContainText('Not called yet');
+  await assertNoHorizontalScroll(page);
+  // note the call: "Promised", for next Wednesday
+  await first.getByRole('button', { name: /^Open / }).click();
+  await page.getByRole('button', { name: 'Promised', exact: true }).click();
+  await pickDate(page, 'Promises to pay on', '2026-10-28');
+  await assertNoHorizontalScroll(page);
+  await page.getByRole('button', { name: 'Save call' }).click();
+  // the row drops to the bottom of the list (the only row here) and carries the promise
+  await expect(rows.last()).toContainText('Promised for 28 Oct');
+  await expect(rows.last()).toHaveAttribute('data-called', '1');
   c.assertClean();
 });

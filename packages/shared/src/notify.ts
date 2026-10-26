@@ -102,12 +102,14 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
       add({ id: 'stock:' + k.id, kind: 'notif.act.stockApprove', params: { item: k.item, qty: `${k.qty} ${k.unit}` }, link: role === 'kitchen' ? '/requests' : '/stock', severity: 'attention', at: k.createdAt }); // F&B approves in Requests (no Stock page)
     }
   }
-  if (role === 'mgmt') {
+  if (role === 'mgmt' || role === 'lobby') {
     // KC round 7: from the 20th the month-end follow-up of the coming month is due; it clears itself as the members are decided
-    // (the front desk gets this as its own duty reminders below; management keeps the plain items)
+    // (round 14: the front desk's duty is now the Unpaid list, so the front desk gets this plain item too)
     const month = renewalMonth(today);
     const left = +today.slice(8) >= 20 ? renewalsLeft(s, today, month) : 0;
     if (left > 0) add({ id: 'renewals:' + month, kind: 'renewals.notif.act.followUp', params: { n: left, month }, link: '/renewals', severity: 'attention', at: `${ym(today)}-20T08:00` });
+  }
+  if (role === 'mgmt') {
     // a trial has no booked time (the guest can come any time the club is open); a visit is due half an hour before its time
     for (const g of guestsOn(s, today).filter((x) => x.status === 'booked' && !x.checkIn && toMin(x.time || s.club.settings.open) - 30 <= nowMin))
       add({ id: 'guest:' + g.id, kind: g.kind === 'trial' ? (g.time ? 'notif.act.guestTrial' : 'notif.act.guestTrialDay') : 'notif.act.guestVisit', params: { name: g.name, time: g.time || '' }, link: linkTo(role, 'arrivals'), severity: 'attention', at: `${today}T${g.time || s.club.settings.open}` });

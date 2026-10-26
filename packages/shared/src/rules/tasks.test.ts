@@ -182,10 +182,15 @@ describe('general duties: from the data, for any day', () => {
     const gd = duty(base, 'lobby.guests', T, NOW);
     expect(gd.total).toBe(guests.length);
     expect(gd.parts.every((p) => p.link === '/today' && p.bell?.id.startsWith('guest:'))).toBe(true);
-    // renewals: from the 20th, counted by the renewal rules; today only
-    const ren = duty(base, 'lobby.renewals');
-    expect(ren.parts[0]).toMatchObject({ done: renewalsLeft(base, T) === 0, link: '/renewals' });
-    expect(dutiesOf(buildSeed('2026-10-19').citra, 'lobby', '2026-10-19', '2026-10-19', NOW).some((d) => d.def.id === 'lobby.renewals')).toBe(false);
+    // unpaid: the overdue invoices of the Unpaid list, chased once called about in the last week; today only
+    const unp = duty(base, 'lobby.unpaid');
+    expect(unp.parts[0]).toMatchObject({ done: false, count: { done: 0, total: 1 }, link: '/renewals?tab=unpaid' });
+    const called = run(base, 'unpaid.call', { invoiceId: 'INV-2609-020', outcome: 'noAnswer' }, 's1', NOW);
+    expect(duty(called, 'lobby.unpaid')).toMatchObject({ status: 'done' });
+    expect(duty(called, 'lobby.unpaid').parts[0].count).toEqual({ done: 1, total: 1 });
+    expect(duty(base, 'finance.unpaid').parts[0]).toMatchObject({ count: { done: 0, total: 1 } }); // finance has the same list
+    const settled = run(base, 'payment.record', { memberId: 'm20', method: 'cash', amount: 3_950_000, invoiceId: 'INV-2609-020' }, 's10', NOW);
+    expect(duty(settled, 'lobby.unpaid').status).toBe('none'); // paid: nothing left to chase
   });
 
   it('front desk counts: the check-ins so far today, and the check-outs as m of n', () => {
@@ -223,7 +228,7 @@ describe('general duties: from the data, for any day', () => {
     expect(duty(base, 'activity.mood', y).status).toBe('done');
     expect(duty(base, 'finance.overdue', y)).toMatchObject({ status: 'past', parts: [] });
     expect(duty(base, 'mgmt.approvals', y).status).toBe('past');
-    expect(duty(base, 'lobby.renewals', y).status).toBe('past');
+    expect(duty(base, 'lobby.unpaid', y).status).toBe('past');
     // a duty not done on a past day is late (missed), and a picture added later for that day counts
     const miss = duty(base, 'kitchen.lunchPhoto', y, NOW);
     const photo = produce(base, (d) => {

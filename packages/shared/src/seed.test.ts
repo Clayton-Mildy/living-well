@@ -83,4 +83,14 @@ describe('seed', () => {
       expect(rows.filter((t) => t.staffId === lv.staffId && t.date >= lv.from && t.date <= lv.to)).toHaveLength(lv.days);
     }
   });
+  it('round 14 unpaid follow-ups: the collection exists; the small seed has none, the roster has a promise and a no answer on its two overdue invoices', () => {
+    const { citra, adina } = buildSeed();
+    expect(adina.unpaidFollowUps).toEqual({});
+    expect(citra.unpaidFollowUps).toEqual({});
+    const roster = buildSeed(undefined, undefined, { roster: true }).citra;
+    const rows = Object.values(roster.unpaidFollowUps);
+    expect(rows.map((f) => [f.invoiceId, f.memberId, f.calls.map((c) => c.outcome)])).toEqual([['INV-2609-020', 'm20', ['promised']], ['INV-2609-074', 'm74', ['noAnswer']]]);
+    expect(rows[0].calls[0].promisedOn).toBe('2026-10-23');
+    for (const f of rows) expect(f.calls[0].at < `${T}T09:58`).toBe(true);
+  });
 });
