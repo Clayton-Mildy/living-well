@@ -4,7 +4,7 @@
 // A day counts once it is over: today is left out until `todayDone` (a half-finished day would pull every average down).
 import type { ClubState, HM, ISODate, Plan } from '../types';
 import { activeOn, isOpen, isPendingRow, openDaysInMonth, planOn } from './core';
-import { flexMonth } from './attendance';
+import { attOf, flexMonth } from './attendance';
 import { lastVisits } from './members';
 import { addDays, addMonths, diffDays, dow, live, sortBy, toHM, toMin, weekStart, ym } from '../util';
 
@@ -60,6 +60,34 @@ export function observedDays(s: ClubState, period: InsightPeriod, today: ISODate
     if (d === today && !todayDone) continue;
     if (isOpen(s, d)) out.push(d);
   }
+  return out;
+}
+
+// ---------- one day's numbers ----------
+export interface DayCounts {
+  /** members active on the date, by the plan they were on that day */
+  active: { flex: number; gold: number };
+  /** active members checked in by `nowMin` */
+  came: number;
+  /** came and not checked out by `nowMin` */
+  inNow: number;
+  /** came and checked out by `nowMin` */
+  gone: number;
+  /** active members not (yet) checked in: active - came */
+  notIn: number;
+}
+/** KC round 14: the day at a glance. `nowMin` cuts the day off (check-ins and check-outs after it are not counted yet); pass 24 * 60 for a day that is over. */
+export function dayCounts(s: ClubState, date: ISODate, nowMin: number): DayCounts {
+  const out: DayCounts = { active: { flex: 0, gold: 0 }, came: 0, inNow: 0, gone: 0, notIn: 0 };
+  for (const m of live(s.members)) {
+    if (!activeOn(m, date)) continue;
+    out.active[planOn(m, date).plan]++;
+    const a = attOf(s, date, m.id);
+    if (!a?.checkIn || toMin(a.checkIn.at) > nowMin) continue;
+    out.came++;
+    if (a.checkOut && toMin(a.checkOut.at) <= nowMin) out.gone++; else out.inNow++;
+  }
+  out.notIn = out.active.flex + out.active.gold - out.came;
   return out;
 }
 

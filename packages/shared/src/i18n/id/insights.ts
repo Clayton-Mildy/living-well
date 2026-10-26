@@ -23,6 +23,7 @@ export const insights: Same<typeof EN> = {
   sumPerDay: '{n}/hari',
   sumBusiest: 'paling ramai {day}',
   sumPeak: 'puncak {hour}',
+  today: 'Hari ini', todayActive: 'Aktif · {f} Flex · {g} Gold', todayCame: 'Datang', todayIn: 'Di klub', todayGone: 'Sudah pulang', todayNotIn: 'Belum datang',
   daily: 'Pengunjung harian',
   dailyAria: 'Anggota yang berkunjung, per hari buka',
   dailyMax: 'terbanyak {n} pada {d}',

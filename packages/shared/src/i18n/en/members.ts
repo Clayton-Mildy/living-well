@@ -7,6 +7,7 @@ export const members = {
   since: 'Since {d}', renews: 'Renews {d}', endsOn: 'Ends {d}', endedOn: 'Ended {d}', sortLabel: 'Sort members', 'sort.name': 'Name', 'sort.startNew': 'Start date, newest', 'sort.startOld': 'Start date, oldest', 'sort.endSoon': 'End date, soonest',
   lastVisit: 'Last visit {d}', neverVisited: 'No visits yet', pagerLabel: 'Members pages',
   noContact: 'No family contact on file',
+  split: '{f} Flex · {g} Gold',
   'st.ended': 'Membership ended {d}', 'st.upcoming': 'Starts {d}', 'st.home': 'Gone home at {t}',
   'st.in': 'In the club since {t}', 'st.off': 'Not in yet today', 'st.usually': 'Usually arrives around {t}', noMatch: 'No members match', noMatchSub: 'Try another name, family name, phone number or filter.',
   // add dialog

@@ -92,3 +92,16 @@ test('Nanny note: Caca opens Edit details on Oma Lina and sees the carer\'s note
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
+
+test('Today\'s numbers: Ega sees the Today block in Insights, and In the club on Members shows the Flex / Gold split', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/insights');
+  await expect(page.getByTestId('insights-today')).toContainText('In the club');
+  await expect(page.locator('#main').getByText('Today', { exact: true })).toBeVisible();
+  await assertNoHorizontalScroll(page);
+  await page.goto('/members');
+  await pickOption(page, 'Filter members', /^In the club/);
+  await expect(page.getByTestId('members-split')).toContainText('Flex ·');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+});

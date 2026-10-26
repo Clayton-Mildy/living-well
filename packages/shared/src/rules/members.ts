@@ -218,7 +218,12 @@ export function sortMemberRows(rows: MemberRow[], by: MemberSort): MemberRow[] {
     return a.k < b.k ? -dir : dir;
   }).map((x) => x.r);
 }
-export const filterCounts =(rows: MemberRow[]) => Object.fromEntries(MEMBER_FILTERS.map((f) => [f, rows.filter(FILTERS[f]).length])) as Record<MemberFilter, number>;
+/** Chip counts per filter; `split` gives the Active and In the club counts by plan (KC round 14: "how many Flex, how many Gold"). */
+export function filterCounts(rows: MemberRow[]) {
+  const counts = Object.fromEntries(MEMBER_FILTERS.map((f) => [f, rows.filter(FILTERS[f]).length])) as Record<MemberFilter, number>;
+  const by = (f: MemberFilter) => { const hit = rows.filter(FILTERS[f]); return { flex: hit.filter((r) => r.plan === 'flex').length, gold: hit.filter((r) => r.plan === 'gold').length }; };
+  return { ...counts, split: { active: by('active'), in: by('in') } as Record<'active' | 'in', { flex: number; gold: number }> };
+}
 
 const digitsVariants = (q: string): string[] => {
   const d = q.replace(/\D/g, '');

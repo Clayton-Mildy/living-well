@@ -56,6 +56,10 @@ export function MembersList() {
     }
     return out;
   };
+  // KC round 14: In the club and Active say how many are Flex and how many Gold
+  const splitEl = (f === 'in' || f === 'active') ? (
+    <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{t('members.split', { f: counts.split[f].flex, g: counts.split[f].gold })}</div>
+  ) : null;
   const sortEl = (
     <Select ariaLabel={t('members.sortLabel')} value={sort} onChange={setSort} options={MEMBER_SORTS.map((k) => ({ value: k, label: t(`members.sort.${k}`) }))} />
   );
@@ -120,6 +124,7 @@ export function MembersList() {
             <FilterChips label={t('members.filter')} value={f} onChange={setF} style={{ flex: '1 1 0', minWidth: 0 }} options={MEMBER_FILTERS.map((k) => ({ value: k, label: t('members.f.' + k), count: counts[k] }))} />
             <div style={{ flex: '1 1 0', minWidth: 0 }}>{sortEl}</div>
           </div>
+          {splitEl}
           <Group pad={0} gap={0}>
             {paged.rows.map((r, i) => {
               const tone = TONES[r.m.photoTone % 5];
@@ -191,6 +196,7 @@ export function MembersList() {
         ) : (
           <FilterChips label={t('members.filter')} value={f} onChange={setF} options={MEMBER_FILTERS.map((k) => ({ value: k, label: t('members.f.' + k), count: counts[k] }))} />
         )}
+        {splitEl}
         <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: isPhone ? 24 : 28, padding: '8px clamp(18px, 3vw, 36px) 12px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px 20px', flexWrap: 'wrap', padding: '14px 0 6px' }}>
             {isPhone ? null : <div style={{ flex: '0 1 220px', minWidth: 0, marginRight: 'auto' }}>{sortEl}</div>}
