@@ -2,6 +2,7 @@
 // The club is drop-in: nothing is booked or expected, Flex counts visits, and an extra day comes from check-ins.
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, findByPhone, live, lobbyGroups, memberName, planOn, membershipStatus, type ClubState, type User } from '../index';
+import { parseCarer } from './members';
 import { faceConsent, faceReady, FILTERS, filterCounts, matchesQuery, memberRows as rows2, memberStatus, isNewMember, nextMemberId, finalInvoiceFor } from '../rules/members';
 
 const T = '2026-10-21';
@@ -168,6 +169,25 @@ describe('members.create', () => {
     expect(lobbyGroups(r.state, '2027-03-15').others.some((x) => x.m.id === 'm47')).toBe(true);
     expect(memberStatus(r.state, r.state.members.m47, '2027-03-12').key).toBe('upcoming');
     expect(Object.values(r.state.notifications).some((n) => n.kind === 'members.notif.welcome' && JSON.stringify(n.params).includes('15/03/2027'))).toBe(true);
+  });
+});
+
+describe('nanny photo and note (round 14)', () => {
+  const NIK = '3175014507850002';
+  it('parseCarer keeps the photo and the note (note cut at 200); both are optional', () => {
+    const r = parseCarer({ name: 'Mbak Sari', nik: NIK, photoMediaId: 'md_nannyphoto0001', note: 'x'.repeat(250) }) as { photoMediaId?: string; note?: string };
+    expect(r.photoMediaId).toBe('md_nannyphoto0001');
+    expect(r.note).toHaveLength(200);
+    expect(parseCarer({ name: 'Mbak Sari', nik: NIK })).toEqual({ name: 'Mbak Sari', nik: NIK });
+    expect(parseCarer({ name: 'Mbak Sari', nik: NIK, note: '  ', photoMediaId: '' })).toEqual({ name: 'Mbak Sari', nik: NIK });
+  });
+  it('updateDetails stores the nanny photo and note; the seeded note for Lina is there', () => {
+    const c = seed();
+    expect(c.citra.members.m1.nanny).toMatchObject({ name: 'Mbak Sari', note: 'Agency: Kasih Ibu, Mon–Wed' });
+    expect(c.citra.members.m1.nanny?.photoMediaId).toBeUndefined();
+    const nanny = { name: 'Mbak Sari', nik: NIK, photoMediaId: 'md_nannyphoto0001', note: 'Agency: Kasih Ibu, Mon–Thu' };
+    const r = run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { nanny } }, who(c, 's9'));
+    expect(r.state.members.m1.nanny).toEqual(nanny);
   });
 });
 

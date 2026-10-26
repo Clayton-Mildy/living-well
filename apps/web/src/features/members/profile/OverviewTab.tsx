@@ -9,6 +9,7 @@ import { Group, Icon, SectionLabel } from '../../../components/ui';
 import { cardStyle, cogText, flagChips, linkBtn, mobLabel, dietLabel, logNote, STATUS_STYLE, statusText } from '../lib';
 import { StatusBadge } from '../../../components/ui';
 import { Block, Chips32, Fact, PendingBanner, Quote } from './parts';
+import { NannyAvatar } from '../ProfilePhoto';
 import type { P } from './types';
 
 export function OverviewTab({ p }: { p: P }) {
@@ -109,7 +110,18 @@ export function OverviewTab({ p }: { p: P }) {
       {phones ? <Fact k={t('profile.f.phones')}>{phones}</Fact> : null}
       {reg?.email ? <Fact k={t('profile.f.email')}>{reg.email}</Fact> : null}
       <Fact k={t('profile.f.usual')}>{m.usualArrival || t('common.notSet')}</Fact>
-      <Fact k={t('profile.f.nanny')}>{m.nanny ? `${m.nanny.name}${m.nanny.phone ? ' · ' + fmtPhone(m.nanny.phone) : ''}${!p.family && m.nanny.nik ? ' · NIK ' + m.nanny.nik : ''}` : t('profile.noNanny')}</Fact>
+      <Fact k={t('profile.f.nanny')}>
+        {m.nanny ? (
+          <span data-testid="nanny-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 10, textAlign: 'left' }}>
+            <NannyAvatar nanny={m.nanny} size={40} />
+            <span style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+              <span>{m.nanny.name}</span>
+              {m.nanny.phone || (!p.family && m.nanny.nik) ? <span style={{ color: '#6B6259' }}>{[m.nanny.phone ? fmtPhone(m.nanny.phone) : '', !p.family && m.nanny.nik ? 'NIK ' + m.nanny.nik : ''].filter(Boolean).join(' · ')}</span> : null}
+              {m.nanny.note ? <span style={{ color: '#6B6259' }}>{m.nanny.note}</span> : null}
+            </span>
+          </span>
+        ) : t('profile.noNanny')}
+      </Fact>
       {!p.family && reg?.nik ? <Fact k={t('profile.f.nik')}>{reg.nik}</Fact> : null}
       {!p.family && reg?.guarantorNik ? <Fact k={t('profile.f.guarantorNik')}>{reg.guarantorNik}</Fact> : null}
       <Fact k={t('profile.f.spouse')}>

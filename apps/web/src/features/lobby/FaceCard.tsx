@@ -9,6 +9,7 @@ import type { TFn } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { FlagChip, MemberAvatar, type Flag } from './parts';
+import { NannyAvatar } from '../members/ProfilePhoto';
 
 export type Scan = { state: 'idle' } | { state: 'scanning'; id: string } | { state: 'matched'; id: string; manual: boolean };
 export const SCAN_MS = 1400;
@@ -35,6 +36,7 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ fontSize: 22, lineHeight: '28px', fontWeight: 500, letterSpacing: '-0.3px', color: '#2B231C' }}>{memberName(m)}{occ ? <span data-testid="occasion-icon" role="img" aria-label={t(occ === 'birthday' ? 'occasions.birthdayToday' : 'occasions.anniversaryToday')} title={t(occ === 'birthday' ? 'occasions.birthdayToday' : 'occasions.anniversaryToday')} style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 8 }}><Icon name={occ === 'birthday' ? 'cake' : 'celebration'} size={20} fill={1} color="#B5652E" /></span> : null}</div>
         <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{plan}</div>
+        {m.nanny ? <div data-testid="with-nanny" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}><NannyAvatar nanny={m.nanny} size={32} />{t('lobby.withNanny', { n: m.nanny.name })}</div> : null}
       </div>
       {flags.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{flags.map((f, i) => <FlagChip key={i} f={f} />)}</div> : null}
       {children}

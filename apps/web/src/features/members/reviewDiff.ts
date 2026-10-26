@@ -150,7 +150,12 @@ export function describeCr(cr: ChangeRequest, s: ClubState, t: TFn, fmt: Fmt): D
       case 'dob': rows.push({ label: t('profile.f.dob'), from: c.from ? fmt.fdy(String(c.from)) : dash, to: c.to ? fmt.fdy(String(c.to)) : dash }); break;
       case 'address': rows.push({ label: t('profile.f.address'), from: String(c.from || dash), to: String(c.to || dash) }); break;
       case 'usualArrival': rows.push({ label: t('profile.f.usual'), from: String(c.from || dash), to: String(c.to || dash) }); break;
-      case 'nanny': rows.push({ label: t('profile.f.nanny'), from: (c.from as Member['nanny'])?.name || dash, to: (c.to as Member['nanny'])?.name || dash }); break;
+      case 'nanny': {
+        const nn = (n: Member['nanny'] | undefined) => (n ? n.name + (n.note ? ` · ${n.note}` : '') : dash);
+        const img = (n: Member['nanny'] | undefined) => (n?.photoMediaId ? mediaUrl(n.photoMediaId) : undefined);
+        rows.push({ label: t('profile.f.nanny'), from: nn(c.from as Member['nanny']), to: nn(c.to as Member['nanny']), fromImg: img(c.from as Member['nanny']), toImg: img(c.to as Member['nanny']) });
+        break;
+      }
       case 'photoMediaId': rows.push({ label: t('profile.f.photo'), from: c.from ? t('profile.photoOld') : dash, to: c.to ? t('profile.photoNew') : t('reviews.removed'), fromImg: c.from ? mediaUrl(String(c.from)) : undefined, toImg: c.to ? mediaUrl(String(c.to)) : undefined }); break;
       case 'spouseId': rows.push({ label: t('profile.f.spouse'), from: c.from && s.members[String(c.from)] ? memberName(s.members[String(c.from)]) : dash, to: c.to && s.members[String(c.to)] ? memberName(s.members[String(c.to)]) : dash }); break;
       case 'documents': {

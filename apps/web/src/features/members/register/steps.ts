@@ -66,7 +66,7 @@ export function initialState(s: ClubState, mode: RegMode, today: ISODate): RegSt
     health: h
       ? { conditions: h.conditions, diabetic: h.diabetic, mobility: h.mobility ?? 'none', diet: h.diet, food: h.food, foodOther: h.foodOther, ...splitDrugs(h.drugs) }
       : { conditions: [], diabetic: false, mobility: trial?.mobility ?? 'none', diet: trial?.diet ?? [], food: trial?.food ?? [], foodOther: '', ...splitDrugs(trial?.drugs ?? []) },
-    carer: { nanny: !!online?.nanny, nannyName: online?.nanny?.name ?? '', nannyNik: online?.nanny?.nik ?? '' },
+    carer: { nanny: !!online?.nanny, nannyName: online?.nanny?.name ?? '', nannyNik: online?.nanny?.nik ?? '', nannyPhoto: online?.nanny?.photoMediaId ?? '', nannyNote: online?.nanny?.note ?? '' },
     ktp: online?.ktp ?? {}, reg: regDraftOf(online?.registration), plan: online?.plan ?? '',
   };
 }

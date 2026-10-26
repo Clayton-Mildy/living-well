@@ -4,6 +4,7 @@ import { useState, type CSSProperties, type ReactNode } from 'react';
 import { DIETS, FOODS, MED_TIMINGS, MOBILITIES, RELATIONS } from '@cp/shared/rules/members';
 import type { Diet, DrugAllergy, FoodAllergen, KtpKind, KtpUploads, MedTiming, MemberRegistration, Mobility, Relation, Title } from '@cp/shared';
 import { KtpField, type PaperFile } from '../PaperForm';
+import { ProfilePhotoField } from '../ProfilePhoto';
 import { MARITALS, REG_IDS, cleanRegistration, type Marital } from '@cp/shared/rules/applicationForm';
 import { Button, Chip, ChipGroup, FONT_BODY, GROUP_HEAD, Icon, IconButton, Select, TimeField, Toggle } from '../../../components/ui';
 import { rp } from '@cp/shared';
@@ -256,7 +257,8 @@ export function RegCareFields({ d, set, t, err, dementia = true, dementiaFee, id
 }
 
 // ---------- KC round 10: the carer (suster) ----------
-export interface CarerDraft { nanny: boolean; nannyName: string; nannyNik: string }
+/** `nannyPhoto` is the carer's picture (a media id) and `nannyNote` a line for the desk; both optional, '' / absent = none (round 14). */
+export interface CarerDraft { nanny: boolean; nannyName: string; nannyNik: string; nannyPhoto?: string; nannyNote?: string }
 /** Comes with a carer? Then the carer's name and NIK (16 digits), both required; `phone` adds the optional mobile (the member dialogs keep it). */
 export function CarerFields({ d, set, t, tried, phone, ktp, setKtp, uploader }: { d: CarerDraft; set: (p: Partial<CarerDraft>) => void; t: TFn; tried: boolean; phone?: ReactNode } & KtpProps) {
   const errName = tried && d.nanny && !d.nannyName.trim() ? t('members.err.nannyNameRequired') : '';
@@ -266,17 +268,19 @@ export function CarerFields({ d, set, t, tried, phone, ktp, setKtp, uploader }: 
       <YesNo label={t('profile.comesWithNanny')} value={d.nanny} onChange={(v) => set({ nanny: v })} t={t} />
       {d.nanny ? (
         <>
+          <ProfilePhotoField name={d.nannyName || t('profile.f.nanny')} value={d.nannyPhoto || null} onChange={(id) => set({ nannyPhoto: id ?? '' })} size={64} upload={uploader ? async (b) => (await uploader(b, 'carer')).mediaId : undefined} />
           <TextField label={t('profile.nannyName')} value={d.nannyName} onChange={(v) => set({ nannyName: v })} error={errName} name="nannyName" />
           <TextField label={t('profile.nannyNik')} value={d.nannyNik} onChange={(v) => set({ nannyNik: v.replace(/[^\d\s]/g, '') })} inputMode="numeric" placeholder={t('profile.nikPh')} error={errNik} name="nannyNik" maxLength={16} />
           {setKtp ? <KtpField label={t('profile.ktpPhotoOf', { who: t('profile.ids.carer') })} value={ktp?.nannyKtp ?? null} onChange={(f) => setKtp('nannyKtp', f)} name="ktp-carer" uploader={uploader} /> : null}
           {phone}
+          <TextField label={t('profile.f.nannyNote')} value={d.nannyNote ?? ''} onChange={(v) => set({ nannyNote: v })} name="nannyNote" maxLength={200} />
         </>
       ) : null}
     </>
   );
 }
-/** The carer as it is saved: null without one; the NIK with no spaces. */
-export const carerOf = (d: CarerDraft) => (d.nanny ? { name: d.nannyName.trim(), nik: d.nannyNik.replace(/\s/g, '') } : null);
+/** The carer as it is saved: null without one; the NIK with no spaces; the picture and the note only when there are some. */
+export const carerOf = (d: CarerDraft) => (d.nanny ? { name: d.nannyName.trim(), nik: d.nannyNik.replace(/\s/g, ''), ...(d.nannyPhoto ? { photoMediaId: d.nannyPhoto } : {}), ...(d.nannyNote?.trim() ? { note: d.nannyNote.trim() } : {}) } : null);
 export const carerOk = (d: CarerDraft) => !d.nanny || (!!d.nannyName.trim() && /^\d{16}$/.test(d.nannyNik.replace(/\s/g, '')));
 
 /** The uploaded ID cards that count for a registration: the member's and the family member's only while their ID is ticked, the carer's only with a carer. */

@@ -30,7 +30,7 @@ export const lobby = {
   // drawer
   careInstructions: 'Care instructions', noNotes: 'No notes yet.', callAria: 'Call {name}', undoIn: 'Undo check-in', undoOut: 'Undo check-out', diabetic: 'Diabetic',
   drugAllergy: '{d} allergy', medLunch: '{name} {dose} · lunch', notInToday: 'Not checked in today', inOut: 'Arrived {a} · left {l}',
-  nanny: 'Carer (suster)', nannyNote: 'With {name}, {p} carer',
+  nanny: 'Carer (suster)', nannyNote: 'With {name}, {p} carer', withNanny: 'with {n}',
   // toasts
   tUndoIn: '{n}’s check-in was undone.', tUndoOut: '{n}’s check-out was undone.',
   // also today

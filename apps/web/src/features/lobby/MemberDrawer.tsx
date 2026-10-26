@@ -1,5 +1,6 @@
 // Member drawer (design OvDrawer): who they are, today's status (usual arrival time, arrived / left), care flags, notes,
 // family and nanny with real tel: links, and the actions: check in / check out, undo.
+import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listName, contactsOfMember, fmtPhone, live, memberAge, memberName, pron, sortBy, todayReading, attOf, type ClubState, type Member } from '@cp/shared';
 import { visitInfo } from '@cp/shared/rules/lobby';
@@ -10,6 +11,7 @@ import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { CallLink, FlagChip, MemberAvatar, ReadingBadge, Stack, cap, memberFlags, relText } from './parts';
 import { FullName } from '../members/lib';
+import { NannyAvatar } from '../members/ProfilePhoto';
 
 const label = { fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase' as const, fontWeight: 500, lineHeight: '18px', color: 'var(--eyebrow, #6E5A43)' };
 
@@ -90,8 +92,9 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
       ) : null}
     </>
   );
-  const person = (key: string, name: string, line: string, phone: string | undefined, first: boolean) => (
+  const person = (key: string, name: string, line: string, phone: string | undefined, first: boolean, lead?: ReactNode) => (
     <div key={key} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '11px 0' : '10px 0', borderTop: first ? 'none' : '0.5px solid var(--hairline, #E2E2E6)' }}>
+      {lead}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{name}</span>
         <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{line}</span>
@@ -101,7 +104,7 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
   );
   const people = [
     ...contacts.map(({ link, contact }, i) => person(contact.id, contact.name, `${cap(relText(t, link.relation))}${link.primary ? ' · ' + t('lobby.primaryBilling') : ''} · ${fmtPhone(contact.phone)}`, contact.phone, isPhone && i === 0)),
-    ...(m.nanny ? [person('nanny', m.nanny.name, `${t('lobby.nanny')}${m.nanny.phone ? ' · ' + fmtPhone(m.nanny.phone) : ''}`, m.nanny.phone || undefined, isPhone && !contacts.length)] : []),
+    ...(m.nanny ? [person('nanny', m.nanny.name, [t('lobby.nanny'), m.nanny.phone ? fmtPhone(m.nanny.phone) : '', m.nanny.note].filter(Boolean).join(' · '), m.nanny.phone || undefined, isPhone && !contacts.length, <NannyAvatar nanny={m.nanny} size={40} />)] : []),
   ];
 
   // round 6, phone: a pushed screen ("‹ Arrivals"), a centred header, iOS grouped sections, the check-in / check-out pinned at the bottom

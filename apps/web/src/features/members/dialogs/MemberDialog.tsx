@@ -53,7 +53,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
   const { s, m, t, today } = p;
   const hours = { open: s.club.settings.open, last: toHM(toMin(s.club.settings.close) - 1) };
   const [d, set] = useDraft(() => ({
-    title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyNik: m.nanny?.nik || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
+    title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyNik: m.nanny?.nik || '', nannyPhoto: m.nanny?.photoMediaId || '', nannyNote: m.nanny?.note || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
     spouseId: m.spouseId || '', note: '', photo: m.photoMediaId || '', reg: regDraftOf(m.registration),
   }));
   const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
@@ -73,7 +73,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
     if (d.dob && d.dob !== (m.dob || '')) patch.dob = d.dob;
     if (d.address.trim() !== (m.address || '')) patch.address = d.address.trim();
     if (d.usual !== (m.usualArrival || '')) patch.usualArrival = d.usual;
-    const nanny = d.nanny ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), nik: d.nannyNik.replace(/\s/g, '') } : null;
+    const nanny = d.nanny ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), nik: d.nannyNik.replace(/\s/g, ''), ...(d.nannyPhoto ? { photoMediaId: d.nannyPhoto } : {}), ...(d.nannyNote.trim() ? { note: d.nannyNote.trim() } : {}) } : null;
     if (JSON.stringify(nanny) !== JSON.stringify(m.nanny)) patch.nanny = nanny;
     if ((d.spouseId || null) !== m.spouseId) patch.spouseId = d.spouseId || null;
     if ((d.photo || undefined) !== m.photoMediaId) patch.photoMediaId = d.photo || null;

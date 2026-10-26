@@ -41,8 +41,10 @@ export function changesOf(m: Member, d: Draft): Patch {
   const patch: Patch = {};
   for (const k of TEXT_KEYS) if (d[k].trim() !== cur[k]) patch[k] = d[k].trim();
   if (d.usual && d.usual !== m.usualArrival) patch.usualArrival = d.usual;
-  const nanny = d.nanny && d.nannyName.trim() ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}) } : null;
-  if (JSON.stringify(nanny) !== JSON.stringify(m.nanny ? { name: m.nanny.name, ...(m.nanny.phone ? { phone: m.nanny.phone } : {}) } : null)) patch.nanny = nanny;
+  // the carer's picture and note are the club's to edit; a family change keeps them as they are
+  const keep = (n: NonNullable<Member['nanny']> | null) => (n ? { ...(n.photoMediaId ? { photoMediaId: n.photoMediaId } : {}), ...(n.note ? { note: n.note } : {}) } : {});
+  const nanny = d.nanny && d.nannyName.trim() ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), ...keep(m.nanny) } : null;
+  if (JSON.stringify(nanny) !== JSON.stringify(m.nanny ? { name: m.nanny.name, ...(m.nanny.phone ? { phone: m.nanny.phone } : {}), ...keep(m.nanny) } : null)) patch.nanny = nanny;
   return patch;
 }
 

@@ -236,7 +236,8 @@ export interface Member extends Row {
   plans: PlanEntry[]; // effective-dated
   usualArrival: HM; // informational only: members drop in on any open day
   /** the carer (suster) who comes along; KC round 10: with a carer, the carer's NIK (16 digits) is required */
-  nanny: { name: string; phone?: string; nik?: string } | null;
+  /** `photoMediaId` is the carer's picture, `note` a line for the desk (agency, days; round 14) */
+  nanny: { name: string; phone?: string; nik?: string; photoMediaId?: string; note?: string } | null;
   spouseId: string | null;
   health: {
     conditions: string[];
@@ -522,7 +523,7 @@ export interface OnlineRegistration {
   contact: { name: string; relation: Relation; phone: string };
   plan?: Plan;
   /** the carer (suster) who comes along, with the carer's NIK */
-  nanny?: { name: string; nik: string } | null;
+  nanny?: { name: string; nik: string; photoMediaId?: string; note?: string } | null;
   /** photos of the ID cards (uploaded through the form's own route) */
   ktp?: KtpUploads;
   health: { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[] };

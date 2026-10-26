@@ -79,3 +79,16 @@ test('Dementia fee: on the Health step, answering Yes tells the cost, and the Re
   await expect(d.locator('[data-testid="review-dementia-fee"]')).toContainText('Rp 750.000 more a month');
   c.assertClean();
 });
+
+test('Nanny note: Caca opens Edit details on Oma Lina and sees the carer\'s note field with the seeded note; Overview shows it', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's1', '/members/m1');
+  await expect(page.getByTestId('nanny-row')).toContainText('Mbak Sari');
+  await expect(page.getByTestId('nanny-row')).toContainText('Agency: Kasih Ibu, Mon–Wed');
+  await assertNoHorizontalScroll(page);
+  await page.getByRole('button', { name: 'Edit details' }).click();
+  const dlg = page.getByRole('dialog').last();
+  await expect(dlg.getByLabel('Note (agency, days)')).toHaveValue('Agency: Kasih Ibu, Mon–Wed');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+});

@@ -121,7 +121,10 @@ export const parseNanny = (v: unknown) => {
   const phone = txt(o.phone, 30);
   const nik = txt(o.nik, 24).replace(/\s/g, '');
   if (nik && !/^\d{16}$/.test(nik)) bad('members.err.nikInvalid');
-  return { name, ...(phone ? { phone: e164(phone) } : {}), ...(nik ? { nik } : {}) };
+  const photoMediaId = txt(o.photoMediaId, 80);
+  if (photoMediaId && !/^md_[A-Za-z0-9_-]{8,}$/.test(photoMediaId)) bad('err.invalid');
+  const note = txt(o.note, 200);
+  return { name, ...(phone ? { phone: e164(phone) } : {}), ...(nik ? { nik } : {}), ...(photoMediaId ? { photoMediaId } : {}), ...(note ? { note } : {}) };
 };
 /** KC round 10: a carer typed in when a lead joins (the Join dialog, the family's online form): the NIK is required. */
 export const parseCarer = (v: unknown) => {
@@ -227,7 +230,7 @@ export function mediaIdOf(v: unknown): string | undefined {
 
 // ---------- parse: details patch ----------
 export interface DetailsPatch {
-  title?: Title; name?: string; dob?: ISODate; address?: string; /** '' clears it */ usualArrival?: HM | ''; nanny?: { name: string; phone?: string; nik?: string } | null; spouseId?: string | null;
+  title?: Title; name?: string; dob?: ISODate; address?: string; /** '' clears it */ usualArrival?: HM | ''; nanny?: { name: string; phone?: string; nik?: string; photoMediaId?: string; note?: string } | null; spouseId?: string | null;
   /** the profile picture; null removes it */ photoMediaId?: string | null;
   /** the answers of the paper application form, all of them as they should be now; null clears them */ registration?: MemberRegistration | null;
 }
