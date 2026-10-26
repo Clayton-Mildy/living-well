@@ -2,7 +2,7 @@
 // Each dialog builds the smallest change it can and sends it through the right action: gated for the front desk, applied now for health.
 import { useMemo, useState } from 'react';
 import {
-  addMonths, e164, execute, fmtPhone, isOpen, live, memberName, nextOpenDay, openDaysInMonth, planOn, priceOn, rp, sortBy, toHM, toMin, ym, linksOfMember, isPendingRow, contactsOfMember,
+  addMonths, e164, execute, feeOf, fmtPhone, isOpen, live, memberName, nextOpenDay, openDaysInMonth, planOn, priceOn, rp, sortBy, toHM, toMin, ym, linksOfMember, isPendingRow, contactsOfMember,
   type Plan, type Title, type Relation, type EndReason,
 } from '@cp/shared';
 import { END_REASONS, consentOf, firstOfNextMonth, isPhone, openBalance, plainName } from '@cp/shared/rules/members';
@@ -102,7 +102,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
         <CarerFields d={d} set={set} t={t} tried={tried} phone={<TextField label={t('profile.nannyPhone')} value={d.nannyPhone} onChange={(v) => set({ nannyPhone: v })} inputMode="tel" placeholder="+62" />} />
       </PeSection>
       <PeSection label={t('profile.sec.regCare')}>
-        <RegCareFields d={d.reg} set={setReg} t={t} err={regErr} />
+        <RegCareFields d={d.reg} set={setReg} t={t} err={regErr} dementiaFee={feeOf(priceOn(s, today), 'dementia')} />
       </PeSection>
       <MgmtNote p={p} v={d.note} set={(v) => set({ note: v })} />
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={p.mgmt ? t('common.saveChanges') : t('common.submitReview')} />

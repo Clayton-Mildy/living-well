@@ -1,4 +1,4 @@
-// Plans and pricing (design ScrPlans), round 13 §11, five sections: Plans (Flex with its visits rule, Gold), Extra charges (extra day, leave month), One-off fees (registration, 2-day trial),
+// Plans and pricing (design ScrPlans), round 13 §11, five sections: Plans (Flex with its visits rule, Gold), Extra charges (extra day, leave month, dementia care), One-off fees (registration, 2-day trial),
 // Changes (takes effect from + tell the team, only while something is edited) and the next-invoice preview for a chosen member (with the unsaved prices). Save / Cancel stay pinned.
 import { useMemo, useState, type ReactNode } from 'react';
 import { approvedMembers, feeOf, fmtN, memberName, membershipStatus, parseN, priceOn, rp } from '@cp/shared';
@@ -12,8 +12,8 @@ import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { Page, SwitchRow, HPAD, heroCard, labelStyle, tn } from './common';
 
-type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave';
-const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave'];
+type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave' | 'dementia';
+const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave', 'dementia'];
 type Draft = Record<PriceKey, string> & { quota: string; from: string };
 
 export function Plans() {
@@ -24,7 +24,7 @@ export function Plans() {
   const { today } = useNow();
   const act = useAct();
   const price = priceOn(s, today);
-  const saved: Draft = { flex: fmtN(price.flex), gold: fmtN(price.gold), extra: fmtN(price.extra), registration: fmtN(feeOf(price, 'registration')), trial: fmtN(feeOf(price, 'trial')), leave: fmtN(feeOf(price, 'leave')), quota: String(s.club.settings.flexQuota), from: today };
+  const saved: Draft = { flex: fmtN(price.flex), gold: fmtN(price.gold), extra: fmtN(price.extra), registration: fmtN(feeOf(price, 'registration')), trial: fmtN(feeOf(price, 'trial')), leave: fmtN(feeOf(price, 'leave')), dementia: fmtN(feeOf(price, 'dementia')), quota: String(s.club.settings.flexQuota), from: today };
   const [draft, setDraft] = useState<Draft | null>(null);
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -33,15 +33,15 @@ export function Plans() {
   const d = draft ?? saved;
   const set = (p: Partial<Draft>) => setDraft({ ...d, ...p });
 
-  const prices = { flex: parseN(d.flex), gold: parseN(d.gold), extra: parseN(d.extra), registration: parseN(d.registration), trial: parseN(d.trial), leave: parseN(d.leave) };
-  const current: Record<PriceKey, number> = { flex: price.flex, gold: price.gold, extra: price.extra, registration: feeOf(price, 'registration'), trial: feeOf(price, 'trial'), leave: feeOf(price, 'leave') };
+  const prices = { flex: parseN(d.flex), gold: parseN(d.gold), extra: parseN(d.extra), registration: parseN(d.registration), trial: parseN(d.trial), leave: parseN(d.leave), dementia: parseN(d.dementia) };
+  const current: Record<PriceKey, number> = { flex: price.flex, gold: price.gold, extra: price.extra, registration: feeOf(price, 'registration'), trial: feeOf(price, 'trial'), leave: feeOf(price, 'leave'), dementia: feeOf(price, 'dementia') };
   const quota = d.quota === '' ? NaN : Number(d.quota);
   const quotaShown = Number.isFinite(quota) ? quota : s.club.settings.flexQuota; // what the cards say while it is being typed
   const priceChanged = PRICE_KEYS.some((k) => prices[k] !== current[k]);
   const rulesChanged = quota !== s.club.settings.flexQuota;
   const dirty = priceChanged || rulesChanged;
   const err = {
-    flex: prices.flex < 1, gold: prices.gold < 1, extra: prices.extra < 1, registration: prices.registration < 1, trial: prices.trial < 1, leave: prices.leave < 1,
+    flex: prices.flex < 1, gold: prices.gold < 1, extra: prices.extra < 1, registration: prices.registration < 1, trial: prices.trial < 1, leave: prices.leave < 1, dementia: prices.dementia < 1,
     quota: !Number.isInteger(quota) || quota < 1 || quota > 23,
     from: priceChanged && (!d.from || d.from < today),
   };
@@ -54,13 +54,13 @@ export function Plans() {
   const previewDraft: PriceDraft | null = priceChanged || rulesChanged
     ? {
         flex: prices.flex > 0 ? prices.flex : price.flex, gold: prices.gold > 0 ? prices.gold : price.gold, extra: prices.extra > 0 ? prices.extra : price.extra,
-        registration: prices.registration > 0 ? prices.registration : current.registration, trial: prices.trial > 0 ? prices.trial : current.trial, leave: prices.leave > 0 ? prices.leave : current.leave,
+        registration: prices.registration > 0 ? prices.registration : current.registration, trial: prices.trial > 0 ? prices.trial : current.trial, leave: prices.leave > 0 ? prices.leave : current.leave, dementia: prices.dementia > 0 ? prices.dementia : current.dementia,
         from: priceChanged && d.from >= today ? d.from : today, ...(rulesChanged && !err.quota ? { flexQuota: quota } : {}),
       }
     : null;
   const preview = useMemo(
     () => (memberId ? invoicePreview(s, memberId, previewDraft, today) : null),
-    [s, memberId, previewDraft?.flex, previewDraft?.gold, previewDraft?.extra, previewDraft?.registration, previewDraft?.trial, previewDraft?.leave, previewDraft?.from, previewDraft?.flexQuota, !!previewDraft, today], // eslint-disable-line react-hooks/exhaustive-deps
+    [s, memberId, previewDraft?.flex, previewDraft?.gold, previewDraft?.extra, previewDraft?.registration, previewDraft?.trial, previewDraft?.leave, previewDraft?.dementia, previewDraft?.from, previewDraft?.flexQuota, !!previewDraft, today], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const save = async () => {
@@ -190,6 +190,7 @@ export function Plans() {
         {section(t('mgmt.plSecExtra'), [
           priceBlock('extra', t('mgmt.plExtra'), t('mgmt.perDay'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')], [t('mgmt.plCounted'), t('mgmt.plCheckIns')]]),
           priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), t('mgmt.plLeaveAskV')]]),
+          priceBlock('dementia', t('mgmt.plDementia'), t('mgmt.perMonth'), []),
         ])}
         {/* KC round 6: the brochure's other fees */}
         {section(t('mgmt.plSecOnce'), [

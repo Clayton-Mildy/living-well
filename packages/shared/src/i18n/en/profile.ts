@@ -79,6 +79,7 @@ export const profile = {
   visitsMonthFlex: '{n} of {q} used', visitsMonthExtra: '{n} of {q} used · {x} extra days', visitsMonthExtraOne: '{n} of {q} used · 1 extra day', visitsMonthGold: '{n} so far',
   planNoteFlex: 'Flex includes {q} visits a month, counted when the member checks in. Each visit after that is an extra day: {p}, on next month’s invoice.', planNoteGold: 'Gold includes unlimited visits. The member can come on any open day.',
   fee: 'Monthly fee',
+  dementiaFee: 'Dementia care costs {rp} more a month.',
   extraDay: 'Extra day', extraDayVal: '{p}, on the next invoice',
   billingContact: 'Billing contact', va: 'Virtual account', vaLater: 'Created with the first invoice', nextChange: 'Next plan change', fromDate: 'from {d}', couple: 'Couple',
   coupleVal: 'Own plan and invoice. {n} can pay both with {s}’s in one go', balance: 'Balance due', membership: 'Membership', endedOn: 'Ended {d}', endsOn: 'Ends {d}',

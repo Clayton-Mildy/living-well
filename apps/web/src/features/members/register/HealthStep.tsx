@@ -1,6 +1,6 @@
 // Step 3, health: conditions, dementia (it changes the fee), mobility and diet, medicines (Add member; the nurse adds them after a Join),
 // allergies, care instructions and the form's three care questions.
-import { live } from '@cp/shared';
+import { feeOf, live, priceOn } from '@cp/shared';
 import { Note } from '../../../components/ui';
 import { AllergyFields, DementiaFields, HealthFields, MedsEditor, RegCareFields, TextField } from '../dialogs/forms';
 import { Sec, setRegOf, type StepProps } from './parts';
@@ -17,7 +17,7 @@ export function HealthStep({ p }: { p: StepProps }) {
     <>
       {fromTrial ? <Note tone="cream" icon="info">{t('enq.jn_fromTrial')}</Note> : null}
       <Sec p={p} label={t('profile.sec.health')}>
-        <HealthFields d={st.health} set={setH} t={t} instead={<DementiaFields d={st.reg} set={setReg} t={t} />} />
+        <HealthFields d={st.health} set={setH} t={t} instead={<DementiaFields d={st.reg} set={setReg} t={t} fee={feeOf(priceOn(s, p.today), 'dementia')} />} />
         {isNew ? (
           <>
             <div style={{ fontWeight: 500 }}>{t('profile.medicines')}</div>

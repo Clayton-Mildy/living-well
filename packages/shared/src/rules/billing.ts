@@ -51,9 +51,9 @@ export function priceOn(s: ClubState, date: ISODate): PriceVersion {
   return v || sortBy(live(s.prices), (p) => p.from)[0];
 }
 /** The brochure's fees, used when a price list (an older one, a draft) has no figure for one of them. */
-export const FEE_DEFAULTS = { registration: 2_500_000, trial: 450_000, leave: 250_000 } as const;
+export const FEE_DEFAULTS = { registration: 2_500_000, trial: 450_000, leave: 250_000, dementia: 750_000 } as const;
 export type Fee = keyof typeof FEE_DEFAULTS;
-/** One-time registration fee, the 2-day trial and a month of leave, from a price list. */
+/** One-time registration fee, the 2-day trial, a month of leave and the monthly dementia care fee, from a price list. */
 export const feeOf = (p: Pick<PriceVersion, Fee> | undefined, k: Fee): number => p?.[k] ?? FEE_DEFAULTS[k];
 /** The day a period's invoice run is issued (the 21st). */
 export const issueDateOf = (s: ClubState, period: YM): ISODate => `${period}-${String(s.club.settings.issueDay).padStart(2, '0')}`;
@@ -117,6 +117,11 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
       const full = plan === 'gold' ? price.gold : price.flex;
       const amount = active.length >= open.length || !open.length ? full : Math.round((full * active.length) / open.length / 1000) * 1000;
       lines.push({ id: `plan-${period}`, kind: 'plan', label: plan === 'gold' ? 'inv.line.gold' : 'inv.line.flex', params: { month: period }, qty: 1, unit: amount, amount, refMonth: period });
+      // round 14: dementia care is a flat fee on top of the plan (not prorated), and not in a month of leave
+      if (m.registration?.dementia === true) {
+        const fee = feeOf(price, 'dementia');
+        lines.push({ id: `dementia-${period}`, kind: 'dementia', label: 'inv.line.dementia', qty: 1, unit: fee, amount: fee });
+      }
     }
     if (registrationDue(s, m)) {
       const fee = feeOf(price, 'registration');

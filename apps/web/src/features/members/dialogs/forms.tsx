@@ -6,6 +6,7 @@ import type { Diet, DrugAllergy, FoodAllergen, KtpKind, KtpUploads, MedTiming, M
 import { KtpField, type PaperFile } from '../PaperForm';
 import { MARITALS, REG_IDS, cleanRegistration, type Marital } from '@cp/shared/rules/applicationForm';
 import { Button, Chip, ChipGroup, FONT_BODY, GROUP_HEAD, Icon, IconButton, Select, TimeField, Toggle } from '../../../components/ui';
+import { rp } from '@cp/shared';
 import type { TFn } from '../../../lib/i18n';
 import { TitleField } from './TitleField';
 import { dietLabel, foodLabel, mobLabel, relLabel, timingLabel } from '../lib';
@@ -213,11 +214,12 @@ function YesNoOpen({ label, value, onChange, t }: { label: string; value: YN; on
     </div>
   );
 }
-/** KC round 10: dementia as a yes / no (it affects the monthly fee), with an optional note once it is yes. */
-export function DementiaFields({ d, set, t }: { d: RegDraft; set: RegSet; t: TFn }) {
+/** KC round 10: dementia as a yes / no (it affects the monthly fee), with an optional note once it is yes. `fee` (round 14) is the extra monthly cost, told on Yes. */
+export function DementiaFields({ d, set, t, fee }: { d: RegDraft; set: RegSet; t: TFn; fee?: number }) {
   return (
     <>
       <YesNoOpen label={t('profile.q.dementia')} value={d.dementia} onChange={(v) => set({ dementia: v, ...(v ? {} : { dementiaNote: '' }) })} t={t} />
+      {d.dementia && fee != null ? <span data-testid="dementia-fee" style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{t('profile.dementiaFee', { rp: rp(fee) })}</span> : null}
       {d.dementia ? <TextField label={t('profile.f.dementiaNote')} value={d.dementiaNote} onChange={(v) => set({ dementiaNote: v })} multiline rows={2} name="dementiaNote" maxLength={300} /> : null}
     </>
   );
@@ -241,13 +243,13 @@ export function IdFields({ d, set, t, err, label, ktp, setKtp, uploader }: { d: 
   );
 }
 /** The three care questions and the IDs; `dementia` (default on) adds the dementia pair here — a registration shows it under Health instead. `ids={false}` leaves the IDs out (round 12: the stepped registration asks for each ID with its person). */
-export function RegCareFields({ d, set, t, err, dementia = true, ids = true, idsLabel, ...ktp }: { d: RegDraft; set: RegSet; t: TFn; err?: (...f: string[]) => string; dementia?: boolean; ids?: boolean; idsLabel?: string } & KtpProps) {
+export function RegCareFields({ d, set, t, err, dementia = true, dementiaFee, ids = true, idsLabel, ...ktp }: { d: RegDraft; set: RegSet; t: TFn; err?: (...f: string[]) => string; dementia?: boolean; dementiaFee?: number; ids?: boolean; idsLabel?: string } & KtpProps) {
   return (
     <>
       <YesNoOpen label={t('profile.q.comm')} value={d.comm} onChange={(v) => set({ comm: v })} t={t} />
       <YesNoOpen label={t('profile.q.self')} value={d.self} onChange={(v) => set({ self: v })} t={t} />
       <YesNoOpen label={t('profile.q.bath')} value={d.bath} onChange={(v) => set({ bath: v })} t={t} />
-      {dementia ? <DementiaFields d={d} set={set} t={t} /> : null}
+      {dementia ? <DementiaFields d={d} set={set} t={t} fee={dementiaFee} /> : null}
       {ids ? <IdFields d={d} set={set} t={t} err={err ?? (() => '')} label={idsLabel} {...ktp} /> : null}
     </>
   );

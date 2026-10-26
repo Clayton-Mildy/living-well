@@ -701,7 +701,7 @@ export const clubActions = [
 
   // ----- prices and rules -----
   // KC round 6: besides the monthly prices, the brochure's one-time registration fee, the 2-day trial and a month of leave (left out = unchanged)
-  defineAction<{ flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; from: ISODate; notify?: boolean }>({
+  defineAction<{ flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; dementia?: number; from: ISODate; notify?: boolean }>({
     name: 'prices.set',
     can: mgmtOnly,
     parse(raw) {
@@ -711,15 +711,15 @@ export const clubActions = [
         return n;
       };
       const fee = (v: unknown, f: string) => (v === undefined ? {} : { [f]: price(v, f) });
-      return { flex: price(o.flex, 'flex'), gold: price(o.gold, 'gold'), extra: price(o.extra, 'extra'), ...fee(o.registration, 'registration'), ...fee(o.trial, 'trial'), ...fee(o.leave, 'leave'), from: isoDate(o.from, 'from'), notify: o.notify === undefined ? true : bool(o.notify) };
+      return { flex: price(o.flex, 'flex'), gold: price(o.gold, 'gold'), extra: price(o.extra, 'extra'), ...fee(o.registration, 'registration'), ...fee(o.trial, 'trial'), ...fee(o.leave, 'leave'), ...(o.dementia === undefined ? {} : { dementia: int(o.dementia, 0, 1_000_000_000, 'dementia') }), from: isoDate(o.from, 'from'), notify: o.notify === undefined ? true : bool(o.notify) };
     },
     run(d, i, ctx) {
       if (i.from < ctx.today) ctx.fail('mgmt.err.pricePast');
       const s = S(d);
       const cur = priceOn(s, i.from);
       const exact = live(s.prices).find((p) => p.from === i.from);
-      const fees = { registration: i.registration ?? feeOf(cur, 'registration'), trial: i.trial ?? feeOf(cur, 'trial'), leave: i.leave ?? feeOf(cur, 'leave') };
-      const same = (p: PriceVersion) => p.flex === i.flex && p.gold === i.gold && p.extra === i.extra && (['registration', 'trial', 'leave'] as const).every((k) => feeOf(p, k) === fees[k]);
+      const fees = { registration: i.registration ?? feeOf(cur, 'registration'), trial: i.trial ?? feeOf(cur, 'trial'), leave: i.leave ?? feeOf(cur, 'leave'), dementia: i.dementia ?? feeOf(cur, 'dementia') };
+      const same = (p: PriceVersion) => p.flex === i.flex && p.gold === i.gold && p.extra === i.extra && (['registration', 'trial', 'leave', 'dementia'] as const).every((k) => feeOf(p, k) === fees[k]);
       if (!exact && same(cur)) ctx.fail('err.noChanges');
       if (exact && same(exact)) ctx.fail('err.noChanges');
       const sample = { flex: cur.sample.flex && cur.flex === i.flex, gold: cur.sample.gold && cur.gold === i.gold, extra: cur.sample.extra && cur.extra === i.extra };

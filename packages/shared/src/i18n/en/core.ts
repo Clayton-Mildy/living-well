@@ -114,5 +114,5 @@ export const demo = {
   reset: 'Reset demo data', resetDone: 'Demo data reset to 09:58.', resetConfirm: 'Reset every change made in this demo? Everyone using the app sees the reset.', designSystem: 'Design system', clock: 'Club clock',
 };
 export const inv = {
-  'line.flex': 'Flex plan · {month}', 'line.gold': 'Gold plan · {month}', 'line.extra': 'Extra days · {month} ({n})', 'line.credit': 'Account credit', 'line.venue': 'Venue booking', 'line.leave': 'Leave (cuti) · {month}', 'line.registration': 'Registration fee',
+  'line.flex': 'Flex plan · {month}', 'line.gold': 'Gold plan · {month}', 'line.extra': 'Extra days · {month} ({n})', 'line.credit': 'Account credit', 'line.venue': 'Venue booking', 'line.leave': 'Leave (cuti) · {month}', 'line.registration': 'Registration fee', 'line.dementia': 'Dementia care',
 };

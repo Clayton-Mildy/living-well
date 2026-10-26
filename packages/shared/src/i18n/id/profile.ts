@@ -72,6 +72,7 @@ export const profile: Same<typeof EN> = {
   visitsMonth: 'Kunjungan di {m}', visitsMonthFlex: '{n} dari {q} terpakai', visitsMonthExtra: '{n} dari {q} terpakai · {x} hari tambahan', visitsMonthExtraOne: '{n} dari {q} terpakai · 1 hari tambahan', visitsMonthGold: '{n} sejauh ini',
   planNoteFlex: 'Paket Flex mencakup {q} kunjungan per bulan, dihitung saat anggota check-in. Setiap kunjungan setelahnya menjadi hari tambahan: {p}, di tagihan bulan depan.',
   planNoteGold: 'Paket Gold mencakup kunjungan tanpa batas. Anggota bisa datang di hari buka mana pun.', fee: 'Biaya bulanan',
+  dementiaFee: 'Perawatan demensia dikenakan biaya tambahan {rp} per bulan.',
   extraDay: 'Hari tambahan', extraDayVal: '{p}, di tagihan berikutnya',
   billingContact: 'Kontak tagihan', va: 'Virtual account', vaLater: 'Dibuat bersama tagihan pertama', nextChange: 'Perubahan paket berikutnya', fromDate: 'mulai {d}', couple: 'Pasangan',
   coupleVal: 'Paket dan tagihan sendiri. {n} bisa membayar keduanya sekaligus dengan tagihan {s}', balance: 'Sisa tagihan', membership: 'Keanggotaan', endedOn: 'Berakhir {d}', endsOn: 'Berakhir {d}',

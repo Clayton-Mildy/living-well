@@ -270,7 +270,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
 
 // ---------- plans and pricing ----------
 /** Prices (and the Flex visits rule) as typed on the Plans screen but not saved yet. */
-export interface PriceDraft { flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; from: ISODate; flexQuota?: number }
+export interface PriceDraft { flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; dementia?: number; from: ISODate; flexQuota?: number }
 /** The period the next invoice run bills: this month's if it hasn't run yet, else next month's. */
 export const nextRunPeriod = (s: ClubState, today: ISODate): YM => (runDone(s, ym(today)) ? addMonths(ym(today), 1) : ym(today));
 export interface InvoicePreview { period: YM; issueDate: ISODate; member: Member; payer?: FamilyContact; lines: InvoiceLine[]; total: number; others: { member: Member; total: number }[] }
@@ -282,7 +282,7 @@ export function invoicePreview(s: ClubState, memberId: string, draft: PriceDraft
   const st: ClubState = draft
     ? {
         ...s,
-        prices: { ...s.prices, __draft: { id: '__draft', clubId: s.clubId, createdAt: '', createdBy: 'system', from: draft.from, flex: draft.flex, gold: draft.gold, extra: draft.extra, registration: draft.registration ?? feeOf(priceOn(s, draft.from), 'registration'), trial: draft.trial ?? feeOf(priceOn(s, draft.from), 'trial'), leave: draft.leave ?? feeOf(priceOn(s, draft.from), 'leave'), sample: { flex: false, gold: false, extra: false } } },
+        prices: { ...s.prices, __draft: { id: '__draft', clubId: s.clubId, createdAt: '', createdBy: 'system', from: draft.from, flex: draft.flex, gold: draft.gold, extra: draft.extra, registration: draft.registration ?? feeOf(priceOn(s, draft.from), 'registration'), trial: draft.trial ?? feeOf(priceOn(s, draft.from), 'trial'), leave: draft.leave ?? feeOf(priceOn(s, draft.from), 'leave'), dementia: draft.dementia ?? feeOf(priceOn(s, draft.from), 'dementia'), sample: { flex: false, gold: false, extra: false } } },
         club: draft.flexQuota ? { ...s.club, settings: { ...s.club.settings, flexQuota: draft.flexQuota } } : s.club,
       }
     : s;

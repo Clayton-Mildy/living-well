@@ -112,6 +112,8 @@ export interface PriceVersion extends Row {
   registration?: number;
   trial?: number;
   leave?: number;
+  /** round 14: the monthly dementia care fee, on top of the plan for a member whose registration answers yes */
+  dementia?: number;
   sample: { flex: boolean; gold: boolean; extra: boolean };
   by?: Actor;
 }
@@ -745,7 +747,7 @@ export interface VendorInvoice extends Row {
 
 export interface InvoiceLine {
   id: string;
-  kind: 'plan' | 'extraDay' | 'adjustment' | 'credit' | 'venue';
+  kind: 'plan' | 'extraDay' | 'adjustment' | 'credit' | 'venue' | 'dementia';
   label: string; // i18n key
   params?: Record<string, string | number>;
   qty: number;

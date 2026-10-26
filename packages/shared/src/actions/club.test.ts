@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, systemUser, live, priceOn, surveyStats, updatesFor, actionItems, liveSurvey, ratingLinkOf, DomainError, type ClubState } from '../index';
+import { buildSeed, execute, feeOf, getUser, systemUser, live, priceOn, surveyStats, updatesFor, actionItems, liveSurvey, ratingLinkOf, DomainError, type ClubState } from '../index';
 import { appFamilies, audienceRecipients, broadcastRecipients, checkVenueSlot, resolveSurveyAudience, surveyMembers, venueClash } from '../rules/mgmt';
 
 const T = '2026-10-21'; // Wednesday
@@ -663,6 +663,17 @@ describe('prices and club rules', () => {
     fails(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, trial: 0, from: T }, 's9', 'err.invalid');
     const onlyLeave = run(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, leave: 260000, from: T }, 's9');
     expect(priceOn(onlyLeave.state, T)).toMatchObject({ registration: 2500000, trial: 450000, leave: 260000 });
+  });
+  it('the dementia care fee is a price too (round 14): optional, non-negative, left out = unchanged', () => {
+    const s = seed().citra;
+    expect(priceOn(s, T).dementia).toBeUndefined();
+    const r = run(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, dementia: 800000, from: T }, 's9');
+    expect(priceOn(r.state, T)).toMatchObject({ dementia: 800000, registration: 2500000 });
+    expect(feeOf(priceOn(r.state, T), 'dementia')).toBe(800000);
+    fails(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, dementia: 750000, from: T }, 's9', 'err.noChanges'); // the default figure again
+    fails(s, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, dementia: -1, from: T }, 's9', 'err.invalid');
+    const later = run(r.state, 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, leave: 260000, from: T }, 's9');
+    expect(priceOn(later.state, T).dementia).toBe(800000); // a save that leaves it out keeps it
   });
   it('the notify toggle: the team is told by default, and not when it is switched off', () => {
     const s = seed().citra;
