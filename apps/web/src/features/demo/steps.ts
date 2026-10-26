@@ -52,7 +52,7 @@ export const DEMO_STEPS: DemoStep[] = [
   { id: 'log', time: '13:15', titleKey: 'demo.s5.title', subKey: 'demo.s5.sub', runLabelKey: 'demo.s5.run', done: (s) => !!logToday(s),
     async run() {
       await ensureCheckedIn(); await demo.setClock('13:15'); await demo.signInAs('s5'); demo.go('/log');
-      const r = await demo.act('log.save', { memberId: 'm1', date: today(), mood: 'cheerful', lunch: 'half', joined: 'yes', communicative: 'normal', content: 'normal', note: 'Oma Lina sang Bengawan Solo again at keroncong and asked for an extra cup of teh melati. She ate about half of her lunch.' });
+      const r = await demo.act('log.save', { memberId: 'm1', date: today(), mood: 'cheerful', joined: 'yes', communicative: 'normal', content: 'normal', note: 'Oma Lina sang Bengawan Solo again at keroncong and asked for an extra cup of teh melati. She was in good spirits all afternoon.' }); // round 14: how much she ate is the kitchen's mark, not the teacher's
       // Dinar's log waits for management; Ega approves it and the family is told
       if (r?.logId) { await demo.sleep(900); await demo.signInAs('s9'); demo.go('/reviews?tab=logs'); await demo.sleep(900); await demo.act('approval.approve', { type: 'logs', ids: [r.logId as string] }); }
     } },
