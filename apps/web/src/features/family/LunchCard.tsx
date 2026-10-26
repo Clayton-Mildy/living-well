@@ -25,9 +25,9 @@ export function LunchCard({ members, stories, past, onOpenPhoto }: { members: Me
         {[...groups].filter(([dishes]) => dishes).map(([dishes, ms]) => (
           <span key={dishes} data-testid="lunch-card-dishes" style={{ fontSize: 16, lineHeight: '22px', color: F.text, overflowWrap: 'anywhere' }}>{groups.size > 1 ? `${ms.map(displayName).join(` ${t('common.and')} `)}: ` : ''}{dishes}</span>
         ))}
-        {photos.length ? <PhotoTiles photos={photos} edge={false} radius={12} gap={4} testId="lunch-card-photos" label={(p) => famPhotoAria(s, p, t, fmt.lang)} onOpen={(p) => onOpenPhoto(p, photos)} /> : null}
+        {photos.length ? <div data-testid="lunch-photos" data-count={photos.length}><PhotoTiles photos={photos} edge={false} radius={12} gap={4} label={(p) => famPhotoAria(s, p, t, fmt.lang)} onOpen={(p) => onOpenPhoto(p, photos)} /></div> : null}
         {came.map((x) => (
-          <span key={x.m.id} data-testid="lunch-card-amount" data-member={x.m.id} data-amount={x.lunch!.amount ?? ''} style={{ fontSize: 15, lineHeight: '21px', fontWeight: x.lunch!.amount ? 500 : 400, color: x.lunch!.amount ? F.sage : F.muted }}>
+          <span key={x.m.id} data-testid="lunch-amount" data-member={x.m.id} data-amount={x.lunch!.amount ?? ''} style={{ fontSize: 15, lineHeight: '21px', fontWeight: x.lunch!.amount ? 500 : 400, color: x.lunch!.amount ? F.sage : F.muted }}>
             {multi ? `${displayName(x.m)}: ` : ''}{x.lunch!.amount ? t('ftoday.dlAte_' + x.lunch!.amount) : none}
           </span>
         ))}

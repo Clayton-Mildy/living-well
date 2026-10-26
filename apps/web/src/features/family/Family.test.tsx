@@ -101,7 +101,6 @@ describe('family Today', () => {
     const rows = Array.from(document.querySelectorAll('[data-tl]'));
     expect(rows.length).toBeGreaterThan(2);
     expect(rows.every((x) => x.getAttribute('data-state') === 'done')).toBe(true);
-    expect(q('[data-testid="lunch-amount"]')).toBeTruthy();
     expect(q('[data-testid="took"]')).toBeTruthy();
     expect(q('[data-testid="survey-card"]')).toBeNull(); // the survey is for today
     // the timeline is a rail: a dot per step (bronze for a step that is over) beside the time and title
@@ -109,7 +108,7 @@ describe('family Today', () => {
     // round 14: the Lunch card follows the timeline (dishes and how much she ate); the daily log below it no longer has a Lunch round
     const card = q('[data-testid="lunch-card"]')!;
     expect(card.textContent).toContain('Lunch');
-    expect(card.querySelector('[data-testid="lunch-card-amount"]')?.getAttribute('data-amount')).toBeTruthy();
+    expect(card.querySelector('[data-testid="lunch-amount"]')?.getAttribute('data-amount')).toBeTruthy();
     expect(card.querySelector('[data-testid="lunch-card-dishes"]')?.textContent).toBeTruthy();
     expect(q('[data-testid="timeline"]')!.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // the daily log below it, every round in the same order: each session, mood, then the team's note (once)
@@ -126,6 +125,23 @@ describe('family Today', () => {
     expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(qa('[data-testid="team-log"]').length).toBeLessThanOrEqual(1); // the note is not shown twice
     expect(qa('[data-testid="log-block"]')).toHaveLength(1);
+  });
+
+  it('round 14: the lunch pictures and the portion show once, on the Lunch card; the timeline row keeps its time and title only', async () => {
+    const view = open('f1');
+    const day = visitDays(view, 'm1', T).filter((d) => d < T).pop()!;
+    const photo = { id: 'ph-r14-lunch', clubId: 'citra', createdAt: `${day}T12:10`, createdBy: 'staff:s9', date: day, time: '12:10', kind: 'lunch', media: 'photo', memberIds: [], tone: 1, takenBy: 's9', visibility: 'visible', mediaId: 'md_test_lunch' };
+    (view.photos as Record<string, unknown>)[photo.id] = photo;
+    view.dayMenus[day] = { ...view.dayMenus[day], photoIds: [...(view.dayMenus[day]?.photoIds ?? []), photo.id] } as never;
+    await show(<FamilyToday />, `/today?member=m1&date=${day}`);
+    expect(qa('[data-testid="lunch-photos"]')).toHaveLength(1);
+    expect(qa('[data-testid="lunch-photos"] [data-photo-id]').length).toBeGreaterThan(0);
+    expect(qa('[data-testid="lunch-amount"]')).toHaveLength(1);
+    const tl = q('[data-testid="timeline"]')!;
+    expect(tl.querySelector('[data-testid="lunch-photos"]')).toBeNull();
+    expect(tl.querySelector('[data-testid="lunch-amount"]')).toBeNull();
+    expect(tl.querySelector('[data-tl="lunch"]')?.textContent).toContain('Lunch');
+    expect(q('[data-testid="lunch-card"]')!.contains(q('[data-testid="lunch-photos"]'))).toBe(true);
   });
 
   it('a weekday she did not come: a gentle sentence, the programme as "what was on", a way to her last visit', async () => {
@@ -191,8 +207,8 @@ describe('family Today', () => {
     await show(<FamilyToday />, '/today');
     const log = q('[data-testid="daily-log"]')!;
     expect(log.querySelectorAll('[data-testid="log-block"]')).toHaveLength(1);
-    expect(q('[data-testid="lunch-card-amount"]')?.textContent).toContain('Not logged yet'); // the Lunch card carries how much was eaten
-    expect(q('[data-testid="lunch-card-amount"]')?.getAttribute('data-amount')).toBe('');
+    expect(q('[data-testid="lunch-amount"]')?.textContent).toContain('Not logged yet'); // the Lunch card carries how much was eaten
+    expect(q('[data-testid="lunch-amount"]')?.getAttribute('data-amount')).toBe('');
     expect(log.querySelector('[data-testid="log-lunch"]')).toBeNull();
     const sessions = Array.from(log.querySelectorAll('[data-testid="log-session"]'));
     expect(sessions.length).toBeGreaterThan(0);

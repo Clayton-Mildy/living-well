@@ -177,7 +177,7 @@ test('Lunch round: Yohanes marks Bapak Bambang "Most" with a "Good" face on /lun
   await signIn(fam.page, 'fm10_0', '/today');
   await expect(fam.page.getByTestId('lunch-card')).toBeVisible();
   await expect(fam.page.getByTestId('lunch-card-dishes')).toContainText('Sop ikan kakap');
-  await expect(fam.page.getByTestId('lunch-card-amount')).toContainText('Not logged yet');
+  await expect(fam.page.getByTestId('lunch-amount')).toContainText('Not logged yet');
   // Ega approves it in Approvals ▸ Daily logs, where it reads "Ate most"
   const ega = await newPage();
   const ec = watchConsole(ega.page);
@@ -187,7 +187,7 @@ test('Lunch round: Yohanes marks Bapak Bambang "Most" with a "Good" face on /lun
   await ega.page.request.post('/api/actions/approval.approve', { headers: { 'x-user-id': 's9' }, data: { mutationId: 'e2e-r14-lunch-approve', club: 'citra', input: { type: 'logs', ids: ['log-m10-2026-10-21'] } } });
   // now the family's Lunch card says how much he ate
   await fam.page.reload();
-  await expect(fam.page.getByTestId('lunch-card-amount')).toContainText('Ate most');
+  await expect(fam.page.getByTestId('lunch-amount')).toContainText('Ate most');
   await expect(fam.page.getByTestId('daily-log').getByText('Lunch', { exact: true })).toHaveCount(0); // not twice: the daily log has no Lunch row any more
   await assertNoHorizontalScroll(fam.page);
   fc.assertClean();

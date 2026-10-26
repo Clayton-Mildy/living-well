@@ -186,6 +186,7 @@ export const careActions = [
     can: (u) => logWriters(u),
     parse: (raw) => parseWith(logSchema, withMood(raw)),
     run(d, input, ctx) {
+      if (input.lunch !== undefined && !isMgmt(ctx.user)) ctx.fail('care.err.lunchKitchen'); // round 14: lunch is the F&B team's (kitchen.lunchMark)
       checkLogDay(ctx, input.date);
       requireAttended(d, ctx, input.memberId, input.date);
       const kind = writeLog(d, ctx, input);
@@ -243,7 +244,7 @@ export const careActions = [
       const todo = attendedOn(view, date).filter((m) => !notesSaved(logs.get(m.id)));
       if (!todo.length) ctx.fail('activity.err.nothingToLog');
       const sessions = Object.fromEntries(roundsOf(view, date).filter((r) => r.kind === 'session').map((r) => [r.id, 'joined' as const]));
-      const marks: Marks = { mood: NORMAL_LOG.mood, lunch: NORMAL_LOG.lunch, communicative: NORMAL_LOG.communicative, content: NORMAL_LOG.content, sessions };
+      const marks: Marks = { mood: NORMAL_LOG.mood, communicative: NORMAL_LOG.communicative, content: NORMAL_LOG.content, sessions };
       for (const m of todo) applyMarks(d, ctx, m.id, date, marks, true);
       ctx.feed({ icon: 'edit_note', key: 'activity.feed.markMood', params: { names: namesOf(d, todo.map((m) => m.id)), n: todo.length } });
       ctx.result.saved = todo.length;

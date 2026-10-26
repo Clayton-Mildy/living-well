@@ -427,7 +427,7 @@ describe('activity pictures (KC round 7)', () => {
     s = run(s, 'photo.addActivity', { date: T, activity: 'Batik painting' }, 's9', 'l1').state;
     const only = libraryPhotos(s, { kind: 'activities' });
     expect(only.length).toBeGreaterThan(0);
-    expect(only.every((p) => p.kind !== 'lunch' && p.kind !== 'arrival')).toBe(true); // round 14: Activities = everything but the meals and the door camera
+    expect(only.every((p) => p.kind === 'group' || p.kind === 'activity')).toBe(true); // round 14: Activities = group and session pictures (solo and arrival are Portraits, lunch is Meals), like the family chips
     const meals = libraryPhotos(s, { kind: 'meals' });
     expect(meals.length).toBeGreaterThan(0);
     expect(meals.every((p) => p.kind === 'lunch')).toBe(true); // lunch and tea pictures

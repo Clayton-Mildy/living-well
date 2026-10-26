@@ -17,7 +17,7 @@ const fails = (s: ClubState, name: string, input: unknown, uid: string, code: st
   try { run(s, name, input, uid); } catch (e) { expect(e).toBeInstanceOf(DomainError); expect((e as DomainError).code).toBe(code); return; }
   throw new Error(`expected ${name} to fail with ${code}`);
 };
-const logIn = { mood: 'calm', lunch: 'all', joined: 'yes', communicative: 'normal', content: 'normal', note: '' };
+const logIn = { mood: 'calm', joined: 'yes', communicative: 'normal', content: 'normal', note: '' };
 const LOG = `log-m10-${T}`;
 const famLogs = (s: ClubState, uid: string) => Object.values(projectForFamily(s, uid).dailyLogs).filter((l) => l.date === T);
 

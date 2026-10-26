@@ -841,13 +841,12 @@ test('The timeline follows the clock for a member in the club, and every approve
     await expect(page.getByTestId('lunch-photos')).toHaveCount(0);
     expect((await api(request, 's9', 'menu.postLunchPhoto', { date: TODAY, mediaId: 'md_demo_food-rawon' })).ok()).toBe(true);
     await expect(page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '1');
-    await expect(page.getByTestId('lunch-photos')).toHaveAttribute('aria-label', /^View image · Lunch/); // KC round 9: the picture itself sits on the row
+    await expect(page.getByTestId('lunch-photos').locator('[data-photo-id]').first()).toHaveAttribute('aria-label', /^Lunch/); // round 14: the pictures are on the Lunch card, once
     expect((await api(request, 's9', 'menu.postLunchPhoto', { date: TODAY, notify: false, mediaId: 'md_demo_food-gado' })).ok()).toBe(true);
     await expect(page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '2'); // live: all the approved photos of the day
-    await expect(page.getByTestId('lunch-photos')).toHaveAttribute('aria-label', /^View 2 images · Lunch/);
-    await page.getByTestId('lunch-photos').click(); // opens the row's pictures underneath
-    await expect(page.getByTestId('lunch-photos-open').locator('[data-photo-id]')).toHaveCount(2);
-    await page.getByTestId('lunch-photos-open').locator('[data-photo-id]').first().click();
+    await expect(page.getByTestId('lunch-photos').locator('[data-photo-id]')).toHaveCount(2);
+    await expect(tl.getByTestId('lunch-photos')).toHaveCount(0); // not on the timeline row too
+    await page.getByTestId('lunch-photos').locator('[data-photo-id]').first().click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.keyboard.press('Escape');
   }

@@ -269,7 +269,7 @@ export function joinedOf(sessions: DailyLog['sessions']): DailyLog['joined'] {
 }
 
 // ---------- photos ----------
-export interface PhotoFilter { memberId?: string; activity?: string; /** round 14: 'meals' = the lunch and tea pictures, 'activities' = everything else except the door camera's arrival pictures */ kind?: 'meals' | 'activities'; from?: ISODate; to?: ISODate; visibility?: 'visible' | 'hidden' | 'pending' | 'all' }
+export interface PhotoFilter { memberId?: string; activity?: string; /** round 14: 'meals' = the lunch and tea pictures, 'activities' = the group and session pictures (the solo portraits and the door camera's arrival pictures are the family's Portraits) */ kind?: 'meals' | 'activities'; from?: ISODate; to?: ISODate; visibility?: 'visible' | 'hidden' | 'pending' | 'all' }
 /** Photos for the library: everything not removed (including photos still waiting for approval), newest first. */
 export function libraryPhotos(s: ClubState, f: PhotoFilter = {}): Photo[] {
   const vis = f.visibility ?? 'all';
@@ -280,7 +280,7 @@ export function libraryPhotos(s: ClubState, f: PhotoFilter = {}): Photo[] {
         p.visibility !== 'draft' && // KC round 7: a shot nobody has sent is not in the library
         (vis === 'all' || p.visibility === vis) &&
         (!f.memberId || p.memberIds.includes(f.memberId)) &&
-        (!f.kind || (f.kind === 'meals' ? p.kind === 'lunch' : p.kind !== 'lunch' && p.kind !== 'arrival')) &&
+        (!f.kind || (f.kind === 'meals' ? p.kind === 'lunch' : p.kind !== 'lunch' && p.kind !== 'arrival' && p.kind !== 'solo')) &&
         (!f.activity || photoActivity(p) === f.activity) &&
         (!f.from || p.date >= f.from) &&
         (!f.to || p.date <= f.to),
