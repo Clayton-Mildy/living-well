@@ -103,15 +103,15 @@ test('plans: the page reads in sections, the visits field sits in Plans, and Cha
   c.assertClean();
 });
 
-test('front desk: Caca changes Oma Lina’s plan (pending banner) and records a cash payment; Fransiska confirms it', async ({ page }) => {
+test('front desk: Caca changes Oma Lina’s plan (applies at once, no review) and records a cash payment; Fransiska confirms it', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's1', '/members/m1/plan');
   await page.getByRole('button', { name: 'Change plan' }).click();
   const dlg = page.getByRole('dialog', { name: 'Change plan' });
   await dlg.getByText(/^Gold · /).click();
   await expect(dlg.getByTestId('plan-effective-fixed')).toContainText('1 November 2026'); // the desk can only pick the 1st of next month
-  await dlg.getByRole('button', { name: 'Submit for review' }).click();
-  await expect(page.getByRole('group', { name: 'Pending review' })).toBeVisible();
+  await dlg.getByRole('button', { name: 'Save changes' }).click(); // round 14: no review, no "waiting for management" step
+  await expect(page.getByRole('group', { name: 'Pending review' })).toHaveCount(0);
   // a cash payment on the October invoice waits for finance
   await page.getByRole('button', { name: /INV-2610-001$/ }).click();
   const sheet = page.getByRole('dialog', { name: 'Invoice INV-2610-001' });
@@ -124,9 +124,6 @@ test('front desk: Caca changes Oma Lina’s plan (pending banner) and records a 
   await expect(page.getByText('Waiting for you · 1')).toBeVisible();
   await page.getByRole('button', { name: /^Confirm/ }).first().click();
   await expect(page.getByText(/^Waiting for you/)).toHaveCount(0);
-  // Ega sees the plan change in Approvals
-  await signIn(page, 's9', '/reviews');
-  await expect(page.getByText(/Oma Lina/).first()).toBeVisible();
   c.assertClean();
 });
 

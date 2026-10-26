@@ -1,8 +1,9 @@
 // KC round 7: the front desk's month-end membership follow-up (renewals). Each member is followed up once per coming month.
 // Subscriptions run month to month: before the month ends Caca asks every family whether they continue, switch plan, take leave or stop, and records the
-// answer (a FollowUp). A change that touches the membership (upgrade, downgrade, leave, stop) waits for management's approval when she records it, then applies
-// from the 1st (actions/renewals.ts, actions/approvals.ts). Leave keeps its own rules (rules/leave.ts): 14 days' notice before the month, at most 2 months.
-import type { ClubState, FamilyContact, FollowUp, FollowUpCall, FollowUpOutcome, ISODate, Member, Plan, Relation, YM } from '../types';
+// answer (a FollowUp). Round 14: a change that touches the membership (upgrade, downgrade, leave, stop) applies at once, whoever records it (it is dated
+// from the 1st), and can be undone until the month starts (actions/renewals.ts); old rows that still wait for management can be decided in the Approvals hub
+// (actions/approvals.ts). Leave keeps its own rules (rules/leave.ts): 14 days' notice before the month, at most 2 months.
+import type { Actor, ClubState, DT, FamilyContact, FollowUp, FollowUpCall, FollowUpOutcome, ISODate, Member, Plan, Relation, YM } from '../types';
 import { addDays, addMonths, live, monthStart, sortBy, ym } from '../util';
 import { approvedMembers, contactsOfMember, currentMembership, isPendingRow, memberName, membershipStatus, planOn } from './core';
 import { issueDateOf } from './billing';
@@ -22,8 +23,8 @@ export const FOLLOW_UP_OUTCOMES: FollowUpOutcome[] = ['continue', 'upgrade', 'do
 /** Outcomes that change the membership: someone but management records them, management approves, and they apply from the 1st. */
 export const CHANGE_OUTCOMES: FollowUpOutcome[] = ['upgrade', 'downgrade', 'leave', 'stop'];
 export const isChange = (o: FollowUpOutcome | undefined): boolean => !!o && CHANGE_OUTCOMES.includes(o);
-/** The outcomes offered for a member: switching goes the one way their plan allows (Flex to Gold, Gold to Flex). */
-export const outcomeChoices = (plan: Plan): FollowUpOutcome[] => ['continue', plan === 'flex' ? 'upgrade' : 'downgrade', 'leave', 'stop', 'noAnswer'];
+/** The changes offered for a member (round 14: "continue" and "no answer" are not recorded any more): switching goes the one way their plan allows (Flex to Gold, Gold to Flex). */
+export const outcomeChoices = (plan: Plan): FollowUpOutcome[] => [plan === 'flex' ? 'upgrade' : 'downgrade', 'leave', 'stop'];
 /** The plan an upgrade or a downgrade ends on. */
 export const planAfter = (o: 'upgrade' | 'downgrade'): Plan => (o === 'upgrade' ? 'gold' : 'flex');
 
@@ -155,6 +156,30 @@ export function renewalsLeft(s: ClubState, today: ISODate, month: YM = renewalMo
     const f = followUpOf(s, m.id, month);
     return stateOf(f, f?.status === 'done' ? undefined : askedInApp(s, m, month)) === 'toDo';
   }).length;
+}
+
+// ---------- changes (round 14: the Next month screen lists what was recorded, newest first) ----------
+export interface ChangeRow {
+  memberId: string;
+  outcome: FollowUpOutcome;
+  /** the day the change starts: the 1st for a plan switch, the first leave month's 1st, the day after a stop's last day */
+  from: ISODate;
+  by: Actor;
+  at: DT;
+  /** the month has not started: the change can still be undone */
+  canUndo: boolean;
+}
+/** The changes recorded for `month` (applied at once; a row that still waits for management is not one yet), newest first. */
+export function changeRows(s: ClubState, month: YM, today: ISODate): ChangeRow[] {
+  const first = monthStart(month);
+  const rows: ChangeRow[] = [];
+  for (const f of Object.values(s.followUps ?? {})) {
+    if (f.deletedAt || f.month !== month || !isApplied(f) || !f.outcome) continue;
+    const last = f.calls[f.calls.length - 1];
+    const from = f.outcome === 'leave' ? monthStart(f.leaveMonths?.[0] ?? month) : f.outcome === 'stop' ? addDays(f.lastDay ?? defaultLastDay(month), 1) : first;
+    rows.push({ memberId: f.memberId, outcome: f.outcome, from, by: last?.by ?? f.createdBy, at: last?.at ?? f.createdAt, canUndo: today < first });
+  }
+  return rows.sort((a, b) => (a.at === b.at ? (a.memberId < b.memberId ? -1 : 1) : a.at < b.at ? 1 : -1));
 }
 
 // ---------- dates ----------

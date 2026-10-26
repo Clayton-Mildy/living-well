@@ -1,18 +1,19 @@
 // KC round 7: the front desk's month-end membership follow-up (renewals). See rules/renewals.ts.
 //   followUp.record { memberId, month, outcome, note?, leaveMonths?, lastDay?, endReason? }
-// Caca (lobby), finance and management record what the family answered for the coming month. "Continue", "no answer" and "call back" never need approval.
-// A change (upgrade, downgrade, leave, stop) recorded by anyone but management waits in the Approvals hub (actions/approvals.ts, type 'renewals') and applies
-// from the 1st once approved; management's own record applies at once. Families only hear about it once it is applied.
+//   followUp.undo { memberId, month }
+// Caca (lobby), finance and management record what the family answered for the coming month. Round 14: a change (upgrade, downgrade, leave, stop) applies at
+// once, whoever records it (a plan entry from the 1st, the leave months, the last day), and can be undone until the month starts. The Approvals hub's
+// 'renewals' branches (actions/approvals.ts) only decide rows that were already waiting before.
 import type { Draft } from 'immer';
 import type { Actor, ClubState, EndReason, FollowUp, FollowUpOutcome, ISODate, Member, YM } from '../types';
 import { defineAction, DomainError, hasRole, type ActionDef, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
-import { clearApproval, markPending, needsApproval } from './approvalGate';
+import { clearApproval } from './approvalGate';
 import { addPlanEntry, applyEnding, obj, oneOf, txt } from './members';
 import { addLeave } from './membership';
 import { planName } from './planRequests';
 import { currentMembership, isPendingRow, membershipStatus, planOn } from '../rules/core';
-import { feeOf, issueDateOf, priceOn } from '../rules/billing';
+import { feeOf, issueDateOf, paidOn, priceOn } from '../rules/billing';
 import { END_REASONS, isISO } from '../rules/members';
 import {
   FOLLOW_UP_OUTCOMES, defaultLastDay, followUpId, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthsCheck, planAfter, renewalMembers,
@@ -136,15 +137,8 @@ export const renewalActions: ActionDef[] = [
       if (input.outcome === 'stop') { f.lastDay = lastDay; f.endReason = input.endReason ?? 'familyDecision'; } else { delete f.lastDay; delete f.endReason; }
 
       const name = shortOf(d, m.id);
-      if (isChange(input.outcome) && needsApproval(ctx)) {
-        // waits for management: nothing changes for the member (or the family) until it is approved
-        f.status = 'pending';
-        markPending(f, ctx, undefined);
-        ctx.result.pending = true;
-      } else {
-        clearApproval(f);
-        if (isChange(input.outcome)) { applyChange(d, f, ctx, ctx.actor); f.status = 'done'; } else f.status = input.outcome === 'continue' ? 'done' : 'open';
-      }
+      clearApproval(f);
+      if (isChange(input.outcome)) { applyChange(d, f, ctx, ctx.actor); f.status = 'done'; } else f.status = input.outcome === 'continue' ? 'done' : 'open';
       const lm = f.leaveMonths ?? [];
       const key = input.outcome === 'leave' && lm.length > 1 ? 'leave2' : input.outcome;
       ctx.feed({
@@ -153,6 +147,40 @@ export const renewalActions: ActionDef[] = [
       });
       ctx.result.followUpId = id;
       ctx.result.status = f.status;
+    },
+  }),
+  defineAction<{ memberId: string; month: YM }>({
+    name: 'followUp.undo',
+    can: people,
+    parse: (raw) => { const o = obj(raw); return { memberId: txt(o.memberId, 60), month: ymOf(o.month) }; },
+    // takes back an applied change while its month has not started: the plan entry from the 1st, the leave months or the last day go, and the member is open again
+    run(d, input, ctx) {
+      const m = requireMember(d, input.memberId, ctx);
+      const f = d.followUps?.[followUpId(input.month, m.id)];
+      if (!f || f.deletedAt) ctx.fail('err.notFound');
+      if (!isApplied(f as FollowUp)) ctx.fail('err.invalid');
+      const first = monthStart(input.month);
+      if (ctx.today >= first) ctx.fail('renewals.err.started');
+      const cur = currentMembership(m);
+      if (f.outcome === 'upgrade' || f.outcome === 'downgrade') {
+        m.plans = m.plans.filter((p) => p.from !== first);
+      } else if (f.outcome === 'leave') {
+        const months = f.leaveMonths ?? [];
+        cur.leaves = (cur.leaves ?? []).filter((l) => !months.includes(l.month));
+        if (!cur.leaves.length) delete cur.leaves;
+      } else if (f.outcome === 'stop' && cur.lastDay === f.lastDay) {
+        // the final invoice the ending made goes with it (as when management cancels an ending)
+        const at = cur.endedAt;
+        for (const i of Object.values(d.invoices)) {
+          if (i.memberId === m.id && i.kind === 'final' && !i.voided && at && i.createdAt === at && paidOn(d as unknown as ClubState, i.id) <= 0) i.voided = { at: ctx.nowDT, by: ctx.actor, reason: 'endingCancelled' };
+        }
+        delete cur.lastDay; delete cur.endReason; delete cur.endNote; delete cur.endedBy; delete cur.endedAt;
+      }
+      delete f.outcome; delete f.leaveMonths; delete f.lastDay; delete f.endReason;
+      clearApproval(f);
+      f.status = 'open';
+      ctx.feed({ icon: 'undo', key: 'renewals.feed.undone', memberId: m.id, params: { name: shortOf(d, m.id), month: input.month } });
+      ctx.result.followUpId = f.id;
     },
   }),
 ];

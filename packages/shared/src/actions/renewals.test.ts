@@ -1,10 +1,11 @@
-// KC round 7: the month-end follow-up. Caca records what each family answered for the coming month; a change (upgrade, downgrade, leave, stop) waits for
-// management and applies from the 1st; management's own record applies at once; leave keeps its notice rules.
+// KC round 7: the month-end follow-up. Caca records what each family answered for the coming month; leave keeps its notice rules.
+// Round 14: a change (upgrade, downgrade, leave, stop) applies at once, whoever records it, and can be undone until the 1st; rows that were already waiting
+// for management from before can still be decided.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { actionItems, buildSeed, execute, getUser, live, membershipStatus, planOn, toMin, updatesFor, DomainError, type ClubState } from '../index';
 import { approvalHistory, pendingItems } from '../rules/approvals';
-import { followUpId, followUpOf, renewalCounts, renewalRows, renewalsLeft } from '../rules/renewals';
+import { changeRows, followUpId, followUpOf, renewalCounts, renewalRows, renewalsLeft } from '../rules/renewals';
 
 const T = '2026-10-21';
 const MONTH = '2026-11';
@@ -63,46 +64,38 @@ describe('recording a follow-up', () => {
   });
 });
 
-describe('a change waits for management, then applies from the 1st', () => {
-  it('Caca records an upgrade: nothing changes and the family hears nothing; Ega approves and it applies from 1 Nov', () => {
-    let s = record(fresh(), 'm1', 'upgrade', 's1', { note: 'Maria agreed.' }).state;
-    const f = fu(s, 'm1');
-    expect(f).toMatchObject({ outcome: 'upgrade', status: 'pending', approval: { status: 'pending', by: 'staff:s1' } });
-    expect(planOn(s.members.m1, '2026-11-01').plan).toBe('flex');
-    expect(famTold(s, 'f1', 'renewals.notif.plan')).toBe(false);
-    expect(renewalRows(s, MONTH).find((r) => r.m.id === 'm1')?.state).toBe('waiting');
-    expect(pendingItems(s, 'renewals')).toMatchObject([{ id: f.id, sub: 'renewal', memberId: 'm1', by: 'staff:s1' }]);
-    fails(s, 'approval.approve', { type: 'renewals', ids: [f.id] }, 's1', 'err.forbidden');
-    s = run(s, 'approval.approve', { type: 'renewals', ids: [f.id] }, 's9').state;
+describe('a change applies at once', () => {
+  it('a lobby change applies at once: no approval, the plan entry starts on 1 Nov, the family hears', () => {
+    const s = record(fresh(), 'm1', 'upgrade', 's1', { note: 'Maria agreed.' }).state;
+    expect(fu(s, 'm1')).toMatchObject({ outcome: 'upgrade', status: 'done', note: 'Maria agreed.' });
+    expect(fu(s, 'm1').approval).toBeUndefined();
     expect(planOn(s.members.m1, '2026-10-31').plan).toBe('flex');
     expect(planOn(s.members.m1, '2026-11-01')).toMatchObject({ plan: 'gold', by: 'staff:s1' });
-    expect(fu(s, 'm1')).toMatchObject({ status: 'done', approval: { status: 'approved', decidedBy: 'staff:s9' } });
     expect(famTold(s, 'f1', 'renewals.notif.plan')).toBe(true);
     expect(pendingItems(s, 'renewals')).toEqual([]);
-    expect(approvalHistory(s).find((h) => h.type === 'renewals')).toMatchObject({ status: 'approved', by: 'staff:s1', memberId: 'm1' });
     fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'continue' }, 's1', 'renewals.err.applied');
   });
 
-  it('a rejection needs a reason, changes nothing, tells Caca and puts the member back on her list', () => {
-    let s = record(fresh(), 'm1', 'upgrade').state;
-    const id = fu(s, 'm1').id;
-    fails(s, 'approval.reject', { type: 'renewals', ids: [id], reason: ' ' }, 's9', 'err.noteRequired');
-    s = run(s, 'approval.reject', { type: 'renewals', ids: [id], reason: 'Not eligible this month.' }, 's9').state;
-    expect(fu(s, 'm1')).toMatchObject({ status: 'rejected', approval: { status: 'rejected', reason: 'Not eligible this month.' } });
-    expect(planOn(s.members.m1, '2026-11-01').plan).toBe('flex');
-    expect(updatesFor(s, as(s, 's1')).some((x) => x.kind === 'approvals.notif.rejected.renewals' && x.params.reason === 'Not eligible this month.')).toBe(true);
-    expect(renewalRows(s, MONTH).find((r) => r.m.id === 'm1')?.state).toBe('toDo');
-    // she can record something else
-    s = record(s, 'm1', 'continue').state;
-    expect(fu(s, 'm1')).toMatchObject({ status: 'done' });
-    expect(fu(s, 'm1').approval).toBeUndefined();
+  it('rows that were already waiting can still be approved (applies from the 1st) or rejected', () => {
+    let s = buildSeed().citra; // Caca's upgrade for Oma Lina was recorded before round 14
+    const f = fu(s, 'm1');
+    expect(f).toMatchObject({ outcome: 'upgrade', status: 'pending' });
+    expect(pendingItems(s, 'renewals')).toMatchObject([{ id: f.id, memberId: 'm1' }]);
+    fails(s, 'approval.approve', { type: 'renewals', ids: [f.id] }, 's1', 'err.forbidden');
+    fails(s, 'approval.reject', { type: 'renewals', ids: [f.id], reason: ' ' }, 's9', 'err.noteRequired');
+    const rej = run(s, 'approval.reject', { type: 'renewals', ids: [f.id], reason: 'Not eligible this month.' }, 's9').state;
+    expect(fu(rej, 'm1')).toMatchObject({ status: 'rejected', approval: { status: 'rejected', reason: 'Not eligible this month.' } });
+    expect(planOn(rej.members.m1, '2026-11-01').plan).toBe('flex');
+    s = run(s, 'approval.approve', { type: 'renewals', ids: [f.id] }, 's9').state;
+    expect(planOn(s.members.m1, '2026-11-01')).toMatchObject({ plan: 'gold', by: 'staff:s1' });
+    expect(fu(s, 'm1')).toMatchObject({ status: 'done', approval: { status: 'approved', decidedBy: 'staff:s9' } });
+    expect(famTold(s, 'f1', 'renewals.notif.plan')).toBe(true);
   });
 
-  it('management\'s own record applies at once: a downgrade, a stop', () => {
+  it('management\'s own record applies at once too: a downgrade, a stop', () => {
     let s = record(fresh(), 'm2', 'downgrade', 's9').state;
     expect(fu(s, 'm2')).toMatchObject({ status: 'done' });
     expect(planOn(s.members.m2, '2026-11-01').plan).toBe('flex');
-    expect(pendingItems(s, 'renewals')).toEqual([]);
     expect(famTold(s, 'fm2_0', 'renewals.notif.plan')).toBe(true);
     // a stop: the last day is the last day of October, the reason defaults to the family's decision
     s = record(s, 'm46', 'stop', 's9').state;
@@ -114,28 +107,84 @@ describe('a change waits for management, then applies from the 1st', () => {
     expect(row?.f?.outcome).toBe('stop');
   });
 
-  it('a stop by Caca waits too, and Ega\'s approval ends the membership', () => {
-    let s = record(fresh(), 'm20', 'stop', 's1', { lastDay: '2026-10-30', endReason: 'movedAway' }).state;
-    expect(live(s.members).find((m) => m.id === 'm20')!.memberships.at(-1)!.lastDay).toBeUndefined();
+  it('a stop by Caca ends the membership at once; the last day has to fit', () => {
+    let s = fresh();
     fails(s, 'followUp.record', { memberId: 'm20', month: MONTH, outcome: 'stop', lastDay: '2026-10-20' }, 's1', 'members.err.lastDayPast');
     fails(s, 'followUp.record', { memberId: 'm20', month: MONTH, outcome: 'stop', lastDay: '2026-12-05' }, 's1', 'renewals.err.lastDayLate');
-    s = run(s, 'approval.approve', { type: 'renewals', ids: [fu(s, 'm20').id] }, 's9').state;
-    expect(s.members.m20.memberships.at(-1)).toMatchObject({ lastDay: '2026-10-30', endReason: 'movedAway' });
+    s = record(s, 'm20', 'stop', 's1', { lastDay: '2026-10-30', endReason: 'movedAway' }).state;
+    expect(s.members.m20.memberships.at(-1)).toMatchObject({ lastDay: '2026-10-30', endReason: 'movedAway', endedBy: 'staff:s1' });
+    expect(fu(s, 'm20')).toMatchObject({ status: 'done' });
+  });
+});
+
+describe('undo until the 1st', () => {
+  const undo = (s: ClubState, memberId: string, uid = 's1', clk = clock) => run(s, 'followUp.undo', { memberId, month: MONTH }, uid, clk).state;
+  const reopened = (s: ClubState, id: string) => { const f = fu(s, id); expect(f.outcome).toBeUndefined(); expect(f.status).toBe('open'); expect(f.approval).toBeUndefined(); };
+
+  it('an upgrade: the plan entry from 1 Nov is gone and the member is back on the list', () => {
+    let s = record(fresh(), 'm1', 'upgrade').state;
+    expect(planOn(s.members.m1, '2026-11-01').plan).toBe('gold');
+    s = undo(s, 'm1');
+    expect(s.members.m1.plans.map((p) => p.from)).toEqual(fresh().members.m1.plans.map((p) => p.from));
+    expect(planOn(s.members.m1, '2026-11-01').plan).toBe('flex');
+    reopened(s, 'm1');
+    expect(renewalRows(s, MONTH).find((r) => r.m.id === 'm1')?.state).toBe('toDo');
+    // and she can record something else
+    expect(record(s, 'm1', 'continue').state.followUps[followUpId(MONTH, 'm1')].status).toBe('done');
+  });
+
+  it('a leave: the leave month is removed', () => {
+    const early = { today: '2026-10-10', nowMin: toMin('10:00') };
+    let s = run(fresh(), 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: ['2026-11', '2026-12'] }, 's1', early).state;
+    expect(s.members.m1.memberships.at(-1)!.leaves!.map((l) => l.month)).toEqual(['2026-11', '2026-12']);
+    s = undo(s, 'm1', 's1', early);
+    expect(s.members.m1.memberships.at(-1)!.leaves ?? []).toEqual([]);
+    reopened(s, 'm1');
+  });
+
+  it('a stop: the last day and the reason are gone, and the final invoice it made is voided', () => {
+    let s = record(fresh(), 'm20', 'stop', 's1', { lastDay: '2026-10-30', endReason: 'movedAway', note: 'Moving to Bali.' }).state;
+    expect(s.members.m20.memberships.at(-1)!.lastDay).toBe('2026-10-30');
+    s = undo(s, 'm20');
+    const cur = s.members.m20.memberships.at(-1)!;
+    for (const k of ['lastDay', 'endReason', 'endNote', 'endedBy', 'endedAt'] as const) expect(cur[k]).toBeUndefined();
+    expect(membershipStatus(s.members.m20, '2026-11-01')).not.toBe('ended');
+    expect(Object.values(s.invoices).filter((i) => i.memberId === 'm20' && i.kind === 'final' && !i.voided)).toEqual([]);
+    reopened(s, 'm20');
+  });
+
+  it('after the 1st it is refused; so is undoing something that was never recorded', () => {
+    const s = record(fresh(), 'm1', 'upgrade').state;
+    fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'continue' }, 's1', 'renewals.err.applied');
+    fails(s, 'followUp.undo', { memberId: 'm1', month: MONTH }, 's1', 'renewals.err.started', { today: '2026-11-01', nowMin: toMin('10:00') });
+    fails(s, 'followUp.undo', { memberId: 'm1', month: MONTH }, 's8', 'err.forbidden');
+    fails(record(fresh(), 'm2', 'continue').state, 'followUp.undo', { memberId: 'm2', month: MONTH }, 's1', 'err.invalid'); // only a change can be undone
+    fails(fresh(), 'followUp.undo', { memberId: 'm1', month: MONTH }, 's1', 'err.notFound');
+  });
+
+  it('changeRows: the applied changes of the month, newest first, with who and from when', () => {
+    let s = record(fresh(), 'm1', 'upgrade').state;
+    s = run(s, 'followUp.record', { memberId: 'm2', month: MONTH, outcome: 'downgrade' }, 's9', { today: T, nowMin: toMin('11:00') }).state;
+    s = record(s, 'm20', 'noAnswer').state; // not a change
+    const rows = changeRows(s, MONTH, T);
+    expect(rows.map((r) => [r.memberId, r.outcome, r.from, r.by, r.canUndo])).toEqual([['m2', 'downgrade', '2026-11-01', 'staff:s9', true], ['m1', 'upgrade', '2026-11-01', 'staff:s1', true]]);
+    expect(changeRows(s, MONTH, '2026-11-01').every((r) => !r.canUndo)).toBe(true);
+    expect(changeRows(s, '2026-12', T)).toEqual([]);
+    s = undo(s, 'm1');
+    expect(changeRows(s, MONTH, T).map((r) => r.memberId)).toEqual(['m2']);
   });
 });
 
 describe('leave keeps its notice rules', () => {
-  it('November\'s notice was due 17 Oct: late on the 21st, fine on the 10th; December still works and applies after approval', () => {
+  it('November\'s notice was due 17 Oct: late on the 21st, fine on the 10th; December still works and applies at once', () => {
     const s = fresh();
     fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: [MONTH] }, 's1', 'err.leaveLate');
     fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: [] }, 's1', 'err.invalid');
     fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: ['2027-01'] }, 's1', 'err.invalid'); // only the month itself and the next
     const early = { today: '2026-10-10', nowMin: toMin('10:00') };
     expect(() => run(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: [MONTH] }, 's1', early)).not.toThrow();
-    let r = record(s, 'm1', 'leave', 's1', { leaveMonths: ['2026-12'] }).state;
-    expect(fu(r, 'm1')).toMatchObject({ status: 'pending', leaveMonths: ['2026-12'] });
-    expect(r.members.m1.memberships.at(-1)!.leaves ?? []).toEqual([]);
-    r = run(r, 'approval.approve', { type: 'renewals', ids: [fu(r, 'm1').id] }, 's9').state;
+    const r = record(s, 'm1', 'leave', 's1', { leaveMonths: ['2026-12'] }).state;
+    expect(fu(r, 'm1')).toMatchObject({ status: 'done', leaveMonths: ['2026-12'] });
     expect(r.members.m1.memberships.at(-1)!.leaves).toMatchObject([{ month: '2026-12', by: 'staff:s1' }]);
     expect(famTold(r, 'f1', 'renewals.notif.leave')).toBe(true);
     // November and December together: two months in a row is the most

@@ -1,9 +1,9 @@
-// Renewals screen: the month, the progress and key dates, the three segments, and recording a follow-up (a change by the front desk goes for approval).
+// Next month screen (round 14): the month, the Changes and Unpaid tabs, recording a change (it applies at once) and Undo.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { buildSeed } from '@cp/shared';
+import { buildSeed, execute, getUser, toMin, type ClubState } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { Renewals } from './index';
@@ -21,13 +21,17 @@ afterEach(async () => {
   host = null;
 });
 
-const actMock = vi.fn(async (_name: string, _input: unknown) => ({ ok: true as const, result: { pending: true, status: 'pending' } }));
-function openClub(uid = 's1', role = 'lobby', name = 'Caca') {
-  const state = buildSeed().citra;
+const actMock = vi.fn(async (_name: string, _input: unknown) => ({ ok: true as const, result: { status: 'done' } }));
+function openClub(uid = 's1', role = 'lobby', name = 'Caca', state: ClubState = buildSeed().citra) {
   actMock.mockClear();
   useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: uid, name, role, clubId: 'citra', clubs: ['citra'] } as never });
   useReplica.setState({ club: 'citra', userId: uid, confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 }, act: actMock });
 }
+/** the seeded world with Lina's upgrade recorded the way round 14 does it: applied at once */
+const withUpgrade = (): ClubState => {
+  const s = buildSeed().citra;
+  return execute(s, 'followUp.record', { memberId: 'm1', month: '2026-11', outcome: 'upgrade' }, getUser({ citra: s }, 's1')!, { today: '2026-10-21', nowMin: toMin('09:58') }, 'w1').state;
+};
 async function show(ui: ReactElement) {
   host = document.createElement('div');
   document.body.appendChild(host);
@@ -36,59 +40,51 @@ async function show(ui: ReactElement) {
 }
 const click = async (el: Element | null | undefined) => { expect(el).toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
 const btn = (re: RegExp) => Array.from(document.querySelectorAll('button')).find((b) => re.test(b.textContent || '') || re.test(b.getAttribute('aria-label') || ''));
-const seg = (k: string) => document.querySelector(`[data-seg="${k}"]`);
+const tab = (re: RegExp) => Array.from(document.querySelectorAll('[role="tab"]')).find((b) => re.test(b.textContent || ''));
 
-describe('Renewals', () => {
-  it('shows the coming month, how many are decided, the key dates and the three segments', async () => {
+describe('Next month', () => {
+  it('shows the coming month under its new title with the Changes and Unpaid tabs, and no progress bar or segments', async () => {
     openClub();
     await show(<Renewals />);
+    expect(document.querySelector('h1')?.textContent).toBe('Next month');
     expect(document.body.textContent).toContain('November 2026');
-    expect(document.querySelector('[data-testid="renewals-progress"]')?.textContent).toBe('3 of 5 decided'); // everyone but the two still to do
-    expect(document.querySelector('[data-testid="renewals-dates"]')?.textContent).toBe('Leave can start in December · Invoice 21 Nov'); // the 17 Oct notice has passed
-    expect(seg('toDo')?.textContent).toBe('To do · 2');
-    expect(seg('waiting')?.textContent).toBe('Waiting · 1');
-    expect(seg('decided')?.textContent).toBe('Decided · 2');
-    // the to-do list: Hendra has not answered twice, Tjahjadi asked to be called back
-    expect(Array.from(document.querySelectorAll('[data-renewal]')).map((r) => r.getAttribute('data-renewal'))).toEqual(['m2', 'm20']);
-    // KC round 8d: the plan, the status and the next step each have their own cell
-    const cell = (id: string, k: 'plan' | 'status' | 'next') => document.querySelector(`[data-renewal="${id}"] [data-testid="renewal-${k}"]`);
-    expect(cell('m2', 'plan')?.textContent).toContain('Gold');
-    expect(cell('m2', 'status')?.textContent).toContain('No answer');
-    expect(cell('m2', 'next')?.textContent).toBe('Call again · 2 calls');
-    expect(cell('m20', 'next')?.textContent).toBe('Call again · 1 call');
-    await click(seg('decided'));
-    expect(cell('m10', 'plan')?.textContent).toContain('Flex');
-    expect(cell('m10', 'status')?.textContent).toContain('Asked in the app');
-    expect(cell('m10', 'next')?.textContent).toBe('Answer the plan request');
-    expect(cell('m46', 'status')?.textContent).toContain('Continue');
-    expect(cell('m46', 'next')?.textContent).toBe('Renews 1 Nov');
-    await click(seg('waiting'));
-    expect(cell('m1', 'status')?.textContent).toContain('Upgrade to Gold'); // the pending change shows its outcome ...
-    expect(cell('m1', 'status')?.getAttribute('data-pending')).toBe('true');
-    expect(cell('m1', 'next')?.textContent).toBe('Waiting for approval'); // ... and what happens next
-    expect(document.body.textContent).toContain('Member'); // the table header
-    expect(document.body.textContent).toContain('Next step');
+    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Changes', 'Unpaid']);
+    expect(tab(/^Changes$/)?.getAttribute('aria-selected')).toBe('true');
+    expect(document.querySelector('[data-testid="renewals-progress"]')).toBeNull();
+    expect(document.querySelector('[role="progressbar"]')).toBeNull();
+    expect(document.querySelector('[data-testid="renewal-quick-continue"]')).toBeNull();
+    expect(document.querySelector('[data-change]')).toBeNull(); // Lina's upgrade still waits for Ega from before: not a change yet
+    expect(document.body.textContent).toContain('No changes recorded for November');
+    expect(btn(/Record a change/)).toBeTruthy();
+    await click(tab(/^Unpaid$/));
+    expect(document.querySelector('[data-testid="unpaid-list"]')).toBeTruthy();
+    expect(btn(/Record a change/)).toBeFalsy();
   });
 
-  it('a change by the front desk is sent for approval: pick the outcome, then Send for approval', async () => {
+  it('recording an upgrade: pick the member, pick the change, Save calls followUp.record', async () => {
     openClub();
     await show(<Renewals />);
-    await click(document.querySelector('[data-renewal="m2"] button.cp-tap-target'));
-    expect(document.body.textContent).toContain('Follow up Opa Hendra');
-    expect(document.body.textContent).toContain('Cynthia Gunawan'); // the family contact to call
-    await click(btn(/^Downgrade to Flex$/));
-    await click(btn(/Send for approval/));
-    expect(actMock).toHaveBeenCalledWith('followUp.record', { memberId: 'm2', month: '2026-11', outcome: 'downgrade' });
+    await click(btn(/Record a change/));
+    expect(document.body.textContent).toContain('Pick a member');
+    await click(document.querySelector('[role="combobox"]'));
+    const opt = Array.from(document.querySelectorAll('[role="option"]')).find((o) => /Lina/.test(o.textContent || ''));
+    await click(opt);
+    expect(document.body.textContent).toContain('Follow up Oma Lina');
+    await click(btn(/^Upgrade to Gold$/));
+    expect(btn(/Send for approval/)).toBeFalsy(); // round 14: no approval step
+    expect(Array.from(document.querySelectorAll('button')).some((b) => /^(Continue|No answer)$/.test(b.textContent || ''))).toBe(false);
+    await click(btn(/Save$/)); // (the button text starts with its icon's name)
+    expect(actMock).toHaveBeenCalledWith('followUp.record', { memberId: 'm1', month: '2026-11', outcome: 'upgrade' });
   });
 
-  it('management\'s own record is just Save, and a waiting change says who recorded it', async () => {
-    openClub('s9', 'mgmt', 'Ega');
+  it('a recorded change is a row with who, from when, and Undo; Undo calls followUp.undo', async () => {
+    openClub('s1', 'lobby', 'Caca', withUpgrade());
     await show(<Renewals />);
-    await click(seg('waiting'));
-    await click(document.querySelector('[data-renewal="m1"] button.cp-tap-target'));
-    expect(document.body.textContent).toContain('Waiting for management approval. Recorded by Caca.');
-    await click(btn(/^Continue$/));
-    expect(btn(/Save$/)).toBeTruthy(); // (the button text starts with its icon's name)
-    expect(btn(/Send for approval/)).toBeFalsy();
+    const row = document.querySelector('[data-change="m1"]');
+    expect(row?.textContent).toContain('Oma Lina');
+    expect(row?.querySelector('[data-testid="change-what"]')?.textContent).toBe('Upgrade to Gold');
+    expect(row?.querySelector('[data-testid="change-when"]')?.textContent).toBe('from 1 Nov · by Caca');
+    await click(row?.querySelector('[data-testid="change-undo"]'));
+    expect(actMock).toHaveBeenCalledWith('followUp.undo', { memberId: 'm1', month: '2026-11' });
   });
 });
