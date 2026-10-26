@@ -57,7 +57,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
     const waiting = pendingPhotos(s);
     if (waiting.length) add({ id: 'photos:pending', kind: 'notif.act.photosReview', params: { n: waiting.length }, link: '/reviews?tab=photos', severity: 'attention', at: waiting[0].createdAt });
     // what the team enters waits for approval before families see it: one item per type, however many entries
-    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu'], ['renewals', 'renewals.notif.act.approve'], ['payments', 'notif.act.approvalsPayments']] as const) {
+    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu'], ['programme', 'notif.act.approvalsProgramme'], ['renewals', 'renewals.notif.act.approve'], ['payments', 'notif.act.approvalsPayments']] as const) {
       const items = pendingItems(s, type);
       if (items.length) add({ id: `approvals:${type}`, kind, params: { n: items.length }, link: `/reviews?tab=${type}`, severity: 'attention', at: items[0].at });
     }

@@ -295,7 +295,8 @@ describe('selectors: counts, the derived items and the history', () => {
     const logsItem = items.filter((i) => i.id === 'approvals:logs');
     expect(logsItem).toHaveLength(1);
     expect(logsItem[0]).toMatchObject({ kind: 'notif.act.approvalsLogs', params: { n: 5 }, link: '/reviews?tab=logs' });
-    expect(items.filter((i) => i.id.startsWith('approvals:')).map((i) => i.id).sort()).toEqual(['approvals:logs', 'approvals:menu', 'approvals:readings', 'approvals:renewals']); // renewals: Caca's seeded upgrade
+    expect(items.filter((i) => i.id.startsWith('approvals:')).map((i) => i.id).sort()).toEqual(['approvals:logs', 'approvals:menu', 'approvals:programme', 'approvals:readings', 'approvals:renewals']); // programme: the seeded Sunday waiting for Ega; renewals: Caca's seeded upgrade
+    expect(items.find((i) => i.id === 'approvals:programme')).toMatchObject({ kind: 'notif.act.approvalsProgramme', params: { n: 1 }, link: '/reviews?tab=programme' });
     expect(actionItems(s, as(s, 's5'), T, toMin('10:00')).some((i) => i.id.startsWith('approvals:'))).toBe(false); // staff do not get them
   });
 

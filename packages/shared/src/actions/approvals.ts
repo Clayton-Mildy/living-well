@@ -14,7 +14,7 @@ import { decideLeave } from './staffLeave';
 import { approvePhotoRows, rejectPhotoRows } from './photos';
 import { applyFollowUp } from './renewals';
 import { approveStockRow, rejectStockRow } from './kitchen';
-import { approveProgrammeDay, approveProgrammeVersion, programmeDayStale, returnProgrammeDay } from './schedule';
+import { approveProgrammeDay, approveProgrammeVersion, programmeDayStale, programmeVersionStale, returnProgrammeDay } from './schedule';
 import { noticeFamilies } from './health';
 import { menuAudience } from '../rules/kitchenOps';
 import { DAYMENU_KEYS, LOG_KEYS, NOTE_KEYS, READING_KEYS, isWaiting, snapshotOf, type ApprovalType, APPROVAL_TYPES, type SnapKeys } from '../rules/approvals';
@@ -176,7 +176,12 @@ const APPROVE: Record<ApprovalType, Handler> = {
   // round 14: a weekly schedule is published (from today once its date has passed); a day's change becomes the live day while that day can still change
   programme(d, ctx, id, o) {
     const v = d.scheduleVersions[id];
-    if (v) { if (v.deletedAt || v.status !== 'pending') return 'skip'; approveProgrammeVersion(d, ctx, id, o.notify !== false); return 'done'; }
+    if (v) {
+      if (v.deletedAt || v.status !== 'pending') return 'skip';
+      if (programmeVersionStale(d, id)) return 'conflict'; // a later week was published since it was sent: approving would override it (R29)
+      approveProgrammeVersion(d, ctx, id, o.notify !== false);
+      return 'done';
+    }
     const day = d.scheduleDays?.[id];
     if (!day || day.deletedAt || !day.pending) return 'skip';
     if (!dayProgrammable(d as unknown as ClubState, id, ctx.today)) return 'conflict'; // passed, or closed since (round 14: a weekend with nothing else on it can be approved: that opens it)

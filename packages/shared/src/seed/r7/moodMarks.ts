@@ -4,7 +4,9 @@
 // Round 14: in the current month and week (what the Team view and this month's Month report score duties over) every visit also has a morning face
 // by Dinar and every marked lunch a lunch face by the kitchen, and every joined session has its face, so the mood duties are done there. Older days keep
 // the round-12 marks only: about 6,000 more marks over six months would push the state past its 7.5 MB cap (last month as well leaves under 30 KB).
-import type { Actor, ClubState, Face, HM, ISODate, MoodMoment, Slot } from '../../types';
+// The window is filled newest day first while the state stays under WINDOW_BUDGET (the cap less a margin for the seeds after this one): late in a month
+// the 45-member roster keeps the most recent days only (the history behind some dates is larger), the 5-member world always keeps the whole window.
+import type { Actor, ClubState, Face, HM, ISODate, MoodMark, MoodMoment, Slot } from '../../types';
 import { live, weekStart, ym } from '../../util';
 import { moodId } from '../../rules/mood';
 import { unit } from '../history';
@@ -21,13 +23,19 @@ const morningFace = (a: Face, x: number): Face => (x < 0.2 ? clampFace(a + 1) : 
 /** Lunch (round 14): one lower when little or nothing was eaten, else one higher in 30%, otherwise the morning face. */
 const lunchFace = (m: Face, amount: string, x: number): Face => (amount === 'little' || amount === 'none' ? clampFace(m - 1) : x < 0.3 ? clampFace(m + 1) : m);
 const MORNING_AT: HM = '09:45';
+/** the club state's size cap (seed/history.test.ts) less about 50 KB for the seeds that run after the mood marks */
+const WINDOW_BUDGET = 7_450_000;
 
 /** Past days and today's seeded check-ins; Oma Lina's visit today stays unmarked because her check-in and face are done live by Caca at the door. */
 export function seedMoodMarks(s: ClubState, T: ISODate): void {
-  const put = (date: ISODate, memberId: string, moment: MoodMoment, face: Face, time: HM, extra: { slot?: Slot; readingId?: string } = {}) => {
+  const mark = (date: ISODate, memberId: string, moment: MoodMoment, face: Face, time: HM, extra: { slot?: Slot; readingId?: string } = {}): MoodMark => {
     const id = moodId(date, memberId, moment, extra.slot);
-    s.moodMarks[id] = { id, clubId: s.clubId, createdAt: `${date}T${time}`, createdBy: BY[moment], memberId, date, time, moment, face, by: BY[moment], ...extra };
+    return { id, clubId: s.clubId, createdAt: `${date}T${time}`, createdBy: BY[moment], memberId, date, time, moment, face, by: BY[moment], ...extra };
   };
+  const put = (...a: Parameters<typeof mark>) => { const m = mark(...a); s.moodMarks[m.id] = m; };
+  /** the round-14 window's marks, by day: added at the end, newest day first, while the state stays under the budget */
+  const windowMarks = new Map<ISODate, MoodMark[]>();
+  const later = (...a: Parameters<typeof mark>) => { const m = mark(...a); const l = windowMarks.get(m.date); if (l) l.push(m); else windowMarks.set(m.date, [m]); };
   // Opa Hendra's Watch days are low days
   const watchDays = new Set(live(s.readings).filter((r) => r.memberId === 'm2' && r.kind === 'arrival' && r.status !== 'normal').map((r) => r.date));
   // Oma Lina is the demo's family story: a day her log calls cheerful or calm is a Great or Good arrival, one it calls unsettled is a Low one, so the faces and the notes agree
@@ -45,7 +53,7 @@ export function seedMoodMarks(s: ClubState, T: ISODate): void {
     const morning = recent(a.date) ? morningFace(arrival, unit(key('morning'))) : undefined;
     faces.set(`${a.date}:${a.memberId}`, { arrival, departure, ...(morning ? { morning } : {}) });
     put(a.date, a.memberId, 'arrival', arrival, a.checkIn.at);
-    if (morning) put(a.date, a.memberId, 'morning', morning, a.checkIn.at > MORNING_AT ? a.checkIn.at : MORNING_AT);
+    if (morning) later(a.date, a.memberId, 'morning', morning, a.checkIn.at > MORNING_AT ? a.checkIn.at : MORNING_AT);
     if (a.checkOut) put(a.date, a.memberId, 'departure', departure, a.checkOut.at);
   }
   // the health mark copies the arrival face, with the arrival reading it was taken with
@@ -57,13 +65,22 @@ export function seedMoodMarks(s: ClubState, T: ISODate): void {
   for (const l of live(s.dailyLogs)) {
     const f = faces.get(`${l.date}:${l.memberId}`);
     if (!f) continue;
-    if (f.morning && l.lunch) put(l.date, l.memberId, 'lunch', lunchFace(f.morning, l.lunch, unit(`mood:${l.memberId}:${l.date}:lunch`)), '12:40');
+    if (f.morning && l.lunch) later(l.date, l.memberId, 'lunch', lunchFace(f.morning, l.lunch, unit(`mood:${l.memberId}:${l.date}:lunch`)), '12:40');
     if (!l.sessions) continue;
     for (const [slot, mark] of Object.entries(l.sessions) as [Slot, string][]) {
       if (mark !== 'joined') continue;
       const key = `mood:${l.memberId}:${l.date}:activity:${slot}`;
       if (unit(key) >= 0.7 && !recent(l.date)) continue;
-      put(l.date, l.memberId, 'activity', unit(key + ':pick') < 0.6 ? clampFace(Math.max(f.arrival, f.departure)) : f.arrival, slot, { slot });
+      (unit(key) >= 0.7 ? later : put)(l.date, l.memberId, 'activity', unit(key + ':pick') < 0.6 ? clampFace(Math.max(f.arrival, f.departure)) : f.arrival, slot, { slot });
     }
+  }
+  // the window, newest day first, as long as the state stays under the budget (a mark costs its JSON, its key and the separators)
+  let size = JSON.stringify(s).length;
+  for (const date of [...windowMarks.keys()].sort().reverse()) {
+    const day = windowMarks.get(date)!;
+    const bytes = day.reduce((n, m) => n + JSON.stringify(m).length + m.id.length + 4, 0);
+    if (size + bytes > WINDOW_BUDGET) break;
+    size += bytes;
+    for (const m of day) s.moodMarks[m.id] = m;
   }
 }

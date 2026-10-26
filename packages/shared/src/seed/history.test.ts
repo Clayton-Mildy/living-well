@@ -195,6 +195,12 @@ describe('six months of history', () => {
     expect(JSON.stringify(projectForFamily(s, 'f1')).length).toBeLessThan(700_000);
     expect(buildMs).toBeLessThan(4000);
   });
+  it('stays under the cap at a month end too (the round-14 mood window keeps the newest days that fit)', () => {
+    const late = buildSeed('2026-12-30', DEMO_START_MIN, { roster: true }).citra;
+    expect(JSON.stringify(late).length).toBeLessThan(7_500_000);
+    const morning = new Set(Object.values(late.moodMarks).filter((m) => m.moment === 'morning').map((m) => m.date));
+    expect(morning.has('2026-12-29') || morning.has('2026-12-28')).toBe(true); // the newest days keep their faces
+  }, 20000);
 });
 
 describe('mood history (round 12)', () => {

@@ -6,7 +6,7 @@
 // and the day's attendees (people still in the club first). A pin marks the rest of a round at once. Marks save as you tap (the replica applies them at once).
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { listName, actorName, addDays, attId, dayArc, marksOn, displayName, memberName, staffCall, type DailyLog as LogRow, type Face, type Member } from '@cp/shared';
+import { listName, actorName, addDays, attId, dayArc, markOf, displayName, memberName, staffCall, type DailyLog as LogRow, type Face, type Member, type Slot } from '@cp/shared';
 import { PendingMark } from '../../components/PendingMark';
 import { approvalState } from '@cp/shared/rules/approvals';
 import {
@@ -107,10 +107,10 @@ export function DailyLog() {
     if (v === null && isToday && faceOf(id)) void act('mood.clear', { memberId: id, moment: 'activity', slot: round.id }, { silent: true });
   };
   // round 12: a face per person per session (today only, like every mood mark). On a row not marked yet the face also marks the session joined.
-  const faceOf = (id: string): Face | undefined => marksOn(s, id, date).find((x) => x.moment === 'activity' && x.slot === round.id)?.face;
+  const faceOf = (id: string): Face | undefined => markOf(s, date, id, 'activity', round.id as Slot)?.face;
   const pickFace = (id: string, f: Face) => markOne(id, logs.get(id)?.sessions?.[round.id] ?? 'joined', f);
   // round 14: the morning face, today only (like every mood mark); tapping the chosen face again keeps it
-  const morningFace = (id: string): Face | undefined => marksOn(s, id, date).find((x) => x.moment === 'morning')?.face;
+  const morningFace = (id: string): Face | undefined => markOf(s, date, id, 'morning')?.face;
   const pickMorning = (id: string, f: Face) => { void act('mood.mark', { memberId: id, moment: 'morning', face: f }, { silent: true }); };
   const restWhat = restable ? t('activity.restWhat.' + round.kind) : '';
   const markRest = async () => {

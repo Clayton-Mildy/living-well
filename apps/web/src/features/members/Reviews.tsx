@@ -297,7 +297,7 @@ export function Reviews() {
 
   /** A quiet v3 row: checkbox, the member (or the menu / the item), one summary line, Details, and its own Approve and Reject. */
   const quietRow = (it: ApprovalItem, i: number) => {
-    const v = itemView(s, it, t, fmt);
+    const v = itemView(s, it, t, fmt, today);
     const m = it.memberId ? s.members[it.memberId] : undefined;
     const on = sel.includes(it.id);
     const expanded = open === it.id;
@@ -353,7 +353,7 @@ export function Reviews() {
 
   const historyRow = (h: HistoryItem, i: number) => {
     const cr = h.type === 'profile' ? s.changeRequests[h.id] : undefined;
-    const v = itemView(s, { id: h.id, sub: h.sub, memberId: h.memberId }, t, fmt);
+    const v = itemView(s, { id: h.id, sub: h.sub, memberId: h.memberId }, t, fmt, today);
     const expanded = open === h.key;
     const reviewer = h.decidedBy ? actorName(s, h.decidedBy) : '';
     const sn = cr ? submitterNote(cr) : '';
@@ -407,7 +407,7 @@ export function Reviews() {
   // ----- KC round 6: the per-person view. One card per member with everything waiting about them, then group photos, then menu and stock.
   /** One waiting entry inside a person (or section) card: what it is, one summary line, View, and its own actions. */
   const personRow = (it: ApprovalItem, i: number) => {
-    const v = itemView(s, it, t, fmt);
+    const v = itemView(s, it, t, fmt, today);
     const ph = it.type === 'photos' ? s.photos[it.id] : undefined;
     const cr = it.type === 'profile' ? s.changeRequests[it.id] : undefined;
     const applied = !!cr && cr.kind !== 'approval';

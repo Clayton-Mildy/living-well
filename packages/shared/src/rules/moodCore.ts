@@ -6,7 +6,13 @@ import { live } from '../util';
 export const moodId = (date: ISODate, memberId: string, moment: MoodMoment, slot?: Slot) =>
   moment === 'activity' && slot ? `${date}:${memberId}:activity:${slot}` : `${date}:${memberId}:${moment}`;
 
-/** A member's live marks for a date, earliest first. */
+/** One moment's live mark (an activity mark names its slot): read by its id, without scanning every mark. */
+export function markOf(s: ClubState, date: ISODate, memberId: string, moment: MoodMoment, slot?: Slot): MoodMark | undefined {
+  const m = s.moodMarks?.[moodId(date, memberId, moment, slot)];
+  return m && !m.deletedAt ? m : undefined;
+}
+
+/** A member's live marks for a date, earliest first (scans every mark: for one moment use markOf). */
 export function marksOn(s: ClubState, memberId: string, date: ISODate): MoodMark[] {
   return live(s.moodMarks ?? {})
     .filter((m) => m.memberId === memberId && m.date === date)

@@ -4,7 +4,7 @@ import type { Activity, CalendarEvent, ClubState, DailyLog, HM, ISODate, Lang, M
 import { dayStatus, isPendingRow, memberName } from './core';
 import { lobbyGroups, attId } from './attendance';
 import { sessionsOn } from './kitchen';
-import { meanFace, moodId } from './moodCore';
+import { markOf, meanFace } from './moodCore';
 import { addDays, live, sortBy, toMin } from '../util';
 
 /** Length of one activity session; a session is "Now" from its start until start + SESSION_MIN. */
@@ -241,7 +241,7 @@ export function defaultRound(rounds: Round[], nowMin: number): RoundId {
 export const notesSaved = (l: Partial<Pick<DailyLog, 'mood' | 'communicative' | 'content' | 'note' | 'staffNote'>> | undefined): boolean =>
   !!l && (l.mood !== undefined || l.communicative !== undefined || l.content !== undefined || !!l.note?.trim() || !!l.staffNote?.trim());
 /** A morning face was marked for the member that day. */
-export const morningFaced = (s: ClubState, memberId: string, date: ISODate): boolean => { const m = s.moodMarks?.[moodId(date, memberId, 'morning')]; return !!m && !m.deletedAt; };
+export const morningFaced = (s: ClubState, memberId: string, date: ISODate): boolean => !!markOf(s, date, memberId, 'morning');
 /** Has this round been marked? An unmarked part is simply missing from the row; the Morning round counts once there is a morning face (`faced`) or the notes are in. */
 export function roundMarked(l: Partial<Pick<DailyLog, 'mood' | 'communicative' | 'content' | 'note' | 'staffNote' | 'lunch' | 'sessions'>> | undefined, round: Round | RoundId, faced = false): boolean {
   const id = roundIdOf(round);

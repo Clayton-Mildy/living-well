@@ -6,6 +6,8 @@ import { asWeekday, live, sortBy, uniq } from '../util';
 import { approvedDayMenu, menuVersionForFamily } from './approvals';
 
 // ---------- versions ----------
+/** The day a waiting weekly version would publish from if approved now: its own date, or today once that has passed. */
+export const publishDateOf = (v: Pick<ScheduleVersion, 'effectiveFrom'>, today: ISODate): ISODate => (v.effectiveFrom > today ? v.effectiveFrom : today);
 export function scheduleVersionFor(s: ClubState, date: ISODate): ScheduleVersion | undefined {
   const pub = live(s.scheduleVersions).filter((v) => v.status === 'published' && v.effectiveFrom <= date);
   return sortBy(pub, (v) => v.effectiveFrom + (v.publishedAt || '')).pop();

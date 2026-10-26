@@ -4,7 +4,10 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { buildSeed } from '@cp/shared';
+import { buildSeed, execute, getUser, scheduleVersionFor, translate, type ClubState } from '@cp/shared';
+import { normalizeDays } from '@cp/shared/rules/calendar';
+import { itemView } from './approvalView';
+import { fd } from '../../lib/i18n';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { PendingMark } from '../../components/PendingMark';
@@ -209,5 +212,34 @@ describe('the marker staff see on their own entries', () => {
     expect(allBtn).toBeTruthy();
     await act(async () => { allBtn.click(); });
     expect(actMock.mock.calls.map((c) => c[0]).some((n) => ['review.approve', 'review.acknowledge', 'approval.approve', 'photo.approve'].includes(n))).toBe(true);
+  });
+});
+
+describe('programme before/after (R29, round 14)', () => {
+  const tr = (k: string, v?: Record<string, string | number | undefined | null>) => translate('en', k, v as never);
+  const fmt = { lang: 'en' as const, fdy: (d: string) => d, fds: (d: string) => d, fd: (d: string, o: Intl.DateTimeFormatOptions) => fd('en', d, o) };
+  const clk = (today: string, nowMin = 600) => ({ today, nowMin });
+  const withWed = (s: ClubState, date: string, activityId: string, staffId: string, roomId: string) => {
+    const days = normalizeDays(scheduleVersionFor(s, date)!.days);
+    return { ...days, 3: { ...days[3], '10:30': { activityId, staffId, roomId } } };
+  };
+  it('a waiting week whose start has passed is compared with the plan in force on the day it would publish', () => {
+    let s = buildSeed().citra;
+    const as = (id: string) => getUser({ citra: s }, id)!;
+    // the team sends a week from Thu 22 Oct; before that, Ega had already published her own from Mon 26 Oct (Memory game on Wednesdays)
+    s = execute(s, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withWed(s, '2026-10-26', 'act-memory', 's5', 'room-lounge') }, as('s9'), clk('2026-10-21', 540), 'p1').state;
+    const r = execute(s, 'schedule.publish', { effectiveFrom: '2026-10-22', days: withWed(s, '2026-10-22', 'act-angklung', 's6', 'room-music') }, as('s5'), clk('2026-10-21'), 'p2');
+    s = r.state;
+    const id = r.result.versionId as string;
+    const row = (today: string) => itemView(s, { id, sub: 'version' }, tr, fmt, today).detail.rows.find((x) => x.label.startsWith('Wednesday · 10:30'));
+    expect(row('2026-10-21')?.from).not.toMatch(/^Memory/); // on the 22nd the plan before Ega's week runs
+    expect(row('2026-10-27')?.from).toMatch(/^Memory/); // approved on the 27th it publishes from today, over Ega's week
+    expect(row('2026-10-27')?.to).toMatch(/^Angklung/);
+  });
+  it('a day change\'s staff-only note uses the calendar\'s day-note label, not the family note', () => {
+    const s = buildSeed().citra;
+    s.scheduleDays['2026-10-23'] = { id: '2026-10-23', clubId: 'citra', createdAt: '2026-10-21T10:00', createdBy: 'staff:s5', date: '2026-10-23', slots: {}, pending: { slots: {}, note: 'Kak Dimas is off sick', by: 'staff:s5', at: '2026-10-21T10:00' } } as never;
+    const rows = itemView(s, { id: '2026-10-23', sub: 'day' }, tr, fmt, '2026-10-21').detail.rows;
+    expect(rows.find((x) => x.to === 'Kak Dimas is off sick')?.label).toBe('Note for the day');
   });
 });

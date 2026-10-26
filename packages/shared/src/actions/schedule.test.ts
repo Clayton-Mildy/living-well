@@ -772,6 +772,21 @@ describe('round 14: every programme change by the activity team waits for Ega', 
     expect(run(onTime.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9').result.skipped).toEqual([id]);
   });
 
+  it('R29: a week Ega published after the team sent theirs makes approving the older one a conflict (it would override hers)', () => {
+    const s0 = fresh();
+    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's5');
+    const id = r.result.versionId as string;
+    const mine = step(r.state, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(r.state, 3, '10:30', MEMORY) }, 's9', { today: TODAY, nowMin: 630 });
+    const a = run(mine, 'approval.approve', { type: 'programme', ids: [id] }, 's9', { today: TODAY, nowMin: 640 });
+    expect(a.result).toMatchObject({ approved: 0, conflicts: [id] });
+    expect(a.state.scheduleVersions[id].status).toBe('pending');
+    expect(sessionsOn(a.state, '2026-10-28')[0].cell).toEqual(MEMORY); // hers stays in force
+    // a week published before the team sent theirs is no conflict
+    const before = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', MEMORY) }, 's9', { today: TODAY, nowMin: 540 });
+    const r2 = run(before, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(before, 3, '10:30', ANGKLUNG) }, 's5');
+    expect(run(r2.state, 'approval.approve', { type: 'programme', ids: [r2.result.versionId as string] }, 's9').result.approved).toBe(1);
+  });
+
   it('Ega returns a version: rejected with the note, the teacher is told, and it can be loaded back into the draft', () => {
     const s0 = fresh();
     const days = withCell(s0, 3, '10:30', ANGKLUNG);

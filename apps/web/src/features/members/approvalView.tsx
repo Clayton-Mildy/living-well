@@ -1,6 +1,6 @@
 // What one entry waiting for approval looks like in the Approvals screen: a short summary line and the full view (old → new for edits).
 // Pure view-model: the screen renders the pieces. Profile changes use describeCr (reviewDiff.ts).
-import { memberName, displayName, actorName, rp, scheduleVersionFor, sessionsOn, staffCall, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type ScheduleCell, type ScheduleVersion, type Slot } from '@cp/shared';
+import { memberName, displayName, actorName, rp, publishDateOf, scheduleVersionFor, sessionsOn, staffCall, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type ScheduleCell, type ScheduleVersion, type Slot } from '@cp/shared';
 import type { ApprovalItem, ApprovalType, HistoryItem } from '@cp/shared/rules/approvals';
 import { APPROVAL_TYPES, DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approvals';
 import { diffTemplates, templateOn, weekDate, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
@@ -85,10 +85,11 @@ function versionView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
 /** Round 14: a session as one line: activity · room · teacher ("No session" for an empty slot). */
 const sessionText = (s: ClubState, c: ScheduleCell | null | undefined, t: TFn, lang: Lang) =>
   c ? [activityName(s.activities[c.activityId], lang), roomName(s.rooms[c.roomId], lang), staffCall(s.staff[c.staffId])].filter(Boolean).join(' · ') : t('cal.noSession');
-/** Round 14 (B1): a weekly schedule the activity team sent: each session it changes against the plan in force on its start date, before → after. */
-function programmeVersionView(s: ClubState, v: ScheduleVersion, t: TFn, fmt: Fmt): ItemView {
+/** Round 14 (B1): a weekly schedule the activity team sent: each session it changes against the plan in force on the day it would publish (its start date, or today
+ *  once that has passed: R29), before → after. */
+function programmeVersionView(s: ClubState, v: ScheduleVersion, t: TFn, fmt: Fmt, today?: string): ItemView {
   const lang = fmt.lang ?? 'en';
-  const before = normalizeDays(scheduleVersionFor(s, v.effectiveFrom)?.days);
+  const before = normalizeDays(scheduleVersionFor(s, v.status === 'pending' && today ? publishDateOf(v, today) : v.effectiveFrom)?.days);
   const after = normalizeDays(v.days);
   const cells = changedCells(after, before);
   const rows: DiffRow[] = cells.map(({ w, slot }) => ({ label: `${fmt.fd(weekDate('2024-01-01', w), { weekday: 'long' })} · ${slot}`, from: sessionText(s, before[w][slot], t, lang), to: sessionText(s, after[w][slot], t, lang) }));
@@ -105,7 +106,7 @@ function programmeDayView(s: ClubState, date: string, t: TFn, fmt: Fmt): ItemVie
   const cellAt = (list: typeof now, slot: string) => list.find((x) => x.slot === slot)?.cell ?? null;
   const rows: DiffRow[] = times.filter((slot) => !sameCell(cellAt(now, slot), cellAt(then, slot))).map((slot) => ({ label: slot, from: sessionText(s, cellAt(now, slot), t, lang), to: sessionText(s, cellAt(then, slot), t, lang) }));
   const noteBefore = s.scheduleDays?.[date]?.note ?? '', noteAfter = next.scheduleDays?.[date]?.note ?? '';
-  if (noteBefore !== noteAfter) rows.push({ label: t('approvals.noteLabel'), from: noteBefore || dash, to: noteAfter || dash });
+  if (noteBefore !== noteAfter) rows.push({ label: t('cal.dayNote'), from: noteBefore || dash, to: noteAfter || dash }); // the staff-only day note, in the calendar's words
   const head = t('approvals.sum.programmeDay', { date: fmt.fds(date) });
   const first = rows[0];
   return { who: '', kind: t('approvals.kind.day'), summary: first ? `${head} · ${first.label}: ${first.to}` : head, detail: { title: head, rows, summary: [] }, edit: true };
@@ -198,12 +199,12 @@ function leaveView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
 }
 
 /** The view of one entry: pending (ApprovalItem) or handled (HistoryItem). Profile changes are described by describeCr. */
-export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt): ItemView {
+export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt, today?: string): ItemView {
   switch (it.sub) {
     case 'log': { const l = s.dailyLogs[it.id]; if (l) return logView(s, l, t, fmt); break; }
     case 'note': { const n = s.memberNotes[it.id]; if (n) return noteView(s, n, t); break; }
     case 'reading': { const r = s.readings[it.id]; if (r) return readingView(s, r, t, fmt); break; }
-    case 'version': { const v = s.scheduleVersions[it.id]; return v ? programmeVersionView(s, v, t, fmt) : versionView(s, it.id, t, fmt); }
+    case 'version': { const v = s.scheduleVersions[it.id]; return v ? programmeVersionView(s, v, t, fmt, today) : versionView(s, it.id, t, fmt); }
     case 'day': return programmeDayView(s, it.id, t, fmt);
     case 'dayMenu': return dayMenuView(s, it.id, t, fmt);
     case 'stock': return stockView(s, it.id, t);

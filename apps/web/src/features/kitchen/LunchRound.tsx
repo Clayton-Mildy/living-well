@@ -3,7 +3,7 @@
 // still be taken. A pin marks the rest as "Ate all" after a confirmation. Marks save as you tap (the replica shows them at once); the amounts wait for
 // management's approval like every entry by non-management staff, the faces do not.
 import { useMemo, useState } from 'react';
-import { displayName, listName, marksOn, memberName, toMin, type Face, type Member } from '@cp/shared';
+import { displayName, listName, markOf, memberName, toMin, type Face, type Member } from '@cp/shared';
 import { LUNCH_AMOUNTS, LUNCH_ROUND_OPENS, attendedOn, logsOn } from '@cp/shared/rules/activity';
 import { Button, EmptyState, Group, MoodFaces, PageHead, Pin, Sheet, FONT_SMALL } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -35,7 +35,7 @@ export function LunchRound() {
   const left = people.filter((m) => logs.get(m.id)?.lunch === undefined);
   const marked = people.length - left.length;
   const choices: RoundChoice[] = LUNCH_AMOUNTS.map((v) => ({ value: v, label: t('activity.lunchShort.' + v), tone: v === 'all' ? 'normal' : v === 'none' ? 'alert' : 'other' }));
-  const faceOf = (id: string): Face | undefined => marksOn(s, id, today).find((x) => x.moment === 'lunch')?.face;
+  const faceOf = (id: string): Face | undefined => markOf(s, today, id, 'lunch')?.face;
 
   const markAmount = (id: string, v: string | null) => { void act('kitchen.lunchMark', { date: today, memberIds: [id], lunch: v }, { silent: true }); }; // a failure toasts and rolls the mark back
   const markFace = (id: string, face: Face) => { void act('kitchen.lunchMark', { date: today, memberIds: [id], face }, { silent: true }); };

@@ -1,11 +1,11 @@
 // Schedule and calendar actions: weekly schedule drafts and dated versions, closures / holidays / outings, activity and room catalog.
 import { z } from 'zod';
 import type { Draft } from 'immer';
-import type { CalendarEvent, ClubState, HM, ISODate, Member, ScheduleCell, ScheduleDay, Slot, StaffRole, WeekSlot } from '../types';
+import type { CalendarEvent, ClubState, HM, ISODate, Member, ScheduleCell, ScheduleDay, ScheduleVersion, Slot, StaffRole, WeekSlot } from '../types';
 import { DomainError, defineAction, hasRole, type Ctx } from './framework';
 import { needsApproval } from './approvalGate';
 import { clubHoursRental, dayStatus, membershipStatus } from '../rules/core';
-import { extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from '../rules/kitchen';
+import { extrasOn, isWeekSlot, publishDateOf, scheduleDayOf, scheduleVersionFor, sessionsOn } from '../rules/kitchen';
 import { ALL_DAYS, DRAFT_ID, SLOTS, cellKey, dayProgrammable, daysEqual, extraTimeIssue, fmtDMY, nextMonday, normalizeDays, pendingDayRow, publishedCellKeys, sameCell, storedDays, weeklyCell, type Days } from '../rules/calendar';
 import { guestOn } from '../rules/guests';
 import { asWeekday, diffDays, live, sortBy, uniq } from '../util';
@@ -274,10 +274,15 @@ export function returnProgrammeDay(d: Draft<ClubState>, ctx: Ctx, date: ISODate,
   row.returned = { note, by: ctx.actor, at: ctx.nowDT };
   return by;
 }
+/** Was another weekly version published after this one was sent (Ega's own, or one she approved)? Then approving it would quietly override that: it is a conflict. */
+export function programmeVersionStale(d: Draft<ClubState>, id: string): boolean {
+  const v = d.scheduleVersions[id];
+  return Object.values(d.scheduleVersions).some((o) => o.id !== id && !o.deletedAt && o.status === 'published' && !!o.publishedAt && o.publishedAt > v.createdAt);
+}
 /** Ega approves a weekly version: it is published from its date, or from today once that date has passed (Review Focus 5); everyone is told. */
 export function approveProgrammeVersion(d: Draft<ClubState>, ctx: Ctx, id: string, notify = true): void {
   const v = d.scheduleVersions[id];
-  const from = v.effectiveFrom > ctx.today ? v.effectiveFrom : ctx.today;
+  const from = publishDateOf(v as ScheduleVersion, ctx.today);
   v.status = 'published';
   v.effectiveFrom = from;
   v.publishedBy = ctx.actor;

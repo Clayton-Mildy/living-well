@@ -9,9 +9,9 @@ import type { InsightPeriod } from './insights';
 import { activeOn } from './core';
 import { sessionsOn } from './kitchen';
 import { attendedOn, logsOn } from './activity';
-import { dailyMood, marksOn, moodId } from './moodCore';
+import { dailyMood, markOf, marksOn, moodId } from './moodCore';
 
-export { dailyMood, marksOn, moodId };
+export { dailyMood, markOf, marksOn, moodId };
 import { attId } from './attendance';
 import { validReadings } from './health';
 
