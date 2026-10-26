@@ -11,7 +11,7 @@ export const fphotos: Same<typeof EN> = {
   numbersTitle_f: 'Bulannya dalam angka', numbersTitle_m: 'Bulannya dalam angka', numVisits: 'kunjungan', numSessions: 'sesi diikuti', numPhotos: 'foto',
   favTitle_f: 'Favoritnya', favTitle_m: 'Favoritnya', favBig: '{a}, {t}', favThen: 'Lalu {l}.',
   mixed: 'Hari-hari yang beragam',
-  mostly_cheerful: 'Kebanyakan ceria', mostly_calm: 'Kebanyakan tenang', mostly_quiet: 'Kebanyakan pendiam', mostly_agitated: 'Beberapa hari yang gelisah', dotsHint: 'Satu titik untuk setiap kunjungan. Ketuk satu hari untuk membukanya.',
+  mostlyFace: 'Kebanyakan {face}', dotsHint: 'Satu titik untuk setiap kunjungan. Ketuk satu hari untuk membukanya.',
   lunchSub: 'Dari catatan harian tim.', noteTitle: 'Dari tim kami',
   shareText: '{t}. {s}',
   storyPause: 'Jeda', storyPlay: 'Putar', memsLeft: 'Geser kenangan ke kiri', memsRight: 'Geser kenangan ke kanan', memsEarlier: 'Bulan sebelumnya', memsFewer: 'Tampilkan lebih sedikit',

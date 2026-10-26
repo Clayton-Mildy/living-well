@@ -196,3 +196,19 @@ test('Lunch round: Yohanes marks Bapak Bambang "Most" with a "Good" face on /lun
   await ega.ctx.close();
   c.assertClean();
 });
+
+test('Maria sees the daily mood on Today: Oma Lina checked in with a Good face shows the Mood row with the Check-in face', async ({ page, request }) => {
+  const c = watchConsole(page);
+  await signIn(page, 'f1', '/today?member=m1');
+  await expect(page.getByTestId('story-hero')).toContainText('Oma Lina isn’t at the club');
+  // Caca checks her in at the door and marks Good
+  const r = await request.post('/api/actions/attendance.checkIn', { headers: { 'x-user-id': 's1' }, data: { mutationId: 'e2e-r14-mood-in', club: 'citra', input: { memberId: 'm1', method: 'manual', face: 4 } } });
+  expect(r.ok()).toBe(true);
+  const mood = page.getByTestId('daily-log').getByTestId('log-mood');
+  await expect(mood).toHaveAttribute('data-mood', '4');
+  await expect(mood).toContainText('Good');
+  await expect(mood.locator('[data-moment="arrival"]')).toContainText('Check-in');
+  await expect(page.getByTestId('hero-mood')).toContainText('Good');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+});

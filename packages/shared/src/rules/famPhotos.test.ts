@@ -84,12 +84,12 @@ describe('memory cards and the story', () => {
   });
   it('the dominant mood counts approved moods only; a tie goes to the warmer one', () => {
     expect(dominantMood({ moods: [{ date: 'a', mood: null }, { date: 'b', mood: null }] })).toBeNull();
-    expect(dominantMood({ moods: [{ date: 'a', mood: 'quiet' }, { date: 'b', mood: 'calm' }, { date: 'c', mood: 'quiet' }] })).toBe('quiet');
-    expect(dominantMood({ moods: [{ date: 'a', mood: 'calm' }, { date: 'b', mood: 'cheerful' }] })).toBe('cheerful');
+    expect(dominantMood({ moods: [{ date: 'a', mood: 2 }, { date: 'b', mood: 4 }, { date: 'c', mood: 2 }] })).toBe(2);
+    expect(dominantMood({ moods: [{ date: 'a', mood: 4 }, { date: 'b', mood: 5 }] })).toBe(5);
   });
   it('"mostly" only when one mood is more than half of the approved ones', () => {
-    expect(moodIsMostly({ moods: [{ date: 'a', mood: 'calm' }, { date: 'b', mood: 'calm' }, { date: 'c', mood: 'quiet' }] })).toBe(true);
-    expect(moodIsMostly({ moods: [{ date: 'a', mood: 'calm' }, { date: 'b', mood: 'cheerful' }, { date: 'c', mood: 'quiet' }, { date: 'd', mood: null }] })).toBe(false);
+    expect(moodIsMostly({ moods: [{ date: 'a', mood: 4 }, { date: 'b', mood: 4 }, { date: 'c', mood: 2 }] })).toBe(true);
+    expect(moodIsMostly({ moods: [{ date: 'a', mood: 4 }, { date: 'b', mood: 5 }, { date: 'c', mood: 2 }, { date: 'd', mood: null }] })).toBe(false);
     expect(moodIsMostly({ moods: [{ date: 'a', mood: null }] })).toBe(false);
   });
   it('each slide gets a picture of its own month; lunch gets a lunch picture; none is used twice while others are left', () => {

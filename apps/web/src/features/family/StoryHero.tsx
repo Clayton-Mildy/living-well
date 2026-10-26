@@ -5,11 +5,11 @@
 // Both parents: a row each (tap to focus on one). One parent: the day's icon rail. A day the parent did not come shows the last visit's picture,
 // dimmed; no picture at all is the warm bronze gradient, so a morning before the first photo never looks empty.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { listName, FACE_KEY, addDays, dayArc, flexMonth, memberName, displayName, planOn, ym, type ISODate, type Member, type Photo } from '@cp/shared';
+import { listName, FACE_KEY, HINT_KEY, addDays, dayArc, flexMonth, memberName, displayName, planOn, ym, type Face as FaceValue, type ISODate, type Member, type Photo } from '@cp/shared';
 import { activityLabel, bestPhotoOf, eventTitle, mayStillCome, type DayStory } from '@cp/shared/rules/family';
 import { railFill } from '@cp/shared/rules/famToday';
 import { famPhotoDays, ownPicture } from '@cp/shared/rules/famPhotos';
-import { Avatar, Icon, PhotoImg, uiZoom } from '../../components/ui';
+import { Avatar, FACE_ICON, Icon, PhotoImg, uiZoom } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { memberPhoto } from '../../lib/media';
 import { catalogPhoto } from '../activity/lib';
@@ -94,7 +94,8 @@ function coverFor(s: Ctx['s'], members: Member[], stories: DayStory[], date: ISO
 }
 
 // ---------- the words ----------
-const moodOf = ({ t }: Ctx, story: DayStory) => (story.log?.mood ? t('family.mood_' + story.log.mood).toLowerCase() : '');
+/** Round 14: the day's mood (from the face marks) as words, for the both-parents rows: "Mood: good". */
+const moodOf = ({ t }: Ctx, story: DayStory) => (story.mood ? t('ftoday.moodIs', { face: t(FACE_KEY[story.mood.face]).toLowerCase() }) : '');
 /** "Batik painting now": the session, lunch or tea happening at this moment. */
 function nowWhat({ s, t, fmt }: Ctx, story: DayStory): string {
   const it = story.items.find((i) => i.state === 'now');
@@ -240,15 +241,27 @@ function Face({ m, size }: { m: Member; size: number }) {
 }
 
 /** Where the parent is, as one strong line and a quiet one under it (never side by side, so neither wraps into the other). */
-function Status({ text, sub, live }: { text: string; sub?: string; live?: boolean }) {
+function Status({ text, sub, live, mood }: { text: string; sub?: string; live?: boolean; mood?: FaceValue }) {
   const wide = useFamWide();
+  const { t } = useFamilyCtx();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
       <span style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: wide ? 17 : 16, lineHeight: 1.3, fontWeight: 600 }}>
         <span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, flex: 'none', background: live ? F.live : F.sand, boxShadow: live ? '0 0 0 3px rgba(127,176,143,.3)' : 'none' }} />
         <span data-testid="hero-status" style={{ minWidth: 0 }}>{text}</span>
       </span>
-      {sub ? <span data-testid="hero-sub" style={{ fontSize: wide ? 15 : 14, lineHeight: 1.4, color: F.sand, paddingLeft: 16 }}>{sub}</span> : null}
+      {sub || mood ? (
+        <span data-testid="hero-sub" style={{ fontSize: wide ? 15 : 14, lineHeight: 1.4, color: F.sand, paddingLeft: 16 }}>
+          {sub}
+          {/* round 14: the day's mood is a face and its word (the meaning on hold), after the rest of the line */}
+          {mood ? (
+            <span data-testid="hero-mood" data-face={mood} title={`${t(FACE_KEY[mood])} · ${t(HINT_KEY[mood])}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, verticalAlign: 'bottom' }}>
+              {sub ? <span aria-hidden="true">{'\u00A0·\u00A0'}</span> : null}
+              <Icon name={FACE_ICON[mood]} size={16} weight={300} fill={1} color={F.sand} />{t(FACE_KEY[mood])}
+            </span>
+          ) : null}
+        </span>
+      ) : null}
     </div>
   );
 }
@@ -330,9 +343,9 @@ function SingleHero({ m, story, date, top, onProfile, onOpenPhoto }: { m: Member
   const arrivalFace = dayArc(s, m.id, date).arrival; // round 12: the face marked at the door
   const face = arrivalFace !== undefined ? t(FACE_KEY[arrivalFace]).toLowerCase() : '';
   let status = '', sub = '', live = false, rail = false;
-  if (st.kind === 'here' && isToday) { status = face ? t('ftoday.atSinceFelt', { t: st.since, face }) : t('family.atSince', { t: st.since }); sub = join([nowWhat(c, story), moodOf(c, story)]); live = true; rail = true; }
-  else if (st.kind === 'here') { status = face ? t('ftoday.arrivedFelt', { a: st.since, face }) : t('family.storyArrived', { a: st.since }); sub = join([highlights(c, story), moodOf(c, story)]); rail = true; }
-  else if (st.kind === 'home') { status = face ? t('ftoday.arrivedHomeFelt', { a: story.arrivedAt || '', b: st.at, face }) : t('family.storyArrivedHome', { a: story.arrivedAt || '', b: st.at }); sub = join([highlights(c, story), moodOf(c, story)]); rail = true; }
+  if (st.kind === 'here' && isToday) { status = face ? t('ftoday.atSinceFelt', { t: st.since, face }) : t('family.atSince', { t: st.since }); sub = nowWhat(c, story); live = true; rail = true; }
+  else if (st.kind === 'here') { status = face ? t('ftoday.arrivedFelt', { a: st.since, face }) : t('family.storyArrived', { a: st.since }); sub = highlights(c, story); rail = true; }
+  else if (st.kind === 'home') { status = face ? t('ftoday.arrivedHomeFelt', { a: story.arrivedAt || '', b: st.at, face }) : t('family.storyArrivedHome', { a: story.arrivedAt || '', b: st.at }); sub = highlights(c, story); rail = true; }
   else if (st.kind === 'away') {
     status = isToday ? t(mayStillCome(s, now.nowMin) ? 'ftoday.notYet' : 'ftoday.homeToday', { n }) : t('family.storyDidntCome', { n, d: dayWord(fmt, date, now.today) });
     // KC round 8b: no "usually arrives around"; where the picture is from, else the last visit
@@ -352,7 +365,7 @@ function SingleHero({ m, story, date, top, onProfile, onOpenPhoto }: { m: Member
         {live ? <LivePill /> : null}
       </div>
       <Title>{dayTitle(t, fmt, n, date, now.today)}</Title>
-      <Status text={status} sub={sub} live={live} />
+      <Status text={status} sub={sub} live={live} mood={rail ? story.mood?.face : undefined} />
       {rail ? <Rail story={story} /> : null}
     </Frame>
   );

@@ -53,7 +53,7 @@ describe('a past day', () => {
     expect(r.members.find((x) => x.m.id === 'm2')!.arrival?.status).toBe('watch');
   });
   it('mood and notes: the daily moods by face (round 14, not the old mood word) and the note written for the family', () => {
-    expect(r.mood.counts).toEqual({ 5: 1, 4: 2, 3: 0, 2: 1, 1: 1 });
+    expect(r.mood.counts).toEqual({ 5: 2, 4: 2, 3: 0, 2: 1, 1: 0 }); // Lina's cheerful day is a Great one (round 14: her faces follow her log's word)
     for (const x of r.members) expect(x.dailyFace).toBe(dailyMood(s, x.m.id, '2026-10-19')!.face);
     // a member with the old mood word but no faces that day shows no mood (not "Okay") and is not counted
     const noFaces = produce(s, (d) => { for (const [id, mk] of Object.entries(d.moodMarks)) if (mk.memberId === 'm1' && mk.date === '2026-10-19') delete d.moodMarks[id]; });

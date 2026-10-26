@@ -8,7 +8,7 @@ export const fphotos = {
   numbersTitle_f: 'Her month in numbers', numbersTitle_m: 'His month in numbers', numVisits: 'visits', numSessions: 'sessions joined', numPhotos: 'photos',
   favTitle_f: 'Her favourite', favTitle_m: 'His favourite', favBig: '{a}, {t}', favThen: 'Then {l}.',
   mixed: 'A mix of days',
-  mostly_cheerful: 'Mostly cheerful', mostly_calm: 'Mostly calm', mostly_quiet: 'Mostly quiet', mostly_agitated: 'Some unsettled days', dotsHint: 'One dot per visit. Tap a day to open it.',
+  mostlyFace: 'Mostly {face}', dotsHint: 'One dot per visit. Tap a day to open it.',
   lunchSub: 'From the team’s daily log.', noteTitle: 'From the team',
   shareText: '{t}. {s}',
   storyPause: 'Pause', storyPlay: 'Play', memsLeft: 'Scroll memories left', memsRight: 'Scroll memories right', memsEarlier: 'Earlier months', memsFewer: 'Show fewer',

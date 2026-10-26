@@ -1,6 +1,6 @@
 // Round 8 family Photos tab and monthly memories story (pure): the family's photos as a flat list per day with a filter, the memory cards for the
 // carousel, and which slides of the story have something to say. Everything is built on the family selectors, so only approved things appear.
-import type { ClubState, DailyLog, ISODate, Member, Photo, YM } from '../types';
+import type { ClubState, Face, ISODate, Member, Photo, YM } from '../types';
 import { live } from '../util';
 import { cameOn } from './activity';
 import { isFamilyActivityPic, isFamilyPhoto, monthRecap, recapMonths, type MonthRecap } from './family';
@@ -107,13 +107,11 @@ export function memoryCards(s: ClubState, parents: Member[], today: ISODate): Me
 
 // ---------- the story ----------
 export type StorySlide = 'cover' | 'numbers' | 'favourite' | 'moods' | 'lunch' | 'note';
-export type Mood = NonNullable<DailyLog['mood']>;
-const MOOD_ORDER: Mood[] = ['cheerful', 'calm', 'quiet', 'agitated'];
-/** The mood most visits had (from approved logs only; a tie goes to the warmer one); null when no visit has one. */
-export function dominantMood(r: Pick<MonthRecap, 'moods'>): Mood | null {
-  const n = new Map<Mood, number>();
+/** The daily face most visits had (round 14: from the face marks; a tie goes to the warmer one); null when no visit has one. */
+export function dominantMood(r: Pick<MonthRecap, 'moods'>): Face | null {
+  const n = new Map<Face, number>();
   for (const d of r.moods) if (d.mood) n.set(d.mood, (n.get(d.mood) || 0) + 1);
-  return MOOD_ORDER.filter((m) => n.has(m)).sort((a, b) => n.get(b)! - n.get(a)!)[0] ?? null;
+  return Array.from(n.keys()).sort((a, b) => n.get(b)! - n.get(a)! || b - a)[0] ?? null;
 }
 /** The newest of the team's kind notes of the month (the recap keeps them in date order). */
 export const latestQuote = (r: Pick<MonthRecap, 'quotes'>) => r.quotes[r.quotes.length - 1] ?? null;
@@ -127,7 +125,7 @@ export function storySlides(r: MonthRecap): StorySlide[] {
   if (latestQuote(r)) out.push('note');
   return out;
 }
-/** True when one mood is more than half of the approved ones ("Mostly cheerful"); else the days were a mix. */
+/** True when one mood is more than half of the approved ones ("Mostly Good"); else the days were a mix. */
 export function moodIsMostly(r: Pick<MonthRecap, 'moods'>): boolean {
   const mood = dominantMood(r);
   const total = r.moods.filter((d) => d.mood).length;

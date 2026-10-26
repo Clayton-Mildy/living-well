@@ -91,12 +91,12 @@ describe('memories story (/memories)', () => {
     expect(slide()).toBe('favourite');
     expect(text()).toContain('Her favourite');
     expect(q('[data-testid="story-big"]')?.textContent).toMatch(/, \d+ times$/);
-    // d: how the days felt, one dot per visit; only approved moods are coloured
+    // d: how the days felt, one dot per visit; only the days with a face are filled (round 14: the daily mood)
     await next();
     expect(slide()).toBe('moods');
     const dots = qa('[data-testid="story-moods"] [data-date]');
     expect(dots).toHaveLength(recap.visits.length);
-    expect(dots.map((d) => d.getAttribute('data-mood') || null)).toEqual(recap.moods.map((d) => d.mood));
+    expect(dots.map((d) => d.getAttribute('data-mood') || null)).toEqual(recap.moods.map((d) => (d.mood === null ? null : String(d.mood))));
     expect(q('[data-testid="story-big"]')?.textContent).toMatch(/^Mostly /);
     // e: lunch
     await next();

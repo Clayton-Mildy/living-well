@@ -30,6 +30,9 @@ export function seedMoodMarks(s: ClubState, T: ISODate): void {
   };
   // Opa Hendra's Watch days are low days
   const watchDays = new Set(live(s.readings).filter((r) => r.memberId === 'm2' && r.kind === 'arrival' && r.status !== 'normal').map((r) => r.date));
+  // Oma Lina is the demo's family story: a day her log calls cheerful or calm is a Great or Good arrival, one it calls unsettled is a Low one, so the faces and the notes agree
+  const lina: Partial<Record<string, Face>> = { cheerful: 5, calm: 4, quiet: 3, agitated: 2 };
+  const linaFace = new Map(live(s.dailyLogs).filter((l) => l.memberId === 'm1' && l.mood).map((l) => [l.date, lina[l.mood!]!]));
   const faces = new Map<string, { arrival: Face; departure: Face; morning?: Face }>(); // `${date}:${member}`
   const from = [`${ym(T)}-01`, weekStart(T)].sort()[0]; // the current month and week
   const recent = (date: ISODate) => date >= from && date < T; // past days of the round-14 window (today is marked live)
@@ -37,7 +40,7 @@ export function seedMoodMarks(s: ClubState, T: ISODate): void {
   for (const a of live(s.attendance)) {
     if (!a.checkIn || a.date > T || (a.date === T && a.memberId === 'm1')) continue;
     const key = (mo: MoodMoment) => `mood:${a.memberId}:${a.date}:${mo}`;
-    const arrival: Face = a.memberId === 'm2' && watchDays.has(a.date) ? 2 : arrivalFace(unit(key('arrival')));
+    const arrival: Face = a.memberId === 'm2' && watchDays.has(a.date) ? 2 : (a.memberId === 'm1' && linaFace.get(a.date)) || arrivalFace(unit(key('arrival')));
     const departure = a.checkOut ? departureFace(arrival, unit(key('departure'))) : arrival;
     const morning = recent(a.date) ? morningFace(arrival, unit(key('morning'))) : undefined;
     faces.set(`${a.date}:${a.memberId}`, { arrival, departure, ...(morning ? { morning } : {}) });

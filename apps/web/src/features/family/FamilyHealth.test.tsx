@@ -113,6 +113,16 @@ describe('family health', () => {
     expect(text()).toContain('Health history');
     expect(text()).toContain('avg mmHg');
   });
+  it('History: a Mood line with the last 30 visit days as small faces from the daily mood (round 14)', async () => {
+    open('f1');
+    await show(<FamilyHistory />, '/history?member=m1&metric=bp');
+    const days = Array.from(document.querySelectorAll('[data-testid="mood-history"] [data-date]'));
+    expect(days.length).toBeGreaterThan(5);
+    expect(days.length).toBeLessThanOrEqual(30);
+    expect(days.map((d) => d.getAttribute('data-date'))).toEqual(days.map((d) => d.getAttribute('data-date')).sort()); // oldest first
+    expect(days.some((d) => ['1', '2', '3', '4', '5'].includes(d.getAttribute('data-face') || ''))).toBe(true);
+    expect(q('mood-history')?.textContent).toContain('Mood');
+  });
   it('Profile: header, plan, health, care, visits, plan facts, family, documents, consents and notes; Edit and the jump chips', async () => {
     open('f1');
     await show(<FamilyProfile />, '/profile?member=m1&from=health');

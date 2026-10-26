@@ -29,7 +29,7 @@ export const fhealth = {
   extraLine: '{n} extra days this month · {p} on next month’s invoice', extraLineOne: '1 extra day this month · {p} on next month’s invoice',
   born: 'Born', married: 'Married',
   history: 'History', foodAllergy: 'Food allergy', drugAllergy: 'Medicine allergy', mobility: 'Mobility', diet: 'Diet', noDiet: 'No special diet',
-  last10: 'Last 10 logs', noMood: 'No mood notes yet.',
+  last10: 'Last 10 visits', noMood: 'No mood marked yet.', moodTitle: 'Mood', moodAria: 'Mood on the last visits', moodNone: 'Not marked',
   visitsIn: 'Visits · {m}',
   tUsed: 'Used', tLeft: 'Left', tLeftSub: 'Extra day {p}', tExtra: 'Extra days', tExtraNone: 'None this month', tExtraBill: '{p} next invoice',
   tVisits: 'Visits', tPlan: 'Plan', tGoldSub: 'Any open day', tUsual: 'Usual', tArrival: 'Arrival',

@@ -7,7 +7,7 @@
 // `?member=` and `?survey=1` still work. The club is drop-in: members come on any open day, so there is no booking, leave, "expected" or "not coming".
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { addDays, answeredBy, live, liveSurvey, displayName, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
+import { FACE_KEY, addDays, answeredBy, live, liveSurvey, displayName, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
 import { activityLabel, roomLabel, dayStory, dishNamesOf, END_OF_DAY, familyPhotosOn, servedLunch, storyNowMin, visitDays, type DayStory } from '@cp/shared/rules/family';
 import { openDayStrip, planDay } from '@cp/shared/rules/famToday';
 import { eventTitle as calTitle, upcomingClosures } from '@cp/shared/rules/calendar';
@@ -114,7 +114,7 @@ function LastVisitCard({ members, stories, onOpen, onOpenPhoto }: { members: Mem
   const when = `${cap(dayWord(fmt, last, now.today))} · ${fmt.fd(last, { day: 'numeric', month: 'short' })}`;
   const times = story.arrivedAt && story.leftAt ? t('family.storyArrivedHome', { a: story.arrivedAt, b: story.leftAt }) : story.arrivedAt ? t('family.storyArrived', { a: story.arrivedAt }) : '';
   const joined = Array.from(new Set(story.sessions.filter((x) => x.took !== 'satOut').map((x) => activityLabel(s, x.activityId, fmt.lang)).filter(Boolean))).slice(0, 2);
-  const bits = [story.log?.mood ? t('family.mood_' + story.log.mood) : '', story.lunch?.amount ? t('family.lunch_' + story.lunch.amount) : '', joined.length ? t('ftoday.lvSessions', { a: joined.join(` ${t('common.and')} `) }) : ''].filter(Boolean);
+  const bits = [story.mood ? t('ftoday.moodIs', { face: t(FACE_KEY[story.mood.face]).toLowerCase() }) : '', story.lunch?.amount ? t('family.lunch_' + story.lunch.amount) : '', joined.length ? t('ftoday.lvSessions', { a: joined.join(` ${t('common.and')} `) }) : ''].filter(Boolean);
   const who = came.length > 1 ? namesOf(t, came) : came[0] ? displayName(came[0]) : '';
   const thumbs = photos.slice(0, 3);
   return (
