@@ -7,14 +7,14 @@ import { Cap, F } from './kit';
 import { useFamilyCtx } from './useFamily';
 
 /** A face icon and its word ("Good"); `hint` adds the face's meaning as small text under it. */
-export function MoodTag({ face, color = F.text, size = 18, hint, testId }: { face: Face; color?: string; size?: number; hint?: boolean; testId?: string }) {
+export function MoodTag({ face, color = F.text, size = 18, hint, hintColor = F.muted, align = 'end', testId }: { face: Face; color?: string; size?: number; hint?: boolean; hintColor?: string; align?: 'start' | 'end'; testId?: string }) {
   const { t } = useFamilyCtx();
   return (
-    <span data-testid={testId} data-face={face} title={`${t(FACE_KEY[face])} · ${t(HINT_KEY[face])}`} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: 'flex-end', gap: 1, color }}>
+    <span data-testid={testId} data-face={face} style={{ display: 'inline-flex', flexDirection: 'column', alignItems: align === 'end' ? 'flex-end' : 'flex-start', gap: 1, color }}>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
         <Icon name={FACE_ICON[face]} size={size} weight={300} fill={1} color={color} />{t(FACE_KEY[face])}
       </span>
-      {hint ? <span style={{ fontSize: 12, fontWeight: 400, color: F.muted, lineHeight: 1.3 }}>{t(HINT_KEY[face])}</span> : null}
+      {hint ? <span style={{ fontSize: 12, fontWeight: 400, color: hintColor, opacity: hintColor === F.muted ? 1 : 0.8, lineHeight: 1.3 }}>{t(HINT_KEY[face])}</span> : null}
     </span>
   );
 }

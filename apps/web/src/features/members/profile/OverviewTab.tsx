@@ -37,8 +37,8 @@ export function OverviewTab({ p }: { p: P }) {
   const healthLine = ar
     ? t('profile.arrivalLine', { t: ar.time, b: `${ar.sys}/${ar.dia}`, o: ar.spo2 ?? '—' }) + (ar.temp ? ` · ${ar.temp} °C` : '')
     : att?.checkIn ? t('profile.arrivalWaiting') : t('profile.noCheckToday');
-  const lg = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && l.status === 'saved').map((l) => (p.family ? logForFamily(l) : l)).filter((l): l is DailyLog => !!l && (p.family ? l.mood !== undefined : notesSaved(l))), (l) => l.date, -1)[0]; // the latest notes (round 14, staff: the Morning round; the family keeps the mood word for now)
-  const lgFace = lg && !p.family ? dailyMood(s, m.id, lg.date)?.face : undefined; // round 14: staff see that day's mood from the faces
+  const lg = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && l.status === 'saved').map((l) => (p.family ? logForFamily(l) : l)).filter((l): l is DailyLog => !!l && notesSaved(l)), (l) => l.date, -1)[0]; // the latest notes (round 14: the Morning round)
+  const lgFace = lg ? dailyMood(s, m.id, lg.date)?.face : undefined; // round 14: that day's mood from the faces, for staff and the family
   const spouse: Member | undefined = m.spouseId ? s.members[m.spouseId] : undefined;
   const since = memberSince(m);
   const age = memberAge(m, today);
@@ -92,7 +92,7 @@ export function OverviewTab({ p }: { p: P }) {
     <>
       <Quote>{logNote(s, t, p.lang, m, lg)}</Quote>
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 18px', fontSize: 14, color: '#6B6259' }}>
-        {([['sentiment_satisfied', p.family ? (lg.mood ? t('family.mood_' + lg.mood) : '') : lgFace !== undefined ? t(FACE_KEY[lgFace]) : ''], ['restaurant', lg.lunch ? t(lunchLabelKey(lg.lunch)) : '']] as const).filter(([, label]) => label).map(([icon, label]) => (
+        {([['sentiment_satisfied', lgFace !== undefined ? t(FACE_KEY[lgFace]) : ''], ['restaurant', lg.lunch ? t(lunchLabelKey(lg.lunch)) : '']] as const).filter(([, label]) => label).map(([icon, label]) => (
           <span key={icon} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, lineHeight: 1.3 }}>
             <Icon name={icon} size={18} color="var(--accent, #75624B)" />
             {label}

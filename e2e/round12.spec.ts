@@ -55,6 +55,8 @@ test('family: after the front desk records a face at the door, Maria reads how O
   const c = watchConsole(page);
   await signIn(page, 'f1', '/today'); // Maria
   await page.locator('[data-testid="parent-row"][data-member="m46"]').click();
-  await expect(page.getByTestId('story-hero')).toContainText(/At the club since \d\d:\d\d, feeling good/);
+  await expect(page.getByTestId('hero-status')).toContainText(/At the club since \d\d:\d\d$/);
+  await expect(page.getByTestId('hero-mood')).toContainText('Good'); // round 14: the day's mood is a face and its word under the status, not "feeling good" in it
+  await expect(page.getByTestId('hero-mood')).toContainText('Engaged and content');
   c.assertClean();
 });

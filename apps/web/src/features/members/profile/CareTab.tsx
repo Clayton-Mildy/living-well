@@ -1,5 +1,5 @@
 // Care log tab (design ScrProfile care), day by day: cognitive status with its real reviewer and date, mood counts for the last 4 weeks
-// (round 14, staff: the daily moods from the faces; the family keeps the old mood words until its own round),
+// (round 14: the daily moods from the faces, for staff and the family alike),
 // then one card per day the member was in (newest first): when they came and left, that day's health readings with their status, and
 // the daily log with every field the teacher recorded and the staff note (staff only). The activity team, nurse and
 // management write or correct the log right on its day (the last week's days they were in).
@@ -28,14 +28,10 @@ export function CareTab({ p }: { p: P }) {
   const paged = usePaged(days, DAYS_PER_PAGE, m.id);
   const writer = !p.family && (['activity', 'nurse', 'mgmt'] as string[]).includes(p.role);
   const editable = new Set(writer ? logDates(s, today).filter((d) => !!s.attendance[attId(d, m.id)]?.checkIn) : []);
-  const recent = logs.filter((l) => l.date >= addDays(today, -28));
-  const cnt = (k: DailyLog['mood']) => recent.filter((l) => l.mood === k).length;
-  // round 14: staff count the daily moods of the last 4 weeks' visits (low or upset days are the unsettled ones); the family keeps the mood words for now
-  const dailies = p.family ? [] : visits.filter((a) => a.date >= addDays(today, -28) && a.date <= today).map((a) => dailyMood(s, m.id, a.date)?.face).filter((f) => f !== undefined);
-  const moods = p.family
-    ? (['cheerful', 'calm', 'quiet', 'agitated'] as const).filter((k) => cnt(k)).map((k) => ({ label: t('family.mood_' + k), n: cnt(k) }))
-    : FACES.map((f) => ({ label: t(FACE_KEY[f]), n: dailies.filter((x) => x === f).length })).filter((x) => x.n);
-  const unsettled = p.family ? cnt('agitated') : dailies.filter((f) => f <= 2).length;
+  // round 14: count the daily moods of the last 4 weeks' visits (low or upset days are the unsettled ones), for staff and the family alike
+  const dailies = visits.filter((a) => a.date >= addDays(today, -28) && a.date <= today).map((a) => dailyMood(s, m.id, a.date)?.face).filter((f) => f !== undefined);
+  const moods = FACES.map((f) => ({ label: t(FACE_KEY[f]), n: dailies.filter((x) => x === f).length })).filter((x) => x.n);
+  const unsettled = dailies.filter((f) => f <= 2).length;
   const behaviour = unsettled ? t('profile.unsettledOn', { n: unsettled }) : t('profile.settled');
   const cog = m.health.cognitive;
   const reviewer = cog.reviewedBy ? staffCall(s.staff[cog.reviewedBy]) || cog.reviewedBy : '';
@@ -57,7 +53,7 @@ export function CareTab({ p }: { p: P }) {
             <span style={{ fontWeight: 500 }}>{c.n}</span>
           </span>
         ))}
-        {!moods.length ? <span style={{ fontSize: 14, color: '#6B6259' }}>{t(p.family ? 'profile.noLogsYet' : 'profile.noMoodYet')}</span> : null}
+        {!moods.length ? <span style={{ fontSize: 14, color: '#6B6259' }}>{t('profile.noMoodYet')}</span> : null}
       </div>
       <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{behaviour}</div>
     </>
@@ -118,7 +114,7 @@ function DayCard({ p, date, log, readings, visit, calls = [], canEdit, first }: 
   const [draft, setDraft] = useState<LogEntry | null>(null);
   const [busy, setBusy] = useState(false);
   const base: LogEntry = baseEntry(log);
-  const moodSaved = p.family ? log?.mood !== undefined : notesSaved(log); // KC round 7: a log can hold only lunch or a session mark so far; round 14: the Morning notes
+  const moodSaved = notesSaved(log); // KC round 7: a log can hold only lunch or a session mark so far; round 14: the Morning notes
   const e = draft ?? base;
   const editing = open || (!!draft && !sameLog(draft, base));
   const name = displayName(m);
@@ -134,9 +130,9 @@ function DayCard({ p, date, log, readings, visit, calls = [], canEdit, first }: 
   };
   const arc = dayArc(s, m.id, date);
   const hasArc = arc.arrival !== undefined || arc.health !== undefined || arc.morning !== undefined || arc.lunch !== undefined || arc.departure !== undefined || arc.activity.length > 0;
-  const daily = p.family ? null : dailyMood(s, m.id, date);
+  const daily = dailyMood(s, m.id, date);
   const where = visit?.checkIn ? (visit.checkOut ? t('profile.dayInOut', { a: visit.checkIn.at, b: visit.checkOut.at }) : t('profile.dayIn', { a: visit.checkIn.at })) : t('profile.dayAway');
-  // what the rounds marked: lunch, each session (named by its activity), then the day's mood (staff: the daily face; the family: the old word), communicative and content;
+  // what the rounds marked: lunch, each session (named by its activity), then the day's mood (the daily face), communicative and content;
   // staff also see what is not marked yet
   const chips: { icon: string; label: string; muted?: boolean }[] = [];
   if (log) {
@@ -150,8 +146,7 @@ function DayCard({ p, date, log, readings, visit, calls = [], canEdit, first }: 
     }
     if (!log.sessions && log.joined) chips.push({ icon: log.joined === 'yes' ? 'groups' : 'chair', label: t('profile.joined_' + log.joined) }); // logs from before the rounds
     else if (!log.sessions && staff && sessions.length) chips.push({ icon: 'groups', label: t('activity.noSessionMarks'), muted: true });
-    if (staff && daily) chips.push({ icon: FACE_ICON[daily.face], label: t(FACE_KEY[daily.face]) });
-    else if (!staff && log.mood) chips.push({ icon: 'sentiment_satisfied', label: t('family.mood_' + log.mood) });
+    if (daily) chips.push({ icon: FACE_ICON[daily.face], label: t(FACE_KEY[daily.face]) });
     if (log.communicative) chips.push({ icon: log.communicative === 'normal' ? 'forum' : 'speaker_notes_off', label: t('profile.comm_' + log.communicative) });
     if (log.content) chips.push({ icon: log.content === 'normal' ? 'mood' : 'mood_bad', label: t('profile.content_' + log.content) });
     if (staff && !notesSaved(log)) chips.push({ icon: 'edit_note', label: t('activity.moodNotMarked'), muted: true });

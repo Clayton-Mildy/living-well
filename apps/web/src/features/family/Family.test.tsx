@@ -91,7 +91,7 @@ describe('family Today', () => {
     await show(<FamilyToday />, `/today?member=m1&date=${day}`);
     expect(q('[data-testid="today-header"]')?.getAttribute('data-date')).toBe(day);
     expect(q('[data-testid="day-strip"] [data-selected="true"]')?.getAttribute('data-date')).toBe(day);
-    expect(q('[data-testid="story-hero"]')?.textContent).toMatch(/Arrived \d\d:\d\d(, feeling [^·]+) · Home \d\d:\d\d/);
+    expect(q('[data-testid="story-hero"]')?.textContent).toMatch(/Arrived \d\d:\d\d · Home \d\d:\d\d/);
     expect(q('[data-testid="story-hero"] h1')?.textContent).toMatch(/Oma Lina/); // the day's title ("Yesterday with Oma Lina", "Oma Lina’s Monday")
     expect(q('[data-testid="back-to-today"]')).toBeTruthy();
     expect(q('[data-testid="hero-sub"]')).toBeTruthy();
@@ -240,6 +240,23 @@ describe('family Today', () => {
     expect(Array.from(mood.querySelectorAll('[data-moment]')).map((x) => [x.getAttribute('data-moment'), x.getAttribute('data-face'), x.lastElementChild?.textContent])).toEqual([['arrival', '4', 'Check-in'], ['morning', '4', 'Morning']]);
     expect(log.querySelector('[data-testid="log-block"]')!.firstElementChild!.firstElementChild).toBe(mood); // the first row of the card
     expect(q('[data-testid="hero-mood"]')?.textContent).toContain('Good'); // the hero shows the face too
+    expect(q('[data-testid="hero-mood"]')?.textContent).toContain('Engaged and content');
+  });
+  it('round 14: both parents: each row that came shows the face and its word (no hint)', async () => {
+    const full = produce(buildSeed().citra, (d) => {
+      d.attendance[`${T}:m1`] = { id: `${T}:m1`, clubId: d.clubId, createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
+      const id = moodId(T, 'm1', 'arrival');
+      d.moodMarks[id] = { id, clubId: d.clubId, createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, time: '10:00', moment: 'arrival', face: 4, by: 'staff:s1' };
+    });
+    open('f1', 'en', 11 * 60, full);
+    await show(<FamilyToday />, '/today');
+    expect(q('[data-testid="story-hero"]')?.getAttribute('data-mode')).toBe('both');
+    const rows = qa('[data-testid="parent-row"]');
+    const lina = rows.find((r) => r.getAttribute('data-member') === 'm1')!;
+    expect(lina.querySelector('[data-testid="row-mood"]')?.textContent).toContain('Good');
+    expect(lina.querySelector('[data-testid="row-mood"]')?.textContent).not.toContain('Engaged');
+    expect(lina.querySelector('[data-testid="row-mood"] [data-face]')?.getAttribute('data-face')).toBe('4');
+    expect(rows.find((r) => r.getAttribute('data-member') === 'm46')!.querySelector('[data-testid="row-mood"]')).toBeNull(); // Opa Budi has not come
   });
 
   it('both parents on a past day: one block each with every round; a round with nothing approved reads "Not logged" (no "yet")', async () => {
@@ -349,19 +366,25 @@ describe('family Today', () => {
     await show(<FamilyToday />, `/today?member=m1&date=${day}`);
     expect(q('[data-testid="story-hero"] h1')?.textContent).toMatch(/Oma Lina/); // the day's title, in Indonesian
     expect(q('[data-testid="back-to-today"]')?.textContent).toBe('Hari ini');
-    expect(text()).toMatch(/Tiba \d\d:\d\d(, perasaan [^·]+) · Pulang \d\d:\d\d/);
+    expect(text()).toMatch(/Tiba \d\d:\d\d · Pulang \d\d:\d\d/);
     expect(text()).toContain('Hari itu');
     expect(text()).not.toMatch(/\b(family|ftoday|fam)\.[a-z]/i);
   });
 });
 
 describe('family Today: the face at the door (round 12)', () => {
-  it('the hero says how the parent arrived: "Arrived 10:00, feeling okay"', async () => {
+  it('the hero shows the day\u2019s mood once, as a face, its word and its meaning under the status ("At the club since 10:00"), not as "feeling okay" in it', async () => {
     const view = projectForFamily(withMarks, 'f1');
     open('f1');
     useReplica.setState({ confirmed: view, view, clock: { today: T, startMin: 16 * 60, realStart: Date.now(), offset: 0 } });
     await show(<FamilyToday />, '/today?member=m1');
     const hero = q('[data-testid="story-hero"]')!;
-    expect(hero.textContent).toContain('At the club since 10:00, feeling okay');
+    expect(q('[data-testid="hero-status"]')?.textContent).toBe('At the club since 10:00');
+    expect(hero.textContent).not.toContain('feeling');
+    const mood = q('[data-testid="hero-mood"]')!; // her marks: Okay at the door, Great leaving: the day is Good
+    expect(mood.getAttribute('data-testid')).toBe('hero-mood');
+    expect(mood.textContent).toContain('Good');
+    expect(mood.textContent).toContain('Engaged and content'); // the hint is small text, not a tooltip
+    expect(mood.querySelector('[title]')).toBeNull();
   });
 });
