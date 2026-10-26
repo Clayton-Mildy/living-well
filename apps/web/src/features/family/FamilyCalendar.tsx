@@ -1,4 +1,4 @@
-// Family Calendar (round 8, the "CitraPremier Family App" prototype): List | Month. The big title is always "Calendar" (List | Month on its right); the period
+// Family Calendar (round 8, the "CitraPremier Family App" prototype): List | Month (round 14: | Year, twelve mini-months of the parents' club days). The big title is always "Calendar" (List | Month on its right); the period
 // (`‹ October 2026 ›`, or the week) is a row of its own below. List is the week's open days as tiles (round 8d: the selected day has a ring, today says "Today"); Month is a grey panel where the days a parent came show
 // that day's best family photo. Either way the selected day's agenda follows (sessions, lunch and tea, who joined in, the pictures). On a laptop the month
 // panel (or the week as five rows) sits LEFT and sticks while the day's agenda scrolls on the RIGHT (round 8c: 1.25fr / 1fr, the closure notice under the agenda).
@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { addDays, addMonths, dayStatus, isOpen, isWeekday, memberName, displayName, nextOpenDay, ym, type ISODate, type Member, type Photo, type YM } from '@cp/shared';
-import { eventTitle, mondayOf, upcomingClosures } from '@cp/shared/rules/calendar';
+import { eventTitle, mondayOf, upcomingClosures, yearView } from '@cp/shared/rules/calendar';
 import { cameByDay, famDay, famRange, famWeek } from '@cp/shared/rules/famCalendar';
 import { Icon } from '../../components/ui';
 import { PhotoViewer } from '../activity/PhotoViewer';
@@ -21,8 +21,9 @@ import { SELECT_RING } from './calendar/bits';
 import { MonthPanel } from './calendar/MonthPanel';
 import { PeriodNav } from './calendar/PeriodNav';
 import { WeekRows } from './calendar/WeekRows';
+import { YearView } from '../calendar/YearView';
 
-type View = 'list' | 'month';
+type View = 'list' | 'month' | 'year';
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}$/;
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
 
@@ -42,6 +43,7 @@ export function FamilyCalendar() {
   const [view, setView] = useState<View>(askedView === 'month' ? 'month' : 'list');
   const [date, setDate] = useState<ISODate>(askedDate ?? home);
   const [month, setMonth] = useState<YM>(ym(askedDate ?? home));
+  const [year, setYear] = useState(() => Number(ym(askedDate ?? home).slice(0, 4)));
   const [viewer, setViewer] = useState<{ photos: Photo[]; startId: string } | null>(null);
   const closeViewer = useCallback(() => setViewer(null), []);
   // a link (a notification, the Today screen) can pick the day or the view
@@ -55,6 +57,7 @@ export function FamilyCalendar() {
   const wide = useFamWide();
   const monday = mondayOf(date);
   const weekDays = useMemo(() => (wide ? famWeek(s, who, monday, today, nowMin) : []), [wide, s, whoKey, monday, today, nowMin]); // eslint-disable-line react-hooks/exhaustive-deps
+  const months = useMemo(() => (view === 'year' ? yearView(s, year, 'family', who) : []), [view, s, year, whoKey]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!user || !who.length) return null;
 
   const week = [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(monday, i)).filter(shown); // Monday to Friday, and an open Saturday or Sunday
@@ -80,7 +83,10 @@ export function FamilyCalendar() {
 
   const stateOf = (d: ISODate) => { const st = dayStatus(s, d); return st.open ? 'open' : st.reason; };
 
-  const seg = (width: number | string) => <Seg label={t('cal.view')} width={width} value={view} onChange={(v) => (v === 'list' ? toList() : toMonth())} testId="cal-view" items={[{ value: 'list', label: t('fcal.vList') }, { value: 'month', label: t('fcal.vMonth') }]} />;
+  const toYear = () => { setView('year'); setYear(Number(ym(date).slice(0, 4))); };
+  const pickMonth = (m: YM) => { setView('month'); setMonth(m); setDate(m === ym(today) ? home : nextOpenDay(s, `${m}-01`, true)); };
+  const pickDay = (d: ISODate) => { setView('month'); setMonth(ym(d)); setDate(d); };
+  const seg = (width: number | string) => <Seg label={t('cal.view')} width={width} value={view} onChange={(v) => (v === 'list' ? toList() : v === 'month' ? toMonth() : toYear())} testId="cal-view" items={[{ value: 'list', label: t('fcal.vList') }, { value: 'month', label: t('fcal.vMonth') }, { value: 'year', label: t('cal.vYear') }]} />;
   const covered = next && date >= next.from && date <= next.to;
   const isMonth = view === 'month';
   const nav = isMonth ? (
@@ -117,8 +123,12 @@ export function FamilyCalendar() {
   return (
     <FamPage testId="FamilyCalendar" gap={wide ? 22 : 16} wide>
       <LargeTitle eyebrow={wide ? t('cal.openHours', { open: s.club.settings.open, close: s.club.settings.close }) : undefined} sub={whoName}
-        right={wide || !switcher ? <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{switcher}{seg(140)}</span> : switcher}>{t('nav.calShort')}</LargeTitle>
+        right={wide || !switcher ? <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{switcher}{seg(180)}</span> : switcher}>{t('nav.calShort')}</LargeTitle>
       {!wide && switcher ? seg('100%') : null}
+      {view === 'year' ? (
+        <YearView year={year} months={months} today={today} hours={{ open: s.club.settings.open, close: s.club.settings.close }} onYear={setYear}
+          minYear={Number(range.min.slice(0, 4))} maxYear={Number(range.max.slice(0, 4))} onPickMonth={pickMonth} onPickDay={pickDay} />
+      ) : (
       <Cols left="1.25fr" right="1fr" gap={32} stickyLeft>
         {[
           <div key="l" style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
@@ -131,6 +141,7 @@ export function FamilyCalendar() {
           </div>,
         ]}
       </Cols>
+      )}
       {viewer ? <PhotoViewer photos={viewer.photos} startId={viewer.startId} onClose={closeViewer} audience="family" /> : null}
     </FamPage>
   );

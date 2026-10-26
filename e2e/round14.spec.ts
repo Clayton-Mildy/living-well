@@ -292,3 +292,30 @@ test('Weekends: the seeded Saturday (7 Nov) is an open day with two sessions on 
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
+
+test('Year view: Dinar sees January to December and the outlined open Saturday, a tap opens that day in the month; Maria sees the Year view too', async ({ page }) => {
+  const c = watchConsole(page);
+  await signIn(page, 's9', '/calendar');
+  await page.getByRole('tab', { name: 'Year' }).click();
+  await expect(page.getByTestId('year-label')).toHaveText('2026');
+  for (const m of ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']) await expect(page.getByTestId('year-month').filter({ hasText: m })).toBeVisible();
+  await expect(page.locator('button[data-date="2026-11-07"]')).toHaveAttribute('data-state', 'weekendOpen');
+  await expect(page.locator('button[data-date="2026-11-14"]')).toHaveAttribute('data-state', 'closed');
+  await assertNoHorizontalScroll(page);
+  // a day opens in the Month view with that day selected
+  await page.locator('button[data-date="2026-11-07"]').click();
+  await expect(page.locator('div[data-date="2026-11-07"]')).toContainText('Angklung ensemble');
+  // the month header opens that month
+  await page.getByRole('tab', { name: 'Year' }).click();
+  await page.getByTestId('year-month').filter({ hasText: 'March' }).click();
+  await expect(page.getByRole('heading', { name: 'March 2026' })).toBeVisible();
+  c.assertClean();
+  // the family calendar has the Year view as well
+  await signIn(page, 'f1', '/calendar');
+  await page.getByTestId('cal-view').getByRole('tab', { name: 'Year' }).click();
+  await expect(page.getByTestId('year-view')).toBeVisible();
+  await expect(page.getByTestId('year-month')).toHaveCount(12);
+  await expect(page.locator('button[data-date="2026-11-07"]')).toHaveAttribute('data-state', 'weekendOpen');
+  await assertNoHorizontalScroll(page);
+  c.assertClean();
+});

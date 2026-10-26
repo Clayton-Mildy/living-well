@@ -120,6 +120,39 @@ export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'st
   return { date, weekday: dow(date), weekend, open, state, items, hasOuting: events.some((e) => e.kind === 'outing'), noSession };
 }
 
+// ---------- round 14 (B3): the Year view ----------
+export type YearDot = 'event' | 'celebration' | 'birthday';
+export type YearDayState = 'closed' | 'open' | 'weekendOpen';
+export interface YearDay { date: ISODate; state: YearDayState; dots: YearDot[] }
+const YEAR_DOT: Partial<Record<CalKind, YearDot>> = { closed: 'event', holiday: 'event', outing: 'event', venue: 'event', celebration: 'celebration', birthday: 'birthday' };
+/**
+ * Twelve mini-months of a year: each day is closed, open, or a weekend that is open because it was programmed, with up to three dots (an event or booking, a
+ * celebration, a birthday). A family audience reads the same items it sees elsewhere; `who` (the parents the view is about) keeps only their celebrations and
+ * birthdays, and with no parent chosen a family sees no birthdays.
+ */
+export function yearView(s: ClubState, year: number, audience: CalAudience = 'staff', who?: string[]): { month: YM; days: YearDay[] }[] {
+  const mine = (id?: string) => !!id && !!who?.includes(id);
+  const birthdays = new Set<ISODate>();
+  if (audience === 'family') for (const o of occasionsInRange(s, `${year}-01-01`, `${year}-12-31`)) if (o.kind === 'birthday' && mine(o.member.id)) birthdays.add(o.date);
+  return Array.from({ length: 12 }, (_, i) => {
+    const month: YM = `${year}-${String(i + 1).padStart(2, '0')}`;
+    const days = monthDays(month).map((date): YearDay => {
+      const info = dayInfo(s, date, audience);
+      const kinds = new Set<YearDot>();
+      for (const it of info.items) {
+        const dot = YEAR_DOT[it.kind];
+        if (!dot) continue;
+        if (audience === 'family' && who && it.kind === 'celebration' && !mine(it.memberId)) continue;
+        kinds.add(dot);
+      }
+      if (birthdays.has(date)) kinds.add('birthday');
+      const dots = (['event', 'celebration', 'birthday'] as YearDot[]).filter((k) => kinds.has(k));
+      return { date, state: !info.open ? 'closed' : isWeekday(date) ? 'open' : 'weekendOpen', dots };
+    });
+    return { month, days };
+  });
+}
+
 /** The next `count` calendar days from `from`, skipping weekends that have nothing on. */
 export function listDays(s: ClubState, from: ISODate, count: number, audience: CalAudience = 'staff'): DayInfo[] {
   const out: DayInfo[] = [];

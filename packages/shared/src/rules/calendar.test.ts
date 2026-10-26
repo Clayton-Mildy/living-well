@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, execute, getUser, projectForFamily, type ClubState } from '../index';
-import { DRAFT_ID, dayEditable, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView } from './calendar';
+import { DRAFT_ID, dayEditable, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView, yearView } from './calendar';
+import { occasionsInRange } from './occasions';
+import { dow } from '../util';
 
 const T = '2026-10-21';
 const fresh = (): ClubState => buildSeed().citra;
@@ -260,5 +262,42 @@ describe('upcomingClosures (family Today note)', () => {
   it('normal weekends, holidays on a weekend, cancelled and deleted events show nothing; closed wins over a holiday on one day', () => {
     const s = withEvents(ev('sat', '2026-10-24', 'holiday'), ev('gone', '2026-10-22', 'closed', { cancelledAt: '2026-10-01T10:00' }), ev('del', '2026-10-23', 'closed', { deletedAt: '2026-10-01T10:00' }), ev('h', '2026-10-27', 'holiday'), ev('c', '2026-10-27', 'closed'));
     expect(upcomingClosures(s, T).map((x) => [x.eventId, x.kind])).toEqual([['c', 'closed']]);
+  });
+});
+
+// round 14 (B3): the Year view, twelve mini-months of day states and dots
+describe('yearView', () => {
+  const flat = (v: ReturnType<typeof yearView>) => v.flatMap((m) => m.days);
+  it('has 12 months of every day, closed or open, and the seeded programmed Saturday is the one weekendOpen day', () => {
+    const s = fresh();
+    const v = yearView(s, 2026, 'staff');
+    expect(v.map((m) => m.month)).toEqual(Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`));
+    expect(v[1].days).toHaveLength(28);
+    expect(v[9].days.find((d) => d.date === T)).toMatchObject({ state: 'open' });
+    expect(v[9].days.find((d) => d.date === '2026-10-24')?.state).toBe('closed'); // a rented Saturday
+    const sat = Object.values(s.scheduleDays).find((d) => dow(d.date) === 6 && Object.keys(d.slots).length)!.date; // the seed programmes the first free Saturday
+    expect(flat(v).filter((d) => d.state === 'weekendOpen').map((d) => d.date)).toEqual([sat]);
+    expect(sat).toBe('2026-11-07');
+  });
+
+  it('dots: a venue booking is an event, a birthday is the member\'s; a family sees only its parent\'s birthday and no staff-only items', () => {
+    const s = fresh();
+    const days = flat(yearView(s, 2026, 'staff'));
+    expect(days.find((d) => d.date === '2026-10-24')?.dots).toContain('event');
+    const bd = occasionsInRange(s, '2026-01-01', '2026-12-31').filter((o) => o.kind === 'birthday');
+    const a = bd[0];
+    const b = bd.find((o) => o.date !== a.date)!;
+    const on = (v: ReturnType<typeof yearView>, d: string) => flat(v).find((x) => x.date === d)!.dots;
+    expect(on(yearView(s, 2026, 'staff'), a.date)).toContain('birthday');
+    const fam = yearView(s, 2026, 'family', [a.member.id]);
+    expect(on(fam, a.date)).toContain('birthday');
+    expect(on(fam, b.date)).not.toContain('birthday');
+    expect(on(yearView(s, 2026, 'family'), a.date)).not.toContain('birthday'); // no parent chosen: no birthdays
+    expect(flat(fam).every((d) => d.dots.length <= 3)).toBe(true);
+  });
+
+  it('a family year has the same day states as the staff year', () => {
+    const s = fresh();
+    expect(flat(yearView(s, 2026, 'family', ['m1'])).map((d) => d.state)).toEqual(flat(yearView(s, 2026, 'staff')).map((d) => d.state));
   });
 });

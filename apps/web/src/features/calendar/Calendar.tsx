@@ -6,7 +6,7 @@
 import { Fragment, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addDays, addMonths, asWeekday, isWeekSlot, ym, type CalendarEvent, type ISODate, type Slot, type WeekSlot } from '@cp/shared';
-import { dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, type CalKind } from '@cp/shared/rules/calendar';
+import { dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, yearView, type CalKind } from '@cp/shared/rules/calendar';
 import { Button, Icon, PageHead, Pin } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
@@ -20,9 +20,10 @@ import { DaySheet, EditChoice, ExtraSheet } from './DaySheet';
 import { EventEditor } from './EventEditor';
 import { ScheduleBuilder, type CellRequest } from './ScheduleBuilder';
 import { PhoneMonth } from './PhoneMonth';
+import { YearView } from './YearView';
 import { KIND, MON_FIRST, dayState, itemText, weekdayName } from './lib';
 
-type View = 'list' | 'month';
+type View = 'list' | 'month' | 'year';
 const LIST_DAYS = 3;
 
 export function Calendar() {
@@ -41,6 +42,7 @@ export function Calendar() {
   const flagOf = (date: string) => { const r = canBuild ? s.scheduleDays?.[date] : undefined; return r?.pending ? t('cal.badgeWaiting') : r?.returned ? t('cal.badgeReturned') : undefined; };
   const [view, setView] = useState<View>('list');
   const [month, setMonth] = useState(() => ym(today));
+  const [year, setYear] = useState(() => Number(today.slice(0, 4)));
   const [sel, setSel] = useState<string | null>(null);
   const [week, setWeek] = useState<ISODate>(() => mondayOf(today));
   const [focus, setFocus] = useState<ISODate | null>(null);
@@ -56,6 +58,7 @@ export function Calendar() {
 
   const days = useMemo(() => nextDays(s, today, LIST_DAYS, audience), [s, today, audience]);
   const cells = useMemo(() => monthGrid(month), [month]);
+  const months = useMemo(() => (view === 'year' ? yearView(s, year, audience) : []), [view, s, year, audience]);
   const info = (d: string) => dayInfo(s, d, audience);
   const selInfo = sel && ym(sel) === month ? info(sel) : null;
   const onEdit = (id: string) => { const e = s.calendarEvents[id]; if (e) setEditor({ event: e }); };
@@ -93,8 +96,8 @@ export function Calendar() {
   };
 
   const tabs = isPhone
-    ? <div role="tablist" aria-label={t('cal.view')} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>
-    : <div role="tablist" aria-label={t('cal.view')} style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', alignSelf: 'flex-start' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>;
+    ? <div role="tablist" aria-label={t('cal.view')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}{tab('year', 'calendar_view_month', t('cal.vYear'))}</div>
+    : <div role="tablist" aria-label={t('cal.view')} style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', alignSelf: 'flex-start' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}{tab('year', 'calendar_view_month', t('cal.vYear'))}</div>;
   /** round 6, phone: tappable list rows in one flat group (a tinted icon tile, the label, a chevron); the hairline starts at the label */
   const linkRows = (rows: { icon: string; label: string; run: () => void }[]) => (
     <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
@@ -136,6 +139,10 @@ export function Calendar() {
               </div>
             )}
           </div>
+        ) : view === 'year' ? (
+          <YearView year={year} months={months} today={today} hours={hours} onYear={setYear}
+            onPickMonth={(m) => { setMonth(m); setSel(null); setView('month'); }}
+            onPickDay={(d) => { setMonth(ym(d)); setSel(d); setView('month'); if (canBuild) openWeek(d, false); }} />
         ) : (
           <>
             {isPhone ? (
