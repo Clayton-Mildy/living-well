@@ -1,20 +1,16 @@
 // Insights, Overall: one summary line, the daily visitors, the weekday x hour heat map (members in the club), arrivals per hour and the
 // average per weekday. The trial day passes (guests) are only a footnote.
 import { useMemo } from 'react';
-import { HEAT_HOURS, dayCounts, type VisitInsights } from '@cp/shared/rules/insights';
+import { HEAT_HOURS, type VisitInsights } from '@cp/shared/rules/insights';
 import { TrendChart } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
-import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
-import { useClub } from '../../store/replica';
 import { Bars, HeatMap, type BarItem } from './charts';
-import { hourText, num1, pct, Panel, Stat, useWeekdays } from './lib';
+import { hourText, num1, pct, Panel, useWeekdays } from './lib';
 
 export function Overall({ data }: { data: VisitInsights }) {
   const t = useT();
   const fmt = useFmt();
-  const s = useClub();
-  const { today, nowMin } = useNow();
   const { isPhone, isWide } = useDevice();
   const wd = useWeekdays();
   const o = data.overall;
@@ -26,23 +22,6 @@ export function Overall({ data }: { data: VisitInsights }) {
     o.presenceHeat.forEach((row, w) => row.forEach((v, i) => { if (v > 0 && (!best || v > o.presenceHeat[best[0]][best[1]])) best = [w, i]; }));
     return best;
   }, [o]);
-
-  // KC round 14: the numbers of the period's last day; today follows the clock, an earlier day counts whole
-  const last = data.period.to;
-  const dc = useMemo(() => dayCounts(s, last, last === today ? nowMin : 24 * 60), [s, last, today, nowMin]);
-  const todayBlock = (
-    <Panel title={last === today ? t('insights.today') : day(last)} pad="14px 16px">
-      <div data-testid="insights-today" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <Stat label={t('insights.todayActive', { f: dc.active.flex, g: dc.active.gold })} value={dc.active.flex + dc.active.gold} />
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, minmax(0, 1fr))', gap: 8 }}>
-          <Stat label={t('insights.todayCame')} value={dc.came} />
-          <Stat label={t('insights.todayIn')} value={dc.inNow} />
-          <Stat label={t('insights.todayGone')} value={dc.gone} />
-          <Stat label={t('insights.todayNotIn')} value={dc.notIn} />
-        </div>
-      </div>
-    </Panel>
-  );
 
   const summary = [
     t('insights.sumVisits', { n: o.visits }),
@@ -88,7 +67,6 @@ export function Overall({ data }: { data: VisitInsights }) {
 
   return (
     <>
-      {todayBlock}
       <div data-testid="insights-summary" style={{ fontSize: 15, lineHeight: '22px', color: '#2B231C', fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{summary}</div>
       {daily}
       {isWide ? (
