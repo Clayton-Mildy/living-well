@@ -1,9 +1,10 @@
 // Activity area selectors: the day's plan and Now/Next, camera context and face opt-out, daily-log helpers, photo library.
 // Pure functions over ClubState; no clock reads (callers pass `date` and `nowMin`).
-import type { Activity, CalendarEvent, ClubState, DailyLog, HM, ISODate, Lang, Member, Photo, Room, ScheduleCell, Slot, Staff } from '../types';
+import type { Activity, CalendarEvent, ClubState, DailyLog, HM, ISODate, Lang, Member, MoodMark, Photo, Room, ScheduleCell, Slot, Staff } from '../types';
 import { dayStatus, isPendingRow, memberName } from './core';
 import { lobbyGroups, attId } from './attendance';
 import { sessionsOn } from './kitchen';
+import { meanFace, moodId } from './moodCore';
 import { addDays, live, sortBy, toMin } from '../util';
 
 /** Length of one activity session; a session is "Now" from its start until start + SESSION_MIN. */
@@ -182,12 +183,15 @@ export function pendingLogMembers(s: ClubState, date: ISODate): Member[] {
 }
 
 export interface CogSummary { base: string; isDefault: boolean; quiet: number; unsettled: number; days: number }
-/** Cognitive summary line: the stored summary plus how the last (up to) 10 logged days went. */
+/** Cognitive summary line: the stored summary plus how the last (up to) 10 visit days with faces went. Round 14: from the daily mood (the faces), not the
+ *  old mood word: a day at 3 (Okay) is quiet, a day at 2 or below unsettled. */
 export function cogSummary(s: ClubState, m: Member): CogSummary {
-  const ls = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && l.status === 'saved' && l.mood !== undefined), (l) => l.date).slice(-10);
+  const byDay = new Map<ISODate, MoodMark[]>();
+  for (const k of live(s.moodMarks ?? {})) if (k.memberId === m.id) byDay.set(k.date, [...(byDay.get(k.date) ?? []), k]);
+  const faces = [...byDay.keys()].sort().slice(-10).map((d) => meanFace(byDay.get(d)!));
   const raw = (m.health.cognitive.summary || '').trim();
   const isDefault = !raw || raw === 'Alert and oriented';
-  return { base: isDefault ? '' : raw.split(';')[0].trim(), isDefault, quiet: ls.filter((l) => l.mood === 'quiet').length, unsettled: ls.filter((l) => l.mood === 'agitated').length, days: ls.length };
+  return { base: isDefault ? '' : raw.split(';')[0].trim(), isDefault, quiet: faces.filter((f) => f === 3).length, unsettled: faces.filter((f) => f <= 2).length, days: faces.length };
 }
 
 export type LogFields = { [K in 'mood' | 'lunch' | 'joined' | 'communicative' | 'content']?: NonNullable<DailyLog[K]> };
@@ -234,8 +238,8 @@ export function defaultRound(rounds: Round[], nowMin: number): RoundId {
 /** The notes of the day are in (Ruling 5): the Morning round's form was saved (communicative and content come with every save; older logs carry the mood word), or a note was written. */
 export const notesSaved = (l: Partial<Pick<DailyLog, 'mood' | 'communicative' | 'content' | 'note' | 'staffNote'>> | undefined): boolean =>
   !!l && (l.mood !== undefined || l.communicative !== undefined || l.content !== undefined || !!l.note?.trim() || !!l.staffNote?.trim());
-/** A morning face was marked for the member that day (the key is rules/mood's `moodId`; that file imports this one). */
-export const morningFaced = (s: ClubState, memberId: string, date: ISODate): boolean => { const m = s.moodMarks?.[`${date}:${memberId}:morning`]; return !!m && !m.deletedAt; };
+/** A morning face was marked for the member that day. */
+export const morningFaced = (s: ClubState, memberId: string, date: ISODate): boolean => { const m = s.moodMarks?.[moodId(date, memberId, 'morning')]; return !!m && !m.deletedAt; };
 /** Has this round been marked? An unmarked part is simply missing from the row; the Morning round counts once there is a morning face (`faced`) or the notes are in. */
 export function roundMarked(l: Partial<Pick<DailyLog, 'mood' | 'communicative' | 'content' | 'note' | 'staffNote' | 'lunch' | 'sessions'>> | undefined, round: Round | RoundId, faced = false): boolean {
   const id = roundIdOf(round);

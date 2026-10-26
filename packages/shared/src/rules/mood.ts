@@ -9,6 +9,9 @@ import type { InsightPeriod } from './insights';
 import { activeOn } from './core';
 import { sessionsOn } from './kitchen';
 import { attendedOn, logsOn } from './activity';
+import { dailyMood, marksOn, moodId } from './moodCore';
+
+export { dailyMood, marksOn, moodId };
 import { attId } from './attendance';
 import { validReadings } from './health';
 
@@ -19,16 +22,6 @@ export const FACE_KEY: Record<Face, string> = { 5: 'mood.face.5', 4: 'mood.face.
 export const MOOD_MOMENTS: readonly MoodMoment[] = ['arrival', 'health', 'morning', 'lunch', 'activity', 'departure'];
 export const HINT_KEY: Record<Face, string> = { 5: 'mood.hint.5', 4: 'mood.hint.4', 3: 'mood.hint.3', 2: 'mood.hint.2', 1: 'mood.hint.1' };
 const MOMENTS = MOOD_MOMENTS;
-
-export const moodId = (date: ISODate, memberId: string, moment: MoodMoment, slot?: Slot) =>
-  moment === 'activity' && slot ? `${date}:${memberId}:activity:${slot}` : `${date}:${memberId}:${moment}`;
-
-/** A member's live marks for a date, earliest first. */
-export function marksOn(s: ClubState, memberId: string, date: ISODate): MoodMark[] {
-  return live(s.moodMarks ?? {})
-    .filter((m) => m.memberId === memberId && m.date === date)
-    .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-}
 
 export interface DayArc { arrival?: Face; health?: Face; morning?: Face; lunch?: Face; activity: { slot: Slot; face: Face }[]; departure?: Face; lift: number | null }
 /** The day's faces in order; `lift` is departure minus arrival, only when both were marked. */
@@ -41,14 +34,6 @@ export function dayArc(s: ClubState, memberId: string, date: ISODate): DayArc {
   arc.activity.sort((a, b) => (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0));
   if (arc.arrival !== undefined && arc.departure !== undefined) arc.lift = arc.departure - arc.arrival;
   return arc;
-}
-
-/** The day's mood of one member: the rounded average of that member's marks on that date (never other days or other members), with the marks.
- *  null when nobody marked a face that day (an old log's mood word does not count). */
-export function dailyMood(s: ClubState, memberId: string, date: ISODate): { face: Face; marks: MoodMark[] } | null {
-  const marks = marksOn(s, memberId, date);
-  if (!marks.length) return null;
-  return { face: Math.round(marks.reduce((a, m) => a + m.face, 0) / marks.length) as Face, marks };
 }
 
 /** Faces still to mark on a date by a role, among the members checked in that day (`total` = the faces expected):

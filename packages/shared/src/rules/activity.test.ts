@@ -131,15 +131,22 @@ describe('daily log helpers', () => {
     expect(logDeviations({ lunch: 'none', mood: 'calm' })).toEqual(['lunch.none']);
   });
 
-  it('cognitive summary counts quiet and unsettled days among the last ten logs', () => {
+  it('cognitive summary counts quiet and unsettled days among the last ten days with faces', () => {
     const s = fresh();
     const c = cogSummary(s, s.members.m10);
     expect(c.base).toBe('Mild memory loss');
     expect(c.isDefault).toBe(false);
     expect(c.days).toBeGreaterThan(0);
     expect(cogSummary(s, s.members.m2)).toMatchObject({ isDefault: true, base: '' });
-    const noisy = produce(s, (d) => { for (const l of Object.values(d.dailyLogs)) if (l.memberId === 'm2') l.mood = 'quiet'; });
-    expect(cogSummary(noisy, noisy.members.m2).quiet).toBe(10);
+    // round 14: the counts come from the daily moods of the last 10 days with faces (3 = quiet, 2 or below = unsettled), not the old mood word
+    const faced = (face: 1 | 2 | 3 | 4 | 5) => produce(s, (d) => { for (const k of Object.values(d.moodMarks)) if (k.memberId === 'm2') k.face = face; });
+    expect(cogSummary(faced(3), s.members.m2)).toMatchObject({ quiet: 10, unsettled: 0, days: 10 });
+    expect(cogSummary(faced(2), s.members.m2)).toMatchObject({ quiet: 0, unsettled: 10 });
+    expect(cogSummary(faced(5), s.members.m2)).toMatchObject({ quiet: 0, unsettled: 0, days: 10 });
+    const words = produce(faced(5), (d) => { for (const l of Object.values(d.dailyLogs)) if (l.memberId === 'm2') l.mood = 'agitated'; });
+    expect(cogSummary(words, s.members.m2).unsettled).toBe(0); // the old word does not count
+    const noFaces = produce(s, (d) => { for (const [id, k] of Object.entries(d.moodMarks)) if (k.memberId === 'm2') delete d.moodMarks[id]; });
+    expect(cogSummary(noFaces, s.members.m2).days).toBe(0);
   });
 });
 
