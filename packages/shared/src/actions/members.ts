@@ -612,12 +612,7 @@ export const membersActions: ActionDef[] = [
       const m = requireMember(d, input.memberId, ctx);
       const cur = currentMembership(m);
       if (!cur.lastDay || membershipStatus(m as Member, ctx.today) === 'ended') ctx.fail('members.err.notEnding');
-      const at = cur.endedAt;
-      // undo what the ending voided
-      for (const i of Object.values(d.invoices)) {
-        if (i.memberId === m.id && i.kind === 'final' && !i.voided && at && i.createdAt === at && paidOn(d as unknown as ClubState, i.id) <= 0) i.voided = { at: ctx.nowDT, by: ctx.actor, reason: 'endingCancelled' };
-      }
-      delete cur.lastDay; delete cur.endReason; delete cur.endNote; delete cur.endedBy; delete cur.endedAt;
+      revertEnding(d, m, ctx);
       feed(ctx, d, m.id, 'undo', 'endingCancelled');
     },
   }),
@@ -730,6 +725,16 @@ export function applyEnding(d: Draft<ClubState>, m: Draft<Member>, input: { last
   const p = primaryContact(d as unknown as ClubState, m.id);
   if (p) ctx.notify({ toUsers: [p.id], kind: 'members.notif.ending', params: { name: displayName(m), date: dmy(input.lastDay) }, link: '/today', memberId: m.id });
   feed(ctx, d, m.id, 'archive', 'ending', { reason: input.reason, date: input.lastDay });
+}
+
+/** Take an ending back: the unpaid final invoice it made is voided and the last day, reason and who ended it are cleared. Also used by the renewals undo (actions/renewals.ts). */
+export function revertEnding(d: Draft<ClubState>, m: Draft<Member>, ctx: Ctx) {
+  const cur = currentMembership(m);
+  const at = cur.endedAt;
+  for (const i of Object.values(d.invoices)) {
+    if (i.memberId === m.id && i.kind === 'final' && !i.voided && at && i.createdAt === at && paidOn(d as unknown as ClubState, i.id) <= 0) i.voided = { at: ctx.nowDT, by: ctx.actor, reason: 'endingCancelled' };
+  }
+  delete cur.lastDay; delete cur.endReason; delete cur.endNote; delete cur.endedBy; delete cur.endedAt;
 }
 
 /** Insert a plan entry keeping the list ordered by date; scheduled changes on or after the new date are replaced. */

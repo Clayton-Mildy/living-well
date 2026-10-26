@@ -9,7 +9,7 @@ import type { Actor, ClubState, EndReason, FollowUp, FollowUpOutcome, ISODate, M
 import { defineAction, DomainError, hasRole, type ActionDef, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { clearApproval } from './approvalGate';
-import { addPlanEntry, applyEnding, obj, oneOf, txt } from './members';
+import { addPlanEntry, applyEnding, obj, oneOf, revertEnding, txt } from './members';
 import { addLeave } from './membership';
 import { planName } from './planRequests';
 import { currentMembership, isPendingRow, membershipStatus, planOn } from '../rules/core';
@@ -162,24 +162,32 @@ export const renewalActions: ActionDef[] = [
       const first = monthStart(input.month);
       if (ctx.today >= first) ctx.fail('renewals.err.started');
       const cur = currentMembership(m);
+      // what the family had asked for in the app, and the change closed, opens again: only the requests this change touched (same plan, decided at that moment by that person)
+      const reopen = (to: string | undefined, status: 'applied' | 'declined', at: string | undefined, by: Actor | undefined) => {
+        for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === status && (!to || r.to === to) && r.decidedAt === at && r.decidedBy === by) { r.status = 'pending'; delete r.decidedBy; delete r.decidedAt; }
+      };
+      const last = f.calls[f.calls.length - 1];
+      const by: Actor = f.approval?.by ?? last?.by ?? f.createdBy; // who the plan entry names (an older row was recorded by one and approved by another)
       if (f.outcome === 'upgrade' || f.outcome === 'downgrade') {
-        m.plans = m.plans.filter((p) => p.from !== first);
+        // only the entry this follow-up added: the plan it asked for, dated the 1st, by the recorder
+        const plan = planAfter(f.outcome);
+        const i = m.plans.findIndex((p) => p.from === first && p.plan === plan && p.by === by);
+        if (i >= 0) m.plans.splice(i, 1);
+        reopen(plan, 'applied', f.approval?.decidedAt ?? last?.at, f.approval?.decidedBy ?? last?.by);
       } else if (f.outcome === 'leave') {
         const months = f.leaveMonths ?? [];
         cur.leaves = (cur.leaves ?? []).filter((l) => !months.includes(l.month));
         if (!cur.leaves.length) delete cur.leaves;
       } else if (f.outcome === 'stop' && cur.lastDay === f.lastDay) {
-        // the final invoice the ending made goes with it (as when management cancels an ending)
-        const at = cur.endedAt;
-        for (const i of Object.values(d.invoices)) {
-          if (i.memberId === m.id && i.kind === 'final' && !i.voided && at && i.createdAt === at && paidOn(d as unknown as ClubState, i.id) <= 0) i.voided = { at: ctx.nowDT, by: ctx.actor, reason: 'endingCancelled' };
-        }
-        delete cur.lastDay; delete cur.endReason; delete cur.endNote; delete cur.endedBy; delete cur.endedAt;
+        reopen(undefined, 'declined', cur.endedAt, cur.endedBy);
+        revertEnding(d, m, ctx);
       }
       delete f.outcome; delete f.leaveMonths; delete f.lastDay; delete f.endReason;
       clearApproval(f);
       f.status = 'open';
       ctx.feed({ icon: 'undo', key: 'renewals.feed.undone', memberId: m.id, params: { name: shortOf(d, m.id), month: input.month } });
+      const to = familyUserIds(d, m.id);
+      if (to.length) ctx.notify({ toUsers: to, kind: 'renewals.notif.undone', params: { name: shortOf(d, m.id), month: input.month }, link: '/billing', memberId: m.id });
       ctx.result.followUpId = f.id;
     },
   }),

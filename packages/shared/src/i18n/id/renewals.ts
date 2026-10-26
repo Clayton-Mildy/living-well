@@ -29,6 +29,7 @@ export const renewals: Same<typeof EN> = {
   'err.notDue': 'Anggota ini tidak perlu dihubungi untuk bulan itu.', 'err.lastDayLate': 'Hari terakhir harus berada dalam bulan yang diputuskan.',
   'notif.plan': 'Paket {name} berubah ke {plan} mulai {date}.', 'notif.leave': 'Cuti {name} pada {month} sudah dicatat: {fee} di tagihan bulan itu sebagai pengganti paket.',
   'notif.leave2': 'Cuti {name} dari {from} sampai {to} sudah dicatat: {fee} per bulan di tagihan sebagai pengganti paket.',
+  'notif.undone': 'Perubahan untuk {name} pada {month} dibatalkan.',
   'notif.act.followUp': '{n} anggota perlu dihubungi untuk {month}', 'notif.act.approve': 'Perubahan perpanjangan menunggu persetujuan: {n}',
   'feed.continue': '{name}: lanjut di {month}', 'feed.upgrade': '{name}: naik ke Gold mulai {month}', 'feed.downgrade': '{name}: turun ke Flex mulai {month}',
   'feed.leave': '{name}: cuti di {month}', 'feed.leave2': '{name}: cuti dari {from} sampai {to}', 'feed.stop': '{name}: berhenti, hari terakhir {date}',

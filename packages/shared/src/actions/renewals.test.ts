@@ -143,14 +143,52 @@ describe('undo until the 1st', () => {
   });
 
   it('a stop: the last day and the reason are gone, and the final invoice it made is voided', () => {
-    let s = record(fresh(), 'm20', 'stop', 's1', { lastDay: '2026-10-30', endReason: 'movedAway', note: 'Moving to Bali.' }).state;
-    expect(s.members.m20.memberships.at(-1)!.lastDay).toBe('2026-10-30');
-    s = undo(s, 'm20');
-    const cur = s.members.m20.memberships.at(-1)!;
+    // Oma Lina has an extra visit today, so ending her membership bills a final invoice
+    const base = run(fresh(), 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, 's1').state;
+    let s = record(base, 'm1', 'stop', 's1', { lastDay: '2026-10-29', endReason: 'movedAway', note: 'Moving to Bali.' }).state;
+    const final = () => Object.values(s.invoices).filter((i) => i.memberId === 'm1' && i.kind === 'final');
+    expect(s.members.m1.memberships.at(-1)!.lastDay).toBe('2026-10-29');
+    expect(final()).toHaveLength(1); // precondition: the ending really made a final invoice
+    expect(final()[0].voided).toBeUndefined();
+    s = undo(s, 'm1');
+    const cur = s.members.m1.memberships.at(-1)!;
     for (const k of ['lastDay', 'endReason', 'endNote', 'endedBy', 'endedAt'] as const) expect(cur[k]).toBeUndefined();
-    expect(membershipStatus(s.members.m20, '2026-11-01')).not.toBe('ended');
-    expect(Object.values(s.invoices).filter((i) => i.memberId === 'm20' && i.kind === 'final' && !i.voided)).toEqual([]);
-    reopened(s, 'm20');
+    expect(membershipStatus(s.members.m1, '2026-11-01')).not.toBe('ended');
+    expect(final()).toHaveLength(1);
+    expect(final()[0].voided).toMatchObject({ reason: 'endingCancelled' });
+    reopened(s, 'm1');
+  });
+
+  it('undo only removes the plan entry this follow-up added', () => {
+    let s = record(fresh(), 'm1', 'upgrade').state;
+    const other = produce(s, (d) => { d.members.m1.plans.find((p) => p.from === '2026-11-01')!.by = 'staff:s9'; }); // an entry on the 1st that is not the follow-up's
+    expect(undo(other, 'm1').members.m1.plans.some((p) => p.from === '2026-11-01')).toBe(true);
+    s = undo(s, 'm1');
+    expect(s.members.m1.plans.some((p) => p.from === '2026-11-01')).toBe(false);
+  });
+
+  it('undo reopens the plan request the change answered (upgrade) or closed (stop), and tells the family once', () => {
+    const s0 = fresh(); // Bambang's family asked for Gold in the app: pcr-m10 waits
+    expect(s0.planChangeRequests['pcr-m10']).toMatchObject({ status: 'pending', to: 'gold' });
+    const told = (s: ClubState) => Object.values(s.notifications || {}).filter((x) => x.kind === 'renewals.notif.undone');
+    let s = record(s0, 'm10', 'upgrade').state;
+    expect(s.planChangeRequests['pcr-m10']).toMatchObject({ status: 'applied', decidedBy: 'staff:s1' });
+    expect(told(s)).toHaveLength(0);
+    s = undo(s, 'm10');
+    expect(s.planChangeRequests['pcr-m10'].status).toBe('pending');
+    expect(s.planChangeRequests['pcr-m10'].decidedBy).toBeUndefined();
+    expect(s.planChangeRequests['pcr-m10'].decidedAt).toBeUndefined();
+    expect(told(s)).toHaveLength(1);
+    expect(famTold(s, 'fm10_0', 'renewals.notif.undone')).toBe(true);
+    // a stop closes the pending request; undoing the stop opens it again
+    s = record(s0, 'm10', 'stop', 's1', { lastDay: '2026-10-29' }).state;
+    expect(s.planChangeRequests['pcr-m10'].status).toBe('declined');
+    s = undo(s, 'm10');
+    expect(s.planChangeRequests['pcr-m10'].status).toBe('pending');
+    expect(told(s)).toHaveLength(1);
+    // a request that was already closed by someone else is left alone
+    const closed = produce(s0, (d) => { d.planChangeRequests['pcr-m10'].status = 'declined'; d.planChangeRequests['pcr-m10'].decidedBy = 'staff:s9'; d.planChangeRequests['pcr-m10'].decidedAt = '2026-10-20T09:00'; });
+    expect(undo(record(closed, 'm10', 'upgrade').state, 'm10').planChangeRequests['pcr-m10'].status).toBe('declined');
   });
 
   it('after the 1st it is refused; so is undoing something that was never recorded', () => {

@@ -33,6 +33,7 @@ export const renewals = {
   // what families are told, once a change is applied
   'notif.plan': '{name}’s plan changes to {plan} from {date}.', 'notif.leave': 'Leave for {name} in {month} is recorded: {fee} on that month’s invoice instead of the plan.',
   'notif.leave2': 'Leave for {name} from {from} to {to} is recorded: {fee} a month on the invoices instead of the plan.',
+  'notif.undone': 'The change for {name} in {month} was cancelled.',
   // the bell
   'notif.act.followUp': '{n} members to follow up for {month}', 'notif.act.approve': 'Renewal changes waiting for approval: {n}',
   // the feed
