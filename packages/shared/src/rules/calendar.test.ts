@@ -296,6 +296,19 @@ describe('yearView', () => {
     expect(flat(fam).every((d) => d.dots.length <= 3)).toBe(true);
   });
 
+  it('a family sees only its parents\' celebrations as dots: two parents\' celebrations, one parent chosen, none chosen', () => {
+    const base = fresh();
+    const cel = (id: string, memberId: string, date: string) => ({ id, clubId: base.clubId, createdAt: '2026-10-01T10:00', createdBy: 'staff:s1' as const, memberId, kind: 'birthday' as const, title: 'Party', date, from: '12:00', to: '14:00', roomId: 'room-music', guests: 5, status: 'confirmed' as const, requestedBy: 'staff:s1' as const });
+    const s = produce(base, (d) => { d.celebrations['ca'] = cel('ca', 'm1', '2026-11-03') as never; d.celebrations['cb'] = cel('cb', 'm2', '2026-11-04') as never; });
+    const dots = (v: ReturnType<typeof yearView>, d: string) => flat(v).find((x) => x.date === d)!.dots;
+    expect(dots(yearView(s, 2026, 'staff'), '2026-11-04')).toContain('celebration');
+    const mine = yearView(s, 2026, 'family', ['m1']);
+    expect(dots(mine, '2026-11-03')).toContain('celebration');
+    expect(dots(mine, '2026-11-04')).not.toContain('celebration');
+    const none = flat(yearView(s, 2026, 'family'));
+    expect(none.some((d) => d.dots.includes('celebration'))).toBe(false);
+  });
+
   it('a family year has the same day states as the staff year', () => {
     const s = fresh();
     expect(flat(yearView(s, 2026, 'family', ['m1'])).map((d) => d.state)).toEqual(flat(yearView(s, 2026, 'staff')).map((d) => d.state));

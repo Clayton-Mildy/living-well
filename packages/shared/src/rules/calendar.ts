@@ -142,7 +142,7 @@ export function yearView(s: ClubState, year: number, audience: CalAudience = 'st
       for (const it of info.items) {
         const dot = YEAR_DOT[it.kind];
         if (!dot) continue;
-        if (audience === 'family' && who && it.kind === 'celebration' && !mine(it.memberId)) continue;
+        if (audience === 'family' && it.kind === 'celebration' && !mine(it.memberId)) continue;
         kinds.add(dot);
       }
       if (birthdays.has(date)) kinds.add('birthday');
