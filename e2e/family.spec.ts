@@ -742,7 +742,7 @@ test('Lunch: feedback goes to the kitchen and comes back as a reply; the allergy
   await signIn(page, 'fm10_0', '/today');
   const tl = page.getByTestId('timeline');
   // Bapak Bambang is allergic to seafood and today's lunch has fish soup: no reassurance until the kitchen serves an alternative
-  await expect(tl).toContainText('Sop ikan kakap');
+  await expect(page.getByTestId('lunch-card-dishes')).toContainText('Sop ikan kakap'); // round 14: the dishes are on the Lunch card; the timeline row keeps the allergy line
   await expect(tl).not.toContainText('today’s menu is clear');
   await expect(tl).not.toContainText('allergy on file');
   const row = page.getByTestId('lunch-feedback-row');

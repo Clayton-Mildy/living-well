@@ -13,7 +13,7 @@ import { addPlanEntry, applyEnding, obj, oneOf, revertEnding, txt } from './memb
 import { addLeave } from './membership';
 import { planName } from './planRequests';
 import { currentMembership, isPendingRow, membershipStatus, planOn } from '../rules/core';
-import { feeOf, issueDateOf, paidOn, priceOn } from '../rules/billing';
+import { feeOf, issueDateOf, priceOn } from '../rules/billing';
 import { END_REASONS, isISO } from '../rules/members';
 import {
   FOLLOW_UP_OUTCOMES, defaultLastDay, followUpId, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthsCheck, planAfter, renewalMembers,

@@ -943,7 +943,7 @@ for (const [uid, path, text] of [
   });
 }
 
-test('the language switch turns the whole teacher screen Indonesian', async ({ page }) => {
+test('the language switch turns the whole teacher screen Indonesian', async ({ page, request }) => {
   const c = watchConsole(page);
   await signIn(page, 's5', '/log?round=10:30');
   await openLangMenu(page);
@@ -958,10 +958,8 @@ test('the language switch turns the whole teacher screen Indonesian', async ({ p
   await expect(bambang.getByRole('button')).toHaveText(['Ikut', 'Tidak ikut']);
   await expect(page.getByRole('button', { name: /^Tandai sisanya/ })).toBeVisible();
   expect(await page.locator('#main').innerText()).not.toMatch(english);
-  // lunch: the five amounts
-  await page.getByRole('tab', { name: /^Makan siang/ }).click();
-  await expect(bambang.getByRole('button')).toHaveText(['Habis', 'Sebagian besar', 'Setengah', 'Sedikit', 'Tidak makan']);
-  expect(await page.locator('#main').innerText()).not.toMatch(english);
+  // round 14: lunch is the kitchen's round now (its five amounts are checked on /lunch below)
+  await expect(page.getByRole('tab', { name: /^Makan siang/ })).toHaveCount(0);
   // the Morning round: the faces and the notes form of one person
   await page.getByRole('tab', { name: /^Pagi/ }).click();
   await bambang.getByRole('button', { name: /Bapak Bambang/ }).click();
@@ -969,6 +967,12 @@ test('the language switch turns the whole teacher screen Indonesian', async ({ p
   await expect(bambang.getByTestId('mood-hint')).toHaveText('Terlibat dan senang');
   for (const m of ['Menarik diri', 'Tampak murung']) await expect(page.getByRole('button', { name: m, exact: true })).toBeVisible();
   expect(await page.locator('#main').innerText()).not.toMatch(english);
+  expect(await page.locator('#main').innerText()).not.toMatch(RAW_KEY);
+  // lunch: the five amounts, on the kitchen's Lunch round (it opens at 11:30)
+  await request.post('/api/demo/clock', { data: { hm: '12:10', allowBack: true } });
+  await signIn(page, 's2', '/lunch', 'id');
+  const lunch = page.getByTestId('lunch-row').filter({ hasText: 'Bapak Bambang' });
+  await expect(lunch.getByRole('button')).toHaveText(['Habis', 'Sebagian besar', 'Setengah', 'Sedikit', 'Tidak makan']);
   expect(await page.locator('#main').innerText()).not.toMatch(RAW_KEY);
   c.assertClean();
 });

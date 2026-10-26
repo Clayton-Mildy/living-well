@@ -359,7 +359,7 @@ test('month view: any month, translated headers, closures, outings and holidays'
   // tapping a day shows its detail; tapping again hides it
   await cell(page, '2026-10-21').click();
   await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
-  await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(0); // a teacher has no schedule to open (management's date opens its week: see the list view test)
+  await expect(page.getByRole('heading', { name: 'Weekly schedule' })).toHaveCount(1); // round 14: the activity team builds the programme too (it goes to Ega), so the date opens its week as for management
   await cell(page, '2026-10-21').click();
   await expect(block(page, '2026-10-21')).toHaveCount(0);
   c.assertClean();

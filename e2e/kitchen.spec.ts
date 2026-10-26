@@ -1138,8 +1138,13 @@ test.describe('layout and language', () => {
   test('every kitchen screen fits the viewport without console errors', async ({ page }) => {
     const c = watchConsole(page);
     await signIn(page, 's3');
-    for (const key of ['today', 'feedback', 'requests']) {
-      await page.locator(`[data-nav-key="${key}"]`).first().click();
+    for (const key of ['today', 'lunch', 'feedback', 'requests']) {
+      const direct = page.locator(`[data-nav-key="${key}"]`).first();
+      if (await direct.isVisible()) await direct.click();
+      else { // round 14: the Lunch round joined the bar, so on a phone Requests sits behind More
+        await page.locator('[data-nav-key="more"]').first().click();
+        await page.getByRole('dialog', { name: 'All modules' }).locator(`[data-nav-key="${key}"]`).click();
+      }
       await expect(page.locator('#main')).toBeVisible();
       await expect(page.getByText('This screen is being built.')).toHaveCount(0);
       await assertNoHorizontalScroll(page);
@@ -1157,7 +1162,12 @@ test.describe('layout and language', () => {
     await expect(page.getByText('Bentrok alergi hari ini')).toBeVisible();
     await expect(page.getByText('Rencana menu mingguan')).toBeVisible();
     for (const [key, heading] of [['feedback', 'Masukan'], ['requests', 'Permintaan']] as const) {
-      await page.locator(`[data-nav-key="${key}"]`).first().click();
+      const direct = page.locator(`[data-nav-key="${key}"]`).first();
+      if (await direct.isVisible()) await direct.click();
+      else { // round 14: on a phone Requests sits behind More (the Lunch round joined the bar)
+        await page.locator('[data-nav-key="more"]').first().click();
+        await page.getByRole('dialog').locator(`[data-nav-key="${key}"]`).click();
+      }
       await expect(page.getByRole('heading', { name: heading, exact: true })).toBeVisible();
       expect(await page.locator('#main').innerText()).not.toMatch(/\b(kitchen|requests|common|status|err)\.[a-zA-Z_]+/);
       await assertNoHorizontalScroll(page);

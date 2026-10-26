@@ -164,6 +164,7 @@ test('Lunch round: Yohanes marks Bapak Bambang "Most" with a "Good" face on /lun
   await expect(page.getByTestId('round-progress')).toHaveText('1 of 3 marked');
   await assertNoHorizontalScroll(page);
   await expect.poll(async () => (await snap('s2')).dailyLogs['log-m10-2026-10-21']?.lunch).toBe('most');
+  await expect.poll(async () => (await snap('s2')).moodMarks['2026-10-21:m10:lunch']?.face).toBe(4); // the face is its own mutation
   expect((await snap('s2')).moodMarks['2026-10-21:m10:lunch']).toMatchObject({ moment: 'lunch', face: 4 });
   // the amount waits for management: the family sees nothing yet
   expect((await snap('s2')).dailyLogs['log-m10-2026-10-21'].approval).toMatchObject({ status: 'pending', by: 'staff:s2' });
@@ -188,7 +189,11 @@ test('Lunch round: Yohanes marks Bapak Bambang "Most" with a "Good" face on /lun
   // now the family's Lunch card says how much he ate
   await fam.page.reload();
   await expect(fam.page.getByTestId('lunch-amount')).toContainText('Ate most');
-  await expect(fam.page.getByTestId('daily-log').getByText('Lunch', { exact: true })).toHaveCount(0); // not twice: the daily log has no Lunch row any more
+  // not twice: the amount is on the Lunch card only (the daily log's "Lunch" is the lunch face's moment label)
+  await expect(fam.page.getByTestId('lunch-amount')).toHaveCount(1);
+  await expect(fam.page.getByTestId('daily-log').getByTestId('lunch-amount')).toHaveCount(0);
+  await expect(fam.page.getByTestId('daily-log').getByText('Ate most')).toHaveCount(0);
+  await expect(fam.page.getByTestId('daily-log').locator('[data-moment="lunch"]')).toHaveAttribute('data-face', '4');
   await assertNoHorizontalScroll(fam.page);
   fc.assertClean();
   ec.assertClean();

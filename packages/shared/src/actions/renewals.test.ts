@@ -3,8 +3,8 @@
 // for management from before can still be decided.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { actionItems, buildSeed, execute, getUser, live, membershipStatus, planOn, toMin, updatesFor, DomainError, type ClubState } from '../index';
-import { approvalHistory, pendingItems } from '../rules/approvals';
+import { actionItems, buildSeed, execute, getUser, membershipStatus, planOn, toMin, updatesFor, DomainError, type ClubState } from '../index';
+import { pendingItems } from '../rules/approvals';
 import { changeRows, followUpId, followUpOf, renewalCounts, renewalRows } from '../rules/renewals';
 
 const T = '2026-10-21';
