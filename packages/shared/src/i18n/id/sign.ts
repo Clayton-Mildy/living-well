@@ -13,5 +13,6 @@ export const sign: Same<typeof EN> = {
   done: 'Sudah ditandatangani. Klub akan menyetujuinya.', already: 'Formulir ini sudah ditandatangani',
   countersign: 'Setujui', approvedBy: 'Disetujui: {name} · {d}',
   'notif.toSign': 'Mohon tanda tangani formulir keanggotaan {name}', 'notif.stamped': 'Formulir keanggotaan {name} sudah ditandatangani dan bermeterai', 'notif.returned': 'Formulir {name} dikembalikan: {note}',
+  timeline: 'Riwayat', scan: 'Unggah pindaian bertanda tangan',
   'err.noSigner': 'Tambahkan kontak penagihan dulu', 'err.notNow': 'Formulir ini tidak bisa diproses sekarang',
 };

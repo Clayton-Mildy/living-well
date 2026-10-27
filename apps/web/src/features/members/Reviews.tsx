@@ -5,12 +5,16 @@
 // "Notify families" switch. /reviews?tab=photos (or logs, readings, menu, stock, renewals, payments, leave, profile, history) opens a tab.
 // KC round 7: the Renewals tab lists the changes the front desk recorded after calling a family (upgrade, downgrade, leave, stop); approving applies them from the 1st.
 // Round 14: the Programme tab lists the weekly schedules and one-day changes the activity team sent (before → after of the changed sessions).
+// Round 14 (D): the Signing tab lists membership forms the billing contact signed; View opens the form with the signature, Countersign approves it, Reject sends it back to Draft with a reason.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { actorName, memberName, displayName, type ChangeRequest, type Photo } from '@cp/shared';
 import { tabForSection, photoReviewKind, splitName } from '@cp/shared/rules/members';
+import { applicationDataOf } from '@cp/shared/rules/applicationForm';
+import { formDoc } from '@cp/shared/rules/signing';
 import { APPROVAL_TYPES, approvalCounts, approvalHistory, pendingItems, type ApprovalItem, type ApprovalType, type HistoryItem } from '@cp/shared/rules/approvals';
 import { Avatar, Button, Dialog, EmptyState, GROUP_HEAD, Group, HAIRLINE, Icon, Note, PageHead, Pager, PhotoImg, TextField, Toggle, usePaged } from '../../components/ui';
+import { useApplicationForm } from './ApplicationForm';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -48,6 +52,7 @@ export function Reviews() {
   const t = useT();
   const fmt = useFmt();
   const act = useAct();
+  const printer = useApplicationForm();
   const navigate = useNavigate();
   const [sp] = useSearchParams();
   const { today } = useNow();
@@ -192,6 +197,10 @@ export function Reviews() {
   };
   const askReject = (type: ApprovalType, ids: string[]) => { setReason(''); setReasonTried(false); setRej({ type, ids }); };
 
+  // ----- Signing tab: the form with the family's signature, and the Approve button that reads Countersign
+  const viewSigned = (memberId: string) => { const sig = formDoc(s.members[memberId])?.signing; if (sig) printer.open(applicationDataOf(s, memberId, today), sig); };
+  const approveWord = (type: ApprovalType) => (type === 'signing' ? t('sign.countersign') : t('approvals.approveOne'));
+
   // ----- pieces
   const photoNames = (ph: Photo) => {
     if (ph.kind === 'lunch') return t(s.dayMenus[ph.date]?.teaPhotoIds?.includes(ph.id) ? 'reviews.photoKind.tea' : 'reviews.photoKind.lunch'); // round 7: afternoon tea photos are lunch-kind rows listed under the day's tea
@@ -304,6 +313,7 @@ export function Reviews() {
     const expanded = open === it.id;
     const title = v.who || v.kind;
     const kindLine = v.edit ? t('approvals.editOf', { kind: v.kind }) : v.kind;
+    const isSign = it.type === 'signing';
     // round 6, phone: a row of the grouped list. Check and avatar on the left; name, one meta line, the summary and a "View" link on the right, with small Reject / Approve pills beside it
     if (isPhone) {
       return (
@@ -318,10 +328,10 @@ export function Reviews() {
             <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{[m || it.type === 'leave' ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
             {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
-              <button type="button" className="cp-press" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : it.id)} style={{ ...textBtn, padding: '0 8px 0 0' }}>{expanded ? t('approvals.hide') : t('approvals.view')}</button>
+              <button type="button" className="cp-press" aria-expanded={isSign ? undefined : expanded} onClick={() => (isSign ? viewSigned(it.id) : setOpen(expanded ? null : it.id))} style={{ ...textBtn, padding: '0 8px 0 0' }}>{expanded && !isSign ? t('approvals.hide') : t('approvals.view')}</button>
               <div style={{ display: 'flex', gap: 8, flex: 'none' }}>
                 {pill(t('approvals.rejectOne'), () => askReject(it.type, [it.id]), { disabled: bulkBusy })}
-                {pill(t('approvals.approveOne'), () => approveSelected(it.type, [it.id]), { primary: true, disabled: bulkBusy })}
+                {pill(approveWord(it.type), () => approveSelected(it.type, [it.id]), { primary: true, disabled: bulkBusy })}
               </div>
             </div>
             {expanded ? <div style={{ paddingTop: 6 }}><DiffList d={v.detail} t={t} proposed /></div> : null}
@@ -340,11 +350,11 @@ export function Reviews() {
             ) : <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '22px' }}>{v.who || v.kind}</span>}
             <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[m || it.type === 'leave' ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
             {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
-            <button type="button" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : it.id)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: '4px 0', margin: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{expanded ? t('approvals.hide') : t('approvals.view')}</button>
+            <button type="button" aria-expanded={isSign ? undefined : expanded} onClick={() => (isSign ? viewSigned(it.id) : setOpen(expanded ? null : it.id))} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: '4px 0', margin: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{expanded && !isSign ? t('approvals.hide') : t('approvals.view')}</button>
           </div>
           <div style={{ display: 'flex', gap: 6, flex: 'none', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
             <Button size={48} variant="secondary" icon="close" disabled={bulkBusy} onClick={() => askReject(it.type, [it.id])}>{t('approvals.rejectOne')}</Button>
-            <Button size={48} icon="check" disabled={bulkBusy} onClick={() => approveSelected(it.type, [it.id])}>{t('approvals.approveOne')}</Button>
+            <Button size={48} icon="check" disabled={bulkBusy} onClick={() => approveSelected(it.type, [it.id])}>{approveWord(it.type)}</Button>
           </div>
         </div>
         {expanded ? <div style={{ paddingLeft: 66 }}><DiffList d={v.detail} t={t} proposed /></div> : null}
@@ -420,7 +430,7 @@ export function Reviews() {
       ? applied
         ? [[t('reviews.revert'), () => { setRevert(cr); setNote(''); }, false], [t('reviews.acknowledge'), () => acknowledge(cr), true]]
         : [[t('reviews.reject'), () => { setReject(cr); setNote(''); setTried(false); }, false], [conflict[cr.id] !== undefined ? t('reviews.approveAnyway') : t('reviews.approve'), () => approve(cr, conflict[cr.id] !== undefined), true]]
-      : [[t('approvals.rejectOne'), () => askReject(it.type, [it.id]), false], [t('approvals.approveOne'), () => approveSelected(it.type, [it.id]), true]];
+      : [[t('approvals.rejectOne'), () => askReject(it.type, [it.id]), false], [approveWord(it.type), () => approveSelected(it.type, [it.id]), true]];
     return (
       <div key={it.id} data-person-item={it.id} data-type={it.type} role="group" aria-label={`${kindLine} ${v.who}`.trim()}
         style={{ padding: isPhone ? '12px 16px' : '14px 0', display: 'flex', gap: 12, alignItems: 'flex-start', ...(isPhone ? { backgroundImage: i ? 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)' : 'none', backgroundSize: 'calc(100% - 16px) 0.5px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' } : { borderTop: i ? HAIRLINE : 'none' }) }}>
@@ -434,7 +444,7 @@ export function Reviews() {
           {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
           {cr && conflict[cr.id] !== undefined ? <Note tone="ochre" icon="warning">{t('err.reviewConflict', { fields: conflict[cr.id] })}</Note> : null}
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4, flexWrap: 'wrap' }}>
-            {ph ? <span /> : <button type="button" className="cp-press" aria-expanded={expanded} onClick={() => setOpen(expanded ? null : 'p:' + it.id)} style={{ ...textBtn, padding: '0 8px 0 0' }}>{expanded ? t('approvals.hide') : t('approvals.view')}</button>}
+            {ph ? <span /> : <button type="button" className="cp-press" aria-expanded={it.type === 'signing' ? undefined : expanded} onClick={() => (it.type === 'signing' ? viewSigned(it.id) : setOpen(expanded ? null : 'p:' + it.id))} style={{ ...textBtn, padding: '0 8px 0 0' }}>{expanded && it.type !== 'signing' ? t('approvals.hide') : t('approvals.view')}</button>}
             <div style={{ display: 'flex', gap: 8, flex: 'none' }}>
               {actions.map(([label, run, primary]) => isPhone
                 ? <span key={label}>{pill(label, run, { primary, disabled: busyRow })}</span>
@@ -525,6 +535,7 @@ export function Reviews() {
   const rejN = rej?.ids.length ?? 0;
   const rejPhotos = rej?.type === 'photos';
   const rejLeave = rej?.type === 'leave';
+  const rejSign = rej?.type === 'signing';
   const rejLeaveName = rejLeave && rej ? itemView(s, { id: rej.ids[0], sub: 'leave' }, t, fmt).who : '';
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 22 }}>
@@ -604,7 +615,7 @@ export function Reviews() {
           </div>
           {current === 'photos' ? <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('reviews.notifyFamilies')} /> : null}
           <div style={{ display: 'flex', gap: 10 }}>
-            <Button size={48} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 0' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
+            <Button size={48} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 0' }}>{current === 'signing' ? `${t('sign.countersign')} (${selected.length})` : t('reviews.approvePhotos', { n: selected.length })}</Button>
             <Button size={48} variant="secondary" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 0', color: selected.length ? '#9A3D24' : undefined }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
           </div>
         </div>
@@ -617,17 +628,18 @@ export function Reviews() {
             <span aria-live="polite" style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{selected.length ? t('reviews.selectedN', { n: selected.length }) : ''}</span>
           </div>
           {current === 'photos' ? <div style={{ flex: '1 1 260px', minWidth: 0 }}><Toggle on={notify} onClick={() => setNotify(!notify)} label={t('reviews.notifyFamilies')} /></div> : null}
-          <Button size={48} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 140px' }}>{t('reviews.approvePhotos', { n: selected.length })}</Button>
+          <Button size={48} disabled={!selected.length || bulkBusy} onClick={() => approveSelected(current as ApprovalType, selected)} style={{ flex: '1 1 140px' }}>{current === 'signing' ? `${t('sign.countersign')} (${selected.length})` : t('reviews.approvePhotos', { n: selected.length })}</Button>
           <Button size={48} variant="secondary" disabled={!selected.length || bulkBusy} onClick={() => askReject(current as ApprovalType, selected)} style={{ flex: '1 1 140px', color: selected.length ? '#9A3D24' : undefined }}>{t('reviews.rejectPhotos', { n: selected.length })}</Button>
         </div>
       ) : null}
 
+      {printer.node}
       {viewer ? <PhotoViewer photos={photos} startId={viewer} onClose={() => setViewer(null)} audience="staff" /> : null}
-      <Dialog open={!!rej} onClose={() => setRej(null)} eyebrow={t('reviews.reject')} title={rejLeave ? t('approvals.rejectLeaveTitle') : rejPhotos ? t(rejN === 1 ? 'reviews.rejectPhotosTitleOne' : 'reviews.rejectPhotosTitleN', { n: rejN }) : t(rejN === 1 ? 'approvals.rejectTitleOne' : 'approvals.rejectTitleN', { n: rejN })} maxWidth={520}
+      <Dialog open={!!rej} onClose={() => setRej(null)} eyebrow={t('reviews.reject')} title={rejLeave ? t('approvals.rejectLeaveTitle') : rejSign ? t('approvals.rejectTitleSigning') : rejPhotos ? t(rejN === 1 ? 'reviews.rejectPhotosTitleOne' : 'reviews.rejectPhotosTitleN', { n: rejN }) : t(rejN === 1 ? 'approvals.rejectTitleOne' : 'approvals.rejectTitleN', { n: rejN })} maxWidth={520}
         footer={<><Button variant="secondary" onClick={() => setRej(null)}>{t('common.cancel')}</Button><Button variant="danger" icon="close" disabled={bulkBusy} onClick={rejectSelected}>{t('reviews.reject')}</Button></>}>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 16, flexShrink: 0 }}>
-          <div style={{ fontSize: 15, lineHeight: '22px' }}>{rejLeave ? t('approvals.rejectSubLeave') : rejPhotos ? t('reviews.rejectPhotosSub') : t('approvals.rejectSub')}</div>
-          <TextField label={rejLeave ? t('approvals.rejectReasonLeave', { name: rejLeaveName }) : rejPhotos ? t('reviews.rejectPhotosReason') : t(rejN === 1 ? 'approvals.rejectReasonOne' : 'approvals.rejectReasonN')} value={reason} onChange={setReason} multiline rows={3} autoFocus error={reasonTried && !rejLeave && !reason.trim() ? t('err.noteRequired') : false} name="rejectReason" />
+          <div style={{ fontSize: 15, lineHeight: '22px' }}>{rejLeave ? t('approvals.rejectSubLeave') : rejSign ? t('approvals.rejectSubSigning') : rejPhotos ? t('reviews.rejectPhotosSub') : t('approvals.rejectSub')}</div>
+          <TextField label={rejLeave ? t('approvals.rejectReasonLeave', { name: rejLeaveName }) : rejSign ? t('approvals.rejectReasonSigning') : rejPhotos ? t('reviews.rejectPhotosReason') : t(rejN === 1 ? 'approvals.rejectReasonOne' : 'approvals.rejectReasonN')} value={reason} onChange={setReason} multiline rows={3} autoFocus error={reasonTried && !rejLeave && !reason.trim() ? t('err.noteRequired') : false} name="rejectReason" />
         </div>
       </Dialog>
       <Dialog open={!!reject} onClose={() => setReject(null)} eyebrow={t('reviews.reject')} title={reject ? describeCr(reject, s, t, fmt).title : ''} maxWidth={520}

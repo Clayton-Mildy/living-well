@@ -10,5 +10,6 @@ export const sign = {
   done: 'Signed. The club will countersign it.', already: 'This form is already signed',
   countersign: 'Countersign', approvedBy: 'Approved by {name} · {d}',
   'notif.toSign': 'Please sign {name}’s membership form', 'notif.stamped': '{name}’s membership form is signed and stamped', 'notif.returned': '{name}’s form was sent back: {note}',
+  timeline: 'Timeline', scan: 'Upload signed scan',
   'err.noSigner': 'Add the billing contact first', 'err.notNow': 'This form can’t do that now',
 };

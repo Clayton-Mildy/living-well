@@ -2,15 +2,20 @@
 // and View (an image in a viewer, a PDF in a new tab), the date and who added it, request-from-family, plus the consent record (who and when).
 // Registration is on paper, so the signed registration form is a photo or scan of the paper; seed members show "Paper copy on file".
 // Next to it, "Print application form" prints the brochure's four-page form with the member's answers already filled in, ready to sign.
+// Round 14 (D): the membership form row also carries its signing status and timeline, and for the front desk Send for signing / Resend (the e-Meterai
+// route: the billing contact signs in the family app), Physical meterai (print, sign over a paper meterai, scan: signing.physical) and View signed form.
+import { useState } from 'react';
 import { actorName, fmtPhone, primaryContact, type DocType } from '@cp/shared';
 import { consentOf, docOf, documentTypes } from '@cp/shared/rules/members';
 import { applicationDataOf } from '@cp/shared/rules/applicationForm';
+import { signingOf } from '@cp/shared/rules/signing';
 import { Icon, IconButton, StatusBadge } from '../../../components/ui';
 import { useT } from '../../../lib/i18n';
 import { HAIR, pillBtn } from '../lib';
 import { DocView, useDocPicker, type PaperFile } from '../PaperForm';
 import { useApplicationForm } from '../ApplicationForm';
 import { ListCard, PendingBanner } from './parts';
+import { SigningTrail } from './SigningTrail';
 import type { P } from './types';
 
 const PHOTO_NAME: Record<DocType, string> = { ktp: 'ktp', nannyKtp: 'ktp-nanny', guarantorKtp: 'ktp-family', membershipForm: 'registration-form', healthInfo: 'health-info', other: 'document' };
@@ -42,6 +47,12 @@ export function DocsTab({ p }: { p: P }) {
     if (p.family) await p.act('document.upload', { memberId: m.id, type, fileName: f.fileName, mediaId: f.mediaId }, { reviewText: t('profile.uploadSent') });
     else await p.act('members.setDocuments', { memberId: m.id, docs: [{ type, fileName: f.fileName, mediaId: f.mediaId }] }, { ok: t('profile.docSaved'), reviewText: t('profile.sentForReview') });
   };
+  const send = async () => { await p.act('signing.send', { memberId: m.id }, { ok: t('sign.sentToast', { name: contact?.name || t('profile.theFamily') }) }); };
+  const [scanning, setScanning] = useState(false); // Physical meterai: the form is printed, now its signed scan is expected
+  const physical = async (f: PaperFile) => {
+    const r = await p.act('signing.physical', { memberId: m.id, mediaId: f.mediaId, fileName: f.fileName }, { ok: t('profile.docSaved'), reviewText: t('profile.sentForReview') });
+    if (r.ok) setScanning(false);
+  };
   const ask = async (type: DocType) => { await p.act('members.requestDocument', { memberId: m.id, type }, { ok: t('profile.docAsked', { n: contact?.firstName || t('profile.theFamily') }) }); };
   const types = documentTypes(m);
   const sub = (type: DocType) => (type === 'nannyKtp' && !m.nanny ? t('profile.docMeta.noNanny') : ''); // a missing document says so in its badge
@@ -60,6 +71,9 @@ export function DocsTab({ p }: { p: P }) {
           const requested = doc?.status === 'requested';
           const waiting = pendingFor(type);
           const who = doc?.by ? actorName(s, doc.by) : '';
+          const sig = type === 'membershipForm' ? signingOf(m) : undefined;
+          const past = !!sig && sig.status !== 'draft' && sig.status !== 'sent'; // signed or later: the front desk can no longer send it
+          const eSigned = sig?.meterai === 'e' && !!sig.signatureMediaId; // its record is the signed form, not a paper scan an older upload left on the document
           const via = doc?.via ? t('profile.via_' + doc.via) : '';
           const meta = has ? t('profile.uploadedMeta', { d: fmt.fds(doc!.on || today), w: who, v: via }) : requested ? t('profile.requestedMeta', { d: fmt.fds(doc!.on || today) }) : sub(type);
           return (
@@ -70,6 +84,7 @@ export function DocsTab({ p }: { p: P }) {
                 {meta ? <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{meta}</div> : null}
                 {has && doc?.mediaId && doc.fileName ? <div style={{ fontSize: 13, color: '#6B6259', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.fileName}</div> : null}
                 {has && !doc?.mediaId ? <div style={{ fontSize: 13, color: '#6B6259' }}>{t('profile.paperCopyOnFile')}</div> : null}
+                {sig ? <SigningTrail sig={sig} /> : null}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   {has ? <StatusBadge kind="paid" label={t('profile.docOnFile')} small /> : requested ? <StatusBadge kind="outstanding" label={t('profile.docRequested')} small /> : <StatusBadge kind="pending" label={t('profile.docMissing')} small />}
                   {waiting ? <span style={{ height: 24, padding: '0 10px 0 6px', borderRadius: 8, background: '#F6ECD6', color: '#7A5510', fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name="hourglass_top" size={16} fill={1} />{t('common.pendingReview')}</span> : null}
@@ -77,7 +92,11 @@ export function DocsTab({ p }: { p: P }) {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
                 {type === 'membershipForm' && !p.family ? <button type="button" className="h-fill cp-fill" onClick={() => printer.open(applicationDataOf(s, m.id, today))} style={pillBtn}><Icon name="print" size={18} />{t('form.printAction')}</button> : null}
-                {has && doc?.mediaId ? <DocView doc={doc} title={title(type)}>{(open) => <button type="button" className="h-fill cp-fill" onClick={open} style={pillBtn}>{t('profile.view')}</button>}</DocView> : null}
+                {frontDesk && type === 'membershipForm' && !past ? <button type="button" className="h-fill cp-fill" onClick={send} style={pillBtn}><Icon name="send" size={18} />{sig?.status === 'sent' ? t('sign.resend') : t('sign.send')}</button> : null}
+                {frontDesk && type === 'membershipForm' && !past ? <button type="button" className="h-fill cp-fill" onClick={() => { printer.open(applicationDataOf(s, m.id, today)); setScanning(true); }} style={pillBtn}><Icon name="approval" size={18} />{t('sign.physical')}</button> : null}
+                {frontDesk && scanning && type === 'membershipForm' && !past ? <span data-testid="physical-scan" style={{ display: 'inline-flex', gap: 8 }}><UploadControls label={t('sign.scan')} name="registration-form" onFile={physical} /></span> : null}
+                {sig && eSigned ? <button type="button" className="h-fill cp-fill" onClick={() => printer.open(applicationDataOf(s, m.id, today), sig)} style={pillBtn}><Icon name="draw" size={18} />{t('sign.viewSigned')}</button> : null}
+                {has && doc?.mediaId && !eSigned ? <DocView doc={doc} title={title(type)}>{(open) => <button type="button" className="h-fill cp-fill" onClick={open} style={pillBtn}>{t('profile.view')}</button>}</DocView> : null}
                 {canUpload && !(type === 'nannyKtp' && !m.nanny) ? <UploadControls label={has ? t('profile.replace') : t('profile.upload')} name={PHOTO_NAME[type]} onFile={(f) => upload(type, f)} /> : null}
                 {frontDesk && !has && !(type === 'nannyKtp' && !m.nanny) ? <button type="button" className="h-fill cp-fill" onClick={() => ask(type)} style={pillBtn}>{requested ? t('profile.remind') : t('profile.requestFamily')}</button> : null}
               </div>
