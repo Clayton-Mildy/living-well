@@ -76,6 +76,16 @@ export function FamilyProfile() {
     return () => { if (raf) cancelAnimationFrame(raf); main.removeEventListener('scroll', onScroll); main.removeEventListener('wheel', release); main.removeEventListener('touchstart', release); };
   }, [wide]);
 
+  // a link to the documents (`sec=docs` from Me → Documents, `sign=1` from the signing notification) lands on that section once
+  const toDocs = useRef(sp.get('sec') === 'docs' || sp.get('sign') === '1');
+  useEffect(() => {
+    if (!m || !toDocs.current) return;
+    toDocs.current = false;
+    setActive('docs');
+    lock.current = Date.now() + 1600;
+    document.getElementById('pf-docs')?.scrollIntoView({ block: 'start' });
+  }, [!!m]);
+
   if (!user || !m) return null;
   const p: PCtx = { s, m, t, fmt, today: now.today, userId: user.id, act, go: (path) => navigate(path) };
   const waiting = pendingDetails(s, m.id, user.id);

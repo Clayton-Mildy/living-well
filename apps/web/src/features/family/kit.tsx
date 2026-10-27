@@ -322,14 +322,14 @@ export function useSwipeDown(ref: RefObject<HTMLElement>, onClose: () => void, e
   }, [ref, enabled]);
 }
 
-export function FamSheet({ open, onClose, title, action, children, testId, maxWidth = 600 }: { open: boolean; onClose: () => void; title: string; action?: { label: string; onClick: () => void; disabled?: boolean }; children: ReactNode; testId?: string; maxWidth?: number }) {
+export function FamSheet({ open, onClose, title, action, children, testId, maxWidth = 600, full }: { open: boolean; onClose: () => void; title: string; action?: { label: string; onClick: () => void; disabled?: boolean }; children: ReactNode; testId?: string; maxWidth?: number; full?: boolean }) {
   const t = useT();
   const wide = useFamWide();
   const { ref, trap } = useOverlayA11y(open, onClose);
   useBackClose(open, onClose); // KC round 9: the phone's back gesture closes it
   const [mounted, setMounted] = useState(false); // the swipe hook needs the sheet in the page
   useEffect(() => { setMounted(open); }, [open]);
-  useSwipeDown(ref, onClose, open && mounted && !wide);
+  useSwipeDown(ref, onClose, open && mounted && !wide && !full); // a full-screen sheet is not swiped away (a stroke on the signature pad would be)
   if (!open) return null;
   const textBtn = (label: string, onClick: () => void, bold: boolean, color: string, disabled?: boolean) => (
     <button type="button" onClick={onClick} disabled={disabled} style={{ border: 'none', background: 'transparent', color, fontSize: 16, fontWeight: bold ? 600 : 400, cursor: disabled ? 'default' : 'pointer', padding: 0, minHeight: 40, fontFamily: FONT, whiteSpace: 'nowrap' }}>{label}</button>
@@ -338,8 +338,8 @@ export function FamSheet({ open, onClose, title, action, children, testId, maxWi
     <div style={{ position: 'fixed', inset: 0, zIndex: 50, display: 'flex', alignItems: wide ? 'center' : 'flex-end', justifyContent: 'center' }}>
       <div onClick={onClose} style={{ position: 'absolute', inset: 0, background: 'rgba(20,16,12,.32)' }} />
       <div ref={ref} onKeyDown={trap} tabIndex={-1} role="dialog" aria-modal="true" aria-label={title} data-testid={testId} className="cp-noshrink"
-        style={{ position: 'relative', width: '100%', maxWidth: wide ? 460 : maxWidth, maxHeight: '88%', overflowY: 'auto', background: '#FFFFFF', borderRadius: wide ? 24 : '28px 28px 0 0', padding: wide ? '18px 22px 22px' : '8px 18px calc(34px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 14, animation: wide ? 'cpPop .2s cubic-bezier(.3,.7,.2,1)' : 'cpUp .22s ease-out', boxShadow: wide ? '0 2px 6px rgba(40,30,20,.08), 0 24px 60px rgba(40,30,20,.22)' : undefined, outline: 'none', boxSizing: 'border-box' }}>
-        {wide ? null : <span aria-hidden="true" style={{ alignSelf: 'center', width: 36, height: 5, borderRadius: 999, background: '#D4D4D8', flex: 'none' }} />}
+        style={{ position: 'relative', width: '100%', maxWidth: wide ? 460 : full ? '100%' : maxWidth, maxHeight: wide ? '88%' : full ? '100%' : '88%', ...(full && !wide ? { height: '100%' } : {}), overflowY: 'auto', background: '#FFFFFF', borderRadius: wide ? 24 : full ? 0 : '28px 28px 0 0', padding: wide ? '18px 22px 22px' : full ? 'calc(12px + env(safe-area-inset-top, 0px)) 18px calc(24px + env(safe-area-inset-bottom, 0px))' : '8px 18px calc(34px + env(safe-area-inset-bottom, 0px))', display: 'flex', flexDirection: 'column', gap: 14, animation: wide ? 'cpPop .2s cubic-bezier(.3,.7,.2,1)' : 'cpUp .22s ease-out', boxShadow: wide ? '0 2px 6px rgba(40,30,20,.08), 0 24px 60px rgba(40,30,20,.22)' : undefined, outline: 'none', boxSizing: 'border-box' }}>
+        {wide || full ? null : <span aria-hidden="true" style={{ alignSelf: 'center', width: 36, height: 5, borderRadius: 999, background: '#D4D4D8', flex: 'none' }} />}
         {action ? (
           <div style={{ display: 'grid', gridTemplateColumns: '1fr auto 1fr', alignItems: 'center', gap: 8 }}>
             <span style={{ justifySelf: 'start' }}>{textBtn(t('fam.cancel'), onClose, false, F.bronze)}</span>

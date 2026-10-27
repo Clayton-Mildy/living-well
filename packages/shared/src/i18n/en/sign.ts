@@ -4,7 +4,7 @@ export const sign = {
   sentToast: 'WhatsApp link sent to {name} (simulated)',
   'status.draft': 'Draft', 'status.sent': 'Sent', 'status.signed': 'Signed by family', 'status.countersigned': 'Countersigned', 'status.stamped': 'Stamped',
   eMeterai: 'e-Meterai', serial: 'Serial {s}', physicalDone: 'Physical meterai', docs: 'Documents',
-  readSign: 'Read and sign', 'step.read': 'Read', 'step.sign': 'Sign', 'step.confirm': 'Confirm',
+  toSign: '{n} to sign', readSign: 'Read and sign', 'step.read': 'Read', 'step.sign': 'Sign', 'step.confirm': 'Confirm',
   readForm: 'Read the form', haveRead: 'I have read the form', drawHere: 'Sign here with your finger', clear: 'Clear',
   codeSent: 'We sent a code to {phone}', codeDemo: 'Demo: any 6 digits', code: '6-digit code', signBtn: 'Sign',
   done: 'Signed. The club will countersign it.', already: 'This form is already signed',

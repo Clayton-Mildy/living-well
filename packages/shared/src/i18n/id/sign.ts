@@ -7,7 +7,7 @@ export const sign: Same<typeof EN> = {
   sentToast: 'Tautan WhatsApp terkirim ke {name} (simulasi)',
   'status.draft': 'Draf', 'status.sent': 'Terkirim', 'status.signed': 'Ditandatangani keluarga', 'status.countersigned': 'Disetujui', 'status.stamped': 'Bermeterai',
   eMeterai: 'e-Meterai', serial: 'Nomor seri {s}', physicalDone: 'Meterai fisik', docs: 'Dokumen',
-  readSign: 'Baca dan tanda tangani', 'step.read': 'Baca', 'step.sign': 'Tanda tangan', 'step.confirm': 'Konfirmasi',
+  toSign: '{n} perlu ditandatangani', readSign: 'Baca dan tanda tangani', 'step.read': 'Baca', 'step.sign': 'Tanda tangan', 'step.confirm': 'Konfirmasi',
   readForm: 'Baca formulir', haveRead: 'Saya sudah membaca formulir', drawHere: 'Tanda tangani di sini dengan jari', clear: 'Hapus',
   codeSent: 'Kode dikirim ke {phone}', codeDemo: 'Demo: 6 angka apa saja', code: 'Kode 6 angka', signBtn: 'Tanda tangani',
   done: 'Sudah ditandatangani. Klub akan menyetujuinya.', already: 'Formulir ini sudah ditandatangani',

@@ -1,7 +1,8 @@
 // Round 8 (the prototype's parent profile page): the sections a family reads about a parent. Everything here is what the family may see:
 // approved readings, approved daily logs, notes shared with the family, the club's own price list. Each section is a block with an id so the
 // jump chips can scroll to it (the page itself is in ../FamilyProfile.tsx).
-import { cloneElement, type CSSProperties, type ReactNode } from 'react';
+import { cloneElement, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import {
   FACES, FACE_KEY, actorName, dailyMood, listName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, displayName, memberSince, primaryContact, priceOn, rp, sortBy, staffCall, waUrl, ym,
   type ClubState, type DocType, type Health, type ISODate, type Member, type MemberNote,
@@ -9,6 +10,8 @@ import {
 import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/members';
 import { latestNote, planSummary, visitDays } from '@cp/shared/rules/family';
 import { noteForFamily } from '@cp/shared/rules/approvals';
+import { applicationDataOf } from '@cp/shared/rules/applicationForm';
+import { canSign, signingOf } from '@cp/shared/rules/signing';
 import { lunchLabelKey } from '@cp/shared/rules/activity';
 import { PROFILE_METRICS, familyReadings, latestOf, metricStatus, metricText, type HMetric } from '@cp/shared/rules/famHealth';
 import { FACE_ICON, Icon } from '../../../components/ui';
@@ -17,6 +20,9 @@ import type { useAct } from '../../../lib/act';
 import type { TFn, useFmt } from '../../../lib/i18n';
 import { dietLabel, drugLabel, foodList, mobLabel, relLabel, timingLabel, cogText } from '../../members/lib';
 import { DocView, useDocPicker, type PaperFile } from '../../members/PaperForm';
+import { useApplicationForm } from '../../members/ApplicationForm';
+import { SigningTrail } from '../../members/profile/SigningTrail';
+import { SignSheet } from '../SignSheet';
 import { F, FillCard, HAIR, KV, List, SectionHead, TextLink, useFamWide } from '../kit';
 import { PALETTE, MemberFace } from '../health/bits';
 import { PlanAsk } from '../PlanCard';
@@ -384,15 +390,35 @@ function DocRow({ p, type, first }: { p: PCtx; type: DocType; first: boolean }) 
     : has ? { c: F.sage, text: doc?.mediaId ? t('fhealth.stOnFile') : t('fhealth.stPaper') }
       : requested ? { c: F.ochre, text: t('fhealth.stRequested') } : { c: F.rust, text: t('profile.docMissing') };
   const pill: CSSProperties = { height: 36, padding: '0 14px', border: 'none', borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, flex: 'none' };
+  // round 14 (D): the membership form is signed online. Everyone with the parent sees where it stands; only the signer (the billing contact) signs, while it is Sent.
+  const sig = type === 'membershipForm' ? signingOf(m) : undefined;
+  const mine = !!sig && canSign(s, m.id, userId);
+  const eSigned = sig?.meterai === 'e' && !!sig.signatureMediaId; // the signed form, not a paper scan an older upload left on the document
+  const [sheet, setSheet] = useState(false);
+  const [sp, setSp] = useSearchParams();
+  const printer = useApplicationForm();
+  // `sign=1` (the link in the notification) opens the sheet once and is then dropped
+  useEffect(() => {
+    if (type !== 'membershipForm' || sp.get('sign') !== '1') return;
+    if (mine) setSheet(true);
+    const next = new URLSearchParams(sp);
+    next.delete('sign');
+    setSp(next, { replace: true });
+  }, [sp.get('sign')]); // eslint-disable-line react-hooks/exhaustive-deps
   return (
     <div data-testid="pf-doc" data-type={type} data-state={waiting ? 'waiting' : has ? 'onFile' : requested ? 'requested' : 'missing'} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px', borderTop: first ? 'none' : HAIR }}>
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{title}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: st.c }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: st.c, flex: 'none' }} />{st.text}</span>
+        {sig ? <SigningTrail sig={sig} /> : null}
       </span>
-      {has && doc?.mediaId ? <DocView doc={doc} title={title}>{(open) => <button type="button" onClick={open} className="cp-fill cp-press" style={{ ...pill, background: '#FFFFFF', color: F.ink }}>{t('profile.view')}</button>}</DocView> : null}
+      {mine && sig?.status === 'sent' ? <button type="button" onClick={() => setSheet(true)} className="cp-press" data-testid="pf-sign" style={{ ...pill, height: 44, background: F.ink, color: '#FFFFFF' }}>{t('sign.readSign')}</button> : null}
+      {sig && eSigned ? <button type="button" onClick={() => printer.open(sig.form ?? applicationDataOf(s, m.id, p.today), sig)} className="cp-fill cp-press" data-testid="pf-signed" style={{ ...pill, background: '#FFFFFF', color: F.ink }}>{t('sign.viewSigned')}</button> : null}
+      {has && doc?.mediaId && !eSigned ? <DocView doc={doc} title={title}>{(open) => <button type="button" onClick={open} className="cp-fill cp-press" style={{ ...pill, background: '#FFFFFF', color: F.ink }}>{t('profile.view')}</button>}</DocView> : null}
       {!has && !waiting ? <button type="button" disabled={pick.busy} onClick={pick.chooseFile} className="cp-press" data-testid="pf-upload" style={{ ...pill, background: F.ink, color: '#FFFFFF', opacity: pick.busy ? 0.6 : 1 }}>{t('profile.upload')}</button> : null}
       {pick.node}
+      {printer.node}
+      {sheet ? <SignSheet memberId={m.id} open onClose={() => setSheet(false)} /> : null}
     </div>
   );
 }
