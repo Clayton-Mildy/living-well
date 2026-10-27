@@ -190,6 +190,16 @@ describe('members.create: the family signs the form at registration (round 15)',
     expect(sig.form).toMatchObject({ name: 'Siti Rahma', nickname: 'Sisi', plan: 'flex', signer: 'Rudi Rahma', date: T, address: 'Jl. Test 1' });
     expect(form(r.state, id)).toMatchObject({ type: 'membershipForm', status: 'onFile', mediaId: 'md_testregistrationform01' }); // the scan stays
   });
+  it('the signature stands in for the scan: signature only is accepted (the form waits as a request), neither is refused', () => {
+    const c = seed();
+    const only = run(c.citra, 'members.create', newMember({ formMediaId: '', formFileName: undefined, signatureMediaId: SIG }), who(c, 's9'));
+    const id = only.result.memberId as string;
+    expect(form(only.state, id)).toMatchObject({ id: `${id}-doc-form`, type: 'membershipForm', status: 'requested', signing: { status: 'signed' } });
+    expect(form(only.state, id).mediaId).toBeUndefined();
+    const bad = (over: Record<string, unknown>) => () => run(c.citra, 'members.create', newMember(over), who(c, 's9'));
+    expect(bad({ formMediaId: '' })).toThrow('members.err.formRequired');
+    expect(bad({ formMediaId: undefined, signatureMediaId: undefined })).toThrow('members.err.formRequired');
+  });
   it('without a signature: no signing (the paper route)', () => {
     const c = seed();
     const r = run(c.citra, 'members.create', newMember(), who(c, 's9'));

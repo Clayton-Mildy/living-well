@@ -235,6 +235,17 @@ describe('joining a lead (registration is on paper)', () => {
     const gated = run(seed().citra, 'enquiry.convert', { ...input, signatureMediaId: SIG }, 's1');
     expect(gated.state.members[gated.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!.signing).toMatchObject({ status: 'signed', signerId: 'fm47_0' });
   });
+  it('round 15: the signature stands in for the scan: signature only is accepted, neither is refused', () => {
+    const s = seed().citra;
+    const { formMediaId, formFileName, ...noScan } = input;
+    void formMediaId; void formFileName;
+    const r = run(s, 'enquiry.convert', { ...noScan, signatureMediaId: 'md_testsignature0001' }, 's9');
+    const doc = r.state.members[r.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!;
+    expect(doc).toMatchObject({ status: 'requested', signing: { status: 'signed', signerId: 'fm47_0' } });
+    expect(doc.mediaId).toBeUndefined();
+    fails(s, 'enquiry.convert', noScan, 's9', 'enq.err.formRequired');
+    fails(s, 'enquiry.convert', { ...noScan, formMediaId: '  ' }, 's9', 'enq.err.formRequired');
+  });
   it('Join keeps a free-text title: the member is "Tante ..." with a female gender', () => {
     const s = seed().citra;
     const made = run(s, 'enquiry.create', { ...lead, senior: { title: 'Tante', name: 'Lily Tan' } }, 's9');

@@ -322,14 +322,14 @@ export const enquiriesActions = [
     parse(raw) {
       const o = obj(raw);
       const plan = isPlanId(o.plan) ? o.plan : bad('plan'); // an unknown or retired catalogue plan is refused by `run` (planOf)
+      const signatureMediaId = mediaIdOf(o.signatureMediaId);
       const mediaId = typeof o.formMediaId === 'string' ? o.formMediaId.trim() : '';
-      if (!mediaId) throw new DomainError('enq.err.formRequired');
-      if (!/^md_[A-Za-z0-9_-]{8,}$/.test(mediaId)) throw new DomainError('err.invalid');
+      if (!mediaId && !signatureMediaId) throw new DomainError('enq.err.formRequired'); // the scan of the signed paper form, or the signature on the pad
+      if (mediaId && !/^md_[A-Za-z0-9_-]{8,}$/.test(mediaId)) throw new DomainError('err.invalid');
       // KC round 6: the application form's answers, typed in when joining (optional), so the printed form and the profile have them
       const dob = o.dob ? isoDate(o.dob, 'dob') : '';
       const address = str(o.address, 200);
       const registration = parseRegistration(o.registration);
-      const signatureMediaId = mediaIdOf(o.signatureMediaId);
       return {
         enquiryId: id60(o.enquiryId, 'enquiryId'), plan, start: isoDate(o.start, 'start'), formMediaId: mediaId, formFileName: str(o.formFileName, 120) || 'registration-form',
         ...(dob ? { dob } : {}), ...(address ? { address } : {}), ...(o.health !== undefined ? { health: parseHealthBasics(o.health) } : {}), ...(registration ? { registration } : {}),
@@ -355,7 +355,7 @@ export const enquiriesActions = [
       const gate = ctx.review === 'gate';
       d.members[memberId] = memberFromLead({
         id: memberId, contactId, enquiry: e as unknown as Enquiry, plan: i.plan, start: i.start, today: ctx.today, nowDT: ctx.nowDT, actor: ctx.actor, vaIndex: num, photoTone: num % 5,
-        form: { mediaId: i.formMediaId, fileName: i.formFileName }, details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration, nanny: i.nanny, ktp: i.ktp },
+        ...(i.formMediaId ? { form: { mediaId: i.formMediaId, fileName: i.formFileName } } : {}), details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration, nanny: i.nanny, ktp: i.ktp },
       });
       if (!existing) d.familyContacts[contactId] = contactFromLead({ id: contactId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor, activated: !gate });
       const link = linkFromLead({ contactId, memberId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor });

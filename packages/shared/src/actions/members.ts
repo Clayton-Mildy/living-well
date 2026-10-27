@@ -160,7 +160,7 @@ export function parseHealthBasics(v: unknown): LeadHealth {
 }
 
 /** The new-member input plus the extra answers of the paper application form (Panggilan, RT/RW, phones, the care questions, the ID ticks). */
-export type NewMemberFull = NewMemberInput & { registration?: MemberRegistration; /** round 15: the family member present signed the form (uploaded first, POST /api/media) */ signatureMediaId?: string };
+export type NewMemberFull = NewMemberInput & { registration?: MemberRegistration };
 /** The answers of the application form, cleaned and checked; undefined when none were given. */
 export function parseRegistration(v: unknown): MemberRegistration | undefined {
   const reg = cleanRegistration(v);
@@ -303,7 +303,10 @@ export const membersActions: ActionDef[] = [
         ...uploaded,
       ];
       // the signed paper registration form: the uploaded photo or PDF
-      documents.push({ id: docIdFor(id, 'membershipForm'), type: 'membershipForm', status: 'onFile', mediaId: input.formMediaId, fileName: input.formFileName, on: ctx.today, via: 'staff', by: ctx.actor });
+      // (signed on the pad and no scan: the document waits as a request until the e-Meterai stamp puts the signed form on file, like a form sent for signing)
+      documents.push(input.formMediaId
+        ? { id: docIdFor(id, 'membershipForm'), type: 'membershipForm', status: 'onFile', mediaId: input.formMediaId, fileName: input.formFileName, on: ctx.today, via: 'staff', by: ctx.actor }
+        : { id: docIdFor(id, 'membershipForm'), type: 'membershipForm', status: 'requested', on: ctx.today, by: ctx.actor });
       d.members[id] = {
         id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, title: input.title, firstName, lastName, gender: genderOf(input.title), dob: input.dob, ageYears: null,
         address: input.address || null, photoTone: (num - 1) % 5, ...(input.photoMediaId ? { photoMediaId: input.photoMediaId } : {}), memberships: [{ start: input.start }], plans: [{ from: input.start, plan: input.plan, by: ctx.actor }],

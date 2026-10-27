@@ -49,6 +49,7 @@ export function ReviewStep({ p, role, goTo, onSign }: { p: StepProps; role: stri
             <span style={{ fontSize: 15, fontWeight: 600, lineHeight: '21px', color: '#24201C' }}>{t('reg.signHere', { name: contactName || t('profile.theFamily') })}</span>
             <SignaturePad onChange={onSign} label={t('sign.drawHere')} />
             <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t('reg.signOptional')}</span>
+            {p.issues.some((i) => i.field === 'form') ? <div data-testid="sign-or-scan"><Note tone="ochre" icon="draw">{t('reg.signOrScan')}</Note></div> : null}
           </div>
           {!mgmt ? <Note tone="ochre" icon="hourglass_top">{t(isNew ? 'members.addNoteReview' : 'enq.joinReviewNote')}</Note> : null}
         </Group>

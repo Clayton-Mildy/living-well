@@ -470,10 +470,8 @@ test('lobby adds a new member: pending approval; management approves; the new co
   await d.getByRole('radio', { name: /^Flex/ }).click();
   await expect(d).toContainText('Flex includes 10 visits a month');
   await regNext(d);
-  // Form: registration is on paper, so the signed form is required
-  await expect(nextBtn(d)).toHaveAttribute('aria-disabled', 'true');
-  await regTryNext(d);
-  await expect(d).toContainText('Attach the signed registration form.');
+  // Form: the scan of the signed paper form is optional now (round 15: the family may sign on the pad at the review instead)
+  await expect(nextBtn(d)).not.toHaveAttribute('aria-disabled', 'true');
   await d.getByTestId('doc-file').setInputFiles({ name: 'registration-form.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(d).toContainText('Attached: registration-form.pdf');
   await regNext(d);
@@ -1244,10 +1242,8 @@ test('application form: add a member with the new answers, print the form to sig
   await page.keyboard.press('Escape'); // closes the printed form only; the member form stays open with what was typed
   await expect(page.getByTestId('application-form')).toHaveCount(0);
   await expect(d).toBeVisible();
-  // the signed form is scanned and attached as before (still required)
-  await expect(nextBtn(d)).toHaveAttribute('aria-disabled', 'true');
-  await regTryNext(d);
-  await expect(d).toContainText('Attach the signed registration form.');
+  // the signed form is scanned and attached as before (optional now: the pad at the review can stand in)
+  await expect(nextBtn(d)).not.toHaveAttribute('aria-disabled', 'true');
   await d.getByTestId('doc-file').setInputFiles({ name: 'signed-form.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(d).toContainText('Attached: signed-form.pdf');
   await regNext(d);

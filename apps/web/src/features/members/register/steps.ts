@@ -76,17 +76,17 @@ const FIELDS: Record<RegStep, string[]> = {
   family: ['contact', 'contactName', 'phone', 'guarantorNik', 'nannyName', 'nannyNik'],
   health: ['meds'],
   plan: ['plan', 'start'],
-  paper: ['form'],
-  review: ['consentData'],
+  paper: [], // the scan is optional now: the review asks for it only when the pad is empty
+  review: ['form', 'consentData'],
 };
 /** What a lead does not ask for: its contact is the lead's, and Join has no arrival time, medicines or consents (as before). */
 const NOT_FOR_LEADS = ['contact', 'contactName', 'phone', 'usualArrival', 'meds', 'consentData'];
 
 /** What still blocks a step. `s` adds the club calendar check on the first day (a closed day). */
-export function stepIssues(step: RegStep, st: RegState, mode: RegMode, today: ISODate, s?: ClubState): FieldIssue[] {
+export function stepIssues(step: RegStep, st: RegState, mode: RegMode, today: ISODate, s?: ClubState, signed = false): FieldIssue[] {
   const lead = mode.kind === 'lead';
   const all: FieldIssue[] = [
-    ...validateNewMember(toCreateInput(st), today),
+    ...validateNewMember({ ...toCreateInput(st), ...(signed ? { signatureMediaId: 'pad' } : {}) }, today), // signed on the pad: that stands for the scan
     ...validateRegistration(regOfDraft(st.reg, st.carer.nanny)),
     ...(!lead && st.contactMode === 'existing' && !st.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []),
     ...(s && st.start && st.start >= today && !isOpen(s, st.start) ? [{ field: 'start', code: 'err.closedDay' }] : []),
@@ -94,7 +94,7 @@ export function stepIssues(step: RegStep, st: RegState, mode: RegMode, today: IS
   return all.filter((i) => FIELDS[step].includes(i.field) && !(lead && NOT_FOR_LEADS.includes(i.field)) && !(lead && i.code === 'members.err.dobRequired')); // Join keeps the date of birth optional
 }
 /** The first step that is not complete yet (the review step when all are). */
-export function firstOpenStep(st: RegState, mode: RegMode, today: ISODate, s?: ClubState): number {
-  const i = REG_STEPS.findIndex((k) => stepIssues(k, st, mode, today, s).length > 0);
+export function firstOpenStep(st: RegState, mode: RegMode, today: ISODate, s?: ClubState, signed = false): number {
+  const i = REG_STEPS.findIndex((k) => stepIssues(k, st, mode, today, s, signed).length > 0);
   return i < 0 ? REG_STEPS.length - 1 : i;
 }

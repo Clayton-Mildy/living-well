@@ -375,9 +375,11 @@ export interface NewMemberInput {
   health: { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[]; meds: { name: string; dose: string; timing: MedTiming }[] };
   careInstructions: string;
   docs: DocType[];
-  /** The signed paper registration form (photo or PDF uploaded first, POST /api/media): required. */
+  /** The signed paper registration form (photo or PDF uploaded first, POST /api/media): required unless the family signed on the pad (`signatureMediaId`). */
   formMediaId: string;
   formFileName: string;
+  /** round 15: the family member present signed the form on the pad (uploaded first); then the paper scan is not needed */
+  signatureMediaId?: string;
   consent: { data: boolean; face: boolean };
   note?: string;
 }
@@ -402,7 +404,7 @@ export function validateNewMember(d: Partial<NewMemberInput>, today?: ISODate): 
     if (!c.phone || !c.phone.trim()) bad('phone', 'phoneRequired');
     else if (!isPhone(e164(c.phone))) bad('phone', 'phoneInvalid');
   }
-  if (!d.formMediaId) bad('form', 'formRequired');
+  if (!d.formMediaId && !d.signatureMediaId) bad('form', 'formRequired'); // the signed paper form, or the signature on the pad
   if (!d.consent?.data) bad('consentData', 'consentRequired');
   for (const med of d.health?.meds || []) if (!med.name?.trim()) { bad('meds', 'medNameRequired'); break; }
   if (d.nanny && !d.nanny.name?.trim()) bad('nannyName', 'nannyNameRequired');

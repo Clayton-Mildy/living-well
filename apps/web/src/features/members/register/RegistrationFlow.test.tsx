@@ -102,7 +102,7 @@ describe('Add member: the stepped flow', () => {
     expect(off(next())).toBe(false); // the first day is the next Monday already
     await click(next());
     expect(flow().dataset.regStep).toBe('paper');
-    expect(off(next())).toBe(true);
+    expect(off(next())).toBe(false); // the scan is optional now (the family may sign on the pad at the review)
     await click(button('Use sample form'));
     await settle();
     expect(h.upload).toHaveBeenCalledOnce();
@@ -270,5 +270,42 @@ describe('the family signs the form at registration (round 15)', () => {
     await settle();
     expect(h.uploadMedia).not.toHaveBeenCalled();
     expect(h.act.mock.calls[0][1]).not.toHaveProperty('signatureMediaId');
+  });
+  it('round 15 fix: Next on the Form step works without a scan', async () => {
+    const st = openClub('mgmt');
+    const base = initialState(st, { kind: 'new' }, T);
+    saveDraft({ kind: 'new' }, { ...base, title: 'Ibu', name: 'Ratna Dewi', dob: '1946-10-14', contact: 'Sari Dewi', phone: '0812 5555 0101', plan: 'flex', consentData: true });
+    await show(<RegistrationFlow mode={{ kind: 'new' }} onDone={() => {}} />);
+    await click(button('Resume'));
+    expect(flow().dataset.regStep).toBe('review'); // everything but the scan is complete, and the scan alone does not hold a step back
+  });
+  it('signature and no scan: Create sends signatureMediaId and no formMediaId', async () => {
+    const st = openClub('mgmt');
+    const base = initialState(st, { kind: 'new' }, T);
+    saveDraft({ kind: 'new' }, { ...base, title: 'Ibu', name: 'Ratna Dewi', dob: '1946-10-14', contact: 'Sari Dewi', phone: '0812 5555 0101', plan: 'flex', consentData: true });
+    await show(<RegistrationFlow mode={{ kind: 'new' }} onDone={() => {}} />);
+    await click(button('Resume'));
+    expect(off(button('Create member'))).toBe(true);
+    expect(flow().querySelector('[data-testid="sign-or-scan"]')!.textContent).toContain('Sign on the pad, or attach the signed form’s scan');
+    stroke();
+    expect(flow().querySelector('[data-testid="sign-or-scan"]')).toBeNull();
+    expect(off(button('Create member'))).toBe(false);
+    await click(button('Create member'));
+    await settle();
+    const [name, sent] = h.act.mock.calls[0];
+    expect(name).toBe('members.create');
+    expect(sent).toMatchObject({ signatureMediaId: 'md_signaturetest0001' });
+    expect(sent).not.toHaveProperty('formMediaId');
+  });
+  it('neither a stroke nor a scan: Create is blocked and nothing is sent', async () => {
+    const st = openClub('mgmt');
+    const base = initialState(st, { kind: 'new' }, T);
+    saveDraft({ kind: 'new' }, { ...base, title: 'Ibu', name: 'Ratna Dewi', dob: '1946-10-14', contact: 'Sari Dewi', phone: '0812 5555 0101', plan: 'flex', consentData: true });
+    await show(<RegistrationFlow mode={{ kind: 'new' }} onDone={() => {}} />);
+    await click(button('Resume'));
+    await click(button('Create member'));
+    await settle();
+    expect(h.act).not.toHaveBeenCalled();
+    expect(off(button('Create member'))).toBe(true);
   });
 });

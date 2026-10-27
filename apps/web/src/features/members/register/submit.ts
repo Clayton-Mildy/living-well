@@ -12,6 +12,9 @@ const healthOf = (st: RegState) => {
   return { conditions: h.conditions, diabetic: h.diabetic, food: h.food, foodOther: h.foodOther.trim(), drugs: joinDrugs(h), mobility: h.mobility === 'none' ? null : h.mobility, diet: h.diet };
 };
 
+/** the scan of the signed paper form; none attached (the family signed on the pad) sends neither field */
+const formOf = (st: RegState): { formMediaId: string; formFileName: string } => (st.form ? { formMediaId: st.form.mediaId, formFileName: st.form.fileName } : ({} as { formMediaId: string; formFileName: string }));
+
 export function toCreateInput(st: RegState): NewMemberFull {
   const reg = regOfDraft(st.reg, st.carer.nanny);
   const ktp = ktpFor(st.ktp, st.reg.ids, st.carer.nanny);
@@ -25,7 +28,7 @@ export function toCreateInput(st: RegState): NewMemberFull {
       : { name: st.contact.trim(), phone: st.phone.trim() ? e164(st.phone) : '', relation: st.rel, primary: st.primary },
     health: { ...healthOf(st), meds: st.meds.filter((x) => x.name.trim()).map((x) => ({ name: x.name.trim(), dose: x.dose.trim(), timing: x.timing })) },
     careInstructions: st.care.trim(), docs: st.docs.filter((x) => (x !== 'nannyKtp' || st.carer.nanny) && x !== 'membershipForm'),
-    formMediaId: st.form?.mediaId ?? '', formFileName: st.form?.fileName ?? '', consent: { data: st.consentData, face: st.consentFace },
+    ...formOf(st), consent: { data: st.consentData, face: st.consentFace },
     ...(reg ? { registration: reg } : {}), ...(note ? { note } : {}),
   };
 }
@@ -34,7 +37,7 @@ export function toConvertInput(st: RegState, lead: Enquiry, plan: Plan, start: I
   const reg = regOfDraft(st.reg, st.carer.nanny);
   const ktp = ktpFor(st.ktp, st.reg.ids, st.carer.nanny);
   return {
-    enquiryId: lead.id, plan, start, formMediaId: st.form?.mediaId ?? '', formFileName: st.form?.fileName ?? '',
+    enquiryId: lead.id, plan, start, ...formOf(st),
     ...(st.dob ? { dob: st.dob } : {}), ...(st.address.trim() ? { address: st.address.trim() } : {}), health: healthOf(st), ...(reg ? { registration: reg } : {}),
     nanny: carerOf(st.carer), ...(ktp ? { ktp } : {}),
   };

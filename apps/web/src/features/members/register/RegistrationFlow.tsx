@@ -77,9 +77,9 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
     if (stepI === last) setFromReview(false); else setSignPng(null);
   }, [stepI, last]);
 
-  const issuesOf = useCallback((k: RegStep) => stepIssues(k, st, mode, today, s), [st, mode, today, s]);
+  const issuesOf = useCallback((k: RegStep) => stepIssues(k, st, mode, today, s, !!signPng), [st, mode, today, s, signPng]);
   const issues = useMemo(() => issuesOf(step), [issuesOf, step]);
-  const reach = useMemo(() => firstOpenStep(st, mode, today, s), [st, mode, today, s]);
+  const reach = useMemo(() => firstOpenStep(st, mode, today, s, !!signPng), [st, mode, today, s, signPng]);
   const lead = mode.kind === 'lead' ? s.enquiries[mode.id] : undefined;
   const isTried = tried.has(step);
   const err = (...fields: string[]) => {
