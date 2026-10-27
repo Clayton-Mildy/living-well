@@ -80,4 +80,44 @@ describe('SignaturePad', () => {
     expect(ctx.clearRect).toHaveBeenCalled();
     expect(on).toHaveBeenCalledWith(null);
   });
+  it('a late encode after Clear is dropped: the last report is null', () => {
+    const pending: BlobCallback[] = [];
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => { pending.push(cb); });
+    const on = vi.fn(); mount(on);
+    stroke();
+    act(() => { Array.from(host!.querySelectorAll('button')).find((b) => b.textContent === 'Clear')!.click(); });
+    act(() => { pending.forEach((cb) => cb(new Blob(['png'], { type: 'image/png' }))); }); // the encoder answers after Clear
+    expect(on).toHaveBeenCalledTimes(1);
+    expect(on).toHaveBeenLastCalledWith(null);
+  });
+  it('nothing is reported after the pad is gone', () => {
+    const pending: BlobCallback[] = [];
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => { pending.push(cb); });
+    const on = vi.fn(); mount(on);
+    stroke();
+    act(() => root!.unmount()); root = null;
+    pending.forEach((cb) => cb(new Blob(['png'], { type: 'image/png' })));
+    expect(on).not.toHaveBeenCalled();
+  });
+  it('a second pointer (another finger, a resting palm) neither draws nor ends the stroke', () => {
+    const on = vi.fn(); mount(on);
+    const p = (type: string, x: number, id: number) => {
+      const e = new Event(type, { bubbles: true, cancelable: true });
+      Object.assign(e, { clientX: x, clientY: 20, pointerId: id, pointerType: 'touch', isPrimary: id === 1, buttons: 1, button: 0 });
+      act(() => { canvas().dispatchEvent(e); });
+    };
+    p('pointerdown', 10, 1); p('pointermove', 30, 1);
+    const lines = (ctx.lineTo as ReturnType<typeof vi.fn>).mock.calls.length;
+    p('pointerdown', 100, 2); p('pointermove', 120, 2); p('pointerup', 120, 2);
+    expect((ctx.lineTo as ReturnType<typeof vi.fn>).mock.calls.length).toBe(lines); // the second pointer drew nothing
+    expect(on).not.toHaveBeenCalled(); // and its lift did not end the first stroke
+    p('pointerup', 30, 1);
+    expect(on).toHaveBeenCalledTimes(1);
+  });
+  it('the placeholder goes as soon as the pen touches down', () => {
+    mount(() => {});
+    expect(host!.textContent).toContain('Sign here');
+    ptr('pointerdown', 10, 10);
+    expect(host!.textContent).not.toContain('Sign here');
+  });
 });
