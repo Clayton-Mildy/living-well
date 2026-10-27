@@ -1,6 +1,7 @@
 // Purchasing rules: the simulated receipt (stand-in for a vision model), line categories and line checks.
 import { describe, it, expect } from 'vitest';
-import { CATALOGUE, RECEIPT_SOURCES, SIM_VENDORS, SPEND_CATEGORIES, lineCategory, lineProblem, linesGap, linesTotal, simulatedReceipt, supplierCategory } from './purchasing';
+import { CATALOGUE, RECEIPT_SOURCES, SIM_VENDORS, SPEND_CATEGORIES, itemKey, itemPurchases, lineCategory, lineProblem, linesGap, linesTotal, simulatedReceipt, spending, spendWindow, supplierCategory } from './purchasing';
+import type { ClubState, Receipt, ReceiptLine } from '../types';
 import { buildSeed } from '../index';
 
 const KEYS = ['md_abc', 'md_def', 'md_ghi', 'md_jkl', 'md_mno', 'md_pqr', 'md_stu', 'md_vwx', 'md_yz1', 'md_234'];
@@ -124,5 +125,105 @@ describe('line rules', () => {
     expect(supplierCategory(s, 'd7')).toBeUndefined();
     expect(supplierCategory(s, 'nope')).toBeUndefined();
     expect(supplierCategory(s)).toBeUndefined();
+  });
+});
+
+describe('spending', () => {
+  const POPOK = 'Popok dewasa (isi 10)';
+  const line = (name: string, unit: string, qty: number, unitPrice: number, category: ReceiptLine['category'], brand?: string): ReceiptLine =>
+    ({ id: 'l', name, unit, qty, unitPrice, amount: qty * unitPrice, category, ...(brand ? { brand } : {}) });
+  const rcpt = (id: string, date: string, supplier: string, amount: number, extra: Partial<Receipt> = {}): Receipt =>
+    ({ id, clubId: 'citra', createdAt: `${date}T09:00`, createdBy: { kind: 'staff', id: 'x', name: 'x' }, date, supplier, amount, sectionId: 'kitchen', fileName: 'nota.jpg', by: 'x', status: 'approved', xero: 'none', ...extra }) as unknown as Receipt;
+  const state = (rs: Receipt[]): ClubState => {
+    const s = structuredClone(buildSeed().citra);
+    s.receipts = Object.fromEntries(rs.map((r) => [r.id, r]));
+    return s;
+  };
+
+  it('spendWindow: calendar months ending today, or the custom dates', () => {
+    expect(spendWindow('3m', '2026-10-21')).toEqual({ from: '2026-08-01', to: '2026-10-21' });
+    expect(spendWindow('6m', '2026-10-21')).toEqual({ from: '2026-05-01', to: '2026-10-21' });
+    expect(spendWindow('3m', '2026-02-10')).toEqual({ from: '2025-12-01', to: '2026-02-10' });
+    expect(spendWindow('month', '2026-10-21').from).toBe('2026-10-01');
+    expect(spendWindow('custom', '2026-10-21', { from: '2026-09-03', to: '2026-09-09' })).toEqual({ from: '2026-09-03', to: '2026-09-09' });
+  });
+
+  it('counts only approved, live receipts dated inside the window (both ends included)', () => {
+    const inside = rcpt('a', '2026-10-01', 'Toko A', 1000);
+    const s = state([
+      inside,
+      rcpt('edge', '2026-10-21', 'Toko A', 500),
+      rcpt('sub', '2026-10-05', 'Toko A', 7000, { status: 'submitted' }),
+      rcpt('rej', '2026-10-05', 'Toko A', 7000, { status: 'rejected' }),
+      rcpt('void', '2026-10-05', 'Toko A', 7000, { voidedAt: '2026-10-06T09:00' }),
+      rcpt('gone', '2026-10-05', 'Toko A', 7000, { deletedAt: '2026-10-06T09:00' }),
+      rcpt('early', '2026-09-30', 'Toko A', 7000),
+      rcpt('late', '2026-10-22', 'Toko A', 7000),
+    ]);
+    const r = spending(s, '2026-10-01', '2026-10-21');
+    expect(r.total).toBe(1500);
+    expect(r.byVendor).toEqual([{ key: 'toko a', label: 'Toko A', amount: 1500, count: 2 }]);
+  });
+
+  it('a receipt without lines counts its whole amount under the supplier category, or other', () => {
+    const s = state([rcpt('a', '2026-10-02', 'Superindo', 40000, { directoryId: 'd6' }), rcpt('b', '2026-10-03', 'Warung', 10000), rcpt('c', '2026-10-04', 'Warung', 5000, { lines: [] })]);
+    s.directory.d6.category = 'groceries';
+    const r = spending(s, '2026-10-01', '2026-10-31');
+    expect(r.total).toBe(55000);
+    expect(r.byCategory).toEqual([{ key: 'groceries', label: 'groceries', amount: 40000, count: 1 }, { key: 'other', label: 'other', amount: 15000, count: 2 }]);
+    expect(r.byVendor.map((v) => [v.key, v.label, v.amount, v.count])).toEqual([['d6', 'Superindo', 40000, 1], ['warung', 'Warung', 15000, 2]]);
+    expect(r.byItem).toEqual([]);
+    expect(r.byBrand).toEqual([]);
+  });
+
+  it('lines split by category, item, brand and vendor, largest first; unbranded lines skip byBrand', () => {
+    const s = state([
+      rcpt('a', '2026-10-02', 'Sahabat Lansia', 255000, { lines: [line(POPOK, 'pack', 2, 100000, 'hygiene', 'Confidence'), line('Tisu basah', 'pack', 3, 15000, 'hygiene', 'Mitu'), line('Teh melati', 'pack', 1, 10000, 'groceries')] }),
+      rcpt('b', '2026-10-09', 'sahabat lansia', 20000, { lines: [line('Teh melati', 'pack', 2, 10000, 'groceries', 'Sosro')] }),
+    ]);
+    const r = spending(s, '2026-10-01', '2026-10-31');
+    expect(r.total).toBe(275000);
+    expect(r.byCategory.map((c) => [c.key, c.amount, c.count])).toEqual([['hygiene', 245000, 2], ['groceries', 30000, 2]]);
+    expect(r.byItem.map((i) => [i.label, i.amount])).toEqual([[POPOK, 200000], ['Tisu basah', 45000], ['Teh melati', 30000]]);
+    expect(r.byBrand.map((b) => [b.label, b.amount])).toEqual([['Confidence', 200000], ['Mitu', 45000], ['Sosro', 20000]]);
+    expect(r.byVendor).toEqual([{ key: 'sahabat lansia', label: 'sahabat lansia', amount: 275000, count: 2 }]);
+  });
+
+  it('an item bought twice sums qty, averages the price and shows the change from first to last', () => {
+    const s = state([
+      rcpt('a', '2026-09-05', 'Toko', 100000, { lines: [line(POPOK, 'pack', 1, 100000, 'hygiene', 'Confidence')] }),
+      rcpt('b', '2026-10-05', 'Toko', 220000, { lines: [line(POPOK, 'pack', 2, 110000, 'hygiene', 'Confidence')] }),
+    ]);
+    const r = spending(s, '2026-09-01', '2026-10-31');
+    expect(r.byItem).toHaveLength(1);
+    const it = r.byItem[0];
+    expect(it).toMatchObject({ key: itemKey(POPOK, 'pack'), label: POPOK, unit: 'pack', qty: 3, amount: 320000, count: 2 });
+    expect(it.avgUnitPrice).toBeCloseTo(320000 / 3);
+    expect(it.change).toBeCloseTo(0.1);
+    // one purchase has no change
+    expect(spending(s, '2026-10-01', '2026-10-31').byItem[0].change).toBeNull();
+  });
+
+  it('the same name in another unit is a separate item', () => {
+    const s = state([rcpt('a', '2026-10-05', 'Toko', 300000, { lines: [line(POPOK, 'pack', 1, 100000, 'hygiene'), line(POPOK, 'box', 1, 200000, 'hygiene')] })]);
+    expect(spending(s, '2026-10-01', '2026-10-31').byItem.map((i) => i.key).sort()).toEqual([itemKey(POPOK, 'box'), itemKey(POPOK, 'pack')].sort());
+    expect(itemKey('  Popok DEWASA (isi 10) ', 'pack')).toBe(itemKey(POPOK, 'pack'));
+  });
+
+  it('an empty window gives zero and empty lists', () => {
+    expect(spending(state([rcpt('a', '2026-01-01', 'Toko', 5000)]), '2026-10-01', '2026-10-31')).toEqual({ total: 0, byCategory: [], byItem: [], byBrand: [], byVendor: [] });
+  });
+
+  it('itemPurchases lists every purchase of one item in the window, oldest first', () => {
+    const s = state([
+      rcpt('b', '2026-10-05', 'Toko B', 220000, { lines: [line(POPOK, 'pack', 2, 110000, 'hygiene', 'Lifree')] }),
+      rcpt('a', '2026-09-05', 'Toko A', 100000, { lines: [line(POPOK, 'pack', 1, 100000, 'hygiene', 'Confidence'), line(POPOK, 'box', 1, 5, 'hygiene')] }),
+      rcpt('x', '2026-10-06', 'Toko A', 5, { status: 'rejected', lines: [line(POPOK, 'pack', 1, 5, 'hygiene')] }),
+    ]);
+    expect(itemPurchases(s, itemKey(POPOK, 'pack'), '2026-09-01', '2026-10-31')).toEqual([
+      { date: '2026-09-05', receiptId: 'a', supplier: 'Toko A', brand: 'Confidence', qty: 1, unitPrice: 100000, amount: 100000 },
+      { date: '2026-10-05', receiptId: 'b', supplier: 'Toko B', brand: 'Lifree', qty: 2, unitPrice: 110000, amount: 220000 },
+    ]);
+    expect(itemPurchases(s, itemKey(POPOK, 'pack'), '2026-10-01', '2026-10-31')).toHaveLength(1);
   });
 });
