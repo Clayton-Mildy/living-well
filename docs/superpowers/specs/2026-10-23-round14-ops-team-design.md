@@ -155,5 +155,5 @@ The chatbot; real DOKU, Xero, e-Meterai and OCR accounts; Tokopedia API import (
 
 1. Dementia: one monthly fee, set by management, added to the invoice (A2).
 2. Morning mood = one round by the activity team before lunch (A5).
-3. Families see the daily mood plus the faces through the day (A5).
+3. KC overruled this on 27 Oct 2026: families see one daily face (the average of the marked moments), no face per moment (A5). Done on branch round14-p2, commit d6bcfdd.
 4. D4 (payment provider interface) was not asked for; it is invisible plumbing so DOKU can go live.

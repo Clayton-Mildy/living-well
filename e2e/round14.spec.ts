@@ -196,7 +196,8 @@ test('Lunch round: Yohanes marks Bapak Bambang "Most" with a "Good" face on /lun
   await expect(fam.page.getByTestId('lunch-amount')).toHaveCount(1);
   await expect(fam.page.getByTestId('daily-log').getByTestId('lunch-amount')).toHaveCount(0);
   await expect(fam.page.getByTestId('daily-log').getByText('Ate most')).toHaveCount(0);
-  await expect(fam.page.getByTestId('daily-log').locator('[data-moment="lunch"]')).toHaveAttribute('data-face', '4');
+  await expect(fam.page.getByTestId('daily-log').getByTestId('log-mood')).toHaveAttribute('data-logged', '1'); // one face a day (d6bcfdd): the average of the marked moments (his seeded check-in face is in it), not the lunch face alone
+  await expect(fam.page.getByTestId('daily-log').locator('[data-moment]')).toHaveCount(0); // no face per moment
   await assertNoHorizontalScroll(fam.page);
   fc.assertClean();
   ec.assertClean();
@@ -215,7 +216,7 @@ test('Maria sees the daily mood on Today: Oma Lina checked in with a Good face s
   const mood = page.getByTestId('daily-log').getByTestId('log-mood');
   await expect(mood).toHaveAttribute('data-mood', '4');
   await expect(mood).toContainText('Good');
-  await expect(mood.locator('[data-moment="arrival"]')).toContainText('Check-in');
+  await expect(mood.locator('[data-moment]')).toHaveCount(0); // one face a day (d6bcfdd): no face per moment
   await expect(page.getByTestId('hero-mood')).toContainText('Good');
   await assertNoHorizontalScroll(page);
   c.assertClean();
