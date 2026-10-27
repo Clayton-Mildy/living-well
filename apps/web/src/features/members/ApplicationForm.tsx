@@ -4,9 +4,11 @@
 // Where each value goes is measured from the page images (1654 x 2339 px) and stored as a share of the page, so it scales to any size.
 import { useEffect, useRef, useState, type CSSProperties } from 'react';
 import { createPortal } from 'react-dom';
-import { page1Values, signatureValues, type ApplicationFormData, type Page1Values } from '@cp/shared/rules/applicationForm';
+import { translate, type Signing } from '@cp/shared';
+import { idDate, page1Values, signatureValues, type ApplicationFormData, type Page1Values } from '@cp/shared/rules/applicationForm';
 import { Button, IconButton } from '../../components/ui';
 import { useT } from '../../lib/i18n';
+import { mediaUrl } from '../../lib/media';
 
 const W = 1654, H = 2339;
 /** A blank line on the page: it runs from x0 to x1 (px of the 1654-wide image) and its bottom edge is at y. `rows` = lines of text it may take (a long answer wraps and shrinks). Values are in capitals, as the form asks (an email keeps its case). */
@@ -36,6 +38,13 @@ const TICKS: { key: 'idGuarantor' | 'idMember' | 'idCarer'; x: number; y: number
 /** The signature tables hold NAMA and TANGGAL; TANDATANGAN stays empty for the pen. */
 const TABLE_NAME = { x0: 170, x1: 692 }, TABLE_DATE = { x0: 718, x1: 1068 };
 const TABLE_P1_Y = 2140, TABLE_P3_Y = 1745;
+/** Round 14 d, the signed overlay. The pen goes in the empty TANDATANGAN cell of the page 1 and 3 tables (the cell's middle is the name's line, so it follows TABLE_P1_Y / TABLE_P3_Y)
+ *  and under the TANDATANGAN label on page 4. The countersign line sits under the page-4 name; the e-Meterai box covers the "[insert materai]" mark above the signature (free paper from
+ *  y 1500 to 1840, right of the TANGGAL line). */
+const SIG_CELL = { x0: 1100, x1: 1535, above: 95, below: 85 };
+const SIG_P4 = { x0: 1180, x1: 1500, y0: 1900, y1: 2060 };
+const COUNTERSIGN = { x0: 272, x1: 1150, y: 2010 } as Box;
+const METERAI = { x0: 1225, x1: 1535, y0: 1695, y1: 1835 };
 const P4 = { saya: { x0: 242, x1: 1295, y: 427 } as Box, date: { x0: 322, x1: 900, y: 1771 } as Box, name: { x0: 272, x1: 900, y: 1891 } as Box };
 
 /** One line of the printed form is about 1.6% of the page wide per character on average; a long answer shrinks, or wraps to two lines, to stay on its line. */
@@ -76,6 +85,21 @@ function Tick({ k, x, y }: { k: string; x: number; y: number }) {
   );
 }
 
+/** The family's drawn signature, fitted inside a box of the page (px of the 1654 x 2339 image). */
+function SigImg({ mediaId, x0, x1, y0, y1 }: { mediaId: string; x0: number; x1: number; y0: number; y1: number }) {
+  return <img className="cp-fsig" data-field="signature" src={mediaUrl(mediaId)} alt="" draggable={false} style={{ left: pct(x0, W), width: pct(x1 - x0, W), top: pct(y0, H), height: pct(y1 - y0, H) }} />;
+}
+const sigInCell = (mediaId: string | undefined, midY: number) => (mediaId ? <SigImg mediaId={mediaId} x0={SIG_CELL.x0} x1={SIG_CELL.x1} y0={midY - SIG_CELL.above} y1={midY + SIG_CELL.below} /> : null);
+/** "e-Meterai · 10000 · serial": the stamp the simulated provider affixed (the "10000" is the duty in rupiah). Fixed text, like the form. */
+function Meterai({ serial }: { serial: string }) {
+  const b = METERAI;
+  return (
+    <div className="cp-fv cp-fmeterai" data-field="emeterai" style={{ left: pct(b.x0, W), width: pct(b.x1 - b.x0, W), top: pct(b.y0, H), height: pct(b.y1 - b.y0, H) }}>
+      <span>{`e-Meterai · 10000 · ${serial}`}</span>
+    </div>
+  );
+}
+
 function Sheet({ n, label, children }: { n: number; label: string; children?: React.ReactNode }) {
   return (
     <section className="cp-print-sheet" data-testid="form-page" data-page={n} aria-label={label}>
@@ -96,6 +120,8 @@ const CSS = `
 .cp-fv { position: absolute; display: flex; box-sizing: border-box; padding: 0 0.4cqw; overflow: hidden; font-family: Inter, 'Helvetica Neue', Arial, sans-serif; font-weight: 500; letter-spacing: 0.01em; color: #101827; line-height: 1.1; }
 .cp-fv > span { min-width: 0; overflow-wrap: anywhere; }
 .cp-tick { padding: 0; color: #101827; }
+.cp-fsig { position: absolute; display: block; object-fit: contain; object-position: center bottom; mix-blend-mode: multiply; user-select: none; }
+.cp-fmeterai { align-items: center; justify-content: center; text-align: center; padding: 0 1.2cqw; border: 0.25cqw solid #101827; border-radius: 0.8cqw; background: #FFFFFF; font-size: 1.5cqw; line-height: 1.35; letter-spacing: 0.02em; }
 @media print {
   html { zoom: 1 !important; }
   html, body { height: auto !important; overflow: visible !important; background: #FFFFFF !important; }
@@ -109,10 +135,15 @@ const CSS = `
 `;
 
 /** The four pages with a bar to print or close. Rendered in a portal on the body so the print CSS can hide everything else. */
-export function ApplicationForm({ data, onClose }: { data: ApplicationFormData; onClose: () => void }) {
+export function ApplicationForm({ data, signing, onClose }: { data: ApplicationFormData; signing?: Signing; onClose: () => void }) {
   const t = useT();
-  const v = page1Values(data);
-  const sig = signatureValues(data);
+  const d = signing?.form ?? data; // what the family signed is the form as it was sent (R2), not the member as they are now
+  const v = page1Values(d);
+  const sig = signatureValues(d);
+  const sigId = signing?.signatureMediaId;
+  const countersigned = signing?.steps.find((x) => x.status === 'countersigned');
+  // everything printed on the page is Indonesian, the reader's language only runs the bar
+  const approved = signing?.countersignerName && countersigned ? translate('id', 'sign.approvedBy', { name: signing.countersignerName, d: idDate(countersigned.at.slice(0, 10)) }) : '';
   const root = useRef<HTMLDivElement>(null);
   const prev = useRef<Element | null>(null);
   useEffect(() => {
@@ -138,16 +169,21 @@ export function ApplicationForm({ data, onClose }: { data: ApplicationFormData; 
           {TICKS.map((x) => (v[x.key] ? <Tick key={x.key} k={x.key} x={x.x} y={x.y} /> : null))}
           <Value k="signer" box={{ ...TABLE_NAME, y: TABLE_P1_Y, mid: true, rows: 2 }} text={v.signer} />
           <Value k="date" box={{ ...TABLE_DATE, y: TABLE_P1_Y, mid: true }} text={v.date} />
+          {sigInCell(sigId, TABLE_P1_Y)}
         </Sheet>
         <Sheet n={2} label={page(2)} />
         <Sheet n={3} label={page(3)}>
           <Value k="signer" box={{ ...TABLE_NAME, y: TABLE_P3_Y, mid: true, rows: 2 }} text={sig.signer} />
           <Value k="date" box={{ ...TABLE_DATE, y: TABLE_P3_Y, mid: true }} text={sig.date} />
+          {sigInCell(sigId, TABLE_P3_Y)}
         </Sheet>
         <Sheet n={4} label={page(4)}>
           <Value k="saya" box={P4.saya} text={sig.signer} />
           <Value k="date" box={P4.date} text={sig.date} />
           <Value k="signer" box={P4.name} text={sig.signer} />
+          {sigId ? <SigImg mediaId={sigId} {...SIG_P4} /> : null}
+          <Value k="countersign" box={COUNTERSIGN} text={approved} />
+          {signing?.meterai === 'e' && signing.meteraiSerial ? <Meterai serial={signing.meteraiSerial} /> : null}
         </Sheet>
       </div>
     </div>,
@@ -155,8 +191,8 @@ export function ApplicationForm({ data, onClose }: { data: ApplicationFormData; 
   );
 }
 
-/** Open the form from a button: `open(data)` shows it, `node` goes once anywhere in the render. */
+/** Open the form from a button: `open(data)` shows it (`open(data, signing)` adds the signed overlay), `node` goes once anywhere in the render. */
 export function useApplicationForm() {
-  const [data, setData] = useState<ApplicationFormData | null>(null);
-  return { open: (d: ApplicationFormData) => setData(d), node: data ? <ApplicationForm data={data} onClose={() => setData(null)} /> : null };
+  const [shown, setShown] = useState<{ data: ApplicationFormData; signing?: Signing } | null>(null);
+  return { open: (d: ApplicationFormData, signing?: Signing) => setShown({ data: d, signing }), node: shown ? <ApplicationForm data={shown.data} signing={shown.signing} onClose={() => setShown(null)} /> : null };
 }
