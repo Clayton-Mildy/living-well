@@ -21,7 +21,7 @@ export function NannyAvatar({ nanny, size, plain }: { nanny: NonNullable<Member[
 }
 
 /** round 15: the carer on a list row, "(face) with Mbak Sari" on one short line. Plain, because the whole row is already a button. */
-export function NannyLine({ nanny, size = 18, fs = 13 }: { nanny: NonNullable<Member['nanny']>; size?: number; fs?: number }) {
+export function NannyLine({ nanny, size = 28, fs = 13 }: { nanny: NonNullable<Member['nanny']>; size?: number; fs?: number }) {
   const t = useT();
   return (
     <span data-testid="row-nanny" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: fs, lineHeight: '20px', color: '#6B6259' }}>

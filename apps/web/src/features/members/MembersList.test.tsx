@@ -8,6 +8,11 @@ import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { MembersList } from './MembersList';
 
+const device = vi.hoisted(() => ({ phone: false }));
+vi.mock('../../hooks/useDevice', async (orig) => {
+  const m = await orig<typeof import('../../hooks/useDevice')>();
+  return { ...m, useDevice: () => (device.phone ? { device: 'phone', isPhone: true, isTablet: false, isLaptop: false, isWide: false } : m.useDevice()) };
+});
 vi.mock('../../lib/act', () => ({ useAct: () => vi.fn(async () => ({ ok: true, result: {} })) }));
 
 const T = '2026-10-21';
@@ -23,6 +28,7 @@ afterEach(async () => {
   root = null; host = null;
   document.body.innerHTML = '';
   localStorage.clear();
+  device.phone = false;
 });
 
 describe('Members, Check on filter', () => {
@@ -53,8 +59,9 @@ describe('Members, Check on filter', () => {
   });
 });
 
-describe('Members rows, nanny', () => {
+describe.each([['laptop', false], ['phone', true]])('Members rows, nanny (%s)', (_label, phone) => {
   it('round 15: a member with a nanny shows her face and "with {name}" on the row; the others show none', async () => {
+    device.phone = phone;
     const state = buildSeed().citra;
     for (const m of Object.values(state.members)) m.nanny = null;
     state.members.m1.nanny = { name: 'Mbak Sari', photoMediaId: 'md_nannyphoto0001' };
