@@ -10,13 +10,24 @@ import { mediaUrl, uploadMedia } from '../../lib/media';
 import { say } from '../../store/ui';
 
 /** A carer's round picture (the initials when there is none); a tap opens it full size. */
-export function NannyAvatar({ nanny, size }: { nanny: NonNullable<Member['nanny']>; size: number }) {
+export function NannyAvatar({ nanny, size, plain }: { nanny: NonNullable<Member['nanny']>; size: number; /** no tap-to-open (inside a button, such as a list row) */ plain?: boolean }) {
   const t = useT();
   const src = nanny.photoMediaId ? mediaUrl(nanny.photoMediaId) : undefined;
   return (
-    <ImageOpen src={src} label={`${t('common.openFull')} · ${nanny.name}`} style={{ borderRadius: 999 }}>
+    <ImageOpen src={src} disabled={plain} label={`${t('common.openFull')} · ${nanny.name}`} style={{ borderRadius: 999 }}>
       <Avatar name={nanny.name} size={size} src={src} />
     </ImageOpen>
+  );
+}
+
+/** round 15: the carer on a list row, "(face) with Mbak Sari" on one short line. Plain, because the whole row is already a button. */
+export function NannyLine({ nanny, size = 18, fs = 13 }: { nanny: NonNullable<Member['nanny']>; size?: number; fs?: number }) {
+  const t = useT();
+  return (
+    <span data-testid="row-nanny" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: fs, lineHeight: '20px', color: '#6B6259' }}>
+      <NannyAvatar nanny={nanny} size={size} plain />
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('lobby.withNanny', { n: nanny.name })}</span>
+    </span>
   );
 }
 

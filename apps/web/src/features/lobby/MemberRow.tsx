@@ -8,6 +8,7 @@ import { useDevice } from '../../hooks/useDevice';
 import { useFmt, useT } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
+import { NannyLine } from '../members/ProfilePhoto';
 import { DotItem, MemberAvatar, allergyLine } from './parts';
 
 /** Dot colour of the arrival reading: normal sage, alert rust, watch / not taken yet ochre. */
@@ -63,6 +64,7 @@ export function MemberRow({ r, first, selected, occasion, onOpen, onCheckIn, onC
             {onLeave ? <DotItem color="#8A6216">{t('status.onLeave', { month: fmt.fd(`${today.slice(0, 7)}-01`, { month: 'short' }) })}</DotItem> : null}
             {allergy ? <DotItem color="#A2452B">{allergy}</DotItem> : null}
           </span>
+          {m.nanny ? <NannyLine nanny={m.nanny} fs={14} /> : null}
         </span>
       </button>
       {action ? (

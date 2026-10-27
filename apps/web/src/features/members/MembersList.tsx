@@ -15,6 +15,7 @@ import { useClub } from '../../store/replica';
 import { NotSeenSelect } from '../lobby/NotSeenSelect';
 import { useCheckOnDays } from '../lobby/useCheckOnDays';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
+import { NannyLine } from './ProfilePhoto';
 import { FullName, relLabel, rowStatusText, STATUS_STYLE } from './lib';
 
 const PAGE_SIZE = 10;
@@ -165,6 +166,7 @@ export function MembersList() {
                     </span>
                     <FullName m={r.m} size={13} />
                     {contactLine(r, 13)}
+                    {r.m.nanny ? <NannyLine nanny={r.m.nanny} /> : null}
                     <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0 6px', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>
                       <span className={showSt ? undefined : 'cp-hide-phone'} style={showSt && r.st.key === 'pending' ? { color: st.fg, fontWeight: 500 } : undefined}>{stText}{showSt && sd.length ? ' ·' : ''}</span>
                       {sd.length && !r.sus ? <span data-sub-dates="">{sd.join(' · ')}</span> : null /* on hold: the status needs the line (the dates are on the profile) */}
@@ -256,7 +258,7 @@ export function MembersList() {
                     {sd.map((x) => <span key={x}>{x}</span>)}
                   </span>
                 )}
-                <span style={{ flex: '0 1 230px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>{contactLine(r, 14)}</span>
+                <span style={{ flex: '0 1 230px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>{contactLine(r, 14)}{r.m.nanny ? <NannyLine nanny={r.m.nanny} fs={14} /> : null}</span>
                 </button>
                 {callBtn(r, 40)}
                 <span aria-hidden="true" onClick={() => open(r)} style={{ display: 'flex', flex: 'none', cursor: 'pointer' }}><Icon name="chevron_right" size={22} color="var(--accent, #75624B)" /></span>

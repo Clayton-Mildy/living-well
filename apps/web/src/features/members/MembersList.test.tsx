@@ -52,3 +52,24 @@ describe('Members, Check on filter', () => {
     expect(rows()).toBe(1);
   });
 });
+
+describe('Members rows, nanny', () => {
+  it('round 15: a member with a nanny shows her face and "with {name}" on the row; the others show none', async () => {
+    const state = buildSeed().citra;
+    for (const m of Object.values(state.members)) m.nanny = null;
+    state.members.m1.nanny = { name: 'Mbak Sari', photoMediaId: 'md_nannyphoto0001' };
+    useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
+    useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=all']}><MembersList /></MemoryRouter>); });
+    const n = host.querySelectorAll('[data-testid="row-nanny"]');
+    expect(host.querySelectorAll('[data-member]').length).toBeGreaterThan(1);
+    expect(n).toHaveLength(1);
+    expect(n[0].textContent).toBe('with Mbak Sari');
+    expect(n[0].innerHTML).toContain('md_nannyphoto0001');
+    expect(n[0].closest('[data-member]')?.getAttribute('data-member')).toBe('m1');
+    expect(n[0].querySelector('button')).toBeNull();
+  });
+});
