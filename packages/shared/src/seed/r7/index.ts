@@ -13,6 +13,7 @@ import { seedCelebrations } from './celebrations';
 import { seedLeads } from './leads';
 import { seedLeave } from './leave';
 import { seedUnpaid } from './unpaid';
+import { seedReceipts } from './receipts';
 import { seedWeekend } from './weekend';
 
 export function seedRound7(s: ClubState, T: ISODate): void {
@@ -28,6 +29,7 @@ export function seedRound7(s: ClubState, T: ISODate): void {
   seedLeads(s, T); // round 13: the history of every lead, and (roster only) the leads that joined or stalled in the last six months
   seedLeave(s, T); // round 13: staff leave requests (Dinar and Caca approved, Caca waiting, Chef Agus declined) with the approved leave rows; no random draws
   seedUnpaid(s, T); // round 14: (roster only) a promise and a "no answer" on the two overdue invoices; no random draws
+  seedReceipts(s, T); // round 14 p2: six months of itemised receipts and (roster only) one Tokopedia order waiting; before the mood marks, whose size budget counts them
   seedMoodMarks(s, T); // round 12: a mood mark for every seeded visit (last: it walks the attendance, readings and logs above)
   seedWeekend(s, T); // round 14: the first Saturday after T is programmed, the Sunday after it waits for Ega (after everything that looks for an open day)
 }

@@ -120,9 +120,10 @@ describe('line rules', () => {
   });
   it('supplierCategory reads the Directory entry, and nothing for free text', () => {
     const s = structuredClone(buildSeed().citra);
-    s.directory.d6.category = 'groceries';
-    expect(supplierCategory(s, 'd6')).toBe('groceries');
-    expect(supplierCategory(s, 'd7')).toBeUndefined();
+    s.directory.d6.category = 'medical';
+    expect(supplierCategory(s, 'd6')).toBe('medical');
+    expect(supplierCategory(s, 'd9')).toBe('cleaning'); // from the seed
+    expect(supplierCategory(s, 'd4')).toBeUndefined(); // a service has none
     expect(supplierCategory(s, 'nope')).toBeUndefined();
     expect(supplierCategory(s)).toBeUndefined();
   });

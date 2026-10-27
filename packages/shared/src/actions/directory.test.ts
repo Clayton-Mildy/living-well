@@ -24,12 +24,12 @@ function world() {
 const entry = { kind: 'supplier', name: 'Toko Roti Manis', what: 'Bread and cakes', whatId: 'Roti dan kue', phone: '0812 3456 7890', public: false };
 
 describe('directory', () => {
-  it('seed: three suppliers are internal, doctors and services are public', () => {
+  it('seed: seven suppliers are internal, doctors and services are public', () => {
     const s = world().s;
     const d = live(s.directory);
-    expect(d).toHaveLength(7);
+    expect(d).toHaveLength(11); // round 14 p2: d10–d13, the shops of the seeded receipts
     expect(d.filter((x) => x.public).map((x) => x.id).sort()).toEqual(['d1', 'd2', 'd3', 'd4']);
-    expect(d.filter((x) => x.kind === 'supplier').map((x) => x.id).sort()).toEqual(['d6', 'd7', 'd9']);
+    expect(d.filter((x) => x.kind === 'supplier').map((x) => x.id).sort()).toEqual(['d10', 'd11', 'd12', 'd13', 'd6', 'd7', 'd9']);
   });
 
   it('finance, management and the lobby can add; the phone is stored as +62…', () => {

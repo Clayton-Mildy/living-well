@@ -510,8 +510,8 @@ test.describe('directory', () => {
     const c = watchConsole(page);
     await signIn(page, 's10', '/directory');
     await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible();
-    if (isPhone(page)) await expect(page.getByRole('combobox', { name: 'Filter contacts' })).toContainText('All · 7');
-    else await expect(page.getByRole('button', { name: /^All\s*·?\s*7/ })).toBeVisible();
+    if (isPhone(page)) await expect(page.getByRole('combobox', { name: 'Filter contacts' })).toContainText('All · 11'); // round 14 p2: four more suppliers (the shops of the seeded receipts)
+    else await expect(page.getByRole('button', { name: /^All\s*·?\s*11/ })).toBeVisible();
     await assertNoHorizontalScroll(page);
 
     await page.getByRole('button', { name: 'Add a contact' }).click();

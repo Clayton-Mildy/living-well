@@ -77,7 +77,7 @@ describe('Receipts: the items of a receipt', () => {
   });
 
   it('a receipt without lines shows no toggle', async () => {
-    await show(<Receipts />);
+    await show(<Receipts />, (s) => { for (const r of Object.values(s.receipts)) delete r.lines; }); // the seed's history receipts are itemised
     expect(button(/items?$/)).toBeUndefined();
     expect(text()).toContain('Sayur Segar Kemang');
   });
@@ -111,7 +111,7 @@ describe('Receipts: the items of a receipt', () => {
 });
 
 describe('Directory: supplier categories', () => {
-  const categorise = (s: ClubState) => { Object.assign(s.directory.d6, { category: 'medical' }); Object.assign(s.directory.d7, { category: 'groceries' }); };
+  const categorise = (s: ClubState) => { Object.assign(s.directory.d6, { category: 'medical' }); Object.assign(s.directory.d7, { category: 'groceries' }); delete s.directory.d9.category; }; // Bersih Prima as a supplier with no category
   const filter = () => document.querySelector<HTMLElement>('[role="combobox"][aria-label="Category"]');
   /** The form's Category select: the combobox whose label reads Category. */
   const combo = (within: Element) => Array.from(within.querySelectorAll('[role="combobox"]')).find((c) => document.getElementById(c.getAttribute('aria-labelledby') ?? '')?.textContent === 'Category');

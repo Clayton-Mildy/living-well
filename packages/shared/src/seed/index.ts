@@ -6,7 +6,7 @@
 import type {
   Actor, Attendance, ClubSettings, ClubState, DailyLog, Dish, DishAllergen, DT, FamilyContact, FamilyLink,
   Invoice, ISODate, Member, MemberNote, Payment, Photo, Reading, Row, ScheduleCell, Staff, StaffRole, WeekSlot, WorkWeekday,
-  ChangeRequest, Notification, ActivityEntry, Relation, Bank, MemberRegistration,
+  ChangeRequest, Notification, ActivityEntry, Relation, Bank, MemberRegistration, SpendCategory,
 } from '../types';
 import { COLLECTIONS } from '../types';
 import type { CollectionName } from '../types';
@@ -490,15 +490,20 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   venue('v2', 'Bank Prima Nusantara retirees’ morning', 'Bapak Teddy Haris', '+62 811-2290-4471', 30, 'room-garden-room', addDays(nextDow(6), 7), '08:00', '12:00');
 
   // directory
-  const dir = (id: string, kind: 'doctor' | 'service' | 'supplier', name: string, what: string, whatId: string, phone: string, pub: boolean) =>
-    put('directory', { ...base(C, id, '2024-07-01T10:00', 'staff:s9'), kind, name, what, whatId, phone: e164(phone), public: pub });
+  const dir = (id: string, kind: 'doctor' | 'service' | 'supplier', name: string, what: string, whatId: string, phone: string, pub: boolean, category?: SpendCategory) =>
+    put('directory', { ...base(C, id, '2024-07-01T10:00', 'staff:s9'), kind, name, what, whatId, phone: e164(phone), public: pub, ...(category ? { category } : {}) });
   dir('d1', 'doctor', 'dr. Andreas Wirawan, Sp.PD', 'Internal medicine · visits Tuesdays', 'Penyakit dalam · berkunjung tiap Selasa', '+62 812-9001-2234', true);
   dir('d2', 'doctor', 'dr. Melinda Kusumo', 'GP on call', 'Dokter umum siaga', '+62 813-4410-9921', true);
   dir('d3', 'service', 'RS Medika Kemang', 'Nearest hospital · emergency', 'Rumah sakit terdekat · gawat darurat', '+62 21 7590 0110', true);
   dir('d4', 'service', 'Apotek Sehat Selalu', 'Pharmacy · delivers to homes', 'Apotek · antar ke rumah', '+62 21 7590 2231', true);
-  dir('d6', 'supplier', 'Sayur Segar Kemang', 'Vegetables and fruit', 'Sayur dan buah', '+62 811-8802-4410', false);
-  dir('d7', 'supplier', 'Ikan Laut Jaya', 'Fish', 'Ikan', '+62 812-1180-3321', false);
-  dir('d9', 'supplier', 'Bersih Prima', 'Cleaning supplies', 'Perlengkapan kebersihan', '+62 21 7581 4410', false);
+  dir('d6', 'supplier', 'Sayur Segar Kemang', 'Vegetables and fruit', 'Sayur dan buah', '+62 811-8802-4410', false, 'groceries');
+  dir('d7', 'supplier', 'Ikan Laut Jaya', 'Fish', 'Ikan', '+62 812-1180-3321', false, 'groceries');
+  dir('d9', 'supplier', 'Bersih Prima', 'Cleaning supplies', 'Perlengkapan kebersihan', '+62 21 7581 4410', false, 'cleaning');
+  // round 14 p2: the shops the receipt reader knows (SIM_VENDORS); the seeded receipts (r7/receipts.ts) come from these
+  dir('d10', 'supplier', 'Sahabat Lansia Official (Tokopedia)', 'Diapers, underpads and medical supplies online', 'Popok, underpad dan alat kesehatan online', '+62 812-7740-1185', false, 'marketplace');
+  dir('d11', 'supplier', 'Grosir Sembako Makmur (Tokopedia)', 'Rice, oil and kitchen supplies online', 'Beras, minyak dan perlengkapan dapur online', '+62 813-2208-6614', false, 'marketplace');
+  dir('d12', 'supplier', 'Gramedia Kemang', 'Craft and painting supplies', 'Perlengkapan kerajinan dan lukis', '+62 21 7199 3302', false, 'activity');
+  dir('d13', 'supplier', 'Superindo Kemang', 'Supermarket: groceries and household', 'Supermarket: bahan makanan dan rumah tangga', '+62 21 7179 2240', false, 'groceries');
 
   // stock, budget, receipts, vendor invoices
   const stock = (id: string, item: string, qty: number, unit: string, area: 'kitchen' | 'health' | 'activities', sectionId: string, by: string, status: 'requested' | 'approved' | 'received', date: ISODate, decidedBy?: string) =>
