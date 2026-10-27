@@ -1,29 +1,29 @@
 // Mood marks (round 12): one 1-5 face per moment of a visit (arrival, health check, each activity session, departure).
-// A mark's id is its natural key, so marking again is an overwrite, never a second row.
+// Round 14: six moments (the activity team's Morning round and the kitchen's lunch round join them), each face with one fixed meaning (mood.hint.*),
+// and the daily mood: the rounded average of a member's marks that day. A mark's id is its natural key, so marking again is an overwrite, never a second row.
 import type { Draft } from 'immer';
-import type { ClubState, Face, ISODate, MoodMark, MoodMoment, Slot } from '../types';
+import type { ClubState, Face, ISODate, MoodMark, MoodMoment, Slot, StaffRole } from '../types';
 import type { Ctx } from '../actions/framework';
 import { dow, live } from '../util';
 import type { InsightPeriod } from './insights';
 import { activeOn } from './core';
 import { sessionsOn } from './kitchen';
+import { attendedOn, logsOn } from './activity';
+import { dailyMood, markOf, marksOn, moodId } from './moodCore';
+
+export { dailyMood, markOf, marksOn, moodId };
+import { attId } from './attendance';
+import { validReadings } from './health';
 
 /** Best face first, the order they are shown in. */
 export const FACES: readonly Face[] = [5, 4, 3, 2, 1];
 export const FACE_KEY: Record<Face, string> = { 5: 'mood.face.5', 4: 'mood.face.4', 3: 'mood.face.3', 2: 'mood.face.2', 1: 'mood.face.1' };
-const MOMENTS: MoodMoment[] = ['arrival', 'health', 'activity', 'departure'];
+/** The moments of a visit in the order they happen (and are listed). */
+export const MOOD_MOMENTS: readonly MoodMoment[] = ['arrival', 'health', 'morning', 'lunch', 'activity', 'departure'];
+export const HINT_KEY: Record<Face, string> = { 5: 'mood.hint.5', 4: 'mood.hint.4', 3: 'mood.hint.3', 2: 'mood.hint.2', 1: 'mood.hint.1' };
+const MOMENTS = MOOD_MOMENTS;
 
-export const moodId = (date: ISODate, memberId: string, moment: MoodMoment, slot?: Slot) =>
-  moment === 'activity' && slot ? `${date}:${memberId}:activity:${slot}` : `${date}:${memberId}:${moment}`;
-
-/** A member's live marks for a date, earliest first. */
-export function marksOn(s: ClubState, memberId: string, date: ISODate): MoodMark[] {
-  return live(s.moodMarks ?? {})
-    .filter((m) => m.memberId === memberId && m.date === date)
-    .sort((a, b) => (a.time < b.time ? -1 : a.time > b.time ? 1 : a.id < b.id ? -1 : a.id > b.id ? 1 : 0));
-}
-
-export interface DayArc { arrival?: Face; health?: Face; activity: { slot: Slot; face: Face }[]; departure?: Face; lift: number | null }
+export interface DayArc { arrival?: Face; health?: Face; morning?: Face; lunch?: Face; activity: { slot: Slot; face: Face }[]; departure?: Face; lift: number | null }
 /** The day's faces in order; `lift` is departure minus arrival, only when both were marked. */
 export function dayArc(s: ClubState, memberId: string, date: ISODate): DayArc {
   const arc: DayArc = { activity: [], lift: null };
@@ -34,6 +34,35 @@ export function dayArc(s: ClubState, memberId: string, date: ISODate): DayArc {
   arc.activity.sort((a, b) => (a.slot < b.slot ? -1 : a.slot > b.slot ? 1 : 0));
   if (arc.arrival !== undefined && arc.departure !== undefined) arc.lift = arc.departure - arc.arrival;
   return arc;
+}
+
+/** Faces still to mark on a date by a role, among the members checked in that day (`total` = the faces expected):
+ *  lobby the arrival of everyone in and the departure of those gone home; nurse the health face of everyone with a reading;
+ *  activity the morning face of everyone in and a face for each session they joined; kitchen the lunch face of everyone whose lunch is marked. */
+export function missingMarks(s: ClubState, date: ISODate, role: StaffRole): { missing: number; total: number } {
+  const people = attendedOn(s, date);
+  const has = (memberId: string, moment: MoodMoment, slot?: Slot) => { const m = s.moodMarks?.[moodId(date, memberId, moment, slot)]; return !!m && !m.deletedAt; };
+  let missing = 0, total = 0;
+  const want = (ok: boolean) => { total++; if (!ok) missing++; };
+  if (role === 'lobby') {
+    for (const m of people) {
+      want(has(m.id, 'arrival'));
+      if (s.attendance[attId(date, m.id)]?.checkOut) want(has(m.id, 'departure'));
+    }
+  } else if (role === 'nurse') {
+    const read = new Set(validReadings(s).filter((r) => r.date === date && r.memberId).map((r) => r.memberId));
+    for (const m of people) if (read.has(m.id)) want(has(m.id, 'health'));
+  } else if (role === 'activity') {
+    const logs = logsOn(s, date);
+    for (const m of people) {
+      want(has(m.id, 'morning'));
+      for (const [slot, v] of Object.entries(logs.get(m.id)?.sessions ?? {})) if (v === 'joined') want(has(m.id, 'activity', slot));
+    }
+  } else if (role === 'kitchen') {
+    const logs = logsOn(s, date);
+    for (const m of people) if (logs.get(m.id)?.lunch !== undefined) want(has(m.id, 'lunch'));
+  }
+  return { missing, total };
 }
 
 export interface MoodStats {
@@ -108,7 +137,7 @@ export function moodInsights(s: ClubState, period: InsightPeriod, today: ISODate
   };
   const perActivity = new Map<string, number[]>();
   const perWeekday: number[][] = [[], [], [], [], []];
-  const perMoment: Record<MoodMoment, number[]> = { arrival: [], health: [], activity: [], departure: [] };
+  const perMoment = Object.fromEntries(MOMENTS.map((k) => [k, []])) as unknown as Record<MoodMoment, number[]>;
   const arrivals = new Map<string, Face>();
   for (const m of marks) {
     perMoment[m.moment].push(m.face);

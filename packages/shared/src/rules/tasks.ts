@@ -11,9 +11,9 @@ import { guestsOn, lobbyGroups } from './attendance';
 import { validReadings } from './health';
 import { SESSION_MIN, attendedOn, pictureSessions, roundProgress, roundsOf, sessionPhotos } from './activity';
 import { conflictsOn, dinersOn, lunchPhotosOn, teaPhotosOn } from './kitchen';
-import { invoiceStatus } from './billing';
-import { renewalMonth, renewalMembers, renewalsLeft } from './renewals';
+import { lastContactOn, unpaidRows } from './unpaid';
 import { approvalTotal } from './approvals';
+import { missingMarks } from './mood';
 
 /** Every staff role that can have tasks, in the order the Team view lists them. */
 export const TASK_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt'];
@@ -129,6 +129,8 @@ export interface DutyPart {
   link: string;
   /** the bell reminder; missing = the duty's own `bellKind` (or none) */
   bell?: { id: string; kind: string; params: Record<string, string | number>; at?: HM };
+  /** round 14: a reminder that never turns late (no bell, no badge), such as the mood faces */
+  neverLate?: boolean;
 }
 type PartIn = Omit<DutyPart, 'titleKey' | 'due'> & { due?: HM };
 
@@ -156,8 +158,14 @@ const endOf = (time: HM): HM => toHM(toMin(time) + SESSION_MIN);
 const stub = (key: string, o: Omit<PartIn, 'key' | 'params'> & { params?: Record<string, string | number> }): PartIn => ({ key, params: {}, ...o });
 const attendedRows = (s: ClubState, date: ISODate) => { const g = lobbyGroups(s, date); return [...g.inClub, ...g.goneHome].map((r) => ({ m: r.m, a: r.a! })); }; // checked in today (also those gone home)
 const guestDue = (s: ClubState, g: { time?: HM }): HM => toHM(Math.max(toMin(s.club.settings.open), toMin(g.time || s.club.settings.open) - 30)); // as the bell always did: half an hour before a visit
-const CHASE_DAYS = 3;
-const lastOfDT = (a: { at: string }[]) => a.reduce<string>((m, x) => (x.at > m ? x.at : m), '');
+/** the Unpaid list as one duty part: a row is followed up once it has an Unpaid call, an invoice call note or a reminder in the last 7 days; done when every row is */
+const unpaidPart = (s: ClubState, date: ISODate): PartIn[] => {
+  const rows = unpaidRows(s, date);
+  if (!rows.length) return [];
+  const since = addDays(date, -7);
+  const chased = rows.filter((r) => lastContactOn(r).slice(0, 10) >= since).length;
+  return [stub('unpaid', { done: chased >= rows.length, count: { done: chased, total: rows.length }, link: '/renewals?tab=unpaid' })];
+};
 
 export const DUTIES: DutyDef[] = [
   // ----- activity -----
@@ -187,22 +195,15 @@ export const DUTIES: DutyDef[] = [
       })];
     }),
   },
-  {
-    id: 'activity.lunch', role: 'activity', icon: 'restaurant', titleKey: 'tasks.duty.activity.lunch', every: 'day', defaultDue: () => '13:30',
-    parts: (s, date) => {
-      const { marked, total } = roundProgress(s, date, 'lunch');
-      return total ? [stub('lunch', { done: marked >= total, count: { done: marked, total }, link: '/log?round=lunch', bell: { id: 'round:lunch', kind: 'activity.notif.act.lunch', params: { n: total - marked, time: '12:00' }, at: '12:00' } })] : [];
-    },
-  },
-  {
-    id: 'activity.mood', role: 'activity', icon: 'edit_note', titleKey: 'tasks.duty.activity.mood', every: 'day', defaultDue: () => '15:00',
-    parts: (s, date) => {
-      const { marked, total } = roundProgress(s, date, 'mood');
-      return total ? [stub('mood', { done: marked >= total, count: { done: marked, total }, link: '/log?round=mood', bell: { id: 'round:mood', kind: 'activity.notif.act.mood', params: { n: total - marked, time: '15:00' }, at: '15:00' } })] : [];
-    },
-  },
 
   // ----- kitchen (F&B) -----
+  {
+    id: 'kitchen.lunch', role: 'kitchen', icon: 'restaurant', titleKey: 'tasks.duty.kitchen.lunch', every: 'day', defaultDue: () => '13:30',
+    parts: (s, date) => {
+      const { marked, total } = roundProgress(s, date, 'lunch');
+      return total ? [stub('lunch', { done: marked >= total, count: { done: marked, total }, link: '/lunch', bell: { id: 'round:lunch', kind: 'tasks.notif.act.lunch', params: { n: total - marked, time: '12:00' }, at: '12:00' } })] : [];
+    },
+  },
   {
     id: 'kitchen.lunchPhoto', role: 'kitchen', icon: 'add_a_photo', titleKey: 'tasks.duty.kitchen.lunchPhoto', every: 'day', defaultDue: () => '12:30', bellKind: 'tasks.notif.act.lunchPhoto',
     parts: (s, date) => {
@@ -283,28 +284,15 @@ export const DUTIES: DutyDef[] = [
     })),
   },
   {
-    // from the 20th: the month-end follow-up of the coming month (who still has no answer is `renewalsLeft`)
-    id: 'lobby.renewals', role: 'lobby', icon: 'event_repeat', titleKey: 'tasks.duty.lobby.renewals', every: 'day', defaultDue: () => '09:00', todayOnly: true,
-    parts: (s, date) => {
-      const month = renewalMonth(date);
-      const all = +date.slice(8) >= 20 ? renewalMembers(s, month).length : 0;
-      if (!all) return [];
-      const left = renewalsLeft(s, date, month);
-      return [stub('renewals', { params: { month }, done: left === 0, count: { done: all - left, total: all }, link: '/renewals', bell: { id: 'renewals:' + month, kind: 'renewals.notif.act.followUp', params: { n: left, month } } })];
-    },
+    // round 14: the overdue invoices on the Unpaid list; a row counts as chased once someone called about it in the last week (the front desk and finance each have the duty)
+    id: 'lobby.unpaid', role: 'lobby', icon: 'payments', titleKey: 'tasks.duty.lobby.unpaid', every: 'day', defaultDue: () => '11:00', todayOnly: true,
+    parts: (s, date) => unpaidPart(s, date),
   },
 
   // ----- finance -----
   {
-    id: 'finance.overdue', role: 'finance', icon: 'error', titleKey: 'tasks.duty.finance.overdue', every: 'day', defaultDue: () => '11:00', todayOnly: true,
-    parts: (s, date) => {
-      const od = live(s.invoices).filter((i) => invoiceStatus(s, i, date) === 'overdue');
-      if (!od.length) return [];
-      // chased = a reminder was sent or a call was noted in the last few days
-      const since = addDays(date, -CHASE_DAYS);
-      const chased = od.filter((i) => lastOfDT([...i.reminders, ...i.callNotes]).slice(0, 10) >= since).length;
-      return [stub('overdue', { done: chased >= od.length, count: { done: chased, total: od.length }, link: linkTo('finance', 'billing', '?f=overdue') })];
-    },
+    id: 'finance.unpaid', role: 'finance', icon: 'payments', titleKey: 'tasks.duty.finance.unpaid', every: 'day', defaultDue: () => '11:00', todayOnly: true,
+    parts: (s, date) => unpaidPart(s, date),
   },
   {
     id: 'finance.receipts', role: 'finance', icon: 'receipt_long', titleKey: 'tasks.duty.finance.receipts', every: 'day', defaultDue: () => '15:00', todayOnly: true,
@@ -326,6 +314,15 @@ export const DUTIES: DutyDef[] = [
       return [stub('run', { params: { month: period }, done: !!run, by, at: run?.createdAt.slice(11, 16), link: linkTo('finance', 'billing', '?run=1') })];
     },
   },
+
+  // ----- mood faces (round 14): one per role that marks them, "Mood · N not marked"; nothing blocks, so it never turns late -----
+  ...([['lobby', linkTo('lobby', 'arrivals')], ['nurse', linkTo('nurse', 'hchecks')], ['activity', '/log?round=morning'], ['kitchen', '/lunch']] as const).map(([role, link]): DutyDef => ({
+    id: 'mood.' + role, role, icon: 'sentiment_satisfied', titleKey: 'tasks.duty.mood', every: 'day', defaultDue: (s) => s.club.settings.close,
+    parts: (s, date) => {
+      const { missing, total } = missingMarks(s, date, role);
+      return total ? [stub('mood', { done: missing === 0, count: { done: total - missing, total }, link, neverLate: true })] : [];
+    },
+  })),
 
   // ----- management -----
   {
@@ -361,8 +358,8 @@ export interface DutyState {
   status: DutyStatus;
 }
 /** Not done, and past its time: its time today, or any time on an earlier day. Never on a coming day. */
-export const partLate = (p: Pick<DutyPart, 'done' | 'due'>, date: ISODate, today: ISODate, nowMin: number): boolean =>
-  !p.done && (date < today || (date === today && nowMin >= toMin(p.due)));
+export const partLate = (p: Pick<DutyPart, 'done' | 'due' | 'neverLate'>, date: ISODate, today: ISODate, nowMin: number): boolean =>
+  !p.done && !p.neverLate && (date < today || (date === today && nowMin >= toMin(p.due)));
 
 /** A duty on a date. The club being closed, the duty being off or a past day it cannot tell all give no parts. */
 export function dutyState(s: ClubState, def: DutyDef, date: ISODate, today: ISODate, nowMin: number): DutyState {

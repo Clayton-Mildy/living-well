@@ -7,7 +7,7 @@ import { DomainError, defineAction, hasRole, isMgmt, type Ctx } from './framewor
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { namesOf, notifyPhotoFamilies } from './photos';
 import { isPendingRow } from '../rules/core';
-import { LUNCH_AMOUNTS, NORMAL_LOG, SESSION_MARKS, attendedOn, joinedOf, logDateOk, logId, logsOn, roundsOf, type LunchAmount, type SessionMark } from '../rules/activity';
+import { LUNCH_AMOUNTS, NORMAL_LOG, SESSION_MARKS, attendedOn, joinedOf, logDateOk, logId, logsOn, notesSaved, roundsOf, type LunchAmount, type SessionMark } from '../rules/activity';
 import { fmtDMY } from '../rules/calendar';
 import { attId } from '../rules/attendance';
 import { writeMark } from '../rules/mood';
@@ -30,7 +30,7 @@ const isoDate = z.string().refine((s) => {
 });
 
 // ---------- daily log ----------
-// KC round 7: the log is filled in rounds. `log.mark` marks lunch / a session / mood for many members at once (one tap per person); `log.save` writes
+// KC round 7: the log is filled in rounds. `log.mark` marks a session / mood for many members at once (one tap per person; lunch is the F&B team's, round 14); `log.save` writes
 // the Mood & notes round of one member (mood, communicative, content, the note for the family and the staff note). Every part can be saved alone.
 const moodEnum = z.enum(['cheerful', 'calm', 'quiet', 'agitated']);
 const lunchEnum = z.enum(LUNCH_AMOUNTS);
@@ -66,9 +66,9 @@ function writeLog(d: Draft<ClubState>, ctx: Ctx, i: LogInput): 'created' | 'edit
   let before: Record<string, unknown> | undefined;
   let seen = false; // the family has (had) an approved version of this round
   if (prev) {
-    kind = prev.status === 'saved' && prev.mood !== undefined ? 'edited' : 'created'; // a row that only has lunch or a session marked is a new Mood & notes entry
+    kind = prev.status === 'saved' && notesSaved(prev) ? 'edited' : 'created'; // a row that only has lunch or a session marked is a new notes entry
     before = priorOf(prev, LOG_KEYS);
-    seen = approvedVersion(prev, LOG_KEYS)?.mood !== undefined;
+    seen = notesSaved(approvedVersion(prev, LOG_KEYS) ?? undefined);
     if (i.mood !== undefined) prev.mood = i.mood;
     if (i.lunch !== undefined) prev.lunch = i.lunch;
     if (i.communicative !== undefined) prev.communicative = i.communicative;
@@ -95,21 +95,21 @@ function writeLog(d: Draft<ClubState>, ctx: Ctx, i: LogInput): 'created' | 'edit
   else {
     clearApproval(row);
     const to = familyUserIds(d, i.memberId);
-    if (to.length && row.mood !== undefined) ctx.notify({ toUsers: to, kind: seen ? 'activity.notif.logUpdated' : 'activity.notif.logSaved', params: { name }, link: '/today', memberId: i.memberId, ref: { type: 'dailyLog', id } });
+    if (to.length && notesSaved(row)) ctx.notify({ toUsers: to, kind: seen ? 'activity.notif.logUpdated' : 'activity.notif.logSaved', params: { name }, link: '/today', memberId: i.memberId, ref: { type: 'dailyLog', id } });
   }
   ctx.feed({ icon: 'edit_note', key: kind === 'edited' ? 'activity.feed.logEdited' : 'activity.feed.log', params: { name, date: fmtDMY(i.date) }, memberId: i.memberId });
   return kind;
 }
-function checkLogDay(ctx: Ctx, date: ISODate) {
+export function checkLogDay(ctx: Ctx, date: ISODate) {
   if (!logDateOk(ctx.today, date)) ctx.fail('activity.err.dateRange');
 }
-function requireAttended(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODate) {
+export function requireAttended(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODate) {
   requireMember(d, memberId, ctx);
   if (!d.attendance[attId(date, memberId)]?.checkIn) ctx.fail('activity.err.notAttended', { name: shortOf(d, memberId) });
 }
 
 /** The parts of a round to set on one member's log: a value sets it, null clears it (undefined leaves it alone). */
-interface Marks { lunch?: LunchAmount | null; mood?: DailyLog['mood'] | null; communicative?: DailyLog['communicative'] | null; content?: DailyLog['content'] | null; sessions?: Partial<Record<Slot, SessionMark | null>> }
+export interface Marks { lunch?: LunchAmount | null; mood?: DailyLog['mood'] | null; communicative?: DailyLog['communicative'] | null; content?: DailyLog['content'] | null; sessions?: Partial<Record<Slot, SessionMark | null>> }
 const SIMPLE_MARKS = ['lunch', 'mood', 'communicative', 'content'] as const;
 const logEmpty = (r: DailyLog) => r.mood === undefined && r.lunch === undefined && r.communicative === undefined && r.content === undefined && !r.sessions && r.joined === undefined && !r.note && !r.staffNote;
 /**
@@ -117,7 +117,7 @@ const logEmpty = (r: DailyLog) => r.mood === undefined && r.lunch === undefined 
  * `onlyEmpty` leaves parts that are already marked alone ("mark the rest"). Returns whether anything changed; nothing changed = no row is touched.
  * Families hear nothing from a mark: they are told when the Mood & notes round is saved and approved.
  */
-function applyMarks(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODate, m: Marks, onlyEmpty: boolean): boolean {
+export function applyMarks(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODate, m: Marks, onlyEmpty: boolean): boolean {
   const id = logId(memberId, date);
   const found = d.dailyLogs[id];
   const row0 = found && !found.deletedAt ? found : undefined;
@@ -147,7 +147,7 @@ function applyMarks(d: Draft<ClubState>, ctx: Ctx, memberId: string, date: ISODa
   if (needsApproval(ctx)) markPending(row, ctx, before);
   else {
     clearApproval(row);
-    const to = row0?.mood === undefined && row.mood !== undefined ? familyUserIds(d, memberId) : []; // management completed the Mood & notes round: the family hears now
+    const to = !notesSaved(row0) && notesSaved(row) ? familyUserIds(d, memberId) : []; // management completed the notes: the family hears now
     if (to.length) ctx.notify({ toUsers: to, kind: 'activity.notif.logSaved', params: { name: shortOf(d, memberId) }, link: '/today', memberId, ref: { type: 'dailyLog', id } });
   }
   return true;
@@ -186,6 +186,7 @@ export const careActions = [
     can: (u) => logWriters(u),
     parse: (raw) => parseWith(logSchema, withMood(raw)),
     run(d, input, ctx) {
+      if (input.lunch !== undefined && !isMgmt(ctx.user)) ctx.fail('care.err.lunchKitchen'); // round 14: lunch is the F&B team's (kitchen.lunchMark)
       checkLogDay(ctx, input.date);
       requireAttended(d, ctx, input.memberId, input.date);
       const kind = writeLog(d, ctx, input);
@@ -199,6 +200,8 @@ export const careActions = [
     can: (u) => logWriters(u),
     parse: (raw) => parseWith(markSchema, withMood(raw)),
     run(d, input, ctx) {
+      // round 14: how much was eaten is the F&B team's (kitchen.lunchMark); management may still correct it here
+      if (input.lunch !== undefined && !isMgmt(ctx.user)) ctx.fail('care.err.lunchKitchen');
       checkLogDay(ctx, input.date);
       const ids = uniq(input.memberIds);
       for (const id of ids) requireAttended(d, ctx, id, input.date);
@@ -238,10 +241,10 @@ export const careActions = [
       const view = d as unknown as ClubState;
       // only members who were here and whose Mood & notes round is not done yet; never overwrite what somebody already marked
       const logs = logsOn(view, date);
-      const todo = attendedOn(view, date).filter((m) => logs.get(m.id)?.mood === undefined);
+      const todo = attendedOn(view, date).filter((m) => !notesSaved(logs.get(m.id)));
       if (!todo.length) ctx.fail('activity.err.nothingToLog');
       const sessions = Object.fromEntries(roundsOf(view, date).filter((r) => r.kind === 'session').map((r) => [r.id, 'joined' as const]));
-      const marks: Marks = { mood: NORMAL_LOG.mood, lunch: NORMAL_LOG.lunch, communicative: NORMAL_LOG.communicative, content: NORMAL_LOG.content, sessions };
+      const marks: Marks = { mood: NORMAL_LOG.mood, communicative: NORMAL_LOG.communicative, content: NORMAL_LOG.content, sessions };
       for (const m of todo) applyMarks(d, ctx, m.id, date, marks, true);
       ctx.feed({ icon: 'edit_note', key: 'activity.feed.markMood', params: { names: namesOf(d, todo.map((m) => m.id)), n: todo.length } });
       ctx.result.saved = todo.length;

@@ -183,9 +183,9 @@ export function cameByDay(s: ClubState, who: string[], today: ISODate): Map<ISOD
   return out;
 }
 
-/** The open days of the week that starts on `monday` (Monday to Friday), each as the family reads it: the desktop's week list shows a line of what is on. */
+/** The days of the week that starts on `monday` (Monday to Friday, plus a Saturday or Sunday that is open: round 14), each as the family reads it: the desktop's week list shows a line of what is on. */
 export function famWeek(s: ClubState, who: string[], monday: ISODate, today: ISODate, nowMin: number): FamDay[] {
-  return [0, 1, 2, 3, 4].map((i) => famDay(s, who, addDays(monday, i), today, nowMin));
+  return [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(monday, i)).filter((d, i) => i < 5 || dayStatus(s, d).open).map((d) => famDay(s, who, d, today, nowMin));
 }
 
 /** How far the family can browse: from the month of the first visit to the month of the last calendar event (at least two months ahead, at most a year). */

@@ -46,7 +46,7 @@ export async function assertNoHorizontalScroll(page: Page) {
   });
   expect(over).toBeLessThanOrEqual(1);
 }
-/** Round 12: check-in and check-out ask for the arrival / departure mood face; the confirm stays off until one is tapped. */
+/** Round 12: check-in and check-out ask for the arrival / departure mood face (round 14: optional, the confirm works without one). */
 export async function tapFace(scope: Page | Locator, face = 4) {
   await scope.locator(`[role=radio][data-face="${face}"]`).first().click();
 }

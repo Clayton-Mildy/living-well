@@ -8,7 +8,10 @@ export type YM = string; // 'YYYY-MM'
 
 export type Actor = `staff:${string}` | `family:${string}` | 'system' | 'doorCamera';
 export type Health = 'normal' | 'watch' | 'alert';
-export type Weekday = 1 | 2 | 3 | 4 | 5;
+/** A day of the week, Monday = 1 … Sunday = 7. Round 14 (B2): Saturday and Sunday are open days when a programme is approved for them (rules/core.ts dayStatus). */
+export type Weekday = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/** Monday to Friday: the days the club always opens (and the weekly tasks' due days). */
+export type WorkWeekday = 1 | 2 | 3 | 4 | 5;
 export type Lang = 'en' | 'id';
 /** The four presets, or any short free text the front desk types under "Other" (e.g. Tante). */
 export type Title = 'Oma' | 'Opa' | 'Ibu' | 'Bapak' | (string & {});
@@ -80,7 +83,7 @@ export interface ClubSettings {
   suspendDay?: number;
   stopDay?: number;
   emergencyPhone: string;
-  hoursLabel: string; // 'Mon–Fri 08:30–16:30'
+  hoursLabel: string; // 'Mon–Fri 08:30–16:30 · weekends when programmed'
   broadcastTemplates: { id: string; key: 'update' | 'closure' | 'event' | 'custom'; title: string; text: string }[];
   /** When a reading counts as Watch or Alert (missing = the defaults in rules/health.ts) */
   limits?: HealthLimits;
@@ -112,6 +115,8 @@ export interface PriceVersion extends Row {
   registration?: number;
   trial?: number;
   leave?: number;
+  /** round 14: the monthly dementia care fee, on top of the plan for a member whose registration answers yes */
+  dementia?: number;
   sample: { flex: boolean; gold: boolean; extra: boolean };
   by?: Actor;
 }
@@ -234,7 +239,8 @@ export interface Member extends Row {
   plans: PlanEntry[]; // effective-dated
   usualArrival: HM; // informational only: members drop in on any open day
   /** the carer (suster) who comes along; KC round 10: with a carer, the carer's NIK (16 digits) is required */
-  nanny: { name: string; phone?: string; nik?: string } | null;
+  /** `photoMediaId` is the carer's picture, `note` a line for the desk (agency, days; round 14) */
+  nanny: { name: string; phone?: string; nik?: string; photoMediaId?: string; note?: string } | null;
   spouseId: string | null;
   health: {
     conditions: string[];
@@ -329,7 +335,7 @@ export interface Attendance extends Row {
   edits: AttendanceEdit[];
 }
 
-export type MoodMoment = 'arrival' | 'health' | 'activity' | 'departure';
+export type MoodMoment = 'arrival' | 'health' | 'morning' | 'lunch' | 'activity' | 'departure';
 export type Face = 1 | 2 | 3 | 4 | 5;
 export interface MoodMark extends Row { memberId: string; date: ISODate; time: HM; moment: MoodMoment; face: Face; slot?: Slot; readingId?: string; by: Actor }
 
@@ -520,7 +526,7 @@ export interface OnlineRegistration {
   contact: { name: string; relation: Relation; phone: string };
   plan?: Plan;
   /** the carer (suster) who comes along, with the carer's NIK */
-  nanny?: { name: string; nik: string } | null;
+  nanny?: { name: string; nik: string; photoMediaId?: string; note?: string } | null;
   /** photos of the ID cards (uploaded through the form's own route) */
   ktp?: KtpUploads;
   health: { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[] };
@@ -612,7 +618,8 @@ export interface ScheduleCell {
 export interface ScheduleVersion extends Row {
   effectiveFrom: ISODate;
   status: 'draft' | 'pending' | 'published' | 'rejected';
-  days: Record<Weekday, Record<WeekSlot, ScheduleCell | null>>;
+  /** round 14: Saturday (6) and Sunday (7) only when the plan has sessions on them */
+  days: Record<WorkWeekday, Record<WeekSlot, ScheduleCell | null>> & Partial<Record<6 | 7, Record<WeekSlot, ScheduleCell | null>>>;
   submittedBy?: Actor;
   publishedBy?: Actor;
   publishedAt?: DT;
@@ -637,7 +644,8 @@ export interface MenuDay {
 export interface MenuVersion extends Row {
   effectiveFrom: ISODate;
   status: 'draft' | 'published';
-  days: Record<Weekday, MenuDay>;
+  /** round 14: Saturday (6) and Sunday (7) only when they have dishes */
+  days: Record<WorkWeekday, MenuDay> & Partial<Record<6 | 7, MenuDay>>;
   publishedBy?: Actor;
   approval?: Approval;
 }
@@ -745,7 +753,7 @@ export interface VendorInvoice extends Row {
 
 export interface InvoiceLine {
   id: string;
-  kind: 'plan' | 'extraDay' | 'adjustment' | 'credit' | 'venue';
+  kind: 'plan' | 'extraDay' | 'adjustment' | 'credit' | 'venue' | 'dementia';
   label: string; // i18n key
   params?: Record<string, string | number>;
   qty: number;
@@ -785,6 +793,15 @@ export interface Payment extends Row {
   by: Actor;
   /** round 13: a payment the front desk recorded waits for finance or management; no mark = confirmed (rules/finance.ts `isConfirmed`) */
   approval?: Approval;
+}
+
+/** Round 14: what a call about an overdue invoice came to. */
+export type UnpaidOutcome = 'promised' | 'paid' | 'disputed' | 'noAnswer';
+/** Round 14: the calls made about one overdue invoice (Next month > Unpaid); id `uf-${invoiceId}`, created by the first call. */
+export interface UnpaidFollowUp extends Row {
+  invoiceId: string;
+  memberId: string;
+  calls: { at: DT; by: Actor; outcome: UnpaidOutcome; promisedOn?: ISODate; note?: string }[];
 }
 
 export interface Refund extends Row {
@@ -1001,6 +1018,10 @@ export interface ScheduleDay extends Row {
   slots: Partial<Record<WeekSlot, ScheduleCell | null>>;
   note?: string;
   extra?: ExtraSession[];
+  /** round 14 (B1): the activity team's edit of the day, waiting for management (the whole day as it would be). Every rule reads the live fields above, never this. */
+  pending?: { slots: Partial<Record<WeekSlot, ScheduleCell | null>>; extra?: ExtraSession[]; note?: string; by: Actor; at: DT; /** the live day when the edit was first made (actions/schedule.ts dayKey): approving refuses once the live day moved on */ base?: string };
+  /** round 14: management sent the last edit back, with this note (cleared by the team's next edit or an approval) */
+  returned?: { note: string; by: Actor; at: DT };
 }
 
 export type GuestHostKind = 'teacher' | 'entertainer' | 'speaker' | 'other';
@@ -1037,7 +1058,7 @@ export interface TaskTemplate extends Row {
   role: StaffRole;
   every: TaskEvery;
   /** weekly: the weekday it is due */
-  weekday?: Weekday;
+  weekday?: WorkWeekday;
   /** monthly: the day of the month it is due (1–28; 31 = the last open day) */
   dayOfMonth?: number;
   /** due by this time of day */
@@ -1169,6 +1190,8 @@ export interface ClubState {
   celebrations: Record<string, Celebration>;
   // round 13
   leaveRequests: Record<string, LeaveRequest>;
+  // round 14
+  unpaidFollowUps: Record<string, UnpaidFollowUp>;
 }
 
 /** Collections stored as one Postgres table each (everything except clubId/rev/club). */
@@ -1181,6 +1204,7 @@ export const COLLECTIONS = [
   'surveys', 'surveyResponses', 'broadcasts', 'changeRequests', 'notifications', 'activity',
   'followUps', 'scheduleDays', 'guestHosts', 'guestSessions', 'surveyTemplates', 'taskTemplates', 'taskDone',
   'moodMarks', 'careCalls', 'celebrations', 'leaveRequests',
+  'unpaidFollowUps',
 ] as const;
 export type CollectionName = (typeof COLLECTIONS)[number];
 

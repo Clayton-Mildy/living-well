@@ -2,7 +2,7 @@
 export const occasions = {
   more: '+{n} more',
   turnsPlain: '{name} turns {n}',
-  title: 'This week', open: 'Open {name}',
+  title: 'Next two weeks', open: 'Open {name}',
   turns: '{name} turns {n} on {day}', turnsToday: '{name} turns {n} today',
   years1: '{name}: 1 year with the club on {day}', yearsN: '{name}: {n} years with the club on {day}',
   years1Today: '{name}: 1 year with the club today', yearsNToday: '{name}: {n} years with the club today',

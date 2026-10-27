@@ -2,7 +2,7 @@
 // Each dialog builds the smallest change it can and sends it through the right action: gated for the front desk, applied now for health.
 import { useMemo, useState } from 'react';
 import {
-  addMonths, e164, execute, fmtPhone, isOpen, live, memberName, nextOpenDay, openDaysInMonth, planOn, priceOn, rp, sortBy, toHM, toMin, ym, linksOfMember, isPendingRow, contactsOfMember,
+  addMonths, e164, execute, feeOf, fmtPhone, isOpen, live, memberName, nextOpenDay, openDaysInMonth, planOn, priceOn, rp, sortBy, toHM, toMin, ym, linksOfMember, isPendingRow, contactsOfMember,
   type Plan, type Title, type Relation, type EndReason,
 } from '@cp/shared';
 import { END_REASONS, consentOf, firstOfNextMonth, isPhone, openBalance, plainName } from '@cp/shared/rules/members';
@@ -53,7 +53,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
   const { s, m, t, today } = p;
   const hours = { open: s.club.settings.open, last: toHM(toMin(s.club.settings.close) - 1) };
   const [d, set] = useDraft(() => ({
-    title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyNik: m.nanny?.nik || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
+    title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyNik: m.nanny?.nik || '', nannyPhoto: m.nanny?.photoMediaId || '', nannyNote: m.nanny?.note || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
     spouseId: m.spouseId || '', note: '', photo: m.photoMediaId || '', reg: regDraftOf(m.registration),
   }));
   const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
@@ -73,7 +73,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
     if (d.dob && d.dob !== (m.dob || '')) patch.dob = d.dob;
     if (d.address.trim() !== (m.address || '')) patch.address = d.address.trim();
     if (d.usual !== (m.usualArrival || '')) patch.usualArrival = d.usual;
-    const nanny = d.nanny ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), nik: d.nannyNik.replace(/\s/g, '') } : null;
+    const nanny = d.nanny ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), nik: d.nannyNik.replace(/\s/g, ''), ...(d.nannyPhoto ? { photoMediaId: d.nannyPhoto } : {}), ...(d.nannyNote.trim() ? { note: d.nannyNote.trim() } : {}) } : null;
     if (JSON.stringify(nanny) !== JSON.stringify(m.nanny)) patch.nanny = nanny;
     if ((d.spouseId || null) !== m.spouseId) patch.spouseId = d.spouseId || null;
     if ((d.photo || undefined) !== m.photoMediaId) patch.photoMediaId = d.photo || null;
@@ -102,7 +102,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
         <CarerFields d={d} set={set} t={t} tried={tried} phone={<TextField label={t('profile.nannyPhone')} value={d.nannyPhone} onChange={(v) => set({ nannyPhone: v })} inputMode="tel" placeholder="+62" />} />
       </PeSection>
       <PeSection label={t('profile.sec.regCare')}>
-        <RegCareFields d={d.reg} set={setReg} t={t} err={regErr} />
+        <RegCareFields d={d.reg} set={setReg} t={t} err={regErr} dementiaFee={feeOf(priceOn(s, today), 'dementia')} />
       </PeSection>
       <MgmtNote p={p} v={d.note} set={(v) => set({ note: v })} />
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={p.mgmt ? t('common.saveChanges') : t('common.submitReview')} />
@@ -188,23 +188,22 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
   const { s, m, t, fmt, today } = p;
   const cur = planOn(m, today);
   const price = priceOn(s, today);
-  const [d, set] = useDraft(() => ({ plan: cur.plan as Plan, effective: firstOfNextMonth(today), note: '' }));
+  const [d, set] = useDraft(() => ({ plan: cur.plan as Plan, effective: firstOfNextMonth(today) }));
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
-  const desk = p.role === 'lobby'; // round 13: the front desk changes a plan from the 1st of next month only; management approves
+  const desk = p.role === 'lobby'; // round 13: the front desk changes a plan from the 1st of next month only (round 14: it applies at once, no review)
   const errEff = tried && (!d.effective || d.effective < today) ? t('members.err.effectiveInvalid') : '';
   const save = async () => {
     setTried(true);
     if (!d.effective || d.effective < today || busy) return;
     if (planOn(m, d.effective).plan === d.plan) { say(t('err.noChanges')); return; }
     setBusy(true);
-    const r = await p.act('members.changePlan', { memberId: m.id, plan: d.plan, effective: d.effective, ...(d.note.trim() ? { note: d.note.trim() } : {}) }, { ok: t('profile.savedPlan', { n: memberName(m), d: fmt.fdy(d.effective) }), reviewText: t('profile.sentForReview') });
+    const r = await p.act('members.changePlan', { memberId: m.id, plan: d.plan, effective: d.effective }, { ok: t('profile.savedPlan', { n: memberName(m), d: fmt.fdy(d.effective) }) });
     setBusy(false);
     if (r.ok) onClose();
   };
   return (
     <>
-      <GateNote p={p} />
       <PeSection label={t('profile.sec.plan')}>
         <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={[{ value: 'flex', label: `${t('profile.planFlex')} · ${rp(price.flex)}` }, { value: 'gold', label: `${t('profile.planGold')} · ${rp(price.gold)}` }]} />
         <div style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{d.plan === 'flex' ? t('profile.planNoteFlex', { q: s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold')}</div>
@@ -215,8 +214,7 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
           </div>
         ) : <DateField label={t('profile.effective')} value={d.effective} onChange={(v) => set({ effective: v })} min={today} error={errEff} />}
       </PeSection>
-      <MgmtNote p={p} v={d.note} set={(v) => set({ note: v })} />
-      <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={p.mgmt ? t('common.saveChanges') : t('common.submitReview')} />
+      <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={t('common.saveChanges')} />
     </>
   );
 }

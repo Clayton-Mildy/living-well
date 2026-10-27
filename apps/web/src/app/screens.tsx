@@ -36,6 +36,7 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   dlog: L(activity, 'DailyLog'),
   cal: L(calendar, 'Calendar'),
   kmenu: L(kitchen, 'KitchenMenu'),
+  klunch: L(kitchen, 'LunchRound'),
   kfeed: L(kitchen, 'KitchenFeedback'),
   kstock: L(kitchen, 'Stock'),
   requests: L(requests, 'Requests'),
@@ -47,6 +48,7 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   overview: L(mgmt, 'Overview'),
   bc: L(mgmt, 'Broadcast'),
   venue: L(mgmt, 'Venue'),
+  celebrations: L(mgmt, 'CelebrationLink'), // round 14: the birthday reminder's link, the request form pre-filled
   hr: L(mgmt, 'People'),
   surveys: L(mgmt, 'Surveys'),
   plans: L(mgmt, 'Plans'),

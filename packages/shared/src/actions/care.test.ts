@@ -12,18 +12,18 @@ const fails = (s: ClubState, name: string, input: unknown, uid: string, code: st
   try { run(s, name, input, uid, clk); } catch (e) { expect(e).toBeInstanceOf(DomainError); expect((e as DomainError).code).toBe(code); return; }
   throw new Error(`expected ${name} to fail with ${code}`);
 };
-const base = { mood: 'calm', lunch: 'all', joined: 'yes', communicative: 'normal', content: 'normal', note: '' };
+const base = { mood: 'calm', joined: 'yes', communicative: 'normal', content: 'normal', note: '' };
 let apN = 0;
 /** management approves logs / notes (families hear about them only then) */
 const approve = (s: ClubState, ids: string[], clk = clock) => execute(s, 'approval.approve', { type: 'logs', ids }, as(s, 's9'), clk, `ap${++apN}`);
 const note = (s: ClubState, kind: string) => live(s.notifications).filter((x) => x.kind === kind);
 
 describe('log.save', () => {
-  it('saves Bambang as quiet / ate most and tells his family once', () => {
+  it('saves Bambang as quiet / withdrawn and tells his family once', () => {
     const s0 = fresh();
-    const r = run(s0, 'log.save', { memberId: 'm10', date: '2026-10-21', ...base, mood: 'quiet', lunch: 'most', joined: 'satOut', communicative: 'withdrawn', content: 'low', note: 'Quiet morning, enjoyed the tea.', staffNote: 'Watch his appetite.' }, 's5');
+    const r = run(s0, 'log.save', { memberId: 'm10', date: '2026-10-21', ...base, mood: 'quiet', joined: 'satOut', communicative: 'withdrawn', content: 'low', note: 'Quiet morning, enjoyed the tea.', staffNote: 'Watch his appetite.' }, 's5');
     const l = r.state.dailyLogs['log-m10-2026-10-21'];
-    expect(l).toMatchObject({ memberId: 'm10', date: '2026-10-21', mood: 'quiet', lunch: 'most', joined: 'satOut', communicative: 'withdrawn', content: 'low', note: 'Quiet morning, enjoyed the tea.', staffNote: 'Watch his appetite.', status: 'saved', by: 's5', edits: [], createdBy: 'staff:s5' });
+    expect(l).toMatchObject({ memberId: 'm10', date: '2026-10-21', mood: 'quiet', joined: 'satOut', communicative: 'withdrawn', content: 'low', note: 'Quiet morning, enjoyed the tea.', staffNote: 'Watch his appetite.', status: 'saved', by: 's5', edits: [], createdBy: 'staff:s5' });
     expect(r.result).toMatchObject({ logId: 'log-m10-2026-10-21', edited: false });
     // a teacher's log waits for approval: families neither see it nor hear about it
     expect(l.approval).toMatchObject({ status: 'pending', by: 'staff:s5' });
@@ -37,13 +37,17 @@ describe('log.save', () => {
     expect(Object.values(r.state.activity).some((a) => a.key === 'activity.feed.log' && a.memberId === 'm10')).toBe(true);
   });
 
-  it('stores every mood, lunch amount and observation as entered', () => {
+  it('stores every mood and observation as entered; lunch is only management\'s to write here (the kitchen has kitchen.lunchMark)', () => {
     let s = fresh();
-    for (const mood of ['cheerful', 'calm', 'quiet', 'agitated'])
-      for (const lunch of ['all', 'most', 'half', 'little', 'none']) {
-        s = step(s, 'log.save', { memberId: 'm2', date: '2026-10-21', ...base, mood, lunch }, 's5');
-        expect(s.dailyLogs['log-m2-2026-10-21']).toMatchObject({ mood, lunch });
-      }
+    for (const mood of ['cheerful', 'calm', 'quiet', 'agitated']) {
+      s = step(s, 'log.save', { memberId: 'm2', date: '2026-10-21', ...base, mood }, 's5');
+      expect(s.dailyLogs['log-m2-2026-10-21']).toMatchObject({ mood });
+    }
+    for (const lunch of ['all', 'most', 'half', 'little', 'none']) {
+      s = step(s, 'log.save', { memberId: 'm2', date: '2026-10-21', ...base, lunch }, 's9');
+      expect(s.dailyLogs['log-m2-2026-10-21']).toMatchObject({ lunch });
+    }
+    for (const uid of ['s5', 's6', 's8']) fails(fresh(), 'log.save', { memberId: 'm2', date: '2026-10-21', ...base, lunch: 'all' }, uid, 'care.err.lunchKitchen'); // activity and nurse
     s = step(s, 'log.save', { memberId: 'm2', date: '2026-10-21', ...base, mood: 'unsettled', joined: 'satOut', communicative: 'withdrawn', content: 'low' }, 's5');
     expect(s.dailyLogs['log-m2-2026-10-21']).toMatchObject({ mood: 'agitated', joined: 'satOut', communicative: 'withdrawn', content: 'low' });
     s = step(s, 'log.save', { memberId: 'm2', date: '2026-10-21', ...base, joined: 'yes', communicative: 'normal', content: 'normal' }, 's5');
@@ -72,8 +76,8 @@ describe('log.save', () => {
 
   it('edits yesterday and up to 7 days back, not further, never the future', () => {
     const s = fresh();
-    const y = run(s, 'log.save', { memberId: 'm2', date: '2026-10-20', ...base, mood: 'cheerful', lunch: 'most', note: 'Late edit.' }, 's5');
-    expect(y.state.dailyLogs['log-m2-2026-10-20']).toMatchObject({ mood: 'cheerful', lunch: 'most', note: 'Late edit.' });
+    const y = run(s, 'log.save', { memberId: 'm2', date: '2026-10-20', ...base, mood: 'cheerful', note: 'Late edit.' }, 's5');
+    expect(y.state.dailyLogs['log-m2-2026-10-20']).toMatchObject({ mood: 'cheerful', note: 'Late edit.' });
     expect(y.state.dailyLogs['log-m2-2026-10-20'].edits).toHaveLength(1);
     run(s, 'log.save', { memberId: 'm2', date: '2026-10-14', ...base }, 's5'); // exactly 7 days back
     fails(s, 'log.save', { memberId: 'm2', date: '2026-10-13', ...base }, 's5', 'activity.err.dateRange');
@@ -141,7 +145,7 @@ describe('log.save as the Mood & notes round (KC round 7)', () => {
   });
 
   it('is a new entry (not an edit) when only lunch was marked before, and keeps the lunch mark', () => {
-    let s = step(fresh(), 'log.mark', { date: '2026-10-21', memberIds: ['m2'], lunch: 'half' }, 's5');
+    let s = step(fresh(), 'log.mark', { date: '2026-10-21', memberIds: ['m2'], lunch: 'half' }, 's9'); // lunch is the kitchen's (or management's) since round 14
     const r = run(s, 'log.save', { memberId: 'm2', date: '2026-10-21', ...base, mood: 'quiet', lunch: undefined, joined: undefined }, 's5');
     s = r.state;
     expect(r.result.edited).toBe(false);
@@ -160,22 +164,23 @@ describe('log.save as the Mood & notes round (KC round 7)', () => {
 
 describe('log.mark', () => {
   const T = '2026-10-21';
-  it('the teacher marks lunch for several people at once: every row waits for approval and families hear nothing yet', () => {
-    const r = run(fresh(), 'log.mark', { date: T, memberIds: ['m2', 'm10', 'm20'], lunch: 'all' }, 's5');
+  it('the teacher marks a session for several people at once: every row waits for approval and families hear nothing yet', () => {
+    const joined = { slot: '10:30', value: 'joined' };
+    const r = run(fresh(), 'log.mark', { date: T, memberIds: ['m2', 'm10', 'm20'], session: joined }, 's5');
     expect(r.result).toMatchObject({ marked: 3, pending: true });
     for (const id of ['m2', 'm10', 'm20']) {
       const l = r.state.dailyLogs[`log-${id}-${T}`];
-      expect(l).toMatchObject({ memberId: id, lunch: 'all', note: '', status: 'saved', by: 's5', edits: [] });
+      expect(l).toMatchObject({ memberId: id, sessions: { '10:30': 'joined' }, joined: 'yes', note: '', status: 'saved', by: 's5', edits: [] });
       expect(l.mood).toBeUndefined();
       expect(l.approval).toMatchObject({ status: 'pending', by: 'staff:s5' });
       expect(l.approval?.prev).toBeUndefined(); // brand new: families see nothing
     }
     expect(projectForFamily(r.state, 'fm2_0').dailyLogs[`log-m2-${T}`]).toBeUndefined();
     expect(note(r.state, 'activity.notif.logSaved').filter((x) => x.createdAt === '2026-10-21T10:00')).toHaveLength(0);
-    expect(Object.values(r.state.activity).filter((a) => a.key === 'activity.feed.markLunch')).toHaveLength(1); // one feed line for the whole round tap
-    // management approves: families now see lunch, one notice each
+    expect(Object.values(r.state.activity).filter((a) => a.key === 'activity.feed.markSession')).toHaveLength(1); // one feed line for the whole round tap
+    // management approves: families now see the session
     const ap = approve(r.state, ['log-m2-' + T]).state;
-    expect(projectForFamily(ap, 'fm2_0').dailyLogs[`log-m2-${T}`]).toMatchObject({ lunch: 'all' });
+    expect(projectForFamily(ap, 'fm2_0').dailyLogs[`log-m2-${T}`]).toMatchObject({ sessions: { '10:30': 'joined' } });
   });
 
   it('management marks are approved at once and keep joined in step with the sessions', () => {
@@ -188,8 +193,8 @@ describe('log.mark', () => {
   });
 
   it('a person who did not check in that day fails the whole call; nothing is written', () => {
-    fails(fresh(), 'log.mark', { date: T, memberIds: ['m2', 'm1'], lunch: 'all' }, 's5', 'activity.err.notAttended'); // Oma Lina has not arrived
-    fails(fresh(), 'log.mark', { date: T, memberIds: ['ghost'], lunch: 'all' }, 's5', 'err.notFound');
+    fails(fresh(), 'log.mark', { date: T, memberIds: ['m2', 'm1'], session: { slot: '10:30', value: 'joined' } }, 's5', 'activity.err.notAttended'); // Oma Lina has not arrived
+    fails(fresh(), 'log.mark', { date: T, memberIds: ['ghost'], session: { slot: '10:30', value: 'joined' } }, 's5', 'err.notFound');
   });
 
   it('a session that is not on the plan, a missing mark, a bad value, the date window and permissions are refused', () => {
@@ -200,38 +205,40 @@ describe('log.mark', () => {
     fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'lots' }, 's5', 'err.invalid');
     fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], session: { slot: '09:00', value: 'joined' } }, 's5', 'activity.err.noSession'); // no session at 09:00 that day
     fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], session: { slot: '9am', value: 'joined' } }, 's5', 'err.invalid');
-    fails(fresh(), 'log.mark', { date: '2026-10-13', memberIds: ['m2'], lunch: 'all' }, 's5', 'activity.err.dateRange');
-    for (const uid of ['s1', 's3', 's10', 'f1', 'fm2_0']) fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, uid, 'err.forbidden');
-    for (const uid of ['s5', 's6', 's8', 's9']) run(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, uid);
+    fails(fresh(), 'log.mark', { date: '2026-10-13', memberIds: ['m2'], session: { slot: '10:30', value: 'joined' } }, 's5', 'activity.err.dateRange');
+    for (const uid of ['s1', 's3', 's10', 'f1', 'fm2_0']) fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], session: { slot: '10:30', value: 'joined' } }, uid, 'err.forbidden');
+    for (const uid of ['s5', 's6', 's8']) fails(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, uid, 'care.err.lunchKitchen'); // round 14: lunch belongs to the F&B team (kitchen.lunchMark)
+    run(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, 's9');
+    for (const uid of ['s5', 's6', 's8']) run(fresh(), 'log.mark', { date: T, memberIds: ['m2'], session: { slot: '10:30', value: 'joined' } }, uid);
   });
 
   it('tapping a different value changes it; null clears it, and a log cleared back to nothing disappears', () => {
-    let s = step(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, 's5');
-    s = step(s, 'log.mark', { date: T, memberIds: ['m2'], lunch: 'none' }, 's5');
+    let s = step(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, 's9');
+    s = step(s, 'log.mark', { date: T, memberIds: ['m2'], lunch: 'none' }, 's9');
     expect(s.dailyLogs[`log-m2-${T}`].lunch).toBe('none');
-    s = step(s, 'log.mark', { date: T, memberIds: ['m2'], lunch: null }, 's5');
+    s = step(s, 'log.mark', { date: T, memberIds: ['m2'], lunch: null }, 's9');
     expect(s.dailyLogs[`log-m2-${T}`].deletedAt).toBeTruthy();
     expect(live(s.dailyLogs).some((l) => l.id === `log-m2-${T}`)).toBe(false);
-    s = step(s, 'log.mark', { date: T, memberIds: ['m2'], lunch: 'half' }, 's5'); // marking again brings a fresh row
+    s = step(s, 'log.mark', { date: T, memberIds: ['m2'], lunch: 'half' }, 's9'); // marking again brings a fresh row
     expect(s.dailyLogs[`log-m2-${T}`]).toMatchObject({ lunch: 'half' });
     expect(s.dailyLogs[`log-m2-${T}`].deletedAt).toBeUndefined();
   });
 
   it('"mark the rest" (onlyEmpty) leaves what is already marked alone', () => {
-    let s = step(fresh(), 'log.mark', { date: T, memberIds: ['m10'], lunch: 'little' }, 's5');
-    const r = run(s, 'log.mark', { date: T, memberIds: ['m2', 'm10', 'm20'], lunch: 'all', onlyEmpty: true }, 's5');
+    let s = step(fresh(), 'log.mark', { date: T, memberIds: ['m10'], lunch: 'little' }, 's9');
+    const r = run(s, 'log.mark', { date: T, memberIds: ['m2', 'm10', 'm20'], lunch: 'all', onlyEmpty: true }, 's9');
     s = r.state;
     expect(r.result.marked).toBe(2);
     expect(s.dailyLogs[`log-m10-${T}`].lunch).toBe('little');
     expect(s.dailyLogs[`log-m2-${T}`].lunch).toBe('all');
     // the mood round's "rest" sets the three observations
-    const m = run(s, 'log.mark', { date: T, memberIds: ['m2'], mood: 'calm', communicative: 'normal', content: 'normal', onlyEmpty: true }, 's5');
+    const m = run(s, 'log.mark', { date: T, memberIds: ['m2'], mood: 'calm', communicative: 'normal', content: 'normal', onlyEmpty: true }, 's9');
     expect(m.state.dailyLogs[`log-m2-${T}`]).toMatchObject({ mood: 'calm', communicative: 'normal', content: 'normal', lunch: 'all' });
     expect(m.result.marked).toBe(1);
   });
 
   it('a mark on an approved log keeps what families saw (sessions included) until management approves the change', () => {
-    let s = step(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all', session: undefined }, 's5');
+    let s = step(fresh(), 'log.mark', { date: T, memberIds: ['m2'], lunch: 'all' }, 's9');
     s = approve(s, [`log-m2-${T}`]).state;
     s = step(s, 'log.mark', { date: T, memberIds: ['m2'], session: { slot: '10:30', value: 'joined' } }, 's5');
     const l = s.dailyLogs[`log-m2-${T}`];
@@ -244,20 +251,21 @@ describe('log.mark', () => {
   });
 
   it('works for a past day inside the window', () => {
-    const r = run(fresh(), 'log.mark', { date: '2026-10-20', memberIds: ['m46'], lunch: 'most' }, 's6');
+    const r = run(fresh(), 'log.mark', { date: '2026-10-20', memberIds: ['m46'], lunch: 'most' }, 's9');
     expect(r.state.dailyLogs['log-m46-2026-10-20']).toMatchObject({ lunch: 'most' });
   });
 });
 
 describe('log.saveAllNormal', () => {
   it('saves only members present and not yet logged, and leaves written logs alone', () => {
-    let s = step(fresh(), 'log.save', { memberId: 'm10', date: '2026-10-21', ...base, mood: 'quiet', lunch: 'half', note: 'Quiet today.' }, 's5');
+    let s = step(fresh(), 'log.save', { memberId: 'm10', date: '2026-10-21', ...base, mood: 'quiet', note: 'Quiet today.' }, 's5');
     const r = run(s, 'log.saveAllNormal', { date: '2026-10-21' }, 's5');
     s = r.state;
     expect(r.result.saved).toBe(2);
     expect(new Set(r.result.memberIds as string[])).toEqual(new Set(['m2', 'm20']));
-    expect(s.dailyLogs['log-m10-2026-10-21']).toMatchObject({ mood: 'quiet', lunch: 'half', note: 'Quiet today.', edits: [] });
-    expect(s.dailyLogs['log-m2-2026-10-21']).toMatchObject({ mood: 'calm', lunch: 'all', joined: 'yes', communicative: 'normal', content: 'normal', note: '', status: 'saved' });
+    expect(s.dailyLogs['log-m10-2026-10-21']).toMatchObject({ mood: 'quiet', note: 'Quiet today.', edits: [] });
+    expect(s.dailyLogs['log-m2-2026-10-21']).toMatchObject({ mood: 'calm', joined: 'yes', communicative: 'normal', content: 'normal', note: '', status: 'saved' });
+    for (const id of ['m2', 'm10', 'm20']) expect(s.dailyLogs[`log-${id}-2026-10-21`].lunch).toBeUndefined(); // round 14: "all normal" never marks lunch, that is the kitchen's
     expect(s.dailyLogs['log-m20-2026-10-21']).toMatchObject({ mood: 'calm', by: 's5' });
     expect(s.dailyLogs['log-m1-2026-10-21']).toBeUndefined(); // not here yet
     expect(s.dailyLogs['log-m46-2026-10-21']).toBeUndefined();

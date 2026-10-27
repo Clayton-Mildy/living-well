@@ -2,6 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, suspensions, lobbyGroups, nurseQueue, dinersOn, conflictsOn, lunchSafety, invoiceStatus, live, flexMonth, wouldBeExtra, extraDaysFor, budgetWeek, surveyStats, toMin } from './index';
 import type { ClubState } from './types';
+import { dutyById, dutyState } from './rules/tasks';
 
 const T = '2026-10-21';
 const s = buildSeed().citra;
@@ -82,5 +83,18 @@ describe('seed', () => {
       const lv = citra.leaveRequests[id];
       expect(rows.filter((t) => t.staffId === lv.staffId && t.date >= lv.from && t.date <= lv.to)).toHaveLength(lv.days);
     }
+  });
+  it('round 14 unpaid follow-ups: the collection exists; the small seed has none, the roster has a promise and a no answer on its two overdue invoices', () => {
+    const { citra, adina } = buildSeed();
+    expect(adina.unpaidFollowUps).toEqual({});
+    expect(citra.unpaidFollowUps).toEqual({});
+    const roster = buildSeed(undefined, undefined, { roster: true }).citra;
+    const rows = Object.values(roster.unpaidFollowUps);
+    expect(rows.map((f) => [f.invoiceId, f.memberId, f.calls.map((c) => c.outcome)])).toEqual([['INV-2609-020', 'm20', ['promised']], ['INV-2609-074', 'm74', ['noAnswer']]]);
+    expect(rows[0].calls[0].promisedOn).toBe('2026-10-23');
+    for (const f of rows) expect(f.calls[0].at < `${T}T09:58`).toBe(true);
+    // the "no answer" was over a week ago, so that row is due a call again and the Unpaid duty starts open
+    expect(rows[1].calls[0].at.slice(0, 10)).toBe('2026-10-12');
+    expect(dutyState(roster, dutyById('lobby.unpaid')!, T, T, toMin('09:58'))).toMatchObject({ status: 'open' });
   });
 });

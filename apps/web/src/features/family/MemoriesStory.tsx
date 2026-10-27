@@ -9,7 +9,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type CSSProperties, type PointerEvent as RPE, type ReactNode } from 'react';
 import { createPortal } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
-import { memberName, displayName, staffCall, type Member, type Photo, type YM } from '@cp/shared';
+import { FACE_KEY, memberName, displayName, staffCall, type Member, type Photo, type YM } from '@cp/shared';
 import { activityLabel, monthRecap, type MonthRecap } from '@cp/shared/rules/family';
 import { STORY_HOLD_MS, dominantMood, latestQuote, moodIsMostly, stepStoryClock, storyBackdrops, storyBarFill, storySlides, type StorySlide } from '@cp/shared/rules/famPhotos';
 import { Avatar, Icon, PhotoImg, useOverlayA11y } from '../../components/ui';
@@ -185,12 +185,12 @@ export function MemoriesStory({ memberId, month, startSlide = 0, cover, onClose 
   } else if (kind === 'moods') {
     const dom = dominantMood(recap)!;
     eyebrow = t('family.memMood');
-    big = moodIsMostly(recap) ? t('fphotos.mostly_' + dom) : t('fphotos.mixed');
+    big = moodIsMostly(recap) ? t('fphotos.mostlyFace', { face: t(FACE_KEY[dom]).toLowerCase() }) : t('fphotos.mixed');
     sub = t('fphotos.dotsHint');
     dots = (
       <div data-testid="story-moods" data-nohold="" style={{ display: 'flex', flexWrap: 'wrap', gap: 8, pointerEvents: held ? 'none' : 'auto' }}>
         {recap.moods.map((d) => (
-          <button key={d.date} type="button" onClick={() => openDay(d.date)} data-date={d.date} data-mood={d.mood ?? ''} aria-label={t('family.memMoodAria', { d: fmt.fds(d.date), m: d.mood ? t('family.mood_' + d.mood) : t('family.memMoodNone') })}
+          <button key={d.date} type="button" onClick={() => openDay(d.date)} data-date={d.date} data-mood={d.mood ?? ''} aria-label={t('family.memMoodAria', { d: fmt.fds(d.date), m: d.mood ? t(FACE_KEY[d.mood]) : t('family.memMoodNone') })}
             style={{ width: 44, height: 44, border: d.mood ? 'none' : '1.5px dashed rgba(255,255,255,.55)', padding: 0, borderRadius: 999, background: d.mood ? MOOD_COLOR[d.mood] : 'transparent', color: d.mood ? MOOD_INK[d.mood] : '#FFFFFF', fontSize: 14, fontWeight: 600, fontVariantNumeric: 'tabular-nums', fontFamily: FONT, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: d.mood ? '0 0 0 2px rgba(255,255,255,.25)' : 'none' }}>
             {+d.date.slice(8, 10)}
           </button>

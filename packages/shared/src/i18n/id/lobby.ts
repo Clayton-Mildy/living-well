@@ -25,7 +25,7 @@ export const lobby: Same<typeof EN> = {
   extraToast: 'Ini hari tambahan: {p} di tagihan bulan depan.',
   careInstructions: 'Petunjuk perawatan', noNotes: 'Belum ada catatan.', callAria: 'Telepon {name}', undoIn: 'Batalkan check-in', undoOut: 'Batalkan check-out', diabetic: 'Diabetes',
   drugAllergy: 'Alergi {d}', medLunch: '{name} {dose} · makan siang', notInToday: 'Belum check-in hari ini', inOut: 'Tiba {a} · pulang {l}',
-  nanny: 'Pengasuh', nannyNote: 'Bersama {name}, pengasuhnya',
+  nanny: 'Pengasuh', nannyNote: 'Bersama {name}, pengasuhnya', withNanny: 'bersama {n}',
   tUndoIn: 'Check-in {n} dibatalkan.', tUndoOut: 'Check-out {n} dibatalkan.',
   menuToday: 'Menu hari ini', guestsToday: 'Tamu pengisi hari ini', menuLunch: 'Makan siang · {t}', menuSoft: 'Makanan lunak', menuTea: 'Teh sore · {t}', menuNone: 'Dapur belum mengatur menu hari ini.', alsoNone: 'Tidak ada acara lain hari ini.',
   guestTrial: 'Hari percobaan: {n}', guestVisit: 'Kunjungan: {n}',

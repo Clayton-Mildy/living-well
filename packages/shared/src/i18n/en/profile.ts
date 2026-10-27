@@ -46,7 +46,7 @@ export const profile = {
   'diet.softFood': 'Soft food', 'diet.lowSalt': 'Low salt', 'diet.vegetarian': 'Vegetarian', 'diet.sugarFree': 'Sugar-free',
   'timing.morningHome': 'Morning, at home', 'timing.lunchClub': 'With lunch, at the club', 'timing.eveningHome': 'Evening, at home', 'timing.asPrescribed': 'As prescribed',
   // care log
-  reviewedBy: 'Reviewed by {n} · {d}', notReviewed: 'Not reviewed yet', moodTitle: 'Mood and behaviour · last 4 weeks', noLogsYet: 'No daily logs yet.',
+  reviewedBy: 'Reviewed by {n} · {d}', notReviewed: 'Not reviewed yet', moodTitle: 'Mood and behaviour · last 4 weeks', noLogsYet: 'No daily logs yet.', noMoodYet: 'No faces marked yet.',
   unsettledOn: 'Unsettled on {n} day(s); a garden walk usually helps.', settled: 'Settled and sociable on club days.', dailyLogs: 'Daily logs',
   joined_yes: 'Joined the activities', joined_satOut: 'Sat out', comm_normal: 'Talkative', comm_withdrawn: 'Withdrawn', content_normal: 'Content', content_low: 'Low in mood', draft: 'Draft', loggedBy: 'Logged by {n}',
   // photos
@@ -79,6 +79,7 @@ export const profile = {
   visitsMonthFlex: '{n} of {q} used', visitsMonthExtra: '{n} of {q} used · {x} extra days', visitsMonthExtraOne: '{n} of {q} used · 1 extra day', visitsMonthGold: '{n} so far',
   planNoteFlex: 'Flex includes {q} visits a month, counted when the member checks in. Each visit after that is an extra day: {p}, on next month’s invoice.', planNoteGold: 'Gold includes unlimited visits. The member can come on any open day.',
   fee: 'Monthly fee',
+  dementiaFee: 'Dementia care costs {rp} more a month.',
   extraDay: 'Extra day', extraDayVal: '{p}, on the next invoice',
   billingContact: 'Billing contact', va: 'Virtual account', vaLater: 'Created with the first invoice', nextChange: 'Next plan change', fromDate: 'from {d}', couple: 'Couple',
   coupleVal: 'Own plan and invoice. {n} can pay both with {s}’s in one go', balance: 'Balance due', membership: 'Membership', endedOn: 'Ended {d}', endsOn: 'Ends {d}',
@@ -131,7 +132,7 @@ export const profile = {
   reactivateNote: 'The member comes back with a new membership period. History stays on file and the original “member since” date is kept.', reactivated: '{n} is a member again from {d}.',
   docsReceived: 'Received today', docsNowSub: 'Tick what the family handed over. Anything else can be uploaded later.',
   // field labels (Reviews, History, pending chips)
-  'f.nik': 'Member’s NIK (KTP number)', 'f.guarantorNik': 'Family member’s NIK (KTP number)', 'f.idsCustomer': 'ID', 'f.title': 'Title', 'f.titleOther': 'Other', 'f.titleOtherHint': 'e.g. Tante', 'f.name': 'Name', 'f.dob': 'Date of birth', 'f.address': 'Home address', 'f.usual': 'Usual arrival time', 'f.usualOpt': 'Usual arrival time (optional)', usualHint: 'Information only. Members come on any open day.', 'f.nanny': 'Carer (suster)', 'f.spouse': 'Spouse',
+  'f.nik': 'Member’s NIK (KTP number)', 'f.guarantorNik': 'Family member’s NIK (KTP number)', 'f.idsCustomer': 'ID', 'f.title': 'Title', 'f.titleOther': 'Other', 'f.titleOtherHint': 'e.g. Tante', 'f.name': 'Name', 'f.dob': 'Date of birth', 'f.address': 'Home address', 'f.usual': 'Usual arrival time', 'f.usualOpt': 'Usual arrival time (optional)', usualHint: 'Information only. Members come on any open day.', 'f.nanny': 'Carer (suster)', 'f.nannyNote': 'Note (agency, days)', 'f.spouse': 'Spouse',
   'f.start': 'First day', 'f.plan': 'Plan', 'f.phone': 'Mobile', 'f.relation': 'Relationship', 'f.primary': 'Primary billing contact',
   'f.appAccess': 'App access', 'f.language': 'Language', 'f.contact': 'Family contact', 'f.upgrade': 'Upgrade request', 'f.care': 'Care instructions', 'f.cognitive': 'Cognitive status',
   'f.meds': 'Medicines', 'f.food': 'Food allergies', 'f.drugs': 'Medicine allergies', 'f.mobility': 'Mobility aid', 'f.diet': 'Diet', 'f.diabetic': 'Diabetic', 'f.conditions': 'Conditions', 'f.allergies': 'Allergies',

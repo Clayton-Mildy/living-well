@@ -51,6 +51,12 @@ describe('page 1 of the form for a saved member (Oma Lina, m1)', () => {
     expect(v.conditions).toBe(s.members.m1.health.conditions.join('; ')); // a condition can hold a comma ("Hard of hearing, left ear"), so they are split with semicolons
     expect(v.dementia).toBe('Tidak ada'); // alert and oriented, no dementia note: nothing to report (KC round 6)
   });
+  it('adds the dementia care fee to the monthly fee when the answer is yes (round 14)', () => {
+    const yes = seed();
+    yes.members.m1.registration = { ...yes.members.m1.registration, dementia: true };
+    expect(page1Values(applicationDataOf(yes, 'm1', T)).monthlyFee).toBe(`${rp(priceOn(yes, T).flex)} + Rp 750.000 dementia care`);
+    expect(v.monthlyFee).not.toContain('dementia care'); // no, or unanswered
+  });
   it('answers the questions in Indonesian: yes/no, the carer and her name, the allergies', () => {
     expect(v).toMatchObject({ q1: 'Tidak', q2: 'Ya', q3: 'Tidak', carer: 'Ya', carerName: 'Mbak Sari', allergy: 'Ya', allergyList: 'Kerang-kerangan' });
   });

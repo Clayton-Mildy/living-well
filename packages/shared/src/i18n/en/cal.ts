@@ -1,7 +1,7 @@
 // cal strings (EN): calendar, events editor, schedule builder and catalog, plus the notification / feed / error texts of schedule.ts.
 export const cal = {
   // calendar
-  openHours: 'Open Monday to Friday · {open}–{close}', titleFamily: 'Club calendar', view: 'View', vList: 'List', vMonth: 'Calendar', showMore: 'Show more days',
+  openHours: 'Open Monday to Friday, and on weekends when programmed · {open}–{close}', weekendCol: 'Weekend', titleFamily: 'Club calendar', view: 'View', vList: 'List', vMonth: 'Calendar', vYear: 'Year', prevYear: 'Previous year', nextYear: 'Next year', showMore: 'Show more days',
   key: 'Key', tapDay: 'Tap a day to see what is on.', openWeek: 'Open this week in the schedule',
   publishShort: 'Publish',
   prevMonth: 'Previous month', nextMonth: 'Next month', thisMonth: 'This month', holiday: 'Holiday', closedShort: 'Closed', allDay: 'All day',
@@ -71,7 +71,7 @@ export const cal = {
   daySaved: 'Changed for {date}. Teachers and families are told.', daySavedQuiet: 'Changed for {date}. Nobody was notified.', dayBackDone: 'Back to the weekly plan on {date}.',
   changedNote: 'Changed · {note}', changedToday: 'Changed today: {note}', changedTodayPlain: 'Changed today',
   guestBook: 'Book a guest host', guestBookSub: 'Someone from outside leads this session', guestOpen: 'Guest host booked',
-  'err.pastDay': 'Only today and later days can be changed.', 'err.dayClosed': 'The club is closed that day.', 'err.dayOuting': 'There is an outing that day, so no sessions run at the club.',
+  'err.pastDay': 'Only today and later days can be changed.', 'err.dayClosed': 'The club is closed that day.', 'err.dayRented': '{org} has the club booked that day ({from}–{to}), so no sessions can run.', 'err.dayOuting': 'There is an outing that day, so no sessions run at the club.',
   'notif.dayChanged': 'On {date} the {slot} activity is now {name}.', 'notif.dayNoSession': 'On {date} there is no {slot} activity.',
   'notif.dayBack': 'On {date} the {slot} activity is back to the usual plan.', 'notif.dayBackAll': 'On {date} the activities are back to the usual plan.',
   'feed.dayChanged': 'Activity changed for {date} · {slot}: {name}', 'feed.dayNoSession': 'No activity on {date} · {slot}',
@@ -91,4 +91,9 @@ export const cal = {
   'feed.extraAdded': 'Extra session added · {date} {time}: {name}', 'feed.extraChanged': 'Extra session changed · {date} {time}: {name}', 'feed.extraRemoved': 'Extra session removed · {date} {time}: {name}',
   // round 7: family Today notice for a closure or holiday in the next 7 days
   famClosureLabel: 'Upcoming closures', famClosedOn: 'Club closed on {d}', famClosedRange: 'Club closed {a} to {b}',
+  // round 14 (B1): the activity team builds the programme; every change waits for Ega (management)
+  sendForApproval: 'Send to Ega', sendTitle: 'Send the weekly schedule to Ega', sentToEga: 'Sent to Ega.', waitingEga: 'Waiting for Ega', returnedNote: 'Returned: {note}',
+  badgeWaiting: 'Waiting', badgeReturned: 'Returned', dayUnchanged: 'Nothing to send: the day is as published.', reviewBtn: 'Review',
+  'notif.programmeAsked': 'The activity team sent the weekly schedule from {date} for your approval.', 'notif.dayAsked': 'The activity team sent a programme change on {date} for your approval.',
+  'notif.dayUpdated': 'The activity programme on {date} has changed.', 'feed.dayUpdated': 'Programme changed for {date}',
 };

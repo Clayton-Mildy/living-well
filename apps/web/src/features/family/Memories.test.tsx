@@ -91,12 +91,12 @@ describe('memories story (/memories)', () => {
     expect(slide()).toBe('favourite');
     expect(text()).toContain('Her favourite');
     expect(q('[data-testid="story-big"]')?.textContent).toMatch(/, \d+ times$/);
-    // d: how the days felt, one dot per visit; only approved moods are coloured
+    // d: how the days felt, one dot per visit; only the days with a face are filled (round 14: the daily mood)
     await next();
     expect(slide()).toBe('moods');
     const dots = qa('[data-testid="story-moods"] [data-date]');
     expect(dots).toHaveLength(recap.visits.length);
-    expect(dots.map((d) => d.getAttribute('data-mood') || null)).toEqual(recap.moods.map((d) => d.mood));
+    expect(dots.map((d) => d.getAttribute('data-mood') || null)).toEqual(recap.moods.map((d) => (d.mood === null ? null : String(d.mood))));
     expect(q('[data-testid="story-big"]')?.textContent).toMatch(/^Mostly /);
     // e: lunch
     await next();
@@ -247,6 +247,18 @@ describe('Photos tab', () => {
     const first = q('[data-testid="photo-day"]')!;
     expect(first.querySelector('h2')?.textContent).toMatch(/^(Today|\w+day \d+ \w{3})$/);
     expect(first.querySelector('[data-testid="select-day-start"]')?.textContent).toMatch(/^\d+ photos?/); // the day's header: the count is also the "select this day" button (KC round 10)
+  });
+
+  it('round 14: the chips are All, Meals, Activities and Portraits; Meals keeps only the lunch and tea table', async () => {
+    open('f1');
+    await show(<FamilyPhotos />, '/photos');
+    const chips = qa('[data-testid="photo-filter"] [data-value]');
+    expect(chips.map((c) => c.getAttribute('data-value'))).toEqual(['all', 'meals', 'activities', 'portraits']);
+    expect(chips.map((c) => c.textContent)).toEqual(['All', 'Meals', 'Activities', 'Portraits']);
+    await click(q('[data-testid="photo-filter"] [data-value="meals"]'));
+    const tiles = qa('[data-testid="photo-day"] [data-photo-id]');
+    expect(tiles.length).toBeGreaterThan(0);
+    expect(tiles.every((x) => x.getAttribute('data-kind') === 'lunch')).toBe(true);
   });
 
   it('a tile opens the black viewer: "1 of N", label and "Today · time · name" for a family with two parents; ← → and Esc', async () => {

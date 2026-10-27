@@ -1,9 +1,9 @@
 // KC round 7: renewals rules: the month, the dates, the leave check for a follow-up, and the seed (5 members in the tests, 45 in the demo).
 import { describe, it, expect } from 'vitest';
-import { buildCitra, DEMO_START_MIN, live, type ClubState } from '../index';
-import { leaveDeadline } from './leave';
+import { buildCitra, DEMO_START_MIN, live, monthStart, planOn, type ClubState } from '../index';
+import { leaveDeadline, leaveMonths } from './leave';
 import type { FollowUp } from '../types';
-import { askedInApp, followUpId, isDecided, leaveMonthsCheck, renewalCounts, renewalDates, renewalMembers, renewalMonth, renewalNext, renewalRows, renewalsLeft, renewalStatus } from './renewals';
+import { askedInApp, changeRows, followUpId, followUpOf, isApplied, isChange, isDecided, leaveMonthsCheck, renewalCounts, renewalDates, renewalMembers, renewalMonth, renewalNext, renewalRows, renewalStatus } from './renewals';
 
 describe('the month and its dates', () => {
   it('the coming month; the leave deadline is 14 days before the end of the month before; the invoice goes out on the 21st', () => {
@@ -36,34 +36,43 @@ describe.each([['2026-10-21'], ['2026-10-08']])('the seed around %s', (T) => {
     expect(fus.every((f) => f.month === month && f.id === followUpId(month, f.memberId) && f.calls.length > 0)).toBe(true);
     for (const f of fus) for (const c of f.calls) expect(c.at < `${T}T09:58`).toBe(true); // nothing "done today" after the demo start
     const outs = fus.map((f) => f.outcome);
-    expect(outs).toContain('upgrade');
-    expect(fus.find((f) => f.outcome === 'upgrade')).toMatchObject({ status: 'pending', approval: { status: 'pending', by: 'staff:s1' } });
+    // round 14 (R25, R31): nothing waits for management; a change is done and applied; Oma Lina's upgrade is not seeded (her family asks in the app)
+    expect(fus.every((f) => f.status !== 'pending' && !f.approval)).toBe(true);
+    expect(followUpOf(s, 'm1', month)).toBeUndefined();
+    for (const f of fus.filter((x) => isChange(x.outcome))) expect(f.status).toBe('done');
     expect(fus.find((f) => f.outcome === 'noAnswer')?.calls).toHaveLength(2);
     expect(outs).not.toContain('callBack'); // KC round 7: no "call back" option
     expect(outs).toContain('continue');
-    // a leave is only seeded when the rules allow it on that day
-    for (const f of fus.filter((x) => x.outcome === 'leave')) expect(leaveMonthsCheck(s, s.members[f.memberId], f.leaveMonths!, T)).toEqual({ ok: true });
+    // a leave is only seeded when the rules allow it on that day, and it is applied (the months are on the membership)
+    for (const f of fus.filter((x) => x.outcome === 'leave')) {
+      expect(leaveMonths(s.members[f.memberId])).toEqual(expect.arrayContaining(f.leaveMonths!));
+      expect(leaveMonthsCheck(s, s.members[f.memberId], f.leaveMonths!, T)).toMatchObject({ ok: false }); // already on the list
+    }
     // everyone with a follow-up is someone to follow up; members who asked in the app are not given one
     const ids = new Set(renewalMembers(s, month).map((m) => m.id));
-    for (const f of fus) { expect(ids.has(f.memberId)).toBe(true); expect(askedInApp(s, s.members[f.memberId], month)).toBeUndefined(); }
+    for (const f of fus) { expect(ids.has(f.memberId)).toBe(true); if (!isApplied(f)) expect(askedInApp(s, s.members[f.memberId], month)).toBeUndefined(); } // (an applied leave in the month is on the membership now)
     const rows = renewalRows(s, month);
     const c = renewalCounts(rows);
     expect(c.toDo + c.waiting + c.decided).toBe(c.total);
-    expect(renewalsLeft(s, T)).toBe(c.toDo);
     expect(rows.filter((r) => r.state === 'decided').every((r) => isDecided(r.f) || !!r.asked)).toBe(true);
     return rows;
   };
-  it('5 members (the tests): a few decided, one waiting, two still to do, one asked in the app', () => {
-    const rows = check(buildCitra(T, DEMO_START_MIN), { min: 4, max: 4 });
+  it('5 members (the tests): a few decided, nothing waiting, still to do, one asked in the app', () => {
+    const rows = check(buildCitra(T, DEMO_START_MIN), { min: 3, max: 3 });
     expect(rows).toHaveLength(5);
     expect(rows.find((r) => r.m.id === 'm10')).toMatchObject({ state: 'decided', asked: 'plan' });
+    expect(renewalCounts(rows).waiting).toBe(0);
   });
-  it('45 members (the demo): 6 to 8 follow-ups, with management\'s waiting list and most members still to do', () => {
-    const rows = check(buildCitra(T, DEMO_START_MIN, { roster: true }), { min: 6, max: 9 });
+  it('45 members (the demo): 5 to 8 follow-ups, the changes applied (Next month lists them), nothing waiting, most members still to do', () => {
+    const s = buildCitra(T, DEMO_START_MIN, { roster: true });
+    const rows = check(s, { min: 5, max: 8 });
     expect(rows.length).toBeGreaterThan(35);
     const c = renewalCounts(rows);
-    expect(c.waiting).toBeGreaterThanOrEqual(2);
+    expect(c.waiting).toBe(0);
     expect(c.toDo).toBeGreaterThan(c.decided);
+    const down = live(s.followUps).find((f) => f.outcome === 'downgrade')!;
+    expect(planOn(s.members[down.memberId], monthStart(month)).plan).toBe('flex');
+    expect(changeRows(s, month, T).filter((r) => !r.readOnly).map((r) => r.memberId).sort()).toEqual(live(s.followUps).filter((f) => isChange(f.outcome)).map((f) => f.memberId).sort());
   });
 });
 
@@ -108,9 +117,9 @@ describe('status and next step of a row', () => {
     expect(renewalNext({ f: undefined }, '2026-10', T)).toEqual({ kind: 'none' });
     expect(renewalNext({ f: undefined }, '2026-11', '2026-11-03')).toEqual({ kind: 'none' });
   });
-  it('the seed rows (5 in the tests): the waiting upgrade, the decided continue, two no-answers, one asked in the app', () => {
+  it('the seed rows (5 in the tests): Oma Lina not called yet, the decided continue, two no-answers, one asked in the app', () => {
     const s = buildCitra(T, DEMO_START_MIN);
     const by = Object.fromEntries(renewalRows(s, '2026-11').map((r) => [r.m.id, [renewalStatus(r), renewalNext(r, '2026-11', T).kind]]));
-    expect(by).toEqual({ m1: ['upgrade', 'approval'], m2: ['noAnswer', 'callAgain'], m10: ['asked', 'answerRequest'], m20: ['noAnswer', 'callAgain'], m46: ['continue', 'renews'] });
+    expect(by).toEqual({ m1: ['new', 'call'], m2: ['noAnswer', 'callAgain'], m10: ['asked', 'answerRequest'], m20: ['noAnswer', 'callAgain'], m46: ['continue', 'renews'] });
   });
 });

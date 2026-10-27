@@ -1124,14 +1124,14 @@ test('Care log: one card per day with that day’s readings and log; the activit
   await expect(page.getByTestId('care-reading').first()).toContainText(/Blood pressure \d+\/\d+/);
   const today = days.first();
   await today.getByRole('button', { name: /^(Write|Edit) the log$/ }).click();
-  await today.getByRole('group', { name: 'Mood' }).getByRole('button', { name: 'Quiet' }).click();
+  await today.getByRole('group', { name: 'Communicative' }).getByRole('button', { name: 'Withdrawn' }).click(); // round 14: the mood word is gone, the faces carry the mood
   await today.getByLabel('Note', { exact: true }).fill('Enjoyed the music');
   await today.getByRole('button', { name: /^(Save log|Save changes)$/ }).click();
   const logOfToday = async () => {
     const st = (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's9' } })).json()).state;
-    return Object.values(st.dailyLogs as Record<string, { memberId: string; date: string; mood: string; note: string }>).find((l) => l.memberId === 'm2' && l.date === '2026-10-21');
+    return Object.values(st.dailyLogs as Record<string, { memberId: string; date: string; communicative: string; note: string }>).find((l) => l.memberId === 'm2' && l.date === '2026-10-21');
   };
-  await expect.poll(async () => (await logOfToday())?.mood).toBe('quiet');
+  await expect.poll(async () => (await logOfToday())?.communicative).toBe('withdrawn');
   expect((await logOfToday())?.note).toBe('Enjoyed the music');
   await expect(today).toContainText('Enjoyed the music');
   await expect(today.getByRole('button', { name: 'Edit the log' })).toBeVisible();

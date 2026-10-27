@@ -5,7 +5,7 @@ import { addMonths } from '../util';
 import {
   DOC_TYPES, billedExtraDates, findDuplicates, docIdFor, endingOn, faceConsent, faceReady, finalInvoiceFor, finalInvoiceLines, firstOfNextMonth, formatVa, genderOf, isHM, isISO, isPhone, isNewMember, lastContactId, lastLinkId, lastMemberId,
   matchesQuery, memberStatus, nextContactId, nextLinkId, nextMemberId, nextMonday, openBalance, plainName, splitName, tabForSection, unbilledExtraMonths, validateNewMember,
-  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows,
+  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows, filterCounts,
 } from './members';
 import type { MemberRow } from './members';
 
@@ -239,6 +239,16 @@ describe('list rows: last visit', () => {
     const row = memberRows(s, T).find((r) => r.m.id === 'm10')!;
     expect(row.lastVisit).toBe(T);
     expect(row.st).toEqual({ key: 'in', at: '09:48' });
+  });
+});
+
+describe('filterCounts split', () => {
+  it('splits Active and In the club by plan (small seed: Flex m1, m10; Gold m2, m20, m46; m2, m10, m20 are in)', () => {
+    const c = filterCounts(memberRows(seed(), T));
+    expect(c.active).toBe(5);
+    expect(c.split.active).toEqual({ flex: 2, gold: 3 });
+    expect(c.split.in).toEqual({ flex: 1, gold: 2 });
+    expect(c.in).toBe(c.split.in.flex + c.split.in.gold);
   });
 });
 

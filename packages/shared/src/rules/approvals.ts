@@ -7,9 +7,9 @@ import { allPendingReviews, appliedReviews, pendingPhotos } from './members';
 import { READING_FIELDS } from './healthStation';
 import { pendingLeave } from './staffLeave';
 
-export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'stock' | 'renewals' | 'payments' | 'leave';
+export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'programme' | 'stock' | 'renewals' | 'payments' | 'leave';
 /** Tab order of the management Approvals screen. */
-export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'stock', 'renewals', 'payments', 'leave'];
+export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'programme', 'stock', 'renewals', 'payments', 'leave'];
 
 // ---------- the mark ----------
 export type ApprovalState = 'pending' | 'rejected' | null;
@@ -65,7 +65,7 @@ export interface ApprovalItem {
   /** the row id (a change request id for 'profile') */
   id: string;
   type: ApprovalType;
-  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'stock' | 'photo' | 'renewal' | 'payment' | 'leave';
+  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'day' | 'stock' | 'photo' | 'renewal' | 'payment' | 'leave';
   at: DT;
   by: Actor;
   memberId?: string;
@@ -88,6 +88,12 @@ export function pendingMenu(s: ClubState): ApprovalItem[] {
   const days = live(s.dayMenus).filter((o) => isWaiting(o)).map((o): ApprovalItem => ({ id: o.id, type: 'menu', sub: 'dayMenu', at: o.approval!.at, by: o.approval!.by, edit: !!o.approval!.prev }));
   return sortNew([...versions, ...days]);
 }
+/** Round 14 (B1): a weekly schedule (`version`) or a day's programme change (`day`, id = the date) the activity team sent, waiting for management. */
+export function pendingProgramme(s: ClubState): ApprovalItem[] {
+  const versions = live(s.scheduleVersions).filter((v) => v.status === 'pending').map((v): ApprovalItem => ({ id: v.id, type: 'programme', sub: 'version', at: v.createdAt, by: v.submittedBy ?? v.createdBy, edit: false }));
+  const days = live(s.scheduleDays ?? {}).filter((d) => d.pending).map((d): ApprovalItem => ({ id: d.id, type: 'programme', sub: 'day', at: d.pending!.at, by: d.pending!.by, edit: true }));
+  return sortNew([...versions, ...days]);
+}
 export const pendingStock = (s: ClubState): ApprovalItem[] =>
   sortNew(live(s.stockRequests).filter((k) => k.status === 'requested').map((k) => ({ id: k.id, type: 'stock' as const, sub: 'stock' as const, at: k.createdAt, by: staffActor(k.requestedBy), edit: false })));
 /** KC round 7: a renewal follow-up whose change (upgrade, downgrade, leave, stop) the front desk recorded and management has yet to approve. */
@@ -106,7 +112,7 @@ export const pendingProfile = (s: ClubState): ApprovalItem[] =>
   sortNew([...allPendingReviews(s), ...appliedReviews(s)].map((c) => ({ id: c.id, type: 'profile' as const, sub: c.kind === 'approval' ? ('cr' as const) : ('flag' as const), at: c.createdAt, by: c.submittedBy, memberId: c.target.memberId, edit: c.op !== 'create' })));
 
 export const pendingItems = (s: ClubState, type: ApprovalType): ApprovalItem[] =>
-  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments, leave: pendingLeaveItems } as const)[type](s);
+  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, programme: pendingProgramme, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments, leave: pendingLeaveItems } as const)[type](s);
 export function approvalCounts(s: ClubState): Record<ApprovalType, number> {
   return Object.fromEntries(APPROVAL_TYPES.map((t) => [t, pendingItems(s, t).length])) as Record<ApprovalType, number>;
 }

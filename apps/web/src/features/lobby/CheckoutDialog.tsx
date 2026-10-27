@@ -10,14 +10,14 @@ import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { MemberAvatar, Stack } from './parts';
 
-export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }: { memberId: string; onClose: () => void; onConfirm: (memberId: string, face: Face) => Promise<boolean>; onAskDeparture: (memberId: string) => Promise<void> }) {
+export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }: { memberId: string; onClose: () => void; onConfirm: (memberId: string, face: Face | null) => Promise<boolean>; onAskDeparture: (memberId: string) => Promise<void> }) {
   const t = useT();
   const s = useClub();
   const { today, nowMin } = useNow();
   const { isPhone } = useDevice();
   const m = s.members[memberId];
   const [busy, setBusy] = useState(false);
-  const [face, setFace] = useState<Face | null>(null); // the departure face, required
+  const [face, setFace] = useState<Face | null>(null); // the departure face, optional (round 14: nothing blocks)
   if (!m) return null;
 
   const dep = departureStatus(s, m.id, today, nowMin);
@@ -25,9 +25,8 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
   const depText = dep.kind === 'done'
     ? `${t('lobby.depDone', { t: dep.reading.time })}${dep.reading.sys != null ? ` ${dep.reading.sys}/${dep.reading.dia}.` : ''}`
     : dep.kind === 'waiting' ? t('lobby.depWaiting') : t('lobby.depMissing');
-  const off = busy || face === null;
+  const off = busy;
   const confirm = async () => {
-    if (face === null) return;
     setBusy(true);
     const ok = await onConfirm(m.id, face);
     setBusy(false);
@@ -50,7 +49,7 @@ export function CheckoutDialog({ memberId, onClose, onConfirm, onAskDeparture }:
         </div>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.askOut', { name: displayName(m) })}</div>
-          <MoodFaces value={face} onChange={setFace} name={displayName(m)} labels={!isPhone} label={t('mood.askOut', { name: displayName(m) })} />
+          <MoodFaces value={face} onChange={setFace} name={displayName(m)} labels={!isPhone} hints label={t('mood.askOut', { name: displayName(m) })} />
         </div>
         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
           <button type="button" className="h-fill" onClick={onClose} style={{ height: 48, padding: '0 22px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{t('common.cancel')}</button>

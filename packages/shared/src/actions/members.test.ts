@@ -2,6 +2,7 @@
 // The club is drop-in: nothing is booked or expected, Flex counts visits, and an extra day comes from check-ins.
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, findByPhone, live, lobbyGroups, memberName, planOn, membershipStatus, type ClubState, type User } from '../index';
+import { parseCarer } from './members';
 import { faceConsent, faceReady, FILTERS, filterCounts, matchesQuery, memberRows as rows2, memberStatus, isNewMember, nextMemberId, finalInvoiceFor } from '../rules/members';
 
 const T = '2026-10-21';
@@ -171,6 +172,25 @@ describe('members.create', () => {
   });
 });
 
+describe('nanny photo and note (round 14)', () => {
+  const NIK = '3175014507850002';
+  it('parseCarer keeps the photo and the note (note cut at 200); both are optional', () => {
+    const r = parseCarer({ name: 'Mbak Sari', nik: NIK, photoMediaId: 'md_nannyphoto0001', note: 'x'.repeat(250) }) as { photoMediaId?: string; note?: string };
+    expect(r.photoMediaId).toBe('md_nannyphoto0001');
+    expect(r.note).toHaveLength(200);
+    expect(parseCarer({ name: 'Mbak Sari', nik: NIK })).toEqual({ name: 'Mbak Sari', nik: NIK });
+    expect(parseCarer({ name: 'Mbak Sari', nik: NIK, note: '  ', photoMediaId: '' })).toEqual({ name: 'Mbak Sari', nik: NIK });
+  });
+  it('updateDetails stores the nanny photo and note; the seeded note for Lina is there', () => {
+    const c = seed();
+    expect(c.citra.members.m1.nanny).toMatchObject({ name: 'Mbak Sari', note: 'Agency: Kasih Ibu, Mon–Wed' });
+    expect(c.citra.members.m1.nanny?.photoMediaId).toBeUndefined();
+    const nanny = { name: 'Mbak Sari', nik: NIK, photoMediaId: 'md_nannyphoto0001', note: 'Agency: Kasih Ibu, Mon–Thu' };
+    const r = run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { nanny } }, who(c, 's9'));
+    expect(r.state.members.m1.nanny).toEqual(nanny);
+  });
+});
+
 describe('members.updateDetails', () => {
   it('lobby: gated. nothing changes until approved; approval applies the patch and notifies', () => {
     const c = seed();
@@ -293,13 +313,11 @@ describe('documents, consent and plan (gated)', () => {
     expect(faceConsent(g.state.members.m1)).toBe(true);
   });
 
-  it('changePlan: effective date defaults to the 1st of next month; finance is gated; today stays the same', () => {
+  it('changePlan: effective date defaults to the 1st of next month; finance applies at once; today stays the same', () => {
     const c = seed();
     const r = run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold' }, who(c, 's10'));
-    expect(r.reviewed).toBe('gate');
-    expect(planOn(r.state.members.m1, T).plan).toBe('flex');
-    const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who(c, 's9'));
-    const m = a.state.members.m1;
+    expect(r.reviewed).toBeUndefined(); // round 14: no review for the plan any more
+    const m = r.state.members.m1;
     expect(m.plans.map((p) => [p.from, p.plan])).toEqual([['2025-03-03', 'flex'], ['2026-11-01', 'gold']]);
     expect(planOn(m, T).plan).toBe('flex');
     expect(planOn(m, '2026-11-02').plan).toBe('gold');
@@ -313,39 +331,20 @@ describe('documents, consent and plan (gated)', () => {
     expect(dec.state.members.m1.plans[1].from).toBe('2027-01-01');
   });
 
-  it('the front desk changes a plan from the 1st of next month only: gated, management approves, the family hears once', () => {
+  it('lobby changePlan applies without review: no ChangeRequest, the entry starts on the 1st of next month, the family hears once', () => {
     const c = seed();
     const r = run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: '2026-11-01' }, who(c, 's1'));
-    expect(r.reviewed).toBe('gate');
-    const crs = Object.values(r.state.changeRequests).filter((x) => x.status === 'pending' && x.section === 'plan' && x.target.id === 'm1');
-    expect(crs).toHaveLength(1);
-    expect(r.state.members.m1.plans).toEqual(c.citra.members.m1.plans);
+    expect(r.reviewed).toBeUndefined();
+    expect(Object.values(r.state.changeRequests).filter((x) => x.section === 'plan' && x.target.id === 'm1')).toHaveLength(0);
+    expect(r.state.members.m1.plans.map((p) => [p.from, p.plan])).toEqual([['2025-03-03', 'flex'], ['2026-11-01', 'gold']]);
+    // the desk still can only pick the 1st of next month
     expect(() => run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: '2026-12-01' }, who(c, 's1'))).toThrow('members.err.effectiveInvalid');
     expect(() => run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: T }, who(c, 's1'))).toThrow('members.err.effectiveInvalid');
     expect(() => run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold' }, who(c, 's5'))).toThrow('err.forbidden');
-    const planNotes = (s: ClubState) => Object.values(s.notifications || {}).filter((x) => x.kind === 'members.notif.planChanged');
-    expect(planNotes(r.state)).toHaveLength(0); // nothing told while it waits
-    const a = run(r.state, 'review.approve', { crId: crs[0].id }, who(c, 's9'));
-    expect(a.state.members.m1.plans.map((p) => [p.from, p.plan])).toEqual([['2025-03-03', 'flex'], ['2026-11-01', 'gold']]);
-    const told = planNotes(a.state);
+    const told = Object.values(r.state.notifications || {}).filter((x) => x.kind === 'members.notif.planChanged');
     expect(told).toHaveLength(1);
     expect(told[0].toUsers).toContain('f1');
     expect(told[0].params).toMatchObject({ plan: 'Gold', date: '2026-11-01' });
-    // a direct change by management tells the family once too
-    const m = run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold' }, who(c, 's9'));
-    expect(planNotes(m.state)).toHaveLength(1);
-  });
-
-  it('a desk plan change approved after the 1st it asked for is applied from that 1st, the family told once', () => {
-    const c = seed();
-    const r = run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: '2026-11-01' }, who(c, 's1'));
-    const crId = Object.values(r.state.changeRequests).find((x) => x.status === 'pending' && x.section === 'plan' && x.target.id === 'm1')!.id;
-    const a = run(r.state, 'review.approve', { crId }, who(c, 's9'), { today: '2026-11-03', nowMin: 600 });
-    expect(a.state.members.m1.plans.map((p) => [p.from, p.plan])).toEqual([['2025-03-03', 'flex'], ['2026-11-01', 'gold']]);
-    expect(a.state.changeRequests[crId].status).toBe('approved');
-    expect(Object.values(a.state.notifications || {}).filter((x) => x.kind === 'members.notif.planChanged')).toHaveLength(1);
-    // a direct run still refuses a past date
-    expect(() => run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: '2026-11-01' }, who(c, 's9'), { today: '2026-11-03', nowMin: 600 })).toThrow('members.err.effectiveInvalid');
   });
 
   it('a scheduled change is replaced by a new one; a matching pending request is marked applied', () => {
@@ -633,7 +632,7 @@ describe('list rules: search, filters, status', () => {
   it('six filters with counts; pending members are listed; ended ones only under Ended', () => {
     const c = seed();
     const rows = rows2(c.citra, T);
-    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, ended: 0 }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
+    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, ended: 0, split: { active: { flex: 2, gold: 3 }, in: { flex: 1, gold: 2 } } }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
     const r = run(c.citra, 'members.create', newMember(), who(c, 's1'));
     const rows2b = rows2(r.state, T);
     expect(rows2b.find((x) => x.m.id === 'm47')?.st.key).toBe('pending');

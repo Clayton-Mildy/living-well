@@ -195,7 +195,7 @@ describe('the selected day keeps its own look (round 8d)', () => {
       expect(ring(row)).toBe(true);
       expect(row.style.background).toMatch(/246, 236, 214|f6ecd6/i);
       expect(document.querySelector('h1')?.textContent).toBe('Calendar');
-      expect(document.body.textContent).toMatch(/Open Monday to Friday · \d\d:\d\d–\d\d:\d\d/);
+      expect(document.body.textContent).toMatch(/Open Monday to Friday, and on weekends when programmed · \d\d:\d\d–\d\d:\d\d/);
     } finally { (window as unknown as { innerWidth: number }).innerWidth = was; }
   });
 });

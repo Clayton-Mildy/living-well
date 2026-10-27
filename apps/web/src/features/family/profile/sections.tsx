@@ -3,22 +3,21 @@
 // jump chips can scroll to it (the page itself is in ../FamilyProfile.tsx).
 import { cloneElement, type CSSProperties, type ReactNode } from 'react';
 import {
-  actorName, listName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, displayName, memberSince, primaryContact, priceOn, rp, sortBy, staffCall, waUrl, ym,
+  FACES, FACE_KEY, actorName, dailyMood, listName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, displayName, memberSince, primaryContact, priceOn, rp, sortBy, staffCall, waUrl, ym,
   type ClubState, type DocType, type Health, type ISODate, type Member, type MemberNote,
 } from '@cp/shared';
 import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/members';
-import { latestNote, logOn, planSummary, visitDays } from '@cp/shared/rules/family';
-import { logForFamily, noteForFamily } from '@cp/shared/rules/approvals';
+import { latestNote, planSummary, visitDays } from '@cp/shared/rules/family';
+import { noteForFamily } from '@cp/shared/rules/approvals';
 import { lunchLabelKey } from '@cp/shared/rules/activity';
 import { PROFILE_METRICS, familyReadings, latestOf, metricStatus, metricText, type HMetric } from '@cp/shared/rules/famHealth';
-import { Icon } from '../../../components/ui';
+import { FACE_ICON, Icon } from '../../../components/ui';
 import { useDevice } from '../../../hooks/useDevice';
 import type { useAct } from '../../../lib/act';
 import type { TFn, useFmt } from '../../../lib/i18n';
 import { dietLabel, drugLabel, foodList, mobLabel, relLabel, timingLabel, cogText } from '../../members/lib';
 import { DocView, useDocPicker, type PaperFile } from '../../members/PaperForm';
 import { F, FillCard, HAIR, KV, List, SectionHead, TextLink, useFamWide } from '../kit';
-import { MOOD_COLOR, type Mood } from '../storyBits';
 import { PALETTE, MemberFace } from '../health/bits';
 import { PlanAsk } from '../PlanCard';
 
@@ -105,12 +104,13 @@ export function Overview({ p, id, notice }: SecProps & { notice?: ReactNode }) {
       {flex && ps.extra.length ? <span style={{ fontSize: 14, color: F.rust, fontWeight: 500 }}>{t(ps.extra.length === 1 ? 'fhealth.extraLineOne' : 'fhealth.extraLine', { n: ps.extra.length, p: rp(ps.price * ps.extra.length) })}</span> : null}
     </FillCard>
   );
+  const lgFace = lg ? dailyMood(s, m.id, lg.date)?.face : undefined; // round 14: the note day's mood from its face marks
   const teamCard = lg ? (
     <FillCard testId="pf-team" gap={10}>
       <Label right={`${staffCall(s.staff[lg.by]) || t('profile.theTeam')} · ${day(p, lg.date)}`}>{t('profile.fromTeam')}</Label>
       <span style={{ fontSize: wide ? 15 : 16, lineHeight: wide ? '22px' : '23px', color: F.text, overflowWrap: 'anywhere' }}>{lg.note}</span>
       <span style={{ display: 'flex', flexWrap: 'wrap', gap: '4px 14px', fontSize: 14, color: F.soft }}>
-        {lg.mood ? <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: MOOD_COLOR[lg.mood] }} />{t('family.mood_' + lg.mood)}</span> : null}
+        {lgFace !== undefined ? <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name={FACE_ICON[lgFace]} size={16} weight={300} fill={1} color={F.soft} />{t(FACE_KEY[lgFace])}</span> : null}
         {lg.lunch ? <span>{t(lunchLabelKey(lg.lunch))}</span> : null}
       </span>
     </FillCard>
@@ -199,8 +199,9 @@ export function CareSection({ p, id }: SecProps) {
   const { s, m, t, fmt, today, go } = p;
   const cog = m.health.cognitive;
   const reviewer = cog.reviewedBy ? staffCall(s.staff[cog.reviewedBy]) || cog.reviewedBy : '';
-  const logs = sortBy(live(s.dailyLogs).filter((l) => l.memberId === m.id && l.status === 'saved' && l.date <= today).map(logForFamily).filter((l) => !!l && l.mood !== undefined), (l) => l!.date, -1).slice(0, 10);
-  const moods = (['cheerful', 'calm', 'quiet', 'agitated'] as Mood[]).map((k) => ({ k, n: logs.filter((l) => l!.mood === k).length })).filter((x) => x.n);
+  // round 14: the daily moods of the last 10 visits (from the face marks), counted by face
+  const dailies = visitDays(s, m.id, today).slice(-10).map((d) => dailyMood(s, m.id, d)?.face).filter((f): f is NonNullable<typeof f> => f !== undefined);
+  const moods = FACES.map((f) => ({ f, n: dailies.filter((x) => x === f).length })).filter((x) => x.n);
   const days = visitDays(s, m.id, today).slice().reverse().slice(0, 3);
   return (
     <Sec id={id}>
@@ -211,7 +212,7 @@ export function CareSection({ p, id }: SecProps) {
           <span style={{ fontSize: 13, color: F.muted }}>{cog.reviewedOn ? t('profile.reviewedBy', { n: reviewer || t('profile.theTeam'), d: fmt.fdy(cog.reviewedOn) }) : t('profile.notReviewed')}</span>
         </span>
         <div style={{ display: 'flex', gap: '6px 14px', flexWrap: 'wrap', fontSize: 14, color: F.soft }}>
-          {moods.map((x) => <span key={x.k} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><span aria-hidden="true" style={{ width: 8, height: 8, borderRadius: 999, background: MOOD_COLOR[x.k] }} />{t('family.mood_' + x.k)} {x.n}</span>)}
+          {moods.map((x) => <span key={x.f} data-face={x.f} style={{ display: 'flex', alignItems: 'center', gap: 6 }}><Icon name={FACE_ICON[x.f]} size={16} weight={300} fill={1} color={F.soft} />{t(FACE_KEY[x.f])} {x.n}</span>)}
           {!moods.length ? <span style={{ color: F.muted }}>{t('fhealth.noMood')}</span> : null}
         </div>
       </FillCard>
@@ -219,14 +220,14 @@ export function CareSection({ p, id }: SecProps) {
         <List testId="pf-days">
           {days.map((d, i) => {
             const a = attOf(s, d, m.id);
-            const mood = logOn(s, m.id, d)?.mood;
+            const mood = dailyMood(s, m.id, d)?.face;
             const times = a?.checkIn ? `${a.checkIn.at}${a.checkOut ? `–${a.checkOut.at}` : ''}` : '';
             return (
               <button key={d} type="button" onClick={() => go(`/today?member=${m.id}&date=${d}`)} data-date={d} className="cp-fam-press"
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', border: 'none', borderTop: i ? HAIR : 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <span style={{ fontSize: 15, fontWeight: 500, color: F.text }}>{d === today ? t('common.today') : fmt.fds(d)}</span>
-                  <span style={{ fontSize: 13, color: F.muted }}>{[times, mood ? t('family.mood_' + mood) : ''].filter(Boolean).join(' · ')}</span>
+                  <span style={{ fontSize: 13, color: F.muted }}>{[times, mood !== undefined ? t(FACE_KEY[mood]) : ''].filter(Boolean).join(' · ')}</span>
                 </span>
                 <Icon name="chevron_right" size={22} color={F.chev} />
               </button>

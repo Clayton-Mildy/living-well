@@ -112,7 +112,7 @@ export const mgmt = {
   'notif.broadcastSent': 'Broadcast sent to {n} people.', 'notif.venueInvoice': 'Venue invoice {ref} for {org}: {amount}.', 'notif.pricesChanged': 'Prices changed from {date}. Check the next invoice run.',
 
   // ----- KC round 6: the brochure's other fees on Plans -----
-  plan_registration: 'Registration', plan_trial: 'Trial', plan_leave: 'Leave (cuti)', perOnce: 'One time', perTrial: 'For 2 days in a row',
+  plan_registration: 'Registration', plan_trial: 'Trial', plan_leave: 'Leave (cuti)', plDementia: 'Dementia care', perOnce: 'One time', perTrial: 'For 2 days in a row',
   plRegWhen: 'Charged', plRegWhenV: 'On the first invoice', plRegAgain: 'Again after', plRegAgainV: 'A stop for an unpaid invoice',
   plTrialDays: 'Length', plTrialDaysV: '2 days in a row', plTrialCollect: 'Collected', plTrialCollectV: 'At the front desk',
   plLeaveBilled: 'Billed', plLeaveBilledV: 'Instead of the plan', plLeaveAsk: 'Asked', plLeaveAskV: '14 days before the month ends',

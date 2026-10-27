@@ -1,20 +1,25 @@
 // Weekly schedule builder (design ScrCal builder): palette from the catalog, drag or tap-to-place, room / teacher / activity editor, dated publish.
-// The schedule is versioned by effective date: the grid shows one Mon–Fri week at a time (previous / next week, date under each day name) with the version
+// The schedule is versioned by effective date: the grid shows one week at a time (previous / next week, date under each day name) with the version
 // in force for that week. A week can be changed until it is over: a future week publishes from its Monday, the current week from today (KC round 7: the days before
 // today have already happened and stay read-only). Edits are saved as a shared draft.
 // Drag works with a mouse; on touch, hold an activity (or a placed one) and drag it onto a slot, or tap an activity and then a slot (or use "Move to").
 // A tap on an empty slot opens a short list to choose its activity (KC round 9). Every placed activity has a quick ✕ to remove it.
 // Round 6 (phone, native look): one day is an iOS grouped list (the day's slots as rows), the slot editor is a set of groups, the versions are a list group.
+// Round 14 (B1): the activity team builds too. Its Publish is "Send to Ega": the version waits for management ("Waiting for Ega" above the builder); one Ega
+// sent back shows "Returned: …" with Edit, which loads it into the draft. The catalog stays management's.
+// Round 14 (B2): Saturday and Sunday follow Friday, empty by default under a lighter "Weekend" header; a session placed there opens the club that day.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useResetOn } from '../../lib/useResetOn';
-import { actorName, addDays, live, scheduleVersionFor, staffCall, type ISODate, type Weekday, type WeekSlot } from '@cp/shared';
+import { ALL_DAYS, actorName, addDays, asWeekday, live, scheduleVersionFor, staffCall, type ISODate, type Weekday, type WeekSlot } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
-import { SLOTS, WEEKDAYS, activityTeachers, changedCells, cloneDays, dayEditable, effectiveVersions, mondayOf, nextMonday, sameCell, weekDays, weekEditable, weekView, type Days } from '@cp/shared/rules/calendar';
+import { SLOTS, activityTeachers, changedCells, cloneDays, dayEditable, effectiveVersions, mondayOf, nextMonday, pendingVersions, returnedVersion, sameCell, weekDays, weekEditable, weekView, type Days } from '@cp/shared/rules/calendar';
 import { Button, DateField, Group, Icon, IconButton, Note, Pager, Select, Sheet, Toggle, chipStyle, uiZoom, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
+import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { Badge, plural, rowLine } from '../activity/lib';
@@ -64,14 +69,19 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const s = useClub();
   const { today } = useNow();
   const act = useAct();
+  const navigate = useNavigate();
+  const { role } = useMe();
+  /** round 14: the activity team's publish asks Ega (management publishes itself) */
+  const asks = role !== 'mgmt';
   const d = useDraft(week);
   const view = d.view;
+  const waiting = pendingVersions(s)[0];
+  const returned = asks ? returnedVersion(s) : undefined;
   const [sel, setSel] = useState<Cell | null>(null);
   const [pal, setPal] = useState<string | null>(null);
   const [drag, setDrag] = useState<null | { act: string } | { cell: Cell }>(null);
   const [over, setOver] = useState<string | null>(null);
-  const todayW = new Date(today + 'T00:00:00Z').getUTCDay();
-  const [pday, setPday] = useState<Weekday>(todayW >= 1 && todayW <= 5 ? (todayW as Weekday) : 1);
+  const [pday, setPday] = useState<Weekday>(asWeekday(today));
   const [pubOpen, setPubOpen] = useState(false);
   const [catalog, setCatalog] = useState(false);
   /** an empty slot that was tapped: the activity list is open for it */
@@ -96,6 +106,8 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const locked = (w: Weekday) => !dayEditable(view.dates[w - 1], today);
   const wLong = (w: number) => weekdayName(lang, w, 'long');
   const wShort = (w: number) => weekdayName(lang, w, 'short');
+  /** round 14: Saturday and Sunday (a lighter header) */
+  const weekendDay = (w: Weekday) => w > 5;
   const dateOf = (w: number) => view.dates[w - 1];
   const dayNum = (w: number) => fd(dateOf(w), { day: 'numeric', month: 'short' });
   const cellOf = (c: Cell) => d.draft[c.w][c.slot];
@@ -279,7 +291,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const panelLabel = (text: string) => <span style={smallCaps}>{text}</span>;
   const roomChips = selCell && selV ? rooms.map((r) => chipBtn(roomName(r, lang), selV.roomId === r.id, () => d.edit((x) => { const c = x[selCell.w][selCell.slot]; if (c) c.roomId = r.id; }), 'radio')) : null;
   const teacherChips = selCell && selV ? [...teachers.map((x) => x.id), ...(teachers.some((x) => x.id === selV.staffId) ? [] : [selV.staffId])].map((id) => chipBtn(staffCall(s.staff[id]) || id, selV.staffId === id, () => d.edit((x) => { const c = x[selCell.w][selCell.slot]; if (c) c.staffId = id; }), 'radio')) : null;
-  const moveChips = selCell && selV ? (WEEKDAYS.filter((w) => !locked(w)).flatMap((w) => SLOTS.map((slot) => ({ w, slot }))).filter((c) => key(c) !== key(selCell)).map((c) => (
+  const moveChips = selCell && selV ? (ALL_DAYS.filter((w) => !locked(w)).flatMap((w) => SLOTS.map((slot) => ({ w, slot }))).filter((c) => key(c) !== key(selCell)).map((c) => (
       <button key={key(c)} type="button" className="cp-fill" onClick={() => { swap(selCell, c, true); setPday(c.w); }} style={{ height: 44, padding: '0 12px', borderRadius: 999, border: cellOf(c) ? '1px solid #8A755B' : '1px dashed #CAB8A2', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 16, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{wShort(c.w)} {c.slot}</button>
     ))) : null;
 
@@ -293,6 +305,13 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   /** the week "Edit" goes to from a week that is over: this one while it still has days to come, else the next */
   const editTarget = weekEditable(thisMonday, today) ? thisMonday : nextMonday(today);
   const weekLabel = `${fd(view.dates[0], { day: 'numeric', month: 'short' })} – ${fd(view.dates[4], { day: 'numeric', month: 'short', year: 'numeric' })}`;
+  /** round 14: "Edit" on a version Ega sent back: it becomes the draft of its week (this week when its start date has passed) */
+  const editReturned = async () => {
+    if (!returned) return;
+    const from = returned.effectiveFrom > today ? returned.effectiveFrom : today;
+    const r = await act('schedule.saveDraft', { days: returned.days, effectiveFrom: from }, { silent: true });
+    if (r.ok) onWeek(mondayOf(from));
+  };
   const discardOther = async () => {
     if (!view.otherDraft) return;
     const m = view.otherDraft.monday;
@@ -343,14 +362,30 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          {isPhone ? <IconButton icon="tune" label={t('cal.catalogBtn')} onClick={() => setCatalog(true)} size={40} color="var(--accent, #75624B)" /> : <Button variant="secondary" icon="tune" onClick={() => setCatalog(true)}>{t('cal.catalogBtn')}</Button>}
+          {asks ? null : isPhone ? <IconButton icon="tune" label={t('cal.catalogBtn')} onClick={() => setCatalog(true)} size={40} color="var(--accent, #75624B)" /> : <Button variant="secondary" icon="tune" onClick={() => setCatalog(true)}>{t('cal.catalogBtn')}</Button>}
           {changed ? <Button variant="ghost" size={isPhone ? 44 : 48} onClick={() => { d.discard(); setSel(null); }}>{t('cal.discard')}</Button> : null}
-          <button type="button" className={isPhone ? 'cp-press' : undefined} onClick={() => changed && canEdit && setPubOpen(true)} aria-disabled={!changed || !canEdit} aria-label={isPhone ? t('cal.publishBtn') : undefined} style={{ height: isPhone ? 40 : 52, padding: isPhone ? '0 18px' : '0 24px', borderRadius: 999, border: 'none', background: changed && canEdit ? '#24201C' : 'var(--press, #EEEEF0)', color: changed && canEdit ? '#FFFFFF' : '#5E5852', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: changed && canEdit ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
-            <Icon name="send" size={20} />{isPhone ? t('cal.publishShort') : t('cal.publishBtn')}
+          <button type="button" className={isPhone ? 'cp-press' : undefined} onClick={() => changed && canEdit && setPubOpen(true)} aria-disabled={!changed || !canEdit} aria-label={isPhone && !asks ? t('cal.publishBtn') : undefined} style={{ height: isPhone ? 40 : 52, padding: isPhone ? '0 18px' : '0 24px', borderRadius: 999, border: 'none', background: changed && canEdit ? '#24201C' : 'var(--press, #EEEEF0)', color: changed && canEdit ? '#FFFFFF' : '#5E5852', fontSize: 16, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, cursor: changed && canEdit ? 'pointer' : 'not-allowed', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
+            <Icon name="send" size={20} />{asks ? t('cal.sendForApproval') : isPhone ? t('cal.publishShort') : t('cal.publishBtn')}
           </button>
         </div>
       </div>
       {!teachers.length ? <Note tone="ochre" icon="info">{t('cal.noTeachers')}</Note> : null}
+      {waiting ? (
+        <Note tone="cream" icon="hourglass_top">
+          <span data-testid="programme-waiting" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <span>{t('cal.waitingEga')} · {t('cal.fromDate', { date: fds(waiting.effectiveFrom) })}</span>
+            {asks ? null : <Button variant="secondary" size={44} onClick={() => navigate('/reviews?tab=programme')}>{t('cal.reviewBtn')}</Button>}
+          </span>
+        </Note>
+      ) : null}
+      {returned ? (
+        <Note tone="ochre" icon="undo">
+          <span data-testid="programme-returned" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+            <span style={{ overflowWrap: 'anywhere' }}>{t('cal.returnedNote', { note: returned.rejectNote ?? '' })}</span>
+            <Button variant="secondary" size={44} onClick={() => void editReturned()}>{t('common.edit')}</Button>
+          </span>
+        </Note>
+      ) : null}
 
       <div role="group" aria-label={t('cal.weekNav')} className={isPhone ? 'cp-grey' : undefined} style={isPhone ? { display: 'flex', alignItems: 'center', gap: 8, padding: '6px 8px', borderRadius: 16, background: 'var(--fill, #F4F4F5)' } : { display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {navBtn('chevron_left', t('cal.prevWeek'), addDays(week, -7))}
@@ -396,11 +431,11 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
         {isPhone ? (
           // round 6, phone: one day at a time; a segmented day switch, then the day's rows in one flat group (the fixed times are quiet rows)
           <div style={{ flex: '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-            <div role="tablist" aria-label={t('cal.day')} style={{ display: 'grid', gridTemplateColumns: 'repeat(5, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>
-              {WEEKDAYS.map((w) => (
-                <button key={w} type="button" role="tab" aria-label={`${wShort(w)} ${dayNum(w)}`} aria-selected={pday === w} onClick={() => { setPday(w); setSel(null); }} style={{ minWidth: 0, minHeight: 48, padding: '3px 0', borderRadius: 7, border: 'none', background: pday === w ? '#FFFFFF' : 'transparent', boxShadow: pday === w ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: pday === w ? '#1E1A16' : '#5E5852', fontSize: 15, fontWeight: pday === w ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.2, transition: 'background-color .15s' }}>
+            <div role="tablist" aria-label={t('cal.day')} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>
+              {ALL_DAYS.map((w) => (
+                <button key={w} type="button" role="tab" aria-label={`${wShort(w)} ${dayNum(w)}${weekendDay(w) ? ` · ${t('cal.weekendCol')}` : ''}`} aria-selected={pday === w} onClick={() => { setPday(w); setSel(null); }} style={{ minWidth: 0, minHeight: 48, padding: '3px 0', borderRadius: 7, border: 'none', background: pday === w ? '#FFFFFF' : 'transparent', boxShadow: pday === w ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: pday === w ? '#1E1A16' : weekendDay(w) ? '#8A8078' : '#5E5852', fontSize: 15, fontWeight: pday === w ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.2, transition: 'background-color .15s' }}>
                   <span>{wShort(w)}</span>
-                  <span style={{ fontSize: 12, color: '#6B6259', fontWeight: 400, whiteSpace: 'nowrap' }}>{fd(dateOf(w), { day: 'numeric', month: 'short' })}</span>
+                  <span style={{ fontSize: 12, color: weekendDay(w) ? '#8A8078' : '#6B6259', fontWeight: 400, whiteSpace: 'nowrap' }}>{fd(dateOf(w), { day: 'numeric', month: 'short' })}</span>
                 </button>
               ))}
             </div>
@@ -412,14 +447,14 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           </div>
         ) : (
           <div style={{ flex: '1 1 640px', minWidth: 0, overflowX: 'auto' }}>
-            <div style={{ minWidth: 660, display: 'grid', gridTemplateColumns: '96px repeat(5,minmax(0,1fr))', gap: 8 }}>
+            <div style={{ minWidth: 900, display: 'grid', gridTemplateColumns: '96px repeat(7,minmax(0,1fr))', gap: 8 }}>
               <div />
-              {WEEKDAYS.map((w) => {
+              {ALL_DAYS.map((w) => {
                 const focus = focusDate === dateOf(w);
                 return (
-                  <div key={w} style={{ textAlign: 'center', padding: '6px 0', lineHeight: 1.3, borderBottom: focus ? '3px solid #24201C' : '3px solid transparent' }}>
-                    <div style={{ fontSize: FONT_BODY, fontWeight: 600 }}>{wLong(w)}</div>
-                    <div style={{ fontSize: FONT_SMALL, color: '#5E5852', fontWeight: focus ? 600 : 400 }}>{dayNum(w)}</div>
+                  <div key={w} style={{ textAlign: 'center', padding: '6px 0', lineHeight: 1.3, borderBottom: focus ? '3px solid #24201C' : '3px solid transparent', color: weekendDay(w) ? '#8A8078' : undefined }}>
+                    <div style={{ fontSize: FONT_BODY, fontWeight: weekendDay(w) ? 500 : 600 }}>{wLong(w)}</div>
+                    <div style={{ fontSize: FONT_SMALL, color: weekendDay(w) ? '#8A8078' : '#5E5852', fontWeight: focus ? 600 : 400 }}>{dayNum(w)}{weekendDay(w) ? ` · ${t('cal.weekendCol')}` : ''}</div>
                   </div>
                 );
               })}
@@ -430,8 +465,8 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
                     <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{slotLabel}</span>
                   </div>
                   {icon ? (
-                    <div style={{ gridColumn: 'span 5', minHeight: 48, borderRadius: 12, background: 'var(--press, #EEEEF0)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', fontSize: FONT_BODY }}>{fixedIcon(icon)}{label}</div>
-                  ) : WEEKDAYS.map((w) => {
+                    <div style={{ gridColumn: 'span 7', minHeight: 48, borderRadius: 12, background: 'var(--press, #EEEEF0)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', fontSize: FONT_BODY }}>{fixedIcon(icon)}{label}</div>
+                  ) : ALL_DAYS.map((w) => {
                     const c: Cell = { w, slot: time as WeekSlot };
                     const v = cellOf(c);
                     const st = cellStyle(c);
@@ -538,13 +573,13 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
         </div>
       )}
 
-      <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, changed - summary.length)} count={changed} week={week}
+      <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, changed - summary.length)} count={changed} week={week} asks={asks}
         onPublish={async (effectiveFrom, notify) => {
           await d.flush();
-          const r = await act('schedule.publish', { effectiveFrom, days: d.draft, notify }, { silent: true });
+          const r = await act('schedule.publish', { effectiveFrom, days: d.draft, ...(asks ? {} : { notify }) }, { silent: true });
           if (r.ok) {
             d.reset(); setPubOpen(false); setSel(null);
-            const k = effectiveFrom === today ? (notify ? 'cal.publishedToastToday' : 'cal.publishedToastTodayQuiet') : notify ? 'cal.publishedToast' : 'cal.publishedToastQuiet';
+            const k = asks ? 'cal.sentToEga' : effectiveFrom === today ? (notify ? 'cal.publishedToastToday' : 'cal.publishedToastTodayQuiet') : notify ? 'cal.publishedToast' : 'cal.publishedToastQuiet';
             say(t(k, { date: fdl(effectiveFrom) }));
             return '';
           }
@@ -576,7 +611,8 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   );
 }
 
-function PublishSheet({ open, onClose, summary, more, count, week, onPublish }: { open: boolean; onClose: () => void; summary: string[]; more: number; count: number; week: ISODate; onPublish: (date: string, notify: boolean) => Promise<string> }) {
+/** `asks` (round 14, the activity team): the sheet sends the version to Ega; who is told is decided when Ega approves. */
+function PublishSheet({ open, onClose, summary, more, count, week, asks, onPublish }: { open: boolean; onClose: () => void; summary: string[]; more: number; count: number; week: ISODate; asks?: boolean; onPublish: (date: string, notify: boolean) => Promise<string> }) {
   const t = useT();
   const { fdl } = useFmt();
   const { today } = useNow();
@@ -590,7 +626,7 @@ function PublishSheet({ open, onClose, summary, more, count, week, onPublish }: 
   const min = today;
   const ok = !!date && date >= min;
   return (
-    <Sheet open={open} onClose={onClose} title={t('cal.publishTitle')}>
+    <Sheet open={open} onClose={onClose} title={t(asks ? 'cal.sendTitle' : 'cal.publishTitle')}>
       <div style={{ fontSize: 16, lineHeight: '22px' }}>{plural(t, 'cal.changesPending', count)}</div>
       <ul style={{ margin: 0, paddingLeft: 20, display: 'flex', flexDirection: 'column', gap: 4, fontSize: FONT_BODY, lineHeight: 1.4 }}>
         {summary.map((x) => <li key={x}>{x}</li>)}
@@ -601,10 +637,10 @@ function PublishSheet({ open, onClose, summary, more, count, week, onPublish }: 
         <Button variant="quiet" size={44} onClick={() => setDate(start)}>{t(start === today ? 'cal.fromToday' : 'cal.weekStart')}</Button>
         <Button variant="quiet" size={44} onClick={() => setDate(nextMonday(today))}>{t('cal.nextMonday')}</Button>
       </div>
-      <Note tone="cream" icon="info">{ok ? t(date === today ? 'cal.effectiveNoteToday' : 'cal.effectiveNote', { date: fdl(date) }) : t('cal.err.futureOnly')}</Note>
-      <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />
+      {asks ? (ok ? null : <Note tone="cream" icon="info">{t('cal.err.futureOnly')}</Note>) : <Note tone="cream" icon="info">{ok ? t(date === today ? 'cal.effectiveNoteToday' : 'cal.effectiveNote', { date: fdl(date) }) : t('cal.err.futureOnly')}</Note>}
+      {asks ? null : <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />}
       {err ? <Note tone="rust" icon="error">{err}</Note> : null}
-      <Button full disabled={!ok || busy} onClick={async () => { setBusy(true); setErr(await onPublish(date, notify)); setBusy(false); }}>{t('cal.publishBtn')}</Button>
+      <Button full disabled={!ok || busy} onClick={async () => { setBusy(true); setErr(await onPublish(date, notify)); setBusy(false); }}>{t(asks ? 'cal.sendForApproval' : 'cal.publishBtn')}</Button>
     </Sheet>
   );
 }

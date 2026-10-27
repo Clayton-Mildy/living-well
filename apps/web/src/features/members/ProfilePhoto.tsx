@@ -9,8 +9,19 @@ import { useT } from '../../lib/i18n';
 import { mediaUrl, uploadMedia } from '../../lib/media';
 import { say } from '../../store/ui';
 
+/** A carer's round picture (the initials when there is none); a tap opens it full size. */
+export function NannyAvatar({ nanny, size }: { nanny: NonNullable<Member['nanny']>; size: number }) {
+  const t = useT();
+  const src = nanny.photoMediaId ? mediaUrl(nanny.photoMediaId) : undefined;
+  return (
+    <ImageOpen src={src} label={`${t('common.openFull')} · ${nanny.name}`} style={{ borderRadius: 999 }}>
+      <Avatar name={nanny.name} size={size} src={src} />
+    </ImageOpen>
+  );
+}
+
 /** Avatar preview with "Take or choose a photo" and "Remove photo". `value` is the media id. */
-export function ProfilePhotoField({ name, tone, value, onChange, size = 72 }: { name: string; tone?: number; value: string | null; onChange: (id: string | null) => void; size?: number }) {
+export function ProfilePhotoField({ name, tone, value, onChange, size = 72, upload = uploadMedia }: { name: string; tone?: number; value: string | null; onChange: (id: string | null) => void; size?: number; /** where the picture goes (the family's form has its own route) */ upload?: (blob: Blob) => Promise<string> }) {
   const t = useT();
   const [camera, setCamera] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -18,7 +29,7 @@ export function ProfilePhotoField({ name, tone, value, onChange, size = 72 }: { 
     setCamera(false);
     setBusy(true);
     try {
-      onChange(await uploadMedia(blob));
+      onChange(await upload(blob));
     } catch (e) {
       say(e instanceof ApiError && hasKey(e.code) ? t(e.code) : t('profile.photoUploadFailed'), { tone: 'error', icon: 'error' });
     } finally {

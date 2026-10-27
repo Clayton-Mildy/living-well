@@ -4,7 +4,8 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
-import { buildSeed, limitsFor, projectForFamily } from '@cp/shared';
+import { produce } from 'immer';
+import { buildSeed, limitsFor, moodId, projectForFamily, type ClubState } from '@cp/shared';
 import { dayStory, END_OF_DAY, visitDays } from '@cp/shared/rules/family';
 import { withMarks } from '@cp/shared/rules/testMarks';
 import { dayChecks } from '@cp/shared/rules/famHealth';
@@ -32,9 +33,9 @@ afterEach(async () => {
 });
 
 const T = '2026-10-21';
-function open(familyId: string, lang: 'en' | 'id' = 'en', min = 598) {
+function open(familyId: string, lang: 'en' | 'id' = 'en', min = 598, base?: ClubState) {
   try { localStorage.clear(); sessionStorage.clear(); } catch { /* storage blocked */ } // the member switcher is remembered per user
-  const full = buildSeed().citra;
+  const full = base ?? buildSeed().citra;
   const view = projectForFamily(full, familyId);
   useSession.setState({ lang, club: 'citra', user: { kind: 'family', id: familyId, name: 'Maria', clubId: 'citra' } as never });
   useReplica.setState({ club: 'citra', userId: familyId, confirmed: view, view, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: min, realStart: Date.now(), offset: 0 }, act: actMock as never });
@@ -90,7 +91,7 @@ describe('family Today', () => {
     await show(<FamilyToday />, `/today?member=m1&date=${day}`);
     expect(q('[data-testid="today-header"]')?.getAttribute('data-date')).toBe(day);
     expect(q('[data-testid="day-strip"] [data-selected="true"]')?.getAttribute('data-date')).toBe(day);
-    expect(q('[data-testid="story-hero"]')?.textContent).toMatch(/Arrived \d\d:\d\d(, feeling [^·]+) · Home \d\d:\d\d/);
+    expect(q('[data-testid="story-hero"]')?.textContent).toMatch(/Arrived \d\d:\d\d · Home \d\d:\d\d/);
     expect(q('[data-testid="story-hero"] h1')?.textContent).toMatch(/Oma Lina/); // the day's title ("Yesterday with Oma Lina", "Oma Lina’s Monday")
     expect(q('[data-testid="back-to-today"]')).toBeTruthy();
     expect(q('[data-testid="hero-sub"]')).toBeTruthy();
@@ -101,26 +102,47 @@ describe('family Today', () => {
     const rows = Array.from(document.querySelectorAll('[data-tl]'));
     expect(rows.length).toBeGreaterThan(2);
     expect(rows.every((x) => x.getAttribute('data-state') === 'done')).toBe(true);
-    expect(q('[data-testid="lunch-amount"]')).toBeTruthy();
     expect(q('[data-testid="took"]')).toBeTruthy();
     expect(q('[data-testid="survey-card"]')).toBeNull(); // the survey is for today
     // the timeline is a rail: a dot per step (bronze for a step that is over) beside the time and title
     expect(qa('[data-tl]').every((x) => x.children.length === 2 && x.firstElementChild?.getAttribute('aria-hidden') === 'true')).toBe(true);
-    // the daily log below it, every round in the same order: lunch, each session, mood, then the team's note (once)
+    // round 14: the Lunch card follows the timeline (dishes and how much she ate); the daily log below it no longer has a Lunch round
+    const card = q('[data-testid="lunch-card"]')!;
+    expect(card.textContent).toContain('Lunch');
+    expect(card.querySelector('[data-testid="lunch-amount"]')?.getAttribute('data-amount')).toBeTruthy();
+    expect(card.querySelector('[data-testid="lunch-card-dishes"]')?.textContent).toBeTruthy();
+    expect(q('[data-testid="timeline"]')!.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // the daily log below it, every round in the same order: mood (round 14: first), each session, then the team's note (once)
     const log = q('[data-testid="daily-log"]')!;
     expect(log.textContent).toContain('Daily log');
-    expect(log.querySelector('[data-testid="log-lunch"]')?.getAttribute('data-amount')).toBeTruthy();
+    expect(log.querySelector('[data-testid="log-lunch"]')).toBeNull();
     const sessions = Array.from(log.querySelectorAll('[data-testid="log-session"]'));
     expect(sessions.length).toBeGreaterThan(0);
     expect(sessions.length).toBe(qa('[data-tl^="session-"]').length); // each session of that day, the same as the list above
     expect(sessions.every((x) => ['joined', 'satOut', 'none'].includes(x.getAttribute('data-took') || ''))).toBe(true);
     expect(sessions.some((x) => x.getAttribute('data-took') !== 'none')).toBe(true);
     expect(log.querySelector('[data-testid="log-mood"]')?.getAttribute('data-mood')).toBeTruthy();
-    const order = ['log-lunch', 'log-activities', 'log-mood'].map((id) => log.querySelector(`[data-testid="${id}"]`)!);
+    const order = ['log-mood', 'log-activities'].map((id) => log.querySelector(`[data-testid="${id}"]`)!);
     expect(order[0].compareDocumentPosition(order[1]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
-    expect(order[1].compareDocumentPosition(order[2]) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(qa('[data-testid="team-log"]').length).toBeLessThanOrEqual(1); // the note is not shown twice
     expect(qa('[data-testid="log-block"]')).toHaveLength(1);
+  });
+
+  it('round 14: the lunch pictures and the portion show once, on the Lunch card; the timeline row keeps its time and title only', async () => {
+    const view = open('f1');
+    const day = visitDays(view, 'm1', T).filter((d) => d < T).pop()!;
+    const photo = { id: 'ph-r14-lunch', clubId: 'citra', createdAt: `${day}T12:10`, createdBy: 'staff:s9', date: day, time: '12:10', kind: 'lunch', media: 'photo', memberIds: [], tone: 1, takenBy: 's9', visibility: 'visible', mediaId: 'md_test_lunch' };
+    (view.photos as Record<string, unknown>)[photo.id] = photo;
+    view.dayMenus[day] = { ...view.dayMenus[day], photoIds: [...(view.dayMenus[day]?.photoIds ?? []), photo.id] } as never;
+    await show(<FamilyToday />, `/today?member=m1&date=${day}`);
+    expect(qa('[data-testid="lunch-photos"]')).toHaveLength(1);
+    expect(qa('[data-testid="lunch-photos"] [data-photo-id]').length).toBeGreaterThan(0);
+    expect(qa('[data-testid="lunch-amount"]')).toHaveLength(1);
+    const tl = q('[data-testid="timeline"]')!;
+    expect(tl.querySelector('[data-testid="lunch-photos"]')).toBeNull();
+    expect(tl.querySelector('[data-testid="lunch-amount"]')).toBeNull();
+    expect(tl.querySelector('[data-tl="lunch"]')?.textContent).toContain('Lunch');
+    expect(q('[data-testid="lunch-card"]')!.contains(q('[data-testid="lunch-photos"]'))).toBe(true);
   });
 
   it('a weekday she did not come: a gentle sentence, the programme as "what was on", a way to her last visit', async () => {
@@ -181,20 +203,60 @@ describe('family Today', () => {
     expect(new Set(blocks.map((b) => b.getAttribute('data-member'))).size).toBe(blocks.length);
   });
 
-  it('in the club today before the team has logged anything: every round is there, each reading "Not logged yet"', async () => {
+  it('in the club today before the team has logged anything: every round is there, each reading "Not logged yet" (lunch on its own card)', async () => {
     open('fm10_0', 'en', 10 * 60 + 40);
     await show(<FamilyToday />, '/today');
     const log = q('[data-testid="daily-log"]')!;
     expect(log.querySelectorAll('[data-testid="log-block"]')).toHaveLength(1);
-    expect(log.querySelector('[data-testid="log-lunch"]')?.textContent).toContain('Not logged yet');
-    expect(log.querySelector('[data-testid="log-lunch"]')?.getAttribute('data-logged')).toBe('0');
+    expect(q('[data-testid="lunch-amount"]')?.textContent).toContain('Not logged yet'); // the Lunch card carries how much was eaten
+    expect(q('[data-testid="lunch-amount"]')?.getAttribute('data-amount')).toBe('');
+    expect(log.querySelector('[data-testid="log-lunch"]')).toBeNull();
     const sessions = Array.from(log.querySelectorAll('[data-testid="log-session"]'));
     expect(sessions.length).toBeGreaterThan(0);
     expect(sessions.every((x) => x.getAttribute('data-took') === 'none' && /Not logged yet/.test(x.textContent || ''))).toBe(true);
-    expect(log.querySelector('[data-testid="log-mood"]')?.textContent).toContain('Not logged yet');
+    // round 14: the door's Check-in face is already the day's mood (the other rounds are not logged yet)
+    expect(log.querySelector('[data-testid="log-mood"]')?.getAttribute('data-logged')).toBe('1');
+    expect(qa('[data-testid="log-mood"] [data-moment]').map((x) => x.getAttribute('data-moment'))).toContain('arrival');
     expect(log.querySelector('[data-testid="log-note-none"]')?.textContent).toContain('Not logged yet');
     expect(log.querySelector('[data-testid="team-note"]')).toBeNull();
     expect(log.textContent).not.toContain('The team fills this in');
+  });
+
+  it('round 14: the Mood row at the top of the daily log: the day\u2019s face and word with its meaning, then the marked moments as small faces', async () => {
+    const full = produce(buildSeed().citra, (d) => {
+      d.attendance[`${T}:m1`] = { id: `${T}:m1`, clubId: d.clubId, createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
+      for (const [moment, time] of [['arrival', '10:00'], ['morning', '10:30']] as const) {
+        const id = moodId(T, 'm1', moment);
+        d.moodMarks[id] = { id, clubId: d.clubId, createdAt: `${T}T${time}`, createdBy: 'staff:s1', memberId: 'm1', date: T, time, moment, face: 4, by: 'staff:s1' };
+      }
+    });
+    open('f1', 'en', 11 * 60, full);
+    await show(<FamilyToday />, '/today?member=m1');
+    const log = q('[data-testid="daily-log"]')!;
+    const mood = log.querySelector('[data-testid="log-mood"]')!;
+    expect(mood.getAttribute('data-mood')).toBe('4');
+    expect(mood.textContent).toContain('Good');
+    expect(mood.textContent).toContain('Engaged and content');
+    expect(Array.from(mood.querySelectorAll('[data-moment]')).map((x) => [x.getAttribute('data-moment'), x.getAttribute('data-face'), x.lastElementChild?.textContent])).toEqual([['arrival', '4', 'Check-in'], ['morning', '4', 'Morning']]);
+    expect(log.querySelector('[data-testid="log-block"]')!.firstElementChild!.firstElementChild).toBe(mood); // the first row of the card
+    expect(q('[data-testid="hero-mood"]')?.textContent).toContain('Good'); // the hero shows the face too
+    expect(q('[data-testid="hero-mood"]')?.textContent).toContain('Engaged and content');
+  });
+  it('round 14: both parents: each row that came shows the face and its word (no hint)', async () => {
+    const full = produce(buildSeed().citra, (d) => {
+      d.attendance[`${T}:m1`] = { id: `${T}:m1`, clubId: d.clubId, createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
+      const id = moodId(T, 'm1', 'arrival');
+      d.moodMarks[id] = { id, clubId: d.clubId, createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, time: '10:00', moment: 'arrival', face: 4, by: 'staff:s1' };
+    });
+    open('f1', 'en', 11 * 60, full);
+    await show(<FamilyToday />, '/today');
+    expect(q('[data-testid="story-hero"]')?.getAttribute('data-mode')).toBe('both');
+    const rows = qa('[data-testid="parent-row"]');
+    const lina = rows.find((r) => r.getAttribute('data-member') === 'm1')!;
+    expect(lina.querySelector('[data-testid="row-mood"]')?.textContent).toContain('Good');
+    expect(lina.querySelector('[data-testid="row-mood"]')?.textContent).not.toContain('Engaged');
+    expect(lina.querySelector('[data-testid="row-mood"] [data-face]')?.getAttribute('data-face')).toBe('4');
+    expect(rows.find((r) => r.getAttribute('data-member') === 'm46')!.querySelector('[data-testid="row-mood"]')).toBeNull(); // Opa Budi has not come
   });
 
   it('both parents on a past day: one block each with every round; a round with nothing approved reads "Not logged" (no "yet")', async () => {
@@ -304,19 +366,25 @@ describe('family Today', () => {
     await show(<FamilyToday />, `/today?member=m1&date=${day}`);
     expect(q('[data-testid="story-hero"] h1')?.textContent).toMatch(/Oma Lina/); // the day's title, in Indonesian
     expect(q('[data-testid="back-to-today"]')?.textContent).toBe('Hari ini');
-    expect(text()).toMatch(/Tiba \d\d:\d\d(, perasaan [^·]+) · Pulang \d\d:\d\d/);
+    expect(text()).toMatch(/Tiba \d\d:\d\d · Pulang \d\d:\d\d/);
     expect(text()).toContain('Hari itu');
     expect(text()).not.toMatch(/\b(family|ftoday|fam)\.[a-z]/i);
   });
 });
 
 describe('family Today: the face at the door (round 12)', () => {
-  it('the hero says how the parent arrived: "Arrived 10:00, feeling okay"', async () => {
+  it('the hero shows the day\u2019s mood once, as a face, its word and its meaning under the status ("At the club since 10:00"), not as "feeling okay" in it', async () => {
     const view = projectForFamily(withMarks, 'f1');
     open('f1');
     useReplica.setState({ confirmed: view, view, clock: { today: T, startMin: 16 * 60, realStart: Date.now(), offset: 0 } });
     await show(<FamilyToday />, '/today?member=m1');
     const hero = q('[data-testid="story-hero"]')!;
-    expect(hero.textContent).toContain('At the club since 10:00, feeling okay');
+    expect(q('[data-testid="hero-status"]')?.textContent).toBe('At the club since 10:00');
+    expect(hero.textContent).not.toContain('feeling');
+    const mood = q('[data-testid="hero-mood"]')!; // her marks: Okay at the door, Great leaving: the day is Good
+    expect(mood.getAttribute('data-testid')).toBe('hero-mood');
+    expect(mood.textContent).toContain('Good');
+    expect(mood.textContent).toContain('Engaged and content'); // the hint is small text, not a tooltip
+    expect(mood.querySelector('[title]')).toBeNull();
   });
 });

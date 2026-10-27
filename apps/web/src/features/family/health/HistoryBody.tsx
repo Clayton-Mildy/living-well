@@ -8,6 +8,7 @@ import { limitsFor, displayName, type Health, type Member } from '@cp/shared';
 import { HIST_METRICS, METRIC_UNIT, averageText, bandOf, familyReadings, isMetric, metricRows, metricsWithData, type HMetric, type MetricRow } from '@cp/shared/rules/famHealth';
 import { Icon, TrendChart, inWindow, rangeValue, windowOf, type RangeChoice, type RangeValue, type TrendPoint } from '../../../components/ui';
 import { useDevice } from '../../../hooks/useDevice';
+import { MoodHistory } from '../MoodBits';
 import { Cap, Cols, F, FillCard, Seg, TextLink, useFamWide } from '../kit';
 import { useFamilyCtx } from '../useFamily';
 import { DateRangeSheet } from './DateRangeSheet';
@@ -46,11 +47,14 @@ export function HistoryBody({ m, asked, onMetric, inline }: { m: Member; /** the
 
   if (!avail.length) {
     return (
+      <>
       <FillCard radius={22} pad={20} gap={6} testId="history-empty">
         <Icon name="monitor_heart" size={28} color={F.bronze} />
         <span style={{ fontSize: 17, fontWeight: 500, color: F.text }}>{t('fhealth.emptyTitle')}</span>
         <span style={{ fontSize: 14, lineHeight: 1.45, color: F.muted }}>{t('fhealth.emptyBody', { n: short })}</span>
       </FillCard>
+      <MoodHistory m={m} inline />
+      </>
     );
   }
 
@@ -137,6 +141,7 @@ export function HistoryBody({ m, asked, onMetric, inline }: { m: Member; /** the
         {summary}
         {chart}
         {legend}
+        <MoodHistory m={m} inline />
         {readings}
         {dateSheet}
       </div>
@@ -153,6 +158,7 @@ export function HistoryBody({ m, asked, onMetric, inline }: { m: Member; /** the
             {summary}
             {chart}
             {legend}
+            <MoodHistory m={m} />
           </div>,
           readings,
         ]}

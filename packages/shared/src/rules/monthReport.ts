@@ -8,7 +8,7 @@ import { invoicePeriod, isConfirmed } from './finance';
 import { invoiceTotal } from './billing';
 import { monthsOf, observedDays, type InsightPeriod } from './insights';
 import { onLeaveOn } from './leave';
-import { moodStats } from './mood';
+import { MOOD_MOMENTS, moodStats } from './mood';
 import { renewalRows } from './renewals';
 import { surveyKind } from './surveys';
 import { teamRange } from './tasks';
@@ -110,7 +110,7 @@ function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, t
     active, joined, ended, byReason, kept, lost, onLeave,
     visits, visitsPerMember: days.length ? ratio(visits, active, 1) : null, utilisation: ratio(visits, days.length * active),
     index: mood.index, lift: mood.lift,
-    byMoment: { arrival: mood.byMoment.arrival.avg, health: mood.byMoment.health.avg, activity: mood.byMoment.activity.avg, departure: mood.byMoment.departure.avg },
+    byMoment: Object.fromEntries(MOOD_MOMENTS.map((k) => [k, mood.byMoment[k].avg])) as Record<MoodMoment, number | null>,
     alerts: readings.filter((r) => r.status === 'alert').length, watches: readings.filter((r) => r.status === 'watch').length, rechecks: readings.filter((r) => r.kind === 'recheck').length,
     lunchEaten: ratio(logs.filter((l) => l.lunch === 'all' || l.lunch === 'most').length, logs.length),
     invoices: invs.length, payments: payments.length, enquiries: live(s.enquiries).filter((e) => within(e.createdAt.slice(0, 10), p)).length, marks: mood.n, readings: readings.length,

@@ -29,7 +29,8 @@ const used = (files: Record<string, string>) => {
   return out;
 };
 const keys = new Set([...used(screens), ...used(actions)]);
-const literal = [...keys].filter((k) => !/[._]$/.test(k));
+const ACTIONS = new Set(['kitchen.lunchMark']); // action names (round 14), not i18n keys
+const literal = [...keys].filter((k) => !/[._]$/.test(k) && !ACTIONS.has(k));
 const prefixes = [...keys].filter((k) => /[._]$/.test(k));
 const holders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort().join(',');
 

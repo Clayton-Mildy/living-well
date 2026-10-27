@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { buildSeed } from '../index';
 import { isOpen } from './core';
 import { dailyLogBlocks, dayDigest, listItems, listKind, noticeKind, openDayStrip, planDay, railFill } from './famToday';
+import { dailyMood, marksOn } from './mood';
 import { dayStory, END_OF_DAY, latestNote, visitDays, type TlItem } from './family';
 
 const T = '2026-10-21';
@@ -67,7 +68,7 @@ describe('the daily log on Today', () => {
   /** a day she came with nothing approved logged: no log, no lunch amount, no session marks */
   const bare = (date = lastVisit) => {
     const v = visited();
-    return { ...v, date, log: null, lunch: v.lunch ? { ...v.lunch, amount: null } : null, sessions: v.sessions.map((x) => ({ ...x, took: null })) };
+    return { ...v, date, log: null, mood: null, lunch: v.lunch ? { ...v.lunch, amount: null } : null, sessions: v.sessions.map((x) => ({ ...x, took: null })) };
   };
 
   it('boils an approved log down round by round: lunch, every session with its mark, mood and the note', () => {
@@ -77,9 +78,19 @@ describe('the daily log on Today', () => {
     expect(d.sessions.length).toBe(visited().sessions.length); // EACH session of the day, marked or not
     expect(d.sessions.every((x) => ['joined', 'satOut', null].includes(x.took))).toBe(true);
     expect(d.sessions.some((x) => x.took)).toBe(true);
-    expect(d.mood).toBeTruthy();
+    expect(d.mood).toMatchObject({ face: expect.any(Number), marks: expect.any(Number) }); // round 14: the daily mood from the day's face marks
     expect(new Set(d.joined).size).toBe(d.joined.length); // an activity once
     expect(d.joined.some((a) => d.satOut.includes(a))).toBe(false);
+  });
+  it('takes the mood from the day\u2019s face marks (the rounded average, with how many); the old mood word alone gives none', () => {
+    const marks = marksOn(s, 'm1', lastVisit);
+    expect(marks.length).toBeGreaterThan(0);
+    expect(dayDigest(visited()).mood).toEqual({ face: dailyMood(s, 'm1', lastVisit)!.face, marks: marks.length });
+    const old = structuredClone(s);
+    for (const [id, mk] of Object.entries(old.moodMarks!)) if (mk.memberId === 'm1' && mk.date === lastVisit) delete old.moodMarks![id];
+    const word = Object.values(old.dailyLogs).find((l) => l.memberId === 'm1' && l.date === lastVisit)!;
+    word.mood = 'cheerful';
+    expect(dayDigest(dayStory(old, old.members.m1, lastVisit, END_OF_DAY)).mood).toBeNull();
   });
   it('lists a session that has no mark as null, and keeps the sessions in time order', () => {
     const d = dayDigest(bare());

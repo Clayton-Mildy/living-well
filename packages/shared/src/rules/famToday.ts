@@ -1,6 +1,6 @@
 // Family Today (round 8): small pure helpers for the day strip, the day's progress, the list's label and the notification titles.
 // Everything reads family-visible data only (it builds on the selectors in rules/family).
-import type { ClubState, DailyLog, HM, ISODate } from '../types';
+import type { ClubState, DailyLog, Face, HM, ISODate } from '../types';
 import { nextOpenDay } from './core';
 import { bestPhotoOf, familyPhotosOn, visitDays, type DayStory, type LunchAmount, type StripDay, type TlItem, type TlState } from './family';
 
@@ -53,15 +53,14 @@ export function listItems(kind: ListKind, items: TlItem[]): TlItem[] {
 }
 
 // ---------- the daily log on Today (round 8b; round 8d: every round, in one order) ----------
-export type MoodKey = NonNullable<DailyLog['mood']>;
 /** One activity session of the day and how the member took part in it, from the approved log (null = not marked yet). */
 export interface DigestSession { id: string; time: HM; activityId: string; took: 'joined' | 'satOut' | null }
 /**
- * One day's approved log boiled down for Today's "Daily log", round by round: how much lunch was eaten, EACH session of the day with its mark, the mood, and the
+ * One day's approved log boiled down for Today's "Daily log", round by round: how much lunch was eaten, EACH session of the day with its mark, the daily mood (round 14: the face from the day's marks and how many), and the
  * log itself when the team wrote a note (null = that round has no approved entry yet). `joined` / `satOut` are the activity ids of the marked sessions (session
  * order, each once). Read from a `DayStory`, so a family only ever sees what is approved. `any` is true when at least one round has something.
  */
-export interface DayDigest { lunch: LunchAmount | null; sessions: DigestSession[]; joined: string[]; satOut: string[]; mood: MoodKey | null; note: DailyLog | null; any: boolean }
+export interface DayDigest { lunch: LunchAmount | null; sessions: DigestSession[]; joined: string[]; satOut: string[]; mood: { face: Face; marks: number } | null; note: DailyLog | null; any: boolean }
 export function dayDigest(story: DayStory): DayDigest {
   const log = story.log;
   const sessions: DigestSession[] = story.sessions.map((x) => ({ id: x.id, time: x.time, activityId: x.activityId, took: x.took }));
@@ -71,7 +70,7 @@ export function dayDigest(story: DayStory): DayDigest {
     const into = x.took === 'joined' ? joined : x.took === 'satOut' ? satOut : null;
     if (into && !into.includes(x.activityId)) into.push(x.activityId);
   }
-  const mood = log?.mood ?? null;
+  const mood = story.mood ? { face: story.mood.face, marks: story.mood.marks.length } : null;
   const lunch = story.lunch?.amount ?? null;
   const note = log?.note ? log : null;
   return { lunch, sessions, joined, satOut, mood, note, any: !!(mood || lunch || joined.length || satOut.length || note) };

@@ -90,7 +90,7 @@ export function FamilyPhotos() {
     } catch { say(t('fphotos.saveFailed'), { tone: 'error', icon: 'error' }); }
     setSaving(false);
   };
-  const chipLabel: Record<PhotoFilter, string> = { all: t('fphotos.chipAll'), portraits: t('fphotos.chipPortraits'), group: t('fphotos.chipGroup'), activities: t('fphotos.chipActivities'), lunch: t('fphotos.chipLunch') };
+  const chipLabel: Record<PhotoFilter, string> = { all: t('fphotos.chipAll'), meals: t('fphotos.chipMeals'), activities: t('fphotos.chipActivities'), portraits: t('fphotos.chipPortraits') };
   const dayTitle = (d: string) => (d === now.today ? t('common.today') : fmt.fd(d, { weekday: 'long', day: 'numeric', month: 'short' }).replace(/,/g, ''));
   const count = (n: number) => (n === 1 ? t('family.phCountOne') : t('family.phCountN', { n }));
 

@@ -29,6 +29,7 @@ import { checkOn } from './checkOn';
 import { reg } from './reg';
 import { celeb } from './celeb';
 import { occasions } from './occasions';
+import { occ } from './occ';
 import { fam } from './fam';
 import { ftoday } from './ftoday';
 import { fphotos } from './fphotos';
@@ -36,6 +37,8 @@ import { fcal } from './fcal';
 import { fhealth } from './fhealth';
 import { fme } from './fme';
 import { month } from './month';
+import { unpaid } from './unpaid';
+import { care } from './care';
 
 export const en = {
   ...ns('common', common),
@@ -78,6 +81,7 @@ export const en = {
   ...ns('reg', reg),
   ...ns('celeb', celeb),
   ...ns('occasions', occasions),
+  ...ns('occ', occ),
   ...ns('fam', fam),
   ...ns('ftoday', ftoday),
   ...ns('fphotos', fphotos),
@@ -85,5 +89,7 @@ export const en = {
   ...ns('fhealth', fhealth),
   ...ns('fme', fme),
   ...ns('month', month),
+  ...ns('unpaid', unpaid),
+  ...ns('care', care),
 };
-export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, reg, celeb, occasions, fam, ftoday, fphotos, fcal, fhealth, fme, month };
+export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, reg, celeb, occasions, occ, fam, ftoday, fphotos, fcal, fhealth, fme, month, unpaid, care };

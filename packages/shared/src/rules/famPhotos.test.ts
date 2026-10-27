@@ -3,21 +3,29 @@ import { describe, it, expect } from 'vitest';
 import { buildSeed } from '../index';
 import { addDays as addDaysISO } from '../util';
 import { monthRecap } from './family';
-import { STORY_HOLD_MS, STORY_SLIDE_MS, dominantMood, famPhotoDays, famPhotoPosts, filterPhotoDays, groupsPresent, isStoryHold, memoryCards, moodIsMostly, ownPicture, photoGroupOf, stepStoryClock, storyBackdrops, storyBarFill, storySlides, storyTapGoes, swipeOutcome } from './famPhotos';
+import { STORY_HOLD_MS, STORY_SLIDE_MS, dominantMood, famPhotoDays, famPhotoPosts, filterPhotoDays, groupsPresent, isStoryHold, memoryCards, moodIsMostly, ownPicture, photoGroupOf, PHOTO_GROUPS, stepStoryClock, storyBackdrops, storyBarFill, storySlides, storyTapGoes, swipeOutcome } from './famPhotos';
 
 const T = '2026-10-21';
 const seed = () => buildSeed().citra;
 /** KC round 9: families only see photos with a real picture; tests about the order and kinds give every seeded photo one */
 const withPictures = (st: ReturnType<typeof seed>) => { for (const p of Object.values(st.photos)) if (!p.mediaId) p.mediaId = `md_test_${p.id}`; return st; };
 
+describe('photo groups (round 14: Meals / Activities)', () => {
+  const kinds = ['solo', 'group', 'arrival', 'lunch', 'activity'] as const;
+  it('lunch (and tea) pictures are Meals; group and activity pictures are Activities; solo and arrival pictures are Portraits', () => {
+    expect(Object.fromEntries(kinds.map((k) => [k, photoGroupOf({ kind: k })]))).toEqual({ solo: 'portraits', group: 'activities', arrival: 'portraits', lunch: 'meals', activity: 'activities' });
+    expect(PHOTO_GROUPS).toEqual(['meals', 'activities', 'portraits']); // the chip order
+  });
+});
+
 describe('family photos by day', () => {
-  it('days newest first, each flat: portraits, then group, activities and lunch, never pending or hidden ones', () => {
+  it('days newest first, each flat: portraits, then activities and meals, never pending or hidden ones', () => {
     const s = seed();
     const days = famPhotoDays(s, ['m1', 'm46']);
     expect(days.length).toBeGreaterThan(5);
     expect(days.map((d) => d.date)).toEqual(days.map((d) => d.date).slice().sort().reverse());
     for (const d of days) {
-      const ranks = d.photos.map((p) => ['portraits', 'group', 'activities', 'lunch'].indexOf(photoGroupOf(p)));
+      const ranks = d.photos.map((p) => ['portraits', 'activities', 'meals'].indexOf(photoGroupOf(p)));
       expect(ranks).toEqual(ranks.slice().sort((a, b) => a - b));
       expect(d.photos.every((p) => p.visibility === 'visible' && !p.deletedAt)).toBe(true);
     }
@@ -76,12 +84,12 @@ describe('memory cards and the story', () => {
   });
   it('the dominant mood counts approved moods only; a tie goes to the warmer one', () => {
     expect(dominantMood({ moods: [{ date: 'a', mood: null }, { date: 'b', mood: null }] })).toBeNull();
-    expect(dominantMood({ moods: [{ date: 'a', mood: 'quiet' }, { date: 'b', mood: 'calm' }, { date: 'c', mood: 'quiet' }] })).toBe('quiet');
-    expect(dominantMood({ moods: [{ date: 'a', mood: 'calm' }, { date: 'b', mood: 'cheerful' }] })).toBe('cheerful');
+    expect(dominantMood({ moods: [{ date: 'a', mood: 2 }, { date: 'b', mood: 4 }, { date: 'c', mood: 2 }] })).toBe(2);
+    expect(dominantMood({ moods: [{ date: 'a', mood: 4 }, { date: 'b', mood: 5 }] })).toBe(5);
   });
   it('"mostly" only when one mood is more than half of the approved ones', () => {
-    expect(moodIsMostly({ moods: [{ date: 'a', mood: 'calm' }, { date: 'b', mood: 'calm' }, { date: 'c', mood: 'quiet' }] })).toBe(true);
-    expect(moodIsMostly({ moods: [{ date: 'a', mood: 'calm' }, { date: 'b', mood: 'cheerful' }, { date: 'c', mood: 'quiet' }, { date: 'd', mood: null }] })).toBe(false);
+    expect(moodIsMostly({ moods: [{ date: 'a', mood: 4 }, { date: 'b', mood: 4 }, { date: 'c', mood: 2 }] })).toBe(true);
+    expect(moodIsMostly({ moods: [{ date: 'a', mood: 4 }, { date: 'b', mood: 5 }, { date: 'c', mood: 2 }, { date: 'd', mood: null }] })).toBe(false);
     expect(moodIsMostly({ moods: [{ date: 'a', mood: null }] })).toBe(false);
   });
   it('each slide gets a picture of its own month; lunch gets a lunch picture; none is used twice while others are left', () => {

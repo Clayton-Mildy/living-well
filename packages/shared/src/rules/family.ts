@@ -1,14 +1,14 @@
 // Family area selectors (pure): member switcher, the member's day, plan card (Flex visits / Gold), timeline, photos, invoices, daily log.
 // The club is drop-in: members come on any open date and nothing is "expected", so a member's day is only ever away, here or home.
 // Everything reads ClubState, so it works on the full state and on a family's projection.
-import type { Attendance, Bank, CalendarEvent, ClubState, DailyLog, Face, GuestHostKind, HM, Invoice, ISODate, MemberNote, Member, Photo, Plan, Reading, Slot, YM } from '../types';
+import type { Attendance, Bank, CalendarEvent, ClubState, DailyLog, Face, GuestHostKind, HM, Invoice, ISODate, MemberNote, Member, MoodMark, Photo, Plan, Reading, Slot, YM } from '../types';
 import { currentMembership, dayStatus, familyMemberIds, isPendingRow, memberSince, membershipStatus, nextOpenDay, planOn } from './core';
 import { attOf, flexMonth } from './attendance';
 import { cameOn, sessionPhotos } from './activity';
 import { balanceOf, invoiceStatus, invoicesOf, priceOn, type InvoiceStatus } from './billing';
 import { menuOn, sessionsOn, visibleLunchPhotos, type SessionSlot } from './kitchen';
 import { guestOn } from './guests';
-import { dayArc } from './mood';
+import { dailyMood, dayArc } from './mood';
 import { todayReading } from './health';
 import { logForFamily, noteForFamily, readingForFamily } from './approvals';
 import { addDays, addMonths, live, sortBy, toHM, toMin, ym } from '../util';
@@ -358,6 +358,8 @@ export interface DayStory {
   leftAt: HM | null;
   /** the approved log of the day */
   log: DailyLog | null;
+  /** round 14: the day's mood from the face marks (not the old log word); null when nobody marked a face */
+  mood: { face: Face; marks: MoodMark[] } | null;
   /** the day's steps in order (the timeline); `sessions`, `lunch` and `tea` are the same steps with their story */
   items: TlItem[];
   sessions: StorySession[];
@@ -403,7 +405,7 @@ export function dayStory(s: ClubState, m: Member, date: ISODate, nowMin: number)
   const ds = dayStatus(s, date);
   const event = ds.open ? ds.outing ?? null : ds.event ?? null;
   return {
-    date, memberId: m.id, state, visited, arrivedAt: att?.checkIn?.at ?? null, leftAt: att?.checkOut?.at ?? null, log, items, sessions, lunch,
+    date, memberId: m.id, state, visited, arrivedAt: att?.checkIn?.at ?? null, leftAt: att?.checkOut?.at ?? null, log, mood: dailyMood(s, m.id, date), items, sessions, lunch,
     tea: tea ? dishNamesOf(s, tea.dishIds) : null,
     arrival: visited ? famReading(s, m.id, date, 'arrival') ?? null : null,
     departure: visited ? famReading(s, m.id, date, 'departure') ?? null : null,
@@ -430,8 +432,8 @@ export interface MonthRecap {
   memberId: string;
   /** the days the member came, oldest first */
   visits: ISODate[];
-  /** one per visit day: the mood from the team's log (null when there is no approved log) */
-  moods: { date: ISODate; mood: NonNullable<DailyLog['mood']> | null }[];
+  /** one per visit day: the daily mood face (round 14: from the face marks; null when nobody marked a face that day) */
+  moods: { date: ISODate; mood: Face | null }[];
   /** sessions the member took part in, from the logs */
   joined: number;
   /** the member's family photos of the month (solo, group and activity pictures) */
@@ -443,7 +445,7 @@ export interface MonthRecap {
   /** lunch: days all of it was eaten, out of the days the team wrote down how much was eaten */
   lunch: { finished: number; of: number };
   /** up to three warm notes from the team, oldest first */
-  quotes: { date: ISODate; text: string; by: string; mood: NonNullable<DailyLog['mood']> }[];
+  quotes: { date: ISODate; text: string; by: string; mood: Face }[];
 }
 export const RECAP_MONTHS = 6;
 /** The months a member's memories can show, newest first: from this month back to the start of the membership, at most six. */
@@ -463,7 +465,8 @@ export function monthRecap(s: ClubState, m: Member, month: YM): MonthRecap {
   const notes: MonthRecap['quotes'] = [];
   for (const d of visits) {
     const log = logOn(s, m.id, d);
-    moods.push({ date: d, mood: log?.mood ?? null });
+    const face = dailyMood(s, m.id, d)?.face ?? null;
+    moods.push({ date: d, mood: face });
     if (!log) continue;
     const left = attOf(s, d, m.id)?.checkOut?.at;
     for (const sl of sessionsOn(s, d)) {
@@ -472,7 +475,7 @@ export function monthRecap(s: ClubState, m: Member, month: YM): MonthRecap {
     }
     if (log.lunch && log.lunch !== 'none') { ate += 1; if (log.lunch === 'all') finished += 1; }
     const text = (log.note || '').trim();
-    if (text.length >= 24 && (log.mood === 'cheerful' || log.mood === 'calm')) notes.push({ date: d, text, by: log.by, mood: log.mood });
+    if (text.length >= 24 && face !== null && face >= 4) notes.push({ date: d, text, by: log.by, mood: face });
   }
   const mine = live(s.photos).filter((p) => ym(p.date) === month && ((isFamilyPhoto(p) && p.memberIds.includes(m.id)) || isFamilyActivityPic(s, p, [m.id])));
   const perDay = new Map<string, number>();
@@ -484,9 +487,9 @@ export function monthRecap(s: ClubState, m: Member, month: YM): MonthRecap {
     if (p.mediaId) shown.add(p.mediaId);
     best.push(p);
   }
-  // the warmest, fullest notes first (cheerful over calm, then the longest), three of them, then in date order
+  // the warmest, fullest notes first (Great over Good, then the longest), three of them, then in date order
   // (the same words on two days are quoted once)
-  const quotes = sortBy(sortBy(notes, (n) => -n.text.length), (n) => (n.mood === 'cheerful' ? 0 : 1)).filter((n, i, a) => a.findIndex((x) => x.text === n.text) === i).slice(0, 3);
+  const quotes = sortBy(sortBy(notes, (n) => -n.text.length), (n) => (n.mood === 5 ? 0 : 1)).filter((n, i, a) => a.findIndex((x) => x.text === n.text) === i).slice(0, 3);
   return {
     month, memberId: m.id, visits, moods, joined, photos: mine.length, best,
     favourites: Array.from(times, ([activityId, n]) => ({ activityId, times: n })).sort((a, b) => b.times - a.times || (a.activityId < b.activityId ? -1 : 1)).slice(0, 3),

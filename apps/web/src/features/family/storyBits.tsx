@@ -1,14 +1,14 @@
-// Small shared pieces of the family day story and the monthly memories: mood colours, day wording, names, how much was eaten.
-import type { ClubState, DailyLog, ISODate, Member } from '@cp/shared';
+// Small shared pieces of the family day story and the monthly memories: mood tones, day wording, names, how much was eaten.
+import type { ClubState, Face, ISODate, Member } from '@cp/shared';
 import { daysBetween, displayName } from '@cp/shared';
 import type { TlItem } from '@cp/shared/rules/family';
 import type { TFn } from '../../lib/i18n';
 
-export type Mood = NonNullable<DailyLog['mood']>;
-export const MOODS: Mood[] = ['cheerful', 'calm', 'quiet', 'agitated'];
-/** Soft, warm colours from the brand's palette (sage for cheerful, never an alarming red for an unsettled day). */
-export const MOOD_COLOR: Record<Mood, string> = { cheerful: '#3D6B4F', calm: '#9DB8A5', quiet: '#CDBFA9', agitated: '#C98C6B' };
-export const MOOD_INK: Record<Mood, string> = { cheerful: '#FFFFFF', calm: '#24201C', quiet: '#24201C', agitated: '#24201C' };
+/** The day's mood faces, best first. */
+export const MOODS: Face[] = [5, 4, 3, 2, 1];
+/** Round 14: a face as an ink or grey tone on the dark memory slide (Great the lightest, Upset the darkest; the ink is the text on it). No tints. */
+export const MOOD_COLOR: Record<Face, string> = { 5: '#FFFFFF', 4: '#E3D9CC', 3: '#A89C8E', 2: '#6B6259', 1: '#4A4038' };
+export const MOOD_INK: Record<Face, string> = { 5: '#24201C', 4: '#24201C', 3: '#24201C', 2: '#FFFFFF', 1: '#FFFFFF' };
 
 type Fmt = { fd: (d: string, o: Intl.DateTimeFormatOptions) => string };
 

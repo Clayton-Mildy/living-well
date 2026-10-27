@@ -6,7 +6,7 @@ import { buildCitra } from '../seed/index';
 import type { Attendance, ClubState, ISODate } from '../types';
 import { flexQuota } from './attendance';
 import { addDays, isWeekday } from '../util';
-import { HEAT_HOURS, clampPeriod, editPeriod, flexQuotaReport, memberRangeFor, memberTrend, monthsOf, periodFor, planTrend, sortPeople, visitInsights } from './insights';
+import { HEAT_HOURS, clampPeriod, dayCounts, editPeriod, flexQuotaReport, memberRangeFor, memberTrend, monthsOf, periodFor, planTrend, sortPeople, visitInsights } from './insights';
 
 const T = '2026-10-21'; // Wednesday
 // m1 Lina and m10 Bambang are Flex; m2, m20 and m46 are Gold
@@ -325,5 +325,32 @@ describe('memberTrend', () => {
     expect(tr.points[0].start).toBe('2025-11-01');
     expect(memberRangeFor('custom', T, { from: '2026-09-01', to: '2026-12-31' })).toEqual({ from: '2026-09-01', to: T });
     expect(memberRangeFor('6m', T).from).toBe('2026-05-01');
+  });
+});
+
+// KC round 14 (A4): today's numbers. Small seed on 21 Oct: Flex m1 and m10, Gold m2, m20 and m46; m20 (09:38), m2 (09:40) and m10 (09:48) are in at 10:00.
+describe('dayCounts', () => {
+  const s = buildCitra();
+  it('10:00: five active (2 Flex, 3 Gold), three came and are still in, nobody gone, two not in', () => {
+    expect(dayCounts(s, T, 600)).toEqual({ active: { flex: 2, gold: 3 }, came: 3, inNow: 3, gone: 0, notIn: 2 });
+  });
+  it('only check-ins and check-outs up to the clock count: m1 arrives at 10:30 and m20 leaves at 09:55', () => {
+    const live = produce(s, (d) => {
+      d.attendance[`${T}:m20`].checkOut = { at: '09:55', by: 'staff:s1', method: 'manual' };
+      d.attendance[`${T}:m1`] = row(T, 'm1', '10:30');
+    });
+    expect(dayCounts(live, T, 600)).toEqual({ active: { flex: 2, gold: 3 }, came: 3, inNow: 2, gone: 1, notIn: 2 });
+    expect(dayCounts(live, T, 660)).toEqual({ active: { flex: 2, gold: 3 }, came: 4, inNow: 3, gone: 1, notIn: 1 });
+    const c = dayCounts(live, T, 660);
+    expect(c.came).toBe(c.inNow + c.gone);
+    expect(c.notIn).toBe(c.active.flex + c.active.gold - c.came);
+  });
+  it('a past day counts the whole day (nowMin 24:00) and the plan on that day; ended members are not active', () => {
+    const past = produce(s, (d) => {
+      for (const id of Object.keys(d.attendance)) if (d.attendance[id].date === '2026-10-14') delete d.attendance[id];
+      d.attendance['2026-10-14:m1'] = row('2026-10-14', 'm1', '16:00', '16:20');
+      d.members.m46.memberships = [{ start: '2025-03-03', lastDay: '2026-10-10' }];
+    });
+    expect(dayCounts(past, '2026-10-14', 24 * 60)).toEqual({ active: { flex: 2, gold: 2 }, came: 1, inNow: 0, gone: 1, notIn: 3 });
   });
 });

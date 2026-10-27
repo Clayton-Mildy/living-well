@@ -1,7 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, execute, getUser, projectForFamily, type ClubState } from '../index';
-import { DRAFT_ID, dayEditable, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView } from './calendar';
+import { DRAFT_ID, dayEditable, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView, yearView } from './calendar';
+import { occasionsInRange } from './occasions';
+import { dow } from '../util';
 
 const T = '2026-10-21';
 const fresh = (): ClubState => buildSeed().citra;
@@ -86,8 +88,9 @@ describe('nextDays', () => {
     // from a Friday: the Saturday with a venue booking counts for staff; for a family it is skipped
     expect(nextDays(s, '2026-10-23', 3).map((d) => d.date)).toEqual(['2026-10-23', '2026-10-24', '2026-10-26']);
     expect(nextDays(s, '2026-10-23', 3, 'family').map((d) => d.date)).toContain('2026-10-24'); // a private event is still a day with something on
-    // an empty weekend is skipped: Fri 6 Nov, then Monday
-    expect(nextDays(s, '2026-11-06', 2).map((d) => d.date)).toEqual(['2026-11-06', '2026-11-09']);
+    // an empty weekend is skipped: Fri 13 Nov, then Monday; round 14: a programmed Saturday is an open day (the seed programmes 7 Nov)
+    expect(nextDays(s, '2026-11-13', 2).map((d) => d.date)).toEqual(['2026-11-13', '2026-11-16']);
+    expect(nextDays(s, '2026-11-06', 2).map((d) => d.date)).toEqual(['2026-11-06', '2026-11-07']);
     expect(nextDays(s, '2026-10-21', 0)).toEqual([]);
     expect(nextDays(s, '2030-01-01', 3)).toHaveLength(3); // far from the seed: still 3 (a schedule version keeps applying)
   });
@@ -171,7 +174,7 @@ describe('the weekly schedule by week', () => {
     expect(mondayOf('2026-11-07')).toBe('2026-11-02'); // Saturday
     expect(mondayOf('2026-11-08')).toBe('2026-11-02'); // Sunday
     expect(mondayOf('2027-01-01')).toBe('2026-12-28'); // across the year
-    expect(weekDates('2026-11-02')).toEqual(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']);
+    expect(weekDates('2026-11-02')).toEqual(['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06', '2026-11-07', '2026-11-08']); // round 14: the weekend has columns too
   });
 
   it('KC round 7: a week can be changed until it is over: the current week from today on, a future week, but not a week that has passed', () => {
@@ -179,7 +182,8 @@ describe('the weekly schedule by week', () => {
     expect(weekEditable('2026-10-26', T)).toBe(true);
     expect(weekEditable('2026-10-26', '2026-10-26')).toBe(true); // on its Monday it is the current week
     expect(weekEditable('2026-10-19', '2026-10-23')).toBe(true); // its Friday
-    expect(weekEditable('2026-10-19', '2026-10-24')).toBe(false); // Saturday: the week is over
+    expect(weekEditable('2026-10-19', '2026-10-25')).toBe(true); // round 14: its Sunday (the weekend can be programmed)
+    expect(weekEditable('2026-10-19', '2026-10-26')).toBe(false); // the next Monday: the week is over
     expect(weekEditable('2026-10-12', T)).toBe(false);
     expect(dayEditable('2026-10-20', T)).toBe(false); // a day before today stays as it was
     expect(dayEditable(T, T)).toBe(true);
@@ -212,7 +216,7 @@ describe('the weekly schedule by week', () => {
     expect(here.changes).toEqual([{ w: 2, slot: '10:30' }]);
     expect(here.days[2]['10:30']).toBeNull();
     expect(here.base[2]['10:30']?.activityId).toBeTruthy();
-    expect(here.dates).toHaveLength(5);
+    expect(here.dates).toHaveLength(7); // round 14: Monday to Sunday
     const other = weekView(d, '2026-10-26', T);
     expect(other.draftHere).toBe(false);
     expect(other.changes).toEqual([]);
@@ -258,5 +262,55 @@ describe('upcomingClosures (family Today note)', () => {
   it('normal weekends, holidays on a weekend, cancelled and deleted events show nothing; closed wins over a holiday on one day', () => {
     const s = withEvents(ev('sat', '2026-10-24', 'holiday'), ev('gone', '2026-10-22', 'closed', { cancelledAt: '2026-10-01T10:00' }), ev('del', '2026-10-23', 'closed', { deletedAt: '2026-10-01T10:00' }), ev('h', '2026-10-27', 'holiday'), ev('c', '2026-10-27', 'closed'));
     expect(upcomingClosures(s, T).map((x) => [x.eventId, x.kind])).toEqual([['c', 'closed']]);
+  });
+});
+
+// round 14 (B3): the Year view, twelve mini-months of day states and dots
+describe('yearView', () => {
+  const flat = (v: ReturnType<typeof yearView>) => v.flatMap((m) => m.days);
+  it('has 12 months of every day, closed or open, and the seeded programmed Saturday is the one weekendOpen day', () => {
+    const s = fresh();
+    const v = yearView(s, 2026, 'staff');
+    expect(v.map((m) => m.month)).toEqual(Array.from({ length: 12 }, (_, i) => `2026-${String(i + 1).padStart(2, '0')}`));
+    expect(v[1].days).toHaveLength(28);
+    expect(v[9].days.find((d) => d.date === T)).toMatchObject({ state: 'open' });
+    expect(v[9].days.find((d) => d.date === '2026-10-24')?.state).toBe('closed'); // a rented Saturday
+    const sat = Object.values(s.scheduleDays).find((d) => dow(d.date) === 6 && Object.keys(d.slots).length)!.date; // the seed programmes the first free Saturday
+    expect(flat(v).filter((d) => d.state === 'weekendOpen').map((d) => d.date)).toEqual([sat]);
+    expect(sat).toBe('2026-11-07');
+  });
+
+  it('dots: a venue booking is an event, a birthday is the member\'s; a family sees only its parent\'s birthday and no staff-only items', () => {
+    const s = fresh();
+    const days = flat(yearView(s, 2026, 'staff'));
+    expect(days.find((d) => d.date === '2026-10-24')?.dots).toContain('event');
+    const bd = occasionsInRange(s, '2026-01-01', '2026-12-31').filter((o) => o.kind === 'birthday');
+    const a = bd[0];
+    const b = bd.find((o) => o.date !== a.date)!;
+    const on = (v: ReturnType<typeof yearView>, d: string) => flat(v).find((x) => x.date === d)!.dots;
+    expect(on(yearView(s, 2026, 'staff'), a.date)).toContain('birthday');
+    const fam = yearView(s, 2026, 'family', [a.member.id]);
+    expect(on(fam, a.date)).toContain('birthday');
+    expect(on(fam, b.date)).not.toContain('birthday');
+    expect(on(yearView(s, 2026, 'family'), a.date)).not.toContain('birthday'); // no parent chosen: no birthdays
+    expect(flat(fam).every((d) => d.dots.length <= 3)).toBe(true);
+  });
+
+  it('a family sees only its parents\' celebrations as dots: two parents\' celebrations, one parent chosen, none chosen', () => {
+    const base = fresh();
+    const cel = (id: string, memberId: string, date: string) => ({ id, clubId: base.clubId, createdAt: '2026-10-01T10:00', createdBy: 'staff:s1' as const, memberId, kind: 'birthday' as const, title: 'Party', date, from: '12:00', to: '14:00', roomId: 'room-music', guests: 5, status: 'confirmed' as const, requestedBy: 'staff:s1' as const });
+    const s = produce(base, (d) => { d.celebrations['ca'] = cel('ca', 'm1', '2026-11-03') as never; d.celebrations['cb'] = cel('cb', 'm2', '2026-11-04') as never; });
+    const dots = (v: ReturnType<typeof yearView>, d: string) => flat(v).find((x) => x.date === d)!.dots;
+    expect(dots(yearView(s, 2026, 'staff'), '2026-11-04')).toContain('celebration');
+    const mine = yearView(s, 2026, 'family', ['m1']);
+    expect(dots(mine, '2026-11-03')).toContain('celebration');
+    expect(dots(mine, '2026-11-04')).not.toContain('celebration');
+    const none = flat(yearView(s, 2026, 'family'));
+    expect(none.some((d) => d.dots.includes('celebration'))).toBe(false);
+  });
+
+  it('a family year has the same day states as the staff year', () => {
+    const s = fresh();
+    expect(flat(yearView(s, 2026, 'family', ['m1'])).map((d) => d.state)).toEqual(flat(yearView(s, 2026, 'staff')).map((d) => d.state));
   });
 });

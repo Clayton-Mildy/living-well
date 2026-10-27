@@ -114,7 +114,7 @@ export const mgmt: Same<typeof EN> = {
   'notif.bc_update': 'Kabar klub: {text}', 'notif.bc_closure': 'Klub tutup pada {text}.', 'notif.bc_event': 'Anda diundang: {text}', 'notif.bc_custom': '{text}',
   'notif.broadcastSent': 'Siaran terkirim ke {n} orang.', 'notif.venueInvoice': 'Faktur venue {ref} untuk {org}: {amount}.', 'notif.pricesChanged': 'Harga berubah mulai {date}. Periksa penerbitan tagihan berikutnya.',
 
-  plan_registration: 'Pendaftaran', plan_trial: 'Percobaan', plan_leave: 'Cuti', perOnce: 'Sekali saja', perTrial: 'Untuk 2 hari berturut-turut',
+  plan_registration: 'Pendaftaran', plan_trial: 'Percobaan', plan_leave: 'Cuti', plDementia: 'Perawatan demensia', perOnce: 'Sekali saja', perTrial: 'Untuk 2 hari berturut-turut',
   plRegWhen: 'Ditagih', plRegWhenV: 'Di invoice pertama', plRegAgain: 'Lagi setelah', plRegAgainV: 'Dihentikan karena invoice belum dibayar',
   plTrialDays: 'Lama', plTrialDaysV: '2 hari berturut-turut', plTrialCollect: 'Dibayar', plTrialCollectV: 'Di meja depan',
   plLeaveBilled: 'Ditagih', plLeaveBilledV: 'Sebagai pengganti paket', plLeaveAsk: 'Diajukan', plLeaveAskV: '14 hari sebelum bulan berakhir',

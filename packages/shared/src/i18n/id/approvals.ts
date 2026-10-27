@@ -37,4 +37,8 @@ export const approvals: Same<typeof EN> = {
   'tab.leave': 'Cuti', 'none.leave': 'Tidak ada permintaan cuti untuk diputuskan', 'none.leaveSub': 'Cuti yang diajukan staf muncul di sini sampai manajemen menjawab.', 'kind.leave': 'Permintaan cuti',
   'sum.leave': '{range} · {days} · {reason} · sisa {left} dari {n}', 'sum.leaveDays': '{n} hari', 'sum.leaveDay': '1 hari', approveAllLeave: 'Setujui semua',
   rejectSubLeave: 'Staf diberi tahu bahwa permintaannya ditolak, beserta catatan Anda jika ada.', rejectReasonLeave: 'Catatan untuk {name} (opsional)', rejectLeaveTitle: 'Tolak permintaan cuti ini',
+  // round 14 (B1): jadwal mingguan dan perubahan satu hari dari tim aktivitas
+  'tab.programme': 'Program', 'none.programme': 'Tidak ada perubahan program untuk disetujui', 'none.programmeSub': 'Jadwal mingguan atau perubahan satu hari dari tim aktivitas muncul di sini sebelum orang lain melihatnya.',
+  'kind.programme': 'Jadwal mingguan', 'kind.day': 'Program satu hari', 'sum.programmeFrom': 'Mulai {date}', 'sum.programmeSame': 'Sesi sama, tanggal mulai baru', 'sum.programmeDay': 'Program {date}',
+  'notif.rejected.programme': 'Manajemen tidak menyetujui {n} perubahan program Anda: {reason}', conflictProgramme: '{n} tidak disetujui: hari itu sudah berubah di kalender sejak dikirim. Kembalikan agar tim aktivitas bisa mengirim ulang.',
 };

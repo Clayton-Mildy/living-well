@@ -38,3 +38,6 @@ export function occasionsInRange(s: ClubState, from: ISODate, to: ISODate): Occa
 
 /** Today and the seven days after it. */
 export const occasionsThisWeek = (s: ClubState, today: ISODate) => occasionsInRange(s, today, addDays(today, 7));
+/** Round 14: today and the fourteen days after it (the birthday list and its reminder look two weeks ahead, so a party can be prepared). */
+export const OCCASION_AHEAD_DAYS = 14;
+export const occasionsAhead = (s: ClubState, today: ISODate) => occasionsInRange(s, today, addDays(today, OCCASION_AHEAD_DAYS));

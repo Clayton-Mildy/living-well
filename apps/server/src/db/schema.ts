@@ -39,7 +39,9 @@ export const prices = tables.prices, members = tables.members, memberNotes = tab
   // round 12
   moodMarks = tables.moodMarks, careCalls = tables.careCalls, celebrations = tables.celebrations,
   // round 13
-  leaveRequests = tables.leaveRequests;
+  leaveRequests = tables.leaveRequests,
+  // round 14
+  unpaidFollowUps = tables.unpaidFollowUps;
 
 export const clubs = pgTable('clubs', {
   id: text('id').primaryKey(),

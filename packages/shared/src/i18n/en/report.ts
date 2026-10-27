@@ -49,5 +49,5 @@ export const report = {
   colMember: 'Member', colTime: 'In–out', colLunch: 'Lunch', colActivities: 'Activities', colMood: 'Mood', colArrival: 'Arrival check',
   satOutTag: '{name} (sat out)',
   noMembers: 'Nobody came on this day',
-  moodArrival: 'Arrival', moodDeparture: 'Departure'
+  moodArrival: 'Arrival', moodDeparture: 'Departure', moodDaily: 'Daily mood'
 };

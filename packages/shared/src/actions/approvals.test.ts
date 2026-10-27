@@ -17,7 +17,7 @@ const fails = (s: ClubState, name: string, input: unknown, uid: string, code: st
   try { run(s, name, input, uid); } catch (e) { expect(e).toBeInstanceOf(DomainError); expect((e as DomainError).code).toBe(code); return; }
   throw new Error(`expected ${name} to fail with ${code}`);
 };
-const logIn = { mood: 'calm', lunch: 'all', joined: 'yes', communicative: 'normal', content: 'normal', note: '' };
+const logIn = { mood: 'calm', joined: 'yes', communicative: 'normal', content: 'normal', note: '' };
 const LOG = `log-m10-${T}`;
 const famLogs = (s: ClubState, uid: string) => Object.values(projectForFamily(s, uid).dailyLogs).filter((l) => l.date === T);
 
@@ -295,7 +295,8 @@ describe('selectors: counts, the derived items and the history', () => {
     const logsItem = items.filter((i) => i.id === 'approvals:logs');
     expect(logsItem).toHaveLength(1);
     expect(logsItem[0]).toMatchObject({ kind: 'notif.act.approvalsLogs', params: { n: 5 }, link: '/reviews?tab=logs' });
-    expect(items.filter((i) => i.id.startsWith('approvals:')).map((i) => i.id).sort()).toEqual(['approvals:logs', 'approvals:menu', 'approvals:readings', 'approvals:renewals']); // renewals: Caca's seeded upgrade
+    expect(items.filter((i) => i.id.startsWith('approvals:')).map((i) => i.id).sort()).toEqual(['approvals:logs', 'approvals:menu', 'approvals:programme', 'approvals:readings']); // programme: the seeded Sunday waiting for Ega; no renewal waits (R31)
+    expect(items.find((i) => i.id === 'approvals:programme')).toMatchObject({ kind: 'notif.act.approvalsProgramme', params: { n: 1 }, link: '/reviews?tab=programme' });
     expect(actionItems(s, as(s, 's5'), T, toMin('10:00')).some((i) => i.id.startsWith('approvals:'))).toBe(false); // staff do not get them
   });
 

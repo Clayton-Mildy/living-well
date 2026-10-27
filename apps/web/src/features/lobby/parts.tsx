@@ -34,7 +34,7 @@ export const relText = (t: TFn, rel: string | undefined) => { const k = 'lobby.r
 
 /** The club's opening-hours label ("Mon–Fri 08:30–16:30"), with the day names in the viewer's language. */
 const DAYS_ID: Record<string, string> = { Mon: 'Sen', Tue: 'Sel', Wed: 'Rab', Thu: 'Kam', Fri: 'Jum', Sat: 'Sab', Sun: 'Min' };
-export const localHours = (label: string, lang: string) => (lang === 'id' ? label.replace(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/g, (d) => DAYS_ID[d]) : label);
+export const localHours = (label: string, lang: string) => (lang === 'id' ? label.replace(/\b(Mon|Tue|Wed|Thu|Fri|Sat|Sun)\b/g, (d) => DAYS_ID[d]).replace('weekends when programmed', 'akhir pekan bila ada program') : label);
 
 // ---------- avatar ----------
 export function MemberAvatar({ m, size, font, ring }: { m: Pick<Member, 'photoTone' | 'title' | 'firstName' | 'lastName' | 'photoMediaId'>; size: number; font: number; ring?: string }) {

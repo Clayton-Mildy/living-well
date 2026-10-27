@@ -5,7 +5,7 @@ import type { ClubState, ISODate, MemberRegistration, Plan } from '../types';
 import { ageOn, e164, fmtPhone, rp } from '../util';
 import { translate } from '../i18n';
 import { memberAge, planOn, primaryContact, linksOfMember } from './core';
-import { priceOn } from './billing';
+import { feeOf, priceOn } from './billing';
 import { billingContactOf } from './family';
 import { genderOf, isPhone, plainName, type FieldIssue, type NewMemberInput } from './members';
 
@@ -87,6 +87,8 @@ export interface ApplicationFormData {
   /** the one-time fee from the price list, when it has one */
   registrationFee: number | null;
   monthlyFee: number | null;
+  /** round 14: the monthly dementia care fee from the price list; printed after the monthly fee when the answer is yes */
+  dementiaFee: number;
   conditions: string[];
   cognitive: string;
   dementiaNote: string;
@@ -127,7 +129,7 @@ export function applicationDataOf(s: ClubState, memberId: string, today: ISODate
   return {
     name: plainName(m), nickname: r.nickname || '', dob: m.dob, age: memberAge(m, today), marital: r.marital ?? null, gender: m.gender,
     address: m.address || '', rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',
-    plan, registrationFee: price.registration ?? null, monthlyFee: plan === 'gold' ? price.gold : price.flex,
+    plan, registrationFee: price.registration ?? null, monthlyFee: plan === 'gold' ? price.gold : price.flex, dementiaFee: feeOf(price, 'dementia'),
     conditions: m.health.conditions, cognitive: cognitiveText(m.health.cognitive.summary), dementiaNote: r.dementiaNote || '', dementia: r.dementia ?? null,
     commDifficulty: r.commDifficulty ?? null, selfCare: r.selfCare ?? null, bathroomHelp: r.bathroomHelp ?? null,
     carer: m.nanny ? m.nanny.name : null,
@@ -154,7 +156,7 @@ export function applicationDataFromInput(s: ClubState, input: ApplicationInput, 
   return {
     name: input.name.trim(), nickname: r.nickname || '', dob: input.dob || null, age: input.dob ? ageOn(input.dob, today) : null, marital: r.marital ?? null, gender: female === null ? null : female ? 'f' : 'm',
     address: input.address.trim(), rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',
-    plan: input.plan, registrationFee: price.registration ?? null, monthlyFee: input.plan === 'gold' ? price.gold : price.flex,
+    plan: input.plan, registrationFee: price.registration ?? null, monthlyFee: input.plan === 'gold' ? price.gold : price.flex, dementiaFee: feeOf(price, 'dementia'),
     conditions: input.health.conditions, cognitive: '', dementiaNote: r.dementiaNote || '', dementia: r.dementia ?? null,
     commDifficulty: r.commDifficulty ?? null, selfCare: r.selfCare ?? null, bathroomHelp: r.bathroomHelp ?? null,
     carer: input.nanny ? input.nanny.name : null,
@@ -203,7 +205,7 @@ export function page1Values(d: ApplicationFormData): Page1Values {
     marital: maritalWord(d.marital, d.gender), address1, address2, rtRw: d.rtRw, city: d.city, postcode: d.postcode,
     phone: d.phone, mobile: d.mobile, email: d.email,
     registrationFee: d.registrationFee ? `${planName} · ${rp(d.registrationFee)}` : planName,
-    monthlyFee: d.monthlyFee != null ? rp(d.monthlyFee) : '',
+    monthlyFee: d.monthlyFee != null ? rp(d.monthlyFee) + (d.dementia ? ` + ${rp(d.dementiaFee)} dementia care` : '') : '',
     // "Tidak ada" when the answer is no (or nothing says otherwise); "Ya" when it is yes without a note; else the cognitive summary and the note
     conditions: d.conditions.join('; '), dementia: d.dementia === false ? id('form.dementiaNone') : [d.cognitive, d.dementiaNote].filter(Boolean).join('; ') || (d.dementia ? 'Ya' : id('form.dementiaNone')),
     q1: yaTidak(d.commDifficulty), q2: yaTidak(d.selfCare), q3: yaTidak(d.bathroomHelp),

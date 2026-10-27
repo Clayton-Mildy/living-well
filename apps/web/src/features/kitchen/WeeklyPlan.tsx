@@ -1,12 +1,13 @@
 // Weekly menu plan: the template editor (explicit Publish, never per keystroke) plus one-off changes for a single date.
 // A week switcher plans coming weeks: the weekly menu is a template that repeats until another one starts, so a plan for a coming week
 // is published from that week's Monday and carries on after it. Edits are kept per week while the page is open.
+// Round 14 (B2): Saturday and Sunday follow Friday, empty by default, under a lighter "Weekend" header (they are served when the weekend is programmed).
 import { useMemo, useState } from 'react';
 import { addDays, dayStatus, diffDays, live, weekStart, type ISODate, type Weekday } from '@cp/shared';
 import { isWaiting } from '@cp/shared/rules/approvals';
 import { PendingMark } from '../../components/PendingMark';
 import { useMe } from '../../lib/me';
-import { COURSES, MAX_PLAN_WEEKS, WEEKDAYS, diffTemplates, planStartFor, sameIds, templateForWeek, weekDate, type Course, type MenuChange, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
+import { ALL_DAYS, COURSES, MAX_PLAN_WEEKS, diffTemplates, planStartFor, sameIds, templateForWeek, weekDate, type Course, type MenuChange, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
 import { Button, Card, CardHead, ChipGroup, DateField, Dialog, Group, Icon, Note, Pager, SectionLabel, Toggle, usePaged, FONT_BODY } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -22,7 +23,7 @@ type Edits = Record<string, string[]>;
 const NO_EDITS: Edits = {};
 const withEdits = (base: WeekTemplate, e: Edits): WeekTemplate => {
   const out = {} as WeekTemplate;
-  for (const w of WEEKDAYS) out[w] = { lunch: e[key(w, 'lunch')] ?? base[w].lunch, soft: e[key(w, 'soft')] ?? base[w].soft, tea: e[key(w, 'tea')] ?? base[w].tea };
+  for (const w of ALL_DAYS) out[w] = { lunch: e[key(w, 'lunch')] ?? base[w].lunch, soft: e[key(w, 'soft')] ?? base[w].soft, tea: e[key(w, 'tea')] ?? base[w].tea };
   return out;
 };
 
@@ -123,16 +124,16 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
         <Group title={t('kitchen.plan.title')} meta={changes.length ? t('kitchen.plan.unpublished', { n: changes.length }) : undefined} gap={10}>
           {planTop}
         </Group>
-        {WEEKDAYS.map((w) => {
+        {ALL_DAYS.map((w) => {
           const date = weekDate(week, w);
           const closed = !dayStatus(s, date).open;
           return (
             <div key={w} data-testid={`plan-day-${w}`} data-day={date}>
-              <Group title={dayName(w)} gap={12}
+              <Group title={w > 5 ? <span style={{ color: '#8A8078' }}>{dayName(w)}</span> : dayName(w)} gap={12}
                 meta={(
                   <span style={{ display: 'inline-flex', alignItems: 'center', gap: 10 }}>
                     {date === v.today ? <span style={{ color: '#3D6B4F', fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#3D6B4F' }} />{t('kitchen.plan.today')}</span> : null}
-                    {closed ? <span style={{ color: '#8A8078', fontWeight: 500 }}>{t('kitchen.plan.closed')}</span> : null}
+                    {w > 5 ? <span style={{ color: '#8A8078', fontWeight: 500 }}>{t('cal.weekendCol')}</span> : closed ? <span style={{ color: '#8A8078', fontWeight: 500 }}>{t('kitchen.plan.closed')}</span> : null}
                     <span data-testid={`plan-date-${w}`}>{short(date)}</span>
                   </span>
                 )}>
@@ -179,16 +180,16 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
       <div style={{ padding: '0 22px 12px', display: 'flex', flexDirection: 'column', gap: 10 }}>
         {planTop}
       </div>
-      {WEEKDAYS.map((w) => {
+      {ALL_DAYS.map((w) => {
         const date = weekDate(week, w);
         const closed = !dayStatus(s, date).open;
         return (
           <div key={w} data-testid={`plan-day-${w}`} data-day={date} style={{ display: 'flex', flexWrap: 'wrap', gap: '10px 12px', padding: '14px 22px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', alignItems: 'flex-start' }}>
             <div style={{ flex: '0 0 120px', display: 'flex', flexDirection: 'column', gap: 2, paddingTop: 22 }}>
-              <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{dayName(w)}</span>
+              <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4, color: w > 5 ? '#8A8078' : undefined }}>{dayName(w)}</span>
               <span data-testid={`plan-date-${w}`} style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{short(date)}</span>
               {date === v.today ? <span style={{ alignSelf: 'flex-start', marginTop: 2, color: '#3D6B4F', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 5 }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: '#3D6B4F' }} />{t('kitchen.plan.today')}</span> : null}
-              {closed ? <span style={{ alignSelf: 'flex-start', marginTop: 2, color: '#8A8078', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center' }}>{t('kitchen.plan.closed')}</span> : null}
+              {w > 5 || closed ? <span style={{ alignSelf: 'flex-start', marginTop: 2, color: '#8A8078', fontSize: 13, fontWeight: 500, display: 'inline-flex', alignItems: 'center' }}>{t(w > 5 ? 'cal.weekendCol' : 'kitchen.plan.closed')}</span> : null}
             </div>
             {field(w, 'lunch', '2 1 260px')}
             {field(w, 'soft', '1 1 160px')}

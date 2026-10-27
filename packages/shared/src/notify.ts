@@ -7,7 +7,6 @@ import { lobbyGroups, guestsOn } from './rules/attendance';
 import { todayReading, validReadings } from './rules/health';
 import { pendingPhotos } from './rules/members';
 import { pendingItems } from './rules/approvals';
-import { renewalMonth, renewalsLeft } from './rules/renewals';
 import { conflictsOn } from './rules/kitchen';
 import { dutyReminders } from './rules/tasks';
 import { invoiceStatus, runDone } from './rules/billing';
@@ -58,7 +57,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
     const waiting = pendingPhotos(s);
     if (waiting.length) add({ id: 'photos:pending', kind: 'notif.act.photosReview', params: { n: waiting.length }, link: '/reviews?tab=photos', severity: 'attention', at: waiting[0].createdAt });
     // what the team enters waits for approval before families see it: one item per type, however many entries
-    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu'], ['renewals', 'renewals.notif.act.approve'], ['payments', 'notif.act.approvalsPayments']] as const) {
+    for (const [type, kind] of [['logs', 'notif.act.approvalsLogs'], ['readings', 'notif.act.approvalsReadings'], ['menu', 'notif.act.approvalsMenu'], ['programme', 'notif.act.approvalsProgramme'], ['renewals', 'renewals.notif.act.approve'], ['payments', 'notif.act.approvalsPayments']] as const) {
       const items = pendingItems(s, type);
       if (items.length) add({ id: `approvals:${type}`, kind, params: { n: items.length }, link: `/reviews?tab=${type}`, severity: 'attention', at: items[0].at });
     }
@@ -103,11 +102,6 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
     }
   }
   if (role === 'mgmt') {
-    // KC round 7: from the 20th the month-end follow-up of the coming month is due; it clears itself as the members are decided
-    // (the front desk gets this as its own duty reminders below; management keeps the plain items)
-    const month = renewalMonth(today);
-    const left = +today.slice(8) >= 20 ? renewalsLeft(s, today, month) : 0;
-    if (left > 0) add({ id: 'renewals:' + month, kind: 'renewals.notif.act.followUp', params: { n: left, month }, link: '/renewals', severity: 'attention', at: `${ym(today)}-20T08:00` });
     // a trial has no booked time (the guest can come any time the club is open); a visit is due half an hour before its time
     for (const g of guestsOn(s, today).filter((x) => x.status === 'booked' && !x.checkIn && toMin(x.time || s.club.settings.open) - 30 <= nowMin))
       add({ id: 'guest:' + g.id, kind: g.kind === 'trial' ? (g.time ? 'notif.act.guestTrial' : 'notif.act.guestTrialDay') : 'notif.act.guestVisit', params: { name: g.name, time: g.time || '' }, link: linkTo(role, 'arrivals'), severity: 'attention', at: `${today}T${g.time || s.club.settings.open}` });

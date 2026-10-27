@@ -52,14 +52,13 @@ describe('Tasks: my day', () => {
   it('shows today’s duties first (late ones with a rust dot and their time), then the additional tasks with who ticked what', async () => {
     openClub('s1', 'lobby');
     await show(<Tasks />);
-    expect(document.querySelector('[role="status"]')?.textContent).toMatch(/^1 of 5 done/); // the duty score: the check-ins (ticked once anyone is in), the check-out, two guests, the renewals
+    expect(document.querySelector('[role="status"]')?.textContent).toMatch(/^2 of 6 done/); // the duty score: the check-ins (ticked once anyone is in), the check-out, two guests, the unpaid list, (round 14) the door faces
     const heads = Array.from(document.querySelectorAll('h2')).map((h) => h.textContent);
     expect(heads).toEqual(['Today’s duties', 'Additional tasks', 'Leave']); // duties first, the staff member's own leave last (round 13)
-    const renewals = document.querySelector('[data-duty="lobby.renewals"]')!;
-    expect(renewals.textContent).toContain('Renewals followed up');
-    expect(renewals.textContent).toContain('Late · By 09:00'); // 09:58 now
-    expect(renewals.hasAttribute('data-late')).toBe(true);
-    expect(renewals.querySelector('[data-late]')).toBeTruthy(); // the rust dot
+    const unpaid = document.querySelector('[data-duty="lobby.unpaid"]')!;
+    expect(unpaid.textContent).toContain('Unpaid');
+    expect(unpaid.textContent).toContain('By 11:00'); // 09:58 now: waiting for its time, no dot
+    expect(unpaid.hasAttribute('data-late')).toBe(false);
     expect(document.querySelector('[data-duty="lobby.checkout"]')?.textContent).toContain('0 of 3 · By 16:30'); // waiting for its time: no dot
     expect(document.querySelector('[data-duty="lobby.checkin"]')?.textContent).toContain('Check-ins3'); // the count of check-ins so far, no deadline
     expect(document.querySelector('[data-duty="lobby.checkout"]')?.hasAttribute('data-late')).toBe(false);
@@ -72,7 +71,7 @@ describe('Tasks: my day', () => {
   it('a duty row goes to the place where it is done', async () => {
     openClub('s1', 'lobby');
     const { container } = await showWithLocation(<Tasks />);
-    await click(document.querySelector('[data-duty="lobby.renewals"]'));
+    await click(document.querySelector('[data-duty="lobby.unpaid"]'));
     expect(container.textContent).toContain('at /renewals');
   });
 
@@ -130,7 +129,7 @@ describe('Tasks: management', () => {
     const fr = document.querySelector('[data-role-row="finance"]')!;
     expect(fr.textContent).toContain('no app login');
     expect(fr.textContent).toContain('0 of 1 done');
-    expect(document.querySelector('[data-role-row="activity"]')?.textContent).toMatch(/0 of 6 done/); // two session pictures, two joined marks, lunch, mood
+    expect(document.querySelector('[data-role-row="activity"]')?.textContent).toMatch(/0 of 5 done/); // two session pictures, two joined marks, mood (lunch is the kitchen's since round 14)
     // one role's details at a time, beside the list (the first late role opens first)
     expect(document.querySelectorAll('[data-role]')).toHaveLength(1);
     await click(document.querySelector('[data-role-row="finance"]'));
@@ -157,7 +156,7 @@ describe('Tasks: management', () => {
     await click(nurse);
     expect(document.querySelector('[data-role="nurse"] [data-duty="nurse.arrival"]')?.textContent).toMatch(/Arrival check for everyone who came.*\d+ of \d+ · \d+%/);
     await click(document.querySelector('[data-role-row="finance"]'));
-    expect(document.querySelector('[data-role="finance"] [data-duty="finance.overdue"]')?.textContent).toContain('—');
+    expect(document.querySelector('[data-role="finance"] [data-duty="finance.unpaid"]')?.textContent).toContain('—');
     await click(tab(/^Month$/));
     expect(document.body.textContent).toContain('October 2026');
     await click(tab(/^Day$/));
@@ -168,7 +167,7 @@ describe('Tasks: management', () => {
     openClub('s9', 'mgmt');
     await show(<Tasks />, '/tasks?view=manage');
     expect(document.querySelectorAll('[data-role-row]')).toHaveLength(6);
-    expect(document.querySelector('[data-role-row="nurse"]')?.textContent).toMatch(/2 of 2 duties on · 3 additional tasks/);
+    expect(document.querySelector('[data-role-row="nurse"]')?.textContent).toMatch(/3 of 3 duties on · 3 additional tasks/);
     // the first role is open on its general duties, every one with a switch and (while on) a time
     expect(document.querySelector('[data-role]')?.getAttribute('data-role')).toBe('lobby');
     expect(document.querySelectorAll('[data-role="lobby"] [data-duty] [role="switch"]').length).toBe(DUTIES.filter((d) => d.role === 'lobby').length);

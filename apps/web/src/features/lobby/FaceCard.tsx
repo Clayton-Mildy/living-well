@@ -9,6 +9,7 @@ import type { TFn } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { FlagChip, MemberAvatar, type Flag } from './parts';
+import { NannyAvatar } from '../members/ProfilePhoto';
 
 export type Scan = { state: 'idle' } | { state: 'scanning'; id: string } | { state: 'matched'; id: string; manual: boolean };
 export const SCAN_MS = 1400;
@@ -22,9 +23,9 @@ const corner = (pos: Record<string, number | string>, borders: Record<string, st
 
 /** Name, visit line (Flex visit n of 10 / Gold), care flags, a note when the visit is an extra day, and the confirm / "not this person" buttons. */
 export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, children, rejectLabel, face, onFace }: {
-  t: TFn; m: Member; plan: string; flags: Flag[]; onConfirm: () => void; onReject: () => void; busy?: boolean; /** the arrival face; confirm stays off until one is chosen */ face: Face | null; onFace: (f: Face) => void; children?: ReactNode; /** a face match says "Not this person"; a manual pick just cancels */ rejectLabel?: string;
+  t: TFn; m: Member; plan: string; flags: Flag[]; onConfirm: () => void; onReject: () => void; busy?: boolean; /** the arrival face; optional (round 14: the face row shows, confirming without one is allowed) */ face: Face | null; onFace: (f: Face) => void; children?: ReactNode; /** a face match says "Not this person"; a manual pick just cancels */ rejectLabel?: string;
 }) {
-  const off = busy || face === null;
+  const off = !!busy;
   const { isPhone } = useDevice();
   const s = useClub();
   const { today } = useNow();
@@ -35,12 +36,13 @@ export function MatchedPanel({ t, m, plan, flags, onConfirm, onReject, busy, chi
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <div style={{ fontSize: 22, lineHeight: '28px', fontWeight: 500, letterSpacing: '-0.3px', color: '#2B231C' }}>{memberName(m)}{occ ? <span data-testid="occasion-icon" role="img" aria-label={t(occ === 'birthday' ? 'occasions.birthdayToday' : 'occasions.anniversaryToday')} title={t(occ === 'birthday' ? 'occasions.birthdayToday' : 'occasions.anniversaryToday')} style={{ display: 'inline-flex', verticalAlign: 'middle', marginLeft: 8 }}><Icon name={occ === 'birthday' ? 'cake' : 'celebration'} size={20} fill={1} color="#B5652E" /></span> : null}</div>
         <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{plan}</div>
+        {m.nanny ? <div data-testid="with-nanny" style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}><NannyAvatar nanny={m.nanny} size={32} />{t('lobby.withNanny', { n: m.nanny.name })}</div> : null}
       </div>
       {flags.length ? <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>{flags.map((f, i) => <FlagChip key={i} f={f} />)}</div> : null}
       {children}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <div style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('mood.ask', { name: displayName(m) })}</div>
-        <MoodFaces value={face} onChange={onFace} name={displayName(m)} labels={!isPhone} />
+        <MoodFaces value={face} onChange={onFace} name={displayName(m)} labels={!isPhone} hints />
       </div>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
         <button type="button" className={off ? undefined : 'h-bronze'} onClick={off ? undefined : onConfirm} aria-disabled={off || undefined}

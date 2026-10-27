@@ -1,13 +1,13 @@
 // Family Today (round 8, the Family App prototype with KC's immersive header): the day's picture full-bleed at the top with the date chip and the bell on it,
 // the parent(s) and the day at its foot (a row per parent, or one parent's icon rail); then a white panel slides up over it with the day strip, the day's
-// timeline, the team's daily log (every round: lunch, each session, mood, the note), the day's health checks (round 8d), its photos and a way to tell the kitchen about lunch. On a laptop (round 8b) it is two columns instead: the picture as a
+// timeline, the Lunch card (round 14: dishes, the lunch pictures, how much was eaten), the team's daily log (each session, mood, the note), the day's health checks (round 8d), its photos and a way to tell the kitchen about lunch. On a laptop (round 8b) it is two columns instead: the picture as a
 // rounded card that stays in view on the left, the day (what the panel holds) scrolling on the right. Round 8c (the prototype's desktop): a heading above
 // the columns ("Good morning, Maria"; "Looking back" and "Back to today" on an earlier day), the day strip as six tiles under the picture, the photos
 // as rounded tiles. `?date=YYYY-MM-DD` shows an earlier day;
 // `?member=` and `?survey=1` still work. The club is drop-in: members come on any open day, so there is no booking, leave, "expected" or "not coming".
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { addDays, answeredBy, live, liveSurvey, displayName, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
+import { FACE_KEY, addDays, answeredBy, live, liveSurvey, displayName, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
 import { activityLabel, roomLabel, dayStory, dishNamesOf, END_OF_DAY, familyPhotosOn, servedLunch, storyNowMin, visitDays, type DayStory } from '@cp/shared/rules/family';
 import { openDayStrip, planDay } from '@cp/shared/rules/famToday';
 import { eventTitle as calTitle, upcomingClosures } from '@cp/shared/rules/calendar';
@@ -26,6 +26,7 @@ import { FrostChip, Hero, PANEL_OVERLAP } from './StoryHero';
 import { ParentSwitch } from './ParentSwitch';
 import { Timeline } from './Timeline';
 import { DailyLogSection } from './TeamLog';
+import { LunchCard } from './LunchCard';
 import { TodayHealthSection } from './TodayHealth';
 import { cap, dayWord, namesOf } from './storyBits';
 import { LunchFeedbackSheet, SurveySheet } from './sheets';
@@ -113,7 +114,7 @@ function LastVisitCard({ members, stories, onOpen, onOpenPhoto }: { members: Mem
   const when = `${cap(dayWord(fmt, last, now.today))} · ${fmt.fd(last, { day: 'numeric', month: 'short' })}`;
   const times = story.arrivedAt && story.leftAt ? t('family.storyArrivedHome', { a: story.arrivedAt, b: story.leftAt }) : story.arrivedAt ? t('family.storyArrived', { a: story.arrivedAt }) : '';
   const joined = Array.from(new Set(story.sessions.filter((x) => x.took !== 'satOut').map((x) => activityLabel(s, x.activityId, fmt.lang)).filter(Boolean))).slice(0, 2);
-  const bits = [story.log?.mood ? t('family.mood_' + story.log.mood) : '', story.lunch?.amount ? t('family.lunch_' + story.lunch.amount) : '', joined.length ? t('ftoday.lvSessions', { a: joined.join(` ${t('common.and')} `) }) : ''].filter(Boolean);
+  const bits = [story.mood ? t('ftoday.moodIs', { face: t(FACE_KEY[story.mood.face]).toLowerCase() }) : '', story.lunch?.amount ? t('family.lunch_' + story.lunch.amount) : '', joined.length ? t('ftoday.lvSessions', { a: joined.join(` ${t('common.and')} `) }) : ''].filter(Boolean);
   const who = came.length > 1 ? namesOf(t, came) : came[0] ? displayName(came[0]) : '';
   const thumbs = photos.slice(0, 3);
   return (
@@ -305,6 +306,8 @@ export function FamilyToday() {
 
       <Timeline members={members} stories={stories} date={date} onOpenPhoto={openPhoto} onDay={setDate}
         lunchFeedback={hasLunch ? { label: sent ? fbSub : t('ftoday.fbRow'), onClick: () => setFeedback(true) } : undefined} />
+
+      {isPlan ? null : <LunchCard members={members} stories={stories} past={!isToday} onOpenPhoto={openPhoto} />}
 
       {isPlan ? null : <DailyLogSection members={members} stories={stories} date={date} onOpenDay={setDate} />}
 

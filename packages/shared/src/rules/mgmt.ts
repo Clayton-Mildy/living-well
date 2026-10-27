@@ -3,14 +3,15 @@ import type {
   ActivityEntry, Bank, ClubState, DT, FamilyContact, HM, InvoiceLine, ISODate, Lang, Member, Plan, Room, Staff, StaffHr, StaffRole, StaffTime, Survey, VenueBooking, YM,
 } from '../types';
 import { addDays, addMonths, diffDays, live, sortBy, sum, toMin, ym } from '../util';
-import { approvedMembers, contactsOfMember, dayStatus, membershipStatus, primaryContact, isPendingRow } from './core';
+import { approvedMembers, contactsOfMember, dayStatus, membershipStatus, overlapsClubHours, primaryContact, isPendingRow, timesOverlap } from './core';
 import { flexMonth, lobbyGroups } from './attendance';
 import { feeOf, invoiceStatus, priceOn, runDone, runLinesFor } from './billing';
 import { validReadings } from './health';
 import { liveSurvey, responsesOf, surveyStats } from './surveys';
 import { openEnquiries } from './enquiries';
 import { lunchPhotoIds } from './kitchen';
-import { moodStats } from './mood';
+import { dailyMood, moodStats } from './mood';
+import { notesSaved } from './activity';
 import { isConfirmed } from './finance';
 import { checkOnList } from './checkOn';
 import { approvalTotal, pendingItems } from './approvals';
@@ -21,7 +22,7 @@ export const VENUE_EARLIEST: HM = '06:00';
 export const VENUE_LATEST: HM = '23:00';
 export const isWholeClub = (r: Pick<Room, 'id' | 'name'> | undefined) => !!r && (r.id === WHOLE_CLUB_ID || /^whole club$/i.test(r.name));
 export const venueRooms = (s: ClubState): Room[] => sortBy(live(s.rooms).filter((r) => r.venue), (r) => r.name);
-export const timesOverlap = (a1: HM, a2: HM, b1: HM, b2: HM) => a1 < b2 && b1 < a2;
+export { timesOverlap };
 export const venueIsPast = (v: Pick<VenueBooking, 'date' | 'to'>, today: ISODate, now: HM) => v.date < today || (v.date === today && v.to <= now);
 
 /** What a slot runs into: a confirmed venue booking or a confirmed celebration (round 12: they share the rooms). */
@@ -51,7 +52,7 @@ export function checkVenueSlot(s: ClubState, slot: { roomId: string; date: ISODa
   if (st.open) {
     if (st.outing) return { ok: false, code: 'mgmt.err.venueOuting' };
     const { open, close } = s.club.settings;
-    if (!duringClub && timesOverlap(slot.from, slot.to, open, close)) return { ok: false, code: 'mgmt.err.venueClubHours', params: { open, close } };
+    if (!duringClub && overlapsClubHours(s, slot.from, slot.to)) return { ok: false, code: 'mgmt.err.venueClubHours', params: { open, close } };
   } else if (st.reason === 'closed') return { ok: false, code: 'mgmt.err.venueClosed' };
   const clash = venueClash(s, slot, ignoreId);
   if (clash) return { ok: false, code: 'mgmt.err.venueClash', params: { org: clash.title, title: clash.title, from: clash.from, to: clash.to, room: s.rooms[clash.roomId]?.name || '' } };
@@ -242,6 +243,9 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
   const st = sv ? surveyStats(s, sv) : null;
   const price = priceOn(s, today);
   const ms = moodStats(s, [today]);
+  // round 14: the tile's index is the average of today's daily moods (one face per member who came and was marked)
+  const daily = [...g.inClub, ...g.goneHome].map((r) => dailyMood(s, r.m.id, today)?.face).filter((f): f is NonNullable<typeof f> => f !== undefined);
+  const dailyIndex = daily.length ? Math.round((daily.reduce((a, f) => a + f, 0) / daily.length) * 10) / 10 : null;
   return {
     members: approvedMembers(s).filter((m) => membershipStatus(m, today) !== 'ended').length,
     staff: live(s.staff).filter((x) => x.active).length,
@@ -256,9 +260,9 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
     reviews: approvalTotal(s) - pendingItems(s, 'stock').length, // waiting in Approvals (stock has its own tile)
     checkOn: checkOnList(s, today).length,
     survey: st && st.overallN ? { avg: st.overall, n: st.overallN } : null,
-    mood: { index: ms.index, lift: ms.lift, n: ms.n },
+    mood: { index: dailyIndex, lift: ms.lift, n: daily.length },
     photos: live(s.photos).filter((p) => p.date === today && p.visibility === 'visible' && p.kind !== 'arrival').length,
-    logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved' && l.mood !== undefined).length, // round 7: complete once the Mood & notes round is in
+    logsSaved: live(s.dailyLogs).filter((l) => l.date === today && l.status === 'saved' && notesSaved(l)).length, // round 7: complete once the notes are in (round 14: the Morning round)
     logsTotal: g.inClub.length + g.goneHome.length, // a log for everyone who visited today
     lunchPhoto: lunchPhotoIds(s, today).length > 0,
     payments: live(s.payments).filter((p) => p.receivedOn === today && isConfirmed(p)).length,
@@ -270,7 +274,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
 
 // ---------- plans and pricing ----------
 /** Prices (and the Flex visits rule) as typed on the Plans screen but not saved yet. */
-export interface PriceDraft { flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; from: ISODate; flexQuota?: number }
+export interface PriceDraft { flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; dementia?: number; from: ISODate; flexQuota?: number }
 /** The period the next invoice run bills: this month's if it hasn't run yet, else next month's. */
 export const nextRunPeriod = (s: ClubState, today: ISODate): YM => (runDone(s, ym(today)) ? addMonths(ym(today), 1) : ym(today));
 export interface InvoicePreview { period: YM; issueDate: ISODate; member: Member; payer?: FamilyContact; lines: InvoiceLine[]; total: number; others: { member: Member; total: number }[] }
@@ -282,7 +286,7 @@ export function invoicePreview(s: ClubState, memberId: string, draft: PriceDraft
   const st: ClubState = draft
     ? {
         ...s,
-        prices: { ...s.prices, __draft: { id: '__draft', clubId: s.clubId, createdAt: '', createdBy: 'system', from: draft.from, flex: draft.flex, gold: draft.gold, extra: draft.extra, registration: draft.registration ?? feeOf(priceOn(s, draft.from), 'registration'), trial: draft.trial ?? feeOf(priceOn(s, draft.from), 'trial'), leave: draft.leave ?? feeOf(priceOn(s, draft.from), 'leave'), sample: { flex: false, gold: false, extra: false } } },
+        prices: { ...s.prices, __draft: { id: '__draft', clubId: s.clubId, createdAt: '', createdBy: 'system', from: draft.from, flex: draft.flex, gold: draft.gold, extra: draft.extra, registration: draft.registration ?? feeOf(priceOn(s, draft.from), 'registration'), trial: draft.trial ?? feeOf(priceOn(s, draft.from), 'trial'), leave: draft.leave ?? feeOf(priceOn(s, draft.from), 'leave'), dementia: draft.dementia ?? feeOf(priceOn(s, draft.from), 'dementia'), sample: { flex: false, gold: false, extra: false } } },
         club: draft.flexQuota ? { ...s.club, settings: { ...s.club.settings, flexQuota: draft.flexQuota } } : s.club,
       }
     : s;

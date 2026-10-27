@@ -16,4 +16,8 @@ describe('projectForFamily: mood marks', () => {
   it('leaves staff-only care calls out', () => {
     expect(view.careCalls).toEqual({});
   });
+  it('leaves staff-only unpaid follow-ups out', () => {
+    expect(live(s.unpaidFollowUps).length).toBeGreaterThan(0);
+    expect(view.unpaidFollowUps).toEqual({});
+  });
 });

@@ -2,6 +2,7 @@
 // whoever builds the schedule (management) gets "Edit activity" on each activity, which offers "Just this day" or the weekly plan.
 // On a phone (round 6) it is an iOS grouped day: the date is the group header (Today chip and open/closed state beside it) and the items are rows in one flat group.
 // Round 7: a session changed for this day only shows "Changed" (and the day's note) for staff; a slot with no session shows a quiet row management can fill.
+// Round 14: `flag` is a small grey chip by the date ("Waiting" for Ega, or "Returned").
 import { Fragment } from 'react';
 import type { ClubState, Slot } from '@cp/shared';
 import type { DayInfo, DayItem } from '@cp/shared/rules/calendar';
@@ -11,7 +12,7 @@ import { useT, useFmt } from '../../lib/i18n';
 import { rowLine } from '../activity/lib';
 import { StatePill, dayState, itemText, neutralFill } from './lib';
 
-export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity }: { s: ClubState; info: DayInfo; today: string; canEdit?: boolean; onEdit?: (eventId: string) => void; onEditActivity?: (slot: Slot, date: string) => void }) {
+export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag }: { s: ClubState; info: DayInfo; today: string; canEdit?: boolean; onEdit?: (eventId: string) => void; onEditActivity?: (slot: Slot, date: string) => void; flag?: string }) {
   const t = useT();
   const { lang, fdl } = useFmt();
   const { isPhone } = useDevice();
@@ -24,6 +25,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity }: { 
     </button>
   );
   const canDay = !!onEditActivity && info.date >= today;
+  const flagChip = flag ? <span data-day-flag style={{ height: 22, padding: '0 8px', borderRadius: 7, background: 'var(--press, #EEEEF0)', color: '#5E5852', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', flex: 'none', whiteSpace: 'nowrap' }}>{flag}</span> : null;
   // round 7: slots with no session. A day change removed it (everyone on staff sees that) or the weekly plan has none (only who can fill it)
   const empties: DayItem[] = info.noSession.filter((n) => n.changed || canDay).map((n) => ({ key: 'n:' + n.slot, kind: 'activity', time: n.slot, title: '', empty: true, changed: n.changed }));
   const rows = [...info.items, ...empties].sort((a, b) => (a.time ?? '00:00').localeCompare(b.time ?? '00:00') || (a.empty ? 1 : 0) - (b.empty ? 1 : 0));
@@ -37,6 +39,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity }: { 
           <h2 style={{ ...GROUP_HEAD, display: 'flex', alignItems: 'center', gap: 8, overflow: 'visible', flex: '1 1 0' }}>
             <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>{fdl(info.date)}</span>
             {info.date === today ? todayTag(18) : null}
+            {flagChip}
           </h2>
           <StatePill st={st} size={13} />
         </div>
@@ -72,6 +75,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity }: { 
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', padding: '14px 22px', borderBottom: '0.5px solid var(--hairline, #E2E2E6)' }}>
         <span style={{ fontSize: 17, fontWeight: 600, flex: '1 1 0', minWidth: 160, lineHeight: 1.4 }}>{fdl(info.date)}</span>
         {info.date === today ? <span style={{ height: 22, padding: '0 8px', borderRadius: 8, background: '#2B231C', color: '#FFFFFF', fontSize: 11, fontWeight: 700, letterSpacing: '1px', display: 'inline-flex', alignItems: 'center', textTransform: 'uppercase' }}>{t('common.today')}</span> : null}
+        {flagChip}
         <StatePill st={st} />
       </div>
       {rows.map((it) => {

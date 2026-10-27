@@ -1,26 +1,25 @@
 // The daily log is filled in rounds (KC round 7). This file holds the pieces the rounds share:
 //   - RoundChips: the one-tap choices on a lunch / activity row (All Most Half Little None, Joined Sat out), tap the chosen one again to clear it;
-//   - LogFieldsForm: the Mood & notes round (mood, communicative, content, the note for the family and the staff-only note),
-//     used by the Daily log screen and by the member's Care log tab.
+//   - LogFieldsForm: the notes of the Morning round (communicative, content, the note for the family and the staff-only note),
+//     used by the Daily log screen and by the member's Care log tab. Round 14: the mood word is gone; the faces carry the mood (DailyLog.mood stays for old data).
 import { NORMAL_LOG } from '@cp/shared/rules/activity';
 import type { DailyLog } from '@cp/shared';
 import { StaffOnlyTag, chipStyle, FONT_BODY } from '../../components/ui';
 import { useT } from '../../lib/i18n';
 
-export type LogEntry = { mood: NonNullable<DailyLog['mood']>; communicative: NonNullable<DailyLog['communicative']>; content: NonNullable<DailyLog['content']>; note: string; staffNote: string };
-export type LogField = 'mood' | 'communicative' | 'content';
+export type LogEntry = { communicative: NonNullable<DailyLog['communicative']>; content: NonNullable<DailyLog['content']>; note: string; staffNote: string };
+export type LogField = 'communicative' | 'content';
 export const LOG_ROWS: { k: LogField; opts: string[] }[] = [
-  { k: 'mood', opts: ['cheerful', 'calm', 'quiet', 'agitated'] },
   { k: 'communicative', opts: ['normal', 'withdrawn'] },
   { k: 'content', opts: ['normal', 'low'] },
 ];
-/** What the Mood & notes form starts from: the saved round, or everyone normal. */
-export const baseEntry = (l: Pick<DailyLog, 'mood' | 'communicative' | 'content' | 'note' | 'staffNote'> | undefined): LogEntry => ({
-  mood: l?.mood ?? NORMAL_LOG.mood, communicative: l?.communicative ?? NORMAL_LOG.communicative, content: l?.content ?? NORMAL_LOG.content, note: l?.note ?? '', staffNote: l?.staffNote ?? '',
+/** What the notes form starts from: the saved round, or everyone normal. */
+export const baseEntry = (l: Pick<DailyLog, 'communicative' | 'content' | 'note' | 'staffNote'> | undefined): LogEntry => ({
+  communicative: l?.communicative ?? NORMAL_LOG.communicative, content: l?.content ?? NORMAL_LOG.content, note: l?.note ?? '', staffNote: l?.staffNote ?? '',
 });
 export const sameLog = (a: LogEntry, b: LogEntry) => LOG_ROWS.every((r) => a[r.k] === b[r.k]) && a.note.trim() === b.note.trim() && a.staffNote.trim() === b.staffNote.trim();
 /** The `log.save` input for an entry. */
-export const logInput = (memberId: string, date: string, e: LogEntry) => ({ memberId, date, mood: e.mood, communicative: e.communicative, content: e.content, note: e.note, staffNote: e.staffNote });
+export const logInput = (memberId: string, date: string, e: LogEntry) => ({ memberId, date, communicative: e.communicative, content: e.content, note: e.note, staffNote: e.staffNote });
 
 // KC round 10 ("when we already fill, it blends"): a chosen chip is a SOLID sage (or rust) pill with white text, like the ink chips — the old pale tint with a thin
 // border disappeared against the warm cream card

@@ -7,7 +7,7 @@ import { attOf, flexMonth, guestsOn } from './attendance';
 import { isWaiting } from './approvals';
 import { dayStatus, isOpen, memberName, planOn, staffByRole, staffCall, type DayStatus } from './core';
 import { guestOn } from './guests';
-import { FACES, dayArc, moodStats } from './mood';
+import { FACES, dailyMood, dayArc, moodStats } from './mood';
 import { daySummary, readingsOnDay } from './healthStation';
 import { lunchPhotosOn, menuOn, scheduleDayOf, sessionsOn, teaPhotosOn } from './kitchen';
 import { teamSummary } from './tasks';
@@ -30,7 +30,8 @@ export interface ReportMember {
   /** the log waits for management's approval */
   pendingLog: boolean;
   lunch?: LunchAmount;
-  mood?: DailyLog['mood'];
+  /** round 14: the day's mood (the rounded average of the member's faces that day); none when nobody marked a face */
+  dailyFace?: Face;
   /** one entry per session of the day: joined, sat out, or not marked (undefined) */
   sessions: { slot: Slot; mark?: SessionMark }[];
   /** the arrival reading (any approval state) */
@@ -95,14 +96,13 @@ export interface ReportHealth {
   /** the Watch and Alert readings, Alert first, then by time */
   flagged: ReportReading[];
 }
-export type Mood = NonNullable<DailyLog['mood']>;
-export const MOODS: Mood[] = ['cheerful', 'calm', 'quiet', 'agitated'];
 export interface ReportNote { m: Member; text: string; /** a staff-only note (never shown to the family) */ staff: boolean; log: DailyLog; pending: boolean }
 export interface ReportMood {
-  counts: Record<Mood, number>;
+  /** round 14: how many members had each daily mood (the old mood word is not counted) */
+  counts: Record<Face, number>;
   /** round 12: faces at the door (counts per face), the average arrival-to-departure lift and visits nobody marked at arrival */
   faces: { arrival: Record<Face, number>; departure: Record<Face, number>; lift: number | null; notMarkedDoor: number };
-  /** members who came and have no Mood & notes round yet */
+  /** members who came and whose notes are not in yet (the Morning round) */
   notMarked: number;
   notes: ReportNote[];
   /** logs of the day still waiting for approval */
@@ -188,10 +188,11 @@ export function dailyReport(s: ClubState, date: ISODate, today: ISODate, nowMin:
     const flexVisits = fm.visits.filter((d) => d <= date && planOn(m, d).plan === 'flex').length;
     const arrival = readings.filter((r) => r.memberId === m.id && r.kind === 'arrival').pop();
     const arc = dayArc(s, m.id, date);
+    const daily = dailyMood(s, m.id, date);
     return {
       m, checkIn: a.checkIn!.at, checkOut: a.checkOut?.at, inClub: isToday && !a.checkOut, plan,
       flex: plan === 'flex' ? { n: flexVisits, quota: fm.quota ?? 0 } : undefined, extra: fm.extraDates.includes(date),
-      log, pendingLog: !!log && isWaiting(log), lunch: log?.lunch, mood: log?.mood,
+      log, pendingLog: !!log && isWaiting(log), lunch: log?.lunch, ...(daily ? { dailyFace: daily.face } : {}),
       sessions: sessions.map((x) => ({ slot: x.slot, mark: log?.sessions?.[x.slot] })), arrival,
       ...(arc.arrival !== undefined ? { arrivalFace: arc.arrival } : {}), ...(arc.departure !== undefined ? { departureFace: arc.departure } : {}),
     };
@@ -226,10 +227,10 @@ export function dailyReport(s: ClubState, date: ISODate, today: ISODate, nowMin:
   );
 
   // ----- mood and notes -----
-  const counts = Object.fromEntries(MOODS.map((k) => [k, 0])) as Record<Mood, number>;
+  const counts = Object.fromEntries(FACES.map((f) => [f, 0])) as Record<Face, number>;
   const notes: ReportNote[] = [];
   for (const r of members) {
-    if (r.mood) counts[r.mood]++;
+    if (r.dailyFace !== undefined) counts[r.dailyFace]++;
     if (r.log?.note?.trim()) notes.push({ m: r.m, text: r.log.note.trim(), staff: false, log: r.log, pending: r.pendingLog });
     if (r.log?.staffNote?.trim()) notes.push({ m: r.m, text: r.log.staffNote.trim(), staff: true, log: r.log, pending: r.pendingLog });
   }

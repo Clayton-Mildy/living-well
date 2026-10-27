@@ -4,7 +4,7 @@ import { buildSeed } from '../seed';
 import { activeOn } from './core';
 import { checkOnList } from './checkOn';
 import { invoicePeriod, invoiceViews } from './finance';
-import { periodFor } from './insights';
+import { observedDays, periodFor } from './insights';
 import { heroTrend, isPartialMonth, monthReport, prevPeriod } from './monthReport';
 import { leadConversion, leadMoves } from './enquiries';
 
@@ -12,6 +12,13 @@ const T = '2026-10-21';
 const s = buildSeed().citra;
 
 describe('month report', () => {
+  // round 14 (B4): a programmed Saturday is an open day, so it counts in the days the report observes; an unprogrammed one and the pending-only Sunday do not
+  it('observed days include the seeded programmed Saturday (7 Nov) and not the other weekend days', () => {
+    const days = observedDays(s, { from: '2026-11-01', to: '2026-11-30' }, '2026-12-01');
+    expect(days).toContain('2026-11-07');
+    expect(days).not.toContain('2026-11-08');
+    expect(days).not.toContain('2026-11-14');
+  });
   it('prevPeriod is the same length ending the day before', () => expect(prevPeriod({ from: '2026-10-01', to: '2026-10-21' })).toEqual({ from: '2026-09-10', to: '2026-09-30' }));
   it('an empty period has zeros and nulls, no NaN', () => { const r = monthReport(buildSeed().citra, { from: '2020-01-01', to: '2020-01-31' }, T, 600); expect(r.empty).toBe(true); expect(r.members.visitsPerMember.cur).toBeNull(); expect(r.members.utilisation.cur).toBeNull(); expect(r.care.index.cur).toBeNull(); expect(r.money.billed.cur).toBe(0); expect(JSON.stringify(r)).not.toContain('NaN'); });
   it('September money matches the seed invoices', () => { const r = monthReport(s, periodFor('lastMonth', T), T, 600); const sept = invoiceViews(s, T, false).filter((v) => invoicePeriod(v.inv) === '2026-09'); expect(r.money.billed.cur).toBe(sept.reduce((a, v) => a + v.total, 0)); expect(r.money.extraDays.cur).toBe(sept.flatMap((v) => v.inv.lines).filter((l) => l.kind === 'extraDay').reduce((a, l) => a + l.qty, 0)); });

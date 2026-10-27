@@ -29,6 +29,7 @@ import { checkOn } from './checkOn';
 import { reg } from './reg';
 import { celeb } from './celeb';
 import { occasions } from './occasions';
+import { occ } from './occ';
 import { fam } from './fam';
 import { ftoday } from './ftoday';
 import { fphotos } from './fphotos';
@@ -36,6 +37,8 @@ import { fcal } from './fcal';
 import { fhealth } from './fhealth';
 import { fme } from './fme';
 import { month } from './month';
+import { unpaid } from './unpaid';
+import { care } from './care';
 
 export const id = {
   ...ns('common', common),
@@ -78,6 +81,7 @@ export const id = {
   ...ns('reg', reg),
   ...ns('celeb', celeb),
   ...ns('occasions', occasions),
+  ...ns('occ', occ),
   ...ns('fam', fam),
   ...ns('ftoday', ftoday),
   ...ns('fphotos', fphotos),
@@ -85,4 +89,6 @@ export const id = {
   ...ns('fhealth', fhealth),
   ...ns('fme', fme),
   ...ns('month', month),
+  ...ns('unpaid', unpaid),
+  ...ns('care', care),
 };

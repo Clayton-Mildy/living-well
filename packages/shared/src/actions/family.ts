@@ -282,7 +282,7 @@ export const familyActions: ActionDef[] = [
 
 /** Round 8: what a family may change on a parent's profile (the rest stays with the front desk). */
 export interface FamilyDetailsPatch {
-  address?: string; usualArrival?: HM | ''; nanny?: { name: string; phone?: string } | null;
+  address?: string; usualArrival?: HM | ''; nanny?: { name: string; phone?: string; photoMediaId?: string; note?: string } | null;
   nickname?: string; rtRw?: string; city?: string; postcode?: string; phone?: string; mobile?: string; email?: string;
 }
 const FAMILY_REG_KEYS = ['nickname', 'rtRw', 'city', 'postcode', 'phone', 'mobile', 'email'] as const;

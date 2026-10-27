@@ -3,7 +3,7 @@ import type { Same } from '../ns';
 import type { cal as EN } from '../en/cal';
 export const cal: Same<typeof EN> = {
   // calendar
-  openHours: 'Buka Senin sampai Jumat · {open}–{close}', titleFamily: 'Kalender klub', view: 'Tampilan', vList: 'Daftar', vMonth: 'Kalender', showMore: 'Tampilkan hari lainnya',
+  openHours: 'Buka Senin sampai Jumat, dan akhir pekan bila ada program · {open}–{close}', weekendCol: 'Akhir pekan', titleFamily: 'Kalender klub', view: 'Tampilan', vList: 'Daftar', vMonth: 'Kalender', vYear: 'Tahun', prevYear: 'Tahun sebelumnya', nextYear: 'Tahun berikutnya', showMore: 'Tampilkan hari lainnya',
   key: 'Keterangan', tapDay: 'Ketuk tanggal untuk melihat acaranya.', openWeek: 'Buka minggu ini di jadwal',
   publishShort: 'Publikasikan',
   prevMonth: 'Bulan sebelumnya', nextMonth: 'Bulan berikutnya', thisMonth: 'Bulan ini', holiday: 'Libur', closedShort: 'Tutup', allDay: 'Seharian',
@@ -73,7 +73,7 @@ export const cal: Same<typeof EN> = {
   daySaved: 'Diubah untuk {date}. Guru dan keluarga dikabari.', daySavedQuiet: 'Diubah untuk {date}. Tidak ada yang dikabari.', dayBackDone: 'Kembali ke jadwal mingguan pada {date}.',
   changedNote: 'Diubah · {note}', changedToday: 'Diubah hari ini: {note}', changedTodayPlain: 'Diubah hari ini',
   guestBook: 'Jadwalkan pengisi acara tamu', guestBookSub: 'Orang dari luar yang memandu sesi ini', guestOpen: 'Pengisi acara tamu terjadwal',
-  'err.pastDay': 'Hanya hari ini dan hari berikutnya yang bisa diubah.', 'err.dayClosed': 'Klub tutup pada hari itu.', 'err.dayOuting': 'Hari itu ada jalan-jalan, jadi tidak ada sesi di klub.',
+  'err.pastDay': 'Hanya hari ini dan hari berikutnya yang bisa diubah.', 'err.dayClosed': 'Klub tutup pada hari itu.', 'err.dayRented': '{org} memesan klub pada hari itu ({from}–{to}), jadi tidak ada sesi.', 'err.dayOuting': 'Hari itu ada jalan-jalan, jadi tidak ada sesi di klub.',
   'notif.dayChanged': 'Pada {date}, kegiatan pukul {slot} diganti menjadi {name}.', 'notif.dayNoSession': 'Pada {date} tidak ada kegiatan pukul {slot}.',
   'notif.dayBack': 'Pada {date}, kegiatan pukul {slot} kembali ke jadwal biasa.', 'notif.dayBackAll': 'Pada {date}, semua kegiatan kembali ke jadwal biasa.',
   'feed.dayChanged': 'Kegiatan diubah untuk {date} · {slot}: {name}', 'feed.dayNoSession': 'Tidak ada kegiatan pada {date} · {slot}',
@@ -93,4 +93,9 @@ export const cal: Same<typeof EN> = {
   'feed.extraAdded': 'Sesi tambahan ditambahkan · {date} {time}: {name}', 'feed.extraChanged': 'Sesi tambahan diubah · {date} {time}: {name}', 'feed.extraRemoved': 'Sesi tambahan dihapus · {date} {time}: {name}',
   // round 7: family Today notice for a closure or holiday in the next 7 days
   famClosureLabel: 'Penutupan mendatang', famClosedOn: 'Klub tutup pada {d}', famClosedRange: 'Klub tutup {a} sampai {b}',
+  // round 14 (B1): tim aktivitas menyusun program; setiap perubahan menunggu Ega (manajemen)
+  sendForApproval: 'Kirim ke Ega', sendTitle: 'Kirim jadwal mingguan ke Ega', sentToEga: 'Terkirim ke Ega.', waitingEga: 'Menunggu Ega', returnedNote: 'Dikembalikan: {note}',
+  badgeWaiting: 'Menunggu', badgeReturned: 'Dikembalikan', dayUnchanged: 'Tidak ada yang dikirim: hari ini sama seperti yang diterbitkan.', reviewBtn: 'Tinjau',
+  'notif.programmeAsked': 'Tim aktivitas mengirim jadwal mingguan mulai {date} untuk Anda setujui.', 'notif.dayAsked': 'Tim aktivitas mengirim perubahan program pada {date} untuk Anda setujui.',
+  'notif.dayUpdated': 'Program aktivitas pada {date} berubah.', 'feed.dayUpdated': 'Program diubah untuk {date}',
 };

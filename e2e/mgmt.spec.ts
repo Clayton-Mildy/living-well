@@ -1050,7 +1050,7 @@ test('Indonesian: every management screen is translated, with no raw keys and no
   await noRawKeys(page, RAW_KEY_R7);
   await overlayFits(page);
   // the new screens of round 7, as management sees them
-  for (const [path, heading] of [['/renewals', 'Perpanjangan'], ['/tasks', 'Tugas'], ['/guests', 'Pengisi acara'], ['/insights', 'Insight']]) {
+  for (const [path, heading] of [['/renewals', 'Bulan depan'], ['/tasks', 'Tugas'], ['/guests', 'Pengisi acara'], ['/insights', 'Insight']]) {
     await page.goto(path);
     await expect(page.getByRole('heading', { name: heading, level: 1 })).toBeVisible();
     await noRawKeys(page, RAW_KEY_R7);

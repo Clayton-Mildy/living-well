@@ -3,7 +3,9 @@ import type { Same } from '../ns';
 import type { renewals as EN } from '../en/renewals';
 
 export const renewals: Same<typeof EN> = {
-  title: 'Perpanjangan',
+  title: 'Bulan depan',
+  tabChanges: 'Perubahan', tabUnpaid: 'Belum bayar', record: 'Catat perubahan', from: 'mulai {d}', undo: 'Batalkan', undone: 'Perubahan {name} dibatalkan.', noChanges: 'Belum ada perubahan untuk {month}', pickMember: 'Pilih anggota', pickNone: 'Tidak ada anggota lagi untuk {month}', recordedBy: 'oleh {who}',
+  undoTitle: 'Batalkan perubahan ini?', undoAsk: 'Perubahan {name} untuk {month} dibatalkan dan keluarga langsung diberi tahu.', keep: 'Biarkan',
   prevMonth: 'Bulan sebelumnya', nextMonth: 'Bulan berikutnya', logEyebrow: '{month} · catatan',
   progress: '{n} dari {total} sudah diputuskan', progressAll: 'Semua {total} sudah diputuskan',
   datesOpen: 'Cuti {month}: kabari paling lambat {date} · Tagihan {invoice}', datesClosed: 'Cuti bisa mulai {month} · Tagihan {invoice}',
@@ -24,13 +26,14 @@ export const renewals: Same<typeof EN> = {
   'st.waiting': 'Menunggu persetujuan manajemen. Dicatat oleh {who}.', 'st.rejected': 'Manajemen tidak menyetujui ini: {reason}', 'st.applied': 'Berlaku mulai {date}.', 'st.appliedStop': 'Sudah berlaku: hari terakhir {date}.',
   'st.askedPlan': 'Keluarga sudah meminta ganti paket lewat aplikasi.', 'st.askedLeave': 'Cuti untuk {month} sudah ada di daftar.', 'st.review': 'Buka di Persetujuan',
   'calls.none': 'Belum ada panggilan', callLine: '{who} · {when}',
-  'err.pastMonth': 'Bulan itu sudah dimulai.', 'err.started': 'Bulan itu sudah dimulai, jadi perubahan tidak bisa lagi berlaku mulai tanggal 1.', 'err.applied': 'Perubahan ini sudah berlaku. Ubah di tab Paket anggota.',
+  'err.pastMonth': 'Bulan itu sudah dimulai.', 'err.started': 'Bulan ini sudah berjalan', 'err.applied': 'Perubahan ini sudah berlaku. Ubah di tab Paket anggota.',
   'err.notDue': 'Anggota ini tidak perlu dihubungi untuk bulan itu.', 'err.lastDayLate': 'Hari terakhir harus berada dalam bulan yang diputuskan.',
   'notif.plan': 'Paket {name} berubah ke {plan} mulai {date}.', 'notif.leave': 'Cuti {name} pada {month} sudah dicatat: {fee} di tagihan bulan itu sebagai pengganti paket.',
   'notif.leave2': 'Cuti {name} dari {from} sampai {to} sudah dicatat: {fee} per bulan di tagihan sebagai pengganti paket.',
-  'notif.act.followUp': '{n} anggota perlu dihubungi untuk {month}', 'notif.act.approve': 'Perubahan perpanjangan menunggu persetujuan: {n}',
+  'notif.undone': 'Perubahan untuk {name} pada {month} dibatalkan.',
+  'notif.act.approve': 'Perubahan perpanjangan menunggu persetujuan: {n}',
   'feed.continue': '{name}: lanjut di {month}', 'feed.upgrade': '{name}: naik ke Gold mulai {month}', 'feed.downgrade': '{name}: turun ke Flex mulai {month}',
   'feed.leave': '{name}: cuti di {month}', 'feed.leave2': '{name}: cuti dari {from} sampai {to}', 'feed.stop': '{name}: berhenti, hari terakhir {date}',
   'feed.noAnswer': '{name}: telepon perpanjangan, tidak diangkat',
-  'feed.approved': '{name}: perubahan perpanjangan {month} disetujui', 'feed.rejected': '{name}: perubahan perpanjangan {month} tidak disetujui',
+  'feed.undone': '{name}: perubahan {month} dibatalkan', 'feed.approved': '{name}: perubahan perpanjangan {month} disetujui', 'feed.rejected': '{name}: perubahan perpanjangan {month} tidak disetujui',
 };

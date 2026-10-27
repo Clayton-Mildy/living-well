@@ -1,11 +1,12 @@
-// Calendar (design ScrCal): list and month views with a day detail, and management's events editor and weekly schedule builder (activity teachers only view it).
+// Calendar (design ScrCal): list and month views with a day detail, management's events editor and the weekly schedule builder (round 14: the activity team
+// builds too; what it changes waits for Ega, and its days show "Waiting" or "Returned").
 // The list shows the next 3 days; clicking a date in the month opens that week in the weekly schedule. Families see the same calendar read-only
 // (venue bookings never show the client). Weekday names, month names and labels follow the language.
 // Round 6 (phone, native look): an iOS segmented List | Calendar switch, days as grouped lists, "Add event" as the Pin pill, actions as list rows.
 import { Fragment, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDays, addMonths, dow, isWeekSlot, ym, type CalendarEvent, type ISODate, type Slot, type Weekday, type WeekSlot } from '@cp/shared';
-import { dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, type CalKind } from '@cp/shared/rules/calendar';
+import { addDays, addMonths, asWeekday, isWeekSlot, ym, type CalendarEvent, type ISODate, type Slot, type WeekSlot } from '@cp/shared';
+import { dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, yearView, type CalKind } from '@cp/shared/rules/calendar';
 import { Button, Icon, PageHead, Pin } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
@@ -19,9 +20,10 @@ import { DaySheet, EditChoice, ExtraSheet } from './DaySheet';
 import { EventEditor } from './EventEditor';
 import { ScheduleBuilder, type CellRequest } from './ScheduleBuilder';
 import { PhoneMonth } from './PhoneMonth';
+import { YearView } from './YearView';
 import { KIND, MON_FIRST, dayState, itemText, weekdayName } from './lib';
 
-type View = 'list' | 'month';
+type View = 'list' | 'month' | 'year';
 const LIST_DAYS = 3;
 
 export function Calendar() {
@@ -35,9 +37,12 @@ export function Calendar() {
   const family = role === 'family';
   const audience = family ? 'family' : 'staff';
   const isMgmt = role === 'mgmt';
-  const canBuild = role === 'mgmt'; // KC round 6: activity teachers see the schedule but cannot change it
+  const canBuild = role === 'mgmt' || role === 'activity'; // round 14: the activity team builds the programme; its changes wait for Ega
+  /** round 14: a day the activity team changed shows that it waits for Ega, or that Ega sent it back (builders only) */
+  const flagOf = (date: string) => { const r = canBuild ? s.scheduleDays?.[date] : undefined; return r?.pending ? t('cal.badgeWaiting') : r?.returned ? t('cal.badgeReturned') : undefined; };
   const [view, setView] = useState<View>('list');
   const [month, setMonth] = useState(() => ym(today));
+  const [year, setYear] = useState(() => Number(today.slice(0, 4)));
   const [sel, setSel] = useState<string | null>(null);
   const [week, setWeek] = useState<ISODate>(() => mondayOf(today));
   const [focus, setFocus] = useState<ISODate | null>(null);
@@ -53,6 +58,7 @@ export function Calendar() {
 
   const days = useMemo(() => nextDays(s, today, LIST_DAYS, audience), [s, today, audience]);
   const cells = useMemo(() => monthGrid(month), [month]);
+  const months = useMemo(() => (view === 'year' ? yearView(s, year, audience) : []), [view, s, year, audience]);
   const info = (d: string) => dayInfo(s, d, audience);
   const selInfo = sel && ym(sel) === month ? info(sel) : null;
   const onEdit = (id: string) => { const e = s.calendarEvents[id]; if (e) setEditor({ event: e }); };
@@ -64,7 +70,7 @@ export function Calendar() {
     const wk = mondayOf(date);
     const target = weekEditable(wk, today) ? wk : nextMonday(today);
     if (target !== wk) say(t('cal.editFromWeek', { date: fdl(target) }), { icon: 'info' });
-    const w = dow(date) as Weekday;
+    const w = asWeekday(date);
     setWeek(target);
     setFocus(addDays(target, w - 1));
     setReq({ w, slot, n: Date.now() });
@@ -90,8 +96,8 @@ export function Calendar() {
   };
 
   const tabs = isPhone
-    ? <div role="tablist" aria-label={t('cal.view')} style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>
-    : <div role="tablist" aria-label={t('cal.view')} style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', alignSelf: 'flex-start' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}</div>;
+    ? <div role="tablist" aria-label={t('cal.view')} style={{ display: 'grid', gridTemplateColumns: 'repeat(3, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}{tab('year', 'calendar_view_month', t('cal.vYear'))}</div>
+    : <div role="tablist" aria-label={t('cal.view')} style={{ display: 'flex', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)', alignSelf: 'flex-start' }}>{tab('list', 'view_agenda', t('cal.vList'))}{tab('month', 'calendar_month', t('cal.vMonth'))}{tab('year', 'calendar_view_month', t('cal.vYear'))}</div>;
   /** round 6, phone: tappable list rows in one flat group (a tinted icon tile, the label, a chevron); the hairline starts at the label */
   const linkRows = (rows: { icon: string; label: string; run: () => void }[]) => (
     <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
@@ -126,13 +132,17 @@ export function Calendar() {
 
         {view === 'list' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 12 }}>
-            {days.map((d) => <DayBlock key={d.date} s={s} info={d} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} />)}
+            {days.map((d) => <DayBlock key={d.date} s={s} info={d} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} flag={flagOf(d.date)} />)}
             {isPhone ? linkRows([{ icon: 'calendar_month', label: t('cal.seeMonth'), run: () => setView('month') }]) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <Button variant="secondary" size={48} icon="calendar_month" onClick={() => setView('month')}>{t('cal.seeMonth')}</Button>
               </div>
             )}
           </div>
+        ) : view === 'year' ? (
+          <YearView year={year} months={months} today={today} hours={hours} onYear={setYear}
+            onPickMonth={(m) => { setMonth(m); setSel(null); setView('month'); }}
+            onPickDay={(d) => { setMonth(ym(d)); setSel(d); setView('month'); if (canBuild) openWeek(d, false); }} />
         ) : (
           <>
             {isPhone ? (
@@ -181,7 +191,7 @@ export function Calendar() {
               </div>
             </div>
             )}
-            {selInfo ? <DayBlock s={s} info={selInfo} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} /> : null}
+            {selInfo ? <DayBlock s={s} info={selInfo} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} flag={flagOf(selInfo.date)} /> : null}
             {(isMgmt && selInfo && selInfo.date >= today) || (isPhone && canBuild && selInfo) ? (isPhone ? linkRows([
               ...(isMgmt && selInfo && selInfo.date >= today ? [{ icon: 'add', label: t('cal.addEventOn', { date: fdl(selInfo.date) }), run: () => setEditor({ date: selInfo.date }) }] : []),
               ...(canBuild && selInfo ? [{ icon: 'event_note', label: t('cal.openWeek'), run: () => openWeek(selInfo.date) }] : []),

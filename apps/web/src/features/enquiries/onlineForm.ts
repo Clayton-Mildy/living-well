@@ -19,7 +19,7 @@ const EMPTY_HEALTH: OnlineRegistration['health'] = { conditions: [], diabetic: f
 export const fromOnline = (o: OnlineRegistration): FDraft => ({
   title: o.title, name: o.name, dob: o.dob, address: o.address, cName: o.contact.name, rel: o.contact.relation, phone: o.contact.phone ? phoneIn(o.contact.phone) : '', plan: o.plan ?? '',
   conditions: o.health.conditions, diabetic: o.health.diabetic, mobility: o.health.mobility ?? 'none', diet: o.health.diet, food: o.health.food, foodOther: o.health.foodOther, ...splitDrugs(o.health.drugs), reg: regDraftOf(o.registration),
-  nanny: !!o.nanny, nannyName: o.nanny?.name ?? '', nannyNik: o.nanny?.nik ?? '', ktp: o.ktp ?? {},
+  nanny: !!o.nanny, nannyName: o.nanny?.name ?? '', nannyNik: o.nanny?.nik ?? '', nannyPhoto: o.nanny?.photoMediaId ?? '', nannyNote: o.nanny?.note ?? '', ktp: o.ktp ?? {},
 });
 /** The answers as the lead keeps them (sent for good, or saved half-filled: the server only checks the shape of a saved draft). */
 export const toOnline = (d: FDraft, lang: Lang): OnlineRegistration => ({

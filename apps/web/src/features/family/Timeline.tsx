@@ -16,7 +16,7 @@ import { mediaUrl } from '../../lib/media';
 import type { TFn } from '../../lib/i18n';
 import { Cap, F, TextLink } from './kit';
 import { HealthPill } from './parts';
-import { lunchWords, stepIcon } from './storyBits';
+import { stepIcon } from './storyBits';
 import { useFamilyCtx } from './useFamily';
 
 interface Props {
@@ -132,10 +132,14 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
       case 'outing':
         return { time: it.time, title: eventTitle(it.event, fmt.lang), detail: `${it.event.from || ''}–${it.event.to || ''}` };
       case 'lunch': {
-        const groups = new Map<string, Member[]>();
-        for (const m of members) { const k = dishNamesOf(s, servedLunch(s, m, date)).join(', '); groups.set(k, [...(groups.get(k) || []), m]); }
+        // round 14: once a parent has come, the dishes, the lunch pictures and how much was eaten are on the Lunch card (LunchCard.tsx) and the row keeps the time, the
+        // allergy line and the feedback line; before that (the day ahead, a day nobody came) the card is not shown, so the row still tells the menu
         const lines: ReactNode[] = [];
-        for (const [dishes, ms] of groups) if (dishes) lines.push(line(groups.size > 1 ? `${ms.map(displayName).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`, 'dish-' + dishes));
+        if (!stories.some((st) => st.visited && st.lunch)) {
+          const groups = new Map<string, Member[]>();
+          for (const m of members) { const k = dishNamesOf(s, servedLunch(s, m, date)).join(', '); groups.set(k, [...(groups.get(k) || []), m]); }
+          for (const [dishes, ms] of groups) if (dishes) lines.push(line(groups.size > 1 ? `${ms.map(displayName).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`, 'dish-' + dishes));
+        }
         if (isToday || ahead) { // the allergy line also for tomorrow's lunch
           for (const m of members) {
             const ls = lunchSafety(s, m.id, date);
@@ -144,16 +148,9 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
             else if (ls.kind === 'alternative') lines.push(line(ahead ? t('ftoday.planLunchAlt', { n: displayName(m), a: foods(m), d: ls.dish, x: ls.alternative, day }) : t('family.tLunchAlt', { n: displayName(m), a: foods(m), d: ls.dish, x: ls.alternative }), 'alt-' + m.id, { color: F.ochre, testId: 'lunch-alt' }));
           }
         }
-        // how much was eaten, from the team's log (a kind line, one per member who has one)
-        const ate = stories.flatMap((st, i) => (st.lunch?.amount ? [{ m: members[i], a: st.lunch.amount as string }] : []));
         return {
-          time: it.time, title: t('family.tLunch'), kind: 'lunch', photos: stories[0]?.lunch?.photos ?? [], alt: (p) => t('kitchen.photo.alt', { time: p.time }), // the kitchen's approved photos
-          detail: (
-            <>
-              {lines}
-              {ate.map((r) => <span key={r.m.id} data-testid="lunch-amount" data-amount={r.a} style={{ display: 'block', marginTop: 2, color: F.sage, fontWeight: 500 }}>{members.length > 1 ? `${displayName(r.m)}: ` : ''}{lunchWords(t, r.a)}</span>)}
-            </>
-          ),
+          time: it.time, title: t('family.tLunch'), kind: 'lunch',
+          detail: <>{lines}</>,
           extra: lunchFeedback ? (
             <button type="button" onClick={lunchFeedback.onClick} data-testid="lunch-feedback-line" className="cp-press"
               style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, minHeight: 28, padding: 0, border: 'none', background: 'transparent', color: F.bronze, fontSize: 13, fontWeight: 600, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>

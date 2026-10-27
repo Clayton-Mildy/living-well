@@ -27,16 +27,16 @@ export const status = {
 };
 export const nav = {
   arrivals: 'Arrivals', enquiries: 'Enquiries', members: 'Members', health: 'Health checks', readings: 'Readings', today: 'Today', camera: 'Camera', log: 'Daily log',
-  menu: 'Menu', feedback: 'Feedback', stock: 'Stock', billing: 'Billing', payments: 'Payments', budget: 'Budget', receipts: 'Receipts', overview: 'Overview', broadcast: 'Broadcast',
+  menu: 'Menu', lunch: 'Lunch round', feedback: 'Feedback', stock: 'Stock', billing: 'Billing', payments: 'Payments', budget: 'Budget', receipts: 'Receipts', overview: 'Overview', broadcast: 'Broadcast',
   calendar: 'Calendar and schedule', calShort: 'Calendar', me: 'Me', people: 'People', photos: 'Photos', healthF: 'Health', venue: 'Venue', more: 'More', directory: 'Directory', contacts: 'Contacts',
   surveys: 'Surveys', plans: 'Plans and pricing', reviews: 'Approvals', requests: 'Requests',
   g_front: 'Front desk', g_care: 'Care', g_kitchen: 'Kitchen', g_finance: 'Finance', g_club: 'Club', allModules: 'All modules',
   // short labels for the phone bottom bar
   s_overview: 'Home', s_arrivals: 'Arrivals', s_enquiries: 'Leads', s_members: 'Members', s_health: 'Checks', s_readings: 'Trends', s_today: 'Today', s_camera: 'Camera',
-  s_log: 'Log', s_menu: 'Menu', s_feedback: 'Feedback', s_stock: 'Stock', s_billing: 'Bills', s_payments: 'Pay', s_budget: 'Budget', s_receipts: 'Receipts', s_directory: 'Contacts',
+  s_log: 'Log', s_menu: 'Menu', s_lunch: 'Lunch', s_feedback: 'Feedback', s_stock: 'Stock', s_billing: 'Bills', s_payments: 'Pay', s_budget: 'Budget', s_receipts: 'Receipts', s_directory: 'Contacts',
   s_calendar: 'Calendar', s_calShort: 'Calendar', s_me: 'Me', s_photos: 'Photos', s_healthF: 'Health', s_more: 'More', s_requests: 'Requests', s_reviews: 'Approvals', s_contacts: 'Contacts',
   // KC round 7
-  renewals: 'Renewals', tasks: 'Tasks', guests: 'Guest hosts', insights: 'Insights', memories: 'Memories', report: 'Daily report', s_report: 'Report', monthReport: 'Month report', s_monthReport: 'Month', s_renewals: 'Renewals', s_tasks: 'Tasks', s_guests: 'Guests', s_insights: 'Insights', s_memories: 'Memories',
+  renewals: 'Next month', tasks: 'Tasks', guests: 'Guest hosts', insights: 'Insights', memories: 'Memories', report: 'Daily report', s_report: 'Report', monthReport: 'Month report', s_monthReport: 'Month', s_renewals: 'Next month', s_tasks: 'Tasks', s_guests: 'Guests', s_insights: 'Insights', s_memories: 'Memories',
 };
 export const roles = {
   lobby: 'Lobby', nurse: 'Nurse', activity: 'Activity teacher', kitchen: 'Kitchen & F&B', finance: 'Finance', mgmt: 'Management', family: 'Family',
@@ -75,7 +75,7 @@ export const notif = {
   'act.leaveRequest': '{name} asks for {days} days off from {from}', 'act.leaveRequestOne': '{name} asks for a day off on {from}',
   'act.contract': 'Contract ends {date}: {name}', 'act.complaint': 'Open meal feedback: {name} · {dish}', 'act.overdue': 'Overdue invoice: {name} · {number}', 'act.budgetApprove': 'Budget request to approve: {item}',
   'act.receiptApprove': 'Receipt to approve: {supplier}', 'act.vendorApprove': 'Vendor invoice to approve: {supplier}', 'act.invoiceRun': 'Invoice run for {month} is due', 'act.stockApprove': 'Stock request to approve: {item} ({qty})',
-  'act.planRequest': '{name}: the family asks to switch to {plan} from {date}', 'act.guestTrial': 'Trial guest arriving {time}: {name}', 'act.guestTrialDay': 'Trial day today: {name}', 'act.photosReview': 'Photos waiting for your approval: {n}', 'act.approvalsLogs': 'Daily logs and notes waiting for approval: {n}', 'act.approvalsReadings': 'Health readings waiting for approval: {n}', 'act.approvalsPayments': 'Payments waiting for your confirmation: {n}', 'act.approvalsMenu': 'Menu changes waiting for approval: {n}', 'act.guestVisit': 'Visit at {time}: {name}', 'act.readyCheckout': 'Departure check done: {name} is ready to go home',
+  'act.planRequest': '{name}: the family asks to switch to {plan} from {date}', 'act.guestTrial': 'Trial guest arriving {time}: {name}', 'act.guestTrialDay': 'Trial day today: {name}', 'act.photosReview': 'Photos waiting for your approval: {n}', 'act.approvalsLogs': 'Daily logs and notes waiting for approval: {n}', 'act.approvalsReadings': 'Health readings waiting for approval: {n}', 'act.approvalsPayments': 'Payments waiting for your confirmation: {n}', 'act.approvalsMenu': 'Menu changes waiting for approval: {n}', 'act.approvalsProgramme': 'Programme changes waiting for approval: {n}', 'act.guestVisit': 'Visit at {time}: {name}', 'act.readyCheckout': 'Departure check done: {name} is ready to go home',
   'act.queue': '{n} waiting at the health station', 'act.logs': '{n} daily logs still to write', 'act.allergen': 'Allergy clash at lunch: {name} · {dish}',
   'act.invoiceDue': 'Invoice to pay: {name} · {number}', 'act.invoiceOverdue': 'Overdue invoice: {name} · {number}', 'act.survey': 'Tell us how we are doing: {title}', 'act.docRequested': 'Document requested for {name}',
 };
@@ -114,5 +114,5 @@ export const demo = {
   reset: 'Reset demo data', resetDone: 'Demo data reset to 09:58.', resetConfirm: 'Reset every change made in this demo? Everyone using the app sees the reset.', designSystem: 'Design system', clock: 'Club clock',
 };
 export const inv = {
-  'line.flex': 'Flex plan · {month}', 'line.gold': 'Gold plan · {month}', 'line.extra': 'Extra days · {month} ({n})', 'line.credit': 'Account credit', 'line.venue': 'Venue booking', 'line.leave': 'Leave (cuti) · {month}', 'line.registration': 'Registration fee',
+  'line.flex': 'Flex plan · {month}', 'line.gold': 'Gold plan · {month}', 'line.extra': 'Extra days · {month} ({n})', 'line.credit': 'Account credit', 'line.venue': 'Venue booking', 'line.leave': 'Leave (cuti) · {month}', 'line.registration': 'Registration fee', 'line.dementia': 'Dementia care',
 };

@@ -20,6 +20,8 @@ export const insights = {
   sumPerDay: '{n}/day',
   sumBusiest: 'busiest {day}',
   sumPeak: 'peak {hour}',
+  // today's numbers (KC round 14)
+  today: 'Today', todayActive: 'Active · {f} Flex · {g} Gold', todayCame: 'Came', todayIn: 'In the club', todayGone: 'Gone home', todayNotIn: 'Not in',
   daily: 'Daily visitors',
   dailyAria: 'Members who visited, per open day',
   dailyMax: 'most {n} on {d}',

@@ -3,9 +3,10 @@
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listName, memberName, dayStatus, nextOpenDay, scheduleDayOf, staffCall, toMin, type Activity, type Photo } from '@cp/shared';
-import { SESSION_MIN, activityName, cogSummary, dayPlan, inClubMembers, logOf, nowNext, roomName, sessionPhotos, type PlanItem, type SessionItem } from '@cp/shared/rules/activity';
+import { SESSION_MIN, activityName, cogSummary, dayPlan, inClubMembers, logOf, morningFaced, notesSaved, nowNext, roomName, sessionPhotos, type PlanItem, type SessionItem } from '@cp/shared/rules/activity';
 import { SLOTS, dayInfo, eventTitle, slotChanged } from '@cp/shared/rules/calendar';
 import { guestOn } from '@cp/shared/rules/guests';
+import { occasionsAhead } from '@cp/shared/rules/occasions';
 import { Card, EmptyState, Group, Icon, PageHead, PhotoThumbs, RailDot, SectionLabel, type RailState } from '../../components/ui';
 import { PhotoViewer } from './PhotoViewer';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -13,6 +14,7 @@ import { useT, useFmt } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
+import { OccasionRows } from '../lobby/OccasionRows';
 import { Av, StatusDot, catalogPhoto, cogLine, heroCardStyle, heroEyebrow, plural, rowLine } from './lib';
 import { activityPhoto, mediaUrl, photoFill } from '../../lib/media';
 
@@ -32,6 +34,7 @@ export function ActivityToday() {
   const outing = status.open ? status.outing : undefined;
   const shut = status.open ? null : status;
   const people = useMemo(() => inClubMembers(s, today), [s, today]);
+  const birthdays = useMemo(() => occasionsAhead(s, today).filter((o) => o.kind === 'birthday'), [s, today]); // round 14: the next 14 days, with Prepare
   const nn = useMemo(() => nowNext(s, today, nowMin), [s, today, nowMin]);
   const [viewer, setViewer] = useState<{ photos: Photo[]; startId: string } | null>(null);
   // KC round 6: a session's picture is its newest real activity picture from today, else the activity's catalog picture (else the icon)
@@ -159,7 +162,7 @@ export function ActivityToday() {
 
   // round 6, phone: a member row in the grouped list: avatar, name, logged / not logged, a chevron; the care line stays hidden on phones as before
   const memberRowPhone = (m: (typeof people)[number], i: number) => {
-    const logged = logOf(s, m.id, today)?.mood !== undefined; // round 7: logged once the Mood & notes round is in
+    const logged = morningFaced(s, m.id, today) || notesSaved(logOf(s, m.id, today)); // round 14 (Ruling 5): logged once there is a morning face or the notes are in
     return (
       <button key={m.id} type="button" onClick={() => navigate(`/log?member=${m.id}`)} className="cp-tap-self" aria-label={`${memberName(m)}: ${t(logged ? 'activity.logged' : 'activity.notLogged')}`}
         style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '8px 10px 8px 16px', border: 'none', minHeight: 58, backgroundColor: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', ...rowLine(i === 0, 68) }}>
@@ -187,6 +190,7 @@ export function ActivityToday() {
             {people.length ? people.map(memberRowPhone) : <div style={{ padding: '16px', fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('activity.nobodyYet')}</div>}
           </Group>
         ) : null}
+        {birthdays.length ? <Group title={t('occ.title')} pad="6px 16px" gap={0}><OccasionRows items={birthdays} testId="birthdays-ahead" /></Group> : null}
         {status.open && !outing ? (
           <Group title={t('activity.todayPlan')} pad={plan.length ? '16px 16px 0' : 0} gap={0}>
             {plan.length ? timeline : <div style={{ padding: '14px 16px', fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('activity.nothingToday')}</div>}
@@ -208,7 +212,7 @@ export function ActivityToday() {
           <section className="cp-grey" style={{ ...heroCardStyle, flex: '1 1 440px' }}>
             {listHead(t('activity.inClub'), String(people.length))}
             {people.length ? people.map((m) => {
-              const logged = logOf(s, m.id, today)?.mood !== undefined; // round 7: logged once the Mood & notes round is in
+              const logged = morningFaced(s, m.id, today) || notesSaved(logOf(s, m.id, today)); // round 14 (Ruling 5): logged once there is a morning face or the notes are in
               return (
                 <button key={m.id} type="button" onClick={() => navigate(`/log?member=${m.id}`)} className="h-row cp-bleed" aria-label={`${memberName(m)}: ${t(logged ? 'activity.logged' : 'activity.notLogged')}`}
                   style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: isPhone ? '12px 0' : '16px 0', border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: isPhone ? 56 : 64, background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
@@ -222,10 +226,20 @@ export function ActivityToday() {
               );
             }) : emptyRow(t('activity.nobodyYet'))}
           </section>
-          {status.open && !outing ? (
+          {birthdays.length || (status.open && !outing) ? (
             <aside style={{ flex: '0 1 300px', width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
-              <span style={heroEyebrow}>{t('activity.todayPlan')}</span>
-              {plan.length ? timeline : <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('activity.nothingToday')}</span>}
+              {birthdays.length ? (
+                <>
+                  <span style={heroEyebrow}>{t('occ.title')}</span>
+                  <OccasionRows items={birthdays} testId="birthdays-ahead" />
+                </>
+              ) : null}
+              {status.open && !outing ? (
+                <>
+                  <span style={heroEyebrow}>{t('activity.todayPlan')}</span>
+                  {plan.length ? timeline : <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('activity.nothingToday')}</span>}
+                </>
+              ) : null}
             </aside>
           ) : null}
         </div>

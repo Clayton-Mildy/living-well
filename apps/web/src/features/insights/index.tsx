@@ -19,6 +19,7 @@ import { Mood } from './Mood';
 import { Overall } from './Overall';
 import { PerPerson } from './PerPerson';
 import { PersonDetail } from './PersonDetail';
+import { TodayBlock } from './TodayBlock';
 
 type Tab = 'overall' | 'plan' | 'person' | 'members' | 'mood';
 const TABS: Tab[] = ['overall', 'plan', 'person', 'members', 'mood'];
@@ -85,6 +86,7 @@ export function Insights() {
         {isPhone ? (members ? mSelect : periodSelect) : null}
         {members ? mCustomRow : customRow}
         <div style={{ fontSize: 13, color: '#6B6259', marginTop: isPhone ? -6 : -10 }}>{members ? t('insights.mRangeText', { from: fmt.fds(mPeriod.from), to: fmt.fds(mPeriod.to) }) : range}</div>
+        {tab === 'overall' ? <TodayBlock date={period.to} /> : null}
         {members && mTrend ? (
           <Membership trend={mTrend} />
         ) : tab === 'mood' && mood ? (

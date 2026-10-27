@@ -19,6 +19,12 @@ const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
 /** The public form routes run as the system user (no sign-in: the link is the key). */
 const system = (u: User) => u.id === 'system';
 const S = (d: Draft<ClubState>) => d as unknown as ClubState;
+/** A half-filled form's carer picture and note, as far as they look right (the form's own save only checks the shape). */
+const nannyExtras = (nn: Record<string, unknown>) => {
+  const photo = txt(nn.photoMediaId, 80);
+  const note = txt(nn.note, 200);
+  return { ...(/^md_[A-Za-z0-9_-]{8,}$/.test(photo) ? { photoMediaId: photo } : {}), ...(note ? { note } : {}) };
+};
 const NEXT_KINDS = ['callBack', 'sendPrices', 'visit', 'trial', 'followUp', 'starts', 'custom'] as const;
 
 // ---------- parsing ----------
@@ -316,7 +322,7 @@ export const enquiriesActions = [
       return {
         enquiryId: id60(o.enquiryId, 'enquiryId'), plan, start: isoDate(o.start, 'start'), formMediaId: mediaId, formFileName: str(o.formFileName, 120) || 'registration-form',
         ...(dob ? { dob } : {}), ...(address ? { address } : {}), ...(o.health !== undefined ? { health: parseHealthBasics(o.health) } : {}), ...(registration ? { registration } : {}),
-        ...(o.nanny !== undefined ? { nanny: parseCarer(o.nanny) as { name: string; nik: string } | null } : {}),
+        ...(o.nanny !== undefined ? { nanny: parseCarer(o.nanny) as OnlineRegistration['nanny'] } : {}),
         ...(o.ktp !== undefined ? { ktp: parseKtp(o.ktp) } : {}),
       };
     },
@@ -439,7 +445,7 @@ export const enquiriesActions = [
           ...(typeof dr.dob === 'string' ? { dob: /^\d{4}-\d{2}-\d{2}$/.test(dr.dob) ? dr.dob : '' } : {}), ...(dr.address !== undefined ? { address: txt(dr.address, 200) } : {}),
           ...(dr.contact !== undefined ? { contact: { name: txt(c.name, 80), relation: ALL_RELATIONS.includes(c.relation as never) ? (c.relation as (typeof ALL_RELATIONS)[number]) : 'daughter', phone: rawPhone.replace(/\D/g, '').length >= 8 ? e164(rawPhone) : rawPhone } } : {}),
           ...(dr.plan === 'flex' || dr.plan === 'gold' ? { plan: dr.plan as Plan } : {}),
-          ...(dr.nanny !== undefined ? { nanny: nn ? { name: txt(nn.name, 80), nik: txt(nn.nik, 24).replace(/\s/g, '') } : null } : {}),
+          ...(dr.nanny !== undefined ? { nanny: nn ? { name: txt(nn.name, 80), nik: txt(nn.nik, 24).replace(/\s/g, ''), ...nannyExtras(nn) } : null } : {}),
           ...(dr.ktp !== undefined && dr.ktp !== null ? { ktp: parseKtp(dr.ktp) } : {}), ...(h ? { health: h } : {}), ...(registration ? { registration } : {}),
           ...(dr.lang === 'id' || dr.lang === 'en' ? { lang: dr.lang } : {}),
         },
@@ -490,7 +496,7 @@ export const enquiriesActions = [
         draft: {
           title: titleOf(dr.title, 'enq.err.titleRequired'), name: str(dr.name, 80, { required: true, field: 'name' }), dob: dr.dob ? isoDate(dr.dob, 'dob') : '', address: str(dr.address, 200),
           contact: { name: str(c.name, 80, { required: true, field: 'contact.name' }), relation: oneOf(c.relation, ALL_RELATIONS, 'contact.relation'), phone: phone(c.phone, 'contact.phone') },
-          ...(plan ? { plan } : {}), ...(dr.nanny !== undefined ? { nanny: parseCarer(dr.nanny) as { name: string; nik: string } | null } : {}), ...(dr.ktp !== undefined ? { ktp: parseKtp(dr.ktp) } : {}), health: h, ...(registration ? { registration } : {}), lang: oneOf(dr.lang ?? 'en', ['en', 'id'] as const, 'lang'),
+          ...(plan ? { plan } : {}), ...(dr.nanny !== undefined ? { nanny: parseCarer(dr.nanny) as OnlineRegistration['nanny'] } : {}), ...(dr.ktp !== undefined ? { ktp: parseKtp(dr.ktp) } : {}), health: h, ...(registration ? { registration } : {}), lang: oneOf(dr.lang ?? 'en', ['en', 'id'] as const, 'lang'),
         },
       };
     },

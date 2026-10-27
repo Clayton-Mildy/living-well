@@ -2,7 +2,7 @@
 // Management's recurring tasks for each role, and what was ticked off: on the last open days, in the last weeks and months, and a few things today before
 // the demo starts (09:58). Left open on purpose: the lobby picture, the weekly bank reconciliation
 // (its Monday has passed, so it shows as overdue). Proof photos have no picture in the seed: the screen shows the tone placeholder.
-import type { ClubState, HM, ISODate, StaffRole, TaskEvery, TaskTemplate, Weekday } from '../../types';
+import type { ClubState, HM, ISODate, StaffRole, TaskEvery, TaskTemplate, WorkWeekday } from '../../types';
 import { addDays, rng, toHM, toMin, weekStart, ym, addMonths } from '../../util';
 import { isOpen } from '../../rules/core';
 import { doneId, dueDateOf, periodOf } from '../../rules/tasks';
@@ -13,7 +13,7 @@ interface Def {
   title: string;
   role: StaffRole;
   every: TaskEvery;
-  weekday?: Weekday;
+  weekday?: WorkWeekday;
   dayOfMonth?: number;
   dueBy?: HM;
   proof?: 'photo';

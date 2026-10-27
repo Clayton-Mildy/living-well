@@ -80,7 +80,7 @@ describe('invoice run', () => {
   it('without that visit nobody has an extra day: Lina is exactly at her 10', () => {
     const plan = runPlan(world().s, '2026-11', T);
     expect(plan.issue.flatMap((r) => r.lines.map((l) => l.kind))).not.toContain('extraDay');
-    expect(plan.total).toBe(2_700_000 + 3_950_000 + 3_950_000 + 2_700_000 + 3_950_000);
+    expect(plan.total).toBe(2_700_000 + 3_950_000 + 3_950_000 + 2_700_000 + 3_950_000 + 750_000); // + Opa Tjahjadi’s dementia care (round 14)
   });
   it('Flex pays for visits beyond 10 (Bambang’s 11th); Gold never has extra days', () => {
     // a month later, once October is over: Bambang has 8 visits and comes 3 more times; Hendra (Gold) comes every day he likes

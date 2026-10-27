@@ -10,6 +10,7 @@ import { onLeaveIn } from '../rules/leave';
 import { demoMediaId, demoMediaPath, MEMBER_PORTRAITS, portraitId } from './demoMedia';
 import { FACE_FREE } from './r7/drafts';
 import { sessionsOn } from '../rules/kitchen';
+import { dutyById, dutyState } from '../rules/tasks';
 
 const T = DEMO_TODAY;
 const t0 = performance.now();
@@ -194,6 +195,12 @@ describe('six months of history', () => {
     expect(JSON.stringify(projectForFamily(s, 'f1')).length).toBeLessThan(700_000);
     expect(buildMs).toBeLessThan(4000);
   });
+  it('stays under the cap at a month end too (the round-14 mood window keeps the newest days that fit)', () => {
+    const late = buildSeed('2026-12-30', DEMO_START_MIN, { roster: true }).citra;
+    expect(JSON.stringify(late).length).toBeLessThan(7_500_000);
+    const morning = new Set(Object.values(late.moodMarks).filter((m) => m.moment === 'morning').map((m) => m.date));
+    expect(morning.has('2026-12-29') || morning.has('2026-12-28')).toBe(true); // the newest days keep their faces
+  }, 20000);
 });
 
 describe('mood history (round 12)', () => {
@@ -216,13 +223,24 @@ describe('mood history (round 12)', () => {
     expect(h.readingId).toBe(r.id);
     expect(h.face).toBe(s.moodMarks[moodId(r.date, 'm10', 'arrival')].face);
   });
+  it('round 14: the past days of this month have every mood face, so each role\'s Mood duty is done; older days keep the round-12 marks only', () => {
+    const days = [...new Set(live(s.attendance).filter((a) => a.checkIn && a.date >= '2026-10-01' && a.date < T).map((a) => a.date))].sort();
+    expect(days.length).toBeGreaterThan(10);
+    for (const date of days) {
+      for (const id of ['mood.lobby', 'mood.nurse', 'mood.activity', 'mood.kitchen']) expect(dutyState(s, dutyById(id)!, date, T, DEMO_START_MIN).status, `${id} ${date}`).toBe('done');
+    }
+    // before the month: no morning or lunch faces (the state's size cap), so the activity and kitchen Mood duties read as missed there
+    const old = live(s.attendance).find((a) => a.checkIn && a.date < '2026-09-28')!;
+    expect(s.moodMarks[moodId(old.date, old.memberId, 'morning')]).toBeUndefined();
+    expect(dutyState(s, dutyById('mood.activity')!, old.date, T, DEMO_START_MIN)).toMatchObject({ status: 'open', late: 0, done: 0 }); // never late, just not done
+  });
   it('marks are stamps by the staff who did the action, with ids that are the mood ids', () => {
     const some = Object.values(s.moodMarks).filter((_, i) => i % 7 === 0);
     expect(some.length).toBeGreaterThan(1000);
     for (const m of some) {
       expect(m.id).toBe(moodId(m.date, m.memberId, m.moment, m.slot));
       expect(m.createdAt).toBe(`${m.date}T${m.time}`);
-      expect(m.by).toBe({ arrival: 'staff:s1', departure: 'staff:s1', health: 'staff:s8', activity: 'staff:s5' }[m.moment]);
+      expect(m.by).toBe({ arrival: 'staff:s1', departure: 'staff:s1', health: 'staff:s8', morning: 'staff:s5', lunch: 'staff:s2', activity: 'staff:s5' }[m.moment]);
     }
   });
 });

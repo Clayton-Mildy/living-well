@@ -590,9 +590,9 @@ test('Photos: everyone’s days newest first, with memory cards and filters; a t
   const filter = page.getByTestId('photo-filter');
   await expect(filter.getByRole('button', { name: 'All', exact: true })).toHaveAttribute('aria-pressed', 'true');
   const all = await page.locator('[data-photo-id]').count();
-  await expect(filter.getByRole('button', { name: 'Group', exact: true })).toHaveCount(0); // KC round 9: the seed's group photos are placeholders, which families never see
+  await expect(filter.getByRole('button', { name: 'Group', exact: true })).toHaveCount(0); // round 14: no Group chip (group pictures are Activities); the chips are All, Meals, Activities, Portraits
   await filter.getByRole('button', { name: 'Activities', exact: true }).click();
-  await expect(page.locator('[data-photo-id]:not([data-kind="activity"])')).toHaveCount(0);
+  await expect(page.locator('[data-photo-id]:not([data-kind="activity"]):not([data-kind="group"])')).toHaveCount(0);
   expect(await page.locator('[data-photo-id]').count()).toBeLessThan(all);
   await filter.getByRole('button', { name: 'All', exact: true }).click();
   await assertNoHorizontalScroll(page);
@@ -742,7 +742,7 @@ test('Lunch: feedback goes to the kitchen and comes back as a reply; the allergy
   await signIn(page, 'fm10_0', '/today');
   const tl = page.getByTestId('timeline');
   // Bapak Bambang is allergic to seafood and today's lunch has fish soup: no reassurance until the kitchen serves an alternative
-  await expect(tl).toContainText('Sop ikan kakap');
+  await expect(page.getByTestId('lunch-card-dishes')).toContainText('Sop ikan kakap'); // round 14: the dishes are on the Lunch card; the timeline row keeps the allergy line
   await expect(tl).not.toContainText('today’s menu is clear');
   await expect(tl).not.toContainText('allergy on file');
   const row = page.getByTestId('lunch-feedback-row');
@@ -841,13 +841,12 @@ test('The timeline follows the clock for a member in the club, and every approve
     await expect(page.getByTestId('lunch-photos')).toHaveCount(0);
     expect((await api(request, 's9', 'menu.postLunchPhoto', { date: TODAY, mediaId: 'md_demo_food-rawon' })).ok()).toBe(true);
     await expect(page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '1');
-    await expect(page.getByTestId('lunch-photos')).toHaveAttribute('aria-label', /^View image · Lunch/); // KC round 9: the picture itself sits on the row
+    await expect(page.getByTestId('lunch-photos').locator('[data-photo-id]').first()).toHaveAttribute('aria-label', /^Lunch/); // round 14: the pictures are on the Lunch card, once
     expect((await api(request, 's9', 'menu.postLunchPhoto', { date: TODAY, notify: false, mediaId: 'md_demo_food-gado' })).ok()).toBe(true);
     await expect(page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '2'); // live: all the approved photos of the day
-    await expect(page.getByTestId('lunch-photos')).toHaveAttribute('aria-label', /^View 2 images · Lunch/);
-    await page.getByTestId('lunch-photos').click(); // opens the row's pictures underneath
-    await expect(page.getByTestId('lunch-photos-open').locator('[data-photo-id]')).toHaveCount(2);
-    await page.getByTestId('lunch-photos-open').locator('[data-photo-id]').first().click();
+    await expect(page.getByTestId('lunch-photos').locator('[data-photo-id]')).toHaveCount(2);
+    await expect(tl.getByTestId('lunch-photos')).toHaveCount(0); // not on the timeline row too
+    await page.getByTestId('lunch-photos').locator('[data-photo-id]').first().click();
     await expect(page.getByRole('dialog')).toBeVisible();
     await page.keyboard.press('Escape');
   }

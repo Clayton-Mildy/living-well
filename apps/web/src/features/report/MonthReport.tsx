@@ -3,7 +3,7 @@
 // The period is the Insights one (This month, Last month, Last 3 / 6 months, or a custom From and To). "Send to owner" opens a WhatsApp-style summary.
 import { useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { rp } from '@cp/shared';
+import { MOOD_MOMENTS, rp } from '@cp/shared';
 import { PERIOD_KEYS, editPeriod, periodFor, type InsightPeriod, type PeriodKey } from '@cp/shared/rules/insights';
 import { END_REASONS, LOST_REASONS, heroTrend, isPartialMonth, monthReport, type Delta } from '@cp/shared/rules/monthReport';
 import { Button, DateField, EmptyState, Group, Icon, PageHead, Pin, Select } from '../../components/ui';
@@ -88,7 +88,7 @@ export function MonthReport() {
     <Group key="money" title={t('month.money')} label={t('month.money')} pad={0} gap={0}>
       <Stat first label={t('month.billed')} value={rp(m.billed.cur)} d={m.billed} df={rp} sub={basis} onClick={open('/billing')} />
       <Stat label={t('month.collected')} value={rp(m.collected.cur)} d={m.collected} df={rp} soFar={isPartialMonth(period) ? t(thisMonth ? 'month.heroSoFar' : 'month.heroSoFarAny') : undefined} onClick={open('/payments')} />
-      <Stat label={t('month.outstanding')} value={rp(m.outstanding.cur)} d={m.outstanding} df={rp} onClick={open('/billing')} />
+      <Stat label={t('month.outstanding')} value={rp(m.outstanding.cur)} d={m.outstanding} df={rp} onClick={open('/renewals?tab=unpaid')} />
       <Stat label={t('month.notYetDue')} value={rp(m.notYetDue.cur)} d={m.notYetDue} df={rp} onClick={open('/billing')} />
       <Stat label={t('month.extraDays')} value={m.extraDays.cur ? `${m.extraDays.cur} · ${rp(m.extraDays.amount.cur)}` : '0'} d={m.extraDays} sub={basis} onClick={open('/billing')} />
       <Stat label={t('month.venueIncome')} value={rp(m.venueIncome.cur)} d={m.venueIncome} df={rp} onClick={open('/venue')} />
@@ -108,7 +108,7 @@ export function MonthReport() {
       <Stat label={t('month.utilisation')} value={pct(mb.utilisation.cur)} d={mb.utilisation} df={pts} onClick={open('/insights')} />
     </Group>
   );
-  const moments = (['arrival', 'health', 'activity', 'departure'] as const).filter((k) => c.byMoment[k] !== null).map((k) => `${t('mood.moment.' + k)} ${one(c.byMoment[k]!)}`).join(' · ');
+  const moments = MOOD_MOMENTS.filter((k) => c.byMoment[k] !== null).map((k) => `${t('mood.moment.' + k)} ${one(c.byMoment[k]!)}`).join(' · ');
   const care = (
     <Group key="care" title={t('month.care')} label={t('month.care')} pad={0} gap={0}>
       <Stat first label={t('month.index')} value={val(c.index, one)} d={c.index} df={one} sub={moments || undefined} onClick={open('/insights?tab=mood')} />

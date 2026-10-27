@@ -1,11 +1,12 @@
-// Renewals (KC round 7): follow up one member. The family contact with Call / WhatsApp, the plan and this month's days, the outcome Caca records
-// (continue, upgrade or downgrade, leave, stop, no answer, call back) with its extra fields, a note, and below it the call history. A change by anyone but
-// management is sent for approval; the sheet says where a record stands (waiting, not approved, applied). A pushed full screen on phones, a bottom sheet elsewhere.
+// Renewals (KC round 7): record a change for one member. The family contact with Call / WhatsApp, the plan and this month's days, the change Caca records
+// (upgrade or downgrade, leave, stop) with its extra fields, a note, and below it the call history. Round 14: a change applies at once (no approval) and can be
+// undone from the list until the 1st; without a `memberId` the sheet first asks which member. A record that still waits for management from before says so.
+// A pushed full screen on phones, a bottom sheet elsewhere.
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { actorName, flexMonth, fmtPhone, memberName, displayName, monthStart, waUrl, ym, type FollowUpOutcome, type YM } from '@cp/shared';
+import { actorName, flexMonth, fmtPhone, listName, memberName, displayName, monthStart, waUrl, ym, type FollowUpOutcome, type YM } from '@cp/shared';
 import { END_REASONS } from '@cp/shared/rules/members';
-import { defaultLastDay, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthChoices, leaveMonthsCheck, outcomeChoices, renewalRows } from '@cp/shared/rules/renewals';
+import { canRecord, defaultLastDay, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthChoices, leaveMonthsCheck, outcomeChoices, renewalMembers, renewalRows } from '@cp/shared/rules/renewals';
 import { Avatar, Button, Chip, DateField, GROUP_HEAD, Icon, Note, PhoneScreen, Select, Sheet, TextField } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
@@ -21,7 +22,29 @@ const HAIR = '0.5px solid var(--hairline, #E2E2E6)';
 const short = { day: 'numeric', month: 'short' } as const;
 const pill: CSSProperties = { height: 36, padding: '0 14px 0 12px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, textDecoration: 'none', fontFamily: 'Inter', whiteSpace: 'nowrap' };
 
-export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; month: YM; onClose: () => void }) {
+/** Without a member, first pick one of the members a change can still be recorded for (a search box shows once the list is long). */
+function PickStep({ month, onPick, onClose }: { month: YM; onPick: (id: string) => void; onClose: () => void }) {
+  const s = useClub();
+  const t = useT();
+  const fmt = useFmt();
+  const { today } = useNow();
+  const { isPhone } = useDevice();
+  const options = useMemo(() => renewalMembers(s, month).filter((m) => canRecord(s, m, month, today)).map((m) => ({ value: m.id, label: listName(m) })).sort((a, b) => a.label.localeCompare(b.label)), [s, month, today]);
+  const title = t('renewals.record');
+  const body = options.length
+    ? <Select label={t('renewals.pickMember')} value="" onChange={onPick} options={options} placeholder={t('renewals.pickMember')} />
+    : <span style={{ fontSize: 15, color: '#6B6259' }}>{t('renewals.pickNone', { month: fmt.fmonth(month) })}</span>;
+  if (isPhone) return <PhoneScreen open onClose={onClose} label={title} back={t('renewals.title')}><h1 style={{ margin: 0, fontSize: 24, lineHeight: '28px', fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C' }}>{title}</h1>{body}</PhoneScreen>;
+  return <Sheet open onClose={onClose} title={title}>{body}</Sheet>;
+}
+
+export function FollowUpSheet({ memberId, month, onClose }: { memberId?: string; month: YM; onClose: () => void }) {
+  const [picked, setPicked] = useState('');
+  const id = memberId ?? picked;
+  return id ? <FollowUpForm key={id} memberId={id} month={month} onClose={onClose} /> : <PickStep month={month} onPick={setPicked} onClose={onClose} />;
+}
+
+function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: YM; onClose: () => void }) {
   const s = useClub();
   const t = useT();
   const fmt = useFmt();
@@ -39,7 +62,7 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
   const mgmt = role === 'mgmt';
 
   // the form: what the family decided, and what that outcome needs
-  const [outcome, setOutcome] = useState<FollowUpOutcome | null>(() => (f && f.status !== 'rejected' && f.outcome && f.outcome !== 'noAnswer' ? f.outcome : null));
+  const [outcome, setOutcome] = useState<FollowUpOutcome | null>(() => (f && f.status !== 'rejected' && isChange(f.outcome) ? f.outcome! : null));
   const firstLeave = useMemo(() => leaveMonthChoices(month).find((x) => m && leaveMonthsCheck(s, m, [x], today).ok), [s, m, month, today]);
   const [leaveSel, setLeaveSel] = useState<YM[]>(() => f?.leaveMonths ?? (firstLeave ? [firstLeave] : []));
   const [lastDay, setLastDay] = useState(() => f?.lastDay ?? defaultLastDay(month));
@@ -53,7 +76,6 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
   const leaveCheck = outcome === 'leave' ? leaveMonthsCheck(s, m, leaveSel, today) : null;
   const stopOk = outcome !== 'stop' || (/^\d{4}-\d{2}-\d{2}$/.test(lastDay) && lastDay >= today && lastDay <= lastDayOfMonth(month));
   const canSave = editable && !!outcome && (!leaveCheck || leaveCheck.ok) && stopOk && !busy;
-  const needsOk = !!outcome && isChange(outcome) && !mgmt;
 
   const save = async () => {
     if (!outcome || !canSave) return;
@@ -184,8 +206,8 @@ export function FollowUpSheet({ memberId, month, onClose }: { memberId: string; 
   );
   const saveBtn = editable ? (
     isPhone
-      ? <button type="button" className="cp-press" aria-disabled={!canSave || undefined} onClick={canSave ? save : undefined} style={{ width: '100%', height: 50, borderRadius: 999, border: 'none', background: canSave ? '#24201C' : 'var(--press, #EEEEF0)', color: canSave ? '#FFFFFF' : '#8A8078', fontSize: 16, fontWeight: 500, cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>{needsOk ? t('renewals.saveApproval') : t('renewals.save')}</button>
-      : <Button size={48} icon={needsOk ? 'send' : 'check'} disabled={!canSave} onClick={save}>{needsOk ? t('renewals.saveApproval') : t('renewals.save')}</Button>
+      ? <button type="button" className="cp-press" aria-disabled={!canSave || undefined} onClick={canSave ? save : undefined} style={{ width: '100%', height: 50, borderRadius: 999, border: 'none', background: canSave ? '#24201C' : 'var(--press, #EEEEF0)', color: canSave ? '#FFFFFF' : '#8A8078', fontSize: 16, fontWeight: 500, cursor: canSave ? 'pointer' : 'not-allowed', fontFamily: 'Inter' }}>{t('renewals.save')}</button>
+      : <Button size={48} icon="check" disabled={!canSave} onClick={save}>{t('renewals.save')}</Button>
   ) : undefined;
 
   if (isPhone) return <PhoneScreen open onClose={onClose} label={title} back={t('renewals.title')} footer={saveBtn}>{body}</PhoneScreen>;

@@ -1,6 +1,6 @@
 // Core selectors: day status, members, plans, family links, staff lookups.
-import type { ClubState, ISODate, Member, PlanEntry, FamilyLink, FamilyContact, Staff, StaffRole, CalendarEvent } from '../types';
-import { addDays, ageOn, isWeekday, live, sortBy, ym } from '../util';
+import type { ClubState, HM, ISODate, Member, PlanEntry, FamilyLink, FamilyContact, Staff, StaffRole, CalendarEvent, VenueBooking } from '../types';
+import { addDays, ageOn, asWeekday, isWeekday, live, sortBy, ym } from '../util';
 
 // ---------- days ----------
 export type DayStatus =
@@ -11,9 +11,25 @@ export function eventsOn(s: ClubState, date: ISODate): CalendarEvent[] {
   return live(s.calendarEvents).filter((e) => !e.cancelledAt && e.date <= date && (e.endDate || e.date) >= date);
 }
 
+/**
+ * Round 14 (B2, Ruling 9): is a Saturday or Sunday programmed? It is when a session runs on it: the published weekly plan in force has a cell for that
+ * day, or the date's live one-day change has a session or an extra (a slot set to "no session" takes the plan's cell away). A waiting (`pending`) or
+ * returned programme never counts: only what is live. A weekend rented out in club hours is never programmed (`clubHoursRental`: the venue rule
+ * holds both ways, so the booking stays editable). Reads the collections directly (rules/kitchen.ts imports this file).
+ */
+export function programmedWeekend(s: ClubState, date: ISODate): boolean {
+  if (clubHoursRental(s, date)) return false;
+  const pub = live(s.scheduleVersions ?? {}).filter((v) => v.status === 'published' && v.effectiveFrom <= date);
+  const plan = sortBy(pub, (v) => v.effectiveFrom + (v.publishedAt || '')).pop()?.days[asWeekday(date)];
+  const row = s.scheduleDays?.[date];
+  const over = row && !row.deletedAt ? row : undefined;
+  if (over?.extra?.length) return true;
+  return (['10:30', '13:30'] as const).some((slot) => (over && slot in over.slots ? over.slots[slot] : plan?.[slot]));
+}
+
 export function dayStatus(s: ClubState, date: ISODate): DayStatus {
   const events = eventsOn(s, date);
-  if (!isWeekday(date)) return { open: false, reason: 'weekend', events };
+  if (!isWeekday(date) && !programmedWeekend(s, date)) return { open: false, reason: 'weekend', events }; // a programmed weekend opens; its closures and holidays below still apply
   const closed = events.find((e) => e.kind === 'closed');
   if (closed) return { open: false, reason: 'closed', event: closed, events };
   const holiday = events.find((e) => e.kind === 'holiday');
@@ -21,6 +37,13 @@ export function dayStatus(s: ClubState, date: ISODate): DayStatus {
   return { open: true, outing: events.find((e) => e.kind === 'outing'), events };
 }
 export const isOpen = (s: ClubState, date: ISODate) => dayStatus(s, date).open;
+/** Two time ranges overlap (touching ends do not). */
+export const timesOverlap = (a1: HM, a2: HM, b1: HM, b2: HM) => a1 < b2 && b1 < a2;
+/** A time range runs into the club's opening hours (a private event may not, on a day the club is open: rules/mgmt.ts checkVenueSlot). */
+export const overlapsClubHours = (s: ClubState, from: HM, to: HM) => timesOverlap(from, to, s.club.settings.open, s.club.settings.close);
+/** Round 14 (B2): a confirmed venue booking on a date that runs into club hours. Such a weekend stays a rental day: it cannot be programmed. */
+export const clubHoursRental = (s: ClubState, date: ISODate): VenueBooking | undefined =>
+  live(s.venueBookings ?? {}).find((v) => v.date === date && v.status === 'confirmed' && overlapsClubHours(s, v.from, v.to));
 export function nextOpenDay(s: ClubState, from: ISODate, inclusive = false): ISODate {
   let d = inclusive ? from : addDays(from, 1);
   for (let i = 0; i < 60 && !isOpen(s, d); i++) d = addDays(d, 1);

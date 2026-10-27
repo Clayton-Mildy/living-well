@@ -1,13 +1,13 @@
 // Calendar and weekly schedule builder selectors: day info for the list / month views, schedule drafts and versions.
 // Pure functions over ClubState. Family audiences never see venue clients; trials and visits are staff-only.
-import type { ClubState, ExtraSession, HM, ISODate, Lang, ScheduleCell, ScheduleVersion, Slot, Staff, Weekday, WeekSlot, YM } from '../types';
-import { dayStatus, eventsOn, listName, staffByRole } from './core';
+import type { ClubState, ExtraSession, HM, ISODate, Lang, ScheduleCell, ScheduleDay, ScheduleVersion, Slot, Staff, Weekday, WeekSlot, WorkWeekday, YM } from '../types';
+import { clubHoursRental, dayStatus, eventsOn, listName, programmedWeekend, staffByRole } from './core';
 import { guestsOn } from './attendance';
 import { WEEK_SLOTS, extrasOn, isWeekSlot, scheduleDayOf, scheduleVersionFor, sessionsOn } from './kitchen';
 import { guestOn } from './guests';
 import { celebrationsOn } from './celebrations';
 import { occasionsInRange } from './occasions';
-import { addDays, dow, isWeekday, live, monthDays, sortBy, toHM, toMin } from '../util';
+import { ALL_DAYS, addDays, asWeekday, dow, isWeekday, live, monthDays, sortBy, toHM, toMin } from '../util';
 
 export type CalAudience = 'staff' | 'family';
 export type CalKind = 'closed' | 'holiday' | 'outing' | 'venue' | 'celebration' | 'birthday' | 'guest' | 'activity';
@@ -49,12 +49,13 @@ export type DayState = 'open' | 'closed' | 'holiday' | 'weekend';
 export interface DayInfo {
   date: ISODate;
   weekday: number; // 0 = Sunday
+  /** a Saturday or Sunday with no programme (round 14: a programmed one is an open day, not `weekend`) */
   weekend: boolean;
   open: boolean;
   state: DayState;
   items: DayItem[];
   hasOuting: boolean;
-  /** KC round 7, staff only: slots of an open day that have no session (`changed`: removed for this day only), so the day view can offer to add one */
+  /** KC round 7, staff only: slots of an open day that have no session (`changed`: removed for this day only), so the day view can offer to add one; round 14: both slots of an unprogrammed weekend */
   noSession: { slot: WeekSlot; changed: boolean }[];
 }
 const ORDER: Record<CalKind, number> = { closed: 0, holiday: 1, outing: 2, venue: 3, celebration: 4, birthday: 5, guest: 6, activity: 7 };
@@ -62,7 +63,7 @@ const ORDER: Record<CalKind, number> = { closed: 0, holiday: 1, outing: 2, venue
 /** Everything that happens on a date, for the list, month and day views. */
 export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'staff'): DayInfo {
   const events = eventsOn(s, date);
-  const weekend = !isWeekday(date);
+  const weekend = !isWeekday(date) && !programmedWeekend(s, date); // round 14: a programmed weekend is an open day like any other
   const closed = events.find((e) => e.kind === 'closed');
   const holiday = events.find((e) => e.kind === 'holiday');
   const state: DayState = closed ? 'closed' : holiday ? 'holiday' : weekend ? 'weekend' : 'open';
@@ -114,9 +115,42 @@ export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'st
     const note = audience === 'staff' ? scheduleDayOf(s, date)?.note : undefined;
     const first = note ? items.filter((i) => i.changed).sort((a, b) => (a.time ?? '').localeCompare(b.time ?? ''))[0] : undefined;
     if (first && note) first.note = note;
-  }
+  } else if (audience === 'staff' && state === 'weekend' && !events.length && !clubHoursRental(s, date)) for (const slot of WEEK_SLOTS) noSession.push({ slot, changed: false }); // round 14: a weekend with nothing on (no event, no rental in club hours) can be programmed from its empty slots
   items.sort((a, b) => ((a.time ?? '00:00') + ORDER[a.kind]).localeCompare((b.time ?? '00:00') + ORDER[b.kind]));
   return { date, weekday: dow(date), weekend, open, state, items, hasOuting: events.some((e) => e.kind === 'outing'), noSession };
+}
+
+// ---------- round 14 (B3): the Year view ----------
+export type YearDot = 'event' | 'celebration' | 'birthday';
+export type YearDayState = 'closed' | 'open' | 'weekendOpen';
+export interface YearDay { date: ISODate; state: YearDayState; dots: YearDot[] }
+const YEAR_DOT: Partial<Record<CalKind, YearDot>> = { closed: 'event', holiday: 'event', outing: 'event', venue: 'event', celebration: 'celebration', birthday: 'birthday' };
+/**
+ * Twelve mini-months of a year: each day is closed, open, or a weekend that is open because it was programmed, with up to three dots (an event or booking, a
+ * celebration, a birthday). A family audience reads the same items it sees elsewhere; `who` (the parents the view is about) keeps only their celebrations and
+ * birthdays, and with no parent chosen a family sees no birthdays.
+ */
+export function yearView(s: ClubState, year: number, audience: CalAudience = 'staff', who?: string[]): { month: YM; days: YearDay[] }[] {
+  const mine = (id?: string) => !!id && !!who?.includes(id);
+  const birthdays = new Set<ISODate>();
+  if (audience === 'family') for (const o of occasionsInRange(s, `${year}-01-01`, `${year}-12-31`)) if (o.kind === 'birthday' && mine(o.member.id)) birthdays.add(o.date);
+  return Array.from({ length: 12 }, (_, i) => {
+    const month: YM = `${year}-${String(i + 1).padStart(2, '0')}`;
+    const days = monthDays(month).map((date): YearDay => {
+      const info = dayInfo(s, date, audience);
+      const kinds = new Set<YearDot>();
+      for (const it of info.items) {
+        const dot = YEAR_DOT[it.kind];
+        if (!dot) continue;
+        if (audience === 'family' && it.kind === 'celebration' && !mine(it.memberId)) continue;
+        kinds.add(dot);
+      }
+      if (birthdays.has(date)) kinds.add('birthday');
+      const dots = (['event', 'celebration', 'birthday'] as YearDot[]).filter((k) => kinds.has(k));
+      return { date, state: !info.open ? 'closed' : isWeekday(date) ? 'open' : 'weekendOpen', dots };
+    });
+    return { month, days };
+  });
 }
 
 /** The next `count` calendar days from `from`, skipping weekends that have nothing on. */
@@ -159,26 +193,35 @@ export function eventTitle(e: { title: string; titleId?: string }, lang: Lang, s
 // ---------- schedule drafts and versions ----------
 /** The weekly plan's two session times (extra sessions of a date are not part of it). */
 export const SLOTS: WeekSlot[] = WEEK_SLOTS;
-export const WEEKDAYS: Weekday[] = [1, 2, 3, 4, 5];
-export type Days = ScheduleVersion['days'];
+/** Monday to Friday, the days the club always opens. The editors show Saturday and Sunday too (`ALL_DAYS`, round 14). */
+export const WEEKDAYS: WorkWeekday[] = [1, 2, 3, 4, 5];
+export { ALL_DAYS };
+/** Every day of a week, Monday to Sunday, with both slots (what the builder edits; Saturday and Sunday are empty unless programmed). */
+export type Days = Record<Weekday, Record<WeekSlot, ScheduleCell | null>>;
 export const DRAFT_ID = 'sched-draft';
 
-export const emptyDays = (): Days => ({ 1: { '10:30': null, '13:30': null }, 2: { '10:30': null, '13:30': null }, 3: { '10:30': null, '13:30': null }, 4: { '10:30': null, '13:30': null }, 5: { '10:30': null, '13:30': null } });
-/** Fill missing weekdays/slots with null so every cell exists. */
+export const emptyDays = (): Days => Object.fromEntries(ALL_DAYS.map((w) => [w, { '10:30': null, '13:30': null }])) as Days;
+/** Fill missing days/slots with null so every cell exists. */
 export function normalizeDays(raw: Partial<Record<number, Partial<Record<WeekSlot, ScheduleCell | null>>>> | undefined): Days {
   const out = emptyDays();
-  for (const w of WEEKDAYS) for (const sl of SLOTS) {
+  for (const w of ALL_DAYS) for (const sl of SLOTS) {
     const c = raw?.[w]?.[sl];
     out[w][sl] = c ? { activityId: c.activityId, staffId: c.staffId, roomId: c.roomId } : null;
   }
   return out;
 }
 export const cloneDays = (d: Days): Days => normalizeDays(d);
+/** A week as it is stored: Saturday and Sunday only when they have a session (round 14: a plan without weekend cells keeps its Mon–Fri shape). */
+export function storedDays(d: Days): ScheduleVersion['days'] {
+  const { 6: sat, 7: sun, ...work } = normalizeDays(d);
+  const has = (x: Record<WeekSlot, ScheduleCell | null>) => SLOTS.some((sl) => x[sl]);
+  return { ...work, ...(has(sat) ? { 6: sat } : {}), ...(has(sun) ? { 7: sun } : {}) };
+}
 export const sameCell = (a: ScheduleCell | null | undefined, b: ScheduleCell | null | undefined) =>
   (!a && !b) || (!!a && !!b && a.activityId === b.activityId && a.staffId === b.staffId && a.roomId === b.roomId);
 /** KC round 7: the weekly plan's cell for a date and slot (a one-day change is ignored). */
 export function weeklyCell(s: ClubState, date: ISODate, slot: Slot): ScheduleCell | null {
-  return isWeekSlot(slot) ? scheduleVersionFor(s, date)?.days[dow(date) as Weekday]?.[slot] ?? null : null; // an extra session is not in the weekly plan
+  return isWeekSlot(slot) ? scheduleVersionFor(s, date)?.days[asWeekday(date)]?.[slot] ?? null : null; // an extra session is not in the weekly plan
 }
 /** KC round 7: does a one-day change make this slot differ from the weekly plan? */
 export function slotChanged(s: ClubState, date: ISODate, slot: Slot): boolean {
@@ -190,15 +233,40 @@ export function dayChangeable(s: ClubState, date: ISODate, today: ISODate): bool
   const st = dayStatus(s, date);
   return date >= today && st.open && !st.outing;
 }
-export function changedCells(a: Days, b: Days): { w: Weekday; slot: WeekSlot }[] {
+/**
+ * Round 14 (B2): can a programme be made for this day? A changeable day, or a Saturday or Sunday with nothing programmed yet, no closure,
+ * holiday or outing on it and no venue booking in club hours (it stays a rental day), today or later: programming it (or approving its programme) is what opens it.
+ */
+export function dayProgrammable(s: ClubState, date: ISODate, today: ISODate): boolean {
+  if (dayChangeable(s, date, today)) return true;
+  const st = dayStatus(s, date);
+  return date >= today && !st.open && st.reason === 'weekend' && !st.events.some((e) => e.kind === 'closed' || e.kind === 'holiday' || e.kind === 'outing') && !clubHoursRental(s, date);
+}
+export function changedCells(a: ScheduleVersion['days'], b: ScheduleVersion['days']): { w: Weekday; slot: WeekSlot }[] {
   const out: { w: Weekday; slot: WeekSlot }[] = [];
-  for (const w of WEEKDAYS) for (const slot of SLOTS) if (!sameCell(a[w]?.[slot], b[w]?.[slot])) out.push({ w, slot });
+  for (const w of ALL_DAYS) for (const slot of SLOTS) if (!sameCell(a[w]?.[slot], b[w]?.[slot])) out.push({ w, slot });
   return out;
 }
-export const daysEqual = (a: Days, b: Days) => changedCells(a, b).length === 0;
+export const daysEqual = (a: ScheduleVersion['days'], b: ScheduleVersion['days']) => changedCells(a, b).length === 0;
 
 export const publishedVersions = (s: ClubState): ScheduleVersion[] =>
   sortBy(live(s.scheduleVersions).filter((v) => v.status === 'published'), (v) => v.effectiveFrom + (v.publishedAt || ''));
+// round 14 (B1): what the activity team sent waits for management; none of it is in force (the rules above read published versions and live days only)
+/** Weekly versions the activity team sent, waiting for management (newest first). */
+export const pendingVersions = (s: ClubState): ScheduleVersion[] => sortBy(live(s.scheduleVersions).filter((v) => v.status === 'pending'), (v) => v.createdAt + v.id, -1);
+/** The version management sent back (sending a new one replaces it). */
+export const returnedVersion = (s: ClubState): ScheduleVersion | undefined => sortBy(live(s.scheduleVersions).filter((v) => v.status === 'rejected'), (v) => v.createdAt + v.id).pop();
+/** A day as its waiting edit would make it (the live day when nothing waits), without the waiting marks. */
+export function pendingDayRow(row: ScheduleDay): ScheduleDay {
+  const { pending, returned: _r, note: _n, extra: _x, ...rest } = row;
+  const p = pending ?? { slots: row.slots, extra: row.extra, note: row.note };
+  return { ...rest, slots: p.slots, ...(p.extra?.length ? { extra: p.extra } : {}), ...(p.note ? { note: p.note } : {}) };
+}
+/** The state with a day as its waiting edit would make it: what the activity team edits, and sees in its day sheets. */
+export function withPendingDay(s: ClubState, date: ISODate): ClubState {
+  const row = s.scheduleDays?.[date];
+  return row && !row.deletedAt && row.pending ? { ...s, scheduleDays: { ...s.scheduleDays, [date]: pendingDayRow(row) } } : s;
+}
 /** The newest published version: the one the builder starts from. */
 export const latestPublished = (s: ClubState): ScheduleVersion | undefined => publishedVersions(s).pop();
 export const scheduleDraft = (s: ClubState): ScheduleVersion | undefined => live(s.scheduleVersions).find((v) => v.status === 'draft');
@@ -220,17 +288,17 @@ export function nextMonday(from: ISODate): ISODate {
 /** Staff who may teach: active, role activity. */
 export const activityTeachers = (s: ClubState): Staff[] => staffByRole(s, 'activity');
 
-// ---------- the week view: what runs in a given Mon–Fri week, and the draft for it ----------
-/** The Monday on or before a date: the Mon–Fri schedule week the date belongs to (a Saturday or Sunday belongs to the week just ended). */
+// ---------- the week view: what runs in a given week (Monday to Sunday), and the draft for it ----------
+/** The Monday on or before a date: the schedule week the date belongs to (a Saturday or Sunday belongs to the week that started that Monday). */
 export function mondayOf(d: ISODate): ISODate {
   return addDays(d, -((dow(d) + 6) % 7));
 }
-/** Monday to Friday of the week starting on `monday`. */
-export const weekDates = (monday: ISODate): ISODate[] => WEEKDAYS.map((w) => addDays(monday, w - 1));
-/** The cells that actually run in a week: each weekday takes the version in force on that date (a version can start mid-week). */
+/** Monday to Sunday of the week starting on `monday` (round 14: the weekend has columns too). */
+export const weekDates = (monday: ISODate): ISODate[] => ALL_DAYS.map((w) => addDays(monday, w - 1));
+/** The cells that actually run in a week: each day takes the version in force on that date (a version can start mid-week). */
 export function weekDays(s: ClubState, monday: ISODate): Days {
   const out = emptyDays();
-  for (const w of WEEKDAYS) {
+  for (const w of ALL_DAYS) {
     const v = scheduleVersionFor(s, addDays(monday, w - 1));
     if (!v) continue;
     const day = normalizeDays(v.days as never)[w];
@@ -248,8 +316,8 @@ export function weekVersions(s: ClubState, monday: ISODate): ScheduleVersion[] {
   }
   return out;
 }
-/** KC round 7: a week can be changed until it is over (its Friday has not passed): the current week is editable from today on, and a version published for it starts today. */
-export const weekEditable = (monday: ISODate, today: ISODate): boolean => addDays(monday, 4) >= today;
+/** KC round 7: a week can be changed until it is over (round 14: its Sunday has not passed, the weekend can be programmed): the current week is editable from today on, and a version published for it starts today. */
+export const weekEditable = (monday: ISODate, today: ISODate): boolean => addDays(monday, 6) >= today;
 /** KC round 7: in an editable week, a day before today has already happened and stays as it was. */
 export const dayEditable = (date: ISODate, today: ISODate): boolean => date >= today;
 /** The week a saved draft is for (the Monday on or before its effective date). */
@@ -285,12 +353,12 @@ export function weekView(s: ClubState, monday: ISODate, today: ISODate): WeekVie
   }
   return { monday, dates: weekDates(monday), editable: weekEditable(monday, today), base, days, changes: changedCells(days, base), versions: weekVersions(s, monday), draftHere, otherDraft };
 }
-/** Every weekday cell that appears in some published version: such cells are always valid, even if the teacher or activity changed since. */
+/** Every cell that appears in some published version: such cells are always valid, even if the teacher or activity changed since. */
 export function publishedCellKeys(s: ClubState): Set<string> {
   const keys = new Set<string>();
   for (const v of publishedVersions(s)) {
     const days = normalizeDays(v.days as never);
-    for (const w of WEEKDAYS) for (const slot of SLOTS) { const c = days[w][slot]; if (c) keys.add(`${w}|${slot}|${c.activityId}|${c.staffId}|${c.roomId}`); }
+    for (const w of ALL_DAYS) for (const slot of SLOTS) { const c = days[w][slot]; if (c) keys.add(`${w}|${slot}|${c.activityId}|${c.staffId}|${c.roomId}`); }
   }
   return keys;
 }

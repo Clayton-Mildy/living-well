@@ -554,7 +554,8 @@ describe('monthRecap and recapMonths', () => {
     const r = monthRecap(s, lina, month);
     expect(r.visits).toEqual(visitDays(s, 'm1', T).filter((d) => d.startsWith(month)));
     expect(r.moods.map((m) => m.date)).toEqual(r.visits);
-    expect(r.moods.every((m) => m.mood === null || ['cheerful', 'calm', 'quiet', 'agitated'].includes(m.mood as string))).toBe(true);
+    expect(r.moods.every((m) => m.mood === null || [1, 2, 3, 4, 5].includes(m.mood))).toBe(true); // round 14: the daily face
+    expect(r.moods.some((m) => m.mood !== null)).toBe(true);
     expect(r.joined).toBeGreaterThan(0);
     expect(r.favourites.length).toBeGreaterThan(0);
     expect(r.favourites.length).toBeLessThanOrEqual(3);
@@ -579,11 +580,12 @@ describe('monthRecap and recapMonths', () => {
     const d = Object.values(s.dailyLogs).find((l) => l.memberId === 'm1' && /Bengawan Solo/.test(l.note))!.date;
     const log = Object.values(s.dailyLogs).find((l) => l.memberId === 'm1' && l.date === d)!;
     const before = monthRecap(s, s.members.m1, d.slice(0, 7));
-    log.mood = 'quiet'; log.joined = 'satOut'; log.sessions = undefined; // the whole day's answer applies
+    log.joined = 'satOut'; log.sessions = undefined; // the whole day's answer applies
+    for (const mk of Object.values(s.moodMarks!)) if (mk.memberId === 'm1' && mk.date === d) mk.face = 2; // a low day
     const after = monthRecap(s, s.members.m1, d.slice(0, 7));
     expect(after.quotes.some((q) => /Bengawan Solo/.test(q.text))).toBe(false);
     expect(after.joined).toBeLessThan(before.joined);
-    expect(after.moods.find((m) => m.date === d)?.mood).toBe('quiet');
+    expect(after.moods.find((m) => m.date === d)?.mood).toBe(2);
   });
   it('a month with no visits is empty, not an error', () => {
     const s = seed();

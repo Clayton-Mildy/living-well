@@ -2,18 +2,29 @@
 // (EditChoice: just this day, or the weekly plan from next week); "Just this day" opens DaySheet for that slot: the activity, its teacher and room, "No session",
 // a note, whether to tell teachers and families, the weekly plan for reference and "Back to the weekly plan". The weekly schedule itself is untouched.
 // ExtraSheet (KC round 7): add, edit or remove an extra session on that date at any time (time, activity, teacher, room, note, tell teachers and families).
+// Round 14 (B1): the activity team edits the day as its waiting edit left it (withPendingDay); saving sends it to Ega ("Sent to Ega"), so there is no "tell" switch.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { extrasOn, isWeekSlot, live, scheduleDayOf, sessionsOn, staffCall, toHM, toMin, type ISODate, type Slot } from '@cp/shared';
+import { extrasOn, isWeekSlot, live, scheduleDayOf, sessionsOn, staffCall, toHM, toMin, type ClubState, type ISODate, type Slot } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
-import { LAST_START_BEFORE_CLOSE, activityTeachers, extraTimeIssue, sameCell, slotChanged, suggestExtraTime, weeklyCell } from '@cp/shared/rules/calendar';
+import { LAST_START_BEFORE_CLOSE, activityTeachers, extraTimeIssue, sameCell, slotChanged, suggestExtraTime, weeklyCell, withPendingDay } from '@cp/shared/rules/calendar';
 import { guestOn } from '@cp/shared/rules/guests';
 import { Button, Icon, Note, Select, Sheet, TextField, TimeField, Toggle } from '../../components/ui';
 import { useAct } from '../../lib/act';
 import { useT, useFmt } from '../../lib/i18n';
+import { useMe } from '../../lib/me';
 import { useResetOn } from '../../lib/useResetOn';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
+
+/** Round 14: the day as its editor sees it. The activity team (whose edits wait for Ega) sees its waiting edit; `asks` = what it saves is sent to Ega. */
+function useDayState(date: ISODate, open: boolean): { sv: ClubState; asks: boolean; sentText: (result: Record<string, unknown>) => string } {
+  const s = useClub();
+  const t = useT();
+  const { role } = useMe();
+  const asks = role !== 'mgmt';
+  return { sv: open && asks ? withPendingDay(s, date) : s, asks, sentText: (r) => t(r.pending ? 'cal.sentToEga' : 'cal.dayUnchanged') };
+}
 
 const NONE = '__none__';
 
@@ -22,8 +33,9 @@ export function EditChoice({ open, onClose, date, slot, onDay, onWeekly, onExtra
   const t = useT();
   const { lang, fdl } = useFmt();
   const s = useClub();
+  const { sv, asks } = useDayState(date, open);
   const navigate = useNavigate();
-  const cell = open ? sessionsOn(s, date).find((x) => x.slot === slot)?.cell ?? null : null;
+  const cell = open ? sessionsOn(sv, date).find((x) => x.slot === slot)?.cell ?? null : null;
   const guest = open ? guestOn(s, date, slot) : null;
   const isExtra = open && !isWeekSlot(slot);
   const title = cell ? t('cal.editChoiceTitle', { title: activityName(s.activities[cell.activityId], lang) }) : t('cal.emptyChoiceTitle', { slot });
@@ -46,8 +58,8 @@ export function EditChoice({ open, onClose, date, slot, onDay, onWeekly, onExtra
             {row('event_repeat', t('cal.weeklyPlan'), t('cal.weeklyPlanSub'), onWeekly)}
           </>
         )}
-        {/* round 7: a guest host leads this session, or book one: the Guests screen opens on it */}
-        {guest
+        {/* round 7: a guest host leads this session, or book one: the Guests screen opens on it (management's screen; round 14: not for the activity team) */}
+        {asks ? null : guest
           ? row('co_present', t('cal.guestOpen'), guest.host.name, () => navigate(`/guests?session=${guest.session.id}`))
           : row('co_present', t('cal.guestBook'), t('cal.guestBookSub'), () => navigate(`/guests?book=${date}|${slot}`))}
         {/* round 7: another session on that day, at any time */}
@@ -61,11 +73,12 @@ export function DaySheet({ open, onClose, date, slot }: { open: boolean; onClose
   const t = useT();
   const { lang, fdl } = useFmt();
   const s = useClub();
+  const { sv, asks, sentText } = useDayState(date, open);
   const act = useAct();
-  const cur = open ? sessionsOn(s, date).find((x) => x.slot === slot)?.cell ?? null : null;
+  const cur = open ? sessionsOn(sv, date).find((x) => x.slot === slot)?.cell ?? null : null;
   const weekly = open ? weeklyCell(s, date, slot) : null;
-  const over = open ? scheduleDayOf(s, date) : undefined;
-  const changed = open && slotChanged(s, date, slot);
+  const over = open ? scheduleDayOf(sv, date) : undefined;
+  const changed = open && slotChanged(sv, date, slot);
   const guest = open ? guestOn(s, date, slot) : null;
   const teachers = activityTeachers(s);
   const defaultTeacher = teachers[slot === '10:30' ? 0 : 1]?.id ?? teachers[0]?.id ?? '';
@@ -105,13 +118,13 @@ export function DaySheet({ open, onClose, date, slot }: { open: boolean; onClose
     setBusy(true);
     const r = await act('schedule.changeDay', { date, slot, cell, note: noteText || null, notify }, { silent: true });
     setBusy(false);
-    if (r.ok) { say(t(notify ? 'cal.daySaved' : 'cal.daySavedQuiet', { date: fdl(date) })); onClose(); }
+    if (r.ok) { say(asks ? sentText(r.result) : t(notify ? 'cal.daySaved' : 'cal.daySavedQuiet', { date: fdl(date) })); onClose(); }
   };
   const back = async () => {
     setBusy(true);
     const r = await act('schedule.resetDay', { date, slot, notify }, { silent: true });
     setBusy(false);
-    if (r.ok) { say(t('cal.dayBackDone', { date: fdl(date) })); onClose(); }
+    if (r.ok) { say(asks ? sentText(r.result) : t('cal.dayBackDone', { date: fdl(date) })); onClose(); }
   };
 
   return (
@@ -126,7 +139,7 @@ export function DaySheet({ open, onClose, date, slot }: { open: boolean; onClose
         </div>
       ) : null}
       <TextField label={t('cal.dayNote')} value={note} onChange={setNote} placeholder={t('cal.dayNotePh')} maxLength={160} />
-      <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.dayTell')} />
+      {asks ? null : <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.dayTell')} />}
       <Button full disabled={!dirty || !ready || busy} onClick={save}>{t('cal.daySave')}</Button>
       {changed ? <Button full variant="secondary" disabled={busy} onClick={back}>{t('cal.dayBack')}</Button> : null}
     </Sheet>
@@ -138,9 +151,10 @@ export function ExtraSheet({ open, onClose, date, time }: { open: boolean; onClo
   const t = useT();
   const { lang, fdl } = useFmt();
   const s = useClub();
+  const { sv, asks, sentText } = useDayState(date, open);
   const act = useAct();
   const editing = !!time; // edit / remove mode (stays so while the sheet closes after a removal)
-  const edit = open && time ? extrasOn(s, date).find((x) => x.time === time) : undefined;
+  const edit = open && time ? extrasOn(sv, date).find((x) => x.time === time) : undefined;
   const teachers = activityTeachers(s);
   const [at, setAt] = useState('');
   const [actId, setActId] = useState('');
@@ -150,7 +164,7 @@ export function ExtraSheet({ open, onClose, date, time }: { open: boolean; onClo
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   useResetOn(open ? `${date}|${time ?? 'new'}` : null, () => {
-    setAt(edit?.time ?? (open ? suggestExtraTime(s, date) : ''));
+    setAt(edit?.time ?? (open ? suggestExtraTime(sv, date) : ''));
     setActId(edit?.cell.activityId ?? '');
     setStaff(edit?.cell.staffId ?? teachers[0]?.id ?? '');
     setRoom(edit?.cell.roomId ?? '');
@@ -161,7 +175,7 @@ export function ExtraSheet({ open, onClose, date, time }: { open: boolean; onClo
 
   const hours = s.club.settings;
   const lastStart = toHM(toMin(hours.close) - LAST_START_BEFORE_CLOSE);
-  const issue = at ? extraTimeIssue(s, date, at, edit?.time) : null;
+  const issue = at ? extraTimeIssue(sv, date, at, edit?.time) : null;
   const activities = live(s.activities).filter((a) => a.active || a.id === edit?.cell.activityId).sort((a, b) => a.name.localeCompare(b.name));
   const teacherIds = [...teachers.map((x) => x.id), ...(staff && !teachers.some((x) => x.id === staff) ? [staff] : [])];
   const pick = (id: string) => { setActId(id); const a = s.activities[id]; if (a) setRoom(a.roomId); if (!staff) setStaff(teachers[0]?.id ?? ''); };
@@ -175,14 +189,14 @@ export function ExtraSheet({ open, onClose, date, time }: { open: boolean; onClo
     const body = { date, ...cell, note: noteText || null, notify };
     const r = editing && time ? await act('schedule.editSession', { ...body, time, toTime: at }, { silent: true }) : await act('schedule.addSession', { ...body, time: at }, { silent: true });
     setBusy(false);
-    if (r.ok) { say(t(editing ? (notify ? 'cal.extraSaved' : 'cal.extraSavedQuiet') : notify ? 'cal.extraAdded' : 'cal.extraAddedQuiet', { date: fdl(date), time: at })); onClose(); }
+    if (r.ok) { say(asks ? sentText(r.result) : t(editing ? (notify ? 'cal.extraSaved' : 'cal.extraSavedQuiet') : notify ? 'cal.extraAdded' : 'cal.extraAddedQuiet', { date: fdl(date), time: at })); onClose(); }
   };
   const remove = async () => {
     if (!time) return;
     setBusy(true);
     const r = await act('schedule.removeSession', { date, time, notify }, { silent: true });
     setBusy(false);
-    if (r.ok) { say(t(notify ? 'cal.extraRemovedDone' : 'cal.extraRemovedQuiet')); onClose(); }
+    if (r.ok) { say(asks ? sentText(r.result) : t(notify ? 'cal.extraRemovedDone' : 'cal.extraRemovedQuiet')); onClose(); }
   };
   const issueText = issue ? t(issue.code, issue.params) : false;
 
@@ -197,7 +211,7 @@ export function ExtraSheet({ open, onClose, date, time }: { open: boolean; onClo
         </div>
       ) : null}
       <TextField label={t('cal.extraNoteLabel')} value={note} onChange={setNote} placeholder={t('cal.extraNotePh')} maxLength={160} />
-      <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.dayTell')} />
+      {asks ? null : <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.dayTell')} />}
       <Button full disabled={!dirty || !ready || busy} onClick={save}>{editing ? t('cal.extraSaveBtn') : t('cal.extraAddBtn')}</Button>
       {editing ? <Button full variant="secondary" disabled={busy} onClick={remove}>{t('cal.extraRemove')}</Button> : null}
     </Sheet>

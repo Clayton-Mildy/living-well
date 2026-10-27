@@ -32,7 +32,7 @@ export const fhealth: Same<typeof EN> = {
   extraLine: '{n} hari tambahan bulan ini · {p} di tagihan bulan depan', extraLineOne: '1 hari tambahan bulan ini · {p} di tagihan bulan depan',
   born: 'Lahir', married: 'Menikah',
   history: 'Riwayat', foodAllergy: 'Alergi makanan', drugAllergy: 'Alergi obat', mobility: 'Mobilitas', diet: 'Diet', noDiet: 'Tanpa diet khusus',
-  last10: '10 catatan terakhir', noMood: 'Belum ada catatan suasana hati.',
+  last10: '10 kunjungan terakhir', noMood: 'Belum ada suasana hati yang dicatat.', moodTitle: 'Suasana hati', moodAria: 'Suasana hati pada kunjungan terakhir', moodNone: 'Belum dicatat',
   visitsIn: 'Kunjungan · {m}',
   tUsed: 'Terpakai', tLeft: 'Sisa', tLeftSub: 'Hari tambahan {p}', tExtra: 'Hari tambahan', tExtraNone: 'Tidak ada bulan ini', tExtraBill: '{p} tagihan berikutnya',
   tVisits: 'Kunjungan', tPlan: 'Paket', tGoldSub: 'Hari buka mana pun', tUsual: 'Biasanya', tArrival: 'Tiba',

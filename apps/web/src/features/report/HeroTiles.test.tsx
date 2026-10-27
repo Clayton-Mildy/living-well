@@ -70,7 +70,7 @@ describe('the hero tiles', () => {
     const tile = (k: string) => region().querySelector(`[data-tile="${k}"]`)!.textContent!;
     expect(tile('collected')).toContain('so far this month');
     expect(tile('collected')).not.toMatch(/[−+]Rp/);
-    expect(tile('index')).toContain('+0.1');
+    expect(tile('index')).toContain('+0.2'); // round 14: October's seeded morning, lunch and session faces lift its index a little
     await act(async () => { root!.unmount(); }); host!.remove();
     await show(false, monthReport(s, periodFor('lastMonth', T), T, 600));
     expect(tile('collected')).not.toContain('so far');

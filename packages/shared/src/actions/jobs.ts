@@ -7,6 +7,8 @@ import { currentMembership, isPendingRow, displayName, primaryContact } from '..
 import { stopsDue, suspensions } from '../rules/billing';
 import { leaveOverrunMonth } from '../rules/leave';
 import { finalInvoiceFor } from '../rules/members';
+import { dm } from '../rules/mgmtParse';
+import { OCCASION_AHEAD_DAYS, occasionsInRange } from '../rules/occasions';
 import { addDays, rp } from '../util';
 
 type Job = (d: Draft<ClubState>, ctx: Ctx) => void;
@@ -76,5 +78,22 @@ registerJob('membership.daily', (d, ctx) => {
     }
   } catch (e) {
     if (!(e instanceof DomainError)) console.error('membership.daily job failed', e);
+  }
+});
+
+// ---------- birthdays two weeks ahead (round 14) ----------
+// The day a birthday is exactly 14 days away, activity, the front desk and management are told once, with a link that opens the celebration request pre-filled.
+registerJob('occasions.daily', (d, ctx) => {
+  try {
+    const s = d as unknown as ClubState;
+    const date = addDays(ctx.today, OCCASION_AHEAD_DAYS);
+    for (const o of occasionsInRange(s, date, date)) {
+      if (o.kind !== 'birthday') continue;
+      const refId = `bday:${o.member.id}:${date}`;
+      if (toldAlready(d, 'occ.notif.birthdaySoon', refId)) continue;
+      ctx.notify({ toRoles: ['activity', 'lobby', 'mgmt'], kind: 'occ.notif.birthdaySoon', params: { name: displayName(o.member), years: o.years, date: dm(date) }, link: `/celebrations?new=${o.member.id}&date=${date}`, memberId: o.member.id, ref: { type: 'birthday', id: refId } });
+    }
+  } catch (e) {
+    if (!(e instanceof DomainError)) console.error('occasions.daily job failed', e);
   }
 });

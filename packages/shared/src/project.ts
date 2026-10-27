@@ -54,7 +54,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const mine = <T extends { memberId?: string | null }>(rows: T[]) => rows.filter((r) => r.memberId && mids.includes(r.memberId));
   out.memberNotes = pick(mine(live(s.memberNotes)).filter((n) => n.visibility === 'family').map(noteForFamily).filter(present));
   out.attendance = pick(mine(live(s.attendance)));
-  // round 13: staff leave requests are staff-only (leaveRequests stays {})
+  // round 13: staff leave requests are staff-only (leaveRequests stays {}); round 14: so are the unpaid follow-up calls (unpaidFollowUps stays {})
   // round 12: mood marks for the family's own members; celebrations only once the club has confirmed them; care calls are staff-only (left {})
   out.moodMarks = pick(mine(live(s.moodMarks || {})));
   out.celebrations = pick(mine(live(s.celebrations || {})).filter((c) => c.status === 'confirmed'));
@@ -74,7 +74,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   out.activities = pick(live(s.activities));
   out.scheduleVersions = pick(live(s.scheduleVersions).filter((v) => v.status === 'published'));
   // KC round 7: one-day programme changes, and who leads a session that is on (a guest host's name and what they do; never fees, phones, bank details or notes)
-  out.scheduleDays = pick(live(s.scheduleDays || {}).map(({ note: _note, extra, ...d }) => ({ ...d, ...(extra?.length ? { extra: extra.map(({ note: _n, ...x }) => x) } : {}) }))); // the day's note ("… is off sick") and an extra session's note are for staff; families see the extra sessions themselves
+  out.scheduleDays = pick(live(s.scheduleDays || {}).map(({ note: _note, extra, pending: _p, returned: _r, ...d }) => ({ ...d, ...(extra?.length ? { extra: extra.map(({ note: _n, ...x }) => x) } : {}) }))); // the day's note ("… is off sick") and an extra session's note are for staff; families see the extra sessions themselves; round 14: what waits for Ega (and her note) is staff-only
   const guestSessions = live(s.guestSessions || {}).filter((g) => g.status !== 'cancelled');
   out.guestSessions = pick(guestSessions.map((g): GuestSession => ({ ...g, fee: 0, vendorInvoiceId: undefined, note: undefined })));
   const hostIds = new Set(guestSessions.map((g) => g.hostId));

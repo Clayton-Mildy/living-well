@@ -131,15 +131,22 @@ describe('daily log helpers', () => {
     expect(logDeviations({ lunch: 'none', mood: 'calm' })).toEqual(['lunch.none']);
   });
 
-  it('cognitive summary counts quiet and unsettled days among the last ten logs', () => {
+  it('cognitive summary counts quiet and unsettled days among the last ten days with faces', () => {
     const s = fresh();
     const c = cogSummary(s, s.members.m10);
     expect(c.base).toBe('Mild memory loss');
     expect(c.isDefault).toBe(false);
     expect(c.days).toBeGreaterThan(0);
     expect(cogSummary(s, s.members.m2)).toMatchObject({ isDefault: true, base: '' });
-    const noisy = produce(s, (d) => { for (const l of Object.values(d.dailyLogs)) if (l.memberId === 'm2') l.mood = 'quiet'; });
-    expect(cogSummary(noisy, noisy.members.m2).quiet).toBe(10);
+    // round 14: the counts come from the daily moods of the last 10 days with faces (3 = quiet, 2 or below = unsettled), not the old mood word
+    const faced = (face: 1 | 2 | 3 | 4 | 5) => produce(s, (d) => { for (const k of Object.values(d.moodMarks)) if (k.memberId === 'm2') k.face = face; });
+    expect(cogSummary(faced(3), s.members.m2)).toMatchObject({ quiet: 10, unsettled: 0, days: 10 });
+    expect(cogSummary(faced(2), s.members.m2)).toMatchObject({ quiet: 0, unsettled: 10 });
+    expect(cogSummary(faced(5), s.members.m2)).toMatchObject({ quiet: 0, unsettled: 0, days: 10 });
+    const words = produce(faced(5), (d) => { for (const l of Object.values(d.dailyLogs)) if (l.memberId === 'm2') l.mood = 'agitated'; });
+    expect(cogSummary(words, s.members.m2).unsettled).toBe(0); // the old word does not count
+    const noFaces = produce(s, (d) => { for (const [id, k] of Object.entries(d.moodMarks)) if (k.memberId === 'm2') delete d.moodMarks[id]; });
+    expect(cogSummary(noFaces, s.members.m2).days).toBe(0);
   });
 });
 
@@ -169,12 +176,12 @@ describe('extra sessions in the plan (KC round 7)', () => {
     expect(curAct(s, T, min('17:00'))).toMatchObject({ name: 'Karaoke' }); // after the day: the last session
   });
 
-  it('rounds: the extra session is its own round, with its marks and progress; mood & notes stays the last round', () => {
+  it('rounds: the extra session is its own round, with its marks and progress', () => {
     const s = withExtra(['15:00']);
-    expect(roundsOf(s, T).map((r) => `${r.time} ${r.id}`)).toEqual(['10:30 10:30', '12:00 lunch', '13:30 13:30', '15:00 15:00', '16:15 mood']);
-    expect(roundsOf(withExtra(['09:00']), T).map((r) => r.id)).toEqual(['09:00', '10:30', 'lunch', '13:30', 'mood']);
+    expect(roundsOf(s, T).map((r) => `${r.time} ${r.id}`)).toEqual(['09:30 morning', '10:30 10:30', '13:30 13:30', '15:00 15:00']);
+    expect(roundsOf(withExtra(['09:00']), T).map((r) => r.id)).toEqual(['09:00', 'morning', '10:30', '13:30']);
     expect(defaultRound(roundsOf(s, T), min('15:20'))).toBe('15:00');
-    expect(defaultRound(roundsOf(s, T), min('16:30'))).toBe('mood');
+    expect(defaultRound(roundsOf(s, T), min('16:30'))).toBe('15:00');
     expect(roundMarked({ sessions: { '15:00': 'joined' } }, '15:00')).toBe(true);
     expect(roundMarked({ sessions: { '13:30': 'joined' } }, '15:00')).toBe(false);
     expect(joinedOf({ '15:00': 'satOut' })).toBe('satOut');
@@ -195,27 +202,30 @@ describe('rounds of the daily log (KC round 7)', () => {
     for (const [mid, l] of Object.entries(logs)) d.dailyLogs[logId(mid, T)] = { id: logId(mid, T), clubId: 'citra', createdAt: `${T}T10:00`, createdBy: 'staff:s5', memberId: mid, date: T, note: '', status: 'saved', by: 's5', edits: [], ...l } as never;
   });
 
-  it('roundsOf: each session, lunch and mood & notes in time order; a slot without a session is skipped', () => {
+  it('roundsOf: the Morning round and each session in time order (lunch is the kitchen\'s, not a round); a slot without a session is skipped', () => {
     const s = fresh();
-    expect(roundsOf(s, T).map((r) => `${r.time} ${r.kind}`)).toEqual(['10:30 session', '12:00 lunch', '13:30 session', '15:00 mood']);
-    expect(roundsOf(s, T).map((r) => r.id)).toEqual(['10:30', 'lunch', '13:30', 'mood']);
-    expect(roundsOf(s, T)[0].session?.activity?.name).toBeTruthy();
+    expect(roundsOf(s, T).map((r) => `${r.time} ${r.kind}`)).toEqual(['09:30 morning', '10:30 session', '13:30 session']);
+    expect(roundsOf(s, T).map((r) => r.id)).toEqual(['morning', '10:30', '13:30']);
+    expect(roundsOf(s, T)[1].session?.activity?.name).toBeTruthy();
     const noAfternoon = produce(s, (d) => { for (const v of Object.values(d.scheduleVersions)) for (const day of Object.values(v.days)) delete (day as Record<string, unknown>)['13:30']; });
-    expect(roundsOf(noAfternoon, T).map((r) => r.id)).toEqual(['10:30', 'lunch', 'mood']);
-    expect(roundsOf(s, '2026-10-24').map((r) => r.id)).toEqual(['lunch', 'mood']); // Saturday: the club is closed, only the lunch and mood rounds remain
+    expect(roundsOf(noAfternoon, T).map((r) => r.id)).toEqual(['morning', '10:30']);
+    expect(roundsOf(s, '2026-10-24').map((r) => r.id)).toEqual(['morning']); // Saturday: the club is closed, only the morning round remains
   });
 
-  it('defaultRound follows the clock: first session before noon, lunch, second session from 13:30, mood & notes from 15:00', () => {
+  it('defaultRound follows the clock: the Morning round before 11:30, the first session until the second starts at 13:30', () => {
     const r = roundsOf(fresh(), T);
-    expect(defaultRound(r, min('08:30'))).toBe('10:30');
+    expect(defaultRound(r, min('08:30'))).toBe('morning');
+    expect(defaultRound(r, min('11:29'))).toBe('morning');
+    expect(defaultRound(r, min('11:30'))).toBe('10:30');
     expect(defaultRound(r, min('11:59'))).toBe('10:30');
-    expect(defaultRound(r, min('12:00'))).toBe('lunch');
-    expect(defaultRound(r, min('13:29'))).toBe('lunch');
+    expect(defaultRound(r, min('12:00'))).toBe('10:30');
+    expect(defaultRound(r, min('13:29'))).toBe('10:30');
     expect(defaultRound(r, min('13:30'))).toBe('13:30');
     expect(defaultRound(r, min('14:59'))).toBe('13:30');
-    expect(defaultRound(r, min('15:00'))).toBe('mood');
+    expect(defaultRound(r, min('15:00'))).toBe('13:30');
     const noMorning = roundsOf(produce(fresh(), (d) => { for (const v of Object.values(d.scheduleVersions)) for (const day of Object.values(v.days)) delete (day as Record<string, unknown>)['10:30']; }), T);
-    expect(defaultRound(noMorning, min('09:00'))).toBe('lunch');
+    expect(defaultRound(noMorning, min('09:00'))).toBe('morning');
+    expect(defaultRound(noMorning, min('11:40'))).toBe('morning'); // nothing else has started yet
     expect(defaultRound(noMorning, min('14:00'))).toBe('13:30');
   });
 
@@ -227,23 +237,28 @@ describe('rounds of the daily log (KC round 7)', () => {
     expect(roundProgress(s, T, 'lunch')).toEqual({ marked: 2, total: 3 });
     expect(roundProgress(s, T, '10:30')).toEqual({ marked: 1, total: 3 });
     expect(roundProgress(s, T, '13:30')).toEqual({ marked: 0, total: 3 });
-    expect(roundProgress(s, T, roundsOf(s, T).find((r) => r.id === 'mood')!)).toEqual({ marked: 1, total: 3 }); // also accepts the round itself
-    expect(roundMarked(logOf(s, 'm2', T), 'mood')).toBe(false);
+    expect(roundProgress(s, T, roundsOf(s, T).find((r) => r.id === 'morning')!)).toEqual({ marked: 1, total: 3 }); // also accepts the round itself; an old mood word counts as notes in
+    expect(roundMarked(logOf(s, 'm2', T), 'morning')).toBe(false);
+    expect(roundMarked(logOf(s, 'm2', T), 'morning', true)).toBe(true); // a morning face is enough (Ruling 5)
+    expect(roundMarked({ note: 'Sang along' }, 'morning')).toBe(true);
+    const faced = produce(s, (d) => { d.moodMarks[`${T}:m20:morning`] = { id: `${T}:m20:morning`, clubId: d.clubId, createdAt: `${T}T09:40`, createdBy: 'staff:s5', memberId: 'm20', date: T, time: '09:40', moment: 'morning', face: 4, by: 'staff:s5' }; });
+    expect(roundProgress(faced, T, 'morning')).toEqual({ marked: 2, total: 3 });
     expect(roundMarked(undefined, 'lunch')).toBe(false);
     expect(logsOn(s, T).get('m10')?.lunch).toBe('none');
     expect(roundProgress(s, '2026-10-24', 'lunch')).toEqual({ marked: 0, total: 0 });
   });
 
-  it('the activity role is reminded once a round is over and people are still unmarked (lunch from 13:30, a session after it ends, mood & notes from 15:00)', () => {
+  it('the activity role is reminded once a session is over and people are still unmarked; lunch is the kitchen\'s reminder (round 14)', () => {
     const s = withLogs({ m2: { lunch: 'all' }, m10: { lunch: 'all' } });
     const u = getUser({ [s.clubId]: s }, 's5')!;
     const items = (hm: string) => actionItems(s, u, T, min(hm)).filter((i) => i.id.startsWith('round:')).map((i) => `${i.id}:${i.params.n}`);
     expect(items('11:00')).toEqual([]); // the 10:30 session runs until 11:45
     expect(items('11:50')).toEqual(['round:10:30:3']);
-    expect(items('13:00')).toEqual(['round:10:30:3']); // lunch is still going
-    expect(items('13:35')).toEqual(['round:lunch:1', 'round:10:30:3']);
-    expect(items('15:05')).toEqual(['round:mood:3', 'round:13:30:3', 'round:lunch:1', 'round:10:30:3']);
-    expect(actionItems(s, u, T, min('15:05')).find((i) => i.id === 'round:mood')).toMatchObject({ kind: 'activity.notif.act.mood', link: '/log?round=mood' });
+    expect(items('13:35')).toEqual(['round:10:30:3']);
+    expect(items('15:05')).toEqual(['round:13:30:3', 'round:10:30:3']); // round 14: the morning faces are a quiet duty, never a reminder
+    const kitchen = (hm: string) => actionItems(s, getUser({ [s.clubId]: s }, 's2')!, T, min(hm)).filter((i) => i.id.startsWith('round:')).map((i) => `${i.id}:${i.params.n}:${i.kind}:${i.link}`);
+    expect(kitchen('13:00')).toEqual([]);
+    expect(kitchen('13:35')).toEqual(['round:lunch:1:tasks.notif.act.lunch:/lunch']); // the F&B team marks lunch, due 13:30
     expect(actionItems(s, getUser({ [s.clubId]: s }, 's1')!, T, min('15:05')).some((i) => i.id.startsWith('round:'))).toBe(false); // only the activity role
   });
 
@@ -407,12 +422,15 @@ describe('activity pictures (KC round 7)', () => {
     expect(sessionPictures(s, T, kero(s)).filter((x) => x.state === 'pending')).toHaveLength(1); // "upload another"
   });
 
-  it('the library can filter to activity pictures; cameOn says whether any of the members checked in', () => {
+  it('the library can filter to Meals or Activities; cameOn says whether any of the members checked in', () => {
     let s = buildSeed().citra;
     s = run(s, 'photo.addActivity', { date: T, activity: 'Batik painting' }, 's9', 'l1').state;
-    const only = libraryPhotos(s, { kind: 'activity' });
+    const only = libraryPhotos(s, { kind: 'activities' });
     expect(only.length).toBeGreaterThan(0);
-    expect(only.every((p) => p.kind === 'activity')).toBe(true);
+    expect(only.every((p) => p.kind === 'group' || p.kind === 'activity')).toBe(true); // round 14: Activities = group and session pictures (solo and arrival are Portraits, lunch is Meals), like the family chips
+    const meals = libraryPhotos(s, { kind: 'meals' });
+    expect(meals.length).toBeGreaterThan(0);
+    expect(meals.every((p) => p.kind === 'lunch')).toBe(true); // lunch and tea pictures
     expect(libraryPhotos(s).length).toBeGreaterThan(only.length);
     expect(cameOn(s, ['m10'], T)).toBe(true);
     expect(cameOn(s, ['m1'], T)).toBe(false);

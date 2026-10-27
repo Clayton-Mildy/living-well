@@ -2,7 +2,7 @@
 // (simulated): GET shows what to answer, POST sends the answer. The answer goes through the normal action path as the system, so it is
 // checked, saved, and broadcast to everyone signed in like any other change (venue.rate in packages/shared/src/actions/club.ts).
 import type { Context, Hono } from 'hono';
-import { DomainError, priceOn, ratingLinkOf, systemUser } from '@cp/shared';
+import { DomainError, feeOf, priceOn, ratingLinkOf, systemUser } from '@cp/shared';
 import { enquiryByFormToken, formLinkState, formRevOf, onlineDraftOf } from '@cp/shared/rules/enquiries';
 import { getClubs, runAction } from '../state';
 import { clockInfo } from '../clock';
@@ -47,7 +47,7 @@ export function registerPublicRoutes(app: Hono) {
     const state = formLinkState(f, `${clk.today}T${clk.now}`);
     const price = priceOn(s, clk.today);
     // anyone holding the link sees only what the form itself holds: the lead's name and contact, and what the family typed in before
-    return c.json({ state, club: s.club.name, today: clk.today, draft: onlineDraftOf(e), step: f.step ?? null, savedAt: f.savedAt ?? null, draftRev: formRevOf(f), submittedAt: f.submittedAt ?? null, expiresAt: f.expiresAt, prices: { flex: price.flex, gold: price.gold, extra: price.extra, flexQuota: s.club.settings.flexQuota } });
+    return c.json({ state, club: s.club.name, today: clk.today, draft: onlineDraftOf(e), step: f.step ?? null, savedAt: f.savedAt ?? null, draftRev: formRevOf(f), submittedAt: f.submittedAt ?? null, expiresAt: f.expiresAt, prices: { flex: price.flex, gold: price.gold, extra: price.extra, flexQuota: s.club.settings.flexQuota }, dementiaFee: feeOf(price, 'dementia') });
   });
   // the family photographs the ID cards from the form: an image or a PDF (never a video), saved as the club's media like any upload
   app.post('/api/public/form/:token/media', async (c) => {
