@@ -40,6 +40,7 @@ import { month } from './month';
 import { unpaid } from './unpaid';
 import { care } from './care';
 import { purchasing } from './purchasing';
+import { search } from './search';
 
 export const id = {
   ...ns('common', common),
@@ -93,4 +94,5 @@ export const id = {
   ...ns('unpaid', unpaid),
   ...ns('care', care),
   ...ns('purchasing', purchasing),
+  ...ns('search', search),
 };

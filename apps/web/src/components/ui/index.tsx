@@ -325,6 +325,9 @@ export const StaffOnlyTag = () => {
 };
 
 // ---------- overlays ----------
+const overlayStack: symbol[] = []; // the open overlays, the topmost last
+let overflowBefore = '';
+const escHandled = new WeakSet<Event>();
 export function useOverlayA11y(open: boolean, onClose: () => void) {
   const ref = useRef<HTMLDivElement>(null);
   // callers pass inline arrows; reading onClose through a ref keeps focus from jumping on every re-render
@@ -336,11 +339,24 @@ export function useOverlayA11y(open: boolean, onClose: () => void) {
     const el = ref.current;
     const first = el?.querySelector<HTMLElement>('[autofocus], input, textarea, select, button, [href], [tabindex]:not([tabindex="-1"])');
     (first || el)?.focus({ preventScroll: true });
-    const onKey = (e: KeyboardEvent) => { if (e.key === 'Escape') { e.stopPropagation(); close.current(); } };
+    // Esc closes only the topmost overlay: every overlay listens on window, and stopPropagation doesn't stop its siblings there
+    const me = Symbol('overlay');
+    if (!overlayStack.length) overflowBefore = document.body.style.overflow;
+    overlayStack.push(me);
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || escHandled.has(e) || overlayStack[overlayStack.length - 1] !== me) return;
+      escHandled.add(e); // the one that closed it: a lower overlay must not also react if the stack changes between listeners
+      e.stopPropagation();
+      close.current();
+    };
     window.addEventListener('keydown', onKey);
-    const body = document.body.style.overflow;
     document.body.style.overflow = 'hidden';
-    return () => { window.removeEventListener('keydown', onKey); document.body.style.overflow = body; prev?.focus?.({ preventScroll: true }); };
+    return () => {
+      window.removeEventListener('keydown', onKey);
+      overlayStack.splice(overlayStack.indexOf(me), 1);
+      if (!overlayStack.length) document.body.style.overflow = overflowBefore; // the last one out restores the page scroll, whatever the closing order
+      prev?.focus?.({ preventScroll: true });
+    };
   }, [open]);
   const trap = (e: RKE<HTMLDivElement>) => {
     if (e.key !== 'Tab' || !ref.current) return;

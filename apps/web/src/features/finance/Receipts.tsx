@@ -1,6 +1,7 @@
 // Receipts (design ScrRcpt): snap a nota (read by the simulated OCR), pick the supplier from the directory, tag the section, send to finance;
 // the receipts list (approve / reject / edit / void) and the vendor invoices list (add / edit / approve / mark paid / delete).
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { actorName, live, rp, sortBy, type Receipt, type ReceiptLine, type ReceiptSource, type VendorInvoice } from '@cp/shared';
 import { lineCategory, linesGap, linesTotal, lineProblem, supplierCategory, RECEIPT_SOURCES } from '@cp/shared/rules/purchasing';
 import { activeSections, receiptOfRequest, receiptsList, sectionName, vendorInvoicesList } from '@cp/shared/rules/finance';
@@ -26,6 +27,15 @@ export function Receipts() {
   const { role } = useMe();
   const canApprove = role === 'finance' || role === 'mgmt';
   const [snapping, setSnapping] = useState(false);
+  // a search result: /receipts?do=snap opens the capture whenever the parameter appears, then the parameter goes
+  const [sp, setSp] = useSearchParams();
+  useEffect(() => {
+    if (!sp.get('do')) return;
+    if (sp.get('do') === 'snap') setSnapping(true);
+    const p = new URLSearchParams(sp);
+    p.delete('do');
+    setSp(p, { replace: true });
+  }, [sp]); // eslint-disable-line react-hooks/exhaustive-deps
   const [q, setQ] = useState('');
   const [vendorForm, setVendorForm] = useState<null | 'new' | VendorInvoice>(null);
   const [editReceipt, setEditReceipt] = useState<Receipt | null>(null);

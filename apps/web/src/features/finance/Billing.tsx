@@ -30,6 +30,13 @@ export function Billing() {
   const [q, setQ] = useState('');
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [sheetId, setSheetId] = useState<string | null>(null);
+  // a search result: ?inv=<id> opens that invoice's sheet (finance reaches Billing as /today, management as /billing), whenever the parameter appears, then the parameter goes; an unknown id opens nothing
+  useEffect(() => {
+    const id = sp.get('inv');
+    if (!id) return;
+    if (s.invoices[id]) setSheetId(id);
+    setSp((p) => { const n = new URLSearchParams(p); n.delete('inv'); return n; }, { replace: true });
+  }, [sp]); // eslint-disable-line react-hooks/exhaustive-deps
   const navigate = useNavigate();
   const [runOpen, setRunOpen] = useState(sp.get('run') === '1');
   useEffect(() => { if (sp.get('run') === '1') setRunOpen(true); }, [sp]);

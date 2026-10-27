@@ -1,8 +1,8 @@
 // Directory (design ScrDir): suppliers, doctors and services. Finance, management and the lobby add, edit, delete and choose what families see;
 // families (the "Useful contacts" page, reached from Today) see the public entries and the club's emergency number;
 // staff who don't keep the directory see the same public list from the Contacts button in the header (KC round 6).
-import { useMemo, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useMemo, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { fmtPhone, live, sortBy, type DirectoryContact, type SpendCategory } from '@cp/shared';
 import { SPEND_CATEGORIES } from '@cp/shared/rules/purchasing';
 import { Button, Chip, EmptyState, FilterChips, Icon, IconButton, PageHead, Pin, Select, TextField, Toggle, usePaged } from '../../components/ui';
@@ -35,7 +35,18 @@ export function Directory() {
   const simple = fam || !canEdit;
   const [f, setF] = useState<Filter>('all');
   const [cat, setCat] = useState<CatFilter>('all'); // round 14 p2: the supplier's category, while the Suppliers filter is on
-  const [q, setQ] = useState('');
+  const [sp, setSp] = useSearchParams();
+  const [q, setQ] = useState(() => sp.get('q') ?? ''); // a search result: /directory?q=<name> pre-fills the search whenever the parameter appears, then the parameter goes
+  useEffect(() => {
+    const w = sp.get('q');
+    if (!w) return;
+    setQ(w); // also when the search overlay sends us here while we are already on the Directory
+    setF('all'); // and an earlier filter must not hide the supplier that was asked for
+    setCat('all');
+    const p = new URLSearchParams(sp);
+    p.delete('q');
+    setSp(p, { replace: true });
+  }, [sp]); // eslint-disable-line react-hooks/exhaustive-deps
   const [form, setForm] = useState<null | 'new' | DirectoryContact>(null);
   const [del, setDel] = useState<DirectoryContact | null>(null);
 
