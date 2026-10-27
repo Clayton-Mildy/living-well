@@ -1,10 +1,12 @@
 // Round 14 (D): the family signs the membership form. A full-screen sheet on a phone, three steps on one page: Read (the form as it was sent, then "I have read
 // the form"), Sign (draw it), Confirm (a simulated 6-digit code: any six digits, said so on screen). Sign uploads the drawing and calls signing.sign. The sheet
-// reads the live status: once the form is no longer Sent (signed here, or by someone else) it says so instead of showing the steps.
-import { useState, type CSSProperties, type ReactNode } from 'react';
+// reads the live status: once the form is no longer Sent (signed here, or by someone else) it says so instead of showing the steps; a form waiting for another contact,
+// or for a resend after the billing contact changed, says that instead. Sign carries the Send it was read for (sentAt); a resend while the sheet is open clears
+// the read tick and the code, so the new form is read first.
+import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { displayName, hasKey } from '@cp/shared';
 import { applicationDataOf } from '@cp/shared/rules/applicationForm';
-import { canSign, maskPhone, signerOf, signingOf } from '@cp/shared/rules/signing';
+import { canSign, lastSentAt, maskPhone, signerChanged, signerOf, signingOf } from '@cp/shared/rules/signing';
 import { Icon, SignaturePad } from '../../components/ui';
 import { useAct } from '../../lib/act';
 import { ApiError } from '../../lib/api';
@@ -40,25 +42,29 @@ function SignInner({ memberId, onClose }: { memberId: string; onClose: () => voi
   const act = useAct();
   const close = useStableFn(onClose);
   const printer = useApplicationForm();
-  const [seen, setSeen] = useState(false); // the form view was opened
+  const [seenAt, setSeenAt] = useState<string | null>(null); // the form view was opened, for the Send made at this time
   const [read, setRead] = useState(false);
   const [png, setPng] = useState<Blob | null>(null);
   const [otp, setOtp] = useState('');
   const [busy, setBusy] = useState(false);
   const [done, setDone] = useState(false);
   const m = s.members[memberId];
+  const sig = m ? signingOf(m) : undefined;
+  const sentAt = lastSentAt(sig);
+  // sent again (a new snapshot) while the sheet is open: what was read and the code belong to the old one
+  useEffect(() => { setSeenAt(null); setRead(false); setOtp(''); }, [sentAt, sig?.form]);
   if (!m || !user) return null;
-  const sig = signingOf(m);
   const signer = signerOf(s, memberId);
   const waiting = sig?.status === 'sent' && canSign(s, memberId, user.id);
-  const ready = read && !!png && /^\d{6}$/.test(otp);
+  const seen = !!seenAt && seenAt === sentAt;
+  const ready = seen && read && !!png && /^\d{6}$/.test(otp);
 
   const sign = async () => {
     if (!ready || busy || !png) return;
     setBusy(true);
     try {
       const signatureMediaId = await uploadMedia(png);
-      const r = await act('signing.sign', { memberId, signatureMediaId, otp });
+      const r = await act('signing.sign', { memberId, signatureMediaId, otp, sentAt: seenAt });
       if (r.ok) setDone(true);
     } catch (e) {
       say(e instanceof ApiError && hasKey(e.code) ? t(e.code) : t('common.mediaFailed'), { tone: 'error', icon: 'error' });
@@ -76,9 +82,15 @@ function SignInner({ memberId, onClose }: { memberId: string; onClose: () => voi
       </div>
     );
   } else if (!waiting) {
+    const closed = !!sig && sig.status !== 'draft' && sig.status !== 'sent';
+    const to = sig?.signerId ? s.familyContacts[sig.signerId]?.name : undefined;
+    const why = closed ? t('sign.already')
+      : sig?.status === 'sent' && signerChanged(s, memberId) && (sig.signerId === user.id || signer?.id === user.id) ? t('sign.err.signerChanged')
+        : sig?.status === 'sent' ? t('sign.waitsFor', { name: to || sig.form?.signer || signer?.name || '' })
+          : t('sign.err.notNow');
     body = (
       <div data-testid="sign-already" style={{ display: 'flex', flexDirection: 'column', gap: 4, padding: '24px 0' }}>
-        <span style={{ fontSize: 17, fontWeight: 500, color: F.text }}>{sig && sig.status !== 'draft' ? t('sign.already') : t('sign.err.notNow')}</span>
+        <span style={{ fontSize: 17, fontWeight: 500, color: F.text }}>{why}</span>
         {sig ? <span style={{ fontSize: 14, color: F.muted }}>{t('sign.status.' + sig.status)}</span> : null}
       </div>
     );
@@ -87,7 +99,7 @@ function SignInner({ memberId, onClose }: { memberId: string; onClose: () => voi
     body = (
       <>
         <Step n={1} done={read} name={t('sign.step.read')}>
-          <button type="button" data-testid="sign-view" className="cp-fam-press" onClick={() => { printer.open(sig!.form ?? applicationDataOf(s, memberId, now.today), sig); setSeen(true); }}
+          <button type="button" data-testid="sign-view" className="cp-fam-press" onClick={() => { printer.open(sig!.form ?? applicationDataOf(s, memberId, now.today), sig); setSeenAt(sentAt ?? null); }}
             style={{ height: 48, border: 'none', borderRadius: 999, background: F.fill, color: F.ink, fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: FONT, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
             <Icon name="description" size={20} />{t('sign.readForm')}
           </button>

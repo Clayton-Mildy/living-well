@@ -4,7 +4,7 @@ import type { Draft } from 'immer';
 import type { ChangeRequest, ClubState, DocType, FamilyLink, HM, Lang, MemberDocument, MemberRegistration, Relation } from '../types';
 import { e164 } from '../util';
 import { defineAction, hasRole, isFamily, DomainError, type ActionDef, type Ctx } from './framework';
-import { shortOf } from './helpers';
+import { carrySigning, shortOf } from './helpers';
 import { isPendingRow, linksOfMember, displayName } from '../rules/core';
 import { DOC_TYPES, RELATIONS, SIM_FILE, docIdFor, firstWord, isHM, isPhone, lastContactId, lastLinkId, nextContactId, nextLinkId } from '../rules/members';
 import { editable, makePrimary, mediaIdOf, obj, oneOf, parseNanny, phoneTaken, txt } from './members';
@@ -219,8 +219,9 @@ export const familyActions: ActionDef[] = [
     run(d, input, ctx) {
       const m = editable(d, input.memberId, ctx);
       if (input.type === 'nannyKtp' && !m.nanny) ctx.fail('members.err.noNanny');
-      const doc: MemberDocument = { id: docIdFor(m.id, input.type), type: input.type, status: 'onFile', fileName: input.fileName || SIM_FILE[input.type], ...(input.mediaId ? { mediaId: input.mediaId } : {}), on: ctx.today, via: 'family', by: ctx.actor };
       const i = m.documents.findIndex((q) => q.type === input.type);
+      const keep = carrySigning(i >= 0 ? m.documents[i] : undefined, ctx);
+      const doc: MemberDocument = { id: docIdFor(m.id, input.type), type: input.type, status: 'onFile', fileName: input.fileName || SIM_FILE[input.type], ...(input.mediaId ? { mediaId: input.mediaId } : {}), on: ctx.today, via: 'family', by: ctx.actor, ...keep };
       if (i >= 0) m.documents[i] = doc; else m.documents.push(doc);
       feed(ctx, d, m.id, 'upload_file', 'docUploaded', { type: input.type, by: ctx.actor });
     },

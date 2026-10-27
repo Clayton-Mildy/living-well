@@ -1,6 +1,6 @@
 // Small helpers shared by action modules.
 import type { Draft } from 'immer';
-import type { Attendance, ClubState, ISODate } from '../types';
+import type { Attendance, ClubState, ISODate, MemberDocument, Signing } from '../types';
 import type { Ctx } from './framework';
 import { attId } from '../rules/attendance';
 import { live } from '../util';
@@ -22,4 +22,13 @@ export function requireMember(d: Draft<ClubState>, memberId: string, ctx: Ctx) {
   const m = d.members[memberId];
   if (!m || m.deletedAt) ctx.fail('err.notFound');
   return m;
+}
+
+/** Round 14 (D), R-F1: the older document actions (request, staff upload, family upload) replace a whole document. On the membership form they refuse while its
+ *  signing is under way or done (Sent and later), and keep a Draft signing on the new document instead of dropping it. Returns what to spread onto it. */
+export function carrySigning(doc: MemberDocument | undefined, ctx: Ctx): { signing?: Signing } {
+  const sig = doc?.type === 'membershipForm' ? doc.signing : undefined;
+  if (!sig) return {};
+  if (sig.status !== 'draft') ctx.fail('sign.err.notNow');
+  return { signing: sig };
 }

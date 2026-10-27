@@ -6,6 +6,7 @@ import { buildSeed, execute, getUser, projectForFamily, invoiceStatus, actionIte
 import { approvalCounts, approvalHistory, approvalTotal, approvedDayMenu, approvedVersion, pendingItems } from '../rules/approvals';
 import { latestLog, sharedNoteOf, servedLunch } from '../rules/family';
 import { menuOn } from '../rules/kitchen';
+import { lastSentAt } from '../rules/signing';
 
 const T = '2026-10-21';
 const clock = { today: T, nowMin: toMin('10:00') };
@@ -432,7 +433,7 @@ describe('countersigning the membership form in the Approvals list (round 14 D)'
   const SIG = 'md_testsignature0001';
   const kinds = (s: ClubState, uid: string, kind: string) => unreadUpdates(s, as(s, uid)).filter((x) => x.kind === kind);
   const sent = () => run(fresh(), 'signing.send', { memberId: 'm1' }, 's1').state;
-  const signedForm = () => run(sent(), 'signing.sign', { memberId: 'm1', signatureMediaId: SIG, otp: '123456' }, 'f1').state;
+  const signedForm = () => { const s = sent(); return run(s, 'signing.sign', { memberId: 'm1', signatureMediaId: SIG, otp: '123456', sentAt: lastSentAt(s.members.m1.documents.find((x) => x.type === 'membershipForm')!.signing) }, 'f1').state; };
   const sigOf = (s: ClubState) => s.members.m1.documents.find((x) => x.type === 'membershipForm')!.signing!;
   it('a signed form is listed once, by the signer; a sent form is not', () => {
     expect(approvalCounts(sent()).signing).toBe(0);

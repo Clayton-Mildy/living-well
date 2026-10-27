@@ -12,4 +12,6 @@ export const sign = {
   'notif.toSign': 'Please sign {name}’s membership form', 'notif.stamped': '{name}’s membership form is signed and stamped', 'notif.returned': '{name}’s form was sent back: {note}',
   timeline: 'Timeline', scan: 'Upload signed scan',
   'err.noSigner': 'Add the billing contact first', 'err.notNow': 'This form can’t do that now',
+  'err.signerChanged': 'The billing contact changed — ask the club to send the form again',
+  waitsFor: 'This form waits for {name}’s signature', online: 'Signed online', resendHint: 'The billing contact changed — resend the form',
 };

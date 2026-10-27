@@ -141,6 +141,9 @@ export function ApplicationForm({ data, signing, onClose }: { data: ApplicationF
   const v = page1Values(d);
   const sig = signatureValues(d);
   const sigId = signing?.signatureMediaId;
+  // TANGGAL beside the signature: the day it was signed once it is (the snapshot's own date is the day it was sent)
+  const signedStep = signing && ['signed', 'countersigned', 'stamped'].includes(signing.status) ? [...signing.steps].reverse().find((x) => x.status === 'signed') : undefined;
+  const sigDate = signedStep ? idDate(signedStep.at.slice(0, 10)) : sig.date;
   const countersigned = signing?.steps.find((x) => x.status === 'countersigned');
   // everything printed on the page is Indonesian, the reader's language only runs the bar
   const approved = signing?.countersignerName && countersigned ? translate('id', 'sign.approvedBy', { name: signing.countersignerName, d: idDate(countersigned.at.slice(0, 10)) }) : '';
@@ -168,18 +171,18 @@ export function ApplicationForm({ data, signing, onClose }: { data: ApplicationF
           {(Object.keys(PAGE1) as (keyof Page1Values)[]).map((k) => <Value key={k} k={k} box={PAGE1[k]!} text={String(v[k] ?? '')} />)}
           {TICKS.map((x) => (v[x.key] ? <Tick key={x.key} k={x.key} x={x.x} y={x.y} /> : null))}
           <Value k="signer" box={{ ...TABLE_NAME, y: TABLE_P1_Y, mid: true, rows: 2 }} text={v.signer} />
-          <Value k="date" box={{ ...TABLE_DATE, y: TABLE_P1_Y, mid: true }} text={v.date} />
+          <Value k="date" box={{ ...TABLE_DATE, y: TABLE_P1_Y, mid: true }} text={signedStep ? sigDate : v.date} />
           {sigInCell(sigId, TABLE_P1_Y)}
         </Sheet>
         <Sheet n={2} label={page(2)} />
         <Sheet n={3} label={page(3)}>
           <Value k="signer" box={{ ...TABLE_NAME, y: TABLE_P3_Y, mid: true, rows: 2 }} text={sig.signer} />
-          <Value k="date" box={{ ...TABLE_DATE, y: TABLE_P3_Y, mid: true }} text={sig.date} />
+          <Value k="date" box={{ ...TABLE_DATE, y: TABLE_P3_Y, mid: true }} text={sigDate} />
           {sigInCell(sigId, TABLE_P3_Y)}
         </Sheet>
         <Sheet n={4} label={page(4)}>
           <Value k="saya" box={P4.saya} text={sig.signer} />
-          <Value k="date" box={P4.date} text={sig.date} />
+          <Value k="date" box={P4.date} text={sigDate} />
           <Value k="signer" box={P4.name} text={sig.signer} />
           {sigId ? <SigImg mediaId={sigId} {...SIG_P4} /> : null}
           <Value k="countersign" box={COUNTERSIGN} text={approved} />

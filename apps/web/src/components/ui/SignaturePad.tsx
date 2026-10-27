@@ -12,7 +12,7 @@ export function SignaturePad({ onChange, label }: { onChange: (png: Blob | null)
   const ref = useRef<HTMLCanvasElement>(null);
   const last = useRef<{ x: number; y: number } | null>(null);
   const pid = useRef<number | null>(null); // the pointer that owns the stroke: a second finger or a resting palm is ignored
-  const epoch = useRef(0); // bumped by Clear and on unmount: an image still being encoded from before is stale and dropped
+  const seq = useRef(0); // bumped by every stroke's end, by Clear and on unmount: only the newest stroke's image is kept, an older encode finishing late is dropped
   const [inked, setInked] = useState(false);
   const dpr = () => Math.min(3, typeof window !== 'undefined' && window.devicePixelRatio ? window.devicePixelRatio : 1);
 
@@ -24,7 +24,7 @@ export function SignaturePad({ onChange, label }: { onChange: (png: Blob | null)
     c.height = Math.round(HEIGHT * dpr());
     const g = c.getContext('2d');
     if (g) { g.lineWidth = 2.6 * dpr(); g.lineCap = 'round'; g.lineJoin = 'round'; g.strokeStyle = INK; g.fillStyle = INK; }
-    return () => { epoch.current += 1; };
+    return () => { seq.current += 1; };
   }, []);
 
   /** the pointer's place in canvas pixels (the box is scaled by CSS, so measure it) */
@@ -56,14 +56,14 @@ export function SignaturePad({ onChange, label }: { onChange: (png: Blob | null)
     last.current = null;
     pid.current = null;
     try { e.currentTarget.releasePointerCapture?.(e.pointerId); } catch { /* nothing to release */ }
-    const mine = epoch.current;
-    e.currentTarget.toBlob((b) => { if (b && mine === epoch.current) onChange(b); }, 'image/png');
+    const mine = ++seq.current;
+    e.currentTarget.toBlob((b) => { if (b && mine === seq.current) onChange(b); }, 'image/png');
   };
   const clear = () => {
     const c = ref.current;
     last.current = null;
     pid.current = null;
-    epoch.current += 1;
+    seq.current += 1;
     c?.getContext('2d')?.clearRect(0, 0, c.width, c.height);
     setInked(false);
     onChange(null);

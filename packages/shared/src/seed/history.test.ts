@@ -301,6 +301,7 @@ describe('signing seed (round 14 D)', () => {
       expect(sig.steps).toEqual([{ status: 'draft', at: `${addDays(T, -1)}T09:30`, by: 'staff:s1' }, { status: 'sent', at: `${addDays(T, -1)}T09:30`, by: 'staff:s1' }]);
       expect(sig.form?.name).toBeTruthy();
       expect(signerOf(st, 'm1')?.id).toBe('f1');
+      expect(sig.signerId).toBe('f1');
       expect(canSign(st, 'm1', 'f1')).toBe(true);
     }
     expect(approvalCounts(small).signing).toBe(0);
@@ -313,6 +314,8 @@ describe('signing seed (round 14 D)', () => {
     const signer = signerOf(s, id)!;
     expect(sig.status).toBe('signed');
     expect(sig.signerName).toBe(signer.name);
+    expect(sig.signerId).toBe(signer.id);
+    expect(sig.signatureMediaId).toBe('md_demo_signature-1'); // the stock signature, served from /demo/signature-1.jpg
     expect(sig.steps.at(-1)).toEqual({ status: 'signed', at: `${addDays(T, -1)}T16:00`, by: `family:${signer.id}` });
     expect(live(s.members).filter((m) => signingOf(m)).map((m) => m.id).sort()).toEqual(['m1', id].sort());
   });

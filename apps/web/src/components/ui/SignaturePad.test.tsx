@@ -90,6 +90,16 @@ describe('SignaturePad', () => {
     expect(on).toHaveBeenCalledTimes(1);
     expect(on).toHaveBeenLastCalledWith(null);
   });
+  it('two strokes whose encodes finish out of order keep the second stroke\'s image', () => {
+    const pending: BlobCallback[] = [];
+    vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => { pending.push(cb); });
+    const on = vi.fn(); mount(on);
+    stroke(); stroke();
+    const second = new Blob(['second'], { type: 'image/png' });
+    act(() => { pending[1](second); pending[0](new Blob(['first'], { type: 'image/png' })); }); // the first stroke's encode answers last
+    expect(on).toHaveBeenCalledTimes(1);
+    expect(on).toHaveBeenLastCalledWith(second);
+  });
   it('nothing is reported after the pad is gone', () => {
     const pending: BlobCallback[] = [];
     vi.spyOn(HTMLCanvasElement.prototype, 'toBlob').mockImplementation((cb) => { pending.push(cb); });

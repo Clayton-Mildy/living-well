@@ -47,11 +47,11 @@ const signed = (): Signing => ({
   steps: [...sent.steps, step('signed', '2026-10-21T08:30', 'family:f1')],
 });
 
-function Harness({ state, as, family }: { state: ClubState; as: Role; family?: boolean }) {
+function Harness({ state, as, family, pending = [] }: { state: ClubState; as: Role; family?: boolean; pending?: unknown[] }) {
   const t = useT();
   const fmt = useFmt();
   const doAct = useAct();
-  const p = { s: state, m: state.members.m1, today: T, nowMin: 600, t, fmt, lang: 'en', audience: family ? 'family' : 'staff', family: !!family, role: as, mgmt: as === 'mgmt', pending: [], mine: [], act: doAct, canEdit: true } as unknown as P;
+  const p = { s: state, m: state.members.m1, today: T, nowMin: 600, t, fmt, lang: 'en', audience: family ? 'family' : 'staff', family: !!family, role: as, mgmt: as === 'mgmt', pending, mine: [], me: { kind: 'staff', id: as === 'mgmt' ? 's9' : 's1' }, act: doAct, canEdit: true } as unknown as P;
   return <DocsTab p={p} />;
 }
 function setup(state: ClubState, as: Role, family = false) {
@@ -66,10 +66,20 @@ async function mount(ui: ReactElement) {
   root = createRoot(host);
   await act(async () => { root!.render(<MemoryRouter>{ui}</MemoryRouter>); });
 }
-async function docs(state: ClubState, as: Role = 'lobby', family = false) {
+async function docs(state: ClubState, as: Role = 'lobby', family = false, pending: unknown[] = []) {
   setup(state, as, family);
-  await mount(<Harness state={state} as={as} family={family} />);
+  await mount(<Harness state={state} as={as} family={family} pending={pending} />);
 }
+/** the form document as a request (not on file), with this signing */
+const requested = (signing?: Signing): ClubState => {
+  const s = withSigning(bare(), signing);
+  s.members.m1.documents = s.members.m1.documents.map((d) => (d.type === 'membershipForm' ? { ...d, status: 'requested' as const, mediaId: undefined, fileName: undefined } : d));
+  return s;
+};
+/** the membership form's row (the badge sits in the trail, in the row's text column) */
+const formRow = () => (document.querySelector('[data-testid="sign-badge"]') as HTMLElement).parentElement!.parentElement!.parentElement!;
+const rowBtn = (label: string) => Array.from(formRow().querySelectorAll('button')).find((b) => (b.textContent ?? '').replace(/^[a-z_]+(?=[A-Z])/, '').trim() === label);
+
 const buttons = () => Array.from(document.querySelectorAll<HTMLElement>('button'));
 const btn = (label: string) => buttons().find((b) => (b.textContent ?? '').replace(/^[a-z_]+(?=[A-Z])/, '').trim() === label || b.getAttribute('aria-label') === label); // the icon's name leads the text
 const click = async (el: Element | null | undefined) => { expect(el).toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
@@ -116,6 +126,9 @@ describe('Documents tab: signing, front desk', () => {
     s.members.m1.documents = s.members.m1.documents.map((d) => (d.type === 'membershipForm' ? { ...d, mediaId: 'md_oldpaperscan000001', fileName: 'old.jpg', status: 'onFile' as const } : d));
     await docs(s);
     expect(document.body.textContent).toContain('EM-0001-2026');
+    expect(formRow().textContent).toContain('Signed online');
+    expect(formRow().textContent).not.toContain('old.jpg'); // the old scan's name is not shown either
+    expect(formRow().textContent).not.toContain('Paper copy on file');
     expect(btn('View')).toBeUndefined(); // the old scan is not the record
     await click(btn('View signed form'));
     expect(document.querySelector('[data-testid="application-form"] [data-field="signature"]')).toBeTruthy();
@@ -142,6 +155,43 @@ describe('Documents tab: signing, front desk', () => {
     expect(btn('View signed form')).toBeUndefined();
     expect(btn('View')).toBeTruthy();
     expect(btn('Send for signing')).toBeUndefined();
+  });
+
+  it('while the form is Sent or later its row has no Upload, Replace or Remind; a Draft (sent back) keeps them', async () => {
+    await docs(requested(sent));
+    expect(btn('Resend')).toBeTruthy();
+    for (const l of ['Upload', 'Replace', 'Remind the family', 'Request from family']) expect(rowBtn(l), l).toBeUndefined();
+    await act(async () => { root?.unmount(); }); host?.remove();
+    await docs(requested({ status: 'draft', meterai: 'e', note: 'Wrong address', steps: [...sent.steps, step('draft', '2026-10-21T08:00', 'staff:s9')] }));
+    expect(rowBtn('Upload')).toBeTruthy();
+    expect(rowBtn('Remind the family')).toBeTruthy();
+  });
+
+  it('a form sent to a contact who is no longer the billing contact tells the front desk to resend it', async () => {
+    await docs(withSigning(bare(), sent));
+    expect(document.querySelector('[data-testid="sign-resend-hint"]')).toBeNull();
+    await act(async () => { root?.unmount(); }); host?.remove();
+    await docs(withSigning(bare(), { ...sent, signerId: 'f2' })); // sent to Daniel; Maria is the billing contact now
+    expect(document.querySelector('[data-testid="sign-resend-hint"]')?.textContent).toBe('The billing contact changed — resend the form');
+  });
+
+  it('a front-desk Physical meterai scan waiting for review marks the row Pending review', async () => {
+    const cr = { id: 'cr1', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s1', submittedBy: 'staff:s1', kind: 'approval', op: 'update', status: 'pending', section: 'docsConsent', action: 'signing.physical',
+      input: { memberId: 'm1', mediaId: 'md_physicalscan000001' }, target: { type: 'member', id: 'm1', memberId: 'm1' }, changes: [] };
+    await docs(withSigning(bare(), sent), 'lobby', false, [cr]);
+    expect(formRow().textContent).toContain('Pending review');
+  });
+
+  it('the badge toggle is 44 px; the sent-back reason shows to staff, never to the family', async () => {
+    const back: Signing = { status: 'draft', meterai: 'e', note: 'The signature is hard to read', steps: [...signed().steps, { ...step('draft', '2026-10-21T10:00', 'staff:s9'), note: 'The signature is hard to read' }] };
+    await docs(withSigning(bare(), back));
+    expect((document.querySelector('[data-testid="sign-badge"]') as HTMLElement).style.minHeight).toBe('44px');
+    await click(document.querySelector('[data-testid="sign-badge"]'));
+    expect(document.querySelector('[data-testid="sign-trail"]')?.textContent).toContain('The signature is hard to read');
+    await act(async () => { root?.unmount(); }); host?.remove();
+    await docs(withSigning(bare(), back), 'lobby', true);
+    await click(document.querySelector('[data-testid="sign-badge"]'));
+    expect(document.querySelector('[data-testid="sign-trail"]')?.textContent).not.toContain('hard to read');
   });
 
   it('a nurse sees the status but no Send or Physical meterai; neither does the family', async () => {

@@ -165,16 +165,62 @@ describe('family signing: the sign sheet', () => {
 
     await click(go());
     await act(async () => {});
-    expect(actMock).toHaveBeenCalledWith('signing.sign', { memberId: 'm1', signatureMediaId: 'md_signaturetest00001', otp: '123456' });
+    expect(actMock).toHaveBeenCalledWith('signing.sign', { memberId: 'm1', signatureMediaId: 'md_signaturetest00001', otp: '123456', sentAt: '2026-10-20T09:05' }); // the Send that was read
     expect(text()).toContain('Signed. The club will countersign it.');
   });
 
-  it('a family user who is not the signer sees the status but no Read and sign, and sign=1 opens nothing', async () => {
-    open('f2', stateWith());
+  it('a family user who is not the signer sees the status but no Read and sign; sign=1 says whose signature it waits for', async () => {
+    open('f2', stateWith(() => ({ ...sent(), signerId: 'f1' })));
     await show(<Docs />, '/profile?member=m1&sign=1');
     expect(q('[data-testid="sign-badge"]')?.textContent).toContain('Sent');
     expect(btn('Read and sign')).toBeUndefined();
-    expect(q('[data-testid="sign-sheet"]')).toBeNull();
+    const sheet = q('[data-testid="sign-sheet"]')!;
+    expect(sheet.textContent).toContain('This form waits for Maria Wijaya’s signature');
+    expect(sheet.textContent).not.toContain('already signed');
+    expect(q('[data-testid="sign-go"]')).toBeNull();
+  });
+
+  it('the billing contact changed after Send: neither the old nor the new one can sign; both are told to ask for a resend', async () => {
+    const toDaniel = () => ({ ...sent(), signerId: 'f2' }); // sent to Daniel, Maria is the billing contact now
+    for (const who of ['f1', 'f2']) {
+      open(who, stateWith(toDaniel));
+      await show(<Docs />, '/profile?member=m1&sign=1');
+      expect(btn('Read and sign')).toBeUndefined();
+      expect(q('[data-testid="pf-sign-changed"]')?.textContent).toBe('The billing contact changed — ask the club to send the form again');
+      expect(q('[data-testid="sign-sheet"]')!.textContent).toContain('The billing contact changed — ask the club to send the form again');
+      expect(q('[data-testid="sign-go"]')).toBeNull();
+      await act(async () => { root?.unmount(); }); host?.remove(); document.body.innerHTML = '';
+    }
+  });
+
+  it('sent again while the sheet is open: the read tick and the code are cleared, so the new form is read first', async () => {
+    open('f1', stateWith());
+    await show(<Docs />, '/profile?member=m1&sign=1');
+    await click(q('[data-testid="sign-view"]'));
+    await click(q('[data-testid="application-form"] button'));
+    await click(q('[data-testid="sign-read"]'));
+    await typeCode('123456');
+    expect(q('[data-testid="sign-read"]')!.getAttribute('aria-checked')).toBe('true');
+    const resent = stateWith(() => ({ ...sent(), steps: [...sent().steps, { status: 'sent', at: '2026-10-21T09:40', by: 'staff:s1' }] }));
+    const view = projectForFamily(resent, 'f1');
+    await act(async () => { useReplica.setState({ confirmed: view, view }); });
+    expect(q('[data-testid="sign-read"]')!.getAttribute('aria-checked')).toBe('false');
+    expect((q('[data-testid="sign-read"]') as HTMLButtonElement).disabled).toBe(true); // open the new form first
+    expect((q('[data-testid="sign-code"]') as HTMLInputElement).value).toBe('');
+  });
+
+  it('while the form is Sent the family has no Upload on its row; an e-stamped form reads Signed online', async () => {
+    const asRequest = (st: ClubState) => produce(st, (d) => { const doc = d.members.m1.documents.find((x) => x.type === 'membershipForm')!; doc.status = 'requested'; delete doc.mediaId; });
+    open('f2', asRequest(stateWith()));
+    await show(<Docs />, '/profile?member=m1');
+    expect(q('[data-type="membershipForm"] [data-testid="pf-upload"]')).toBeNull();
+    expect(q('[data-type="ktp"]')).toBeTruthy();
+    await act(async () => { root?.unmount(); }); host?.remove(); document.body.innerHTML = '';
+    const stamped = (): Signing => ({ ...sent(), status: 'stamped', meteraiSerial: 'EM-1', signatureMediaId: 'md_signaturetest00001', steps: [...sent().steps, { status: 'stamped', at: '2026-10-21T09:00', by: 'system' }] });
+    open('f2', produce(stateWith(stamped), (d) => { const doc = d.members.m1.documents.find((x) => x.type === 'membershipForm')!; doc.status = 'onFile'; delete doc.mediaId; }));
+    await show(<Docs />, '/profile?member=m1');
+    expect(q('[data-type="membershipForm"]')!.textContent).toContain('Signed online');
+    expect(q('[data-type="membershipForm"]')!.textContent).not.toContain('Paper');
   });
 
   it('with the form already signed, sign=1 says so instead of showing the steps', async () => {

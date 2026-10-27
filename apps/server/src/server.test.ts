@@ -711,7 +711,7 @@ describe('signing: the e-Meterai stamp sweep (simulated provider)', () => {
   /** m1's form sent by the front desk, signed by the billing contact, then approved by management: the countersign that triggers the sweep. */
   const countersign = async () => {
     expect((await act('signing.send', { memberId: 'm1' }, 's1')).status).toBe(200);
-    expect((await act('signing.sign', { memberId: 'm1', signatureMediaId: SIG, otp: '123456' }, 'f1')).status).toBe(200);
+    expect((await act('signing.sign', { memberId: 'm1', signatureMediaId: SIG, otp: '123456', sentAt: [...form().steps].reverse().find((x) => x.status === 'sent')!.at }, 'f1')).status).toBe(200);
     expect((await act('approval.approve', { type: 'signing', ids: ['m1'] }, 's9')).status).toBe(200);
   };
   let was: string | undefined;

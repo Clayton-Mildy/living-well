@@ -151,6 +151,14 @@ describe('ApplicationForm', () => {
       expect(field(1, 'address1')?.textContent).toContain('Snapshot');
       expect(page(1).textContent).not.toContain('Changed Later');
     });
+    it('TANGGAL beside the signature is the day it was signed, not the day it was sent; a form only sent keeps the snapshot date', async () => {
+      const snap = { ...base(), date: '2026-10-20' };
+      await show(base(), () => {}, 'en', signed({ form: snap }));
+      for (const n of [1, 3, 4]) expect(field(n, 'date')?.textContent).toBe('21 Oktober 2026');
+      await act(async () => { root?.unmount(); });
+      await show(base(), () => {}, 'en', { status: 'sent', meterai: 'e', form: snap, steps: [{ status: 'sent', at: '2026-10-20T09:00', by: 'staff:s1' }] });
+      expect(field(3, 'date')?.textContent).toBe('20 Oktober 2026');
+    });
     it('without a signing nothing is added', async () => {
       await show(base());
       expect(document.querySelector('[data-field="signature"], [data-field="countersign"], [data-field="emeterai"]')).toBeNull();

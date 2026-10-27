@@ -15,4 +15,6 @@ export const sign: Same<typeof EN> = {
   'notif.toSign': 'Mohon tanda tangani formulir keanggotaan {name}', 'notif.stamped': 'Formulir keanggotaan {name} sudah ditandatangani dan bermeterai', 'notif.returned': 'Formulir {name} dikembalikan: {note}',
   timeline: 'Riwayat', scan: 'Unggah pindaian bertanda tangan',
   'err.noSigner': 'Tambahkan kontak penagihan dulu', 'err.notNow': 'Formulir ini tidak bisa diproses sekarang',
+  'err.signerChanged': 'Kontak penagihan berubah — minta klub mengirim ulang formulir',
+  waitsFor: 'Formulir ini menunggu tanda tangan {name}', online: 'Ditandatangani online', resendHint: 'Kontak penagihan berubah — kirim ulang formulir',
 };

@@ -210,6 +210,8 @@ export interface Signing {
   /** the form as it was when sent: what the family signs (editing the member afterwards does not change it) */
   form?: ApplicationFormData;
   signatureMediaId?: string;
+  /** the contact the form was sent to (the billing contact at Send): only they sign it; a new billing contact needs a resend */
+  signerId?: string;
   signerName?: string;
   countersignerName?: string;
   note?: string;

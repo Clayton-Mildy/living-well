@@ -11,7 +11,7 @@ import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/memb
 import { latestNote, planSummary, visitDays } from '@cp/shared/rules/family';
 import { noteForFamily } from '@cp/shared/rules/approvals';
 import { applicationDataOf } from '@cp/shared/rules/applicationForm';
-import { canSign, signingOf } from '@cp/shared/rules/signing';
+import { canSign, signerChanged, signerOf, signingOf } from '@cp/shared/rules/signing';
 import { lunchLabelKey } from '@cp/shared/rules/activity';
 import { PROFILE_METRICS, familyReadings, latestOf, metricStatus, metricText, type HMetric } from '@cp/shared/rules/famHealth';
 import { FACE_ICON, Icon } from '../../../components/ui';
@@ -387,20 +387,22 @@ function DocRow({ p, type, first }: { p: PCtx; type: DocType; first: boolean }) 
   const title = type === 'ktp' ? t('profile.docTitle.ktp', { n: m.firstName }) : t('profile.docTitle.' + type);
   const st = waiting
     ? { c: F.ochre, text: t('fhealth.stWaiting') }
-    : has ? { c: F.sage, text: doc?.mediaId ? t('fhealth.stOnFile') : t('fhealth.stPaper') }
+    : has ? { c: F.sage, text: type === 'membershipForm' && signingOf(m)?.meterai === 'e' && signingOf(m)?.status === 'stamped' ? t('sign.online') : doc?.mediaId ? t('fhealth.stOnFile') : t('fhealth.stPaper') }
       : requested ? { c: F.ochre, text: t('fhealth.stRequested') } : { c: F.rust, text: t('profile.docMissing') };
   const pill: CSSProperties = { height: 36, padding: '0 14px', border: 'none', borderRadius: 999, fontSize: 14, fontWeight: 600, cursor: 'pointer', fontFamily: FONT, flex: 'none' };
   // round 14 (D): the membership form is signed online. Everyone with the parent sees where it stands; only the signer (the billing contact) signs, while it is Sent.
   const sig = type === 'membershipForm' ? signingOf(m) : undefined;
   const mine = !!sig && canSign(s, m.id, userId);
   const eSigned = sig?.meterai === 'e' && !!sig.signatureMediaId; // the signed form, not a paper scan an older upload left on the document
+  const locked = !!sig && sig.status !== 'draft'; // Sent or later: no Upload (document.upload refuses it)
+  const changed = !!sig && signerChanged(s, m.id) && (sig.signerId === userId || signerOf(s, m.id)?.id === userId); // the old or the new billing contact: it waits for a resend
   const [sheet, setSheet] = useState(false);
   const [sp, setSp] = useSearchParams();
   const printer = useApplicationForm();
-  // `sign=1` (the link in the notification) opens the sheet once and is then dropped
+  // `sign=1` (the link in the notification) opens the sheet once and is then dropped; the sheet says why when this contact cannot sign it (now)
   useEffect(() => {
     if (type !== 'membershipForm' || sp.get('sign') !== '1') return;
-    if (mine) setSheet(true);
+    if (sig) setSheet(true);
     const next = new URLSearchParams(sp);
     next.delete('sign');
     setSp(next, { replace: true });
@@ -410,12 +412,13 @@ function DocRow({ p, type, first }: { p: PCtx; type: DocType; first: boolean }) 
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{title}</span>
         <span style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, color: st.c }}><span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: 999, background: st.c, flex: 'none' }} />{st.text}</span>
-        {sig ? <SigningTrail sig={sig} /> : null}
+        {sig ? <SigningTrail sig={sig} family /> : null}
+        {changed ? <span data-testid="pf-sign-changed" style={{ fontSize: 13, lineHeight: 1.4, color: F.muted }}>{t('sign.err.signerChanged')}</span> : null}
       </span>
       {mine && sig?.status === 'sent' ? <button type="button" onClick={() => setSheet(true)} className="cp-press" data-testid="pf-sign" style={{ ...pill, height: 44, background: F.ink, color: '#FFFFFF' }}>{t('sign.readSign')}</button> : null}
       {sig && eSigned ? <button type="button" onClick={() => printer.open(sig.form ?? applicationDataOf(s, m.id, p.today), sig)} className="cp-fill cp-press" data-testid="pf-signed" style={{ ...pill, background: '#FFFFFF', color: F.ink }}>{t('sign.viewSigned')}</button> : null}
       {has && doc?.mediaId && !eSigned ? <DocView doc={doc} title={title}>{(open) => <button type="button" onClick={open} className="cp-fill cp-press" style={{ ...pill, background: '#FFFFFF', color: F.ink }}>{t('profile.view')}</button>}</DocView> : null}
-      {!has && !waiting ? <button type="button" disabled={pick.busy} onClick={pick.chooseFile} className="cp-press" data-testid="pf-upload" style={{ ...pill, background: F.ink, color: '#FFFFFF', opacity: pick.busy ? 0.6 : 1 }}>{t('profile.upload')}</button> : null}
+      {!has && !waiting && !locked ? <button type="button" disabled={pick.busy} onClick={pick.chooseFile} className="cp-press" data-testid="pf-upload" style={{ ...pill, background: F.ink, color: '#FFFFFF', opacity: pick.busy ? 0.6 : 1 }}>{t('profile.upload')}</button> : null}
       {pick.node}
       {printer.node}
       {sheet ? <SignSheet memberId={m.id} open onClose={() => setSheet(false)} /> : null}

@@ -102,3 +102,6 @@ export const lunchPicIds = (dishIds: readonly string[], n: number): string[] =>
 /** Afternoon tea pictures (for the kitchen's tea photos): a teapot, a tray of kue and a tea table. */
 export const TEA_PICS: readonly string[] = ['food-teh', 'food-kue', 'club-tea-1'];
 export const teaPicId = (n: number): string => demoMediaId(at(TEA_PICS, n));
+
+/** Round 14 (D): a made-up stock signature (drawn by a script, not a photo) for the seeded form that is Signed and waits for the countersign. */
+export const SIGNATURE_PIC = demoMediaId('signature-1');

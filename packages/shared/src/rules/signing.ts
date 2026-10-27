@@ -21,7 +21,21 @@ export function signTrail(sig: Signing): { status: SignStatus; at?: DT; by?: Act
 
 /** The one person who signs the form: the billing (primary) contact. */
 export const signerOf = (s: ClubState, memberId: string): FamilyContact | undefined => primaryContact(s, memberId);
-export const canSign = (s: ClubState, memberId: string, familyId: string): boolean => signerOf(s, memberId)?.id === familyId;
+/** The latest Send's time: the form the signer read is the one sent then (signing.sign carries it back). */
+export const lastSentAt = (sig?: Signing): DT | undefined => (sig ? [...sig.steps].reverse().find((x) => x.status === 'sent')?.at : undefined);
+/** Sent to a contact who is no longer the billing contact: nobody may sign it until the front desk sends it again. */
+export function signerChanged(s: ClubState, memberId: string): boolean {
+  const m = s.members[memberId];
+  const sig = m ? signingOf(m) : undefined;
+  return !!sig && sig.status === 'sent' && !!sig.signerId && signerOf(s, memberId)?.id !== sig.signerId;
+}
+/** The billing contact may sign, and when the form was sent to someone (signerId), only while that is still them. */
+export function canSign(s: ClubState, memberId: string, familyId: string): boolean {
+  if (signerOf(s, memberId)?.id !== familyId) return false;
+  const m = s.members[memberId];
+  const to = m ? signingOf(m)?.signerId : undefined;
+  return !to || to === familyId;
+}
 
 /** "+6281210904471" → "+62 ••• 4471": where the code "was sent" without showing the whole number. */
 export function maskPhone(e164: string): string {

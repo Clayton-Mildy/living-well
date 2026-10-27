@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, execute, getUser, systemUser, toMin, DomainError, type ClubState, type User } from '../index';
-import { formDoc, signingOf } from '../rules/signing';
+import { canSign, formDoc, lastSentAt, signerChanged, signingOf } from '../rules/signing';
 
 const T = '2026-10-27';
 const clock = { today: T, nowMin: toMin('10:00') };
@@ -19,7 +19,10 @@ const fails = (s: ClubState, name: string, input: unknown, user: User, code: str
 const SIG = 'md_testsignature0001';
 const sys = systemUser('citra');
 const send = (s: ClubState, uid = 's1') => run(s, 'signing.send', { memberId: 'm1' }, who(uid)).state;
-const signed = (s: ClubState) => run(s, 'signing.sign', { memberId: 'm1', signatureMediaId: SIG, otp: '123456' }, who('f1')).state;
+const signIn = (s: ClubState) => ({ memberId: 'm1', signatureMediaId: SIG, otp: '123456', sentAt: lastSentAt(signingOf(s.members.m1)) });
+const signed = (s: ClubState) => run(s, 'signing.sign', signIn(s), who('f1')).state;
+/** Daniel (f2) becomes Oma Lina's billing contact instead of Maria (f1) */
+const newPrimary = (s: ClubState) => produce(s, (d) => { for (const l of Object.values(d.familyLinks)) if (l.memberId === 'm1' && (l.familyId === 'f1' || l.familyId === 'f2')) l.primary = l.familyId === 'f2'; });
 /** a countersigned e-Meterai form (the countersign action itself is the approvals task) */
 const countersigned = (s: ClubState) => produce(signed(send(s)), (d) => {
   const sig = formDoc(d.members.m1)!.signing!;
@@ -33,6 +36,7 @@ describe('signing.send', () => {
     expect(sig).toMatchObject({ status: 'sent', meterai: 'e' });
     expect(sig.steps).toEqual([{ status: 'draft', at: `${T}T10:00`, by: 'staff:s1' }, { status: 'sent', at: `${T}T10:00`, by: 'staff:s1' }]);
     expect(sig.form?.signer).toBe('Maria Wijaya');
+    expect(sig.signerId).toBe('f1');
     expect(formDoc(s.members.m1)?.status).toBe('onFile'); // already on file: left alone
     const note = Object.values(s.notifications).find((x) => x.kind === 'sign.notif.toSign');
     expect(note).toMatchObject({ toUsers: ['f1'], link: '/profile?member=m1&sign=1' });
@@ -92,6 +96,57 @@ describe('signing.sign', () => {
   });
 });
 
+describe('signing.sign: the signer and the form they read (R-F2, R-F3)', () => {
+  it('a new billing contact after Send: neither the old nor the new one may sign until it is sent again (signerChanged)', () => {
+    const s = newPrimary(send(base));
+    expect(signerChanged(s, 'm1')).toBe(true);
+    expect(canSign(s, 'm1', 'f1')).toBe(false);
+    expect(canSign(s, 'm1', 'f2')).toBe(false);
+    fails(s, 'signing.sign', signIn(s), who('f1'), 'sign.err.signerChanged');
+    fails(s, 'signing.sign', signIn(s), who('f2'), 'sign.err.signerChanged');
+    const again = send(s); // Resend: now sent to Daniel, who signs it
+    expect(signingOf(again.members.m1)?.signerId).toBe('f2');
+    expect(signerChanged(again, 'm1')).toBe(false);
+    expect(canSign(again, 'm1', 'f2')).toBe(true);
+    const done = run(again, 'signing.sign', signIn(again), who('f2')).state;
+    expect(signingOf(done.members.m1)).toMatchObject({ status: 'signed', signerName: 'Daniel Wijaya' });
+  });
+  it("sent again after the signer opened it: the old Send's time is refused (notNow), the new one signs", () => {
+    const first = send(base);
+    const read = signIn(first);
+    const again = run(first, 'signing.send', { memberId: 'm1' }, who('s1')).state;
+    const later = produce(again, (d) => { formDoc(d.members.m1)!.signing!.steps.at(-1)!.at = `${T}T10:05`; }); // the resend, five minutes later
+    fails(later, 'signing.sign', read, who('f1'), 'sign.err.notNow');
+    fails(later, 'signing.sign', { ...read, sentAt: undefined }, who('f1'), 'sign.err.notNow');
+    expect(signingOf(run(later, 'signing.sign', signIn(later), who('f1')).state.members.m1)?.status).toBe('signed');
+  });
+});
+
+describe('the older document actions keep the signing record (R-F1)', () => {
+  const draft = (s: ClubState) => produce(s, (d) => { const doc = formDoc(d.members.m1)!; doc.status = 'requested'; doc.signing = { status: 'draft', meterai: 'e', note: 'Wrong address', steps: [{ status: 'draft', at: `${T}T09:00`, by: 'staff:s9', note: 'Wrong address' }] }; });
+  const upload = { memberId: 'm1', docs: [{ type: 'membershipForm', fileName: 'form.jpg', mediaId: 'md_testformscan00001' }] };
+  const famUpload = { memberId: 'm1', type: 'membershipForm', fileName: 'form.jpg', mediaId: 'md_testformscan00001' };
+  it('members.requestDocument: refused while the form is Sent or later; a Draft signing stays on the new request', () => {
+    fails(send(base), 'members.requestDocument', { memberId: 'm1', type: 'membershipForm' }, who('s1'), 'sign.err.notNow');
+    fails(countersigned(base), 'members.requestDocument', { memberId: 'm1', type: 'membershipForm' }, who('s1'), 'sign.err.notNow');
+    const s = run(draft(base), 'members.requestDocument', { memberId: 'm1', type: 'membershipForm' }, who('s1')).state;
+    expect(formDoc(s.members.m1)).toMatchObject({ status: 'requested', signing: { status: 'draft', note: 'Wrong address' } });
+  });
+  it("members.setDocuments: refused while the form is Sent or later (also the front desk's gated upload); a Draft signing stays on the new document", () => {
+    fails(send(base), 'members.setDocuments', upload, who('s9'), 'sign.err.notNow');
+    fails(signed(send(base)), 'members.setDocuments', upload, who('s1'), 'sign.err.notNow');
+    const s = run(draft(base), 'members.setDocuments', upload, who('s9')).state;
+    expect(formDoc(s.members.m1)).toMatchObject({ status: 'onFile', mediaId: 'md_testformscan00001', signing: { status: 'draft' } });
+  });
+  it('document.upload: the family is refused while the form is Sent or later; approved on a Draft, the signing stays', () => {
+    fails(send(base), 'document.upload', famUpload, who('f1'), 'sign.err.notNow');
+    fails(send(base), 'document.upload', famUpload, who('f2'), 'sign.err.notNow');
+    const r = run(draft(base), 'document.upload', famUpload, who('f2'));
+    const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who('s9')).state;
+    expect(formDoc(a.members.m1)).toMatchObject({ status: 'onFile', via: 'family', signing: { status: 'draft' } });
+  });
+});
+
 describe('signing.stamp', () => {
   const stamp = { memberId: 'm1', serial: 'SIM-EM-0001', at: `${T}T12:00` };
   it('the system stamps a countersigned form: Stamped, the serial, the document on file, the signer told', () => {
@@ -136,6 +191,18 @@ describe('signing.physical', () => {
     const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who('s9'));
     expect(signingOf(a.state.members.m1)).toMatchObject({ status: 'stamped', meterai: 'physical' });
     expect(formDoc(a.state.members.m1)?.mediaId).toBe('md_testphysicalscan01');
+  });
+  it('refused once the form is signed online (signed, countersigned, e-stamped); a Draft or Sent form can still go the paper way', () => {
+    fails(signed(send(base)), 'signing.physical', scan, who('s9'), 'sign.err.notNow');
+    fails(countersigned(base), 'signing.physical', scan, who('s9'), 'sign.err.notNow');
+    expect(signingOf(run(send(base), 'signing.physical', scan, who('s9')).state.members.m1)).toMatchObject({ status: 'stamped', meterai: 'physical' });
+  });
+  it('a stale front-desk scan approved after the e-route finished does not replace the stamped form', () => {
+    const r = run(send(base), 'signing.physical', scan, who('s1')); // gated, waits for management
+    const stamped = run(countersigned(r.state), 'signing.stamp', { memberId: 'm1', serial: 'SIM-EM-0001', at: `${T}T12:00` }, sys).state;
+    fails(stamped, 'review.approve', { crId: r.result.changeRequestId }, who('s9'), 'err.reviewConflict'); // the document moved since the scan was sent
+    fails(stamped, 'review.approve', { crId: r.result.changeRequestId, force: true }, who('s9'), 'sign.err.notNow'); // Approve anyway
+    expect(signingOf(stamped.members.m1)).toMatchObject({ status: 'stamped', meterai: 'e', meteraiSerial: 'SIM-EM-0001' });
   });
   it('needs a scan; a nurse and the family are refused', () => {
     fails(base, 'signing.physical', { memberId: 'm1' }, who('s9'), 'err.invalid');

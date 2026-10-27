@@ -5,7 +5,7 @@ import type { Draft } from 'immer';
 import type { Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
 import { e164, toMin } from '../util';
 import { defineAction, hasRole, isMgmt, roleOf, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
-import { requireMember, shortOf, familyUserIds } from './helpers';
+import { carrySigning, requireMember, shortOf, familyUserIds } from './helpers';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 import { NOTE_KEYS } from '../rules/approvals';
 import { currentMembership, isOpen, isPendingRow, membershipStatus, displayName, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
@@ -382,8 +382,9 @@ export const membersActions: ActionDef[] = [
       for (const x of input.docs) {
         if (x.type === 'nannyKtp' && !m.nanny) ctx.fail('members.err.noNanny');
         const i = m.documents.findIndex((q) => q.type === x.type);
+        const keep = carrySigning(i >= 0 ? m.documents[i] : undefined, ctx);
         if (x.fileName === null) { if (i >= 0) { m.documents.splice(i, 1); types.push(x.type); } continue; }
-        const doc: MemberDocument = { id: docIdFor(m.id, x.type), type: x.type, status: 'onFile', fileName: x.fileName, ...(x.mediaId ? { mediaId: x.mediaId } : {}), on: ctx.today, via: 'staff', by: ctx.actor };
+        const doc: MemberDocument = { id: docIdFor(m.id, x.type), type: x.type, status: 'onFile', fileName: x.fileName, ...(x.mediaId ? { mediaId: x.mediaId } : {}), on: ctx.today, via: 'staff', by: ctx.actor, ...keep };
         if (i >= 0) m.documents[i] = doc; else m.documents.push(doc);
         types.push(x.type);
       }
@@ -457,8 +458,9 @@ export const membersActions: ActionDef[] = [
       const m = editable(d, input.memberId, ctx);
       if (input.type === 'nannyKtp' && !m.nanny) ctx.fail('members.err.noNanny');
       const i = m.documents.findIndex((q) => q.type === input.type);
+      const keep = carrySigning(i >= 0 ? m.documents[i] : undefined, ctx);
       if (i >= 0 && m.documents[i].status === 'onFile') ctx.fail('members.err.alreadyOnFile');
-      const doc: MemberDocument = { id: docIdFor(m.id, input.type), type: input.type, status: 'requested', on: ctx.today, by: ctx.actor };
+      const doc: MemberDocument = { id: docIdFor(m.id, input.type), type: input.type, status: 'requested', on: ctx.today, by: ctx.actor, ...keep };
       if (i >= 0) m.documents[i] = doc; else m.documents.push(doc);
       const p = primaryContact(d as unknown as ClubState, m.id);
       if (p) ctx.notify({ toUsers: [p.id], kind: 'members.notif.docRequested', params: { name: displayName(m) }, link: `/health?member=${m.id}&tab=docs`, memberId: m.id });
