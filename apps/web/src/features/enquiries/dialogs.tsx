@@ -77,6 +77,7 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
   const [rel, setRel] = useState<Relation>(e?.contact.relation ?? 'daughter');
   const [phone, setPhone] = useState(e ? fmtPhone(e.contact.phone) : '');
   const [source, setSource] = useState<Enquiry['source']>(e?.source ?? 'referral');
+  const [sourceOther, setSourceOther] = useState(e?.sourceOther ?? '');
   const [notes, setNotes] = useState(e?.notes ?? '');
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -88,7 +89,7 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
     if (!ok || busy) return;
     setBusy(true);
     try {
-      const body = { senior: { title: title.trim(), name: name.trim() }, contact: { name: cName.trim(), relation: rel, phone }, source, notes: notes.trim() };
+      const body = { senior: { title: title.trim(), name: name.trim() }, contact: { name: cName.trim(), relation: rel, phone }, source, ...(source === 'other' ? { sourceOther: sourceOther.trim() } : {}), notes: notes.trim() };
       if (e) {
         const r = await act('enquiry.update', { enquiryId: e.id, ...body }, { ok: t('enq.leadSaved') });
         if (r.ok) onClose();
@@ -126,6 +127,7 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
         <div style={row} role="radiogroup" aria-label={t('enq.fSource')}>
           {ENQ_SOURCES.map((x) => <Pick key={x} selected={source === x} onClick={() => setSource(x)}>{t('enq.src_' + x)}</Pick>)}
         </div>
+        {source === 'other' ? <TextField label={t('enq.sourceOther')} value={sourceOther} onChange={(v) => setSourceOther(v.slice(0, 80))} /> : null}
       </Sec>
       <TextField label={t('enq.fNotes')} multiline rows={3} value={notes} onChange={setNotes} />
       </DialogBody>

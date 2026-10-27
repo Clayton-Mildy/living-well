@@ -49,6 +49,26 @@ describe('leads', () => {
     fails(s, 'enquiry.create', { ...lead, senior: { title: '', name: 'Lily Tan' } }, 's1', 'enq.err.titleRequired');
     fails(s, 'enquiry.create', { ...lead, senior: { title: 'T'.repeat(21), name: 'Lily Tan' } }, 's1', 'err.invalid');
   });
+  it('round 15: source Other keeps where the lead heard of us; another source drops it; over 80 characters is refused', () => {
+    const s = seed().citra;
+    const r = run(s, 'enquiry.create', { ...lead, source: 'other', sourceOther: ' Church group ' }, 's1');
+    const id = r.result.enquiryId as string;
+    expect(r.state.enquiries[id]).toMatchObject({ source: 'other', sourceOther: 'Church group' });
+    // text is only kept with Other, and it is optional
+    expect(run(s, 'enquiry.create', { ...lead, sourceOther: 'Church group' }, 's1').state.enquiries[id].sourceOther).toBeUndefined();
+    expect(run(s, 'enquiry.create', { ...lead, source: 'other' }, 's1').state.enquiries[id].sourceOther).toBeUndefined();
+    const r2 = run(r.state, 'enquiry.update', { enquiryId: id, source: 'instagram' }, 's1');
+    expect(r2.state.enquiries[id].source).toBe('instagram');
+    expect('sourceOther' in r2.state.enquiries[id]).toBe(false);
+    // an edit of the text alone, and of the source back to Other with new text
+    const r3 = run(r.state, 'enquiry.update', { enquiryId: id, sourceOther: 'Neighbour' }, 's1');
+    expect(r3.state.enquiries[id]).toMatchObject({ source: 'other', sourceOther: 'Neighbour' });
+    expect(run(r2.state, 'enquiry.update', { enquiryId: id, source: 'other', sourceOther: 'Radio' }, 's1').state.enquiries[id].sourceOther).toBe('Radio');
+    expect('sourceOther' in run(r.state, 'enquiry.update', { enquiryId: id, source: 'other', sourceOther: '' }, 's1').state.enquiries[id]).toBe(false);
+    expect(run(s, 'enquiry.create', { ...lead, source: 'other', sourceOther: 'x'.repeat(80) }, 's1').state.enquiries[id].sourceOther).toHaveLength(80);
+    fails(s, 'enquiry.create', { ...lead, source: 'other', sourceOther: 'x'.repeat(81) }, 's1', 'err.invalid');
+    fails(r.state, 'enquiry.update', { enquiryId: id, sourceOther: 'x'.repeat(81) }, 's1', 'err.invalid');
+  });
   it('edit changes the lead and keeps booked visit names in step', () => {
     const s = seed().citra;
     const r = run(s, 'enquiry.update', { enquiryId: 'e2', senior: { title: 'Bapak', name: 'Yusuf H. Hamid' }, notes: 'Prefers mornings' }, 's1');

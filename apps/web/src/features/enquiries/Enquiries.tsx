@@ -257,7 +257,7 @@ function LeadCard({ e, h, phone, overlay }: { e: Enquiry; h: H; phone?: boolean;
       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 6 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
           <span style={{ fontSize: phone ? 17 : 15, fontWeight: 600, lineHeight: 1.35, overflowWrap: 'anywhere' }}>{seniorName(e)}</span>
-          <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{e.contact.name} · {t('enq.rel_' + e.contact.relation).toLowerCase()} · {t('enq.src_' + e.source)}</span>
+          <span style={{ fontSize: 13, color: '#5E5852', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{e.contact.name} · {t('enq.rel_' + e.contact.relation).toLowerCase()} · {t('enq.src_' + e.source)}{e.source === 'other' && e.sourceOther ? ` · ${e.sourceOther}` : ''}</span>
         </div>
         <IconButton icon="edit" label={t('enq.editLead')} bordered={false} onClick={() => h.edit(e)} style={{ margin: '-6px -6px 0 0' }} />
       </div>

@@ -211,3 +211,26 @@ describe('a trial is 2 days in a row, no time, no lunch or health check switches
     expect(button('Pick a day and time', d)).toBeTruthy();
   });
 });
+
+describe('round 15: source Other asks where from', () => {
+  it('picking Other shows the field; the saved lead reads "Other · Church group"', async () => {
+    openClub('mgmt');
+    await show(<Enquiries />);
+    vi.stubGlobal('fetch', () => new Promise(() => {})); // the server never answers: the lead stays as the optimistic view shows it
+    await click(button('New lead'));
+    const d = dialog()!;
+    const field = (label: string) => Array.from(d.querySelectorAll<HTMLInputElement>('input')).find((i) => i.labels?.[0]?.textContent === label || i.getAttribute('aria-label') === label);
+    expect(field('Where from?')).toBeUndefined();
+    const chip = (label: string) => Array.from(d.querySelectorAll<HTMLElement>('[role="radiogroup"][aria-label="How did they hear of us?"] button')).find((r) => textOf(r) === label);
+    await click(chip('Instagram'));
+    expect(field('Where from?')).toBeUndefined();
+    await click(chip('Other'));
+    await type(field('Where from?')!, 'Church group');
+    await type(field('Name')!, 'Lily Tan'); // the senior's name
+    await type(field('Contact person')!, 'Dina Tan');
+    await type(d.querySelector<HTMLInputElement>('input[inputmode="tel"]')!, '812 5550 1234');
+    await click(button('Add lead', d));
+    const card = Array.from(document.querySelectorAll<HTMLElement>('[data-lead]')).find((c) => c.textContent?.includes('Lily Tan'));
+    expect(card?.textContent).toContain('Other · Church group');
+  });
+});

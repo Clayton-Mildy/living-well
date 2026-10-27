@@ -12,7 +12,7 @@ import {
 import { parseCarer, parseHealthBasics, parseKtp, parseRegistration, titleOf, txt } from './members';
 import { cleanRegistration } from '../rules/applicationForm';
 import { FORM_LINK_DAYS, FORM_STEPS, enquiryByFormToken, formRevOf, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
-import { arr, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
+import { arr, bad, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { e164, live, sortBy, addDays } from '../util';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
@@ -96,8 +96,13 @@ function nextFor(d: Draft<ClubState>, stage: EnqStage, enquiryId: string, today:
 }
 
 // ---------- leads ----------
-interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; notes?: string; next?: Enquiry['next'] }
-interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; notes?: string; next?: Enquiry['next'] | null }
+/** "Where from?" for source Other: optional, at most 80 characters (longer is refused, not cut). */
+function parseSourceOther(v: unknown): string {
+  const t = str(v);
+  return t.length > 80 ? bad('sourceOther') : t;
+}
+interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] }
+interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] | null }
 /** `formMediaId` and `formFileName`: the signed paper registration form, uploaded first (POST /api/media). */
 export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string }
 
@@ -127,12 +132,12 @@ export const enquiriesActions = [
     can: (u) => lobbyOrMgmt(u),
     parse(raw) {
       const o = obj(raw);
-      return { senior: parseSenior(o.senior), contact: parseContact(o.contact), source: oneOf(o.source, ENQ_SOURCES, 'source'), notes: str(o.notes, 1000), next: parseNext(o.next) };
+      return { senior: parseSenior(o.senior), contact: parseContact(o.contact), source: oneOf(o.source, ENQ_SOURCES, 'source'), ...(o.sourceOther !== undefined ? { sourceOther: parseSourceOther(o.sourceOther) } : {}), notes: str(o.notes, 1000), next: parseNext(o.next) };
     },
     run(d, i, ctx) {
       const id = nextNumId(d.enquiries, 'e');
       d.enquiries[id] = {
-        id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, senior: i.senior, contact: i.contact, source: i.source, stage: 'new',
+        id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, senior: i.senior, contact: i.contact, source: i.source, ...(i.source === 'other' && i.sourceOther ? { sourceOther: i.sourceOther } : {}), stage: 'new',
         next: i.next ?? { kind: 'callBack', date: nextOpenDay(S(d), ctx.today) }, ...(i.notes ? { notes: i.notes } : {}),
         history: [{ stage: 'new', at: ctx.nowDT, by: ctx.actor }],
       };
@@ -151,6 +156,7 @@ export const enquiriesActions = [
         ...(o.senior !== undefined ? { senior: parseSenior(o.senior) } : {}),
         ...(o.contact !== undefined ? { contact: parseContact(o.contact) } : {}),
         ...(o.source !== undefined ? { source: oneOf(o.source, ENQ_SOURCES, 'source') } : {}),
+        ...(o.sourceOther !== undefined ? { sourceOther: parseSourceOther(o.sourceOther) } : {}),
         ...(o.notes !== undefined ? { notes: str(o.notes, 1000) } : {}),
         ...(o.next !== undefined ? { next: o.next === null ? null : parseNext(o.next) } : {}),
       };
@@ -160,6 +166,9 @@ export const enquiriesActions = [
       if (i.senior) e.senior = i.senior;
       if (i.contact) e.contact = i.contact;
       if (i.source) e.source = i.source;
+      // the text belongs to Other only: a new text is kept with it, any other source clears it
+      if (e.source !== 'other') delete e.sourceOther;
+      else if (i.sourceOther !== undefined) { if (i.sourceOther) e.sourceOther = i.sourceOther; else delete e.sourceOther; }
       if (i.notes !== undefined) { if (i.notes) e.notes = i.notes; else delete e.notes; }
       if (i.next !== undefined) { if (i.next) e.next = i.next; else delete e.next; }
       for (const g of guestsOf(d, e.id)) if (g.status === 'booked') { g.name = seniorName(e); g.escortName = e.contact.name; }

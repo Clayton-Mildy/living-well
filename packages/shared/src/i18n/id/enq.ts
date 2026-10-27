@@ -25,7 +25,7 @@ export const enq: Same<typeof EN> = {
 
   // ----- dialog calon -----
   newEyebrow: 'Calon baru', editEyebrow: 'Ubah data calon', fSenior: 'Untuk siapa?', fSeniorName: 'Nama', fContact: 'Siapa yang bertanya?', fContactName: 'Narahubung',
-  fRelation: 'Hubungan', fSource: 'Dari mana mereka tahu tentang kami?', fNotes: 'Catatan', addLead: 'Tambah calon', leadCreated: 'Calon ditambahkan: {name}.', leadSaved: 'Data calon tersimpan.',
+  fRelation: 'Hubungan', fSource: 'Dari mana mereka tahu tentang kami?', sourceOther: 'Dari mana?', fNotes: 'Catatan', addLead: 'Tambah calon', leadCreated: 'Calon ditambahkan: {name}.', leadSaved: 'Data calon tersimpan.',
 
   // ----- kunjungan dan percobaan -----
   visitTitle: 'Jadwalkan kunjungan', visitChange: 'Ubah kunjungan', trialTitle: 'Jadwalkan hari percobaan', trialChange: 'Ubah hari percobaan',

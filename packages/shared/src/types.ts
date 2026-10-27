@@ -525,6 +525,8 @@ export interface Enquiry extends Row {
   senior: { title: Title; name: string };
   contact: { name: string; relation: Relation; phone: string };
   source: 'referral' | 'instagram' | 'website' | 'walkIn' | 'other';
+  /** round 15: where a lead heard of us when the source is Other (optional, at most 80 characters; gone when the source changes) */
+  sourceOther?: string;
   stage: 'new' | 'visit' | 'trial' | 'joined' | 'lost';
   next?: { kind: 'callBack' | 'sendPrices' | 'visit' | 'trial' | 'followUp' | 'starts' | 'custom'; date?: ISODate; time?: HM; text?: string };
   notes?: string;
