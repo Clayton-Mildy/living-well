@@ -105,7 +105,7 @@ test('members list: compact rows (name, status, plan), search finds family names
   await expect(page.locator('[data-member="m46"]')).toContainText('Gold');
   await expect(page.locator('[data-member="m46"]')).toContainText('Last visit Tue 20 Oct');
   await expect(page.locator('[data-member="m1"]')).not.toContainText(/years|Walker|Walking|allerg|Amlodipine|Penicillin|Shellfish|Peanuts|new member/i);
-  for (const id of ['m1', 'm2', 'm10', 'm20', 'm46']) expect((await page.locator(`[data-member="${id}"]`).boundingBox())!.height, id).toBeLessThanOrEqual(isPhone(page) ? 112 : 80); // a compact row
+  for (const id of ['m1', 'm2', 'm10', 'm20', 'm46']) expect((await page.locator(`[data-member="${id}"]`).boundingBox())!.height, id).toBeLessThanOrEqual(isPhone(page) ? (id === 'm1' ? 124 : 112) : 80); // a compact row (round 15: Oma Lina's has the nanny line)
   // what needs a look is an icon, with the reading or the reason as its name
   await expect(page.locator('[data-member="m2"]').getByRole('img', { name: /^Watch · BP \d+\/\d+$/ })).toBeVisible();
   // Tjahjadi's overdue invoice has put his membership on hold (the brochure's terms): "Suspended · unpaid" says more than "Payment overdue"
@@ -236,7 +236,7 @@ test('attendance: a visits calendar for any month; no booking, leave or absence 
   await expect(page.getByText('Nothing extra so far')).toBeVisible();
   await expect(page.locator('[data-visit="visit"]')).toHaveCount(10);
   await expect(page.locator('[data-visit="extra"]')).toHaveCount(0);
-  await expect(page.locator('[data-visit="visit"]').first()).toContainText(/In \d\d:\d\d/);
+  await expect(page.locator('[data-visit="visit"]').first()).toHaveAttribute('title', /In \d\d:\d\d/); // round 15: the cell shows the in and out times, the title spells them
   // any month can be browsed
   await page.getByRole('button', { name: 'Previous month' }).click();
   await expect(page.getByRole('heading', { name: 'September 2026' })).toBeVisible();
@@ -280,7 +280,7 @@ test('an extra visit: the 11th Flex visit is marked "Extra day" on the calendar 
   await signIn(page, 's9', '/members/m1/att');
   await expect(page.locator('[data-visit="visit"]')).toHaveCount(10);
   await expect(page.locator('[data-visit="extra"]')).toHaveCount(1);
-  await expect(page.locator('[data-visit="extra"]')).toContainText('Extra day');
+  await expect(page.locator('[data-visit="extra"]')).toHaveAttribute('title', /Extra day/); // round 15: the cell shows the time, the title says Extra day
   await expect(page.locator('[data-visit="extra"]')).toContainText('21');
   await expect(page.getByText('Extra days in October')).toBeVisible();
   await expect(page.getByText('Rp 650.000 on next month’s invoice')).toBeVisible();
