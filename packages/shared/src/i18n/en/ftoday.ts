@@ -32,5 +32,5 @@ export const ftoday = {
   nt_arrived: 'Arrived at the club', nt_home: 'Went home', nt_photos: 'New photos', nt_note: 'Note from the team', nt_health: 'Health check', nt_billing: 'Billing', nt_survey: 'Quick survey',
   nt_document: 'Document', nt_kitchen: 'The kitchen', nt_calendar: 'Club calendar', nt_plan: 'Plan', nt_club: 'From the club',
   // round 12: the day's mood in the timeline titles ({face} is the lowercase face word)
-  moodIs: 'Mood: {face}', arrivedMood: 'Arrived feeling {face}', healthMood: 'Health check, feeling {face}', homeMood: 'Went home feeling {face}',
+  moodIs: 'Mood: {face}',
 };

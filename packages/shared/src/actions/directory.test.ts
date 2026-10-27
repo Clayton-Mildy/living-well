@@ -24,12 +24,12 @@ function world() {
 const entry = { kind: 'supplier', name: 'Toko Roti Manis', what: 'Bread and cakes', whatId: 'Roti dan kue', phone: '0812 3456 7890', public: false };
 
 describe('directory', () => {
-  it('seed: three suppliers are internal, doctors and services are public', () => {
+  it('seed: seven suppliers are internal, doctors and services are public', () => {
     const s = world().s;
     const d = live(s.directory);
-    expect(d).toHaveLength(7);
+    expect(d).toHaveLength(11); // round 14 p2: d10–d13, the shops of the seeded receipts
     expect(d.filter((x) => x.public).map((x) => x.id).sort()).toEqual(['d1', 'd2', 'd3', 'd4']);
-    expect(d.filter((x) => x.kind === 'supplier').map((x) => x.id).sort()).toEqual(['d6', 'd7', 'd9']);
+    expect(d.filter((x) => x.kind === 'supplier').map((x) => x.id).sort()).toEqual(['d10', 'd11', 'd12', 'd13', 'd6', 'd7', 'd9']);
   });
 
   it('finance, management and the lobby can add; the phone is stored as +62…', () => {
@@ -78,6 +78,22 @@ describe('directory', () => {
     w.run('directory.update', { id: 'd6', kind: 'service', public: true }, 's10');
     expect(w.s.directory.d6).toMatchObject({ kind: 'service', public: true });
     w.fail('directory.update', { id: 'nope', name: 'x' }, 's10', 'err.notFound');
+  });
+
+  it('a supplier can carry a spend category: stored on add and update, unknown ones refused, null clears it', () => {
+    const w = world();
+    const id = w.run('directory.add', { ...entry, category: 'groceries' }, 's10').result.id as string;
+    expect(w.s.directory[id].category).toBe('groceries');
+    const plain = w.run('directory.add', entry, 's10').result.id as string;
+    expect('category' in w.s.directory[plain]).toBe(false);
+    w.run('directory.update', { id, category: 'marketplace' }, 's10');
+    expect(w.s.directory[id].category).toBe('marketplace');
+    w.run('directory.update', { id, name: 'Toko Roti Baru' }, 's10');
+    expect(w.s.directory[id]).toMatchObject({ category: 'marketplace', name: 'Toko Roti Baru' });
+    w.run('directory.update', { id, category: null }, 's10');
+    expect('category' in w.s.directory[id]).toBe(false);
+    w.fail('directory.add', { ...entry, category: 'snacks' }, 's10', 'err.invalid');
+    w.fail('directory.update', { id, category: 'snacks' }, 's10', 'err.invalid');
   });
 
   it('toggles public and families see exactly the public entries', () => {

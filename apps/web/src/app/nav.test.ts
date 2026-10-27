@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { NAVG, NAVS, phoneNav } from './nav';
+import { NAVG, NAVS, phoneNav, screenFor } from './nav';
 
 // KC round 13 §15: every staff role's sidebar is sectioned; the sections hold exactly the role's items, and the phone bar is untouched
 describe('nav groups', () => {
@@ -12,5 +12,18 @@ describe('nav groups', () => {
   });
   it('the front desk phone bar keeps its round-6 order', () => {
     expect(phoneNav('lobby').items.map((i) => i.key)).toEqual(['today', 'enquiries', 'members', 'menu', 'more']);
+  });
+  // round 14 phase 2: Spending is for the people who read the books
+  it('Spending is in the finance and management navs, after Receipts, and no other role reaches it', () => {
+    for (const role of ['finance', 'mgmt'] as const) {
+      const keys = NAVS[role].map((i) => i.key);
+      expect(keys[keys.indexOf('receipts') + 1]).toBe('spending');
+      expect(NAVG[role].flatMap((g) => g[1]).map((i) => i.key)).toContain('spending');
+      expect(screenFor(role, 'spending')).toBe('spend');
+    }
+    for (const role of ['lobby', 'nurse', 'activity', 'kitchen', 'family'] as const) {
+      expect(NAVS[role].map((i) => i.key)).not.toContain('spending');
+      expect(screenFor(role, 'spending')).toBeNull();
+    }
   });
 });

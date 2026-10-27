@@ -13,7 +13,7 @@ export const NAVS: Record<Role, NavItem[]> = {
   activity: [n('today', 'today', 'wb_sunny'), n('camera', 'camera', 'photo_camera'), n('log', 'log', 'edit_note'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
   // KC round 6: no Stock page for F&B (Requests has the stock request; the supervisor approves there, under Team stock requests)
   kitchen: [n('today', 'menu', 'restaurant'), n('lunch', 'lunch', 'lunch_dining'), n('feedback', 'feedback', 'forum'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
-  finance: [n('today', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('stock', 'stock', 'inventory_2'), n('guests', 'guests', 'co_present'), n('members', 'members', 'groups'), n('tasks', 'tasks', 'checklist'), n('directory', 'directory', 'contacts')], // round 7: Guests to pay the guest hosts' fees
+  finance: [n('today', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart'), n('stock', 'stock', 'inventory_2'), n('guests', 'guests', 'co_present'), n('members', 'members', 'groups'), n('tasks', 'tasks', 'checklist'), n('directory', 'directory', 'contacts')], // round 7: Guests to pay the guest hosts' fees
   mgmt: [],
   // round 8 (Family App prototype): Today · Photos · Calendar · Health · Me; Billing and Contacts open from Me
   family: [n('today', 'today', 'wb_sunny'), n('photos', 'photos', 'photo_library'), n('calendar', 'calShort', 'calendar_month'), n('health', 'healthF', 'favorite'), n('me', 'me', 'person')],
@@ -24,7 +24,7 @@ export const NAVG: Record<string, [string | null, NavItem[]][]> = {
     ['nav.g_front', [n('enquiries', 'enquiries', 'contact_phone'), n('renewals', 'renewals', 'event_repeat')]],
     ['nav.g_care', [n('hchecks', 'health', 'monitor_heart'), n('readings', 'readings', 'monitoring'), n('log', 'log', 'edit_note'), n('camera', 'camera', 'photo_camera')]], // the photo library is the Camera's Library tab
     ['nav.g_kitchen', [n('menu', 'menu', 'restaurant'), n('feedback', 'feedback', 'forum'), n('stock', 'stock', 'inventory_2')]],
-    ['nav.g_finance', [n('billing', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long')]],
+    ['nav.g_finance', [n('billing', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart')]],
     ['nav.g_club', [n('calendar', 'calShort', 'calendar_month'), n('guests', 'guests', 'co_present'), n('insights', 'insights', 'insights'), n('broadcast', 'broadcast', 'campaign'), n('venue', 'venue', 'storefront'), n('hr', 'people', 'badge'), n('directory', 'directory', 'contacts'), n('surveys', 'surveys', 'rate_review'), n('plans', 'plans', 'sell')]],
   ],
 };
@@ -35,7 +35,7 @@ NAVG.lobby = [[null, pick('lobby', ['today', 'members', 'tasks'])], ['nav.g_fron
 NAVG.nurse = [[null, pick('nurse', ['today', 'readings', 'members', 'tasks'])], ['nav.g_club', pick('nurse', ['requests', 'contacts'])]];
 NAVG.activity = [[null, pick('activity', ['today', 'camera', 'log', 'tasks'])], ['nav.g_club', pick('activity', ['members', 'calendar', 'requests', 'contacts'])]];
 NAVG.kitchen = [[null, pick('kitchen', ['today', 'lunch', 'feedback', 'tasks'])], ['nav.g_club', pick('kitchen', ['requests', 'contacts'])]];
-NAVG.finance = [[null, pick('finance', ['today', 'payments', 'budget', 'receipts'])], ['nav.g_kitchen', pick('finance', ['stock'])], ['nav.g_club', pick('finance', ['guests', 'members', 'tasks', 'directory'])]];
+NAVG.finance = [[null, pick('finance', ['today', 'payments', 'budget', 'receipts', 'spending'])], ['nav.g_kitchen', pick('finance', ['stock'])], ['nav.g_club', pick('finance', ['guests', 'members', 'tasks', 'directory'])]];
 export const PHONE_NAV: Partial<Record<Role, NavItem[]>> = {
   mgmt: [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month')],
   // KC round 6: the teacher's bar has Calendar instead of Members (Members and Requests sit under More)
@@ -69,7 +69,7 @@ export const allowedKeys = (role: Role) => new Set([...NAVS[role].map((x) => x.k
 
 export type ScreenId =
   | 'arrivals' | 'health' | 'activityToday' | 'kmenu' | 'klunch' | 'fin' | 'overview' | 'familyToday' | 'requests' | 'enq' | 'members' | 'readings' | 'camera' | 'dlog'
-  | 'cal' | 'kfeed' | 'kstock' | 'pay' | 'budget' | 'rcpt' | 'dir' | 'venue' | 'bc' | 'hr' | 'surveys' | 'plans' | 'reviews' | 'photoLib' | 'fphotos' | 'familyHealth' | 'fbill'
+  | 'cal' | 'kfeed' | 'kstock' | 'pay' | 'budget' | 'rcpt' | 'spend' | 'dir' | 'venue' | 'bc' | 'hr' | 'surveys' | 'plans' | 'reviews' | 'photoLib' | 'fphotos' | 'familyHealth' | 'fbill'
   | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'monthReport' | 'drafts'
   | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts' | 'celebrations';
 
@@ -79,7 +79,7 @@ export function screenFor(role: Role, key: string): ScreenId | null {
   if (role === 'family') return ({ photos: 'fphotos', health: 'familyHealth', billing: 'fbill', calendar: 'fcal', contacts: 'fcontacts', memories: 'fmemories', me: 'fme', profile: 'fprofile', history: 'fhistory' } as Record<string, ScreenId>)[key] || null;
   const map: Record<string, ScreenId> = {
     arrivals: 'arrivals', hchecks: 'health', menu: 'kmenu', lunch: 'klunch', readings: 'readings', log: 'dlog', camera: 'camera', photos: 'photoLib', feedback: 'kfeed', stock: 'kstock',
-    billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', directory: 'dir', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
+    billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', spending: 'spend', directory: 'dir', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
     enquiries: 'enq', calendar: 'cal', plans: 'plans', surveys: 'surveys', reviews: 'reviews', requests: 'requests',
     renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', monthReport: 'monthReport', drafts: 'drafts', celebrations: 'celebrations',
   };

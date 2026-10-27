@@ -44,6 +44,7 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   pay: L(finance, 'Payments'),
   budget: L(finance, 'Budget'),
   rcpt: L(finance, 'Receipts'),
+  spend: L(finance, 'Spending'),
   dir: L(finance, 'Directory'),
   overview: L(mgmt, 'Overview'),
   bc: L(mgmt, 'Broadcast'),

@@ -5,13 +5,13 @@
 // (today) or "Not logged" (an earlier day) instead of disappearing. Families only ever read approved log data (the day's story is built from it). A day nobody came
 // has no section, except today before a parent arrives, which keeps the newest written note, labelled with its day.
 import type { ReactNode } from 'react';
-import { memberName, displayName, staffCall, type DailyLog, type ISODate, type Member, type MoodMark } from '@cp/shared';
+import { memberName, displayName, staffCall, type DailyLog, type ISODate, type Member } from '@cp/shared';
 import { activityLabel, latestNote, type DayStory } from '@cp/shared/rules/family';
 import { dailyLogBlocks, dayDigest, type DayDigest, type LogBlock } from '@cp/shared/rules/famToday';
 import { Avatar } from '../../components/ui';
 import { memberPhoto } from '../../lib/media';
 import { Cap, F, FillCard, HAIR, TextLink } from './kit';
-import { MomentFaces, MoodTag } from './MoodBits';
+import { MoodTag } from './MoodBits';
 import { useFamilyCtx } from './useFamily';
 
 const REST_DOT = '#BBA88F';
@@ -82,36 +82,33 @@ export function TeamNote({ m, log, own, border, onOpenDay }: { m: Member; log: D
   );
 }
 
-/** The Mood row: the day's face and its word (the meaning as small text), then the marked moments as small faces. Not logged reads quiet, like the other rounds. */
-function MoodRow({ d, marks, none, first }: { d: DayDigest; marks: MoodMark[]; none: string; first: boolean }) {
+/** The Mood row: the day's one face (the average of its marked moments) and its word, the meaning as small text. Not logged reads quiet, like the other rounds. */
+function MoodRow({ d, none, first }: { d: DayDigest; none: string; first: boolean }) {
   const { t } = useFamilyCtx();
   if (!d.mood) return <Fact k={t('ftoday.dlMood')} v={none} none first={first} testId="log-mood" attrs={{ 'data-logged': '0' }} />;
   return (
-    <div data-testid="log-mood" data-mood={d.mood.face} data-logged="1" style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: '10px 16px 12px', borderTop: first ? 'none' : HAIR }}>
-      <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, fontSize: 15, lineHeight: 1.4 }}>
-        <span style={{ flex: 'none', color: F.muted, fontSize: 14 }}>{t('ftoday.dlMood')}</span>
-        <span style={{ fontWeight: 500 }}><MoodTag face={d.mood.face} hint /></span>
-      </div>
-      <MomentFaces marks={marks} />
+    <div data-testid="log-mood" data-mood={d.mood.face} data-logged="1" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: 14, fontSize: 15, lineHeight: 1.4, padding: '10px 16px 12px', borderTop: first ? 'none' : HAIR }}>
+      <span style={{ flex: 'none', color: F.muted, fontSize: 14 }}>{t('ftoday.dlMood')}</span>
+      <span style={{ fontWeight: 500 }}><MoodTag face={d.mood.face} hint /></span>
     </div>
   );
 }
 
 /** One parent who came: Mood, Activities, then the team's note (each says "not logged" when nothing is approved for it yet). */
-function Rounds({ d, marks, m, multi, past, onOpenDay }: { d: DayDigest; marks: MoodMark[]; m: Member; multi: boolean; past: boolean; onOpenDay: (d: ISODate) => void }) {
+function Rounds({ d, m, multi, past, onOpenDay }: { d: DayDigest; m: Member; multi: boolean; past: boolean; onOpenDay: (d: ISODate) => void }) {
   const { t } = useFamilyCtx();
   const none = t(past ? 'ftoday.dlNonePast' : 'ftoday.dlNone');
   const first = !multi;
   return (
     <>
-      <MoodRow d={d} marks={marks} none={none} first={first} />
+      <MoodRow d={d} none={none} first={first} />
       <Activities d={d} none={none} first={false} />
       {d.note ? <TeamNote m={m} log={d.note} own border onOpenDay={onOpenDay} /> : <Fact k={t('ftoday.dlNote')} v={none} none first={false} testId="log-note-none" attrs={{ 'data-logged': '0' }} />}
     </>
   );
 }
 
-function Block({ b, marks, m, multi, past, onOpenDay }: { b: LogBlock; marks: MoodMark[]; m: Member; multi: boolean; past: boolean; onOpenDay: (d: ISODate) => void }) {
+function Block({ b, m, multi, past, onOpenDay }: { b: LogBlock; m: Member; multi: boolean; past: boolean; onOpenDay: (d: ISODate) => void }) {
   return (
     <div data-testid="log-block" data-member={m.id} data-kind={b.kind}>
       <FillCard radius={22} pad={0} gap={0} style={{ overflow: 'hidden' }}>
@@ -121,7 +118,7 @@ function Block({ b, marks, m, multi, past, onOpenDay }: { b: LogBlock; marks: Mo
             <span style={{ fontSize: 15, fontWeight: 600, color: F.text }}>{displayName(m)}</span>
           </div>
         ) : null}
-        {b.kind === 'day' ? <Rounds d={b.digest} marks={marks} m={m} multi={multi} past={past} onOpenDay={onOpenDay} /> : null}
+        {b.kind === 'day' ? <Rounds d={b.digest} m={m} multi={multi} past={past} onOpenDay={onOpenDay} /> : null}
         {b.kind === 'older' ? <TeamNote m={m} log={b.log} own={false} border={multi} onOpenDay={onOpenDay} /> : null}
       </FillCard>
     </div>
@@ -143,7 +140,7 @@ export function DailyLogSection({ members, stories, date, onOpenDay }: { members
   return (
     <section data-testid="daily-log" data-day={date} style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <Cap>{t('ftoday.dlTitle')}</Cap>
-      {blocks.map((b) => <Block key={b.memberId} b={b} marks={stories.find((st) => st.memberId === b.memberId)?.mood?.marks ?? []} m={byId.get(b.memberId)!} multi={members.length > 1} past={!isToday} onOpenDay={onOpenDay} />)}
+      {blocks.map((b) => <Block key={b.memberId} b={b} m={byId.get(b.memberId)!} multi={members.length > 1} past={!isToday} onOpenDay={onOpenDay} />)}
     </section>
   );
 }

@@ -33,5 +33,5 @@ export const ftoday: Same<typeof EN> = {
   allCaught: 'Belum ada yang baru.', showMore: 'Tampilkan lebih banyak',
   nt_arrived: 'Tiba di klub', nt_home: 'Sudah pulang', nt_photos: 'Foto baru', nt_note: 'Catatan dari tim', nt_health: 'Cek kesehatan', nt_billing: 'Tagihan', nt_survey: 'Survei singkat',
   nt_document: 'Dokumen', nt_kitchen: 'Dapur', nt_calendar: 'Kalender klub', nt_plan: 'Paket', nt_club: 'Dari klub',
-  moodIs: 'Suasana: {face}', arrivedMood: 'Tiba dengan perasaan {face}', healthMood: 'Cek kesehatan, perasaan {face}', homeMood: 'Pulang dengan perasaan {face}',
+  moodIs: 'Suasana: {face}',
 };

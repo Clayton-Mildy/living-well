@@ -306,7 +306,7 @@ test.describe('CameraCapture (no camera in a headless browser: the file picker t
     const { id, bytes } = await res.json();
     expect(bytes).toBeLessThan(5 * 1024 * 1024);
     await expect(cam).toBeHidden();
-    await expect(page.getByRole('img', { name: /Photo of receipt nota_2110\.jpg/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Open full size · nota_2110.jpg' })).toBeVisible();
 
     // what was stored is a JPEG of at most 1600px, readable without any sign-in header (an <img> tag has none)
     const shape = await page.evaluate(async (url) => {
@@ -345,11 +345,11 @@ test.describe('CameraCapture (no camera in a headless browser: the file picker t
     await expect(cam).toBeHidden();
     await page.getByRole('button', { name: 'Tap to take the photo' }).click();
     await takePhotoWithFile(page, { name: 'one.png', mimeType: 'image/png', buffer: TINY_PNG });
-    await expect(page.getByRole('img', { name: /Photo of receipt/ })).toBeVisible();
+    await expect(page.getByRole('button', { name: /^Open full size · nota_/ })).toBeVisible();
     await page.getByRole('button', { name: 'Retake' }).click(); // the tile's own retake opens the camera again
     await expect(cam).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(page.getByRole('img', { name: /Photo of receipt/ })).toBeVisible(); // the first photo stays
+    await expect(page.getByRole('button', { name: /^Open full size · nota_/ })).toBeVisible(); // the first photo stays
     c.assertClean();
   });
 });

@@ -427,6 +427,7 @@ test.describe('receipts', () => {
     await page.getByRole('button', { name: 'Snap a receipt (nota)' }).click();
     await page.getByRole('button', { name: 'Tap to take the photo' }).click();
     await takePhotoWithFile(page); // no camera in a headless browser: the file picker is the fallback
+    await expect(page.getByText('Filled in automatically: check before sending.')).toBeVisible(); // the simulated reader has filled the form in
     await expect(page.getByRole('button', { name: 'Open full size · nota_2110.jpg' })).toBeVisible(); // round 13: the receipt picture opens full size
     await page.getByRole('button', { name: 'Sayur Segar Kemang', exact: true }).click();
     await expect(page.getByLabel('Supplier', { exact: true })).toHaveValue('Sayur Segar Kemang');
@@ -509,8 +510,8 @@ test.describe('directory', () => {
     const c = watchConsole(page);
     await signIn(page, 's10', '/directory');
     await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible();
-    if (isPhone(page)) await expect(page.getByRole('combobox', { name: 'Filter contacts' })).toContainText('All · 7');
-    else await expect(page.getByRole('button', { name: /^All\s*·?\s*7/ })).toBeVisible();
+    if (isPhone(page)) await expect(page.getByRole('combobox', { name: 'Filter contacts' })).toContainText('All · 11'); // round 14 p2: four more suppliers (the shops of the seeded receipts)
+    else await expect(page.getByRole('button', { name: /^All\s*·?\s*11/ })).toBeVisible();
     await assertNoHorizontalScroll(page);
 
     await page.getByRole('button', { name: 'Add a contact' }).click();

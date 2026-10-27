@@ -1,14 +1,15 @@
 // Finance actions: invoice run, invoices, payments, refunds, Xero, budget, receipts, vendor invoices.
 // Everything is pure and deterministic: ids come from ctx.id(), dates and times from ctx.today / ctx.now.
 import { current, type Draft } from 'immer';
-import type { Bank, BudgetSection, ClubState, DT, Invoice, Payment, Receipt, User, VendorInvoice, YM } from '../types';
+import type { Bank, BudgetSection, ClubState, DT, Invoice, Payment, Receipt, ReceiptLine, ReceiptSource, User, VendorInvoice, YM } from '../types';
 import { defineAction, DomainError, hasRole, isFamily, isStaff, type ActionDef, type Ctx } from './framework';
 import { registerJob } from './jobs';
 import { requireMember, shortOf } from './helpers';
 import { allocate, balanceOf, invoiceTotal, nextInvoiceNumber, paidOn, runDone } from '../rules/billing';
 import { actorName, isPrimaryFor, primaryContact } from '../rules/core';
+import { RECEIPT_SOURCES, SPEND_CATEGORIES, lineProblem } from '../rules/purchasing';
 import { BANKS, XERO_DELAY_MIN, dtMinutes, invoiceVa, receiptOfRequest, refundableOn, runPlan } from '../rules/finance';
-import { bool, idList, isoDate, obj, oneOf, optText, pickId, rupiah, rupiahOrZero, signedRupiah, text, yearMonth } from '../rules/financeInput';
+import { bad, bool, idList, isoDate, obj, oneOf, optText, pickId, rupiah, rupiahOrZero, signedRupiah, text, yearMonth } from '../rules/financeInput';
 import { addDays, rp, uniq, weekStart, ym } from '../util';
 
 const finMgmt = (u: User) => hasRole(u, 'finance', 'mgmt');
@@ -25,6 +26,21 @@ const freeId = (coll: Record<string, unknown>, id: string) => {
 };
 const slug = (s: string) => s.toLowerCase().normalize('NFKD').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
 const nameKey = (s: string) => s.trim().toLowerCase();
+
+/** A receipt's lines: at most 40, each checked by `lineProblem`; the ids are made here (l1…ln), whatever the caller sent. */
+const receiptLines = (v: unknown): ReceiptLine[] => {
+  if (v === undefined || v === null) return [];
+  if (!Array.isArray(v) || v.length > 40) return bad();
+  return v.map((raw, i) => {
+    const o = obj(raw);
+    if (lineProblem(o as Partial<ReceiptLine>)) return bad();
+    const brand = optText(o.brand, 60);
+    return {
+      id: `l${i + 1}`, name: text(o.name, 120), ...(brand ? { brand } : {}), qty: o.qty as number, unit: optText(o.unit, 20) ?? 'pcs',
+      unitPrice: Math.round(o.unitPrice as number), amount: rupiahOrZero(o.amount), category: oneOf(o.category, SPEND_CATEGORIES),
+    };
+  });
+};
 
 const invoiceOf = (d: D, id: string, ctx: Ctx) => {
   const inv = d.invoices[id];
@@ -463,12 +479,14 @@ export const financeActions: ActionDef[] = [
   }),
 
   // ---------- receipts ----------
-  defineAction<{ date: string; supplier: string; directoryId?: string; amount: number; sectionId: string; budgetRequestId?: string; fileName?: string; mediaId?: string }>({
+  defineAction<{ date: string; supplier: string; directoryId?: string; amount: number; sectionId: string; budgetRequestId?: string; fileName?: string; mediaId?: string; source?: ReceiptSource; orderNo?: string; lines: ReceiptLine[] }>({
     name: 'receipt.add',
     can: anyStaff, // submitted for approval, including by finance and management
     parse: (raw) => {
       const o = obj(raw);
-      return { date: isoDate(o.date), supplier: text(o.supplier, 120), directoryId: optText(o.directoryId, 80), amount: rupiah(o.amount), sectionId: text(o.sectionId, 80), budgetRequestId: optText(o.budgetRequestId, 80), fileName: optText(o.fileName, 120), mediaId: optText(o.mediaId, 60) };
+      return { date: isoDate(o.date), supplier: text(o.supplier, 120), directoryId: optText(o.directoryId, 80), amount: rupiah(o.amount), sectionId: text(o.sectionId, 80), budgetRequestId: optText(o.budgetRequestId, 80), fileName: optText(o.fileName, 120), mediaId: optText(o.mediaId, 60),
+        source: o.source === undefined ? undefined : oneOf(o.source, RECEIPT_SOURCES), orderNo: optText(o.orderNo, 60), lines: receiptLines(o.lines),
+      };
     },
     run(d, input, ctx) {
       if (input.date > ctx.today) ctx.fail('finance.err.futureDate');
@@ -479,12 +497,13 @@ export const financeActions: ActionDef[] = [
       d.receipts[id] = {
         ...base(ctx, id), date: input.date, supplier: input.supplier, ...(input.directoryId ? { directoryId: input.directoryId } : {}), amount: input.amount, sectionId: sec.id,
         ...(input.budgetRequestId ? { budgetRequestId: input.budgetRequestId } : {}), fileName: input.fileName || noteName(ctx.today), ...(input.mediaId ? { mediaId: input.mediaId } : {}), by: ctx.user.id, status: 'submitted', xero: 'notSent',
+        ...(input.source ? { source: input.source } : {}), ...(input.orderNo ? { orderNo: input.orderNo } : {}), ...(input.lines.length ? { lines: input.lines } : {}),
       };
       ctx.feed({ icon: 'receipt_long', key: 'finance.feed.receiptAdded', params: { supplier: input.supplier, amount: rp(input.amount), section: sec.name } });
       ctx.result.receiptId = id;
     },
   }),
-  defineAction<{ id: string; date?: string; supplier?: string; directoryId?: string | null; amount?: number; sectionId?: string; budgetRequestId?: string | null }>({
+  defineAction<{ id: string; date?: string; supplier?: string; directoryId?: string | null; amount?: number; sectionId?: string; budgetRequestId?: string | null; source?: ReceiptSource; orderNo?: string | null; lines?: ReceiptLine[] }>({
     name: 'receipt.edit',
     // the person who submitted it while it is waiting (or after a rejection), and finance or management at any time
     can: (u, input, s) => finMgmt(u) || (isStaff(u) && s.receipts[input?.id]?.by === u.id),
@@ -493,6 +512,7 @@ export const financeActions: ActionDef[] = [
       return {
         id: pickId(o, 'receiptId'), date: o.date === undefined ? undefined : isoDate(o.date), supplier: optText(o.supplier, 120), amount: o.amount === undefined ? undefined : rupiah(o.amount), sectionId: optText(o.sectionId, 80),
         directoryId: o.directoryId === null ? null : optText(o.directoryId, 80), budgetRequestId: o.budgetRequestId === null ? null : optText(o.budgetRequestId, 80),
+        source: o.source === undefined ? undefined : oneOf(o.source, RECEIPT_SOURCES), orderNo: o.orderNo === null ? null : optText(o.orderNo, 60), lines: o.lines === undefined ? undefined : receiptLines(o.lines),
       };
     },
     run(d, input, ctx) {
@@ -513,6 +533,10 @@ export const financeActions: ActionDef[] = [
       else if (input.directoryId) r.directoryId = input.directoryId;
       if (link) r.budgetRequestId = link;
       else delete r.budgetRequestId;
+      if (input.source) r.source = input.source;
+      if (input.orderNo === null) delete r.orderNo;
+      else if (input.orderNo) r.orderNo = input.orderNo;
+      if (input.lines) { if (input.lines.length) r.lines = input.lines; else delete r.lines; } // [] clears them
       if (mine && r.status === 'rejected') { r.status = 'submitted'; delete r.note; delete r.decidedBy; delete r.decidedAt; } // corrected and sent again
     },
   }),

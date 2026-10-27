@@ -3,8 +3,9 @@
 // staff who don't keep the directory see the same public list from the Contacts button in the header (KC round 6).
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fmtPhone, live, sortBy, type DirectoryContact } from '@cp/shared';
-import { Button, Chip, EmptyState, FilterChips, Icon, IconButton, PageHead, Pin, TextField, Toggle, usePaged } from '../../components/ui';
+import { fmtPhone, live, sortBy, type DirectoryContact, type SpendCategory } from '@cp/shared';
+import { SPEND_CATEGORIES } from '@cp/shared/rules/purchasing';
+import { Button, Chip, EmptyState, FilterChips, Icon, IconButton, PageHead, Pin, Select, TextField, Toggle, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useFmt, useT } from '../../lib/i18n';
@@ -17,6 +18,7 @@ type Filter = 'all' | 'supplier' | 'doctor' | 'service' | 'public' | 'internal';
 const FILTERS: Filter[] = ['all', 'supplier', 'doctor', 'service', 'public', 'internal'];
 const KIND_ICON: Record<DirectoryContact['kind'], string> = { doctor: 'stethoscope', service: 'medical_services', supplier: 'local_shipping' };
 const KINDS: DirectoryContact['kind'][] = ['doctor', 'service', 'supplier'];
+type CatFilter = SpendCategory | 'all';
 const telOf = (p: string) => 'tel:' + p.replace(/[^\d+]/g, '');
 
 export function Directory() {
@@ -32,15 +34,18 @@ export function Directory() {
   // KC round 6: staff who don't keep the directory get the family app's contacts (the public doctors and services, read-only)
   const simple = fam || !canEdit;
   const [f, setF] = useState<Filter>('all');
+  const [cat, setCat] = useState<CatFilter>('all'); // round 14 p2: the supplier's category, while the Suppliers filter is on
   const [q, setQ] = useState('');
   const [form, setForm] = useState<null | 'new' | DirectoryContact>(null);
   const [del, setDel] = useState<DirectoryContact | null>(null);
 
   const all = useMemo(() => sortBy(live(s.directory), (d) => d.name), [s.directory]);
   const what = (d: DirectoryContact) => (lang === 'id' && d.whatId ? d.whatId : d.what);
-  const inFilter = (d: DirectoryContact) => (simple ? d.public : f === 'all' || (f === 'public' ? d.public : f === 'internal' ? !d.public : d.kind === f));
+  // a supplier's row also says what it sells (staff only: families see doctors and services)
+  const sub = (d: DirectoryContact) => `${t('finance.kind.' + d.kind)} · ${what(d)}${!simple && d.kind === 'supplier' && d.category ? ` · ${t('purchasing.cat.' + d.category)}` : ''}`;
+  const inFilter = (d: DirectoryContact) => (simple ? d.public : f === 'all' || (f === 'public' ? d.public : f === 'internal' ? !d.public : d.kind === f && (f !== 'supplier' || cat === 'all' || d.category === cat)));
   const hits = all.filter((d) => inFilter(d) && matches(q, d.name, what(d), d.what, d.whatId, d.phone, fmtPhone(d.phone), t('finance.kind.' + d.kind)));
-  const paged = usePaged(hits, 20, q + f);
+  const paged = usePaged(hits, 20, q + f + cat);
   const emergency = s.club.settings.emergencyPhone;
   const count = (k: Filter) => all.filter((d) => (k === 'all' ? true : k === 'public' ? d.public : k === 'internal' ? !d.public : d.kind === k)).length;
 
@@ -84,7 +89,7 @@ export function Directory() {
             <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--eyebrow, #6E5A43)', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={19} weight={300} /></span>
             <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               {nameEl}
-              <span style={{ ...rowSub, fontSize: 13 }}>{t('finance.kind.' + d.kind)} · {what(d)}</span>
+              <span style={{ ...rowSub, fontSize: 13 }}>{sub(d)}</span>
             </div>
             {vis ? <span style={{ fontSize: 13, whiteSpace: 'nowrap', flex: 'none' }}>{vis}</span> : null}
           </div>
@@ -102,7 +107,7 @@ export function Directory() {
           <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--eyebrow, #6E5A43)', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={22} weight={300} /></span>
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
             {nameEl}
-            <span style={rowSub}>{t('finance.kind.' + d.kind)} · {what(d)}</span>
+            <span style={rowSub}>{sub(d)}</span>
           </div>
           {vis}
           {tel}
@@ -129,6 +134,11 @@ export function Directory() {
         </div>
       ) : null}
       {!simple ? <FilterChips label={t('finance.dir.filter')} value={f} onChange={setF} options={FILTERS.map((k) => ({ value: k, label: t('finance.dir.f_' + k), count: count(k) }))} /> : null}
+      {!simple && f === 'supplier' ? (
+        <div style={{ maxWidth: isPhone ? undefined : 280 }}>
+          <Select ariaLabel={t('purchasing.category')} value={cat} onChange={setCat} options={[{ value: 'all', label: t('purchasing.allCategories') }, ...SPEND_CATEGORIES.map((c) => ({ value: c, label: t('purchasing.cat.' + c) }))]} />
+        </div>
+      ) : null}
       {!simple || all.filter((d) => d.public).length > 6 ? <SearchField value={q} onChange={setQ} label={t('finance.dir.search')} placeholder={t('finance.dir.search')} /> : null}
 
       {isPhone ? (
@@ -159,7 +169,7 @@ function ContactForm({ value, onClose }: { value: null | 'new' | DirectoryContac
   const t = useT();
   const act = useAct();
   const editing = value && value !== 'new' ? value : null;
-  const init = () => ({ kind: (editing?.kind || 'supplier') as DirectoryContact['kind'], name: editing?.name || '', what: editing?.what || '', whatId: editing?.whatId || '', phone: editing ? fmtPhone(editing.phone) : '', pub: editing?.public ?? false });
+  const init = () => ({ kind: (editing?.kind || 'supplier') as DirectoryContact['kind'], name: editing?.name || '', what: editing?.what || '', whatId: editing?.whatId || '', phone: editing ? fmtPhone(editing.phone) : '', pub: editing?.public ?? false, cat: (editing?.category ?? 'none') as SpendCategory | 'none' });
   const [v, setV] = useState(init);
   const key = value ? (value === 'new' ? 'new' : value.id) : null;
   const [prev, setPrev] = useState<string | null>(null);
@@ -170,9 +180,11 @@ function ContactForm({ value, onClose }: { value: null | 'new' | DirectoryContac
   const ok = !!v.name.trim() && !!v.what.trim() && phoneOk;
   const save = async () => {
     const body = { kind: v.kind, name: v.name.trim(), what: v.what.trim(), phone: v.phone.trim(), public: v.pub };
+    // only a supplier has a category; changing a contact to another kind drops it
+    const category = v.kind === 'supplier' && v.cat !== 'none' ? v.cat : null;
     const r = editing
-      ? await act('directory.update', { id: editing.id, ...body, whatId: v.whatId.trim() || null }, { ok: t('finance.toast.contactSaved', { name: body.name }) })
-      : await act('directory.add', { ...body, ...(v.whatId.trim() ? { whatId: v.whatId.trim() } : {}) }, { ok: t('finance.toast.contactAdded', { name: body.name }) });
+      ? await act('directory.update', { id: editing.id, ...body, whatId: v.whatId.trim() || null, category }, { ok: t('finance.toast.contactSaved', { name: body.name }) })
+      : await act('directory.add', { ...body, ...(v.whatId.trim() ? { whatId: v.whatId.trim() } : {}), ...(category ? { category } : {}) }, { ok: t('finance.toast.contactAdded', { name: body.name }) });
     if (r.ok) onClose();
   };
   return (
@@ -184,6 +196,9 @@ function ContactForm({ value, onClose }: { value: null | 'new' | DirectoryContac
           {KINDS.map((k) => <Chip key={k} selected={v.kind === k} onClick={() => set({ kind: k })}>{t('finance.kind.' + k)}</Chip>)}
         </div>
       </div>
+      {v.kind === 'supplier' ? (
+        <Select label={t('purchasing.category')} value={v.cat} onChange={(x) => set({ cat: x })} options={[{ value: 'none', label: t('purchasing.noCategory') }, ...SPEND_CATEGORIES.map((c) => ({ value: c, label: t('purchasing.cat.' + c) }))]} />
+      ) : null}
       <TextField label={t('common.name')} value={v.name} onChange={(x) => set({ name: x })} maxLength={120} />
       <TextField label={t('finance.dir.what')} value={v.what} onChange={(x) => set({ what: x })} maxLength={160} placeholder={t('finance.dir.whatEx')} />
       <TextField label={t('finance.dir.whatId')} value={v.whatId} onChange={(x) => set({ whatId: x })} maxLength={160} />

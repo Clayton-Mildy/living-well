@@ -1,7 +1,8 @@
 // Directory actions: suppliers, doctors and services. Finance, management and the lobby keep the list; families see the public entries.
-import type { DirectoryContact, User } from '../types';
+import type { DirectoryContact, SpendCategory, User } from '../types';
 import { defineAction, hasRole, type ActionDef } from './framework';
 import { bool, obj, oneOf, optText, pickId, text, bad } from '../rules/financeInput';
+import { SPEND_CATEGORIES } from '../rules/purchasing';
 import { e164 } from '../util';
 
 const KINDS = ['doctor', 'service', 'supplier'] as const;
@@ -13,20 +14,20 @@ const phone = (v: unknown): string => {
 };
 
 export const directoryActions: ActionDef[] = [
-  defineAction<{ kind: DirectoryContact['kind']; name: string; what: string; whatId?: string; phone: string; public: boolean }>({
+  defineAction<{ kind: DirectoryContact['kind']; name: string; what: string; whatId?: string; phone: string; public: boolean; category?: SpendCategory }>({
     name: 'directory.add',
     can: keeps,
     parse: (raw) => {
       const o = obj(raw);
-      return { kind: oneOf(o.kind, KINDS), name: text(o.name, 120), what: text(o.what, 160), whatId: optText(o.whatId, 160), phone: phone(o.phone), public: bool(o.public) };
+      return { kind: oneOf(o.kind, KINDS), name: text(o.name, 120), what: text(o.what, 160), whatId: optText(o.whatId, 160), phone: phone(o.phone), public: bool(o.public), category: o.category === undefined || o.category === null ? undefined : oneOf(o.category, SPEND_CATEGORIES) };
     },
     run(d, input, ctx) {
       const id = ctx.id('dir');
-      d.directory[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, kind: input.kind, name: input.name, what: input.what, ...(input.whatId ? { whatId: input.whatId } : {}), phone: input.phone, public: input.public };
+      d.directory[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, kind: input.kind, name: input.name, what: input.what, ...(input.whatId ? { whatId: input.whatId } : {}), phone: input.phone, public: input.public, ...(input.category ? { category: input.category } : {}) };
       ctx.result.id = id;
     },
   }),
-  defineAction<{ id: string; kind?: DirectoryContact['kind']; name?: string; what?: string; whatId?: string | null; phone?: string; public?: boolean }>({
+  defineAction<{ id: string; kind?: DirectoryContact['kind']; name?: string; what?: string; whatId?: string | null; phone?: string; public?: boolean; category?: SpendCategory | null }>({
     name: 'directory.update',
     can: keeps,
     parse: (raw) => {
@@ -40,6 +41,8 @@ export const directoryActions: ActionDef[] = [
         whatId: o.whatId === null || o.whatId === '' ? null : optText(o.whatId, 160),
         phone: o.phone === undefined ? undefined : phone(o.phone),
         public: typeof o.public === 'boolean' ? o.public : undefined,
+        // null clears what the supplier sells
+        category: o.category === null ? null : o.category === undefined ? undefined : oneOf(o.category, SPEND_CATEGORIES),
       };
       return out;
     },
@@ -53,6 +56,8 @@ export const directoryActions: ActionDef[] = [
       else if (input.whatId) c.whatId = input.whatId;
       if (input.phone) c.phone = input.phone;
       if (input.public !== undefined) c.public = input.public;
+      if (input.category === null) delete c.category;
+      else if (input.category) c.category = input.category;
     },
   }),
   defineAction<{ id: string }>({

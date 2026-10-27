@@ -11,6 +11,8 @@ import { demoMediaId, demoMediaPath, MEMBER_PORTRAITS, portraitId } from './demo
 import { FACE_FREE } from './r7/drafts';
 import { sessionsOn } from '../rules/kitchen';
 import { dutyById, dutyState } from '../rules/tasks';
+import { spending, spendWindow } from '../rules/purchasing';
+import { weekStart } from '../util';
 
 const T = DEMO_TODAY;
 const t0 = performance.now();
@@ -242,5 +244,46 @@ describe('mood history (round 12)', () => {
       expect(m.createdAt).toBe(`${m.date}T${m.time}`);
       expect(m.by).toBe({ arrival: 'staff:s1', departure: 'staff:s1', health: 'staff:s8', morning: 'staff:s5', lunch: 'staff:s2', activity: 'staff:s5' }[m.moment]);
     }
+  });
+});
+
+describe('itemised receipts (round 14 p2)', () => {
+  const ws = weekStart(T);
+  const hist = live(s.receipts).filter((r) => r.id.startsWith('rch-'));
+  it('six months of approved, itemised receipts before the current week, none in it (this week\'s Budget figures stay as they were)', () => {
+    expect(hist.length).toBeGreaterThanOrEqual(40);
+    for (const r of hist) {
+      expect(r.date < ws, r.id).toBe(true);
+      expect(r.status).toBe('approved');
+      expect(r.lines?.length, r.id).toBeGreaterThan(0);
+      expect(r.amount).toBe(r.lines!.reduce((a, l) => a + l.amount, 0));
+      expect(r.mediaId).toBeUndefined();
+      expect(r.lines!.every((l) => !('brand' in l) || !!l.brand), r.id).toBe(true);
+    }
+    for (let k = 0; k < 6; k++) { const m = addMonths(ym(T), -k); expect(hist.some((r) => ym(r.date) === m), m).toBe(true); }
+  });
+  it('no seeded week goes over 70 % of a section\'s weekly limit', () => {
+    const week = new Map<string, number>();
+    for (const r of hist) week.set(`${r.sectionId}:${weekStart(r.date)}`, (week.get(`${r.sectionId}:${weekStart(r.date)}`) ?? 0) + r.amount);
+    for (const [k, v] of week) { const sec = k.split(':')[0]; expect(v, k).toBeLessThanOrEqual(0.7 * s.budgetSections[sec].limits[0].weekly); }
+  });
+  it('six months of Spending have at least 5 categories, and adult diapers got dearer', () => {
+    const sp = spending(s, spendWindow('6m', T).from, T);
+    expect(sp.byCategory.length).toBeGreaterThanOrEqual(5);
+    const popok = sp.byItem.find((i) => i.label.startsWith('Popok dewasa'));
+    expect(popok?.count ?? 0).toBeGreaterThanOrEqual(10); // in every Sahabat Lansia order (R-C3)
+    expect(popok?.change ?? 0).toBeGreaterThan(0);
+    for (const r of live(s.receipts).filter((x) => x.directoryId === 'd10')) expect(r.lines![0].name, r.id).toBe('Popok dewasa (isi 10)');
+  });
+  it('suppliers have categories; the roster has one Tokopedia receipt from Caca waiting since yesterday, the small seed none', () => {
+    expect([s.directory.d6.category, s.directory.d7.category, s.directory.d9.category, s.directory.d13.category]).toEqual(['groceries', 'groceries', 'cleaning', 'groceries']);
+    expect([s.directory.d10.category, s.directory.d11.category, s.directory.d12.category]).toEqual(['marketplace', 'marketplace', 'activity']);
+    const waiting = live(s.receipts).filter((r) => r.status === 'submitted' && r.source === 'tokopedia');
+    expect(waiting).toHaveLength(1);
+    expect(waiting[0]).toMatchObject({ by: 's1', date: addDays(T, -1), supplier: 'Sahabat Lansia Official (Tokopedia)', directoryId: 'd10' });
+    expect(waiting[0].lines?.length).toBeGreaterThan(0);
+    const small = buildSeed(T, DEMO_START_MIN).citra;
+    expect(live(small.receipts).filter((r) => r.status === 'submitted' && r.source === 'tokopedia')).toHaveLength(0);
+    expect(live(small.receipts).filter((r) => r.id.startsWith('rch-')).length).toBeGreaterThanOrEqual(40);
   });
 });
