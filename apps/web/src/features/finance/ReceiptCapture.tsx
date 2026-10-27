@@ -103,7 +103,10 @@ export function ReceiptCapture({ defaultSectionId, onDone, onCancel, sentText }:
   // the read in flight: a new photo (or leaving) aborts it, and an answer that is no longer the latest is ignored
   const ctl = useRef<AbortController | null>(null);
   const latest = useRef(0);
-  useEffect(() => () => ctl.current?.abort(), []);
+  // the upload in flight: only the last photo counts, and nothing runs after leaving
+  const up = useRef(0);
+  const hadRead = useRef(false);
+  useEffect(() => () => { up.current++; ctl.current?.abort(); }, []);
 
   const sectionId = picked && s.budgetSections[picked] ? picked : defaultSectionId && s.budgetSections[defaultSectionId] ? defaultSectionId : sections[0]?.id || '';
   const supplierCat = supplierCategory(s, directoryId);
@@ -124,12 +127,15 @@ export function ReceiptCapture({ defaultSectionId, onDone, onCancel, sentText }:
     ctl.current = c;
     setStatus('reading');
     setLines([]);
+    // a retake starts a clean form: what the reader fills is not left over from the previous photo (a first photo keeps what was typed)
+    if (hadRead.current) { pickSupplier(''); setSource('shop'); setOrderNo(''); setTotal(''); setDate(today); }
+    hadRead.current = true;
     readReceipt(id, c.signal).then((r) => {
       if (mine !== latest.current) return;
-      if (r.supplier) pickSupplier(r.supplier);
-      if (r.source) setSource(r.source);
+      pickSupplier(r.supplier ?? '');
+      setSource(r.source ?? 'shop');
       setOrderNo(r.orderNo ?? '');
-      if (r.date) setDate(r.date > today ? today : r.date);
+      setDate(r.date ? (r.date > today ? today : r.date) : today);
       setLines(r.lines);
       const tot = r.total ?? linesTotal(r.lines);
       setTotal(tot > 0 ? String(tot) : '');
@@ -141,13 +147,16 @@ export function ReceiptCapture({ defaultSectionId, onDone, onCancel, sentText }:
   };
   // the camera hands over the photo; it is uploaded at once, then read
   const took = async (blob: Blob) => {
+    const mine = ++up.current;
     setUploading(true);
     try {
       const id = await uploadMedia(blob);
+      if (mine !== up.current) return;
       setMediaId(id);
       read(id);
-    } catch (e) { say(t(e instanceof ApiError && e.code.startsWith('common.') ? e.code : 'common.mediaFailed'), { tone: 'error', icon: 'error' }); }
-    finally { setUploading(false); }
+    } catch (e) {
+      if (mine === up.current) say(t(e instanceof ApiError && e.code.startsWith('common.') ? e.code : 'common.mediaFailed'), { tone: 'error', icon: 'error' });
+    } finally { if (mine === up.current) setUploading(false); }
   };
   const send = async () => {
     if (!ok) return;
@@ -155,7 +164,7 @@ export function ReceiptCapture({ defaultSectionId, onDone, onCancel, sentText }:
     // a line the buyer added takes the category of the supplier as it is now
     const sent = lines.map((l) => (l.id.startsWith(NEW) ? { ...l, category: lineCategory(undefined, supplierCat) } : l));
     const r = await act('receipt.add', {
-      date, supplier: supplier.trim(), ...(directoryId ? { directoryId } : {}), amount, sectionId, source, ...(orderNo.trim() ? { orderNo: orderNo.trim() } : {}),
+      date, supplier: supplier.trim(), ...(directoryId ? { directoryId } : {}), amount, sectionId, source, ...(source !== 'shop' && orderNo.trim() ? { orderNo: orderNo.trim() } : {}),
       ...(requestId ? { budgetRequestId: requestId } : {}), fileName: file, mediaId, lines: sent,
     }, { ok: (sentText ?? ((sec: string) => t('finance.toast.receiptSent', { section: sec })))(sectionName(s, sectionId, lang)) });
     setSending(false);
@@ -176,12 +185,12 @@ export function ReceiptCapture({ defaultSectionId, onDone, onCancel, sentText }:
   const tapLabel = uploading ? t('common.processing') : t('finance.rc.tap');
   const photo = !mediaId ? (
     isPhone ? (
-      <button type="button" onClick={openCam} aria-busy={uploading || undefined} className="cp-press" style={{ height: 64, borderRadius: 12, border: 'none', background: '#2E2924', color: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter' }}>
+      <button type="button" onClick={openCam} disabled={uploading} aria-busy={uploading || undefined} className="cp-press" style={{ height: 64, borderRadius: 12, border: 'none', background: '#2E2924', color: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter' }}>
         <Icon name="receipt_long" size={28} color="#CAB8A2" />
         <span style={{ fontSize: 16, lineHeight: 1.4 }}>{tapLabel}</span>
       </button>
     ) : (
-      <button type="button" onClick={openCam} aria-busy={uploading || undefined} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 14, border: 'none', background: '#2E2924', color: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
+      <button type="button" onClick={openCam} disabled={uploading} aria-busy={uploading || undefined} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 14, border: 'none', background: '#2E2924', color: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
         <Icon name="receipt_long" size={40} color="#CAB8A2" />
         <span style={{ fontSize: 16, lineHeight: 1.4 }}>{tapLabel}</span>
       </button>
@@ -191,7 +200,7 @@ export function ReceiptCapture({ defaultSectionId, onDone, onCancel, sentText }:
       {thumb(84, 10)}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', minWidth: 0 }}>
         {fileChip}
-        <PillBtn icon="refresh" onClick={openCam}>{t('common.retake')}</PillBtn>
+        <PillBtn icon="refresh" onClick={openCam} disabled={uploading}>{t('common.retake')}</PillBtn>
       </div>
     </div>
   ) : (
@@ -200,7 +209,7 @@ export function ReceiptCapture({ defaultSectionId, onDone, onCancel, sentText }:
         {thumb('100%', 14)}
         <span style={{ pointerEvents: 'none', position: 'absolute', left: 10, bottom: 10 }}>{fileChip}</span>
       </div>
-      <Button variant="ghost" size={44} icon="refresh" onClick={openCam} style={{ padding: '0 6px' }}>{t('common.retake')}</Button>
+      <Button variant="ghost" size={44} icon="refresh" onClick={openCam} disabled={uploading} style={{ padding: '0 6px' }}>{t('common.retake')}</Button>
     </div>
   );
 
@@ -217,6 +226,7 @@ export function ReceiptCapture({ defaultSectionId, onDone, onCancel, sentText }:
         <CameraCapture open={cam} onClose={() => setCam(false)} onCapture={(b) => void took(b)} />
         <div style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 12 }}>
           {note}
+          {!sections.length ? <Note tone="ochre" icon="info">{t('requests.budget.noSections')}</Note> : null}
           {/* every field waits while the receipt is uploaded and read */}
           <fieldset disabled={busy} style={{ ...bare, display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 12 }}>
             <TextField label={t('finance.rc.supplier')} value={supplier} onChange={pickSupplier} maxLength={120} />

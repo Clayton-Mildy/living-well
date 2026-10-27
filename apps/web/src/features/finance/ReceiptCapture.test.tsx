@@ -9,14 +9,16 @@ import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { ReceiptCapture } from './ReceiptCapture';
 
-const h = vi.hoisted(() => ({ act: vi.fn(), upload: vi.fn(), read: vi.fn() }));
+const h = vi.hoisted(() => ({ act: vi.fn(), upload: vi.fn(), read: vi.fn(), capture: null as null | ((b: Blob) => void) }));
 vi.mock('../../lib/act', () => ({ useAct: () => h.act }));
 vi.mock('../../lib/media', async (orig) => ({ ...(await orig<typeof import('../../lib/media')>()), uploadMedia: h.upload }));
 vi.mock('../../lib/ocr', () => ({ readReceipt: h.read }));
 // no camera in jsdom: the dialog is a single button that hands over a photo
 vi.mock('../../components/ui/CameraCapture', () => ({
-  CameraCapture: ({ open, onCapture, onClose }: { open: boolean; onCapture: (b: Blob) => void; onClose: () => void }) =>
-    open ? <button type="button" data-testid="shot" onClick={() => { onCapture(new Blob(['x'], { type: 'image/jpeg' })); onClose(); }}>shot</button> : null,
+  CameraCapture: ({ open, onCapture, onClose }: { open: boolean; onCapture: (b: Blob) => void; onClose: () => void }) => {
+    h.capture = onCapture; // lets a test hand over two photos without the dialog in between
+    return open ? <button type="button" data-testid="shot" onClick={() => { onCapture(new Blob(['x'], { type: 'image/jpeg' })); onClose(); }}>shot</button> : null;
+  },
 }));
 
 const T = '2026-10-21';
@@ -27,7 +29,7 @@ beforeAll(() => {
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 });
 beforeEach(() => {
-  h.act.mockReset(); h.upload.mockReset(); h.read.mockReset();
+  h.act.mockReset(); h.upload.mockReset(); h.read.mockReset(); h.capture = null;
   let n = 0;
   h.upload.mockImplementation(async () => `md_${++n}`);
   h.act.mockResolvedValue({ ok: true, result: {} });
@@ -49,9 +51,10 @@ function deferred<V>() {
   return { promise, resolve, reject };
 }
 
-async function show(ui: ReactElement) {
+async function show(ui: ReactElement, tweak?: (st: ReturnType<typeof buildSeed>['citra']) => void) {
   useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's5', name: 'Teacher', role: 'activity', clubId: 'citra', clubs: ['citra'] } });
   const state = buildSeed().citra;
+  tweak?.(state);
   useReplica.setState({ club: 'citra', userId: 's5', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
   host = document.createElement('div');
   document.body.appendChild(host);
@@ -198,5 +201,88 @@ describe('ReceiptCapture', () => {
     await snap();
     await click(send());
     expect((h.act.mock.calls[0][1] as { date: string }).date).toBe(T);
+  });
+  it('a retake whose read fails starts from a clean form: the first photo\'s supplier and total are gone', async () => {
+    h.read.mockResolvedValueOnce(reading()).mockRejectedValueOnce(new Error('boom'));
+    await mount();
+    await snap();
+    expect(supplierInput().value).toBe('Bersih Prima');
+    expect(totalInput().value).toBe('185.000');
+    await snap(true);
+    expect(text()).toContain("Couldn't read the receipt. Fill it in by hand.");
+    expect(supplierInput().value).toBe('');
+    expect(totalInput().value).toBe('');
+    expect(lineRows()).toHaveLength(0);
+    expect(off(send())).toBe(true);
+  });
+
+  it('a reading with no supplier or total leaves those blank (not the previous photo\'s)', async () => {
+    h.read.mockResolvedValueOnce(reading()).mockResolvedValueOnce({ lines: [], confidence: 0.5 });
+    await mount();
+    await snap();
+    await snap(true);
+    expect(supplierInput().value).toBe('');
+    expect(totalInput().value).toBe('');
+    expect(text()).not.toContain('Order no.');
+  });
+
+  it('the last photo wins: an upload that finishes after a newer one is ignored, and only the newer photo is read', async () => {
+    const u1 = deferred<string>();
+    const u2 = deferred<string>();
+    h.upload.mockReset();
+    h.upload.mockReturnValueOnce(u1.promise).mockReturnValueOnce(u2.promise);
+    h.read.mockResolvedValue(reading());
+    await mount();
+    await click(button('Tap to take the photo'));
+    await act(async () => { h.capture!(new Blob(['a'])); h.capture!(new Blob(['b'])); });
+    await act(async () => { u2.resolve('md_second'); });
+    expect(h.read).toHaveBeenCalledTimes(1);
+    expect(h.read.mock.calls[0][0]).toBe('md_second');
+    await act(async () => { u1.resolve('md_first'); });
+    expect(h.read).toHaveBeenCalledTimes(1);
+    await click(send());
+    expect((h.act.mock.calls[0][1] as { mediaId: string }).mediaId).toBe('md_second');
+  });
+
+  it('the photo buttons are off while a photo uploads', async () => {
+    const u = deferred<string>();
+    h.upload.mockReset();
+    h.upload.mockReturnValueOnce(u.promise);
+    h.read.mockResolvedValue(reading());
+    await mount();
+    await snap();
+    expect(document.querySelector<HTMLButtonElement>('button[aria-busy="true"]')?.disabled).toBe(true);
+    await act(async () => { u.resolve('md_1'); });
+    expect(button('Retake')?.getAttribute('aria-disabled')).toBeNull();
+  });
+
+  it('an upload that finishes after leaving the screen starts no read', async () => {
+    const u = deferred<string>();
+    h.upload.mockReset();
+    h.upload.mockReturnValueOnce(u.promise);
+    await mount();
+    await click(button('Tap to take the photo'));
+    await act(async () => { h.capture!(new Blob(['a'])); });
+    await act(async () => { root!.unmount(); });
+    root = null;
+    await act(async () => { u.resolve('md_1'); });
+    expect(h.read).not.toHaveBeenCalled();
+  });
+
+  it('Send leaves the order number out when the source is Shop', async () => {
+    h.read.mockResolvedValue(reading());
+    await mount();
+    await snap();
+    await click(button('Shop'));
+    await click(send());
+    const input = h.act.mock.calls[0][1] as Record<string, unknown>;
+    expect(input.source).toBe('shop');
+    expect('orderNo' in input).toBe(false);
+  });
+
+  it('a club with no budget sections says so (Send has nothing to go to)', async () => {
+    h.read.mockResolvedValue(reading());
+    await show(<ReceiptCapture onDone={() => {}} onCancel={() => {}} />, (st) => { st.budgetSections = {}; });
+    expect(text()).toContain('No budget sections yet. Ask finance to add one.');
   });
 });
