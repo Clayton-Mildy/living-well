@@ -19,7 +19,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useSession } from '../../store/session';
 import { foodLabel, mobLabel, relLabel } from '../members/lib';
 import { Rows, StepBar } from '../members/register/parts';
-import { AllergyFields, CarerFields, DementiaFields, HealthFields, IdFields, PeSection, RegCareFields, RegPersonalFields, RelationChips, TextField, TitleName, type RegDraft } from '../members/dialogs/forms';
+import { AllergyFields, CarerFields, DementiaFields, dementiaQuestion, HealthFields, IdFields, PeSection, RegCareFields, RegPersonalFields, RelationChips, TextField, TitleName, type RegDraft } from '../members/dialogs/forms';
 import { ONLINE_STEPS, STEP_NAME_KEY, blankOnline, clearDevice, firstOpenOnlineStep, fromOnline, loadDevice, onlineIssues, pickDraft, resumeStep, saveDevice, toOnline, type FDraft, type OnlineStep } from './onlineForm';
 
 interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; extra: number; flexQuota: number }; dementiaFee: number }
@@ -274,7 +274,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
     const rows: Record<Exclude<OnlineStep, 'review'>, [ReactNode, ReactNode][]> = {
       who: [[t('common.name'), `${d.title} ${d.name.trim()}`], [t('profile.f.called'), d.reg.nickname.trim() || none], [t('profile.f.dob'), d.dob ? fdy(d.dob) : none], [t('profile.f.address'), d.address.trim() || none]],
       family: [[t('common.name'), d.cName.trim() || none], [t('profile.f.relation'), relLabel(t, d.rel)], [t('common.phone'), d.phone.trim() ? (d.phone.replace(/\D/g, '').length >= 8 ? fmtPhone(d.phone) : d.phone) : none], [t('profile.sec.nanny'), d.nanny ? d.nannyName.trim() || none : none]],
-      health: [[t('profile.f.conditions'), d.conditions.join(', ') || none], [t('profile.f.mobility'), mobLabel(t, d.mobility === 'none' ? null : d.mobility)], [t('profile.sec.allergies'), allergies.join(', ') || none], [t('profile.q.dementia'), d.reg.dementia === null ? none : d.reg.dementia ? <>{t('common.yes')}<span style={{ display: 'block', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{t('profile.dementiaFee', { rp: rp(info.dementiaFee) })}</span></> : t('common.no')]],
+      health: [[t('profile.f.conditions'), d.conditions.join(', ') || none], [t('profile.f.mobility'), mobLabel(t, d.mobility === 'none' ? null : d.mobility)], [t('profile.sec.allergies'), allergies.join(', ') || none], [dementiaQuestion(t, info.dementiaFee), d.reg.dementia === null ? none : d.reg.dementia ? <>{t('common.yes')}<span style={{ display: 'block', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{t('profile.dementiaFee', { rp: rp(info.dementiaFee) })}</span></> : t('common.no')]],
       plan: [[t('enq.plan'), d.plan ? `${t('mgmt.plan_' + d.plan)} · ${rp(prices[d.plan])}` : t('enq.pf_planUnsure')]],
     };
     const edit = (k: OnlineStep) => (

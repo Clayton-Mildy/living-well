@@ -117,6 +117,8 @@ describe('the online form: five steps', () => {
     expect(step()).toBe('review');
     const groups = Array.from(document.querySelectorAll('[data-review-group]'));
     expect(groups).toHaveLength(4);
+    expect(groups[2].textContent).toContain('Dementia (plus Rp 750.000 monthly fee)?'); // the payload's fee, else the default (round 15)
+    expect(document.body.textContent).not.toContain('{fee}');
     expect(document.body.textContent).toContain('Rosa S');
     expect(document.body.textContent).toContain('Dina Santoso');
     await click(button('Edit', groups[0] as HTMLElement));

@@ -104,6 +104,7 @@ describe('Add member: the stepped flow', () => {
     await click(next());
     expect(flow().dataset.regStep).toBe('review');
     expect(flow().querySelectorAll('[data-review-group]')).toHaveLength(6);
+    expect(flow().querySelector('[data-review-group="health"]')!.textContent).toContain('Dementia (plus Rp 750.000 monthly fee)?'); // not a bare {fee} (round 15)
     await click(button('Edit', flow().querySelector('[data-review-group="family"]')!)); // Edit goes back to that step, and Next straight back to the review
     expect(flow().dataset.regStep).toBe('family');
     expect(button('Next')).toBeUndefined();

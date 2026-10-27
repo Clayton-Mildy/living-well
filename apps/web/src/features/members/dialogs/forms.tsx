@@ -215,13 +215,13 @@ function YesNoOpen({ label, value, onChange, t }: { label: string; value: YN; on
     </div>
   );
 }
+/** Round 15 (KC): the dementia question names the fee in force ("Dementia (plus Rp 750.000 monthly fee)?"); the form, its review and the edit dialog all word it here. */
+export const dementiaQuestion = (t: TFn, fee?: number) => t('profile.q.dementia', { fee: rp(fee ?? FEE_DEFAULTS.dementia).replace(/^Rp\s*/, '') });
 /** KC round 10: dementia as a yes / no (it affects the monthly fee), with an optional note once it is yes. `fee` (round 14) is the extra monthly cost, told on Yes. */
 export function DementiaFields({ d, set, t, fee }: { d: RegDraft; set: RegSet; t: TFn; fee?: number }) {
-  // round 15 (KC): the question names the fee in force ("Dementia (plus Rp 750.000 monthly fee)?"); the price list's, else the default
-  const question = t('profile.q.dementia', { fee: rp(fee ?? FEE_DEFAULTS.dementia).replace(/^Rp\s*/, '') });
   return (
     <>
-      <YesNoOpen label={question} value={d.dementia} onChange={(v) => set({ dementia: v, ...(v ? {} : { dementiaNote: '' }) })} t={t} />
+      <YesNoOpen label={dementiaQuestion(t, fee)} value={d.dementia} onChange={(v) => set({ dementia: v, ...(v ? {} : { dementiaNote: '' }) })} t={t} />
       {d.dementia && fee != null ? <span data-testid="dementia-fee" style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{t('profile.dementiaFee', { rp: rp(fee) })}</span> : null}
       {d.dementia ? <TextField label={t('profile.f.dementiaNote')} value={d.dementiaNote} onChange={(v) => set({ dementiaNote: v })} multiline rows={2} name="dementiaNote" maxLength={300} /> : null}
     </>
