@@ -216,18 +216,19 @@ describe('family Today', () => {
     expect(sessions.every((x) => x.getAttribute('data-took') === 'none' && /Not logged yet/.test(x.textContent || ''))).toBe(true);
     // round 14: the door's Check-in face is already the day's mood (the other rounds are not logged yet)
     expect(log.querySelector('[data-testid="log-mood"]')?.getAttribute('data-logged')).toBe('1');
-    expect(qa('[data-testid="log-mood"] [data-moment]').map((x) => x.getAttribute('data-moment'))).toContain('arrival');
+    expect(log.querySelector('[data-testid="log-mood"]')?.getAttribute('data-mood')).toBeTruthy();
+    expect(log.querySelector('[data-moment]')).toBeNull(); // one face only, no face per moment
     expect(log.querySelector('[data-testid="log-note-none"]')?.textContent).toContain('Not logged yet');
     expect(log.querySelector('[data-testid="team-note"]')).toBeNull();
     expect(log.textContent).not.toContain('The team fills this in');
   });
 
-  it('round 14: the Mood row at the top of the daily log: the day\u2019s face and word with its meaning, then the marked moments as small faces', async () => {
+  it('round 14: the Mood row at the top of the daily log: one face, the average of the marked moments, with its word and meaning; no face per moment anywhere', async () => {
     const full = produce(buildSeed().citra, (d) => {
       d.attendance[`${T}:m1`] = { id: `${T}:m1`, clubId: d.clubId, createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
-      for (const [moment, time] of [['arrival', '10:00'], ['morning', '10:30']] as const) {
+      for (const [moment, time, face] of [['arrival', '10:00', 5], ['morning', '10:30', 3]] as const) {
         const id = moodId(T, 'm1', moment);
-        d.moodMarks[id] = { id, clubId: d.clubId, createdAt: `${T}T${time}`, createdBy: 'staff:s1', memberId: 'm1', date: T, time, moment, face: 4, by: 'staff:s1' };
+        d.moodMarks[id] = { id, clubId: d.clubId, createdAt: `${T}T${time}`, createdBy: 'staff:s1', memberId: 'm1', date: T, time, moment, face, by: 'staff:s1' };
       }
     });
     open('f1', 'en', 11 * 60, full);
@@ -237,7 +238,8 @@ describe('family Today', () => {
     expect(mood.getAttribute('data-mood')).toBe('4');
     expect(mood.textContent).toContain('Good');
     expect(mood.textContent).toContain('Engaged and content');
-    expect(Array.from(mood.querySelectorAll('[data-moment]')).map((x) => [x.getAttribute('data-moment'), x.getAttribute('data-face'), x.lastElementChild?.textContent])).toEqual([['arrival', '4', 'Check-in'], ['morning', '4', 'Morning']]);
+    expect(q('[data-moment]')).toBeNull(); // no face per moment
+    expect(document.body.textContent).not.toContain('feeling'); // the timeline names no moment's face either
     expect(log.querySelector('[data-testid="log-block"]')!.firstElementChild!.firstElementChild).toBe(mood); // the first row of the card
     expect(q('[data-testid="hero-mood"]')?.textContent).toContain('Good'); // the hero shows the face too
     expect(q('[data-testid="hero-mood"]')?.textContent).toContain('Engaged and content');
