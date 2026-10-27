@@ -39,7 +39,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const photos = live(s.photos).filter((p) => p.visibility === 'visible' && p.memberIds.some((id) => mids.includes(id)));
   for (const p of photos) for (const id of p.memberIds) if (!out.members[id] && s.members[id]) {
     const m = s.members[id];
-    out.members[id] = { ...strip(m), dob: null, address: null, health: { conditions: [], diabetic: false, food: [], drugs: [], mobility: null, diet: [], meds: [], cognitive: { summary: '' } }, documents: [], consents: [], billing: { va: '' }, review: { status: 'approved', crId: 'stub' } } as Member;
+    out.members[id] = { ...strip(m), dob: null, address: null, nanny: null, health: { conditions: [], diabetic: false, food: [], drugs: [], mobility: null, diet: [], meds: [], cognitive: { summary: '' } }, documents: [], consents: [], billing: { va: '' }, review: { status: 'approved', crId: 'stub' } } as Member;
   }
   // the kitchen's lunch photos (no member tags) show on the family's Today timeline
   const lunchIds = new Set(live(s.dayMenus).flatMap((d) => [...(d.photoIds || []), ...(d.teaPhotoIds || []), ...(d.photoId ? [d.photoId] : [])])); // KC round 7: the tea photos too

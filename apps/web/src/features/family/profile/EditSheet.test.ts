@@ -1,7 +1,7 @@
 // Round 14: a family edit of the carer keeps the club's picture and note only for the same person.
 import { describe, expect, it } from 'vitest';
 import { buildSeed, type Member } from '@cp/shared';
-import { changesOf } from './EditSheet';
+import { carerPhoto, changesOf } from './EditSheet';
 
 const base = () => {
   const m = buildSeed().citra.members.m1;
@@ -30,5 +30,15 @@ describe('changesOf: the carer', () => {
     expect(changesOf(m, draft(m, { nannyPhoto: '' })).nanny).toEqual({ name: 'Mbak Sari', phone: '+6281211112222', note: 'Agency: Kasih Ibu, Mon–Wed' });
     const different = changesOf(m, draft(m, { nannyName: 'Mbak Dewi', nannyPhoto: 'md_newphoto00001' }));
     expect(different.nanny).toEqual({ name: 'Mbak Dewi', phone: '+6281211112222', photoMediaId: 'md_newphoto00001' });
+  });
+  it('a new name with the old picture untouched sends no picture; a newly chosen one is kept', () => {
+    const m = base();
+    const untouched = draft(m, { nannyName: 'Mbak Dewi', nannyPhoto: 'md_nannyphoto0001' });
+    expect(carerPhoto(m, untouched)).toBeUndefined();
+    expect(changesOf(m, untouched).nanny).toEqual({ name: 'Mbak Dewi', phone: '+6281211112222' });
+    const chosen = draft(m, { nannyName: 'Mbak Dewi', nannyPhoto: 'md_newphoto00001' });
+    expect(carerPhoto(m, chosen)).toBe('md_newphoto00001');
+    expect(changesOf(m, chosen).nanny).toEqual({ name: 'Mbak Dewi', phone: '+6281211112222', photoMediaId: 'md_newphoto00001' });
+    expect(carerPhoto(m, draft(m, { nannyPhoto: 'md_nannyphoto0001' }))).toBe('md_nannyphoto0001'); // the same person keeps it
   });
 });

@@ -35,6 +35,15 @@ function draftOf(m: Member, waiting: Patch): Draft {
   };
 }
 
+/** Is the carer in the draft the one on file (same name, any case or spacing)? */
+const sameCarer = (m: Member, d: Draft) => !!m.nanny && m.nanny.name.trim().toLowerCase() === d.nannyName.trim().toLowerCase();
+/** The picture the sheet shows and sends: another person's name does not inherit the old carer's picture until a new one is chosen. */
+export function carerPhoto(m: Member, d: Draft): string | undefined {
+  if (d.nannyPhoto === undefined) return sameCarer(m, d) ? m.nanny?.photoMediaId : undefined;
+  if (!sameCarer(m, d) && d.nannyPhoto === m.nanny?.photoMediaId) return undefined;
+  return d.nannyPhoto || undefined;
+}
+
 /** Only what differs from the current details. */
 export function changesOf(m: Member, d: Draft): Patch {
   const reg = m.registration || {};
@@ -42,10 +51,10 @@ export function changesOf(m: Member, d: Draft): Patch {
   const patch: Patch = {};
   for (const k of TEXT_KEYS) if (d[k].trim() !== cur[k]) patch[k] = d[k].trim();
   if (d.usual && d.usual !== m.usualArrival) patch.usualArrival = d.usual;
-  // the carer's note is the club's to edit and stays for the same person; the picture is what the sheet shows (a different person starts without the old note)
+  // the carer's note is the club's to edit and stays for the same person; the picture is what the sheet shows (a different person starts without the old picture and note)
   const keep = (n: NonNullable<Member['nanny']> | null) => (n ? { ...(n.photoMediaId ? { photoMediaId: n.photoMediaId } : {}), ...(n.note ? { note: n.note } : {}) } : {});
-  const same = !!m.nanny && m.nanny.name.trim().toLowerCase() === d.nannyName.trim().toLowerCase();
-  const photo = d.nannyPhoto === undefined ? (same ? m.nanny?.photoMediaId : undefined) : d.nannyPhoto || undefined;
+  const same = sameCarer(m, d);
+  const photo = carerPhoto(m, d);
   const nanny = d.nanny && d.nannyName.trim() ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), ...(photo ? { photoMediaId: photo } : {}), ...(same && m.nanny?.note ? { note: m.nanny.note } : {}) } : null;
   if (JSON.stringify(nanny) !== JSON.stringify(m.nanny ? { name: m.nanny.name, ...(m.nanny.phone ? { phone: m.nanny.phone } : {}), ...keep(m.nanny) } : null)) patch.nanny = nanny;
   return patch;
@@ -102,7 +111,7 @@ export function ProfileEditSheet({ m, s, t, userId, onClose }: { m: Member; s: C
         <Switch on={d.nanny} onClick={() => set({ nanny: !d.nanny })} label={t('profile.comesWithNanny')} />
       </div>
       {d.nanny ? (
-        <ProfilePhotoField name={d.nannyName || t('profile.f.nanny')} value={d.nannyPhoto || null} onChange={(id) => set({ nannyPhoto: id ?? '' })} size={64} />
+        <ProfilePhotoField name={d.nannyName || t('profile.f.nanny')} value={carerPhoto(m, d) || null} onChange={(id) => set({ nannyPhoto: id ?? '' })} size={64} />
       ) : null}
       {d.nanny ? (
         <Two>
