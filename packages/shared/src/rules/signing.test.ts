@@ -4,7 +4,8 @@ import { produce } from 'immer';
 import { buildSeed, type Signing } from '../index';
 import { SIGN_STATUSES, canSign, formDoc, maskPhone, signTrail, signerOf, signingOf } from './signing';
 
-const base = buildSeed().citra;
+// the seed sends Oma Lina's form for signing (round 14 D seed); these tests start from a form nobody has sent
+const base = produce(buildSeed().citra, (d) => { delete formDoc(d.members.m1)!.signing; });
 const step = (status: Signing['status'], at: string, by: Signing['steps'][number]['by'] = 'staff:s1') => ({ status, at, by });
 
 describe('signTrail', () => {

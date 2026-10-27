@@ -35,6 +35,8 @@ afterEach(async () => {
 const actMock = vi.fn(async (_name: string, _input: unknown) => ({ ok: true as const, result: { approved: 1, rejected: 1, skipped: [] as string[], conflicts: [] as string[] } }));
 const step = (status: Signing['status'], at: string, by: Actor = 'staff:s1'): SignStep => ({ status, at, by });
 const sent: Signing = { status: 'sent', meterai: 'e', steps: [step('draft', '2026-10-20T09:00'), step('sent', '2026-10-20T09:05')] };
+/** The seed with Oma Lina's form unsent (the seed itself has sent it, round 14 D). */
+const bare = (): ClubState => withSigning(buildSeed().citra);
 function withSigning(state: ClubState, signing?: Signing): ClubState {
   const m = state.members.m1;
   m.documents = m.documents.map((d) => (d.type === 'membershipForm' ? { ...d, signing } : d));
@@ -74,14 +76,14 @@ const click = async (el: Element | null | undefined) => { expect(el).toBeTruthy(
 
 describe('Documents tab: signing, front desk', () => {
   it('Send for signing calls signing.send and says the (simulated) WhatsApp link went to the billing contact', async () => {
-    await docs(buildSeed().citra);
+    await docs(bare());
     await click(btn('Send for signing'));
     expect(actMock).toHaveBeenCalledWith('signing.send', { memberId: 'm1' });
     expect(useUi.getState().toast?.text).toBe('WhatsApp link sent to Maria Wijaya (simulated)');
   });
 
   it('a sent form says Sent and offers Resend; its timeline lists Draft and Sent with the time and who', async () => {
-    await docs(withSigning(buildSeed().citra, sent));
+    await docs(withSigning(bare(), sent));
     expect(btn('Send for signing')).toBeUndefined();
     expect(btn('Resend')).toBeTruthy();
     expect(document.querySelector('[data-testid="sign-badge"]')?.textContent).toContain('Sent');
@@ -99,7 +101,7 @@ describe('Documents tab: signing, front desk', () => {
   });
 
   it('once the family signed there is no Send or Physical meterai; View signed form opens the form with the signature', async () => {
-    await docs(withSigning(buildSeed().citra, signed()));
+    await docs(withSigning(bare(), signed()));
     expect(btn('Send for signing')).toBeUndefined();
     expect(btn('Resend')).toBeUndefined();
     expect(btn('Physical meterai')).toBeUndefined();
@@ -110,7 +112,7 @@ describe('Documents tab: signing, front desk', () => {
 
   it('a stamped e-Meterai form shows its serial and opens the signed form, not an old paper scan', async () => {
     const sig: Signing = { ...signed(), status: 'stamped', meteraiSerial: 'EM-0001-2026', countersignerName: 'Ega', steps: [...signed().steps, step('countersigned', '2026-10-21T09:00', 'staff:s9'), step('stamped', '2026-10-21T09:01', 'system')] };
-    const s = withSigning(buildSeed().citra, sig);
+    const s = withSigning(bare(), sig);
     s.members.m1.documents = s.members.m1.documents.map((d) => (d.type === 'membershipForm' ? { ...d, mediaId: 'md_oldpaperscan000001', fileName: 'old.jpg', status: 'onFile' as const } : d));
     await docs(s);
     expect(document.body.textContent).toContain('EM-0001-2026');
@@ -120,7 +122,7 @@ describe('Documents tab: signing, front desk', () => {
   });
 
   it('Physical meterai opens the print view and a scan goes to signing.physical with its media id; the row then reads Physical meterai', async () => {
-    await docs(buildSeed().citra);
+    await docs(bare());
     expect(document.querySelector('[data-testid="physical-scan"]')).toBeNull();
     await click(btn('Physical meterai'));
     expect(document.querySelector('[data-testid="application-form"]')).toBeTruthy(); // printed for the paper
@@ -133,7 +135,7 @@ describe('Documents tab: signing, front desk', () => {
   });
 
   it('a physical-meterai form reads Stamped · Physical meterai and its record is the scan', async () => {
-    const s = withSigning(buildSeed().citra, { status: 'stamped', meterai: 'physical', steps: [step('stamped', '2026-10-21T09:10')] });
+    const s = withSigning(bare(), { status: 'stamped', meterai: 'physical', steps: [step('stamped', '2026-10-21T09:10')] });
     s.members.m1.documents = s.members.m1.documents.map((d) => (d.type === 'membershipForm' ? { ...d, mediaId: 'md_physicalscan000001', fileName: 'signed-scan.jpg', status: 'onFile' as const } : d));
     await docs(s);
     expect(document.querySelector('[data-testid="sign-badge"]')?.textContent).toContain('Physical meterai');
@@ -143,14 +145,14 @@ describe('Documents tab: signing, front desk', () => {
   });
 
   it('a nurse sees the status but no Send or Physical meterai; neither does the family', async () => {
-    await docs(withSigning(buildSeed().citra, sent), 'nurse');
+    await docs(withSigning(bare(), sent), 'nurse');
     expect(btn('Resend')).toBeUndefined();
     expect(btn('Send for signing')).toBeUndefined();
     expect(btn('Physical meterai')).toBeUndefined();
     expect(document.querySelector('[data-testid="sign-badge"]')?.textContent).toContain('Sent');
     await act(async () => { root?.unmount(); });
     host?.remove();
-    await docs(buildSeed().citra, 'lobby', true);
+    await docs(bare(), 'lobby', true);
     expect(btn('Send for signing')).toBeUndefined();
     expect(btn('Physical meterai')).toBeUndefined();
   });
@@ -159,7 +161,7 @@ describe('Documents tab: signing, front desk', () => {
 describe('Approvals → Signing', () => {
   const dialogReject = () => Array.from(document.querySelectorAll<HTMLElement>('[role="dialog"] button')).find((b) => (b.textContent ?? '').replace(/^[a-z_]+(?=[A-Z])/, '') === 'Reject');
   async function approvals(extra?: (s: ClubState) => void) {
-    const state = withSigning(buildSeed().citra, signed());
+    const state = withSigning(bare(), signed());
     extra?.(state);
     setup(state, 'mgmt');
     await mount(<Reviews />);

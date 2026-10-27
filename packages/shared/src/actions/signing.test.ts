@@ -7,7 +7,8 @@ import { formDoc, signingOf } from '../rules/signing';
 const T = '2026-10-27';
 const clock = { today: T, nowMin: toMin('10:00') };
 const seed = buildSeed();
-const base = seed.citra;
+// the seed sends Oma Lina's form for signing (round 14 D seed); these tests start from a form nobody has sent
+const base = produce(seed.citra, (d) => { delete formDoc(d.members.m1)!.signing; });
 const who = (id: string): User => getUser(seed, id)!;
 let n = 0;
 const run = (s: ClubState, name: string, input: unknown, user: User) => execute(s, name, input, user, clock, `sg${++n}`);

@@ -49,8 +49,9 @@ const sent = (): Signing => ({ status: 'sent', meterai: 'e', steps: [{ status: '
 /** The seed with Oma Lina's membership form in the given signing state (the form snapshot is taken as Send does). */
 function stateWith(make: (() => Signing) | null = sent): ClubState {
   return produce(buildSeed().citra, (d) => {
-    if (!make) return;
     const doc = d.members.m1.documents.find((x) => x.type === 'membershipForm')!;
+    delete doc.signing; // the seed has already sent Oma Lina's form (round 14 D seed)
+    if (!make) return;
     doc.signing = { ...make(), form: applicationDataOf(d as ClubState, 'm1', T) };
   });
 }

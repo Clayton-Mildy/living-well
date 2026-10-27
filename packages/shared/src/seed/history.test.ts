@@ -7,6 +7,8 @@ import {
 } from '../index';
 import { existsSync } from 'node:fs';
 import { onLeaveIn } from '../rules/leave';
+import { canSign, signerOf, signingOf } from '../rules/signing';
+import { approvalCounts, pendingItems } from '../rules/approvals';
 import { demoMediaId, demoMediaPath, MEMBER_PORTRAITS, portraitId } from './demoMedia';
 import { FACE_FREE } from './r7/drafts';
 import { sessionsOn } from '../rules/kitchen';
@@ -285,5 +287,33 @@ describe('itemised receipts (round 14 p2)', () => {
     const small = buildSeed(T, DEMO_START_MIN).citra;
     expect(live(small.receipts).filter((r) => r.status === 'submitted' && r.source === 'tokopedia')).toHaveLength(0);
     expect(live(small.receipts).filter((r) => r.id.startsWith('rch-')).length).toBeGreaterThanOrEqual(40);
+  });
+});
+
+describe('signing seed (round 14 D)', () => {
+  const sigOf = (st: ClubState, id: string) => signingOf(st.members[id]);
+  it('Oma Lina\'s membership form was sent to Maria yesterday morning by Caca, in both worlds', () => {
+    const small = buildSeed(T, DEMO_START_MIN).citra;
+    for (const st of [s, small]) {
+      const sig = sigOf(st, 'm1')!;
+      expect(sig.status).toBe('sent');
+      expect(sig.meterai).toBe('e');
+      expect(sig.steps).toEqual([{ status: 'draft', at: `${addDays(T, -1)}T09:30`, by: 'staff:s1' }, { status: 'sent', at: `${addDays(T, -1)}T09:30`, by: 'staff:s1' }]);
+      expect(sig.form?.name).toBeTruthy();
+      expect(signerOf(st, 'm1')?.id).toBe('f1');
+      expect(canSign(st, 'm1', 'f1')).toBe(true);
+    }
+    expect(approvalCounts(small).signing).toBe(0);
+  });
+  it('the roster has one form signed by its billing contact yesterday afternoon, waiting for management to countersign', () => {
+    const items = pendingItems(s, 'signing');
+    expect(items).toHaveLength(1);
+    const id = items[0].memberId!;
+    const sig = sigOf(s, id)!;
+    const signer = signerOf(s, id)!;
+    expect(sig.status).toBe('signed');
+    expect(sig.signerName).toBe(signer.name);
+    expect(sig.steps.at(-1)).toEqual({ status: 'signed', at: `${addDays(T, -1)}T16:00`, by: `family:${signer.id}` });
+    expect(live(s.members).filter((m) => signingOf(m)).map((m) => m.id).sort()).toEqual(['m1', id].sort());
   });
 });
