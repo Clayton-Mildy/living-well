@@ -27,13 +27,13 @@ const att = (date: string, inAt: string, outAt?: string): Attendance => ({
   checkIn: { at: inAt, by: 'staff:s1', method: 'manual' }, ...(outAt ? { checkOut: { at: outAt, by: 'staff:s1', method: 'manual' as const } } : {}),
   queueAdds: [], dismissed: [], edits: [],
 });
-function Harness({ state }: { state: ClubState }) {
+function Harness({ state, isPhone = false }: { state: ClubState; isPhone?: boolean }) {
   const t = useT();
   const fmt = useFmt();
-  const p = { s: state, m: state.members.m1, today: T, nowMin: 600, t, fmt, lang: 'en', isPhone: false } as unknown as P;
+  const p = { s: state, m: state.members.m1, today: T, nowMin: 600, t, fmt, lang: 'en', isPhone } as unknown as P;
   return <AttendanceTab p={p} />;
 }
-async function show(lang: 'en' | 'id') {
+async function show(lang: 'en' | 'id', isPhone = false) {
   // m1's days of October 2026 are replaced by two: the 5th (in and out) and the 6th (still in)
   const state = produce(buildSeed().citra, (d) => {
     for (const k of Object.keys(d.attendance)) if (d.attendance[k].memberId === 'm1') delete d.attendance[k];
@@ -44,7 +44,7 @@ async function show(lang: 'en' | 'id') {
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => { root!.render(<Harness state={state} />); });
+  await act(async () => { root!.render(<Harness state={state} isPhone={isPhone} />); });
 }
 const visits = () => Array.from(document.querySelectorAll('[data-visit]')) as HTMLElement[];
 
@@ -61,5 +61,15 @@ describe('Attendance tab', () => {
   it('in Indonesian', async () => {
     await show('id');
     expect(visits()[0].title).toBe('Masuk 09:58 · Pulang 15:30');
+  });
+  it('on a phone the cell shows just the times, 09:58 over 15:30, without In / Out; the tooltip keeps the full text', async () => {
+    await show('en', true);
+    const [done, still] = visits();
+    expect(done.textContent).toContain('09:58');
+    expect(done.textContent).toContain('15:30');
+    expect(done.textContent).not.toMatch(/In |Out /);
+    expect(done.title).toBe('In 09:58 · Out 15:30');
+    expect(still.textContent).toContain('09:58');
+    expect(still.textContent).not.toMatch(/In |Out /);
   });
 });

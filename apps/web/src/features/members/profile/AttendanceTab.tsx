@@ -35,10 +35,12 @@ export function AttendanceTab({ p }: { p: P }) {
     if (a?.checkIn) {
       const extra = extraSet.has(d);
       const inOut = a.checkOut ? t('profile.attInOut', { a: a.checkIn.at, b: a.checkOut.at }) : t('profile.cal.in', { t: a.checkIn.at }); // round 15: "In 09:58 · Out 15:30"
-      const out = a.checkOut ? t('profile.cal.out', { t: a.checkOut.at }) : undefined;
+      // a phone cell is about 25 px wide: just the times (09:58 over 15:30), no In / Out words; the tooltip keeps the full text and the dark fill + coin mark an extra day
+      const out = a.checkOut ? (p.isPhone ? a.checkOut.at : t('profile.cal.out', { t: a.checkOut.at })) : undefined;
+      const inLabel = p.isPhone ? a.checkIn.at : t('profile.cal.in', { t: a.checkIn.at });
       c = extra
-        ? { ...c, bg: '#24201C', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.extra'), label2: out, extra: true, full: `${inOut} · ${t('profile.cal.extra')}` }
-        : { ...c, bg: 'var(--accent, #75624B)', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.in', { t: a.checkIn.at }), label2: out, full: inOut };
+        ? { ...c, bg: '#24201C', bd: 'none', fg: '#FFFFFF', label: p.isPhone ? inLabel : t('profile.cal.extra'), label2: out, extra: true, full: `${inOut} · ${t('profile.cal.extra')}` }
+        : { ...c, bg: 'var(--accent, #75624B)', bd: 'none', fg: '#FFFFFF', label: inLabel, label2: out, full: inOut };
     } else if (w === 0 || w === 6) c = { ...c, bg: 'var(--press, #EEEEF0)', bd: 'none', fg: '#5E5852' };
     else if (!ds.open) c = { ...c, bg: 'var(--hairline, #E2E2E6)', bd: 'none', fg: '#5E5852', label: ds.reason === 'holiday' ? t('profile.cal.holiday') : t('profile.cal.closed') };
     else if (!member) c = { ...c, bg: 'var(--press, #EEEEF0)', bd: 'none', fg: '#5E5852', label: cur.lastDay && d > cur.lastDay ? t('profile.cal.ended') : '' };
@@ -86,15 +88,15 @@ export function AttendanceTab({ p }: { p: P }) {
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7,minmax(0,1fr))', gap: 6 }}>
         {dows.map((w, i) => <div key={i} style={{ fontSize: 12, fontWeight: 500, textAlign: 'center', padding: '4px 0', lineHeight: 1.4, color: '#6B6259', letterSpacing: '1px', textTransform: 'uppercase' }}>{w}</div>)}
         {cells.map((c, i) => {
-          const st: CSSProperties = { minHeight: 60, borderRadius: 8, padding: '6px 8px', background: c.bg, border: c.bd, color: c.fg, display: 'flex', flexDirection: 'column', gap: 2, visibility: c.vis, minWidth: 0, overflow: 'hidden', textAlign: 'left', fontFamily: 'Inter' };
+          const st: CSSProperties = { minHeight: 60, borderRadius: 8, padding: p.isPhone ? '6px 3px' : '6px 8px', background: c.bg, border: c.bd, color: c.fg, display: 'flex', flexDirection: 'column', gap: 2, visibility: c.vis, minWidth: 0, overflow: 'hidden', textAlign: 'left', fontFamily: 'Inter' };
           return (
             <div key={i} style={st} title={c.full} data-visit={c.full ? (c.extra ? 'extra' : 'visit') : undefined}>
               <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 2 }}>
                 {c.day}
                 {c.extra ? <Icon name="paid" size={14} fill={1} /> : null}
               </span>
-              <span style={{ fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</span>
-              {c.label2 ? <span style={{ fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label2}</span> : null}
+              <span style={{ fontSize: p.isPhone ? 11 : 12, lineHeight: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{c.label}</span>
+              {c.label2 ? <span style={{ fontSize: p.isPhone ? 11 : 12, lineHeight: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', fontVariantNumeric: 'tabular-nums' }}>{c.label2}</span> : null}
             </div>
           );
         })}

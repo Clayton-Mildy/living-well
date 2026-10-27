@@ -5,7 +5,7 @@ import type { fme as EN } from '../en/fme';
 export const fme: Same<typeof EN> = {
   // ----- Me -----
   textSize: 'Ukuran teks', textNormal: 'Standar', textLarge: 'Lebih besar',
-  yourParent: 'Orang tua Anda', yourFamily: 'Keluarga Anda', rolePays: '{rel} · membayar tagihan', atClub: 'Di klub', atClubSince: 'Di klub sejak {t}', homeToday: 'Di rumah hari ini', wentHome: 'Pulang {t}',
+  yourParent: 'Orang tua Anda', yourFamily: 'Keluarga Anda', rolePays: '{rel} · membayar tagihan', atClubSince: 'Di klub sejak {t}', homeToday: 'Di rumah hari ini', wentHome: 'Pulang {t}',
   memEnded: 'Keanggotaan berakhir', memStarts: 'Mulai {d}', dueAmt: '{a} jatuh tempo', someonePays: '{n} yang membayar', healthAlerts: 'Peringatan kesehatan', healthAlertsFor: 'Peringatan kesehatan · {n}',
   details: 'Data Anda', detailsTitle: 'Data Anda', password: 'Kata sandi',
   // ----- Billing -----

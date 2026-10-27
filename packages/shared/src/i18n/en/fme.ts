@@ -2,7 +2,7 @@
 export const fme = {
   // ----- Me -----
   textSize: 'Text size', textNormal: 'Default', textLarge: 'Larger', // KC round 10
-  yourParent: 'Your parent', yourFamily: 'Your family', rolePays: '{rel} · pays the bills', atClub: 'At the club', atClubSince: 'At the club since {t}', homeToday: 'Home today', wentHome: 'Went home {t}',
+  yourParent: 'Your parent', yourFamily: 'Your family', rolePays: '{rel} · pays the bills', atClubSince: 'At the club since {t}', homeToday: 'Home today', wentHome: 'Went home {t}',
   memEnded: 'Membership ended', memStarts: 'Starts {d}', dueAmt: '{a} due', someonePays: '{n} pays', healthAlerts: 'Health alerts', healthAlertsFor: 'Health alerts · {n}',
   details: 'Your details', detailsTitle: 'Your details', password: 'Password',
   // ----- Billing -----
