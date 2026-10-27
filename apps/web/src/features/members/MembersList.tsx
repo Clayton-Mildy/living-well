@@ -3,8 +3,8 @@
 // Pending new members are listed as "Pending approval". The details (age, mobility, allergies, medicines) live on the profile.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym } from '@cp/shared';
-import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
+import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym, type Plan } from '@cp/shared';
+import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, activePlans, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -33,11 +33,13 @@ export function MembersList() {
   const [f, setF] = useState<MemberFilter>(() => { const w = sp.get('f'); return (MEMBER_FILTERS as string[]).includes(w ?? '') ? (w as MemberFilter) : 'active'; }); // /members?f=checkOn opens a filter
   const [sort, setSort] = useState<MemberSort>('name');
   const [adding, setAdding] = useState(false);
+  const [plan, setPlan] = useState<Plan | 'all'>('all'); // round 15: narrows In the club by plan
   const [notSeen] = useCheckOnDays();
   const rows = useMemo(() => memberRows(s, today, notSeen), [s, today, notSeen]);
   const counts = useMemo(() => filterCounts(rows), [rows]);
-  const visible = useMemo(() => sortMemberRows(rows.filter(FILTERS[f]).filter((r) => matchesQuery(s, r.m, q)), sort), [rows, f, q, s, sort]);
-  const paged = usePaged(visible, PAGE_SIZE, `${f}|${q}|${sort}`);
+  const planOn = f === 'in' && plan !== 'all' ? plan : null;
+  const visible = useMemo(() => sortMemberRows(rows.filter(FILTERS[f]).filter((r) => !planOn || r.plan === planOn).filter((r) => matchesQuery(s, r.m, q)), sort), [rows, f, planOn, q, s, sort]);
+  const paged = usePaged(visible, PAGE_SIZE, `${f}|${planOn}|${q}|${sort}`);
   const canAdd = role === 'lobby' || role === 'mgmt';
   // a search result: /members?do=add opens Add member (only for a role that can add), then the parameter goes so Back doesn't reopen it
   useEffect(() => {
@@ -69,10 +71,17 @@ export function MembersList() {
     return out;
   };
   // KC round 14: In the club and Active say how many are Flex and how many Gold
-  const splitEl = (f === 'in' || f === 'active') ? (
-    <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{t('members.split', { f: counts.split[f].flex, g: counts.split[f].gold })}</div>
+  const split = (f === 'in' || f === 'active') ? (planOn ? { flex: planOn === 'flex' ? counts.split.in.flex : 0, gold: planOn === 'gold' ? counts.split.in.gold : 0 } : counts.split[f]) : null;
+  const splitEl = split ? (
+    <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{t('members.split', { f: split.flex, g: split.gold })}</div>
   ) : null;
   // round 15: the Check on filter says how long "not seen" is (a per-device choice that also drives the lobby rail)
+  // round 15: while In the club is on, a Plan dropdown narrows it (the plans come from activePlans, so phase 2's catalogue shows up here)
+  const planEl = f === 'in' ? (
+    <div style={{ maxWidth: isPhone ? undefined : 240 }}>
+      <Select label={t('members.planFilter')} value={plan} onChange={setPlan} options={[{ value: 'all', label: t('members.allPlans') }, ...activePlans(s).map((p) => ({ value: p.id, label: t(p.label) }))]} />
+    </div>
+  ) : null;
   const notSeenEl = f === 'checkOn' ? <div style={{ maxWidth: isPhone ? undefined : 240 }}><NotSeenSelect /></div> : null;
   const sortEl = (
     <Select ariaLabel={t('members.sortLabel')} value={sort} onChange={setSort} options={MEMBER_SORTS.map((k) => ({ value: k, label: t(`members.sort.${k}`) }))} />
@@ -139,6 +148,7 @@ export function MembersList() {
             <div style={{ flex: '1 1 0', minWidth: 0 }}>{sortEl}</div>
           </div>
           {splitEl}
+          {planEl}
           {notSeenEl}
           <Group pad={0} gap={0}>
             {paged.rows.map((r, i) => {
@@ -213,7 +223,8 @@ export function MembersList() {
           <FilterChips label={t('members.filter')} value={f} onChange={setF} options={MEMBER_FILTERS.map((k) => ({ value: k, label: t('members.f.' + k), count: counts[k] }))} />
         )}
         {splitEl}
-        {notSeenEl}
+        {planEl}
+          {notSeenEl}
         <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: isPhone ? 24 : 28, padding: '8px clamp(18px, 3vw, 36px) 12px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px 20px', flexWrap: 'wrap', padding: '14px 0 6px' }}>
             {isPhone ? null : <div style={{ flex: '0 1 220px', minWidth: 0, marginRight: 'auto' }}>{sortEl}</div>}

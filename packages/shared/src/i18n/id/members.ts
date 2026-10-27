@@ -8,6 +8,7 @@ export const members: Same<typeof EN> = {
   since: 'Sejak {d}', renews: 'Perpanjangan {d}', endsOn: 'Berakhir {d}', endedOn: 'Berakhir {d}', sortLabel: 'Urutkan anggota', 'sort.name': 'Nama', 'sort.startNew': 'Tanggal mulai, terbaru', 'sort.startOld': 'Tanggal mulai, terlama', 'sort.endSoon': 'Tanggal berakhir, terdekat',
   lastVisit: 'Kunjungan terakhir {d}', neverVisited: 'Belum pernah datang', pagerLabel: 'Halaman anggota',
   noContact: 'Belum ada kontak keluarga',
+  planFilter: 'Paket', allPlans: 'Semua paket',
   split: '{f} Flex · {g} Gold',
   'st.ended': 'Keanggotaan berakhir {d}', 'st.upcoming': 'Mulai {d}', 'st.home': 'Sudah pulang pukul {t}',
   'st.in': 'Di klub sejak {t}', 'st.off': 'Belum datang hari ini', 'st.usually': 'Biasanya tiba sekitar {t}', noMatch: 'Tidak ada anggota yang cocok', noMatchSub: 'Coba nama, nama keluarga, nomor ponsel, atau filter lain.',

@@ -80,3 +80,41 @@ describe.each([['laptop', false], ['phone', true]])('Members rows, nanny (%s)', 
     expect(n[0].querySelector('button')).toBeNull();
   });
 });
+
+describe('Members, In the club by plan', () => {
+  it('round 15: Plan = Gold narrows In the club to the Gold members who are in, and the count line follows', async () => {
+    const state = buildSeed().citra;
+    useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
+    useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=in']}><MembersList /></MemoryRouter>); });
+    const rows = () => Array.from(host!.querySelectorAll('[data-member]')).map((e) => e.getAttribute('data-member'));
+    const plan = () => host!.querySelector('[role="combobox"][aria-labelledby]') as HTMLButtonElement;
+    const pick = async (label: string) => {
+      await act(async () => { plan().click(); });
+      await act(async () => { (Array.from(document.body.querySelectorAll('[role="option"]')).find((o) => o.textContent === label) as HTMLElement).click(); });
+    };
+    expect(rows().sort()).toEqual(['m10', 'm2', 'm20']);
+    expect(host.querySelector('[data-testid="members-split"]')!.textContent).toBe('1 Flex · 2 Gold');
+    expect(plan().textContent).toContain('All plans');
+    await pick('Gold');
+    expect(rows().sort()).toEqual(['m2', 'm20']);
+    expect(host.querySelector('[data-testid="members-split"]')!.textContent).toBe('0 Flex · 2 Gold');
+    await pick('Flex');
+    expect(rows()).toEqual(['m10']);
+    await pick('All plans');
+    expect(rows()).toHaveLength(3);
+  });
+  it('the Plan select shows only while In the club is selected', async () => {
+    const state = buildSeed().citra;
+    useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
+    useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=active']}><MembersList /></MemoryRouter>); });
+    expect(host.textContent).not.toContain('All plans');
+  });
+});

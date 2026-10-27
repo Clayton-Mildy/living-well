@@ -5,7 +5,7 @@ import { addMonths } from '../util';
 import {
   DOC_TYPES, billedExtraDates, findDuplicates, docIdFor, endingOn, faceConsent, faceReady, finalInvoiceFor, finalInvoiceLines, firstOfNextMonth, formatVa, genderOf, isHM, isISO, isPhone, isNewMember, lastContactId, lastLinkId, lastMemberId,
   matchesQuery, memberStatus, nextContactId, nextLinkId, nextMemberId, nextMonday, openBalance, plainName, splitName, tabForSection, unbilledExtraMonths, validateNewMember,
-  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows, filterCounts,
+  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows, filterCounts, activePlans,
 } from './members';
 import type { MemberRow } from './members';
 
@@ -249,6 +249,12 @@ describe('filterCounts split', () => {
     expect(c.split.active).toEqual({ flex: 2, gold: 3 });
     expect(c.split.in).toEqual({ flex: 1, gold: 2 });
     expect(c.in).toBe(c.split.in.flex + c.split.in.gold);
+  });
+});
+
+describe('activePlans', () => {
+  it('round 15: lists Flex then Gold, each with its i18n label key (phase 2 extends it with the catalogue)', () => {
+    expect(activePlans(seed())).toEqual([{ id: 'flex', label: 'members.f.flex' }, { id: 'gold', label: 'members.f.gold' }]);
   });
 });
 

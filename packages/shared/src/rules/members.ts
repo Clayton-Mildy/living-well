@@ -153,6 +153,10 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 // ---------- list rows, filters, search ----------
 export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'ended';
 export const MEMBER_FILTERS: MemberFilter[] = ['active', 'in', 'att', 'checkOn', 'flex', 'gold', 'ended'];
+/** The plans a member can be on, as pickers list them (round 15). `label` is an i18n key. One place for every plan list in the UI, so phase 2's plan catalogue only has to extend this. */
+export function activePlans(_s: ClubState): { id: Plan; label: string }[] {
+  return [{ id: 'flex', label: 'members.f.flex' }, { id: 'gold', label: 'members.f.gold' }];
+}
 export interface MemberRow {
   m: Member;
   st: MemberStatus;
