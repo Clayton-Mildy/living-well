@@ -1,7 +1,7 @@
 // cal strings (EN): calendar, events editor, schedule builder and catalog, plus the notification / feed / error texts of schedule.ts.
 export const cal = {
   // calendar
-  openHours: 'Open Monday to Friday, and on weekends when programmed · {open}–{close}', weekendCol: 'Weekend', titleFamily: 'Club calendar', view: 'View', vList: 'List', vMonth: 'Calendar', vYear: 'Year', prevYear: 'Previous year', nextYear: 'Next year', showMore: 'Show more days',
+  openHours: 'Open Monday to Friday, and on weekends when programmed · {open}–{close}', weekendCol: 'Weekend', titleFamily: 'Club calendar', view: 'View', vList: 'List', vMonth: 'Calendar', vYear: 'Year', closedYear: 'Closed or away in {y}', nDays: '{n} days', prevYear: 'Previous year', nextYear: 'Next year', showMore: 'Show more days',
   key: 'Key', tapDay: 'Tap a day to see what is on.', openWeek: 'Open this week in the schedule',
   publishShort: 'Publish',
   prevMonth: 'Previous month', nextMonth: 'Next month', thisMonth: 'This month', holiday: 'Holiday', closedShort: 'Closed', allDay: 'All day',

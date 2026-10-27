@@ -15,6 +15,14 @@ export const KIND: Record<CalKind, { icon: string; bg: string; fg: string; dot: 
   activity: { icon: 'interests', bg: 'var(--fill, #F4F4F5)', fg: 'var(--accent, #75624B)', dot: '#8A755B' },
   guest: { icon: 'waving_hand', bg: '#E8E1D8', fg: '#24201C', dot: 'var(--accent, #75624B)' },
 };
+/** round 15: a day the club is closed for a reason (a holiday or a closure; a plain weekend is not one) is filled sand in the month grids */
+export const CLOSED_FILL = 'var(--sand, #EFE6D8)';
+/** the reason a day is closed ("Independence Day", "staff first-aid training"), or '' for an open day and a plain weekend */
+export function closedReason(info: Pick<DayInfo, 'state' | 'items'>, lang: Lang): string {
+  if (info.state !== 'closed' && info.state !== 'holiday') return '';
+  const it = info.items.find((i) => i.kind === info.state);
+  return it ? eventTitle(it, lang) : '';
+}
 /** the neutral (grey) tints are a fill: className "cp-fill" turns one white when it sits on a grey block */
 export const neutralFill = (bg: string) => (bg === 'var(--fill, #F4F4F5)' ? 'cp-fill' : undefined);
 const STATE = {

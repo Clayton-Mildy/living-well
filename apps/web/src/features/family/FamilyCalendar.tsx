@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { addDays, addMonths, dayStatus, isOpen, isWeekday, memberName, displayName, nextOpenDay, ym, type ISODate, type Member, type Photo, type YM } from '@cp/shared';
-import { eventTitle, mondayOf, upcomingClosures, yearView } from '@cp/shared/rules/calendar';
+import { closedDaysOfYear, eventTitle, mondayOf, upcomingClosures, yearView } from '@cp/shared/rules/calendar';
 import { cameByDay, famDay, famRange, famWeek } from '@cp/shared/rules/famCalendar';
 import { Icon } from '../../components/ui';
 import { PhotoViewer } from '../activity/PhotoViewer';
@@ -58,6 +58,7 @@ export function FamilyCalendar() {
   const monday = mondayOf(date);
   const weekDays = useMemo(() => (wide ? famWeek(s, who, monday, today, nowMin) : []), [wide, s, whoKey, monday, today, nowMin]); // eslint-disable-line react-hooks/exhaustive-deps
   const months = useMemo(() => (view === 'year' ? yearView(s, year, 'family', who) : []), [view, s, year, whoKey]); // eslint-disable-line react-hooks/exhaustive-deps
+  const closed = useMemo(() => (view === 'year' ? closedDaysOfYear(s, year) : []), [view, s, year]);
   if (!user || !who.length) return null;
 
   const week = [0, 1, 2, 3, 4, 5, 6].map((i) => addDays(monday, i)).filter(shown); // Monday to Friday, and an open Saturday or Sunday
@@ -126,7 +127,7 @@ export function FamilyCalendar() {
         right={wide || !switcher ? <span style={{ display: 'flex', alignItems: 'center', gap: 10 }}>{switcher}{seg(180)}</span> : switcher}>{t('nav.calShort')}</LargeTitle>
       {!wide && switcher ? seg('100%') : null}
       {view === 'year' ? (
-        <YearView year={year} months={months} today={today} hours={{ open: s.club.settings.open, close: s.club.settings.close }} onYear={setYear}
+        <YearView year={year} months={months} closed={closed} today={today} hours={{ open: s.club.settings.open, close: s.club.settings.close }} onYear={setYear}
           minYear={Number(range.min.slice(0, 4))} maxYear={Number(range.max.slice(0, 4))} onPickMonth={pickMonth} onPickDay={pickDay} />
       ) : (
       <Cols left="1.25fr" right="1fr" gap={32} stickyLeft>

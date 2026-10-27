@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, execute, getUser, projectForFamily, type ClubState } from '../index';
-import { DRAFT_ID, dayEditable, builderBase, builderDays, changedCells, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView, yearView } from './calendar';
+import { DRAFT_ID, dayEditable, builderBase, builderDays, changedCells, closedDaysOfYear, cloneDays, dayInfo, daysEqual, effectiveVersions, emptyDays, eventTitle, fmtDMY, latestPublished, listDays, monthGrid, nextDays, mondayOf, nextMonday, normalizeDays, sameCell, scheduleDraft, upcomingClosures, weekDates, weekDays, weekEditable, weekVersions, weekView, yearView } from './calendar';
 import { occasionsInRange } from './occasions';
 import { dow } from '../util';
 
@@ -312,5 +312,38 @@ describe('yearView', () => {
   it('a family year has the same day states as the staff year', () => {
     const s = fresh();
     expect(flat(yearView(s, 2026, 'family', ['m1'])).map((d) => d.state)).toEqual(flat(yearView(s, 2026, 'staff')).map((d) => d.state));
+  });
+});
+
+describe('closedDaysOfYear', () => {
+  const withEvents = (events: { id: string; date: string; endDate?: string; kind: 'closed' | 'holiday' | 'outing'; title: string; deleted?: boolean }[]) => {
+    const s = fresh();
+    return produce(s, (d) => {
+      d.calendarEvents = {};
+      for (const e of events) d.calendarEvents[e.id] = { id: e.id, clubId: s.club.id, createdAt: '2026-09-01T10:00', createdBy: 'staff:s9', date: e.date, endDate: e.endDate, kind: e.kind, title: e.title, ...(e.deleted ? { deletedAt: '2026-09-02T10:00' } : {}) } as never;
+    });
+  };
+  it('a 3-day holiday is one span of 3 days', () => {
+    const s = withEvents([{ id: 'h', date: '2026-03-19', endDate: '2026-03-21', kind: 'holiday', title: 'Nyepi' }]);
+    expect(closedDaysOfYear(s, 2026)).toEqual([{ from: '2026-03-19', to: '2026-03-21', kind: 'holiday', title: 'Nyepi', days: 3 }]);
+  });
+  it('an event over New Year is clipped to each year', () => {
+    const s = withEvents([{ id: 'c', date: '2026-12-30', endDate: '2027-01-02', kind: 'closed', title: 'Year-end break' }]);
+    expect(closedDaysOfYear(s, 2026)).toEqual([{ from: '2026-12-30', to: '2026-12-31', kind: 'closed', title: 'Year-end break', days: 2 }]);
+    expect(closedDaysOfYear(s, 2027)).toEqual([{ from: '2027-01-01', to: '2027-01-02', kind: 'closed', title: 'Year-end break', days: 2 }]);
+    expect(closedDaysOfYear(s, 2028)).toEqual([]);
+  });
+  it('lists an outing, sorts by start and leaves out a deleted event', () => {
+    const s = withEvents([
+      { id: 'b', date: '2026-11-26', kind: 'outing', title: 'Outing: museum' },
+      { id: 'a', date: '2026-05-01', kind: 'holiday', title: 'Labour Day' },
+      { id: 'x', date: '2026-06-01', kind: 'closed', title: 'Gone', deleted: true },
+    ]);
+    expect(closedDaysOfYear(s, 2026).map((c) => [c.from, c.kind, c.days])).toEqual([['2026-05-01', 'holiday', 1], ['2026-11-26', 'outing', 1]]);
+  });
+  it('the seed has its closure on 30 Oct and outing on 29 Oct', () => {
+    const l = closedDaysOfYear(fresh(), 2026);
+    expect(l.find((c) => c.from === '2026-10-30')).toMatchObject({ kind: 'closed', days: 1 });
+    expect(l.find((c) => c.from === '2026-10-29')).toMatchObject({ kind: 'outing', days: 1 });
   });
 });

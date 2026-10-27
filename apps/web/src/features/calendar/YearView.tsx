@@ -1,9 +1,9 @@
 // Year view (round 14, B3): twelve mini-months. A day is a 28 px cell: closed in light grey, open on white, a weekend that opened because it was programmed
 // outlined in ink; up to three dots sit under the number (an event or booking, a celebration, a birthday). Tapping a month header opens that month, tapping
 // a day opens the day. Shared by the staff and the family calendar (the caller picks the audience when it builds `year`). 2 months per row on a phone, 3 on a
-// tablet, 4 on a laptop.
+// tablet, 4 on a laptop. Round 15: under the months, the year's closed or away days as a list (holidays, closures, outings); a row opens its first day.
 import { type ISODate, type YM } from '@cp/shared';
-import { monthGrid, type YearDay, type YearDot } from '@cp/shared/rules/calendar';
+import { eventTitle, monthGrid, type ClosedSpan, type YearDay, type YearDot } from '@cp/shared/rules/calendar';
 import { Icon } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
@@ -12,7 +12,7 @@ import { KIND } from './lib';
 const DOT: Record<YearDot, string> = { event: KIND.closed.dot, celebration: KIND.celebration.dot, birthday: KIND.birthday.dot };
 const COLS = { phone: 2, tablet: 3, laptop: 4 } as const;
 
-export function YearView({ year, months, today, hours, onYear, onPickMonth, onPickDay, minYear, maxYear }: {
+export function YearView({ year, months, today, hours, onYear, onPickMonth, onPickDay, closed, minYear, maxYear }: {
   year: number;
   months: { month: YM; days: YearDay[] }[];
   today: ISODate;
@@ -20,12 +20,14 @@ export function YearView({ year, months, today, hours, onYear, onPickMonth, onPi
   onYear: (year: number) => void;
   onPickMonth: (month: YM) => void;
   onPickDay: (date: ISODate) => void;
+  /** round 15: the year's closed, holiday and outing days (closedDaysOfYear) */
+  closed?: ClosedSpan[];
   /** the family can browse only so far */
   minYear?: number;
   maxYear?: number;
 }) {
   const t = useT();
-  const { fdl, fmonth } = useFmt();
+  const { lang, fdl, fds, fmonth } = useFmt();
   const { device } = useDevice();
   const step = (dir: 1 | -1, label: string, disabled: boolean) => (
     <button type="button" className="cp-press cp-fill" onClick={() => onYear(year + dir)} disabled={disabled} aria-label={label} data-testid={dir === 1 ? 'year-next' : 'year-prev'}
@@ -65,6 +67,23 @@ export function YearView({ year, months, today, hours, onYear, onPickMonth, onPi
           </section>
         ))}
       </div>
+      {closed?.length ? (
+        <section aria-label={t('cal.closedYear', { y: year })} data-testid="year-closed" style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+          <h3 style={{ margin: 0, padding: '4px 4px 0', fontSize: 15, fontWeight: 600, color: '#24201C' }}>{t('cal.closedYear', { y: year })}</h3>
+          <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '0 6px', display: 'flex', flexDirection: 'column' }}>
+            {closed.map((c) => (
+              <button key={c.from + c.title} type="button" className="cp-press" onClick={() => onPickDay(c.from)} data-testid="year-closed-row" data-date={c.from} data-kind={c.kind}
+                style={{ minHeight: 44, padding: '6px 4px', border: 'none', background: 'transparent', display: 'flex', alignItems: 'center', gap: 10, textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', color: '#24201C' }}>
+                <Icon name={KIND[c.kind].icon} size={20} />
+                <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+                  <span style={{ fontSize: 15, fontWeight: 500, lineHeight: '20px' }}>{eventTitle(c, lang)}</span>
+                  <span style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259' }}>{t(`cal.k_${c.kind}`)} · {c.to === c.from ? fds(c.from) : `${fds(c.from)} – ${fds(c.to)}`}{c.days > 1 ? ` · ${t('cal.nDays', { n: c.days })}` : ''}</span>
+                </span>
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
     </div>
   );
 }

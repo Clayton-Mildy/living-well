@@ -6,7 +6,7 @@
 import { Fragment, useMemo, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { addDays, addMonths, asWeekday, isWeekSlot, ym, type CalendarEvent, type ISODate, type Slot, type WeekSlot } from '@cp/shared';
-import { dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, yearView, type CalKind } from '@cp/shared/rules/calendar';
+import { closedDaysOfYear, dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, yearView, type CalKind } from '@cp/shared/rules/calendar';
 import { Button, Icon, PageHead, Pin } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
@@ -21,7 +21,7 @@ import { EventEditor } from './EventEditor';
 import { ScheduleBuilder, type CellRequest } from './ScheduleBuilder';
 import { PhoneMonth } from './PhoneMonth';
 import { YearView } from './YearView';
-import { KIND, MON_FIRST, dayState, itemText, weekdayName } from './lib';
+import { CLOSED_FILL, KIND, MON_FIRST, closedReason, dayState, itemText, weekdayName } from './lib';
 
 type View = 'list' | 'month' | 'year';
 const LIST_DAYS = 3;
@@ -59,6 +59,7 @@ export function Calendar() {
   const days = useMemo(() => nextDays(s, today, LIST_DAYS, audience), [s, today, audience]);
   const cells = useMemo(() => monthGrid(month), [month]);
   const months = useMemo(() => (view === 'year' ? yearView(s, year, audience) : []), [view, s, year, audience]);
+  const closed = useMemo(() => (view === 'year' ? closedDaysOfYear(s, year) : []), [view, s, year]);
   const info = (d: string) => dayInfo(s, d, audience);
   const selInfo = sel && ym(sel) === month ? info(sel) : null;
   const onEdit = (id: string) => { const e = s.calendarEvents[id]; if (e) setEditor({ event: e }); };
@@ -140,7 +141,7 @@ export function Calendar() {
             )}
           </div>
         ) : view === 'year' ? (
-          <YearView year={year} months={months} today={today} hours={hours} onYear={setYear}
+          <YearView year={year} months={months} closed={closed} today={today} hours={hours} onYear={setYear}
             onPickMonth={(m) => { setMonth(m); setSel(null); setView('month'); }}
             onPickDay={(d) => { setMonth(ym(d)); setSel(d); setView('month'); if (canBuild) openWeek(d, false); }} />
         ) : (
@@ -169,14 +170,15 @@ export function Calendar() {
                   const on = sel === d;
                   const isToday = d === today;
                   const shut = !x.open;
-                  const hol = x.state === 'holiday';
+                  const reason = closedReason(x, lang);
+                  const sand = x.state === 'holiday' || x.state === 'closed'; // round 15: a holiday or a closure is filled sand with its reason; a plain weekend stays plain
                   const lines = x.items.filter((it) => it.kind !== 'closed' && it.kind !== 'holiday').slice(0, 3).map((it) => ({ dot: KIND[it.kind].dot, bg: KIND[it.kind].bg, fg: KIND[it.kind].fg, text: itemText(s, it, t, lang, x.weekend).title.split(' with ')[0].split(':')[0], key: it.key }));
                   return (
-                    <button key={d} type="button" onClick={() => { setSel(on ? null : d); if (canBuild) openWeek(d); }} aria-label={`${fdl(d)} · ${st.label}`} aria-pressed={on} data-date={d}
-                      style={{ minHeight: 100, padding: 8, borderRadius: 8, border: isToday ? '2px solid #3D6B4F' : shut ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: isToday ? '#EAF1EC' : hol ? '#FBEDE8' : shut ? 'transparent' : '#FFFFFF', opacity: shut && !hol && !isToday ? 0.6 : 1, boxShadow: on ? '0 0 0 3px #24201C' : 'none', display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', gap: 4, textAlign: 'left', cursor: 'pointer', color: '#24201C', minWidth: 0, overflow: 'hidden', fontFamily: 'Inter' }}>
+                    <button key={d} type="button" onClick={() => { setSel(on ? null : d); if (canBuild) openWeek(d); }} aria-label={`${fdl(d)} · ${st.label}`} aria-pressed={on} data-date={d} data-closed={sand ? '1' : undefined} title={reason || undefined}
+                      style={{ minHeight: 100, padding: 8, borderRadius: 8, border: isToday ? '2px solid #3D6B4F' : shut ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: isToday ? '#EAF1EC' : sand ? CLOSED_FILL : shut ? 'transparent' : '#FFFFFF', opacity: shut && !sand && !isToday ? 0.6 : 1, boxShadow: on ? '0 0 0 3px #24201C' : 'none', display: 'flex', flexDirection: 'column', alignItems: 'stretch', justifyContent: 'flex-start', gap: 4, textAlign: 'left', cursor: 'pointer', color: '#24201C', minWidth: 0, overflow: 'hidden', fontFamily: 'Inter' }}>
                       <span style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 4, minWidth: 0 }}>
                         <span style={{ fontSize: 15, fontWeight: isToday ? 700 : 500, color: isToday ? '#2F5A40' : shut ? '#6B6259' : '#24201C', lineHeight: 1.4 }}>{Number(d.slice(8))}</span>
-                        <span style={{ fontSize: 12, color: '#5E5852', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{hol ? t('cal.holiday') : x.weekend ? '' : shut ? t('cal.closedShort') : ''}</span>
+                        <span style={{ fontSize: 12, color: '#5E5852', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{sand ? reason || (x.state === 'holiday' ? t('cal.holiday') : t('cal.closedShort')) : x.weekend ? '' : shut ? t('cal.closedShort') : ''}</span>
                       </span>
                       {lines.map((l) => (
                         <Fragment key={l.key}>

@@ -3,7 +3,7 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '@cp/shared';
-import { yearView } from '@cp/shared/rules/calendar';
+import { closedDaysOfYear, yearView } from '@cp/shared/rules/calendar';
 import { useSession } from '../../store/session';
 import { YearView } from './YearView';
 
@@ -40,5 +40,23 @@ describe('YearView', () => {
     expect(onPickDay).toHaveBeenCalledWith('2026-11-07');
     await act(async () => { document.querySelectorAll<HTMLButtonElement>('[data-testid="year-month"]')[2].click(); });
     expect(onPickMonth).toHaveBeenCalledWith('2026-03');
+  });
+
+  it('lists the closed and away days of the year (the seeded closure and outing) and a row opens its first day', async () => {
+    useSession.setState({ lang: 'en' });
+    const s = buildSeed().citra;
+    const onPickDay = vi.fn();
+    await show(<YearView year={2026} months={yearView(s, 2026, 'staff')} closed={closedDaysOfYear(s, 2026)} today="2026-10-21" hours={{ open: '08:30', close: '16:30' }} onYear={() => {}} onPickMonth={() => {}} onPickDay={onPickDay} />);
+    const rows = Array.from(document.querySelectorAll<HTMLButtonElement>('[data-testid="year-closed-row"]'));
+    const closure = rows.find((r) => r.dataset.date === '2026-10-30')!;
+    const outing = rows.find((r) => r.dataset.date === '2026-10-29')!;
+    expect(closure.dataset.kind).toBe('closed');
+    expect(closure.textContent).toContain('staff first-aid training');
+    expect(closure.textContent).toContain('Club closed');
+    expect(outing.dataset.kind).toBe('outing');
+    expect(outing.textContent).toContain('Outing');
+    expect(rows.map((r) => r.dataset.date)).toEqual([...rows.map((r) => r.dataset.date)].sort());
+    await act(async () => { closure.click(); });
+    expect(onPickDay).toHaveBeenCalledWith('2026-10-30');
   });
 });
