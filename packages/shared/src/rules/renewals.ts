@@ -5,7 +5,7 @@
 // (actions/approvals.ts). Leave keeps its own rules (rules/leave.ts): 14 days' notice before the month, at most 2 months.
 import type { Actor, ClubState, DT, FamilyContact, FollowUp, FollowUpCall, FollowUpOutcome, ISODate, Member, Plan, Relation, YM } from '../types';
 import { addDays, addMonths, live, monthStart, sortBy, ym } from '../util';
-import { approvedMembers, contactsOfMember, currentMembership, isPendingRow, memberName, membershipStatus, planOn } from './core';
+import { activeOn, approvedMembers, contactsOfMember, currentMembership, displayName, isPendingRow, memberName, membershipStatus, planOn } from './core';
 import { issueDateOf } from './billing';
 import { LEAVE_MAX_MONTHS, lastDayOfMonth, leaveCheck, leaveDeadline, leaveMonths, leaveRunAround, onLeaveIn, type LeaveCheck } from './leave';
 import { matchesQuery } from './members';
@@ -208,6 +208,37 @@ export function changeRows(s: ClubState, month: YM, today: ISODate): ChangeRow[]
   }
   const at = (r: ChangeRow) => r.at ?? '';
   return rows.sort((a, b) => (at(a) === at(b) ? (a.memberId < b.memberId ? -1 : a.memberId > b.memberId ? 1 : a.outcome < b.outcome ? -1 : 1) : at(a) < at(b) ? 1 : -1));
+}
+
+// ---------- next month, member by member (round 15, R5: the Members tab) ----------
+export interface NextMonthRow {
+  member: Member;
+  /** the plan today, and the plan on the 1st (null once the membership stops before then) */
+  planNow: Plan;
+  planNext: Plan | null;
+  /** continues: nothing recorded, it carries on · plan: a plan switch from the 1st · leave: leave in the month · stop: the last day falls in the month (or before the 1st) */
+  status: 'continues' | 'plan' | 'leave' | 'stop';
+}
+/**
+ * Every member and what next month holds for them, by display name: the members active on the 1st (a new member whose plan starts then included), plus those a
+ * recorded stop ends before it. Someone who has already ended, is still waiting for approval or starts later is not listed. A stop wins over leave, leave over a
+ * plan switch; the changes themselves are recorded as follow-ups or on the profile (`changeRows`), and all of them are on the member's plans and memberships.
+ */
+export function nextMonthPlans(s: ClubState, today: ISODate): NextMonthRow[] {
+  const month = renewalMonth(today);
+  const first = monthStart(month);
+  const rows: NextMonthRow[] = [];
+  for (const m of approvedMembers(s)) {
+    const cur = currentMembership(m);
+    if (!cur || membershipStatus(m, today) === 'ended') continue;
+    const stops = !!cur.lastDay && cur.lastDay <= lastDayOfMonth(month);
+    if (!activeOn(m, first) && !(stops && cur.lastDay! < first)) continue;
+    const planNow = planOn(m, today).plan;
+    const planNext = planOn(m, first).plan;
+    const status: NextMonthRow['status'] = stops ? 'stop' : onLeaveIn(m, month) ? 'leave' : planNext !== planNow ? 'plan' : 'continues';
+    rows.push({ member: m, planNow, planNext: stops ? null : planNext, status });
+  }
+  return sortBy(rows, (r) => `${displayName(r.member).toLowerCase()}|${r.member.id}`);
 }
 
 // ---------- dates ----------

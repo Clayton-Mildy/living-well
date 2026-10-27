@@ -1,4 +1,4 @@
-// Next month screen (round 14): the month, the Changes and Unpaid tabs, recording a change (it applies at once) and Undo.
+// Next month screen (round 14, round 15): the month, the Members, Changes and Unpaid tabs, recording a change (it applies at once) and Undo.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -32,23 +32,23 @@ const withUpgrade = (): ClubState => {
   const s = buildSeed().citra;
   return execute(s, 'followUp.record', { memberId: 'm1', month: '2026-11', outcome: 'upgrade' }, getUser({ citra: s }, 's1')!, { today: '2026-10-21', nowMin: toMin('09:58') }, 'w1').state;
 };
-async function show(ui: ReactElement) {
+async function show(ui: ReactElement, at = '/renewals?tab=changes') {
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => { root!.render(<MemoryRouter>{ui}</MemoryRouter>); });
+  await act(async () => { root!.render(<MemoryRouter initialEntries={[at]}>{ui}</MemoryRouter>); });
 }
 const click = async (el: Element | null | undefined) => { expect(el).toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
 const btn = (re: RegExp) => Array.from(document.querySelectorAll('button')).find((b) => re.test(b.textContent || '') || re.test(b.getAttribute('aria-label') || ''));
 const tab = (re: RegExp) => Array.from(document.querySelectorAll('[role="tab"]')).find((b) => re.test(b.textContent || ''));
 
 describe('Next month', () => {
-  it('shows the coming month under its new title with the Changes and Unpaid tabs, and no progress bar or segments', async () => {
+  it('shows the coming month under its new title with the Members, Changes and Unpaid tabs, and no progress bar or segments', async () => {
     openClub();
     await show(<Renewals />);
     expect(document.querySelector('h1')?.textContent).toBe('Next month');
     expect(document.body.textContent).toContain('November 2026');
-    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Changes', 'Unpaid']);
+    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Members', 'Changes', 'Unpaid']);
     expect(tab(/^Changes$/)?.getAttribute('aria-selected')).toBe('true');
     expect(document.querySelector('[data-testid="renewals-progress"]')).toBeNull();
     expect(document.querySelector('[role="progressbar"]')).toBeNull();
@@ -104,5 +104,42 @@ describe('Next month', () => {
     expect(row?.querySelector('[data-testid="change-what"]')?.textContent).toBe('Downgrade to Flex');
     expect(row?.querySelector('[data-testid="change-when"]')?.textContent).toBe('from 1 Nov · by Bu Fransiska');
     expect(row?.querySelector('[data-testid="change-undo"]')).toBeNull();
+  });
+
+  it('Members is the first tab and the default: every member, the count line, the Changing filter, and a tap opens the follow-up sheet', async () => {
+    const world = withUpgrade();
+    // Oma Lina's upgrade is recorded; Oma Lina is on Flex
+    openClub('s1', 'lobby', 'Caca', world);
+    await show(<Renewals />, '/renewals');
+    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Members', 'Changes', 'Unpaid']);
+    expect(tab(/^Members$/)?.getAttribute('aria-selected')).toBe('true');
+    const rows = Array.from(document.querySelectorAll('[data-member]'));
+    expect(rows.length).toBeGreaterThan(1);
+    const changing = rows.filter((r) => r.getAttribute('data-status') !== 'continues');
+    expect(changing.map((r) => r.getAttribute('data-member'))).toContain('m1');
+    expect(document.querySelector('[data-member="m1"] [data-testid="next-status"]')?.textContent).toBe('→ Gold');
+    expect(document.querySelector('[data-member="m1"] [data-testid="next-plan"]')?.textContent).toBe('Flex');
+    const cont = rows.length - changing.length;
+    expect(document.querySelector('[data-testid="next-count"]')?.textContent).toBe(`${cont} continue · ${changing.length} change`);
+    expect(document.querySelector('[data-member] [data-testid="next-status"]')).toBeTruthy();
+    // the filter: Changing keeps only the changes
+    await click(document.querySelector('[role="combobox"]'));
+    await click(Array.from(document.querySelectorAll('[role="option"]')).find((o) => /^Changing$/.test(o.textContent || '')));
+    const left = Array.from(document.querySelectorAll('[data-member]'));
+    expect(left.length).toBe(changing.length);
+    expect(left.every((r) => r.getAttribute('data-status') !== 'continues')).toBe(true);
+    // a tap opens the follow-up sheet for that member
+    await click(document.querySelector('button[data-member="m1"]'));
+    expect(document.body.textContent).toContain('Follow up Oma Lina');
+  });
+
+  it('on a past month the Members tab is not offered: the log opens on Changes', async () => {
+    openClub();
+    await show(<Renewals />, '/renewals');
+    expect(tab(/^Members$/)).toBeTruthy();
+    await click(tab(/^Changes$/));
+    await click(btn(/Earlier month/));
+    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Changes', 'Unpaid']);
+    expect(tab(/^Changes$/)?.getAttribute('aria-selected')).toBe('true');
   });
 });

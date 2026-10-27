@@ -1,6 +1,8 @@
-// Next month (KC round 7 "Renewals", round 14): what the club decides for the coming month. Two tabs under the month: Changes (what the front desk recorded
+// Next month (KC round 7 "Renewals", round 14): what the club decides for the coming month. Three tabs under the month: Members (round 15: everyone and their
+// plan next month; a tap records a change), Changes (what the front desk recorded
 // after talking to a family: a plan switch, leave or a stop, each in effect at once and dated from the 1st; "Record a change" adds one, Undo takes one back until
-// the month starts) and Unpaid (the month's unpaid invoices). Past months are a read-only log of their changes.
+// the month starts) and Unpaid (the month's unpaid invoices). Past months are a read-only log of their changes: the Members tab is for the coming month only,
+// so it is not offered there.
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { listName, addMonths, actorName, memberName, displayName, ym, type YM } from '@cp/shared';
@@ -14,10 +16,11 @@ import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { ConfirmDialog } from '../kitchen/parts';
 import { FollowUpSheet } from './FollowUpSheet';
+import { NextMonthList } from './NextMonthList';
 import { UnpaidList } from './UnpaidList';
 import { changeText } from './lib';
 
-type Tab = 'changes' | 'unpaid';
+type Tab = 'members' | 'changes' | 'unpaid';
 const dm = { day: 'numeric', month: 'short' } as const;
 const pill: CSSProperties = { height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: 14, fontWeight: 500, fontFamily: 'Inter', whiteSpace: 'nowrap', flex: 'none', cursor: 'pointer' };
 
@@ -34,10 +37,11 @@ export function Renewals() {
   const [picked, setPicked] = useState<YM | null>(null);
   const month: YM = picked && picked >= minMonth && picked <= maxMonth ? picked : maxMonth;
   const past = month <= ym(today);
-  // the tab is in the address (`?tab=unpaid`: the Month report's Outstanding and the Unpaid duty open it)
+  // the tab is in the address (`?tab=unpaid`: the Month report's Outstanding and the Unpaid duty open it); Members is first and the default for the coming month
   const [params, setParams] = useSearchParams();
-  const tab: Tab = params.get('tab') === 'unpaid' ? 'unpaid' : 'changes';
-  const setTab = (v: Tab) => setParams(v === 'unpaid' ? { tab: 'unpaid' } : {}, { replace: true });
+  const asked = params.get('tab');
+  const tab: Tab = asked === 'unpaid' ? 'unpaid' : asked === 'changes' || past ? 'changes' : 'members';
+  const setTab = (v: Tab) => setParams(v === 'members' ? {} : { tab: v }, { replace: true });
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   /** the member whose change is about to be undone (Undo asks first: the family is told at once) */
@@ -62,7 +66,9 @@ export function Renewals() {
       <IconButton icon="chevron_right" label={t('renewals.nextMonth')} size={40} onClick={month >= maxMonth ? undefined : () => setPicked(addMonths(month, 1))} style={month >= maxMonth ? { opacity: 0.35, cursor: 'default' } : undefined} />
     </div>
   );
-  const tabs = <Segmented label={t('renewals.title')} value={tab} onChange={setTab} cols={isPhone ? 2 : undefined} items={[{ value: 'changes', label: t('renewals.tabChanges') }, { value: 'unpaid', label: t('renewals.tabUnpaid') }]} />;
+  const tabItems: { value: Tab; label: string }[] = [{ value: 'changes', label: t('renewals.tabChanges') }, { value: 'unpaid', label: t('renewals.tabUnpaid') }];
+  if (!past) tabItems.unshift({ value: 'members', label: t('renewals.tab.members') });
+  const tabs = <Segmented label={t('renewals.title')} value={tab} onChange={setTab} cols={isPhone ? tabItems.length : undefined} items={tabItems} />;
 
   const rowEl = (r: (typeof rows)[number], i: number) => {
     const m = s.members[r.memberId];
@@ -92,7 +98,7 @@ export function Renewals() {
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 22 }}>
       <PageHead size={40} eyebrow={fmt.fmonth(month, true)} title={t('renewals.title')} right={tab === 'changes' ? switcher : undefined} />
       {tabs}
-      {tab === 'changes' ? (
+      {tab === 'members' ? <NextMonthList month={month} /> : tab === 'changes' ? (
         <>
           {canAdd ? (
             <div style={{ display: 'flex' }}>

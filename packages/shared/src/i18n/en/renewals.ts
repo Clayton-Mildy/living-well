@@ -4,6 +4,8 @@ export const renewals = {
   // round 14: the Next month screen (changes recorded for the coming month)
   tabChanges: 'Changes', tabUnpaid: 'Unpaid', record: 'Record a change', from: 'from {d}', undo: 'Undo', undone: 'Change undone for {name}.', noChanges: 'No changes recorded for {month}', pickMember: 'Pick a member', pickNone: 'Nobody left to record for {month}', recordedBy: 'by {who}',
   undoTitle: 'Undo this change?', undoAsk: 'The change for {name} in {month} is cancelled and the family is told now.', keep: 'Keep it',
+  // round 15: the Members tab (every member and what next month holds)
+  'tab.members': 'Members', continues: 'Continues', toPlan: '→ {plan}', onLeave: 'On leave', stops: 'Stops', countLine: '{c} continue · {n} change', 'f.all': 'All', 'f.continues': 'Continues', 'f.changing': 'Changing',
   // page
   prevMonth: 'Earlier month', nextMonth: 'Later month', logEyebrow: '{month} · log',
   progress: '{n} of {total} decided', progressAll: 'All {total} decided',

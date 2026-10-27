@@ -10,9 +10,11 @@ test('Next month: Caca records Oma Lina’s upgrade (in effect at once), sees th
   const c = watchConsole(page);
   await signIn(page, 's1', '/renewals');
   await expect(page.getByRole('heading', { level: 1, name: 'Next month' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Changes' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true'); // round 15: the first tab, every member and their plan
+  await expect(page.getByTestId('next-month-list').locator('[data-member="m1"]')).toContainText('Continues');
   await expect(page.getByRole('tab', { name: 'Unpaid' })).toBeVisible();
   await assertNoHorizontalScroll(page);
+  await page.getByRole('tab', { name: 'Changes' }).click();
   // record a change: pick the member, then the change (Oma Lina is on Flex, so the switch is an upgrade)
   await page.getByRole('button', { name: 'Record a change' }).click();
   await pickOption(page, 'Pick a member', /Oma Lina/);
