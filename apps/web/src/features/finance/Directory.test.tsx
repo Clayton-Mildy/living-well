@@ -1,6 +1,6 @@
 // Round 15 (phase 2), Task 6: the Contacts directory grouped by category, each contact with a 44 px call link; an editable category list.
 // The action is mocked; the screen runs against the seed.
-import { act, type ReactElement } from 'react';
+import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';

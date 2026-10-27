@@ -440,7 +440,7 @@ test('join: the details come from the paper form, the signed form is attached (P
   await expect(j.getByRole('button', { name: 'Take photo' })).toBeVisible();
   await expect(j.getByRole('button', { name: 'Choose file' })).toBeVisible();
   await expect(j.getByRole('button', { name: 'Use sample form' })).toBeVisible(); // demo login is on
-  await expect(nextBtn(j)).toHaveAttribute('aria-disabled', 'true');
+  await expect(nextBtn(j)).not.toHaveAttribute('aria-disabled', 'true'); // round 15: the scan is optional (the family may sign on the pad at the review)
   await attachForm(j);
   await regNext(j);
   // Review: management creates it directly
@@ -535,7 +535,7 @@ test('join with a photo of the form: a photo goes through the same upload; the c
   await regNext(j); await regNext(j); await regNext(j); // Person, Family, Health: from the enquiry
   await j.getByRole('radio', { name: /^Flex/ }).click();
   await regNext(j);
-  await expect(nextBtn(j)).toHaveAttribute('aria-disabled', 'true'); // no form, no member
+  await expect(nextBtn(j)).not.toHaveAttribute('aria-disabled', 'true'); // round 15: the scan is optional (the family may sign on the pad at the review)
   await attachForm(j, { name: 'ellen-form.png', mimeType: 'image/png', buffer: TINY_PNG }, 'ellen-form.jpg');
   await regNext(j);
   await j.getByRole('button', { name: 'Create member · Flex' }).click();
@@ -561,7 +561,7 @@ test('join by other staff goes to management for approval; the lead shows Pendin
   await regNext(j); await regNext(j); await regNext(j); // Person, Family, Health
   await j.getByRole('radio', { name: /^Flex/ }).click();
   await regNext(j);
-  await expect(nextBtn(j)).toHaveAttribute('aria-disabled', 'true'); // no form attached yet
+  await expect(nextBtn(j)).not.toHaveAttribute('aria-disabled', 'true'); // round 15: the scan is optional (the family may sign on the pad at the review)
   await attachForm(j);
   await regNext(j);
   await expect(j.getByText('Your request goes to management. The member becomes active, and the family can sign in, once they approve.')).toBeVisible();
