@@ -1,6 +1,7 @@
 // Requests (new screen) for section staff: ask for stock, ask for budget, snap a receipt; then follow "My requests".
 // Reuses the kitchen stock form and the finance actions.
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { defaultAreaFor } from '@cp/shared/rules/kitchenOps';
 import { PageHead, Icon } from '../../components/ui';
 import { PGroup } from '../finance/parts';
@@ -21,6 +22,15 @@ export function Requests() {
   const { device, isPhone } = useDevice();
   const { role } = useMe();
   const [open, setOpen] = useState<Panel | null>(null);
+  // a search result: /requests?do=receipt opens the receipt panel, once, then the parameter goes
+  const [sp, setSp] = useSearchParams();
+  useEffect(() => {
+    if (!sp.get('do')) return;
+    if (sp.get('do') === 'receipt' && hasAction('receipt.add')) setOpen('receipt');
+    const p = new URLSearchParams(sp);
+    p.delete('do');
+    setSp(p, { replace: true });
+  }, [sp]); // eslint-disable-line react-hooks/exhaustive-deps
   const tiles: { id: Panel; icon: string; title: string; enabled: boolean }[] = [
     { id: 'stock', icon: 'inventory_2', title: t('requests.stock.title'), enabled: true },
     { id: 'budget', icon: 'pie_chart', title: t('requests.budget.title'), enabled: hasAction('budget.request') },
