@@ -6,6 +6,7 @@ import { buildSeed, execute, getUser, projectForFamily, invoiceStatus, actionIte
 import { approvalCounts, approvalHistory, approvalTotal, approvedDayMenu, approvedVersion, pendingItems } from '../rules/approvals';
 import { latestLog, sharedNoteOf, servedLunch } from '../rules/family';
 import { menuOn } from '../rules/kitchen';
+import { lastSentAt } from '../rules/signing';
 
 const T = '2026-10-21';
 const clock = { today: T, nowMin: toMin('10:00') };
@@ -425,5 +426,47 @@ describe('staff leave in the Approvals list (round 13)', () => {
     expect(approvalHistory(d.state).find((x) => x.type === 'leave' && x.id === 'lv-3')).toMatchObject({ status: 'rejected', reason: 'Short staffed' });
     // the seeded decided ones (lv-1 approved, lv-4 declined) are history too
     expect(approvalHistory(fresh()).filter((x) => x.type === 'leave').map((x) => x.id).sort()).toEqual(['lv-1', 'lv-2', 'lv-4']);
+  });
+});
+
+describe('countersigning the membership form in the Approvals list (round 14 D)', () => {
+  const SIG = 'md_testsignature0001';
+  const kinds = (s: ClubState, uid: string, kind: string) => unreadUpdates(s, as(s, uid)).filter((x) => x.kind === kind);
+  const sent = () => run(fresh(), 'signing.send', { memberId: 'm1' }, 's1').state;
+  const signedForm = () => { const s = sent(); return run(s, 'signing.sign', { memberId: 'm1', signatureMediaId: SIG, otp: '123456', sentAt: lastSentAt(s.members.m1.documents.find((x) => x.type === 'membershipForm')!.signing) }, 'f1').state; };
+  const sigOf = (s: ClubState) => s.members.m1.documents.find((x) => x.type === 'membershipForm')!.signing!;
+  it('a signed form is listed once, by the signer; a sent form is not', () => {
+    expect(approvalCounts(sent()).signing).toBe(0);
+    const s = signedForm();
+    expect(approvalCounts(s).signing).toBe(1);
+    expect(pendingItems(s, 'signing')[0]).toMatchObject({ id: 'm1', type: 'signing', sub: 'signing', memberId: 'm1', by: sigOf(s).steps.at(-1)!.by, at: sigOf(s).steps.at(-1)!.at, edit: false });
+  });
+  it('approving countersigns it in the approver\'s name and leaves the list', () => {
+    const r = run(signedForm(), 'approval.approve', { type: 'signing', ids: ['m1'] }, 's9');
+    expect(r.result).toMatchObject({ approved: 1, conflicts: [] });
+    expect(sigOf(r.state)).toMatchObject({ status: 'countersigned', countersignerName: 'Ega', meterai: 'e' });
+    expect(sigOf(r.state).steps.at(-1)).toMatchObject({ status: 'countersigned', by: 'staff:s9' });
+    expect(approvalCounts(r.state).signing).toBe(0);
+    expect(run(r.state, 'approval.approve', { type: 'signing', ids: ['m1'] }, 's9').result).toMatchObject({ approved: 0, skipped: ['m1'] });
+  });
+  it('rejecting sends it back to Draft with the note and tells whoever sent it', () => {
+    const r = run(signedForm(), 'approval.reject', { type: 'signing', ids: ['m1'], reason: 'Wrong plan' }, 's9');
+    expect(sigOf(r.state)).toMatchObject({ status: 'draft', note: 'Wrong plan' });
+    expect(sigOf(r.state).steps.at(-1)).toMatchObject({ status: 'draft', by: 'staff:s9', note: 'Wrong plan' });
+    expect(approvalCounts(r.state).signing).toBe(0);
+    expect(kinds(r.state, 's1', 'sign.notif.returned')).toEqual([expect.objectContaining({ params: expect.objectContaining({ note: 'Wrong plan' }) })]);
+    fails(signedForm(), 'approval.reject', { type: 'signing', ids: ['m1'], reason: '' }, 's9', 'err.noteRequired');
+    const again = run(r.state, 'signing.send', { memberId: 'm1' }, 's1').state; // the front desk can resend
+    expect(sigOf(again)).toMatchObject({ status: 'sent' });
+    expect(sigOf(again).note).toBeUndefined();
+  });
+  it('a form re-sent meanwhile is a conflict and nothing changes', () => {
+    const s = produce(signedForm(), (d) => { sigOf(d as ClubState).status = 'sent'; });
+    const r = run(s, 'approval.approve', { type: 'signing', ids: ['m1'] }, 's9');
+    expect(r.result).toMatchObject({ approved: 0, conflicts: ['m1'] });
+    expect(sigOf(r.state).status).toBe('sent');
+  });
+  it('only management decides it', () => {
+    for (const uid of ['s1', 'f1']) fails(signedForm(), 'approval.approve', { type: 'signing', ids: ['m1'] }, uid, 'err.forbidden');
   });
 });

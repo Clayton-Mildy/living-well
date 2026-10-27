@@ -1,6 +1,8 @@
 // CitraPremier shared data model. One ClubState per clubhouse; every row carries clubId.
 // Times are club wall-clock strings: ISODate 'YYYY-MM-DD', HM 'HH:mm', DT 'YYYY-MM-DDTHH:mm'.
 
+import type { ApplicationFormData } from './rules/applicationForm';
+
 export type ISODate = string;
 export type HM = string;
 export type DT = string;
@@ -192,6 +194,27 @@ export interface MemberDocument {
   by?: Actor;
   /** The uploaded photo or PDF (POST /api/media). Without one, a document on file is a paper copy kept at the club. */
   mediaId?: string;
+  /** Round 14 (D): the membership form's online signing, or its physical-meterai record. Only on the `membershipForm` document. */
+  signing?: Signing;
+}
+
+/** Round 14 (D): Draft (staff prepared it) → Sent (link to the billing contact) → Signed by family → Countersigned (management) → Stamped (e-Meterai affixed, or a physical meterai scanned). */
+export type SignStatus = 'draft' | 'sent' | 'signed' | 'countersigned' | 'stamped';
+export interface SignStep { status: SignStatus; at: DT; by: Actor; note?: string }
+export interface Signing {
+  status: SignStatus;
+  steps: SignStep[];
+  /** e = the simulated e-Meterai route (send, sign, countersign, stamp); physical = printed, signed over a paper meterai and scanned */
+  meterai: 'e' | 'physical';
+  meteraiSerial?: string;
+  /** the form as it was when sent: what the family signs (editing the member afterwards does not change it) */
+  form?: ApplicationFormData;
+  signatureMediaId?: string;
+  /** the contact the form was sent to (the billing contact at Send): only they sign it; a new billing contact needs a resend */
+  signerId?: string;
+  signerName?: string;
+  countersignerName?: string;
+  note?: string;
 }
 
 /** KC round 6: the answers of the paper Membership Application Form (brochure pp. 14–17) that the app does not keep elsewhere.

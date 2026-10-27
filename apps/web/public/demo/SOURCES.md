@@ -98,3 +98,5 @@ Stock portraits for the 40 roster members m51..m90 (`MEMBER_PORTRAITS` in `packa
 | portrait-m88.jpg | m88 Opa Tony Hermanto | https://images.unsplash.com/photo-1597761553610-511bab52ffac |
 | portrait-m89.jpg | m89 Ibu Maya Sari | https://images.unsplash.com/photo-1778174903051-0b15d54bb451 |
 | portrait-m90.jpg | m90 Bapak Hendrik Wongso | https://images.unsplash.com/photo-1768478563694-b9b38533f2f4 |
+
+Round 14 (D): `signature-1.jpg` (480x160, grey ink on white) is not a photo. It was drawn by a small script as a made-up stock signature for the seeded signed membership form.

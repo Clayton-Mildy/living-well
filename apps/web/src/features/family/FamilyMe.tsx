@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import { initials, isPrimaryFor, live, displayName, rp, type Member } from '@cp/shared';
 import { dayStateOf } from '@cp/shared/rules/family';
 import { familyBill } from '@cp/shared/rules/familyMe';
+import { canSign, signingOf } from '@cp/shared/rules/signing';
 import { useAct } from '../../lib/act';
 import { useSession } from '../../store/session';
 import { useTextSize } from '../../shell/FamilyShell';
@@ -51,6 +52,10 @@ export function FamilyMe() {
       ? { v: bill.overdue ? t('status.overdue') : t('fme.dueAmt', { a: rp(bill.total) }), color: F.rust, weight: 500 }
       : { v: t('family.invAllPaid'), color: F.sage, weight: 500 };
 
+  // round 14 (D): membership forms the club sent for this contact to sign. The row opens the first parent's Documents (with the sign sheet when one waits).
+  const toSign = members.filter((m) => signingOf(m)?.status === 'sent' && canSign(s, m.id, user.id));
+  const docsTo = toSign.length ? `/profile?member=${toSign[0].id}&sign=1` : members[0] ? `/profile?member=${members[0].id}&sec=docs` : '';
+
   const alertMembers = (choices.length ? choices : all).map((id) => s.members[id]).filter(Boolean) as Member[];
   const alertOn = (id: string) => links.find((l) => l.memberId === id)?.healthAlerts ?? true;
 
@@ -89,6 +94,7 @@ export function FamilyMe() {
     <List testId="me-links">
       <ListRow first icon="receipt_long" label={t('nav.billing')} value={billing.v} valueColor={billing.color} valueWeight={billing.weight} onClick={() => navigate('/billing')} testId="me-billing" />
       <ListRow icon="contacts" label={t('nav.contacts')} onClick={() => navigate('/contacts')} testId="me-contacts" />
+      {docsTo ? <ListRow icon="description" label={t('sign.docs')} value={toSign.length ? t('sign.toSign', { n: toSign.length }) : ''} valueColor={F.rust} valueWeight={500} onClick={() => navigate(docsTo)} testId="me-docs" /> : null}
       {alertRows}
     </List>
   );

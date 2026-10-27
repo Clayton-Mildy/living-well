@@ -1,16 +1,18 @@
 // Management approval hub: approve or reject what non-management staff entered, one action for a whole batch (one patch, one SSE update).
 //   approval.approve { type, ids, notify? }      approval.reject { type, ids, reason }
 // type: profile (change requests, applied-at-once flags), logs (daily logs + family notes), readings, photos, menu (weekly versions + per-day overrides), stock, renewals (a change the front desk recorded in the month-end follow-up: approving applies it from the 1st),
+// signing (round 14 D: a signed membership form; approving countersigns it, rejecting sends it back to Draft),
 // programme (round 14: a weekly schedule or a day's change the activity team sent; approving publishes it / makes it the live day).
 // Ids that were already handled, are gone or have gone stale (a profile change whose values moved on) are skipped and reported back in `skipped`.
 // Families never see an entry before this approves it (rules/approvals.ts, project.ts); the notices that would tell them go out here.
 import { z } from 'zod';
 import { produce, current, type Draft } from 'immer';
 import type { Approval, ClubState, DailyLog, DayMenu, MemberNote, MenuVersion, Payment, Photo, Reading, StockRequest } from '../types';
-import { DomainError, defineAction, hasRole, isMgmt, type Ctx } from './framework';
+import { DomainError, defineAction, hasRole, isMgmt, nameOfUser, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { acknowledgeChange, approveChange, rejectChange, revertChange } from './review';
 import { decideLeave } from './staffLeave';
+import { formDoc } from '../rules/signing';
 import { approvePhotoRows, rejectPhotoRows } from './photos';
 import { applyFollowUp } from './renewals';
 import { approveStockRow, rejectStockRow } from './kitchen';
@@ -19,7 +21,7 @@ import { noticeFamilies } from './health';
 import { menuAudience } from '../rules/kitchenOps';
 import { DAYMENU_KEYS, LOG_KEYS, NOTE_KEYS, READING_KEYS, isWaiting, snapshotOf, type ApprovalType, APPROVAL_TYPES, type SnapKeys } from '../rules/approvals';
 import { balanceOf } from '../rules/billing';
-import { primaryContact } from '../rules/core';
+import { displayName, primaryContact } from '../rules/core';
 import { dayProgrammable } from '../rules/calendar';
 import { notesSaved } from '../rules/activity';
 import { uniq, rp } from '../util';
@@ -222,6 +224,19 @@ const APPROVE: Record<ApprovalType, Handler> = {
     decideLeave(d, ctx, id, true);
     return 'done';
   },
+  // round 14 (D): the countersign. The server's sweep then stamps it (e-Meterai). A form that is no longer Signed (re-sent, sent back) is a conflict; one already countersigned or stamped is simply handled.
+  signing(d, ctx, id) {
+    const m = d.members[id];
+    const sig = m && !m.deletedAt ? formDoc(m)?.signing : undefined;
+    if (!sig) return 'skip';
+    if (sig.status === 'countersigned' || sig.status === 'stamped') return 'skip';
+    if (sig.status !== 'signed') return 'conflict';
+    sig.status = 'countersigned';
+    sig.countersignerName = nameOfUser(ctx.user);
+    sig.steps.push({ status: 'countersigned', at: ctx.nowDT, by: ctx.actor });
+    delete sig.note;
+    return 'done';
+  },
 };
 
 const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
@@ -341,6 +356,21 @@ const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
     const r = d.leaveRequests?.[id];
     if (!r || r.deletedAt || r.status !== 'pending') return 'skip';
     decideLeave(d, ctx, id, false, o.reason || undefined);
+    return 'done';
+  },
+  // round 14 (D): sent back to Draft with the reason; whoever sent it for signing hears why (so the approvals notice is not used)
+  signing: () => (d, ctx, id, o) => {
+    const m = d.members[id];
+    const sig = m && !m.deletedAt ? formDoc(m)?.signing : undefined;
+    if (!m || !sig || sig.status !== 'signed') return 'skip';
+    const sender = [...sig.steps].reverse().find((x) => x.status === 'sent')?.by ?? '';
+    sig.status = 'draft';
+    sig.note = o.reason!;
+    delete sig.signatureMediaId;
+    delete sig.signerName;
+    sig.steps.push({ status: 'draft', at: ctx.nowDT, by: ctx.actor, note: o.reason! });
+    const to = staffIdOfActor(sender);
+    if (to && d.staff[to] && !d.staff[to].deletedAt) ctx.notify({ toUsers: [to], kind: 'sign.notif.returned', params: { name: displayName(m), note: o.reason! }, link: `/members/${id}`, memberId: id, severity: 'attention' });
     return 'done';
   },
 };

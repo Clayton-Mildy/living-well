@@ -39,6 +39,8 @@ export const approvals = {
   'tab.payments': 'Payments', 'none.payments': 'No payments to confirm', 'none.paymentsSub': 'Cash and bank transfers recorded at the front desk appear here until finance or management confirms them.', 'kind.payment': 'Payment',
   'sum.payment': '{amount} {method} · {invoice} · recorded by {who}', 'notif.rejected.payments': 'Finance did not confirm {n} of your payment entries: {reason}',
   // round 13: staff leave requests (the same decision as People → Leave)
+  'tab.signing': 'Signing', 'none.signing': 'No forms to countersign', 'kind.signing': 'Membership form',
+  'sum.signing': 'Signed by {name}', rejectTitleSigning: 'Send this form back', rejectSubSigning: 'The form returns to Draft. Whoever sent it is told, with your reason, and can send it again.', rejectReasonSigning: 'Why is it sent back?',
   'tab.leave': 'Leave', 'none.leave': 'No leave requests to decide', 'none.leaveSub': 'Days off that staff ask for appear here until management answers.', 'kind.leave': 'Leave request',
   'sum.leave': '{range} · {days} · {reason} · {left} of {n} left', 'sum.leaveDays': '{n} days', 'sum.leaveDay': '1 day', approveAllLeave: 'Approve all',
   rejectSubLeave: 'The staff member is told that the request was declined, with your note if you write one.', rejectReasonLeave: 'Note for {name} (optional)', rejectLeaveTitle: 'Decline this leave request',

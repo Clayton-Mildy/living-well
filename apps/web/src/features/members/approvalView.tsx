@@ -8,6 +8,7 @@ import type { TFn } from '../../lib/i18n';
 import { activityName, roomName, roundsOf } from '@cp/shared/rules/activity';
 import { changedCells, normalizeDays, sameCell, withPendingDay } from '@cp/shared/rules/calendar';
 import { leaveBalance } from '@cp/shared/rules/staffLeave';
+import { formDoc } from '@cp/shared/rules/signing';
 import { CHECK_KEY } from '../health/ReadingCard';
 import { values as readingValues } from './profile/CareTab';
 import { describeCr, type Described, type DiffRow } from './reviewDiff';
@@ -198,6 +199,15 @@ function leaveView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   return { who, kind: t('approvals.kind.leave'), summary, detail: { title: t('approvals.kind.leave'), rows: [], summary: rows }, edit: false };
 }
 
+/** Round 14 (D): a signed membership form waiting for the countersign: "Signed by Maria Wijaya". */
+function signingView(s: ClubState, id: string, t: TFn): ItemView {
+  const m = s.members[id];
+  const sig = m ? formDoc(m)?.signing : undefined;
+  const kind = t('approvals.kind.signing');
+  const summary = sig ? t('approvals.sum.signing', { name: sig.signerName || '' }) : '';
+  return { who: m ? memberName(m) : '', kind, summary, detail: { title: kind, rows: [], summary: [] }, edit: false };
+}
+
 /** The view of one entry: pending (ApprovalItem) or handled (HistoryItem). Profile changes are described by describeCr. */
 export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt, today?: string): ItemView {
   switch (it.sub) {
@@ -211,6 +221,7 @@ export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt, today?: stri
     case 'renewal': return renewalView(s, it.id, t, fmt);
     case 'payment': return payView(s, it.id, t, fmt);
     case 'leave': return leaveView(s, it.id, t, fmt);
+    case 'signing': return signingView(s, it.id, t);
     case 'cr': case 'flag': {
       const cr = s.changeRequests[it.id];
       if (cr) {

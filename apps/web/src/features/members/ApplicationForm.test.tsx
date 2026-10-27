@@ -4,6 +4,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { buildSeed } from '@cp/shared';
+import type { Signing } from '@cp/shared';
 import { applicationDataOf, applicationDataFromInput, type ApplicationFormData } from '@cp/shared/rules/applicationForm';
 import { useSession } from '../../store/session';
 import { ApplicationForm } from './ApplicationForm';
@@ -19,12 +20,12 @@ afterEach(async () => {
   document.body.innerHTML = '';
   vi.restoreAllMocks();
 });
-async function show(data: ApplicationFormData, onClose = () => {}, lang: 'en' | 'id' = 'en') {
+async function show(data: ApplicationFormData, onClose = () => {}, lang: 'en' | 'id' = 'en', signing?: Signing) {
   useSession.setState({ lang });
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => { root!.render(<ApplicationForm data={data} onClose={onClose} />); });
+  await act(async () => { root!.render(<ApplicationForm data={data} onClose={onClose} signing={signing} />); });
 }
 const page = (n: number) => document.querySelectorAll('[data-testid="form-page"]')[n - 1];
 const field = (n: number, k: string) => page(n).querySelector(`[data-field="${k}"]`);
@@ -108,5 +109,59 @@ describe('ApplicationForm', () => {
     await show(applicationDataOf(s, 'm1', T), () => {}, 'id');
     expect(document.querySelector('.cp-print-bar h2')?.textContent).toBe('Formulir pendaftaran keanggotaan');
     expect(field(1, 'q2')?.textContent).toBe('Ya');
+  });
+
+  describe('with a signing (round 14 d)', () => {
+    const base = () => applicationDataOf(s, 'm1', T);
+    const signed = (over: Partial<Signing> = {}): Signing => ({
+      status: 'stamped', meterai: 'e', meteraiSerial: 'EM-2026-000123', signatureMediaId: 'md_sig1', signerName: 'Maria Wijaya', countersignerName: 'Ega Pratama',
+      steps: [
+        { status: 'sent', at: '2026-10-20T09:00', by: 'staff:s1' }, { status: 'signed', at: '2026-10-21T09:00', by: 'family:f1' },
+        { status: 'countersigned', at: '2026-10-22T09:00', by: 'staff:s2' }, { status: 'stamped', at: '2026-10-22T09:01', by: 'system' },
+      ],
+      ...over,
+    });
+    it('puts the drawn signature on pages 1, 3 and 4, the countersign line and the e-Meterai box with its serial on page 4', async () => {
+      await show(base(), () => {}, 'en', signed());
+      for (const n of [1, 3, 4]) {
+        const img = field(n, 'signature') as HTMLImageElement;
+        expect(img).not.toBeNull();
+        expect(img.getAttribute('src')).toBe('/api/media/md_sig1');
+        expect(img.style.left).toMatch(/%$/);
+      }
+      expect(field(2, 'signature')).toBeNull();
+      expect(field(4, 'countersign')?.textContent).toBe('Disetujui: Ega Pratama · 22 Oktober 2026'); // printed in Indonesian, like the form, even with the app in English
+      expect(field(4, 'emeterai')?.textContent).toBe('e-Meterai · 10000 · EM-2026-000123');
+    });
+    it('a physical meterai has no e-Meterai box; the signature and the countersign line are still there', async () => {
+      await show(base(), () => {}, 'en', signed({ meterai: 'physical', meteraiSerial: undefined }));
+      expect(field(4, 'emeterai')).toBeNull();
+      expect(field(4, 'signature')).not.toBeNull();
+      expect(field(4, 'countersign')).not.toBeNull();
+    });
+    it('an e-Meterai not stamped yet has no box, and a form not countersigned has no countersign line', async () => {
+      await show(base(), () => {}, 'en', signed({ status: 'signed', meteraiSerial: undefined, countersignerName: undefined, steps: [{ status: 'signed', at: '2026-10-21T09:00', by: 'family:f1' }] }));
+      expect(field(4, 'emeterai')).toBeNull();
+      expect(field(4, 'countersign')).toBeNull();
+      expect(field(3, 'signature')).not.toBeNull();
+    });
+    it('shows the form as it was sent (the snapshot), not the member as they are now', async () => {
+      const snap = { ...base(), address: 'Jl. Snapshot No. 9' };
+      await show({ ...base(), address: 'Jl. Changed Later No. 1' }, () => {}, 'en', signed({ form: snap }));
+      expect(field(1, 'address1')?.textContent).toContain('Snapshot');
+      expect(page(1).textContent).not.toContain('Changed Later');
+    });
+    it('TANGGAL beside the signature is the day it was signed, not the day it was sent; a form only sent keeps the snapshot date', async () => {
+      const snap = { ...base(), date: '2026-10-20' };
+      await show(base(), () => {}, 'en', signed({ form: snap }));
+      for (const n of [1, 3, 4]) expect(field(n, 'date')?.textContent).toBe('21 Oktober 2026');
+      await act(async () => { root?.unmount(); });
+      await show(base(), () => {}, 'en', { status: 'sent', meterai: 'e', form: snap, steps: [{ status: 'sent', at: '2026-10-20T09:00', by: 'staff:s1' }] });
+      expect(field(3, 'date')?.textContent).toBe('20 Oktober 2026');
+    });
+    it('without a signing nothing is added', async () => {
+      await show(base());
+      expect(document.querySelector('[data-field="signature"], [data-field="countersign"], [data-field="emeterai"]')).toBeNull();
+    });
   });
 });
