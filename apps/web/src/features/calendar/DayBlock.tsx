@@ -3,11 +3,14 @@
 // On a phone (round 6) it is an iOS grouped day: the date is the group header (Today chip and open/closed state beside it) and the items are rows in one flat group.
 // Round 7: a session changed for this day only shows "Changed" (and the day's note) for staff; a slot with no session shows a quiet row management can fill.
 // Round 14: `flag` is a small grey chip by the date ("Proposed" while it waits for Ega, or "Returned").
+// Round 15 (phase 2): a day with a lunch picture (the dish photo, or the day's own lunch photo once the kitchen has one) gets a Lunch row with it at 12:00.
 // Round 15 (phase 2): `proposed` adds the day's proposed programme under its rows, before → after; `decide` (management) adds Approve and Reject to it.
 import { Fragment } from 'react';
 import type { ClubState, Slot } from '@cp/shared';
 import type { DayInfo, DayItem } from '@cp/shared/rules/calendar';
-import { Button, GROUP_HEAD, Icon, IconButton } from '../../components/ui';
+import { Button, DishThumb, GROUP_HEAD, Icon, IconButton } from '../../components/ui';
+import { LUNCH_AT } from '@cp/shared/rules/family';
+import { dishNames, lunchPictureOn, menuOn } from '@cp/shared/rules/kitchen';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { rowLine } from '../activity/lib';
@@ -33,6 +36,20 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
   const rows = [...info.items, ...empties].sort((a, b) => (a.time ?? '00:00').localeCompare(b.time ?? '00:00') || (a.empty ? 1 : 0) - (b.empty ? 1 : 0));
   const changedLine = (line: string | undefined, size: number) => (line ? <span style={{ fontSize: size, lineHeight: 1.4, fontWeight: 600, color: '#7A5510' }}>{line}</span> : null);
   const slotOf = (it: DayItem) => (it.time || '10:30') as Slot;
+  // round 15: the lunch line with its picture, in time order among the rows (staff see a photo that still waits for approval)
+  const pic = lunchPictureOn(s, info.date, 'staff');
+  const lunchRow = pic ? { pic, title: t('kitchen.course.lunch'), sub: dishNames(s, menuOn(s, info.date)?.lunch ?? []) } : null;
+  const lunchAt = lunchRow ? (() => { const k = rows.findIndex((r) => (r.time ?? '00:00') > LUNCH_AT); return k < 0 ? rows.length : k; })() : -1;
+  const lunchLine = (size: number, pad: string, gap: number, first: boolean, phone: boolean) => lunchRow ? (
+    <div key="lunch" data-testid="day-lunch" data-source={lunchRow.pic.source} style={{ display: 'flex', alignItems: 'center', gap, padding: pad, minHeight: phone ? 54 : 64, ...(phone ? rowLine(first, 72) : { borderTop: '0.5px solid var(--hairline, #E2E2E6)' }) }}>
+      <span style={{ width: phone ? 46 : 60, flex: 'none', fontSize: phone ? 14 : 'max(14px, var(--cp-body, 0px))', fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, color: phone ? '#4A4038' : undefined }}>{LUNCH_AT}</span>
+      <DishThumb mediaId={lunchRow.pic.mediaId} label={t('kitchen.dishPhoto')} size={size} source={lunchRow.pic.source} testId="day-lunch-picture" />
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+        <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35 }}>{lunchRow.title}</span>
+        {lunchRow.sub ? <span style={{ fontSize: phone ? 14 : 'max(14px, var(--cp-body, 0px))', lineHeight: '20px', color: '#6B6259' }}>{lunchRow.sub}</span> : null}
+      </div>
+    </div>
+  ) : null;
 
   if (isPhone) {
     return (
@@ -45,7 +62,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
           </h2>
           <StatePill st={st} size={13} />
         </div>
-        {rows.length || proposed ? (
+        {rows.length || lunchRow || proposed ? (
           <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
             {rows.map((it, i) => {
               const x = itemText(s, it, t, lang, info.weekend);
@@ -53,7 +70,8 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
               const activityEdit = canDay && it.kind === 'activity';
               return (
                 <Fragment key={it.key}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px 8px 16px', minHeight: 54, ...rowLine(i === 0, 72) }}>
+                  {i === lunchAt ? lunchLine(32, '8px 12px 8px 16px', 10, i === 0, true) : null}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px 8px 16px', minHeight: 54, ...rowLine(i === 0 && i !== lunchAt, 72) }}>
                     <span style={{ width: 46, flex: 'none', fontSize: 14, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, color: '#4A4038' }}>{x.time}</span>
                     <span aria-hidden="true" className={neutralFill(x.bg)} style={{ width: 32, height: 32, borderRadius: 9, background: x.bg, color: x.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={x.icon} size={18} /></span>
                     <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
@@ -67,6 +85,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
                 </Fragment>
               );
             })}
+            {lunchAt === rows.length ? lunchLine(32, '8px 12px 8px 16px', 10, rows.length === 0, true) : null}
             {proposed ? <ProposedDay s={s} date={info.date} decide={decide} /> : null}
           </div>
         ) : null}
@@ -87,6 +106,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
         const activityEdit = canDay && it.kind === 'activity';
         return (
           <Fragment key={it.key}>
+            {rows.indexOf(it) === lunchAt ? lunchLine(40, '12px 22px', 14, false, false) : null}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 22px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: 64, flexWrap: activityEdit ? 'wrap' : 'nowrap' }}>
               <span style={{ width: 60, flex: 'none', fontSize: 'max(14px, var(--cp-body, 0px))', fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{x.time}</span>
               <span aria-hidden="true" className={neutralFill(x.bg)} style={{ width: 40, height: 40, borderRadius: 999, background: x.bg, color: x.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={x.icon} size={20} /></span>
@@ -107,6 +127,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
           </Fragment>
         );
       })}
+      {lunchAt === rows.length ? lunchLine(40, '12px 22px', 14, false, false) : null}
       {proposed ? <ProposedDay s={s} date={info.date} decide={decide} /> : null}
     </div>
   );

@@ -52,6 +52,7 @@ export const kitchen: Same<typeof EN> = {
   'dish.eyebrow': 'Hidangan dan alergen', 'dish.new': 'Hidangan baru', 'dish.name': 'Nama hidangan', 'dish.namePh': 'Misalnya Ayam kukus', 'dish.course': 'Jenis', 'dish.contains': 'Mengandung',
   'dish.containsHint': 'Centang semua bahan dalam resep. Alergi seafood mencakup ikan dan kerang-kerangan.', 'dish.tags': 'Cocok untuk', 'dish.checked': 'Alergen sudah dicek',
   'dish.checkedSub': 'Keluarga baru diberi tahu menu aman untuk hidangan yang alergennya sudah dicek.', 'dish.checkedBy': 'Alergen dicek oleh {name} pada {date}.',
+  dishPhoto: 'Foto hidangan', addDishPhoto: 'Tambah foto',
   'dish.save': 'Simpan hidangan', 'dish.delete': 'Hapus hidangan', 'dish.deleteAsk': 'Hapus {name}? Hidangan ini dihapus dari daftar.', 'dish.keep': 'Jangan hapus', 'dish.saved': '{name} tersimpan.', 'dish.deleted': '{name} dihapus.',
   'dishes.title': 'Hidangan dan alergen', 'dishes.search': 'Cari hidangan', 'dishes.toCheck': '{n} perlu dicek', 'dishes.allChecked': 'Semua alergen sudah dicek', 'dishes.add': 'Tambah hidangan', 'dishes.none': 'Belum ada hidangan.',
   'picker.title': 'Tambah ke {course}', 'picker.titleDay': '{day} · {course}', 'picker.search': 'Cari hidangan', 'picker.pages': 'Hidangan untuk dipilih', 'picker.ph': 'Cari, atau ketik hidangan baru', 'picker.none': 'Tidak ada hidangan yang cocok.', 'picker.affects': 'Bentrok dengan {names}', 'picker.create': 'Tambah “{name}” sebagai hidangan baru',

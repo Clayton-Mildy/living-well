@@ -672,6 +672,8 @@ export interface Dish extends Row {
   tags: ('soft' | 'lowSalt' | 'sugarFree' | 'vegetarian')[];
   reviewedBy?: string;
   reviewedAt?: DT;
+  /** round 15: the dish's picture (a media id); the menu and the calendars show it until the day's own lunch photo replaces it */
+  photoMediaId?: string;
 }
 
 export interface MenuDay {

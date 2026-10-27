@@ -51,6 +51,7 @@ export const kitchen = {
   'dish.eyebrow': 'Dish and allergens', 'dish.new': 'New dish', 'dish.name': 'Dish name', 'dish.namePh': 'For example Ayam kukus', 'dish.course': 'Course', 'dish.contains': 'Contains',
   'dish.containsHint': 'Tick everything in the recipe. A seafood allergy covers fish and shellfish.', 'dish.tags': 'Suits', 'dish.checked': 'Allergens checked',
   'dish.checkedSub': 'Families are only told the menu is clear for dishes whose allergens have been checked.', 'dish.checkedBy': 'Allergens checked by {name} on {date}.',
+  dishPhoto: 'Dish photo', addDishPhoto: 'Add photo',
   'dish.save': 'Save dish', 'dish.delete': 'Delete dish', 'dish.deleteAsk': 'Delete {name}? It is removed from the dish list.', 'dish.keep': 'Keep dish', 'dish.saved': '{name} saved.', 'dish.deleted': '{name} deleted.',
   'dishes.title': 'Dishes and allergens', 'dishes.search': 'Search dishes', 'dishes.toCheck': '{n} to check', 'dishes.allChecked': 'All allergens checked', 'dishes.add': 'Add a dish', 'dishes.none': 'No dishes yet.',
   'picker.title': 'Add to {course}', 'picker.titleDay': '{day} · {course}', 'picker.search': 'Find a dish', 'picker.pages': 'Dishes to choose from', 'picker.ph': 'Search, or type a new dish', 'picker.none': 'No dish matches.', 'picker.affects': 'Clashes with {names}', 'picker.create': 'Add “{name}” as a new dish',

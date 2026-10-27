@@ -7,7 +7,7 @@ import { attOf } from './attendance';
 import { sessionPhotos } from './activity';
 import { occasionsInRange } from './occasions';
 import { dayInfo, monthGrid, type DayState } from './calendar';
-import { extrasOn, menuOn, teaPhotosOn, visibleLunchPhotos } from './kitchen';
+import { extrasOn, lunchPictureOn, menuOn, teaPhotosOn, visibleLunchPhotos, type LunchPicture } from './kitchen';
 import { bestPhotoOf, familyPhotosOn, homeTime, logOn, servedLunch, dishNamesOf, tookPart, visitDays, LUNCH_AT, TEA_AT } from './family';
 import { addDays, addMonths, live, toMin, ym } from '../util';
 
@@ -43,6 +43,8 @@ export interface FamRow {
   to?: HM | null;
   /** lunch and tea: the dishes */
   dishes?: FamDishes[];
+  /** lunch, round 15: the day's picture, the lunch photo when the kitchen's is approved, else the photo of a dish on the menu (a family sees nothing that waits for approval) */
+  picture?: LunchPicture;
   /** a session that is over, on a day a parent came: who joined in or sat out (only parents the log says something about) */
   took: { memberId: string; took: 'joined' | 'satOut' }[];
   /** the family-visible pictures of a session / meal that is over, on a day a parent came (a session's pictures appear once per activity) */
@@ -147,7 +149,8 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
         const over = came.length > 0 && isPast(date, LUNCH_AT, today, nowMin);
         const photos = over ? visibleLunchPhotos(s, date) : [];
         photos.forEach((p) => used.add(p.id));
-        rows.push({ key: 'lunch', kind: 'lunch', time: LUNCH_AT, passed: false, dishes: lunch, took: [], photos });
+        const picture = lunchPictureOn(s, date, 'family');
+        rows.push({ key: 'lunch', kind: 'lunch', time: LUNCH_AT, passed: false, dishes: lunch, ...(picture ? { picture } : {}), took: [], photos });
       }
       const tea = menu ? dishNamesOf(s, menu.tea) : [];
       if (tea.length) {

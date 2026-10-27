@@ -4,6 +4,8 @@ import { buildSeed, projectForFamily, type ClubState } from '../index';
 import { addDays, dow } from '../util';
 import { visitDays } from './family';
 import { famDay, famMonth, famRange, famWeek } from './famCalendar';
+import { menuOn } from './kitchen';
+import { produce } from 'immer';
 
 const T = '2026-10-21';
 const NOW = 14 * 60; // after both sessions started
@@ -177,5 +179,16 @@ describe('famDay: a celebration on a closed day', () => {
     expect(famDay(s, ['m1'], sat, T, NOW).rows).toHaveLength(0);
     s.celebrations['c-wk'] = { ...cel, status: 'requested' };
     expect(famDay(s, WHO, sat, T, NOW).rows).toHaveLength(0);
+  });
+});
+
+describe('famDay: the lunch picture (round 15)', () => {
+  const NEXT = '2026-10-22';
+  const withDishPhoto = (s: ClubState, date: string) => produce(s, (d) => { d.dishes[menuOn(s, date)!.lunch[0]].photoMediaId = 'md_dish_photo_1'; });
+  it('tomorrow\'s lunch row carries the dish photo; a day with no dish photo carries none', () => {
+    const s = produce(seed(), (d) => { for (const x of Object.values(d.dishes)) delete x.photoMediaId; }); // the seed\'s main dishes have demo pictures
+    expect(famDay(s, WHO, NEXT, T, NOW).rows.find((r) => r.kind === 'lunch')?.picture).toBeUndefined();
+    const row = famDay(projectForFamily(withDishPhoto(s, NEXT), 'f1'), WHO, NEXT, T, NOW).rows.find((r) => r.kind === 'lunch');
+    expect(row?.picture).toEqual({ mediaId: 'md_dish_photo_1', source: 'dish' });
   });
 });

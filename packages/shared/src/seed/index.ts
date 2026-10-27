@@ -16,7 +16,7 @@ import { evaluateReading, limitsFor } from '../rules/health';
 import { suspensions } from '../rules/billing';
 import { addRoster } from './roster';
 import { addHistory } from './history';
-import { activityPicId, portraitId } from './demoMedia';
+import { activityPicId, dishPicId, portraitId } from './demoMedia';
 import { seedRound7 } from './r7';
 
 type Coll<K extends keyof ClubState> = ClubState[K];
@@ -270,7 +270,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   ([1, 2, 3, 4, 5] as WorkWeekday[]).forEach((w) => { const [a, b] = SCHED[w]; days[w] = { '10:30': { activityId: a[0], staffId: a[1], roomId: actRoom(a[0]) }, '13:30': { activityId: b[0], staffId: b[1], roomId: actRoom(b[0]) } }; });
   put('scheduleVersions', { ...base(C, 'sched-2024-07', at('2026-10-19T16:10'), 'staff:s9'), effectiveFrom: '2024-07-01', status: 'published', days, publishedBy: 'staff:s9', publishedAt: at('2026-10-19T16:10') });
   seedEmptyWeek(s, T, days, { at: at('2026-10-19T16:10'), by: 'staff:s9' }); // round 15 (R4): an empty week two weeks out for the activity team to plan live, then the normal days again
-  DISHES.forEach(([id, name, course, allergens, tags]) => put('dishes', { ...base(C, id, '2024-06-01T09:00', 'staff:s3'), name, course, allergens, tags, reviewedBy: 's3', reviewedAt: at('2026-10-01T10:00') } satisfies Dish));
+  DISHES.forEach(([id, name, course, allergens, tags]) => put('dishes', { ...base(C, id, '2024-06-01T09:00', 'staff:s3'), name, course, allergens, tags, reviewedBy: 's3', reviewedAt: at('2026-10-01T10:00'), ...(dishPicId(id) ? { photoMediaId: dishPicId(id) } : {}) } satisfies Dish));
   put('menuVersions', { ...base(C, 'menu-2024-07', '2024-06-20T10:00', 'staff:s3'), effectiveFrom: '2024-07-01', status: 'published', days: MENU_DAYS, publishedBy: 'staff:s3' });
   // the demo day always serves Wednesday's fish soup (Bambang's seafood allergy, the fish-bone feedback)
   if (dow(T) !== 3) put('dayMenus', { ...base(C, T, `${T}T07:00`, 'staff:s3'), date: T, lunch: MENU_DAYS[3].lunch, soft: MENU_DAYS[3].soft, tea: MENU_DAYS[3].tea, photoIds: [], allergyPlans: [] });

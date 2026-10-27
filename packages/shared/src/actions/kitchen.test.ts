@@ -5,7 +5,7 @@ import { buildSeed, execute, getUser, getAction, actionItems, updatesFor, unread
 import { defineAction, registerActions } from './framework';
 import { announceLunchPhoto } from './kitchen';
 import { moodId } from '../rules/mood';
-import { MAX_LUNCH_PHOTOS, lunchPhotosOn, teaPhotosOn, visibleLunchPhotos, visibleTeaPhotos } from '../rules/kitchen';
+import { MAX_LUNCH_PHOTOS, lunchPhotosOn, lunchPictureOn, teaPhotosOn, visibleLunchPhotos, visibleTeaPhotos } from '../rules/kitchen';
 import {
   allergiesOnFile, canApproveStock, canReceiveStock, coversOn, dietaryRows, dishUsage, kitchenConflicts, menuDishesOn, potentialConflicts, safetyOf, sortStock, templateOn, unknownAllergyGuests, unreviewedDishesOn,
 } from '../rules/kitchenOps';
@@ -437,6 +437,67 @@ describe('tea photos (KC round 7)', () => {
     const first = run(s, 'menu.postLunchPhoto', { date: T, meal: 'tea' }, 's9');
     const only = run(first.state, 'menu.removeLunchPhoto', { photoId: first.result.photoId as string }, 's9');
     expect(only.state.dayMenus[T]).toBeUndefined();
+  });
+});
+
+describe('dish photos (round 15)', () => {
+  const NEXT = '2026-10-22'; // Thursday, the day after T
+  const lunchDish = (s: ClubState, date: string) => menuOn(s, date)!.lunch[0];
+  /** the seed's main dishes carry demo pictures; these tests set their own, so start from dishes with none */
+  const bare = (): ClubState => produce(seed(), (d) => { for (const x of Object.values(d.dishes)) delete x.photoMediaId; });
+  const withDishPhoto = (s: ClubState, id: string, mediaId = 'md_dish_photo_1') => produce(s, (d) => { d.dishes[id].photoMediaId = mediaId; });
+  it('the seed\'s main lunch dishes carry their demo picture, the sides do not, and the menu shows it', () => {
+    const s = seed();
+    expect(s.dishes['dish-sop-ikan'].photoMediaId).toBe('md_demo_food-sop-ikan');
+    expect(s.dishes['dish-nasi-merah'].photoMediaId).toBeUndefined();
+    expect(lunchPictureOn(s, T)).toEqual({ mediaId: 'md_demo_food-sop-ikan', source: 'dish' }); // Wednesday: fish soup
+  });
+  it('dish.upsert stores photoMediaId, leaves it when absent and clears it with null; a bad id is refused', () => {
+    const s = seed();
+    const made = run(s, 'dish.upsert', { name: 'Ayam kukus', course: 'lunch', allergens: [], tags: [], photoMediaId: 'md_abcdefgh1' }, 's3');
+    const id = made.result.dishId as string;
+    expect(made.state.dishes[id].photoMediaId).toBe('md_abcdefgh1');
+    const kept = run(made.state, 'dish.upsert', { id, name: 'Ayam kukus 2', course: 'lunch', allergens: [], tags: [] }, 's3');
+    expect(kept.state.dishes[id].photoMediaId).toBe('md_abcdefgh1');
+    const swapped = run(kept.state, 'dish.upsert', { id, name: 'Ayam kukus 2', course: 'lunch', allergens: [], tags: [], photoMediaId: 'md_zzzzzzzz2' }, 's3');
+    expect(swapped.state.dishes[id].photoMediaId).toBe('md_zzzzzzzz2');
+    const cleared = run(swapped.state, 'dish.upsert', { id, name: 'Ayam kukus 2', course: 'lunch', allergens: [], tags: [], photoMediaId: null }, 's3');
+    expect('photoMediaId' in cleared.state.dishes[id]).toBe(false);
+    expect(() => run(s, 'dish.upsert', { name: 'Tahu', course: 'lunch', allergens: [], tags: [], photoMediaId: 'no pe!' }, 's3')).toThrow('err.invalid');
+    expect(() => run(s, 'dish.upsert', { name: 'Tahu', course: 'lunch', allergens: [], tags: [], photoMediaId: 'md_abcdefgh1' }, 's1')).toThrow('err.forbidden');
+  });
+  it('lunchPictureOn: the dish photo before the day has a lunch photo, the day\'s own lunch photo after', () => {
+    const base = bare();
+    const dish = lunchDish(base, NEXT);
+    const s = withDishPhoto(base, dish);
+    expect(lunchPictureOn(base, NEXT)).toBeNull(); // no dish of the day has a picture
+    expect(lunchPictureOn(s, NEXT)).toEqual({ mediaId: 'md_dish_photo_1', source: 'dish' }); // tomorrow
+    expect(lunchPictureOn(s, '2026-10-24')).toBeNull(); // a Saturday: the club is closed, nothing is served
+    // today: the dish photo until the kitchen's photo is up; management's is visible at once and takes its place
+    const today = withDishPhoto(base, lunchDish(base, T));
+    expect(lunchPictureOn(today, T)).toEqual({ mediaId: 'md_dish_photo_1', source: 'dish' });
+    const posted = run(today, 'menu.postLunchPhoto', { date: T, mediaId: 'md_lunch_photo_1' }, 's9');
+    expect(lunchPictureOn(posted.state, T)).toEqual({ mediaId: 'md_lunch_photo_1', source: 'lunch' });
+    expect(lunchPictureOn(posted.state, T, 'staff')).toEqual({ mediaId: 'md_lunch_photo_1', source: 'lunch' });
+    expect(lunchPictureOn(posted.state, NEXT)).toBeNull(); // another day is not touched
+  });
+  it('a lunch photo waiting for approval replaces the dish photo for staff only; the family keeps seeing the dish photo until management approves it', () => {
+    const s = withDishPhoto(bare(), lunchDish(seed(), T));
+    const r = run(s, 'menu.postLunchPhoto', { date: T, mediaId: 'md_lunch_photo_1' }, 's3'); // the kitchen: pending
+    expect(lunchPictureOn(r.state, T, 'staff')).toEqual({ mediaId: 'md_lunch_photo_1', source: 'lunch' });
+    expect(lunchPictureOn(r.state, T)).toEqual({ mediaId: 'md_dish_photo_1', source: 'dish' });
+    // what a family's browser holds: the pending photo is not even sent
+    expect(lunchPictureOn(projectForFamily(r.state, 'fm10_0'), T)).toEqual({ mediaId: 'md_dish_photo_1', source: 'dish' });
+    const ok = run(r.state, 'photo.approve', { photoIds: [r.result.photoId], notify: true }, 's9');
+    expect(lunchPictureOn(ok.state, T)).toEqual({ mediaId: 'md_lunch_photo_1', source: 'lunch' });
+    expect(lunchPictureOn(projectForFamily(ok.state, 'fm10_0'), T)).toEqual({ mediaId: 'md_lunch_photo_1', source: 'lunch' });
+  });
+  it('a lunch photo without an image (the old placeholder) never counts, and a deleted dish shows nothing', () => {
+    const s = withDishPhoto(bare(), lunchDish(seed(), T));
+    const r = run(s, 'menu.postLunchPhoto', { date: T }, 's9'); // visible, but no upload
+    expect(lunchPictureOn(r.state, T)).toEqual({ mediaId: 'md_dish_photo_1', source: 'dish' });
+    const gone = produce(s, (d) => { d.dishes[lunchDish(s, T)].deletedAt = `${T}T09:00`; });
+    expect(lunchPictureOn(gone, T)).toBeNull();
   });
 });
 

@@ -2,8 +2,9 @@
 // panel and the weekly plan editor. Closed days and weekends show a closed state instead of crashing.
 // KC round 6: the front desk opens the same page view only: the menu, the allergy warnings and the week, with no buttons that change anything.
 import { useState } from 'react';
-import { Card, EmptyState, GROUP_HEAD, Group, Icon, PageHead, Pager, Pin, usePaged, FONT_BODY } from '../../components/ui';
+import { Card, DishThumb, EmptyState, GROUP_HEAD, Group, Icon, PageHead, Pager, Pin, usePaged, FONT_BODY } from '../../components/ui';
 import { listName } from '@cp/shared';
+import { lunchPictureOn } from '@cp/shared/rules/kitchen';
 import type { DietRow } from '@cp/shared/rules/kitchenOps';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { PendingMark } from '../../components/PendingMark';
@@ -31,6 +32,9 @@ export function KitchenMenu() {
   const editor = usePlanEditor();
   const [publishing, setPublishing] = useState(false);
   const [override, setOverride] = useState(false);
+  // round 15: the lunch dish's picture beside the menu until today's own lunch photo is up (that one shows in the gallery above)
+  const dishPic = lunchPictureOn(s, v.today, 'staff');
+  const lunchPic = dishPic?.source === 'dish' ? <DishThumb mediaId={dishPic.mediaId} label={t('kitchen.dishPhoto')} size={56} source="dish" testId="menu-lunch-picture" /> : null;
   const names = (list: { name: string }[]) => list.map((d) => d.name).join(', ') || t('kitchen.menu.none');
   // "3 in the club + 1 guest": members who are in, members who already left (they still had lunch), booked guests
   const { inClub, gone } = v.members;
@@ -79,7 +83,7 @@ export function KitchenMenu() {
                       <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
 {celebLines}
 {birthdayLine}
-                      <div style={{ fontSize: 22, lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', marginTop: 2 }}>{names(v.menu.lunch)}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginTop: 2 }}>{lunchPic}<div style={{ fontSize: 22, lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', minWidth: 0 }}>{names(v.menu.lunch)}</div></div>
                       <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.softLine', { dishes: names(v.menu.soft) })}</div>
                       <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.teaLine', { dishes: names(v.menu.tea) })}</div>
                       {readOnly ? null : (<div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 6 }}>
@@ -115,7 +119,7 @@ export function KitchenMenu() {
                   <div style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }} data-testid="covers-split">{coversSplit}</div>
 {celebLines}
 {birthdayLine}
-                  <div style={{ fontSize: 'clamp(20px, 2.4vw, 24px)', lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', marginTop: 4 }}>{names(v.menu.lunch)}</div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginTop: 4 }}>{lunchPic}<div style={{ fontSize: 'clamp(20px, 2.4vw, 24px)', lineHeight: 1.3, fontWeight: 500, letterSpacing: '-0.3px', color: '#5E4E3B', minWidth: 0 }}>{names(v.menu.lunch)}</div></div>
                   <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.softLine', { dishes: names(v.menu.soft) })}</div>
                   <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('kitchen.teaLine', { dishes: names(v.menu.tea) })}</div>
                   {readOnly ? null : (<div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, alignItems: 'center', marginTop: 6 }}>

@@ -5,7 +5,7 @@ import { displayName } from '@cp/shared';
 import { eventTitle } from '@cp/shared/rules/calendar';
 import { activityLabel, roomLabel, staffFirst } from '@cp/shared/rules/family';
 import type { FamDay, FamRow } from '@cp/shared/rules/famCalendar';
-import { Icon, PhotoImg } from '../../../components/ui';
+import { DishThumb, Icon, PhotoImg } from '../../../components/ui';
 import { useFamilyCtx } from '../useFamily';
 import { F, HAIR, useFamWide } from '../kit';
 import { nameList } from './bits';
@@ -103,6 +103,7 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
                 {x.sub ? <span style={{ fontSize: 13, lineHeight: 1.35, color: F.muted, overflowWrap: 'anywhere' }}>{x.sub}</span> : null}
                 {mark}
               </span>
+              {r.kind === 'lunch' && r.picture && !r.photos.length ? <span style={{ display: 'flex' }}><DishThumb mediaId={r.picture.mediaId} label={t('kitchen.dishPhoto')} size={wide ? 72 : 64} source={r.picture.source} testId="cal-lunch-picture" /></span> : null}
               {r.photos.length ? <Thumbs size={wide ? 72 : 64} photos={r.photos} label={(k) => t('fcal.photoAria', { i: k + 1, n: r.photos.length, a: x.title })} onOpen={(p) => onOpen(r.photos, p.id)} /> : null}
             </span>
           </div>

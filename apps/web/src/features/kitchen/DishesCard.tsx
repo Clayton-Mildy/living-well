@@ -2,7 +2,7 @@
 import { useMemo, useState } from 'react';
 import { live } from '@cp/shared';
 import { COURSES, dishesByCourse, type Course } from '@cp/shared/rules/kitchenOps';
-import { Button, Card, CardHead, Group, Icon, Pager, Segmented, TextField, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Card, CardHead, DishThumb, Group, Icon, Pager, Segmented, TextField, usePaged, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
@@ -35,6 +35,7 @@ export function DishesCard() {
           {paged.rows.map((d, i) => (
             <button key={d.id} type="button" onClick={() => setOpen(d.id)} className="cp-tap-self" data-testid="dish-row"
               style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 16px', minHeight: 58, border: 'none', backgroundColor: 'transparent', backgroundImage: i === 0 ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 16px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+              <DishThumb plain mediaId={d.photoMediaId} label={t('kitchen.dishPhoto')} size={40} />
               <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
                 <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{allergenText(t, d)}</span>
@@ -67,6 +68,7 @@ export function DishesCard() {
       {paged.rows.map((d) => (
         <button key={d.id} type="button" onClick={() => setOpen(d.id)} className="h-row" data-testid="dish-row"
           style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 22px', minHeight: 60, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+          <DishThumb plain mediaId={d.photoMediaId} label={t('kitchen.dishPhoto')} size={44} />
           <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
             <span style={{ fontSize: FONT_BODY, color: '#6B6259', lineHeight: 1.4 }}>{allergenText(t, d)}</span>

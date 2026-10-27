@@ -205,6 +205,35 @@ describe('family Today', () => {
     expect(rows.every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
   });
 
+  it('round 15: tomorrow\'s lunch row shows the dish photo; a lunch photo still waiting for approval does not replace it, an approved one does', async () => {
+    const base = buildSeed().citra;
+    const thursday = (b: ClubState) => b.dishes['dish-semur-tahu']; // Thursday's main dish: the seed gives it a picture
+    expect(thursday(base).photoMediaId).toBe('md_demo_food-tahu');
+    open('f1', 'en', 598, base);
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22'); // tomorrow
+    const pic = q('[data-tl="lunch"] [data-testid="lunch-picture"]');
+    expect(pic?.getAttribute('data-media')).toBe('md_demo_food-tahu');
+    expect(pic?.getAttribute('data-source')).toBe('dish');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    // the kitchen's photo of the day is pending: the family's copy of the club does not even hold it, so the dish photo stays
+    const pending = produce(base, (d) => {
+      d.photos['ph-pending'] = { id: 'ph-pending', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: '2026-10-22', time: '09:00', kind: 'lunch', media: 'photo', memberIds: [], tone: 0, takenBy: 's3', visibility: 'pending', mediaId: 'md_pending_lunch' } as never;
+      d.dayMenus['2026-10-22'] = { id: '2026-10-22', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: '2026-10-22', allergyPlans: [], photoIds: ['ph-pending'] } as never;
+    });
+    open('f1', 'en', 598, pending);
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22');
+    expect(q('[data-tl="lunch"] [data-testid="lunch-picture"]')?.getAttribute('data-media')).toBe('md_demo_food-tahu');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    const approved = produce(pending, (d) => { d.photos['ph-pending'].visibility = 'visible'; });
+    open('f1', 'en', 598, approved);
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22');
+    const now = q('[data-tl="lunch"] [data-testid="lunch-picture"]');
+    expect(now?.getAttribute('data-media')).toBe('md_pending_lunch');
+    expect(now?.getAttribute('data-source')).toBe('lunch');
+  });
+
   it('round 15: today after the club has closed with nobody in: the programme is "what was on" and every row is passed', async () => {
     open('f1', 'en', 21 * 60 + 40);
     await show(<FamilyToday />, '/today?member=m1');

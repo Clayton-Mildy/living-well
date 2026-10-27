@@ -113,3 +113,25 @@ describe('DayBlock: a pending day', () => {
     expect(buttons(/^Approve$/)).toHaveLength(0);
   });
 });
+
+describe('DayBlock: the lunch picture (round 15)', () => {
+  it('a day whose lunch has a picture gets a Lunch row at 12:00 with it; the day\'s own lunch photo replaces the dish photo (staff see a pending one)', async () => {
+    const s = buildSeed().citra; // Friday 23 Oct: gado-gado is the main dish, with its demo picture
+    openClub(s, 'activity');
+    await show(s);
+    const row = document.querySelector('[data-testid="day-lunch"]');
+    expect(row?.getAttribute('data-source')).toBe('dish');
+    expect(row?.querySelector('[data-testid="day-lunch-picture"]')?.getAttribute('data-media')).toBe('md_demo_food-gado');
+    expect(row?.textContent).toContain('Gado-gado');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    const pending = structuredClone(s); // the kitchen's photo of the day, waiting for approval
+    pending.photos['ph-k'] = { id: 'ph-k', clubId: 'citra', createdAt: `${DATE}T09:00`, createdBy: 'staff:s3', date: DATE, time: '09:00', kind: 'lunch', media: 'photo', memberIds: [], tone: 0, takenBy: 's3', visibility: 'pending', mediaId: 'md_kitchen_photo' } as never;
+    pending.dayMenus[DATE] = { id: DATE, clubId: 'citra', createdAt: `${DATE}T09:00`, createdBy: 'staff:s3', date: DATE, allergyPlans: [], photoIds: ['ph-k'] } as never;
+    openClub(pending, 'activity');
+    await show(pending);
+    const now = document.querySelector('[data-testid="day-lunch"]');
+    expect(now?.getAttribute('data-source')).toBe('lunch');
+    expect(now?.querySelector('[data-testid="day-lunch-picture"]')?.getAttribute('data-media')).toBe('md_kitchen_photo');
+  });
+});

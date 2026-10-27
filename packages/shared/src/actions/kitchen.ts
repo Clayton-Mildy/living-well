@@ -85,7 +85,7 @@ const isEmptyDay = (row: Draft<ClubState>['dayMenus'][string]) => !row.lunch && 
 const sameSet = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x) => b.includes(x));
 
 // ---------- dishes ----------
-interface DishInput { id?: string; name: string; course: Course; allergens: DishAllergen[]; tags: Dish['tags']; reviewed: boolean }
+interface DishInput { id?: string; name: string; course: Course; allergens: DishAllergen[]; tags: Dish['tags']; reviewed: boolean; /** round 15: undefined leaves the picture as it is, null removes it */ photoMediaId?: string | null }
 
 const dishActions: ActionDef[] = [
   defineAction<DishInput>({
@@ -93,7 +93,7 @@ const dishActions: ActionDef[] = [
     can: (u) => kitchenOrMgmt(u),
     parse(raw) {
       const r = rec(raw);
-      return { id: r.id === undefined || r.id === null ? undefined : line(r.id, 80), name: line(r.name, 60), course: oneOf(r.course, COURSES), allergens: listOf(r.allergens ?? [], DISH_ALLERGENS), tags: listOf(r.tags ?? [], DISH_TAGS), reviewed: r.reviewed === true };
+      return { id: r.id === undefined || r.id === null ? undefined : line(r.id, 80), name: line(r.name, 60), course: oneOf(r.course, COURSES), allergens: listOf(r.allergens ?? [], DISH_ALLERGENS), tags: listOf(r.tags ?? [], DISH_TAGS), reviewed: r.reviewed === true, ...(r.photoMediaId === undefined ? {} : { photoMediaId: r.photoMediaId === null ? null : (mediaIdOf(r.photoMediaId) ?? bad()) }) };
     },
     run(d, i, ctx) {
       const dup = live(d.dishes as ClubState['dishes']).find((x) => x.id !== i.id && x.course === i.course && x.name.toLocaleLowerCase() === i.name.toLocaleLowerCase());
@@ -107,12 +107,13 @@ const dishActions: ActionDef[] = [
         row.course = i.course;
         row.allergens = i.allergens;
         row.tags = i.tags;
+        if (i.photoMediaId) row.photoMediaId = i.photoMediaId; else if (i.photoMediaId === null) delete row.photoMediaId;
         if (i.reviewed) { row.reviewedBy = ctx.user.id; row.reviewedAt = ctx.nowDT; }
         else if (allergensChanged) { delete row.reviewedBy; delete row.reviewedAt; } // new tags: nobody has confirmed them yet
         ctx.result.dishId = row.id;
       } else {
         const id = ctx.id('dish');
-        d.dishes[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, name: i.name, course: i.course, allergens: i.allergens, tags: i.tags, ...(i.reviewed ? { reviewedBy: ctx.user.id, reviewedAt: ctx.nowDT } : {}) };
+        d.dishes[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, name: i.name, course: i.course, allergens: i.allergens, tags: i.tags, ...(i.photoMediaId ? { photoMediaId: i.photoMediaId } : {}), ...(i.reviewed ? { reviewedBy: ctx.user.id, reviewedAt: ctx.nowDT } : {}) };
         ctx.result.dishId = id;
       }
     },
