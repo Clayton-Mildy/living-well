@@ -746,6 +746,12 @@ export const clubActions = [
         const id = ctx.id('price');
         d.prices[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, from: i.from, flex: i.flex, gold: i.gold, extra: i.extra, ...fees, ...planPrices, sample, by: ctx.actor };
       }
+      // a plan priced now is also added to any later price list that has no figure for it (it would bill Rp 0); a later list that already prices it keeps its own
+      for (const [id, n] of Object.entries(i.plans ?? {})) {
+        for (const p of live(S(d).prices)) {
+          if (p.from > i.from && p.plans?.[id] === undefined) d.prices[p.id].plans = { ...(p.plans ?? {}), [id]: n };
+        }
+      }
       ctx.feed({ icon: 'sell', key: 'mgmt.feed.prices', params: { date: dm(i.from) } });
       if (i.notify !== false) ctx.notify({ toRoles: ['finance'], kind: 'mgmt.notif.pricesChanged', params: { date: dm(i.from) }, link: '/billing' });
     },
@@ -775,6 +781,7 @@ export const clubActions = [
         if (JSON.stringify(plans[at]) === JSON.stringify(def)) ctx.fail('err.noChanges');
         plans[at] = def;
       } else plans.push(def);
+      ctx.result.planId = def.id;
       ctx.feed({ icon: 'workspace_premium', key: 'mgmt.feed.plan', params: { name: def.name } });
     },
   }),

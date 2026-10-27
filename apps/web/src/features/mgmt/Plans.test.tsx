@@ -1,7 +1,7 @@
 // Plans: five sections in order (Plans, Extra charges, One-off fees, Changes when edited, Next invoice preview); the Flex visits rule lives in the Flex card.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { buildSeed } from '@cp/shared';
 import { useReplica } from '../../store/replica';
@@ -18,10 +18,16 @@ afterEach(async () => {
   host = null;
   document.body.innerHTML = '';
 });
-function openClub() {
-  const state = buildSeed().citra;
-  useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's9', name: 'Ega', role: 'mgmt', clubId: 'citra', clubs: ['citra', 'adina'] } });
-  useReplica.setState({ club: 'citra', userId: 's9', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 } });
+function openClub(opts: { staff?: 's9' | 's1'; plans?: boolean } = {}) {
+  const state = structuredClone(buildSeed().citra); // the seed is shared between tests
+  if (opts.plans) {
+    // round 15 phase 2: two catalogue plans, the second without a price yet
+    state.club.settings.plans = [{ id: 'plan_1', name: 'Gold Plus', kind: 'unlimited', active: true }, { id: 'plan_2', name: 'Flex 6', kind: 'days', quota: 6, active: true }];
+    Object.values(state.prices).forEach((p) => { p.plans = { plan_1: 4_500_000 }; });
+  }
+  const user = opts.staff === 's1' ? { kind: 'staff' as const, id: 's1', name: 'Caca', role: 'lobby' as const, clubId: 'citra', clubs: ['citra'] } : { kind: 'staff' as const, id: 's9', name: 'Ega', role: 'mgmt' as const, clubId: 'citra', clubs: ['citra', 'adina'] };
+  useSession.setState({ lang: 'en', club: 'citra', user });
+  useReplica.setState({ club: 'citra', userId: user.id, confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 } });
 }
 async function show(ui: ReactElement, width: number) {
   (window as { innerWidth: number }).innerWidth = width;
@@ -75,5 +81,102 @@ describe.each([['phone', 390], ['wide', 1280]])('Plans sections (%s)', (_n, widt
     expect(ch.textContent).toContain('Notify the team');
     expect(ch.textContent).toContain('Takes effect from');
     expect(ch.querySelector('input, button[aria-haspopup], [role="button"]')).toBeTruthy();
+  });
+});
+
+// ---------- round 15 phase 2: the plan catalogue ----------
+const calls: [string, Record<string, unknown>][] = [];
+function mockAct() {
+  calls.length = 0;
+  const fn = vi.fn(async (name: string, input: unknown) => { calls.push([name, input as Record<string, unknown>]); return { ok: true as const, result: name === 'club.setPlan' ? { planId: 'plan_3' } : {} }; });
+  useReplica.setState({ act: fn as never });
+}
+const click = async (el: Element | null | undefined) => { expect(el).toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
+const byText = (sel: string, text: string) => Array.from(document.querySelectorAll<HTMLElement>(sel)).find((e) => e.textContent?.trim().endsWith(text));
+const field = (label: string) => Array.from(document.querySelectorAll<HTMLLabelElement>('[role="dialog"] label')).find((l) => l.textContent?.startsWith(label))!.querySelector('input')!;
+
+describe.each([['phone', 390], ['wide', 1280]])('the plan catalogue (%s)', (_n, width) => {
+  it('management sees Flex, Gold and the custom plans with their price in force, or No price', async () => {
+    openClub({ plans: true });
+    await show(<Plans />, width);
+    const plans = section('Plans')!;
+    expect(plans.contains(priceInput('Flex'))).toBe(true);
+    expect(plans.contains(priceInput('Gold'))).toBe(true);
+    expect(priceInput('Gold Plus').value).toBe('4.500.000');
+    expect(plans.textContent).toContain('Unlimited');
+    expect(plans.textContent).toContain('6 days a month');
+    expect(priceInput('Flex 6').value).toBe('');
+    expect(priceInput('Flex 6').placeholder).toBe('No price');
+    expect(plans.textContent).toContain('Add plan');
+  });
+  it('Start from Flex prefills Days per month, the Flex quota and the Flex price; saving adds the plan and then prices it', async () => {
+    openClub();
+    mockAct();
+    await show(<Plans />, width);
+    await click(byText('button', 'Add plan'));
+    expect(byText('button', 'Start from Gold')).toBeTruthy();
+    await click(byText('button', 'Start from Flex'));
+    const flexQuota = useReplica.getState().view!.club.settings.flexQuota;
+    expect(byText('[role="tab"]', 'Days per month')!.getAttribute('aria-selected')).toBe('true');
+    expect(field('Days a month').value).toBe(String(flexQuota));
+    expect(field('Price per month').value).toBe('2.700.000');
+    await type(field('Plan name'), 'Flex 8');
+    await type(field('Days a month'), '8');
+    await type(field('Price per month'), '2000000');
+    await click(byText('button', 'Save'));
+    expect(calls.map((c) => c[0])).toEqual(['club.setPlan', 'prices.set']);
+    expect(calls[0][1]).toEqual({ name: 'Flex 8', kind: 'days', quota: 8, active: true });
+    expect(calls[1][1]).toMatchObject({ plans: { plan_3: 2_000_000 }, from: '2026-10-21' });
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+  });
+  it('Start from Gold prefills Unlimited and the Gold price, with no days field', async () => {
+    openClub();
+    mockAct();
+    await show(<Plans />, width);
+    await click(byText('button', 'Add plan'));
+    await click(byText('button', 'Start from Gold'));
+    expect(byText('[role="tab"]', 'Unlimited')!.getAttribute('aria-selected')).toBe('true');
+    expect(field('Price per month').value).toBe('3.950.000');
+    expect(Array.from(document.querySelectorAll('label')).some((l) => l.textContent?.startsWith('Days a month'))).toBe(false);
+    await type(field('Plan name'), 'Gold Lite');
+    await click(byText('button', 'Save'));
+    expect(calls[0][1]).toEqual({ name: 'Gold Lite', kind: 'unlimited', active: true });
+  });
+  it('an empty name or price keeps the sheet open and calls nothing', async () => {
+    openClub();
+    mockAct();
+    await show(<Plans />, width);
+    await click(byText('button', 'Add plan'));
+    await click(byText('button', 'Save'));
+    expect(calls).toEqual([]);
+    expect(document.querySelector('[role="dialog"]')!.textContent).toContain('Give the plan a name.');
+  });
+  it('switching Active off retires the plan with club.setPlan', async () => {
+    openClub({ plans: true });
+    mockAct();
+    await show(<Plans />, width);
+    const sw = document.querySelectorAll<HTMLElement>('[role="switch"]');
+    expect(sw.length).toBe(2);
+    await click(sw[1]);
+    expect(calls).toEqual([['club.setPlan', { id: 'plan_2', name: 'Flex 6', kind: 'days', quota: 6, active: false }]]);
+  });
+  it('a custom plan price is saved from the chosen date with prices.set plans', async () => {
+    openClub({ plans: true });
+    mockAct();
+    await show(<Plans />, width);
+    await type(priceInput('Flex 6'), '1800000');
+    expect(section('Changes')!.textContent).toContain('Takes effect from');
+    await click(byText('button', 'Save changes'));
+    expect(calls.length).toBe(1);
+    expect(calls[0][0]).toBe('prices.set');
+    expect(calls[0][1]).toMatchObject({ plans: { plan_1: 4_500_000, plan_2: 1_800_000 }, from: '2026-10-21' });
+  });
+  it('a lobby user sees the plans but no Add plan, Edit or Active switch', async () => {
+    openClub({ plans: true, staff: 's1' });
+    await show(<Plans />, width);
+    expect(section('Plans')!.textContent).toContain('Gold Plus');
+    expect(byText('button', 'Add plan')).toBeUndefined();
+    expect(document.querySelector('[role="switch"]')).toBeNull();
+    expect(document.querySelector('button[aria-label^="Edit "]')).toBeNull();
   });
 });

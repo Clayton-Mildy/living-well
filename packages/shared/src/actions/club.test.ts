@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, feeOf, getUser, systemUser, live, priceOn, surveyStats, updatesFor, actionItems, liveSurvey, ratingLinkOf, DomainError, type ClubState } from '../index';
+import { buildSeed, execute, feeOf, planPrice, getUser, systemUser, live, priceOn, surveyStats, updatesFor, actionItems, liveSurvey, ratingLinkOf, DomainError, type ClubState } from '../index';
 import { appFamilies, audienceRecipients, broadcastRecipients, checkVenueSlot, resolveSurveyAudience, surveyMembers, venueClash } from '../rules/mgmt';
 
 const T = '2026-10-21'; // Wednesday
@@ -710,6 +710,7 @@ describe('the plan catalogue (round 15, phase 2)', () => {
     const s = seed().citra;
     const r = run(s, 'club.setPlan', plan, 's9');
     expect(r.state.club.settings.plans).toEqual([{ id: 'plan_1', ...plan }]);
+    expect(r.result.planId).toBe('plan_1');
     const r2 = run(r.state, 'club.setPlan', { name: 'Private', kind: 'unlimited', active: true }, 's9');
     expect(r2.state.club.settings.plans!.map((p) => p.id)).toEqual(['plan_1', 'plan_2']);
     expect(r2.state.club.settings.plans![1]).toEqual({ id: 'plan_2', name: 'Private', kind: 'unlimited', active: true });
@@ -741,6 +742,20 @@ describe('the plan catalogue (round 15, phase 2)', () => {
     expect(priceOn(again.state, '2026-12-01').plans).toEqual({ plan_1: 2000000 });
     fails(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, plans: { plan_9: 1 }, from: '2026-12-01' }, 's9', 'err.invalid');
     fails(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, plans: { plan_1: 0 }, from: '2026-12-01' }, 's9', 'err.invalid');
+  });
+  it('a plan priced from an earlier date is also added to later price lists that lack it (they would bill Rp 0)', () => {
+    const s = run(seed().citra, 'club.setPlan', plan, 's9').state;
+    const later = run(s, 'prices.set', { flex: 3100000, gold: 3950000, extra: 650000, from: '2026-12-01' }, 's9').state;
+    expect(priceOn(later, '2026-12-01').plans).toBeUndefined();
+    const r = run(later, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, plans: { plan_1: 2000000 }, from: '2026-11-01' }, 's9');
+    expect(planPrice(priceOn(r.state, '2026-11-15'), 'plan_1')).toBe(2000000);
+    expect(planPrice(priceOn(r.state, '2026-12-01'), 'plan_1')).toBe(2000000);
+    expect(priceOn(r.state, '2026-12-01').flex).toBe(3100000); // the later list keeps its own other prices
+    // a later list that already prices the plan keeps its own figure
+    const own = run(r.state, 'prices.set', { flex: 3100000, gold: 3950000, extra: 650000, plans: { plan_1: 2400000 }, from: '2026-12-01' }, 's9').state;
+    const r2 = run(own, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, plans: { plan_1: 2100000 }, from: '2026-11-01' }, 's9');
+    expect(planPrice(priceOn(r2.state, '2026-11-15'), 'plan_1')).toBe(2100000);
+    expect(planPrice(priceOn(r2.state, '2026-12-01'), 'plan_1')).toBe(2400000);
   });
 });
 
