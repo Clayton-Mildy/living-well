@@ -12,7 +12,8 @@ import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
-import { NOT_SEEN_CHOICES, useCheckOnDays } from '../lobby/useCheckOnDays';
+import { NotSeenSelect } from '../lobby/NotSeenSelect';
+import { useCheckOnDays } from '../lobby/useCheckOnDays';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { FullName, relLabel, rowStatusText, STATUS_STYLE } from './lib';
 
@@ -31,7 +32,7 @@ export function MembersList() {
   const [f, setF] = useState<MemberFilter>(() => { const w = sp.get('f'); return (MEMBER_FILTERS as string[]).includes(w ?? '') ? (w as MemberFilter) : 'active'; }); // /members?f=checkOn opens a filter
   const [sort, setSort] = useState<MemberSort>('name');
   const [adding, setAdding] = useState(false);
-  const [notSeen, setNotSeen] = useCheckOnDays();
+  const [notSeen] = useCheckOnDays();
   const rows = useMemo(() => memberRows(s, today, notSeen), [s, today, notSeen]);
   const counts = useMemo(() => filterCounts(rows), [rows]);
   const visible = useMemo(() => sortMemberRows(rows.filter(FILTERS[f]).filter((r) => matchesQuery(s, r.m, q)), sort), [rows, f, q, s, sort]);
@@ -71,10 +72,7 @@ export function MembersList() {
     <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{t('members.split', { f: counts.split[f].flex, g: counts.split[f].gold })}</div>
   ) : null;
   // round 15: the Check on filter says how long "not seen" is (a per-device choice that also drives the lobby rail)
-  const notSeenEl = f === 'checkOn' ? (
-    <div style={{ maxWidth: isPhone ? undefined : 240 }}><Select label={t('checkOn.notSeenFor')} value={String(notSeen ?? 'auto')} onChange={(v) => setNotSeen(v === 'auto' ? 'auto' : Number(v))}
-      options={NOT_SEEN_CHOICES.map((c) => ({ value: String(c), label: c === 'auto' ? t('checkOn.auto') : t('checkOn.days', { n: c }) }))} /></div>
-  ) : null;
+  const notSeenEl = f === 'checkOn' ? <div style={{ maxWidth: isPhone ? undefined : 240 }}><NotSeenSelect /></div> : null;
   const sortEl = (
     <Select ariaLabel={t('members.sortLabel')} value={sort} onChange={setSort} options={MEMBER_SORTS.map((k) => ({ value: k, label: t(`members.sort.${k}`) }))} />
   );

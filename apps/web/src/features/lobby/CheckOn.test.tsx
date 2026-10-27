@@ -81,11 +81,27 @@ describe('Check on in the Arrivals rail', () => {
     expect(host!.querySelector('[data-check-on="m2"]')).toBeTruthy();
     expect(host!.textContent).toContain("Haven't come lately (2)");
   });
-  it('a stored 30 hides the 12-day member from the rail', async () => {
+  it('a stored 30 keeps the block with a quiet line and the control; Automatic brings the member back', async () => {
     open(true);
     localStorage.setItem('cp.checkOn.days', '30');
     await show();
-    expect(host!.textContent).not.toContain("Haven't come lately");
+    expect(host!.textContent).toContain("Haven't come lately (0)");
+    expect(host!.textContent).toContain('Nobody has been away that long');
+    expect(host!.querySelector('[data-check-on="m1"]')).toBeNull();
+    const trigger = host!.querySelector('[role="combobox"]') as HTMLButtonElement;
+    expect(trigger.textContent).toContain('30 days');
+    await act(async () => { trigger.click(); });
+    await act(async () => { (Array.from(document.body.querySelectorAll('[role="option"]')).find((o) => o.textContent === 'Automatic') as HTMLElement).click(); });
+    expect(localStorage.getItem('cp.checkOn.days')).toBeNull();
+    expect(host!.querySelector('[data-check-on="m1"]')).toBeTruthy();
+  });
+  it('choosing 7 days on the rail itself updates its count', async () => {
+    open(true, true);
+    await show();
+    expect(host!.textContent).toContain("Haven't come lately (1)");
+    await act(async () => { (host!.querySelector('[role="combobox"]') as HTMLButtonElement).click(); });
+    await act(async () => { (Array.from(document.body.querySelectorAll('[role="option"]')).find((o) => o.textContent === '7 days') as HTMLElement).click(); });
+    expect(host!.textContent).toContain("Haven't come lately (2)");
   });
   it('still renders with Automatic when storage throws', async () => {
     open(true);
