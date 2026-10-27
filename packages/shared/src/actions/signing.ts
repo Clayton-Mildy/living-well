@@ -8,7 +8,7 @@ import type { Draft } from 'immer';
 import type { ClubState, MemberDocument, Signing, SignStatus } from '../types';
 import { defineAction, hasRole, isFamily, DomainError, type ActionDef, type Ctx } from './framework';
 import { editable, mediaIdOf, obj, txt } from './members';
-import { shortOf } from './helpers';
+import { requireMember, shortOf } from './helpers';
 import { displayName } from '../rules/core';
 import { docIdFor, SIM_FILE } from '../rules/members';
 import { applicationDataOf } from '../rules/applicationForm';
@@ -103,7 +103,7 @@ export const signingActions: ActionDef[] = [
       return { ...memberOf(o), serial, at };
     },
     run(d, input, ctx) {
-      const m = editable(d, input.memberId, ctx);
+      const m = requireMember(d, input.memberId, ctx); // not editable(): a form countersigned just before the membership ended must still be stamped
       const doc = formDoc(m) as Draft<MemberDocument> | undefined;
       const sig = doc?.signing;
       if (!doc || !sig || sig.status !== 'countersigned' || sig.meterai !== 'e') ctx.fail('sign.err.notNow');

@@ -101,6 +101,12 @@ describe('signing.stamp', () => {
     expect(formDoc(s.members.m1)).toMatchObject({ status: 'onFile', on: T, via: 'form' });
     expect(Object.values(s.notifications).some((x) => x.kind === 'sign.notif.stamped' && x.toUsers.includes('f1'))).toBe(true);
   });
+  it('an ended member does not stop the stamp', () => {
+    const ended = produce(countersigned(base), (d) => { const ms = d.members.m1.memberships; ms[ms.length - 1].lastDay = '2026-10-01'; });
+    const s = run(ended, 'signing.stamp', stamp, sys).state;
+    expect(signingOf(s.members.m1)).toMatchObject({ status: 'stamped', meteraiSerial: 'SIM-EM-0001' });
+    expect(formDoc(s.members.m1)?.status).toBe('onFile');
+  });
   it('management and the front desk cannot stamp', () => {
     fails(countersigned(base), 'signing.stamp', stamp, who('s9'), 'err.forbidden');
     fails(countersigned(base), 'signing.stamp', stamp, who('s1'), 'err.forbidden');
