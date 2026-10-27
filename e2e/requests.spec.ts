@@ -2,7 +2,7 @@
 // Isolated env: pnpm e2e:env kitchen 8806 5206 ; E2E_BASE_URL=http://localhost:5206 pnpm exec playwright test e2e/requests.spec.ts
 import { test, expect, type Browser, type Page, type TestInfo } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, isPhone, assertNoHorizontalScroll } from './helpers';
-import { goToPage } from './kit';
+import { goToPage, takePhotoWithFile } from './kit';
 
 test.describe.configure({ timeout: 90_000 }); // other areas' suites share this machine
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
@@ -31,6 +31,13 @@ async function toggleToId(page: Page) {
 async function needsTile(page: Page, id: 'budget' | 'receipt') {
   const disabled = await page.getByTestId(`tile-${id}`).getAttribute('aria-disabled');
   test.skip(disabled === 'true', `the ${id === 'budget' ? 'budget.request' : 'receipt.add'} action is not registered yet (finance area)`);
+}
+
+/** Round 14 p2: the real camera dialog (a file picker without a camera), then the simulated reader fills the form in; wait for it before changing a field. */
+async function snapPhoto(page: Page) {
+  await page.getByRole('button', { name: 'Tap to take the photo' }).click();
+  await takePhotoWithFile(page);
+  await expect(page.getByText('Filled in automatically: check before sending.')).toBeVisible();
 }
 
 test.describe('requests screen', () => {
@@ -188,9 +195,10 @@ test.describe('requests screen', () => {
     await signIn(page, 's8', '/requests');
     await needsTile(page, 'receipt');
     await page.getByTestId('tile-receipt').click();
-    await expect(page.getByTestId('snap-photo')).toBeVisible();
+    await expect(page.getByRole('button', { name: 'Tap to take the photo' })).toBeVisible();
     // the send button waits for the photo, a supplier and an amount
-    await page.getByTestId('snap-photo').click();
+    await expect(page.getByRole('button', { name: 'Send to finance' })).toHaveAttribute('aria-disabled', 'true');
+    await snapPhoto(page);
     await expect(page.getByText('nota_2110.jpg')).toBeVisible(); // 21 Oct: nota_<day><month>.jpg
     // suppliers are the directory's suppliers; free text works too
     for (const name of ['Sayur Segar Kemang', 'Ikan Laut Jaya', 'Bersih Prima']) await expect(page.getByRole('button', { name, exact: true })).toBeVisible();
@@ -198,7 +206,7 @@ test.describe('requests screen', () => {
     await expect(page.getByLabel('Supplier', { exact: true })).toHaveValue('Bersih Prima');
     await page.getByLabel('Amount (Rp)').fill('85000');
     await expect(page.getByLabel('Amount (Rp)')).toHaveValue('85.000');
-    await expect(page.getByRole('button', { name: 'Operations', exact: true })).toHaveAttribute('aria-pressed', 'true'); // the nurse's section
+    await expect(page.getByRole('combobox', { name: 'Section' })).toContainText('Operations'); // the nurse's section
     await page.getByRole('button', { name: 'Send to finance' }).click();
     await expect(toast(page)).toContainText('Receipt sent to finance, counted against the Operations budget.');
     const row = mine(page).filter({ hasText: 'Bersih Prima' });
@@ -219,10 +227,10 @@ test.describe('requests screen', () => {
     await signIn(page, 's3', '/requests');
     await needsTile(page, 'receipt');
     await page.getByTestId('tile-receipt').click();
-    await page.getByTestId('snap-photo').click();
+    await snapPhoto(page);
     await page.getByLabel('Supplier', { exact: true }).fill('Toko Maju Jaya');
     await page.getByLabel('Amount (Rp)').fill('45000');
-    await expect(page.getByRole('button', { name: 'F&B', exact: true })).toHaveAttribute('aria-pressed', 'true'); // the kitchen's section
+    await expect(page.getByRole('combobox', { name: 'Section' })).toContainText('F&B'); // the kitchen's section
     await page.getByRole('button', { name: 'Send to finance' }).click();
     await expect(toast(page)).toContainText('counted against the F&B budget');
     const st = await stateOf(page, 's3');
@@ -234,7 +242,7 @@ test.describe('requests screen', () => {
     await signIn(page, 's8', '/requests');
     await needsTile(page, 'receipt');
     await page.getByTestId('tile-receipt').click();
-    await page.getByTestId('snap-photo').click();
+    await snapPhoto(page);
     await page.getByLabel('Supplier', { exact: true }).fill('Toko Obat Sentosa');
     await page.getByLabel('Amount (Rp)').fill('50000');
     await page.getByRole('button', { name: 'Send to finance' }).click();

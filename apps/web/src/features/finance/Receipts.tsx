@@ -1,29 +1,26 @@
-// Receipts (design ScrRcpt): snap a nota with the fake camera, pick the supplier from the directory, tag the section, send to finance;
+// Receipts (design ScrRcpt): snap a nota (read by the simulated OCR), pick the supplier from the directory, tag the section, send to finance;
 // the receipts list (approve / reject / edit / void) and the vendor invoices list (add / edit / approve / mark paid / delete).
 import { useMemo, useState } from 'react';
 import { actorName, live, rp, sortBy, type Receipt, type VendorInvoice } from '@cp/shared';
 import { activeSections, receiptOfRequest, receiptsList, sectionName, vendorInvoicesList } from '@cp/shared/rules/finance';
-import { Button, CameraCapture, Chip, DateField, EmptyState, Icon, PageHead, PhotoImg, ImageOpen, Pin, Select, TextField, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { Button, Chip, DateField, EmptyState, PageHead, PhotoImg, ImageOpen, Pin, Select, TextField, usePaged, FONT_BODY } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
-import { ApiError } from '../../lib/api';
-import { mediaUrl, uploadMedia } from '../../lib/media';
-import { say } from '../../store/ui';
+import { mediaUrl } from '../../lib/media';
 import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { digits, matches } from './lib';
+import { ReceiptCapture } from './ReceiptCapture';
 import { Badge, ConfirmDialog, FormOverlay, HAIR, Hero, HeroHead, PGroup, PagerBar, PillBtn, RpField, SearchField, dangerStrip, fieldLabel, hrow, inputBox, prow, rowSub, rowTitle } from './parts';
 
 const PAPER = 'linear-gradient(160deg, #FBF8F4 0%, #EFE7DD 55%, #DCCFC0 100%)';
-const noteName = (date: string) => `nota_${date.slice(8)}${date.slice(5, 7)}.jpg`;
 
 export function Receipts() {
   const s = useClub();
   const t = useT();
   const { lang } = useFmt();
-  const { today } = useNow();
   const { device, isPhone } = useDevice();
   const { role } = useMe();
   const canApprove = role === 'finance' || role === 'mgmt';
@@ -46,7 +43,7 @@ export function Receipts() {
         {!snapping && !isPhone ? (
           <Button size={48} icon="photo_camera" onClick={() => setSnapping(true)} style={{ alignSelf: 'flex-start', padding: '0 22px 0 18px' }}>{t('finance.rc.snap')}</Button>
         ) : null}
-        {snapping ? <SnapPanel today={today} onClose={() => setSnapping(false)} /> : null}
+        {snapping ? <SnapPanel onClose={() => setSnapping(false)} /> : null}
 
         <SearchField value={q} onChange={setQ} label={t('finance.rc.search')} placeholder={t('finance.rc.search')} />
         {isPhone ? (
@@ -124,93 +121,14 @@ function ReceiptFields({ v, set, selfId }: { v: Fields; set: (p: Partial<Fields>
   );
 }
 
-function SnapPanel({ today, onClose }: { today: string; onClose: () => void }) {
-  const s = useClub();
-  const t = useT();
-  const act = useAct();
-  const { lang } = useFmt();
-  const sections = activeSections(s);
-  const [mediaId, setMediaId] = useState<string | null>(null);
-  const [cam, setCam] = useState(false);
-  const [uploading, setUploading] = useState(false);
-  const snapped = !!mediaId;
-  const [v, setV] = useState<Fields>({ supplier: '', amount: '', sectionId: sections[0]?.id || '', date: today });
-  const set = (p: Partial<Fields>) => setV((x) => ({ ...x, ...p }));
-  const amount = digits(v.amount);
-  const sectionId = s.budgetSections[v.sectionId] ? v.sectionId : sections[0]?.id || '';
-  const ok = snapped && !!v.supplier.trim() && amount > 0 && !!sectionId && !!v.date && v.date <= today;
-  const file = noteName(v.date || today);
-  // the camera hands over the photo; it is uploaded at once and the receipt keeps its id
-  const took = async (blob: Blob) => {
-    setUploading(true);
-    try { setMediaId(await uploadMedia(blob)); }
-    catch (e) { say(t(e instanceof ApiError && e.code.startsWith('common.') ? e.code : 'common.mediaFailed'), { tone: 'error', icon: 'error' }); }
-    finally { setUploading(false); }
-  };
-  const send = async () => {
-    if (!ok) return;
-    const r = await act('receipt.add', { date: v.date, supplier: v.supplier.trim(), ...(v.directoryId ? { directoryId: v.directoryId } : {}), amount, sectionId, ...(v.requestId ? { budgetRequestId: v.requestId } : {}), fileName: file, ...(mediaId ? { mediaId } : {}) },
-      { ok: t('finance.toast.receiptSent', { section: sectionName(s, sectionId, lang) }) });
-    if (r.ok) onClose();
-  };
+function SnapPanel({ onClose }: { onClose: () => void }) {
   const { isPhone } = useDevice();
-  // round 6, phone: a flat group; the photo is a slim row (a small thumb with the file name and Retake) instead of the big 3:4 tile
-  if (isPhone) {
-    return (
-      <PGroup gap={14}>
-        {!snapped ? (
-          <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} className="cp-press" style={{ height: 64, borderRadius: 12, border: 'none', background: '#2E2924', color: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 12, cursor: 'pointer', fontFamily: 'Inter' }}>
-            <Icon name="receipt_long" size={28} color="#CAB8A2" />
-            <span style={{ fontSize: 16, lineHeight: 1.4 }}>{uploading ? t('common.processing') : t('finance.rc.tap')}</span>
-          </button>
-        ) : (
-          <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-            <div role={mediaId ? undefined : 'img'} aria-label={mediaId ? undefined : t('finance.rc.photoAlt', { file })} style={{ width: 84, flex: 'none', aspectRatio: '3/4', borderRadius: 10, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
-              <ImageOpen src={mediaId ? mediaUrl(mediaId) : null} alt={t('finance.rc.photoAlt', { file })} label={`${t('common.openFull')} · ${file}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} /></ImageOpen>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', minWidth: 0 }}>
-              <span style={{ height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: 'var(--on-card, #FFFFFF)', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-                <Icon name="check_circle" size={17} color="#3D6B4F" />{file}
-              </span>
-              <PillBtn icon="refresh" onClick={() => setCam(true)}>{t('common.retake')}</PillBtn>
-            </div>
-          </div>
-        )}
-        <CameraCapture open={cam} onClose={() => setCam(false)} onCapture={(b) => void took(b)} />
-        <ReceiptFields v={{ ...v, sectionId }} set={set} />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant="secondary" size={48} onClick={onClose} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
-          <Button size={48} disabled={!ok} onClick={send} style={{ flex: 1 }}>{t('finance.rc.send')}</Button>
-        </div>
-      </PGroup>
-    );
-  }
+  // round 14 p2: the capture itself (photo, reading, fields, lines) is shared with the section staff's Requests screen; this is the shell
+  // round 6, phone: a flat group
+  if (isPhone) return <PGroup gap={14}><ReceiptCapture onDone={onClose} onCancel={onClose} /></PGroup>;
   return (
-    <Hero visible style={{ padding: '22px clamp(18px, 3vw, 36px)', display: 'flex', flexWrap: 'wrap', gap: 24, alignItems: 'flex-start', animation: 'cpUp .2s ease-out' }}>
-      {!snapped ? (
-        <button type="button" onClick={() => setCam(true)} aria-busy={uploading || undefined} style={{ flex: '0 0 220px', aspectRatio: '3/4', borderRadius: 14, border: 'none', background: '#2E2924', color: 'var(--fill, #F4F4F5)', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter' }}>
-          <Icon name="receipt_long" size={40} color="#CAB8A2" />
-          <span style={{ fontSize: 16, lineHeight: 1.4 }}>{uploading ? t('common.processing') : t('finance.rc.tap')}</span>
-        </button>
-      ) : (
-        <div style={{ flex: '0 0 220px', display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
-        <div role={mediaId ? undefined : 'img'} aria-label={mediaId ? undefined : t('finance.rc.photoAlt', { file })} style={{ width: '100%', aspectRatio: '3/4', borderRadius: 14, background: PAPER, boxShadow: '0 1px 3px rgba(40,30,20,.14)', position: 'relative', overflow: 'hidden' }}>
-          <ImageOpen src={mediaId ? mediaUrl(mediaId) : null} alt={t('finance.rc.photoAlt', { file })} label={`${t('common.openFull')} · ${file}`} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%' }}><PhotoImg photo={{ mediaId: mediaId || undefined, tone: 0 }} /></ImageOpen>
-          <span style={{ pointerEvents: 'none', position: 'absolute', left: 10, bottom: 10, height: 28, padding: '0 10px 0 6px', borderRadius: 8, background: '#FFFFFF', fontSize: FONT_SMALL, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}>
-            <Icon name="check_circle" size={17} color="#3D6B4F" />{file}
-          </span>
-        </div>
-        <Button variant="ghost" size={44} icon="refresh" onClick={() => setCam(true)} style={{ padding: '0 6px' }}>{t('common.retake')}</Button>
-        </div>
-      )}
-      <CameraCapture open={cam} onClose={() => setCam(false)} onCapture={(b) => void took(b)} />
-      <div style={{ flex: '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <ReceiptFields v={{ ...v, sectionId }} set={set} />
-        <div style={{ display: 'flex', gap: 8 }}>
-          <Button variant="secondary" size={48} onClick={onClose} style={{ padding: '0 18px' }}>{t('common.cancel')}</Button>
-          <Button size={48} disabled={!ok} onClick={send} style={{ flex: 1 }}>{t('finance.rc.send')}</Button>
-        </div>
-      </div>
+    <Hero visible style={{ padding: '22px clamp(18px, 3vw, 36px)', animation: 'cpUp .2s ease-out' }}>
+      <ReceiptCapture onDone={onClose} onCancel={onClose} />
     </Hero>
   );
 }
