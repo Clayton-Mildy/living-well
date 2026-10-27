@@ -86,12 +86,14 @@ const pageButton = (label: string) => host!.querySelector(`nav button[aria-label
 const heading = (name: string) => Array.from(host?.querySelectorAll('h2') ?? []).find((h) => h.textContent === name);
 
 describe('check-in list', () => {
-  it('round 15: a member with a nanny shows her face and "with {name}" on the row; one without shows nothing extra', async () => {
+  it('round 15 follow-up: a member with a nanny shows her face and "Nanny · {name}" right after the name; one without shows nothing extra', async () => {
     openClub(0, 'en', { name: 'Mbak Sari', photoMediaId: 'md_nannyphoto0001' });
     await show(<Lists which="in" />);
     const nannies = host!.querySelectorAll('[data-testid="row-nanny"]');
     expect(nannies).toHaveLength(1);
-    expect(nannies[0].textContent).toBe('with Mbak Sari');
+    expect(nannies[0].textContent).toBe('Nanny · Mbak Sari');
+    const line = nannies[0].closest('[data-testid="row-name"]');
+    expect(line?.textContent).toMatch(/^Opa Budi.*Nanny · Mbak Sari$/); // on the name line, after the name
     expect(nannies[0].innerHTML).toContain('md_nannyphoto0001'); // the avatar's background picture
     expect(nannies[0].querySelector('button')).toBeNull(); // inside the row's own button, so the picture is not a second button
     expect(nannies[0].closest('button')?.textContent).toContain('Opa Budi'); // the nanny line is part of the row's open button

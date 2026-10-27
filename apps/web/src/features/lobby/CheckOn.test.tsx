@@ -66,49 +66,34 @@ describe('Check on in the Arrivals rail', () => {
     await show();
     expect(host!.textContent).not.toContain("Haven't come lately");
   });
-  it('"Not seen for" in the call sheet: 7 days adds the member quiet for a week to the rail and is remembered', async () => {
+  it('round 15 follow-up: the rail and the call sheet have no "Not seen for" control; they follow the choice the Members page stored (7 days adds the member quiet for a week)', async () => {
     open(true, true);
+    localStorage.setItem('cp.checkOn.days', '7');
     await show();
-    expect(host!.querySelector('[data-check-on="m2"]')).toBeNull();
-    await act(async () => { (host!.querySelector('[data-check-on="m1"]') as HTMLButtonElement).click(); });
-    const sheet = document.body.querySelector('[role="dialog"]')!;
-    const trigger = sheet.querySelector('[role="combobox"]') as HTMLButtonElement;
-    expect(trigger.textContent).toContain('Automatic');
-    await act(async () => { trigger.click(); });
-    const opt = Array.from(document.body.querySelectorAll('[role="option"]')).find((o) => o.textContent === '7 days') as HTMLElement;
-    await act(async () => { opt.click(); });
-    expect(localStorage.getItem('cp.checkOn.days')).toBe('7');
+    expect(host!.querySelector('[role="combobox"]')).toBeNull();
+    expect(host!.textContent).not.toContain('Not seen for');
     expect(host!.querySelector('[data-check-on="m2"]')).toBeTruthy();
     expect(host!.textContent).toContain("Haven't come lately (2)");
+    await act(async () => { (host!.querySelector('[data-check-on="m1"]') as HTMLButtonElement).click(); });
+    const sheet = document.body.querySelector('[role="dialog"]')!;
+    expect(sheet.querySelector('[role="combobox"]')).toBeNull();
+    expect(sheet.textContent).not.toContain('Not seen for');
   });
-  it('a stored 30 keeps the block with a quiet line and the control; Automatic brings the member back', async () => {
+  it('a stored 30 keeps the block with a quiet line (and no control)', async () => {
     open(true);
     localStorage.setItem('cp.checkOn.days', '30');
     await show();
     expect(host!.textContent).toContain("Haven't come lately (0)");
     expect(host!.textContent).toContain('Nobody has been away that long');
     expect(host!.querySelector('[data-check-on="m1"]')).toBeNull();
-    const trigger = host!.querySelector('[role="combobox"]') as HTMLButtonElement;
-    expect(trigger.textContent).toContain('30 days');
-    await act(async () => { trigger.click(); });
-    await act(async () => { (Array.from(document.body.querySelectorAll('[role="option"]')).find((o) => o.textContent === 'Automatic') as HTMLElement).click(); });
-    expect(localStorage.getItem('cp.checkOn.days')).toBeNull();
-    expect(host!.querySelector('[data-check-on="m1"]')).toBeTruthy();
-  });
-  it('choosing 7 days on the rail itself updates its count', async () => {
-    open(true, true);
-    await show();
-    expect(host!.textContent).toContain("Haven't come lately (1)");
-    await act(async () => { (host!.querySelector('[role="combobox"]') as HTMLButtonElement).click(); });
-    await act(async () => { (Array.from(document.body.querySelectorAll('[role="option"]')).find((o) => o.textContent === '7 days') as HTMLElement).click(); });
-    expect(host!.textContent).toContain("Haven't come lately (2)");
+    expect(host!.querySelector('[role="combobox"]')).toBeNull();
   });
   it('still renders with Automatic when storage throws', async () => {
     open(true);
     vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
     await show();
     await act(async () => { (host!.querySelector('[data-check-on="m1"]') as HTMLButtonElement).click(); });
-    const trigger = document.body.querySelector('[role="dialog"] [role="combobox"]') as HTMLButtonElement;
-    expect(trigger.textContent).toContain('Automatic');
+    expect(document.body.querySelector('[role="dialog"]')).toBeTruthy(); // the sheet opens with Automatic and no control
+    expect(document.body.querySelector('[role="dialog"] [role="combobox"]')).toBeNull();
   });
 });

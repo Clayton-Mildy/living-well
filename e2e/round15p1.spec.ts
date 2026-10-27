@@ -48,29 +48,34 @@ test('Caca: the search button, an enquiry from "Other", the plan filter, and the
   await expect(card).toContainText('Other · Church bulletin');
   await assertNoHorizontalScroll(page);
 
-  // 3. Members: In the club has a Plan dropdown; Oma Lina's row says who is with her
+  // 3. Members: In the club has Plan chips; Oma Lina's name line says who is with her
   await page.goto('/members');
   await pickOption(page, 'Filter members', /^In the club/);
   await expect(page.locator('[data-member]')).toHaveCount(4); // control: m1 (just in), m2, m20, m10
   const lina = page.locator('[data-member="m1"]');
-  await expect(lina.getByTestId('row-nanny')).toContainText('with Mbak Sari');
+  await expect(lina.getByTestId('row-nanny')).toContainText('Nanny · Mbak Sari');
+  await expect(lina.getByTestId('row-name')).toContainText(/Lina.*Nanny · Mbak Sari/); // on the name line, after the name
   await expect(page.locator('[data-member="m10"]').getByTestId('row-nanny')).toHaveCount(0);
-  await pickOption(page, /^Plan$/, 'Gold');
+  const plan = page.getByRole('radiogroup', { name: 'Plan' });
+  await expect(plan.getByRole('radio')).toHaveText(['All · 4', 'Flex · 2', 'Gold · 2']);
+  await expect(page.getByRole('combobox', { name: 'Plan' })).toHaveCount(0); // chips, not a dropdown
+  await plan.getByRole('radio', { name: /^Gold/ }).click();
   await expect(page.locator('[data-member]')).toHaveCount(2); // Hendra and Tjahjadi
   await expect(page.locator('[data-member="m2"]')).toBeVisible();
   await expect(page.locator('[data-member="m10"]')).toHaveCount(0);
   await expect(page.locator('[data-member="m1"]')).toHaveCount(0);
-  await pickOption(page, /^Plan$/, 'Flex');
+  await plan.getByRole('radio', { name: /^Flex/ }).click();
+  await expect(plan.getByRole('radio', { name: /^Flex/ })).toHaveAttribute('aria-checked', 'true');
   await expect(page.locator('[data-member]')).toHaveCount(2); // Oma Lina and Opa Bambang
   await expect(page.locator('[data-member="m1"]')).toBeVisible();
-  await expect(page.locator('[data-member="m1"]').getByTestId('row-nanny')).toContainText('with Mbak Sari');
-  await pickOption(page, /^Plan$/, 'All plans');
+  await expect(page.locator('[data-member="m1"]').getByTestId('row-nanny')).toContainText('Nanny · Mbak Sari');
+  await plan.getByRole('radio', { name: /^All/ }).click();
   await expect(page.locator('[data-member]')).toHaveCount(4);
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
 
-test('Caca: "Not seen for" 7 days lists the members who have been away a week, on Members and on the lobby rail', async ({ page, request }) => {
+test('Caca: "Not seen for" 7 days (set on Members) lists the members who have been away a week, on Members and on the lobby rail', async ({ page, request }) => {
   const c = watchConsole(page);
   // 28 Oct: everybody last came on the 20th or 21st, so no one is past their own rhythm yet
   expect((await request.post('/api/demo/clock', { data: { hm: '09:30', allowBack: true, date: '2026-10-28' } })).ok()).toBeTruthy();
@@ -89,15 +94,22 @@ test('Caca: "Not seen for" 7 days lists the members who have been away a week, o
   expect(await page.evaluate(() => localStorage.getItem('cp.checkOn.days'))).toBe('7'); // remembered on this device
   await assertNoHorizontalScroll(page);
 
-  // the lobby rail reads the same choice
+  // the lobby rail reads the same choice and has no control of its own
   await page.goto('/today');
   await expect(page.getByText(/^Haven't come lately \(4\)/)).toBeVisible();
   await expect(page.locator('[data-check-on]')).toHaveCount(4);
-  await expect(page.getByRole('combobox', { name: 'Not seen for' })).toContainText('7 days');
-  // Automatic takes the members off again (the block stays only while a fixed choice is on)
+  await expect(page.getByRole('combobox', { name: 'Not seen for' })).toHaveCount(0);
+  // the call sheet has none either
+  await page.locator('[data-check-on]').first().click();
+  const sheet = page.getByRole('dialog');
+  await expect(sheet).toBeVisible();
+  await expect(sheet.getByRole('combobox')).toHaveCount(0);
+  await page.keyboard.press('Escape');
+  // Automatic on the Members page takes the members off the rail again
+  await page.goto('/members?f=checkOn');
   await pickOption(page, 'Not seen for', 'Automatic');
+  await page.goto('/today');
   await expect(page.locator('[data-check-on]')).toHaveCount(0);
-  await expect(page.getByText(/^Haven't come lately \(/)).toHaveCount(0);
   c.assertClean();
 });
 
@@ -129,6 +141,10 @@ test('Ega: Next month lists every member and what next month holds, a tap opens 
   await expect(row).toHaveAttribute('data-kind', 'closed');
   await expect(closed.locator('[data-testid="year-closed-row"][data-date="2026-10-29"]')).toHaveAttribute('data-kind', 'outing');
   await expect(closed.locator('[data-testid="year-closed-row"][data-date="2026-10-29"]')).toContainText('Outing');
+  await expect(closed.getByTestId('year-closed-month').filter({ hasText: 'October' })).toBeVisible(); // grouped under a month header
+  await expect(page.locator('[data-testid="year-day"][data-date="2026-10-30"]')).toHaveAttribute('data-closed', 'closed'); // circled in the months
+  await expect(page.locator('[data-testid="year-day"][data-date="2026-10-29"]')).toHaveAttribute('data-closed', 'outing');
+  await expect(page.getByTestId('year-legend')).toContainText('Outing');
   await assertNoHorizontalScroll(page);
   // a tap on a row opens that day in the month
   await row.click();

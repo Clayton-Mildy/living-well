@@ -60,7 +60,7 @@ describe('Members, Check on filter', () => {
 });
 
 describe.each([['laptop', false], ['phone', true]])('Members rows, nanny (%s)', (_label, phone) => {
-  it('round 15: a member with a nanny shows her face and "with {name}" on the row; the others show none', async () => {
+  it('round 15 follow-up: a nanny shows her face and "Nanny · {name}" on the name line, right after the member\'s name; the others show none', async () => {
     device.phone = phone;
     const state = buildSeed().citra;
     for (const m of Object.values(state.members)) m.nanny = null;
@@ -74,10 +74,13 @@ describe.each([['laptop', false], ['phone', true]])('Members rows, nanny (%s)', 
     const n = host.querySelectorAll('[data-testid="row-nanny"]');
     expect(host.querySelectorAll('[data-member]').length).toBeGreaterThan(1);
     expect(n).toHaveLength(1);
-    expect(n[0].textContent).toBe('with Mbak Sari');
+    expect(n[0].textContent).toBe('Nanny · Mbak Sari');
     expect(n[0].innerHTML).toContain('md_nannyphoto0001');
     expect(n[0].closest('[data-member]')?.getAttribute('data-member')).toBe('m1');
     expect(n[0].querySelector('button')).toBeNull();
+    const line = n[0].closest('[data-testid="row-name"]');
+    expect(line, 'the nanny sits inside the name line').not.toBeNull();
+    expect(line!.textContent).toMatch(/^Oma Lina.*Nanny · Mbak Sari$/); // after the name, not before it
   });
 });
 
@@ -91,23 +94,24 @@ describe('Members, In the club by plan', () => {
     root = createRoot(host);
     await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=in']}><MembersList /></MemoryRouter>); });
     const rows = () => Array.from(host!.querySelectorAll('[data-member]')).map((e) => e.getAttribute('data-member'));
-    const plan = () => host!.querySelector('[role="combobox"][aria-labelledby]') as HTMLButtonElement;
-    const pick = async (label: string) => {
-      await act(async () => { plan().click(); });
-      await act(async () => { (Array.from(document.body.querySelectorAll('[role="option"]')).find((o) => o.textContent === label) as HTMLElement).click(); });
-    };
+    const group = () => host!.querySelector('[role="radiogroup"][aria-label="Plan"]') as HTMLElement;
+    const chip = (label: string) => Array.from(group().querySelectorAll<HTMLElement>('[role="radio"]')).find((o) => o.textContent?.startsWith(label))!;
+    const pick = async (label: string) => { await act(async () => { chip(label).click(); }); };
     expect(rows().sort()).toEqual(['m10', 'm2', 'm20']);
     expect(host.querySelector('[data-testid="members-split"]')!.textContent).toBe('1 Flex · 2 Gold');
-    expect(plan().textContent).toContain('All plans');
+    expect(Array.from(group().querySelectorAll('[role="radio"]')).map((o) => o.textContent)).toEqual(['All · 3', 'Flex · 1', 'Gold · 2']);
+    expect(chip('All').getAttribute('aria-checked')).toBe('true');
+    expect(host.querySelector('[role="combobox"][aria-labelledby]')).toBeNull(); // chips, not a dropdown
     await pick('Gold');
+    expect(chip('Gold').getAttribute('aria-checked')).toBe('true');
     expect(rows().sort()).toEqual(['m2', 'm20']);
     expect(host.querySelector('[data-testid="members-split"]')!.textContent).toBe('0 Flex · 2 Gold');
     await pick('Flex');
     expect(rows()).toEqual(['m10']);
-    await pick('All plans');
+    await pick('All');
     expect(rows()).toHaveLength(3);
   });
-  it('the Plan select shows only while In the club is selected', async () => {
+  it('the Plan chips show only while In the club is selected', async () => {
     const state = buildSeed().citra;
     useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
     useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
@@ -115,6 +119,6 @@ describe('Members, In the club by plan', () => {
     document.body.appendChild(host);
     root = createRoot(host);
     await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=active']}><MembersList /></MemoryRouter>); });
-    expect(host.textContent).not.toContain('All plans');
+    expect(host.querySelector('[role="radiogroup"][aria-label="Plan"]')).toBeNull();
   });
 });

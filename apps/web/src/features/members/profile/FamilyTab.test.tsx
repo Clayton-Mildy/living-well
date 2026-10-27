@@ -45,18 +45,23 @@ async function show(state: ClubState, memberId = 'm1') {
 }
 
 describe('Family tab: photos and the carer', () => {
-  it('lists the carer after the contacts with name, phone and the Carer label', async () => {
-    const s = produce(buildSeed().citra, (d) => { d.members.m1.nanny = { name: 'Mbak Sari', phone: '+6281211112222' }; });
+  it('round 15 follow-up: the nanny has her own card under the family card, headed "Nanny", with name, phone, call, WhatsApp and the note', async () => {
+    const s = produce(buildSeed().citra, (d) => { d.members.m1.nanny = { name: 'Mbak Sari', phone: '+6281211112222', note: 'Agency: Kasih Ibu, Mon–Wed' }; });
     await show(s);
-    const row = document.querySelector('[data-testid="fam-nanny"]');
-    expect(row).toBeTruthy();
-    expect(row!.textContent).toContain('Mbak Sari');
-    expect(row!.textContent).toContain('Carer (suster)');
-    expect(row!.textContent).toMatch(/812.?1111.?2222/);
-    expect(row!.querySelector('a[href="tel:+6281211112222"]')).toBeTruthy();
+    const card = document.querySelector('[data-testid="fam-nanny"]')!;
+    expect(card).toBeTruthy();
+    expect(card.textContent!.startsWith('Nanny')).toBe(true); // the heading
+    expect(card.textContent).toContain('Mbak Sari');
+    expect(card.textContent).toContain('Agency: Kasih Ibu, Mon–Wed');
+    expect(card.textContent).toMatch(/812.?1111.?2222/);
+    expect(card.querySelector('a[href="tel:+6281211112222"]')).toBeTruthy();
+    expect(card.querySelector('a[href^="https://wa.me/"]')).toBeTruthy();
     const contacts = Array.from(document.querySelectorAll('[data-testid="fam-contact"]'));
     expect(contacts.length).toBeGreaterThan(0);
-    expect(contacts.at(-1)!.compareDocumentPosition(row!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const c of contacts) expect(card.contains(c)).toBe(false);
+    expect(contacts.every((c) => !c.closest('[data-testid="fam-nanny"]'))).toBe(true);
+    expect(contacts.at(-1)!.compareDocumentPosition(card) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(contacts.at(-1)!.parentElement!.contains(card)).toBe(false); // not in the family card
   });
   it('no carer, no carer row', async () => {
     await show(buildSeed().citra, 'm2');

@@ -20,13 +20,14 @@ export function NannyAvatar({ nanny, size, plain }: { nanny: NonNullable<Member[
   );
 }
 
-/** round 15: the carer on a list row, "(face) with Mbak Sari" on one short line. Plain, because the whole row is already a button. */
-export function NannyLine({ nanny, size = 28, fs = 13 }: { nanny: NonNullable<Member['nanny']>; size?: number; fs?: number }) {
+/** round 15 follow-up: the carer on a list row, right after the member's name on the name line: "(face) Nanny · Mbak Sari" in the muted 12 px style. Plain, because the whole row is already a button.
+ * It shrinks (and truncates) long before the member's name does. */
+export function NannyLine({ nanny }: { nanny: NonNullable<Member['nanny']> }) {
   const t = useT();
   return (
-    <span data-testid="row-nanny" style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0, fontSize: fs, lineHeight: '20px', color: '#6B6259' }}>
-      <NannyAvatar nanny={nanny} size={size} plain />
-      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('lobby.withNanny', { n: nanny.name })}</span>
+    <span data-testid="row-nanny" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flex: '0 100 auto', minWidth: 0, fontSize: 12, lineHeight: '18px', fontWeight: 400, color: '#6B6259' }}>
+      <span style={{ display: 'inline-flex', flex: 'none' }}><NannyAvatar nanny={nanny} size={22} plain /></span>
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('lobby.nannyLine', { n: nanny.name })}</span>
     </span>
   );
 }

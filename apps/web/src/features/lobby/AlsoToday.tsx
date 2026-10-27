@@ -6,7 +6,6 @@ import { useNavigate } from 'react-router-dom';
 import { listName, type GuestVisit } from '@cp/shared';
 import { occasionsAhead } from '@cp/shared/rules/occasions';
 import { checkOnList } from '@cp/shared/rules/checkOn';
-import { NotSeenSelect } from './NotSeenSelect';
 import { useCheckOnDays } from './useCheckOnDays';
 import { alsoToday } from '@cp/shared/rules/lobby';
 import { menuOn } from '@cp/shared/rules/kitchen';
@@ -161,12 +160,11 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
     );
   }
 
-  // round 12: members not seen for a while (up to five, longest quiet first); a tap opens the call sheet
+  // round 12: members not seen for a while (up to five, longest quiet first); a tap opens the call sheet. Round 15: "how long" is the choice made on the Members page (it is not set here)
   const quiet = checkOnList(s, today, notSeen);
-  if ((quiet.length || notSeen !== undefined) && onCheckOn) { // a fixed choice keeps the block (and its control) even when it empties the list
+  if ((quiet.length || notSeen !== undefined) && onCheckOn) { // a fixed choice keeps the block (with its quiet line) even when it empties the list
     blocks.push(
       <Block key="checkOn" title={`${t('checkOn.title')} (${quiet.length})`} openLabel={t('checkOn.all', { n: quiet.length })} onClick={() => navigate('/members?f=checkOn')}>
-        <div style={{ maxWidth: 240 }}><NotSeenSelect /></div>
         {quiet.length ? null : <span style={sub14}>{t('checkOn.nobody')}</span>}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {quiet.slice(0, 5).map((r) => (

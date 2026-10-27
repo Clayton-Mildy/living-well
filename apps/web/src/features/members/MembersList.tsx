@@ -16,6 +16,7 @@ import { NotSeenSelect } from '../lobby/NotSeenSelect';
 import { useCheckOnDays } from '../lobby/useCheckOnDays';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { NannyLine } from './ProfilePhoto';
+import { PlanChips } from './PlanChips';
 import { FullName, relLabel, rowStatusText, STATUS_STYLE } from './lib';
 
 const PAGE_SIZE = 10;
@@ -37,6 +38,7 @@ export function MembersList() {
   const [notSeen] = useCheckOnDays();
   const rows = useMemo(() => memberRows(s, today, notSeen), [s, today, notSeen]);
   const counts = useMemo(() => filterCounts(rows), [rows]);
+  const inRows = useMemo(() => rows.filter(FILTERS.in), [rows]);
   const planOn = f === 'in' && plan !== 'all' ? plan : null;
   const visible = useMemo(() => sortMemberRows(rows.filter(FILTERS[f]).filter((r) => !planOn || r.plan === planOn).filter((r) => matchesQuery(s, r.m, q)), sort), [rows, f, planOn, q, s, sort]);
   const paged = usePaged(visible, PAGE_SIZE, `${f}|${planOn}|${q}|${sort}`);
@@ -76,11 +78,10 @@ export function MembersList() {
     <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{t('members.split', { f: split.flex, g: split.gold })}</div>
   ) : null;
   // round 15: the Check on filter says how long "not seen" is (a per-device choice that also drives the lobby rail)
-  // round 15: while In the club is on, a Plan dropdown narrows it (the plans come from activePlans, so phase 2's catalogue shows up here)
+  // round 15: while In the club is on, Plan chips narrow it (the plans come from activePlans, so phase 2's catalogue shows up here)
   const planEl = f === 'in' ? (
-    <div style={{ maxWidth: isPhone ? undefined : 240 }}>
-      <Select label={t('members.planFilter')} value={plan} onChange={setPlan} options={[{ value: 'all', label: t('members.allPlans') }, ...activePlans(s).map((p) => ({ value: p.id, label: t(p.label) }))]} />
-    </div>
+    <PlanChips label={t('members.planFilter')} value={plan} onChange={setPlan} scroll={isPhone}
+      chips={[{ value: 'all', label: t('common.all'), count: inRows.length }, ...activePlans(s).map((p) => ({ value: p.id, label: t(p.label), count: inRows.filter((r) => r.plan === p.id).length }))]} />
   ) : null;
   const notSeenEl = f === 'checkOn' ? <div style={{ maxWidth: isPhone ? undefined : 240 }}><NotSeenSelect /></div> : null;
   const sortEl = (
@@ -171,12 +172,14 @@ export function MembersList() {
                   </span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{listName(r.m)}</span>
+                      <span data-testid="row-name" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{listName(r.m)}</span>
+                        {r.m.nanny ? <NannyLine nanny={r.m.nanny} /> : null}
+                      </span>
                       <span title={pc.tip} style={{ flex: 'none', fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{pc.text}</span>
                     </span>
                     <FullName m={r.m} size={13} />
                     {contactLine(r, 13)}
-                    {r.m.nanny ? <NannyLine nanny={r.m.nanny} /> : null}
                     <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0 6px', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>
                       <span className={showSt ? undefined : 'cp-hide-phone'} style={showSt && r.st.key === 'pending' ? { color: st.fg, fontWeight: 500 } : undefined}>{stText}{showSt && sd.length ? ' ·' : ''}</span>
                       {sd.length && !r.sus ? <span data-sub-dates="">{sd.join(' · ')}</span> : null /* on hold: the status needs the line (the dates are on the profile) */}
@@ -247,7 +250,10 @@ export function MembersList() {
                   style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500, flex: 'none', boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(r.m)}</span>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{listName(r.m)}</span>
+                  <span data-testid="row-name" style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{listName(r.m)}</span>
+                    {r.m.nanny ? <NannyLine nanny={r.m.nanny} /> : null}
+                  </span>
                   <FullName m={r.m} ellipsis={!isPhone} />
                   <span style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>
                     <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: st.dot, flex: 'none', marginTop: 7 }} />
@@ -269,7 +275,7 @@ export function MembersList() {
                     {sd.map((x) => <span key={x}>{x}</span>)}
                   </span>
                 )}
-                <span style={{ flex: '0 1 230px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>{contactLine(r, 14)}{r.m.nanny ? <NannyLine nanny={r.m.nanny} fs={14} /> : null}</span>
+                <span style={{ flex: '0 1 230px', minWidth: 0, display: 'flex', flexDirection: 'column' }}>{contactLine(r, 14)}</span>
                 </button>
                 {callBtn(r, 40)}
                 <span aria-hidden="true" onClick={() => open(r)} style={{ display: 'flex', flex: 'none', cursor: 'pointer' }}><Icon name="chevron_right" size={22} color="var(--accent, #75624B)" /></span>

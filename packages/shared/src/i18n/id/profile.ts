@@ -28,7 +28,7 @@ export const profile: Same<typeof EN> = {
   extraSoFarOne: '1 hari tambahan sejauh ini: {p} di tagihan {m}.', extraNote: 'Hari tambahan {p}, di tagihan bulan depan.',
   goldAnyDay: 'Anggota Gold bisa datang di hari buka mana pun.',
   fromTeam: 'Dari tim', personal: 'Data pribadi',
-  noNanny: 'Tanpa pengasuh', noSpouse: 'Tanpa pasangan', since: 'Anggota sejak',
+  noNanny: 'Tanpa pengasuh', nannyCard: 'Pengasuh', noSpouse: 'Tanpa pasangan', since: 'Anggota sejak',
   notMeasured: 'Belum diukur', trendTitle: 'Tren', trendRange: '{n} hasil ukur sejak {d}', normalRange: 'Rentang normal', hotRange: 'Pantau atau Waspada',
   tmBp: 'TD', tmPulse: 'Nadi', tmWeight: 'Berat', tmGlucose: 'Gula', bpUpper: 'Angka atas', bpLower: 'Angka bawah', metricL: 'Pengukuran', readingsTotal: '{n} hasil ukur',
   conditions: 'Kondisi', conditionSource: 'Dari formulir keanggotaan dan peninjauan perawat', cognitive: 'Status kognitif', diabetic: 'Diabetes', medicines: 'Obat-obatan',

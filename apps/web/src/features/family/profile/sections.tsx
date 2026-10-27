@@ -350,6 +350,7 @@ export function FamilySection({ p, id }: SecProps) {
   const { s, m, t, userId } = p;
   const rows = contactsOfMember(s, m.id).filter(({ link, contact }) => !isPendingRow(link) && !isPendingRow(contact));
   const circle: CSSProperties = { width: 40, height: 40, borderRadius: 999, border: 'none', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: F.bronze, textDecoration: 'none', flex: 'none' };
+  const nannyWa = m.nanny?.phone ? waUrl(m.nanny.phone) : '';
   return (
     <Sec id={id}>
       <SectionHead>{t('fhealth.jump.family')}</SectionHead>
@@ -374,17 +375,25 @@ export function FamilySection({ p, id }: SecProps) {
             </div>
           );
         })}
-        {m.nanny ? (
-          <div data-testid="pf-nanny" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px', borderTop: rows.length ? HAIR : 'none' }}>
-            <NannyAvatar nanny={m.nanny} size={40} />
-            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-              <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{m.nanny.name}</span>
-              <span style={{ fontSize: 13, color: F.muted }}>{[t('profile.f.nanny'), m.nanny.phone ? fmtPhone(m.nanny.phone) : ''].filter(Boolean).join(' · ')}</span>
-            </span>
-            {m.nanny.phone ? <a href={`tel:${m.nanny.phone}`} aria-label={t('profile.callName', { n: m.nanny.name })} data-testid="pf-nanny-call" className="cp-press" style={circle}><Icon name="call" size={19} /></a> : null}
-          </div>
-        ) : null}
       </List>
+      {m.nanny ? (
+        // round 15 follow-up: the nanny is not family, so she has a block of her own after the family list
+        <div data-testid="pf-nanny" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <SectionHead>{t('profile.nannyCard')}</SectionHead>
+          <List>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px' }}>
+              <NannyAvatar nanny={m.nanny} size={40} />
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{m.nanny.name}</span>
+                {m.nanny.phone ? <span style={{ fontSize: 13, color: F.muted }}>{fmtPhone(m.nanny.phone)}</span> : null}
+                {m.nanny.note ? <span style={{ fontSize: 13, color: F.muted, overflowWrap: 'anywhere' }}>{m.nanny.note}</span> : null}
+              </span>
+              {nannyWa ? <a href={nannyWa} target="_blank" rel="noopener" aria-label={t('fhealth.waAria', { n: m.nanny.name })} data-testid="pf-nanny-wa" className="cp-press" style={circle}><Icon name="chat" size={19} /></a> : null}
+              {m.nanny.phone ? <a href={`tel:${m.nanny.phone}`} aria-label={t('profile.callName', { n: m.nanny.name })} data-testid="pf-nanny-call" className="cp-press" style={circle}><Icon name="call" size={19} /></a> : null}
+            </div>
+          </List>
+        </div>
+      ) : null}
     </Sec>
   );
 }

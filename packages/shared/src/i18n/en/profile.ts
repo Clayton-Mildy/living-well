@@ -31,7 +31,7 @@ export const profile = {
   extraNote: 'An extra day is {p}, on next month’s invoice.',
   goldAnyDay: 'Gold members can come on any open day.',
   fromTeam: 'From the team', personal: 'Personal details',
-  noNanny: 'No carer', noSpouse: 'No spouse', since: 'Member since',
+  noNanny: 'No carer', nannyCard: 'Nanny', noSpouse: 'No spouse', since: 'Member since',
   // health
   notMeasured: 'Not measured yet', trendTitle: 'Trends', trendRange: '{n} readings since {d}', normalRange: 'Normal range', hotRange: 'Watch or Alert',
   tmBp: 'BP', tmPulse: 'Pulse', tmWeight: 'Weight', tmGlucose: 'Glucose', bpUpper: 'Upper number', bpLower: 'Lower number', metricL: 'Measurement', readingsTotal: '{n} readings',

@@ -138,7 +138,7 @@ describe('family health', () => {
     expect(q('fam-back')?.textContent).toContain('Health');
     expect(q('pf-pending')).toBeNull();
   });
-  it('Profile family section: photos on the contacts, and the carer row with a call link', async () => {
+  it('Profile family section: photos on the contacts, and the nanny in a block of her own after the family list', async () => {
     open('f1');
     const v = useReplica.getState().view!;
     const view = produce(v, (d) => { d.familyContacts.f2.photoMediaId = 'md_contactphoto01'; d.members.m1.nanny = { name: 'Mbak Sari', phone: '+6281211112222', photoMediaId: 'md_carerphoto0001' }; });
@@ -147,7 +147,8 @@ describe('family health', () => {
     const nanny = q('pf-nanny');
     expect(nanny).toBeTruthy();
     expect(nanny!.textContent).toContain('Mbak Sari');
-    expect(nanny!.textContent).toContain('Carer (suster)');
+    expect(nanny!.textContent).toContain('Nanny');
+    expect(q('pf-family')!.contains(nanny)).toBe(false); // a separate block, not a row of the family list
     expect(nanny!.innerHTML).toContain('md_carerphoto0001');
     expect(nanny!.querySelector('a[href="tel:+6281211112222"]')).toBeTruthy();
     expect(q('pf-family')!.querySelector('[data-family-id="f2"]')!.innerHTML).toContain('md_contactphoto01');

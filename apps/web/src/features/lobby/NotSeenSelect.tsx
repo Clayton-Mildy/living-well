@@ -1,4 +1,4 @@
-// The "Not seen for" dropdown of the Check on list (round 15), shared by the lobby rail block, the call sheet and the Members filter.
+// The "Not seen for" dropdown of the Check on list (round 15). It lives only on the Members page; the lobby rail and the call sheet read the same stored choice (useCheckOnDays).
 import { Select } from '../../components/ui';
 import { useT } from '../../lib/i18n';
 import { NOT_SEEN_CHOICES, useCheckOnDays } from './useCheckOnDays';
