@@ -39,6 +39,17 @@ export const SETTINGS: ClubSettings = {
     { id: 'tpl-closure', key: 'closure', title: 'Club closed', text: 'Hello {name}, a reminder that CitraPremier is closed on {msg}. We open again on the next working day at 08:30.' },
     { id: 'tpl-event', key: 'event', title: 'Event invitation', text: 'Hello {name}, you are invited: {msg}. Reply YES to save a place.' },
   ],
+  // round 15 (phase 2): the Contacts directory's categories (editable by the front desk, finance and management)
+  directoryGroups: [
+    { id: 'dgrp_1', name: 'AC and electrical', nameId: 'AC dan listrik', active: true },
+    { id: 'dgrp_2', name: 'Plumbing', nameId: 'Perpipaan', active: true },
+    { id: 'dgrp_3', name: 'Transport', nameId: 'Transportasi', active: true },
+    { id: 'dgrp_4', name: 'Medical', nameId: 'Medis', active: true },
+    { id: 'dgrp_5', name: 'Groceries', nameId: 'Bahan makanan', active: true },
+    { id: 'dgrp_6', name: 'Cleaning', nameId: 'Kebersihan', active: true },
+    { id: 'dgrp_7', name: 'Activity materials', nameId: 'Perlengkapan kegiatan', active: true },
+    { id: 'dgrp_8', name: 'Other', nameId: 'Lainnya', active: true },
+  ],
 };
 
 // ---------------- staff ----------------
@@ -492,20 +503,23 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   venue('v2', 'Bank Prima Nusantara retirees’ morning', 'Bapak Teddy Haris', '+62 811-2290-4471', 30, 'room-garden-room', addDays(nextDow(6), 7), '08:00', '12:00');
 
   // directory
-  const dir = (id: string, kind: 'doctor' | 'service' | 'supplier', name: string, what: string, whatId: string, phone: string, pub: boolean, category?: SpendCategory) =>
-    put('directory', { ...base(C, id, '2024-07-01T10:00', 'staff:s9'), kind, name, what, whatId, phone: e164(phone), public: pub, ...(category ? { category } : {}) });
-  dir('d1', 'doctor', 'dr. Andreas Wirawan, Sp.PD', 'Internal medicine · visits Tuesdays', 'Penyakit dalam · berkunjung tiap Selasa', '+62 812-9001-2234', true);
-  dir('d2', 'doctor', 'dr. Melinda Kusumo', 'GP on call', 'Dokter umum siaga', '+62 813-4410-9921', true);
-  dir('d3', 'service', 'RS Medika Kemang', 'Nearest hospital · emergency', 'Rumah sakit terdekat · gawat darurat', '+62 21 7590 0110', true);
-  dir('d4', 'service', 'Apotek Sehat Selalu', 'Pharmacy · delivers to homes', 'Apotek · antar ke rumah', '+62 21 7590 2231', true);
-  dir('d6', 'supplier', 'Sayur Segar Kemang', 'Vegetables and fruit', 'Sayur dan buah', '+62 811-8802-4410', false, 'groceries');
-  dir('d7', 'supplier', 'Ikan Laut Jaya', 'Fish', 'Ikan', '+62 812-1180-3321', false, 'groceries');
-  dir('d9', 'supplier', 'Bersih Prima', 'Cleaning supplies', 'Perlengkapan kebersihan', '+62 21 7581 4410', false, 'cleaning');
+  const dir = (id: string, kind: 'doctor' | 'service' | 'supplier', name: string, what: string, whatId: string, phone: string, pub: boolean, category?: SpendCategory, groupId?: string) =>
+    put('directory', { ...base(C, id, '2024-07-01T10:00', 'staff:s9'), kind, name, what, whatId, phone: e164(phone), public: pub, ...(category ? { category } : {}), ...(groupId ? { groupId } : {}) });
+  dir('d1', 'doctor', 'dr. Andreas Wirawan, Sp.PD', 'Internal medicine · visits Tuesdays', 'Penyakit dalam · berkunjung tiap Selasa', '+62 812-9001-2234', true, undefined, 'dgrp_4');
+  dir('d2', 'doctor', 'dr. Melinda Kusumo', 'GP on call', 'Dokter umum siaga', '+62 813-4410-9921', true, undefined, 'dgrp_4');
+  dir('d3', 'service', 'RS Medika Kemang', 'Nearest hospital · emergency', 'Rumah sakit terdekat · gawat darurat', '+62 21 7590 0110', true, undefined, 'dgrp_4');
+  dir('d4', 'service', 'Apotek Sehat Selalu', 'Pharmacy · delivers to homes', 'Apotek · antar ke rumah', '+62 21 7590 2231', true, undefined, 'dgrp_4');
+  dir('d6', 'supplier', 'Sayur Segar Kemang', 'Vegetables and fruit', 'Sayur dan buah', '+62 811-8802-4410', false, 'groceries', 'dgrp_5');
+  dir('d7', 'supplier', 'Ikan Laut Jaya', 'Fish', 'Ikan', '+62 812-1180-3321', false, 'groceries', 'dgrp_5');
+  dir('d9', 'supplier', 'Bersih Prima', 'Cleaning supplies', 'Perlengkapan kebersihan', '+62 21 7581 4410', false, 'cleaning', 'dgrp_6');
   // round 14 p2: the shops the receipt reader knows (SIM_VENDORS); the seeded receipts (r7/receipts.ts) come from these
-  dir('d10', 'supplier', 'Sahabat Lansia Official (Tokopedia)', 'Diapers, underpads and medical supplies online', 'Popok, underpad dan alat kesehatan online', '+62 812-7740-1185', false, 'marketplace');
-  dir('d11', 'supplier', 'Grosir Sembako Makmur (Tokopedia)', 'Rice, oil and kitchen supplies online', 'Beras, minyak dan perlengkapan dapur online', '+62 813-2208-6614', false, 'marketplace');
-  dir('d12', 'supplier', 'Gramedia Kemang', 'Craft and painting supplies', 'Perlengkapan kerajinan dan lukis', '+62 21 7199 3302', false, 'activity');
-  dir('d13', 'supplier', 'Superindo Kemang', 'Supermarket: groceries and household', 'Supermarket: bahan makanan dan rumah tangga', '+62 21 7179 2240', false, 'groceries');
+  dir('d10', 'supplier', 'Sahabat Lansia Official (Tokopedia)', 'Diapers, underpads and medical supplies online', 'Popok, underpad dan alat kesehatan online', '+62 812-7740-1185', false, 'marketplace', 'dgrp_4');
+  dir('d11', 'supplier', 'Grosir Sembako Makmur (Tokopedia)', 'Rice, oil and kitchen supplies online', 'Beras, minyak dan perlengkapan dapur online', '+62 813-2208-6614', false, 'marketplace', 'dgrp_5');
+  dir('d12', 'supplier', 'Gramedia Kemang', 'Craft and painting supplies', 'Perlengkapan kerajinan dan lukis', '+62 21 7199 3302', false, 'activity', 'dgrp_7');
+  dir('d13', 'supplier', 'Superindo Kemang', 'Supermarket: groceries and household', 'Supermarket: bahan makanan dan rumah tangga', '+62 21 7179 2240', false, 'groceries', 'dgrp_5');
+  // round 15 (phase 2): two AC vendors, so "the AC breaks: call the first, then the next" works in the demo (fixed rows, no random draws)
+  dir('d14', 'supplier', 'Dingin Jaya AC Service', 'AC repair and servicing · same-day visits', 'Servis dan perbaikan AC · bisa datang hari ini', '+62 812-4455-7721', false, 'other', 'dgrp_1');
+  dir('d15', 'supplier', 'Kemang Teknik AC', 'AC and electrical repairs', 'Perbaikan AC dan listrik', '+62 813-9988-3406', false, 'other', 'dgrp_1');
 
   // stock, budget, receipts, vendor invoices
   const stock = (id: string, item: string, qty: number, unit: string, area: 'kitchen' | 'health' | 'activities', sectionId: string, by: string, status: 'requested' | 'approved' | 'received', date: ISODate, decidedBy?: string) =>

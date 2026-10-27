@@ -98,7 +98,12 @@ export interface ClubSettings {
   leaveDays?: number;
   /** KC round 15 (phase 2): the plans management added beyond Flex and Gold, in order. A retired plan stays here: its members keep it and still bill. */
   plans?: PlanDef[];
+  /** KC round 15 (phase 2): the Contacts directory's categories, in order (AC and electrical, Plumbing…). A retired one stays: its contacts show under "Other". Separate from a supplier's spending category. */
+  directoryGroups?: DirectoryGroup[];
 }
+
+/** One category of the Contacts directory. */
+export interface DirectoryGroup { id: string; name: string; nameId?: string; active: boolean }
 
 /** One Watch / Alert pair; null = not used. */
 export interface Limit { watch: number | null; alert: number | null }
@@ -885,6 +890,8 @@ export interface DirectoryContact extends Row {
   public: boolean;
   /** what a supplier sells: the default category for lines added by hand */
   category?: SpendCategory;
+  /** round 15 (phase 2): the directory category (ClubSettings.directoryGroups); none, or a retired one = shown under "Other" */
+  groupId?: string;
 }
 
 export interface StaffHr {

@@ -135,6 +135,9 @@ export const finance: Same<typeof EN> = {
   'dir.search': 'Cari kontak', 'dir.empty': 'Belum ada kontak', 'dir.public': 'Publik', 'dir.internal': 'Internal', 'dir.makeInternal': 'Jadikan internal', 'dir.makePublic': 'Jadikan publik',
   'dir.kind': 'Jenis', 'dir.what': 'Bidang mereka', 'dir.whatEx': 'mis. Sayur dan buah', 'dir.whatId': 'Bidang mereka (bahasa Indonesia, opsional)', 'dir.whatIdHint': 'Ditampilkan saat aplikasi berbahasa Indonesia.',
   'dir.phoneBad': 'Masukkan nomor telepon dengan minimal 6 digit.', 'dir.visibleToFamilies': 'Terlihat oleh keluarga', 'dir.visibleHelp': 'Kontak publik tampil di aplikasi keluarga. Kontak internal hanya untuk staf.',
+  'dir.groups': 'Kategori', 'dir.addGroup': 'Tambah kategori', 'dir.editGroup': 'Ubah kategori', 'dir.group': 'Kategori', 'dir.call': 'Telepon {name}', 'dir.otherGroup': 'Lainnya', 'dir.allGroups': 'Semua kategori',
+  'dir.spendCat': 'Kategori belanja', 'dir.groupName': 'Nama', 'dir.groupNameId': 'Nama (bahasa Indonesia, opsional)', 'dir.groupActive': 'Aktif', 'dir.groupRetired': 'Dihentikan', 'dir.groupKeep': 'Kategori yang dihentikan tidak muncul di pilihan; kontaknya tampil di Lainnya.',
+  'dir.groupSaved': '{name} disimpan.', 'dir.groupAdded': '{name} ditambahkan.', 'dir.groupsEmpty': 'Belum ada kategori', 'dir.groupBack': 'Kembali ke kategori',
   'dir.deleteTitle': 'Hapus kontak ini?', 'dir.deleteBody': 'Hapus {name}? Keluarga tidak akan melihatnya lagi. Kuitansi sebelumnya tetap memakai nama pemasok.',
 
   // ---- Invoice sheet ----

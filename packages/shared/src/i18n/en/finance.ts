@@ -133,6 +133,9 @@ export const finance = {
   'dir.search': 'Search contacts', 'dir.empty': 'No contacts yet', 'dir.public': 'Public', 'dir.internal': 'Internal', 'dir.makeInternal': 'Make internal', 'dir.makePublic': 'Make public',
   'dir.kind': 'Type', 'dir.what': 'What they do', 'dir.whatEx': 'e.g. Vegetables and fruit', 'dir.whatId': 'What they do (Indonesian, optional)', 'dir.whatIdHint': 'Shown when the app is in Indonesian.',
   'dir.phoneBad': 'Enter a phone number with at least 6 digits.', 'dir.visibleToFamilies': 'Visible to families', 'dir.visibleHelp': 'Public contacts appear in the family app. Internal ones are for staff only.',
+  'dir.groups': 'Categories', 'dir.addGroup': 'Add category', 'dir.editGroup': 'Edit category', 'dir.group': 'Category', 'dir.call': 'Call {name}', 'dir.otherGroup': 'Other', 'dir.allGroups': 'All categories',
+  'dir.spendCat': 'Spending category', 'dir.groupName': 'Name', 'dir.groupNameId': 'Name (Indonesian, optional)', 'dir.groupActive': 'Active', 'dir.groupRetired': 'Retired', 'dir.groupKeep': 'A retired category leaves the lists to choose from; its contacts show under Other.',
+  'dir.groupSaved': '{name} saved.', 'dir.groupAdded': '{name} added.', 'dir.groupsEmpty': 'No categories yet', 'dir.groupBack': 'Back to categories',
   'dir.deleteTitle': 'Delete this contact?', 'dir.deleteBody': 'Delete {name}? Families will no longer see it. Past receipts keep the supplier’s name.',
 
   // ---- Invoice sheet ----
