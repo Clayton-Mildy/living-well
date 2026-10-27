@@ -129,7 +129,7 @@ describe('joining needs the signed paper registration form', () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
   };
   const pickPlan = async (re: RegExp) => click(Array.from(dialog()!.querySelectorAll<HTMLElement>('[role="radio"]')).find((r) => re.test(r.textContent ?? '')));
-  it('Join cannot be sent until a form is attached (management creates the member)', async () => {
+  it('Join: the scan is optional on the Form step (signing on the pad can replace it); management creates the member', async () => {
     openClub('mgmt');
     await show(<Enquiries />);
     await click(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
@@ -143,8 +143,7 @@ describe('joining needs the signed paper registration form', () => {
     expect(button('Take photo', d)).toBeTruthy();
     expect(button('Choose file', d)).toBeTruthy();
     expect(d.querySelector('input[type="file"]')?.getAttribute('accept')).toContain('application/pdf');
-    expect(button('Next', d)!.getAttribute('aria-disabled')).toBe('true'); // no form attached yet
-    expect(rail('Review')!.getAttribute('aria-disabled')).toBe('true');
+    expect(button('Next', d)!.getAttribute('aria-disabled')).not.toBe('true'); // round 15: the scan is optional, the pad on Review can replace it
     await sampleForm();
     await click(button('Next', d));
     expect(d.textContent).not.toContain('Your request goes to management');
