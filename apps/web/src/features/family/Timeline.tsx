@@ -190,7 +190,9 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
       <ol style={{ listStyle: 'none', margin: 0, padding: '0 4px', display: 'flex', flexDirection: 'column' }}>
         {items.map((it, i) => {
           const v = view(it);
-          const st = kind === 'wasOn' || kind === 'plan' ? 'up' : it.state; // a day they did not come, or the day ahead: the programme on a light track (nothing done yet)
+          // round 15: what is over is drawn passed (the brown line) whether or not the member joined or came; the day ahead is on a light track (nothing done yet).
+          // Today follows the item's own state, which is read at the clock (timelineOf: a session is 'done' once it has ended).
+          const st = ahead ? 'up' : date < today ? 'done' : it.state;
           const isNow = kind === 'next' && it.state === 'now';
           const n = v.photos?.length ?? 0;
           const last = i === items.length - 1;

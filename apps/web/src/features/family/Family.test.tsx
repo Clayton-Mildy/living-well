@@ -183,8 +183,26 @@ describe('family Today', () => {
     expect(text()).toContain('What was on');
     expect(q('[data-testid="last-visit"]')).toBeTruthy();
     expect(q('[data-testid="hero-rail"]')).toBeNull();
-    expect(Array.from(document.querySelectorAll('[data-tl]')).every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
+    // round 15: a day that is over draws every session as passed (the brown line), whether or not she came
+    const rows = qa('[data-tl]');
+    expect(rows.length).toBeGreaterThan(2);
+    expect(rows.every((x) => x.getAttribute('data-state') === 'done')).toBe(true);
     expect(q('[data-testid="daily-log"]')).toBeNull(); // a day she did not come has no log
+  });
+
+  it('round 15: the day ahead stays on the light track; today before the afternoon lists only what is not over, none of it passed', async () => {
+    open('f1');
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22'); // tomorrow
+    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('plan');
+    expect(qa('[data-tl]').length).toBeGreaterThan(0);
+    expect(qa('[data-tl]').every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open('f1', 'en', 14 * 60 + 10); // 14:10, nobody in yet: the sessions from 14:10 on are still to come
+    await show(<FamilyToday />, '/today?member=m1');
+    const rows = qa('[data-tl]');
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
   });
 
   it('both parents: one card with a row each; a row focuses on that parent and "Both parents" goes back', async () => {
