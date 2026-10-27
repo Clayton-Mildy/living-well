@@ -54,6 +54,7 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
           <Stat label={t('insights.kAttend')} value={p.attendanceRate === null ? '—' : `${Math.round(p.attendanceRate * 100)}%`} />
         </div>
         <Line label={t('insights.avgArrival')} value={p.avgArrival ?? '—'} />
+        <Line label={t('insights.avgDeparture')} value={p.avgDeparture ?? '—'} />
         <Line label={t('insights.avgStay')} value={stay(p.avgStayMin)} />
         <div style={{ paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span style={{ fontSize: 13, color: '#6B6259' }}>{t('insights.pattern')}</span>

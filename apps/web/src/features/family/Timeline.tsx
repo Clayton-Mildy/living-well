@@ -165,7 +165,8 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         if (it.att?.checkOut) {
           const dep = it.departure;
           const bp = dep ? bpLine(t, dep) : '';
-          return { time: it.time, title: t('family.tHome'), detail: t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
+          const who = it.memberId ? members.find((x) => x.id === it.memberId) : undefined; // Both mode: one home time per parent
+          return { time: it.time, title: t('family.tHome'), detail: (who ? `${displayName(who)} · ` : '') + t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
         }
         return { time: it.time, title: t('family.tHome'), detail: m ? t('family.tHomeD', { s: pron(m).s }) : '' };
       }

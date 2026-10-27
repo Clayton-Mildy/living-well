@@ -7,7 +7,7 @@ import { Button, FONT_BODY, Group, Icon } from '../../../components/ui';
 import { cardStyle, HAIR } from '../lib';
 import type { P } from './types';
 
-interface Cell { day: string; label: string; bg: string; bd: string; fg: string; vis: 'visible' | 'hidden'; extra?: boolean; full?: string }
+interface Cell { day: string; label: string; /** round 15: the check-out, under the check-in */ label2?: string; bg: string; bd: string; fg: string; vis: 'visible' | 'hidden'; extra?: boolean; full?: string }
 
 export function AttendanceTab({ p }: { p: P }) {
   const { s, m, t, fmt, today } = p;
@@ -34,9 +34,11 @@ export function AttendanceTab({ p }: { p: P }) {
     let c: Cell = { day: String(i), label: '', bg: '#FFFFFF', bd: 'none', fg: '#24201C', vis: 'visible' };
     if (a?.checkIn) {
       const extra = extraSet.has(d);
+      const inOut = a.checkOut ? t('profile.attInOut', { a: a.checkIn.at, b: a.checkOut.at }) : t('profile.cal.in', { t: a.checkIn.at }); // round 15: "In 09:58 · Out 15:30"
+      const out = a.checkOut ? t('profile.cal.out', { t: a.checkOut.at }) : undefined;
       c = extra
-        ? { ...c, bg: '#24201C', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.extra'), extra: true, full: `${t('profile.cal.in', { t: a.checkIn.at })} · ${t('profile.cal.extra')}` }
-        : { ...c, bg: 'var(--accent, #75624B)', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.in', { t: a.checkIn.at }), full: t('profile.cal.in', { t: a.checkIn.at }) };
+        ? { ...c, bg: '#24201C', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.extra'), label2: out, extra: true, full: `${inOut} · ${t('profile.cal.extra')}` }
+        : { ...c, bg: 'var(--accent, #75624B)', bd: 'none', fg: '#FFFFFF', label: t('profile.cal.in', { t: a.checkIn.at }), label2: out, full: inOut };
     } else if (w === 0 || w === 6) c = { ...c, bg: 'var(--press, #EEEEF0)', bd: 'none', fg: '#5E5852' };
     else if (!ds.open) c = { ...c, bg: 'var(--hairline, #E2E2E6)', bd: 'none', fg: '#5E5852', label: ds.reason === 'holiday' ? t('profile.cal.holiday') : t('profile.cal.closed') };
     else if (!member) c = { ...c, bg: 'var(--press, #EEEEF0)', bd: 'none', fg: '#5E5852', label: cur.lastDay && d > cur.lastDay ? t('profile.cal.ended') : '' };
@@ -92,6 +94,7 @@ export function AttendanceTab({ p }: { p: P }) {
                 {c.extra ? <Icon name="paid" size={14} fill={1} /> : null}
               </span>
               <span style={{ fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label}</span>
+              {c.label2 ? <span style={{ fontSize: 12, lineHeight: '16px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{c.label2}</span> : null}
             </div>
           );
         })}

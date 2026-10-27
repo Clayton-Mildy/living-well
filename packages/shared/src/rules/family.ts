@@ -149,7 +149,7 @@ export type TlItem =
   | { id: string; kind: 'outing'; state: TlState; time: HM; start: number; end: number; event: CalendarEvent }
   | { id: string; kind: 'lunch'; state: TlState; time: HM; start: number; end: number }
   | { id: string; kind: 'tea'; state: TlState; time: HM; start: number; end: number; dishIds: string[] }
-  | { id: string; kind: 'home'; state: TlState; time: HM; att?: Attendance; departure?: Reading; face?: Face };
+  | { id: string; kind: 'home'; state: TlState; time: HM; att?: Attendance; departure?: Reading; face?: Face; /** round 15: Both mode, whose check-out this is */ memberId?: string };
 
 export const homeTime = (s: ClubState): HM => toHM(toMin(s.club.settings.close) - 30);
 
@@ -181,7 +181,8 @@ function scheduleBlocks(s: ClubState, date: ISODate): Block[] {
 /**
  * The "Today at the club" timeline for one or more members. The club's programme is listed either way (it stays "up" until the member
  * is at the club). The arrival item appears once checked in, the health check once the member is in, and home time with the actual
- * time once checked out. With several members (Both mode) only the programme is listed, following whoever has been at the club today.
+ * time once checked out. With several members (Both mode) the programme is listed, following whoever has been at the club today, then one home
+ * time per member who has checked out (round 15: the check-out is visible there too; the arrival is left to the hero).
  */
 export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowMin: number): TlItem[] {
   const states = members.map((m) => ({ m, st: dayStateOf(s, m, today), a: attOf(s, today, m.id) }));
@@ -219,6 +220,8 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
     const arc = dayArc(s, single.m.id, today);
     if (a?.checkOut) items.push({ id: 'home', kind: 'home', state: 'done', time: a.checkOut.at, att: a, departure: famReading(s, single.m.id, today, 'departure'), ...(arc.departure !== undefined ? { face: arc.departure } : {}) });
     else if (st.kind === 'here') items.push({ id: 'home', kind: 'home', state: 'up', time: homeTime(s) });
+  } else {
+    for (const { m, a } of states) if (a?.checkOut) items.push({ id: 'home-' + m.id, kind: 'home', state: 'done', time: a.checkOut.at, att: a, memberId: m.id });
   }
   return items;
 }

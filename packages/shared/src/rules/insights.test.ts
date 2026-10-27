@@ -6,7 +6,7 @@ import { buildCitra } from '../seed/index';
 import type { Attendance, ClubState, ISODate } from '../types';
 import { flexQuota } from './attendance';
 import { addDays, isWeekday } from '../util';
-import { HEAT_HOURS, clampPeriod, dayCounts, editPeriod, flexQuotaReport, memberRangeFor, memberTrend, monthsOf, periodFor, planTrend, sortPeople, visitInsights } from './insights';
+import { HEAT_HOURS, clampPeriod, dayCounts, departuresByHour, editPeriod, flexQuotaReport, memberRangeFor, memberTrend, monthsOf, periodFor, planTrend, sortPeople, visitInsights } from './insights';
 
 const T = '2026-10-21'; // Wednesday
 // m1 Lina and m10 Bambang are Flex; m2, m20 and m46 are Gold
@@ -352,5 +352,36 @@ describe('dayCounts', () => {
       d.members.m46.memberships = [{ start: '2025-03-03', lastDay: '2026-10-10' }];
     });
     expect(dayCounts(past, '2026-10-14', 24 * 60)).toEqual({ active: { flex: 2, gold: 2 }, came: 1, inNow: 0, gone: 1, notIn: 3 });
+  });
+});
+
+// round 15 (1): the check-out shown wherever the check-in is: departures by hour and the average departure
+describe('departures', () => {
+  // Lina leaves 15:10 and 15:40, Hendra 16:05, Bambang and Budi never checked out
+  const OUT = withRows([
+    row('2026-10-05', 'm1', '09:00', '15:10'), row('2026-10-06', 'm1', '09:30', '15:40'), row('2026-10-05', 'm2', '10:00', '16:05'),
+    row('2026-10-05', 'm10', '09:48'), row('2026-10-09', 'm46', '10:10'),
+  ]);
+  const r = visitInsights(OUT, P, T);
+  it('departures by hour: 15:10 and 15:40 fall in the 15:00 bucket, 16:05 in 16:00; a visit with no check-out counts nowhere', () => {
+    expect(r.overall.departures).toHaveLength(HEAT_HOURS.length);
+    expect(r.overall.departures[col(15)]).toBe(2);
+    expect(r.overall.departures[col(16)]).toBe(1);
+    expect(r.overall.departures.reduce((t, x) => t + x, 0)).toBe(3);
+    expect(departuresByHour([{ outMin: 15 * 60 + 10 }, { outMin: null }, { outMin: 16 * 60 + 5 }])[col(16)]).toBe(1);
+    expect(r.overall.arrivals.reduce((t, x) => t + x, 0)).toBe(5); // all five arrived
+  });
+  it('the average departure of a plan and of a person: 15:10 and 15:40 average to 15:25; with no check-outs it is null', () => {
+    expect(r.byPlan.flex.avgDeparture).toBe('15:25');
+    expect(r.byPlan.gold.avgDeparture).toBe('16:05');
+    const lina = r.people.find((p) => p.memberId === 'm1')!;
+    expect(lina.avgDeparture).toBe('15:25');
+    expect(lina.departures).toEqual([{ date: '2026-10-05', value: 15 * 60 + 10 }, { date: '2026-10-06', value: 15 * 60 + 40 }]);
+    const bambang = r.people.find((p) => p.memberId === 'm10')!;
+    expect(bambang.avgDeparture).toBeNull();
+    expect(bambang.departures).toEqual([]);
+    const none = visitInsights(withRows([row('2026-10-05', 'm1', '09:00')]), P, T);
+    expect(none.byPlan.flex.avgDeparture).toBeNull();
+    expect(none.overall.departures.every((x) => x === 0)).toBe(true);
   });
 });

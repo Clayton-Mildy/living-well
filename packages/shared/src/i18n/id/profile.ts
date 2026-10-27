@@ -53,7 +53,7 @@ export const profile: Same<typeof EN> = {
   'tile.used': 'Kunjungan terpakai di {m}', 'tile.quota': 'Paket Flex · {q} kunjungan termasuk', 'tile.left': 'Kunjungan tersisa', 'tile.extra': 'Setelah itu, setiap kunjungan menjadi hari tambahan: {p}',
   'tile.goldNoLimit': 'Paket Gold · tanpa batas', 'tile.visitsIn': 'Kunjungan di {m}', 'tile.extraDays': 'Hari tambahan di {m}', 'tile.extraBill': '{p} di tagihan bulan depan', 'tile.extraNone': 'Belum ada hari tambahan', 'tile.usualSub': 'Hanya informasi. Anggota bisa datang di hari buka mana pun.',
   'legend.closed': 'Klub tutup', 'legend.visited': 'Datang', 'legend.extra': 'Hari tambahan',
-  'cal.holiday': 'Libur', 'cal.closed': 'Tutup', 'cal.in': 'Masuk {t}', 'cal.extra': 'Hari tambahan',
+  'cal.holiday': 'Libur', 'cal.closed': 'Tutup', 'cal.in': 'Masuk {t}', 'cal.out': 'Pulang {t}', attInOut: 'Masuk {a} · Pulang {b}', 'cal.extra': 'Hari tambahan',
   'cal.noteFlex': 'Paket Flex mencakup {q} kunjungan per bulan. Mulai kunjungan berikutnya, setiap kunjungan menjadi hari tambahan: {p}, di tagihan bulan depan.', 'cal.noteGold': 'Gold tanpa batas: anggota bisa datang di hari buka mana pun.',
   'cal.ended': 'Berakhir',
   prevMonth: 'Bulan sebelumnya', nextMonth: 'Bulan berikutnya', thisMonth: 'Kembali ke bulan ini',

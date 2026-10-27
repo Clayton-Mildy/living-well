@@ -128,6 +128,34 @@ describe('family Today', () => {
     expect(qa('[data-testid="log-block"]')).toHaveLength(1);
   });
 
+  it('round 15: the check-out is a row of "That day" with its time on a past day they came, and on today once they have gone home', async () => {
+    const view = open('f1');
+    const day = visitDays(view, 'm1', T).filter((d) => d < T).pop()!;
+    const out = view.attendance[`${day}:m1`].checkOut!.at;
+    await show(<FamilyToday />, `/today?member=m1&date=${day}`);
+    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('thatDay');
+    const home = q('[data-tl="home"]')!;
+    expect(home.textContent).toContain('Home time');
+    expect(home.textContent).toContain(out);
+    // today, once she has gone home (the clock after her check-out): the whole day is listed, ending with the home time
+    const gone = produce(buildSeed().citra, (d) => {
+      d.attendance[`${T}:m1`] = { id: `${T}:m1`, clubId: 'citra', createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, checkOut: { at: '15:40', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
+    });
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open('f1', 'en', 17 * 60, gone);
+    await show(<FamilyToday />, '/today?member=m1');
+    expect(q('[data-tl="home"]')?.textContent).toContain('15:40');
+  });
+  it('round 15: Both mode lists a home time per parent who has gone home', async () => {
+    const gone = produce(buildSeed().citra, (d) => {
+      for (const id of ['m1', 'm46']) d.attendance[`${T}:${id}`] = { id: `${T}:${id}`, clubId: 'citra', createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: id, date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, checkOut: { at: id === 'm1' ? '15:40' : '15:55', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
+    });
+    open('f1', 'en', 17 * 60, gone);
+    await show(<FamilyToday />, '/today');
+    const homes = qa('[data-tl^="home-"]');
+    expect(homes.map((x) => x.textContent)).toEqual([expect.stringContaining('15:40'), expect.stringContaining('15:55')]);
+  });
   it('round 14: the lunch pictures and the portion show once, on the Lunch card; the timeline row keeps its time and title only', async () => {
     const view = open('f1');
     const day = visitDays(view, 'm1', T).filter((d) => d < T).pop()!;

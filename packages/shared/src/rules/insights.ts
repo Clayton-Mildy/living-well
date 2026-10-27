@@ -109,8 +109,15 @@ function collectVisits(s: ClubState, days: Set<ISODate>): Visit[] {
 const mean = (a: number[]): number | null => (a.length ? a.reduce((t, x) => t + x, 0) / a.length : null);
 const r1 = (n: number) => Math.round(n * 10) / 10;
 const avgHM = (mins: number[]): HM | null => { const m = mean(mins); return m === null ? null : toHM(m); };
+const avgOut = (vs: Visit[]): HM | null => avgHM(vs.filter((v) => v.outMin !== null).map((v) => v.outMin!));
 const avgStay = (vs: Visit[]): number | null => { const m = mean(vs.filter((v) => v.outMin !== null).map((v) => v.outMin! - v.inMin)); return m === null ? null : Math.round(m); };
 const hourIdx = (min: number) => Math.min(HEAT_LAST, Math.max(HEAT_FIRST, Math.floor(min / 60))) - HEAT_FIRST;
+/** Round 15: check-outs per hour 08 … 16, the same buckets as the arrivals; a visit with no check-out counts nowhere. */
+export function departuresByHour(visits: { outMin: number | null }[]): number[] {
+  const out = HEAT_HOURS.map(() => 0);
+  for (const v of visits) if (v.outMin !== null) out[hourIdx(v.outMin)]++;
+  return out;
+}
 
 // ---------- results ----------
 export interface DayCount { date: ISODate; total: number; flex: number; gold: number }
@@ -135,6 +142,8 @@ export interface OverallStats {
   heatMax: number;
   /** arrivals (check-ins) per hour 08 … 16 over the whole period */
   arrivals: number[];
+  /** round 15: departures (check-outs) per hour 08 … 16 over the whole period; a visit with no check-out counts nowhere */
+  departures: number[];
 }
 /** A week is 5 open days (Mon … Fri): the unit of "visits per member per week". */
 export const OPEN_DAYS_PER_WEEK = 5;
@@ -170,6 +179,8 @@ export interface PlanStats {
   /** visits per weekday Mon … Fri */
   weekdays: number[];
   avgArrival: HM | null;
+  /** round 15: the average check-out time; null while no visit has a check-out */
+  avgDeparture: HM | null;
   avgStayMin: number | null;
   /** every member of the plan in the period, in name order (see `sortPeople` for most / fewest visits) */
   people: PlanPerson[];
@@ -197,6 +208,7 @@ export interface PersonStats {
   /** the (up to) two weekdays this member comes on most, most first */
   usual: number[];
   avgArrival: HM | null;
+  avgDeparture: HM | null;
   avgStayMin: number | null;
   /** the last check-in up to today (not limited to the period) */
   lastVisit: ISODate | null;
@@ -204,6 +216,8 @@ export interface PersonStats {
   monthly: { month: string; visits: number }[];
   /** arrival time of every visit in the period, in minutes, oldest first */
   arrivals: { date: ISODate; value: number }[];
+  /** departure time of every visit that has a check-out, in minutes, oldest first */
+  departures: { date: ISODate; value: number }[];
   /** the last 10 visits, newest first */
   recent: { date: ISODate; in: HM; out: HM | null }[];
 }
@@ -258,7 +272,7 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
     hourAvg, peakHour: bh < 0 ? null : HEAT_HOURS[bh],
     maxDay, dailyCounts: daily,
     presenceHeat, heatMax: Math.max(0, ...presenceHeat.flat()),
-    arrivals,
+    arrivals, departures: departuresByHour(visits),
   };
 
   // ----- member-months: a member counts for the open days they were active, each as 1 / the open days of its month, so "visits per month" is a monthly rate
@@ -321,7 +335,7 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
       share: visits.length ? vs.length / visits.length : 0,
       perMemberWeek: planDays[plan] > 0 ? r1(vs.length / (planDays[plan] / OPEN_DAYS_PER_WEEK)) : null,
       attendanceRate: planDays[plan] > 0 ? Math.min(1, planCame[plan] / planDays[plan]) : null,
-      weekdays: wd, avgArrival: avgHM(vs.map((v) => v.inMin)), avgStayMin: avgStay(vs), people,
+      weekdays: wd, avgArrival: avgHM(vs.map((v) => v.inMin)), avgDeparture: avgOut(vs), avgStayMin: avgStay(vs), people,
     };
   }
 
@@ -338,9 +352,10 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
     const mm = memberMonths.get(m.id) ?? 0;
     people.push({
       memberId: m.id, plan: planOn(m, lastActive.get(m.id) ?? today).plan, visits: vs.length, perMonth: mm > 0 ? r1(vs.length / mm) : 0,
-      weekdays: wd, usual, avgArrival: avgHM(vs.map((v) => v.inMin)), avgStayMin: avgStay(vs), lastVisit: last[m.id] ?? null,
+      weekdays: wd, usual, avgArrival: avgHM(vs.map((v) => v.inMin)), avgDeparture: avgOut(vs), avgStayMin: avgStay(vs), lastVisit: last[m.id] ?? null,
       monthly: months.map((month) => ({ month, visits: vs.filter((v) => ym(v.date) === month).length })),
       arrivals: vs.map((v) => ({ date: v.date, value: v.inMin })),
+      departures: vs.filter((v) => v.outMin !== null).map((v) => ({ date: v.date, value: v.outMin! })),
       recent: vs.slice(-10).reverse().map((v) => ({ date: v.date, in: toHM(v.inMin), out: v.outMin === null ? null : toHM(v.outMin) })),
     });
   }

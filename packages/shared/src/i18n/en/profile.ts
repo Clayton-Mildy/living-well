@@ -60,7 +60,7 @@ export const profile = {
   'tile.used': 'Visits used in {m}', 'tile.quota': 'Flex plan · {q} visits included', 'tile.left': 'Visits left', 'tile.extra': 'After that, each visit is an extra day: {p}',
   'tile.goldNoLimit': 'Gold plan · no limit', 'tile.visitsIn': 'Visits in {m}', 'tile.extraDays': 'Extra days in {m}', 'tile.extraBill': '{p} on next month’s invoice', 'tile.extraNone': 'Nothing extra so far', 'tile.usualSub': 'Information only. Members come on any open day.',
   'legend.closed': 'Club closed', 'legend.visited': 'Visited', 'legend.extra': 'Extra day',
-  'cal.holiday': 'Holiday', 'cal.closed': 'Closed', 'cal.in': 'In {t}', 'cal.extra': 'Extra day', 'cal.noteFlex': 'Flex includes {q} visits a month. From the next visit, each one is an extra day: {p}, on next month’s invoice.', 'cal.noteGold': 'Gold has no limit: the member can come on any open day.', 'cal.ended': 'Ended',
+  'cal.holiday': 'Holiday', 'cal.closed': 'Closed', 'cal.in': 'In {t}', 'cal.out': 'Out {t}', attInOut: 'In {a} · Out {b}', 'cal.extra': 'Extra day', 'cal.noteFlex': 'Flex includes {q} visits a month. From the next visit, each one is an extra day: {p}, on next month’s invoice.', 'cal.noteGold': 'Gold has no limit: the member can come on any open day.', 'cal.ended': 'Ended',
   prevMonth: 'Previous month', nextMonth: 'Next month', thisMonth: 'Back to this month',
   // documents and consent
   'docTitle.ktp': '{n}’s ID card (KTP)', 'docTitle.nannyKtp': 'Carer’s ID card (KTP)', 'docTitle.guarantorKtp': 'Family member’s ID card (KTP)', 'docTitle.membershipForm': 'Signed membership form', 'docTitle.healthInfo': 'Health-info photo', 'docTitle.other': 'Other document',

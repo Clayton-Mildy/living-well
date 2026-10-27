@@ -34,6 +34,8 @@ export const insights = {
   fewer: 'Fewer', more: 'More',
   arrivals: 'Arrivals by hour',
   arrivalsTip: '{hour} · {n} arrivals ({pct}%)',
+  departures: 'Departures by hour',
+  departuresTip: '{hour} · {n} departures ({pct}%)',
   weekdays: 'Average per weekday',
   weekdayTip: '{day} · {n} members on average',
   // by plan
@@ -51,6 +53,7 @@ export const insights = {
   kPerWeek: 'Per member / week',
   kAttend: 'Attendance',
   avgArrival: 'Average arrival',
+  avgDeparture: 'Avg departure',
   avgStay: 'Average stay',
   pattern: 'Days they come',
   patternTip: '{day} · {n} visits ({pct}%)',
@@ -75,8 +78,9 @@ export const insights = {
   monthly: 'Visits per month',
   monthlyTip: '{month} · {n} visits',
   usual: 'Usual days',
-  arrivalTrend: 'Arrival time',
+  arrivalTrend: 'Arrival and departure time',
   arrivalSeries: 'Arrival',
+  departureSeries: 'Departure',
   recent: 'Last 10 visits',
   noCheckOut: 'no check-out',
   // Flex quota (under Flex, By plan)

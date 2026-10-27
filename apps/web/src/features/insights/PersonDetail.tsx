@@ -39,6 +39,7 @@ function Body({ memberId, period, periodLabel, today, todayDone }: { memberId: s
   const total = p?.visits ?? 0;
   const days: BarItem[] = wd.short.map((d, w) => ({ key: String(w), label: d, value: p?.weekdays[w] ?? 0, tip: t('insights.patternTip', { day: wd.long[w], n: p?.weekdays[w] ?? 0, pct: pct(p?.weekdays[w] ?? 0, total) }) }));
   const arrivals = p?.arrivals ?? [];
+  const departures = p?.departures ?? [];
   const toDate = period.to < today ? period.to : today;
 
   return (
@@ -54,6 +55,7 @@ function Body({ memberId, period, periodLabel, today, todayDone }: { memberId: s
         <Line first label={t('insights.dVisits')} value={p?.visits ?? 0} />
         <Line label={t('insights.dPerMonth')} value={num1(p?.perMonth ?? 0)} />
         <Line label={t('insights.avgArrival')} value={p?.avgArrival ?? '—'} />
+        <Line label={t('insights.avgDeparture')} value={p?.avgDeparture ?? '—'} />
         <Line label={t('insights.avgStay')} value={stay(p?.avgStayMin ?? null)} />
         <Line label={t('insights.dLast')} value={p?.lastVisit ? fmt.fds(p.lastVisit) : t('insights.dNever')} />
       </Panel>
@@ -66,7 +68,10 @@ function Body({ memberId, period, periodLabel, today, todayDone }: { memberId: s
       {arrivals.length ? (
         <Panel title={t('insights.arrivalTrend')}>
           <TrendChart height={130} from={period.from} to={toDate} ariaLabel={t('insights.arrivalTrend')} format={hhmm}
-            series={[{ key: 'arrival', label: t('insights.arrivalSeries'), tone: 'bronze', points: arrivals.map((a) => ({ date: a.date, value: a.value })) }]} />
+            legend series={[
+              { key: 'arrival', label: t('insights.arrivalSeries'), tone: 'bronze', points: arrivals.map((a) => ({ date: a.date, value: a.value })) },
+              ...(departures.length ? [{ key: 'departure', label: t('insights.departureSeries'), tone: 'ink' as const, points: departures.map((a) => ({ date: a.date, value: a.value })) }] : []),
+            ]} />
         </Panel>
       ) : null}
       {p?.recent.length ? (
