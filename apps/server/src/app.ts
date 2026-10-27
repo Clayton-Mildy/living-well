@@ -13,7 +13,8 @@ import { getClub, runAction, subscribe, resetDemo, broadcastAll, runJobsNow } fr
 import { clockInfo, setClock } from './clock';
 import { authUser, publicUser, registerAuthRoutes } from './routes/auth';
 import { registerPublicRoutes } from './routes/public';
-import { byteRange, checkUpload, loadMedia, saveMedia } from './media';
+import { byteRange, checkUpload, loadMedia, saveMedia, IMAGE_MIME } from './media';
+import { receiptOcr } from './providers/receiptOcr';
 
 export const app = new Hono();
 const errBody = (e: unknown) => (e instanceof DomainError ? { code: e.code, params: e.params } : { code: 'err.server', params: { message: e instanceof Error ? e.message : String(e) } });
@@ -102,6 +103,19 @@ app.get('/api/media/:id', async (c) => {
     return new Response(new Uint8Array(part), { status: 206, headers: { ...head, 'Content-Length': String(part.length), 'Content-Range': `bytes ${range.start}-${range.end}/${m.bytes.length}` } });
   }
   return new Response(new Uint8Array(m.bytes), { headers: { ...head, 'Content-Length': String(m.bytes.length) } });
+});
+
+// receipts: read a photographed receipt (staff only; the reader is the simulated OCR until a real one is configured)
+const ocr = receiptOcr(); // an unknown CP_OCR_PROVIDER stops the server here, at boot
+app.post('/api/receipts/read', async (c) => {
+  const u = authUser(c);
+  if (!u) return c.json({ code: 'err.forbidden' }, 401);
+  if (u.kind === 'family') return c.json({ code: 'err.forbidden' }, 403);
+  const body = (await c.req.json().catch(() => ({}))) as { mediaId?: unknown };
+  const m = typeof body.mediaId === 'string' ? await loadMedia(body.mediaId) : null;
+  if (!m) return c.json({ code: 'err.notFound' }, 404);
+  if (!(IMAGE_MIME as readonly string[]).includes(m.mime)) return c.json({ code: 'purchasing.err.notImage' }, 415);
+  return c.json(await ocr.extract({ mediaId: body.mediaId as string, mime: m.mime, bytes: m.bytes, today: clockInfo().today }));
 });
 
 // demo tools

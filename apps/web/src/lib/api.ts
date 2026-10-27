@@ -14,15 +14,17 @@ let onUnauthorized: (() => void) | null = null;
 export const setUnauthorizedHandler = (fn: (() => void) | null) => { onUnauthorized = fn; };
 // these answer 401/403 for ordinary reasons (wrong password, no app access) and must not sign the current user out
 const OWN_AUTH = /^\/api\/(login|verify)\b/;
-export async function api<T>(path: string, opts: { method?: string; body?: unknown } = {}): Promise<T> {
+export async function api<T>(path: string, opts: { method?: string; body?: unknown; signal?: AbortSignal } = {}): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
       method: opts.method || (opts.body !== undefined ? 'POST' : 'GET'),
       headers: { 'content-type': 'application/json', ...(token ? { authorization: `Bearer ${token}` } : {}) },
       body: opts.body !== undefined ? JSON.stringify(opts.body) : undefined,
+      signal: opts.signal,
     });
-  } catch {
+  } catch (e) {
+    if (opts.signal?.aborted) throw e; // the caller cancelled (AbortError): not a network failure
     throw new ApiError(0, 'err.network');
   }
   const data = await res.json().catch(() => ({}));

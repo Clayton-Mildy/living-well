@@ -664,3 +664,42 @@ describe('byteRange', () => {
     expect(byteRange('bytes=-0', 100)).toBe('bad');
   });
 });
+
+describe('receipts: POST /api/receipts/read (simulated OCR)', () => {
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const read = (mediaId: string, user?: string) => app.request('/api/receipts/read', json({ mediaId }, user));
+  const withNoDelay = async (fn: () => Promise<void>) => {
+    const was = process.env.CP_OCR_DELAY_MS;
+    process.env.CP_OCR_DELAY_MS = '0';
+    try { await fn(); } finally { if (was === undefined) delete process.env.CP_OCR_DELAY_MS; else process.env.CP_OCR_DELAY_MS = was; }
+  };
+  it('is signed-in staff only: 401 signed out, 403 for a family, 404 for an unknown id', () => withNoDelay(async () => {
+    expect((await read('md_nope')).status).toBe(401);
+    expect((await app.request('/api/receipts/read', { method: 'POST', headers: { 'content-type': 'application/json', authorization: `Bearer ${await tokenOf('maria')}` }, body: JSON.stringify({ mediaId: 'md_nope' }) })).status).toBe(403);
+    const r = await read('md_nope', 's1');
+    expect(r.status).toBe(404);
+    expect((await j(r)).code).toBe('err.notFound');
+  }));
+  it('refuses a PDF with 415 purchasing.err.notImage', () => withNoDelay(async () => {
+    const pdf = Buffer.concat([Buffer.from('%PDF-1.4\n'), Buffer.alloc(64, 0x20), Buffer.from('\n%%EOF')]).toString('base64');
+    const { id } = await j(await app.request('/api/media', json({ mime: 'application/pdf', data: pdf }, 's1')));
+    const r = await read(id, 's1');
+    expect(r.status).toBe(415);
+    expect((await j(r)).code).toBe('purchasing.err.notImage');
+  }));
+  it('reads a photo into an itemised receipt, the same one every time for the same photo', () => withNoDelay(async () => {
+    const { id } = await j(await app.request('/api/media', json({ mime: 'image/png', data: PNG }, 's1')));
+    const a = await read(id, 's1');
+    expect(a.status).toBe(200);
+    const body = await j(a);
+    expect(body.lines.length).toBeGreaterThanOrEqual(2);
+    expect(body.date).toBe((await j(await app.request('/api/clock'))).today);
+    expect(await j(await read(id, 's1'))).toEqual(body);
+  }));
+  it('an unknown OCR provider fails at boot', async () => {
+    const { receiptOcr } = await import('./providers/receiptOcr');
+    const was = process.env.CP_OCR_PROVIDER;
+    process.env.CP_OCR_PROVIDER = 'nope';
+    try { expect(() => receiptOcr()).toThrow(); } finally { if (was === undefined) delete process.env.CP_OCR_PROVIDER; else process.env.CP_OCR_PROVIDER = was; }
+  });
+});
