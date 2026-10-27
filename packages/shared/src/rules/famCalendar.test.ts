@@ -47,6 +47,25 @@ describe('famDay: the agenda of one date', () => {
     for (const r of day.rows.filter((x) => x.kind === 'lunch' || x.kind === 'tea')) expect(r.dishes?.[0].names.length).toBeGreaterThan(0);
   });
 
+  it('round 15: a row is passed once its time has gone by, whether or not a parent came; rows still ahead are not', () => {
+    const s = seed();
+    const past = addDays(T, -1); // Tuesday
+    const before = famDay(s, ['m1'], past, T, NOW);
+    expect(before.rows.some((r) => r.kind === 'session')).toBe(true);
+    expect(before.rows.every((r) => r.passed)).toBe(true);
+    const nobody = famDay(s, [], past, T, NOW); // nobody came
+    expect(nobody.rows.every((r) => r.passed)).toBe(true);
+    const ahead = famDay(s, WHO, addDays(T, 1), T, NOW);
+    expect(ahead.rows.length).toBeGreaterThan(0);
+    expect(ahead.rows.some((r) => r.passed)).toBe(false);
+    // today at 14:00: the morning session and lunch are over, the 13:30 session is still running, tea is ahead
+    const today = famDay(s, WHO, T, T, NOW);
+    expect(today.rows.filter((r) => r.kind === 'session' && r.time < '12:00').every((r) => r.passed)).toBe(true);
+    expect(today.rows.find((r) => r.kind === 'lunch')?.passed).toBe(true);
+    expect(today.rows.find((r) => r.kind === 'tea')?.passed).toBe(false);
+    expect(famDay(s, WHO, T, T, 9 * 60).rows.some((r) => r.passed)).toBe(false);
+  });
+
   it('on a day a parent came, a finished session says who joined in or sat out and holds the approved pictures once per activity', () => {
     const s = seed();
     const days = WHO.flatMap((id) => visitDays(s, id, addDays(T, -1))).sort().reverse();

@@ -37,6 +37,33 @@ async function show(ui: ReactElement, url: string) {
 const q = (id: string) => document.querySelector(`[data-testid="${id}"]`);
 const click = async (id: string) => { await act(async () => { (q(id) as HTMLElement).click(); }); };
 
+describe('family calendar list: the line means passed (round 15)', () => {
+  const lines = (d: string) => Array.from(document.querySelectorAll(`[data-testid="cal-agenda"][data-date="${d}"] [data-testid="cal-row"] [data-passed]`)) as HTMLElement[];
+  it('every row of a past day has the bronze line, a guest host is still named; tomorrow and later today are light', async () => {
+    open();
+    await show(<FamilyCalendar />, '/calendar?date=2026-10-20');
+    expect(lines('2026-10-20').length).toBeGreaterThan(2);
+    expect(lines('2026-10-20').every((x) => x.getAttribute('data-passed') === '1')).toBe(true);
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open();
+    await show(<FamilyCalendar />, '/calendar?date=2026-10-22');
+    expect(lines('2026-10-22').length).toBeGreaterThan(2);
+    expect(lines('2026-10-22').every((x) => x.getAttribute('data-passed') === '0')).toBe(true);
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open(); // today at 09:58: nothing has ended yet
+    await show(<FamilyCalendar />, '/calendar');
+    expect(lines(T).length).toBeGreaterThan(2);
+    expect(lines(T).every((x) => x.getAttribute('data-passed') === '0')).toBe(true);
+  });
+  it('a guest-hosted session names its guest host in the row', async () => {
+    open();
+    await show(<FamilyCalendar />, '/calendar?date=2026-10-19'); // the seeded guest Angklung teacher
+    expect(document.querySelector('[data-testid="cal-agenda"]')?.textContent).toContain('guest host');
+  });
+});
+
 describe('family calendar header', () => {
   it('the title is "Calendar" in both views; Month names the period in its own row, and "This month" appears only away from this month', async () => {
     open();

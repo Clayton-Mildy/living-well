@@ -8,7 +8,7 @@ import { sessionPhotos } from './activity';
 import { occasionsInRange } from './occasions';
 import { dayInfo, monthGrid, type DayState } from './calendar';
 import { extrasOn, menuOn, teaPhotosOn, visibleLunchPhotos } from './kitchen';
-import { bestPhotoOf, familyPhotosOn, logOn, servedLunch, dishNamesOf, tookPart, visitDays, LUNCH_AT, TEA_AT } from './family';
+import { bestPhotoOf, familyPhotosOn, homeTime, logOn, servedLunch, dishNamesOf, tookPart, visitDays, LUNCH_AT, TEA_AT } from './family';
 import { addDays, addMonths, live, toMin, ym } from '../util';
 
 export type FamRowKind = 'session' | 'lunch' | 'tea' | 'outing' | 'venue' | 'birthday' | 'celebration';
@@ -22,8 +22,8 @@ export interface FamRow {
   kind: FamRowKind;
   /** null never happens for rows the family sees, but a venue booking or outing without a time falls back to the club's opening time */
   time: HM;
-  /** the bronze bar: a guest-hosted session, an extra session of the day, an outing */
-  accent: boolean;
+  /** round 15, the bronze bar: this row's time has passed (a past day, or today once it has ended); filled in by `famDay` */
+  passed: boolean;
   /** session */
   slot?: Slot;
   activityId?: string;
@@ -66,6 +66,22 @@ export interface FamDay {
 
 const isPast = (date: ISODate, time: HM, today: ISODate, nowMin: number) => date < today || (date === today && toMin(time) <= nowMin);
 
+/**
+ * Round 15: marks which rows have passed. A row ends at its own end time, else where the next row starts (the way the day's timeline reads it), else
+ * half an hour on or closing time. A past day is passed whole; a birthday (all day) passes with its day. `rows` are in time order.
+ */
+function markPassed(s: ClubState, rows: FamRow[], date: ISODate, today: ISODate, nowMin: number) {
+  const close = toMin(homeTime(s));
+  rows.forEach((r, i) => {
+    if (date !== today) { r.passed = date < today; return; }
+    if (r.kind === 'birthday') return;
+    const start = toMin(r.time);
+    const next = rows.slice(i + 1).find((x) => x.kind !== 'birthday' && toMin(x.time) > start);
+    const end = r.to ? toMin(r.to) : next ? toMin(next.time) : Math.max(close, start + 30);
+    r.passed = nowMin >= end;
+  });
+}
+
 /** Dishes a meal serves the parents: one entry when everyone has the same, else one per group of parents with the same dishes. */
 function lunchDishes(s: ClubState, parents: Member[], date: ISODate): FamDishes[] {
   const groups = new Map<string, { ids: string[]; memberIds: string[] }>();
@@ -97,7 +113,7 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
 
   // round 12: a birthday of one of these parents (all day, so it sits at the top of the club's day; on a closed day it is the only row)
   const birthdays: FamRow[] = occasionsInRange(s, date, date).filter((o) => o.kind === 'birthday' && who.includes(o.member.id))
-    .map((o) => ({ key: 'bd:' + o.member.id, kind: 'birthday', time: s.club.settings.open as HM, accent: true, memberId: o.member.id, years: o.years, took: [], photos: [] }));
+    .map((o) => ({ key: 'bd:' + o.member.id, kind: 'birthday', time: s.club.settings.open as HM, passed: false, memberId: o.member.id, years: o.years, took: [], photos: [] }));
   if (info.open) {
     const open = s.club.settings.open as HM;
     const extraTimes = new Set(extrasOn(s, date).map((x) => x.time as string));
@@ -105,13 +121,13 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
     const used = new Set<string>();
     for (const it of info.items) {
       if (it.kind === 'outing') {
-        rows.push({ key: it.key, kind: 'outing', time: it.time ?? open, to: it.to ?? null, accent: true, title: it.title, titleId: it.titleId, took: [], photos: [] });
+        rows.push({ key: it.key, kind: 'outing', time: it.time ?? open, to: it.to ?? null, passed: false, title: it.title, titleId: it.titleId, took: [], photos: [] });
       } else if (it.kind === 'venue') {
-        rows.push({ key: it.key, kind: 'venue', time: it.time ?? open, to: it.to ?? null, accent: false, roomId: it.roomId, took: [], photos: [] });
+        rows.push({ key: it.key, kind: 'venue', time: it.time ?? open, to: it.to ?? null, passed: false, roomId: it.roomId, took: [], photos: [] });
       } else if (it.kind === 'celebration') {
         // only the celebrations of the parents this view is about
         if (!it.memberId || !who.includes(it.memberId)) continue;
-        rows.push({ key: it.key, kind: 'celebration', time: it.time ?? open, to: it.to ?? null, accent: true, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
+        rows.push({ key: it.key, kind: 'celebration', time: it.time ?? open, to: it.to ?? null, passed: false, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
       } else if (it.kind === 'activity' && it.time) {
         const slot = it.time as Slot;
         const over = came.length > 0 && isPast(date, slot, today, nowMin);
@@ -121,7 +137,7 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
         let photos: Photo[] = [];
         if (over && act && !shown.has(act.name)) { photos = sessionPhotos(s, date, act, { familyOnly: true }); shown.add(act.name); }
         photos.forEach((p) => used.add(p.id));
-        rows.push({ key: it.key, kind: 'session', time: slot, slot, accent: !!it.guest || extraTimes.has(slot), activityId: it.activityId, roomId: it.roomId, staffId: it.staffId, ...(it.guest ? { guest: { name: it.guest.name } } : {}), ...(extraTimes.has(slot) ? { extra: true } : {}), took, photos });
+        rows.push({ key: it.key, kind: 'session', time: slot, slot, passed: false, activityId: it.activityId, roomId: it.roomId, staffId: it.staffId, ...(it.guest ? { guest: { name: it.guest.name } } : {}), ...(extraTimes.has(slot) ? { extra: true } : {}), took, photos });
       }
     }
     if (!info.hasOuting) {
@@ -131,27 +147,29 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
         const over = came.length > 0 && isPast(date, LUNCH_AT, today, nowMin);
         const photos = over ? visibleLunchPhotos(s, date) : [];
         photos.forEach((p) => used.add(p.id));
-        rows.push({ key: 'lunch', kind: 'lunch', time: LUNCH_AT, accent: false, dishes: lunch, took: [], photos });
+        rows.push({ key: 'lunch', kind: 'lunch', time: LUNCH_AT, passed: false, dishes: lunch, took: [], photos });
       }
       const tea = menu ? dishNamesOf(s, menu.tea) : [];
       if (tea.length) {
         const over = came.length > 0 && isPast(date, TEA_AT, today, nowMin);
         const photos = over ? teaPhotosOn(s, date).filter((p) => p.visibility === 'visible') : [];
         photos.forEach((p) => used.add(p.id));
-        rows.push({ key: 'tea', kind: 'tea', time: TEA_AT, accent: false, dishes: [{ names: tea }], took: [], photos });
+        rows.push({ key: 'tea', kind: 'tea', time: TEA_AT, passed: false, dishes: [{ names: tea }], took: [], photos });
       }
     }
     const rank: Record<FamRowKind, number> = { outing: 0, venue: 1, birthday: 2, celebration: 3, session: 4, lunch: 5, tea: 6 };
     rows.push(...birthdays);
     rows.sort((a, b) => a.time.localeCompare(b.time) || rank[a.kind] - rank[b.kind]);
+    markPassed(s, rows, date, today, nowMin);
     const others = came.length ? familyPhotosOn(s, who, date).filter((p) => !used.has(p.id)) : [];
     return { date, state: info.state, banner, rows, came, others };
   }
   // a closed day (weekend, holiday) can still hold a celebration: the banner stays, the celebration is its only row
   for (const it of info.items) {
-    if (it.kind === 'celebration' && it.memberId && who.includes(it.memberId)) rows.push({ key: it.key, kind: 'celebration', time: it.time ?? (s.club.settings.open as HM), to: it.to ?? null, accent: true, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
+    if (it.kind === 'celebration' && it.memberId && who.includes(it.memberId)) rows.push({ key: it.key, kind: 'celebration', time: it.time ?? (s.club.settings.open as HM), to: it.to ?? null, passed: false, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
   }
   rows.push(...birthdays);
+  markPassed(s, rows, date, today, nowMin);
   return { date, state: info.state, banner, rows, came, others: [] };
 }
 
