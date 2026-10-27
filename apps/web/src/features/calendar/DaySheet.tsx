@@ -3,6 +3,7 @@
 // a note, whether to tell teachers and families, the weekly plan for reference and "Back to the weekly plan". The weekly schedule itself is untouched.
 // ExtraSheet (KC round 7): add, edit or remove an extra session on that date at any time (time, activity, teacher, room, note, tell teachers and families).
 // Round 14 (B1): the activity team edits the day as its waiting edit left it (withPendingDay); saving sends it to Ega ("Sent to Ega"), so there is no "tell" switch.
+// Round 15 (phase 2): management sees the day's proposed programme (when one waits) at the top of the sheet, with Approve and Reject.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { extrasOn, isWeekSlot, live, scheduleDayOf, sessionsOn, staffCall, toHM, toMin, type ClubState, type ISODate, type Slot } from '@cp/shared';
@@ -16,6 +17,7 @@ import { useMe } from '../../lib/me';
 import { useResetOn } from '../../lib/useResetOn';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
+import { ProposedDay } from './ProposalActions';
 
 /** Round 14: the day as its editor sees it. The activity team (whose edits wait for Ega) sees its waiting edit; `asks` = what it saves is sent to Ega. */
 function useDayState(date: ISODate, open: boolean): { sv: ClubState; asks: boolean; sentText: (result: Record<string, unknown>) => string } {
@@ -129,6 +131,8 @@ export function DaySheet({ open, onClose, date, slot }: { open: boolean; onClose
 
   return (
     <Sheet open={open} onClose={onClose} title={t('cal.dayTitle', { date: fdl(date), slot })}>
+      {/* round 15: management sees the day's proposed programme here too, and decides it */}
+      {open && !asks && s.scheduleDays?.[date]?.pending && !s.scheduleDays[date].deletedAt ? <ProposedDay s={s} date={date} decide bare /> : null}
       <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{weekly ? t('cal.dayWeekly', { what: weeklyText }) : t('cal.dayWeeklyNone')}</div>
       {guest ? <Note tone="ochre" icon="co_present">{t('cal.dayGuest', { name: guest.host.name })}</Note> : null}
       <Select label={t('cal.activity')} value={actId} onChange={pick} options={activityOptions} />

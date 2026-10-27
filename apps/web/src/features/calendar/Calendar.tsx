@@ -39,7 +39,9 @@ export function Calendar() {
   const isMgmt = role === 'mgmt';
   const canBuild = role === 'mgmt' || role === 'activity'; // round 14: the activity team builds the programme; its changes wait for Ega
   /** round 14: a day the activity team changed shows that it waits for Ega, or that Ega sent it back (builders only) */
-  const flagOf = (date: string) => { const r = canBuild ? s.scheduleDays?.[date] : undefined; return r?.pending ? t('cal.badgeWaiting') : r?.returned ? t('cal.badgeReturned') : undefined; };
+  const flagOf = (date: string) => { const r = canBuild ? s.scheduleDays?.[date] : undefined; return r?.pending ? t('cal.proposed') : r?.returned ? t('cal.badgeReturned') : undefined; };
+  /** round 15: a day with a change waiting shows its proposed programme (builders only; management can decide it there) */
+  const proposedOf = (date: string) => { const r = canBuild ? s.scheduleDays?.[date] : undefined; return !!r && !r.deletedAt && !!r.pending; };
   const [view, setView] = useState<View>('list');
   const [month, setMonth] = useState(() => ym(today));
   const [year, setYear] = useState(() => Number(today.slice(0, 4)));
@@ -133,7 +135,7 @@ export function Calendar() {
 
         {view === 'list' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 12 }}>
-            {days.map((d) => <DayBlock key={d.date} s={s} info={d} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} flag={flagOf(d.date)} />)}
+            {days.map((d) => <DayBlock key={d.date} s={s} info={d} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} flag={flagOf(d.date)} proposed={proposedOf(d.date)} decide={isMgmt} />)}
             {isPhone ? linkRows([{ icon: 'calendar_month', label: t('cal.seeMonth'), run: () => setView('month') }]) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <Button variant="secondary" size={48} icon="calendar_month" onClick={() => setView('month')}>{t('cal.seeMonth')}</Button>
@@ -193,7 +195,7 @@ export function Calendar() {
               </div>
             </div>
             )}
-            {selInfo ? <DayBlock s={s} info={selInfo} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} flag={flagOf(selInfo.date)} /> : null}
+            {selInfo ? <DayBlock s={s} info={selInfo} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} flag={flagOf(selInfo.date)} proposed={proposedOf(selInfo.date)} decide={isMgmt} /> : null}
             {(isMgmt && selInfo && selInfo.date >= today) || (isPhone && canBuild && selInfo) ? (isPhone ? linkRows([
               ...(isMgmt && selInfo && selInfo.date >= today ? [{ icon: 'add', label: t('cal.addEventOn', { date: fdl(selInfo.date) }), run: () => setEditor({ date: selInfo.date }) }] : []),
               ...(canBuild && selInfo ? [{ icon: 'event_note', label: t('cal.openWeek'), run: () => openWeek(selInfo.date) }] : []),

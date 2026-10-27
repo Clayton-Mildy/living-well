@@ -10,6 +10,7 @@ import type {
 } from '../types';
 import { COLLECTIONS } from '../types';
 import type { CollectionName } from '../types';
+import { seedEmptyWeek } from './emptyWeek';
 import { addDays, addMonths, daysBetween, dow, rng, rp, toHM, toMin, ym, DEMO_TODAY, DEMO_START_MIN, isWeekday, e164 } from '../util';
 import { evaluateReading, limitsFor } from '../rules/health';
 import { suspensions } from '../rules/billing';
@@ -257,6 +258,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   const days = {} as Record<WorkWeekday, Record<WeekSlot, ScheduleCell | null>>;
   ([1, 2, 3, 4, 5] as WorkWeekday[]).forEach((w) => { const [a, b] = SCHED[w]; days[w] = { '10:30': { activityId: a[0], staffId: a[1], roomId: actRoom(a[0]) }, '13:30': { activityId: b[0], staffId: b[1], roomId: actRoom(b[0]) } }; });
   put('scheduleVersions', { ...base(C, 'sched-2024-07', at('2026-10-19T16:10'), 'staff:s9'), effectiveFrom: '2024-07-01', status: 'published', days, publishedBy: 'staff:s9', publishedAt: at('2026-10-19T16:10') });
+  seedEmptyWeek(s, T, days, { at: at('2026-10-19T16:10'), by: 'staff:s9' }); // round 15 (R4): an empty week two weeks out for the activity team to plan live, then the normal days again
   DISHES.forEach(([id, name, course, allergens, tags]) => put('dishes', { ...base(C, id, '2024-06-01T09:00', 'staff:s3'), name, course, allergens, tags, reviewedBy: 's3', reviewedAt: at('2026-10-01T10:00') } satisfies Dish));
   put('menuVersions', { ...base(C, 'menu-2024-07', '2024-06-20T10:00', 'staff:s3'), effectiveFrom: '2024-07-01', status: 'published', days: MENU_DAYS, publishedBy: 'staff:s3' });
   // the demo day always serves Wednesday's fish soup (Bambang's seafood allergy, the fish-bone feedback)

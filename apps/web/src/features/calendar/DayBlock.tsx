@@ -2,7 +2,8 @@
 // whoever builds the schedule (management) gets "Edit activity" on each activity, which offers "Just this day" or the weekly plan.
 // On a phone (round 6) it is an iOS grouped day: the date is the group header (Today chip and open/closed state beside it) and the items are rows in one flat group.
 // Round 7: a session changed for this day only shows "Changed" (and the day's note) for staff; a slot with no session shows a quiet row management can fill.
-// Round 14: `flag` is a small grey chip by the date ("Waiting" for Ega, or "Returned").
+// Round 14: `flag` is a small grey chip by the date ("Proposed" while it waits for Ega, or "Returned").
+// Round 15 (phase 2): `proposed` adds the day's proposed programme under its rows, before → after; `decide` (management) adds Approve and Reject to it.
 import { Fragment } from 'react';
 import type { ClubState, Slot } from '@cp/shared';
 import type { DayInfo, DayItem } from '@cp/shared/rules/calendar';
@@ -10,9 +11,10 @@ import { Button, GROUP_HEAD, Icon, IconButton } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { rowLine } from '../activity/lib';
+import { ProposedDay } from './ProposalActions';
 import { StatePill, dayState, itemText, neutralFill } from './lib';
 
-export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag }: { s: ClubState; info: DayInfo; today: string; canEdit?: boolean; onEdit?: (eventId: string) => void; onEditActivity?: (slot: Slot, date: string) => void; flag?: string }) {
+export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag, proposed, decide }: { s: ClubState; info: DayInfo; today: string; canEdit?: boolean; onEdit?: (eventId: string) => void; onEditActivity?: (slot: Slot, date: string) => void; flag?: string; proposed?: boolean; decide?: boolean }) {
   const t = useT();
   const { lang, fdl } = useFmt();
   const { isPhone } = useDevice();
@@ -43,7 +45,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
           </h2>
           <StatePill st={st} size={13} />
         </div>
-        {rows.length ? (
+        {rows.length || proposed ? (
           <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
             {rows.map((it, i) => {
               const x = itemText(s, it, t, lang, info.weekend);
@@ -65,6 +67,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
                 </Fragment>
               );
             })}
+            {proposed ? <ProposedDay s={s} date={info.date} decide={decide} /> : null}
           </div>
         ) : null}
       </div>
@@ -104,6 +107,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
           </Fragment>
         );
       })}
+      {proposed ? <ProposedDay s={s} date={info.date} decide={decide} /> : null}
     </div>
   );
 }

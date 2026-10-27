@@ -8,12 +8,13 @@
 // Round 14 (B1): the activity team builds too. Its Publish is "Send to Ega": the version waits for management ("Waiting for Ega" above the builder); one Ega
 // sent back shows "Returned: …" with Edit, which loads it into the draft. The catalog stays management's.
 // Round 14 (B2): Saturday and Sunday follow Friday, empty by default under a lighter "Weekend" header; a session placed there opens the club that day.
+// Round 15 (phase 2): while a version waits, "See proposed week" draws it in the grid (a changed cell shows its session before, struck through, and after) and management
+// approves or rejects it right there (the same approval actions as Approvals); the activity team sees the proposed week without the buttons.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from 'react';
-import { useNavigate } from 'react-router-dom';
 import { useResetOn } from '../../lib/useResetOn';
-import { ALL_DAYS, actorName, addDays, asWeekday, live, scheduleVersionFor, staffCall, type ISODate, type Weekday, type WeekSlot } from '@cp/shared';
+import { ALL_DAYS, actorName, addDays, asWeekday, live, publishDateOf, scheduleVersionFor, staffCall, type ISODate, type Weekday, type WeekSlot } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
-import { SLOTS, activityTeachers, changedCells, cloneDays, dayEditable, effectiveVersions, mondayOf, nextMonday, pendingVersions, returnedVersion, sameCell, weekDays, weekEditable, weekView, type Days } from '@cp/shared/rules/calendar';
+import { SLOTS, activityTeachers, changedCells, cloneDays, dayEditable, effectiveVersions, mondayOf, nextMonday, normalizeDays, pendingVersions, returnedVersion, sameCell, weekDays, weekEditable, weekView, type Days } from '@cp/shared/rules/calendar';
 import { Button, DateField, Group, Icon, IconButton, Note, Pager, Select, Sheet, Toggle, chipStyle, uiZoom, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
@@ -22,8 +23,10 @@ import { useNow } from '../../lib/clock';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
+import { sessionText } from '../members/approvalView';
 import { Badge, plural, rowLine } from '../activity/lib';
 import { CatalogEditor } from './CatalogEditor';
+import { ProposalActions } from './ProposalActions';
 import { smallCaps, weekdayName } from './lib';
 
 type Cell = { w: Weekday; slot: WeekSlot };
@@ -69,7 +72,6 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const s = useClub();
   const { today } = useNow();
   const act = useAct();
-  const navigate = useNavigate();
   const { role } = useMe();
   /** round 14: the activity team's publish asks Ega (management publishes itself) */
   const asks = role !== 'mgmt';
@@ -77,6 +79,10 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const view = d.view;
   const waiting = pendingVersions(s)[0];
   const returned = asks ? returnedVersion(s) : undefined;
+  /** round 15: the grid shows the version that waits for management instead of the plan in force */
+  const [showProposed, setShowProposed] = useState(false);
+  useResetOn(waiting?.id ?? '', () => setShowProposed(false));
+  const proposing = !!waiting && showProposed;
   const [sel, setSel] = useState<Cell | null>(null);
   const [pal, setPal] = useState<string | null>(null);
   const [drag, setDrag] = useState<null | { act: string } | { cell: Cell }>(null);
@@ -101,7 +107,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const inForce = scheduleVersionFor(s, today);
   const hours = s.club.settings;
   const changed = d.changes.length;
-  const canEdit = view.editable && !view.otherDraft;
+  const canEdit = view.editable && !view.otherDraft && !proposing;
   /** KC round 7: in the current week a day before today has already happened: it shows what ran and cannot be changed */
   const locked = (w: Weekday) => !dayEditable(view.dates[w - 1], today);
   const wLong = (w: number) => weekdayName(lang, w, 'long');
@@ -110,10 +116,23 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const weekendDay = (w: Weekday) => w > 5;
   const dateOf = (w: number) => view.dates[w - 1];
   const dayNum = (w: number) => fd(dateOf(w), { day: 'numeric', month: 'short' });
-  const cellOf = (c: Cell) => d.draft[c.w][c.slot];
+  /** round 15: the waiting version from the day it would publish (an earlier day of the week keeps the plan in force) */
+  const proposedFrom = waiting ? publishDateOf(waiting, today) : '';
+  const proposedDays = useMemo(() => {
+    if (!waiting) return null;
+    const wd = normalizeDays(waiting.days);
+    return Object.fromEntries(ALL_DAYS.map((w) => [w, view.dates[w - 1] >= proposedFrom ? wd[w] : view.base[w]])) as Days;
+  }, [waiting, view, proposedFrom]);
+  const gridDays: Days = proposing && proposedDays ? proposedDays : d.draft;
+  const shownBase: Days = proposing ? view.base : d.base;
+  const cellOf = (c: Cell) => gridDays[c.w][c.slot];
   const title = (c: Cell) => { const x = cellOf(c); return x ? activityName(s.activities[x.activityId], lang) : ''; };
   const roomOf = (id?: string) => (id ? roomName(s.rooms[id], lang) : '');
-  const isChanged = (c: Cell) => !sameCell(d.draft[c.w][c.slot], d.base[c.w][c.slot]);
+  const isChanged = (c: Cell) => !sameCell(gridDays[c.w][c.slot], shownBase[c.w][c.slot]);
+  /** "Changed" on a cell of the draft; in the proposed week the cell shows its session before, struck through, above the new one */
+  const changedLabel = (c: Cell, fs: number) => (isChanged(c) && !proposing ? <span style={{ fontSize: fs, fontWeight: 600, color: '#7A5510', lineHeight: 1.4 }}>{t('cal.changed')}</span> : null);
+  const beforeLine = (c: Cell, fs: number) => (isChanged(c) && proposing ? <s data-before style={{ fontSize: fs, color: '#8A8078', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{sessionText(s, shownBase[c.w][c.slot], t, lang)}</s> : null);
+  const proposedAttr = (c: Cell) => (proposing && isChanged(c) ? { 'data-proposed-cell': key(c) } : {});
 
   // "Edit activity" from the calendar: show the slot's editor
   useEffect(() => {
@@ -260,19 +279,20 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.3 }}>{label}</span>
         </span>
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2, paddingRight: v && touch ? 40 : 0 }}>
+          {beforeLine(c, 14)}
           {v ? (
             <>
               <span style={{ fontSize: 16, fontWeight: 600, lineHeight: 1.35 }}>{title(c)}</span>
               <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35 }}>{roomOf(v.roomId)} · {staffCall(s.staff[v.staffId])}</span>
             </>
           ) : <span style={{ fontSize: 15, color: touch ? 'var(--accent, #75624B)' : '#8A8078', fontWeight: touch ? 500 : 400, lineHeight: 1.4, display: 'inline-flex', alignItems: 'center', gap: 4 }}>{touch && !hint ? <Icon name="add" size={18} /> : null}{emptyText(c)}</span>}
-          {isChanged(c) ? <span style={{ fontSize: 13, fontWeight: 600, color: '#7A5510', lineHeight: 1.4 }}>{t('cal.changed')}</span> : null}
+          {changedLabel(c, 13)}
         </span>
       </>
     );
     const box = { width: '100%', minHeight: 64, padding: '10px 12px 10px 16px', display: 'flex', gap: 10, alignItems: 'center', textAlign: 'left', color: '#24201C', fontFamily: 'Inter', flex: 1, minWidth: 0, border: 'none', background: 'transparent' } as const;
     return (
-      <div key={key(c)} data-slot={touch ? key(c) : undefined} className={touch ? 'cp-tap' : undefined} style={{ position: 'relative', display: 'flex', backgroundColor: on || (touch && over === key(c) && !!drag) ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : touch && over === key(c) && !!drag ? 'inset 3px 0 0 var(--accent, #75624B)' : undefined, ...rowLine(first || on) }}>
+      <div key={key(c)} data-slot={touch ? key(c) : undefined} {...proposedAttr(c)} className={touch ? 'cp-tap' : undefined} style={{ position: 'relative', display: 'flex', backgroundColor: on || (touch && over === key(c) && !!drag) ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #2B231C' : touch && over === key(c) && !!drag ? 'inset 3px 0 0 var(--accent, #75624B)' : undefined, ...rowLine(first || on) }}>
         {touch
           ? <button type="button" className="cp-tap-target" onClick={() => tapCell(c)} aria-label={aria(c)} aria-pressed={on} style={{ ...box, ...noCallout, cursor: 'pointer' }}
               {...(v ? { onTouchStart: touchStart({ cell: c }, title(c)), onTouchMove: touchMoveEarly, onTouchEnd: touchEndEarly } : {})}>{inner}</button>
@@ -357,7 +377,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           <div style={smallCaps}>{t('cal.builder')}</div>
           <h2 className="cp-serif" style={{ margin: 0, fontSize: isPhone ? 24 : 28, lineHeight: isPhone ? '30px' : '36px', fontWeight: 400, letterSpacing: '-0.8px', color: '#2B231C' }}>{t('cal.weekly')}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, lineHeight: 1.4, flexWrap: 'wrap' }}>
-            {changed ? <Badge kind="watch" label={t('cal.draft')} /> : <Badge kind="paid" label={t('cal.published')} />}
+            {proposing ? <Badge kind="watch" label={t('cal.proposed')} /> : changed ? <Badge kind="watch" label={t('cal.draft')} /> : <Badge kind="paid" label={t('cal.published')} />}
             <span>{status}</span>
           </div>
         </div>
@@ -372,9 +392,10 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
       {!teachers.length ? <Note tone="ochre" icon="info">{t('cal.noTeachers')}</Note> : null}
       {waiting ? (
         <Note tone="cream" icon="hourglass_top">
-          <span data-testid="programme-waiting" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
+          <span data-testid="programme-waiting" style={{ display: 'flex', flexDirection: 'column', gap: 10, alignItems: 'flex-start', minWidth: 0 }}>
             <span>{t('cal.waitingEga')} · {t('cal.fromDate', { date: fds(waiting.effectiveFrom) })}</span>
-            {asks ? null : <Button variant="secondary" size={44} onClick={() => navigate('/reviews?tab=programme')}>{t('cal.reviewBtn')}</Button>}
+            <Button variant="secondary" size={44} icon={proposing ? 'undo' : 'visibility'} onClick={() => { if (!proposing && mondayOf(proposedFrom) !== week) onWeek(mondayOf(proposedFrom)); setShowProposed(!proposing); }}>{t(proposing ? 'cal.viewCurrent' : 'cal.viewProposed')}</Button>
+            {asks ? null : <ProposalActions id={waiting.id} />}
           </span>
         </Note>
       ) : null}
@@ -473,20 +494,22 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
                     const touch = canEdit && !locked(w); // a day before today is read-only
                     const content = v ? (
                       <>
+                        {beforeLine(c, 12)}
                         <span style={{ fontSize: FONT_BODY, lineHeight: '19px', fontWeight: 600, paddingRight: touch ? 24 : 0 }}>{title(c)}</span>
                         <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{roomOf(v.roomId)}</span>
                         <span style={{ fontSize: FONT_SMALL, lineHeight: 1.4 }}>{staffCall(s.staff[v.staffId])}</span>
-                        {isChanged(c) ? <span style={{ marginTop: 'auto', fontSize: 12, fontWeight: 600, color: '#7A5510' }}>{t('cal.changed')}</span> : null}
+                        {isChanged(c) && !proposing ? <span style={{ marginTop: 'auto', fontSize: 12, fontWeight: 600, color: '#7A5510' }}>{t('cal.changed')}</span> : null}
                       </>
                     ) : (
                       <>
+                        {beforeLine(c, 12)}
                         <span style={{ margin: 'auto', fontSize: 'max(13px, var(--cp-body, 0px))', color: touch ? 'var(--accent, #75624B)' : '#5E5852', fontWeight: touch ? 500 : 400, textAlign: 'center', lineHeight: 1.4, display: 'inline-flex', alignItems: 'center', gap: 4 }}>{touch && !hint ? <Icon name="add" size={17} /> : null}{emptyText(c)}</span>
-                        {isChanged(c) ? <span style={{ fontSize: 12, fontWeight: 600, color: '#7A5510' }}>{t('cal.changed')}</span> : null}
+                        {isChanged(c) && !proposing ? <span style={{ fontSize: 12, fontWeight: 600, color: '#7A5510' }}>{t('cal.changed')}</span> : null}
                       </>
                     );
                     const box = { flex: 1, minHeight: 104, borderRadius: 12, border: st.border, background: st.background, boxShadow: st.boxShadow, padding: 10, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 } as const;
                     return (
-                      <div key={key(c)} data-slot={touch ? key(c) : undefined} style={{ position: 'relative', display: 'flex', minWidth: 0 }} onDragOver={touch ? (e) => { e.preventDefault(); if (over !== key(c)) setOver(key(c)); } : undefined} onDrop={touch ? (e) => { e.preventDefault(); dropAt(c); } : undefined}>
+                      <div key={key(c)} data-slot={touch ? key(c) : undefined} {...proposedAttr(c)} style={{ position: 'relative', display: 'flex', minWidth: 0 }} onDragOver={touch ? (e) => { e.preventDefault(); if (over !== key(c)) setOver(key(c)); } : undefined} onDrop={touch ? (e) => { e.preventDefault(); dropAt(c); } : undefined}>
                         {touch ? (
                           <div draggable={!!v && !coarse} onDragStart={(e) => { if (!v) return; try { e.dataTransfer.setData('text/plain', key(c)); } catch { /* ignore */ } setDrag({ cell: c }); }} onDragEnd={() => { setDrag(null); setOver(null); }}
                             {...(v ? { onTouchStart: touchStart({ cell: c }, title(c)), onTouchMove: touchMoveEarly, onTouchEnd: touchEndEarly } : {})}
