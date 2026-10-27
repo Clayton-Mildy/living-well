@@ -1,9 +1,10 @@
 // Receipts (design ScrRcpt): snap a nota (read by the simulated OCR), pick the supplier from the directory, tag the section, send to finance;
 // the receipts list (approve / reject / edit / void) and the vendor invoices list (add / edit / approve / mark paid / delete).
 import { useMemo, useState } from 'react';
-import { actorName, live, rp, sortBy, type Receipt, type VendorInvoice } from '@cp/shared';
+import { actorName, live, rp, sortBy, type Receipt, type ReceiptLine, type ReceiptSource, type VendorInvoice } from '@cp/shared';
+import { lineCategory, linesGap, linesTotal, lineProblem, supplierCategory, RECEIPT_SOURCES } from '@cp/shared/rules/purchasing';
 import { activeSections, receiptOfRequest, receiptsList, sectionName, vendorInvoicesList } from '@cp/shared/rules/finance';
-import { Button, Chip, DateField, EmptyState, PageHead, PhotoImg, ImageOpen, Pin, Select, TextField, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Chip, DateField, EmptyState, Icon, Note, PageHead, PhotoImg, ImageOpen, Pin, Select, TextField, usePaged, FONT_BODY } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { mediaUrl } from '../../lib/media';
@@ -12,8 +13,8 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { digits, matches } from './lib';
-import { ReceiptCapture } from './ReceiptCapture';
-import { Badge, ConfirmDialog, FormOverlay, HAIR, Hero, HeroHead, PGroup, PagerBar, PillBtn, RpField, SearchField, dangerStrip, fieldLabel, hrow, inputBox, prow, rowSub, rowTitle } from './parts';
+import { LinesEditor, ReceiptCapture } from './ReceiptCapture';
+import { Badge, ConfirmDialog, FormOverlay, HAIR, Hero, HeroHead, PGroup, PagerBar, PillBtn, RpField, SearchField, Segmented, dangerStrip, fieldLabel, hrow, inputBox, prow, rowSub, rowTitle } from './parts';
 
 const PAPER = 'linear-gradient(160deg, #FBF8F4 0%, #EFE7DD 55%, #DCCFC0 100%)';
 
@@ -85,7 +86,7 @@ export function Receipts() {
 }
 
 // ---------- the receipt fields, shared by the snap panel and the edit dialog ----------
-interface Fields { supplier: string; directoryId?: string; amount: string; sectionId: string; date: string; requestId?: string }
+interface Fields { supplier: string; directoryId?: string; amount: string; sectionId: string; date: string; requestId?: string; source: ReceiptSource; orderNo: string; lines: ReceiptLine[] }
 function ReceiptFields({ v, set, selfId }: { v: Fields; set: (p: Partial<Fields>) => void; selfId?: string }) {
   const s = useClub();
   const t = useT();
@@ -93,6 +94,7 @@ function ReceiptFields({ v, set, selfId }: { v: Fields; set: (p: Partial<Fields>
   const { today } = useNow();
   const sections = activeSections(s);
   const suppliers = sortBy(live(s.directory).filter((d) => d.kind === 'supplier'), (d) => d.name);
+  const gap = linesGap(digits(v.amount), v.lines);
   // approved requests of this section that no receipt settles yet (the one this receipt already settles stays pickable)
   const requests = live(s.budgetRequests).filter((b) => b.sectionId === v.sectionId && b.status === 'approved' && (!receiptOfRequest(s, b.id) || receiptOfRequest(s, b.id)?.id === selfId));
   return (
@@ -104,6 +106,14 @@ function ReceiptFields({ v, set, selfId }: { v: Fields; set: (p: Partial<Fields>
             style={{ height: 44, padding: '0 14px', borderRadius: 999, border: 'none', background: v.directoryId === d.id ? '#24201C' : 'var(--fill, #F4F4F5)', color: v.directoryId === d.id ? '#FFFFFF' : '#24201C', fontSize: FONT_BODY, cursor: 'pointer', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>{d.name}</button>
         ))}
       </div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span style={fieldLabel}>{t('purchasing.boughtAt')}</span>
+        <Segmented label={t('purchasing.boughtAt')} options={RECEIPT_SOURCES.map((x) => ({ value: x, label: t(`purchasing.src.${x}`) }))} value={v.source} onChange={(x) => set({ source: x })} />
+      </div>
+      {v.source !== 'shop' ? <TextField label={t('purchasing.orderNo')} value={v.orderNo} onChange={(x) => set({ orderNo: x })} maxLength={60} /> : null}
+      <LinesEditor lines={v.lines} onChange={(l) => set({ lines: l })} supplierCat={supplierCategory(s, v.directoryId)} />
+      {v.lines.length && digits(v.amount) > 0 && gap !== 0
+        ? <Note tone="ochre" icon="info">{t(gap > 0 ? 'purchasing.gapShort' : 'purchasing.gapOver', { sum: rp(linesTotal(v.lines)), diff: rp(Math.abs(gap)) })}</Note> : null}
       <RpField label={t('finance.rc.amount')} ariaLabel={t('finance.rc.amount')} value={v.amount} onChange={(x) => set({ amount: x })} />
       <Select label={t('finance.budget.section')} value={v.sectionId} onChange={(x) => set({ sectionId: x, requestId: undefined })} options={sections.map((x) => ({ value: x.id, label: sectionName(s, x.id, lang) }))} />
       {requests.length ? (
@@ -134,16 +144,21 @@ function SnapPanel({ onClose }: { onClose: () => void }) {
 }
 
 function EditReceipt({ receipt, onClose }: { receipt: Receipt | null; onClose: () => void }) {
+  const s = useClub();
   const t = useT();
   const act = useAct();
-  const init = (r: Receipt | null): Fields => ({ supplier: r?.supplier || '', directoryId: r?.directoryId, amount: String(r?.amount || ''), sectionId: r?.sectionId || '', date: r?.date || '', requestId: r?.budgetRequestId });
+  const init = (r: Receipt | null): Fields => ({ supplier: r?.supplier || '', directoryId: r?.directoryId, amount: String(r?.amount || ''), sectionId: r?.sectionId || '', date: r?.date || '', requestId: r?.budgetRequestId, source: r?.source ?? 'shop', orderNo: r?.orderNo ?? '', lines: r?.lines ?? [] });
   const [v, setV] = useState<Fields>(init(receipt));
   const [prev, setPrev] = useState(receipt?.id);
   if (receipt?.id !== prev) { setPrev(receipt?.id); setV(init(receipt)); }
   if (!receipt) return null;
-  const ok = !!v.supplier.trim() && digits(v.amount) > 0 && !!v.sectionId;
+  const ok = !!v.supplier.trim() && digits(v.amount) > 0 && !!v.sectionId && !v.lines.some((l) => lineProblem(l));
   const save = async () => {
-    const r = await act('receipt.edit', { id: receipt.id, supplier: v.supplier.trim(), directoryId: v.directoryId ?? null, amount: digits(v.amount), sectionId: v.sectionId, date: v.date, budgetRequestId: v.requestId ?? null }, { ok: t('finance.toast.receiptSaved') });
+    // a line added here takes the category of the supplier as it is now (an OCR line keeps its own)
+    const cat = supplierCategory(s, v.directoryId);
+    const lines = v.lines.map((l) => (l.id.startsWith('new') ? { ...l, category: lineCategory(undefined, cat) } : l));
+    const r = await act('receipt.edit', { id: receipt.id, supplier: v.supplier.trim(), directoryId: v.directoryId ?? null, amount: digits(v.amount), sectionId: v.sectionId, date: v.date, budgetRequestId: v.requestId ?? null,
+      source: v.source, orderNo: v.source !== 'shop' && v.orderNo.trim() ? v.orderNo.trim() : null, lines }, { ok: t('finance.toast.receiptSaved') });
     if (r.ok) onClose();
   };
   return (
@@ -151,6 +166,37 @@ function EditReceipt({ receipt, onClose }: { receipt: Receipt | null; onClose: (
       footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button disabled={!ok} onClick={save}>{t('common.save')}</Button></>}>
       <ReceiptFields v={v} set={(p) => setV((x) => ({ ...x, ...p }))} selfId={receipt.id} />
     </FormOverlay>
+  );
+}
+
+// finance sees what was bought: an "N items" toggle (44px high) that opens the lines under the row, with where it was bought and the order no.
+function ReceiptItems({ r, indent }: { r: Receipt; indent?: number }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const lines = r.lines ?? [];
+  if (!lines.length) return null;
+  return (
+    <div style={{ paddingLeft: indent }}>
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="cp-press" style={{ height: 44, margin: '-6px 0', padding: '0 6px 0 0', border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer', fontFamily: 'Inter' }}>
+        {t('purchasing.nItems', { n: lines.length })}<Icon name="expand_more" size={20} style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
+      </button>
+      {open ? (
+        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
+          {lines.map((l) => (
+            <div key={l.id} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '7px 0', borderTop: HAIR }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <span style={{ fontSize: 15, lineHeight: 1.35, color: '#24201C' }}>{l.name}{l.brand ? ` · ${l.brand}` : ''}</span>
+                <span style={{ fontSize: 13, lineHeight: 1.4, color: '#6B6259' }}>{l.qty} {l.unit} × {rp(l.unitPrice)} · {t(`purchasing.cat.${l.category}`)}</span>
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(l.amount)}</span>
+            </div>
+          ))}
+          <span style={{ borderTop: HAIR, paddingTop: 7, fontSize: 13, lineHeight: 1.4, color: '#6B6259' }}>
+            {t('purchasing.boughtAt')} {t(`purchasing.src.${r.source ?? 'shop'}`)}{r.orderNo ? ` · ${t('purchasing.orderNo')} ${r.orderNo}` : ''}
+          </span>
+        </div>
+      ) : null}
+    </div>
   );
 }
 
@@ -209,6 +255,7 @@ function ReceiptRow({ r, canApprove, onEdit, first }: { r: Receipt; canApprove: 
             ) : null}
           </div>
         ) : null}
+        <ReceiptItems r={r} indent={48} />
         {r.status === 'rejected' && r.note ? <span style={{ fontSize: 14, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
         {rejectStrip}
         {voidDialog}
@@ -238,6 +285,7 @@ function ReceiptRow({ r, canApprove, onEdit, first }: { r: Receipt; canApprove: 
         </div>
         ) : null}
       </div>
+      <ReceiptItems r={r} indent={54} />
       {r.status === 'rejected' && r.note ? <span style={{ fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}>{t('finance.budget.rejectedNote', { note: r.note })}</span> : null}
       {rejectStrip}
       {voidDialog}

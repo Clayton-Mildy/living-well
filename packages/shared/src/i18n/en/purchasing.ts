@@ -3,6 +3,7 @@ export const purchasing = {
   // the eight spend categories (a fixed list)
   'cat.groceries': 'Groceries', 'cat.medical': 'Medical supplies', 'cat.hygiene': 'Hygiene & toiletries', 'cat.activity': 'Activity materials',
   'cat.cleaning': 'Cleaning', 'cat.kitchen': 'Kitchen equipment', 'cat.marketplace': 'Online marketplace', 'cat.other': 'Other',
+  allCategories: 'All categories', noCategory: 'No category',
   'src.shop': 'Shop', 'src.tokopedia': 'Tokopedia', 'src.other': 'Other',
   // capture
   boughtAt: 'Bought at', orderNo: 'Order no.',

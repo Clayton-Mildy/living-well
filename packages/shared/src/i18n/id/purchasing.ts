@@ -5,6 +5,7 @@ import type { purchasing as EN } from '../en/purchasing';
 export const purchasing: Same<typeof EN> = {
   'cat.groceries': 'Bahan makanan', 'cat.medical': 'Perlengkapan medis', 'cat.hygiene': 'Kebersihan diri', 'cat.activity': 'Bahan aktivitas',
   'cat.cleaning': 'Kebersihan ruangan', 'cat.kitchen': 'Peralatan dapur', 'cat.marketplace': 'Marketplace online', 'cat.other': 'Lainnya',
+  allCategories: 'Semua kategori', noCategory: 'Tanpa kategori',
   'src.shop': 'Toko', 'src.tokopedia': 'Tokopedia', 'src.other': 'Lainnya',
   boughtAt: 'Dibeli di', orderNo: 'No. pesanan',
   reading: 'Membaca nota…', autoFilled: 'Diisi otomatis: periksa sebelum mengirim.', readFailed: 'Nota tidak terbaca. Isi secara manual.',
