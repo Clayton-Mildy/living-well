@@ -6,10 +6,11 @@ import { live, sortBy } from '../util';
 import { allPendingReviews, appliedReviews, pendingPhotos } from './members';
 import { READING_FIELDS } from './healthStation';
 import { pendingLeave } from './staffLeave';
+import { formDoc } from './signing';
 
-export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'programme' | 'stock' | 'renewals' | 'payments' | 'leave';
+export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'programme' | 'stock' | 'renewals' | 'payments' | 'leave' | 'signing';
 /** Tab order of the management Approvals screen. */
-export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'programme', 'stock', 'renewals', 'payments', 'leave'];
+export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'programme', 'stock', 'renewals', 'payments', 'leave', 'signing'];
 
 // ---------- the mark ----------
 export type ApprovalState = 'pending' | 'rejected' | null;
@@ -65,7 +66,7 @@ export interface ApprovalItem {
   /** the row id (a change request id for 'profile') */
   id: string;
   type: ApprovalType;
-  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'day' | 'stock' | 'photo' | 'renewal' | 'payment' | 'leave';
+  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'day' | 'stock' | 'photo' | 'renewal' | 'payment' | 'leave' | 'signing';
   at: DT;
   by: Actor;
   memberId?: string;
@@ -105,6 +106,17 @@ export const pendingPayments = (s: ClubState): ApprovalItem[] =>
 /** Round 13: a staff member's request for days off, waiting for management (same list as People → Leave). */
 export const pendingLeaveItems = (s: ClubState): ApprovalItem[] =>
   sortNew(pendingLeave(s).filter((r) => s.staff[r.staffId] && !s.staff[r.staffId].deletedAt).map((r): ApprovalItem => ({ id: r.id, type: 'leave', sub: 'leave', at: r.createdAt, by: staffActor(r.staffId), edit: false })));
+/** Round 14 (D): a membership form the billing contact signed, waiting for management to countersign (id = the member). */
+export function pendingSigning(s: ClubState): ApprovalItem[] {
+  const out: ApprovalItem[] = [];
+  for (const m of live(s.members)) {
+    const sig = formDoc(m)?.signing;
+    if (sig?.status !== 'signed') continue;
+    const step = [...sig.steps].reverse().find((x) => x.status === 'signed');
+    out.push({ id: m.id, type: 'signing', sub: 'signing', at: step?.at ?? '', by: step?.by ?? 'system', memberId: m.id, edit: false });
+  }
+  return sortNew(out);
+}
 export const pendingPhotoItems = (s: ClubState): ApprovalItem[] =>
   pendingPhotos(s).map((p) => ({ id: p.id, type: 'photos' as const, sub: 'photo' as const, at: p.createdAt, by: staffActor(p.takenBy), memberId: p.memberIds[0], edit: false }));
 /** Change requests: gated ones wait for approval; flagged ones were applied at once and wait for a review. */
@@ -112,7 +124,7 @@ export const pendingProfile = (s: ClubState): ApprovalItem[] =>
   sortNew([...allPendingReviews(s), ...appliedReviews(s)].map((c) => ({ id: c.id, type: 'profile' as const, sub: c.kind === 'approval' ? ('cr' as const) : ('flag' as const), at: c.createdAt, by: c.submittedBy, memberId: c.target.memberId, edit: c.op !== 'create' })));
 
 export const pendingItems = (s: ClubState, type: ApprovalType): ApprovalItem[] =>
-  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, programme: pendingProgramme, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments, leave: pendingLeaveItems } as const)[type](s);
+  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, programme: pendingProgramme, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments, leave: pendingLeaveItems, signing: pendingSigning } as const)[type](s);
 export function approvalCounts(s: ClubState): Record<ApprovalType, number> {
   return Object.fromEntries(APPROVAL_TYPES.map((t) => [t, pendingItems(s, t).length])) as Record<ApprovalType, number>;
 }

@@ -32,7 +32,7 @@ const STATUS_ICON: Record<string, string> = { approved: 'task_alt', rejected: 'b
 const TAB_FOR_SUB: Record<string, string> = { log: 'care', note: 'notes', reading: 'care', renewal: 'plan', payment: 'plan' };
 const LEGACY_TABS: Record<string, Tab> = { pending: 'profile', applied: 'profile' };
 /** The icon tile of a row that is not about a member. */
-const TYPE_ICON: Partial<Record<ApprovalType, string>> = { menu: 'restaurant_menu', programme: 'event_note', stock: 'inventory_2', leave: 'beach_access' };
+const TYPE_ICON: Partial<Record<ApprovalType, string>> = { menu: 'restaurant_menu', programme: 'event_note', stock: 'inventory_2', leave: 'beach_access', signing: 'draw' };
 
 /** A checkbox in the v3 quiet style (also used on photo tiles' own button). */
 function Check({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
@@ -76,6 +76,7 @@ export function Reviews() {
     renewals: usePaged(items.renewals, 10, 'renewals'),
     payments: usePaged(items.payments, 10, 'payments'),
     leave: usePaged(items.leave, 10, 'leave'),
+    signing: usePaged(items.signing, 10, 'signing'),
     history: usePaged(history, 10, 'history'),
   };
   const [sels, setSels] = useState<Partial<Record<Tab, string[]>>>({});
@@ -560,6 +561,7 @@ export function Reviews() {
           {card(paged.leave.rows.map(quietRow))}
         </>
       ) : empty('leave')) : null}
+      {current === 'signing' ? (items.signing.length ? card(paged.signing.rows.map(quietRow)) : empty('signing')) : null}
       {current === 'photos' ? (
         photos.length ? (
           <>

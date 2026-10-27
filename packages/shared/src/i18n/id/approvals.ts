@@ -34,6 +34,7 @@ export const approvals: Same<typeof EN> = {
   'tab.payments': 'Pembayaran', 'none.payments': 'Tidak ada pembayaran untuk dikonfirmasi', 'none.paymentsSub': 'Tunai dan transfer bank yang dicatat meja depan muncul di sini sampai keuangan atau manajemen mengonfirmasinya.', 'kind.payment': 'Pembayaran',
   'sum.payment': '{amount} {method} · {invoice} · dicatat {who}', 'notif.rejected.payments': 'Keuangan tidak mengonfirmasi {n} catatan pembayaran Anda: {reason}',
   // round 13: permintaan cuti staf (keputusan yang sama dengan Orang → Cuti)
+  'tab.signing': 'Tanda tangan', 'none.signing': 'Tidak ada formulir untuk ditandatangani', 'kind.signing': 'Formulir keanggotaan',
   'tab.leave': 'Cuti', 'none.leave': 'Tidak ada permintaan cuti untuk diputuskan', 'none.leaveSub': 'Cuti yang diajukan staf muncul di sini sampai manajemen menjawab.', 'kind.leave': 'Permintaan cuti',
   'sum.leave': '{range} · {days} · {reason} · sisa {left} dari {n}', 'sum.leaveDays': '{n} hari', 'sum.leaveDay': '1 hari', approveAllLeave: 'Setujui semua',
   rejectSubLeave: 'Staf diberi tahu bahwa permintaannya ditolak, beserta catatan Anda jika ada.', rejectReasonLeave: 'Catatan untuk {name} (opsional)', rejectLeaveTitle: 'Tolak permintaan cuti ini',
