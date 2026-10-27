@@ -93,8 +93,8 @@ describe('the drop-in club: no expected members, escorts, absences, bookings or 
   it('the extra-day note names the visit, the quota and the price', () => {
     expect(translate('en', 'lobby.extraVisit', { n: 11, q: 10, p: 'Rp 650.000' })).toBe('Visit 11 of 10 this month: an extra day, Rp 650.000 on next month’s invoice.');
     expect(translate('id', 'lobby.notif.extraVisit', { name: 'Oma Lina', n: 11, price: 'Rp 650.000' })).toContain('Rp 650.000');
-    expect(translate('en', 'lobby.visitOf', { n: 8, q: 10 })).toBe('Flex · visit 8 of 10 this month');
-    expect(translate('en', 'lobby.goldU')).toBe('Gold · unlimited days');
+    expect(translate('en', 'lobby.visitOf', { plan: 'Flex', n: 8, q: 10 })).toBe('Flex · visit 8 of 10 this month');
+    expect(translate('en', 'lobby.goldU', { plan: 'Gold' })).toBe('Gold · unlimited days');
   });
 });
 

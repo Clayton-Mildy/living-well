@@ -3,7 +3,7 @@
 // progress bar; tablet and laptop: a dialog with the steps on a rail. What is typed is kept on this device until it is sent.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import type { Plan } from '@cp/shared';
+import { planLabel, type Plan } from '@cp/shared';
 import { seniorName } from '@cp/shared/rules/enquiries';
 import { Button, Dialog, Eyebrow, FONT_SMALL, Note, PhoneScreen, RailDot } from '../../../components/ui';
 import { useDevice } from '../../../hooks/useDevice';
@@ -29,7 +29,7 @@ export type { RegMode, RegStep, RegState } from './steps';
 
 export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; onDone: (memberId?: string) => void }) {
   const t = useT();
-  const { fds } = useFmt();
+  const { fds, lang } = useFmt();
   const s = useClub();
   const act = useAct();
   const navigate = useNavigate();
@@ -139,7 +139,7 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
   };
   const title = lead ? seniorName({ senior: { title: st.title, name: st.name.trim() || lead.senior.name } }) : st.name.trim() ? `${st.title} ${st.name.trim()}` : t('members.addTitle');
   const eyebrow = lead ? t('enq.jn_eyebrow') : t('members.newMember');
-  const submitLabel = lead ? joinLabel(t, role, (st.plan || 'flex') as Plan) : t('members.create');
+  const submitLabel = lead ? joinLabel(t, role, planLabel(s, (st.plan || 'flex') as Plan, lang)) : t('members.create');
   const progress = `${stepI + 1}/${REG_STEPS.length}`;
   const stepOf = t('reg.stepOf', { n: stepI + 1, total: REG_STEPS.length, step: t('reg.' + step) });
 

@@ -1,6 +1,6 @@
 // What one entry waiting for approval looks like in the Approvals screen: a short summary line and the full view (old → new for edits).
 // Pure view-model: the screen renders the pieces. Profile changes use describeCr (reviewDiff.ts).
-import { memberName, displayName, actorName, rp, publishDateOf, scheduleVersionFor, sessionsOn, staffCall, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type ScheduleCell, type ScheduleVersion, type Slot } from '@cp/shared';
+import { memberName, displayName, actorName, planLabel, rp, publishDateOf, scheduleVersionFor, sessionsOn, staffCall, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type ScheduleCell, type ScheduleVersion, type Slot } from '@cp/shared';
 import type { ApprovalItem, ApprovalType, HistoryItem } from '@cp/shared/rules/approvals';
 import { APPROVAL_TYPES, DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approvals';
 import { diffTemplates, templateOn, weekDate, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
@@ -147,6 +147,7 @@ function renewalView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   const monthName = (x: string) => fmt.fd(`${x}-01`, { month: 'long' });
   const summary = f.outcome === 'upgrade' ? t('approvals.sum.renewalUpgrade', { month: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) })
     : f.outcome === 'downgrade' ? t('approvals.sum.renewalDowngrade', { month: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) })
+    : f.outcome === 'switch' ? t('approvals.sum.renewalSwitch', { plan: f.plan ? planLabel(s, f.plan, fmt.lang ?? 'en') : '', month: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) })
     : f.outcome === 'leave' ? t('approvals.sum.renewalLeave', { months: (f.leaveMonths ?? []).map(monthName).join(', ') })
     : f.outcome === 'stop' ? t('approvals.sum.renewalStop', { date: fmt.fds(f.lastDay ?? '') })
     : t(`renewals.outcome.${f.outcome}`);

@@ -1,7 +1,7 @@
 // KC round 12: pieces the six registration steps share — the props every step gets, the section, the two-line choice chip (moved here from the
 // enquiry dialogs), one ID at a time (with its person), read-only rows, and the "already on file" warning.
 import type { ReactNode } from 'react';
-import { listName, type ClubState, type ISODate, type KtpKind, type Plan } from '@cp/shared';
+import { listName, type ClubState, type ISODate, type KtpKind } from '@cp/shared';
 import { findDuplicates, type FieldIssue } from '@cp/shared/rules/members';
 import { seniorName } from '@cp/shared/rules/enquiries';
 import { FONT_SMALL, HAIRLINE, Note, Toggle } from '../../../components/ui';
@@ -49,7 +49,7 @@ export function StackChip({ label, sub, selected, off, onClick }: { label: React
   );
 }
 /** What the submit button of a Join says: management creates the member, everyone else sends it to management. */
-export const joinLabel = (t: TFn, role: string | null, plan: Plan) => t(role === 'mgmt' ? 'enq.createMember' : 'enq.sendForApproval', { plan: t('mgmt.plan_' + plan) });
+export const joinLabel = (t: TFn, role: string | null, plan: string) => t(role === 'mgmt' ? 'enq.createMember' : 'enq.sendForApproval', { plan });
 
 export function Rows({ rows }: { rows: [ReactNode, ReactNode][] }) {
   return (

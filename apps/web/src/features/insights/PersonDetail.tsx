@@ -1,7 +1,7 @@
 // Insights: one member's detail over the chosen period (a pushed screen on phones, a sheet on tablet and laptop): visits per month, the days they
 // usually come, how their arrival time moves, and their last 10 visits.
 import { useMemo } from 'react';
-import { listName, memberName } from '@cp/shared';
+import { listName, memberName, planLabel } from '@cp/shared';
 import { visitInsights, type InsightPeriod, type PersonStats } from '@cp/shared/rules/insights';
 import { Avatar, PhoneScreen, Sheet, TrendChart } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -9,7 +9,7 @@ import { memberPhoto } from '../../lib/media';
 import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { Bars, type BarItem } from './charts';
-import { FLEX_COLOR, GOLD_COLOR, Line, Panel, hhmm, num1, pct, useStay, useWeekdays } from './lib';
+import { Line, Panel, hhmm, num1, planColor, pct, useStay, useWeekdays } from './lib';
 
 export function PersonDetail({ memberId, period, periodLabel, today, todayDone, onClose }: { memberId: string | null; period: InsightPeriod; periodLabel: string; today: string; todayDone: boolean; onClose: () => void }) {
   const s = useClub();
@@ -33,7 +33,7 @@ function Body({ memberId, period, periodLabel, today, todayDone }: { memberId: s
     [s, memberId, period, today, todayDone],
   );
   if (!m) return null;
-  const color = p?.plan === 'gold' ? GOLD_COLOR : FLEX_COLOR;
+  const color = planColor(p?.plan ?? 'flex', 0);
   const month = (mo: string) => fmt.fd(`${mo}-01`, { month: 'short' });
   const monthly: BarItem[] = (p?.monthly ?? []).map((x) => ({ key: x.month, label: month(x.month), value: x.visits, tip: t('insights.monthlyTip', { month: fmt.fmonth(x.month, true), n: x.visits }) }));
   const total = p?.visits ?? 0;
@@ -48,7 +48,7 @@ function Body({ memberId, period, periodLabel, today, todayDone }: { memberId: s
         <Avatar name={memberName(m)} member={m} tone={m.photoTone} size={56} src={memberPhoto(m)} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0 }}>
           <span style={{ fontSize: 20, fontWeight: 500, color: '#2B231C', lineHeight: '26px' }}>{listName(m)}</span>
-          <span style={{ fontSize: 14, color: '#6B6259' }}>{t(p?.plan === 'gold' ? 'insights.planGold' : 'insights.planFlex')} · {periodLabel}</span>
+          <span style={{ fontSize: 14, color: '#6B6259' }}>{planLabel(s, p?.plan ?? 'flex', fmt.lang)} · {periodLabel}</span>
         </div>
       </div>
       <Panel gap={0}>

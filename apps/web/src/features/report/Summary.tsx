@@ -3,13 +3,14 @@
 import type { CSSProperties } from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { Photo } from '@cp/shared';
-import { listName, FACES, memberName, displayName } from '@cp/shared';
+import { listName, FACES, memberName, displayName, planLabel } from '@cp/shared';
 import { FIXED_SLOTS, LUNCH_AMOUNTS, activityName, roomName } from '@cp/shared/rules/activity';
 import type { DayReport, ReportSession } from '@cp/shared/rules/dailyReport';
 import { readingSummary } from '@cp/shared/rules/healthStation';
 import { FACE_ICON, Group, Icon, PhotoThumbs, StaffOnlyTag } from '../../components/ui';
 import { PendingMark } from '../../components/PendingMark';
-import { useFmt, useT, type TFn } from '../../lib/i18n';
+import { useFmt, useLang, useT, type TFn } from '../../lib/i18n';
+import { useClub } from '../../store/replica';
 import { rowLine } from '../activity/lib';
 import { DotItem, MemberAvatar } from '../lobby/parts';
 import { Fact, HEALTH_DOT, LUNCH_DOT, LUNCH_KEY, Line, MUTED, MoreRow, OCHRE, RUST, SAGE, Tag, useCap, visitTime } from './parts';
@@ -42,6 +43,8 @@ export function Summary({ r, wide, openPhotos }: { r: DayReport; wide: boolean; 
 // ---------- who came ----------
 function Came({ r }: { r: DayReport }) {
   const t = useT();
+  const s = useClub();
+  const lang = useLang();
   const go = useNavigate();
   const cap = useCap(r.members, 8);
   if (!r.members.length) return null;
@@ -54,7 +57,7 @@ function Came({ r }: { r: DayReport }) {
             <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{listName(x.m)}</span>
             <span style={{ ...sub, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: '2px 10px' }}>
               <span style={{ fontVariantNumeric: 'tabular-nums' }}>{visitTime(t, x)}</span>
-              <span>{x.flex ? t('report.flexVisit', { n: x.flex.n, q: x.flex.quota }) : t('report.gold')}</span>
+              <span>{x.flex ? t('report.flexVisit', { plan: planLabel(s, x.plan, lang), n: x.flex.n, q: x.flex.quota }) : t('report.gold', { plan: planLabel(s, x.plan, lang) })}</span>
               {x.extra ? <DotItem color={RUST}>{t('report.extraDay')}</DotItem> : null}
             </span>
           </span>

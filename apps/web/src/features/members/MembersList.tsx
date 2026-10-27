@@ -5,7 +5,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym, type Plan } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, activePlans, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
-import { planLabel } from '@cp/shared/rules/plans';
+import { isDaysPlan, planDefs, planLabel } from '@cp/shared/rules/plans';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
 import { useDevice, padFor } from '../../hooks/useDevice';
@@ -58,11 +58,12 @@ export function MembersList() {
   const open = (r: MemberRow) => navigate(`/members/${r.m.id}`);
 
   const planText = (r: MemberRow) => {
-    if (r.plan === 'gold') return { text: t('members.planGold'), tip: t('members.planGoldTip') };
+    const plan = planLabel(s, r.plan, lang);
+    if (!isDaysPlan(s, r.plan)) return { text: t('members.planGold', { plan }), tip: t('members.planGoldTip', { plan }) };
     const fm = flexMonth(s, r.m, ym(today), today);
     const quota = fm.quota ?? 0;
     const n = Math.min(fm.used, quota);
-    return { text: t('members.planFlex', { n, q: quota }), tip: t('members.planFlexTip', { n, q: quota }) };
+    return { text: t('members.planFlex', { plan, n, q: quota }), tip: t('members.planFlexTip', { plan, n, q: quota }) };
   };
   /** Quiet subscription dates: "Since 12 Mar 2025" and "Renews 31 Oct" / "Ends 31 Oct" / "Ended 30 Sep" (the year only when it is not this one). */
   const subDates = (r: MemberRow) => {
@@ -75,9 +76,12 @@ export function MembersList() {
     return out;
   };
   // KC round 14: In the club and Active say how many are Flex and how many Gold
-  const split = (f === 'in' || f === 'active') ? (planOn ? { flex: planOn === 'flex' ? counts.split.in.flex : 0, gold: planOn === 'gold' ? counts.split.in.gold : 0 } : counts.split[f]) : null;
-  const splitEl = split ? (
-    <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{t('members.split', { f: split.flex, g: split.gold })}</div>
+  // round 15 phase 2: one count per plan (Flex and Gold always, a catalogue plan once it has members, a retired one too); the Plan chip narrows it to that plan
+  const splitRows = f === 'in' ? inRows : f === 'active' ? rows.filter(FILTERS.active) : null;
+  const splitParts = splitRows ? planDefs(s).map((d) => ({ id: d.id, n: planOn && planOn !== d.id ? 0 : splitRows.filter((r) => r.plan === d.id).length })).filter((x) => (planOn && planOn !== 'flex' && planOn !== 'gold' ? x.id === planOn : x.id === 'flex' || x.id === 'gold' || x.n > 0)) : null;
+  const splitText = !splitParts ? '' : splitParts.length === 2 ? t('members.split', { f: splitParts[0].n, g: splitParts[1].n }) : splitParts.map((x) => `${x.n} ${planLabel(s, x.id, lang)}`).join(' · ');
+  const splitEl = splitParts ? (
+    <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{splitText}</div>
   ) : null;
   // round 15: the Check on filter says how long "not seen" is (a per-device choice that also drives the lobby rail)
   // round 15: while In the club is on, Plan chips narrow it (the plans come from activePlans, so phase 2's catalogue shows up here)

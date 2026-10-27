@@ -4,7 +4,7 @@ import type { members as EN } from '../en/members';
 export const members: Same<typeof EN> = {
   eyebrow: '{n} anggota aktif', eyebrowPending: '{n} menunggu persetujuan', add: 'Tambah anggota', searchPh: 'Cari nama, keluarga, atau nomor ponsel', searchLabel: 'Cari anggota', filter: 'Saring anggota',
   'f.active': 'Aktif', 'f.in': 'Di klub', 'f.att': 'Perhatian kesehatan', 'f.flex': 'Flex', 'f.gold': 'Gold', 'f.checkOn': 'Lama tidak datang', 'f.ended': 'Berakhir',
-  planGold: 'Gold', planFlex: 'Flex {n}/{q}', planFlexTip: 'Paket Flex: {n} dari {q} kunjungan terpakai bulan ini', planGoldTip: 'Paket Gold: kunjungan tanpa batas', newTag: 'anggota baru', paymentOverdue: 'Pembayaran terlambat', endingOn: 'berakhir {d}',
+  planGold: '{plan}', planFlex: '{plan} {n}/{q}', planFlexTip: 'Paket {plan}: {n} dari {q} kunjungan terpakai bulan ini', planGoldTip: 'Paket {plan}: kunjungan tanpa batas', newTag: 'anggota baru', paymentOverdue: 'Pembayaran terlambat', endingOn: 'berakhir {d}',
   since: 'Sejak {d}', renews: 'Perpanjangan {d}', endsOn: 'Berakhir {d}', endedOn: 'Berakhir {d}', sortLabel: 'Urutkan anggota', 'sort.name': 'Nama', 'sort.startNew': 'Tanggal mulai, terbaru', 'sort.startOld': 'Tanggal mulai, terlama', 'sort.endSoon': 'Tanggal berakhir, terdekat',
   lastVisit: 'Kunjungan terakhir {d}', neverVisited: 'Belum pernah datang', pagerLabel: 'Halaman anggota',
   noContact: 'Belum ada kontak keluarga',

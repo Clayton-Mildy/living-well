@@ -3,7 +3,7 @@ export const members = {
   // list
   eyebrow: '{n} active members', eyebrowPending: '{n} pending approval', add: 'Add member', searchPh: 'Search by name, family or phone', searchLabel: 'Search members', filter: 'Filter members',
   'f.active': 'Active', 'f.in': 'In the club', 'f.att': 'Health attention', 'f.flex': 'Flex', 'f.gold': 'Gold', 'f.checkOn': "Haven't come lately", 'f.ended': 'Ended',
-  planGold: 'Gold', planFlex: 'Flex {n}/{q}', planFlexTip: 'Flex plan: {n} of {q} visits used this month', planGoldTip: 'Gold plan: unlimited visits', newTag: 'new member', paymentOverdue: 'Payment overdue', endingOn: 'ends {d}',
+  planGold: '{plan}', planFlex: '{plan} {n}/{q}', planFlexTip: '{plan} plan: {n} of {q} visits used this month', planGoldTip: '{plan} plan: unlimited visits', newTag: 'new member', paymentOverdue: 'Payment overdue', endingOn: 'ends {d}',
   since: 'Since {d}', renews: 'Renews {d}', endsOn: 'Ends {d}', endedOn: 'Ended {d}', sortLabel: 'Sort members', 'sort.name': 'Name', 'sort.startNew': 'Start date, newest', 'sort.startOld': 'Start date, oldest', 'sort.endSoon': 'End date, soonest',
   lastVisit: 'Last visit {d}', neverVisited: 'No visits yet', pagerLabel: 'Members pages',
   noContact: 'No family contact on file',

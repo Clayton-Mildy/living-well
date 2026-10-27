@@ -1,7 +1,7 @@
 // Round 15, phase 2: the plan catalogue. Flex and Gold are virtual entries; custom plans are stored in the club settings.
 import { describe, it, expect } from 'vitest';
 import { buildSeed, type ClubState, type PlanDef } from '../index';
-import { isDaysPlan, planDef, planDefs, planLabel, planPrice, planQuota } from './plans';
+import { isDaysPlan, isPlanId, planDef, planDefs, planLabel, planOf, planPrice, planQuota } from './plans';
 import { priceOn } from './billing';
 
 const T = '2026-10-21';
@@ -53,5 +53,18 @@ describe('plan helpers', () => {
   it('labels follow the language and fall back to the English name', () => {
     expect([planLabel(s, 'plan_1', 'en'), planLabel(s, 'plan_1', 'id'), planLabel(s, 'plan_2', 'id'), planLabel(s, 'flex', 'id'), planLabel(s, 'gold', 'en')]).toEqual(['Flex 8', 'Fleks 8', 'Private', 'Flex', 'Gold']);
     expect(planLabel(s, 'plan_9', 'en')).toBe('plan_9');
+  });
+});
+
+describe('planOf', () => {
+  it('accepts Flex, Gold and any active catalogue plan', () => {
+    const s = withPlans(FLEX8, PRIVATE);
+    expect(['flex', 'gold', 'plan_1'].map((p) => planOf(s, p))).toEqual(['flex', 'gold', 'plan_1']);
+  });
+  it('refuses a retired, an unknown or a malformed id with the invalid-input code (or the one asked for)', () => {
+    const s = withPlans(FLEX8, PRIVATE);
+    for (const bad of ['plan_2', 'plan_9', 'platinum', '', null, undefined, 7]) expect(() => planOf(s, bad)).toThrow('err.invalid');
+    expect(() => planOf(s, 'plan_2', 'members.err.planInvalid')).toThrow('members.err.planInvalid');
+    expect(isPlanId('plan_1') && isPlanId('gold') && !isPlanId('plan_') && !isPlanId('planet')).toBe(true);
   });
 });

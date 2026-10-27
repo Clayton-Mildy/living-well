@@ -3,7 +3,7 @@
 // Round 8c, on a laptop the dark card is a 420px column on the left, Plans and Invoices the lists on the right. Round 8d: the sidebar has no Billing item any more
 // (it is pushed from Me), so the "‹ Me" link shows on every width.
 import { Fragment, useState, type ReactNode } from 'react';
-import { memberName, displayName, paidDate, rp, type Bank, type Member } from '@cp/shared';
+import { memberName, displayName, isDaysPlan, paidDate, planLabel, rp, type Bank, type Member } from '@cp/shared';
 import { BANKS, combinedVa, historyRows, isOpenStatus, nextIssueDate, planSummary, type InvRow } from '@cp/shared/rules/family';
 import { familyBill, rpShort } from '@cp/shared/rules/familyMe';
 import { Avatar, Icon } from '../../components/ui';
@@ -56,14 +56,14 @@ export function FamilyBilling() {
   // ----- plans -----
   const planRow = (m: Member, i: number) => {
     const p = planSummary(s, m, today);
-    const flex = p.plan === 'flex';
+    const flex = isDaysPlan(s, p.plan);
     const extra = flex && !p.ended ? (p.extra.length ? t(p.extra.length > 1 ? 'family.visitsExtraN' : 'family.visitsExtra', { n: p.extra.length, p: rp(p.price * p.extra.length), m: fmt.fmonth(p.invoiceMonth) })
       : p.left === 0 ? t('fme.nextExtra', { p: rp(p.price), m: fmt.fmonth(p.invoiceMonth) }) : '') : '';
     return (
       <div key={m.id} data-testid="plan-card" data-member={m.id} data-plan={p.plan} style={{ display: 'flex', alignItems: 'flex-start', gap: 12, padding: '12px 14px', borderTop: i ? HAIR : 'none' }}>
         <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={36} />
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-          <span style={{ fontSize: 15, fontWeight: 500, overflowWrap: 'anywhere' }}>{t('fme.planName', { n: displayName(m), p: t(flex ? 'family.planFlex' : 'family.planGold') })}</span>
+          <span style={{ fontSize: 15, fontWeight: 500, overflowWrap: 'anywhere' }}>{t('fme.planName', { n: displayName(m), p: planLabel(s, p.plan, fmt.lang) })}</span>
           <span style={{ fontSize: 13, color: F.muted }} data-testid="plan-line">{p.ended ? t('fme.ended') : flex ? t('family.visitsUsed', { n: p.used, q: p.quota ?? 0, m: fmt.fmonth(p.month) }) : t('fme.anyOpenDay')}</span>
           {extra ? <span style={{ fontSize: 13, fontWeight: 500, color: F.ochre }} data-testid="extra-visits">{extra}</span> : null}
           <div style={{ marginTop: 4 }}><PlanAsk m={m} quiet={!b.pays} /></div>

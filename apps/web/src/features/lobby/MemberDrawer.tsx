@@ -2,11 +2,11 @@
 // family and nanny with real tel: links, and the actions: check in / check out, undo.
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listName, contactsOfMember, fmtPhone, live, memberAge, memberName, pron, sortBy, todayReading, attOf, type ClubState, type Member } from '@cp/shared';
+import { listName, contactsOfMember, fmtPhone, live, memberAge, memberName, planLabel, planOn, pron, sortBy, todayReading, attOf, type ClubState, type Member } from '@cp/shared';
 import { visitInfo } from '@cp/shared/rules/lobby';
 import { Button, Drawer, FONT_BODY, Group, Icon, PhoneScreen, StaffOnlyTag } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
-import { useT, type TFn } from '../../lib/i18n';
+import { useLang, useT, type TFn } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { CallLink, FlagChip, MemberAvatar, ReadingBadge, Stack, cap, memberFlags, relText } from './parts';
@@ -23,13 +23,15 @@ export interface DrawerActions {
 }
 
 /** "Flex · visit 8 of 10 this month" or "Gold · unlimited days". */
-export function visitLine(t: TFn, s: ClubState, m: Member, date: string) {
+export function visitLine(t: TFn, s: ClubState, m: Member, date: string, lang: 'en' | 'id') {
   const v = visitInfo(s, m, date);
-  return v.flex ? t('lobby.visitOf', { n: v.n, q: v.quota ?? 0 }) : t('lobby.goldU');
+  const plan = planLabel(s, planOn(m, date).plan, lang);
+  return v.flex ? t('lobby.visitOf', { plan, n: v.n, q: v.quota ?? 0 }) : t('lobby.goldU', { plan });
 }
 
 export function MemberDrawer({ memberId, onClose, actions }: { memberId: string | null; onClose: () => void; actions: DrawerActions }) {
   const t = useT();
+  const lang = useLang();
   const s = useClub();
   const { today } = useNow();
   const navigate = useNavigate();
@@ -52,7 +54,7 @@ export function MemberDrawer({ memberId, onClose, actions }: { memberId: string 
 
   const primaryBtn = primary ? <button type="button" onClick={primary.run} className={`h-bronze${isPhone ? ' cp-press' : ''}`} style={{ width: '100%', height: isPhone ? 50 : 52, borderRadius: 999, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 16, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter' }}>{primary.text}</button> : undefined;
   const openProfile = () => { onClose(); navigate(`/members/${m.id}`); };
-  const sub = `${memberAge(m, today) ?? ''} · ${visitLine(t, s, m, today)}`;
+  const sub = `${memberAge(m, today) ?? ''} · ${visitLine(t, s, m, today, lang)}`;
   const todayBody = (
     <>
       <span style={{ fontSize: 16, lineHeight: 1.4 }}>{todayText}</span>

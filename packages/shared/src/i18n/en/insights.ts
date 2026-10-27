@@ -84,7 +84,7 @@ export const insights = {
   recent: 'Last 10 visits',
   noCheckOut: 'no check-out',
   // Flex quota (under Flex, By plan)
-  fQuota: 'Flex quota',
+  fQuota: '{plan} quota',
   fUsedAll: 'Used it all',
   fNotAll: "Didn't use it all",
   fMembers: 'Members',
@@ -105,7 +105,7 @@ export const insights = {
   fRunningOne: '1 member still has visits left this month: not counted yet',
   fNoneUsedAll: 'Nobody used the whole quota',
   fNoneNotAll: 'Nobody left visits unused',
-  fNoMonths: 'No Flex members in these months',
+  fNoMonths: 'No {plan} members in these months',
   // By plan: all plans or one
   planView: 'Which plans', allPlans: 'All plans',
   // KC round 9: the Membership tab (members in and out, by plan)

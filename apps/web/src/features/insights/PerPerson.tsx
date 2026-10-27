@@ -1,13 +1,13 @@
 // Insights, Per person: search, sort (most visits, fewest visits, last visit) and one quiet row per member (name, plan, usual days, visits). A tap
 // opens that member's detail (monthly visits, usual days, arrival trend, last 10 visits).
 import { useMemo, useState } from 'react';
-import { listName, memberName } from '@cp/shared';
+import { listName, memberName, planLabel } from '@cp/shared';
 import { matchesQuery } from '@cp/shared/rules/members';
 import { PERSON_SORTS, sortPeople, type PersonSort, type VisitInsights } from '@cp/shared/rules/insights';
 import { Avatar, Group, Icon, Pager, Select, usePaged } from '../../components/ui';
 import { memberPhoto } from '../../lib/media';
 import { useDevice } from '../../hooks/useDevice';
-import { useT } from '../../lib/i18n';
+import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { num1, useWeekdays } from './lib';
 
@@ -17,6 +17,7 @@ const SORT_KEY: Record<PersonSort, string> = { most: 'insights.sortMost', fewest
 export function PerPerson({ data, onOpen }: { data: VisitInsights; onOpen: (memberId: string) => void }) {
   const s = useClub();
   const t = useT();
+  const fmt = useFmt();
   const { isPhone } = useDevice();
   const wd = useWeekdays();
   const [q, setQ] = useState('');
@@ -53,7 +54,7 @@ export function PerPerson({ data, onOpen }: { data: VisitInsights; onOpen: (memb
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '21px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{name}</span>
                   <span style={{ fontSize: 13, color: '#6B6259', lineHeight: '18px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {t(p.plan === 'flex' ? 'insights.planFlex' : 'insights.planGold')} · {p.visits ? days : t('insights.none')}
+                    {planLabel(s, p.plan, fmt.lang)} · {p.visits ? days : t('insights.none')}
                   </span>
                 </span>
                 <span style={{ flex: 'none', display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, fontVariantNumeric: 'tabular-nums' }}>

@@ -29,7 +29,7 @@ export interface MonthReport { period: InsightPeriod; prev: InsightPeriod; month
 
 export const END_REASONS: EndReason[] = ['movedAway', 'careNeeds', 'careHome', 'passedAway', 'familyDecision', 'unpaid', 'leaveOverrun'];
 export const LOST_REASONS: LostReason[] = ['price', 'distance', 'notReady', 'otherPlace', 'health', 'other'];
-const KEPT = new Set(['continue', 'upgrade', 'downgrade', 'leave']);
+const KEPT = new Set(['continue', 'upgrade', 'downgrade', 'switch', 'leave']);
 
 /** The period just before `p`: the same number of days, ending the day before `p.from`. */
 export function prevPeriod(p: InsightPeriod): InsightPeriod {

@@ -150,3 +150,17 @@ describe('a new member who is still being typed', () => {
     expect(page1Values(e)).toMatchObject({ kin: f.name, signer: f.name, kinRelation: 'Putri' });
   });
 });
+
+describe('a catalogue plan on the form (round 15)', () => {
+  it('prints the plan\'s name and its own monthly price, for a saved member and for one still being typed', () => {
+    const s = seed();
+    s.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }];
+    const price = priceOn(s, T);
+    price.plans = { plan_1: 2_100_000 };
+    price.registration = 2_500_000;
+    s.members.m1.plans = [{ from: '2020-01-01', plan: 'plan_1', by: 'staff:s9' }];
+    expect(page1Values(applicationDataOf(s, 'm1', T))).toMatchObject({ registrationFee: `Flex 8 · ${rp(2_500_000)}`, monthlyFee: rp(2_100_000) });
+    const input = { name: 'Rosa Santoso', dob: '1947-05-02', address: 'Jl. Melati 3', plan: 'plan_1' as const, nanny: null, contact: { name: 'Dina', phone: '0812', relation: 'daughter' as const, primary: true }, health: { conditions: [], food: [], foodOther: '', drugs: [] } };
+    expect(page1Values(applicationDataFromInput(s, input, T))).toMatchObject({ registrationFee: `Flex 8 · ${rp(2_500_000)}`, monthlyFee: rp(2_100_000) });
+  });
+});

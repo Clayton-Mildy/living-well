@@ -556,3 +556,36 @@ describe('lead history (round 13)', () => {
     expect(leadFunnel(ok, '2026-10-01', '2026-10-31').joined).toBe(1);
   });
 });
+
+describe('plans from the catalogue (round 15)', () => {
+  const withPlans = () => {
+    const s = structuredClone(seed().citra);
+    s.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+    return s;
+  };
+  const input = { enquiryId: 'e1', start: '2026-10-26', ...paper };
+  it('enquiry.convert accepts an active catalogue plan and refuses a retired or unknown one', () => {
+    const s = withPlans();
+    const r = run(s, 'enquiry.convert', { ...input, plan: 'plan_1' }, 's9');
+    const m = r.state.members[r.result.memberId as string];
+    expect(m.plans[0].plan).toBe('plan_1');
+    fails(s, 'enquiry.convert', { ...input, plan: 'plan_2' }, 's9', 'err.invalid');
+    fails(s, 'enquiry.convert', { ...input, plan: 'plan_9' }, 's9', 'err.invalid');
+  });
+  it('the online form takes an active catalogue plan; a retired one is dropped from a saved draft and refused on submit', () => {
+    const s = withPlans();
+    const sys = (st: ClubState, name: string, inp: unknown) => execute(st, name, inp, systemUser('citra'), clock, mid());
+    const made = run(s, 'enquiry.create', lead, 's1');
+    const id = made.result.enquiryId as string;
+    const sent = run(made.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    const token = sent.result.token as string;
+    const draft = (plan: string) => ({
+      title: 'Oma', name: 'Rosa Santoso', dob: '1947-05-02', address: 'Jl. Melati 3', contact: { name: 'Dina Santoso', relation: 'daughter', phone: '0812 5550 1234' }, plan,
+      health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
+    });
+    expect(sys(sent.state, 'enquiry.formSave', { token, step: 4, expect: null, draft: draft('plan_1') }).state.enquiries[id].form!.draft).toMatchObject({ plan: 'plan_1' });
+    expect(sys(sent.state, 'enquiry.formSave', { token, step: 4, expect: null, draft: draft('plan_2') }).state.enquiries[id].form!.draft!.plan).toBeUndefined();
+    expect(sys(sent.state, 'enquiry.formSubmit', { token, draft: draft('plan_1') }).state.enquiries[id].form!.draft).toMatchObject({ plan: 'plan_1' });
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft('plan_2') })).toThrow('err.invalid');
+  });
+});

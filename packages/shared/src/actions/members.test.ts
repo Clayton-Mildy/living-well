@@ -737,3 +737,27 @@ describe('application form answers', () => {
     expect(r.state.members.m47.registration).toEqual({ nickname: 'Oma Siti', commDifficulty: false });
   });
 });
+
+describe('plans from the catalogue (round 15)', () => {
+  const withCatalogue = () => {
+    const c = seed();
+    c.citra = structuredClone(c.citra);
+    c.citra.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+    return c;
+  };
+  it('members.create accepts an active catalogue plan and refuses a retired or unknown one', () => {
+    const c = withCatalogue();
+    const r = run(c.citra, 'members.create', newMember({ plan: 'plan_1' }), who(c, 's9'));
+    expect(planOn(r.state.members[r.result.memberId as string], '2026-10-26').plan).toBe('plan_1');
+    expect(() => run(c.citra, 'members.create', newMember({ plan: 'plan_2' }), who(c, 's9'))).toThrow('members.err.planInvalid');
+    expect(() => run(c.citra, 'members.create', newMember({ plan: 'plan_9' }), who(c, 's9'))).toThrow('members.err.planInvalid');
+  });
+  it('members.changePlan moves a member to an active catalogue plan, names it in the notice, and refuses a retired one', () => {
+    const c = withCatalogue();
+    const r = run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'plan_1', effective: '2026-11-01' }, who(c, 's9'));
+    expect(planOn(r.state.members.m1, '2026-11-01').plan).toBe('plan_1');
+    expect(JSON.stringify(Object.values(r.state.notifications ?? {}))).toContain('Flex 8');
+    expect(() => run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'plan_2', effective: '2026-11-01' }, who(c, 's9'))).toThrow('members.err.planInvalid');
+    expect(() => run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'plan_9', effective: '2026-11-01' }, who(c, 's9'))).toThrow('members.err.planInvalid');
+  });
+});

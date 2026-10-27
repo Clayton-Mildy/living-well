@@ -1,6 +1,7 @@
 // The membership plan catalogue (round 15, phase 2). Flex and Gold are virtual entries: their quota and prices stay in the club settings and the price list.
 // Plans management adds are stored in `ClubSettings.plans` and priced in `PriceVersion.plans`.
 import type { ClubState, Plan, PlanDef, PriceVersion } from '../types';
+import { DomainError } from '../actions/framework';
 
 /** Flex, Gold, then the catalogue in the order management made it. */
 export function planDefs(s: ClubState): PlanDef[] {
@@ -24,4 +25,13 @@ export const planPrice = (price: PriceVersion, plan: Plan): number => (plan === 
 export function planLabel(s: ClubState, plan: Plan, lang: 'en' | 'id'): string {
   const d = planDef(s, plan);
   return d ? (lang === 'id' && d.nameId ? d.nameId : d.name) : plan;
+}
+/** The shape of a plan id: Flex, Gold or a catalogue plan (`plan_<n>`). Says nothing about whether the catalogue has it. */
+export const isPlanId = (v: unknown): v is Plan => v === 'flex' || v === 'gold' || (typeof v === 'string' && /^plan_[A-Za-z0-9_]{1,40}$/.test(v));
+/** A plan an action takes: any active plan of the catalogue. An unknown or retired id is refused with `code` (default: the invalid-input code). */
+export function planOf(s: ClubState, raw: unknown, code = 'err.invalid'): Plan {
+  if (!isPlanId(raw)) throw new DomainError(code);
+  const d = planDef(s, raw);
+  if (!d || !d.active) throw new DomainError(code);
+  return raw;
 }

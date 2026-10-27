@@ -44,12 +44,12 @@ export const family: Same<typeof EN> = {
   dayLineSat: '{n} melewati hari yang {m} dan tidak ikut kegiatan.', sharedNoteFor: 'Catatan bersama tentang {m}: {n}', calendarBtn: 'Kalender klub', contactsBtn: 'Kontak penting',
 
   // ----- plan card: Flex visits this month (counted from check-ins, extra visits billed next month) and Gold -----
-  planLabel: 'Paket Flex · {m}', planGoldLabel: 'Paket Gold · {m}', visitsUsed: '{n} dari {q} kunjungan terpakai di {m}', goldTitle: 'Paket Gold · datang di hari buka mana saja',
+  planLabel: 'Paket {plan} · {m}', planGoldLabel: 'Paket {plan} · {m}', visitsUsed: '{n} dari {q} kunjungan terpakai di {m}', goldTitle: 'Paket {plan} · datang di hari buka mana saja',
   goldVisits: 'Kunjungan di {m}: {n}. Tanpa batas dan tanpa biaya tambahan.', visitsExtra: '{n} kunjungan tambahan bulan ini · {p} di tagihan {m}', visitsExtraN: '{n} kunjungan tambahan bulan ini · {p} di tagihan {m}',
   extraDates: 'Tanggal kunjungan tambahan: {d}', extraRule: 'Kunjungan tambahan {p} per kunjungan, ditagih bulan depan di tagihan {m}.',
-  planAskGold: 'Minta pindah ke paket Gold', planAskFlex: 'Minta pindah ke paket Flex', planAskTitle: 'Pindahkan {name} ke paket {plan}?',
-  planAskBodyGold: 'Gold: datang di hari buka mana pun seharga {p} per bulan, tanpa biaya hari tambahan. Mulai {d} setelah klub mengonfirmasi.',
-  planAskBodyFlex: 'Flex: {q} kunjungan per bulan seharga {p}; kunjungan tambahan {x} per kunjungan. Mulai {d} setelah klub mengonfirmasi.',
+  planAskGold: 'Minta pindah ke paket Gold', planAskFlex: 'Minta pindah ke paket Flex', planAskTitle: 'Pindahkan {name} ke paket {plan}?', planPick: 'Paket tujuan',
+  planAskBodyGold: '{plan}: datang di hari buka mana pun seharga {p} per bulan, tanpa biaya hari tambahan. Mulai {d} setelah klub mengonfirmasi.',
+  planAskBodyFlex: '{plan}: {q} kunjungan per bulan seharga {p}; kunjungan tambahan {x} per kunjungan. Mulai {d} setelah klub mengonfirmasi.',
   planAskSend: 'Kirim permintaan', planAskSent: 'Permintaan terkirim. Klub akan mengonfirmasinya.', planAsked: 'Pindah ke paket {plan} mulai {d} sudah diminta · menunggu konfirmasi klub', planWithdraw: 'Batalkan permintaan', planWithdrawn: 'Permintaan dibatalkan.', endedPlan: 'Keanggotaan sudah berakhir. Paket ditutup.',
 
   // ----- invoice card and billing -----

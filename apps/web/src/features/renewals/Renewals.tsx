@@ -5,7 +5,7 @@
 // so it is not offered there.
 import { useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { listName, addMonths, actorName, memberName, displayName, ym, type YM } from '@cp/shared';
+import { listName, addMonths, actorName, memberName, displayName, planLabel, ym, type YM } from '@cp/shared';
 import { canRecord, changeRows, renewalMembers, renewalMonth } from '@cp/shared/rules/renewals';
 import { Avatar, EmptyState, Icon, IconButton, PageHead, Segmented } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -74,7 +74,7 @@ export function Renewals() {
     const m = s.members[r.memberId];
     if (!m) return null;
     const name = listName(m);
-    const what = changeText(t, fmt, r.outcome, r.leaveMonths);
+    const what = changeText(t, fmt, r.outcome, r.leaveMonths, r.outcome === 'switch' && r.plan ? planLabel(s, r.plan, fmt.lang) : undefined);
     const when = [t('renewals.from', { d: fmt.fd(r.from, dm) }), r.by ? t('renewals.recordedBy', { who: actorName(s, r.by) }) : ''].filter(Boolean).join(' · ');
     return (
       <div key={`${r.memberId}-${r.outcome}`} data-change={r.memberId} className="cp-tap"

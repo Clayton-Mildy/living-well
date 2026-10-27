@@ -5,7 +5,7 @@ import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enq
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
 import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
-import { planDefs } from './plans';
+import { isPlanId, planDefs } from './plans';
 import { invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
 import { onLeaveOn } from './leave';
 import { latestBp } from './health';
@@ -392,7 +392,7 @@ export function validateNewMember(d: Partial<NewMemberInput>, today?: ISODate): 
   else if (!isISO(d.dob) || (today && d.dob > today)) bad('dob', 'dobInvalid');
   else if (today) { const a = ageOn(d.dob, today); if (a < ageRange.min || a > ageRange.max) bad('dob', 'dobInvalid'); }
   if (d.usualArrival && !isHM(d.usualArrival)) bad('usualArrival', 'arrivalInvalid');
-  if (d.plan !== 'flex' && d.plan !== 'gold') bad('plan', 'planInvalid');
+  if (!isPlanId(d.plan)) bad('plan', 'planInvalid');
   if (!isISO(d.start) || (today && (d.start as string) < today)) bad('start', 'startInvalid');
   else if (!isWeekday(d.start as string)) bad('start', 'startInvalid');
   const c = d.contact;

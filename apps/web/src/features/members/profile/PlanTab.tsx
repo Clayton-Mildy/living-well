@@ -2,11 +2,11 @@
 // the membership state, and the invoices. Invoices open the invoice sheet; Xero status is for staff only.
 import { useState } from 'react';
 import {
-  actorName, currentMembership, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
+  actorName, currentMembership, type Plan, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
 } from '@cp/shared';
 import { formatVa, openBalance } from '@cp/shared/rules/members';
 import { isConfirmed } from '@cp/shared/rules/finance';
-import { planPrice } from '@cp/shared/rules/plans';
+import { isDaysPlan, planLabel, planPrice, planQuota } from '@cp/shared/rules/plans';
 import { Button, Group, Icon, Pager, SectionLabel, Sheet, StatusBadge, TextField, Note, usePaged } from '../../../components/ui';
 import { say } from '../../../store/ui';
 import { InvoiceSheet } from '../../finance/InvoiceSheet';
@@ -22,6 +22,9 @@ export function PlanTab({ p }: { p: P }) {
   const [declining, setDeclining] = useState<string | null>(null);
   const [note, setNote] = useState('');
   const plan = planOn(m, today);
+  const name = (pl: Plan) => planLabel(s, pl, fmt.lang);
+  const days = isDaysPlan(s, plan.plan);
+  const quota = planQuota(s, plan.plan) ?? s.club.settings.flexQuota;
   const price = priceOn(s, today);
   const invoices = sortBy(invoicesOf(s, m.id), (i) => i.issueDate + i.number, -1);
   const pagedInv = usePaged(invoices, 6, m.id);
@@ -47,20 +50,20 @@ export function PlanTab({ p }: { p: P }) {
     if (r.ok) { setDeclining(null); setNote(''); }
   };
   const planTitle = (
-    <div style={{ fontSize: 26, lineHeight: '34px', letterSpacing: '-0.5px', color: '#2B231C' }}>{plan.plan === 'flex' ? t('profile.planFlexTitle', { q: s.club.settings.flexQuota }) : t('profile.planGoldTitle')}</div>
+    <div style={{ fontSize: 26, lineHeight: '34px', letterSpacing: '-0.5px', color: '#2B231C' }}>{days ? t('profile.planFlexTitle', { plan: name(plan.plan), q: quota }) : t('profile.planGoldTitle', { plan: name(plan.plan) })}</div>
   );
   const facts = (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       <Fact k={t('profile.fee')} first>{rp(planPrice(price, plan.plan))}</Fact>
-      <Fact k={t('profile.visits')}>{plan.plan === 'flex' ? t('profile.visitsFlex', { q: s.club.settings.flexQuota }) : t('profile.visitsGold')}</Fact>
+      <Fact k={t('profile.visits')}>{days ? t('profile.visitsFlex', { q: quota }) : t('profile.visitsGold')}</Fact>
       <Fact k={t('profile.visitsMonth', { m: fmt.fmonth(ym(today)) })}>
         {fm.quota === null ? t('profile.visitsMonthGold', { n: fm.used }) : t(fm.extra ? (fm.extra === 1 ? 'profile.visitsMonthExtraOne' : 'profile.visitsMonthExtra') : 'profile.visitsMonthFlex', { n: Math.min(fm.used, fm.quota), q: fm.quota, x: fm.extra })}
       </Fact>
-      {plan.plan === 'flex' ? <Fact k={t('profile.extraDay')}>{t('profile.extraDayVal', { p: rp(price.extra) })}</Fact> : null}
+      {days ? <Fact k={t('profile.extraDay')}>{t('profile.extraDayVal', { p: rp(price.extra) })}</Fact> : null}
       <Fact k={t('profile.billingContact')}>{prim ? prim.name : '—'}</Fact>
       <Fact k={t('profile.va')}>{m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')}</Fact>
       <Fact k={t('profile.since')}>{since ? fmt.fmonth(ym(since), true) : '—'}</Fact>
-      {next ? <Fact k={t('profile.nextChange')}>{`${planText(t, next)} · ${t('profile.fromDate', { d: fmt.fdy(next.from) })}`}</Fact> : null}
+      {next ? <Fact k={t('profile.nextChange')}>{`${planText(s, fmt.lang, next)} · ${t('profile.fromDate', { d: fmt.fdy(next.from) })}`}</Fact> : null}
       {spouse ? <Fact k={t('profile.couple')}>{t('profile.coupleVal', { n: prim?.firstName || t('profile.theBilling'), s: displayName(spouse) })}</Fact> : null}
       {balance > 0 ? <Fact k={t('profile.balance')}><strong style={{ fontWeight: 600 }}>{rp(balance)}</strong></Fact> : null}
       {cur.lastDay ? <Fact k={t('profile.membership')}>{life === 'ended' ? t('profile.endedOn', { d: fmt.fdy(cur.lastDay) }) : t('profile.endsOn', { d: fmt.fdy(cur.lastDay) })}{cur.endReason ? ` · ${endReasonLabel(t, cur.endReason)}` : ''}</Fact> : null}
@@ -84,7 +87,7 @@ export function PlanTab({ p }: { p: P }) {
       {req ? (
         <Note tone="ochre" icon="upgrade">
           <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <span style={{ fontWeight: 600 }}>{t('profile.upgradeAsked', { f: t('profile.plan.' + plan.plan), to: t('profile.plan.' + req.to), d: fmt.fds(req.from) })}</span>
+            <span style={{ fontWeight: 600 }}>{t('profile.upgradeAsked', { f: name(plan.plan), to: name(req.to), d: fmt.fds(req.from) })}</span>
             {finance && !p.m.deletedAt ? (
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                 <Button size={44} icon="check" onClick={apply}>{t('profile.applyRequest')}</Button>

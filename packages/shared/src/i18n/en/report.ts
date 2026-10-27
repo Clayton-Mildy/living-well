@@ -17,7 +17,7 @@ export const report = {
   // who came
   nMembers: '{n} members',
   inOut: '{a}–{l}', since: 'Since {a}', noOut: '{a} · no check-out',
-  flexVisit: 'Flex · visit {n} of {q}', gold: 'Gold', extraDay: 'Extra day',
+  flexVisit: '{plan} · visit {n} of {q}', gold: '{plan}', extraDay: 'Extra day',
   kindTrial: 'Trial day', kindVisit: 'Visit', gExpected: 'Expected', gNoShow: 'Did not come',
   // activities
   noSessions: 'No activities on this day', outingNoSessions: 'No activities: the club was on an outing',

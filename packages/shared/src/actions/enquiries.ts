@@ -6,6 +6,7 @@ import { defineAction, hasRole, DomainError, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
 import { FEE_DEFAULTS, priceOn } from '../rules/billing';
+import { isPlanId, planDef, planOf } from '../rules/plans';
 import {
   ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
 } from '../rules/enquiries';
@@ -320,7 +321,7 @@ export const enquiriesActions = [
     },
     parse(raw) {
       const o = obj(raw);
-      const plan = oneOf(o.plan, ['flex', 'gold'] as const, 'plan');
+      const plan = isPlanId(o.plan) ? o.plan : bad('plan'); // an unknown or retired catalogue plan is refused by `run` (planOf)
       const mediaId = typeof o.formMediaId === 'string' ? o.formMediaId.trim() : '';
       if (!mediaId) throw new DomainError('enq.err.formRequired');
       if (!/^md_[A-Za-z0-9_-]{8,}$/.test(mediaId)) throw new DomainError('err.invalid');
@@ -338,6 +339,7 @@ export const enquiriesActions = [
     run(d, i, ctx) {
       const s = S(d);
       const e = enq(d, i.enquiryId, ctx);
+      planOf(s, i.plan); // an active plan of the catalogue
       if (e.stage === 'joined') ctx.fail('enq.err.alreadyMember');
       if (e.stage === 'lost' || e.archivedAt) ctx.fail('enq.err.notOpen');
       if (i.start < ctx.today) ctx.fail('enq.err.startPast');
@@ -453,7 +455,7 @@ export const enquiriesActions = [
           ...(typeof dr.title === 'string' ? { title: txt(dr.title, 20) } : {}), ...(dr.name !== undefined ? { name: txt(dr.name, 80) } : {}),
           ...(typeof dr.dob === 'string' ? { dob: /^\d{4}-\d{2}-\d{2}$/.test(dr.dob) ? dr.dob : '' } : {}), ...(dr.address !== undefined ? { address: txt(dr.address, 200) } : {}),
           ...(dr.contact !== undefined ? { contact: { name: txt(c.name, 80), relation: ALL_RELATIONS.includes(c.relation as never) ? (c.relation as (typeof ALL_RELATIONS)[number]) : 'daughter', phone: rawPhone.replace(/\D/g, '').length >= 8 ? e164(rawPhone) : rawPhone } } : {}),
-          ...(dr.plan === 'flex' || dr.plan === 'gold' ? { plan: dr.plan as Plan } : {}),
+          ...(isPlanId(dr.plan) ? { plan: dr.plan } : {}),
           ...(dr.nanny !== undefined ? { nanny: nn ? { name: txt(nn.name, 80), nik: txt(nn.nik, 24).replace(/\s/g, ''), ...nannyExtras(nn) } : null } : {}),
           ...(dr.ktp !== undefined && dr.ktp !== null ? { ktp: parseKtp(dr.ktp) } : {}), ...(h ? { health: h } : {}), ...(registration ? { registration } : {}),
           ...(dr.lang === 'id' || dr.lang === 'en' ? { lang: dr.lang } : {}),
@@ -475,6 +477,7 @@ export const enquiriesActions = [
         title: row.senior.title, name: row.senior.name, dob: '', address: '', contact: { ...row.contact }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
         ...i.draft,
       };
+      if (next.plan && !planDef(S(d), next.plan)?.active) delete next.plan; // a plan retired while the form was open is dropped from the draft, the page asks again
       const cur = formRevOf(f);
       ctx.result.draftRev = cur;
       ctx.result.savedAt = f.savedAt ?? null;
@@ -499,7 +502,7 @@ export const enquiriesActions = [
       const c = obj(dr.contact, 'contact');
       const h = parseHealthBasics(dr.health);
       const registration = parseRegistration(dr.registration);
-      const plan = dr.plan ? oneOf(dr.plan, ['flex', 'gold'] as const, 'plan') : undefined;
+      const plan = dr.plan ? (isPlanId(dr.plan) ? dr.plan : bad('plan')) : undefined;
       return {
         token: str(o.token, 80, { required: true, field: 'token' }),
         draft: {
@@ -518,6 +521,7 @@ export const enquiriesActions = [
       if (state === 'submitted') ctx.fail('enq.err.formDone');
       if (row.stage === 'joined' || row.stage === 'lost' || row.archivedAt) ctx.fail('enq.err.notOpen');
       if (i.draft.dob && i.draft.dob > ctx.today) ctx.fail('members.err.dobInvalid');
+      if (i.draft.plan) planOf(S(d), i.draft.plan); // an active plan of the catalogue
       const f = row.form!;
       f.draft = i.draft;
       f.submittedAt = ctx.nowDT;

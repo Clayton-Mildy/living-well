@@ -2,7 +2,7 @@
 // shared with Add member, members/register), and mark lost. Registration is on paper: staff type the key details in and attach a photo or PDF of the signed form.
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
-  addDays, dayStatus, feeOf, fmtPhone, priceOn, rp, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Relation,
+  addDays, dayStatus, feeOf, fmtPhone, planLabel, priceOn, rp, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Relation,
 } from '@cp/shared';
 import {
   ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookableDays, bookingDayCheck, formLinkState, formPath, openGuest, seniorName, trialDays,
@@ -282,7 +282,7 @@ function LostDialog({ id, onClose }: { id: string; onClose: () => void }) {
  */
 function FormLinkDialog({ id, onClose, onJoin }: { id: string; onClose: () => void; onJoin: () => void }) {
   const t = useT();
-  const { fds, fdy } = useFmt();
+  const { fds, fdy, lang } = useFmt();
   const s = useClub();
   const act = useAct();
   const { today, now } = useNow();
@@ -307,7 +307,7 @@ function FormLinkDialog({ id, onClose, onJoin }: { id: string; onClose: () => vo
   const dr = state === 'submitted' ? f?.draft : undefined;
   const summary: [string, string][] = dr ? [
     [t('enq.jn_member'), `${dr.title} ${dr.name}`], ...(dr.dob ? [[t('profile.f.dob'), fdy(dr.dob)] as [string, string]] : []), ...(dr.address ? [[t('profile.f.address'), dr.address] as [string, string]] : []),
-    [t('enq.jn_contact'), `${dr.contact.name} · ${fmtPhone(dr.contact.phone)}`], ...(dr.plan ? [[t('enq.plan'), t('mgmt.plan_' + dr.plan)] as [string, string]] : []),
+    [t('enq.jn_contact'), `${dr.contact.name} · ${fmtPhone(dr.contact.phone)}`], ...(dr.plan ? [[t('enq.plan'), planLabel(s, dr.plan, lang)] as [string, string]] : []),
   ] : [];
   return (
     <Dialog open onClose={onClose} eyebrow={t('enq.formLinkEyebrow')} title={seniorName(e)} maxWidth={560}

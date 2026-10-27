@@ -2,10 +2,10 @@
 // the four-week systolic chart, and what the nurse must know before touching them (allergies, mobility, diet, lunchtime medicines).
 import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDays, limitsFor, memberAge, ownLimitKeys, planOn, type ClubState } from '@cp/shared';
+import { addDays, limitsFor, memberAge, ownLimitKeys, planLabel, planOn, type ClubState } from '@cp/shared';
 import { NORMAL_BANDS, arrivalSystolic, careFlagsOf, type CareFlag, type StationRow } from '@cp/shared/rules/healthStation';
 import { Button, Eyebrow, Group, Icon, TrendChart } from '../../components/ui';
-import type { TFn } from '../../lib/i18n';
+import { useLang, type TFn } from '../../lib/i18n';
 import { Av } from './parts';
 import { FullName } from '../members/lib';
 import type { Who } from './who';
@@ -29,11 +29,12 @@ function flagVm(f: CareFlag, t: TFn): { icon: string; label: string; dot?: strin
 
 export function DetailHead({ who, row, s, today, t, isPhone }: { who: Who; row: StationRow; s: ClubState; today: string; t: TFn; isPhone: boolean }) {
   const navigate = useNavigate();
+  const lang = useLang();
   const eyebrow = row.presence === 'in' ? t('health.presIn', { t: row.since ?? '' }) : row.presence === 'gone' ? t('health.presGone', { t: row.left ?? '' }) : t('health.presNo');
   const sub = who.member
     ? (row.presence === 'in'
-      ? t('health.ageSub', { a: memberAge(who.member, today) ?? '', p: planOn(who.member, today).plan === 'flex' ? 'Flex' : 'Gold', t: row.since ?? '' })
-      : t('health.ageSubPlain', { a: memberAge(who.member, today) ?? '', p: planOn(who.member, today).plan === 'flex' ? 'Flex' : 'Gold' }))
+      ? t('health.ageSub', { a: memberAge(who.member, today) ?? '', p: planLabel(s, planOn(who.member, today).plan, lang), t: row.since ?? '' })
+      : t('health.ageSubPlain', { a: memberAge(who.member, today) ?? '', p: planLabel(s, planOn(who.member, today).plan, lang) }))
     : t('health.guestSub', { k: who.guest?.kind === 'trial' ? t('health.guestTrial') : t('health.guestVisit'), t: row.since ?? '' });
   // KC round 7: the four-week systolic chart is a small TrendChart: tap or hover it to read a day's value
   const tr = useMemo(() => (who.kind === 'member' ? arrivalSystolic(s, who.id, today, 28, who.member ? limitsFor(s, who.member) : undefined) : []), [s, who.kind, who.id, who.member, today]);

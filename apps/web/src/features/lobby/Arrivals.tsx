@@ -198,7 +198,7 @@ export function Arrivals() {
 
   const visit = scanMember ? visitInfo(s, scanMember, today) : null;
   const matchedPanel = scanMember ? (
-    <MatchedPanel t={t} m={scanMember} plan={visitLine(t, s, scanMember, today)} flags={memberFlags(t, scanMember, true)} busy={busy} face={face} onFace={setFace} onConfirm={() => void confirmScan()}
+    <MatchedPanel t={t} m={scanMember} plan={visitLine(t, s, scanMember, today, lang)} flags={memberFlags(t, scanMember, true)} busy={busy} face={face} onFace={setFace} onConfirm={() => void confirmScan()}
       rejectLabel={scan.state === 'matched' && scan.manual ? t('common.cancel') : undefined}
       onReject={scan.state === 'matched' && !scan.manual ? () => { const wrong = scan.id; rejectScan(); setWhoFor(wrong); } : rejectScan}>
       {visit?.extra ? <Note tone="ochre" icon="payments">{t('lobby.extraVisit', { n: visit.n, q: visit.quota ?? 0, p: price(priceOn(s, today).extra) })}</Note> : null}

@@ -2,7 +2,7 @@
 // team, plus the personal details (with the answers of the paper application form). The club is drop-in, so nothing here is booked or expected.
 import type { ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { FACE_KEY, dailyMood, fmtPhone, live, memberAge, memberName, memberSince, sortBy, staffCall, flexMonth, planOn, todayReading, ym, type DailyLog, type Member } from '@cp/shared';
+import { FACE_KEY, dailyMood, fmtPhone, live, memberAge, memberName, memberSince, sortBy, staffCall, flexMonth, isDaysPlan, planLabel, planOn, todayReading, ym, type DailyLog, type Member } from '@cp/shared';
 import { lunchLabelKey, notesSaved } from '@cp/shared/rules/activity';
 import { logForFamily, readingForFamily } from '@cp/shared/rules/approvals';
 import { Group, Icon, SectionLabel } from '../../../components/ui';
@@ -20,7 +20,8 @@ export function OverviewTab({ p }: { p: P }) {
   const plan = planOn(m, today).plan;
   const fm = flexMonth(s, m, month, today);
   const quota = fm.quota ?? 0;
-  const used = plan === 'flex' ? Math.min(fm.used, quota) : fm.used; // visits beyond the quota are the extra days, shown below
+  const days = isDaysPlan(s, plan);
+  const used = days ? Math.min(fm.used, quota) : fm.used; // visits beyond the quota are the extra days, shown below
   const segN = Math.max(1, Math.min(31, quota));
   const segs = Array.from({ length: segN }, (_, i) => (i < used ? 'used' : 'free'));
   const conds = m.health.conditions.length ? m.health.conditions.join(', ') : t('profile.noConditions');
@@ -72,12 +73,12 @@ export function OverviewTab({ p }: { p: P }) {
       ) : null}
     </>
   ) });
-  sections.push({ key: 'plan', title: plan === 'flex' ? t('profile.planLabelFlex', { m: fmt.fmonth(month) }) : t('profile.planLabelGold', { m: fmt.fmonth(month) }), body: (
+  sections.push({ key: 'plan', title: t(days ? 'profile.planLabelFlex' : 'profile.planLabelGold', { plan: planLabel(s, plan, fmt.lang), m: fmt.fmonth(month) }), body: (
     <>
       <div style={{ fontSize: 24, lineHeight: '32px', letterSpacing: '-0.5px', color: '#2B231C' }}>
-        {plan === 'flex' ? t('profile.visitsUsed', { n: used, q: quota }) : t('profile.visitsSoFar', { n: used })}
+        {days ? t('profile.visitsUsed', { n: used, q: quota }) : t('profile.visitsSoFar', { n: used })}
       </div>
-      {plan === 'flex' ? (
+      {days ? (
         <div style={{ display: 'grid', gridTemplateColumns: `repeat(${segN},minmax(0,1fr))`, gap: 4 }} role="img" aria-label={t('profile.visitsUsed', { n: used, q: quota })}>
           {segs.map((k, i) => (
             <span key={i} style={{ height: 8, borderRadius: 999, background: k === 'used' ? 'var(--accent, #75624B)' : '#FFFFFF' }} />
@@ -85,7 +86,7 @@ export function OverviewTab({ p }: { p: P }) {
         </div>
       ) : null}
       {/* the number is enough (KC): the visits left, price and billing details live on the Attendance and Plan tabs */}
-      {plan === 'flex' && fm.extra ? <div style={{ fontSize: 14, color: '#9A3D24', fontWeight: 500, lineHeight: 1.4 }}>{t('profile.extraShort', { n: fm.extra })}</div> : null}
+      {days && fm.extra ? <div style={{ fontSize: 14, color: '#9A3D24', fontWeight: 500, lineHeight: 1.4 }}>{t('profile.extraShort', { n: fm.extra })}</div> : null}
     </>
   ) });
   if (lg) sections.push({ key: 'team', title: t('profile.fromTeam'), meta: `${staffCall(s.staff[lg.by]) || t('profile.theTeam')} · ${fmt.fds(lg.date)}`, body: (

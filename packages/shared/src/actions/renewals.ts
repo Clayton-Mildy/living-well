@@ -5,18 +5,19 @@
 // once, whoever records it (a plan entry from the 1st, the leave months, the last day), and can be undone until the month starts. The Approvals hub's
 // 'renewals' branches (actions/approvals.ts) only decide rows that were already waiting before.
 import type { Draft } from 'immer';
-import type { Actor, ClubState, EndReason, FollowUp, FollowUpOutcome, ISODate, Member, YM } from '../types';
+import type { Actor, ClubState, EndReason, FollowUp, FollowUpOutcome, ISODate, Member, Plan, YM } from '../types';
 import { defineAction, DomainError, hasRole, type ActionDef, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { clearApproval } from './approvalGate';
 import { addPlanEntry, applyEnding, obj, oneOf, revertEnding, txt } from './members';
 import { addLeave } from './membership';
 import { planName } from './planRequests';
+import { isPlanId, planOf } from '../rules/plans';
 import { currentMembership, isPendingRow, membershipStatus, planOn } from '../rules/core';
 import { feeOf, issueDateOf, priceOn } from '../rules/billing';
 import { END_REASONS, isISO } from '../rules/members';
 import {
-  FOLLOW_UP_OUTCOMES, defaultLastDay, followUpId, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthsCheck, planAfter, renewalMembers,
+  FOLLOW_UP_OUTCOMES, defaultLastDay, followUpId, followUpOf, isApplied, isChange, lastDayOfMonth, isPlanOutcome, leaveMonthsCheck, planAfter, renewalMembers,
 } from '../rules/renewals';
 import { LEAVE_MAX_MONTHS } from '../rules/leave';
 import { addMonths, monthStart, rp, ym } from '../util';
@@ -25,6 +26,8 @@ export interface RecordInput {
   memberId: string;
   month: YM;
   outcome: FollowUpOutcome;
+  /** switch: the catalogue plan to move to */
+  plan?: Plan;
   note?: string;
   leaveMonths?: YM[];
   lastDay?: ISODate;
@@ -35,13 +38,13 @@ const bad = (code: string, params?: Record<string, string | number>): never => {
 const ymOf = (v: unknown): YM => (typeof v === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(v) ? v : bad('err.invalid'));
 
 /** The change a follow-up asks for fits the member today: throws the reason it does not. `asOf` is the day the family gave notice (leave deadline). */
-export function checkChange(s: ClubState, m: Member, f: Pick<FollowUp, 'month' | 'outcome' | 'leaveMonths' | 'lastDay'>, today: ISODate, asOf: ISODate = today): void {
+export function checkChange(s: ClubState, m: Member, f: Pick<FollowUp, 'month' | 'outcome' | 'plan' | 'leaveMonths' | 'lastDay'>, today: ISODate, asOf: ISODate = today): void {
   const first = monthStart(f.month);
   const cur = currentMembership(m);
   if (!cur || membershipStatus(m, today) === 'ended') bad('members.err.alreadyEnded');
-  if (f.outcome === 'upgrade' || f.outcome === 'downgrade') {
+  if (isPlanOutcome(f.outcome)) {
     if (today >= first) bad('renewals.err.started');
-    if (planOn(m, first).plan === planAfter(f.outcome)) bad('err.noChanges');
+    if (planOn(m, first).plan === planAfter(f.outcome, f.plan)) bad('err.noChanges');
   } else if (f.outcome === 'leave') {
     const months = f.leaveMonths ?? [];
     if (months.some((x) => x !== f.month && x !== addMonths(f.month, 1))) bad('err.invalid');
@@ -63,12 +66,12 @@ export function applyChange(d: Draft<ClubState>, f: Draft<FollowUp>, ctx: Ctx, b
   const first = monthStart(f.month);
   const name = shortOf(d, m.id);
   const to = familyUserIds(d, m.id);
-  if (f.outcome === 'upgrade' || f.outcome === 'downgrade') {
-    const plan = planAfter(f.outcome);
+  if (isPlanOutcome(f.outcome)) {
+    const plan = planAfter(f.outcome, f.plan);
     addPlanEntry(m, { from: first, plan, by }, ctx.today);
     // a request the family sent from the app for the same plan is answered by this
     for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending' && r.to === plan) { r.status = 'applied'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }
-    if (to.length) ctx.notify({ toUsers: to, kind: 'renewals.notif.plan', params: { name, plan: planName(plan), date: first }, link: '/billing', memberId: m.id });
+    if (to.length) ctx.notify({ toUsers: to, kind: 'renewals.notif.plan', params: { name, plan: planName(d as unknown as ClubState, plan), date: first }, link: '/billing', memberId: m.id });
   } else if (f.outcome === 'leave') {
     const cur = currentMembership(m);
     const months = [...(f.leaveMonths ?? [])].sort();
@@ -104,6 +107,7 @@ export const renewalActions: ActionDef[] = [
       const outcome = oneOf(o.outcome, FOLLOW_UP_OUTCOMES);
       const note = txt(o.note, 400);
       const out: RecordInput = { memberId: txt(o.memberId, 60), month: ymOf(o.month), outcome, ...(note ? { note } : {}) };
+      if (outcome === 'switch') out.plan = isPlanId(o.plan) && o.plan !== 'flex' && o.plan !== 'gold' ? o.plan : bad('err.invalid'); // the catalogue plan to move to; Gold and Flex are upgrade and downgrade
       if (outcome === 'leave') {
         const months = Array.from(new Set((Array.isArray(o.leaveMonths) ? o.leaveMonths : []).map(ymOf))).sort();
         if (!months.length || months.length > LEAVE_MAX_MONTHS) bad('err.invalid');
@@ -125,7 +129,8 @@ export const renewalActions: ActionDef[] = [
       if (isApplied(followUpOf(s, m.id, input.month))) ctx.fail('renewals.err.applied');
       if (!renewalMembers(s, input.month).some((x) => x.id === m.id)) ctx.fail('renewals.err.notDue');
       const lastDay = input.outcome === 'stop' ? input.lastDay ?? defaultLastDay(input.month) : undefined;
-      if (isChange(input.outcome)) checkChange(s, m as Member, { month: input.month, outcome: input.outcome, leaveMonths: input.leaveMonths, lastDay }, ctx.today);
+      if (input.outcome === 'switch') planOf(s, input.plan); // an active plan of the catalogue
+      if (isChange(input.outcome)) checkChange(s, m as Member, { month: input.month, outcome: input.outcome, plan: input.plan, leaveMonths: input.leaveMonths, lastDay }, ctx.today);
 
       d.followUps ??= {};
       const id = followUpId(input.month, m.id);
@@ -133,6 +138,7 @@ export const renewalActions: ActionDef[] = [
       f.calls.push({ at: ctx.nowDT, by: ctx.actor, outcome: input.outcome, ...(input.note ? { note: input.note } : {}) });
       f.outcome = input.outcome;
       if (input.note) f.note = input.note; else delete f.note;
+      if (input.outcome === 'switch') f.plan = input.plan; else delete f.plan;
       if (input.outcome === 'leave') f.leaveMonths = input.leaveMonths; else delete f.leaveMonths;
       if (input.outcome === 'stop') { f.lastDay = lastDay; f.endReason = input.endReason ?? 'familyDecision'; } else { delete f.lastDay; delete f.endReason; }
 
@@ -143,7 +149,7 @@ export const renewalActions: ActionDef[] = [
       const key = input.outcome === 'leave' && lm.length > 1 ? 'leave2' : input.outcome;
       ctx.feed({
         icon: 'event_repeat', key: `renewals.feed.${key}`, memberId: m.id,
-        params: { name, month: input.month, from: lm[0] ?? input.month, to: lm[lm.length - 1] ?? input.month, date: lastDay ?? input.month },
+        params: { name, month: input.month, plan: input.plan ? planName(s, input.plan) : '', from: lm[0] ?? input.month, to: lm[lm.length - 1] ?? input.month, date: lastDay ?? input.month },
       });
       ctx.result.followUpId = id;
       ctx.result.status = f.status;
@@ -168,9 +174,9 @@ export const renewalActions: ActionDef[] = [
       };
       const last = f.calls[f.calls.length - 1];
       const by: Actor = f.approval?.by ?? last?.by ?? f.createdBy; // who the plan entry names (an older row was recorded by one and approved by another)
-      if (f.outcome === 'upgrade' || f.outcome === 'downgrade') {
+      if (isPlanOutcome(f.outcome)) {
         // only the entry this follow-up added: the plan it asked for, dated the 1st, by the recorder
-        const plan = planAfter(f.outcome);
+        const plan = planAfter(f.outcome, f.plan);
         const i = m.plans.findIndex((p) => p.from === first && p.plan === plan && p.by === by);
         if (i >= 0) m.plans.splice(i, 1);
         reopen(plan, 'applied', f.approval?.decidedAt ?? last?.at, f.approval?.decidedBy ?? last?.by);
@@ -182,7 +188,7 @@ export const renewalActions: ActionDef[] = [
         reopen(undefined, 'declined', cur.endedAt, cur.endedBy);
         revertEnding(d, m, ctx);
       }
-      delete f.outcome; delete f.leaveMonths; delete f.lastDay; delete f.endReason;
+      delete f.outcome; delete f.plan; delete f.leaveMonths; delete f.lastDay; delete f.endReason;
       clearApproval(f);
       f.status = 'open';
       ctx.feed({ icon: 'undo', key: 'renewals.feed.undone', memberId: m.id, params: { name: shortOf(d, m.id), month: input.month } });

@@ -1025,7 +1025,7 @@ export interface Broadcast extends Row {
 // ---------------- KC round 7 ----------------
 
 /** What the family decided for the coming month, as the front desk recorded it. 'noAnswer' keeps the follow-up open. (KC round 7: no "call back" option.) */
-export type FollowUpOutcome = 'continue' | 'upgrade' | 'downgrade' | 'leave' | 'stop' | 'noAnswer';
+export type FollowUpOutcome = 'continue' | 'upgrade' | 'downgrade' | 'switch' | 'leave' | 'stop' | 'noAnswer';
 export interface FollowUpCall { at: DT; by: Actor; outcome: FollowUpOutcome; note?: string }
 
 /**
@@ -1039,6 +1039,8 @@ export interface FollowUp extends Row {
   /** the latest outcome; missing = nobody reached yet */
   outcome?: FollowUpOutcome;
   note?: string;
+  /** switch (round 15): the catalogue plan the member moves to (upgrade is always Gold and downgrade Flex) */
+  plan?: Plan;
   /** leave: the months asked for */
   leaveMonths?: YM[];
   /** stop: the member's last day */

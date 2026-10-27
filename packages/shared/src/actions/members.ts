@@ -10,6 +10,7 @@ import { clearApproval, markPending, needsApproval, priorOf } from './approvalGa
 import { NOTE_KEYS } from '../rules/approvals';
 import { currentMembership, isOpen, isPendingRow, membershipStatus, displayName, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
 import { paidOn } from '../rules/billing';
+import { isPlanId, planLabel as planLabelOf, planOf } from '../rules/plans';
 import { cleanRegistration, validateRegistration } from '../rules/applicationForm';
 import {
   DEFAULT_SIM, DIETS, DOC_TYPES, END_REASONS, FOODS, KTP_KINDS, MED_TIMINGS, MOBILITIES, RELATIONS, SIM_FILE, TITLE_MAX, docIdFor, ktpDocuments,
@@ -35,7 +36,7 @@ const strList = (v: unknown, max = 120, cap = 30): string[] => (Array.isArray(v)
 const enumList = <T extends string>(v: unknown, list: readonly T[]): T[] => (Array.isArray(v) ? Array.from(new Set(v.filter((x): x is T => (list as readonly string[]).includes(x as string)))) : []);
 /** dd/mm/yyyy: the same in English and Indonesian, safe inside stored notification text. */
 /** Plan names are brand words (the app shows Gold / Flex in both languages); the notice carries the label, the reader's app formats the ISO date. */
-const planLabel = (p: Plan) => (p === 'gold' ? 'Gold' : 'Flex');
+const planLabel = (s: ClubState | Draft<ClubState>, p: Plan) => planLabelOf(s as ClubState, p, 'en');
 export const dmy = (d: ISODate) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
 export const staffIdOf = (a: Actor) => (a.startsWith('staff:') ? a.slice(6) : '');
 /** Full name of an actor (consent records keep who and when). */
@@ -173,7 +174,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
   const h = obj(o.health ?? {});
   const c = obj(o.contact ?? {});
   const cons = obj(o.consent ?? {});
-  const plan: Plan = o.plan === 'gold' ? 'gold' : 'flex';
+  const plan: Plan = isPlanId(o.plan) ? o.plan : 'flex'; // an unknown or retired catalogue plan is refused by `run` (planOf)
   const photo = mediaIdOf(o.photoMediaId);
   const registration = parseRegistration(o.registration);
   const input: NewMemberFull = {
@@ -266,6 +267,7 @@ export const membersActions: ActionDef[] = [
     parse: (raw) => parseNewMember(raw),
     review: { policy: 'gate', section: 'newMember', op: 'create', target: (_i, s) => { const id = lastMemberId(s); return { type: 'member', id, memberId: id }; } },
     run(d, input, ctx) {
+      planOf(d as unknown as ClubState, input.plan, 'members.err.planInvalid'); // an active plan of the catalogue
       const issues = validateNewMember(input, ctx.today);
       if (issues.length) ctx.fail(issues[0].code, issues[0].params);
       if (input.usualArrival) checkArrival(d, input.usualArrival, ctx);
@@ -426,13 +428,14 @@ export const membersActions: ActionDef[] = [
     can: (u) => hasRole(u, 'lobby', 'finance', 'mgmt'),
     parse: (raw) => {
       const o = obj(raw);
-      const plan: Plan = o.plan === 'gold' ? 'gold' : o.plan === 'flex' ? 'flex' : bad('members.err.planInvalid');
+      const plan: Plan = isPlanId(o.plan) ? o.plan : bad('members.err.planInvalid');
       const eff = txt(o.effective, 10);
       if (eff && !isISO(eff)) bad('members.err.effectiveInvalid');
       return { memberId: txt(o.memberId, 60), plan, ...(eff ? { effective: eff } : {}), ...optionalNote(o) };
     },
     run(d, input, ctx) {
       const m = editable(d, input.memberId, ctx);
+      planOf(d as unknown as ClubState, input.plan, 'members.err.planInvalid');
       const effective = input.effective || firstOfNextMonth(ctx.today);
       // a replay of an older gated change on approval (actor is the submitter, not the approving manager) may land after the 1st it asked for: back-date to that 1st
       const replay = ctx.actor !== actorOf(ctx.user);
@@ -444,7 +447,7 @@ export const membersActions: ActionDef[] = [
       addPlanEntry(m, { from: effective, plan: input.plan, by: ctx.actor }, ctx.today);
       for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending' && r.to === input.plan) { r.status = 'applied'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }
       const to = familyUserIds(d, m.id);
-      if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.planChanged', params: { name: displayName(m), plan: planLabel(input.plan), date: effective }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
+      if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.planChanged', params: { name: displayName(m), plan: planLabel(d, input.plan), date: effective }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
       feed(ctx, d, m.id, 'sell', 'plan', { plan: input.plan, from: effective, by: ctx.actor });
     },
   }),
@@ -557,13 +560,14 @@ export const membersActions: ActionDef[] = [
       if (!req || req.deletedAt) ctx.fail('err.notFound');
       if (req.status !== 'pending') ctx.fail('members.err.requestNotPending');
       const m = editable(d, req.memberId, ctx);
+      planOf(d as unknown as ClubState, req.to, 'members.err.planInvalid'); // a plan retired since the family asked cannot be applied
       const effective = input.effective || (req.from < ctx.today ? ctx.today : req.from);
       if (effective < ctx.today) ctx.fail('members.err.effectiveInvalid');
       if (planOn(m as Member, effective).plan === req.to) ctx.fail('err.noChanges');
       addPlanEntry(m, { from: effective, plan: req.to, by: ctx.actor, requestId: req.id }, ctx.today);
       req.status = 'applied'; req.decidedBy = ctx.actor; req.decidedAt = ctx.nowDT;
       const asker = req.createdBy.startsWith('family:') ? req.createdBy.slice(7) : '';
-      if (asker) ctx.notify({ toUsers: [asker], kind: 'members.notif.planApplied', params: { name: displayName(m), plan: planLabel(req.to), date: effective }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
+      if (asker) ctx.notify({ toUsers: [asker], kind: 'members.notif.planApplied', params: { name: displayName(m), plan: planLabel(d, req.to), date: effective }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
       feed(ctx, d, m.id, 'sell', 'planApplied', { plan: req.to, from: effective, by: ctx.actor });
     },
   }),

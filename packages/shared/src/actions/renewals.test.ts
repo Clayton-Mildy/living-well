@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { actionItems, buildSeed, execute, getUser, membershipStatus, planOn, toMin, updatesFor, DomainError, type ClubState } from '../index';
 import { pendingItems } from '../rules/approvals';
-import { changeRows, followUpId, followUpOf, renewalCounts, renewalRows } from '../rules/renewals';
+import { changeRows, followUpId, followUpOf, outcomeChoices, renewalCounts, renewalRows } from '../rules/renewals';
 
 const T = '2026-10-21';
 const MONTH = '2026-11';
@@ -248,5 +248,38 @@ describe('leave keeps its notice rules', () => {
     // November and December together: two months in a row is the most
     const two = run(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: [MONTH, '2026-12'] }, 's9', early).state;
     expect(two.members.m1.memberships.at(-1)!.leaves!.map((l) => l.month)).toEqual(['2026-11', '2026-12']);
+  });
+});
+
+describe('plan switches to the catalogue (round 15)', () => {
+  const withPlans = (): ClubState => produce(fresh(), (d) => {
+    d.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', nameId: 'Fleks 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+  });
+  it('lists every other active plan as a move (Gold stays an upgrade, a catalogue plan is a switch) and never a retired one', () => {
+    const s = withPlans();
+    expect(outcomeChoices(s, 'flex')).toEqual([{ outcome: 'upgrade', plan: 'gold' }, { outcome: 'switch', plan: 'plan_1' }, { outcome: 'leave' }, { outcome: 'stop' }]);
+    expect(outcomeChoices(s, 'gold').map((c) => c.plan)).toEqual(['flex', 'plan_1', undefined, undefined]);
+    expect(outcomeChoices(s, 'plan_1').map((c) => c.plan)).toEqual(['flex', 'gold', undefined, undefined]);
+    expect(outcomeChoices(fresh(), 'flex')).toEqual([{ outcome: 'upgrade', plan: 'gold' }, { outcome: 'leave' }, { outcome: 'stop' }]); // Flex and Gold only: as before
+  });
+  it('records a switch to an active catalogue plan, applies it from the 1st, lists it by name, and undo takes it back', () => {
+    const s = withPlans();
+    const r = record(s, 'm1', 'switch', 's1', { plan: 'plan_1' });
+    expect(fu(r.state, 'm1')).toMatchObject({ outcome: 'switch', plan: 'plan_1', status: 'done' });
+    expect(planOn(r.state.members.m1, '2026-11-01').plan).toBe('plan_1');
+    expect(changeRows(r.state, MONTH, T).find((c) => c.memberId === 'm1')).toMatchObject({ outcome: 'switch', plan: 'plan_1', canUndo: true });
+    expect(JSON.stringify(Object.values(r.state.activity ?? {}))).toContain('Flex 8');
+    const undone = run(r.state, 'followUp.undo', { memberId: 'm1', month: MONTH }, 's1').state;
+    expect(planOn(undone.members.m1, '2026-11-01').plan).toBe('flex');
+    expect(fu(undone, 'm1').plan).toBeUndefined();
+  });
+  it('refuses a switch without a plan, to a retired or unknown one, to Flex or Gold, and to the plan the member is on', () => {
+    const s = withPlans();
+    for (const extra of [{}, { plan: 'plan_2' }, { plan: 'plan_9' }, { plan: 'gold' }, { plan: 'flex' }]) fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'switch', ...extra }, 's1', 'err.invalid');
+    const on = run(s, 'members.changePlan', { memberId: 'm1', plan: 'plan_1', effective: '2026-11-01' }, 's9').state;
+    fails(on, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'switch', plan: 'plan_1' }, 's1', 'err.noChanges');
+    // a plan retired after the sheet was opened is refused too
+    const retired = produce(s, (d) => { d.club.settings.plans![0].active = false; });
+    fails(retired, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'switch', plan: 'plan_1' }, 's1', 'err.invalid');
   });
 });

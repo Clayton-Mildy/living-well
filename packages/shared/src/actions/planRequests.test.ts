@@ -68,3 +68,30 @@ describe('planChange.request', () => {
     expect(pending(r.state, 'm1')).toHaveLength(1);
   });
 });
+
+describe('plans from the catalogue (round 15)', () => {
+  const catalogue = () => {
+    const s = structuredClone(buildSeed().citra);
+    s.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+    return s;
+  };
+  it('the family can ask for an active catalogue plan, finance applies it, and the feed and notices name it', () => {
+    let s = catalogue();
+    const r = execute(s, 'planChange.request', { memberId: 'm1', to: 'plan_1' }, getUser(clubs, 'f1')!, clock, 'pc1');
+    s = r.state;
+    const req = s.planChangeRequests[r.result.requestId as string];
+    expect(req).toMatchObject({ to: 'plan_1', status: 'pending' });
+    expect(JSON.stringify(Object.values(s.activity ?? {}))).toContain('Flex 8');
+    s = execute(s, 'planChange.apply', { requestId: req.id }, getUser(clubs, 's9')!, clock, 'pc2').state;
+    expect(planOn(s.members.m1, '2026-11-01').plan).toBe('plan_1');
+  });
+  it('refuses a retired or unknown plan, and a plan retired after the family asked cannot be applied', () => {
+    const s = catalogue();
+    const f1 = getUser(clubs, 'f1')!;
+    for (const to of ['plan_2', 'plan_9', 'platinum']) expect(() => execute(s, 'planChange.request', { memberId: 'm1', to }, f1, clock, 'pc3')).toThrow('err.invalid');
+    const asked = execute(s, 'planChange.request', { memberId: 'm1', to: 'plan_1' }, f1, clock, 'pc4').state;
+    const retired = structuredClone(asked);
+    retired.club.settings.plans![0].active = false;
+    expect(() => execute(retired, 'planChange.apply', { requestId: Object.keys(retired.planChangeRequests).find((k) => retired.planChangeRequests[k].to === 'plan_1')! }, getUser(clubs, 's9')!, clock, 'pc5')).toThrow('members.err.planInvalid');
+  });
+});

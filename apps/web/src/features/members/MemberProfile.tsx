@@ -4,7 +4,7 @@ import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { occasionsThisWeek } from '@cp/shared/rules/occasions';
 import { birthdayHint } from '../../lib/occasions';
-import { listName, latestBp, live, memberAge, memberName, memberSince, onLeaveOn, planOn, suspensionOf, ym, currentMembership, membershipStatus, type Member, type Role } from '@cp/shared';
+import { listName, latestBp, live, memberAge, memberName, memberSince, onLeaveOn, planLabel, planOn, suspensionOf, ym, currentMembership, membershipStatus, type Member, type Role } from '@cp/shared';
 import { checkOnList } from '@cp/shared/rules/checkOn';
 import { PROFILE_TABS, endingOn, isNewMember, memberStatus, pendingReviewsFor, tabForSection, type ProfileTab } from '@cp/shared/rules/members';
 import { Button, EmptyState, Icon, photoBg, TONES } from '../../components/ui';
@@ -175,7 +175,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
       {native ? <TopBar back={backLabel} onBack={goBack} title={listName(m)} showTitle={collapsed} action={editBtn} /> : null}
       {phoneUi ? (
         <NativeHead m={m} canPhoto={canPhoto} onPhoto={() => setPhotoSheet(true)} titleRef={titleRef}
-          sub={[t('profile.eyebrow', { p: plan === 'flex' ? t('profile.planFlex') : t('profile.planGold'), d: since ? fmt.fmonth(ym(since), true) : '—' }), sub].filter(Boolean).join(' · ')} />
+          sub={[t('profile.eyebrow', { p: planLabel(s, plan, fmt.lang), d: since ? fmt.fmonth(ym(since), true) : '—' }), sub].filter(Boolean).join(' · ')} />
       ) : null}
       {!family && !native ? (
         <button type="button" className="dh37" onClick={() => (canGoBack() ? navigate(-1) : navigate('/members'))} style={{ alignSelf: 'flex-start', height: isPhone ? 36 : 44, padding: '0 16px 0 10px', margin: isPhone ? '-6px 0 -6px -10px' : '-6px 0 -8px -10px', borderRadius: 12, border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', fontFamily: 'Inter' }}>
@@ -198,7 +198,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
         })()}
         <div style={{ flex: isPhone ? '1 1 0' : '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 3 : 6 }}>
           <div className="cp-eyebrow1" style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' }}>
-            {t('profile.eyebrow', { p: plan === 'flex' ? t('profile.planFlex') : t('profile.planGold'), d: since ? fmt.fmonth(ym(since), true) : '—' })}
+            {t('profile.eyebrow', { p: planLabel(s, plan, fmt.lang), d: since ? fmt.fmonth(ym(since), true) : '—' })}
           </div>
           <h1 style={{ margin: 0, fontSize: isPhone ? 26 : 'clamp(30px, 3.2vw, 40px)', lineHeight: 1.1, fontWeight: 400, letterSpacing: '-1px', color: '#2B231C', overflowWrap: 'anywhere' }}>{listName(m)}</h1>
           <FullName m={m} />

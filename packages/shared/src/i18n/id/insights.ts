@@ -86,7 +86,7 @@ export const insights: Same<typeof EN> = {
   recent: '10 kunjungan terakhir',
   noCheckOut: 'tanpa check-out',
   // Kuota Flex (di bawah Flex, Per paket)
-  fQuota: 'Kuota Flex',
+  fQuota: 'Kuota {plan}',
   fUsedAll: 'Kuota habis',
   fNotAll: 'Kuota tidak habis',
   fMembers: 'Anggota',
@@ -107,7 +107,7 @@ export const insights: Same<typeof EN> = {
   fRunningOne: '1 anggota masih punya sisa kunjungan bulan ini: belum dihitung',
   fNoneUsedAll: 'Tidak ada yang menghabiskan kuota',
   fNoneNotAll: 'Tidak ada kunjungan yang tersisa',
-  fNoMonths: 'Tidak ada anggota Flex di bulan-bulan ini',
+  fNoMonths: 'Tidak ada anggota {plan} di bulan-bulan ini',
   // By plan: all plans or one
   planView: 'Paket yang dilihat', allPlans: 'Semua paket',
   // KC round 9: tab Keanggotaan (anggota masuk dan keluar, per paket)

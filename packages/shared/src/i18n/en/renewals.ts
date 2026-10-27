@@ -16,7 +16,7 @@ export const renewals = {
   // rows
   noContact: 'No contact on file', calls1: '1 call', callsN: '{n} calls',
   'plan.flex': 'Flex', 'plan.gold': 'Gold',
-  'outcome.continue': 'Continue', 'outcome.upgrade': 'Upgrade to Gold', 'outcome.downgrade': 'Downgrade to Flex', 'outcome.leave': 'Leave', 'outcome.stop': 'Stop', 'outcome.noAnswer': 'No answer',
+  'outcome.continue': 'Continue', 'outcome.upgrade': 'Upgrade to Gold', 'outcome.downgrade': 'Downgrade to Flex', 'outcome.switch': 'Switch to {plan}', 'outcome.leave': 'Leave', 'outcome.stop': 'Stop', 'outcome.noAnswer': 'No answer',
   // the list's columns (round 8d): who · plan · where it stands · what to do now
   'col.member': 'Member', 'col.plan': 'Plan', 'col.status': 'Status', 'col.next': 'Next step', usageLine: '{usage} this month',
   'status.new': 'Not contacted', 'status.asked': 'Asked in the app', 'status.rejected': 'Not approved', 'status.pending': 'Waiting for approval',
@@ -40,7 +40,7 @@ export const renewals = {
   // the bell
   'notif.act.approve': 'Renewal changes waiting for approval: {n}',
   // the feed
-  'feed.continue': '{name}: continues in {month}', 'feed.upgrade': '{name}: moving to Gold from {month}', 'feed.downgrade': '{name}: moving to Flex from {month}',
+  'feed.continue': '{name}: continues in {month}', 'feed.upgrade': '{name}: moving to Gold from {month}', 'feed.downgrade': '{name}: moving to Flex from {month}', 'feed.switch': '{name}: moving to {plan} from {month}',
   'feed.leave': '{name}: leave in {month}', 'feed.leave2': '{name}: leave from {from} to {to}', 'feed.stop': '{name}: stopping, last day {date}',
   'feed.noAnswer': '{name}: renewal call, no answer',
   'feed.undone': '{name}: change for {month} undone', 'feed.approved': '{name}: renewal change for {month} approved', 'feed.rejected': '{name}: renewal change for {month} not approved',

@@ -385,3 +385,50 @@ describe('departures', () => {
     expect(none.overall.departures.every((x) => x === 0)).toBe(true);
   });
 });
+
+describe('By plan groups by catalogue plan (round 15)', () => {
+  const by = 'staff:s9' as const;
+  /** Lina (m1) is on Flex 8 for the whole week, Hendra (m20) on a plan that has since been retired; a third plan has nobody */
+  const world = (): ClubState => {
+    const s = produce(WEEK, (d) => {
+      d.club.settings.plans = [
+        { id: 'plan_1', name: 'Flex 8', nameId: 'Fleks 8', kind: 'days', quota: 8, active: true },
+        { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false },
+        { id: 'plan_3', name: 'Weekends', kind: 'days', quota: 4, active: true },
+      ];
+      d.members.m1.plans = [{ from: '2020-01-01', plan: 'plan_1', by }];
+      d.members.m20.plans = [{ from: '2020-01-01', plan: 'plan_2', by }];
+    });
+    return s;
+  };
+  it('lists Flex, Gold, then each catalogue plan that has members (retired ones too), with its own numbers', () => {
+    const r = visitInsights(world(), P, T);
+    expect(r.plans).toEqual(['flex', 'gold', 'plan_1', 'plan_2']); // plan_3 has nobody: not shown
+    expect(r.byPlan.plan_1).toMatchObject({ plan: 'plan_1', members: 1, visits: 2 }); // Lina came on Mon and Tue
+    expect(r.byPlan.plan_2).toMatchObject({ members: 1, visits: 1 }); // Hendra, retired but still has members
+    expect(r.byPlan.flex.visits).toBe(1); // Bambang only: Lina is no longer counted under Flex
+    expect(r.byPlan.flex.visits + r.byPlan.gold.visits + r.byPlan.plan_1.visits + r.byPlan.plan_2.visits).toBe(r.overall.visits);
+    expect(r.people.find((p) => p.memberId === 'm1')!.plan).toBe('plan_1');
+    expect(r.trend.points[0]).toMatchObject({ plan_1: 1 });
+  });
+  it('Flex and Gold only: the same two groups as before', () => {
+    const r = visitInsights(WEEK, P, T);
+    expect(r.plans).toEqual(['flex', 'gold']);
+  });
+  it('the quota report can follow one days plan', () => {
+    const s = world();
+    const onlyFlex = flexQuotaReport(s, { from: '2026-10-01', to: T }, T, 'flex');
+    const onlyEight = flexQuotaReport(s, { from: '2026-10-01', to: T }, T, 'plan_1');
+    const ids = (r: ReturnType<typeof flexQuotaReport>) => [...r.usedAll.entries, ...r.notAll.entries].map((e) => e.memberId);
+    expect(ids(onlyEight)).not.toContain('m10');
+    expect(ids(onlyFlex)).not.toContain('m1');
+  });
+  it('plan switches count by the plan moved to, not its kind', () => {
+    const s = produce(world(), (d) => {
+      d.members.m10.memberships = [{ start: '2025-03-01' }];
+      d.members.m10.plans = [{ from: '2025-03-01', plan: 'flex', by }, { from: '2026-09-14', plan: 'plan_1', by }, { from: '2026-10-05', plan: 'gold', by }];
+    });
+    const tr = memberTrend(s, memberRangeFor('3m', T), T);
+    expect(tr.totals).toMatchObject({ toGold: 1, toFlex: 0, toOther: 1 });
+  });
+});

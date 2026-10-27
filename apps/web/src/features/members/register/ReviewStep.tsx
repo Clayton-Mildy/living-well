@@ -1,7 +1,7 @@
 // Step 6, review: one group per step with an Edit link back to it, then what is confirmed before sending (Add member: the consents and a
 // note for management).
 import type { ReactNode } from 'react';
-import { feeOf, fmtPhone, priceOn, rp } from '@cp/shared';
+import { feeOf, fmtPhone, planLabel, priceOn, rp } from '@cp/shared';
 import { Group, Note, Toggle } from '../../../components/ui';
 import { useFmt } from '../../../lib/i18n';
 import { foodLabel, mobLabel, relLabel } from '../lib';
@@ -11,7 +11,7 @@ import { REG_STEPS, type RegStep } from './steps';
 
 export function ReviewStep({ p, role, goTo }: { p: StepProps; role: string | null; goTo: (k: RegStep) => void }) {
   const { st, set, t, s, today, mode } = p;
-  const { fds, fd } = useFmt();
+  const { fds, fd, lang } = useFmt();
   const none = t('reg.none');
   const isNew = mode.kind === 'new';
   const mgmt = role === 'mgmt';
@@ -22,7 +22,7 @@ export function ReviewStep({ p, role, goTo }: { p: StepProps; role: string | nul
     person: [[t('common.name'), `${st.title} ${st.name.trim()}`], [t('profile.f.called'), st.reg.nickname.trim() || none], [t('profile.f.dob'), st.dob ? fd(st.dob, { day: 'numeric', month: 'short', year: 'numeric' }) : none], [t('profile.f.address'), st.address.trim() || none]],
     family: [[t('common.name'), contactName || none], [t('profile.f.relation'), relLabel(t, st.rel)], [t('common.phone'), contactPhone ? fmtPhone(contactPhone) : none], [t('profile.sec.nanny'), st.carer.nanny ? st.carer.nannyName.trim() || none : none]],
     health: [[t('profile.f.conditions'), st.health.conditions.join(', ') || none], [t('profile.f.mobility'), mobLabel(t, st.health.mobility === 'none' ? null : st.health.mobility)], [t('profile.sec.allergies'), allergies.join(', ') || none], [dementiaQuestion(t, feeOf(priceOn(s, today), 'dementia')), st.reg.dementia === null ? none : st.reg.dementia ? <>{t('common.yes')}<span data-testid="review-dementia-fee" style={{ display: 'block', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{t('profile.dementiaFee', { rp: rp(feeOf(priceOn(s, today), 'dementia')) })}</span></> : t('common.no')]],
-    plan: [[t('enq.plan'), st.plan ? t('mgmt.plan_' + st.plan) : none], [t('enq.start'), st.start ? fds(st.start) : none]],
+    plan: [[t('enq.plan'), st.plan ? planLabel(s, st.plan, lang) : none], [t('enq.start'), st.start ? fds(st.start) : none]],
     paper: [[t('profile.paperTitle'), st.form?.fileName || none], [t('profile.f.idsShort'), st.reg.ids.filter((x) => x !== 'carer').map((x) => t('profile.ids.' + x)).join(', ') || none]],
   };
   const edit = (k: RegStep) => (
