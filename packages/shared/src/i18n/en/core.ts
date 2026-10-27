@@ -37,6 +37,8 @@ export const nav = {
   s_calendar: 'Calendar', s_calShort: 'Calendar', s_me: 'Me', s_photos: 'Photos', s_healthF: 'Health', s_more: 'More', s_requests: 'Requests', s_reviews: 'Approvals', s_contacts: 'Contacts',
   // KC round 7
   renewals: 'Next month', tasks: 'Tasks', guests: 'Guest hosts', insights: 'Insights', memories: 'Memories', report: 'Daily report', s_report: 'Report', monthReport: 'Month report', s_monthReport: 'Month', s_renewals: 'Next month', s_tasks: 'Tasks', s_guests: 'Guests', s_insights: 'Insights', s_memories: 'Memories',
+  // round 14 p2
+  spending: 'Spending', s_spending: 'Spending',
 };
 export const roles = {
   lobby: 'Lobby', nurse: 'Nurse', activity: 'Activity teacher', kitchen: 'Kitchen & F&B', finance: 'Finance', mgmt: 'Management', family: 'Family',
