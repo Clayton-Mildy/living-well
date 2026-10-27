@@ -7,13 +7,14 @@ import { addDays, displayName } from '@cp/shared';
 import { CARE_CALL_OUTCOMES, checkOnList } from '@cp/shared/rules/checkOn';
 import { renewalContact } from '@cp/shared/rules/renewals';
 import type { CareCallOutcome } from '@cp/shared';
-import { Button, ChipGroup, DateField, Note, Sheet, TextField } from '../../components/ui';
+import { Button, ChipGroup, DateField, Note, Select, Sheet, TextField } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { CallLink, relText } from './parts';
+import { NOT_SEEN_CHOICES, useCheckOnDays } from './useCheckOnDays';
 
 export function CheckOnSheet({ memberId, onClose }: { memberId: string | null; onClose: () => void }) {
   return memberId ? <Body key={memberId} memberId={memberId} onClose={onClose} /> : null;
@@ -30,11 +31,12 @@ function Body({ memberId, onClose }: { memberId: string; onClose: () => void }) 
   const [note, setNote] = useState('');
   const [again, setAgain] = useState('');
   const [busy, setBusy] = useState(false);
+  const [days, setDays] = useCheckOnDays();
 
   const m = s.members[memberId];
   if (!m || m.deletedAt) return null;
   const who = renewalContact(s, memberId);
-  const row = checkOnList(s, today).find((r) => r.member.id === memberId);
+  const row = checkOnList(s, today, days).find((r) => r.member.id === memberId);
   const name = displayName(m);
   const day = (d: string) => fd(d, { day: 'numeric', month: 'short' });
 
@@ -53,6 +55,8 @@ function Body({ memberId, onClose }: { memberId: string; onClose: () => void }) 
     <Sheet open onClose={onClose} title={name} maxWidth={480}
       footer={<Button variant="primary" size={48} full disabled={!outcome || busy} onClick={() => void save()}>{t('checkOn.save')}</Button>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 18 }}>
+        <Select label={t('checkOn.notSeenFor')} value={String(days ?? 'auto')} onChange={(v) => setDays(v === 'auto' ? 'auto' : Number(v))}
+          options={NOT_SEEN_CHOICES.map((c) => ({ value: String(c), label: c === 'auto' ? t('checkOn.auto') : t('checkOn.days', { n: c }) }))} />
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2, fontSize: 14, lineHeight: 1.4, color: '#6B6259' }}>
           {row ? <span>{row.lastVisit ? t('checkOn.lastSeen', { date: day(row.lastVisit) }) : t('checkOn.neverSeen')} · {t(row.daysSince === 1 ? 'checkOn.day1' : 'checkOn.days', { n: row.daysSince })}</span> : null}
           {row?.lastCall ? <span>{t('checkOn.lastCall', { outcome: t('checkOn.outcome.' + row.lastCall.outcome) })} · {day(row.lastCall.date)}</span> : null}

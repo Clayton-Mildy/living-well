@@ -12,6 +12,7 @@ import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
+import { NOT_SEEN_CHOICES, useCheckOnDays } from '../lobby/useCheckOnDays';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { FullName, relLabel, rowStatusText, STATUS_STYLE } from './lib';
 
@@ -30,7 +31,8 @@ export function MembersList() {
   const [f, setF] = useState<MemberFilter>(() => { const w = sp.get('f'); return (MEMBER_FILTERS as string[]).includes(w ?? '') ? (w as MemberFilter) : 'active'; }); // /members?f=checkOn opens a filter
   const [sort, setSort] = useState<MemberSort>('name');
   const [adding, setAdding] = useState(false);
-  const rows = useMemo(() => memberRows(s, today), [s, today]);
+  const [notSeen, setNotSeen] = useCheckOnDays();
+  const rows = useMemo(() => memberRows(s, today, notSeen), [s, today, notSeen]);
   const counts = useMemo(() => filterCounts(rows), [rows]);
   const visible = useMemo(() => sortMemberRows(rows.filter(FILTERS[f]).filter((r) => matchesQuery(s, r.m, q)), sort), [rows, f, q, s, sort]);
   const paged = usePaged(visible, PAGE_SIZE, `${f}|${q}|${sort}`);
@@ -67,6 +69,11 @@ export function MembersList() {
   // KC round 14: In the club and Active say how many are Flex and how many Gold
   const splitEl = (f === 'in' || f === 'active') ? (
     <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{t('members.split', { f: counts.split[f].flex, g: counts.split[f].gold })}</div>
+  ) : null;
+  // round 15: the Check on filter says how long "not seen" is (a per-device choice that also drives the lobby rail)
+  const notSeenEl = f === 'checkOn' ? (
+    <div style={{ maxWidth: isPhone ? undefined : 240 }}><Select label={t('checkOn.notSeenFor')} value={String(notSeen ?? 'auto')} onChange={(v) => setNotSeen(v === 'auto' ? 'auto' : Number(v))}
+      options={NOT_SEEN_CHOICES.map((c) => ({ value: String(c), label: c === 'auto' ? t('checkOn.auto') : t('checkOn.days', { n: c }) }))} /></div>
   ) : null;
   const sortEl = (
     <Select ariaLabel={t('members.sortLabel')} value={sort} onChange={setSort} options={MEMBER_SORTS.map((k) => ({ value: k, label: t(`members.sort.${k}`) }))} />
@@ -133,6 +140,7 @@ export function MembersList() {
             <div style={{ flex: '1 1 0', minWidth: 0 }}>{sortEl}</div>
           </div>
           {splitEl}
+          {notSeenEl}
           <Group pad={0} gap={0}>
             {paged.rows.map((r, i) => {
               const tone = TONES[r.m.photoTone % 5];
@@ -205,6 +213,7 @@ export function MembersList() {
           <FilterChips label={t('members.filter')} value={f} onChange={setF} options={MEMBER_FILTERS.map((k) => ({ value: k, label: t('members.f.' + k), count: counts[k] }))} />
         )}
         {splitEl}
+        {notSeenEl}
         <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: isPhone ? 24 : 28, padding: '8px clamp(18px, 3vw, 36px) 12px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px 20px', flexWrap: 'wrap', padding: '14px 0 6px' }}>
             {isPhone ? null : <div style={{ flex: '0 1 220px', minWidth: 0, marginRight: 'auto' }}>{sortEl}</div>}

@@ -181,11 +181,12 @@ export function lastVisits(s: ClubState, today: ISODate): Record<string, ISODate
   for (const a of live(s.attendance)) if (a.checkIn && a.date <= today && (!out[a.memberId] || a.date > out[a.memberId])) out[a.memberId] = a.date;
   return out;
 }
-export function memberRows(s: ClubState, today: ISODate): MemberRow[] {
+/** `notSeenFor`: the device's "Not seen for" choice for the Check on filter (undefined = automatic); the web passes it in so shared stays pure. */
+export function memberRows(s: ClubState, today: ISODate, notSeenFor?: number): MemberRow[] {
   const overdue = new Set(live(s.invoices).filter((i) => invoiceStatus(s, i, today) === 'overdue').map((i) => i.memberId));
   const hold = suspensions(s, today);
   const last = lastVisits(s, today);
-  const quiet = new Map(checkOnList(s, today).map((r) => [r.member.id, r]));
+  const quiet = new Map(checkOnList(s, today, notSeenFor).map((r) => [r.member.id, r]));
   return sortBy(
     live(s.members).filter((m) => !isPendingRow(m) || m.review?.status === 'pending'),
     (m) => m.firstName + m.lastName,

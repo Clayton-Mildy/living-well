@@ -18,6 +18,7 @@ import { initials } from '@cp/shared';
 import { FullName, canGoBack, endReasonLabel, STATUS_STYLE, statusText } from './lib';
 import { MemberDialog } from './dialogs/MemberDialog';
 import { CheckOnSheet } from '../lobby/CheckOnSheet';
+import { useCheckOnDays } from '../lobby/useCheckOnDays';
 import { ProfilePhotoSheet } from './ProfilePhoto';
 import { memberPhoto, photoFill } from '../../lib/media';
 import { AttendanceTab } from './profile/AttendanceTab';
@@ -96,7 +97,8 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
   const [dlg, setDlg] = useState<{ kind: DialogKind; familyId?: string } | null>(null);
   const [photoSheet, setPhotoSheet] = useState(false);
   const [callSheet, setCallSheet] = useState(false);
-  const onCheckOn = useMemo(() => !family && (['lobby', 'nurse', 'mgmt'] as string[]).includes(myRole) && checkOnList(s, today).some((r) => r.member.id === id), [s, today, id, family, myRole]); // round 12: not seen for a while
+  const [notSeen] = useCheckOnDays();
+  const onCheckOn = useMemo(() => !family && (['lobby', 'nurse', 'mgmt'] as string[]).includes(myRole) && checkOnList(s, today, notSeen).some((r) => r.member.id === id), [s, today, id, family, myRole, notSeen]); // round 12: not seen for a while
   const st = memberStatus(s, m, today);
   const life = membershipStatus(m, today);
   const myActor = me.kind === 'staff' ? `staff:${me.id}` : `family:${me.id}`;

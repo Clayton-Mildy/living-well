@@ -1,7 +1,7 @@
 // Check on (round 12): the rail block in Arrivals' side rail and the call sheet it opens.
 import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { buildSeed } from '@cp/shared';
 import { useReplica } from '../../store/replica';
@@ -17,6 +17,8 @@ afterEach(async () => {
   await act(async () => { root?.unmount(); });
   host?.remove();
   document.body.innerHTML = '';
+  vi.restoreAllMocks();
+  try { localStorage.removeItem('cp.checkOn.days'); } catch { /* none */ }
   root = null;
   host = null;
 });
@@ -27,9 +29,10 @@ function Rail() {
   return <><AlsoToday guest={noop} onCheckOn={setId} /><CheckOnSheet memberId={id} onClose={() => setId(null)} /></>;
 }
 /** The seed with Oma Lina (m1) quiet for 12 days: nothing since Friday the 9th. */
-function open(quiet: boolean) {
+function open(quiet: boolean, alsoM2 = false) {
   const state = buildSeed().citra;
   if (quiet) for (const k of Object.keys(state.attendance)) if (state.attendance[k].memberId === 'm1' && state.attendance[k].date > '2026-10-09') delete state.attendance[k];
+  if (alsoM2) for (const k of Object.keys(state.attendance)) if (state.attendance[k].memberId === 'm2' && state.attendance[k].date > '2026-10-13') delete state.attendance[k]; // m2: a week or so quiet, under the automatic 10
   useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
   useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 598, realStart: Date.now(), offset: 0 } });
 }
@@ -62,5 +65,34 @@ describe('Check on in the Arrivals rail', () => {
     open(false);
     await show();
     expect(host!.textContent).not.toContain("Haven't come lately");
+  });
+  it('"Not seen for" in the call sheet: 7 days adds the member quiet for a week to the rail and is remembered', async () => {
+    open(true, true);
+    await show();
+    expect(host!.querySelector('[data-check-on="m2"]')).toBeNull();
+    await act(async () => { (host!.querySelector('[data-check-on="m1"]') as HTMLButtonElement).click(); });
+    const sheet = document.body.querySelector('[role="dialog"]')!;
+    const trigger = sheet.querySelector('[role="combobox"]') as HTMLButtonElement;
+    expect(trigger.textContent).toContain('Automatic');
+    await act(async () => { trigger.click(); });
+    const opt = Array.from(document.body.querySelectorAll('[role="option"]')).find((o) => o.textContent === '7 days') as HTMLElement;
+    await act(async () => { opt.click(); });
+    expect(localStorage.getItem('cp.checkOn.days')).toBe('7');
+    expect(host!.querySelector('[data-check-on="m2"]')).toBeTruthy();
+    expect(host!.textContent).toContain("Haven't come lately (2)");
+  });
+  it('a stored 30 hides the 12-day member from the rail', async () => {
+    open(true);
+    localStorage.setItem('cp.checkOn.days', '30');
+    await show();
+    expect(host!.textContent).not.toContain("Haven't come lately");
+  });
+  it('still renders with Automatic when storage throws', async () => {
+    open(true);
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new Error('blocked'); });
+    await show();
+    await act(async () => { (host!.querySelector('[data-check-on="m1"]') as HTMLButtonElement).click(); });
+    const trigger = document.body.querySelector('[role="dialog"] [role="combobox"]') as HTMLButtonElement;
+    expect(trigger.textContent).toContain('Automatic');
   });
 });
