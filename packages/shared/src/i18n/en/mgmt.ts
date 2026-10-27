@@ -105,7 +105,7 @@ export const mgmt = {
   'feed.venueBooked': 'Venue booked · {org} · {date}', 'feed.venueUpdated': 'Venue booking changed · {org} · {date}', 'feed.venueCancelled': 'Venue booking cancelled · {org} · {date}',
   'feed.venueReviewAsked': 'Review link sent · {org}', 'feed.venueReviewed': 'Venue review recorded · {org} · {stars}/5', 'feed.venueInvoice': 'Venue invoice {ref} · {org}',
   'feed.surveySent': 'Survey sent · {title} · {n} families', 'feed.surveySentTo': 'Survey sent · {title} · {name}', 'feed.surveyClosed': 'Survey closed · {title}', 'feed.surveyAnswered': '{name} answered the survey · {overall}/5', 'feed.surveyAnsweredPlain': '{name} answered the survey',
-  'feed.prices': 'Prices updated (from {date})', 'feed.rules': 'Club rules updated: Flex is {quota} visits a month',
+  'feed.plan': 'Plan updated: {name}', 'feed.prices': 'Prices updated (from {date})', 'feed.rules': 'Club rules updated: Flex is {quota} visits a month',
 
   // ----- notifications (updates) -----
   'notif.bc_update': 'Club update: {text}', 'notif.bc_closure': 'The club is closed on {text}.', 'notif.bc_event': 'You are invited: {text}', 'notif.bc_custom': '{text}',

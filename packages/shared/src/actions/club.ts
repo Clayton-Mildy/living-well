@@ -1,6 +1,6 @@
 // Club management: venue bookings, WhatsApp broadcasts (and the job that sends scheduled ones), surveys, prices and club rules.
 import type { Draft } from 'immer';
-import type { Actor, Broadcast, ClubState, HM, ISODate, PriceVersion, Survey, SurveyAnswer, SurveyCustomQuestion, User, VenueBooking } from '../types';
+import type { Actor, Broadcast, ClubState, HM, ISODate, PlanDef, PriceVersion, Survey, SurveyAnswer, SurveyCustomQuestion, User, VenueBooking } from '../types';
 import { defineAction, hasRole, isFamily, isMgmt, type Ctx } from './framework';
 import { registerJob } from './jobs';
 import { feeOf, priceOn } from '../rules/billing';
@@ -13,6 +13,17 @@ import { actorName } from '../rules/core';
 import { live, rp, sortBy } from '../util';
 
 const mgmtOnly = (u: User) => isMgmt(u);
+/** Custom plan prices from the input: { plan_1: 2000000 }. */
+function customPrices(v: unknown): Record<string, number> {
+  const o = obj(v, 'plans');
+  const out: Record<string, number> = {};
+  for (const [id, n] of Object.entries(o)) {
+    if (!/^plan_\d+$/.test(id)) bad('plans');
+    out[id] = int(n, 1, 1_000_000_000, 'plans');
+  }
+  return out;
+}
+const sortedPlans = (p: Record<string, number> | undefined) => Object.entries(p ?? {}).sort(([a], [b]) => a.localeCompare(b));
 // round 12: venue bookings always come through the front desk, so the lobby runs them; only management and finance invoice
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
 const invoicers = (u: User) => hasRole(u, 'mgmt', 'finance');
@@ -701,7 +712,7 @@ export const clubActions = [
 
   // ----- prices and rules -----
   // KC round 6: besides the monthly prices, the brochure's one-time registration fee, the 2-day trial and a month of leave (left out = unchanged)
-  defineAction<{ flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; dementia?: number; from: ISODate; notify?: boolean }>({
+  defineAction<{ flex: number; gold: number; extra: number; registration?: number; trial?: number; leave?: number; dementia?: number; plans?: Record<string, number>; from: ISODate; notify?: boolean }>({
     name: 'prices.set',
     can: mgmtOnly,
     parse(raw) {
@@ -711,7 +722,7 @@ export const clubActions = [
         return n;
       };
       const fee = (v: unknown, f: string) => (v === undefined ? {} : { [f]: price(v, f) });
-      return { flex: price(o.flex, 'flex'), gold: price(o.gold, 'gold'), extra: price(o.extra, 'extra'), ...fee(o.registration, 'registration'), ...fee(o.trial, 'trial'), ...fee(o.leave, 'leave'), ...(o.dementia === undefined ? {} : { dementia: int(o.dementia, 0, 1_000_000_000, 'dementia') }), from: isoDate(o.from, 'from'), notify: o.notify === undefined ? true : bool(o.notify) };
+      return { flex: price(o.flex, 'flex'), gold: price(o.gold, 'gold'), extra: price(o.extra, 'extra'), ...fee(o.registration, 'registration'), ...fee(o.trial, 'trial'), ...fee(o.leave, 'leave'), ...(o.dementia === undefined ? {} : { dementia: int(o.dementia, 0, 1_000_000_000, 'dementia') }), ...(o.plans === undefined ? {} : { plans: customPrices(o.plans) }), from: isoDate(o.from, 'from'), notify: o.notify === undefined ? true : bool(o.notify) };
     },
     run(d, i, ctx) {
       if (i.from < ctx.today) ctx.fail('mgmt.err.pricePast');
@@ -719,19 +730,52 @@ export const clubActions = [
       const cur = priceOn(s, i.from);
       const exact = live(s.prices).find((p) => p.from === i.from);
       const fees = { registration: i.registration ?? feeOf(cur, 'registration'), trial: i.trial ?? feeOf(cur, 'trial'), leave: i.leave ?? feeOf(cur, 'leave'), dementia: i.dementia ?? feeOf(cur, 'dementia') };
-      const same = (p: PriceVersion) => p.flex === i.flex && p.gold === i.gold && p.extra === i.extra && (['registration', 'trial', 'leave', 'dementia'] as const).every((k) => feeOf(p, k) === fees[k]);
+      // custom plan prices: a plan left out keeps the price in force; every plan id must be in the catalogue
+      const known = new Set((s.club.settings.plans ?? []).map((p) => p.id));
+      if (Object.keys(i.plans ?? {}).some((id) => !known.has(id as PlanDef['id']))) ctx.fail('err.invalid');
+      const plans = { ...(cur.plans ?? {}), ...(i.plans ?? {}) };
+      const same = (p: PriceVersion) => p.flex === i.flex && p.gold === i.gold && p.extra === i.extra && (['registration', 'trial', 'leave', 'dementia'] as const).every((k) => feeOf(p, k) === fees[k]) && JSON.stringify(sortedPlans(p.plans)) === JSON.stringify(sortedPlans(plans));
       if (!exact && same(cur)) ctx.fail('err.noChanges');
       if (exact && same(exact)) ctx.fail('err.noChanges');
       const sample = { flex: cur.sample.flex && cur.flex === i.flex, gold: cur.sample.gold && cur.gold === i.gold, extra: cur.sample.extra && cur.extra === i.extra };
+      const planPrices = Object.keys(plans).length ? { plans } : {};
       if (exact) {
         const row = d.prices[exact.id];
-        Object.assign(row, { flex: i.flex, gold: i.gold, extra: i.extra, ...fees, sample, by: ctx.actor });
+        Object.assign(row, { flex: i.flex, gold: i.gold, extra: i.extra, ...fees, ...planPrices, sample, by: ctx.actor });
       } else {
         const id = ctx.id('price');
-        d.prices[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, from: i.from, flex: i.flex, gold: i.gold, extra: i.extra, ...fees, sample, by: ctx.actor };
+        d.prices[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, from: i.from, flex: i.flex, gold: i.gold, extra: i.extra, ...fees, ...planPrices, sample, by: ctx.actor };
       }
       ctx.feed({ icon: 'sell', key: 'mgmt.feed.prices', params: { date: dm(i.from) } });
       if (i.notify !== false) ctx.notify({ toRoles: ['finance'], kind: 'mgmt.notif.pricesChanged', params: { date: dm(i.from) }, link: '/billing' });
+    },
+  }),
+  // KC round 15 (phase 2): the plan catalogue. Flex and Gold are built in; management adds plans beyond them, edits them and retires them (a retired plan keeps its members and still bills).
+  defineAction<{ id?: string; name: string; nameId?: string; kind: PlanDef['kind']; quota?: number; active: boolean }>({
+    name: 'club.setPlan',
+    can: mgmtOnly,
+    parse(raw) {
+      const o = obj(raw);
+      const kind = oneOf(o.kind, ['days', 'unlimited'] as const, 'kind');
+      const id = o.id === undefined ? undefined : str(o.id, 40, { required: true, field: 'id' });
+      if (id !== undefined && !/^plan_\d+$/.test(id)) bad('id');
+      const nameId = str(o.nameId, 60);
+      return {
+        ...(id ? { id } : {}), name: str(o.name, 60, { required: true, field: 'name' }), ...(nameId ? { nameId } : {}), kind,
+        ...(kind === 'days' ? { quota: int(o.quota, 1, 23, 'quota') } : {}), active: o.active === undefined ? true : bool(o.active),
+      };
+    },
+    run(d, i, ctx) {
+      const st = d.club.settings;
+      const plans = (st.plans ??= []);
+      const def: PlanDef = { id: (i.id ?? nextNumId(Object.fromEntries(plans.map((p) => [p.id, p])), 'plan_')) as PlanDef['id'], name: i.name, ...(i.nameId ? { nameId: i.nameId } : {}), kind: i.kind, ...(i.kind === 'days' ? { quota: i.quota } : {}), active: i.active };
+      if (i.id) {
+        const at = plans.findIndex((p) => p.id === i.id);
+        if (at < 0) ctx.fail('err.notFound');
+        if (JSON.stringify(plans[at]) === JSON.stringify(def)) ctx.fail('err.noChanges');
+        plans[at] = def;
+      } else plans.push(def);
+      ctx.feed({ icon: 'workspace_premium', key: 'mgmt.feed.plan', params: { name: def.name } });
     },
   }),
   // The one club rule: how many visits a month a Flex member gets before a visit is an extra day. Counted from check-ins.

@@ -4,6 +4,7 @@
 import type { Attendance, Bank, CalendarEvent, ClubState, DailyLog, Face, GuestHostKind, HM, Invoice, ISODate, MemberNote, Member, MoodMark, Photo, Plan, Reading, Slot, YM } from '../types';
 import { currentMembership, dayStatus, familyMemberIds, isPendingRow, memberSince, membershipStatus, nextOpenDay, planOn } from './core';
 import { attOf, flexMonth } from './attendance';
+import { isDaysPlan } from './plans';
 import { cameOn, sessionPhotos } from './activity';
 import { balanceOf, invoiceStatus, invoicesOf, priceOn, type InvoiceStatus } from './billing';
 import { menuOn, sessionsOn, visibleLunchPhotos, type SessionSlot } from './kitchen';
@@ -128,7 +129,7 @@ export interface PlanSummary {
 export function planSummary(s: ClubState, m: Member, today: ISODate): PlanSummary {
   const month = ym(today);
   const plan = planOn(m, today).plan;
-  const flex = plan === 'flex';
+  const flex = isDaysPlan(s, plan);
   const fm = flexMonth(s, m, month, today);
   const { invoiceMonth, price } = extraPriceFor(s, `${month}-01`);
   const quota = flex ? fm.quota ?? s.club.settings.flexQuota : null;

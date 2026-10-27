@@ -4,6 +4,7 @@
 import type { Activity, AllergyPlan, ClubState, DailyLog, Dish, Face, Feedback, GuestHost, GuestSession, GuestVisit, HM, ISODate, Member, Photo, Plan, Reading, Room, ScheduleCell, Slot, Staff, StaffRole, VenueBooking } from '../types';
 import { LUNCH_AMOUNTS, SESSION_MIN, FIXED_SLOTS, attendedOn, libraryPhotos, logsOn, pendingLogMembers, sessionPhotos, type LunchAmount, type SessionMark } from './activity';
 import { attOf, flexMonth, guestsOn } from './attendance';
+import { isDaysPlan } from './plans';
 import { isWaiting } from './approvals';
 import { dayStatus, isOpen, memberName, planOn, staffByRole, staffCall, type DayStatus } from './core';
 import { guestOn } from './guests';
@@ -185,13 +186,13 @@ export function dailyReport(s: ClubState, date: ISODate, today: ISODate, nowMin:
     const log = logs.get(m.id);
     const plan = planOn(m, date).plan;
     const fm = flexMonth(s, m, ym(date), today);
-    const flexVisits = fm.visits.filter((d) => d <= date && planOn(m, d).plan === 'flex').length;
+    const flexVisits = fm.visits.filter((d) => d <= date && isDaysPlan(s, planOn(m, d).plan)).length;
     const arrival = readings.filter((r) => r.memberId === m.id && r.kind === 'arrival').pop();
     const arc = dayArc(s, m.id, date);
     const daily = dailyMood(s, m.id, date);
     return {
       m, checkIn: a.checkIn!.at, checkOut: a.checkOut?.at, inClub: isToday && !a.checkOut, plan,
-      flex: plan === 'flex' ? { n: flexVisits, quota: fm.quota ?? 0 } : undefined, extra: fm.extraDates.includes(date),
+      flex: isDaysPlan(s, plan) ? { n: flexVisits, quota: fm.quota ?? 0 } : undefined, extra: fm.extraDates.includes(date),
       log, pendingLog: !!log && isWaiting(log), lunch: log?.lunch, ...(daily ? { dailyFace: daily.face } : {}),
       sessions: sessions.map((x) => ({ slot: x.slot, mark: log?.sessions?.[x.slot] })), arrival,
       ...(arc.arrival !== undefined ? { arrivalFace: arc.arrival } : {}), ...(arc.departure !== undefined ? { departureFace: arc.departure } : {}),

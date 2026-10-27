@@ -1,10 +1,11 @@
 // Members: lifecycle status, list rows, filters and search, id allocation, documents and consent, validation,
 // pending reviews and the final invoice. Members drop in on any open day, so there are no bookings, leave or "expected" days here:
 // status comes from check-ins, and the Flex plan counts visits. Pure selectors shared by the actions and the screens.
-import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
+import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
 import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
+import { planDefs } from './plans';
 import { invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
 import { onLeaveOn } from './leave';
 import { latestBp } from './health';
@@ -153,10 +154,8 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 // ---------- list rows, filters, search ----------
 export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'ended';
 export const MEMBER_FILTERS: MemberFilter[] = ['active', 'in', 'att', 'checkOn', 'flex', 'gold', 'ended'];
-/** The plans a member can be on, as pickers list them (round 15). `label` is an i18n key. One place for every plan list in the UI, so phase 2's plan catalogue only has to extend this. */
-export function activePlans(_s: ClubState): { id: Plan; label: string }[] {
-  return [{ id: 'flex', label: 'members.f.flex' }, { id: 'gold', label: 'members.f.gold' }];
-}
+/** The plans a member can be put on, as pickers list them: Flex, Gold, then the catalogue's active plans (a retired plan leaves the pickers; its members keep it). Name them with `planLabel`. */
+export const activePlans = (s: ClubState): PlanDef[] => planDefs(s).filter((p) => p.active);
 export interface MemberRow {
   m: Member;
   st: MemberStatus;

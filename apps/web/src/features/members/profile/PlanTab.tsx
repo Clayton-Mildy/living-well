@@ -6,6 +6,7 @@ import {
 } from '@cp/shared';
 import { formatVa, openBalance } from '@cp/shared/rules/members';
 import { isConfirmed } from '@cp/shared/rules/finance';
+import { planPrice } from '@cp/shared/rules/plans';
 import { Button, Group, Icon, Pager, SectionLabel, Sheet, StatusBadge, TextField, Note, usePaged } from '../../../components/ui';
 import { say } from '../../../store/ui';
 import { InvoiceSheet } from '../../finance/InvoiceSheet';
@@ -50,7 +51,7 @@ export function PlanTab({ p }: { p: P }) {
   );
   const facts = (
     <div style={{ display: 'flex', flexDirection: 'column' }}>
-      <Fact k={t('profile.fee')} first>{rp(price[plan.plan])}</Fact>
+      <Fact k={t('profile.fee')} first>{rp(planPrice(price, plan.plan))}</Fact>
       <Fact k={t('profile.visits')}>{plan.plan === 'flex' ? t('profile.visitsFlex', { q: s.club.settings.flexQuota }) : t('profile.visitsGold')}</Fact>
       <Fact k={t('profile.visitsMonth', { m: fmt.fmonth(ym(today)) })}>
         {fm.quota === null ? t('profile.visitsMonthGold', { n: fm.used }) : t(fm.extra ? (fm.extra === 1 ? 'profile.visitsMonthExtraOne' : 'profile.visitsMonthExtra') : 'profile.visitsMonthFlex', { n: Math.min(fm.used, fm.quota), q: fm.quota, x: fm.extra })}

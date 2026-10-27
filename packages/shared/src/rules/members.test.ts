@@ -253,8 +253,11 @@ describe('filterCounts split', () => {
 });
 
 describe('activePlans', () => {
-  it('round 15: lists Flex then Gold, each with its i18n label key (phase 2 extends it with the catalogue)', () => {
-    expect(activePlans(seed())).toEqual([{ id: 'flex', label: 'members.f.flex' }, { id: 'gold', label: 'members.f.gold' }]);
+  it('lists Flex, Gold, then the active catalogue plans; a retired plan leaves the list', () => {
+    expect(activePlans(seed()).map((p) => p.id)).toEqual(['flex', 'gold']);
+    const s = seed();
+    s.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+    expect(activePlans(s).map((p) => p.id)).toEqual(['flex', 'gold', 'plan_1']);
   });
 });
 

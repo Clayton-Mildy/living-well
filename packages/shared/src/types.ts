@@ -31,7 +31,10 @@ export type StaffRole = 'lobby' | 'nurse' | 'activity' | 'kitchen' | 'finance' |
 export type Bank = 'BCA' | 'Mandiri' | 'BNI' | 'BRI' | 'Permata';
 export type Xero = 'synced' | 'pending' | 'awaitingPayment' | 'draft' | 'notSent';
 export type SectionId = string; // 'fnb' | 'activities' | 'operations' | custom
-export type Plan = 'flex' | 'gold';
+/** Flex and Gold are built in; a plan the club adds to its catalogue (ClubSettings.plans) is `plan_<n>`. */
+export type Plan = 'flex' | 'gold' | `plan_${string}`;
+/** One entry of the membership plan catalogue (round 15, phase 2). Flex and Gold are virtual entries built from the settings and the price list (rules/plans.ts). */
+export interface PlanDef { id: Plan; name: string; nameId?: string; kind: 'days' | 'unlimited'; /** visits a month on a days plan (1-23) */ quota?: number; active: boolean }
 export type QueueKind = 'arrival' | 'departure' | 'recheck' | 'monthly' | 'spot';
 export type ThreadTopic = 'lobby' | 'nurse' | 'care' | 'kitchen' | 'billing';
 
@@ -93,6 +96,8 @@ export interface ClubSettings {
   duties?: Record<string, { off?: boolean; dueBy?: HM }>;
   /** KC round 13: days of leave a staff member may take in a calendar year (missing = 5) */
   leaveDays?: number;
+  /** KC round 15 (phase 2): the plans management added beyond Flex and Gold, in order. A retired plan stays here: its members keep it and still bill. */
+  plans?: PlanDef[];
 }
 
 /** One Watch / Alert pair; null = not used. */
@@ -119,6 +124,8 @@ export interface PriceVersion extends Row {
   leave?: number;
   /** round 14: the monthly dementia care fee, on top of the plan for a member whose registration answers yes */
   dementia?: number;
+  /** round 15 (phase 2): the monthly price of each catalogue plan, by plan id (a plan missing here bills Rp 0 from this version) */
+  plans?: Record<string, number>;
   sample: { flex: boolean; gold: boolean; extra: boolean };
   by?: Actor;
 }

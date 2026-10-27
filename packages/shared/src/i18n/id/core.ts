@@ -113,5 +113,5 @@ export const demo: Same<typeof EN.demo> = {
   reset: 'Atur ulang data demo', resetDone: 'Data demo diatur ulang ke 09.58.', resetConfirm: 'Atur ulang semua perubahan di demo ini? Semua pengguna aplikasi ikut melihat pengaturan ulang.', designSystem: 'Sistem desain', clock: 'Jam klub',
 };
 export const inv: Same<typeof EN.inv> = {
-  'line.flex': 'Paket Flex · {month}', 'line.gold': 'Paket Gold · {month}', 'line.extra': 'Hari tambahan · {month} ({n})', 'line.credit': 'Saldo akun', 'line.venue': 'Sewa venue', 'line.leave': 'Cuti · {month}', 'line.dementia': 'Perawatan demensia', 'line.registration': 'Biaya pendaftaran',
+  'line.plan': 'Paket {planId} · {month}', 'line.flex': 'Paket Flex · {month}', 'line.gold': 'Paket Gold · {month}', 'line.extra': 'Hari tambahan · {month} ({n})', 'line.credit': 'Saldo akun', 'line.venue': 'Sewa venue', 'line.leave': 'Cuti · {month}', 'line.dementia': 'Perawatan demensia', 'line.registration': 'Biaya pendaftaran',
 };

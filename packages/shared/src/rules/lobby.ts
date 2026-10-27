@@ -6,6 +6,7 @@ import type { ClubState, GuestVisit, HM, ISODate, Member, Reading } from '../typ
 import { contactsOfMember, dayStatus, memberName, planOn } from './core';
 import { attOf, flexQuota, guestsOn, lobbyGroups, visitsInMonth, wouldBeExtra, type BoardRow } from './attendance';
 import { todayReading } from './health';
+import { isDaysPlan } from './plans';
 import { sortBy, toMin, ym } from '../util';
 
 // ---------- face recognition ----------
@@ -41,9 +42,10 @@ export interface VisitInfo {
   extra: boolean;
 }
 export function visitInfo(s: ClubState, m: Member, date: ISODate): VisitInfo {
-  if (planOn(m, date).plan !== 'flex') return { flex: false, n: visitsInMonth(s, m, ym(date)).filter((d) => d <= date).length || 1, quota: null, extra: false };
-  const before = visitsInMonth(s, m, ym(date)).filter((d) => d < date && planOn(m, d).plan === 'flex').length;
-  return { flex: true, n: before + 1, quota: flexQuota(s, m, ym(date)), extra: wouldBeExtra(s, m, date) };
+  const plan = planOn(m, date).plan;
+  if (!isDaysPlan(s, plan)) return { flex: false, n: visitsInMonth(s, m, ym(date)).filter((d) => d <= date).length || 1, quota: null, extra: false };
+  const before = visitsInMonth(s, m, ym(date)).filter((d) => d < date && isDaysPlan(s, planOn(m, d).plan)).length;
+  return { flex: true, n: before + 1, quota: flexQuota(s, m, ym(date), plan), extra: wouldBeExtra(s, m, date) };
 }
 
 // ---------- member search and the three lobby lists ----------

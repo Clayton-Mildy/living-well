@@ -108,7 +108,7 @@ export const mgmt: Same<typeof EN> = {
   'feed.venueBooked': 'Venue dipesan · {org} · {date}', 'feed.venueUpdated': 'Pemesanan venue diubah · {org} · {date}', 'feed.venueCancelled': 'Pemesanan venue dibatalkan · {org} · {date}',
   'feed.venueReviewAsked': 'Tautan ulasan terkirim · {org}', 'feed.venueReviewed': 'Ulasan venue dicatat · {org} · {stars}/5', 'feed.venueInvoice': 'Faktur venue {ref} · {org}',
   'feed.surveySent': 'Survei dikirim · {title} · {n} keluarga', 'feed.surveySentTo': 'Survei dikirim · {title} · {name}', 'feed.surveyClosed': 'Survei ditutup · {title}', 'feed.surveyAnswered': '{name} menjawab survei · {overall}/5', 'feed.surveyAnsweredPlain': '{name} menjawab survei',
-  'feed.prices': 'Harga diperbarui (mulai {date})', 'feed.rules': 'Aturan klub diperbarui: Flex adalah {quota} kunjungan sebulan',
+  'feed.plan': 'Paket diperbarui: {name}', 'feed.prices': 'Harga diperbarui (mulai {date})', 'feed.rules': 'Aturan klub diperbarui: Flex adalah {quota} kunjungan sebulan',
 
   // ----- notifikasi -----
   'notif.bc_update': 'Kabar klub: {text}', 'notif.bc_closure': 'Klub tutup pada {text}.', 'notif.bc_event': 'Anda diundang: {text}', 'notif.bc_custom': '{text}',

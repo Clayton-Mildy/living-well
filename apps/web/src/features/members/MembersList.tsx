@@ -5,11 +5,12 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym, type Plan } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, activePlans, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
+import { planLabel } from '@cp/shared/rules/plans';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
-import { useFmt, useT } from '../../lib/i18n';
+import { useFmt, useLang, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { NotSeenSelect } from '../lobby/NotSeenSelect';
@@ -24,6 +25,7 @@ const PAGE_SIZE = 10;
 export function MembersList() {
   const s = useClub();
   const t = useT();
+  const lang = useLang();
   const fmt = useFmt();
   const { today } = useNow();
   const { role } = useMe();
@@ -81,7 +83,7 @@ export function MembersList() {
   // round 15: while In the club is on, Plan chips narrow it (the plans come from activePlans, so phase 2's catalogue shows up here)
   const planEl = f === 'in' ? (
     <PlanChips label={t('members.planFilter')} value={plan} onChange={setPlan} scroll={isPhone}
-      chips={[{ value: 'all', label: t('common.all'), count: inRows.length }, ...activePlans(s).map((p) => ({ value: p.id, label: t(p.label), count: inRows.filter((r) => r.plan === p.id).length }))]} />
+      chips={[{ value: 'all', label: t('common.all'), count: inRows.length }, ...activePlans(s).map((p) => ({ value: p.id, label: planLabel(s, p.id, lang), count: inRows.filter((r) => r.plan === p.id).length }))]} />
   ) : null;
   const notSeenEl = f === 'checkOn' ? <div style={{ maxWidth: isPhone ? undefined : 240 }}><NotSeenSelect /></div> : null;
   const sortEl = (

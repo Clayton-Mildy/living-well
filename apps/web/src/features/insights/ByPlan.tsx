@@ -2,7 +2,7 @@
 // (stacked on a phone). A plan's card opens with its key numbers (members, visits, visits per member per week, attendance rate), then the average arrival and
 // stay and the days they come; the plan's people follow, and under Flex how the monthly quota is spent.
 import { useMemo, useState } from 'react';
-import type { Plan } from '@cp/shared';
+import type { PlanGroup } from '@cp/shared/rules/insights';
 import type { PlanStats, VisitInsights } from '@cp/shared/rules/insights';
 import { Segmented, TrendChart } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -12,7 +12,7 @@ import { FlexQuota } from './FlexQuota';
 import { FLEX_COLOR, GOLD_COLOR, Line, Panel, Stat, num1, pct, useStay, useWeekdays } from './lib';
 import { PlanPeople } from './PlanPeople';
 
-const PLANS: Plan[] = ['flex', 'gold'];
+const PLANS: PlanGroup[] = ['flex', 'gold'];
 
 export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: string; onOpen: (memberId: string) => void }) {
   const t = useT();
@@ -20,15 +20,15 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
   const { isPhone } = useDevice();
   const wd = useWeekdays();
   const stay = useStay();
-  const colors: Record<Plan, string> = { flex: FLEX_COLOR, gold: GOLD_COLOR };
-  const name = (p: Plan) => t(p === 'flex' ? 'insights.planFlex' : 'insights.planGold');
+  const colors: Record<PlanGroup, string> = { flex: FLEX_COLOR, gold: GOLD_COLOR };
+  const name = (p: PlanGroup) => t(p === 'flex' ? 'insights.planFlex' : 'insights.planGold');
   const total = data.overall.visits;
   const gap = isPhone ? 14 : 20;
   const day = (d: string) => fmt.fd(d, { day: 'numeric', month: 'short' });
   const trend = data.trend;
   const byDate = useMemo(() => new Map(trend.points.map((p) => [p.date, p])), [trend]);
   // KC round 7: look at both plans, or at one plan only
-  const [view, setView] = useState<'all' | Plan>('all');
+  const [view, setView] = useState<'all' | PlanGroup>('all');
   const shown = view === 'all' ? PLANS : [view];
 
   const trendPanel = (
@@ -64,7 +64,7 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
     );
   };
 
-  const column = (plan: Plan) => (
+  const column = (plan: PlanGroup) => (
     <div key={plan} data-plan={plan} style={{ display: 'flex', flexDirection: 'column', gap, minWidth: 0 }}>
       {card(data.byPlan[plan])}
       {plan === 'flex' ? <FlexQuota period={data.period} today={today} gap={gap} onOpen={onOpen} /> : null}
@@ -73,7 +73,7 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
   );
 
   // one plan: its numbers (and Flex's quota) on the left, its people on the right; on a phone everything stacks
-  const single = (plan: Plan) => (
+  const single = (plan: PlanGroup) => (
     <div data-plan={plan} style={{ display: 'grid', gridTemplateColumns: isPhone ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', gap: isPhone ? gap : 20, alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap, minWidth: 0 }}>
         {card(data.byPlan[plan])}
@@ -85,7 +85,7 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
 
   return (
     <>
-      <Segmented<'all' | Plan> label={t('insights.planView')} value={view} onChange={setView}
+      <Segmented<'all' | PlanGroup> label={t('insights.planView')} value={view} onChange={setView}
         items={[{ value: 'all', label: t('insights.allPlans') }, ...PLANS.map((p) => ({ value: p, label: name(p), count: data.byPlan[p].members }))]} />
       {trendPanel}
       {view === 'all' ? (

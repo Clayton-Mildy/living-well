@@ -9,6 +9,7 @@ import {
 } from '@cp/shared';
 import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/members';
 import { latestNote, planSummary, visitDays } from '@cp/shared/rules/family';
+import { planPrice } from '@cp/shared/rules/plans';
 import { noteForFamily } from '@cp/shared/rules/approvals';
 import { applicationDataOf } from '@cp/shared/rules/applicationForm';
 import { canSign, signerChanged, signerOf, signingOf } from '@cp/shared/rules/signing';
@@ -332,7 +333,7 @@ export function PlanSection({ p, id }: SecProps) {
       <SectionHead>{t('fhealth.jump.plan')}</SectionHead>
       <List testId="pf-plan">
         <KV first k={t('fhealth.tPlan')} v={t(flex ? 'profile.planFlexTitle' : 'profile.planGoldTitle', { q: s.club.settings.flexQuota })} />
-        <KV k={t('profile.fee')} v={t('fhealth.perMonth', { p: rp(price[ps.plan]) })} />
+        <KV k={t('profile.fee')} v={t('fhealth.perMonth', { p: rp(planPrice(price, ps.plan)) })} />
         {flex ? <KV k={t('profile.extraDay')} v={rp(price.extra)} /> : null}
         {prim ? <KV k={t('profile.billingContact')} v={prim.name} /> : null}
         <KV k={t('profile.va')} v={m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')} />

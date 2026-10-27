@@ -2,6 +2,7 @@
 import type { ClubState, Invoice, InvoiceLine, ISODate, Member, PriceVersion, YM } from '../types';
 import { activeOn, currentMembership, isOpen, membershipStatus, openDaysInMonth, planOn, primaryContact, isPendingRow } from './core';
 import { extraDaysFor } from './attendance';
+import { planDef, planPrice } from './plans';
 import { onLeaveIn } from './leave';
 import { addDays, addMonths, dow, live, sortBy, sum, ym } from '../util';
 
@@ -114,9 +115,13 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
       const plan = planOn(m, issue).plan;
       const open = openDaysInMonth(s, period);
       const active = open.filter((d) => activeOn(m, d));
-      const full = plan === 'gold' ? price.gold : price.flex;
+      const full = planPrice(price, plan);
       const amount = active.length >= open.length || !open.length ? full : Math.round((full * active.length) / open.length / 1000) * 1000;
-      lines.push({ id: `plan-${period}`, kind: 'plan', label: plan === 'gold' ? 'inv.line.gold' : 'inv.line.flex', params: { month: period }, qty: 1, unit: amount, amount, refMonth: period });
+      // a catalogue plan is named on the line (the Indonesian name in `planId`, for the Indonesian wording); Flex and Gold keep their own wording
+      const def = plan === 'flex' || plan === 'gold' ? undefined : planDef(s, plan);
+      const label = plan === 'gold' ? 'inv.line.gold' : plan === 'flex' ? 'inv.line.flex' : 'inv.line.plan';
+      const params: Record<string, string | number> = plan === 'flex' || plan === 'gold' ? { month: period } : { month: period, plan: def?.name ?? plan, planId: def?.nameId ?? def?.name ?? plan };
+      lines.push({ id: `plan-${period}`, kind: 'plan', label, params, qty: 1, unit: amount, amount, refMonth: period });
       // round 14: dementia care is a flat fee on top of the plan (not prorated), and not in a month of leave
       if (m.registration?.dementia === true) {
         const fee = feeOf(price, 'dementia');

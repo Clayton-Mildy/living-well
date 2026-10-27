@@ -1,13 +1,13 @@
 // Next month, Members tab (round 15, KC: "show the list of members and their plan; if they do nothing it continues; if someone wants to change, we can mark it").
 // Every member who is in next month with the plan they have, and what happens: Continues, → Gold, On leave, Stops. A tap records a change for that member.
 import { useMemo, useState } from 'react';
-import { listName, memberName, type YM } from '@cp/shared';
+import { listName, memberName, type Plan, type YM } from '@cp/shared';
 import { renewalMembers, nextMonthPlans, type NextMonthRow } from '@cp/shared/rules/renewals';
-import { activePlans } from '@cp/shared/rules/members';
+import { planLabel } from '@cp/shared/rules/plans';
 import { Avatar, EmptyState, Select } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
-import { useFmt, useT } from '../../lib/i18n';
+import { useFmt, useLang, useT } from '../../lib/i18n';
 import { memberPhoto } from '../../lib/media';
 import { useClub } from '../../store/replica';
 import { FollowUpSheet } from './FollowUpSheet';
@@ -18,6 +18,7 @@ const FILTERS: Filter[] = ['all', 'continues', 'changing'];
 export function NextMonthList({ month }: { month: YM }) {
   const s = useClub();
   const t = useT();
+  const lang = useLang();
   const { fd } = useFmt();
   const { today } = useNow();
   const { isPhone } = useDevice();
@@ -26,8 +27,7 @@ export function NextMonthList({ month }: { month: YM }) {
   const all = useMemo(() => nextMonthPlans(s, today), [s, today]);
   /** the members a change can be recorded for (a new member who starts on the 1st has no follow-up to open) */
   const followable = useMemo(() => new Set(renewalMembers(s, month).map((m) => m.id)), [s, month]);
-  const plans = activePlans(s);
-  const planName = (p: string) => { const k = plans.find((x) => x.id === p)?.label; return k ? t(k) : p; };
+  const planName = (p: Plan) => planLabel(s, p, lang);
   const continuing = all.filter((r) => r.status === 'continues').length;
   const rows = all.filter((r) => filter === 'all' || (filter === 'continues') === (r.status === 'continues'));
 

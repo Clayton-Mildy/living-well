@@ -5,6 +5,7 @@
 import type { ClubState, HM, ISODate, Plan } from '../types';
 import { activeOn, isOpen, isPendingRow, openDaysInMonth, planOn } from './core';
 import { attOf, flexMonth } from './attendance';
+import { isDaysPlan } from './plans';
 import { lastVisits } from './members';
 import { addDays, addMonths, diffDays, dow, live, sortBy, toHM, toMin, weekStart, ym } from '../util';
 
@@ -81,7 +82,7 @@ export function dayCounts(s: ClubState, date: ISODate, nowMin: number): DayCount
   const out: DayCounts = { active: { flex: 0, gold: 0 }, came: 0, inNow: 0, gone: 0, notIn: 0 };
   for (const m of live(s.members)) {
     if (!activeOn(m, date)) continue;
-    out.active[planOn(m, date).plan]++;
+    out.active[groupOf(s, planOn(m, date).plan)]++;
     const a = attOf(s, date, m.id);
     if (!a?.checkIn || toMin(a.checkIn.at) > nowMin) continue;
     out.came++;
@@ -91,8 +92,13 @@ export function dayCounts(s: ClubState, date: ISODate, nowMin: number): DayCount
   return out;
 }
 
+// ---------- plan groups ----------
+/** The insights still split members into two columns: a plan with a visit quota (Flex, or a catalogue days plan) counts under Flex, an unlimited one under Gold. */
+export type PlanGroup = 'flex' | 'gold';
+const groupOf = (s: ClubState, plan: Plan): PlanGroup => (isDaysPlan(s, plan) ? 'flex' : 'gold');
+
 // ---------- visits ----------
-interface Visit { date: ISODate; memberId: string; plan: Plan; inMin: number; outMin: number | null; wd: number }
+interface Visit { date: ISODate; memberId: string; plan: PlanGroup; inMin: number; outMin: number | null; wd: number }
 
 function collectVisits(s: ClubState, days: Set<ISODate>): Visit[] {
   const out: Visit[] = [];
@@ -102,7 +108,7 @@ function collectVisits(s: ClubState, days: Set<ISODate>): Visit[] {
     if (!m || m.deletedAt || isPendingRow(m)) continue;
     const inMin = toMin(a.checkIn.at);
     const out0 = a.checkOut ? toMin(a.checkOut.at) : null;
-    out.push({ date: a.date, memberId: a.memberId, plan: planOn(m, a.date).plan, inMin, outMin: out0 !== null && out0 >= inMin ? out0 : null, wd: weekdayIdx(a.date) });
+    out.push({ date: a.date, memberId: a.memberId, plan: groupOf(s, planOn(m, a.date).plan), inMin, outMin: out0 !== null && out0 >= inMin ? out0 : null, wd: weekdayIdx(a.date) });
   }
   return out;
 }
@@ -162,7 +168,7 @@ export interface PlanPerson {
   usual: number[];
 }
 export interface PlanStats {
-  plan: Plan;
+  plan: PlanGroup;
   /** members on this plan for at least one open day of the period (visited or not): the length of `people` */
   members: number;
   visitors: number;
@@ -200,7 +206,7 @@ export interface PlanTrendPoint {
 export interface PlanTrend { grain: TrendGrain; points: PlanTrendPoint[] }
 export interface PersonStats {
   memberId: string;
-  plan: Plan;
+  plan: PlanGroup;
   visits: number;
   perMonth: number;
   /** visits per weekday Mon … Fri */
@@ -225,7 +231,7 @@ export interface VisitInsights {
   period: InsightPeriod;
   days: ISODate[];
   overall: OverallStats;
-  byPlan: Record<Plan, PlanStats>;
+  byPlan: Record<PlanGroup, PlanStats>;
   people: PersonStats[];
   /** visits per plan over time: by day, or by week once the period is longer than `TREND_DAY_MAX` days */
   trend: PlanTrend;
@@ -283,12 +289,12 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
     for (let d = `${m}-01`; ym(d) === m; d = addDays(d, 1)) if (isOpen(s, d)) n++;
     monthOpen.set(m, n || 1);
   }
-  const planDays: Record<Plan, number> = { flex: 0, gold: 0 };
-  const planCame: Record<Plan, number> = { flex: 0, gold: 0 };
+  const planDays: Record<PlanGroup, number> = { flex: 0, gold: 0 };
+  const planCame: Record<PlanGroup, number> = { flex: 0, gold: 0 };
   const memberMonths = new Map<string, number>();
   const lastActive = new Map<string, ISODate>();
   /** per member and plan: the open days they were active on that plan, and on how many of them they came */
-  const onPlan = new Map<string, Record<Plan, { days: number; came: number }>>();
+  const onPlan = new Map<string, Record<PlanGroup, { days: number; came: number }>>();
   const visitDays = new Set(visits.map((v) => `${v.memberId}|${v.date}`));
   const members = live(s.members).filter((m) => !isPendingRow(m));
   for (const m of members) {
@@ -297,7 +303,7 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
     for (const d of days) {
       if (!activeOn(m, d)) continue;
       mm += 1 / monthOpen.get(ym(d))!;
-      const p = planOn(m, d).plan;
+      const p = groupOf(s, planOn(m, d).plan);
       mine[p].days++;
       planDays[p]++;
       if (visitDays.has(`${m.id}|${d}`)) { mine[p].came++; planCame[p]++; }
@@ -311,8 +317,8 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
   const usualDays = (wd: number[]) => wd.map((n, i) => ({ n, i })).filter((x) => x.n > 0).sort((a, b) => b.n - a.n || a.i - b.i).slice(0, 2).map((x) => x.i);
 
   // ----- by plan
-  const byPlan = {} as Record<Plan, PlanStats>;
-  for (const plan of ['flex', 'gold'] as Plan[]) {
+  const byPlan = {} as Record<PlanGroup, PlanStats>;
+  for (const plan of ['flex', 'gold'] as PlanGroup[]) {
     const vs = visits.filter((v) => v.plan === plan);
     const wd = [0, 0, 0, 0, 0];
     for (const v of vs) if (v.wd >= 0) wd[v.wd]++;
@@ -351,7 +357,7 @@ export function visitInsights(s: ClubState, period: InsightPeriod, today: ISODat
     const usual = usualDays(wd);
     const mm = memberMonths.get(m.id) ?? 0;
     people.push({
-      memberId: m.id, plan: planOn(m, lastActive.get(m.id) ?? today).plan, visits: vs.length, perMonth: mm > 0 ? r1(vs.length / mm) : 0,
+      memberId: m.id, plan: groupOf(s, planOn(m, lastActive.get(m.id) ?? today).plan), visits: vs.length, perMonth: mm > 0 ? r1(vs.length / mm) : 0,
       weekdays: wd, usual, avgArrival: avgHM(vs.map((v) => v.inMin)), avgDeparture: avgOut(vs), avgStayMin: avgStay(vs), lastVisit: last[m.id] ?? null,
       monthly: months.map((month) => ({ month, visits: vs.filter((v) => ym(v.date) === month).length })),
       arrivals: vs.map((v) => ({ date: v.date, value: v.inMin })),
@@ -372,7 +378,7 @@ export const TREND_DAY_MAX = 35;
  * A week is placed on its first open day inside the period; `days` says how many open days it covers, so a short edge week or a holiday week is not
  * mistaken for a dip. `visits` are the period's visits (each tagged with the plan on the day).
  */
-export function planTrend(days: ISODate[], visits: { date: ISODate; plan: Plan }[]): PlanTrend {
+export function planTrend(days: ISODate[], visits: { date: ISODate; plan: PlanGroup }[]): PlanTrend {
   const grain: TrendGrain = days.length && diffDays(days[0], days[days.length - 1]) + 1 > TREND_DAY_MAX ? 'week' : 'day';
   const key = (d: ISODate) => (grain === 'day' ? d : weekStart(d));
   const buckets = new Map<ISODate, PlanTrendPoint>();
@@ -448,7 +454,7 @@ export function flexQuotaReport(s: ClubState, period: InsightPeriod, today: ISOD
       if (isPendingRow(m)) continue;
       const fm = flexMonth(s, m, month, today);
       if (fm.quota === null || fm.quota <= 0) continue;
-      const dates = fm.visits.filter((d) => d <= upTo && planOn(m, d).plan === 'flex');
+      const dates = fm.visits.filter((d) => d <= upTo && isDaysPlan(s, planOn(m, d).plan));
       if (!dates.length && !openDays.some((d) => activeOn(m, d))) continue;
       total++;
       const used = dates.length;
@@ -527,7 +533,7 @@ export function memberTrend(s: ClubState, period: InsightPeriod, today: ISODate)
   const members = live(s.members).filter((m) => !isPendingRow(m));
   const countActive = (date: ISODate): PlanCount => {
     const c = zero();
-    for (const m of members) if (activeOn(m, date)) c[planOn(m, date).plan]++;
+    for (const m of members) if (activeOn(m, date)) c[groupOf(s, planOn(m, date).plan)]++;
     return c;
   };
   const points: MemberTrendPoint[] = buckets.map((b) => ({ ...b, joined: zero(), left: zero(), toGold: 0, toFlex: 0, active: countActive(b.end) }));
@@ -535,8 +541,8 @@ export function memberTrend(s: ClubState, period: InsightPeriod, today: ISODate)
   for (const m of members) {
     for (const ms of m.memberships) {
       const j = at(ms.start);
-      if (j) j.joined[planOn(m, ms.start).plan]++;
-      if (ms.lastDay && ms.lastDay <= today) { const l = at(ms.lastDay); if (l) l.left[planOn(m, ms.lastDay).plan]++; }
+      if (j) j.joined[groupOf(s, planOn(m, ms.start).plan)]++;
+      if (ms.lastDay && ms.lastDay <= today) { const l = at(ms.lastDay); if (l) l.left[groupOf(s, planOn(m, ms.lastDay).plan)]++; }
     }
     m.plans.forEach((p, i) => {
       const prev = m.plans[i - 1];

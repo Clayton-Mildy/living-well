@@ -703,3 +703,44 @@ describe('prices and club rules', () => {
     expect(s.club.settings.flexQuota).toBe(10);
   });
 });
+
+describe('the plan catalogue (round 15, phase 2)', () => {
+  const plan = { name: 'Flex 8', nameId: 'Fleks 8', kind: 'days', quota: 8, active: true };
+  it('management creates plans (plan_1, plan_2 ...), others are refused', () => {
+    const s = seed().citra;
+    const r = run(s, 'club.setPlan', plan, 's9');
+    expect(r.state.club.settings.plans).toEqual([{ id: 'plan_1', ...plan }]);
+    const r2 = run(r.state, 'club.setPlan', { name: 'Private', kind: 'unlimited', active: true }, 's9');
+    expect(r2.state.club.settings.plans!.map((p) => p.id)).toEqual(['plan_1', 'plan_2']);
+    expect(r2.state.club.settings.plans![1]).toEqual({ id: 'plan_2', name: 'Private', kind: 'unlimited', active: true });
+    expect(Object.values(r.state.activity).some((x) => x.key === 'mgmt.feed.plan' && x.params?.name === 'Flex 8')).toBe(true);
+    for (const uid of ['s1', 's10']) expect(() => run(s, 'club.setPlan', plan, uid)).toThrow('err.forbidden');
+  });
+  it('edits a plan by id, retires it, and refuses bad input', () => {
+    const r = run(seed().citra, 'club.setPlan', plan, 's9');
+    const edited = run(r.state, 'club.setPlan', { ...plan, id: 'plan_1', quota: 12, active: false }, 's9');
+    expect(edited.state.club.settings.plans).toEqual([{ id: 'plan_1', ...plan, quota: 12, active: false }]);
+    fails(r.state, 'club.setPlan', { ...plan, id: 'plan_1' }, 's9', 'err.noChanges');
+    fails(r.state, 'club.setPlan', { ...plan, id: 'plan_7' }, 's9', 'err.notFound');
+    fails(r.state, 'club.setPlan', { ...plan, id: 'flex' }, 's9', 'err.invalid');
+    fails(r.state, 'club.setPlan', { ...plan, name: ' ' }, 's9', 'err.invalid');
+    fails(r.state, 'club.setPlan', { ...plan, quota: 0 }, 's9', 'err.invalid');
+    fails(r.state, 'club.setPlan', { ...plan, quota: 24 }, 's9', 'err.invalid');
+    fails(r.state, 'club.setPlan', { ...plan, quota: undefined }, 's9', 'err.invalid');
+    fails(r.state, 'club.setPlan', { ...plan, kind: 'weekly' }, 's9', 'err.invalid');
+    // an unlimited plan keeps no quota
+    const u = run(r.state, 'club.setPlan', { id: 'plan_1', name: 'Flex 8', kind: 'unlimited', quota: 8, active: true }, 's9');
+    expect(u.state.club.settings.plans![0]).not.toHaveProperty('quota');
+  });
+  it('prices.set stores custom plan prices on the new version and keeps them when a later save leaves them out', () => {
+    const s = run(seed().citra, 'club.setPlan', plan, 's9').state;
+    const r = run(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, plans: { plan_1: 2000000 }, from: '2026-12-01' }, 's9');
+    expect(live(r.state.prices).find((p) => p.from === '2026-12-01')!.plans).toEqual({ plan_1: 2000000 });
+    expect(priceOn(r.state, '2026-11-30').plans).toBeUndefined();
+    const again = run(r.state, 'prices.set', { flex: 3000000, gold: 3950000, extra: 700000, from: '2026-12-01' }, 's9');
+    expect(priceOn(again.state, '2026-12-01').plans).toEqual({ plan_1: 2000000 });
+    fails(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, plans: { plan_9: 1 }, from: '2026-12-01' }, 's9', 'err.invalid');
+    fails(s, 'prices.set', { flex: 3000000, gold: 3950000, extra: 650000, plans: { plan_1: 0 }, from: '2026-12-01' }, 's9', 'err.invalid');
+  });
+});
+

@@ -1,0 +1,57 @@
+// Round 15, phase 2: the plan catalogue. Flex and Gold are virtual entries; custom plans are stored in the club settings.
+import { describe, it, expect } from 'vitest';
+import { buildSeed, type ClubState, type PlanDef } from '../index';
+import { isDaysPlan, planDef, planDefs, planLabel, planPrice, planQuota } from './plans';
+import { priceOn } from './billing';
+
+const T = '2026-10-21';
+const FLEX8: PlanDef = { id: 'plan_1', name: 'Flex 8', nameId: 'Fleks 8', kind: 'days', quota: 8, active: true };
+const PRIVATE: PlanDef = { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false };
+const withPlans = (...plans: PlanDef[]): ClubState => {
+  const s = structuredClone(buildSeed().citra);
+  s.club.settings.plans = plans;
+  return s;
+};
+
+describe('planDefs', () => {
+  it('lists Flex (days, the club quota), Gold (unlimited), then the catalogue in order', () => {
+    const s = withPlans(FLEX8, PRIVATE);
+    expect(planDefs(s).map((p) => p.id)).toEqual(['flex', 'gold', 'plan_1', 'plan_2']);
+    expect(planDefs(s)[0]).toMatchObject({ id: 'flex', kind: 'days', quota: s.club.settings.flexQuota, active: true });
+    expect(planDefs(s)[1]).toMatchObject({ id: 'gold', kind: 'unlimited', active: true });
+    expect(planDefs(s)[1].quota).toBeUndefined();
+    expect(planDef(s, 'plan_2')).toEqual(PRIVATE);
+    expect(planDef(s, 'plan_9')).toBeUndefined();
+  });
+  it('is just Flex and Gold when the club has no catalogue', () => {
+    expect(planDefs(withPlans()).map((p) => p.id)).toEqual(['flex', 'gold']);
+    const s = structuredClone(buildSeed().citra);
+    delete s.club.settings.plans;
+    expect(planDefs(s).map((p) => p.id)).toEqual(['flex', 'gold']);
+  });
+  it('Flex follows the club quota setting', () => {
+    const s = withPlans();
+    s.club.settings.flexQuota = 7;
+    expect(planDef(s, 'flex')!.quota).toBe(7);
+    expect(planQuota(s, 'flex')).toBe(7);
+  });
+});
+
+describe('plan helpers', () => {
+  const s = withPlans(FLEX8, PRIVATE);
+  it('days plans have a quota, unlimited plans none', () => {
+    expect([isDaysPlan(s, 'flex'), isDaysPlan(s, 'gold'), isDaysPlan(s, 'plan_1'), isDaysPlan(s, 'plan_2')]).toEqual([true, false, true, false]);
+    expect([planQuota(s, 'gold'), planQuota(s, 'plan_1'), planQuota(s, 'plan_2')]).toEqual([null, 8, null]);
+    expect(planQuota(s, 'plan_9')).toBeNull();
+    expect(isDaysPlan(s, 'plan_9')).toBe(false);
+  });
+  it('prices: Flex and Gold from the list, a custom plan from PriceVersion.plans, Rp 0 when it has none', () => {
+    const p = { ...priceOn(s, T), plans: { plan_1: 2_000_000 } };
+    expect([planPrice(p, 'flex'), planPrice(p, 'gold'), planPrice(p, 'plan_1'), planPrice(p, 'plan_2')]).toEqual([p.flex, p.gold, 2_000_000, 0]);
+    expect(planPrice({ ...p, plans: undefined }, 'plan_1')).toBe(0);
+  });
+  it('labels follow the language and fall back to the English name', () => {
+    expect([planLabel(s, 'plan_1', 'en'), planLabel(s, 'plan_1', 'id'), planLabel(s, 'plan_2', 'id'), planLabel(s, 'flex', 'id'), planLabel(s, 'gold', 'en')]).toEqual(['Flex 8', 'Fleks 8', 'Private', 'Flex', 'Gold']);
+    expect(planLabel(s, 'plan_9', 'en')).toBe('plan_9');
+  });
+});
