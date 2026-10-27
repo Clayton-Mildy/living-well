@@ -31,11 +31,25 @@ describe('projectForFamily: members tagged in a photo', () => {
       d.photos[pid].visibility = 'visible';
       delete d.photos[pid].deletedAt;
       d.photos[pid].memberIds = ['m1', 'm20'];
+      d.members.m20.registration = { mobile: '0812 0000 1111', email: 'x@y.id', city: 'Jakarta' };
+      d.members.m20.spouseId = 'm21';
+      d.members.m20.limits = { sys: { watch: 1, alert: 2 } } as never;
       d.members.m20.nanny = { name: 'Mbak Rina', phone: '+6281200000000', nik: '3175014507850009', note: 'agency', photoMediaId: 'md_otherfamily01' };
     });
     const view = projectForFamily(s, 'f1');
     expect(view.members.m20).toBeTruthy();
-    expect(view.members.m20.nanny).toBeNull();
+    const stub = view.members.m20;
+    expect(stub.nanny).toBeNull();
+    expect(stub.registration).toBeUndefined();
+    expect(stub.spouseId).toBeNull();
+    expect(stub.limits).toBeUndefined();
+    expect(stub.usualArrival).toBe('');
+    expect(stub.sim.sys).toBe(0);
+    expect(stub.face.enrolled).toBe(false);
+    expect(stub.firstName).toBe(s.members.m20.firstName); // what a photo shows stays
+    expect(stub.photoMediaId).toBe(s.members.m20.photoMediaId);
     expect(view.members.m1.nanny?.name).toBeTruthy();
+    expect(view.members.m1.registration).toEqual(s.members.m1.registration);
+    expect(view.members.m1.spouseId).toBe(s.members.m1.spouseId);
   });
 });
