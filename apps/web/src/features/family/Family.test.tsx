@@ -205,6 +205,14 @@ describe('family Today', () => {
     expect(rows.every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
   });
 
+  it('round 15: today after the club has closed with nobody in: the programme is "what was on" and every row is passed', async () => {
+    open('f1', 'en', 21 * 60 + 40);
+    await show(<FamilyToday />, '/today?member=m1');
+    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('wasOn');
+    expect(qa('[data-tl^="session-"]').length).toBeGreaterThan(0);
+    expect(qa('[data-tl]').every((x) => x.getAttribute('data-state') === 'done')).toBe(true);
+  });
+
   it('both parents: one card with a row each; a row focuses on that parent and "Both parents" goes back', async () => {
     open('f1');
     await show(<FamilyToday />, '/today');
