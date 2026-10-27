@@ -8,7 +8,9 @@ import { initials, isPrimaryFor, live, displayName, rp, type Member } from '@cp/
 import { dayStateOf } from '@cp/shared/rules/family';
 import { familyBill } from '@cp/shared/rules/familyMe';
 import { canSign, signingOf } from '@cp/shared/rules/signing';
+import { Avatar } from '../../components/ui';
 import { useAct } from '../../lib/act';
+import { memberPhoto } from '../../lib/media';
 import { useSession } from '../../store/session';
 import { useTextSize } from '../../shell/FamilyShell';
 import { F, FamPage, FillCard, LargeTitle, List, ListRow, Cap, Switch, useFamWide } from './kit';
@@ -75,7 +77,8 @@ export function FamilyMe() {
 
   const accountCard = (
     <FillCard pad={wide ? 16 : 14} gap={wide ? 14 : 12} style={{ flexDirection: 'row', alignItems: 'center' }} testId="me-account">
-      <span aria-hidden="true" style={{ width: wide ? 56 : 52, height: wide ? 56 : 52, borderRadius: 999, background: F.ink, color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: wide ? 18 : 17, fontWeight: 500, flex: 'none' }}>{initials(user.contact.name)}</span>
+      {user.contact.photoMediaId ? <Avatar name={user.contact.name} size={wide ? 56 : 52} src={memberPhoto(user.contact)} />
+        : <span aria-hidden="true" style={{ width: wide ? 56 : 52, height: wide ? 56 : 52, borderRadius: 999, background: F.ink, color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: wide ? 18 : 17, fontWeight: 500, flex: 'none' }}>{initials(user.contact.name)}</span>}
       <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
         <span style={{ fontSize: wide ? 19 : 18, fontWeight: 500, overflowWrap: 'anywhere' }}>{user.contact.name}</span>
         {role ? <span style={{ fontSize: wide ? 14 : 13, color: F.muted }}>{role}</span> : null}

@@ -73,6 +73,21 @@ describe('family Me', () => {
     expect(text()).toContain('Your mobile number');
   });
 
+  it('the details sheet carries the picture: removing it sends photoMediaId null for approval', async () => {
+    const full = produce(buildSeed().citra, (d) => { d.familyContacts.f1.photoMediaId = 'md_contactphoto01'; });
+    const { acts } = open('f1', 'en', full);
+    await show(<FamilyMe />, '/me');
+    expect(q('[data-testid="me-account"]')!.innerHTML).toContain('md_contactphoto01');
+    await act(async () => { q('[data-testid="me-details"]')!.click(); });
+    const sheet = q('[data-testid="details-sheet"]')!;
+    expect(sheet.querySelector('[data-testid="profile-photo"]')).toBeTruthy();
+    const remove = Array.from(sheet.querySelectorAll('button')).find((b) => b.textContent === 'Remove photo') as HTMLButtonElement;
+    await act(async () => { remove.click(); });
+    const send = Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Send') as HTMLButtonElement;
+    await act(async () => { send.click(); });
+    expect(acts.at(-1)).toMatchObject({ name: 'account.updateFamily', input: { familyId: 'f1', photoMediaId: null } });
+  });
+
   it('someone who does not pay sees who pays', async () => {
     open('f2');
     await show(<FamilyMe />, '/me');

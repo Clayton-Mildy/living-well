@@ -14,13 +14,15 @@ import { applicationDataOf } from '@cp/shared/rules/applicationForm';
 import { canSign, signerChanged, signerOf, signingOf } from '@cp/shared/rules/signing';
 import { lunchLabelKey } from '@cp/shared/rules/activity';
 import { PROFILE_METRICS, familyReadings, latestOf, metricStatus, metricText, type HMetric } from '@cp/shared/rules/famHealth';
-import { FACE_ICON, Icon } from '../../../components/ui';
+import { Avatar, FACE_ICON, Icon } from '../../../components/ui';
+import { memberPhoto } from '../../../lib/media';
 import { useDevice } from '../../../hooks/useDevice';
 import type { useAct } from '../../../lib/act';
 import type { TFn, useFmt } from '../../../lib/i18n';
 import { dietLabel, drugLabel, foodList, mobLabel, relLabel, timingLabel, cogText } from '../../members/lib';
 import { DocView, useDocPicker, type PaperFile } from '../../members/PaperForm';
 import { useApplicationForm } from '../../members/ApplicationForm';
+import { NannyAvatar } from '../../members/ProfilePhoto';
 import { SigningTrail } from '../../members/profile/SigningTrail';
 import { SignSheet } from '../SignSheet';
 import { F, FillCard, HAIR, KV, List, SectionHead, TextLink, useFamWide } from '../kit';
@@ -358,6 +360,7 @@ export function FamilySection({ p, id }: SecProps) {
           const line = [relLabel(t, link.relation), link.primary ? t('fhealth.paysBills') : '', link.appAccess ? t('fhealth.usesApp') : t('fhealth.noApp')].filter(Boolean).join(' · ');
           return (
             <div key={link.id} data-testid="pf-contact" data-family-id={contact.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px', borderTop: i ? HAIR : 'none' }}>
+              <Avatar name={contact.name} size={40} src={memberPhoto(contact)} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{contact.name}</span>
                 <span style={{ fontSize: 13, color: F.muted }}>{line}</span>
@@ -371,6 +374,16 @@ export function FamilySection({ p, id }: SecProps) {
             </div>
           );
         })}
+        {m.nanny ? (
+          <div data-testid="pf-nanny" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px', borderTop: rows.length ? HAIR : 'none' }}>
+            <NannyAvatar nanny={m.nanny} size={40} />
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{m.nanny.name}</span>
+              <span style={{ fontSize: 13, color: F.muted }}>{[t('profile.f.nanny'), m.nanny.phone ? fmtPhone(m.nanny.phone) : ''].filter(Boolean).join(' · ')}</span>
+            </span>
+            {m.nanny.phone ? <a href={`tel:${m.nanny.phone}`} aria-label={t('profile.callName', { n: m.nanny.name })} data-testid="pf-nanny-call" className="cp-press" style={circle}><Icon name="call" size={19} /></a> : null}
+          </div>
+        ) : null}
       </List>
     </Sec>
   );

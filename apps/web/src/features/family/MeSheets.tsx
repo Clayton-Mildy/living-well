@@ -5,6 +5,7 @@ import { Icon } from '../../components/ui';
 import { api, ApiError } from '../../lib/api';
 import { useAct } from '../../lib/act';
 import { say } from '../../store/ui';
+import { ProfilePhotoField } from '../members/ProfilePhoto';
 import { F, FamSheet } from './kit';
 import { useFamilyCtx } from './useFamily';
 
@@ -37,7 +38,7 @@ export function Field({ label, value, onChange, inputMode, readOnly, error, hint
   );
 }
 
-/** "Your details": the signed-in contact's name and phone. A change goes to the club's Approvals; the current details stay until then. */
+/** "Your details": the signed-in contact's picture, name and phone. A change goes to the club's Approvals; the current details stay until then. */
 export function DetailsSheet({ onClose }: { onClose: () => void }) {
   const { s, t, user } = useFamilyCtx();
   const act = useAct();
@@ -45,26 +46,30 @@ export function DetailsSheet({ onClose }: { onClose: () => void }) {
   const phone0 = fmtPhone(user?.contact.phone ?? '');
   const [name, setName] = useState(name0);
   const [phone, setPhone] = useState(phone0);
+  const photo0 = user?.contact.photoMediaId ?? null;
+  const [photo, setPhoto] = useState<string | null>(photo0);
   const [busy, setBusy] = useState(false);
   if (!user) return null;
   const pending = Object.values(s.changeRequests).some((c) => c.status === 'pending' && c.submittedBy === `family:${user.id}` && c.target.type === 'familyContact');
   const nameChanged = name.trim() !== name0;
   const phoneChanged = phone.replace(/\D/g, '') !== phone0.replace(/\D/g, '');
+  const photoChanged = photo !== photo0;
   const save = async () => {
     if (busy) return;
     setBusy(true);
     try {
-      const r = await act('account.updateFamily', { familyId: user.id, name: nameChanged ? name.trim() : undefined, phone: phoneChanged ? phone : undefined }, { reviewText: t('shell.profileSubmitted') });
+      const r = await act('account.updateFamily', { familyId: user.id, name: nameChanged ? name.trim() : undefined, phone: phoneChanged ? phone : undefined, ...(photoChanged ? { photoMediaId: photo } : {}) }, { reviewText: t('shell.profileSubmitted') });
       if (r.ok) { if (r.reviewed !== 'gate') say(t('shell.profileSaved')); onClose(); }
     } finally { setBusy(false); }
   };
   return (
-    <FamSheet open onClose={onClose} title={t('fme.detailsTitle')} testId="details-sheet" action={{ label: t('fam.send'), onClick: () => void save(), disabled: busy || !(nameChanged || phoneChanged) || !name.trim() }}>
+    <FamSheet open onClose={onClose} title={t('fme.detailsTitle')} testId="details-sheet" action={{ label: t('fam.send'), onClick: () => void save(), disabled: busy || !(nameChanged || phoneChanged || photoChanged) || !name.trim() }}>
       {pending ? (
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '10px 12px', borderRadius: 12, background: F.ochreBg, color: F.ochre, fontSize: 14, lineHeight: '20px' }} data-testid="details-pending">
           <Icon name="hourglass_top" size={18} color={F.ochre} style={{ marginTop: 1 }} />{t('shell.profileSubmitted')}
         </div>
       ) : null}
+      <ProfilePhotoField name={name || name0} value={photo} onChange={setPhoto} size={64} />
       <Field label={t('shell.yourName')} value={name} onChange={setName} autoComplete="name" />
       <Field label={t('shell.yourPhone')} value={phone} onChange={setPhone} inputMode="tel" autoComplete="tel" />
     </FamSheet>

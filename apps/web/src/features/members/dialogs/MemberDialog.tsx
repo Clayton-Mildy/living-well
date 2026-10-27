@@ -260,7 +260,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
   const others = sortBy(live(s.familyContacts).filter((x) => !linked.has(x.id) && !isPendingRow(x)), (x) => x.name);
   const [d, set] = useDraft(() => ({
     mode: 'new' as 'new' | 'existing', existingId: '', name: c?.name || '', phone: c ? fmtPhone(c.phone) : '', rel: (link?.relation || 'daughter') as Relation,
-    primary: link ? link.primary : contactsOfMember(s, m.id).length === 0, appAccess: link ? link.appAccess : true, note: '',
+    primary: link ? link.primary : contactsOfMember(s, m.id).length === 0, appAccess: link ? link.appAccess : true, note: '', photo: (c?.photoMediaId ?? null) as string | null,
   }));
   const [step, setStep] = useState<'form' | 'remove'>('form');
   const [busy, setBusy] = useState(false);
@@ -293,6 +293,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
     const body: Record<string, unknown> = {};
     if (d.name.trim() !== c!.name) body.name = d.name.trim();
     if (phone !== c!.phone) body.phone = phone;
+    if (d.photo !== (c!.photoMediaId ?? null)) body.photoMediaId = d.photo;
     if (Object.keys(body).length) await run('family.updateContact', body);
     if (d.primary && !link!.primary) await run('family.setPrimary', {});
     if (d.appAccess !== link!.appAccess) await run('family.setAppAccess', { appAccess: d.appAccess });
@@ -328,6 +329,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
           <SelectField label={t('members.pickContact')} value={d.existingId} onChange={(v) => set({ existingId: v })} placeholder={t('members.pickContactPh')} error={errExisting} options={others.map((x) => ({ value: x.id, label: `${x.name} · ${fmtPhone(x.phone)}` }))} />
         ) : (
           <>
+            {edit ? <ProfilePhotoField name={d.name || c!.name} value={d.photo} onChange={(id) => set({ photo: id })} size={64} /> : null}
             <TextField label={t('common.name')} value={d.name} onChange={(v) => set({ name: v })} error={errName} name="contact" />
             <TextField label={t('common.phone')} value={d.phone} onChange={(v) => set({ phone: v })} inputMode="tel" placeholder="+62" error={errPhone} name="phone" />
           </>

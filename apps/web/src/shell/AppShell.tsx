@@ -83,7 +83,7 @@ export function AppShell() {
             <div style={{ flex: 1, minWidth: 0 }}><Logo height={30} /></div>
             <NotificationBell onClick={() => setBell(true)} />
             <button type="button" onClick={() => setAcct(true)} aria-label={t('shell.account')} style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <Avatar name={user.kind === 'staff' ? user.staff.name : user.contact.name} size={36} src={user.kind === 'staff' ? memberPhoto(user.staff) : undefined} />
+              <Avatar name={user.kind === 'staff' ? user.staff.name : user.contact.name} size={36} src={memberPhoto(user.kind === 'staff' ? user.staff : user.contact)} />
             </button>
           </div>
         ) : null}
@@ -182,7 +182,7 @@ function Sidebar({ width, groups, current, counts, onGo, onAcct, onBell, onSearc
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 10, borderRadius: 16, border: '1px solid #3A3027' }}>
           <button type="button" onClick={onAcct} aria-label={t('shell.account')} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', color: '#EDE4D8' }}>
-            <Avatar name={name} size={36} src={user.kind === 'staff' ? memberPhoto(user.staff) : undefined} />
+            <Avatar name={name} size={36} src={memberPhoto(user.kind === 'staff' ? user.staff : user.contact)} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.35 }}>{name}</span>
               <span style={{ fontSize: 12, color: '#9C8E7E', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{roleLabel}</span>

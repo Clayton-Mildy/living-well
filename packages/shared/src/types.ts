@@ -320,6 +320,8 @@ export interface FamilyContact extends Row {
   phone: string; // E.164, e.g. +6281210904471
   lang?: Lang;
   activatedAt?: DT;
+  /** round 15: the contact's picture (a media id); the Family tabs and the account header show it */
+  photoMediaId?: string;
 }
 
 export interface FamilyLink extends Row {

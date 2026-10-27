@@ -23,4 +23,12 @@ describe('changesOf: the carer', () => {
     const p = changesOf(m, draft(m, { nannyName: 'Mbak Dewi' }));
     expect(p.nanny).toEqual({ name: 'Mbak Dewi', phone: '+6281211112222' });
   });
+  it('round 15: a new or removed picture is sent with the carer; unchanged sends no carer', () => {
+    const m = base();
+    expect(changesOf(m, draft(m, { nannyPhoto: 'md_nannyphoto0001' })).nanny).toBeUndefined();
+    expect(changesOf(m, draft(m, { nannyPhoto: 'md_newphoto00001' })).nanny).toMatchObject({ name: 'Mbak Sari', photoMediaId: 'md_newphoto00001', note: 'Agency: Kasih Ibu, Mon–Wed' });
+    expect(changesOf(m, draft(m, { nannyPhoto: '' })).nanny).toEqual({ name: 'Mbak Sari', phone: '+6281211112222', note: 'Agency: Kasih Ibu, Mon–Wed' });
+    const different = changesOf(m, draft(m, { nannyName: 'Mbak Dewi', nannyPhoto: 'md_newphoto00001' }));
+    expect(different.nanny).toEqual({ name: 'Mbak Dewi', phone: '+6281211112222', photoMediaId: 'md_newphoto00001' });
+  });
 });

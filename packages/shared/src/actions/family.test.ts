@@ -104,6 +104,54 @@ describe('family.updateContact', () => {
   });
 });
 
+describe('round 15: family photos', () => {
+  const PHOTO = 'md_contactphoto01';
+  it('family.updateContact: management stores a contact photo at once, null clears it; the front desk waits for approval', () => {
+    const c = seed();
+    const set = run(c.citra, 'family.updateContact', { familyId: 'f2', photoMediaId: PHOTO }, who(c, 's9'));
+    expect(set.reviewed).toBeUndefined();
+    expect(set.state.familyContacts.f2.photoMediaId).toBe(PHOTO);
+    const cleared = run(set.state, 'family.updateContact', { familyId: 'f2', photoMediaId: null }, who(c, 's9'));
+    expect(cleared.state.familyContacts.f2.photoMediaId).toBeUndefined();
+    const desk = run(c.citra, 'family.updateContact', { familyId: 'f2', memberId: 'm1', photoMediaId: PHOTO }, who(c, 's1'));
+    expect(desk.reviewed).toBe('gate');
+    expect(desk.state.familyContacts.f2.photoMediaId).toBeUndefined();
+    const cr = desk.state.changeRequests[desk.result.changeRequestId as string];
+    expect(cr.target).toEqual({ type: 'familyContact', id: 'f2', memberId: 'm1' });
+    expect(cr.changes.map((x) => x.field)).toEqual(['photoMediaId']);
+    expect(run(desk.state, 'review.approve', { crId: cr.id }, who(c, 's9')).state.familyContacts.f2.photoMediaId).toBe(PHOTO);
+    expect(() => run(c.citra, 'family.updateContact', { familyId: 'f2', photoMediaId: 'nope' }, who(c, 's9'))).toThrow('err.invalid');
+    expect(() => run(set.state, 'family.updateContact', { familyId: 'f2', photoMediaId: PHOTO }, who(c, 's9'))).toThrow('err.noChanges');
+  });
+  it('account.updateFamily: the family\'s own photo waits for the club; approval stores it', () => {
+    const c = seed();
+    const r = run(c.citra, 'account.updateFamily', { familyId: 'f1', photoMediaId: PHOTO }, who(c, 'f1'));
+    expect(r.reviewed).toBe('gate');
+    expect(r.state.familyContacts.f1.photoMediaId).toBeUndefined();
+    const cr = r.state.changeRequests[r.result.changeRequestId as string];
+    expect(cr).toMatchObject({ section: 'family', submittedBy: 'family:f1' });
+    expect(cr.changes.map((x) => x.field)).toEqual(['photoMediaId']);
+    const a = run(r.state, 'review.approve', { crId: cr.id }, who(c, 's9'));
+    expect(a.state.familyContacts.f1.photoMediaId).toBe(PHOTO);
+    const gone = run(a.state, 'account.updateFamily', { familyId: 'f1', photoMediaId: null }, who(c, 'f1'));
+    expect(gone.reviewed).toBe('gate');
+    expect(run(gone.state, 'review.approve', { crId: gone.result.changeRequestId }, who(c, 's9')).state.familyContacts.f1.photoMediaId).toBeUndefined();
+    expect(() => run(c.citra, 'account.updateFamily', { familyId: 'f1', photoMediaId: 'bad id' }, who(c, 'f1'))).toThrow('err.invalid');
+  });
+  it('family.updateDetails: the carer\'s photo is gated like the rest; the carer\'s NIK stays', () => {
+    const c = seed();
+    const nik = c.citra.members.m1.nanny?.nik;
+    const name = c.citra.members.m1.nanny!.name;
+    const r = run(c.citra, 'family.updateDetails', { memberId: 'm1', patch: { nanny: { name, photoMediaId: PHOTO } } }, who(c, 'f1'));
+    expect(r.reviewed).toBe('gate');
+    expect(r.state.members.m1.nanny?.photoMediaId).toBeUndefined();
+    const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who(c, 's9'));
+    expect(a.state.members.m1.nanny).toMatchObject({ name, photoMediaId: PHOTO });
+    expect(a.state.members.m1.nanny?.nik).toBe(nik);
+    expect(() => run(a.state, 'family.updateDetails', { memberId: 'm1', patch: { nanny: { name, photoMediaId: 'bad id' } } }, who(c, 'f1'))).toThrow('err.invalid');
+  });
+});
+
 describe('family.setPrimary: the billing contact is per member', () => {
   it('making Daniel primary for Lina does not change Opa Budi', () => {
     const c = seed();

@@ -3,6 +3,7 @@ import { defineAction, isFamily, isStaff } from './framework';
 import { updatesFor } from '../notify';
 import type { Lang } from '../types';
 import { e164 } from '../util';
+import { mediaIdOf, obj } from './members';
 
 export const sessionActions = [
   defineAction<{ ids: string[] }>({
@@ -35,17 +36,24 @@ export const sessionActions = [
       if (input.phone?.trim()) st.phone = e164(input.phone);
     },
   }),
-  defineAction<{ familyId: string; name?: string; phone?: string; lang?: Lang }>({
+  defineAction<{ familyId: string; name?: string; phone?: string; lang?: Lang; /** round 15, null removes it */ photoMediaId?: string | null }>({
     name: 'account.updateFamily',
     can: (u, input) => isFamily(u) && u.id === input.familyId,
-    // a family member changing their own contact details is a customer change: management reviews it
-    review: { policy: (input) => (input.name || input.phone ? 'gate' : 'none'), section: 'family', op: 'update', target: (input) => ({ type: 'familyContact', id: input.familyId }) },
+    // the picture is checked here; the rest passes as it is
+    parse: (raw) => {
+      const o = obj(raw);
+      const input = o as { familyId: string; name?: string; phone?: string; lang?: Lang; photoMediaId?: string | null };
+      return o.photoMediaId === undefined ? input : { ...input, photoMediaId: mediaIdOf(o.photoMediaId) ?? null };
+    },
+    // a family member changing their own contact details or picture is a customer change: management reviews it
+    review: { policy: (input) => (input.name || input.phone || input.photoMediaId !== undefined ? 'gate' : 'none'), section: 'family', op: 'update', target: (input) => ({ type: 'familyContact', id: input.familyId }) },
     run(d, input, ctx) {
       const fc = d.familyContacts[input.familyId];
       if (!fc) ctx.fail('err.notFound');
       if (input.name?.trim()) { fc.name = input.name.trim(); fc.firstName = fc.name.split(' ')[0]; }
       if (input.phone?.trim()) fc.phone = e164(input.phone);
       if (input.lang) fc.lang = input.lang;
+      if (input.photoMediaId !== undefined) { if (input.photoMediaId) fc.photoMediaId = input.photoMediaId; else delete fc.photoMediaId; }
     },
   }),
 ];
