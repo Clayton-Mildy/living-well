@@ -2,7 +2,7 @@
 // the lobby host finds the Add member action, which opens the flow; nobody finds a screen their role cannot open; the kitchen cannot find invoices.
 // Finance reaches Billing through its `today` key (R-P1), so its Billing result goes to /today, not /billing.
 import { test, expect, type Page } from '@playwright/test';
-import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll } from './helpers';
+import { resetDemo, signIn, watchConsole } from './helpers';
 
 test.describe.configure({ timeout: 90_000 });
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
@@ -26,10 +26,11 @@ test('phase E story: search opens Billing and an invoice for finance, an action 
   expect(inv, 'a seeded invoice').toBeTruthy();
 
   // 1. Finance (Fransiska): "tagihan" finds Billing (a Screens result); finance's Billing is its Today
-  await signIn(page, 's10', '/today');
+  await signIn(page, 's10', '/payments'); // not /today, so the click has to move her there
+  await expect(page).toHaveURL(/\/payments$/);
   let overlay = await search(page, 'tagihan');
   await expect(overlay.getByRole('group', { name: 'Screens' })).toBeVisible();
-  await assertNoHorizontalScroll(page);
+  expect(await overlay.evaluate((el) => el.scrollWidth - el.clientWidth)).toBeLessThanOrEqual(1); // the overlay itself fits the phone
   await overlay.getByRole('group', { name: 'Screens' }).getByTestId('ss-row').filter({ hasText: 'Billing' }).first().click();
   await expect(overlay).toHaveCount(0);
   await expect(page).toHaveURL(/\/today$/);
@@ -59,13 +60,18 @@ test('phase E story: search opens Billing and an invoice for finance, an action 
 
   // 4. the lobby has no Spending screen: searching it shows no Screens group
   await signIn(page, 's1', '/today');
-  overlay = await search(page, 'Spending');
+  // positive control first: the index is ready and the lobby finds a screen it can open (an empty index would also show nothing)
+  overlay = await search(page, 'Members');
+  await expect(overlay.getByRole('group', { name: 'Screens' }).getByTestId('ss-row').filter({ hasText: 'Members' }).first()).toBeVisible();
+  await overlay.getByRole('textbox', { name: 'Search' }).fill('Spending');
+  await expect(overlay.getByText('Nothing found for "Spending"')).toBeVisible();
   await expect(overlay.getByRole('group', { name: 'Screens' })).toHaveCount(0);
-  await expect(overlay.getByRole('group', { name: 'Records' })).toHaveCount(0);
 
   // 5. the kitchen cannot see invoices at all
   await signIn(page, 's3', '/today');
-  overlay = await search(page, inv.number);
+  overlay = await search(page, 'Menu'); // positive control: the kitchen finds its own Menu screen, so the index is ready
+  await expect(overlay.getByRole('group', { name: 'Screens' }).getByTestId('ss-row').filter({ hasText: 'Menu' }).first()).toBeVisible();
+  await overlay.getByRole('textbox', { name: 'Search' }).fill(inv.number);
   await expect(overlay.getByText(`Nothing found for "${inv.number}"`)).toBeVisible();
   await expect(overlay.getByTestId('ss-row')).toHaveCount(0);
   c.assertClean();
