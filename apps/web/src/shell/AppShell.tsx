@@ -64,13 +64,15 @@ export function AppShell() {
   if (role === 'family') return <FamilyShell />; // round 8: the family app has its own frame (Family App prototype)
 
   // --cp-tabbar: how far a page's sticky foot (a Save bar) sits up so the floating tab bar (64px tall, 14px up) never covers it
-  const cssVars = { '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px', '--cp-tabbar': isPhone ? 'calc(86px + env(safe-area-inset-bottom, 0px))' : '0px' } as CSSProperties;
+  // --cp-floatclear: the phone's room under a page's last rows for the floating tab bar, Demo pill and button stack; full-screen views with their own scroller (FullSheet, pushed screens) end with a spacer of this height
+  const quick = (QUICK_CAMERA_ROLES as readonly string[]).includes(role) || QUICK_TASK_ROLES.includes(role); // the quick camera / tasks buttons float over the page's last rows: leave room to scroll them clear of them
+  const fabRows = isPhone ? (quick ? 58 : 44) : 0; // round 15: the phone search button floats above that stack (a role with neither has just this button)
+  const floatClear = isPhone ? `calc(${84 + (pins ? (quick ? 124 : 76) : quick ? 68 : 24) + fabRows}px + env(safe-area-inset-bottom, 0px))` : '0px';
+  const cssVars = { '--cp-floatclear': floatClear, '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px', '--cp-tabbar': isPhone ? 'calc(86px + env(safe-area-inset-bottom, 0px))' : '0px' } as CSSProperties;
   const go = (k: string) => (k === 'more' ? setMore(true) : navigate('/' + k));
   const groups: [string | null, NavItem[]][] = NAVG[role] || [[null, NAVS[role as Role]]];
   // round 6: a member profile is a pushed screen on a phone; it brings its own top bar (‹ Members), so the logo header steps aside
   const pushed = isPhone && /^\/members\/[^/]+/.test(pathname);
-  const quick = (QUICK_CAMERA_ROLES as readonly string[]).includes(role) || QUICK_TASK_ROLES.includes(role); // the quick camera / tasks buttons float over the page's last rows: leave room to scroll them clear of them
-  const fabRows = isPhone ? (quick ? 58 : 44) : 0; // round 15: the phone search button floats above that stack (a role with neither has just this button)
   return (
     // round 9: the warm cream page (App v4); cards on it are warm white (global.css)
     <div style={{ ...cssVars, position: 'fixed', inset: 0, display: 'flex', background: 'var(--page, #FFFFFF)', color: '#24201C' }}>
@@ -91,7 +93,7 @@ export function AppShell() {
           <Suspense fallback={<PageSkeleton />}>
             <Outlet />
             {/* room to scroll the last rows clear of the floating Demo pill; on a phone also of the floating tab bar (84px: it floats over the page like the family app's) */}
-            <div aria-hidden="true" style={{ height: isPhone ? `calc(${84 + (pins ? (quick ? 124 : 76) : quick ? 68 : 24) + fabRows}px + env(safe-area-inset-bottom, 0px))` : quick ? 136 : 72 }} />
+            <div aria-hidden="true" style={{ height: isPhone ? 'var(--cp-floatclear)' : quick ? 136 : 72 }} />
           </Suspense>
         </main>
         {isPhone ? <BottomNav role={role} current={key} counts={counts} onGo={go} /> : null}

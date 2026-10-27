@@ -3,6 +3,7 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { produce } from 'immer';
 import { buildSeed, execute, getUser, toMin, type ClubState } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
@@ -104,6 +105,15 @@ describe('Next month', () => {
     expect(row?.querySelector('[data-testid="change-what"]')?.textContent).toBe('Downgrade to Flex');
     expect(row?.querySelector('[data-testid="change-when"]')?.textContent).toBe('from 1 Nov · by Bu Fransiska');
     expect(row?.querySelector('[data-testid="change-undo"]')).toBeNull();
+  });
+
+  it('a stop on the last day of next month reads "Stops 30 Nov" and keeps the plan', async () => {
+    const world = produce(buildSeed().citra, (d) => { const ms = d.members.m1.memberships; ms[ms.length - 1].lastDay = '2026-11-30'; });
+    openClub('s1', 'lobby', 'Caca', world);
+    await show(<Renewals />, '/renewals');
+    const row = document.querySelector('[data-member="m1"]');
+    expect(row?.getAttribute('data-status')).toBe('stop');
+    expect(row?.querySelector('[data-testid="next-status"]')?.textContent).toBe('Stops 30 Nov');
   });
 
   it('Members is the first tab and the default: every member, the count line, the Changing filter, and a tap opens the follow-up sheet', async () => {

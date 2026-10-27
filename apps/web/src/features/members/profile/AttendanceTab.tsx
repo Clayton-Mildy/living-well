@@ -35,7 +35,7 @@ export function AttendanceTab({ p }: { p: P }) {
     if (a?.checkIn) {
       const extra = extraSet.has(d);
       const inOut = a.checkOut ? t('profile.attInOut', { a: a.checkIn.at, b: a.checkOut.at }) : t('profile.cal.in', { t: a.checkIn.at }); // round 15: "In 09:58 · Out 15:30"
-      // a phone cell is about 25 px wide: just the times (09:58 over 15:30), no In / Out words; the tooltip keeps the full text and the dark fill + coin mark an extra day
+      // a phone cell is about 44 px wide (about 38 px of text) on a 375 px phone: just the times (09:58 over 15:30), no In / Out words; the tooltip keeps the full text and the dark fill + coin mark an extra day
       const out = a.checkOut ? (p.isPhone ? a.checkOut.at : t('profile.cal.out', { t: a.checkOut.at })) : undefined;
       const inLabel = p.isPhone ? a.checkIn.at : t('profile.cal.in', { t: a.checkIn.at });
       c = extra

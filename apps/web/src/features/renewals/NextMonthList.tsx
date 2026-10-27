@@ -7,7 +7,7 @@ import { activePlans } from '@cp/shared/rules/members';
 import { Avatar, EmptyState, Select } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
-import { useT } from '../../lib/i18n';
+import { useFmt, useT } from '../../lib/i18n';
 import { memberPhoto } from '../../lib/media';
 import { useClub } from '../../store/replica';
 import { FollowUpSheet } from './FollowUpSheet';
@@ -18,6 +18,7 @@ const FILTERS: Filter[] = ['all', 'continues', 'changing'];
 export function NextMonthList({ month }: { month: YM }) {
   const s = useClub();
   const t = useT();
+  const { fd } = useFmt();
   const { today } = useNow();
   const { isPhone } = useDevice();
   const [filter, setFilter] = useState<Filter>('all');
@@ -30,7 +31,7 @@ export function NextMonthList({ month }: { month: YM }) {
   const continuing = all.filter((r) => r.status === 'continues').length;
   const rows = all.filter((r) => filter === 'all' || (filter === 'continues') === (r.status === 'continues'));
 
-  const statusText = (r: NextMonthRow) => r.status === 'plan' ? t('renewals.toPlan', { plan: planName(r.planNext!) }) : r.status === 'leave' ? t('renewals.onLeave') : r.status === 'stop' ? t('renewals.stops') : t('renewals.continues');
+  const statusText = (r: NextMonthRow) => r.status === 'plan' ? t('renewals.toPlan', { plan: planName(r.planNext!) }) : r.status === 'leave' ? t('renewals.onLeave') : r.status === 'stop' ? (r.lastDay ? t('renewals.stopsOn', { d: fd(r.lastDay, { day: 'numeric', month: 'short' }) }) : t('renewals.stops')) : t('renewals.continues');
   const rowEl = (r: NextMonthRow, i: number) => {
     const m = r.member;
     const name = listName(m);

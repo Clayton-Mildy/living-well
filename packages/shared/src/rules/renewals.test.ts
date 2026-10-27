@@ -1,6 +1,5 @@
 // KC round 7: renewals rules: the month, the dates, the leave check for a follow-up, and the seed (5 members in the tests, 45 in the demo).
 import { describe, it, expect } from 'vitest';
-import { displayName } from './core';
 import { buildCitra, DEMO_START_MIN, live, monthStart, planOn, type ClubState } from '../index';
 import { leaveDeadline, leaveMonths } from './leave';
 import type { FollowUp } from '../types';
@@ -161,6 +160,9 @@ describe('nextMonthPlans', () => {
     // also when the last day is today, and when it falls early in next month
     expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = T; }), T)).m1.status).toBe('stop');
     expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = '2026-11-10'; }), T)).m1.status).toBe('stop');
+    // a last day on the final day of next month: still in all of November, so the plan on the 1st stays, with the date
+    expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = '2026-11-30'; }), T)).m1).toMatchObject({ status: 'stop', planNext: 'flex', lastDay: '2026-11-30' });
+    expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = '2026-11-15'; }), T)).m1).toMatchObject({ status: 'stop', planNext: 'flex', lastDay: '2026-11-15' });
     // a last day further out than next month does not touch it
     expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = '2026-12-31'; }), T)).m1.status).toBe('continues');
   });
@@ -185,7 +187,8 @@ describe('nextMonthPlans', () => {
     const s = world((ms) => { ms.m1.memberships = [{ start: '2026-11-15' }]; });
     const rows = nextMonthPlans(s, T);
     expect(rows.map((r) => r.member.id)).not.toContain('m1');
-    const names = rows.map((r) => displayName(r.member));
-    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    // the same order as the Members page: first and last name, not the title (Oma/Opa do not group together)
+    const keys = rows.map((r) => r.member.firstName + r.member.lastName);
+    expect(keys).toEqual([...keys].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
   });
 });
