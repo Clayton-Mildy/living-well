@@ -21,6 +21,16 @@ import { QUICK_CAMERA_ROLES } from './QuickCamera';
 
 /** The roles that have the quick tasks button: every role with duties. */
 export const QUICK_TASK_ROLES: readonly string[] = TASK_ROLES;
+/** Round 15: the geometry of the floating button stack, shared with the phone search button so it lines up without copying numbers.
+ *  Columns count leftwards from the right edge (the quick camera is column 0, Tasks sits left of it when the role has a camera); levels count upwards. */
+export const FLOAT_GAP = 10;
+export function floatingSlot(phone: boolean, pins: number, col = 0, level = 0) {
+  const size = phone ? 48 : 52;
+  const edge = phone ? 14 : 24;
+  const lift = level * (size + FLOAT_GAP);
+  const bottom = phone ? `calc(${(pins ? 150 : 96) + lift}px + env(safe-area-inset-bottom, 0px))` : `${78 + lift}px`;
+  return { size, edge, right: edge + col * (size + FLOAT_GAP), bottom };
+}
 const RUST = '#9A3D24';
 const INK = '#24201C';
 /** Duties done by taking a picture: their quick action is the camera. */
@@ -53,11 +63,9 @@ function QuickTasksButton({ phone, role }: { phone: boolean; role: StaffRole }) 
   const todo = rows.filter((r) => !r.done).length;
   const late = rows.some((r) => !r.done && r.late);
   const hasCam = (QUICK_CAMERA_ROLES as readonly string[]).includes(role);
-  const size = phone ? 48 : 52;
   // beside the quick camera (left of it); where the role has no camera, in its place
-  const edge = phone ? 14 : 24;
-  const bottom = phone ? `calc(${pins ? 150 : 96}px + env(safe-area-inset-bottom, 0px))` : '78px';
-  const pos: CSSProperties = { right: edge + (hasCam ? size + 10 : 0), bottom };
+  const { size, edge, right, bottom } = floatingSlot(phone, pins, hasCam ? 1 : 0);
+  const pos: CSSProperties = { right, bottom };
   const label = todo ? t('tasks.quickN', { n: todo }) : t('tasks.quick');
   return (
     <>
@@ -66,7 +74,7 @@ function QuickTasksButton({ phone, role }: { phone: boolean; role: StaffRole }) 
         <Icon name="checklist" size={phone ? 24 : 26} />
         {todo ? <span data-testid="quick-tasks-badge" data-late={late || undefined} aria-hidden="true" style={{ position: 'absolute', top: -4, right: -4, minWidth: 20, height: 20, padding: '0 5px', borderRadius: 999, background: late ? RUST : '#FFFFFF', color: late ? '#FFFFFF' : INK, fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 0 0 2px ${INK}`, fontVariantNumeric: 'tabular-nums' }}>{todo > 99 ? '99+' : todo}</span> : null}
       </button>
-      {open ? <QuickTasksPopup rows={rows} done={rows.length - todo} total={rows.length} closed={!dayStatus(s, today).open} hasCam={hasCam} phone={phone} anchor={{ right: edge, bottom: `calc(${bottom} + ${size + 10}px)` }} onClose={() => setOpen(false)} /> : null}
+      {open ? <QuickTasksPopup rows={rows} done={rows.length - todo} total={rows.length} closed={!dayStatus(s, today).open} hasCam={hasCam} phone={phone} anchor={{ right: edge, bottom: floatingSlot(phone, pins, 0, 1).bottom }} onClose={() => setOpen(false)} /> : null}
     </>
   );
 }

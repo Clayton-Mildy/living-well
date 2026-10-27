@@ -10,9 +10,9 @@ test.beforeEach(async ({ request }) => { await resetDemo(request); });
 const stateOf = async (page: Page, userId: string) => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': userId } })).json()).state;
 type Inv = { id: string; number: string; voided?: boolean; deletedAt?: unknown };
 
-/** Tap the search icon in the phone header and type the query. */
+/** Tap the floating search button (bottom right of the phone) and type the query. */
 async function search(page: Page, q: string) {
-  await page.getByRole('button', { name: 'Search', exact: true }).click();
+  await page.getByTestId('search-fab').click();
   const overlay = page.getByRole('dialog', { name: 'Search' });
   await expect(overlay).toBeVisible();
   await overlay.getByRole('textbox', { name: 'Search' }).fill(q);
@@ -49,6 +49,12 @@ test('phase E story: search opens Billing and an invoice for finance, an action 
 
   // 3. Caca (lobby): "tambah anggota" finds the Add member action; it opens the stepped flow
   await signIn(page, 's1', '/today');
+  // the button is bottom right, straight above the Tasks button (the lobby has no quick camera), and the header has no search icon
+  const fab = (await page.getByTestId('search-fab').boundingBox())!;
+  const tasks = (await page.getByTestId('quick-tasks').boundingBox())!;
+  expect(fab.x).toBeCloseTo(tasks.x, 0);
+  expect(fab.y + fab.height).toBeLessThan(tasks.y);
+  expect(await page.getByRole('button', { name: 'Search', exact: true }).count()).toBe(1);
   overlay = await search(page, 'tambah anggota');
   const act = overlay.getByRole('group', { name: 'Actions' }).getByTestId('ss-row').filter({ hasText: 'Add member' }).first();
   await expect(act).toBeVisible();

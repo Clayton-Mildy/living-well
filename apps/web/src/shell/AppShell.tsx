@@ -19,6 +19,7 @@ import { QuickCamera, QUICK_CAMERA_ROLES } from './QuickCamera';
 import { QuickTasks, QUICK_TASK_ROLES } from './QuickTasks';
 import { FamilyShell } from './FamilyShell';
 import { SuperSearch } from './SuperSearch';
+import { SearchFab } from './SearchFab';
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
 
@@ -50,7 +51,7 @@ export function AppShell() {
     document.documentElement.dataset.skin = 'warm';
     return () => { delete document.documentElement.dataset.skin; };
   }, [staff]);
-  // round 14 e: Cmd-K / Ctrl-K toggles the search, from any staff screen (even a pushed phone profile, which hides the header icon)
+  // round 14 e: Cmd-K / Ctrl-K toggles the search, from any staff screen (even a pushed phone profile, which hides the header)
   useEffect(() => {
     if (!staff) return;
     const on = (e: KeyboardEvent) => {
@@ -69,6 +70,7 @@ export function AppShell() {
   // round 6: a member profile is a pushed screen on a phone; it brings its own top bar (‹ Members), so the logo header steps aside
   const pushed = isPhone && /^\/members\/[^/]+/.test(pathname);
   const quick = (QUICK_CAMERA_ROLES as readonly string[]).includes(role) || QUICK_TASK_ROLES.includes(role); // the quick camera / tasks buttons float over the page's last rows: leave room to scroll them clear of them
+  const fabRows = isPhone ? (quick ? 58 : 44) : 0; // round 15: the phone search button floats above that stack (a role with neither has just this button)
   return (
     // round 9: the warm cream page (App v4); cards on it are warm white (global.css)
     <div style={{ ...cssVars, position: 'fixed', inset: 0, display: 'flex', background: 'var(--page, #FFFFFF)', color: '#24201C' }}>
@@ -79,7 +81,6 @@ export function AppShell() {
         {isPhone && !pushed ? (
           <div style={{ height: 56, flex: 'none', display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px 0 18px', background: 'var(--page, #FFFFFF)' }}>
             <div style={{ flex: 1, minWidth: 0 }}><Logo height={30} /></div>
-            <IconButton icon="search" label={t('search.open')} bordered={false} onClick={() => setFind(true)} />
             <NotificationBell onClick={() => setBell(true)} />
             <button type="button" onClick={() => setAcct(true)} aria-label={t('shell.account')} style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <Avatar name={user.kind === 'staff' ? user.staff.name : user.contact.name} size={36} src={user.kind === 'staff' ? memberPhoto(user.staff) : undefined} />
@@ -90,7 +91,7 @@ export function AppShell() {
           <Suspense fallback={<PageSkeleton />}>
             <Outlet />
             {/* room to scroll the last rows clear of the floating Demo pill; on a phone also of the floating tab bar (84px: it floats over the page like the family app's) */}
-            <div aria-hidden="true" style={{ height: isPhone ? `calc(${84 + (pins ? (quick ? 124 : 76) : quick ? 68 : 24)}px + env(safe-area-inset-bottom, 0px))` : quick ? 136 : 72 }} />
+            <div aria-hidden="true" style={{ height: isPhone ? `calc(${84 + (pins ? (quick ? 124 : 76) : quick ? 68 : 24) + fabRows}px + env(safe-area-inset-bottom, 0px))` : quick ? 136 : 72 }} />
           </Suspense>
         </main>
         {isPhone ? <BottomNav role={role} current={key} counts={counts} onGo={go} /> : null}
@@ -105,6 +106,7 @@ export function AppShell() {
       <DemoPill phone={isPhone} />
       <QuickCamera phone={isPhone} />
       <QuickTasks phone={isPhone} />
+      <SearchFab phone={isPhone} onOpen={() => setFind(true)} />
     </div>
   );
 }

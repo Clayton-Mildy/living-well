@@ -1,4 +1,4 @@
-// Round 14 phase E, Task 4: the search overlay and its entry points (phone icon, sidebar field, Cmd/Ctrl-K).
+// Round 14 phase E, Task 4: the search overlay and its entry points (phone floating button, sidebar field, Cmd/Ctrl-K).
 // The overlay runs against the seed at the e2e date; the router's navigate is mocked, the action layer too.
 import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
@@ -7,6 +7,7 @@ import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { buildSeed, translate } from '@cp/shared';
 import { useReplica } from '../store/replica';
 import { useSession } from '../store/session';
+import { useUi } from '../store/ui';
 import { SuperSearch } from './SuperSearch';
 import { AppShell } from './AppShell';
 import { Sheet } from '../components/ui';
@@ -19,7 +20,7 @@ vi.mock('../lib/act', () => ({ useAct: () => vi.fn(async () => ({ ok: true, resu
 vi.mock('./demoAccounts', () => ({ useDemoLogin: () => true, useDemoAccounts: () => [] }));
 
 const T = '2026-10-21';
-const WHO: Record<string, { id: string; name: string }> = { lobby: { id: 's1', name: 'Caca' }, finance: { id: 's10', name: 'Fransiska' } };
+const WHO: Record<string, { id: string; name: string }> = { lobby: { id: 's1', name: 'Caca' }, finance: { id: 's10', name: 'Fransiska' }, activity: { id: 's5', name: 'Dinar' } };
 const KEY = 'cp.search.recent.s10'; // per user: the finance user signs in below unless a test signs in the lobby (s1)
 let root: Root | null = null;
 let host: HTMLElement | null = null;
@@ -38,7 +39,7 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-function sign(role: 'lobby' | 'finance', width: number) {
+function sign(role: 'lobby' | 'finance' | 'activity', width: number) {
   const { id, name } = WHO[role];
   const state = buildSeed().citra;
   (window as unknown as { innerWidth: number }).innerWidth = width;
@@ -55,7 +56,7 @@ async function showSearch(role: 'lobby' | 'finance' = 'finance', open = true, wi
   await act(async () => { root!.render(ui(open)); });
   return { onClose, rerender: async (o: boolean) => { await act(async () => { root!.render(ui(o)); }); } };
 }
-async function showShell(role: 'lobby' | 'finance', width: number) {
+async function showShell(role: 'lobby' | 'finance' | 'activity', width: number) {
   sign(role, width);
   await act(async () => { root!.render(<MemoryRouter initialEntries={['/today']}><Routes><Route element={<AppShell />}><Route path="*" element={<div>page</div>} /></Route></Routes></MemoryRouter>); });
 }
@@ -211,13 +212,58 @@ describe('SuperSearch overlay', () => {
 });
 
 describe('search entry points in the shell', () => {
-  it('phone: the search icon in the logo header opens the overlay', async () => {
+  it('phone: the floating search button opens the overlay; the logo header has no search icon', async () => {
     await showShell('finance', 375);
     expect(document.querySelector('input')).toBeNull();
-    await click(btn('Search'));
+    expect(document.querySelector('[data-testid="staff-sidebar"]')).toBeNull();
+    const fab = document.querySelector<HTMLElement>('[data-testid="search-fab"]')!;
+    expect(fab.getAttribute('aria-label')).toBe('Search');
+    expect(Array.from(document.querySelectorAll('button')).filter((b) => b.getAttribute('aria-label') === 'Search')).toEqual([fab]); // the only one: the header icon is gone
+    await click(fab);
     expect(document.activeElement).toBe(input());
     await click(btn('Close search'));
     expect(document.querySelector('input')).toBeNull();
+  });
+
+  // the stack's geometry: px of the base (the calc's first term) and the right edge, read off the inline style
+  const px = (v: string) => parseFloat(/calc\((\d+)px/.exec(v)?.[1] ?? 'NaN');
+  const at = (testid: string) => { const el = document.querySelector<HTMLElement>(`[data-testid="${testid}"]`)!; return { el, right: parseFloat(el.style.right), bottom: px(el.style.bottom), size: parseFloat(el.style.width) }; };
+
+  it('phone, lobby: the search button sits right above Tasks in the same column, and opens the search', async () => {
+    await showShell('lobby', 375);
+    const tasks = at('quick-tasks');
+    const fab = at('search-fab');
+    expect(document.querySelector('[data-testid="quick-camera"]')).toBeNull();
+    expect(fab.size).toBe(48);
+    expect(fab.right).toBe(tasks.right);
+    expect(fab.bottom).toBe(tasks.bottom + tasks.size + 10);
+    await click(fab.el);
+    expect(document.activeElement).toBe(input());
+  });
+
+  it('phone, activity: the search button sits right above the camera, which stays the bottom of the right column', async () => {
+    await showShell('activity', 375);
+    const cam = at('quick-camera');
+    const tasks = at('quick-tasks');
+    const fab = at('search-fab');
+    expect(fab.right).toBe(cam.right);
+    expect(fab.bottom).toBe(cam.bottom + cam.size + 10);
+    expect(tasks.right).toBe(cam.right + cam.size + 10); // Tasks stays left of the camera
+    expect(tasks.bottom).toBe(cam.bottom);
+  });
+
+  it('phone: a page Pin raises the search button with the rest of the stack', async () => {
+    await showShell('lobby', 375);
+    const before = at('search-fab').bottom;
+    await act(async () => { useUi.getState().pin(1); });
+    expect(at('search-fab').bottom).toBeGreaterThan(before);
+    expect(at('search-fab').bottom).toBe(at('quick-tasks').bottom + 58);
+    await act(async () => { useUi.getState().pin(-1); });
+  });
+
+  it('laptop: no floating search button', async () => {
+    await showShell('lobby', 1440);
+    expect(document.querySelector('[data-testid="search-fab"]')).toBeNull();
   });
 
   it('laptop: the sidebar field opens it; Cmd-K toggles it; Ctrl-K too', async () => {
