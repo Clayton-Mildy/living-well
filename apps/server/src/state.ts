@@ -5,6 +5,8 @@ import { clockInfo, demoDate, demoNowMin, loadClock, resetClock } from './clock'
 import { runMigrations, ensureDatabase } from './db/setup';
 import { claimUsername, scrubError, seedMissingCredentials } from './db/credentials';
 import { loadSecret } from './auth';
+import { formDoc, signingOf } from '@cp/shared/rules/signing';
+import { stampProvider, type StampProvider } from './providers/stampProvider';
 
 let clubs: Record<string, ClubState> = {};
 const queues: Record<string, Promise<unknown>> = {};
@@ -35,6 +37,7 @@ export async function boot() {
   await loadSecret();
   await seedMissingCredentials(clubs);
   await syncUsernames(); // older databases: give everyone who can sign in a username
+  stampProvider(); // an unknown CP_STAMP_PROVIDER stops the server here, at boot
 }
 export const getClubs = () => clubs;
 export const getClub = (id: string) => clubs[id];
@@ -67,6 +70,7 @@ export const broadcastAll = (e: ServerEvent) => { for (const l of listeners) l.s
  */
 export async function runAction(clubId: string, name: string, input: unknown, user: User, mutationId: string) {
   const r = await runActionRaw(clubId, name, input, user, mutationId);
+  if (user.id !== 'system') stampCountersigned(clubId).catch((e) => console.error('stamp sweep failed:', scrubError(e))); // fire and forget: the stamp lands a moment later as a normal change
   if (r.patches.some((p) => ACCOUNT_COLLECTIONS.has(String(p.path[0])))) {
     try { await syncUsernames(); } catch (e) { console.error('username assignment failed:', scrubError(e)); }
   }
@@ -107,6 +111,42 @@ function runActionRaw(clubId: string, name: string, input: unknown, user: User, 
   });
 }
 
+// e-Meterai: the server stamps every countersigned e-Meterai form that has no serial yet (after any action, and on the jobs tick).
+// One sweep per club at a time; a request that arrives while one runs makes it look once more, so a form countersigned meanwhile is not missed.
+let stamper: StampProvider | null = null;
+/** Tests swap the provider; null goes back to the configured one. */
+export function setStampProvider(p: StampProvider | null) { stamper = p; }
+const sweeps = new Map<string, Promise<number>>();
+const sweepAgain = new Set<string>();
+/** The sweep running for the club, or a resolved 0: lets tests wait for the fire-and-forget sweep instead of sleeping. */
+export const lastSweep = (clubId: string): Promise<number> => sweeps.get(clubId) ?? Promise.resolve(0);
+
+const awaitingStamp = (s: ClubState | undefined) =>
+  Object.values(s?.members || {}).filter((m) => { const g = signingOf(m); return g?.status === 'countersigned' && g.meterai === 'e' && !g.meteraiSerial; });
+
+/** Affix the e-Meterai to every countersigned form without a serial. Resolves with how many were stamped; provider errors are logged and leave the form countersigned. */
+export async function stampCountersigned(clubId: string): Promise<number> {
+  const running = sweeps.get(clubId);
+  if (running) { sweepAgain.add(clubId); return running; }
+  if (!awaitingStamp(clubs[clubId]).length) return 0;
+  const p = (async () => {
+    let stamped = 0;
+    do {
+      sweepAgain.delete(clubId);
+      for (const m of awaitingStamp(clubs[clubId])) {
+        try {
+          const { serial, at } = await (stamper ?? stampProvider()).affix({ documentId: formDoc(m)!.id, memberId: m.id });
+          await runActionRaw(clubId, 'signing.stamp', { memberId: m.id, serial, at }, systemUser(clubId), `stamp-${Date.now().toString(36)}-${m.id}`);
+          stamped++;
+        } catch (e) { console.error(`stamp failed for ${m.id}:`, scrubError(e)); }
+      }
+    } while (sweepAgain.has(clubId));
+    return stamped;
+  })().finally(() => sweeps.delete(clubId));
+  sweeps.set(clubId, p);
+  return p;
+}
+
 let resetting: Promise<void> | null = null;
 /** Re-seed every clubhouse. One reset at a time: if two people press Reset together, the second shares the first. */
 export function resetDemo(): Promise<void> {
@@ -134,6 +174,7 @@ export async function runJobsNow(wait = true) {
     for (const id of Object.keys(clubs)) {
       try { await runAction(id, 'jobs.tick', {}, systemUser(id), `job-${Date.now().toString(36)}-${id}`); }
       catch (e) { if (!(e instanceof DomainError)) console.error('job tick failed', e); }
+      await stampCountersigned(id); // never throws: provider errors are logged inside
     }
   } finally { tickBusy = false; }
 }

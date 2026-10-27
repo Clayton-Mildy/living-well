@@ -1,5 +1,5 @@
 // Server routes against a separate test database (citrapremier_test on the Homebrew Postgres, port 5434).
-import { describe, it, expect, beforeAll, afterAll, vi } from 'vitest';
+import { describe, it, expect, beforeAll, afterAll, beforeEach, afterEach, vi } from 'vitest';
 
 process.env.DATABASE_URL = process.env.TEST_DATABASE_URL || 'postgres://localhost:5434/citrapremier_test';
 // Tests call the API without a browser session: they may name the user with `x-user-id`. The auth tests below switch this off to prove a browser cannot.
@@ -701,5 +701,91 @@ describe('receipts: POST /api/receipts/read (simulated OCR)', () => {
     const was = process.env.CP_OCR_PROVIDER;
     process.env.CP_OCR_PROVIDER = 'nope';
     try { expect(() => receiptOcr()).toThrow(); } finally { if (was === undefined) delete process.env.CP_OCR_PROVIDER; else process.env.CP_OCR_PROVIDER = was; }
+  });
+});
+
+describe('signing: the e-Meterai stamp sweep (simulated provider)', () => {
+  const SIG = 'md_testsignature0001';
+  const act = (name: string, input: unknown, user: string) => app.request(`/api/actions/${name}`, json({ mutationId: `st-${name}-${Math.random().toString(36).slice(2)}`, club: 'citra', input }, user));
+  const form = () => state.getClub('citra').members.m1.documents.find((d) => d.type === 'membershipForm')!.signing!;
+  /** m1's form sent by the front desk, signed by the billing contact, then approved by management: the countersign that triggers the sweep. */
+  const countersign = async () => {
+    expect((await act('signing.send', { memberId: 'm1' }, 's1')).status).toBe(200);
+    expect((await act('signing.sign', { memberId: 'm1', signatureMediaId: SIG, otp: '123456' }, 'f1')).status).toBe(200);
+    expect((await act('approval.approve', { type: 'signing', ids: ['m1'] }, 's9')).status).toBe(200);
+  };
+  let was: string | undefined;
+  beforeEach(async () => {
+    was = process.env.CP_STAMP_DELAY_MS;
+    process.env.CP_STAMP_DELAY_MS = '0';
+    await state.resetDemo();
+  });
+  afterEach(async () => {
+    state.setStampProvider(null);
+    if (was === undefined) delete process.env.CP_STAMP_DELAY_MS; else process.env.CP_STAMP_DELAY_MS = was;
+    await state.lastSweep('citra');
+    vi.restoreAllMocks();
+  });
+
+  it('after management approves a signed form, the sweep stamps it with a 22-character serial', async () => {
+    await countersign();
+    await state.lastSweep('citra');
+    expect(form()).toMatchObject({ status: 'stamped', meterai: 'e' });
+    expect(form().meteraiSerial).toMatch(/^[A-Z0-9]{22}$/);
+    expect(form().steps.at(-1)).toMatchObject({ status: 'stamped', by: 'system' });
+  });
+
+  it('the approving request does not wait for the stamp', async () => {
+    process.env.CP_STAMP_DELAY_MS = '150';
+    await countersign();
+    expect(form().status).toBe('countersigned');
+    expect(await state.lastSweep('citra')).toBe(1);
+    expect(form().status).toBe('stamped');
+  });
+
+  it('a provider that throws once leaves the form countersigned, and the next sweep stamps it', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    let calls = 0;
+    state.setStampProvider({ affix: async () => { if (++calls === 1) throw new Error('provider down'); return { serial: 'A'.repeat(22), at: '2026-10-21T10:00' }; } });
+    await countersign();
+    expect(await state.lastSweep('citra')).toBe(0);
+    expect(form().status).toBe('countersigned');
+    expect(await state.stampCountersigned('citra')).toBe(1);
+    expect(form()).toMatchObject({ status: 'stamped', meteraiSerial: 'A'.repeat(22) });
+  });
+
+  it('two sweeps started together stamp once', async () => {
+    let calls = 0;
+    state.setStampProvider({ affix: async () => { calls++; await new Promise((r) => setTimeout(r, 30)); return { serial: 'B'.repeat(22), at: '2026-10-21T10:00' }; } });
+    await countersign();
+    const both = await Promise.all([state.stampCountersigned('citra'), state.stampCountersigned('citra')]); // both join the one sweep and share its count
+    await state.lastSweep('citra');
+    expect(both).toEqual([1, 1]);
+    expect(calls).toBe(1);
+    expect(form().steps.filter((x) => x.status === 'stamped')).toHaveLength(1);
+  });
+
+  it('the jobs tick stamps a countersigned form too', async () => {
+    state.setStampProvider({ affix: async () => { throw new Error('down at approval'); } });
+    vi.spyOn(console, 'error').mockImplementation(() => {});
+    await countersign();
+    await state.lastSweep('citra');
+    expect(form().status).toBe('countersigned');
+    state.setStampProvider(null);
+    await state.runJobsNow();
+    expect(form().status).toBe('stamped');
+  });
+
+  it('signing.stamp is the system only: staff and management get 403', async () => {
+    await countersign();
+    await state.lastSweep('citra');
+    for (const u of ['s1', 's9']) expect((await act('signing.stamp', { memberId: 'm1', serial: 'C'.repeat(22), at: '2026-10-21T10:00' }, u)).status).toBe(403);
+  });
+
+  it('an unknown stamp provider fails at boot', async () => {
+    const { stampProvider } = await import('./providers/stampProvider');
+    const prev = process.env.CP_STAMP_PROVIDER;
+    process.env.CP_STAMP_PROVIDER = 'nope';
+    try { expect(() => stampProvider()).toThrow(); } finally { if (prev === undefined) delete process.env.CP_STAMP_PROVIDER; else process.env.CP_STAMP_PROVIDER = prev; }
   });
 });
