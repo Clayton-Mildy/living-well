@@ -26,7 +26,7 @@ afterEach(async () => {
 });
 
 const lead = (): OnlineRegistration => ({ ...blankOnline(), title: 'Oma', name: 'Rosa Santoso', contact: { name: 'Dina Santoso', relation: 'daughter', phone: '+6281255550101' } });
-interface Server { state?: string; draft?: OnlineRegistration; step?: number | null; savedAt?: string | null; rev?: number; /** a save that comes in with a different `expect` is answered 409 */ strict?: boolean; /** answer the draft POST only when released (a save in flight) */ hold?: boolean }
+interface Server { dementiaFee?: number; state?: string; draft?: OnlineRegistration; step?: number | null; savedAt?: string | null; rev?: number; /** a save that comes in with a different `expect` is answered 409 */ strict?: boolean; /** answer the draft POST only when released (a save in flight) */ hold?: boolean }
 /** The public routes: GET gives the link, POST …/draft saves, POST … opens or sends. Returns the calls made. */
 let release: () => void = () => undefined;
 function serve(srv: Server = {}) {
@@ -35,7 +35,7 @@ function serve(srv: Server = {}) {
     const method = init?.method ?? 'GET';
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
     calls.push({ url, method, body });
-    if (method === 'GET') return { ok: true, status: 200, json: async () => ({ state: srv.state ?? 'sent', club: 'CitraPremier', today: '2026-10-22', draft: srv.draft ?? lead(), step: srv.step ?? null, savedAt: srv.savedAt ?? null, draftRev: srv.rev ?? (srv.savedAt ? 1 : 0), submittedAt: null, expiresAt: '2026-11-05T09:00', prices: { flex: 2500000, gold: 4500000, flexQuota: 8 } }) };
+    if (method === 'GET') return { ok: true, status: 200, json: async () => ({ state: srv.state ?? 'sent', club: 'CitraPremier', today: '2026-10-22', draft: srv.draft ?? lead(), step: srv.step ?? null, savedAt: srv.savedAt ?? null, draftRev: srv.rev ?? (srv.savedAt ? 1 : 0), submittedAt: null, expiresAt: '2026-11-05T09:00', prices: { flex: 2500000, gold: 4500000, flexQuota: 8 }, ...(srv.dementiaFee != null ? { dementiaFee: srv.dementiaFee } : {}) }) };
     if (url.endsWith('/draft')) {
       if (srv.hold) await new Promise<void>((r) => { release = r; });
       const cur = srv.rev ?? (srv.savedAt ? 1 : 0);
@@ -129,6 +129,18 @@ describe('the online form: five steps', () => {
     expect(sent[0].body.draft).toMatchObject({ title: 'Oma', name: 'Rosa S', contact: { name: 'Dina Santoso' }, lang: 'en' });
     expect(document.querySelector('[data-testid="public-form-message"]')?.textContent).toContain('Thank you, Dina');
     expect(localStorage.getItem(formDraftKey(TOKEN))).toBeNull();
+  });
+});
+
+describe('the online form: the dementia question (round 15)', () => {
+  it('names the fee from the link\'s own payload', async () => {
+    serve({ dementiaFee: 900000 });
+    await show();
+    await click(button('Continue')); // who -> family
+    await click(button('Continue')); // family -> health
+    expect(step()).toBe('health');
+    expect(stepEl()?.textContent).toContain('Dementia (plus Rp 900.000 monthly fee)?');
+    expect(document.body.textContent).not.toContain('affects the monthly fee');
   });
 });
 

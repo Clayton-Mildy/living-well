@@ -144,7 +144,7 @@ export const profile: Same<typeof EN> = {
   'sec.regPersonal': 'Detail pribadi lainnya', 'sec.regCare': 'Pertanyaan perawatan', 'f.nickname': 'Panggilan', 'f.marital': 'Status pernikahan',
   'marital.single': 'Belum menikah', 'marital.married': 'Menikah', 'marital.widowed': 'Janda atau duda', 'marital.divorced': 'Cerai',
   'f.rtRw': 'RT/RW', 'f.city': 'Kota', 'f.postcode': 'Kodepos', 'f.homePhone': 'Telepon rumah', 'f.memberMobile': 'Ponsel anggota', 'f.email': 'Email',
-  'q.comm': 'Kesulitan berkomunikasi?', 'q.self': 'Dapat beraktivitas dan makan sendiri?', 'q.bath': 'Butuh bantuan ke kamar mandi?', 'q.dementia': 'Demensia (memengaruhi biaya bulanan)?', 'q.dementiaShort': 'Demensia',
+  'q.comm': 'Kesulitan berkomunikasi?', 'q.self': 'Dapat beraktivitas dan makan sendiri?', 'q.bath': 'Butuh bantuan ke kamar mandi?', 'q.dementia': 'Demensia (tambahan Rp {fee} per bulan)?', 'q.dementiaShort': 'Demensia',
   'q.commShort': 'Sulit berkomunikasi', 'q.selfShort': 'Makan dan beraktivitas sendiri', 'q.bathShort': 'Butuh bantuan kamar mandi',
   'f.dementiaNote': 'Catatan demensia (opsional)', 'f.dementiaShort': 'Catatan demensia', 'f.idsReceived': 'Identitas diterima (KTP/KK)', 'f.idsShort': 'Identitas diterima',
   'ids.guarantor': 'Penanggung jawab', 'ids.member': 'Anggota', 'ids.carer': 'Pengasuh (suster)',

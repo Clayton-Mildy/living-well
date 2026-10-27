@@ -69,7 +69,6 @@ html[data-skin="warm"] .cp-serif-up { font-size: 25px !important; line-height: 3
   .cp-tiles3 { grid-template-columns: repeat(3, minmax(0, 1fr)) !important; }
   .cp-tile-stack { align-items: center !important; text-align: center !important; justify-content: center !important; }
   .cp-tile-stack > span { flex-direction: column; font-size: 14px !important; }
-  .cp-addphoto { aspect-ratio: auto !important; flex-direction: row !important; justify-content: flex-start !important; padding: 10px 16px !important; gap: 12px !important; }
   /* a row of tabs/chips becomes one swipeable line */
   .cp-tabrow { flex-wrap: nowrap !important; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
   .cp-tabrow > * { flex: none; }

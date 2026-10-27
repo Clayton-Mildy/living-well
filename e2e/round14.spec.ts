@@ -68,7 +68,7 @@ test('Dementia fee: on the Health step, answering Yes tells the cost, and the Re
   await d.getByLabel('Mobile (WhatsApp)').fill('0813 4000 7777');
   await regNext(d);
   // Health: nothing is told until the answer is Yes
-  const askYes = d.getByText('Dementia (affects the monthly fee)?', { exact: true }).locator('xpath=..').getByRole('button', { name: 'Yes', exact: true });
+  const askYes = d.getByText('Dementia (plus Rp 750.000 monthly fee)?', { exact: true }).locator('xpath=..').getByRole('button', { name: 'Yes', exact: true });
   await expect(d).not.toContainText('more a month');
   await askYes.click();
   await expect(d).toContainText('Rp 750.000 more a month');

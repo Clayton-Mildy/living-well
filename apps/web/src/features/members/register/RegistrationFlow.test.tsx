@@ -121,6 +121,21 @@ describe('Add member: the stepped flow', () => {
     expect(onDone).toHaveBeenCalledWith('m99');
     expect(localStorage.getItem('cp.reg.new')).toBeNull();
   });
+  it('the Health step asks about dementia with the fee in force (round 15)', async () => {
+    openClub('mgmt');
+    await show(<RegistrationFlow mode={{ kind: 'new' }} onDone={vi.fn()} />);
+    await type(input('name'), 'Ratna Dewi');
+    await click(button('Ibu', flow()));
+    await click(flow().querySelector('[aria-haspopup="dialog"]'));
+    await click(document.querySelector('[data-date="1946-10-14"]'));
+    await click(next());
+    await type(input('contact'), 'Sari Dewi');
+    await type(input('phone'), '0812 5555 0101');
+    await click(next());
+    expect(flow().dataset.regStep).toBe('health');
+    expect(flow().textContent).toContain('Dementia (plus Rp 750.000 monthly fee)?');
+  });
+
   it('offers to continue a draft left on this device', async () => {
     const s = openClub('mgmt');
     saveDraft({ kind: 'new' }, { ...initialState(s, { kind: 'new' }, T), name: 'Ratna Dewi' });

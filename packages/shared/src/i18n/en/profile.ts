@@ -157,7 +157,7 @@ export const profile = {
   'sec.regPersonal': 'More personal details', 'sec.regCare': 'Care questions', 'f.nickname': 'Nickname (Panggilan)', 'f.marital': 'Marital status',
   'marital.single': 'Single', 'marital.married': 'Married', 'marital.widowed': 'Widowed', 'marital.divorced': 'Divorced',
   'f.rtRw': 'RT/RW', 'f.city': 'City', 'f.postcode': 'Postcode', 'f.homePhone': 'Home phone', 'f.memberMobile': 'Member’s mobile', 'f.email': 'Email',
-  'q.comm': 'Difficulty communicating?', 'q.self': 'Can do activities and eat alone?', 'q.bath': 'Needs help in the bathroom?', 'q.dementia': 'Dementia (affects the monthly fee)?', 'q.dementiaShort': 'Dementia',
+  'q.comm': 'Difficulty communicating?', 'q.self': 'Can do activities and eat alone?', 'q.bath': 'Needs help in the bathroom?', 'q.dementia': 'Dementia (plus Rp {fee} monthly fee)?', 'q.dementiaShort': 'Dementia',
   'q.commShort': 'Hard to communicate', 'q.selfShort': 'Eats and does activities alone', 'q.bathShort': 'Needs bathroom help',
   'f.dementiaNote': 'Dementia notes (optional)', 'f.dementiaShort': 'Dementia notes', 'f.idsReceived': 'IDs received (KTP/KK)', 'f.idsShort': 'IDs received',
   'ids.guarantor': 'Responsible family member', 'ids.member': 'Member', 'ids.carer': 'Carer (suster)',

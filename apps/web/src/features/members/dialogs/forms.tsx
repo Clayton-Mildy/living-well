@@ -7,7 +7,7 @@ import { KtpField, type PaperFile } from '../PaperForm';
 import { ProfilePhotoField } from '../ProfilePhoto';
 import { MARITALS, REG_IDS, cleanRegistration, type Marital } from '@cp/shared/rules/applicationForm';
 import { Button, Chip, ChipGroup, FONT_BODY, GROUP_HEAD, Icon, IconButton, Select, TimeField, Toggle } from '../../../components/ui';
-import { rp } from '@cp/shared';
+import { FEE_DEFAULTS, rp } from '@cp/shared';
 import type { TFn } from '../../../lib/i18n';
 import { TitleField } from './TitleField';
 import { dietLabel, foodLabel, mobLabel, relLabel, timingLabel } from '../lib';
@@ -217,9 +217,11 @@ function YesNoOpen({ label, value, onChange, t }: { label: string; value: YN; on
 }
 /** KC round 10: dementia as a yes / no (it affects the monthly fee), with an optional note once it is yes. `fee` (round 14) is the extra monthly cost, told on Yes. */
 export function DementiaFields({ d, set, t, fee }: { d: RegDraft; set: RegSet; t: TFn; fee?: number }) {
+  // round 15 (KC): the question names the fee in force ("Dementia (plus Rp 750.000 monthly fee)?"); the price list's, else the default
+  const question = t('profile.q.dementia', { fee: rp(fee ?? FEE_DEFAULTS.dementia).replace(/^Rp\s*/, '') });
   return (
     <>
-      <YesNoOpen label={t('profile.q.dementia')} value={d.dementia} onChange={(v) => set({ dementia: v, ...(v ? {} : { dementiaNote: '' }) })} t={t} />
+      <YesNoOpen label={question} value={d.dementia} onChange={(v) => set({ dementia: v, ...(v ? {} : { dementiaNote: '' }) })} t={t} />
       {d.dementia && fee != null ? <span data-testid="dementia-fee" style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{t('profile.dementiaFee', { rp: rp(fee) })}</span> : null}
       {d.dementia ? <TextField label={t('profile.f.dementiaNote')} value={d.dementiaNote} onChange={(v) => set({ dementiaNote: v })} multiline rows={2} name="dementiaNote" maxLength={300} /> : null}
     </>

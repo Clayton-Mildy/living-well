@@ -1211,7 +1211,7 @@ test('application form: add a member with the new answers, print the form to sig
   await askChip(d, 'Difficulty communicating?', 'Yes').click();
   await askChip(d, 'Can do activities and eat alone?', 'Yes').click();
   await askChip(d, 'Needs help in the bathroom?', 'No').click();
-  await askChip(d, 'Dementia (affects the monthly fee)?', 'Yes').click();
+  await askChip(d, 'Dementia (plus Rp 750.000 monthly fee)?', 'Yes').click();
   await d.getByLabel('Dementia notes (optional)').fill('Forgets names');
   await regNext(d);
   // Plan: Gold
@@ -1339,7 +1339,7 @@ test('application form: Edit details changes the answers; they show on Overview;
   await d.getByLabel('Postcode').fill('12731');
   await askChip(d, 'Difficulty communicating?', 'Yes').click();
   // the dementia note opens once the dementia answer is Yes (tapping Yes again would clear it)
-  if (!(await d.getByLabel('Dementia notes (optional)').count())) await askChip(d, 'Dementia (affects the monthly fee)?', 'Yes').click();
+  if (!(await d.getByLabel('Dementia notes (optional)').count())) await askChip(d, 'Dementia (plus Rp 750.000 monthly fee)?', 'Yes').click();
   await d.getByLabel('Dementia notes (optional)').fill('Repeats questions');
   await d.getByRole('button', { name: 'Save changes' }).click();
   await expect(dialog(page)).toHaveCount(0);
