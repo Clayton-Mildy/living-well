@@ -730,6 +730,53 @@ describe('receipts', () => {
     const b = w.run('receipt.add', { date: T, supplier: 'Toko Batik', amount: 300_000, sectionId: 'activities' }, 's5');
     expect('mediaId' in w.s.receipts[b.result.receiptId as string]).toBe(false);
   });
+  describe('itemised receipts', () => {
+    const lines = [
+      { id: 'l1', name: 'Popok dewasa (isi 10)', brand: 'Confidence', qty: 2, unit: 'pack', unitPrice: 100_000, amount: 200_000, category: 'hygiene' },
+      { id: 'l2', name: 'Tisu basah', qty: 3, unit: 'pack', unitPrice: 15_000, amount: 45_000, category: 'hygiene' },
+    ];
+    const rc = { date: T, supplier: 'Sahabat Lansia Official (Tokopedia)', amount: 260_000, sectionId: 'fnb', fileName: 'n.jpg', source: 'tokopedia', orderNo: 'INV/20261021/MPL/1234567890', lines };
+    it('stores the source, order number and lines as given, and the amount stays the typed total', () => {
+      const w = world();
+      const id = w.run('receipt.add', rc, 's2').result.receiptId as string;
+      expect(w.s.receipts[id]).toMatchObject({ source: 'tokopedia', orderNo: 'INV/20261021/MPL/1234567890', amount: 260_000, lines });
+      // a receipt without them stays as before
+      const plain = w.run('receipt.add', { date: T, supplier: 'X', amount: 1000, sectionId: 'fnb' }, 's2').result.receiptId as string;
+      for (const k of ['source', 'orderNo', 'lines']) expect(k in w.s.receipts[plain]).toBe(false);
+    });
+    it('regenerates the line ids and refuses bad lines, sources and too many lines', () => {
+      const w = world();
+      const id = w.run('receipt.add', { ...rc, lines: [{ ...lines[1], id: 'zzz' }, { ...lines[0], id: '' }] }, 's2').result.receiptId as string;
+      expect(w.s.receipts[id].lines!.map((l) => l.id)).toEqual(['l1', 'l2']);
+      for (const bad of [{ ...lines[0], qty: 0 }, { ...lines[0], name: '  ' }, { ...lines[0], unitPrice: -1 }, { ...lines[0], category: 'stuff' }, { ...lines[0], amount: -5 }, 'nope']) {
+        w.fail('receipt.add', { ...rc, lines: [bad] }, 's2', 'err.invalid');
+      }
+      w.fail('receipt.add', { ...rc, source: 'lazada' }, 's2', 'err.invalid');
+      w.fail('receipt.add', { ...rc, orderNo: 'x'.repeat(61) }, 's2', 'err.invalid');
+      const many = (n: number) => Array.from({ length: n }, (_, i) => ({ ...lines[1], id: `l${i + 1}` }));
+      w.run('receipt.add', { ...rc, lines: many(40) }, 's2');
+      w.fail('receipt.add', { ...rc, lines: many(41) }, 's2', 'err.invalid');
+    });
+    it('finance replaces the lines on edit, and an empty list removes them', () => {
+      const w = world();
+      const id = w.run('receipt.add', rc, 's2').result.receiptId as string;
+      w.run('receipt.approve', { id }, 's10');
+      w.run('receipt.edit', { id, lines: [{ ...lines[1], qty: 4, amount: 60_000 }], orderNo: 'INV/X' , source: 'other' }, 's10');
+      expect(w.s.receipts[id]).toMatchObject({ source: 'other', orderNo: 'INV/X', amount: 260_000, lines: [{ id: 'l1', name: 'Tisu basah', qty: 4, amount: 60_000 }] });
+      w.run('receipt.edit', { id, lines: [] }, 's10');
+      expect('lines' in w.s.receipts[id]).toBe(false);
+      w.fail('receipt.edit', { id, lines: [{ ...lines[0], qty: 0 }] }, 's10', 'err.invalid');
+    });
+    it('the submitter can correct the lines until approval, not after', () => {
+      const w = world();
+      const id = w.run('receipt.add', rc, 's2').result.receiptId as string;
+      w.run('receipt.edit', { id, lines: [lines[1]] }, 's2');
+      expect(w.s.receipts[id].lines).toHaveLength(1);
+      w.run('receipt.approve', { id }, 's10');
+      w.fail('receipt.edit', { id, lines: [] }, 's2', 'finance.err.alreadyApproved');
+      expect(w.s.receipts[id].lines).toHaveLength(1);
+    });
+  });
   it('picks a supplier from the directory or free text, and defaults the file name from the date', () => {
     const w = world();
     const a = w.run('receipt.add', { date: T, supplier: 'Sayur Segar Kemang', directoryId: 'd6', amount: 500_000, sectionId: 'fnb' }, 's2');

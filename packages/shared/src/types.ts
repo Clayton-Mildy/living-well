@@ -714,6 +714,14 @@ export interface BudgetAdjustment extends Row {
   note: string;
 }
 
+/** Where a receipt came from; 'tokopedia' receipts carry an order number and often shipping in the total. */
+export type ReceiptSource = 'shop' | 'tokopedia' | 'other';
+/** What was bought, in the fixed list Spending groups by. */
+export type SpendCategory = 'groceries' | 'medical' | 'hygiene' | 'activity' | 'cleaning' | 'kitchen' | 'marketplace' | 'other';
+export interface ReceiptLine { id: string; name: string; brand?: string; qty: number; unit: string; unitPrice: number; amount: number; category: SpendCategory }
+/** What a receipt reader (a vision model or document-AI service) returns for one photo. */
+export interface OcrResult { supplier?: string; source?: ReceiptSource; orderNo?: string; date?: ISODate; lines: ReceiptLine[]; total?: number; confidence: number }
+
 export interface Receipt extends Row {
   date: ISODate;
   supplier: string;
@@ -724,6 +732,10 @@ export interface Receipt extends Row {
   fileName: string;
   /** the photo of the nota, taken with CameraCapture (GET /api/media/:id) */
   mediaId?: string;
+  /** round 14 p2: older receipts have none of these; readers use `source ?? 'shop'` and `lines ?? []` */
+  source?: ReceiptSource;
+  orderNo?: string;
+  lines?: ReceiptLine[];
   by: string;
   status: 'submitted' | 'approved' | 'rejected';
   xero: Xero;
@@ -837,6 +849,8 @@ export interface DirectoryContact extends Row {
   whatId?: string;
   phone: string;
   public: boolean;
+  /** what a supplier sells: the default category for lines added by hand */
+  category?: SpendCategory;
 }
 
 export interface StaffHr {

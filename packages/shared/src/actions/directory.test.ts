@@ -80,6 +80,22 @@ describe('directory', () => {
     w.fail('directory.update', { id: 'nope', name: 'x' }, 's10', 'err.notFound');
   });
 
+  it('a supplier can carry a spend category: stored on add and update, unknown ones refused, null clears it', () => {
+    const w = world();
+    const id = w.run('directory.add', { ...entry, category: 'groceries' }, 's10').result.id as string;
+    expect(w.s.directory[id].category).toBe('groceries');
+    const plain = w.run('directory.add', entry, 's10').result.id as string;
+    expect('category' in w.s.directory[plain]).toBe(false);
+    w.run('directory.update', { id, category: 'marketplace' }, 's10');
+    expect(w.s.directory[id].category).toBe('marketplace');
+    w.run('directory.update', { id, name: 'Toko Roti Baru' }, 's10');
+    expect(w.s.directory[id]).toMatchObject({ category: 'marketplace', name: 'Toko Roti Baru' });
+    w.run('directory.update', { id, category: null }, 's10');
+    expect('category' in w.s.directory[id]).toBe(false);
+    w.fail('directory.add', { ...entry, category: 'snacks' }, 's10', 'err.invalid');
+    w.fail('directory.update', { id, category: 'snacks' }, 's10', 'err.invalid');
+  });
+
   it('toggles public and families see exactly the public entries', () => {
     const w = world();
     const fam = () => Object.values(projectForFamily(w.s, 'f1').directory).map((x) => x.id).sort();
