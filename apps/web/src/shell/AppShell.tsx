@@ -18,6 +18,9 @@ import { DemoPill } from './DemoPanel';
 import { QuickCamera, QUICK_CAMERA_ROLES } from './QuickCamera';
 import { QuickTasks, QUICK_TASK_ROLES } from './QuickTasks';
 import { FamilyShell } from './FamilyShell';
+import { SuperSearch } from './SuperSearch';
+
+const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
 
 export function useKeyFromPath() {
   const { pathname } = useLocation();
@@ -36,6 +39,7 @@ export function AppShell() {
   const [acct, setAcct] = useState(false);
   const [bell, setBell] = useState(false);
   const [more, setMore] = useState(false);
+  const [find, setFind] = useState(false); // round 14 e: the super search overlay
   const mainRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [pathname]);
@@ -45,6 +49,15 @@ export function AppShell() {
     if (!staff) return;
     document.documentElement.dataset.skin = 'warm';
     return () => { delete document.documentElement.dataset.skin; };
+  }, [staff]);
+  // round 14 e: Cmd-K / Ctrl-K toggles the search, from any staff screen (even a pushed phone profile, which hides the header icon)
+  useEffect(() => {
+    if (!staff) return;
+    const on = (e: KeyboardEvent) => {
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); setFind((v) => !v); }
+    };
+    window.addEventListener('keydown', on);
+    return () => window.removeEventListener('keydown', on);
   }, [staff]);
   if (!user || !role) return <PageSkeleton />;
   if (role === 'family') return <FamilyShell />; // round 8: the family app has its own frame (Family App prototype)
@@ -60,12 +73,13 @@ export function AppShell() {
     // round 9: the warm cream page (App v4); cards on it are warm white (global.css)
     <div style={{ ...cssVars, position: 'fixed', inset: 0, display: 'flex', background: 'var(--page, #FFFFFF)', color: '#24201C' }}>
       {!isPhone ? (
-        <Sidebar width={device === 'tablet' ? 228 : 252} groups={groups} current={key} counts={counts} onGo={go} onAcct={() => setAcct(true)} onBell={() => setBell(true)} />
+        <Sidebar width={device === 'tablet' ? 228 : 252} groups={groups} current={key} counts={counts} onGo={go} onAcct={() => setAcct(true)} onBell={() => setBell(true)} onSearch={() => setFind(true)} />
       ) : null}
       <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         {isPhone && !pushed ? (
           <div style={{ height: 56, flex: 'none', display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px 0 18px', background: 'var(--page, #FFFFFF)' }}>
             <div style={{ flex: 1, minWidth: 0 }}><Logo height={30} /></div>
+            <IconButton icon="search" label={t('search.open')} bordered={false} onClick={() => setFind(true)} />
             <NotificationBell onClick={() => setBell(true)} />
             <button type="button" onClick={() => setAcct(true)} aria-label={t('shell.account')} style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
               <Avatar name={user.kind === 'staff' ? user.staff.name : user.contact.name} size={36} src={user.kind === 'staff' ? memberPhoto(user.staff) : undefined} />
@@ -83,6 +97,7 @@ export function AppShell() {
       </div>
       <AccountSheet open={acct} onClose={() => setAcct(false)} />
       <NotificationPanel open={bell} onClose={() => setBell(false)} />
+      <SuperSearch open={find} onClose={() => setFind(false)} />
       <Sheet open={more} onClose={() => setMore(false)} title={t('nav.allModules')}>
         <MoreList groups={groups} current={key} counts={counts} onGo={(k) => { setMore(false); navigate('/' + k); }} />
       </Sheet>
@@ -125,7 +140,7 @@ function NavButton({ n, current, count, onClick, h = 44, surface = 'grey' }: { n
  * groups scroll in the middle (the current page a lighter brown tile with a gold icon); the language switch and the signed-in person stay
  * pinned at the foot.
  */
-function Sidebar({ width, groups, current, counts, onGo, onAcct, onBell }: { width: number; groups: [string | null, NavItem[]][]; current: string; counts: Record<string, number>; onGo: (k: string) => void; onAcct: () => void; onBell: () => void }) {
+function Sidebar({ width, groups, current, counts, onGo, onAcct, onBell, onSearch }: { width: number; groups: [string | null, NavItem[]][]; current: string; counts: Record<string, number>; onGo: (k: string) => void; onAcct: () => void; onBell: () => void; onSearch: () => void }) {
   const t = useT();
   const { user, role } = useMe();
   const { lang, setLang } = useSession();
@@ -142,6 +157,13 @@ function Sidebar({ width, groups, current, counts, onGo, onAcct, onBell }: { wid
         </span>
         <NotificationBell variant="side" onClick={onBell} />
       </div>
+      {/* round 14 e: a field-like button (not a real input) that opens the overlay; the shortcut shows on the right */}
+      <button type="button" onClick={onSearch} data-testid="side-search" aria-label={t('search.open')} className="cp-side-dark"
+        style={{ flex: 'none', height: 44, margin: '-6px 0 0', padding: '0 12px', borderRadius: 12, border: '1px solid #3A3027', background: '#2E251D', color: '#9C8E7E', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, textAlign: 'left', width: '100%', boxSizing: 'border-box' }}>
+        <Icon name="search" size={20} color="#9C8E7E" />
+        <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('search.placeholder')}</span>
+        {narrow ? null : <span aria-hidden="true" style={{ fontSize: 12, color: '#CFC3B4', padding: '2px 6px', borderRadius: 6, background: '#3A3027', whiteSpace: 'nowrap' }}>{IS_MAC ? '⌘K' : 'Ctrl K'}</span>}
+      </button>
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
         {groups.map(([g, items], gi) => (
           <div key={gi} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
