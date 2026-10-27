@@ -271,7 +271,9 @@ describe('itemised receipts (round 14 p2)', () => {
     const sp = spending(s, spendWindow('6m', T).from, T);
     expect(sp.byCategory.length).toBeGreaterThanOrEqual(5);
     const popok = sp.byItem.find((i) => i.label.startsWith('Popok dewasa'));
+    expect(popok?.count ?? 0).toBeGreaterThanOrEqual(10); // in every Sahabat Lansia order (R-C3)
     expect(popok?.change ?? 0).toBeGreaterThan(0);
+    for (const r of live(s.receipts).filter((x) => x.directoryId === 'd10')) expect(r.lines![0].name, r.id).toBe('Popok dewasa (isi 10)');
   });
   it('suppliers have categories; the roster has one Tokopedia receipt from Caca waiting since yesterday, the small seed none', () => {
     expect([s.directory.d6.category, s.directory.d7.category, s.directory.d9.category, s.directory.d13.category]).toEqual(['groceries', 'groceries', 'cleaning', 'groceries']);
