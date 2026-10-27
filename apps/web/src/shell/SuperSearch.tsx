@@ -11,18 +11,18 @@ import { rank, type SearchHit } from '../lib/search';
 import { buildSearchIndex } from '../app/searchRegistry';
 import { useClub } from '../store/replica';
 
-const KEY = 'cp.search.recent';
+const KEY = 'cp.search.recent'; // per signed-in user: <KEY>.<userId>, so a shared tablet doesn't show one person's searches to the next
 const MAX_RECENT = 8; // R6: the newest 8, without duplicates
 
 // every read and write is guarded: a blocked store (private mode) simply means no recents
-const readRecent = (): string[] => {
+const readRecent = (key: string): string[] => {
   try {
-    const v: unknown = JSON.parse(localStorage.getItem(KEY) || '[]');
+    const v: unknown = JSON.parse(localStorage.getItem(key) || '[]');
     return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string').slice(0, MAX_RECENT) : [];
   } catch { return []; }
 };
-const writeRecent = (list: string[]) => {
-  try { if (list.length) localStorage.setItem(KEY, JSON.stringify(list)); else localStorage.removeItem(KEY); } catch { /* no recents then */ }
+const writeRecent = (key: string, list: string[]) => {
+  try { if (list.length) localStorage.setItem(key, JSON.stringify(list)); else localStorage.removeItem(key); } catch { /* no recents then */ }
 };
 
 export function SuperSearch({ open, onClose }: { open: boolean; onClose: () => void }) {
@@ -34,11 +34,12 @@ function Overlay({ onClose }: { onClose: () => void }) {
   const lang = useLang();
   const navigate = useNavigate();
   const { isPhone } = useDevice();
-  const { role } = useMe();
+  const { role, id } = useMe();
+  const key = `${KEY}.${id ?? ''}`;
   const club = useClub();
   const { ref, trap } = useOverlayA11y(true, onClose);
   const [q, setQ] = useState('');
-  const [recent, setRecent] = useState<string[]>(readRecent);
+  const [recent, setRecent] = useState<string[]>(() => readRecent(key));
   const [at, setAt] = useState(0);
   const index = useMemo(() => (club && role && role !== 'family' ? buildSearchIndex(club, role, t, lang) : []), [club, role, t, lang]);
   const groups = useMemo(() => rank(index, q), [index, q]);
@@ -49,7 +50,7 @@ function Overlay({ onClose }: { onClose: () => void }) {
 
   const open = (h: SearchHit) => {
     const next = [q.trim(), ...recent.filter((r) => r !== q.trim())].slice(0, MAX_RECENT); // R6: remembered when one of its results is opened
-    writeRecent(next);
+    writeRecent(key, next);
     onClose();
     navigate(h.to);
   };
@@ -78,11 +79,11 @@ function Overlay({ onClose }: { onClose: () => void }) {
   const small = (s: string) => <div style={{ padding: '14px 16px 6px', fontSize: 11, letterSpacing: '1.4px', textTransform: 'uppercase', fontWeight: 600, color: '#5E5852', lineHeight: '16px' }}>{s}</div>;
   let n = -1;
   const body = (
-    <div role="listbox" aria-label={t('search.open')} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 6px 12px' }}>
+    <div role={typed && groups.length ? 'listbox' : undefined} aria-label={typed && groups.length ? t('search.open') : undefined} style={{ flex: 1, minHeight: 0, overflowY: 'auto', padding: '0 6px 12px' }}>
       {typed ? (
         groups.length ? groups.map((g) => (
           <div key={g.group} data-testid="ss-group" role="group" aria-label={t('search.g.' + g.group)}>
-            {small(t('search.g.' + g.group))}
+            <div aria-hidden="true">{small(t('search.g.' + g.group))}</div>
             {g.hits.map((h) => {
               const i = ++n;
               const sel = i === at;
@@ -103,7 +104,7 @@ function Overlay({ onClose }: { onClose: () => void }) {
         <div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', paddingRight: 6 }}>
             {small(t('search.recent'))}
-            <button type="button" onClick={() => { writeRecent([]); setRecent([]); }} className="h-cream"
+            <button type="button" onClick={() => { writeRecent(key, []); setRecent([]); }} className="h-cream"
               style={{ minHeight: 44, padding: '0 12px', border: 'none', borderRadius: 10, background: 'transparent', fontSize: 14, fontWeight: 600, color: '#24201C', cursor: 'pointer', fontFamily: 'Inter' }}>{t('search.clear')}</button>
           </div>
           {recent.map((r) => (

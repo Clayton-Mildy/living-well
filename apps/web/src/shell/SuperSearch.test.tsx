@@ -1,14 +1,17 @@
 // Round 14 phase E, Task 4: the search overlay and its entry points (phone icon, sidebar field, Cmd/Ctrl-K).
 // The overlay runs against the seed at the e2e date; the router's navigate is mocked, the action layer too.
-import { act } from 'react';
+import { act, useState } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
-import { buildSeed } from '@cp/shared';
+import { buildSeed, translate } from '@cp/shared';
 import { useReplica } from '../store/replica';
 import { useSession } from '../store/session';
 import { SuperSearch } from './SuperSearch';
 import { AppShell } from './AppShell';
+import { Sheet } from '../components/ui';
+import { rank } from '../lib/search';
+import { buildSearchIndex } from '../app/searchRegistry';
 
 const navigate = vi.fn();
 vi.mock('react-router-dom', async (orig) => ({ ...(await orig<typeof import('react-router-dom')>()), useNavigate: () => navigate }));
@@ -17,7 +20,7 @@ vi.mock('./demoAccounts', () => ({ useDemoLogin: () => true, useDemoAccounts: ()
 
 const T = '2026-10-21';
 const WHO: Record<string, { id: string; name: string }> = { lobby: { id: 's1', name: 'Caca' }, finance: { id: 's10', name: 'Fransiska' } };
-const KEY = 'cp.search.recent';
+const KEY = 'cp.search.recent.s10'; // per user: the finance user signs in below unless a test signs in the lobby (s1)
 let root: Root | null = null;
 let host: HTMLElement | null = null;
 beforeAll(() => {
@@ -161,18 +164,49 @@ describe('SuperSearch overlay', () => {
 
   it('laptop: arrows move the highlight and Enter opens the highlighted row', async () => {
     const { onClose } = await showSearch('finance', true, 1440);
-    await type('billing');
-    const first = rows()[0];
-    expect(first.getAttribute('aria-selected')).toBe('true');
+    await type('bayar');
+    const want = rank(buildSearchIndex(buildSeed().citra, 'finance', (k, v) => translate('en', k, v), 'en'), 'bayar').flatMap((g) => g.hits);
+    expect(want.length).toBeGreaterThanOrEqual(2);
+    expect(rows().length).toBe(want.length);
+    expect(rows()[0].getAttribute('aria-selected')).toBe('true');
     await key('ArrowDown');
-    const hl = rows().filter((r) => r.getAttribute('aria-selected') === 'true');
-    expect(hl.length).toBe(1);
-    if (rows().length > 1) expect(hl[0]).toBe(rows()[1]);
+    expect(rows().map((r) => r.getAttribute('aria-selected'))).toEqual(want.map((_, n) => (n === 1 ? 'true' : 'false')));
     await key('ArrowUp');
     expect(rows()[0].getAttribute('aria-selected')).toBe('true');
+    await key('ArrowDown');
     await key('Enter');
     expect(onClose).toHaveBeenCalled();
     expect(navigate).toHaveBeenCalledTimes(1);
+    expect(navigate).toHaveBeenCalledWith(want[1]!.to);
+  });
+
+  it('recents are kept per signed-in user', async () => {
+    localStorage.setItem('cp.search.recent.s10', JSON.stringify(['finance only']));
+    await showSearch('lobby');
+    expect(text()).not.toContain('finance only');
+    await type('add member');
+    await click(rowOf('Add member'));
+    expect(JSON.parse(localStorage.getItem('cp.search.recent.s1')!)).toEqual(['add member']);
+    expect(JSON.parse(localStorage.getItem('cp.search.recent.s10')!)).toEqual(['finance only']);
+  });
+
+  it('lobby finds a supplier through Contacts; nurse does not', async () => {
+    await showSearch('lobby');
+    await type('Bersih');
+    await click(rowOf('Bersih Prima'));
+    expect(navigate).toHaveBeenCalledWith('/contacts?q=Bersih%20Prima');
+  });
+
+  it('the listbox is only on the results; group headings are hidden from readers (the group carries the name)', async () => {
+    await showSearch('finance');
+    expect(document.querySelector('[role="listbox"]')).toBeNull(); // hint / recents
+    await type('bayar');
+    expect(document.querySelectorAll('[role="listbox"]').length).toBe(1);
+    const g = document.querySelector('[data-testid="ss-group"]')!;
+    expect(g.getAttribute('aria-label')).toBeTruthy();
+    expect(g.firstElementChild!.getAttribute('aria-hidden')).toBe('true');
+    await type('%%%');
+    expect(document.querySelector('[role="listbox"]')).toBeNull();
   });
 });
 
@@ -204,10 +238,54 @@ describe('search entry points in the shell', () => {
     expect(document.querySelector('input')).not.toBeNull();
   });
 
+  it('Ctrl+Shift+K and a held key (repeat) do not open it', async () => {
+    await showShell('finance', 1440);
+    await key('k', { ctrlKey: true, shiftKey: true }, window);
+    expect(document.querySelector('input')).toBeNull();
+    await key('k', { metaKey: true, repeat: true }, window);
+    expect(document.querySelector('input')).toBeNull();
+  });
+
   it('Cmd-K calls preventDefault', async () => {
     await showShell('lobby', 1440);
     const e = new KeyboardEvent('keydown', { key: 'k', metaKey: true, bubbles: true, cancelable: true });
     await act(async () => { window.dispatchEvent(e); });
     expect(e.defaultPrevented).toBe(true);
+  });
+});
+
+describe('Esc closes only the topmost overlay', () => {
+  function Stack() {
+    const [sheet, setSheet] = useState(true);
+    const [find, setFind] = useState(false);
+    return (
+      <MemoryRouter>
+        <button type="button" data-testid="open-find" onClick={() => setFind(true)}>find</button>
+        <Sheet open={sheet} onClose={() => { sheetClose(); setSheet(false); }} title="Under"><input data-testid="draft" /></Sheet>
+        <SuperSearch open={find} onClose={() => { searchClose(); setFind(false); }} />
+      </MemoryRouter>
+    );
+  }
+  const sheetClose = vi.fn();
+  const searchClose = vi.fn();
+
+  it('a sheet under the search stays open on the first Esc and closes on the second; the page scroll comes back', async () => {
+    sheetClose.mockClear(); searchClose.mockClear();
+    sign('finance', 375);
+    document.body.style.overflow = '';
+    await act(async () => { root!.render(<Stack />); });
+    await click(document.querySelector('[data-testid="open-find"]'));
+    expect(document.querySelector('[role="dialog"][aria-label="Under"]')).not.toBeNull();
+    expect(document.querySelector('input[aria-label="Search"]')).not.toBeNull();
+    await key('Escape', {}, window);
+    expect(searchClose).toHaveBeenCalledTimes(1);
+    expect(sheetClose).not.toHaveBeenCalled();
+    expect(document.querySelector('input[aria-label="Search"]')).toBeNull();
+    expect(document.querySelector('[role="dialog"][aria-label="Under"]')).not.toBeNull();
+    expect(document.body.style.overflow).toBe('hidden'); // the sheet is still open
+    await key('Escape', {}, window);
+    expect(sheetClose).toHaveBeenCalledTimes(1);
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.style.overflow).toBe('');
   });
 });

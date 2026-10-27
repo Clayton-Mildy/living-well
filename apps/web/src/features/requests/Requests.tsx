@@ -22,7 +22,7 @@ export function Requests() {
   const { device, isPhone } = useDevice();
   const { role } = useMe();
   const [open, setOpen] = useState<Panel | null>(null);
-  // a search result: /requests?do=receipt opens the receipt panel, once, then the parameter goes
+  // a search result: /requests?do=receipt opens the receipt panel whenever the parameter appears, then the parameter goes
   const [sp, setSp] = useSearchParams();
   useEffect(() => {
     if (!sp.get('do')) return;

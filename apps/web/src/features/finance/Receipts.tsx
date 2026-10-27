@@ -27,7 +27,7 @@ export function Receipts() {
   const { role } = useMe();
   const canApprove = role === 'finance' || role === 'mgmt';
   const [snapping, setSnapping] = useState(false);
-  // a search result: /receipts?do=snap opens the capture, once, then the parameter goes
+  // a search result: /receipts?do=snap opens the capture whenever the parameter appears, then the parameter goes
   const [sp, setSp] = useSearchParams();
   useEffect(() => {
     if (!sp.get('do')) return;

@@ -1,4 +1,4 @@
-// Round 14 phase E, Task 3: the pages a search result opens take their parameter once on mount and then drop it from the URL (replace),
+// Round 14 phase E, Task 3: the pages a search result opens take their parameter whenever it appears (on mount, or when the search overlay navigates here while the screen is already open) and then drop it from the URL (replace),
 // so Back doesn't reopen the sheet: /members?do=add, /requests?do=receipt, /receipts?do=snap, ?inv=<id> on Billing, /directory?q=<text>.
 // The screens run against the seed at the e2e date; the action layer is mocked.
 import { act, type ReactElement } from 'react';
@@ -134,5 +134,16 @@ describe('deep links from search results', () => {
     await act(async () => { (document.querySelector('[data-testid="go"]') as HTMLElement).click(); });
     expect(text()).not.toContain('Sayur Segar Kemang');
     expect(where()).toBe('/directory');
+  });
+
+  it('a supplier result clears an earlier kind and category filter, so it is never hidden', async () => {
+    await show('finance', '/directory', <><Directory /><Go to="/directory?q=Bersih" /></>);
+    const chip = (label: string) => Array.from(document.querySelectorAll<HTMLElement>('button[aria-pressed]')).find((b) => (b.textContent ?? '').includes(label))!;
+    await act(async () => { chip('Doctors').click(); });
+    expect(chip('Doctors').getAttribute('aria-pressed')).toBe('true');
+    expect(text()).not.toContain('Bersih Prima'); // the doctor filter hides the supplier
+    await act(async () => { (document.querySelector('[data-testid="go"]') as HTMLElement).click(); });
+    expect(chip('All').getAttribute('aria-pressed')).toBe('true');
+    expect(text()).toContain('Bersih Prima');
   });
 });

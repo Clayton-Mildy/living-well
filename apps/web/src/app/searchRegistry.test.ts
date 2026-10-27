@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildSeed, displayName, hasKey, translate, type Role } from '@cp/shared';
 import { rank } from '../lib/search';
-import { NAVS, allowedKeys } from './nav';
+import { NAVS, allowedKeys, screenFor } from './nav';
 import { ACTION_ENTRIES, SCREEN_ENTRIES, buildSearchIndex } from './searchRegistry';
 
 const s = buildSeed().citra;
@@ -50,7 +50,9 @@ describe('role gating', () => {
     expect(has('mgmt', 'host:')).toBe(true);
     expect(has('nurse', 'host:')).toBe(false);
     expect(has('mgmt', 'supplier:')).toBe(true);
-    expect(has('lobby', 'supplier:')).toBe(false);
+    expect(has('lobby', 'supplier:')).toBe(true); // R-F2: through Contacts
+    expect(has('nurse', 'supplier:')).toBe(false);
+    expect(has('kitchen', 'supplier:')).toBe(false);
     expect(has('activity', 'activity:')).toBe(true);
     expect(has('mgmt', 'contact:')).toBe(true);
     expect(has('kitchen', 'contact:')).toBe(false);
@@ -59,6 +61,23 @@ describe('role gating', () => {
     const voided = Object.values(s.invoices).filter((i) => i.voided || i.deletedAt).map((i) => 'invoice:' + i.id);
     const ids = new Set(idx('mgmt').map((i) => i.id));
     for (const v of voided) expect(ids.has(v)).toBe(false);
+  });
+});
+
+describe('supplier paths', () => {
+  it('management and finance open the Directory, the lobby opens Contacts (R-F2)', () => {
+    expect(idx('mgmt').find((i) => i.id.startsWith('supplier:'))!.to).toMatch(/^\/directory\?q=/);
+    expect(idx('finance').find((i) => i.id.startsWith('supplier:'))!.to).toMatch(/^\/directory\?q=/);
+    expect(idx('lobby').find((i) => i.id.startsWith('supplier:'))!.to).toMatch(/^\/contacts\?q=/);
+  });
+});
+
+describe('every result opens a screen the role may open', () => {
+  it.each(STAFF)('%s: the first path segment passes screenFor', (role) => {
+    for (const i of idx(role)) {
+      const seg = i.to.split('?')[0]!.split('/').filter(Boolean)[0]!;
+      expect(screenFor(role, seg), `${role}: ${i.id} -> ${i.to}`).not.toBeNull();
+    }
   });
 });
 

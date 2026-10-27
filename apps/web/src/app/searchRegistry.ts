@@ -131,10 +131,12 @@ export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'e
       out.push({ id: 'activity:' + a.id, group: 'records', label: lang === 'id' && a.nameId ? a.nameId : a.name, icon: a.icon || 'event', to: '/calendar', terms: [a.name, a.nameId ?? ''] });
     }
   }
-  if (keys.has('directory')) {
+  // R-F2: suppliers open the Directory; a role without it (the lobby) reaches the same screen through Contacts, where it may edit (Directory's canEdit)
+  const dirPath = keys.has('directory') ? '/directory' : keys.has('contacts') && (role === 'lobby' || role === 'finance' || role === 'mgmt') ? '/contacts' : null;
+  if (dirPath) {
     for (const d of live(s.directory)) {
       if (d.kind !== 'supplier') continue;
-      out.push({ id: 'supplier:' + d.id, group: 'records', label: d.name, sub: d.category ? t('purchasing.cat.' + d.category) : d.what, icon: 'local_shipping', to: '/directory?q=' + encodeURIComponent(d.name), terms: [d.what] });
+      out.push({ id: 'supplier:' + d.id, group: 'records', label: d.name, sub: d.category ? t('purchasing.cat.' + d.category) : d.what, icon: 'local_shipping', to: `${dirPath}?q=` + encodeURIComponent(d.name), terms: [d.what] });
     }
   }
   return out.map((i) => ({ ...i, terms: i.terms.filter(Boolean) }));

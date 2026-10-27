@@ -36,11 +36,13 @@ export function Directory() {
   const [f, setF] = useState<Filter>('all');
   const [cat, setCat] = useState<CatFilter>('all'); // round 14 p2: the supplier's category, while the Suppliers filter is on
   const [sp, setSp] = useSearchParams();
-  const [q, setQ] = useState(() => sp.get('q') ?? ''); // a search result: /directory?q=<name> pre-fills the search, once, then the parameter goes
+  const [q, setQ] = useState(() => sp.get('q') ?? ''); // a search result: /directory?q=<name> pre-fills the search whenever the parameter appears, then the parameter goes
   useEffect(() => {
     const w = sp.get('q');
     if (!w) return;
     setQ(w); // also when the search overlay sends us here while we are already on the Directory
+    setF('all'); // and an earlier filter must not hide the supplier that was asked for
+    setCat('all');
     const p = new URLSearchParams(sp);
     p.delete('q');
     setSp(p, { replace: true });

@@ -54,7 +54,7 @@ export function AppShell() {
   useEffect(() => {
     if (!staff) return;
     const on = (e: KeyboardEvent) => {
-      if ((e.metaKey || e.ctrlKey) && !e.altKey && e.key.toLowerCase() === 'k') { e.preventDefault(); setFind((v) => !v); }
+      if ((e.metaKey || e.ctrlKey) && !e.altKey && !e.shiftKey && !e.repeat && e.key.toLowerCase() === 'k') { e.preventDefault(); setFind((v) => !v); }
     };
     window.addEventListener('keydown', on);
     return () => window.removeEventListener('keydown', on);

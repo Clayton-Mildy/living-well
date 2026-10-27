@@ -30,7 +30,7 @@ export function Billing() {
   const [q, setQ] = useState('');
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [sheetId, setSheetId] = useState<string | null>(null);
-  // a search result: ?inv=<id> opens that invoice's sheet (finance reaches Billing as /today, management as /billing), once, then the parameter goes; an unknown id opens nothing
+  // a search result: ?inv=<id> opens that invoice's sheet (finance reaches Billing as /today, management as /billing), whenever the parameter appears, then the parameter goes; an unknown id opens nothing
   useEffect(() => {
     const id = sp.get('inv');
     if (!id) return;

@@ -8,7 +8,7 @@ test.describe.configure({ timeout: 90_000 });
 test.beforeEach(async ({ request }) => { await resetDemo(request); });
 
 const stateOf = async (page: Page, userId: string) => (await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': userId } })).json()).state;
-type Inv = { id: string; number: string; voided?: boolean; deleted?: unknown };
+type Inv = { id: string; number: string; voided?: boolean; deletedAt?: unknown };
 
 /** Tap the search icon in the phone header and type the query. */
 async function search(page: Page, q: string) {
@@ -22,7 +22,7 @@ async function search(page: Page, q: string) {
 test('phase E story: search opens Billing and an invoice for finance, an action for the lobby, and respects roles', async ({ page }) => {
   const c = watchConsole(page);
   const st = await stateOf(page, 's10');
-  const inv = Object.values<Inv>(st.invoices).find((i) => !i.voided && !i.deleted && i.number)!;
+  const inv = Object.values<Inv>(st.invoices).find((i) => !i.voided && !i.deletedAt && i.number)!;
   expect(inv, 'a seeded invoice').toBeTruthy();
 
   // 1. Finance (Fransiska): "tagihan" finds Billing (a Screens result); finance's Billing is its Today
