@@ -204,6 +204,20 @@ describe('spending', () => {
     expect(spending(s, '2026-10-01', '2026-10-31').byItem[0].change).toBeNull();
   });
 
+  it('counts what was paid: the part of the total the lines miss goes under the supplier category, a discount is not subtracted', () => {
+    const s = state([
+      rcpt('a', '2026-10-02', 'Sahabat Lansia', 115000, { directoryId: 'd6', lines: [line(POPOK, 'pack', 1, 100000, 'hygiene', 'Confidence')] }),
+      rcpt('b', '2026-10-03', 'Gramedia', 90000, { lines: [line('Lem kertas', 'pcs', 1, 100000, 'activity')] }),
+    ]);
+    s.directory.d6.category = 'marketplace';
+    const r = spending(s, '2026-10-01', '2026-10-31');
+    expect(r.total).toBe(215000);
+    expect(r.byCategory.map((c) => [c.key, c.amount]).sort()).toEqual([['activity', 100000], ['hygiene', 100000], ['marketplace', 15000]]);
+    expect(r.byVendor.map((v) => [v.key, v.amount])).toEqual([['d6', 115000], ['gramedia', 100000]]);
+    expect(r.byItem.map((i) => i.amount)).toEqual([100000, 100000]); // items stay line-only
+    expect(r.byBrand).toEqual([{ key: 'confidence', label: 'Confidence', amount: 100000, count: 1 }]);
+  });
+
   it('the same name in another unit is a separate item', () => {
     const s = state([rcpt('a', '2026-10-05', 'Toko', 300000, { lines: [line(POPOK, 'pack', 1, 100000, 'hygiene'), line(POPOK, 'box', 1, 200000, 'hygiene')] })]);
     expect(spending(s, '2026-10-01', '2026-10-31').byItem.map((i) => i.key).sort()).toEqual([itemKey(POPOK, 'box'), itemKey(POPOK, 'pack')].sort());

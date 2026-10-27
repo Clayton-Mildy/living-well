@@ -129,8 +129,8 @@ function counted(s: ClubState, from: ISODate, to: ISODate): Receipt[] {
 const bySize = <T extends SpendRow>(rows: T[]): T[] => rows.sort((a, b) => b.amount - a.amount || a.label.localeCompare(b.label));
 
 /**
- * What was spent in the window. A receipt with lines counts its lines (so Tokopedia shipping, which is in the
- * total but not in the lines, is left out); one without lines counts its whole total under its supplier's category.
+ * What was paid in the window. A receipt counts its total: the lines give the category, item and brand rows, and the part
+ * of the total they miss (Tokopedia shipping) goes under the supplier's category; one without lines counts its whole total there.
  */
 export function spending(s: ClubState, from: ISODate, to: ISODate): { total: number; byCategory: SpendRow[]; byItem: ItemRow[]; byBrand: SpendRow[]; byVendor: SpendRow[] } {
   const cat = new Map<string, SpendRow>();
@@ -147,7 +147,10 @@ export function spending(s: ClubState, from: ISODate, to: ISODate): { total: num
   let total = 0;
   for (const r of counted(s, from, to)) {
     const lines = r.lines ?? [];
-    const whole = lines.length ? linesTotal(lines) : r.amount;
+    const itemsSum = linesTotal(lines);
+    // what was paid: the part of the total the lines miss (shipping, rounding) counts; lines over the total (a discount) are left as they are
+    const missed = lines.length ? Math.max(0, r.amount - itemsSum) : 0;
+    const whole = lines.length ? itemsSum + missed : r.amount;
     total += whole;
     add(vendor, r.directoryId ?? r.supplier.trim().toLowerCase(), r.supplier, whole);
     if (!lines.length) {
@@ -155,6 +158,7 @@ export function spending(s: ClubState, from: ISODate, to: ISODate): { total: num
       add(cat, c, c, r.amount);
       continue;
     }
+    if (missed) { const c = supplierCategory(s, r.directoryId) ?? 'other'; add(cat, c, c, missed, 0); }
     for (const l of lines) {
       add(cat, l.category, l.category, l.amount);
       if (l.brand?.trim()) add(brand, l.brand.trim().toLowerCase(), l.brand.trim(), l.amount);
