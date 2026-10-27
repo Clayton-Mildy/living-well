@@ -5,7 +5,7 @@ import type { Draft } from 'immer';
 import type { Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
 import { e164, toMin } from '../util';
 import { defineAction, hasRole, isMgmt, roleOf, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
-import { carrySigning, requireMember, shortOf, familyUserIds } from './helpers';
+import { carrySigning, requireMember, shortOf, familyUserIds, signAtRegistration } from './helpers';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 import { NOTE_KEYS } from '../rules/approvals';
 import { currentMembership, isOpen, isPendingRow, membershipStatus, displayName, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
@@ -160,7 +160,7 @@ export function parseHealthBasics(v: unknown): LeadHealth {
 }
 
 /** The new-member input plus the extra answers of the paper application form (Panggilan, RT/RW, phones, the care questions, the ID ticks). */
-export type NewMemberFull = NewMemberInput & { registration?: MemberRegistration };
+export type NewMemberFull = NewMemberInput & { registration?: MemberRegistration; /** round 15: the family member present signed the form (uploaded first, POST /api/media) */ signatureMediaId?: string };
 /** The answers of the application form, cleaned and checked; undefined when none were given. */
 export function parseRegistration(v: unknown): MemberRegistration | undefined {
   const reg = cleanRegistration(v);
@@ -177,6 +177,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
   const plan: Plan = isPlanId(o.plan) ? o.plan : 'flex'; // an unknown or retired catalogue plan is refused by `run` (planOf)
   const photo = mediaIdOf(o.photoMediaId);
   const registration = parseRegistration(o.registration);
+  const signature = mediaIdOf(o.signatureMediaId);
   const input: NewMemberFull = {
     ...(photo ? { photoMediaId: photo } : {}),
     title: titleOf(o.title), // empty is reported by validateNewMember (members.err.titleRequired)
@@ -200,6 +201,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
     formFileName: txt(o.formFileName, 120) || 'registration-form',
     consent: { data: cons.data === true, face: cons.face !== false },
     ...(registration ? { registration } : {}),
+    ...(signature ? { signatureMediaId: signature } : {}),
     ...optionalNote(o),
   };
   const issues = validateNewMember(input); // clock-dependent checks run in `run`
@@ -313,6 +315,7 @@ export const membersActions: ActionDef[] = [
         care: { instructions: input.careInstructions, by: ctx.actor, at: ctx.nowDT }, consents, documents, face: { enrolled: false }, billing: { va: vaFor(num - 1) }, sim: { ...DEFAULT_SIM },
         ...(input.registration ? { registration: input.registration } : {}),
       };
+      signAtRegistration(d, id, input.signatureMediaId, ctx);
       ctx.result.memberId = id;
       ctx.result.familyId = familyId;
       feed(ctx, d, id, 'person_add', 'created');

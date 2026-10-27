@@ -14,9 +14,10 @@ import { initialState } from './steps';
 const h = vi.hoisted(() => ({
   act: vi.fn(async (_name: string, _input: unknown, _opts?: unknown) => ({ ok: true as const, result: { memberId: 'm99' } as Record<string, unknown> })),
   upload: vi.fn(async () => ({ mediaId: 'med-sample', fileName: 'registration-form.jpg' })),
+  uploadMedia: vi.fn(async (_b: Blob) => 'md_signaturetest0001'),
 }));
 vi.mock('../../../lib/act', () => ({ useAct: () => h.act }));
-vi.mock('../../../lib/media', async (orig) => ({ ...(await orig<typeof import('../../../lib/media')>()), uploadDocument: h.upload }));
+vi.mock('../../../lib/media', async (orig) => ({ ...(await orig<typeof import('../../../lib/media')>()), uploadDocument: h.upload, uploadMedia: h.uploadMedia }));
 vi.mock('../../../shell/demoAccounts', () => ({ useDemoLogin: () => true, useDemoAccounts: () => [] }));
 
 const T = '2026-10-21';
@@ -25,6 +26,12 @@ let host: HTMLElement | null = null;
 beforeAll(() => {
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
+  // jsdom draws nothing: a recording 2D context and a canvas that "encodes" a PNG blob
+  const g = { beginPath() {}, moveTo() {}, lineTo() {}, stroke() {}, clearRect() {}, arc() {}, fill() {} };
+  HTMLCanvasElement.prototype.getContext = (() => g) as unknown as HTMLCanvasElement['getContext'];
+  HTMLCanvasElement.prototype.toBlob = ((cb: BlobCallback) => cb(new Blob(['png'], { type: 'image/png' }))) as HTMLCanvasElement['toBlob'];
+  HTMLCanvasElement.prototype.setPointerCapture = () => {};
+  HTMLCanvasElement.prototype.releasePointerCapture = () => {};
 });
 afterEach(async () => {
   await act(async () => { root?.unmount(); });
@@ -32,7 +39,7 @@ afterEach(async () => {
   root = null; host = null;
   document.body.innerHTML = '';
   localStorage.clear();
-  h.act.mockClear(); h.upload.mockClear();
+  h.act.mockClear(); h.upload.mockClear(); h.uploadMedia.mockClear();
   vi.unstubAllGlobals();
 });
 
@@ -201,5 +208,67 @@ describe('Join a lead: a half-filled online form pre-fills too (round 13)', () =
     expect(input('nickname')?.value).toBe('Oma Lin');
     expect(input('address')?.value).toBe('Jl. Melati 3');
     expect(flow().textContent).not.toContain('Filled in online by'); // only a sent form says so
+  });
+});
+
+describe('the family signs the form at registration (round 15)', () => {
+  const ptr = (type: string, x: number, y: number) => {
+    const e = new Event(type, { bubbles: true, cancelable: true });
+    Object.assign(e, { clientX: x, clientY: y, pointerId: 1, pointerType: 'touch', isPrimary: true, buttons: type === 'pointerup' ? 0 : 1, button: 0 });
+    act(() => { document.querySelector('canvas')!.dispatchEvent(e); });
+  };
+  const stroke = () => { ptr('pointerdown', 10, 10); ptr('pointermove', 40, 30); ptr('pointermove', 80, 20); ptr('pointerup', 80, 20); };
+  /** a finished registration kept as a device draft: Resume lands on the review */
+  async function atReview(mode: { kind: 'new' } | { kind: 'lead'; id: string }, as: 'mgmt' | 'lobby') {
+    const s = openClub(as);
+    const base = initialState(s, mode, T);
+    saveDraft(mode, mode.kind === 'new'
+      ? { ...base, title: 'Ibu', name: 'Ratna Dewi', dob: '1946-10-14', contact: 'Sari Dewi', phone: '0812 5555 0101', plan: 'flex', form: { mediaId: 'md_scan0000000001', fileName: 'scan.jpg' }, consentData: true }
+      : { ...base, plan: 'flex', form: { mediaId: 'md_scan0000000001', fileName: 'scan.jpg' } });
+    await show(<RegistrationFlow mode={mode} onDone={() => {}} />);
+    await click(button('Resume'));
+    expect(flow().dataset.regStep).toBe('review');
+  }
+  it('Add member: the pad is labelled with the billing contact; a stroke is uploaded and sent as signatureMediaId', async () => {
+    await atReview({ kind: 'new' }, 'mgmt');
+    expect(flow().querySelector('[data-reg-sign]')!.textContent).toContain('Sari Dewi signs the form here');
+    expect(flow().querySelector('[data-reg-sign]')!.textContent).toContain('Or print the form and sign on paper');
+    expect(flow().querySelectorAll('[data-review-group]')).toHaveLength(6);
+    stroke();
+    await click(button('Create member'));
+    await settle();
+    expect(h.uploadMedia).toHaveBeenCalledOnce();
+    expect(h.act).toHaveBeenCalledOnce();
+    const [name, sent] = h.act.mock.calls[0];
+    expect(name).toBe('members.create');
+    expect(sent).toMatchObject({ name: 'Ratna Dewi', formMediaId: 'md_scan0000000001', signatureMediaId: 'md_signaturetest0001' });
+  });
+  it('Add member without a stroke: nothing is uploaded and no signatureMediaId is sent (the paper route)', async () => {
+    await atReview({ kind: 'new' }, 'mgmt');
+    await click(button('Create member'));
+    await settle();
+    expect(h.uploadMedia).not.toHaveBeenCalled();
+    expect(h.act.mock.calls[0][1]).not.toHaveProperty('signatureMediaId');
+  });
+  it('Join a lead: the same pad, and enquiry.convert gets the signature', async () => {
+    await atReview({ kind: 'lead', id: 'e3' }, 'lobby');
+    expect(flow().querySelector('[data-reg-sign]')!.textContent).toContain('Kevin Sutanto signs the form here');
+    stroke();
+    await click(button(/^Send to management/));
+    await settle();
+    const [name, sent] = h.act.mock.calls[0];
+    expect(name).toBe('enquiry.convert');
+    expect(sent).toMatchObject({ enquiryId: 'e3', signatureMediaId: 'md_signaturetest0001' });
+  });
+  it('going back to another step and returning gives an empty pad: an earlier stroke is not sent', async () => {
+    await atReview({ kind: 'new' }, 'mgmt');
+    stroke();
+    await click(button('Edit', flow().querySelector('[data-review-group="family"]')!));
+    await click(Array.from(document.querySelectorAll<HTMLElement>('button')).filter((b) => textOf(b) === 'Review').pop());
+    expect(flow().dataset.regStep).toBe('review');
+    await click(button('Create member'));
+    await settle();
+    expect(h.uploadMedia).not.toHaveBeenCalled();
+    expect(h.act.mock.calls[0][1]).not.toHaveProperty('signatureMediaId');
   });
 });

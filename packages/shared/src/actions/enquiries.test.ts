@@ -220,6 +220,21 @@ describe('joining a lead (registration is on paper)', () => {
     fails(s, 'enquiry.convert', { ...input, formMediaId: 'not-a-media-id' }, 's9', 'err.invalid');
     expect(s.enquiries.e1.stage).toBe('trial');
   });
+  it('round 15: with the family\'s signature the form is signed in person (three steps, the lead contact signs); without it there is no signing', () => {
+    const s = seed().citra;
+    const SIG = 'md_testsignature0001';
+    const r = run(s, 'enquiry.convert', { ...input, signatureMediaId: SIG, registration: { nickname: 'Lan' } }, 's9');
+    const id = r.result.memberId as string;
+    const sig = r.state.members[id].documents.find((d) => d.type === 'membershipForm')!.signing!;
+    expect(sig).toMatchObject({ status: 'signed', meterai: 'e', signerId: 'fm47_0', signerName: 'Melinda Tjandra', signatureMediaId: SIG });
+    expect(sig.steps.map((x) => [x.status, x.at, x.by])).toEqual([['draft', '2026-10-21T10:00', 'staff:s9'], ['sent', '2026-10-21T10:00', 'staff:s9'], ['signed', '2026-10-21T10:00', 'family:fm47_0']]);
+    expect(sig.form).toMatchObject({ name: 'Siu Lan Tjandra', nickname: 'Lan', signer: 'Melinda Tjandra', plan: 'flex' });
+    const plain = run(seed().citra, 'enquiry.convert', input, 's9');
+    expect(plain.state.members[plain.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!.signing).toBeUndefined();
+    // a lobby join waits with the member; the signing is there for the countersign after approval
+    const gated = run(seed().citra, 'enquiry.convert', { ...input, signatureMediaId: SIG }, 's1');
+    expect(gated.state.members[gated.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!.signing).toMatchObject({ status: 'signed', signerId: 'fm47_0' });
+  });
   it('Join keeps a free-text title: the member is "Tante ..." with a female gender', () => {
     const s = seed().citra;
     const made = run(s, 'enquiry.create', { ...lead, senior: { title: 'Tante', name: 'Lily Tan' } }, 's9');

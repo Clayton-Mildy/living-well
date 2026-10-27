@@ -4,7 +4,7 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { MemoryRouter } from 'react-router-dom';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { buildSeed, type Actor, type ClubState, type Role, type SignStep, type Signing } from '@cp/shared';
+import { buildSeed, execute, getUser, type Actor, type ClubState, type Role, type SignStep, type Signing } from '@cp/shared';
 import { useReplica } from '../../../store/replica';
 import { useSession } from '../../../store/session';
 import { useUi } from '../../../store/ui';
@@ -47,11 +47,11 @@ const signed = (): Signing => ({
   steps: [...sent.steps, step('signed', '2026-10-21T08:30', 'family:f1')],
 });
 
-function Harness({ state, as, family, pending = [] }: { state: ClubState; as: Role; family?: boolean; pending?: unknown[] }) {
+function Harness({ state, as, family, pending = [], memberId = 'm1' }: { state: ClubState; as: Role; family?: boolean; pending?: unknown[]; memberId?: string }) {
   const t = useT();
   const fmt = useFmt();
   const doAct = useAct();
-  const p = { s: state, m: state.members.m1, today: T, nowMin: 600, t, fmt, lang: 'en', audience: family ? 'family' : 'staff', family: !!family, role: as, mgmt: as === 'mgmt', pending, mine: [], me: { kind: 'staff', id: as === 'mgmt' ? 's9' : 's1' }, act: doAct, canEdit: true } as unknown as P;
+  const p = { s: state, m: state.members[memberId], today: T, nowMin: 600, t, fmt, lang: 'en', audience: family ? 'family' : 'staff', family: !!family, role: as, mgmt: as === 'mgmt', pending, mine: [], me: { kind: 'staff', id: as === 'mgmt' ? 's9' : 's1' }, act: doAct, canEdit: true } as unknown as P;
   return <DocsTab p={p} />;
 }
 function setup(state: ClubState, as: Role, family = false) {
@@ -66,9 +66,9 @@ async function mount(ui: ReactElement) {
   root = createRoot(host);
   await act(async () => { root!.render(<MemoryRouter>{ui}</MemoryRouter>); });
 }
-async function docs(state: ClubState, as: Role = 'lobby', family = false, pending: unknown[] = []) {
+async function docs(state: ClubState, as: Role = 'lobby', family = false, pending: unknown[] = [], memberId = 'm1') {
   setup(state, as, family);
-  await mount(<Harness state={state} as={as} family={family} pending={pending} />);
+  await mount(<Harness state={state} as={as} family={family} pending={pending} memberId={memberId} />);
 }
 /** the form document as a request (not on file), with this signing */
 const requested = (signing?: Signing): ClubState => {
@@ -118,6 +118,18 @@ describe('Documents tab: signing, front desk', () => {
     expect(document.querySelector('[data-testid="sign-badge"]')?.textContent).toContain('Signed by family');
     await click(btn('View signed form'));
     expect(document.querySelector('[data-testid="application-form"] [data-field="signature"]')).toBeTruthy();
+  });
+
+  it('a form signed at registration (round 15) reads Signed by family and prints with the signature and the registered data', async () => {
+    const base = buildSeed().citra;
+    const input = { title: 'Oma', name: 'Siti Rahma', dob: '1946-03-12', address: 'Jl. Test 1', usualArrival: '10:00', plan: 'flex', start: '2026-10-26', contact: { name: 'Rudi Rahma', phone: '0812 5550 1234', relation: 'son', primary: true }, health: { conditions: [], food: [], meds: [] }, docs: [], formMediaId: 'md_testregistrationform01', consent: { data: true, face: true }, signatureMediaId: 'md_signaturetest00001' };
+    const r = execute(base, 'members.create', input, getUser({ citra: base }, 's9')!, { today: T, nowMin: 600 }, 'reg1');
+    await docs(r.state, 'lobby', false, [], r.result.memberId as string);
+    expect(btn('Send for signing')).toBeUndefined();
+    expect(document.querySelector('[data-testid="sign-badge"]')?.textContent).toContain('Signed by family');
+    await click(btn('View signed form'));
+    expect(document.querySelector('[data-testid="application-form"] [data-field="signature"]')).toBeTruthy();
+    expect(document.querySelector('[data-testid="application-form"]')?.textContent).toContain('Siti Rahma');
   });
 
   it('a stamped e-Meterai form shows its serial and opens the signed form, not an old paper scan', async () => {

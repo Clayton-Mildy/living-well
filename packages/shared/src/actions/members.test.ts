@@ -3,6 +3,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, findByPhone, live, lobbyGroups, memberName, planOn, membershipStatus, type ClubState, type User } from '../index';
 import { parseCarer } from './members';
+import { formDoc, signingOf } from '../rules/signing';
+import { approvalCounts, pendingItems } from '../rules/approvals';
 import { faceConsent, faceReady, FILTERS, filterCounts, matchesQuery, memberRows as rows2, memberStatus, isNewMember, nextMemberId, finalInvoiceFor } from '../rules/members';
 
 const T = '2026-10-21';
@@ -169,6 +171,56 @@ describe('members.create', () => {
     expect(lobbyGroups(r.state, '2027-03-15').others.some((x) => x.m.id === 'm47')).toBe(true);
     expect(memberStatus(r.state, r.state.members.m47, '2027-03-12').key).toBe('upcoming');
     expect(Object.values(r.state.notifications).some((n) => n.kind === 'members.notif.welcome' && JSON.stringify(n.params).includes('15/03/2027'))).toBe(true);
+  });
+});
+
+describe('members.create: the family signs the form at registration (round 15)', () => {
+  const SIG = 'md_testsignature0001';
+  const form = (s: ClubState, id: string) => formDoc(s.members[id])!;
+  it('with a signature: the membership form is signed in person, by the billing contact, with three steps at the creation time and the form as registered', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.create', newMember({ signatureMediaId: SIG, registration: { nickname: 'Sisi' } }), who(c, 's9'));
+    const id = r.result.memberId as string;
+    const contact = r.result.familyId as string;
+    const sig = signingOf(r.state.members[id])!;
+    expect(sig).toMatchObject({ status: 'signed', meterai: 'e', signerId: contact, signerName: 'Rudi Rahma', signatureMediaId: SIG });
+    expect(sig.steps).toEqual([
+      { status: 'draft', at: '2026-10-21T10:00', by: 'staff:s9' }, { status: 'sent', at: '2026-10-21T10:00', by: 'staff:s9' }, { status: 'signed', at: '2026-10-21T10:00', by: `family:${contact}` },
+    ]);
+    expect(sig.form).toMatchObject({ name: 'Siti Rahma', nickname: 'Sisi', plan: 'flex', signer: 'Rudi Rahma', date: T, address: 'Jl. Test 1' });
+    expect(form(r.state, id)).toMatchObject({ type: 'membershipForm', status: 'onFile', mediaId: 'md_testregistrationform01' }); // the scan stays
+  });
+  it('without a signature: no signing (the paper route)', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.create', newMember(), who(c, 's9'));
+    expect(signingOf(r.state.members[r.result.memberId as string])).toBeUndefined();
+    expect(() => run(c.citra, 'members.create', newMember({ signatureMediaId: 'not-an-id' }), who(c, 's9'))).toThrow('err.invalid');
+  });
+  it('management sees the member as a signing approval item and countersigns it', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.create', newMember({ signatureMediaId: SIG }), who(c, 's9'));
+    const id = r.result.memberId as string;
+    expect(approvalCounts(r.state).signing).toBe(1);
+    expect(pendingItems(r.state, 'signing')[0]).toMatchObject({ id, type: 'signing', memberId: id });
+    const a = run(r.state, 'approval.approve', { type: 'signing', ids: [id] }, who(c, 's9'));
+    expect(signingOf(a.state.members[id])).toMatchObject({ status: 'countersigned', countersignerName: 'Ega' });
+  });
+  it('lobby: the signed form waits with the gated member and is listed for the countersign once the member is approved', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.create', newMember({ signatureMediaId: SIG }), who(c, 's1'));
+    const id = r.result.memberId as string;
+    expect(signingOf(r.state.members[id])).toMatchObject({ status: 'signed', signerId: r.result.familyId, form: { name: 'Siti Rahma' } });
+    expect(approvalCounts(r.state).signing).toBe(0);
+    const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who(c, 's9'));
+    expect(approvalCounts(a.state).signing).toBe(1);
+  });
+  it('an existing contact who is the primary one signs; a later doc action cannot erase the signed record', () => {
+    const c = seed();
+    const link = Object.values(c.citra.familyLinks).find((l) => l.primary && c.citra.familyContacts[l.familyId])!;
+    const r = run(c.citra, 'members.create', newMember({ contact: { existingId: link.familyId, name: '', phone: '', relation: 'son', primary: true }, signatureMediaId: SIG }), who(c, 's9'));
+    const id = r.result.memberId as string;
+    expect(signingOf(r.state.members[id])).toMatchObject({ status: 'signed', signerId: link.familyId, signerName: c.citra.familyContacts[link.familyId].name });
+    expect(() => run(r.state, 'members.setDocuments', { memberId: id, docs: [{ type: 'membershipForm', fileName: 'x.pdf' }] }, who(c, 's9'))).toThrow('sign.err.notNow');
   });
 });
 

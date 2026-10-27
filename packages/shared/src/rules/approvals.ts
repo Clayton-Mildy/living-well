@@ -7,6 +7,7 @@ import { allPendingReviews, appliedReviews, pendingPhotos } from './members';
 import { READING_FIELDS } from './healthStation';
 import { pendingLeave } from './staffLeave';
 import { formDoc } from './signing';
+import { isPendingRow } from './core';
 
 export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'programme' | 'stock' | 'renewals' | 'payments' | 'leave' | 'signing';
 /** Tab order of the management Approvals screen. */
@@ -110,6 +111,7 @@ export const pendingLeaveItems = (s: ClubState): ApprovalItem[] =>
 export function pendingSigning(s: ClubState): ApprovalItem[] {
   const out: ApprovalItem[] = [];
   for (const m of live(s.members)) {
+    if (isPendingRow(m)) continue; // a member still waiting for approval (signed at registration): the countersign follows the approval
     const sig = formDoc(m)?.signing;
     if (sig?.status !== 'signed') continue;
     const step = [...sig.steps].reverse().find((x) => x.status === 'signed');

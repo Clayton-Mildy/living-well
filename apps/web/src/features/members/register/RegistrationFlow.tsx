@@ -3,15 +3,18 @@
 // progress bar; tablet and laptop: a dialog with the steps on a rail. What is typed is kept on this device until it is sent.
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { planLabel, type Plan } from '@cp/shared';
+import { hasKey, planLabel, type Plan } from '@cp/shared';
 import { seniorName } from '@cp/shared/rules/enquiries';
 import { Button, Dialog, Eyebrow, FONT_SMALL, Note, PhoneScreen, RailDot } from '../../../components/ui';
 import { useDevice } from '../../../hooks/useDevice';
 import { useAct } from '../../../lib/act';
+import { ApiError } from '../../../lib/api';
 import { useNow } from '../../../lib/clock';
+import { uploadMedia } from '../../../lib/media';
 import { useFmt, useT } from '../../../lib/i18n';
 import { useMe } from '../../../lib/me';
 import { useClub } from '../../../store/replica';
+import { say } from '../../../store/ui';
 import { PillBtn } from '../../mgmt/common';
 import { DialogBody } from '../dialogs/forms';
 import { clearDraft, loadDraft, saveDraft } from './draft';
@@ -42,6 +45,8 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
   const [tried, setTried] = useState<ReadonlySet<RegStep>>(new Set());
   const [pending, setPending] = useState<RegState | null>(() => loadDraft(startMode));
   const [busy, setBusy] = useState(false);
+  /** round 15: the family member's signature drawn on the review step (a picture, so not in the saved draft); the pad starts empty each time the review opens */
+  const [signPng, setSignPng] = useState<Blob | null>(null);
   const step = REG_STEPS[stepI];
   const last = REG_STEPS.length - 1;
   const top = useRef<HTMLDivElement>(null);
@@ -69,7 +74,7 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
   useEffect(() => {
     const sc = top.current?.closest<HTMLElement>('.cp-noshrink');
     if (sc) sc.scrollTop = 0;
-    if (stepI === last) setFromReview(false);
+    if (stepI === last) setFromReview(false); else setSignPng(null);
   }, [stepI, last]);
 
   const issuesOf = useCallback((k: RegStep) => stepIssues(k, st, mode, today, s), [st, mode, today, s]);
@@ -107,6 +112,13 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
     if (busy || reach < last || issues.length) { if (reach < last) setStepI(reach); return; }
     setBusy(true);
     try {
+      let signatureMediaId: string | undefined;
+      if (signPng) {
+        try { signatureMediaId = await uploadMedia(signPng); } catch (e) {
+          say(e instanceof ApiError && hasKey(e.code) ? t(e.code) : t('common.mediaFailed'), { tone: 'error', icon: 'error' });
+          return;
+        }
+      }
       let r;
       if (mode.kind === 'lead') {
         if (!lead) return;
@@ -115,9 +127,9 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
           if (!u.ok) return;
         }
         const name = `${st.title} ${st.name.trim()}`;
-        r = await act('enquiry.convert', toConvertInput(st, lead, st.plan as Plan, st.start), { ok: t('enq.joined', { name, date: fds(st.start), contact: lead.contact.name.split(' ')[0] }), reviewText: t('enq.joinSent', { name }) });
+        r = await act('enquiry.convert', { ...toConvertInput(st, lead, st.plan as Plan, st.start), ...(signatureMediaId ? { signatureMediaId } : {}) }, { ok: t('enq.joined', { name, date: fds(st.start), contact: lead.contact.name.split(' ')[0] }), reviewText: t('enq.joinSent', { name }) });
       } else {
-        r = await act('members.create', toCreateInput(st), { ok: (res) => t('members.added', { n: st.name.trim(), id: String(res.memberId || '') }), reviewText: t('members.sentForReview') });
+        r = await act('members.create', { ...toCreateInput(st), ...(signatureMediaId ? { signatureMediaId } : {}) }, { ok: (res) => t('members.added', { n: st.name.trim(), id: String(res.memberId || '') }), reviewText: t('members.sentForReview') });
       }
       if (r.ok) {
         done.current = true;
@@ -135,7 +147,7 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
     health: <HealthStep p={p} />,
     plan: <PlanStep p={p} />,
     paper: <PaperStep p={p} />,
-    review: <ReviewStep p={p} role={role} goTo={(k) => { setFromReview(true); setStepI(REG_STEPS.indexOf(k)); }} />,
+    review: <ReviewStep p={p} role={role} goTo={(k) => { setFromReview(true); setStepI(REG_STEPS.indexOf(k)); }} onSign={setSignPng} />,
   };
   const title = lead ? seniorName({ senior: { title: st.title, name: st.name.trim() || lead.senior.name } }) : st.name.trim() ? `${st.title} ${st.name.trim()}` : t('members.addTitle');
   const eyebrow = lead ? t('enq.jn_eyebrow') : t('members.newMember');

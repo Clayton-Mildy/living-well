@@ -2,14 +2,15 @@
 // note for management).
 import type { ReactNode } from 'react';
 import { feeOf, fmtPhone, planLabel, priceOn, rp } from '@cp/shared';
-import { Group, Note, Toggle } from '../../../components/ui';
+import { Group, Note, SignaturePad, Toggle } from '../../../components/ui';
 import { useFmt } from '../../../lib/i18n';
 import { foodLabel, mobLabel, relLabel } from '../lib';
 import { TextField, dementiaQuestion } from '../dialogs/forms';
 import { Rows, type StepProps } from './parts';
 import { REG_STEPS, type RegStep } from './steps';
 
-export function ReviewStep({ p, role, goTo }: { p: StepProps; role: string | null; goTo: (k: RegStep) => void }) {
+/** `onSign`: the PNG the family member drew on the pad (null while it is empty); it is uploaded when the registration is sent (round 15). */
+export function ReviewStep({ p, role, goTo, onSign }: { p: StepProps; role: string | null; goTo: (k: RegStep) => void; onSign: (png: Blob | null) => void }) {
   const { st, set, t, s, today, mode } = p;
   const { fds, fd, lang } = useFmt();
   const none = t('reg.none');
@@ -44,6 +45,11 @@ export function ReviewStep({ p, role, goTo }: { p: StepProps; role: string | nul
               {!mgmt ? <TextField label={t('profile.noteForMgmt')} value={st.note} onChange={(v) => set({ note: v })} multiline rows={2} /> : null}
             </>
           ) : null}
+          <div data-reg-sign style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <span style={{ fontSize: 15, fontWeight: 600, lineHeight: '21px', color: '#24201C' }}>{t('reg.signHere', { name: contactName || t('profile.theFamily') })}</span>
+            <SignaturePad onChange={onSign} label={t('sign.drawHere')} />
+            <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t('reg.signOptional')}</span>
+          </div>
           {!mgmt ? <Note tone="ochre" icon="hourglass_top">{t(isNew ? 'members.addNoteReview' : 'enq.joinReviewNote')}</Note> : null}
         </Group>
       </div>
