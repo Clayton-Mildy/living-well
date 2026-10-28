@@ -1088,13 +1088,13 @@ test('Indonesian: every management screen is translated, with no raw keys and no
   c.assertClean();
 });
 
-test('insights (KC round 9): the Membership tab — joined, left and plan switches by Gold / Flex, active members, its own range (3 months, 6 months, 1 year, custom)', async ({ page }) => {
+test('insights (KC round 9): the Membership tab — joined, left and plan switches by plan, active members, its own range (3 months, 6 months, 1 year, custom)', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's9', '/insights');
   await page.getByRole('tab', { name: 'Membership' }).click();
   for (const id of ['kpi-joined', 'kpi-left', 'kpi-active', 'kpi-switches']) await expect(page.getByTestId(id)).toBeVisible();
-  await expect(page.getByTestId('kpi-active')).toContainText(/Gold \d+ · Flex \d+/);
-  await expect(page.getByTestId('kpi-switches')).toContainText(/Flex → Gold \d+ · Gold → Flex \d+/);
+  await expect(page.getByTestId('kpi-active')).toContainText(/Flex: \d+ · Gold: \d+/); // KC 28 Oct: every plan on its own
+  await expect(page.getByTestId('kpi-switches')).toContainText(/→ Flex: \d+ · → Gold: \d+/);
   await expect(page.getByText('Net change')).toHaveCount(0); // KC: no net change figure
   for (const h of ['Joined and left', 'Active members']) await expect(page.getByText(h, { exact: true }).first()).toBeVisible();
   await expect(page.getByText('Fri 1 May – Wed 21 Oct')).toBeVisible(); // 6 months by default: this month and the five before it

@@ -5,10 +5,11 @@
 //
 // Everything here is deterministic and independent of the main seed's random stream: each member, day and reading draws from its own `rng(hash(key))`, so the
 // near-T data the tests and the demo story depend on stays exactly as it was. Couples share a key (they come together and arrive within minutes of each other).
-import type { Actor, Bank, ClubState, CollectionName, DailyLog, DT, HM, Invoice, InvoiceLine, ISODate, Member, Payment, Photo, Reading, Row, Slot } from '../types';
+import type { Actor, Bank, ClubState, CollectionName, DailyLog, DT, HM, Invoice, InvoiceLine, ISODate, Member, Payment, Photo, Plan, Reading, Row, Slot } from '../types';
 import { addDays, addMonths, daysBetween, daysInMonth, dow, rng, toHM, toMin, ym } from '../util';
 import { activeOn, currentMembership, isOpen, isPendingRow, planOn, primaryContact, pron } from '../rules/core';
 import { attId, flexQuota } from '../rules/attendance';
+import { isDaysPlan } from '../rules/plans';
 import { dueDateFor, feeOf, invoiceTotal, issueDateOf, nextInvoiceNumber, priceOn, runLinesFor } from '../rules/billing';
 import { evaluateReading, limitsFor } from '../rules/health';
 import { pictureSessions } from '../rules/activity';
@@ -171,13 +172,13 @@ export function addHistory(s: ClubState, T: ISODate, opts: { patterns?: Record<s
   const flexCount = new Map<string, Record<string, number>>(); // visits on Flex days a member already has, by month
   for (const a of Object.values(s.attendance)) {
     const m = s.members[a.memberId];
-    if (!a.checkIn || !m || planOn(m, a.date).plan !== 'flex') continue;
+    if (!a.checkIn || !m || !isDaysPlan(s, planOn(m, a.date).plan)) continue;
     const c = flexCount.get(m.id) ?? {};
     c[ym(a.date)] = (c[ym(a.date)] ?? 0) + 1;
     flexCount.set(m.id, c);
   }
   const quotaOf = new Map<string, number>();
-  const quota = (m: Member, month: string) => { const k = `${m.id}:${month}`; let q = quotaOf.get(k); if (q === undefined) { q = flexQuota(s, m, month); quotaOf.set(k, q); } return q; };
+  const quota = (m: Member, month: string, plan: Plan) => { const k = `${m.id}:${month}:${plan}`; let q = quotaOf.get(k); if (q === undefined) { q = flexQuota(s, m, month, plan); quotaOf.set(k, q); } return q; };
   for (const m of members) {
     const pr = profs.get(m.id)!;
     const rv = rng(hash32(pr.key + ':v'));
@@ -197,8 +198,8 @@ export function addHistory(s: ClubState, T: ISODate, opts: { patterns?: Record<s
       const p = usual ? Math.min(0.99, (inOver ? 0.99 : plan === 'gold' ? pr.regGold : pr.regFlex) * DOW_FACTOR[w]) : (plan === 'gold' ? 0.05 : 0.06) * (w === 2 || w === 4 ? 1.5 : 1);
       if (u >= p) continue;
       if (s.attendance[attId(d, m.id)]) continue; // already there (counted above)
-      if (plan === 'flex') {
-        if ((cnt[month] ?? 0) >= quota(m, month) + (inOver ? 1 : 0)) continue;
+      if (isDaysPlan(s, plan)) { // a days plan (Flex, Flex 12) keeps to its monthly visits
+        if ((cnt[month] ?? 0) >= quota(m, month, plan) + (inOver ? 1 : 0)) continue;
         cnt[month] = (cnt[month] ?? 0) + 1;
       }
       // morning peak 09:00 to 10:00: usual arrival give or take 17 to 27 minutes; leaving 14:45 to 16:15, mostly around 15:35

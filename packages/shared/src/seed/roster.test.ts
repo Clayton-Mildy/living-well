@@ -8,6 +8,8 @@ import {
 } from '../index';
 import { portraitId, demoMediaPath } from './demoMedia';
 import { leadMonths } from '../rules/enquiries';
+import { memberRangeFor, memberTrend } from '../rules/insights';
+import { ROSTER_PLAN } from './roster';
 
 const build = (T = DEMO_TODAY, nowMin = DEMO_START_MIN) => buildSeed(T, nowMin, { roster: true }).citra;
 const extra = (s: ClubState) => live(s.members).filter((m) => /^m(5\d|[6-8]\d|90)$/.test(m.id));
@@ -166,5 +168,20 @@ describe('lead history seed (round 13)', () => {
     expect(Object.keys(buildSeed().citra.enquiries).sort()).toEqual(['e1', 'e2', 'e3', 'e5', 'e9']);
     // the joined leads are the members who joined in the last months, counted as joined in the cohort of their opening month
     expect(months.reduce((a, m) => a + m.funnel.joined, 0)).toBeGreaterThanOrEqual(3);
+  });
+
+  it('has one catalogue plan beside Flex and Gold (KC 28 Oct): Flex 12, priced, with four members, two joins and a switch from Flex in six months', () => {
+    const s = build();
+    expect(s.club.settings.plans).toEqual([ROSTER_PLAN]);
+    expect(buildSeed().citra.club.settings.plans ?? []).toEqual([]); // the 5-member world keeps Flex and Gold only
+    for (const pv of Object.values(s.prices)) expect(pv.plans?.plan_1).toBeGreaterThan(0);
+    expect(extra(s).filter((m) => planOn(m, DEMO_TODAY).plan === 'plan_1').map((m) => m.id).sort()).toEqual(['m61', 'm65', 'm82', 'm86']);
+    const tr = memberTrend(s, memberRangeFor('6m', DEMO_TODAY), DEMO_TODAY);
+    expect(tr.plans).toEqual(['flex', 'gold', 'plan_1']);
+    expect(tr.totals.joined.plan_1).toBe(2);
+    expect(tr.totals.switchedTo.plan_1).toBe(1);
+    expect(tr.totals.switchedFrom.flex).toBeGreaterThanOrEqual(1);
+    expect(tr.totals.activeEnd.plan_1).toBe(4);
+    for (const m of extra(s).filter((x) => planOn(x, DEMO_TODAY).plan === 'plan_1')) expect(flexMonth(s, m, ym(addDays(DEMO_TODAY, -28)), DEMO_TODAY).extra, m.id).toBe(0);
   });
 });

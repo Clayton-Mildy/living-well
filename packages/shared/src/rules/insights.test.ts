@@ -6,7 +6,8 @@ import { buildCitra } from '../seed/index';
 import type { Attendance, ClubState, ISODate } from '../types';
 import { flexQuota } from './attendance';
 import { addDays, isWeekday } from '../util';
-import { HEAT_HOURS, clampPeriod, dayCounts, departuresByHour, editPeriod, flexQuotaReport, memberRangeFor, memberTrend, monthsOf, periodFor, planTrend, sortPeople, visitInsights } from './insights';
+import { HEAT_HOURS, clampPeriod, dayCounts, departuresByHour, editPeriod, flexQuotaReport, memberRangeFor, memberTrend, monthsOf, periodFor, planCountTotal, planTrend, sortPeople, visitInsights } from './insights';
+import { activeOn } from './core';
 
 const T = '2026-10-21'; // Wednesday
 // m1 Lina and m10 Bambang are Flex; m2, m20 and m46 are Gold
@@ -309,14 +310,15 @@ describe('memberTrend', () => {
     expect(tr.grain).toBe('week');
     expect(tr.points[0].start).toBe('2026-08-01');
     expect(tr.points[tr.points.length - 1].end).toBe(T);
-    expect(tr.totals.joined).toEqual({ gold: 0, flex: 2 }); // m1, m20 back
-    expect(tr.totals.left).toEqual({ gold: 2, flex: 0 }); // m2, m20
-    expect(tr.totals.toGold).toBe(1);
-    expect(tr.totals.toFlex).toBe(0);
+    expect(tr.totals.joined).toEqual({ flex: 2 }); // m1, m20 back
+    expect(tr.totals.left).toEqual({ gold: 2 }); // m2, m20
+    expect(tr.totals.switchedTo).toEqual({ gold: 1 }); // m10, Flex -> Gold
+    expect(tr.totals.switchedFrom).toEqual({ flex: 1 });
+    expect(tr.plans).toEqual(['flex', 'gold']); // no catalogue plan in use
     expect(tr.totals.activeStart).toEqual({ gold: 2, flex: 1 }); // 31 Jul: m2, m20 Gold; m10 Flex
     expect(tr.totals.activeEnd).toEqual({ gold: 1, flex: 2 }); // m10 Gold; m1, m20 Flex
     const oct9 = tr.points.find((x) => x.start <= '2026-10-09' && '2026-10-09' <= x.end)!;
-    expect(oct9.left).toEqual({ gold: 1, flex: 0 });
+    expect(oct9.left).toEqual({ gold: 1 });
   });
   it('1 year: monthly, twelve months; custom keeps to today', () => {
     const tr = memberTrend(state, memberRangeFor('1y', T), T);
@@ -423,12 +425,15 @@ describe('By plan groups by catalogue plan (round 15)', () => {
     expect(ids(onlyEight)).not.toContain('m10');
     expect(ids(onlyFlex)).not.toContain('m1');
   });
-  it('plan switches count by the plan moved to, not its kind', () => {
+  it('Membership counts every plan on its own: switches by the plan moved to and from, catalogue plans listed after Flex and Gold', () => {
     const s = produce(world(), (d) => {
       d.members.m10.memberships = [{ start: '2025-03-01' }];
       d.members.m10.plans = [{ from: '2025-03-01', plan: 'flex', by }, { from: '2026-09-14', plan: 'plan_1', by }, { from: '2026-10-05', plan: 'gold', by }];
     });
     const tr = memberTrend(s, memberRangeFor('3m', T), T);
-    expect(tr.totals).toMatchObject({ toGold: 1, toFlex: 0, toOther: 1 });
+    expect(tr.totals.switchedTo).toEqual({ plan_1: 1, gold: 1 });
+    expect(tr.totals.switchedFrom).toEqual({ flex: 1, plan_1: 1 });
+    expect(tr.plans).toEqual(['flex', 'gold', 'plan_1', 'plan_2']); // plan_3 has nobody: not shown
+    expect(planCountTotal(tr.totals.activeEnd)).toBe(Object.values(s.members).filter((m) => !m.deletedAt && activeOn(m, T)).length);
   });
 });

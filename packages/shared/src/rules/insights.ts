@@ -93,7 +93,7 @@ export function dayCounts(s: ClubState, date: ISODate, nowMin: number): DayCount
 }
 
 // ---------- plan groups ----------
-/** The day-by-day and membership-in-out charts still split members into two columns: a plan with a visit quota (Flex, or a catalogue days plan) counts under Flex, an unlimited one under Gold. By plan, the trend and the people use the plan itself. */
+/** The day-by-day counts still split members into two columns: a plan with a visit quota (Flex, or a catalogue days plan) counts under Flex, an unlimited one under Gold. By plan, the trend, the people and (KC 28 Oct) the Membership tab use the plan itself. */
 export type PlanGroup = 'flex' | 'gold';
 const groupOf = (s: ClubState, plan: Plan): PlanGroup => (isDaysPlan(s, plan) ? 'flex' : 'gold');
 
@@ -509,7 +509,10 @@ export function memberRangeFor(key: MemberRangeKey, today: ISODate, custom?: Ins
   const back = key === '6m' ? 5 : key === '1y' ? 11 : 2;
   return { from: `${addMonths(ym(today), -back)}-01`, to: today };
 }
-export interface PlanCount { gold: number; flex: number }
+/** A count per plan id (KC 28 Oct: every plan on its own, catalogue plans too): a plan nobody is in is missing or 0. */
+export type PlanCount = Partial<Record<Plan, number>>;
+export const planCountOf = (c: PlanCount, plan: Plan): number => c[plan] ?? 0;
+export const planCountTotal = (c: PlanCount): number => Object.values(c).reduce<number>((a, n) => a + (n ?? 0), 0);
 export interface MemberTrendPoint {
   /** the first and last day of the week or month (cut to the range) */
   start: ISODate;
@@ -517,24 +520,25 @@ export interface MemberTrendPoint {
   /** memberships that started / ended in it, by the plan on that day */
   joined: PlanCount;
   left: PlanCount;
-  /** plan switches of members who stayed (a new plan entry while the membership ran), by the plan they moved to */
-  toGold: number;
-  toFlex: number;
-  /** ... to a catalogue plan */
-  toOther: number;
+  /** plan switches of members who stayed (a new plan entry while the membership ran): by the plan they moved to, and by the plan they left */
+  switchedTo: PlanCount;
+  switchedFrom: PlanCount;
   /** members active on its last day, by plan */
   active: PlanCount;
 }
 export interface MemberTrend {
   grain: 'week' | 'month';
   points: MemberTrendPoint[];
-  totals: { joined: PlanCount; left: PlanCount; toGold: number; toFlex: number; toOther: number; activeStart: PlanCount; activeEnd: PlanCount };
+  /** the plans the tab shows: Flex, Gold, then each catalogue plan someone joined, left, switched to or from, or was active on in the range, in the catalogue's order */
+  plans: Plan[];
+  totals: { joined: PlanCount; left: PlanCount; switchedTo: PlanCount; switchedFrom: PlanCount; activeStart: PlanCount; activeEnd: PlanCount };
 }
 /** Weekly up to about three months (so "3 months" shows its weeks), monthly beyond. */
 export const MEMBER_WEEKLY_MAX_DAYS = 100;
-const zero = (): PlanCount => ({ gold: 0, flex: 0 });
+const bump = (c: PlanCount, plan: Plan) => { c[plan] = (c[plan] ?? 0) + 1; };
+const entriesOf = (c: PlanCount) => Object.entries(c) as [Plan, number | undefined][];
 
-/** Members in and out over a period: who joined, who left and who switched plan, per week or month, and how many were active by plan. */
+/** Members in and out over a period: who joined, who left and who switched plan, per week or month, and how many were active, each by plan. */
 export function memberTrend(s: ClubState, period: InsightPeriod, today: ISODate): MemberTrend {
   const to = period.to > today ? today : period.to;
   const from = period.from > to ? to : period.from;
@@ -547,34 +551,40 @@ export function memberTrend(s: ClubState, period: InsightPeriod, today: ISODate)
   }
   const members = live(s.members).filter((m) => !isPendingRow(m));
   const countActive = (date: ISODate): PlanCount => {
-    const c = zero();
-    for (const m of members) if (activeOn(m, date)) c[groupOf(s, planOn(m, date).plan)]++;
+    const c: PlanCount = {};
+    for (const m of members) if (activeOn(m, date)) bump(c, planOn(m, date).plan);
     return c;
   };
-  const points: MemberTrendPoint[] = buckets.map((b) => ({ ...b, joined: zero(), left: zero(), toGold: 0, toFlex: 0, toOther: 0, active: countActive(b.end) }));
+  const points: MemberTrendPoint[] = buckets.map((b) => ({ ...b, joined: {}, left: {}, switchedTo: {}, switchedFrom: {}, active: countActive(b.end) }));
   const at = (d: ISODate) => points.find((p) => p.start <= d && d <= p.end);
   for (const m of members) {
     for (const ms of m.memberships) {
       const j = at(ms.start);
-      if (j) j.joined[groupOf(s, planOn(m, ms.start).plan)]++;
-      if (ms.lastDay && ms.lastDay <= today) { const l = at(ms.lastDay); if (l) l.left[groupOf(s, planOn(m, ms.lastDay).plan)]++; }
+      if (j) bump(j.joined, planOn(m, ms.start).plan);
+      if (ms.lastDay && ms.lastDay <= today) { const l = at(ms.lastDay); if (l) bump(l.left, planOn(m, ms.lastDay).plan); }
     }
     m.plans.forEach((p, i) => {
       const prev = m.plans[i - 1];
       if (!prev || prev.plan === p.plan || p.from > today) return;
       const b = at(p.from);
       if (!b || !activeOn(m, addDays(p.from, -1))) return; // a member who stayed, not a new membership on another plan
-      if (p.plan === 'gold') b.toGold++; else if (p.plan === 'flex') b.toFlex++; else b.toOther++; // by the plan they moved to, not by its kind
+      bump(b.switchedTo, p.plan);
+      bump(b.switchedFrom, prev.plan);
     });
   }
-  const sum = (f: (p: MemberTrendPoint) => PlanCount): PlanCount => points.reduce((a, p) => ({ gold: a.gold + f(p).gold, flex: a.flex + f(p).flex }), zero());
-  return {
-    grain,
-    points,
-    totals: {
-      joined: sum((p) => p.joined), left: sum((p) => p.left),
-      toGold: points.reduce((a, p) => a + p.toGold, 0), toFlex: points.reduce((a, p) => a + p.toFlex, 0), toOther: points.reduce((a, p) => a + p.toOther, 0),
-      activeStart: countActive(addDays(from, -1)), activeEnd: points.length ? points[points.length - 1].active : countActive(to),
-    },
+  const sum = (f: (p: MemberTrendPoint) => PlanCount): PlanCount => {
+    const c: PlanCount = {};
+    for (const p of points) for (const [plan, n] of entriesOf(f(p))) c[plan] = (c[plan] ?? 0) + (n ?? 0);
+    return c;
   };
+  const totals: MemberTrend['totals'] = {
+    joined: sum((p) => p.joined), left: sum((p) => p.left), switchedTo: sum((p) => p.switchedTo), switchedFrom: sum((p) => p.switchedFrom),
+    activeStart: countActive(addDays(from, -1)), activeEnd: points.length ? points[points.length - 1].active : countActive(to),
+  };
+  // Flex and Gold always; a catalogue plan once anything happened on it (a plan that is not in the catalogue any more goes last)
+  const used = new Set<Plan>();
+  for (const c of [totals.joined, totals.left, totals.switchedTo, totals.switchedFrom, totals.activeStart, ...points.map((p) => p.active)]) for (const [plan, n] of entriesOf(c)) if (n) used.add(plan);
+  const catalogue = planDefs(s).map((p) => p.id);
+  const plans = [...catalogue.filter((id) => id === 'flex' || id === 'gold' || used.has(id)), ...[...used].filter((id) => !catalogue.includes(id))];
+  return { grain, points, plans, totals };
 }

@@ -1,15 +1,19 @@
 // KC round 9: Insights › Membership. Members in and out over the chosen range (3 months, 6 months, 1 year or custom): who joined and who left, each
-// counted as Gold or Flex by the plan on that day; how many Gold and Flex members were active; and plan switches of members who stayed.
-// Weekly bars up to about three months, monthly beyond (the rules decide: memberTrend).
+// counted by the plan on that day; how many members were active on each plan; and plan switches of members who stayed (above the line the plan moved to,
+// below it the plan left). KC 28 Oct: every plan on its own, a catalogue plan beside Flex and Gold once someone is on it (the rules decide: memberTrend).
+// Weekly bars up to about three months, monthly beyond.
 import type { ReactNode } from 'react';
-import type { MemberTrend, MemberTrendPoint, PlanCount } from '@cp/shared/rules/insights';
+import { planLabel, type Plan } from '@cp/shared';
+import { planCountOf, planCountTotal, type MemberTrend, type MemberTrendPoint, type PlanCount } from '@cp/shared/rules/insights';
 import { TrendChart } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useFmt, useT } from '../../lib/i18n';
+import { useClub } from '../../store/replica';
 import { InOutBars, type InOutItem } from './charts';
-import { FLEX_COLOR, GOLD_COLOR, INK, MUTED, Panel } from './lib';
+import { INK, MUTED, Panel, planColor } from './lib';
 
-const all = (c: PlanCount) => c.gold + c.flex;
+/** one plan and its number never split over two lines on a phone */
+const keep = (x: string) => x.replace(/ /g, '\u00A0');
 
 function Kpi({ label, value, sub, testId }: { label: ReactNode; value: ReactNode; sub?: ReactNode; testId?: string }) {
   return (
@@ -37,39 +41,42 @@ function Key({ items, note }: { items: { color: string; label: string; dashed?: 
 export function Membership({ trend }: { trend: MemberTrend }) {
   const t = useT();
   const fmt = useFmt();
+  const s = useClub();
   const { isPhone } = useDevice();
-  const { points, totals } = trend;
+  const { points, totals, plans } = trend;
   const day = (d: string) => fmt.fd(d, { day: 'numeric', month: 'short' });
   const periodName = (p: MemberTrendPoint) => (trend.grain === 'week' ? t('insights.mWeekOf', { from: day(p.start), to: day(p.end) }) : fmt.fd(p.start, { month: 'long', year: 'numeric' }));
   const label = (p: MemberTrendPoint) => (trend.grain === 'week' ? day(p.start) : fmt.fd(p.start, { month: 'short' }));
-  const gf = (c: PlanCount) => t('insights.mGoldFlex', { g: c.gold, f: c.flex });
+  const name = (p: Plan) => planLabel(s, p, fmt.lang);
+  const colors = Object.fromEntries(plans.map((p, i) => [p, planColor(p, i - 2)])) as Record<Plan, string>;
+  /** "Flex: 5 · Gold: 0 · Flex 12: 2": every plan shown, in order (the colon keeps a number in a plan's name apart from its count) */
+  const byPlan = (c: PlanCount) => plans.map((p) => keep(`${name(p)}: ${planCountOf(c, p)}`)).join(' · ');
+  /** only the plans with a number, for a bar's tip ("—" when none) */
+  const some = (c: PlanCount) => plans.filter((p) => planCountOf(c, p)).map((p) => `${name(p)}: ${planCountOf(c, p)}`).join(', ') || '—';
+  const parts = (c: PlanCount) => plans.map((p) => ({ value: planCountOf(c, p), color: colors[p] }));
   const grain = t(trend.grain === 'week' ? 'insights.mPerWeek' : 'insights.mPerMonth');
-  const planKey = [{ color: GOLD_COLOR, label: t('insights.planGold') }, { color: FLEX_COLOR, label: t('insights.planFlex') }];
+  const planKey = plans.map((p) => ({ color: colors[p], label: name(p) }));
 
   const inOut: InOutItem[] = points.map((p) => ({
-    key: p.start, label: label(p),
-    up: [{ value: p.joined.gold, color: GOLD_COLOR }, { value: p.joined.flex, color: FLEX_COLOR }],
-    down: [{ value: p.left.gold, color: GOLD_COLOR }, { value: p.left.flex, color: FLEX_COLOR }],
-    tip: t('insights.mTipInOut', { period: periodName(p), j: all(p.joined), jg: p.joined.gold, jf: p.joined.flex, l: all(p.left), lg: p.left.gold, lf: p.left.flex }),
+    key: p.start, label: label(p), up: parts(p.joined), down: parts(p.left),
+    tip: t('insights.mTipInOut', { period: periodName(p), j: planCountTotal(p.joined), jp: some(p.joined), l: planCountTotal(p.left), lp: some(p.left) }),
   }));
   const switches: InOutItem[] = points.map((p) => ({
-    key: p.start, label: label(p),
-    up: [{ value: p.toGold, color: GOLD_COLOR }],
-    down: [{ value: p.toFlex, color: FLEX_COLOR }],
-    tip: t('insights.mTipSwitch', { period: periodName(p), g: p.toGold, f: p.toFlex }),
+    key: p.start, label: label(p), up: parts(p.switchedTo), down: parts(p.switchedFrom),
+    tip: t('insights.mTipSwitch', { period: periodName(p), n: planCountTotal(p.switchedTo), to: some(p.switchedTo), from: some(p.switchedFrom) }),
   }));
   const byEnd = new Map(points.map((p) => [p.end, p]));
-  const anyInOut = all(totals.joined) + all(totals.left) > 0;
-  const anySwitch = totals.toGold + totals.toFlex > 0;
+  const anyInOut = planCountTotal(totals.joined) + planCountTotal(totals.left) > 0;
+  const switchN = planCountTotal(totals.switchedTo);
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 18 }}>
       <Panel>
         <div data-testid="member-kpis" style={{ display: 'grid', gridTemplateColumns: isPhone ? 'repeat(2, minmax(0, 1fr))' : 'repeat(4, minmax(0, 1fr))', gap: isPhone ? '14px 12px' : 16 }}>
-          <Kpi testId="kpi-joined" label={t('insights.mJoined')} value={all(totals.joined)} sub={gf(totals.joined)} />
-          <Kpi testId="kpi-left" label={t('insights.mLeft')} value={all(totals.left)} sub={gf(totals.left)} />
-          <Kpi testId="kpi-active" label={t('insights.mActiveNow')} value={all(totals.activeEnd)} sub={gf(totals.activeEnd)} />
-          <Kpi testId="kpi-switches" label={t('insights.mSwitches')} value={totals.toGold + totals.toFlex} sub={t('insights.mSwitchSub', { g: totals.toGold, f: totals.toFlex })} />
+          <Kpi testId="kpi-joined" label={t('insights.mJoined')} value={planCountTotal(totals.joined)} sub={byPlan(totals.joined)} />
+          <Kpi testId="kpi-left" label={t('insights.mLeft')} value={planCountTotal(totals.left)} sub={byPlan(totals.left)} />
+          <Kpi testId="kpi-active" label={t('insights.mActiveNow')} value={planCountTotal(totals.activeEnd)} sub={byPlan(totals.activeEnd)} />
+          <Kpi testId="kpi-switches" label={t('insights.mSwitches')} value={switchN} sub={plans.map((p) => keep(`${t('insights.mToPlan', { plan: name(p) })}: ${planCountOf(totals.switchedTo, p)}`)).join(' · ')} />
         </div>
       </Panel>
 
@@ -82,17 +89,16 @@ export function Membership({ trend }: { trend: MemberTrend }) {
       <Panel title={t('insights.mActive')} meta={grain}>
         <TrendChart legend height={isPhone ? 150 : 180} ariaLabel={t('insights.mActiveAria')} from={points[0]?.end} to={points[points.length - 1]?.end}
           series={[
-            { key: 'gold', label: t('insights.planGold'), color: GOLD_COLOR, points: points.map((p) => ({ date: p.end, value: p.active.gold })) },
-            { key: 'flex', label: t('insights.planFlex'), color: FLEX_COLOR, points: points.map((p) => ({ date: p.end, value: p.active.flex })) },
-            { key: 'all', label: t('insights.mTotal'), color: INK, dashed: true, points: points.map((p) => ({ date: p.end, value: all(p.active) })) },
+            ...plans.map((plan) => ({ key: plan, label: name(plan), color: colors[plan], points: points.map((p) => ({ date: p.end, value: planCountOf(p.active, plan) })) })),
+            { key: 'all', label: t('insights.mTotal'), color: INK, dashed: true, points: points.map((p) => ({ date: p.end, value: planCountTotal(p.active) })) },
           ]}
-          describe={(d) => { const p = byEnd.get(d); return p ? `${periodName(p)} · ${t('insights.mTipActive', { g: p.active.gold, f: p.active.flex, n: all(p.active) })}` : undefined; }} />
+          describe={(d) => { const p = byEnd.get(d); return p ? `${periodName(p)} · ${t('insights.mTipActive', { list: byPlan(p.active), n: planCountTotal(p.active) })}` : undefined; }} />
       </Panel>
 
       <Panel title={t('insights.mSwitches')} meta={grain}>
-        {anySwitch ? <InOutBars items={switches} height={isPhone ? 110 : 130} ariaLabel={t('insights.mSwitchAria')} idle={t('insights.mIdle')} />
+        {switchN ? <InOutBars items={switches} height={isPhone ? 110 : 130} ariaLabel={t('insights.mSwitchAria')} idle={t('insights.mIdle')} />
           : <div style={{ fontSize: 14, color: MUTED, padding: '8px 0' }}>{t('insights.mNoSwitch')}</div>}
-        <Key items={[{ color: GOLD_COLOR, label: t('insights.mToGold') }, { color: FLEX_COLOR, label: t('insights.mToFlex') }]} note={anySwitch ? t('insights.mSwitchKey') : undefined} />
+        <Key items={planKey} note={switchN ? t('insights.mSwitchKey') : undefined} />
       </Panel>
     </div>
   );

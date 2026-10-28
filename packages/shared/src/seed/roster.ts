@@ -4,20 +4,21 @@
 // and every date moves with the anchor, like the rest of the seed. Opt-in: buildSeed(anchor, nowMin, { roster: true }).
 import type {
   Actor, ActivityEntry, Attendance, Bank, ClubState, CollectionName, DailyLog, Diet, DrugAllergy, EndReason, FamilyContact, FamilyLink, FoodAllergen,
-  HM, Invoice, ISODate, Member, MedTiming, Membership, Mobility, Payment, Plan, PlanEntry, Reading, Relation, Row, Title, Vitals,
+  HM, Invoice, ISODate, Member, MedTiming, Membership, Mobility, Payment, Plan, PlanDef, PlanEntry, Reading, Relation, Row, Title, Vitals,
 } from '../types';
 import { addDays, addMonths, daysInMonth, dow, e164, rng, toHM, toMin, ym } from '../util';
 import { carerPortraitId, portraitId } from './demoMedia';
 import { activeOn, isOpen, openDaysInMonth, planOn } from '../rules/core';
 import { flexQuota } from '../rules/attendance';
+import { isDaysPlan } from '../rules/plans';
 import { dueDateFor, invoiceTotal, runLinesFor } from '../rules/billing';
 import { evaluateReading } from '../rules/health';
 
 const FIRST_NO = 51; // m51 … m90 (idx 50 … 89: the digits keep invoice numbers and virtual accounts apart from m1 … m46)
 const VA = (i: number) => '8808' + String(1203440000 + i * 7919).padStart(12, '0');
 
-type Row5 = [Title, string, string, ISODate, 'f' | 'g', HM, string, string];
-/** title, first name, last name, date of birth, plan now, usual arrival, start ('M1' / 'M3' = first open day this month / two open days later; 'A2' = a year ago, so the anniversary falls two days from the anchor), health profile codes */
+type Row5 = [Title, string, string, ISODate, 'f' | 'g' | 'h', HM, string, string];
+/** title, first name, last name, date of birth, plan now ('h' = the catalogue plan below, Flex 12), usual arrival, start ('M1' / 'M3' = first open day this month / two open days later; 'A2' = a year ago, so the anniversary falls two days from the anchor), health profile codes */
 const ROWS: Row5[] = [
   ['Opa', 'Hartono', 'Salim', '1944-03-11', 'g', '08:45', '2024-07-01', 'htn chol'],
   ['Oma', 'Lieni', 'Salim', '1947-09-02', 'g', '08:45', '2024-07-01', 'oa osteo'],
@@ -29,11 +30,11 @@ const ROWS: Row5[] = [
   ['Bapak', 'Ahmad', 'Hidayat', '1950-10-09', 'f', '09:00', '2025-01-06', 'gout htn'],
   ['Oma', 'Yenny', 'Halim', '1948-04-14', 'g', '09:15', '2024-11-04', 'osteo cat'],
   ['Opa', 'Eddy', 'Setiawan', '1939-12-03', 'g', '09:20', '2024-07-22', 'htn hear heart'],
-  ['Ibu', 'Rina', 'Siregar', '1955-07-19', 'f', '10:15', '2025-02-10', 'dm'],
+  ['Ibu', 'Rina', 'Siregar', '1955-07-19', 'h', '10:15', '2025-02-10', 'dm'],
   ['Bapak', 'Hasan', 'Nasution', '1947-08-26', 'f', '08:35', '2025-03-17', 'chol gout'],
   ['Oma', 'Susi', 'Hartanto', '1952-03-05', 'f', '09:40', '2025-04-07', 'oa osteo'],
   ['Opa', 'Gunawan', 'Gozali', '1943-10-21', 'g', '09:30', '2024-09-16', 'htn dm'],
-  ['Ibu', 'Dewi', 'Wibowo', '1958-01-12', 'f', '10:20', '2025-05-12', 'thy'],
+  ['Ibu', 'Dewi', 'Wibowo', '1958-01-12', 'h', '10:20', '2025-05-12', 'thy'],
   ['Bapak', 'Made', 'Wirawan', '1949-05-28', 'f', '10:05', '2025-06-02', 'chol'],
   ['Oma', 'Angela', 'Chandra', '1945-08-07', 'g', '09:35', '2024-12-02', 'oa htn'],
   ['Opa', 'Paulus', 'Gondokusumo', '1940-02-16', 'g', '08:50', '2025-07-14', 'stroke htn'],
@@ -50,11 +51,11 @@ const ROWS: Row5[] = [
   ['Oma', 'Lani', 'Setiawan', '1937-10-14', 'g', '09:20', '2024-07-22', 'oa osteo mem'],
   ['Opa', 'Ferry', 'Winata', '1948-02-06', 'f', '10:00', '2026-03-16', 'gout'],
   ['Ibu', 'Christina', 'Pangestu', '1951-12-11', 'f', '09:35', '2026-04-13', 'htn asthma'],
-  ['Bapak', 'Raden Mas Soedjatmoko', 'Hadi', '1955-06-03', 'f', '10:25', '2026-05-04', 'chol'],
+  ['Bapak', 'Raden Mas Soedjatmoko', 'Hadi', '1955-06-03', 'h', '10:25', '2026-05-04', 'chol'],
   ['Oma', 'Tjoa Sioe', 'Lan', '1943-08-19', 'g', '08:40', '2025-03-03', 'stroke fracture'],
   ['Opa', 'Handoko', 'Gani', '1940-11-25', 'f', '09:45', '2024-08-12', 'htn dm'],
   ['Ibu', 'Nurhayati', 'Lubis', '1953-09-07', 'f', '10:10', 'M1', 'gerd htn'],
-  ['Bapak', 'Agung', 'Nugroho', '1949-03-15', 'f', '09:15', '2026-07-06', 'chol htn'],
+  ['Bapak', 'Agung', 'Nugroho', '1949-03-15', 'h', '09:15', '2026-07-06', 'chol htn'],
   ['Oma', 'Giok Lan', 'Sutedja', '1941-01-26', 'g', '09:10', '2025-04-14', 'stroke dm'],
   ['Opa', 'Tony', 'Hermanto', '1946-06-30', 'f', '10:00', '2026-08-03', 'chol'],
   ['Ibu', 'Maya', 'Sari', '1961-02-04', 'f', '09:30', 'M3', 'thy'],
@@ -64,7 +65,11 @@ const ROWS: Row5[] = [
 const NICK: Record<string, string> = { 'Giok Nio': 'Nio', Soekartini: 'Tini', 'Tjoa Sioe': 'Lan', 'Raden Mas Soedjatmoko': 'Djat' };
 const SPOUSE: Record<number, number> = { 1: 0, 3: 2, 28: 9 }; // second spouse -> first (couples share an address, family and visit days)
 /** plan changes: the date it took effect ('M' = first open day this month) and the plan from then on (the plan before it is the other one) */
-const PLAN_CHANGE: Record<number, string> = { 4: '2025-09-01', 8: '2026-03-02', 17: '2026-07-01', 36: 'M', 33: '2026-01-05' };
+const PLAN_CHANGE: Record<number, string> = { 4: '2025-09-01', 8: '2026-03-02', 17: '2026-07-01', 36: 'M', 33: '2026-01-05', 10: '2026-08-03' }; // 10: Rina used up her Flex quota, Flex -> Flex 12
+/** KC 28 Oct: one catalogue plan beside Flex and Gold, so Insights (By plan, Membership) and the plan lists show one: 12 visits a month. Four roster members are on it
+ * ('h' in ROWS): two joined on it in the last six months and one switched to it from Flex in August. */
+export const ROSTER_PLAN: PlanDef = { id: 'plan_1', name: 'Flex 12', nameId: 'Fleks 12', kind: 'days', quota: 12, active: true };
+const ROSTER_PLAN_PRICE = 3_300_000;
 const ENDING: Record<number, [number, EndReason, string]> = { 12: [0, 'careHome', 'Moving to a care home near family'], 21: [3, 'careNeeds', 'Needs more care than a day club can give'], 29: [6, 'movedAway', 'Moving to Bandung to live with his daughter'] };
 /** '@unpaid' = stopped on the 3rd for the older of the two runs still unpaid (the brochure's terms): the last day is the end of that run's month */
 const ENDED: Record<number, [string, EndReason, string]> = { 19: ['-12', 'movedAway', 'Moved to Surabaya'], 26: ['2026-08-28', 'careHome', 'Moved into a care home'], 7: ['2026-07-31', 'familyDecision', 'Family decided to stay home'], 23: ['@unpaid', 'unpaid', 'The invoice was still unpaid on the 3rd'] };
@@ -133,6 +138,10 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<stri
   const firstOpen = monthOpen.find((d) => d <= T) ?? T;
   const startOf = (v: string): ISODate => (v === 'M1' ? firstOpen : v === 'M3' ? (monthOpen.filter((d) => d <= T)[2] ?? T) : v === 'A2' ? `${+T.slice(0, 4) - 1}-${addDays(T, 2).slice(5).replace('02-29', '02-28')}` : v);
   const id = (i: number) => `m${FIRST_NO + i}`;
+  // the catalogue plan and its price, before any invoice is written
+  // (copies: the settings object is shared with every other build of the seed)
+  s.club = { ...s.club, settings: { ...s.club.settings, plans: [...(s.club.settings.plans ?? []).filter((p) => p.id !== ROSTER_PLAN.id), ROSTER_PLAN] } };
+  for (const [k, pv] of Object.entries(s.prices)) s.prices[k] = { ...pv, plans: { ...pv.plans, [ROSTER_PLAN.id]: ROSTER_PLAN_PRICE } };
   const usedPhones = new Set<string>([...Object.values(s.staff).map((x) => x.phone), ...Object.values(s.familyContacts).map((x) => x.phone)]);
   const phone = () => {
     for (;;) {
@@ -155,9 +164,9 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<stri
     addr[i] = lead !== i ? addr[lead] : (() => { const [st, area] = STREETS[between(0, STREETS.length - 1)]; return `${st} no. ${between(1, 88)}, ${area}, Jakarta Selatan`; })();
     // plans
     const chg = PLAN_CHANGE[i];
-    const nowPlan: Plan = planNow === 'g' ? 'gold' : 'flex';
+    const nowPlan: Plan = planNow === 'g' ? 'gold' : planNow === 'h' ? ROSTER_PLAN.id : 'flex';
     const plans: PlanEntry[] = chg
-      ? [{ from: start, plan: nowPlan === 'gold' ? 'flex' : 'gold', by: 'staff:s1' }, { from: chg === 'M' ? firstOpen : chg, plan: nowPlan, by: 'staff:s9' }]
+      ? [{ from: start, plan: nowPlan === 'flex' ? 'gold' : 'flex', by: 'staff:s1' }, { from: chg === 'M' ? firstOpen : chg, plan: nowPlan, by: 'staff:s9' }]
       : [{ from: start, plan: nowPlan, by: 'staff:s1' }];
     // membership
     const ms: Membership = { start };
@@ -284,11 +293,12 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<stri
     const m = s.members[id(i)];
     const count: Record<string, number> = {};
     const out: ISODate[] = [];
-    const todayFlex = !!TODAY_IN[i] && activeOn(m, T) && planOn(m, T).plan === 'flex';
+    const todayFlex = !!TODAY_IN[i] && activeOn(m, T) && isDaysPlan(s, planOn(m, T).plan);
     for (const d of cand) {
       if (!activeOn(m, d)) continue;
-      if (planOn(m, d).plan === 'flex') {
-        const q = flexQuota(s, m, ym(d)) - (todayFlex && ym(d) === month ? 1 : 0);
+      const plan = planOn(m, d).plan;
+      if (isDaysPlan(s, plan)) { // Flex and Flex 12 keep to their monthly visits
+        const q = flexQuota(s, m, ym(d), plan) - (todayFlex && ym(d) === month ? 1 : 0);
         if ((count[ym(d)] || 0) >= q) continue;
         count[ym(d)] = (count[ym(d)] || 0) + 1;
       }
