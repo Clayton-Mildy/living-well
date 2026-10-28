@@ -125,7 +125,7 @@ test('Ega: Next month lists every member and what next month holds, a tap opens 
   await expect(list.locator('[data-member="m46"]')).toContainText('Gold');
   await expect(list.getByTestId('next-count')).toContainText('5 continue');
   await assertNoHorizontalScroll(page);
-  await list.locator('button[data-member="m1"]').click();
+  await list.locator('[data-member="m1"] button[data-open]').click();
   await expect(page.getByRole('dialog', { name: /Oma Lina/ })).toBeVisible();
   await page.keyboard.press('Escape');
   await expect(page.getByRole('dialog')).toHaveCount(0);

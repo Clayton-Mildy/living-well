@@ -127,8 +127,19 @@ describe('Next month', () => {
     expect(rows.length).toBeGreaterThan(1);
     const changing = rows.filter((r) => r.getAttribute('data-status') !== 'continues');
     expect(changing.map((r) => r.getAttribute('data-member'))).toContain('m1');
-    expect(document.querySelector('[data-member="m1"] [data-testid="next-status"]')?.textContent).toBe('→ Gold');
-    expect(document.querySelector('[data-member="m1"] [data-testid="next-plan"]')?.textContent).toBe('Flex');
+    // next month's plan is the headline: an ink badge "Flex → Gold" with Gold as next month's plan
+    expect(document.querySelector('[data-member="m1"] [data-testid="next-status"]')?.textContent).toBe('Flex→Gold');
+    expect(document.querySelector('[data-member="m1"] [data-testid="next-plan"]')?.textContent).toBe('Gold');
+    // a member who continues shows the plan they keep
+    const keeps = rows.find((r) => r.getAttribute('data-status') === 'continues')!;
+    expect(keeps.querySelector('[data-testid="next-status"]')?.textContent).toBe('Continues');
+    expect(['Flex', 'Gold']).toContain(keeps.querySelector('[data-testid="next-plan"]')?.textContent);
+    // next month at a glance: the plan counts add up to everyone who is in next month on a plan
+    const counts = Array.from(document.querySelectorAll('[data-plan-count]'));
+    expect(counts.map((x) => x.getAttribute('data-plan-count'))).toContain('gold');
+    // quick actions: call and WhatsApp the family contact, as links (they never open the sheet)
+    expect(document.querySelector('[data-member="m1"] [data-testid="next-call"]')?.getAttribute('href')).toMatch(/^tel:\+?\d+$/);
+    expect(document.querySelector('[data-member="m1"] [data-testid="next-wa"]')?.getAttribute('href')).toMatch(/^https:\/\/wa\.me\//);
     const cont = rows.length - changing.length;
     expect(document.querySelector('[data-testid="next-count"]')?.textContent).toBe(`${cont} continue · ${changing.length} change`);
     expect(document.querySelector('[data-member] [data-testid="next-status"]')).toBeTruthy();
@@ -139,7 +150,7 @@ describe('Next month', () => {
     expect(left.length).toBe(changing.length);
     expect(left.every((r) => r.getAttribute('data-status') !== 'continues')).toBe(true);
     // a tap opens the follow-up sheet for that member
-    await click(document.querySelector('button[data-member="m1"]'));
+    await click(document.querySelector('[data-member="m1"] button[data-open]'));
     expect(document.body.textContent).toContain('Follow up Oma Lina');
   });
 
