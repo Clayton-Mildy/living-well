@@ -11,7 +11,7 @@ import { useClub } from '../../store/replica';
 import { BadgePill, ConfirmDialog, OutlineButton, StockBadge, TextButton, useResetOn } from '../kitchen/parts';
 import { StockEditDialog } from '../kitchen/Stock';
 import { areaLabel, unitLabel, useQty } from '../kitchen/StockForm';
-import { Badge, FormOverlay, Hero, HeroHead, PGroup, PillBtn, hrow, prow, rowSub, rowTitle } from '../finance/parts';
+import { Badge, FormOverlay, Hero, HeroHead, PGroup, PillBtn, ReceiptItems, hrow, prow, rowSub, rowTitle } from '../finance/parts';
 import { budgetCancelInput, budgetEditInput, hasAction, receiptEditInput, receiptVoidInput, sectionName, sectionsOf } from './finance';
 
 type Mine =
@@ -114,6 +114,7 @@ export function MyRequests() {
                 </div>
                 <span style={{ paddingTop: 2 }}>{badge(x)}</span>
               </div>
+              {x.type === 'receipt' ? <ReceiptItems r={x.r} /> : null}
               {a.length ? <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>{a}</div> : null}
             </div>
           );
@@ -137,6 +138,7 @@ export function MyRequests() {
           </div>
           {badge(x)}
           {actions(x)}
+          {x.type === 'receipt' && x.r.lines?.length ? <div style={{ flex: '1 1 100%', minWidth: 0 }}><ReceiptItems r={x.r} indent={60} /></div> : null}
         </div>
       ))}
       {!rows.length ? <EmptyState icon="inbox" title={t('requests.mine.empty')} /> : null}

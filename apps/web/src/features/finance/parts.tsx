@@ -1,6 +1,6 @@
 // Small pieces shared by the finance screens, with the design's exact values.
-import { type CSSProperties, type ReactNode } from 'react';
-import { BADGE, fmtN, type BadgeKey } from '@cp/shared';
+import { useState, type CSSProperties, type ReactNode } from 'react';
+import { BADGE, fmtN, rp, type BadgeKey, type Receipt } from '@cp/shared';
 import { Button, Dialog, Eyebrow, FONT_BODY, FONT_SMALL, GROUP_HEAD, Icon, Pager, Sheet, type Paged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
@@ -254,3 +254,34 @@ export function Segmented<T extends string>({ options, value, onChange, label }:
 /** a grey rounded field (no border) for the form fields that sit inside a flat group. */
 /** (add className "cp-input cp-fill") */
 export const phoneField: CSSProperties = { height: 44, border: 'none', borderRadius: 12, background: 'var(--fill, #F4F4F5)', padding: '0 12px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', outline: 'none', minWidth: 0 };
+
+// what was bought (finance's Receipts and the buyer's My requests): an "N items" toggle (44px high) that opens the lines under the row, with where it was bought and the order no.
+export function ReceiptItems({ r, indent }: { r: Receipt; indent?: number }) {
+  const t = useT();
+  const [open, setOpen] = useState(false);
+  const lines = r.lines ?? [];
+  if (!lines.length) return null;
+  return (
+    <div style={{ paddingLeft: indent }}>
+      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="cp-press" style={{ height: 44, margin: '-6px 0', padding: '0 6px 0 0', border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer', fontFamily: 'Inter' }}>
+        {t('purchasing.nItems', { n: lines.length })}<Icon name="expand_more" size={20} style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
+      </button>
+      {open ? (
+        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
+          {lines.map((l) => (
+            <div key={l.id} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '7px 0', borderTop: HAIR }}>
+              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <span style={{ fontSize: 15, lineHeight: 1.35, color: '#24201C' }}>{l.name}{l.brand ? ` · ${l.brand}` : ''}</span>
+                <span style={{ fontSize: 13, lineHeight: 1.4, color: '#6B6259' }}>{l.qty} {l.unit} × {rp(l.unitPrice)} · {t(`purchasing.cat.${l.category}`)}</span>
+              </div>
+              <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(l.amount)}</span>
+            </div>
+          ))}
+          <span style={{ borderTop: HAIR, paddingTop: 7, fontSize: 13, lineHeight: 1.4, color: '#6B6259' }}>
+            {t('purchasing.boughtAt')} {t(`purchasing.src.${r.source ?? 'shop'}`)}{r.orderNo ? ` · ${t('purchasing.orderNo')} ${r.orderNo}` : ''}
+          </span>
+        </div>
+      ) : null}
+    </div>
+  );
+}

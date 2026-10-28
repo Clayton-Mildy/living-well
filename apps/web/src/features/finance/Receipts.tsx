@@ -5,7 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import { actorName, live, rp, sortBy, type Receipt, type ReceiptLine, type ReceiptSource, type VendorInvoice } from '@cp/shared';
 import { lineCategory, linesGap, linesTotal, lineProblem, supplierCategory, RECEIPT_SOURCES } from '@cp/shared/rules/purchasing';
 import { activeSections, receiptOfRequest, receiptsList, sectionName, vendorInvoicesList } from '@cp/shared/rules/finance';
-import { Button, Chip, DateField, EmptyState, Icon, Note, PageHead, PhotoImg, ImageOpen, Pin, Select, TextField, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Chip, DateField, EmptyState, Note, PageHead, PhotoImg, ImageOpen, Pin, Select, TextField, usePaged, FONT_BODY } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { mediaUrl } from '../../lib/media';
@@ -15,7 +15,7 @@ import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { digits, matches } from './lib';
 import { LinesEditor, ReceiptCapture } from './ReceiptCapture';
-import { Badge, ConfirmDialog, FormOverlay, HAIR, Hero, HeroHead, PGroup, PagerBar, PillBtn, RpField, SearchField, Segmented, dangerStrip, fieldLabel, hrow, inputBox, prow, rowSub, rowTitle } from './parts';
+import { Badge, ConfirmDialog, FormOverlay, HAIR, ReceiptItems, Hero, HeroHead, PGroup, PagerBar, PillBtn, RpField, SearchField, Segmented, dangerStrip, fieldLabel, hrow, inputBox, prow, rowSub, rowTitle } from './parts';
 
 const PAPER = 'linear-gradient(160deg, #FBF8F4 0%, #EFE7DD 55%, #DCCFC0 100%)';
 
@@ -176,37 +176,6 @@ function EditReceipt({ receipt, onClose }: { receipt: Receipt | null; onClose: (
       footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button disabled={!ok} onClick={save}>{t('common.save')}</Button></>}>
       <ReceiptFields v={v} set={(p) => setV((x) => ({ ...x, ...p }))} selfId={receipt.id} />
     </FormOverlay>
-  );
-}
-
-// finance sees what was bought: an "N items" toggle (44px high) that opens the lines under the row, with where it was bought and the order no.
-function ReceiptItems({ r, indent }: { r: Receipt; indent?: number }) {
-  const t = useT();
-  const [open, setOpen] = useState(false);
-  const lines = r.lines ?? [];
-  if (!lines.length) return null;
-  return (
-    <div style={{ paddingLeft: indent }}>
-      <button type="button" onClick={() => setOpen(!open)} aria-expanded={open} className="cp-press" style={{ height: 44, margin: '-6px 0', padding: '0 6px 0 0', border: 'none', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 2, cursor: 'pointer', fontFamily: 'Inter' }}>
-        {t('purchasing.nItems', { n: lines.length })}<Icon name="expand_more" size={20} style={{ transform: open ? 'rotate(180deg)' : undefined, transition: 'transform .15s' }} />
-      </button>
-      {open ? (
-        <div style={{ display: 'flex', flexDirection: 'column', marginTop: 8 }}>
-          {lines.map((l) => (
-            <div key={l.id} style={{ display: 'flex', gap: 12, alignItems: 'baseline', padding: '7px 0', borderTop: HAIR }}>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                <span style={{ fontSize: 15, lineHeight: 1.35, color: '#24201C' }}>{l.name}{l.brand ? ` · ${l.brand}` : ''}</span>
-                <span style={{ fontSize: 13, lineHeight: 1.4, color: '#6B6259' }}>{l.qty} {l.unit} × {rp(l.unitPrice)} · {t(`purchasing.cat.${l.category}`)}</span>
-              </div>
-              <span style={{ fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(l.amount)}</span>
-            </div>
-          ))}
-          <span style={{ borderTop: HAIR, paddingTop: 7, fontSize: 13, lineHeight: 1.4, color: '#6B6259' }}>
-            {t('purchasing.boughtAt')} {t(`purchasing.src.${r.source ?? 'shop'}`)}{r.orderNo ? ` · ${t('purchasing.orderNo')} ${r.orderNo}` : ''}
-          </span>
-        </div>
-      ) : null}
-    </div>
   );
 }
 
