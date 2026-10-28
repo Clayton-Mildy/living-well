@@ -71,6 +71,8 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch', compact = 
       <span>{t(photos.length ? 'kitchen.photo.addMore' : K.add)}</span>
     </button>
   ) : null;
+  // KC 28 Oct (the Lunch round like the Daily log): in the compact strip "Notify families" sits on the same line as the add button, not in a second box
+  const notifyEl = !readOnly && mgmt ? <div data-testid="notify-families" style={{ flex: '0 1 auto', maxWidth: '100%' }}><Toggle on={notify} onClick={() => setNotify((x) => !x)} label={t('kitchen.notify.families')} /></div> : null;
   return (
     <div data-testid={`${meal}-photos`} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: photos.length ? (tea ? '4px 16px 16px' : '16px 16px 4px') : tea ? '0 16px 16px' : compact ? '12px 16px' : 0 }}>
       {compact ? (
@@ -104,9 +106,10 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch', compact = 
               );
             })}
             {addBtn}
+            {notifyEl ? <div style={{ marginLeft: 'auto' }}>{notifyEl}</div> : null}
           </div>
         </>
-      ) : addBtn
+      ) : <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 10 }}>{addBtn}{notifyEl ? <div style={{ marginLeft: 'auto' }}>{notifyEl}</div> : null}</div>
       ) : (
       <>
       {/* round 6, phone: the add row has a plain hairline under it (the dashed edge is the desktop look) */}
@@ -159,8 +162,8 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch', compact = 
       </>
       )}
       {full && !readOnly ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t(K.full)}</span> : null}
-      {readOnly ? null : mgmt ? (
-        <div style={{ padding: photos.length || compact ? 0 : '12px 16px 0' }}>
+      {readOnly || (compact && mgmt) ? null : mgmt ? (
+        <div style={{ padding: photos.length ? 0 : '12px 16px 0' }}>
           <Toggle on={notify} onClick={() => setNotify((x) => !x)} label={t('kitchen.notify.families')} />
         </div>
       ) : photos.length && !tea ? <Note tone="cream" icon="hourglass_top">{t('kitchen.photo.pendingNote')}</Note> : null}
