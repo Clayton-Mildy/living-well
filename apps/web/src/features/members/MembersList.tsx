@@ -178,9 +178,9 @@ export function MembersList() {
                   </span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                      <span data-testid="row-name" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <span data-testid="row-name" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '2px 8px', flexWrap: 'wrap' }}>
                         <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{listName(r.m)}</span>
-                        {r.m.nanny ? <NannyLine nanny={r.m.nanny} /> : null}
+                        {r.m.nanny ? <NannyLine nanny={r.m.nanny} phone /> : null}
                       </span>
                       <span title={pc.tip} style={{ flex: 'none', fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{pc.text}</span>
                     </span>
