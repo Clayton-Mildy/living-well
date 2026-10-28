@@ -2,7 +2,7 @@
 import type { ClubState, Invoice, InvoiceLine, ISODate, Member, PriceVersion, YM } from '../types';
 import { activeOn, currentMembership, isOpen, membershipStatus, openDaysInMonth, planOn, primaryContact, isPendingRow } from './core';
 import { extraDaysFor } from './attendance';
-import { planDef, planParams, planPrice } from './plans';
+import { planParams, planPrice } from './plans';
 import { onLeaveIn } from './leave';
 import { addDays, addMonths, dow, live, sortBy, sum, ym } from '../util';
 
@@ -118,7 +118,6 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
       const full = planPrice(price, plan);
       const amount = active.length >= open.length || !open.length ? full : Math.round((full * active.length) / open.length / 1000) * 1000;
       // a catalogue plan is named on the line (the Indonesian name in `planId`, for the Indonesian wording); Flex and Gold keep their own wording
-      const def = plan === 'flex' || plan === 'gold' ? undefined : planDef(s, plan);
       const label = plan === 'gold' ? 'inv.line.gold' : plan === 'flex' ? 'inv.line.flex' : 'inv.line.plan';
       const params: Record<string, string | number> = plan === 'flex' || plan === 'gold' ? { month: period } : { month: period, ...planParams(s, plan) };
       lines.push({ id: `plan-${period}`, kind: 'plan', label, params, qty: 1, unit: amount, amount, refMonth: period });

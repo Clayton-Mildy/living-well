@@ -1,7 +1,6 @@
 // Family plan requests: the primary contact asks to switch plan (Flex ↔ Gold) from the 1st of next month.
 // Finance or management applies or declines it from the member's Plan tab (planChange.apply / planChange.decline in members.ts).
 import type { ClubState, Plan } from '../types';
-import type { Draft } from 'immer';
 import { defineAction, DomainError, type ActionDef } from './framework';
 import { isPlanId, planOf, planParams } from '../rules/plans';
 import { currentMembership, isPendingRow, isPrimaryFor, membershipStatus, displayName, planOn } from '../rules/core';
