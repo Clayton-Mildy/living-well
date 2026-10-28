@@ -2,7 +2,7 @@
 import { useMemo } from 'react';
 import { dayStatus, lobbyGroups, live, lunchPhotosOn, nextOpenDay, type DayStatus, type Feedback, type ISODate, type StockRequest } from '@cp/shared';
 import {
-  coversOn, dietaryRows, dishesByCourse, kitchenConflicts, menuDishesOn, overridesFrom, scheduledVersions, sortFeedback, sortStock, templateForWeek, templateOn, unknownAllergyGuests, unreviewedDishesOn,
+  coversOn, dietaryRows, dishesByCourse, kitchenConflicts, menuDishesOn, scheduledVersions, sortFeedback, sortStock, templateForWeek, templateOn, unknownAllergyGuests, unreviewedDishesOn,
 } from '@cp/shared/rules/kitchenOps';
 import { celebrationsOn } from '@cp/shared/rules/celebrations';
 import { occasionsInRange } from '@cp/shared/rules/occasions';
@@ -39,7 +39,7 @@ export function useMenuVals() {
   }, [s, today]);
 }
 
-/** The weekly menu of the week starting `week` (the editor's starting point), later versions and upcoming per-date overrides. */
+/** The weekly menu of the week starting `week` (the editor's starting point) and later versions. */
 export function usePlanVals(week: ISODate) {
   const s = useClub();
   const { today } = useNow();
@@ -51,7 +51,6 @@ export function usePlanVals(week: ISODate) {
       version,
       days: templateForWeek(s, week, today),
       scheduled: scheduledVersions(s, today),
-      overrides: overridesFrom(s, today),
       dishes: { lunch: dishesByCourse(s, 'lunch'), soft: dishesByCourse(s, 'soft'), tea: dishesByCourse(s, 'tea') },
     };
   }, [s, today, week]);

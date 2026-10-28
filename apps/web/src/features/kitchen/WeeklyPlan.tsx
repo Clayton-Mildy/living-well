@@ -1,4 +1,6 @@
-// Weekly menu plan: the week's menu editor (explicit Publish, never per keystroke) plus one-off changes for a single date.
+// Weekly menu plan: the week's menu editor (explicit Publish, never per keystroke).
+// KC 28 Oct: no separate "Just for one date" list any more (each week has its own menu, so a day is changed in its week). A date that still has its own
+// dishes ("Change today's menu" on the Menu page, or an older one-date change) shows them on its day, with Undo, because they win over the week's.
 // A week switcher plans coming weeks. KC round 15: each week has its own menu: a plan is published for the week shown only (from its Monday, or
 // today for the current week), a week nobody planned is empty, and "Copy last week" fills the editor from the week before (asking first when it
 // replaces dishes already planned). Edits are kept per week while the page is open.
@@ -11,15 +13,14 @@ import { PendingMark } from '../../components/PendingMark';
 import { useMe } from '../../lib/me';
 import { ALL_DAYS, COURSES, MAX_PLAN_WEEKS, diffTemplates, planStartFor, sameIds, templateForWeek, weekDate, type Course, type MenuChange, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
 import { copyMenu, hasDishes, lastWeekMenu, menuCopyReplaces, menuPlanned } from '@cp/shared/rules/weekPlans';
-import { Button, Card, CardHead, Dialog, Group, Icon, Note, Pager, SectionLabel, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, Card, CardHead, Dialog, Group, Icon, Note, SectionLabel, Toggle, FONT_BODY } from '../../components/ui';
 import { say } from '../../store/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { DishField, DishPicker } from './dish';
-import { OverrideSheet } from './OverrideSheet';
-import { ConfirmDialog, OutlineButton, RowPill, TextButton, useResetOn } from './parts';
+import { ConfirmDialog, TextButton, useResetOn } from './parts';
 import { usePlanVals } from './vals';
 
 const key = (w: Weekday, c: Course) => `${w}:${c}`;
@@ -91,13 +92,11 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
   const doCopy = () => { fill(copyMenu(draft, last, week, v.today)); setAskCopy(false); say(t('kitchen.plan.copied')); };
   const onCopy = () => (menuCopyReplaces(draft, last, week, v.today) ? setAskCopy(true) : doCopy());
   const [picker, setPicker] = useState<{ w: Weekday; c: Course } | null>(null);
-  const [override, setOverride] = useState<string | null>(null);
   const dayName = (w: Weekday) => fd(weekDate(week, w), { weekday: 'long' });
   const short = (d: ISODate) => fd(d, { day: 'numeric', month: 'short' });
-  const overrides = usePaged(v.overrides, 5);
   const waiting = live(s.menuVersions).filter((x) => x.status === 'published' && isWaiting(x)); // weekly menus waiting for management's approval
-  const dishName = (id: string) => s.dishes[id]?.name ?? id;
-  const clearOverride = async (date: string) => { await act('dayMenu.override', { date, lunch: null, soft: null, tea: null }, { ok: t('kitchen.override.reset') }); };
+  const undoDay = async (date: string) => { await act('dayMenu.override', { date, lunch: null, soft: null, tea: null }, { ok: t('kitchen.override.reset') }); };
+  const dayChange = (date: ISODate) => <DayChange date={date} today={v.today} readOnly={readOnly} onUndo={() => undoDay(date)} />;
   const field = (w: Weekday, c: Course, flex: string) => (
     <DishField label={t('kitchen.course.' + c)} course={c} ids={cur(w, c)} flex={flex} testId={`plan-${w}-${c}`} date={weekDate(week, w)} readOnly={readOnly}
       onRemove={(id) => setCell(w, c, cur(w, c).filter((x) => x !== id))} onAdd={() => setPicker({ w, c })} />
@@ -141,12 +140,11 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
           onToggle={(id) => setCell(picker.w, picker.c, cur(picker.w, picker.c).includes(id) ? cur(picker.w, picker.c).filter((x) => x !== id) : [...cur(picker.w, picker.c), id])}
           onCreated={(id) => setCell(picker.w, picker.c, [...cur(picker.w, picker.c), id])} />
       ) : null}
-      <OverrideSheet open={override !== null} initialDate={override ?? v.today} onClose={() => setOverride(null)} />
       <ConfirmDialog open={askCopy} onClose={() => setAskCopy(false)} title={t('kitchen.plan.copyTitle')} body={t('kitchen.plan.copyBody')} confirmLabel={t('kitchen.plan.copyConfirm')} cancelLabel={t('kitchen.plan.copyKeep')} onConfirm={doCopy} danger={false} />
     </>
   );
   // round 6, phone: iOS grouped sections. The week switcher and its notes first, then one section per weekday (day name outside, its three courses inside),
-  // the unpublished bar, and the one-off changes. Publishing is the pinned "Publish menu" pill of the page.
+  // and the unpublished bar. Publishing is the pinned "Publish menu" pill of the page.
   if (isPhone) {
     return (
       <>
@@ -169,6 +167,7 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
                 {field(w, 'lunch', 'none')}
                 {field(w, 'soft', 'none')}
                 {field(w, 'tea', 'none')}
+                {dayChange(date)}
               </Group>
             </div>
           );
@@ -181,24 +180,6 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
             </div>
           </Group>
         ) : null}
-        <Group title={t('kitchen.plan.oneOffTitle')} pad="0 16px" gap={0}>
-          {v.overrides.length ? overrides.rows.map((o, i) => (
-            <div key={o.date} data-testid="override-row" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 0', borderTop: i === 0 ? 'none' : '0.5px solid var(--hairline, #E2E2E6)' }}>
-              <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{fds(o.date)}</span>
-                <PendingMark row={s.dayMenus[o.date]} />
-                {COURSES.filter((c) => o[c]).map((c) => <span key={c} style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.course.' + c)}: {(o[c] || []).map(dishName).join(', ') || t('kitchen.plan.nothing')}</span>)}
-              </div>
-              {readOnly ? null : (<><RowPill tone="quiet" onClick={() => setOverride(o.date)}>{t('common.edit')}</RowPill>
-              <RowPill tone="danger" onClick={() => clearOverride(o.date)}>{t('kitchen.override.remove')}</RowPill></>)}
-            </div>
-          )) : <span style={{ padding: '14px 0', fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.plan.noOneOff')}</span>}
-          {v.overrides.length && overrides.pages > 1 ? <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}><Pager page={overrides.page} pages={overrides.pages} onPage={overrides.setPage} label={t('kitchen.plan.oneOffTitle')} /></div> : null}
-          {readOnly ? null : (<button type="button" onClick={() => setOverride(v.today)} className="cp-press" style={{ height: 50, margin: '0 -16px', padding: '0 16px', border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', color: 'var(--accent, #75624B)', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
-            <Icon name="event" size={20} />
-            {t('kitchen.plan.changeDate')}
-          </button>)}
-        </Group>
         {dialogs}
       </>
     );
@@ -223,6 +204,7 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
             {field(w, 'lunch', '2 1 260px')}
             {field(w, 'soft', '1 1 160px')}
             {field(w, 'tea', '1 1 160px')}
+            {dayChange(date)}
           </div>
         );
       })}
@@ -234,25 +216,6 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
           {!isPhone ? <Button size={44} icon="publish" onClick={onPublish}>{t('kitchen.plan.publish')}</Button> : null}
         </div>
       ) : null}
-
-      <div style={{ borderTop: '0.5px solid var(--hairline, #E2E2E6)', padding: '14px 22px', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, flexWrap: 'wrap' }}>
-          <SectionLabel>{t('kitchen.plan.oneOffTitle')}</SectionLabel>
-          {readOnly ? null : (<OutlineButton onClick={() => setOverride(v.today)} icon="event">{t('kitchen.plan.changeDate')}</OutlineButton>)}
-        </div>
-        {v.overrides.length ? overrides.rows.map((o) => (
-          <div key={o.date} data-testid="override-row" style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', padding: '8px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)' }}>
-            <div style={{ flex: '1 1 220px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-              <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{fds(o.date)}</span>
-              <PendingMark row={s.dayMenus[o.date]} />
-              {COURSES.filter((c) => o[c]).map((c) => <span key={c} style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.course.' + c)}: {(o[c] || []).map(dishName).join(', ') || t('kitchen.plan.nothing')}</span>)}
-            </div>
-            {readOnly ? null : (<><TextButton onClick={() => setOverride(o.date)}>{t('common.edit')}</TextButton>
-            <TextButton onClick={() => clearOverride(o.date)} color="#9A3D24">{t('kitchen.override.remove')}</TextButton></>)}
-          </div>
-        )) : <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.plan.noOneOff')}</span>}
-        <Pager page={overrides.page} pages={overrides.pages} onPage={overrides.setPage} label={t('kitchen.plan.oneOffTitle')} />
-      </div>
 
       {dialogs}
     </Card>
@@ -311,5 +274,27 @@ export function PublishDialog({ open, onClose, editor }: { open: boolean; onClos
       <Toggle on={notify} onClick={() => setNotify((x) => !x)} label={t('kitchen.notify.families')} />
       {role !== 'mgmt' ? <Note tone="ochre" icon="hourglass_top">{t('approvals.menuNeeds')}</Note> : null}
     </Dialog>
+  );
+}
+
+/** A date with its own dishes (they win over the week's dishes above): what it serves, whether it waits for approval, and Undo (back to the week's
+ * dishes) while the date is still to come. Nothing when the date simply follows its week. */
+function DayChange({ date, today, readOnly, onUndo }: { date: ISODate; today: ISODate; readOnly: boolean; onUndo: () => void }) {
+  const t = useT();
+  const s = useClub();
+  const row = s.dayMenus[date];
+  const courses = row && !row.deletedAt ? COURSES.filter((c) => row[c] !== undefined) : [];
+  if (!courses.length) return null;
+  const names = (ids: string[]) => ids.map((id) => s.dishes[id]?.name ?? id).join(', ') || t('kitchen.plan.nothing');
+  return (
+    <div data-testid="day-change" className="cp-fill" style={{ flex: '1 1 100%', display: 'flex', alignItems: 'flex-start', gap: 10, padding: '10px 12px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', color: '#24201C' }}>
+      <Icon name="edit_calendar" size={18} color="#6B6259" style={{ marginTop: 2 }} />
+      <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+        <span style={{ fontSize: 14, fontWeight: 500, lineHeight: '20px' }}>{t('kitchen.plan.dayChanged')}</span>
+        <PendingMark row={row} />
+        {courses.map((c) => <span key={c} style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{t('kitchen.course.' + c)}: {names(row![c] ?? [])}</span>)}
+      </div>
+      {!readOnly && date >= today ? <TextButton onClick={onUndo}>{t('kitchen.plan.dayUndo')}</TextButton> : null}
+    </div>
   );
 }

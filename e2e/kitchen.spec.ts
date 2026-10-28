@@ -315,12 +315,8 @@ test.describe('closed days', () => {
     await page.getByTestId('plan-4-lunch').getByRole('button', { name: 'Remove Jeruk' }).click();
     await expect(page.getByText('Unpublished changes: 1').first()).toBeVisible();
     await page.getByRole('button', { name: 'Discard changes' }).click();
-    // one-date changes refuse the closed day and offer another
-    await page.getByRole('button', { name: 'Change a date' }).click();
-    const sheet = page.getByRole('dialog', { name: 'Change one date' });
-    await expect(sheet.getByText('The club is closed that day.').first()).toBeVisible();
-    await pickDate(page, 'Date', '2026-10-22');
-    await expect(sheet.getByRole('group', { name: 'Lunch' })).toContainText('Semur tahu tempe');
+    // KC 28 Oct: no "Change a date" any more, and "Change today's menu" needs an open day
+    await expect(page.getByRole('button', { name: 'Change a date' })).toHaveCount(0);
     await assertNoHorizontalScroll(page);
     c.assertClean();
   });
@@ -462,7 +458,7 @@ test.describe('allergen reach of a dish', () => {
     await expect(reach(fri.getByRole('checkbox', { name: /Sop ikan kakap/ }))).toContainText('1 allergic · 1 usually comes Fri');
     await fri.getByRole('button', { name: 'Done' }).click();
     // the one-date sheet counts for its own date's weekday (today is a Wednesday and serves the soup)
-    await page.getByRole('button', { name: 'Change a date' }).click();
+    await page.getByRole('button', { name: 'Change today’s menu' }).first().click();
     const sheet = page.getByRole('dialog', { name: 'Change one date' });
     await expect(reach(sheet.getByTestId('override-lunch'))).toContainText('1 allergic · 1 usually comes Wed');
     await pickDate(page, 'Date', '2026-10-22');
@@ -592,9 +588,10 @@ test.describe('weekly menu plan and dishes', () => {
     await expect(page.getByText(/Allergens have not been checked for/)).toHaveCount(0);
   });
 
-  test('one-off changes: change a date, see it listed, remove it', async ({ page }) => {
+  test('a one-date change shows on its day in the weekly plan, with Undo (KC 28 Oct: no separate list)', async ({ page }) => {
     await signIn(page, 's3');
-    await page.getByRole('button', { name: 'Change a date' }).click();
+    await expect(page.getByRole('button', { name: 'Change a date' })).toHaveCount(0);
+    await page.getByRole('button', { name: 'Change today’s menu' }).first().click();
     const sheet = page.getByRole('dialog', { name: 'Change one date' });
     await pickDate(page, 'Date', '2026-10-22');
     await sheet.getByRole('button', { name: 'Add a dish to Afternoon tea' }).click();
@@ -602,19 +599,20 @@ test.describe('weekly menu plan and dishes', () => {
     await picker.getByRole('checkbox', { name: /Klepon/ }).click();
     await picker.getByRole('button', { name: 'Done' }).click();
     await page.getByRole('dialog', { name: 'Change one date' }).getByRole('button', { name: 'Save for this date' }).click();
-    // the seed already lists a pending one-off change two weeks ahead; ours is the one on Thu 22 Oct
-    const row = page.getByTestId('override-row').filter({ hasText: 'Thu 22 Oct' });
-    await expect(row).toHaveCount(1);
-    await expect(row.getByTestId('approval-mark')).toContainText('Pending approval'); // a kitchen change waits for management
-    await expect(row).toContainText('Afternoon tea: Kacang hijau, Klepon'.replace('Kacang hijau', 'Bubur kacang hijau'));
-    await row.getByRole('button', { name: 'Remove' }).click();
-    await expect(page.getByTestId('override-row').filter({ hasText: 'Thu 22 Oct' })).toHaveCount(0);
+    // Thursday 22 Oct, in this week's plan: the change sits on its day, under the week's dishes it replaces
+    const box = page.getByTestId('plan-day-4').getByTestId('day-change');
+    await expect(box).toContainText('Changed for this date only');
+    await expect(box.getByTestId('approval-mark')).toContainText('Pending approval'); // a kitchen change waits for management
+    await expect(box).toContainText('Afternoon tea: Bubur kacang hijau, Klepon');
+    await expect(page.getByTestId('plan-day-5').getByTestId('day-change')).toHaveCount(0); // Friday follows its week
+    await box.getByRole('button', { name: 'Undo' }).click();
+    await expect(page.getByTestId('plan-day-4').getByTestId('day-change')).toHaveCount(0);
   });
 
   test('closed days and past days cannot be picked in the one-date editor, with no crash', async ({ page }) => {
     const c = watchConsole(page);
     await signIn(page, 's3');
-    await page.getByRole('button', { name: 'Change a date' }).click();
+    await page.getByRole('button', { name: 'Change today’s menu' }).first().click();
     const sheet = page.getByRole('dialog', { name: 'Change one date' });
     await expect(fieldText(page, 'Date')).toContainText('Wed 21 Oct 2026');
     await fieldText(page, 'Date').click();
