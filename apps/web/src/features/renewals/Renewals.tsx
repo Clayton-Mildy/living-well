@@ -7,6 +7,7 @@ import { useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { listName, addMonths, actorName, memberName, displayName, planLabel, ym, type YM } from '@cp/shared';
 import { canRecord, changeRows, renewalMembers, renewalMonth } from '@cp/shared/rules/renewals';
+import { unpaidRows } from '@cp/shared/rules/unpaid';
 import { Avatar, EmptyState, Icon, IconButton, PageHead, Segmented } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
@@ -66,7 +67,9 @@ export function Renewals() {
       <IconButton icon="chevron_right" label={t('renewals.nextMonth')} size={40} onClick={month >= maxMonth ? undefined : () => setPicked(addMonths(month, 1))} style={month >= maxMonth ? { opacity: 0.35, cursor: 'default' } : undefined} />
     </div>
   );
-  const tabItems: { value: Tab; label: string }[] = [{ value: 'changes', label: t('renewals.tabChanges') }, { value: 'unpaid', label: t('renewals.tabUnpaid') }];
+  // KC 28 Oct: how many unpaid invoices wait, beside the tab's name (the same list the Unpaid tab shows)
+  const unpaidN = useMemo(() => unpaidRows(s, today).length, [s, today]);
+  const tabItems: { value: Tab; label: string; count?: number }[] = [{ value: 'changes', label: t('renewals.tabChanges') }, { value: 'unpaid', label: t('renewals.tabUnpaid'), ...(unpaidN ? { count: unpaidN } : {}) }];
   if (!past) tabItems.unshift({ value: 'members', label: t('renewals.tab.members') });
   const tabs = <Segmented label={t('renewals.title')} value={tab} onChange={setTab} cols={isPhone ? tabItems.length : undefined} items={tabItems} />;
 

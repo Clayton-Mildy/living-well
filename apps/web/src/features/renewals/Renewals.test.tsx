@@ -49,7 +49,7 @@ describe('Next month', () => {
     await show(<Renewals />);
     expect(document.querySelector('h1')?.textContent).toBe('Next month');
     expect(document.body.textContent).toContain('November 2026');
-    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Members', 'Changes', 'Unpaid']);
+    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Members', 'Changes', 'Unpaid1']); // KC 28 Oct: the number of unpaid invoices beside Unpaid (the 5-member seed has one overdue)
     expect(tab(/^Changes$/)?.getAttribute('aria-selected')).toBe('true');
     expect(document.querySelector('[data-testid="renewals-progress"]')).toBeNull();
     expect(document.querySelector('[role="progressbar"]')).toBeNull();
@@ -57,7 +57,7 @@ describe('Next month', () => {
     expect(document.querySelector('[data-change]')).toBeNull(); // Lina's upgrade still waits for Ega from before: not a change yet
     expect(document.body.textContent).toContain('No changes recorded for November');
     expect(btn(/Record a change/)).toBeTruthy();
-    await click(tab(/^Unpaid$/));
+    await click(tab(/^Unpaid\d*$/));
     expect(document.querySelector('[data-testid="unpaid-list"]')).toBeTruthy();
     expect(btn(/Record a change/)).toBeFalsy();
   });
@@ -121,7 +121,7 @@ describe('Next month', () => {
     // Oma Lina's upgrade is recorded; Oma Lina is on Flex
     openClub('s1', 'lobby', 'Caca', world);
     await show(<Renewals />, '/renewals');
-    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Members', 'Changes', 'Unpaid']);
+    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Members', 'Changes', 'Unpaid1']);
     expect(tab(/^Members$/)?.getAttribute('aria-selected')).toBe('true');
     const rows = Array.from(document.querySelectorAll('[data-member]'));
     expect(rows.length).toBeGreaterThan(1);
@@ -174,7 +174,7 @@ describe('Next month', () => {
     expect(tab(/^Members$/)).toBeTruthy();
     await click(tab(/^Changes$/));
     await click(btn(/Earlier month/));
-    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Changes', 'Unpaid']);
+    expect(Array.from(document.querySelectorAll('[role="tab"]')).map((x) => x.textContent)).toEqual(['Changes', 'Unpaid1']);
     expect(tab(/^Changes$/)?.getAttribute('aria-selected')).toBe('true');
   });
 });
