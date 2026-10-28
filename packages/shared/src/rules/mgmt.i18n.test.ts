@@ -62,7 +62,7 @@ describe('i18n coverage for management and enquiries', () => {
     }
   });
   it('placeholders match between languages', () => {
-    const ph = (s: string) => (s.match(/\{\w+\}/g) || []).sort().join(',');
+    const ph = (s: string) => (s.match(/\{\w+\}/g) || []).map((p) => (p === '{planId}' ? '{plan}' : p)).sort().join(','); // {planId} is the Indonesian name of {plan}
     const bad = Object.keys(en).filter((k) => /^(mgmt|people|enq|form)\./.test(k)).filter((k) => ph((en as Record<string, string>)[k]) !== ph((id as Record<string, string>)[k]) && !/^form\.(s[0-9]|pron|consent|nannyQ|healthTake)/.test(k));
     expect(bad).toEqual([]);
   });
