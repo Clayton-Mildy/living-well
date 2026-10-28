@@ -123,7 +123,7 @@ test('Ega: Next month lists every member and what next month holds, a tap opens 
   await expect(list.locator('[data-member="m1"]')).toContainText('Flex');
   await expect(list.locator('[data-member="m1"]')).toContainText('Continues');
   await expect(list.locator('[data-member="m46"]')).toContainText('Gold');
-  await expect(list.getByTestId('next-count')).toContainText('5 continue');
+  await expect(list.locator('[data-filter="continues"]')).toHaveText(/^5\s*continue$/); // the Continues chip with its count
   await assertNoHorizontalScroll(page);
   await list.locator('[data-member="m1"] button[data-open]').click();
   await expect(page.getByRole('dialog', { name: /Oma Lina/ })).toBeVisible();

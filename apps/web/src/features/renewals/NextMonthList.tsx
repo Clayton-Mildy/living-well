@@ -2,11 +2,11 @@
 // KC (28 Oct): "the goal is to know what is our plan for next month, so the plan should be more visible, and should have a quick action to message or call".
 // Every member with next month's plan up front: the plan name when it continues, an ink badge when something changes (Flex → Gold, On leave, Stops 31 Oct),
 // a count of next month's plans on top, and Call / WhatsApp for the family contact on each row. A tap on the member records a change.
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { contactsOfMember, isPendingRow, listName, memberName, waUrl, type Plan, type YM } from '@cp/shared';
 import { renewalMembers, nextMonthPlans, type NextMonthRow } from '@cp/shared/rules/renewals';
 import { planDefs, planLabel } from '@cp/shared/rules/plans';
-import { Avatar, EmptyState, Icon, Select } from '../../components/ui';
+import { Avatar, EmptyState, Icon } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
 import { useFmt, useLang, useT } from '../../lib/i18n';
@@ -15,7 +15,8 @@ import { useClub } from '../../store/replica';
 import { FollowUpSheet } from './FollowUpSheet';
 
 type Filter = 'all' | 'continues' | 'changing';
-const FILTERS: Filter[] = ['all', 'continues', 'changing'];
+/** a plan id, or 'leave' / 'stop' */
+type PlanPick = string | null;
 const INK = '#24201C';
 const MUTED = '#6B6259';
 const badge = { display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 999, background: INK, color: '#FFFFFF', fontSize: 13, lineHeight: '20px', fontWeight: 500, whiteSpace: 'nowrap' } as const;
@@ -28,22 +29,26 @@ export function NextMonthList({ month }: { month: YM }) {
   const { today } = useNow();
   const { isPhone } = useDevice();
   const [filter, setFilter] = useState<Filter>('all');
+  const [pick, setPick] = useState<PlanPick>(null);
   const [open, setOpen] = useState<string | null>(null);
   const all = useMemo(() => nextMonthPlans(s, today), [s, today]);
   /** the members a change can be recorded for (a new member who starts on the 1st has no follow-up to open) */
   const followable = useMemo(() => new Set(renewalMembers(s, month).map((m) => m.id)), [s, month]);
   const planName = (p: Plan) => planLabel(s, p, lang);
   const continuing = all.filter((r) => r.status === 'continues').length;
-  const rows = all.filter((r) => filter === 'all' || (filter === 'continues') === (r.status === 'continues'));
+  /** what a summary chip counts: next month's plan for members who are in, else on leave or stopping */
+  const pickOf = (r: NextMonthRow): string | null => (r.status === 'stop' ? 'stop' : r.status === 'leave' ? 'leave' : r.planNext);
+  const rows = all.filter((r) => (filter === 'all' || (filter === 'continues') === (r.status === 'continues')) && (!pick || pickOf(r) === pick));
 
   /** next month at a glance: how many on each plan (in the catalogue's order), then on leave and stopping */
   const summary = useMemo(() => {
     const by = new Map<Plan, number>();
     let leave = 0, stop = 0;
     for (const r of all) {
-      if (r.status === 'stop') stop++;
-      else if (r.status === 'leave') leave++;
-      else if (r.planNext) by.set(r.planNext, (by.get(r.planNext) ?? 0) + 1);
+      const k = pickOf(r);
+      if (k === 'stop') stop++;
+      else if (k === 'leave') leave++;
+      else if (k) by.set(k as Plan, (by.get(k as Plan) ?? 0) + 1);
     }
     const plans = planDefs(s).filter((p) => by.get(p.id)).map((p) => ({ key: p.id, label: planLabel(s, p.id, lang), n: by.get(p.id)! }));
     return [...plans, ...(leave ? [{ key: 'leave', label: t('renewals.onLeave'), n: leave }] : []), ...(stop ? [{ key: 'stop', label: t('renewals.stops'), n: stop }] : [])];
@@ -77,6 +82,13 @@ export function NextMonthList({ month }: { month: YM }) {
     );
   };
 
+  /** a tap-to-filter chip: ink when on, tap again to clear */
+  const chip = (on: boolean, onClick: () => void, children: ReactNode, data: Record<string, string>) => (
+    <button key={Object.values(data)[0]} type="button" aria-pressed={on} onClick={onClick} className={on ? undefined : 'cp-fill'} {...data}
+      style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, minHeight: 36, padding: '7px 14px', borderRadius: 999, border: 'none', cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, lineHeight: '20px', background: on ? INK : 'var(--fill, #F4F4F5)', color: on ? '#FFFFFF' : INK, whiteSpace: 'nowrap', flex: 'none' }}>
+      {children}
+    </button>
+  );
   const round = (size: number) => ({ width: size, height: size, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: INK, display: 'flex', alignItems: 'center', justifyContent: 'center', textDecoration: 'none', flex: 'none' }) as const;
   const rowEl = (r: NextMonthRow, i: number) => {
     const m = r.member;
@@ -112,19 +124,13 @@ export function NextMonthList({ month }: { month: YM }) {
 
   return (
     <div data-testid="next-month-list" style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-      <div data-testid="next-plans" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-        <span style={{ fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', color: MUTED, fontWeight: 600, marginRight: 4 }}>{t('renewals.nextPlans')}</span>
-        {summary.map((x) => (
-          <span key={x.key} data-plan-count={x.key} className="cp-fill" style={{ display: 'inline-flex', alignItems: 'baseline', gap: 6, padding: '4px 12px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', fontSize: 14, lineHeight: '20px', color: INK }}>
-            <span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{x.n}</span>{x.label}
-          </span>
-        ))}
+      <div role="group" aria-label={t('renewals.nextPlans')} data-testid="next-plans" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: isPhone ? 'nowrap' : 'wrap', overflowX: isPhone ? 'auto' : undefined, margin: isPhone ? '0 -16px' : undefined, padding: isPhone ? '0 16px' : undefined, scrollbarWidth: 'none' }}>
+        <span style={{ fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', color: MUTED, fontWeight: 600, marginRight: 4, flex: 'none' }}>{t('renewals.nextPlans')}</span>
+        {summary.map((x) => chip(pick === x.key, () => setPick(pick === x.key ? null : x.key), <><span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{x.n}</span>{x.label}</>, { 'data-plan-count': x.key }))}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
-        <div style={{ flex: isPhone ? '1 1 140px' : '0 0 200px' }}>
-          <Select ariaLabel={t('renewals.segLabel')} value={filter} onChange={setFilter} options={FILTERS.map((f) => ({ value: f, label: t(`renewals.f.${f}`) }))} />
-        </div>
-        <span data-testid="next-count" style={{ fontSize: 13, lineHeight: '18px', color: MUTED, fontVariantNumeric: 'tabular-nums' }}>{t('renewals.countLine', { c: continuing, n: all.length - continuing })}</span>
+      <div role="group" aria-label={t('renewals.segLabel')} data-testid="next-count" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+        {chip(filter === 'continues', () => setFilter(filter === 'continues' ? 'all' : 'continues'), <><span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{continuing}</span>{t('renewals.chip.continues')}</>, { 'data-filter': 'continues' })}
+        {chip(filter === 'changing', () => setFilter(filter === 'changing' ? 'all' : 'changing'), <><span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{all.length - continuing}</span>{t('renewals.chip.changing')}</>, { 'data-filter': 'changing' })}
       </div>
       {rows.length
         ? <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden', padding: isPhone ? 0 : '4px clamp(18px, 3vw, 28px)' }}>{rows.map(rowEl)}</div>

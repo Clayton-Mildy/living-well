@@ -141,14 +141,28 @@ describe('Next month', () => {
     expect(document.querySelector('[data-member="m1"] [data-testid="next-call"]')?.getAttribute('href')).toMatch(/^tel:\+?\d+$/);
     expect(document.querySelector('[data-member="m1"] [data-testid="next-wa"]')?.getAttribute('href')).toMatch(/^https:\/\/wa\.me\//);
     const cont = rows.length - changing.length;
-    expect(document.querySelector('[data-testid="next-count"]')?.textContent).toBe(`${cont} continue · ${changing.length} change`);
+    expect(document.querySelector('[data-filter="continues"]')?.textContent).toBe(`${cont}continue`);
+    expect(document.querySelector('[data-filter="changing"]')?.textContent).toBe(`${changing.length}change`);
     expect(document.querySelector('[data-member] [data-testid="next-status"]')).toBeTruthy();
     // the filter: Changing keeps only the changes
-    await click(document.querySelector('[role="combobox"]'));
-    await click(Array.from(document.querySelectorAll('[role="option"]')).find((o) => /^Changing$/.test(o.textContent || '')));
+    expect(document.querySelector('[data-testid="next-month-list"] [role="combobox"]')).toBeNull(); // chips, not a dropdown
+    await click(document.querySelector('[data-filter="changing"]'));
+    expect(document.querySelector('[data-filter="changing"]')?.getAttribute('aria-pressed')).toBe('true');
     const left = Array.from(document.querySelectorAll('[data-member]'));
     expect(left.length).toBe(changing.length);
     expect(left.every((r) => r.getAttribute('data-status') !== 'continues')).toBe(true);
+    // tap Changing again: everyone is back; tap the Gold count: only next month's Gold members (Oma Lina's upgrade among them)
+    await click(document.querySelector('[data-filter="changing"]'));
+    expect(document.querySelectorAll('[data-member]').length).toBe(rows.length);
+    const gold = document.querySelector('[data-plan-count="gold"]')!;
+    const goldN = Number(gold.textContent!.match(/^\d+/)![0]);
+    await click(gold);
+    const golds = Array.from(document.querySelectorAll('[data-member]'));
+    expect(golds.length).toBe(goldN);
+    expect(golds.map((r) => r.getAttribute('data-member'))).toContain('m1');
+    expect(golds.every((r) => !['stop', 'leave'].includes(r.getAttribute('data-status')!))).toBe(true);
+    await click(gold); // off again
+    expect(document.querySelectorAll('[data-member]').length).toBe(rows.length);
     // a tap opens the follow-up sheet for that member
     await click(document.querySelector('[data-member="m1"] button[data-open]'));
     expect(document.body.textContent).toContain('Follow up Oma Lina');
