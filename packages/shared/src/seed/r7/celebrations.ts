@@ -2,9 +2,12 @@
 // cake without nuts) on the third open day after T, so the kitchen, the calendar and his family's Today all show it; and an anniversary lunch for Opa Tjahjadi
 // (m20) that Caca has asked for and management has not answered yet. Both land on open club days, so they hold for T = 21 Oct (tests) and any other demo day.
 // No random draws. Round 14 adds Opa Hendra's birthday about ten days out, without a celebration. The same date is Opa Budi's real birthday (Task 14: he turns 80 that day), so the occasions on Arrivals, the menu and the calendar agree with the party.
-import type { Celebration, ClubState, ISODate } from '../../types';
-import { dayStatus } from '../../rules/core';
+// KC 28 Oct: Bapak Bambang turns 78 exactly two weeks after T, and the reminder the daily job sends that morning is already in the bells, so the demo can start from it.
+import type { Celebration, ClubState, ISODate, Notification } from '../../types';
+import { dayStatus, displayName } from '../../rules/core';
 import { celebrationTitle } from '../../rules/celebrations';
+import { dm } from '../../rules/mgmtParse';
+import { OCCASION_AHEAD_DAYS } from '../../rules/occasions';
 import { addDays } from '../../util';
 
 /** The n-th open club day after `from` (no weekend, closure, holiday or outing); n = 1 is the next one. */
@@ -31,6 +34,19 @@ export function seedCelebrations(s: ClubState, T: ISODate): void {
   // round 14: Opa Hendra (m2) has a birthday on the first open day from ten days after T (turning 85, so his age today stays 84), with no celebration yet:
   // the Prepare button and the two-week list show on every demo day, and the day can hold a party
   if (s.members.m2) { const bd = openDayFrom(s, addDays(T, 10)); s.members.m2.dob = `${+bd.slice(0, 4) - 85}-${bd.slice(5)}`; }
+  // KC 28 Oct: Bapak Bambang (m10) turns 78 exactly two weeks after T (his age today stays 77), and the birthday reminder is in the bells of activity, the front desk
+  // and management: a tap opens the request form pre-filled. The same ref as the job's (occasions.daily), so the job does not send it again.
+  if (s.members.m10) {
+    const bd = addDays(T, OCCASION_AHEAD_DAYS);
+    const m = s.members.m10;
+    m.dob = `${+bd.slice(0, 4) - 78}-${bd.slice(5)}`;
+    const id = 'nt-bday-m10';
+    s.notifications[id] = {
+      id, clubId: C, createdAt: `${T}T07:00`, createdBy: 'system', toUsers: [], toRoles: ['activity', 'lobby', 'mgmt'], kind: 'occ.notif.birthdaySoon',
+      params: { name: displayName(m), years: 78, date: dm(bd) }, severity: 'info', action: false, link: `/celebrations?new=m10&date=${bd}`, memberId: 'm10',
+      ref: { type: 'birthday', id: `bday:m10:${bd}` }, readBy: [],
+    } satisfies Notification;
+  }
   if (s.members.m46 && s.rooms['room-garden-room']) {
     s.celebrations['cel-seed-1'] = row('cel-seed-1', {
       memberId: 'm46', kind: 'birthday', title: celebrationTitle('birthday', 'Opa Budi', 80, 'en'), date: budi, from: '15:00', to: '17:00', roomId: 'room-garden-room', guests: 12,

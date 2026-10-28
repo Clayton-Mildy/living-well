@@ -70,7 +70,7 @@ describe('birthday rows with Prepare (round 14)', () => {
     await act(async () => { host!.querySelector<HTMLButtonElement>('[data-testid="prepare-m2"] button')!.click(); });
     const dialog = document.querySelector('[role="dialog"]')!;
     expect(dialog.textContent).toContain('New celebration');
-    expect([...dialog.querySelectorAll('input')].map((i) => i.value)).toContain("Opa Hendra's birthday");
+    expect([...dialog.querySelectorAll('input')].map((i) => i.value)).toContain("Opa Hendra's 85th birthday");
     expect(dialog.textContent).toContain('13:30');
     await act(async () => { root!.unmount(); });
     host!.remove();

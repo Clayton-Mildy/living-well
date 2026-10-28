@@ -234,7 +234,7 @@ test('Birthdays: Dinar sees Opa Hendra’s birthday two weeks ahead on Today, ta
   await assertNoHorizontalScroll(page);
   await list.getByTestId('prepare-m2').getByRole('button').click();
   const d = page.getByRole('dialog').last();
-  await expect(d.getByLabel('Title')).toHaveValue("Opa Hendra's birthday");
+  await expect(d.getByLabel('Title')).toHaveValue("Opa Hendra's 85th birthday");
   await expect(d).toContainText('13:30');
   await expect(d).toContainText('15:00');
   await assertNoHorizontalScroll(page);

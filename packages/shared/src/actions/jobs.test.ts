@@ -25,8 +25,18 @@ describe('occasions.daily', () => {
   it('says nothing for a birthday 13 or 15 days away', () => {
     const s = buildSeed().citra;
     for (const m of Object.values(s.members)) m.dob = null;
+    for (const x of Object.values(s.notifications)) if (x.kind === 'occ.notif.birthdaySoon') delete s.notifications[x.id]; // the seed's own reminder (Bapak Bambang)
     s.members.m2.dob = `1942-${addDays(T, 13).slice(5)}`;
     s.members.m10.dob = `1944-${addDays(T, 15).slice(5)}`;
     expect(told(tick(s, T), 's9')).toHaveLength(0);
+  });
+  it('the seed already holds the reminder for Bapak Bambang, two weeks out, and the job does not send it again', () => {
+    const date = addDays(T, 14);
+    const after = tick(buildSeed(T).citra, T);
+    for (const uid of ['s5', 's1', 's9']) {
+      const mine = told(after, uid).filter((x) => x.ref?.id === `bday:m10:${date}`);
+      expect(mine).toHaveLength(1);
+      expect(mine[0]).toMatchObject({ link: `/celebrations?new=m10&date=${date}`, params: { name: 'Bapak Bambang', years: 78, date: '4/11' } });
+    }
   });
 });

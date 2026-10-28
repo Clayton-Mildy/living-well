@@ -1,5 +1,5 @@
 // The celebration request form as a sheet (round 14): the Celebrations tab, the Prepare button on a birthday row and the reminder's link (/celebrations?new=&date=) all
-// open this one form. `prefill` starts it on a member, an occasion and a day (title "{nickname}'s birthday", the first room, 13:30–15:00).
+// open this one form. `prefill` starts it on a member, an occasion and a day (the suggested title with the age, the first room, 13:30–15:00).
 import { useState } from 'react';
 import { approvedMembers, listName, displayName, membershipStatus, sortBy, type Celebration, type CelebrationKind, type ISODate, type Member, type Room } from '@cp/shared';
 import { CELEBRATION_KINDS, CELEBRATION_GUESTS_MAX, celebrationTitle, checkCelebrationSlot } from '@cp/shared/rules/celebrations';
@@ -97,10 +97,9 @@ export function Submit({ f, ignoreId, busy, onClick, children }: { f: CForm; ign
 }
 
 export interface CelebrationPrefill { memberId: string; kind: CelebrationKind; date: ISODate }
-/** The form a Prepare tap starts: the member's occasion on its day, "{nickname}'s birthday", the first venue room, 13:30–15:00. */
-export function prefillForm(s: Parameters<typeof venueRooms>[0], p: CelebrationPrefill, lang: 'en' | 'id'): CForm {
-  const m = s.members[p.memberId];
-  return { ...blank(venueRooms(s)), memberId: p.memberId, kind: p.kind, date: p.date, from: '13:30', to: '15:00', title: m ? celebrationTitle(p.kind, displayName(m), undefined, lang) : '' };
+/** The form a Prepare tap starts: the member's occasion on its day, the first venue room, 13:30–15:00. The title is left to the suggestion ("{nickname}'s 85th birthday"), so it carries the age and follows the day. */
+export function prefillForm(s: Parameters<typeof venueRooms>[0], p: CelebrationPrefill): CForm {
+  return { ...blank(venueRooms(s)), memberId: p.memberId, kind: p.kind, date: p.date, from: '13:30', to: '15:00' };
 }
 
 export function CelebrationSheet({ open, onClose, prefill }: { open: boolean; onClose: () => void; prefill?: CelebrationPrefill }) {
@@ -122,7 +121,7 @@ function SheetBody({ onClose, prefill }: { onClose: () => void; prefill?: Celebr
   const { role } = useMe();
   const isMgmt = role === 'mgmt';
   const rooms = venueRooms(s);
-  const [form, setForm] = useState<CForm>(() => (prefill ? prefillForm(s, prefill, lang) : blank(rooms)));
+  const [form, setForm] = useState<CForm>(() => (prefill ? prefillForm(s, prefill) : blank(rooms)));
   const { busy, run } = useBusy();
   const book = () => run(async () => {
     const title = form.title || suggestTitle(s.members[form.memberId], form, lang);
