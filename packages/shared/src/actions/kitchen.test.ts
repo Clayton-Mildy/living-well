@@ -230,8 +230,8 @@ describe('allergy conflicts and plans', () => {
     // closed days: no menu, nothing clashes, nothing throws
     expect(allergiesOnFile(seed(), '2026-10-24', T).every((r) => r.clashes.length === 0)).toBe(true);
   });
-  it('uses the club date, not a fixed month: a plan for a Wednesday in November', () => {
-    const NOV = '2026-11-11'; // Wednesday
+  it('uses the club date, not the demo day: a plan for next Wednesday', () => {
+    const NOV = '2026-10-28'; // Wednesday next week (KC round 15: the last week the seed planned)
     const s = produce(seed(), (d) => {
       d.attendance[`${NOV}:m10`] = { id: `${NOV}:m10`, clubId: 'citra', createdAt: `${NOV}T09:30`, createdBy: 'staff:s1', memberId: 'm10', date: NOV, checkIn: { at: '09:30', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
     });
@@ -250,7 +250,7 @@ describe('weekly menu', () => {
     const lunch = [...thursdayLunch(s), 'dish-ayam-bakar'];
     const r = run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch) }, 's3');
     expect(menuOn(r.state, '2026-10-22')!.lunch).toContain('dish-ayam-bakar');
-    expect(menuOn(r.state, '2026-10-29')!.lunch).toContain('dish-ayam-bakar');
+    expect(menuOn(r.state, '2026-10-29')!.lunch).not.toContain('dish-ayam-bakar'); // KC round 15: next week keeps its own menu
     expect(menuOn(r.state, '2026-10-15')!.lunch).not.toContain('dish-ayam-bakar'); // last Thursday: history unchanged
     expect(menuOn(r.state, T)!.lunch).toEqual(menuOn(s, T)!.lunch);
     expect(r.state.menuVersions[r.result.versionId as string]).toMatchObject({ status: 'published', effectiveFrom: T, publishedBy: 'staff:s3', approval: { status: 'pending', by: 'staff:s3' } });
@@ -264,7 +264,7 @@ describe('weekly menu', () => {
     expect(r.result.pending).toBe(true);
     // the club's own screens follow it at once; the old version is not replaced yet
     expect(menuOn(r.state, '2026-10-22')!.lunch).toContain('dish-ayam-bakar');
-    expect(r.state.menuVersions['menu-2024-07'].deletedAt).toBeUndefined();
+    expect(r.state.menuVersions['menu-2026-10-19'].deletedAt).toBeUndefined();
     // families get the approved menu only
     const fam = projectForFamily(r.state, 'fm10_0');
     expect(fam.menuVersions[id]).toBeUndefined();
@@ -274,7 +274,8 @@ describe('weekly menu', () => {
     // approval: the version replaces the old one, families see it and are told
     const ok = approveMenu(r.state, [id]);
     expect(ok.state.menuVersions[id].approval).toMatchObject({ status: 'approved', decidedBy: 'staff:s9' });
-    expect(ok.state.menuVersions['menu-2024-07'].deletedAt).toBeUndefined(); // earlier versions stay as history; only the same date or later ones give way
+    expect(ok.state.menuVersions['menu-2026-10-19'].deletedAt).toBeUndefined(); // this week's earlier days keep theirs; only the same date or later ones give way
+    expect(ok.state.menuVersions['menu-2026-10-26'].deletedAt).toBeUndefined(); // KC round 15: next week keeps its own
     expect(projectForFamily(ok.state, 'fm10_0').menuVersions[id]).toBeDefined();
     expect(menuOn(projectForFamily(ok.state, 'fm10_0'), '2026-10-22')!.lunch).toContain('dish-ayam-bakar');
     expect(Object.values(ok.state.notifications).filter((x) => x.kind === 'kitchen.notif.menuPublished')).toHaveLength(1);
@@ -308,30 +309,31 @@ describe('weekly menu', () => {
     // the family sees it in their updates
     expect(updatesFor(on.state, usr(on.state, 'fm10_0')).some((x) => x.kind === 'kitchen.notif.menuPublished')).toBe(true);
   });
-  it('planning next week: a plan published from that Monday leaves this week alone and carries on after it', () => {
+  it('planning next week: a plan published from that Monday leaves this week and the weeks after it alone (KC round 15)', () => {
     const s = seed();
     const MON = '2026-10-26';
     const lunch = [...thursdayLunch(s), 'dish-ayam-bakar'];
     const r = run(s, 'menu.publish', { effectiveFrom: MON, days: withLunch(s, lunch) }, 's3');
     expect(menuOn(r.state, '2026-10-22')!.lunch).toEqual(menuOn(s, '2026-10-22')!.lunch); // Thursday this week: unchanged
     expect(menuOn(r.state, '2026-10-29')!.lunch).toContain('dish-ayam-bakar'); // Thursday next week
-    expect(menuOn(r.state, '2026-11-05')!.lunch).toContain('dish-ayam-bakar'); // and the week after, until another menu starts
+    expect(menuOn(r.state, '2026-11-05')!.lunch).toEqual([]); // the week after was never planned
     expect(r.state.menuVersions[r.result.versionId as string].effectiveFrom).toBe(MON);
     expect(Object.values(approveMenu(r.state, [r.result.versionId as string]).state.notifications).find((x) => x.kind === 'kitchen.notif.menuPublished')!.params.date).toBe(MON);
     // changing only next week's Tuesday in a version already scheduled for that Monday replaces it
     const again = run(r.state, 'menu.publish', { effectiveFrom: MON, days: withLunch(s, ['dish-rawon']) }, 's3');
-    expect(live(again.state.menuVersions).filter((v) => v.effectiveFrom === MON)).toHaveLength(1);
+    expect(again.state.menuVersions[r.result.versionId as string].deletedAt).toBeDefined(); // the waiting one it replaces
     expect(menuOn(again.state, '2026-10-29')!.lunch).toEqual(['dish-rawon']);
   });
-  it('a second publish for the same date replaces the first; a later scheduled version is replaced too', () => {
+  it('a second publish for the same date replaces the first; a publish for this week leaves next week’s alone (KC round 15)', () => {
     const s = seed();
     const a = run(s, 'menu.publish', { effectiveFrom: '2026-10-26', days: withLunch(s, ['dish-ayam-bakar']) }, 's3');
     const b = run(a.state, 'menu.publish', { effectiveFrom: '2026-10-26', days: withLunch(s, ['dish-rawon']) }, 's3');
     expect(menuOn(b.state, '2026-10-29')!.lunch).toEqual(['dish-rawon']);
-    expect(live(b.state.menuVersions).filter((v) => v.effectiveFrom === '2026-10-26')).toHaveLength(1);
+    expect(b.state.menuVersions[a.result.versionId as string].deletedAt).toBeDefined();
     const c = run(b.state, 'menu.publish', { effectiveFrom: T, days: withLunch(s, ['dish-ayam-bakar']) }, 's3');
-    expect(menuOn(c.state, '2026-10-29')!.lunch).toEqual(['dish-ayam-bakar']); // the scheduled one no longer shadows it
-    expect(live(c.state.menuVersions).filter((v) => v.effectiveFrom > T)).toHaveLength(0);
+    expect(menuOn(c.state, '2026-10-22')!.lunch).toEqual(['dish-ayam-bakar']);
+    expect(menuOn(c.state, '2026-10-29')!.lunch).toEqual(['dish-rawon']); // next week's is its own
+    expect(c.state.menuVersions[b.result.versionId as string].deletedAt).toBeUndefined();
   });
   it('refuses unchanged menus, past dates, unknown dishes and dishes in the wrong course', () => {
     const s = seed();

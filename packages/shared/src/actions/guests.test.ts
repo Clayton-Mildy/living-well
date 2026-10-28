@@ -160,7 +160,7 @@ describe('guest.book', () => {
     const r = run(fresh(), 'guest.book', { hostId: 'gh-ratna', date: '2026-10-26', slot: '13:30', activityId: 'act-angklung' });
     let s = r.state;
     expect(sessionsOn(s, '2026-10-26')[1].cell).toEqual({ activityId: 'act-angklung', staffId: 's6', roomId: 'room-music' }); // Monday 13:30 was chair yoga with Kak Dimas
-    expect(sessionsOn(s, '2026-11-09')[1].cell?.activityId).toBe('act-yoga');
+    expect(sessionsOn(s, '2026-10-19')[1].cell?.activityId).toBe('act-yoga'); // other Mondays keep the plan
     const told = notLobby(s, 'guests.notif.booked').at(-1)!;
     expect(told.toUsers.length).toBeGreaterThan(0);
     expect(dayInfo(s, '2026-10-26', 'staff').items.find((i) => i.time === '13:30')).toMatchObject({ changed: true, guest: { name: 'Bu Ratna' } });

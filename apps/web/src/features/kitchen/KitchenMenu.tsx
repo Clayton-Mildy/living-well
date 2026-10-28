@@ -19,6 +19,7 @@ import { LunchPhotos } from './LunchPhotos';
 import { OutlineButton, cardLabel } from './parts';
 import { PublishDialog, WeeklyPlan, usePlanEditor } from './WeeklyPlan';
 import { useMenuVals } from './vals';
+import { WeekPlanReminder } from '../calendar/WeekPlanReminder';
 
 export function KitchenMenu() {
   const t = useT();
@@ -60,6 +61,7 @@ export function KitchenMenu() {
     <>
       <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 20 : 'clamp(18px, 2.8vw, 32px)' }}>
         <PageHead eyebrow={fdl(v.today)} title={t('kitchen.menuTitle')} />
+        {readOnly ? null : <WeekPlanReminder what="menu" onMenu={(m) => { editor.goto(m); requestAnimationFrame(() => document.querySelector('[data-testid="plan-week"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })); }} />}
 
         {v.closed && isPhone ? (
           <Group pad={0} gap={0}>

@@ -45,10 +45,10 @@ describe('dayPlan and Now/Next', () => {
     expect(dayPlan(s, '2026-10-30')).toEqual([]); // closed
     expect(dayPlan(s, '2026-10-29')).toEqual([]); // outing
     expect(nowNext(s, '2026-10-24', 600)).toEqual({ phase: 'none', current: undefined, later: [] });
-    const cleared = produce(s, (d) => { d.scheduleVersions['sched-2024-07'].days[3]['10:30'] = null; });
+    const cleared = produce(s, (d) => { d.scheduleVersions['sched-2026-10-19'].days[3]['10:30'] = null; });
     expect(dayPlan(cleared, T).map((x) => x.time)).toEqual(['12:00', '13:30', '15:00']);
     expect(nowNext(cleared, T, 600)).toMatchObject({ phase: 'next', current: { time: '13:30' } });
-    const none = produce(s, (d) => { d.scheduleVersions['sched-2024-07'].days[3] = { '10:30': null, '13:30': null }; });
+    const none = produce(s, (d) => { d.scheduleVersions['sched-2026-10-19'].days[3] = { '10:30': null, '13:30': null }; });
     expect(nowNext(none, T, 600).phase).toBe('none');
     expect(dayPlan(none, T).map((x) => x.kind)).toEqual(['lunch', 'tea']);
     expect(dayPlan(produce(s, (d) => { d.scheduleVersions = {}; }), T).map((x) => x.kind)).toEqual(['lunch', 'tea']); // no schedule yet: no crash

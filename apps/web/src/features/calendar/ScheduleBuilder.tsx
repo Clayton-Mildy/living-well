@@ -10,12 +10,15 @@
 // Round 14 (B2): Saturday and Sunday follow Friday, empty by default under a lighter "Weekend" header; a session placed there opens the club that day.
 // Round 15 (phase 2): while a version waits, "See proposed week" draws it in the grid (a changed cell shows its session before, struck through, and after) and management
 // approves or rejects it right there (the same approval actions as Approvals); the activity team sees the proposed week without the buttons.
+// KC round 15: each week has its own plan (a publish is for the week shown only; a week nobody planned shows "Not planned"). "Copy last week" puts last
+// week's plan into the draft (asking first when it replaces sessions already placed); it is published like any other change.
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from 'react';
 import { useResetOn } from '../../lib/useResetOn';
 import { ALL_DAYS, actorName, addDays, asWeekday, live, publishDateOf, scheduleVersionFor, staffCall, type ISODate, type Weekday, type WeekSlot } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
 import { SLOTS, activityTeachers, changedCells, cloneDays, dayEditable, effectiveVersions, mondayOf, nextMonday, normalizeDays, pendingVersions, returnedVersion, sameCell, weekDays, weekEditable, weekView, type Days } from '@cp/shared/rules/calendar';
-import { Button, DateField, Group, Icon, IconButton, Note, Pager, Select, Sheet, Toggle, chipStyle, uiZoom, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
+import { copyProgramme, hasSessions, lastWeekProgramme, programmeCopyReplaces } from '@cp/shared/rules/weekPlans';
+import { Button, Group, Icon, IconButton, Note, Pager, Select, Sheet, Toggle, chipStyle, uiZoom, usePaged, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -27,6 +30,7 @@ import { sessionText } from '../members/approvalView';
 import { Badge, plural, rowLine } from '../activity/lib';
 import { CatalogEditor } from './CatalogEditor';
 import { ProposalActions } from './ProposalActions';
+import { ConfirmDialog } from '../kitchen/parts';
 import { smallCaps, weekdayName } from './lib';
 
 type Cell = { w: Weekday; slot: WeekSlot };
@@ -62,7 +66,7 @@ function useDraft(week: ISODate) {
   const edit = (fn: (d: Days) => void) => { const next = cloneDays(draft); fn(next); put(next); };
   const flush = () => new Promise<void>((res) => { const r = run.current; if (!r.busy && !r.next) res(); else r.idle.push(res); });
   const reset = () => { localRef.current = null; setLocal(null); };
-  return { view, draft, base: view.base, edit, flush, reset, discard: () => put(cloneDays(view.base)), changes: changedCells(draft, view.base) };
+  return { view, draft, base: view.base, edit, put, flush, reset, discard: () => put(cloneDays(view.base)), changes: changedCells(draft, view.base) };
 }
 
 export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: ISODate; onWeek: (monday: ISODate) => void; focusDate?: ISODate | null; request?: CellRequest | null }) {
@@ -102,12 +106,19 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const teachers = activityTeachers(s);
   const palette = live(s.activities).filter((a) => a.active).sort((a, b) => a.name.localeCompare(b.name));
   const rooms = live(s.rooms).sort((a, b) => a.name.localeCompare(b.name));
-  const versions = effectiveVersions(s);
+  const versions = useMemo(() => effectiveVersions(s).filter((v) => mondayOf(v.effectiveFrom) === week), [s, week]); // KC round 15: the versions of the week shown
   const vp = usePaged(versions, 5);
   const inForce = scheduleVersionFor(s, today);
   const hours = s.club.settings;
   const changed = d.changes.length;
   const canEdit = view.editable && !view.otherDraft && !proposing;
+  /** KC round 15: the week shown has its own published plan; last week's can be copied into the draft */
+  const planned = view.versions.length > 0;
+  const last = useMemo(() => lastWeekProgramme(s, week), [s, week]);
+  const canCopy = canEdit && hasSessions(last);
+  const [askCopy, setAskCopy] = useState(false);
+  const doCopy = () => { d.put(copyProgramme(d.draft, last, week, today)); setSel(null); setPick(null); setAskCopy(false); say(t('cal.copied')); };
+  const onCopy = () => (programmeCopyReplaces(d.draft, last, week, today) ? setAskCopy(true) : doCopy());
   /** KC round 7: in the current week a day before today has already happened: it shows what ran and cannot be changed */
   const locked = (w: Weekday) => !dayEditable(view.dates[w - 1], today);
   const wLong = (w: number) => weekdayName(lang, w, 'long');
@@ -253,7 +264,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const who = (v: NonNullable<typeof shown>) => (v.publishedBy ? (staffCall(s.staff[v.publishedBy.replace('staff:', '')]) || actorName(s, v.publishedBy)) : '');
   const status = changed ? plural(t, 'cal.changesPending', changed)
     : shown ? t('cal.publishedBy', { when: `${fds(shown.publishedAt?.slice(0, 10) || shown.effectiveFrom)}, ${shown.publishedAt?.slice(11, 16) || ''}`, who: who(shown) }) + ' · ' + t('cal.inForceFrom', { date: fds(shown.effectiveFrom) })
-      : t('cal.noSchedule');
+      : '';
   const midWeek = !changed && view.versions.length > 1 ? view.versions[1] : null;
 
   // the remove ✕ sits beside the cell (never inside the cell's own button)
@@ -377,8 +388,8 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           <div style={smallCaps}>{t('cal.builder')}</div>
           <h2 className="cp-serif" style={{ margin: 0, fontSize: isPhone ? 24 : 28, lineHeight: isPhone ? '30px' : '36px', fontWeight: 400, letterSpacing: '-0.8px', color: '#2B231C' }}>{t('cal.weekly')}</h2>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 16, lineHeight: 1.4, flexWrap: 'wrap' }}>
-            {proposing ? <Badge kind="watch" label={t('cal.proposed')} /> : changed ? <Badge kind="watch" label={t('cal.draft')} /> : <Badge kind="paid" label={t('cal.published')} />}
-            <span>{status}</span>
+            {proposing ? <Badge kind="watch" label={t('cal.proposed')} /> : changed ? <Badge kind="watch" label={t('cal.draft')} /> : planned ? <Badge kind="paid" label={t('cal.published')} /> : <Badge label={t('cal.notPlanned')} bg="var(--press, #EEEEF0)" fg="#5E5852" icon="event_busy" />}
+            {status ? <span>{status}</span> : null}
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
@@ -435,6 +446,14 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
         </Note>
       ) : null}
       {midWeek ? <Note tone="cream" icon="info">{t('cal.midWeekChange', { date: fds(midWeek.effectiveFrom) })}</Note> : null}
+      {canEdit && !planned && !changed ? (
+        <Note tone="cream" icon="event_busy">
+          <span data-testid="week-not-planned" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+            <span>{t('cal.notPlannedNote')}</span>
+            {canCopy ? <Button variant="secondary" size={44} icon="content_copy" onClick={onCopy}>{t('cal.copyLastWeek')}</Button> : <span style={{ color: '#5E5852' }}>{t('cal.noLastWeek')}</span>}
+          </span>
+        </Note>
+      ) : canCopy ? <div><Button variant="ghost" size={44} icon="content_copy" onClick={onCopy}>{t('cal.copyLastWeek')}</Button></div> : null}
 
       {canEdit ? (isPhone ? (
         // round 6, phone: the activities are a group with its header outside
@@ -583,7 +602,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
         )) : null}
       </div>
 
-      {isPhone ? (
+      {!versions.length ? null : isPhone ? (
         <Group title={t('cal.versions')} pad={0} gap={0}>
           {vp.rows.map((v, i) => versionRow(v, i))}
           <Pager page={vp.page} pages={vp.pages} onPage={vp.setPage} label={t('cal.pagerVersions')} />
@@ -609,6 +628,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           return t(r.code, r.params);
         }} />
       <CatalogEditor open={catalog} onClose={() => setCatalog(false)} />
+      <ConfirmDialog open={askCopy} onClose={() => setAskCopy(false)} title={t('cal.copyTitle')} body={t('cal.copyBody')} confirmLabel={t('cal.copyConfirm')} cancelLabel={t('cal.copyKeep')} onConfirm={doCopy} danger={false} />
       {/* KC round 9: a tap on an empty slot — choose its activity from a short list (it is placed at once; no side panel) */}
       <Sheet open={!!pick} onClose={() => setPick(null)} title={pick ? t('cal.chooseFor', { day: `${wLong(pick.w)} ${dayNum(pick.w)}`, slot: pick.slot }) : ''}>
         <div role="list" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -634,20 +654,18 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   );
 }
 
-/** `asks` (round 14, the activity team): the sheet sends the version to Ega; who is told is decided when Ega approves. */
+/** `asks` (round 14, the activity team): the sheet sends the version to Ega; who is told is decided when Ega approves.
+ *  KC round 15: the plan is for the week shown only: from its Monday, or from today when that week has started, to its Sunday. */
 function PublishSheet({ open, onClose, summary, more, count, week, asks, onPublish }: { open: boolean; onClose: () => void; summary: string[]; more: number; count: number; week: ISODate; asks?: boolean; onPublish: (date: string, notify: boolean) => Promise<string> }) {
   const t = useT();
   const { fdl } = useFmt();
   const { today } = useNow();
-  // default: the Monday of the week being edited, or today when that week has started (KC round 7: the current week publishes from today)
   const start = week > today ? week : today;
-  const [date, setDate] = useState<string>(start);
+  const end = addDays(week, 6);
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
   const [err, setErr] = useState('');
-  useResetOn(open ? 'open' + week : null, () => { setDate(start); setNotify(true); setErr(''); });
-  const min = today;
-  const ok = !!date && date >= min;
+  useResetOn(open ? 'open' + week : null, () => { setNotify(true); setErr(''); });
   return (
     <Sheet open={open} onClose={onClose} title={t(asks ? 'cal.sendTitle' : 'cal.publishTitle')}>
       <div style={{ fontSize: 16, lineHeight: '22px' }}>{plural(t, 'cal.changesPending', count)}</div>
@@ -655,15 +673,10 @@ function PublishSheet({ open, onClose, summary, more, count, week, asks, onPubli
         {summary.map((x) => <li key={x}>{x}</li>)}
         {more ? <li>{t('cal.andMore', { n: more })}</li> : null}
       </ul>
-      <DateField label={t('cal.effective')} value={date} min={min} onChange={setDate} error={!ok && t('cal.err.futureOnly')} />
-      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        <Button variant="quiet" size={44} onClick={() => setDate(start)}>{t(start === today ? 'cal.fromToday' : 'cal.weekStart')}</Button>
-        <Button variant="quiet" size={44} onClick={() => setDate(nextMonday(today))}>{t('cal.nextMonday')}</Button>
-      </div>
-      {asks ? (ok ? null : <Note tone="cream" icon="info">{t('cal.err.futureOnly')}</Note>) : <Note tone="cream" icon="info">{ok ? t(date === today ? 'cal.effectiveNoteToday' : 'cal.effectiveNote', { date: fdl(date) }) : t('cal.err.futureOnly')}</Note>}
+      <Note tone="cream" icon="date_range">{t(start === today ? 'cal.effectiveNoteToday' : 'cal.effectiveNote', { date: fdl(start), end: fdl(end) })}</Note>
       {asks ? null : <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />}
       {err ? <Note tone="rust" icon="error">{err}</Note> : null}
-      <Button full disabled={!ok || busy} onClick={async () => { setBusy(true); setErr(await onPublish(date, notify)); setBusy(false); }}>{t(asks ? 'cal.sendForApproval' : 'cal.publishBtn')}</Button>
+      <Button full disabled={busy} onClick={async () => { setBusy(true); setErr(await onPublish(start, notify)); setBusy(false); }}>{t(asks ? 'cal.sendForApproval' : 'cal.publishBtn')}</Button>
     </Sheet>
   );
 }

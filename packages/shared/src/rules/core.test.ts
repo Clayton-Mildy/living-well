@@ -1,7 +1,7 @@
 // Display names: the nickname (Panggilan) is what staff and family call a member.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { buildSeed, type Member } from '../index';
+import { buildSeed, type ClubState, type Member } from '../index';
 import { checkVenueSlot } from './mgmt';
 import { dayStatus, displayFull, displayName, initials, memberName, memberShort, openDaysInMonth } from './core';
 
@@ -41,12 +41,17 @@ describe('weekends open when programmed', () => {
   const SEED_SUN = '2026-11-08';
   const seed = () => { const s = buildSeed().citra; return s; };
     const ANGKLUNG = { activityId: 'act-angklung', staffId: 's5', roomId: 'room-music' };
+  /** KC round 15: each week has its own plan; these weeks get one with a Saturday cell (a copy of next week's with Saturday added). */
+  const satPlan = (st: ClubState, mondays: string[]) => produce(st, (d) => {
+    for (const m of mondays) d.scheduleVersions[`sched-${m}`] = { ...JSON.parse(JSON.stringify(st.scheduleVersions['sched-2026-10-26'])), id: `sched-${m}`, effectiveFrom: m, days: { ...JSON.parse(JSON.stringify(st.scheduleVersions['sched-2026-10-26'].days)), 6: { '10:30': ANGKLUNG, '13:30': null } } };
+  });
   it('a Saturday with nothing programmed is closed for the weekend', () => {
     expect(dayStatus(seed(), SAT)).toMatchObject({ open: false, reason: 'weekend' });
   });
   it('opens with a Saturday cell in the published plan, or a live session or extra on the day', () => {
-    const plan = produce(seed(), (d) => { d.scheduleVersions['sched-2024-07'].days[6] = { '10:30': ANGKLUNG, '13:30': null }; });
+    const plan = satPlan(seed(), ['2026-11-09']);
     expect(dayStatus(plan, SAT).open).toBe(true);
+    expect(dayStatus(plan, '2026-11-21').open).toBe(false); // KC round 15: the next week has its own plan
     expect(dayStatus(plan, SUN).open).toBe(false);
     const day = produce(seed(), (d) => { d.scheduleDays[SAT] = { id: SAT, clubId: d.clubId, createdAt: '2026-10-20T10:00', createdBy: 'staff:s9', date: SAT, slots: { '10:30': ANGKLUNG } }; });
     expect(dayStatus(day, SAT).open).toBe(true);
@@ -55,7 +60,7 @@ describe('weekends open when programmed', () => {
     expect(dayStatus(seed(), SEED_SAT).open).toBe(true);
   });
   it('a published Saturday cell does not open a Saturday rented out in club hours (the booking stays editable); a free Saturday opens', () => {
-    const plan = produce(seed(), (d) => { d.scheduleVersions['sched-2024-07'].days[6] = { '10:30': ANGKLUNG, '13:30': null }; });
+    const plan = satPlan(seed(), ['2026-10-19', '2026-11-09']);
     expect(plan.venueBookings.v1).toMatchObject({ date: RENTED, status: 'confirmed', from: '09:00', to: '13:00' });
     expect(dayStatus(plan, RENTED)).toMatchObject({ open: false, reason: 'weekend' });
     expect(checkVenueSlot(plan, { roomId: plan.venueBookings.v1.roomId, date: RENTED, from: '09:00', to: '12:00' }, '2026-10-21', '10:00', 'v1')).toEqual({ ok: true }); // the rental can still be edited

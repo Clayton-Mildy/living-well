@@ -9,6 +9,7 @@ import { guestOn } from '@cp/shared/rules/guests';
 import { occasionsAhead } from '@cp/shared/rules/occasions';
 import { Card, EmptyState, Group, Icon, PageHead, PhotoThumbs, RailDot, SectionLabel, type RailState } from '../../components/ui';
 import { PhotoViewer } from './PhotoViewer';
+import { WeekPlanReminder } from '../calendar/WeekPlanReminder';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
@@ -182,6 +183,7 @@ export function ActivityToday() {
       <div className="cp-native" style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 18 }}>
         <PageHead eyebrow={fdl(today)} title={t('activity.hello', { n: first })} />
         {hero}
+        <WeekPlanReminder what="programme" />
         {shut ? (
           <Group pad={0} gap={0}><EmptyState icon="event_busy" title={t('common.clubClosed')} sub={[shut.event ? cap(eventTitle(shut.event, lang)) : '', closedSub].filter(Boolean).join(' · ')} /></Group>
         ) : null}
@@ -204,6 +206,7 @@ export function ActivityToday() {
     <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(18px, 2.8vw, 32px)' }}>
       <PageHead eyebrow={fdl(today)} title={t('activity.hello', { n: first })} />
       {hero}
+      <WeekPlanReminder what="programme" />
       {shut ? (
         <Card><EmptyState icon="event_busy" title={t('common.clubClosed')} sub={[shut.event ? cap(eventTitle(shut.event, lang)) : '', closedSub].filter(Boolean).join(' · ')} /></Card>
       ) : null}

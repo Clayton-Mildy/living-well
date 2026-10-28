@@ -6,7 +6,7 @@
 import type { ClubState, DT, GuestHost, GuestSession, ISODate, ScheduleCell, ScheduleDay, Slot, VendorInvoice, WeekSlot } from '../../types';
 import { dayStatus } from '../../rules/core';
 import { guestInvoiceNumber } from '../../rules/guests';
-import { addDays, asWeekday, dow } from '../../util';
+import { addDays, asWeekday, dow, sameWeek } from '../../util';
 import { activityPicId } from '../demoMedia';
 
 export function seedGuests(s: ClubState, T: ISODate): void {
@@ -23,7 +23,7 @@ export function seedGuests(s: ClubState, T: ISODate): void {
   const openFrom = (from: ISODate): ISODate => (free(from) ? from : openAfter(from));
 
   const weekly = (date: ISODate, slot: WeekSlot): ScheduleCell | null => {
-    const v = Object.values(s.scheduleVersions).filter((x) => x.status === 'published' && x.effectiveFrom <= date).sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom)).pop();
+    const v = Object.values(s.scheduleVersions).filter((x) => x.status === 'published' && x.effectiveFrom <= date && sameWeek(x.effectiveFrom, date)).sort((a, b) => a.effectiveFrom.localeCompare(b.effectiveFrom)).pop();
     return v?.days[asWeekday(date)]?.[slot] ?? null;
   };
   /** One-day change of a slot (merged into the day's row). */

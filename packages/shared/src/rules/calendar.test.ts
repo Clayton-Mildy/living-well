@@ -136,7 +136,7 @@ describe('schedule drafts and versions', () => {
 
   it('the builder starts from the newest published version and prefers a saved draft', () => {
     const s = fresh();
-    expect(latestPublished(s)?.id).toBe('sched-2024-07');
+    expect(latestPublished(s)?.id).toBe('sched-2026-10-26'); // KC round 15: next week, the last week the seed planned
     expect(scheduleDraft(s)).toBeUndefined();
     expect(builderDays(s)[3]['10:30']?.activityId).toBe('act-keroncong');
     const cx = (st: ClubState, input: unknown, mid: string) => execute(st, 'schedule.saveDraft', input, getUser({ citra: st }, 's9')!, { today: T, nowMin: 600 }, mid).state;
@@ -148,11 +148,11 @@ describe('schedule drafts and versions', () => {
     expect(builderBase(withDraft)[3]['10:30']?.activityId).toBe('act-keroncong');
     // versions list: one per effective date, newest first
     let v = execute(withDraft, 'schedule.publish', { effectiveFrom: '2026-10-26' }, getUser({ citra: withDraft }, 's9')!, { today: T, nowMin: 600 }, 'p1').state;
-    expect(effectiveVersions(v).map((x) => x.effectiveFrom)).toEqual(['2026-10-26', '2024-07-01']);
+    expect(effectiveVersions(v).slice(0, 2).map((x) => x.effectiveFrom)).toEqual(['2026-10-26', '2026-10-19']);
     const days2 = builderDays(v);
     days2[1]['10:30'] = null;
     v = execute(v, 'schedule.publish', { effectiveFrom: '2026-10-26', days: days2 }, getUser({ citra: v }, 's9')!, { today: T, nowMin: 610 }, 'p2').state;
-    expect(effectiveVersions(v).map((x) => x.effectiveFrom)).toEqual(['2026-10-26', '2024-07-01']); // the later publish for the same date replaces the earlier one
+    expect(effectiveVersions(v).slice(0, 2).map((x) => x.effectiveFrom)).toEqual(['2026-10-26', '2026-10-19']); // the later publish for the same date replaces the earlier one
     expect(latestPublished(v)?.days[1]['10:30']).toBeNull();
   });
 
@@ -195,41 +195,42 @@ describe('the weekly schedule by week', () => {
     const days = builderDays(s);
     days[3]['10:30'] = null;
     days[4]['10:30'] = null;
-    const v = cx(s, 'schedule.publish', { effectiveFrom: '2026-11-04', days }, 's9', 'w1'); // a Wednesday
-    const w = weekDays(v, '2026-11-02');
+    const v = cx(s, 'schedule.publish', { effectiveFrom: '2026-10-28', days }, 's9', 'w1'); // a Wednesday
+    const w = weekDays(v, '2026-10-26');
     expect(w[1]['10:30']?.activityId).toBeTruthy(); // Monday: the old version
     expect(w[2]['10:30']?.activityId).toBeTruthy(); // Tuesday: the old version
     expect(w[3]['10:30']).toBeNull(); // from Wednesday: the new version
     expect(w[4]['10:30']).toBeNull();
-    expect(weekVersions(v, '2026-11-02').map((x) => x.effectiveFrom)).toEqual(['2024-07-01', '2026-11-04']);
-    expect(weekVersions(v, '2026-10-26').map((x) => x.effectiveFrom)).toEqual(['2024-07-01']);
-    expect(weekVersions(v, '2026-11-09').map((x) => x.effectiveFrom)).toEqual(['2026-11-04']);
+    expect(weekVersions(v, '2026-10-26').map((x) => x.effectiveFrom)).toEqual(['2026-10-26', '2026-10-28']);
+    expect(weekVersions(v, '2026-10-19').map((x) => x.effectiveFrom)).toEqual(['2026-10-19']);
+    expect(weekVersions(v, '2026-11-02')).toEqual([]); // KC round 15: a version does not carry on into the next week
+    expect(weekDays(v, '2026-11-02')[3]['13:30']).toBeNull();
   });
 
   it('weekView: the version in force, plus the draft in the week it was saved for', () => {
     const s = fresh();
     const days = builderDays(s);
     days[2]['10:30'] = null;
-    const d = cx(s, 'schedule.saveDraft', { days, effectiveFrom: '2026-11-02' }, 's9', 'w2');
-    const here = weekView(d, '2026-11-02', T);
-    expect(here).toMatchObject({ monday: '2026-11-02', editable: true, draftHere: true, otherDraft: undefined });
+    const d = cx(s, 'schedule.saveDraft', { days, effectiveFrom: '2026-10-26' }, 's9', 'w2');
+    const here = weekView(d, '2026-10-26', T);
+    expect(here).toMatchObject({ monday: '2026-10-26', editable: true, draftHere: true, otherDraft: undefined });
     expect(here.changes).toEqual([{ w: 2, slot: '10:30' }]);
     expect(here.days[2]['10:30']).toBeNull();
     expect(here.base[2]['10:30']?.activityId).toBeTruthy();
     expect(here.dates).toHaveLength(7); // round 14: Monday to Sunday
-    const other = weekView(d, '2026-10-26', T);
+    const other = weekView(d, '2026-11-02', T);
     expect(other.draftHere).toBe(false);
     expect(other.changes).toEqual([]);
-    expect(other.otherDraft).toEqual({ monday: '2026-11-02', changes: 1 });
+    expect(other.otherDraft).toEqual({ monday: '2026-10-26', changes: 1 });
     // this week is editable from today on; the draft is for another week
     const now = weekView(d, '2026-10-19', T);
     expect(now).toMatchObject({ editable: true, draftHere: false, changes: [] });
     expect(weekView(d, '2026-10-12', T)).toMatchObject({ editable: false, draftHere: false, changes: [] }); // a week that is over only shows what ran
     expect(now.days[3]['10:30']?.activityId).toBe('act-keroncong');
     // a draft equal to what runs is no draft for the banner
-    const same = cx(s, 'schedule.saveDraft', { days: builderDays(s), effectiveFrom: '2026-11-02' }, 's9', 'w3');
+    const same = cx(s, 'schedule.saveDraft', { days: builderDays(s), effectiveFrom: '2026-10-26' }, 's9', 'w3');
     expect(weekView(same, '2026-11-09', T).otherDraft).toBeUndefined();
-    expect(weekView(same, '2026-11-02', T).changes).toEqual([]);
+    expect(weekView(same, '2026-10-26', T).changes).toEqual([]);
   });
 });
 

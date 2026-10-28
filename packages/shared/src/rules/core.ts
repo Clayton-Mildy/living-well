@@ -1,6 +1,6 @@
 // Core selectors: day status, members, plans, family links, staff lookups.
 import type { ClubState, HM, ISODate, Member, PlanEntry, FamilyLink, FamilyContact, Staff, StaffRole, CalendarEvent, VenueBooking } from '../types';
-import { addDays, ageOn, asWeekday, isWeekday, live, sortBy, ym } from '../util';
+import { addDays, ageOn, asWeekday, isWeekday, live, sameWeek, sortBy, ym } from '../util';
 
 // ---------- days ----------
 export type DayStatus =
@@ -19,7 +19,7 @@ export function eventsOn(s: ClubState, date: ISODate): CalendarEvent[] {
  */
 export function programmedWeekend(s: ClubState, date: ISODate): boolean {
   if (clubHoursRental(s, date)) return false;
-  const pub = live(s.scheduleVersions ?? {}).filter((v) => v.status === 'published' && v.effectiveFrom <= date);
+  const pub = live(s.scheduleVersions ?? {}).filter((v) => v.status === 'published' && v.effectiveFrom <= date && sameWeek(v.effectiveFrom, date));
   const plan = sortBy(pub, (v) => v.effectiveFrom + (v.publishedAt || '')).pop()?.days[asWeekday(date)];
   const row = s.scheduleDays?.[date];
   const over = row && !row.deletedAt ? row : undefined;

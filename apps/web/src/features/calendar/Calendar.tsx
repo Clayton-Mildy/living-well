@@ -3,8 +3,8 @@
 // The list shows the next 3 days; clicking a date in the month opens that week in the weekly schedule. Families see the same calendar read-only
 // (venue bookings never show the client). Weekday names, month names and labels follow the language.
 // Round 6 (phone, native look): an iOS segmented List | Calendar switch, days as grouped lists, "Add event" as the Pin pill, actions as list rows.
-import { Fragment, useMemo, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { addDays, addMonths, asWeekday, isWeekSlot, ym, type CalendarEvent, type ISODate, type Slot, type WeekSlot } from '@cp/shared';
 import { closedDaysOfYear, dayInfo, monthGrid, mondayOf, nextDays, nextMonday, weekEditable, yearView, type CalKind } from '@cp/shared/rules/calendar';
 import { Button, Icon, PageHead, Pin } from '../../components/ui';
@@ -46,7 +46,10 @@ export function Calendar() {
   const [month, setMonth] = useState(() => ym(today));
   const [year, setYear] = useState(() => Number(today.slice(0, 4)));
   const [sel, setSel] = useState<string | null>(null);
-  const [week, setWeek] = useState<ISODate>(() => mondayOf(today));
+  // KC round 15: "Plan the programme" on Today opens a week (?week=) in the weekly schedule
+  const [params] = useSearchParams();
+  const asked = params.get('week');
+  const [week, setWeek] = useState<ISODate>(() => (asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? mondayOf(asked) : mondayOf(today)));
   const [focus, setFocus] = useState<ISODate | null>(null);
   const [req, setReq] = useState<CellRequest | null>(null);
   const builderRef = useRef<HTMLDivElement>(null);
@@ -66,6 +69,11 @@ export function Calendar() {
   const selInfo = sel && ym(sel) === month ? info(sel) : null;
   const onEdit = (id: string) => { const e = s.calendarEvents[id]; if (e) setEditor({ event: e }); };
   const showBuilder = () => requestAnimationFrame(() => builderRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' }));
+  useEffect(() => { // once the list above has laid out (on a wide screen an immediate scroll stops at the top)
+    if (!asked) return;
+    const id = window.setTimeout(showBuilder, 400);
+    return () => window.clearTimeout(id);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
   /** A date in the month: that week opens in the weekly schedule (a Saturday or Sunday opens the week it ends). */
   const openWeek = (date: ISODate, scroll = true) => { setWeek(mondayOf(date)); setFocus(date); setReq(null); if (scroll) showBuilder(); };
   /** "Change the weekly plan": that week, with the slot's editor open. A week that is over can't change, so the first week that can is shown (the current week can, from today). */

@@ -1,21 +1,25 @@
-// Weekly menu plan: the template editor (explicit Publish, never per keystroke) plus one-off changes for a single date.
-// A week switcher plans coming weeks: the weekly menu is a template that repeats until another one starts, so a plan for a coming week
-// is published from that week's Monday and carries on after it. Edits are kept per week while the page is open.
+// Weekly menu plan: the week's menu editor (explicit Publish, never per keystroke) plus one-off changes for a single date.
+// A week switcher plans coming weeks. KC round 15: each week has its own menu: a plan is published for the week shown only (from its Monday, or
+// today for the current week), a week nobody planned is empty, and "Copy last week" fills the editor from the week before (asking first when it
+// replaces dishes already planned). Edits are kept per week while the page is open.
 // Round 14 (B2): Saturday and Sunday follow Friday, empty by default, under a lighter "Weekend" header (they are served when the weekend is programmed).
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { addDays, dayStatus, diffDays, live, weekStart, type ISODate, type Weekday } from '@cp/shared';
 import { isWaiting } from '@cp/shared/rules/approvals';
 import { PendingMark } from '../../components/PendingMark';
 import { useMe } from '../../lib/me';
 import { ALL_DAYS, COURSES, MAX_PLAN_WEEKS, diffTemplates, planStartFor, sameIds, templateForWeek, weekDate, type Course, type MenuChange, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
-import { Button, Card, CardHead, ChipGroup, DateField, Dialog, Group, Icon, Note, Pager, SectionLabel, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { copyMenu, hasDishes, lastWeekMenu, menuCopyReplaces, menuPlanned } from '@cp/shared/rules/weekPlans';
+import { Button, Card, CardHead, Dialog, Group, Icon, Note, Pager, SectionLabel, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { say } from '../../store/ui';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { DishField, DishPicker } from './dish';
 import { OverrideSheet } from './OverrideSheet';
-import { OutlineButton, RowPill, TextButton, useResetOn } from './parts';
+import { ConfirmDialog, OutlineButton, RowPill, TextButton, useResetOn } from './parts';
 import { usePlanVals } from './vals';
 
 const key = (w: Weekday, c: Course) => `${w}:${c}`;
@@ -32,7 +36,9 @@ export function usePlanEditor() {
   const s = useClub();
   const { today } = useNow();
   const thisMonday = weekStart(today);
-  const [ahead, setAhead] = useState(0); // weeks after the current one
+  const [params] = useSearchParams();
+  // weeks after the current one (KC round 15: "Plan the menu" on Today opens a week with ?week=)
+  const [ahead, setAhead] = useState(() => { const w = params.get('week'); return w && /^\d{4}-\d{2}-\d{2}$/.test(w) ? Math.max(0, Math.round(diffDays(thisMonday, weekStart(w)) / 7)) : 0; });
   const offset = Math.min(Math.max(ahead, 0), MAX_PLAN_WEEKS);
   const week = addDays(thisMonday, offset * 7);
   const v = usePlanVals(week);
@@ -52,7 +58,15 @@ export function usePlanEditor() {
   // other weeks that have unpublished edits (so they are not forgotten when the switcher moves away from them)
   const others = useMemo(() => Object.keys(all).filter((w) => w !== week).map((w) => { const b = templateForWeek(s, w, today); return { week: w, n: diffTemplates(b, withEdits(b, all[w])).length }; }).filter((x) => x.n > 0), [all, week, s, today]);
   const discard = () => setAll((a) => { const n = { ...a }; delete n[week]; return n; });
-  return { vals: v, week, offset, thisMonday, goto: (w: ISODate) => setAhead(diffDays(thisMonday, w) / 7), setAhead, cur, setCell, draft, changes, others, discard };
+  /** KC round 15: the whole week at once ("Copy last week"); only cells that differ from the menu shown are kept */
+  const fill = (next: WeekTemplate) => setAll((a) => {
+    const e: Edits = {};
+    for (const w of ALL_DAYS) for (const c of COURSES) if (!sameIds(next[w][c], base[w][c])) e[key(w, c)] = next[w][c];
+    const n = { ...a };
+    if (Object.keys(e).length) n[week] = e; else delete n[week];
+    return n;
+  });
+  return { vals: v, week, offset, thisMonday, goto: (w: ISODate) => setAhead(diffDays(thisMonday, w) / 7), setAhead, cur, setCell, fill, draft, changes, others, discard };
 }
 export type PlanEditor = ReturnType<typeof usePlanEditor>;
 
@@ -68,7 +82,14 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
   const s = useClub();
   const act = useAct();
   const weekName = useWeekName();
-  const { vals: v, week, offset, cur, setCell, changes, others, discard } = editor;
+  const { vals: v, week, offset, cur, setCell, fill, draft, changes, others, discard } = editor;
+  // KC round 15: a week has its own menu; last week's can be copied in
+  const planned = menuPlanned(s, week);
+  const last = useMemo(() => lastWeekMenu(s, week), [s, week]);
+  const canCopy = !readOnly && hasDishes(last);
+  const [askCopy, setAskCopy] = useState(false);
+  const doCopy = () => { fill(copyMenu(draft, last, week, v.today)); setAskCopy(false); say(t('kitchen.plan.copied')); };
+  const onCopy = () => (menuCopyReplaces(draft, last, week, v.today) ? setAskCopy(true) : doCopy());
   const [picker, setPicker] = useState<{ w: Weekday; c: Course } | null>(null);
   const [override, setOverride] = useState<string | null>(null);
   const dayName = (w: Weekday) => fd(weekDate(week, w), { weekday: 'long' });
@@ -92,7 +113,14 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
           <WeekButton icon="chevron_right" label={t('kitchen.plan.nextWeek')} disabled={offset >= MAX_PLAN_WEEKS} onClick={() => editor.setAhead(offset + 1)} />
         </div>
         {waiting.map((w) => <Note key={w.id} tone="ochre" icon="hourglass_top">{t('approvals.menuWaiting', { date: fds(w.effectiveFrom) })}</Note>)}
-        {v.scheduled.length ? <Note tone="ochre" icon="schedule">{t('kitchen.plan.scheduled', { date: fds(v.scheduled[0].effectiveFrom) })}</Note> : null}
+        {!planned && !changes.length ? (
+          <Note tone="cream" icon="event_busy">
+            <span data-testid="menu-not-planned" style={{ display: 'flex', flexDirection: 'column', gap: 8, alignItems: 'flex-start' }}>
+              <span>{t('kitchen.plan.notPlanned')}</span>
+              {canCopy ? <Button variant="secondary" size={44} icon="content_copy" onClick={onCopy}>{t('kitchen.plan.copy')}</Button> : null}
+            </span>
+          </Note>
+        ) : canCopy ? <div><Button variant="ghost" size={44} icon="content_copy" onClick={onCopy}>{t('kitchen.plan.copy')}</Button></div> : null}
         {others.length ? (
           <Note tone="ochre" icon="edit_note">
             <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: 4 }}>
@@ -114,6 +142,7 @@ export function WeeklyPlan({ editor, onPublish, isPhone, readOnly = false }: { e
           onCreated={(id) => setCell(picker.w, picker.c, [...cur(picker.w, picker.c), id])} />
       ) : null}
       <OverrideSheet open={override !== null} initialDate={override ?? v.today} onClose={() => setOverride(null)} />
+      <ConfirmDialog open={askCopy} onClose={() => setAskCopy(false)} title={t('kitchen.plan.copyTitle')} body={t('kitchen.plan.copyBody')} confirmLabel={t('kitchen.plan.copyConfirm')} cancelLabel={t('kitchen.plan.copyKeep')} onConfirm={doCopy} danger={false} />
     </>
   );
   // round 6, phone: iOS grouped sections. The week switcher and its notes first, then one section per weekday (day name outside, its three courses inside),
@@ -240,11 +269,7 @@ function WeekButton({ icon, label, disabled, onClick }: { icon: string; label: s
   );
 }
 
-type From = 'start' | 'monday' | 'date';
-/**
- * Publish the week shown. When it starts: the current week from today (or next Monday, or a date); a coming week from its Monday (or a
- * date). A weekly menu repeats until another one starts, so the note says so for a coming week.
- */
+/** Publish the week shown (KC round 15: for that week only): the current week from today, a coming week from its Monday, to its Sunday. */
 export function PublishDialog({ open, onClose, editor }: { open: boolean; onClose: () => void; editor: PlanEditor }) {
   const t = useT();
   const { fd, fds } = useFmt();
@@ -252,35 +277,23 @@ export function PublishDialog({ open, onClose, editor }: { open: boolean; onClos
   const act = useAct();
   const weekName = useWeekName();
   const { role } = useMe();
-  const { vals: v, week, offset, thisMonday, draft, changes, discard } = editor;
-  const [from, setFrom] = useState<From>('start');
-  const [date, setDate] = useState('');
+  const { vals: v, week, offset, draft, changes, discard } = editor;
   const [notify, setNotify] = useState(true);
   const [busy, setBusy] = useState(false);
-  useResetOn(open ? week : null, () => { if (open) { setFrom('start'); setDate(''); setNotify(true); } });
-  const nextMonday = addDays(thisMonday, 7);
+  useResetOn(open ? week : null, () => { if (open) setNotify(true); });
   const dayName = (w: Weekday) => fd(weekDate(week, w), { weekday: 'long' });
   const start = planStartFor(week, v.today);
-  const mode: From = offset > 0 && from === 'monday' ? 'start' : from;
-  const effective = mode === 'start' ? start : mode === 'monday' ? nextMonday : date;
-  const valid = /^\d{4}-\d{2}-\d{2}$/.test(effective) && effective >= v.today;
-  const replaces = v.scheduled.filter((x) => x.effectiveFrom >= effective);
   const name = (id: string) => s.dishes[id]?.name ?? id;
   const publish = async () => {
-    if (!valid || busy) return;
+    if (busy) return;
     setBusy(true);
-    const r = await act('menu.publish', { effectiveFrom: effective, days: draft, notify }, { ok: t('kitchen.publish.done', { date: fds(effective) }) });
+    const r = await act('menu.publish', { effectiveFrom: start, days: draft, notify }, { ok: t('kitchen.publish.done', { date: fds(start) }) });
     setBusy(false);
     if (r.ok) { discard(); onClose(); }
   };
-  const options: { value: From; label: string }[] = [
-    { value: 'start', label: offset === 0 ? t('kitchen.publish.fromToday') : t('kitchen.publish.fromWeekStart', { date: week }) },
-    ...(offset === 0 ? [{ value: 'monday' as const, label: t('kitchen.publish.fromMonday', { date: nextMonday }) }] : []),
-    { value: 'date', label: t('kitchen.publish.fromDate') },
-  ];
   return (
     <Dialog open={open} onClose={onClose} eyebrow={t('kitchen.plan.title')} title={t('kitchen.publish.title')}
-      footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button icon="publish" onClick={publish} disabled={!valid || busy}>{t('kitchen.publish.confirm')}</Button></>}>
+      footer={<><Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button icon="publish" onClick={publish} disabled={busy}>{t('kitchen.publish.confirm')}</Button></>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t('kitchen.publish.forWeek', { week: `${weekName(offset, week)} · ${fd(week, { day: 'numeric', month: 'short' })} – ${fd(weekDate(week, 5), { day: 'numeric', month: 'short' })}` })}</span>
         <SectionLabel>{t('kitchen.publish.changes')}</SectionLabel>
@@ -294,12 +307,9 @@ export function PublishDialog({ open, onClose, editor }: { open: boolean; onClos
           ))}
         </div>
       </div>
-      <ChipGroup<From> label={t('kitchen.publish.from')} value={mode} onChange={(x) => setFrom(x as From)} options={options} />
-      {mode === 'date' ? <DateField label={t('common.date')} value={date} onChange={setDate} min={v.today} error={date && !valid ? t('kitchen.err.pastDate') : undefined} /> : null}
+      <Note tone="cream" icon="date_range">{t('kitchen.publish.weekOnly', { from: fds(start), to: fds(addDays(week, 6)) })}</Note>
       <Toggle on={notify} onClick={() => setNotify((x) => !x)} label={t('kitchen.notify.families')} />
       {role !== 'mgmt' ? <Note tone="ochre" icon="hourglass_top">{t('approvals.menuNeeds')}</Note> : null}
-      {valid && effective > v.today ? <Note tone="cream" icon="event_repeat">{t('kitchen.publish.repeats', { date: effective })}</Note> : null}
-      {replaces.length ? <Note tone="ochre" icon="info">{t('kitchen.publish.replaces', { date: replaces[0].effectiveFrom })}</Note> : null}
     </Dialog>
   );
 }

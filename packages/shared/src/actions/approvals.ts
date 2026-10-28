@@ -7,7 +7,7 @@
 // Families never see an entry before this approves it (rules/approvals.ts, project.ts); the notices that would tell them go out here.
 import { z } from 'zod';
 import { produce, current, type Draft } from 'immer';
-import type { Approval, ClubState, DailyLog, DayMenu, MemberNote, MenuVersion, Payment, Photo, Reading, StockRequest } from '../types';
+import type { Approval, ClubState, DailyLog, DayMenu, MemberNote, MenuVersion, Payment, Photo, Reading, ScheduleVersion, StockRequest } from '../types';
 import { DomainError, defineAction, hasRole, isMgmt, nameOfUser, type Ctx } from './framework';
 import { familyUserIds, shortOf } from './helpers';
 import { acknowledgeChange, approveChange, rejectChange, revertChange } from './review';
@@ -19,12 +19,13 @@ import { approveStockRow, rejectStockRow } from './kitchen';
 import { approveProgrammeDay, approveProgrammeVersion, programmeDayStale, programmeVersionStale, returnProgrammeDay } from './schedule';
 import { noticeFamilies } from './health';
 import { menuAudience } from '../rules/kitchenOps';
+import { weekOver } from '../rules/kitchen';
 import { DAYMENU_KEYS, LOG_KEYS, NOTE_KEYS, READING_KEYS, isWaiting, snapshotOf, type ApprovalType, APPROVAL_TYPES, type SnapKeys } from '../rules/approvals';
 import { balanceOf } from '../rules/billing';
 import { displayName, primaryContact } from '../rules/core';
 import { dayProgrammable } from '../rules/calendar';
 import { notesSaved } from '../rules/activity';
-import { uniq, rp } from '../util';
+import { uniq, rp, sameWeek } from '../util';
 
 const approveSchema = z.object({ type: z.enum(APPROVAL_TYPES as [ApprovalType, ...ApprovalType[]]), ids: z.array(z.string().min(1)).min(1).max(300), notify: z.boolean().optional() });
 // a rejection always says why, except a leave request: there the note is optional (round 13)
@@ -110,8 +111,8 @@ const rejectReading = (ctx: Ctx, r: Draft<Reading>, reason: string) => {
 const approveVersion = (d: Draft<ClubState>, ctx: Ctx, v: Draft<MenuVersion>) => {
   const notify = !!v.approval!.defer?.notify;
   decide(v.approval!, ctx, 'approved');
-  // like management's own publish: the versions for the same date (or later) that were approved give way
-  for (const o of Object.values(d.menuVersions)) if (o.id !== v.id && !o.deletedAt && o.status === 'published' && o.effectiveFrom >= v.effectiveFrom && !isWaiting(o)) o.deletedAt = ctx.nowDT;
+  // like management's own publish: the approved versions of the same week from the same date (or later) give way
+  for (const o of Object.values(d.menuVersions)) if (o.id !== v.id && !o.deletedAt && o.status === 'published' && o.effectiveFrom >= v.effectiveFrom && sameWeek(o.effectiveFrom, v.effectiveFrom) && !isWaiting(o)) o.deletedAt = ctx.nowDT;
   if (notify) {
     const families = menuAudience(d as unknown as ClubState, v.effectiveFrom > ctx.today ? v.effectiveFrom : ctx.today);
     if (families.length) ctx.notify({ toUsers: families, kind: 'kitchen.notif.menuPublished', params: { date: v.effectiveFrom }, link: '/today' });
@@ -180,7 +181,8 @@ const APPROVE: Record<ApprovalType, Handler> = {
     const v = d.scheduleVersions[id];
     if (v) {
       if (v.deletedAt || v.status !== 'pending') return 'skip';
-      if (programmeVersionStale(d, id)) return 'conflict'; // a later week was published since it was sent: approving would override it (R29)
+      if (weekOver(v as ScheduleVersion, ctx.today)) return 'conflict'; // KC round 15: its week is over, there is nothing left to publish it to
+      if (programmeVersionStale(d, id)) return 'conflict'; // its week was published since it was sent: approving would override it (R29)
       approveProgrammeVersion(d, ctx, id, o.notify !== false);
       return 'done';
     }

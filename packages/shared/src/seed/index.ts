@@ -10,7 +10,7 @@ import type {
 } from '../types';
 import { COLLECTIONS } from '../types';
 import type { CollectionName } from '../types';
-import { seedEmptyWeek } from './emptyWeek';
+import { seedPlanWeeks } from './planWeeks';
 import { addDays, addMonths, daysBetween, dow, rng, rp, toHM, toMin, ym, DEMO_TODAY, DEMO_START_MIN, isWeekday, e164 } from '../util';
 import { evaluateReading, limitsFor } from '../rules/health';
 import { suspensions } from '../rules/billing';
@@ -268,10 +268,16 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   ACTS.forEach(([id, name, nameId, roomId, icon]) => put('activities', { ...base(C, id, '2024-06-01T09:00'), name, nameId, icon, roomId, active: true, photoMediaId: activityPicId(id) })); // KC round 7: each activity has its picture (a free Unsplash scene, seed/demoMedia.ts)
   const days = {} as Record<WorkWeekday, Record<WeekSlot, ScheduleCell | null>>;
   ([1, 2, 3, 4, 5] as WorkWeekday[]).forEach((w) => { const [a, b] = SCHED[w]; days[w] = { '10:30': { activityId: a[0], staffId: a[1], roomId: actRoom(a[0]) }, '13:30': { activityId: b[0], staffId: b[1], roomId: actRoom(b[0]) } }; });
-  put('scheduleVersions', { ...base(C, 'sched-2024-07', at('2026-10-19T16:10'), 'staff:s9'), effectiveFrom: '2024-07-01', status: 'published', days, publishedBy: 'staff:s9', publishedAt: at('2026-10-19T16:10') });
-  seedEmptyWeek(s, T, { at: at('2026-10-19T16:10'), by: 'staff:s9' }); // round 15 (R4): an empty week two weeks out (five one-day changes) for the activity team to plan live; the weekly plan is untouched
+  // KC round 15: each week has its own programme and menu (a week does not repeat into the next). Every week of the past year, this week and next week
+  // are planned (published the Friday before); the week after next (T+14) and later are empty, for the activity team and the kitchen to plan live.
+  const planWeeks = seedPlanWeeks(T);
+  const planned = (monday: ISODate) => (addDays(monday, -3) < T ? addDays(monday, -3) : addDays(T, -1)); // the Friday before, next week's the day before the demo day
+  for (const monday of planWeeks) {
+    const by = planned(monday) + 'T16:10';
+    put('scheduleVersions', { ...base(C, `sched-${monday}`, by, 'staff:s9'), effectiveFrom: monday, status: 'published', days, publishedBy: 'staff:s9', publishedAt: by });
+  }
   DISHES.forEach(([id, name, course, allergens, tags]) => put('dishes', { ...base(C, id, '2024-06-01T09:00', 'staff:s3'), name, course, allergens, tags, reviewedBy: 's3', reviewedAt: at('2026-10-01T10:00'), ...(dishPicId(id) ? { photoMediaId: dishPicId(id) } : {}) } satisfies Dish));
-  put('menuVersions', { ...base(C, 'menu-2024-07', '2024-06-20T10:00', 'staff:s3'), effectiveFrom: '2024-07-01', status: 'published', days: MENU_DAYS, publishedBy: 'staff:s3' });
+  for (const monday of planWeeks) put('menuVersions', { ...base(C, `menu-${monday}`, planned(monday) + 'T10:00', 'staff:s3'), effectiveFrom: monday, status: 'published', days: MENU_DAYS, publishedBy: 'staff:s3' });
   // the demo day always serves Wednesday's fish soup (Bambang's seafood allergy, the fish-bone feedback)
   if (dow(T) !== 3) put('dayMenus', { ...base(C, T, `${T}T07:00`, 'staff:s3'), date: T, lunch: MENU_DAYS[3].lunch, soft: MENU_DAYS[3].soft, tea: MENU_DAYS[3].tea, photoIds: [], allergyPlans: [] });
 

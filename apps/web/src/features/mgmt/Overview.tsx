@@ -13,6 +13,7 @@ import { useClub } from '../../store/replica';
 import { nextText } from '../enquiries/text';
 import { Page, ListCard, LightRow, IconBox, DotText, tn } from './common';
 import { memberPhoto } from '../../lib/media';
+import { WeekPlanReminder } from '../calendar/WeekPlanReminder';
 
 interface Tile { key: string; label: string; value: string; icon: string; to: string; badge?: { icon: string; fg: string; bg: string; label: string } }
 
@@ -59,6 +60,7 @@ export function Overview() {
   return (
     <Page gap={22}>
       <PageHead eyebrow={fdl(today)} title={t('nav.overview')} />
+      <WeekPlanReminder what="both" />
       {empty ? <div style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>{t('mgmt.emptyClub', { club: s.club.fullName })}</div> : null}
 
       {isPhone ? (

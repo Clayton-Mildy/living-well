@@ -62,15 +62,14 @@ export const kitchen = {
   'plan.prevWeek': 'Previous week', 'plan.nextWeek': 'Next week', 'plan.thisWeek': 'This week', 'plan.weekOf': 'Week of {date}', 'plan.closed': 'Closed',
   'plan.otherWeeks': 'Unpublished changes in other weeks:', 'plan.jumpAria': 'Go to {week}, {n} unpublished changes',
   'plan.title': 'Weekly menu plan', 'plan.unpublished': 'Unpublished changes: {n}', 'plan.today': 'TODAY', 'plan.add': 'Add', 'plan.addTo': 'Add a dish to {course}',
-  'plan.remove': 'Remove {name}', 'plan.affects': 'Clashes with {names} (allergy on file)', 'plan.discard': 'Discard changes', 'plan.publish': 'Publish menu', 'plan.scheduled': 'Another weekly menu is already scheduled from {date}. Publishing with an earlier start date replaces it.',
+  'plan.remove': 'Remove {name}', 'plan.affects': 'Clashes with {names} (allergy on file)', 'plan.discard': 'Discard changes', 'plan.publish': 'Publish menu',
   'plan.oneOffTitle': 'Just for one date', 'plan.changeDate': 'Change a date', 'plan.noOneOff': 'No one-off changes.', 'plan.nothing': 'Nothing',
   'override.title': 'Change one date', 'override.save': 'Save for this date', 'override.done': 'Menu changed for that date.',
   'override.reset': 'Back to the weekly menu.', 'override.remove': 'Remove', 'override.isChanged': 'Changed for this date.', 'override.backToWeekly': 'Back to weekly menu',
-  'publish.title': 'Publish weekly menu', 'publish.confirm': 'Publish menu', 'publish.changes': 'What changes', 'publish.from': 'Starts', 'publish.fromToday': 'Today', 'publish.fromMonday': 'Next Monday ({date})',
-  'publish.forWeek': 'Planning: {week}', 'publish.fromWeekStart': 'Start of the week ({date})',
-  'publish.repeats': 'From {date} this menu repeats every week until you publish a different one. Earlier weeks keep their menu.',
-  'publish.fromDate': 'Pick a date',
-  'publish.replaces': 'This replaces the weekly menu scheduled from {date}.', 'publish.done': 'Weekly menu published from {date}.',
+  'publish.title': 'Publish weekly menu', 'publish.confirm': 'Publish menu', 'publish.changes': 'What changes',
+  'publish.forWeek': 'Planning: {week}',
+  'publish.weekOnly': 'This menu is for {from} to {to} only. Other weeks keep their own menu.',
+  'publish.done': 'Weekly menu published from {date}.',
   // ---- feedback
   'fb.title': 'Feedback', 'fb.open': '{n} open · from families', 'fb.empty': 'No meal feedback yet',
   'fb.from': 'From {who}, {rel} · {when}', 'fb.fromNoRel': 'From {who} · {when}', 'fb.fromStaff': 'Logged by {who} · phone call · {when}', 'fb.theFamily': 'the family',
@@ -113,4 +112,8 @@ export const kitchen = {
   'feed.stockRequested': 'Stock requested: {item} ({qty})', 'feed.stockApproved': 'Stock approved: {item}', 'feed.stockDeclined': 'Stock declined: {item}', 'feed.stockReceived': 'Stock received: {item}',
   // the lunch round (round 14)
   'lunch.opens': 'Opens at {time}', 'lunch.markRest': 'Mark the rest as Ate all', 'lunch.restWhat': 'Ate all', 'lunch.nobody': 'Nobody has checked in yet.', 'lunch.rowAria': '{name} · lunch',
+  // KC round 15: each week has its own menu; "Copy last week" fills it
+  'plan.notPlanned': 'Nobody has planned this week’s menu yet. Copy last week, or add dishes.', 'plan.copy': 'Copy last week',
+  'plan.copyTitle': 'Replace this week’s menu?', 'plan.copyBody': 'Last week’s menu replaces the dishes planned for this week. Days that have passed stay as they were. Nothing changes until you publish.',
+  'plan.copyConfirm': 'Replace with last week', 'plan.copyKeep': 'Keep this week', 'plan.copied': 'Last week’s menu is in. Check it, then publish.',
 };

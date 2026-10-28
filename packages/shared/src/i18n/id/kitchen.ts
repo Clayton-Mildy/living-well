@@ -63,15 +63,14 @@ export const kitchen: Same<typeof EN> = {
   'plan.prevWeek': 'Minggu sebelumnya', 'plan.nextWeek': 'Minggu depan', 'plan.thisWeek': 'Minggu ini', 'plan.weekOf': 'Minggu {date}', 'plan.closed': 'Tutup',
   'plan.otherWeeks': 'Perubahan belum diterbitkan di minggu lain:', 'plan.jumpAria': 'Buka {week}, {n} perubahan belum diterbitkan',
   'plan.title': 'Rencana menu mingguan', 'plan.unpublished': 'Perubahan belum diterbitkan: {n}', 'plan.today': 'HARI INI', 'plan.add': 'Tambah', 'plan.addTo': 'Tambah hidangan ke {course}',
-  'plan.remove': 'Hapus {name}', 'plan.affects': 'Bentrok dengan {names} (alergi tercatat)', 'plan.discard': 'Buang perubahan', 'plan.publish': 'Terbitkan menu', 'plan.scheduled': 'Menu mingguan lain sudah dijadwalkan mulai {date}. Menerbitkan dengan tanggal mulai yang lebih awal akan menggantikannya.',
+  'plan.remove': 'Hapus {name}', 'plan.affects': 'Bentrok dengan {names} (alergi tercatat)', 'plan.discard': 'Buang perubahan', 'plan.publish': 'Terbitkan menu',
   'plan.oneOffTitle': 'Hanya untuk satu tanggal', 'plan.changeDate': 'Ubah satu tanggal', 'plan.noOneOff': 'Belum ada perubahan satu tanggal.', 'plan.nothing': 'Kosong',
   'override.title': 'Ubah satu tanggal', 'override.save': 'Simpan untuk tanggal ini', 'override.done': 'Menu tanggal itu sudah diubah.',
   'override.reset': 'Kembali ke menu mingguan.', 'override.remove': 'Hapus', 'override.isChanged': 'Diubah untuk tanggal ini.', 'override.backToWeekly': 'Kembali ke menu mingguan',
-  'publish.title': 'Terbitkan menu mingguan', 'publish.confirm': 'Terbitkan menu', 'publish.changes': 'Yang berubah', 'publish.from': 'Mulai berlaku', 'publish.fromToday': 'Hari ini', 'publish.fromMonday': 'Senin depan ({date})',
-  'publish.forWeek': 'Rencana: {week}', 'publish.fromWeekStart': 'Awal minggu ({date})',
-  'publish.repeats': 'Mulai {date}, menu ini berulang setiap minggu sampai Anda menerbitkan menu lain. Minggu sebelumnya tetap memakai menu lamanya.',
-  'publish.fromDate': 'Pilih tanggal',
-  'publish.replaces': 'Ini menggantikan menu mingguan yang dijadwalkan mulai {date}.', 'publish.done': 'Menu mingguan diterbitkan mulai {date}.',
+  'publish.title': 'Terbitkan menu mingguan', 'publish.confirm': 'Terbitkan menu', 'publish.changes': 'Yang berubah',
+  'publish.forWeek': 'Rencana: {week}',
+  'publish.weekOnly': 'Menu ini hanya untuk {from} sampai {to}. Minggu lain tetap memakai menunya sendiri.',
+  'publish.done': 'Menu mingguan diterbitkan mulai {date}.',
   // ---- masukan
   'fb.title': 'Masukan', 'fb.open': '{n} terbuka · dari keluarga', 'fb.empty': 'Belum ada masukan tentang makanan',
   'fb.from': 'Dari {who}, {rel} · {when}', 'fb.fromNoRel': 'Dari {who} · {when}', 'fb.fromStaff': 'Dicatat oleh {who} · telepon · {when}', 'fb.theFamily': 'keluarga',
@@ -114,4 +113,8 @@ export const kitchen: Same<typeof EN> = {
   'feed.stockRequested': 'Stok diminta: {item} ({qty})', 'feed.stockApproved': 'Stok disetujui: {item}', 'feed.stockDeclined': 'Stok ditolak: {item}', 'feed.stockReceived': 'Stok diterima: {item}',
   // ronde makan siang (putaran 14)
   'lunch.opens': 'Dibuka pukul {time}', 'lunch.markRest': 'Tandai sisanya Habis', 'lunch.restWhat': 'Habis', 'lunch.nobody': 'Belum ada yang check-in.', 'lunch.rowAria': '{name} · makan siang',
+  // KC putaran 15: setiap minggu punya menunya sendiri; "Salin minggu lalu" mengisinya
+  'plan.notPlanned': 'Menu minggu ini belum disusun. Salin minggu lalu, atau tambahkan hidangan.', 'plan.copy': 'Salin minggu lalu',
+  'plan.copyTitle': 'Ganti menu minggu ini?', 'plan.copyBody': 'Menu minggu lalu menggantikan hidangan yang sudah direncanakan untuk minggu ini. Hari yang sudah lewat tidak berubah. Belum ada yang berubah sampai Anda menerbitkan.',
+  'plan.copyConfirm': 'Ganti dengan minggu lalu', 'plan.copyKeep': 'Biarkan minggu ini', 'plan.copied': 'Menu minggu lalu sudah disalin. Periksa, lalu terbitkan.',
 };

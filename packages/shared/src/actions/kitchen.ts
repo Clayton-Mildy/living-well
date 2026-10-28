@@ -14,7 +14,7 @@ import {
   ALL_DAYS, COURSES, DISH_ALLERGENS, DISH_TAGS, STOCK_AREAS, type Course, type PersonKey, type WeekTemplate,
   canApproveStock, canEditStock, canReceiveStock, canRequestStock, diffTemplates, dishUsage, menuAudience, potentialConflicts, replyTarget, sameIds, storedTemplate, templateOn,
 } from '../rules/kitchenOps';
-import { asWeekday, live, uniq } from '../util';
+import { asWeekday, live, sameWeek, uniq } from '../util';
 import { LUNCH_AMOUNTS, type LunchAmount } from '../rules/activity';
 import { writeMark } from '../rules/mood';
 import { applyMarks, checkLogDay, requireAttended } from './care';
@@ -161,8 +161,8 @@ export function announceLunchPhoto(d: Draft<ClubState>, ctx: Ctx, photoId: strin
 interface OverrideInput { date: ISODate; lunch?: string[] | null; soft?: string[] | null; tea?: string[] | null }
 
 const menuActions: ActionDef[] = [
-  // effectiveFrom: the Monday of a coming week, or today for the current one. The weekly menu is a template that repeats every week from its
-  // start date until another one starts. notify (default on): tell the families of the active members that the menu changes.
+  // effectiveFrom: the Monday of a coming week, or today for the current one. KC round 15: the menu applies to that week only (each week has
+  // its own; "Copy last week" fills a new one). notify (default on): tell the families of the active members that the menu changes.
   defineAction<{ effectiveFrom: ISODate; days: WeekTemplate; notify: boolean }>({
     name: 'menu.publish',
     can: (u) => kitchenOrMgmt(u),
@@ -172,9 +172,9 @@ const menuActions: ActionDef[] = [
       for (const w of ALL_DAYS) for (const c of COURSES) checkDishes(d, i.days[w][c], c, ctx);
       const st = asState(d);
       const gated = needsApproval(ctx);
-      const replaced = live(st.menuVersions).filter((v) => v.status === 'published' && v.effectiveFrom >= i.effectiveFrom);
+      const replaced = live(st.menuVersions).filter((v) => v.status === 'published' && v.effectiveFrom >= i.effectiveFrom && sameWeek(v.effectiveFrom, i.effectiveFrom));
       if (!diffTemplates(templateOn(st, i.effectiveFrom).days, i.days).length && !replaced.some((v) => v.effectiveFrom > i.effectiveFrom)) ctx.fail('err.noChanges');
-      // management's version replaces the ones for the same date (or later) at once; earlier versions stay as history.
+      // management's version replaces the ones of the same week from the same date (or later) at once; earlier versions stay as history.
       // The kitchen's version waits for approval: it only supersedes versions that are still waiting, and replaces the approved ones when it is approved.
       for (const v of replaced) if (!gated || isWaiting(v)) d.menuVersions[v.id].deletedAt = ctx.nowDT;
       const id = ctx.id('mv');

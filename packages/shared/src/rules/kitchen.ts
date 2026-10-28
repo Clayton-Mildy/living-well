@@ -2,14 +2,17 @@
 import type { ClubState, ISODate, Dish, DishAllergen, FoodAllergen, Member, GuestVisit, MenuDay, Photo, ScheduleCell, Slot, WeekSlot, ExtraSession, ScheduleVersion, MenuVersion } from '../types';
 import { dayStatus } from './core';
 import { lobbyGroups, guestsOn } from './attendance';
-import { asWeekday, live, sortBy, uniq } from '../util';
+import { addDays, asWeekday, live, sameWeek, sortBy, uniq, weekStart } from '../util';
 import { approvedDayMenu, menuVersionForFamily } from './approvals';
 
 // ---------- versions ----------
-/** The day a waiting weekly version would publish from if approved now: its own date, or today once that has passed. */
+/** The day a waiting weekly version would publish from if approved now: its own date, or today once that has passed (within its week: `weekOver`). */
 export const publishDateOf = (v: Pick<ScheduleVersion, 'effectiveFrom'>, today: ISODate): ISODate => (v.effectiveFrom > today ? v.effectiveFrom : today);
+/** KC round 15: has the week of a weekly version ended (its Sunday is before today)? A plan for it can no longer be published. */
+export const weekOver = (v: Pick<ScheduleVersion, 'effectiveFrom'>, today: ISODate): boolean => addDays(weekStart(v.effectiveFrom), 6) < today;
+/** The weekly programme in force on a date: the newest published version of that date's week that has started (KC round 15: a week does not repeat into the next; an unplanned week has none). */
 export function scheduleVersionFor(s: ClubState, date: ISODate): ScheduleVersion | undefined {
-  const pub = live(s.scheduleVersions).filter((v) => v.status === 'published' && v.effectiveFrom <= date);
+  const pub = live(s.scheduleVersions).filter((v) => v.status === 'published' && v.effectiveFrom <= date && sameWeek(v.effectiveFrom, date));
   return sortBy(pub, (v) => v.effectiveFrom + (v.publishedAt || '')).pop();
 }
 export interface SessionSlot {
@@ -45,11 +48,11 @@ export function sessionsOn(s: ClubState, date: ISODate): SessionSlot[] {
   return extra.length ? sortBy([...fixed, ...extra], (x) => x.slot) : fixed;
 }
 /**
- * The weekly menu version in force on a date. A version the kitchen published waits for management's approval; the club's own screens already
+ * The weekly menu version in force on a date: one of that date's own week (KC round 15: a week's menu does not repeat into the next). A version the kitchen published waits for management's approval; the club's own screens already
  * follow it, families see only approved ones (`approvedOnly`, and the family projection leaves the rest out).
  */
 export function menuVersionFor(s: ClubState, date: ISODate, opts: { approvedOnly?: boolean } = {}): MenuVersion | undefined {
-  const pub = live(s.menuVersions).filter((v) => v.status === 'published' && v.effectiveFrom <= date && (!opts.approvedOnly || menuVersionForFamily(v)) && v.approval?.status !== 'rejected');
+  const pub = live(s.menuVersions).filter((v) => v.status === 'published' && v.effectiveFrom <= date && sameWeek(v.effectiveFrom, date) && (!opts.approvedOnly || menuVersionForFamily(v)) && v.approval?.status !== 'rejected');
   return sortBy(pub, (v) => v.effectiveFrom + v.createdAt).pop();
 }
 /** Dish ids served on a date: per-date override, else the version in force; nothing on closed days. */

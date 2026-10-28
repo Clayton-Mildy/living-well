@@ -48,6 +48,8 @@ export const weekStart = (d: ISODate): ISODate => {
   const w = dow(d);
   return addDays(d, w === 0 ? -6 : 1 - w);
 };
+/** KC round 15: each week has its own programme and menu, so a published weekly version only applies in the week (Monday to Sunday) it starts in. */
+export const sameWeek = (a: ISODate, b: ISODate): boolean => weekStart(a) === weekStart(b);
 export const diffDays = (a: ISODate, b: ISODate) => Math.round((parseDate(b).getTime() - parseDate(a).getTime()) / 86400000);
 export const ageOn = (dob: ISODate, on: ISODate) => {
   const [y, m, d] = dob.split('-').map(Number);

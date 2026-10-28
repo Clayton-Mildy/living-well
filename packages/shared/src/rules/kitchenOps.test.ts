@@ -13,8 +13,9 @@ const T = '2026-10-21';
 const seed = () => buildSeed().citra;
 const usr = (s: ClubState, id: string) => getUser({ [s.clubId]: s }, id)!;
 const withVersion = (s: ClubState, effectiveFrom: string, lunch4: string[]) => produce(s, (d) => {
-  const base = d.menuVersions['menu-2024-07'];
+  const base = d.menuVersions['menu-2026-10-19'];
   const days = JSON.parse(JSON.stringify(base.days));
+  delete d.menuVersions[`menu-${effectiveFrom}`]; // KC round 15: on a Monday it is that week's own menu (instead of the seeded one)
   days[4].lunch = lunch4;
   d.menuVersions['mv-next'] = { id: 'mv-next', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', effectiveFrom, status: 'published', days } satisfies MenuVersion;
 });
@@ -170,7 +171,7 @@ describe('allergy reach: how many are allergic, and how many of them usually com
 describe('menu template helpers', () => {
   it('the template in force, scheduled versions and the version a later date resolves to', () => {
     const s = withVersion(seed(), '2026-10-26', ['dish-rawon']);
-    expect(templateOn(s, T).version?.id).toBe('menu-2024-07');
+    expect(templateOn(s, T).version?.id).toBe('menu-2026-10-19');
     expect(templateOn(s, '2026-10-29').version?.id).toBe('mv-next');
     expect(templateOn(s, '2026-10-29').days[4].lunch).toEqual(['dish-rawon']);
     expect(scheduledVersions(s, T).map((v) => v.id)).toEqual(['mv-next']);

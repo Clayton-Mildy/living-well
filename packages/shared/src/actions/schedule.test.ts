@@ -91,8 +91,9 @@ describe('schedule.publish', () => {
     expect(sessionsOn(s, '2026-10-19')[0].cell?.activityId).toBe('act-angklung'); // history unchanged (Monday, as before)
     expect(sessionsOn(s, '2026-10-28')[0].cell).toEqual(ANGKLUNG); // next Wednesday follows the new version
     expect(sessionsOn(s, '2026-10-26')[0].cell?.activityId).toBe('act-angklung'); // Monday is unchanged content
-    expect(scheduleVersionFor(s, '2026-10-25')?.effectiveFrom).toBe('2024-07-01');
+    expect(scheduleVersionFor(s, '2026-10-25')?.effectiveFrom).toBe('2026-10-19'); // KC round 15: each week has its own version
     expect(scheduleVersionFor(s, '2026-10-26')?.id).toBe(v.id);
+    expect(scheduleVersionFor(s, '2026-11-02')).toBeUndefined(); // it does not carry on into a week nobody planned
     expect(builderDays(s)[3]['10:30']).toEqual(ANGKLUNG); // the builder now starts from the new version
   });
 
@@ -118,7 +119,7 @@ describe('schedule.publish', () => {
     expect(s.scheduleVersions[r.result.versionId as string]).toMatchObject({ status: 'published', effectiveFrom: '2026-10-21' });
     expect(sessionsOn(s, '2026-10-22')[0].cell?.activityId).toBe('act-memory'); // Thursday, tomorrow: follows the new version
     expect(sessionsOn(s, '2026-10-21')[1].cell?.activityId).toBe('act-batik'); // today's cell was not touched
-    expect(scheduleVersionFor(s, '2026-10-20')?.effectiveFrom).toBe('2024-07-01'); // yesterday keeps the version it had
+    expect(scheduleVersionFor(s, '2026-10-20')?.effectiveFrom).toBe('2026-10-19'); // yesterday keeps the version it had
     expect(scheduleVersionFor(s, '2026-10-21')?.id).toBe(r.result.versionId);
     // the week view: the current week is editable (from today), a week that is over is not
     expect(weekView(s, '2026-10-19', clock.today)).toMatchObject({ editable: true });
@@ -136,7 +137,7 @@ describe('schedule.publish', () => {
     fails(s0, 'schedule.publish', { effectiveFrom: 'next monday', days }, 's9', 'err.invalid');
   });
 
-  it('later versions stack: each date uses the latest version in force on it', () => {
+  it('KC round 15: each week has its own version: a publish leaves the other weeks alone, and a week nobody planned is empty', () => {
     const s0 = fresh();
     let s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9');
     const second = withCell(s, 3, '10:30', { activityId: 'act-yoga', staffId: 's6', roomId: 'room-garden-room' });
@@ -144,8 +145,11 @@ describe('schedule.publish', () => {
     expect(sessionsOn(s, '2026-10-28')[0].cell?.activityId).toBe('act-angklung');
     expect(sessionsOn(s, '2026-11-11')[0].cell?.activityId).toBe('act-yoga');
     expect(sessionsOn(s, '2026-10-21')[0].cell?.activityId).toBe('act-keroncong');
-    // republishing the second version's days for a date after it changes nothing
-    fails(s, 'schedule.publish', { effectiveFrom: '2026-12-01', days: second }, 's9', 'err.noChanges');
+    expect(sessionsOn(s, '2026-11-04')).toEqual([]); // the week between them was never planned
+    expect(sessionsOn(s, '2026-11-18')).toEqual([]); // nor the week after
+    // republishing the second version's days later in its own week changes nothing; in another week it is a new plan
+    fails(s, 'schedule.publish', { effectiveFrom: '2026-11-12', days: second }, 's9', 'err.noChanges');
+    expect(run(s, 'schedule.publish', { effectiveFrom: '2026-11-16', days: second }, 's9').result.effectiveFrom).toBe('2026-11-16');
   });
 
   it('tells staff roles and every family with app access', () => {
@@ -167,13 +171,13 @@ describe('schedule.publish', () => {
     const both = builderDays(s0);
     both[3]['10:30'] = null;
     both[3]['13:30'] = null;
-    const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-22', days: both }, 's9');
+    const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: both }, 's9');
     const wed = '2026-10-28';
     expect(sessionsOn(s, wed).map((x) => x.cell)).toEqual([null, null]);
     expect(dayPlan(s, wed).map((x) => x.kind)).toEqual(['lunch', 'tea']);
     expect(nowNext(s, wed, 600).phase).toBe('none');
     const one = withCell(s0, 3, '10:30', null);
-    const s2 = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-22', days: one }, 's9');
+    const s2 = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: one }, 's9');
     expect(nowNext(s2, wed, 600)).toMatchObject({ phase: 'next', current: { time: '13:30' } });
   });
 
@@ -188,18 +192,19 @@ describe('schedule.publish', () => {
   });
 });
 
-describe('the seeded empty week (round 15 fix wave R-F1)', () => {
-  it('is one-day changes, not a weekly version: a weekly change from next Monday still applies the week after the empty week (and before it)', () => {
-    const s0 = buildSeed().citra; // keeps the seeded data: Mon 2 - Fri 6 Nov are empty days
-    for (const d of ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) expect(sessionsOn(s0, d).map((x) => x.cell)).toEqual([null, null]);
-    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9');
-    const s = r.state;
+describe('the seeded empty week (round 15 fix wave R-F1; KC round 15)', () => {
+  it('has no version at all: a publish for next week does not reach it, and the team plans it day by day or as a week', () => {
+    const s0 = buildSeed().citra; // keeps the seeded data: Mon 2 - Fri 6 Nov were never planned
+    for (const d of ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) expect(sessionsOn(s0, d)).toEqual([]);
+    const s = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9').state;
     expect(sessionsOn(s, '2026-10-28')[0].cell).toEqual(ANGKLUNG); // the week of the change
-    expect(sessionsOn(s, '2026-11-11')[0].cell).toEqual(ANGKLUNG); // the week after the empty week: not reverted by a restore copy
-    expect(sessionsOn(s, '2026-11-18')[0].cell).toEqual(ANGKLUNG);
-    expect(sessionsOn(s, '2026-11-04').map((x) => x.cell)).toEqual([null, null]); // the empty week stays empty (a one-day change wins on its own date)
-    // the team plans a day live: setting a session on an empty day replaces its "no session"
-    const planned = step(s, 'schedule.changeDay', { date: '2026-11-04', slot: '13:30', cell: ANGKLUNG }, 's9');    expect(sessionsOn(planned, '2026-11-04').map((x) => x.cell)).toEqual([null, ANGKLUNG]);
+    expect(sessionsOn(s, '2026-11-04')).toEqual([]); // the empty week stays empty
+    // the team plans a day live, or the whole week
+    const planned = step(s, 'schedule.changeDay', { date: '2026-11-04', slot: '13:30', cell: ANGKLUNG }, 's9');
+    expect(sessionsOn(planned, '2026-11-04').map((x) => x.cell)).toEqual([null, ANGKLUNG]);
+    const week = step(s, 'schedule.publish', { effectiveFrom: '2026-11-02', days: builderDays(s) }, 's9');
+    expect(sessionsOn(week, '2026-11-04')[0].cell).toEqual(ANGKLUNG);
+    expect(sessionsOn(week, '2026-11-11')).toEqual([]);
   });
 });
 
@@ -216,18 +221,18 @@ describe('schedule.publish notify toggle and weekly versions', () => {
     fails(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days, notify: 'no' }, 's9', 'err.invalid');
   });
 
-  it('publishing from a later week’s Monday leaves the weeks before it on their own version', () => {
+  it('publishing from a later week’s Monday leaves the weeks before and after it on their own version (KC round 15: none)', () => {
     const s0 = fresh();
     const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-11-09', days: withCell(s0, 4, '10:30', ANGKLUNG) }, 's9');
     const before = weekView(s, '2026-11-02', clock.today);
     const from = weekView(s, '2026-11-09', clock.today);
     const after = weekView(s, '2026-11-16', clock.today);
-    expect(before.versions.map((v) => v.effectiveFrom)).toEqual(['2024-07-01']);
+    expect(before.versions).toEqual([]);
     expect(from.versions.map((v) => v.effectiveFrom)).toEqual(['2026-11-09']);
-    expect(after.versions.map((v) => v.effectiveFrom)).toEqual(['2026-11-09']); // a version applies until a newer one starts
-    expect(before.base[4]['10:30']?.activityId).not.toBe('act-angklung');
+    expect(after.versions).toEqual([]); // a version applies to its own week only
+    expect(before.base[4]['10:30']).toBeNull();
     expect(from.base[4]['10:30']).toEqual(ANGKLUNG);
-    expect(after.base[4]['10:30']).toEqual(ANGKLUNG);
+    expect(after.base[4]['10:30']).toBeNull();
   });
 
   it('a draft saved for a week shows in that week only, and publishing it needs no new input', () => {
@@ -235,12 +240,12 @@ describe('schedule.publish notify toggle and weekly versions', () => {
     const s = step(s0, 'schedule.saveDraft', { days: withCell(s0, 3, '10:30', ANGKLUNG), effectiveFrom: '2026-11-09' }, 's9');
     const here = weekView(s, '2026-11-09', clock.today);
     expect(here.draftHere).toBe(true);
-    expect(here.changes).toEqual([{ w: 3, slot: '10:30' }]);
+    expect(here.changes).toHaveLength(10); // KC round 15: the week was never planned, so every placed session is a change
     expect(here.days[3]['10:30']).toEqual(ANGKLUNG);
     const elsewhere = weekView(s, '2026-11-16', clock.today);
     expect(elsewhere.draftHere).toBe(false);
     expect(elsewhere.changes).toEqual([]);
-    expect(elsewhere.otherDraft).toEqual({ monday: '2026-11-09', changes: 1 });
+    expect(elsewhere.otherDraft).toEqual({ monday: '2026-11-09', changes: 10 }); // the week of the draft was never planned: every placed session is new
     const out = run(s, 'schedule.publish', { effectiveFrom: '2026-11-09' }, 's9');
     expect(out.state.scheduleVersions[out.result.versionId as string].days[3]['10:30']).toEqual(ANGKLUNG);
   });
@@ -774,15 +779,17 @@ describe('round 14: every programme change by the activity team waits for Ega', 
     const onTime = run(r.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9');
     expect(onTime.result.approved).toBe(1);
     expect(onTime.state.scheduleVersions[id]).toMatchObject({ status: 'published', effectiveFrom: '2026-10-22', publishedBy: 'staff:s9', publishedAt: '2026-10-21T10:00', submittedBy: 'staff:s5' });
-    expect(sessionsOn(onTime.state, '2026-10-28')[0].cell).toEqual(ANGKLUNG);
+    expect(scheduleVersionFor(onTime.state, '2026-10-22')?.id).toBe(id);
     const ns = note(onTime.state, 'cal.notif.schedulePublished');
     expect(ns).toHaveLength(1);
     expect(new Set(ns[0].toUsers)).toEqual(new Set(FAMILIES));
     expect(pendingItems(onTime.state, 'programme')).toEqual([]);
     // Review Focus 5: approved after its start date, it publishes from today
-    const late = run(r.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9', { today: '2026-10-26', nowMin: 600 });
-    expect(late.state.scheduleVersions[id]).toMatchObject({ status: 'published', effectiveFrom: '2026-10-26' });
-    expect(scheduleVersionFor(late.state, '2026-10-23')?.effectiveFrom).toBe('2024-07-01'); // the days that passed keep their plan
+    const late = run(r.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9', { today: '2026-10-23', nowMin: 600 });
+    expect(late.state.scheduleVersions[id]).toMatchObject({ status: 'published', effectiveFrom: '2026-10-23' });
+    expect(scheduleVersionFor(late.state, '2026-10-22')?.effectiveFrom).toBe('2026-10-19'); // the days that passed keep their plan
+    // KC round 15: once its week is over there is nothing left to publish it to: a conflict
+    expect(run(r.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9', { today: '2026-10-26', nowMin: 600 }).result.conflicts).toEqual([id]);
     // handled once
     expect(run(onTime.state, 'approval.approve', { type: 'programme', ids: [id] }, 's9').result.skipped).toEqual([id]);
   });
@@ -951,12 +958,13 @@ describe('round 14: weekends open when a programme is approved', () => {
     const ok = run(r.state, 'approval.approve', { type: 'programme', ids: ['2026-11-14'] }, 's9');
     expect(dayStatus(ok.state, '2026-11-14').open).toBe(true);
   });
-  it('a Saturday cell in the weekly plan opens every Saturday from its date; management changes a programmed Saturday at once', () => {
+  it('a Saturday cell in the weekly plan opens that week’s Saturday (KC round 15: not the next); management changes a programmed Saturday at once', () => {
     const s0 = fresh();
     const days = { ...builderDays(s0), 6: { '10:30': MEMORY, '13:30': null } };
-    const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 's9');
+    const s = step(s0, 'schedule.publish', { effectiveFrom: '2026-11-09', days }, 's9');
     expect(dayStatus(s, '2026-11-14').open).toBe(true);
     expect(dayStatus(s, '2026-11-15').open).toBe(false);
+    expect(dayStatus(s, '2026-11-21').open).toBe(false);
     expect(sessionsOn(s, '2026-11-14')[0].cell).toEqual(MEMORY);
     const c = step(s0, 'schedule.changeDay', { date: SAT, slot: '13:30', cell: null }, 's9');
     expect(sessionsOn(c, SAT).filter((x) => x.cell).map((x) => x.cell!.activityId)).toEqual(['act-angklung']);
