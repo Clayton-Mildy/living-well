@@ -41,15 +41,22 @@ test('Dinar sends a change; Ega opens "See proposed week" in the Calendar, sees 
   c.assertClean();
 });
 
-test('the week two weeks out (2 – 6 Nov) is empty for the activity team to plan, and the programme is back the week after', async ({ page }) => {
+test('the week two weeks out (2 – 6 Nov) is empty for the activity team to plan (five one-day changes), the weekly plan is untouched, and the programme is there the week after', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's5', '/calendar');
+  // the Calendar shows each of those days with no session, marked as a day change, and the team can add one
+  await page.getByRole('tab', { name: 'Calendar' }).click();
+  await page.getByRole('button', { name: 'Next month' }).click();
+  await page.locator('button[data-date="2026-11-04"]').click();
+  const day = page.locator('div[data-date="2026-11-04"]');
+  await expect(day.getByRole('button', { name: 'Add a session at 10:30' })).toBeVisible();
+  await expect(day.getByRole('button', { name: 'Add a session at 13:30' })).toBeVisible();
+  await page.locator('button[data-date="2026-11-04"]').click();
+  await page.locator('button[data-date="2026-11-09"]').click();
+  await expect(page.locator('div[data-date="2026-11-09"]').getByRole('button', { name: /^Edit activity/ }).first()).toBeVisible(); // the week after has its programme
+  // the weekly plan itself is untouched
   await page.getByRole('heading', { name: 'Weekly schedule' }).scrollIntoViewIfNeeded();
   for (let i = 0; i < 2; i++) await page.getByRole('button', { name: 'Next week' }).click();
-  await page.getByRole('tab', { name: /^Mon/ }).click();
-  await expect(page.getByRole('button', { name: 'Monday 10:30: Empty' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Monday 13:30: Empty' })).toBeVisible();
-  await page.getByRole('button', { name: 'Next week' }).click();
   await page.getByRole('tab', { name: /^Mon/ }).click();
   await expect(page.getByRole('button', { name: /^Monday 10:30: (?!Empty)/ })).toBeVisible();
   c.assertClean();

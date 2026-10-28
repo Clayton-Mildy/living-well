@@ -421,13 +421,13 @@ test('builder (s9): this week is editable from today (earlier days read-only), a
   await expect(sheet.getByRole('switch', { name: /Notify families and the team/ })).toHaveAttribute('aria-checked', 'true');
   await sheet.getByRole('button', { name: 'Publish to staff and families' }).click();
   await expect(page.getByRole('status')).toContainText('Schedule published from Monday 26 October');
-  await expect(page.getByText('Upcoming').first()).toBeVisible(); // this version, then round 15's empty week and the Monday that restores the programme
+  await expect(page.getByText('Upcoming').first()).toBeVisible();
   await expect(page.getByText('From Monday 26 October', { exact: true })).toBeVisible();
   await expect(page.getByText(/Published Wed 21 Oct, \d\d:\d\d by Ega · In force from Mon 26 Oct/)).toBeVisible(); // the status follows the version of the week shown
   // stored as a dated version: the old one stays for the past
   const s = await snapshot(page, 's9');
   const published = Object.values(s.scheduleVersions).filter((v) => v.status === 'published');
-  expect(published.map((v) => v.effectiveFrom).sort()).toEqual(['2024-07-01', '2026-10-26', '2026-11-02', '2026-11-09']); // plus round 15's empty week (2 Nov) and the Monday that restores the programme
+  expect(published.map((v) => v.effectiveFrom).sort()).toEqual(['2024-07-01', '2026-10-26']);
   expect(s.scheduleVersions['sched-draft']).toBeUndefined();
   expect(published.find((v) => v.effectiveFrom === '2026-10-26')!.days['3']['10:30']).toMatchObject({ activityId: 'act-angklung', staffId: 's6' });
   expect(published.find((v) => v.effectiveFrom === '2024-07-01')!.days['3']['10:30'].activityId).toBe('act-keroncong');
@@ -436,7 +436,7 @@ test('builder (s9): this week is editable from today (earlier days read-only), a
   expect(note.toRoles).toEqual(expect.arrayContaining(['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt']));
   expect(note.toUsers).toContain('f1');
   expect(note.params.date).toBe('26/10/2026');
-  // this week still shows the old version; next week the new one; the week after is the seeded empty week
+  // this week still shows the old version; next week the new one; the weekly plan of the week after follows it too (round 15's empty week 2 – 6 Nov is five one-day changes, not a weekly version)
   await page.getByRole('button', { name: 'This week' }).click();
   await goDay(page, 'Wed');
   await expect(page.getByRole('button', { name: 'Wednesday 10:30: Keroncong sing-along' })).toBeVisible();
@@ -444,7 +444,7 @@ test('builder (s9): this week is editable from today (earlier days read-only), a
   await page.getByRole('button', { name: 'Next week', exact: true }).click();
   await expect(page.getByText('2 Nov – 6 Nov 2026')).toBeVisible();
   await goDay(page, 'Wed');
-  await expect(page.getByRole('button', { name: 'Wednesday 10:30: Empty' })).toBeVisible(); // round 15: the seeded empty week (2 – 6 Nov) has its own version, which a publish for 26 Oct does not replace
+  await expect(page.getByRole('button', { name: 'Wednesday 10:30: Angklung ensemble' })).toBeVisible(); // the weekly plan of 2 – 6 Nov is the new one (its days are emptied by one-day changes, see the Calendar list)
   // today is unchanged on the calendar and on the teacher's Today
   await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
   const { page: t, ctx } = await otherUser(browser, 's5', '/today');
@@ -707,7 +707,7 @@ test('s5 (activity teacher): no event editor or catalog, but the builder and Edi
   expect((await rawAct(page, 's5', 'schedule.publish', { effectiveFrom: '2026-10-26', days }, 'e2e-ask-publish')).code).toBeUndefined();
   const s = await snapshot(page, 's9');
   expect(Object.values(s.activities).some((a) => a.name === 'Tai chi')).toBe(false);
-  expect(Object.values(s.scheduleVersions).filter((v) => v.status === 'published' && !v.id.startsWith('sched-r15-')).map((v) => v.effectiveFrom)).toEqual(['2024-07-01']); // (round 15's empty week and its restore version are seeded)
+  expect(Object.values(s.scheduleVersions).filter((v) => v.status === 'published').map((v) => v.effectiveFrom)).toEqual(['2024-07-01']);
   expect(Object.values(s.scheduleVersions).filter((v) => v.status === 'pending').map((v) => v.effectiveFrom)).toEqual(['2026-10-26']);
   c.assertClean();
 });
@@ -797,7 +797,7 @@ test('builder (s9): this week’s plan is edited from today: a publish starts to
   // stored from today; the old version stays for the days before it
   const s = await snapshot(page, 's9');
   const published = Object.values(s.scheduleVersions).filter((v) => v.status === 'published');
-  expect(published.filter((v) => !v.id.startsWith('sched-r15-')).map((v) => v.effectiveFrom).sort()).toEqual(['2024-07-01', '2026-10-21']);
+  expect(published.map((v) => v.effectiveFrom).sort()).toEqual(['2024-07-01', '2026-10-21']);
   expect(published.find((v) => v.effectiveFrom === '2026-10-21')!.days['4']['10:30']).toMatchObject({ activityId: 'act-reading' });
   expect(published.find((v) => v.effectiveFrom === '2024-07-01')!.days['4']['10:30'].activityId).toBe('act-garden');
   // today is as it was, Thursday follows the new plan

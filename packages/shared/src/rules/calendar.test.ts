@@ -6,7 +6,7 @@ import { occasionsInRange } from './occasions';
 import { dow } from '../util';
 
 const T = '2026-10-21';
-const fresh = (): ClubState => { const s = buildSeed().citra; for (const id of ['sched-r15-empty', 'sched-r15-restore']) delete s.scheduleVersions[id]; return s; }; // the plain weekly plan: without the round-15 empty week and its restore version (the seed tests cover those)
+const fresh = (): ClubState => { const s = buildSeed().citra; return s; };
 
 describe('dayInfo', () => {
   it('open weekday: activities from the schedule version, in time order', () => {

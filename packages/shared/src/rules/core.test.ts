@@ -39,7 +39,7 @@ describe('weekends open when programmed', () => {
   /** the seed programmes the first Saturday with no venue booking (7 Nov; 24 and 31 Oct are rented out) and leaves its Sunday waiting for Ega */
   const SEED_SAT = '2026-11-07';
   const SEED_SUN = '2026-11-08';
-  const seed = () => { const s = buildSeed().citra; for (const id of ['sched-r15-empty', 'sched-r15-restore']) delete s.scheduleVersions[id]; return s; }; // the plain weekly plan: without the round-15 empty week and its restore version (the seed tests cover those)
+  const seed = () => { const s = buildSeed().citra; return s; };
     const ANGKLUNG = { activityId: 'act-angklung', staffId: 's5', roomId: 'room-music' };
   it('a Saturday with nothing programmed is closed for the weekend', () => {
     expect(dayStatus(seed(), SAT)).toMatchObject({ open: false, reason: 'weekend' });

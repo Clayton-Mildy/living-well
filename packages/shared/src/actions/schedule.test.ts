@@ -7,7 +7,7 @@ import { guestOn } from '../rules/guests';
 
 const clock = { today: '2026-10-21', nowMin: 600 }; // Wed 21 Oct, 10:00
 let n = 0;
-const fresh = (): ClubState => { const s = buildSeed().citra; for (const id of ['sched-r15-empty', 'sched-r15-restore']) delete s.scheduleVersions[id]; return s; }; // the plain weekly plan: without the round-15 empty week and its restore version (the seed tests cover those)
+const fresh = (): ClubState => { const s = buildSeed().citra; return s; };
 const as = (s: ClubState, id: string) => getUser({ [s.clubId]: s }, id)!;
 const run = (s: ClubState, name: string, input: unknown, uid: string, clk = clock) => execute(s, name, input, as(s, uid), clk, `t${++n}`);
 const step = (s: ClubState, name: string, input: unknown, uid: string, clk = clock) => run(s, name, input, uid, clk).state;
@@ -185,6 +185,21 @@ describe('schedule.publish', () => {
     const r = run(s0, 'schedule.publish', { days }, 's9', later);
     expect(r.result.effectiveFrom).toBe('2027-03-08');
     expect(normalizeDays(undefined)[1]['10:30']).toBeNull();
+  });
+});
+
+describe('the seeded empty week (round 15 fix wave R-F1)', () => {
+  it('is one-day changes, not a weekly version: a weekly change from next Monday still applies the week after the empty week (and before it)', () => {
+    const s0 = buildSeed().citra; // keeps the seeded data: Mon 2 - Fri 6 Nov are empty days
+    for (const d of ['2026-11-02', '2026-11-03', '2026-11-04', '2026-11-05', '2026-11-06']) expect(sessionsOn(s0, d).map((x) => x.cell)).toEqual([null, null]);
+    const r = run(s0, 'schedule.publish', { effectiveFrom: '2026-10-26', days: withCell(s0, 3, '10:30', ANGKLUNG) }, 's9');
+    const s = r.state;
+    expect(sessionsOn(s, '2026-10-28')[0].cell).toEqual(ANGKLUNG); // the week of the change
+    expect(sessionsOn(s, '2026-11-11')[0].cell).toEqual(ANGKLUNG); // the week after the empty week: not reverted by a restore copy
+    expect(sessionsOn(s, '2026-11-18')[0].cell).toEqual(ANGKLUNG);
+    expect(sessionsOn(s, '2026-11-04').map((x) => x.cell)).toEqual([null, null]); // the empty week stays empty (a one-day change wins on its own date)
+    // the team plans a day live: setting a session on an empty day replaces its "no session"
+    const planned = step(s, 'schedule.changeDay', { date: '2026-11-04', slot: '13:30', cell: ANGKLUNG }, 's9');    expect(sessionsOn(planned, '2026-11-04').map((x) => x.cell)).toEqual([null, ANGKLUNG]);
   });
 });
 
@@ -726,7 +741,7 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
 // round 14 (B1): the activity team builds the programme; every change it makes waits for Ega (management). Ruling 6: a day's edit waits in `pending`
 // beside the live fields, which every rule keeps reading; Review Focus 5: an edit back to the live day clears it, an approval after the start date publishes from today.
 describe('round 14: every programme change by the activity team waits for Ega', () => {
-  const fresh = (): ClubState => { const s = buildSeed().citra; delete s.scheduleDays['2026-11-08']; for (const id of ['sched-r15-empty', 'sched-r15-restore']) delete s.scheduleVersions[id]; return s; }; // without the seeded Sunday waiting for Ega (round 14 B2)
+  const fresh = (): ClubState => { const s = buildSeed().citra; delete s.scheduleDays['2026-11-08']; return s; }; // without the seeded Sunday waiting for Ega (round 14 B2)
   const TODAY = '2026-10-21';
   const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
   const BATIK = { activityId: 'act-batik', staffId: 's6', roomId: 'room-studio' }; // Wednesday 13:30 in the weekly plan
