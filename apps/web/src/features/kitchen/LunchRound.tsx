@@ -54,7 +54,7 @@ export function LunchRound() {
   const allDone = people.length > 0 && !left.length;
   const photos = (
     <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
-      <LunchPhotos date={today} />
+      <LunchPhotos date={today} compact />
     </div>
   );
 

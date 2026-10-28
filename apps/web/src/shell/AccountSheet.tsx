@@ -75,7 +75,7 @@ export function AccountSheet({ open, onClose }: { open: boolean; onClose: () => 
   return (
     <Sheet open={open} onClose={onClose} title={t('shell.account')}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <Avatar name={name0} size={52} src={user.kind === 'staff' ? memberPhoto(user.staff) : undefined} />
+        <Avatar name={name0} size={52} src={memberPhoto(user.kind === 'staff' ? user.staff : user.contact)} />
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, minWidth: 0 }}>
           <span style={{ fontSize: 18, fontWeight: 500 }}>{name0}</span>
           <span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{roleLabel} · {s.club.name}</span>

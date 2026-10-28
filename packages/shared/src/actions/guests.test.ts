@@ -6,7 +6,7 @@ import { feeOfSession, guestInvoiceNumber, guestIssue, guestLists, guestOn, gues
 
 const clock = { today: '2026-10-21', nowMin: 600 }; // Wed 21 Oct, 10:00
 let n = 0;
-const fresh = (): ClubState => buildSeed().citra;
+const fresh = (): ClubState => { const s = buildSeed().citra; return s; };
 const as = (s: ClubState, id: string) => getUser({ [s.clubId]: s }, id)!;
 const run = (s: ClubState, name: string, input: unknown, uid = 's9') => execute(s, name, input, as(s, uid), clock, `g${++n}`);
 const step = (s: ClubState, name: string, input: unknown, uid = 's9') => run(s, name, input, uid).state;
@@ -160,7 +160,7 @@ describe('guest.book', () => {
     const r = run(fresh(), 'guest.book', { hostId: 'gh-ratna', date: '2026-10-26', slot: '13:30', activityId: 'act-angklung' });
     let s = r.state;
     expect(sessionsOn(s, '2026-10-26')[1].cell).toEqual({ activityId: 'act-angklung', staffId: 's6', roomId: 'room-music' }); // Monday 13:30 was chair yoga with Kak Dimas
-    expect(sessionsOn(s, '2026-11-02')[1].cell?.activityId).toBe('act-yoga');
+    expect(sessionsOn(s, '2026-11-09')[1].cell?.activityId).toBe('act-yoga');
     const told = notLobby(s, 'guests.notif.booked').at(-1)!;
     expect(told.toUsers.length).toBeGreaterThan(0);
     expect(dayInfo(s, '2026-10-26', 'staff').items.find((i) => i.time === '13:30')).toMatchObject({ changed: true, guest: { name: 'Bu Ratna' } });

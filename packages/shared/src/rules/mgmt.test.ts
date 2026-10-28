@@ -102,6 +102,17 @@ describe('pricing preview', () => {
     expect(invoicePreview(s, 'm1', { flex: 6000000, gold: 10000000, extra: 700000, from: '2026-12-01' }, T)!.total).toBe(2700000);
     expect(invoicePreview(s, 'nope', null, T)).toBeNull();
   });
+  it('a member on a custom plan previews the plan price, saved or typed', () => {
+    const c: ClubState = structuredClone(s);
+    c.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }];
+    Object.values(c.prices).forEach((p) => { p.plans = { plan_1: 2_000_000 }; });
+    c.members.m1.plans = [{ from: '2020-01-01', plan: 'plan_1', by: 'staff:s9' }];
+    const base = { flex: 6000000, gold: 10000000, extra: 700000, from: T };
+    const planLine = (d: Parameters<typeof invoicePreview>[2]) => invoicePreview(c, 'm1', d, T)!.lines.find((l) => l.id.startsWith('plan-'))!.amount;
+    expect(planLine(null)).toBe(2_000_000);
+    expect(planLine(base)).toBe(2_000_000); // unsaved other prices keep the plan's price
+    expect(planLine({ ...base, plans: { plan_1: 2_300_000 } })).toBe(2_300_000);
+  });
   it('an extra visit this month shows on the next invoice at the extra-day price, with the unsaved price when typing', () => {
     expect(invoicePreview(s, 'm1', null, T)!.lines.map((l) => l.kind)).toEqual(['plan']); // 10 of 10 visits so far: nothing extra
     const lina = checkIn(s, 'm1');

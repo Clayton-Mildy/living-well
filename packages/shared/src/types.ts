@@ -31,7 +31,10 @@ export type StaffRole = 'lobby' | 'nurse' | 'activity' | 'kitchen' | 'finance' |
 export type Bank = 'BCA' | 'Mandiri' | 'BNI' | 'BRI' | 'Permata';
 export type Xero = 'synced' | 'pending' | 'awaitingPayment' | 'draft' | 'notSent';
 export type SectionId = string; // 'fnb' | 'activities' | 'operations' | custom
-export type Plan = 'flex' | 'gold';
+/** Flex and Gold are built in; a plan the club adds to its catalogue (ClubSettings.plans) is `plan_<n>`. */
+export type Plan = 'flex' | 'gold' | `plan_${string}`;
+/** One entry of the membership plan catalogue (round 15, phase 2). Flex and Gold are virtual entries built from the settings and the price list (rules/plans.ts). */
+export interface PlanDef { id: Plan; name: string; nameId?: string; kind: 'days' | 'unlimited'; /** visits a month on a days plan (1-23) */ quota?: number; active: boolean }
 export type QueueKind = 'arrival' | 'departure' | 'recheck' | 'monthly' | 'spot';
 export type ThreadTopic = 'lobby' | 'nurse' | 'care' | 'kitchen' | 'billing';
 
@@ -93,7 +96,14 @@ export interface ClubSettings {
   duties?: Record<string, { off?: boolean; dueBy?: HM }>;
   /** KC round 13: days of leave a staff member may take in a calendar year (missing = 5) */
   leaveDays?: number;
+  /** KC round 15 (phase 2): the plans management added beyond Flex and Gold, in order. A retired plan stays here: its members keep it and still bill. */
+  plans?: PlanDef[];
+  /** KC round 15 (phase 2): the Contacts directory's categories, in order (AC and electrical, Plumbing…). A retired one stays: its contacts show under "Other". Separate from a supplier's spending category. */
+  directoryGroups?: DirectoryGroup[];
 }
+
+/** One category of the Contacts directory. */
+export interface DirectoryGroup { id: string; name: string; nameId?: string; active: boolean }
 
 /** One Watch / Alert pair; null = not used. */
 export interface Limit { watch: number | null; alert: number | null }
@@ -119,6 +129,8 @@ export interface PriceVersion extends Row {
   leave?: number;
   /** round 14: the monthly dementia care fee, on top of the plan for a member whose registration answers yes */
   dementia?: number;
+  /** round 15 (phase 2): the monthly price of each catalogue plan, by plan id (a plan missing here bills Rp 0 from this version) */
+  plans?: Record<string, number>;
   sample: { flex: boolean; gold: boolean; extra: boolean };
   by?: Actor;
 }
@@ -320,6 +332,8 @@ export interface FamilyContact extends Row {
   phone: string; // E.164, e.g. +6281210904471
   lang?: Lang;
   activatedAt?: DT;
+  /** round 15: the contact's picture (a media id); the Family tabs and the account header show it */
+  photoMediaId?: string;
 }
 
 export interface FamilyLink extends Row {
@@ -525,6 +539,8 @@ export interface Enquiry extends Row {
   senior: { title: Title; name: string };
   contact: { name: string; relation: Relation; phone: string };
   source: 'referral' | 'instagram' | 'website' | 'walkIn' | 'other';
+  /** round 15: where a lead heard of us when the source is Other (optional, at most 80 characters; gone when the source changes) */
+  sourceOther?: string;
   stage: 'new' | 'visit' | 'trial' | 'joined' | 'lost';
   next?: { kind: 'callBack' | 'sendPrices' | 'visit' | 'trial' | 'followUp' | 'starts' | 'custom'; date?: ISODate; time?: HM; text?: string };
   notes?: string;
@@ -656,6 +672,8 @@ export interface Dish extends Row {
   tags: ('soft' | 'lowSalt' | 'sugarFree' | 'vegetarian')[];
   reviewedBy?: string;
   reviewedAt?: DT;
+  /** round 15: the dish's picture (a media id); the menu and the calendars show it until the day's own lunch photo replaces it */
+  photoMediaId?: string;
 }
 
 export interface MenuDay {
@@ -874,6 +892,8 @@ export interface DirectoryContact extends Row {
   public: boolean;
   /** what a supplier sells: the default category for lines added by hand */
   category?: SpendCategory;
+  /** round 15 (phase 2): the directory category (ClubSettings.directoryGroups); none, or a retired one = shown under "Other" */
+  groupId?: string;
 }
 
 export interface StaffHr {
@@ -1014,7 +1034,7 @@ export interface Broadcast extends Row {
 // ---------------- KC round 7 ----------------
 
 /** What the family decided for the coming month, as the front desk recorded it. 'noAnswer' keeps the follow-up open. (KC round 7: no "call back" option.) */
-export type FollowUpOutcome = 'continue' | 'upgrade' | 'downgrade' | 'leave' | 'stop' | 'noAnswer';
+export type FollowUpOutcome = 'continue' | 'upgrade' | 'downgrade' | 'switch' | 'leave' | 'stop' | 'noAnswer';
 export interface FollowUpCall { at: DT; by: Actor; outcome: FollowUpOutcome; note?: string }
 
 /**
@@ -1028,6 +1048,8 @@ export interface FollowUp extends Row {
   /** the latest outcome; missing = nobody reached yet */
   outcome?: FollowUpOutcome;
   note?: string;
+  /** switch (round 15): the catalogue plan the member moves to (upgrade is always Gold and downgrade Flex) */
+  plan?: Plan;
   /** leave: the months asked for */
   leaveMonths?: YM[];
   /** stop: the member's last day */

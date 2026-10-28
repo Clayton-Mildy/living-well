@@ -19,6 +19,7 @@ import { QuickCamera, QUICK_CAMERA_ROLES } from './QuickCamera';
 import { QuickTasks, QUICK_TASK_ROLES } from './QuickTasks';
 import { FamilyShell } from './FamilyShell';
 import { SuperSearch } from './SuperSearch';
+import { SearchFab } from './SearchFab';
 
 const IS_MAC = typeof navigator !== 'undefined' && /Mac|iPhone|iPad/i.test(navigator.platform || navigator.userAgent || '');
 
@@ -50,7 +51,7 @@ export function AppShell() {
     document.documentElement.dataset.skin = 'warm';
     return () => { delete document.documentElement.dataset.skin; };
   }, [staff]);
-  // round 14 e: Cmd-K / Ctrl-K toggles the search, from any staff screen (even a pushed phone profile, which hides the header icon)
+  // round 14 e: Cmd-K / Ctrl-K toggles the search, from any staff screen (even a pushed phone profile, which hides the header)
   useEffect(() => {
     if (!staff) return;
     const on = (e: KeyboardEvent) => {
@@ -63,12 +64,15 @@ export function AppShell() {
   if (role === 'family') return <FamilyShell />; // round 8: the family app has its own frame (Family App prototype)
 
   // --cp-tabbar: how far a page's sticky foot (a Save bar) sits up so the floating tab bar (64px tall, 14px up) never covers it
-  const cssVars = { '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px', '--cp-tabbar': isPhone ? 'calc(86px + env(safe-area-inset-bottom, 0px))' : '0px' } as CSSProperties;
+  // --cp-floatclear: the phone's room under a page's last rows for the floating tab bar, Demo pill and button stack; full-screen views with their own scroller (FullSheet, pushed screens) end with a spacer of this height
+  const quick = (QUICK_CAMERA_ROLES as readonly string[]).includes(role) || QUICK_TASK_ROLES.includes(role); // the quick camera / tasks buttons float over the page's last rows: leave room to scroll them clear of them
+  const fabRows = isPhone ? (quick ? 58 : 44) : 0; // round 15: the phone search button floats above that stack (a role with neither has just this button)
+  const floatClear = isPhone ? `calc(${84 + (pins ? (quick ? 124 : 76) : quick ? 68 : 24) + fabRows}px + env(safe-area-inset-bottom, 0px))` : '0px';
+  const cssVars = { '--cp-floatclear': floatClear, '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px', '--cp-tabbar': isPhone ? 'calc(86px + env(safe-area-inset-bottom, 0px))' : '0px' } as CSSProperties;
   const go = (k: string) => (k === 'more' ? setMore(true) : navigate('/' + k));
   const groups: [string | null, NavItem[]][] = NAVG[role] || [[null, NAVS[role as Role]]];
   // round 6: a member profile is a pushed screen on a phone; it brings its own top bar (‹ Members), so the logo header steps aside
   const pushed = isPhone && /^\/members\/[^/]+/.test(pathname);
-  const quick = (QUICK_CAMERA_ROLES as readonly string[]).includes(role) || QUICK_TASK_ROLES.includes(role); // the quick camera / tasks buttons float over the page's last rows: leave room to scroll them clear of them
   return (
     // round 9: the warm cream page (App v4); cards on it are warm white (global.css)
     <div style={{ ...cssVars, position: 'fixed', inset: 0, display: 'flex', background: 'var(--page, #FFFFFF)', color: '#24201C' }}>
@@ -79,10 +83,9 @@ export function AppShell() {
         {isPhone && !pushed ? (
           <div style={{ height: 56, flex: 'none', display: 'flex', alignItems: 'center', gap: 4, padding: '0 10px 0 18px', background: 'var(--page, #FFFFFF)' }}>
             <div style={{ flex: 1, minWidth: 0 }}><Logo height={30} /></div>
-            <IconButton icon="search" label={t('search.open')} bordered={false} onClick={() => setFind(true)} />
             <NotificationBell onClick={() => setBell(true)} />
             <button type="button" onClick={() => setAcct(true)} aria-label={t('shell.account')} style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'transparent', padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer' }}>
-              <Avatar name={user.kind === 'staff' ? user.staff.name : user.contact.name} size={36} src={user.kind === 'staff' ? memberPhoto(user.staff) : undefined} />
+              <Avatar name={user.kind === 'staff' ? user.staff.name : user.contact.name} size={36} src={memberPhoto(user.kind === 'staff' ? user.staff : user.contact)} />
             </button>
           </div>
         ) : null}
@@ -90,7 +93,7 @@ export function AppShell() {
           <Suspense fallback={<PageSkeleton />}>
             <Outlet />
             {/* room to scroll the last rows clear of the floating Demo pill; on a phone also of the floating tab bar (84px: it floats over the page like the family app's) */}
-            <div aria-hidden="true" style={{ height: isPhone ? `calc(${84 + (pins ? (quick ? 124 : 76) : quick ? 68 : 24)}px + env(safe-area-inset-bottom, 0px))` : quick ? 136 : 72 }} />
+            <div aria-hidden="true" style={{ height: isPhone ? 'var(--cp-floatclear)' : quick ? 136 : 72 }} />
           </Suspense>
         </main>
         {isPhone ? <BottomNav role={role} current={key} counts={counts} onGo={go} /> : null}
@@ -105,6 +108,7 @@ export function AppShell() {
       <DemoPill phone={isPhone} />
       <QuickCamera phone={isPhone} />
       <QuickTasks phone={isPhone} />
+      <SearchFab phone={isPhone} onOpen={() => setFind(true)} />
     </div>
   );
 }
@@ -180,7 +184,7 @@ function Sidebar({ width, groups, current, counts, onGo, onAcct, onBell, onSearc
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 10, borderRadius: 16, border: '1px solid #3A3027' }}>
           <button type="button" onClick={onAcct} aria-label={t('shell.account')} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', color: '#EDE4D8' }}>
-            <Avatar name={name} size={36} src={user.kind === 'staff' ? memberPhoto(user.staff) : undefined} />
+            <Avatar name={name} size={36} src={memberPhoto(user.kind === 'staff' ? user.staff : user.contact)} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
               <span style={{ fontSize: 14, fontWeight: 500, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', lineHeight: 1.35 }}>{name}</span>
               <span style={{ fontSize: 12, color: '#9C8E7E', lineHeight: 1.35, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{roleLabel}</span>

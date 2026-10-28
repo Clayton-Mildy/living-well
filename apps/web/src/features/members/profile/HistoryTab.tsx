@@ -1,8 +1,8 @@
 // History tab (staff): every change to the record with who and when, read from the activity log. The log also covers members created from
 // enquiries; "Everything" adds day-to-day activity (check-ins, readings).
 import { useState } from 'react';
-import { actorName, hasKey, sortBy } from '@cp/shared';
-import type { ActivityEntry } from '@cp/shared';
+import { actorName, hasKey, planLabel, sortBy } from '@cp/shared';
+import type { ActivityEntry, Plan } from '@cp/shared';
 import { Icon, Pager, Segmented, usePaged } from '../../../components/ui';
 import { docLabel, HAIR, whenText } from '../lib';
 import { ListCard } from './parts';
@@ -25,7 +25,7 @@ export function HistoryTab({ p }: { p: P }) {
     if (pr.fields) parts.push(String(pr.fields).split(',').map((f) => t('profile.f.' + (FIELD_KEY[f] || f))).join(', '));
     if (pr.type) parts.push(String(pr.type).split(',').map((x) => docLabel(t, x as never)).join(', '));
     if (pr.kinds) parts.push(String(pr.kinds).split(',').map((x) => t('profile.consent.' + x)).join(', '));
-    if (a.key === 'members.feed.plan' || a.key === 'members.feed.planApplied') parts.push(`${t('profile.plan.' + pr.plan)} · ${t('profile.fromDate', { d: fmt.fdy(String(pr.from)) })}`);
+    if (a.key === 'members.feed.plan' || a.key === 'members.feed.planApplied') parts.push(`${planLabel(s, pr.plan as Plan, fmt.lang)} · ${t('profile.fromDate', { d: fmt.fdy(String(pr.from)) })}`);
     if (a.key === 'members.feed.ending') parts.push(`${t('profile.endReason.' + pr.reason)} · ${t('profile.lastDay', { d: fmt.fdy(String(pr.date)) })}`);
     if (a.key === 'members.feed.reactivated') parts.push(t('profile.fromDate', { d: fmt.fdy(String(pr.from)) }));
     if (a.key.endsWith('reviewApproved') || a.key.endsWith('reviewReverted')) parts.push(t('review.' + pr.section));

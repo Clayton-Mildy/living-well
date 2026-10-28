@@ -35,6 +35,11 @@ export function Overall({ data }: { data: VisitInsights }) {
     key: String(h), label: hourText(h), value: o.arrivals[i],
     tip: t('insights.arrivalsTip', { hour: hourText(h), n: o.arrivals[i], pct: pct(o.arrivals[i], arrivalsTotal) }),
   }));
+  const departuresTotal = o.departures.reduce((a, b) => a + b, 0);
+  const departureItems: BarItem[] = HEAT_HOURS.map((h, i) => ({
+    key: String(h), label: hourText(h), value: o.departures[i],
+    tip: t('insights.departuresTip', { hour: hourText(h), n: o.departures[i], pct: pct(o.departures[i], departuresTotal) }),
+  }));
   const weekdayItems: BarItem[] = wd.short.map((name, w) => ({
     key: String(w), label: name, value: o.weekdayAvg[w], shown: num1(o.weekdayAvg[w]),
     tip: t('insights.weekdayTip', { day: wd.long[w], n: num1(o.weekdayAvg[w]) }),
@@ -59,6 +64,11 @@ export function Overall({ data }: { data: VisitInsights }) {
       <Bars items={arrivalItems} ariaLabel={t('insights.arrivals')} />
     </Panel>
   );
+  const departures = (
+    <Panel title={t('insights.departures')}>
+      <Bars items={departureItems} ariaLabel={t('insights.departures')} />
+    </Panel>
+  );
   const weekdays = (
     <Panel title={t('insights.weekdays')}>
       <Bars items={weekdayItems} ariaLabel={t('insights.weekdays')} />
@@ -72,9 +82,9 @@ export function Overall({ data }: { data: VisitInsights }) {
       {isWide ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 3fr) minmax(0, 2fr)', gap: 20, alignItems: 'start' }}>
           {heat}
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>{arrivals}{weekdays}</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>{arrivals}{departures}{weekdays}</div>
         </div>
-      ) : <>{heat}{arrivals}{weekdays}</>}
+      ) : <>{heat}{arrivals}{departures}{weekdays}</>}
       {data.trials > 0 ? <div style={{ fontSize: 13, color: '#6B6259', padding: '0 4px' }}>{data.trials === 1 ? t('insights.trialsOne') : t('insights.trials', { n: data.trials })}</div> : null}
     </>
   );

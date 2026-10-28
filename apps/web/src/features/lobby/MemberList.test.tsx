@@ -28,8 +28,9 @@ afterEach(async () => {
 });
 
 /** The seed plus `extra` more members who have not checked in (clones of Opa Budi with later usual arrivals). */
-function openClub(extra: number, lang: 'en' | 'id' = 'en') {
+function openClub(extra: number, lang: 'en' | 'id' = 'en', nanny?: { name: string; photoMediaId?: string }) {
   const state = buildSeed().citra;
+  if (nanny) { for (const m of Object.values(state.members)) m.nanny = null; state.members.m46.nanny = nanny; }
   for (let i = 0; i < extra; i++) {
     const id = `mx${i}`;
     state.members[id] = { ...structuredClone(state.members.m46), id, firstName: `Tester${i}`, lastName: 'Clone', usualArrival: `11:${String(10 + i).padStart(2, '0')}`, consents: [], face: { enrolled: false } };
@@ -85,6 +86,18 @@ const pageButton = (label: string) => host!.querySelector(`nav button[aria-label
 const heading = (name: string) => Array.from(host?.querySelectorAll('h2') ?? []).find((h) => h.textContent === name);
 
 describe('check-in list', () => {
+  it('round 15 follow-up: a member with a nanny shows her face and "Nanny · {name}" right after the name; one without shows nothing extra', async () => {
+    openClub(0, 'en', { name: 'Mbak Sari', photoMediaId: 'md_nannyphoto0001' });
+    await show(<Lists which="in" />);
+    const nannies = host!.querySelectorAll('[data-testid="row-nanny"]');
+    expect(nannies).toHaveLength(1);
+    expect(nannies[0].textContent).toBe('Nanny · Mbak Sari');
+    const line = nannies[0].closest('[data-testid="row-name"]');
+    expect(line?.textContent).toMatch(/^Opa Budi.*Nanny · Mbak Sari$/); // on the name line, after the name
+    expect(nannies[0].innerHTML).toContain('md_nannyphoto0001'); // the avatar's background picture
+    expect(nannies[0].querySelector('button')).toBeNull(); // inside the row's own button, so the picture is not a second button
+    expect(nannies[0].closest('button')?.textContent).toContain('Opa Budi'); // the nanny line is part of the row's open button
+  });
   it('with two members not in yet, shows both in usual-arrival order with the count', async () => {
     openClub(0);
     await show(<Lists which="in" />);

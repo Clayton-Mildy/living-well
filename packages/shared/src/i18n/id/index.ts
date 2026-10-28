@@ -42,6 +42,7 @@ import { care } from './care';
 import { purchasing } from './purchasing';
 import { search } from './search';
 import { sign } from './sign';
+import { plans } from './plans';
 
 export const id = {
   ...ns('common', common),
@@ -97,4 +98,5 @@ export const id = {
   ...ns('purchasing', purchasing),
   ...ns('search', search),
   ...ns('sign', sign),
+  ...ns('plans', plans),
 };

@@ -3,9 +3,11 @@
 // "Message on WhatsApp" (a wa.me link per contact: the club talks to families on WhatsApp, there is no in-app inbox) and (lobby, management) edit / add / link / remove contacts.
 import { useState } from 'react';
 import { contactsOfMember, fmtPhone, hasKey, isPendingRow, linksOfFamily, displayName, waUrl, type FamilyContact, type Member } from '@cp/shared';
-import { Avatar, Button, Icon, Sheet } from '../../../components/ui';
+import { Avatar, Button, Icon, ImageOpen, Sheet } from '../../../components/ui';
 import { api, ApiError } from '../../../lib/api';
+import { mediaUrl } from '../../../lib/media';
 import { say } from '../../../store/ui';
+import { NannyAvatar } from '../ProfilePhoto';
 import { HAIR, relLabel } from '../lib';
 import { ListCard, PendingBanner, Tag28 } from './parts';
 import type { P } from './types';
@@ -40,8 +42,10 @@ export function FamilyTab({ p }: { p: P }) {
           const pending = isPendingRow(link) || isPendingRow(contact);
           const access = link.appAccess && !pending;
           return (
-            <div key={link.id} style={{ display: 'flex', alignItems: 'center', gap: '10px 14px', padding: '18px 0', borderTop: idx ? HAIR : 'none', flexWrap: 'wrap' }}>
-              <Avatar name={contact.name} size={46} />
+            <div key={link.id} data-testid="fam-contact" data-family-id={contact.id} style={{ display: 'flex', alignItems: 'center', gap: '10px 14px', padding: '18px 0', borderTop: idx ? HAIR : 'none', flexWrap: 'wrap' }}>
+              <ImageOpen src={contact.photoMediaId ? mediaUrl(contact.photoMediaId) : null} label={`${t('common.openFull')} · ${contact.name}`} style={{ borderRadius: 999 }}>
+                <Avatar name={contact.name} size={46} src={contact.photoMediaId ? mediaUrl(contact.photoMediaId) : undefined} />
+              </ImageOpen>
               <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{contact.name}</span>
                 <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{relLabel(t, link.relation)} · {fmtPhone(contact.phone)}</span>
@@ -70,6 +74,34 @@ export function FamilyTab({ p }: { p: P }) {
           );
         })}
       </ListCard>
+      {m.nanny ? (
+        // round 15 follow-up: the nanny is not family, so she has a card of her own under the family card
+        <div data-testid="fam-nanny">
+          <ListCard phone={ph} title={t('profile.nannyCard')}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '10px 14px', padding: '18px 0', flexWrap: 'wrap' }}>
+              <NannyAvatar nanny={m.nanny} size={46} />
+              <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{m.nanny.name}</span>
+                {m.nanny.phone ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{fmtPhone(m.nanny.phone)}</span> : null}
+                {m.nanny.note ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{m.nanny.note}</span> : null}
+              </div>
+              {m.nanny.phone ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
+                  {waUrl(m.nanny.phone) ? (
+                    <a href={waUrl(m.nanny.phone)} target="_blank" rel="noopener" data-testid="fam-nanny-wa" aria-label={t('fhealth.waAria', { n: m.nanny.name })} className="h-fill cp-fill cp-press"
+                      style={{ height: 40, padding: '0 14px', borderRadius: 10, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontFamily: 'Inter', fontSize: 14, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 8, textDecoration: 'none', whiteSpace: 'nowrap', flex: 'none' }}>
+                      <Icon name="chat" size={19} weight={300} />WhatsApp
+                    </a>
+                  ) : null}
+                  <a href={`tel:${m.nanny.phone}`} aria-label={t('profile.callName', { n: m.nanny.name })} className="h-fill cp-fill" style={{ width: 44, height: 44, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent, #75624B)', textDecoration: 'none', flex: 'none' }}>
+                    <Icon name="call" size={20} />
+                  </a>
+                </div>
+              ) : null}
+            </div>
+          </ListCard>
+        </div>
+      ) : null}
       <Sheet open={!!reset} onClose={() => setReset(null)} title={t('profile.resetTitle')}
         footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" onClick={() => setReset(null)}>{t('common.cancel')}</Button><Button icon="lock_reset" disabled={busy} onClick={doReset}>{t('profile.resetPassword')}</Button></div>}>
         <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('profile.resetSub', { n: reset?.name || '' })}</div>

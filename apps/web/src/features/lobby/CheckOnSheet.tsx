@@ -14,6 +14,7 @@ import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { CallLink, relText } from './parts';
+import { useCheckOnDays } from './useCheckOnDays';
 
 export function CheckOnSheet({ memberId, onClose }: { memberId: string | null; onClose: () => void }) {
   return memberId ? <Body key={memberId} memberId={memberId} onClose={onClose} /> : null;
@@ -30,11 +31,12 @@ function Body({ memberId, onClose }: { memberId: string; onClose: () => void }) 
   const [note, setNote] = useState('');
   const [again, setAgain] = useState('');
   const [busy, setBusy] = useState(false);
+  const [days] = useCheckOnDays();
 
   const m = s.members[memberId];
   if (!m || m.deletedAt) return null;
   const who = renewalContact(s, memberId);
-  const row = checkOnList(s, today).find((r) => r.member.id === memberId);
+  const row = checkOnList(s, today, days).find((r) => r.member.id === memberId);
   const name = displayName(m);
   const day = (d: string) => fd(d, { day: 'numeric', month: 'short' });
 

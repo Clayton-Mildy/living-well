@@ -129,7 +129,7 @@ describe('joining needs the signed paper registration form', () => {
     await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
   };
   const pickPlan = async (re: RegExp) => click(Array.from(dialog()!.querySelectorAll<HTMLElement>('[role="radio"]')).find((r) => re.test(r.textContent ?? '')));
-  it('Join cannot be sent until a form is attached (management creates the member)', async () => {
+  it('Join: the scan is optional on the Form step (signing on the pad can replace it); management creates the member', async () => {
     openClub('mgmt');
     await show(<Enquiries />);
     await click(button('Join', document.querySelector<HTMLElement>('[data-lead="e1"]')!));
@@ -143,8 +143,7 @@ describe('joining needs the signed paper registration form', () => {
     expect(button('Take photo', d)).toBeTruthy();
     expect(button('Choose file', d)).toBeTruthy();
     expect(d.querySelector('input[type="file"]')?.getAttribute('accept')).toContain('application/pdf');
-    expect(button('Next', d)!.getAttribute('aria-disabled')).toBe('true'); // no form attached yet
-    expect(rail('Review')!.getAttribute('aria-disabled')).toBe('true');
+    expect(button('Next', d)!.getAttribute('aria-disabled')).not.toBe('true'); // round 15: the scan is optional, the pad on Review can replace it
     await sampleForm();
     await click(button('Next', d));
     expect(d.textContent).not.toContain('Your request goes to management');
@@ -209,5 +208,28 @@ describe('a trial is 2 days in a row, no time, no lunch or health check switches
     await click(day);
     expect(button(/^Book visit/, d)).toBeUndefined(); // no time yet
     expect(button('Pick a day and time', d)).toBeTruthy();
+  });
+});
+
+describe('round 15: source Other asks where from', () => {
+  it('picking Other shows the field; the saved lead reads "Other · Church group"', async () => {
+    openClub('mgmt');
+    await show(<Enquiries />);
+    vi.stubGlobal('fetch', () => new Promise(() => {})); // the server never answers: the lead stays as the optimistic view shows it
+    await click(button('New lead'));
+    const d = dialog()!;
+    const field = (label: string) => Array.from(d.querySelectorAll<HTMLInputElement>('input')).find((i) => i.labels?.[0]?.textContent === label || i.getAttribute('aria-label') === label);
+    expect(field('Where from?')).toBeUndefined();
+    const chip = (label: string) => Array.from(d.querySelectorAll<HTMLElement>('[role="radiogroup"][aria-label="How did they hear of us?"] button')).find((r) => textOf(r) === label);
+    await click(chip('Instagram'));
+    expect(field('Where from?')).toBeUndefined();
+    await click(chip('Other'));
+    await type(field('Where from?')!, 'Church group');
+    await type(field('Name')!, 'Lily Tan'); // the senior's name
+    await type(field('Contact person')!, 'Dina Tan');
+    await type(d.querySelector<HTMLInputElement>('input[inputmode="tel"]')!, '812 5550 1234');
+    await click(button('Add lead', d));
+    const card = Array.from(document.querySelectorAll<HTMLElement>('[data-lead]')).find((c) => c.textContent?.includes('Lily Tan'));
+    expect(card?.textContent).toContain('Other · Church group');
   });
 });

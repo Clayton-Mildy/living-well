@@ -1,6 +1,6 @@
 // Super search: the registry (every screen and action declares its keywords here, so a new feature is searchable with one entry)
 // and the role-gated index built from it and from the synced club state. Ranking lives in lib/search.ts.
-import { approvedMembers, displayName, invoiceTotal, live, memberName, rp, type ClubState, type Lang, type Role } from '@cp/shared';
+import { approvedMembers, displayName, invoiceTotal, live, memberName, planLabel, rp, type ClubState, type Lang, type Role } from '@cp/shared';
 import type { SearchItem } from '../lib/search';
 import { NAVS, allowedKeys } from './nav';
 
@@ -91,7 +91,7 @@ export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'e
   const mName = (id: string) => { const m = s.members[id]; return m ? displayName(m) : ''; };
   if (keys.has('members')) {
     for (const m of approvedMembers(s)) {
-      out.push({ id: 'member:' + m.id, group: 'people', label: displayName(m), sub: t('profile.plan.' + (m.plans[m.plans.length - 1]?.plan ?? 'flex')), icon: 'person', to: '/members/' + m.id, terms: [memberName(m), m.registration?.nickname ?? ''] });
+      out.push({ id: 'member:' + m.id, group: 'people', label: displayName(m), sub: planLabel(s, m.plans[m.plans.length - 1]?.plan ?? 'flex', lang), icon: 'person', to: '/members/' + m.id, terms: [memberName(m), m.registration?.nickname ?? ''] });
     }
     const links = live(s.familyLinks);
     for (const c of live(s.familyContacts)) {

@@ -34,12 +34,20 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const links = live(s.familyLinks).filter((l) => l.familyId === familyId && !isPendingRow(l) && l.appAccess);
   const mids = uniq(links.map((l) => l.memberId));
   const strip = (m: Member): Member => ({ ...m, care: { instructions: '', by: m.care.by, at: m.care.at }, sim: { ...m.sim, script: undefined } });
+  // R-T7b: a stub keeps what a photo shows (names, title, portrait) and what the shared rules need to stay safe (membership start and last day, plan and date, review mark); nothing personal of another family (no end reason or note, leave, who changed a plan or the request)
+  const stub = (m: Member): Member => ({
+    ...strip(m), dob: null, ageYears: null, address: null, nanny: null, spouseId: null, usualArrival: '' as Member['usualArrival'], registration: undefined, limits: undefined, face: { enrolled: false },
+    sim: { sys: 0, dia: 0, pulse: 0, spo2: 0, glucose: 0, weight: 0, temp: 0, grip: 0 },
+    memberships: m.memberships.map(({ start, lastDay }) => ({ start, ...(lastDay ? { lastDay } : {}) })),
+    plans: m.plans.map(({ from, plan }) => ({ from, plan, by: 'system' as const })),
+    health: { conditions: [], diabetic: false, food: [], drugs: [], mobility: null, diet: [], meds: [], cognitive: { summary: '' } }, documents: [], consents: [], billing: { va: '' }, review: { status: 'approved', crId: 'stub' },
+  } as Member);
   out.members = pick(mids.map((id) => s.members[id]).filter(Boolean).map((m) => strip(heldBack(s, m))));
   // co-tagged members in photos: short name stubs only
   const photos = live(s.photos).filter((p) => p.visibility === 'visible' && p.memberIds.some((id) => mids.includes(id)));
   for (const p of photos) for (const id of p.memberIds) if (!out.members[id] && s.members[id]) {
     const m = s.members[id];
-    out.members[id] = { ...strip(m), dob: null, address: null, health: { conditions: [], diabetic: false, food: [], drugs: [], mobility: null, diet: [], meds: [], cognitive: { summary: '' } }, documents: [], consents: [], billing: { va: '' }, review: { status: 'approved', crId: 'stub' } } as Member;
+    out.members[id] = stub(m);
   }
   // the kitchen's lunch photos (no member tags) show on the family's Today timeline
   const lunchIds = new Set(live(s.dayMenus).flatMap((d) => [...(d.photoIds || []), ...(d.teaPhotoIds || []), ...(d.photoId ? [d.photoId] : [])])); // KC round 7: the tea photos too

@@ -3,16 +3,21 @@
 // Pending new members are listed as "Pending approval". The details (age, mobility, allergies, medicines) live on the profile.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym } from '@cp/shared';
+import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym, type Plan } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
+import { isDaysPlan, planDefs, planLabel } from '@cp/shared/rules/plans';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
-import { useFmt, useT } from '../../lib/i18n';
+import { useFmt, useLang, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
+import { NotSeenSelect } from '../lobby/NotSeenSelect';
+import { useCheckOnDays } from '../lobby/useCheckOnDays';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
+import { NannyLine } from './ProfilePhoto';
+import { PlanChips } from './PlanChips';
 import { FullName, relLabel, rowStatusText, STATUS_STYLE } from './lib';
 
 const PAGE_SIZE = 10;
@@ -20,6 +25,7 @@ const PAGE_SIZE = 10;
 export function MembersList() {
   const s = useClub();
   const t = useT();
+  const lang = useLang();
   const fmt = useFmt();
   const { today } = useNow();
   const { role } = useMe();
@@ -30,10 +36,14 @@ export function MembersList() {
   const [f, setF] = useState<MemberFilter>(() => { const w = sp.get('f'); return (MEMBER_FILTERS as string[]).includes(w ?? '') ? (w as MemberFilter) : 'active'; }); // /members?f=checkOn opens a filter
   const [sort, setSort] = useState<MemberSort>('name');
   const [adding, setAdding] = useState(false);
-  const rows = useMemo(() => memberRows(s, today), [s, today]);
+  const [plan, setPlan] = useState<Plan | 'all'>('all'); // round 15: narrows In the club by plan
+  const [notSeen] = useCheckOnDays();
+  const rows = useMemo(() => memberRows(s, today, notSeen), [s, today, notSeen]);
   const counts = useMemo(() => filterCounts(rows), [rows]);
-  const visible = useMemo(() => sortMemberRows(rows.filter(FILTERS[f]).filter((r) => matchesQuery(s, r.m, q)), sort), [rows, f, q, s, sort]);
-  const paged = usePaged(visible, PAGE_SIZE, `${f}|${q}|${sort}`);
+  const inRows = useMemo(() => rows.filter(FILTERS.in), [rows]);
+  const planOn = f === 'in' && plan !== 'all' ? plan : null;
+  const visible = useMemo(() => sortMemberRows(rows.filter(FILTERS[f]).filter((r) => !planOn || r.plan === planOn).filter((r) => matchesQuery(s, r.m, q)), sort), [rows, f, planOn, q, s, sort]);
+  const paged = usePaged(visible, PAGE_SIZE, `${f}|${planOn}|${q}|${sort}`);
   const canAdd = role === 'lobby' || role === 'mgmt';
   // a search result: /members?do=add opens Add member (only for a role that can add), then the parameter goes so Back doesn't reopen it
   useEffect(() => {
@@ -48,11 +58,12 @@ export function MembersList() {
   const open = (r: MemberRow) => navigate(`/members/${r.m.id}`);
 
   const planText = (r: MemberRow) => {
-    if (r.plan === 'gold') return { text: t('members.planGold'), tip: t('members.planGoldTip') };
+    const plan = planLabel(s, r.plan, lang);
+    if (!isDaysPlan(s, r.plan)) return { text: t('members.planGold', { plan }), tip: t('members.planGoldTip', { plan }) };
     const fm = flexMonth(s, r.m, ym(today), today);
     const quota = fm.quota ?? 0;
     const n = Math.min(fm.used, quota);
-    return { text: t('members.planFlex', { n, q: quota }), tip: t('members.planFlexTip', { n, q: quota }) };
+    return { text: t('members.planFlex', { plan, n, q: quota }), tip: t('members.planFlexTip', { plan, n, q: quota }) };
   };
   /** Quiet subscription dates: "Since 12 Mar 2025" and "Renews 31 Oct" / "Ends 31 Oct" / "Ended 30 Sep" (the year only when it is not this one). */
   const subDates = (r: MemberRow) => {
@@ -65,9 +76,20 @@ export function MembersList() {
     return out;
   };
   // KC round 14: In the club and Active say how many are Flex and how many Gold
-  const splitEl = (f === 'in' || f === 'active') ? (
-    <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{t('members.split', { f: counts.split[f].flex, g: counts.split[f].gold })}</div>
+  // round 15 phase 2: one count per plan (Flex and Gold always, a catalogue plan once it has members, a retired one too); the Plan chip narrows it to that plan
+  const splitRows = f === 'in' ? inRows : f === 'active' ? rows.filter(FILTERS.active) : null;
+  const splitParts = splitRows ? planDefs(s).map((d) => ({ id: d.id, n: planOn && planOn !== d.id ? 0 : splitRows.filter((r) => r.plan === d.id).length })).filter((x) => (planOn && planOn !== 'flex' && planOn !== 'gold' ? x.id === planOn : x.id === 'flex' || x.id === 'gold' || x.n > 0)) : null;
+  const splitText = !splitParts ? '' : splitParts.length === 2 ? t('members.split', { f: splitParts[0].n, g: splitParts[1].n }) : splitParts.map((x) => `${x.n} ${planLabel(s, x.id, lang)}`).join(' · ');
+  const splitEl = splitParts ? (
+    <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{splitText}</div>
   ) : null;
+  // round 15: the Check on filter says how long "not seen" is (a per-device choice that also drives the lobby rail)
+  // round 15: while In the club is on, Plan chips narrow it (the catalogue's active plans, and a retired plan that still has members in the club)
+  const planEl = f === 'in' ? (
+    <PlanChips label={t('members.planFilter')} value={plan} onChange={setPlan} scroll={isPhone}
+      chips={[{ value: 'all', label: t('common.all'), count: inRows.length }, ...planDefs(s).filter((p) => p.active || inRows.some((r) => r.plan === p.id)).map((p) => ({ value: p.id, label: planLabel(s, p.id, lang), count: inRows.filter((r) => r.plan === p.id).length }))]} />
+  ) : null;
+  const notSeenEl = f === 'checkOn' ? <div style={{ maxWidth: isPhone ? undefined : 240 }}><NotSeenSelect /></div> : null;
   const sortEl = (
     <Select ariaLabel={t('members.sortLabel')} value={sort} onChange={setSort} options={MEMBER_SORTS.map((k) => ({ value: k, label: t(`members.sort.${k}`) }))} />
   );
@@ -133,6 +155,8 @@ export function MembersList() {
             <div style={{ flex: '1 1 0', minWidth: 0 }}>{sortEl}</div>
           </div>
           {splitEl}
+          {planEl}
+          {notSeenEl}
           <Group pad={0} gap={0}>
             {paged.rows.map((r, i) => {
               const tone = TONES[r.m.photoTone % 5];
@@ -154,7 +178,10 @@ export function MembersList() {
                   </span>
                   <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                     <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-                      <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{listName(r.m)}</span>
+                      <span data-testid="row-name" style={{ flex: 1, minWidth: 0, display: 'flex', alignItems: 'center', gap: '2px 8px', flexWrap: 'wrap' }}>
+                        <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500, overflowWrap: 'anywhere' }}>{listName(r.m)}</span>
+                        {r.m.nanny ? <NannyLine nanny={r.m.nanny} phone /> : null}
+                      </span>
                       <span title={pc.tip} style={{ flex: 'none', fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{pc.text}</span>
                     </span>
                     <FullName m={r.m} size={13} />
@@ -205,6 +232,8 @@ export function MembersList() {
           <FilterChips label={t('members.filter')} value={f} onChange={setF} options={MEMBER_FILTERS.map((k) => ({ value: k, label: t('members.f.' + k), count: counts[k] }))} />
         )}
         {splitEl}
+        {planEl}
+          {notSeenEl}
         <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: isPhone ? 24 : 28, padding: '8px clamp(18px, 3vw, 36px) 12px', overflow: 'hidden' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '8px 20px', flexWrap: 'wrap', padding: '14px 0 6px' }}>
             {isPhone ? null : <div style={{ flex: '0 1 220px', minWidth: 0, marginRight: 'auto' }}>{sortEl}</div>}
@@ -227,7 +256,10 @@ export function MembersList() {
                   style={{ flex: '1 1 0', minWidth: 0, display: 'flex', alignItems: 'center', gap: 16, padding: '14px 0', border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
                 <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: photoFill(memberPhoto(r.m), photoBg(r.m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: 500, flex: 'none', boxShadow: 'inset 0 0 0 2px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' }}>{r.m.photoMediaId ? null : initials(r.m)}</span>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-                  <span style={{ fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{listName(r.m)}</span>
+                  <span data-testid="row-name" style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <span style={{ flex: '0 1 auto', minWidth: 0, fontSize: 17, lineHeight: '24px', fontWeight: 500, ...(isPhone ? { overflowWrap: 'anywhere' } : { overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }) }}>{listName(r.m)}</span>
+                    {r.m.nanny ? <NannyLine nanny={r.m.nanny} /> : null}
+                  </span>
                   <FullName m={r.m} ellipsis={!isPhone} />
                   <span style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>
                     <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: st.dot, flex: 'none', marginTop: 7 }} />

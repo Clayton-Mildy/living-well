@@ -95,6 +95,8 @@ export const DISH_PICS: Readonly<Record<string, readonly string[]>> = {
   'dish-gado-gado': ['food-gado'],
   'dish-soto-bening': ['food-soto-1', 'food-soto-2'],
 };
+/** Round 15: the picture a seeded dish carries in the dish library (the first of its pictures), or undefined for a dish without one. */
+export const dishPicId = (dishId: string): string | undefined => { const l = DISH_PICS[dishId]; return l ? demoMediaId(l[0]) : undefined; };
 /** The lunch pictures that fit a day's dishes, main dish first (at most one per dish; `n` picks among a dish's pictures). Empty when no dish has one. */
 export const lunchPicIds = (dishIds: readonly string[], n: number): string[] =>
   dishIds.flatMap((d) => (DISH_PICS[d] ? [demoMediaId(at(DISH_PICS[d], n))] : []));

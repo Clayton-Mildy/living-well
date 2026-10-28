@@ -153,6 +153,28 @@ export function yearView(s: ClubState, year: number, audience: CalAudience = 'st
   });
 }
 
+// ---------- round 15 (10): the year's closed days ----------
+/** One closure, holiday or outing as a run of days inside a year (an outing is listed too: the club is away, though it stays open). */
+export interface ClosedSpan { from: ISODate; to: ISODate; kind: 'holiday' | 'closed' | 'outing'; title: string; titleId?: string; days: number }
+/**
+ * The days of a year the club is shut or away, from the live calendar events: one span per event (its days are consecutive), clipped to the year, sorted by
+ * start; `days` counts the calendar days inside the year. A cancelled or deleted event is left out.
+ */
+export function closedDaysOfYear(s: ClubState, year: number): ClosedSpan[] {
+  const first: ISODate = `${year}-01-01`;
+  const last: ISODate = `${year}-12-31`;
+  const out: ClosedSpan[] = [];
+  for (const e of live(s.calendarEvents)) {
+    if (e.cancelledAt) continue;
+    const end = e.endDate && e.endDate > e.date ? e.endDate : e.date;
+    if (end < first || e.date > last) continue;
+    const from = e.date < first ? first : e.date;
+    const to = end > last ? last : end;
+    out.push({ from, to, kind: e.kind, title: e.title, ...(e.titleId ? { titleId: e.titleId } : {}), days: Math.round((Date.parse(to) - Date.parse(from)) / 86400000) + 1 });
+  }
+  return out.sort((a, b) => a.from.localeCompare(b.from) || a.to.localeCompare(b.to));
+}
+
 /** The next `count` calendar days from `from`, skipping weekends that have nothing on. */
 export function listDays(s: ClubState, from: ISODate, count: number, audience: CalAudience = 'staff'): DayInfo[] {
   const out: DayInfo[] = [];

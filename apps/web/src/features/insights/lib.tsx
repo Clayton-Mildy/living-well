@@ -5,6 +5,9 @@ import { useFmt, useT } from '../../lib/i18n';
 
 export const FLEX_COLOR = 'var(--accent, #75624B)'; // bronze
 export const GOLD_COLOR = '#C9A24D'; // gold
+/** Catalogue plans beyond Flex and Gold: dark and mid neutrals that read apart from the bronze and the gold (no pastels). */
+const PLAN_COLORS = ['#3E3326', '#8A7E6E', '#A9552F', '#5F7A68'];
+export const planColor = (plan: string, i: number): string => (plan === 'flex' ? FLEX_COLOR : plan === 'gold' ? GOLD_COLOR : PLAN_COLORS[i % PLAN_COLORS.length]);
 export const INK = '#24201C';
 export const MUTED = '#6B6259';
 

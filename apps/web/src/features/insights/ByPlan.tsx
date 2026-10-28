@@ -1,27 +1,29 @@
-// Insights, By plan: All plans, or one plan only (KC round 7). Visits per plan over the period (a line each for Flex and Gold, by day or by week), the share of visits, then Flex and Gold side by side
-// (stacked on a phone). A plan's card opens with its key numbers (members, visits, visits per member per week, attendance rate), then the average arrival and
-// stay and the days they come; the plan's people follow, and under Flex how the monthly quota is spent.
+// Insights, By plan: All plans, or one plan only (KC round 7). Visits per plan over the period (a line each for Flex, Gold and every catalogue plan that had members, by day or by week),
+// the share of visits, then the plans side by side (stacked on a phone). A plan's card opens with its key numbers (members, visits, visits per member per week, attendance rate), then the
+// average arrival and stay and the days they come; the plan's people follow, and under each plan with a monthly quota how that quota is spent.
 import { useMemo, useState } from 'react';
-import type { Plan } from '@cp/shared';
+import { isDaysPlan, planLabel, type Plan } from '@cp/shared';
 import type { PlanStats, VisitInsights } from '@cp/shared/rules/insights';
 import { Segmented, TrendChart } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useFmt, useT } from '../../lib/i18n';
+import { useClub } from '../../store/replica';
 import { Bars, ShareBar, type BarItem } from './charts';
 import { FlexQuota } from './FlexQuota';
-import { FLEX_COLOR, GOLD_COLOR, Line, Panel, Stat, num1, pct, useStay, useWeekdays } from './lib';
+import { Line, Panel, Stat, num1, planColor, pct, useStay, useWeekdays } from './lib';
 import { PlanPeople } from './PlanPeople';
 
-const PLANS: Plan[] = ['flex', 'gold'];
 
 export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: string; onOpen: (memberId: string) => void }) {
   const t = useT();
   const fmt = useFmt();
+  const s = useClub();
   const { isPhone } = useDevice();
   const wd = useWeekdays();
   const stay = useStay();
-  const colors: Record<Plan, string> = { flex: FLEX_COLOR, gold: GOLD_COLOR };
-  const name = (p: Plan) => t(p === 'flex' ? 'insights.planFlex' : 'insights.planGold');
+  const PLANS: Plan[] = data.plans;
+  const colors = Object.fromEntries(PLANS.map((p, i) => [p, planColor(p, i - 2)])) as Record<Plan, string>;
+  const name = (p: Plan) => planLabel(s, p, fmt.lang);
   const total = data.overall.visits;
   const gap = isPhone ? 14 : 20;
   const day = (d: string) => fmt.fd(d, { day: 'numeric', month: 'short' });
@@ -34,7 +36,7 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
   const trendPanel = (
     <Panel title={t('insights.trend')} meta={t(trend.grain === 'week' ? 'insights.trendWeek' : 'insights.trendDay')}>
       <TrendChart legend={shown.length > 1} height={isPhone ? 160 : 190} ariaLabel={t('insights.trendAria')} from={data.days[0]} to={data.days[data.days.length - 1]}
-        series={shown.map((p) => ({ key: p, label: name(p), color: colors[p], points: trend.points.map((x) => ({ date: x.date, value: x[p] })) }))}
+        series={shown.map((p) => ({ key: p, label: name(p), color: colors[p], points: trend.points.map((x) => ({ date: x.date, value: x[p] ?? 0 })) }))}
         describe={trend.grain === 'week' ? (d) => {
           const p = byDate.get(d);
           if (!p) return undefined;
@@ -54,6 +56,7 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
           <Stat label={t('insights.kAttend')} value={p.attendanceRate === null ? '—' : `${Math.round(p.attendanceRate * 100)}%`} />
         </div>
         <Line label={t('insights.avgArrival')} value={p.avgArrival ?? '—'} />
+        <Line label={t('insights.avgDeparture')} value={p.avgDeparture ?? '—'} />
         <Line label={t('insights.avgStay')} value={stay(p.avgStayMin)} />
         <div style={{ paddingTop: 12, display: 'flex', flexDirection: 'column', gap: 8 }}>
           <span style={{ fontSize: 13, color: '#6B6259' }}>{t('insights.pattern')}</span>
@@ -66,7 +69,7 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
   const column = (plan: Plan) => (
     <div key={plan} data-plan={plan} style={{ display: 'flex', flexDirection: 'column', gap, minWidth: 0 }}>
       {card(data.byPlan[plan])}
-      {plan === 'flex' ? <FlexQuota period={data.period} today={today} gap={gap} onOpen={onOpen} /> : null}
+      {isDaysPlan(s, plan) ? <FlexQuota period={data.period} today={today} gap={gap} onOpen={onOpen} plan={plan} /> : null}
       <PlanPeople plan={name(plan)} stats={data.byPlan[plan]} onOpen={onOpen} />
     </div>
   );
@@ -76,7 +79,7 @@ export function ByPlan({ data, today, onOpen }: { data: VisitInsights; today: st
     <div data-plan={plan} style={{ display: 'grid', gridTemplateColumns: isPhone ? 'minmax(0, 1fr)' : 'repeat(2, minmax(0, 1fr))', gap: isPhone ? gap : 20, alignItems: 'start' }}>
       <div style={{ display: 'flex', flexDirection: 'column', gap, minWidth: 0 }}>
         {card(data.byPlan[plan])}
-        {plan === 'flex' ? <FlexQuota period={data.period} today={today} gap={gap} onOpen={onOpen} /> : null}
+        {isDaysPlan(s, plan) ? <FlexQuota period={data.period} today={today} gap={gap} onOpen={onOpen} plan={plan} /> : null}
       </div>
       <PlanPeople plan={name(plan)} stats={data.byPlan[plan]} onOpen={onOpen} />
     </div>

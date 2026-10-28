@@ -28,6 +28,18 @@ describe('check on', () => {
     expect(listed(quiet(seed, 'm1', 5), 'm1')).toBeUndefined();
     expect(listed(quiet(seed, 'm1', 11), 'm1')).toMatchObject({ daysSince: 12, threshold: 10 }); // the 10th is a Saturday: last seen Friday the 9th;
   });
+  it('a fixed "not seen for" replaces the automatic threshold for everyone', () => {
+    const eight = quiet(seed, 'm1', 7); // last seen a week ago (the 14th)
+    expect(listed(eight, 'm1')).toBeUndefined(); // automatic: never under 10
+    expect(checkOnList(eight, T, 7).find((r) => r.member.id === 'm1')).toMatchObject({ daysSince: 7, threshold: 7 });
+    expect(checkOnList(quiet(seed, 'm1', 19), T, 30).find((r) => r.member.id === 'm1')).toBeUndefined(); // 20 days: under 30
+    expect(checkOnList(quiet(seed, 'm1', 19), T).find((r) => r.member.id === 'm1')).toBeDefined(); // but automatic lists it
+  });
+  it('a fixed number still skips a member checked in today or joined under 14 days ago', () => {
+    expect(checkOnList(seed, T, 7).find((r) => r.member.id === 'm1')).toBeUndefined();
+    const fresh = produce(quiet(seed, 'm1', 11), (d) => { const cur = d.members.m1.memberships[d.members.m1.memberships.length - 1]; cur.start = '2026-10-10'; });
+    expect(checkOnList(fresh, T, 7).find((r) => r.member.id === 'm1')).toBeUndefined();
+  });
   it('sorts by days since the last visit, longest first', () => {
     const rows = checkOnList(quiet(quiet(seed, 'm1', 12), 'm46', 16), T);
     const days = rows.map((r) => r.daysSince);

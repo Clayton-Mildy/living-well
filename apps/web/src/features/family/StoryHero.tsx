@@ -5,7 +5,7 @@
 // Both parents: a row each (tap to focus on one). One parent: the day's icon rail. A day the parent did not come shows the last visit's picture,
 // dimmed; no picture at all is the warm bronze gradient, so a morning before the first photo never looks empty.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { listName, addDays, flexMonth, memberName, displayName, planOn, ym, type Face as FaceValue, type ISODate, type Member, type Photo } from '@cp/shared';
+import { listName, addDays, flexMonth, memberName, displayName, isDaysPlan, planLabel, planOn, ym, type Face as FaceValue, type ISODate, type Member, type Photo } from '@cp/shared';
 import { activityLabel, bestPhotoOf, eventTitle, mayStillCome, type DayStory } from '@cp/shared/rules/family';
 import { railFill } from '@cp/shared/rules/famToday';
 import { famPhotoDays, ownPicture } from '@cp/shared/rules/famPhotos';
@@ -109,11 +109,13 @@ function highlights({ s, t, fmt }: Ctx, story: DayStory): string {
 }
 const join = (parts: (string | false | null | undefined)[]) => parts.filter(Boolean).join(' · ');
 /** KC round 9: the plan under the name: "Gold plan", or "Flex plan · 7 of 10 used" this month. */
-function planLine({ s, t, now }: Ctx, m: Member): string {
-  if (planOn(m, now.today).plan !== 'flex') return t('ftoday.heroPlanGold');
+function planLine({ s, t, now, fmt }: Ctx, m: Member): string {
+  const plan = planOn(m, now.today).plan;
+  const name = planLabel(s, plan, fmt.lang);
+  if (!isDaysPlan(s, plan)) return t('ftoday.heroPlanGold', { plan: name });
   const f = flexMonth(s, m, ym(now.today), now.today);
   const q = f.quota ?? s.club.settings.flexQuota;
-  return f.extra ? t('ftoday.heroPlanFlexExtra', { q, x: f.extra }) : t('ftoday.heroPlanFlex', { n: f.used, q });
+  return f.extra ? t('ftoday.heroPlanFlexExtra', { plan: name, q, x: f.extra }) : t('ftoday.heroPlanFlex', { plan: name, n: f.used, q });
 }
 
 /** A row of the both-parents card: who, where they are, and how far the day has got. */

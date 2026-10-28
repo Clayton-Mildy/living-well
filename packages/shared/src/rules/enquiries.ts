@@ -201,7 +201,8 @@ export interface LeadMemberArgs {
   id: string;
   contactId: string;
   enquiry: Enquiry;
-  form: PaperForm;
+  /** the scanned paper form; none when the family signed on the pad (round 15): the document is then a request until the stamp */
+  form?: PaperForm;
   details?: LeadDetails;
   plan: Plan;
   start: ISODate;
@@ -222,7 +223,7 @@ export function memberFromLead(a: LeadMemberArgs): Member {
   const documents: MemberDocument[] = [
     ...(uploaded.some((d) => d.type === 'ktp') ? [] : [{ id: `${a.id}-doc-ktp`, type: 'ktp' as const, status: 'requested' as const, on: a.today, by: a.actor }]),
     ...uploaded,
-    paperFormDoc(a.id, a.form, a.today, a.actor),
+    a.form ? paperFormDoc(a.id, a.form, a.today, a.actor) : { id: `${a.id}-doc-form`, type: 'membershipForm' as const, status: 'requested' as const, on: a.today, by: a.actor },
     { id: `${a.id}-doc-health`, type: 'healthInfo', status: 'requested', on: a.today, by: a.actor },
   ];
   const consents: Consent[] = [];

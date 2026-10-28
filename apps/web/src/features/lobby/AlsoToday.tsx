@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { listName, type GuestVisit } from '@cp/shared';
 import { occasionsAhead } from '@cp/shared/rules/occasions';
 import { checkOnList } from '@cp/shared/rules/checkOn';
+import { useCheckOnDays } from './useCheckOnDays';
 import { alsoToday } from '@cp/shared/rules/lobby';
 import { menuOn } from '@cp/shared/rules/kitchen';
 import { GUEST_KIND_ICON, guestSessionsOn } from '@cp/shared/rules/guests';
@@ -62,6 +63,7 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
   const guests = usePaged(a.guests, GUESTS_PER_PAGE);
   const sub14 = { fontSize: 14, lineHeight: 1.4, color: '#6B6259' } as const;
   const { isPhone } = useDevice();
+  const [notSeen] = useCheckOnDays();
 
   // KC round 6: the front desk knows today's menu (what the kitchen cooks: lunch, the soft version, afternoon tea)
   const menu = menuOn(s, today);
@@ -158,11 +160,12 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
     );
   }
 
-  // round 12: members not seen for a while (up to five, longest quiet first); a tap opens the call sheet
-  const quiet = checkOnList(s, today);
-  if (quiet.length && onCheckOn) {
+  // round 12: members not seen for a while (up to five, longest quiet first); a tap opens the call sheet. Round 15: "how long" is the choice made on the Members page (it is not set here)
+  const quiet = checkOnList(s, today, notSeen);
+  if ((quiet.length || notSeen !== undefined) && onCheckOn) { // a fixed choice keeps the block (with its quiet line) even when it empties the list
     blocks.push(
       <Block key="checkOn" title={`${t('checkOn.title')} (${quiet.length})`} openLabel={t('checkOn.all', { n: quiet.length })} onClick={() => navigate('/members?f=checkOn')}>
+        {quiet.length ? null : <span style={sub14}>{t('checkOn.nobody')}</span>}
         <div style={{ display: 'flex', flexDirection: 'column' }}>
           {quiet.slice(0, 5).map((r) => (
             <button key={r.member.id} type="button" data-check-on={r.member.id} onClick={() => onCheckOn(r.member.id)} aria-label={`${t('checkOn.call')}: ${listName(r.member)}`}

@@ -6,7 +6,7 @@ import { addMonths, type ISODate, type YM } from '@cp/shared';
 import { monthGrid, type CalKind, type DayInfo } from '@cp/shared/rules/calendar';
 import { Button, Icon } from '../../components/ui';
 import { useT, useFmt } from '../../lib/i18n';
-import { KIND, MON_FIRST, dayState, weekdayName } from './lib';
+import { CLOSED_FILL, KIND, MON_FIRST, closedReason, dayState, weekdayName } from './lib';
 
 const DOT_ORDER: CalKind[] = ['closed', 'holiday', 'outing', 'venue', 'celebration', 'birthday', 'guest', 'activity'];
 const MAX_DOTS = 4;
@@ -48,12 +48,13 @@ export function PhoneMonth({ month, onMonth, today, sel, onSelect, info, hours, 
           const on = sel === d;
           const isToday = d === today;
           const shut = !x.open;
-          const hol = x.state === 'holiday';
+          const reason = closedReason(x, lang);
+          const sand = x.state === 'holiday' || x.state === 'closed'; // a holiday or a closure is filled sand; a plain weekend stays plain
           const kinds = DOT_ORDER.filter((k) => x.items.some((it) => it.kind === k)).slice(0, MAX_DOTS);
           return (
-            <button key={d} type="button" className="cp-press" onClick={() => onSelect(d, on)} aria-label={`${fdl(d)} · ${st.label}`} aria-pressed={on} data-date={d}
-              style={{ boxSizing: 'border-box', minWidth: 0, height: 48, padding: 0, borderRadius: 10, border: 'none', background: 'transparent', opacity: shut && !hol && !isToday && !on ? 0.55 : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-              <span style={{ width: 32, height: 32, borderRadius: 999, background: on ? '#24201C' : isToday ? '#EAF1EC' : hol ? '#FBEDE8' : 'transparent', boxShadow: isToday && !on ? 'inset 0 0 0 1.5px #3D6B4F' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: isToday || on ? 700 : 500, lineHeight: '20px', color: on ? '#FFFFFF' : isToday ? '#2F5A40' : hol ? '#9A3D24' : shut ? '#6B6259' : '#24201C', fontVariantNumeric: 'tabular-nums' }}>{Number(d.slice(8))}</span>
+            <button key={d} type="button" className="cp-press" onClick={() => onSelect(d, on)} aria-label={`${fdl(d)} · ${st.label}`} aria-pressed={on} data-date={d} data-closed={sand ? '1' : undefined} title={reason || undefined}
+              style={{ boxSizing: 'border-box', minWidth: 0, height: 48, padding: 0, borderRadius: 10, border: 'none', background: sand ? CLOSED_FILL : 'transparent', opacity: shut && !sand && !isToday && !on ? 0.55 : 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', gap: 2, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
+              <span style={{ width: 32, height: 32, borderRadius: 999, background: on ? '#24201C' : isToday ? '#EAF1EC' : 'transparent', boxShadow: isToday && !on ? 'inset 0 0 0 1.5px #3D6B4F' : 'none', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, fontWeight: isToday || on ? 700 : 500, lineHeight: '20px', color: on ? '#FFFFFF' : isToday ? '#2F5A40' : shut ? '#6B6259' : '#24201C', fontVariantNumeric: 'tabular-nums' }}>{Number(d.slice(8))}</span>
               <span aria-hidden="true" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 3, height: 7 }}>
                 {kinds.map((k) => <span key={k} style={{ width: 7, height: 7, borderRadius: 999, background: KIND[k].dot }} />)}
               </span>

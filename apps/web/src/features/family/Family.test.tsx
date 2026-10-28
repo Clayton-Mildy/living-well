@@ -128,6 +128,34 @@ describe('family Today', () => {
     expect(qa('[data-testid="log-block"]')).toHaveLength(1);
   });
 
+  it('round 15: the check-out is a row of "That day" with its time on a past day they came, and on today once they have gone home', async () => {
+    const view = open('f1');
+    const day = visitDays(view, 'm1', T).filter((d) => d < T).pop()!;
+    const out = view.attendance[`${day}:m1`].checkOut!.at;
+    await show(<FamilyToday />, `/today?member=m1&date=${day}`);
+    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('thatDay');
+    const home = q('[data-tl="home"]')!;
+    expect(home.textContent).toContain('Home time');
+    expect(home.textContent).toContain(out);
+    // today, once she has gone home (the clock after her check-out): the whole day is listed, ending with the home time
+    const gone = produce(buildSeed().citra, (d) => {
+      d.attendance[`${T}:m1`] = { id: `${T}:m1`, clubId: 'citra', createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: 'm1', date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, checkOut: { at: '15:40', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
+    });
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open('f1', 'en', 17 * 60, gone);
+    await show(<FamilyToday />, '/today?member=m1');
+    expect(q('[data-tl="home"]')?.textContent).toContain('15:40');
+  });
+  it('round 15: Both mode lists a home time per parent who has gone home', async () => {
+    const gone = produce(buildSeed().citra, (d) => {
+      for (const id of ['m1', 'm46']) d.attendance[`${T}:${id}`] = { id: `${T}:${id}`, clubId: 'citra', createdAt: `${T}T10:00`, createdBy: 'staff:s1', memberId: id, date: T, checkIn: { at: '10:00', by: 'staff:s1', method: 'manual' }, checkOut: { at: id === 'm1' ? '15:40' : '15:55', by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
+    });
+    open('f1', 'en', 17 * 60, gone);
+    await show(<FamilyToday />, '/today');
+    const homes = qa('[data-tl^="home-"]');
+    expect(homes.map((x) => x.textContent)).toEqual([expect.stringContaining('15:40'), expect.stringContaining('15:55')]);
+  });
   it('round 14: the lunch pictures and the portion show once, on the Lunch card; the timeline row keeps its time and title only', async () => {
     const view = open('f1');
     const day = visitDays(view, 'm1', T).filter((d) => d < T).pop()!;
@@ -155,8 +183,91 @@ describe('family Today', () => {
     expect(text()).toContain('What was on');
     expect(q('[data-testid="last-visit"]')).toBeTruthy();
     expect(q('[data-testid="hero-rail"]')).toBeNull();
-    expect(Array.from(document.querySelectorAll('[data-tl]')).every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
+    // round 15: a day that is over draws every session as passed (the brown line), whether or not she came
+    const rows = qa('[data-tl]');
+    expect(rows.length).toBeGreaterThan(2);
+    expect(rows.every((x) => x.getAttribute('data-state') === 'done')).toBe(true);
     expect(q('[data-testid="daily-log"]')).toBeNull(); // a day she did not come has no log
+  });
+
+  it('round 15: the day ahead stays on the light track; today before the afternoon lists only what is not over, none of it passed', async () => {
+    open('f1');
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22'); // tomorrow
+    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('plan');
+    expect(qa('[data-tl]').length).toBeGreaterThan(0);
+    expect(qa('[data-tl]').every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open('f1', 'en', 14 * 60 + 10); // 14:10, nobody in yet: the sessions from 14:10 on are still to come
+    await show(<FamilyToday />, '/today?member=m1');
+    const rows = qa('[data-tl]');
+    expect(rows.length).toBeGreaterThan(0);
+    expect(rows.every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
+  });
+
+  it('round 15: tomorrow\'s lunch row shows the dish photo; a lunch photo still waiting for approval does not replace it, an approved one does', async () => {
+    const base = buildSeed().citra;
+    const thursday = (b: ClubState) => b.dishes['dish-semur-tahu']; // Thursday's main dish: the seed gives it a picture
+    expect(thursday(base).photoMediaId).toBe('md_demo_food-tahu');
+    open('f1', 'en', 598, base);
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22'); // tomorrow
+    const pic = q('[data-tl="lunch"] [data-testid="lunch-picture"]');
+    expect(pic?.getAttribute('data-media')).toBe('md_demo_food-tahu');
+    expect(pic?.getAttribute('data-source')).toBe('dish');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    // the kitchen's photo of the day is pending: the family's copy of the club does not even hold it, so the dish photo stays
+    const pending = produce(base, (d) => {
+      d.photos['ph-pending'] = { id: 'ph-pending', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: '2026-10-22', time: '09:00', kind: 'lunch', media: 'photo', memberIds: [], tone: 0, takenBy: 's3', visibility: 'pending', mediaId: 'md_pending_lunch' } as never;
+      d.dayMenus['2026-10-22'] = { id: '2026-10-22', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: '2026-10-22', allergyPlans: [], photoIds: ['ph-pending'] } as never;
+    });
+    open('f1', 'en', 598, pending);
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22');
+    expect(q('[data-tl="lunch"] [data-testid="lunch-picture"]')?.getAttribute('data-media')).toBe('md_demo_food-tahu');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    const approved = produce(pending, (d) => { d.photos['ph-pending'].visibility = 'visible'; });
+    open('f1', 'en', 598, approved);
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22');
+    const now = q('[data-tl="lunch"] [data-testid="lunch-picture"]');
+    expect(now?.getAttribute('data-media')).toBe('md_pending_lunch');
+    expect(now?.getAttribute('data-source')).toBe('lunch');
+  });
+
+  it('round 15 fix wave: a seafood-allergic parent never sees the fish soup picture; the dish he is served shows, or nothing', async () => {
+    // tomorrow's lunch (Thu 22 Oct) is the fish soup, rice, green beans and papaya; only the fish soup (and the beans, in the first two cases) have a picture
+    const withPics = (beans: boolean) => produce(buildSeed().citra, (d) => {
+      for (const id of ['dish-sop-ikan', 'dish-nasi-merah', 'dish-tumis-buncis', 'dish-pepaya']) delete d.dishes[id].photoMediaId;
+      d.dishes['dish-sop-ikan'].photoMediaId = 'md_fish_soup';
+      if (beans) d.dishes['dish-tumis-buncis'].photoMediaId = 'md_buncis';
+      d.dayMenus['2026-10-22'] = { id: '2026-10-22', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: '2026-10-22', lunch: ['dish-sop-ikan', 'dish-nasi-merah', 'dish-tumis-buncis', 'dish-pepaya'], soft: [], tea: [], allergyPlans: [], photoIds: [] } as never;
+    });
+    const media = () => qa('[data-tl="lunch"] [data-testid="lunch-picture"]').map((x) => x.getAttribute('data-media'));
+    // Oma Lina has no allergy: the day's picture is the first dish with a photo, the fish soup
+    open('f1', 'en', 598, withPics(true));
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22');
+    expect(media()).toEqual(['md_fish_soup']);
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    // Bambang is allergic to seafood: the fish soup is not what he is served, so the next served dish with a photo shows
+    open('fm10_0', 'en', 598, withPics(true));
+    await show(<FamilyToday />, '/today?member=m10&date=2026-10-22');
+    expect(media()).toEqual(['md_buncis']);
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    // and with no picture on any other dish there is none at all, while the row still tells the menu
+    open('fm10_0', 'en', 598, withPics(false));
+    await show(<FamilyToday />, '/today?member=m10&date=2026-10-22');
+    expect(media()).toEqual([]);
+    expect(q('[data-tl="lunch"]')?.textContent).toContain('Tumis buncis');
+  });
+
+  it('round 15: today after the club has closed with nobody in: the programme is "what was on" and every row is passed', async () => {
+    open('f1', 'en', 21 * 60 + 40);
+    await show(<FamilyToday />, '/today?member=m1');
+    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('wasOn');
+    expect(qa('[data-tl^="session-"]').length).toBeGreaterThan(0);
+    expect(qa('[data-tl]').every((x) => x.getAttribute('data-state') === 'done')).toBe(true);
   });
 
   it('both parents: one card with a row each; a row focuses on that parent and "Both parents" goes back', async () => {

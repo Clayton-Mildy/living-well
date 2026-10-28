@@ -16,7 +16,7 @@ export const report: Same<typeof EN> = {
   showAll: 'Lihat semua {n}', showFewer: 'Lihat lebih sedikit',
   nMembers: '{n} anggota',
   inOut: '{a}–{l}', since: 'Sejak {a}', noOut: '{a} · belum check-out',
-  flexVisit: 'Flex · kunjungan {n} dari {q}', gold: 'Gold', extraDay: 'Hari tambahan',
+  flexVisit: '{plan} · kunjungan {n} dari {q}', gold: '{plan}', extraDay: 'Hari tambahan',
   kindTrial: 'Hari percobaan', kindVisit: 'Kunjungan', gExpected: 'Dijadwalkan', gNoShow: 'Tidak datang',
   noSessions: 'Tidak ada aktivitas pada hari ini', outingNoSessions: 'Tidak ada aktivitas: klub sedang wisata',
   changed: 'Diubah', guestHost: '{name} · pengisi acara tamu',

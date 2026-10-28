@@ -2,7 +2,7 @@
 // shared with Add member, members/register), and mark lost. Registration is on paper: staff type the key details in and attach a photo or PDF of the signed form.
 import { useCallback, useEffect, useState, type ReactNode } from 'react';
 import {
-  addDays, dayStatus, feeOf, fmtPhone, priceOn, rp, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Relation,
+  addDays, dayStatus, feeOf, fmtPhone, planLabel, priceOn, rp, toHM, toMin, waUrl, type Diet, type DrugAllergy, type Enquiry, type FoodAllergen, type Mobility, type Relation,
 } from '@cp/shared';
 import {
   ALL_RELATIONS, DIETS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookableDays, bookingDayCheck, formLinkState, formPath, openGuest, seniorName, trialDays,
@@ -77,6 +77,7 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
   const [rel, setRel] = useState<Relation>(e?.contact.relation ?? 'daughter');
   const [phone, setPhone] = useState(e ? fmtPhone(e.contact.phone) : '');
   const [source, setSource] = useState<Enquiry['source']>(e?.source ?? 'referral');
+  const [sourceOther, setSourceOther] = useState(e?.sourceOther ?? '');
   const [notes, setNotes] = useState(e?.notes ?? '');
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -88,7 +89,7 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
     if (!ok || busy) return;
     setBusy(true);
     try {
-      const body = { senior: { title: title.trim(), name: name.trim() }, contact: { name: cName.trim(), relation: rel, phone }, source, notes: notes.trim() };
+      const body = { senior: { title: title.trim(), name: name.trim() }, contact: { name: cName.trim(), relation: rel, phone }, source, ...(source === 'other' ? { sourceOther: sourceOther.trim() } : {}), notes: notes.trim() };
       if (e) {
         const r = await act('enquiry.update', { enquiryId: e.id, ...body }, { ok: t('enq.leadSaved') });
         if (r.ok) onClose();
@@ -126,6 +127,7 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
         <div style={row} role="radiogroup" aria-label={t('enq.fSource')}>
           {ENQ_SOURCES.map((x) => <Pick key={x} selected={source === x} onClick={() => setSource(x)}>{t('enq.src_' + x)}</Pick>)}
         </div>
+        {source === 'other' ? <TextField label={t('enq.sourceOther')} value={sourceOther} onChange={(v) => setSourceOther(v.slice(0, 80))} /> : null}
       </Sec>
       <TextField label={t('enq.fNotes')} multiline rows={3} value={notes} onChange={setNotes} />
       </DialogBody>
@@ -280,7 +282,7 @@ function LostDialog({ id, onClose }: { id: string; onClose: () => void }) {
  */
 function FormLinkDialog({ id, onClose, onJoin }: { id: string; onClose: () => void; onJoin: () => void }) {
   const t = useT();
-  const { fds, fdy } = useFmt();
+  const { fds, fdy, lang } = useFmt();
   const s = useClub();
   const act = useAct();
   const { today, now } = useNow();
@@ -305,7 +307,7 @@ function FormLinkDialog({ id, onClose, onJoin }: { id: string; onClose: () => vo
   const dr = state === 'submitted' ? f?.draft : undefined;
   const summary: [string, string][] = dr ? [
     [t('enq.jn_member'), `${dr.title} ${dr.name}`], ...(dr.dob ? [[t('profile.f.dob'), fdy(dr.dob)] as [string, string]] : []), ...(dr.address ? [[t('profile.f.address'), dr.address] as [string, string]] : []),
-    [t('enq.jn_contact'), `${dr.contact.name} · ${fmtPhone(dr.contact.phone)}`], ...(dr.plan ? [[t('enq.plan'), t('mgmt.plan_' + dr.plan)] as [string, string]] : []),
+    [t('enq.jn_contact'), `${dr.contact.name} · ${fmtPhone(dr.contact.phone)}`], ...(dr.plan ? [[t('enq.plan'), planLabel(s, dr.plan, lang)] as [string, string]] : []),
   ] : [];
   return (
     <Dialog open onClose={onClose} eyebrow={t('enq.formLinkEyebrow')} title={seniorName(e)} maxWidth={560}

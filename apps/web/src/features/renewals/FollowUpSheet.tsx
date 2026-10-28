@@ -4,7 +4,7 @@
 // A pushed full screen on phones, a bottom sheet elsewhere.
 import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { actorName, flexMonth, fmtPhone, listName, memberName, displayName, monthStart, waUrl, ym, type FollowUpOutcome, type YM } from '@cp/shared';
+import { actorName, flexMonth, fmtPhone, listName, memberName, displayName, monthStart, planLabel, waUrl, ym, type FollowUpOutcome, type Plan, type YM } from '@cp/shared';
 import { END_REASONS } from '@cp/shared/rules/members';
 import { canRecord, defaultLastDay, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthChoices, leaveMonthsCheck, outcomeChoices, renewalMembers, renewalRows } from '@cp/shared/rules/renewals';
 import { Avatar, Button, Chip, DateField, GROUP_HEAD, Icon, Note, PhoneScreen, Select, Sheet, TextField } from '../../components/ui';
@@ -16,7 +16,7 @@ import { memberPhoto } from '../../lib/media';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { relLabel, whenText } from '../members/lib';
-import { outcomeLabel, planLabel, usageText } from './lib';
+import { outcomeLabel, usageText } from './lib';
 
 const HAIR = '0.5px solid var(--hairline, #E2E2E6)';
 const short = { day: 'numeric', month: 'short' } as const;
@@ -63,6 +63,8 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
 
   // the form: what the family decided, and what that outcome needs
   const [outcome, setOutcome] = useState<FollowUpOutcome | null>(() => (f && f.status !== 'rejected' && isChange(f.outcome) ? f.outcome! : null));
+  /** a switch: the catalogue plan chosen */
+  const [target, setTarget] = useState<Plan | null>(() => (f && f.status !== 'rejected' && f.outcome === 'switch' ? f.plan ?? null : null));
   const firstLeave = useMemo(() => leaveMonthChoices(month).find((x) => m && leaveMonthsCheck(s, m, [x], today).ok), [s, m, month, today]);
   const [leaveSel, setLeaveSel] = useState<YM[]>(() => f?.leaveMonths ?? (firstLeave ? [firstLeave] : []));
   const [lastDay, setLastDay] = useState(() => f?.lastDay ?? defaultLastDay(month));
@@ -75,12 +77,12 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
   const fm = flexMonth(s, m, ym(today), today);
   const leaveCheck = outcome === 'leave' ? leaveMonthsCheck(s, m, leaveSel, today) : null;
   const stopOk = outcome !== 'stop' || (/^\d{4}-\d{2}-\d{2}$/.test(lastDay) && lastDay >= today && lastDay <= lastDayOfMonth(month));
-  const canSave = editable && !!outcome && (!leaveCheck || leaveCheck.ok) && stopOk && !busy;
+  const canSave = editable && !!outcome && (outcome !== 'switch' || !!target) && (!leaveCheck || leaveCheck.ok) && stopOk && !busy;
 
   const save = async () => {
     if (!outcome || !canSave) return;
     setBusy(true);
-    const input = { memberId, month, outcome, ...(note.trim() ? { note: note.trim() } : {}), ...(outcome === 'leave' ? { leaveMonths: leaveSel } : {}), ...(outcome === 'stop' ? { lastDay, endReason: reason } : {}) };
+    const input = { memberId, month, outcome, ...(outcome === 'switch' && target ? { plan: target } : {}), ...(note.trim() ? { note: note.trim() } : {}), ...(outcome === 'leave' ? { leaveMonths: leaveSel } : {}), ...(outcome === 'stop' ? { lastDay, endReason: reason } : {}) };
     const name = displayName(m);
     const r = await act('followUp.record', input, { ok: (res) => (res.status === 'done' && isChange(outcome) ? t('renewals.savedApplied', { name, date: first }) : t('renewals.saved', { name })) });
     setBusy(false);
@@ -112,13 +114,13 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
         </>
       ) : <span style={{ fontSize: 15, color: '#6B6259' }}>{t('renewals.noContact')}</span>
   ));
-  const usage = usageText(t, row.plan, fm);
+  const usage = usageText(t, fm);
   const line = (label: string, value: string) => (
     <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, fontSize: 15, lineHeight: '22px' }}><span style={{ color: '#6B6259' }}>{label}</span><span style={{ fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{value}</span></div>
   );
   const membership = Section(t('renewals.group.membership'), (
     <>
-      {line(t('renewals.plan'), planLabel(t, row.plan))}
+      {line(t('renewals.plan'), planLabel(s, row.plan, fmt.lang))}
       {line(t('renewals.usage'), usage)}
     </>
   ));
@@ -137,7 +139,7 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
   if (applied && f) status.push(<Note key="a" tone="sage" icon="task_alt">{f.outcome === 'stop' ? t('renewals.st.appliedStop', { date: f.lastDay ?? '' }) : t('renewals.st.applied', { date: first })}</Note>);
   if (row.asked) status.push(<Note key="k" tone="sage" icon="smartphone">{row.asked === 'plan' ? t('renewals.st.askedPlan') : t('renewals.st.askedLeave', { month: fmt.fmonth(month) })}</Note>);
 
-  const choices = outcomeChoices(row.planOnFirst);
+  const choices = outcomeChoices(s, row.planOnFirst);
   const leaveMonthsBox = outcome === 'leave' ? (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <span style={{ fontSize: 13, fontWeight: 500, color: '#4A4038' }}>{t('renewals.leaveMonths')}</span>
@@ -164,7 +166,11 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
   const decision = editable ? Section(t('renewals.group.outcome', { month: fmt.fmonth(month, true) }), (
     <>
       <div role="group" aria-label={t('renewals.group.outcome', { month: fmt.fmonth(month, true) })} style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {choices.map((o) => <Chip key={o} size={40} selected={outcome === o} onClick={() => setOutcome(o)}>{outcomeLabel(t, o)}</Chip>)}
+        {choices.map((c) => (
+          <Chip key={c.plan ? `${c.outcome}:${c.plan}` : c.outcome} size={40} selected={outcome === c.outcome && (!c.plan || c.outcome !== 'switch' || target === c.plan)} onClick={() => { setOutcome(c.outcome); setTarget(c.outcome === 'switch' ? c.plan ?? null : null); }}>
+            {outcomeLabel(t, c.outcome, c.plan ? planLabel(s, c.plan, fmt.lang) : '')}
+          </Chip>
+        ))}
       </div>
       {leaveMonthsBox}
       {stopBox}
@@ -178,7 +184,7 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
       {calls.length ? calls.map((call, i) => (
         <div key={call.at + i} style={{ padding: '10px 16px', display: 'flex', flexDirection: 'column', gap: 2, borderTop: i ? HAIR : 'none', margin: 0 }}>
           <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}>
-            <span style={{ fontSize: 15, fontWeight: 500, lineHeight: '22px' }}>{outcomeLabel(t, call.outcome)}</span>
+            <span style={{ fontSize: 15, fontWeight: 500, lineHeight: '22px' }}>{outcomeLabel(t, call.outcome, call.outcome === 'switch' && f?.plan ? planLabel(s, f.plan, fmt.lang) : '')}</span>
             <span style={{ fontSize: 13, color: '#6B6259', whiteSpace: 'nowrap' }}>{whenText(fmt.fds, today, call.at, t)}</span>
           </div>
           <span style={{ fontSize: 13, color: '#6B6259' }}>{actorName(s, call.by)}</span>

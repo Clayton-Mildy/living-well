@@ -1,11 +1,11 @@
-// Family Calendar: one day's agenda. A banner for a closure, holiday or weekend; else rows of time | bar | title and sub. The bar is bronze for a guest-hosted,
-// extra or outing row. On a day a parent came, a finished session says who joined in or sat out and shows the family's pictures of it (64px thumbnails).
+// Family Calendar: one day's agenda. A banner for a closure, holiday or weekend; else rows of time | bar | title and sub. The bar is bronze once the row has passed (round 15; a guest-hosted or extra session is
+// told apart by its words), light while it is still ahead. On a day a parent came, a finished session says who joined in or sat out and shows the family's pictures of it (64px thumbnails).
 import type { Photo } from '@cp/shared';
 import { displayName } from '@cp/shared';
 import { eventTitle } from '@cp/shared/rules/calendar';
 import { activityLabel, roomLabel, staffFirst } from '@cp/shared/rules/family';
 import type { FamDay, FamRow } from '@cp/shared/rules/famCalendar';
-import { Icon, PhotoImg } from '../../../components/ui';
+import { DishThumb, Icon, PhotoImg } from '../../../components/ui';
 import { useFamilyCtx } from '../useFamily';
 import { F, HAIR, useFamWide } from '../kit';
 import { nameList } from './bits';
@@ -47,7 +47,7 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
     switch (r.kind) {
       case 'session': {
         const lead = r.guest ? t('fcal.guestHost', { name: r.guest.name }) : staffFirst(s, r.staffId);
-        return { title: activityLabel(s, r.activityId, lang), sub: [roomLabel(s, r.roomId, lang), lead].filter(Boolean).join(' · ') };
+        return { title: activityLabel(s, r.activityId, lang), sub: [roomLabel(s, r.roomId, lang), lead, r.extra ? t('cal.extra') : ''].filter(Boolean).join(' · ') };
       }
       case 'lunch':
       case 'tea': {
@@ -96,13 +96,14 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
         return (
           <div key={r.key} data-testid="cal-row" data-kind={r.kind} data-time={r.time} style={{ display: 'flex', gap: 14, padding: '12px 0', borderTop: i ? HAIR : 'none' }}>
             <span style={{ width: wide ? 46 : 44, flex: 'none', fontSize: 15, fontWeight: 500, fontVariantNumeric: 'tabular-nums', color: F.text }}>{r.time}</span>
-            <span aria-hidden="true" style={{ width: 3, borderRadius: 2, background: r.accent ? F.bronze : F.line, flex: 'none' }} />
+            <span aria-hidden="true" data-passed={r.passed ? '1' : '0'} style={{ width: 3, borderRadius: 2, background: r.passed ? F.bronze : F.line, flex: 'none' }} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, color: F.text, overflowWrap: 'anywhere' }}>{x.title}</span>
                 {x.sub ? <span style={{ fontSize: 13, lineHeight: 1.35, color: F.muted, overflowWrap: 'anywhere' }}>{x.sub}</span> : null}
                 {mark}
               </span>
+              {r.kind === 'lunch' && r.picture && !r.photos.length ? <span style={{ display: 'flex' }}><DishThumb mediaId={r.picture.mediaId} label={t('kitchen.dishPhoto')} size={wide ? 72 : 64} source={r.picture.source} testId="cal-lunch-picture" /></span> : null}
               {r.photos.length ? <Thumbs size={wide ? 72 : 64} photos={r.photos} label={(k) => t('fcal.photoAria', { i: k + 1, n: r.photos.length, a: x.title })} onOpen={(p) => onOpen(r.photos, p.id)} /> : null}
             </span>
           </div>

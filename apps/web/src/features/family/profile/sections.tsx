@@ -9,18 +9,21 @@ import {
 } from '@cp/shared';
 import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/members';
 import { latestNote, planSummary, visitDays } from '@cp/shared/rules/family';
+import { isDaysPlan, planLabel, planPrice, planQuota } from '@cp/shared/rules/plans';
 import { noteForFamily } from '@cp/shared/rules/approvals';
 import { applicationDataOf } from '@cp/shared/rules/applicationForm';
 import { canSign, signerChanged, signerOf, signingOf } from '@cp/shared/rules/signing';
 import { lunchLabelKey } from '@cp/shared/rules/activity';
 import { PROFILE_METRICS, familyReadings, latestOf, metricStatus, metricText, type HMetric } from '@cp/shared/rules/famHealth';
-import { FACE_ICON, Icon } from '../../../components/ui';
+import { Avatar, FACE_ICON, Icon } from '../../../components/ui';
+import { memberPhoto } from '../../../lib/media';
 import { useDevice } from '../../../hooks/useDevice';
 import type { useAct } from '../../../lib/act';
 import type { TFn, useFmt } from '../../../lib/i18n';
 import { dietLabel, drugLabel, foodList, mobLabel, relLabel, timingLabel, cogText } from '../../members/lib';
 import { DocView, useDocPicker, type PaperFile } from '../../members/PaperForm';
 import { useApplicationForm } from '../../members/ApplicationForm';
+import { NannyAvatar } from '../../members/ProfilePhoto';
 import { SigningTrail } from '../../members/profile/SigningTrail';
 import { SignSheet } from '../SignSheet';
 import { F, FillCard, HAIR, KV, List, SectionHead, TextLink, useFamWide } from '../kit';
@@ -65,7 +68,7 @@ export function headText(p: PCtx): { eyebrow: string; sub: string } {
     m.nanny ? t('profile.withNanny_' + m.gender, { n: m.nanny.name }) : '',
     spouse && !spouse.deletedAt ? t('profile.marriedTo', { n: displayName(spouse) }) : '',
   ].filter(Boolean).join(' · ');
-  return { eyebrow: t('fhealth.eyebrow', { p: t('profile.plan.' + ps.plan), d: since ? fmt.fmonth(ym(since), true) : '—' }), sub };
+  return { eyebrow: t('fhealth.eyebrow', { p: planLabel(s, ps.plan, fmt.lang), d: since ? fmt.fmonth(ym(since), true) : '—' }), sub };
 }
 
 /** The laptop's left column: the face, the eyebrow, the name and the line under it (a phone and tablet have the picture on top instead, ProfileCover). */
@@ -89,7 +92,7 @@ export function Overview({ p, id, notice }: SecProps & { notice?: ReactNode }) {
   const wide = useFamWide();
   const { isLaptop } = useDevice(); // round 8d: the personal details are two columns from a 1280px window; a 1024–1279 window has too little room for two
   const ps = planSummary(s, m, today);
-  const flex = ps.plan === 'flex';
+  const flex = isDaysPlan(s, ps.plan);
   const since = memberSince(m);
   const age = memberAge(m, today);
   const spouse = m.spouseId ? s.members[m.spouseId] : undefined;
@@ -100,7 +103,7 @@ export function Overview({ p, id, notice }: SecProps & { notice?: ReactNode }) {
   const quota = Math.max(1, Math.min(31, ps.quota ?? 0));
   const planCard = (
     <FillCard testId="pf-plan-card" gap={10}>
-      <Label right={ps.ended ? undefined : t('fhealth.nextInvoice', { d: fmt.fd(nextInvoice(s, today), { day: 'numeric', month: 'short' }) })}>{t(flex ? 'profile.planLabelFlex' : 'profile.planLabelGold', { m: month })}</Label>
+      <Label right={ps.ended ? undefined : t('fhealth.nextInvoice', { d: fmt.fd(nextInvoice(s, today), { day: 'numeric', month: 'short' }) })}>{t(flex ? 'profile.planLabelFlex' : 'profile.planLabelGold', { plan: planLabel(s, ps.plan, fmt.lang), m: month })}</Label>
       <span style={{ fontSize: 22, letterSpacing: '-0.4px', color: F.ink }}>{flex ? t('profile.visitsUsed', { n: ps.used, q: ps.quota ?? 0 }) : t('fhealth.visitsGold', { n: ps.used })}</span>
       {flex ? (
         <div role="img" aria-label={t('profile.visitsUsed', { n: ps.used, q: ps.quota ?? 0 })} style={{ display: 'grid', gridTemplateColumns: `repeat(${quota}, minmax(0, 1fr))`, gap: 4 }}>
@@ -250,7 +253,7 @@ export function VisitsSection({ p, id }: SecProps) {
   const { s, m, t, fmt, today } = p;
   const wide = useFamWide();
   const ps = planSummary(s, m, today);
-  const flex = ps.plan === 'flex';
+  const flex = isDaysPlan(s, ps.plan);
   const month = ps.month;
   const extra = new Set(ps.extra);
   const lead = (dow(`${month}-01`) + 6) % 7;
@@ -263,7 +266,7 @@ export function VisitsSection({ p, id }: SecProps) {
       ]
     : [
         { k: t('fhealth.tVisits'), v: String(ps.used), sub: month1 },
-        { k: t('fhealth.tPlan'), v: t('profile.plan.gold'), sub: t('fhealth.tGoldSub') },
+        { k: t('fhealth.tPlan'), v: planLabel(s, ps.plan, fmt.lang), sub: t('fhealth.tGoldSub') },
         { k: t('fhealth.tUsual'), v: m.usualArrival || '—', sub: t('fhealth.tArrival') },
       ];
   const cells: { n: number | null; bg: string; fg: string; op: number; ring: boolean; date?: ISODate }[] = Array.from({ length: lead }, () => ({ n: null, bg: 'transparent', fg: F.text, op: 1, ring: false }));
@@ -319,7 +322,7 @@ export function VisitsSection({ p, id }: SecProps) {
 export function PlanSection({ p, id }: SecProps) {
   const { s, m, t, fmt, today } = p;
   const ps = planSummary(s, m, today);
-  const flex = ps.plan === 'flex';
+  const flex = isDaysPlan(s, ps.plan);
   const price = priceOn(s, today);
   const prim = primaryContact(s, m.id);
   const spouse = m.spouseId ? s.members[m.spouseId] : undefined;
@@ -329,12 +332,12 @@ export function PlanSection({ p, id }: SecProps) {
     <Sec id={id}>
       <SectionHead>{t('fhealth.jump.plan')}</SectionHead>
       <List testId="pf-plan">
-        <KV first k={t('fhealth.tPlan')} v={t(flex ? 'profile.planFlexTitle' : 'profile.planGoldTitle', { q: s.club.settings.flexQuota })} />
-        <KV k={t('profile.fee')} v={t('fhealth.perMonth', { p: rp(price[ps.plan]) })} />
+        <KV first k={t('fhealth.tPlan')} v={t(flex ? 'profile.planFlexTitle' : 'profile.planGoldTitle', { plan: planLabel(s, ps.plan, fmt.lang), q: planQuota(s, ps.plan) ?? s.club.settings.flexQuota })} />
+        <KV k={t('profile.fee')} v={t('fhealth.perMonth', { p: rp(planPrice(price, ps.plan)) })} />
         {flex ? <KV k={t('profile.extraDay')} v={rp(price.extra)} /> : null}
         {prim ? <KV k={t('profile.billingContact')} v={prim.name} /> : null}
         <KV k={t('profile.va')} v={m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')} />
-        {upcoming ? <KV k={t('profile.nextChange')} v={`${t('profile.plan.' + upcoming.plan)} · ${t('profile.fromDate', { d: fmt.fdy(upcoming.from) })}`} /> : null}
+        {upcoming ? <KV k={t('profile.nextChange')} v={`${planLabel(s, upcoming.plan, fmt.lang)} · ${t('profile.fromDate', { d: fmt.fdy(upcoming.from) })}`} /> : null}
         {spouse && !spouse.deletedAt ? <KV k={t('profile.couple')} v={t('fhealth.coupleVal', { n: displayName(spouse) })} /> : null}
         <KV k={t('profile.membership')} v={last ? t(last < today ? 'profile.endedOn' : 'profile.endsOn', { d: fmt.fdy(last) }) : t('fhealth.monthly', { d: fmt.fd(nextInvoice(s, today), { day: 'numeric', month: 'short' }) })} />
       </List>
@@ -348,6 +351,7 @@ export function FamilySection({ p, id }: SecProps) {
   const { s, m, t, userId } = p;
   const rows = contactsOfMember(s, m.id).filter(({ link, contact }) => !isPendingRow(link) && !isPendingRow(contact));
   const circle: CSSProperties = { width: 40, height: 40, borderRadius: 999, border: 'none', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: F.bronze, textDecoration: 'none', flex: 'none' };
+  const nannyWa = m.nanny?.phone ? waUrl(m.nanny.phone) : '';
   return (
     <Sec id={id}>
       <SectionHead>{t('fhealth.jump.family')}</SectionHead>
@@ -358,6 +362,7 @@ export function FamilySection({ p, id }: SecProps) {
           const line = [relLabel(t, link.relation), link.primary ? t('fhealth.paysBills') : '', link.appAccess ? t('fhealth.usesApp') : t('fhealth.noApp')].filter(Boolean).join(' · ');
           return (
             <div key={link.id} data-testid="pf-contact" data-family-id={contact.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px', borderTop: i ? HAIR : 'none' }}>
+              <Avatar name={contact.name} size={40} src={memberPhoto(contact)} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{contact.name}</span>
                 <span style={{ fontSize: 13, color: F.muted }}>{line}</span>
@@ -372,6 +377,24 @@ export function FamilySection({ p, id }: SecProps) {
           );
         })}
       </List>
+      {m.nanny ? (
+        // round 15 follow-up: the nanny is not family, so she has a block of her own after the family list
+        <div data-testid="pf-nanny" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <SectionHead>{t('profile.nannyCard')}</SectionHead>
+          <List>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px' }}>
+              <NannyAvatar nanny={m.nanny} size={40} />
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+                <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{m.nanny.name}</span>
+                {m.nanny.phone ? <span style={{ fontSize: 13, color: F.muted }}>{fmtPhone(m.nanny.phone)}</span> : null}
+                {m.nanny.note ? <span style={{ fontSize: 13, color: F.muted, overflowWrap: 'anywhere' }}>{m.nanny.note}</span> : null}
+              </span>
+              {nannyWa ? <a href={nannyWa} target="_blank" rel="noopener" aria-label={t('fhealth.waAria', { n: m.nanny.name })} data-testid="pf-nanny-wa" className="cp-press" style={circle}><Icon name="chat" size={19} /></a> : null}
+              {m.nanny.phone ? <a href={`tel:${m.nanny.phone}`} aria-label={t('profile.callName', { n: m.nanny.name })} data-testid="pf-nanny-call" className="cp-press" style={circle}><Icon name="call" size={19} /></a> : null}
+            </div>
+          </List>
+        </div>
+      ) : null}
     </Sec>
   );
 }

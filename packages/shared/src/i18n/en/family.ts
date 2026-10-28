@@ -41,12 +41,12 @@ export const family = {
   dayLineSat: '{n} had a {m} day and sat out the activities.', sharedNoteFor: 'Shared note about {m}: {n}', calendarBtn: 'Club calendar', contactsBtn: 'Useful contacts',
 
   // ----- plan card: Flex visits this month (counted from check-ins, extra visits billed next month) and Gold -----
-  planLabel: 'Flex plan · {m}', planGoldLabel: 'Gold plan · {m}', visitsUsed: '{n} of {q} visits used in {m}', goldTitle: 'Gold plan · come any open day', goldVisits: 'Visits in {m}: {n}. No limit and no extra charge.',
+  planLabel: '{plan} plan · {m}', planGoldLabel: '{plan} plan · {m}', visitsUsed: '{n} of {q} visits used in {m}', goldTitle: '{plan} plan · come any open day', goldVisits: 'Visits in {m}: {n}. No limit and no extra charge.',
   visitsExtra: '{n} extra visit this month · {p} on the {m} invoice', visitsExtraN: '{n} extra visits this month · {p} on the {m} invoice', extraDates: 'Extra visit dates: {d}',
   extraRule: 'Extra visits are {p} each, billed next month on the {m} invoice.',
-  planAskGold: 'Ask to switch to Gold', planAskFlex: 'Ask to switch to Flex', planAskTitle: 'Switch {name} to {plan}?',
-  planAskBodyGold: 'Gold: come any open day for {p} a month, with no extra-day charges. It starts on {d} once the club confirms.',
-  planAskBodyFlex: 'Flex: {q} visits a month for {p}; extra visits are {x} each. It starts on {d} once the club confirms.',
+  planAskGold: 'Ask to switch to Gold', planAskFlex: 'Ask to switch to Flex', planAskTitle: 'Switch {name} to {plan}?', planPick: 'Plan to switch to',
+  planAskBodyGold: '{plan}: come any open day for {p} a month, with no extra-day charges. It starts on {d} once the club confirms.',
+  planAskBodyFlex: '{plan}: {q} visits a month for {p}; extra visits are {x} each. It starts on {d} once the club confirms.',
   planAskSend: 'Send request', planAskSent: 'Request sent. The club will confirm it.', planAsked: 'Switch to {plan} from {d} requested · waiting for the club', planWithdraw: 'Withdraw request', planWithdrawn: 'Request withdrawn.', endedPlan: 'Membership ended. The plan is closed.',
 
   // ----- invoice card and billing -----

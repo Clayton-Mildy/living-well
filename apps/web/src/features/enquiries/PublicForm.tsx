@@ -19,10 +19,10 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useSession } from '../../store/session';
 import { foodLabel, mobLabel, relLabel } from '../members/lib';
 import { Rows, StepBar } from '../members/register/parts';
-import { AllergyFields, CarerFields, DementiaFields, HealthFields, IdFields, PeSection, RegCareFields, RegPersonalFields, RelationChips, TextField, TitleName, type RegDraft } from '../members/dialogs/forms';
+import { AllergyFields, CarerFields, DementiaFields, dementiaQuestion, HealthFields, IdFields, PeSection, RegCareFields, RegPersonalFields, RelationChips, TextField, TitleName, type RegDraft } from '../members/dialogs/forms';
 import { ONLINE_STEPS, STEP_NAME_KEY, blankOnline, clearDevice, firstOpenOnlineStep, fromOnline, loadDevice, onlineIssues, pickDraft, resumeStep, saveDevice, toOnline, type FDraft, type OnlineStep } from './onlineForm';
 
-interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; extra: number; flexQuota: number }; dementiaFee: number }
+interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; extra: number; flexQuota: number }; /** the active plans of the catalogue (a server before round 15 sends none: Flex and Gold from `prices`) */ plans?: { id: Plan; name: string; nameId: string; quota: number | null; price: number }[]; dementiaFee: number }
 type View = { kind: 'loading' } | { kind: 'ready'; info: Info } | { kind: 'bad' } | { kind: 'network' } | { kind: 'expired' } | { kind: 'done'; date: string } | { kind: 'thanks'; name: string };
 type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
 /** This phone's answers and the lead's, when both changed since they last met: the family picks one. */
@@ -225,6 +225,9 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   const sec = (label: ReactNode, children: ReactNode) => <PeSection label={label}>{children}</PeSection>;
   const stepBody = (info: Info): ReactNode => {
     const { prices } = info;
+    const plans = info.plans ?? [{ id: 'flex' as Plan, name: 'Flex', nameId: 'Flex', quota: prices.flexQuota, price: prices.flex }, { id: 'gold' as Plan, name: 'Gold', nameId: 'Gold', quota: null, price: prices.gold }];
+    const planName = (p: Plan) => { const x = plans.find((y) => y.id === p); return x ? (lang === 'id' ? x.nameId : x.name) : p; };
+    const chosen = plans.find((y) => y.id === d.plan);
     if (step === 'who') {
       return (
         <>
@@ -264,8 +267,8 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
     if (step === 'plan') {
       return sec(t('enq.pf_plan'), <>
         <ChipGroup label={t('enq.plan')} value={d.plan || 'unsure'} onChange={(v) => set({ plan: v === 'unsure' ? '' : (v as Plan) })}
-          options={[{ value: 'flex', label: `${t('mgmt.plan_flex')} · ${rp(prices.flex)}` }, { value: 'gold', label: `${t('mgmt.plan_gold')} · ${rp(prices.gold)}` }, { value: 'unsure', label: t('enq.pf_planUnsure') }]} />
-        <div style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{d.plan === 'gold' ? t('profile.planNoteGold') : d.plan === 'flex' ? t('profile.planNoteFlex', { q: prices.flexQuota, p: rp(prices.extra) }) : null}</div>
+          options={[...plans.map((x) => ({ value: x.id, label: `${planName(x.id)} · ${rp(x.price)}` })), { value: 'unsure', label: t('enq.pf_planUnsure') }]} />
+        <div style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{chosen ? (chosen.quota !== null ? t('profile.planNoteFlex', { plan: planName(chosen.id), q: chosen.quota, p: rp(prices.extra) }) : t('profile.planNoteGold', { plan: planName(chosen.id) })) : null}</div>
       </>);
     }
     // review: what was typed, one group per step with an Edit link back to it
@@ -274,8 +277,8 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
     const rows: Record<Exclude<OnlineStep, 'review'>, [ReactNode, ReactNode][]> = {
       who: [[t('common.name'), `${d.title} ${d.name.trim()}`], [t('profile.f.called'), d.reg.nickname.trim() || none], [t('profile.f.dob'), d.dob ? fdy(d.dob) : none], [t('profile.f.address'), d.address.trim() || none]],
       family: [[t('common.name'), d.cName.trim() || none], [t('profile.f.relation'), relLabel(t, d.rel)], [t('common.phone'), d.phone.trim() ? (d.phone.replace(/\D/g, '').length >= 8 ? fmtPhone(d.phone) : d.phone) : none], [t('profile.sec.nanny'), d.nanny ? d.nannyName.trim() || none : none]],
-      health: [[t('profile.f.conditions'), d.conditions.join(', ') || none], [t('profile.f.mobility'), mobLabel(t, d.mobility === 'none' ? null : d.mobility)], [t('profile.sec.allergies'), allergies.join(', ') || none], [t('profile.q.dementia'), d.reg.dementia === null ? none : d.reg.dementia ? <>{t('common.yes')}<span style={{ display: 'block', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{t('profile.dementiaFee', { rp: rp(info.dementiaFee) })}</span></> : t('common.no')]],
-      plan: [[t('enq.plan'), d.plan ? `${t('mgmt.plan_' + d.plan)} · ${rp(prices[d.plan])}` : t('enq.pf_planUnsure')]],
+      health: [[t('profile.f.conditions'), d.conditions.join(', ') || none], [t('profile.f.mobility'), mobLabel(t, d.mobility === 'none' ? null : d.mobility)], [t('profile.sec.allergies'), allergies.join(', ') || none], [dementiaQuestion(t, info.dementiaFee), d.reg.dementia === null ? none : d.reg.dementia ? <>{t('common.yes')}<span style={{ display: 'block', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{t('profile.dementiaFee', { rp: rp(info.dementiaFee) })}</span></> : t('common.no')]],
+      plan: [[t('enq.plan'), d.plan ? `${planName(d.plan)} · ${rp(chosen?.price ?? 0)}` : t('enq.pf_planUnsure')]],
     };
     const edit = (k: OnlineStep) => (
       <button type="button" onClick={() => { goTo(ONLINE_STEPS.indexOf(k)); setFromReview(true); }} style={{ border: 'none', background: 'transparent', padding: 0, minHeight: 32, color: 'var(--accent, #75624B)', fontWeight: 500, fontSize: 14, cursor: 'pointer', fontFamily: 'Inter' }}>{t('reg.edit')}</button>

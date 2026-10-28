@@ -98,7 +98,7 @@ export function FullSheet({ open, onClose, back, pos, label, bg = '#FFFFFF', chi
         <span style={{ flex: 1 }} />
         {pos ? <span style={{ fontSize: FONT_BODY, color: '#6B6259', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}>{pos}</span> : null}
       </div>
-      <div ref={scroller} className="cp-noshrink" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '4px 16px 0', display: 'flex', flexDirection: 'column', gap: 22 }}>{children}</div>
+      <div ref={scroller} className="cp-noshrink" style={{ flex: 1, minHeight: 0, overflowY: 'auto', overflowX: 'hidden', overscrollBehavior: 'contain', padding: '4px 16px 0', display: 'flex', flexDirection: 'column', gap: 22 }}>{children}<div aria-hidden="true" style={{ flex: 'none', height: 'var(--cp-floatclear, 0px)' }} /></div>
     </div>
   );
 }

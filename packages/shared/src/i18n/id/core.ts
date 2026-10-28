@@ -75,12 +75,12 @@ export const notif: Same<typeof EN.notif> = {
   'act.leaveRequest': '{name} mengajukan cuti {days} hari mulai {from}', 'act.leaveRequestOne': '{name} mengajukan cuti sehari pada {from}',
   'act.contract': 'Kontrak berakhir {date}: {name}', 'act.complaint': 'Masukan makanan terbuka: {name} · {dish}', 'act.overdue': 'Tagihan terlambat: {name} · {number}', 'act.budgetApprove': 'Permintaan anggaran untuk disetujui: {item}',
   'act.receiptApprove': 'Kuitansi untuk disetujui: {supplier}', 'act.vendorApprove': 'Tagihan pemasok untuk disetujui: {supplier}', 'act.invoiceRun': 'Penerbitan tagihan {month} sudah waktunya', 'act.stockApprove': 'Permintaan stok untuk disetujui: {item} ({qty})',
-  'act.planRequest': '{name}: keluarga minta pindah ke paket {plan} mulai {date}', 'act.guestTrial': 'Tamu uji coba datang {time}: {name}', 'act.guestTrialDay': 'Hari uji coba hari ini: {name}', 'act.photosReview': 'Foto menunggu persetujuan Anda: {n}', 'act.approvalsLogs': 'Catatan harian dan catatan menunggu persetujuan: {n}', 'act.approvalsReadings': 'Hasil ukur kesehatan menunggu persetujuan: {n}', 'act.approvalsPayments': 'Pembayaran menunggu konfirmasi Anda: {n}', 'act.approvalsMenu': 'Perubahan menu menunggu persetujuan: {n}', 'act.approvalsProgramme': 'Perubahan program menunggu persetujuan: {n}', 'act.guestVisit': 'Kunjungan pukul {time}: {name}', 'act.readyCheckout': 'Cek pulang selesai: {name} siap pulang',
+  'act.planRequest': '{name}: keluarga minta pindah ke paket {planId} mulai {date}', 'act.guestTrial': 'Tamu uji coba datang {time}: {name}', 'act.guestTrialDay': 'Hari uji coba hari ini: {name}', 'act.photosReview': 'Foto menunggu persetujuan Anda: {n}', 'act.approvalsLogs': 'Catatan harian dan catatan menunggu persetujuan: {n}', 'act.approvalsReadings': 'Hasil ukur kesehatan menunggu persetujuan: {n}', 'act.approvalsPayments': 'Pembayaran menunggu konfirmasi Anda: {n}', 'act.approvalsMenu': 'Perubahan menu menunggu persetujuan: {n}', 'act.approvalsProgramme': 'Perubahan program menunggu persetujuan: {n}', 'act.guestVisit': 'Kunjungan pukul {time}: {name}', 'act.readyCheckout': 'Cek pulang selesai: {name} siap pulang',
   'act.queue': '{n} menunggu di pos kesehatan', 'act.logs': '{n} catatan harian belum ditulis', 'act.allergen': 'Bentrok alergi saat makan siang: {name} · {dish}',
   'act.invoiceDue': 'Tagihan untuk dibayar: {name} · {number}', 'act.invoiceOverdue': 'Tagihan terlambat: {name} · {number}', 'act.survey': 'Ceritakan pengalaman Anda: {title}', 'act.docRequested': 'Dokumen diminta untuk {name}',
 };
 export const feed: Same<typeof EN.feed> = {
-  planRequested: '{name}: keluarga meminta pindah ke paket {plan}', planWithdrawn: '{name}: keluarga membatalkan permintaan ganti paket',
+  planRequested: '{name}: keluarga meminta pindah ke paket {planId}', planWithdrawn: '{name}: keluarga membatalkan permintaan ganti paket',
   checkedIn: '{name} check-in', checkedOut: '{name} check-out', memberCreatedForm: 'Data anggota dibuat dari formulir keanggotaan', reading: 'Hasil ukur {name}: {value}',
   reviewApproved: 'Perubahan disetujui ({section})', reviewReverted: 'Perubahan dibatalkan ({section})',
 };
@@ -113,5 +113,5 @@ export const demo: Same<typeof EN.demo> = {
   reset: 'Atur ulang data demo', resetDone: 'Data demo diatur ulang ke 09.58.', resetConfirm: 'Atur ulang semua perubahan di demo ini? Semua pengguna aplikasi ikut melihat pengaturan ulang.', designSystem: 'Sistem desain', clock: 'Jam klub',
 };
 export const inv: Same<typeof EN.inv> = {
-  'line.flex': 'Paket Flex · {month}', 'line.gold': 'Paket Gold · {month}', 'line.extra': 'Hari tambahan · {month} ({n})', 'line.credit': 'Saldo akun', 'line.venue': 'Sewa venue', 'line.leave': 'Cuti · {month}', 'line.dementia': 'Perawatan demensia', 'line.registration': 'Biaya pendaftaran',
+  'line.plan': 'Paket {planId} · {month}', 'line.flex': 'Paket Flex · {month}', 'line.gold': 'Paket Gold · {month}', 'line.extra': 'Hari tambahan · {month} ({n})', 'line.credit': 'Saldo akun', 'line.venue': 'Sewa venue', 'line.leave': 'Cuti · {month}', 'line.dementia': 'Perawatan demensia', 'line.registration': 'Biaya pendaftaran',
 };

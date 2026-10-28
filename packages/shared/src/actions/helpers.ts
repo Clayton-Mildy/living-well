@@ -4,7 +4,9 @@ import type { Attendance, ClubState, ISODate, MemberDocument, Signing } from '..
 import type { Ctx } from './framework';
 import { attId } from '../rules/attendance';
 import { live } from '../util';
-import { displayName } from '../rules/core';
+import { displayName, primaryContact } from '../rules/core';
+import { applicationDataOf } from '../rules/applicationForm';
+import { formDoc } from '../rules/signing';
 
 export function ensureAttendance(d: Draft<ClubState>, date: ISODate, memberId: string, ctx: Ctx): Draft<Attendance> {
   const id = attId(date, memberId);
@@ -31,4 +33,20 @@ export function carrySigning(doc: MemberDocument | undefined, ctx: Ctx): { signi
   if (!sig) return {};
   if (sig.status !== 'draft') ctx.fail('sign.err.notNow');
   return { signing: sig };
+}
+
+/** Round 15 (R5): the family member present signed the form at registration. The membership form gets a signing that is already Signed in person:
+ *  Draft, Sent and Signed all at the creation time (Draft and Sent by the staff user, Signed by the billing contact, who is the signer), the form as it is
+ *  at creation, and e-Meterai as the route, so the countersign and the stamp follow exactly as after an online signature. Call it once the member, the
+ *  contact and the link exist. No signature given: nothing changes. */
+export function signAtRegistration(d: Draft<ClubState>, memberId: string, signatureMediaId: string | undefined, ctx: Ctx): void {
+  if (!signatureMediaId) return;
+  const signer = primaryContact(d as ClubState, memberId);
+  const doc = d.members[memberId] && formDoc(d.members[memberId]);
+  if (!signer || !doc) return ctx.fail('sign.err.noSigner');
+  const at = ctx.nowDT;
+  doc.signing = {
+    status: 'signed', meterai: 'e', form: applicationDataOf(d as ClubState, memberId, ctx.today), signerId: signer.id, signerName: signer.name, signatureMediaId,
+    steps: [{ status: 'draft', at, by: ctx.actor }, { status: 'sent', at, by: ctx.actor }, { status: 'signed', at, by: `family:${signer.id}` }],
+  } as Signing;
 }

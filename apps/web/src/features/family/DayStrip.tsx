@@ -1,7 +1,7 @@
 // The day strip (round 8): the last days as 44px circles with the weekday above. A day the parent came is filled with that day's best picture (a scrim keeps the
 // number readable), the day being read is ink, today has a ring; KC round 10: only days they came are shown (plus today, a grey outline when they stayed home).
 // KC round 9: the day ahead goes last ("Tomorrow", or Monday after a Friday) as a dashed circle, so families can see tomorrow's plan.
-import { useState, type CSSProperties, type ReactNode } from 'react';
+import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import type { ISODate } from '@cp/shared';
 import type { StripDay } from '@cp/shared/rules/family';
 import { addDays } from '@cp/shared';
@@ -15,15 +15,24 @@ const BRONZE = 'linear-gradient(160deg, #B3A28A 0%, #75624B 100%)';
 /**
  * `picker`: the calendar button, last in the row (a day older than the strip).
  * `tiles` (round 8c, the laptop under Today's picture): six rounded grey tiles, the day's circle and its weekday side by side; the day being read is a
- * darker tile.
+ * darker tile. Round 15 follow-up: the tiles keep a fixed width and the row scrolls sideways inside its column when they do not fit (the label of one tile never
+ * runs into the next), with the day being read scrolled into view.
  */
 export function DayStrip({ days, selected, onPick, picker, tiles }: { days: StripDay[]; selected: ISODate; onPick: (d: ISODate) => void; picker?: ReactNode; tiles?: boolean }) {
   const { t, fmt, now } = useFamilyCtx();
   /** "Tomorrow", or the day's name when the next open day is further away (Monday after a Friday) */
   const planWord = (d: ISODate) => (d === addDays(now.today, 1) ? t('common.tomorrow') : fmt.fd(d, { weekday: 'short' }).replace(/\.$/, ''));
+  const row = useRef<HTMLDivElement>(null);
+  // the day being read stays in view when the row scrolls (set the row's own scroll; scrollIntoView would also move the page)
+  useEffect(() => {
+    const el = row.current;
+    const on = el?.querySelector<HTMLElement>('[aria-pressed="true"]');
+    if (!el || !on || el.scrollWidth <= el.clientWidth) return;
+    el.scrollLeft = Math.max(0, on.offsetLeft - (el.clientWidth - on.offsetWidth) / 2);
+  }, [selected, days.length, tiles]);
   if (tiles) {
     return (
-      <div role="group" aria-label={t('family.storyStrip')} data-testid="day-strip" data-layout="tiles" style={{ display: 'grid', gridTemplateColumns: `repeat(${days.length}, minmax(0, 1fr))`, gap: 6 }}>
+      <div ref={row} role="group" aria-label={t('family.storyStrip')} data-testid="day-strip" data-layout="tiles" style={{ position: 'relative', display: 'flex', gap: 6, overflowX: 'auto', scrollbarWidth: 'thin', paddingBottom: 2 }}>
         {days.map((d) => {
           const on = d.date === selected;
           const isToday = d.date === now.today;
@@ -32,7 +41,7 @@ export function DayStrip({ days, selected, onPick, picker, tiles }: { days: Stri
           const ahead = !!d.plan && !on;
           return (
             <button key={d.date} type="button" data-date={d.date} data-selected={on} data-visited={d.visited} data-plan={d.plan || undefined} aria-pressed={on} aria-current={isToday ? 'date' : undefined} aria-label={d.plan ? `${planWord(d.date)} · ${fmt.fdl(d.date)}` : fmt.fdl(d.date)} onClick={() => onPick(d.date)} className="cp-fam-press"
-              style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 6px', border: 'none', borderRadius: 16, background: on ? F.press : '#F7F7F8', cursor: 'pointer', fontFamily: 'Inter', minWidth: 0 }}>
+              style={{ flex: 'none', width: 112, boxSizing: 'border-box', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, padding: '8px 6px', border: 'none', borderRadius: 16, background: on ? F.press : '#F7F7F8', cursor: 'pointer', fontFamily: 'Inter' }}>
               <span style={{ position: 'relative', width: 40, height: 40, borderRadius: 999, overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none',
                 background: on ? F.ink : filled ? BRONZE : '#FFFFFF', color: on || filled ? '#FFFFFF' : '#8A8078', fontSize: 14, fontWeight: 600,
                 boxShadow: isToday && !on ? `0 0 0 2px #F7F7F8, 0 0 0 3.5px ${F.bronze}` : !on && !filled && !ahead ? `inset 0 0 0 1.5px ${F.line}` : 'none', border: ahead ? `1.5px dashed ${F.bronze}` : undefined, boxSizing: 'border-box' }}>

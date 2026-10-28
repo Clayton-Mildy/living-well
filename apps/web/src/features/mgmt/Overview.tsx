@@ -2,7 +2,7 @@
 // Every number and row is computed from the clubhouse's own data, so an empty clubhouse (Adina) shows zeros and empty states.
 import { Fragment, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { actorName, memberName, type Enquiry } from '@cp/shared';
+import { actorName, memberName, planLabel, type Enquiry } from '@cp/shared';
 import { comingUp, familyRequests, liveToday, overviewStats, type ComingUpItem, type FamilyRequest } from '@cp/shared/rules/mgmt';
 import { openEnquiries } from '@cp/shared/rules/enquiries';
 import { Avatar, EmptyState, Group, PageHead } from '../../components/ui';
@@ -117,7 +117,7 @@ export function Overview() {
             if (!m) return null;
             return (
               <Fragment key={r.id}>
-                <LightRow avatar={<Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={46} />} title={memberName(m)} sub={reqText(t, fds, r)} onClick={() => navigate(`/members/${m.id}/plan`)} />
+                <LightRow avatar={<Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={46} />} title={memberName(m)} sub={reqText(t, fds, r, planLabel(s, r.to, lang))} onClick={() => navigate(`/members/${m.id}/plan`)} />
               </Fragment>
             );
           }) : <EmptyState icon="inbox" title={t('mgmt.reqEmpty')} />}
@@ -143,6 +143,6 @@ function upTitle(t: TFn, lang: string, x: ComingUpItem) {
   if (x.kind === 'visit') return t('mgmt.upVisit', { name: x.title });
   return lang === 'id' && x.titleId ? x.titleId : x.title;
 }
-function reqText(t: TFn, fds: Fds, r: FamilyRequest) {
-  return t('mgmt.reqUpgrade', { to: t('mgmt.plan_' + r.to), date: fds(r.from) });
+function reqText(t: TFn, fds: Fds, r: FamilyRequest, to: string) {
+  return t('mgmt.reqUpgrade', { to, date: fds(r.from) });
 }

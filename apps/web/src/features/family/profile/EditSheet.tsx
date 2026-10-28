@@ -5,10 +5,11 @@ import { useState, type ReactNode } from 'react';
 import { e164, fmtPhone, live, toHM, toMin, type ChangeRequest, type ClubState, type Member } from '@cp/shared';
 import { Icon, TimeField } from '../../../components/ui';
 import { useAct } from '../../../lib/act';
+import { ProfilePhotoField } from '../../members/ProfilePhoto';
 import type { TFn } from '../../../lib/i18n';
 import { F, FamSheet, FillCard, Switch } from '../kit';
 
-type Draft = { address: string; rtRw: string; city: string; postcode: string; phone: string; mobile: string; email: string; nanny: boolean; nannyName: string; nannyPhone: string; usual: string };
+type Draft = { address: string; rtRw: string; city: string; postcode: string; phone: string; mobile: string; email: string; nanny: boolean; nannyName: string; nannyPhone: string; /** the carer's picture (a media id), '' = none; absent = as it is */ nannyPhoto?: string; usual: string };
 type Patch = Record<string, unknown>;
 const TEXT_KEYS = ['address', 'rtRw', 'city', 'postcode', 'phone', 'mobile', 'email'] as const;
 const FIELD_LABEL: Record<string, string> = {
@@ -29,9 +30,18 @@ function draftOf(m: Member, waiting: Patch): Draft {
   return {
     address: pick('address', m.address || ''), rtRw: pick('rtRw', reg.rtRw || ''), city: pick('city', reg.city || ''), postcode: pick('postcode', reg.postcode || ''),
     phone: pick('phone', reg.phone || ''), mobile: pick('mobile', reg.mobile || ''), email: pick('email', reg.email || ''),
-    nanny: !!wn, nannyName: wn?.name || '', nannyPhone: wn?.phone ? fmtPhone(wn.phone) : '',
+    nanny: !!wn, nannyName: wn?.name || '', nannyPhone: wn?.phone ? fmtPhone(wn.phone) : '', nannyPhoto: wn?.photoMediaId || '',
     usual: typeof waiting.usualArrival === 'string' && waiting.usualArrival ? (waiting.usualArrival as string) : m.usualArrival || '',
   };
+}
+
+/** Is the carer in the draft the one on file (same name, any case or spacing)? */
+const sameCarer = (m: Member, d: Draft) => !!m.nanny && m.nanny.name.trim().toLowerCase() === d.nannyName.trim().toLowerCase();
+/** The picture the sheet shows and sends: another person's name does not inherit the old carer's picture until a new one is chosen. */
+export function carerPhoto(m: Member, d: Draft): string | undefined {
+  if (d.nannyPhoto === undefined) return sameCarer(m, d) ? m.nanny?.photoMediaId : undefined;
+  if (!sameCarer(m, d) && d.nannyPhoto === m.nanny?.photoMediaId) return undefined;
+  return d.nannyPhoto || undefined;
 }
 
 /** Only what differs from the current details. */
@@ -41,11 +51,11 @@ export function changesOf(m: Member, d: Draft): Patch {
   const patch: Patch = {};
   for (const k of TEXT_KEYS) if (d[k].trim() !== cur[k]) patch[k] = d[k].trim();
   if (d.usual && d.usual !== m.usualArrival) patch.usualArrival = d.usual;
-  // the carer's picture and note are the club's to edit; a family change keeps them as they are
+  // the carer's note is the club's to edit and stays for the same person; the picture is what the sheet shows (a different person starts without the old picture and note)
   const keep = (n: NonNullable<Member['nanny']> | null) => (n ? { ...(n.photoMediaId ? { photoMediaId: n.photoMediaId } : {}), ...(n.note ? { note: n.note } : {}) } : {});
-  // a different person (another name) starts without the old carer's picture and note
-  const same = !!m.nanny && m.nanny.name.trim().toLowerCase() === d.nannyName.trim().toLowerCase();
-  const nanny = d.nanny && d.nannyName.trim() ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), ...(same ? keep(m.nanny) : {}) } : null;
+  const same = sameCarer(m, d);
+  const photo = carerPhoto(m, d);
+  const nanny = d.nanny && d.nannyName.trim() ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), ...(photo ? { photoMediaId: photo } : {}), ...(same && m.nanny?.note ? { note: m.nanny.note } : {}) } : null;
   if (JSON.stringify(nanny) !== JSON.stringify(m.nanny ? { name: m.nanny.name, ...(m.nanny.phone ? { phone: m.nanny.phone } : {}), ...keep(m.nanny) } : null)) patch.nanny = nanny;
   return patch;
 }
@@ -100,6 +110,9 @@ export function ProfileEditSheet({ m, s, t, userId, onClose }: { m: Member; s: C
         <span style={{ fontSize: 16, color: F.text }}>{t('profile.comesWithNanny')}</span>
         <Switch on={d.nanny} onClick={() => set({ nanny: !d.nanny })} label={t('profile.comesWithNanny')} />
       </div>
+      {d.nanny ? (
+        <ProfilePhotoField name={d.nannyName || t('profile.f.nanny')} value={carerPhoto(m, d) || null} onChange={(id) => set({ nannyPhoto: id ?? '' })} size={64} />
+      ) : null}
       {d.nanny ? (
         <Two>
           <Field label={t('profile.nannyName')} value={d.nannyName} onChange={(v) => set({ nannyName: v })} error={noName ? t('members.err.nannyNameRequired') : undefined} />

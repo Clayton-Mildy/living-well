@@ -49,6 +49,26 @@ describe('leads', () => {
     fails(s, 'enquiry.create', { ...lead, senior: { title: '', name: 'Lily Tan' } }, 's1', 'enq.err.titleRequired');
     fails(s, 'enquiry.create', { ...lead, senior: { title: 'T'.repeat(21), name: 'Lily Tan' } }, 's1', 'err.invalid');
   });
+  it('round 15: source Other keeps where the lead heard of us; another source drops it; over 80 characters is refused', () => {
+    const s = seed().citra;
+    const r = run(s, 'enquiry.create', { ...lead, source: 'other', sourceOther: ' Church group ' }, 's1');
+    const id = r.result.enquiryId as string;
+    expect(r.state.enquiries[id]).toMatchObject({ source: 'other', sourceOther: 'Church group' });
+    // text is only kept with Other, and it is optional
+    expect(run(s, 'enquiry.create', { ...lead, sourceOther: 'Church group' }, 's1').state.enquiries[id].sourceOther).toBeUndefined();
+    expect(run(s, 'enquiry.create', { ...lead, source: 'other' }, 's1').state.enquiries[id].sourceOther).toBeUndefined();
+    const r2 = run(r.state, 'enquiry.update', { enquiryId: id, source: 'instagram' }, 's1');
+    expect(r2.state.enquiries[id].source).toBe('instagram');
+    expect('sourceOther' in r2.state.enquiries[id]).toBe(false);
+    // an edit of the text alone, and of the source back to Other with new text
+    const r3 = run(r.state, 'enquiry.update', { enquiryId: id, sourceOther: 'Neighbour' }, 's1');
+    expect(r3.state.enquiries[id]).toMatchObject({ source: 'other', sourceOther: 'Neighbour' });
+    expect(run(r2.state, 'enquiry.update', { enquiryId: id, source: 'other', sourceOther: 'Radio' }, 's1').state.enquiries[id].sourceOther).toBe('Radio');
+    expect('sourceOther' in run(r.state, 'enquiry.update', { enquiryId: id, source: 'other', sourceOther: '' }, 's1').state.enquiries[id]).toBe(false);
+    expect(run(s, 'enquiry.create', { ...lead, source: 'other', sourceOther: 'x'.repeat(80) }, 's1').state.enquiries[id].sourceOther).toHaveLength(80);
+    fails(s, 'enquiry.create', { ...lead, source: 'other', sourceOther: 'x'.repeat(81) }, 's1', 'err.invalid');
+    fails(r.state, 'enquiry.update', { enquiryId: id, sourceOther: 'x'.repeat(81) }, 's1', 'err.invalid');
+  });
   it('edit changes the lead and keeps booked visit names in step', () => {
     const s = seed().citra;
     const r = run(s, 'enquiry.update', { enquiryId: 'e2', senior: { title: 'Bapak', name: 'Yusuf H. Hamid' }, notes: 'Prefers mornings' }, 's1');
@@ -199,6 +219,32 @@ describe('joining a lead (registration is on paper)', () => {
     fails(s, 'enquiry.convert', { ...input, formMediaId: '  ' }, 's9', 'enq.err.formRequired');
     fails(s, 'enquiry.convert', { ...input, formMediaId: 'not-a-media-id' }, 's9', 'err.invalid');
     expect(s.enquiries.e1.stage).toBe('trial');
+  });
+  it('round 15: with the family\'s signature the form is signed in person (three steps, the lead contact signs); without it there is no signing', () => {
+    const s = seed().citra;
+    const SIG = 'md_testsignature0001';
+    const r = run(s, 'enquiry.convert', { ...input, signatureMediaId: SIG, registration: { nickname: 'Lan' } }, 's9');
+    const id = r.result.memberId as string;
+    const sig = r.state.members[id].documents.find((d) => d.type === 'membershipForm')!.signing!;
+    expect(sig).toMatchObject({ status: 'signed', meterai: 'e', signerId: 'fm47_0', signerName: 'Melinda Tjandra', signatureMediaId: SIG });
+    expect(sig.steps.map((x) => [x.status, x.at, x.by])).toEqual([['draft', '2026-10-21T10:00', 'staff:s9'], ['sent', '2026-10-21T10:00', 'staff:s9'], ['signed', '2026-10-21T10:00', 'family:fm47_0']]);
+    expect(sig.form).toMatchObject({ name: 'Siu Lan Tjandra', nickname: 'Lan', signer: 'Melinda Tjandra', plan: 'flex' });
+    const plain = run(seed().citra, 'enquiry.convert', input, 's9');
+    expect(plain.state.members[plain.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!.signing).toBeUndefined();
+    // a lobby join waits with the member; the signing is there for the countersign after approval
+    const gated = run(seed().citra, 'enquiry.convert', { ...input, signatureMediaId: SIG }, 's1');
+    expect(gated.state.members[gated.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!.signing).toMatchObject({ status: 'signed', signerId: 'fm47_0' });
+  });
+  it('round 15: the signature stands in for the scan: signature only is accepted, neither is refused', () => {
+    const s = seed().citra;
+    const { formMediaId, formFileName, ...noScan } = input;
+    void formMediaId; void formFileName;
+    const r = run(s, 'enquiry.convert', { ...noScan, signatureMediaId: 'md_testsignature0001' }, 's9');
+    const doc = r.state.members[r.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!;
+    expect(doc).toMatchObject({ status: 'requested', signing: { status: 'signed', signerId: 'fm47_0' } });
+    expect(doc.mediaId).toBeUndefined();
+    fails(s, 'enquiry.convert', noScan, 's9', 'enq.err.formRequired');
+    fails(s, 'enquiry.convert', { ...noScan, formMediaId: '  ' }, 's9', 'enq.err.formRequired');
   });
   it('Join keeps a free-text title: the member is "Tante ..." with a female gender', () => {
     const s = seed().citra;
@@ -534,5 +580,39 @@ describe('lead history (round 13)', () => {
     expect(wd.enquiries.e1.history!.at(-1)).toMatchObject({ stage: 'trial', undo: true, by: 'staff:s1' });
     const ok = run(gated.state, 'review.approve', { crId }, 's9').state;
     expect(leadFunnel(ok, '2026-10-01', '2026-10-31').joined).toBe(1);
+  });
+});
+
+describe('plans from the catalogue (round 15)', () => {
+  const withPlans = () => {
+    const s = structuredClone(seed().citra);
+    s.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+    return s;
+  };
+  const input = { enquiryId: 'e1', start: '2026-10-26', ...paper };
+  it('enquiry.convert accepts an active catalogue plan and refuses a retired or unknown one', () => {
+    const s = withPlans();
+    const r = run(s, 'enquiry.convert', { ...input, plan: 'plan_1' }, 's9');
+    const m = r.state.members[r.result.memberId as string];
+    expect(m.plans[0].plan).toBe('plan_1');
+    expect(Object.values(r.state.activity).find((a) => a.key === 'enq.feed.joined')?.params).toMatchObject({ plan: 'Flex 8', planId: 'Flex 8' }); // the lead's feed names the plan, not its id
+    fails(s, 'enquiry.convert', { ...input, plan: 'plan_2' }, 's9', 'err.invalid');
+    fails(s, 'enquiry.convert', { ...input, plan: 'plan_9' }, 's9', 'err.invalid');
+  });
+  it('the online form takes an active catalogue plan; a retired one is dropped from a saved draft and refused on submit', () => {
+    const s = withPlans();
+    const sys = (st: ClubState, name: string, inp: unknown) => execute(st, name, inp, systemUser('citra'), clock, mid());
+    const made = run(s, 'enquiry.create', lead, 's1');
+    const id = made.result.enquiryId as string;
+    const sent = run(made.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    const token = sent.result.token as string;
+    const draft = (plan: string) => ({
+      title: 'Oma', name: 'Rosa Santoso', dob: '1947-05-02', address: 'Jl. Melati 3', contact: { name: 'Dina Santoso', relation: 'daughter', phone: '0812 5550 1234' }, plan,
+      health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
+    });
+    expect(sys(sent.state, 'enquiry.formSave', { token, step: 4, expect: null, draft: draft('plan_1') }).state.enquiries[id].form!.draft).toMatchObject({ plan: 'plan_1' });
+    expect(sys(sent.state, 'enquiry.formSave', { token, step: 4, expect: null, draft: draft('plan_2') }).state.enquiries[id].form!.draft!.plan).toBeUndefined();
+    expect(sys(sent.state, 'enquiry.formSubmit', { token, draft: draft('plan_1') }).state.enquiries[id].form!.draft).toMatchObject({ plan: 'plan_1' });
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft('plan_2') })).toThrow('err.invalid');
   });
 });

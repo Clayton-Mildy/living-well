@@ -3,7 +3,8 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { buildSeed, projectForFamily } from '@cp/shared';
+import { produce } from 'immer';
+import { buildSeed, projectForFamily, type Attendance, type ClubState } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { FamilyMe } from './FamilyMe';
@@ -28,9 +29,9 @@ afterEach(async () => {
 });
 
 const T = '2026-10-21';
-function open(familyId: string, lang: 'en' | 'id' = 'en') {
+function open(familyId: string, lang: 'en' | 'id' = 'en', base?: ClubState) {
   try { localStorage.clear(); sessionStorage.clear(); } catch { /* storage blocked */ }
-  const full = buildSeed().citra;
+  const full = base ?? buildSeed().citra;
   const view = projectForFamily(full, familyId);
   const acts: { name: string; input: unknown }[] = [];
   useSession.setState({ lang, club: 'citra', user: { kind: 'family', id: familyId, name: 'Maria', clubId: 'citra' } as never });
@@ -72,11 +73,52 @@ describe('family Me', () => {
     expect(text()).toContain('Your mobile number');
   });
 
+  it('the details sheet carries the picture: removing it sends photoMediaId null for approval', async () => {
+    const full = produce(buildSeed().citra, (d) => { d.familyContacts.f1.photoMediaId = 'md_contactphoto01'; });
+    const { acts } = open('f1', 'en', full);
+    await show(<FamilyMe />, '/me');
+    expect(q('[data-testid="me-account"]')!.innerHTML).toContain('md_contactphoto01');
+    await act(async () => { q('[data-testid="me-details"]')!.click(); });
+    const sheet = q('[data-testid="details-sheet"]')!;
+    expect(sheet.querySelector('[data-testid="profile-photo"]')).toBeTruthy();
+    const remove = Array.from(sheet.querySelectorAll('button')).find((b) => b.textContent === 'Remove photo') as HTMLButtonElement;
+    await act(async () => { remove.click(); });
+    const send = Array.from(document.querySelectorAll('button')).find((b) => b.textContent === 'Send') as HTMLButtonElement;
+    await act(async () => { send.click(); });
+    expect(acts.at(-1)).toMatchObject({ name: 'account.updateFamily', input: { familyId: 'f1', photoMediaId: null } });
+  });
+
   it('someone who does not pay sees who pays', async () => {
     open('f2');
     await show(<FamilyMe />, '/me');
     expect(q('[data-testid="me-billing"]')?.textContent).toContain('Maria pays');
     expect(q('[data-testid="me-account"]')?.textContent).not.toContain('pays the bills');
+  });
+});
+
+// round 15 (1): the club's own day rules say where each parent is; the check-out time shows as well as the check-in
+describe('family Me, where each parent is', () => {
+  const att = (inAt: string, outAt?: string): Attendance => ({
+    id: `${T}:m1`, clubId: 'citra', createdAt: `${T}T${inAt}`, createdBy: 'staff:s1', memberId: 'm1', date: T,
+    checkIn: { at: inAt, by: 'staff:s1', method: 'manual' }, ...(outAt ? { checkOut: { at: outAt, by: 'staff:s1', method: 'manual' as const } } : {}),
+    queueAdds: [], dismissed: [], edits: [],
+  });
+  const withToday = (a: Attendance) => produce(buildSeed().citra, (d) => { d.attendance = { ...d.attendance, [a.id]: a }; });
+  it('while she is in it reads "At the club since 10:00"; after check-out, "Went home 15:40"', async () => {
+    open('f1', 'en', withToday(att('10:00')));
+    await show(<FamilyMe />, '/me');
+    expect(q('[data-testid="me-parents"]')?.textContent).toContain('At the club since 10:00');
+    expect(q('[data-testid="me-parents"]')?.textContent).not.toContain('Went home');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open('f1', 'en', withToday(att('10:00', '15:40')));
+    await show(<FamilyMe />, '/me');
+    expect(q('[data-testid="me-parents"]')?.textContent).toContain('Went home 15:40');
+  });
+  it('in Indonesian', async () => {
+    open('f1', 'id', withToday(att('10:00')));
+    await show(<FamilyMe />, '/me');
+    expect(q('[data-testid="me-parents"]')?.textContent).toContain('Di klub sejak 10:00');
   });
 });
 

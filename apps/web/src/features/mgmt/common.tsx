@@ -192,7 +192,7 @@ export function PushPanel({ open, onBack, backLabel, title, children }: { open: 
           <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{backLabel}</span>
         </button>
       </div>
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>{children}</div>
+      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto' }}>{children}<div aria-hidden="true" style={{ height: 'var(--cp-floatclear, 0px)' }} /></div>
     </div>
   );
 }

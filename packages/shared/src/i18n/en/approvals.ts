@@ -33,7 +33,7 @@ export const approvals = {
   'notif.rejected.logs': 'Management did not approve {n} of your care log entries: {reason}', 'notif.rejected.readings': 'Management did not approve {n} of your health readings: {reason}', 'notif.rejected.menu': 'Management did not approve {n} of your menu changes: {reason}',
   // KC round 7: renewal changes recorded by the front desk
   'tab.renewals': 'Renewals', 'none.renewals': 'No renewal changes to approve', 'none.renewalsSub': 'Changes the front desk records after calling a family (upgrade, downgrade, leave, stop) appear here.', 'kind.renewal': 'Renewal',
-  'sum.renewalUpgrade': 'Upgrade to Gold from {month}', 'sum.renewalDowngrade': 'Downgrade to Flex from {month}', 'sum.renewalLeave': 'Leave in {months}', 'sum.renewalStop': 'Stop · last day {date}',
+  'sum.renewalUpgrade': 'Upgrade to Gold from {month}', 'sum.renewalDowngrade': 'Downgrade to Flex from {month}', 'sum.renewalSwitch': 'Switch to {plan} from {month}', 'sum.renewalLeave': 'Leave in {months}', 'sum.renewalStop': 'Stop · last day {date}',
   renewalChange: 'Change', renewalMonth: 'Month', renewalReason: 'Reason', 'notif.rejected.renewals': 'Management did not approve {n} of your renewal changes: {reason}',
   // round 13: payments the front desk recorded
   'tab.payments': 'Payments', 'none.payments': 'No payments to confirm', 'none.paymentsSub': 'Cash and bank transfers recorded at the front desk appear here until finance or management confirms them.', 'kind.payment': 'Payment',

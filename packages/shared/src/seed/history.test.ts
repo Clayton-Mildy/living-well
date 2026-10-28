@@ -320,3 +320,41 @@ describe('signing seed (round 14 D)', () => {
     expect(live(s.members).filter((m) => signingOf(m)).map((m) => m.id).sort()).toEqual(['m1', id].sort());
   });
 });
+
+describe('an empty week to plan in (round 15 phase 2, R4)', () => {
+  const mondayOfWeek = (d: string) => addDays(d, -((dow(d) + 6) % 7));
+  const empty = mondayOfWeek(addDays(T, 14));
+  const small = buildSeed(T, DEMO_START_MIN).citra;
+  const real = buildSeed('2026-10-28', DEMO_START_MIN).citra;
+  const weekdays = (monday: string) => [0, 1, 2, 3, 4].map((i) => addDays(monday, i));
+
+  it('the week containing T+14 has no programme session on Monday to Friday; the week after has the normal days again', () => {
+    for (const st of [s, small]) {
+      for (const d of weekdays(empty)) expect(sessionsOn(st, d).filter((x) => x.cell), d).toEqual([]);
+      const normal = st.scheduleVersions['sched-2024-07'].days;
+      const back = weekdays(addDays(empty, 7)).filter((d) => dayStatus(st, d).open);
+      expect(back.length).toBeGreaterThan(0);
+      for (const d of back) expect(sessionsOn(st, d).filter((x) => x.cell).length, d).toBeGreaterThan(0);
+      for (const d of weekdays(addDays(empty, 7))) expect(sessionsOn(st, d).map((x) => x.cell?.activityId ?? null).slice(0, 2), d).toEqual([normal[dow(d) as 1][ '10:30']?.activityId ?? null, normal[dow(d) as 1]['13:30']?.activityId ?? null]);
+    }
+  });
+  it('is five published one-day changes that empty Monday to Friday, at the real date too, and the weekly plan is untouched (no empty or restore version)', () => {
+    for (const [st, at] of [[s, T], [small, T], [real, '2026-10-28']] as const) {
+      const from = mondayOfWeek(addDays(at, 14));
+      expect(from > at).toBe(true);
+      expect(live(st.scheduleVersions).filter((v) => v.status === 'published').map((v) => v.effectiveFrom)).toEqual(['2024-07-01']);
+      const rows = live(st.scheduleDays).filter((d) => d.date >= from && d.date <= addDays(from, 4));
+      expect(rows.map((d) => d.date).sort()).toEqual(weekdays(from));
+      for (const d of rows) expect(d).toMatchObject({ id: d.date, createdBy: 'staff:s9', slots: { '10:30': null, '13:30': null } });
+    }
+  });
+  it('no extra session, waiting edit, session or guest booking sits on the empty week (Monday to Friday) (they all stay near the demo day)', () => {
+    for (const st of [s, small, real]) {
+      const at = st === real ? '2026-10-28' : T;
+      const from = mondayOfWeek(addDays(at, 14));
+      const week = new Set(Array.from({ length: 5 }, (_, i) => addDays(from, i)));
+      expect(Object.values(st.scheduleDays).filter((d) => week.has(d.date) && !d.deletedAt && (d.extra?.length || d.pending || Object.values(d.slots).some(Boolean)))).toEqual([]);
+      expect(live(st.guestSessions).filter((g) => week.has(g.date))).toEqual([]);
+    }
+  });
+});

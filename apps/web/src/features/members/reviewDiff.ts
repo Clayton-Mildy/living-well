@@ -1,5 +1,5 @@
 // Turns a change request into readable "old → new" rows (translated field labels) and, for creates, a summary of what is being added.
-import { fmtPhone, memberName, type ChangeRequest, type ClubState, type Member, type MemberRegistration, type Plan, type PlanEntry } from '@cp/shared';
+import { fmtPhone, memberName, planLabel, isPlanId, type ChangeRequest, type ClubState, type Member, type MemberRegistration, type Plan, type PlanEntry } from '@cp/shared';
 import { plainName } from '@cp/shared/rules/members';
 import type { TFn } from '../../lib/i18n';
 import { dietLabel, docLabel, drugLabel, foodLabel, mobLabel, relLabel, timingLabel } from './lib';
@@ -14,12 +14,12 @@ export interface Described {
   /** What is being added (creates), or a sentence for actions that change another row. */
   summary: DiffRow[];
 }
-interface Fmt { fdy: (d: string) => string; fds: (d: string) => string; fd: (d: string, o: Intl.DateTimeFormatOptions) => string }
+interface Fmt { lang?: 'en' | 'id'; fdy: (d: string) => string; fds: (d: string) => string; fd: (d: string, o: Intl.DateTimeFormatOptions) => string }
 
 const dash = '—';
 const yn = (t: TFn, v: boolean | undefined) => (v ? t('common.yes') : t('common.no'));
-/** "Flex" or "Gold". The plan has no usual days: members drop in on any open day. */
-export const planText = (t: TFn, p: Pick<PlanEntry, 'plan'>) => (p.plan === 'gold' ? t('profile.planGold') : t('profile.planFlex'));
+/** The plan's name (Flex, Gold or a catalogue plan) in the language. The plan has no usual days: members drop in on any open day. */
+export const planText = (s: ClubState, lang: 'en' | 'id', p: Pick<PlanEntry, 'plan'>) => planLabel(s, p.plan, lang);
 const list = (a: string[]) => (a.length ? a.join(', ') : dash);
 const medText = (t: TFn, x: { name: string; dose: string; timing: Parameters<typeof timingLabel>[1] }) => `${`${x.name} ${x.dose}`.trim()} · ${timingLabel(t, x.timing)}`;
 
@@ -66,6 +66,7 @@ const consentText = (t: TFn, c: Member['consents'][number] | undefined) => (!c ?
 
 /** Describe a change request. `m` is the member row now (for names the diff needs). */
 export function describeCr(cr: ChangeRequest, s: ClubState, t: TFn, fmt: Fmt): Described {
+  const lang = fmt.lang ?? 'en';
   const m = cr.target.memberId ? s.members[cr.target.memberId] : undefined;
   const title = t(`reviews.title.${cr.action}`) === `reviews.title.${cr.action}` ? t('review.' + cr.section) : t(`reviews.title.${cr.action}`);
   const rows: DiffRow[] = [];
@@ -81,13 +82,13 @@ export function describeCr(cr: ChangeRequest, s: ClubState, t: TFn, fmt: Fmt): D
   const newMember = (): Described => {
     const nm = s.members[createdMemberId || cr.target.memberId || lead?.memberId || cr.target.id];
     const planRaw = input.plan;
-    const planIn = planRaw === 'gold' || planRaw === 'flex' ? { plan: planRaw as Plan } : undefined;
+    const planIn = isPlanId(planRaw) ? { plan: planRaw as Plan } : undefined;
     const pl = nm ? nm.plans[nm.plans.length - 1] : planIn;
     const first = nm ? nm.memberships[0].start : typeof input.start === 'string' ? input.start : '';
     const name = nm ? memberName(nm) : lead ? `${lead.senior.title} ${lead.senior.name}` : '';
     if (name) summary.push({ label: t('profile.f.name'), to: name });
     if (nm?.dob) summary.push({ label: t('profile.f.dob'), to: fmt.fdy(nm.dob) });
-    if (pl) summary.push({ label: t('profile.f.plan'), to: planText(t, pl) });
+    if (pl) summary.push({ label: t('profile.f.plan'), to: planText(s, lang, pl) });
     if (first) summary.push({ label: t('profile.f.start'), to: fmt.fdy(first) });
     if (nm?.address) summary.push({ label: t('profile.f.address'), to: nm.address });
     const regLine = nm?.registration ? [nm.registration.nickname, nm.registration.mobile, nm.registration.email].filter(Boolean).join(' · ') : '';
@@ -134,7 +135,7 @@ export function describeCr(cr: ChangeRequest, s: ClubState, t: TFn, fmt: Fmt): D
       return { title, rows, summary };
     case 'planChange.decline': {
       const req = s.planChangeRequests[String(input.requestId || '')];
-      if (req) summary.push({ label: t('profile.f.upgrade'), from: `${t('profile.plan.' + req.to)} · ${fmt.fdy(req.from)}`, to: t('reviews.declined') });
+      if (req) summary.push({ label: t('profile.f.upgrade'), from: `${planLabel(s, req.to, lang)} · ${fmt.fdy(req.from)}`, to: t('reviews.declined') });
       return { title, rows, summary };
     }
     default:
@@ -179,7 +180,7 @@ export function describeCr(cr: ChangeRequest, s: ClubState, t: TFn, fmt: Fmt): D
         const a = (c.from as PlanEntry[] | undefined) || [], b = (c.to as PlanEntry[] | undefined) || [];
         const nw = b.find((p) => !a.some((q) => JSON.stringify(q) === JSON.stringify(p))) || b[b.length - 1];
         const cur = nw ? [...a].filter((p) => p.from <= nw.from).pop() || a[0] : a[a.length - 1];
-        if (nw) rows.push({ label: t('profile.f.plan'), from: cur ? planText(t, cur) : dash, to: `${planText(t, nw)} · ${t('profile.fromDate', { d: fmt.fdy(nw.from) })}` });
+        if (nw) rows.push({ label: t('profile.f.plan'), from: cur ? planText(s, lang, cur) : dash, to: `${planText(s, lang, nw)} · ${t('profile.fromDate', { d: fmt.fdy(nw.from) })}` });
         break;
       }
       case 'health': rows.push(...healthRows(t, c.from as Member['health'], c.to as Member['health'])); break;

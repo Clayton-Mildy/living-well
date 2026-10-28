@@ -79,6 +79,42 @@ export function lunchPhotosOn(s: ClubState, date: ISODate): Photo[] {
 /** The lunch photos families may see on a date: approved ones only (pending, hidden and removed never reach a family). */
 export const visibleLunchPhotos = (s: ClubState, date: ISODate): Photo[] => lunchPhotosOn(s, date).filter((p) => p.visibility === 'visible');
 
+// ---------- the lunch picture of a day (round 15: dish photos) ----------
+/** Where a date's lunch picture comes from: that day's own lunch photo ('lunch'), else the photo of a dish on the lunch menu ('dish'). */
+export interface LunchPicture { mediaId: string; source: 'lunch' | 'dish' }
+/**
+ * The one picture that stands for a date's lunch (plan ruling R6): once the kitchen has a lunch photo of the day it replaces the dish photo; before that the first
+ * lunch dish that has a photo shows. `audience` says whose eyes: 'family' (the default, so a call that forgets stays safe) only counts approved lunch photos and the
+ * approved menu, exactly as the family app does; 'staff' also counts a photo waiting for approval and a menu waiting for it. A photo without an image (the old
+ * tone placeholder) never counts. Null when the day has neither.
+ */
+export function lunchPictureOn(s: ClubState, date: ISODate, audience: 'staff' | 'family' = 'family'): LunchPicture | null {
+  const own = (audience === 'staff' ? lunchPhotosOn(s, date) : visibleLunchPhotos(s, date)).find((p) => p.media === 'photo' && p.mediaId);
+  if (own?.mediaId) return { mediaId: own.mediaId, source: 'lunch' };
+  const menu = menuOn(s, date, audience === 'family' ? { approvedOnly: true } : {});
+  for (const id of menu?.lunch ?? []) {
+    const d = s.dishes[id];
+    if (d && !d.deletedAt && d.photoMediaId) return { mediaId: d.photoMediaId, source: 'dish' };
+  }
+  return null;
+}
+/**
+ * The picture for what one member is actually served (round 15 fix wave). A member on the day's main lunch (no soft diet, no food allergy that clashes with a lunch dish)
+ * gets the day's picture, `lunchPictureOn`. A member on the soft menu, or whose allergy clashes with a lunch dish (an alternative is cooked for them, or the kitchen has
+ * not decided yet), never gets the day's photo or the clashing dish's photo: the first dish they are served that has a photo shows, else nothing.
+ */
+export function lunchPictureFor(s: ClubState, m: Member, date: ISODate, audience: 'staff' | 'family' = 'family'): LunchPicture | null {
+  const soft = m.health.diet.includes('softFood');
+  const clash = new Set(memberConflictsOn(s, m, date).map((c) => c.dish.id));
+  if (!soft && !clash.size) return lunchPictureOn(s, date, audience);
+  const menu = menuOn(s, date, audience === 'family' ? { approvedOnly: true } : {});
+  for (const id of (soft ? menu?.soft : menu?.lunch) ?? []) {
+    const d = s.dishes[id];
+    if (!clash.has(id) && d && !d.deletedAt && d.photoMediaId) return { mediaId: d.photoMediaId, source: 'dish' };
+  }
+  return null;
+}
+
 // ---------- afternoon tea photos (KC round 7: the same gallery and approval as lunch, kept in DayMenu.teaPhotoIds) ----------
 /** Tea photo ids of a date, oldest first. */
 export function teaPhotoIds(s: ClubState, date: ISODate): string[] {

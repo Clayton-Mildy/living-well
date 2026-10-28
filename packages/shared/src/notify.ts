@@ -6,6 +6,7 @@ import { live, sortBy, toMin, addDays, ym } from './util';
 import { lobbyGroups, guestsOn } from './rules/attendance';
 import { todayReading, validReadings } from './rules/health';
 import { pendingPhotos } from './rules/members';
+import { planParams } from './rules/plans';
 import { pendingItems } from './rules/approvals';
 import { conflictsOn } from './rules/kitchen';
 import { dutyReminders } from './rules/tasks';
@@ -86,7 +87,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
   if (role === 'mgmt' || role === 'finance') {
     for (const r of live(s.planChangeRequests).filter((x) => x.status === 'pending')) {
       const m = s.members[r.memberId];
-      if (m) add({ id: 'pcr:' + r.id, kind: 'notif.act.planRequest', params: { name: displayName(m), plan: r.to === 'gold' ? 'Gold' : 'Flex', date: r.from }, link: `/members/${m.id}/plan`, severity: 'attention', at: r.createdAt, memberId: m.id });
+      if (m) add({ id: 'pcr:' + r.id, kind: 'notif.act.planRequest', params: { name: displayName(m), ...planParams(s, r.to), date: r.from }, link: `/members/${m.id}/plan`, severity: 'attention', at: r.createdAt, memberId: m.id });
     }
     for (const inv of live(s.invoices)) if (invoiceStatus(s, inv, today) === 'overdue') add({ id: 'od:' + inv.id, kind: 'notif.act.overdue', params: { name: displayName(s.members[inv.memberId]), number: inv.number }, link: linkTo(role, 'billing', '?f=overdue'), severity: 'urgent', at: `${inv.dueDate}T23:59`, memberId: inv.memberId });
     for (const b of live(s.budgetRequests).filter((x) => x.status === 'pending')) add({ id: 'br:' + b.id, kind: 'notif.act.budgetApprove', params: { item: b.item, amount: b.amount }, link: '/budget', severity: 'attention', at: b.createdAt });

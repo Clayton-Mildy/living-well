@@ -31,8 +31,9 @@ export const usualGapDays = (s: ClubState, memberId: string, today: ISODate): nu
 /** Twice the usual gap, held between 10 and 14 days; 14 when the usual gap is unknown. */
 export const checkOnThreshold = (gap: number | null): number => (gap === null ? CHECK_ON_MAX : Math.min(CHECK_ON_MAX, Math.max(CHECK_ON_MIN, 2 * gap)));
 
-/** Active members not seen for longer than their own rhythm, longest quiet first. */
-export function checkOnList(s: ClubState, today: ISODate): CheckOnRow[] {
+/** Active members not seen for longer than their own rhythm, longest quiet first. With `notSeenFor` (days, a device choice) that number is the threshold for everyone;
+ *  the three-visit rule only feeds the automatic one, so a fixed number lists members of any rhythm. */
+export function checkOnList(s: ClubState, today: ISODate, notSeenFor?: number): CheckOnRow[] {
   const days = visitDays(s, today);
   const last: Record<string, ISODate> = {};
   for (const a of live(s.attendance)) if (a.checkIn && a.date <= today && (!last[a.memberId] || a.date > last[a.memberId])) last[a.memberId] = a.date;
@@ -46,7 +47,7 @@ export function checkOnList(s: ClubState, today: ISODate): CheckOnRow[] {
     const lastVisit = last[m.id] ?? null;
     const daysSince = daysBetween(lastVisit ?? start, today);
     const gap = gapOf(days[m.id]);
-    const threshold = checkOnThreshold(gap);
+    const threshold = notSeenFor ?? checkOnThreshold(gap);
     if (daysSince < threshold) continue;
     const lastCall = sortBy(calls[m.id] ?? [], (c) => c.date + c.at, -1)[0];
     if ((calls[m.id] ?? []).some((c) => !!c.checkAgainOn && c.checkAgainOn > today)) continue;

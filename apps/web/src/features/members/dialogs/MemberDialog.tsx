@@ -2,14 +2,15 @@
 // Each dialog builds the smallest change it can and sends it through the right action: gated for the front desk, applied now for health.
 import { useMemo, useState } from 'react';
 import {
-  addMonths, e164, execute, feeOf, fmtPhone, isOpen, live, memberName, nextOpenDay, openDaysInMonth, planOn, priceOn, rp, sortBy, toHM, toMin, ym, linksOfMember, isPendingRow, contactsOfMember,
+  addMonths, e164, execute, feeOf, fmtPhone, isOpen, live, memberName, nextOpenDay, openDaysInMonth, planLabel, planOn, planQuota, isDaysPlan, priceOn, rp, sortBy, toHM, toMin, ym, linksOfMember, isPendingRow, contactsOfMember,
   type Plan, type Title, type Relation, type EndReason,
 } from '@cp/shared';
-import { END_REASONS, consentOf, firstOfNextMonth, isPhone, openBalance, plainName } from '@cp/shared/rules/members';
+import { END_REASONS, activePlans, consentOf, firstOfNextMonth, isPhone, openBalance, plainName } from '@cp/shared/rules/members';
 import { cleanRegistration, validateRegistration } from '@cp/shared/rules/applicationForm';
 import { Button, ChipGroup, DateField, Dialog, Note, StaffOnlyTag, Toggle } from '../../../components/ui';
 import { say } from '../../../store/ui';
 import { endReasonLabel } from '../lib';
+import { planPriceText } from '../planPriceText';
 import { ProfilePhotoField } from '../ProfilePhoto';
 import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, OptionalTime, PeSection, RegCareFields, RegPersonalFields, RelationChips, SelectField, TitleName, joinDrugs, regDraftOf, regOfDraft, splitDrugs, useDraft, type MedRow, type RegDraft, CarerFields, carerOk } from './forms';
 import type { DialogKind, P } from '../profile/types';
@@ -189,6 +190,8 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
   const cur = planOn(m, today);
   const price = priceOn(s, today);
   const [d, set] = useDraft(() => ({ plan: cur.plan as Plan, effective: firstOfNextMonth(today) }));
+  // a retired plan is not offered (its members keep it)
+  const planOptions = activePlans(s);
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
   const desk = p.role === 'lobby'; // round 13: the front desk changes a plan from the 1st of next month only (round 14: it applies at once, no review)
@@ -205,8 +208,8 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
   return (
     <>
       <PeSection label={t('profile.sec.plan')}>
-        <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={[{ value: 'flex', label: `${t('profile.planFlex')} · ${rp(price.flex)}` }, { value: 'gold', label: `${t('profile.planGold')} · ${rp(price.gold)}` }]} />
-        <div style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{d.plan === 'flex' ? t('profile.planNoteFlex', { q: s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold')}</div>
+        <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={planOptions.map((o) => ({ value: o.id, label: `${planLabel(s, o.id, fmt.lang)} · ${planPriceText(s, o.id, today, t, fmt.fds)}` }))} />
+        <div style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{isDaysPlan(s, d.plan) ? t('profile.planNoteFlex', { plan: planLabel(s, d.plan, fmt.lang), q: planQuota(s, d.plan) ?? s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold', { plan: planLabel(s, d.plan, fmt.lang) })}</div>
         {desk ? (
           <div data-testid="plan-effective-fixed" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, minHeight: 44, alignItems: 'center', fontSize: 16, lineHeight: '22px' }}>
             <span style={{ color: '#6B6259' }}>{t('profile.effective')}</span>
@@ -260,7 +263,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
   const others = sortBy(live(s.familyContacts).filter((x) => !linked.has(x.id) && !isPendingRow(x)), (x) => x.name);
   const [d, set] = useDraft(() => ({
     mode: 'new' as 'new' | 'existing', existingId: '', name: c?.name || '', phone: c ? fmtPhone(c.phone) : '', rel: (link?.relation || 'daughter') as Relation,
-    primary: link ? link.primary : contactsOfMember(s, m.id).length === 0, appAccess: link ? link.appAccess : true, note: '',
+    primary: link ? link.primary : contactsOfMember(s, m.id).length === 0, appAccess: link ? link.appAccess : true, note: '', photo: (c?.photoMediaId ?? null) as string | null,
   }));
   const [step, setStep] = useState<'form' | 'remove'>('form');
   const [busy, setBusy] = useState(false);
@@ -293,6 +296,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
     const body: Record<string, unknown> = {};
     if (d.name.trim() !== c!.name) body.name = d.name.trim();
     if (phone !== c!.phone) body.phone = phone;
+    if (d.photo !== (c!.photoMediaId ?? null)) body.photoMediaId = d.photo;
     if (Object.keys(body).length) await run('family.updateContact', body);
     if (d.primary && !link!.primary) await run('family.setPrimary', {});
     if (d.appAccess !== link!.appAccess) await run('family.setAppAccess', { appAccess: d.appAccess });
@@ -328,6 +332,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
           <SelectField label={t('members.pickContact')} value={d.existingId} onChange={(v) => set({ existingId: v })} placeholder={t('members.pickContactPh')} error={errExisting} options={others.map((x) => ({ value: x.id, label: `${x.name} · ${fmtPhone(x.phone)}` }))} />
         ) : (
           <>
+            {edit ? <ProfilePhotoField name={d.name || c!.name} value={d.photo} onChange={(id) => set({ photo: id })} size={64} /> : null}
             <TextField label={t('common.name')} value={d.name} onChange={(v) => set({ name: v })} error={errName} name="contact" />
             <TextField label={t('common.phone')} value={d.phone} onChange={(v) => set({ phone: v })} inputMode="tel" placeholder="+62" error={errPhone} name="phone" />
           </>

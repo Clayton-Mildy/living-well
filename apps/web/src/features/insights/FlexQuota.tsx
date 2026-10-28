@@ -2,7 +2,7 @@
 // by about which day of the month the quota ran out and how many days it took from the first visit, then who and when. "Didn't use it all": how many,
 // the visits burned (the quota minus the visits made) in all and per member, then who. The running month counts as far as today and burns nothing yet.
 import { useMemo } from 'react';
-import { listName, memberName } from '@cp/shared';
+import { listName, memberName, planLabel, type Plan } from '@cp/shared';
 import { flexQuotaReport, type InsightPeriod, type QuotaMonth } from '@cp/shared/rules/insights';
 import { Avatar, GROUP_HEAD, Group, Pager, usePaged } from '../../components/ui';
 import { memberPhoto } from '../../lib/media';
@@ -14,11 +14,12 @@ import { INK, MUTED, Stat, num1 } from './lib';
 
 const PAGE = 5;
 
-export function FlexQuota({ period, today, gap, onOpen }: { period: InsightPeriod; today: string; gap: number; onOpen: (memberId: string) => void }) {
+export function FlexQuota({ period, today, gap, onOpen, plan }: { period: InsightPeriod; today: string; gap: number; onOpen: (memberId: string) => void; /** one days plan (By plan shows the report under each); without it, every days plan together */ plan?: Plan }) {
   const s = useClub();
   const t = useT();
   const fmt = useFmt();
-  const r = useMemo(() => flexQuotaReport(s, period, today), [s, period, today]);
+  const r = useMemo(() => flexQuotaReport(s, period, today, plan), [s, period, today, plan]);
+  const planName = plan ? planLabel(s, plan, fmt.lang) : planLabel(s, 'flex', fmt.lang);
   const multi = r.months.length > 1;
   const days = (n: number) => (n === 1 ? t('insights.oneDay') : t('insights.nDays', { n }));
   const month = (m: string, year: boolean) => fmt.fd(`${m}-01`, { month: 'short', ...(year ? { year: 'numeric' } : {}) });
@@ -102,10 +103,10 @@ export function FlexQuota({ period, today, gap, onOpen }: { period: InsightPerio
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap, minWidth: 0 }}>
       <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8, padding: '0 16px', marginBottom: -Math.round(gap / 2) }}>
-        <h2 style={GROUP_HEAD}>{t('insights.fQuota')}</h2>
+        <h2 style={GROUP_HEAD}>{t('insights.fQuota', { plan: planName })}</h2>
         <span style={{ fontSize: 13, color: MUTED, lineHeight: '18px', flex: 'none' }}>{span}</span>
       </div>
-      {r.total === 0 ? <div style={{ padding: '18px 0', textAlign: 'center', color: MUTED, fontSize: 15 }}>{t('insights.fNoMonths')}</div> : <>{usedBlock}{notBlock}</>}
+      {r.total === 0 ? <div style={{ padding: '18px 0', textAlign: 'center', color: MUTED, fontSize: 15 }}>{t('insights.fNoMonths', { plan: planName })}</div> : <>{usedBlock}{notBlock}</>}
     </div>
   );
 }

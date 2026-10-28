@@ -21,7 +21,8 @@ const STATUS: Record<'visible' | 'pending' | 'hidden', { icon: string; fg: strin
   hidden: { icon: 'visibility_off', fg: '#5E5852', bg: 'var(--press, #EEEEF0)' },
 };
 
-export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: ISODate; readOnly?: boolean; meal?: Meal }) {
+/** `compact` (the Lunch round, round 15): a strip of 64 px thumbnails. The kitchen Menu page keeps the larger grid with each photo's time and state. */
+export function LunchPhotos({ date, readOnly = false, meal = 'lunch', compact = false }: { date: ISODate; readOnly?: boolean; meal?: Meal; compact?: boolean }) {
   const t = useT();
   const s = useClub();
   const act = useAct();
@@ -60,8 +61,54 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: 
   };
 
   if (readOnly && !photos.length) return null; // view only: no "add a photo" tile
+  // round 15 (KC "the image field is too damn big"): one quiet strip. 64 px thumbnails that wrap, then a 44 px add button; the time and the "waiting" /
+  // "hidden" state moved into the picture's full-size view and a small badge, and the X is a corner target (a 36 px hit area, so its centre stays off the middle of the picture).
+  const addBtn = busy ? (
+    <span aria-live="polite" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center', fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.photo.uploading')}</span>
+  ) : !full && !readOnly ? (
+    <button type="button" onClick={() => setCamera(true)} className="h-fill cp-fill" data-testid={`${meal}-photo-add`} style={{ maxWidth: '100%', minHeight: 44, padding: '0 16px 0 12px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'inline-flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', fontSize: 15, fontWeight: 500, textAlign: 'left' }}>
+      <Icon name="add_a_photo" size={22} color="var(--accent, #75624B)" />
+      <span>{t(photos.length ? 'kitchen.photo.addMore' : K.add)}</span>
+    </button>
+  ) : null;
   return (
-    <div data-testid={`${meal}-photos`} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: photos.length ? (tea ? '4px 16px 16px' : '16px 16px 4px') : tea ? '0 16px 16px' : 0 }}>
+    <div data-testid={`${meal}-photos`} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: photos.length ? (tea ? '4px 16px 16px' : '16px 16px 4px') : tea ? '0 16px 16px' : compact ? '12px 16px' : 0 }}>
+      {compact ? (
+      photos.length ? (
+        <>
+          <span style={cardLabel}>{t(K.title)} · {photos.length}</span>
+          <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 12, paddingTop: 6 }}>
+            {photos.map((p) => {
+              const st = STATUS[p.visibility as keyof typeof STATUS] ?? STATUS.hidden;
+              const label = t(K.alt, { time: p.time });
+              return (
+                <div key={p.id} role="group" aria-label={label} data-testid={`${meal}-photo`} data-photo-id={p.id} data-status={p.visibility}
+                  style={{ position: 'relative', width: 64, height: 64, flex: 'none' }}>
+                  <div style={{ position: 'absolute', inset: 0, borderRadius: 10, overflow: 'hidden', background: 'var(--press, #EEEEF0)' }}>
+                    <PhotoImg photo={p} />
+                    {/* the tile opens the picture full size, where its time and state are written out */}
+                    <button type="button" onClick={() => setViewer(p.id)} aria-label={t('kitchen.photo.open', { time: p.time })} title={label} data-testid="photo-open" className="cp-press"
+                      style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'zoom-in' }} />
+                  </div>
+                  {p.visibility === 'visible' ? null : (
+                    <span aria-hidden="true" style={{ pointerEvents: 'none', position: 'absolute', left: 4, bottom: 4, width: 20, height: 20, borderRadius: 999, background: st.bg, color: st.fg, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <Icon name={st.icon} size={14} fill={1} />
+                    </span>
+                  )}
+                  <span className="sr-only">{t('kitchen.photo.status.' + p.visibility)}</span>
+                  {readOnly ? null : (<button type="button" onClick={() => setRemoving(p)} aria-label={t('kitchen.photo.removeAria', { time: p.time })} title={t('kitchen.photo.remove')} className="h-cream"
+                    style={{ position: 'absolute', right: -12, top: -12, width: 36, height: 36, borderRadius: 999, border: 'none', background: 'transparent', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 0 }}>
+                    <span aria-hidden="true" style={{ width: 22, height: 22, borderRadius: 999, background: 'rgba(255,255,255,0.96)', boxShadow: '0 0 0 1px rgba(36,32,28,0.18)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Icon name="close" size={16} color="#24201C" /></span>
+                  </button>)}
+                </div>
+              );
+            })}
+            {addBtn}
+          </div>
+        </>
+      ) : addBtn
+      ) : (
+      <>
       {/* round 6, phone: the add row has a plain hairline under it (the dashed edge is the desktop look) */}
       {!photos.length && !busy && tea ? (
         <button type="button" onClick={() => setCamera(true)} className="h-fill cp-fill" data-testid="tea-photo-add" style={{ alignSelf: 'flex-start', maxWidth: '100%', minHeight: 44, padding: '0 16px 0 12px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', display: 'flex', alignItems: 'center', gap: 8, cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', fontSize: 15, fontWeight: 500, textAlign: 'left' }}>
@@ -109,9 +156,11 @@ export function LunchPhotos({ date, readOnly = false, meal = 'lunch' }: { date: 
         </div>
         </>
       )}
+      </>
+      )}
       {full && !readOnly ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t(K.full)}</span> : null}
       {readOnly ? null : mgmt ? (
-        <div style={{ padding: photos.length ? 0 : '12px 16px 0' }}>
+        <div style={{ padding: photos.length || compact ? 0 : '12px 16px 0' }}>
           <Toggle on={notify} onClick={() => setNotify((x) => !x)} label={t('kitchen.notify.families')} />
         </div>
       ) : photos.length && !tea ? <Note tone="cream" icon="hourglass_top">{t('kitchen.photo.pendingNote')}</Note> : null}

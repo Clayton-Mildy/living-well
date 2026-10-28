@@ -3,16 +3,17 @@
 import type { Draft } from 'immer';
 import type { ClubState, DrugAllergy, Enquiry, LeadMove, FamilyContact, FoodAllergen, GuestVisit, OnlineRegistration, Plan, User } from '../types';
 import { defineAction, hasRole, DomainError, type Ctx } from './framework';
-import { familyUserIds, shortOf } from './helpers';
+import { familyUserIds, shortOf, signAtRegistration } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
 import { FEE_DEFAULTS, priceOn } from '../rules/billing';
+import { isPlanId, planDef, planOf, planParams } from '../rules/plans';
 import {
   ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
 } from '../rules/enquiries';
-import { parseCarer, parseHealthBasics, parseKtp, parseRegistration, titleOf, txt } from './members';
+import { mediaIdOf, parseCarer, parseHealthBasics, parseKtp, parseRegistration, titleOf, txt } from './members';
 import { cleanRegistration } from '../rules/applicationForm';
 import { FORM_LINK_DAYS, FORM_STEPS, enquiryByFormToken, formRevOf, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
-import { arr, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
+import { arr, bad, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { e164, live, sortBy, addDays } from '../util';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
@@ -96,10 +97,15 @@ function nextFor(d: Draft<ClubState>, stage: EnqStage, enquiryId: string, today:
 }
 
 // ---------- leads ----------
-interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; notes?: string; next?: Enquiry['next'] }
-interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; notes?: string; next?: Enquiry['next'] | null }
+/** "Where from?" for source Other: optional, at most 80 characters (longer is refused, not cut). */
+function parseSourceOther(v: unknown): string {
+  const t = str(v);
+  return t.length > 80 ? bad('sourceOther') : t;
+}
+interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] }
+interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] | null }
 /** `formMediaId` and `formFileName`: the signed paper registration form, uploaded first (POST /api/media). */
-export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string }
+export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string; /** round 15: the family member present signed the form (uploaded first) */ signatureMediaId?: string }
 
 /** After a lead becomes a member (immediately for management, on approval for lobby): welcome message, visits closed. Members come on any open day, so nothing is booked. */
 function finishJoin(d: Draft<ClubState>, memberId: string, input: ConvertIn, ctx: Ctx) {
@@ -127,12 +133,12 @@ export const enquiriesActions = [
     can: (u) => lobbyOrMgmt(u),
     parse(raw) {
       const o = obj(raw);
-      return { senior: parseSenior(o.senior), contact: parseContact(o.contact), source: oneOf(o.source, ENQ_SOURCES, 'source'), notes: str(o.notes, 1000), next: parseNext(o.next) };
+      return { senior: parseSenior(o.senior), contact: parseContact(o.contact), source: oneOf(o.source, ENQ_SOURCES, 'source'), ...(o.sourceOther !== undefined ? { sourceOther: parseSourceOther(o.sourceOther) } : {}), notes: str(o.notes, 1000), next: parseNext(o.next) };
     },
     run(d, i, ctx) {
       const id = nextNumId(d.enquiries, 'e');
       d.enquiries[id] = {
-        id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, senior: i.senior, contact: i.contact, source: i.source, stage: 'new',
+        id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, senior: i.senior, contact: i.contact, source: i.source, ...(i.source === 'other' && i.sourceOther ? { sourceOther: i.sourceOther } : {}), stage: 'new',
         next: i.next ?? { kind: 'callBack', date: nextOpenDay(S(d), ctx.today) }, ...(i.notes ? { notes: i.notes } : {}),
         history: [{ stage: 'new', at: ctx.nowDT, by: ctx.actor }],
       };
@@ -151,6 +157,7 @@ export const enquiriesActions = [
         ...(o.senior !== undefined ? { senior: parseSenior(o.senior) } : {}),
         ...(o.contact !== undefined ? { contact: parseContact(o.contact) } : {}),
         ...(o.source !== undefined ? { source: oneOf(o.source, ENQ_SOURCES, 'source') } : {}),
+        ...(o.sourceOther !== undefined ? { sourceOther: parseSourceOther(o.sourceOther) } : {}),
         ...(o.notes !== undefined ? { notes: str(o.notes, 1000) } : {}),
         ...(o.next !== undefined ? { next: o.next === null ? null : parseNext(o.next) } : {}),
       };
@@ -160,6 +167,9 @@ export const enquiriesActions = [
       if (i.senior) e.senior = i.senior;
       if (i.contact) e.contact = i.contact;
       if (i.source) e.source = i.source;
+      // the text belongs to Other only: a new text is kept with it, any other source clears it
+      if (e.source !== 'other') delete e.sourceOther;
+      else if (i.sourceOther !== undefined) { if (i.sourceOther) e.sourceOther = i.sourceOther; else delete e.sourceOther; }
       if (i.notes !== undefined) { if (i.notes) e.notes = i.notes; else delete e.notes; }
       if (i.next !== undefined) { if (i.next) e.next = i.next; else delete e.next; }
       for (const g of guestsOf(d, e.id)) if (g.status === 'booked') { g.name = seniorName(e); g.escortName = e.contact.name; }
@@ -311,10 +321,11 @@ export const enquiriesActions = [
     },
     parse(raw) {
       const o = obj(raw);
-      const plan = oneOf(o.plan, ['flex', 'gold'] as const, 'plan');
+      const plan = isPlanId(o.plan) ? o.plan : bad('plan'); // an unknown or retired catalogue plan is refused by `run` (planOf)
+      const signatureMediaId = mediaIdOf(o.signatureMediaId);
       const mediaId = typeof o.formMediaId === 'string' ? o.formMediaId.trim() : '';
-      if (!mediaId) throw new DomainError('enq.err.formRequired');
-      if (!/^md_[A-Za-z0-9_-]{8,}$/.test(mediaId)) throw new DomainError('err.invalid');
+      if (!mediaId && !signatureMediaId) throw new DomainError('enq.err.formRequired'); // the scan of the signed paper form, or the signature on the pad
+      if (mediaId && !/^md_[A-Za-z0-9_-]{8,}$/.test(mediaId)) throw new DomainError('err.invalid');
       // KC round 6: the application form's answers, typed in when joining (optional), so the printed form and the profile have them
       const dob = o.dob ? isoDate(o.dob, 'dob') : '';
       const address = str(o.address, 200);
@@ -324,11 +335,13 @@ export const enquiriesActions = [
         ...(dob ? { dob } : {}), ...(address ? { address } : {}), ...(o.health !== undefined ? { health: parseHealthBasics(o.health) } : {}), ...(registration ? { registration } : {}),
         ...(o.nanny !== undefined ? { nanny: parseCarer(o.nanny) as OnlineRegistration['nanny'] } : {}),
         ...(o.ktp !== undefined ? { ktp: parseKtp(o.ktp) } : {}),
+        ...(signatureMediaId ? { signatureMediaId } : {}),
       };
     },
     run(d, i, ctx) {
       const s = S(d);
       const e = enq(d, i.enquiryId, ctx);
+      planOf(s, i.plan); // an active plan of the catalogue
       if (e.stage === 'joined') ctx.fail('enq.err.alreadyMember');
       if (e.stage === 'lost' || e.archivedAt) ctx.fail('enq.err.notOpen');
       if (i.start < ctx.today) ctx.fail('enq.err.startPast');
@@ -342,11 +355,12 @@ export const enquiriesActions = [
       const gate = ctx.review === 'gate';
       d.members[memberId] = memberFromLead({
         id: memberId, contactId, enquiry: e as unknown as Enquiry, plan: i.plan, start: i.start, today: ctx.today, nowDT: ctx.nowDT, actor: ctx.actor, vaIndex: num, photoTone: num % 5,
-        form: { mediaId: i.formMediaId, fileName: i.formFileName }, details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration, nanny: i.nanny, ktp: i.ktp },
+        ...(i.formMediaId ? { form: { mediaId: i.formMediaId, fileName: i.formFileName } } : {}), details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration, nanny: i.nanny, ktp: i.ktp },
       });
       if (!existing) d.familyContacts[contactId] = contactFromLead({ id: contactId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor, activated: !gate });
       const link = linkFromLead({ contactId, memberId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor });
       d.familyLinks[link.id] = link;
+      signAtRegistration(d, memberId, i.signatureMediaId, ctx);
       if (gate) {
         e.prevStage = e.stage;
         if (e.next) e.prevNext = JSON.parse(JSON.stringify(e.next));
@@ -357,7 +371,7 @@ export const enquiriesActions = [
       e.next = { kind: 'starts', date: i.start };
       ctx.result.memberId = memberId;
       ctx.result.familyId = contactId;
-      ctx.feed({ icon: 'person_add', key: gate ? 'enq.feed.joinPending' : 'enq.feed.joined', params: { name: shortOf(d, memberId), plan: i.plan, date: dm(i.start) }, memberId });
+      ctx.feed({ icon: 'person_add', key: gate ? 'enq.feed.joinPending' : 'enq.feed.joined', params: { name: shortOf(d, memberId), ...planParams(d as ClubState, i.plan), date: dm(i.start) }, memberId });
       if (!gate) finishJoin(d, memberId, i, ctx);
     },
     afterApprove(d, cr, ctx) {
@@ -365,7 +379,7 @@ export const enquiriesActions = [
       const memberId = cr.target.memberId || cr.createdRows?.find((r) => r.coll === 'members')?.id;
       if (!memberId) return;
       finishJoin(d, memberId, i, ctx);
-      ctx.feed({ icon: 'person_add', key: 'enq.feed.joined', params: { name: shortOf(d, memberId), plan: i.plan, date: dm(i.start) }, memberId });
+      ctx.feed({ icon: 'person_add', key: 'enq.feed.joined', params: { name: shortOf(d, memberId), ...planParams(d as ClubState, i.plan), date: dm(i.start) }, memberId });
       const e = d.enquiries[i.enquiryId];
       if (e) { delete e.prevStage; delete e.prevNext; }
     },
@@ -444,7 +458,7 @@ export const enquiriesActions = [
           ...(typeof dr.title === 'string' ? { title: txt(dr.title, 20) } : {}), ...(dr.name !== undefined ? { name: txt(dr.name, 80) } : {}),
           ...(typeof dr.dob === 'string' ? { dob: /^\d{4}-\d{2}-\d{2}$/.test(dr.dob) ? dr.dob : '' } : {}), ...(dr.address !== undefined ? { address: txt(dr.address, 200) } : {}),
           ...(dr.contact !== undefined ? { contact: { name: txt(c.name, 80), relation: ALL_RELATIONS.includes(c.relation as never) ? (c.relation as (typeof ALL_RELATIONS)[number]) : 'daughter', phone: rawPhone.replace(/\D/g, '').length >= 8 ? e164(rawPhone) : rawPhone } } : {}),
-          ...(dr.plan === 'flex' || dr.plan === 'gold' ? { plan: dr.plan as Plan } : {}),
+          ...(isPlanId(dr.plan) ? { plan: dr.plan } : {}),
           ...(dr.nanny !== undefined ? { nanny: nn ? { name: txt(nn.name, 80), nik: txt(nn.nik, 24).replace(/\s/g, ''), ...nannyExtras(nn) } : null } : {}),
           ...(dr.ktp !== undefined && dr.ktp !== null ? { ktp: parseKtp(dr.ktp) } : {}), ...(h ? { health: h } : {}), ...(registration ? { registration } : {}),
           ...(dr.lang === 'id' || dr.lang === 'en' ? { lang: dr.lang } : {}),
@@ -466,6 +480,7 @@ export const enquiriesActions = [
         title: row.senior.title, name: row.senior.name, dob: '', address: '', contact: { ...row.contact }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
         ...i.draft,
       };
+      if (next.plan && !planDef(S(d), next.plan)?.active) delete next.plan; // a plan retired while the form was open is dropped from the draft, the page asks again
       const cur = formRevOf(f);
       ctx.result.draftRev = cur;
       ctx.result.savedAt = f.savedAt ?? null;
@@ -490,7 +505,7 @@ export const enquiriesActions = [
       const c = obj(dr.contact, 'contact');
       const h = parseHealthBasics(dr.health);
       const registration = parseRegistration(dr.registration);
-      const plan = dr.plan ? oneOf(dr.plan, ['flex', 'gold'] as const, 'plan') : undefined;
+      const plan = dr.plan ? (isPlanId(dr.plan) ? dr.plan : bad('plan')) : undefined;
       return {
         token: str(o.token, 80, { required: true, field: 'token' }),
         draft: {
@@ -509,6 +524,7 @@ export const enquiriesActions = [
       if (state === 'submitted') ctx.fail('enq.err.formDone');
       if (row.stage === 'joined' || row.stage === 'lost' || row.archivedAt) ctx.fail('enq.err.notOpen');
       if (i.draft.dob && i.draft.dob > ctx.today) ctx.fail('members.err.dobInvalid');
+      if (i.draft.plan) planOf(S(d), i.draft.plan); // an active plan of the catalogue
       const f = row.form!;
       f.draft = i.draft;
       f.submittedAt = ctx.nowDT;

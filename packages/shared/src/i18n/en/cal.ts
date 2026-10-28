@@ -1,7 +1,7 @@
 // cal strings (EN): calendar, events editor, schedule builder and catalog, plus the notification / feed / error texts of schedule.ts.
 export const cal = {
   // calendar
-  openHours: 'Open Monday to Friday, and on weekends when programmed · {open}–{close}', weekendCol: 'Weekend', titleFamily: 'Club calendar', view: 'View', vList: 'List', vMonth: 'Calendar', vYear: 'Year', prevYear: 'Previous year', nextYear: 'Next year', showMore: 'Show more days',
+  openHours: 'Open Monday to Friday, and on weekends when programmed · {open}–{close}', weekendCol: 'Weekend', titleFamily: 'Club calendar', view: 'View', vList: 'List', vMonth: 'Calendar', vYear: 'Year', closedYear: 'Closed or away in {y}', nDays: '{n} days', prevYear: 'Previous year', nextYear: 'Next year', showMore: 'Show more days',
   key: 'Key', tapDay: 'Tap a day to see what is on.', openWeek: 'Open this week in the schedule',
   publishShort: 'Publish',
   prevMonth: 'Previous month', nextMonth: 'Next month', thisMonth: 'This month', holiday: 'Holiday', closedShort: 'Closed', allDay: 'All day',
@@ -93,7 +93,8 @@ export const cal = {
   famClosureLabel: 'Upcoming closures', famClosedOn: 'Club closed on {d}', famClosedRange: 'Club closed {a} to {b}',
   // round 14 (B1): the activity team builds the programme; every change waits for Ega (management)
   sendForApproval: 'Send to Ega', sendTitle: 'Send the weekly schedule to Ega', sentToEga: 'Sent to Ega.', waitingEga: 'Waiting for Ega', returnedNote: 'Returned: {note}',
-  badgeWaiting: 'Waiting', badgeReturned: 'Returned', dayUnchanged: 'Nothing to send: the day is as published.', reviewBtn: 'Review',
+  badgeReturned: 'Returned', dayUnchanged: 'Nothing to send: the day is as published.',
+  proposed: 'Proposed', viewProposed: 'See proposed week', viewCurrent: 'See current week',
   'notif.programmeAsked': 'The activity team sent the weekly schedule from {date} for your approval.', 'notif.dayAsked': 'The activity team sent a programme change on {date} for your approval.',
   'notif.dayUpdated': 'The activity programme on {date} has changed.', 'feed.dayUpdated': 'Programme changed for {date}',
 };

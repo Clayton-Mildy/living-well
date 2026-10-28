@@ -39,7 +39,7 @@ const parsePerson = (o: Record<string, unknown>) => {
 
 interface AddContact { memberId: string; name: string; phone: string; relation: Relation; primary: boolean; appAccess: boolean; note?: string }
 interface LinkContact { memberId: string; familyId: string; relation: Relation; primary: boolean; appAccess: boolean; note?: string }
-interface UpdateContact { familyId: string; memberId?: string; name?: string; phone?: string; relation?: Relation; lang?: Lang; note?: string }
+interface UpdateContact { familyId: string; memberId?: string; name?: string; phone?: string; relation?: Relation; lang?: Lang; /** null removes it */ photoMediaId?: string | null; note?: string }
 
 /** Welcome the contact (they see it when they first sign in). */
 function welcomeContact(d: Draft<ClubState>, familyId: string, memberId: string, ctx: Ctx) {
@@ -128,11 +128,12 @@ export const familyActions: ActionDef[] = [
       if (o.phone !== undefined) { const p = e164(txt(o.phone, 30)); if (!p) throw badCode('members.err.phoneRequired'); if (!isPhone(p)) throw badCode('members.err.phoneInvalid'); out.phone = p; }
       if (o.relation !== undefined) { out.relation = oneOf(o.relation, RELATIONS); if (!out.memberId) throw badCode('err.invalid'); }
       if (o.lang !== undefined) out.lang = oneOf(o.lang, ['en', 'id'] as const);
-      if (out.name === undefined && out.phone === undefined && out.relation === undefined && out.lang === undefined) throw badCode('err.noChanges');
+      if (o.photoMediaId !== undefined) out.photoMediaId = mediaIdOf(o.photoMediaId) ?? null;
+      if (out.name === undefined && out.phone === undefined && out.relation === undefined && out.lang === undefined && out.photoMediaId === undefined) throw badCode('err.noChanges');
       return { ...out, ...note(o) };
     },
-    // name, mobile and language live on the contact; the relationship lives on the link to the member
-    review: { policy: 'gate', section: 'family', op: 'update', target: (i, s) => (i.name !== undefined || i.phone !== undefined || i.lang !== undefined || !i.memberId ? contactTarget(i.familyId, i.memberId) : linkTarget(s, i.familyId, i.memberId)) },
+    // name, mobile, language and picture live on the contact; the relationship lives on the link to the member
+    review: { policy: 'gate', section: 'family', op: 'update', target: (i, s) => (i.name !== undefined || i.phone !== undefined || i.lang !== undefined || i.photoMediaId !== undefined || !i.memberId ? contactTarget(i.familyId, i.memberId) : linkTarget(s, i.familyId, i.memberId)) },
     run(d, input, ctx) {
       const c = d.familyContacts[input.familyId];
       if (!c || c.deletedAt) ctx.fail('members.err.contactNotFound');
@@ -145,6 +146,10 @@ export const familyActions: ActionDef[] = [
         c.phone = input.phone; changed = true;
       }
       if (input.lang !== undefined && input.lang !== c.lang) { c.lang = input.lang; changed = true; }
+      if (input.photoMediaId !== undefined && (input.photoMediaId ?? undefined) !== c.photoMediaId) {
+        if (input.photoMediaId) c.photoMediaId = input.photoMediaId; else delete c.photoMediaId;
+        changed = true;
+      }
       if (input.relation !== undefined && input.memberId) {
         const l = linkFor(d, c.id, input.memberId, ctx);
         if (l.relation !== input.relation) { l.relation = input.relation; changed = true; }
@@ -253,7 +258,13 @@ export const familyActions: ActionDef[] = [
         if (p.usualArrival && (p.usualArrival < open || p.usualArrival >= close)) ctx.fail('members.err.arrivalHours', { open, close });
         m.usualArrival = p.usualArrival; fields.push('usualArrival');
       }
-      if (p.nanny !== undefined && JSON.stringify(p.nanny) !== JSON.stringify(m.nanny)) { m.nanny = p.nanny ? { ...p.nanny } : null; fields.push('nanny'); }
+      if (p.nanny !== undefined) {
+        // the family never sees the carer's NIK: the same person keeps it
+        const old = m.nanny;
+        const nik = old?.nik && p.nanny && old.name.trim().toLowerCase() === p.nanny.name.trim().toLowerCase() ? old.nik : undefined;
+        const next = p.nanny ? { ...p.nanny, ...(nik ? { nik } : {}) } : null;
+        if (JSON.stringify(next) !== JSON.stringify(old)) { m.nanny = next; fields.push('nanny'); }
+      }
       const reg: MemberRegistration = { ...(m.registration || {}) };
       let regChanged = false;
       for (const k of FAMILY_REG_KEYS) {

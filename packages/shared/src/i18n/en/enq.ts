@@ -22,7 +22,7 @@ export const enq = {
 
   // ----- lead dialog -----
   newEyebrow: 'New lead', editEyebrow: 'Edit lead', fSenior: 'Who is it for?', fSeniorName: 'Name', fContact: 'Who is asking?', fContactName: 'Contact person',
-  fRelation: 'Relationship', fSource: 'How did they hear of us?', fNotes: 'Notes', addLead: 'Add lead', leadCreated: 'Lead added: {name}.', leadSaved: 'Lead saved.',
+  fRelation: 'Relationship', fSource: 'How did they hear of us?', sourceOther: 'Where from?', fNotes: 'Notes', addLead: 'Add lead', leadCreated: 'Lead added: {name}.', leadSaved: 'Lead saved.',
 
   // ----- visit and trial -----
   visitTitle: 'Book a visit', visitChange: 'Change the visit', trialTitle: 'Book a trial day', trialChange: 'Change the trial day',

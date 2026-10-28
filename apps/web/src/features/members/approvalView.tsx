@@ -1,6 +1,6 @@
 // What one entry waiting for approval looks like in the Approvals screen: a short summary line and the full view (old → new for edits).
 // Pure view-model: the screen renders the pieces. Profile changes use describeCr (reviewDiff.ts).
-import { memberName, displayName, actorName, rp, publishDateOf, scheduleVersionFor, sessionsOn, staffCall, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type ScheduleCell, type ScheduleVersion, type Slot } from '@cp/shared';
+import { memberName, displayName, actorName, planLabel, rp, publishDateOf, scheduleVersionFor, sessionsOn, staffCall, type ClubState, type DailyLog, type Lang, type MemberNote, type Reading, type ScheduleCell, type ScheduleVersion, type Slot } from '@cp/shared';
 import type { ApprovalItem, ApprovalType, HistoryItem } from '@cp/shared/rules/approvals';
 import { APPROVAL_TYPES, DAYMENU_KEYS, isWaiting } from '@cp/shared/rules/approvals';
 import { diffTemplates, templateOn, weekDate, type WeekTemplate } from '@cp/shared/rules/kitchenOps';
@@ -84,7 +84,7 @@ function versionView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   return { who: '', kind: t('approvals.kind.version'), summary: `${head} · ${changes.length ? t('approvals.sum.menuChanges', { n: changes.length }) : t('approvals.sum.menuSame')}`, detail: { title: head, rows: [], summary: rows }, edit: false };
 }
 /** Round 14: a session as one line: activity · room · teacher ("No session" for an empty slot). */
-const sessionText = (s: ClubState, c: ScheduleCell | null | undefined, t: TFn, lang: Lang) =>
+export const sessionText = (s: ClubState, c: ScheduleCell | null | undefined, t: TFn, lang: Lang) =>
   c ? [activityName(s.activities[c.activityId], lang), roomName(s.rooms[c.roomId], lang), staffCall(s.staff[c.staffId])].filter(Boolean).join(' · ') : t('cal.noSession');
 /** Round 14 (B1): a weekly schedule the activity team sent: each session it changes against the plan in force on the day it would publish (its start date, or today
  *  once that has passed: R29), before → after. */
@@ -98,7 +98,7 @@ function programmeVersionView(s: ClubState, v: ScheduleVersion, t: TFn, fmt: Fmt
   return { who: '', kind: t('approvals.kind.programme'), summary: `${head} · ${cells.length ? t('approvals.sum.menuChanges', { n: cells.length }) : t('approvals.sum.programmeSame')}`, detail: { title: head, rows, summary: [] }, edit: false };
 }
 /** Round 14 (B1): a day's programme change the activity team sent: each session time it changes (or adds or removes), and the note, before → after. */
-function programmeDayView(s: ClubState, date: string, t: TFn, fmt: Fmt): ItemView {
+export function programmeDayView(s: ClubState, date: string, t: TFn, fmt: Fmt): ItemView {
   const lang = fmt.lang ?? 'en';
   const now = sessionsOn(s, date);
   const next = withPendingDay(s, date);
@@ -147,6 +147,7 @@ function renewalView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   const monthName = (x: string) => fmt.fd(`${x}-01`, { month: 'long' });
   const summary = f.outcome === 'upgrade' ? t('approvals.sum.renewalUpgrade', { month: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) })
     : f.outcome === 'downgrade' ? t('approvals.sum.renewalDowngrade', { month: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) })
+    : f.outcome === 'switch' ? t('approvals.sum.renewalSwitch', { plan: f.plan ? planLabel(s, f.plan, fmt.lang ?? 'en') : '', month: fmt.fd(`${f.month}-01`, { month: 'long', year: 'numeric' }) })
     : f.outcome === 'leave' ? t('approvals.sum.renewalLeave', { months: (f.leaveMonths ?? []).map(monthName).join(', ') })
     : f.outcome === 'stop' ? t('approvals.sum.renewalStop', { date: fmt.fds(f.lastDay ?? '') })
     : t(`renewals.outcome.${f.outcome}`);

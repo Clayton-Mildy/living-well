@@ -10,9 +10,11 @@ test('Next month: Caca records Oma Lina’s upgrade (in effect at once), sees th
   const c = watchConsole(page);
   await signIn(page, 's1', '/renewals');
   await expect(page.getByRole('heading', { level: 1, name: 'Next month' })).toBeVisible();
-  await expect(page.getByRole('tab', { name: 'Changes' })).toHaveAttribute('aria-selected', 'true');
+  await expect(page.getByRole('tab', { name: 'Members' })).toHaveAttribute('aria-selected', 'true'); // round 15: the first tab, every member and their plan
+  await expect(page.getByTestId('next-month-list').locator('[data-member="m1"]')).toContainText('Continues');
   await expect(page.getByRole('tab', { name: 'Unpaid' })).toBeVisible();
   await assertNoHorizontalScroll(page);
+  await page.getByRole('tab', { name: 'Changes' }).click();
   // record a change: pick the member, then the change (Oma Lina is on Flex, so the switch is an upgrade)
   await page.getByRole('button', { name: 'Record a change' }).click();
   await pickOption(page, 'Pick a member', /Oma Lina/);
@@ -68,7 +70,7 @@ test('Dementia fee: on the Health step, answering Yes tells the cost, and the Re
   await d.getByLabel('Mobile (WhatsApp)').fill('0813 4000 7777');
   await regNext(d);
   // Health: nothing is told until the answer is Yes
-  const askYes = d.getByText('Dementia (affects the monthly fee)?', { exact: true }).locator('xpath=..').getByRole('button', { name: 'Yes', exact: true });
+  const askYes = d.getByText('Dementia (plus Rp 750.000 monthly fee)?', { exact: true }).locator('xpath=..').getByRole('button', { name: 'Yes', exact: true });
   await expect(d).not.toContainText('more a month');
   await askYes.click();
   await expect(d).toContainText('Rp 750.000 more a month');

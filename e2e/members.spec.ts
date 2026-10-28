@@ -105,7 +105,7 @@ test('members list: compact rows (name, status, plan), search finds family names
   await expect(page.locator('[data-member="m46"]')).toContainText('Gold');
   await expect(page.locator('[data-member="m46"]')).toContainText('Last visit Tue 20 Oct');
   await expect(page.locator('[data-member="m1"]')).not.toContainText(/years|Walker|Walking|allerg|Amlodipine|Penicillin|Shellfish|Peanuts|new member/i);
-  for (const id of ['m1', 'm2', 'm10', 'm20', 'm46']) expect((await page.locator(`[data-member="${id}"]`).boundingBox())!.height, id).toBeLessThanOrEqual(isPhone(page) ? 112 : 80); // a compact row
+  for (const id of ['m1', 'm2', 'm10', 'm20', 'm46']) expect((await page.locator(`[data-member="${id}"]`).boundingBox())!.height, id).toBeLessThanOrEqual(isPhone(page) ? (id === 'm1' ? 124 : 112) : 80); // a compact row (round 15: Oma Lina's has the nanny line)
   // what needs a look is an icon, with the reading or the reason as its name
   await expect(page.locator('[data-member="m2"]').getByRole('img', { name: /^Watch · BP \d+\/\d+$/ })).toBeVisible();
   // Tjahjadi's overdue invoice has put his membership on hold (the brochure's terms): "Suspended · unpaid" says more than "Payment overdue"
@@ -236,7 +236,7 @@ test('attendance: a visits calendar for any month; no booking, leave or absence 
   await expect(page.getByText('Nothing extra so far')).toBeVisible();
   await expect(page.locator('[data-visit="visit"]')).toHaveCount(10);
   await expect(page.locator('[data-visit="extra"]')).toHaveCount(0);
-  await expect(page.locator('[data-visit="visit"]').first()).toContainText(/In \d\d:\d\d/);
+  await expect(page.locator('[data-visit="visit"]').first()).toHaveAttribute('title', /In \d\d:\d\d/); // round 15: the cell shows the in and out times, the title spells them
   // any month can be browsed
   await page.getByRole('button', { name: 'Previous month' }).click();
   await expect(page.getByRole('heading', { name: 'September 2026' })).toBeVisible();
@@ -280,7 +280,7 @@ test('an extra visit: the 11th Flex visit is marked "Extra day" on the calendar 
   await signIn(page, 's9', '/members/m1/att');
   await expect(page.locator('[data-visit="visit"]')).toHaveCount(10);
   await expect(page.locator('[data-visit="extra"]')).toHaveCount(1);
-  await expect(page.locator('[data-visit="extra"]')).toContainText('Extra day');
+  await expect(page.locator('[data-visit="extra"]')).toHaveAttribute('title', /Extra day/); // round 15: the cell shows the time, the title says Extra day
   await expect(page.locator('[data-visit="extra"]')).toContainText('21');
   await expect(page.getByText('Extra days in October')).toBeVisible();
   await expect(page.getByText('Rp 650.000 on next month’s invoice')).toBeVisible();
@@ -470,10 +470,8 @@ test('lobby adds a new member: pending approval; management approves; the new co
   await d.getByRole('radio', { name: /^Flex/ }).click();
   await expect(d).toContainText('Flex includes 10 visits a month');
   await regNext(d);
-  // Form: registration is on paper, so the signed form is required
-  await expect(nextBtn(d)).toHaveAttribute('aria-disabled', 'true');
-  await regTryNext(d);
-  await expect(d).toContainText('Attach the signed registration form.');
+  // Form: the scan of the signed paper form is optional now (round 15: the family may sign on the pad at the review instead)
+  await expect(nextBtn(d)).not.toHaveAttribute('aria-disabled', 'true');
   await d.getByTestId('doc-file').setInputFiles({ name: 'registration-form.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(d).toContainText('Attached: registration-form.pdf');
   await regNext(d);
@@ -1211,7 +1209,7 @@ test('application form: add a member with the new answers, print the form to sig
   await askChip(d, 'Difficulty communicating?', 'Yes').click();
   await askChip(d, 'Can do activities and eat alone?', 'Yes').click();
   await askChip(d, 'Needs help in the bathroom?', 'No').click();
-  await askChip(d, 'Dementia (affects the monthly fee)?', 'Yes').click();
+  await askChip(d, 'Dementia (plus Rp 750.000 monthly fee)?', 'Yes').click();
   await d.getByLabel('Dementia notes (optional)').fill('Forgets names');
   await regNext(d);
   // Plan: Gold
@@ -1244,10 +1242,8 @@ test('application form: add a member with the new answers, print the form to sig
   await page.keyboard.press('Escape'); // closes the printed form only; the member form stays open with what was typed
   await expect(page.getByTestId('application-form')).toHaveCount(0);
   await expect(d).toBeVisible();
-  // the signed form is scanned and attached as before (still required)
-  await expect(nextBtn(d)).toHaveAttribute('aria-disabled', 'true');
-  await regTryNext(d);
-  await expect(d).toContainText('Attach the signed registration form.');
+  // the signed form is scanned and attached as before (optional now: the pad at the review can stand in)
+  await expect(nextBtn(d)).not.toHaveAttribute('aria-disabled', 'true');
   await d.getByTestId('doc-file').setInputFiles({ name: 'signed-form.pdf', mimeType: 'application/pdf', buffer: PDF });
   await expect(d).toContainText('Attached: signed-form.pdf');
   await regNext(d);
@@ -1339,7 +1335,7 @@ test('application form: Edit details changes the answers; they show on Overview;
   await d.getByLabel('Postcode').fill('12731');
   await askChip(d, 'Difficulty communicating?', 'Yes').click();
   // the dementia note opens once the dementia answer is Yes (tapping Yes again would clear it)
-  if (!(await d.getByLabel('Dementia notes (optional)').count())) await askChip(d, 'Dementia (affects the monthly fee)?', 'Yes').click();
+  if (!(await d.getByLabel('Dementia notes (optional)').count())) await askChip(d, 'Dementia (plus Rp 750.000 monthly fee)?', 'Yes').click();
   await d.getByLabel('Dementia notes (optional)').fill('Repeats questions');
   await d.getByRole('button', { name: 'Save changes' }).click();
   await expect(dialog(page)).toHaveCount(0);

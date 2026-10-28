@@ -1,6 +1,6 @@
 // check on strings (EN): KC round 12, members not seen for a while and the welfare calls to their families.
 export const checkOn = {
-  title: "Haven't come lately", days: '{n} days', day1: '1 day', call: 'Call', all: 'All {n}', again: 'Check again on', saved: 'Call logged',
+  title: "Haven't come lately", notSeenFor: 'Not seen for', auto: 'Automatic', nobody: 'Nobody has been away that long', days: '{n} days', day1: '1 day', call: 'Call', all: 'All {n}', again: 'Check again on', saved: 'Call logged',
   who: 'Phone {relation} {name}', noContact: 'No family contact on file', noPhone: 'No phone number on file',
   outcomeLabel: 'What did they say?', notePh: 'Note (optional)', save: 'Save call', logCall: 'Log a call', lastSeen: 'Last seen {date}', neverSeen: 'Not seen yet', lastCall: 'Last call: {outcome}',
   recordLeave: 'Record leave', callBy: 'Call to {name} · {by}', callEntry: 'Welfare call: {outcome}',

@@ -5,10 +5,10 @@
 // (actions/approvals.ts). Leave keeps its own rules (rules/leave.ts): 14 days' notice before the month, at most 2 months.
 import type { Actor, ClubState, DT, FamilyContact, FollowUp, FollowUpCall, FollowUpOutcome, ISODate, Member, Plan, Relation, YM } from '../types';
 import { addDays, addMonths, live, monthStart, sortBy, ym } from '../util';
-import { approvedMembers, contactsOfMember, currentMembership, isPendingRow, memberName, membershipStatus, planOn } from './core';
+import { activeOn, approvedMembers, contactsOfMember, currentMembership, isPendingRow, memberName, membershipStatus, planOn } from './core';
 import { issueDateOf } from './billing';
 import { LEAVE_MAX_MONTHS, lastDayOfMonth, leaveCheck, leaveDeadline, leaveMonths, leaveRunAround, onLeaveIn, type LeaveCheck } from './leave';
-import { matchesQuery } from './members';
+import { activePlans, matchesQuery } from './members';
 
 /** The month the front desk follows up today: the coming month. */
 export const renewalMonth = (today: ISODate): YM => addMonths(ym(today), 1);
@@ -19,14 +19,24 @@ export function followUpOf(s: ClubState, memberId: string, month: YM): FollowUp 
 }
 
 // ---------- outcomes ----------
-export const FOLLOW_UP_OUTCOMES: FollowUpOutcome[] = ['continue', 'upgrade', 'downgrade', 'leave', 'stop', 'noAnswer'];
+export const FOLLOW_UP_OUTCOMES: FollowUpOutcome[] = ['continue', 'upgrade', 'downgrade', 'switch', 'leave', 'stop', 'noAnswer'];
 /** Outcomes that change the membership: someone but management records them, management approves, and they apply from the 1st. */
-export const CHANGE_OUTCOMES: FollowUpOutcome[] = ['upgrade', 'downgrade', 'leave', 'stop'];
+export const CHANGE_OUTCOMES: FollowUpOutcome[] = ['upgrade', 'downgrade', 'switch', 'leave', 'stop'];
 export const isChange = (o: FollowUpOutcome | undefined): boolean => !!o && CHANGE_OUTCOMES.includes(o);
-/** The changes offered for a member (round 14: "continue" and "no answer" are not recorded any more): switching goes the one way their plan allows (Flex to Gold, Gold to Flex). */
-export const outcomeChoices = (plan: Plan): FollowUpOutcome[] => [plan === 'flex' ? 'upgrade' : 'downgrade', 'leave', 'stop'];
-/** The plan an upgrade or a downgrade ends on. */
-export const planAfter = (o: 'upgrade' | 'downgrade'): Plan => (o === 'upgrade' ? 'gold' : 'flex');
+/** An outcome that moves the member to another plan: upgrade (to Gold), downgrade (to Flex) or switch (to a catalogue plan). */
+export type PlanOutcome = 'upgrade' | 'downgrade' | 'switch';
+export const isPlanOutcome = (o: FollowUpOutcome | undefined): o is PlanOutcome => o === 'upgrade' || o === 'downgrade' || o === 'switch';
+/** The plan a plan outcome ends on (`plan` is the follow-up's own plan, used by a switch). */
+export const planAfter = (o: PlanOutcome, plan?: Plan): Plan => (o === 'switch' ? plan ?? 'flex' : o === 'upgrade' ? 'gold' : 'flex');
+/** The outcome that records a move to `plan`: Gold and Flex keep their upgrade / downgrade, a catalogue plan is a switch. */
+export const outcomeFor = (plan: Plan): PlanOutcome => (plan === 'gold' ? 'upgrade' : plan === 'flex' ? 'downgrade' : 'switch');
+/** One change the front desk can record: a move to `plan` (an outcome of its own), leave or stop. */
+export interface OutcomeChoice { outcome: FollowUpOutcome; plan?: Plan }
+/** The changes offered for a member whose plan on the 1st is `plan` (round 14: "continue" and "no answer" are not recorded any more): a move to every other active plan of the catalogue, leave and stop. */
+export const outcomeChoices = (s: ClubState, plan: Plan): OutcomeChoice[] => [
+  ...activePlans(s).filter((p) => p.id !== plan).map((p): OutcomeChoice => ({ outcome: outcomeFor(p.id), plan: p.id })),
+  { outcome: 'leave' }, { outcome: 'stop' },
+];
 
 /** A follow-up is decided once the family gave an answer (not "no answer" / "call back") and management did not turn it down. */
 export const isDecided = (f: FollowUp | undefined) => !!f?.outcome && f.status !== 'rejected' && f.outcome !== 'noAnswer';
@@ -110,7 +120,7 @@ export function renewalNext(r: Pick<RenewalRow, 'f' | 'asked'>, month: YM, today
   if (f?.status === 'pending') return { kind: 'approval' };
   if (f?.status === 'done' && f.outcome) {
     switch (f.outcome) {
-      case 'upgrade': case 'downgrade': return { kind: 'planFrom', date: first, plan: planAfter(f.outcome) };
+      case 'upgrade': case 'downgrade': case 'switch': return { kind: 'planFrom', date: first, plan: planAfter(f.outcome, f.plan) };
       case 'leave': return { kind: 'leaveFrom', date: monthStart(f.leaveMonths?.[0] ?? month) };
       case 'stop': return { kind: 'lastDay', date: f.lastDay ?? defaultLastDay(month) };
       default: return { kind: 'renews', date: first };
@@ -154,6 +164,8 @@ export const rowName = (r: RenewalRow) => memberName(r.m);
 export interface ChangeRow {
   memberId: string;
   outcome: FollowUpOutcome;
+  /** the plan a switch ends on (also set on a plan change recorded elsewhere) */
+  plan?: Plan;
   /** the day the change starts: the 1st for a plan switch, the first leave month's 1st, the day after a stop's last day */
   from: ISODate;
   /** who recorded it (a plan entry made before round 14 may not say when) */
@@ -179,7 +191,7 @@ export function changeRows(s: ClubState, month: YM, today: ISODate): ChangeRow[]
     if (f.month !== month) continue;
     const last = f.calls[f.calls.length - 1];
     const from = f.outcome === 'leave' ? monthStart(f.leaveMonths?.[0] ?? month) : f.outcome === 'stop' ? addDays(f.lastDay ?? defaultLastDay(month), 1) : first;
-    rows.push({ memberId: f.memberId, outcome: f.outcome!, from, by: last?.by ?? f.createdBy, at: last?.at ?? f.createdAt, ...(f.leaveMonths ? { leaveMonths: f.leaveMonths } : {}), canUndo: today < first });
+    rows.push({ memberId: f.memberId, outcome: f.outcome!, ...(isPlanOutcome(f.outcome) ? { plan: planAfter(f.outcome, f.plan) } : {}), from, by: last?.by ?? f.createdBy, at: last?.at ?? f.createdAt, ...(f.leaveMonths ? { leaveMonths: f.leaveMonths } : {}), canUndo: today < first });
   }
   for (const m of Object.values(s.members)) {
     if (m.deletedAt || isPendingRow(m)) continue;
@@ -188,10 +200,10 @@ export function changeRows(s: ClubState, month: YM, today: ISODate): ChangeRow[]
     const i = m.plans.findIndex((p) => p.from === first);
     if (i > 0 && m.plans[i].plan !== m.plans[i - 1].plan) {
       const p = m.plans[i];
-      if (!mine.some((f) => f.month === month && (f.outcome === 'upgrade' || f.outcome === 'downgrade') && planAfter(f.outcome) === p.plan)) {
+      if (!mine.some((f) => f.month === month && isPlanOutcome(f.outcome) && planAfter(f.outcome, f.plan) === p.plan)) {
         const req = p.requestId ? s.planChangeRequests?.[p.requestId] : undefined;
         const at = req?.decidedAt;
-        rows.push({ memberId: m.id, outcome: p.plan === 'gold' ? 'upgrade' : 'downgrade', from: first, by: p.by, ...(at ? { at } : {}), canUndo: false, readOnly: true });
+        rows.push({ memberId: m.id, outcome: outcomeFor(p.plan), plan: p.plan, from: first, by: p.by, ...(at ? { at } : {}), canUndo: false, readOnly: true });
       }
     }
     for (const ms of m.memberships ?? []) {
@@ -208,6 +220,40 @@ export function changeRows(s: ClubState, month: YM, today: ISODate): ChangeRow[]
   }
   const at = (r: ChangeRow) => r.at ?? '';
   return rows.sort((a, b) => (at(a) === at(b) ? (a.memberId < b.memberId ? -1 : a.memberId > b.memberId ? 1 : a.outcome < b.outcome ? -1 : 1) : at(a) < at(b) ? 1 : -1));
+}
+
+// ---------- next month, member by member (round 15, R5: the Members tab) ----------
+export interface NextMonthRow {
+  member: Member;
+  /** the plan today, and the plan on the 1st (null once the membership stops before then) */
+  planNow: Plan;
+  planNext: Plan | null;
+  /** the last day, for a stop (the row shows the date) */
+  lastDay?: ISODate;
+  /** continues: nothing recorded, it carries on · plan: a plan switch from the 1st · leave: leave in the month · stop: the last day falls in the month (or before the 1st) */
+  status: 'continues' | 'plan' | 'leave' | 'stop';
+}
+/**
+ * Every member and what next month holds for them, in the Members page order (first and last name): the members active on the 1st (a new member whose plan starts then included), plus those a
+ * recorded stop ends before it. Someone who has already ended, is still waiting for approval or starts later is not listed. A stop wins over leave, leave over a
+ * plan switch; the changes themselves are recorded as follow-ups or on the profile (`changeRows`), and all of them are on the member's plans and memberships.
+ */
+export function nextMonthPlans(s: ClubState, today: ISODate): NextMonthRow[] {
+  const month = renewalMonth(today);
+  const first = monthStart(month);
+  const rows: NextMonthRow[] = [];
+  for (const m of approvedMembers(s)) {
+    const cur = currentMembership(m);
+    if (!cur || membershipStatus(m, today) === 'ended') continue;
+    const stops = !!cur.lastDay && cur.lastDay <= lastDayOfMonth(month);
+    if (!activeOn(m, first) && !(stops && cur.lastDay! < first)) continue;
+    const planNow = planOn(m, today).plan;
+    const planNext = planOn(m, first).plan;
+    const status: NextMonthRow['status'] = stops ? 'stop' : onLeaveIn(m, month) ? 'leave' : planNext !== planNow ? 'plan' : 'continues';
+    // a stop on or after the 1st still has the plan on the 1st (they are in the club until the last day); one before it has none
+    rows.push({ member: m, planNow, planNext: stops && cur.lastDay! < first ? null : planNext, ...(stops ? { lastDay: cur.lastDay } : {}), status });
+  }
+  return sortBy(rows, (r) => r.member.firstName + r.member.lastName); // the Members page order
 }
 
 // ---------- dates ----------

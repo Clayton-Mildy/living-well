@@ -421,7 +421,7 @@ test('builder (s9): this week is editable from today (earlier days read-only), a
   await expect(sheet.getByRole('switch', { name: /Notify families and the team/ })).toHaveAttribute('aria-checked', 'true');
   await sheet.getByRole('button', { name: 'Publish to staff and families' }).click();
   await expect(page.getByRole('status')).toContainText('Schedule published from Monday 26 October');
-  await expect(page.getByText('Upcoming')).toBeVisible();
+  await expect(page.getByText('Upcoming').first()).toBeVisible();
   await expect(page.getByText('From Monday 26 October', { exact: true })).toBeVisible();
   await expect(page.getByText(/Published Wed 21 Oct, \d\d:\d\d by Ega · In force from Mon 26 Oct/)).toBeVisible(); // the status follows the version of the week shown
   // stored as a dated version: the old one stays for the past
@@ -436,7 +436,7 @@ test('builder (s9): this week is editable from today (earlier days read-only), a
   expect(note.toRoles).toEqual(expect.arrayContaining(['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt']));
   expect(note.toUsers).toContain('f1');
   expect(note.params.date).toBe('26/10/2026');
-  // this week still shows the old version; next week the new one; the week after follows it too
+  // this week still shows the old version; next week the new one; the weekly plan of the week after follows it too (round 15's empty week 2 – 6 Nov is five one-day changes, not a weekly version)
   await page.getByRole('button', { name: 'This week' }).click();
   await goDay(page, 'Wed');
   await expect(page.getByRole('button', { name: 'Wednesday 10:30: Keroncong sing-along' })).toBeVisible();
@@ -444,7 +444,7 @@ test('builder (s9): this week is editable from today (earlier days read-only), a
   await page.getByRole('button', { name: 'Next week', exact: true }).click();
   await expect(page.getByText('2 Nov – 6 Nov 2026')).toBeVisible();
   await goDay(page, 'Wed');
-  await expect(page.getByRole('button', { name: 'Wednesday 10:30: Angklung ensemble' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Wednesday 10:30: Angklung ensemble' })).toBeVisible(); // the weekly plan of 2 – 6 Nov is the new one (its days are emptied by one-day changes, see the Calendar list)
   // today is unchanged on the calendar and on the teacher's Today
   await expect(block(page, '2026-10-21')).toContainText('Keroncong sing-along');
   const { page: t, ctx } = await otherUser(browser, 's5', '/today');

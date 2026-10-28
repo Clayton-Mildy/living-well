@@ -1,9 +1,12 @@
 // Dish pieces: the allergen editor dialog, the "add a dish" picker sheet, and the chip field used for each course of a day.
 import { useMemo, useState } from 'react';
 import type { Dish, DishAllergen, ISODate } from '@cp/shared';
-import { actorName, displayName } from '@cp/shared';
+import { actorName, displayName, hasKey } from '@cp/shared';
 import { COURSES, DISH_ALLERGENS, DISH_TAGS, allergyReachOf, dishesByCourse, membersAffectedBy, type Course } from '@cp/shared/rules/kitchenOps';
-import { Button, ChipGroup, Dialog, Icon, Note, Pager, Sheet, TextField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { Button, CameraCapture, ChipGroup, Dialog, DishThumb, Icon, Note, Pager, Sheet, TextField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { uploadMedia } from '../../lib/media';
+import { ApiError } from '../../lib/api';
+import { say } from '../../store/ui';
 import { useT, useFmt, type TFn } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -48,6 +51,31 @@ export function ReachChip({ reach, bare }: { reach: Reach; bare?: boolean }) {
   );
 }
 
+/** Round 15: the dish's picture. Take one or choose a file (CameraCapture does both), change it or remove it; it shows in the menu plan, the calendars and the family app. */
+function DishPhotoField({ value, onChange }: { value: string | null; onChange: (id: string | null) => void }) {
+  const t = useT();
+  const [camera, setCamera] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const take = async (blob: Blob) => {
+    setCamera(false);
+    setBusy(true);
+    try { onChange(await uploadMedia(blob)); } catch (e) { say(e instanceof ApiError && hasKey(e.code) ? t(e.code) : t('profile.photoUploadFailed'), { tone: 'error', icon: 'error' }); } finally { setBusy(false); }
+  };
+  return (
+    <div role="group" aria-label={t('kitchen.dishPhoto')} data-testid="dish-photo" style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
+      {value ? <DishThumb mediaId={value} label={t('common.openFull')} size={64} testId="dish-photo-img" /> : null}
+      <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
+        <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('kitchen.dishPhoto')}</span>
+        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+          <Button variant="secondary" size={44} icon="photo_camera" disabled={busy} onClick={() => setCamera(true)}>{busy ? t('profile.photoUploading') : value ? t('profile.photoChange') : t('kitchen.addDishPhoto')}</Button>
+          {value && !busy ? <Button variant="ghost" size={44} onClick={() => onChange(null)}>{t('profile.photoRemove')}</Button> : null}
+        </div>
+      </div>
+      {camera ? <CameraCapture open onClose={() => setCamera(false)} onCapture={(b) => void take(b)} facing="environment" allowUpload /> : null}
+    </div>
+  );
+}
+
 /** Create or edit a dish: name, course, allergen chips, tags, and whether its allergens have been checked. */
 export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: boolean; onClose: () => void; dishId?: string; preset?: { name?: string; course?: Course }; onSaved?: (id: string) => void }) {
   const t = useT();
@@ -60,6 +88,7 @@ export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: b
   const [allergens, setAllergens] = useState<DishAllergen[]>([]);
   const [tags, setTags] = useState<Dish['tags']>([]);
   const [checked, setChecked] = useState(true);
+  const [photo, setPhoto] = useState<string | null>(null);
   const [askDelete, setAskDelete] = useState(false);
   const [busy, setBusy] = useState(false);
   useResetOn(open ? dishId ?? '' : null, () => {
@@ -69,6 +98,7 @@ export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: b
     setAllergens(dish?.allergens ?? []);
     setTags(dish?.tags ?? []);
     setChecked(dish ? !!dish.reviewedAt : true);
+    setPhoto(dish?.photoMediaId ?? null);
     setAskDelete(false);
   });
   const changed = !dish || allergens.length !== dish.allergens.length || allergens.some((a) => !dish.allergens.includes(a));
@@ -77,7 +107,7 @@ export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: b
   const save = async () => {
     if (!ok || busy) return;
     setBusy(true);
-    const r = await act('dish.upsert', { id: dishId, name, course, allergens, tags, reviewed: !alreadyChecked && checked }, { ok: t('kitchen.dish.saved', { name: name.trim() }) });
+    const r = await act('dish.upsert', { id: dishId, name, course, allergens, tags, reviewed: !alreadyChecked && checked, photoMediaId: photo }, { ok: t('kitchen.dish.saved', { name: name.trim() }) });
     setBusy(false);
     if (r.ok) { onSaved?.((r.result.dishId as string) || dishId || ''); onClose(); }
   };
@@ -104,6 +134,7 @@ export function DishDialog({ open, onClose, dishId, preset, onSaved }: { open: b
   return (
     <Dialog open={open} onClose={onClose} eyebrow={t('kitchen.dish.eyebrow')} title={dish ? dish.name : t('kitchen.dish.new')} footer={footer}>
       <TextField label={t('kitchen.dish.name')} value={name} onChange={setName} placeholder={t('kitchen.dish.namePh')} maxLength={60} autoFocus={!dish} onEnter={save} />
+      <DishPhotoField value={photo} onChange={setPhoto} />
       <ChipGroup<Course> label={t('kitchen.dish.course')} value={course} onChange={(v) => setCourse(v as Course)} options={COURSES.map((c) => ({ value: c, label: t('kitchen.course.' + c) }))} />
       <ChipGroup<DishAllergen> label={t('kitchen.dish.contains')} multi value={allergens} onChange={(v) => { setAllergens(v as DishAllergen[]); setChecked(true); }} options={DISH_ALLERGENS.map((a) => ({ value: a, label: t('kitchen.allergen.' + a) }))} />
       <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4, marginTop: -8 }}>{t('kitchen.dish.containsHint')}</span>
@@ -145,6 +176,7 @@ export function DishPicker({ open, onClose, title, course, picked, onToggle, onC
               <button key={d.id} type="button" role="checkbox" aria-checked={on} onClick={() => onToggle(d.id)} className="h-row"
                 style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '10px 14px', minHeight: 56, border: 'none', borderTop: k ? '0.5px solid var(--hairline, #E2E2E6)' : 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter', width: '100%' }}>
                 <Icon name={on ? 'check_circle' : 'radio_button_unchecked'} size={24} fill={on ? 1 : 0} color={on ? '#3D6B4F' : '#8A755B'} />
+                <DishThumb plain mediaId={d.photoMediaId} label={t('kitchen.dishPhoto')} size={40} />
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                   <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{d.name}</span>
                   <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{allergenText(t, d)}{d.reviewedAt ? '' : ' · ' + t('kitchen.notChecked')}</span>
@@ -190,9 +222,10 @@ export function DishField({ label, course, ids, onRemove, onAdd, flex, testId, d
           const reach = hit ? reachOf(d, date) : null;
           const clash = hit ? `${reach ? reach.label + '. ' : ''}${t('kitchen.plan.affects', { names: hit })}` : '';
           const name = t('kitchen.plan.remove', { name: d.name }) + (clash ? `. ${clash}` : '');
-          const chip: React.CSSProperties = { minHeight: 44, padding: reach ? '6px 10px 6px 14px' : '0 10px 0 14px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', textAlign: 'left', maxWidth: '100%' };
+          const chip: React.CSSProperties = { minHeight: 44, padding: d.photoMediaId ? '6px 10px 6px 6px' : reach ? '6px 10px 6px 14px' : '0 10px 0 14px', borderRadius: 12, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 15, fontWeight: 500, display: 'inline-flex', alignItems: 'center', gap: 6, fontFamily: 'Inter', textAlign: 'left', maxWidth: '100%' };
           const inner = (
             <>
+              <DishThumb plain mediaId={d.photoMediaId} label={t('kitchen.dishPhoto')} size={32} testId="plan-dish-thumb" />
               {reach ? <span style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, alignItems: 'flex-start' }}><span>{d.name}</span><ReachChip reach={reach} bare /></span> : <span>{d.name}</span>}
               {hit && !reach ? <Icon name="no_food" size={17} fill={1} color="#9A3D24" style={{ marginLeft: 2 }} /> : null}
               {!d.reviewedAt ? <Icon name="help" size={17} fill={1} color="#7A5510" style={{ marginLeft: 2 }} /> : null}

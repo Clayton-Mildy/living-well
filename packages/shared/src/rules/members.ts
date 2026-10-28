@@ -1,10 +1,11 @@
 // Members: lifecycle status, list rows, filters and search, id allocation, documents and consent, validation,
 // pending reviews and the final invoice. Members drop in on any open day, so there are no bookings, leave or "expected" days here:
 // status comes from check-ins, and the Flex plan counts visits. Pure selectors shared by the actions and the screens.
-import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
+import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
 import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
+import { isPlanId, planDefs } from './plans';
 import { invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
 import { onLeaveOn } from './leave';
 import { latestBp } from './health';
@@ -153,6 +154,8 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 // ---------- list rows, filters, search ----------
 export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'ended';
 export const MEMBER_FILTERS: MemberFilter[] = ['active', 'in', 'att', 'checkOn', 'flex', 'gold', 'ended'];
+/** The plans a member can be put on, as pickers list them: Flex, Gold, then the catalogue's active plans (a retired plan leaves the pickers; its members keep it). Name them with `planLabel`. */
+export const activePlans = (s: ClubState): PlanDef[] => planDefs(s).filter((p) => p.active);
 export interface MemberRow {
   m: Member;
   st: MemberStatus;
@@ -181,11 +184,12 @@ export function lastVisits(s: ClubState, today: ISODate): Record<string, ISODate
   for (const a of live(s.attendance)) if (a.checkIn && a.date <= today && (!out[a.memberId] || a.date > out[a.memberId])) out[a.memberId] = a.date;
   return out;
 }
-export function memberRows(s: ClubState, today: ISODate): MemberRow[] {
+/** `notSeenFor`: the device's "Not seen for" choice for the Check on filter (undefined = automatic); the web passes it in so shared stays pure. */
+export function memberRows(s: ClubState, today: ISODate, notSeenFor?: number): MemberRow[] {
   const overdue = new Set(live(s.invoices).filter((i) => invoiceStatus(s, i, today) === 'overdue').map((i) => i.memberId));
   const hold = suspensions(s, today);
   const last = lastVisits(s, today);
-  const quiet = new Map(checkOnList(s, today).map((r) => [r.member.id, r]));
+  const quiet = new Map(checkOnList(s, today, notSeenFor).map((r) => [r.member.id, r]));
   return sortBy(
     live(s.members).filter((m) => !isPendingRow(m) || m.review?.status === 'pending'),
     (m) => m.firstName + m.lastName,
@@ -371,9 +375,11 @@ export interface NewMemberInput {
   health: { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[]; meds: { name: string; dose: string; timing: MedTiming }[] };
   careInstructions: string;
   docs: DocType[];
-  /** The signed paper registration form (photo or PDF uploaded first, POST /api/media): required. */
+  /** The signed paper registration form (photo or PDF uploaded first, POST /api/media): required unless the family signed on the pad (`signatureMediaId`). */
   formMediaId: string;
   formFileName: string;
+  /** round 15: the family member present signed the form on the pad (uploaded first); then the paper scan is not needed */
+  signatureMediaId?: string;
   consent: { data: boolean; face: boolean };
   note?: string;
 }
@@ -388,7 +394,7 @@ export function validateNewMember(d: Partial<NewMemberInput>, today?: ISODate): 
   else if (!isISO(d.dob) || (today && d.dob > today)) bad('dob', 'dobInvalid');
   else if (today) { const a = ageOn(d.dob, today); if (a < ageRange.min || a > ageRange.max) bad('dob', 'dobInvalid'); }
   if (d.usualArrival && !isHM(d.usualArrival)) bad('usualArrival', 'arrivalInvalid');
-  if (d.plan !== 'flex' && d.plan !== 'gold') bad('plan', 'planInvalid');
+  if (!isPlanId(d.plan)) bad('plan', 'planInvalid');
   if (!isISO(d.start) || (today && (d.start as string) < today)) bad('start', 'startInvalid');
   else if (!isWeekday(d.start as string)) bad('start', 'startInvalid');
   const c = d.contact;
@@ -398,7 +404,7 @@ export function validateNewMember(d: Partial<NewMemberInput>, today?: ISODate): 
     if (!c.phone || !c.phone.trim()) bad('phone', 'phoneRequired');
     else if (!isPhone(e164(c.phone))) bad('phone', 'phoneInvalid');
   }
-  if (!d.formMediaId) bad('form', 'formRequired');
+  if (!d.formMediaId && !d.signatureMediaId) bad('form', 'formRequired'); // the signed paper form, or the signature on the pad
   if (!d.consent?.data) bad('consentData', 'consentRequired');
   for (const med of d.health?.meds || []) if (!med.name?.trim()) { bad('meds', 'medNameRequired'); break; }
   if (d.nanny && !d.nanny.name?.trim()) bad('nannyName', 'nannyNameRequired');

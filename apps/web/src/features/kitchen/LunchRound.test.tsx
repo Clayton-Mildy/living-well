@@ -23,8 +23,12 @@ afterEach(async () => {
   document.body.innerHTML = '';
 });
 
-async function show(startMin: number) {
+async function show(startMin: number, withPhotos = false) {
   const state = buildSeed().citra;
+  if (withPhotos) { // two of the seed's lunch photos, moved onto today
+    const ids = Object.values(state.photos).filter((p) => p.kind === 'lunch' && p.visibility === 'visible').slice(0, 2).map((p) => p.id);
+    state.dayMenus[T] = { ...state.dayMenus[T], photoIds: ids };
+  }
   const mock = vi.fn(async (_name: string, _input: unknown) => ({ ok: true, result: {} }));
   useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's2', name: 'Yohanes', role: 'kitchen', clubId: 'citra', clubs: ['citra'] } });
   useReplica.setState({ club: 'citra', userId: 's2', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin, realStart: Date.now(), offset: 0 }, act: mock as never });
@@ -58,6 +62,19 @@ describe('LunchRound', () => {
     expect(rest[0]).toBe('kitchen.lunchMark');
     expect(rest[1]).toMatchObject({ date: T, lunch: 'all', onlyEmpty: true });
     expect([...(rest[1] as { memberIds: string[] }).memberIds].sort()).toEqual(['m10', 'm2', 'm20']);
+  });
+
+  it('the photos are a compact strip: 64 px thumbnails and a 44 px Add photo button (round 15)', async () => {
+    await show(12 * 60, true);
+    const tiles = Array.from(document.querySelectorAll<HTMLElement>('[data-testid="lunch-photo"]'));
+    expect(tiles).toHaveLength(2);
+    for (const tile of tiles) {
+      expect(tile.style.width).toBe('64px');
+      expect(tile.style.height).toBe('64px');
+    }
+    const add = document.querySelector<HTMLElement>('[data-testid="lunch-photo-add"]')!;
+    expect(add.style.minHeight).toBe('44px');
+    expect(add.textContent).toContain('Add a photo');
   });
 
   it('before 11:30 it says when it opens, still shows the lunch photos, and has no rows to mark', async () => {

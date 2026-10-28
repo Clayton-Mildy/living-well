@@ -3,7 +3,7 @@ import { describe, it, expect } from 'vitest';
 import { buildCitra, DEMO_START_MIN, live, monthStart, planOn, type ClubState } from '../index';
 import { leaveDeadline, leaveMonths } from './leave';
 import type { FollowUp } from '../types';
-import { askedInApp, changeRows, followUpId, followUpOf, isApplied, isChange, isDecided, leaveMonthsCheck, renewalCounts, renewalDates, renewalMembers, renewalMonth, renewalNext, renewalRows, renewalStatus } from './renewals';
+import { askedInApp, changeRows, followUpId, followUpOf, isApplied, isChange, isDecided, leaveMonthsCheck, nextMonthPlans, renewalCounts, renewalDates, renewalMembers, renewalMonth, renewalNext, renewalRows, renewalStatus } from './renewals';
 
 describe('the month and its dates', () => {
   it('the coming month; the leave deadline is 14 days before the end of the month before; the invoice goes out on the 21st', () => {
@@ -121,5 +121,74 @@ describe('status and next step of a row', () => {
     const s = buildCitra(T, DEMO_START_MIN);
     const by = Object.fromEntries(renewalRows(s, '2026-11').map((r) => [r.m.id, [renewalStatus(r), renewalNext(r, '2026-11', T).kind]]));
     expect(by).toEqual({ m1: ['new', 'call'], m2: ['noAnswer', 'callAgain'], m10: ['asked', 'answerRequest'], m20: ['noAnswer', 'callAgain'], m46: ['continue', 'renews'] });
+  });
+});
+
+// round 15 (R5): the Members tab lists every member active on the 1st, plus those a recorded stop ends before it
+describe('nextMonthPlans', () => {
+  const T = '2026-10-21';
+  const world = (edit: (ms: ClubState['members']) => void): ClubState => {
+    const s = structuredClone(buildCitra(T, DEMO_START_MIN));
+    // a quiet world: five members on Flex, all running, nothing recorded
+    for (const m of Object.values(s.members)) {
+      m.plans = [{ from: '2026-01-01', plan: 'flex', by: 'staff:s1' }];
+      m.memberships = [{ start: '2026-01-01' }];
+    }
+    s.followUps = {};
+    edit(s.members);
+    return s;
+  };
+  const by = (rows: ReturnType<typeof nextMonthPlans>) => Object.fromEntries(rows.map((r) => [r.member.id, r]));
+
+  it('a member with nothing recorded continues on the plan they have', () => {
+    const rows = nextMonthPlans(world(() => {}), T);
+    expect(rows.length).toBeGreaterThan(0);
+    for (const r of rows) expect(r).toMatchObject({ status: 'continues', planNow: 'flex', planNext: 'flex' });
+  });
+  it('an upgrade recorded for the 1st is a plan change to Gold', () => {
+    const s = world((ms) => { ms.m1.plans.push({ from: '2026-11-01', plan: 'gold', by: 'staff:s1' }); });
+    expect(by(nextMonthPlans(s, T)).m1).toMatchObject({ status: 'plan', planNow: 'flex', planNext: 'gold' });
+    expect(by(nextMonthPlans(s, T)).m2.status).toBe('continues');
+  });
+  it('leave starting the 1st shows as leave, on the plan they keep', () => {
+    const s = world((ms) => { ms.m1.memberships[0].leaves = [{ month: '2026-11', by: 'staff:s1', at: '2026-10-05T10:00' }]; });
+    expect(by(nextMonthPlans(s, T)).m1).toMatchObject({ status: 'leave', planNow: 'flex', planNext: 'flex' });
+  });
+  it('a stop this month is listed as a stop, never as continues', () => {
+    const s = world((ms) => { ms.m1.memberships[0].lastDay = '2026-10-31'; });
+    expect(by(nextMonthPlans(s, T)).m1).toMatchObject({ status: 'stop', planNow: 'flex', planNext: null });
+    // also when the last day is today, and when it falls early in next month
+    expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = T; }), T)).m1.status).toBe('stop');
+    expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = '2026-11-10'; }), T)).m1.status).toBe('stop');
+    // a last day on the final day of next month: still in all of November, so the plan on the 1st stays, with the date
+    expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = '2026-11-30'; }), T)).m1).toMatchObject({ status: 'stop', planNext: 'flex', lastDay: '2026-11-30' });
+    expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = '2026-11-15'; }), T)).m1).toMatchObject({ status: 'stop', planNext: 'flex', lastDay: '2026-11-15' });
+    // a last day further out than next month does not touch it
+    expect(by(nextMonthPlans(world((ms) => { ms.m1.memberships[0].lastDay = '2026-12-31'; }), T)).m1.status).toBe('continues');
+  });
+  it('a member who has already ended, or is waiting for approval, is not listed', () => {
+    const s = world((ms) => {
+      ms.m1.memberships[0].lastDay = '2026-10-10';
+      ms.m2.review = { status: 'pending' } as never;
+    });
+    const ids = nextMonthPlans(s, T).map((r) => r.member.id);
+    expect(ids).not.toContain('m1');
+    expect(ids).not.toContain('m2');
+    expect(ids).toContain('m10');
+  });
+  it('a new member whose plan starts on the 1st continues with that plan', () => {
+    const s = world((ms) => {
+      ms.m1.memberships = [{ start: '2026-11-01' }];
+      ms.m1.plans = [{ from: '2026-11-01', plan: 'gold', by: 'staff:s1' }];
+    });
+    expect(by(nextMonthPlans(s, T)).m1).toMatchObject({ status: 'continues', planNow: 'gold', planNext: 'gold' });
+  });
+  it('a member who starts after the 1st is not listed; the list is sorted by display name', () => {
+    const s = world((ms) => { ms.m1.memberships = [{ start: '2026-11-15' }]; });
+    const rows = nextMonthPlans(s, T);
+    expect(rows.map((r) => r.member.id)).not.toContain('m1');
+    // the same order as the Members page: first and last name, not the title (Oma/Opa do not group together)
+    const keys = rows.map((r) => r.member.firstName + r.member.lastName);
+    expect(keys).toEqual([...keys].sort((a, b) => (a < b ? -1 : a > b ? 1 : 0)));
   });
 });

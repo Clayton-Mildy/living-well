@@ -36,6 +36,8 @@ export const insights: Same<typeof EN> = {
   fewer: 'Sepi', more: 'Ramai',
   arrivals: 'Kedatangan per jam',
   arrivalsTip: '{hour} · {n} kedatangan ({pct}%)',
+  departures: 'Kepulangan per jam',
+  departuresTip: '{hour} · {n} kepulangan ({pct}%)',
   weekdays: 'Rata-rata per hari',
   weekdayTip: '{day} · rata-rata {n} anggota',
   // by plan
@@ -53,6 +55,7 @@ export const insights: Same<typeof EN> = {
   kPerWeek: 'Per anggota / minggu',
   kAttend: 'Kehadiran',
   avgArrival: 'Rata-rata datang',
+  avgDeparture: 'Rata-rata pulang',
   avgStay: 'Rata-rata lama tinggal',
   pattern: 'Hari kedatangan',
   patternTip: '{day} · {n} kunjungan ({pct}%)',
@@ -77,12 +80,13 @@ export const insights: Same<typeof EN> = {
   monthly: 'Kunjungan per bulan',
   monthlyTip: '{month} · {n} kunjungan',
   usual: 'Hari biasa',
-  arrivalTrend: 'Jam kedatangan',
+  arrivalTrend: 'Jam datang dan pulang',
   arrivalSeries: 'Kedatangan',
+  departureSeries: 'Kepulangan',
   recent: '10 kunjungan terakhir',
   noCheckOut: 'tanpa check-out',
   // Kuota Flex (di bawah Flex, Per paket)
-  fQuota: 'Kuota Flex',
+  fQuota: 'Kuota {plan}',
   fUsedAll: 'Kuota habis',
   fNotAll: 'Kuota tidak habis',
   fMembers: 'Anggota',
@@ -103,7 +107,7 @@ export const insights: Same<typeof EN> = {
   fRunningOne: '1 anggota masih punya sisa kunjungan bulan ini: belum dihitung',
   fNoneUsedAll: 'Tidak ada yang menghabiskan kuota',
   fNoneNotAll: 'Tidak ada kunjungan yang tersisa',
-  fNoMonths: 'Tidak ada anggota Flex di bulan-bulan ini',
+  fNoMonths: 'Tidak ada anggota {plan} di bulan-bulan ini',
   // By plan: all plans or one
   planView: 'Paket yang dilihat', allPlans: 'Semua paket',
   // KC round 9: tab Keanggotaan (anggota masuk dan keluar, per paket)

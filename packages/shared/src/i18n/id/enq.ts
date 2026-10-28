@@ -25,7 +25,7 @@ export const enq: Same<typeof EN> = {
 
   // ----- dialog calon -----
   newEyebrow: 'Calon baru', editEyebrow: 'Ubah data calon', fSenior: 'Untuk siapa?', fSeniorName: 'Nama', fContact: 'Siapa yang bertanya?', fContactName: 'Narahubung',
-  fRelation: 'Hubungan', fSource: 'Dari mana mereka tahu tentang kami?', fNotes: 'Catatan', addLead: 'Tambah calon', leadCreated: 'Calon ditambahkan: {name}.', leadSaved: 'Data calon tersimpan.',
+  fRelation: 'Hubungan', fSource: 'Dari mana mereka tahu tentang kami?', sourceOther: 'Dari mana?', fNotes: 'Catatan', addLead: 'Tambah calon', leadCreated: 'Calon ditambahkan: {name}.', leadSaved: 'Data calon tersimpan.',
 
   // ----- kunjungan dan percobaan -----
   visitTitle: 'Jadwalkan kunjungan', visitChange: 'Ubah kunjungan', trialTitle: 'Jadwalkan hari percobaan', trialChange: 'Ubah hari percobaan',
@@ -57,7 +57,7 @@ export const enq: Same<typeof EN> = {
   'feed.leadAdded': 'Calon baru · {name}', 'feed.moved_new': '{name} dikembalikan ke Baru', 'feed.moved_visit': '{name} dipindahkan ke Kunjungan', 'feed.moved_trial': '{name} dipindahkan ke Percobaan terjadwal',
   'feed.visitBooked': 'Kunjungan dijadwalkan · {name} · {date} {time}', 'feed.trialBooked': 'Percobaan dijadwalkan · {name} · {date}', 'feed.lost': '{name} ditandai batal', 'feed.reopened': '{name} dibuka kembali',
   'feed.archived': '{name} diarsipkan',
-  'feed.joined': '{name} bergabung sebagai anggota ({plan}), mulai {date}',
+  'feed.joined': '{name} bergabung sebagai anggota ({planId}), mulai {date}',
   'feed.joinPending': '{name} ditambahkan dari data calon dan menunggu persetujuan manajemen', 'feed.joinRejected': 'Pendaftaran {name} tidak disetujui; calon kembali ke papan',
 
   // ----- notifikasi -----

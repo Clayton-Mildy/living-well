@@ -3,6 +3,7 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
+import { produce } from 'immer';
 import { buildSeed, projectForFamily } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
@@ -136,6 +137,29 @@ describe('family health', () => {
     expect(q('pf-plan')?.textContent).toContain('Rp');
     expect(q('fam-back')?.textContent).toContain('Health');
     expect(q('pf-pending')).toBeNull();
+  });
+  it('Profile family section: photos on the contacts, and the nanny in a block of her own after the family list', async () => {
+    open('f1');
+    const v = useReplica.getState().view!;
+    const view = produce(v, (d) => { d.familyContacts.f2.photoMediaId = 'md_contactphoto01'; d.members.m1.nanny = { name: 'Mbak Sari', phone: '+6281211112222', photoMediaId: 'md_carerphoto0001' }; });
+    useReplica.setState({ confirmed: view, view });
+    await show(<FamilyProfile />, '/profile?member=m1');
+    const nanny = q('pf-nanny');
+    expect(nanny).toBeTruthy();
+    expect(nanny!.textContent).toContain('Mbak Sari');
+    expect(nanny!.textContent).toContain('Nanny');
+    expect(q('pf-family')!.contains(nanny)).toBe(false); // a separate block, not a row of the family list
+    expect(nanny!.innerHTML).toContain('md_carerphoto0001');
+    expect(nanny!.querySelector('a[href="tel:+6281211112222"]')).toBeTruthy();
+    expect(q('pf-family')!.querySelector('[data-family-id="f2"]')!.innerHTML).toContain('md_contactphoto01');
+  });
+  it('Profile family section: no carer, no carer row', async () => {
+    open('f1');
+    const v = useReplica.getState().view!;
+    const view = produce(v, (d) => { d.members.m1.nanny = null; });
+    useReplica.setState({ confirmed: view, view });
+    await show(<FamilyProfile />, '/profile?member=m1');
+    expect(q('pf-nanny')).toBeNull();
   });
   it('Profile on a laptop: the sections are a vertical list on the left with Edit under it (one Edit, one list, same eight labels)', async () => {
     open('f1');

@@ -3,7 +3,7 @@ import type { Same } from '../ns';
 import type { cal as EN } from '../en/cal';
 export const cal: Same<typeof EN> = {
   // calendar
-  openHours: 'Buka Senin sampai Jumat, dan akhir pekan bila ada program · {open}–{close}', weekendCol: 'Akhir pekan', titleFamily: 'Kalender klub', view: 'Tampilan', vList: 'Daftar', vMonth: 'Kalender', vYear: 'Tahun', prevYear: 'Tahun sebelumnya', nextYear: 'Tahun berikutnya', showMore: 'Tampilkan hari lainnya',
+  openHours: 'Buka Senin sampai Jumat, dan akhir pekan bila ada program · {open}–{close}', weekendCol: 'Akhir pekan', titleFamily: 'Kalender klub', view: 'Tampilan', vList: 'Daftar', vMonth: 'Kalender', vYear: 'Tahun', closedYear: 'Tutup atau di luar klub {y}', nDays: '{n} hari', prevYear: 'Tahun sebelumnya', nextYear: 'Tahun berikutnya', showMore: 'Tampilkan hari lainnya',
   key: 'Keterangan', tapDay: 'Ketuk tanggal untuk melihat acaranya.', openWeek: 'Buka minggu ini di jadwal',
   publishShort: 'Publikasikan',
   prevMonth: 'Bulan sebelumnya', nextMonth: 'Bulan berikutnya', thisMonth: 'Bulan ini', holiday: 'Libur', closedShort: 'Tutup', allDay: 'Seharian',
@@ -95,7 +95,8 @@ export const cal: Same<typeof EN> = {
   famClosureLabel: 'Penutupan mendatang', famClosedOn: 'Klub tutup pada {d}', famClosedRange: 'Klub tutup {a} sampai {b}',
   // round 14 (B1): tim aktivitas menyusun program; setiap perubahan menunggu Ega (manajemen)
   sendForApproval: 'Kirim ke Ega', sendTitle: 'Kirim jadwal mingguan ke Ega', sentToEga: 'Terkirim ke Ega.', waitingEga: 'Menunggu Ega', returnedNote: 'Dikembalikan: {note}',
-  badgeWaiting: 'Menunggu', badgeReturned: 'Dikembalikan', dayUnchanged: 'Tidak ada yang dikirim: hari ini sama seperti yang diterbitkan.', reviewBtn: 'Tinjau',
+  badgeReturned: 'Dikembalikan', dayUnchanged: 'Tidak ada yang dikirim: hari ini sama seperti yang diterbitkan.',
+  proposed: 'Usulan', viewProposed: 'Lihat usulan minggu', viewCurrent: 'Lihat minggu sekarang',
   'notif.programmeAsked': 'Tim aktivitas mengirim jadwal mingguan mulai {date} untuk Anda setujui.', 'notif.dayAsked': 'Tim aktivitas mengirim perubahan program pada {date} untuk Anda setujui.',
   'notif.dayUpdated': 'Program aktivitas pada {date} berubah.', 'feed.dayUpdated': 'Program diubah untuk {date}',
 };

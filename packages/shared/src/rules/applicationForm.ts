@@ -7,6 +7,7 @@ import { translate } from '../i18n';
 import { memberAge, planOn, primaryContact, linksOfMember } from './core';
 import { feeOf, priceOn } from './billing';
 import { billingContactOf } from './family';
+import { planLabel, planPrice } from './plans';
 import { genderOf, isPhone, plainName, type FieldIssue, type NewMemberInput } from './members';
 
 export const MARITALS = ['single', 'married', 'widowed', 'divorced'] as const;
@@ -70,6 +71,8 @@ export function validateRegistration(r: MemberRegistration | undefined): FieldIs
 // ---------- the data the form is printed from ----------
 /** Everything the four pages need, as plain data: built from a saved member or from a new member that is still being typed. */
 export interface ApplicationFormData {
+  /** the plan's name as printed (Flex / Gold / a catalogue plan); a form saved before round 15 has none and prints Flex or Gold from `plan` */
+  planName?: string;
   name: string;
   nickname: string;
   dob: ISODate | null;
@@ -129,7 +132,7 @@ export function applicationDataOf(s: ClubState, memberId: string, today: ISODate
   return {
     name: plainName(m), nickname: r.nickname || '', dob: m.dob, age: memberAge(m, today), marital: r.marital ?? null, gender: m.gender,
     address: m.address || '', rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',
-    plan, registrationFee: price.registration ?? null, monthlyFee: plan === 'gold' ? price.gold : price.flex, dementiaFee: feeOf(price, 'dementia'),
+    plan, planName: planLabel(s, plan, 'id'), registrationFee: price.registration ?? null, monthlyFee: planPrice(price, plan), dementiaFee: feeOf(price, 'dementia'),
     conditions: m.health.conditions, cognitive: cognitiveText(m.health.cognitive.summary), dementiaNote: r.dementiaNote || '', dementia: r.dementia ?? null,
     commDifficulty: r.commDifficulty ?? null, selfCare: r.selfCare ?? null, bathroomHelp: r.bathroomHelp ?? null,
     carer: m.nanny ? m.nanny.name : null,
@@ -156,7 +159,7 @@ export function applicationDataFromInput(s: ClubState, input: ApplicationInput, 
   return {
     name: input.name.trim(), nickname: r.nickname || '', dob: input.dob || null, age: input.dob ? ageOn(input.dob, today) : null, marital: r.marital ?? null, gender: female === null ? null : female ? 'f' : 'm',
     address: input.address.trim(), rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',
-    plan: input.plan, registrationFee: price.registration ?? null, monthlyFee: input.plan === 'gold' ? price.gold : price.flex, dementiaFee: feeOf(price, 'dementia'),
+    plan: input.plan, planName: planLabel(s, input.plan, 'id'), registrationFee: price.registration ?? null, monthlyFee: planPrice(price, input.plan), dementiaFee: feeOf(price, 'dementia'),
     conditions: input.health.conditions, cognitive: '', dementiaNote: r.dementiaNote || '', dementia: r.dementia ?? null,
     commDifficulty: r.commDifficulty ?? null, selfCare: r.selfCare ?? null, bathroomHelp: r.bathroomHelp ?? null,
     carer: input.nanny ? input.nanny.name : null,
@@ -198,7 +201,7 @@ export interface Page1Values {
 export function page1Values(d: ApplicationFormData): Page1Values {
   const [address1, address2] = splitAddress(d.address);
   const allergies = [...d.foodAllergies, ...d.drugAllergies];
-  const planName = d.plan === 'gold' ? 'Gold' : 'Flex';
+  const planName = d.planName ?? (d.plan === 'gold' ? 'Gold' : 'Flex');
   return {
     name: d.name, nickname: d.nickname,
     dobAge: d.dob ? `${idDate(d.dob)}${d.age != null ? ` (${d.age} th)` : ''}` : d.age != null ? `${d.age} th` : '',

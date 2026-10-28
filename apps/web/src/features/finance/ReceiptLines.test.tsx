@@ -112,9 +112,9 @@ describe('Receipts: the items of a receipt', () => {
 
 describe('Directory: supplier categories', () => {
   const categorise = (s: ClubState) => { Object.assign(s.directory.d6, { category: 'medical' }); Object.assign(s.directory.d7, { category: 'groceries' }); delete s.directory.d9.category; }; // Bersih Prima as a supplier with no category
-  const filter = () => document.querySelector<HTMLElement>('[role="combobox"][aria-label="Category"]');
-  /** The form's Category select: the combobox whose label reads Category. */
-  const combo = (within: Element) => Array.from(within.querySelectorAll('[role="combobox"]')).find((c) => document.getElementById(c.getAttribute('aria-labelledby') ?? '')?.textContent === 'Category');
+  const filter = () => document.querySelector<HTMLElement>('[role="combobox"][aria-label="Spending category"]');
+  /** The form's Spending category select: the combobox whose label reads Spending category (the Category select is the directory category, round 15). */
+  const combo = (within: Element) => Array.from(within.querySelectorAll('[role="combobox"]')).find((c) => document.getElementById(c.getAttribute('aria-labelledby') ?? '')?.textContent === 'Spending category');
   const pick = async (label: string) => {
     await click(filter());
     await click(Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find((o) => o.getAttribute('aria-label') === label));

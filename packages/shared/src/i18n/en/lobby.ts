@@ -25,12 +25,12 @@ export const lobby = {
   pagerAria: 'Pages of {list}', tileIn: 'Open the check-out list', tileGone: 'See who has gone home',
   goneHint: 'Members who checked out today. Open one to undo a check-out.', countOf: '{n} of {total}',
   // visits (Flex: 10 visits a month; Gold: unlimited)
-  visitOf: 'Flex · visit {n} of {q} this month', goldU: 'Gold · unlimited days', extraVisit: 'Visit {n} of {q} this month: an extra day, {p} on next month’s invoice.',
+  visitOf: '{plan} · visit {n} of {q} this month', goldU: '{plan} · unlimited days', extraVisit: 'Visit {n} of {q} this month: an extra day, {p} on next month’s invoice.',
   extraToast: 'This is an extra day: {p} on next month’s invoice.',
   // drawer
   careInstructions: 'Care instructions', noNotes: 'No notes yet.', callAria: 'Call {name}', undoIn: 'Undo check-in', undoOut: 'Undo check-out', diabetic: 'Diabetic',
   drugAllergy: '{d} allergy', medLunch: '{name} {dose} · lunch', notInToday: 'Not checked in today', inOut: 'Arrived {a} · left {l}',
-  nanny: 'Carer (suster)', nannyNote: 'With {name}, {p} carer', withNanny: 'with {n}',
+  nanny: 'Carer (suster)', nannyNote: 'With {name}, {p} carer', withNanny: 'with {n}', nannyLine: 'Nanny · {n}',
   // toasts
   tUndoIn: '{n}’s check-in was undone.', tUndoOut: '{n}’s check-out was undone.',
   // also today

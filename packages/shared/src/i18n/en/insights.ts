@@ -34,6 +34,8 @@ export const insights = {
   fewer: 'Fewer', more: 'More',
   arrivals: 'Arrivals by hour',
   arrivalsTip: '{hour} · {n} arrivals ({pct}%)',
+  departures: 'Departures by hour',
+  departuresTip: '{hour} · {n} departures ({pct}%)',
   weekdays: 'Average per weekday',
   weekdayTip: '{day} · {n} members on average',
   // by plan
@@ -51,6 +53,7 @@ export const insights = {
   kPerWeek: 'Per member / week',
   kAttend: 'Attendance',
   avgArrival: 'Average arrival',
+  avgDeparture: 'Avg departure',
   avgStay: 'Average stay',
   pattern: 'Days they come',
   patternTip: '{day} · {n} visits ({pct}%)',
@@ -75,12 +78,13 @@ export const insights = {
   monthly: 'Visits per month',
   monthlyTip: '{month} · {n} visits',
   usual: 'Usual days',
-  arrivalTrend: 'Arrival time',
+  arrivalTrend: 'Arrival and departure time',
   arrivalSeries: 'Arrival',
+  departureSeries: 'Departure',
   recent: 'Last 10 visits',
   noCheckOut: 'no check-out',
   // Flex quota (under Flex, By plan)
-  fQuota: 'Flex quota',
+  fQuota: '{plan} quota',
   fUsedAll: 'Used it all',
   fNotAll: "Didn't use it all",
   fMembers: 'Members',
@@ -101,7 +105,7 @@ export const insights = {
   fRunningOne: '1 member still has visits left this month: not counted yet',
   fNoneUsedAll: 'Nobody used the whole quota',
   fNoneNotAll: 'Nobody left visits unused',
-  fNoMonths: 'No Flex members in these months',
+  fNoMonths: 'No {plan} members in these months',
   // By plan: all plans or one
   planView: 'Which plans', allPlans: 'All plans',
   // KC round 9: the Membership tab (members in and out, by plan)

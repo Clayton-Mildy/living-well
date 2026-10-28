@@ -10,13 +10,26 @@ import { mediaUrl, uploadMedia } from '../../lib/media';
 import { say } from '../../store/ui';
 
 /** A carer's round picture (the initials when there is none); a tap opens it full size. */
-export function NannyAvatar({ nanny, size }: { nanny: NonNullable<Member['nanny']>; size: number }) {
+export function NannyAvatar({ nanny, size, plain }: { nanny: NonNullable<Member['nanny']>; size: number; /** no tap-to-open (inside a button, such as a list row) */ plain?: boolean }) {
   const t = useT();
   const src = nanny.photoMediaId ? mediaUrl(nanny.photoMediaId) : undefined;
   return (
-    <ImageOpen src={src} label={`${t('common.openFull')} · ${nanny.name}`} style={{ borderRadius: 999 }}>
+    <ImageOpen src={src} disabled={plain} label={`${t('common.openFull')} · ${nanny.name}`} style={{ borderRadius: 999 }}>
       <Avatar name={nanny.name} size={size} src={src} />
     </ImageOpen>
+  );
+}
+
+/** round 15 follow-up: the carer on a list row, right after the member's name on the name line: "(face) Nanny · Mbak Sari" in the muted 12 px style. Plain, because the whole row is already a button.
+ * It shrinks (and truncates) long before the member's name does. */
+/** The member's nanny on a row's name line. `phone`: the chip sits at the right of the line and drops to its own line (still on the right) when the name is long, so neither is cut to "N…". */
+export function NannyLine({ nanny, phone }: { nanny: NonNullable<Member['nanny']>; phone?: boolean }) {
+  const t = useT();
+  return (
+    <span data-testid="row-nanny" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flex: phone ? '0 1 auto' : '0 100 auto', marginLeft: phone ? 'auto' : undefined, maxWidth: '100%', minWidth: 0, fontSize: 12, lineHeight: '18px', fontWeight: 400, color: '#6B6259' }}>
+      <span style={{ display: 'inline-flex', flex: 'none' }}><NannyAvatar nanny={nanny} size={22} plain /></span>
+      <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('lobby.nannyLine', { n: nanny.name })}</span>
+    </span>
   );
 }
 

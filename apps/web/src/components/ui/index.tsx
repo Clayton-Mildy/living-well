@@ -500,6 +500,7 @@ export { usePaged, Pager, type Paged } from './Pager';
 export { CameraCapture, type CaptureInfo } from './CameraCapture';
 export { PhotoImg, PhotoThumbs } from './PhotoImg';
 export { ImageLightbox, ImageOpen } from './ImageLightbox';
+export { DishThumb } from './DishThumb';
 export { SignaturePad } from './SignaturePad';
 export { useBackClose } from './useBackClose';
 export { uiZoom } from './field';

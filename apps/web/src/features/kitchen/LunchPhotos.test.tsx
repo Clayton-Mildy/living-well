@@ -60,6 +60,25 @@ describe.each([['lunch', 'lunch-photo'], ['tea', 'tea-photo']] as const)('%s pho
   });
 });
 
+describe('compact strip (the Lunch round) and the Menu page gallery (round 15)', () => {
+  it('compact: 64 px tile, the X hit area is 36 px so the centre of the tile still opens the picture', async () => {
+    const { date } = openClub();
+    await show(<LunchPhotos date={date} compact />);
+    const tile = document.querySelector<HTMLElement>('[data-testid=lunch-photo]')!;
+    expect(tile.style.width).toBe('64px');
+    expect(tile.querySelector<HTMLElement>('button[title="Remove photo"]')!.style.width).toBe('36px');
+  });
+  it('not compact: the larger grid keeps its time chip and readable state', async () => {
+    const { date } = openClub();
+    await show(<LunchPhotos date={date} />);
+    const tile = document.querySelector<HTMLElement>('[data-testid=lunch-photo]')!;
+    expect(tile.style.width).toBe('');
+    expect(tile.querySelector<HTMLElement>('button[title="Remove photo"]')!.style.width).toBe('44px');
+    expect(tile.textContent).toMatch(/\d\d:\d\d/);
+    expect(tile.textContent).toMatch(/Waiting for approval|Shown to families|Hidden/);
+  });
+});
+
 describe('read-only gallery (view only)', () => {
   it('still opens the picture', async () => {
     const { date } = openClub();

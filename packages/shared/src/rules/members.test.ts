@@ -5,7 +5,7 @@ import { addMonths } from '../util';
 import {
   DOC_TYPES, billedExtraDates, findDuplicates, docIdFor, endingOn, faceConsent, faceReady, finalInvoiceFor, finalInvoiceLines, firstOfNextMonth, formatVa, genderOf, isHM, isISO, isPhone, isNewMember, lastContactId, lastLinkId, lastMemberId,
   matchesQuery, memberStatus, nextContactId, nextLinkId, nextMemberId, nextMonday, openBalance, plainName, splitName, tabForSection, unbilledExtraMonths, validateNewMember,
-  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows, filterCounts,
+  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows, filterCounts, activePlans,
 } from './members';
 import type { MemberRow } from './members';
 
@@ -249,6 +249,15 @@ describe('filterCounts split', () => {
     expect(c.split.active).toEqual({ flex: 2, gold: 3 });
     expect(c.split.in).toEqual({ flex: 1, gold: 2 });
     expect(c.in).toBe(c.split.in.flex + c.split.in.gold);
+  });
+});
+
+describe('activePlans', () => {
+  it('lists Flex, Gold, then the active catalogue plans; a retired plan leaves the list', () => {
+    expect(activePlans(seed()).map((p) => p.id)).toEqual(['flex', 'gold']);
+    const s = seed();
+    s.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+    expect(activePlans(s).map((p) => p.id)).toEqual(['flex', 'gold', 'plan_1']);
   });
 });
 

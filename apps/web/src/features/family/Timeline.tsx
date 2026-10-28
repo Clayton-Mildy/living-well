@@ -7,10 +7,10 @@
 // downwards with the step's pictures as big cards, and a card opens the full-screen viewer. Lunch has its own "Tell the kitchen about lunch" line.
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDays, firstOfRole, lunchSafety, displayName, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
+import { addDays, firstOfRole, lunchPictureFor, lunchSafety, displayName, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
 import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, storyNowMin, type DayStory, type StorySession, type TlItem } from '@cp/shared/rules/family';
 import { listItems, listKind } from '@cp/shared/rules/famToday';
-import { Avatar, Icon, PhotoImg, RailDot } from '../../components/ui';
+import { Avatar, DishThumb, Icon, PhotoImg, RailDot } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { mediaUrl } from '../../lib/media';
 import type { TFn } from '../../lib/i18n';
@@ -138,6 +138,10 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
           const groups = new Map<string, Member[]>();
           for (const m of members) { const k = dishNamesOf(s, servedLunch(s, m, date)).join(', '); groups.set(k, [...(groups.get(k) || []), m]); }
           for (const [dishes, ms] of groups) if (dishes) lines.push(line(groups.size > 1 ? `${ms.map(displayName).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`, 'dish-' + dishes));
+          // round 15: the day's picture, the dish photo until the kitchen's own lunch photo is approved (a photo that waits for approval never replaces it here)
+          // the picture of what each parent is actually served (an alternative or the soft menu never shows the main dish's picture); parents with the same picture share it
+          const pics = members.map((m) => lunchPictureFor(s, m, date, 'family')).filter((p): p is NonNullable<typeof p> => !!p).filter((p, i, all) => all.findIndex((x) => x.mediaId === p.mediaId) === i);
+          if (pics.length && lines.length) lines.push(<span key="pic" style={{ display: 'flex', gap: 6, marginTop: 6 }}>{pics.map((pic) => <DishThumb key={pic.mediaId} mediaId={pic.mediaId} label={t('kitchen.dishPhoto')} size={56} source={pic.source} testId="lunch-picture" />)}</span>);
         }
         if (isToday || ahead) { // the allergy line also for tomorrow's lunch
           for (const m of members) {
@@ -165,7 +169,8 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         if (it.att?.checkOut) {
           const dep = it.departure;
           const bp = dep ? bpLine(t, dep) : '';
-          return { time: it.time, title: t('family.tHome'), detail: t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
+          const who = it.memberId ? members.find((x) => x.id === it.memberId) : undefined; // Both mode: one home time per parent
+          return { time: it.time, title: t('family.tHome'), detail: (who ? `${displayName(who)} · ` : '') + t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
         }
         return { time: it.time, title: t('family.tHome'), detail: m ? t('family.tHomeD', { s: pron(m).s }) : '' };
       }
@@ -189,7 +194,9 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
       <ol style={{ listStyle: 'none', margin: 0, padding: '0 4px', display: 'flex', flexDirection: 'column' }}>
         {items.map((it, i) => {
           const v = view(it);
-          const st = kind === 'wasOn' || kind === 'plan' ? 'up' : it.state; // a day they did not come, or the day ahead: the programme on a light track (nothing done yet)
+          // round 15: what is over is drawn passed (the brown line) whether or not the member joined or came; the day ahead is on a light track (nothing done yet).
+          // Today follows the item's own state, which is read at the clock (timelineOf: a session is 'done' once it has ended).
+          const st = ahead ? 'up' : date < today ? 'done' : it.state;
           const isNow = kind === 'next' && it.state === 'now';
           const n = v.photos?.length ?? 0;
           const last = i === items.length - 1;
