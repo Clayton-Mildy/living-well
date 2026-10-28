@@ -26,4 +26,9 @@ describe('nav groups', () => {
       expect(screenFor(role, 'spending')).toBeNull();
     }
   });
+  it('management has the Lunch round in the Kitchen group (KC 28 Oct)', () => {
+    const kitchen = NAVG.mgmt.find((g) => g[0] === 'nav.g_kitchen')![1].map((x) => x.key);
+    expect(kitchen).toEqual(['menu', 'lunch', 'feedback', 'stock']);
+    expect(screenFor('mgmt', 'lunch')).toBe('klunch');
+  });
 });

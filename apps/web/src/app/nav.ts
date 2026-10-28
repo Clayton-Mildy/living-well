@@ -23,7 +23,7 @@ export const NAVG: Record<string, [string | null, NavItem[]][]> = {
     [null, [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('reviews', 'reviews', 'fact_check'), n('tasks', 'tasks', 'checklist'), n('report', 'report', 'summarize'), n('monthReport', 'monthReport', 'query_stats')]], // round 7: the daily report (management); round 12: the month report
     ['nav.g_front', [n('enquiries', 'enquiries', 'contact_phone'), n('renewals', 'renewals', 'event_repeat')]],
     ['nav.g_care', [n('hchecks', 'health', 'monitor_heart'), n('readings', 'readings', 'monitoring'), n('log', 'log', 'edit_note'), n('camera', 'camera', 'photo_camera')]], // the photo library is the Camera's Library tab
-    ['nav.g_kitchen', [n('menu', 'menu', 'restaurant'), n('feedback', 'feedback', 'forum'), n('stock', 'stock', 'inventory_2')]],
+    ['nav.g_kitchen', [n('menu', 'menu', 'restaurant'), n('lunch', 'lunch', 'lunch_dining'), n('feedback', 'feedback', 'forum'), n('stock', 'stock', 'inventory_2')]], // KC 28 Oct: management has the Lunch round too
     ['nav.g_finance', [n('billing', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart')]],
     ['nav.g_club', [n('calendar', 'calShort', 'calendar_month'), n('guests', 'guests', 'co_present'), n('insights', 'insights', 'insights'), n('broadcast', 'broadcast', 'campaign'), n('venue', 'venue', 'storefront'), n('hr', 'people', 'badge'), n('directory', 'directory', 'contacts'), n('surveys', 'surveys', 'rate_review'), n('plans', 'plans', 'sell')]],
   ],
@@ -63,7 +63,7 @@ const EXTRA: Partial<Record<Role, string[]>> = {
   kitchen: ['calendar', 'contacts', 'drafts'], // KC round 7: the quick camera's Drafts (activity and management have them in the Camera)
   finance: ['calendar', 'contacts', 'renewals'], // round 14: renewals is link-only, for the Unpaid list (the Month report, the duty)
   activity: ['photos', 'contacts', 'drafts', 'celebrations'],
-  mgmt: ['photos', 'contacts', 'drafts', 'lunch', 'celebrations'], // photos: old links to the standalone library; lunch: the kitchen duty's link (round 14)
+  mgmt: ['photos', 'contacts', 'drafts', 'celebrations'], // photos: old links to the standalone library
 };
 export const allowedKeys = (role: Role) => new Set([...NAVS[role].map((x) => x.key), ...(EXTRA[role] || [])]);
 
