@@ -6,6 +6,7 @@ import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { photoFill } from '../../lib/media';
 import { useUi } from '../../store/ui';
+import { ImageOpen } from './ImageLightbox';
 
 // Round 8c: every role speaks the family palette — white page, soft grey (var(--fill, #F4F4F5)) fills with no border or shadow, #E2E2E6 hairlines, pills for chips,
 // var(--press, #EEEEF0) for pressed / tracks. A grey block carries className "cp-grey" and the controls on it ("cp-fill") turn white (global.css).
@@ -134,12 +135,17 @@ export const CountDot = ({ n, style }: { n: number; style?: CSSProperties }) =>
   n > 0 ? <span style={{ minWidth: 22, height: 22, padding: '0 7px', borderRadius: 999, background: '#2B231C', color: '#FFFFFF', fontSize: 12, fontWeight: 600, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', ...style }}>{n > 99 ? '99+' : n}</span> : null;
 
 // ---------- avatar & card ----------
-export function Avatar({ name, member, tone, size = 48, ring, src }: { name: string; /** a member: initials come from the first and last name, never the title (any title, "Tante" included) */ member?: Pick<Member, 'title' | 'firstName' | 'lastName'> | null; tone?: number; size?: number; ring?: boolean; /** a photo (member profile picture) */ src?: string }) {
+export function Avatar({ name, member, tone, size = 48, ring, src, open = true }: { name: string; /** a member: initials come from the first and last name, never the title (any title, "Tante" included) */ member?: Pick<Member, 'title' | 'firstName' | 'lastName'> | null; tone?: number; size?: number; ring?: boolean; /** a photo (member profile picture) */ src?: string;
+  /** KC 28 Oct: a photo opens full size on tap, even inside a row (the rest of the row keeps its own tap); false where the caller already opens it */
+  open?: boolean }) {
+  const t = useT();
   const [bg, fg] = TONES[(tone ?? toneFor(name)) % 5];
   return (
+    <ImageOpen nested src={open ? src : undefined} label={`${t('common.openFull')} · ${name}`} style={{ borderRadius: 999 }}>
     <div aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(src, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.36), fontWeight: 500, flex: 'none', boxShadow: ring ? 'inset 0 0 0 3px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' : undefined }}>
       {src ? null : initials(member ?? name)}
     </div>
+    </ImageOpen>
   );
 }
 /** Round 8c, the family card: a soft grey (var(--fill, #F4F4F5)) block, 20px radius, no border and no shadow (`shadow` is kept for old callers and does nothing). */
@@ -499,7 +505,7 @@ export { TimeField } from './TimeField';
 export { usePaged, Pager, type Paged } from './Pager';
 export { CameraCapture, type CaptureInfo } from './CameraCapture';
 export { PhotoImg, PhotoThumbs } from './PhotoImg';
-export { ImageLightbox, ImageOpen } from './ImageLightbox';
+export { ImageLightbox, ImageOpen, PictureOpen } from './ImageLightbox';
 export { DishThumb } from './DishThumb';
 export { SignaturePad } from './SignaturePad';
 export { useBackClose } from './useBackClose';

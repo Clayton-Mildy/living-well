@@ -4,7 +4,8 @@
 import type { ReactNode } from 'react';
 import { listName } from '@cp/shared';
 import { ownPicture } from '@cp/shared/rules/famPhotos';
-import { PhotoImg } from '../../../components/ui';
+import { PhotoImg, PictureOpen } from '../../../components/ui';
+import { mediaUrl } from '../../../lib/media';
 import { useDevice } from '../../../hooks/useDevice';
 import { GRADIENT, PANEL_OVERLAP, SCRIM } from '../StoryHero';
 import { MemberFace } from '../health/bits';
@@ -24,6 +25,8 @@ export function ProfileCover({ p, top }: { p: PCtx; /** the floating ‹ back an
         height: COVER_H, display: 'flex', flexDirection: 'column', justifyContent: 'space-between', boxSizing: 'border-box' }}>
       {pic ? <span aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: -3 }}><PhotoImg photo={pic} /></span> : null}
       <span aria-hidden="true" style={{ position: 'absolute', inset: 0, zIndex: -2, background: SCRIM }} />
+      {/* KC 28 Oct (every image opens): a tap on the cover, outside its buttons and text, opens the picture full size */}
+      {pic?.mediaId ? <PictureOpen src={mediaUrl(pic.mediaId)} name={listName(m)} round={false}><span data-testid="pf-cover-open" style={{ position: 'absolute', inset: 0, zIndex: -1 }} /></PictureOpen> : null}
       <div style={{ position: 'relative', zIndex: 3, padding: `${isPhone ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : '16px'} 14px 0` }}>{top}</div>
       <div data-testid="pf-head" style={{ position: 'relative', padding: `20px 20px ${PANEL_OVERLAP + 20}px`, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 6 }}>
         {pic ? null : <span style={{ marginBottom: 6 }}><MemberFace m={m} size={72} ring /></span>}

@@ -12,6 +12,7 @@ import { CATALOGUE, linesTotal, simulatedReceipt } from '../../rules/purchasing'
 import { weeklyLimit } from '../../rules/budget';
 import { addDays, weekStart } from '../../util';
 import { unit } from '../history';
+import { notaMediaId } from '../demoMedia';
 
 const SUPPLIER: Record<string, string> = {
   d9: 'Bersih Prima',
@@ -50,7 +51,7 @@ export function seedReceipts(s: ClubState, T: ISODate): void {
   const add = (id: string, date: ISODate, dirId: string, by: string, read: ReturnType<typeof simulatedReceipt>, sectionId: SectionId, amount: number, decided: boolean) => {
     const row: Receipt = {
       id, clubId: s.clubId, createdAt: `${date}T${decided ? '12:00' : '15:10'}`, createdBy: `staff:${by}`,
-      date, supplier: SUPPLIER[dirId], directoryId: dirId, amount, sectionId, fileName: `nota_${ddmm(date)}.jpg`,
+      date, supplier: SUPPLIER[dirId], directoryId: dirId, amount, sectionId, fileName: `nota_${ddmm(date)}.jpg`, mediaId: notaMediaId(id),
       ...(read.source ? { source: read.source } : {}), ...(read.orderNo ? { orderNo: read.orderNo } : {}), lines: read.lines, by,
       ...(decided ? { status: 'approved' as const, xero: 'synced' as const, decidedBy: 'staff:s10' as const, decidedAt: `${date}T16:30` } : { status: 'submitted' as const, xero: 'notSent' as const }),
     };

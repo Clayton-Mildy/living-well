@@ -141,6 +141,7 @@ export const profile = {
   'endReason.movedAway': 'Moved away', 'endReason.careNeeds': 'Care needs changed', 'endReason.careHome': 'Moved to a care home', 'endReason.passedAway': 'Passed away', 'endReason.familyDecision': 'Family decision', 'endReason.unpaid': 'Stopped: invoice unpaid', 'endReason.leaveOverrun': 'Leave ran out',
   logTitle: 'Write the daily log', logDays: 'Day of the log', logWrite: 'Write the log', logEdit: 'Edit the log', logNotYet: 'Not written yet for this day.',
   logNoVisit: '{n} has not been in the club in the last 7 days, so there is no log to write.',
+  nannyPhotoTitle: 'Carer’s photo', nannyPhotoAdd: 'Add photo', nannyPhotoSet: 'New photo for {n}.', nannyPhotoRemoved: 'Photo removed for {n}.', // KC 28 Oct
   photoTitle: 'Profile photo', photoAdd: 'Take or choose a photo', photoChange: 'Change photo', photoRemove: 'Remove photo', photoUploading: 'Uploading…',
   photoSet: 'New profile photo for {n}.', photoRemoved: 'Profile photo removed for {n}.', photoReviewNote: 'Management approves a new profile photo before it shows.',
   'f.photo': 'Profile photo', photoOld: 'Current photo', photoNew: 'New photo',

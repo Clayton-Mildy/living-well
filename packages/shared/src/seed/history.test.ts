@@ -9,7 +9,7 @@ import { existsSync } from 'node:fs';
 import { onLeaveIn } from '../rules/leave';
 import { canSign, signerOf, signingOf } from '../rules/signing';
 import { approvalCounts, pendingItems } from '../rules/approvals';
-import { demoMediaId, demoMediaPath, MEMBER_PORTRAITS, portraitId } from './demoMedia';
+import { demoMediaId, demoMediaPath, MEMBER_PORTRAITS, notaMediaId, portraitId } from './demoMedia';
 import { FACE_FREE } from './r7/drafts';
 import { sessionsOn } from '../rules/kitchen';
 import { dutyById, dutyState } from '../rules/tasks';
@@ -259,7 +259,7 @@ describe('itemised receipts (round 14 p2)', () => {
       expect(r.status).toBe('approved');
       expect(r.lines?.length, r.id).toBeGreaterThan(0);
       expect(r.amount).toBe(r.lines!.reduce((a, l) => a + l.amount, 0));
-      expect(r.mediaId).toBeUndefined();
+      expect(r.mediaId, r.id).toBe(notaMediaId(r.id)); // KC 28 Oct: a nota drawn from the receipt's own data
       expect(r.lines!.every((l) => !('brand' in l) || !!l.brand), r.id).toBe(true);
     }
     for (let k = 0; k < 6; k++) { const m = addMonths(ym(T), -k); expect(hist.some((r) => ym(r.date) === m), m).toBe(true); }

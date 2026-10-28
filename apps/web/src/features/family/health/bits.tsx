@@ -1,9 +1,9 @@
 // Small pieces the family Health tab, Health history and a parent's profile share: a member's face, the member in the URL, the status colours.
 import { useEffect, useMemo, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { initials, type Health, type Member } from '@cp/shared';
+import { initials, memberName, type Health, type Member } from '@cp/shared';
 import { familyMembers } from '@cp/shared/rules/family';
-import { TONES } from '../../../components/ui';
+import { PictureOpen, TONES } from '../../../components/ui';
 import { memberPhoto, photoFill } from '../../../lib/media';
 import { useDevice } from '../../../hooks/useDevice';
 import { Chips, F } from '../kit';
@@ -14,9 +14,11 @@ export function MemberFace({ m, size, ring }: { m: Pick<Member, 'photoTone' | 'p
   const [bg, fg] = TONES[(m.photoTone || 0) % 5];
   const photo = memberPhoto(m);
   return (
+    <PictureOpen src={photo} name={memberName(m)}>
     <span aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(photo, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.36), fontWeight: 500, flex: 'none', boxShadow: ring ? `0 0 0 3px #FFFFFF, 0 0 0 4px ${F.hair}` : undefined }}>
       {photo ? null : initials(m)}
     </span>
+    </PictureOpen>
   );
 }
 

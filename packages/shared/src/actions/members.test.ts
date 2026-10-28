@@ -246,7 +246,7 @@ describe('nanny photo and note (round 14)', () => {
   it('updateDetails stores the nanny photo and note; the seeded note for Lina is there', () => {
     const c = seed();
     expect(c.citra.members.m1.nanny).toMatchObject({ name: 'Mbak Sari', note: 'Agency: Kasih Ibu, Mon–Wed' });
-    expect(c.citra.members.m1.nanny?.photoMediaId).toBeUndefined();
+    expect(c.citra.members.m1.nanny?.photoMediaId).toBe('md_demo_carer-sari'); // KC 28 Oct: the demo carers have stock portraits
     const nanny = { name: 'Mbak Sari', nik: NIK, photoMediaId: 'md_nannyphoto0001', note: 'Agency: Kasih Ibu, Mon–Thu' };
     const r = run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { nanny } }, who(c, 's9'));
     expect(r.state.members.m1.nanny).toEqual(nanny);

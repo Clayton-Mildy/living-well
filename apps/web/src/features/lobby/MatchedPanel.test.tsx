@@ -38,14 +38,14 @@ describe('MatchedPanel carer line', () => {
   it('shows the carer with a picture that opens full size', async () => {
     await mountPanel({ name: 'Mbak Sari', photoMediaId: 'md_nannyphoto0001' });
     expect(document.querySelector('[data-testid=with-nanny]')?.textContent).toBe('with Mbak Sari');
-    (document.querySelector('[data-testid=with-nanny] button') as HTMLElement).click();
+    (document.querySelector('[data-testid=with-nanny] [role=button]') as HTMLElement).click(); // a face opens from inside a row too (KC 28 Oct)
     await act(async () => {});
     expect(document.querySelector<HTMLImageElement>('[data-testid=image-lightbox-img]')?.getAttribute('src')).toContain('md_nannyphoto0001');
   });
   it('shows the initials without a picture, and nothing without a carer', async () => {
     await mountPanel({ name: 'Mbak Sari' });
     expect(document.querySelector('[data-testid=with-nanny]')?.textContent).toBe('Swith Mbak Sari'); // the avatar's initial, then the line
-    expect(document.querySelector('[data-testid=with-nanny] button')).toBeNull();
+    expect(document.querySelector('[data-testid=with-nanny] [role=button]')).toBeNull();
     await act(async () => { root?.unmount(); });
     host?.remove();
     await mountPanel(null);

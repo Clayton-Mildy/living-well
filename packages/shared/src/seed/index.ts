@@ -16,7 +16,7 @@ import { evaluateReading, limitsFor } from '../rules/health';
 import { suspensions } from '../rules/billing';
 import { addRoster } from './roster';
 import { addHistory } from './history';
-import { activityPicId, dishPicId, portraitId } from './demoMedia';
+import { activityPicId, carerPortraitId, dishPicId, notaMediaId, portraitId } from './demoMedia';
 import { seedRound7 } from './r7';
 
 type Coll<K extends keyof ClubState> = ClubState[K];
@@ -288,7 +288,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
     const m: Member = {
       ...base(C, c.id, c.start + 'T10:00', 'staff:s1'), title: c.title, firstName: c.first, lastName: c.last, gender: c.gender, dob: c.dob, ageYears: null, address: c.address, photoTone: c.tone, ...(portraitId(c.id) ? { photoMediaId: portraitId(c.id) } : {}),
       memberships: [{ start: c.start }], plans: [{ from: c.start, plan: c.plan, by: 'staff:s1' }], usualArrival: c.usual,
-      nanny: c.nanny ? { name: c.nanny, ...(NANNY_NIK[c.id] ? { nik: NANNY_NIK[c.id] } : {}), ...(NANNY_NOTE[c.id] ? { note: NANNY_NOTE[c.id] } : {}) } : null, spouseId: c.spouse, ...(REG[c.id] ? { registration: REG[c.id] } : {}),
+      nanny: c.nanny ? { name: c.nanny, ...(carerPortraitId(c.nanny) ? { photoMediaId: carerPortraitId(c.nanny) } : {}), ...(NANNY_NIK[c.id] ? { nik: NANNY_NIK[c.id] } : {}), ...(NANNY_NOTE[c.id] ? { note: NANNY_NOTE[c.id] } : {}) } : null, spouseId: c.spouse, ...(REG[c.id] ? { registration: REG[c.id] } : {}),
       health: { conditions: c.conditions, diabetic: c.diabetic, food: c.food, drugs: [], mobility: c.mobility, diet: c.diet, meds: c.meds.map(([name, dose, timing], i) => ({ id: `${c.id}-med${i + 1}`, name, dose, timing })),
         cognitive: { summary: c.cognitive, reviewedBy: 's8', reviewedOn: sh('2026-10-01') } },
       care: { instructions: c.id === 'm2' ? c.care.replace('14 Oct', dm(HENDRA_DAY)) : c.care, by: 'staff:s8', at: `${HENDRA_DAY}T10:45` },
@@ -539,7 +539,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   put('budgetAdjustments', { ...base(C, 'adj-act-1019', `${monday}T08:00`, 'staff:s10'), sectionId: 'activities', weekStart: monday, amount: 840000, note: 'Opening balance' });
   put('budgetAdjustments', { ...base(C, 'adj-ops-1019', `${monday}T08:00`, 'staff:s10'), sectionId: 'operations', weekStart: monday, amount: 760000, note: 'Opening balance' });
   const rcpt = (id: string, date: ISODate, supplier: string, directoryId: string, amount: number, sectionId: string, by: string) =>
-    put('receipts', { ...base(C, id, date + 'T12:00', `staff:${by}`), date, supplier, directoryId, amount, sectionId, fileName: `nota_${date.slice(8)}${date.slice(5, 7)}.jpg`, by, status: 'approved', xero: 'synced' });
+    put('receipts', { ...base(C, id, date + 'T12:00', `staff:${by}`), date, supplier, directoryId, amount, sectionId, fileName: `nota_${date.slice(8)}${date.slice(5, 7)}.jpg`, mediaId: notaMediaId(id), by, status: 'approved', xero: 'synced' });
   const rcDay = addDays(T, -1) >= monday ? addDays(T, -1) : T; // receipts this week
   rcpt('rc1', rcDay, 'Sayur Segar Kemang', 'd6', 1840000, 'fnb', 's2');
   rcpt('rc2', rcDay, 'Ikan Laut Jaya', 'd7', 2260000, 'fnb', 's3');

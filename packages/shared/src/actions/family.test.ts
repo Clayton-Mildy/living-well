@@ -144,7 +144,7 @@ describe('round 15: family photos', () => {
     const name = c.citra.members.m1.nanny!.name;
     const r = run(c.citra, 'family.updateDetails', { memberId: 'm1', patch: { nanny: { name, photoMediaId: PHOTO } } }, who(c, 'f1'));
     expect(r.reviewed).toBe('gate');
-    expect(r.state.members.m1.nanny?.photoMediaId).toBeUndefined();
+    expect(r.state.members.m1.nanny?.photoMediaId).toBe('md_demo_carer-sari'); // the seeded portrait stays until management approves
     const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who(c, 's9'));
     expect(a.state.members.m1.nanny).toMatchObject({ name, photoMediaId: PHOTO });
     expect(a.state.members.m1.nanny?.nik).toBe(nik);

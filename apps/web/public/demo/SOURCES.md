@@ -99,4 +99,16 @@ Stock portraits for the 40 roster members m51..m90 (`MEMBER_PORTRAITS` in `packa
 | portrait-m89.jpg | m89 Ibu Maya Sari | https://images.unsplash.com/photo-1778174903051-0b15d54bb451 |
 | portrait-m90.jpg | m90 Bapak Hendrik Wongso | https://images.unsplash.com/photo-1768478563694-b9b38533f2f4 |
 
+## Carers (KC 28 Oct)
+
+Stock portraits for the demo carers (suster) (`CARER_PORTRAITS` in `packages/shared/src/seed/demoMedia.ts`). Free Unsplash photos (none Unsplash+, none used elsewhere in the demo). The faces are real people; the names next to them are made up. Saved as 600x600 JPEG (face-centred crop), quality 78.
+
+| File | Carer | Unsplash photo (CDN URL) |
+|---|---|---|
+| carer-sari.jpg | Mbak Sari (Oma Lina) | https://images.unsplash.com/photo-1644102585882-50cb86bbfa33 |
+| carer-wati.jpg | Mbak Wati (two roster members) | https://images.unsplash.com/photo-1770796568095-2776d45840ed |
+| carer-yanti.jpg | Mbak Yanti | https://images.unsplash.com/photo-1750231413225-6513a6622a2a |
+| carer-lastri.jpg | Mbak Lastri | https://images.unsplash.com/photo-1547354157-4da97ad61f8f |
+| carer-maman.jpg | Pak Maman | https://images.unsplash.com/photo-1673426886320-4438bb7677fd |
+
 Round 14 (D): `signature-1.jpg` (480x160, grey ink on white) is not a photo. It was drawn by a small script as a made-up stock signature for the seeded signed membership form.

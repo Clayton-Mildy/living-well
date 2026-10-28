@@ -129,6 +129,7 @@ export const profile: Same<typeof EN> = {
   'endReason.movedAway': 'Pindah tempat tinggal', 'endReason.careNeeds': 'Kebutuhan perawatan berubah', 'endReason.careHome': 'Pindah ke panti perawatan', 'endReason.passedAway': 'Meninggal dunia', 'endReason.familyDecision': 'Keputusan keluarga', 'endReason.unpaid': 'Dihentikan: invoice belum dibayar', 'endReason.leaveOverrun': 'Cuti habis',
   logTitle: 'Tulis catatan harian', logDays: 'Hari catatan', logWrite: 'Tulis catatan', logEdit: 'Ubah catatan', logNotYet: 'Belum ditulis untuk hari ini.',
   logNoVisit: '{n} tidak datang ke klub dalam 7 hari terakhir, jadi belum ada catatan untuk ditulis.',
+  nannyPhotoTitle: 'Foto suster', nannyPhotoAdd: 'Tambah foto', nannyPhotoSet: 'Foto baru untuk {n}.', nannyPhotoRemoved: 'Foto {n} dihapus.',
   photoTitle: 'Foto profil', photoAdd: 'Ambil atau pilih foto', photoChange: 'Ganti foto', photoRemove: 'Hapus foto', photoUploading: 'Mengunggah…',
   photoSet: 'Foto profil baru untuk {n}.', photoRemoved: 'Foto profil {n} dihapus.', photoReviewNote: 'Manajemen menyetujui foto profil baru sebelum ditampilkan.',
   'f.photo': 'Foto profil', photoOld: 'Foto sekarang', photoNew: 'Foto baru',

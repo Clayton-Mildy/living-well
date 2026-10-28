@@ -7,8 +7,12 @@
 export const DEMO_MEDIA_PREFIX = 'md_demo_';
 /** The media id of a demo picture file (`act-batik-1` -> `md_demo_act-batik-1`). */
 export const demoMediaId = (name: string): string => DEMO_MEDIA_PREFIX + name;
-/** Where a demo media id is served from (`/demo/act-batik-1.jpg`); undefined for an uploaded picture. */
-export const demoMediaPath = (id: string): string | undefined => (id.startsWith(DEMO_MEDIA_PREFIX) ? `/demo/${id.slice(DEMO_MEDIA_PREFIX.length)}.jpg` : undefined);
+const NOTA = DEMO_MEDIA_PREFIX + 'nota-';
+/** KC 28 Oct: a seeded receipt's picture, a nota the server draws from the receipt's own data (GET /api/demo/nota/:receiptId), so it matches the numbers. */
+export const notaMediaId = (receiptId: string): string => NOTA + receiptId;
+/** Where a demo media id is served from (`/demo/act-batik-1.jpg`, a drawn nota from the API); undefined for an uploaded picture. */
+export const demoMediaPath = (id: string): string | undefined =>
+  id.startsWith(NOTA) ? `/api/demo/nota/${encodeURIComponent(id.slice(NOTA.length))}` : id.startsWith(DEMO_MEDIA_PREFIX) ? `/demo/${id.slice(DEMO_MEDIA_PREFIX.length)}.jpg` : undefined;
 
 /** KC round 9: a free Unsplash portrait as the profile picture of each parent a demo family account follows (the faces are stock, the records made up).
  * The family's Today shows it until staff take a newer photo of that parent on their own. */
@@ -62,6 +66,17 @@ export const MEMBER_PORTRAITS: Readonly<Record<string, string>> = {
 };
 /** The media id of a member's demo portrait, or undefined for a member without one. */
 export const portraitId = (memberId: string): string | undefined => (MEMBER_PORTRAITS[memberId] ? demoMediaId(MEMBER_PORTRAITS[memberId]) : undefined);
+
+/** KC 28 Oct: a free Unsplash portrait for each demo carer (suster), by the carer's name (Mbak Wati looks after two members, so both show the same face). */
+export const CARER_PORTRAITS: Readonly<Record<string, string>> = {
+  'Mbak Sari': 'carer-sari',
+  'Mbak Wati': 'carer-wati',
+  'Mbak Yanti': 'carer-yanti',
+  'Mbak Lastri': 'carer-lastri',
+  'Pak Maman': 'carer-maman',
+};
+/** The media id of a demo carer's portrait, if there is one. */
+export const carerPortraitId = (name: string): string | undefined => (CARER_PORTRAITS[name] ? demoMediaId(CARER_PORTRAITS[name]) : undefined);
 
 const at = <T,>(list: readonly T[], n: number): T => list[((Math.floor(n) % list.length) + list.length) % list.length];
 

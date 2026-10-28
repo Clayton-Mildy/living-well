@@ -9,7 +9,9 @@ import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
 import { DomainError, projectForFamily, canAccessClub, live } from '@cp/shared';
-import { getClub, runAction, subscribe, resetDemo, broadcastAll, runJobsNow } from './state';
+import { getClub, getClubs, runAction, subscribe, resetDemo, broadcastAll, runJobsNow } from './state';
+import { notaSvg } from './nota';
+import { notaMediaId } from '@cp/shared/seed/demoMedia';
 import { clockInfo, setClock } from './clock';
 import { authUser, publicUser, registerAuthRoutes } from './routes/auth';
 import { registerPublicRoutes } from './routes/public';
@@ -119,6 +121,17 @@ app.post('/api/receipts/read', async (c) => {
 });
 
 // demo tools
+// KC 28 Oct: a seeded receipt's picture, drawn from its own data (no sign-in, like /api/media: an <img> sends no token). Only receipts the seed
+// marked with a drawn nota, and only while the demo login is on, so a real club's receipts are never served here.
+app.get('/api/demo/nota/:id', (c) => {
+  if (process.env.CP_DEMO_LOGIN === '0') return c.json({ code: 'err.notFound' }, 404);
+  const id = c.req.param('id');
+  for (const s of Object.values(getClubs())) {
+    const r = s.receipts[id];
+    if (r && !r.deletedAt && r.mediaId === notaMediaId(id)) return c.body(notaSvg(r), 200, { 'Content-Type': 'image/svg+xml; charset=utf-8', 'Cache-Control': 'no-cache', 'X-Content-Type-Options': 'nosniff', 'Content-Security-Policy': "default-src 'none'; style-src 'unsafe-inline'" });
+  }
+  return c.json({ code: 'err.notFound' }, 404);
+});
 app.get('/api/demo/accounts', (c) => {
   const s = getClub('citra');
   const demoLogin = process.env.CP_DEMO_LOGIN !== '0'; // KC round 12: the web shows demo-only helpers (the sample registration form)

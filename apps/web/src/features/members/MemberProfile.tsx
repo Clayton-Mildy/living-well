@@ -7,7 +7,7 @@ import { birthdayHint } from '../../lib/occasions';
 import { listName, latestBp, live, memberAge, memberName, memberSince, onLeaveOn, planLabel, planOn, suspensionOf, ym, currentMembership, membershipStatus, type Member, type Role } from '@cp/shared';
 import { checkOnList } from '@cp/shared/rules/checkOn';
 import { PROFILE_TABS, endingOn, isNewMember, memberStatus, pendingReviewsFor, tabForSection, type ProfileTab } from '@cp/shared/rules/members';
-import { Button, EmptyState, Icon, photoBg, TONES } from '../../components/ui';
+import { Button, EmptyState, Icon, ImageOpen, photoBg, TONES } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -187,14 +187,7 @@ function ProfileInner({ id, audience }: { id: string; audience: Audience }) {
         {(() => {
           const size = isPhone ? 68 : 104;
           const look = { width: size, height: size, borderRadius: 999, background: photoFill(memberPhoto(m), photoBg(m.photoTone)), color: tone[1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: isPhone ? 22 : 34, fontWeight: 400, flex: 'none', boxShadow: `inset 0 0 0 ${isPhone ? 3 : 4}px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)` } as const;
-          const face = m.photoMediaId ? null : initials(m);
-          if (!canPhoto) return <div aria-hidden="true" style={look}>{face}</div>;
-          return (
-            <button type="button" onClick={() => setPhotoSheet(true)} aria-label={t('profile.photoTitle')} title={t('profile.photoTitle')} data-testid="profile-avatar" style={{ ...look, position: 'relative', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Inter' }}>
-              {face}
-              <span aria-hidden="true" style={{ position: 'absolute', right: -2, bottom: -2, width: isPhone ? 24 : 32, height: isPhone ? 24 : 32, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #FFFFFF' }}><Icon name="photo_camera" size={isPhone ? 14 : 18} /></span>
-            </button>
-          );
+          return <HeadFace m={m} look={look} canPhoto={canPhoto} onPhoto={() => setPhotoSheet(true)} badge={isPhone ? 28 : 32} at={-2} />;
         })()}
         <div style={{ flex: isPhone ? '1 1 0' : '1 1 300px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 3 : 6 }}>
           <div className="cp-eyebrow1" style={{ fontSize: 12, letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', lineHeight: '18px' }}>
@@ -299,19 +292,42 @@ function TopBar({ back, onBack, title, showTitle, action }: { back: string; onBa
 }
 
 /** Round 6, phone: a centred header (like a phone's contact card), the photo, the name and one quiet line under it. */
-function NativeHead({ m, canPhoto, onPhoto, titleRef, sub }: { m: Member; canPhoto: boolean; onPhoto: () => void; titleRef: React.RefObject<HTMLHeadingElement>; sub: string }) {
+/**
+ * The profile's big face. KC 28 Oct (every image opens): with a picture, a tap opens it full size and the camera badge changes it;
+ * without one, the whole face adds one (staff who may change it), or it is just the initials.
+ */
+function HeadFace({ m, look, canPhoto, onPhoto, badge, at }: { m: Member; look: React.CSSProperties; canPhoto: boolean; onPhoto: () => void; badge: number; at: number }) {
   const t = useT();
+  const photo = memberPhoto(m);
+  const cam = <Icon name="photo_camera" size={Math.round(badge * 0.55)} />;
+  const badgeLook: React.CSSProperties = { position: 'absolute', right: at, bottom: at, width: badge, height: badge, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #FFFFFF' };
+  if (!photo) {
+    if (!canPhoto) return <div aria-hidden="true" style={look}>{initials(m)}</div>;
+    return (
+      <button type="button" onClick={onPhoto} aria-label={t('profile.photoTitle')} title={t('profile.photoTitle')} data-testid="profile-avatar" className="cp-press" style={{ ...look, position: 'relative', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Inter' }}>
+        {initials(m)}
+        <span aria-hidden="true" style={badgeLook}>{cam}</span>
+      </button>
+    );
+  }
+  return (
+    <span style={{ position: 'relative', display: 'inline-flex', flex: 'none' }}>
+      <ImageOpen src={photo} label={`${t('common.openFull')} · ${memberName(m)}`} style={{ borderRadius: 999 }}>
+        <div aria-hidden="true" style={look} />
+      </ImageOpen>
+      {canPhoto ? (
+        <button type="button" onClick={onPhoto} aria-label={t('profile.photoTitle')} title={t('profile.photoTitle')} data-testid="profile-avatar" className="cp-press" style={{ ...badgeLook, border: 'none', padding: 0, cursor: 'pointer' }}>{cam}</button>
+      ) : null}
+    </span>
+  );
+}
+
+function NativeHead({ m, canPhoto, onPhoto, titleRef, sub }: { m: Member; canPhoto: boolean; onPhoto: () => void; titleRef: React.RefObject<HTMLHeadingElement>; sub: string }) {
   const size = 88;
   const look = { width: size, height: size, borderRadius: 999, background: photoFill(memberPhoto(m), photoBg(m.photoTone)), color: TONES[m.photoTone % 5][1], display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 30, fontWeight: 400, flex: 'none', boxShadow: 'inset 0 0 0 3px #FFFFFF, 0 0 0 1px var(--field-bd, #E0E0E4)' } as const;
-  const face = m.photoMediaId ? null : initials(m);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', gap: 8, paddingTop: 2 }}>
-      {canPhoto ? (
-        <button type="button" onClick={onPhoto} aria-label={t('profile.photoTitle')} title={t('profile.photoTitle')} data-testid="profile-avatar" className="cp-press" style={{ ...look, position: 'relative', border: 'none', padding: 0, cursor: 'pointer', fontFamily: 'Inter' }}>
-          {face}
-          <span aria-hidden="true" style={{ position: 'absolute', right: -1, bottom: -1, width: 28, height: 28, borderRadius: 999, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #FFFFFF' }}><Icon name="photo_camera" size={15} /></span>
-        </button>
-      ) : <div aria-hidden="true" style={look}>{face}</div>}
+      <HeadFace m={m} look={look} canPhoto={canPhoto} onPhoto={onPhoto} badge={28} at={-1} />
       <h1 ref={titleRef} style={{ margin: '2px 0 0', fontSize: 26, lineHeight: 1.15, fontWeight: 400, letterSpacing: '-0.6px', color: '#2B231C', overflowWrap: 'anywhere' }}>{listName(m)}</h1>
       <FullName m={m} />
       <div style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{sub}</div>

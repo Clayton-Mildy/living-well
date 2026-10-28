@@ -43,16 +43,33 @@ const media: CSSProperties = { display: 'block', maxWidth: '100%', maxHeight: '1
  * A thumbnail button that opens its picture in the lightbox: wrap the thumbnail (`children`) and give the full-size `src`.
  * `disabled` (or no `src`) renders the children bare, as before. Extra controls (remove, badges) stay OUTSIDE this button.
  */
-export function ImageOpen({ src, alt, label, kind, disabled, children, style, className }: { src?: string | null; alt?: string; /** the button's accessible name */ label: string; kind?: 'image' | 'video'; disabled?: boolean; children: ReactNode; style?: CSSProperties; className?: string }) {
+export function ImageOpen({ src, alt, label, kind, disabled, children, style, className, nested }: { src?: string | null; alt?: string; /** the button's accessible name */ label: string; kind?: 'image' | 'video'; disabled?: boolean; children: ReactNode; style?: CSSProperties; className?: string;
+  /** KC 28 Oct (every image opens): the picture sits inside a row button or a link. It renders a span with role="button" (a button can't hold a button),
+   *  and the tap opens the picture only: it doesn't reach the row or follow the link. */
+  nested?: boolean }) {
   const [open, setOpen] = useState(false);
   if (!src || disabled) return <>{children}</>;
+  const box: CSSProperties = { display: 'block', padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', flex: 'none', font: 'inherit', color: 'inherit', ...style };
+  const show = (e: React.SyntheticEvent) => { e.preventDefault(); e.stopPropagation(); setOpen(true); };
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} aria-label={label} className={className ?? 'cp-press'}
-        style={{ display: 'block', padding: 0, border: 'none', background: 'transparent', cursor: 'zoom-in', flex: 'none', font: 'inherit', color: 'inherit', ...style }}>
-        {children}
-      </button>
+      {nested ? (
+        <span role="button" tabIndex={0} aria-label={label} className={className ?? 'cp-press'} onClick={show} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') show(e); }}
+          onPointerDown={(e) => e.stopPropagation()} style={box}>
+          {children}
+        </span>
+      ) : (
+        <button type="button" onClick={() => setOpen(true)} aria-label={label} className={className ?? 'cp-press'} style={box}>
+          {children}
+        </button>
+      )}
       {open ? <ImageLightbox src={src} alt={alt ?? label} kind={kind} onClose={() => setOpen(false)} /> : null}
     </>
   );
+}
+
+/** KC 28 Oct (every image opens): a face or thumbnail anywhere, in a row, a link or a card, opens its picture full size; no picture leaves the children bare. */
+export function PictureOpen({ src, name, children, round = true }: { src?: string | null; /** whose or what picture, for the button's name */ name: string; children: ReactNode; round?: boolean }) {
+  const t = useT();
+  return <ImageOpen nested src={src} label={`${t('common.openFull')} · ${name}`} style={round ? { borderRadius: 999 } : undefined}>{children}</ImageOpen>;
 }
