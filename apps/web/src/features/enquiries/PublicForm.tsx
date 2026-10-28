@@ -13,7 +13,7 @@ import { FORM_STEPS } from '@cp/shared/rules/enquiries';
 import { MAX_PDF_BYTES, MAX_UPLOAD_BYTES, downscaleImage, isPdfFile, toBase64 } from '../../lib/media';
 import { ApiError } from '../../lib/api';
 import type { PaperFile } from '../members/PaperForm';
-import { Button, ChipGroup, DateField, Eyebrow, Group, Icon, Logo, Note } from '../../components/ui';
+import { Button, ChipGroup, DateField, Eyebrow, Group, Icon, Logo, Note, SignaturePad } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useFmt, useT } from '../../lib/i18n';
 import { useSession } from '../../store/session';
@@ -23,7 +23,7 @@ import { AllergyFields, CarerFields, DementiaFields, dementiaQuestion, HealthFie
 import { ONLINE_STEPS, STEP_NAME_KEY, blankOnline, clearDevice, firstOpenOnlineStep, fromOnline, loadDevice, onlineIssues, pickDraft, resumeStep, saveDevice, toOnline, type FDraft, type OnlineStep } from './onlineForm';
 
 interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; extra: number; flexQuota: number }; /** the active plans of the catalogue (a server before round 15 sends none: Flex and Gold from `prices`) */ plans?: { id: Plan; name: string; nameId: string; quota: number | null; price: number }[]; dementiaFee: number }
-type View = { kind: 'loading' } | { kind: 'ready'; info: Info } | { kind: 'bad' } | { kind: 'network' } | { kind: 'expired' } | { kind: 'done'; date: string } | { kind: 'thanks'; name: string };
+type View = { kind: 'loading' } | { kind: 'ready'; info: Info } | { kind: 'bad' } | { kind: 'network' } | { kind: 'expired' } | { kind: 'done'; date: string } | { kind: 'thanks'; name: string; signed?: boolean };
 type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
 /** This phone's answers and the lead's, when both changed since they last met: the family picks one. */
 interface Choice { mine: { d: FDraft; step: number; lang?: Lang }; server: { d: FDraft; step: number | null; rev: number; lang: Lang } }
@@ -88,6 +88,8 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
   const setKtp = (kind: KtpKind, f: PaperFile | null) => set({ ktp: { ...d.ktp, [kind]: f ?? undefined } });
   const uploader = publicUploader(token);
+  /** KC 28 Oct: the family contact's signature on the review step (optional; a picture, so not in the draft: the pad starts empty each time the review opens) */
+  const [signPng, setSignPng] = useState<Blob | null>(null);
   const writeDevice = useCallback(() => {
     if (!ready.current || finished.current || !touched.current) return;
     saveDevice(token, { d: live.current.d, step: live.current.stepI + 1, base: base.current, dirty: dirty.current, lang: live.current.lang });
@@ -185,7 +187,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   };
   useEffect(() => { if (pushAfter.current && ready.current) { pushAfter.current = false; void pushDraft(false); } }, [d, stepI, choice, pushDraft]);
   // a new step starts at the top of the page
-  useEffect(() => { top.current?.closest<HTMLElement>('[data-testid="public-form"]')?.scrollTo?.({ top: 0 }); }, [stepI]);
+  useEffect(() => { top.current?.closest<HTMLElement>('[data-testid="public-form"]')?.scrollTo?.({ top: 0 }); if (stepI !== last) setSignPng(null); }, [stepI, last]);
 
   const issues = onlineIssues(step, d);
   const isTried = tried.has(step);
@@ -211,13 +213,15 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
     if (busy) return;
     setBusy(true); setErr(''); submitting.current = true;
     try {
-      const res = await fetch(`/api/public/form/${encodeURIComponent(token)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'submit', draft: toOnline(d, lang) }) });
-      if (res.ok) { finished.current = true; clearDevice(token); setView({ kind: 'thanks', name: d.cName.trim().split(' ')[0] }); window.scrollTo?.({ top: 0 }); return; }
+      // the signature goes up first, through the form's own upload route; the server stamps when and who
+      const signature = signPng ? { mediaId: (await uploader(signPng, 'signature.png')).mediaId } : undefined;
+      const res = await fetch(`/api/public/form/${encodeURIComponent(token)}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action: 'submit', draft: { ...toOnline(d, lang), ...(signature ? { signature } : {}) } }) });
+      if (res.ok) { finished.current = true; clearDevice(token); setView({ kind: 'thanks', name: d.cName.trim().split(' ')[0], signed: !!signature }); window.scrollTo?.({ top: 0 }); return; }
       const data = (await res.json().catch(() => ({}))) as { code?: string; params?: Record<string, string | number> };
       if (data.code === 'enq.err.formExpired') { setView({ kind: 'expired' }); return; }
       if (data.code === 'enq.err.formDone') { finished.current = true; clearDevice(token); setView({ kind: 'done', date: '' }); return; }
       setErr(data.code ? t(data.code, data.params) : t('err.invalid'));
-    } catch { setErr(t('mgmt.rtNetText')); }
+    } catch (e) { setErr(e instanceof ApiError && e.code ? t(e.code) : t('mgmt.rtNetText')); }
     submitting.current = false;
     setBusy(false);
   };
@@ -289,7 +293,11 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
         {ONLINE_STEPS.filter((k): k is Exclude<OnlineStep, 'review'> => k !== 'review').map((k) => (
           <div key={k} data-review-group={k}><Group title={t(STEP_NAME_KEY[k])} meta={edit(k)} gap={0} pad="6px 16px"><Rows rows={rows[k]} /></Group></div>
         ))}
-        <Note icon="draw">{t('enq.pf_paperNote')}</Note>
+        <div data-pf-sign style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={{ fontSize: 15, fontWeight: 600, lineHeight: '21px', color: '#24201C' }}>{t('enq.pf_signTitle', { name: d.cName.trim() || t('profile.theFamily') })}</span>
+          <SignaturePad onChange={setSignPng} label={t('sign.drawHere')} />
+          <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t(signPng ? 'enq.pf_signDone' : 'enq.pf_signNote')}</span>
+        </div>
         <span style={{ fontSize: 13, lineHeight: '18px', color: '#8A8078', textAlign: 'center' }}>{t('enq.pf_privacy')}</span>
       </>
     );
@@ -301,7 +309,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
     if (view.kind === 'expired') return <Message icon="lock_clock" title={t('enq.pf_expiredTitle')} text={t('enq.pf_expiredText')} />;
     if (view.kind === 'network') return <Message icon="cloud_off" title={t('mgmt.rtNetTitle')} text={t('mgmt.rtNetText')} action={<Button size={48} onClick={() => void load()}>{t('common.retry')}</Button>} />;
     if (view.kind === 'done') return <Message icon="task_alt" tone="sage" title={t('enq.pf_doneTitle')} text={view.date ? t('enq.pf_doneText', { date: fds(view.date) }) : t('enq.pf_doneText', { date: '' })} />;
-    if (view.kind === 'thanks') return <Message icon="favorite" tone="sage" title={t('enq.pf_thanksTitle', { name: view.name })} text={t('enq.pf_thanksText')} />;
+    if (view.kind === 'thanks') return <Message icon="favorite" tone="sage" title={t('enq.pf_thanksTitle', { name: view.name })} text={t(view.signed ? 'enq.pf_thanksSigned' : 'enq.pf_thanksText')} />;
     if (choice) {
       return (
         <div data-testid="form-conflict" role="alertdialog" aria-label={t('enq.pf_conflictTitle')} style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '24px 16px', borderRadius: 20, background: 'var(--fill, #F4F4F5)' }}>

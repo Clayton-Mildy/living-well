@@ -1,6 +1,6 @@
 // Small helpers shared by action modules.
 import type { Draft } from 'immer';
-import type { Attendance, ClubState, ISODate, MemberDocument, Signing } from '../types';
+import type { Attendance, ClubState, DT, ISODate, MemberDocument, Signing } from '../types';
 import type { Ctx } from './framework';
 import { attId } from '../rules/attendance';
 import { live } from '../util';
@@ -39,7 +39,8 @@ export function carrySigning(doc: MemberDocument | undefined, ctx: Ctx): { signi
  *  Draft, Sent and Signed all at the creation time (Draft and Sent by the staff user, Signed by the billing contact, who is the signer), the form as it is
  *  at creation, and e-Meterai as the route, so the countersign and the stamp follow exactly as after an online signature. Call it once the member, the
  *  contact and the link exist. No signature given: nothing changes. */
-export function signAtRegistration(d: Draft<ClubState>, memberId: string, signatureMediaId: string | undefined, ctx: Ctx): void {
+/** `signedAt`: when the family signed, if it was earlier than now (on the online form, KC 28 Oct). */
+export function signAtRegistration(d: Draft<ClubState>, memberId: string, signatureMediaId: string | undefined, ctx: Ctx, signedAt?: DT): void {
   if (!signatureMediaId) return;
   const signer = primaryContact(d as ClubState, memberId);
   const doc = d.members[memberId] && formDoc(d.members[memberId]);
@@ -47,6 +48,6 @@ export function signAtRegistration(d: Draft<ClubState>, memberId: string, signat
   const at = ctx.nowDT;
   doc.signing = {
     status: 'signed', meterai: 'e', form: applicationDataOf(d as ClubState, memberId, ctx.today), signerId: signer.id, signerName: signer.name, signatureMediaId,
-    steps: [{ status: 'draft', at, by: ctx.actor }, { status: 'sent', at, by: ctx.actor }, { status: 'signed', at, by: `family:${signer.id}` }],
+    steps: [{ status: 'draft', at: signedAt ?? at, by: ctx.actor }, { status: 'sent', at: signedAt ?? at, by: ctx.actor }, { status: 'signed', at: signedAt ?? at, by: `family:${signer.id}` }],
   } as Signing;
 }

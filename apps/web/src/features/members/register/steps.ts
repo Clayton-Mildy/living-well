@@ -71,6 +71,11 @@ export function initialState(s: ClubState, mode: RegMode, today: ISODate): RegSt
   };
 }
 
+/** KC 28 Oct: what the family answers on the online form, to tell whether the front desk changed it after they signed there. */
+export const answersOf = (st: RegState): string => JSON.stringify([st.title, st.name.trim(), st.dob, st.address.trim(), st.health, st.carer.nanny, st.carer.nannyName.trim(), st.carer.nannyNik.trim(), st.reg, st.plan]);
+/** The signature the family drew on the lead's online form, once they sent it. */
+export const onlineSignatureOf = (e: Enquiry | undefined) => (e?.form?.submittedAt ? e.form.draft?.signature : undefined);
+
 const FIELDS: Record<RegStep, string[]> = {
   person: ['title', 'name', 'dob', 'usualArrival', 'nik', 'rtRw', 'postcode', 'regPhone', 'regMobile', 'email'],
   family: ['contact', 'contactName', 'phone', 'guarantorNik', 'nannyName', 'nannyNik'],

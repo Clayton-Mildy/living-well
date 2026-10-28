@@ -79,8 +79,8 @@ export const enq = {
   'feed.formSaved': 'Registration form started online · {name}',
   'notif.formSubmitted': '{by} filled in the registration form for {name} online.',
   // the public page
-  pf_tab: 'Registration', pf_eyebrow: 'Membership registration', pf_intro: 'Fill this in before your visit. It takes about five minutes and saves the front desk retyping it. At the club you will sign the printed form.',
-  pf_who: 'Who is joining', pf_contact: 'Family contact', pf_plan: 'Plan you lean to', pf_planUnsure: 'Not sure yet', pf_paperNote: 'The signed paper form is still needed: the club prints it from these answers for you to sign.',
+  pf_tab: 'Registration', pf_eyebrow: 'Membership registration', pf_intro: 'Fill this in before your visit. It takes about five minutes and saves the front desk retyping it. You can sign the membership form at the end, or at the club.',
+  pf_who: 'Who is joining', pf_contact: 'Family contact', pf_plan: 'Plan you lean to', pf_planUnsure: 'Not sure yet', pf_signTitle: '{name}, sign the membership form here', pf_signNote: 'Optional: sign here and you won’t need to sign at the club. Or leave it empty and sign the printed form there.', pf_signDone: 'Signed. Clear it to sign at the club instead.', pf_thanksSigned: 'Your answers and your signature reached the club. Bring your KTP and the family card on the first day.', pf_paperNote: 'The signed paper form is still needed: the club prints it from these answers for you to sign.',
   pf_submit: 'Send to the club', pf_sending: 'Sending…', pf_thanksTitle: 'Thank you, {name}', pf_thanksText: 'Your answers reached the club. Bring your KTP and the family card on the first day; the front desk has the form ready to sign.',
   pf_doneTitle: 'Already sent', pf_doneText: 'This form reached the club on {date}. To change something, ask the front desk for a new link.',
   pf_badTitle: 'This link does not work', pf_badText: 'Check the link you received, or ask the club to send it again.', pf_expiredTitle: 'This link has expired', pf_expiredText: 'Links stay open for 14 days. Ask the front desk to send a new one.',

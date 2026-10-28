@@ -570,6 +570,9 @@ export interface OnlineRegistration {
   ktp?: KtpUploads;
   health: { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[] };
   registration?: MemberRegistration;
+  /** KC 28 Oct: the family contact signed the membership form on the link's last step (optional): the picture, when it was sent and who signed.
+   *  Joining the lead carries it over as the signature at registration, so nobody signs again at the club. Set by the server on Send. */
+  signature?: { mediaId: string; at: DT; by: string };
   /** the language the family filled it in */
   lang: Lang;
 }

@@ -56,8 +56,9 @@ export function Rows({ rows }: { rows: [ReactNode, ReactNode][] }) {
     <div style={{ display: 'flex', flexDirection: 'column' }}>
       {rows.map(([k, v], i) => (
         <div key={i} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, padding: '8px 0', borderTop: i ? HAIRLINE : undefined, fontSize: 15, lineHeight: '22px' }}>
-          <span style={{ color: '#6B6259', flex: 'none' }}>{k}</span>
-          <span style={{ textAlign: 'right', minWidth: 0, overflowWrap: 'anywhere' }}>{v}</span>
+          {/* a long question wraps rather than squeezing its answer to a letter a line (KC 28 Oct: "N o n e" on a phone) */}
+          <span style={{ color: '#6B6259', flex: '1 1 auto', minWidth: 0 }}>{k}</span>
+          <span style={{ textAlign: 'right', flex: '0 1 auto', maxWidth: '62%', minWidth: 0, overflowWrap: 'anywhere' }}>{v}</span>
         </div>
       ))}
     </div>

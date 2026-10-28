@@ -6,5 +6,6 @@ export const reg = {
   duplicate: '{name} already has this {what}', 'what.phone': 'phone number', 'what.nik': 'NIK', open: 'Open',
   edit: 'Edit', stepOf: 'Step {n} of {total} · {step}', steps: 'Steps', confirm: 'Before you send', none: 'None',
   idMember: 'Member’s KTP received', idGuarantor: 'Family member’s KTP received',
+  signedOnline: 'Signed online by {name} · {date}', signatureOf: 'Signature of {name}', signedChanged: 'Details changed since they signed: ask them to sign again.', signAgain: 'Sign again', signedOnlineShort: 'Signed online', // KC 28 Oct
   signHere: '{name} signs the form here', signOptional: 'Or print the form and sign on paper', signOrScan: 'Sign on the pad, or attach the signed form’s scan',
 };

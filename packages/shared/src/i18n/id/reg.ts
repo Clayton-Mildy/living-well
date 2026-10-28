@@ -9,5 +9,6 @@ export const reg: Same<typeof EN> = {
   duplicate: '{name} sudah memakai {what} ini', 'what.phone': 'nomor telepon', 'what.nik': 'NIK', open: 'Buka',
   edit: 'Ubah', stepOf: 'Langkah {n} dari {total} · {step}', steps: 'Langkah', confirm: 'Sebelum dikirim', none: 'Tidak ada',
   idMember: 'KTP anggota diterima', idGuarantor: 'KTP anggota keluarga diterima',
+  signedOnline: 'Ditandatangani online oleh {name} · {date}', signatureOf: 'Tanda tangan {name}', signedChanged: 'Data berubah sejak ditandatangani: minta tanda tangan lagi.', signAgain: 'Tanda tangan lagi', signedOnlineShort: 'Ditandatangani online',
   signHere: '{name} menandatangani formulir di sini', signOptional: 'Atau cetak formulir dan tanda tangani di kertas', signOrScan: 'Tanda tangani di sini, atau lampirkan pindaian formulir yang ditandatangani',
 };

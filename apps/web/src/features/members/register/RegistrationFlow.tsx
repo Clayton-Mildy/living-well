@@ -25,7 +25,7 @@ import { PaperStep } from './PaperStep';
 import { PersonStep } from './PersonStep';
 import { PlanStep } from './PlanStep';
 import { ReviewStep } from './ReviewStep';
-import { REG_STEPS, STEP_ICON, firstOpenStep, initialState, stepIssues, type RegMode, type RegState, type RegStep } from './steps';
+import { REG_STEPS, STEP_ICON, answersOf, firstOpenStep, initialState, onlineSignatureOf, stepIssues, type RegMode, type RegState, type RegStep } from './steps';
 import { seniorChanged, toConvertInput, toCreateInput } from './submit';
 
 export type { RegMode, RegStep, RegState } from './steps';
@@ -47,6 +47,8 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
   const [busy, setBusy] = useState(false);
   /** round 15: the family member's signature drawn on the review step (a picture, so not in the saved draft); the pad starts empty each time the review opens */
   const [signPng, setSignPng] = useState<Blob | null>(null);
+  /** KC 28 Oct: the family signed on the online form; `resign` = staff chose Sign again (the pad replaces it) */
+  const [resign, setResign] = useState(false);
   const step = REG_STEPS[stepI];
   const last = REG_STEPS.length - 1;
   const top = useRef<HTMLDivElement>(null);
@@ -77,10 +79,15 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
     if (stepI === last) setFromReview(false); else setSignPng(null);
   }, [stepI, last]);
 
-  const issuesOf = useCallback((k: RegStep) => stepIssues(k, st, mode, today, s, !!signPng), [st, mode, today, s, signPng]);
-  const issues = useMemo(() => issuesOf(step), [issuesOf, step]);
-  const reach = useMemo(() => firstOpenStep(st, mode, today, s, !!signPng), [st, mode, today, s, signPng]);
   const lead = mode.kind === 'lead' ? s.enquiries[mode.id] : undefined;
+  const online = resign ? undefined : onlineSignatureOf(lead);
+  const signed = !!signPng || !!online;
+  // the answers as the family sent them with their signature: a change made here since then asks for a new signature (a warning, not a block)
+  const signedAnswers = useMemo(() => (online ? answersOf(initialState(s, mode, today)) : ''), [online, s, mode, today]);
+  const changedSinceSigned = !!online && answersOf(st) !== signedAnswers;
+  const issuesOf = useCallback((k: RegStep) => stepIssues(k, st, mode, today, s, signed), [st, mode, today, s, signed]);
+  const issues = useMemo(() => issuesOf(step), [issuesOf, step]);
+  const reach = useMemo(() => firstOpenStep(st, mode, today, s, signed), [st, mode, today, s, signed]);
   const isTried = tried.has(step);
   const err = (...fields: string[]) => {
     if (!isTried) return '';
@@ -104,7 +111,7 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
     clearDraft({ kind: 'new' });
     const m: RegMode = { kind: 'lead', id };
     dirty.current = false;
-    setMode(m); setSt(initialState(s, m, today)); setPending(loadDraft(m)); setTried(new Set()); setStepI(0);
+    setMode(m); setSt(initialState(s, m, today)); setPending(loadDraft(m)); setTried(new Set()); setStepI(0); setResign(false);
   };
 
   const submit = async () => {
@@ -112,7 +119,7 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
     if (busy || reach < last || issues.length) { if (reach < last) setStepI(reach); return; }
     setBusy(true);
     try {
-      let signatureMediaId: string | undefined;
+      let signatureMediaId: string | undefined = online?.mediaId; // signed on the online form (unless Sign again)
       if (signPng) {
         try { signatureMediaId = await uploadMedia(signPng); } catch (e) {
           say(e instanceof ApiError && hasKey(e.code) ? t(e.code) : t('common.mediaFailed'), { tone: 'error', icon: 'error' });
@@ -147,7 +154,7 @@ export function RegistrationFlow({ mode: startMode, onDone }: { mode: RegMode; o
     health: <HealthStep p={p} />,
     plan: <PlanStep p={p} />,
     paper: <PaperStep p={p} />,
-    review: <ReviewStep p={p} role={role} goTo={(k) => { setFromReview(true); setStepI(REG_STEPS.indexOf(k)); }} onSign={setSignPng} />,
+    review: <ReviewStep p={p} role={role} goTo={(k) => { setFromReview(true); setStepI(REG_STEPS.indexOf(k)); }} onSign={setSignPng} online={online} changed={changedSinceSigned} onResign={() => setResign(true)} />,
   };
   const title = lead ? seniorName({ senior: { title: st.title, name: st.name.trim() || lead.senior.name } }) : st.name.trim() ? `${st.title} ${st.name.trim()}` : t('members.addTitle');
   const eyebrow = lead ? t('enq.jn_eyebrow') : t('members.newMember');

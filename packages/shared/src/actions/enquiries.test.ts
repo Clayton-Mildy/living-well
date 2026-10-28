@@ -393,6 +393,26 @@ describe('online registration link', () => {
     fails(done.state, 'enquiry.sendForm', { enquiryId: id }, 's1', 'enq.err.formDone');
     expect(() => sys(done.state, 'enquiry.formSubmit', { token, draft: draft() })).toThrow(DomainError);
   });
+  it('KC 28 Oct: the family can sign on the online form; joining the lead carries the signature over, dated when they sent it', () => {
+    const made = run(seed().citra, 'enquiry.create', lead, 's1');
+    const id = made.result.enquiryId as string;
+    const link = run(made.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    const token = link.result.token as string;
+    const sent = link.state;
+    const SIG = 'md_testonlinesign001';
+    expect(() => sys(sent, 'enquiry.formSubmit', { token, draft: draft({ signature: { mediaId: 'not a media id' } }) })).toThrow(DomainError);
+    const done = sys(sent, 'enquiry.formSubmit', { token, draft: draft({ signature: { mediaId: SIG, at: '2020-01-01T00:00', by: 'someone else' } }) }, { today: T, nowMin: 9 * 60 + 15 });
+    // the server stamps when and who: what the page sent for those is ignored
+    expect(done.state.enquiries[id].form!.draft!.signature).toEqual({ mediaId: SIG, at: `${T}T09:15`, by: 'Dina Santoso' });
+    expect(sys(sent, 'enquiry.formSubmit', { token, draft: draft() }).state.enquiries[id].form!.draft!.signature).toBeUndefined(); // optional
+    const joined = run(done.state, 'enquiry.convert', { enquiryId: id, plan: 'gold', start: '2026-10-26', signatureMediaId: SIG }, 's9');
+    const sig = joined.state.members[joined.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!.signing!;
+    expect(sig).toMatchObject({ status: 'signed', signatureMediaId: SIG, signerName: 'Dina Santoso' });
+    expect(sig.steps.map((x) => x.at)).toEqual([`${T}T09:15`, `${T}T09:15`, `${T}T09:15`]);
+    // signed again at the desk instead: dated now
+    const resigned = run(done.state, 'enquiry.convert', { enquiryId: id, plan: 'gold', start: '2026-10-26', signatureMediaId: 'md_testdesksign00001' }, 's9');
+    expect(resigned.state.members[resigned.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!.signing!.steps.at(-1)!.at).toBe(`${T}T10:00`);
+  });
   it('the online form accepts a free-text title; empty or too long is refused', () => {
     const made = run(seed().citra, 'enquiry.create', lead, 's1');
     const id = made.result.enquiryId as string;

@@ -360,7 +360,9 @@ export const enquiriesActions = [
       if (!existing) d.familyContacts[contactId] = contactFromLead({ id: contactId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor, activated: !gate });
       const link = linkFromLead({ contactId, memberId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor });
       d.familyLinks[link.id] = link;
-      signAtRegistration(d, memberId, i.signatureMediaId, ctx);
+      // KC 28 Oct: the signature the family drew on the online form is dated when they sent it
+      const online = e.form?.submittedAt ? e.form.draft?.signature : undefined;
+      signAtRegistration(d, memberId, i.signatureMediaId, ctx, online && online.mediaId === i.signatureMediaId ? online.at : undefined);
       if (gate) {
         e.prevStage = e.stage;
         if (e.next) e.prevNext = JSON.parse(JSON.stringify(e.next));
@@ -496,7 +498,7 @@ export const enquiriesActions = [
       if (first) ctx.feed({ icon: 'edit_note', key: 'enq.feed.formSaved', params: { name: seniorName(row) } });
     },
   }),
-  defineAction<{ token: string; draft: OnlineRegistration }>({
+  defineAction<{ token: string; draft: OnlineRegistration; signatureMediaId?: string }>({
     name: 'enquiry.formSubmit',
     can: (u, i, s) => system(u) && !!enquiryByFormToken(s, i.token),
     parse(raw) {
@@ -508,6 +510,7 @@ export const enquiriesActions = [
       const plan = dr.plan ? (isPlanId(dr.plan) ? dr.plan : bad('plan')) : undefined;
       return {
         token: str(o.token, 80, { required: true, field: 'token' }),
+        ...(dr.signature !== undefined && dr.signature !== null ? { signatureMediaId: mediaIdOf(obj(dr.signature, 'signature').mediaId) } : {}),
         draft: {
           title: titleOf(dr.title, 'enq.err.titleRequired'), name: str(dr.name, 80, { required: true, field: 'name' }), dob: dr.dob ? isoDate(dr.dob, 'dob') : '', address: str(dr.address, 200),
           contact: { name: str(c.name, 80, { required: true, field: 'contact.name' }), relation: oneOf(c.relation, ALL_RELATIONS, 'contact.relation'), phone: phone(c.phone, 'contact.phone') },
@@ -526,7 +529,7 @@ export const enquiriesActions = [
       if (i.draft.dob && i.draft.dob > ctx.today) ctx.fail('members.err.dobInvalid');
       if (i.draft.plan) planOf(S(d), i.draft.plan); // an active plan of the catalogue
       const f = row.form!;
-      f.draft = i.draft;
+      f.draft = { ...i.draft, ...(i.signatureMediaId ? { signature: { mediaId: i.signatureMediaId, at: ctx.nowDT, by: i.draft.contact.name } } : {}) };
       f.submittedAt = ctx.nowDT;
       f.filledBy = i.draft.contact.name;
       f.openedAt ??= ctx.nowDT;
