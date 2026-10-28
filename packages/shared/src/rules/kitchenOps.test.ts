@@ -7,7 +7,7 @@ import {
   allergiesOnFile, canApproveStock, canEditStock, canReceiveStock, canRequestStock, coversOn, defaultAreaFor, defaultSectionFor, diffTemplates, dishUsage, dishesByCourse, feedbackReplies, isStockApprover,
   kitchenConflicts, allergyReachOf, dishAllergyReach, lastSameWeekdays, membersAffectedBy, usuallyComes, menuAudience, menuDishesOn, overridesFrom, personKey, potentialConflicts, replyTarget, safetyOf, sameIds, scheduledVersions, sortFeedback, sortStock, templateForWeek, templateOn, unreviewedDishesOn, weekDate, weekdayOf, planStartFor, MAX_PLAN_WEEKS,
 } from './kitchenOps';
-import { lunchPhotoIds, lunchPhotosOn, visibleLunchPhotos } from './kitchen';
+import { lunchPhotoIds, lunchPhotosOn, lunchPictureFor, visibleLunchPhotos } from './kitchen';
 
 const T = '2026-10-21';
 const seed = () => buildSeed().citra;
@@ -351,5 +351,32 @@ describe('lunch photo selectors', () => {
     const old = produce(seed(), (d) => { d.dayMenus[T] = row({ photoId: 'a' }) as never; d.photos['a'] = photo('a', 'visible') as never; });
     expect(lunchPhotoIds(old, T)).toEqual(['a']);
     expect(visibleLunchPhotos(old, T).map((p) => p.id)).toEqual(['a']);
+  });
+});
+
+describe('lunchPictureFor (round 15 fix wave): the picture of what a member is actually served', () => {
+  const s = produce(seed(), (d) => {
+    for (const id of ['dish-sop-ikan', 'dish-nasi-merah', 'dish-tumis-buncis', 'dish-pepaya', 'dish-bubur-ikan']) delete d.dishes[id].photoMediaId;
+    d.dishes['dish-sop-ikan'].photoMediaId = 'md_fish_soup';
+    d.dishes['dish-tumis-buncis'].photoMediaId = 'md_buncis';
+    d.dishes['dish-bubur-ikan'].photoMediaId = 'md_porridge';
+  }); // the demo day (Wed) serves the fish soup
+  it('a member on the main lunch gets the day\'s picture; a seafood-allergic member gets the next served dish\'s, never the fish soup\'s', () => {
+    expect(lunchPictureFor(s, s.members.m1, T)).toEqual({ mediaId: 'md_fish_soup', source: 'dish' });
+    expect(lunchPictureFor(s, s.members.m10, T)).toEqual({ mediaId: 'md_buncis', source: 'dish' });
+  });
+  it('nothing when none of the dishes they are served has a picture, even if the fish soup has one', () => {
+    const bare = produce(s, (d) => { delete d.dishes['dish-tumis-buncis'].photoMediaId; });
+    expect(lunchPictureFor(bare, bare.members.m10, T)).toBeNull();
+  });
+  it('the kitchen\'s lunch photo of the day is for members on the main dish only; a soft-menu member gets a soft dish picture', () => {
+    const photo = produce(s, (d) => {
+      d.photos['ph-l'] = { id: 'ph-l', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: T, time: '09:00', kind: 'lunch', media: 'photo', memberIds: [], tone: 0, takenBy: 's3', visibility: 'visible', mediaId: 'md_day' } as never;
+      d.dayMenus[T] = { ...(d.dayMenus[T] ?? { id: T, clubId: 'citra', createdAt: `${T}T07:00`, createdBy: 'staff:s3', date: T, allergyPlans: [] }), photoIds: ['ph-l'] } as never;
+      d.members.m2.health.diet = ['softFood'];
+    });
+    expect(lunchPictureFor(photo, photo.members.m1, T)).toEqual({ mediaId: 'md_day', source: 'lunch' });
+    expect(lunchPictureFor(photo, photo.members.m10, T)).toEqual({ mediaId: 'md_buncis', source: 'dish' });
+    expect(lunchPictureFor(photo, photo.members.m2, T)).toEqual({ mediaId: 'md_porridge', source: 'dish' });
   });
 });

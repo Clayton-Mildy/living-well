@@ -234,6 +234,34 @@ describe('family Today', () => {
     expect(now?.getAttribute('data-source')).toBe('lunch');
   });
 
+  it('round 15 fix wave: a seafood-allergic parent never sees the fish soup picture; the dish he is served shows, or nothing', async () => {
+    // tomorrow's lunch (Thu 22 Oct) is the fish soup, rice, green beans and papaya; only the fish soup (and the beans, in the first two cases) have a picture
+    const withPics = (beans: boolean) => produce(buildSeed().citra, (d) => {
+      for (const id of ['dish-sop-ikan', 'dish-nasi-merah', 'dish-tumis-buncis', 'dish-pepaya']) delete d.dishes[id].photoMediaId;
+      d.dishes['dish-sop-ikan'].photoMediaId = 'md_fish_soup';
+      if (beans) d.dishes['dish-tumis-buncis'].photoMediaId = 'md_buncis';
+      d.dayMenus['2026-10-22'] = { id: '2026-10-22', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s3', date: '2026-10-22', lunch: ['dish-sop-ikan', 'dish-nasi-merah', 'dish-tumis-buncis', 'dish-pepaya'], soft: [], tea: [], allergyPlans: [], photoIds: [] } as never;
+    });
+    const media = () => qa('[data-tl="lunch"] [data-testid="lunch-picture"]').map((x) => x.getAttribute('data-media'));
+    // Oma Lina has no allergy: the day's picture is the first dish with a photo, the fish soup
+    open('f1', 'en', 598, withPics(true));
+    await show(<FamilyToday />, '/today?member=m1&date=2026-10-22');
+    expect(media()).toEqual(['md_fish_soup']);
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    // Bambang is allergic to seafood: the fish soup is not what he is served, so the next served dish with a photo shows
+    open('fm10_0', 'en', 598, withPics(true));
+    await show(<FamilyToday />, '/today?member=m10&date=2026-10-22');
+    expect(media()).toEqual(['md_buncis']);
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    // and with no picture on any other dish there is none at all, while the row still tells the menu
+    open('fm10_0', 'en', 598, withPics(false));
+    await show(<FamilyToday />, '/today?member=m10&date=2026-10-22');
+    expect(media()).toEqual([]);
+    expect(q('[data-tl="lunch"]')?.textContent).toContain('Tumis buncis');
+  });
+
   it('round 15: today after the club has closed with nobody in: the programme is "what was on" and every row is passed', async () => {
     open('f1', 'en', 21 * 60 + 40);
     await show(<FamilyToday />, '/today?member=m1');

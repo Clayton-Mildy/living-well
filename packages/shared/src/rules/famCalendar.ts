@@ -7,7 +7,7 @@ import { attOf } from './attendance';
 import { sessionPhotos } from './activity';
 import { occasionsInRange } from './occasions';
 import { dayInfo, monthGrid, type DayState } from './calendar';
-import { extrasOn, lunchPictureOn, menuOn, teaPhotosOn, visibleLunchPhotos, type LunchPicture } from './kitchen';
+import { extrasOn, lunchPictureFor, menuOn, teaPhotosOn, visibleLunchPhotos, type LunchPicture } from './kitchen';
 import { bestPhotoOf, familyPhotosOn, homeTime, logOn, servedLunch, dishNamesOf, tookPart, visitDays, LUNCH_AT, TEA_AT } from './family';
 import { addDays, addMonths, live, toMin, ym } from '../util';
 
@@ -149,7 +149,9 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
         const over = came.length > 0 && isPast(date, LUNCH_AT, today, nowMin);
         const photos = over ? visibleLunchPhotos(s, date) : [];
         photos.forEach((p) => used.add(p.id));
-        const picture = lunchPictureOn(s, date, 'family');
+        // one picture only when every parent is served what it shows (a parent on an alternative or the soft menu would otherwise see another dish)
+        const pics = parents.map((m) => lunchPictureFor(s, m, date, 'family'));
+        const picture = pics.length && pics.every((p) => p && p.mediaId === pics[0]?.mediaId) ? pics[0] : null;
         rows.push({ key: 'lunch', kind: 'lunch', time: LUNCH_AT, passed: false, dishes: lunch, ...(picture ? { picture } : {}), took: [], photos });
       }
       const tea = menu ? dishNamesOf(s, menu.tea) : [];

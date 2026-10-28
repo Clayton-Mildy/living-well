@@ -191,4 +191,13 @@ describe('famDay: the lunch picture (round 15)', () => {
     const row = famDay(projectForFamily(withDishPhoto(s, NEXT), 'f1'), WHO, NEXT, T, NOW).rows.find((r) => r.kind === 'lunch');
     expect(row?.picture).toEqual({ mediaId: 'md_dish_photo_1', source: 'dish' });
   });
+  it('round 15 fix wave: a parent served something else (a seafood allergy) never gets the fish soup picture; parents who differ get none, parents who agree get it', () => {
+    const WED = T; // the demo day serves the fish soup
+    const s = produce(seed(), (d) => { for (const x of Object.values(d.dishes)) delete x.photoMediaId; d.dishes['dish-sop-ikan'].photoMediaId = 'md_fish_soup'; });
+    const pic = (who: string[]) => famDay(s, who, WED, T, 8 * 60).rows.find((r) => r.kind === 'lunch')?.picture;
+    expect(pic(['m1'])).toEqual({ mediaId: 'md_fish_soup', source: 'dish' });
+    expect(pic(['m10'])).toBeUndefined(); // Bambang: seafood allergy, and no other served dish has a picture
+    expect(pic(['m1', 'm10'])).toBeUndefined(); // they are not served the same: no picture rather than the wrong one
+    expect(pic(['m1', 'm46'])).toEqual({ mediaId: 'md_fish_soup', source: 'dish' });
+  });
 });

@@ -37,7 +37,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
   const changedLine = (line: string | undefined, size: number) => (line ? <span style={{ fontSize: size, lineHeight: 1.4, fontWeight: 600, color: '#7A5510' }}>{line}</span> : null);
   const slotOf = (it: DayItem) => (it.time || '10:30') as Slot;
   // round 15: the lunch line with its picture, in time order among the rows (staff see a photo that still waits for approval)
-  const pic = lunchPictureOn(s, info.date, 'staff');
+  const pic = info.hasOuting ? null : lunchPictureOn(s, info.date, 'staff'); // an outing day has no lunch at the club (the family calendar skips it too)
   const lunchRow = pic ? { pic, title: t('kitchen.course.lunch'), sub: dishNames(s, menuOn(s, info.date)?.lunch ?? []) } : null;
   const lunchAt = lunchRow ? (() => { const k = rows.findIndex((r) => (r.time ?? '00:00') > LUNCH_AT); return k < 0 ? rows.length : k; })() : -1;
   const lunchLine = (size: number, pad: string, gap: number, first: boolean, phone: boolean) => lunchRow ? (
@@ -50,6 +50,8 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
       </div>
     </div>
   ) : null;
+  /** The lunch line goes in before row `i` (the first row later than 12:00, or after the last one); phone and wide layouts both ask here. */
+  const lunchBefore = (i: number, ...args: Parameters<typeof lunchLine>) => (i === lunchAt ? lunchLine(...args) : null);
 
   if (isPhone) {
     return (
@@ -70,7 +72,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
               const activityEdit = canDay && it.kind === 'activity';
               return (
                 <Fragment key={it.key}>
-                  {i === lunchAt ? lunchLine(32, '8px 12px 8px 16px', 10, i === 0, true) : null}
+                  {lunchBefore(i, 32, '8px 12px 8px 16px', 10, i === 0, true)}
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px 8px 16px', minHeight: 54, ...rowLine(i === 0 && i !== lunchAt, 72) }}>
                     <span style={{ width: 46, flex: 'none', fontSize: 14, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3, color: '#4A4038' }}>{x.time}</span>
                     <span aria-hidden="true" className={neutralFill(x.bg)} style={{ width: 32, height: 32, borderRadius: 9, background: x.bg, color: x.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={x.icon} size={18} /></span>
@@ -85,7 +87,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
                 </Fragment>
               );
             })}
-            {lunchAt === rows.length ? lunchLine(32, '8px 12px 8px 16px', 10, rows.length === 0, true) : null}
+            {lunchBefore(rows.length, 32, '8px 12px 8px 16px', 10, rows.length === 0, true)}
             {proposed ? <ProposedDay s={s} date={info.date} decide={decide} /> : null}
           </div>
         ) : null}
@@ -106,7 +108,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
         const activityEdit = canDay && it.kind === 'activity';
         return (
           <Fragment key={it.key}>
-            {rows.indexOf(it) === lunchAt ? lunchLine(40, '12px 22px', 14, false, false) : null}
+            {lunchBefore(rows.indexOf(it), 40, '12px 22px', 14, false, false)}
             <div style={{ display: 'flex', alignItems: 'center', gap: 14, padding: '12px 22px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', minHeight: 64, flexWrap: activityEdit ? 'wrap' : 'nowrap' }}>
               <span style={{ width: 60, flex: 'none', fontSize: 'max(14px, var(--cp-body, 0px))', fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{x.time}</span>
               <span aria-hidden="true" className={neutralFill(x.bg)} style={{ width: 40, height: 40, borderRadius: 999, background: x.bg, color: x.fg, display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}><Icon name={x.icon} size={20} /></span>
@@ -127,7 +129,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
           </Fragment>
         );
       })}
-      {lunchAt === rows.length ? lunchLine(40, '12px 22px', 14, false, false) : null}
+      {lunchBefore(rows.length, 40, '12px 22px', 14, false, false)}
       {proposed ? <ProposedDay s={s} date={info.date} decide={decide} /> : null}
     </div>
   );

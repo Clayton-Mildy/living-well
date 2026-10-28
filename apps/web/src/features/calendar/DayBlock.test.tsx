@@ -134,4 +134,12 @@ describe('DayBlock: the lunch picture (round 15)', () => {
     expect(now?.getAttribute('data-source')).toBe('lunch');
     expect(now?.querySelector('[data-testid="day-lunch-picture"]')?.getAttribute('data-media')).toBe('md_kitchen_photo');
   });
+  it('round 15 fix wave: an outing day has no lunch row (the family calendar skips it too)', async () => {
+    const s = structuredClone(buildSeed().citra);
+    s.calendarEvents['ev-out'] = { id: 'ev-out', clubId: 'citra', createdAt: '', createdBy: 'system', date: DATE, kind: 'outing', title: 'Trip to the museum', from: '09:00', to: '14:00' } as never;
+    openClub(s, 'activity');
+    await show(s);
+    expect(document.querySelector('[data-testid="day-lunch"]')).toBeNull();
+    expect(document.body.textContent).toContain('Trip to the museum');
+  });
 });

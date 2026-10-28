@@ -7,7 +7,7 @@
 // downwards with the step's pictures as big cards, and a card opens the full-screen viewer. Lunch has its own "Tell the kitchen about lunch" line.
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDays, firstOfRole, lunchPictureOn, lunchSafety, displayName, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
+import { addDays, firstOfRole, lunchPictureFor, lunchSafety, displayName, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
 import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, storyNowMin, type DayStory, type StorySession, type TlItem } from '@cp/shared/rules/family';
 import { listItems, listKind } from '@cp/shared/rules/famToday';
 import { Avatar, DishThumb, Icon, PhotoImg, RailDot } from '../../components/ui';
@@ -139,8 +139,9 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
           for (const m of members) { const k = dishNamesOf(s, servedLunch(s, m, date)).join(', '); groups.set(k, [...(groups.get(k) || []), m]); }
           for (const [dishes, ms] of groups) if (dishes) lines.push(line(groups.size > 1 ? `${ms.map(displayName).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`, 'dish-' + dishes));
           // round 15: the day's picture, the dish photo until the kitchen's own lunch photo is approved (a photo that waits for approval never replaces it here)
-          const pic = lunchPictureOn(s, date, 'family');
-          if (pic && lines.length) lines.push(<span key="pic" style={{ display: 'block', marginTop: 6 }}><DishThumb mediaId={pic.mediaId} label={t('kitchen.dishPhoto')} size={56} source={pic.source} testId="lunch-picture" /></span>);
+          // the picture of what each parent is actually served (an alternative or the soft menu never shows the main dish's picture); parents with the same picture share it
+          const pics = members.map((m) => lunchPictureFor(s, m, date, 'family')).filter((p): p is NonNullable<typeof p> => !!p).filter((p, i, all) => all.findIndex((x) => x.mediaId === p.mediaId) === i);
+          if (pics.length && lines.length) lines.push(<span key="pic" style={{ display: 'flex', gap: 6, marginTop: 6 }}>{pics.map((pic) => <DishThumb key={pic.mediaId} mediaId={pic.mediaId} label={t('kitchen.dishPhoto')} size={56} source={pic.source} testId="lunch-picture" />)}</span>);
         }
         if (isToday || ahead) { // the allergy line also for tomorrow's lunch
           for (const m of members) {
