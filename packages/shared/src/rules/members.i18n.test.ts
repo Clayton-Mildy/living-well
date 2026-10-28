@@ -48,7 +48,7 @@ describe('i18n coverage for the members area', () => {
     expect(keys.filter((k) => !(k in E) || !(k in I))).toEqual([]);
   });
   it('the placeholders match between the languages', () => {
-    const ph = (x: string) => (x.match(/\{\w+\}/g) || []).sort().join(',');
+    const ph = (x: string) => (x.match(/\{\w+\}/g) || []).map((p) => (p === '{planId}' ? '{plan}' : p)).sort().join(','); // {planId} is the Indonesian name of {plan} (a plan notice carries both)
     const bad = Object.keys(E).filter((k) => /^(members|profile|reviews)\./.test(k)).filter((k) => ph(E[k]) !== ph(I[k]));
     expect(bad).toEqual([]);
   });

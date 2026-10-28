@@ -26,6 +26,13 @@ export function planLabel(s: ClubState, plan: Plan, lang: 'en' | 'id'): string {
   const d = planDef(s, plan);
   return d ? (lang === 'id' && d.nameId ? d.nameId : d.name) : plan;
 }
+/**
+ * Both names of a plan for a notice or a feed line, the way an invoice line carries them: `plan` is the English name, `planId` the Indonesian one (the English
+ * name when there is none) for copy that already says "paket": a leading "Paket " is dropped so the copy never reads "Paket Paket Hemat 8".
+ */
+export function planParams(s: ClubState, plan: Plan): { plan: string; planId: string } {
+  return { plan: planLabel(s, plan, 'en'), planId: planLabel(s, plan, 'id').replace(/^paket\s+/i, '') || planLabel(s, plan, 'en') };
+}
 /** The shape of a plan id: Flex, Gold or a catalogue plan (`plan_<n>`). Says nothing about whether the catalogue has it. */
 export const isPlanId = (v: unknown): v is Plan => v === 'flex' || v === 'gold' || (typeof v === 'string' && /^plan_[A-Za-z0-9_]{1,40}$/.test(v));
 /** A plan an action takes: any active plan of the catalogue. An unknown or retired id is refused with `code` (default: the invalid-input code). */

@@ -27,7 +27,7 @@ export const members: Same<typeof EN> = {
   'feed.appAccessOn': '{name}: {who} diundang ke aplikasi', 'feed.appAccessOff': '{name}: akses aplikasi {who} dicabut',
   'notif.welcome': 'Selamat datang di CitraPremier. Keanggotaan {name} dimulai {date}.', 'notif.docRequested': 'Klub meminta Anda mengunggah dokumen untuk {name}.',
   'notif.allergies': '{who} memperbarui alergi {name}.', 'notif.meds': '{who} memperbarui obat {name}.', 'notif.care': '{who} memperbarui petunjuk perawatan {name}.',
-  'notif.health': '{who} memperbarui catatan kesehatan {name}.', 'notif.planApplied': 'Perubahan paket {name} diterapkan mulai {date}.', 'notif.planChanged': 'Paket {name} berubah ke {plan} mulai {date}.', 'notif.planDeclined': 'Permintaan perubahan paket {name} tidak diterapkan.',
+  'notif.health': '{who} memperbarui catatan kesehatan {name}.', 'notif.planApplied': 'Perubahan paket {name} diterapkan mulai {date}.', 'notif.planChanged': 'Paket {name} berubah ke {planId} mulai {date}.', 'notif.planDeclined': 'Permintaan perubahan paket {name} tidak diterapkan.',
   'notif.ending': 'Keanggotaan {name} berakhir pada {date}.', 'notif.reactivated': 'Keanggotaan {name} aktif kembali mulai {date}.', 'notif.contactAdded': 'Anda kini menjadi kontak keluarga untuk {name}.',
   'notif.appInvite': 'Sekarang Anda bisa memakai aplikasi CitraPremier untuk {name}.',
   'err.titleRequired': 'Sapaan harus diisi.', 'err.nameRequired': 'Mohon isi nama lengkap.', 'err.dobRequired': 'Mohon isi tanggal lahir.', 'err.dobInvalid': 'Periksa tanggal lahir. Usia dihitung dari tanggal ini.',

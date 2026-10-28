@@ -132,7 +132,7 @@ export function applicationDataOf(s: ClubState, memberId: string, today: ISODate
   return {
     name: plainName(m), nickname: r.nickname || '', dob: m.dob, age: memberAge(m, today), marital: r.marital ?? null, gender: m.gender,
     address: m.address || '', rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',
-    plan, planName: planLabel(s, plan, 'en'), registrationFee: price.registration ?? null, monthlyFee: planPrice(price, plan), dementiaFee: feeOf(price, 'dementia'),
+    plan, planName: planLabel(s, plan, 'id'), registrationFee: price.registration ?? null, monthlyFee: planPrice(price, plan), dementiaFee: feeOf(price, 'dementia'),
     conditions: m.health.conditions, cognitive: cognitiveText(m.health.cognitive.summary), dementiaNote: r.dementiaNote || '', dementia: r.dementia ?? null,
     commDifficulty: r.commDifficulty ?? null, selfCare: r.selfCare ?? null, bathroomHelp: r.bathroomHelp ?? null,
     carer: m.nanny ? m.nanny.name : null,
@@ -159,7 +159,7 @@ export function applicationDataFromInput(s: ClubState, input: ApplicationInput, 
   return {
     name: input.name.trim(), nickname: r.nickname || '', dob: input.dob || null, age: input.dob ? ageOn(input.dob, today) : null, marital: r.marital ?? null, gender: female === null ? null : female ? 'f' : 'm',
     address: input.address.trim(), rtRw: r.rtRw || '', city: r.city || '', postcode: r.postcode || '', phone: r.phone || '', mobile: r.mobile || '', email: r.email || '',
-    plan: input.plan, planName: planLabel(s, input.plan, 'en'), registrationFee: price.registration ?? null, monthlyFee: planPrice(price, input.plan), dementiaFee: feeOf(price, 'dementia'),
+    plan: input.plan, planName: planLabel(s, input.plan, 'id'), registrationFee: price.registration ?? null, monthlyFee: planPrice(price, input.plan), dementiaFee: feeOf(price, 'dementia'),
     conditions: input.health.conditions, cognitive: '', dementiaNote: r.dementiaNote || '', dementia: r.dementia ?? null,
     commDifficulty: r.commDifficulty ?? null, selfCare: r.selfCare ?? null, bathroomHelp: r.bathroomHelp ?? null,
     carer: input.nanny ? input.nanny.name : null,

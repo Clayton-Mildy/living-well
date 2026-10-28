@@ -11,8 +11,7 @@ import { familyUserIds, requireMember, shortOf } from './helpers';
 import { clearApproval } from './approvalGate';
 import { addPlanEntry, applyEnding, obj, oneOf, revertEnding, txt } from './members';
 import { addLeave } from './membership';
-import { planName } from './planRequests';
-import { isPlanId, planOf } from '../rules/plans';
+import { isPlanId, planOf, planParams } from '../rules/plans';
 import { currentMembership, isPendingRow, membershipStatus, planOn } from '../rules/core';
 import { feeOf, issueDateOf, priceOn } from '../rules/billing';
 import { END_REASONS, isISO } from '../rules/members';
@@ -71,7 +70,7 @@ export function applyChange(d: Draft<ClubState>, f: Draft<FollowUp>, ctx: Ctx, b
     addPlanEntry(m, { from: first, plan, by }, ctx.today);
     // a request the family sent from the app for the same plan is answered by this
     for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending' && r.to === plan) { r.status = 'applied'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }
-    if (to.length) ctx.notify({ toUsers: to, kind: 'renewals.notif.plan', params: { name, plan: planName(d as unknown as ClubState, plan), date: first }, link: '/billing', memberId: m.id });
+    if (to.length) ctx.notify({ toUsers: to, kind: 'renewals.notif.plan', params: { name, ...planParams(d as unknown as ClubState, plan), date: first }, link: '/billing', memberId: m.id });
   } else if (f.outcome === 'leave') {
     const cur = currentMembership(m);
     const months = [...(f.leaveMonths ?? [])].sort();
@@ -149,7 +148,7 @@ export const renewalActions: ActionDef[] = [
       const key = input.outcome === 'leave' && lm.length > 1 ? 'leave2' : input.outcome;
       ctx.feed({
         icon: 'event_repeat', key: `renewals.feed.${key}`, memberId: m.id,
-        params: { name, month: input.month, plan: input.plan ? planName(s, input.plan) : '', from: lm[0] ?? input.month, to: lm[lm.length - 1] ?? input.month, date: lastDay ?? input.month },
+        params: { name, month: input.month, ...(input.plan ? planParams(s as ClubState, input.plan) : { plan: '', planId: '' }), from: lm[0] ?? input.month, to: lm[lm.length - 1] ?? input.month, date: lastDay ?? input.month },
       });
       ctx.result.followUpId = id;
       ctx.result.status = f.status;

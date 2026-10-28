@@ -2,7 +2,7 @@
 import type { ClubState, Invoice, InvoiceLine, ISODate, Member, PriceVersion, YM } from '../types';
 import { activeOn, currentMembership, isOpen, membershipStatus, openDaysInMonth, planOn, primaryContact, isPendingRow } from './core';
 import { extraDaysFor } from './attendance';
-import { planDef, planPrice } from './plans';
+import { planDef, planParams, planPrice } from './plans';
 import { onLeaveIn } from './leave';
 import { addDays, addMonths, dow, live, sortBy, sum, ym } from '../util';
 
@@ -120,7 +120,7 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
       // a catalogue plan is named on the line (the Indonesian name in `planId`, for the Indonesian wording); Flex and Gold keep their own wording
       const def = plan === 'flex' || plan === 'gold' ? undefined : planDef(s, plan);
       const label = plan === 'gold' ? 'inv.line.gold' : plan === 'flex' ? 'inv.line.flex' : 'inv.line.plan';
-      const params: Record<string, string | number> = plan === 'flex' || plan === 'gold' ? { month: period } : { month: period, plan: def?.name ?? plan, planId: def?.nameId ?? def?.name ?? plan };
+      const params: Record<string, string | number> = plan === 'flex' || plan === 'gold' ? { month: period } : { month: period, ...planParams(s, plan) };
       lines.push({ id: `plan-${period}`, kind: 'plan', label, params, qty: 1, unit: amount, amount, refMonth: period });
       // round 14: dementia care is a flat fee on top of the plan (not prorated), and not in a month of leave
       if (m.registration?.dementia === true) {

@@ -3,14 +3,13 @@
 import type { ClubState, Plan } from '../types';
 import type { Draft } from 'immer';
 import { defineAction, DomainError, type ActionDef } from './framework';
-import { isPlanId, planLabel, planOf } from '../rules/plans';
+import { isPlanId, planOf, planParams } from '../rules/plans';
 import { currentMembership, isPendingRow, isPrimaryFor, membershipStatus, displayName, planOn } from '../rules/core';
 import { addMonths, live, ym } from '../util';
 
 const bad = (): never => { throw new DomainError('err.invalid'); };
 const obj = (raw: unknown) => (raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {});
 /** A plan's English name for notices and the activity feed (the catalogue's name; Flex and Gold are brand words). */
-export const planName = (s: ClubState | Draft<ClubState>, p: Plan) => planLabel(s as ClubState, p, 'en');
 /** A family's open request for a member, if any. */
 export const pendingPlanRequest = (s: ClubState, memberId: string) => live(s.planChangeRequests).find((r) => r.memberId === memberId && r.status === 'pending');
 
@@ -31,7 +30,7 @@ export const planRequestActions: ActionDef[] = [
       if (pendingPlanRequest(s, m.id)) ctx.fail('err.planRequestPending');
       const id = ctx.id('pcr');
       d.planChangeRequests[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: m.id, to: input.to, from, status: 'pending' };
-      ctx.feed({ icon: 'sell', key: 'feed.planRequested', params: { name: displayName(m), plan: planName(s, input.to) }, memberId: m.id });
+      ctx.feed({ icon: 'sell', key: 'feed.planRequested', params: { name: displayName(m), ...planParams(s as ClubState, input.to) }, memberId: m.id });
       ctx.result.requestId = id;
     },
   }),
