@@ -1,12 +1,12 @@
 // People / HR (design ScrHr, now real staff records): list + detail with Profile, Contract and KTP, Salary and bank,
-// Notes and ratings, Leave (round 13: requests and the 5 days a year), Hours (the old Attendance tab: clock in and out). Add, edit, deactivate; app access; masked pay; contract expiry warnings.
+// Notes and ratings, Leave (round 13: requests and the 5 days a year). KC 28 Oct: the Hours tab (clock in and out) is gone. Add, edit, deactivate; app access; masked pay; contract expiry warnings.
 // On phone the list opens the detail as a full-screen panel with a back button.
-import { Fragment, useEffect, useMemo, useState } from 'react';
+import { Fragment, useEffect, useState } from 'react';
 import { useResetOn } from '../../lib/useResetOn';
 import { useSearchParams } from 'react-router-dom';
-import { addMonths, e164, fmtN, fmtPhone, live, parseN, rp, translate, ym, type Bank, type Staff, type StaffHr, type StaffRole, type StaffTime } from '@cp/shared';
-import { BANKS, CONTRACTS, HR_NOTE_KINDS, STAFF_ROLES, TIME_KINDS, contractState, hoursLabel, minutesBetween, staffList, staffRating, staffTimeFor } from '@cp/shared/rules/mgmt';
-import { Avatar, Button, Chip, DateField, Dialog, EmptyState, Group, Icon, IconButton, InfoChip, Note, PageHead, Pager, Pin, SectionLabel, Sheet, TextField, TimeField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
+import { e164, fmtN, fmtPhone, live, parseN, rp, translate, type Bank, type Staff, type StaffHr, type StaffRole } from '@cp/shared';
+import { BANKS, CONTRACTS, HR_NOTE_KINDS, STAFF_ROLES, contractState, staffList, staffRating } from '@cp/shared/rules/mgmt';
+import { Avatar, Button, Chip, DateField, Dialog, EmptyState, Group, Icon, IconButton, InfoChip, Note, PageHead, Pager, Pin, SectionLabel, Sheet, TextField, Toggle, usePaged, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -24,8 +24,8 @@ const titleOf = (t: (k: string) => string, x: Pick<Staff, 'title' | 'role'>) => 
 import { useClub } from '../../store/replica';
 import { Fact, ListCard, Page, PillBtn, PushPanel, SegTabs, SwitchRow, groupCard, labelStyle, chipRow, tn } from './common';
 
-type Tab = 'profile' | 'contract' | 'pay' | 'notes' | 'leave' | 'att';
-const TABS: Tab[] = ['profile', 'contract', 'pay', 'notes', 'leave', 'att'];
+type Tab = 'profile' | 'contract' | 'pay' | 'notes' | 'leave';
+const TABS: Tab[] = ['profile', 'contract', 'pay', 'notes', 'leave'];
 
 export function People() {
   const t = useT();
@@ -261,7 +261,6 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
 
       {tab === 'notes' ? <NotesTab staff={x} /> : null}
       {tab === 'leave' ? <LeaveTab staff={x} /> : null}
-      {tab === 'att' ? <AttendanceTab staff={x} /> : null}
 
       <StaffDialog open={editing} onClose={() => setEditing(false)} staff={x} onSaved={() => setEditing(false)} />
       <StaffPhoto staff={x} open={photo} onClose={() => setPhoto(false)} />
@@ -400,135 +399,6 @@ function NotesTab({ staff: x }: { staff: Staff }) {
       </div>
       {delDialog}
     </div>
-  );
-}
-
-// ---------- attendance (staff time) ----------
-function AttendanceTab({ staff: x }: { staff: Staff }) {
-  const t = useT();
-  const { isPhone } = useDevice();
-  const { fds, fmonth } = useFmt();
-  const s = useClub();
-  const act = useAct();
-  const { today, now } = useNow();
-  const [month, setMonth] = useState(ym(today));
-  const [dlg, setDlg] = useState<{ date: string; row?: StaffTime } | null>(null);
-  const cur = ym(today);
-  const data = useMemo(() => staffTimeFor(s, x.id, month), [s, x.id, month]);
-  const byDate = new Map(data.rows.map((r) => [r.date, r]));
-  const last = month === cur ? today : `${month}-31`;
-  const days: string[] = [];
-  for (let d = Number(last.slice(8)); d >= 1; d--) {
-    const date = `${month}-${String(d).padStart(2, '0')}`;
-    if (date > today) continue;
-    const wd = new Date(date + 'T00:00:00Z').getUTCDay();
-    if (byDate.has(date) || (wd >= 1 && wd <= 5)) days.push(date);
-  }
-  const todayRow = byDate.get(today);
-  const daysPaged = usePaged(days, 10, month);
-  const clockIn = () => act('staffTime.upsert', { staffId: x.id, date: today, kind: 'worked', from: now }, { ok: t('people.clockedIn', { time: now }) });
-  const clockOut = () => act('staffTime.upsert', { staffId: x.id, date: today, kind: 'worked', from: todayRow?.from, to: now }, { ok: t('people.clockedOut', { time: now }) });
-  const tile = (label: string, value: string) => isPhone ? (
-    <div key={label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <span style={{ fontSize: 28, lineHeight: '32px', fontWeight: 300, letterSpacing: '-0.5px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-      <span style={{ fontSize: 13, fontWeight: 500, color: '#6B6259' }}>{label}</span>
-    </div>
-  ) : (
-    <div style={{ padding: '0 0 10px', borderBottom: '2px solid var(--hairline, #E2E2E6)', display: 'flex', flexDirection: 'column', gap: 4 }}>
-      <span style={{ fontSize: 'clamp(28px, 3.4vw, 40px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums' }}>{value}</span>
-      <span style={{ fontSize: 13, fontWeight: 500, color: '#6B6259' }}>{label}</span>
-    </div>
-  );
-  const KC: Record<string, { icon: string; fg: string; bg: string }> = { worked: { icon: 'check_circle', fg: '#3D6B4F', bg: '#E3EFE6' }, leave: { icon: 'beach_access', fg: '#7A5510', bg: '#F6ECD6' }, sick: { icon: 'sick', fg: '#7A5510', bg: '#F6ECD6' }, off: { icon: 'event_busy', fg: '#5E5852', bg: 'var(--press, #EEEEF0)' } };
-  return (
-    <>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-        <IconButton icon="chevron_left" label={t('common.previous')} onClick={() => setMonth(addMonths(month, -1))} />
-        <span style={{ fontSize: 19, fontWeight: 500, minWidth: 140, textAlign: 'center', letterSpacing: '-0.3px' }}>{fmonth(month, true)}</span>
-        <IconButton icon="chevron_right" label={t('common.next')} onClick={() => setMonth(addMonths(month, 1))} style={{ opacity: month >= cur ? 0.4 : 1 }} />
-        <span style={{ flex: 1 }} />
-        {month === cur && x.active ? (
-          !todayRow || todayRow.kind !== 'worked' ? <Button size={44} icon="login" onClick={clockIn}>{t('people.clockIn')}</Button>
-            : !todayRow.to ? <Button size={44} icon="logout" onClick={clockOut}>{t('people.clockOut')}</Button> : null
-        ) : null}
-      </div>
-      {isPhone ? (
-        // round 6, phone: the four numbers are one flat group, two by two (not four underlined tiles)
-        <Group pad="14px 16px" gap={0}>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: '14px 16px' }}>
-            {tile(t('people.attWorked'), String(data.worked))}
-            {tile(t('people.attHours'), hoursLabel(data.minutes))}
-            {tile(t('people.attLeave'), String(data.leave))}
-            {tile(t('people.attSick'), String(data.sick))}
-          </div>
-        </Group>
-      ) : (
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(110px,1fr))', gap: 'clamp(12px, 2vw, 28px)' }}>
-        {tile(t('people.attWorked'), String(data.worked))}
-        {tile(t('people.attHours'), hoursLabel(data.minutes))}
-        {tile(t('people.attLeave'), String(data.leave))}
-        {tile(t('people.attSick'), String(data.sick))}
-      </div>
-      )}
-      <ListCard title={t('people.attTitle')}>
-        {days.length ? daysPaged.rows.map((date) => {
-          const r = byDate.get(date);
-          const k = r ? KC[r.kind] : null;
-          const mins = r ? minutesBetween(r.from, r.to) : 0;
-          return (
-            <Fragment key={date}>
-              <button type="button" data-att={date} className={isPhone ? 'cp-press' : undefined} onClick={() => setDlg({ date, row: r })} style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '14px 0', minHeight: 56, border: 'none', borderTop: '0.5px solid var(--hairline, #E2E2E6)', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
-                <span style={{ flex: 1, minWidth: 0, fontSize: 16, fontWeight: 500 }}>{fds(date)}</span>
-                {r && k ? (
-                  <>
-                    <span style={{ fontSize: FONT_BODY, color: '#5E5852', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{r.kind === 'worked' ? `${r.from || '—'} – ${r.to || t('people.stillIn')}${mins ? ` · ${hoursLabel(mins)}` : ''}` : ''}</span>
-                    <span style={{ height: 24, padding: '0 10px 0 6px', borderRadius: 8, background: k.bg, color: k.fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4, whiteSpace: 'nowrap' }}><Icon name={k.icon} size={16} fill={1} />{t('people.tk_' + r.kind)}</span>
-                  </>
-                ) : <span style={{ fontSize: FONT_BODY, color: '#5E5852' }}>{t('people.noEntry')}</span>}
-                <Icon name="edit" size={20} color="var(--accent, #75624B)" />
-              </button>
-            </Fragment>
-          );
-        }) : <div style={{ padding: '14px 0 16px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', fontSize: 15, color: '#6B6259' }}>{t('people.attNone')}</div>}
-        <Pager page={daysPaged.page} pages={daysPaged.pages} onPage={daysPaged.setPage} label={t('people.pgDays')} />
-      </ListCard>
-      {dlg ? <TimeDialog staff={x} date={dlg.date} row={dlg.row} onClose={() => setDlg(null)} /> : null}
-    </>
-  );
-}
-
-function TimeDialog({ staff: x, date, row, onClose }: { staff: Staff; date: string; row?: StaffTime; onClose: () => void }) {
-  const t = useT();
-  const { fdl } = useFmt();
-  const act = useAct();
-  const [kind, setKind] = useState<StaffTime['kind']>(row?.kind || 'worked');
-  const [from, setFrom] = useState(row?.from || '08:00');
-  const [to, setTo] = useState(row?.to || '');
-  const bad = kind === 'worked' && (!from || (!!to && to <= from));
-  const save = async () => {
-    const r = await act('staffTime.upsert', { staffId: x.id, date, kind, ...(kind === 'worked' ? { from, ...(to ? { to } : {}) } : {}) }, { ok: t('people.timeSaved') });
-    if (r.ok) onClose();
-  };
-  const remove = async () => {
-    const r = await act('staffTime.remove', { staffId: x.id, date }, { ok: t('people.timeRemoved') });
-    if (r.ok) onClose();
-  };
-  return (
-    <Dialog open onClose={onClose} eyebrow={x.name} title={fdl(date)} maxWidth={520}
-      footer={<>{row ? <Button variant="secondary" onClick={remove}>{t('common.remove')}</Button> : null}<Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button><Button disabled={bad} onClick={save}>{t('common.save')}</Button></>}>
-      <div style={chipRow} role="radiogroup" aria-label={t('people.attTitle')}>
-        {TIME_KINDS.map((k) => <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>{t('people.tk_' + k)}</Chip>)}
-      </div>
-      {kind === 'worked' ? (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(140px,1fr))', gap: 10 }}>
-          <TimeField label={t('people.clockInL')} value={from} onChange={setFrom} />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 4, alignItems: 'flex-start' }}>
-            <div style={{ width: '100%' }}><TimeField label={t('people.clockOutL')} value={to} onChange={setTo} min={from || undefined} error={to && to <= from ? t('people.err.timeOrder') : false} /></div>
-            {to ? <Button size={44} variant="ghost" onClick={() => setTo('')}>{t('people.stillIn')}</Button> : null}
-          </div>
-        </div>
-      ) : null}
-    </Dialog>
   );
 }
 
