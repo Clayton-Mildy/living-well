@@ -7,6 +7,7 @@ import type { ClubState, FollowUp, FollowUpCall, FollowUpOutcome, ISODate, Membe
 import { addDays, addMonths, monthStart, rng } from '../../util';
 import { currentMembership, planOn } from '../../rules/core';
 import { askedInApp, followUpId, leaveMonthsCheck, planAfter, renewalMembers, renewalMonth } from '../../rules/renewals';
+import { leaveDeadline } from '../../rules/leave';
 
 type Slot = { kind: FollowUpOutcome; plan?: Plan; calls?: number };
 /** In this order, each takes the next member who fits: the 5-member world uses the first four, the full roster all eight. */
@@ -76,5 +77,27 @@ export function seedRenewals(s: ClubState, T: ISODate): void {
       for (const mo of leaveMonths) cur.leaves = [...(cur.leaves ?? []), { month: mo, at: last.at, by: last.by, ...(last.note ? { note: last.note } : {}) }].sort((a, b) => (a.month < b.month ? -1 : 1));
     }
     s.followUps[id] = row;
+  }
+  seedLeaveNextMonth(s, T, month, take);
+}
+
+/**
+ * KC (28 Oct): the full roster also has a member on leave next month itself (November in the demo), so Next month shows one "On leave".
+ * The family asked before the notice closed (two days before the deadline, or yesterday if that is earlier), so the rules allowed it on that day.
+ * Fixed times only (no random draws), so nothing else in the seed shifts. The 5-member test world has no one left to take.
+ */
+function seedLeaveNextMonth(s: ClubState, T: ISODate, month: YM, take: () => Member | undefined): void {
+  if (Object.keys(s.members).length <= 10) return;
+  if (Object.values(s.followUps ?? {}).some((f) => f.outcome === 'leave' && f.leaveMonths?.includes(month))) return; // early in the month the leave slot above already took next month
+  const asked = [addDays(T, -1), addDays(leaveDeadline(month), -2)].sort()[0];
+  for (let m = take(); m; m = take()) {
+    if (!leaveMonthsCheck(s, m, [month], T, asked).ok) continue;
+    const at = `${asked}T10:20`;
+    const note = 'Visiting their son in Surabaya for the month.';
+    const id = followUpId(month, m.id);
+    s.followUps![id] = { id, clubId: s.clubId, createdAt: at, createdBy: 'staff:s1', memberId: m.id, month, outcome: 'leave', calls: [{ at, by: 'staff:s1', outcome: 'leave', note }], status: 'done', note, leaveMonths: [month] };
+    const cur = currentMembership(m);
+    cur.leaves = [...(cur.leaves ?? []), { month, at, by: 'staff:s1' as const, note }].sort((a, b) => (a.month < b.month ? -1 : 1));
+    return;
   }
 }

@@ -63,9 +63,13 @@ describe.each([['2026-10-21'], ['2026-10-08']])('the seed around %s', (T) => {
     expect(rows.find((r) => r.m.id === 'm10')).toMatchObject({ state: 'decided', asked: 'plan' });
     expect(renewalCounts(rows).waiting).toBe(0);
   });
-  it('45 members (the demo): 5 to 8 follow-ups, the changes applied (Next month lists them), nothing waiting, most members still to do', () => {
+  it('45 members (the demo): 5 to 9 follow-ups, the changes applied (Next month lists them), nothing waiting, most members still to do', () => {
     const s = buildCitra(T, DEMO_START_MIN, { roster: true });
-    const rows = check(s, { min: 5, max: 8 });
+    const rows = check(s, { min: 5, max: 9 });
+    // KC (28 Oct): one member is on leave next month itself, asked before the notice closed
+    const away = live(s.followUps).filter((f) => f.outcome === 'leave' && f.leaveMonths?.[0] === month);
+    expect(away).toHaveLength(1);
+    expect(nextMonthPlans(s, T).find((r) => r.member.id === away[0].memberId)?.status).toBe('leave');
     expect(rows.length).toBeGreaterThan(35);
     const c = renewalCounts(rows);
     expect(c.waiting).toBe(0);
@@ -77,6 +81,16 @@ describe.each([['2026-10-21'], ['2026-10-08']])('the seed around %s', (T) => {
 });
 
 // KC round 8d: the list's Status and Next step columns
+it('the demo on 28 Oct (after November\'s notice closed) still has the member on leave in November, asked in time', () => {
+  const T = '2026-10-28';
+  const s = buildCitra(T, DEMO_START_MIN, { roster: true });
+  const away = live(s.followUps).find((f) => f.outcome === 'leave' && f.leaveMonths?.[0] === '2026-11')!;
+  expect(away).toBeTruthy();
+  expect(away.calls[0].at < `${T}T00:00`).toBe(true);
+  expect(leaveMonths(s.members[away.memberId])).toContain('2026-11');
+  expect(nextMonthPlans(s, T).find((r) => r.member.id === away.memberId)?.status).toBe('leave');
+});
+
 describe('status and next step of a row', () => {
   const fu = (f: Partial<FollowUp>): FollowUp => ({ id: 'fu-2026-11-m1', clubId: 'citra', createdAt: '2026-10-20T10:00', createdBy: 'staff:s1', memberId: 'm1', month: '2026-11', calls: [], status: 'open', ...f } as FollowUp);
   const call = { at: '2026-10-20T10:00', by: 'staff:s1', outcome: 'noAnswer' } as FollowUp['calls'][number];
