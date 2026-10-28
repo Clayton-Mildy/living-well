@@ -595,6 +595,7 @@ describe('plans from the catalogue (round 15)', () => {
     const r = run(s, 'enquiry.convert', { ...input, plan: 'plan_1' }, 's9');
     const m = r.state.members[r.result.memberId as string];
     expect(m.plans[0].plan).toBe('plan_1');
+    expect(Object.values(r.state.activity).find((a) => a.key === 'enq.feed.joined')?.params).toMatchObject({ plan: 'Flex 8', planId: 'Flex 8' }); // the lead's feed names the plan, not its id
     fails(s, 'enquiry.convert', { ...input, plan: 'plan_2' }, 's9', 'err.invalid');
     fails(s, 'enquiry.convert', { ...input, plan: 'plan_9' }, 's9', 'err.invalid');
   });

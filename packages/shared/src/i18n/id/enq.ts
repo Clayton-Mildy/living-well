@@ -57,7 +57,7 @@ export const enq: Same<typeof EN> = {
   'feed.leadAdded': 'Calon baru · {name}', 'feed.moved_new': '{name} dikembalikan ke Baru', 'feed.moved_visit': '{name} dipindahkan ke Kunjungan', 'feed.moved_trial': '{name} dipindahkan ke Percobaan terjadwal',
   'feed.visitBooked': 'Kunjungan dijadwalkan · {name} · {date} {time}', 'feed.trialBooked': 'Percobaan dijadwalkan · {name} · {date}', 'feed.lost': '{name} ditandai batal', 'feed.reopened': '{name} dibuka kembali',
   'feed.archived': '{name} diarsipkan',
-  'feed.joined': '{name} bergabung sebagai anggota ({plan}), mulai {date}',
+  'feed.joined': '{name} bergabung sebagai anggota ({planId}), mulai {date}',
   'feed.joinPending': '{name} ditambahkan dari data calon dan menunggu persetujuan manajemen', 'feed.joinRejected': 'Pendaftaran {name} tidak disetujui; calon kembali ke papan',
 
   // ----- notifikasi -----

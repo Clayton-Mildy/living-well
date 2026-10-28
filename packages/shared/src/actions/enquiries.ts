@@ -6,7 +6,7 @@ import { defineAction, hasRole, DomainError, type Ctx } from './framework';
 import { familyUserIds, shortOf, signAtRegistration } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
 import { FEE_DEFAULTS, priceOn } from '../rules/billing';
-import { isPlanId, planDef, planOf } from '../rules/plans';
+import { isPlanId, planDef, planOf, planParams } from '../rules/plans';
 import {
   ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
 } from '../rules/enquiries';
@@ -371,7 +371,7 @@ export const enquiriesActions = [
       e.next = { kind: 'starts', date: i.start };
       ctx.result.memberId = memberId;
       ctx.result.familyId = contactId;
-      ctx.feed({ icon: 'person_add', key: gate ? 'enq.feed.joinPending' : 'enq.feed.joined', params: { name: shortOf(d, memberId), plan: i.plan, date: dm(i.start) }, memberId });
+      ctx.feed({ icon: 'person_add', key: gate ? 'enq.feed.joinPending' : 'enq.feed.joined', params: { name: shortOf(d, memberId), ...planParams(d as ClubState, i.plan), date: dm(i.start) }, memberId });
       if (!gate) finishJoin(d, memberId, i, ctx);
     },
     afterApprove(d, cr, ctx) {
@@ -379,7 +379,7 @@ export const enquiriesActions = [
       const memberId = cr.target.memberId || cr.createdRows?.find((r) => r.coll === 'members')?.id;
       if (!memberId) return;
       finishJoin(d, memberId, i, ctx);
-      ctx.feed({ icon: 'person_add', key: 'enq.feed.joined', params: { name: shortOf(d, memberId), plan: i.plan, date: dm(i.start) }, memberId });
+      ctx.feed({ icon: 'person_add', key: 'enq.feed.joined', params: { name: shortOf(d, memberId), ...planParams(d as ClubState, i.plan), date: dm(i.start) }, memberId });
       const e = d.enquiries[i.enquiryId];
       if (e) { delete e.prevStage; delete e.prevNext; }
     },
