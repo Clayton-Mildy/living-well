@@ -111,6 +111,22 @@ describe('Members, In the club by plan', () => {
     await pick('All');
     expect(rows()).toHaveLength(3);
   });
+  it('a retired plan that still has members in the club keeps its chip (a retired plan with none has no chip)', async () => {
+    const state = structuredClone(buildSeed().citra);
+    state.club.settings.plans = [{ id: 'plan_1', name: 'Saver 8', kind: 'days', quota: 8, active: false }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+    state.members.m10.plans = [{ from: '2020-01-01', plan: 'plan_1', by: 'staff:s9' }]; // m10 is in the club today (Flex before)
+    useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
+    useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=in']}><MembersList /></MemoryRouter>); });
+    const group = host.querySelector('[role="radiogroup"][aria-label="Plan"]') as HTMLElement;
+    const chips = Array.from(group.querySelectorAll('[role="radio"]')).map((o) => o.textContent);
+    expect(chips).toEqual(['All · 3', 'Flex · 0', 'Gold · 2', 'Saver 8 · 1']);
+    await act(async () => { (Array.from(group.querySelectorAll<HTMLElement>('[role="radio"]')).find((o) => o.textContent?.startsWith('Saver 8')))!.click(); });
+    expect(Array.from(host.querySelectorAll('[data-member]')).map((e) => e.getAttribute('data-member'))).toEqual(['m10']);
+  });
   it('the Plan chips show only while In the club is selected', async () => {
     const state = buildSeed().citra;
     useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });

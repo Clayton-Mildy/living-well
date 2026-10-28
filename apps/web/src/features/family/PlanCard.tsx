@@ -1,11 +1,12 @@
 // Round 8: "Ask the club to change the plan" and "Ask for leave", the two bronze text links under a parent's plan (Billing's Plans list and the parent's
 // profile). The billing contact sends them; everyone else reads who to ask. A request waiting for the club shows with a way to withdraw it.
 import { useState } from 'react';
-import { isPrimaryFor, displayName, isDaysPlan, planLabel, planPrice, planQuota, priceOn, rp, suspensionOf, type Member, type Plan } from '@cp/shared';
+import { isPrimaryFor, displayName, isDaysPlan, planLabel, planQuota, priceOn, rp, suspensionOf, type Member, type Plan } from '@cp/shared';
 import { pendingPlanRequest } from '@cp/shared/actions/planRequests';
 import { activePlans } from '@cp/shared/rules/members';
 import { billingContactOf, planSummary } from '@cp/shared/rules/family';
 import { Icon } from '../../components/ui';
+import { planPriceText } from '../members/planPriceText';
 import { useAct } from '../../lib/act';
 import { Chips, F, FamSheet, TextLink } from './kit';
 import { useFamilyCtx } from './useFamily';
@@ -79,8 +80,8 @@ export function PlanAsk({ m, quiet }: { m: Member; quiet?: boolean }) {
             <FamSheet open={ask} onClose={() => setAsk(false)} title={t('family.planAskTitle', { name, plan: name_(to) })} testId="plan-sheet" action={{ label: t('fam.send'), onClick: () => void send(), disabled: busy }}>
               {choices.length > 1 ? <Chips label={t('family.planPick')} testId="plan-pick" items={choices.map((d) => ({ value: d.id, label: name_(d.id) }))} value={to} onChange={setPick} /> : null}
               <div style={{ fontSize: 15, lineHeight: '22px', color: F.soft }}>{isDaysPlan(s, to)
-                ? t('family.planAskBodyFlex', { plan: name_(to), q: planQuota(s, to) ?? s.club.settings.flexQuota, p: rp(planPrice(price, to)), x: rp(price.extra), d: fmt.fdl(next) })
-                : t('family.planAskBodyGold', { plan: name_(to), p: rp(planPrice(price, to)), d: fmt.fdl(next) })}</div>
+                ? t('family.planAskBodyFlex', { plan: name_(to), q: planQuota(s, to) ?? s.club.settings.flexQuota, p: planPriceText(s, to, next, t, fmt.fds), x: rp(price.extra), d: fmt.fdl(next) })
+                : t('family.planAskBodyGold', { plan: name_(to), p: planPriceText(s, to, next, t, fmt.fds), d: fmt.fdl(next) })}</div>
             </FamSheet>
           ) : null}
         </>

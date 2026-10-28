@@ -1,7 +1,7 @@
 // Plans and pricing (design ScrPlans), round 13 §11, five sections: Plans (Flex with its visits rule, Gold, then the plans management added in round 15 with Add plan / quick add / edit / retire), Extra charges (extra day, leave month, dementia care), One-off fees (registration, 2-day trial),
 // Changes (takes effect from + tell the team, only while something is edited) and the next-invoice preview for a chosen member (with the unsaved prices). Save / Cancel stay pinned.
 import { useMemo, useState, type ReactNode } from 'react';
-import { approvedMembers, feeOf, fmtN, memberName, membershipStatus, parseN, planLabel, priceOn, rp, type PlanDef } from '@cp/shared';
+import { approvedMembers, feeOf, fmtN, memberName, membershipStatus, parseN, planLabel, planPriceInfo, priceOn, rp, type Plan, type PlanDef } from '@cp/shared';
 import { invoicePreview, type PriceDraft } from '@cp/shared/rules/mgmt';
 import { Button, DateField, Group, Icon, IconButton, PageHead, Segmented, Select, Sheet, TextField, Toggle, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -20,7 +20,7 @@ type Draft = Record<PriceKey, string> & { quota: string; from: string; plans: Re
 export function Plans() {
   const t = useT();
   const { isPhone } = useDevice();
-  const { fmonth } = useFmt();
+  const { fmonth, fds } = useFmt();
   const s = useClub();
   const { today } = useNow();
   const act = useAct();
@@ -45,6 +45,8 @@ export function Plans() {
   const planVal = (id: string) => d.plans[id] ?? saved.plans[id] ?? '';
   const planNums = Object.fromEntries(custom.map((p) => [p.id, parseN(planVal(p.id))]));
   const planNow = (id: string) => price.plans?.[id] ?? 0;
+  // a plan whose only price starts later shows that price and its date where the price field is empty (round 15 fix wave)
+  const upcomingText = (id: string) => { const u = planPriceInfo(s, id as Plan, today); return u.from ? t('plans.fromPrice', { date: fds(u.from), price: rp(u.price) }) : undefined; };
   const plansChanged = custom.some((p) => planNums[p.id] !== planNow(p.id));
   const planErr = (id: string) => (planVal(id) === '' ? planNow(id) > 0 : planNums[id] < 1);
   const quota = d.quota === '' ? NaN : Number(d.quota);
@@ -118,7 +120,7 @@ export function Plans() {
       <span style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.4 }}>{unit}</span>
       <span className={`cp-input-wrap cp-fill${show(k) ? ' cp-err' : ''}`} style={{ display: 'flex', alignItems: 'center', height: 52, borderRadius: 12, background: 'var(--fill, #F4F4F5)', boxShadow: show(k) ? 'inset 0 0 0 2px #9A3D24' : undefined, overflow: 'hidden' }}>
         <span style={{ padding: '0 14px', height: '100%', display: 'flex', alignItems: 'center', background: 'var(--press, #EEEEF0)', fontSize: 15 }}>Rp</span>
-        <input value={k in d ? d[k as PriceKey] : planVal(k)} onChange={(e) => (k in d ? set({ [k]: fmtN(e.target.value) }) : set({ plans: { ...d.plans, [k]: fmtN(e.target.value) } }))} placeholder={k in d ? undefined : t('plans.noPrice')} inputMode="numeric" aria-label={t('mgmt.priceAria', { name })} aria-invalid={show(k) || undefined}
+        <input value={k in d ? d[k as PriceKey] : planVal(k)} onChange={(e) => (k in d ? set({ [k]: fmtN(e.target.value) }) : set({ plans: { ...d.plans, [k]: fmtN(e.target.value) } }))} placeholder={k in d ? undefined : upcomingText(k) ?? t('plans.noPrice')} inputMode="numeric" aria-label={t('mgmt.priceAria', { name })} aria-invalid={show(k) || undefined}
           style={{ flex: 1, minWidth: 0, border: 'none', outline: 'none', height: '100%', padding: '0 14px', fontSize: 18, fontVariantNumeric: 'tabular-nums', fontFamily: 'Inter', color: '#24201C', background: 'transparent' }} />
       </span>
       {show(k) ? <span role="alert" style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}><Icon name="error" size={18} fill={1} />{t('mgmt.err.priceInvalid')}</span> : null}
@@ -281,6 +283,8 @@ function PlanSheet({ plan, onClose }: { plan?: PlanDef; onClose: () => void }) {
   const [f, setF] = useState({ name: plan?.name ?? '', nameId: plan?.nameId ?? '', kind: (plan?.kind ?? 'days') as PlanDef['kind'], quota: plan?.quota ? String(plan.quota) : '', price: '', from: today, active: plan?.active ?? true });
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [created, setCreated] = useState<string | null>(null); // the plan was added but its price did not save: Save then only retries the price (never adds the plan twice)
+  const [priceFailed, setPriceFailed] = useState(false);
   const set = (p: Partial<typeof f>) => setF((x) => ({ ...x, ...p }));
   const quota = f.quota === '' ? NaN : Number(f.quota);
   const priceN = parseN(f.price);
@@ -291,12 +295,17 @@ function PlanSheet({ plan, onClose }: { plan?: PlanDef; onClose: () => void }) {
     if (Object.values(err).some(Boolean) || busy) return;
     setBusy(true);
     try {
-      const r = await act('club.setPlan', { ...(plan ? { id: plan.id } : {}), name: f.name.trim(), ...(f.nameId.trim() ? { nameId: f.nameId.trim() } : {}), kind: f.kind, ...(f.kind === 'days' ? { quota } : {}), active: f.active }, { silent: true });
-      if (!r.ok) return;
-      const id = plan?.id ?? String(r.result.planId ?? '');
+      let id = plan?.id ?? created ?? '';
+      if (!created) {
+        const r = await act('club.setPlan', { ...(plan ? { id: plan.id } : {}), name: f.name.trim(), ...(f.nameId.trim() ? { nameId: f.nameId.trim() } : {}), kind: f.kind, ...(f.kind === 'days' ? { quota } : {}), active: f.active }, { silent: true });
+        if (!r.ok) return;
+        id = plan?.id ?? String(r.result.planId ?? '');
+      }
       if (!plan && id) {
+        setCreated(id);
         const cur = priceOn(s, f.from);
-        await act('prices.set', { flex: cur.flex, gold: cur.gold, extra: cur.extra, plans: { [id]: priceN }, from: f.from }, { silent: true });
+        const r = await act('prices.set', { flex: cur.flex, gold: cur.gold, extra: cur.extra, plans: { [id]: priceN }, from: f.from }, { silent: true });
+        if (!r.ok) { setPriceFailed(true); return; } // the plan exists without a price: keep the sheet open and say so
       }
       say(t(plan ? 'plans.savedToast' : 'plans.addedToast', { name: f.name.trim() }));
       onClose();
@@ -314,6 +323,7 @@ function PlanSheet({ plan, onClose }: { plan?: PlanDef; onClose: () => void }) {
       <TextField label={t('plans.name')} value={f.name} maxLength={60} onChange={(v) => set({ name: v })} error={touched && err.name && t('plans.err.name')} />
       <TextField label={t('plans.nameId')} value={f.nameId} maxLength={60} onChange={(v) => set({ nameId: v })} />
       <Segmented label={t('plans.type')} cols={2} value={f.kind} onChange={(v) => set({ kind: v })} items={[{ value: 'days', label: t('plans.kind.days') }, { value: 'unlimited', label: t('plans.kind.unlimited') }]} />
+      {priceFailed ? <div role="alert" style={{ display: 'flex', alignItems: 'flex-start', gap: 6, fontSize: FONT_BODY, color: '#9A3D24', lineHeight: 1.4 }}><Icon name="error" size={18} fill={1} />{t('plans.err.priceSave')}</div> : null}
       {f.kind === 'days' ? <TextField label={t('plans.quota')} value={f.quota} inputMode="numeric" maxLength={2} onChange={(v) => set({ quota: v.replace(/\D/g, '') })} error={touched && err.quota && t('plans.err.quota')} /> : null}
       {!plan ? (
         <>

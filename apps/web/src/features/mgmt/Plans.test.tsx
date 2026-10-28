@@ -18,12 +18,14 @@ afterEach(async () => {
   host = null;
   document.body.innerHTML = '';
 });
-function openClub(opts: { staff?: 's9' | 's1'; plans?: boolean } = {}) {
+function openClub(opts: { staff?: 's9' | 's1'; plans?: boolean; later?: boolean } = {}) {
   const state = structuredClone(buildSeed().citra); // the seed is shared between tests
   if (opts.plans) {
     // round 15 phase 2: two catalogue plans, the second without a price yet
     state.club.settings.plans = [{ id: 'plan_1', name: 'Gold Plus', kind: 'unlimited', active: true }, { id: 'plan_2', name: 'Flex 6', kind: 'days', quota: 6, active: true }];
     Object.values(state.prices).forEach((p) => { p.plans = { plan_1: 4_500_000 }; });
+    // round 15 fix wave: Flex 6 is priced from a later date only
+    if (opts.later) { const base = Object.values(state.prices)[0]; state.prices['price-later'] = { ...base, id: 'price-later', from: '2026-11-01', plans: { plan_1: 4_500_000, plan_2: 2_100_000 } }; }
   }
   const user = opts.staff === 's1' ? { kind: 'staff' as const, id: 's1', name: 'Caca', role: 'lobby' as const, clubId: 'citra', clubs: ['citra'] } : { kind: 'staff' as const, id: 's9', name: 'Ega', role: 'mgmt' as const, clubId: 'citra', clubs: ['citra', 'adina'] };
   useSession.setState({ lang: 'en', club: 'citra', user });
@@ -108,6 +110,37 @@ describe.each([['phone', 390], ['wide', 1280]])('the plan catalogue (%s)', (_n, 
     expect(priceInput('Flex 6').value).toBe('');
     expect(priceInput('Flex 6').placeholder).toBe('No price');
     expect(plans.textContent).toContain('Add plan');
+  });
+  it('a plan priced from a later date shows "From {date}: Rp X" instead of No price', async () => {
+    openClub({ plans: true, later: true });
+    await show(<Plans />, width);
+    expect(priceInput('Flex 6').value).toBe('');
+    expect(priceInput('Flex 6').placeholder).toBe('From Sun 1 Nov: Rp 2.100.000');
+    expect(priceInput('Gold Plus').value).toBe('4.500.000');
+  });
+  it('if the price does not save after the plan was added, the sheet stays open with an error, no "added" toast, and Save retries only the price', async () => {
+    openClub();
+    mockAct();
+    let fail = true;
+    const fn = vi.fn(async (name: string, input: unknown) => {
+      calls.push([name, input as Record<string, unknown>]);
+      if (name === 'prices.set' && fail) return { ok: false as const, code: 'err.invalid', params: {} };
+      return { ok: true as const, result: name === 'club.setPlan' ? { planId: 'plan_3' } : {} };
+    });
+    useReplica.setState({ act: fn as never });
+    await show(<Plans />, width);
+    await click(byText('button', 'Add plan'));
+    await click(byText('button', 'Start from Gold'));
+    await type(field('Plan name'), 'Gold 2');
+    await click(byText('button', 'Save'));
+    expect(calls.map((c) => c[0])).toEqual(['club.setPlan', 'prices.set']);
+    expect(document.querySelector('[role="dialog"]')).not.toBeNull();
+    expect(document.querySelector('[role="dialog"] [role="alert"]')?.textContent).toContain('its price was not saved');
+    fail = false;
+    await click(byText('button', 'Save'));
+    expect(calls.map((c) => c[0])).toEqual(['club.setPlan', 'prices.set', 'prices.set']); // the plan is not added twice
+    expect(calls[2][1]).toMatchObject({ plans: { plan_3: expect.any(Number) } });
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
   });
   it('Start from Flex prefills Days per month, the Flex quota and the Flex price; saving adds the plan and then prices it', async () => {
     openClub();

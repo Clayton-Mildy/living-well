@@ -96,6 +96,21 @@ describe('the plan pickers use the catalogue', () => {
     expect(chips.some((c) => c.startsWith('Private'))).toBe(false);
   });
 
+  it('a plan priced from a later date shows "From {date}: Rp X" in the Change plan dialog and in the registration Plan step, not Rp 0', async () => {
+    const later = produce(catalogue(), (d) => { const base = Object.values(d.prices)[0]; d.prices['price-later'] = { ...base, id: 'price-later', from: '2026-11-01', plans: { plan_1: 2_100_000 } }; });
+    openStaff(later);
+    await show(<Tab state={later} memberId="m1" dialog />);
+    const chips = Array.from(document.querySelectorAll<HTMLElement>('[role="radio"], button')).map((b) => b.textContent ?? '');
+    expect(chips.some((c) => c.startsWith('Flex 8') && c.includes('From Sun 1 Nov: Rp 2.100.000') && !c.includes('Rp 0'))).toBe(true);
+    await act(async () => { root?.unmount(); });
+    host?.remove(); document.body.innerHTML = '';
+    openStaff(later, 's1', 'lobby');
+    await show(<RegistrationFlow mode={{ kind: 'lead', id: 'e3' }} onDone={() => {}} />);
+    for (let i = 0; i < 3; i++) await click(btn('Next'));
+    const radios = Array.from(document.querySelectorAll<HTMLElement>('[role="radiogroup"] [role="radio"]')).map((r) => r.textContent ?? '');
+    expect(radios.some((r) => r.startsWith('Flex 8') && r.includes('From Sun 1 Nov: Rp 2.100.000'))).toBe(true);
+  });
+
   it('the family can pick Flex 8 when asking to change the plan, and the request carries it', async () => {
     const full = catalogue();
     const view = projectForFamily(full, 'f1');

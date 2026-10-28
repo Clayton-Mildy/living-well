@@ -2,7 +2,7 @@
 // Each dialog builds the smallest change it can and sends it through the right action: gated for the front desk, applied now for health.
 import { useMemo, useState } from 'react';
 import {
-  addMonths, e164, execute, feeOf, fmtPhone, isOpen, live, memberName, nextOpenDay, openDaysInMonth, planLabel, planOn, planPrice, planQuota, isDaysPlan, priceOn, rp, sortBy, toHM, toMin, ym, linksOfMember, isPendingRow, contactsOfMember,
+  addMonths, e164, execute, feeOf, fmtPhone, isOpen, live, memberName, nextOpenDay, openDaysInMonth, planLabel, planOn, planQuota, isDaysPlan, priceOn, rp, sortBy, toHM, toMin, ym, linksOfMember, isPendingRow, contactsOfMember,
   type Plan, type Title, type Relation, type EndReason,
 } from '@cp/shared';
 import { END_REASONS, activePlans, consentOf, firstOfNextMonth, isPhone, openBalance, plainName } from '@cp/shared/rules/members';
@@ -10,6 +10,7 @@ import { cleanRegistration, validateRegistration } from '@cp/shared/rules/applic
 import { Button, ChipGroup, DateField, Dialog, Note, StaffOnlyTag, Toggle } from '../../../components/ui';
 import { say } from '../../../store/ui';
 import { endReasonLabel } from '../lib';
+import { planPriceText } from '../planPriceText';
 import { ProfilePhotoField } from '../ProfilePhoto';
 import { AllergyFields, DialogBody, TextField, HealthFields, MedsEditor, OptionalTime, PeSection, RegCareFields, RegPersonalFields, RelationChips, SelectField, TitleName, joinDrugs, regDraftOf, regOfDraft, splitDrugs, useDraft, type MedRow, type RegDraft, CarerFields, carerOk } from './forms';
 import type { DialogKind, P } from '../profile/types';
@@ -207,7 +208,7 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
   return (
     <>
       <PeSection label={t('profile.sec.plan')}>
-        <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={planOptions.map((o) => ({ value: o.id, label: `${planLabel(s, o.id, fmt.lang)} · ${rp(planPrice(price, o.id))}` }))} />
+        <ChipGroup label={t('profile.sec.plan')} value={d.plan} onChange={(v) => set({ plan: v as Plan })} options={planOptions.map((o) => ({ value: o.id, label: `${planLabel(s, o.id, fmt.lang)} · ${planPriceText(s, o.id, today, t, fmt.fds)}` }))} />
         <div style={{ fontSize: 16, lineHeight: '22px', color: '#5E5852' }}>{isDaysPlan(s, d.plan) ? t('profile.planNoteFlex', { plan: planLabel(s, d.plan, fmt.lang), q: planQuota(s, d.plan) ?? s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold', { plan: planLabel(s, d.plan, fmt.lang) })}</div>
         {desk ? (
           <div data-testid="plan-effective-fixed" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, minHeight: 44, alignItems: 'center', fontSize: 16, lineHeight: '22px' }}>

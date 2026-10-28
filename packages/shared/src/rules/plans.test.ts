@@ -2,7 +2,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, type ClubState, type PlanDef } from '../index';
 import { isDaysPlan, isPlanId, planDef, planDefs, planLabel, planOf, planPrice, planQuota } from './plans';
-import { priceOn } from './billing';
+import { planPriceInfo, priceOn } from './billing';
 
 const T = '2026-10-21';
 const FLEX8: PlanDef = { id: 'plan_1', name: 'Flex 8', nameId: 'Fleks 8', kind: 'days', quota: 8, active: true };
@@ -66,5 +66,19 @@ describe('planOf', () => {
     for (const bad of ['plan_2', 'plan_9', 'platinum', '', null, undefined, 7]) expect(() => planOf(s, bad)).toThrow('err.invalid');
     expect(() => planOf(s, 'plan_2', 'members.err.planInvalid')).toThrow('members.err.planInvalid');
     expect(isPlanId('plan_1') && isPlanId('gold') && !isPlanId('plan_') && !isPlanId('planet')).toBe(true);
+  });
+});
+
+describe('planPriceInfo (a plan priced from a future date)', () => {
+  it('is the price in force; else the first later price with its start date; else 0', () => {
+    const s = withPlans(FLEX8, PRIVATE);
+    const base = Object.values(s.prices)[0];
+    s.prices['price-later'] = { ...base, id: 'price-later', from: '2026-11-01', plans: { plan_1: 2_100_000 } };
+    s.prices['price-later2'] = { ...base, id: 'price-later2', from: '2026-12-01', plans: { plan_1: 2_300_000 } };
+    expect(planPriceInfo(s, 'plan_1', T)).toEqual({ price: 2_100_000, from: '2026-11-01' });
+    expect(planPriceInfo(s, 'plan_1', '2026-11-05')).toEqual({ price: 2_100_000 });
+    expect(planPriceInfo(s, 'plan_1', '2026-12-05')).toEqual({ price: 2_300_000 });
+    expect(planPriceInfo(s, 'plan_2', T)).toEqual({ price: 0 });
+    expect(planPriceInfo(s, 'flex', T)).toEqual({ price: priceOn(s, T).flex });
   });
 });

@@ -1,5 +1,5 @@
 // Invoices, payments, refunds, invoice run preview, due-date rule.
-import type { ClubState, Invoice, InvoiceLine, ISODate, Member, PriceVersion, YM } from '../types';
+import type { ClubState, Invoice, InvoiceLine, ISODate, Member, Plan, PriceVersion, YM } from '../types';
 import { activeOn, currentMembership, isOpen, membershipStatus, openDaysInMonth, planOn, primaryContact, isPendingRow } from './core';
 import { extraDaysFor } from './attendance';
 import { planParams, planPrice } from './plans';
@@ -50,6 +50,16 @@ export function allocate(s: ClubState, memberId: string, amount: number, today: 
 export function priceOn(s: ClubState, date: ISODate): PriceVersion {
   const v = sortBy(live(s.prices).filter((p) => p.from <= date), (p) => p.from).pop();
   return v || sortBy(live(s.prices), (p) => p.from)[0];
+}
+/**
+ * A plan's monthly price on a date, for a screen that shows it: the price in force then, or — when the plan has none in force but a price list starting later
+ * has one (a plan priced from a future date) — that upcoming price with its start date (`from`). `price` is 0 when neither exists.
+ */
+export function planPriceInfo(s: ClubState, plan: Plan, date: ISODate): { price: number; from?: ISODate } {
+  const now = planPrice(priceOn(s, date), plan);
+  if (now > 0) return { price: now };
+  const next = sortBy(live(s.prices).filter((p) => p.from > date && planPrice(p, plan) > 0), (p) => p.from)[0];
+  return next ? { price: planPrice(next, plan), from: next.from } : { price: 0 };
 }
 /** The brochure's fees, used when a price list (an older one, a draft) has no figure for one of them. */
 export const FEE_DEFAULTS = { registration: 2_500_000, trial: 450_000, leave: 250_000, dementia: 750_000 } as const;

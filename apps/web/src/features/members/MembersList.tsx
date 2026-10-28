@@ -4,7 +4,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym, type Plan } from '@cp/shared';
-import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, activePlans, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
+import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
 import { isDaysPlan, planDefs, planLabel } from '@cp/shared/rules/plans';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
 import { memberPhoto, photoFill } from '../../lib/media';
@@ -84,10 +84,10 @@ export function MembersList() {
     <div data-testid="members-split" style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', fontVariantNumeric: 'tabular-nums', padding: '0 4px' }}>{splitText}</div>
   ) : null;
   // round 15: the Check on filter says how long "not seen" is (a per-device choice that also drives the lobby rail)
-  // round 15: while In the club is on, Plan chips narrow it (the plans come from activePlans, so phase 2's catalogue shows up here)
+  // round 15: while In the club is on, Plan chips narrow it (the catalogue's active plans, and a retired plan that still has members in the club)
   const planEl = f === 'in' ? (
     <PlanChips label={t('members.planFilter')} value={plan} onChange={setPlan} scroll={isPhone}
-      chips={[{ value: 'all', label: t('common.all'), count: inRows.length }, ...activePlans(s).map((p) => ({ value: p.id, label: planLabel(s, p.id, lang), count: inRows.filter((r) => r.plan === p.id).length }))]} />
+      chips={[{ value: 'all', label: t('common.all'), count: inRows.length }, ...planDefs(s).filter((p) => p.active || inRows.some((r) => r.plan === p.id)).map((p) => ({ value: p.id, label: planLabel(s, p.id, lang), count: inRows.filter((r) => r.plan === p.id).length }))]} />
   ) : null;
   const notSeenEl = f === 'checkOn' ? <div style={{ maxWidth: isPhone ? undefined : 240 }}><NotSeenSelect /></div> : null;
   const sortEl = (

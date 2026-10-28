@@ -1,11 +1,12 @@
 // Step 4, plan and first day: Flex or Gold with this month's price, the one-time registration fee, and the first day (the next open Mondays,
 // or any open day).
 import { useMemo } from 'react';
-import { dayStatus, feeOf, isDaysPlan, planLabel, planPrice, planQuota, priceOn, rp, type Plan } from '@cp/shared';
+import { dayStatus, feeOf, isDaysPlan, planLabel, planQuota, priceOn, rp, type Plan } from '@cp/shared';
 import { activePlans } from '@cp/shared/rules/members';
 import { startMondays } from '@cp/shared/rules/enquiries';
 import { DateField } from '../../../components/ui';
 import { useFmt, useLang } from '../../../lib/i18n';
+import { planPriceText } from '../planPriceText';
 import { tn } from '../../mgmt/common';
 import { Sec, StackChip, type StepProps } from './parts';
 
@@ -23,7 +24,7 @@ export function PlanStep({ p }: { p: StepProps }) {
       <Sec p={p} label={t('enq.plan')}>
         <div style={row} role="radiogroup" aria-label={t('enq.plan')}>
           {activePlans(s).map((d) => (
-            <StackChip key={d.id} selected={st.plan === d.id} label={planLabel(s, d.id, lang)} sub={`${rp(planPrice(price, d.id))} · ${d.kind === 'days' ? tn(t, 'enq.jn_visits', planQuota(s, d.id) ?? s.club.settings.flexQuota) : t('mgmt.plUnlimited').toLowerCase()}`} onClick={() => pick(d.id)} />
+            <StackChip key={d.id} selected={st.plan === d.id} label={planLabel(s, d.id, lang)} sub={`${planPriceText(s, d.id, today, t, fds)} · ${d.kind === 'days' ? tn(t, 'enq.jn_visits', planQuota(s, d.id) ?? s.club.settings.flexQuota) : t('mgmt.plUnlimited').toLowerCase()}`} onClick={() => pick(d.id)} />
           ))}
         </div>
         {p.err('plan') ? <div role="alert" style={{ color: '#9A3D24', fontSize: 14 }}>{p.err('plan')}</div> : null}
