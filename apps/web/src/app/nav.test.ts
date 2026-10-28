@@ -26,6 +26,12 @@ describe('nav groups', () => {
       expect(screenFor(role, 'spending')).toBeNull();
     }
   });
+  it('Purchases lives inside Spending (its Items tab), not as a menu of its own (KC 28 Oct)', () => {
+    for (const role of ['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt', 'family'] as const) {
+      expect(NAVS[role].map((i) => i.key)).not.toContain('purchases');
+      expect(screenFor(role, 'purchases')).toBeNull();
+    }
+  });
   it('management has the Lunch round in the Kitchen group (KC 28 Oct)', () => {
     const kitchen = NAVG.mgmt.find((g) => g[0] === 'nav.g_kitchen')![1].map((x) => x.key);
     expect(kitchen).toEqual(['menu', 'lunch', 'feedback', 'stock']);

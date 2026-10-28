@@ -32,7 +32,7 @@ export const SCREEN_ENTRIES: ScreenEntry[] = [
   sc('payments', 'payments', 'account_balance', ['payments', 'transfer', 'virtual account'], ['pembayaran', 'bayar', 'transfer']),
   sc('budget', 'budget', 'pie_chart', ['budget'], ['anggaran']),
   sc('receipts', 'receipts', 'receipt_long', ['receipts', 'nota', 'purchases'], ['nota', 'kuitansi', 'belanja']),
-  sc('spending', 'spending', 'shopping_cart', ['spending', 'expenses', 'purchases'], ['pengeluaran', 'belanja', 'biaya']),
+  sc('spending', 'spending', 'shopping_cart', ['spending', 'expenses', 'purchases', 'items bought'], ['pengeluaran', 'biaya', 'pembelian', 'belanja']),
   sc('calendar', 'calendar', 'calendar_month', ['calendar', 'schedule', 'programme', 'activities'], ['kalender', 'jadwal', 'kegiatan']),
   sc('guests', 'guests', 'co_present', ['guest hosts', 'teachers', 'performers'], ['pengisi acara', 'tamu']),
   sc('insights', 'insights', 'insights', ['insights', 'statistics'], ['statistik', 'wawasan']),

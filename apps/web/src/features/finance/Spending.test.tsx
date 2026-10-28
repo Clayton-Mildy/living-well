@@ -4,7 +4,7 @@ import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { buildSeed, rp, type ClubState } from '@cp/shared';
-import { spending, spendWindow } from '@cp/shared/rules/purchasing';
+import { purchases, spending, spendWindow } from '@cp/shared/rules/purchasing';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { Spending } from './Spending';
@@ -59,7 +59,7 @@ describe('Spending', () => {
 
   it('Item view: tapping Popok dewasa opens the sheet with the price chart and at least 2 purchases', async () => {
     await show();
-    await click(tab('6 months'));
+    await click(tab('3 months'));
     await click(tab('Item'));
     const popok = rows().find((r) => r.textContent!.includes('Popok dewasa (isi 10)'))!;
     expect(popok).toBeTruthy();
@@ -78,8 +78,8 @@ describe('Spending', () => {
 
   it('Brand and Vendor views list their rows too', async () => {
     const s = await show();
-    await click(tab('6 months'));
-    const w = spendWindow('6m', T);
+    await click(tab('3 months'));
+    const w = spendWindow('3m', T);
     const want = spending(s, w.from, w.to);
     await click(tab('Brand'));
     expect(rows().length).toBe(want.byBrand.length);
@@ -103,10 +103,37 @@ describe('Spending', () => {
     expect(to).toContain('15');
   });
 
-  it('A window with no approved receipts shows the empty state', async () => {
-    await show((s) => { for (const r of Object.values(s.receipts)) if (r.status === 'approved') r.status = 'submitted'; });
-    expect(text()).toContain('No approved receipts in this period');
+  it('Waiting receipts count, and the part waiting for finance is shown under the total (KC 28 Oct)', async () => {
+    const s = await show((x) => { for (const r of Object.values(x.receipts)) if (r.status === 'approved' && r.date >= '2026-10-01') r.status = 'submitted'; });
+    const w = spendWindow('month', T);
+    const want = spending(s, w.from, w.to);
+    expect(want.waiting).toBe(want.total);
+    expect(document.querySelector('[data-testid="sp-total"]')!.textContent).toBe(rp(want.total));
+    expect(document.querySelector('[data-testid="sp-waiting"]')!.textContent).toBe(`${rp(want.waiting)} waiting for finance`);
+  });
+
+  it('A window with no receipts shows the empty state', async () => {
+    await show((s) => { for (const r of Object.values(s.receipts)) r.status = 'rejected'; });
+    expect(text()).toContain('No receipts in this period');
     expect(rows().length).toBe(0);
+  });
+
+  it('Items tab: every bought item, and the items add up to the Summary total when every receipt is itemised', async () => {
+    const s = await show();
+    await click(tab('Last month'));
+    const w = spendWindow('lastMonth', T);
+    const want = purchases(s, w.from, w.to);
+    expect(want.length).toBeGreaterThan(0);
+    await click(tab('Items'));
+    expect(document.querySelectorAll('[data-testid="pu-row"]').length).toBeGreaterThan(0);
+    const itemsTotal = want.reduce((a, p) => a + p.line.amount, 0);
+    expect(document.querySelector('[data-testid="pu-total"]')!.textContent).toBe(rp(itemsTotal));
+    const sum = spending(s, w.from, w.to);
+    const shipping = Object.values(s.receipts).filter((r) => r.status !== 'rejected' && !r.voidedAt && !r.deletedAt && r.date >= w.from && r.date <= w.to)
+      .reduce((a, r) => a + (r.lines?.length ? Math.max(0, r.amount - r.lines.reduce((b, l) => b + l.amount, 0)) : r.amount), 0);
+    expect(itemsTotal + shipping).toBe(sum.total); // the Summary total also counts shipping and receipts without items
+    await click(tab('Summary'));
+    expect(document.querySelector('[data-testid="sp-total"]')!.textContent).toBe(rp(sum.total));
   });
 
   it('Management reads the same screen', async () => {

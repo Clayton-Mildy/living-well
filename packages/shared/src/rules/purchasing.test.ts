@@ -1,6 +1,6 @@
 // Purchasing rules: the simulated receipt (stand-in for a vision model), line categories and line checks.
 import { describe, it, expect } from 'vitest';
-import { CATALOGUE, RECEIPT_SOURCES, SIM_VENDORS, SPEND_CATEGORIES, itemKey, itemPurchases, lineCategory, lineProblem, linesGap, linesTotal, simulatedReceipt, spending, spendWindow, supplierCategory } from './purchasing';
+import { CATALOGUE, RECEIPT_SOURCES, SIM_VENDORS, SPEND_CATEGORIES, filterPurchases, itemKey, itemPurchases, purchases, purchasesByCategory, lineCategory, lineProblem, linesGap, linesTotal, simulatedReceipt, spending, spendWindow, supplierCategory } from './purchasing';
 import type { ClubState, Receipt, ReceiptLine } from '../types';
 import { buildSeed } from '../index';
 
@@ -149,7 +149,7 @@ describe('spending', () => {
     expect(spendWindow('custom', '2026-10-21', { from: '2026-09-03', to: '2026-09-09' })).toEqual({ from: '2026-09-03', to: '2026-09-09' });
   });
 
-  it('counts only approved, live receipts dated inside the window (both ends included)', () => {
+  it('counts approved and waiting live receipts dated inside the window (both ends included); waiting is the part not yet approved', () => {
     const inside = rcpt('a', '2026-10-01', 'Toko A', 1000);
     const s = state([
       inside,
@@ -162,8 +162,9 @@ describe('spending', () => {
       rcpt('late', '2026-10-22', 'Toko A', 7000),
     ]);
     const r = spending(s, '2026-10-01', '2026-10-21');
-    expect(r.total).toBe(1500);
-    expect(r.byVendor).toEqual([{ key: 'toko a', label: 'Toko A', amount: 1500, count: 2 }]);
+    expect(r.total).toBe(8500);
+    expect(r.waiting).toBe(7000);
+    expect(r.byVendor).toEqual([{ key: 'toko a', label: 'Toko A', amount: 8500, count: 3 }]);
   });
 
   it('a receipt without lines counts its whole amount under the supplier category, or other', () => {
@@ -226,7 +227,7 @@ describe('spending', () => {
   });
 
   it('an empty window gives zero and empty lists', () => {
-    expect(spending(state([rcpt('a', '2026-01-01', 'Toko', 5000)]), '2026-10-01', '2026-10-31')).toEqual({ total: 0, byCategory: [], byItem: [], byBrand: [], byVendor: [] });
+    expect(spending(state([rcpt('a', '2026-01-01', 'Toko', 5000)]), '2026-10-01', '2026-10-31')).toEqual({ total: 0, waiting: 0, byCategory: [], byItem: [], byBrand: [], byVendor: [] });
   });
 
   it('itemPurchases lists every purchase of one item in the window, oldest first', () => {
@@ -240,5 +241,49 @@ describe('spending', () => {
       { date: '2026-10-05', receiptId: 'b', supplier: 'Toko B', brand: 'Lifree', qty: 2, unitPrice: 110000, amount: 220000 },
     ]);
     expect(itemPurchases(s, itemKey(POPOK, 'pack'), '2026-10-01', '2026-10-31')).toHaveLength(1);
+  });
+
+  it('spendWindow: last month is the whole previous calendar month', () => {
+    expect(spendWindow('lastMonth', '2026-10-21')).toEqual({ from: '2026-09-01', to: '2026-09-30' });
+    expect(spendWindow('lastMonth', '2026-03-01')).toEqual({ from: '2026-02-01', to: '2026-02-28' });
+  });
+
+  it('purchases: approved and waiting lines in the window, newest first; filters by name or brand, source and category; grouped by category', () => {
+    const s = state([
+      rcpt('a', '2026-10-02', 'Toko A', 0, { lines: [{ ...line('Beras', 'sak', 2, 150000, 'groceries'), id: 'l1' }, { ...line(POPOK, 'pack', 1, 90000, 'hygiene', 'Lifree'), id: 'l2' }] }),
+      rcpt('b', '2026-10-05', 'Tokopedia store', 0, { status: 'submitted', source: 'tokopedia', lines: [{ ...line('Sabun cair', 'btl', 3, 20000, 'hygiene', 'Lifebuoy'), id: 'l1' }] }),
+      rcpt('rej', '2026-10-05', 'Toko A', 0, { status: 'rejected', lines: [line('Gula', 'kg', 1, 15000, 'groceries')] }),
+      rcpt('void', '2026-10-05', 'Toko A', 0, { voidedAt: '2026-10-06T09:00', lines: [line('Gula', 'kg', 1, 15000, 'groceries')] }),
+      rcpt('early', '2026-09-30', 'Toko A', 0, { lines: [line('Gula', 'kg', 1, 15000, 'groceries')] }),
+    ]);
+    const rows = purchases(s, '2026-10-01', '2026-10-31');
+    expect(rows.map((p) => [p.key, p.waiting, p.source])).toEqual([['b:l1', true, 'tokopedia'], ['a:l2', false, 'shop'], ['a:l1', false, 'shop']]);
+    expect(filterPurchases(rows, { q: 'lifr' }).map((p) => p.key)).toEqual(['a:l2']);
+    expect(filterPurchases(rows, { q: ' BERAS ' }).map((p) => p.key)).toEqual(['a:l1']);
+    expect(filterPurchases(rows, { source: 'tokopedia' }).map((p) => p.key)).toEqual(['b:l1']);
+    expect(filterPurchases(rows, { category: 'hygiene', source: 'shop' }).map((p) => p.key)).toEqual(['a:l2']);
+    expect(filterPurchases(rows, { q: '', source: '', category: '' })).toHaveLength(3);
+    expect(purchasesByCategory(rows).map((g) => [g.category, g.amount, g.rows.length])).toEqual([['groceries', 300000, 1], ['hygiene', 150000, 2]]);
+  });
+
+  it('purchases: a receipt without lines is one whole row, a total over its lines adds an extra row; together they add up to spending', () => {
+    const s = state([
+      rcpt('a', '2026-10-02', 'Superindo', 40000, { directoryId: 'd6' }),
+      rcpt('b', '2026-10-03', 'Tokopedia store', 115000, { source: 'tokopedia', lines: [{ ...line('Sabun cair', 'btl', 5, 20000, 'hygiene'), id: 'l1' }] }),
+      rcpt('c', '2026-10-04', 'Toko', 9000, { lines: [{ ...line('Gula', 'kg', 1, 10000, 'groceries'), id: 'l1' }] }), // a discount: no extra row
+    ]);
+    s.directory.d6.category = 'groceries';
+    const rows = purchases(s, '2026-10-01', '2026-10-31');
+    expect(rows.map((p) => [p.key, p.kind ?? null, p.line.amount, p.line.category])).toEqual([
+      ['c:l1', null, 10000, 'groceries'], ['b:l1', null, 100000, 'hygiene'], ['b:extra', 'extra', 15000, 'other'], ['a:whole', 'whole', 40000, 'groceries'],
+    ]);
+    expect(rows.reduce((a, p) => a + p.line.amount, 0)).toBe(spending(s, '2026-10-01', '2026-10-31').total);
+    expect(filterPurchases(rows, { q: 'sabun' }).map((p) => p.key)).toEqual(['b:l1']); // the search is on items: the extra rows drop out
+  });
+
+  it('purchases add up to spending on the seed, month by month', () => {
+    const s = buildSeed().citra;
+    for (const [from, to] of [['2026-08-01', '2026-08-31'], ['2026-09-01', '2026-09-30'], ['2026-10-01', '2026-10-31']])
+      expect(purchases(s, from, to).reduce((a, p) => a + p.line.amount, 0), from).toBe(spending(s, from, to).total);
   });
 });

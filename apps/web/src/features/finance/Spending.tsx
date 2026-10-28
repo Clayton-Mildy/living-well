@@ -1,7 +1,9 @@
-// Spending (round 14 phase 2): where the money went, from the approved receipts. A period (calendar months ending today, or From and To),
-// the total, and the same money by Category, Item, Brand or Vendor, each row with a thin bar for its share of the biggest.
-// An item opens a sheet: its unit price over every purchase as a chart, then the purchases. Finance and management only (the nav and the route map).
+// Spending (round 14 phase 2): where the money went, from the approved receipts and the ones waiting for finance (KC 28 Oct). A period
+// (this month, last month, 3 months or From and To) shared by two tabs. Summary: the total, and the same money by Category, Item, Brand
+// or Vendor, each row with a thin bar for its share of the biggest; an item opens a sheet with its unit price over every purchase as a chart,
+// then the purchases. Items (KC 28 Oct, was the Purchases page): every item bought, see ./Purchases. Finance and management only.
 import { useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { rp, type ISODate } from '@cp/shared';
 import { itemPurchases, spending, spendWindow, type SpendPeriod, type SpendRow, type ItemRow } from '@cp/shared/rules/purchasing';
 import { DateField, EmptyState, PageHead, Segmented, Sheet } from '../../components/ui';
@@ -10,10 +12,12 @@ import { padFor, useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
-import { PGroup, prow } from './parts';
+import { HAIR, Hero, PGroup, prow } from './parts';
+import { OCHRE, PurchaseItems } from './Purchases';
 
 type View = 'category' | 'item' | 'brand' | 'vendor';
-const PERIODS: SpendPeriod[] = ['month', '3m', '6m', 'custom'];
+type Tab = 'summary' | 'items';
+const PERIODS: SpendPeriod[] = ['month', 'lastMonth', '3m', 'custom'];
 const VIEWS: View[] = ['category', 'item', 'brand', 'vendor'];
 const VIEW_KEY = { category: 'byCategory', item: 'byItem', brand: 'byBrand', vendor: 'byVendor' } as const;
 const RUST = '#9A3D24', GREEN = '#2F5A40'; // a dearer price reads rust, a cheaper one green (text only, no tints)
@@ -25,48 +29,103 @@ export function editWindow(w: { from: ISODate; to: ISODate }, part: 'from' | 'to
 }
 
 export function Spending() {
-  const s = useClub();
   const t = useT();
   const { today } = useNow();
-  const { device, isPhone } = useDevice();
+  const { device, isPhone, isLaptop } = useDevice();
   const [period, setPeriod] = useState<SpendPeriod>('month');
   const [custom, setCustom] = useState(() => spendWindow('month', today));
-  const [view, setView] = useState<View>('category');
-  const [open, setOpen] = useState<ItemRow | null>(null);
+  // /spending?tab=items opens the Items tab (a search result, an old Purchases link)
+  const [sp, setSp] = useSearchParams();
+  const tab: Tab = sp.get('tab') === 'items' ? 'items' : 'summary';
+  const setTab = (x: Tab) => { const p = new URLSearchParams(sp); if (x === 'items') p.set('tab', 'items'); else p.delete('tab'); setSp(p, { replace: true }); };
 
   const win = spendWindow(period, today, custom);
-  const data = useMemo(() => spending(s, win.from, win.to), [s, win.from, win.to]);
-  const list: SpendRow[] = data[VIEW_KEY[view]];
-  const biggest = list[0]?.amount || 1; // rows come sorted by amount, largest first
-
+  const tabs = <Segmented<Tab> label={t('nav.spending')} cols={2} value={tab} onChange={setTab} items={[{ value: 'summary', label: t('purchasing.sp.summary') }, { value: 'items', label: t('purchasing.sp.items') }]} />;
+  const periods = <Segmented<SpendPeriod> label={t('purchasing.sp.period')} cols={4} value={period} onChange={setPeriod} items={PERIODS.map((p) => ({ value: p, label: t(`purchasing.sp.${p}`) }))} />;
   return (
-    <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 20, maxWidth: 760, boxSizing: 'border-box' }}>
+    <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 20, boxSizing: 'border-box', minWidth: 0 }}>
       <PageHead title={t('nav.spending')} />
-      <Segmented<SpendPeriod> label={t('nav.spending')} cols={4} value={period} onChange={setPeriod} items={PERIODS.map((p) => ({ value: p, label: t(`purchasing.sp.${p}`) }))} />
+      {/* phone: the period, then Summary | Items; wider (KC 28 Oct): one bar, Summary | Items on the left and the period on the right, wrapping when narrow */}
+      {isPhone ? <>{periods}{tabs}</> : (
+        <div data-testid="sp-bar" style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '12px 20px' }}>
+          <div style={{ flex: '1 1 260px', maxWidth: isLaptop ? 360 : undefined, minWidth: 0 }}>{tabs}</div>
+          <div style={{ flex: '2 1 420px', maxWidth: isLaptop ? 560 : undefined, minWidth: 0, marginLeft: 'auto' }}>{periods}</div>
+        </div>
+      )}
       {period === 'custom' ? (
-        <div data-testid="sp-custom" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8 }}>
+        <div data-testid="sp-custom" style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) minmax(0, 1fr)', gap: 8, ...(isPhone ? {} : { width: '100%', maxWidth: 560, marginLeft: 'auto' }) }}>
           <DateField compact label={t('health.rangeFrom')} value={custom.from} max={today} onChange={(d) => setCustom(editWindow(custom, 'from', d))} />
           <DateField compact label={t('health.rangeTo')} value={custom.to} max={today} onChange={(d) => setCustom(editWindow(custom, 'to', d))} />
         </div>
       ) : null}
+      {tab === 'items' ? <PurchaseItems from={win.from} to={win.to} /> : <Summary from={win.from} to={win.to} />}
+    </div>
+  );
+}
 
-      {data.total <= 0 && !list.length ? (
-        <EmptyState icon="shopping_cart" title={t('purchasing.sp.empty')} />
-      ) : (
-        <>
-          <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, padding: '0 4px' }}>
-            <span style={{ fontSize: 14, color: '#6B6259' }}>{t('purchasing.sp.spent')}</span>
-            <span data-testid="sp-total" style={{ fontSize: 28, lineHeight: '34px', fontWeight: 500, letterSpacing: '-0.5px', color: '#24201C', fontVariantNumeric: 'tabular-nums' }}>{rp(data.total)}</span>
-          </div>
-          <Segmented<View> label={t('purchasing.sp.byCategory')} cols={4} value={view} onChange={setView} items={VIEWS.map((v) => ({ value: v, label: t(`purchasing.sp.${VIEW_KEY[v]}`) }))} />
-          {list.length ? ( // receipts from before itemising have no items or brands: those views are empty while the total still counts them
-            <PGroup pad={0} gap={0} label={t(`purchasing.sp.${VIEW_KEY[view]}`)}>
-              {list.map((r, i) => <Row key={r.key} r={r} first={i === 0} share={r.amount / biggest} view={view} onOpen={view === 'item' ? () => setOpen(r as ItemRow) : undefined} />)}
-            </PGroup>
-          ) : null}
-        </>
-      )}
-      <ItemSheet item={open} from={win.from} to={win.to} onClose={() => setOpen(null)} />
+/** The Summary tab: the total (and what of it waits for finance), then the money by Category, Item, Brand or Vendor. */
+function Summary({ from, to }: { from: ISODate; to: ISODate }) {
+  const s = useClub();
+  const t = useT();
+  const { isPhone, isLaptop } = useDevice();
+  const [view, setView] = useState<View>('category');
+  const [open, setOpen] = useState<ItemRow | null>(null);
+  const data = useMemo(() => spending(s, from, to), [s, from, to]);
+  const list: SpendRow[] = data[VIEW_KEY[view]];
+  const biggest = list[0]?.amount || 1; // rows come sorted by amount, largest first
+  const sheet = <ItemSheet item={open} from={from} to={to} onClose={() => setOpen(null)} />;
+  if (data.total <= 0 && !list.length) return <><EmptyState icon="shopping_cart" title={t('purchasing.sp.empty')} />{sheet}</>;
+
+  // phone and tablet: the count line over the list; laptop: the same numbers in a rail on the right, as on the Items tab
+  const total = <span data-testid="sp-total" style={{ fontSize: 28, lineHeight: '34px', fontWeight: 500, letterSpacing: '-0.5px', color: '#24201C', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(data.total)}</span>;
+  const waiting = data.waiting ? <span data-testid="sp-waiting" style={{ fontSize: 13, color: OCHRE }}>{t('purchasing.pu.waitingSum', { amount: rp(data.waiting) })}</span> : null;
+  const body = (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 20, minWidth: 0 }}>
+      <Segmented<View> label={t('purchasing.sp.byCategory')} cols={4} value={view} onChange={setView} items={VIEWS.map((v) => ({ value: v, label: t(`purchasing.sp.${VIEW_KEY[v]}`) }))} />
+      {list.length ? ( // receipts from before itemising have no items or brands: those views are empty while the total still counts them
+        <PGroup pad={0} gap={0} label={t(`purchasing.sp.${VIEW_KEY[view]}`)}>
+          {list.map((r, i) => <Row key={r.key} r={r} first={i === 0} share={r.amount / biggest} view={view} onOpen={view === 'item' ? () => setOpen(r as ItemRow) : undefined} />)}
+        </PGroup>
+      ) : null}
+    </div>
+  );
+  if (isLaptop) {
+    // how many categories, items, brands and vendors the period has; a tap shows that list
+    const fact = (v: View) => (
+      <button key={v} type="button" onClick={() => setView(v)} aria-pressed={view === v} className="h-row cp-bleed"
+        style={{ display: 'flex', justifyContent: 'space-between', gap: 10, width: '100%', padding: '10px 0', border: 'none', borderTop: HAIR, background: 'transparent', fontSize: 14, lineHeight: '20px', fontFamily: 'Inter', color: '#24201C', cursor: 'pointer', textAlign: 'left' }}>
+        <span style={{ color: view === v ? '#24201C' : '#6B6259', fontWeight: view === v ? 600 : 400 }}>{t(`purchasing.sp.n_${v}`)}</span>
+        <span style={{ fontWeight: 500, fontVariantNumeric: 'tabular-nums' }}>{data[VIEW_KEY[v]].length}</span>
+      </button>
+    );
+    return (
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 300px', gap: 28, alignItems: 'start' }}>
+        {body}
+        <aside data-testid="sp-rail" aria-label={t('purchasing.sp.spent')} style={{ position: 'sticky', top: 24 }}>
+          <Hero>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '14px 0 12px' }}>
+              <span style={{ fontSize: 14, color: '#6B6259' }}>{t('purchasing.sp.spent')}</span>
+              {total}
+              {waiting}
+            </div>
+            {VIEWS.map(fact)}
+          </Hero>
+        </aside>
+        {sheet}
+      </div>
+    );
+  }
+  return (
+    <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 20, minWidth: 0 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: 2, padding: '0 4px' }}>
+        <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 12, alignSelf: 'stretch' }}>
+          <span style={{ fontSize: 14, color: '#6B6259' }}>{t('purchasing.sp.spent')}</span>
+          {total}
+        </div>
+        {waiting}
+      </div>
+      {body}
+      {sheet}
     </div>
   );
 }

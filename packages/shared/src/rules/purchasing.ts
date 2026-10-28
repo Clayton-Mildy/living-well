@@ -2,7 +2,7 @@
 // A real provider (a vision model or a document-AI service) replaces `simulatedReceipt` by config; nothing in the screens changes.
 import type { ClubState, ISODate, OcrResult, Receipt, ReceiptLine, ReceiptSource, SpendCategory } from '../types';
 import { hashOf } from './activity';
-import { addMonths, live, monthStart, ym } from '../util';
+import { addDays, addMonths, live, monthStart, ym } from '../util';
 
 export const SPEND_CATEGORIES: SpendCategory[] = ['groceries', 'medical', 'hygiene', 'activity', 'cleaning', 'kitchen', 'marketplace', 'other'];
 export const RECEIPT_SOURCES: ReceiptSource[] = ['shop', 'tokopedia', 'other'];
@@ -104,12 +104,13 @@ export function lineProblem(l: Partial<ReceiptLine>): 'name' | 'qty' | 'price' |
 /** What the Directory says this supplier sells (free-text suppliers have no category). */
 export const supplierCategory = (s: ClubState, directoryId?: string): SpendCategory | undefined => (directoryId ? s.directory[directoryId]?.category : undefined);
 
-// ---- Spending: where the money went, from the approved receipts ----
+// ---- Spending: where the money went, from the approved receipts and the ones waiting for finance (KC 28 Oct) ----
 
-export type SpendPeriod = 'month' | '3m' | '6m' | 'custom';
-/** Calendar months ending today: this month is the 1st to today, 3 months starts on the 1st two months back. */
+export type SpendPeriod = 'month' | 'lastMonth' | '3m' | '6m' | 'custom';
+/** Calendar months ending today: this month is the 1st to today, 3 months starts on the 1st two months back; last month is the whole of it. */
 export function spendWindow(p: SpendPeriod, today: ISODate, custom?: { from: ISODate; to: ISODate }): { from: ISODate; to: ISODate } {
   if (p === 'custom' && custom) return { from: custom.from, to: custom.to };
+  if (p === 'lastMonth') { const first = monthStart(ym(today)); return { from: monthStart(addMonths(ym(today), -1)), to: addDays(first, -1) }; }
   const back = p === '3m' ? 2 : p === '6m' ? 5 : 0;
   return { from: monthStart(addMonths(ym(today), -back)), to: today };
 }
@@ -120,19 +121,19 @@ export interface ItemRow extends SpendRow { unit: string; qty: number; avgUnitPr
 /** One item is a name in a unit: 'Tisu basah' per pack and per box are separate rows. */
 export const itemKey = (name: string, unit: string): string => `${name.trim().toLowerCase()}|${unit}`;
 
-/** Approved receipts that aren't voided, dated inside the window, oldest first. */
+/** Approved and waiting receipts (not rejected, not voided), dated inside the window, oldest first. */
 function counted(s: ClubState, from: ISODate, to: ISODate): Receipt[] {
   return live(s.receipts)
-    .filter((r) => r.status === 'approved' && !r.voidedAt && r.date >= from && r.date <= to)
+    .filter((r) => r.status !== 'rejected' && !r.voidedAt && r.date >= from && r.date <= to)
     .sort((a, b) => (a.date === b.date ? a.id.localeCompare(b.id) : a.date < b.date ? -1 : 1));
 }
 const bySize = <T extends SpendRow>(rows: T[]): T[] => rows.sort((a, b) => b.amount - a.amount || a.label.localeCompare(b.label));
 
 /**
- * What was paid in the window. A receipt counts its total: the lines give the category, item and brand rows, and the part
+ * What was paid in the window, and how much of it is still waiting for finance. A receipt counts its total: the lines give the category, item and brand rows, and the part
  * of the total they miss (Tokopedia shipping) goes under the supplier's category; one without lines counts its whole total there.
  */
-export function spending(s: ClubState, from: ISODate, to: ISODate): { total: number; byCategory: SpendRow[]; byItem: ItemRow[]; byBrand: SpendRow[]; byVendor: SpendRow[] } {
+export function spending(s: ClubState, from: ISODate, to: ISODate): { total: number; waiting: number; byCategory: SpendRow[]; byItem: ItemRow[]; byBrand: SpendRow[]; byVendor: SpendRow[] } {
   const cat = new Map<string, SpendRow>();
   const brand = new Map<string, SpendRow>();
   const vendor = new Map<string, SpendRow>();
@@ -145,6 +146,7 @@ export function spending(s: ClubState, from: ISODate, to: ISODate): { total: num
     m.set(key, row);
   };
   let total = 0;
+  let waiting = 0;
   for (const r of counted(s, from, to)) {
     const lines = r.lines ?? [];
     const itemsSum = linesTotal(lines);
@@ -152,6 +154,7 @@ export function spending(s: ClubState, from: ISODate, to: ISODate): { total: num
     const missed = lines.length ? Math.max(0, r.amount - itemsSum) : 0;
     const whole = lines.length ? itemsSum + missed : r.amount;
     total += whole;
+    if (r.status === 'submitted') waiting += whole;
     add(vendor, r.directoryId ?? r.supplier.trim().toLowerCase(), r.supplier, whole);
     if (!lines.length) {
       const c = supplierCategory(s, r.directoryId) ?? 'other';
@@ -177,7 +180,7 @@ export function spending(s: ClubState, from: ISODate, to: ISODate): { total: num
     avgUnitPrice: row.qty ? row.amount / row.qty : 0,
     change: row.count > 1 && first > 0 ? (last - first) / first : null,
   }));
-  return { total, byCategory: bySize([...cat.values()]), byItem: bySize(byItem), byBrand: bySize([...brand.values()]), byVendor: bySize([...vendor.values()]) };
+  return { total, waiting, byCategory: bySize([...cat.values()]), byItem: bySize(byItem), byBrand: bySize([...brand.values()]), byVendor: bySize([...vendor.values()]) };
 }
 
 /** Every purchase of one item in the window, oldest first (for the item's price trend). */
@@ -187,4 +190,52 @@ export function itemPurchases(s: ClubState, key: string, from: ISODate, to: ISOD
     for (const l of r.lines ?? [])
       if (itemKey(l.name, l.unit) === key) out.push({ date: r.date, receiptId: r.id, supplier: r.supplier, ...(l.brand ? { brand: l.brand } : {}), qty: l.qty, unitPrice: l.unitPrice, amount: l.amount });
   return out;
+}
+
+// ---- Purchases: every item bought, one row per receipt line (KC 28 Oct: management recaps what was bought, by category) ----
+
+/** One bought item: a receipt line with its receipt's date, supplier, source and status (approved, or waiting for finance). */
+export interface Purchase { key: string; receiptId: string; date: ISODate; supplier: string; source: ReceiptSource; waiting: boolean; line: ReceiptLine;
+  /** KC 28 Oct, so Items adds up to Spending: 'whole' = a receipt with no item lines (its whole total), 'extra' = the part of a total its lines miss
+   *  (Tokopedia shipping, rounding). Both take the supplier's category, or other, as `spending` does; their line has no name, qty 1. */
+  kind?: 'whole' | 'extra' }
+export interface PurchaseFilter { q?: string; source?: ReceiptSource | ''; category?: SpendCategory | '' }
+
+/**
+ * The lines of approved and waiting receipts (not rejected, not voided) dated inside the window, newest first; with a 'whole' row for a
+ * receipt without lines and an 'extra' row for what a total has over its lines, so the rows add up to `spending(...).total`.
+ */
+export function purchases(s: ClubState, from: ISODate, to: ISODate): Purchase[] {
+  const out: Purchase[] = [];
+  for (const r of live(s.receipts)) {
+    if (r.voidedAt || r.status === 'rejected' || r.date < from || r.date > to) continue;
+    const base = { receiptId: r.id, date: r.date, supplier: r.supplier, source: r.source ?? 'shop', waiting: r.status === 'submitted' };
+    const lines = r.lines ?? [];
+    for (const l of lines) out.push({ ...base, key: `${r.id}:${l.id}`, line: l });
+    const rest = lines.length ? r.amount - linesTotal(lines) : r.amount;
+    if (rest > 0) {
+      const kind = lines.length ? 'extra' : 'whole';
+      out.push({ ...base, key: `${r.id}:${kind}`, kind, line: { id: kind, name: '', qty: 1, unit: '', unitPrice: rest, amount: rest, category: supplierCategory(s, r.directoryId) ?? 'other' } });
+    }
+  }
+  return out.sort((a, b) => (a.date === b.date ? b.key.localeCompare(a.key) : a.date < b.date ? 1 : -1));
+}
+
+/** Search matches the item name or brand (any case); source and category match exactly when set. */
+export function filterPurchases(rows: Purchase[], f: PurchaseFilter): Purchase[] {
+  const q = f.q?.trim().toLowerCase() ?? '';
+  return rows.filter((p) => (!f.source || p.source === f.source) && (!f.category || p.line.category === f.category)
+    && (!q || p.line.name.toLowerCase().includes(q) || !!p.line.brand?.toLowerCase().includes(q)));
+}
+
+/** The rows by category, the biggest subtotal first; each group keeps the rows' order. */
+export function purchasesByCategory(rows: Purchase[]): { category: SpendCategory; amount: number; rows: Purchase[] }[] {
+  const m = new Map<SpendCategory, { category: SpendCategory; amount: number; rows: Purchase[] }>();
+  for (const p of rows) {
+    const g = m.get(p.line.category) ?? { category: p.line.category, amount: 0, rows: [] };
+    g.amount += p.line.amount;
+    g.rows.push(p);
+    m.set(p.line.category, g);
+  }
+  return [...m.values()].sort((a, b) => b.amount - a.amount || SPEND_CATEGORIES.indexOf(a.category) - SPEND_CATEGORIES.indexOf(b.category));
 }
