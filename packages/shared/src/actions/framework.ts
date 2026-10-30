@@ -3,7 +3,7 @@ import { produceWithPatches, enablePatches, type Patch, type Draft, original, cu
 import type { Actor, ClubState, DT, HM, ISODate, Role, StaffRole, User, Notification, ActivityEntry, ChangeRequest, ReviewSection } from '../types';
 import { COLLECTIONS } from '../types';
 import { toHM } from '../util';
-import { areaOf, HOME_AREAS, OWN_ROW } from './areas';
+import { areaOf, OWN_ROW } from './areas';
 import { accessOf, defaultLevel, AREA_BASE, type GridRole } from '../rules/access';
 
 enablePatches();
@@ -152,7 +152,8 @@ export function permit(def: ActionDef, user: User, input: unknown, s: ClubState)
   const area = areaOf(def.name);
   if (!area || user.kind !== 'staff' || user.id === 'system' || isOwner(user)) return own ? 'ok' : 'forbidden';
   const role = user.staff.role as GridRole;
-  if (HOME_AREAS[role]?.includes(area)) return own ? 'ok' : 'forbidden';
+  // no explicit setting and Hidden by default: not a grid cell for this role (cross-screen paths keep `can` alone)
+  if (s.club.settings.access?.[role]?.[area] === undefined && defaultLevel(role, area) === 'off') return own ? 'ok' : 'forbidden';
   if (accessOf(s, role, area) !== 'edit') {
     // the filer of a receipt or budget request keeps editing or withdrawing it: `can` says yes even for a role with no finance power
     if (own && OWN_ROW.includes(def.name) && def.can(asRole(user, 'activity'), input, s)) return 'ok';

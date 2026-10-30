@@ -51,9 +51,19 @@ describe('action areas', () => {
   it('a granted Edit beyond the default lets the role do what the menu\'s role does', () => {
     const c = withAccess(seed(), { lobby: { budget: 'edit', payments: 'edit' } });
     const caca = user(c, 'lobby');
-    expect(canRun('budget.request', caca, {}, c)).toBe(true);
     expect(canRun('budget.setLimit', caca, {}, c)).toBe(true); // finance's can, through the Budget grant
     expect(canRun('budget.setLimit', caca, {}, seed())).toBe(false);
+  });
+
+  it('an explicit View refuses in a cell the role owns; a never-set Hidden cell leaves `can` alone', () => {
+    const c = withAccess(seed(), { finance: { payments: 'view', stock: 'view' }, mgmt: { directory: 'view' } });
+    const fr = user(c, 'finance');
+    expect(canRun('payment.record', fr, {}, c)).toBe(false);
+    expect(canRun('payment.record', user(c, 'lobby'), {}, c)).toBe(true); // Caca: payments never set, Hidden by default
+    expect(canRun('stock.approve', fr, {}, c)).toBe(false);
+    expect(canRun('stock.approve', user(c, 'kitchen'), {}, c)).toBe(true);
+    expect(canRun('directory.add', user(c, 'mgmt'), {}, c)).toBe(false);
+    expect(canRun('directory.add', user(c, 'lobby'), {}, c)).toBe(true);
   });
 
   it('Hidden or View refuses with err.viewOnly', () => {

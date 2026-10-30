@@ -1,5 +1,4 @@
 // Round 16 (KC): every staff action belongs to one menu of the access grid. `execute` refuses a staff action when the role's access to that menu is View or Hidden.
-import type { StaffRole } from '../types';
 
 /** An exact action name or a 'x.' prefix → menu key. Exact names win over prefixes; the longest prefix wins. */
 export const AREA_PREFIXES: [prefix: string, area: string][] = [
@@ -24,7 +23,7 @@ export const AREA_PREFIXES: [prefix: string, area: string][] = [
   ['budget.', 'budget'],
   ['receipt.', 'receipts'],
   ['vendorInvoice.', 'spending'],
-  ['guest.', 'guests'],
+  ['guest.', 'guests'], ['stock.', 'stock'], ['directory.', 'directory'],
   ['prices.set', 'plans'], ['club.setPlan', 'plans'], ['club.updateSettings', 'plans'],
   // club
   ['calendarEvent.', 'calendar'], ['schedule.', 'calendar'], ['activity.', 'calendar'], ['room.', 'calendar'],
@@ -34,25 +33,18 @@ export const AREA_PREFIXES: [prefix: string, area: string][] = [
 
 /**
  * Actions that stay `can`-only: family-only and public ones, `system`, approvals, own-account actions, the door (attendance, guest check-in),
- * quick capture that every role does from its own home (photo.take…, mood, stock requests), and shared lists whose menu a role may not have
- * (directory is the Contacts list for the front desk). Mapping these would turn a role's everyday work into View only.
+ * quick capture that every role does from its own home (photo.take…, mood, stock requests). A role whose default for a menu is Hidden and whose
+ * grid cell was never set is not checked for that menu either (see `permit`), so cross-screen paths keep working.
  */
 export const UNMAPPED: string[] = [
   'review.', 'approval.', 'notifications.', 'account.', 'attendance.', 'jobs.',
   'guest.checkIn', 'guest.checkOut', 'guest.noShow', 'guest.undoCheckIn', 'guest.undoNoShow',
   'photo.take', 'photo.capture', 'photo.editDraft', 'photo.deleteDraft', 'photo.sendDrafts', 'photo.unsend',
-  'stock.', 'feedback.submit', 'feedback.log', 'mood.', 'leave.request', 'leave.cancel', 'member.logCall', 'celebration.request',
-  'budget.request', 'receipt.add', 'payment.record', 'directory.',
+  'stock.request', 'stock.edit', 'stock.cancel', 'feedback.submit', 'feedback.log', 'mood.', 'leave.request', 'leave.cancel', 'member.logCall', 'celebration.request',
+  'budget.request', 'receipt.add',
   'document.upload', 'enquiry.formOpen', 'enquiry.formSave', 'enquiry.formSubmit', 'venue.rate', 'survey.answer', 'signing.sign', 'signing.stamp',
   'family.updateDetails', 'family.setHealthAlerts', 'planChange.request', 'planChange.withdraw',
 ];
-
-/** A role's home screen is its Today: what it does there is never View only, whatever the grid says for the menu of the same name. */
-export const HOME_AREAS: Partial<Record<StaffRole, string[]>> = {
-  nurse: ['readings', 'log'],
-  kitchen: ['lunch', 'menu'],
-  finance: ['billing', 'renewals'], // Finance's home is Billing, where it also follows up unpaid invoices
-};
 
 /** Actions the person who filed the row may also run (edit or withdraw their own receipt or budget request): that path is not an area right, so the grid does not take it away. */
 export const OWN_ROW: string[] = ['receipt.edit', 'receipt.void', 'budget.edit', 'budget.cancel'];
