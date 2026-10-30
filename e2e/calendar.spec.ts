@@ -77,7 +77,7 @@ async function openDay(page: Page, date: string) {
 
 test('s9 adds a closure: it shows on the month view; edit and delete it', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's9', '/calendar');
+  await signIn(page, 's11', '/calendar'); // round 16: Ega's closures and holidays wait for the Owner; Benjamin's save at once
   await expect(page.getByRole('heading', { level: 1, name: 'Calendar and schedule' })).toBeVisible();
   await expect(page.getByText('Open Monday to Friday, and on weekends when programmed · 08:30–16:30')).toBeVisible();
   await noHScroll(page);
@@ -133,7 +133,7 @@ test('s9 adds a closure: it shows on the month view; edit and delete it', async 
 
 test('s9 adds a closure with "notify" switched off: the calendar changes but nobody is told', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's9', '/calendar');
+  await signIn(page, 's11', '/calendar'); // round 16: Ega's closures and holidays wait for the Owner; Benjamin's save at once
   await page.getByRole('button', { name: 'Add event' }).click();
   const dlg = page.getByRole('dialog', { name: 'Add to the calendar' });
   await dlg.getByPlaceholder('For example: Staff first-aid training').fill('Quiet cleaning');
@@ -159,7 +159,7 @@ test('s9 adds a closure with "notify" switched off: the calendar changes but nob
 
 test('s9 closes a day: it is closed for everyone (no check-in there) and staff and families are told', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's9', '/calendar');
+  await signIn(page, 's11', '/calendar'); // round 16: Ega's closures and holidays wait for the Owner; Benjamin's save at once
   await page.getByRole('button', { name: 'Add event' }).click();
   const dlg = page.getByRole('dialog', { name: 'Add to the calendar' });
   await dlg.getByPlaceholder('For example: Staff first-aid training').fill('Deep cleaning');
@@ -186,7 +186,7 @@ test('s9 closes a day: it is closed for everyone (no check-in there) and staff a
 
 test('s9 adds a three-day holiday and an outing with times', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's9', '/calendar');
+  await signIn(page, 's11', '/calendar'); // round 16: Ega's closures and holidays wait for the Owner; Benjamin's save at once
   await page.getByRole('button', { name: 'Add event' }).click();
   let dlg = page.getByRole('dialog', { name: 'Add to the calendar' });
   await dlg.getByRole('button', { name: 'National holiday' }).click();

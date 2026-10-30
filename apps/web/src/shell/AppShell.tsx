@@ -34,7 +34,8 @@ export function useKeyFromPath() {
 export function AppShell() {
   const club = useClub();
   const { device, isPhone } = useDevice();
-  const { user, role } = useMe();
+  const { user, role, realRole } = useMe();
+  const navRole = realRole === 'owner' ? 'owner' : role; // round 16: the Owner's menus include Roles (the screens themselves render as management)
   const t = useT();
   const navigate = useNavigate();
   const key = useKeyFromPath();
@@ -73,7 +74,7 @@ export function AppShell() {
   const floatClear = isPhone ? `calc(${84 + (pins ? (quick ? 124 : 76) : quick ? 68 : 24) + fabRows}px + env(safe-area-inset-bottom, 0px))` : '0px';
   const cssVars = { '--cp-floatclear': floatClear, '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px', '--cp-tabbar': isPhone ? 'calc(86px + env(safe-area-inset-bottom, 0px))' : '0px' } as CSSProperties;
   const go = (k: string) => (k === 'more' ? setMore(true) : navigate('/' + k));
-  const groups: [string | null, NavItem[]][] = navGroups(club, role); // round 16: the menus come from the access grid
+  const groups: [string | null, NavItem[]][] = navGroups(club, navRole!); // round 16: the menus come from the access grid
   // round 6: a member profile is a pushed screen on a phone; it brings its own top bar (‹ Members), so the logo header steps aside
   const pushed = isPhone && /^\/members\/[^/]+/.test(pathname);
   return (
@@ -99,7 +100,7 @@ export function AppShell() {
             <div aria-hidden="true" style={{ height: isPhone ? 'var(--cp-floatclear)' : quick ? 136 : 72 }} />
           </Suspense>
         </main>
-        {isPhone ? <BottomNav role={role} current={key} counts={counts} onGo={go} /> : null}
+        {isPhone ? <BottomNav role={navRole!} current={key} counts={counts} onGo={go} /> : null}
       </div>
       <AccountSheet open={acct} onClose={() => setAcct(false)} />
       <NotificationPanel open={bell} onClose={() => setBell(false)} />

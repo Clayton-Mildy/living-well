@@ -204,13 +204,13 @@ test('broadcast: audiences are people, the preview follows the chosen recipient,
   const c = watchConsole(page);
   await signIn(page, 's9', '/broadcast');
   await expect(page.getByRole('heading', { name: 'Broadcast', level: 1 })).toBeVisible();
-  // audience counts are real people with a phone (6 families, 4 open leads, 8 staff)
+  // audience counts are real people with a phone (6 families, 4 open leads, 9 staff: round 16 added the Owner)
   await expect(page.getByRole('button', { name: 'Families · 6' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Enquiries · 4' })).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Staff · 8' })).toBeVisible();
-  await page.getByRole('button', { name: 'Staff · 8' }).click();
+  await expect(page.getByRole('button', { name: 'Staff · 9' })).toBeVisible();
+  await page.getByRole('button', { name: 'Staff · 9' }).click();
   await expect(page.getByRole('button', { name: 'Families · 6' })).toBeVisible();
-  await page.getByRole('button', { name: 'Staff · 8' }).click(); // off again
+  await page.getByRole('button', { name: 'Staff · 9' }).click(); // off again
   // the preview is for a chosen recipient, not a fixed name
   await page.getByRole('button', { name: 'Club update' }).click();
   await page.getByPlaceholder('Our new garden room opens on Monday.').fill('the garden room opens on Monday');
@@ -298,7 +298,7 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   const c = watchConsole(page);
   await signIn(page, 's9', '/hr');
   await expect(page.getByRole('heading', { name: 'People', level: 1 })).toBeVisible();
-  await expect(page.locator('[data-staff]')).toHaveCount(8); // eight people: one page
+  await expect(page.locator('[data-staff]')).toHaveCount(8); // round 16: nine people now (the Owner is s11), eight a page
   await assertNoHorizontalScroll(page);
 
   await page.getByRole('button', { name: 'Add staff member' }).click();
@@ -317,7 +317,7 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   await dlg.getByLabel('Account number').fill('1234 5678 90');
   await dlg.getByRole('button', { name: 'Add staff member' }).click();
   await expect(toast(page, 'Wulan Sari added to the team.')).toBeVisible();
-  await expect(page.locator('[data-staff="s11"]')).toBeVisible();
+  await expect(page.locator('[data-staff="s12"]')).toBeVisible(); // round 16: s11 is Benjamin, so the new person is s12
   await expect(page.getByRole('heading', { name: 'Wulan Sari', level: 2 })).toBeVisible();
   await expect(page.getByText('Kitchen helper · +62 811-2201-7788')).toBeVisible();
 
@@ -334,7 +334,7 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   await dlg2.getByRole('button', { name: 'Cancel' }).click();
 
   // edit the new record
-  await (await staffRow(page, 's11')).click();
+  await (await staffRow(page, 's12')).click();
   await page.getByRole('button', { name: 'Edit', exact: true }).click();
   const edit = page.getByRole('dialog', { name: 'Wulan Sari' });
   await edit.getByLabel('Job title').fill('Senior kitchen helper');
@@ -349,8 +349,8 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   await expect(toast(page, 'Wulan Sari is deactivated.')).toBeVisible();
   // inactive people are listed last: the ninth person is on the second page
   if (isPhone(page)) await page.getByRole('button', { name: 'Back' }).click();
-  await expect(await staffRow(page, 's11')).toContainText('Inactive');
-  if (isPhone(page)) await (await staffRow(page, 's11')).click();
+  await expect(await staffRow(page, 's12')).toContainText('Inactive');
+  if (isPhone(page)) await (await staffRow(page, 's12')).click();
   await page.getByRole('button', { name: 'Reactivate' }).click();
   await expect(toast(page, 'Wulan Sari is active again.')).toBeVisible();
   // you cannot deactivate yourself
@@ -836,7 +836,7 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
 
 test('plans: prices change only on Save, with validation; the Flex visits rule is editable; the preview follows a chosen member', async ({ page }) => {
   const c = watchConsole(page);
-  await signIn(page, 's9', '/plans');
+  await signIn(page, 's11', '/plans'); // round 16: Ega's price changes wait for the Owner, so Benjamin saves them
   await expect(page.getByRole('heading', { name: 'Plans and pricing', level: 1 })).toBeVisible();
   const flex = page.getByLabel('Flex price in rupiah');
   await expect(flex).toHaveValue('2.700.000');

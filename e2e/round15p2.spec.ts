@@ -37,7 +37,7 @@ test('phase 2 story: a new plan, the programme review, signing at registration, 
   await expect(page.getByTestId('programme-waiting')).toContainText('Waiting for Ega');
 
   // 1. Ega: Plans and pricing → Add plan → Start from Flex → "Flex 8", 8 days, Rp 2,000,000
-  await signIn(page, 's9', '/plans');
+  await signIn(page, 's11', '/plans'); // round 16: a new plan from Ega waits for the Owner, so Benjamin adds it
   await page.getByRole('button', { name: 'Add plan' }).click();
   const sheet = page.getByRole('dialog', { name: 'Add plan' });
   await sheet.getByRole('button', { name: 'Start from Flex' }).click();

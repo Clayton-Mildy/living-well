@@ -40,7 +40,7 @@ async function payOctober(request: APIRequestContext, ids: [string, string][] = 
 test.describe('prices and fees (Plans)', () => {
   test('the brochure’s prices are real; the registration fee, the 2-day trial and a month of leave are edited beside them; only the extra day is still a sample', async ({ page }) => {
     const c = watchConsole(page);
-    await signIn(page, 's9', '/plans');
+    await signIn(page, 's11', '/plans'); // round 16: Ega's price changes wait for the Owner, so Benjamin saves them
     await expect(page.getByLabel('Flex price in rupiah')).toHaveValue('2.700.000');
     await expect(page.getByLabel('Gold price in rupiah')).toHaveValue('3.950.000');
     await expect(page.getByLabel('Extra day price in rupiah')).toHaveValue('650.000');

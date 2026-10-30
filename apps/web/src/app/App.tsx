@@ -29,10 +29,10 @@ function DataGate({ children }: { children: ReactNode }) {
 }
 function NavScreen() {
   const { key = 'today' } = useParams();
-  const { role } = useMe();
+  const { role, realRole } = useMe();
   const club = useClub();
   if (!role) return <PageSkeleton />;
-  const id = screenFor(club, role, key);
+  const id = screenFor(club, realRole === 'owner' ? 'owner' : role, key); // round 16: the Owner's Roles screen
   if (!id) return <Navigate to="/today" replace />;
   const C = SCREENS[id];
   return <C />;
