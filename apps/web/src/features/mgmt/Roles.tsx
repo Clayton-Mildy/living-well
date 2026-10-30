@@ -1,7 +1,7 @@
 // Admin › Roles (round 16, KC): the Owner sets what each role opens (Hidden / View / Edit per menu item) and which of a role's changes wait for the Owner.
 // Wide screens: a grid, roles down the side and menu items across, the three approval switches in the last columns. Phone: a role picker, then its menu list.
-import { useState } from 'react';
-import { GRID_ROLES, MENU_KEYS, accessOf, ownerApprovalOn, type AccessLevel, type GridRole, type OwnerKind } from '@cp/shared';
+import { useState, type CSSProperties } from 'react';
+import { GRID_ROLES, MENU_KEYS, accessOf, defaultLevel, ownerApprovalOn, type AccessLevel, type GridRole, type OwnerKind } from '@cp/shared';
 import { PageHead, Select, FONT_SMALL, HAIRLINE } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
@@ -12,6 +12,7 @@ import { Page, SwitchRow } from './common';
 
 const KINDS: OwnerKind[] = ['pricing', 'holidays', 'budget'];
 const LEVELS: AccessLevel[] = ['off', 'view', 'edit'];
+type Cell = AccessLevel | 'none';
 
 export function Roles() {
   const t = useT();
@@ -21,10 +22,14 @@ export function Roles() {
   const [role, setRole] = useState<GridRole>(GRID_ROLES[0]);
   const roleName = (r: GridRole) => t('mgmt.access.role.' + r);
   const levelOptions = LEVELS.map((l) => ({ value: l, label: t('mgmt.access.' + l) }));
-  const setLevel = (r: GridRole, key: string, level: AccessLevel) => { void act('access.set', { role: r, key, level }); };
+  // a never-set cell whose default is Off is not in the role's menu: "—" (the server leaves such a cell to the action's own `can`); Hidden there is an explicit choice
+  const notInMenu = (r: GridRole, key: string) => s.club.settings.access?.[r]?.[key] === undefined && defaultLevel(r, key) === 'off';
+  const noneOption = { value: 'none' as Cell, label: '—' };
+  const setLevel = (r: GridRole, key: string, level: Cell) => { void act('access.set', { role: r, key, level: level === 'none' ? 'clear' : level }); };
   const setApproval = (r: GridRole, kind: OwnerKind, on: boolean) => { void act('access.setOwnerApproval', { role: r, kind, on }); };
   const cell = (r: GridRole, key: string) => (
-    <Select<AccessLevel> ariaLabel={t('mgmt.access.cell', { role: roleName(r), menu: t(menuLabel(key)) })} value={accessOf(s, r, key)} options={levelOptions} onChange={(l) => setLevel(r, key, l)} />
+    <Select<Cell> ariaLabel={t('mgmt.access.cell', { role: roleName(r), menu: t(menuLabel(key)) })} value={notInMenu(r, key) ? 'none' : accessOf(s, r, key)}
+      options={defaultLevel(r, key) === 'off' ? [{ ...noneOption, hint: t('mgmt.access.none') }, ...levelOptions] : levelOptions} onChange={(l) => setLevel(r, key, l)} />
   );
   const switchOf = (r: GridRole, kind: OwnerKind) => (
     <SwitchRow on={ownerApprovalOn(s, r, kind)} onClick={() => setApproval(r, kind, !ownerApprovalOn(s, r, kind))} label={t('mgmt.access.approvalOf', { kind: t('mgmt.access.kind.' + kind) })} />
@@ -50,27 +55,36 @@ export function Roles() {
     );
   }
 
-  const COL = 132;
-  const th = { padding: '8px 6px', fontSize: FONT_SMALL, fontWeight: 600, textAlign: 'left', verticalAlign: 'bottom', whiteSpace: 'normal', minWidth: COL } as const;
-  const firstCol = { position: 'sticky', left: 0, background: 'var(--bg, #FFFFFF)', zIndex: 1, minWidth: 150, padding: '6px 10px 6px 0', fontWeight: 600 } as const;
+  // wide: menu items down the side (sticky), the six roles across, then the three approval switches as rows of the same columns; compact selects fit a 1024px tablet
+  const compact = { '--cp-field-h': '36px' } as CSSProperties;
+  const th = { padding: '8px 4px', fontSize: FONT_SMALL, fontWeight: 600, textAlign: 'left', verticalAlign: 'bottom' } as const;
+  const first = { position: 'sticky', left: 0, background: 'var(--bg, #FFFFFF)', zIndex: 1, padding: '3px 8px 3px 0', fontSize: 14, fontWeight: 500, textAlign: 'left', width: 190 } as const;
   return (
     <Page>
       <PageHead title={t('mgmt.access.title')} size={32} />
       <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', fontFamily: 'Inter' }}>
+        <table style={{ borderCollapse: 'collapse', fontFamily: 'Inter', width: '100%', tableLayout: 'fixed' }}>
           <thead>
             <tr>
-              <th style={{ ...th, ...firstCol, minWidth: 150 }}>{t('mgmt.access.role')}</th>
-              {MENU_KEYS.map((k) => <th key={k} style={th}>{t(menuLabel(k))}</th>)}
-              {KINDS.map((kind) => <th key={kind} style={th}>{t('mgmt.access.approval')}<br />{t('mgmt.access.kind.' + kind)}</th>)}
+              <th style={{ ...th, ...first, fontWeight: 600 }}>{t('mgmt.access.menu')}</th>
+              {GRID_ROLES.map((r) => <th key={r} data-role={r} scope="col" style={th}>{roleName(r)}</th>)}
             </tr>
           </thead>
           <tbody>
-            {GRID_ROLES.map((r) => (
-              <tr key={r} style={{ borderTop: HAIRLINE }} data-role={r}>
-                <th scope="row" style={{ ...firstCol, textAlign: 'left', fontSize: 15 }}>{roleName(r)}</th>
-                {MENU_KEYS.map((k) => <td key={k} style={{ padding: '6px' }}>{cell(r, k)}</td>)}
-                {KINDS.map((kind) => <td key={kind} style={{ padding: '6px' }}>{switchOf(r, kind)}</td>)}
+            {MENU_KEYS.map((k) => (
+              <tr key={k} style={{ borderTop: HAIRLINE }} data-menu={k}>
+                <th scope="row" style={first}>{t(menuLabel(k))}</th>
+                {GRID_ROLES.map((r) => <td key={r} style={{ padding: '3px 4px', ...compact }}>{cell(r, k)}</td>)}
+              </tr>
+            ))}
+            {KINDS.map((kind, i) => (
+              <tr key={kind} style={{ borderTop: i === 0 ? '2px solid var(--hairline, #E2E2E6)' : HAIRLINE }} data-approval={kind}>
+                <th scope="row" style={first}>{t('mgmt.access.approvalOf', { kind: t('mgmt.access.kind.' + kind) })}</th>
+                {GRID_ROLES.map((r) => (
+                  <td key={r} style={{ padding: '3px 4px' }}>
+                    <SwitchRow on={ownerApprovalOn(s, r, kind)} onClick={() => setApproval(r, kind, !ownerApprovalOn(s, r, kind))} label={<span className="sr-only" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{t('mgmt.access.approvalOf', { kind: t('mgmt.access.kind.' + kind) })}: {roleName(r)}</span>} />
+                  </td>
+                ))}
               </tr>
             ))}
           </tbody>

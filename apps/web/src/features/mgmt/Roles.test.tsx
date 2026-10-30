@@ -6,6 +6,7 @@ import { MemoryRouter } from 'react-router-dom';
 import { buildSeed, MENU_KEYS } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
+import { screenFor } from '../../app/nav';
 import { Roles } from './Roles';
 
 let root: Root | null = null;
@@ -39,13 +40,40 @@ const click = async (el: Element | undefined | null) => { expect(el, 'element to
 const option = (name: string) => Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find((o) => o.getAttribute('aria-label') === name);
 
 describe('Admin › Roles', () => {
-  it('wide: six role rows, no Owner row, approval switches in the last columns', async () => {
+  it('wide: menu items down, six role columns, no Owner column, three approval rows', async () => {
     openClub();
-    await show(<Roles />, 1280);
-    expect(Array.from(document.querySelectorAll('tbody tr')).map((r) => r.getAttribute('data-role'))).toEqual(['mgmt', 'lobby', 'nurse', 'activity', 'kitchen', 'finance']);
-    expect(document.querySelectorAll('tbody tr:first-child [role="switch"]')).toHaveLength(3);
-    expect(document.querySelectorAll('tbody tr:first-child [role="combobox"]')).toHaveLength(MENU_KEYS.length);
+    await show(<Roles />, 1024);
+    expect(Array.from(document.querySelectorAll('thead th[data-role]')).map((r) => r.getAttribute('data-role'))).toEqual(['mgmt', 'lobby', 'nurse', 'activity', 'kitchen', 'finance']);
+    expect(document.querySelectorAll('tbody tr[data-menu]')).toHaveLength(MENU_KEYS.length);
+    expect(document.querySelectorAll('tbody tr[data-approval]')).toHaveLength(3);
+    expect(document.querySelectorAll('tbody tr[data-approval] [role="switch"]')).toHaveLength(18);
     expect(document.body.textContent).not.toContain('Owner');
+  });
+
+  it('a never-set default-off cell shows "—"; Hidden stores an explicit off, "—" clears it', async () => {
+    openClub();
+    await show(<Roles />, 390);
+    await click(document.querySelector('[role="combobox"][aria-labelledby]'));
+    await click(option('Front desk'));
+    expect(combo('Front desk: Payments').textContent).toContain('—');
+    await click(combo('Front desk: Payments'));
+    await click(option('Hidden'));
+    expect(actMock).toHaveBeenCalledWith('access.set', { role: 'lobby', key: 'payments', level: 'off' });
+    // the server stored it: the cell now shows Hidden, and "—" clears the entry
+    const v = structuredClone(useReplica.getState().view!);
+    v.club.settings.access = { lobby: { payments: 'off' } };
+    await act(async () => { useReplica.setState({ view: v, confirmed: v } as never); });
+    expect(combo('Front desk: Payments').textContent).toContain('Hidden');
+    await click(combo('Front desk: Payments'));
+    await click(option('—'));
+    expect(actMock).toHaveBeenCalledWith('access.set', { role: 'lobby', key: 'payments', level: 'clear' });
+  });
+
+  it('only the Owner reaches /roles', () => {
+    openClub();
+    const st = useReplica.getState().view!;
+    expect(screenFor(st, 'owner', 'roles')).toBe('roles');
+    for (const r of ['mgmt', 'lobby', 'nurse', 'activity', 'kitchen', 'finance'] as const) expect(screenFor(st, r, 'roles')).toBeNull();
   });
 
   it('phone: a role picker, the menu list with a level each, three switches; Front desk › Billing to Hidden calls access.set', async () => {

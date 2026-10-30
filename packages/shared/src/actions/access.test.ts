@@ -22,10 +22,18 @@ describe('access.set', () => {
     expect(a.club.settings.access?.nurse?.budget).toBe('edit');
     expect(accessOf(a, 'nurse', 'budget')).toBe('edit');
     const b = run(a, 'access.set', { role: 'nurse', key: 'budget', level: 'off' }, OWNER).state;
-    expect(b.club.settings.access?.nurse?.budget).toBeUndefined();
-    expect(b.club.settings.access?.nurse).toBeUndefined();
+    expect(b.club.settings.access?.nurse?.budget).toBe('off'); // round 16 fix: nurse/budget has no default, so an explicit Hidden is kept
+    const b2 = run(b, 'access.set', { role: 'nurse', key: 'budget', level: 'clear' }, OWNER).state;
+    expect(b2.club.settings.access?.nurse).toBeUndefined();
+    const b3 = run(run(base, 'access.set', { role: 'lobby', key: 'billing', level: 'edit' }, OWNER).state, 'access.set', { role: 'lobby', key: 'billing', level: 'view' }, OWNER).state;
+    expect(b3.club.settings.access?.lobby?.billing).toBeUndefined(); // back to a non-off default
     const c = run(base, 'access.set', { role: 'lobby', key: 'billing', level: 'off' }, OWNER).state;
     expect(c.club.settings.access?.lobby?.billing).toBe('off'); // the default is View, so Hidden is kept
+  });
+  it('Hidden on a never-set default-off cell is stored and the server then refuses the area', () => {
+    const a = run(base, 'access.set', { role: 'lobby', key: 'payments', level: 'off' }, OWNER).state;
+    expect(a.club.settings.access?.lobby?.payments).toBe('off');
+    fails(a, 'payment.record', { memberId: 'm1', amount: 1000, method: 'other' }, 's1', 'err.viewOnly');
   });
   it('an unknown key, role or level is invalid', () => {
     fails(base, 'access.set', { role: 'nurse', key: 'nope', level: 'edit' }, OWNER, 'err.invalid');

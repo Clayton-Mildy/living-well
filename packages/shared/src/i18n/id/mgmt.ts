@@ -148,7 +148,7 @@ export const mgmt: Same<typeof EN> = {
   tileCheckOn: 'Lama tidak datang',
   tileMood: 'Suasana hati hari ini',
   'access.title': 'Peran', 'access.role': 'Peran', 'access.menu': 'Menu', 'access.cell': '{role}: {menu}',
-  'access.off': 'Tersembunyi', 'access.view': 'Lihat', 'access.edit': 'Ubah',
+  'access.none': 'Tidak di menu', 'access.off': 'Tersembunyi', 'access.view': 'Lihat', 'access.edit': 'Ubah',
   'access.approval': 'Perlu persetujuan pemilik', 'access.approvalOf': 'Perlu persetujuan pemilik: {kind}',
   'access.kind.pricing': 'Harga', 'access.kind.holidays': 'Libur', 'access.kind.budget': 'Anggaran',
   'access.role.lobby': 'Resepsionis', 'access.role.nurse': 'Perawat', 'access.role.activity': 'Pengajar aktivitas', 'access.role.kitchen': 'Dapur & F&B', 'access.role.finance': 'Keuangan', 'access.role.mgmt': 'Manajemen',
