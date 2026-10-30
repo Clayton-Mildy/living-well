@@ -336,6 +336,24 @@ export interface FamilyContact extends Row {
   activatedAt?: DT;
   /** round 15: the contact's picture (a media id); the Family tabs and the account header show it */
   photoMediaId?: string;
+  /** round 16: where the contract and the invoices are emailed (simulated: an `emails` row) */
+  email?: string;
+}
+
+/** Round 16: one simulated email (nothing leaves the server; the row is the record). `to` is '' when no address was on file (`noAddress`). */
+export interface EmailRow extends Row {
+  to: string;
+  toName: string;
+  familyId: string;
+  memberId: string;
+  kind: 'contract' | 'invoice';
+  /** i18n key of the subject; `params` fill it */
+  subject: string;
+  params: Record<string, string | number>;
+  ref: { type: 'document' | 'invoice'; id: string };
+  sentAt: DT;
+  sentBy: Actor;
+  status: 'sent' | 'noAddress';
 }
 
 export interface FamilyLink extends Row {
@@ -1256,6 +1274,8 @@ export interface ClubState {
   leaveRequests: Record<string, LeaveRequest>;
   // round 14
   unpaidFollowUps: Record<string, UnpaidFollowUp>;
+  // round 16
+  emails: Record<string, EmailRow>;
 }
 
 /** Collections stored as one Postgres table each (everything except clubId/rev/club). */
@@ -1269,6 +1289,7 @@ export const COLLECTIONS = [
   'followUps', 'scheduleDays', 'guestHosts', 'guestSessions', 'surveyTemplates', 'taskTemplates', 'taskDone',
   'moodMarks', 'careCalls', 'celebrations', 'leaveRequests',
   'unpaidFollowUps',
+  'emails',
 ] as const;
 export type CollectionName = (typeof COLLECTIONS)[number];
 

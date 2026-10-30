@@ -5,6 +5,7 @@ import type { Draft } from 'immer';
 import type { Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
 import { e164, monthStart, toMin, ym } from '../util';
 import { changeKind, earliestMonth, noticeDays, noticeDeadline } from '../rules/notice';
+import { maybeEmailContract } from './emails';
 import { defineAction, hasRole, isMgmt, roleOf, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
 import { carrySigning, requireMember, shortOf, familyUserIds, signAtRegistration } from './helpers';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
@@ -111,6 +112,7 @@ export function activateMember(d: Draft<ClubState>, memberId: string, ctx: Ctx) 
   const start = currentMembership(m).start;
   const to = familyUserIds(d, memberId);
   if (to.length) ctx.notify({ toUsers: to, kind: 'members.notif.welcome', params: { name: displayName(m), date: dmy(start) }, link: '/today', memberId });
+  maybeEmailContract(d, memberId, ctx); // round 16: a form already stamped (signed at registration and stamped before approval) goes out now
 }
 
 // ---------- parse: add member ----------
@@ -189,7 +191,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
     spouseId: typeof o.spouseId === 'string' && o.spouseId ? o.spouseId : null,
     plan,
     start: txt(o.start, 10),
-    contact: { ...(typeof c.existingId === 'string' && c.existingId ? { existingId: c.existingId } : {}), name: txt(c.name, 80), phone: c.phone ? e164(txt(c.phone, 30)) : '', relation: oneOf(c.relation ?? 'daughter', RELATIONS), primary: c.primary !== false },
+    contact: { ...(typeof c.existingId === 'string' && c.existingId ? { existingId: c.existingId } : {}), name: txt(c.name, 80), phone: c.phone ? e164(txt(c.phone, 30)) : '', ...(txt(c.email, 120) ? { email: txt(c.email, 120).toLowerCase() } : {}), relation: oneOf(c.relation ?? 'daughter', RELATIONS), primary: c.primary !== false },
     health: {
       conditions: strList(h.conditions), diabetic: !!h.diabetic, food: enumList(h.food, FOODS), foodOther: txt(h.foodOther, 80), drugs: parseDrugs(h.drugs),
       mobility: MOBILITIES.includes(h.mobility as Mobility) ? (h.mobility as Mobility) : null, diet: enumList(h.diet, DIETS), meds: parseMeds(h.meds).map(({ name, dose, timing }) => ({ name, dose, timing })),
@@ -287,7 +289,7 @@ export const membersActions: ActionDef[] = [
         const phone = e164(input.contact.phone);
         if (phoneTaken(d, phone)) ctx.fail('members.err.phoneInUse');
         familyId = nextContactId(d, id);
-        d.familyContacts[familyId] = { id: familyId, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, name: input.contact.name, firstName: firstWord(input.contact.name), phone };
+        d.familyContacts[familyId] = { id: familyId, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, name: input.contact.name, firstName: firstWord(input.contact.name), phone, ...(input.contact.email ? { email: input.contact.email } : {}) };
       }
       const lid = `${familyId}:${id}`;
       d.familyLinks[lid] = { id: lid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, familyId, memberId: id, relation: input.contact.relation, primary: input.contact.primary, appAccess: true, healthAlerts: true };

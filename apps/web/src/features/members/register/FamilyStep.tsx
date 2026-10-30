@@ -25,6 +25,7 @@ export function FamilyStep({ p }: { p: StepProps }) {
                 <TextField label={t('common.name')} value={st.contact} onChange={(v) => set({ contact: v })} error={p.err('contactName')} name="contact" />
                 <TextField label={t('common.phone')} value={st.phone} onChange={(v) => set({ phone: v })} type="tel" inputMode="tel" placeholder="+62" error={p.err('phone')} name="phone" />
                 <DupNote p={p} phone={st.phone} />
+                <TextField label={t('email.label')} value={st.email} onChange={(v) => set({ email: v })} type="email" inputMode="email" placeholder={t('email.ph')} error={p.err('email')} name="email" />
               </>
             )}
             <RelationChips value={st.rel} onChange={(v) => set({ rel: v })} t={t} />

@@ -7,6 +7,7 @@ import {
 } from '@cp/shared';
 import { END_REASONS, activePlans, consentOf, firstOfNextMonth, isPhone, openBalance, plainName } from '@cp/shared/rules/members';
 import { changeKind, earliestMonth, noticeDays } from '@cp/shared/rules/notice';
+import { isEmail } from '@cp/shared/rules/emails';
 import { monthStart } from '@cp/shared/util';
 import { cleanRegistration, validateRegistration } from '@cp/shared/rules/applicationForm';
 import { Button, ChipGroup, DateField, Dialog, Note, StaffOnlyTag, Toggle } from '../../../components/ui';
@@ -270,7 +271,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
   const linked = new Set(linksOfMember(s, m.id).map((l) => l.familyId));
   const others = sortBy(live(s.familyContacts).filter((x) => !linked.has(x.id) && !isPendingRow(x)), (x) => x.name);
   const [d, set] = useDraft(() => ({
-    mode: 'new' as 'new' | 'existing', existingId: '', name: c?.name || '', phone: c ? fmtPhone(c.phone) : '', rel: (link?.relation || 'daughter') as Relation,
+    mode: 'new' as 'new' | 'existing', existingId: '', name: c?.name || '', phone: c ? fmtPhone(c.phone) : '', email: c?.email || '', rel: (link?.relation || 'daughter') as Relation,
     primary: link ? link.primary : contactsOfMember(s, m.id).length === 0, appAccess: link ? link.appAccess : true, note: '', photo: (c?.photoMediaId ?? null) as string | null,
   }));
   const [step, setStep] = useState<'form' | 'remove'>('form');
@@ -280,23 +281,25 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
   const phone = d.phone.trim() ? e164(d.phone) : '';
   const errName = tried && d.mode === 'new' && d.name.trim().length < 2 ? t('members.err.contactRequired') : '';
   const errPhone = tried && d.mode === 'new' ? (!d.phone.trim() ? t('members.err.phoneRequired') : !isPhone(phone) ? t('members.err.phoneInvalid') : '') : '';
+  const email = d.email.trim().toLowerCase();
+  const errEmail = tried && d.mode === 'new' && email && !isEmail(email) ? t('err.emailInvalid') : ''; // round 16
   const errExisting = tried && d.mode === 'existing' && !d.existingId ? t('members.err.contactRequired') : '';
   const only = contactsOfMember(s, m.id).length <= 1;
   const save = async () => {
     setTried(true);
     if (busy) return;
     if (!edit) {
-      if (errName || errPhone || errExisting || (d.mode === 'new' && (d.name.trim().length < 2 || !isPhone(phone))) || (d.mode === 'existing' && !d.existingId)) return;
+      if (errName || errPhone || errExisting || (d.mode === 'new' && (d.name.trim().length < 2 || !isPhone(phone) || (!!email && !isEmail(email)))) || (d.mode === 'existing' && !d.existingId)) return;
       setBusy(true);
       const base = { memberId: m.id, relation: d.rel, primary: d.primary, appAccess: d.appAccess, ...(d.note.trim() ? { note: d.note.trim() } : {}) };
       const r = d.mode === 'new'
-        ? await p.act('family.addContact', { ...base, name: d.name.trim(), phone }, { ok: t('profile.contactAdded', { n: d.name.trim() }), reviewText: t('profile.sentForReview') })
+        ? await p.act('family.addContact', { ...base, name: d.name.trim(), phone, ...(email ? { email } : {}) }, { ok: t('profile.contactAdded', { n: d.name.trim() }), reviewText: t('profile.sentForReview') })
         : await p.act('family.linkContact', { ...base, familyId: d.existingId }, { ok: t('profile.contactLinked', { n: s.familyContacts[d.existingId]?.name || '' }), reviewText: t('profile.sentForReview') });
       setBusy(false);
       if (r.ok) onClose();
       return;
     }
-    if (errName || d.name.trim().length < 2 || !isPhone(phone)) { setTried(true); return; }
+    if (errName || d.name.trim().length < 2 || !isPhone(phone) || (!!email && !isEmail(email))) { setTried(true); return; }
     setBusy(true);
     let ok = true, any = false, gated = false;
     const run = async (name: string, input: Record<string, unknown>) => { if (!ok) return; const r = await p.act(name, { familyId, memberId: m.id, ...input, ...(d.note.trim() ? { note: d.note.trim() } : {}) }, { silent: true }); if (!r.ok) ok = false; else { any = true; if (r.reviewed === 'gate') gated = true; } };
@@ -304,6 +307,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
     const body: Record<string, unknown> = {};
     if (d.name.trim() !== c!.name) body.name = d.name.trim();
     if (phone !== c!.phone) body.phone = phone;
+    if (email !== (c!.email ?? '')) body.email = email;
     if (d.photo !== (c!.photoMediaId ?? null)) body.photoMediaId = d.photo;
     if (Object.keys(body).length) await run('family.updateContact', body);
     if (d.primary && !link!.primary) await run('family.setPrimary', {});
@@ -343,6 +347,7 @@ function ContactForm({ p, familyId, onClose }: { p: P; familyId?: string; onClos
             {edit ? <ProfilePhotoField name={d.name || c!.name} value={d.photo} onChange={(id) => set({ photo: id })} size={64} /> : null}
             <TextField label={t('common.name')} value={d.name} onChange={(v) => set({ name: v })} error={errName} name="contact" />
             <TextField label={t('common.phone')} value={d.phone} onChange={(v) => set({ phone: v })} inputMode="tel" placeholder="+62" error={errPhone} name="phone" />
+            <TextField label={t('email.label')} value={d.email} onChange={(v) => set({ email: v })} type="email" inputMode="email" placeholder={t('email.ph')} error={errEmail || (tried && email && !isEmail(email) ? t('err.emailInvalid') : '')} name="email" />
           </>
         )}
         <RelationChips value={d.rel} onChange={(v) => set({ rel: v })} t={t} />

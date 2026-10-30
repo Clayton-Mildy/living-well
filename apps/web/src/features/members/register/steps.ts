@@ -21,7 +21,7 @@ export interface RegState {
   title: Title; name: string; gender: 'f' | 'm'; dob: string; address: string;
   /** usual arrival (optional, informational); profile picture media id; spouse member id — Add member only */
   usual: string; photo: string; spouseId: string;
-  contactMode: 'new' | 'existing'; existingId: string; contact: string; rel: Relation; phone: string; primary: boolean;
+  contactMode: 'new' | 'existing'; existingId: string; contact: string; rel: Relation; phone: string; /** round 16: where the contract is emailed */ email: string; primary: boolean;
   health: HealthDraft & AllergyDraft; carer: CarerDraft; meds: MedRow[]; care: string;
   plan: Plan | ''; start: string;
   /** the signed paper form (already uploaded) */ form: PaperFile | null;
@@ -33,7 +33,7 @@ export interface RegState {
 
 export const blankState = (): RegState => ({
   title: 'Oma', name: '', gender: 'f', dob: '', address: '', usual: '', photo: '', spouseId: '',
-  contactMode: 'new', existingId: '', contact: '', rel: 'daughter', phone: '', primary: true,
+  contactMode: 'new', existingId: '', contact: '', rel: 'daughter', phone: '', email: '', primary: true,
   health: { conditions: [], diabetic: false, mobility: 'none', diet: [], food: [], foodOther: '', drug: [], drugOther: '' }, carer: { nanny: false, nannyName: '', nannyNik: '' }, meds: [], care: '',
   plan: '', start: '', form: null, ktp: {}, docs: [], consentData: false, consentFace: true, note: '', reg: regDraftOf(),
 });
@@ -78,7 +78,7 @@ export const onlineSignatureOf = (e: Enquiry | undefined) => (e?.form?.submitted
 
 const FIELDS: Record<RegStep, string[]> = {
   person: ['title', 'name', 'dob', 'usualArrival', 'nik', 'rtRw', 'postcode', 'regPhone', 'regMobile', 'email'],
-  family: ['contact', 'contactName', 'phone', 'guarantorNik', 'nannyName', 'nannyNik'],
+  family: ['contact', 'contactName', 'phone', 'email', 'guarantorNik', 'nannyName', 'nannyNik'],
   health: ['meds'],
   plan: ['plan', 'start'],
   paper: [], // the scan is optional now: the review asks for it only when the pad is empty

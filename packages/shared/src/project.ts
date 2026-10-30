@@ -65,6 +65,8 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   // round 13: staff leave requests are staff-only (leaveRequests stays {}); round 14: so are the unpaid follow-up calls (unpaidFollowUps stays {})
   // round 12: mood marks for the family's own members; celebrations only once the club has confirmed them; care calls are staff-only (left {})
   out.moodMarks = pick(mine(live(s.moodMarks || {})));
+  // round 16: the emails sent to this contact only (another contact's mail stays staff-side)
+  out.emails = pick(live(s.emails || {}).filter((e) => e.familyId === familyId));
   out.celebrations = pick(mine(live(s.celebrations || {})).filter((c) => c.status === 'confirmed'));
   out.readings = pick(mine(live(s.readings)).filter((r) => !r.voided).map(readingForFamily).filter(present));
   // daily logs, family notes and readings by staff wait for approval: a new entry is left out, an edit shows the last approved values

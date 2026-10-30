@@ -1,6 +1,7 @@
 // Members: lifecycle status, list rows, filters and search, id allocation, documents and consent, validation,
 // pending reviews and the final invoice. Members drop in on any open day, so there are no bookings, leave or "expected" days here:
 // status comes from check-ins, and the Flex plan counts visits. Pure selectors shared by the actions and the screens.
+import { isEmail } from './emails';
 import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
 import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
@@ -371,7 +372,7 @@ export interface NewMemberInput {
   photoMediaId?: string;
   plan: Plan;
   start: ISODate;
-  contact: { existingId?: string; name: string; phone: string; relation: Relation; primary: boolean };
+  contact: { existingId?: string; name: string; phone: string; /** round 16 */ email?: string; relation: Relation; primary: boolean };
   health: { conditions: string[]; diabetic: boolean; food: FoodAllergen[]; foodOther: string; drugs: DrugAllergy[]; mobility: Mobility | null; diet: Diet[]; meds: { name: string; dose: string; timing: MedTiming }[] };
   careInstructions: string;
   docs: DocType[];
@@ -403,6 +404,7 @@ export function validateNewMember(d: Partial<NewMemberInput>, today?: ISODate): 
     if (!c.name || c.name.trim().length < 2) bad('contactName', 'contactRequired');
     if (!c.phone || !c.phone.trim()) bad('phone', 'phoneRequired');
     else if (!isPhone(e164(c.phone))) bad('phone', 'phoneInvalid');
+    if (c.email && !isEmail(c.email)) bad('email', 'emailInvalid'); // round 16
   }
   if (!d.formMediaId && !d.signatureMediaId) bad('form', 'formRequired'); // the signed paper form, or the signature on the pad
   if (!d.consent?.data) bad('consentData', 'consentRequired');

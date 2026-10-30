@@ -10,6 +10,7 @@ import { actorName, fmtPhone, primaryContact, type DocType } from '@cp/shared';
 import { consentOf, docOf, documentTypes } from '@cp/shared/rules/members';
 import { applicationDataOf } from '@cp/shared/rules/applicationForm';
 import { signerChanged, signingOf } from '@cp/shared/rules/signing';
+import { contractEmails } from '@cp/shared/rules/emails';
 import { Icon, IconButton, StatusBadge } from '../../../components/ui';
 import { useT } from '../../../lib/i18n';
 import { HAIR, pillBtn } from '../lib';
@@ -60,6 +61,14 @@ export function DocsTab({ p }: { p: P }) {
   const sub = (type: DocType) => (type === 'nannyKtp' && !m.nanny ? t('profile.docMeta.noNanny') : ''); // a missing document says so in its badge
   const title = (type: DocType) => (type === 'ktp' ? t('profile.docTitle.ktp', { n: m.firstName }) : type === 'nannyKtp' ? t('profile.docTitle.nannyKtp') : t('profile.docTitle.' + type));
   const consents = (['data', 'face'] as const).map((k) => ({ k, c: consentOf(m, k) }));
+  // round 16: where the signed contract was emailed (simulated), or that the billing contact has no email yet
+  const mail = contractEmails(s, m.id)[0];
+  const contractLine = () => (mail ? (
+    <div data-testid="contract-email" style={{ fontSize: 13, lineHeight: 1.4, color: mail.status === 'sent' ? '#6B6259' : '#7A5510' }}>
+      {mail.status === 'sent' ? t('email.contractSent', { to: mail.to, d: fmt.fd(mail.sentAt.slice(0, 10), { day: 'numeric', month: 'short' }) }) : t('email.noAddress', { name: s.familyContacts[mail.familyId]?.firstName || mail.toName })}
+    </div>
+  ) : null);
+  const resendContract = async () => { await p.act('email.resendContract', { memberId: m.id }, { ok: (r) => (r.emailedTo ? t('email.sentAgain', { to: String(r.emailedTo) }) : t('email.noAddress', { name: contact?.firstName || '' })) }); };
   const DOC_ICON: Record<DocType, string> = { ktp: 'badge', nannyKtp: 'badge', guarantorKtp: 'badge', membershipForm: 'description', healthInfo: 'medical_information', other: 'draft' };
   const ph = p.isPhone; // round 6, phone (staff and family): each list card is an iOS grouped section
   const printer = useApplicationForm();
@@ -90,6 +99,7 @@ export function DocsTab({ p }: { p: P }) {
                 {has && !eDone && doc?.mediaId && doc.fileName ? <div style={{ fontSize: 13, color: '#6B6259', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{doc.fileName}</div> : null}
                 {has && !eDone && !doc?.mediaId ? <div style={{ fontSize: 13, color: '#6B6259' }}>{t('profile.paperCopyOnFile')}</div> : null}
                 {sig ? <SigningTrail sig={sig} family={p.family} /> : null}
+                {type === 'membershipForm' && !p.family ? contractLine() : null}
                 {frontDesk && sig && signerChanged(s, m.id) ? <div data-testid="sign-resend-hint" style={{ fontSize: 13, lineHeight: 1.4, color: '#7A5510' }}>{t('sign.resendHint')}</div> : null}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                   {has ? <StatusBadge kind="paid" label={t('profile.docOnFile')} small /> : requested ? <StatusBadge kind="outstanding" label={t('profile.docRequested')} small /> : <StatusBadge kind="pending" label={t('profile.docMissing')} small />}
@@ -101,6 +111,7 @@ export function DocsTab({ p }: { p: P }) {
                 {frontDesk && type === 'membershipForm' && !past ? <button type="button" className="h-fill cp-fill" onClick={send} style={pillBtn}><Icon name="send" size={18} />{sig?.status === 'sent' ? t('sign.resend') : t('sign.send')}</button> : null}
                 {frontDesk && type === 'membershipForm' && !past ? <button type="button" className="h-fill cp-fill" onClick={() => { printer.open(applicationDataOf(s, m.id, today)); setScanning(true); }} style={pillBtn}><Icon name="approval" size={18} />{t('sign.physical')}</button> : null}
                 {frontDesk && scanning && type === 'membershipForm' && !past ? <span data-testid="physical-scan" style={{ display: 'inline-flex', gap: 8 }}><UploadControls label={t('sign.scan')} name="registration-form" onFile={physical} /></span> : null}
+                {frontDesk && type === 'membershipForm' && sig?.status === 'stamped' ? <button type="button" className="h-fill cp-fill" onClick={resendContract} style={pillBtn}><Icon name="forward_to_inbox" size={18} />{t('email.sendAgain')}</button> : null}
                 {sig && eSigned ? <button type="button" className="h-fill cp-fill" onClick={() => printer.open(applicationDataOf(s, m.id, today), sig)} style={pillBtn}><Icon name="draw" size={18} />{t('sign.viewSigned')}</button> : null}
                 {has && doc?.mediaId && !eSigned ? <DocView doc={doc} title={title(type)}>{(open) => <button type="button" className="h-fill cp-fill" onClick={open} style={pillBtn}>{t('profile.view')}</button>}</DocView> : null}
                 {canUpload && !locked && !(type === 'nannyKtp' && !m.nanny) ? <UploadControls label={has ? t('profile.replace') : t('profile.upload')} name={PHOTO_NAME[type]} onFile={(f) => upload(type, f)} /> : null}

@@ -32,11 +32,12 @@ import { celebrationActions } from './celebrations';
 import { staffLeaveActions } from './staffLeave';
 import { unpaidActions } from './unpaid';
 import { signingActions } from './signing';
+import { emailActions } from './emails';
 
 registerActions([
   ...reviewActions, ...approvalActions, ...sessionActions, ...attendanceActions, ...healthActions, ...membersActions, ...familyActions,
   ...careActions, ...photoActions, ...photoDraftActions, ...kitchenActions, ...requestsActions, ...financeActions, ...enquiriesActions, ...clubActions, ...demoActions, ...jobsActions, ...scheduleActions, ...directoryActions, ...peopleActions, ...planRequestActions, ...membershipActions, ...accountActions,
-  ...renewalActions, ...guestActions, ...taskActions, ...moodActions, ...checkOnActions, ...celebrationActions, ...staffLeaveActions, ...unpaidActions, ...signingActions,
+  ...renewalActions, ...guestActions, ...taskActions, ...moodActions, ...checkOnActions, ...celebrationActions, ...staffLeaveActions, ...unpaidActions, ...signingActions, ...emailActions,
 ] as never);
 
 export * from './framework';

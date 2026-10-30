@@ -25,7 +25,7 @@ export function toCreateInput(st: RegState): NewMemberFull {
     plan: st.plan as Plan, start: st.start,
     contact: st.contactMode === 'existing'
       ? { existingId: st.existingId, name: '', phone: '', relation: st.rel, primary: st.primary }
-      : { name: st.contact.trim(), phone: st.phone.trim() ? e164(st.phone) : '', relation: st.rel, primary: st.primary },
+      : { name: st.contact.trim(), phone: st.phone.trim() ? e164(st.phone) : '', ...(st.email.trim() ? { email: st.email.trim().toLowerCase() } : {}), relation: st.rel, primary: st.primary },
     health: { ...healthOf(st), meds: st.meds.filter((x) => x.name.trim()).map((x) => ({ name: x.name.trim(), dose: x.dose.trim(), timing: x.timing })) },
     careInstructions: st.care.trim(), docs: st.docs.filter((x) => (x !== 'nannyKtp' || st.carer.nanny) && x !== 'membershipForm'),
     ...formOf(st), consent: { data: st.consentData, face: st.consentFace },

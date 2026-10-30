@@ -7,6 +7,7 @@ import { defineAction, hasRole, isFamily, DomainError, type ActionDef, type Ctx 
 import { carrySigning, shortOf } from './helpers';
 import { isPendingRow, linksOfMember, displayName } from '../rules/core';
 import { DOC_TYPES, RELATIONS, SIM_FILE, docIdFor, firstWord, isHM, isPhone, lastContactId, lastLinkId, nextContactId, nextLinkId } from '../rules/members';
+import { isEmail } from '../rules/emails';
 import { editable, makePrimary, mediaIdOf, obj, oneOf, parseNanny, phoneTaken, txt } from './members';
 
 const frontDesk = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'lobby', 'mgmt');
@@ -27,6 +28,13 @@ const linkFor = (d: Draft<ClubState>, familyId: string, memberId: string, ctx: C
 const contactTarget = (familyId: string, memberId?: string) => ({ type: 'familyContact' as const, id: familyId, ...(memberId ? { memberId } : {}) });
 const linkTarget = (s: ClubState, familyId: string, memberId: string) => ({ type: 'familyLink' as const, id: linkOf(s, familyId, memberId)?.id || '', memberId });
 
+/** Round 16: an optional email ('' or missing = none); a bad one is refused. */
+const emailOf = (v: unknown): string | undefined => {
+  const e = txt(v, 120).toLowerCase();
+  if (!e) return undefined;
+  if (!isEmail(e)) throw badCode('err.emailInvalid');
+  return e;
+};
 const parsePerson = (o: Record<string, unknown>) => {
   const name = txt(o.name, 80);
   if (name.length < 2) throw badCode('members.err.contactRequired');
@@ -37,9 +45,9 @@ const parsePerson = (o: Record<string, unknown>) => {
   return { name, phone };
 };
 
-interface AddContact { memberId: string; name: string; phone: string; relation: Relation; primary: boolean; appAccess: boolean; note?: string }
+interface AddContact { memberId: string; name: string; phone: string; email?: string; relation: Relation; primary: boolean; appAccess: boolean; note?: string }
 interface LinkContact { memberId: string; familyId: string; relation: Relation; primary: boolean; appAccess: boolean; note?: string }
-interface UpdateContact { familyId: string; memberId?: string; name?: string; phone?: string; relation?: Relation; lang?: Lang; /** null removes it */ photoMediaId?: string | null; note?: string }
+interface UpdateContact { familyId: string; memberId?: string; name?: string; phone?: string; relation?: Relation; lang?: Lang; /** null removes it */ photoMediaId?: string | null; /** round 16; null removes it */ email?: string | null; note?: string }
 
 /** Welcome the contact (they see it when they first sign in). */
 function welcomeContact(d: Draft<ClubState>, familyId: string, memberId: string, ctx: Ctx) {
@@ -57,14 +65,15 @@ export const familyActions: ActionDef[] = [
     parse: (raw) => {
       const o = obj(raw);
       const p = parsePerson(o);
-      return { memberId: txt(o.memberId, 60), ...p, relation: oneOf(o.relation ?? 'other', RELATIONS), primary: o.primary === true, appAccess: o.appAccess !== false, ...note(o) };
+      const email = emailOf(o.email);
+      return { memberId: txt(o.memberId, 60), ...p, ...(email ? { email } : {}), relation: oneOf(o.relation ?? 'other', RELATIONS), primary: o.primary === true, appAccess: o.appAccess !== false, ...note(o) };
     },
     review: { policy: 'gate', section: 'family', op: 'create', target: (i, s) => ({ type: 'familyContact', id: lastContactId(s, i.memberId), memberId: i.memberId }) },
     run(d, input, ctx) {
       const m = editable(d, input.memberId, ctx);
       if (phoneTaken(d, input.phone)) ctx.fail('members.err.phoneInUse');
       const id = nextContactId(d, m.id);
-      d.familyContacts[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, name: input.name, firstName: firstWord(input.name), phone: input.phone };
+      d.familyContacts[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, name: input.name, firstName: firstWord(input.name), phone: input.phone, ...(input.email ? { email: input.email } : {}) };
       const lid = nextLinkId(d, id, m.id);
       d.familyLinks[lid] = { id: lid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, familyId: id, memberId: m.id, relation: input.relation, primary: input.primary, appAccess: input.appAccess, healthAlerts: true };
       ctx.result.familyId = id;
@@ -120,7 +129,8 @@ export const familyActions: ActionDef[] = [
 
   defineAction<UpdateContact>({
     name: 'family.updateContact',
-    can: (u) => frontDesk(u),
+    // round 16: a family contact may change their own email (only that); it goes to the club for approval like their other edits
+    can: (u, i) => frontDesk(u) || (isFamily(u) && i.familyId === u.id && i.email !== undefined && i.name === undefined && i.phone === undefined && i.relation === undefined && i.lang === undefined && i.photoMediaId === undefined),
     parse: (raw) => {
       const o = obj(raw);
       const out: UpdateContact = { familyId: txt(o.familyId, 60), ...(txt(o.memberId, 60) ? { memberId: txt(o.memberId, 60) } : {}) };
@@ -129,11 +139,12 @@ export const familyActions: ActionDef[] = [
       if (o.relation !== undefined) { out.relation = oneOf(o.relation, RELATIONS); if (!out.memberId) throw badCode('err.invalid'); }
       if (o.lang !== undefined) out.lang = oneOf(o.lang, ['en', 'id'] as const);
       if (o.photoMediaId !== undefined) out.photoMediaId = mediaIdOf(o.photoMediaId) ?? null;
-      if (out.name === undefined && out.phone === undefined && out.relation === undefined && out.lang === undefined && out.photoMediaId === undefined) throw badCode('err.noChanges');
+      if (o.email !== undefined) out.email = emailOf(o.email) ?? null; // round 16: '' clears it
+      if (out.name === undefined && out.phone === undefined && out.relation === undefined && out.lang === undefined && out.photoMediaId === undefined && out.email === undefined) throw badCode('err.noChanges');
       return { ...out, ...note(o) };
     },
     // name, mobile, language and picture live on the contact; the relationship lives on the link to the member
-    review: { policy: 'gate', section: 'family', op: 'update', target: (i, s) => (i.name !== undefined || i.phone !== undefined || i.lang !== undefined || i.photoMediaId !== undefined || !i.memberId ? contactTarget(i.familyId, i.memberId) : linkTarget(s, i.familyId, i.memberId)) },
+    review: { policy: 'gate', section: 'family', op: 'update', target: (i, s) => (i.name !== undefined || i.phone !== undefined || i.lang !== undefined || i.photoMediaId !== undefined || i.email !== undefined || !i.memberId ? contactTarget(i.familyId, i.memberId) : linkTarget(s, i.familyId, i.memberId)) },
     run(d, input, ctx) {
       const c = d.familyContacts[input.familyId];
       if (!c || c.deletedAt) ctx.fail('members.err.contactNotFound');
@@ -148,6 +159,10 @@ export const familyActions: ActionDef[] = [
       if (input.lang !== undefined && input.lang !== c.lang) { c.lang = input.lang; changed = true; }
       if (input.photoMediaId !== undefined && (input.photoMediaId ?? undefined) !== c.photoMediaId) {
         if (input.photoMediaId) c.photoMediaId = input.photoMediaId; else delete c.photoMediaId;
+        changed = true;
+      }
+      if (input.email !== undefined && (input.email ?? undefined) !== c.email) {
+        if (input.email) c.email = input.email; else delete c.email;
         changed = true;
       }
       if (input.relation !== undefined && input.memberId) {

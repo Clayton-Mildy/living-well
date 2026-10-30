@@ -57,6 +57,13 @@
       "when": 1793021958256,
       "tag": "0007_round14_unpaid",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1793344012620,
+      "tag": "0008_round16_emails",
+      "breakpoints": true
     }
   ]
 }

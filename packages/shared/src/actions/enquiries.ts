@@ -14,6 +14,7 @@ import { mediaIdOf, parseCarer, parseHealthBasics, parseKtp, parseRegistration, 
 import { cleanRegistration } from '../rules/applicationForm';
 import { FORM_LINK_DAYS, FORM_STEPS, enquiryByFormToken, formRevOf, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
 import { arr, bad, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
+import { maybeEmailContract } from './emails';
 import { e164, live, sortBy, addDays } from '../util';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
@@ -112,6 +113,7 @@ function finishJoin(d: Draft<ClubState>, memberId: string, input: ConvertIn, ctx
   if (!d.members[memberId]) return;
   cancelPendingGuests(d, input.enquiryId, ctx.today);
   ctx.notify({ toUsers: familyUserIds(d, memberId), kind: 'enq.notif.welcome', params: { name: shortOf(d, memberId), date: dm(input.start) }, link: '/today', memberId });
+  maybeEmailContract(d, memberId, ctx); // round 16
 }
 
 /** Append a move to the lead's history (a row from before round 13 gets its first `new` move filled in first). */

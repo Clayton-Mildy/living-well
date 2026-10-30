@@ -15,6 +15,7 @@ import { docIdFor, SIM_FILE } from '../rules/members';
 import { applicationDataOf } from '../rules/applicationForm';
 import { formDoc, lastSentAt, signerOf, signingOf } from '../rules/signing';
 
+import { maybeEmailContract } from './emails';
 const frontDesk = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'lobby', 'mgmt');
 const bad = (code: string): never => { throw new DomainError(code); };
 const feed = (ctx: Ctx, d: Draft<ClubState>, memberId: string, icon: string, key: string, extra: Record<string, string | number> = {}) =>
@@ -94,6 +95,7 @@ export const signingActions: ActionDef[] = [
       Object.assign(doc, { status: 'onFile', fileName: input.fileName || SIM_FILE.membershipForm, mediaId: input.mediaId, on: ctx.today, via: 'staff', by: ctx.actor });
       doc.signing = { status: 'stamped', meterai: 'physical', steps: [...(doc.signing?.steps || []), { status: 'stamped', at: ctx.nowDT, by: ctx.actor }] } as Signing;
       feed(ctx, d, input.memberId, 'description', 'docs', { type: 'membershipForm', by: ctx.actor });
+      maybeEmailContract(d, input.memberId, ctx); // round 16
     },
   }),
 
@@ -119,6 +121,7 @@ export const signingActions: ActionDef[] = [
       const signer = signerOf(d as ClubState, m.id);
       if (signer) ctx.notify({ toUsers: [signer.id], kind: 'sign.notif.stamped', params: { name: displayName(m) }, link: `/profile?member=${m.id}`, memberId: m.id });
       feed(ctx, d, m.id, 'description', 'docs', { type: 'membershipForm', by: 'system' });
+      maybeEmailContract(d, m.id, ctx); // round 16
     },
   }),
 ];

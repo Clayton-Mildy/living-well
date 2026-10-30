@@ -97,3 +97,23 @@ describe('Documents tab (paper registration)', () => {
     expect(Array.from(document.querySelectorAll<HTMLElement>('button')).some((b) => (b.textContent ?? '').includes('Print application form'))).toBe(false);
   });
 });
+
+describe('round 16: the contract email', () => {
+  const withMail = (status: 'sent' | 'noAddress') => {
+    const s = structuredClone(buildSeed().citra);
+    const doc = s.members.m1.documents.find((d) => d.type === 'membershipForm')!;
+    doc.status = 'onFile';
+    doc.signing = { status: 'stamped', meterai: 'e', steps: [{ status: 'stamped', at: '2026-10-21T09:00', by: 'system' }] };
+    s.emails = { em1: { id: 'em1', clubId: 'citra', createdAt: '2026-10-21T09:00', createdBy: 'system', to: status === 'sent' ? 'maria@example.com' : '', toName: 'Maria Wijaya', familyId: 'f1', memberId: 'm1', kind: 'contract', subject: 'email.subj.contract', params: {}, ref: { type: 'document', id: 'm1:2026-10-21T09:00' }, sentAt: '2026-10-21T09:00', sentBy: 'system', status } };
+    return s;
+  };
+  it('says where the signed contract was emailed, with Send again', async () => {
+    await show(withMail('sent'));
+    expect(document.querySelector('[data-testid="contract-email"]')?.textContent).toBe('Contract emailed to maria@example.com · 21 Oct');
+    expect(Array.from(document.querySelectorAll('button')).some((b) => b.textContent?.endsWith('Send again'))).toBe(true);
+  });
+  it('with no email on file it asks for one', async () => {
+    await show(withMail('noAddress'));
+    expect(document.querySelector('[data-testid="contract-email"]')?.textContent).toBe('No email for Maria — add one');
+  });
+});
