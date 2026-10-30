@@ -467,6 +467,25 @@ export const membersActions: ActionDef[] = [
     },
   }),
 
+  // ----- round 16: the pick-up service, a monthly fee (finance and management) -----
+  defineAction<{ memberId: string; on: boolean; price?: number | null }>({
+    name: 'members.setPickup',
+    can: (u) => hasRole(u, 'finance', 'mgmt'),
+    parse: (raw) => {
+      const o = obj(raw);
+      const price = o.price === undefined || o.price === null || o.price === '' ? null : Number(o.price);
+      if (price !== null && (!Number.isInteger(price) || price < 1000 || price > 100_000_000)) bad('err.invalid');
+      return { memberId: txt(o.memberId, 60), on: o.on === true, price };
+    },
+    run(d, input, ctx) {
+      const m = editable(d, input.memberId, ctx);
+      const next = { on: input.on, ...(input.price ? { price: input.price } : {}) };
+      if (JSON.stringify(m.pickup ?? { on: false }) === JSON.stringify(next)) ctx.fail('err.noChanges');
+      m.pickup = next;
+      feed(ctx, d, m.id, 'airport_shuttle', input.on ? 'pickupOn' : 'pickupOff', { by: ctx.actor });
+    },
+  }),
+
   // ----- request a document from the family (not gated) -----
   defineAction<{ memberId: string; type: DocType }>({
     name: 'members.requestDocument',

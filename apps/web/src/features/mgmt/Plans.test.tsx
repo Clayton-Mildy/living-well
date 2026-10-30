@@ -228,3 +228,19 @@ describe('round 16: the notice period', () => {
     expect(fn).toHaveBeenCalledWith('club.updateSettings', { noticeDays: 21 });
   });
 });
+
+describe('round 16: pick-up and field trip fees', () => {
+  it('show their defaults in Extra charges and save with prices.set', async () => {
+    openClub();
+    const fn = vi.fn(async () => ({ ok: true as const, result: {} }));
+    useReplica.setState({ act: fn as never });
+    await show(<Plans />, 390);
+    expect(section('Extra charges')!.contains(priceInput('Pick-up'))).toBe(true);
+    expect(priceInput('Pick-up').value).toBe('600.000');
+    expect(priceInput('Field trip').value).toBe('250.000');
+    await type(priceInput('Pick-up'), '650.000');
+    const save = Array.from(document.querySelectorAll('button')).find((b) => /Save changes$/.test(b.textContent || ''))!;
+    await act(async () => { save.click(); });
+    expect(fn).toHaveBeenCalledWith('prices.set', expect.objectContaining({ pickup: 650_000, fieldTrip: 250_000 }));
+  });
+});

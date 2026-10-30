@@ -14,8 +14,8 @@ import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { Page, SwitchRow, HPAD, heroCard, labelStyle, tn, Pill } from './common';
 
-type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave' | 'dementia';
-const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave', 'dementia'];
+type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave' | 'dementia' | 'pickup' | 'fieldTrip';
+const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip']; // round 16: pick-up and field trip defaults
 type Draft = Record<PriceKey, string> & { quota: string; notice: string; from: string; plans: Record<string, string> }; // plans: the catalogue plans' prices as typed ('' = no price)
 
 export function Plans() {
@@ -31,7 +31,7 @@ export function Plans() {
   const price = priceOn(s, today);
   const custom = s.club.settings.plans ?? [];
   const [sheet, setSheet] = useState<{ plan?: PlanDef } | null>(null);
-  const saved: Draft = { flex: fmtN(price.flex), gold: fmtN(price.gold), extra: fmtN(price.extra), registration: fmtN(feeOf(price, 'registration')), trial: fmtN(feeOf(price, 'trial')), leave: fmtN(feeOf(price, 'leave')), dementia: fmtN(feeOf(price, 'dementia')), quota: String(s.club.settings.flexQuota), notice: String(noticeDays(s)), from: today, plans: Object.fromEntries(custom.map((p) => [p.id, price.plans?.[p.id] ? fmtN(price.plans[p.id]) : ''])) };
+  const saved: Draft = { flex: fmtN(price.flex), gold: fmtN(price.gold), extra: fmtN(price.extra), registration: fmtN(feeOf(price, 'registration')), trial: fmtN(feeOf(price, 'trial')), leave: fmtN(feeOf(price, 'leave')), dementia: fmtN(feeOf(price, 'dementia')), pickup: fmtN(feeOf(price, 'pickup')), fieldTrip: fmtN(feeOf(price, 'fieldTrip')), quota: String(s.club.settings.flexQuota), notice: String(noticeDays(s)), from: today, plans: Object.fromEntries(custom.map((p) => [p.id, price.plans?.[p.id] ? fmtN(price.plans[p.id]) : ''])) };
   const [draft, setDraft] = useState<Draft | null>(null);
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -40,8 +40,8 @@ export function Plans() {
   const d = draft ?? saved;
   const set = (p: Partial<Draft>) => setDraft({ ...d, ...p });
 
-  const prices = { flex: parseN(d.flex), gold: parseN(d.gold), extra: parseN(d.extra), registration: parseN(d.registration), trial: parseN(d.trial), leave: parseN(d.leave), dementia: parseN(d.dementia) };
-  const current: Record<PriceKey, number> = { flex: price.flex, gold: price.gold, extra: price.extra, registration: feeOf(price, 'registration'), trial: feeOf(price, 'trial'), leave: feeOf(price, 'leave'), dementia: feeOf(price, 'dementia') };
+  const prices = { flex: parseN(d.flex), gold: parseN(d.gold), extra: parseN(d.extra), registration: parseN(d.registration), trial: parseN(d.trial), leave: parseN(d.leave), dementia: parseN(d.dementia), pickup: parseN(d.pickup), fieldTrip: parseN(d.fieldTrip) };
+  const current: Record<PriceKey, number> = { flex: price.flex, gold: price.gold, extra: price.extra, registration: feeOf(price, 'registration'), trial: feeOf(price, 'trial'), leave: feeOf(price, 'leave'), dementia: feeOf(price, 'dementia'), pickup: feeOf(price, 'pickup'), fieldTrip: feeOf(price, 'fieldTrip') };
   // custom plans: typed price per plan (a plan added while editing falls back to its saved one); 0 = no price
   const planVal = (id: string) => d.plans[id] ?? saved.plans[id] ?? '';
   const planNums = Object.fromEntries(custom.map((p) => [p.id, parseN(planVal(p.id))]));
@@ -59,7 +59,7 @@ export function Plans() {
   const rulesChanged = quotaChanged || noticeChanged;
   const dirty = priceChanged || rulesChanged;
   const err = {
-    flex: prices.flex < 1, gold: prices.gold < 1, extra: prices.extra < 1, registration: prices.registration < 1, trial: prices.trial < 1, leave: prices.leave < 1, dementia: prices.dementia < 1,
+    flex: prices.flex < 1, gold: prices.gold < 1, extra: prices.extra < 1, registration: prices.registration < 1, trial: prices.trial < 1, leave: prices.leave < 1, dementia: prices.dementia < 1, pickup: prices.pickup < 1, fieldTrip: prices.fieldTrip < 1,
     quota: !Number.isInteger(quota) || quota < 1 || quota > 23,
     notice: !Number.isInteger(notice) || notice < 1 || notice > 60,
     from: priceChanged && (!d.from || d.from < today),
@@ -241,6 +241,8 @@ export function Plans() {
           priceBlock('extra', t('mgmt.plExtra'), t('mgmt.perDay'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')], [t('mgmt.plCounted'), t('mgmt.plCheckIns')]]),
           priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), tn(t, 'mgmt.plLeaveAskV', Number.isFinite(notice) ? notice : noticeDays(s))]], noticeBody),
           priceBlock('dementia', t('mgmt.plDementia'), t('mgmt.perMonth'), []),
+          priceBlock('pickup', t('mgmt.plPickup'), t('mgmt.perMonth'), [[t('mgmt.plPickupWho'), t('mgmt.plPickupWhoV')]]),
+          priceBlock('fieldTrip', t('mgmt.plFieldTrip'), t('mgmt.perTrip'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')]]),
         ])}
         {/* KC round 6: the brochure's other fees */}
         {section(t('mgmt.plSecOnce'), [

@@ -18,7 +18,7 @@ export const members: Same<typeof EN> = {
   dobHint: 'Usia dihitung dari tanggal lahir.', startHint: 'Hari pertama di klub. Setelah itu anggota bisa datang di hari buka mana pun.',
   contactMode: 'Kontak keluarga', newContact: 'Kontak baru', existingContact: 'Kontak yang ada', pickContact: 'Pilih kontak', pickContactPh: 'Pilih…',
   'feed.created': '{name} ditambahkan sebagai anggota', 'feed.details': '{name}: data diri diperbarui', 'feed.docs': '{name}: dokumen diperbarui', 'feed.docRequested': '{name}: dokumen diminta dari keluarga',
-  'feed.docUploaded': '{name}: dokumen diunggah keluarga', 'feed.consent': '{name}: persetujuan diperbarui', 'feed.plan': '{name}: paket diubah', 'feed.planApplied': '{name}: permintaan paket diterapkan',
+  'feed.docUploaded': '{name}: dokumen diunggah keluarga', 'feed.consent': '{name}: persetujuan diperbarui', 'feed.pickupOn': '{name}: antar-jemput diaktifkan', 'feed.pickupOff': '{name}: antar-jemput dimatikan', 'feed.plan': '{name}: paket diubah', 'feed.planApplied': '{name}: permintaan paket diterapkan',
   'feed.planDeclined': '{name}: permintaan paket ditolak', 'feed.allergies': '{name}: alergi diperbarui', 'feed.meds': '{name}: obat diperbarui', 'feed.care': '{name}: petunjuk perawatan diperbarui',
   'feed.health': '{name}: catatan kesehatan diperbarui', 'feed.cognitive': '{name}: status kognitif diperbarui', 'feed.ending': '{name}: hari terakhir di klub ditetapkan', 'feed.endingCancelled': '{name}: pengakhiran dibatalkan',
   'feed.reactivated': '{name}: keanggotaan diaktifkan kembali', 'feed.noteShared': '{name}: catatan dibagikan ke keluarga', 'feed.noteStaff': '{name}: catatan khusus staf ditambahkan', 'feed.noteEdited': '{name}: catatan diubah',

@@ -19,7 +19,7 @@ export const members = {
   contactMode: 'Family contact', newContact: 'New contact', existingContact: 'Existing contact', pickContact: 'Choose a contact', pickContactPh: 'Choose…',
   // activity feed (member History and Live today)
   'feed.created': '{name} added as a member', 'feed.details': '{name}: details updated', 'feed.docs': '{name}: documents updated', 'feed.docRequested': '{name}: document requested from the family',
-  'feed.docUploaded': '{name}: document uploaded by the family', 'feed.consent': '{name}: consent updated', 'feed.plan': '{name}: plan changed', 'feed.planApplied': '{name}: plan request applied',
+  'feed.docUploaded': '{name}: document uploaded by the family', 'feed.consent': '{name}: consent updated', 'feed.pickupOn': '{name}: pick-up switched on', 'feed.pickupOff': '{name}: pick-up switched off', 'feed.plan': '{name}: plan changed', 'feed.planApplied': '{name}: plan request applied',
   'feed.planDeclined': '{name}: plan request declined', 'feed.allergies': '{name}: allergies updated', 'feed.meds': '{name}: medicines updated', 'feed.care': '{name}: care instructions updated',
   'feed.health': '{name}: health record updated', 'feed.cognitive': '{name}: cognitive status updated', 'feed.ending': '{name}: last club day set', 'feed.endingCancelled': '{name}: ending cancelled',
   'feed.reactivated': '{name}: membership reactivated', 'feed.noteShared': '{name}: note shared with family', 'feed.noteStaff': '{name}: staff-only note added', 'feed.noteEdited': '{name}: note edited',

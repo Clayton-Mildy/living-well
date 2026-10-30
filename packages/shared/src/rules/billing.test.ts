@@ -1,7 +1,7 @@
 // The invoice run's lines for a member: the dementia care fee (round 14, A2) on top of the plan line.
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, priceOn, type ClubState, type PlanDef } from '../index';
-import { FEE_DEFAULTS, feeOf, runLinesFor } from './billing';
+import { FEE_DEFAULTS, feeOf, pickupPrice, runLinesFor } from './billing';
 
 const T = '2026-10-21';
 const PERIOD = '2026-11';
@@ -85,5 +85,32 @@ describe('a custom plan on the invoice run', () => {
     for (const d of days) s.attendance[`${d}:m1`] = { id: `${d}:m1`, clubId: s.clubId, createdAt: `${d}T09:00`, createdBy: 'staff:s1', date: d, memberId: 'm1', checkIn: { at: `${d}T09:00`, by: 'staff:s1', method: 'manual' } } as never;
     const x = runLinesFor(s, s.members.m1, '2026-11', T).find((l) => l.kind === 'extraDay')!;
     expect(x).toMatchObject({ qty: 1, unit: priceOn(s, '2026-11-21').extra, dates: ['2026-10-13'] });
+  });
+});
+
+describe('round 16: the pick-up fee', () => {
+  const pickupLine = (s: ClubState, period = PERIOD) => runLinesFor(s, s.members.m1, period, T).find((l) => l.kind === 'pickup');
+  it('a member with pick-up on is billed the default Rp 600.000 a month, or their own price', () => {
+    expect(FEE_DEFAULTS.pickup).toBe(600_000);
+    expect(FEE_DEFAULTS.fieldTrip).toBe(250_000);
+    const s = seed();
+    expect(pickupLine(s)).toBeUndefined();
+    s.members.m1.pickup = { on: true };
+    expect(pickupLine(s)).toMatchObject({ id: 'pickup-2026-11', kind: 'pickup', label: 'inv.line.pickup', amount: 600_000 });
+    expect(pickupPrice(s, s.members.m1, '2026-11-21')).toEqual({ price: 600_000, custom: false });
+    s.members.m1.pickup = { on: true, price: 450_000 };
+    expect(pickupLine(s)?.amount).toBe(450_000);
+    s.members.m1.pickup = { on: false, price: 450_000 };
+    expect(pickupLine(s)).toBeUndefined();
+  });
+  it('no pick-up line in a month of leave, nor after the last day', () => {
+    const s = seed();
+    s.members.m1.pickup = { on: true };
+    const cur = s.members.m1.memberships.at(-1)!;
+    cur.leaves = [{ month: PERIOD, at: '2026-10-01T10:00', by: 'staff:s1' }];
+    expect(pickupLine(s)).toBeUndefined();
+    cur.leaves = [];
+    cur.lastDay = '2026-11-10';
+    expect(pickupLine(s, '2026-12')).toBeUndefined();
   });
 });

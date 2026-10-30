@@ -74,7 +74,7 @@ export const profile: Same<typeof EN> = {
   planNoteGold: 'Paket {plan} mencakup kunjungan tanpa batas. Anggota bisa datang di hari buka mana pun.', fee: 'Biaya bulanan',
   dementiaFee: 'Perawatan demensia dikenakan biaya tambahan {rp} per bulan.',
   extraDay: 'Hari tambahan', extraDayVal: '{p}, di tagihan berikutnya',
-  billingContact: 'Kontak tagihan', va: 'Virtual account', vaLater: 'Dibuat bersama tagihan pertama', nextChange: 'Perubahan paket berikutnya', fromDate: 'mulai {d}', couple: 'Pasangan',
+  pickup: 'Antar-jemput', pickupOff: 'Tidak', pickupVal: '{p} / bulan', pickupCustom: 'khusus', pickupOn: 'Klub menjemput anggota ini', pickupPrice: 'Harga bulanan khusus', pickupHint: 'Kosongkan untuk harga biasa {p}.', pickupSaved: 'Antar-jemput disimpan.', billingContact: 'Kontak tagihan', va: 'Virtual account', vaLater: 'Dibuat bersama tagihan pertama', nextChange: 'Perubahan paket berikutnya', fromDate: 'mulai {d}', couple: 'Pasangan',
   coupleVal: 'Paket dan tagihan sendiri. {n} bisa membayar keduanya sekaligus dengan tagihan {s}', balance: 'Sisa tagihan', membership: 'Keanggotaan', endedOn: 'Berakhir {d}', endsOn: 'Berakhir {d}',
   invoices: 'Tagihan', invoicesMeta: 'Virtual account DOKU · Xero', invoicesMetaFamily: 'Virtual account DOKU', finalInvoice: 'Tagihan akhir', paidOn: 'dibayar {d}', dueOn: 'jatuh tempo {d}',
   noInvoices: 'Tagihan pertama terbit pada tanggal 21 setelah tanggal mulai.', openStayPayable: 'Tagihan yang terbuka tetap bisa dibayar. Tagihan akhir hanya mencakup hari tambahan yang belum pernah ditagih.',

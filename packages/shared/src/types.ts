@@ -133,6 +133,9 @@ export interface PriceVersion extends Row {
   dementia?: number;
   /** round 15 (phase 2): the monthly price of each catalogue plan, by plan id (a plan missing here bills Rp 0 from this version) */
   plans?: Record<string, number>;
+  /** KC round 16: the default monthly pick-up fee (a member can have their own price) and the default field trip fee */
+  pickup?: number;
+  fieldTrip?: number;
   sample: { flex: boolean; gold: boolean; extra: boolean };
   by?: Actor;
 }
@@ -300,6 +303,8 @@ export interface Member extends Row {
   limits?: Partial<HealthLimits>;
   /** KC round 6: the extra answers of the paper Membership Application Form */
   registration?: MemberRegistration;
+  /** KC round 16: the club picks the member up; `price` is their own monthly fee (none = the price list's default) */
+  pickup?: { on: boolean; price?: number };
 }
 
 export interface MemberNote extends Row {

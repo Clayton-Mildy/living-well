@@ -2,12 +2,12 @@
 // the membership state, and the invoices. Invoices open the invoice sheet; Xero status is for staff only.
 import { useState } from 'react';
 import {
-  actorName, currentMembership, type Plan, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
+  actorName, currentMembership, feeOf, fmtN, parseN, pickupPrice, type Plan, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
 } from '@cp/shared';
 import { formatVa, openBalance } from '@cp/shared/rules/members';
 import { isConfirmed } from '@cp/shared/rules/finance';
 import { isDaysPlan, planLabel, planPrice, planQuota } from '@cp/shared/rules/plans';
-import { Button, Group, Icon, Pager, SectionLabel, Sheet, StatusBadge, TextField, Note, usePaged } from '../../../components/ui';
+import { Button, Group, Icon, Pager, SectionLabel, Sheet, StatusBadge, TextField, Toggle, Note, usePaged } from '../../../components/ui';
 import { say } from '../../../store/ui';
 import { InvoiceSheet } from '../../finance/InvoiceSheet';
 import { useLeaveUi } from '../../family/LeaveSection';
@@ -21,6 +21,9 @@ export function PlanTab({ p }: { p: P }) {
   const [inv, setInv] = useState<string | null>(null);
   const [declining, setDeclining] = useState<string | null>(null);
   const [note, setNote] = useState('');
+  const [pickOpen, setPickOpen] = useState(false); // round 16: the pick-up editor
+  const [pickOn, setPickOn] = useState(false);
+  const [pickPrice, setPickPrice] = useState('');
   const plan = planOn(m, today);
   const name = (pl: Plan) => planLabel(s, pl, fmt.lang);
   const days = isDaysPlan(s, plan.plan);
@@ -41,6 +44,13 @@ export function PlanTab({ p }: { p: P }) {
   const spouse = m.spouseId ? s.members[m.spouseId] : undefined;
   const fm = flexMonth(s, m, ym(today), today);
   const since = memberSince(m);
+  const pick = pickupPrice(s, m, today);
+  const savePickup = async () => {
+    const n = parseN(pickPrice);
+    if (pickPrice.trim() && n < 1000) return;
+    const r = await p.act('members.setPickup', { memberId: m.id, on: pickOn, price: pickPrice.trim() ? n : null }, { ok: t('profile.pickupSaved') });
+    if (r.ok) setPickOpen(false);
+  };
   const xeroLabel = (x: string) => t('profile.xero.' + x);
   const apply = async () => { if (req) await p.act('planChange.apply', { requestId: req.id }, { ok: t('profile.planApplied'), reviewText: t('profile.sentForReview') }); };
   const decline = async () => {
@@ -60,6 +70,12 @@ export function PlanTab({ p }: { p: P }) {
         {fm.quota === null ? t('profile.visitsMonthGold', { n: fm.used }) : t(fm.extra ? (fm.extra === 1 ? 'profile.visitsMonthExtraOne' : 'profile.visitsMonthExtra') : 'profile.visitsMonthFlex', { n: Math.min(fm.used, fm.quota), q: fm.quota, x: fm.extra })}
       </Fact>
       {days ? <Fact k={t('profile.extraDay')}>{t('profile.extraDayVal', { p: rp(price.extra) })}</Fact> : null}
+      <Fact k={t('profile.pickup')}>
+        <span data-testid="pickup-fact" style={{ display: 'inline-flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <span>{pick ? `${t('profile.pickupVal', { p: rp(pick.price) })}${pick.custom ? ` · ${t('profile.pickupCustom')}` : ''}` : t('profile.pickupOff')}</span>
+          {finance && !m.deletedAt ? <button type="button" data-testid="pickup-edit" onClick={() => { setPickOn(!!m.pickup?.on); setPickPrice(m.pickup?.price ? fmtN(m.pickup.price) : ''); setPickOpen(true); }} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('common.edit')}</button> : null}
+        </span>
+      </Fact>
       <Fact k={t('profile.billingContact')}>{prim ? prim.name : '—'}</Fact>
       <Fact k={t('profile.va')}>{m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')}</Fact>
       <Fact k={t('profile.since')}>{since ? fmt.fmonth(ym(since), true) : '—'}</Fact>
@@ -133,6 +149,11 @@ export function PlanTab({ p }: { p: P }) {
       </div>
       {leave.sheet}
       {inv ? <InvoiceSheet invoiceId={inv} open onClose={() => setInv(null)} audience={p.family ? 'family' : 'staff'} /> : null}
+      <Sheet open={pickOpen} onClose={() => setPickOpen(false)} title={t('profile.pickup')}
+        footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" onClick={() => setPickOpen(false)}>{t('common.cancel')}</Button><Button onClick={() => void savePickup()}>{t('common.save')}</Button></div>}>
+        <Toggle on={pickOn} onClick={() => setPickOn(!pickOn)} label={t('profile.pickupOn')} />
+        {pickOn ? <TextField label={t('profile.pickupPrice')} value={pickPrice} onChange={(v) => setPickPrice(v.replace(/[^\d.]/g, ''))} inputMode="numeric" placeholder={fmtN(feeOf(price, 'pickup'))} hint={t('profile.pickupHint', { p: rp(feeOf(price, 'pickup')) })} /> : null}
+      </Sheet>
       <Sheet open={!!declining} onClose={() => setDeclining(null)} title={t('profile.declineTitle')}
         footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" onClick={() => setDeclining(null)}>{t('common.cancel')}</Button><Button variant="danger" onClick={decline}>{t('profile.declineRequest')}</Button></div>}>
         <TextField label={t('profile.declineNote')} value={note} onChange={setNote} multiline rows={3} hint={t('profile.declineHint')} />

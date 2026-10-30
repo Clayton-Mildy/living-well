@@ -834,3 +834,14 @@ describe('round 16: a downgrade from the profile needs the notice period', () =>
     expect(run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: '2026-11-01' }, who(c, 's1')).state.members.m1.plans.at(-1)).toMatchObject({ plan: 'gold', from: '2026-11-01' });
   });
 });
+
+describe('round 16: members.setPickup', () => {
+  it('finance turns pick-up on at a custom price; the front desk cannot', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.setPickup', { memberId: 'm1', on: true, price: 450_000 }, who(c, 's10'));
+    expect(r.state.members.m1.pickup).toEqual({ on: true, price: 450_000 });
+    const back = run(r.state, 'members.setPickup', { memberId: 'm1', on: true, price: null }, who(c, 's9'));
+    expect(back.state.members.m1.pickup).toEqual({ on: true });
+    expect(() => run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's1'))).toThrow('err.forbidden');
+  });
+});

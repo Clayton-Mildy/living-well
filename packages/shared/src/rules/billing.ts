@@ -62,10 +62,15 @@ export function planPriceInfo(s: ClubState, plan: Plan, date: ISODate): { price:
   return next ? { price: planPrice(next, plan), from: next.from } : { price: 0 };
 }
 /** The brochure's fees, used when a price list (an older one, a draft) has no figure for one of them. */
-export const FEE_DEFAULTS = { registration: 2_500_000, trial: 450_000, leave: 250_000, dementia: 750_000 } as const;
+export const FEE_DEFAULTS = { registration: 2_500_000, trial: 450_000, leave: 250_000, dementia: 750_000, pickup: 600_000, fieldTrip: 250_000 } as const;
 export type Fee = keyof typeof FEE_DEFAULTS;
-/** One-time registration fee, the 2-day trial, a month of leave and the monthly dementia care fee, from a price list. */
+/** One-time registration fee, the 2-day trial, a month of leave, the monthly dementia care fee and (round 16) the pick-up and field trip defaults, from a price list. */
 export const feeOf = (p: Pick<PriceVersion, Fee> | undefined, k: Fee): number => p?.[k] ?? FEE_DEFAULTS[k];
+/** Round 16: a member's monthly pick-up fee on a date (their own price, else the price list's default); null when pick-up is off. */
+export function pickupPrice(s: ClubState, m: Member, date: ISODate): { price: number; custom: boolean } | null {
+  if (!m.pickup?.on) return null;
+  return m.pickup.price ? { price: m.pickup.price, custom: true } : { price: feeOf(priceOn(s, date), 'pickup'), custom: false };
+}
 /** The day a period's invoice run is issued (the 21st). */
 export const issueDateOf = (s: ClubState, period: YM): ISODate => `${period}-${String(s.club.settings.issueDay).padStart(2, '0')}`;
 
@@ -136,6 +141,9 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
         const fee = feeOf(price, 'dementia');
         lines.push({ id: `dementia-${period}`, kind: 'dementia', label: 'inv.line.dementia', qty: 1, unit: fee, amount: fee });
       }
+      // round 16: the pick-up fee, a flat monthly fee like dementia care (not in a month of leave)
+      const pick = pickupPrice(s, m, issue);
+      if (pick) lines.push({ id: `pickup-${period}`, kind: 'pickup', label: 'inv.line.pickup', qty: 1, unit: pick.price, amount: pick.price });
     }
     if (registrationDue(s, m)) {
       const fee = feeOf(price, 'registration');
