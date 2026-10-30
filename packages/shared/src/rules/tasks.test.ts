@@ -188,7 +188,7 @@ describe('general duties: from the data, for any day', () => {
     expect(duty(called, 'lobby.unpaid')).toMatchObject({ status: 'done' });
     expect(duty(called, 'lobby.unpaid').parts[0].count).toEqual({ done: 1, total: 1 });
     expect(duty(base, 'finance.unpaid').parts[0]).toMatchObject({ count: { done: 0, total: 1 } }); // finance has the same list
-    const settled = run(base, 'payment.record', { memberId: 'm20', method: 'cash', amount: 3_950_000, invoiceId: 'INV-2609-020' }, 's10', NOW);
+    const settled = run(base, 'payment.record', { memberId: 'm20', method: 'cash', proofMediaId: 'md_testproof01', amount: 3_950_000, invoiceId: 'INV-2609-020' }, 's10', NOW);
     expect(duty(settled, 'lobby.unpaid').status).toBe('none'); // paid: nothing left to chase
   });
 

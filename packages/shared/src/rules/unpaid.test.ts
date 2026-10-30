@@ -46,7 +46,7 @@ describe('unpaidRows', () => {
   });
 
   it('a payment waiting for finance still counts: the invoice leaves the list at once', () => {
-    const r = execute(base, 'payment.record', { memberId: 'm20', method: 'cash', amount: 3_950_000, invoiceId: OLD }, as(base, 's1'), clock, 'unp-pay');
+    const r = execute(base, 'payment.record', { memberId: 'm20', method: 'cash', proofMediaId: 'md_testproof01', amount: 3_950_000, invoiceId: OLD }, as(base, 's1'), clock, 'unp-pay');
     expect(ids(r.state)).toEqual([]);
   });
 

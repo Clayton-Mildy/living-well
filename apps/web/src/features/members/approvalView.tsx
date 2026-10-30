@@ -11,6 +11,7 @@ import { leaveBalance } from '@cp/shared/rules/staffLeave';
 import { formDoc } from '@cp/shared/rules/signing';
 import { CHECK_KEY } from '../health/ReadingCard';
 import { values as readingValues } from './profile/CareTab';
+import { mediaUrl } from '../../lib/media';
 import { describeCr, type Described, type DiffRow } from './reviewDiff';
 
 interface Fmt { fdy: (d: string) => string; fds: (d: string) => string; fd: (d: string, o: Intl.DateTimeFormatOptions) => string; lang?: Lang }
@@ -174,6 +175,7 @@ function payView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
     { label: t('finance.pay.paidBy'), to: t('finance.method.' + p.method) },
     { label: t('finance.pay.invoice'), to: invoice },
     ...(p.ref ? [{ label: t('finance.pay.reference'), to: p.ref }] : []),
+    ...(p.proofMediaId ? [{ label: t('finance.pay.proof'), to: t('finance.pay.proofPhoto'), toImg: mediaUrl(p.proofMediaId) }] : []), // round 16
     { label: t('approvals.requestedBy'), to: `${actorName(s, p.by)} · ${fmt.fds(p.receivedOn)}${p.receivedAt ? `, ${p.receivedAt}` : ''}` },
   ];
   return { who: m ? memberName(m) : '', kind: t('approvals.kind.payment'), summary, detail: { title: t('approvals.kind.payment'), rows: [], summary: rows }, edit: false };

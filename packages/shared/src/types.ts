@@ -881,6 +881,8 @@ export interface Payment extends Row {
   by: Actor;
   /** round 13: a payment the front desk recorded waits for finance or management; no mark = confirmed (rules/finance.ts `isConfirmed`) */
   approval?: Approval;
+  /** KC round 16: the photo of the transfer slip or the signed cash receipt (required when recorded by hand as cash or transfer) */
+  proofMediaId?: string;
 }
 
 /** Round 14: what a call about an overdue invoice came to. */

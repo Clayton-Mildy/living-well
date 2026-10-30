@@ -78,7 +78,7 @@ describe('Unpaid list', () => {
     openClub('s10', 'finance', 'Gabriel', called);
     await show(<UnpaidList />);
     expect(document.querySelector('[data-testid="unpaid-last"]')?.textContent).toBe('Promised for 23 Oct');
-    const paid = execute(called, 'payment.record', { memberId: 'm20', method: 'cash', amount: 3_950_000, invoiceId: 'INV-2609-020' }, getUser({ citra: called }, 's10')!, { today: '2026-10-21', nowMin: toMin('09:58') }, 'u2').state;
+    const paid = execute(called, 'payment.record', { memberId: 'm20', method: 'cash', proofMediaId: 'md_testproof01', amount: 3_950_000, invoiceId: 'INV-2609-020' }, getUser({ citra: called }, 's10')!, { today: '2026-10-21', nowMin: toMin('09:58') }, 'u2').state;
     await act(async () => { useReplica.setState({ confirmed: paid, view: paid }); });
     expect(document.querySelector('[data-unpaid]')).toBeNull();
     expect(document.body.textContent).toContain('No unpaid invoices');

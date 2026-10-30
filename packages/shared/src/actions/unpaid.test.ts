@@ -50,7 +50,7 @@ describe('unpaid.call', () => {
     const voided = produce(base, (d) => { d.invoices[OLD].voided = { at: `${T}T09:00`, by: 'staff:s10', reason: 'wrong' }; });
     fails(voided, { invoiceId: OLD, outcome: 'noAnswer' }, 's1', 'finance.err.invoiceVoid');
     const paid = run(base, { invoiceId: OLD, outcome: 'noAnswer' }, 's10').state;
-    const settled = execute(paid, 'payment.record', { memberId: 'm20', method: 'cash', amount: 3_950_000, invoiceId: OLD }, as(paid, 's10'), clock, 'unp-pay').state;
+    const settled = execute(paid, 'payment.record', { memberId: 'm20', method: 'cash', proofMediaId: 'md_testproof01', amount: 3_950_000, invoiceId: OLD }, as(paid, 's10'), clock, 'unp-pay').state;
     fails(settled, { invoiceId: OLD, outcome: 'noAnswer' }, 's1', 'finance.err.invoicePaid');
   });
 

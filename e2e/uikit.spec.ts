@@ -210,7 +210,7 @@ test.describe('Pager', () => {
     const c = watchConsole(page);
     // 18 new cash payments sit on top of the seeded history (about 6 months of paid invoices), newest first
     for (let i = 1; i <= 18; i++) {
-      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', ref: `T${i}`, invoiceId: 'INV-2610-046' });
+      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01', ref: `T${i}`, invoiceId: 'INV-2610-046' });
       expect(r.ok()).toBeTruthy();
     }
     await signIn(page, 's10', '/payments');
@@ -250,7 +250,7 @@ test.describe('Pager', () => {
     const c = watchConsole(page);
     // twelve "payment received" updates for finance
     for (let i = 1; i <= 12; i++) {
-      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', ref: `N${i}`, invoiceId: 'INV-2610-046' });
+      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01', ref: `N${i}`, invoiceId: 'INV-2610-046' });
       expect(r.ok()).toBeTruthy();
     }
     await signIn(page, 's9', '/arrivals');

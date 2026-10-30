@@ -24,7 +24,7 @@ afterEach(async () => {
 /** Caca records Rp 1.000.000 cash on Oma Lina's October invoice (or not), then `who` looks at the club. */
 function openAs(who: 's1' | 's10', recorded: boolean) {
   let state: ClubState = buildSeed().citra;
-  if (recorded) state = execute(state, 'payment.record', { memberId: 'm1', amount: 1_000_000, method: 'cash', invoiceId: 'INV-2610-001' }, getUser({ citra: state }, 's1')!, { today: T, nowMin: 600 }, 'desk1').state;
+  if (recorded) state = execute(state, 'payment.record', { memberId: 'm1', amount: 1_000_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, getUser({ citra: state }, 's1')!, { today: T, nowMin: 600 }, 'desk1').state;
   const user = who === 's1' ? { kind: 'staff' as const, id: 's1', name: 'Caca', role: 'lobby' as const, clubId: 'citra', clubs: ['citra'] } : { kind: 'staff' as const, id: 's10', name: 'Fransiska', role: 'finance' as const, clubId: 'citra', clubs: ['citra'] };
   useSession.setState({ lang: 'en', club: 'citra', user });
   useReplica.setState({ club: 'citra', userId: who, confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
@@ -84,5 +84,17 @@ describe('round 16: the invoice says where it was emailed', () => {
     useReplica.setState({ view: s, confirmed: s });
     await show(<InvoiceSheet invoiceId="INV-2610-001" open onClose={() => {}} audience="staff" />);
     expect(document.querySelector('[data-testid="invoice-emailed"]')?.textContent).toBe('Emailed to maria@example.com · 21 Oct');
+  });
+});
+
+describe('round 16: proof of payment in the form', () => {
+  it('cash cannot be saved until a photo of the receipt is attached', async () => {
+    openAs('s1', false);
+    await show(<InvoiceSheet invoiceId="INV-2610-001" open onClose={() => {}} audience="staff" />);
+    await act(async () => { button('Record payment')!.click(); });
+    expect(document.querySelector('[data-testid="payment-proof"]')?.textContent).toContain('Add a photo of the transfer slip or the signed receipt.');
+    const save = document.querySelector('[data-testid="payment-proof"]')!.nextElementSibling as HTMLButtonElement; // the form's own Record payment
+    expect(save.textContent).toContain('Record payment');
+    expect(save.getAttribute('aria-disabled')).toBe('true');
   });
 });

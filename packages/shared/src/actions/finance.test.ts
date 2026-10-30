@@ -186,7 +186,7 @@ describe('invoice run', () => {
   });
   it('uses account credit once: a second run does not spend it again', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm46', amount: 4_450_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10'); // 3.95M pays the invoice, 0.5M stays as credit
+    w.run('payment.record', { memberId: 'm46', amount: 4_450_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-046' }, 's10'); // 3.95M pays the invoice, 0.5M stays as credit
     expect(accountCredit(w.s, 'm46')).toBe(500_000);
     const plan = runPlan(w.s, '2026-11', T);
     const budi = plan.issue.find((r) => r.member.id === 'm46')!;
@@ -263,7 +263,7 @@ describe('invoices', () => {
   it('a credit cannot take the total below what was paid', () => {
     const w = world();
     w.fail('invoice.adjust', { invoiceId: 'INV-2610-002', label: 'Credit', amount: -1_000_000 }, 's10', 'finance.err.creditTooLarge'); // paid in full
-    w.run('payment.record', { memberId: 'm1', amount: 1_500_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10');
+    w.run('payment.record', { memberId: 'm1', amount: 1_500_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10');
     expect(() => w.run('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'Credit', amount: -1_200_000 }, 's10')).not.toThrow(); // 2.7M − 1.2M = 1.5M = paid
     w.fail('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'Credit', amount: -1 }, 's10', 'finance.err.creditTooLarge');
   });
@@ -273,7 +273,7 @@ describe('invoices', () => {
     w.fail('invoice.void', { invoiceId: 'INV-2610-020', reason: '  ' }, 's10', 'err.invalid');
     w.fail('invoice.void', { invoiceId: 'INV-2610-020', reason: 'x' }, 's1', 'err.forbidden');
     // part-paid counts as paid
-    w.run('payment.record', { memberId: 'm20', amount: 100_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10');
+    w.run('payment.record', { memberId: 'm20', amount: 100_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-020' }, 's10');
     w.fail('invoice.void', { invoiceId: 'INV-2610-020', reason: 'x' }, 's10', 'finance.err.voidPaid');
     // unpaid: fine
     w.run('invoice.void', { invoiceId: 'INV-2610-046', reason: 'Member left early' }, 's10');
@@ -282,10 +282,10 @@ describe('invoices', () => {
     expect(balanceOf(w.s, w.s.invoices['INV-2610-046'])).toBe(0);
     w.fail('invoice.void', { invoiceId: 'INV-2610-046', reason: 'again' }, 's10', 'finance.err.alreadyVoid');
     w.fail('invoice.adjust', { invoiceId: 'INV-2610-046', label: 'x', amount: 5 }, 's10', 'finance.err.invoiceVoid');
-    w.fail('payment.record', { memberId: 'm46', amount: 5, method: 'cash', invoiceId: 'INV-2610-046' }, 's10', 'finance.err.invoiceVoid');
+    w.fail('payment.record', { memberId: 'm46', amount: 5, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-046' }, 's10', 'finance.err.invoiceVoid');
     // a fully refunded invoice has nothing paid any more: it can be voided
     const w2 = world();
-    const p = w2.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10').result.paymentId as string;
+    const p = w2.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-020' }, 's10').result.paymentId as string;
     w2.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-020', amount: 3_950_000, reason: 'Wrong member', creditNote: false }, 's10');
     expect(() => w2.run('invoice.void', { invoiceId: 'INV-2610-020', reason: 'Wrong member' }, 's10')).not.toThrow();
   });
@@ -326,7 +326,7 @@ describe('payments', () => {
   it('a partial payment makes the invoice part paid, the rest makes it paid', () => {
     const w = world();
     expect(w.status('INV-2610-046')).toBe('outstanding');
-    const r = w.run('payment.record', { memberId: 'm46', amount: 2_000_000, method: 'bankTransfer', ref: 'TF-4471', invoiceId: 'INV-2610-046' }, 's10');
+    const r = w.run('payment.record', { memberId: 'm46', amount: 2_000_000, method: 'bankTransfer', proofMediaId: 'md_testproof01', ref: 'TF-4471', invoiceId: 'INV-2610-046' }, 's10');
     expect(w.status('INV-2610-046')).toBe('partial');
     expect(balanceOf(w.s, w.s.invoices['INV-2610-046'])).toBe(1_950_000);
     const pay = w.s.payments[r.result.paymentId as string];
@@ -334,47 +334,47 @@ describe('payments', () => {
     expect(pay).not.toHaveProperty('foreign');
     expect(pay.allocations).toEqual([{ invoiceId: 'INV-2610-046', amount: 2_000_000 }]);
     expect(w.s.invoices['INV-2610-046'].xero).toBe('awaitingPayment'); // not settled yet
-    w.run('payment.record', { memberId: 'm46', amount: 1_950_000, method: 'bankTransfer', ref: 'TF-2', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 1_950_000, method: 'bankTransfer', proofMediaId: 'md_testproof01', ref: 'TF-2', invoiceId: 'INV-2610-046' }, 's10');
     expect(w.status('INV-2610-046')).toBe('paid');
     expect(w.s.invoices['INV-2610-046'].xero).toBe('pending'); // settled: Xero hears about it
     expect(paidOn(w.s, 'INV-2610-046')).toBe(3_950_000);
   });
   it('without a chosen invoice the oldest due is paid first; the rest goes on to the next', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm20', amount: 5_000_000, method: 'cash' }, 's10');
+    w.run('payment.record', { memberId: 'm20', amount: 5_000_000, method: 'cash', proofMediaId: 'md_testproof01' }, 's10');
     expect(w.status('INV-2609-020')).toBe('paid'); // September, due first
     expect(w.status('INV-2610-020')).toBe('partial');
     expect(balanceOf(w.s, w.s.invoices['INV-2610-020'])).toBe(2_900_000);
   });
   it('a chosen invoice goes first even when an older one is open', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10');
+    w.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-020' }, 's10');
     expect(w.status('INV-2610-020')).toBe('paid');
     expect(w.status('INV-2609-020')).toBe('overdue');
   });
   it('an overpayment stays on the account as credit', () => {
     const w = world();
-    const r = w.run('payment.record', { memberId: 'm46', amount: 4_450_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
+    const r = w.run('payment.record', { memberId: 'm46', amount: 4_450_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-046' }, 's10');
     expect(r.result).toMatchObject({ credit: 500_000, allocations: 1 });
     expect(accountCredit(w.s, 'm46')).toBe(500_000);
     expect(w.status('INV-2610-046')).toBe('paid');
   });
   it('validates and checks permissions', () => {
     const w = world();
-    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash' }, 's5', 'err.forbidden'); // the front desk records, but only against an invoice (the desk tests)
-    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash' }, 'f1', 'err.forbidden');
-    w.fail('payment.record', { memberId: 'm46', amount: 0, method: 'cash' }, 's10', 'err.invalid');
+    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01' }, 's5', 'err.forbidden'); // the front desk records, but only against an invoice (the desk tests)
+    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01' }, 'f1', 'err.forbidden');
+    w.fail('payment.record', { memberId: 'm46', amount: 0, method: 'cash', proofMediaId: 'md_testproof01' }, 's10', 'err.invalid');
     w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'bitcoin' }, 's10', 'err.invalid');
     // KC round 8d: everything is paid in Indonesia, in rupiah: no SGD / Revolut methods and no foreign amount any more
     w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'revolut' }, 's10', 'err.invalid');
     w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'bankTransferSgd' }, 's10', 'err.invalid');
-    w.fail('payment.record', { memberId: 'nobody', amount: 1000, method: 'cash' }, 's10', 'err.notFound');
-    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10', 'err.notFound'); // someone else's invoice
-    w.fail('payment.record', { memberId: 'm2', amount: 1000, method: 'cash', invoiceId: 'INV-2610-002' }, 's10', 'finance.err.invoicePaid');
+    w.fail('payment.record', { memberId: 'nobody', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01' }, 's10', 'err.notFound');
+    w.fail('payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10', 'err.notFound'); // someone else's invoice
+    w.fail('payment.record', { memberId: 'm2', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-002' }, 's10', 'finance.err.invoicePaid');
   });
   it('tells management, the payer and the feed', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-046' }, 's10');
     const mgmt = updatesFor(w.s, getUser(clubs, 's9')!).find((x) => x.kind === 'notif.paymentReceived' && x.params.invoice === 'INV-2610-046');
     expect(mgmt?.params).toMatchObject({ name: 'Maria Wijaya', amount: 'Rp 3.950.000' });
     expect(updatesFor(w.s, getUser(clubs, 'f1')!).some((x) => x.kind === 'finance.notif.paid')).toBe(true);
@@ -383,7 +383,7 @@ describe('payments', () => {
 });
 
 describe('the front desk records a payment (round 13): saved waiting for finance', () => {
-  const desk = { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001' };
+  const desk = { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001', proofMediaId: 'md_testproof01' };
   it('a cash payment by the lobby counts for staff but not for the family, Xero, refunds or the notice', () => {
     const w = world();
     const r = w.run('payment.record', desk, 's1');
@@ -420,11 +420,11 @@ describe('the front desk records a payment (round 13): saved waiting for finance
     const w = world();
     w.fail('payment.record', { ...desk, method: 'dokuVa' }, 's1', 'finance.err.deskMethod');
     w.fail('payment.record', { ...desk, method: 'other' }, 's1', 'finance.err.deskMethod');
-    w.fail('payment.record', { memberId: 'm1', amount: 100_000, method: 'cash' }, 's1', 'finance.err.deskInvoice');
+    w.fail('payment.record', { memberId: 'm1', amount: 100_000, method: 'cash', proofMediaId: 'md_testproof01' }, 's1', 'finance.err.deskInvoice');
     w.fail('payment.record', { ...desk, amount: 2_700_001 }, 's1', 'finance.err.deskOverpay');
     w.fail('payment.record', desk, 's5', 'err.forbidden');
     w.fail('payment.record', desk, 'f1', 'err.forbidden');
-    expect(() => w.run('payment.record', { ...desk, amount: 1_000_000, method: 'bankTransfer', ref: 'TF-1' }, 's1')).not.toThrow();
+    expect(() => w.run('payment.record', { ...desk, amount: 1_000_000, method: 'bankTransfer', proofMediaId: 'md_testproof01', ref: 'TF-1' }, 's1')).not.toThrow();
     expect(balanceOf(w.s, w.s.invoices['INV-2610-001'])).toBe(1_700_000);
   });
   it('finance and management still record as before, confirmed at once', () => {
@@ -480,7 +480,7 @@ describe('payment.simulateVa (DOKU, demo)', () => {
   });
   it('pays only what is left on a part-paid invoice', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm1', amount: 1_000_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10');
+    w.run('payment.record', { memberId: 'm1', amount: 1_000_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10');
     const r = w.run('payment.simulateVa', { invoiceIds: ['INV-2610-001'], bank: 'BNI' }, 'f1');
     expect(r.result.total).toBe(1_700_000);
     expect(w.status('INV-2610-001')).toBe('paid');
@@ -490,7 +490,7 @@ describe('payment.simulateVa (DOKU, demo)', () => {
 describe('refunds', () => {
   const paid = () => {
     const w = world();
-    const p = w.run('payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10').result.paymentId as string;
+    const p = w.run('payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10').result.paymentId as string;
     return { w, p };
   };
   it('a partial refund without a credit note re-opens the invoice', () => {
@@ -550,7 +550,7 @@ describe('refunds', () => {
 describe('Xero (simulated)', () => {
   it('a payment waits in "pending" and the job syncs it about two demo minutes later', () => {
     const w = world();
-    const r = w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10', at(T, 600));
+    const r = w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-046' }, 's10', at(T, 600));
     const id = r.result.paymentId as string;
     expect(w.s.payments[id].xero).toBe('pending');
     expect(w.s.invoices['INV-2610-046'].xero).toBe('pending');
@@ -566,8 +566,8 @@ describe('Xero (simulated)', () => {
   });
   it('xero.sync flips everything at once', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
-    w.run('payment.record', { memberId: 'm20', amount: 1_000_000, method: 'bankTransfer', ref: 'R', invoiceId: 'INV-2610-020' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 3_950_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm20', amount: 1_000_000, method: 'bankTransfer', proofMediaId: 'md_testproof01', ref: 'R', invoiceId: 'INV-2610-020' }, 's10');
     expect(paymentsBoard(w.s, T).xeroPending).toBe(2);
     const r = w.run('xero.sync', {}, 's10');
     expect(r.result.synced).toBeGreaterThanOrEqual(3); // two payments + the invoice they settled
@@ -580,7 +580,7 @@ describe('Xero (simulated)', () => {
   });
   it('refunds, approved receipts and approved vendor invoices sync too', () => {
     const w = world();
-    const p = w.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', invoiceId: 'INV-2610-020' }, 's10').result.paymentId as string;
+    const p = w.run('payment.record', { memberId: 'm20', amount: 3_950_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-020' }, 's10').result.paymentId as string;
     w.run('refund.record', { paymentId: p, invoiceId: 'INV-2610-020', amount: 500_000, reason: 'Goodwill', creditNote: true }, 's10');
     const rc = w.run('receipt.add', { date: T, supplier: 'Toko A', amount: 100_000, sectionId: 'fnb', fileName: 'a.jpg' }, 's2').result.receiptId as string;
     w.run('receipt.approve', { id: rc }, 's10');
@@ -897,7 +897,7 @@ describe('boards', () => {
   });
   it('part-paid invoices stay in the lists for what is left; overdue stays overdue', () => {
     const w = world();
-    w.run('payment.record', { memberId: 'm46', amount: 2_000_000, method: 'cash', invoiceId: 'INV-2610-046' }, 's10');
+    w.run('payment.record', { memberId: 'm46', amount: 2_000_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-046' }, 's10');
     let b = billingBoard(w.s, T);
     expect(b.due.find((v) => v.inv.id === 'INV-2610-046')).toMatchObject({ status: 'partial', paid: 2_000_000, balance: 1_950_000 });
     // after the due date the part-paid invoice is overdue for the balance
@@ -914,5 +914,16 @@ describe('round 16: invoices are emailed when issued', () => {
     const mails = live(w.s.emails).filter((e) => e.kind === 'invoice');
     expect(mails.map((e) => e.ref.id).sort()).toEqual([...run.invoiceIds].sort());
     for (const e of mails) expect(e.familyId).toBe(w.s.invoices[e.ref.id].payerFamilyId);
+  });
+});
+
+describe('round 16: proof of payment', () => {
+  it('cash and bank transfer need a photo; it is kept on the payment; other does not', () => {
+    const w = world();
+    w.fail('payment.record', { memberId: 'm1', amount: 100_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10', 'finance.err.proofRequired');
+    w.fail('payment.record', { memberId: 'm1', amount: 100_000, method: 'bankTransfer', invoiceId: 'INV-2610-001' }, 's10', 'finance.err.proofRequired');
+    const r = w.run('payment.record', { memberId: 'm1', amount: 100_000, method: 'cash', invoiceId: 'INV-2610-001', proofMediaId: 'md_proofslip01' }, 's10');
+    expect(w.s.payments[r.result.paymentId as string].proofMediaId).toBe('md_proofslip01');
+    expect(() => w.run('payment.record', { memberId: 'm1', amount: 50_000, method: 'other', invoiceId: 'INV-2610-001' }, 's10')).not.toThrow();
   });
 });

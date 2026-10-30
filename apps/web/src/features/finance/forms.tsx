@@ -2,7 +2,8 @@
 import { useMemo, useState } from 'react';
 import { balanceOf, displayName, rp, sortBy, type Invoice } from '@cp/shared';
 import { invoicePeriod, invoiceViews, type PaymentView } from '@cp/shared/rules/finance';
-import { Button, Chip, Note, TextField, Toggle, FONT_BODY } from '../../components/ui';
+import { Button, Chip, Icon, Note, TextField, Toggle, FONT_BODY } from '../../components/ui';
+import { useDocPicker, type PaperFile } from '../members/PaperForm';
 import { useAct } from '../../lib/act';
 import { useFmt, useT } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
@@ -26,6 +27,7 @@ export function PaymentForm({ fixed, onDone, desk }: { fixed?: Invoice; onDone?:
   const [method, setMethod] = useState<Manual>(desk ? 'cash' : 'bankTransfer');
   const [amt, setAmt] = useState(fixed ? String(Math.max(0, balanceOf(s, fixed))) : '');
   const [ref, setRef] = useState('');
+  const [proof, setProof] = useState<PaperFile | null>(null); // round 16: the transfer slip or the signed receipt
 
   // every invoice that can still take a payment, whole list: search narrows it, nothing is cut off
   const open = useMemo(
@@ -38,15 +40,16 @@ export function PaymentForm({ fixed, onDone, desk }: { fixed?: Invoice; onDone?:
   const amount = digits(amt);
   const needsRef = method === 'bankTransfer'; // a bank transfer is matched to the statement by its reference
   const tooMuch = !!desk && !!sel && amount > balance; // the desk cannot record more than the invoice owes
-  const ok = !!sel && amount > 0 && !tooMuch && (!needsRef || !!ref.trim());
+  const needsProof = method === 'cash' || method === 'bankTransfer';
+  const ok = !!sel && amount > 0 && !tooMuch && (!needsRef || !!ref.trim()) && (!needsProof || !!proof);
   const choose = (id: string) => { setInvId(id); setAmt(String(Math.max(0, balanceOf(s, s.invoices[id])))); };
 
   const submit = async () => {
     if (!ok || !sel) return;
     const r = await act('payment.record', {
-      memberId: sel.memberId, amount, method, invoiceId: sel.id, ...(ref.trim() ? { ref: ref.trim() } : {}),
+      memberId: sel.memberId, amount, method, invoiceId: sel.id, ...(ref.trim() ? { ref: ref.trim() } : {}), ...(needsProof && proof ? { proofMediaId: proof.mediaId } : {}),
     }, { ok: desk ? t('finance.toast.sentToFinance') : t('finance.toast.paymentRecorded', { name: displayName(s.members[sel.memberId]) }) });
-    if (r.ok) { if (!fixed) setInvId(null); setAmt(''); setRef(''); onDone?.(); }
+    if (r.ok) { if (!fixed) setInvId(null); setAmt(''); setRef(''); setProof(null); onDone?.(); }
   };
 
   return (
@@ -80,7 +83,35 @@ export function PaymentForm({ fixed, onDone, desk }: { fixed?: Invoice; onDone?:
       {sel && amount > balance ? <Note tone="ochre" icon="info">{desk ? t('finance.err.deskOverpay') : t('finance.pay.overpay', { extra: rp(amount - balance) })}</Note> : null}
       {desk ? <Note icon="hourglass_top">{t('finance.pay.deskNote')}</Note> : null}
       <TextField label={t('finance.pay.reference')} value={ref} onChange={setRef} placeholder={needsRef ? t('finance.pay.refPlaceholder') : t('finance.pay.refOptional')} />
+      {needsProof ? <ProofField value={proof} onChange={setProof} /> : null}
       <Button size={48} disabled={!ok} onClick={submit} full>{t('finance.pay.record')}</Button>
+    </div>
+  );
+}
+
+/** Round 16: the proof photo of a payment recorded by hand (camera or file). */
+function ProofField({ value, onChange }: { value: PaperFile | null; onChange: (f: PaperFile | null) => void }) {
+  const t = useT();
+  const pick = useDocPicker((f) => onChange(f), 'payment-proof');
+  return (
+    <div data-testid="payment-proof" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={fieldLabel}>{t('finance.pay.proof')}</span>
+      {value ? (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+          <Icon name="check_circle" size={20} fill={1} color="#3D6B4F" />
+          <span style={{ flex: 1, minWidth: 0, fontSize: FONT_BODY, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{value.fileName}</span>
+          <Button size={44} variant="secondary" onClick={() => onChange(null)}>{t('common.remove')}</Button>
+        </div>
+      ) : (
+        <>
+          <span style={{ fontSize: 14, color: '#7A5510', lineHeight: 1.4 }}>{t('finance.err.proofRequired')}</span>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Button size={44} variant="secondary" icon="photo_camera" disabled={pick.busy} onClick={pick.takePhoto}>{t('profile.paperPhoto')}</Button>
+            <Button size={44} variant="secondary" icon="upload_file" disabled={pick.busy} onClick={pick.chooseFile}>{t('profile.upload')}</Button>
+          </div>
+        </>
+      )}
+      {pick.node}
     </div>
   );
 }

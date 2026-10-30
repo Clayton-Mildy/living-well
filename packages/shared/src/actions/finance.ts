@@ -11,6 +11,7 @@ import { RECEIPT_SOURCES, SPEND_CATEGORIES, lineProblem } from '../rules/purchas
 import { BANKS, XERO_DELAY_MIN, dtMinutes, invoiceVa, receiptOfRequest, refundableOn, runPlan } from '../rules/finance';
 import { bad, bool, idList, isoDate, obj, oneOf, optText, pickId, rupiah, rupiahOrZero, signedRupiah, text, yearMonth } from '../rules/financeInput';
 import { emailInvoice } from './emails';
+import { mediaIdOf } from './members';
 import { addDays, rp, uniq, weekStart, ym } from '../util';
 
 const finMgmt = (u: User) => hasRole(u, 'finance', 'mgmt');
@@ -129,11 +130,11 @@ function issueRun(d: D, ctx: Ctx, period: YM, auto: boolean) {
 // ---------- payments ----------
 const METHODS = ['dokuVa', 'bankTransfer', 'cash', 'other'] as const;
 /** `hold`: the front desk's payment waits for finance, so Xero is not told yet and the invoice's Xero state is left alone. */
-function addPayment(d: D, ctx: Ctx, p: { memberId: string; amount: number; method: Payment['method']; ref?: string; bank?: Bank; allocations: Payment['allocations'] }, opts: { hold?: boolean } = {}): Payment {
+function addPayment(d: D, ctx: Ctx, p: { memberId: string; amount: number; method: Payment['method']; ref?: string; bank?: Bank; allocations: Payment['allocations']; proofMediaId?: string }, opts: { hold?: boolean } = {}): Payment {
   const id = ctx.id('pay');
   const pay: Payment = {
     ...base(ctx, id), memberId: p.memberId, method: p.method, amount: p.amount,
-    ...(p.ref ? { ref: p.ref } : {}), ...(p.bank ? { bank: p.bank } : {}),
+    ...(p.ref ? { ref: p.ref } : {}), ...(p.bank ? { bank: p.bank } : {}), ...(p.proofMediaId ? { proofMediaId: p.proofMediaId } : {}),
     receivedOn: ctx.today, receivedAt: ctx.now, allocations: p.allocations, xero: opts.hold ? 'notSent' : 'pending', by: ctx.actor,
     ...(opts.hold ? { approval: { status: 'pending' as const, by: ctx.actor, at: ctx.nowDT } } : {}),
   };
@@ -258,12 +259,16 @@ export const financeActions: ActionDef[] = [
   }),
 
   // ---------- payments ----------
-  defineAction<{ memberId: string; amount: number; method: Payment['method']; ref?: string; invoiceId?: string }>({
+  defineAction<{ memberId: string; amount: number; method: Payment['method']; ref?: string; invoiceId?: string; proofMediaId?: string }>({
     name: 'payment.record',
     can: (u) => finMgmt(u) || hasRole(u, 'lobby'), // round 13: the front desk records cash or transfer on an open invoice; it waits for finance
     parse: (raw) => {
       const o = obj(raw);
-      return { memberId: text(o.memberId, 80), amount: rupiah(o.amount), method: oneOf(o.method, METHODS), ref: optText(o.ref, 120), invoiceId: optText(o.invoiceId, 80) };
+      const method = oneOf(o.method, METHODS);
+      // round 16 (KC): a payment recorded by hand as cash or transfer needs its proof (the transfer slip, the signed receipt)
+      const proof = mediaIdOf(o.proofMediaId);
+      if (!proof && (method === 'cash' || method === 'bankTransfer')) throw new DomainError('finance.err.proofRequired');
+      return { memberId: text(o.memberId, 80), amount: rupiah(o.amount), method, ref: optText(o.ref, 120), invoiceId: optText(o.invoiceId, 80), ...(proof ? { proofMediaId: proof } : {}) };
     },
     run(d, input, ctx) {
       requireMember(d, input.memberId, ctx);
@@ -282,7 +287,7 @@ export const financeActions: ActionDef[] = [
       }
       // the chosen invoice first, then the oldest due; what is left over stays on the account as credit
       const { allocations, credit } = allocate(s, input.memberId, input.amount, ctx.today, input.invoiceId);
-      const pay = addPayment(d, ctx, { memberId: input.memberId, amount: input.amount, method: input.method, ref: input.ref, allocations }, { hold: desk });
+      const pay = addPayment(d, ctx, { memberId: input.memberId, amount: input.amount, method: input.method, ref: input.ref, allocations, proofMediaId: input.proofMediaId }, { hold: desk });
       const numbers = allocations.map((a) => a.invoiceId).join(', ') || '—';
       const name = shortOf(d, input.memberId);
       const amount = rp(input.amount);

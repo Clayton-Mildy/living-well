@@ -3,7 +3,9 @@ import { useMemo, useState } from 'react';
 import { displayName, memberName, rp, ym } from '@cp/shared';
 import { actorName } from '@cp/shared';
 import { invoicePeriod, isConfirmed, paymentsBoard, type PaymentView } from '@cp/shared/rules/finance';
-import { Button, EmptyState, Eyebrow, PageHead, Sheet, TextField, usePaged } from '../../components/ui';
+import { Button, EmptyState, Eyebrow, Icon, PageHead, Sheet, TextField, usePaged } from '../../components/ui';
+import { ImageOpen } from '../../components/ui/ImageLightbox';
+import { mediaUrl } from '../../lib/media';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -135,6 +137,12 @@ function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentVi
     p.ref ? t('finance.pay.ref', { ref: p.ref }) : '',
     pv.credit > 0 && numbers.length ? t('finance.pay.creditPart', { amount: rp(pv.credit) }) : '',
   ].filter(Boolean).join(' · ');
+  // round 16: the transfer slip or signed receipt of a payment recorded by hand (opens full size)
+  const proof = p.proofMediaId ? (
+    <ImageOpen src={mediaUrl(p.proofMediaId)} label={t('finance.pay.proof')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--accent, #75624B)', fontWeight: 500, cursor: 'pointer' }}>
+      <Icon name="receipt" size={16} />{t('finance.pay.proof')}
+    </ImageOpen>
+  ) : null;
   // round 6, phone: name and amount, the what-it-paid line, then the date, a quiet Xero status and a Refund pill
   if (isPhone) {
     return (
@@ -147,6 +155,7 @@ function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentVi
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap', minHeight: 24 }}>
           <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{p.receivedOn === today ? t('common.today') : fds(p.receivedOn)}{p.receivedAt ? `, ${p.receivedAt}` : ''}</span>
           {!isConfirmed(p) ? <Badge kind="pending" label={t('finance.pay.waitingTag')} /> : p.xero === 'synced' ? <Badge kind="paid" label={t('finance.xero.synced')} /> : <Badge kind="pending" label={t('finance.xero.pending')} />}
+          {proof}
           {pv.refundable > 0 && !refunding ? (
             <span style={{ marginLeft: 'auto' }}>
               <PillBtn label={`${t('finance.pay.refund')} ${member ? memberName(member) : ''} ${numbers.join(' ')}`.trim()} onClick={onRefund}>{t('finance.pay.refund')}</PillBtn>
@@ -174,6 +183,7 @@ function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentVi
             <span style={{ fontSize: 17, fontWeight: 500, fontVariantNumeric: 'tabular-nums', lineHeight: 1.3 }}>{rp(p.amount)}</span>
             <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{p.receivedOn === today ? t('common.today') : fds(p.receivedOn)}{p.receivedAt ? `, ${p.receivedAt}` : ''}</span>
           </div>
+          {proof}
           {!isConfirmed(p) ? <Badge kind="pending" label={t('finance.pay.waitingTag')} /> : p.xero === 'synced' ? <Badge kind="paid" label={t('finance.xero.synced')} /> : <Badge kind="pending" label={t('finance.xero.pending')} />}
         </div>
         {pv.refundable > 0 && !refunding ? (

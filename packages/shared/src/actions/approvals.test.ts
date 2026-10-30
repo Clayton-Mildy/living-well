@@ -324,7 +324,7 @@ describe('selectors: counts, the derived items and the history', () => {
 });
 
 describe('payments the front desk recorded (round 13)', () => {
-  const rec = () => run(fresh(), 'payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', invoiceId: 'INV-2610-001' }, 's1');
+  const rec = () => run(fresh(), 'payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's1');
   const kinds = (s: ClubState, uid: string, kind: string) => unreadUpdates(s, as(s, uid)).filter((x) => x.kind === kind);
   it('finance confirms: Xero hears of it, the family sees it and gets the receipt notice', () => {
     const r = rec();

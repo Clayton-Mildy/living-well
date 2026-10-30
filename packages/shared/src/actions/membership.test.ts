@@ -174,9 +174,9 @@ describe('suspension and stop: an unpaid invoice (issued 21st, due 28th, on hold
     expect(hold.m20).toMatchObject({ number: 'INV-2609-020' }); // the oldest unpaid invoice is the one that counts
     expect(suspensionOf(base, 'm2', '2026-11-02')).toBeUndefined(); // Hendra paid
     // a part payment still leaves the invoice open; paying it in full lifts the hold at once
-    const part = run(base, 'payment.record', { memberId: 'm1', amount: 1000000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10', at('2026-11-02')).state;
+    const part = run(base, 'payment.record', { memberId: 'm1', amount: 1000000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10', at('2026-11-02')).state;
     expect(suspensionOf(part, 'm1', '2026-11-02')?.balance).toBe(1700000);
-    const paid = run(part, 'payment.record', { memberId: 'm1', amount: 1700000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10', at('2026-11-02')).state;
+    const paid = run(part, 'payment.record', { memberId: 'm1', amount: 1700000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10', at('2026-11-02')).state;
     expect(suspensionOf(paid, 'm1', '2026-11-02')).toBeUndefined();
   });
   it('check-in is refused while on hold, with the invoice and the amount; fine again once paid', () => {
@@ -186,7 +186,7 @@ describe('suspension and stop: an unpaid invoice (issued 21st, due 28th, on hold
     expect(err?.params).toMatchObject({ name: 'Oma Lina', number: 'INV-2610-001', amount: 'Rp 2.700.000' });
     fails(base, 'attendance.checkIn', { memberId: 'm1', method: 'face' }, 's9', 'err.suspended', c); // management has no override: they record the payment
     expect(() => run(base, 'attendance.checkIn', { memberId: 'm2', method: 'manual' }, 's1', c)).not.toThrow(); // Hendra paid
-    const paid = run(base, 'payment.record', { memberId: 'm1', amount: 2700000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10', c).state;
+    const paid = run(base, 'payment.record', { memberId: 'm1', amount: 2700000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10', c).state;
     expect(() => run(paid, 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, 's1', c)).not.toThrow();
   });
   it('the daily job tells management, finance and the billing contact once, on the first day of the hold', () => {
@@ -228,10 +228,10 @@ describe('suspension and stop: an unpaid invoice (issued 21st, due 28th, on hold
   });
   it('paying before the 3rd keeps the membership; paying after the stop does not bring it back (it needs re-registration)', () => {
     const c = at('2026-11-02');
-    const paid = run(base, 'payment.record', { memberId: 'm1', amount: 2700000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10', c).state;
+    const paid = run(base, 'payment.record', { memberId: 'm1', amount: 2700000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10', c).state;
     expect(stopsDue(paid, '2026-11-03').map((x) => x.memberId)).not.toContain('m1');
     const stopped = tick(base, at('2026-11-03')).state;
-    const late = run(stopped, 'payment.record', { memberId: 'm1', amount: 2700000, method: 'cash', invoiceId: 'INV-2610-001' }, 's10', at('2026-11-04')).state;
+    const late = run(stopped, 'payment.record', { memberId: 'm1', amount: 2700000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' }, 's10', at('2026-11-04')).state;
     expect(membershipStatus(late.members.m1, '2026-11-04')).toBe('ended');
     // management registers them again: a new membership, which pays the registration fee on its first invoice
     const back = run(late, 'members.reactivate', { memberId: 'm1', start: '2026-11-09' }, 's9', at('2026-11-04')).state;

@@ -273,7 +273,7 @@ test.describe('payments', () => {
   test('long lists are paged, never cut off: 6 seeded + 18 new payments show 15, then all 24', async ({ page }) => {
     const c = watchConsole(page);
     for (let i = 1; i <= 18; i++) {
-      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', ref: `T${i}`, invoiceId: 'INV-2610-046' });
+      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01', ref: `T${i}`, invoiceId: 'INV-2610-046' });
       expect(r.ok()).toBeTruthy();
     }
     await signIn(page, 's10', '/payments');
