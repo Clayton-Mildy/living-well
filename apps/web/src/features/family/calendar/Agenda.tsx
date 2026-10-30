@@ -8,6 +8,7 @@ import type { FamDay, FamRow } from '@cp/shared/rules/famCalendar';
 import { DishThumb, Icon, PhotoImg } from '../../../components/ui';
 import { useFamilyCtx } from '../useFamily';
 import { F, HAIR, useFamWide } from '../kit';
+import { chargesLine } from '@cp/shared/rules/celebrations';
 import { nameList } from './bits';
 
 const cap = (x: string) => x.charAt(0).toUpperCase() + x.slice(1);
@@ -62,7 +63,7 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
       }
       case 'celebration': {
         const c = r.celebrationId ? s.celebrations?.[r.celebrationId] : undefined;
-        return { title: r.title ?? '', sub: [t('celeb.famCard'), roomLabel(s, r.roomId, lang), span(r), c?.cateringNote ?? ''].filter(Boolean).join(' · ') };
+        return { title: r.title ?? '', sub: [t('celeb.famCard'), roomLabel(s, r.roomId, lang), span(r), c?.cateringNote ?? '', c ? chargesLine(c) : ''].filter(Boolean).join(' · ') }; // round 16: what the family pays for
       }
     }
   };

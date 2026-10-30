@@ -91,7 +91,7 @@ export const err: Same<typeof EN.err> = {
   memberPending: 'Anggota ini masih menunggu persetujuan manajemen.', memberNotActive: 'Keanggotaan ini tidak aktif hari ini.', alreadyCheckedIn: 'Sudah check-in.',
   alreadyCheckedOut: 'Sudah check-out.', notCheckedIn: 'Belum check-in.', network: 'Tidak terhubung ke server klub.', invalid: 'Mohon periksa kolom yang ditandai.', closedDay: 'Klub tutup pada hari itu.',
   suspended: 'Keanggotaan ditangguhkan: invoice {number} ({amount}) belum dibayar. Check-in lagi setelah dibayar.', onLeave: '{name} sedang cuti pada {month}.',
-  leaveLate: 'Cuti untuk {month} harus diajukan paling lambat {deadline}. Tanggal itu sudah lewat.', emailInvalid: 'Periksa alamat email (seperti nama@contoh.com).', noticeLate: 'Terlambat untuk {month} — perubahan perlu pemberitahuan {days} hari (paling lambat {deadline}). Paling cepat: {earliest}.', leaveAlready: 'Sudah ada cuti untuk {month}.',
+  leaveLate: 'Cuti untuk {month} harus diajukan paling lambat {deadline}. Tanggal itu sudah lewat.', charged: 'Biaya ini sudah ada di tagihan.', nothingToBill: 'Tidak ada yang baru untuk ditagih.', noPayer: 'Anggota ini belum punya kontak tagihan.', emailInvalid: 'Periksa alamat email (seperti nama@contoh.com).', noticeLate: 'Terlambat untuk {month} — perubahan perlu pemberitahuan {days} hari (paling lambat {deadline}). Paling cepat: {earliest}.', leaveAlready: 'Sudah ada cuti untuk {month}.',
   leaveMax: 'Cuti paling lama {max} bulan berturut-turut.', leaveEnding: 'Keanggotaan ini akan atau sudah berakhir, jadi cuti tidak bisa diajukan.', leaveLocked: 'Cuti ini sudah dikonfirmasi: bisa dibatalkan sampai {deadline}.',
 };
 export const review: Same<typeof EN.review> = {
@@ -113,5 +113,5 @@ export const demo: Same<typeof EN.demo> = {
   reset: 'Atur ulang data demo', resetDone: 'Data demo diatur ulang ke 09.58.', resetConfirm: 'Atur ulang semua perubahan di demo ini? Semua pengguna aplikasi ikut melihat pengaturan ulang.', designSystem: 'Sistem desain', clock: 'Jam klub',
 };
 export const inv: Same<typeof EN.inv> = {
-  'line.plan': 'Paket {planId} · {month}', 'line.flex': 'Paket Flex · {month}', 'line.gold': 'Paket Gold · {month}', 'line.extra': 'Hari tambahan · {month} ({n})', 'line.credit': 'Saldo akun', 'line.venue': 'Sewa venue', 'line.leave': 'Cuti · {month}', 'line.dementia': 'Perawatan demensia', 'line.registration': 'Biaya pendaftaran',
+  'line.plan': 'Paket {planId} · {month}', 'line.flex': 'Paket Flex · {month}', 'line.gold': 'Paket Gold · {month}', 'line.extra': 'Hari tambahan · {month} ({n})', 'line.credit': 'Saldo akun', 'line.venue': 'Sewa venue', 'line.leave': 'Cuti · {month}', 'line.celebration': '{item} · {title}', 'line.pickup': 'Antar-jemput', 'line.dementia': 'Perawatan demensia', 'line.registration': 'Biaya pendaftaran',
 };

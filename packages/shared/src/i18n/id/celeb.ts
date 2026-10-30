@@ -18,6 +18,8 @@ export const celeb: Same<typeof EN> = {
   editReconfirm: 'Perayaan ini sudah terkonfirmasi. Setelah diubah, manajemen harus mengonfirmasi lagi.',
   famCard: 'Perayaan', famOpen: 'Lihat di kalender', famSub: '{from}–{to} · {room}',
   'err.decided': 'Perayaan ini sudah tidak bisa diubah.',
+  'notif.invoiced': 'Tagihan {number} untuk {name}: {title}',
+  chargeAdded: '{item} ditambahkan.', chargeRemoved: '{item} dihapus.', chargesBtn: 'Biaya', charges: 'Biaya', free: 'Gratis', addCharge: 'Tambah biaya', item: 'Barang', price: 'Harga', issueInvoice: 'Terbitkan tagihan', issued: 'Tagihan {number} diterbitkan', total: 'Total {amount}',
   'notif.requested': '{name}: perayaan diminta untuk {date} ({title})',
   'notif.decided': 'Terkonfirmasi: {title} pada {date}',
   'notif.declined': 'Ditolak: {title} pada {date}',

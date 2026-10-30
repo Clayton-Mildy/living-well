@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, updatesFor, DomainError, familyUserIds, type ClubState } from '../index';
+import { balanceOf, buildSeed, execute, getUser, updatesFor, DomainError, familyUserIds, type ClubState } from '../index';
 import { dayInfo } from '../rules/calendar';
 import { coversOn } from '../rules/kitchenOps';
 import { famDay } from '../rules/famCalendar';
@@ -126,5 +126,64 @@ describe('celebrations (actions)', () => {
     expect(famDay(d.state, ['m1'], date, T, 600).rows.some((x) => x.kind === 'celebration')).toBe(false);
     // the family projection holds it only once confirmed
     expect(Object.keys(projectForFamily(r.state, 'f1').celebrations)).not.toContain(id);
+  });
+});
+
+describe('round 16: birthday charges on their own invoice', () => {
+  const confirmed = () => { const s = seed(); const r = run(s, 'celebration.request', req, 's9'); return { s: r.state, id: created(s, r.state)[0] }; };
+  it('two charges become one CEL invoice to the billing contact, emailed; a later charge gets its own invoice', () => {
+    let { s, id } = confirmed();
+    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
+    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Balloons', amount: 100_000 }, 's1').state;
+    s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
+    const inv = s.invoices['CEL-2610-001'];
+    expect(inv).toMatchObject({ kind: 'manual', memberId: 'm46', payerFamilyId: 'f1' });
+    expect(inv.lines.map((l) => [l.kind, l.amount])).toEqual([['celebration', 350_000], ['celebration', 100_000]]);
+    expect(s.celebrations[id].charges!.every((c) => c.invoiceId === 'CEL-2610-001')).toBe(true);
+    expect(Object.values(s.emails).filter((e) => e.ref.id === 'CEL-2610-001')).toHaveLength(1);
+    fails(s, 'celebration.removeCharge', { celebrationId: id, chargeId: s.celebrations[id].charges![0].id }, 's1', 'err.charged');
+    fails(s, 'celebration.issueInvoice', { celebrationId: id }, 's10', 'err.nothingToBill');
+    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Photo print', amount: 75_000 }, 's1').state;
+    s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
+    expect(s.invoices['CEL-2610-002'].lines).toHaveLength(1);
+  });
+  it('an uninvoiced charge can be removed; the front desk cannot issue the invoice', () => {
+    let { s, id } = confirmed();
+    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
+    s = run(s, 'celebration.removeCharge', { celebrationId: id, chargeId: s.celebrations[id].charges![0].id }, 's1').state;
+    expect(s.celebrations[id].charges).toEqual([]);
+    fails(s, 'celebration.issueInvoice', { celebrationId: id }, 's1', 'err.forbidden');
+  });
+  it('one VA payment covers the monthly invoice and the birthday invoice together', () => {
+    let { s, id } = confirmed();
+    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
+    s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
+    const monthly = Object.values(s.invoices).find((i) => i.memberId === 'm46' && i.kind === 'monthly' && balanceOf(s, i) > 0)!;
+    expect(monthly).toBeTruthy();
+    const r = run(s, 'payment.simulateVa', { invoiceIds: [monthly.id, 'CEL-2610-001'] }, 'f1');
+    const pays = (r.result.paymentIds as string[]).map((p) => r.state.payments[p]);
+    expect(pays).toHaveLength(1);
+    expect(pays[0].allocations.map((a) => a.invoiceId).sort()).toEqual([monthly.id, 'CEL-2610-001'].sort());
+  });
+});
+
+describe('round 16: celebrations with charges still to invoice (Billing)', () => {
+  it('lists a celebration until all its charges are invoiced', async () => {
+    const { celebrationsToInvoice } = await import('../rules/celebrations');
+    const s0 = seed();
+    const r = run(s0, 'celebration.request', req, 's9');
+    const id = created(s0, r.state)[0];
+    let s = run(r.state, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
+    expect(celebrationsToInvoice(s).map((x) => [x.c.id, x.amount])).toEqual([[id, 350_000]]);
+    s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
+    expect(celebrationsToInvoice(s)).toEqual([]);
+  });
+});
+
+describe('round 16: the charges line families see', () => {
+  it('lists each charge with its price; free shows nothing', async () => {
+    const { chargesLine } = await import('../rules/celebrations');
+    expect(chargesLine({ charges: [] })).toBe('');
+    expect(chargesLine({ charges: [{ id: 'a', item: 'Cake', amount: 350_000 }, { id: 'b', item: 'Balloons', amount: 100_000 }] })).toBe('Cake Rp 350.000 · Balloons Rp 100.000');
   });
 });

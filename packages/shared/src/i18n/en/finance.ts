@@ -77,7 +77,7 @@ export const finance = {
   'run.early': 'This is before the usual issue date ({usual}). The invoices are released early: families get them today.',
   'run.partialMonth': '{month} isn’t over yet. Extra days after today are not on these invoices; they go on a later one.',
   'run.dates': 'Invoices are dated {issue} and due {due}.', 'run.billTo': 'Bill to {name}',
-  'run.noPayer': 'No billing contact:', 'run.noPayerHelp': 'Make one of their family contacts the primary contact, then run again.',
+  'bill.celTitle': 'Celebration charges to invoice', 'run.noPayer': 'No billing contact:', 'run.noPayerHelp': 'Make one of their family contacts the primary contact, then run again.',
   'run.nothing': 'Nobody has anything left to bill for this month.', 'run.allDone': 'Everything for {month} has been invoiced.', 'run.nothingFor': 'Nothing to bill: {names}.',
   'run.total': 'Invoices: {n} · {total}', 'run.issueBtn': 'Issue invoices ({n}) · {total}', 'run.confirm': 'Send these invoices ({n}, {total}) to families now?',
   'run.issueNow': 'Yes, issue them now', 'run.issueEarly': 'Yes, release them early', 'run.issued': 'Invoices issued: {n}. Families have been told.',

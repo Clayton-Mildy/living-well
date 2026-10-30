@@ -94,7 +94,7 @@ export const err = {
   alreadyCheckedOut: 'Already checked out.', notCheckedIn: 'Not checked in yet.', network: 'No connection to the club server.', invalid: 'Please check the highlighted fields.', closedDay: 'The club is closed that day.',
   // KC round 6: the brochure's terms (suspension for an unpaid invoice, leave)
   suspended: 'Membership on hold: invoice {number} ({amount}) is still unpaid. Check in again once it is paid.', onLeave: '{name} is on leave in {month}.',
-  leaveLate: 'Leave for {month} had to be asked for by {deadline}. That day has passed.', emailInvalid: 'Check the email address (like name@example.com).', noticeLate: "Too late for {month} — changes need {days} days' notice (by {deadline}). Earliest: {earliest}.", leaveAlready: 'There is already leave for {month}.',
+  leaveLate: 'Leave for {month} had to be asked for by {deadline}. That day has passed.', charged: 'This charge is already on an invoice.', nothingToBill: 'There is nothing new to bill.', noPayer: 'This member has no billing contact yet.', emailInvalid: 'Check the email address (like name@example.com).', noticeLate: "Too late for {month} — changes need {days} days' notice (by {deadline}). Earliest: {earliest}.", leaveAlready: 'There is already leave for {month}.',
   leaveMax: 'Leave can be at most {max} months in a row.', leaveEnding: 'This membership is ending or has ended, so leave can’t be asked for.', leaveLocked: 'This leave is confirmed: it could be taken back until {deadline}.',
 };
 export const review = {
@@ -116,5 +116,5 @@ export const demo = {
   reset: 'Reset demo data', resetDone: 'Demo data reset to 09:58.', resetConfirm: 'Reset every change made in this demo? Everyone using the app sees the reset.', designSystem: 'Design system', clock: 'Club clock',
 };
 export const inv = {
-  'line.plan': '{plan} plan · {month}', 'line.flex': 'Flex plan · {month}', 'line.gold': 'Gold plan · {month}', 'line.extra': 'Extra days · {month} ({n})', 'line.credit': 'Account credit', 'line.venue': 'Venue booking', 'line.leave': 'Leave (cuti) · {month}', 'line.registration': 'Registration fee', 'line.dementia': 'Dementia care',
+  'line.plan': '{plan} plan · {month}', 'line.flex': 'Flex plan · {month}', 'line.gold': 'Gold plan · {month}', 'line.extra': 'Extra days · {month} ({n})', 'line.credit': 'Account credit', 'line.venue': 'Venue booking', 'line.leave': 'Leave (cuti) · {month}', 'line.registration': 'Registration fee', 'line.celebration': '{item} · {title}', 'line.pickup': 'Pick-up', 'line.dementia': 'Dementia care',
 };

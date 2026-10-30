@@ -2,8 +2,8 @@
 // and management confirms (a request by management is confirmed at once). Under Venue as its own tab: Requested (Confirm / Decline for management, "Waiting"
 // for the front desk), Upcoming, Past. The form is the venue form's little sibling: a member, the occasion, a title the app suggests, the day, the time, the room.
 import { useState } from 'react';
-import { listName, type Celebration, type Room } from '@cp/shared';
-import { celebrationLists } from '@cp/shared/rules/celebrations';
+import { listName, rp, type Celebration, type Room } from '@cp/shared';
+import { celebrationLists, celebrationTotal } from '@cp/shared/rules/celebrations';
 import { venueRooms } from '@cp/shared/rules/mgmt';
 import { Button, Dialog, Icon, Note, Pager, Pin, TextField, usePaged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -13,6 +13,7 @@ import { useAct } from '../../lib/act';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { BadgePill, ListCard, PillBtn, roomName, useBusy } from './common';
+import { ChargesBody } from './CelebrationCharges';
 import { CelebrationSheet, type CelebrationPrefill, CelForm, Submit, fromRow, suggestTitle, type CForm } from './CelebrationSheet';
 
 export function Celebrations({ open, setOpen, prefill }: { open: boolean; setOpen: (b: boolean) => void; prefill?: CelebrationPrefill }) {
@@ -29,6 +30,7 @@ export function Celebrations({ open, setOpen, prefill }: { open: boolean; setOpe
   const [edit, setEdit] = useState<Celebration | null>(null);
   const [cancel, setCancel] = useState<Celebration | null>(null);
   const [decline, setDecline] = useState<Celebration | null>(null);
+  const [charges, setCharges] = useState<string | null>(null); // round 16: the celebration whose charges are open
   const { busy, run } = useBusy();
   const { requested, upcoming, past } = celebrationLists(s, today, now);
   const upPaged = usePaged(upcoming, 6);
@@ -50,8 +52,10 @@ export function Celebrations({ open, setOpen, prefill }: { open: boolean; setOpe
         acts.push({ key: 'decline', icon: 'close', label: t('celeb.decline'), tone: 'secondary', run: () => setDecline(c) });
       }
       acts.push({ key: 'edit', icon: 'edit', label: t('common.edit'), tone: 'secondary', run: () => setEdit(c) });
+      if (c.status !== 'declined' && c.status !== 'cancelled') acts.push({ key: 'charges', icon: 'payments', label: t('celeb.chargesBtn'), tone: 'secondary', run: () => setCharges(c.id) });
       acts.push({ key: 'cancel', icon: 'event_busy', label: t('celeb.cancelBtn'), tone: 'secondary', run: () => setCancel(c) });
-    }
+    } else if (c.status === 'confirmed' && (c.charges ?? []).some((x) => !x.invoiceId)) acts.push({ key: 'charges', icon: 'payments', label: t('celeb.chargesBtn'), tone: 'secondary', run: () => setCharges(c.id) });
+    const total = celebrationTotal(c);
     return (
       <div key={c.id} data-celebration={c.id} data-status={c.status} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: isPhone ? '12px 0' : '16px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', opacity: c.status === 'declined' || c.status === 'cancelled' ? 0.7 : 1 }}>
         <div style={{ display: 'flex', alignItems: 'flex-start', gap: 12 }}>
@@ -60,6 +64,7 @@ export function Celebrations({ open, setOpen, prefill }: { open: boolean; setOpe
             <span style={{ fontSize: isPhone ? 16 : 17, fontWeight: 500, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{c.title}</span>
             <span style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{t('celeb.sub', { date: fdl(c.date), from: c.from, to: c.to, room: roomName(s.rooms[c.roomId], lang) })}</span>
             <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[m ? listName(m) : '', t(c.guests === 1 ? 'celeb.guest1' : 'celeb.guests', { n: c.guests }), c.cateringNote].filter(Boolean).join(' · ')}</span>
+            {total ? <span data-testid="celebration-charges" style={{ fontSize: 14, color: '#24201C', lineHeight: 1.4 }}>{t('celeb.total', { amount: rp(total) })}</span> : null}
             {c.status === 'declined' && c.declineReason ? <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('celeb.declinedWhy', { reason: c.declineReason })}</span> : null}
             <span style={{ alignSelf: 'flex-start', paddingTop: 4 }}>{badge}</span>
           </div>
@@ -98,6 +103,9 @@ export function Celebrations({ open, setOpen, prefill }: { open: boolean; setOpe
         footer={<><Button variant="secondary" onClick={() => setCancel(null)}>{t('mgmt.vnKeep')}</Button>
           <Button variant="danger" disabled={busy} onClick={() => { if (cancel) void run(async () => { const r = await act('celebration.cancel', { celebrationId: cancel.id }, { ok: t('celeb.cancelledToast') }); if (r.ok) setCancel(null); }); }}>{t('celeb.cancelBtn')}</Button></>}>
         <div style={{ fontSize: 16, lineHeight: '24px' }}>{cancel ? t('celeb.cancelText', { title: cancel.title, date: fdl(cancel.date) }) : null}</div>
+      </Dialog>
+      <Dialog open={!!charges} onClose={() => setCharges(null)} eyebrow={charges ? s.celebrations?.[charges]?.title : ''} title={t('celeb.charges')} maxWidth={520}>
+        {charges ? <ChargesBody celebrationId={charges} /> : null}
       </Dialog>
       <DeclineDialog c={decline} busy={busy} onClose={() => setDecline(null)} onDecline={(c, reason) => { void decide(c, 'declined', reason); }} />
       <CelebrationSheet open={open} onClose={() => setOpen(false)} prefill={prefill} />

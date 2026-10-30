@@ -1,13 +1,17 @@
 // Celebrations (round 12): a family asks the front desk to hold a room for a birthday or small celebration; the front desk requests, management confirms.
 // A request by management is confirmed at once. Editing a confirmed one at the front desk sends it back for confirmation. Families hear only when it is confirmed.
 import type { Draft } from 'immer';
-import type { Celebration, CelebrationKind, ClubState, HM, ISODate, User } from '../types';
+import type { Celebration, CelebrationKind, ClubState, HM, ISODate, Invoice, User } from '../types';
 import { defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
+import { emailInvoice } from './emails';
+import { primaryContact } from '../rules/core';
+import { addDays } from '../util';
 import { CELEBRATION_GUESTS_MAX, CELEBRATION_KINDS, celebrationIsPast, checkCelebrationSlot } from '../rules/celebrations';
 import { dm, hm, int, isoDate, obj, oneOf, str } from '../rules/mgmtParse';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
+const finMgmt = (u: User) => hasRole(u, 'finance', 'mgmt');
 /** Round 14: the activity team prepares a birthday too (Prepare on its Today); what it asks for is requested, like the front desk's. */
 const canRequest = (u: User) => hasRole(u, 'lobby', 'activity', 'mgmt');
 const id80 = (v: unknown, field: string) => str(v, 80, { required: true, field });
@@ -144,6 +148,57 @@ export const celebrationActions = [
       ctx.feed({ icon: 'cake', key: i.status === 'confirmed' ? 'celeb.feed.confirmed' : 'celeb.feed.declined', memberId: c.memberId, params: { name, date: dm(c.date) } });
       ctx.notify({ toRoles: ['lobby'], kind: i.status === 'confirmed' ? 'celeb.notif.decided' : 'celeb.notif.declined', params: { name, title: c.title, date: dm(c.date), status: i.status }, link: '/venue?tab=celebrations', memberId: c.memberId });
       if (i.status === 'confirmed') tellFamily(d, c, ctx);
+    },
+  }),
+  // ----- round 16: charges (free by default) and their own invoice -----
+  defineAction<{ celebrationId: string; item: string; amount: number }>({
+    name: 'celebration.addCharge',
+    can: lobbyOrMgmt,
+    parse: (raw) => { const o = obj(raw); return { celebrationId: id80(o.celebrationId, 'celebrationId'), item: str(o.item, 60, { required: true, field: 'item' }), amount: int(o.amount, 1_000, 100_000_000, 'amount') }; },
+    run(d, i, ctx) {
+      const c = celebration(d, i.celebrationId, ctx);
+      open(c, ctx);
+      c.charges ??= [];
+      c.charges.push({ id: ctx.id('cc'), item: i.item, amount: i.amount });
+    },
+  }),
+  defineAction<{ celebrationId: string; chargeId: string }>({
+    name: 'celebration.removeCharge',
+    can: lobbyOrMgmt,
+    parse: (raw) => { const o = obj(raw); return { celebrationId: id80(o.celebrationId, 'celebrationId'), chargeId: id80(o.chargeId, 'chargeId') }; },
+    run(d, i, ctx) {
+      const c = celebration(d, i.celebrationId, ctx);
+      const ch = (c.charges ?? []).find((x) => x.id === i.chargeId);
+      if (!ch) ctx.fail('err.notFound');
+      if (ch!.invoiceId) ctx.fail('err.charged');
+      c.charges = c.charges!.filter((x) => x.id !== i.chargeId);
+    },
+  }),
+  defineAction<{ celebrationId: string }>({
+    name: 'celebration.issueInvoice',
+    can: finMgmt,
+    parse: (raw) => ({ celebrationId: id80(obj(raw).celebrationId, 'celebrationId') }),
+    run(d, i, ctx) {
+      const c = celebration(d, i.celebrationId, ctx);
+      if (c.status === 'declined' || c.status === 'cancelled') ctx.fail('celeb.err.decided', { status: c.status });
+      const todo = (c.charges ?? []).filter((x) => !x.invoiceId);
+      if (!todo.length) ctx.fail('err.nothingToBill');
+      const m = requireMember(d, c.memberId, ctx);
+      const payer = primaryContact(S(d), m.id);
+      if (!payer) ctx.fail('err.noPayer');
+      const prefix = `CEL-${ctx.today.slice(2, 4)}${ctx.today.slice(5, 7)}-`;
+      const n = Object.keys(d.invoices).filter((k) => k.startsWith(prefix)).length + 1;
+      const number = prefix + String(n).padStart(3, '0');
+      const inv: Invoice = {
+        id: number, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, number, memberId: m.id, payerFamilyId: payer!.id, kind: 'manual', issueDate: ctx.today, dueDate: addDays(ctx.today, 7),
+        lines: todo.map((x) => ({ id: `cel-${x.id}`, kind: 'celebration' as const, label: 'inv.line.celebration', params: { item: x.item, title: c.title }, qty: 1, unit: x.amount, amount: x.amount })),
+        va: m.billing.va, xero: 'awaitingPayment', reminders: [], callNotes: [],
+      };
+      d.invoices[number] = inv;
+      for (const x of todo) x.invoiceId = number;
+      emailInvoice(d, ctx, number);
+      ctx.notify({ toUsers: [payer!.id], kind: 'celeb.notif.invoiced', params: { name: shortOf(d, m.id), number, title: c.title }, link: '/billing', memberId: m.id, ref: { type: 'invoice', id: number } });
+      ctx.result.invoiceId = number;
     },
   }),
 ];

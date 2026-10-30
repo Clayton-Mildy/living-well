@@ -7,11 +7,11 @@
 // `?member=` and `?survey=1` still work. The club is drop-in: members come on any open day, so there is no booking, leave, "expected" or "not coming".
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { FACE_KEY, addDays, answeredBy, live, liveSurvey, displayName, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
+import { FACE_KEY, addDays, answeredBy, live, liveSurvey, displayName, rp, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
 import { activityLabel, roomLabel, dayStory, dishNamesOf, END_OF_DAY, familyPhotosOn, servedLunch, storyNowMin, visitDays, type DayStory } from '@cp/shared/rules/family';
 import { openDayStrip, planDay } from '@cp/shared/rules/famToday';
 import { eventTitle as calTitle, upcomingClosures } from '@cp/shared/rules/calendar';
-import { celebrationsOn } from '@cp/shared/rules/celebrations';
+import { celebrationTotal, celebrationsOn, chargesLine } from '@cp/shared/rules/celebrations';
 import { occasionsThisWeek } from '@cp/shared/rules/occasions';
 import { occasionLine } from '../../lib/occasions';
 import { Icon, PhotoImg } from '../../components/ui';
@@ -169,6 +169,7 @@ function CelebrationCard({ members, date }: { members: Member[]; date: ISODate }
               <span style={{ fontSize: 17, fontWeight: 600, color: F.text, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{c.title}</span>
               <span style={{ fontSize: 14, color: F.soft }}>{t('celeb.famSub', { from: c.from, to: c.to, room: roomLabel(s, c.roomId, fmt.lang) })}</span>
               <span style={{ fontSize: 13, color: F.muted, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{[t(c.guests === 1 ? 'celeb.guest1' : 'celeb.guests', { n: c.guests }), c.cateringNote].filter(Boolean).join(' · ')}</span>
+              {chargesLine(c) ? <span data-testid="celebration-charges" style={{ fontSize: 13, color: F.text, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{chargesLine(c)} · {t('celeb.total', { amount: rp(celebrationTotal(c)) })}</span> : null}
             </span>
           </span>
           <TextLink size={13} onClick={() => navigate(`/calendar?date=${c.date}`)} style={{ minHeight: 24 }}>{t('celeb.famOpen')}</TextLink>
