@@ -12,7 +12,8 @@ const MONTH = '2026-11';
 const clock = { today: T, nowMin: toMin('10:00') };
 let n = 0;
 /** the demo world without the seeded follow-ups, so each test starts from a clean to-do list */
-const fresh = (): ClubState => produce(buildSeed().citra, (d) => { d.followUps = {}; });
+// round 16: these stories record November changes on 21 October; a 1-day notice keeps them in time (the notice period has its own tests at the end)
+const fresh = (): ClubState => produce(buildSeed().citra, (d) => { d.followUps = {}; d.club.settings.noticeDays = 1; });
 const as = (s: ClubState, id: string) => getUser({ [s.clubId]: s }, id)!;
 const run = (s: ClubState, name: string, input: unknown, uid: string, clk = clock) => execute(s, name, input, as(s, uid), clk, `fu${++n}`);
 const fails = (s: ClubState, name: string, input: unknown, uid: string, code: string, clk = clock) => {
@@ -115,8 +116,8 @@ describe('a change applies at once', () => {
     let s = fresh();
     fails(s, 'followUp.record', { memberId: 'm20', month: MONTH, outcome: 'stop', lastDay: '2026-10-20' }, 's1', 'members.err.lastDayPast');
     fails(s, 'followUp.record', { memberId: 'm20', month: MONTH, outcome: 'stop', lastDay: '2026-12-05' }, 's1', 'renewals.err.lastDayLate');
-    s = record(s, 'm20', 'stop', 's1', { lastDay: '2026-10-30', endReason: 'movedAway' }).state;
-    expect(s.members.m20.memberships.at(-1)).toMatchObject({ lastDay: '2026-10-30', endReason: 'movedAway', endedBy: 'staff:s1' });
+    s = record(s, 'm20', 'stop', 's1', { lastDay: '2026-10-31', endReason: 'movedAway' }).state; // round 16: with notice, a stop for November ends on 31 Oct at the soonest
+    expect(s.members.m20.memberships.at(-1)).toMatchObject({ lastDay: '2026-10-31', endReason: 'movedAway', endedBy: 'staff:s1' });
     expect(fu(s, 'm20')).toMatchObject({ status: 'done' });
   });
 });
@@ -149,9 +150,9 @@ describe('undo until the 1st', () => {
   it('a stop: the last day and the reason are gone, and the final invoice it made is voided', () => {
     // Oma Lina has an extra visit today, so ending her membership bills a final invoice
     const base = run(fresh(), 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, 's1').state;
-    let s = record(base, 'm1', 'stop', 's1', { lastDay: '2026-10-29', endReason: 'movedAway', note: 'Moving to Bali.' }).state;
+    let s = record(base, 'm1', 'stop', 's1', { lastDay: '2026-10-31', endReason: 'movedAway', note: 'Moving to Bali.' }).state;
     const final = () => Object.values(s.invoices).filter((i) => i.memberId === 'm1' && i.kind === 'final');
-    expect(s.members.m1.memberships.at(-1)!.lastDay).toBe('2026-10-29');
+    expect(s.members.m1.memberships.at(-1)!.lastDay).toBe('2026-10-31');
     expect(final()).toHaveLength(1); // precondition: the ending really made a final invoice
     expect(final()[0].voided).toBeUndefined();
     s = undo(s, 'm1');
@@ -185,7 +186,7 @@ describe('undo until the 1st', () => {
     expect(told(s)).toHaveLength(1);
     expect(famTold(s, 'fm10_0', 'renewals.notif.undone')).toBe(true);
     // a stop closes the pending request; undoing the stop opens it again
-    s = record(s0, 'm10', 'stop', 's1', { lastDay: '2026-10-29' }).state;
+    s = record(s0, 'm10', 'stop', 's1', { lastDay: '2026-10-31' }).state;
     expect(s.planChangeRequests['pcr-m10'].status).toBe('declined');
     s = undo(s, 'm10');
     expect(s.planChangeRequests['pcr-m10'].status).toBe('pending');
@@ -234,8 +235,8 @@ describe('changeRows: changes recorded elsewhere', () => {
 });
 
 describe('leave keeps its notice rules', () => {
-  it('November\'s notice was due 17 Oct: late on the 21st, fine on the 10th; December still works and applies at once', () => {
-    const s = fresh();
+  it('November\'s notice was due 18 Oct (round 16: 14 days before the 1st): late on the 21st, fine on the 10th; December still works and applies at once', () => {
+    const s = produce(fresh(), (d) => { delete d.club.settings.noticeDays; });
     fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: [MONTH] }, 's1', 'err.leaveLate');
     fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: [] }, 's1', 'err.invalid');
     fails(s, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'leave', leaveMonths: ['2027-01'] }, 's1', 'err.invalid'); // only the month itself and the next
@@ -281,5 +282,29 @@ describe('plan switches to the catalogue (round 15)', () => {
     // a plan retired after the sheet was opened is refused too
     const retired = produce(s, (d) => { d.club.settings.plans![0].active = false; });
     fails(retired, 'followUp.record', { memberId: 'm1', month: MONTH, outcome: 'switch', plan: 'plan_1' }, 's1', 'err.invalid');
+  });
+});
+
+describe('round 16: the notice period', () => {
+  const fresh = (): ClubState => produce(buildSeed().citra, (d) => { d.followUps = {}; });
+  const late = { today: '2026-11-18', nowMin: toMin('10:00') };
+  const goldMember = (s: ClubState) => renewalRows(s, '2026-12').map((r) => r.m).find((m) => planOn(m, '2026-12-01').plan === 'gold')!;
+  const flexMember = (s: ClubState) => renewalRows(s, '2026-12').map((r) => r.m).find((m) => planOn(m, '2026-12-01').plan === 'flex')!;
+  it('a downgrade for December asked on 18 November is too late; for January it is fine', () => {
+    const s = fresh();
+    const m = goldMember(s);
+    fails(s, 'followUp.record', { memberId: m.id, month: '2026-12', outcome: 'downgrade' }, 's1', 'err.noticeLate', late);
+    const r = run(s, 'followUp.record', { memberId: m.id, month: '2027-01', outcome: 'downgrade' }, 's1', late);
+    expect(planOn(m.id ? r.state.members[m.id] : m, '2027-01-01').plan).toBe('flex');
+  });
+  it('a stop for December asked on 18 November is too late', () => {
+    const s = fresh();
+    fails(s, 'followUp.record', { memberId: goldMember(s).id, month: '2026-12', outcome: 'stop' }, 's1', 'err.noticeLate', late);
+  });
+  it('an upgrade for December asked on 18 November still goes through', () => {
+    const s = fresh();
+    const m = flexMember(s);
+    const r = run(s, 'followUp.record', { memberId: m.id, month: '2026-12', outcome: 'upgrade' }, 's1', late);
+    expect(planOn(r.state.members[m.id], '2026-12-01').plan).toBe('gold');
   });
 });

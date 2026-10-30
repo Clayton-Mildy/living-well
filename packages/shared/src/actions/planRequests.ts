@@ -4,7 +4,8 @@ import type { ClubState, Plan } from '../types';
 import { defineAction, DomainError, type ActionDef } from './framework';
 import { isPlanId, planOf, planParams } from '../rules/plans';
 import { currentMembership, isPendingRow, isPrimaryFor, membershipStatus, displayName, planOn } from '../rules/core';
-import { addMonths, live, ym } from '../util';
+import { addMonths, live, monthStart, ym } from '../util';
+import { changeKind, earliestMonth } from '../rules/notice';
 
 const bad = (): never => { throw new DomainError('err.invalid'); };
 const obj = (raw: unknown) => (raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {});
@@ -24,7 +25,9 @@ export const planRequestActions: ActionDef[] = [
       planOf(s, input.to); // an active plan of the catalogue
       if (!isPrimaryFor(s, ctx.user.id, m.id)) ctx.fail('err.forbidden');
       if (membershipStatus(m, ctx.today) === 'ended' || currentMembership(m)?.lastDay) ctx.fail('err.planRequestEnding');
-      const from = `${addMonths(ym(ctx.today), 1)}-01`;
+      // round 16: a downgrade asked after the notice deadline starts the month after (an upgrade: next month)
+      const next = addMonths(ym(ctx.today), 1);
+      const from = monthStart(earliestMonth(s, changeKind(s, m, input.to, next), ctx.today));
       if (planOn(m, from).plan === input.to) ctx.fail('err.noChanges');
       if (pendingPlanRequest(s, m.id)) ctx.fail('err.planRequestPending');
       const id = ctx.id('pcr');

@@ -12,6 +12,7 @@ const run = (s: ClubState, name: string, input: unknown, uid: string) => execute
 /** Plan 1 is priced and has an Indonesian name that already starts with "Paket"; plan 2 has no Indonesian name. */
 const world = (): ClubState => {
   const s = structuredClone(buildSeed().citra);
+  s.club.settings.noticeDays = 1; // round 16: November changes on 21 October stay in time
   s.club.settings.plans = [
     { id: 'plan_1', name: 'Saver 8', nameId: 'Paket Hemat 8', kind: 'days', quota: 8, active: true },
     { id: 'plan_2', name: 'Private', kind: 'unlimited', active: true },

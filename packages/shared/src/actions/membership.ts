@@ -9,6 +9,7 @@ import { currentMembership, isPendingRow, isPrimaryFor } from '../rules/core';
 import { RETURN_NOTE, leaveCheck, leaveDeadline, leaveNeedsWord, leaveOpen, onLeaveIn } from '../rules/leave';
 import { feeOf, priceOn, issueDateOf } from '../rules/billing';
 import { rp } from '../util';
+import { noticeDays } from '../rules/notice';
 
 const obj = (raw: unknown) => (raw && typeof raw === 'object' ? (raw as Record<string, unknown>) : {});
 const month = (v: unknown): string => {
@@ -42,7 +43,7 @@ export const membershipActions: ActionDef[] = [
       if (isFamily(ctx.user)) ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'family.notif.leaveAsked', params, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
       else ctx.notify({ toUsers: familyUserIds(d, m.id), kind: 'family.notif.leaveRecorded', params, link: '/billing', memberId: m.id });
       ctx.result.month = input.month;
-      ctx.result.deadline = leaveDeadline(input.month);
+      ctx.result.deadline = leaveDeadline(input.month, noticeDays(d as unknown as ClubState));
     },
   }),
   defineAction<{ memberId: string; month: string }>({
@@ -55,7 +56,7 @@ export const membershipActions: ActionDef[] = [
       const cur = currentMembership(m);
       if (!cur || !onLeaveIn(m as Member, input.month)) ctx.fail('err.notFound');
       // taken back only while it can still be asked for; after that the month is settled (it goes on the invoice)
-      if (!leaveOpen(input.month, ctx.today)) ctx.fail('err.leaveLocked', { deadline: leaveDeadline(input.month), month: input.month });
+      if (!leaveOpen(input.month, ctx.today, noticeDays(d as unknown as ClubState))) ctx.fail('err.leaveLocked', { deadline: leaveDeadline(input.month, noticeDays(d as unknown as ClubState)), month: input.month });
       cur.leaves = (cur.leaves ?? []).filter((l) => l.month !== input.month || l.note === RETURN_NOTE);
       ctx.feed({ icon: 'event_busy', key: 'family.feed.leaveWithdrawn', params: { name: shortOf(d, m.id), month: input.month }, memberId: m.id });
       if (isFamily(ctx.user)) ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'family.notif.leaveWithdrawn', params: { name: shortOf(d, m.id), month: input.month }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });

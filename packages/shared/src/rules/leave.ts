@@ -4,17 +4,16 @@
 import type { ClubState, ISODate, Member, MembershipLeave, YM } from '../types';
 import { addDays, addMonths, daysInMonth, live, sortBy, ym } from '../util';
 import { currentMembership, membershipStatus } from './core';
+import { NOTICE_DAYS_DEFAULT, noticeDays } from './notice';
 
-/** Days before the end of the previous month by which a leave (or a change of plan, or stopping) has to be asked for in writing. */
-export const LEAVE_NOTICE_DAYS = 14;
 /** The most months of leave in a row. */
 export const LEAVE_MAX_MONTHS = 2;
 /** The "word" for a 3rd month: a return noted on the leave list (the club's note on that row). */
 export const RETURN_NOTE = 'return';
 
 export const lastDayOfMonth = (month: YM): ISODate => `${month}-${String(daysInMonth(month)).padStart(2, '0')}`;
-/** The last day a leave for `month` can be asked for: 14 days before the end of the month before. */
-export const leaveDeadline = (month: YM): ISODate => addDays(lastDayOfMonth(addMonths(month, -1)), -LEAVE_NOTICE_DAYS);
+/** The last day a leave for `month` can be asked for. Round 16: the club's notice period before the month's 1st (`rules/notice.ts`; 14 days → 17 Nov for December). */
+export const leaveDeadline = (month: YM, days: number = NOTICE_DAYS_DEFAULT): ISODate => addDays(`${month}-01`, -days);
 
 /** The current membership's leave rows that are real leave months (not the note that a member is coming back), oldest first. */
 export const leavesOf = (m: Pick<Member, 'memberships'>): MembershipLeave[] =>
@@ -24,7 +23,7 @@ export const onLeaveIn = (m: Pick<Member, 'memberships'>, month: YM) => leaveMon
 /** A member on leave on `date` (the leave month is the calendar month the date is in). */
 export const onLeaveOn = (m: Member, date: ISODate) => !m.deletedAt && membershipStatus(m, date) !== 'ended' && onLeaveIn(m, ym(date));
 /** A leave month can be taken back until its deadline. */
-export const leaveOpen = (month: YM, today: ISODate) => today <= leaveDeadline(month);
+export const leaveOpen = (month: YM, today: ISODate, days: number = NOTICE_DAYS_DEFAULT) => today <= leaveDeadline(month, days);
 export const leaveLeft = (m: Member, today: ISODate): YM[] => leaveMonths(m).filter((x) => x >= ym(today));
 
 /** How many leave months in a row there would be around `month` if it were on the list. */
@@ -37,11 +36,12 @@ export function leaveRunAround(months: YM[], month: YM): number {
 
 export type LeaveCheck = { ok: true } | { ok: false; code: string; params?: Record<string, string | number> };
 /** Can `month` be asked for as leave today? The code is an `err.*` key (core namespace). */
-export function leaveCheck(_s: ClubState, m: Member, month: YM, today: ISODate): LeaveCheck {
+export function leaveCheck(s: ClubState, m: Member, month: YM, today: ISODate): LeaveCheck {
+  const days = noticeDays(s);
   const cur = currentMembership(m);
   if (!cur || membershipStatus(m, today) === 'ended' || cur.lastDay) return { ok: false, code: 'err.leaveEnding' };
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return { ok: false, code: 'err.invalid' };
-  if (month <= ym(today) || today > leaveDeadline(month)) return { ok: false, code: 'err.leaveLate', params: { deadline: leaveDeadline(month), month } };
+  if (month <= ym(today) || today > leaveDeadline(month, days)) return { ok: false, code: 'err.leaveLate', params: { deadline: leaveDeadline(month, days), month } };
   if (onLeaveIn(m, month)) return { ok: false, code: 'err.leaveAlready', params: { month } };
   if (leaveRunAround(leaveMonths(m), month) > LEAVE_MAX_MONTHS) return { ok: false, code: 'err.leaveMax', params: { max: LEAVE_MAX_MONTHS } };
   return { ok: true };
@@ -49,10 +49,11 @@ export function leaveCheck(_s: ClubState, m: Member, month: YM, today: ISODate):
 /** The next months a leave can still be asked for (deadline not yet passed), soonest first. */
 export function leaveChoices(s: ClubState, m: Member, today: ISODate, n = 3): { month: YM; deadline: ISODate; ok: boolean }[] {
   const out: { month: YM; deadline: ISODate; ok: boolean }[] = [];
+  const days = noticeDays(s);
   for (let k = 1; k <= 12 && out.length < n; k++) {
     const month = addMonths(ym(today), k);
-    if (today > leaveDeadline(month)) continue;
-    out.push({ month, deadline: leaveDeadline(month), ok: leaveCheck(s, m, month, today).ok });
+    if (today > leaveDeadline(month, days)) continue;
+    out.push({ month, deadline: leaveDeadline(month, days), ok: leaveCheck(s, m, month, today).ok });
   }
   return out;
 }

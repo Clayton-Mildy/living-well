@@ -9,6 +9,7 @@ import { activeOn, approvedMembers, contactsOfMember, currentMembership, isPendi
 import { issueDateOf } from './billing';
 import { LEAVE_MAX_MONTHS, lastDayOfMonth, leaveCheck, leaveDeadline, leaveMonths, leaveRunAround, onLeaveIn, type LeaveCheck } from './leave';
 import { activePlans, matchesQuery } from './members';
+import { noticeDays } from './notice';
 
 /** The month the front desk follows up today: the coming month. */
 export const renewalMonth = (today: ISODate): YM => addMonths(ym(today), 1);
@@ -268,9 +269,10 @@ export interface RenewalDates {
   invoice: ISODate;
 }
 export function renewalDates(s: ClubState, month: YM, today: ISODate): RenewalDates {
-  const deadline = leaveDeadline(month);
+  const days = noticeDays(s);
+  const deadline = leaveDeadline(month, days);
   let from = month;
-  for (let k = 0; k < 3 && today > leaveDeadline(from); k++) from = addMonths(from, 1);
+  for (let k = 0; k < 3 && today > leaveDeadline(from, days); k++) from = addMonths(from, 1);
   return { leaveDeadline: deadline, leaveOpen: today <= deadline, leaveFrom: from, invoice: issueDateOf(s, month) };
 }
 
@@ -285,7 +287,7 @@ export function leaveMonthsCheck(s: ClubState, m: Member, months: YM[], today: I
   const chosen = Array.from(new Set(months)).sort();
   if (!chosen.length || chosen.length > LEAVE_MAX_MONTHS) return { ok: false, code: 'err.invalid' };
   for (const mo of chosen) {
-    if (mo <= ym(today)) return { ok: false, code: 'err.leaveLate', params: { deadline: leaveDeadline(mo), month: mo } };
+    if (mo <= ym(today)) return { ok: false, code: 'err.leaveLate', params: { deadline: leaveDeadline(mo, noticeDays(s)), month: mo } };
     const c = leaveCheck(s, m, mo, asOf < today ? asOf : today);
     if (!c.ok) return c;
   }

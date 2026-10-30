@@ -10,8 +10,8 @@ describe('the month and its dates', () => {
     expect(renewalMonth('2026-10-21')).toBe('2026-11');
     expect(renewalMonth('2026-12-30')).toBe('2027-01');
     const s = buildCitra('2026-10-08', DEMO_START_MIN);
-    expect(leaveDeadline('2026-11')).toBe('2026-10-17');
-    expect(renewalDates(s, '2026-11', '2026-10-08')).toEqual({ leaveDeadline: '2026-10-17', leaveOpen: true, leaveFrom: '2026-11', invoice: '2026-11-21' });
+    expect(leaveDeadline('2026-11')).toBe('2026-10-18');
+    expect(renewalDates(s, '2026-11', '2026-10-08')).toEqual({ leaveDeadline: '2026-10-18', leaveOpen: true, leaveFrom: '2026-11', invoice: '2026-11-21' });
     // after the notice day leave can only start in the month after
     expect(renewalDates(s, '2026-11', '2026-10-21')).toMatchObject({ leaveOpen: false, leaveFrom: '2026-12' });
   });

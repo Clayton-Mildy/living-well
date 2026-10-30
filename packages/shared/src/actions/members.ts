@@ -3,7 +3,8 @@
 // Review policy: gate = waits for management; flag = applies now, reviewed afterwards; management always applies at once.
 import type { Draft } from 'immer';
 import type { Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
-import { e164, toMin } from '../util';
+import { e164, monthStart, toMin, ym } from '../util';
+import { changeKind, earliestMonth, noticeDays, noticeDeadline } from '../rules/notice';
 import { defineAction, hasRole, isMgmt, roleOf, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
 import { carrySigning, requireMember, shortOf, familyUserIds, signAtRegistration } from './helpers';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
@@ -449,6 +450,13 @@ export const membersActions: ActionDef[] = [
       if (roleOf(ctx.user) === 'lobby' && effective !== firstOfNextMonth(ctx.today)) ctx.fail('members.err.effectiveInvalid');
       const cur = planOn(m as Member, effective);
       if (cur.plan === input.plan) ctx.fail('err.noChanges');
+      // round 16: a downgrade needs the notice period (a replay on approval was checked when it was asked)
+      if (!replay) {
+        const s = d as unknown as ClubState;
+        const kind = changeKind(s, m as Member, input.plan, ym(effective));
+        const earliest = earliestMonth(s, kind, ctx.today);
+        if (kind === 'downgrade' && effective < monthStart(earliest)) ctx.fail('err.noticeLate', { deadline: noticeDeadline(s, ym(effective)), month: ym(effective), earliest, days: noticeDays(s) });
+      }
       addPlanEntry(m, { from: effective, plan: input.plan, by: ctx.actor }, ctx.today);
       for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending' && r.to === input.plan) { r.status = 'applied'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }
       const to = familyUserIds(d, m.id);

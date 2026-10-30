@@ -1,5 +1,6 @@
 // Family plan requests: the primary contact asks to switch plan; management and finance see it until it is applied or declined.
 import { describe, it, expect } from 'vitest';
+import { produce } from 'immer';
 import { actionItems, buildSeed, execute, getUser, live, planOn, projectForFamily, type ClubState } from '../index';
 
 const clubs = buildSeed();
@@ -7,7 +8,7 @@ const T = '2026-10-21';
 const clock = { today: T, nowMin: 600 };
 let n = 0;
 function world() {
-  let s: ClubState = buildSeed().citra;
+  let s: ClubState = produce(buildSeed().citra, (d) => { d.club.settings.noticeDays = 1; }); // round 16: November requests on 21 October stay in time
   return {
     get s() { return s; },
     run(name: string, input: unknown, uid: string) {
@@ -73,6 +74,7 @@ describe('plans from the catalogue (round 15)', () => {
   const catalogue = () => {
     const s = structuredClone(buildSeed().citra);
     s.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
+    s.club.settings.noticeDays = 1; // round 16: Flex 8 (no price, a downgrade) asked on 21 October stays in time for November
     return s;
   };
   it('the family can ask for an active catalogue plan, finance applies it, and the feed and notices name it', () => {
@@ -93,5 +95,15 @@ describe('plans from the catalogue (round 15)', () => {
     const retired = structuredClone(asked);
     retired.club.settings.plans![0].active = false;
     expect(() => execute(retired, 'planChange.apply', { requestId: Object.keys(retired.planChangeRequests).find((k) => retired.planChangeRequests[k].to === 'plan_1')! }, getUser(clubs, 's9')!, clock, 'pc5')).toThrow('members.err.planInvalid');
+  });
+});
+
+describe('round 16: a family request after the notice deadline', () => {
+  it('a downgrade asked on 18 November starts in January', () => {
+    let s: ClubState = buildSeed().citra;
+    const link = live(s.familyLinks).find((l) => l.primary && l.appAccess && planOn(s.members[l.memberId], '2026-12-01').plan === 'gold' && !live(s.planChangeRequests).some((r) => r.memberId === l.memberId && r.status === 'pending'))!;
+    s = execute(s, 'planChange.request', { memberId: link.memberId, to: 'flex' }, getUser(clubs, link.familyId)!, { today: '2026-11-18', nowMin: 600 }, 'pr-late').state;
+    const req = live(s.planChangeRequests).find((r) => r.memberId === link.memberId && r.status === 'pending')!;
+    expect(req.from).toBe('2027-01-01');
   });
 });

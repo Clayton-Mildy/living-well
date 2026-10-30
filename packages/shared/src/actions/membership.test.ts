@@ -22,26 +22,26 @@ const paidUp = (s: ClubState): ClubState =>
   produce(s, (d) => { for (const i of Object.values(d.invoices)) { const paid = Object.values(d.payments).flatMap((p) => p.allocations).filter((a) => a.invoiceId === i.id).reduce((t, a) => t + a.amount, 0); const total = i.lines.reduce((t, l) => t + l.amount, 0); if (total > paid) d.payments[`pp-${i.id}`] = { id: `pp-${i.id}`, clubId: 'citra', createdAt: `${i.issueDate}T12:00`, createdBy: 'system', memberId: i.memberId, method: 'dokuVa', amount: total - paid, receivedOn: i.issueDate, allocations: [{ invoiceId: i.id, amount: total - paid }], xero: 'synced', by: 'system' }; } });
 
 describe('leave: who asks, how late, how many months', () => {
-  it('the deadline is 14 days before the end of the month before: for December it is 16 Nov', () => {
-    expect(leaveDeadline('2026-12')).toBe('2026-11-16'); // November ends on the 30th
-    expect(leaveDeadline('2026-11')).toBe('2026-10-17'); // October ends on the 31st
-    expect(leaveDeadline('2027-03')).toBe('2027-02-14'); // February ends on the 28th
+  it('round 16: the deadline is 14 days before the 1st: for December it is 17 Nov', () => {
+    expect(leaveDeadline('2026-12')).toBe('2026-11-17');
+    expect(leaveDeadline('2026-11')).toBe('2026-10-18');
+    expect(leaveDeadline('2027-03')).toBe('2027-02-15');
   });
   it('the billing contact asks for December: it is recorded, finance and management are told, and the family sees the choices', () => {
     const r = run(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-12' }, 'f1');
     expect(leaves(r.state)).toEqual([{ month: '2026-12', at: `${T}T10:00`, by: 'family:f1' }]);
-    expect(r.result).toMatchObject({ month: '2026-12', deadline: '2026-11-16' });
+    expect(r.result).toMatchObject({ month: '2026-12', deadline: '2026-11-17' });
     for (const uid of ['s9', 's10']) expect(updatesFor(r.state, getUser({ citra: r.state }, uid)!).some((x) => x.kind === 'family.notif.leaveAsked' && x.params.month === '2026-12' && x.params.fee === 'Rp 250.000')).toBe(true);
     expect(Object.values(r.state.activity).some((a) => a.key === 'family.feed.leaveAsked' && a.memberId === 'm1')).toBe(true);
-    // the next choices start with the first month whose deadline has not passed: November's was 17 Oct
-    expect(leaveChoices(base, lina(base), T).map((c) => [c.month, c.deadline, c.ok])).toEqual([['2026-12', '2026-11-16', true], ['2027-01', '2026-12-17', true], ['2027-02', '2027-01-17', true]]);
+    // the next choices start with the first month whose deadline has not passed: November's was 18 Oct
+    expect(leaveChoices(base, lina(base), T).map((c) => [c.month, c.deadline, c.ok])).toEqual([['2026-12', '2026-11-17', true], ['2027-01', '2026-12-18', true], ['2027-02', '2027-01-18', true]]);
   });
-  it('a late request is refused with the deadline: November was due on 17 October', () => {
+  it('a late request is refused with the deadline: November was due on 18 October', () => {
     fails(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-11' }, 'f1', 'err.leaveLate');
-    try { run(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-11' }, 'f1'); } catch (e) { expect((e as { params: object }).params).toMatchObject({ deadline: '2026-10-17', month: '2026-11' }); }
+    try { run(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-11' }, 'f1'); } catch (e) { expect((e as { params: object }).params).toMatchObject({ deadline: '2026-10-18', month: '2026-11' }); }
     // the day itself is still in time
-    expect(() => run(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-11' }, 'f1', at('2026-10-17'))).not.toThrow();
-    fails(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-11' }, 'f1', 'err.leaveLate', at('2026-10-18'));
+    expect(() => run(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-11' }, 'f1', at('2026-10-18'))).not.toThrow();
+    fails(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-11' }, 'f1', 'err.leaveLate', at('2026-10-19'));
     fails(base, 'membership.requestLeave', { memberId: 'm1', month: '2026-10' }, 'f1', 'err.leaveLate'); // this month
     fails(base, 'membership.requestLeave', { memberId: 'm1', month: 'December' }, 'f1', 'err.invalid');
   });
@@ -73,8 +73,8 @@ describe('leave: who asks, how late, how many months', () => {
     const w = run(s, 'membership.withdrawLeave', { memberId: 'm1', month: '2026-12' }, 'f1');
     expect(leaves(w.state)).toEqual([]);
     expect(updatesFor(w.state, getUser({ citra: w.state }, 's9')!).some((x) => x.kind === 'family.notif.leaveWithdrawn')).toBe(true);
-    expect(() => run(s, 'membership.withdrawLeave', { memberId: 'm1', month: '2026-12' }, 'f1', at('2026-11-16'))).not.toThrow(); // the deadline day
-    fails(s, 'membership.withdrawLeave', { memberId: 'm1', month: '2026-12' }, 'f1', 'err.leaveLocked', at('2026-11-17'));
+    expect(() => run(s, 'membership.withdrawLeave', { memberId: 'm1', month: '2026-12' }, 'f1', at('2026-11-17'))).not.toThrow(); // the deadline day
+    fails(s, 'membership.withdrawLeave', { memberId: 'm1', month: '2026-12' }, 'f1', 'err.leaveLocked', at('2026-11-18'));
     fails(s, 'membership.withdrawLeave', { memberId: 'm1', month: '2027-01' }, 'f1', 'err.notFound');
     fails(s, 'membership.withdrawLeave', { memberId: 'm1', month: '2026-12' }, 'f2', 'err.forbidden');
   });

@@ -11,6 +11,7 @@ import { arr, bad, bool, dm, hm, int, isoDate, nextNumId, obj, oneOf, phone, str
 import { SURVEY_BUILTINS, SURVEY_KINDS, SURVEY_KIND_LIST, SURVEY_LIMITS, answerValue, assignQuestionIds, customOf, presetsFor, questionProblem, ratingLinkOf, ratingTokenOf, surveyKind, type SurveyKind } from '../rules/surveys';
 import { actorName } from '../rules/core';
 import { live, rp, sortBy } from '../util';
+import { NOTICE_DAYS_DEFAULT } from '../rules/notice';
 
 const mgmtOnly = (u: User) => isMgmt(u);
 /** Custom plan prices from the input: { plan_1: 2000000 }. */
@@ -785,18 +786,25 @@ export const clubActions = [
       ctx.feed({ icon: 'workspace_premium', key: 'mgmt.feed.plan', params: { name: def.name } });
     },
   }),
-  // The one club rule: how many visits a month a Flex member gets before a visit is an extra day. Counted from check-ins.
-  defineAction<{ flexQuota: number }>({
+  // The club rules: how many visits a month a Flex member gets before a visit is an extra day (counted from check-ins), and (round 16) the notice period
+  // for a downgrade, stop or leave (rules/notice.ts).
+  defineAction<{ flexQuota?: number; noticeDays?: number }>({
     name: 'club.updateSettings',
     can: mgmtOnly,
     parse(raw) {
       const o = obj(raw);
-      return { flexQuota: int(o.flexQuota, 1, 23, 'flexQuota') };
+      const out: { flexQuota?: number; noticeDays?: number } = {};
+      if (o.flexQuota !== undefined) out.flexQuota = int(o.flexQuota, 1, 23, 'flexQuota');
+      if (o.noticeDays !== undefined) out.noticeDays = int(o.noticeDays, 1, 60, 'noticeDays');
+      if (out.flexQuota === undefined && out.noticeDays === undefined) bad('err.invalid');
+      return out;
     },
     run(d, i, ctx) {
       const st = d.club.settings;
-      if (i.flexQuota === st.flexQuota) ctx.fail('err.noChanges');
-      st.flexQuota = i.flexQuota;
+      const same = (i.flexQuota === undefined || i.flexQuota === st.flexQuota) && (i.noticeDays === undefined || i.noticeDays === (st.noticeDays ?? NOTICE_DAYS_DEFAULT));
+      if (same) ctx.fail('err.noChanges');
+      if (i.flexQuota !== undefined) st.flexQuota = i.flexQuota;
+      if (i.noticeDays !== undefined) st.noticeDays = i.noticeDays;
       ctx.feed({ icon: 'tune', key: 'mgmt.feed.rules', params: { quota: st.flexQuota } });
     },
   }),

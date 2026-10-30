@@ -81,6 +81,8 @@ export interface ClubSettings {
   departureFrom: HM; // departure checks auto-queue from here
   recheckMin: number; // 15
   flexQuota: number; // 10 visits / month
+  /** KC round 16: days before a month's 1st by which a downgrade, stop or leave for that month must be asked (missing = 14; rules/notice.ts) */
+  noticeDays?: number;
   issueDay: number; // 21 (KC round 6, brochure: invoices on the 21st)
   dueDay: number; // 28 (paid within 7 days)
   finalDueDays: number; // 14

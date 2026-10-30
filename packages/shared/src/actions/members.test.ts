@@ -804,6 +804,7 @@ describe('plans from the catalogue (round 15)', () => {
   const withCatalogue = () => {
     const c = seed();
     c.citra = structuredClone(c.citra);
+    c.citra.club.settings.noticeDays = 1; // round 16: November changes on 21 October stay in time
     c.citra.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }, { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false }];
     return c;
   };

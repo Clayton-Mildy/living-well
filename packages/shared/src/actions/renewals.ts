@@ -19,7 +19,8 @@ import {
   FOLLOW_UP_OUTCOMES, defaultLastDay, followUpId, followUpOf, isApplied, isChange, lastDayOfMonth, isPlanOutcome, leaveMonthsCheck, planAfter, renewalMembers,
 } from '../rules/renewals';
 import { LEAVE_MAX_MONTHS } from '../rules/leave';
-import { addMonths, monthStart, rp, ym } from '../util';
+import { addDays, addMonths, monthStart, rp, ym } from '../util';
+import { changeKind, earliestMonth, noticeCheck, noticeDays, noticeDeadline, type NoticeKind } from '../rules/notice';
 
 export interface RecordInput {
   memberId: string;
@@ -34,6 +35,8 @@ export interface RecordInput {
 }
 
 const bad = (code: string, params?: Record<string, string | number>): never => { throw new DomainError(code, params); };
+/** Round 16: throw the notice error when a change of this kind for `month` was asked too late. */
+const notice = (s: ClubState, kind: NoticeKind, month: YM, asOf: ISODate) => { const c = noticeCheck(s, kind, month, asOf); if (!c.ok) bad(c.code, c.params); };
 const ymOf = (v: unknown): YM => (typeof v === 'string' && /^\d{4}-(0[1-9]|1[0-2])$/.test(v) ? v : bad('err.invalid'));
 
 /** The change a follow-up asks for fits the member today: throws the reason it does not. `asOf` is the day the family gave notice (leave deadline). */
@@ -43,7 +46,9 @@ export function checkChange(s: ClubState, m: Member, f: Pick<FollowUp, 'month' |
   if (!cur || membershipStatus(m, today) === 'ended') bad('members.err.alreadyEnded');
   if (isPlanOutcome(f.outcome)) {
     if (today >= first) bad('renewals.err.started');
-    if (planOn(m, first).plan === planAfter(f.outcome, f.plan)) bad('err.noChanges');
+    const to = planAfter(f.outcome, f.plan);
+    if (planOn(m, first).plan === to) bad('err.noChanges');
+    notice(s, changeKind(s, m, to, f.month), f.month, asOf);
   } else if (f.outcome === 'leave') {
     const months = f.leaveMonths ?? [];
     if (months.some((x) => x !== f.month && x !== addMonths(f.month, 1))) bad('err.invalid');
@@ -56,6 +61,10 @@ export function checkChange(s: ClubState, m: Member, f: Pick<FollowUp, 'month' |
     if (last < today) bad('members.err.lastDayPast');
     if (last < cur.start) bad('members.err.lastDayBeforeStart');
     if (last > lastDayOfMonth(f.month)) bad('renewals.err.lastDayLate');
+    notice(s, 'stop', f.month, asOf);
+    // round 16: a stop asked after the deadline ends with the month before the earliest month at the soonest
+    const earliest = earliestMonth(s, 'stop', asOf);
+    if (last < addDays(monthStart(earliest), -1)) bad('err.noticeLate', { deadline: noticeDeadline(s, ym(addDays(last, 1))), month: ym(addDays(last, 1)), earliest, days: noticeDays(s) });
   }
 }
 
