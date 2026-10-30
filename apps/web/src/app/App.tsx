@@ -11,6 +11,7 @@ import { RatePage } from '../features/rate/RatePage';
 import { PageSkeleton, EmptyState, Button } from '../components/ui';
 import { SCREENS, MemberProfileScreen, DesignSystemScreen, PublicFormScreen } from './screens';
 import { screenFor } from './nav';
+import { useClub } from '../store/replica';
 import { useT } from '../lib/i18n';
 import { routerRef } from './routerRef';
 
@@ -29,8 +30,9 @@ function DataGate({ children }: { children: ReactNode }) {
 function NavScreen() {
   const { key = 'today' } = useParams();
   const { role } = useMe();
+  const club = useClub();
   if (!role) return <PageSkeleton />;
-  const id = screenFor(role, key);
+  const id = screenFor(club, role, key);
   if (!id) return <Navigate to="/today" replace />;
   const C = SCREENS[id];
   return <C />;
@@ -38,9 +40,10 @@ function NavScreen() {
 function ProfileRoute() {
   const { role } = useMe();
   const { id } = useParams();
+  const club = useClub();
   if (!role) return <PageSkeleton />;
   if (role === 'family') return <Navigate to={`/profile?member=${encodeURIComponent(id || '')}`} replace />; // round 8: the family's own profile page
-  if (!screenFor(role, 'members')) return <Navigate to="/today" replace />;
+  if (!screenFor(club, role, 'members')) return <Navigate to="/today" replace />;
   return <MemberProfileScreen />;
 }
 function LoginRoute() {

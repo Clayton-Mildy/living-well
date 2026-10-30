@@ -1,45 +1,56 @@
 // Per-role navigation (design NAVS/NAVG/PHONE_NAV + new Reviews/Requests/Contacts items) and nav-key → screen mapping.
-import type { Role } from '@cp/shared';
+import { menuKeys, type ClubState, type Role, type StaffRole } from '@cp/shared';
 
 export interface NavItem { key: string; label: string; short: string; icon: string }
 const n = (key: string, labelKey: string, icon: string): NavItem => ({ key, label: 'nav.' + labelKey, short: 'nav.s_' + labelKey, icon });
 
-export const NAVS: Record<Role, NavItem[]> = {
-  // KC round 6: the front desk has the kitchen's Menu, view only, to see who is allergic to today's dishes
-  // KC round 7: Renewals (the month-end membership follow-up) and Tasks for the front desk
-  // round 12: Venue, because every booking comes through the front desk (the invoice stays with management and finance)
-  lobby: [n('today', 'arrivals', 'how_to_reg'), n('enquiries', 'enquiries', 'contact_phone'), n('members', 'members', 'groups'), n('menu', 'menu', 'restaurant'), n('renewals', 'renewals', 'event_repeat'), n('surveys', 'surveys', 'rate_review'), n('venue', 'venue', 'storefront'), n('tasks', 'tasks', 'checklist'), n('contacts', 'contacts', 'contacts'), n('requests', 'requests', 'add_shopping_cart')],
-  nurse: [n('today', 'health', 'monitor_heart'), n('readings', 'readings', 'monitoring'), n('members', 'members', 'groups'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
-  activity: [n('today', 'today', 'wb_sunny'), n('camera', 'camera', 'photo_camera'), n('log', 'log', 'edit_note'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
-  // KC round 6: no Stock page for F&B (Requests has the stock request; the supervisor approves there, under Team stock requests)
-  kitchen: [n('today', 'menu', 'restaurant'), n('lunch', 'lunch', 'lunch_dining'), n('feedback', 'feedback', 'forum'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
-  finance: [n('today', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart'), n('stock', 'stock', 'inventory_2'), n('guests', 'guests', 'co_present'), n('members', 'members', 'groups'), n('tasks', 'tasks', 'checklist'), n('directory', 'directory', 'contacts')], // round 7: Guests to pay the guest hosts' fees
-  mgmt: [],
-  owner: [], // round 16 (KC): the Owner's menus are management's (filled below)
-  // round 8 (Family App prototype): Today · Photos · Calendar · Health · Me; Billing and Contacts open from Me
-  family: [n('today', 'today', 'wb_sunny'), n('photos', 'photos', 'photo_library'), n('calendar', 'calShort', 'calendar_month'), n('health', 'healthF', 'favorite'), n('me', 'me', 'person')],
+// round 16 (KC): the menus come from the shared access grid (rules/access.ts). Icons and labels stay here, keyed by menu key.
+/** Each role's own Today: its label and icon say what the home screen is (Arrivals, Health, Menu, Billing…). */
+const TODAY_ITEM: Record<StaffRole, NavItem> = {
+  lobby: n('today', 'arrivals', 'how_to_reg'), nurse: n('today', 'health', 'monitor_heart'), activity: n('today', 'today', 'wb_sunny'),
+  kitchen: n('today', 'menu', 'restaurant'), finance: n('today', 'billing', 'payments'), mgmt: n('today', 'arrivals', 'how_to_reg'), owner: n('today', 'arrivals', 'how_to_reg'),
 };
-export const NAVG: Record<string, [string | null, NavItem[]][]> = {
-  mgmt: [
-    [null, [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('reviews', 'reviews', 'fact_check'), n('tasks', 'tasks', 'checklist'), n('report', 'report', 'summarize'), n('monthReport', 'monthReport', 'query_stats')]], // round 7: the daily report (management); round 12: the month report
-    ['nav.g_front', [n('enquiries', 'enquiries', 'contact_phone'), n('renewals', 'renewals', 'event_repeat')]],
-    ['nav.g_care', [n('hchecks', 'health', 'monitor_heart'), n('readings', 'readings', 'monitoring'), n('log', 'log', 'edit_note'), n('camera', 'camera', 'photo_camera')]], // the photo library is the Camera's Library tab
-    ['nav.g_kitchen', [n('menu', 'menu', 'restaurant'), n('lunch', 'lunch', 'lunch_dining'), n('feedback', 'feedback', 'forum'), n('stock', 'stock', 'inventory_2')]], // KC 28 Oct: management has the Lunch round too
-    ['nav.g_finance', [n('billing', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart')]],
-    ['nav.g_club', [n('calendar', 'calShort', 'calendar_month'), n('guests', 'guests', 'co_present'), n('insights', 'insights', 'insights'), n('broadcast', 'broadcast', 'campaign'), n('venue', 'venue', 'storefront'), n('hr', 'people', 'badge'), n('directory', 'directory', 'contacts'), n('surveys', 'surveys', 'rate_review'), n('plans', 'plans', 'sell')]],
-  ],
-};
-NAVS.mgmt = NAVG.mgmt.reduce<NavItem[]>((a, g) => a.concat(g[1]), []);
-NAVG.owner = NAVG.mgmt;
-NAVS.owner = NAVS.mgmt;
-// KC round 13 §15: every staff role's sidebar is sectioned like management's — a regrouping of the SAME items (the phone bar keeps NAVS order)
-const pick = (role: Role, keys: string[]): NavItem[] => keys.map((k) => { const x = NAVS[role].find((i) => i.key === k); if (!x) throw new Error(`nav: ${role} has no "${k}"`); return x; });
-NAVG.lobby = [[null, pick('lobby', ['today', 'members', 'tasks'])], ['nav.g_front', pick('lobby', ['enquiries', 'renewals', 'venue', 'surveys'])], ['nav.g_kitchen', pick('lobby', ['menu'])], ['nav.g_club', pick('lobby', ['contacts', 'requests'])]];
-NAVG.nurse = [[null, pick('nurse', ['today', 'readings', 'members', 'tasks'])], ['nav.g_club', pick('nurse', ['requests', 'contacts'])]];
-NAVG.activity = [[null, pick('activity', ['today', 'camera', 'log', 'tasks'])], ['nav.g_club', pick('activity', ['members', 'calendar', 'requests', 'contacts'])]];
-NAVG.kitchen = [[null, pick('kitchen', ['today', 'lunch', 'feedback', 'tasks'])], ['nav.g_club', pick('kitchen', ['requests', 'contacts'])]];
-NAVG.finance = [[null, pick('finance', ['today', 'payments', 'budget', 'receipts', 'spending'])], ['nav.g_kitchen', pick('finance', ['stock'])], ['nav.g_club', pick('finance', ['guests', 'members', 'tasks', 'directory'])]];
-export const PHONE_NAV: Partial<Record<Role, NavItem[]>> = {
+// KC round 6: the front desk has the kitchen's Menu, view only; round 7: Renewals, Tasks; round 12: Venue
+const ITEMS: Record<string, NavItem> = Object.fromEntries([
+  n('members', 'members', 'groups'), n('reviews', 'reviews', 'fact_check'), n('tasks', 'tasks', 'checklist'), n('report', 'report', 'summarize'), n('monthReport', 'monthReport', 'query_stats'),
+  n('enquiries', 'enquiries', 'contact_phone'), n('renewals', 'renewals', 'event_repeat'),
+  n('hchecks', 'health', 'monitor_heart'), n('readings', 'readings', 'monitoring'), n('log', 'log', 'edit_note'), n('camera', 'camera', 'photo_camera'),
+  n('menu', 'menu', 'restaurant'), n('lunch', 'lunch', 'lunch_dining'), n('feedback', 'feedback', 'forum'), n('stock', 'stock', 'inventory_2'),
+  n('billing', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart'),
+  n('calendar', 'calShort', 'calendar_month'), n('guests', 'guests', 'co_present'), n('insights', 'insights', 'insights'), n('broadcast', 'broadcast', 'campaign'), n('venue', 'venue', 'storefront'), n('hr', 'people', 'badge'),
+  n('directory', 'directory', 'contacts'), n('surveys', 'surveys', 'rate_review'), n('plans', 'plans', 'sell'), n('contacts', 'contacts', 'contacts'), n('requests', 'requests', 'add_shopping_cart'),
+].map((x) => [x.key, x]));
+// round 8 (Family App prototype): Today · Photos · Calendar · Health · Me; Billing and Contacts open from Me
+export const FAMILY_NAV: NavItem[] = [n('today', 'today', 'wb_sunny'), n('photos', 'photos', 'photo_library'), n('calendar', 'calShort', 'calendar_month'), n('health', 'healthF', 'favorite'), n('me', 'me', 'person')];
+
+const itemOf = (role: StaffRole, key: string): NavItem | null => (key === 'today' ? TODAY_ITEM[role] : ITEMS[key] ?? null);
+
+/** The role's sidebar and More list, flat: today, then its menus from the grid. */
+export function navFor(s: ClubState, role: Role): NavItem[] {
+  if (role === 'family') return FAMILY_NAV;
+  return menuKeys(s, role).map((k) => itemOf(role, k)).filter((x): x is NavItem => !!x);
+}
+
+// The sidebar sections are management's grouping (KC round 13 §15), applied to the role's own items; Requests and Contacts (not in management's menu) sit under Club
+const GROUPS: [string | null, string[]][] = [
+  [null, ['today', 'members', 'reviews', 'tasks', 'report', 'monthReport']],
+  ['nav.g_front', ['enquiries', 'renewals']],
+  ['nav.g_care', ['hchecks', 'readings', 'log', 'camera']], // the photo library is the Camera's Library tab
+  ['nav.g_kitchen', ['menu', 'lunch', 'feedback', 'stock']], // KC 28 Oct: management has the Lunch round too
+  ['nav.g_finance', ['billing', 'payments', 'budget', 'receipts', 'spending']],
+  ['nav.g_club', ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'contacts', 'requests']],
+];
+export function navGroups(s: ClubState, role: Role): [string | null, NavItem[]][] {
+  const all = navFor(s, role);
+  if (role === 'family') return [[null, all]];
+  const out: [string | null, NavItem[]][] = GROUPS.map(([title, keys]) => [title, keys.map((k) => all.find((i) => i.key === k)).filter((x): x is NavItem => !!x)]);
+  const placed = new Set(out.flatMap((g) => g[1].map((i) => i.key)));
+  const rest = all.filter((i) => !placed.has(i.key));
+  if (rest.length) out[out.length - 1][1].push(...rest);
+  return out.filter((g) => g[1].length);
+}
+
+const PHONE_NAV: Partial<Record<Role, NavItem[]>> = {
   mgmt: [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month')],
   owner: [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month')],
   // KC round 6: the teacher's bar has Calendar instead of Members (Members and Requests sit under More)
@@ -51,9 +62,12 @@ export const MORE: NavItem = n('more', 'more', 'menu');
 export const FAMILY_TAB_OF: Record<string, string> = { billing: 'me', contacts: 'me', profile: 'me', history: 'health', memories: 'photos' };
 
 /** Phone bottom bar: role's phone nav (≤5) or first 4 + More. */
-export function phoneNav(role: Role): { items: NavItem[]; more: boolean } {
-  if (PHONE_NAV[role]) return { items: [...PHONE_NAV[role]!, MORE], more: true };
-  const all = NAVS[role];
+export function phoneNav(s: ClubState, role: Role): { items: NavItem[]; more: boolean } {
+  const all = navFor(s, role);
+  if (PHONE_NAV[role]) { // a bar item the grid switched off drops out
+    const have = new Set(all.map((x) => x.key));
+    return { items: [...PHONE_NAV[role]!.filter((x) => have.has(x.key)), MORE], more: true };
+  }
   return all.length > 5 ? { items: [...all.slice(0, 4), MORE], more: true } : { items: all, more: false };
 }
 
@@ -70,7 +84,11 @@ const EXTRA: Partial<Record<Role, string[]>> = {
   mgmt: ['photos', 'contacts', 'drafts', 'celebrations'], // photos: old links to the standalone library
   owner: ['photos', 'contacts', 'drafts', 'celebrations'],
 };
-export const allowedKeys = (role: Role) => new Set([...NAVS[role].map((x) => x.key), ...(EXTRA[role] || [])]);
+/** The menus plus the link-only extras. A key the grid sets to Off is gone from both (round 16). */
+export const allowedKeys = (s: ClubState, role: Role) => {
+  const off = role === 'family' ? undefined : (k: string) => s.club.settings.access?.[role]?.[k] === 'off';
+  return new Set([...navFor(s, role).map((x) => x.key), ...(EXTRA[role] || []).filter((k) => !off?.(k))]);
+};
 
 export type ScreenId =
   | 'arrivals' | 'health' | 'activityToday' | 'kmenu' | 'klunch' | 'fin' | 'overview' | 'familyToday' | 'requests' | 'enq' | 'members' | 'readings' | 'camera' | 'dlog'
@@ -78,8 +96,8 @@ export type ScreenId =
   | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'monthReport' | 'drafts'
   | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts' | 'celebrations';
 
-export function screenFor(role: Role, key: string): ScreenId | null {
-  if (!allowedKeys(role).has(key)) return null;
+export function screenFor(s: ClubState, role: Role, key: string): ScreenId | null {
+  if (!allowedKeys(s, role).has(key)) return null;
   if (key === 'today') return ({ lobby: 'arrivals', nurse: 'health', activity: 'activityToday', kitchen: 'kmenu', finance: 'fin', mgmt: 'arrivals', owner: 'arrivals', family: 'familyToday' } as const)[role];
   if (role === 'family') return ({ photos: 'fphotos', health: 'familyHealth', billing: 'fbill', calendar: 'fcal', contacts: 'fcontacts', memories: 'fmemories', me: 'fme', profile: 'fprofile', history: 'fhistory' } as Record<string, ScreenId>)[key] || null;
   const map: Record<string, ScreenId> = {

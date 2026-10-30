@@ -49,7 +49,7 @@ function sign(role: 'lobby' | 'finance' | 'activity', width: number) {
   document.body.appendChild(host);
   root = createRoot(host);
 }
-async function showSearch(role: 'lobby' | 'finance' = 'finance', open = true, width = 375) {
+async function showSearch(role: 'lobby' | 'finance' | 'activity' = 'finance', open = true, width = 375) {
   sign(role, width);
   const onClose = vi.fn();
   const ui = (o: boolean) => <MemoryRouter><SuperSearch open={o} onClose={onClose} /></MemoryRouter>;
@@ -97,8 +97,9 @@ describe('SuperSearch overlay', () => {
     expect(navigate).toHaveBeenCalledWith('/today'); // finance reaches Billing through its Today key (R-P1)
   });
 
-  it('lobby types tagihan: no Billing', async () => {
-    await showSearch('lobby');
+  // round 16: the front desk now sees Billing (view), so the "no Billing" check runs for the activity teacher
+  it('activity teacher types tagihan: no Billing', async () => {
+    await showSearch('activity');
     await type('tagihan');
     expect(rows().some((r) => r.textContent!.includes('Billing'))).toBe(false);
   });

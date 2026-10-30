@@ -19,12 +19,13 @@ const DAYS_PER_PAGE = 5;
 
 export function PhotoLibrary() {
   const t = useT();
+  const club = useClub();
   const { device, isPhone } = useDevice();
   const navigate = useNavigate();
   const { role } = useMe();
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)' }}>
-      <PhotoLibraryBody title={<PageHead title={t('activity.libraryTitle')} size={36} right={role && allowedKeys(role).has('camera') ? <Button size={44} icon="photo_camera" onClick={() => navigate('/camera')}>{t('activity.openCamera')}</Button> : null} />} />
+      <PhotoLibraryBody title={<PageHead title={t('activity.libraryTitle')} size={36} right={role && allowedKeys(club, role).has('camera') ? <Button size={44} icon="photo_camera" onClick={() => navigate('/camera')}>{t('activity.openCamera')}</Button> : null} />} />
     </div>
   );
 }

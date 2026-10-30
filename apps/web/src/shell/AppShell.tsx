@@ -10,7 +10,8 @@ import { useSession } from '../store/session';
 import { useUi } from '../store/ui';
 import { memberPhoto } from '../lib/media';
 import { Avatar, Icon, IconButton, Logo, PageSkeleton, Sheet } from '../components/ui';
-import { NAVG, NAVS, phoneNav, type NavItem } from '../app/nav';
+import { navGroups, phoneNav, type NavItem } from '../app/nav';
+import { useClub } from '../store/replica';
 import { useNavCounts } from './badges';
 import { AccountSheet } from './AccountSheet';
 import { NotificationBell, NotificationPanel } from './Notifications';
@@ -30,6 +31,7 @@ export function useKeyFromPath() {
 }
 
 export function AppShell() {
+  const club = useClub();
   const { device, isPhone } = useDevice();
   const { user, role } = useMe();
   const t = useT();
@@ -70,7 +72,7 @@ export function AppShell() {
   const floatClear = isPhone ? `calc(${84 + (pins ? (quick ? 124 : 76) : quick ? 68 : 24) + fabRows}px + env(safe-area-inset-bottom, 0px))` : '0px';
   const cssVars = { '--cp-floatclear': floatClear, '--cp-body': isPhone ? '16px' : '0px', '--cp-small': isPhone ? '14px' : '0px', '--cp-tabbar': isPhone ? 'calc(86px + env(safe-area-inset-bottom, 0px))' : '0px' } as CSSProperties;
   const go = (k: string) => (k === 'more' ? setMore(true) : navigate('/' + k));
-  const groups: [string | null, NavItem[]][] = NAVG[role] || [[null, NAVS[role as Role]]];
+  const groups: [string | null, NavItem[]][] = navGroups(club, role); // round 16: the menus come from the access grid
   // round 6: a member profile is a pushed screen on a phone; it brings its own top bar (‹ Members), so the logo header steps aside
   const pushed = isPhone && /^\/members\/[^/]+/.test(pathname);
   return (
@@ -217,7 +219,7 @@ export function SignOutButton({ dark }: { dark?: boolean }) {
  *  label; the others are icons (their names are the buttons' labels). A count shows as a small rust badge on the icon; More opens All modules. */
 function BottomNav({ role, current, counts, onGo }: { role: Role; current: string; counts: Record<string, number>; onGo: (k: string) => void }) {
   const t = useT();
-  const { items } = phoneNav(role);
+  const { items } = phoneNav(useClub(), role);
   const inBar = new Set(items.map((x) => x.key));
   return (
     <nav aria-label="Main" data-testid="staff-tabbar" style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(14px + env(safe-area-inset-bottom, 0px))', margin: '0 auto', width: 'calc(100% - 28px)', zIndex: 30, height: 64, borderRadius: 32, background: 'rgba(255,255,255,.96)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: '0 1px 2px rgba(60,40,20,.06), 0 14px 34px rgba(60,40,20,.14)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', boxSizing: 'border-box' }}>

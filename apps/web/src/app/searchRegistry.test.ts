@@ -2,7 +2,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildSeed, displayName, hasKey, translate, type Role } from '@cp/shared';
 import { rank } from '../lib/search';
-import { NAVS, allowedKeys, screenFor } from './nav';
+import { allowedKeys, navFor, screenFor } from './nav';
 import { ACTION_ENTRIES, SCREEN_ENTRIES, buildSearchIndex } from './searchRegistry';
 
 const s = buildSeed().citra;
@@ -76,7 +76,7 @@ describe('every result opens a screen the role may open', () => {
   it.each(STAFF)('%s: the first path segment passes screenFor', (role) => {
     for (const i of idx(role)) {
       const seg = i.to.split('?')[0]!.split('/').filter(Boolean)[0]!;
-      expect(screenFor(role, seg), `${role}: ${i.id} -> ${i.to}`).not.toBeNull();
+      expect(screenFor(s, role, seg), `${role}: ${i.id} -> ${i.to}`).not.toBeNull();
     }
   });
 });
@@ -121,13 +121,13 @@ describe('results', () => {
 describe('registry completeness', () => {
   it('every nav key of every staff role has a screen entry', () => {
     const have = new Set(SCREEN_ENTRIES.map((e) => e.key));
-    for (const r of STAFF) for (const n of NAVS[r]) expect(have.has(n.key), `${r}:${n.key}`).toBe(true);
+    for (const r of STAFF) for (const n of navFor(s, r)) expect(have.has(n.key), `${r}:${n.key}`).toBe(true);
   });
   it('every screen and action entry has keywords in both languages', () => {
     for (const e of [...SCREEN_ENTRIES, ...ACTION_ENTRIES]) { expect(e.keywords.en.length).toBeGreaterThan(0); expect(e.keywords.id.length).toBeGreaterThan(0); }
   });
   it('screen items only for keys the role may open', () => {
-    for (const r of STAFF) for (const i of idx(r).filter((x) => x.group === 'screens')) expect(allowedKeys(r).has(i.id.slice(7))).toBe(true);
+    for (const r of STAFF) for (const i of idx(r).filter((x) => x.group === 'screens')) expect(allowedKeys(s, r).has(i.id.slice(7))).toBe(true);
   });
 });
 

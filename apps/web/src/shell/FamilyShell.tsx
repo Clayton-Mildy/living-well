@@ -5,7 +5,7 @@
 import { Suspense, useCallback, useEffect, useRef, useState } from 'react';
 import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Icon, Logo, PageSkeleton } from '../components/ui';
-import { FAMILY_TAB_OF, NAVS } from '../app/nav';
+import { FAMILY_TAB_OF, FAMILY_NAV } from '../app/nav';
 import { familyBill } from '@cp/shared/rules/familyMe';
 import { useT } from '../lib/i18n';
 import { useMe } from '../lib/me';
@@ -102,7 +102,7 @@ function FamSidebar({ current, onBell }: { current: string; onBell: () => void }
       </div>
       {/* KC round 8d: the same five as the phone's tab bar (Billing and Contacts open from Me, which shows what is due) */}
       <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', gap: 2 }}>
-        {NAVS.family.map((n) => item(n.key, n.icon, t(n.short), n.key === 'me' && due ? t('fam.due', { n: due }) : undefined))}
+        {FAMILY_NAV.map((n) => item(n.key, n.icon, t(n.short), n.key === 'me' && due ? t('fam.due', { n: due }) : undefined))}
       </div>
       <button type="button" onClick={() => navigate('/me')} data-testid="fam-account" className="cp-press"
         style={{ display: 'flex', alignItems: 'center', gap: 10, padding: 10, borderRadius: 16, background: '#FFFFFF', border: 'none', cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left', flex: 'none' }}>
@@ -123,7 +123,7 @@ function FamTabBar({ current }: { current: string }) {
   return (
     <nav aria-label="Main" data-testid="fam-tabbar"
       style={{ position: 'fixed', left: 0, right: 0, bottom: 'calc(22px + env(safe-area-inset-bottom, 0px))', margin: '0 auto', width: 'calc(100% - 28px)', maxWidth: 440, zIndex: 30, height: 64, borderRadius: 32, background: 'rgba(255,255,255,.94)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)', boxShadow: '0 1px 2px rgba(60,40,20,.06), 0 14px 34px rgba(60,40,20,.16)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 8px', boxSizing: 'border-box' }}>
-      {NAVS.family.map((n) => {
+      {FAMILY_NAV.map((n) => {
         const on = current === n.key;
         // the bell lives on Today: elsewhere a small dot on Today's icon says something is new
         const dot = !on && n.key === 'today' && count > 0;

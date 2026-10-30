@@ -8,3 +8,4 @@ export * from './leave';
 export * from './budget';
 export * from './surveys';
 export * from './mood';
+export * from './access';

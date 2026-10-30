@@ -2,7 +2,7 @@
 // and the role-gated index built from it and from the synced club state. Ranking lives in lib/search.ts.
 import { approvedMembers, displayName, invoiceTotal, live, memberName, planLabel, rp, type ClubState, type Lang, type Role } from '@cp/shared';
 import type { SearchItem } from '../lib/search';
-import { NAVS, allowedKeys } from './nav';
+import { allowedKeys, navFor } from './nav';
 
 export interface ScreenEntry { key: string; label: string; icon: string; keywords: { en: string[]; id: string[] } }
 export interface ActionEntry { id: string; label: string; icon: string; roles: Role[]; to: (role: Role) => string; keywords: { en: string[]; id: string[] } }
@@ -62,25 +62,26 @@ export const ACTION_ENTRIES: ActionEntry[] = [
 const TODAY_ROW: Record<string, string> = { 'nav.menu': 'menu', 'nav.billing': 'billing', 'nav.health': 'hchecks' };
 
 /** Where "Billing" is for a role: finance's Billing is its `today`, management's is `billing`; null when the role has none. */
-const billingPath = (role: Role): string | null => {
-  const keys = allowedKeys(role);
+const billingPath = (s: ClubState, role: Role): string | null => {
+  const keys = allowedKeys(s, role);
   return role === 'finance' && keys.has('today') ? '/today' : keys.has('billing') ? '/billing' : null;
 };
 /** The role's Menu screen: the kitchen reaches it through `today`. */
-const menuPath = (role: Role): string | null => (allowedKeys(role).has('menu') ? '/menu' : role === 'kitchen' ? '/today' : null);
+const menuPath = (s: ClubState, role: Role): string | null => (allowedKeys(s, role).has('menu') ? '/menu' : role === 'kitchen' ? '/today' : null);
 
 const kw = (k: { en: string[]; id: string[] }) => [...k.en, ...k.id];
 type T = (k: string, p?: Record<string, string | number>) => string;
 
 export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'en'): SearchItem[] {
-  const keys = allowedKeys(role);
+  const keys = allowedKeys(s, role);
+  const navItems = navFor(s, role);
   const out: SearchItem[] = [];
   const rows = new Map(SCREEN_ENTRIES.map((e) => [e.key, e]));
 
   // Screens: the role's own nav label wins ("today" is Arrivals, Menu or Billing); a today key carries its own screen's keywords
   for (const e of SCREEN_ENTRIES) {
     if (!keys.has(e.key)) continue;
-    const nav = NAVS[role].find((n) => n.key === e.key);
+    const nav = navItems.find((n) => n.key === e.key);
     const label = nav?.label ?? e.label;
     const row = e.key === 'today' ? rows.get(TODAY_ROW[label] ?? 'today')! : e;
     out.push({ id: 'screen:' + e.key, group: 'screens', label: t(label), icon: nav?.icon ?? row.icon, to: '/' + e.key, terms: kw(row.keywords) });
@@ -108,7 +109,7 @@ export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'e
   if (keys.has('guests')) for (const h of live(s.guestHosts)) out.push({ id: 'host:' + h.id, group: 'people', label: h.name, sub: h.what, icon: 'co_present', to: '/guests', terms: [h.what] });
 
   // Records
-  const bill = billingPath(role);
+  const bill = billingPath(s, role);
   if (bill) {
     for (const inv of live(s.invoices)) {
       if (inv.voided) continue;
@@ -123,7 +124,7 @@ export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'e
   if (keys.has('enquiries')) {
     for (const e of live(s.enquiries)) out.push({ id: 'lead:' + e.id, group: 'records', label: e.senior.name, sub: t('enq.stage.' + e.stage), icon: 'contact_phone', to: '/enquiries?e=' + e.id, terms: [e.senior.name, e.contact.name] });
   }
-  const menu = menuPath(role);
+  const menu = menuPath(s, role);
   if (menu) for (const d of live(s.dishes)) out.push({ id: 'dish:' + d.id, group: 'records', label: d.name, sub: t('kitchen.course.' + d.course), icon: 'restaurant', to: menu, terms: [] });
   if (keys.has('calendar')) {
     for (const a of live(s.activities)) {
