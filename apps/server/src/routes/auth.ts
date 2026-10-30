@@ -3,7 +3,7 @@
 // The bare `x-user-id` header is NOT trusted unless CP_TRUST_USER_HEADER=1 (set by scripts/e2e-all.sh and the server tests, never in production).
 import type { Context, Hono } from 'hono';
 import { HTTPException } from 'hono/http-exception';
-import { accessState, canAccessClub, findAccount, isMgmt, type User } from '@cp/shared';
+import { accessState, canAccessClub, findAccount, isMgmt, isOwner, type User } from '@cp/shared';
 import { getClubs, userById } from '../state';
 import { signToken, verifyToken } from '../auth';
 import { DEFAULT_PASSWORD, MAX_PASSWORD, MIN_PASSWORD, burnHash, credentialByUser, credentialByUsername, hashPassword, normUsername, scrubError, setPasswordHash, verifyPassword } from '../db/credentials';
@@ -101,6 +101,7 @@ export function registerAuthRoutes(app: Hono) {
     const cred = acct ? await credentialByUser(userId) : undefined;
     if (!acct || !cred) return c.json({ code: 'err.notFound' }, 404);
     if (!canAccessClub(u, acct.clubId)) return c.json({ code: 'err.forbidden' }, 403);
+    if (getClubs()[acct.clubId]?.staff[userId]?.role === 'owner' && !isOwner(u)) return c.json({ code: 'err.forbidden' }, 403); // round 16: only the Owner resets the Owner's password
     await setPasswordHash(userId, await hashPassword(DEFAULT_PASSWORD));
     return c.json({ ok: true, username: cred.username, defaultPassword: DEFAULT_PASSWORD });
   });

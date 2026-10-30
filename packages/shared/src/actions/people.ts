@@ -1,7 +1,7 @@
 // People: real staff records (profile, contract, KTP, pay, app access), HR notes and staff time entries. Management only.
 import type { Draft } from 'immer';
 import type { ClubState, ISODate, Staff, StaffHr, StaffRole, User } from '../types';
-import { defineAction, isMgmt, isOwner, type Ctx } from './framework';
+import { defineAction, isMgmt, isOwner, ownerRowGuard, type Ctx } from './framework';
 import { BANKS, CONTRACTS, HR_NOTE_KINDS, STAFF_ROLES, TIME_KINDS, staffTimeId } from '../rules/mgmt';
 import { bad, bool, hm, int, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { live } from '../util';
@@ -60,6 +60,7 @@ function checkContract(hr: StaffHr, ctx: Ctx) {
 function staffRow(d: Draft<ClubState>, id: string, ctx: Ctx) {
   const st = d.staff[id];
   if (!st || st.deletedAt || st.id === 'system') ctx.fail('err.notFound');
+  ownerRowGuard(st, ctx);
   return st;
 }
 
@@ -190,6 +191,7 @@ export const peopleActions = [
     parse: (raw) => ({ noteId: id80(obj(raw).noteId, 'noteId') }),
     run(d, i, ctx) {
       const n = need(d.hrNotes[i.noteId], ctx);
+      ownerRowGuard(d.staff[n.staffId], ctx);
       if (n.deletedAt) ctx.fail('err.notFound');
       n.deletedAt = ctx.nowDT;
     },
@@ -225,6 +227,7 @@ export const peopleActions = [
     run(d, i, ctx) {
       const id = staffTimeId(i.staffId, i.date);
       const cur = need(d.staffTime[id], ctx);
+      ownerRowGuard(d.staff[i.staffId], ctx);
       if (cur.deletedAt) ctx.fail('err.notFound');
       cur.deletedAt = ctx.nowDT;
     },

@@ -1,6 +1,6 @@
 // The signed-in user: session (public) + full User from the club state.
 import { useMemo } from 'react';
-import { roleOf, type Role, type User } from '@cp/shared';
+import { roleOf, screenRole, type Role, type User } from '@cp/shared';
 import { useSession } from '../store/session';
 import { useReplica, userIn } from '../store/replica';
 
@@ -13,6 +13,6 @@ export function useMe(): { user: User | null; role: Role | null; realRole: Role 
     if (!id || !view) return { user: null, role: null, realRole: null, id };
     const u = userIn(view, id, self);
     const real = u ? roleOf(u) : null;
-    return { user: u, role: real === 'owner' ? 'mgmt' : real, realRole: real, id };
+    return { user: u, role: real && screenRole(real), realRole: real, id };
   }, [id, view, self]);
 }

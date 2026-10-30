@@ -152,6 +152,8 @@ describe('auth: change and reset password', () => {
     expect((await reset('f2', await tokenOf('caca'))).status).toBe(403); // lobby
     expect((await reset('f2', await tokenOf('fransiska'))).status).toBe(403); // finance
     expect((await reset('f2', await tokenOf('maria'))).status).toBe(403); // family
+    expect((await reset('s11', await tokenOf('ega'))).status).toBe(403); // round 16: management cannot reset the Owner's password
+    expect((await reset('s11', await tokenOf('benjamin'))).status).toBe(200); // the Owner can reset his own
     expect((await login('daniel', 'a-new-secret')).status).toBe(200); // still the changed password
     const mgmt = await tokenOf('ega');
     const r = await reset('f2', mgmt);

@@ -1,7 +1,7 @@
 // Notification centre: "Needs action" items are derived from state (they clear themselves when handled);
 // "Updates" are stored Notification rows with per-user read state.
 import type { ClubState, DT, ISODate, Notification, Role, User } from './types';
-import { roleOf } from './actions/framework';
+import { roleOf, screenRole } from './actions/framework';
 import { live, sortBy, toMin, addDays, ym } from './util';
 import { lobbyGroups, guestsOn } from './rules/attendance';
 import { todayReading, validReadings } from './rules/health';
@@ -30,7 +30,7 @@ const HOME_KEY: Partial<Record<Role, string>> = { lobby: 'arrivals', mgmt: 'arri
 const linkTo = (role: Role, key: string, query = '') => (HOME_KEY[role] === key ? '/today' : '/' + key) + query;
 
 export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: number): ActionItem[] {
-  const role = roleOf(user) === 'owner' ? 'mgmt' : roleOf(user); // round 16 (KC): the Owner sees what management sees
+  const role = screenRole(roleOf(user)); // round 16 (KC): the Owner sees what management sees
   const out: ActionItem[] = [];
   const at = (d: DT | undefined) => d || `${today}T00:00`;
   const add = (x: ActionItem) => out.push(x);
@@ -117,7 +117,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
   if (user.kind === 'staff') {
     // KC round 7: a general duty that is late (a session picture, the lunch photo, a round of the daily log, the checks…) reminds the person on duty, and only them;
     // it clears itself when the duty is done. Management switches duties off or retimes them in Tasks > Manage.
-    for (const r of dutyReminders(s, user.staff.role, today, nowMin)) add({ id: r.id, kind: r.kind, params: r.params, link: r.link, severity: 'attention', at: r.at });
+    for (const r of dutyReminders(s, screenRole(user.staff.role), today, nowMin)) add({ id: r.id, kind: r.kind, params: r.params, link: r.link, severity: 'attention', at: r.at });
   }
   if (role === 'kitchen' || role === 'mgmt') {
     for (const c of conflictsOn(s, today).filter((x) => !x.plan)) {

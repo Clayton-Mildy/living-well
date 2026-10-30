@@ -72,6 +72,16 @@ export const roleOf = (u: User): Role => (u.kind === 'staff' ? u.staff.role : 'f
 export const actorOf = (u: User): Actor => (u.kind === 'staff' ? `staff:${u.id}` : `family:${u.id}`);
 // round 16 (KC): the Owner (Benjamin Cass) is management and more
 export const isOwner = (u: User) => u.kind === 'staff' && u.staff.role === 'owner';
+/** round 16 (KC): the role screens and rules treat a user as: the Owner acts as management. One mapping for every place that needs it. */
+export function screenRole(role: StaffRole): StaffRole;
+export function screenRole(role: Role): Role;
+export function screenRole(role: Role): Role {
+  return role === 'owner' ? 'mgmt' : role;
+}
+/** round 16 (KC): management can no longer edit the Owner's staff row (or anything hanging off it); only the Owner does. Call it in every action that targets another person's staff row. */
+export const ownerRowGuard = (st: { role: StaffRole } | undefined, ctx: { user: User; fail: (code: string) => never }) => {
+  if (st && st.role === 'owner' && !isOwner(ctx.user)) ctx.fail('err.forbidden');
+};
 export const isMgmt = (u: User) => u.kind === 'staff' && (u.staff.role === 'mgmt' || u.staff.role === 'owner');
 export const hasRole = (u: User, ...roles: Role[]) => roles.includes(roleOf(u)) || (roles.includes('mgmt') && isOwner(u));
 export const isStaff = (u: User) => u.kind === 'staff';
@@ -90,7 +100,7 @@ export function makeCtx(user: User, clubId: string, clock: ClockInfo, mutationId
   const ctx: Ctx & { _pending: typeof pending } = {
     user,
     actor: user.id === 'system' ? 'system' : actorOf(user),
-    role: roleOf(user) === 'owner' ? 'mgmt' : roleOf(user), // round 16 (KC): the Owner acts as management (use isOwner for the owner-only parts)
+    role: screenRole(roleOf(user)), // round 16 (KC): the Owner acts as management (use isOwner for the owner-only parts)
     clubId,
     today: clock.today,
     nowMin: clock.nowMin,

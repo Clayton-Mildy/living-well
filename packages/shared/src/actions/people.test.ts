@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { isMgmt, isOwner, hasRole, roleOf, updatesFor, buildSeed, execute, getUser, findByPhone, live, activeStaff, actionItems, DomainError, type ClubState } from '../index';
+import { dutyReminders } from '../rules/tasks';
 import { contractState, hoursLabel, minutesBetween, staffList, staffRating, staffTimeFor } from '../rules/mgmt';
 
 const T = '2026-10-21';
@@ -36,6 +37,23 @@ describe('the Owner (round 16)', () => {
     const s = seed();
     s.notifications['nt-own'] = { id: 'nt-own', clubId: s.clubId, createdAt: `${T}T09:00`, createdBy: 'system', toUsers: [], toRoles: ['mgmt'], kind: 'x', params: {}, severity: 'info', action: false, readBy: [] } as never;
     expect(updatesFor(s, user(s, 's11')).map((n) => n.id)).toContain('nt-own');
+  });
+  it('management cannot touch the Owner\'s staff row; the Owner edits himself', () => {
+    const s = seed();
+    fails(s, 'staff.update', { staffId: 's11', hr: { salary: 1 } }, 'err.forbidden', 's9');
+    fails(s, 'staff.deactivate', { staffId: 's11' }, 'err.forbidden', 's9');
+    fails(s, 'staff.setAppAccess', { staffId: 's11', on: false }, 'err.forbidden', 's9');
+    fails(s, 'hrNote.add', { staffId: 's11', kind: 'note', text: 'x' }, 'err.forbidden', 's9');
+    fails(s, 'staffTime.upsert', { staffId: 's11', date: T, kind: 'worked', from: '08:00', to: '17:00' }, 'err.forbidden', 's9');
+    expect(run(s, 'staff.update', { staffId: 's11', hr: { salary: 36000000 } }, 's11').state.staff.s11.hr.salary).toBe(36000000);
+  });
+  it('the Owner gets the same duty reminders as management', () => {
+    const s = seed();
+    const now = 23 * 60;
+    const ids = (id: string) => actionItems(s, user(s, id), T, now).map((x) => x.id).sort();
+    expect(ids('s11')).toEqual(ids('s9'));
+    // (management's own duties ring no bell today, so this pins the mapping rather than a count)
+    for (const r of dutyReminders(s, 'mgmt', T, now)) expect(ids('s11')).toContain(r.id);
   });
   it('only the Owner gives the Owner role', () => {
     const s = seed();

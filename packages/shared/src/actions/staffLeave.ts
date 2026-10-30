@@ -2,7 +2,7 @@
 // Approval writes one `leave` StaffTime row per open day, so the team and duty views see who is away. Management decides its own request (one manager in the club).
 import type { Draft } from 'immer';
 import type { ClubState, LeaveRequest, User } from '../types';
-import { defineAction, isMgmt, isStaff, type Ctx } from './framework';
+import { defineAction, isMgmt, isStaff, ownerRowGuard, type Ctx } from './framework';
 import { staffTimeId } from '../rules/mgmt';
 import { leaveBalance, leaveDates } from '../rules/staffLeave';
 import { bad, bool, dm, isoDate, obj, str } from '../rules/mgmtParse';
@@ -14,6 +14,7 @@ const S = (d: Draft<ClubState>) => d as unknown as ClubState;
 function request(d: Draft<ClubState>, id: string, ctx: Ctx): Draft<LeaveRequest> {
   const r = d.leaveRequests?.[id];
   if (!r || r.deletedAt) ctx.fail('err.notFound');
+  ownerRowGuard(d.staff[r.staffId], ctx); // round 16: only the Owner decides or cancels the Owner's leave
   return r;
 }
 const nameOf = (d: Draft<ClubState>, staffId: string) => d.staff[staffId]?.knownAs || d.staff[staffId]?.name.split(' ')[0] || staffId;
