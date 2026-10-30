@@ -117,7 +117,7 @@ export const mgmt: Same<typeof EN> = {
   plan_registration: 'Pendaftaran', plan_trial: 'Percobaan', plan_leave: 'Cuti', plDementia: 'Perawatan demensia', perOnce: 'Sekali saja', perTrial: 'Untuk 2 hari berturut-turut',
   plRegWhen: 'Ditagih', plRegWhenV: 'Di invoice pertama', plRegAgain: 'Lagi setelah', plRegAgainV: 'Dihentikan karena invoice belum dibayar',
   plTrialDays: 'Lama', plTrialDaysV: '2 hari berturut-turut', plTrialCollect: 'Dibayar', plTrialCollectV: 'Di meja depan',
-  plLeaveBilled: 'Ditagih', plLeaveBilledV: 'Sebagai pengganti paket', plLeaveAsk: 'Diajukan', plLeaveAskV: '14 hari sebelum bulan berakhir',
+  plLeaveBilled: 'Ditagih', plLeaveBilledV: 'Sebagai pengganti paket', plLeaveAsk: 'Diajukan', plLeaveAskV: '{n} hari sebelum tanggal 1', plLeaveAskVOne: '{n} hari sebelum tanggal 1', plNoticeL: 'Masa pemberitahuan (hari)', plNoticeHint: 'Untuk turun paket, berhenti, atau cuti. Naik paket tidak perlu.', 'err.noticeInvalid': 'Gunakan bilangan bulat 1 sampai 60.',
 
   // ----- KC round 7: templat survei, riwayat survei, survei venue, dan tautan penilaian untuk penyewa -----
   svTabLive: 'Aktif', svTabDrafts: 'Draf', svTabTemplates: 'Templat', svTabLog: 'Riwayat', svKind_family: 'Keluarga', svKind_venue: 'Penyewa venue',

@@ -6,7 +6,8 @@ import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { actorName, flexMonth, fmtPhone, listName, memberName, displayName, monthStart, planLabel, waUrl, ym, type FollowUpOutcome, type Plan, type YM } from '@cp/shared';
 import { END_REASONS } from '@cp/shared/rules/members';
-import { canRecord, defaultLastDay, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthChoices, leaveMonthsCheck, outcomeChoices, renewalMembers, renewalRows } from '@cp/shared/rules/renewals';
+import { changeKind, noticeCheck } from '@cp/shared/rules/notice';
+import { canRecord, defaultLastDay, followUpOf, isApplied, isChange, lastDayOfMonth, leaveMonthChoices, leaveMonthsCheck, outcomeChoices, planAfter, renewalMembers, renewalRows } from '@cp/shared/rules/renewals';
 import { Avatar, Button, Chip, DateField, GROUP_HEAD, Icon, Note, PhoneScreen, Select, Sheet, TextField } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
@@ -67,22 +68,27 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
   const [target, setTarget] = useState<Plan | null>(() => (f && f.status !== 'rejected' && f.outcome === 'switch' ? f.plan ?? null : null));
   const firstLeave = useMemo(() => leaveMonthChoices(month).find((x) => m && leaveMonthsCheck(s, m, [x], today).ok), [s, m, month, today]);
   const [leaveSel, setLeaveSel] = useState<YM[]>(() => f?.leaveMonths ?? (firstLeave ? [firstLeave] : []));
-  const [lastDay, setLastDay] = useState(() => f?.lastDay ?? defaultLastDay(month));
+  const [lastDay, setLastDay] = useState<string | null>(() => f?.lastDay ?? null);
   const [reason, setReason] = useState<string>(() => f?.endReason ?? 'familyDecision');
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   if (!m || !row) return null;
 
-  const first = monthStart(month);
+  // round 16: a downgrade or a stop asked after the notice deadline is recorded for the earliest month it can start in (leave keeps its own month choice)
+  const kind = outcome === 'stop' ? 'stop' : outcome === 'upgrade' || outcome === 'downgrade' || outcome === 'switch' ? changeKind(s, m, planAfter(outcome, target ?? undefined), month) : null;
+  const late = kind ? noticeCheck(s, kind, month, today) : null;
+  const recMonth: YM = late && !late.ok ? late.params.earliest : month;
+  const first = monthStart(recMonth);
+  const stopDay = lastDay ?? defaultLastDay(recMonth);
   const fm = flexMonth(s, m, ym(today), today);
   const leaveCheck = outcome === 'leave' ? leaveMonthsCheck(s, m, leaveSel, today) : null;
-  const stopOk = outcome !== 'stop' || (/^\d{4}-\d{2}-\d{2}$/.test(lastDay) && lastDay >= today && lastDay <= lastDayOfMonth(month));
+  const stopOk = outcome !== 'stop' || (/^\d{4}-\d{2}-\d{2}$/.test(stopDay) && stopDay >= today && stopDay <= lastDayOfMonth(recMonth));
   const canSave = editable && !!outcome && (outcome !== 'switch' || !!target) && (!leaveCheck || leaveCheck.ok) && stopOk && !busy;
 
   const save = async () => {
     if (!outcome || !canSave) return;
     setBusy(true);
-    const input = { memberId, month, outcome, ...(outcome === 'switch' && target ? { plan: target } : {}), ...(note.trim() ? { note: note.trim() } : {}), ...(outcome === 'leave' ? { leaveMonths: leaveSel } : {}), ...(outcome === 'stop' ? { lastDay, endReason: reason } : {}) };
+    const input = { memberId, month: recMonth, outcome, ...(outcome === 'switch' && target ? { plan: target } : {}), ...(note.trim() ? { note: note.trim() } : {}), ...(outcome === 'leave' ? { leaveMonths: leaveSel } : {}), ...(outcome === 'stop' ? { lastDay: stopDay, endReason: reason } : {}) };
     const name = displayName(m);
     const r = await act('followUp.record', input, { ok: (res) => (res.status === 'done' && isChange(outcome) ? t('renewals.savedApplied', { name, date: first }) : t('renewals.saved', { name })) });
     setBusy(false);
@@ -159,7 +165,7 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
   ) : null;
   const stopBox = outcome === 'stop' ? (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-      <DateField label={t('renewals.lastDay')} value={lastDay} onChange={setLastDay} min={today} max={lastDayOfMonth(month)} error={stopOk ? false : t('members.err.lastDayPast')} />
+      <DateField label={t('renewals.lastDay')} value={stopDay} onChange={setLastDay} min={today} max={lastDayOfMonth(recMonth)} error={stopOk ? false : t('members.err.lastDayPast')} />
       <Select label={t('renewals.reason')} value={reason} onChange={setReason} options={END_REASONS.map((r) => ({ value: r, label: t(`profile.endReason.${r}`) }))} />
     </div>
   ) : null;
@@ -172,6 +178,7 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
           </Chip>
         ))}
       </div>
+      {late && !late.ok ? <span data-testid="notice-late" style={{ fontSize: 13, color: '#6B6259', lineHeight: '19px' }}>{t('renewals.noticeLate', { month: fmt.fmonth(month), earliest: fmt.fmonth(recMonth) })}</span> : null}
       {leaveMonthsBox}
       {stopBox}
       <TextField label={t('common.note')} value={note} onChange={setNote} multiline rows={2} placeholder={t('renewals.notePh')} maxLength={400} />

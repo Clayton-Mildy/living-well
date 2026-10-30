@@ -115,7 +115,7 @@ export const mgmt = {
   plan_registration: 'Registration', plan_trial: 'Trial', plan_leave: 'Leave (cuti)', plDementia: 'Dementia care', perOnce: 'One time', perTrial: 'For 2 days in a row',
   plRegWhen: 'Charged', plRegWhenV: 'On the first invoice', plRegAgain: 'Again after', plRegAgainV: 'A stop for an unpaid invoice',
   plTrialDays: 'Length', plTrialDaysV: '2 days in a row', plTrialCollect: 'Collected', plTrialCollectV: 'At the front desk',
-  plLeaveBilled: 'Billed', plLeaveBilledV: 'Instead of the plan', plLeaveAsk: 'Asked', plLeaveAskV: '14 days before the month ends',
+  plLeaveBilled: 'Billed', plLeaveBilledV: 'Instead of the plan', plLeaveAsk: 'Asked', plLeaveAskV: '{n} days before the 1st', plLeaveAskVOne: '{n} day before the 1st', plNoticeL: 'Notice period (days)', plNoticeHint: 'For a downgrade, stop or leave. Upgrades need none.', 'err.noticeInvalid': 'Use a whole number from 1 to 60.',
 
   // ----- KC round 7: survey templates, the survey log, venue surveys and the renter's rating link -----
   svTabLive: 'Live', svTabDrafts: 'Drafts', svTabTemplates: 'Templates', svTabLog: 'Log', svKind_family: 'Families', svKind_venue: 'Venue renters',

@@ -175,6 +175,17 @@ describe('family Billing', () => {
     await act(async () => { send.click(); });
     expect(acts.at(-1)).toMatchObject({ name: 'planChange.request', input: { memberId: 'm1', to: 'gold' } });
   });
+  it('round 16: a move to a cheaper plan after the notice deadline starts the month after, and the sheet says why', async () => {
+    open('f1');
+    const v = structuredClone(useReplica.getState().view!);
+    v.members.m1.plans.push({ from: '2020-01-02', plan: 'gold', by: 'staff:s9' });
+    useReplica.setState({ view: v, confirmed: v });
+    await show(<PlanAsk m={v.members.m1} />, '/profile');
+    await act(async () => { q('[data-testid="plan-ask-link"]')!.click(); });
+    const sheet = q('[data-testid="plan-sheet"]')!;
+    expect(sheet.textContent).toContain('It starts on Tuesday 1 December');
+    expect(q('[data-testid="plan-notice"]')?.textContent).toBe("Moving to a cheaper plan needs 14 days' notice before the 1st.");
+  });
 });
 
 describe('family Contacts', () => {

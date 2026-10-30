@@ -446,8 +446,6 @@ export const membersActions: ActionDef[] = [
       // a replay of an older gated change on approval (actor is the submitter, not the approving manager) may land after the 1st it asked for: back-date to that 1st
       const replay = ctx.actor !== actorOf(ctx.user);
       if (effective < (replay && effective.endsWith('-01') ? effective : ctx.today)) ctx.fail('members.err.effectiveInvalid');
-      // the replay on approval runs as management, so this only bites when the desk submits
-      if (roleOf(ctx.user) === 'lobby' && effective !== firstOfNextMonth(ctx.today)) ctx.fail('members.err.effectiveInvalid');
       const cur = planOn(m as Member, effective);
       if (cur.plan === input.plan) ctx.fail('err.noChanges');
       // round 16: a downgrade needs the notice period (a replay on approval was checked when it was asked)
@@ -456,6 +454,8 @@ export const membersActions: ActionDef[] = [
         const kind = changeKind(s, m as Member, input.plan, ym(effective));
         const earliest = earliestMonth(s, kind, ctx.today);
         if (kind === 'downgrade' && effective < monthStart(earliest)) ctx.fail('err.noticeLate', { deadline: noticeDeadline(s, ym(effective)), month: ym(effective), earliest, days: noticeDays(s) });
+        // the front desk changes a plan from one date only: the first 1st it can start on (next month, or later for a late downgrade)
+        if (roleOf(ctx.user) === 'lobby' && effective !== monthStart(earliestMonth(s, changeKind(s, m as Member, input.plan, ym(firstOfNextMonth(ctx.today))), ctx.today))) ctx.fail('members.err.effectiveInvalid');
       }
       addPlanEntry(m, { from: effective, plan: input.plan, by: ctx.actor }, ctx.today);
       for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending' && r.to === input.plan) { r.status = 'applied'; r.decidedBy = ctx.actor; r.decidedAt = ctx.nowDT; }

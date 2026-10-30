@@ -824,3 +824,13 @@ describe('plans from the catalogue (round 15)', () => {
     expect(() => run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'plan_9', effective: '2026-11-01' }, who(c, 's9'))).toThrow('members.err.planInvalid');
   });
 });
+
+describe('round 16: a downgrade from the profile needs the notice period', () => {
+  it('on 21 October a downgrade from 1 November is too late; from 1 December it goes through, for the front desk too', () => {
+    const c = seed();
+    expect(() => run(c.citra, 'members.changePlan', { memberId: 'm2', plan: 'flex', effective: '2026-11-01' }, who(c, 's9'))).toThrow('err.noticeLate');
+    expect(run(c.citra, 'members.changePlan', { memberId: 'm2', plan: 'flex', effective: '2026-12-01' }, who(c, 's1')).state.members.m2.plans.at(-1)).toMatchObject({ plan: 'flex', from: '2026-12-01' });
+    // an upgrade keeps the next 1st
+    expect(run(c.citra, 'members.changePlan', { memberId: 'm1', plan: 'gold', effective: '2026-11-01' }, who(c, 's1')).state.members.m1.plans.at(-1)).toMatchObject({ plan: 'gold', from: '2026-11-01' });
+  });
+});

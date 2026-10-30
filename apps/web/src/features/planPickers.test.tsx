@@ -21,7 +21,7 @@ import { ByPlan } from './insights/ByPlan';
 const T = '2026-10-21';
 const FLEX8: PlanDef = { id: 'plan_1', name: 'Flex 8', nameId: 'Fleks 8', kind: 'days', quota: 8, active: true };
 const PRIVATE: PlanDef = { id: 'plan_2', name: 'Private', kind: 'unlimited', active: false };
-const catalogue = (): ClubState => produce(buildSeed().citra, (d) => { d.club.settings.plans = [FLEX8, PRIVATE]; });
+const catalogue = (): ClubState => produce(buildSeed().citra, (d) => { d.club.settings.plans = [FLEX8, PRIVATE]; d.club.settings.noticeDays = 1; }); // round 16: November moves on 21 October stay in time
 
 let root: Root | null = null;
 let host: HTMLElement | null = null;

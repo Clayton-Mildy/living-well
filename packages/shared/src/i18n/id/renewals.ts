@@ -22,7 +22,7 @@ export const renewals: Same<typeof EN> = {
   'next.renews': 'Diperpanjang {date}', 'next.planFrom': '{plan} mulai {date}', 'next.leaveFrom': 'Cuti mulai {date}', 'next.lastDay': 'Hari terakhir {date}',
   sheetTitle: 'Hubungi {name}', 'group.contact': 'Kontak keluarga', 'group.membership': 'Keanggotaan', 'group.outcome': 'Keputusan untuk {month}', 'group.calls': 'Panggilan',
   whatsapp: 'WhatsApp', plan: 'Paket', usage: 'Bulan ini', usageFlex: '{used} dari {quota} hari', usageGold: '{n} hari', usageExtra: ' · {n} hari tambahan',
-  leaveMonths: 'Bulan cuti', leaveLate: '{month}: pemberitahuan paling lambat {date}', lastDay: 'Hari terakhir', reason: 'Alasan', notePh: 'Opsional',
+  noticeLate: 'Terlambat untuk {month} · paling cepat {earliest}', leaveMonths: 'Bulan cuti', leaveLate: '{month}: pemberitahuan paling lambat {date}', lastDay: 'Hari terakhir', reason: 'Alasan', notePh: 'Opsional',
   save: 'Simpan', saveApproval: 'Kirim untuk persetujuan', saved: 'Tersimpan untuk {name}.', savedApplied: 'Tersimpan untuk {name}. Berlaku mulai {date}.', quickSaved: 'Tersimpan untuk {name}: {outcome}.',
   'st.waiting': 'Menunggu persetujuan manajemen. Dicatat oleh {who}.', 'st.rejected': 'Manajemen tidak menyetujui ini: {reason}', 'st.applied': 'Berlaku mulai {date}.', 'st.appliedStop': 'Sudah berlaku: hari terakhir {date}.',
   'st.askedPlan': 'Keluarga sudah meminta ganti paket lewat aplikasi.', 'st.askedLeave': 'Cuti untuk {month} sudah ada di daftar.', 'st.review': 'Buka di Persetujuan',

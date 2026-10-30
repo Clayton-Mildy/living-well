@@ -97,7 +97,7 @@ describe('Next month', () => {
   });
 
   it('a plan switch recorded on the profile is a read-only row: who and from when, no Undo', async () => {
-    const s = buildSeed().citra;
+    const s = produce(buildSeed().citra, (d) => { d.club.settings.noticeDays = 1; }); // round 16: a November downgrade on 21 October stays in time
     const done = execute(s, 'members.changePlan', { memberId: 'm2', plan: 'flex' }, getUser({ citra: s }, 's10')!, { today: '2026-10-21', nowMin: toMin('09:58') }, 'w2').state;
     openClub('s1', 'lobby', 'Caca', done);
     await show(<Renewals />);
@@ -105,6 +105,20 @@ describe('Next month', () => {
     expect(row?.querySelector('[data-testid="change-what"]')?.textContent).toBe('Downgrade to Flex');
     expect(row?.querySelector('[data-testid="change-when"]')?.textContent).toBe('from 1 Nov · by Bu Fransiska');
     expect(row?.querySelector('[data-testid="change-undo"]')).toBeNull();
+  });
+
+  it('round 16: a downgrade after the notice deadline starts the month after (Caca sees why) and is recorded for that month', async () => {
+    const world = buildSeed().citra;
+    openClub('s1', 'lobby', 'Caca', world);
+    await show(<Renewals />);
+    await click(btn(/Record a change/));
+    await click(document.querySelector('[role="combobox"]'));
+    const opt = Array.from(document.querySelectorAll('[role="option"]')).find((o) => o.textContent?.startsWith(world.members.m2.firstName) || o.textContent?.includes(` ${world.members.m2.firstName}`));
+    await click(opt);
+    await click(btn(/^Downgrade to Flex$/));
+    expect(document.querySelector('[data-testid="notice-late"]')?.textContent).toBe('Too late for November · earliest December');
+    await click(btn(/Save$/));
+    expect(actMock).toHaveBeenCalledWith('followUp.record', { memberId: 'm2', month: '2026-12', outcome: 'downgrade' });
   });
 
   it('a stop on the last day of next month reads "Stops 30 Nov" and keeps the plan', async () => {

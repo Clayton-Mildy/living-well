@@ -1,6 +1,8 @@
 // Round 8: "Ask the club to change the plan" and "Ask for leave", the two bronze text links under a parent's plan (Billing's Plans list and the parent's
 // profile). The billing contact sends them; everyone else reads who to ask. A request waiting for the club shows with a way to withdraw it.
 import { useState } from 'react';
+import { addMonths, monthStart, ym } from '@cp/shared';
+import { changeKind, earliestMonth, noticeDays } from '@cp/shared/rules/notice';
 import { isPrimaryFor, displayName, isDaysPlan, planLabel, planQuota, priceOn, rp, suspensionOf, type Member, type Plan } from '@cp/shared';
 import { pendingPlanRequest } from '@cp/shared/actions/planRequests';
 import { activePlans } from '@cp/shared/rules/members';
@@ -34,7 +36,9 @@ export function PlanAsk({ m, quiet }: { m: Member; quiet?: boolean }) {
   // the family can ask for any other active plan of the catalogue (a retired plan is not offered)
   const choices = activePlans(s).filter((d) => d.id !== p.plan);
   const to: Plan = choices.find((d) => d.id === pick)?.id ?? choices[0]?.id ?? (p.plan === 'flex' ? 'gold' : 'flex');
-  const next = new Date(Date.UTC(+now.today.slice(0, 4), +now.today.slice(5, 7), 1)).toISOString().slice(0, 10);
+  // round 16: a cheaper plan needs the notice period, so asked late it starts the month after (what planChange.request records)
+  const kind = changeKind(s, m, to, addMonths(ym(now.today), 1));
+  const next = monthStart(earliestMonth(s, kind, now.today));
   const price = priceOn(s, next);
   const pending = canAsk ? pendingPlanRequest(s, m.id) : undefined;
   const payer = billingContactOf(s, m.id);
@@ -82,6 +86,7 @@ export function PlanAsk({ m, quiet }: { m: Member; quiet?: boolean }) {
               <div style={{ fontSize: 15, lineHeight: '22px', color: F.soft }}>{isDaysPlan(s, to)
                 ? t('family.planAskBodyFlex', { plan: name_(to), q: planQuota(s, to) ?? s.club.settings.flexQuota, p: planPriceText(s, to, next, t, fmt.fds), x: rp(price.extra), d: fmt.fdl(next) })
                 : t('family.planAskBodyGold', { plan: name_(to), p: planPriceText(s, to, next, t, fmt.fds), d: fmt.fdl(next) })}</div>
+              {kind === 'downgrade' ? <div data-testid="plan-notice" style={{ fontSize: 14, lineHeight: '20px', color: F.muted }}>{t('family.planNotice', { n: noticeDays(s) })}</div> : null}
             </FamSheet>
           ) : null}
         </>

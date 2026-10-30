@@ -25,7 +25,7 @@ export const renewals = {
   // the follow-up sheet
   sheetTitle: 'Follow up {name}', 'group.contact': 'Family contact', 'group.membership': 'Membership', 'group.outcome': 'Decision for {month}', 'group.calls': 'Calls',
   whatsapp: 'WhatsApp', plan: 'Plan', usage: 'This month', usageFlex: '{used} of {quota} days', usageGold: '{n} days', usageExtra: ' · {n} extra',
-  leaveMonths: 'Leave months', leaveLate: '{month}: notice was due {date}', lastDay: 'Last day', reason: 'Reason', notePh: 'Optional',
+  noticeLate: 'Too late for {month} · earliest {earliest}', leaveMonths: 'Leave months', leaveLate: '{month}: notice was due {date}', lastDay: 'Last day', reason: 'Reason', notePh: 'Optional',
   save: 'Save', saveApproval: 'Send for approval', saved: 'Saved for {name}.', savedApplied: 'Saved for {name}. It applies from {date}.', quickSaved: 'Saved for {name}: {outcome}.',
   'st.waiting': 'Waiting for management approval. Recorded by {who}.', 'st.rejected': 'Management did not approve this: {reason}', 'st.applied': 'Applied from {date}.', 'st.appliedStop': 'Applied: the last day is {date}.',
   'st.askedPlan': 'The family asked to switch plan in the app.', 'st.askedLeave': 'Leave for {month} is already on the list.', 'st.review': 'Open in Approvals',

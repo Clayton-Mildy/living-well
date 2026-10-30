@@ -213,3 +213,18 @@ describe.each([['phone', 390], ['wide', 1280]])('the plan catalogue (%s)', (_n, 
     expect(document.querySelector('button[aria-label^="Edit "]')).toBeNull();
   });
 });
+
+describe('round 16: the notice period', () => {
+  it('shows 14 days in the Leave card; changing it to 21 saves club.updateSettings with noticeDays', async () => {
+    openClub();
+    const fn = vi.fn(async () => ({ ok: true as const, result: {} }));
+    useReplica.setState({ act: fn as never });
+    await show(<Plans />, 390);
+    const input = Array.from(document.querySelectorAll<HTMLInputElement>('input')).find((i) => i.closest('label')?.textContent?.includes('Notice period (days)'))!;
+    expect(input.value).toBe('14');
+    await type(input, '21');
+    const save = Array.from(document.querySelectorAll('button')).find((b) => /Save changes$/.test(b.textContent || ''))!;
+    await act(async () => { save.click(); });
+    expect(fn).toHaveBeenCalledWith('club.updateSettings', { noticeDays: 21 });
+  });
+});

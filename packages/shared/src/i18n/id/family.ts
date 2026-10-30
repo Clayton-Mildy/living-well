@@ -47,7 +47,7 @@ export const family: Same<typeof EN> = {
   planLabel: 'Paket {plan} · {m}', planGoldLabel: 'Paket {plan} · {m}', visitsUsed: '{n} dari {q} kunjungan terpakai di {m}', goldTitle: 'Paket {plan} · datang di hari buka mana saja',
   goldVisits: 'Kunjungan di {m}: {n}. Tanpa batas dan tanpa biaya tambahan.', visitsExtra: '{n} kunjungan tambahan bulan ini · {p} di tagihan {m}', visitsExtraN: '{n} kunjungan tambahan bulan ini · {p} di tagihan {m}',
   extraDates: 'Tanggal kunjungan tambahan: {d}', extraRule: 'Kunjungan tambahan {p} per kunjungan, ditagih bulan depan di tagihan {m}.',
-  planAskGold: 'Minta pindah ke paket Gold', planAskFlex: 'Minta pindah ke paket Flex', planAskTitle: 'Pindahkan {name} ke paket {plan}?', planPick: 'Paket tujuan',
+  planAskGold: 'Minta pindah ke paket Gold', planAskFlex: 'Minta pindah ke paket Flex', planAskTitle: 'Pindahkan {name} ke paket {plan}?', planNotice: 'Pindah ke paket yang lebih murah perlu pemberitahuan {n} hari sebelum tanggal 1.', planPick: 'Paket tujuan',
   planAskBodyGold: '{plan}: datang di hari buka mana pun seharga {p} per bulan, tanpa biaya hari tambahan. Mulai {d} setelah klub mengonfirmasi.',
   planAskBodyFlex: '{plan}: {q} kunjungan per bulan seharga {p}; kunjungan tambahan {x} per kunjungan. Mulai {d} setelah klub mengonfirmasi.',
   planAskSend: 'Kirim permintaan', planAskSent: 'Permintaan terkirim. Klub akan mengonfirmasinya.', planAsked: 'Pindah ke paket {plan} mulai {d} sudah diminta · menunggu konfirmasi klub', planWithdraw: 'Batalkan permintaan', planWithdrawn: 'Permintaan dibatalkan.', endedPlan: 'Keanggotaan sudah berakhir. Paket ditutup.',

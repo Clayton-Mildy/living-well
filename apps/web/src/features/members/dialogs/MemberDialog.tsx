@@ -6,6 +6,8 @@ import {
   type Plan, type Title, type Relation, type EndReason,
 } from '@cp/shared';
 import { END_REASONS, activePlans, consentOf, firstOfNextMonth, isPhone, openBalance, plainName } from '@cp/shared/rules/members';
+import { changeKind, earliestMonth, noticeDays } from '@cp/shared/rules/notice';
+import { monthStart } from '@cp/shared/util';
 import { cleanRegistration, validateRegistration } from '@cp/shared/rules/applicationForm';
 import { Button, ChipGroup, DateField, Dialog, Note, StaffOnlyTag, Toggle } from '../../../components/ui';
 import { say } from '../../../store/ui';
@@ -195,13 +197,18 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
   const [busy, setBusy] = useState(false);
   const [tried, setTried] = useState(false);
   const desk = p.role === 'lobby'; // round 13: the front desk changes a plan from the 1st of next month only (round 14: it applies at once, no review)
-  const errEff = tried && (!d.effective || d.effective < today) ? t('members.err.effectiveInvalid') : '';
+  // round 16: a downgrade needs the notice period, so asked late its first possible date is the 1st after next
+  const kind = changeKind(s, m, d.plan, ym(firstOfNextMonth(today)));
+  const minEff = kind === 'downgrade' ? monthStart(earliestMonth(s, kind, today)) : today;
+  const deskEff = monthStart(earliestMonth(s, kind, today));
+  const eff = desk ? deskEff : d.effective && d.effective < minEff ? minEff : d.effective;
+  const errEff = tried && (!eff || eff < today) ? t('members.err.effectiveInvalid') : '';
   const save = async () => {
     setTried(true);
-    if (!d.effective || d.effective < today || busy) return;
-    if (planOn(m, d.effective).plan === d.plan) { say(t('err.noChanges')); return; }
+    if (!eff || eff < today || busy) return;
+    if (planOn(m, eff).plan === d.plan) { say(t('err.noChanges')); return; }
     setBusy(true);
-    const r = await p.act('members.changePlan', { memberId: m.id, plan: d.plan, effective: d.effective }, { ok: t('profile.savedPlan', { n: memberName(m), d: fmt.fdy(d.effective) }) });
+    const r = await p.act('members.changePlan', { memberId: m.id, plan: d.plan, effective: eff }, { ok: t('profile.savedPlan', { n: memberName(m), d: fmt.fdy(eff) }) });
     setBusy(false);
     if (r.ok) onClose();
   };
@@ -213,9 +220,10 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
         {desk ? (
           <div data-testid="plan-effective-fixed" style={{ display: 'flex', justifyContent: 'space-between', gap: 12, minHeight: 44, alignItems: 'center', fontSize: 16, lineHeight: '22px' }}>
             <span style={{ color: '#6B6259' }}>{t('profile.effective')}</span>
-            <span style={{ fontWeight: 500 }}>{fmt.fdy(firstOfNextMonth(today))}</span>
+            <span style={{ fontWeight: 500 }}>{fmt.fdy(deskEff)}</span>
           </div>
-        ) : <DateField label={t('profile.effective')} value={d.effective} onChange={(v) => set({ effective: v })} min={today} error={errEff} />}
+        ) : <DateField label={t('profile.effective')} value={eff} onChange={(v) => set({ effective: v })} min={minEff} error={errEff} />}
+        {kind === 'downgrade' && minEff > firstOfNextMonth(today) ? <div data-testid="plan-notice" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t('family.planNotice', { n: noticeDays(s) })}</div> : null}
       </PeSection>
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={t('common.saveChanges')} />
     </>
