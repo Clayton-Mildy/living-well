@@ -3,6 +3,7 @@ import { useEffect, useRef, type CSSProperties, type ReactNode, type KeyboardEve
 import { createPortal } from 'react-dom';
 import { BADGE, type BadgeKey, type Member, initials } from '@cp/shared';
 import { useDevice } from '../../hooks/useDevice';
+import { useScreenAccess } from '../../lib/access';
 import { useT } from '../../lib/i18n';
 import { photoFill } from '../../lib/media';
 import { useUi } from '../../store/ui';
@@ -49,8 +50,22 @@ export function PageHead({ eyebrow, title, size = 36, right, sub }: { eyebrow?: 
         {eyebrow ? <Eyebrow className="cp-eyebrow1">{eyebrow}</Eyebrow> : null}
         <h1 style={{ margin: 0, fontSize: size >= 36 ? `clamp(32px, 3.6vw, ${size + 12}px)` : size, lineHeight: 1.05, fontWeight: 400, letterSpacing: '-1.2px', color: '#2B231C' }}>{title}</h1>
         {sub ? <div className="cp-desc" style={{ fontSize: 14, lineHeight: '20px', maxWidth: 700, color: '#6B6259', marginTop: 2 }}>{sub}</div> : null}
+        <ViewOnlyBanner />
       </div>
       {right}
+    </div>
+  );
+}
+
+/** Round 16 (KC): under a screen's title when the role's access to it is View (the server refuses its actions). Grey and quiet. */
+export function ViewOnlyBanner() {
+  const { level } = useScreenAccess();
+  const t = useT();
+  if (level !== 'view') return null;
+  return (
+    <div role="status" data-testid="view-only" style={{ display: 'flex', alignItems: 'center', gap: 8, alignSelf: 'flex-start', minHeight: 32, padding: '4px 12px', borderRadius: 10, background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, lineHeight: '20px', marginTop: 4 }}>
+      <Icon name="visibility" size={18} color="#6B6259" />
+      <span>{t('err.viewOnly')}</span>
     </div>
   );
 }

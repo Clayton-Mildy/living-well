@@ -10,6 +10,7 @@ import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
+import { useScreenAccess } from '../../lib/access';
 import { useClub } from '../../store/replica';
 import { InvoiceRunSheet } from './InvoiceRun';
 import { InvoiceSheet } from './InvoiceSheet';
@@ -28,6 +29,7 @@ export function Billing() {
   const { device, isPhone, isLaptop } = useDevice();
   const [sp, setSp] = useSearchParams();
   const f: Filter = FILTERS.includes(sp.get('f') as Filter) ? (sp.get('f') as Filter) : 'all';
+  const view = useScreenAccess().level === 'view'; // round 16: Front desk on Billing — no Issue, Remind or notes
   const [q, setQ] = useState('');
   const [openRow, setOpenRow] = useState<string | null>(null);
   const [sheetId, setSheetId] = useState<string | null>(null);
@@ -64,7 +66,7 @@ export function Billing() {
 
   // KC round 6: members whose unpaid invoice has put the membership on hold (from the 1st; it stops on the 3rd), oldest invoice first
   const act = useAct();
-  const celToBill = celebrationsToInvoice(s);
+  const celToBill = view ? [] : celebrationsToInvoice(s);
   const holds = useMemo(() => Object.entries(suspensions(s, today)).filter(([id]) => s.members[id]).sort((a, b) => (a[1].dueDate < b[1].dueDate ? -1 : 1)), [s, today]);
   const nextPeriod = nextRunPeriod(s, today);
   const planNext = useMemo(() => runPlan(s, nextPeriod, today), [s, nextPeriod, today]);
@@ -83,9 +85,9 @@ export function Billing() {
       </div>
     </>
   );
-  const runBtn = <Button icon="event_repeat" size={48} onClick={() => setRunOpen(true)}>{t('finance.run.open')}</Button>;
+  const runBtn = view ? null : <Button icon="event_repeat" size={48} onClick={() => setRunOpen(true)}>{t('finance.run.open')}</Button>;
   // round 6, phone: the invoice run is a small group (header outside), the month on the left and a 34px pill on the right
-  const phoneRun = (
+  const phoneRun = view ? null : (
     <PGroup title={t('finance.run.title')} pad="12px 16px" gap={0}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
         <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 4 }}>
@@ -108,7 +110,7 @@ export function Billing() {
         key: x.key, label: x.label, value: x.value, sub: rp(x.sum), subColor: x.key === 'overdue' && x.value ? '#9A3D24' : undefined, selected: f === x.key, onClick: () => setFilter(x.key),
       }))} />
 
-      {isPhone ? phoneRun : !isLaptop ? (
+      {isPhone ? phoneRun : !isLaptop && !view ? (
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14, flexWrap: 'wrap', borderTop: '0.5px solid var(--hairline, #E2E2E6)', borderBottom: '0.5px solid var(--hairline, #E2E2E6)', padding: isPhone ? '12px 0' : '16px 0' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, flex: '1 1 240px' }}>{runBlock}</div>
           {runBtn}
@@ -138,7 +140,7 @@ export function Billing() {
             <InvoiceList key={l.key} id={l.key} title={l.title} meta={l.meta} rows={l.rows} q={q} openRow={openRow} setOpenRow={setOpenRow} onOpenInvoice={setSheetId} />
           ))}
         </div>
-        {isLaptop ? (
+        {isLaptop && !view ? (
           <aside style={{ flex: '0 1 300px', width: '100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 16, paddingTop: 8 }}>
             {runBlock}
             <div><Button icon="event_repeat" size={48} onClick={() => setRunOpen(true)}>{t('finance.run.open')}</Button></div>
@@ -213,6 +215,7 @@ function InvoiceList({ id, title, meta, rows, q, openRow, setOpenRow, onOpenInvo
 }
 
 function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: InvoiceView; list: 'paid' | 'due' | 'overdue' | 'xero'; open: boolean; onToggle: () => void; onOpenInvoice: () => void; first?: boolean }) {
+  const view = useScreenAccess().level === 'view'; // round 16: View hides Remind and call notes
   const s = useClub();
   const t = useT();
   const act = useAct();
@@ -234,7 +237,7 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
     ...inv.reminders.map((r) => ({ at: r.at, by: r.by, text: t('finance.bill.reminderSent') })),
   ].sort((a, b) => (a.at < b.at ? -1 : a.at > b.at ? 1 : 0));
   const last = inv.reminders.length ? inv.reminders[inv.reminders.length - 1] : undefined;
-  const canRemind = v.balance > 0;
+  const canRemind = v.balance > 0 && !view;
   const saveNote = async () => {
     if (!note.trim()) return;
     const r = await act('invoice.callNote', { invoiceId: inv.id, text: note.trim() }, { ok: t('finance.toast.noteSaved') });
@@ -273,10 +276,10 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
                 ))}
               </div>
             ) : null}
-            <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void saveNote(); }} placeholder={t('finance.bill.notePlaceholder')} aria-label={t('finance.bill.callNote')}
-              className="cp-input cp-fill" style={{ ...phoneField, width: '100%' }} />
+            {view ? null : <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void saveNote(); }} placeholder={t('finance.bill.notePlaceholder')} aria-label={t('finance.bill.callNote')}
+              className="cp-input cp-fill" style={{ ...phoneField, width: '100%' }} />}
             <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-              <PillBtn onClick={saveNote}>{t('finance.bill.saveNote')}</PillBtn>
+              {view ? null : <PillBtn onClick={saveNote}>{t('finance.bill.saveNote')}</PillBtn>}
               {canRemind ? <PillBtn tone="primary" onClick={remind}>{t('finance.bill.sendReminder')}</PillBtn> : null}
             </div>
             {last ? <span style={{ ...small, fontSize: 13 }}>{t('finance.bill.lastReminder', { when: stampOf(last.at, fds) })}</span> : null}
@@ -316,12 +319,12 @@ function InvoiceRow({ v, list, open, onToggle, onOpenInvoice, first }: { v: Invo
               ))}
             </div>
           ) : null}
-          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
+          {view ? null : <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'flex-end' }}>
             <input value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => { if (e.key === 'Enter') void saveNote(); }} placeholder={t('finance.bill.notePlaceholder')} aria-label={t('finance.bill.callNote')}
               className="cp-input cp-fill" style={{ flex: '1 1 240px', minWidth: 0, height: 44, border: 'none', borderRadius: 12, background: 'var(--fill, #F4F4F5)', padding: '0 14px', fontSize: 16, fontFamily: 'Inter', color: '#24201C' }} />
             <Button variant="secondary" size={44} onClick={saveNote} style={{ padding: '0 18px' }}>{t('finance.bill.saveNote')}</Button>
             {canRemind ? <Button size={44} onClick={remind} style={{ padding: '0 20px' }}>{t('finance.bill.sendReminder')}</Button> : null}
-          </div>
+          </div>}
           {last ? <span style={small}>{t('finance.bill.lastReminder', { when: stampOf(last.at, fds) })}</span> : null}
           <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
             <Button variant="secondary" size={44} icon="receipt_long" onClick={onOpenInvoice} style={{ padding: '0 16px' }}>{t('finance.bill.openInvoice')}</Button>

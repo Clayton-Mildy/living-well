@@ -11,6 +11,7 @@ import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
+import { useScreenAccess } from '../../lib/access';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { copyText, lineLabel, methodLabel, money, stampOf } from './lib';
@@ -61,9 +62,11 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
   const { pathname } = useLocation();
   const staff = audience === 'staff';
   // only finance and management act on invoices (the server enforces it; other staff just read the invoice)
-  const canAct = staff && (role === 'finance' || role === 'mgmt');
+  // round 16: a screen the role only views (Front desk on Billing) hides the actions; the same sheet on the member profile (Members: Edit) keeps Record payment
+  const view = useScreenAccess().level === 'view';
+  const canAct = staff && !view && (role === 'finance' || role === 'mgmt');
   // round 13: the front desk may only record cash or a transfer, which then waits for finance
-  const desk = staff && role === 'lobby';
+  const desk = staff && !view && role === 'lobby';
   const [bank, setBank] = useState<Bank>('BCA');
   const [panelOpen, setPanel] = useState<null | 'pay' | 'adjust' | 'void'>(null);
   const [refundFor, setRefundFor] = useState<string | null>(null);

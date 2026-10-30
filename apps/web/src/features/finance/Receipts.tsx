@@ -12,6 +12,7 @@ import { mediaUrl } from '../../lib/media';
 import { useNow } from '../../lib/clock';
 import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
+import { useScreenAccess } from '../../lib/access';
 import { useClub } from '../../store/replica';
 import { digits, matches } from './lib';
 import { LinesEditor, ReceiptCapture } from './ReceiptCapture';
@@ -25,7 +26,7 @@ export function Receipts() {
   const { lang } = useFmt();
   const { device, isPhone } = useDevice();
   const { role } = useMe();
-  const canApprove = role === 'finance' || role === 'mgmt';
+  const canApprove = (role === 'finance' || role === 'mgmt') && useScreenAccess().level !== 'view'; // round 16: Management's default is View on Receipts
   const [snapping, setSnapping] = useState(false);
   // a search result: /receipts?do=snap opens the capture whenever the parameter appears, then the parameter goes
   const [sp, setSp] = useSearchParams();

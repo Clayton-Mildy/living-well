@@ -6,6 +6,7 @@ import type { Role } from '@cp/shared';
 import { useDevice } from '../hooks/useDevice';
 import { useT } from '../lib/i18n';
 import { useMe } from '../lib/me';
+import { ScreenAccessProvider } from '../lib/access';
 import { useSession } from '../store/session';
 import { useUi } from '../store/ui';
 import { memberPhoto } from '../lib/media';
@@ -93,7 +94,7 @@ export function AppShell() {
         ) : null}
         <main ref={mainRef} id="main" style={{ flex: 1, minHeight: 0, overflowY: 'auto', position: 'relative' }}>
           <Suspense fallback={<PageSkeleton />}>
-            <Outlet />
+            <ScreenAccessProvider screenKey={key}><Outlet /></ScreenAccessProvider>{/* round 16: the grid's level for this screen (View banner, granted screens) */}
             {/* room to scroll the last rows clear of the floating Demo pill; on a phone also of the floating tab bar (84px: it floats over the page like the family app's) */}
             <div aria-hidden="true" style={{ height: isPhone ? 'var(--cp-floatclear)' : quick ? 136 : 72 }} />
           </Suspense>
