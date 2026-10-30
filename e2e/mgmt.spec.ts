@@ -347,7 +347,7 @@ test('people: add a staff member with a contract, edit, deactivate and reactivat
   await page.getByRole('button', { name: 'Deactivate' }).click();
   await page.getByRole('dialog', { name: 'Deactivate Wulan Sari?' }).getByRole('button', { name: 'Deactivate' }).click();
   await expect(toast(page, 'Wulan Sari is deactivated.')).toBeVisible();
-  // inactive people are listed last: the ninth person is on the second page
+  // inactive people are listed last: round 16: the tenth person (nine before her, with the Owner) is on the second page
   if (isPhone(page)) await page.getByRole('button', { name: 'Back' }).click();
   await expect(await staffRow(page, 's12')).toContainText('Inactive');
   if (isPhone(page)) await (await staffRow(page, 's12')).click();
