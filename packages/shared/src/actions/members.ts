@@ -5,7 +5,7 @@ import type { Draft } from 'immer';
 import type { Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
 import { e164, monthStart, toMin, ym } from '../util';
 import { changeKind, earliestMonth, noticeDays, noticeDeadline } from '../rules/notice';
-import { maybeEmailContract } from './emails';
+import { emailInvoice, maybeEmailContract } from './emails';
 import { defineAction, hasRole, isMgmt, roleOf, actorOf, DomainError, type ActionDef, type Ctx } from './framework';
 import { carrySigning, requireMember, shortOf, familyUserIds, signAtRegistration } from './helpers';
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
@@ -744,6 +744,7 @@ export function applyEnding(d: Draft<ClubState>, m: Draft<Member>, input: { last
   if (inv) {
     const row: Invoice = { id: inv.number, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...inv };
     d.invoices[row.id] = row;
+    emailInvoice(d, ctx, row.id); // round 16
     ctx.result.finalInvoice = { number: inv.number, total: inv.lines.reduce((t, l) => t + l.amount, 0) };
   }
   const p = primaryContact(d as unknown as ClubState, m.id);

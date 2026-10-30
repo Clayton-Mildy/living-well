@@ -10,6 +10,7 @@ import { actorName, isPrimaryFor, primaryContact } from '../rules/core';
 import { RECEIPT_SOURCES, SPEND_CATEGORIES, lineProblem } from '../rules/purchasing';
 import { BANKS, XERO_DELAY_MIN, dtMinutes, invoiceVa, receiptOfRequest, refundableOn, runPlan } from '../rules/finance';
 import { bad, bool, idList, isoDate, obj, oneOf, optText, pickId, rupiah, rupiahOrZero, signedRupiah, text, yearMonth } from '../rules/financeInput';
+import { emailInvoice } from './emails';
 import { addDays, rp, uniq, weekStart, ym } from '../util';
 
 const finMgmt = (u: User) => hasRole(u, 'finance', 'mgmt');
@@ -115,6 +116,7 @@ function issueRun(d: D, ctx: Ctx, period: YM, auto: boolean) {
     const name = shortOf(d, inv.memberId);
     const amount = rp(invoiceTotal(inv));
     tellPayer(d, ctx, inv, 'finance.notif.invoiceIssued', { name, number: inv.number, amount });
+    emailInvoice(d, ctx, inv.id); // round 16: and by email (simulated)
     ctx.feed({ icon: 'receipt_long', key: 'finance.feed.invoiceIssued', params: { name, number: inv.number, amount }, memberId: inv.memberId });
   }
   ctx.result.runId = runId;

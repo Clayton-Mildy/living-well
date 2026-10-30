@@ -16,6 +16,7 @@ import { say } from '../../store/ui';
 import { copyText, lineLabel, methodLabel, money, stampOf } from './lib';
 import { AdjustForm, PaymentForm, RefundForm } from './forms';
 import { Badge, caps } from './parts';
+import { lastEmail } from '@cp/shared/rules/emails';
 import { memberPhoto } from '../../lib/media';
 
 export function InvoiceSheet({ invoiceId, open, onClose, audience }: { invoiceId: string; open: boolean; onClose: () => void; audience: 'staff' | 'family' }) {
@@ -52,7 +53,7 @@ const panel = { borderTop: '0.5px solid var(--hairline, #E2E2E6)', paddingTop: 1
 function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staff' | 'family'; onClose: () => void }) {
   const s = useClub();
   const t = useT();
-  const { fds, fdy, fmonth } = useFmt();
+  const { fd, fds, fdy, fmonth } = useFmt();
   const { today } = useNow();
   const { user, role } = useMe();
   const act = useAct();
@@ -99,6 +100,8 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
   };
   const toggle = (p: 'pay' | 'adjust' | 'void') => setPanel(panelOpen === p ? null : p);
 
+  // round 16: the last time this invoice was emailed (simulated), to whom
+  const mailed = (() => { const e = lastEmail(s, { type: 'invoice', id: inv.id }); return e && e.status === 'sent' ? e : undefined; })();
   const statusDate = v.status === 'paid' ? t('finance.inv.paidOn', { date: fdy(paidDateOf(v.inv, pays) || today) }) : t('finance.inv.dueOn', { date: fdy(inv.dueDate) });
   return (
     <>
@@ -123,6 +126,7 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
             <span style={caps}>{t('finance.inv.billTo')}</span>
             <span style={{ fontSize: 16, lineHeight: 1.4, textAlign: 'right' }}>{payerName}</span>
             {v.payer?.phone ? <a href={`tel:${v.payer.phone}`} style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>{fmtPhone(v.payer.phone)}</a> : null}
+            {mailed ? <span data-testid="invoice-emailed" style={{ fontSize: 13, lineHeight: 1.4, color: '#6B6259', textAlign: 'right', overflowWrap: 'anywhere' }}>{t('email.invoiceSent', { to: mailed.to, d: fd(mailed.sentAt.slice(0, 10), { day: 'numeric', month: 'short' }) })}</span> : null}
           </div>
         ) : null}
       </div>

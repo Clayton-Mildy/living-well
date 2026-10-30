@@ -1,6 +1,7 @@
 // Family contact actions: gating, afterApprove (login), per-member primary, app access, linking, removing, and the family's document upload.
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, findByPhone, contactsOfMember, primaryContact, isPrimaryFor, live, type ClubState, type User } from '../index';
+import { produce } from 'immer';
+import { buildSeed, execute, getUser, findByPhone, contactsOfMember, primaryContact, isPrimaryFor, live, type ClubState, type Invoice, type Payment, type User } from '../index';
 
 const T = '2026-10-21';
 const clock = { today: T, nowMin: 600 };
@@ -153,17 +154,49 @@ describe('round 15: family photos', () => {
 });
 
 describe('family.setPrimary: the billing contact is per member', () => {
-  it('making Daniel primary for Lina does not change Opa Budi', () => {
+  it('making Daniel primary for Lina does not change Opa Budi (round 16: at once, no approval)', () => {
     const c = seed();
     const r = run(c.citra, 'family.setPrimary', { memberId: 'm1', familyId: 'f2' }, who(c, 's1'));
-    expect(r.reviewed).toBe('gate');
-    expect(primaryContact(r.state, 'm1')?.id).toBe('f1'); // unchanged until approved
-    const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who(c, 's9'));
-    expect(primaryContact(a.state, 'm1')?.id).toBe('f2');
-    expect(primaryContact(a.state, 'm46')?.id).toBe('f1');
-    expect(isPrimaryFor(a.state, 'f1', 'm1')).toBe(false);
-    expect(isPrimaryFor(a.state, 'f1', 'm46')).toBe(true);
-    expect(() => run(a.state, 'family.setPrimary', { memberId: 'm1', familyId: 'f2' }, who(c, 's9'))).toThrow('err.noChanges');
+    expect(r.reviewed).toBeUndefined();
+    expect(primaryContact(r.state, 'm1')?.id).toBe('f2');
+    expect(primaryContact(r.state, 'm46')?.id).toBe('f1');
+    expect(isPrimaryFor(r.state, 'f1', 'm1')).toBe(false);
+    expect(isPrimaryFor(r.state, 'f1', 'm46')).toBe(true);
+    expect(() => run(r.state, 'family.setPrimary', { memberId: 'm1', familyId: 'f2' }, who(c, 's9'))).toThrow('err.noChanges');
+  });
+});
+
+describe('round 16: passing the billing to a sister', () => {
+  /** Lina with one unpaid, one part-paid and one paid invoice, all to Maria (f1) */
+  const world = (): ClubState => produce(buildSeed().citra, (d) => {
+    for (const id of Object.keys(d.invoices)) if (d.invoices[id].memberId === 'm1') delete d.invoices[id];
+    for (const id of Object.keys(d.payments)) if (d.payments[id].memberId === 'm1') delete d.payments[id];
+    const inv = (id: string, amount: number) => ({ id, clubId: 'citra', createdAt: `${T}T08:00`, createdBy: 'system', number: id.toUpperCase(), memberId: 'm1', payerFamilyId: 'f1', kind: 'monthly' as const, period: '2026-10', issueDate: '2026-09-21', dueDate: '2026-11-28', lines: [{ id: 'plan', kind: 'plan' as const, label: 'inv.line.flex', qty: 1, unit: amount, amount }], va: d.members.m1.billing.va, xero: 'synced' as const, reminders: [], callNotes: [] }) as unknown as Invoice;
+    d.invoices.i_open = inv('i_open', 1_000_000);
+    d.invoices.i_part = inv('i_part', 1_000_000);
+    d.invoices.i_paid = inv('i_paid', 1_000_000);
+    const pay = (id: string, invoiceId: string, amount: number) => ({ id, clubId: 'citra', createdAt: `${T}T08:00`, createdBy: 'system', memberId: 'm1', method: 'bankTransfer' as const, amount, receivedOn: T, allocations: [{ invoiceId, amount }], xero: 'synced' as const, by: 'staff:s10' as const }) as unknown as Payment;
+    d.payments.p_part = pay('p_part', 'i_part', 400_000);
+    d.payments.p_paid = pay('p_paid', 'i_paid', 1_000_000);
+    d.familyContacts.f2.email = 'daniel@example.com';
+  });
+  it('Maria passes it to Daniel from the family app: unpaid invoices follow him and are emailed; paid ones stay', () => {
+    const c = seed();
+    const r = run(world(), 'family.setPrimary', { memberId: 'm1', familyId: 'f2' }, who(c, 'f1'));
+    const s = r.state;
+    expect(primaryContact(s, 'm1')?.id).toBe('f2');
+    expect(live(s.changeRequests).some((x) => x.action === 'family.setPrimary' && x.status === 'pending')).toBe(false);
+    expect(s.invoices.i_open.payerFamilyId).toBe('f2');
+    expect(s.invoices.i_part.payerFamilyId).toBe('f2');
+    expect(s.payments.p_part.allocations).toEqual([{ invoiceId: 'i_part', amount: 400_000 }]);
+    expect(s.invoices.i_paid.payerFamilyId).toBe('f1');
+    const mails = live(s.emails).filter((e) => e.kind === 'invoice');
+    expect(mails.map((e) => e.ref.id).sort()).toEqual(['i_open', 'i_part']);
+    expect(mails.every((e) => e.to === 'daniel@example.com')).toBe(true);
+  });
+  it('only the billing contact may pass it on', () => {
+    const c = seed();
+    expect(() => run(world(), 'family.setPrimary', { memberId: 'm1', familyId: 'f1' }, who(c, 'f2'))).toThrow('err.forbidden');
   });
 });
 

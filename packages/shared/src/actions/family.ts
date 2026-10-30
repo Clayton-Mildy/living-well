@@ -1,11 +1,13 @@
 // Family contact actions (all gated for non-management staff) and the family's own document upload (gated).
 // A contact belongs to a member through a link; the billing flag (primary) and app access live on the link, per member.
 import type { Draft } from 'immer';
-import type { ChangeRequest, ClubState, DocType, FamilyLink, HM, Lang, MemberDocument, MemberRegistration, Relation } from '../types';
+import type { ChangeRequest, ClubState, DocType, FamilyLink, HM, Invoice, Lang, MemberDocument, MemberRegistration, Relation } from '../types';
 import { e164 } from '../util';
 import { defineAction, hasRole, isFamily, DomainError, type ActionDef, type Ctx } from './framework';
 import { carrySigning, shortOf } from './helpers';
-import { isPendingRow, linksOfMember, displayName } from '../rules/core';
+import { isPendingRow, isPrimaryFor, linksOfMember, displayName, primaryContact } from '../rules/core';
+import { balanceOf } from '../rules/billing';
+import { emailInvoice } from './emails';
 import { DOC_TYPES, RELATIONS, SIM_FILE, docIdFor, firstWord, isHM, isPhone, lastContactId, lastLinkId, nextContactId, nextLinkId } from '../rules/members';
 import { isEmail } from '../rules/emails';
 import { editable, makePrimary, mediaIdOf, obj, oneOf, parseNanny, phoneTaken, txt } from './members';
@@ -199,15 +201,27 @@ export const familyActions: ActionDef[] = [
 
   defineAction<{ memberId: string; familyId: string; note?: string }>({
     name: 'family.setPrimary',
-    can: (u) => frontDesk(u),
+    // round 16 (KC): two sisters take turns paying their mother's bills, so the billing contact passes it on themselves (or the front desk, finance or
+    // management does it); it applies at once, no approval. Unpaid invoices follow the new contact and are emailed to them.
+    can: (u, i, s) => hasRole(u, 'lobby', 'finance', 'mgmt') || (isFamily(u) && !!i?.memberId && isPrimaryFor(s, u.id, i.memberId)),
     parse: (raw) => { const o = obj(raw); return { memberId: txt(o.memberId, 60), familyId: txt(o.familyId, 60), ...note(o) }; },
-    review: { policy: 'gate', section: 'family', op: 'update', target: (i, s) => linkTarget(s, i.familyId, i.memberId) },
     run(d, input, ctx) {
       const m = editable(d, input.memberId, ctx);
       const l = linkFor(d, input.familyId, m.id, ctx);
       if (l.primary) ctx.fail('err.noChanges');
+      if (isPendingRow(l) || isPendingRow(d.familyContacts[l.familyId] ?? {})) ctx.fail('members.err.contactPending');
+      const before = primaryContact(d as unknown as ClubState, m.id)?.id;
       makePrimary(d, m.id, l.id);
-      feed(ctx, d, m.id, 'receipt_long', 'primaryChanged', { who: d.familyContacts[l.familyId]?.name || '' });
+      const s = d as unknown as ClubState;
+      for (const inv of Object.values(d.invoices)) {
+        if (inv.memberId !== m.id || inv.deletedAt || inv.voided || inv.payerFamilyId === l.familyId || balanceOf(s, inv as Invoice) <= 0) continue;
+        inv.payerFamilyId = l.familyId;
+        emailInvoice(d, ctx, inv.id);
+      }
+      const name = shortOf(d, m.id);
+      const who = d.familyContacts[l.familyId]?.name || '';
+      ctx.notify({ toUsers: [l.familyId, ...(before ? [before] : [])], toRoles: ['finance'], kind: 'family.notif.billingPassed', params: { name, who }, link: '/billing', memberId: m.id });
+      feed(ctx, d, m.id, 'receipt_long', 'primaryChanged', { who });
     },
   }),
 

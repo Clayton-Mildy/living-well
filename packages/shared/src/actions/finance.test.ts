@@ -905,3 +905,14 @@ describe('boards', () => {
     expect(b.overdue.find((v) => v.inv.id === 'INV-2610-046')).toMatchObject({ status: 'overdue', balance: 1_950_000, late: 1 });
   });
 });
+
+describe('round 16: invoices are emailed when issued', () => {
+  it('the run emails each invoice to its payer', () => {
+    const w = world();
+    issueNov(w);
+    const run = live(w.s.invoiceRuns).find((r) => r.period === '2026-11')!;
+    const mails = live(w.s.emails).filter((e) => e.kind === 'invoice');
+    expect(mails.map((e) => e.ref.id).sort()).toEqual([...run.invoiceIds].sort());
+    for (const e of mails) expect(e.familyId).toBe(w.s.invoices[e.ref.id].payerFamilyId);
+  });
+});

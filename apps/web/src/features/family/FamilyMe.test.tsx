@@ -166,6 +166,27 @@ describe('family Billing', () => {
     expect(text()).not.toMatch(/\b(fme|family|fam)\.[a-z]/i);
   });
 
+  it('round 16: the billing contact passes the bills to a sibling, and changes the email invoices go to', async () => {
+    const { acts } = open('f1');
+    await show(<FamilyBilling />, '/billing');
+    const row = q('[data-testid="billing-contact"][data-member="m1"]')!;
+    expect(row.textContent).toContain('Billing contact: you');
+    await act(async () => { (row.querySelector('[data-testid="pass-billing"]') as HTMLElement).click(); });
+    const sheet = q('[data-testid="pass-sheet"]')!;
+    const daniel = sheet.querySelector('[data-value="f2"]') as HTMLElement;
+    expect(daniel.textContent).toContain('Daniel');
+    await act(async () => { daniel.click(); });
+    const go = Array.from(sheet.querySelectorAll('button')).find((b) => b.textContent === 'Pass on') as HTMLButtonElement;
+    await act(async () => { go.click(); });
+    expect(acts.at(-1)).toMatchObject({ name: 'family.setPrimary', input: { memberId: 'm1', familyId: 'f2' } });
+    expect(q('[data-testid="billing-email"]')?.textContent).toContain('No email yet');
+  });
+  it('round 16: a contact who is not the billing contact sees who is', async () => {
+    open('f2');
+    await show(<FamilyBilling />, '/billing');
+    expect(q('[data-testid="billing-contact"][data-member="m1"]')?.textContent).toContain('Billing contact: Maria');
+    expect(q('[data-testid="pass-billing"]')).toBeNull();
+  });
   it('asking the club to change the plan: the sheet sends planChange.request', async () => {
     const { acts } = open('f1');
     await show(<PlanAsk m={useReplica.getState().view!.members.m1} />, '/profile');

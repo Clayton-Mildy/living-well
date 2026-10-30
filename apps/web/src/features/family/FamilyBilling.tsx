@@ -13,6 +13,7 @@ import { say } from '../../store/ui';
 import { InvoiceSheet } from '../finance/InvoiceSheet';
 import { BackLink, Cap, Cols, F, FamPage, HAIR, List, PageTitle, StatusDot, TextLink, useBack, useFamWide } from './kit';
 import { PlanAsk } from './PlanCard';
+import { BillingContacts } from './BillingContact';
 import { useFamilyCtx, useFamilySel } from './useFamily';
 
 const SAND = '#D9CDBF';
@@ -131,9 +132,13 @@ export function FamilyBilling() {
   );
 
   const plansBlock = (
-    <Block wide={wide} title={t('fme.plans')}>
-      <List testId="billing-plans">{plans.map(planRow)}</List>
-    </Block>
+    <>
+      <Block wide={wide} title={t('fme.plans')}>
+        <List testId="billing-plans">{plans.map(planRow)}</List>
+      </Block>
+      {/* round 16: who pays for each parent (passed between sisters) and the email invoices go to */}
+      <Block wide={wide} title={t('family.billingCap')}><BillingContacts members={plans} /></Block>
+    </>
   );
   const invoicesBlock = list.length ? (
     <Block wide={wide} title={t('fme.invoices')}>

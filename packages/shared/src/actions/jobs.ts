@@ -9,6 +9,7 @@ import { leaveOverrunMonth } from '../rules/leave';
 import { finalInvoiceFor } from '../rules/members';
 import { dm } from '../rules/mgmtParse';
 import { OCCASION_AHEAD_DAYS, occasionsInRange } from '../rules/occasions';
+import { emailInvoice } from './emails';
 import { addDays, rp } from '../util';
 
 type Job = (d: Draft<ClubState>, ctx: Ctx) => void;
@@ -54,7 +55,7 @@ registerJob('membership.daily', (d, ctx) => {
       cur.lastDay = lastDay; cur.endReason = 'unpaid'; cur.endNote = x.number; cur.endedBy = 'system'; cur.endedAt = ctx.nowDT;
       for (const r of Object.values(d.planChangeRequests)) if (r.memberId === m.id && r.status === 'pending') { r.status = 'declined'; r.decidedBy = 'system'; r.decidedAt = ctx.nowDT; }
       const fin = finalInvoiceFor(s, m as Member, lastDay, today); // extra days no invoice has billed yet
-      if (fin) d.invoices[fin.number] = { id: fin.number, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: 'system', ...fin };
+      if (fin) { d.invoices[fin.number] = { id: fin.number, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: 'system', ...fin }; emailInvoice(d, ctx, fin.number); } // round 16: emailed too
       const name = displayName(m);
       const params = { name, number: x.number, amount: rp(x.balance) };
       ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'finance.notif.stopped', params, link: `/members/${m.id}`, memberId: m.id, severity: 'attention', ref: { type: 'invoice', id: x.invoiceId } });

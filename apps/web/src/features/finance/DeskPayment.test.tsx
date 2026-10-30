@@ -75,3 +75,14 @@ describe('the front desk records a payment', () => {
     expect(button(/^Reject/)).toBeTruthy();
   });
 });
+
+describe('round 16: the invoice says where it was emailed', () => {
+  it('"Emailed to maria@example.com · 21 Oct" under Bill to', async () => {
+    openAs('s10', false);
+    const s = structuredClone(useReplica.getState().view!);
+    s.emails = { em1: { id: 'em1', clubId: 'citra', createdAt: '2026-10-21T08:00', createdBy: 'system', to: 'maria@example.com', toName: 'Maria Wijaya', familyId: 'f1', memberId: 'm1', kind: 'invoice', subject: 'email.subj.invoice', params: {}, ref: { type: 'invoice', id: 'INV-2610-001' }, sentAt: '2026-10-21T08:00', sentBy: 'system', status: 'sent' } };
+    useReplica.setState({ view: s, confirmed: s });
+    await show(<InvoiceSheet invoiceId="INV-2610-001" open onClose={() => {}} audience="staff" />);
+    expect(document.querySelector('[data-testid="invoice-emailed"]')?.textContent).toBe('Emailed to maria@example.com · 21 Oct');
+  });
+});
