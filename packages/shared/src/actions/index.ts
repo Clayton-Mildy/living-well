@@ -41,6 +41,7 @@ registerActions([
 ] as never);
 
 export * from './framework';
+export * from './areas';
 export { registerJob } from './jobs';
 export { accountRows, findAccount, accessState, accountsNeedingUsername, usernameBase, USERNAME_RE, DEFAULT_PASSWORD, MIN_PASSWORD, MAX_PASSWORD, type AccountRef } from './accounts';
 export { ensureAttendance, familyUserIds, shortOf, requireMember } from './helpers';

@@ -1,0 +1,2036 @@
+{
+ "review.approve": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "review.reject": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "review.withdraw": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "review.acknowledge": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "review.revert": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "approval.approve": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "approval.reject": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "notifications.read": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "notifications.readAll": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "account.updateStaff": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "account.updateFamily": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "attendance.checkIn": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "attendance.checkOut": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "attendance.undoCheckIn": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "attendance.undoCheckOut": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "attendance.askDeparture": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.checkIn": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.checkOut": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.noShow": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.undoCheckIn": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.undoNoShow": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "reading.save": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "reading.edit": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "reading.void": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "queue.add": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "queue.dismiss": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "health.setLimits": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "health.setMemberLimits": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.create": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.updateDetails": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.setDocuments": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.setConsent": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.changePlan": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "members.setPickup": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "members.requestDocument": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.setAllergies": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.setMeds": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.setCareInstructions": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.setHealth": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.setCognitive": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "planChange.apply": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "planChange.decline": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "members.end": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.cancelEnding": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "members.reactivate": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "note.add": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "note.edit": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "note.delete": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "family.addContact": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "family.linkContact": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "family.updateContact": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "family.unlinkContact": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "family.setPrimary": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "family.setAppAccess": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "document.upload": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "family.updateDetails": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "family.setHealthAlerts": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "log.save": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "log.mark": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "log.saveAllNormal": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.retag": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.setType": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.hide": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.restore": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.remove": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.take": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.addActivity": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.approve": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.reject": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.capture": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.editDraft": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.deleteDraft": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.sendDrafts": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "photo.unsend": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "dish.upsert": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "dish.delete": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "dish.reviewAllergens": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "menu.publish": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "dayMenu.override": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "menu.postLunchPhoto": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "menu.removeLunchPhoto": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "allergyPlan.set": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "allergyPlan.clear": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "feedback.submit": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "feedback.log": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "feedback.reply": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "feedback.setStatus": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "stock.request": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "stock.edit": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "stock.cancel": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "stock.approve": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "stock.reject": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "stock.receive": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "kitchen.lunchMark": {
+  "lobby": false,
+  "kitchen": true,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "run.issue": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "invoice.adjust": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "invoice.void": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "invoice.remind": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "invoice.callNote": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "payment.record": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "payment.simulateVa": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "refund.record": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "xero.sync": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "budget.request": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "budget.edit": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "budget.cancel": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "budget.approve": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "budget.reject": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "budget.setLimit": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "budget.addSection": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "budget.renameSection": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "receipt.add": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "receipt.edit": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "receipt.void": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "receipt.approve": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "receipt.reject": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "vendorInvoice.add": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "vendorInvoice.edit": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "vendorInvoice.approve": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "vendorInvoice.reject": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "vendorInvoice.markPaid": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "vendorInvoice.delete": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "enquiry.create": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.update": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.move": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.bookVisit": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.bookTrial": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.markLost": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.reopen": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.archive": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.convert": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.sendForm": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "enquiry.formOpen": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "enquiry.formSave": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "enquiry.formSubmit": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "venue.book": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "venue.update": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "venue.cancel": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "venue.askReview": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "venue.rate": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "venue.recordReview": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "venue.createInvoice": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "broadcast.send": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "broadcast.schedule": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "broadcast.cancel": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "broadcast.update": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "template.upsert": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "template.remove": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "survey.create": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "survey.update": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "survey.delete": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "survey.send": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "survey.close": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "survey.reopen": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "surveyTemplate.save": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "surveyTemplate.delete": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "survey.answer": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "prices.set": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "club.setPlan": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "club.updateSettings": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "jobs.tick": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "schedule.saveDraft": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "schedule.publish": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "calendarEvent.create": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "calendarEvent.update": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "calendarEvent.delete": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "calendarEvent.setWent": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "activity.upsert": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "room.upsert": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "schedule.changeDay": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "schedule.addSession": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "schedule.editSession": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "schedule.removeSession": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "schedule.resetDay": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "directory.add": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "directory.update": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "directory.setGroup": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "directory.delete": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "directory.togglePublic": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "staff.create": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "staff.update": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "staff.deactivate": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "staff.reactivate": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "staff.setAppAccess": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "hrNote.add": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "hrNote.delete": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "staffTime.upsert": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "staffTime.remove": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "planChange.request": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "planChange.withdraw": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "membership.requestLeave": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "membership.withdrawLeave": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "membership.confirmReturn": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "account.setUsernames": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "followUp.record": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "followUp.undo": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "guest.saveHost": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.archiveHost": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.book": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.update": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.cancel": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "guest.done": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "duty.configure": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "task.saveTemplate": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "task.archiveTemplate": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "task.done": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "task.undo": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "mood.mark": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "mood.clear": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "member.logCall": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": true,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "celebration.request": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": true,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "celebration.update": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "celebration.cancel": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "celebration.decide": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "celebration.addCharge": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "celebration.removeCharge": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "celebration.issueInvoice": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "leave.request": {
+  "lobby": true,
+  "kitchen": true,
+  "activity": true,
+  "nurse": true,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "leave.decide": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "leave.cancel": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "unpaid.call": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": true,
+  "owner": true
+ },
+ "signing.send": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "signing.sign": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "signing.physical": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ },
+ "signing.stamp": {
+  "lobby": false,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": false,
+  "finance": false,
+  "owner": false
+ },
+ "email.resendContract": {
+  "lobby": true,
+  "kitchen": false,
+  "activity": false,
+  "nurse": false,
+  "mgmt": true,
+  "finance": false,
+  "owner": true
+ }
+}

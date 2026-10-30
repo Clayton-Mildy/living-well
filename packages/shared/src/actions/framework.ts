@@ -3,6 +3,8 @@ import { produceWithPatches, enablePatches, type Patch, type Draft, original, cu
 import type { Actor, ClubState, DT, HM, ISODate, Role, StaffRole, User, Notification, ActivityEntry, ChangeRequest, ReviewSection } from '../types';
 import { COLLECTIONS } from '../types';
 import { toHM } from '../util';
+import { areaOf, HOME_AREAS, OWN_ROW } from './areas';
+import { accessOf, defaultLevel, AREA_BASE, type GridRole } from '../rules/access';
 
 enablePatches();
 
@@ -137,6 +139,36 @@ function flushSideEffects(draft: Draft<ClubState>, ctx: Ctx) {
   p.notify = [];
 }
 
+// ---------- access grid (round 16) ----------
+/** The same user with another staff role. Only for `can`, never for `run`. */
+export const asRole = (u: User, role: StaffRole): User => (u.kind === 'staff' ? { ...u, staff: { ...u.staff, role } } : u);
+
+/**
+ * round 16 (KC): may this user run this action? `can` as today, then the access grid for the action's menu (the Owner and the system are never area-checked).
+ * View/Hidden → 'viewOnly'. Edit beyond the role's default also lets the role do what the menu's own role does (`can` as AREA_BASE).
+ */
+export function permit(def: ActionDef, user: User, input: unknown, s: ClubState): 'ok' | 'forbidden' | 'viewOnly' {
+  const own = def.can(user, input, s);
+  const area = areaOf(def.name);
+  if (!area || user.kind !== 'staff' || user.id === 'system' || isOwner(user)) return own ? 'ok' : 'forbidden';
+  const role = user.staff.role as GridRole;
+  if (HOME_AREAS[role]?.includes(area)) return own ? 'ok' : 'forbidden';
+  if (accessOf(s, role, area) !== 'edit') {
+    // the filer of a receipt or budget request keeps editing or withdrawing it: `can` says yes even for a role with no finance power
+    if (own && OWN_ROW.includes(def.name) && def.can(asRole(user, 'activity'), input, s)) return 'ok';
+    return own ? 'viewOnly' : 'forbidden';
+  }
+  if (own) return 'ok';
+  return defaultLevel(role, area) !== 'edit' && def.can(asRole(user, AREA_BASE[area] ?? 'mgmt'), input, s) ? 'ok' : 'forbidden';
+}
+
+/** The permission part of `execute` as a yes/no (UI and tests). */
+export function canRun(name: string, user: User, input: unknown, s: ClubState): boolean {
+  const def = getAction(name);
+  if (!def) return false;
+  try { return permit(def, user, input, s) === 'ok'; } catch { return false; }
+}
+
 // ---------- execution ----------
 export interface ExecResult {
   state: ClubState;
@@ -173,7 +205,9 @@ export function execute(state: ClubState, name: string, rawInput: unknown, user:
   const def = getAction(name);
   if (!def) throw new DomainError('err.unknownAction', { name });
   const input = def.parse ? def.parse(rawInput) : rawInput;
-  if (!def.can(user, input, state)) throw new DomainError('err.forbidden', { name });
+  const p = permit(def, user, input, state);
+  if (p === 'viewOnly') throw new DomainError('err.viewOnly', { name });
+  if (p === 'forbidden') throw new DomainError('err.forbidden', { name });
   let policy: ReviewPolicy = opts.forceReview ?? 'none';
   if (!opts.forceReview && def.review && !isMgmt(user)) {
     policy = typeof def.review.policy === 'function' ? def.review.policy(input, state, user) : def.review.policy;

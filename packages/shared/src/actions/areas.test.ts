@@ -1,0 +1,70 @@
+import { describe, it, expect } from 'vitest';
+import { writeFileSync, readFileSync } from 'node:fs';
+import { buildSeed, getUser, allActions, execute, canRun, areaOf, isUnmapped, DomainError } from '../index';
+import type { ClubState } from '../types';
+
+const FIXTURE = new URL('./__fixtures__/can-matrix.json', import.meta.url);
+const clock = { today: '2026-10-21', nowMin: 600 };
+const SEED_USER: Record<string, string> = { lobby: 's1', kitchen: 's2', activity: 's5', nurse: 's8', mgmt: 's9', finance: 's10', owner: 's11' };
+const seed = () => buildSeed().citra;
+const user = (c: ClubState, role: string) => getUser({ [c.clubId]: c }, SEED_USER[role])!;
+const withAccess = (c: ClubState, access: NonNullable<ClubState['club']['settings']['access']>): ClubState => ({ ...c, club: { ...c.club, settings: { ...c.club.settings, access } } });
+
+describe('action areas', () => {
+  // Run once, before execute changed, to pin what `can` said for every (action, role): then commit the JSON and leave this skipped.
+  it.skip('generate', () => {
+    const c = seed();
+    const out: Record<string, Record<string, boolean>> = {};
+    for (const d of allActions()) {
+      out[d.name] = {};
+      for (const role of Object.keys(SEED_USER)) {
+        try { out[d.name][role] = !!d.can(user(c, role), {}, c); } catch { out[d.name][role] = false; }
+      }
+    }
+    writeFileSync(FIXTURE, JSON.stringify(out, null, 1) + '\n');
+  });
+
+  it('every action has an area or is unmapped', () => {
+    const missing = allActions().map((d) => d.name).filter((n) => !areaOf(n) && !isUnmapped(n));
+    expect(missing).toEqual([]);
+  });
+
+  it('with default access, canRun equals the old can, except Management no longer acts in Receipts', () => {
+    const fixture = JSON.parse(readFileSync(FIXTURE, 'utf8')) as Record<string, Record<string, boolean>>;
+    const c = seed();
+    const diffs: string[] = [];
+    for (const d of allActions()) {
+      for (const role of Object.keys(SEED_USER)) {
+        const want = areaOf(d.name) === 'receipts' && role === 'mgmt' ? false : fixture[d.name][role];
+        if (canRun(d.name, user(c, role), {}, c) !== want) diffs.push(`${d.name} ${role}`);
+      }
+    }
+    expect(diffs).toEqual([]);
+  });
+
+  it('Ega cannot approve receipts; Fransiska can', () => {
+    const c = seed();
+    expect(() => execute(c, 'receipt.approve', { receiptId: 'x' }, user(c, 'mgmt'), clock, 'a1')).toThrow('err.viewOnly');
+    expect(canRun('receipt.approve', user(c, 'finance'), {}, c)).toBe(true);
+  });
+
+  it('a granted Edit beyond the default lets the role do what the menu\'s role does', () => {
+    const c = withAccess(seed(), { lobby: { budget: 'edit', payments: 'edit' } });
+    const caca = user(c, 'lobby');
+    expect(canRun('budget.request', caca, {}, c)).toBe(true);
+    expect(canRun('budget.setLimit', caca, {}, c)).toBe(true); // finance's can, through the Budget grant
+    expect(canRun('budget.setLimit', caca, {}, seed())).toBe(false);
+  });
+
+  it('Hidden or View refuses with err.viewOnly', () => {
+    const c = withAccess(seed(), { lobby: { renewals: 'off' } });
+    const caca = user(c, 'lobby');
+    expect(canRun('followUp.record', caca, {}, c)).toBe(false);
+    try { execute(c, 'followUp.record', { memberId: 'm1', month: '2026-10', outcome: 'continue' }, caca, clock, 'a2'); expect.unreachable(); } catch (e) { expect((e as DomainError).code).toBe('err.viewOnly'); }
+  });
+
+  it('the Owner is never area-checked', () => {
+    const c = withAccess(seed(), { mgmt: { receipts: 'off' } });
+    expect(canRun('receipt.approve', user(c, 'owner'), {}, c)).toBe(true);
+  });
+});

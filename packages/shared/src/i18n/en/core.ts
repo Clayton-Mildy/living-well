@@ -88,7 +88,7 @@ export const feed = {
 };
 export const err = {
   planRequestPending: 'A plan change is already waiting for the club.', planRequestEnding: 'This membership is ending, so the plan can’t change.', planRequestDone: 'The club has already handled this request.',
-  unknownAction: 'That action isn’t available.', forbidden: 'You don’t have permission to do that.', notFound: 'That record no longer exists.', noChanges: 'Nothing changed.',
+  viewOnly: 'View only — ask the owner for access', unknownAction: 'That action isn’t available.', forbidden: 'You don’t have permission to do that.', notFound: 'That record no longer exists.', noChanges: 'Nothing changed.',
   reviewNotPending: 'This change was already handled.', reviewConflict: 'The details changed since this was submitted ({fields}). Review again or approve anyway.', noteRequired: 'Please add a note.',
   memberPending: 'This member is still waiting for management approval.', memberNotActive: 'This membership isn’t active today.', alreadyCheckedIn: 'Already checked in.',
   alreadyCheckedOut: 'Already checked out.', notCheckedIn: 'Not checked in yet.', network: 'No connection to the club server.', invalid: 'Please check the highlighted fields.', closedDay: 'The club is closed that day.',

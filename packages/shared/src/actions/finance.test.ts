@@ -804,7 +804,8 @@ describe('receipts', () => {
     w.fail('receipt.approve', { id }, 's10', 'finance.err.notPending');
     const id2 = w.run('receipt.add', { date: T, supplier: 'Toko Salah', amount: 50_000, sectionId: 'activities', fileName: 'n2.jpg' }, 's5').result.receiptId as string;
     w.fail('receipt.reject', { id: id2, note: '' }, 's9', 'err.invalid');
-    w.run('receipt.reject', { id: id2, note: 'Not a club expense' }, 's9');
+    w.fail('receipt.reject', { id: id2, note: 'Not a club expense' }, 's9', 'err.viewOnly'); // round 16: Management only views Receipts; Finance rejects
+    w.run('receipt.reject', { id: id2, note: 'Not a club expense' }, 's10');
     expect(w.s.receipts[id2]).toMatchObject({ status: 'rejected', note: 'Not a club expense' });
     expect(budgetWeekOf(w.s, 'activities', T).spent).toBe(840_000 + 300_000);
     expect(updatesFor(w.s, getUser(clubs, 's5')!).some((x) => x.kind === 'finance.notif.receiptRejected')).toBe(true);
