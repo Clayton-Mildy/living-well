@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSeed } from '@cp/shared';
+import { MENU_KEYS, AREA_BASE } from '@cp/shared';
 import { navFor, navGroups, phoneNav, screenFor } from './nav';
 
 const s = structuredClone(buildSeed().citra);
@@ -59,5 +60,40 @@ describe('nav groups', () => {
     expect(screenFor(o, 'lobby', 'renewals')).toBeNull();
     expect(navFor(o, 'lobby').map((i) => i.key)).not.toContain('renewals');
     expect(navGroups(o, 'lobby').flatMap((g) => g[1]).map((i) => i.key)).not.toContain('renewals');
+  });
+});
+
+// round 16 fix: each role keeps today's sidebar grouping and order (KC round 13 §15), copied here as fixtures
+describe('access grid in the nav', () => {
+  const OLD: Record<string, [string | null, string[]][]> = {
+    lobby: [[null, ['today', 'members', 'tasks']], ['nav.g_front', ['enquiries', 'renewals', 'venue', 'surveys']], ['nav.g_kitchen', ['menu']], ['nav.g_club', ['contacts', 'requests', 'billing']]],
+    nurse: [[null, ['today', 'readings', 'members', 'tasks']], ['nav.g_club', ['requests', 'contacts']]],
+    activity: [[null, ['today', 'camera', 'log', 'tasks']], ['nav.g_club', ['members', 'calendar', 'requests', 'contacts']]],
+    kitchen: [[null, ['today', 'lunch', 'feedback', 'tasks']], ['nav.g_club', ['requests', 'contacts']]],
+    finance: [[null, ['today', 'payments', 'budget', 'receipts', 'spending']], ['nav.g_kitchen', ['stock']], ['nav.g_club', ['guests', 'members', 'tasks', 'directory']]],
+  };
+  it.each(Object.keys(OLD))('%s: default sidebar groups are today\'s (lobby adds Billing under Club)', (role) => {
+    expect(navGroups(s, role as 'lobby').map((g) => [g[0], g[1].map((i) => i.key)])).toEqual(OLD[role]);
+  });
+  it('R3: an Off link-only extra is closed; unset keeps it', () => {
+    expect(screenFor(s, 'finance', 'renewals')).toBe('renewals');
+    const o = structuredClone(s);
+    o.club.settings.access = { finance: { renewals: 'off' } };
+    expect(screenFor(o, 'finance', 'renewals')).toBeNull();
+  });
+  it('the phone bar drops an item the grid switches off', () => {
+    expect(phoneNav(s, 'mgmt').items.map((i) => i.key)).toContain('members');
+    const o = structuredClone(s);
+    o.club.settings.access = { mgmt: { members: 'off' } };
+    expect(phoneNav(o, 'mgmt').items.map((i) => i.key)).not.toContain('members');
+  });
+  it('every grid menu has a nav item and a screen for its base role', () => {
+    for (const k of MENU_KEYS) {
+      const base = AREA_BASE[k];
+      const o = structuredClone(s);
+      o.club.settings.access = { [base]: { [k]: 'edit' } };
+      expect(navFor(o, base).map((i) => i.key), k).toContain(k);
+      expect(screenFor(o, base, k), k).not.toBeNull();
+    }
   });
 });

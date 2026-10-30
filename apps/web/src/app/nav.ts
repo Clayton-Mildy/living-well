@@ -31,22 +31,34 @@ export function navFor(s: ClubState, role: Role): NavItem[] {
   return menuKeys(s, role).map((k) => itemOf(role, k)).filter((x): x is NavItem => !!x);
 }
 
-// The sidebar sections are management's grouping (KC round 13 §15), applied to the role's own items; Requests and Contacts (not in management's menu) sit under Club
-const GROUPS: [string | null, string[]][] = [
+// The sidebar sections: each role keeps its own grouping and order (KC round 13 §15; only the titles are shared), filtered by the grid.
+// A menu the grid grants beyond the role's defaults goes under Club at the end.
+const G_FRONT = 'nav.g_front', G_CARE = 'nav.g_care', G_KITCHEN = 'nav.g_kitchen', G_FINANCE = 'nav.g_finance', G_CLUB = 'nav.g_club';
+type Layout = [string | null, string[]][];
+const MGMT_LAYOUT: Layout = [
   [null, ['today', 'members', 'reviews', 'tasks', 'report', 'monthReport']],
-  ['nav.g_front', ['enquiries', 'renewals']],
-  ['nav.g_care', ['hchecks', 'readings', 'log', 'camera']], // the photo library is the Camera's Library tab
-  ['nav.g_kitchen', ['menu', 'lunch', 'feedback', 'stock']], // KC 28 Oct: management has the Lunch round too
-  ['nav.g_finance', ['billing', 'payments', 'budget', 'receipts', 'spending']],
-  ['nav.g_club', ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'contacts', 'requests']],
+  [G_FRONT, ['enquiries', 'renewals']],
+  [G_CARE, ['hchecks', 'readings', 'log', 'camera']], // the photo library is the Camera's Library tab
+  [G_KITCHEN, ['menu', 'lunch', 'feedback', 'stock']], // KC 28 Oct: management has the Lunch round too
+  [G_FINANCE, ['billing', 'payments', 'budget', 'receipts', 'spending']],
+  [G_CLUB, ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans']],
 ];
+const LAYOUTS: Record<StaffRole, Layout> = {
+  lobby: [[null, ['today', 'members', 'tasks']], [G_FRONT, ['enquiries', 'renewals', 'venue', 'surveys']], [G_KITCHEN, ['menu']], [G_CLUB, ['contacts', 'requests']]],
+  nurse: [[null, ['today', 'readings', 'members', 'tasks']], [G_CLUB, ['requests', 'contacts']]],
+  activity: [[null, ['today', 'camera', 'log', 'tasks']], [G_CLUB, ['members', 'calendar', 'requests', 'contacts']]],
+  kitchen: [[null, ['today', 'lunch', 'feedback', 'tasks']], [G_CLUB, ['requests', 'contacts']]],
+  finance: [[null, ['today', 'payments', 'budget', 'receipts', 'spending']], [G_KITCHEN, ['stock']], [G_CLUB, ['guests', 'members', 'tasks', 'directory']]],
+  mgmt: MGMT_LAYOUT,
+  owner: MGMT_LAYOUT,
+};
 export function navGroups(s: ClubState, role: Role): [string | null, NavItem[]][] {
   const all = navFor(s, role);
   if (role === 'family') return [[null, all]];
-  const out: [string | null, NavItem[]][] = GROUPS.map(([title, keys]) => [title, keys.map((k) => all.find((i) => i.key === k)).filter((x): x is NavItem => !!x)]);
+  const out: [string | null, NavItem[]][] = LAYOUTS[role].map(([title, keys]) => [title, keys.map((k) => all.find((i) => i.key === k)).filter((x): x is NavItem => !!x)]);
   const placed = new Set(out.flatMap((g) => g[1].map((i) => i.key)));
   const rest = all.filter((i) => !placed.has(i.key));
-  if (rest.length) out[out.length - 1][1].push(...rest);
+  if (rest.length) { const club = out.find((g) => g[0] === G_CLUB); if (club) club[1].push(...rest); else out.push([G_CLUB, rest]); }
   return out.filter((g) => g[1].length);
 }
 
