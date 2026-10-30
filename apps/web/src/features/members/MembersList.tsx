@@ -75,9 +75,9 @@ export function MembersList() {
     }
     return out;
   };
-  // KC round 14: In the club and Active say how many are Flex and how many Gold
+  // KC round 14: In the club says how many are Flex and how many Gold (round 16: not Active any more — its Flex and Gold chips carry the counts)
   // round 15 phase 2: one count per plan (Flex and Gold always, a catalogue plan once it has members, a retired one too); the Plan chip narrows it to that plan
-  const splitRows = f === 'in' ? inRows : f === 'active' ? rows.filter(FILTERS.active) : null;
+  const splitRows = f === 'in' ? inRows : null;
   const splitParts = splitRows ? planDefs(s).map((d) => ({ id: d.id, n: planOn && planOn !== d.id ? 0 : splitRows.filter((r) => r.plan === d.id).length })).filter((x) => (planOn && planOn !== 'flex' && planOn !== 'gold' ? x.id === planOn : x.id === 'flex' || x.id === 'gold' || x.n > 0)) : null;
   const splitText = !splitParts ? '' : splitParts.length === 2 ? t('members.split', { f: splitParts[0].n, g: splitParts[1].n }) : splitParts.map((x) => `${x.n} ${planLabel(s, x.id, lang)}`).join(' · ');
   const splitEl = splitParts ? (

@@ -136,5 +136,7 @@ describe('Members, In the club by plan', () => {
     root = createRoot(host);
     await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=active']}><MembersList /></MemoryRouter>); });
     expect(host.querySelector('[role="radiogroup"][aria-label="Plan"]')).toBeNull();
+    // round 16: the Flex and Gold chips sit beside Active and carry the counts, so the grey split line is gone for Active
+    expect(host.querySelector('[data-testid="members-split"]')).toBeNull();
   });
 });

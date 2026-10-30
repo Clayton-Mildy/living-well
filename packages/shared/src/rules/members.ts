@@ -153,7 +153,7 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 
 // ---------- list rows, filters, search ----------
 export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'ended';
-export const MEMBER_FILTERS: MemberFilter[] = ['active', 'in', 'att', 'checkOn', 'flex', 'gold', 'ended'];
+export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'in', 'att', 'checkOn', 'ended']; // round 16: Flex and Gold beside Active
 /** The plans a member can be put on, as pickers list them: Flex, Gold, then the catalogue's active plans (a retired plan leaves the pickers; its members keep it). Name them with `planLabel`. */
 export const activePlans = (s: ClubState): PlanDef[] => planDefs(s).filter((p) => p.active);
 export interface MemberRow {

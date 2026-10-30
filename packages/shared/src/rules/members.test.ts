@@ -5,7 +5,7 @@ import { addMonths } from '../util';
 import {
   DOC_TYPES, billedExtraDates, findDuplicates, docIdFor, endingOn, faceConsent, faceReady, finalInvoiceFor, finalInvoiceLines, firstOfNextMonth, formatVa, genderOf, isHM, isISO, isPhone, isNewMember, lastContactId, lastLinkId, lastMemberId,
   matchesQuery, memberStatus, nextContactId, nextLinkId, nextMemberId, nextMonday, openBalance, plainName, splitName, tabForSection, unbilledExtraMonths, validateNewMember,
-  documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows, filterCounts, activePlans,
+  MEMBER_FILTERS, documentTypes, pendingReviewsFor, allPendingReviews, appliedReviews, handledReviews, lastVisits, memberRows, pendingPhotoCount, pendingPhotos, photoReviewKind, subStart, subEnd, sortMemberRows, filterCounts, activePlans,
 } from './members';
 import type { MemberRow } from './members';
 
@@ -356,5 +356,11 @@ describe('findDuplicates (round 12 registration)', () => {
     expect(findDuplicates(s, { phone: '', nik: '' })).toEqual({ members: [], leads: [] });
     expect(findDuplicates(s, { phone: '0812' })).toEqual({ members: [], leads: [] }); // too short to compare
     expect(findDuplicates(s, { phone: '+62 812-8831-2201' }).leads).toEqual([]); // e9 is lost: not an open lead
+  });
+});
+
+describe('filters', () => {
+  it('round 16: Flex and Gold sit beside Active (a helicopter view of the counts)', () => {
+    expect(MEMBER_FILTERS).toEqual(['active', 'flex', 'gold', 'in', 'att', 'checkOn', 'ended']);
   });
 });
