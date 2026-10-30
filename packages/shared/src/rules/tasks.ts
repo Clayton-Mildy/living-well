@@ -151,7 +151,7 @@ export interface DutyDef {
   /** the bell message of a late part, when the part brings none of its own: params are the part's plus `n` (people still to do) */
   bellKind?: string;
   /** the parts on a date, empty = nothing to do (hidden). Times are natural ones; the configured time is applied by `dutyState`. */
-  parts(s: ClubState, date: ISODate, nowMin: number): PartIn[];
+  parts(s: ClubState, date: ISODate, nowMin: number, o: DutyOpts): PartIn[];
 }
 
 const endOf = (time: HM): HM => toHM(toMin(time) + SESSION_MIN);
@@ -166,6 +166,9 @@ const unpaidPart = (s: ClubState, date: ISODate): PartIn[] => {
   const chased = rows.filter((r) => lastContactOn(r).slice(0, 10) >= since).length;
   return [stub('unpaid', { done: chased >= rows.length, count: { done: chased, total: rows.length }, link: '/renewals?tab=unpaid' })];
 };
+
+/** round 16 (KC): who is looking: the Owner's management duties also count what only he decides (owner approvals). */
+export interface DutyOpts { owner?: boolean }
 
 export const DUTIES: DutyDef[] = [
   // ----- activity -----
@@ -327,8 +330,8 @@ export const DUTIES: DutyDef[] = [
   // ----- management -----
   {
     id: 'mgmt.approvals', role: 'mgmt', icon: 'fact_check', titleKey: 'tasks.duty.mgmt.approvals', every: 'day', defaultDue: () => '16:00', todayOnly: true,
-    parts: (s) => {
-      const n = approvalTotal(s);
+    parts: (s, _date, _now, o) => {
+      const n = approvalTotal(s, { owner: o.owner });
       return [stub('approvals', { done: n === 0, ...(n ? { count: { done: 0, total: n } } : {}), link: '/reviews' })];
     },
   },
@@ -362,28 +365,28 @@ export const partLate = (p: Pick<DutyPart, 'done' | 'due' | 'neverLate'>, date: 
   !p.done && !p.neverLate && (date < today || (date === today && nowMin >= toMin(p.due)));
 
 /** A duty on a date. The club being closed, the duty being off or a past day it cannot tell all give no parts. */
-export function dutyState(s: ClubState, def: DutyDef, date: ISODate, today: ISODate, nowMin: number): DutyState {
+export function dutyState(s: ClubState, def: DutyDef, date: ISODate, today: ISODate, nowMin: number, o: DutyOpts = {}): DutyState {
   const none = (status: DutyStatus): DutyState => ({ def, parts: [], done: 0, total: 0, late: 0, status });
   if (!dutyIsOn(s, def.id) || date > today || !isOpen(s, date)) return none('none');
   if (def.todayOnly && date !== today) return none('past');
   const cfg = dutyCfg(s, def.id);
-  const parts: DutyPart[] = def.parts(s, date, date < today ? 24 * 60 : nowMin).map((p) => ({ ...p, titleKey: def.partKey ?? def.titleKey, due: cfg.dueBy ?? p.due ?? def.defaultDue?.(s) ?? '16:30' }));
+  const parts: DutyPart[] = def.parts(s, date, date < today ? 24 * 60 : nowMin, o).map((p) => ({ ...p, titleKey: def.partKey ?? def.titleKey, due: cfg.dueBy ?? p.due ?? def.defaultDue?.(s) ?? '16:30' }));
   if (!parts.length) return none('none');
   const done = parts.filter((p) => p.done).length;
   const late = parts.filter((p) => partLate(p, date, today, nowMin)).length;
   return { def, parts, done, total: parts.length, late, status: done === parts.length ? 'done' : late ? 'late' : 'open' };
 }
 /** The duties of a role on a date that apply (off ones and empty ones are left out; a "past" one stays so the screens can show a dash). */
-export function dutiesOf(s: ClubState, role: StaffRole, date: ISODate, today: ISODate, nowMin: number): DutyState[] {
-  return dutiesOfRole(role).filter((d) => dutyIsOn(s, d.id)).map((d) => dutyState(s, d, date, today, nowMin)).filter((x) => x.status !== 'none');
+export function dutiesOf(s: ClubState, role: StaffRole, date: ISODate, today: ISODate, nowMin: number, o: DutyOpts = {}): DutyState[] {
+  return dutiesOfRole(role).filter((d) => dutyIsOn(s, d.id)).map((d) => dutyState(s, d, date, today, nowMin, o)).filter((x) => x.status !== 'none');
 }
 
 // ----- the bell -----
 export interface DutyReminder { id: string; kind: string; params: Record<string, string | number>; link: string; at: DT }
 /** One reminder per late part of the role's duties today. It clears itself when the part is done (or the duty is switched off). Only the person on duty gets these. */
-export function dutyReminders(s: ClubState, role: StaffRole, today: ISODate, nowMin: number): DutyReminder[] {
+export function dutyReminders(s: ClubState, role: StaffRole, today: ISODate, nowMin: number, o: DutyOpts = {}): DutyReminder[] {
   const out: DutyReminder[] = [];
-  for (const d of dutiesOf(s, role, today, today, nowMin)) {
+  for (const d of dutiesOf(s, role, today, today, nowMin, o)) {
     for (const p of d.parts) {
       if (!partLate(p, today, today, nowMin)) continue;
       const bell = p.bell ?? (d.def.bellKind ? { id: `duty:${d.def.id}:${p.key}`, kind: d.def.bellKind, params: { ...p.params, ...(p.count ? { n: p.count.total - p.count.done } : {}) } } : undefined);
@@ -410,8 +413,8 @@ export interface RoleSummary {
   customOverdue: number;
 }
 /** A role's day: the duties with their score and the additional tasks (custom ones) that count that day. */
-export function roleSummary(s: ClubState, role: StaffRole, date: ISODate, today: ISODate, nowMin: number): RoleSummary {
-  const duties = dutiesOf(s, role, date, today, nowMin);
+export function roleSummary(s: ClubState, role: StaffRole, date: ISODate, today: ISODate, nowMin: number, o: DutyOpts = {}): RoleSummary {
+  const duties = dutiesOf(s, role, date, today, nowMin, o);
   const custom = customTasks(s, role, date, today, nowMin);
   const counted = custom.filter((i) => countsOn(i, date));
   return {
@@ -482,7 +485,7 @@ export const teamRange = (s: ClubState, from: ISODate, to: ISODate, today: ISODa
   TASK_ROLES.map((r) => roleRange(s, r, from, to, today, nowMin)).filter((r) => r.duties.length > 0 || r.customTotal > 0);
 
 /** Open work of a role that is due by now (the nav badge): late duty parts, and additional tasks due today or earlier that are not ticked off. */
-export function openTaskCount(s: ClubState, role: StaffRole, today: ISODate, nowMin: number): number {
-  const r = roleSummary(s, role, today, today, nowMin);
+export function openTaskCount(s: ClubState, role: StaffRole, today: ISODate, nowMin: number, o: DutyOpts = {}): number {
+  const r = roleSummary(s, role, today, today, nowMin, o);
   return r.late + (r.customTotal - r.customDone);
 }

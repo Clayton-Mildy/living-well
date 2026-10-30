@@ -52,7 +52,8 @@ function QuickTasksButton({ phone, role }: { phone: boolean; role: StaffRole }) 
   const { today, nowMin } = useNow();
   const pins = useUi((st) => st.pins);
   const [open, setOpen] = useState(false);
-  const sum = useMemo(() => roleSummary(s, role, today, today, nowMin), [s, role, today, nowMin]);
+  const { realRole } = useMe();
+  const sum = useMemo(() => roleSummary(s, role, today, today, nowMin, { owner: realRole === 'owner' }), [s, role, today, nowMin, realRole]); // round 16
   // late first, then by the time they are due; done ones go last (like Mine on the Tasks screen)
   const rows = useMemo<Row[]>(() => {
     const duties = sum.duties.flatMap((d) => d.parts.map((p): Row => ({ kind: 'duty', key: d.def.id + p.key, def: d.def, part: p, done: p.done, late: partLate(p, today, today, nowMin), due: p.due })));

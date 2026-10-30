@@ -1,6 +1,8 @@
 // Round 16 (KC): Management's pricing, holiday and weekly-budget changes wait for the Owner (Benjamin, s11).
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, DomainError, live, type ClubState } from '../index';
+import { buildSeed, execute, getUser, DomainError, live, actionItems, type ClubState } from '../index';
+import { overviewStats } from '../rules/mgmt';
+import { roleSummary } from '../rules/tasks';
 import { pendingItems } from '../rules/approvals';
 import { ownerKindOf, pendingOwnerRequests } from './ownerGate';
 
@@ -83,7 +85,8 @@ describe('owner gate', () => {
     const a = run(base, 'calendarEvent.create', { ...CLOSE, date: '2026-10-26' }, EGA);
     const crId = a.result.changeRequestId as string;
     fails(() => run(a.state, 'review.approve', { crId }, OWNER, later), 'cal.err.pastDate'); // the day passed while it waited
-    expect(a.state.changeRequests[crId].status).toBe('pending');
+    // the failed approval changed nothing: on a day it still fits, the same request is approved
+    expect(run(a.state, 'review.approve', { crId }, OWNER).state.changeRequests[crId].status).toBe('approved');
     // removing a holiday the Owner removed himself in between
     const hol = live(base.calendarEvents).find((e) => e.kind === 'holiday' && e.date > clock.today)!;
     const d = run(base, 'calendarEvent.delete', { eventId: hol.id }, EGA);
@@ -124,5 +127,18 @@ describe('owner gate', () => {
     const cr = pendingOwnerRequests(seeded, 'holiday')[0];
     expect(cr).toMatchObject({ action: 'calendarEvent.create', submittedBy: 'staff:s9', input: { kind: 'closed', title: 'Staff training day', titleId: 'Hari pelatihan staf', date: '2026-12-14' } });
     expect(Object.values(seeded.notifications).some((x) => x.kind === 'notif.ownerApproval' && x.ref?.id === cr.id)).toBe(true);
+  });
+  it('the seeded day is Mon 14 Dec for the 21 Oct and the 30 Oct anchors (moved by whole months)', () => {
+    expect((pendingOwnerRequests(buildSeed('2026-10-30').citra, 'holiday')[0].input as { date: string }).date).toBe('2026-12-14');
+  });
+  it("Needs action: Ega gets no item for an owner request; Benjamin gets one 'Owner approvals waiting' item; his tile and duty count it", () => {
+    const ega = actionItems(seeded, as(seeded, EGA), clock.today, clock.nowMin);
+    expect(ega.some((x) => x.id === 'cr:cr-owner-training' || x.id === 'approvals:owner')).toBe(false);
+    const ben = actionItems(seeded, as(seeded, OWNER), clock.today, clock.nowMin);
+    expect(ben.find((x) => x.id === 'approvals:owner')).toMatchObject({ kind: 'notif.act.approvalsOwner', params: { n: 1 }, link: '/reviews?tab=owner' });
+    expect(ben.some((x) => x.id === 'cr:cr-owner-training')).toBe(false);
+    expect(overviewStats(seeded, clock.today, { owner: true }).reviews).toBe(overviewStats(seeded, clock.today).reviews + 1);
+    const duty = (o: { owner?: boolean }) => roleSummary(seeded, 'mgmt', clock.today, clock.today, clock.nowMin, o).duties.find((d) => d.def.id === 'mgmt.approvals')!.parts[0].count!.total;
+    expect(duty({ owner: true })).toBe(duty({}) + 1);
   });
 });

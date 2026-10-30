@@ -1,7 +1,8 @@
 // Notification centre: "Needs action" items are derived from state (they clear themselves when handled);
 // "Updates" are stored Notification rows with per-user read state.
 import type { ClubState, DT, ISODate, Notification, Role, User } from './types';
-import { roleOf, screenRole } from './actions/framework';
+import { roleOf, screenRole, isOwner } from './actions/framework';
+import { isOwnerSection } from './actions/ownerGate';
 import { live, sortBy, toMin, addDays, ym } from './util';
 import { lobbyGroups, guestsOn } from './rules/attendance';
 import { todayReading, validReadings } from './rules/health';
@@ -62,8 +63,11 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
       const items = pendingItems(s, type);
       if (items.length) add({ id: `approvals:${type}`, kind, params: { n: items.length }, link: `/reviews?tab=${type}`, severity: 'attention', at: items[0].at });
     }
+    // round 16 (KC): the Owner's own list: Management's pricing, holiday and budget changes waiting for him
+    const owner = isOwner(user) ? pendingItems(s, 'owner') : [];
+    if (owner.length) add({ id: 'approvals:owner', kind: 'notif.act.approvalsOwner', params: { n: owner.length }, link: '/reviews?tab=owner', severity: 'attention', at: owner[0].at });
     for (const c of live(s.changeRequests)) {
-      if (c.status !== 'pending') continue;
+      if (c.status !== 'pending' || isOwnerSection(c.section)) continue; // owner requests: the item above, the Owner's alone
       add({ id: 'cr:' + c.id, kind: c.kind === 'approval' ? 'notif.act.review' : 'notif.act.reviewFlagged', params: { section: c.section, name: c.target.memberId && s.members[c.target.memberId] ? displayName(s.members[c.target.memberId]) : '' }, link: '/reviews', severity: 'attention', at: c.createdAt, memberId: c.target.memberId });
     }
     for (const r of validReadings(s).filter((x) => x.date === today && x.status === 'alert' && x.memberId))
@@ -117,7 +121,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
   if (user.kind === 'staff') {
     // KC round 7: a general duty that is late (a session picture, the lunch photo, a round of the daily log, the checks…) reminds the person on duty, and only them;
     // it clears itself when the duty is done. Management switches duties off or retimes them in Tasks > Manage.
-    for (const r of dutyReminders(s, screenRole(user.staff.role), today, nowMin)) add({ id: r.id, kind: r.kind, params: r.params, link: r.link, severity: 'attention', at: r.at });
+    for (const r of dutyReminders(s, screenRole(user.staff.role), today, nowMin, { owner: isOwner(user) })) add({ id: r.id, kind: r.kind, params: r.params, link: r.link, severity: 'attention', at: r.at });
   }
   if (role === 'kitchen' || role === 'mgmt') {
     for (const c of conflictsOn(s, today).filter((x) => !x.plan)) {

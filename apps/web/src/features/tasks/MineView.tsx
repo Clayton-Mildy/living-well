@@ -15,10 +15,10 @@ import { DutyRow, Progress, TaskRow, TaskSheet, useTick, whoIs } from './parts';
 export function MineView({ s, role, today, nowMin }: { s: ClubState; role: StaffRole; today: ISODate; nowMin: number }) {
   const t = useT();
   const { isPhone } = useDevice();
-  const { id: me, role: myRole } = useMe();
+  const { id: me, role: myRole, realRole } = useMe();
   const tick = useTick();
   const [openKey, setOpenKey] = useState<{ id: string; period: string } | null>(null);
-  const sum = useMemo(() => roleSummary(s, role, today, today, nowMin), [s, role, today, nowMin]);
+  const sum = useMemo(() => roleSummary(s, role, today, today, nowMin, { owner: realRole === 'owner' }), [s, role, today, nowMin, realRole]); // round 16: the Owner's approvals duty counts his requests
   const who = (id: string) => whoIs(s, id);
   const status = dayStatus(s, today);
   // late first, then by the time they are due; done ones go last

@@ -236,7 +236,7 @@ export interface OverviewStats {
   survey: { avg: number; n: number } | null; mood: { index: number | null; lift: number | null; n: number }; photos: number; logsSaved: number; logsTotal: number; lunchPhoto: boolean; payments: number; stock: number; venues: number; samplePrices: boolean;
 }
 /** Every number on the overview tiles, computed from the club's own data (an empty clubhouse gives zeros). */
-export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
+export function overviewStats(s: ClubState, today: ISODate, o: { owner?: boolean } = {}): OverviewStats {
   const g = lobbyGroups(s, today);
   const checks = validReadings(s).filter((r) => r.date === today && r.kind !== 'monthly');
   const sv = liveSurvey(s);
@@ -257,7 +257,7 @@ export function overviewStats(s: ClubState, today: ISODate): OverviewStats {
     flagged: checks.filter((r) => r.status !== 'normal').length,
     overdue: live(s.invoices).filter((i) => invoiceStatus(s, i, today) === 'overdue').length,
     enquiries: openEnquiries(s).length,
-    reviews: approvalTotal(s) - pendingItems(s, 'stock').length, // waiting in Approvals (stock has its own tile)
+    reviews: approvalTotal(s, o) - pendingItems(s, 'stock').length, // waiting in Approvals (stock has its own tile; round 16: owner requests for the Owner only)
     checkOn: checkOnList(s, today).length,
     survey: st && st.overallN ? { avg: st.overall, n: st.overallN } : null,
     mood: { index: dailyIndex, lift: ms.lift, n: daily.length },

@@ -3,7 +3,7 @@
 // training day waiting for the Owner.
 // Fixed values, no random draws; the same for 5 and 45 members.
 import type { ClubState, ISODate } from '../../types';
-import { addDays, daysBetween, DEMO_TODAY, isWeekday, live } from '../../util';
+import { addDays, addMonths, DEMO_TODAY, isWeekday, live } from '../../util';
 import { fmtDMY } from '../../rules/calendar';
 import { dayStatus } from '../../rules/core';
 
@@ -26,10 +26,12 @@ export function seedRound16(s: ClubState, T: ISODate): void {
   seedOwnerHoliday(s, T);
 }
 
-/** R7: Ega asked to close the club for a staff training day (the first open weekday on or after 14 Dec, moved with the anchor); it waits for Benjamin, who was told. */
+/** R7: Ega asked to close the club for a staff training day (the first free weekday on or after 14 Dec, moved by whole months with the anchor); it waits for Benjamin, who was told. */
 function seedOwnerHoliday(s: ClubState, T: ISODate): void {
   if (!s.staff.s9 || !s.staff.s11) return;
-  let date = addDays('2026-12-14', daysBetween(DEMO_TODAY, T));
+  // moved by whole months with the anchor (the seed's month), so it is mid-December for any anchor in October
+  const months = (+T.slice(0, 4) - +DEMO_TODAY.slice(0, 4)) * 12 + (+T.slice(5, 7) - +DEMO_TODAY.slice(5, 7));
+  let date = `${addMonths('2026-12', months)}-14`;
   const free = (d: ISODate) => isWeekday(d) && dayStatus(s, d).events.length === 0 && !live(s.venueBookings).some((v) => v.date === d);
   while (!free(date)) date = addDays(date, 1);
   const at = `${addDays(T, -1)}T16:20`;

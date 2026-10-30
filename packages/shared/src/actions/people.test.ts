@@ -51,7 +51,8 @@ describe('the Owner (round 16)', () => {
     const s = seed();
     const now = 23 * 60;
     const ids = (id: string) => actionItems(s, user(s, id), T, now).map((x) => x.id).sort();
-    expect(ids('s11')).toEqual(ids('s9'));
+    expect(ids('s11').filter((x) => x !== 'approvals:owner')).toEqual(ids('s9')); // round 16: plus his own owner-approvals item (the seeded staff training day)
+    expect(ids('s11')).toContain('approvals:owner');
     // (management's own duties ring no bell today, so this pins the mapping rather than a count)
     for (const r of dutyReminders(s, 'mgmt', T, now)) expect(ids('s11')).toContain(r.id);
   });

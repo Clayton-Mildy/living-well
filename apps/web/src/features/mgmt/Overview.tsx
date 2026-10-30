@@ -1,5 +1,6 @@
 // Management overview (design ScrLight, mgmt branch): tiles, then Live today / Coming up / Requests from families / Enquiries.
 // Every number and row is computed from the clubhouse's own data, so an empty clubhouse (Adina) shows zeros and empty states.
+import { useMe } from '../../lib/me';
 import { Fragment, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { actorName, memberName, planLabel, type Enquiry } from '@cp/shared';
@@ -27,7 +28,8 @@ export function Overview() {
   const s = useClub();
   const { today } = useNow();
   const navigate = useNavigate();
-  const st = useMemo(() => overviewStats(s, today), [s, today]);
+  const { realRole } = useMe();
+  const st = useMemo(() => overviewStats(s, today, { owner: realRole === 'owner' }), [s, today, realRole]); // round 16: owner requests count for the Owner
   const empty = st.members === 0 && st.staff === 0;
 
   const tiles: Tile[] = [

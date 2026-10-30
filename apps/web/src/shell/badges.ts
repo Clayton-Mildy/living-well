@@ -24,7 +24,7 @@ export function useNavCounts(): Record<string, number> {
       out.budget = live(s.budgetRequests).filter((b) => b.status === 'pending').length;
       out.receipts = live(s.receipts).filter((r) => r.status === 'submitted' && !r.voidedAt).length + live(s.vendorInvoices).filter((v) => v.status === 'toApprove').length;
     }
-    if (user?.kind === 'staff') out.tasks = openTaskCount(s, screenRole(user.staff.role), today, nowMin); // KC round 7: tasks still open that are due by now
+    if (user?.kind === 'staff') out.tasks = openTaskCount(s, screenRole(user.staff.role), today, nowMin, { owner: realRole === 'owner' }); // KC round 7: tasks still open that are due by now
     return out;
   }, [s, role, realRole, id, user, today, nowMin]);
 }

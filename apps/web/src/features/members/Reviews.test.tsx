@@ -51,12 +51,22 @@ function openAsOwner() {
 }
 
 describe('Approvals', () => {
+  it('round 16: /reviews?tab=owner opens the Owner tab', async () => {
+    openAsOwner();
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/reviews?tab=owner']}><Reviews /></MemoryRouter>); });
+    expect(tab(/^Owner/)?.getAttribute('aria-selected')).toBe('true');
+  });
   it("round 16: the Owner's tab comes first with Ega's staff training day; Approve replays it, Reject asks why", async () => {
     openAsOwner();
     await show(<Reviews />);
     const labels = Array.from(document.querySelectorAll('[role="tablist"][aria-label="Approval types"] [role="tab"]')).map((t) => t.textContent);
     expect(labels[0]).toBe('Owner · 1');
     expect(tab(/^Owner/)?.getAttribute('aria-selected')).toBe('true');
+    // the seeded day is moved by whole months with the anchor: Mon 14 Dec for any October anchor
+    expect((useReplica.getState().view!.changeRequests['cr-owner-training'].input as { date: string }).date).toBe('2026-12-14');
     const row = document.querySelector('[data-type="owner"]')!;
     expect(row.textContent).toContain('Ega · Close Mon 14 Dec · Staff training day');
     await click(Array.from(row.querySelectorAll('button')).find((b) => /Approve$/.test(b.textContent || '')));
