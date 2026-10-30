@@ -2,7 +2,7 @@
 // Isolated env: E2E_NAME=r13 E2E_PORT=8861 scripts/e2e-all.sh 1 "phone" round13
 import { test, expect } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll } from './helpers';
-import { pickDate } from './kit';
+import { pickDate, TINY_PNG } from './kit';
 import type { Page } from '@playwright/test';
 
 /** The bell lists many items now and pages them: look through the pages of the open Notifications dialog for a line (the last locator is returned, so a count of 0 means it is on no page). */
@@ -116,6 +116,7 @@ test('front desk: Caca changes Oma Lina’s plan (applies at once, no review) an
   await page.getByRole('button', { name: /INV-2610-001$/ }).click();
   const sheet = page.getByRole('dialog', { name: 'Invoice INV-2610-001' });
   await sheet.getByRole('button', { name: 'Record payment' }).click();
+  await sheet.getByTestId('payment-proof').getByTestId('doc-file').setInputFiles({ name: 'receipt.png', mimeType: 'image/png', buffer: TINY_PNG }); // round 16: a photo of the slip or receipt is required
   await sheet.getByRole('button', { name: 'Record payment' }).last().click();
   await expect(sheet).toContainText('Recorded by Caca, waiting for finance');
   await assertNoHorizontalScroll(page);

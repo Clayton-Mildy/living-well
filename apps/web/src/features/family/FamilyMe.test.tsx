@@ -179,7 +179,7 @@ describe('family Billing', () => {
     const go = Array.from(sheet.querySelectorAll('button')).find((b) => b.textContent === 'Pass on') as HTMLButtonElement;
     await act(async () => { go.click(); });
     expect(acts.at(-1)).toMatchObject({ name: 'family.setPrimary', input: { memberId: 'm1', familyId: 'f2' } });
-    expect(q('[data-testid="billing-email"]')?.textContent).toContain('No email yet');
+    expect(q('[data-testid="billing-email"]')?.textContent).toContain('Invoices go to maria.wijaya@example.com');
   });
   it('round 16: a contact who is not the billing contact sees who is', async () => {
     open('f2');

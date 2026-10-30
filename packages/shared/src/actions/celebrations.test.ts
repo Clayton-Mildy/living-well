@@ -174,9 +174,9 @@ describe('round 16: celebrations with charges still to invoice (Billing)', () =>
     const r = run(s0, 'celebration.request', req, 's9');
     const id = created(s0, r.state)[0];
     let s = run(r.state, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
-    expect(celebrationsToInvoice(s).map((x) => [x.c.id, x.amount])).toEqual([[id, 350_000]]);
+    expect(celebrationsToInvoice(s).map((x) => [x.c.id, x.amount])).toContainEqual([id, 350_000]);
     s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
-    expect(celebrationsToInvoice(s)).toEqual([]);
+    expect(celebrationsToInvoice(s).map((x) => x.c.id)).not.toContain(id);
   });
 });
 

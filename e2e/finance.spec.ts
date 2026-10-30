@@ -3,7 +3,7 @@
 // Runs at phone, phone360, tablet and laptop. Isolated environment: `pnpm e2e:env finance 8807 5207`.
 import { test, expect as baseExpect, type Page } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, isPhone, assertNoHorizontalScroll } from './helpers';
-import { goToPage, pickDate, pickFilter, takePhotoWithFile } from './kit';
+import { goToPage, pickDate, pickFilter, takePhotoWithFile, TINY_PNG } from './kit';
 
 // Eight agents share one machine: leave room for a slow moment (a test that is wrong still fails, just a little later).
 const expect = baseExpect.configure({ timeout: 15_000 });
@@ -130,6 +130,7 @@ test.describe('billing', () => {
     await sheet.getByRole('button', { name: 'Record payment' }).click();
     await sheet.getByLabel('Amount credited (Rp)').fill('2000000');
     await sheet.getByLabel('Reference').fill('TF-4471');
+    await sheet.getByTestId('payment-proof').getByTestId('doc-file').setInputFiles({ name: 'slip-4471.png', mimeType: 'image/png', buffer: TINY_PNG }); // round 16: a photo of the slip or receipt is required
     await sheet.getByRole('button', { name: 'Record payment' }).last().click();
     await toast(page, /Payment recorded for Opa Budi/);
     await expect(sheet.getByText('Part paid').first()).toBeVisible();
@@ -145,6 +146,7 @@ test.describe('billing', () => {
     await sheet.getByRole('button', { name: 'Record payment' }).click();
     await expect(sheet.getByLabel('Amount credited (Rp)')).toHaveValue('1.950.000'); // the balance is suggested
     await sheet.getByLabel('Reference').fill('TF-4472');
+    await sheet.getByTestId('payment-proof').getByTestId('doc-file').setInputFiles({ name: 'slip-4472.png', mimeType: 'image/png', buffer: TINY_PNG }); // round 16: a photo of the slip or receipt is required
     await sheet.getByRole('button', { name: 'Record payment' }).last().click();
     await expect(sheet.getByText('Paid', { exact: true }).first()).toBeVisible();
     c.assertClean();
@@ -303,6 +305,8 @@ test.describe('payments', () => {
     await page.getByLabel('Amount credited (Rp)').fill('5000000'); // more than September: the rest goes to October
     await expect(page.getByRole('button', { name: 'Record payment' })).toHaveAttribute('aria-disabled', 'true'); // a bank transfer needs its reference
     await page.getByLabel('Reference', { exact: true }).fill('TF-9981');
+    await expect(page.getByRole('button', { name: 'Record payment' })).toHaveAttribute('aria-disabled', 'true'); // round 16: and a photo of the slip
+    await page.getByTestId('payment-proof').getByTestId('doc-file').setInputFiles({ name: 'slip-9981.png', mimeType: 'image/png', buffer: TINY_PNG }); // round 16: a photo of the slip or receipt is required
     await expect(page.getByRole('button', { name: 'Record payment' })).not.toHaveAttribute('aria-disabled', 'true');
     await page.getByRole('button', { name: 'Record payment' }).click();
     await toast(page, /Payment recorded for Opa Tjahjadi/);

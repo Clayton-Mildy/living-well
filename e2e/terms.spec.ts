@@ -78,16 +78,16 @@ test.describe('leave (cuti)', () => {
     const sheet = page.getByRole('dialog', { name: 'Leave for Oma Lina' });
     await expect(sheet).toContainText('Rp 250.000');
     await expect(sheet).toContainText('14 days before the end of the month before');
-    // the deadline for November was 17 October: it is not offered; December is, with its deadline
+    // the deadline for November was 18 October (round 16: 1st − 14 days): it is not offered; December is, with its deadline
     await expect(sheet.getByRole('radio', { name: /^November/ })).toHaveCount(0);
-    await expect(sheet.getByRole('radio', { name: 'December · ask by Mon 16 Nov' })).toBeVisible();
-    await sheet.getByRole('radio', { name: 'December · ask by Mon 16 Nov' }).click();
+    await expect(sheet.getByRole('radio', { name: 'December · ask by Tue 17 Nov' })).toBeVisible();
+    await sheet.getByRole('radio', { name: 'December · ask by Tue 17 Nov' }).click();
     await sheet.getByRole('button', { name: 'Send', exact: true }).click();
     await toast(page, 'Leave for December asked.');
     await expect(sheet).toHaveCount(0);
     const row = p.getByTestId('leave-row');
     await expect(row).toHaveCount(1);
-    await expect(row).toContainText('Leave in December · asked, you can take it back until Mon 16 Nov');
+    await expect(row).toContainText('Leave in December · asked, you can take it back until Tue 17 Nov');
     // management and finance were told
     const snap = await state(request, 's9');
     expect(Object.values<{ kind: string; params: { month: string } }>(snap.notifications).some((n) => n.kind === 'family.notif.leaveAsked' && n.params.month === '2026-12')).toBe(true);
@@ -117,7 +117,7 @@ test.describe('leave (cuti)', () => {
     const snap = await state(request, 's9');
     const inv = Object.values<{ memberId: string; period: string; lines: { label: string; amount: number }[] }>(snap.invoices).filter((i) => i.period === '2026-12');
     expect(inv.find((i) => i.memberId === 'm1')!.lines.map((l) => [l.label, l.amount])).toEqual([['inv.line.leave', 250000]]);
-    expect(inv.find((i) => i.memberId === 'm46')!.lines.map((l) => [l.label, l.amount])).toEqual([['inv.line.gold', 3950000]]);
+    expect(inv.find((i) => i.memberId === 'm46')!.lines.map((l) => [l.label, l.amount])).toEqual([['inv.line.gold', 3950000], ['inv.line.pickup', 450000]]); // round 16: Opa Budi is picked up
     // Maria sees it on her Billing: the leave line, the status
     await signIn(page, 'f1', '/billing');
     await expect(planCard(page, 'm1').getByTestId('leave-row')).toContainText('On leave in December');

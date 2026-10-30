@@ -58,8 +58,8 @@ describe('the contract email', () => {
 
 describe('the family edits their own email', () => {
   it('goes to the club for approval; another contact\'s email is not theirs to change', () => {
-    const r = run(seed.citra, 'family.updateContact', { familyId: 'f1', email: 'maria@example.com' }, who('f1'));
-    expect(r.state.familyContacts.f1.email).toBeUndefined();
+    const r = run(seed.citra, 'family.updateContact', { familyId: 'f1', email: 'maria.new@example.com' }, who('f1'));
+    expect(r.state.familyContacts.f1.email).toBe(seed.citra.familyContacts.f1.email); // unchanged until the club approves
     expect(live(r.state.changeRequests).some((c) => c.status === 'pending' && c.action === 'family.updateContact' && c.submittedBy === 'family:f1')).toBe(true);
     fails(seed.citra, 'family.updateContact', { familyId: 'f2', email: 'x@example.com' }, who('f1'), 'err.forbidden');
     fails(seed.citra, 'family.updateContact', { familyId: 'f1', name: 'Someone Else' }, who('f1'), 'err.forbidden');
