@@ -2,6 +2,7 @@
 import type { Same } from '../ns';
 import type { cal as EN } from '../en/cal';
 export const cal: Same<typeof EN> = {
+  went: 'Ikut', wentNone: 'Belum ada yang dicentang', whoWent: 'Yang ikut · {n}', whoWentTitle: 'Yang ikut {title}', whoWentSaved: 'Daftar yang ikut disimpan.', fee: 'Biaya karyawisata', feeHint: 'Setiap anggota yang ikut membayar ini di tagihan berikutnya. 0 = gratis.',
   // calendar
   openHours: 'Buka Senin sampai Jumat, dan akhir pekan bila ada program · {open}–{close}', weekendCol: 'Akhir pekan', titleFamily: 'Kalender klub', view: 'Tampilan', vList: 'Daftar', vMonth: 'Kalender', vYear: 'Tahun', closedYear: 'Tutup atau di luar klub {y}', nDays: '{n} hari', prevYear: 'Tahun sebelumnya', nextYear: 'Tahun berikutnya', showMore: 'Tampilkan hari lainnya',
   key: 'Keterangan', tapDay: 'Ketuk tanggal untuk melihat acaranya.', openWeek: 'Buka minggu ini di jadwal',

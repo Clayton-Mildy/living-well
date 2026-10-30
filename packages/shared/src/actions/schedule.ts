@@ -83,6 +83,7 @@ const eventSchema = z.object({
   titleId: z.string().trim().max(120).nullish(),
   from: hm.nullish(),
   to: hm.nullish(),
+  fee: z.number().int().min(0).max(100_000_000).nullish(), // round 16: an outing's field trip fee
   notify: z.boolean().optional(),
 });
 type EventInput = z.infer<typeof eventSchema>;
@@ -95,6 +96,7 @@ const updateSchema = z.object({
   titleId: z.string().trim().max(120).nullish(),
   from: hm.nullish(),
   to: hm.nullish(),
+  fee: z.number().int().min(0).max(100_000_000).nullish(),
   notify: z.boolean().optional(),
 });
 type UpdateInput = z.infer<typeof updateSchema>;
@@ -376,7 +378,7 @@ export const scheduleActions = [
     run(d, input, ctx) {
       const f = eventFields(input, ctx);
       const id = ctx.id('ev');
-      d.calendarEvents[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...f };
+      d.calendarEvents[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...f, ...(f.kind === 'outing' && input.fee ? { fee: input.fee } : {}) };
       notifyEveryone(d, ctx, { kind: 'cal.notif.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } });
       ctx.result.eventId = id;
@@ -408,6 +410,7 @@ export const scheduleActions = [
       if (f.endDate) row.endDate = f.endDate; else delete row.endDate;
       if (f.titleId) row.titleId = f.titleId; else delete row.titleId;
       if (f.from && f.to) { row.from = f.from; row.to = f.to; } else { delete row.from; delete row.to; }
+      if (input.fee !== undefined) { if (f.kind === 'outing' && input.fee) row.fee = input.fee; else delete row.fee; } // round 16
       notifyEveryone(d, ctx, { kind: 'cal.notif.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } });
     },
@@ -423,6 +426,33 @@ export const scheduleActions = [
       cur.deletedAt = ctx.nowDT;
       notifyEveryone(d, ctx, { kind: 'cal.notif.removed_' + cur.kind, params: { date: dateText(cur.date, cur.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[cur.kind], key: 'cal.feed.removed_' + cur.kind, params: { date: dateText(cur.date, cur.endDate) } });
+    },
+  }),
+
+  // round 16 (KC): who went on a field trip. Each member ticked on an outing with a fee gets a pending charge for their next invoice; unticking takes back a charge
+  // no invoice has billed yet. Only from the outing's day (nobody has gone before it).
+  defineAction<{ eventId: string; memberIds: string[] }>({
+    name: 'calendarEvent.setWent',
+    can: (u) => builders(u),
+    parse: (raw) => parseWith(z.object({ eventId: z.string().min(1), memberIds: z.array(z.string().min(1).max(60)).max(200) }), raw),
+    run(d, input, ctx) {
+      const ev = d.calendarEvents[input.eventId];
+      if (!ev || ev.deletedAt || ev.cancelledAt) ctx.fail('err.notFound');
+      if (ev.kind !== 'outing' || ev.date > ctx.today) ctx.fail('err.invalid');
+      const want = Array.from(new Set(input.memberIds)).filter((id) => d.members[id] && !d.members[id].deletedAt);
+      const chargeId = (m: string) => `trip-${ev.id}-${m}`;
+      for (const m of ev.wentIds ?? []) {
+        if (want.includes(m)) continue;
+        const c = d.pendingCharges[chargeId(m)];
+        if (c?.invoiceId) ctx.fail('err.charged');
+        if (c) delete d.pendingCharges[chargeId(m)];
+      }
+      const fee = ev.fee ?? 0;
+      for (const m of want) {
+        if (fee <= 0 || d.pendingCharges[chargeId(m)]) continue;
+        d.pendingCharges[chargeId(m)] = { id: chargeId(m), clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: m, amount: fee, label: `Field trip · ${ev.title} · ${fmtDMY(ev.date)}` };
+      }
+      ev.wentIds = want;
     },
   }),
 

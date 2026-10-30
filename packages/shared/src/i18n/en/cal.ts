@@ -1,5 +1,6 @@
 // cal strings (EN): calendar, events editor, schedule builder and catalog, plus the notification / feed / error texts of schedule.ts.
 export const cal = {
+  went: 'Went', wentNone: 'Nobody ticked yet', whoWent: 'Who went · {n}', whoWentTitle: 'Who went on {title}', whoWentSaved: 'Saved who went.', fee: 'Field trip fee', feeHint: 'Each member who goes pays this on their next invoice. 0 = free.', 
   // calendar
   openHours: 'Open Monday to Friday, and on weekends when programmed · {open}–{close}', weekendCol: 'Weekend', titleFamily: 'Club calendar', view: 'View', vList: 'List', vMonth: 'Calendar', vYear: 'Year', closedYear: 'Closed or away in {y}', nDays: '{n} days', prevYear: 'Previous year', nextYear: 'Next year', showMore: 'Show more days',
   key: 'Key', tapDay: 'Tap a day to see what is on.', openWeek: 'Open this week in the schedule',

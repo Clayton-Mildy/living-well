@@ -2,7 +2,8 @@
 // A "notify" toggle (on by default) decides whether staff and families are told about the change.
 // Round 6 (phone): a pushed full screen (PhoneScreen) with grouped fields and the Save pill pinned at the bottom, instead of the centred dialog.
 import { useEffect, useState } from 'react';
-import type { CalendarEvent } from '@cp/shared';
+import { feeOf, fmtN, parseN, priceOn, type CalendarEvent } from '@cp/shared';
+import { useClub } from '../../store/replica';
 import { Button, Chip, DateField, Dialog, Eyebrow, Group, Note, PhoneScreen, TextField, TimeField, Toggle, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
@@ -18,6 +19,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
   const { today } = useNow();
   const { isPhone } = useDevice();
   const act = useAct();
+  const s = useClub();
   const [kind, setKind] = useState<Kind>('closed');
   const [title, setTitle] = useState('');
   const [titleId, setTitleId] = useState('');
@@ -26,6 +28,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
   const [d1, setD1] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+  const [fee, setFee] = useState(''); // round 16: an outing's field trip fee (as typed; '' = free)
   const [tried, setTried] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [notify, setNotify] = useState(true);
@@ -42,6 +45,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
     setD1(event?.endDate ?? '');
     setFrom(event?.from ?? '');
     setTo(event?.to ?? '');
+    setFee(event ? (event.fee ? fmtN(event.fee) : '') : fmtN(feeOf(priceOn(s, date ?? today), 'fieldTrip')));
     setTried(false);
     setConfirmDel(false);
     setNotify(true);
@@ -60,7 +64,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
     setTried(true);
     if (!valid || busy) return;
     setBusy(true);
-    const common = { date: d0, kind, title: title.trim(), notify };
+    const common = { date: d0, kind, title: title.trim(), notify, ...(kind === 'outing' ? { fee: parseN(fee) || 0 } : {}) };
     const r = event
       ? await act('calendarEvent.update', { eventId: event.id, ...common, endDate: end || null, titleId: titleId.trim() || null, from: kind === 'outing' && from && to ? from : null, to: kind === 'outing' && from && to ? to : null }, { ok: t(notify ? 'cal.eventSaved' : 'cal.eventSavedQuiet') })
       : await act('calendarEvent.create', { ...common, ...(end ? { endDate: end } : {}), ...(titleId.trim() ? { titleId: titleId.trim() } : {}), ...(kind === 'outing' && from && to ? { from, to } : {}) }, { ok: t(notify ? 'cal.eventSaved' : 'cal.eventSavedQuiet') });
@@ -115,10 +119,13 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
               <Toggle on={multi} onClick={() => { setMulti(!multi); if (!multi && !d1) setD1(d0); }} label={t('cal.multiDay')} />
               {multi ? <DateField label={t('cal.until')} value={d1} min={d0} onChange={setD1} error={tried && errors.end} /> : null}
               {kind === 'outing' ? (
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                  <TimeField label={t('cal.from')} value={from} onChange={setFrom} error={tried && errors.time} />
-                  <TimeField label={t('cal.to')} value={to} onChange={setTo} />
-                </div>
+                <>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                    <TimeField label={t('cal.from')} value={from} onChange={setFrom} error={tried && errors.time} />
+                    <TimeField label={t('cal.to')} value={to} onChange={setTo} />
+                  </div>
+                  <TextField label={t('cal.fee')} value={fee} onChange={(v) => setFee(v.replace(/[^\d.]/g, ''))} inputMode="numeric" placeholder="0" hint={t('cal.feeHint')} name="fee" />
+                </>
               ) : null}
             </Group>
             {err ? <Note tone="rust" icon="error">{err}</Note> : null}
@@ -165,10 +172,13 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
           <Toggle on={multi} onClick={() => { setMulti(!multi); if (!multi && !d1) setD1(d0); }} label={t('cal.multiDay')} />
           {multi ? <DateField label={t('cal.until')} value={d1} min={d0} onChange={setD1} error={tried && errors.end} /> : null}
           {kind === 'outing' ? (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-              <TimeField label={t('cal.from')} value={from} onChange={setFrom} error={tried && errors.time} />
-              <TimeField label={t('cal.to')} value={to} onChange={setTo} />
-            </div>
+            <>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <TimeField label={t('cal.from')} value={from} onChange={setFrom} error={tried && errors.time} />
+                <TimeField label={t('cal.to')} value={to} onChange={setTo} />
+              </div>
+              <TextField label={t('cal.fee')} value={fee} onChange={(v) => setFee(v.replace(/[^\d.]/g, ''))} inputMode="numeric" placeholder="0" hint={t('cal.feeHint')} name="fee" />
+            </>
           ) : null}
           {err ? <Note tone="rust" icon="error">{err}</Note> : null}
           <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />

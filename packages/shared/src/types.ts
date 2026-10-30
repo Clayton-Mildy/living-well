@@ -630,6 +630,10 @@ export interface CalendarEvent extends Row {
   from?: HM;
   to?: HM;
   cancelledAt?: DT;
+  /** KC round 16, an outing: the field trip fee each member who went pays (0 or none = free) */
+  fee?: number;
+  /** KC round 16, an outing: the members ticked as having gone (each is charged `fee` on the next invoice) */
+  wentIds?: string[];
 }
 
 export interface VenueBooking extends Row {

@@ -17,13 +17,19 @@ import { rowLine } from '../activity/lib';
 import { ProposedDay } from './ProposalActions';
 import { StatePill, dayState, itemText, neutralFill } from './lib';
 
-export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag, proposed, decide }: { s: ClubState; info: DayInfo; today: string; canEdit?: boolean; onEdit?: (eventId: string) => void; onEditActivity?: (slot: Slot, date: string) => void; flag?: string; proposed?: boolean; decide?: boolean }) {
+export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, onWent, flag, proposed, decide }: { s: ClubState; info: DayInfo; today: string; canEdit?: boolean; onEdit?: (eventId: string) => void; onEditActivity?: (slot: Slot, date: string) => void; /** round 16: tick who went on a past outing */ onWent?: (eventId: string) => void; flag?: string; proposed?: boolean; decide?: boolean }) {
   const t = useT();
   const { lang, fdl } = useFmt();
   const { isPhone } = useDevice();
   const st = dayState(t, info, { open: s.club.settings.open, close: s.club.settings.close });
   const todayTag = (h: number) => <span style={{ height: h, padding: '0 7px', borderRadius: 7, background: '#2B231C', color: '#FFFFFF', fontSize: 11, fontWeight: 700, letterSpacing: '1px', display: 'inline-flex', alignItems: 'center', textTransform: 'uppercase', flex: 'none' }}>{t('common.today')}</span>;
   // round 6, phone: a small 34px pill for a row's edit action
+  // round 16: on an outing from its day on, "Who went · N" (each ticked member is charged the field trip fee)
+  const wentPill = (it: DayItem) => {
+    const ev = it.eventId ? s.calendarEvents[it.eventId] : undefined;
+    if (!onWent || !ev || ev.kind !== 'outing' || ev.date > today) return null;
+    return <button type="button" className="cp-press cp-fill" onClick={() => onWent(ev.id)} style={{ height: 34, padding: '0 12px', borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', flex: 'none', fontFamily: 'Inter', whiteSpace: 'nowrap' }}>{t('cal.whoWent', { n: (ev.wentIds ?? []).length })}</button>;
+  };
   const editPill = (label: string, run: () => void, icon = 'edit') => (
     <button type="button" className="cp-press cp-fill" onClick={run} aria-label={label} title={label} style={{ width: 34, height: 34, borderRadius: 999, border: 'none', background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none', padding: 0 }}>
       <Icon name={icon} size={19} />
@@ -81,6 +87,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
                       {x.sub ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{x.sub}</span> : null}
                       {changedLine(x.changedLine, 13)}
                     </div>
+                    {wentPill(it)}
                     {editable && info.date >= today ? editPill(t('cal.editEvent', { title: x.title }), () => onEdit!(it.eventId!)) : null}
                     {activityEdit ? (it.empty ? editPill(t('cal.addSessionAria', { slot: slotOf(it) }), () => onEditActivity!(slotOf(it), info.date), 'add') : editPill(t('cal.editActivityAria', { title: x.title }), () => onEditActivity!(slotOf(it), info.date))) : null}
                   </div>
@@ -117,6 +124,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, flag
                 {x.sub ? <span style={{ fontSize: 'max(14px, var(--cp-body, 0px))', lineHeight: '20px', color: '#6B6259' }}>{x.sub}</span> : null}
                 {changedLine(x.changedLine, 14)}
               </div>
+              {wentPill(it)}
               {editable && info.date >= today ? <IconButton icon="edit" label={t('cal.editEvent', { title: x.title })} onClick={() => onEdit!(it.eventId!)} /> : null}
               {activityEdit ? (
                 <span style={{ marginLeft: 'auto' }}>

@@ -143,3 +143,22 @@ describe('DayBlock: the lunch picture (round 15)', () => {
     expect(document.body.textContent).toContain('Trip to the museum');
   });
 });
+
+describe('round 16: who went on a field trip', () => {
+  it('a past outing shows "Who went · N" for the activity team; a future one does not', async () => {
+    const s = structuredClone(buildSeed().citra);
+    s.calendarEvents.trip = { id: 'trip', clubId: 'citra', createdAt: '2026-10-01T09:00', createdBy: 'staff:s9', date: '2026-10-21', kind: 'outing', title: 'Ancol aquarium', fee: 250_000, wentIds: ['m1', 'm2'] };
+    openClub(s, 'activity');
+    const onWent = vi.fn();
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter><DayBlock s={s} info={dayInfo(s, '2026-10-21')} today="2026-10-21" onWent={onWent} /></MemoryRouter>); });
+    const btn = Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.includes('Who went · 2'))!;
+    expect(btn).toBeTruthy();
+    await act(async () => { btn.click(); });
+    expect(onWent).toHaveBeenCalledWith('trip');
+    await act(async () => { root!.render(<MemoryRouter><DayBlock s={s} info={dayInfo(s, '2026-10-21')} today="2026-10-20" onWent={onWent} /></MemoryRouter>); });
+    expect(Array.from(document.querySelectorAll('button')).some((b) => b.textContent?.includes('Who went'))).toBe(false);
+  });
+});

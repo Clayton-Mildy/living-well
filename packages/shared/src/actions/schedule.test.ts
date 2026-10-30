@@ -983,3 +983,27 @@ describe('round 14: weekends open when a programme is approved', () => {
     expect(dayStatus(a.state, RENTED).open).toBe(false);
   });
 });
+
+describe('round 16: field trip fee and who went', () => {
+  const outing = (s: ClubState, date = '2026-10-21', fee = 250_000) => { const r = run(s, 'calendarEvent.create', { date, kind: 'outing', title: 'Ancol aquarium', fee, notify: false }, 's9'); return { s: r.state, id: r.result.eventId as string }; };
+  const charges = (s: ClubState, id: string) => live(s.pendingCharges).filter((c) => c.id.startsWith(`trip-${id}-`));
+  it('ticking who went charges each on the next invoice; unticking removes an uninvoiced charge', async () => {
+    const { runLinesFor } = await import('../rules/billing');
+    let { s, id } = outing(fresh());
+    expect(s.calendarEvents[id].fee).toBe(250_000);
+    s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m1', 'm2'] }, 's5').state;
+    expect(charges(s, id).map((c) => [c.memberId, c.amount, c.label])).toEqual([['m1', 250_000, 'Field trip · Ancol aquarium · 21/10/2026'], ['m2', 250_000, 'Field trip · Ancol aquarium · 21/10/2026']]);
+    expect(runLinesFor(s, s.members.m1, '2026-11', '2026-10-21').some((l) => l.id === `charge-trip-${id}-m1` && l.amount === 250_000)).toBe(true);
+    s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m1'] }, 's5').state;
+    expect(charges(s, id).map((c) => c.memberId)).toEqual(['m1']);
+    expect(s.calendarEvents[id].wentIds).toEqual(['m1']);
+  });
+  it('a charge already on an invoice cannot be unticked; a future outing has nobody to tick yet', () => {
+    let { s, id } = outing(fresh());
+    s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m1'] }, 's5').state;
+    s = { ...s, pendingCharges: { ...s.pendingCharges, [`trip-${id}-m1`]: { ...s.pendingCharges[`trip-${id}-m1`], invoiceId: 'INV-X' } } };
+    fails(s, 'calendarEvent.setWent', { eventId: id, memberIds: [] }, 's5', 'err.charged');
+    const later = outing(fresh(), '2026-10-28');
+    fails(later.s, 'calendarEvent.setWent', { eventId: later.id, memberIds: ['m1'] }, 's5', 'err.invalid');
+  });
+});
