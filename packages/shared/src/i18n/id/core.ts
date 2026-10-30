@@ -40,6 +40,7 @@ export const nav: Same<typeof EN.nav> = {
   // KC round 7
   renewals: 'Bulan depan', tasks: 'Tugas', guests: 'Pengisi acara', insights: 'Insight', memories: 'Kenangan', report: 'Laporan harian', s_report: 'Laporan', monthReport: 'Laporan bulanan', s_monthReport: 'Bulanan', s_renewals: 'Bulan depan', s_tasks: 'Tugas', s_guests: 'Pengisi', s_insights: 'Insight', s_memories: 'Kenangan',
   spending: 'Pengeluaran', s_spending: 'Pengeluaran',
+  roles: 'Peran', s_roles: 'Peran',
 };
 export const roles: Same<typeof EN.roles> = {
   lobby: 'Lobi', nurse: 'Perawat', activity: 'Pengajar aktivitas', kitchen: 'Dapur & F&B', finance: 'Keuangan', mgmt: 'Manajemen', owner: 'Pemilik', family: 'Keluarga',

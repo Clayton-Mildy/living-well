@@ -34,6 +34,7 @@ describe('action areas', () => {
     const c = seed();
     const diffs: string[] = [];
     for (const d of allActions()) {
+      if (!fixture[d.name]) continue; // round 16: actions added after the matrix was pinned (access.*) have no old `can` to compare
       for (const role of Object.keys(SEED_USER)) {
         const want = areaOf(d.name) === 'receipts' && role === 'mgmt' ? false : fixture[d.name][role];
         if (canRun(d.name, user(c, role), {}, c) !== want) diffs.push(`${d.name} ${role}`);

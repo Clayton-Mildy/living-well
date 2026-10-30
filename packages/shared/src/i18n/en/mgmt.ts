@@ -145,4 +145,11 @@ export const mgmt = {
   'notif.venueRated': '{org} rated their event {stars}/5 through the rating link.',
   tileCheckOn: "Haven't come lately",
   tileMood: 'Mood today',
+  // round 16 (KC): Admin › Roles
+  'access.title': 'Roles', 'access.role': 'Role', 'access.menu': 'Menu item', 'access.cell': '{role}: {menu}',
+  'access.off': 'Hidden', 'access.view': 'View', 'access.edit': 'Edit',
+  'access.approval': 'Needs owner approval', 'access.approvalOf': 'Needs owner approval: {kind}',
+  'access.kind.pricing': 'Pricing', 'access.kind.holidays': 'Holidays', 'access.kind.budget': 'Budget',
+  'access.role.lobby': 'Front desk', 'access.role.nurse': 'Nurse', 'access.role.activity': 'Activity teacher', 'access.role.kitchen': 'Kitchen & F&B', 'access.role.finance': 'Finance', 'access.role.mgmt': 'Management',
+  'access.saved': 'Saved.',
 };

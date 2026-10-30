@@ -53,6 +53,7 @@ export const SCREENS: Record<ScreenId, LazyExoticComponent<ComponentType>> = {
   hr: L(mgmt, 'People'),
   surveys: L(mgmt, 'Surveys'),
   plans: L(mgmt, 'Plans'),
+  roles: L(mgmt, 'Roles'), // round 16: the Owner's Admin › Roles
   enq: L(enquiries, 'Enquiries'),
   familyToday: L(family, 'FamilyToday'),
   fphotos: L(family, 'FamilyPhotos'),

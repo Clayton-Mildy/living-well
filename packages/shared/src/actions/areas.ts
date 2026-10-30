@@ -42,6 +42,7 @@ export const UNMAPPED: string[] = [
   'photo.take', 'photo.capture', 'photo.editDraft', 'photo.deleteDraft', 'photo.sendDrafts', 'photo.unsend',
   'stock.request', 'stock.edit', 'stock.cancel', 'feedback.submit', 'feedback.log', 'mood.', 'leave.request', 'leave.cancel', 'member.logCall', 'celebration.request',
   'budget.request', 'receipt.add',
+  'access.', // round 16: Admin › Roles is the Owner's (can isOwner only)
   'document.upload', 'enquiry.formOpen', 'enquiry.formSave', 'enquiry.formSubmit', 'venue.rate', 'survey.answer', 'signing.sign', 'signing.stamp',
   'family.updateDetails', 'family.setHealthAlerts', 'planChange.request', 'planChange.withdraw',
 ];

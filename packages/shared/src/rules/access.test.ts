@@ -25,7 +25,7 @@ describe('access grid', () => {
     const s = fresh();
     expect(accessOf(s, 'mgmt', 'receipts')).toBe('view');
     expect(accessOf(s, 'owner', 'anything')).toBe('edit');
-    expect(menuKeys(s, 'owner')).toEqual(TODAY.mgmt);
+    expect(menuKeys(s, 'owner')).toEqual([...TODAY.mgmt, 'roles']); // round 16: plus Admin › Roles, the Owner's alone
   });
   it('a granted menu is added; an off one is removed', () => {
     const s = fresh();

@@ -19,10 +19,13 @@ const ITEMS: Record<string, NavItem> = Object.fromEntries([
   n('billing', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart'),
   n('calendar', 'calShort', 'calendar_month'), n('guests', 'guests', 'co_present'), n('insights', 'insights', 'insights'), n('broadcast', 'broadcast', 'campaign'), n('venue', 'venue', 'storefront'), n('hr', 'people', 'badge'),
   n('directory', 'directory', 'contacts'), n('surveys', 'surveys', 'rate_review'), n('plans', 'plans', 'sell'), n('contacts', 'contacts', 'contacts'), n('requests', 'requests', 'add_shopping_cart'),
+  n('roles', 'roles', 'admin_panel_settings'), // round 16: the Owner's Admin › Roles
 ].map((x) => [x.key, x]));
 // round 8 (Family App prototype): Today · Photos · Calendar · Health · Me; Billing and Contacts open from Me
 export const FAMILY_NAV: NavItem[] = [n('today', 'today', 'wb_sunny'), n('photos', 'photos', 'photo_library'), n('calendar', 'calShort', 'calendar_month'), n('health', 'healthF', 'favorite'), n('me', 'me', 'person')];
 
+/** The nav label key of a menu item (the grid on Admin › Roles names its menus the way the sidebar does). */
+export const menuLabel = (key: string): string => ITEMS[key]?.label ?? 'nav.' + key;
 const itemOf = (role: StaffRole, key: string): NavItem | null => (key === 'today' ? TODAY_ITEM[role] : ITEMS[key] ?? null);
 
 /** The role's sidebar and More list, flat: today, then its menus from the grid. */
@@ -41,7 +44,7 @@ const MGMT_LAYOUT: Layout = [
   [G_CARE, ['hchecks', 'readings', 'log', 'camera']], // the photo library is the Camera's Library tab
   [G_KITCHEN, ['menu', 'lunch', 'feedback', 'stock']], // KC 28 Oct: management has the Lunch round too
   [G_FINANCE, ['billing', 'payments', 'budget', 'receipts', 'spending']],
-  [G_CLUB, ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans']],
+  [G_CLUB, ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'roles']], // round 16: 'roles' is the Owner's only (DEFAULT_MENUS.owner); management's menus do not include it
 ];
 const LAYOUTS: Record<StaffRole, Layout> = {
   lobby: [[null, ['today', 'members', 'tasks']], [G_FRONT, ['enquiries', 'renewals', 'venue', 'surveys']], [G_KITCHEN, ['menu']], [G_CLUB, ['contacts', 'requests']]],
@@ -106,7 +109,7 @@ export type ScreenId =
   | 'arrivals' | 'health' | 'activityToday' | 'kmenu' | 'klunch' | 'fin' | 'overview' | 'familyToday' | 'requests' | 'enq' | 'members' | 'readings' | 'camera' | 'dlog'
   | 'cal' | 'kfeed' | 'kstock' | 'pay' | 'budget' | 'rcpt' | 'spend' | 'dir' | 'venue' | 'bc' | 'hr' | 'surveys' | 'plans' | 'reviews' | 'photoLib' | 'fphotos' | 'familyHealth' | 'fbill'
   | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'monthReport' | 'drafts'
-  | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts' | 'celebrations';
+  | 'roles' | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts' | 'celebrations';
 
 export function screenFor(s: ClubState, role: Role, key: string): ScreenId | null {
   if (!allowedKeys(s, role).has(key)) return null;
@@ -116,7 +119,7 @@ export function screenFor(s: ClubState, role: Role, key: string): ScreenId | nul
     arrivals: 'arrivals', hchecks: 'health', menu: 'kmenu', lunch: 'klunch', readings: 'readings', log: 'dlog', camera: 'camera', photos: 'photoLib', feedback: 'kfeed', stock: 'kstock',
     billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', spending: 'spend', directory: 'dir', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
     enquiries: 'enq', calendar: 'cal', plans: 'plans', surveys: 'surveys', reviews: 'reviews', requests: 'requests',
-    renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', monthReport: 'monthReport', drafts: 'drafts', celebrations: 'celebrations',
+    renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', monthReport: 'monthReport', drafts: 'drafts', celebrations: 'celebrations', roles: 'roles',
   };
   return map[key] || null;
 }

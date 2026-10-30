@@ -23,7 +23,7 @@ export const DEFAULT_MENUS: Record<StaffRole, string[]> = {
   kitchen: ['today', 'lunch', 'feedback', 'tasks', 'requests', 'contacts'],
   finance: ['today', 'payments', 'budget', 'receipts', 'spending', 'stock', 'guests', 'members', 'tasks', 'directory'],
   mgmt: MGMT_MENU,
-  owner: [...MGMT_MENU],
+  owner: [...MGMT_MENU, 'roles'], // round 16: Admin › Roles is the Owner's alone (not a grid menu)
 };
 
 /** Where today's default is not Edit. Front desk sees Billing; only Finance (and the Owner) approve receipts. */
