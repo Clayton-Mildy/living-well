@@ -85,7 +85,7 @@ export function sessionPictures(s: ClubState, date: ISODate, activity: Pick<Acti
   for (const p of Object.values(s.photos)) {
     if (p.kind !== 'activity' || p.date !== date || p.activity !== activity.name || p.visibility === 'draft') continue; // a draft is nobody's picture until it is sent
     if (p.deletedAt || p.visibility === 'removed') {
-      if (p.visibility === 'removed' && p.moderated && s.staff[p.moderated.by]?.role === 'mgmt') out.push({ photo: p, state: 'rejected', reason: p.moderated.reason });
+      if (p.visibility === 'removed' && p.moderated && ['mgmt', 'owner'].includes(s.staff[p.moderated.by]?.role)) out.push({ photo: p, state: 'rejected', reason: p.moderated.reason });
       continue;
     }
     out.push({ photo: p, state: p.visibility === 'pending' ? 'pending' : p.visibility === 'hidden' ? 'hidden' : 'approved' });

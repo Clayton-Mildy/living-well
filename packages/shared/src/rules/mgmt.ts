@@ -162,7 +162,7 @@ export function staffRating(s: ClubState, staffId: string): StaffRating | null {
 }
 
 // ---------- staff records ----------
-export const STAFF_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt'];
+export const STAFF_ROLES: StaffRole[] = ['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt', 'owner'];
 export const BANKS: Bank[] = ['BCA', 'Mandiri', 'BNI', 'BRI', 'Permata'];
 export const CONTRACTS: StaffHr['contract'][] = ['pkwtt', 'pkwt'];
 export const HR_NOTE_KINDS = ['warning', 'note', 'praise'] as const;

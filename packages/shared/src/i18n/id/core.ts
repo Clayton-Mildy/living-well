@@ -42,8 +42,8 @@ export const nav: Same<typeof EN.nav> = {
   spending: 'Pengeluaran', s_spending: 'Pengeluaran',
 };
 export const roles: Same<typeof EN.roles> = {
-  lobby: 'Lobi', nurse: 'Perawat', activity: 'Pengajar aktivitas', kitchen: 'Dapur & F&B', finance: 'Keuangan', mgmt: 'Manajemen', family: 'Keluarga',
-  lands_lobby: 'Papan kedatangan', lands_nurse: 'Pos kesehatan', lands_activity: 'Aktivitas hari ini', lands_kitchen: 'Menu hari ini', lands_finance: 'Papan tagihan', lands_mgmt: 'Papan kedatangan',
+  lobby: 'Lobi', nurse: 'Perawat', activity: 'Pengajar aktivitas', kitchen: 'Dapur & F&B', finance: 'Keuangan', mgmt: 'Manajemen', owner: 'Pemilik', family: 'Keluarga',
+  lands_lobby: 'Papan kedatangan', lands_nurse: 'Pos kesehatan', lands_activity: 'Aktivitas hari ini', lands_kitchen: 'Menu hari ini', lands_finance: 'Papan tagihan', lands_mgmt: 'Papan kedatangan', lands_owner: 'Papan kedatangan',
   lands_family: 'Halaman hari ini', billing: 'tagihan',
 };
 export const login: Same<typeof EN.login> = {

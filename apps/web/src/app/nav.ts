@@ -15,6 +15,7 @@ export const NAVS: Record<Role, NavItem[]> = {
   kitchen: [n('today', 'menu', 'restaurant'), n('lunch', 'lunch', 'lunch_dining'), n('feedback', 'feedback', 'forum'), n('tasks', 'tasks', 'checklist'), n('requests', 'requests', 'add_shopping_cart'), n('contacts', 'contacts', 'contacts')],
   finance: [n('today', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart'), n('stock', 'stock', 'inventory_2'), n('guests', 'guests', 'co_present'), n('members', 'members', 'groups'), n('tasks', 'tasks', 'checklist'), n('directory', 'directory', 'contacts')], // round 7: Guests to pay the guest hosts' fees
   mgmt: [],
+  owner: [], // round 16 (KC): the Owner's menus are management's (filled below)
   // round 8 (Family App prototype): Today · Photos · Calendar · Health · Me; Billing and Contacts open from Me
   family: [n('today', 'today', 'wb_sunny'), n('photos', 'photos', 'photo_library'), n('calendar', 'calShort', 'calendar_month'), n('health', 'healthF', 'favorite'), n('me', 'me', 'person')],
 };
@@ -29,6 +30,8 @@ export const NAVG: Record<string, [string | null, NavItem[]][]> = {
   ],
 };
 NAVS.mgmt = NAVG.mgmt.reduce<NavItem[]>((a, g) => a.concat(g[1]), []);
+NAVG.owner = NAVG.mgmt;
+NAVS.owner = NAVS.mgmt;
 // KC round 13 §15: every staff role's sidebar is sectioned like management's — a regrouping of the SAME items (the phone bar keeps NAVS order)
 const pick = (role: Role, keys: string[]): NavItem[] => keys.map((k) => { const x = NAVS[role].find((i) => i.key === k); if (!x) throw new Error(`nav: ${role} has no "${k}"`); return x; });
 NAVG.lobby = [[null, pick('lobby', ['today', 'members', 'tasks'])], ['nav.g_front', pick('lobby', ['enquiries', 'renewals', 'venue', 'surveys'])], ['nav.g_kitchen', pick('lobby', ['menu'])], ['nav.g_club', pick('lobby', ['contacts', 'requests'])]];
@@ -38,6 +41,7 @@ NAVG.kitchen = [[null, pick('kitchen', ['today', 'lunch', 'feedback', 'tasks'])]
 NAVG.finance = [[null, pick('finance', ['today', 'payments', 'budget', 'receipts', 'spending'])], ['nav.g_kitchen', pick('finance', ['stock'])], ['nav.g_club', pick('finance', ['guests', 'members', 'tasks', 'directory'])]];
 export const PHONE_NAV: Partial<Record<Role, NavItem[]>> = {
   mgmt: [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month')],
+  owner: [n('today', 'arrivals', 'how_to_reg'), n('members', 'members', 'groups'), n('calendar', 'calShort', 'calendar_month')],
   // KC round 6: the teacher's bar has Calendar instead of Members (Members and Requests sit under More)
   activity: [n('today', 'today', 'wb_sunny'), n('camera', 'camera', 'photo_camera'), n('log', 'log', 'edit_note'), n('calendar', 'calShort', 'calendar_month')],
 };
@@ -64,6 +68,7 @@ const EXTRA: Partial<Record<Role, string[]>> = {
   finance: ['calendar', 'contacts', 'renewals'], // round 14: renewals is link-only, for the Unpaid list (the Month report, the duty)
   activity: ['photos', 'contacts', 'drafts', 'celebrations'],
   mgmt: ['photos', 'contacts', 'drafts', 'celebrations'], // photos: old links to the standalone library
+  owner: ['photos', 'contacts', 'drafts', 'celebrations'],
 };
 export const allowedKeys = (role: Role) => new Set([...NAVS[role].map((x) => x.key), ...(EXTRA[role] || [])]);
 
@@ -75,7 +80,7 @@ export type ScreenId =
 
 export function screenFor(role: Role, key: string): ScreenId | null {
   if (!allowedKeys(role).has(key)) return null;
-  if (key === 'today') return ({ lobby: 'arrivals', nurse: 'health', activity: 'activityToday', kitchen: 'kmenu', finance: 'fin', mgmt: 'arrivals', family: 'familyToday' } as const)[role];
+  if (key === 'today') return ({ lobby: 'arrivals', nurse: 'health', activity: 'activityToday', kitchen: 'kmenu', finance: 'fin', mgmt: 'arrivals', owner: 'arrivals', family: 'familyToday' } as const)[role];
   if (role === 'family') return ({ photos: 'fphotos', health: 'familyHealth', billing: 'fbill', calendar: 'fcal', contacts: 'fcontacts', memories: 'fmemories', me: 'fme', profile: 'fprofile', history: 'fhistory' } as Record<string, ScreenId>)[key] || null;
   const map: Record<string, ScreenId> = {
     arrivals: 'arrivals', hchecks: 'health', menu: 'kmenu', lunch: 'klunch', readings: 'readings', log: 'dlog', camera: 'camera', photos: 'photoLib', feedback: 'kfeed', stock: 'kstock',

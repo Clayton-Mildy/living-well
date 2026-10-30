@@ -314,7 +314,7 @@ export const weekdayOf = (date: ISODate): Weekday => asWeekday(date);
 // ---------- stock ----------
 /** Who may approve, decline and (with the requester) receive a request: management, finance, and the F&B supervisor for kitchen-area items. */
 export const isStockApprover = (u: User, k: Pick<StockRequest, 'area'>) =>
-  u.kind === 'staff' && (u.staff.role === 'mgmt' || u.staff.role === 'finance' || (u.staff.supervisor && u.staff.role === 'kitchen' && k.area === 'kitchen'));
+  u.kind === 'staff' && (u.staff.role === 'mgmt' || u.staff.role === 'owner' || u.staff.role === 'finance' || (u.staff.supervisor && u.staff.role === 'kitchen' && k.area === 'kitchen'));
 export const canRequestStock = (u: User) => u.kind === 'staff';
 export const canEditStock = (u: User, k: Pick<StockRequest, 'status' | 'requestedBy'>) => u.kind === 'staff' && k.status === 'requested' && k.requestedBy === u.id;
 export const canApproveStock = (u: User, k: Pick<StockRequest, 'status' | 'area'>) => k.status === 'requested' && isStockApprover(u, k);

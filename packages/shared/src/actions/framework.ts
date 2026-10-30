@@ -70,8 +70,10 @@ export const allActions = () => Object.values(REGISTRY);
 // ---------- users / roles ----------
 export const roleOf = (u: User): Role => (u.kind === 'staff' ? u.staff.role : 'family');
 export const actorOf = (u: User): Actor => (u.kind === 'staff' ? `staff:${u.id}` : `family:${u.id}`);
-export const isMgmt = (u: User) => u.kind === 'staff' && u.staff.role === 'mgmt';
-export const hasRole = (u: User, ...roles: Role[]) => roles.includes(roleOf(u));
+// round 16 (KC): the Owner (Benjamin Cass) is management and more
+export const isOwner = (u: User) => u.kind === 'staff' && u.staff.role === 'owner';
+export const isMgmt = (u: User) => u.kind === 'staff' && (u.staff.role === 'mgmt' || u.staff.role === 'owner');
+export const hasRole = (u: User, ...roles: Role[]) => roles.includes(roleOf(u)) || (roles.includes('mgmt') && isOwner(u));
 export const isStaff = (u: User) => u.kind === 'staff';
 export const isFamily = (u: User) => u.kind === 'family';
 export const systemUser = (clubId: string): User => ({ kind: 'staff', id: 'system', clubId, clubs: [clubId], staff: { id: 'system', clubId, createdAt: '', createdBy: 'system', name: 'CitraPremier', role: 'mgmt', title: 'System', phone: '', supervisor: true, rateable: false, appAccess: false, active: true, extraClubIds: [], hr: { contract: 'pkwtt', start: '', end: null, signed: true, ktpLast4: '', ktpOnFile: false, salary: 0, allowance: 0, bank: 'BCA', account: '' } } });
@@ -88,7 +90,7 @@ export function makeCtx(user: User, clubId: string, clock: ClockInfo, mutationId
   const ctx: Ctx & { _pending: typeof pending } = {
     user,
     actor: user.id === 'system' ? 'system' : actorOf(user),
-    role: roleOf(user),
+    role: roleOf(user) === 'owner' ? 'mgmt' : roleOf(user), // round 16 (KC): the Owner acts as management (use isOwner for the owner-only parts)
     clubId,
     today: clock.today,
     nowMin: clock.nowMin,

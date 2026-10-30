@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, findByPhone, live, activeStaff, actionItems, DomainError, type ClubState } from '../index';
+import { isMgmt, isOwner, hasRole, roleOf, updatesFor, buildSeed, execute, getUser, findByPhone, live, activeStaff, actionItems, DomainError, type ClubState } from '../index';
 import { contractState, hoursLabel, minutesBetween, staffList, staffRating, staffTimeFor } from '../rules/mgmt';
 
 const T = '2026-10-21';
@@ -21,23 +21,47 @@ const fails = (s: ClubState, name: string, input: unknown, code: string, uid = '
 };
 const newStaff = { name: 'Wulan Sari', knownAs: 'Bu Wulan', role: 'kitchen', title: 'Kitchen helper', phone: '0811 2201 7788', hr: { contract: 'pkwt', start: '2026-11-01', end: '2027-10-31', salary: 4800000, allowance: 480000, bank: 'BNI', account: '1234 5678 90', ktpLast4: '4411', ktpOnFile: true, signed: true } };
 
+describe('the Owner (round 16)', () => {
+  it('Benjamin Cass is seeded as the owner with app access, and counts as management', () => {
+    const s = seed();
+    expect(s.staff.s11).toMatchObject({ name: 'Benjamin Cass', role: 'owner', appAccess: true, supervisor: true, hr: { salary: 35000000 } });
+    expect(isOwner(user(s, 's11'))).toBe(true);
+    expect(isOwner(user(s, 's9'))).toBe(false);
+    expect(isMgmt(user(s, 's11'))).toBe(true);
+    expect(hasRole(user(s, 's11'), 'mgmt')).toBe(true);
+    expect(hasRole(user(s, 's11'), 'finance')).toBe(false);
+    expect(roleOf(user(s, 's11'))).toBe('owner');
+  });
+  it('a notification for management is listed for the Owner', () => {
+    const s = seed();
+    s.notifications['nt-own'] = { id: 'nt-own', clubId: s.clubId, createdAt: `${T}T09:00`, createdBy: 'system', toUsers: [], toRoles: ['mgmt'], kind: 'x', params: {}, severity: 'info', action: false, readBy: [] } as never;
+    expect(updatesFor(s, user(s, 's11')).map((n) => n.id)).toContain('nt-own');
+  });
+  it('only the Owner gives the Owner role', () => {
+    const s = seed();
+    fails(s, 'staff.update', { staffId: 's1', role: 'owner' }, 'err.forbidden', 's9');
+    expect(run(s, 'staff.update', { staffId: 's1', role: 'owner' }, 's11').state.staff.s1.role).toBe('owner');
+    fails(s, 'staff.update', { staffId: 's11', role: 'mgmt' }, 'err.forbidden', 's9');
+  });
+});
+
 describe('staff records', () => {
   it('management adds a staff member with a full record', () => {
     const s = seed();
     const r = run(s, 'staff.create', newStaff);
     const id = r.result.staffId as string;
-    expect(id).toBe('s11');
+    expect(id).toBe('s12'); // round 16: s11 is Benjamin Cass, the Owner
     expect(r.state.staff[id]).toMatchObject({
       name: 'Wulan Sari', knownAs: 'Bu Wulan', role: 'kitchen', title: 'Kitchen helper', phone: '+6281122017788', active: true, appAccess: false, supervisor: false, rateable: false, extraClubIds: [], createdBy: 'staff:s9',
       hr: { contract: 'pkwt', start: '2026-11-01', end: '2027-10-31', salary: 4800000, allowance: 480000, bank: 'BNI', account: '1234567890', ktpLast4: '4411', ktpOnFile: true, signed: true },
     });
-    expect(activeStaff(r.state).map((x) => x.id)).toContain('s11');
+    expect(activeStaff(r.state).map((x) => x.id)).toContain('s12');
     expect(Object.values(r.state.activity).some((a) => a.key === 'people.feed.added' && a.params.name === 'Wulan Sari')).toBe(true);
     // minimal input gets sensible defaults
     const min = run(s, 'staff.create', { name: 'Budi', role: 'nurse', title: 'Nurse', phone: '+62 811 9000 111', hr: { contract: 'pkwtt' } });
-    expect(min.state.staff.s11).toMatchObject({ rateable: true, hr: { contract: 'pkwtt', end: null, start: T, salary: 0, bank: 'BCA', ktpOnFile: false, signed: false } });
+    expect(min.state.staff.s12).toMatchObject({ rateable: true, hr: { contract: 'pkwtt', end: null, start: T, salary: 0, bank: 'BCA', ktpOnFile: false, signed: false } });
     // app access can be switched on when adding
-    expect(run(s, 'staff.create', { ...newStaff, appAccess: true }).state.staff.s11.appAccess).toBe(true);
+    expect(run(s, 'staff.create', { ...newStaff, appAccess: true }).state.staff.s12.appAccess).toBe(true);
   });
   it('validation: role, phone, contract dates, KTP, unique phone', () => {
     const s = seed();

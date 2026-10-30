@@ -174,7 +174,7 @@ export function approvalHistory(s: ClubState): HistoryItem[] {
   }
   for (const p of Object.values(s.photos)) {
     if (p.approved && p.takenBy !== p.approved.by) add({ id: p.id, type: 'photos', sub: 'photo', status: 'approved', at: p.createdAt, decidedAt: p.approved.at, by: staffActor(p.takenBy), decidedBy: staffActor(p.approved.by), memberId: p.memberIds[0] });
-    else if (p.visibility === 'removed' && p.moderated && p.moderated.by !== p.takenBy && s.staff[p.moderated.by]?.role === 'mgmt') add({ id: p.id, type: 'photos', sub: 'photo', status: 'rejected', at: p.createdAt, decidedAt: p.moderated.at, by: staffActor(p.takenBy), decidedBy: staffActor(p.moderated.by), reason: p.moderated.reason, memberId: p.memberIds[0] });
+    else if (p.visibility === 'removed' && p.moderated && p.moderated.by !== p.takenBy && ['mgmt', 'owner'].includes(s.staff[p.moderated.by]?.role)) add({ id: p.id, type: 'photos', sub: 'photo', status: 'rejected', at: p.createdAt, decidedAt: p.moderated.at, by: staffActor(p.takenBy), decidedBy: staffActor(p.moderated.by), reason: p.moderated.reason, memberId: p.memberIds[0] });
   }
   for (const k of Object.values(s.stockRequests)) {
     if ((k.status === 'approved' || k.status === 'received' || k.status === 'rejected') && k.decidedAt) add({ id: k.id, type: 'stock', sub: 'stock', status: k.status === 'rejected' ? 'rejected' : 'approved', at: k.createdAt, decidedAt: k.decidedAt, by: staffActor(k.requestedBy), decidedBy: k.decidedBy, reason: k.note });

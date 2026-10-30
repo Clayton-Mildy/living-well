@@ -27,7 +27,8 @@ export type Diet = 'softFood' | 'lowSalt' | 'vegetarian' | 'sugarFree';
 export type EndReason = 'movedAway' | 'careNeeds' | 'careHome' | 'passedAway' | 'familyDecision' | 'unpaid' | 'leaveOverrun';
 export type LostReason = 'price' | 'distance' | 'notReady' | 'otherPlace' | 'health' | 'other';
 export type QuickNote = 'rested' | 'medsTaken' | 'dizzy' | 'headache' | 'rightArm';
-export type StaffRole = 'lobby' | 'nurse' | 'activity' | 'kitchen' | 'finance' | 'mgmt';
+export type StaffRole = 'lobby' | 'nurse' | 'activity' | 'kitchen' | 'finance' | 'mgmt' | 'owner'; // round 16 (KC): the owner counts as management everywhere, and approves what the owner switches on
+
 export type Bank = 'BCA' | 'Mandiri' | 'BNI' | 'BRI' | 'Permata';
 export type Xero = 'synced' | 'pending' | 'awaitingPayment' | 'draft' | 'notSent';
 export type SectionId = string; // 'fnb' | 'activities' | 'operations' | custom

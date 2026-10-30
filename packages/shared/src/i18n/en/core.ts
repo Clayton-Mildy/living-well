@@ -41,8 +41,8 @@ export const nav = {
   spending: 'Spending', s_spending: 'Spending',
 };
 export const roles = {
-  lobby: 'Lobby', nurse: 'Nurse', activity: 'Activity teacher', kitchen: 'Kitchen & F&B', finance: 'Finance', mgmt: 'Management', family: 'Family',
-  lands_lobby: 'Arrivals board', lands_nurse: 'Health station', lands_activity: "Today's activity", lands_kitchen: 'Menu of the day', lands_finance: 'Billing board', lands_mgmt: 'Arrivals board',
+  lobby: 'Lobby', nurse: 'Nurse', activity: 'Activity teacher', kitchen: 'Kitchen & F&B', finance: 'Finance', mgmt: 'Management', owner: 'Owner', family: 'Family',
+  lands_lobby: 'Arrivals board', lands_nurse: 'Health station', lands_activity: "Today's activity", lands_kitchen: 'Menu of the day', lands_finance: 'Billing board', lands_mgmt: 'Arrivals board', lands_owner: 'Arrivals board',
   lands_family: 'Today page', billing: 'billing',
 };
 export const login = {

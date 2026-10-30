@@ -30,7 +30,7 @@ const HOME_KEY: Partial<Record<Role, string>> = { lobby: 'arrivals', mgmt: 'arri
 const linkTo = (role: Role, key: string, query = '') => (HOME_KEY[role] === key ? '/today' : '/' + key) + query;
 
 export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: number): ActionItem[] {
-  const role = roleOf(user);
+  const role = roleOf(user) === 'owner' ? 'mgmt' : roleOf(user); // round 16 (KC): the Owner sees what management sees
   const out: ActionItem[] = [];
   const at = (d: DT | undefined) => d || `${today}T00:00`;
   const add = (x: ActionItem) => out.push(x);
@@ -133,7 +133,7 @@ export function actionItems(s: ClubState, user: User, today: ISODate, nowMin: nu
 export function updatesFor(s: ClubState, user: User): Notification[] {
   const role = roleOf(user);
   return sortBy(
-    live(s.notifications).filter((n) => n.toUsers.includes(user.id) || (user.kind === 'staff' && (n.toRoles as string[]).includes(role))),
+    live(s.notifications).filter((n) => n.toUsers.includes(user.id) || (user.kind === 'staff' && (n.toRoles as string[]).some((r) => r === role || (role === 'owner' && r === 'mgmt')))),
     (n) => n.createdAt,
     -1,
   );

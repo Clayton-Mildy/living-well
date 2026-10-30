@@ -62,22 +62,23 @@ const STAFF: [string, string, StaffRole, string, boolean, string, string?][] = [
   ['s8', 'Dewi Anggraini', 'nurse', 'Nurse', true, '+62 811-2201-3352', 'Ns. Dewi'],
   ['s9', 'Ega', 'mgmt', 'Club manager', true, '+62 811-2201-3353', 'Ega'],
   ['s10', 'Fransiska Tan', 'finance', 'Finance (AR)', true, '+62 811-2201-3354', 'Bu Fransiska'],
+  ['s11', 'Benjamin Cass', 'owner', 'Owner', true, '+62 811-2201-3355', 'Pak Benjamin'], // round 16 (KC): last, so no other person's derived details move
 ];
-const SALARY: Record<string, number> = { lobby: 6500000, kitchen: 7200000, activity: 6800000, nurse: 8900000, mgmt: 18500000, finance: 9800000 };
-const STARTS = ['2024-07-01', '2024-07-01', '2024-08-01', '2024-07-15', '2025-01-06', '2024-07-01', '2024-06-01', '2025-02-03'];
+const SALARY: Record<string, number> = { lobby: 6500000, kitchen: 7200000, activity: 6800000, nurse: 8900000, mgmt: 18500000, finance: 9800000, owner: 35000000 };
+const STARTS = ['2024-07-01', '2024-07-01', '2024-08-01', '2024-07-15', '2025-01-06', '2024-07-01', '2024-06-01', '2025-02-03', '2024-06-01'];
 const QUOTES: Record<string, string> = { s1: 'Always greets Mama by name.', s3: 'The soto tastes just like home.', s5: 'Dinar makes Papa laugh every day.', s6: 'So patient with Mama during batik.', s8: 'Ns. Dewi explains everything clearly.' };
 
 function staffRows(clubId: string, T: ISODate): Staff[] {
   return STAFF.map(([id, name, role, title, login, phone, knownAs], i) => {
     const k = +id.slice(1) - 1; // the number in the id (not the list position), so each person's derived details stay put
     const r = (n: number) => ((k * 7919 + n * 104729) % 1000) / 1000;
-    let end: string | null = k < 3 ? null : '2026-' + String(6 + (k % 6)).padStart(2, '0') + '-30';
+    let end: string | null = k < 3 || id === 's11' ? null : '2026-' + String(6 + (k % 6)).padStart(2, '0') + '-30';
     if (end && end < T) end = String(+end.slice(0, 4) + 1) + end.slice(4); // roll expired fixed-term contracts to the next anniversary
     const sal = SALARY[role] || 6000000;
     return {
-      ...base(clubId, id, STARTS[i] + 'T09:00'), username: name.split(' ')[0].toLowerCase(), name, knownAs, role, title, phone: e164(phone), supervisor: id === 's2', rateable: ['s1', 's3', 's5', 's6', 's8'].includes(id),
+      ...base(clubId, id, STARTS[i] + 'T09:00'), username: name.split(' ')[0].toLowerCase(), name, knownAs, role, title, phone: e164(phone), supervisor: id === 's2' || id === 's11', rateable: ['s1', 's3', 's5', 's6', 's8'].includes(id),
       appAccess: login, active: true, extraClubIds: id === 's9' ? ['adina'] : [],
-      hr: { contract: k < 3 ? 'pkwtt' : 'pkwt', start: STARTS[i], end, signed: id !== 's10', ktpLast4: String(1000 + Math.round(r(1) * 8999)), ktpOnFile: id !== 's6', salary: sal, allowance: Math.round((sal * 0.1) / 50000) * 50000, bank: (['BCA', 'Mandiri', 'BNI', 'BRI'] as Bank[])[k % 4], account: String(1000000000 + Math.round(r(2) * 8999999999)).slice(0, 10), quote: QUOTES[id] },
+      hr: { contract: k < 3 || id === 's11' ? 'pkwtt' : 'pkwt', start: STARTS[i], end, signed: id !== 's10', ktpLast4: String(1000 + Math.round(r(1) * 8999)), ktpOnFile: id !== 's6', salary: sal, allowance: Math.round((sal * 0.1) / 50000) * 50000, bank: (['BCA', 'Mandiri', 'BNI', 'BRI'] as Bank[])[k % 4], account: String(1000000000 + Math.round(r(2) * 8999999999)).slice(0, 10), quote: QUOTES[id] },
     } satisfies Staff;
   });
 }

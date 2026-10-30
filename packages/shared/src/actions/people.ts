@@ -1,7 +1,7 @@
 // People: real staff records (profile, contract, KTP, pay, app access), HR notes and staff time entries. Management only.
 import type { Draft } from 'immer';
 import type { ClubState, ISODate, Staff, StaffHr, StaffRole, User } from '../types';
-import { defineAction, isMgmt, type Ctx } from './framework';
+import { defineAction, isMgmt, isOwner, type Ctx } from './framework';
 import { BANKS, CONTRACTS, HR_NOTE_KINDS, STAFF_ROLES, TIME_KINDS, staffTimeId } from '../rules/mgmt';
 import { bad, bool, hm, int, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { live } from '../util';
@@ -76,6 +76,7 @@ export const peopleActions = [
       };
     },
     run(d, i, ctx) {
+      if (i.role === 'owner' && !isOwner(ctx.user)) ctx.fail('err.forbidden');
       if (phoneTaken(d, i.phone)) ctx.fail('people.err.phoneTaken');
       const id = nextNumId(d.staff, 's');
       const hr: StaffHr = {
@@ -110,6 +111,8 @@ export const peopleActions = [
     },
     run(d, i, ctx) {
       const st = staffRow(d, i.staffId, ctx);
+      // round 16 (KC): only the Owner gives or takes the Owner role
+      if (i.role && i.role !== st.role && (i.role === 'owner' || st.role === 'owner') && !isOwner(ctx.user)) ctx.fail('err.forbidden');
       if (i.role && i.role !== st.role && st.id === ctx.user.id) ctx.fail('people.err.ownRole');
       if (i.phone && i.phone !== st.phone && phoneTaken(d, i.phone, st.id)) ctx.fail('people.err.phoneTaken');
       if (i.name !== undefined) st.name = i.name;

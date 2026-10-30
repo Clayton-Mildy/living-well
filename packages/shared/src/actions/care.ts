@@ -323,7 +323,7 @@ export const careActions = [
     run(d, input, ctx) {
       const p = photoRow(d, input.photoId, ctx, true);
       // what management rejected or removed stays gone for teachers; they can only undo their own removal
-      if (p.deletedAt && !isMgmt(ctx.user) && p.moderated && d.staff[p.moderated.by]?.role === 'mgmt') ctx.fail('err.forbidden');
+      if (p.deletedAt && !isMgmt(ctx.user) && p.moderated && ['mgmt', 'owner'].includes(d.staff[p.moderated.by]?.role)) ctx.fail('err.forbidden');
       if (p.visibility === 'pending') {
         if (!p.deletedAt) ctx.fail('activity.err.notHidden');
         // a withdrawn photo that was never approved goes back to the review, not straight to the families

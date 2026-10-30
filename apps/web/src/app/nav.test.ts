@@ -2,6 +2,15 @@ import { describe, expect, it } from 'vitest';
 import { NAVG, NAVS, phoneNav, screenFor } from './nav';
 
 // KC round 13 §15: every staff role's sidebar is sectioned; the sections hold exactly the role's items, and the phone bar is untouched
+describe('owner nav', () => {
+  // round 16: the Owner's menus are management's
+  it('the owner has every management menu and lands on the arrivals board', () => {
+    const own = NAVS.owner.map((i) => i.key);
+    for (const k of NAVS.mgmt.map((i) => i.key)) expect(own).toContain(k);
+    expect(screenFor('owner', 'today')).toBe('arrivals');
+  });
+});
+
 describe('nav groups', () => {
   it.each(['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt'] as const)('%s: the groups hold exactly the flat nav, each item once', (role) => {
     const grouped = NAVG[role].flatMap((g) => g[1].map((i) => i.key));
