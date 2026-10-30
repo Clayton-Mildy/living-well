@@ -9,7 +9,8 @@ import { runPlan } from '../rules/finance';
 
 const T = '2026-10-21';
 const clubs = buildSeed();
-const base: ClubState = clubs.citra;
+// round 16: Ega's price changes would wait for the Owner (ownerGate.test.ts), so the switch is off
+const base: ClubState = { ...clubs.citra, club: { ...clubs.citra.club, settings: { ...clubs.citra.club.settings, ownerApproval: { mgmt: { pricing: false, holidays: false, budget: false } } } } };
 let n = 0;
 const at = (today: string, nowMin = 600) => ({ today, nowMin });
 const run = (s: ClubState, name: string, input: unknown, uid: string, clock = at(T)) => execute(s, name, input, getUser({ citra: s }, uid)!, clock, `m${++n}`);

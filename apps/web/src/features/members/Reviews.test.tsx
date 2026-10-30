@@ -43,7 +43,35 @@ const click = async (el: Element | null | undefined) => { expect(el).toBeTruthy(
 const btn = (re: RegExp) => Array.from(document.querySelectorAll('button')).find((b) => re.test(b.textContent || '') || re.test(b.getAttribute('aria-label') || ''));
 const tab = (name: RegExp) => Array.from(document.querySelectorAll('[role="tab"]')).find((b) => name.test(b.textContent || ''));
 
+// round 16 (KC): the Owner (Benjamin, s11) has an Owner tab for Management's pricing, holiday and budget changes
+function openAsOwner() {
+  openClub();
+  useSession.setState({ user: { kind: 'staff', id: 's11', name: 'Benjamin Cass', role: 'owner', clubId: 'citra', clubs: ['citra', 'adina'] } });
+  useReplica.setState({ userId: 's11' });
+}
+
 describe('Approvals', () => {
+  it("round 16: the Owner's tab comes first with Ega's staff training day; Approve replays it, Reject asks why", async () => {
+    openAsOwner();
+    await show(<Reviews />);
+    const labels = Array.from(document.querySelectorAll('[role="tablist"][aria-label="Approval types"] [role="tab"]')).map((t) => t.textContent);
+    expect(labels[0]).toBe('Owner · 1');
+    expect(tab(/^Owner/)?.getAttribute('aria-selected')).toBe('true');
+    const row = document.querySelector('[data-type="owner"]')!;
+    expect(row.textContent).toContain('Ega · Close Mon 14 Dec · Staff training day');
+    await click(Array.from(row.querySelectorAll('button')).find((b) => /Approve$/.test(b.textContent || '')));
+    expect(actMock.mock.calls[0]).toEqual(['review.approve', { crId: 'cr-owner-training' }]);
+    await click(Array.from(row.querySelectorAll('button')).find((b) => /Reject$/.test(b.textContent || '')));
+    const dialog = document.querySelector('[role="dialog"]')!;
+    const ta = dialog.querySelector('textarea')!;
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(ta, 'Pick a Friday');
+      ta.dispatchEvent(new Event('input', { bubbles: true }));
+    });
+    await click(Array.from(dialog.querySelectorAll('button')).find((b) => /Reject$/.test(b.textContent || '')));
+    expect(actMock.mock.calls[1]).toEqual(['approval.reject', { type: 'owner', ids: ['cr-owner-training'], reason: 'Pick a Friday' }]);
+  });
+
   it('has a tab for every kind with its count, and opens on the first one with something waiting', async () => {
     openClub();
     await show(<Reviews />);

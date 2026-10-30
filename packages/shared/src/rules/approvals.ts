@@ -8,10 +8,11 @@ import { READING_FIELDS } from './healthStation';
 import { pendingLeave } from './staffLeave';
 import { formDoc } from './signing';
 import { isPendingRow } from './core';
+import { isOwnerSection, pendingOwnerRequests } from '../actions/ownerGate';
 
-export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'programme' | 'stock' | 'renewals' | 'payments' | 'leave' | 'signing';
-/** Tab order of the management Approvals screen. */
-export const APPROVAL_TYPES: ApprovalType[] = ['profile', 'logs', 'readings', 'photos', 'menu', 'programme', 'stock', 'renewals', 'payments', 'leave', 'signing'];
+export type ApprovalType = 'profile' | 'logs' | 'readings' | 'photos' | 'menu' | 'programme' | 'stock' | 'renewals' | 'payments' | 'leave' | 'signing' | 'owner';
+/** Tab order of the management Approvals screen. round 16 (KC): 'owner' (Management's pricing, holiday and budget changes) is the Owner's alone. */
+export const APPROVAL_TYPES: ApprovalType[] = ['owner', 'profile', 'logs', 'readings', 'photos', 'menu', 'programme', 'stock', 'renewals', 'payments', 'leave', 'signing'];
 
 // ---------- the mark ----------
 export type ApprovalState = 'pending' | 'rejected' | null;
@@ -67,7 +68,7 @@ export interface ApprovalItem {
   /** the row id (a change request id for 'profile') */
   id: string;
   type: ApprovalType;
-  sub: 'cr' | 'flag' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'day' | 'stock' | 'photo' | 'renewal' | 'payment' | 'leave' | 'signing';
+  sub: 'cr' | 'flag' | 'owner' | 'log' | 'note' | 'reading' | 'version' | 'dayMenu' | 'day' | 'stock' | 'photo' | 'renewal' | 'payment' | 'leave' | 'signing';
   at: DT;
   by: Actor;
   memberId?: string;
@@ -125,12 +126,17 @@ export const pendingPhotoItems = (s: ClubState): ApprovalItem[] =>
 export const pendingProfile = (s: ClubState): ApprovalItem[] =>
   sortNew([...allPendingReviews(s), ...appliedReviews(s)].map((c) => ({ id: c.id, type: 'profile' as const, sub: c.kind === 'approval' ? ('cr' as const) : ('flag' as const), at: c.createdAt, by: c.submittedBy, memberId: c.target.memberId, edit: c.op !== 'create' })));
 
+/** round 16 (KC): Management's pricing, holiday and weekly-budget changes waiting for the Owner. */
+export const pendingOwner = (s: ClubState): ApprovalItem[] =>
+  sortNew(pendingOwnerRequests(s).map((c) => ({ id: c.id, type: 'owner' as const, sub: 'owner' as const, at: c.createdAt, by: c.submittedBy, edit: false })));
+
 export const pendingItems = (s: ClubState, type: ApprovalType): ApprovalItem[] =>
-  ({ profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, programme: pendingProgramme, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments, leave: pendingLeaveItems, signing: pendingSigning } as const)[type](s);
+  ({ owner: pendingOwner, profile: pendingProfile, logs: pendingLogs, readings: pendingReadings, photos: pendingPhotoItems, menu: pendingMenu, programme: pendingProgramme, stock: pendingStock, renewals: pendingRenewals, payments: pendingPayments, leave: pendingLeaveItems, signing: pendingSigning } as const)[type](s);
 export function approvalCounts(s: ClubState): Record<ApprovalType, number> {
   return Object.fromEntries(APPROVAL_TYPES.map((t) => [t, pendingItems(s, t).length])) as Record<ApprovalType, number>;
 }
-export const approvalTotal = (s: ClubState): number => APPROVAL_TYPES.reduce((n, t) => n + pendingItems(s, t).length, 0);
+/** Everything waiting in Approvals. The owner requests count only for the Owner (Management cannot decide them). */
+export const approvalTotal = (s: ClubState, o: { owner?: boolean } = {}): number => APPROVAL_TYPES.reduce((n, t) => n + (t === 'owner' && !o.owner ? 0 : pendingItems(s, t).length), 0);
 
 // ---------- history ----------
 export interface HistoryItem {
@@ -170,7 +176,8 @@ export function approvalHistory(s: ClubState): HistoryItem[] {
   for (const o of Object.values(s.dayMenus)) fromMark('menu', 'dayMenu', o.id, o.approval);
   for (const c of Object.values(s.changeRequests)) {
     if (c.status === 'pending' || !c.reviewedAt && !['withdrawn', 'superseded'].includes(c.status)) continue;
-    add({ id: c.id, type: 'profile', sub: c.kind === 'approval' ? 'cr' : 'flag', status: c.status as HistoryItem['status'], at: c.createdAt, decidedAt: c.reviewedAt || c.createdAt, by: c.submittedBy, decidedBy: c.reviewedBy, reason: c.note, memberId: c.target.memberId });
+    const owner = isOwnerSection(c.section);
+    add({ id: c.id, type: owner ? 'owner' : 'profile', sub: owner ? 'owner' : c.kind === 'approval' ? 'cr' : 'flag', status: c.status as HistoryItem['status'], at: c.createdAt, decidedAt: c.reviewedAt || c.createdAt, by: c.submittedBy, decidedBy: c.reviewedBy, reason: c.note, memberId: c.target.memberId });
   }
   for (const p of Object.values(s.photos)) {
     if (p.approved && p.takenBy !== p.approved.by) add({ id: p.id, type: 'photos', sub: 'photo', status: 'approved', at: p.createdAt, decidedAt: p.approved.at, by: staffActor(p.takenBy), decidedBy: staffActor(p.approved.by), memberId: p.memberIds[0] });

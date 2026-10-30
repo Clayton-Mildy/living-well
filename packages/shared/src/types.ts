@@ -1182,7 +1182,8 @@ export interface TaskDone extends Row {
   note?: string;
 }
 
-export type ReviewSection = 'newMember' | 'conversion' | 'details' | 'plan' | 'docsConsent' | 'family' | 'allergies' | 'medicines' | 'care';
+export type ReviewSection = 'newMember' | 'conversion' | 'details' | 'plan' | 'docsConsent' | 'family' | 'allergies' | 'medicines' | 'care'
+  | 'pricing' | 'holiday' | 'budget'; // round 16 (KC): Management's changes that wait for the Owner (actions/ownerGate.ts)
 
 export interface ChangeRequest extends Row {
   kind: 'approval' | 'postReview';
@@ -1190,7 +1191,7 @@ export interface ChangeRequest extends Row {
   action: string;
   input: unknown;
   section: ReviewSection;
-  target: { type: 'member' | 'familyContact' | 'familyLink' | 'enquiry' | 'document'; id: string; memberId?: string };
+  target: { type: 'member' | 'familyContact' | 'familyLink' | 'enquiry' | 'document' | 'club'; id: string; memberId?: string }; // 'club': an owner request (id = the club)
   changes: { field: string; from: unknown; to: unknown }[];
   createdRows?: { coll: string; id: string }[];
   status: 'pending' | 'approved' | 'rejected' | 'withdrawn' | 'superseded' | 'acknowledged' | 'reverted';

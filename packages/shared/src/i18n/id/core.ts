@@ -71,7 +71,7 @@ export const shell: Same<typeof EN.shell> = {
 export const notif: Same<typeof EN.notif> = {
   checkedIn: '{name} check-in pukul {time}.', checkedOut: '{name} check-out pukul {time}.', newPhotos: '{n} foto baru {name}.', logSaved: 'Catatan harian {name} sudah ada: {mood}.',
   paymentReceived: 'Pembayaran diterima dari {name} untuk {invoice}.', reviewSubmitted: '{who} mengirim perubahan untuk ditinjau ({section}).', reviewFlagged: '{who} mengubah data kesehatan ({section}). Sudah berlaku; mohon ditinjau.',
-  reviewApproved: 'Perubahan Anda disetujui ({section}).', reviewRejected: 'Perubahan Anda tidak disetujui ({section}): {note}', reviewReverted: 'Manajemen membatalkan perubahan Anda ({section}).',
+  ownerApproval: '{who} meminta persetujuan Anda: {what}', reviewApproved: 'Perubahan Anda disetujui ({section}).', reviewRejected: 'Perubahan Anda tidak disetujui ({section}): {note}', reviewReverted: 'Manajemen membatalkan perubahan Anda ({section}).',
   'act.review': 'Perubahan untuk ditinjau: {name} · {section}', 'act.reviewFlagged': 'Perubahan kesehatan sudah berlaku, mohon ditinjau: {name} · {section}', 'act.alertReading': 'Hasil ukur waspada: {name} · {value}',
   'act.leaveRequest': '{name} mengajukan cuti {days} hari mulai {from}', 'act.leaveRequestOne': '{name} mengajukan cuti sehari pada {from}',
   'act.contract': 'Kontrak berakhir {date}: {name}', 'act.complaint': 'Masukan makanan terbuka: {name} · {dish}', 'act.overdue': 'Tagihan terlambat: {name} · {number}', 'act.budgetApprove': 'Permintaan anggaran untuk disetujui: {item}',
@@ -97,6 +97,7 @@ export const err: Same<typeof EN.err> = {
 };
 export const review: Same<typeof EN.review> = {
   newMember: 'Anggota baru', conversion: 'Calon bergabung', details: 'Data diri', plan: 'Paket', docsConsent: 'Dokumen dan persetujuan', family: 'Kontak keluarga', allergies: 'Alergi', medicines: 'Obat', care: 'Petunjuk perawatan',
+  pricing: 'Harga dan paket', holiday: 'Hari libur dan tutup', budget: 'Anggaran mingguan', // round 16 (KC)
 };
 export const demo: Same<typeof EN.demo> = {
   pill: 'Demo', title: 'Alat demo', guided: 'Demo terpandu', guidedTitle: 'Hari Oma Lina', progress: '{n} dari {total} langkah selesai', switchAccount: 'Ganti akun',

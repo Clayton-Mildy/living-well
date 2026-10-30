@@ -655,7 +655,7 @@ describe('budget', () => {
     expect(w.s.budgetSections.fnb.limits.at(-1)).toEqual({ fromWeek: '2026-10-26', weekly: 10_000_000 });
     expect(budgetWeekOf(w.s, 'fnb', '2026-10-21').limit).toBe(9_500_000);
     expect(budgetWeekOf(w.s, 'fnb', '2026-10-27').limit).toBe(10_000_000);
-    w.run('budget.setLimit', { sectionId: 'fnb', weekly: 9_000_000, fromWeek: '2026-10-26' }, 's9'); // same week: replaced
+    w.run('budget.setLimit', { sectionId: 'fnb', weekly: 9_000_000, fromWeek: '2026-10-26' }, 's11'); // same week: replaced (round 16: by the Owner; Ega's would wait for him)
     expect(w.s.budgetSections.fnb.limits.filter((l) => l.fromWeek === '2026-10-26')).toEqual([{ fromWeek: '2026-10-26', weekly: 9_000_000 }]);
     w.fail('budget.setLimit', { sectionId: 'fnb', weekly: 1, fromWeek: '2026-10-26' }, 's5', 'err.forbidden');
     w.fail('budget.setLimit', { sectionId: 'fnb', weekly: -1, fromWeek: '2026-10-26' }, 's10', 'err.invalid');
@@ -670,7 +670,7 @@ describe('budget', () => {
     w.fail('budget.addSection', { name: ' transport ', weekly: 1 }, 's10', 'finance.err.sectionExists');
     w.fail('budget.addSection', { name: 'f&b', weekly: 1 }, 's10', 'finance.err.sectionExists');
     w.fail('budget.addSection', { name: 'X', weekly: 1 }, 's2', 'err.forbidden');
-    w.run('budget.renameSection', { id, name: 'Transport and fuel' }, 's9');
+    w.run('budget.renameSection', { id, name: 'Transport and fuel' }, 's11'); // round 16: the Owner (Ega's would wait for him)
     expect(w.s.budgetSections[id].name).toBe('Transport and fuel');
     expect(w.s.budgetSections[id].nameId).toBeUndefined();
     w.fail('budget.renameSection', { id, name: 'Activities' }, 's10', 'finance.err.sectionExists');

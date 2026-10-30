@@ -1,9 +1,11 @@
 // Round 16 seed: the family emails the contract and invoices go to (Maria and her brother Daniel, both on Oma Lina and Opa Budi, so the billing can be passed
-// between them), Opa Budi's pick-up at his own price, a cake on his birthday party not invoiced yet, and the field trip fee on the seeded outings.
+// between them), Opa Budi's pick-up at his own price, a cake on his birthday party not invoiced yet, the field trip fee on the seeded outings, and (R7) Ega's staff
+// training day waiting for the Owner.
 // Fixed values, no random draws; the same for 5 and 45 members.
 import type { ClubState, ISODate } from '../../types';
-import { live } from '../../util';
+import { addDays, daysBetween, DEMO_TODAY, isWeekday, live } from '../../util';
 import { fmtDMY } from '../../rules/calendar';
+import { dayStatus } from '../../rules/core';
 
 export function seedRound16(s: ClubState, T: ISODate): void {
   if (s.familyContacts.f1) s.familyContacts.f1.email = 'maria.wijaya@example.com';
@@ -21,4 +23,22 @@ export function seedRound16(s: ClubState, T: ISODate): void {
       s.pendingCharges[id] = { id, clubId: trip.clubId, createdAt: `${trip.date}T15:00:00`, createdBy: 'staff:s1', memberId: m, amount: 250_000, label: `Field trip · ${trip.title} · ${fmtDMY(trip.date)}` };
     }
   }
+  seedOwnerHoliday(s, T);
+}
+
+/** R7: Ega asked to close the club for a staff training day (the first open weekday on or after 14 Dec, moved with the anchor); it waits for Benjamin, who was told. */
+function seedOwnerHoliday(s: ClubState, T: ISODate): void {
+  if (!s.staff.s9 || !s.staff.s11) return;
+  let date = addDays('2026-12-14', daysBetween(DEMO_TODAY, T));
+  const free = (d: ISODate) => isWeekday(d) && dayStatus(s, d).events.length === 0 && !live(s.venueBookings).some((v) => v.date === d);
+  while (!free(date)) date = addDays(date, 1);
+  const at = `${addDays(T, -1)}T16:20`;
+  const id = 'cr-owner-training';
+  const input = { date, kind: 'closed', title: 'Staff training day', titleId: 'Hari pelatihan staf' };
+  s.changeRequests[id] = { id, clubId: s.clubId, createdAt: at, createdBy: 'staff:s9', kind: 'approval', op: 'update', action: 'calendarEvent.create', input, section: 'holiday', target: { type: 'club', id: s.clubId }, changes: [], status: 'pending', submittedBy: 'staff:s9' };
+  s.notifications['nt-owner-training'] = {
+    id: 'nt-owner-training', clubId: s.clubId, createdAt: at, createdBy: 'staff:s9', toUsers: [], toRoles: ['owner'], kind: 'notif.ownerApproval',
+    params: { who: 'Ega', whatKey: 'approvals.owner.what.closeAdd', date: fmtDMY(date), title: input.title, name: '', amount: '', what: input.title },
+    severity: 'attention', action: false, link: '/reviews', ref: { type: 'changeRequest', id }, readBy: ['s9'],
+  };
 }

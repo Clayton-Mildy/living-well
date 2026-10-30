@@ -11,12 +11,12 @@ import { useMe } from '../lib/me';
 export function useNavCounts(): Record<string, number> {
   const s = useClub();
   const { today, nowMin } = useNow();
-  const { role, id, user } = useMe();
+  const { role, realRole, id, user } = useMe();
   return useMemo(() => {
     if (!s || !role || !id) return {};
     const out: Record<string, number> = {};
     if (role === 'mgmt') out.hr = pendingLeave(s).length; // round 13: staff leave requests waiting in People → Leave
-    if (role === 'mgmt') out.reviews = approvalTotal(s); // everything waiting in Approvals: profile changes, care log, readings, photos, menu, stock
+    if (role === 'mgmt') out.reviews = approvalTotal(s, { owner: realRole === 'owner' }); // round 16: owner requests count for the Owner only; // everything waiting in Approvals: profile changes, care log, readings, photos, menu, stock
     const approver = role === 'mgmt' || role === 'finance' || (user?.kind === 'staff' && user.staff.supervisor);
     if (approver) out.stock = live(s.stockRequests).filter((k) => k.status === 'requested' && (role !== 'kitchen' || k.area === 'kitchen')).length;
     if (role === 'finance') out.payments = pendingItems(s, 'payments').length; // front-desk payments waiting for finance
@@ -26,5 +26,5 @@ export function useNavCounts(): Record<string, number> {
     }
     if (user?.kind === 'staff') out.tasks = openTaskCount(s, screenRole(user.staff.role), today, nowMin); // KC round 7: tasks still open that are due by now
     return out;
-  }, [s, role, id, user, today, nowMin]);
+  }, [s, role, realRole, id, user, today, nowMin]);
 }

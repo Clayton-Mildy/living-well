@@ -43,4 +43,10 @@ export const approvals: Same<typeof EN> = {
   'tab.programme': 'Program', 'none.programme': 'Tidak ada perubahan program untuk disetujui', 'none.programmeSub': 'Jadwal mingguan atau perubahan satu hari dari tim aktivitas muncul di sini sebelum orang lain melihatnya.',
   'kind.programme': 'Jadwal mingguan', 'kind.day': 'Program satu hari', 'sum.programmeFrom': 'Mulai {date}', 'sum.programmeSame': 'Sesi sama, tanggal mulai baru', 'sum.programmeDay': 'Program {date}',
   'notif.rejected.programme': 'Manajemen tidak menyetujui {n} perubahan program Anda: {reason}', conflictProgramme: '{n} tidak disetujui: hari itu sudah berubah di kalender sejak dikirim. Kembalikan agar tim aktivitas bisa mengirim ulang.',
+  // round 16 (KC): perubahan harga, hari libur dan anggaran mingguan dari Manajemen menunggu Pemilik
+  'tab.owner': 'Pemilik', 'none.owner': 'Tidak ada yang menunggu Anda', 'kind.owner': 'Persetujuan pemilik',
+  'owner.waiting': 'Menunggu pemilik · {what}', 'owner.withdraw': 'Tarik kembali', 'owner.withdrawn': 'Permintaan ditarik.', 'owner.sent': 'Dikirim ke pemilik untuk disetujui.',
+  'owner.what.prices': 'Harga baru mulai {date}', 'owner.what.plan': 'Paket · {name}', 'owner.what.rules': 'Aturan klub (kunjungan, pemberitahuan)',
+  'owner.what.budgetLimit': 'Anggaran mingguan · {name} · {amount} mulai {date}', 'owner.what.budgetAdd': 'Bagian anggaran baru · {name} · {amount}', 'owner.what.budgetRename': 'Ganti nama bagian anggaran · {name}',
+  'owner.what.closeAdd': 'Tutup {date} · {title}', 'owner.what.holidayAdd': 'Libur {date} · {title}', 'owner.what.eventChange': 'Ubah {date} · {title}', 'owner.what.eventRemove': 'Hapus {date} · {title}', 'owner.what.other': 'Sebuah perubahan',
 };

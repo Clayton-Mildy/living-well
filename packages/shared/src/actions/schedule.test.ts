@@ -7,7 +7,8 @@ import { guestOn } from '../rules/guests';
 
 const clock = { today: '2026-10-21', nowMin: 600 }; // Wed 21 Oct, 10:00
 let n = 0;
-const fresh = (): ClubState => { const s = buildSeed().citra; return s; };
+// round 16: Management's holidays wait for the Owner by default (ownerGate.test.ts); these tests are about the calendar itself, so the switch is off
+const fresh = (): ClubState => { const s = buildSeed().citra; return { ...s, club: { ...s.club, settings: { ...s.club.settings, ownerApproval: { mgmt: { pricing: false, holidays: false, budget: false } } } } }; };
 const as = (s: ClubState, id: string) => getUser({ [s.clubId]: s }, id)!;
 const run = (s: ClubState, name: string, input: unknown, uid: string, clk = clock) => execute(s, name, input, as(s, uid), clk, `t${++n}`);
 const step = (s: ClubState, name: string, input: unknown, uid: string, clk = clock) => run(s, name, input, uid, clk).state;

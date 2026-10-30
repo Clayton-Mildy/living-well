@@ -9,6 +9,7 @@ import { Fragment } from 'react';
 import type { ClubState, Slot } from '@cp/shared';
 import type { DayInfo, DayItem } from '@cp/shared/rules/calendar';
 import { Button, DishThumb, GROUP_HEAD, Icon, IconButton } from '../../components/ui';
+import { OwnerWaiting, ownerRequestOn } from '../../components/OwnerWaiting';
 import { LUNCH_AT } from '@cp/shared/rules/family';
 import { dishNames, lunchPictureOn, menuOn } from '@cp/shared/rules/kitchen';
 import { useDevice } from '../../hooks/useDevice';
@@ -98,6 +99,7 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, onWe
             {proposed ? <ProposedDay s={s} date={info.date} decide={decide} /> : null}
           </div>
         ) : null}
+        {canEdit ? <OwnerWaiting section="holiday" only={(cr) => ownerRequestOn(s, cr, info.date)} pad="2px 16px" /> : null}
       </div>
     );
   }
@@ -138,6 +140,8 @@ export function DayBlock({ s, info, today, canEdit, onEdit, onEditActivity, onWe
         );
       })}
       {lunchBefore(rows.length, 40, '12px 22px', 14, false, false)}
+      {/* round 16 (KC): a closure or holiday change for this day that waits for the Owner */}
+      {canEdit ? <OwnerWaiting section="holiday" only={(cr) => ownerRequestOn(s, cr, info.date)} pad="8px 22px" /> : null}
       {proposed ? <ProposedDay s={s} date={info.date} decide={decide} /> : null}
     </div>
   );

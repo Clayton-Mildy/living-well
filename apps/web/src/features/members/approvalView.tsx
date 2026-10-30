@@ -13,6 +13,7 @@ import { CHECK_KEY } from '../health/ReadingCard';
 import { values as readingValues } from './profile/CareTab';
 import { mediaUrl } from '../../lib/media';
 import { describeCr, type Described, type DiffRow } from './reviewDiff';
+import { ownerWhatText } from '../../components/OwnerWaiting';
 
 interface Fmt { fdy: (d: string) => string; fds: (d: string) => string; fd: (d: string, o: Intl.DateTimeFormatOptions) => string; lang?: Lang }
 type Entry = Pick<ApprovalItem, 'id' | 'sub' | 'memberId'>;
@@ -211,6 +212,17 @@ function signingView(s: ClubState, id: string, t: TFn): ItemView {
   return { who: m ? memberName(m) : '', kind, summary, detail: { title: kind, rows: [], summary: [] }, edit: false };
 }
 
+/** Round 16 (KC): a pricing, holiday or budget change Management asked the Owner for: "Ega · Close Mon 14 Dec · Staff training day". */
+function ownerView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
+  const cr = s.changeRequests[id];
+  const kind = cr ? t('review.' + cr.section) : t('approvals.kind.owner');
+  if (!cr) return { who: '', kind, summary: '', detail: { title: '', rows: [], summary: [] }, edit: false };
+  const what = ownerWhatText(s, cr, t, fmt);
+  const by = actorName(s, cr.submittedBy);
+  const rows: DiffRow[] = [{ label: kind, to: what }, { label: t('approvals.requestedBy'), to: by }];
+  return { who: '', kind, summary: `${by} · ${what}`, detail: { title: kind, rows: [], summary: rows }, edit: false };
+}
+
 /** The view of one entry: pending (ApprovalItem) or handled (HistoryItem). Profile changes are described by describeCr. */
 export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt, today?: string): ItemView {
   switch (it.sub) {
@@ -225,6 +237,7 @@ export function itemView(s: ClubState, it: Entry, t: TFn, fmt: Fmt, today?: stri
     case 'payment': return payView(s, it.id, t, fmt);
     case 'leave': return leaveView(s, it.id, t, fmt);
     case 'signing': return signingView(s, it.id, t);
+    case 'owner': return ownerView(s, it.id, t, fmt);
     case 'cr': case 'flag': {
       const cr = s.changeRequests[it.id];
       if (cr) {
@@ -250,7 +263,7 @@ export function groupByPerson(s: ClubState, items: Record<ApprovalType, Approval
   const other: ApprovalItem[] = [];
   for (const type of APPROVAL_TYPES) {
     for (const it of items[type] || []) {
-      if (type === 'menu' || type === 'programme' || type === 'stock' || type === 'leave') { other.push(it); continue; }
+      if (type === 'menu' || type === 'programme' || type === 'stock' || type === 'leave' || type === 'owner') { other.push(it); continue; } // round 16: owner requests are about the club
       let mid = it.memberId;
       if (type === 'photos') {
         const ph = s.photos[it.id];

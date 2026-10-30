@@ -22,7 +22,7 @@ interface ReplicaState {
   stop(): void;
   act(name: string, input: unknown): Promise<ActResult>;
 }
-export type ActResult = { ok: true; result: Record<string, unknown>; reviewed?: 'gate' | 'flag' } | { ok: false; code: string; params: Record<string, string | number> };
+export type ActResult = { ok: true; result: Record<string, unknown>; reviewed?: 'gate' | 'flag' | 'owner' } | { ok: false; code: string; params: Record<string, string | number> };
 
 let es: EventSource | null = null;
 let refetchT: ReturnType<typeof setTimeout> | undefined;
@@ -116,7 +116,7 @@ export const useReplica = create<ReplicaState>((set, get) => {
       const user = userIn(view, userId, get().self);
       if (!user) return { ok: false, code: 'err.forbidden', params: {} };
       const mutationId = `${userId}-${Date.now().toString(36)}-${(++seq).toString(36)}`;
-      let optimistic: { reviewed?: 'gate' | 'flag'; result: Record<string, unknown> } | null = null;
+      let optimistic: { reviewed?: 'gate' | 'flag' | 'owner'; result: Record<string, unknown> } | null = null;
       try {
         const r = execute(view, name, input, user, clockNow(get().clock), mutationId);
         optimistic = { reviewed: r.reviewed, result: r.result };
@@ -126,7 +126,7 @@ export const useReplica = create<ReplicaState>((set, get) => {
         // unexpected client-side error: still try the server
       }
       try {
-        const r = await api<{ rev: number; patches?: Patch[]; result: Record<string, unknown>; reviewed?: 'gate' | 'flag' }>(`/api/actions/${name}`, { body: { mutationId, club, input } });
+        const r = await api<{ rev: number; patches?: Patch[]; result: Record<string, unknown>; reviewed?: 'gate' | 'flag' | 'owner' }>(`/api/actions/${name}`, { body: { mutationId, club, input } });
         if (r.patches) applyServer(r.rev, mutationId, r.patches);
         else { // family: projection refetch
           set({ pending: get().pending.filter((p) => p.mutationId !== mutationId) });

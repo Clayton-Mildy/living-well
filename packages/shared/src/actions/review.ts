@@ -1,7 +1,8 @@
 // Management review of customer changes: approve / reject / withdraw (gated) and acknowledge / revert (flagged health edits).
 import type { Draft } from 'immer';
 import type { ChangeRequest, ClubState } from '../types';
-import { defineAction, getAction, isMgmt, collOf, type Ctx, DomainError } from './framework';
+import { defineAction, getAction, isMgmt, isOwner, collOf, type Ctx, DomainError } from './framework';
+import { isOwnerSection, OWNER_LINK } from './ownerGate';
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const rowOf = (d: Draft<ClubState>, cr: ChangeRequest) => (d as unknown as Record<string, Record<string, Record<string, unknown>>>)[collOf(cr.target.type)]?.[cr.target.id];
@@ -11,12 +12,20 @@ const cr = (d: Draft<ClubState>, id: string, ctx: Ctx) => {
   return x;
 };
 const submitterId = (c: ChangeRequest) => String(c.submittedBy).split(':')[1] || '';
+const linkOf = (c: ChangeRequest) => (c.target.memberId ? `/members/${c.target.memberId}` : OWNER_LINK[c.section] ?? '/reviews');
+/** round 16 (KC): pricing, holiday and budget requests are the Owner's to decide (Management only withdraws its own). */
+const ownerOnly = (c: ChangeRequest, ctx: Ctx) => { if (isOwnerSection(c.section) && !isOwner(ctx.user)) ctx.fail('err.forbidden'); };
 
 /** Approve a waiting request: apply it (updates) or activate what it created, and tell the sender. Shared with the Approvals hub. */
 export function approveChange(d: Draft<ClubState>, c: Draft<ChangeRequest>, ctx: Ctx, opts: { force?: boolean; note?: string } = {}) {
   if (c.status !== 'pending' || c.kind !== 'approval') ctx.fail('err.reviewNotPending');
+  ownerOnly(c as ChangeRequest, ctx);
   const def = getAction(c.action);
-  if (c.op === 'create') {
+  if (c.target.type === 'club') {
+    // round 16 (KC): an owner request has no row to compare: replay the action as the person who asked (it fails with its own error if it no longer fits)
+    if (!def) throw new DomainError('err.unknownAction', { name: c.action });
+    def.run(d, JSON.parse(JSON.stringify(c.input)) as never, { ...ctx, actor: c.submittedBy, review: 'none' });
+  } else if (c.op === 'create') {
     for (const r of c.createdRows || []) {
       const row = (d as unknown as Record<string, Record<string, { review?: { status: string } }>>)[r.coll]?.[r.id];
       if (row?.review) row.review.status = 'approved';
@@ -35,12 +44,13 @@ export function approveChange(d: Draft<ClubState>, c: Draft<ChangeRequest>, ctx:
   c.reviewedBy = ctx.actor;
   c.reviewedAt = ctx.nowDT;
   if (opts.note) c.note = opts.note;
-  ctx.notify({ toUsers: [submitterId(c as ChangeRequest)], kind: 'notif.reviewApproved', params: { section: c.section }, link: c.target.memberId ? `/members/${c.target.memberId}` : '/reviews', memberId: c.target.memberId, ref: { type: 'changeRequest', id: c.id } });
+  ctx.notify({ toUsers: [submitterId(c as ChangeRequest)], kind: 'notif.reviewApproved', params: { section: c.section }, link: linkOf(c as ChangeRequest), memberId: c.target.memberId, ref: { type: 'changeRequest', id: c.id } });
   ctx.feed({ icon: 'task_alt', key: 'feed.reviewApproved', params: { section: c.section }, memberId: c.target.memberId });
 }
 /** Reject a waiting request with a reason: nothing is applied (a rejected create is cleaned up), and the sender is told why. */
 export function rejectChange(d: Draft<ClubState>, c: Draft<ChangeRequest>, ctx: Ctx, note: string) {
   if (c.status !== 'pending' || c.kind !== 'approval') ctx.fail('err.reviewNotPending');
+  ownerOnly(c as ChangeRequest, ctx);
   if (!note?.trim()) ctx.fail('err.noteRequired');
   if (c.op === 'create') {
     for (const r of c.createdRows || []) {
@@ -55,7 +65,7 @@ export function rejectChange(d: Draft<ClubState>, c: Draft<ChangeRequest>, ctx: 
   c.reviewedBy = ctx.actor;
   c.reviewedAt = ctx.nowDT;
   c.note = note.trim();
-  ctx.notify({ toUsers: [submitterId(c as ChangeRequest)], kind: 'notif.reviewRejected', params: { section: c.section, note: c.note }, link: c.target.memberId ? `/members/${c.target.memberId}` : '/reviews', memberId: c.target.memberId, severity: 'attention', ref: { type: 'changeRequest', id: c.id } });
+  ctx.notify({ toUsers: [submitterId(c as ChangeRequest)], kind: 'notif.reviewRejected', params: { section: c.section, note: c.note }, link: linkOf(c as ChangeRequest), memberId: c.target.memberId, severity: 'attention', ref: { type: 'changeRequest', id: c.id } });
 }
 /** Management has looked at a change that was applied at once (health sections): keep it. */
 export function acknowledgeChange(c: Draft<ChangeRequest>, ctx: Ctx) {
@@ -76,7 +86,7 @@ export function revertChange(d: Draft<ClubState>, c: Draft<ChangeRequest>, ctx: 
   c.reviewedBy = ctx.actor;
   c.reviewedAt = ctx.nowDT;
   if (opts.note) c.note = opts.note;
-  ctx.notify({ toUsers: [submitterId(c as ChangeRequest)], kind: 'notif.reviewReverted', params: { section: c.section }, link: c.target.memberId ? `/members/${c.target.memberId}` : '/reviews', memberId: c.target.memberId, severity: 'attention' });
+  ctx.notify({ toUsers: [submitterId(c as ChangeRequest)], kind: 'notif.reviewReverted', params: { section: c.section }, link: linkOf(c as ChangeRequest), memberId: c.target.memberId, severity: 'attention' });
   ctx.feed({ icon: 'undo', key: 'feed.reviewReverted', params: { section: c.section }, memberId: c.target.memberId });
 }
 

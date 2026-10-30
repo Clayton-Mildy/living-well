@@ -6,7 +6,9 @@ const T = '2026-10-21'; // Wednesday
 const clock = { today: T, nowMin: 10 * 60 };
 let n = 0;
 const mid = () => `c${++n}`;
-const seed = () => buildSeed();
+// round 16: Management's prices wait for the Owner by default (ownerGate.test.ts); these tests are about prices and plans themselves, so the switch is off
+const noOwnerGate = (s: ClubState): ClubState => ({ ...s, club: { ...s.club, settings: { ...s.club.settings, ownerApproval: { mgmt: { pricing: false, holidays: false, budget: false } } } } });
+const seed = () => { const c = buildSeed(); c.citra = noOwnerGate(c.citra); c.adina = noOwnerGate(c.adina); return c; };
 const user = (s: ClubState, id: string) => getUser({ [s.clubId]: s }, id)!;
 const run = (s: ClubState, name: string, input: unknown, uid: string, clk = clock) => execute(s, name, input, user(s, uid), clk, mid());
 const fails = (s: ClubState, name: string, input: unknown, uid: string, code: string, clk = clock) => {

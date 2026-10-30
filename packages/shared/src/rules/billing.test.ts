@@ -5,7 +5,8 @@ import { FEE_DEFAULTS, feeOf, pickupPrice, runLinesFor } from './billing';
 
 const T = '2026-10-21';
 const PERIOD = '2026-11';
-const seed = (): ClubState => structuredClone(buildSeed().citra);
+// round 16: Ega's price changes would wait for the Owner (ownerGate.test.ts), so the switch is off
+const seed = (): ClubState => { const s = structuredClone(buildSeed().citra); s.club.settings.ownerApproval = { mgmt: { pricing: false, holidays: false, budget: false } }; return s; };
 const withDementia = (v: boolean | undefined) => {
   const s = seed();
   s.members.m1.registration = { ...s.members.m1.registration, dementia: v };

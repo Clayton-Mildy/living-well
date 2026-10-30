@@ -2,9 +2,10 @@
 import { produceWithPatches, enablePatches, type Patch, type Draft, original, current, isDraft } from 'immer';
 import type { Actor, ClubState, DT, HM, ISODate, Role, StaffRole, User, Notification, ActivityEntry, ChangeRequest, ReviewSection } from '../types';
 import { COLLECTIONS } from '../types';
-import { toHM } from '../util';
+import { toHM, rp } from '../util';
 import { areaOf, OWN_ROW } from './areas';
-import { accessOf, defaultLevel, AREA_BASE, type GridRole } from '../rules/access';
+import { accessOf, defaultLevel, AREA_BASE, ownerApprovalOn, type GridRole } from '../rules/access';
+import { ownerKindOf, ownerWhat, SECTION_OF } from './ownerGate';
 
 enablePatches();
 
@@ -176,7 +177,7 @@ export interface ExecResult {
   patches: Patch[];
   inverse: Patch[];
   result: Record<string, unknown>;
-  reviewed?: 'gate' | 'flag';
+  reviewed?: 'gate' | 'flag' | 'owner';
 }
 
 const getPath = (obj: unknown, path: (string | number)[]) => path.reduce<unknown>((o, k) => (o == null ? undefined : (o as Record<string | number, unknown>)[k]), obj);
@@ -209,6 +210,9 @@ export function execute(state: ClubState, name: string, rawInput: unknown, user:
   const p = permit(def, user, input, state);
   if (p === 'viewOnly') throw new DomainError('err.viewOnly', { name });
   if (p === 'forbidden') throw new DomainError('err.forbidden', { name });
+  // round 16 (KC): Management's pricing, holiday and weekly-budget changes wait for the Owner (after the access grid: a View role does not even ask)
+  const ownerKind = !opts.forceReview && user.kind === 'staff' && user.id !== 'system' ? ownerKindOf(name, input, state) : null;
+  if (ownerKind && user.kind === 'staff' && ownerApprovalOn(state, user.staff.role, ownerKind)) return ownerRequest(state, def, name, input, user, clock, mutationId, SECTION_OF[ownerKind]);
   let policy: ReviewPolicy = opts.forceReview ?? 'none';
   if (!opts.forceReview && def.review && !isMgmt(user)) {
     policy = typeof def.review.policy === 'function' ? def.review.policy(input, state, user) : def.review.policy;
@@ -272,8 +276,29 @@ export function execute(state: ClubState, name: string, rawInput: unknown, user:
   return { state: next, patches, inverse, result: ctx.result };
 }
 
+/**
+ * round 16 (KC): store an owner request instead of the change. The action is dry-run first, so a request that cannot work fails now with the action's own error;
+ * the Owner's approval replays it as the person who asked (review.ts approveChange).
+ */
+function ownerRequest(state: ClubState, def: ActionDef, name: string, input: unknown, user: User, clock: ClockInfo, mutationId: string, section: ReviewSection): ExecResult {
+  const ctx = makeCtx(user, state.clubId, clock, mutationId, 'none');
+  produceWithPatches(state, (d) => { def.run(d, input, { ...ctx, result: {}, feed: () => {}, notify: () => {} }); });
+  const what = ownerWhat(state, name, input);
+  const dmy = (d?: string) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : '');
+  const params: Record<string, string | number> = { who: nameOfUser(user), whatKey: what.key, date: dmy(what.params.date), title: what.params.title ?? '', name: what.params.name ?? '', amount: what.params.amount !== undefined ? rp(what.params.amount) : '' };
+  params.what = String(params.title || params.name || params.date || section);
+  const [next, patches, inverse] = produceWithPatches(state, (d) => {
+    const crId = ctx.id('cr');
+    d.changeRequests[crId] = { id: crId, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, kind: 'approval', op: 'update', action: name, input, section, target: { type: 'club', id: ctx.clubId }, changes: [], status: 'pending', submittedBy: ctx.actor } as ChangeRequest;
+    ctx.result.changeRequestId = crId;
+    ctx.notify({ toRoles: ['owner'], kind: 'notif.ownerApproval', params, link: '/reviews', severity: 'attention', ref: { type: 'changeRequest', id: crId } });
+    flushSideEffects(d, ctx);
+  });
+  return { state: next, patches, inverse, result: ctx.result, reviewed: 'owner' };
+}
+
 export const collOf = (type: ChangeRequest['target']['type']) =>
-  ({ member: 'members', familyContact: 'familyContacts', familyLink: 'familyLinks', enquiry: 'enquiries', document: 'members' })[type];
+  ({ member: 'members', familyContact: 'familyContacts', familyLink: 'familyLinks', enquiry: 'enquiries', document: 'members', club: 'club' })[type];
 
 export function nameOfUser(u: User) {
   return u.kind === 'staff' ? u.staff.knownAs || u.staff.name : u.contact.name;

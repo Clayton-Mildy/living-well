@@ -73,7 +73,7 @@ export const shell = {
 export const notif = {
   checkedIn: '{name} checked in at {time}.', checkedOut: '{name} checked out at {time}.', newPhotos: '{n} new photos of {name}.', logSaved: '{name}’s daily log is ready: {mood}.',
   paymentReceived: 'Payment received from {name} for {invoice}.', reviewSubmitted: '{who} sent a change for review ({section}).', reviewFlagged: '{who} changed health details ({section}). Applied; please review.',
-  reviewApproved: 'Your change was approved ({section}).', reviewRejected: 'Your change was not approved ({section}): {note}', reviewReverted: 'Management reverted your change ({section}).',
+  ownerApproval: '{who} asks you to approve: {what}', reviewApproved: 'Your change was approved ({section}).', reviewRejected: 'Your change was not approved ({section}): {note}', reviewReverted: 'Management reverted your change ({section}).',
   // derived "needs action" items
   'act.review': 'Change to review: {name} · {section}', 'act.reviewFlagged': 'Health change applied, please review: {name} · {section}', 'act.alertReading': 'Alert reading: {name} · {value}',
   'act.leaveRequest': '{name} asks for {days} days off from {from}', 'act.leaveRequestOne': '{name} asks for a day off on {from}',
@@ -101,6 +101,7 @@ export const err = {
 };
 export const review = {
   newMember: 'New member', conversion: 'Lead joining', details: 'Details', plan: 'Plan', docsConsent: 'Documents and consent', family: 'Family contacts', allergies: 'Allergies', medicines: 'Medicines', care: 'Care instructions',
+  pricing: 'Prices and plans', holiday: 'Holidays and closures', budget: 'Weekly budget', // round 16 (KC): changes that wait for the Owner
 };
 export const demo = {
   pill: 'Demo', title: 'Demo tools', guided: 'Guided demo', guidedTitle: 'Oma Lina’s day', progress: '{n} of {total} steps done', switchAccount: 'Switch account',

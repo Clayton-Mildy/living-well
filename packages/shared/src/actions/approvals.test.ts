@@ -287,7 +287,9 @@ describe('selectors: counts, the derived items and the history', () => {
     expect(c.stock).toBeGreaterThanOrEqual(2);
     expect(c.photos).toBe(0);
     expect(c.payments).toBe(0);
-    expect(approvalTotal(s)).toBe(Object.values(c).reduce((a, b) => a + b, 0));
+    expect(c.owner).toBe(1); // round 16: Ega's staff training day waits for the Owner
+    expect(approvalTotal(s, { owner: true })).toBe(Object.values(c).reduce((a, b) => a + b, 0));
+    expect(approvalTotal(s)).toBe(Object.values(c).reduce((a, b) => a + b, 0) - c.owner); // round 16: Management's badge leaves out what only the Owner decides
   });
 
   it('management gets one derived "needs action" item per type, not one per entry', () => {

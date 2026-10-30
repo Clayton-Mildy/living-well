@@ -98,7 +98,7 @@ describe('members.create', () => {
     expect(r.state.members[id].review).toBeUndefined();
     expect(Object.values(r.state.notifications).some((n) => n.kind === 'members.notif.welcome')).toBe(true);
     expect(findByPhone({ citra: r.state }, '0812 5550 1234').ok).toBe(true);
-    expect(Object.keys(r.state.changeRequests).length).toBe(2); // only the seeded ones
+    expect(Object.keys(r.state.changeRequests).length).toBe(3); // only the seeded ones (round 16: and the owner request)
   });
 
   it('a free-text title ("Other") is stored as typed, trimmed', () => {
@@ -474,7 +474,7 @@ describe('health edits: applied now, reviewed afterwards', () => {
     const c = seed();
     const r = run(c.citra, 'members.setAllergies', { memberId: 'm1', food: [], foodOther: '', drugs: [] }, who(c, 's9'));
     expect(r.reviewed).toBeUndefined();
-    expect(Object.keys(r.state.changeRequests)).toEqual(['cr-seed-1', 'cr-seed-2']);
+    expect(Object.keys(r.state.changeRequests)).toEqual(['cr-seed-1', 'cr-seed-2', 'cr-owner-training'] /* round 16: the seeded owner request */);
     expect(() => run(c.citra, 'members.setAllergies', { memberId: 'm1', food: [], foodOther: '', drugs: [] }, who(c, 's1'))).toThrow('err.forbidden');
     expect(() => run(c.citra, 'members.setMeds', { memberId: 'm1', meds: [] }, who(c, 's5'))).toThrow('err.forbidden');
   });

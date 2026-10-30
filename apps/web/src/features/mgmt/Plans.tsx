@@ -13,6 +13,7 @@ import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { Page, SwitchRow, HPAD, heroCard, labelStyle, tn, Pill } from './common';
+import { OwnerWaiting } from '../../components/OwnerWaiting';
 
 type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave' | 'dementia' | 'pickup' | 'fieldTrip';
 const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip']; // round 16: pick-up and field trip defaults
@@ -88,19 +89,22 @@ export function Plans() {
     if (!valid || !dirty || busy) return;
     setBusy(true);
     try {
+      let toOwner = false; // round 16 (KC): Management's price and rule changes wait for the Owner
       if (priceChanged) {
         const plans = Object.fromEntries(custom.filter((p) => planNums[p.id] >= 1).map((p) => [p.id, planNums[p.id]]));
         const r = await act('prices.set', { ...prices, ...(custom.length ? { plans } : {}), from: d.from, notify }, { silent: true });
         if (!r.ok) return;
+        toOwner ||= r.reviewed === 'owner';
       }
       if (rulesChanged) {
         const r = await act('club.updateSettings', { ...(quotaChanged ? { flexQuota: quota } : {}), ...(noticeChanged ? { noticeDays: notice } : {}) }, { silent: true });
         if (!r.ok) return;
+        toOwner ||= r.reviewed === 'owner';
       }
       setDraft(null);
       setTouched(false);
       setNotify(true);
-      say(t('mgmt.plansSaved'));
+      say(t(toOwner ? 'approvals.owner.sent' : 'mgmt.plansSaved'), toOwner ? { icon: 'hourglass_top' } : undefined);
     } finally { setBusy(false); }
   };
   const cancel = () => { setDraft(null); setTouched(false); setNotify(true); };
@@ -162,7 +166,7 @@ export function Plans() {
   // a catalogue plan: name (+ Retired), Edit, its price (saved with the others from a chosen date), type and days, and the Active switch (off = retired: it leaves the pickers, its members keep it)
   const setActive = async (p: PlanDef) => {
     const r = await act('club.setPlan', { id: p.id, name: p.name, ...(p.nameId ? { nameId: p.nameId } : {}), kind: p.kind, ...(p.kind === 'days' ? { quota: p.quota } : {}), active: !p.active }, { silent: true });
-    if (r.ok) say(t(p.active ? 'plans.retiredToast' : 'plans.activeToast', { name: planLabel(s, p.id, lang) }));
+    if (r.ok) say(r.reviewed === 'owner' ? t('approvals.owner.sent') : t(p.active ? 'plans.retiredToast' : 'plans.activeToast', { name: planLabel(s, p.id, lang) }));
   };
   const planBlock = (p: PlanDef) => {
     const name = planLabel(s, p.id, lang);
@@ -228,6 +232,7 @@ export function Plans() {
   return (
     <Page gap={20}>
       <PageHead eyebrow={t('mgmt.plEyebrow')} title={t('nav.plans')} size={40} />
+      <OwnerWaiting section="pricing" pad="4px 0" />
 
       {section(t('mgmt.plSecPlans'), [
         priceBlock('flex', t('mgmt.plan_flex'), t('mgmt.perMonth'), [[t('mgmt.plQuota'), tn(t, 'mgmt.plQuotaV', quotaShown)], [t('mgmt.plUnused'), t('mgmt.plNoRoll')]], rulesBody),
@@ -307,6 +312,7 @@ function PlanSheet({ plan, onClose }: { plan?: PlanDef; onClose: () => void }) {
       if (!created) {
         const r = await act('club.setPlan', { ...(plan ? { id: plan.id } : {}), name: f.name.trim(), ...(f.nameId.trim() ? { nameId: f.nameId.trim() } : {}), kind: f.kind, ...(f.kind === 'days' ? { quota } : {}), active: f.active }, { silent: true });
         if (!r.ok) return;
+        if (r.reviewed === 'owner') { say(t('approvals.owner.sent'), { icon: 'hourglass_top' }); onClose(); return; } // round 16: the plan waits for the Owner (its price follows once it exists)
         id = plan?.id ?? String(r.result.planId ?? '');
       }
       if (!plan && id) {
@@ -314,6 +320,7 @@ function PlanSheet({ plan, onClose }: { plan?: PlanDef; onClose: () => void }) {
         const cur = priceOn(s, f.from);
         const r = await act('prices.set', { flex: cur.flex, gold: cur.gold, extra: cur.extra, plans: { [id]: priceN }, from: f.from }, { silent: true });
         if (!r.ok) { setPriceFailed(true); return; } // the plan exists without a price: keep the sheet open and say so
+        if (r.reviewed === 'owner') { say(t('approvals.owner.sent'), { icon: 'hourglass_top' }); onClose(); return; }
       }
       say(t(plan ? 'plans.savedToast' : 'plans.addedToast', { name: f.name.trim() }));
       onClose();

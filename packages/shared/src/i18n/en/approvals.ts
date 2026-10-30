@@ -48,4 +48,10 @@ export const approvals = {
   'tab.programme': 'Programme', 'none.programme': 'No programme changes to approve', 'none.programmeSub': 'A weekly schedule or a one-day change from the activity team appears here before anyone else sees it.',
   'kind.programme': 'Weekly schedule', 'kind.day': 'Programme for one day', 'sum.programmeFrom': 'From {date}', 'sum.programmeSame': 'Same sessions, new start date', 'sum.programmeDay': 'Programme for {date}',
   'notif.rejected.programme': 'Management did not approve {n} of your programme changes: {reason}', conflictProgramme: '{n} not approved: the day changed on the calendar since it was sent. Send it back so the activity team can send it again.',
+  // round 16 (KC): Management's pricing, holiday and weekly-budget changes wait for the Owner
+  'tab.owner': 'Owner', 'none.owner': 'Nothing waiting for you', 'kind.owner': 'Owner approval',
+  'owner.waiting': 'Waiting for owner · {what}', 'owner.withdraw': 'Withdraw', 'owner.withdrawn': 'Request withdrawn.', 'owner.sent': 'Sent to the owner for approval.',
+  'owner.what.prices': 'New prices from {date}', 'owner.what.plan': 'Plan · {name}', 'owner.what.rules': 'Club rules (visits, notice)',
+  'owner.what.budgetLimit': 'Weekly budget · {name} · {amount} from {date}', 'owner.what.budgetAdd': 'New budget section · {name} · {amount}', 'owner.what.budgetRename': 'Rename budget section · {name}',
+  'owner.what.closeAdd': 'Close {date} · {title}', 'owner.what.holidayAdd': 'Holiday {date} · {title}', 'owner.what.eventChange': 'Change {date} · {title}', 'owner.what.eventRemove': 'Remove {date} · {title}', 'owner.what.other': 'A change',
 };

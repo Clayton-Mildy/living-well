@@ -16,6 +16,7 @@ export function useAct() {
     }
     if (opts.silent) return r;
     if (r.reviewed === 'gate') say(opts.reviewText || t('common.reviewNote'), { icon: 'hourglass_top' });
+    else if (r.reviewed === 'owner') say(t('approvals.owner.sent'), { icon: 'hourglass_top' }); // round 16 (KC): Management's pricing, holiday or budget change waits for the Owner
     else if (opts.ok || r.result.pending) {
       // an entry by non-management staff waits for management's approval before families see it
       const ok = opts.ok ? (typeof opts.ok === 'function' ? opts.ok(r.result) : opts.ok) : '';

@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { actorName, rp, weekStart, addDays, type BudgetRequest, type BudgetSection } from '@cp/shared';
 import { activeSections, budgetRange, budgetWeekOf, receiptOfRequest, sectionName } from '@cp/shared/rules/finance';
 import { Button, Chip, DateField, Eyebrow, IconButton, PageHead, Pin, Select, TextField, FONT_BODY, Note } from '../../components/ui';
+import { OwnerWaiting } from '../../components/OwnerWaiting';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -72,6 +73,7 @@ export function Budget() {
       <>
         <div className="cp-native" style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 18 }}>
           <PageHead eyebrow={`${t('finance.budget.weekOf', { date: fds(ws) })} · ${when}`} title={t('nav.budget')} />
+          <OwnerWaiting section="budget" pad="0 16px" />{/* round 16 (KC): Management's budget changes waiting for the Owner */}
 
           <PGroup pad="6px 8px 8px" gap={6}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>{weekNav}</div>
@@ -96,6 +98,7 @@ export function Budget() {
     <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 'clamp(18px, 2.8vw, 36px)' }}>
       <PageHead eyebrow={`${t('finance.budget.weekOf', { date: fds(ws) })} · ${when}`} title={t('nav.budget')}
         right={canSet ? <Button variant="secondary" size={48} icon="add" onClick={() => setAddOpen(true)} style={{ padding: '0 18px' }}>{t('finance.budget.addSection')}</Button> : undefined} />
+      <OwnerWaiting section="budget" pad="0" />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {weekNav}

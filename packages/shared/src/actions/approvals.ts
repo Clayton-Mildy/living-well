@@ -8,7 +8,8 @@
 import { z } from 'zod';
 import { produce, current, type Draft } from 'immer';
 import type { Approval, ClubState, DailyLog, DayMenu, MemberNote, MenuVersion, Payment, Photo, Reading, ScheduleVersion, StockRequest } from '../types';
-import { DomainError, defineAction, hasRole, isMgmt, nameOfUser, type Ctx } from './framework';
+import { DomainError, defineAction, hasRole, isMgmt, isOwner, nameOfUser, type Ctx } from './framework';
+import { isOwnerSection } from './ownerGate';
 import { familyUserIds, shortOf } from './helpers';
 import { acknowledgeChange, approveChange, rejectChange, revertChange } from './review';
 import { decideLeave } from './staffLeave';
@@ -139,9 +140,18 @@ const confirmPayment = (d: Draft<ClubState>, ctx: Ctx, p: Draft<Payment>) => {
 };
 
 const APPROVE: Record<ApprovalType, Handler> = {
+  // round 16 (KC): an owner request is replayed as the person who asked; one that no longer fits (the day passed, the row went) stays waiting
+  owner(d, ctx, id) {
+    const c = d.changeRequests[id];
+    if (!c || c.deletedAt || c.status !== 'pending' || !isOwnerSection(c.section)) return 'skip';
+    const run = (x: Draft<ClubState>, k: Ctx) => approveChange(x, x.changeRequests[id], k);
+    if (tryRun(d, ctx, run)) return 'conflict';
+    run(d, ctx);
+    return 'done';
+  },
   profile(d, ctx, id) {
     const c = d.changeRequests[id];
-    if (!c || c.deletedAt || c.status !== 'pending') return 'skip';
+    if (!c || c.deletedAt || c.status !== 'pending' || isOwnerSection(c.section)) return 'skip';
     const run = (x: Draft<ClubState>, k: Ctx) => { const row = x.changeRequests[id]; if (c.kind === 'approval') approveChange(x, row, k); else acknowledgeChange(row, k); };
     const err = tryRun(d, ctx, run);
     if (err) return err === 'err.reviewConflict' || err === 'members.err.effectiveInvalid' ? 'conflict' : 'skip';
@@ -242,9 +252,15 @@ const APPROVE: Record<ApprovalType, Handler> = {
 };
 
 const REJECT: Record<ApprovalType, (out: Outcome) => Handler> = {
+  owner: () => (d, ctx, id, o) => {
+    const c = d.changeRequests[id];
+    if (!c || c.deletedAt || c.status !== 'pending' || !isOwnerSection(c.section)) return 'skip';
+    rejectChange(d, c, ctx, o.reason!); // the person who asked hears why
+    return 'done';
+  },
   profile: () => (d, ctx, id, o) => {
     const c = d.changeRequests[id];
-    if (!c || c.deletedAt || c.status !== 'pending') return 'skip';
+    if (!c || c.deletedAt || c.status !== 'pending' || isOwnerSection(c.section)) return 'skip';
     const run = (x: Draft<ClubState>, k: Ctx) => { const row = x.changeRequests[id]; if (c.kind === 'approval') rejectChange(x, row, k, o.reason!); else revertChange(x, row, k, { note: o.reason }); };
     const err = tryRun(d, ctx, run);
     if (err) return err === 'err.reviewConflict' ? 'conflict' : 'skip';
@@ -401,13 +417,13 @@ function run(d: Draft<ClubState>, ctx: Ctx, type: ApprovalType, ids: string[], m
 export const approvalActions = [
   defineAction<{ type: ApprovalType; ids: string[]; notify?: boolean }>({
     name: 'approval.approve',
-    can: (u, i) => isMgmt(u) || (hasRole(u, 'finance') && i?.type === 'payments'), // finance confirms the front desk's payments, nothing else
+    can: (u, i) => (i?.type === 'owner' ? isOwner(u) : isMgmt(u) || (hasRole(u, 'finance') && i?.type === 'payments')), // finance confirms the front desk's payments, nothing else; round 16: owner requests are the Owner's
     parse: (raw) => parseWith(approveSchema, raw),
     run: (d, i, ctx) => { run(d, ctx, i.type, i.ids, 'approve', { notify: i.notify }); },
   }),
   defineAction<{ type: ApprovalType; ids: string[]; reason: string }>({
     name: 'approval.reject',
-    can: (u, i) => isMgmt(u) || (hasRole(u, 'finance') && i?.type === 'payments'),
+    can: (u, i) => (i?.type === 'owner' ? isOwner(u) : isMgmt(u) || (hasRole(u, 'finance') && i?.type === 'payments')),
     parse: (raw) => parseWith(rejectSchema, raw),
     run: (d, i, ctx) => { run(d, ctx, i.type, i.ids, 'reject', { reason: i.reason }); },
   }),

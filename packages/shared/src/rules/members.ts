@@ -1,6 +1,7 @@
 // Members: lifecycle status, list rows, filters and search, id allocation, documents and consent, validation,
 // pending reviews and the final invoice. Members drop in on any open day, so there are no bookings, leave or "expected" days here:
 // status comes from check-ins, and the Flex plan counts visits. Pure selectors shared by the actions and the screens.
+import { isOwnerSection } from '../actions/ownerGate';
 import { isEmail } from './emails';
 import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
@@ -268,10 +269,11 @@ export type ProfileTab = 'overview' | 'health' | 'care' | 'photos' | 'att' | 'do
 export const PROFILE_TABS: ProfileTab[] = ['overview', 'health', 'care', 'photos', 'att', 'docs', 'plan', 'family', 'notes', 'history'];
 /** The profile tab that shows a given review section. */
 export const tabForSection = (section: ChangeRequest['section']): ProfileTab =>
-  ({ newMember: 'overview', conversion: 'overview', details: 'overview', plan: 'plan', docsConsent: 'docs', family: 'family', allergies: 'health', medicines: 'health', care: 'health' } as const)[section];
+  ({ newMember: 'overview', conversion: 'overview', details: 'overview', plan: 'plan', docsConsent: 'docs', family: 'family', allergies: 'health', medicines: 'health', care: 'health', pricing: 'overview', holiday: 'overview', budget: 'overview' } as const)[section]; // round 16: owner sections have no member (never asked for)
 export const pendingReviewsFor = (s: ClubState, memberId: string): ChangeRequest[] =>
   sortBy(live(s.changeRequests).filter((c) => c.status === 'pending' && c.target.memberId === memberId), (c) => c.createdAt, -1);
-export const allPendingReviews = (s: ClubState) => sortBy(live(s.changeRequests).filter((c) => c.status === 'pending' && c.kind === 'approval'), (c) => c.createdAt, -1);
+/** Waiting member and lead changes (round 16: the Owner's pricing, holiday and budget requests are not among them: actions/ownerGate.ts). */
+export const allPendingReviews = (s: ClubState) => sortBy(live(s.changeRequests).filter((c) => c.status === 'pending' && c.kind === 'approval' && !isOwnerSection(c.section)), (c) => c.createdAt, -1);
 export const appliedReviews = (s: ClubState) => sortBy(live(s.changeRequests).filter((c) => c.status === 'pending' && c.kind === 'postReview'), (c) => c.createdAt, -1);
 export const handledReviews = (s: ClubState) => sortBy(live(s.changeRequests).filter((c) => c.status !== 'pending'), (c) => c.reviewedAt || c.createdAt, -1);
 

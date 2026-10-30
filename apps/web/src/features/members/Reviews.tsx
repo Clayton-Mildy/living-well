@@ -5,6 +5,7 @@
 // "Notify families" switch. /reviews?tab=photos (or logs, readings, menu, stock, renewals, payments, leave, profile, history) opens a tab.
 // KC round 7: the Renewals tab lists the changes the front desk recorded after calling a family (upgrade, downgrade, leave, stop); approving applies them from the 1st.
 // Round 14: the Programme tab lists the weekly schedules and one-day changes the activity team sent (before → after of the changed sessions).
+// Round 16 (KC): the Owner tab (the Owner only, first) lists Management's pricing, holiday and weekly-budget changes; Approve replays the change, Reject sends it back with a reason.
 // Round 14 (D): the Signing tab lists membership forms the billing contact signed; View opens the form with the signature, Countersign approves it, Reject sends it back to Draft with a reason.
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -29,14 +30,14 @@ import { describeCr } from './reviewDiff';
 import { groupByPerson, itemView, type PersonGroup } from './approvalView';
 import { DiffList } from './profile/parts';
 import { memberPhoto } from '../../lib/media';
+import { useMe } from '../../lib/me';
 
 type Tab = ApprovalType | 'history';
-const TABS: Tab[] = [...APPROVAL_TYPES, 'history'];
 const STATUS_ICON: Record<string, string> = { approved: 'task_alt', rejected: 'block', withdrawn: 'undo', superseded: 'swap_horiz', acknowledged: 'done_all', reverted: 'undo' };
 const TAB_FOR_SUB: Record<string, string> = { log: 'care', note: 'notes', reading: 'care', renewal: 'plan', payment: 'plan' };
 const LEGACY_TABS: Record<string, Tab> = { pending: 'profile', applied: 'profile' };
 /** The icon tile of a row that is not about a member. */
-const TYPE_ICON: Partial<Record<ApprovalType, string>> = { menu: 'restaurant_menu', programme: 'event_note', stock: 'inventory_2', leave: 'beach_access', signing: 'draw' };
+const TYPE_ICON: Partial<Record<ApprovalType, string>> = { owner: 'verified_user', menu: 'restaurant_menu', programme: 'event_note', stock: 'inventory_2', leave: 'beach_access', signing: 'draw' };
 
 /** A checkbox in the v3 quiet style (also used on photo tiles' own button). */
 function Check({ on, onClick, label }: { on: boolean; onClick: () => void; label: string }) {
@@ -57,7 +58,11 @@ export function Reviews() {
   const [sp] = useSearchParams();
   const { today } = useNow();
   const { device, isPhone } = useDevice();
-  const items = useMemo(() => Object.fromEntries(APPROVAL_TYPES.map((k) => [k, pendingItems(s, k)])) as Record<ApprovalType, ApprovalItem[]>, [s]);
+  // round 16 (KC): the Owner tab is the Owner's alone (Management cannot decide those requests)
+  const { realRole } = useMe();
+  const types = useMemo(() => APPROVAL_TYPES.filter((k) => k !== 'owner' || realRole === 'owner'), [realRole]);
+  const TABS: Tab[] = [...types, 'history'];
+  const items = useMemo(() => Object.fromEntries(APPROVAL_TYPES.map((k) => [k, types.includes(k) ? pendingItems(s, k) : []])) as Record<ApprovalType, ApprovalItem[]>, [s, types]);
   const counts = useMemo(() => approvalCounts(s), [s]);
   const history = useMemo(() => approvalHistory(s), [s]);
   const photos = useMemo(() => items.photos.map((i) => s.photos[i.id]).filter((p): p is Photo => !!p), [items, s]);
@@ -69,8 +74,9 @@ export function Reviews() {
   const pagedPeople = usePaged(byPerson.people, 8, 'people');
   const q = sp.get('tab') || '';
   const linked = TABS.find((k) => k === q) ?? LEGACY_TABS[q];
-  const current: Tab = view ?? linked ?? APPROVAL_TYPES.find((k) => counts[k] > 0) ?? 'profile';
+  const current: Tab = view ?? linked ?? types.find((k) => counts[k] > 0) ?? 'profile';
   const paged = {
+    owner: usePaged(items.owner, 10, 'owner'),
     profile: usePaged(items.profile, 5, 'profile'),
     logs: usePaged(items.logs, 10, 'logs'),
     readings: usePaged(items.readings, 10, 'readings'),
@@ -168,7 +174,10 @@ export function Reviews() {
     if (!ids.length || bulkBusy) return;
     setBulkBusy(true);
     let ok = false;
-    if (type === 'photos') {
+    if (type === 'owner' && ids.length === 1) {
+      // round 16: one owner request at a time, so a change that no longer fits says why (the action's own error)
+      ok = (await act('review.approve', { crId: ids[0] }, { ok: t('reviews.approved') })).ok;
+    } else if (type === 'photos') {
       const n = ids.length;
       const r = await act('photo.approve', { photoIds: ids, notify }, { ok: t(`reviews.photosApproved${notify ? 'Told' : ''}${n === 1 ? 'One' : 'N'}`, { n }) });
       ok = r.ok;
@@ -325,7 +334,7 @@ export function Reviews() {
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
             ) : <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '22px' }}>{v.who || v.kind}</span>}
-            <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{[m || it.type === 'leave' ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
+            <span style={{ fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{[m || it.type === 'leave' ? kindLine : v.edit ? t('approvals.isEdit') : '', it.type === 'owner' ? '' : who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
             {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, marginTop: 4 }}>
               <button type="button" className="cp-press" aria-expanded={isSign ? undefined : expanded} onClick={() => (isSign ? viewSigned(it.id) : setOpen(expanded ? null : it.id))} style={{ ...textBtn, padding: '0 8px 0 0' }}>{expanded && !isSign ? t('approvals.hide') : t('approvals.view')}</button>
@@ -348,7 +357,7 @@ export function Reviews() {
             {m ? (
               <button type="button" onClick={() => navigate(`/members/${m.id}/${TAB_FOR_SUB[it.sub] || 'overview'}`)} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: 0, margin: 0, color: '#24201C', fontSize: 16, fontWeight: 500, lineHeight: '22px', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3, textDecorationColor: '#CAB8A2' }}>{v.who}</button>
             ) : <span style={{ fontSize: 16, fontWeight: 500, lineHeight: '22px' }}>{v.who || v.kind}</span>}
-            <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[m || it.type === 'leave' ? kindLine : v.edit ? t('approvals.isEdit') : '', who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
+            <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[m || it.type === 'leave' ? kindLine : v.edit ? t('approvals.isEdit') : '', it.type === 'owner' ? '' : who(it.by), whenText(fmt.fds, today, it.at, t)].filter(Boolean).join(' · ')}</span>
             {v.summary ? <span style={{ fontSize: 15, lineHeight: '22px', color: '#24201C', overflowWrap: 'anywhere', ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' as const, overflow: 'hidden' }) }}>{v.summary}</span> : null}
             <button type="button" aria-expanded={isSign ? undefined : expanded} onClick={() => (isSign ? viewSigned(it.id) : setOpen(expanded ? null : it.id))} style={{ alignSelf: 'flex-start', border: 'none', background: 'transparent', padding: '4px 0', margin: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{expanded && !isSign ? t('approvals.hide') : t('approvals.view')}</button>
           </div>
@@ -488,7 +497,7 @@ export function Reviews() {
   const personCard = (g: PersonGroup) => {
     const m = s.members[g.memberId];
     const n = g.items.length;
-    const kinds = APPROVAL_TYPES.map((k) => [k, g.items.filter((x) => x.type === k).length] as const).filter(([, c]) => c).map(([k, c]) => `${t('approvals.tab.' + k)} ${c}`).join(' · ');
+    const kinds = types.map((k) => [k, g.items.filter((x) => x.type === k).length] as const).filter(([, c]) => c).map(([k, c]) => `${t('approvals.tab.' + k)} ${c}`).join(' · ');
     return sectionCard(g.memberId, (
       <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: isPhone ? '12px 16px' : '12px 0' }}>
         <Avatar name={memberName(m)} member={m} tone={m.photoTone} src={memberPhoto(m)} size={isPhone ? 42 : 46} />
@@ -556,6 +565,7 @@ export function Reviews() {
         })}
       </div>
 
+      {current === 'owner' ? (items.owner.length ? card(paged.owner.rows.map(quietRow)) : empty('owner')) : null}
       {current === 'profile' ? (items.profile.length ? <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 12 : 16 }}>{paged.profile.rows.map(profileCard)}</div> : empty('profile')) : null}
       {current === 'logs' ? (items.logs.length ? card(paged.logs.rows.map(quietRow)) : empty('logs')) : null}
       {current === 'readings' ? (items.readings.length ? card(paged.readings.rows.map(quietRow)) : empty('readings')) : null}
