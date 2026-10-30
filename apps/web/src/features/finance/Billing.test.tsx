@@ -71,6 +71,7 @@ describe('Receipts for Management (View)', () => {
     expect(document.querySelector('[data-testid="view-only"]')).toBeTruthy();
     expect(hasButton(/^Approve/)).toBe(false);
     expect(hasButton(/^Reject/)).toBe(false);
+    expect(hasButton(/Snap a receipt/)).toBe(true); // filing a receipt stays open to everyone (the server allows it)
   });
   it('without the View cell (finance-style Edit) Approve is there', async () => {
     openAs('s9', (s) => { waiting(s); s.club.settings.access = { mgmt: { receipts: 'edit' } }; });

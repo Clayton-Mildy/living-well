@@ -26,7 +26,8 @@ export function Receipts() {
   const { lang } = useFmt();
   const { device, isPhone } = useDevice();
   const { role } = useMe();
-  const canApprove = (role === 'finance' || role === 'mgmt') && useScreenAccess().level !== 'view'; // round 16: Management's default is View on Receipts
+  const { level } = useScreenAccess();
+  const canApprove = (role === 'finance' || role === 'mgmt') && level !== 'view'; // round 16: Management's default is View on Receipts
   const [snapping, setSnapping] = useState(false);
   // a search result: /receipts?do=snap opens the capture whenever the parameter appears, then the parameter goes
   const [sp, setSp] = useSearchParams();
