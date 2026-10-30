@@ -284,8 +284,8 @@ function ownerRequest(state: ClubState, def: ActionDef, name: string, input: unk
   const ctx = makeCtx(user, state.clubId, clock, mutationId, 'none');
   produceWithPatches(state, (d) => { def.run(d, input, { ...ctx, result: {}, feed: () => {}, notify: () => {} }); });
   const what = ownerWhat(state, name, input);
-  const dmy = (d?: string) => (d ? `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}` : '');
-  const params: Record<string, string | number> = { who: nameOfUser(user), whatKey: what.key, date: dmy(what.params.date), title: what.params.title ?? '', name: what.params.name ?? '', amount: what.params.amount !== undefined ? rp(what.params.amount) : '' };
+  const params: Record<string, string | number> = { who: nameOfUser(user), whatKey: what.key, date: what.params.date ?? '', // ISO: the bell formats it the way the Approvals row does
+    title: what.params.title ?? '', name: what.params.name ?? '', amount: what.params.amount !== undefined ? rp(what.params.amount) : '' };
   params.what = String(params.title || params.name || params.date || section);
   const [next, patches, inverse] = produceWithPatches(state, (d) => {
     const crId = ctx.id('cr');

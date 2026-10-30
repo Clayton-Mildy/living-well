@@ -98,7 +98,8 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
   const { fdy } = useFmt();
   const s = useClub();
   const act = useAct();
-  const { id: meId } = useMe();
+  const { id: meId, realRole } = useMe();
+  const locked = x.role === 'owner' && realRole !== 'owner'; // round 16: only the Owner changes the Owner's row; the server refuses the rest
   const { today } = useNow();
   const [params, setParams] = useSearchParams();
   const urlTab = params.get('tab');
@@ -179,8 +180,8 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
           <h2 className="cp-serif" style={{ margin: '6px 0 0', fontSize: 24, lineHeight: 1.2, fontWeight: 400, letterSpacing: '-0.5px', color: '#2B231C', overflowWrap: 'anywhere' }}>{x.name}</h2>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)} · {fmtPhone(x.phone)}</span>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', justifyContent: 'center', paddingTop: 8 }}>
-            <PillBtn icon="edit" onClick={() => setEditing(true)}>{t('common.edit')}</PillBtn>
-            {x.active ? <PillBtn icon="person_off" onClick={() => setOff(true)} disabled={x.id === meId}>{t('people.deactivate')}</PillBtn>
+            {locked ? null : <PillBtn icon="edit" onClick={() => setEditing(true)}>{t('common.edit')}</PillBtn>}
+            {locked ? null : x.active ? <PillBtn icon="person_off" onClick={() => setOff(true)} disabled={x.id === meId}>{t('people.deactivate')}</PillBtn>
               : <PillBtn tone="primary" icon="person_check" onClick={() => act('staff.reactivate', { staffId: x.id }, { ok: t('people.reactivated', { name: x.name }) })}>{t('people.reactivate')}</PillBtn>}
           </div>
         </div>
@@ -192,8 +193,8 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{titleOf(t, x)} · {fmtPhone(x.phone)}</span>
         </div>
         <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-          <Button size={44} variant="secondary" icon="edit" onClick={() => setEditing(true)}>{t('common.edit')}</Button>
-          {x.active ? <Button size={44} variant="secondary" icon="person_off" onClick={() => setOff(true)} disabled={x.id === meId}>{t('people.deactivate')}</Button>
+          {locked ? null : <Button size={44} variant="secondary" icon="edit" onClick={() => setEditing(true)}>{t('common.edit')}</Button>}
+          {locked ? null : x.active ? <Button size={44} variant="secondary" icon="person_off" onClick={() => setOff(true)} disabled={x.id === meId}>{t('people.deactivate')}</Button>
             : <Button size={44} icon="person_check" onClick={() => act('staff.reactivate', { staffId: x.id }, { ok: t('people.reactivated', { name: x.name }) })}>{t('people.reactivate')}</Button>}
         </div>
       </div>
@@ -219,15 +220,15 @@ function StaffDetail({ staff: x }: { staff: Staff }) {
           <>
             <Facts title={t('people.tab_profile')} rows={profileRows} />
             <Group pad="0 16px" gap={0}>
-              <SwitchRow on={x.appAccess} disabled={!x.active || x.id === meId} label={t('people.toggleApp')} onClick={toggleApp} />
-              {x.appAccess ? <div style={{ padding: '6px 0 12px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', display: 'flex' }}><PillBtn icon="lock_reset" onClick={() => setReset(true)}>{t('people.resetPw')}</PillBtn></div> : null}
+              <SwitchRow on={x.appAccess} disabled={locked || !x.active || x.id === meId} label={t('people.toggleApp')} onClick={toggleApp} />
+              {x.appAccess && !locked ? <div style={{ padding: '6px 0 12px', borderTop: '0.5px solid var(--hairline, #E2E2E6)', display: 'flex' }}><PillBtn icon="lock_reset" onClick={() => setReset(true)}>{t('people.resetPw')}</PillBtn></div> : null}
             </Group>
           </>
         ) : (
         <>
           <Facts rows={profileRows} />
-          <Toggle on={x.appAccess} disabled={!x.active || x.id === meId} label={t('people.toggleApp')} onClick={toggleApp} />
-          {x.appAccess ? (
+          <Toggle on={x.appAccess} disabled={locked || !x.active || x.id === meId} label={t('people.toggleApp')} onClick={toggleApp} />
+          {x.appAccess && !locked ? (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 6, alignItems: 'flex-start' }}>
               <Button size={44} variant="secondary" icon="lock_reset" onClick={() => setReset(true)}>{t('people.resetPw')}</Button>
             </div>
@@ -308,6 +309,8 @@ function Facts({ rows, title }: { rows: [string, string][]; title?: string }) {
 // ---------- notes and warnings, ratings ----------
 function NotesTab({ staff: x }: { staff: Staff }) {
   const t = useT();
+  const { realRole } = useMe();
+  const locked = x.role === 'owner' && realRole !== 'owner'; // round 16: the Owner's notes are the Owner's
   const { isPhone } = useDevice();
   const { fds } = useFmt();
   const s = useClub();
@@ -332,7 +335,7 @@ function NotesTab({ staff: x }: { staff: Staff }) {
             <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
               <span style={{ height: 24, padding: '0 10px 0 6px', borderRadius: 8, background: KC[n.kind].bg, color: KC[n.kind].fg, fontSize: 13, fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: 4 }}><Icon name={KC[n.kind].icon} size={16} fill={1} />{t('people.nk_' + n.kind)}</span>
               <span style={{ flex: 1 }} />
-              <IconButton icon="delete" label={t('people.deleteNote')} bordered={false} onClick={() => setDel(n.id)} />
+              {locked ? null : <IconButton icon="delete" label={t('people.deleteNote')} bordered={false} onClick={() => setDel(n.id)} />}
             </div>
             <span style={{ fontSize: 15, lineHeight: '22px', overflowWrap: 'anywhere' }}>{n.text}</span>
             <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{[who(n.createdBy), fds(n.on)].filter(Boolean).join(' · ')}</span>
@@ -420,7 +423,7 @@ function StaffDialog({ open, onClose, staff, onSaved }: { open: boolean; onClose
   const t = useT();
   const act = useAct();
   const { today } = useNow();
-  const { id: meId } = useMe();
+  const { id: meId, realRole } = useMe();
   const [f, setF] = useState<SForm>(() => formOf(staff, today));
   const [busy, setBusy] = useState(false);
   useResetOn(open ? 'open' : null, () => setF(formOf(staff, today)));
@@ -464,7 +467,7 @@ function StaffDialog({ open, onClose, staff, onSaved }: { open: boolean; onClose
       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
         <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('people.fRole')}</span>
         <div style={chipRow} role="radiogroup" aria-label={t('people.fRole')}>
-          {STAFF_ROLES.map((r) => <Chip key={r} selected={f.role === r} off={!!staff && staff.id === meId && r !== staff.role} onClick={() => roleChange(r)}>{t('roles.' + r)}</Chip>)}
+          {STAFF_ROLES.filter((r) => r !== 'owner' || realRole === 'owner' || staff?.role === 'owner').map((r) => <Chip key={r} selected={f.role === r} off={!!staff && staff.id === meId && r !== staff.role} onClick={() => roleChange(r)}>{t('roles.' + r)}</Chip>)}
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(240px,1fr))', gap: 10 }}>

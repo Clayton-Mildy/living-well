@@ -43,6 +43,15 @@ describe('access.set', () => {
   });
 });
 
+describe('Approvals access', () => {
+  it('Management with Approvals on View cannot decide (round 16 review)', () => {
+    const a = run(base, 'access.set', { role: 'mgmt', key: 'reviews', level: 'view' }, OWNER).state;
+    fails(a, 'approval.approve', { type: 'logs', ids: ['x'] }, 's9', 'err.viewOnly');
+    fails(a, 'approval.reject', { type: 'logs', ids: ['x'], reason: 'no' }, 's9', 'err.viewOnly');
+    fails(a, 'review.approve', { crId: 'x' }, 's9', 'err.viewOnly');
+  });
+});
+
 describe('access.setOwnerApproval', () => {
   it('only the Owner switches it', () => {
     fails(base, 'access.setOwnerApproval', { role: 'mgmt', kind: 'pricing', on: false }, 's9', 'err.forbidden');

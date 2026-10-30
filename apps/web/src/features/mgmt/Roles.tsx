@@ -58,7 +58,7 @@ export function Roles() {
   // wide: menu items down the side (sticky), the six roles across, then the three approval switches as rows of the same columns; compact selects fit a 1024px tablet
   const compact = { '--cp-field-h': '36px' } as CSSProperties;
   const th = { padding: '8px 4px', fontSize: FONT_SMALL, fontWeight: 600, textAlign: 'left', verticalAlign: 'bottom' } as const;
-  const first = { position: 'sticky', left: 0, background: 'var(--bg, #FFFFFF)', zIndex: 1, padding: '3px 8px 3px 0', fontSize: 14, fontWeight: 500, textAlign: 'left', width: 190 } as const;
+  const first = { position: 'sticky', left: 0, background: 'var(--page, #FFFFFF)', zIndex: 1, padding: '3px 8px 3px 0', fontSize: 14, fontWeight: 500, textAlign: 'left', width: 190 } as const;
   return (
     <Page>
       <PageHead title={t('mgmt.access.title')} size={32} />

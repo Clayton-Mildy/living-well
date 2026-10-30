@@ -33,6 +33,7 @@ describe('owner gate', () => {
     expect(pendingOwnerRequests(r.state, 'holiday').map((c) => c.id)).toEqual([id]);
     const note = Object.values(r.state.notifications).find((x) => x.kind === 'notif.ownerApproval');
     expect(note).toMatchObject({ toRoles: ['owner'], link: '/reviews' });
+    expect(note!.params.date).toMatch(/^\d{4}-\d{2}-\d{2}$/); // round 16 review: ISO, the bell formats it
   });
   it('an outing applies at once', () => {
     const r = run(base, 'calendarEvent.create', { ...CLOSE, kind: 'outing', title: 'Outing: zoo' }, EGA);

@@ -8,21 +8,21 @@ import { useReplica, userIn } from '../store/replica';
 export const RoleAsContext = createContext<StaffRole | undefined>(undefined);
 
 /** The signed-in user as the club state has them, before any granted-screen override. */
-export function useBaseMe(): { user: User | null; role: Role | null; realRole: Role | null; id: string | null } {
+export function useBaseMe(): { user: User | null; role: Role | null; realRole: Role | null; navRole: Role | null; id: string | null } {
   const id = useSession((s) => s.user?.id || null);
   const view = useReplica((s) => s.view);
   const self = useReplica((s) => s.self);
   return useMemo(() => {
-    if (!id || !view) return { user: null, role: null, realRole: null, id };
+    if (!id || !view) return { user: null, role: null, realRole: null, navRole: null, id };
     const u = userIn(view, id, self);
     const real = u ? roleOf(u) : null;
-    return { user: u, role: real && screenRole(real), realRole: real, id };
+    return { user: u, role: real && screenRole(real), realRole: real, navRole: real, id }; // navRole: the role whose menus resolve routes (the Owner's include Roles); never the granted-screen roleAs
   }, [id, view, self]);
 }
 
 // round 16 (KC): the Owner renders every screen as management (`role`); `realRole` is 'owner' for the few places that differ.
 // On a granted screen (explicit Edit beyond the role's default) `role` and the user's staff role are the area's base role, so the screen works as it does for that role.
-export function useMe(): { user: User | null; role: Role | null; realRole: Role | null; id: string | null } {
+export function useMe(): { user: User | null; role: Role | null; realRole: Role | null; navRole: Role | null; id: string | null } {
   const base = useBaseMe();
   const roleAs = useContext(RoleAsContext);
   return useMemo(() => {

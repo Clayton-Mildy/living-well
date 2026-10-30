@@ -171,7 +171,7 @@ const vendorOf = (d: D, id: string, ctx: Ctx): Draft<VendorInvoice> => {
 };
 const requesterLink = (d: D, staffId: string) => {
   const role = d.staff[staffId]?.role;
-  return role === 'finance' || role === 'mgmt' ? '/budget' : '/requests';
+  return role === 'finance' || role === 'mgmt' || role === 'owner' ? '/budget' : '/requests';
 };
 /** A linked budget request must be approved, in the receipt's section, and not already receipted. */
 function checkLink(d: D, ctx: Ctx, requestId: string | undefined, sectionId: string, selfId?: string) {

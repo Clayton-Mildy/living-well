@@ -3,6 +3,7 @@
 /** An exact action name or a 'x.' prefix → menu key. Exact names win over prefixes; the longest prefix wins. */
 export const AREA_PREFIXES: [prefix: string, area: string][] = [
   // people
+  ['approval.approve', 'reviews'], ['approval.reject', 'reviews'], ['review.approve', 'reviews'], ['review.reject', 'reviews'], ['review.acknowledge', 'reviews'], ['review.revert', 'reviews'], // round 16: View on Approvals refuses deciding (withdraw is the submitter's own, stays unmapped)
   ['members.', 'members'], ['family.', 'members'], ['note.', 'members'], ['planChange.', 'members'], ['membership.', 'members'],
   ['signing.send', 'members'], ['signing.physical', 'members'], ['email.', 'members'],
   ['enquiry.', 'enquiries'],
@@ -37,7 +38,7 @@ export const AREA_PREFIXES: [prefix: string, area: string][] = [
  * grid cell was never set is not checked for that menu either (see `permit`), so cross-screen paths keep working.
  */
 export const UNMAPPED: string[] = [
-  'review.', 'approval.', 'notifications.', 'account.', 'attendance.', 'jobs.',
+  'review.withdraw', 'notifications.', 'account.', 'attendance.', 'jobs.',
   'guest.checkIn', 'guest.checkOut', 'guest.noShow', 'guest.undoCheckIn', 'guest.undoNoShow',
   'photo.take', 'photo.capture', 'photo.editDraft', 'photo.deleteDraft', 'photo.sendDrafts', 'photo.unsend',
   'stock.request', 'stock.edit', 'stock.cancel', 'feedback.submit', 'feedback.log', 'mood.', 'leave.request', 'leave.cancel', 'member.logCall', 'celebration.request',

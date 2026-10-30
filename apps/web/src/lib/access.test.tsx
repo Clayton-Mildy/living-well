@@ -3,6 +3,7 @@ import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { buildSeed, type ClubState } from '@cp/shared';
+import { screenFor } from '../app/nav';
 import { useReplica } from '../store/replica';
 import { useSession } from '../store/session';
 import { ScreenAccessProvider, screenAccess, useScreenAccess } from './access';
@@ -47,6 +48,7 @@ describe('useMe on a granted screen', () => {
     expect(p.out.acc).toEqual({ key: 'payments', level: 'edit', roleAs: 'finance' });
     expect(p.out.me!.role).toBe('finance');
     expect(p.out.me!.realRole).toBe('lobby');
+    expect(p.out.me!.navRole).toBe('lobby');
     expect(p.out.me!.user!.kind === 'staff' && p.out.me!.user!.staff.role).toBe('finance');
     await act(async () => { root!.unmount(); });
     const q = probe({ id: 's1', role: 'lobby' }, { lobby: { payments: 'edit' } }, 'members');
@@ -58,5 +60,15 @@ describe('useMe on a granted screen', () => {
     await p.render();
     expect(p.out.acc).toEqual({ key: 'billing', level: 'view' });
     expect(p.out.me!.role).toBe('lobby');
+  });
+  it('round 16 review: a lobby user granted Edit on Billing keeps routes of the real role (not finance), so the screen opens', async () => {
+    const p = probe({ id: 's1', role: 'lobby' }, { lobby: { billing: 'edit' } }, 'billing');
+    await p.render();
+    expect(p.out.acc).toEqual({ key: 'billing', level: 'edit', roleAs: 'finance' });
+    expect(p.out.me!.role).toBe('finance');
+    expect(p.out.me!.navRole).toBe('lobby');
+    const club = useReplica.getState().view as ClubState;
+    expect(screenFor(club, 'lobby', 'billing')).toBe('fin');
+    expect(screenFor(club, p.out.me!.role!, 'billing')).toBeNull(); // the old lookup: Today
   });
 });

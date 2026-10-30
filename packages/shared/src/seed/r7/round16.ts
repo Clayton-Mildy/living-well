@@ -40,7 +40,7 @@ function seedOwnerHoliday(s: ClubState, T: ISODate): void {
   s.changeRequests[id] = { id, clubId: s.clubId, createdAt: at, createdBy: 'staff:s9', kind: 'approval', op: 'update', action: 'calendarEvent.create', input, section: 'holiday', target: { type: 'club', id: s.clubId }, changes: [], status: 'pending', submittedBy: 'staff:s9' };
   s.notifications['nt-owner-training'] = {
     id: 'nt-owner-training', clubId: s.clubId, createdAt: at, createdBy: 'staff:s9', toUsers: [], toRoles: ['owner'], kind: 'notif.ownerApproval',
-    params: { who: 'Ega', whatKey: 'approvals.owner.what.closeAdd', date: fmtDMY(date), title: input.title, name: '', amount: '', what: input.title },
+    params: { who: 'Ega', whatKey: 'approvals.owner.what.closeAdd', date, title: input.title, name: '', amount: '', what: input.title },
     severity: 'attention', action: false, link: '/reviews', ref: { type: 'changeRequest', id }, readBy: ['s9'],
   };
 }

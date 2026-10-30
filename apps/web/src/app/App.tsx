@@ -29,21 +29,21 @@ function DataGate({ children }: { children: ReactNode }) {
 }
 function NavScreen() {
   const { key = 'today' } = useParams();
-  const { role, realRole } = useMe();
+  const { navRole } = useMe();
   const club = useClub();
-  if (!role) return <PageSkeleton />;
-  const id = screenFor(club, realRole === 'owner' ? 'owner' : role, key); // round 16: the Owner's Roles screen
+  if (!navRole) return <PageSkeleton />;
+  const id = screenFor(club, navRole, key); // round 16: routes resolve with the signed-in role (Owner: Roles screen; a granted screen beyond the menu), not the granted screen's roleAs
   if (!id) return <Navigate to="/today" replace />;
   const C = SCREENS[id];
   return <C />;
 }
 function ProfileRoute() {
-  const { role } = useMe();
+  const { navRole } = useMe();
   const { id } = useParams();
   const club = useClub();
-  if (!role) return <PageSkeleton />;
-  if (role === 'family') return <Navigate to={`/profile?member=${encodeURIComponent(id || '')}`} replace />; // round 8: the family's own profile page
-  if (!screenFor(club, role, 'members')) return <Navigate to="/today" replace />;
+  if (!navRole) return <PageSkeleton />;
+  if (navRole === 'family') return <Navigate to={`/profile?member=${encodeURIComponent(id || '')}`} replace />; // round 8: the family's own profile page
+  if (!screenFor(club, navRole, 'members')) return <Navigate to="/today" replace />;
   return <MemberProfileScreen />;
 }
 function LoginRoute() {

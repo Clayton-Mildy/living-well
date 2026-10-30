@@ -34,8 +34,7 @@ export function useKeyFromPath() {
 export function AppShell() {
   const club = useClub();
   const { device, isPhone } = useDevice();
-  const { user, role, realRole } = useMe();
-  const navRole = realRole === 'owner' ? 'owner' : role; // round 16: the Owner's menus include Roles (the screens themselves render as management)
+  const { user, role, navRole } = useMe(); // round 16: navRole carries the Owner's menus (Roles) and granted screens; the screens themselves render as role
   const t = useT();
   const navigate = useNavigate();
   const key = useKeyFromPath();
