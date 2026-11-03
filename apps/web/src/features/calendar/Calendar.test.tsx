@@ -17,7 +17,9 @@ beforeAll(() => {
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
   (globalThis as unknown as { ResizeObserver: unknown }).ResizeObserver = class { observe() {} unobserve() {} disconnect() {} };
 });
+const WIDTH = window.innerWidth;
 afterEach(async () => {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: WIDTH });
   await act(async () => { root?.unmount(); });
   host?.remove();
   root = null;
@@ -27,7 +29,8 @@ afterEach(async () => {
 
 const Where = () => { const l = useLocation(); return <output data-testid="where">{l.pathname + l.search}</output>; };
 const WHO = { s9: { id: 's9', name: 'Ega', role: 'mgmt' as const }, s5: { id: 's5', name: 'Dinar', role: 'activity' as const } };
-async function show(uid: keyof typeof WHO, url = '/calendar') {
+async function show(uid: keyof typeof WHO, url = '/calendar', width = 1280) {
+  Object.defineProperty(window, 'innerWidth', { configurable: true, writable: true, value: width });
   const w = WHO[uid];
   const state = buildSeed().citra;
   useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: w.id, name: w.name, role: w.role, clubId: 'citra', clubs: ['citra'] } });
@@ -52,6 +55,23 @@ describe('Calendar: field trips', () => {
     expect(selectedChip()).toContain('Field trip');
     const fee = Array.from(document.querySelectorAll<HTMLInputElement>('input')).find((i) => i.value === '250.000');
     expect(fee).toBeTruthy();
+  });
+  it('on a phone management finds the New field trip row at the top of the List view, before the day blocks, and it opens the editor on Field trip', async () => {
+    await show('s9', '/calendar', 390);
+    const row = document.querySelector('[data-testid="new-field-trip-row"]')!;
+    expect(row).toBeTruthy();
+    expect(row.textContent).toContain('New field trip');
+    // before the first day block (a DayBlock carries data-date)
+    const blocks = Array.from(document.querySelectorAll('[data-date]'));
+    expect(blocks.length).toBeGreaterThan(0);
+    for (const b of blocks) expect(row.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await act(async () => { (row.querySelector('button') as HTMLButtonElement).click(); });
+    expect(dialog()).toBeTruthy();
+    expect(selectedChip()).toContain('Field trip');
+  });
+  it('on a phone the activity team has no such row', async () => {
+    await show('s5', '/calendar', 390);
+    expect(document.querySelector('[data-testid="new-field-trip-row"]')).toBeNull();
   });
   it('the activity team has no such button', async () => {
     await show('s5');

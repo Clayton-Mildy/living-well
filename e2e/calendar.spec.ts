@@ -339,7 +339,7 @@ test('month view: any month, translated headers, closures, outings and holidays'
   // forwards: any month, not a fixed list
   await page.getByRole('button', { name: 'Next month' }).click();
   await expect(page.getByRole('heading', { name: 'November 2026' })).toBeVisible();
-  await cellHas(page, '2026-11-26', 'batik museum');
+  await cellHas(page, '2026-11-26', 'Batik museum');
   await page.getByRole('button', { name: 'Next month' }).click();
   await expect(page.getByRole('heading', { name: 'December 2026' })).toBeVisible();
   await expect(cell(page, '2026-12-25')).toHaveAttribute('aria-label', 'Friday 25 December · National holiday · closed');

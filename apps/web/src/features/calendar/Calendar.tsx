@@ -169,8 +169,9 @@ export function Calendar() {
 
         {view === 'list' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 12 }}>
+            {isPhone && isMgmt ? <div data-testid="new-field-trip-row">{linkRows([{ icon: 'directions_bus', label: t('cal.newFieldTrip'), run: () => setEditor({ date: today, kind: 'outing' }) }])}</div> : null}
             {days.map((d) => <DayBlock key={d.date} s={s} info={d} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} onWent={onWent} flag={flagOf(d.date)} proposed={proposedOf(d.date)} decide={isMgmt} />)}
-            {isPhone ? linkRows([...(isMgmt ? [{ icon: 'directions_bus', label: t('cal.newFieldTrip'), run: () => setEditor({ date: today, kind: 'outing' as const }) }] : []), { icon: 'calendar_month', label: t('cal.seeMonth'), run: () => setView('month') }]) : (
+            {isPhone ? linkRows([{ icon: 'calendar_month', label: t('cal.seeMonth'), run: () => setView('month') }]) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <Button variant="secondary" size={48} icon="calendar_month" onClick={() => setView('month')}>{t('cal.seeMonth')}</Button>
               </div>
