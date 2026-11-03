@@ -399,6 +399,12 @@ export const scheduleActions = [
       const feeOnly = input.fee !== undefined && cur.kind === 'outing' && [input.date, input.endDate, input.kind, input.title, input.titleId, input.from, input.to].every((v) => v === undefined);
       const past = (cur.endDate || cur.date) < ctx.today;
       if (past && !(feeOnly && eventCharges(d, cur.id).length)) ctx.fail('cal.err.pastEvent');
+      const repriceCharges = (fee: number) => { for (const c of eventCharges(d, cur.id)) { if (fee) c.amount = fee; else delete d.pendingCharges[c.id]; } };
+      if (past) { // only the fee changes: no date re-validation (the dates are already over), no notice
+        if (input.fee) cur.fee = input.fee; else delete cur.fee;
+        repriceCharges(input.fee ?? 0);
+        return;
+      }
       const next: EventInput = {
         date: input.date ?? cur.date,
         endDate: input.endDate === undefined ? cur.endDate ?? null : input.endDate,
@@ -420,9 +426,8 @@ export const scheduleActions = [
       if (input.fee !== undefined) { // round 16
         if (f.kind === 'outing' && input.fee) row.fee = input.fee; else delete row.fee;
         // round 17: charges no invoice has billed yet follow the fee; 0 takes them back, invoiced ones stay as billed
-        for (const c of eventCharges(d, row.id)) { if (row.fee) c.amount = row.fee; else delete d.pendingCharges[c.id]; }
+        repriceCharges(row.fee ?? 0);
       }
-      if (past) return; // a fee fixed after the day is not news for the club
       notifyEveryone(d, ctx, { kind: 'cal.notif.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } });
     },

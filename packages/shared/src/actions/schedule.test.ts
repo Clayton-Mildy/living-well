@@ -1036,6 +1036,14 @@ describe('round 16: field trip fee and who went', () => {
     const allBilled = { ...s, pendingCharges: { ...s.pendingCharges, [`trip-${id}-m46`]: { ...s.pendingCharges[`trip-${id}-m46`], invoiceId: 'INV-Y' } } };
     fails(allBilled, 'calendarEvent.update', { eventId: id, fee: 300_000 }, 's9', 'cal.err.pastEvent', DAY_AFTER);
   });
+  it('a multi-day outing that ended can still have its fee fixed while a charge is open', () => {
+    let { s, id } = outing(fresh(), '2026-10-21');
+    s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m46'] }, 's5').state;
+    s = { ...s, calendarEvents: { ...s.calendarEvents, [id]: { ...s.calendarEvents[id], date: '2026-10-19', endDate: '2026-10-20' } } }; // it ran 19-20 Oct
+    const n = run(s, 'calendarEvent.update', { eventId: id, fee: 300_000 }, 's9').state;
+    expect(n.pendingCharges[`trip-${id}-m46`].amount).toBe(300_000);
+    expect(n.calendarEvents[id]).toMatchObject({ fee: 300_000, date: '2026-10-19', endDate: '2026-10-20' });
+  });
   it('deleting the outing on its day removes the open charges and leaves invoiced ones', () => {
     const { s, id } = twoWent();
     const n = run(s, 'calendarEvent.delete', { eventId: id, notify: false }, 's9').state;
