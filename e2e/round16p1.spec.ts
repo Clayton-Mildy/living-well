@@ -1,5 +1,5 @@
 // Round 16 phase 1 story (phone, small seed, demo day Wed 21 Oct 2026). Caca: Flex and Gold beside Active, a late downgrade waits a month (14 days' notice).
-// Fransiska: a cash payment needs a photo of the receipt. Maria passes the bills to Daniel, whose Bills then show them.
+// Fransiska: Opa Budi's birthday cake waits on his next bill (round 17: no invoice of its own); a cash payment needs a photo of the receipt. Maria passes the bills to Daniel, whose Bills then show them.
 // Isolated env: E2E_NAME=r16 E2E_PORT=8901 scripts/e2e-all.sh 1 phone round16p1
 import { test, expect } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll } from './helpers';
@@ -31,10 +31,16 @@ test('Caca: Flex and Gold sit beside Active; a downgrade asked on 21 Oct starts 
   c.assertClean();
 });
 
-test('Fransiska: cash needs a photo of the receipt', async ({ page }) => {
+test('Fransiska: the birthday cake waits on the next bill, no invoice of its own; cash needs a photo of the receipt', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's10', '/billing');
-  await expect(page.getByTestId('cel-to-bill')).toHaveCount(0); // round 17: the birthday cake goes on the next monthly invoice, not an invoice of its own
+  await expect(page.getByTestId('cel-to-bill')).toHaveCount(0); // round 17: no "to invoice" card, no Issue invoice button: the cake goes on the next monthly invoice
+  await expect(page.getByRole('button', { name: 'Issue invoice' })).toHaveCount(0);
+  await page.goto('/members/m46/plan'); // Opa Budi: the seeded cake is a pending charge, billed with November
+  const next = page.getByTestId('next-bill');
+  await expect(next).toContainText('On your next bill');
+  await expect(next.getByTestId('next-item').filter({ hasText: /Birthday · Birthday cake \(chocolate, no nuts\)/ })).toContainText('Rp 350.000');
+  await assertNoHorizontalScroll(page);
 
   await page.goto('/payments');
   await page.getByRole('searchbox', { name: 'Find a member or invoice' }).fill('lina');
