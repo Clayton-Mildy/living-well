@@ -156,6 +156,9 @@ export const mgmt: Same<typeof EN> = {
   'access.role.lobby': 'Resepsionis', 'access.role.nurse': 'Perawat', 'access.role.activity': 'Pengajar aktivitas', 'access.role.kitchen': 'Dapur & F&B', 'access.role.finance': 'Keuangan', 'access.role.mgmt': 'Manajemen',
   'access.notif.changed': 'Menu Anda diubah oleh {name}',
   'access.saved': 'Tersimpan.',
+  // round 18: Roles like Tasks
+  'roles.ofMenus': '{n} dari {total}', 'roles.viewOnly': 'hanya lihat', 'roles.hidden': 'tersembunyi', 'roles.all': 'Semua', 'roles.none': 'Kosongkan', 'roles.fullAccess': 'akses penuh',
+  'roles.changedBy': 'diubah {d} oleh {name}', 'roles.saveN': 'Simpan · {n} perubahan', 'roles.saveOne': 'Simpan · 1 perubahan', 'roles.reset': 'Atur ulang',
   // ----- round 17: Admin › Settings -----
   'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.notice': 'Hari pemberitahuan (turun paket, berhenti, cuti)', 'settings.sendOwner': 'Kirim ke pemilik',
   'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewBelowOne': 'Tandai di bawah {n} kunjungan',

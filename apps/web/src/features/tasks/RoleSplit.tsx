@@ -1,100 +1,12 @@
 // Tasks, Team and Manage (KC round 7): a list of the roles and the chosen role's details, laid out like the health station. On tablet and laptop the list sits on
 // the left and the details on the right; on a phone the list is a grouped list and a role opens full screen. The details have tabs (duties, additional tasks).
-import { useState, type CSSProperties, type ReactNode } from 'react';
+// Round 18: the parts (RoleRow, RoleHead, ScoreBar, RoleIcon, Lines) live in components/roleparts.tsx, shared with Admin › Roles.
+import { useState, type ReactNode } from 'react';
 import type { StaffRole } from '@cp/shared';
-import { TASK_ROLE_ICON } from '@cp/shared/rules/tasks';
-import { Group, Icon, PhoneScreen } from '../../components/ui';
+import { Group, PhoneScreen } from '../../components/ui';
+import { RoleRow, roleCard as card, type RoleItem } from '../../components/roleparts';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
-
-const RUST = '#9A3D24';
-const GREEN = '#3D6B4F';
-export const pct = (done: number, total: number) => (total ? Math.round((done / total) * 100) : 0);
-
-export interface RoleItem {
-  role: StaffRole;
-  /** the people, or what the role has */
-  sub: string;
-  /** the score on the right ("1 of 3 done", "90%") */
-  right?: string;
-  late?: boolean;
-  done?: number;
-  total?: number;
-}
-
-const card: CSSProperties = { background: 'var(--fill, #F4F4F5)', borderRadius: 20, overflow: 'hidden' };
-
-function RoleIcon({ role, size = 36 }: { role: StaffRole; size?: number }) {
-  return (
-    <span aria-hidden="true" className="cp-fill" style={{ width: size, height: size, borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: 'var(--accent, #75624B)', display: 'flex', alignItems: 'center', justifyContent: 'center', flex: 'none' }}>
-      <Icon name={TASK_ROLE_ICON[role]} size={Math.round(size * 0.55)} fill={1} />
-    </span>
-  );
-}
-
-/** A thin score bar: green once everything is done. */
-export function ScoreBar({ done = 0, total = 0, h = 3 }: { done?: number; total?: number; h?: number }) {
-  if (!total) return null;
-  const complete = done >= total;
-  return (
-    <span aria-hidden="true" className="cp-fill" style={{ display: 'block', height: h, borderRadius: 999, background: 'var(--press, #EEEEF0)', overflow: 'hidden' }}>
-      <span style={{ display: 'block', height: '100%', width: `${pct(done, total)}%`, background: complete ? GREEN : '#24201C' }} />
-    </span>
-  );
-}
-
-function RoleRow({ it, on, first, phone, onClick }: { it: RoleItem; on: boolean; first: boolean; phone: boolean; onClick: () => void }) {
-  const t = useT();
-  const complete = !!it.total && (it.done ?? 0) >= it.total;
-  return (
-    <button type="button" data-role-row={it.role} aria-current={on ? 'true' : undefined} onClick={onClick} className={phone ? 'cp-tap-self' : 'h-row'}
-      style={{
-        width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '12px 14px 12px 16px', minHeight: 64, border: 'none', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter',
-        backgroundColor: on ? 'var(--press, #EEEEF0)' : 'transparent', boxShadow: on ? 'inset 3px 0 0 #24201C' : 'none',
-        backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 64px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat',
-      }}>
-      <RoleIcon role={it.role} />
-      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
-        <span style={{ display: 'flex', alignItems: 'baseline', gap: 8 }}>
-          <span style={{ flex: 1, minWidth: 0, fontSize: 16, lineHeight: '22px', fontWeight: 500 }}>{t('roles.' + it.role)}</span>
-          {it.right ? (
-            <span style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 13, lineHeight: '18px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', color: complete ? GREEN : it.late ? RUST : '#4A4038' }}>
-              {it.late ? <span aria-hidden="true" data-late style={{ width: 6, height: 6, borderRadius: 999, background: RUST }} /> : null}
-              {it.right}
-            </span>
-          ) : null}
-        </span>
-        {it.sub ? <span style={{ fontSize: 13, lineHeight: '18px', color: '#6B6259', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{it.sub}</span> : null}
-        <ScoreBar done={it.done} total={it.total} />
-      </span>
-      {phone ? <Icon name="chevron_right" size={22} color="#A89C8E" /> : null}
-    </button>
-  );
-}
-
-/** The top of a role's details: its icon, name, a line under it, and the score with its bar. */
-export function RoleHead({ role, sub, right, late, done, total }: Omit<RoleItem, 'role'> & { role: StaffRole }) {
-  const t = useT();
-  const complete = !!total && (done ?? 0) >= total;
-  return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-        <RoleIcon role={role} size={44} />
-        <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <span style={{ fontSize: 20, lineHeight: '26px', fontWeight: 500, letterSpacing: '-0.2px' }}>{t('roles.' + role)}</span>
-          {sub ? <span style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259', overflowWrap: 'anywhere' }}>{sub}</span> : null}
-        </span>
-        {right ? (
-          <span style={{ flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: 15, lineHeight: '20px', fontWeight: 500, fontVariantNumeric: 'tabular-nums', color: complete ? GREEN : late ? RUST : '#24201C' }}>
-            {late ? <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: RUST }} /> : null}
-            {right}
-          </span>
-        ) : null}
-      </div>
-      <ScoreBar done={done} total={total} h={4} />
-    </div>
-  );
-}
 
 export function RoleSplit({ items, listTitle, back, render, initial }: {
   items: RoleItem[];

@@ -9,8 +9,8 @@ import { useAct } from '../../lib/act';
 import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { TemplateSheet } from './TemplateSheet';
-import { RoleHead, RoleSplit, type RoleItem } from './RoleSplit';
-import { Lines } from './TeamView';
+import { Lines, RoleHead, type RoleItem } from '../../components/roleparts';
+import { RoleSplit } from './RoleSplit';
 
 /** One general duty: its name, the switch, and (while on) the time it is due. The time left empty means the duty's own (after each session, before each visit). */
 function DutyConfig({ def, first }: { def: DutyDef; first: boolean }) {

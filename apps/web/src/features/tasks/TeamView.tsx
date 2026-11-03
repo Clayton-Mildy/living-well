@@ -1,17 +1,17 @@
 // Team (management): how each role is doing on its general duties. A date picker for any day and a Day / Week / Month switch; the roles in a list with their people and
 // duty score ("7 of 8 done"; for a week or month "90%"), and the chosen role's details beside it (tabs: duties, additional tasks), like the health station. Past days are worked out
 // from the data (a picture taken, a check recorded…); a duty only the live state can tell shows a dash there. Today, management can also tick an additional task off for a role.
-import { useMemo, useState, type CSSProperties, type ReactNode } from 'react';
+import { useMemo, useState, type CSSProperties } from 'react';
 import type { ClubState, ISODate, Staff, StaffRole } from '@cp/shared';
 import { staffCall } from '@cp/shared';
 import { activityName } from '@cp/shared/rules/activity';
 import { onLeave } from '@cp/shared/rules/staffLeave';
 import { spanOf, teamRange, teamSummary, type DutyState, type TeamSpan } from '@cp/shared/rules/tasks';
-import { DateField, EmptyState, Group, Icon, Segmented } from '../../components/ui';
-import { useDevice } from '../../hooks/useDevice';
+import { DateField, EmptyState, Icon, Segmented } from '../../components/ui';
 import { useFmt, useT, type TFn } from '../../lib/i18n';
 import { TaskRow, TaskSheet, useTick, whoIs } from './parts';
-import { RoleHead, RoleSplit, pct, type RoleItem } from './RoleSplit';
+import { Lines, RoleHead, pct, type RoleItem } from '../../components/roleparts';
+import { RoleSplit } from './RoleSplit';
 
 const RUST = '#9A3D24';
 const GREEN = '#3D6B4F';
@@ -115,23 +115,6 @@ export function TeamView({ s, today, nowMin }: { s: ClubState; today: ISODate; n
       ) : null}
       {tick.camera}
     </>
-  );
-}
-
-/** The rows of a role's details: a white grouped list on a phone, edge to edge inside the details card on wider screens. */
-export function Lines({ title, meta, children }: { /** a section title above the rows (the "All" view: duties, then additional tasks) */ title?: string; meta?: ReactNode; children: ReactNode }) {
-  const { isPhone } = useDevice();
-  if (isPhone) return <Group title={title} meta={meta} pad={0} gap={0}>{children}</Group>;
-  return (
-    <section data-section={title ? 'titled' : undefined} style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {title ? (
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 8, padding: '4px 0 2px' }}>
-          <span style={{ fontSize: 12, lineHeight: '16px', letterSpacing: '1.5px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)' }}>{title}</span>
-          {meta != null ? <span style={{ fontSize: 13, color: '#6B6259' }}>{meta}</span> : null}
-        </div>
-      ) : null}
-      <div style={{ margin: '0 -20px' }}>{children}</div>
-    </section>
   );
 }
 

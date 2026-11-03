@@ -1,9 +1,10 @@
-// Admin › Roles (round 17): a role list, then the role's page with View and Edit checkboxes per menu, grouped like the sidebar, saved as one draft.
+// Admin › Roles (round 17; round 18: Tasks-style list and sections, folded hidden groups, two columns on wide screens): a role list, then the role's page
+// with View and Edit checkboxes per menu, grouped like the sidebar, saved as one draft.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { RouterProvider, createMemoryRouter } from 'react-router-dom';
-import { buildSeed } from '@cp/shared';
+import { MENU_KEYS, buildSeed, roleDraft } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { screenFor } from '../../app/nav';
@@ -18,6 +19,7 @@ beforeAll(() => {
 });
 afterEach(async () => {
   await act(async () => { root?.unmount(); });
+  delete (HTMLElement.prototype as { clientWidth?: number }).clientWidth; // back to jsdom's own (0)
   host?.remove();
   root = null;
   host = null;
@@ -53,24 +55,31 @@ const ticked = (label: string) => box(label)?.getAttribute('aria-checked');
 /** A button's words without its icon's ligature name. */
 const words = (b: Element) => { const c = b.cloneNode(true) as HTMLElement; c.querySelectorAll('.ms').forEach((x) => x.remove()); return (c.textContent ?? '').trim(); };
 const button = (text: string) => Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => words(b) === text);
-const roleRow = (r: string) => document.querySelector<HTMLElement>(`[data-role="${r}"]`);
+const roleRow = (r: string) => document.querySelector<HTMLElement>(`[data-role-row="${r}"]`);
+const group = (g: string) => document.querySelector<HTMLElement>(`[data-group="${g}"]`);
+const inGroup = (g: string, text: string) => Array.from(group(g)?.querySelectorAll<HTMLElement>('button') ?? []).find((b) => words(b) === text);
+/** The role panel's width, as useAtLeast reads it (clientWidth). */
+const panelWidth = (w: number) => Object.defineProperty(HTMLElement.prototype, 'clientWidth', { configurable: true, get: () => w });
 
 describe('Admin › Roles', () => {
   it('phone: Owner (full access, not a link) and six roles with their people and menu count; a role opens its page grouped like the sidebar', async () => {
     openClub();
     await show(<Roles />, 390);
-    const rows = Array.from(document.querySelectorAll('[data-role]')).map((r) => r.getAttribute('data-role'));
+    const rows = Array.from(document.querySelectorAll('[data-role-row]')).map((r) => r.getAttribute('data-role-row'));
     expect(rows).toEqual(['owner', 'mgmt', 'lobby', 'nurse', 'activity', 'kitchen', 'finance']);
-    expect(roleRow('owner')!.textContent).toContain('Full access');
+    expect(roleRow('owner')!.textContent).toContain('full access');
     expect(roleRow('owner')!.tagName).not.toBe('BUTTON');
     expect(roleRow('lobby')!.tagName).toBe('BUTTON');
     expect(roleRow('lobby')!.textContent).toContain('Front desk');
     expect(roleRow('lobby')!.textContent).toContain('Caca');
-    expect(roleRow('lobby')!.textContent).toContain('10 menus');
+    const d = roleDraft(useReplica.getState().view!, 'lobby');
+    const seen = MENU_KEYS.filter((k) => d.levels[k] !== 'off').length;
+    expect(roleRow('lobby')!.textContent).toContain(`${seen} of ${MENU_KEYS.length}`);
     await click(roleRow('lobby'));
     const page = document.querySelector('[data-role-page="lobby"]')!;
     expect(page).toBeTruthy();
     expect(Array.from(page.querySelectorAll('[data-group]')).map((g) => g.getAttribute('data-group'))).toEqual(['General', 'Front desk', 'Care', 'Kitchen', 'Finance', 'Club']);
+    expect(page.querySelector('[data-role-head]')!.textContent).toContain(`${seen} of ${MENU_KEYS.length}`);
   });
 
   it('Edit ticks View, unticking View unticks Edit; the bar counts the change and Save sends the whole role', async () => {
@@ -81,22 +90,96 @@ describe('Admin › Roles', () => {
     expect(ticked('Billing: Edit')).toBe('false');
     await click(box('Billing: View'));
     expect(ticked('Billing: View')).toBe('false');
-    expect(ticked('Billing: Edit')).toBe('false');
+    expect(ticked('Billing: Edit')).toBe('false'); // Finance now has nothing ticked but stays open while it is being edited
     await click(box('Billing: Edit'));
     expect(ticked('Billing: View')).toBe('true');
     expect(ticked('Billing: Edit')).toBe('true');
     expect(document.body.textContent).toContain('1 change');
-    await click(button('Save'));
+    await click(button('Save · 1 change'));
     expect(actMock).toHaveBeenCalledWith('access.setRole', { role: 'lobby', levels: expect.objectContaining({ billing: 'edit', members: 'edit', payments: 'off' }), approvals: { pricing: false, holidays: false, budget: false } });
   });
 
-  it('a group tick-all is mixed when some rows are ticked', async () => {
+  it('Save counts the draft: "Save · 2 changes" after two ticks; Reset drops the draft', async () => {
     openClub();
     await show(<Roles />, 390);
     await click(roleRow('lobby'));
-    expect(ticked('Finance: View')).toBe('mixed'); // Billing only
-    expect(ticked('Finance: Edit')).toBe('false');
-    expect(ticked('Front desk: Edit')).toBe('true');
+    await click(box('Billing: Edit'));
+    await click(box('Payments: View'));
+    expect(button('Save · 2 changes')).toBeTruthy();
+    await click(button('Reset'));
+    expect(button('Save · 2 changes')).toBeUndefined();
+    expect(ticked('Billing: Edit')).toBe('false');
+  });
+
+  it('a group with nothing ticked folds to "Care · hidden" with its menus; tapping it opens its four rows', async () => {
+    openClub();
+    await show(<Roles />, 390);
+    await click(roleRow('lobby'));
+    const care = group('Care')!;
+    expect(care.textContent).toContain('Care · hidden');
+    expect(care.textContent).toContain('Health checks');
+    expect(care.querySelectorAll('[role="checkbox"]')).toHaveLength(0);
+    await click(care.querySelector('button'));
+    expect(group('Care')!.querySelectorAll('[data-menu]')).toHaveLength(4);
+    expect(group('Care')!.textContent).not.toContain('hidden');
+    expect(ticked('Readings: View')).toBe('false');
+  });
+
+  it('a group header counts what the role sees and All ticks every View and Edit in it; then it reads None', async () => {
+    openClub();
+    await show(<Roles />, 390);
+    await click(roleRow('lobby'));
+    const d = roleDraft(useReplica.getState().view!, 'lobby');
+    const keys = Array.from(group('General')!.querySelectorAll('[data-menu]')).map((m) => m.getAttribute('data-menu')!);
+    const seen = keys.filter((k) => d.levels[k] !== 'off').length;
+    expect(group('General')!.textContent).toContain(`${seen} of ${keys.length}`);
+    expect(inGroup('General', 'None')).toBeUndefined();
+    await click(inGroup('General', 'All'));
+    for (const m of Array.from(group('General')!.querySelectorAll('[data-menu]'))) {
+      expect(m.querySelectorAll('[role="checkbox"][aria-checked="true"]')).toHaveLength(2);
+    }
+    const n = keys.filter((k) => d.levels[k] !== 'edit').length;
+    expect(n).toBeGreaterThan(0);
+    expect(button(n === 1 ? 'Save · 1 change' : `Save · ${n} changes`)).toBeTruthy();
+    expect(group('General')!.textContent).toContain(`${keys.length} of ${keys.length}`);
+    expect(inGroup('General', 'None')).toBeTruthy();
+  });
+
+  it('a menu with View and no Edit reads "view only"', async () => {
+    openClub();
+    await show(<Roles />, 390);
+    await click(roleRow('lobby'));
+    const report = () => document.querySelector('[data-menu="report"]')!;
+    expect(report().textContent).not.toContain('view only');
+    await click(box('Daily report: View'));
+    expect(report().textContent).toContain('Daily report · view only');
+    await click(box('Daily report: Edit'));
+    expect(report().textContent).not.toContain('view only');
+  });
+
+  it('the sections sit in two columns when the role panel is 900px or wider, each with its View / Edit header', async () => {
+    openClub();
+    panelWidth(1200);
+    await show(<Roles />, 1440);
+    const cols = document.querySelector('[data-columns]')!;
+    expect(cols.getAttribute('data-columns')).toBe('2');
+    const columns = Array.from(cols.querySelectorAll('[data-column]'));
+    expect(columns).toHaveLength(2);
+    for (const c of columns) expect(c.querySelector('[data-col-head]')?.textContent).toBe('ViewEdit');
+    // balanced by rows, sidebar order kept
+    const order = columns.flatMap((c) => Array.from(c.querySelectorAll('[data-group]')).map((g) => g.getAttribute('data-group')));
+    expect(order).toEqual(['General', 'Front desk', 'Care', 'Kitchen', 'Finance', 'Club']);
+    // the owner-approval section is outside the columns
+    expect(cols.querySelector('[data-approval]')).toBeNull();
+    expect(document.querySelector('[data-approval="pricing"]')).toBeTruthy();
+  });
+
+  it('one column under 900px', async () => {
+    openClub();
+    panelWidth(700);
+    await show(<Roles />, 1024);
+    expect(document.querySelector('[data-columns]')!.getAttribute('data-columns')).toBe('1');
+    expect(document.querySelectorAll('[data-column]')).toHaveLength(1);
   });
 
   it('going back with a dirty draft asks first', async () => {
@@ -171,7 +254,7 @@ describe('Admin › Roles', () => {
     expect(ticked('Payments: View')).toBe('false');
     expect(ticked('Prices and plans')).toBe('false');
     expect(document.body.textContent).toContain('3 changes');
-    await click(button('Save'));
+    await click(button('Save · 3 changes'));
     expect(actMock).toHaveBeenCalledWith('access.setRole', { role: 'lobby', levels: expect.objectContaining({ billing: 'view', payments: 'off', members: 'edit' }), approvals: { pricing: false, holidays: false, budget: false } });
   });
 
