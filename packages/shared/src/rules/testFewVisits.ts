@@ -27,9 +27,12 @@ export const withFewVisits = (): ClubState => {
     FEW_IDS.forEach((id, i) => {
       const m = structuredClone(base.members.m1);
       Object.assign(m, { id, firstName: NAMES[i], lastName: 'Visitor' });
+      delete m.registration; // no nickname: the list shows the full name
       m.memberships = [{ start: '2025-03-03' }];
       m.plans = [{ from: '2025-03-03', plan: 'flex', by: 'staff:s1' }];
       d.members[id] = m;
+      // the same family as Oma Lina, so each has a billing contact to call
+      for (const l of Object.values(base.familyLinks).filter((x) => x.memberId === 'm1')) d.familyLinks[`${l.id}-${id}`] = { ...l, id: `${l.id}-${id}`, memberId: id };
       for (const day of VISITS[i]) visit(id, day);
     });
     d.visitCalls['vc-fv5'] = { id: 'vc-fv5', clubId: d.clubId, createdAt: `${FEW_DAY}T09:30`, createdBy: 'staff:s1', memberId: 'fv5', month: FEW_MONTH, outcome: 'noAnswer', by: 'staff:s1', at: `${FEW_DAY}T09:30` };
