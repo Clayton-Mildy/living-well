@@ -21,6 +21,10 @@ describe('termsText', () => {
     const t = produce(s, (d) => { d.club.settings.noticeDays = 10; });
     expect(termsText(t, 'en')).toBe(`Notice 10 days. Invoice on the ${t.club.settings.issueDay}, due on the ${t.club.settings.dueDay}, ${t.club.settings.flexQuota} visits.`);
   });
+  it('round 18: fills the days of each kind; {noticeDays} is the stop days', () => {
+    const s = produce(withTerms(base(), v(1, '{stopDays} {leaveDays} {downgradeDays} {noticeDays}')), (d) => { d.club.settings.notice = { downgrade: 7, stop: 30, leave: 14 }; });
+    expect(termsText(s, 'en')).toBe('30 14 7 30');
+  });
   it('uses the default notice period when none is set', () => {
     expect(termsText(withTerms(base(), v(1, '{noticeDays}')), 'en')).toBe('14');
   });

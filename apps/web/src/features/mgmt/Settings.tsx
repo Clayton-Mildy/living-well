@@ -65,13 +65,13 @@ export function Settings() {
   const [shown, setShown] = useState<Record<string, boolean>>({}); // a group shows its errors once Save was tapped
   const [busy, setBusy] = useState(false);
 
-  const noticeV = notice ?? String(noticeDays(s));
+  const noticeV = notice ?? String(noticeDays(s, 'stop'));
   const belowV = below ?? String(few.below);
   const daysV = days ?? String(few.daysBeforeDeadline);
   const noticeBad = !inRange(num(noticeV), 1, 60);
   const belowBad = !inRange(num(belowV), 1, 31);
   const daysBad = !inRange(num(daysV), 0, 14);
-  const noticeDirty = num(noticeV) !== noticeDays(s) || (notice !== null && noticeBad);
+  const noticeDirty = num(noticeV) !== noticeDays(s, 'stop') || (notice !== null && noticeBad);
   const fewDirty = num(belowV) !== few.below || num(daysV) !== few.daysBeforeDeadline || (below !== null && belowBad) || (days !== null && daysBad);
 
   const run = async (group: 'membership' | 'few', input: Record<string, unknown>, reset: () => void) => {
@@ -83,7 +83,7 @@ export function Settings() {
       if (r.ok) { reset(); setShown((x) => ({ ...x, [group]: false })); }
     } finally { setBusy(false); }
   };
-  const saveNotice = () => { if (noticeBad) { setShown((x) => ({ ...x, membership: true })); return; } void run('membership', { noticeDays: num(noticeV) }, () => setNotice(null)); };
+  const saveNotice = () => { if (noticeBad) { setShown((x) => ({ ...x, membership: true })); return; } void run('membership', { notice: { downgrade: num(noticeV), stop: num(noticeV), leave: num(noticeV) } }, () => setNotice(null)); }; // round 18: one value for the three kinds
   const saveFew = () => { if (belowBad || daysBad) { setShown((x) => ({ ...x, few: true })); return; } void run('few', { fewVisits: { below: num(belowV), daysBeforeDeadline: num(daysV) } }, () => { setBelow(null); setDays(null); }); };
 
   const err = (text: string) => <div role="alert" style={{ padding: '0 16px 10px', fontSize: FONT_SMALL, color: '#9A3D24', lineHeight: 1.4 }}>{text}</div>;

@@ -86,7 +86,7 @@ export function PlanAsk({ m, quiet }: { m: Member; quiet?: boolean }) {
               <div style={{ fontSize: 15, lineHeight: '22px', color: F.soft }}>{isDaysPlan(s, to)
                 ? t('family.planAskBodyFlex', { plan: name_(to), q: planQuota(s, to) ?? s.club.settings.flexQuota, p: planPriceText(s, to, next, t, fmt.fds), x: rp(price.extra), d: fmt.fdl(next) })
                 : t('family.planAskBodyGold', { plan: name_(to), p: planPriceText(s, to, next, t, fmt.fds), d: fmt.fdl(next) })}</div>
-              {kind === 'downgrade' ? <div data-testid="plan-notice" style={{ fontSize: 14, lineHeight: '20px', color: F.muted }}>{t('family.planNotice', { n: noticeDays(s) })}</div> : null}
+              {kind === 'downgrade' ? <div data-testid="plan-notice" style={{ fontSize: 14, lineHeight: '20px', color: F.muted }}>{t('family.planNotice', { n: noticeDays(s, 'downgrade') })}</div> : null}
             </FamSheet>
           ) : null}
         </>

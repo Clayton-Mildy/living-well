@@ -83,8 +83,10 @@ export interface ClubSettings {
   departureFrom: HM; // departure checks auto-queue from here
   recheckMin: number; // 15
   flexQuota: number; // 10 visits / month
-  /** KC round 16: days before a month's 1st by which a downgrade, stop or leave for that month must be asked (missing = 14; rules/notice.ts) */
+  /** KC round 16: days before a month's 1st by which a downgrade, stop or leave for that month must be asked (missing = 14; rules/notice.ts). Round 18: only the fallback for `notice`, no longer saved */
   noticeDays?: number;
+  /** KC round 18: the notice for each kind of change, 1–60 days each (a kind missing here falls back to `noticeDays`, then 14; rules/notice.ts) */
+  notice?: { downgrade: number; stop: number; leave: number };
   /** KC round 17: the few-visits alert. Members with fewer than `below` visit days this month are flagged from `daysBeforeDeadline` days before the notice deadline (missing = 5 and 2; rules/fewVisits.ts) */
   fewVisits?: { below: number; daysBeforeDeadline: number };
   issueDay: number; // 21 (KC round 6, brochure: invoices on the 21st)

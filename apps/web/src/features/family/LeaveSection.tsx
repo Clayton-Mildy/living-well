@@ -2,6 +2,7 @@
 // after 2 months. Used by the family plan card (the billing contact asks, takes back and confirms) and by the profile's Plan tab (finance and management record it).
 import { useState, type ReactNode } from 'react';
 import { currentMembership, feeOf, issueDateOf, leaveChoices, leaveDeadline, leaveMonths, leaveNeedsWord, leaveOpen, LEAVE_MAX_MONTHS, displayName, membershipStatus, priceOn, rp, ym, type ClubState, type Member } from '@cp/shared';
+import { noticeDays } from '@cp/shared/rules/notice';
 import { Button, ChipGroup, Icon, Sheet, TextField } from '../../components/ui';
 import type { TFn, useFmt } from '../../lib/i18n';
 import type { useAct } from '../../lib/act';
@@ -28,6 +29,7 @@ export function useLeaveUi({ s, m, today, t, fmt, act, canEdit, staff }: Args): 
   const months = leaveMonths(m).filter((x) => x >= ym(today));
   const word = leaveNeedsWord(m, today);
   const choices = leaveChoices(s, m, today);
+  const days = noticeDays(s, 'leave'); // round 18: the club's leave notice, not the default 14
   const firstOk = choices.find((c) => c.ok)?.month ?? '';
   const chosen = choices.find((c) => c.month === (pick || firstOk) && c.ok)?.month ?? '';
   const active = membershipStatus(m, today) !== 'ended' && !currentMembership(m)?.lastDay;
@@ -39,9 +41,9 @@ export function useLeaveUi({ s, m, today, t, fmt, act, canEdit, staff }: Args): 
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-testid="leave">
       {months.map((month) => {
         const now = month === ym(today);
-        const asked = !now && leaveOpen(month, today);
+        const asked = !now && leaveOpen(month, today, days);
         const label = now ? t('family.leaveNow', { m: fmt.fmonth(month) })
-          : asked ? t(staff ? 'family.leaveOpenStaff' : 'family.leaveOpen', { m: fmt.fmonth(month), d: fmt.fds(leaveDeadline(month)) })
+          : asked ? t(staff ? 'family.leaveOpenStaff' : 'family.leaveOpen', { m: fmt.fmonth(month), d: fmt.fds(leaveDeadline(month, days)) })
           : t('family.leaveLocked', { m: fmt.fmonth(month), fee: feeOn(month) });
         return (
           <div key={month} data-testid="leave-row" data-month={month} style={{ display: 'flex', alignItems: 'center', gap: 8, ...text }}>
@@ -99,6 +101,7 @@ export function useFamilyLeave({ s, m, today, t, fmt, act, canEdit }: Omit<Args,
   const months = leaveMonths(m).filter((x) => x >= ym(today));
   const word = leaveNeedsWord(m, today);
   const choices = leaveChoices(s, m, today);
+  const days = noticeDays(s, 'leave'); // round 18: the club's leave notice, not the default 14
   const firstOk = choices.find((c) => c.ok)?.month ?? '';
   const chosen = choices.find((c) => c.month === (pick || firstOk) && c.ok)?.month ?? '';
   const active = membershipStatus(m, today) !== 'ended' && !currentMembership(m)?.lastDay;
@@ -110,9 +113,9 @@ export function useFamilyLeave({ s, m, today, t, fmt, act, canEdit }: Omit<Args,
     <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }} data-testid="leave">
       {months.map((month) => {
         const now = month === ym(today);
-        const asked = !now && leaveOpen(month, today);
+        const asked = !now && leaveOpen(month, today, days);
         const label = now ? t('family.leaveNow', { m: fmt.fmonth(month) })
-          : asked ? t('family.leaveOpen', { m: fmt.fmonth(month), d: fmt.fds(leaveDeadline(month)) })
+          : asked ? t('family.leaveOpen', { m: fmt.fmonth(month), d: fmt.fds(leaveDeadline(month, days)) })
           : t('family.leaveLocked', { m: fmt.fmonth(month), fee: feeOn(month) });
         return (
           <div key={month} data-testid="leave-row" data-month={month} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, ...line }}>

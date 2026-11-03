@@ -1,5 +1,5 @@
-// Leave (cuti), from the brochure's terms: a month of leave is asked for in writing 14 days before the end of the month before it, costs the leave fee
-// on that month's invoice instead of the plan, lasts at most 2 months in a row, and a member who gives no word for a 3rd month is taken to have resigned.
+// Leave (cuti), from the brochure's terms: a month of leave is asked for in writing the club's leave notice before its 1st (round 18: `noticeDays(s, 'leave')`,
+// default 14), costs the leave fee on that month's invoice instead of the plan, lasts at most 2 months in a row, and a member who gives no word for a 3rd month is taken to have resigned.
 // Leave months live on the membership (`Membership.leaves`). Everything here is pure; the actions are in actions/membership.ts.
 import type { ClubState, ISODate, Member, MembershipLeave, YM } from '../types';
 import { addDays, addMonths, daysInMonth, live, sortBy, ym } from '../util';
@@ -12,7 +12,7 @@ export const LEAVE_MAX_MONTHS = 2;
 export const RETURN_NOTE = 'return';
 
 export const lastDayOfMonth = (month: YM): ISODate => `${month}-${String(daysInMonth(month)).padStart(2, '0')}`;
-/** The last day a leave for `month` can be asked for. Round 16: the club's notice period before the month's 1st (`rules/notice.ts`; 14 days → 17 Nov for December). */
+/** The last day a leave for `month` can be asked for: `days` before the month's 1st. Callers pass `noticeDays(s, 'leave')` (round 18; the default 14 → 17 Nov for December). */
 export const leaveDeadline = (month: YM, days: number = NOTICE_DAYS_DEFAULT): ISODate => addDays(`${month}-01`, -days);
 
 /** The current membership's leave rows that are real leave months (not the note that a member is coming back), oldest first. */
@@ -37,7 +37,7 @@ export function leaveRunAround(months: YM[], month: YM): number {
 export type LeaveCheck = { ok: true } | { ok: false; code: string; params?: Record<string, string | number> };
 /** Can `month` be asked for as leave today? The code is an `err.*` key (core namespace). */
 export function leaveCheck(s: ClubState, m: Member, month: YM, today: ISODate): LeaveCheck {
-  const days = noticeDays(s);
+  const days = noticeDays(s, 'leave');
   const cur = currentMembership(m);
   if (!cur || membershipStatus(m, today) === 'ended' || cur.lastDay) return { ok: false, code: 'err.leaveEnding' };
   if (!/^\d{4}-(0[1-9]|1[0-2])$/.test(month)) return { ok: false, code: 'err.invalid' };
@@ -49,7 +49,7 @@ export function leaveCheck(s: ClubState, m: Member, month: YM, today: ISODate): 
 /** The next months a leave can still be asked for (deadline not yet passed), soonest first. */
 export function leaveChoices(s: ClubState, m: Member, today: ISODate, n = 3): { month: YM; deadline: ISODate; ok: boolean }[] {
   const out: { month: YM; deadline: ISODate; ok: boolean }[] = [];
-  const days = noticeDays(s);
+  const days = noticeDays(s, 'leave');
   for (let k = 1; k <= 12 && out.length < n; k++) {
     const month = addMonths(ym(today), k);
     if (today > leaveDeadline(month, days)) continue;

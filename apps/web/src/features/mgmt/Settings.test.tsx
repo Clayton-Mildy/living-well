@@ -79,9 +79,9 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     await show(<Settings />, width);
     await type(field('notice'), '10');
     await click(button(section('Membership rules'), 'Send to owner')); // Management's change waits for the Owner: the button says so
-    expect(actMock).toHaveBeenCalledWith('club.updateSettings', { noticeDays: 10 });
+    expect(actMock).toHaveBeenCalledWith('club.updateSettings', { notice: { downgrade: 10, stop: 10, leave: 10 } });
     expect(document.body.textContent).toContain('Waiting for owner');
-    expect(useReplica.getState().view!.club.settings.noticeDays).toBeUndefined();
+    expect(useReplica.getState().view!.club.settings.notice).toBeUndefined();
     expect(field('notice').value).toBe('14');
   });
 
@@ -90,7 +90,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     await show(<Settings />, width);
     await type(field('notice'), '10');
     await click(button(section('Membership rules'), 'Save')); // the Owner's own change: a plain Save
-    expect(useReplica.getState().view!.club.settings.noticeDays).toBe(10);
+    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 10, stop: 10, leave: 10 });
     expect(document.body.textContent).not.toContain('Waiting for owner');
     expect(field('notice').value).toBe('10');
   });

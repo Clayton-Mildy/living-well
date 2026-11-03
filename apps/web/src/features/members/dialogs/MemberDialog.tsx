@@ -224,7 +224,7 @@ function PlanForm({ p, onClose }: { p: P; onClose: () => void }) {
             <span style={{ fontWeight: 500 }}>{fmt.fdy(deskEff)}</span>
           </div>
         ) : <DateField label={t('profile.effective')} value={eff} onChange={(v) => set({ effective: v })} min={minEff} error={errEff} />}
-        {kind === 'downgrade' && minEff > firstOfNextMonth(today) ? <div data-testid="plan-notice" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t('family.planNotice', { n: noticeDays(s) })}</div> : null}
+        {kind === 'downgrade' && minEff > firstOfNextMonth(today) ? <div data-testid="plan-notice" style={{ fontSize: 14, lineHeight: '20px', color: '#6B6259' }}>{t('family.planNotice', { n: noticeDays(s, 'downgrade') })}</div> : null}
       </PeSection>
       <Footer t={t} onClose={onClose} onSave={save} busy={busy} label={t('common.saveChanges')} />
     </>

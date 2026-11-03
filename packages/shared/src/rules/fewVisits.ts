@@ -18,7 +18,7 @@ export const fewVisitsSettings = (s: Pick<ClubState, 'club'>): { below: number; 
 
 /** The day the list opens for `month`: the notice deadline of the month after, less `daysBeforeDeadline`. */
 export const fewVisitsAlertDay = (s: ClubState, month: YM): ISODate =>
-  addDays(noticeDeadline(s, addMonths(month, 1)), -fewVisitsSettings(s).daysBeforeDeadline);
+  addDays(noticeDeadline(s, addMonths(month, 1), 'stop'), -fewVisitsSettings(s).daysBeforeDeadline);
 
 /** The calls logged for a member in a month, newest first. */
 export const callsOf = (s: ClubState, memberId: string, month: YM): VisitCall[] =>
@@ -77,7 +77,7 @@ export type FewVisitsWindow = Omit<FewVisitsState, 'rows' | 'called'>;
 export function fewVisitsWindow(s: ClubState, today: ISODate): FewVisitsWindow {
   const month = ym(today);
   const alertDay = fewVisitsAlertDay(s, month);
-  const deadline = noticeDeadline(s, addMonths(month, 1));
+  const deadline = noticeDeadline(s, addMonths(month, 1), 'stop');
   return { month, alertDay, deadline, phase: today < alertDay ? 'before' : today <= deadline ? 'open' : 'closed' };
 }
 export function fewVisitsState(s: ClubState, today: ISODate): FewVisitsState {

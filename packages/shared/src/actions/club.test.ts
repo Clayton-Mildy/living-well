@@ -721,8 +721,28 @@ describe('few-visits settings (round 17)', () => {
     expect(() => run(s, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, 's10')).toThrow('err.forbidden');
   });
   it('can be saved together with the notice period', () => {
-    const r = run(seed().citra, 'club.updateSettings', { noticeDays: 10, fewVisits: { below: 3, daysBeforeDeadline: 1 } }, 's9');
-    expect(r.state.club.settings).toMatchObject({ noticeDays: 10, fewVisits: { below: 3, daysBeforeDeadline: 1 } });
+    const r = run(seed().citra, 'club.updateSettings', { notice: { stop: 10 }, fewVisits: { below: 3, daysBeforeDeadline: 1 } }, 's9');
+    expect(r.state.club.settings).toMatchObject({ notice: { downgrade: 14, stop: 10, leave: 14 }, fewVisits: { below: 3, daysBeforeDeadline: 1 } });
+  });
+});
+
+describe('notice per kind (round 18)', () => {
+  it('stores all three kinds, the missing ones from the current values', () => {
+    const r = run(seed().citra, 'club.updateSettings', { notice: { stop: 30 } }, 's9');
+    expect(r.state.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 14 });
+    const r2 = run(r.state, 'club.updateSettings', { notice: { leave: 20 } }, 's9');
+    expect(r2.state.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 20 });
+    fails(r2.state, 'club.updateSettings', { notice: { stop: 30, leave: 20 } }, 's9', 'err.noChanges');
+    fails(seed().citra, 'club.updateSettings', { notice: { downgrade: 14 } }, 's9', 'err.noChanges');
+  });
+  it('1 to 60 whole days; an empty input fails; noticeDays is no longer taken', () => {
+    const s = seed().citra;
+    for (const bad of [{ stop: 0 }, { leave: 61 }, { downgrade: 2.5 }, { stop: 'x' }]) {
+      expect(() => run(s, 'club.updateSettings', { notice: bad }, 's9')).toThrow();
+    }
+    expect(() => run(s, 'club.updateSettings', {}, 's9')).toThrow('err.invalid');
+    expect(() => run(s, 'club.updateSettings', { notice: {} }, 's9')).toThrow('err.invalid');
+    expect(() => run(s, 'club.updateSettings', { noticeDays: 10 }, 's9')).toThrow('err.invalid');
   });
 });
 
