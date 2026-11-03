@@ -3,10 +3,11 @@
 // scrolled to its end (enabled at once when it fits without scrolling). Sign out is the only other way out. The server refuses every other action until they agree.
 import { useCallback, useLayoutEffect, useRef, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { displayName, type Member } from '@cp/shared';
+import { displayName, type Lang, type Member } from '@cp/shared';
 import { currentTerms, termsText } from '@cp/shared/rules/terms';
-import { Avatar, Logo } from '../../components/ui';
+import { Avatar, Logo, Segmented } from '../../components/ui';
 import { useAct } from '../../lib/act';
+import { useReplica } from '../../store/replica';
 import { memberPhoto } from '../../lib/media';
 import { useSession } from '../../store/session';
 import { TermsView } from '../terms/TermsView';
@@ -16,15 +17,18 @@ import { useFamilyCtx } from './useFamily';
 /** Reaching the end: within 8px of the bottom, or nothing to scroll. */
 export const atEnd = (el: HTMLElement) => el.scrollHeight <= el.clientHeight || el.scrollTop + el.clientHeight >= el.scrollHeight - 8;
 
-export function TermsGate({ kind }: { kind: 'first' | 'updated' }) {
+export function TermsGate({ kind, phoneRoom }: { kind: 'first' | 'updated'; /** leave room top right for the Demo pill (phone) */ phoneRoom?: boolean }) {
   const { s, t, user } = useFamilyCtx();
   const lang = useSession((x) => x.lang);
+  const setLang = useSession((x) => x.setLang);
   const signOut = useSession((x) => x.signOut);
   const navigate = useNavigate();
   const act = useAct();
+  const run = useReplica((x) => x.act); // the agree's error shows under the button (not a toast)
   const box = useRef<HTMLDivElement>(null);
   const [reached, setReached] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [err, setErr] = useState('');
   const cur = currentTerms(s);
   const body = termsText(s, lang);
   // checked on mount and whenever the text changes, on resize, and on scroll
@@ -42,15 +46,21 @@ export function TermsGate({ kind }: { kind: 'first' | 'updated' }) {
   const parents = user.memberIds.map((id) => s.members[id]).filter(Boolean) as Member[];
   const agree = async () => {
     setBusy(true);
-    const r = await act('terms.agree', { version: cur.version }, { silent: true });
-    if (!r.ok) setBusy(false);
+    setErr('');
+    const r = await run('terms.agree', { version: cur.version });
+    if (!r.ok) { setBusy(false); setErr(t(r.code, r.params)); }
   };
+  // the language can be switched before agreeing (account.updateFamily is open behind the gate)
+  const switchLang = (l: Lang) => { setLang(l); void act('account.updateFamily', { familyId: user.id, lang: l }, { silent: true }); };
   const out = () => { signOut(); navigate('/login'); };
   const hint = t('terms.scrollHint');
   return (
     <main id="main" data-shell="family" data-testid="terms-gate" data-kind={kind} style={{ position: 'fixed', inset: 0, zIndex: 40, background: '#FFFFFF', color: F.text, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
       <div style={{ width: '100%', maxWidth: 600, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 14, padding: 'calc(16px + env(safe-area-inset-top, 0px)) 16px calc(14px + env(safe-area-inset-bottom, 0px))' }}>
-        <Logo height={30} />
+        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, flex: 'none', paddingRight: phoneRoom ? 52 : 0 }}>
+          <Logo height={30} />
+          <Segmented label={t('shell.language')} value={lang} onChange={switchLang} items={[{ value: 'en' as Lang, label: 'EN' }, { value: 'id' as Lang, label: 'ID' }]} />
+        </div>
         {kind === 'first' ? (
           <div data-testid="terms-welcome" style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
             <span style={{ display: 'flex', flex: 'none' }}>
@@ -70,7 +80,7 @@ export function TermsGate({ kind }: { kind: 'first' | 'updated' }) {
           <TermsView text={body} />
         </div>
         <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div id="terms-hint" role="status" style={{ minHeight: 18, fontSize: 13, textAlign: 'center', color: F.muted }}>{reached ? '' : hint}</div>
+          <div id="terms-hint" role={err ? 'alert' : 'status'} data-testid="terms-hint" style={{ minHeight: 18, fontSize: 13, textAlign: 'center', color: err ? '#9A3D24' : F.muted }}>{err || (reached ? '' : hint)}</div>
           <button type="button" data-testid="terms-agree" disabled={!reached || busy} aria-describedby={reached ? undefined : 'terms-hint'} onClick={() => void agree()}
             style={{ height: 52, borderRadius: 16, border: 'none', background: reached && !busy ? F.ink : '#CFC8BF', color: '#FFFFFF', fontSize: 16, fontWeight: 600, fontFamily: 'Inter, system-ui, sans-serif', cursor: reached && !busy ? 'pointer' : 'default', transition: 'background-color .2s' }}>
             {t('terms.agree')}

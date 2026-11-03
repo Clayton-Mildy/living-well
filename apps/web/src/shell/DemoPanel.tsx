@@ -15,14 +15,14 @@ import { DEMO_STEPS } from '../features/demo/steps';
 const SHOW_GUIDED = false;
 import { useDemoAccounts } from './demoAccounts';
 
-export function DemoPill({ phone }: { phone: boolean }) {
+export function DemoPill({ phone, top }: { phone: boolean; /** phone: top right (the terms gate keeps its buttons at the bottom) */ top?: boolean }) {
   const t = useT();
   const [open, setOpen] = useState(false);
   return (
     <>
       <button type="button" onClick={() => setOpen(true)} aria-label={t('demo.pill')} title={t('demo.pill')}
         style={phone
-          ? { position: 'fixed', left: 12, bottom: 102, zIndex: 45, width: 40, height: 40, padding: 0, borderRadius: 999, border: 'none', background: 'rgba(36,32,28,0.9)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }
+          ? { position: 'fixed', ...(top ? { right: 16, top: 'calc(12px + env(safe-area-inset-top, 0px))' } : { left: 12, bottom: 102 }), zIndex: 45, width: 40, height: 40, padding: 0, borderRadius: 999, border: 'none', background: 'rgba(36,32,28,0.9)', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 4px 12px rgba(0,0,0,0.25)' }
           : { position: 'fixed', right: 24, bottom: 24, zIndex: 45, height: 42, padding: '0 16px 0 12px', borderRadius: 12, border: 'none', background: '#24201C', color: '#FFFFFF', fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, cursor: 'pointer', boxShadow: '0 8px 20px rgba(0,0,0,0.25)', whiteSpace: 'nowrap', fontFamily: 'Inter' }}>
         <Icon name="tune" size={phone ? 20 : 18} color="#FFFFFF" />{phone ? null : t('demo.pill')}
       </button>

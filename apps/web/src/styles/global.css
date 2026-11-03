@@ -52,7 +52,7 @@ html[data-skin="warm"] .cp-serif-up { font-size: 25px !important; line-height: 3
   .cp-btn { height: 42px !important; padding: 0 18px !important; font-size: 15px !important; gap: 6px !important; }
   .cp-btn.cp-btn-56 { height: 46px !important; font-size: 16px !important; }
   .cp-chip { height: 36px !important; padding: 0 12px !important; font-size: 14px !important; }
-  #main h1 { font-size: 30px !important; line-height: 1.1 !important; letter-spacing: -0.8px !important; }
+  #main:not([data-testid="terms-gate"]) h1 { font-size: 30px !important; line-height: 1.1 !important; letter-spacing: -0.8px !important; }
   .cp-desc { display: none !important; }
   /* list rows and headers a little tighter */
   .cp-row { min-height: 56px !important; padding-top: 9px !important; padding-bottom: 9px !important; }

@@ -50,7 +50,7 @@ export function FamilyShell() {
   const s = useClub();
   const me = useFamilyUser();
   const gate = me ? needsTerms(s, s.familyContacts[me.id] ?? me.contact) : null;
-  if (gate) return <><TermsGate kind={gate} /><Toast phone={isPhone} /></>;
+  if (gate) return <><TermsGate kind={gate} phoneRoom={isPhone} /><Toast phone={isPhone} /><DemoPill phone={isPhone} top /></>;
   return (
     <div data-shell="family" style={{ position: 'fixed', inset: 0, background: '#FFFFFF', color: '#24201C', display: 'flex' }}>
       {!isPhone ? <FamSidebar current={tab} onBell={() => setBell(true)} /> : null}

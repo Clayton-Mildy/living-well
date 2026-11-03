@@ -104,6 +104,29 @@ describe('terms gate, first sign-in', () => {
     expect(text()).not.toContain('Scroll to the end to continue');
   });
 
+  it('a failed agree says why under the button, and Agree can be tapped again', async () => {
+    layout(240, 300);
+    open('f_sinta', club(T1));
+    useReplica.setState({ act: (async () => ({ ok: false as const, code: 'err.invalid', params: {} })) as never });
+    await show(<TermsGate kind="first" />);
+    await act(async () => { agree().click(); });
+    const hint = q('[data-testid="terms-hint"]')!;
+    expect(hint.getAttribute('role')).toBe('alert');
+    expect(hint.textContent).not.toBe('');
+    expect(hint.textContent).not.toBe('err.invalid'); // a translated message, not the code
+    expect(agree().disabled).toBe(false);
+  });
+
+  it('EN / ID switches the language before agreeing and saves it on the contact', async () => {
+    layout(240, 300);
+    const { acts } = open('f_sinta', club(T1));
+    await show(<TermsGate kind="first" />);
+    const id = Array.from(document.querySelectorAll<HTMLButtonElement>('[role="tab"]')).find((b) => b.textContent === 'ID')!;
+    await act(async () => { id.click(); });
+    expect(useSession.getState().lang).toBe('id');
+    expect(acts.at(-1)).toEqual({ name: 'account.updateFamily', input: { familyId: 'f_sinta', lang: 'id' } });
+  });
+
   it('the Sign out link signs out and goes to the sign-in page', async () => {
     layout(1000, 300);
     open('f_sinta', club(T1));
