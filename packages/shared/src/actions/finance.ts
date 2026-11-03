@@ -226,8 +226,17 @@ export const financeActions: ActionDef[] = [
       if (inv.voided) ctx.fail('finance.err.alreadyVoid');
       if (paidOn(d as unknown as ClubState, inv.id) > 0) ctx.fail('finance.err.voidPaid');
       inv.voided = { at: ctx.nowDT, by: ctx.actor, reason: input.reason };
-      // charges that went onto this invoice are free to be billed again
-      for (const c of Object.values(d.pendingCharges)) if (c.invoiceId === inv.id) delete c.invoiceId;
+      // charges that went onto this invoice are free to be billed again, except those whose source is gone: a party cancelled or declined, or an outing deleted
+      // after the invoice (they were kept only because they were invoiced), so the next run does not bill something that did not happen
+      for (const c of Object.values(d.pendingCharges)) {
+        if (c.invoiceId !== inv.id) continue;
+        const src = c.source;
+        const cel = src?.type === 'celebration' ? d.celebrations?.[src.id] : undefined;
+        const ev = src?.type === 'event' ? d.calendarEvents[src.id] : undefined;
+        const gone = src?.type === 'celebration' ? !cel || !!cel.deletedAt || cel.status === 'cancelled' || cel.status === 'declined' : src?.type === 'event' ? !ev || !!ev.deletedAt : false;
+        if (gone) delete d.pendingCharges[c.id];
+        else delete c.invoiceId;
+      }
       const params = { name: shortOf(d, inv.memberId), number: inv.number };
       tellPayer(d, ctx, inv, 'finance.notif.voided', params);
       ctx.feed({ icon: 'block', key: 'finance.feed.voided', params, memberId: inv.memberId });

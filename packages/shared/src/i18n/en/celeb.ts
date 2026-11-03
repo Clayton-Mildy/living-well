@@ -15,7 +15,7 @@ export const celeb = {
   editReconfirm: 'This celebration is confirmed. After a change, management has to confirm it again.',
   famPending: 'Waiting for confirmation', famCard: 'Celebration', famOpen: 'See in the calendar', famSub: '{from}–{to} · {room}', 
   'err.decided': 'This celebration is no longer open to changes.',
-  chargeAdded: '{item} added.', chargeRemoved: '{item} removed.', chargesBtn: 'Charges', charges: 'Charges', free: 'Free', addCharge: 'Add charge', item: 'Item', price: 'Price', onNextBill: 'On next bill', onInvoice: 'On invoice {number}', total: 'Total {amount}',
+  chargeAdded: '{item} added.', chargeRemoved: '{item} removed.', chargesBtn: 'Charges', charges: 'Charges', free: 'Free', addCharge: 'Add charge', item: 'Item', price: 'Price', onNextBill: 'On next bill', notBilled: 'Not billed', onInvoice: 'On invoice {number}', total: 'Total {amount}',
   'notif.requested': '{name}: celebration requested for {date} ({title})',
   'notif.decided': 'Confirmed: {title} on {date}',
   'notif.declined': 'Declined: {title} on {date}',

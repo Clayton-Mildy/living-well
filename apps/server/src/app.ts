@@ -72,7 +72,8 @@ app.post('/api/actions/:name', async (c) => {
     // round 17: a payment's proof photo must really have been uploaded (the shared action only checks the id's shape)
     if (c.req.param('name') === 'payment.record') {
       const proof = (input as { proofMediaId?: unknown } | null)?.proofMediaId;
-      if (typeof proof === 'string' && proof && !(await mediaExists(clubId, proof))) throw new DomainError('finance.err.proofMissing');
+      // /api/media saves under the uploader's own club (u.clubId), so look there, also when a manager is viewing another clubhouse
+      if (typeof proof === 'string' && proof && !(await mediaExists(u.clubId, proof))) throw new DomainError('finance.err.proofMissing');
     }
     const r = await runAction(clubId, c.req.param('name'), input, u, mutationId || `m${Date.now().toString(36)}`);
     return c.json(u.kind === 'family' ? { rev: r.rev, result: r.result, reviewed: r.reviewed } : r);

@@ -42,7 +42,7 @@ export function ChargesBody({ celebrationId }: { celebrationId: string }) {
         {charges.map((x, i) => (
           <div key={x.id} data-charge={x.id} style={{ display: 'flex', alignItems: 'center', gap: 10, minHeight: 48, padding: '6px 8px 6px 16px', borderTop: i ? '0.5px solid var(--hairline, #E2E2E6)' : 'none' }}>
             <span style={{ flex: 1, minWidth: 0, fontSize: 15, lineHeight: 1.4 }}>{x.item} · {rp(x.amount)}</span>
-            <span style={{ fontSize: 13, color: '#6B6259' }}>{invoice(x) ? t('celeb.onInvoice', { number: invoice(x)! }) : t('celeb.onNextBill')}</span>
+            <span style={{ fontSize: 13, color: '#6B6259' }}>{invoice(x) ? t('celeb.onInvoice', { number: invoice(x)! }) : live ? t('celeb.onNextBill') : t('celeb.notBilled')}</span>
             {!invoice(x) && canEdit ? <IconButton icon="close" label={t('common.remove')} size={40} onClick={() => void run('celebration.removeCharge', { celebrationId, chargeId: x.id }, t('celeb.chargeRemoved', { item: x.item }))} /> : null}
           </div>
         ))}

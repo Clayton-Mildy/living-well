@@ -1050,4 +1050,15 @@ describe('round 16: field trip fee and who went', () => {
     expect(n.calendarEvents[id].deletedAt).toBeTruthy();
     expect(charges(n, id).map((c) => c.memberId)).toEqual(['m1']);
   });
+  it('voiding the invoice of a deleted outing\'s trip does not bill the trip again', () => {
+    let { s, id } = outing(fresh());
+    s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m46'] }, 's5').state;
+    s = run(s, 'run.issue', { period: '2026-11', early: true }, 's10').state;
+    const inv = s.pendingCharges[`trip-${id}-m46`].invoiceId!;
+    expect(inv).toBeTruthy();
+    s = run(s, 'calendarEvent.delete', { eventId: id, notify: false }, 's9').state;
+    expect(s.pendingCharges[`trip-${id}-m46`]).toBeTruthy(); // invoiced: kept
+    s = run(s, 'invoice.void', { invoiceId: inv, reason: 'Re-issue' }, 's10').state;
+    expect(s.pendingCharges[`trip-${id}-m46`]).toBeUndefined();
+  });
 });

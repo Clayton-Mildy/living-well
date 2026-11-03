@@ -192,6 +192,9 @@ describe('round 17: birthday charges go on the next monthly invoice', () => {
     s = run(s, 'run.issue', { period: '2026-11', early: true }, 's10').state;
     s = run(s, 'celebration.cancel', { celebrationId: id }, 's9').state;
     expect(s.pendingCharges[pid]?.invoiceId).toBeTruthy();
+    // voiding that invoice does not put the cancelled party's cake back on the next bill
+    s = run(s, 'invoice.void', { invoiceId: s.pendingCharges[pid].invoiceId!, reason: 'Re-issue' }, 's10').state;
+    expect(s.pendingCharges[pid]).toBeUndefined();
   });
   it('the birthday invoice action is gone', () => {
     const { s, id } = confirmed();
