@@ -44,6 +44,7 @@ import { search } from './search';
 import { sign } from './sign';
 import { plans } from './plans';
 import { email } from './email';
+import { terms } from './terms';
 
 export const en = {
   ...ns('common', common),
@@ -101,5 +102,6 @@ export const en = {
   ...ns('sign', sign),
   ...ns('plans', plans),
   ...ns('email', email),
+  ...ns('terms', terms),
 };
-export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, reg, celeb, occasions, occ, fam, ftoday, fphotos, fcal, fhealth, fme, month, unpaid, care, purchasing, search, sign, plans };
+export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, reg, celeb, occasions, occ, fam, ftoday, fphotos, fcal, fhealth, fme, month, unpaid, care, purchasing, search, sign, plans, terms };

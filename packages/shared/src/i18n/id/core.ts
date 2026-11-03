@@ -88,6 +88,7 @@ export const feed: Same<typeof EN.feed> = {
 };
 export const err: Same<typeof EN.err> = {
   planRequestPending: 'Permintaan ganti paket sudah menunggu konfirmasi klub.', planRequestEnding: 'Keanggotaan ini akan berakhir, jadi paket tidak bisa diganti.', planRequestDone: 'Klub sudah memproses permintaan ini.',
+  termsFirst: 'Silakan baca dan setujui syarat dan ketentuan terlebih dahulu.',
   viewOnly: 'Hanya lihat — minta akses ke pemilik', unknownAction: 'Tindakan itu tidak tersedia.', forbidden: 'Anda tidak punya izin untuk itu.', notFound: 'Data itu sudah tidak ada.', noChanges: 'Tidak ada yang berubah.',
   reviewNotPending: 'Perubahan ini sudah ditangani.', reviewConflict: 'Data sudah berubah sejak dikirim ({fields}). Tinjau lagi atau tetap setujui.', noteRequired: 'Mohon tambahkan catatan.',
   memberPending: 'Anggota ini masih menunggu persetujuan manajemen.', memberNotActive: 'Keanggotaan ini tidak aktif hari ini.', alreadyCheckedIn: 'Sudah check-in.',

@@ -6,6 +6,7 @@ import { toHM, rp } from '../util';
 import { areaOf, OWN_ROW } from './areas';
 import { accessOf, defaultLevel, AREA_BASE, ownerApprovalOn, type GridRole } from '../rules/access';
 import { ownerKindOf, ownerWhat, SECTION_OF } from './ownerGate';
+import { needsTerms } from '../rules/terms';
 
 enablePatches();
 
@@ -196,6 +197,9 @@ export function changesFor(before: ClubState, patches: Patch[], coll: string, id
   return out;
 }
 
+/** The only actions a family user may run before agreeing to the current terms. */
+export const TERMS_OPEN = ['terms.agree', 'notifications.read', 'notifications.readAll', 'account.updateFamily'];
+
 /**
  * Run an action against a club state. Applies the review policy:
  *  - none: run as is
@@ -206,6 +210,8 @@ export function changesFor(before: ClubState, patches: Patch[], coll: string, id
 export function execute(state: ClubState, name: string, rawInput: unknown, user: User, clock: ClockInfo, mutationId: string, opts: { forceReview?: ReviewPolicy } = {}): ExecResult {
   const def = getAction(name);
   if (!def) throw new DomainError('err.unknownAction', { name });
+  // round 17 (KC): a family user who has not agreed to the current terms can only agree, read their notices and switch language. The live row decides, not the signed-in snapshot.
+  if (user.kind === 'family' && !TERMS_OPEN.includes(name) && needsTerms(state, state.familyContacts[user.id] ?? user.contact)) throw new DomainError('err.termsFirst');
   const input = def.parse ? def.parse(rawInput) : rawInput;
   const p = permit(def, user, input, state);
   if (p === 'viewOnly') throw new DomainError('err.viewOnly', { name });
