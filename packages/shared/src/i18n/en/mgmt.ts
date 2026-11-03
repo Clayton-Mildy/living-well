@@ -151,5 +151,6 @@ export const mgmt = {
   'access.approval': 'Needs owner approval', 'access.approvalOf': 'Needs owner approval: {kind}',
   'access.kind.pricing': 'Pricing', 'access.kind.holidays': 'Holidays', 'access.kind.budget': 'Budget',
   'access.role.lobby': 'Front desk', 'access.role.nurse': 'Nurse', 'access.role.activity': 'Activity teacher', 'access.role.kitchen': 'Kitchen & F&B', 'access.role.finance': 'Finance', 'access.role.mgmt': 'Management',
+  'access.notif.changed': 'Your menus were changed by {name}',
   'access.saved': 'Saved.',
 };

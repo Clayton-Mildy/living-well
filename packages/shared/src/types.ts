@@ -2,7 +2,7 @@
 // Times are club wall-clock strings: ISODate 'YYYY-MM-DD', HM 'HH:mm', DT 'YYYY-MM-DDTHH:mm'.
 
 import type { ApplicationFormData } from './rules/applicationForm';
-import type { AccessLevel, OwnerKind } from './rules/access';
+import type { AccessLevel, GridRole, OwnerKind } from './rules/access';
 
 export type ISODate = string;
 export type HM = string;
@@ -108,6 +108,8 @@ export interface ClubSettings {
   access?: Partial<Record<StaffRole, Record<string, AccessLevel>>>;
   /** KC round 16: which changes by a role wait for the Owner. A missing cell: on for Management, off for the others. */
   ownerApproval?: Partial<Record<StaffRole, Partial<Record<OwnerKind, boolean>>>>;
+  /** KC round 17: when the Owner last saved each role on Admin › Roles, and who. Shown on the role list. */
+  accessChanged?: Partial<Record<GridRole, { by: string; at: DT }>>;
 }
 
 /** One category of the Contacts directory. */

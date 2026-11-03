@@ -71,3 +71,25 @@ export function ownerApprovalOn(s: ClubState, role: StaffRole, kind: OwnerKind):
   if (role === 'owner') return false;
   return s.club.settings.ownerApproval?.[role]?.[kind] ?? role === 'mgmt';
 }
+
+// ---------- round 17 (phase 2): a role's draft on the Roles screen ----------
+export type RoleDraft = { levels: Record<string, AccessLevel>; approvals: Record<OwnerKind, boolean> };
+export const OWNER_KINDS: OwnerKind[] = ['pricing', 'holidays', 'budget'];
+
+/** What the Roles screen starts from and `access.setRole` saves: every menu key's effective level and the three owner-approval switches. */
+export function roleDraft(s: ClubState, role: GridRole): RoleDraft {
+  const levels: Record<string, AccessLevel> = {};
+  for (const k of MENU_KEYS) levels[k] = accessOf(s, role, k);
+  const approvals = {} as Record<OwnerKind, boolean>;
+  for (const kind of OWNER_KINDS) approvals[kind] = ownerApprovalOn(s, role, kind);
+  return { levels, approvals };
+}
+
+/** How many cells of the draft differ from what is saved (menus and approval switches). */
+export function draftChanges(s: ClubState, role: GridRole, draft: RoleDraft): number {
+  const saved = roleDraft(s, role);
+  return MENU_KEYS.filter((k) => draft.levels[k] !== saved.levels[k]).length + OWNER_KINDS.filter((k) => draft.approvals[k] !== saved.approvals[k]).length;
+}
+
+/** A cell at its default is not stored. For a default-off key that includes Off, so the key stays "never set" and `permit()` leaves it to the action's own `can`. */
+export const isDefaultCell = (role: GridRole, key: string, level: AccessLevel): boolean => level === defaultLevel(role, key);

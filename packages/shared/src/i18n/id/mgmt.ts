@@ -152,5 +152,6 @@ export const mgmt: Same<typeof EN> = {
   'access.approval': 'Perlu persetujuan pemilik', 'access.approvalOf': 'Perlu persetujuan pemilik: {kind}',
   'access.kind.pricing': 'Harga', 'access.kind.holidays': 'Libur', 'access.kind.budget': 'Anggaran',
   'access.role.lobby': 'Resepsionis', 'access.role.nurse': 'Perawat', 'access.role.activity': 'Pengajar aktivitas', 'access.role.kitchen': 'Dapur & F&B', 'access.role.finance': 'Keuangan', 'access.role.mgmt': 'Manajemen',
+  'access.notif.changed': 'Menu Anda diubah oleh {name}',
   'access.saved': 'Tersimpan.',
 };

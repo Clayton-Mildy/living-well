@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { buildSeed } from '../seed';
-import { GRID_ROLES, accessOf, menuKeys, ownerApprovalOn } from './access';
+import { GRID_ROLES, MENU_KEYS, accessOf, draftChanges, isDefaultCell, menuKeys, ownerApprovalOn, roleDraft } from './access';
 
 const fresh = () => structuredClone(buildSeed().citra);
 
@@ -40,5 +40,37 @@ describe('access grid', () => {
     expect(ownerApprovalOn(s, 'owner', 'holidays')).toBe(false);
     s.club.settings.ownerApproval = { mgmt: { holidays: false } };
     expect(ownerApprovalOn(s, 'mgmt', 'holidays')).toBe(false);
+  });
+});
+
+describe('role draft', () => {
+  it('lists every menu key with its effective level and the three approval switches', () => {
+    const s = fresh();
+    delete s.club.settings.access;
+    delete s.club.settings.ownerApproval;
+    const d = roleDraft(s, 'lobby');
+    expect(Object.keys(d.levels).sort()).toEqual([...MENU_KEYS].sort());
+    expect(d.levels.billing).toBe('view');
+    expect(d.levels.members).toBe('edit');
+    expect(d.levels.payments).toBe('off');
+    expect(d.approvals).toEqual({ pricing: false, holidays: false, budget: false });
+    expect(roleDraft(s, 'mgmt').approvals).toEqual({ pricing: true, holidays: true, budget: true });
+  });
+  it('draftChanges counts the cells that differ from what is saved', () => {
+    const s = fresh();
+    const d = roleDraft(s, 'lobby');
+    expect(draftChanges(s, 'lobby', d)).toBe(0);
+    d.levels.billing = 'edit';
+    expect(draftChanges(s, 'lobby', d)).toBe(1);
+    d.approvals.pricing = true;
+    d.levels.members = 'off';
+    expect(draftChanges(s, 'lobby', d)).toBe(3);
+  });
+  it('isDefaultCell: the default level, and Off on a default-off key', () => {
+    expect(isDefaultCell('lobby', 'billing', 'view')).toBe(true);
+    expect(isDefaultCell('lobby', 'billing', 'edit')).toBe(false);
+    expect(isDefaultCell('lobby', 'payments', 'off')).toBe(true);
+    expect(isDefaultCell('lobby', 'members', 'edit')).toBe(true);
+    expect(isDefaultCell('lobby', 'members', 'off')).toBe(false);
   });
 });

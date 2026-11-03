@@ -50,7 +50,7 @@ describe('Admin › Roles', () => {
     expect(document.body.textContent).not.toContain('Owner');
   });
 
-  it('a never-set default-off cell shows "—"; Hidden stores an explicit off, "—" clears it', async () => {
+  it('a never-set default-off cell shows "—"; choosing Hidden saves the role through access.setRole', async () => {
     openClub();
     await show(<Roles />, 390);
     await click(document.querySelector('[role="combobox"][aria-labelledby]'));
@@ -58,15 +58,7 @@ describe('Admin › Roles', () => {
     expect(combo('Front desk: Payments').textContent).toContain('—');
     await click(combo('Front desk: Payments'));
     await click(option('Hidden'));
-    expect(actMock).toHaveBeenCalledWith('access.set', { role: 'lobby', key: 'payments', level: 'off' });
-    // the server stored it: the cell now shows Hidden, and "—" clears the entry
-    const v = structuredClone(useReplica.getState().view!);
-    v.club.settings.access = { lobby: { payments: 'off' } };
-    await act(async () => { useReplica.setState({ view: v, confirmed: v } as never); });
-    expect(combo('Front desk: Payments').textContent).toContain('Hidden');
-    await click(combo('Front desk: Payments'));
-    await click(option('—'));
-    expect(actMock).toHaveBeenCalledWith('access.set', { role: 'lobby', key: 'payments', level: 'clear' });
+    expect(actMock).toHaveBeenCalledWith('access.setRole', expect.objectContaining({ role: 'lobby', levels: expect.objectContaining({ payments: 'off', billing: 'view' }) }));
   });
 
   it('only the Owner reaches /roles', () => {
@@ -76,7 +68,7 @@ describe('Admin › Roles', () => {
     for (const r of ['mgmt', 'lobby', 'nurse', 'activity', 'kitchen', 'finance'] as const) expect(screenFor(st, r, 'roles')).toBeNull();
   });
 
-  it('phone: a role picker, the menu list with a level each, three switches; Front desk › Billing to Hidden calls access.set', async () => {
+  it('phone: a role picker, the menu list with a level each, three switches; Front desk › Billing to Hidden calls access.setRole', async () => {
     openClub();
     await show(<Roles />, 390);
     expect(document.querySelectorAll('[role="switch"]')).toHaveLength(3);
@@ -87,13 +79,13 @@ describe('Admin › Roles', () => {
     expect(combo('Front desk: Billing').textContent).toContain('View'); // the default
     await click(combo('Front desk: Billing'));
     await click(option('Hidden'));
-    expect(actMock).toHaveBeenCalledWith('access.set', { role: 'lobby', key: 'billing', level: 'off' });
+    expect(actMock).toHaveBeenCalledWith('access.setRole', expect.objectContaining({ role: 'lobby', levels: expect.objectContaining({ billing: 'off', members: 'edit' }) }));
   });
 
-  it('a switch calls access.setOwnerApproval', async () => {
+  it('a switch calls access.setRole with the approval changed', async () => {
     openClub();
     await show(<Roles />, 390);
     await click(document.querySelector('[role="switch"]')); // Management starts on for Pricing
-    expect(actMock).toHaveBeenCalledWith('access.setOwnerApproval', { role: 'mgmt', kind: 'pricing', on: false });
+    expect(actMock).toHaveBeenCalledWith('access.setRole', expect.objectContaining({ role: 'mgmt', approvals: { pricing: false, holidays: true, budget: true } }));
   });
 });

@@ -1,7 +1,7 @@
 // Admin › Roles (round 16, KC): the Owner sets what each role opens (Hidden / View / Edit per menu item) and which of a role's changes wait for the Owner.
 // Wide screens: a grid, roles down the side and menu items across, the three approval switches in the last columns. Phone: a role picker, then its menu list.
 import { useState, type CSSProperties } from 'react';
-import { GRID_ROLES, MENU_KEYS, accessOf, defaultLevel, ownerApprovalOn, type AccessLevel, type GridRole, type OwnerKind } from '@cp/shared';
+import { GRID_ROLES, MENU_KEYS, accessOf, defaultLevel, ownerApprovalOn, roleDraft, type AccessLevel, type GridRole, type OwnerKind } from '@cp/shared';
 import { PageHead, Select, FONT_SMALL, HAIRLINE } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
@@ -25,8 +25,9 @@ export function Roles() {
   // a never-set cell whose default is Off is not in the role's menu: "—" (the server leaves such a cell to the action's own `can`); Hidden there is an explicit choice
   const notInMenu = (r: GridRole, key: string) => s.club.settings.access?.[r]?.[key] === undefined && defaultLevel(r, key) === 'off';
   const noneOption = { value: 'none' as Cell, label: '—' };
-  const setLevel = (r: GridRole, key: string, level: Cell) => { void act('access.set', { role: r, key, level: level === 'none' ? 'clear' : level }); };
-  const setApproval = (r: GridRole, kind: OwnerKind, on: boolean) => { void act('access.setOwnerApproval', { role: r, kind, on }); };
+  // Task 2 rewrites this screen as a draft with one Save; until then each change saves the whole role (access.setRole)
+  const setLevel = (r: GridRole, key: string, level: Cell) => { const d = roleDraft(s, r); void act('access.setRole', { role: r, levels: { ...d.levels, [key]: level === 'none' ? 'off' : level }, approvals: d.approvals }); };
+  const setApproval = (r: GridRole, kind: OwnerKind, on: boolean) => { const d = roleDraft(s, r); void act('access.setRole', { role: r, levels: d.levels, approvals: { ...d.approvals, [kind]: on } }); };
   const cell = (r: GridRole, key: string) => (
     <Select<Cell> ariaLabel={t('mgmt.access.cell', { role: roleName(r), menu: t(menuLabel(key)) })} value={notInMenu(r, key) ? 'none' : accessOf(s, r, key)}
       options={defaultLevel(r, key) === 'off' ? [{ ...noneOption, hint: t('mgmt.access.none') }, ...levelOptions] : levelOptions} onChange={(l) => setLevel(r, key, l)} />

@@ -1,6 +1,6 @@
 // Round 16 (KC): Management's pricing, holiday and weekly-budget changes wait for the Owner (Benjamin, s11).
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, DomainError, live, actionItems, type ClubState } from '../index';
+import { buildSeed, execute, getUser, DomainError, live, actionItems, roleDraft, type ClubState } from '../index';
 import { overviewStats } from '../rules/mgmt';
 import { roleSummary } from '../rules/tasks';
 import { pendingItems } from '../rules/approvals';
@@ -77,7 +77,7 @@ describe('owner gate', () => {
     expect(run(base, 'calendarEvent.create', CLOSE, OWNER).reviewed).toBeUndefined();
   });
   it('the switch off lets Management apply at once', () => {
-    const off = run(base, 'access.setOwnerApproval', { role: 'mgmt', kind: 'holidays', on: false }, OWNER).state;
+    const off = run(base, 'access.setRole', { role: 'mgmt', levels: roleDraft(base, 'mgmt').levels, approvals: { ...roleDraft(base, 'mgmt').approvals, holidays: false } }, OWNER).state;
     const r = run(off, 'calendarEvent.create', CLOSE, EGA);
     expect(r.reviewed).toBeUndefined();
     expect(eventsCount(r.state)).toBe(eventsCount(base) + 1);
