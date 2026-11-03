@@ -790,7 +790,7 @@ test('members list: more than a page is paged; a search or filter goes back to p
   await noHScroll(page);
   // a search shows what matches from page 1; clearing it goes back to the first page of everyone
   await page.getByLabel('Search members').fill('Sinta');
-  await expect(page.locator('[data-member]')).toHaveCount(7);
+  await expect(page.locator('[data-member]')).toHaveCount(8); // the seven new ones and Opa Hendra, whose second daughter is Sinta Halim (round 17)
   await expect(page.getByRole('navigation', { name: 'Members pages' })).toHaveCount(0);
   await page.getByLabel('Search members').fill('');
   await expect(page.locator('[data-member]')).toHaveCount(10);

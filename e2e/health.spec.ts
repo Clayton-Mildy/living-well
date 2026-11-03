@@ -299,7 +299,7 @@ test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-che
   const banner = page.getByRole('status').filter({ hasText: 'Above the alert line' });
   await expect(banner.getByTestId('status-badge')).toHaveAttribute('data-status', 'alert');
   await expect(banner).toContainText('Blood pressure 164/98.');
-  const tell = page.getByRole('switch', { name: 'Tell Cynthia and Stephanie now' });
+  const tell = page.getByRole('switch', { name: 'Tell Cynthia, Sinta and Stephanie now' });
   await expect(tell).toHaveAttribute('aria-checked', 'true');
   await expect(page.getByRole('switch', { name: /Re-check in/ })).toHaveCount(0); // no re-check reminder: nothing is "due"
   // a quick note and a free-text note
@@ -321,7 +321,7 @@ test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-che
   const s = await stateOf(page, 's8');
   const rd = Object.values<any>(s.readings).find((r) => r.memberId === 'm2' && r.date === T);
   expect(rd).toMatchObject({ kind: 'arrival', sys: 164, dia: 98, pulse: 84, status: 'alert', takenBy: 's8', createdBy: 'staff:s8', noteKeys: ['rested'], note: 'Sat down first, felt fine', shared: true });
-  expect(rd.familyTold.familyIds).toEqual(['fm2_0', 'fm2_1']);
+  expect(rd.familyTold.familyIds).toEqual(['fm2_0', 'f_sinta', 'fm2_1']);
   expect(s.attendance[`${T}:m2`].recheckDueAt).toBeUndefined();
   // Messages is gone: nothing is posted, the club tells the family on WhatsApp (simulated) and the update is in their bell, linking to Health
   expect(Object.keys(s.threads)).toHaveLength(0);
@@ -348,7 +348,7 @@ test('Hendra: Read PC-303 gives 164/98 (Alert), tell-the-family is on (no re-che
   await expect(card.getByText(/Saved at \d\d:\d\d by Ns\. Dewi/)).toBeVisible();
   await expect(card.getByText('Rested 5 minutes first', { exact: true })).toBeVisible();
   await expect(card.getByText('Sat down first, felt fine')).toBeVisible();
-  await expect(card.getByText(/Family told at \d\d:\d\d: Cynthia and Stephanie/)).toBeVisible();
+  await expect(card.getByText(/Family told at \d\d:\d\d: Cynthia, Sinta and Stephanie/)).toBeVisible();
   await expect(card.getByText('164/98', { exact: true })).toBeVisible();
   // and the next check suggested for him is the re-check
   c.assertClean();
@@ -920,7 +920,7 @@ test('Readings: a member’s record day by day, back in time: the arrows go to t
   await expect(hist.getByTestId('history-empty')).toContainText('No readings on Sat 17 Oct.');
   await expect(hist.getByTestId('reading-card')).toHaveCount(0);
   await page.getByRole('button', { name: 'Earlier reading day' }).click(); // from a day without readings: the nearest before
-  await expect(fieldText(page, /^Reading day,/)).toContainText('Fri 16 Oct 2026');
+  await expect(fieldText(page, /^Reading day,/)).toContainText('Wed 14 Oct 2026'); // round 17: Opa Hendra's 15th and 16th are not visit days any more
   await pickDate(page, /^Reading day,/, '2026-10-17');
   await page.getByRole('button', { name: 'Later reading day' }).click();
   await expect(fieldText(page, /^Reading day,/)).toContainText('Mon 19 Oct 2026');
@@ -1042,7 +1042,7 @@ test('Indonesian: the list, the chips, the result banner, the dialogs and the re
   const banner = page.getByRole('status').filter({ hasText: 'Di atas batas waspada' });
   await expect(banner.getByTestId('status-badge')).toContainText('Waspada');
   await expect(banner).toContainText('Tekanan darah 164/98.');
-  await expect(page.getByRole('switch', { name: 'Kabari Cynthia dan Stephanie sekarang' })).toBeVisible();
+  await expect(page.getByRole('switch', { name: 'Kabari Cynthia, Sinta dan Stephanie sekarang' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Istirahat 5 menit dulu' })).toBeVisible();
   await expect(page.getByText('Bagikan catatan ke keluarga')).toBeVisible();
   await expect(d.getByRole('button', { name: 'Tutup', exact: true })).toBeVisible();
@@ -1059,7 +1059,7 @@ test('Indonesian: the list, the chips, the result banner, the dialogs and the re
   await expect(dd.getByText('Hasil ukur hari ini · 1')).toBeVisible();
   const card = await openCard(dd, 'Cek kedatangan');
   await expect(card.getByText(/Disimpan \d\d:\d\d oleh Ns\. Dewi/)).toBeVisible();
-  await expect(card.getByText(/Keluarga dikabari pukul \d\d:\d\d: Cynthia dan Stephanie/)).toBeVisible();
+  await expect(card.getByText(/Keluarga dikabari pukul \d\d:\d\d: Cynthia, Sinta dan Stephanie/)).toBeVisible();
   await card.getByRole('button', { name: 'Ubah hasil ukur' }).click();
   const ed = page.getByRole('dialog', { name: 'Ubah hasil ukur' });
   await expect(ed.getByRole('button', { name: 'Salah ketik' })).toBeVisible();

@@ -262,7 +262,7 @@ test.describe('menu of the day', () => {
     const st = await stateOf(page, 's9');
     const told = Object.values<{ kind: string; toUsers: string[] }>(st.notifications).filter((x) => x.kind === 'kitchen.notif.lunchPhoto');
     expect(told).toHaveLength(1);
-    expect([...told[0].toUsers].sort()).toEqual(['fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']);
+    expect([...told[0].toUsers].sort()).toEqual(['f_sinta', 'fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']);
     // a picture on the Lunch card opens in the viewer (round 14)
     await laras.page.getByTestId('lunch-photos').locator('[data-photo-id]').first().click();
     await expect(laras.page.getByTestId('family-viewer')).toBeVisible();

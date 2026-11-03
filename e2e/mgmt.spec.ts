@@ -204,12 +204,12 @@ test('broadcast: audiences are people, the preview follows the chosen recipient,
   const c = watchConsole(page);
   await signIn(page, 's9', '/broadcast');
   await expect(page.getByRole('heading', { name: 'Broadcast', level: 1 })).toBeVisible();
-  // audience counts are real people with a phone (6 families, 4 open leads, 9 staff: round 16 added the Owner)
-  await expect(page.getByRole('button', { name: 'Families · 6' })).toHaveAttribute('aria-pressed', 'true');
+  // audience counts are real people with a phone (7 families, 4 open leads, 9 staff: round 16 added the Owner)
+  await expect(page.getByRole('button', { name: 'Families · 7' })).toHaveAttribute('aria-pressed', 'true');
   await expect(page.getByRole('button', { name: 'Enquiries · 4' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Staff · 9' })).toBeVisible();
   await page.getByRole('button', { name: 'Staff · 9' }).click();
-  await expect(page.getByRole('button', { name: 'Families · 6' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Families · 7' })).toBeVisible();
   await page.getByRole('button', { name: 'Staff · 9' }).click(); // off again
   // the preview is for a chosen recipient, not a fixed name
   await page.getByRole('button', { name: 'Club update' }).click();
@@ -223,12 +223,12 @@ test('broadcast: audiences are people, the preview follows the chosen recipient,
   // dates are computed from today (Wed 21 Oct): Tomorrow 08:00 and the next Friday 15:00
   await expect(page.getByRole('button', { name: 'Fri 23 Oct, 15:00' })).toBeVisible();
   await page.getByRole('button', { name: 'Tomorrow, 08:00' }).click();
-  await page.getByRole('button', { name: 'Schedule for 6 people' }).click();
+  await page.getByRole('button', { name: 'Schedule for 7 people' }).click();
   await expect(toast(page, 'Scheduled for Thu 22 Oct, 08:00.')).toBeVisible();
   const row = page.locator('[data-bc="scheduled"]');
   await expect(row).toHaveCount(1);
   await expect(row).toContainText('Club closed: the garden room opens on Monday');
-  await expect(row).toContainText('Families · 6 people · Scheduled · Thu 22 Oct, 08:00');
+  await expect(row).toContainText('Families · 7 people · Scheduled · Thu 22 Oct, 08:00');
   // edit the scheduled message
   await row.getByRole('button', { name: 'Edit' }).click();
   await expect(page.getByText('You are editing a scheduled message.')).toBeVisible();
@@ -251,8 +251,8 @@ test('broadcast: send now; a scheduled message goes out when the demo clock pass
   await signIn(page, 's9', '/broadcast');
   await page.getByPlaceholder('Our new garden room opens on Monday.').fill('the bus leaves at 09:00');
   await page.getByRole('button', { name: 'Event invitation' }).click();
-  await page.getByRole('button', { name: 'Send to 6 people' }).click();
-  await expect(toast(page, 'Sent to 6 people on WhatsApp (demo).')).toBeVisible();
+  await page.getByRole('button', { name: 'Send to 7 people' }).click();
+  await expect(toast(page, 'Sent to 7 people on WhatsApp (demo).')).toBeVisible();
   await expect(page.locator('[data-bc="sent"]').first()).toContainText('Event invitation: the bus leaves at 09:00');
   // schedule for 11:00 today, then move the clock past it
   await page.getByRole('button', { name: 'Club update' }).click();
@@ -260,7 +260,7 @@ test('broadcast: send now; a scheduled message goes out when the demo clock pass
   await page.getByRole('button', { name: 'Pick a date and time' }).click();
   await pickDate(page, /^Date/, '2026-10-21');
   await pickTime(page, /^Time/, '11:00');
-  await page.getByRole('button', { name: 'Schedule for 6 people' }).click();
+  await page.getByRole('button', { name: 'Schedule for 7 people' }).click();
   await expect(toast(page, 'Scheduled for Wed 21 Oct, 11:00.')).toBeVisible();
   await expect(page.locator('[data-bc="scheduled"]')).toHaveCount(1);
   const clock = await request.post('/api/demo/clock', { data: { hm: '11:05' } });
@@ -594,7 +594,7 @@ test('surveys: open a closed survey in full; create, edit as a draft and send a 
   await expect(ed.getByText('Sending closes “October check-in”, the family survey that is live now.')).toBeVisible();
   const count = page.getByTestId('survey-count');
   const picked = page.getByTestId('survey-picked');
-  await expect(count).toHaveText('Goes to 6 families'); // every family with the app is the default
+  await expect(count).toHaveText('Goes to 7 families'); // every family with the app is the default
   // families of chosen members: nobody until someone is picked, then the count follows
   await page.getByRole('button', { name: 'Families of chosen members' }).click();
   await expect(count).toHaveText('Goes to 0 families');
@@ -611,7 +611,7 @@ test('surveys: open a closed survey in full; create, edit as a draft and send a 
   await expect(count).toHaveText('Goes to 2 families');
   await page.getByRole('checkbox', { name: /Opa Budi Wijaya/ }).click(); // off again
   await page.getByRole('checkbox', { name: /Opa Hendra Gunawan/ }).click();
-  await expect(count).toHaveText('Goes to 4 families');
+  await expect(count).toHaveText('Goes to 5 families');
   await expect(picked).toHaveText('2 members chosen');
   // chosen people: six contacts over two pages of five, searchable; the picks of the other choice are kept
   await page.getByRole('button', { name: 'Chosen people' }).click();
@@ -628,7 +628,7 @@ test('surveys: open a closed survey in full; create, edit as a draft and send a 
   await page.getByRole('button', { name: 'Clear selection' }).click();
   await expect(count).toHaveText('Goes to 0 families');
   await page.getByRole('button', { name: 'Families of chosen members' }).click();
-  await expect(count).toHaveText('Goes to 4 families'); // switching back kept the member picks
+  await expect(count).toHaveText('Goes to 5 families'); // switching back kept the member picks
   await page.getByRole('button', { name: 'Save draft' }).click();
   await expect(toast(page, 'Draft saved. Edit it before sending.')).toBeVisible();
   // it lands in Drafts (the tab counts it), with its kind, its questions and who gets it
@@ -636,22 +636,22 @@ test('surveys: open a closed survey in full; create, edit as a draft and send a 
   await expect(page.getByRole('tab', { name: /^Drafts/ })).toContainText('1');
   const draft = page.locator('[data-draft]').filter({ hasText: 'November check-in' });
   await expect(draft).toHaveCount(1);
-  await expect(page.locator('[data-draft-audience]')).toContainText('Families · 3 questions · Families of 2 members · 4 families');
+  await expect(page.locator('[data-draft-audience]')).toContainText('Families · 3 questions · Families of 2 members · 5 families');
   // the draft can be edited: its audience comes back, and it can change
   await draft.click();
   const again = page.getByRole('dialog', { name: 'Edit draft' });
   await expect(again.getByLabel('Title')).toHaveValue('November check-in');
-  await expect(count).toHaveText('Goes to 4 families');
+  await expect(count).toHaveText('Goes to 5 families');
   await expect(picked).toHaveText('2 members chosen');
   await again.getByLabel('Title').fill('November check-in 2026');
-  await page.getByRole('button', { name: 'Send to 4 families' }).click();
-  await expect(toast(page, 'Survey sent to 4 families on WhatsApp (demo), with a link into the app.')).toBeVisible();
+  await page.getByRole('button', { name: 'Send to 5 families' }).click();
+  await expect(toast(page, 'Survey sent to 5 families on WhatsApp (demo), with a link into the app.')).toBeVisible();
   // Live: the new family survey replaced October; the venue survey is still live (sending closes only the same kind)
   await expect(page.getByRole('tab', { name: /^Live/ })).toHaveAttribute('aria-selected', 'true');
   const nov = card('November check-in 2026');
   await expect(page.getByText('Live · sent Wed 21 Oct')).toBeVisible();
-  await expect(nov).toContainText('Sent to: Families of 2 members · 4 families');
-  await expect(nov).toContainText('0 of 4 answered');
+  await expect(nov).toContainText('Sent to: Families of 2 members · 5 families');
+  await expect(nov).toContainText('0 of 5 answered');
   await expect(card('Venue rating')).toBeVisible();
   await expect(page.getByText('October check-in', { exact: true })).toHaveCount(0);
   // October is now in the Log, closed because a newer survey was sent
@@ -672,7 +672,7 @@ test('surveys: open a closed survey in full; create, edit as a draft and send a 
   // a family that was not chosen has nothing to answer
   const notChosen = await page.request.post('/api/actions/survey.answer', { headers: { 'x-user-id': 'fm20_0' }, data: { mutationId: 'e2e-sv-3', input: { surveyId: 'sv2', overall: 4 } } });
   expect(notChosen.status()).toBe(403);
-  await expect(nov).toContainText('1 of 4 answered');
+  await expect(nov).toContainText('1 of 5 answered');
   // the answer is counted: overall, recommend and the rating for Caca (the comment question was switched off, so nothing is kept for it)
   await expect(nov).toContainText('1 answer');
   await expect(nov).toContainText('5.0 / 5');
@@ -683,7 +683,7 @@ test('surveys: open a closed survey in full; create, edit as a draft and send a 
   await full.getByRole('tab', { name: 'Responses' }).click();
   await expect(full.locator('[data-response]')).toHaveCount(1);
   await expect(full.locator('[data-response]')).toContainText('Maria Wijaya');
-  await expect(full.getByText('Waiting for 3')).toBeVisible();
+  await expect(full.getByText('Waiting for 4')).toBeVisible();
   await closeDetail(page, full);
   // close it
   await nov.getByRole('button', { name: 'Close survey' }).click();
@@ -709,7 +709,7 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
   const section = page.getByTestId('survey-custom');
   const rows = page.locator('[data-custom-q]');
   const dlg = page.getByRole('dialog', { name: /^(New|Edit) question$/ });
-  await expect(page.getByRole('button', { name: /^Send to 6 families/ })).toBeEnabled(); // overall alone is a survey
+  await expect(page.getByRole('button', { name: /^Send to 7 families/ })).toBeEnabled(); // overall alone is a survey
   // a mistake shows when Save is tapped, and nothing is added
   await section.getByRole('button', { name: 'Add a question' }).click();
   await dlg.getByRole('button', { name: 'Add question' }).click();
@@ -770,8 +770,8 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
   await expect(page.getByRole('dialog', { name: 'Edit draft' })).toBeVisible();
   await expect(rows).toHaveCount(4);
   await expect(rows.nth(1)).toContainText('Which evening suits the family?');
-  await page.getByRole('button', { name: 'Send to 6 families' }).click();
-  await expect(toast(page, 'Survey sent to 6 families on WhatsApp (demo), with a link into the app.')).toBeVisible();
+  await page.getByRole('button', { name: 'Send to 7 families' }).click();
+  await expect(toast(page, 'Survey sent to 7 families on WhatsApp (demo), with a link into the app.')).toBeVisible();
 
   // Maria answers on her phone: required questions first
   const fam = await otherSession(browser);
@@ -802,7 +802,7 @@ test('surveys: your own questions (stars, yes or no, choice, text): build, check
   await page.getByRole('tab', { name: /^Live/ }).click();
   await page.getByText('Menu check', { exact: true }).locator('xpath=..').getByRole('button', { name: 'See details' }).click();
   const detail = page.getByRole('dialog', { name: 'Menu check' });
-  await expect(detail.getByText('6 of 6 answered').first()).toBeVisible();
+  await expect(detail.getByText('6 of 7 answered').first()).toBeVisible();
   const res = detail.getByTestId('survey-results');
   await expect(res.locator('[data-result="q1"]')).toContainText('4.3 / 5'); // 4, 5, 3, 4, 5, 5
   await expect(res.locator('[data-result="q1"]')).toContainText('6 answers');
@@ -993,7 +993,7 @@ test('Indonesian: every management screen is translated, with no raw keys and no
   await noRawKeys(page);
   await assertNoHorizontalScroll(page);
   const checks: [string, string, RegExp[]][] = [
-    ['/broadcast', 'Siaran', [/Templat WhatsApp/, /Keluarga · 6/, /Kirim ke 6 orang/]],
+    ['/broadcast', 'Siaran', [/Templat WhatsApp/, /Keluarga · 7/, /Kirim ke 7 orang/]],
     ['/venue', 'Pemesanan venue', [/Acara luar/, /Pemesanan baru/, /Terkonfirmasi · di kalender/]],
     ['/hr', 'SDM', [/Data staf/, /Tambah staf/]],
     ['/surveys', 'Survei', [/Tingkat respons/, /Dikirim ke: Semua keluarga yang memakai aplikasi · 4 keluarga/, /Penyewa venue/, /3 tautan penilaian terkirim/, /Berjalan · dikirim/]],
@@ -1039,8 +1039,8 @@ test('Indonesian: every management screen is translated, with no raw keys and no
   await pick.locator('[data-pick-survey="blank-family"]').click();
   const ed = page.getByRole('dialog', { name: 'Survei baru' });
   await expect(ed.getByText('Siapa yang menerima')).toBeVisible();
-  await expect(ed.getByText('Dikirim ke 6 keluarga')).toBeVisible();
-  await expect(ed.getByRole('button', { name: 'Kirim ke 6 keluarga' })).toBeVisible();
+  await expect(ed.getByText('Dikirim ke 7 keluarga')).toBeVisible();
+  await expect(ed.getByRole('button', { name: 'Kirim ke 7 keluarga' })).toBeVisible();
   await expect(ed.getByRole('button', { name: 'Simpan draf' })).toBeVisible();
   await expect(ed.getByRole('button', { name: 'Simpan sebagai templat' })).toBeVisible();
   await noRawKeys(page, RAW_KEY_R7);

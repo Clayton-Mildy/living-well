@@ -535,6 +535,7 @@ test('A member with no invoice gets an empty state, not a crash', async ({ page,
   const { memberId, familyId } = (await made.json()).result as { memberId: string; familyId: string };
   expect(Object.values((await snapshot(request, 's9')).invoices as Record<string, { memberId: string }>).filter((i) => i.memberId === memberId)).toHaveLength(0);
   const c = watchConsole(page);
+  expect((await api(request, familyId, 'terms.agree', { version: 1 })).ok()).toBe(true); // a new contact meets the terms page first (round 17)
   await signIn(page, familyId, '/today');
   await expect(hero(page)).toBeVisible(); // Today renders without an invoice (bills are under Me)
   await expect(page.getByTestId('invoice-card')).toHaveCount(0);
