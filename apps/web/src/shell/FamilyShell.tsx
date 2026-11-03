@@ -7,6 +7,7 @@ import { Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { Icon, Logo, PageSkeleton } from '../components/ui';
 import { FAMILY_TAB_OF, FAMILY_NAV } from '../app/nav';
 import { familyBill } from '@cp/shared/rules/familyMe';
+import { needsTerms } from '@cp/shared/rules/terms';
 import { useT } from '../lib/i18n';
 import { useMe } from '../lib/me';
 import { useNow } from '../lib/clock';
@@ -16,6 +17,8 @@ import { readPref, writePref } from '../store/session';
 import { useDevice } from '../hooks/useDevice';
 import { NotificationPanel, UrgentToasts, useBell } from './Notifications';
 import { DemoPill } from './DemoPanel';
+import { TermsGate } from '../features/family/TermsGate';
+import { useFamilyUser } from '../features/family/useFamily';
 import { Toast, useKeyFromPath } from './AppShell';
 
 /** KC round 10: the family's text size ("Default" or "Larger"), kept per person. "Larger" lifts the page's zoom (global.css html[data-text="large"]). */
@@ -43,6 +46,11 @@ export function FamilyShell() {
   const mainRef = useRef<HTMLElement>(null);
   useEffect(() => { mainRef.current?.scrollTo({ top: 0 }); }, [pathname]);
   const tab = FAMILY_TAB_OF[key] || key; // a pushed page (Billing, Contacts, a profile, history) keeps its tab lit
+  // round 17 (KC): terms to agree to (first sign-in, or a newer version) come before the app; the server refuses the contact's other actions until then
+  const s = useClub();
+  const me = useFamilyUser();
+  const gate = me ? needsTerms(s, s.familyContacts[me.id] ?? me.contact) : null;
+  if (gate) return <><TermsGate kind={gate} /><Toast phone={isPhone} /></>;
   return (
     <div data-shell="family" style={{ position: 'fixed', inset: 0, background: '#FFFFFF', color: '#24201C', display: 'flex' }}>
       {!isPhone ? <FamSidebar current={tab} onBell={() => setBell(true)} /> : null}
