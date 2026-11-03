@@ -450,7 +450,7 @@ export const scheduleActions = [
       const fee = ev.fee ?? 0;
       for (const m of want) {
         if (fee <= 0 || d.pendingCharges[chargeId(m)]) continue;
-        d.pendingCharges[chargeId(m)] = { id: chargeId(m), clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: m, amount: fee, label: `Field trip · ${ev.title} · ${fmtDMY(ev.date)}` };
+        d.pendingCharges[chargeId(m)] = { id: chargeId(m), clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: m, amount: fee, label: 'inv.line.fieldTrip', params: { title: ev.title, date: ev.date }, source: { type: 'event', id: ev.id } };
       }
       ev.wentIds = want;
     },

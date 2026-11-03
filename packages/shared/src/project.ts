@@ -79,7 +79,9 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   out.refunds = pick(live(s.refunds).filter((r) => invIds.has(r.invoiceId)));
   // their own feedback, and feedback the kitchen logged from a phone call whose replies go to them (KC round 6: replies show in the family app)
   out.feedback = pick(live(s.feedback).filter((f) => f.familyId === familyId || (!f.familyId && replyTarget(s, f) === familyId)));
-  out.calendarEvents = pick(live(s.calendarEvents));
+  // round 17: who went on an outing is the family's own members only; the charges still waiting for the next invoice are theirs too
+  out.calendarEvents = pick(live(s.calendarEvents).map((e) => (e.wentIds ? { ...e, wentIds: e.wentIds.filter((id) => mids.includes(id)) } : e)));
+  out.pendingCharges = pick(mine(live(s.pendingCharges)).filter((c) => !c.invoiceId));
   out.rooms = pick(live(s.rooms));
   out.activities = pick(live(s.activities));
   out.scheduleVersions = pick(live(s.scheduleVersions).filter((v) => v.status === 'published'));

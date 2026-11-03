@@ -68,3 +68,22 @@ describe('projectForFamily: members tagged in a photo', () => {
     expect(view.members.m1.spouseId).toBe(s.members.m1.spouseId);
   });
 });
+
+describe('projectForFamily: pending charges and field trip attendance (round 17)', () => {
+  const base = buildSeed(DEMO_TODAY, DEMO_START_MIN, { roster: true }).citra;
+  const row = (id: string, memberId: string, invoiceId?: string) => ({ id, clubId: base.clubId, createdAt: `${DEMO_TODAY}T09:00`, createdBy: 'staff:s9' as const, memberId, amount: 250_000, label: 'inv.line.fieldTrip', ...(invoiceId ? { invoiceId } : {}) });
+  const s = produce(base, (d) => {
+    d.pendingCharges = { c1: row('c1', 'm1'), c2: row('c2', 'm1', 'INV-X'), c3: row('c3', 'm46'), c4: row('c4', 'm20') };
+    const ev = live(d.calendarEvents).find((e) => e.kind === 'outing')!;
+    d.calendarEvents[ev.id].wentIds = ['m1', 'm46', 'm20'];
+  });
+  const view = projectForFamily(s, 'f1');
+  it("carries only the family's own members' un-invoiced charges", () => {
+    expect(live(view.pendingCharges).map((c) => c.id).sort()).toEqual(['c1', 'c3']);
+  });
+  it("shows an outing's attendance for the family's own members only", () => {
+    const ev = live(view.calendarEvents).find((e) => e.kind === 'outing')!;
+    expect(ev.wentIds).toEqual(['m1', 'm46']);
+    expect(live(s.calendarEvents).find((e) => e.id === ev.id)!.wentIds).toEqual(['m1', 'm46', 'm20']);
+  });
+});

@@ -156,7 +156,7 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
     if (extra.length) lines.push({ id: `extra-${prev}`, kind: 'extraDay', label: 'inv.line.extra', params: { month: prev, n: extra.length }, qty: extra.length, unit: price.extra, amount: extra.length * price.extra, refMonth: prev, dates: extra });
   }
   for (const c of live(s.pendingCharges).filter((c) => c.memberId === m.id && !c.invoiceId)) {
-    lines.push({ id: `charge-${c.id}`, kind: 'adjustment', label: c.label, qty: 1, unit: c.amount, amount: c.amount });
+    lines.push({ id: `charge-${c.id}`, kind: 'adjustment', label: c.label, ...(c.params ? { params: c.params } : {}), qty: 1, unit: c.amount, amount: c.amount });
   }
   const credit = accountCredit(s, m.id);
   if (credit > 0 && lines.length) lines.push({ id: 'credit', kind: 'credit', label: 'inv.line.credit', qty: 1, unit: -credit, amount: -Math.min(credit, sum(lines.map((l) => l.amount))) });

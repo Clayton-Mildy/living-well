@@ -993,7 +993,8 @@ describe('round 16: field trip fee and who went', () => {
     let { s, id } = outing(fresh());
     expect(s.calendarEvents[id].fee).toBe(250_000);
     s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m1', 'm2'] }, 's5').state;
-    expect(charges(s, id).map((c) => [c.memberId, c.amount, c.label])).toEqual([['m1', 250_000, 'Field trip · Ancol aquarium · 21/10/2026'], ['m2', 250_000, 'Field trip · Ancol aquarium · 21/10/2026']]);
+    expect(charges(s, id).map((c) => [c.memberId, c.amount, c.label])).toEqual([['m1', 250_000, 'inv.line.fieldTrip'], ['m2', 250_000, 'inv.line.fieldTrip']]);
+    expect(s.pendingCharges[`trip-${id}-m1`]).toMatchObject({ params: { title: 'Ancol aquarium', date: '2026-10-21' }, source: { type: 'event', id } });
     expect(runLinesFor(s, s.members.m1, '2026-11', '2026-10-21').some((l) => l.id === `charge-trip-${id}-m1` && l.amount === 250_000)).toBe(true);
     s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m1'] }, 's5').state;
     expect(charges(s, id).map((c) => c.memberId)).toEqual(['m1']);

@@ -912,7 +912,9 @@ export interface Refund extends Row {
 export interface PendingCharge extends Row {
   memberId: string;
   amount: number;
-  label: string;
+  label: string; // an i18n key (round 17); old free text still renders as it is
+  params?: Record<string, string | number>;
+  source?: { type: 'event' | 'celebration'; id: string }; // the outing or the celebration this charge came from, so it can re-price or remove its own charges
   invoiceId?: string;
 }
 

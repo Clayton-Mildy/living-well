@@ -210,6 +210,14 @@ describe('invoice run', () => {
     w.run('invoice.void', { invoiceId: 'INV-2611-010', reason: 'Re-issue' }, 's10');
     expect(w.s.pendingCharges.pc1.invoiceId).toBeUndefined();
   });
+  it('a pending charge with an i18n label and params gives a line with the same label and params', () => {
+    const base = buildSeed().citra;
+    const params = { title: 'Ancol aquarium', date: '2026-10-21' };
+    const s: ClubState = { ...base, pendingCharges: { pc2: { id: 'pc2', clubId: 'citra', createdAt: `${T}T09:00`, createdBy: 'staff:s9', memberId: 'm10', amount: 250_000, label: 'inv.line.fieldTrip', params, source: { type: 'event', id: 'ev1' } } } };
+    const w = world(s);
+    issueNov(w);
+    expect(w.s.invoices['INV-2611-010'].lines.find((l) => l.id === 'charge-pc2')).toMatchObject({ kind: 'adjustment', amount: 250_000, label: 'inv.line.fieldTrip', params });
+  });
   it('skips members without a billing contact and says so', () => {
     const base = buildSeed().citra;
     const noPayer: ClubState = { ...base, familyLinks: Object.fromEntries(Object.entries(base.familyLinks).filter(([, l]) => l.memberId !== 'm10')) };

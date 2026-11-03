@@ -4,7 +4,6 @@
 // Fixed values, no random draws; the same for 5 and 45 members.
 import type { ClubState, ISODate } from '../../types';
 import { addDays, addMonths, DEMO_TODAY, isWeekday, live } from '../../util';
-import { fmtDMY } from '../../rules/calendar';
 import { dayStatus } from '../../rules/core';
 
 export function seedRound16(s: ClubState, T: ISODate): void {
@@ -20,7 +19,7 @@ export function seedRound16(s: ClubState, T: ISODate): void {
     trip.wentIds = ['m1', 'm46'].filter((id) => s.members[id] && !s.members[id].deletedAt);
     for (const m of trip.wentIds) {
       const id = `trip-${trip.id}-${m}`;
-      s.pendingCharges[id] = { id, clubId: trip.clubId, createdAt: `${trip.date}T15:00:00`, createdBy: 'staff:s1', memberId: m, amount: 250_000, label: `Field trip · ${trip.title} · ${fmtDMY(trip.date)}` };
+      s.pendingCharges[id] = { id, clubId: trip.clubId, createdAt: `${trip.date}T15:00:00`, createdBy: 'staff:s1', memberId: m, amount: 250_000, label: 'inv.line.fieldTrip', params: { title: trip.title, date: trip.date }, source: { type: 'event', id: trip.id } };
     }
   }
   seedOwnerHoliday(s, T);
