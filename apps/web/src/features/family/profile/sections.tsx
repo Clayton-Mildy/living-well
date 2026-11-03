@@ -354,16 +354,27 @@ export function FamilySection({ p, id }: SecProps) {
   const rows = contactsOfMember(s, m.id).filter(({ link, contact }) => !isPendingRow(link) && !isPendingRow(contact));
   const circle: CSSProperties = { width: 40, height: 40, borderRadius: 999, border: 'none', background: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', color: F.bronze, textDecoration: 'none', flex: 'none' };
   const nannyWa = m.nanny?.phone ? waUrl(m.nanny.phone) : '';
+  const spouse = m.spouseId ? s.members[m.spouseId] : undefined; // round 17: the spouse is a member too, listed first (no link, no edit)
+  const spouseShown = spouse && !spouse.deletedAt ? spouse : undefined;
   return (
     <Sec id={id}>
       <SectionHead>{t('fhealth.jump.family')}</SectionHead>
       <List testId="pf-family">
+        {spouseShown ? (
+          <div data-testid="pf-spouse" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px' }}>
+            <Avatar name={memberName(spouseShown)} size={40} src={memberPhoto(spouseShown)} />
+            <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+              <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{memberName(spouseShown)}</span>
+              <span style={{ fontSize: 13, color: F.muted }}>{t('profile.spouseRow')} · {t('profile.memberTag')}</span>
+            </span>
+          </div>
+        ) : null}
         {rows.map(({ link, contact }, i) => {
           const me = contact.id === userId;
           const wa = waUrl(contact.phone);
           const line = [relLabel(t, link.relation), link.primary ? t('fhealth.paysBills') : '', link.appAccess ? t('fhealth.usesApp') : t('fhealth.noApp')].filter(Boolean).join(' · ');
           return (
-            <div key={link.id} data-testid="pf-contact" data-family-id={contact.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px', borderTop: i ? HAIR : 'none' }}>
+            <div key={link.id} data-testid="pf-contact" data-family-id={contact.id} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '10px 10px 10px 14px', borderTop: i || spouseShown ? HAIR : 'none' }}>
               <Avatar name={contact.name} size={40} src={memberPhoto(contact)} />
               <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 15, fontWeight: 500, color: F.text, overflowWrap: 'anywhere' }}>{contact.name}</span>

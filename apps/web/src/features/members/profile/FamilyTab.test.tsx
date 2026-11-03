@@ -1,10 +1,10 @@
 // Family tab (round 15): a contact's photo shows on its row, and the member's carer is listed after the contacts (photo, name, phone, "Carer (suster)").
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { afterEach, beforeAll, describe, expect, it } from 'vitest';
 import { produce } from 'immer';
-import { buildSeed, getUser, type ClubState } from '@cp/shared';
+import { buildSeed, getUser, memberName, type ClubState } from '@cp/shared';
 import { useReplica } from '../../../store/replica';
 import { useSession } from '../../../store/session';
 import { useT, useFmt } from '../../../lib/i18n';
@@ -27,13 +27,14 @@ afterEach(async () => {
   document.body.innerHTML = '';
 });
 
+function Loc() { return <span data-testid="loc" hidden>{useLocation().pathname}</span>; }
 function Harness({ state, memberId, uid, role }: { state: ClubState; memberId: string; uid: string; role: string }) {
   const t = useT();
   const fmt = useFmt();
   const doAct = useAct();
   const me = getUser(buildSeed(), uid)!;
   const p = { s: state, m: state.members[memberId], today: T, nowMin: 600, t, fmt, lang: 'en', audience: 'staff', family: false, role, me, mgmt: role === 'mgmt', pending: [], mine: [], act: doAct, canEdit: true, isPhone: false, open: () => {}, go: () => {} } as unknown as P;
-  return <FamilyTab p={p} />;
+  return <><FamilyTab p={p} /><Loc /></>;
 }
 const acts: { name: string; input: unknown }[] = [];
 async function show(state: ClubState, memberId = 'm1', uid = 's1', role = 'lobby') {
@@ -110,5 +111,75 @@ describe('round 17: Make billing contact', () => {
     await show(s, 'm1', 's10', 'finance');
     expect(rowOf('f2')).toBeTruthy();
     expect(makeBtn('f2')).toBeUndefined();
+  });
+});
+
+describe('round 17: the spouse in the Family tab', () => {
+  const couple = () => produce(buildSeed().citra, (d) => { d.members.m1.spouseId = 'm46'; });
+  const row = () => document.querySelector('[data-testid="fam-spouse"]') as HTMLElement | null;
+  const btn = (label: string) => Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => (b.textContent ?? '').trim().endsWith(label)); // the icon name is part of the text
+  const pickIn = async (name: string) => {
+    await act(async () => { document.querySelector<HTMLElement>('[role="dialog"] [role="combobox"]')!.click(); });
+    await act(async () => { Array.from(document.querySelectorAll<HTMLElement>('[role="option"]')).find((o) => o.getAttribute('aria-label') === name)!.click(); });
+  };
+  it('the spouse is the first row of the family card, with a Member tag; tapping it opens their profile', async () => {
+    const s = couple();
+    await show(s, 'm1', 's1', 'lobby');
+    const r = row()!;
+    expect(r).toBeTruthy();
+    expect(r.textContent).toContain(memberName(s.members.m46));
+    expect(r.textContent).toContain('Spouse');
+    expect(r.textContent).toContain('Member');
+    expect(r.nextElementSibling?.getAttribute('data-testid')).toBe('fam-contact'); // before every contact
+    expect(r.compareDocumentPosition(document.querySelector('[data-testid="fam-contact"]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    await act(async () => { r.querySelector<HTMLElement>('[data-testid="fam-spouse-open"]')!.click(); });
+    expect(document.querySelector('[data-testid="loc"]')!.textContent).toBe('/members/m46');
+  });
+  it('lobby: Change opens the sheet; picking m2 and saving sends the spouse; Clear sends null', async () => {
+    const s = couple();
+    await show(s, 'm1', 's1', 'lobby');
+    await act(async () => { btn('Change')!.click(); });
+    await pickIn(memberName(s.members.m2));
+    await act(async () => { btn('Save spouse')!.click(); });
+    expect(acts).toEqual([{ name: 'members.updateDetails', input: { memberId: 'm1', patch: { spouseId: 'm2' } } }]);
+    acts.length = 0;
+    expect(document.querySelector('[role="dialog"]')).toBeNull(); // the sheet closed
+    await act(async () => { btn('Change')!.click(); });
+    await act(async () => { btn('Clear spouse')!.click(); });
+    expect(acts).toEqual([{ name: 'members.updateDetails', input: { memberId: 'm1', patch: { spouseId: null } } }]);
+  });
+  it('the sheet lists live members except the member (no pending, no deleted)', async () => {
+    const s = produce(couple(), (d) => { d.members.m10.deletedAt = '2026-10-01T00:00:00Z'; });
+    await show(s, 'm1', 's1', 'mgmt');
+    await act(async () => { btn('Change')!.click(); });
+    await act(async () => { document.querySelector<HTMLElement>('[role="dialog"] [role="combobox"]')!.click(); });
+    const names = Array.from(document.querySelectorAll('[role="option"]')).map((o) => o.getAttribute('aria-label'));
+    expect(names).toContain(memberName(s.members.m2));
+    expect(names).not.toContain(memberName(s.members.m1));
+    expect(names).not.toContain(memberName(s.members.m10));
+  });
+  it('no spouse: no spouse row; lobby sees Set spouse under the card, and saving sends it', async () => {
+    const s = produce(buildSeed().citra, (d) => { d.members.m1.spouseId = null; });
+    await show(s, 'm1', 's1', 'lobby');
+    expect(row()).toBeNull();
+    await act(async () => { btn('Set spouse')!.click(); });
+    expect(btn('Save spouse')!.getAttribute('aria-disabled')).toBe('true'); // nothing picked yet
+    await pickIn(memberName(s.members.m2));
+    await act(async () => { btn('Save spouse')!.click(); });
+    expect(acts).toEqual([{ name: 'members.updateDetails', input: { memberId: 'm1', patch: { spouseId: 'm2' } } }]);
+  });
+  it('a nurse sees the row and no Change, Clear or Set spouse', async () => {
+    await show(couple(), 'm1', 's8', 'nurse');
+    expect(row()).toBeTruthy();
+    expect(btn('Change')).toBeUndefined();
+    const none = produce(buildSeed().citra, (d) => { d.members.m1.spouseId = null; });
+    await act(async () => { root?.unmount(); }); host?.remove(); document.body.innerHTML = '';
+    await show(none, 'm1', 's8', 'nurse');
+    expect(btn('Set spouse')).toBeUndefined();
+  });
+  it('a deleted spouse is not shown', async () => {
+    const s = produce(couple(), (d) => { d.members.m46.deletedAt = '2026-10-01T00:00:00Z'; });
+    await show(s, 'm1', 's1', 'lobby');
+    expect(row()).toBeNull();
   });
 });

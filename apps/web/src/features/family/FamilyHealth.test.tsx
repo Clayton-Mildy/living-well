@@ -164,6 +164,26 @@ describe('family health', () => {
     expect(nanny!.querySelector('a[href="tel:+6281211112222"]')).toBeTruthy();
     expect(q('pf-family')!.querySelector('[data-family-id="f2"]')!.innerHTML).toContain('md_contactphoto01');
   });
+  it('round 17: the spouse is the first row of the family list, a Member row with no link and no edit; no spouse, no row', async () => {
+    open('f1');
+    await show(<FamilyProfile />, '/profile?member=m1');
+    const list = q('pf-family')!;
+    const row = q('pf-spouse')!;
+    expect(row).toBeTruthy();
+    expect(list.firstElementChild).toBe(row);
+    expect(row.textContent).toContain('Budi');
+    expect(row.textContent).toContain('Spouse');
+    expect(row.textContent).toContain('Member');
+    expect(row.querySelector('a, button')).toBeNull();
+    expect(list.querySelector('[data-testid="pf-contact"]')).toBeTruthy(); // the contacts follow
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    const v = useReplica.getState().view!;
+    const view = produce(v, (d) => { d.members.m1.spouseId = null; });
+    useReplica.setState({ confirmed: view, view });
+    await show(<FamilyProfile />, '/profile?member=m1');
+    expect(q('pf-spouse')).toBeNull();
+  });
   it('Profile family section: no carer, no carer row', async () => {
     open('f1');
     const v = useReplica.getState().view!;

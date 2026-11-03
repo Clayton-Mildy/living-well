@@ -2,15 +2,17 @@
 // this member, each contact's sign-in username (read-only; a family member sees only their own), management's "Reset password",
 // "Message on WhatsApp" (a wa.me link per contact: the club talks to families on WhatsApp, there is no in-app inbox) and (lobby, management) edit / add / link / remove contacts.
 import { useState } from 'react';
-import { contactsOfMember, fmtPhone, hasKey, isPendingRow, linksOfFamily, displayName, waUrl, type FamilyContact, type Member } from '@cp/shared';
+import { useNavigate } from 'react-router-dom';
+import { contactsOfMember, fmtPhone, hasKey, isPendingRow, linksOfFamily, displayName, memberName, waUrl, type FamilyContact, type Member } from '@cp/shared';
 import { Avatar, Button, Icon, Sheet } from '../../../components/ui';
 import { api, ApiError } from '../../../lib/api';
-import { mediaUrl } from '../../../lib/media';
+import { mediaUrl, memberPhoto } from '../../../lib/media';
 import { say } from '../../../store/ui';
 import { NannyAvatar, NannyPhotoSheet } from '../ProfilePhoto';
 import { HAIR, relLabel } from '../lib';
 import { ConfirmDialog } from '../../kitchen/parts';
 import { ListCard, PendingBanner, Tag28 } from './parts';
+import { SpouseSheet } from './SpouseSheet';
 import type { P } from './types';
 
 export function FamilyTab({ p }: { p: P }) {
@@ -24,6 +26,11 @@ export function FamilyTab({ p }: { p: P }) {
   // round 17: lobby, finance and management hand the billing role to another approved contact (family.setPrimary, at once; unpaid invoices follow)
   const canBill = !p.family && (p.role === 'lobby' || p.role === 'finance' || p.role === 'mgmt');
   const [bill, setBill] = useState<FamilyContact | null>(null);
+  // round 17: the spouse (also a member) is the first row; front desk and management set, change or clear it
+  const navigate = useNavigate();
+  const [spouseOpen, setSpouseOpen] = useState(false);
+  const spouse = m.spouseId ? s.members[m.spouseId] : undefined;
+  const spouseShown = spouse && !spouse.deletedAt ? spouse : undefined;
   const doBill = async () => {
     if (!bill) return;
     const r = await p.act('family.setPrimary', { memberId: m.id, familyId: bill.id }, { ok: t('family.passedT', { n: bill.firstName }) });
@@ -48,11 +55,25 @@ export function FamilyTab({ p }: { p: P }) {
     <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 14 : 'clamp(18px, 2.8vw, 28px)', maxWidth: 860 }}>
       <PendingBanner p={p} tab="family" />
       <ListCard phone={ph} title={t('profile.familyTitle')}>
+        {spouseShown ? (
+          <div data-testid="fam-spouse" style={{ display: 'flex', alignItems: 'center', gap: '10px 14px', padding: '18px 0', flexWrap: 'wrap' }}>
+            <button type="button" data-testid="fam-spouse-open" onClick={() => navigate(`/members/${spouseShown.id}`)} className="cp-press"
+              style={{ flex: '1 1 200px', minWidth: 0, minHeight: 46, display: 'flex', alignItems: 'center', gap: 14, padding: 0, border: 'none', background: 'none', textAlign: 'left', fontFamily: 'Inter', color: '#24201C', cursor: 'pointer' }}>
+              <Avatar name={memberName(spouseShown)} size={46} src={memberPhoto(spouseShown)} />
+              <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+                <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{memberName(spouseShown)}</span>
+                <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.spouseRow')}</span>
+              </span>
+            </button>
+            <Tag28 icon="badge" label={t('profile.memberTag')} bg="var(--fill, #F4F4F5)" />
+            {canEdit ? <Button variant="secondary" size={44} icon="edit" onClick={() => setSpouseOpen(true)} label={t('profile.f.spouse')}>{t('profile.changeSpouse')}</Button> : null}
+          </div>
+        ) : null}
         {rows.map(({ link, contact }, idx) => {
           const pending = isPendingRow(link) || isPendingRow(contact);
           const access = link.appAccess && !pending;
           return (
-            <div key={link.id} data-testid="fam-contact" data-family-id={contact.id} style={{ display: 'flex', alignItems: 'center', gap: '10px 14px', padding: '18px 0', borderTop: idx ? HAIR : 'none', flexWrap: 'wrap' }}>
+            <div key={link.id} data-testid="fam-contact" data-family-id={contact.id} style={{ display: 'flex', alignItems: 'center', gap: '10px 14px', padding: '18px 0', borderTop: idx || spouseShown ? HAIR : 'none', flexWrap: 'wrap' }}>
               <Avatar name={contact.name} size={46} src={contact.photoMediaId ? mediaUrl(contact.photoMediaId) : undefined} />
               <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <span style={{ fontSize: 17, fontWeight: 500, lineHeight: 1.4 }}>{contact.name}</span>
@@ -83,6 +104,8 @@ export function FamilyTab({ p }: { p: P }) {
           );
         })}
       </ListCard>
+      {canEdit && !spouseShown ? <div><Button variant="secondary" size={44} icon="favorite" onClick={() => setSpouseOpen(true)}>{t('profile.setSpouse')}</Button></div> : null}
+      {canEdit ? <SpouseSheet key={String(spouseOpen) + (m.spouseId ?? '')} p={p} open={spouseOpen} onClose={() => setSpouseOpen(false)} /> : null}
       {m.nanny ? (
         // round 15 follow-up: the nanny is not family, so she has a card of her own under the family card
         <div data-testid="fam-nanny">
