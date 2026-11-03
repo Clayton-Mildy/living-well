@@ -16,6 +16,7 @@ export const finance: Same<typeof EN> = {
   'err.creditTooLarge': 'Potongan itu lebih besar dari sisa tagihan. Potongan terbesar yang bisa diberikan adalah {max}. Untuk mengembalikan uang, catat pengembalian dana.',
   'err.noAllocation': 'Pembayaran itu tidak dipakai untuk tagihan ini.',
   'err.refundTooMuch': 'Pengembalian dana tidak boleh melebihi yang sudah dibayar. Sisa yang bisa dikembalikan: {max}.',
+  'err.proofMissing': 'Foto belum terunggah. Tambahkan lagi.',
   'err.nothingToPay': 'Tagihan itu sudah lunas.',
   'err.notPending': 'Hal itu sudah diputuskan.',
   'err.notApproved': 'Setujui tagihan terlebih dahulu.',

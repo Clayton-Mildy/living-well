@@ -14,6 +14,7 @@ export const finance = {
   'err.creditTooLarge': 'That credit is more than what is still owed. The most you can credit is {max}. To give money back, record a refund.',
   'err.noAllocation': 'That payment was not applied to this invoice.',
   'err.refundTooMuch': 'A refund can’t be more than what was paid. The most left to refund is {max}.',
+  'err.proofMissing': 'That photo did not upload. Add it again.',
   'err.nothingToPay': 'Those invoices are already paid.',
   'err.notPending': 'That was already decided.',
   'err.notApproved': 'Approve the invoice first.',

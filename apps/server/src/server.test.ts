@@ -490,6 +490,19 @@ describe('demo accounts', () => {
   });
 });
 
+describe('payment proof must be an uploaded photo', () => {
+  const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+  const pay = (proofMediaId: string) => app.request('/api/actions/payment.record', json({ mutationId: `proof-${Math.random().toString(36).slice(2)}`, club: 'citra', input: { memberId: 'm1', amount: 1000, method: 'cash', proofMediaId } }, 's9'));
+  it('refuses a proof that was never uploaded, and takes the id that POST /api/media returned', async () => {
+    const missing = await pay('md_' + 'a'.repeat(24));
+    expect(missing.status).toBe(422);
+    expect(await j(missing)).toMatchObject({ code: 'finance.err.proofMissing' });
+    const up = await j(await app.request('/api/media', json({ mime: 'image/png', data: PNG }, 's9')));
+    const ok = await pay(up.id);
+    expect(ok.status).toBe(200);
+  });
+});
+
 describe('media (photos)', () => {
   // a 1x1 PNG, and the first bytes of a JPEG and a WebP
   const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';

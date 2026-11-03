@@ -18,7 +18,8 @@ import { copyText, lineLabel, methodLabel, money, stampOf } from './lib';
 import { AdjustForm, PaymentForm, RefundForm } from './forms';
 import { Badge, caps } from './parts';
 import { lastEmail } from '@cp/shared/rules/emails';
-import { memberPhoto } from '../../lib/media';
+import { memberPhoto, mediaUrl } from '../../lib/media';
+import { ImageOpen } from '../../components/ui/ImageLightbox';
 
 export function InvoiceSheet({ invoiceId, open, onClose, audience }: { invoiceId: string; open: boolean; onClose: () => void; audience: 'staff' | 'family' }) {
   const s = useClub();
@@ -198,6 +199,11 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
                     <div style={{ flex: '1 1 160px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
                       <span style={{ fontSize: 16, lineHeight: 1.4 }}>{methodLabel(t, pv.p)}</span>
                       <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{fds(pv.p.receivedOn)}{pv.p.receivedAt ? `, ${pv.p.receivedAt}` : ''}{pv.p.ref ? ` · ${t('finance.pay.ref', { ref: pv.p.ref })}` : ''}</span>
+                      {staff && pv.p.proofMediaId ? (
+                        <ImageOpen src={mediaUrl(pv.p.proofMediaId)} label={t('finance.pay.proof')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--accent, #75624B)', fontWeight: 500, cursor: 'pointer', alignSelf: 'flex-start' }}>
+                          <Icon name="receipt" size={16} />{t('finance.pay.proof')}
+                        </ImageOpen>
+                      ) : null}
                       {!isConfirmed(pv.p) ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.pay.waitingBy', { name: actorName(s, pv.p.by) })}</span> : null}
                     </div>
                     <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}>{rp(a.amount)}</span>

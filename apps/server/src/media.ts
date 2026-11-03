@@ -1,6 +1,6 @@
 // Photos, short videos and PDFs (the paper registration form) from the camera or an upload: validate, store (base64 in the server-only `media` table) and read back.
 import { randomBytes } from 'node:crypto';
-import { eq } from 'drizzle-orm';
+import { and, eq } from 'drizzle-orm';
 import { db } from './db/client';
 import { media } from './db/schema';
 
@@ -73,6 +73,12 @@ export async function loadMedia(id: string): Promise<{ mime: string; bytes: Buff
   if (!/^md_[A-Za-z0-9_-]{20,40}$/.test(id)) return null;
   const [row] = await db.select({ mime: media.mime, data: media.data }).from(media).where(eq(media.id, id)).limit(1);
   return row ? { mime: row.mime, bytes: Buffer.from(row.data, 'base64') } : null;
+}
+
+/** True when a photo with this id was uploaded for this club. */
+export async function mediaExists(clubId: string, id: string): Promise<boolean> {
+  const [row] = await db.select({ id: media.id }).from(media).where(and(eq(media.id, id), eq(media.clubId, clubId))).limit(1);
+  return !!row;
 }
 
 /** A `Range: bytes=a-b` header against a body of `size` bytes: the inclusive range to send, `null` for no (or an unsupported multi-part) range header, `'bad'` when it lies outside the body. */

@@ -15,7 +15,7 @@ import { notaMediaId } from '@cp/shared/seed/demoMedia';
 import { clockInfo, setClock } from './clock';
 import { authUser, publicUser, registerAuthRoutes } from './routes/auth';
 import { registerPublicRoutes } from './routes/public';
-import { byteRange, checkUpload, loadMedia, saveMedia, IMAGE_MIME } from './media';
+import { byteRange, checkUpload, loadMedia, mediaExists, saveMedia, IMAGE_MIME } from './media';
 import { receiptOcr } from './providers/receiptOcr';
 
 export const app = new Hono();
@@ -69,6 +69,11 @@ app.post('/api/actions/:name', async (c) => {
   const clubId = club || u.clubId;
   if (!canAccessClub(u, clubId)) return c.json({ code: 'err.forbidden' }, 403);
   try {
+    // round 17: a payment's proof photo must really have been uploaded (the shared action only checks the id's shape)
+    if (c.req.param('name') === 'payment.record') {
+      const proof = (input as { proofMediaId?: unknown } | null)?.proofMediaId;
+      if (typeof proof === 'string' && proof && !(await mediaExists(clubId, proof))) throw new DomainError('finance.err.proofMissing');
+    }
     const r = await runAction(clubId, c.req.param('name'), input, u, mutationId || `m${Date.now().toString(36)}`);
     return c.json(u.kind === 'family' ? { rev: r.rev, result: r.result, reviewed: r.reviewed } : r);
   } catch (e) {
