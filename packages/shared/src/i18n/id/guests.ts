@@ -10,7 +10,7 @@ export const guests: Same<typeof EN> = {
   g_upcoming: 'Akan datang', g_toPay: 'Belum dibayar', g_paid: 'Lunas', g_cancelled: 'Dibatalkan', g_done: 'Selesai',
   st_booked: 'Terjadwal', st_cancelled: 'Dibatalkan', st_paid: 'Lunas', st_toPay: 'Belum dibayar',
   late: 'Harinya sudah lewat: tandai selesai', overdue: 'Sesi ini pada {date}. Tandai selesai setelah tamu mengajar atau tampil.',
-  issue_closed: 'Klub tutup pada hari itu', issue_outing: 'Hari itu diganti jalan-jalan', issue_noSession: 'Jam itu sekarang tidak ada sesi',
+  issue_closed: 'Klub tutup pada hari itu', issue_outing: 'Hari itu diganti karyawisata', issue_noSession: 'Jam itu sekarang tidak ada sesi',
   empty: 'Belum ada sesi tamu.', emptyHosts: 'Belum ada pengisi acara.', noSessionsHost: 'Belum ada sesi.', inactive: 'Tidak aktif', owes: '{amount} belum dibayar',
   withGuest: 'bersama {name} · tamu', hint: 'Pengisi acara',
   // kinds
@@ -21,7 +21,7 @@ export const guests: Same<typeof EN> = {
   doneToast: 'Ditandai selesai. Keuangan sekarang bisa membayar {name}.', paidToast: '{name} ditandai lunas.', cancelledToast: 'Jadwal dibatalkan.',
   // book sheet
   bookTitle: 'Jadwalkan tamu', editTitle: 'Ubah jadwal', host: 'Pengisi', pickHost: 'Pilih pengisi', newHost: 'Pengisi baru', date: 'Tanggal', session: 'Sesi', pickActivity: 'Pilih kegiatan',
-  errDay: 'Pilih hari buka, hari ini atau setelahnya, tanpa jalan-jalan.', takenBy: 'Sudah dijadwalkan: {name}', changesSlot: 'Ini mengubah kegiatan pukul {slot} pada {date}. Guru dan keluarga dikabari.',
+  errDay: 'Pilih hari buka, hari ini atau setelahnya, tanpa karyawisata.', takenBy: 'Sudah dijadwalkan: {name}', changesSlot: 'Ini mengubah kegiatan pukul {slot} pada {date}. Guru dan keluarga dikabari.',
   notePh: 'Contoh: perlu mikrofon', bookBtn: 'Jadwalkan', booked: '{name} dijadwalkan pada {date}.', saved: 'Jadwal disimpan.',
   // host
   addHostBtn: 'Tambah pengisi', editHost: 'Ubah pengisi', name: 'Nama', kind: 'Jenis', what: 'Keahlian', whatPh: 'Contoh: Pengajar angklung', phone: 'Telepon', usualFee: 'Honor biasa per sesi',

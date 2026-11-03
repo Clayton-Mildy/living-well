@@ -20,7 +20,7 @@ export const report = {
   flexVisit: '{plan} · visit {n} of {q}', gold: '{plan}', extraDay: 'Extra day',
   kindTrial: 'Trial day', kindVisit: 'Visit', gExpected: 'Expected', gNoShow: 'Did not come',
   // activities
-  noSessions: 'No activities on this day', outingNoSessions: 'No activities: the club was on an outing',
+  noSessions: 'No activities on this day', outingNoSessions: 'No activities: the club was on a field trip',
   changed: 'Changed', guestHost: '{name} · guest host',
   joined: '{n} joined', satOut: '{n} sat out', satOutWho: '{n} sat out: {names}', notMarked: '{n} not marked',
   notStarted: 'Not started', running: 'Running now',

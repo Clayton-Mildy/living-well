@@ -222,3 +222,36 @@ describe('round 16: the charges line families see', () => {
     expect(chargesLine({ charges: [{ id: 'a', item: 'Cake', amount: 350_000 }, { id: 'b', item: 'Balloons', amount: 100_000 }] })).toBe('Cake Rp 350.000 · Balloons Rp 100.000');
   });
 });
+
+describe('celebration.request with charges (round 18)', () => {
+  const ch = [{ item: 'Birthday cake', amount: 350_000 }, { item: 'Balloons', amount: 120_000 }];
+  for (const [uid, status] of [['s9', 'confirmed'], ['s1', 'requested']] as const) {
+    it(`${uid} lists two charges while making the party: they are pending charges on the next monthly bill (${status})`, () => {
+      const s = seed();
+      const r = run(s, 'celebration.request', { ...req, charges: ch }, uid);
+      const [id] = created(s, r.state);
+      const c = r.state.celebrations[id];
+      expect(c.status).toBe(status);
+      expect(c.charges!.map(({ item, amount }) => ({ item, amount }))).toEqual(ch);
+      for (const x of c.charges!) expect(r.state.pendingCharges[`cel-${x.id}`]).toMatchObject({ memberId: 'm46', amount: x.amount, label: 'inv.line.birthday', params: { item: x.item }, source: { type: 'celebration', id } });
+    });
+  }
+  it('the activity team may not list charges: the whole request is refused and nothing is made', () => {
+    const s = seed();
+    const parties = Object.keys(s.celebrations).length;
+    const charges = Object.keys(s.pendingCharges).length;
+    fails(s, 'celebration.request', { ...req, charges: ch }, 's5', 'err.forbidden');
+    expect(Object.keys(s.celebrations)).toHaveLength(parties);
+    expect(Object.keys(s.pendingCharges)).toHaveLength(charges);
+    // an empty list is no charges at all
+    expect(created(s, run(s, 'celebration.request', { ...req, charges: [] }, 's5').state)).toHaveLength(1);
+  });
+  it('more than 10 charges, or a bad one, is refused', () => {
+    const s = seed();
+    const many = (n: number) => Array.from({ length: n }, (_, k) => ({ item: `Item ${k}`, amount: 10_000 }));
+    expect(created(s, run(s, 'celebration.request', { ...req, charges: many(10) }, 's9').state)).toHaveLength(1);
+    fails(s, 'celebration.request', { ...req, charges: many(11) }, 's9', 'err.invalid');
+    fails(s, 'celebration.request', { ...req, charges: [{ item: 'Cake', amount: 500 }] }, 's9', 'err.invalid');
+    fails(s, 'celebration.request', { ...req, charges: [{ item: '', amount: 5_000 }] }, 's9', 'err.invalid');
+  });
+});

@@ -99,7 +99,7 @@ describe('photo.take', () => {
     const weekend = take(fresh(), { kind: 'solo', memberIds: ['m2'], media: 'photo' }, 's5', { today: '2026-10-24', nowMin: 600 });
     expect(weekend.s.photos[weekend.id].activity).toBe('Club activities');
     const outing = take(fresh(), { kind: 'group', memberIds: ['m2'], media: 'photo' }, 's5', { today: '2026-10-29', nowMin: 600 });
-    expect(outing.s.photos[outing.id].activity).toMatch(/^Outing/);
+    expect(outing.s.photos[outing.id].activity).toMatch(/^Kebun Raya/);
   });
 
   it('validates tags and the image id', () => {

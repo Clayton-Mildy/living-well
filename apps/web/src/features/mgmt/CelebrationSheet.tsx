@@ -11,6 +11,7 @@ import { useAct } from '../../lib/act';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { SLOTS, chipRow, roomName, useBusy } from './common';
+import { ChargeListEditor, type DraftCharge } from './CelebrationCharges';
 
 export interface CForm { memberId: string; kind: CelebrationKind; title: string; date: string; from: string; to: string; roomId: string; guests: string; note: string }
 export const blank = (rooms: Room[]): CForm => ({ memberId: '', kind: 'birthday', title: '', date: '', from: '', to: '', roomId: rooms[0]?.id ?? '', guests: '10', note: '' });
@@ -122,16 +123,24 @@ function SheetBody({ onClose, prefill }: { onClose: () => void; prefill?: Celebr
   const isMgmt = role === 'mgmt';
   const rooms = venueRooms(s);
   const [form, setForm] = useState<CForm>(() => (prefill ? prefillForm(s, prefill) : blank(rooms)));
+  const [charges, setCharges] = useState<DraftCharge[]>([]);
+  const canCharge = role === 'lobby' || role === 'mgmt'; // the activity team asks for a party, not for what it costs
   const { busy, run } = useBusy();
   const book = () => run(async () => {
     const title = form.title || suggestTitle(s.members[form.memberId], form, lang);
-    const r = await act('celebration.request', { memberId: form.memberId, kind: form.kind, title: title.trim(), date: form.date, from: form.from, to: form.to, roomId: form.roomId, guests: Number(form.guests), cateringNote: form.note.trim() },
+    const r = await act('celebration.request', { memberId: form.memberId, kind: form.kind, title: title.trim(), date: form.date, from: form.from, to: form.to, roomId: form.roomId, guests: Number(form.guests), cateringNote: form.note.trim(), ...(canCharge && charges.length ? { charges } : {}) },
       { ok: isMgmt ? t('celeb.bookedToast', { date: fdl(form.date) }) : t('celeb.requestedToast') });
     if (r.ok) onClose();
   });
   return (
     <>
       <CelForm value={form} onChange={setForm} rooms={rooms} />
+      {canCharge ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+          <span style={{ fontSize: FONT_BODY, fontWeight: 500, lineHeight: 1.4 }}>{t('celeb.chargesNew')}</span>
+          <ChargeListEditor value={charges} onChange={setCharges} />
+        </div>
+      ) : null}
       <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end', flexWrap: 'wrap' }}>
         <Button variant="secondary" onClick={onClose}>{t('common.cancel')}</Button>
         <Submit f={form} busy={busy} onClick={book}>{isMgmt ? t('celeb.bookBtn') : t('celeb.requestBtn')}</Submit>

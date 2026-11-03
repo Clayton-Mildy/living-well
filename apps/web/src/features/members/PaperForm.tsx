@@ -9,7 +9,7 @@ import { isPdfName, mediaUrl, uploadDocument } from '../../lib/media';
 import { say } from '../../store/ui';
 
 /** What an upload gives back: store both on the document. */
-export interface PaperFile { mediaId: string; fileName: string }
+export interface PaperFile { mediaId: string; fileName: string; /** round 18: what was picked (a PDF opens in a new tab, a photo in the viewer) */ kind?: 'image' | 'pdf' }
 
 /** Take a photo or choose a file, upload it, and hand over the media id. Render `node` once next to the buttons. */
 export function useDocPicker(onFile: (f: PaperFile) => void | Promise<unknown>, photoName = 'registration-form', uploader: (blob: Blob, name: string) => Promise<PaperFile> = uploadDocument) {
@@ -20,7 +20,7 @@ export function useDocPicker(onFile: (f: PaperFile) => void | Promise<unknown>, 
   const send = async (blob: Blob, name: string) => {
     setBusy(true);
     try {
-      await onFile(await uploader(blob, name));
+      await onFile({ ...(await uploader(blob, name)), kind: blob.type === 'application/pdf' ? 'pdf' : 'image' });
     } catch (e) {
       say(e instanceof ApiError && hasKey(e.code) ? t(e.code) : t('profile.paperFailed'), { tone: 'error', icon: 'error' });
     } finally {

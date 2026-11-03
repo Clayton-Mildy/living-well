@@ -140,11 +140,11 @@ test('Ega: Next month lists every member and what next month holds, a tap opens 
   await expect(row).toContainText('staff first-aid training');
   await expect(row).toHaveAttribute('data-kind', 'closed');
   await expect(closed.locator('[data-testid="year-closed-row"][data-date="2026-10-29"]')).toHaveAttribute('data-kind', 'outing');
-  await expect(closed.locator('[data-testid="year-closed-row"][data-date="2026-10-29"]')).toContainText('Outing');
+  await expect(closed.locator('[data-testid="year-closed-row"][data-date="2026-10-29"]')).toContainText('Field trip');
   await expect(closed.getByTestId('year-closed-month').filter({ hasText: 'October' })).toBeVisible(); // grouped under a month header
   await expect(page.locator('[data-testid="year-day"][data-date="2026-10-30"]')).toHaveAttribute('data-closed', 'closed'); // circled in the months
   await expect(page.locator('[data-testid="year-day"][data-date="2026-10-29"]')).toHaveAttribute('data-closed', 'outing');
-  await expect(page.getByTestId('year-legend')).toContainText('Outing');
+  await expect(page.getByTestId('year-legend')).toContainText('Field trip');
   await assertNoHorizontalScroll(page);
   // a tap on a row opens that day in the month
   await row.click();

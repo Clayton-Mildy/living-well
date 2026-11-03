@@ -44,7 +44,7 @@ export const enq = {
   lostEyebrow: 'Mark as lost', reason: 'Reason', lostBtn: 'Mark as lost', markedLost: '{name} moved to Lost.',
 
   // ----- errors -----
-  'err.tooSoon': 'Trials are booked at least one day ahead.', 'err.past': 'That day has passed.', 'err.pastTime': 'That time has passed today.', 'err.outing': 'That is an outing day, so nobody is at the club.',
+  'err.tooSoon': 'Trials are booked at least one day ahead.', 'err.past': 'That day has passed.', 'err.pastTime': 'That time has passed today.', 'err.outing': 'That is a field trip day, so nobody is at the club.',
   'err.hours': 'Choose a time while the club is open ({open}–{close}).', 'err.alreadyMember': 'This lead is already a member.', 'err.notOpen': 'Reopen this lead first.',
   'err.reopenFirst': 'Reopen this lead before moving it.', 'err.notLost': 'Only lost leads can be reopened.',
 

@@ -18,7 +18,7 @@ export const report: Same<typeof EN> = {
   inOut: '{a}–{l}', since: 'Sejak {a}', noOut: '{a} · belum check-out',
   flexVisit: '{plan} · kunjungan {n} dari {q}', gold: '{plan}', extraDay: 'Hari tambahan',
   kindTrial: 'Hari percobaan', kindVisit: 'Kunjungan', gExpected: 'Dijadwalkan', gNoShow: 'Tidak datang',
-  noSessions: 'Tidak ada aktivitas pada hari ini', outingNoSessions: 'Tidak ada aktivitas: klub sedang wisata',
+  noSessions: 'Tidak ada aktivitas pada hari ini', outingNoSessions: 'Tidak ada aktivitas: klub sedang karyawisata',
   changed: 'Diubah', guestHost: '{name} · pengisi acara tamu',
   joined: '{n} ikut', satOut: '{n} tidak ikut', satOutWho: '{n} tidak ikut: {names}', notMarked: '{n} belum dicatat',
   notStarted: 'Belum mulai', running: 'Sedang berlangsung',

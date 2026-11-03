@@ -576,6 +576,15 @@ describe('media (PDF documents)', () => {
     expect(got.headers.get('content-disposition')).toBe('inline');
     expect(Buffer.from(await got.arrayBuffer()).subarray(0, 5).toString()).toBe('%PDF-');
   });
+  it('HEAD tells the content type without the file (round 18: the web asks once for a proof recorded before proofKind)', async () => {
+    const up = await app.request('/api/media', json({ mime: 'application/pdf', data: pdf(200).toString('base64') }, 's1'));
+    const { id } = await j(up);
+    const head = await app.request(`/api/media/${id}`, { method: 'HEAD' });
+    expect(head.status).toBe(200);
+    expect(head.headers.get('content-type')).toBe('application/pdf');
+    expect((await head.arrayBuffer()).byteLength).toBe(0);
+    expect((await app.request('/api/media/md_nothere0000000000000', { method: 'HEAD' })).status).toBe(404);
+  });
   it('checks the file really is a PDF, in both directions', async () => {
     const text = Buffer.from('hello, this is not a pdf').toString('base64');
     expect((await app.request('/api/media', json({ mime: 'application/pdf', data: text }, 's1'))).status).toBe(415);

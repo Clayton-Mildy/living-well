@@ -7,7 +7,7 @@ export const guests = {
   g_upcoming: 'Upcoming', g_toPay: 'To pay', g_paid: 'Paid', g_cancelled: 'Cancelled', g_done: 'Done',
   st_booked: 'Booked', st_cancelled: 'Cancelled', st_paid: 'Paid', st_toPay: 'Not paid yet',
   late: 'The day has passed: mark it as done', overdue: 'This was on {date}. Mark it as done once the guest has taught or performed.',
-  issue_closed: 'The club is closed that day', issue_outing: 'An outing replaces that day', issue_noSession: 'That slot has no session now',
+  issue_closed: 'The club is closed that day', issue_outing: 'A field trip replaces that day', issue_noSession: 'That slot has no session now',
   empty: 'No guest sessions yet.', emptyHosts: 'No guest hosts yet.', noSessionsHost: 'No sessions yet.', inactive: 'Inactive', owes: '{amount} owed',
   withGuest: 'with {name} · guest', hint: 'Guest host',
   // kinds
@@ -18,7 +18,7 @@ export const guests = {
   doneToast: 'Marked as done. Finance can pay {name} now.', paidToast: '{name} marked as paid.', cancelledToast: 'Booking cancelled.',
   // book sheet
   bookTitle: 'Book a guest', editTitle: 'Edit booking', host: 'Host', pickHost: 'Pick a host', newHost: 'New host', date: 'Date', session: 'Session', pickActivity: 'Pick an activity',
-  errDay: 'Pick an open day, today or later, with no outing.', takenBy: 'Already booked: {name}', changesSlot: 'This changes the {slot} activity on {date}. Teachers and families are told.',
+  errDay: 'Pick an open day, today or later, with no field trip.', takenBy: 'Already booked: {name}', changesSlot: 'This changes the {slot} activity on {date}. Teachers and families are told.',
   notePh: 'For example: needs a microphone', bookBtn: 'Book', booked: '{name} is booked for {date}.', saved: 'Booking saved.',
   // host
   addHostBtn: 'Add host', editHost: 'Edit host', name: 'Name', kind: 'Kind', what: 'What they do', whatPh: 'For example: Angklung teacher', phone: 'Phone', usualFee: 'Usual fee per session',

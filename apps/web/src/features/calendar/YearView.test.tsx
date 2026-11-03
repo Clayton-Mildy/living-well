@@ -54,7 +54,7 @@ describe('YearView', () => {
     expect(closure.textContent).toContain('staff first-aid training');
     expect(closure.textContent).toContain('Club closed');
     expect(outing.dataset.kind).toBe('outing');
-    expect(outing.textContent).toContain('Outing');
+    expect(outing.textContent).toContain('Field trip');
     expect(rows.map((r) => r.dataset.date)).toEqual([...rows.map((r) => r.dataset.date)].sort());
     await act(async () => { closure.click(); });
     expect(onPickDay).toHaveBeenCalledWith('2026-10-30');
@@ -78,7 +78,7 @@ describe('YearView', () => {
     expect(closure.querySelector('svg, .material-symbols-rounded')).toBeNull(); // no icon in a row
     expect(closure.textContent).toContain('Club closed');
     expect(legendText()).toContain('Closed');
-    expect(legendText()).toContain('Outing');
+    expect(legendText()).toContain('Field trip');
   });
   it('round 15 follow-up: a two-day closure reads "14–15" and "2 days" on its row', async () => {
     useSession.setState({ lang: 'en' });

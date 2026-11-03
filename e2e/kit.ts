@@ -116,3 +116,7 @@ export async function uploadProof(request: APIRequestContext, userId = 's10'): P
   expect(r.ok(), `upload proof: ${await r.text()}`).toBeTruthy();
   return ((await r.json()) as { id: string }).id;
 }
+/** Round 18: the proof fields of a payment.record call (the id uploadProof returns, and its kind): `{ ...(await proofFields(request)), memberId, ... }`. */
+export async function proofFields(request: APIRequestContext, userId = 's10'): Promise<{ proofMediaId: string; proofKind: 'image' }> {
+  return { proofMediaId: await uploadProof(request, userId), proofKind: 'image' };
+}

@@ -108,7 +108,7 @@ test('venue: book any future date with a time range, price and deposit; a clash 
   await expect(page.getByTestId('venue-error')).toContainText('The club is open 08:30–16:30 that day');
   // an outing and a closure block the day
   await pickDate(page, /^Day/, '2026-10-29');
-  await expect(page.getByTestId('venue-error')).toContainText('outing');
+  await expect(page.getByTestId('venue-error')).toContainText('field trip');
   await pickTime(page, /^From/, '17:00');
   await pickTime(page, /^To\b/, '19:00');
   await pickDate(page, /^Day/, '2026-10-30');

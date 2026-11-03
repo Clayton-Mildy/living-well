@@ -937,6 +937,21 @@ describe('round 16: proof of payment', () => {
   });
 });
 
+describe('round 18: proof kind', () => {
+  const rec = (w: ReturnType<typeof world>, extra: Record<string, unknown>) => { const r = w.run('payment.record', { memberId: 'm1', amount: 100_000, method: 'cash', invoiceId: 'INV-2610-001', ...extra }, 's10'); return w.s.payments[r.result.paymentId as string]; };
+  it('proofKind is kept next to its proof; a payment without it has none', () => {
+    expect(rec(world(), { proofMediaId: 'md_proofslip01', proofKind: 'pdf' })).toMatchObject({ proofMediaId: 'md_proofslip01', proofKind: 'pdf' });
+    expect(rec(world(), { proofMediaId: 'md_proofslip01', proofKind: 'image' })).toMatchObject({ proofKind: 'image' });
+    expect('proofKind' in rec(world(), { proofMediaId: 'md_proofslip01' })).toBe(false);
+  });
+  it('proofKind without a proof is dropped (other method needs no proof); a bad kind is refused', () => {
+    const p = rec(world(), { method: 'other', proofKind: 'pdf' });
+    expect('proofKind' in p).toBe(false);
+    expect('proofMediaId' in p).toBe(false);
+    world().fail('payment.record', { memberId: 'm1', amount: 100_000, method: 'cash', invoiceId: 'INV-2610-001', proofMediaId: 'md_proofslip01', proofKind: 'video' }, 's10', 'err.invalid');
+  });
+});
+
 describe('round 17: adjusting an invoice re-sends it', () => {
   it('invoice.adjust emails the invoice to its payer again', () => {
     const w = world();

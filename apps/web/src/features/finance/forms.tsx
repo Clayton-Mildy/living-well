@@ -47,7 +47,7 @@ export function PaymentForm({ fixed, onDone, desk }: { fixed?: Invoice; onDone?:
   const submit = async () => {
     if (!ok || !sel) return;
     const r = await act('payment.record', {
-      memberId: sel.memberId, amount, method, invoiceId: sel.id, ...(ref.trim() ? { ref: ref.trim() } : {}), ...(needsProof && proof ? { proofMediaId: proof.mediaId } : {}),
+      memberId: sel.memberId, amount, method, invoiceId: sel.id, ...(ref.trim() ? { ref: ref.trim() } : {}), ...(needsProof && proof ? { proofMediaId: proof.mediaId, proofKind: proof.kind ?? 'image' } : {}),
     }, { ok: desk ? t('finance.toast.sentToFinance') : t('finance.toast.paymentRecorded', { name: displayName(s.members[sel.memberId]) }) });
     if (r.ok) { if (!fixed) setInvId(null); setAmt(''); setRef(''); setProof(null); onDone?.(); }
   };

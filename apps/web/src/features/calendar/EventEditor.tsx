@@ -13,7 +13,8 @@ import { useNow } from '../../lib/clock';
 type Kind = 'closed' | 'holiday' | 'outing';
 const KINDS: Kind[] = ['closed', 'holiday', 'outing'];
 
-export function EventEditor({ open, onClose, event, date }: { open: boolean; onClose: () => void; event?: CalendarEvent; date?: string }) {
+/** `initialKind` starts a new event on that kind (the New field trip button opens it on Field trip). */
+export function EventEditor({ open, onClose, event, date, initialKind }: { open: boolean; onClose: () => void; event?: CalendarEvent; date?: string; initialKind?: Kind }) {
   const t = useT();
   const { fdl } = useFmt();
   const { today } = useNow();
@@ -37,7 +38,7 @@ export function EventEditor({ open, onClose, event, date }: { open: boolean; onC
 
   useEffect(() => {
     if (!open) return;
-    setKind(event?.kind ?? 'closed');
+    setKind(event?.kind ?? initialKind ?? 'closed');
     setTitle(event?.title ?? '');
     setTitleId(event?.titleId ?? '');
     setD0(event?.date ?? date ?? today);

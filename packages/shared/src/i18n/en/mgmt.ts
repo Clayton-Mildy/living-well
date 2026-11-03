@@ -13,7 +13,7 @@ export const mgmt = {
   // ----- broadcast -----
   bcEyebrow: 'WhatsApp templates', audience: 'Audience', aud_families: 'Families', aud_enquiries: 'Enquiries', aud_staff: 'Staff', noRecipients: 'Nobody to message yet in this selection.',
   template: 'Template', editTemplates: 'Edit templates', message: 'Message', ph_update: 'Our new garden room opens on Monday.', ph_closure: 'Friday 30 October, for staff first-aid training',
-  ph_event: 'batik museum outing, Thursday 26 November', ph_custom: 'Write your message.', when: 'When', whenNow: 'Send now', whenTom: 'Tomorrow, 08:00', whenCustom: 'Pick a date and time',
+  ph_event: 'batik museum field trip, Thursday 26 November', ph_custom: 'Write your message.', when: 'When', whenNow: 'Send now', whenTom: 'Tomorrow, 08:00', whenCustom: 'Pick a date and time',
   sendTo: 'Send to {n} people', scheduleFor: 'Schedule for {n} people', sendToOne: 'Send to {n} person', scheduleForOne: 'Schedule for {n} person', stopEditing: 'Stop editing', bcEditing: 'You are editing a scheduled message. Save to keep the changes.',
   previewFor: 'Preview for {name} · template “{tpl}”', previewNobody: 'The preview appears when the audience has someone in it.', previewPick: 'Preview as', openApp: 'Open the CitraPremier app',
   simNote: 'Demo: WhatsApp messages are simulated.', sentAndScheduled: 'Sent and scheduled', bcEmpty: 'No broadcasts yet.', nPeople: '{n} people', nPeopleOne: '{n} person', scheduledFor: 'Scheduled · {when}', sentOn: 'Sent {when}',
@@ -30,8 +30,8 @@ export const mgmt = {
   vnMobile: 'Mobile', vnGuests: 'Guests', vnDay: 'Day', vnTime: 'Time', vnFrom: 'From', vnTo: 'To', vnRoom: 'Room', vnPriceL: 'Price', vnDepositL: 'Deposit', vnOptional: 'Optional',
   vnDayOpen: 'The club is open this day. Outside events must be before {open} or after {close}.', vnDayWeekend: 'Weekend: the club is closed, so any time is free.',
   vnDayHoliday: 'National holiday: the club is closed, so any time is free.', vnDayClosed: 'The club is closed this day for its own reasons, so it cannot take bookings.',
-  vnDayOuting: 'Outing day: the team and members are away, so it cannot take bookings.', vnPickDay: 'Pick a day', vnFree: 'Free', vnTaken: 'Taken', vnMembersHere: 'Members here',
-  vnOutingDay: 'Outing day', vnClosedDay: 'Closure', vnGone: 'Passed', vnNotFree: 'Not free', vnNoRooms: 'No rooms can be booked for events yet. Rooms for events are set under Calendar and schedule.',
+  vnDayOuting: 'Field trip day: the team and members are away, so it cannot take bookings.', vnPickDay: 'Pick a day', vnFree: 'Free', vnTaken: 'Taken', vnMembersHere: 'Members here',
+  vnOutingDay: 'Field trip day', vnClosedDay: 'Closure', vnGone: 'Passed', vnNotFree: 'Not free', vnNoRooms: 'No rooms can be booked for events yet. Rooms for events are set under Calendar and schedule.',
   vnHint: 'The booking blocks the club calendar for that time. On club days, outside events happen after {close}.', vnConfirm: 'Confirm booking',
   vnBooked: 'Booked. {date}, {time} is now blocked on the club calendar.', vnUpcoming: 'Upcoming', vnOnCalendar: 'on the club calendar', vnNone: 'No upcoming bookings.', vnPast: 'Past and cancelled',
   vnPastMeta: 'send the guest a review link afterwards', vnSub: '{date} · {from}–{to} · {n} guests · {room}', vnPrice: 'Price {n}', vnDeposit: 'Deposit {n}', vnInvoice: 'Invoice {ref}',
@@ -88,7 +88,7 @@ export const mgmt = {
 
   // ----- errors (action codes) -----
   'err.venueClash': '{room} is already booked from {from} to {to} by {title}.', 'err.venueClubHours': 'The club is open {open}–{close} that day. Events need to be before {open} or after {close}.',
-  'err.venueOuting': 'That day is an outing, so the club cannot take a booking.', 'err.venueClosed': 'The club is closed that day for its own reasons, so it cannot take a booking.',
+  'err.venueOuting': 'That day is a field trip, so the club cannot take a booking.', 'err.venueClosed': 'The club is closed that day for its own reasons, so it cannot take a booking.',
   'err.venuePast': 'That time has already passed.', 'err.venueTimes': 'The end time must be after the start time.', 'err.venueLate': 'Events must fall between {from} and {to}.',
   'err.venueRoom': 'Choose a room that can be booked for events.', 'err.venueCancelled': 'That booking is cancelled.', 'err.venueDone': 'That event has already happened.',
   'err.venueNotDone': 'The event has not happened yet.', 'err.venueReviewed': 'This event already has a review.', 'err.venueAsked': 'A review link was already sent.', 'err.svTplBuiltIn': 'The venue rating template is built in: you can change its questions, but it can’t be deleted.', svTplBuiltIn: 'Built in',

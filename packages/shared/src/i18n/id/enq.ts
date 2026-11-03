@@ -47,7 +47,7 @@ export const enq: Same<typeof EN> = {
   lostEyebrow: 'Tandai batal', reason: 'Alasan', lostBtn: 'Tandai batal', markedLost: '{name} dipindahkan ke Batal.',
 
   // ----- galat -----
-  'err.tooSoon': 'Percobaan dipesan paling lambat sehari sebelumnya.', 'err.past': 'Hari itu sudah lewat.', 'err.pastTime': 'Jam itu sudah lewat hari ini.', 'err.outing': 'Hari itu jalan-jalan, jadi tidak ada orang di klub.',
+  'err.tooSoon': 'Percobaan dipesan paling lambat sehari sebelumnya.', 'err.past': 'Hari itu sudah lewat.', 'err.pastTime': 'Jam itu sudah lewat hari ini.', 'err.outing': 'Hari itu karyawisata, jadi tidak ada orang di klub.',
   'err.hours': 'Pilih jam saat klub buka ({open}–{close}).', 'err.alreadyMember': 'Calon ini sudah menjadi anggota.', 'err.notOpen': 'Buka kembali calon ini terlebih dahulu.',
   'err.reopenFirst': 'Buka kembali calon ini sebelum memindahkannya.', 'err.notLost': 'Hanya calon yang batal yang bisa dibuka kembali.',
 

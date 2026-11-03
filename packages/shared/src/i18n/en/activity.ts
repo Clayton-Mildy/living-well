@@ -4,7 +4,7 @@ export const activity = {
   hello: 'Hello, {n}', nowAt: 'Now · {time}', nextAt: 'Next · {time}', lastAt: 'Last session · {time}', withTeacher: 'with {name}',
   nInClub_one: '1 member in the club', nInClub_other: '{n} members in the club',
   heroNote: 'Photos are tagged by face and reach each family’s Today page.',
-  outingLabel: 'Outing today', doneLabel: 'Done for today', doneTitle: 'Today’s sessions are over', doneSub: 'Daily logs and photos can still be added.',
+  outingLabel: 'Field trip today', doneLabel: 'Done for today', doneTitle: 'Today’s sessions are over', doneSub: 'Daily logs and photos can still be added.',
   nextDay: 'Next session: {day} · {time} · {name}.', noneLabel: 'Today', noneTitle: 'No sessions scheduled', noneSub: 'Nothing is planned in the weekly schedule today. Photos and daily logs still work.',
   inClub: 'In the club', todayPlan: 'Today’s programme', nothingToday: 'Nothing is scheduled today.', laterToday: 'Later today', nothingLater: 'Nothing more is scheduled today.', nobodyYet: 'Nobody has checked in yet.', nobodyThatDay: 'Nobody was checked in that day.',
   logged: 'Logged', notLogged: 'Not logged', lunch: 'Lunch', tea: 'Afternoon tea',

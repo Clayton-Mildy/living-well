@@ -5,7 +5,7 @@ import type { Celebration, CelebrationKind, ClubState, HM, ISODate, User } from 
 import { defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { CELEBRATION_GUESTS_MAX, CELEBRATION_KINDS, celebrationIsPast, checkCelebrationSlot } from '../rules/celebrations';
-import { dm, hm, int, isoDate, obj, oneOf, str } from '../rules/mgmtParse';
+import { arr, bad, dm, hm, int, isoDate, obj, oneOf, str } from '../rules/mgmtParse';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
 /** Round 14: the activity team prepares a birthday too (Prepare on its Today); what it asks for is requested, like the front desk's. */
@@ -13,8 +13,13 @@ const canRequest = (u: User) => hasRole(u, 'lobby', 'activity', 'mgmt');
 const id80 = (v: unknown, field: string) => str(v, 80, { required: true, field });
 const S = (d: Draft<ClubState>) => d as unknown as ClubState;
 
-interface CelIn { memberId: string; kind: CelebrationKind; title: string; date: ISODate; from: HM; to: HM; roomId: string; guests: number; cateringNote?: string }
+interface CelIn { memberId: string; kind: CelebrationKind; title: string; date: ISODate; from: HM; to: HM; roomId: string; guests: number; cateringNote?: string; charges?: { item: string; amount: number }[] }
 type CelUpdateIn = { celebrationId: string } & Partial<Omit<CelIn, 'memberId'>> & { cateringNote?: string };
+
+/** Round 18: charges listed while the party is made (at most 10; the same item and amount limits as addCharge). */
+const CHARGES_MAX = 10;
+const parseCharge = (raw: unknown) => { const o = obj(raw); return { item: str(o.item, 60, { required: true, field: 'item' }), amount: int(o.amount, 1_000, 100_000_000, 'amount') }; };
+const parseCharges = (v: unknown, field: string) => (Array.isArray(v) && v.length > CHARGES_MAX ? bad(field) : arr(v, parseCharge, CHARGES_MAX));
 
 const common = (o: Record<string, unknown>, partial: boolean) => {
   const out: Partial<CelIn> = {};
@@ -47,9 +52,12 @@ export const celebrationActions = [
     can: canRequest,
     parse(raw) {
       const o = obj(raw);
-      return { memberId: id80(o.memberId, 'memberId'), ...common(o, false) } as CelIn;
+      const charges = o.charges === undefined ? [] : parseCharges(o.charges, 'charges');
+      return { memberId: id80(o.memberId, 'memberId'), ...common(o, false), ...(charges.length ? { charges } : {}) } as CelIn;
     },
     run(d, i, ctx) {
+      // the whole request is refused before anything is made: the activity team asks for a party, not for what it costs
+      if (i.charges?.length && !lobbyOrMgmt(ctx.user)) ctx.fail('err.forbidden');
       const m = requireMember(d, i.memberId, ctx);
       const chk = checkCelebrationSlot(S(d), slotOf(i), ctx.today, ctx.now);
       if (!chk.ok) ctx.fail(chk.code, chk.params);
@@ -62,6 +70,7 @@ export const celebrationActions = [
         ...(byMgmt ? { decidedBy: ctx.actor, decidedAt: ctx.nowDT } : {}),
       };
       ctx.result.celebrationId = id;
+      for (const x of i.charges ?? []) addChargeTo(d, d.celebrations[id], x.item, x.amount, ctx);
       const name = shortOf(d, m.id);
       ctx.feed({ icon: 'cake', key: byMgmt ? 'celeb.feed.confirmed' : 'celeb.feed.requested', memberId: m.id, params: { name, date: dm(i.date) } });
       if (byMgmt) tellFamily(d, d.celebrations[id], ctx);
@@ -156,11 +165,7 @@ export const celebrationActions = [
     run(d, i, ctx) {
       const c = celebration(d, i.celebrationId, ctx);
       open(c, ctx);
-      c.charges ??= [];
-      const chargeId = ctx.id('cc');
-      c.charges.push({ id: chargeId, item: i.item, amount: i.amount });
-      const pid = `cel-${chargeId}`;
-      d.pendingCharges[pid] = { id: pid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: c.memberId, amount: i.amount, label: 'inv.line.birthday', params: { item: i.item }, source: { type: 'celebration', id: c.id } };
+      addChargeTo(d, c, i.item, i.amount, ctx);
     },
   }),
   defineAction<{ celebrationId: string; chargeId: string }>({
@@ -177,6 +182,15 @@ export const celebrationActions = [
     },
   }),
 ];
+
+/** A charge on a celebration, and its pending charge on the member's next monthly invoice (used by addCharge and by request). */
+function addChargeTo(d: Draft<ClubState>, c: Draft<Celebration>, item: string, amount: number, ctx: Ctx) {
+  c.charges ??= [];
+  const chargeId = ctx.id('cc');
+  c.charges.push({ id: chargeId, item, amount });
+  const pid = `cel-${chargeId}`;
+  d.pendingCharges[pid] = { id: pid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: c.memberId, amount, label: 'inv.line.birthday', params: { item }, source: { type: 'celebration', id: c.id } };
+}
 
 /** Round 17: a party that did not happen bills nothing: its charges still waiting for a run go (any already on an invoice stay). */
 function dropPendingCharges(d: Draft<ClubState>, c: Draft<Celebration>) {

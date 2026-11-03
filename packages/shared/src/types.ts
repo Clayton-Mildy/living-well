@@ -908,6 +908,8 @@ export interface Payment extends Row {
   approval?: Approval;
   /** KC round 16: the photo of the transfer slip or the signed cash receipt (required when recorded by hand as cash or transfer) */
   proofMediaId?: string;
+  /** round 18: what the proof file is, so it opens as a photo in the viewer or a PDF in a new tab (payments before round 18 have none: the web asks the server once) */
+  proofKind?: 'image' | 'pdf';
 }
 
 /** Round 14: what a call about an overdue invoice came to. */
