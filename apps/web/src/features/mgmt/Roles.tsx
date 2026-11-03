@@ -3,7 +3,7 @@
 // the role's page (RolePage.tsx) and saves the draft in one go (access.setRole). Phone: a grouped list, then the role as a full screen with the Save
 // bar at the bottom; tablet and desktop: the list card on the left, the role's card on the right. Leaving a role or the screen with unsaved changes
 // asks first (lib/leaveGuard).
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { GRID_ROLES, MENU_KEYS, accessOf, draftChanges, roleDraft, staffByRole, staffCall, type GridRole, type RoleDraft } from '@cp/shared';
 import { Group, PageHead, PhoneScreen, HAIRLINE } from '../../components/ui';
 import { RoleRow, roleCard, type RoleItem } from '../../components/roleparts';
@@ -12,6 +12,7 @@ import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useLeaveGuard } from '../../lib/leaveGuard';
 import { useClub } from '../../store/replica';
+import { useAtLeast } from '../lobby/useAtLeast';
 import { ConfirmDialog } from '../kitchen/parts';
 import { Page, tn } from './common';
 import { RolePage, SaveBar } from './RolePage';
@@ -24,6 +25,11 @@ export function Roles() {
   const [edit, setEdit] = useState<{ role: GridRole; draft: RoleDraft } | null>(null);
   const [leaving, setLeaving] = useState<{ to: GridRole | null } | null>(null);
   const [busy, setBusy] = useState(false);
+  // tablet portrait (final review I-3): the list (290–330) + gap (≤24) + card (520) no longer fit side by side, so the card stacks under the list.
+  // Then the list is not sticky (it would cover the card's rows) and picking a role brings its card into view.
+  const rowRef = useRef<HTMLDivElement>(null);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const side = useAtLeast(rowRef, 874).wide;
   const role = picked ?? (isPhone ? null : GRID_ROLES[0]);
   const draft = role ? (edit?.role === role ? edit.draft : roleDraft(s, role)) : null;
   const changes = role && draft ? draftChanges(s, role, draft) : 0;
@@ -37,6 +43,9 @@ export function Roles() {
     setPicked(to);
     setEdit(null);
   };
+  useEffect(() => {
+    if (picked && !isPhone && !side) cardRef.current?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+  }, [picked]); // eslint-disable-line react-hooks/exhaustive-deps -- only when the Owner picks a role
   const discard = () => { setPicked(leaving?.to ?? null); setEdit(null); setLeaving(null); };
   const save = async () => {
     if (!role || !draft || !changes || busy) return;
@@ -68,10 +77,10 @@ export function Roles() {
   return (
     <Page>
       <PageHead title={t('mgmt.access.title')} size={32} />
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(14px, 2vw, 24px)', alignItems: 'flex-start' }}>
-        <div style={{ flex: '0 1 330px', minWidth: 290, position: 'sticky', top: 16 }}>{list}</div>
+      <div ref={rowRef} data-roles-layout={side ? 'side' : 'stacked'} style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(14px, 2vw, 24px)', alignItems: 'flex-start' }}>
+        <div data-testid="roles-list" style={side ? { flex: '0 1 330px', minWidth: 290, position: 'sticky', top: 16 } : { flex: '1 1 100%', minWidth: 0 }}>{list}</div>
         {/* not roleCard: overflow hidden would stop the View / Edit header and the Save bar from sticking */}
-        <div className="cp-grey" style={{ background: roleCard.background, borderRadius: roleCard.borderRadius, flex: '1 1 520px', minWidth: 0, padding: '18px 20px 0', display: 'flex', flexDirection: 'column' }}>
+        <div ref={cardRef} className="cp-grey" style={{ scrollMarginTop: 16, background: roleCard.background, borderRadius: roleCard.borderRadius, flex: '1 1 520px', minWidth: 0, padding: '18px 20px 0', display: 'flex', flexDirection: 'column' }}>
           {page}
           <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '18px -20px 0', padding: bar ? '12px 20px 14px' : '0 0 20px', borderTop: bar ? HAIRLINE : 'none', backgroundColor: 'inherit', borderRadius: '0 0 20px 20px' }}>{bar}</div>
         </div>

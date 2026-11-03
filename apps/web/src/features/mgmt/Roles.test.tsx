@@ -203,6 +203,29 @@ describe('Admin › Roles', () => {
     expect(roleRow('finance')).toBeTruthy();
   });
 
+  it('final review I-3: side by side (874px or wider) the list is sticky; stacked (tablet portrait) it is not, and a pick scrolls the card into view', async () => {
+    const scrolled = vi.fn();
+    (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView = scrolled;
+    openClub();
+    panelWidth(1000);
+    await show(<Roles />, 1024);
+    expect(document.querySelector('[data-roles-layout]')!.getAttribute('data-roles-layout')).toBe('side');
+    expect(document.querySelector<HTMLElement>('[data-testid="roles-list"]')!.style.position).toBe('sticky');
+    await click(roleRow('lobby'));
+    expect(scrolled).not.toHaveBeenCalled();
+    await act(async () => { root?.unmount(); });
+    document.body.innerHTML = '';
+    openClub();
+    panelWidth(712); // 768 minus the tablet sidebar is narrower still; anything under 874 stacks
+    await show(<Roles />, 768);
+    expect(document.querySelector('[data-roles-layout]')!.getAttribute('data-roles-layout')).toBe('stacked');
+    expect(document.querySelector<HTMLElement>('[data-testid="roles-list"]')!.style.position).toBe('');
+    await click(roleRow('finance'));
+    expect(document.querySelector('[data-role-page="finance"]')).toBeTruthy();
+    expect(scrolled).toHaveBeenCalledWith({ block: 'start', behavior: 'smooth' });
+    delete (Element.prototype as { scrollIntoView?: unknown }).scrollIntoView;
+  });
+
   it('with a draft, a sidebar link asks first and only Discard leaves', async () => {
     openClub();
     await show(<Roles />, 1024, true);
