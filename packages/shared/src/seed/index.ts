@@ -500,8 +500,8 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   const outingDay = freeDay(sh('2026-10-29'));
   const closedDay = freeDay(sh('2026-10-30'));
   ev('ev-closed-1030', closedDay, 'closed', 'Club closed: staff first-aid training', 'Klub tutup: pelatihan P3K staf');
-  ev('ev-outing-1029', outingDay, 'outing', 'Outing: Kebun Raya Bogor botanical garden', 'Jalan-jalan: Kebun Raya Bogor', '08:30', '15:00');
-  ev('ev-outing-1126', freeDay(sh('2026-11-26')), 'outing', 'Outing: batik museum and lunch', 'Jalan-jalan: museum batik dan makan siang', '09:00', '14:30');
+  ev('ev-outing-1029', outingDay, 'outing', 'Kebun Raya Bogor botanical garden', 'Kebun Raya Bogor', '08:30', '15:00');
+  ev('ev-outing-1126', freeDay(sh('2026-11-26')), 'outing', 'Batik museum and lunch', 'Museum batik dan makan siang', '09:00', '14:30');
   for (const [date, title, titleId] of HOLIDAYS) ev(`ev-hol-${date.slice(5, 7)}${date.slice(8)}`, date, 'holiday', title, titleId);
   const venue = (id: string, org: string, contactName: string, phone: string, guests: number, roomId: string, date: ISODate, from: string, to: string, review?: { stars: number; text: string }) =>
     put('venueBookings', { ...base(C, id, at('2026-09-20T10:00'), 'staff:s9'), org, contactName, phone: e164(phone), guests, roomId, date, from, to, status: 'confirmed', price: 3500000, deposit: 1000000, ...(review ? { review, reviewAskedAt: `${date}T13:00` } : {}) });

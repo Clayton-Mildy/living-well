@@ -131,12 +131,59 @@ describe('registry completeness', () => {
   });
 });
 
+describe('field trips (round 18)', () => {
+  const TODAY = '2026-10-21';
+  const trip = Object.values(s.calendarEvents).find((e) => e.kind === 'outing' && e.title.includes('Bogor'))!;
+  const at = (role: Role) => buildSearchIndex(s, role, t, 'en', TODAY);
+  it('Ega: "field trip" finds the New field trip action, then the Bogor event, which opens its day', () => {
+    const groups = rank(at('mgmt'), 'field trip');
+    expect(groups.map((g) => g.group)).toEqual(['actions', 'records']);
+    expect(groups[0]!.hits[0]!.id).toBe('action:newFieldTrip');
+    expect(groups[0]!.hits[0]!.to).toBe('/calendar?new=trip');
+    const ev = groups[1]!.hits.find((h) => h.id === 'event:' + trip.id)!;
+    expect(ev.label).toBe('Kebun Raya Bogor botanical garden');
+    expect(ev.to).toBe(`/calendar?date=${trip.date}`);
+    expect(ev.sub).toContain('08:30');
+  });
+  it('"bogor" and the Indonesian word find the event', () => {
+    expect(rank(at('mgmt'), 'bogor').some((g) => g.hits.some((h) => h.id === 'event:' + trip.id))).toBe(true);
+    expect(rank(at('mgmt'), 'karyawisata').some((g) => g.hits.some((h) => h.id === 'event:' + trip.id))).toBe(true);
+  });
+  it('the activity team and the kitchen find the event (every staff role opens Calendar) but not the action', () => {
+    const a = rank(at('activity'), 'bogor').flatMap((g) => g.hits);
+    expect(a.some((h) => h.id === 'event:' + trip.id)).toBe(true);
+    expect(rank(at('activity'), 'field trip').flatMap((g) => g.hits).some((h) => h.id === 'action:newFieldTrip')).toBe(false);
+    expect(rank(at('kitchen'), 'bogor').flatMap((g) => g.hits).some((h) => h.id === 'event:' + trip.id)).toBe(true);
+    expect(at('kitchen').some((i) => i.id === 'action:newFieldTrip')).toBe(false);
+    // a role the access grid has switched off for Calendar gets no events at all
+    const noCal = structuredClone(s);
+    noCal.club.settings.access = { ...(noCal.club.settings.access ?? {}), kitchen: { calendar: 'off' } } as never;
+    expect(allowedKeys(noCal, 'kitchen').has('calendar')).toBe(false);
+    expect(buildSearchIndex(noCal, 'kitchen', t, 'en', TODAY).some((i) => i.id.startsWith('event:'))).toBe(false);
+  });
+  it('only events from 3 months back to 6 months ahead, and not cancelled ones', () => {
+    const far = structuredClone(s);
+    far.calendarEvents['ev-far'] = { ...trip, id: 'ev-far', title: 'Far away', date: '2027-06-01' };
+    far.calendarEvents['ev-old'] = { ...trip, id: 'ev-old', title: 'Long ago', date: '2026-06-01' };
+    far.calendarEvents['ev-cx'] = { ...trip, id: 'ev-cx', title: 'Called off', cancelledAt: '2026-10-01T09:00' };
+    const ids = buildSearchIndex(far, 'mgmt', t, 'en', TODAY).map((i) => i.id);
+    expect(ids).not.toContain('event:ev-far');
+    expect(ids).not.toContain('event:ev-old');
+    expect(ids).not.toContain('event:ev-cx');
+    expect(ids).toContain('event:' + trip.id);
+  });
+  it('Indonesian shows the Indonesian title', () => {
+    const id = buildSearchIndex(s, 'mgmt', t, 'id', TODAY).find((i) => i.id === 'event:' + trip.id)!;
+    expect(id.label).toBe('Kebun Raya Bogor');
+  });
+});
+
 describe('copy', () => {
   it('every label and sub line resolves in both languages (no raw keys)', () => {
     const missing: string[] = [];
     for (const lang of ['en', 'id'] as const) {
       const tr = (k: string, p?: Record<string, string | number>) => { if (!hasKey(k)) missing.push(k); return translate(lang, k, p); };
-      for (const r of STAFF) buildSearchIndex(s, r, tr, lang);
+      for (const r of STAFF) buildSearchIndex(s, r, tr, lang, '2026-10-21');
     }
     expect([...new Set(missing)]).toEqual([]);
   });

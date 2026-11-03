@@ -1,6 +1,7 @@
 // Super search: the registry (every screen and action declares its keywords here, so a new feature is searchable with one entry)
 // and the role-gated index built from it and from the synced club state. Ranking lives in lib/search.ts.
-import { approvedMembers, displayName, invoiceTotal, live, memberName, planLabel, rp, type ClubState, type Lang, type Role } from '@cp/shared';
+import { addMonths, approvedMembers, displayName, invoiceTotal, live, memberName, planLabel, rp, ym, type ClubState, type ISODate, type Lang, type Role } from '@cp/shared';
+import { eventTitle, fmtDMY } from '@cp/shared/rules/calendar';
 import type { SearchItem } from '../lib/search';
 import { allowedKeys, navFor } from './nav';
 
@@ -56,6 +57,7 @@ export const ACTION_ENTRIES: ActionEntry[] = [
   act('recordPayment', 'account_balance', ['finance', 'mgmt'], () => '/payments', ['record payment', 'paid', 'transfer', 'cash'], ['catat pembayaran', 'bayar', 'lunas', 'tunai']),
   act('requestLeave', 'beach_access', ALL_STAFF, () => '/tasks', ['leave', 'day off', 'holiday'], ['cuti', 'izin', 'libur']),
   act('newCelebration', 'cake', ['lobby', 'activity', 'mgmt'], () => '/celebrations', ['birthday', 'celebration', 'party'], ['ulang tahun', 'perayaan', 'pesta']),
+  act('newFieldTrip', 'directions_bus', ['mgmt'], () => '/calendar?new=trip', ['field trip', 'trip', 'outing', 'excursion'], ['karyawisata', 'jalan-jalan', 'wisata']),
   act('submitReceipt', 'receipt_long', ALL_STAFF, (r) => (r === 'finance' || r === 'mgmt' ? '/receipts?do=snap' : '/requests?do=receipt'), ['receipt', 'nota', 'purchase', 'snap'], ['nota', 'kuitansi', 'belanja', 'foto nota']),
 ];
 
@@ -73,7 +75,15 @@ const menuPath = (s: ClubState, role: Role): string | null => (allowedKeys(s, ro
 const kw = (k: { en: string[]; id: string[] }) => [...k.en, ...k.id];
 type T = (k: string, p?: Record<string, string | number>) => string;
 
-export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'en'): SearchItem[] {
+/** Round 18 (R5): calendar events are found from 3 months back to 6 months ahead. */
+const EVENT_BACK = -3;
+const EVENT_AHEAD = 6;
+const shiftMonths = (d: ISODate, n: number): ISODate => `${addMonths(ym(d), n)}${d.slice(7)}`;
+const EVENT_ICON = { outing: 'directions_bus', closed: 'event_busy', holiday: 'celebration' } as const;
+/** Words that find a field trip besides its title. */
+const TRIP_WORDS = ['field trip', 'trip', 'outing', 'excursion', 'karyawisata', 'jalan-jalan', 'wisata'];
+
+export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'en', today?: ISODate): SearchItem[] {
   const keys = allowedKeys(s, role);
   const navItems = navFor(s, role);
   const out: SearchItem[] = [];
@@ -131,6 +141,18 @@ export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'e
     for (const a of live(s.activities)) {
       if (!a.active) continue;
       out.push({ id: 'activity:' + a.id, group: 'records', label: lang === 'id' && a.nameId ? a.nameId : a.name, icon: a.icon || 'event', to: '/calendar', terms: [a.name, a.nameId ?? ''] });
+    }
+  }
+  if (keys.has('calendar') && today) {
+    const from = shiftMonths(today, EVENT_BACK);
+    const to = shiftMonths(today, EVENT_AHEAD);
+    for (const e of live(s.calendarEvents)) {
+      if (e.cancelledAt || e.date < from || e.date > to) continue;
+      const time = e.from && e.to ? `${e.from}–${e.to}` : t('cal.allDay');
+      out.push({
+        id: 'event:' + e.id, group: 'records', label: eventTitle(e, lang), sub: `${fmtDMY(e.date)} · ${time}`, icon: EVENT_ICON[e.kind], to: `/calendar?date=${e.date}`,
+        terms: [e.title, e.titleId ?? '', ...(e.kind === 'outing' ? TRIP_WORDS : [])],
+      });
     }
   }
   // R-F2: suppliers open the Directory; a role without it (the lobby) reaches the same screen through Contacts, where it may edit (Directory's canEdit)

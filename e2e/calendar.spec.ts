@@ -209,7 +209,7 @@ test('s9 adds a three-day holiday and an outing with times', async ({ page }) =>
   await page.getByRole('tab', { name: 'List' }).click(); // (the date pickers look for days by data-date: keep the month grid out of the page)
   await page.getByRole('button', { name: 'Add event' }).click();
   dlg = page.getByRole('dialog', { name: 'Add to the calendar' });
-  await dlg.getByRole('button', { name: 'Outing', exact: true }).click();
+  await dlg.getByRole('button', { name: 'Field trip', exact: true }).click();
   await dlg.getByPlaceholder('For example: Staff first-aid training').fill('Botanical garden');
   await pickDate(page, 'Date', '2026-11-05');
   await pickTime(page, 'From', '09:00');
@@ -221,7 +221,7 @@ test('s9 adds a three-day holiday and an outing with times', async ({ page }) =>
   await page.getByRole('tab', { name: 'Calendar' }).click();
   if (!(await block(page, '2026-11-05').isVisible())) await cell(page, '2026-11-05').click(); // 5 Nov is still the selected day
   await expect(block(page, '2026-11-05')).toContainText('Botanical garden');
-  await expect(block(page, '2026-11-05')).toContainText('Outing · 09:00–14:00');
+  await expect(block(page, '2026-11-05')).toContainText('Field trip · 09:00–14:00');
   await expect(block(page, '2026-11-05')).not.toContainText('Gardening club');
   const s = await snapshot(page, 's9');
   expect(Object.values(s.calendarEvents).find((e) => e.title === 'Long weekend')).toMatchObject({ date: '2026-11-02', endDate: '2026-11-04', kind: 'holiday' });
@@ -896,7 +896,7 @@ test('Indonesian: month and weekday names, labels and activity names follow the 
   await page.getByRole('button', { name: 'Tambah acara' }).click();
   const dlg = page.getByRole('dialog', { name: 'Tambah ke kalender' });
   await expect(dlg).toBeVisible();
-  for (const t of ['Penutupan', 'Libur nasional', 'Jalan-jalan']) await expect(dlg.getByRole('button', { name: t, exact: true })).toBeVisible();
+  for (const t of ['Penutupan', 'Libur nasional', 'Karyawisata']) await expect(dlg.getByRole('button', { name: t, exact: true })).toBeVisible();
   await expect(dlg.getByRole('switch', { name: /Kabari keluarga dan tim/ })).toBeVisible();
   const body = await page.locator('body').innerText();
   expect(body).not.toMatch(RAW_KEY);

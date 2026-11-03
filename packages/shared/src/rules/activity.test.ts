@@ -60,7 +60,7 @@ describe('dayPlan and Now/Next', () => {
     expect(curAct(s, T, min('12:30'))).toMatchObject({ kind: 'session', phase: 'next', name: 'Batik painting' });
     expect(curAct(s, T, min('15:00'))).toMatchObject({ kind: 'session', phase: 'done', name: 'Batik painting' });
     expect(curAct(s, '2026-10-29', 600)).toMatchObject({ kind: 'outing' });
-    expect(curAct(s, '2026-10-29', 600).name).toMatch(/^Outing/);
+    expect(curAct(s, '2026-10-29', 600).name).toMatch(/^Kebun Raya/);
     expect(curAct(s, '2026-10-24', 600)).toEqual({ kind: 'general', name: GENERAL_ACTIVITY });
   });
 

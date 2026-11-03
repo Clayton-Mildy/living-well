@@ -50,18 +50,36 @@ export function Calendar() {
   const [year, setYear] = useState(() => Number(today.slice(0, 4)));
   const [sel, setSel] = useState<string | null>(null);
   // KC round 15: "Plan the programme" on Today opens a week (?week=) in the weekly schedule
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const asked = params.get('week');
   const [week, setWeek] = useState<ISODate>(() => (asked && /^\d{4}-\d{2}-\d{2}$/.test(asked) ? mondayOf(asked) : mondayOf(today)));
   const [focus, setFocus] = useState<ISODate | null>(null);
   const [req, setReq] = useState<CellRequest | null>(null);
   const builderRef = useRef<HTMLDivElement>(null);
-  const [editor, setEditor] = useState<null | { event?: CalendarEvent; date?: string }>(null);
+  const [editor, setEditor] = useState<null | { event?: CalendarEvent; date?: string; kind?: 'outing' }>(null);
   // round 7: "Edit activity" on a day asks what to change; "Just this day" opens the one-day sheet for that slot
   const [choice, setChoice] = useState<null | { date: ISODate; slot: Slot }>(null);
   const [daySlot, setDaySlot] = useState<null | { date: ISODate; slot: Slot }>(null);
   // round 7: an extra session on a date, at any time: add (no time) or edit / remove (its time)
   const [extra, setExtra] = useState<null | { date: ISODate; time?: string }>(null);
+  // round 18: a search result opens /calendar?date=<day> (that day, in the month view: the day view on a phone) or /calendar?new=trip (management: the editor on Field trip);
+  // the parameter goes once used (replace), so Back doesn't open it again
+  const wantDay = params.get('date');
+  const wantTrip = params.get('new') === 'trip';
+  useEffect(() => {
+    if (!wantDay && !wantTrip) return;
+    if (wantDay && /^\d{4}-\d{2}-\d{2}$/.test(wantDay)) {
+      setMonth(ym(wantDay));
+      setSel(wantDay);
+      setView('month');
+      if (canBuild) { setWeek(mondayOf(wantDay)); setFocus(wantDay); setReq(null); }
+    }
+    if (wantTrip && isMgmt) setEditor({ date: today, kind: 'outing' });
+    const p = new URLSearchParams(params);
+    p.delete('date');
+    p.delete('new');
+    setParams(p, { replace: true });
+  }, [wantDay, wantTrip]); // eslint-disable-line react-hooks/exhaustive-deps
   const hours = { open: s.club.settings.open, close: s.club.settings.close };
 
   const days = useMemo(() => nextDays(s, today, LIST_DAYS, audience), [s, today, audience]);
@@ -142,12 +160,17 @@ export function Calendar() {
         ) : (
           <PageHead size={40} eyebrow={t('cal.openHours', hours)} title={family ? t('cal.titleFamily') : t('nav.calendar')} right={tabs} />
         )}
-        {isMgmt && !isPhone ? <div><Button icon="add" onClick={() => setEditor({ date: sel || today })}>{t('cal.addEvent')}</Button></div> : null}
+        {isMgmt && !isPhone ? (
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <Button icon="add" onClick={() => setEditor({ date: sel || today })}>{t('cal.addEvent')}</Button>
+            <Button variant="secondary" icon="directions_bus" onClick={() => setEditor({ date: sel || today, kind: 'outing' })}>{t('cal.newFieldTrip')}</Button>
+          </div>
+        ) : null}
 
         {view === 'list' ? (
           <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 16 : 12 }}>
             {days.map((d) => <DayBlock key={d.date} s={s} info={d} today={today} canEdit={isMgmt} onEdit={onEdit} onEditActivity={canBuild ? editActivity : undefined} onWent={onWent} flag={flagOf(d.date)} proposed={proposedOf(d.date)} decide={isMgmt} />)}
-            {isPhone ? linkRows([{ icon: 'calendar_month', label: t('cal.seeMonth'), run: () => setView('month') }]) : (
+            {isPhone ? linkRows([...(isMgmt ? [{ icon: 'directions_bus', label: t('cal.newFieldTrip'), run: () => setEditor({ date: today, kind: 'outing' as const }) }] : []), { icon: 'calendar_month', label: t('cal.seeMonth'), run: () => setView('month') }]) : (
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, flexWrap: 'wrap' }}>
                 <Button variant="secondary" size={48} icon="calendar_month" onClick={() => setView('month')}>{t('cal.seeMonth')}</Button>
               </div>
@@ -222,7 +245,7 @@ export function Calendar() {
       </div>
       {isMgmt && isPhone ? <Pin icon="add" label={t('cal.addEvent')} onClick={() => setEditor({ date: sel || today })} /> : null}
       <WentSheet eventId={went} onClose={() => setWent(null)} />
-      {isMgmt ? <EventEditor open={!!editor} onClose={() => setEditor(null)} event={editor?.event} date={editor?.date} /> : null}
+      {isMgmt ? <EventEditor open={!!editor} onClose={() => setEditor(null)} event={editor?.event} date={editor?.date} initialKind={editor?.kind} /> : null}
       {canBuild ? (
         <>
           <EditChoice open={!!choice} onClose={() => setChoice(null)} date={choice?.date ?? today} slot={choice?.slot ?? '10:30'}

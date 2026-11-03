@@ -16,7 +16,7 @@ export const mgmt: Same<typeof EN> = {
   // ----- siaran -----
   bcEyebrow: 'Templat WhatsApp', audience: 'Penerima', aud_families: 'Keluarga', aud_enquiries: 'Calon anggota', aud_staff: 'Staf', noRecipients: 'Belum ada yang bisa dikirimi pesan pada pilihan ini.',
   template: 'Templat', editTemplates: 'Ubah templat', message: 'Pesan', ph_update: 'Ruang taman baru kami dibuka hari Senin.', ph_closure: 'Jumat 30 Oktober, untuk pelatihan P3K staf',
-  ph_event: 'jalan-jalan ke museum batik, Kamis 26 November', ph_custom: 'Tulis pesan Anda.', when: 'Kapan', whenNow: 'Kirim sekarang', whenTom: 'Besok, 08:00', whenCustom: 'Pilih tanggal dan jam',
+  ph_event: 'karyawisata ke museum batik, Kamis 26 November', ph_custom: 'Tulis pesan Anda.', when: 'Kapan', whenNow: 'Kirim sekarang', whenTom: 'Besok, 08:00', whenCustom: 'Pilih tanggal dan jam',
   sendTo: 'Kirim ke {n} orang', scheduleFor: 'Jadwalkan untuk {n} orang', sendToOne: 'Kirim ke {n} orang', scheduleForOne: 'Jadwalkan untuk {n} orang', stopEditing: 'Berhenti mengubah', bcEditing: 'Anda sedang mengubah pesan terjadwal. Simpan agar perubahan berlaku.',
   previewFor: 'Pratinjau untuk {name} · templat “{tpl}”', previewNobody: 'Pratinjau muncul bila ada orang di antara penerima.', previewPick: 'Pratinjau sebagai', openApp: 'Buka aplikasi CitraPremier',
   simNote: 'Demo: pesan WhatsApp hanya simulasi.', sentAndScheduled: 'Terkirim dan terjadwal', bcEmpty: 'Belum ada siaran.', nPeople: '{n} orang', nPeopleOne: '{n} orang', scheduledFor: 'Terjadwal · {when}', sentOn: 'Terkirim {when}',
@@ -33,8 +33,8 @@ export const mgmt: Same<typeof EN> = {
   vnMobile: 'Nomor ponsel', vnGuests: 'Tamu', vnDay: 'Hari', vnTime: 'Jam', vnFrom: 'Dari', vnTo: 'Sampai', vnRoom: 'Ruangan', vnPriceL: 'Harga', vnDepositL: 'Uang muka', vnOptional: 'Opsional',
   vnDayOpen: 'Klub buka pada hari ini. Acara luar harus sebelum {open} atau sesudah {close}.', vnDayWeekend: 'Akhir pekan: klub tutup, jadi jam berapa pun kosong.',
   vnDayHoliday: 'Hari libur nasional: klub tutup, jadi jam berapa pun kosong.', vnDayClosed: 'Klub tutup pada hari ini karena urusan sendiri, jadi tidak bisa menerima pemesanan.',
-  vnDayOuting: 'Hari jalan-jalan: tim dan anggota sedang pergi, jadi tidak bisa menerima pemesanan.', vnPickDay: 'Pilih hari', vnFree: 'Kosong', vnTaken: 'Terpakai', vnMembersHere: 'Ada anggota',
-  vnOutingDay: 'Hari jalan-jalan', vnClosedDay: 'Klub tutup', vnGone: 'Sudah lewat', vnNotFree: 'Tidak kosong', vnNoRooms: 'Belum ada ruangan yang bisa dipesan untuk acara. Ruangan acara diatur di Kalender dan jadwal.',
+  vnDayOuting: 'Hari karyawisata: tim dan anggota sedang pergi, jadi tidak bisa menerima pemesanan.', vnPickDay: 'Pilih hari', vnFree: 'Kosong', vnTaken: 'Terpakai', vnMembersHere: 'Ada anggota',
+  vnOutingDay: 'Hari karyawisata', vnClosedDay: 'Klub tutup', vnGone: 'Sudah lewat', vnNotFree: 'Tidak kosong', vnNoRooms: 'Belum ada ruangan yang bisa dipesan untuk acara. Ruangan acara diatur di Kalender dan jadwal.',
   vnHint: 'Pemesanan memblokir kalender klub pada jam itu. Pada hari klub buka, acara luar berlangsung setelah {close}.', vnConfirm: 'Konfirmasi pemesanan',
   vnBooked: 'Dipesan. {date}, {time} kini terblokir di kalender klub.', vnUpcoming: 'Mendatang', vnOnCalendar: 'di kalender klub', vnNone: 'Belum ada pemesanan mendatang.', vnPast: 'Lalu dan dibatalkan',
   vnPastMeta: 'kirim tautan ulasan ke tamu setelah acara', vnSub: '{date} · {from}–{to} · {n} tamu · {room}', vnPrice: 'Harga {n}', vnDeposit: 'Uang muka {n}', vnInvoice: 'Faktur {ref}',
@@ -91,7 +91,7 @@ export const mgmt: Same<typeof EN> = {
 
   // ----- galat -----
   'err.venueClash': '{room} sudah dipesan pukul {from}–{to} oleh {title}.', 'err.venueClubHours': 'Klub buka pukul {open}–{close} pada hari itu. Acara harus sebelum {open} atau sesudah {close}.',
-  'err.venueOuting': 'Hari itu jalan-jalan, jadi klub tidak bisa menerima pemesanan.', 'err.venueClosed': 'Klub tutup pada hari itu karena urusan sendiri, jadi tidak bisa menerima pemesanan.',
+  'err.venueOuting': 'Hari itu karyawisata, jadi klub tidak bisa menerima pemesanan.', 'err.venueClosed': 'Klub tutup pada hari itu karena urusan sendiri, jadi tidak bisa menerima pemesanan.',
   'err.venuePast': 'Jam itu sudah lewat.', 'err.venueTimes': 'Jam selesai harus setelah jam mulai.', 'err.venueLate': 'Acara harus berlangsung antara pukul {from} dan {to}.',
   'err.venueRoom': 'Pilih ruangan yang bisa dipesan untuk acara.', 'err.venueCancelled': 'Pemesanan itu sudah dibatalkan.', 'err.venueDone': 'Acara itu sudah berlangsung.',
   'err.venueNotDone': 'Acaranya belum berlangsung.', 'err.venueReviewed': 'Acara ini sudah punya ulasan.', 'err.venueAsked': 'Tautan ulasan sudah dikirim.', 'err.svTplBuiltIn': 'Templat rating venue sudah bawaan: pertanyaannya bisa diubah, tetapi tidak bisa dihapus.', svTplBuiltIn: 'Bawaan',

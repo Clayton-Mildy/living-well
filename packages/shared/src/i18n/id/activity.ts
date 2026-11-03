@@ -6,7 +6,7 @@ export const activity: Same<typeof EN> = {
   hello: 'Halo, {n}', nowAt: 'Sekarang · {time}', nextAt: 'Berikutnya · {time}', lastAt: 'Sesi terakhir · {time}', withTeacher: 'bersama {name}',
   nInClub_one: '1 anggota di klub', nInClub_other: '{n} anggota di klub',
   heroNote: 'Foto ditandai lewat wajah dan masuk ke halaman Hari ini keluarga.',
-  outingLabel: 'Jalan-jalan hari ini', doneLabel: 'Selesai untuk hari ini', doneTitle: 'Sesi hari ini sudah selesai', doneSub: 'Catatan harian dan foto masih bisa ditambahkan.',
+  outingLabel: 'Karyawisata hari ini', doneLabel: 'Selesai untuk hari ini', doneTitle: 'Sesi hari ini sudah selesai', doneSub: 'Catatan harian dan foto masih bisa ditambahkan.',
   nextDay: 'Sesi berikutnya: {day} · {time} · {name}.', noneLabel: 'Hari ini', noneTitle: 'Belum ada sesi terjadwal', noneSub: 'Tidak ada sesi di jadwal mingguan hari ini. Foto dan catatan harian tetap bisa dipakai.',
   inClub: 'Di klub', todayPlan: 'Program hari ini', nothingToday: 'Tidak ada jadwal hari ini.', laterToday: 'Nanti hari ini', nothingLater: 'Tidak ada lagi jadwal hari ini.', nobodyYet: 'Belum ada yang check-in.', nobodyThatDay: 'Tidak ada yang check-in pada hari itu.',
   logged: 'Tercatat', notLogged: 'Belum dicatat', lunch: 'Makan siang', tea: 'Teh sore',

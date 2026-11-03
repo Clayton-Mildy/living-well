@@ -205,8 +205,8 @@ export function monthGrid(month: YM): (ISODate | null)[] {
 }
 
 export const fmtDMY = (d: ISODate) => `${d.slice(8, 10)}/${d.slice(5, 7)}/${d.slice(0, 4)}`;
-const KIND_PREFIX = /^(Club closed|Outing|Venue booking|Klub tutup|Jalan-jalan|Pemesanan tempat)\s*:\s*/i;
-/** Event title in the current language (Indonesian when known); the "Outing:" / "Club closed:" prefix is dropped because the kind is shown next to it. */
+const KIND_PREFIX = /^(Club closed|Outing|Field trip|Venue booking|Klub tutup|Jalan-jalan|Karyawisata|Pemesanan tempat)\s*:\s*/i;
+/** Event title in the current language (Indonesian when known); the "Field trip:" / "Club closed:" prefix is dropped because the kind is shown next to it. */
 export function eventTitle(e: { title: string; titleId?: string }, lang: Lang, strip = true): string {
   const raw = lang === 'id' && e.titleId ? e.titleId : e.title;
   return strip ? raw.replace(KIND_PREFIX, '') : raw;
