@@ -706,23 +706,56 @@ describe('prices and club rules', () => {
   });
 });
 
-describe('few-visits settings (round 17)', () => {
-  it('management saves them; below 1-31, days before the deadline 0-14, whole numbers', () => {
+describe('few-visits settings (round 17; round 18: days before next month)', () => {
+  const failsWith = (s: ClubState, input: unknown, code: string, params?: Record<string, unknown>) => {
+    try { run(s, 'club.updateSettings', input, 's9'); } catch (e) {
+      expect((e as DomainError).code).toBe(code);
+      if (params) expect((e as DomainError).params).toEqual(params);
+      return;
+    }
+    throw new Error(`expected ${code}`);
+  };
+  it('management saves them; below 1-31, days before the month from the stop days to 28, whole numbers', () => {
     const s = seed().citra;
-    const r = run(s, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, 's9');
-    expect(r.state.club.settings.fewVisits).toEqual({ below: 4, daysBeforeDeadline: 3 });
-    expect(run(s, 'club.updateSettings', { fewVisits: { below: 31, daysBeforeDeadline: 0 } }, 's9').state.club.settings.fewVisits).toEqual({ below: 31, daysBeforeDeadline: 0 });
-    for (const bad of [{ below: 0, daysBeforeDeadline: 2 }, { below: 32, daysBeforeDeadline: 2 }, { below: 5, daysBeforeDeadline: -1 }, { below: 5, daysBeforeDeadline: 15 }, { below: 2.5, daysBeforeDeadline: 2 }, { below: 5 }]) {
+    const r = run(s, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeMonth: 18 } }, 's9');
+    expect(r.state.club.settings.fewVisits).toEqual({ below: 4, daysBeforeMonth: 18 });
+    expect(run(s, 'club.updateSettings', { fewVisits: { below: 31, daysBeforeMonth: 14 } }, 's9').state.club.settings.fewVisits).toEqual({ below: 31, daysBeforeMonth: 14 });
+    for (const bad of [{ below: 0, daysBeforeMonth: 16 }, { below: 32, daysBeforeMonth: 16 }, { below: 5, daysBeforeMonth: -1 }, { below: 2.5, daysBeforeMonth: 16 }, { below: 5 }, { below: 5, daysBeforeDeadline: 2 }]) {
       fails(s, 'club.updateSettings', { fewVisits: bad }, 's9', 'err.invalid');
     }
-    // the defaults (5 and 2) are no change until something else was saved
-    fails(s, 'club.updateSettings', { fewVisits: { below: 5, daysBeforeDeadline: 2 } }, 's9', 'err.noChanges');
-    fails(r.state, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, 's9', 'err.noChanges');
-    expect(() => run(s, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, 's10')).toThrow('err.forbidden');
+    // the defaults (5 and 16) are no change until something else was saved
+    fails(s, 'club.updateSettings', { fewVisits: { below: 5, daysBeforeMonth: 16 } }, 's9', 'err.noChanges');
+    fails(r.state, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeMonth: 18 } }, 's9', 'err.noChanges');
+    expect(() => run(s, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeMonth: 18 } }, 's10')).toThrow('err.forbidden');
   });
-  it('can be saved together with the notice period', () => {
-    const r = run(seed().citra, 'club.updateSettings', { noticeDays: 10, fewVisits: { below: 3, daysBeforeDeadline: 1 } }, 's9');
-    expect(r.state.club.settings).toMatchObject({ noticeDays: 10, fewVisits: { below: 3, daysBeforeDeadline: 1 } });
+  it('the alert has to come before changes close: at least the stop days, at most 28', () => {
+    const s = seed().citra;
+    failsWith(s, { fewVisits: { below: 5, daysBeforeMonth: 10 } }, 'mgmt.err.fewDaysInvalid', { min: 14, max: 28 });
+    failsWith(s, { fewVisits: { below: 5, daysBeforeMonth: 29 } }, 'mgmt.err.fewDaysInvalid', { min: 14, max: 28 });
+    // checked against the stop days after this same input's notice
+    const r = run(s, 'club.updateSettings', { notice: { stop: 10 }, fewVisits: { below: 5, daysBeforeMonth: 10 } }, 's9');
+    expect(r.state.club.settings).toMatchObject({ notice: { downgrade: 14, stop: 10, leave: 14 }, fewVisits: { below: 5, daysBeforeMonth: 10 } });
+    failsWith(s, { notice: { stop: 20 }, fewVisits: { below: 5, daysBeforeMonth: 16 } }, 'mgmt.err.fewDaysInvalid', { min: 20, max: 28 });
+  });
+});
+
+describe('notice per kind (round 18)', () => {
+  it('stores all three kinds, the missing ones from the current values', () => {
+    const r = run(seed().citra, 'club.updateSettings', { notice: { stop: 30 } }, 's9');
+    expect(r.state.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 14 });
+    const r2 = run(r.state, 'club.updateSettings', { notice: { leave: 20 } }, 's9');
+    expect(r2.state.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 20 });
+    fails(r2.state, 'club.updateSettings', { notice: { stop: 30, leave: 20 } }, 's9', 'err.noChanges');
+    fails(seed().citra, 'club.updateSettings', { notice: { downgrade: 14 } }, 's9', 'err.noChanges');
+  });
+  it('1 to 60 whole days; an empty input fails; noticeDays is no longer taken', () => {
+    const s = seed().citra;
+    for (const bad of [{ stop: 0 }, { leave: 61 }, { downgrade: 2.5 }, { stop: 'x' }]) {
+      expect(() => run(s, 'club.updateSettings', { notice: bad }, 's9')).toThrow();
+    }
+    expect(() => run(s, 'club.updateSettings', {}, 's9')).toThrow('err.invalid');
+    expect(() => run(s, 'club.updateSettings', { notice: {} }, 's9')).toThrow('err.invalid');
+    expect(() => run(s, 'club.updateSettings', { noticeDays: 10 }, 's9')).toThrow('err.invalid');
   });
 });
 

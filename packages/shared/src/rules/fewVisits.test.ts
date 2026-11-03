@@ -1,28 +1,44 @@
-// Round 17: the few-visits alert — the alert day follows the notice deadline; who is flagged on a given day; the three phases.
+// Round 17: the few-visits alert — round 18: the alert day is days before next month, the list closes at the stop deadline; who is flagged on a given day; the three phases.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import type { ClubState } from '../types';
 import { FEW_DAY, withFewVisits } from './testFewVisits';
-import { fewVisitMembers, fewVisitsAlertDay, fewVisitsSettings, fewVisitsState, fewVisitsWindow } from './fewVisits';
+import { FEW_DAYS_BEFORE_MONTH_DEFAULT, fewDaysRange, fewVisitMembers, fewVisitsAlertDay, fewVisitsSettings, fewVisitsState, fewVisitsWindow } from './fewVisits';
 import { translate } from '../i18n';
 
 const ids = (s = withFewVisits(), today = FEW_DAY) => fewVisitMembers(s, today).map((r) => r.memberId);
 
 describe('alert day', () => {
-  it('is two days before the notice deadline of the next month (15 Nov, 16 Dec, 13 Feb)', () => {
+  it('round 18: 16 days before next month by default (December: alert 15 Nov, closes 17 Nov; November: 16 Oct, 18 Oct)', () => {
     const s = withFewVisits();
     expect(fewVisitsAlertDay(s, '2026-11')).toBe('2026-11-15');
+    expect(fewVisitsWindow(s, '2026-11-15').deadline).toBe('2026-11-17');
+    expect(fewVisitsAlertDay(s, '2026-10')).toBe('2026-10-16');
+    expect(fewVisitsWindow(s, '2026-10-16').deadline).toBe('2026-10-18');
     expect(fewVisitsAlertDay(s, '2026-12')).toBe('2026-12-16');
     expect(fewVisitsAlertDay(s, '2027-02')).toBe('2027-02-13');
   });
-  it('follows the notice period and the club setting', () => {
-    const s = produce(withFewVisits(), (d) => { d.club.settings.noticeDays = 7; });
-    expect(fewVisitsAlertDay(s, '2026-11')).toBe('2026-11-22');
-    const t = produce(withFewVisits(), (d) => { d.club.settings.fewVisits = { below: 5, daysBeforeDeadline: 5 }; });
+  it('the list closes at the stop deadline; the alert day follows daysBeforeMonth, not the notice', () => {
+    const s = produce(withFewVisits(), (d) => { d.club.settings.notice = { downgrade: 7, stop: 7, leave: 7 }; });
+    expect(fewVisitsAlertDay(s, '2026-11')).toBe('2026-11-15');
+    expect(fewVisitsWindow(s, '2026-11-15').deadline).toBe('2026-11-24');
+    const t = produce(withFewVisits(), (d) => { d.club.settings.fewVisits = { below: 5, daysBeforeMonth: 19 }; });
     expect(fewVisitsAlertDay(t, '2026-11')).toBe('2026-11-12');
   });
-  it('the settings default to 5 and 2', () => {
-    expect(fewVisitsSettings(withFewVisits())).toEqual({ below: 5, daysBeforeDeadline: 2 });
+  it('a stop notice longer than the alert: the alert falls on the stop deadline, not after it (Review Focus 2)', () => {
+    const s = produce(withFewVisits(), (d) => { d.club.settings.notice = { downgrade: 14, stop: 20, leave: 14 }; d.club.settings.fewVisits = { below: 5, daysBeforeMonth: 16 }; });
+    expect(fewVisitsAlertDay(s, '2026-11')).toBe('2026-11-11');
+    expect(fewVisitsWindow(s, '2026-11-11')).toMatchObject({ alertDay: '2026-11-11', deadline: '2026-11-11', phase: 'open' });
+    expect(fewDaysRange(s)).toEqual({ min: 20, max: 28 });
+  });
+  it('the settings default to 5 and 16; a round 17 daysBeforeDeadline is read as that many days before the stop deadline', () => {
+    expect(fewVisitsSettings(withFewVisits())).toEqual({ below: 5, daysBeforeMonth: 16 });
+    expect(FEW_DAYS_BEFORE_MONTH_DEFAULT).toBe(16);
+    const old = produce(withFewVisits(), (d) => { d.club.settings.fewVisits = { below: 5, daysBeforeDeadline: 2 } as never; });
+    expect(fewVisitsSettings(old)).toEqual({ below: 5, daysBeforeMonth: 16 });
+    const old7 = produce(old, (d) => { d.club.settings.notice = { downgrade: 14, stop: 7, leave: 14 }; });
+    expect(fewVisitsSettings(old7).daysBeforeMonth).toBe(9);
+    expect(fewDaysRange(withFewVisits())).toEqual({ min: 14, max: 28 });
   });
 });
 
@@ -40,7 +56,7 @@ describe('who is flagged', () => {
     expect(ids(s)).toContain('fv1'); // 4 visits
     const five = produce(s, (d) => { d.attendance['2026-11-06:fv1'] = { ...d.attendance['2026-11-06:m1'], id: '2026-11-06:fv1', memberId: 'fv1' }; });
     expect(ids(five)).not.toContain('fv1');
-    const below4 = produce(s, (d) => { d.club.settings.fewVisits = { below: 4, daysBeforeDeadline: 2 }; });
+    const below4 = produce(s, (d) => { d.club.settings.fewVisits = { below: 4, daysBeforeMonth: 16 }; });
     expect(ids(below4)).not.toContain('fv1');
     expect(ids(below4)).toContain('fv2'); // 3 visits
   });

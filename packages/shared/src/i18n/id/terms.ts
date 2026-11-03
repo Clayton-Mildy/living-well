@@ -26,7 +26,7 @@ export const terms: Same<typeof EN> = {
   textLang: 'Bahasa',
   idHint: 'Opsional. Keluarga yang membaca dalam Bahasa Indonesia melihat teks Inggris selama ini kosong.',
   hintFormat: '# judul · - butir',
-  hintPlaceholders: 'Diisi dari pengaturan: {noticeDays} {issueDay} {dueDay} {flexQuota}',
+  hintPlaceholders: 'Diisi dari pengaturan: {downgradeDays} {stopDays} {leaveDays} {issueDay} {dueDay} {flexQuota}',
   badEn: 'Tulis teks Inggris (paling banyak 20.000 karakter).',
   badId: 'Teks Indonesia lebih dari 20.000 karakter.',
   badTab: 'Periksa teks ini',

@@ -241,7 +241,7 @@ export function Plans() {
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: isPhone ? 18 : 16, alignItems: 'start' }}>
         {section(t('mgmt.plSecExtra'), [
           priceBlock('extra', t('mgmt.plExtra'), t('mgmt.perDay'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')], [t('mgmt.plCounted'), t('mgmt.plCheckIns')]]),
-          priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), tn(t, 'mgmt.plLeaveAskV', noticeDays(s))]]),
+          priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), tn(t, 'mgmt.plLeaveAskV', noticeDays(s, 'leave'))]]),
           priceBlock('dementia', t('mgmt.plDementia'), t('mgmt.perMonth'), []),
           priceBlock('pickup', t('mgmt.plPickup'), t('mgmt.perMonth'), [[t('mgmt.plPickupWho'), t('mgmt.plPickupWhoV')]]),
           priceBlock('fieldTrip', t('mgmt.plFieldTrip'), t('mgmt.perTrip'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')]]),

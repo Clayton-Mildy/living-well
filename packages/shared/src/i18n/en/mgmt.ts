@@ -115,7 +115,7 @@ export const mgmt = {
   plan_registration: 'Registration', plan_trial: 'Trial', plan_leave: 'Leave (cuti)', plDementia: 'Dementia care', perOnce: 'One time', perTrial: 'For 2 days in a row',
   plRegWhen: 'Charged', plRegWhenV: 'On the first invoice', plRegAgain: 'Again after', plRegAgainV: 'A stop for an unpaid invoice',
   plTrialDays: 'Length', plTrialDaysV: '2 days in a row', plTrialCollect: 'Collected', plTrialCollectV: 'At the front desk',
-  plLeaveBilled: 'Billed', plLeaveBilledV: 'Instead of the plan', plLeaveAsk: 'Asked', plLeaveAskV: '{n} days before the 1st', plLeaveAskVOne: '{n} day before the 1st', 'err.noticeInvalid': 'Use a whole number from 1 to 60.',
+  plLeaveBilled: 'Billed', plLeaveBilledV: 'Instead of the plan', plLeaveAsk: 'Asked', plLeaveAskV: '{n} days before the 1st', plLeaveAskVOne: '{n} day before the 1st', 'err.noticeInvalid': 'Use a whole number from 1 to 60.', 'err.fewDaysInvalid': 'Pick {min}–{max} days: the alert has to come before changes close.',
 
   // ----- KC round 7: survey templates, the survey log, venue surveys and the renter's rating link -----
   svTabLive: 'Live', svTabDrafts: 'Drafts', svTabTemplates: 'Templates', svTabLog: 'Log', svKind_family: 'Families', svKind_venue: 'Venue renters',
@@ -159,10 +159,14 @@ export const mgmt = {
   'roles.ofMenus': '{n} of {total}', 'roles.viewOnly': 'view only', 'roles.hidden': 'hidden', 'roles.all': 'All', 'roles.none': 'None', 'roles.fullAccess': 'full access',
   'roles.changedBy': 'changed {d} by {name}', 'roles.saveN': 'Save · {n} changes', 'roles.saveOne': 'Save · 1 change', 'roles.reset': 'Reset',
   // ----- round 17: Admin › Settings -----
-  'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.notice': 'Notice days (downgrade, stop, leave)', 'settings.sendOwner': 'Send to owner',
+  'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.sendOwner': 'Send to owner',
   'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewBelowOne': 'Flag below {n} visit',
-  'settings.fewDays': 'Alert {n} days before the last change day', 'settings.fewDaysOne': 'Alert {n} day before the last change day',
   'settings.terms': 'Terms and conditions', 'settings.noTerms': 'No terms yet', 'settings.termsRow': 'Version {v} · published {d} by {name} · {a} of {n} agreed',
   'settings.save': 'Save', 'settings.cancel': 'Cancel', 'settings.saved': 'Saved.',
-  'settings.err.few': 'Use a whole number from 1 to 31.', 'settings.err.days': 'Use a whole number from 0 to 14.',
+  'settings.err.few': 'Use a whole number from 1 to 31.',
+  // ----- round 18: Settings › notice per kind, few-visits alert before next month -----
+  'settings.downgrade': 'Downgrade', 'settings.downgradeSub': 'to a cheaper plan · ask by {d}', 'settings.stop': 'Stop membership', 'settings.stopSub': 'last month {m} · ask by {d}',
+  'settings.leave': 'Leave (cuti)', 'settings.leaveSub': '{m} off · ask by {d}', 'settings.upgrade': 'Upgrade', 'settings.upgradeSub': 'starts the next 1st', 'settings.noNotice': 'no notice',
+  'settings.leaveRun': 'Leave in a row', 'settings.leaveRunSub': 'no word after that ends the membership', 'settings.leaveRunV': 'up to {n} months', 'settings.days': 'days',
+  'settings.fewAlert': 'Alert before next month', 'settings.fewAlertSub': '{m}: alert {a} · changes close {c}',
 };

@@ -269,7 +269,7 @@ export interface RenewalDates {
   invoice: ISODate;
 }
 export function renewalDates(s: ClubState, month: YM, today: ISODate): RenewalDates {
-  const days = noticeDays(s);
+  const days = noticeDays(s, 'leave');
   const deadline = leaveDeadline(month, days);
   let from = month;
   for (let k = 0; k < 3 && today > leaveDeadline(from, days); k++) from = addMonths(from, 1);
@@ -287,7 +287,7 @@ export function leaveMonthsCheck(s: ClubState, m: Member, months: YM[], today: I
   const chosen = Array.from(new Set(months)).sort();
   if (!chosen.length || chosen.length > LEAVE_MAX_MONTHS) return { ok: false, code: 'err.invalid' };
   for (const mo of chosen) {
-    if (mo <= ym(today)) return { ok: false, code: 'err.leaveLate', params: { deadline: leaveDeadline(mo, noticeDays(s)), month: mo } };
+    if (mo <= ym(today)) return { ok: false, code: 'err.leaveLate', params: { deadline: leaveDeadline(mo, noticeDays(s, 'leave')), month: mo } };
     const c = leaveCheck(s, m, mo, asOf < today ? asOf : today);
     if (!c.ok) return c;
   }

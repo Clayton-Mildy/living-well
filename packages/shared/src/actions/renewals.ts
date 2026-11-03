@@ -64,7 +64,7 @@ export function checkChange(s: ClubState, m: Member, f: Pick<FollowUp, 'month' |
     notice(s, 'stop', f.month, asOf);
     // round 16: a stop asked after the deadline ends with the month before the earliest month at the soonest
     const earliest = earliestMonth(s, 'stop', asOf);
-    if (last < addDays(monthStart(earliest), -1)) bad('err.noticeLate', { deadline: noticeDeadline(s, ym(addDays(last, 1))), month: ym(addDays(last, 1)), earliest, days: noticeDays(s) });
+    if (last < addDays(monthStart(earliest), -1)) bad('err.noticeLate', { deadline: noticeDeadline(s, ym(addDays(last, 1)), 'stop'), month: ym(addDays(last, 1)), earliest, days: noticeDays(s, 'stop') });
   }
 }
 

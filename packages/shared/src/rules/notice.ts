@@ -1,5 +1,6 @@
-// Round 16 (KC): the notice period. A downgrade, a stop or a leave for a month has to be asked `noticeDays` (a club setting, default 14) before that
-// month's 1st (December → 17 November); asked later, it can start the month after at the earliest. An upgrade needs no notice: only to be asked before the 1st.
+// Round 16 (KC): the notice period. A downgrade, a stop or a leave for a month has to be asked some days before that month's 1st; asked later, it can start
+// the month after at the earliest. Round 18: each of the three kinds has its own days (`ClubSettings.notice`); a kind not set falls back to the round 16
+// `noticeDays`, then to 14 (December → 17 November), so a club with no settings behaves as before. An upgrade needs no notice: only to be asked before the 1st.
 // Management ending a membership for a reason (members.end) is not a family's request and is not held to it.
 import type { ClubState, ISODate, Member, Plan, YM } from '../types';
 import { addDays, addMonths, monthStart, ym } from '../util';
@@ -8,11 +9,19 @@ import { priceOn } from './billing';
 import { planPrice } from './plans';
 
 export const NOTICE_DAYS_DEFAULT = 14;
-export const noticeDays = (s: Pick<ClubState, 'club'>): number => s.club.settings.noticeDays ?? NOTICE_DAYS_DEFAULT;
-/** The last day a change starting in `month` can be asked for. */
-export const noticeDeadline = (s: Pick<ClubState, 'club'>, month: YM): ISODate => addDays(monthStart(month), -noticeDays(s));
+export const NOTICE_KINDS = ['downgrade', 'stop', 'leave'] as const;
+export type NoticeDaysKind = typeof NOTICE_KINDS[number];
+/** The days of notice for each kind: the kind's own setting, else the old single `noticeDays`, else 14. */
+export const noticeSettings = (s: Pick<ClubState, 'club'>): Record<NoticeDaysKind, number> => {
+  const { notice, noticeDays: old } = s.club.settings;
+  const of = (k: NoticeDaysKind) => notice?.[k] ?? old ?? NOTICE_DAYS_DEFAULT;
+  return { downgrade: of('downgrade'), stop: of('stop'), leave: of('leave') };
+};
+export const noticeDays = (s: Pick<ClubState, 'club'>, kind: NoticeDaysKind): number => noticeSettings(s)[kind];
+/** The last day a change of this kind starting in `month` can be asked for. */
+export const noticeDeadline = (s: Pick<ClubState, 'club'>, month: YM, kind: NoticeDaysKind): ISODate => addDays(monthStart(month), -noticeDays(s, kind));
 
-export type NoticeKind = 'upgrade' | 'downgrade' | 'stop' | 'leave';
+export type NoticeKind = 'upgrade' | NoticeDaysKind;
 export type NoticeCheck = { ok: true } | { ok: false; code: 'err.noticeLate'; params: { deadline: ISODate; month: YM; earliest: YM; days: number } };
 
 /**
@@ -27,18 +36,19 @@ export function changeKind(s: ClubState, m: Member, to: Plan, month: YM): 'upgra
   return planPrice(price, to) > planPrice(price, before) ? 'upgrade' : 'downgrade';
 }
 
-const inTime = (s: ClubState, kind: NoticeKind, month: YM, today: ISODate) =>
-  month > ym(today) && (kind === 'upgrade' ? today < monthStart(month) : today <= noticeDeadline(s, month));
+const inTime = (s: Pick<ClubState, 'club'>, kind: NoticeKind, month: YM, today: ISODate) =>
+  month > ym(today) && (kind === 'upgrade' ? today < monthStart(month) : today <= noticeDeadline(s, month, kind));
 
 /** The first month after today's whose change of this kind can still be asked for. */
-export function earliestMonth(s: ClubState, kind: NoticeKind, today: ISODate): YM {
+export function earliestMonth(s: Pick<ClubState, 'club'>, kind: NoticeKind, today: ISODate): YM {
   let month = addMonths(ym(today), 1);
   while (!inTime(s, kind, month, today)) month = addMonths(month, 1);
   return month;
 }
 
-/** Can a change of this kind starting in `month` be asked for today? */
-export function noticeCheck(s: ClubState, kind: NoticeKind, month: YM, today: ISODate): NoticeCheck {
+/** Can a change of this kind starting in `month` be asked for today? `days` is the kind's days (0 for an upgrade, whose deadline is the day before the 1st). */
+export function noticeCheck(s: Pick<ClubState, 'club'>, kind: NoticeKind, month: YM, today: ISODate): NoticeCheck {
   if (inTime(s, kind, month, today)) return { ok: true };
-  return { ok: false, code: 'err.noticeLate', params: { deadline: noticeDeadline(s, month), month, earliest: earliestMonth(s, kind, today), days: noticeDays(s) } };
+  const deadline = kind === 'upgrade' ? addDays(monthStart(month), -1) : noticeDeadline(s, month, kind);
+  return { ok: false, code: 'err.noticeLate', params: { deadline, month, earliest: earliestMonth(s, kind, today), days: kind === 'upgrade' ? 0 : noticeDays(s, kind) } };
 }

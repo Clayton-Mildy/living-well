@@ -23,7 +23,7 @@ export const terms = {
   textLang: 'Language',
   idHint: 'Optional. Families who read in Bahasa Indonesia see the English text while this is empty.',
   hintFormat: '# heading · - bullet',
-  hintPlaceholders: 'Filled in from the settings: {noticeDays} {issueDay} {dueDay} {flexQuota}',
+  hintPlaceholders: 'Filled in from the settings: {downgradeDays} {stopDays} {leaveDays} {issueDay} {dueDay} {flexQuota}',
   badEn: 'Write the English text (20,000 characters at most).',
   badId: 'The Indonesian text is longer than 20,000 characters.',
   badTab: 'Check this text',

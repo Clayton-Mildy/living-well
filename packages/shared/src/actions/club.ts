@@ -1,6 +1,6 @@
 // Club management: venue bookings, WhatsApp broadcasts (and the job that sends scheduled ones), surveys, prices and club rules.
 import type { Draft } from 'immer';
-import { fewVisitsSettings } from '../rules/fewVisits';
+import { fewDaysRange, fewVisitsSettings } from '../rules/fewVisits';
 import type { Actor, Broadcast, ClubState, HM, ISODate, PlanDef, PriceVersion, Survey, SurveyAnswer, SurveyCustomQuestion, User, VenueBooking } from '../types';
 import { defineAction, hasRole, isFamily, isMgmt, type Ctx } from './framework';
 import { registerJob } from './jobs';
@@ -12,7 +12,7 @@ import { arr, bad, bool, dm, hm, int, isoDate, nextNumId, obj, oneOf, phone, str
 import { SURVEY_BUILTINS, SURVEY_KINDS, SURVEY_KIND_LIST, SURVEY_LIMITS, answerValue, assignQuestionIds, customOf, presetsFor, questionProblem, ratingLinkOf, ratingTokenOf, surveyKind, type SurveyKind } from '../rules/surveys';
 import { actorName } from '../rules/core';
 import { live, rp, sortBy } from '../util';
-import { NOTICE_DAYS_DEFAULT } from '../rules/notice';
+import { NOTICE_KINDS, noticeSettings, type NoticeDaysKind } from '../rules/notice';
 
 const mgmtOnly = (u: User) => isMgmt(u);
 /** Custom plan prices from the input: { plan_1: 2000000 }. */
@@ -788,30 +788,42 @@ export const clubActions = [
     },
   }),
   // The club rules: how many visits a month a Flex member gets before a visit is an extra day (counted from check-ins), and (round 16) the notice period
-  // for a downgrade, stop or leave (rules/notice.ts). Round 17 (Admin › Settings): the few-visits alert's two numbers (those apply at once, ownerGate.ts).
-  defineAction<{ flexQuota?: number; noticeDays?: number; fewVisits?: { below: number; daysBeforeDeadline: number } }>({
+  // for a downgrade, stop or leave (rules/notice.ts; round 18: each kind its own days, `noticeDays` no longer taken). Round 17 (Admin › Settings): the few-visits
+  // alert's two numbers (those apply at once, ownerGate.ts; round 18: days before next month, at least the stop days).
+  defineAction<{ flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number } }>({
     name: 'club.updateSettings',
     can: mgmtOnly,
     parse(raw) {
       const o = obj(raw);
-      const out: { flexQuota?: number; noticeDays?: number; fewVisits?: { below: number; daysBeforeDeadline: number } } = {};
+      const out: { flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number } } = {};
       if (o.flexQuota !== undefined) out.flexQuota = int(o.flexQuota, 1, 23, 'flexQuota');
-      if (o.noticeDays !== undefined) out.noticeDays = int(o.noticeDays, 1, 60, 'noticeDays');
+      if (o.notice !== undefined) {
+        const n = obj(o.notice);
+        const notice: Partial<Record<NoticeDaysKind, number>> = {};
+        for (const k of NOTICE_KINDS) if (n[k] !== undefined) notice[k] = int(n[k], 1, 60, k);
+        if (Object.keys(notice).length) out.notice = notice;
+      }
       if (o.fewVisits !== undefined) {
         const f = obj(o.fewVisits);
-        out.fewVisits = { below: int(f.below, 1, 31, 'below'), daysBeforeDeadline: int(f.daysBeforeDeadline, 0, 14, 'daysBeforeDeadline') };
+        out.fewVisits = { below: int(f.below, 1, 31, 'below'), daysBeforeMonth: int(f.daysBeforeMonth, 0, 60, 'daysBeforeMonth') }; // the range is checked in run, against the stop days
       }
-      if (out.flexQuota === undefined && out.noticeDays === undefined && out.fewVisits === undefined) bad('err.invalid');
+      if (out.flexQuota === undefined && out.notice === undefined && out.fewVisits === undefined) bad('err.invalid');
       return out;
     },
     run(d, i, ctx) {
       const st = d.club.settings;
       const few = fewVisitsSettings(d);
-      const same = (i.flexQuota === undefined || i.flexQuota === st.flexQuota) && (i.noticeDays === undefined || i.noticeDays === (st.noticeDays ?? NOTICE_DAYS_DEFAULT))
-        && (i.fewVisits === undefined || (i.fewVisits.below === few.below && i.fewVisits.daysBeforeDeadline === few.daysBeforeDeadline));
+      const notice = noticeSettings(d);
+      const same = (i.flexQuota === undefined || i.flexQuota === st.flexQuota) && (i.notice === undefined || NOTICE_KINDS.every((k) => i.notice![k] === undefined || i.notice![k] === notice[k]))
+        && (i.fewVisits === undefined || (i.fewVisits.below === few.below && i.fewVisits.daysBeforeMonth === few.daysBeforeMonth));
       if (same) ctx.fail('err.noChanges');
+      // round 18: the alert has to come before changes close, so its days before the month are at least the stop days (after this input's notice)
+      if (i.fewVisits !== undefined) {
+        const { min, max } = fewDaysRange({ club: { ...d.club, settings: { ...st, notice: { ...notice, ...i.notice } } } });
+        if (i.fewVisits.daysBeforeMonth < min || i.fewVisits.daysBeforeMonth > max) ctx.fail('mgmt.err.fewDaysInvalid', { min, max });
+      }
       if (i.flexQuota !== undefined) st.flexQuota = i.flexQuota;
-      if (i.noticeDays !== undefined) st.noticeDays = i.noticeDays;
+      if (i.notice !== undefined) st.notice = { ...notice, ...i.notice };
       if (i.fewVisits !== undefined) st.fewVisits = i.fewVisits;
       ctx.feed({ icon: 'tune', key: 'mgmt.feed.rules', params: { quota: st.flexQuota } });
     },

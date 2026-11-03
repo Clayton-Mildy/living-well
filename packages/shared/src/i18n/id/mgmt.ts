@@ -117,7 +117,7 @@ export const mgmt: Same<typeof EN> = {
   plan_registration: 'Pendaftaran', plan_trial: 'Percobaan', plan_leave: 'Cuti', plDementia: 'Perawatan demensia', perOnce: 'Sekali saja', perTrial: 'Untuk 2 hari berturut-turut',
   plRegWhen: 'Ditagih', plRegWhenV: 'Di invoice pertama', plRegAgain: 'Lagi setelah', plRegAgainV: 'Dihentikan karena invoice belum dibayar',
   plTrialDays: 'Lama', plTrialDaysV: '2 hari berturut-turut', plTrialCollect: 'Dibayar', plTrialCollectV: 'Di meja depan',
-  plLeaveBilled: 'Ditagih', plLeaveBilledV: 'Sebagai pengganti paket', plLeaveAsk: 'Diajukan', plLeaveAskV: '{n} hari sebelum tanggal 1', plLeaveAskVOne: '{n} hari sebelum tanggal 1', 'err.noticeInvalid': 'Gunakan bilangan bulat 1 sampai 60.',
+  plLeaveBilled: 'Ditagih', plLeaveBilledV: 'Sebagai pengganti paket', plLeaveAsk: 'Diajukan', plLeaveAskV: '{n} hari sebelum tanggal 1', plLeaveAskVOne: '{n} hari sebelum tanggal 1', 'err.noticeInvalid': 'Gunakan bilangan bulat 1 sampai 60.', 'err.fewDaysInvalid': 'Pilih {min}–{max} hari: pengingat harus datang sebelum perubahan ditutup.',
 
   // ----- KC round 7: templat survei, riwayat survei, survei venue, dan tautan penilaian untuk penyewa -----
   svTabLive: 'Aktif', svTabDrafts: 'Draf', svTabTemplates: 'Templat', svTabLog: 'Riwayat', svKind_family: 'Keluarga', svKind_venue: 'Penyewa venue',
@@ -160,10 +160,14 @@ export const mgmt: Same<typeof EN> = {
   'roles.ofMenus': '{n} dari {total}', 'roles.viewOnly': 'hanya lihat', 'roles.hidden': 'tersembunyi', 'roles.all': 'Semua', 'roles.none': 'Kosongkan', 'roles.fullAccess': 'akses penuh',
   'roles.changedBy': 'diubah {d} oleh {name}', 'roles.saveN': 'Simpan · {n} perubahan', 'roles.saveOne': 'Simpan · 1 perubahan', 'roles.reset': 'Atur ulang',
   // ----- round 17: Admin › Settings -----
-  'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.notice': 'Hari pemberitahuan (turun paket, berhenti, cuti)', 'settings.sendOwner': 'Kirim ke pemilik',
+  'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.sendOwner': 'Kirim ke pemilik',
   'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewBelowOne': 'Tandai di bawah {n} kunjungan',
-  'settings.fewDays': 'Ingatkan {n} hari sebelum hari terakhir perubahan', 'settings.fewDaysOne': 'Ingatkan {n} hari sebelum hari terakhir perubahan',
   'settings.terms': 'Syarat dan ketentuan', 'settings.noTerms': 'Belum ada syarat', 'settings.termsRow': 'Versi {v} · diterbitkan {d} oleh {name} · {a} dari {n} setuju',
   'settings.save': 'Simpan', 'settings.cancel': 'Batal', 'settings.saved': 'Tersimpan.',
-  'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.', 'settings.err.days': 'Gunakan bilangan bulat 0 sampai 14.',
+  'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.',
+  // ----- round 18: Settings › notice per kind, few-visits alert before next month -----
+  'settings.downgrade': 'Turun paket', 'settings.downgradeSub': 'ke paket lebih murah · paling lambat {d}', 'settings.stop': 'Berhenti', 'settings.stopSub': 'bulan terakhir {m} · paling lambat {d}',
+  'settings.leave': 'Cuti', 'settings.leaveSub': 'cuti {m} · paling lambat {d}', 'settings.upgrade': 'Naik paket', 'settings.upgradeSub': 'mulai tanggal 1 berikutnya', 'settings.noNotice': 'tanpa pemberitahuan',
+  'settings.leaveRun': 'Cuti berturut-turut', 'settings.leaveRunSub': 'tanpa kabar sesudahnya, keanggotaan berakhir', 'settings.leaveRunV': 'maks. {n} bulan', 'settings.days': 'hari',
+  'settings.fewAlert': 'Pengingat sebelum bulan depan', 'settings.fewAlertSub': '{m}: pengingat {a} · perubahan ditutup {c}',
 };

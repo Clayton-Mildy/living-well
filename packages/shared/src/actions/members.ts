@@ -455,7 +455,7 @@ export const membersActions: ActionDef[] = [
         const s = d as unknown as ClubState;
         const kind = changeKind(s, m as Member, input.plan, ym(effective));
         const earliest = earliestMonth(s, kind, ctx.today);
-        if (kind === 'downgrade' && effective < monthStart(earliest)) ctx.fail('err.noticeLate', { deadline: noticeDeadline(s, ym(effective)), month: ym(effective), earliest, days: noticeDays(s) });
+        if (kind === 'downgrade' && effective < monthStart(earliest)) ctx.fail('err.noticeLate', { deadline: noticeDeadline(s, ym(effective), 'downgrade'), month: ym(effective), earliest, days: noticeDays(s, 'downgrade') });
         // the front desk changes a plan from one date only: the first 1st it can start on (next month, or later for a late downgrade)
         if (roleOf(ctx.user) === 'lobby' && effective !== monthStart(earliestMonth(s, changeKind(s, m as Member, input.plan, ym(firstOfNextMonth(ctx.today))), ctx.today))) ctx.fail('members.err.effectiveInvalid');
       }

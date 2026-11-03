@@ -2,15 +2,15 @@
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import { buildSeed, type ClubState } from '../index';
-import { changeKind, earliestMonth, noticeCheck, noticeDays, noticeDeadline } from './notice';
+import { changeKind, earliestMonth, noticeCheck, noticeDays, noticeDeadline, noticeSettings } from './notice';
 
 const seed = (): ClubState => buildSeed().citra;
 
 describe('notice period', () => {
   it('defaults to 14 days before the 1st (December → 17 November)', () => {
     const s = seed();
-    expect(noticeDays(s)).toBe(14);
-    expect(noticeDeadline(s, '2026-12')).toBe('2026-11-17');
+    expect(noticeDays(s, 'stop')).toBe(14);
+    expect(noticeDeadline(s, '2026-12', 'stop')).toBe('2026-11-17');
   });
   it('a downgrade is fine on the deadline day and too late the day after; the earliest month moves on', () => {
     const s = seed();
@@ -28,7 +28,7 @@ describe('notice period', () => {
   });
   it('the club setting changes the deadline', () => {
     const s = produce(seed(), (d) => { d.club.settings.noticeDays = 7; });
-    expect(noticeDeadline(s, '2026-12')).toBe('2026-11-24');
+    expect(noticeDeadline(s, '2026-12', 'downgrade')).toBe('2026-11-24');
   });
   it('a cheaper (or equally priced) plan is a downgrade, a dearer one an upgrade', () => {
     const s = seed();
@@ -44,5 +44,27 @@ describe('notice period', () => {
     const flex = Object.values(s.members).find((m) => m.plans.at(-1)?.plan === 'flex' && !m.deletedAt)!;
     const up = produce(s, (d) => { d.members[flex.id].plans.push({ from: '2026-12-01', plan: 'gold', by: 'staff:s9' }); });
     expect(changeKind(up, up.members[flex.id], 'flex', '2026-12')).toBe('upgrade');
+  });
+});
+
+describe('round 18: notice per kind of change', () => {
+  it('no settings: 14 days for each kind', () => {
+    expect(noticeSettings(seed())).toEqual({ downgrade: 14, stop: 14, leave: 14 });
+  });
+  it('an old club with only noticeDays 21 stored uses 21 for all three', () => {
+    const s = produce(seed(), (d) => { d.club.settings.noticeDays = 21; delete d.club.settings.notice; });
+    expect(noticeSettings(s)).toEqual({ downgrade: 21, stop: 21, leave: 21 });
+  });
+  it('each kind has its own deadline and check', () => {
+    const s = produce(seed(), (d) => { d.club.settings.notice = { downgrade: 7, stop: 30, leave: 14 }; });
+    expect(noticeDeadline(s, '2026-12', 'downgrade')).toBe('2026-11-24');
+    expect(noticeDeadline(s, '2026-12', 'stop')).toBe('2026-11-01');
+    expect(noticeDeadline(s, '2026-12', 'leave')).toBe('2026-11-17');
+    const today = '2026-11-05';
+    const stop = noticeCheck(s, 'stop', '2026-12', today);
+    expect(stop.ok).toBe(false);
+    if (!stop.ok) expect(stop.params).toMatchObject({ days: 30, earliest: '2027-01', deadline: '2026-11-01' });
+    expect(noticeCheck(s, 'leave', '2026-12', today).ok).toBe(true);
+    expect(noticeCheck(s, 'downgrade', '2026-12', today).ok).toBe(true);
   });
 });
