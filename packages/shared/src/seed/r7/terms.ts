@@ -6,7 +6,7 @@ export const TERMS_V1_EN = `# 1. Membership and plans
 - Membership is month to month for the member named on the registration form. The family contact who signs the form is responsible for the bills.
 - Flex covers {flexQuota} visit days a month; Gold covers every open day. Other plans are listed under Plans in the app.
 # 2. Visits and opening hours
-- The club is open on weekdays. Public holidays and the club's closed days are shown in the app's calendar.
+- The club is open on weekdays, and on the weekend days the club announces for a programme. Public holidays, closed days and weekend programmes are shown in the app's calendar.
 - A visit day starts when the front desk checks the member in and ends at check-out.
 - Flex visits beyond {flexQuota} in a month are billed as extra days. Visit days do not carry over to the next month.
 # 3. Fees and billing
@@ -38,7 +38,7 @@ export const TERMS_V1_EN = `# 1. Membership and plans
 # 9. Belongings
 - Please label glasses, hearing aids, walking aids and clothes. The club is not responsible for money or valuables brought in.
 # 10. Photos
-- Staff take photos of the day. Each photo is shared only with the families of the members in it; other members' faces are never shared with a family.
+- Staff take photos of the day. Each photo is shared only with the families of the members tagged in it, so a group photo is shared with the family of every member tagged in it.
 - Face tagging and face check-in can be turned off at any time; ask the front desk.
 # 11. Personal data
 - The member's and the family's details are used only to run the membership and care for the member, and are kept safe.
@@ -54,7 +54,7 @@ export const TERMS_V1_ID = `# 1. Keanggotaan dan paket
 - Keanggotaan berlaku bulan ke bulan untuk anggota yang tertulis di formulir pendaftaran. Kontak keluarga yang menandatangani formulir bertanggung jawab atas tagihan.
 - Flex mencakup {flexQuota} hari kunjungan sebulan; Gold mencakup setiap hari buka. Paket lain ada di menu Paket di aplikasi.
 # 2. Kunjungan dan jam buka
-- Klub buka pada hari kerja. Hari libur nasional dan hari tutup klub ada di kalender aplikasi.
+- Klub buka pada hari kerja, dan pada akhir pekan yang diumumkan klub untuk suatu program. Hari libur nasional, hari tutup dan program akhir pekan ada di kalender aplikasi.
 - Satu hari kunjungan dimulai saat resepsionis mencatat kedatangan anggota dan berakhir saat pulang.
 - Kunjungan Flex di atas {flexQuota} dalam sebulan ditagih sebagai hari tambahan. Hari kunjungan tidak dibawa ke bulan berikutnya.
 # 3. Biaya dan tagihan
@@ -63,7 +63,7 @@ export const TERMS_V1_ID = `# 1. Keanggotaan dan paket
 - Bayar lewat virtual account di tagihan, atau tunai atau transfer bank dengan foto bukti bayar.
 - Bila tagihan belum dibayar, keanggotaan ditahan mulai tanggal 1 bulan berikutnya. Bila keluarga belum memberi tahu kapan akan membayar, keanggotaan berhenti beberapa hari kemudian.
 # 4. Mengubah, berhenti dan cuti
-- Naik paket berlaku mulai tanggal 1 berikutnya, tanpa pemberitahuan.
+- Naik paket berlaku mulai tanggal 1 berikutnya, tanpa perlu pemberitahuan lebih dulu.
 - Turun paket harus diminta paling lambat {downgradeDays} hari sebelum bulan berlaku.
 - Berhenti harus diminta paling lambat {stopDays} hari sebelum bulan berlaku.
 - Cuti harus diminta paling lambat {leaveDays} hari sebelum bulan berlaku. Satu bulan cuti ditagih sebesar biaya cuti dan tempat anggota tetap disimpan.
@@ -86,7 +86,7 @@ export const TERMS_V1_ID = `# 1. Keanggotaan dan paket
 # 9. Barang bawaan
 - Mohon beri nama pada kacamata, alat bantu dengar, alat bantu jalan dan pakaian. Klub tidak bertanggung jawab atas uang atau barang berharga yang dibawa.
 # 10. Foto
-- Staf memotret kegiatan harian. Setiap foto hanya dibagikan kepada keluarga anggota yang ada di foto itu; wajah anggota lain tidak pernah dibagikan kepada keluarga.
+- Staf memotret kegiatan harian. Setiap foto hanya dibagikan kepada keluarga anggota yang ditandai di foto itu, jadi foto bersama dibagikan kepada keluarga setiap anggota yang ditandai di dalamnya.
 - Penandaan wajah dan absen wajah dapat dimatikan kapan saja; tanyakan ke resepsionis.
 # 11. Data pribadi
 - Data anggota dan keluarga hanya dipakai untuk menjalankan keanggotaan dan merawat anggota, dan disimpan dengan aman.

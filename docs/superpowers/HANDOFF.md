@@ -14,7 +14,7 @@ Spec `specs/2026-11-03-round18-design.md`; plan `plans/2026-11-03-round18.md`; p
 
 ### Logins added to the quick list (`/api/demo/accounts`, `apps/server/src/app.ts`)
 - **Benjamin Cass** (`s11`, Owner): login `benjamin` / `citra123`, after Ega.
-- **Ratna Rahayu** (`f_ratna`): login `ratna` / `citra123`, after Daniel. Full 45-member roster only, so the small seed (tests, e2e) has no Ratna and the list skips her.
+- **Ratna Rahayu** (`f_ratna`): login `ratna` / `citra123`, after Daniel. Full 46-member roster only, so the small seed (tests, e2e) has no Ratna and the list skips her.
 
 ### Seed (`packages/shared/src/seed/r7/terms.ts`, `round18.ts`; no random draws)
 - **Terms v1** (`terms.ts`): 14 sections in English and Indonesian, with placeholders filled from the settings: `{flexQuota}`, `{issueDay}`, `{dueDay}`, `{downgradeDays}`, `{stopDays}` and `{leaveDays}`. It is still version 1, so no seeded family meets a new-version gate. The staff Terms page shows "Demo text: review before going live" while version 1 is current.
