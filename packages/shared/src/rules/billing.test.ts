@@ -1,7 +1,7 @@
 // The invoice run's lines for a member: the dementia care fee (round 14, A2) on top of the plan line.
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, priceOn, type ClubState, type PlanDef } from '../index';
-import { FEE_DEFAULTS, feeOf, pickupPrice, runLinesFor } from './billing';
+import { FEE_DEFAULTS, feeOf, nextBill, pickupPrice, runLinesFor } from './billing';
 
 const T = '2026-10-21';
 const PERIOD = '2026-11';
@@ -113,5 +113,40 @@ describe('round 16: the pick-up fee', () => {
     cur.leaves = [];
     cur.lastDay = '2026-11-10';
     expect(pickupLine(s, '2026-12')).toBeUndefined();
+  });
+});
+
+describe('round 17: on your next bill', () => {
+  const bare = () => { const s = seed(); s.pendingCharges = {}; return s; }; // the seed already bills Opa Budi's pick-up, cake and trip
+  const trip = (s: ClubState, id: string, memberId: string, amount: number, invoiceId?: string) => {
+    s.pendingCharges[id] = { id, clubId: s.clubId, createdAt: '2026-10-20T15:00:00', createdBy: 'staff:s1', memberId, amount, label: 'inv.line.fieldTrip', params: { title: 'Zoo', date: '2026-10-20' }, ...(invoiceId ? { invoiceId } : {}) } as never;
+  };
+  it('lists the un-invoiced charges and next month\'s pick-up fee, with a total', () => {
+    const s = bare();
+    s.members.m46.pickup = { on: true, price: 500_000 };
+    trip(s, 'trip-e1-m46', 'm46', 250_000);
+    const b = nextBill(s, 'm46', T);
+    expect(b.items.map((i) => i.id).sort()).toEqual(['pickup', 'trip-e1-m46']);
+    expect(b.items.find((i) => i.id === 'pickup')).toMatchObject({ label: 'inv.line.pickup', amount: 500_000 });
+    expect(b.items.find((i) => i.id === 'trip-e1-m46')).toMatchObject({ label: 'inv.line.fieldTrip', params: { title: 'Zoo', date: '2026-10-20' }, amount: 250_000 });
+    expect(b.total).toBe(750_000);
+  });
+  it('leaves out invoiced charges, other members\' charges and a pick-up that is off', () => {
+    const s = bare();
+    s.members.m46.pickup = { on: false, price: 500_000 };
+    trip(s, 'trip-e1-m46', 'm46', 250_000, 'INV-2610-046');
+    trip(s, 'trip-e1-m1', 'm1', 250_000);
+    expect(nextBill(s, 'm46', T)).toEqual({ items: [], total: 0 });
+  });
+  it('has no pick-up item when next month is leave or after the last day', () => {
+    const s = bare();
+    s.members.m46.pickup = { on: true };
+    expect(nextBill(s, 'm46', T).items.map((i) => i.amount)).toEqual([600_000]);
+    const cur = s.members.m46.memberships.at(-1)!;
+    cur.leaves = [{ month: '2026-11', at: '2026-10-01T10:00', by: 'staff:s1' }];
+    expect(nextBill(s, 'm46', T).items).toEqual([]);
+    cur.leaves = [];
+    cur.lastDay = '2026-10-31';
+    expect(nextBill(s, 'm46', T).items).toEqual([]);
   });
 });

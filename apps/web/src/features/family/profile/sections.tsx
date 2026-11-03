@@ -4,7 +4,7 @@
 import { cloneElement, useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import {
-  FACES, FACE_KEY, actorName, dailyMood, listName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, displayName, memberSince, primaryContact, priceOn, rp, sortBy, staffCall, waUrl, ym,
+  FACES, FACE_KEY, actorName, dailyMood, listName, addMonths, attOf, contactsOfMember, dayStatus, daysInMonth, dow, fmtPhone, isPendingRow, issueDateOf, limitsFor, live, memberAge, memberName, displayName, memberSince, primaryContact, pickupPrice, priceOn, rp, sortBy, staffCall, waUrl, ym,
   type ClubState, type DocType, type Health, type ISODate, type Member, type MemberNote,
 } from '@cp/shared';
 import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/members';
@@ -326,6 +326,7 @@ export function PlanSection({ p, id }: SecProps) {
   const price = priceOn(s, today);
   const prim = primaryContact(s, m.id);
   const spouse = m.spouseId ? s.members[m.spouseId] : undefined;
+  const pick = pickupPrice(s, m, today); // round 17: the pick-up fee, shown without the staff's "custom" mark
   const upcoming = m.plans.find((x) => x.from > today);
   const last = m.memberships[m.memberships.length - 1]?.lastDay;
   return (
@@ -334,6 +335,7 @@ export function PlanSection({ p, id }: SecProps) {
       <List testId="pf-plan">
         <KV first k={t('fhealth.tPlan')} v={t(flex ? 'profile.planFlexTitle' : 'profile.planGoldTitle', { plan: planLabel(s, ps.plan, fmt.lang), q: planQuota(s, ps.plan) ?? s.club.settings.flexQuota })} />
         <KV k={t('profile.fee')} v={t('fhealth.perMonth', { p: rp(planPrice(price, ps.plan)) })} />
+        {pick ? <KV testId="pf-pickup" k={t('profile.pickup')} v={t('profile.pickupVal', { p: rp(pick.price) })} /> : null}
         {flex ? <KV k={t('profile.extraDay')} v={rp(price.extra)} /> : null}
         {prim ? <KV k={t('profile.billingContact')} v={prim.name} /> : null}
         <KV k={t('profile.va')} v={m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')} />

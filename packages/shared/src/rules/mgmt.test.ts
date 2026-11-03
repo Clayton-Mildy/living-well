@@ -102,6 +102,17 @@ describe('pricing preview', () => {
     expect(invoicePreview(s, 'm1', { flex: 6000000, gold: 10000000, extra: 700000, from: '2026-12-01' }, T)!.total).toBe(2700000);
     expect(invoicePreview(s, 'nope', null, T)).toBeNull();
   });
+  it('a typed pick-up price shows on the preview of a pick-up member, and the saved one when nothing is typed', () => {
+    const c: ClubState = structuredClone(s);
+    c.members.m1.pickup = { on: true };
+    const pick = (d: Parameters<typeof invoicePreview>[2]) => invoicePreview(c, 'm1', d, T)!.lines.find((l) => l.kind === 'pickup')?.amount;
+    const base = { flex: 6000000, gold: 10000000, extra: 700000, from: T };
+    expect(pick(null)).toBe(600000);
+    expect(pick(base)).toBe(600000); // a draft that does not touch it keeps the saved fee
+    expect(pick({ ...base, pickup: 700000 })).toBe(700000);
+    c.members.m1.pickup = { on: true, price: 450000 };
+    expect(pick({ ...base, pickup: 700000 })).toBe(450000); // the member's own price wins
+  });
   it('a member on a custom plan previews the plan price, saved or typed', () => {
     const c: ClubState = structuredClone(s);
     c.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }];

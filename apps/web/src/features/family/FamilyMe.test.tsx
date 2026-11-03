@@ -141,6 +141,17 @@ describe('family Billing', () => {
     expect(document.querySelectorAll('[data-testid="invoice-row"]').length).toBeLessThanOrEqual(6);
   });
 
+  it('On your next bill: Opa Budi’s pick-up, trip and birthday cake sit above the invoices (Oma Lina has none)', async () => {
+    open('f1');
+    await show(<FamilyBilling />, '/billing');
+    const blocks = document.querySelectorAll('[data-testid="next-bill"]');
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].textContent).toContain('On your next bill · Opa Budi');
+    expect(blocks[0].textContent).toContain('Pick-up');
+    expect(blocks[0].textContent).toContain('Birthday · Birthday cake (chocolate, no nuts)');
+    expect(blocks[0].compareDocumentPosition(q('[data-testid="billing-invoices"]')!) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
   it('pay (demo) sends every open invoice together', async () => {
     const { acts } = open('f1');
     await show(<FamilyBilling />, '/billing');

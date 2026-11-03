@@ -162,6 +162,24 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
   if (credit > 0 && lines.length) lines.push({ id: 'credit', kind: 'credit', label: 'inv.line.credit', qty: 1, unit: -credit, amount: -Math.min(credit, sum(lines.map((l) => l.amount))) });
   return lines;
 }
+/**
+ * Round 17: what a member will see on their next bill beyond the plan fee (a preview; the plan fee is left out because the family knows it and leave or a stop
+ * would make a wrong number): the charges still waiting for an invoice (a field trip, a birthday cake) and next month's pick-up fee when it is on.
+ */
+export interface NextBillItem { id: string; label: string; params?: Record<string, string | number>; amount: number }
+export function nextBill(s: ClubState, memberId: string, today: ISODate): { items: NextBillItem[]; total: number } {
+  const m = s.members[memberId];
+  if (!m || m.deletedAt) return { items: [], total: 0 };
+  const items: NextBillItem[] = [];
+  const next = addMonths(ym(today), 1);
+  const first: ISODate = `${next}-01`;
+  const pick = pickupPrice(s, m, first);
+  if (pick && !onLeaveIn(m, next) && membershipStatus(m, first) !== 'ended') items.push({ id: 'pickup', label: 'inv.line.pickup', amount: pick.price });
+  for (const c of sortBy(live(s.pendingCharges).filter((c) => c.memberId === memberId && !c.invoiceId), (c) => c.createdAt + c.id)) {
+    items.push({ id: c.id, label: c.label, ...(c.params ? { params: c.params } : {}), amount: c.amount });
+  }
+  return { items, total: sum(items.map((i) => i.amount)) };
+}
 export function runPreview(s: ClubState, period: YM, today: ISODate): RunPreviewRow[] {
   return sortBy(live(s.members).filter((m) => !isPendingRow(m)), (m) => m.firstName).map((m) => {
     const payer = primaryContact(s, m.id);

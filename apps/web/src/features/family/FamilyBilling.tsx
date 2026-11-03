@@ -11,6 +11,7 @@ import { useAct } from '../../lib/act';
 import { memberPhoto } from '../../lib/media';
 import { say } from '../../store/ui';
 import { InvoiceSheet } from '../finance/InvoiceSheet';
+import { NextBill } from '../finance/NextBill';
 import { BackLink, Cap, Cols, F, FamPage, HAIR, List, PageTitle, StatusDot, TextLink, useBack, useFamWide } from './kit';
 import { PlanAsk } from './PlanCard';
 import { BillingContacts } from './BillingContact';
@@ -140,6 +141,8 @@ export function FamilyBilling() {
       <Block wide={wide} title={t('family.billingCap')}><BillingContacts members={plans} /></Block>
     </>
   );
+  // round 17: what waits for the next invoice (pick-up, field trips, a birthday cake), above the bills
+  const nextBlock = plans.map((m) => <NextBill key={m.id} memberId={m.id} caption={plans.length > 1 ? displayName(m) : undefined} />);
   const invoicesBlock = list.length ? (
     <Block wide={wide} title={t('fme.invoices')}>
       <List testId="billing-invoices">{list.slice(0, limit).map(invRow)}</List>
@@ -153,7 +156,7 @@ export function FamilyBilling() {
       <BackLink label={t('nav.me')} onClick={back} />
       <PageTitle>{t('nav.billing')}</PageTitle>
       <Cols left="420px" right="1fr" gap={32}>
-        {[<Fragment key="l">{card}{wide ? null : plansBlock}</Fragment>, <Fragment key="r">{wide ? plansBlock : null}{invoicesBlock}</Fragment>]}
+        {[<Fragment key="l">{card}{wide ? null : plansBlock}</Fragment>, <Fragment key="r">{wide ? plansBlock : null}{nextBlock}{invoicesBlock}</Fragment>]}
       </Cols>
 
       {detail ? <InvoiceSheet invoiceId={detail} open onClose={() => setDetail(null)} audience="family" /> : null}

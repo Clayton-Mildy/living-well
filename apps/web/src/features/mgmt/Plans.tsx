@@ -75,13 +75,14 @@ export function Plans() {
     ? {
         flex: prices.flex > 0 ? prices.flex : price.flex, gold: prices.gold > 0 ? prices.gold : price.gold, extra: prices.extra > 0 ? prices.extra : price.extra,
         registration: prices.registration > 0 ? prices.registration : current.registration, trial: prices.trial > 0 ? prices.trial : current.trial, leave: prices.leave > 0 ? prices.leave : current.leave, dementia: prices.dementia > 0 ? prices.dementia : current.dementia,
+        pickup: prices.pickup > 0 ? prices.pickup : current.pickup, fieldTrip: prices.fieldTrip > 0 ? prices.fieldTrip : current.fieldTrip,
         ...(custom.length ? { plans: Object.fromEntries(custom.map((p) => [p.id, planNums[p.id] > 0 ? planNums[p.id] : planNow(p.id)])) } : {}),
         from: priceChanged && d.from >= today ? d.from : today, ...(quotaChanged && !err.quota ? { flexQuota: quota } : {}),
       }
     : null;
   const preview = useMemo(
     () => (memberId ? invoicePreview(s, memberId, previewDraft, today) : null),
-    [s, memberId, previewDraft?.flex, previewDraft?.gold, previewDraft?.extra, previewDraft?.registration, previewDraft?.trial, previewDraft?.leave, previewDraft?.dementia, previewDraft?.from, previewDraft?.flexQuota, JSON.stringify(previewDraft?.plans), !!previewDraft, today], // eslint-disable-line react-hooks/exhaustive-deps
+    [s, memberId, previewDraft?.flex, previewDraft?.gold, previewDraft?.extra, previewDraft?.registration, previewDraft?.trial, previewDraft?.leave, previewDraft?.dementia, previewDraft?.pickup, previewDraft?.fieldTrip, previewDraft?.from, previewDraft?.flexQuota, JSON.stringify(previewDraft?.plans), !!previewDraft, today], // eslint-disable-line react-hooks/exhaustive-deps
   );
 
   const save = async () => {

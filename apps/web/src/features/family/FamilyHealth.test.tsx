@@ -124,6 +124,17 @@ describe('family health', () => {
     expect(days.some((d) => ['1', '2', '3', '4', '5'].includes(d.getAttribute('data-face') || ''))).toBe(true);
     expect(q('mood-history')?.textContent).toContain('Mood');
   });
+  it('Profile: the plan section shows the pick-up fee (without the staff mark) for a pick-up parent only', async () => {
+    open('f1');
+    await show(<FamilyProfile />, '/profile?member=m46&from=health');
+    expect(q('pf-pickup')?.textContent).toContain('Pick-up');
+    expect(q('pf-pickup')?.textContent).toContain('Rp 450.000');
+    expect(q('pf-pickup')?.textContent).not.toContain('custom');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    await show(<FamilyProfile />, '/profile?member=m1&from=health');
+    expect(q('pf-pickup')).toBeNull();
+  });
   it('Profile: header, plan, health, care, visits, plan facts, family, documents, consents and notes; Edit and the jump chips', async () => {
     open('f1');
     await show(<FamilyProfile />, '/profile?member=m1&from=health');
