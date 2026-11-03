@@ -32,6 +32,8 @@ export const fdl = (lang: Lang, d: string) => fd(lang, d, { weekday: 'long', day
 /** "Wed 21 Oct" */
 export const fds = (lang: Lang, d: string) => fd(lang, d, { weekday: 'short', day: 'numeric', month: 'short' }).replace(/,/g, '');
 /** "21 October 2026" */
+/** "1 Jun", or "1 Jun 2024" when the day is not in the current year. */
+export const dayMonth = (d: string, today: string): Intl.DateTimeFormatOptions => (d.slice(0, 4) === today.slice(0, 4) ? { day: 'numeric', month: 'short' } : { day: 'numeric', month: 'short', year: 'numeric' });
 export const fdy = (lang: Lang, d: string) => fd(lang, d, { day: 'numeric', month: 'long', year: 'numeric' });
 /** "October" / "October 2026" */
 export const fmonth = (lang: Lang, ym: string, year = false) => fd(lang, ym + '-01', year ? { month: 'long', year: 'numeric' } : { month: 'long' });

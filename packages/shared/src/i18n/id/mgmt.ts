@@ -157,10 +157,9 @@ export const mgmt: Same<typeof EN> = {
   'access.notif.changed': 'Menu Anda diubah oleh {name}',
   'access.saved': 'Tersimpan.',
   // ----- round 17: Admin › Settings -----
-  'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.notice': 'Masa pemberitahuan (hari)',
-  'settings.noticeHint': 'Untuk turun paket, berhenti, atau cuti. Naik paket tidak perlu.',
-  'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewDays': 'Ingatkan {n} hari sebelum hari terakhir perubahan',
-  'settings.fewHint': 'Anggota aktif dengan hari kunjungan lebih sedikit dari ini pada hari peringatan ditandai di Bulan depan. Berlaku seketika.',
+  'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.notice': 'Hari pemberitahuan (turun paket, berhenti, cuti)', 'settings.sendOwner': 'Kirim ke pemilik',
+  'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewBelowOne': 'Tandai di bawah {n} kunjungan',
+  'settings.fewDays': 'Ingatkan {n} hari sebelum hari terakhir perubahan', 'settings.fewDaysOne': 'Ingatkan {n} hari sebelum hari terakhir perubahan',
   'settings.terms': 'Syarat dan ketentuan', 'settings.noTerms': 'Belum ada syarat', 'settings.termsRow': 'Versi {v} · diterbitkan {d} oleh {name} · {a} dari {n} setuju',
   'settings.save': 'Simpan', 'settings.cancel': 'Batal', 'settings.saved': 'Tersimpan.',
   'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.', 'settings.err.days': 'Gunakan bilangan bulat 0 sampai 14.',

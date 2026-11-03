@@ -11,6 +11,7 @@ import { useFamilyCtx } from './useFamily';
 import { termsText } from '@cp/shared/rules/terms';
 import { useSession } from '../../store/session';
 import { TermsView } from '../terms/TermsView';
+import { dayMonth } from '../../lib/i18n';
 
 /** A grey labelled input (the sheets' field): label above, 16px text, a soft rust ring on an error. */
 export function Field({ label, value, onChange, inputMode, readOnly, error, hint, name, autoComplete, lock, onEnter, secret, autoFocus }: {
@@ -127,13 +128,13 @@ export function PasswordSheet({ onClose }: { onClose: () => void }) {
 
 /** Round 17: "Terms and conditions": the current text, and at its end when this contact agreed and to which version. */
 export function TermsSheet({ onClose }: { onClose: () => void }) {
-  const { s, t, fmt, user } = useFamilyCtx();
+  const { s, t, fmt, user, now } = useFamilyCtx();
   const lang = useSession((x) => x.lang);
   const agreed = user ? s.familyContacts[user.id]?.termsAgreed : undefined;
   return (
     <FamSheet open onClose={onClose} title={t('terms.title')} testId="terms-sheet">
       <TermsView text={termsText(s, lang)} />
-      {agreed ? <div style={{ borderTop: `0.5px solid ${F.hair}`, paddingTop: 12, fontSize: 14, color: F.muted }}>{t('terms.youAgreed', { d: fmt.fd(agreed.at.slice(0, 10), { day: 'numeric', month: 'short' }), v: agreed.version })}</div> : null}
+      {agreed ? <div style={{ borderTop: `0.5px solid ${F.hair}`, paddingTop: 12, fontSize: 14, color: F.muted }}>{t('terms.youAgreed', { d: fmt.fd(agreed.at.slice(0, 10), dayMonth(agreed.at.slice(0, 10), now.today)), v: agreed.version })}</div> : null}
     </FamSheet>
   );
 }

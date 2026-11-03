@@ -78,7 +78,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     openClub('s9');
     await show(<Settings />, width);
     await type(field('notice'), '10');
-    await click(button(section('Membership rules'), 'Save'));
+    await click(button(section('Membership rules'), 'Send to owner')); // Management's change waits for the Owner: the button says so
     expect(actMock).toHaveBeenCalledWith('club.updateSettings', { noticeDays: 10 });
     expect(document.body.textContent).toContain('Waiting for owner');
     expect(useReplica.getState().view!.club.settings.noticeDays).toBeUndefined();
@@ -89,7 +89,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     openClub('s11');
     await show(<Settings />, width);
     await type(field('notice'), '10');
-    await click(button(section('Membership rules'), 'Save'));
+    await click(button(section('Membership rules'), 'Save')); // the Owner's own change: a plain Save
     expect(useReplica.getState().view!.club.settings.noticeDays).toBe(10);
     expect(document.body.textContent).not.toContain('Waiting for owner');
     expect(field('notice').value).toBe('10');
@@ -116,7 +116,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     expect(actMock).not.toHaveBeenCalled();
     expect(section('Few-visits alert').textContent).toContain('Use a whole number from 1 to 31.');
     await type(field('notice'), '61');
-    await click(button(section('Membership rules'), 'Save'));
+    await click(button(section('Membership rules'), 'Send to owner'));
     expect(actMock).not.toHaveBeenCalled();
     expect(section('Membership rules').textContent).toContain('Use a whole number from 1 to 60.');
   });

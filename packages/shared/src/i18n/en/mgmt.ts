@@ -156,10 +156,9 @@ export const mgmt = {
   'access.notif.changed': 'Your menus were changed by {name}',
   'access.saved': 'Saved.',
   // ----- round 17: Admin › Settings -----
-  'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.notice': 'Notice period (days)',
-  'settings.noticeHint': 'For a downgrade, stop or leave. Upgrades need none.',
-  'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewDays': 'Alert {n} days before the last change day',
-  'settings.fewHint': 'An active member with fewer visit days than this by the alert day is flagged on Next month. Applies at once.',
+  'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.notice': 'Notice days (downgrade, stop, leave)', 'settings.sendOwner': 'Send to owner',
+  'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewBelowOne': 'Flag below {n} visit',
+  'settings.fewDays': 'Alert {n} days before the last change day', 'settings.fewDaysOne': 'Alert {n} day before the last change day',
   'settings.terms': 'Terms and conditions', 'settings.noTerms': 'No terms yet', 'settings.termsRow': 'Version {v} · published {d} by {name} · {a} of {n} agreed',
   'settings.save': 'Save', 'settings.cancel': 'Cancel', 'settings.saved': 'Saved.',
   'settings.err.few': 'Use a whole number from 1 to 31.', 'settings.err.days': 'Use a whole number from 0 to 14.',

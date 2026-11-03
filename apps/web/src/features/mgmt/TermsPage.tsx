@@ -6,7 +6,8 @@ import { currentTerms, termsAgreement, termsText } from '@cp/shared/rules/terms'
 import { Button, Group, HAIRLINE, PageHead, PhoneScreen, Segmented, FONT_SMALL } from '../../components/ui';
 import { TermsView } from '../terms/TermsView';
 import { useDevice } from '../../hooks/useDevice';
-import { useFmt, useT } from '../../lib/i18n';
+import { dayMonth, useFmt, useT } from '../../lib/i18n';
+import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { Page, linkBtn } from './common';
 import { TermsEditor } from './TermsEditor';
@@ -14,6 +15,7 @@ import { TermsEditor } from './TermsEditor';
 export function TermsPage({ onBack }: { onBack: () => void }) {
   const t = useT();
   const fmt = useFmt();
+  const { today } = useNow();
   const { isPhone } = useDevice();
   const s = useClub();
   const [lang, setLang] = useState<Lang>(fmt.lang);
@@ -31,7 +33,7 @@ export function TermsPage({ onBack }: { onBack: () => void }) {
     <>
       {cur ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: FONT_SMALL, color: '#6B6259', lineHeight: 1.4, minWidth: 0 }}>{t('terms.version', { v: cur.version, d: fmt.fd(dtDate(cur.publishedAt), { day: 'numeric', month: 'short' }), name: actorName(s, cur.publishedBy) })}</span>
+          <span style={{ fontSize: FONT_SMALL, color: '#6B6259', lineHeight: 1.4, minWidth: 0 }}>{t('terms.version', { v: cur.version, d: fmt.fd(dtDate(cur.publishedAt), dayMonth(dtDate(cur.publishedAt), today)), name: actorName(s, cur.publishedBy) })}</span>
           <Button variant="secondary" size={48} onClick={() => setEditing(true)}>{t('terms.edit')}</Button>
         </div>
       ) : (
