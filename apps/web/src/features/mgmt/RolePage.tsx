@@ -50,7 +50,7 @@ function Dot({ icon }: { icon: string }) {
   );
 }
 
-/** `surface`: the colour behind the page (the sticky View / Edit header covers the rows with it). */
+/** `surface`: the colour behind the page, or 'inherit' inside a card (the warm skin repaints cards, so the sticky View / Edit header takes the card's own colour). */
 export function RolePage({ role, draft, onChange, surface }: { role: GridRole; draft: RoleDraft; onChange: (d: RoleDraft) => void; surface: string }) {
   const t = useT();
   const fmt = useFmt();
@@ -89,7 +89,7 @@ export function RolePage({ role, draft, onChange, surface }: { role: GridRole; d
     return { label, keys: g.keys, folded: seen(g.keys) === 0 && !opened.includes(label) };
   });
   const colHead = (
-    <div data-col-head aria-hidden="true" style={{ ...GRID, padding: PAD, margin: isPhone ? 0 : '0 -20px', position: 'sticky', top: isPhone ? -4 : 0, zIndex: 1, background: surface }}>
+    <div data-col-head aria-hidden="true" style={{ ...GRID, padding: PAD, margin: isPhone ? 0 : '0 -20px', position: 'sticky', top: isPhone ? -4 : 0, zIndex: 1, backgroundColor: 'inherit' }}>
       <span />
       {COLS.map((c) => <span key={c} style={{ fontSize: 12, lineHeight: '16px', fontWeight: 600, color: MUTED, textAlign: 'center', padding: '6px 0' }}>{colLabel(c)}</span>)}
     </div>
@@ -148,12 +148,12 @@ export function RolePage({ role, draft, onChange, surface }: { role: GridRole; d
   const columns = two ? balance(groups, (g) => (g.folded ? 1 : g.keys.length)) : [groups];
 
   return (
-    <div ref={ref} data-role-page={role} style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+    <div ref={ref} data-role-page={role} style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0, backgroundColor: surface }}>
       <RoleHead role={role} title={roleName} sub={sub} right={t('mgmt.roles.ofMenus', { n: seen(MENU_KEYS), total: MENU_KEYS.length })} done={seen(MENU_KEYS)} total={MENU_KEYS.length} ink />
 
-      <div data-columns={columns.length} style={{ display: 'grid', gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`, columnGap: 40, alignItems: 'start' }}>
+      <div data-columns={columns.length} style={{ backgroundColor: 'inherit', display: 'grid', gridTemplateColumns: `repeat(${columns.length}, minmax(0, 1fr))`, columnGap: 40, alignItems: 'start' }}>
         {columns.map((col, i) => (
-          <div key={i} data-column style={{ display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
+          <div key={i} data-column style={{ backgroundColor: 'inherit', display: 'flex', flexDirection: 'column', gap: 18, minWidth: 0 }}>
             {colHead}
             {col.map(section)}
           </div>

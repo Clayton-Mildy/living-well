@@ -46,7 +46,7 @@ export function Roles() {
     if (r.ok) setEdit(null);
   };
   const roleName = (r: GridRole) => t('mgmt.access.role.' + r);
-  const page = role && draft ? <RolePage key={role} role={role} draft={draft} onChange={(d) => setEdit({ role, draft: d })} surface={isPhone ? '#FFFFFF' : 'var(--fill, #F4F4F5)'} /> : null;
+  const page = role && draft ? <RolePage key={role} role={role} draft={draft} onChange={(d) => setEdit({ role, draft: d })} surface={isPhone ? '#FFFFFF' : 'inherit'} /> : null;
   const bar = changes ? <SaveBar n={changes} busy={busy} onCancel={() => setEdit(null)} onSave={() => void save()} packed={!isPhone} /> : null;
   const ask = (
     <ConfirmDialog open={!!leaving || leave.blocked} onClose={() => (leaving ? setLeaving(null) : leave.stay())} title={tn(t, 'mgmt.access.discardAsk', changes)}
@@ -73,7 +73,7 @@ export function Roles() {
         {/* not roleCard: overflow hidden would stop the View / Edit header and the Save bar from sticking */}
         <div className="cp-grey" style={{ background: roleCard.background, borderRadius: roleCard.borderRadius, flex: '1 1 520px', minWidth: 0, padding: '18px 20px 0', display: 'flex', flexDirection: 'column' }}>
           {page}
-          <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '18px -20px 0', padding: bar ? '12px 20px 14px' : '0 0 20px', borderTop: bar ? HAIRLINE : 'none', background: roleCard.background, borderRadius: '0 0 20px 20px' }}>{bar}</div>
+          <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '18px -20px 0', padding: bar ? '12px 20px 14px' : '0 0 20px', borderTop: bar ? HAIRLINE : 'none', backgroundColor: 'inherit', borderRadius: '0 0 20px 20px' }}>{bar}</div>
         </div>
       </div>
       {ask}
