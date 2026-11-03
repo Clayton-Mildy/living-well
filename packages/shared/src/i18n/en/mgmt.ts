@@ -155,6 +155,9 @@ export const mgmt = {
   'access.role.lobby': 'Front desk', 'access.role.nurse': 'Nurse', 'access.role.activity': 'Activity teacher', 'access.role.kitchen': 'Kitchen & F&B', 'access.role.finance': 'Finance', 'access.role.mgmt': 'Management',
   'access.notif.changed': 'Your menus were changed by {name}',
   'access.saved': 'Saved.',
+  // round 18: Roles like Tasks
+  'roles.ofMenus': '{n} of {total}', 'roles.viewOnly': 'view only', 'roles.hidden': 'hidden', 'roles.all': 'All', 'roles.none': 'None', 'roles.fullAccess': 'full access',
+  'roles.changedBy': 'changed {d} by {name}', 'roles.saveN': 'Save · {n} changes', 'roles.saveOne': 'Save · 1 change', 'roles.reset': 'Reset',
   // ----- round 17: Admin › Settings -----
   'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.notice': 'Notice days (downgrade, stop, leave)', 'settings.sendOwner': 'Send to owner',
   'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewBelowOne': 'Flag below {n} visit',

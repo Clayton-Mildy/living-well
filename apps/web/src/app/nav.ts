@@ -27,6 +27,8 @@ export const FAMILY_NAV: NavItem[] = [n('today', 'today', 'wb_sunny'), n('photos
 
 /** The nav label key of a menu item (the grid on Admin › Roles names its menus the way the sidebar does). */
 export const menuLabel = (key: string): string => ITEMS[key]?.label ?? 'nav.' + key;
+/** The sidebar icon of a menu item (round 18: each row on Admin › Roles has it). */
+export const menuIcon = (key: string): string => ITEMS[key]?.icon ?? 'apps';
 const itemOf = (role: StaffRole, key: string): NavItem | null => (key === 'today' ? TODAY_ITEM[role] : ITEMS[key] ?? null);
 
 /** The role's sidebar and More list, flat: today, then its menus from the grid. */

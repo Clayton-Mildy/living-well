@@ -1,9 +1,12 @@
-// Admin › Roles (round 16; round 17, KC: "how business standard admin role pages work"). The Owner picks a role from the list, ticks its View and Edit
-// checkboxes and approvals on the role's page (RolePage.tsx) and saves the draft in one go (access.setRole). Phone: the list, then the role as a pushed screen;
-// tablet and desktop: the list on the left, the role on the right. Leaving a role or the screen with unsaved changes asks first (lib/leaveGuard).
+// Admin › Roles (round 16; round 17, KC: "how business standard admin role pages work"; round 18: laid out like Tasks › Team). The Owner picks a role
+// from the list (each with its icon, people, "10 of 29" menus and a bar; the Owner row is locked), ticks its View and Edit checkboxes and approvals on
+// the role's page (RolePage.tsx) and saves the draft in one go (access.setRole). Phone: a grouped list, then the role as a full screen with the Save
+// bar at the bottom; tablet and desktop: the list card on the left, the role's card on the right. Leaving a role or the screen with unsaved changes
+// asks first (lib/leaveGuard).
 import { useState } from 'react';
 import { GRID_ROLES, MENU_KEYS, accessOf, draftChanges, roleDraft, staffByRole, staffCall, type GridRole, type RoleDraft } from '@cp/shared';
-import { Icon, PageHead, PhoneScreen, FONT_SMALL, HAIRLINE } from '../../components/ui';
+import { Group, PageHead, PhoneScreen, HAIRLINE } from '../../components/ui';
+import { RoleRow, roleCard, type RoleItem } from '../../components/roleparts';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -12,7 +15,6 @@ import { useClub } from '../../store/replica';
 import { ConfirmDialog } from '../kitchen/parts';
 import { Page, tn } from './common';
 import { RolePage, SaveBar } from './RolePage';
-
 export function Roles() {
   const t = useT();
   const { isPhone } = useDevice();
@@ -44,14 +46,14 @@ export function Roles() {
     if (r.ok) setEdit(null);
   };
   const roleName = (r: GridRole) => t('mgmt.access.role.' + r);
-  const page = role && draft ? <RolePage role={role} draft={draft} onChange={(d) => setEdit({ role, draft: d })} surface={isPhone ? '#FFFFFF' : 'var(--page, #FFFFFF)'} /> : null;
+  const page = role && draft ? <RolePage key={role} role={role} draft={draft} onChange={(d) => setEdit({ role, draft: d })} surface={isPhone ? '#FFFFFF' : 'inherit'} /> : null;
   const bar = changes ? <SaveBar n={changes} busy={busy} onCancel={() => setEdit(null)} onSave={() => void save()} packed={!isPhone} /> : null;
   const ask = (
     <ConfirmDialog open={!!leaving || leave.blocked} onClose={() => (leaving ? setLeaving(null) : leave.stay())} title={tn(t, 'mgmt.access.discardAsk', changes)}
       body={role ? t('mgmt.access.discardBody', { role: roleName(role) }) : null} confirmLabel={t('mgmt.access.discard')} cancelLabel={t('common.cancel')}
       onConfirm={() => (leaving ? discard() : leave.proceed())} />
   );
-  const list = <RoleList selected={isPhone ? null : role} onPick={go} />;
+  const list = <RoleList selected={isPhone ? null : role} onPick={go} phone={isPhone} />;
 
   if (isPhone) {
     return (
@@ -66,11 +68,12 @@ export function Roles() {
   return (
     <Page>
       <PageHead title={t('mgmt.access.title')} size={32} />
-      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) minmax(0, 1fr)', gap: 'clamp(20px, 3vw, 40px)', alignItems: 'start' }}>
-        <div style={{ position: 'sticky', top: 16, minWidth: 0 }}>{list}</div>
-        <div style={{ minWidth: 0, maxWidth: 720, display: 'flex', flexDirection: 'column' }}>
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(14px, 2vw, 24px)', alignItems: 'flex-start' }}>
+        <div style={{ flex: '0 1 330px', minWidth: 290, position: 'sticky', top: 16 }}>{list}</div>
+        {/* not roleCard: overflow hidden would stop the View / Edit header and the Save bar from sticking */}
+        <div className="cp-grey" style={{ background: roleCard.background, borderRadius: roleCard.borderRadius, flex: '1 1 520px', minWidth: 0, padding: '18px 20px 0', display: 'flex', flexDirection: 'column' }}>
           {page}
-          {bar ? <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, marginTop: 18, padding: '12px 0 14px 16px', borderTop: HAIRLINE, background: 'var(--page, #FFFFFF)' }}>{bar}</div> : null}
+          <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, margin: '18px -20px 0', padding: bar ? '12px 20px 14px' : '0 0 20px', borderTop: bar ? HAIRLINE : 'none', backgroundColor: 'inherit', borderRadius: '0 0 20px 20px' }}>{bar}</div>
         </div>
       </div>
       {ask}
@@ -78,37 +81,17 @@ export function Roles() {
   );
 }
 
-/** Owner first (full access, not editable), then the six roles with their people and how many menus they open. */
-function RoleList({ selected, onPick }: { selected: GridRole | null; onPick: (r: GridRole) => void }) {
+/** Owner first (full access, locked), then the six roles with their people and how many menus they open, with a bar. */
+function RoleList({ selected, onPick, phone }: { selected: GridRole | null; onPick: (r: GridRole) => void; phone: boolean }) {
   const t = useT();
   const s = useClub();
   const people = (r: 'owner' | GridRole) => staffByRole(s, r).map(staffCall).filter(Boolean).join(', ');
-  const row = { width: '100%', display: 'flex', alignItems: 'center', gap: 10, minHeight: 56, padding: '8px 12px 8px 16px', border: 'none', background: 'transparent', textAlign: 'left', fontFamily: 'Inter', color: '#24201C' } as const;
-  const text = (title: string, sub: string) => (
-    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
-      <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{title}</span>
-      {sub ? <span style={{ fontSize: FONT_SMALL, color: '#6B6259', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</span> : null}
-    </span>
-  );
-  const meta = { fontSize: FONT_SMALL, color: '#6B6259', flex: 'none', whiteSpace: 'nowrap' } as const;
-  return (
-    <nav aria-label={t('mgmt.access.title')} className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
-      <div data-role="owner" style={row}>
-        {text(t('roles.owner'), people('owner'))}
-        <span style={meta}>{t('mgmt.access.fullAccess')}</span>
-      </div>
-      {GRID_ROLES.map((r) => {
-        const on = r === selected;
-        const n = MENU_KEYS.filter((k) => accessOf(s, r, k) !== 'off').length;
-        return (
-          <button key={r} type="button" data-role={r} aria-current={on || undefined} onClick={() => onPick(r)} className={on ? undefined : 'h-row'}
-            style={{ ...row, borderTop: HAIRLINE, cursor: 'pointer', background: on ? 'var(--press, #EEEEF0)' : 'transparent' }}>
-            {text(t('mgmt.access.role.' + r), people(r))}
-            <span style={meta}>{tn(t, 'mgmt.access.menus', n)}</span>
-            <Icon name="chevron_right" size={20} color="#8A8078" />
-          </button>
-        );
-      })}
-    </nav>
-  );
+  const owner: RoleItem = { role: 'owner', title: t('roles.owner'), icon: 'admin_panel_settings', sub: people('owner'), right: t('mgmt.roles.fullAccess'), locked: true };
+  const items: RoleItem[] = [owner, ...GRID_ROLES.map((r): RoleItem => {
+    const n = MENU_KEYS.filter((k) => accessOf(s, r, k) !== 'off').length;
+    return { role: r, title: t('mgmt.access.role.' + r), sub: [people(r), t('mgmt.roles.ofMenus', { n, total: MENU_KEYS.length })].filter(Boolean).join(' · '), done: n, total: MENU_KEYS.length, ink: true };
+  })];
+  const rows = items.map((it, i) => <RoleRow key={it.role} it={it} on={it.role === selected} first={i === 0} phone={phone} onClick={() => it.role !== 'owner' && onPick(it.role)} />);
+  if (phone) return <Group label={t('mgmt.access.title')} pad={0} gap={0}>{rows}</Group>;
+  return <nav aria-label={t('mgmt.access.title')} className="cp-grey" style={roleCard}>{rows}</nav>;
 }
