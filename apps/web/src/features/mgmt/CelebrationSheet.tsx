@@ -1,14 +1,14 @@
 // The celebration request form as a sheet (round 14): the Celebrations tab, the Prepare button on a birthday row and the reminder's link (/celebrations?new=&date=) all
 // open this one form. `prefill` starts it on a member, an occasion and a day (the suggested title with the age, the first room, 13:30–15:00).
 import { useState } from 'react';
-import { approvedMembers, listName, displayName, membershipStatus, sortBy, type Celebration, type CelebrationKind, type ISODate, type Member, type Room } from '@cp/shared';
+import { approvedMembers, canRun, listName, displayName, membershipStatus, sortBy, type Celebration, type CelebrationKind, type ISODate, type Member, type Room } from '@cp/shared';
 import { CELEBRATION_KINDS, CELEBRATION_GUESTS_MAX, celebrationTitle, checkCelebrationSlot } from '@cp/shared/rules/celebrations';
 import { VENUE_EARLIEST, VENUE_LATEST, venueRooms } from '@cp/shared/rules/mgmt';
 import { Button, ChipGroup, Chip, DateField, Dialog, Icon, Note, Select, TextField, TimeField, FONT_BODY, FONT_SMALL } from '../../components/ui';
 import { useT, useFmt, useLang } from '../../lib/i18n';
 import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
-import { useMe } from '../../lib/me';
+import { useBaseMe, useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { SLOTS, chipRow, roomName, useBusy } from './common';
 import { ChargeListEditor, type DraftCharge } from './CelebrationCharges';
@@ -120,11 +120,13 @@ function SheetBody({ onClose, prefill }: { onClose: () => void; prefill?: Celebr
   const s = useClub();
   const act = useAct();
   const { role } = useMe();
+  const { user } = useBaseMe();
   const isMgmt = role === 'mgmt';
   const rooms = venueRooms(s);
   const [form, setForm] = useState<CForm>(() => (prefill ? prefillForm(s, prefill) : blank(rooms)));
   const [charges, setCharges] = useState<DraftCharge[]>([]);
-  const canCharge = role === 'lobby' || role === 'mgmt'; // the activity team asks for a party, not for what it costs
+  // the activity team asks for a party, not for what it costs: the server's rule for addCharge (role, then the access grid), on the real user (final review I-2)
+  const canCharge = !!user && canRun('celebration.addCharge', user, { celebrationId: 'new' }, s);
   const { busy, run } = useBusy();
   const book = () => run(async () => {
     const title = form.title || suggestTitle(s.members[form.memberId], form, lang);

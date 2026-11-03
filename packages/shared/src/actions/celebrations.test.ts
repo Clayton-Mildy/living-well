@@ -1,4 +1,5 @@
 import { describe, it, expect } from 'vitest';
+import { produce } from 'immer';
 import { balanceOf, buildSeed, execute, getUser, updatesFor, DomainError, familyUserIds, type ClubState } from '../index';
 import { dayInfo } from '../rules/calendar';
 import { coversOn } from '../rules/kitchenOps';
@@ -245,6 +246,16 @@ describe('celebration.request with charges (round 18)', () => {
     expect(Object.keys(s.pendingCharges)).toHaveLength(charges);
     // an empty list is no charges at all
     expect(created(s, run(s, 'celebration.request', { ...req, charges: [] }, 's5').state)).toHaveLength(1);
+  });
+  it('final review I-2: a role granted Venue › Edit lists charges as addCharge lets it; one without is refused before anything is made', () => {
+    const granted = produce(seed(), (d) => { d.club.settings.access = { ...d.club.settings.access, activity: { ...d.club.settings.access?.activity, venue: 'edit' } }; });
+    const r = run(granted, 'celebration.request', { ...req, charges: ch }, 's5');
+    const [id] = created(granted, r.state);
+    expect(r.state.celebrations[id].charges!.map((x) => x.item)).toEqual(['Birthday cake', 'Balloons']);
+    const viewOnly = produce(seed(), (d) => { d.club.settings.access = { ...d.club.settings.access, activity: { ...d.club.settings.access?.activity, venue: 'view' } }; });
+    const parties = Object.keys(viewOnly.celebrations).length;
+    fails(viewOnly, 'celebration.request', { ...req, charges: ch }, 's5', 'err.forbidden');
+    expect(Object.keys(viewOnly.celebrations)).toHaveLength(parties);
   });
   it('more than 10 charges, or a bad one, is refused', () => {
     const s = seed();

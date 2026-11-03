@@ -24,8 +24,9 @@ const USERS = {
   s5: { kind: 'staff' as const, id: 's5', name: 'Dewi', role: 'activity' as const, clubId: 'citra', clubs: ['citra'] },
   s9: { kind: 'staff' as const, id: 's9', name: 'Ega', role: 'mgmt' as const, clubId: 'citra', clubs: ['citra'] },
 };
-function openAs(uid: keyof typeof USERS) {
+function openAs(uid: keyof typeof USERS, edit?: (s: ClubState) => void) {
   const s: ClubState = structuredClone(buildSeed().citra);
+  edit?.(s);
   const fn = vi.fn(async () => ({ ok: true as const, result: {} }));
   useSession.setState({ lang: 'en', club: 'citra', user: USERS[uid] });
   useReplica.setState({ club: 'citra', userId: uid, confirmed: s, view: s, rev: 0, pending: [], status: 'ready', clock: { today: '2026-10-21', startMin: 600, realStart: Date.now(), offset: 0 }, act: fn as never });
@@ -73,5 +74,15 @@ describe('new celebration: charges', () => {
     await act(async () => { button('Send request')!.click(); });
     const call = (fn.mock.calls as unknown[][]).find((c) => c[0] === 'celebration.request')!;
     expect('charges' in (call[1] as object)).toBe(false);
+  });
+  it('final review I-2: the activity team granted Venue › Edit sees charges; with Venue › View it does not', async () => {
+    openAs('s5', (s) => { s.club.settings.access = { ...s.club.settings.access, activity: { ...s.club.settings.access?.activity, venue: 'edit' } }; });
+    await show();
+    expect(document.body.textContent).toContain('Charges · next monthly bill');
+    await act(async () => { root?.unmount(); });
+    document.body.innerHTML = '';
+    openAs('s5', (s) => { s.club.settings.access = { ...s.club.settings.access, activity: { ...s.club.settings.access?.activity, venue: 'view' } }; });
+    await show();
+    expect(document.body.textContent).not.toContain('Charges · next monthly bill');
   });
 });

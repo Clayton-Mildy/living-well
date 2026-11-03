@@ -2,7 +2,7 @@
 // A request by management is confirmed at once. Editing a confirmed one at the front desk sends it back for confirmation. Families hear only when it is confirmed.
 import type { Draft } from 'immer';
 import type { Celebration, CelebrationKind, ClubState, HM, ISODate, User } from '../types';
-import { defineAction, hasRole, isMgmt, type Ctx } from './framework';
+import { canRun, defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { CELEBRATION_GUESTS_MAX, CELEBRATION_KINDS, celebrationIsPast, checkCelebrationSlot } from '../rules/celebrations';
 import { arr, bad, dm, hm, int, isoDate, obj, oneOf, str } from '../rules/mgmtParse';
@@ -56,8 +56,9 @@ export const celebrationActions = [
       return { memberId: id80(o.memberId, 'memberId'), ...common(o, false), ...(charges.length ? { charges } : {}) } as CelIn;
     },
     run(d, i, ctx) {
-      // the whole request is refused before anything is made: the activity team asks for a party, not for what it costs
-      if (i.charges?.length && !lobbyOrMgmt(ctx.user)) ctx.fail('err.forbidden');
+      // the whole request is refused before anything is made: the activity team asks for a party, not for what it costs. The rule is addCharge's
+      // (its role, then the access grid), so a role granted Venue › Edit may list charges here as it may add them after (final review I-2)
+      if (i.charges?.length && !canRun('celebration.addCharge', ctx.user, { celebrationId: 'new' }, S(d))) ctx.fail('err.forbidden');
       const m = requireMember(d, i.memberId, ctx);
       const chk = checkCelebrationSlot(S(d), slotOf(i), ctx.today, ctx.now);
       if (!chk.ok) ctx.fail(chk.code, chk.params);
