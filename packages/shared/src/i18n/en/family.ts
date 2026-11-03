@@ -64,8 +64,8 @@ export const family = {
 
   // ----- leave (cuti) and an unpaid invoice (KC round 6, the brochure's terms) -----
   leaveAsk: 'Ask for leave', leaveRecord: 'Record leave', leaveTitle: 'Leave for {name}', leaveRecordTitle: 'Record leave for {name}',
-  leaveBody: 'A month of leave costs {fee} on that month’s invoice instead of the plan. Ask in writing 14 days before the end of the month before; at most {max} months in a row.',
-  leaveBodyStaff: 'Record the leave the family asked for in writing. It costs {fee} on that month’s invoice instead of the plan: at most {max} months in a row, asked 14 days before the end of the month before.',
+  leaveBody: 'A month of leave costs {fee} on that month’s invoice instead of the plan. Ask in writing {days} before the 1st of that month; at most {max} months in a row.', leaveDaysOne: '1 day', leaveDaysN: '{n} days',
+  leaveBodyStaff: 'Record the leave the family asked for in writing. It costs {fee} on that month’s invoice instead of the plan: at most {max} months in a row, asked {days} before the 1st of that month.',
   leaveWhich: 'Which month?', leaveChoice: '{m} · ask by {d}', leaveNone: 'No month can be asked for any more.', leaveNote: 'Note (optional)', leaveNotePh: 'e.g. written request received on 10 Oct',
   leaveSend: 'Ask for leave · {m}', leaveRecordSend: 'Record leave · {m}', leaveSent: 'Leave for {m} asked. The club has been told.', leaveRecorded: 'Leave for {m} recorded.',
   leaveNow: 'On leave in {m}', leaveOpen: 'Leave in {m} · asked, you can take it back until {d}', leaveOpenStaff: 'Leave in {m} · asked, can be taken back until {d}', leaveLocked: 'Leave in {m} · confirmed · {fee} on that month’s invoice',

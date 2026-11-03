@@ -66,8 +66,8 @@ export const family: Same<typeof EN> = {
   fbPh: 'Ceritakan yang sudah baik atau yang perlu diubah', fbSend: 'Kirim masukan', fbSent: 'Terima kasih. Balasan tim dapur akan tampil di Hari ini, di Masukan makan siang.', lunchFb: 'Masukan makan siang', lunchFbWaiting: 'Menunggu dapur', lunchFbAnswered: 'Dapur membalas', lunchFbClosed: 'Selesai', lunchFbYou: 'Anda · {when}', lunchFbPhone: 'Lewat telepon · {when}', lunchFbKitchen: 'Dapur · {when}',
 
   leaveAsk: 'Ajukan cuti', leaveRecord: 'Catat cuti', leaveTitle: 'Cuti untuk {name}', leaveRecordTitle: 'Catat cuti untuk {name}',
-  leaveBody: 'Satu bulan cuti dikenakan {fee} di tagihan bulan itu, sebagai pengganti paket. Ajukan tertulis 14 hari sebelum akhir bulan sebelumnya; paling lama {max} bulan berturut-turut.',
-  leaveBodyStaff: 'Catat cuti yang diajukan keluarga secara tertulis. Dikenakan {fee} di tagihan bulan itu, sebagai pengganti paket: paling lama {max} bulan berturut-turut, diajukan 14 hari sebelum akhir bulan sebelumnya.',
+  leaveBody: 'Satu bulan cuti dikenakan {fee} di tagihan bulan itu, sebagai pengganti paket. Ajukan tertulis {days} sebelum tanggal 1 bulan itu; paling lama {max} bulan berturut-turut.', leaveDaysOne: '1 hari', leaveDaysN: '{n} hari',
+  leaveBodyStaff: 'Catat cuti yang diajukan keluarga secara tertulis. Dikenakan {fee} di tagihan bulan itu, sebagai pengganti paket: paling lama {max} bulan berturut-turut, diajukan {days} sebelum tanggal 1 bulan itu.',
   leaveWhich: 'Bulan apa?', leaveChoice: '{m} · ajukan paling lambat {d}', leaveNone: 'Tidak ada bulan yang masih bisa diajukan.', leaveNote: 'Catatan (opsional)', leaveNotePh: 'mis. surat permohonan diterima 10 Okt',
   leaveSend: 'Ajukan cuti · {m}', leaveRecordSend: 'Catat cuti · {m}', leaveSent: 'Cuti {m} diajukan. Klub sudah diberi tahu.', leaveRecorded: 'Cuti {m} dicatat.',
   leaveNow: 'Sedang cuti pada {m}', leaveOpen: 'Cuti {m} · diajukan, bisa dibatalkan sampai {d}', leaveOpenStaff: 'Cuti {m} · diajukan, bisa dibatalkan sampai {d}', leaveLocked: 'Cuti {m} · dikonfirmasi · {fee} di tagihan bulan itu',

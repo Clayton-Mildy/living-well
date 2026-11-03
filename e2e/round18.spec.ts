@@ -207,7 +207,8 @@ test('Notice per kind: Benjamin sets leave to 30 days; Maria’s November leave 
   await signIn(page, 'f1', '/billing');
   await planCard(page, 'm1').getByTestId('leave-ask').click();
   const sheet = page.getByRole('dialog', { name: 'Leave for Oma Lina' });
-  // (the sheet's explanatory sentence still says "14 days": the text is hard-coded in family.leaveBody; reported, not asserted)
+  await expect(sheet).toContainText('Ask in writing 30 days before the 1st of that month');
+  await expect(sheet).not.toContainText('14 days');
   await expect(sheet.getByRole('radio', { name: /^November/ })).toHaveCount(0);
   const dec = sheet.getByRole('radio', { name: 'December · ask by Sun 1 Nov' });
   await expect(dec).toBeVisible();

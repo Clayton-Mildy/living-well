@@ -52,3 +52,23 @@ describe.each([['family', Family], ['staff', Staff]])('leave rows (%s)', (_n, Vi
     expect(row('2026-12')).toContain('until Tue 17 Nov');
   });
 });
+
+// Final review I-1: the sheet's sentence says the club's leave days (before the 1st of that month), not a hard-coded 14
+function FamilySheet({ s }: { s: ClubState }) {
+  const t = useT(), fmt = useFmt();
+  const ui = useFamilyLeave({ s, m: s.members.m1, today: TODAY, t, fmt, act: vi.fn() as never, canEdit: true });
+  return <>{ui.link}{ui.sheet}</>;
+}
+function StaffSheet({ s }: { s: ClubState }) {
+  const t = useT(), fmt = useFmt();
+  const ui = useLeaveUi({ s, m: s.members.m1, today: TODAY, t, fmt, act: vi.fn() as never, canEdit: true, staff: true });
+  return <>{ui.button}{ui.sheet}</>;
+}
+describe.each([['family', FamilySheet], ['staff', StaffSheet]])('leave sheet text (%s)', (_n, View) => {
+  it('with leave notice 30 the sheet says 30 days before the 1st', async () => {
+    await show(<View s={club(30)} />);
+    await act(async () => { (host!.querySelector('button') as HTMLButtonElement).click(); });
+    expect(document.body.textContent).toContain('30 days before the 1st of that month');
+    expect(document.body.textContent).not.toContain('14 days');
+  });
+});

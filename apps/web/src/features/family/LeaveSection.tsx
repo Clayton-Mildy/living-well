@@ -77,7 +77,7 @@ export function useLeaveUi({ s, m, today, t, fmt, act, canEdit, staff }: Args): 
     <Sheet open={open} onClose={() => setOpen(false)} title={t(staff ? 'family.leaveRecordTitle' : 'family.leaveTitle', { name })}
       footer={<Button size={56} full disabled={!chosen || busy} onClick={send}>{chosen ? t(staff ? 'family.leaveRecordSend' : 'family.leaveSend', { m: fmt.fmonth(chosen) }) : t('family.leaveNone')}</Button>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ fontSize: 15, lineHeight: '24px' }}>{t(staff ? 'family.leaveBodyStaff' : 'family.leaveBody', { fee: feeOn(choices[0]?.month ?? ym(today)), max: LEAVE_MAX_MONTHS })}</div>
+        <div style={{ fontSize: 15, lineHeight: '24px' }}>{t(staff ? 'family.leaveBodyStaff' : 'family.leaveBody', { fee: feeOn(choices[0]?.month ?? ym(today)), max: LEAVE_MAX_MONTHS, days: t(days === 1 ? 'family.leaveDaysOne' : 'family.leaveDaysN', { n: days }) })}</div>
         {choices.length ? (
           <ChipGroup label={t('family.leaveWhich')} value={chosen || null} onChange={(v) => { const c = choices.find((x) => x.month === v); if (c?.ok) setPick(String(v)); }}
             options={choices.map((c) => ({ value: c.month, label: t('family.leaveChoice', { m: fmt.fmonth(c.month), d: fmt.fds(c.deadline) }), off: !c.ok }))} />
@@ -145,7 +145,7 @@ export function useFamilyLeave({ s, m, today, t, fmt, act, canEdit }: Omit<Args,
   const link = canEdit && active ? <TextLink onClick={() => setOpen(true)} testId="leave-ask">{t('family.leaveAsk')}</TextLink> : null;
   const sheet = canEdit && active ? (
     <FamSheet open={open} onClose={() => setOpen(false)} title={t('family.leaveTitle', { name })} testId="leave-sheet" action={{ label: t('fam.send'), onClick: () => void send(), disabled: !chosen || busy }}>
-      <div style={{ fontSize: 15, lineHeight: '22px', color: F.soft }}>{t('family.leaveBody', { fee: feeOn(choices[0]?.month ?? ym(today)), max: LEAVE_MAX_MONTHS })}</div>
+      <div style={{ fontSize: 15, lineHeight: '22px', color: F.soft }}>{t('family.leaveBody', { fee: feeOn(choices[0]?.month ?? ym(today)), max: LEAVE_MAX_MONTHS, days: t(days === 1 ? 'family.leaveDaysOne' : 'family.leaveDaysN', { n: days }) })}</div>
       {choices.length ? (
         <div role="radiogroup" aria-label={t('family.leaveWhich')} style={{ background: F.fill, borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {choices.map((c, i) => {
