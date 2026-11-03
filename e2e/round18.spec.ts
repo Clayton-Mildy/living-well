@@ -251,6 +251,8 @@ test('screenshots', async ({ page, request }, info) => {
   test.skip(!process.env.E2E_SHOTS, 'only with E2E_SHOTS=1');
   const shot = async (name: string) => { await page.evaluate(() => document.fonts.ready); await page.waitForTimeout(500); await page.screenshot({ path: `artifacts/shots/round18/${info.project.name}-${name}.png`, fullPage: false }); };
   const phone = isPhone(page);
+  /** #main scrolled to its end: the last rows must clear the floating camera / tasks buttons and the Demo pill. */
+  const bottom = async (name: string) => { await page.evaluate(() => { const m = document.getElementById('main')!; m.scrollTop = m.scrollHeight; }); await shot(name); await page.evaluate(() => { document.getElementById('main')!.scrollTop = 0; }); };
 
   // Settings
   await signIn(page, 's11', '/settings');
@@ -263,6 +265,26 @@ test('screenshots', async ({ page, request }, info) => {
   await page.locator('[data-role-row="lobby"]').click();
   await expect(page.locator('[data-role-page="lobby"]')).toBeVisible();
   await shot('2-roles');
+  await bottom('2d-roles-bottom');
+
+  // final review I-3: tablet portrait (768×1024) stacks the role card under the list; the list is not sticky and a pick scrolls the card into view
+  if (info.project.name === 'tablet') {
+    const size = page.viewportSize()!;
+    await page.setViewportSize({ width: 768, height: 1024 });
+    await signIn(page, 's11', '/roles');
+    await expect(page.locator('[data-roles-layout="stacked"]')).toBeVisible();
+    expect(await page.getByTestId('roles-list').evaluate((el) => getComputedStyle(el).position)).toBe('static');
+    await page.locator('[data-role-row="finance"]').click();
+    const card = page.locator('[data-role-page="finance"]');
+    await expect(card).toBeVisible();
+    await expect.poll(async () => (await card.boundingBox())!.y).toBeLessThan(200); // scrolled up to the card's top
+    await shot('2b-roles-portrait-picked');
+    await page.evaluate(() => { document.getElementById('main')!.scrollTop += 500; });
+    const list = await page.getByTestId('roles-list').boundingBox();
+    expect(list!.y + list!.height).toBeLessThan(0); // the list scrolled away with the page: nothing pinned over the rows
+    await shot('2c-roles-portrait-scrolled');
+    await page.setViewportSize(size);
+  }
 
   // The celebration sheet with two charges
   await signIn(page, 's9', '/venue?tab=celebrations');
@@ -278,6 +300,7 @@ test('screenshots', async ({ page, request }, info) => {
   await page.goto('/calendar');
   if (phone) await expect(page.getByTestId('new-field-trip-row')).toBeVisible(); else await expect(page.getByRole('button', { name: 'New field trip' })).toBeVisible();
   await shot('4-calendar-new-field-trip');
+  await bottom('4b-calendar-bottom');
   await (phone ? page.getByTestId('new-field-trip-row').getByText('New field trip') : page.getByRole('button', { name: 'New field trip' })).click();
   await expect(page.getByRole('dialog').last()).toBeVisible();
   await shot('5-field-trip-editor');
@@ -290,6 +313,7 @@ test('screenshots', async ({ page, request }, info) => {
   await expect(page.locator('[data-testid="proof-open"][data-kind="pdf"]')).toBeVisible();
   await expect(page.locator('[data-testid="proof-open"][data-kind="image"]')).toBeVisible();
   await shot('6-proof-thumbnails');
+  await bottom('6b-payments-bottom');
   await page.locator('[data-testid="proof-open"][data-kind="image"]').click();
   await expect(page.getByTestId('image-lightbox-img')).toBeVisible();
   await shot('7-proof-viewer');
