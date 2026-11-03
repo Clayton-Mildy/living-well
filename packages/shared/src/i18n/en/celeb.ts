@@ -4,7 +4,7 @@ export const celeb = {
   new: 'New celebration', requested: 'Requested', upcoming: 'Upcoming', past: 'Past', none: 'No celebrations coming up.',
   sub: '{date} · {from}–{to} · {room}', guest1: '1 guest', guests: '{n} guests',
   member: 'Member', pickMember: 'Choose a member', kind: 'Occasion', kind_birthday: 'Birthday', kind_anniversary: 'Anniversary', kind_other: 'Other',
-  titleL: 'Title', guestsL: 'Guests', noteL: 'Cake or catering', notePh: 'For example: chocolate cake, no nuts', reasonL: 'Reason',
+  titleL: 'Title', guestsL: 'Guests', noteL: 'Kitchen note', reasonL: 'Reason',
   requestBtn: 'Send request', bookBtn: 'Book it',
   waiting: 'Waiting', confirmedBadge: 'Confirmed', done: 'Done', declined: 'Declined', declinedWhy: 'Declined: {reason}',
   confirm: 'Confirm', decline: 'Decline', declineTitle: 'Decline this celebration?', cancelBtn: 'Cancel', cancelTitle: 'Cancel this celebration?',

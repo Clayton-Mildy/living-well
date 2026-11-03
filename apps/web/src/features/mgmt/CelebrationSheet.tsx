@@ -80,7 +80,7 @@ export function CelForm({ value: f, onChange, rooms, ignoreId, memberLocked }: {
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit,minmax(160px,1fr))', gap: 10 }}>
         <TextField label={t('celeb.guestsL')} value={f.guests} onChange={(v) => set({ guests: v.replace(/\D/g, '').slice(0, 3) })} inputMode="numeric" />
-        <TextField label={t('celeb.noteL')} value={f.note} onChange={(v) => set({ note: v })} placeholder={t('celeb.notePh')} hint={t('mgmt.vnOptional')} />
+        <TextField label={t('celeb.noteL')} value={f.note} onChange={(v) => set({ note: v })} name="note" />
       </div>
       {check && !check.ok ? <div role="alert" style={{ display: 'flex', gap: 10, alignItems: 'flex-start', padding: '12px 14px', borderRadius: 12, background: '#F9E3DB', color: '#9A3D24', fontSize: 16, lineHeight: '22px' }}><Icon name="error" size={20} fill={1} /><span data-testid="celebration-error">{t(check.code, { ...(check.params || {}) })}</span></div> : null}
     </>

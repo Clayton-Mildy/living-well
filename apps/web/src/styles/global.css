@@ -26,6 +26,8 @@ html[data-skin="warm"] .cp-fill:hover,
 html[data-skin="warm"] .cp-grey .cp-fill:hover,
 html[data-skin="warm"] .cp-grey .cp-grey .cp-fill:hover,
 html[data-skin="warm"] .h-cream:hover, html[data-skin="warm"] .h-fill:hover { background-color: #FAF6F0 !important; }
+/* a text field keeps one white background under the mouse (final review: Item and Price read as two colours when the pointer rested on one); its focus ring shows the state */
+html[data-skin="warm"] .cp-input.cp-fill:hover:not(:disabled):not([aria-disabled="true"]), html[data-skin="warm"] .cp-input-wrap.cp-fill:hover:not(:disabled):not([aria-disabled="true"]) { background-color: #FFFFFF !important; }
 /* a grey button that never got the cp-fill class (it sat on the old white page) would be beige-on-cream here: every fill-coloured button is a
    white control with the warm edge, like cp-fill. Non-interactive tiles (icon circles) keep the warm tile colour. */
 html[data-skin="warm"] button[style*="background: var(--fill"], html[data-skin="warm"] button[style*="background-color: var(--fill"],

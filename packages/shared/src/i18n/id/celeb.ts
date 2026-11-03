@@ -7,7 +7,7 @@ export const celeb: Same<typeof EN> = {
   new: 'Perayaan baru', requested: 'Diminta', upcoming: 'Akan datang', past: 'Sudah lewat', none: 'Belum ada perayaan.',
   sub: '{date} · {from}–{to} · {room}', guest1: '1 tamu', guests: '{n} tamu',
   member: 'Anggota', pickMember: 'Pilih anggota', kind: 'Acara', kind_birthday: 'Ulang tahun', kind_anniversary: 'Hari jadi', kind_other: 'Lainnya',
-  titleL: 'Judul', guestsL: 'Tamu', noteL: 'Kue atau katering', notePh: 'Contoh: kue cokelat, tanpa kacang', reasonL: 'Alasan',
+  titleL: 'Judul', guestsL: 'Tamu', noteL: 'Catatan dapur', reasonL: 'Alasan',
   requestBtn: 'Kirim permintaan', bookBtn: 'Pesan',
   waiting: 'Menunggu', confirmedBadge: 'Terkonfirmasi', done: 'Selesai', declined: 'Ditolak', declinedWhy: 'Ditolak: {reason}',
   confirm: 'Konfirmasi', decline: 'Tolak', declineTitle: 'Tolak perayaan ini?', cancelBtn: 'Batalkan', cancelTitle: 'Batalkan perayaan ini?',
