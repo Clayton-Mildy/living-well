@@ -156,10 +156,14 @@ export const mgmt = {
   'access.notif.changed': 'Your menus were changed by {name}',
   'access.saved': 'Saved.',
   // ----- round 17: Admin › Settings -----
-  'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.notice': 'Notice days (downgrade, stop, leave)', 'settings.sendOwner': 'Send to owner',
+  'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.sendOwner': 'Send to owner',
   'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewBelowOne': 'Flag below {n} visit',
-  'settings.fewDays': 'Alert {n} days before the last change day', 'settings.fewDaysOne': 'Alert {n} day before the last change day',
   'settings.terms': 'Terms and conditions', 'settings.noTerms': 'No terms yet', 'settings.termsRow': 'Version {v} · published {d} by {name} · {a} of {n} agreed',
   'settings.save': 'Save', 'settings.cancel': 'Cancel', 'settings.saved': 'Saved.',
-  'settings.err.few': 'Use a whole number from 1 to 31.', 'settings.err.days': 'Use a whole number from 0 to 14.',
+  'settings.err.few': 'Use a whole number from 1 to 31.',
+  // ----- round 18: Settings › notice per kind, few-visits alert before next month -----
+  'settings.downgrade': 'Downgrade', 'settings.downgradeSub': 'to a cheaper plan · ask by {d}', 'settings.stop': 'Stop membership', 'settings.stopSub': 'last month {m} · ask by {d}',
+  'settings.leave': 'Leave (cuti)', 'settings.leaveSub': '{m} off · ask by {d}', 'settings.upgrade': 'Upgrade', 'settings.upgradeSub': 'starts the next 1st', 'settings.noNotice': 'no notice',
+  'settings.leaveRun': 'Leave in a row', 'settings.leaveRunSub': 'no word after that ends the membership', 'settings.leaveRunV': 'up to {n} months', 'settings.days': 'days',
+  'settings.fewAlert': 'Alert before next month', 'settings.fewAlertSub': '{m}: alert {a} · changes close {c}',
 };

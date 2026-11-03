@@ -1,10 +1,12 @@
-// Admin › Settings (round 17, Owner and Management). Three grouped lists: Membership rules (the notice period; Management's change waits for the Owner),
-// Few-visits alert (the two numbers, applied at once) and Terms and conditions (a row that opens the terms page, ?view=terms). Each group has its own Save and Cancel while edited.
+// Admin › Settings (round 17, Owner and Management). Three grouped lists: Membership rules (round 18: the notice for a downgrade, a stop and a leave, each with
+// a live "ask by" date, plus the fixed Upgrade and Leave in a row rows; Management's change waits for the Owner), Few-visits alert (fewer than N visits, and
+// the alert's days before next month, applied at once) and Terms and conditions (a row that opens the terms page, ?view=terms). Each group has its own Save and
+// Cancel while edited. The live dates come from a copy of the club with the draft values in it.
 import { useState, type ReactNode } from 'react';
-import { fewDaysRange, fewVisitsSettings } from '@cp/shared/rules/fewVisits';
+import { fewDaysRange, fewVisitsAlertDay, fewVisitsSettings } from '@cp/shared/rules/fewVisits';
 import { useSearchParams } from 'react-router-dom';
-import { actorName, dtDate, hasKey } from '@cp/shared';
-import { noticeDays } from '@cp/shared/rules/notice';
+import { actorName, addMonths, dtDate, hasKey, LEAVE_MAX_MONTHS, type ClubState } from '@cp/shared';
+import { NOTICE_KINDS, earliestMonth, noticeDeadline, noticeSettings, type NoticeDaysKind } from '@cp/shared/rules/notice';
 import { currentTerms, termsAgreement } from '@cp/shared/rules/terms';
 import { ownerApprovalOn } from '@cp/shared';
 import { Button, Group, HAIRLINE, Icon, PageHead, FONT_SMALL } from '../../components/ui';
@@ -21,20 +23,38 @@ import { TermsPage } from './TermsPage';
 const digits = (v: string) => v.replace(/\D/g, '').slice(0, 2);
 const num = (v: string) => (v === '' ? NaN : Number(v));
 const inRange = (n: number, lo: number, hi: number) => Number.isInteger(n) && n >= lo && n <= hi;
+const NOTICE_MAX = 60;
+const SLOT = '\u0000'; // where the field goes in a sentence template
 
 const ROW = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px', minHeight: 52, padding: '6px 16px', fontSize: 15, lineHeight: 1.4, color: '#24201C' } as const;
+const SUB = { fontSize: FONT_SMALL, lineHeight: 1.35, color: '#6B6259', fontVariantNumeric: 'tabular-nums' } as const;
+const NOTICE_ICON: Record<NoticeDaysKind, string> = { downgrade: 'trending_down', stop: 'logout', leave: 'beach_access' };
+const NO_DRAFT: Record<NoticeDaysKind, string | null> = { downgrade: null, stop: null, leave: null };
 
 /** A small whole-number field (44px tall); turns white on the grey group. */
-function NumField({ name, label, value, onChange, bad }: { name: string; label: string; value: string; onChange: (v: string) => void; bad: boolean }) {
+function NumField({ name, label, value, onChange, bad, width = 64 }: { name: string; label: string; value: string; onChange: (v: string) => void; bad: boolean; width?: number }) {
   return (
     <input data-field={name} aria-label={label} aria-invalid={bad || undefined} value={value} onChange={(e) => onChange(digits(e.target.value))} inputMode="numeric" maxLength={2} className="cp-input cp-fill"
-      style={{ width: 64, height: 44, border: 'none', borderRadius: 12, background: 'var(--fill, #F4F4F5)', boxShadow: bad ? 'inset 0 0 0 2px #9A3D24' : undefined, padding: '0 10px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', textAlign: 'center', fontVariantNumeric: 'tabular-nums', flex: 'none' }} />
+      style={{ width, height: 44, border: 'none', borderRadius: 12, background: 'var(--fill, #F4F4F5)', boxShadow: bad ? 'inset 0 0 0 2px #9A3D24' : undefined, padding: '0 6px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', textAlign: 'center', fontVariantNumeric: 'tabular-nums', flex: 'none' }} />
   );
 }
 /** A sentence with the number field inside it: "Flag below [5] visits". The template's {n} is where the field goes. */
 function Sentence({ template, field }: { template: string; field: ReactNode }) {
-  const [before, after] = template.split('\u0000');
+  const [before, after] = template.split(SLOT);
   return <>{before ? <span>{before}</span> : null}{field}{after ? <span>{after}</span> : null}</>;
+}
+/** One rule: an icon in a grey circle, the title with its live line under it, and on the right a "[14] days" field or a fixed value. */
+function RuleRow({ k, icon, title, sub, right, first }: { k: string; icon: string; title: string; sub: string; right: ReactNode; first?: boolean }) {
+  return (
+    <div data-setting={k} style={{ ...ROW, flexWrap: 'nowrap', gap: 12, minHeight: 60, padding: '8px 16px', borderTop: first ? undefined : HAIRLINE }}>
+      <span style={{ width: 32, height: 32, borderRadius: '50%', background: 'var(--track, #E8E8EB)', display: 'grid', placeItems: 'center', flex: 'none' }}><Icon name={icon} size={18} color="#4A433D" /></span>
+      <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>
+        <span style={{ fontWeight: 500 }}>{title}</span>
+        <span style={SUB}>{sub}</span>
+      </span>
+      <span style={{ display: 'flex', alignItems: 'center', gap: 6, flex: 'none', ...(typeof right === 'string' ? SUB : {}) }}>{right}</span>
+    </div>
+  );
 }
 function SaveRow({ busy, onSave, onCancel, label }: { busy: boolean; onSave: () => void; onCancel: () => void; /** "Send to owner" when the change waits for the Owner */ label?: string }) {
   const t = useT();
@@ -59,21 +79,43 @@ export function Settings() {
   const setTermsOpen = (on: boolean) => setSp(on ? { view: 'terms' } : {}, { replace: false });
   const st = s.club.settings;
   const few = fewVisitsSettings(s);
-  const [notice, setNotice] = useState<string | null>(null); // null = untouched (shows the saved value)
+  const saved = noticeSettings(s);
+  const [notice, setNotice] = useState(NO_DRAFT); // null = untouched (shows the saved value)
   const [below, setBelow] = useState<string | null>(null);
   const [days, setDays] = useState<string | null>(null);
   const [shown, setShown] = useState<Record<string, boolean>>({}); // a group shows its errors once Save was tapped
   const [busy, setBusy] = useState(false);
 
-  const noticeV = notice ?? String(noticeDays(s, 'stop'));
+  const noticeV = (k: NoticeDaysKind) => notice[k] ?? String(saved[k]);
+  const noticeBad = (k: NoticeDaysKind) => !inRange(num(noticeV(k)), 1, NOTICE_MAX);
+  const noticeChanged = NOTICE_KINDS.filter((k) => num(noticeV(k)) !== saved[k]);
+  const noticeDirty = noticeChanged.length > 0;
+  const range = fewDaysRange(s);
   const belowV = below ?? String(few.below);
   const daysV = days ?? String(few.daysBeforeMonth);
-  const range = fewDaysRange(s);
-  const noticeBad = !inRange(num(noticeV), 1, 60);
   const belowBad = !inRange(num(belowV), 1, 31);
   const daysBad = !inRange(num(daysV), range.min, range.max);
-  const noticeDirty = num(noticeV) !== noticeDays(s, 'stop') || (notice !== null && noticeBad);
-  const fewDirty = num(belowV) !== few.below || num(daysV) !== few.daysBeforeMonth || (below !== null && belowBad) || (days !== null && daysBad);
+  const fewDirty = num(belowV) !== few.below || num(daysV) !== few.daysBeforeMonth;
+  // a field out of range shows its message as soon as it is edited (the few-visits range depends on the stop notice), or once Save was tapped
+  const noticeShow = (k: NoticeDaysKind) => noticeBad(k) && (notice[k] !== null || !!shown.membership);
+  const daysShow = daysBad && (days !== null || !!shown.few);
+
+  // the club with the draft values (the valid ones), for the live dates
+  const patched: ClubState = { ...s, club: { ...s.club, settings: {
+    ...st,
+    notice: { downgrade: noticeBad('downgrade') ? saved.downgrade : num(noticeV('downgrade')), stop: noticeBad('stop') ? saved.stop : num(noticeV('stop')), leave: noticeBad('leave') ? saved.leave : num(noticeV('leave')) },
+    fewVisits: { below: few.below, daysBeforeMonth: daysBad ? few.daysBeforeMonth : num(daysV) },
+  } } };
+  const day = (d: string) => fmt.fd(d, dayMonth(d, today));
+  const subOf = (k: NoticeDaysKind) => {
+    const month = earliestMonth(patched, k, today); // the first month this kind can still be asked for
+    const d = day(noticeDeadline(patched, month, k));
+    if (k === 'downgrade') return t('mgmt.settings.downgradeSub', { d });
+    if (k === 'stop') return t('mgmt.settings.stopSub', { m: fmt.fmonth(addMonths(month, -1)), d }); // a stop from `month`: the month before is the last
+    return t('mgmt.settings.leaveSub', { m: fmt.fmonth(month), d });
+  };
+  const fewMonth = earliestMonth(patched, 'stop', today); // the first month whose changes have not closed
+  const fewSub = t('mgmt.settings.fewAlertSub', { m: fmt.fmonth(fewMonth), a: day(fewVisitsAlertDay(patched, addMonths(fewMonth, -1))), c: day(noticeDeadline(patched, fewMonth, 'stop')) });
 
   const run = async (group: 'membership' | 'few', input: Record<string, unknown>, reset: () => void) => {
     setShown((x) => ({ ...x, [group]: true }));
@@ -84,14 +126,20 @@ export function Settings() {
       if (r.ok) { reset(); setShown((x) => ({ ...x, [group]: false })); }
     } finally { setBusy(false); }
   };
-  const saveNotice = () => { if (noticeBad) { setShown((x) => ({ ...x, membership: true })); return; } void run('membership', { notice: { downgrade: num(noticeV), stop: num(noticeV), leave: num(noticeV) } }, () => setNotice(null)); }; // round 18: one value for the three kinds
+  const saveNotice = () => {
+    if (NOTICE_KINDS.some(noticeBad)) { setShown((x) => ({ ...x, membership: true })); return; }
+    void run('membership', { notice: Object.fromEntries(noticeChanged.map((k) => [k, num(noticeV(k))])) }, () => setNotice(NO_DRAFT)); // only the kinds that changed
+  };
   const saveFew = () => { if (belowBad || daysBad) { setShown((x) => ({ ...x, few: true })); return; } void run('few', { fewVisits: { below: num(belowV), daysBeforeMonth: num(daysV) } }, () => { setBelow(null); setDays(null); }); };
 
   const err = (text: string) => <div role="alert" style={{ padding: '0 16px 10px', fontSize: FONT_SMALL, color: '#9A3D24', lineHeight: 1.4 }}>{text}</div>;
-  const sentence = (key: string, name: string, value: string, set: (v: string) => void, bad: boolean, saved: number) => {
-    const label = tn(t, key, saved);
+  const daysField = (name: string, label: string, value: string, set: (v: string) => void, bad: boolean) => (
+    <><NumField name={name} label={label} value={value} onChange={set} bad={bad} width={46} /><span style={SUB}>{t('mgmt.settings.days')}</span></>
+  );
+  const sentence = (key: string, name: string, value: string, set: (v: string) => void, bad: boolean, savedN: number) => {
+    const label = tn(t, key, savedN);
     const one = num(value) === 1 && hasKey(key + 'One') ? key + 'One' : key; // "Flag below 1 visit"
-    return <div style={ROW}><Sentence template={t(one, { n: '\u0000' })} field={<NumField name={name} label={label} value={value} onChange={set} bad={bad} />} /></div>;
+    return <div style={ROW}><Sentence template={t(one, { n: SLOT })} field={<NumField name={name} label={label} value={value} onChange={set} bad={bad} />} /></div>;
   };
   const cur = currentTerms(s);
   const agreement = termsAgreement(s);
@@ -103,21 +151,22 @@ export function Settings() {
       <PageHead title={t('mgmt.settings.title')} size={isPhone ? 28 : 40} />
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: isPhone ? 18 : 24, alignItems: 'start' }}>
         <Group title={t('mgmt.settings.membership')} label={t('mgmt.settings.membership')} pad={0} gap={0}>
-          <div style={ROW}>
-            <span style={{ flex: 1, minWidth: 0, fontWeight: 500 }}>{t('mgmt.settings.notice')}</span>
-            <NumField name="notice" label={t('mgmt.settings.notice')} value={noticeV} onChange={setNotice} bad={noticeBad && !!shown.membership} />
-          </div>
-          {shown.membership && noticeBad ? err(t('mgmt.err.noticeInvalid')) : null}
+          {NOTICE_KINDS.map((k, i) => (
+            <RuleRow key={k} k={k} first={i === 0} icon={NOTICE_ICON[k]} title={t(`mgmt.settings.${k}`)} sub={subOf(k)}
+              right={daysField(k, t(`mgmt.settings.${k}`), noticeV(k), (v) => setNotice((x) => ({ ...x, [k]: v })), noticeShow(k))} />
+          ))}
+          {NOTICE_KINDS.some(noticeShow) ? err(t('mgmt.err.noticeInvalid')) : null}
+          <RuleRow k="upgrade" icon="trending_up" title={t('mgmt.settings.upgrade')} sub={t('mgmt.settings.upgradeSub')} right={t('mgmt.settings.noNotice')} />
+          <RuleRow k="leaveRun" icon="event_repeat" title={t('mgmt.settings.leaveRun')} sub={t('mgmt.settings.leaveRunSub')} right={t('mgmt.settings.leaveRunV', { n: LEAVE_MAX_MONTHS })} />
           <OwnerWaiting section="pricing" pad="4px 16px" only={(c) => c.action === 'club.updateSettings'} />
-          {noticeDirty ? <SaveRow busy={busy} label={needsOwner ? t('mgmt.settings.sendOwner') : undefined} onSave={saveNotice} onCancel={() => { setNotice(null); setShown((x) => ({ ...x, membership: false })); }} /> : null}
+          {noticeDirty ? <SaveRow busy={busy} label={needsOwner ? t('mgmt.settings.sendOwner') : undefined} onSave={saveNotice} onCancel={() => { setNotice(NO_DRAFT); setShown((x) => ({ ...x, membership: false })); }} /> : null}
         </Group>
 
         <Group title={t('mgmt.settings.fewVisits')} label={t('mgmt.settings.fewVisits')} pad={0} gap={0}>
           {sentence('mgmt.settings.fewBelow', 'below', belowV, setBelow, belowBad && !!shown.few, few.below)}
           {shown.few && belowBad ? err(t('mgmt.settings.err.few')) : null}
-          <div style={{ borderTop: HAIRLINE }} />
-          {sentence('mgmt.settings.fewDays', 'days', daysV, setDays, daysBad && !!shown.few, few.daysBeforeMonth)}
-          {shown.few && daysBad ? err(t('mgmt.err.fewDaysInvalid', range)) : null}
+          <RuleRow k="days" icon="notifications" title={t('mgmt.settings.fewAlert')} sub={fewSub} right={daysField('days', t('mgmt.settings.fewAlert'), daysV, setDays, daysShow)} />
+          {daysShow ? err(t('mgmt.err.fewDaysInvalid', range)) : null}
           {fewDirty ? <SaveRow busy={busy} onSave={saveFew} onCancel={() => { setBelow(null); setDays(null); setShown((x) => ({ ...x, few: false })); }} /> : null}
         </Group>
 

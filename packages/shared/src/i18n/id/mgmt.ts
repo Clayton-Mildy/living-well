@@ -157,10 +157,14 @@ export const mgmt: Same<typeof EN> = {
   'access.notif.changed': 'Menu Anda diubah oleh {name}',
   'access.saved': 'Tersimpan.',
   // ----- round 17: Admin › Settings -----
-  'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.notice': 'Hari pemberitahuan (turun paket, berhenti, cuti)', 'settings.sendOwner': 'Kirim ke pemilik',
+  'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.sendOwner': 'Kirim ke pemilik',
   'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewBelowOne': 'Tandai di bawah {n} kunjungan',
-  'settings.fewDays': 'Ingatkan {n} hari sebelum hari terakhir perubahan', 'settings.fewDaysOne': 'Ingatkan {n} hari sebelum hari terakhir perubahan',
   'settings.terms': 'Syarat dan ketentuan', 'settings.noTerms': 'Belum ada syarat', 'settings.termsRow': 'Versi {v} · diterbitkan {d} oleh {name} · {a} dari {n} setuju',
   'settings.save': 'Simpan', 'settings.cancel': 'Batal', 'settings.saved': 'Tersimpan.',
-  'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.', 'settings.err.days': 'Gunakan bilangan bulat 0 sampai 14.',
+  'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.',
+  // ----- round 18: Settings › notice per kind, few-visits alert before next month -----
+  'settings.downgrade': 'Turun paket', 'settings.downgradeSub': 'ke paket lebih murah · paling lambat {d}', 'settings.stop': 'Berhenti', 'settings.stopSub': 'bulan terakhir {m} · paling lambat {d}',
+  'settings.leave': 'Cuti', 'settings.leaveSub': 'cuti {m} · paling lambat {d}', 'settings.upgrade': 'Naik paket', 'settings.upgradeSub': 'mulai tanggal 1 berikutnya', 'settings.noNotice': 'tanpa pemberitahuan',
+  'settings.leaveRun': 'Cuti berturut-turut', 'settings.leaveRunSub': 'tanpa kabar sesudahnya, keanggotaan berakhir', 'settings.leaveRunV': 'maks. {n} bulan', 'settings.days': 'hari',
+  'settings.fewAlert': 'Pengingat sebelum bulan depan', 'settings.fewAlertSub': '{m}: pengingat {a} · perubahan ditutup {c}',
 };
