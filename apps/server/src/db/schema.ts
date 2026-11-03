@@ -42,7 +42,9 @@ export const prices = tables.prices, members = tables.members, memberNotes = tab
   leaveRequests = tables.leaveRequests,
   // round 14
   unpaidFollowUps = tables.unpaidFollowUps,
-  emails = tables.emails;
+  emails = tables.emails,
+  // round 17
+  visitCalls = tables.visitCalls;
 
 export const clubs = pgTable('clubs', {
   id: text('id').primaryKey(),
