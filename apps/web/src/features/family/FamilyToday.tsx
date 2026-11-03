@@ -151,12 +151,12 @@ function LastVisitCard({ members, stories, onOpen, onOpenPhoto }: { members: Mem
 }
 const famPhotoAriaLite = (day: string, time: string) => `${day} · ${time}`;
 
-/** Round 12: a confirmed celebration of one of these parents on the day shown (the club has said yes): what, when, where, and the cake. Only confirmed ones reach a family. */
+/** Round 12: a celebration of one of these parents on the day shown: what, when, where, and the cake. Round 17: also while it waits for the club to confirm (tagged), so the charges show early. */
 function CelebrationCard({ members, date }: { members: Member[]; date: ISODate }) {
   const { s, t, fmt } = useFamilyCtx();
   const navigate = useNavigate();
   const ids = members.map((m) => m.id);
-  const list = celebrationsOn(s, date).filter((c) => ids.includes(c.memberId));
+  const list = celebrationsOn(s, date, ['confirmed', 'requested']).filter((c) => ids.includes(c.memberId));
   if (!list.length) return null;
   return (
     <section data-testid="celebration-card" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -167,6 +167,7 @@ function CelebrationCard({ members, date }: { members: Member[]; date: ISODate }
             <IconTile icon="cake" size={40} iconSize={22} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
               <span style={{ fontSize: 17, fontWeight: 600, color: F.text, lineHeight: 1.3, overflowWrap: 'anywhere' }}>{c.title}</span>
+              {c.status === 'requested' ? <span data-testid="celebration-requested" style={{ alignSelf: 'flex-start', fontSize: 12, fontWeight: 500, color: F.soft, background: F.fill, borderRadius: 999, padding: '2px 8px' }}>{t('celeb.famPending')}</span> : null}
               <span style={{ fontSize: 14, color: F.soft }}>{t('celeb.famSub', { from: c.from, to: c.to, room: roomLabel(s, c.roomId, fmt.lang) })}</span>
               <span style={{ fontSize: 13, color: F.muted, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{[t(c.guests === 1 ? 'celeb.guest1' : 'celeb.guests', { n: c.guests }), c.cateringNote].filter(Boolean).join(' · ')}</span>
               {chargesLine(c) ? <span data-testid="celebration-charges" style={{ fontSize: 13, color: F.text, lineHeight: 1.4, overflowWrap: 'anywhere' }}>{chargesLine(c)} · {t('celeb.total', { amount: rp(celebrationTotal(c)) })}</span> : null}

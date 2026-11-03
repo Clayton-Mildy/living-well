@@ -109,7 +109,7 @@ describe('celebrations (actions)', () => {
     expect(x.state.celebrations[id].status).toBe('cancelled');
     fails(x.state, 'celebration.cancel', { celebrationId: id }, 's1', 'celeb.err.decided');
   });
-  it('kitchen covers include confirmed guests; the calendar shows requested to staff only', () => {
+  it('kitchen covers include confirmed guests; the calendar shows a request flagged (a family sees its own member only)', () => {
     const s = seed();
     const date = req.date;
     const base = coversOn(s, date);
@@ -117,7 +117,7 @@ describe('celebrations (actions)', () => {
     const [id] = created(s, r.state);
     expect(coversOn(r.state, date)).toMatchObject({ celebration: 0, total: base.total });
     expect(dayInfo(r.state, date, 'staff').items.find((i) => i.kind === 'celebration')).toMatchObject({ celebrationId: id, note: 'requested' });
-    expect(dayInfo(r.state, date, 'family').items.some((i) => i.kind === 'celebration')).toBe(false);
+    expect(dayInfo(r.state, date, 'family').items.find((i) => i.kind === 'celebration')).toMatchObject({ celebrationId: id, note: 'requested' }); // round 17: the family sees a request too
     const d = run(r.state, 'celebration.decide', { celebrationId: id, status: 'confirmed' }, 's9');
     expect(coversOn(d.state, date)).toMatchObject({ celebration: 12, total: base.total + 12 });
     expect(dayInfo(d.state, date, 'family').items.find((i) => i.kind === 'celebration')).toMatchObject({ celebrationId: id });

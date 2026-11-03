@@ -39,6 +39,8 @@ export interface FamRow {
   memberId?: string;
   /** round 12, birthday: the age the parent turns (memberId says who) */
   years?: number;
+  /** round 17, celebration: the club has not said yes yet (the family still sees what it will cost) */
+  requested?: boolean;
   /** venue / outing / celebration: the end time when there is one */
   to?: HM | null;
   /** lunch and tea: the dishes */
@@ -129,7 +131,7 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
       } else if (it.kind === 'celebration') {
         // only the celebrations of the parents this view is about
         if (!it.memberId || !who.includes(it.memberId)) continue;
-        rows.push({ key: it.key, kind: 'celebration', time: it.time ?? open, to: it.to ?? null, passed: false, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
+        rows.push({ key: it.key, kind: 'celebration', time: it.time ?? open, to: it.to ?? null, passed: false, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, ...(it.note === 'requested' ? { requested: true } : {}), took: [], photos: [] });
       } else if (it.kind === 'activity' && it.time) {
         const slot = it.time as Slot;
         const over = came.length > 0 && isPast(date, slot, today, nowMin);
@@ -171,7 +173,7 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
   }
   // a closed day (weekend, holiday) can still hold a celebration: the banner stays, the celebration is its only row
   for (const it of info.items) {
-    if (it.kind === 'celebration' && it.memberId && who.includes(it.memberId)) rows.push({ key: it.key, kind: 'celebration', time: it.time ?? (s.club.settings.open as HM), to: it.to ?? null, passed: false, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, took: [], photos: [] });
+    if (it.kind === 'celebration' && it.memberId && who.includes(it.memberId)) rows.push({ key: it.key, kind: 'celebration', time: it.time ?? (s.club.settings.open as HM), to: it.to ?? null, passed: false, roomId: it.roomId, celebrationId: it.celebrationId, memberId: it.memberId, title: it.title, ...(it.note === 'requested' ? { requested: true } : {}), took: [], photos: [] });
   }
   rows.push(...birthdays);
   markPassed(s, rows, date, today, nowMin);

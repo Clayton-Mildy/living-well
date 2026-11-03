@@ -166,7 +166,7 @@ describe('famWeek: the five open days the desktop lists', () => {
 });
 
 describe('famDay: a celebration on a closed day', () => {
-  it('a confirmed weekend celebration is a row under the weekend banner, only for its own member; a requested one is not shown', () => {
+  it('a confirmed weekend celebration is a row under the weekend banner, only for its own member; a requested one shows too, flagged; declined and cancelled do not', () => {
     const s = seed();
     let sat = T;
     while (dow(sat) !== 6) sat = addDays(sat, 1);
@@ -177,8 +177,21 @@ describe('famDay: a celebration on a closed day', () => {
     expect(day.rows).toHaveLength(1);
     expect(day.rows[0]).toMatchObject({ kind: 'celebration', celebrationId: 'c-wk', memberId: 'm46', time: '14:00', to: '16:00', title: "Opa Budi's birthday" });
     expect(famDay(s, ['m1'], sat, T, NOW).rows).toHaveLength(0);
+    expect(day.rows[0].requested).toBeUndefined();
+    // round 17: a request shows too (its charges are on the family's next bill), flagged so the screens can say it waits for confirmation
     s.celebrations['c-wk'] = { ...cel, status: 'requested' };
-    expect(famDay(s, WHO, sat, T, NOW).rows).toHaveLength(0);
+    expect(famDay(s, WHO, sat, T, NOW).rows).toHaveLength(1);
+    expect(famDay(s, WHO, sat, T, NOW).rows[0]).toMatchObject({ kind: 'celebration', celebrationId: 'c-wk', requested: true });
+    expect(famDay(s, ['m1'], sat, T, NOW).rows).toHaveLength(0);
+    for (const status of ['declined', 'cancelled'] as const) {
+      s.celebrations['c-wk'] = { ...cel, status };
+      expect(famDay(s, WHO, sat, T, NOW).rows).toHaveLength(0);
+    }
+  });
+  it('on an open day a requested celebration is a flagged row too', () => {
+    const s = produce(seed(), (d) => { d.celebrations['cel-seed-1'].status = 'requested'; });
+    const date = s.celebrations['cel-seed-1'].date;
+    expect(famDay(s, WHO, date, T, NOW).rows.find((r) => r.kind === 'celebration')).toMatchObject({ celebrationId: 'cel-seed-1', requested: true });
   });
 });
 

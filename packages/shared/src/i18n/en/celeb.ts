@@ -13,7 +13,7 @@ export const celeb = {
   confirmedToast: 'Confirmed. The family and the front desk are told.', declinedToast: 'Declined. The front desk is told.',
   updatedToast: 'Celebration updated.', updatedAgain: 'Updated. Management needs to confirm it again.', cancelledToast: 'Celebration cancelled.',
   editReconfirm: 'This celebration is confirmed. After a change, management has to confirm it again.',
-  famCard: 'Celebration', famOpen: 'See in the calendar', famSub: '{from}–{to} · {room}', 
+  famPending: 'Waiting for confirmation', famCard: 'Celebration', famOpen: 'See in the calendar', famSub: '{from}–{to} · {room}', 
   'err.decided': 'This celebration is no longer open to changes.',
   chargeAdded: '{item} added.', chargeRemoved: '{item} removed.', chargesBtn: 'Charges', charges: 'Charges', free: 'Free', addCharge: 'Add charge', item: 'Item', price: 'Price', onNextBill: 'On next bill', onInvoice: 'On invoice {number}', total: 'Total {amount}',
   'notif.requested': '{name}: celebration requested for {date} ({title})',

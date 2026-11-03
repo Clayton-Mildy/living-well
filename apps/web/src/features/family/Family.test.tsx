@@ -501,3 +501,31 @@ describe('family Today: the face at the door (round 12)', () => {
     expect(mood.querySelector('[title]')).toBeNull();
   });
 });
+
+describe('round 17: a requested celebration on the family Today', () => {
+  it('shows the card with its charges and "Waiting for confirmation"; a confirmed one has no tag; a declined one is hidden', async () => {
+    // the party moved to today: Today reads only today and tomorrow
+    const base = produce(buildSeed().citra, (d) => { d.celebrations['cel-seed-1'].status = 'requested'; d.celebrations['cel-seed-1'].date = T; });
+    const date = T;
+    open('f1', 'en', 598, base);
+    await show(<FamilyToday />, `/today?member=m46&date=${date}`);
+    expect(q('[data-testid="celebration-charges"]')?.textContent).toContain('Birthday cake (chocolate, no nuts) Rp 350.000');
+    expect(q('[data-testid="celebration-requested"]')?.textContent).toBe('Waiting for confirmation');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open('f1', 'en', 598, produce(base, (d) => { d.celebrations['cel-seed-1'].status = 'confirmed'; }));
+    await show(<FamilyToday />, `/today?member=m46&date=${date}`);
+    expect(q('[data-testid="celebration-charges"]')).not.toBeNull();
+    expect(q('[data-testid="celebration-requested"]')).toBeNull();
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open('f1', 'id', 598, base);
+    await show(<FamilyToday />, `/today?member=m46&date=${date}`);
+    expect(q('[data-testid="celebration-requested"]')?.textContent).toBe('Menunggu konfirmasi');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open('f1', 'en', 598, produce(base, (d) => { d.celebrations['cel-seed-1'].status = 'declined'; }));
+    await show(<FamilyToday />, `/today?member=m46&date=${date}`);
+    expect(q('[data-testid="celebration-card"]')).toBeNull();
+  });
+});

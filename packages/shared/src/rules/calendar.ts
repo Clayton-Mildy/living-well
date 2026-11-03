@@ -76,7 +76,7 @@ export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'st
       ? { key: 'v:' + v.id, kind: 'venue', time: v.from, to: v.to, title: v.org, venueId: v.id, roomId: v.roomId }
       : { key: 'v:' + v.id, kind: 'venue', time: v.from, to: v.to, title: '', private: true, roomId: v.roomId });
   }
-  for (const c of celebrationsOn(s, date, audience === 'staff' ? ['confirmed', 'requested'] : ['confirmed'])) {
+  for (const c of celebrationsOn(s, date, ['confirmed', 'requested'])) {
     items.push({ key: 'cel:' + c.id, kind: 'celebration', time: c.from, to: c.to, title: c.title, celebrationId: c.id, memberId: c.memberId, roomId: c.roomId, ...(c.status === 'requested' ? { note: 'requested' } : {}) });
   }
   if (audience === 'staff') {

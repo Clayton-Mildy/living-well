@@ -101,6 +101,7 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 6 }}>
               <span style={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.35, color: F.text, overflowWrap: 'anywhere' }}>{x.title}</span>
+                {r.requested ? <span data-testid="cal-requested" style={{ alignSelf: 'flex-start', margin: '2px 0', fontSize: 12, fontWeight: 500, color: F.soft, background: F.fill, borderRadius: 999, padding: '2px 8px' }}>{t('celeb.famPending')}</span> : null}
                 {x.sub ? <span style={{ fontSize: 13, lineHeight: 1.35, color: F.muted, overflowWrap: 'anywhere' }}>{x.sub}</span> : null}
                 {mark}
               </span>

@@ -16,7 +16,7 @@ export const celeb: Same<typeof EN> = {
   confirmedToast: 'Terkonfirmasi. Keluarga dan resepsionis diberi tahu.', declinedToast: 'Ditolak. Resepsionis diberi tahu.',
   updatedToast: 'Perayaan diperbarui.', updatedAgain: 'Diperbarui. Manajemen perlu mengonfirmasi lagi.', cancelledToast: 'Perayaan dibatalkan.',
   editReconfirm: 'Perayaan ini sudah terkonfirmasi. Setelah diubah, manajemen harus mengonfirmasi lagi.',
-  famCard: 'Perayaan', famOpen: 'Lihat di kalender', famSub: '{from}–{to} · {room}',
+  famPending: 'Menunggu konfirmasi', famCard: 'Perayaan', famOpen: 'Lihat di kalender', famSub: '{from}–{to} · {room}',
   'err.decided': 'Perayaan ini sudah tidak bisa diubah.',
   chargeAdded: '{item} ditambahkan.', chargeRemoved: '{item} dihapus.', chargesBtn: 'Biaya', charges: 'Biaya', free: 'Gratis', addCharge: 'Tambah biaya', item: 'Barang', price: 'Harga', onNextBill: 'Di tagihan berikutnya', onInvoice: 'Di tagihan {number}', total: 'Total {amount}',
   'notif.requested': '{name}: perayaan diminta untuk {date} ({title})',

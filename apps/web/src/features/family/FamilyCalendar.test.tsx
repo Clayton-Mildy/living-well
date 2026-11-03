@@ -3,7 +3,8 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { buildSeed, projectForFamily } from '@cp/shared';
+import { produce } from 'immer';
+import { buildSeed, projectForFamily, type ClubState } from '@cp/shared';
 import { visitDays } from '@cp/shared/rules/family';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
@@ -22,9 +23,9 @@ afterEach(async () => {
 });
 
 const T = '2026-10-21';
-function open(lang: 'en' | 'id' = 'en') {
+function open(lang: 'en' | 'id' = 'en', base?: ClubState) {
   try { localStorage.clear(); sessionStorage.clear(); } catch { /* storage blocked */ }
-  const view = projectForFamily(buildSeed().citra, 'f1');
+  const view = projectForFamily(base ?? buildSeed().citra, 'f1');
   useSession.setState({ lang, club: 'citra', user: { kind: 'family', id: 'f1', name: 'Maria', clubId: 'citra' } as never });
   useReplica.setState({ club: 'citra', userId: 'f1', confirmed: view, view, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 598, realStart: Date.now(), offset: 0 }, act: (async () => ({ ok: true as const, result: {} })) as never });
 }
@@ -224,5 +225,32 @@ describe('the selected day keeps its own look (round 8d)', () => {
       expect(document.querySelector('h1')?.textContent).toBe('Calendar');
       expect(document.body.textContent).toMatch(/Open Monday to Friday, and on weekends when programmed · \d\d:\d\d–\d\d:\d\d/);
     } finally { (window as unknown as { innerWidth: number }).innerWidth = was; }
+  });
+});
+
+describe('round 17: a requested celebration shows with its charges and a waiting tag', () => {
+  const requested = () => {
+    const base = produce(buildSeed().citra, (d) => { d.celebrations['cel-seed-1'].status = 'requested'; });
+    open('en', base);
+    return base.celebrations['cel-seed-1'].date;
+  };
+  it('the calendar agenda row carries the cake and "Waiting for confirmation"; confirmed carries no tag', async () => {
+    const date = requested();
+    await show(<FamilyCalendar />, `/calendar?date=${date}`);
+    const row = document.querySelector('[data-testid="cal-row"][data-kind="celebration"]');
+    expect(row?.textContent).toContain('Birthday cake (chocolate, no nuts) Rp 350.000');
+    expect(row?.querySelector('[data-testid="cal-requested"]')?.textContent).toBe('Waiting for confirmation');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    open();
+    await show(<FamilyCalendar />, `/calendar?date=${date}`);
+    expect(document.querySelector('[data-testid="cal-row"][data-kind="celebration"]')?.textContent).toContain('Rp 350.000');
+    expect(document.querySelector('[data-testid="cal-requested"]')).toBeNull();
+  });
+  it('in Indonesian the tag reads "Menunggu konfirmasi"', async () => {
+    const base = produce(buildSeed().citra, (d) => { d.celebrations['cel-seed-1'].status = 'requested'; });
+    open('id', base);
+    await show(<FamilyCalendar />, `/calendar?date=${base.celebrations['cel-seed-1'].date}`);
+    expect(document.querySelector('[data-testid="cal-requested"]')?.textContent).toBe('Menunggu konfirmasi');
   });
 });
