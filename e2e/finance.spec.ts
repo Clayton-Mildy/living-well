@@ -3,7 +3,7 @@
 // Runs at phone, phone360, tablet and laptop. Isolated environment: `pnpm e2e:env finance 8807 5207`.
 import { test, expect as baseExpect, type Page } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, isPhone, assertNoHorizontalScroll } from './helpers';
-import { goToPage, pickDate, pickFilter, takePhotoWithFile, TINY_PNG } from './kit';
+import { goToPage, pickDate, pickFilter, takePhotoWithFile, TINY_PNG, uploadProof } from './kit';
 
 // Eight agents share one machine: leave room for a slow moment (a test that is wrong still fails, just a little later).
 const expect = baseExpect.configure({ timeout: 15_000 });
@@ -274,8 +274,9 @@ test.describe('payments', () => {
 
   test('long lists are paged, never cut off: 6 seeded + 18 new payments show 15, then all 24', async ({ page }) => {
     const c = watchConsole(page);
+    const proof = await uploadProof(page.request);
     for (let i = 1; i <= 18; i++) {
-      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01', ref: `T${i}`, invoiceId: 'INV-2610-046' });
+      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: proof, ref: `T${i}`, invoiceId: 'INV-2610-046' });
       expect(r.ok()).toBeTruthy();
     }
     await signIn(page, 's10', '/payments');

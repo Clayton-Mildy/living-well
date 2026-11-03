@@ -3,7 +3,7 @@
 // The demo clock moves to other days with POST /api/demo/clock { date } (the club's daily job then runs at once).
 import { test, expect as baseExpect, type APIRequestContext, type Page } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll, isPhone, confirmCheckIn } from './helpers';
-import { pickOption, regNext } from './kit';
+import { pickOption, regNext, uploadProof } from './kit';
 
 const expect = baseExpect.configure({ timeout: 15_000 });
 test.beforeEach(async ({ request }) => { test.setTimeout(90_000); await resetDemo(request); });
@@ -34,7 +34,8 @@ async function updatesOf(page: Page) {
 }
 /** Everyone the families of Lina and Budi owe nothing to: pay October for them (finance, cash). */
 async function payOctober(request: APIRequestContext, ids: [string, string][] = [['m1', 'INV-2610-001'], ['m46', 'INV-2610-046']]) {
-  for (const [memberId, invoiceId] of ids) await ok(request, 's10', 'payment.record', { memberId, amount: memberId === 'm1' ? 2_700_000 : 3_950_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId });
+  const proof = await uploadProof(request);
+  for (const [memberId, invoiceId] of ids) await ok(request, 's10', 'payment.record', { memberId, amount: memberId === 'm1' ? 2_700_000 : 3_950_000, method: 'cash', proofMediaId: proof, invoiceId });
 }
 
 test.describe('prices and fees (Plans)', () => {
@@ -162,7 +163,8 @@ test.describe('leave (cuti)', () => {
     await ok(request, 'fm2_0', 'membership.requestLeave', { memberId: 'm2', month: '2027-01' });
     await ok(request, 'fm2_0', 'membership.confirmReturn', { memberId: 'm2' });
     // everybody has paid
-    for (const [memberId, invoiceId, amount] of [['m1', 'INV-2610-001', 2_700_000], ['m46', 'INV-2610-046', 3_950_000], ['m20', 'INV-2610-020', 3_950_000], ['m20', 'INV-2609-020', 3_950_000]] as const) await ok(request, 's10', 'payment.record', { memberId, amount, method: 'cash', proofMediaId: 'md_testproof01', invoiceId });
+    const proof = await uploadProof(request);
+    for (const [memberId, invoiceId, amount] of [['m1', 'INV-2610-001', 2_700_000], ['m46', 'INV-2610-046', 3_950_000], ['m20', 'INV-2610-020', 3_950_000], ['m20', 'INV-2609-020', 3_950_000]] as const) await ok(request, 's10', 'payment.record', { memberId, amount, method: 'cash', proofMediaId: proof, invoiceId });
     await setDay(request, '2027-02-01');
     const snap = await state(request, 's9');
     expect(snap.members.m10.memberships.at(-1)).toMatchObject({ lastDay: '2027-01-31', endReason: 'leaveOverrun' });
@@ -206,7 +208,7 @@ test.describe('an unpaid invoice: on hold on the 1st, stopped on the 3rd', () =>
     await page.locator('[data-nav-key="today"]').click();
     await expect((await updatesOf(page)).getByText(/Membership on hold: invoice INV-2610-001 \(Rp 2\.700\.000\) for Oma Lina is unpaid/)).toBeVisible();
     // paying lifts the hold at once, and she can check in
-    await ok(request, 's10', 'payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: 'INV-2610-001' });
+    await ok(request, 's10', 'payment.record', { memberId: 'm1', amount: 2_700_000, method: 'cash', proofMediaId: await uploadProof(request), invoiceId: 'INV-2610-001' });
     await signIn(page, 's1', '/today');
     await expect(page.getByRole('button', { name: /^Oma Lina\b/ })).not.toContainText('Suspended');
     expect((await api(request, 's1', 'attendance.checkIn', { memberId: 'm1', method: 'manual' })).ok()).toBeTruthy();
@@ -273,7 +275,7 @@ test.describe('the registration fee and the trial', () => {
     await expect(sheet).toContainText('Rp 2.500.000');
     await expect(sheet).toContainText('Rp 6.450.000');
     // the next invoice (December) does not carry it again (the family paid November: an unpaid invoice would have stopped the membership on 3 Dec)
-    await ok(request, 's10', 'payment.record', { memberId, amount: 6_450_000, method: 'cash', proofMediaId: 'md_testproof01', invoiceId: inv.id });
+    await ok(request, 's10', 'payment.record', { memberId, amount: 6_450_000, method: 'cash', proofMediaId: await uploadProof(request), invoiceId: inv.id });
     await setDay(request, '2026-12-21');
     const dec = Object.values<{ memberId: string; period: string; lines: { label: string }[] }>((await state(request, 's9')).invoices).find((i) => i.memberId === memberId && i.period === '2026-12')!;
     expect(dec.lines.map((l) => l.label)).toEqual(['inv.line.gold']);

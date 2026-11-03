@@ -2,7 +2,7 @@
 // Runs at phone and laptop: a popover floats under its field on the laptop and becomes a bottom sheet on the phone.
 import { test, expect as baseExpect, type Locator, type Page } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll, isPhone } from './helpers';
-import { calendarDay, fieldText, goToPage, pickDate, pickOption, takePhotoWithFile, TINY_PNG } from './kit';
+import { calendarDay, fieldText, goToPage, pickDate, pickOption, takePhotoWithFile, TINY_PNG, uploadProof } from './kit';
 
 const expect = baseExpect.configure({ timeout: 15_000 });
 test.beforeEach(async ({ request }) => { test.setTimeout(90_000); await resetDemo(request); });
@@ -209,8 +209,9 @@ test.describe('Pager', () => {
   test('payments are paged 15 at a time: next, previous, numbered pages, the last page; a search starts again on page 1', async ({ page }) => {
     const c = watchConsole(page);
     // 18 new cash payments sit on top of the seeded history (about 6 months of paid invoices), newest first
+    const proof = await uploadProof(page.request);
     for (let i = 1; i <= 18; i++) {
-      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01', ref: `T${i}`, invoiceId: 'INV-2610-046' });
+      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: proof, ref: `T${i}`, invoiceId: 'INV-2610-046' });
       expect(r.ok()).toBeTruthy();
     }
     await signIn(page, 's10', '/payments');
@@ -249,8 +250,9 @@ test.describe('Pager', () => {
   test('the notification bell and the demo accounts are paged too', async ({ page }) => {
     const c = watchConsole(page);
     // twelve "payment received" updates for finance
+    const proof = await uploadProof(page.request);
     for (let i = 1; i <= 12; i++) {
-      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: 'md_testproof01', ref: `N${i}`, invoiceId: 'INV-2610-046' });
+      const r = await post(page, 's10', 'payment.record', { memberId: 'm46', amount: 1000, method: 'cash', proofMediaId: proof, ref: `N${i}`, invoiceId: 'INV-2610-046' });
       expect(r.ok()).toBeTruthy();
     }
     await signIn(page, 's9', '/arrivals');

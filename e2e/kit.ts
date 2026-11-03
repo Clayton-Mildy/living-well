@@ -8,7 +8,7 @@
 //   await goToPage(page, 2);                              // Pager: numbered button on tablet and laptop, Next on phone
 //   await regNext(dialog);                                // the six-step registration flow (Join, Add member): Next / a tap on the off Next / its button
 //   await takePhotoWithFile(page);                        // CameraCapture without a camera: the file-picker fallback, then "Use photo"
-import { expect, type Locator, type Page } from '@playwright/test';
+import { expect, type APIRequestContext, type Locator, type Page } from '@playwright/test';
 
 type Name = string | RegExp;
 const MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
@@ -106,3 +106,13 @@ export const nextBtn = (d: Locator) => d.getByRole('button', { name: /^(Next|Lan
 export const regNext = (d: Locator) => nextBtn(d).click();
 /** A tap on the off Next button: it stays on the step and says what is missing. */
 export const regTryNext = (d: Locator) => nextBtn(d).click({ force: true });
+
+/**
+ * Round 17: the server checks that a payment's proof photo was really uploaded, so a spec that records a cash or transfer payment through the API first
+ * uploads a tiny receipt photo (as the signed-in user, under their own club) and passes its id as `proofMediaId`.
+ */
+export async function uploadProof(request: APIRequestContext, userId = 's10'): Promise<string> {
+  const r = await request.post('/api/media', { headers: { 'x-user-id': userId }, data: { mime: 'image/png', data: TINY_PNG.toString('base64') } });
+  expect(r.ok(), `upload proof: ${await r.text()}`).toBeTruthy();
+  return ((await r.json()) as { id: string }).id;
+}

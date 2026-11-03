@@ -350,7 +350,7 @@ describe('the record by day', () => {
     expect(new Set(days).size).toBe(days.length);
     expect(neighbourDay(days, '2026-10-20', -1)).toBe(days[days.length - 2]);
     expect(neighbourDay(days, '2026-10-20', 1)).toBeNull();
-    expect(neighbourDay(days, '2026-10-17', -1)).toBe(days.filter((d) => d < '2026-10-17').pop()); // a day without readings: the nearest day with some
+    expect(neighbourDay(days, '2026-10-17', -1)).toBe('2026-10-14'); // a day without readings: the nearest day with some
     expect(neighbourDay(days, '2026-10-17', 1)).toBe('2026-10-19');
     expect(neighbourDay(days, '2000-01-01', -1)).toBeNull();
     expect(neighbourDay([], T, -1)).toBeNull();
