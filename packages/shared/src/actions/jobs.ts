@@ -9,6 +9,7 @@ import { leaveOverrunMonth } from '../rules/leave';
 import { finalInvoiceFor } from '../rules/members';
 import { dm } from '../rules/mgmtParse';
 import { OCCASION_AHEAD_DAYS, occasionsInRange } from '../rules/occasions';
+import { fewVisitsSettings, fewVisitsState } from '../rules/fewVisits';
 import { emailInvoice } from './emails';
 import { addDays, rp } from '../util';
 
@@ -96,5 +97,20 @@ registerJob('occasions.daily', (d, ctx) => {
     }
   } catch (e) {
     if (!(e instanceof DomainError)) console.error('occasions.daily job failed', e);
+  }
+});
+
+// ---------- few visits (round 17) ----------
+// From the alert day (two days before the notice deadline: 15 Nov) to the deadline, management and the front desk are told once a month how many members came fewer than
+// 5 days. Nobody flagged = no notice. Calling the families is done from Next month (the link opens the list).
+registerJob('fewVisits.daily', (d, ctx) => {
+  try {
+    const st = fewVisitsState(d as unknown as ClubState, ctx.today);
+    if (st.phase !== 'open' || !st.rows.length) return;
+    const refId = `few:${st.month}`;
+    if (toldAlready(d, 'renewals.few.notif', refId)) return;
+    ctx.notify({ toRoles: ['mgmt', 'lobby'], kind: 'renewals.few.notif', params: { n: st.rows.length, max: fewVisitsSettings(d as unknown as ClubState).below - 1, d: st.deadline }, link: '/renewals?few=1', ref: { type: 'fewVisits', id: refId } });
+  } catch (e) {
+    if (!(e instanceof DomainError)) console.error('fewVisits.daily job failed', e);
   }
 });

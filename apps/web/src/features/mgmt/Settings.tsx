@@ -1,6 +1,7 @@
 // Admin › Settings (round 17, Owner and Management). Three grouped lists: Membership rules (the notice period; Management's change waits for the Owner),
 // Few-visits alert (the two numbers, applied at once) and Terms and conditions (a row that opens the terms page, ?view=terms). Each group has its own Save and Cancel while edited.
 import { useState, type ReactNode } from 'react';
+import { fewVisitsSettings } from '@cp/shared/rules/fewVisits';
 import { useSearchParams } from 'react-router-dom';
 import { actorName, dtDate } from '@cp/shared';
 import { noticeDays } from '@cp/shared/rules/notice';
@@ -16,7 +17,6 @@ import { useClub } from '../../store/replica';
 import { Page } from './common';
 import { TermsPage } from './TermsPage';
 
-const FEW_DEFAULT = { below: 5, daysBeforeDeadline: 2 }; // the merge step switches this to fewVisitsSettings (rules/fewVisits.ts)
 const digits = (v: string) => v.replace(/\D/g, '').slice(0, 2);
 const num = (v: string) => (v === '' ? NaN : Number(v));
 const inRange = (n: number, lo: number, hi: number) => Number.isInteger(n) && n >= lo && n <= hi;
@@ -57,7 +57,7 @@ export function Settings() {
   const termsOpen = sp.get('view') === 'terms';
   const setTermsOpen = (on: boolean) => setSp(on ? { view: 'terms' } : {}, { replace: false });
   const st = s.club.settings;
-  const few = st.fewVisits ?? FEW_DEFAULT;
+  const few = fewVisitsSettings(s);
   const [notice, setNotice] = useState<string | null>(null); // null = untouched (shows the saved value)
   const [below, setBelow] = useState<string | null>(null);
   const [days, setDays] = useState<string | null>(null);

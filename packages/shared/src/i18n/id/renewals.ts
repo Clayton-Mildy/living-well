@@ -36,5 +36,9 @@ export const renewals: Same<typeof EN> = {
   'feed.continue': '{name}: lanjut di {month}', 'feed.upgrade': '{name}: naik ke Gold mulai {month}', 'feed.downgrade': '{name}: turun ke Flex mulai {month}', 'feed.switch': '{name}: pindah ke {planId} mulai {month}',
   'feed.leave': '{name}: cuti di {month}', 'feed.leave2': '{name}: cuti dari {from} sampai {to}', 'feed.stop': '{name}: berhenti, hari terakhir {date}',
   'feed.noAnswer': '{name}: telepon perpanjangan, tidak diangkat',
+  'few.notif': '{n} anggota datang {max} kali atau kurang bulan ini · perubahan paket ditutup {d}', 'few.reached': 'Tersambung', 'few.noAnswer': 'Tidak diangkat', 'few.staying': 'Tetap lanjut',
+  'few.title': 'Jarang datang', 'few.card': '{n} · {c} dihubungi · perubahan ditutup {d}', 'few.before': 'daftar dibuka {d} · sejauh ini {n}', 'few.closed': 'perubahan ditutup',
+  'few.row': '{n} kunjungan · terakhir {d}', 'few.row1': '1 kunjungan · terakhir {d}', 'few.rowNone': 'Belum ada kunjungan', 'few.log': 'Catat panggilan', 'few.called': 'Dihubungi', 'few.toCall': '{n} perlu dihubungi',
+  'few.saved': 'Panggilan untuk {name} dicatat.', 'few.earlier': 'Panggilan sebelumnya', 'few.outcome': 'Hasil', 'few.none': 'Tidak ada yang ditandai',
   'feed.undone': '{name}: perubahan {month} dibatalkan', 'feed.approved': '{name}: perubahan perpanjangan {month} disetujui', 'feed.rejected': '{name}: perubahan perpanjangan {month} tidak disetujui',
 };

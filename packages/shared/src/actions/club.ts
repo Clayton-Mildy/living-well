@@ -1,5 +1,6 @@
 // Club management: venue bookings, WhatsApp broadcasts (and the job that sends scheduled ones), surveys, prices and club rules.
 import type { Draft } from 'immer';
+import { fewVisitsSettings } from '../rules/fewVisits';
 import type { Actor, Broadcast, ClubState, HM, ISODate, PlanDef, PriceVersion, Survey, SurveyAnswer, SurveyCustomQuestion, User, VenueBooking } from '../types';
 import { defineAction, hasRole, isFamily, isMgmt, type Ctx } from './framework';
 import { registerJob } from './jobs';
@@ -805,7 +806,7 @@ export const clubActions = [
     },
     run(d, i, ctx) {
       const st = d.club.settings;
-      const few = st.fewVisits ?? { below: 5, daysBeforeDeadline: 2 }; // the defaults (rules/fewVisits.ts)
+      const few = fewVisitsSettings(d);
       const same = (i.flexQuota === undefined || i.flexQuota === st.flexQuota) && (i.noticeDays === undefined || i.noticeDays === (st.noticeDays ?? NOTICE_DAYS_DEFAULT))
         && (i.fewVisits === undefined || (i.fewVisits.below === few.below && i.fewVisits.daysBeforeDeadline === few.daysBeforeDeadline));
       if (same) ctx.fail('err.noChanges');

@@ -85,7 +85,7 @@ export interface ClubSettings {
   flexQuota: number; // 10 visits / month
   /** KC round 16: days before a month's 1st by which a downgrade, stop or leave for that month must be asked (missing = 14; rules/notice.ts) */
   noticeDays?: number;
-  /** KC round 17: the few-visits alert — flag an active member with fewer than `below` visit days this month, `daysBeforeDeadline` days before the last day to change next month (missing = 5 and 2) */
+  /** KC round 17: the few-visits alert. Members with fewer than `below` visit days this month are flagged from `daysBeforeDeadline` days before the notice deadline (missing = 5 and 2; rules/fewVisits.ts) */
   fewVisits?: { below: number; daysBeforeDeadline: number };
   issueDay: number; // 21 (KC round 6, brochure: invoices on the 21st)
   dueDay: number; // 28 (paid within 7 days)
@@ -334,6 +334,9 @@ export interface MemberNote extends Row {
 }
 
 export type CareCallOutcome = 'fine' | 'unwell' | 'hospital' | 'travelling' | 'wantsPause' | 'noAnswer' | 'other';
+/** KC round 17: a call to a family about few visits this month (Next month > Few visits). One member can have several in a month; the newest is the latest word. */
+export interface VisitCall extends Row { memberId: string; month: YM; outcome: 'reached' | 'noAnswer' | 'staying'; note?: string; by: Actor; at: DT }
+
 export interface CareCall extends Row { memberId: string; date: ISODate; at: DT; by: Actor; contactName: string; phone: string; outcome: CareCallOutcome; note?: string; checkAgainOn?: ISODate }
 
 export interface PlanChangeRequest extends Row {
@@ -1310,6 +1313,8 @@ export interface ClubState {
   unpaidFollowUps: Record<string, UnpaidFollowUp>;
   // round 16
   emails: Record<string, EmailRow>;
+  // round 17
+  visitCalls: Record<string, VisitCall>;
 }
 
 /** Collections stored as one Postgres table each (everything except clubId/rev/club). */
@@ -1324,6 +1329,7 @@ export const COLLECTIONS = [
   'moodMarks', 'careCalls', 'celebrations', 'leaveRequests',
   'unpaidFollowUps',
   'emails',
+  'visitCalls',
 ] as const;
 export type CollectionName = (typeof COLLECTIONS)[number];
 

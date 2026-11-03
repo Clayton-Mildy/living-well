@@ -301,6 +301,8 @@ describe('snapshots', () => {
     expect(fam.state.leaveRequests).toEqual({});
     // round 14: unpaid follow-up calls are staff-only too
     expect(fam.state.unpaidFollowUps).toEqual({});
+    // round 17: the few-visits call log is staff-only
+    expect(fam.state.visitCalls).toEqual({});
   });
   it('club access is enforced', async () => {
     expect((await app.request('/api/snapshot?club=adina', { headers: { 'x-user-id': 's1' } })).status).toBe(403);

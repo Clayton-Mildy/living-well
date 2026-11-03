@@ -6,6 +6,7 @@ import { useNavigate } from 'react-router-dom';
 import { listName, type GuestVisit } from '@cp/shared';
 import { occasionsAhead } from '@cp/shared/rules/occasions';
 import { checkOnList } from '@cp/shared/rules/checkOn';
+import { fewVisitsState } from '@cp/shared/rules/fewVisits';
 import { useCheckOnDays } from './useCheckOnDays';
 import { alsoToday } from '@cp/shared/rules/lobby';
 import { menuOn } from '@cp/shared/rules/kitchen';
@@ -180,6 +181,13 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
         {quiet.length > 5 ? <button type="button" onClick={() => navigate('/members?f=checkOn')} style={{ ...sub14, alignSelf: 'flex-start', padding: 0, minHeight: 28, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline' }}>{t('checkOn.all', { n: quiet.length })}</button> : null}
       </Block>,
     );
+  }
+
+  // round 17: few visits — from the alert day to the last change day, the members nobody has called yet; a tap opens the list on Next month
+  const few = fewVisitsState(s, today);
+  const toCall = few.rows.filter((r) => !r.called).length;
+  if (few.phase === 'open' && toCall) {
+    blocks.push(<Block key="fewVisits" title={`${t('renewals.few.title')} · ${t('renewals.few.toCall', { n: toCall })}`} onClick={() => navigate('/renewals?few=1')} />);
   }
 
   // round 12: birthdays and membership anniversaries; round 14: two weeks ahead, a birthday row has Prepare (a tap on the name opens the member)

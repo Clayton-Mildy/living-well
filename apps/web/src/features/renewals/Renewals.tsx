@@ -16,6 +16,8 @@ import { memberPhoto } from '../../lib/media';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { ConfirmDialog } from '../kitchen/parts';
+import { FewVisitsCard } from './FewVisitsCard';
+import { FewVisitsSheet } from './FewVisitsSheet';
 import { FollowUpSheet } from './FollowUpSheet';
 import { NextMonthList } from './NextMonthList';
 import { UnpaidList } from './UnpaidList';
@@ -43,6 +45,9 @@ export function Renewals() {
   const asked = params.get('tab');
   const tab: Tab = asked === 'unpaid' ? 'unpaid' : asked === 'changes' || past ? 'changes' : 'members';
   const setTab = (v: Tab) => setParams(v === 'members' ? {} : { tab: v }, { replace: true });
+  // round 17: the Few visits list is in the address too (`?few=1`: the notification and Also today open it)
+  const fewOpen = !past && params.get('few') === '1';
+  const setFew = (on: boolean) => setParams((p) => { const n = new URLSearchParams(p); if (on) n.set('few', '1'); else n.delete('few'); return n; }, { replace: !on });
   const [recording, setRecording] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   /** the member whose change is about to be undone (Undo asks first: the family is told at once) */
@@ -100,6 +105,7 @@ export function Renewals() {
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 22 }}>
       <PageHead size={40} eyebrow={fmt.fmonth(month, true)} title={t('renewals.title')} right={tab === 'changes' ? switcher : undefined} />
+      {past ? null : <FewVisitsCard onOpen={() => setFew(true)} />}
       {tabs}
       {tab === 'members' ? <NextMonthList month={month} /> : tab === 'changes' ? (
         <>
@@ -111,6 +117,7 @@ export function Renewals() {
           {list}
         </>
       ) : <UnpaidList />}
+      {fewOpen ? <FewVisitsSheet onClose={() => setFew(false)} /> : null}
       {recording ? <FollowUpSheet month={month} onClose={() => setRecording(false)} /> : null}
       <ConfirmDialog open={!!undoing} onClose={() => setUndoing(null)} title={t('renewals.undoTitle')} body={undoing && s.members[undoing] ? t('renewals.undoAsk', { name: displayName(s.members[undoing]), month: fmt.fmonth(month) }) : null}
         confirmLabel={t('renewals.undo')} cancelLabel={t('renewals.keep')} onConfirm={() => (undoing ? undo(undoing) : undefined)} />
