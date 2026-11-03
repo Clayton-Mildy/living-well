@@ -1,16 +1,20 @@
 // Admin › Settings (round 17, Owner and Management). Three grouped lists: Membership rules (the notice period; Management's change waits for the Owner),
-// Few-visits alert (the two numbers, applied at once) and Terms and conditions (a row; the terms screen follows in a later task). Each group has its own Save and Cancel while edited.
+// Few-visits alert (the two numbers, applied at once) and Terms and conditions (a row that opens the terms page, ?view=terms). Each group has its own Save and Cancel while edited.
 import { useState, type ReactNode } from 'react';
+import { useSearchParams } from 'react-router-dom';
+import { actorName, dtDate } from '@cp/shared';
 import { noticeDays } from '@cp/shared/rules/notice';
+import { currentTerms, termsAgreement } from '@cp/shared/rules/terms';
 import { ownerApprovalOn } from '@cp/shared';
-import { Button, Group, HAIRLINE, PageHead, FONT_SMALL } from '../../components/ui';
+import { Button, Group, HAIRLINE, Icon, PageHead, FONT_SMALL } from '../../components/ui';
 import { OwnerWaiting } from '../../components/OwnerWaiting';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
-import { useT } from '../../lib/i18n';
+import { useFmt, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { Page } from './common';
+import { TermsPage } from './TermsPage';
 
 const FEW_DEFAULT = { below: 5, daysBeforeDeadline: 2 }; // the merge step switches this to fewVisitsSettings (rules/fewVisits.ts)
 const digits = (v: string) => v.replace(/\D/g, '').slice(0, 2);
@@ -48,6 +52,10 @@ export function Settings() {
   const s = useClub();
   const act = useAct();
   const { role } = useMe();
+  const fmt = useFmt();
+  const [sp, setSp] = useSearchParams();
+  const termsOpen = sp.get('view') === 'terms';
+  const setTermsOpen = (on: boolean) => setSp(on ? { view: 'terms' } : {}, { replace: false });
   const st = s.club.settings;
   const few = st.fewVisits ?? FEW_DEFAULT;
   const [notice, setNotice] = useState<string | null>(null); // null = untouched (shows the saved value)
@@ -82,8 +90,11 @@ export function Settings() {
     const label = t(key, { n: saved });
     return <div style={ROW}><Sentence template={t(key, { n: '\u0000' })} field={<NumField name={name} label={label} value={value} onChange={set} bad={bad} />} /></div>;
   };
+  const cur = currentTerms(s);
+  const agreement = termsAgreement(s);
   const needsOwner = role !== 'owner' && ownerApprovalOn(s, role as 'mgmt', 'pricing');
 
+  if (termsOpen && !isPhone) return <TermsPage onBack={() => setTermsOpen(false)} />;
   return (
     <Page>
       <PageHead title={t('mgmt.settings.title')} size={isPhone ? 28 : 40} />
@@ -110,11 +121,16 @@ export function Settings() {
         </Group>
 
         <Group title={t('mgmt.settings.terms')} label={t('mgmt.settings.terms')} pad={0} gap={0}>
-          <div data-row="terms" style={{ ...ROW, minHeight: 56 }}>
-            <span style={{ flex: 1, minWidth: 0, fontWeight: 500 }}>{t('mgmt.settings.noTerms')}</span>
-          </div>
+          <button type="button" data-row="terms" className="h-row cp-press" onClick={() => setTermsOpen(true)}
+            style={{ ...ROW, width: '100%', minHeight: 56, flexWrap: 'nowrap', gap: 10, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter' }}>
+            <span style={{ flex: 1, minWidth: 0, fontWeight: 500 }}>
+              {cur ? t('mgmt.settings.termsRow', { v: cur.version, d: fmt.fd(dtDate(cur.publishedAt), { day: 'numeric', month: 'short' }), name: actorName(s, cur.publishedBy), a: agreement.agreed, n: agreement.total }) : t('mgmt.settings.noTerms')}
+            </span>
+            <Icon name="chevron_right" size={20} color="#8A8078" />
+          </button>
         </Group>
       </div>
+      {termsOpen && isPhone ? <TermsPage onBack={() => setTermsOpen(false)} /> : null}
     </Page>
   );
 }

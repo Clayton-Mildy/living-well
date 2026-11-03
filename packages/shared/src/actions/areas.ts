@@ -25,7 +25,7 @@ export const AREA_PREFIXES: [prefix: string, area: string][] = [
   ['receipt.', 'receipts'],
   ['vendorInvoice.', 'spending'],
   ['guest.', 'guests'], ['stock.', 'stock'], ['directory.', 'directory'],
-  ['prices.set', 'plans'], ['club.setPlan', 'plans'], ['club.updateSettings', 'settings'], // round 17: Admin › Settings (the Flex visits rule too)
+  ['prices.set', 'plans'], ['club.setPlan', 'plans'], ['club.updateSettings', 'settings'], ['terms.publish', 'settings'], // round 17: Admin › Settings (the Flex visits rule too)
   // club
   ['calendarEvent.', 'calendar'], ['schedule.', 'calendar'], ['activity.', 'calendar'], ['room.', 'calendar'],
   ['broadcast.', 'broadcast'], ['template.', 'broadcast'],
@@ -44,7 +44,7 @@ export const UNMAPPED: string[] = [
   'stock.request', 'stock.edit', 'stock.cancel', 'feedback.submit', 'feedback.log', 'mood.', 'leave.request', 'leave.cancel', 'member.logCall', 'celebration.request',
   'budget.request', 'receipt.add',
   'access.', // round 16: Admin › Roles is the Owner's (can isOwner only)
-  'terms.publish', 'terms.agree', // round 17: publish is guarded by its own `can` (management and the owner); agree is the family's. Task 8 maps terms.publish to the settings menu.
+  'terms.agree', // round 17: the family's own action (terms.publish belongs to the settings menu)
   'document.upload', 'enquiry.formOpen', 'enquiry.formSave', 'enquiry.formSubmit', 'venue.rate', 'survey.answer', 'signing.sign', 'signing.stamp',
   'family.updateDetails', 'family.setHealthAlerts', 'planChange.request', 'planChange.withdraw',
 ];

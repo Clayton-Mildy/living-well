@@ -55,6 +55,16 @@ describe('terms.publish', () => {
     w.fail('terms.publish', { en: 'x'.repeat(20001), id: '' }, 's9', 'err.invalid');
     w.run('terms.publish', { en: 'x'.repeat(20000), id: 'y'.repeat(20000) }, 's9');
   });
+  it('a refused text names its field so the editor can mark the right tab', () => {
+    const w = world();
+    const field = (input: unknown) => { try { execute(w.s, 'terms.publish', input, w.user('s9'), clock, `tf${++n}`); } catch (e) { return (e as { params: { field?: string } }).params.field; } return 'none'; };
+    expect(field({ en: '   ', id: '' })).toBe('en');
+    expect(field({ id: '' })).toBe('en');
+    expect(field({ en: 'x'.repeat(20001), id: '' })).toBe('en');
+    expect(field({ en: 'ok', id: 'y'.repeat(20001) })).toBe('id');
+    expect(field({ en: 'ok', id: 5 })).toBe('id');
+    expect(field({ en: 7, id: '' })).toBe('en');
+  });
   it('only management and the owner, never other staff or family', () => {
     const w = world();
     w.fail('terms.publish', { en: 'x', id: '' }, 's1', 'err.forbidden');

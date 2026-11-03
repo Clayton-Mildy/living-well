@@ -29,6 +29,13 @@ describe('action areas', () => {
     expect(areaOf('club.setPlan')).toBe('plans');
   });
 
+  it('round 17: publishing terms belongs to Settings; agreeing stays the family\'s own', () => {
+    expect(areaOf('terms.publish')).toBe('settings');
+    expect(isUnmapped('terms.publish')).toBe(false);
+    expect(areaOf('terms.agree')).toBeNull();
+    expect(isUnmapped('terms.agree')).toBe(true);
+  });
+
   it('every action has an area or is unmapped', () => {
     const missing = allActions().map((d) => d.name).filter((n) => !areaOf(n) && !isUnmapped(n));
     expect(missing).toEqual([]);

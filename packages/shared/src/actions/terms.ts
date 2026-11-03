@@ -10,11 +10,11 @@ import { live } from '../util';
 
 export const TERMS_MAX = 20000;
 const S = (d: Draft<ClubState>) => d as unknown as ClubState;
-const text = (v: unknown, required: boolean): string => {
-  if (v === undefined || v === null) return required ? bad('en') : '';
-  if (typeof v !== 'string') return bad();
+const text = (v: unknown, required: boolean, field: 'en' | 'id'): string => {
+  if (v === undefined || v === null) return required ? bad(field) : '';
+  if (typeof v !== 'string') return bad(field);
   const t = v.trim();
-  if ((required && !t) || t.length > TERMS_MAX) return bad();
+  if ((required && !t) || t.length > TERMS_MAX) return bad(field);
   return t;
 };
 
@@ -22,7 +22,7 @@ export const termsActions = [
   defineAction<{ en: string; id: string }>({
     name: 'terms.publish',
     can: (u) => isMgmt(u),
-    parse: (raw) => { const o = obj(raw); return { en: text(o.en, true), id: text(o.id, false) }; },
+    parse: (raw) => { const o = obj(raw); return { en: text(o.en, true, 'en'), id: text(o.id, false, 'id') }; },
     run(d, input, ctx) {
       const settings = S(d).club.settings;
       const list = (settings.terms ??= []);
