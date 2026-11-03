@@ -22,7 +22,7 @@ test('Benjamin ticks Edit on Billing for the front desk; Caca then has the Billi
   await signIn(page, 's1', '/billing');
   await expect(page.getByTestId('view-only')).toContainText('View only'); // Front desk reads Billing by default
   await signIn(page, 's11', '/roles');
-  await page.locator('[data-role="lobby"]').click();
+  await page.locator('[data-role-row="lobby"]').click();
   await expect(page.locator('[data-role-page="lobby"]')).toBeVisible();
   const edit = page.getByRole('checkbox', { name: 'Billing: Edit', exact: true });
   const view = page.getByRole('checkbox', { name: 'Billing: View', exact: true });
@@ -31,9 +31,9 @@ test('Benjamin ticks Edit on Billing for the front desk; Caca then has the Billi
   await edit.click();
   await expect(edit).toHaveAttribute('aria-checked', 'true');
   await assertNoHorizontalScroll(page);
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^Save · \d+ changes?$/ }).click();
   await toast(page, 'Saved.');
-  await expect(page.locator('[data-role-page="lobby"]')).toContainText(/Last changed by .*Benjamin/);
+  await expect(page.locator('[data-role-page="lobby"]')).toContainText(/changed 21 Oct by .*Benjamin/);
 
   await signIn(page, 's1', '/billing');
   await expect(page.getByRole('heading', { name: 'Billing' }).first()).toBeVisible();
@@ -132,13 +132,13 @@ test('screenshots', async ({ page }, info) => {
   const wide = (page.viewportSize()?.width || 0) >= 768;
 
   await signIn(page, 's11', '/roles');
-  await expect(page.locator('[data-role="lobby"]')).toBeVisible();
+  await expect(page.locator('[data-role-row="lobby"]')).toBeVisible();
   if (!wide) await shot('1-roles-list');
-  await page.locator('[data-role="lobby"]').click();
+  await page.locator('[data-role-row="lobby"]').click();
   await expect(page.locator('[data-role-page="lobby"]')).toBeVisible();
   await page.getByRole('checkbox', { name: 'Billing: Edit', exact: true }).click(); // an unsaved change shows the Save bar
   await shot(wide ? '1-roles-list-and-role' : '2-role-page');
-  await page.getByRole('button', { name: 'Cancel', exact: true }).click();
+  await page.getByRole('button', { name: 'Reset', exact: true }).click();
 
   await signIn(page, 's9', '/settings');
   await expect(page.locator('[data-row="terms"]')).toBeVisible();

@@ -30,13 +30,13 @@ test('Benjamin approves the staff training day and the Calendar shows it closed'
 test('Benjamin hides Next month for the front desk; Caca loses it from More and Billing is view-only', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's11', '/roles');
-  await page.locator('[data-role="lobby"]').click(); // round 17: the role list, then View / Edit checkboxes saved in one go
+  await page.locator('[data-role-row="lobby"]').click(); // round 17: the role list, then View / Edit checkboxes saved in one go
   const view = page.getByRole('checkbox', { name: 'Next month: View', exact: true });
   await expect(view).toHaveAttribute('aria-checked', 'true');
   await view.click(); // unticking View unticks Edit too: the menu is hidden
   await expect(view).toHaveAttribute('aria-checked', 'false');
   await assertNoHorizontalScroll(page);
-  await page.getByRole('button', { name: 'Save', exact: true }).click();
+  await page.getByRole('button', { name: /^Save · \d+ changes?$/ }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Saved.' }).first()).toBeVisible();
 
   await signIn(page, 's1', '/today');
