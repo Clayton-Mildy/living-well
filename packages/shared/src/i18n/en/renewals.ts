@@ -43,5 +43,7 @@ export const renewals = {
   'feed.continue': '{name}: continues in {month}', 'feed.upgrade': '{name}: moving to Gold from {month}', 'feed.downgrade': '{name}: moving to Flex from {month}', 'feed.switch': '{name}: moving to {plan} from {month}',
   'feed.leave': '{name}: leave in {month}', 'feed.leave2': '{name}: leave from {from} to {to}', 'feed.stop': '{name}: stopping, last day {date}',
   'feed.noAnswer': '{name}: renewal call, no answer',
+  // round 17: the few-visits alert
+  'few.notif': '{n} members came {max} times or fewer this month · plan changes close {d}', 'few.reached': 'Reached', 'few.noAnswer': 'No answer', 'few.staying': 'Staying',
   'feed.undone': '{name}: change for {month} undone', 'feed.approved': '{name}: renewal change for {month} approved', 'feed.rejected': '{name}: renewal change for {month} not approved',
 };

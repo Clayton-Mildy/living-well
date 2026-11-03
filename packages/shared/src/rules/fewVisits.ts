@@ -1,8 +1,8 @@
 // Round 17 (KC, point 9): the few-visits alert. A member who came fewer than 5 days this month is a "potential quitter": the club calls the family before plan changes
 // close. The alert day is `daysBeforeDeadline` (2) days before the notice deadline of the next month (15 Nov when December's deadline is 17 Nov). Pure reads; the call
 // log is in actions/visitCalls.ts.
-import type { ClubState, ISODate, YM } from '../types';
-import { addDays, addMonths, live, monthStart, ym } from '../util';
+import type { ClubState, ISODate, VisitCall, YM } from '../types';
+import { addDays, addMonths, live, monthStart, sortBy, ym } from '../util';
 import { approvedMembers, currentMembership, membershipStatus } from './core';
 import { visitsInMonth } from './attendance';
 import { onLeaveIn } from './leave';
@@ -20,6 +20,13 @@ export const fewVisitsSettings = (s: Pick<ClubState, 'club'>): { below: number; 
 /** The day the list opens for `month`: the notice deadline of the month after, less `daysBeforeDeadline`. */
 export const fewVisitsAlertDay = (s: ClubState, month: YM): ISODate =>
   addDays(noticeDeadline(s, addMonths(month, 1)), -fewVisitsSettings(s).daysBeforeDeadline);
+
+/** The calls logged for a member in a month, newest first. */
+export const callsOf = (s: ClubState, memberId: string, month: YM): VisitCall[] =>
+  sortBy(live(s.visitCalls || {}).filter((c) => c.memberId === memberId && c.month === month), (c) => c.at + c.id, -1);
+
+export const VISIT_CALL_OUTCOMES: VisitCall['outcome'][] = ['reached', 'noAnswer', 'staying'];
+export const VISIT_CALL_NOTE_MAX = 200;
 
 export type FewRow = { memberId: string; visits: number; last?: ISODate; called: boolean };
 
