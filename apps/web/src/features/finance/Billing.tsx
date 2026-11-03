@@ -3,7 +3,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { actorName, fmtPhone, memberName, displayName, rp, runDone, suspensions, ym } from '@cp/shared';
-import { celebrationsToInvoice } from '@cp/shared/rules/celebrations';
 import { billingBoard, invoicePeriod, onlyWaitingPayments, nextRunPeriod, runPlan, type InvoiceView } from '@cp/shared/rules/finance';
 import { Avatar, Button, EmptyState, Eyebrow, Icon, PageHead, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -65,8 +64,6 @@ export function Billing() {
   if (f === 'xero') add('xero', t('finance.bill.tileXero'), '', board.xero);
 
   // KC round 6: members whose unpaid invoice has put the membership on hold (from the 1st; it stops on the 3rd), oldest invoice first
-  const act = useAct();
-  const celToBill = view ? [] : celebrationsToInvoice(s);
   const holds = useMemo(() => Object.entries(suspensions(s, today)).filter(([id]) => s.members[id]).sort((a, b) => (a[1].dueDate < b[1].dueDate ? -1 : 1)), [s, today]);
   const nextPeriod = nextRunPeriod(s, today);
   const planNext = useMemo(() => runPlan(s, nextPeriod, today), [s, nextPeriod, today]);
@@ -118,20 +115,6 @@ export function Billing() {
       ) : null}
 
       {holds.length && (f === 'all' || f === 'overdue') ? <HoldList holds={holds} onOpen={(id) => navigate(`/members/${id}/plan`)} /> : null}
-      {celToBill.length ? (
-        // round 16: a birthday's charges (a cake…) go on an invoice of their own; finance issues it here
-        <PGroup title={t('finance.bill.celTitle')} pad={0} gap={0}>
-          {celToBill.map(({ c, amount }, i) => (
-            <div key={c.id} data-testid="cel-to-bill" data-celebration={c.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 16px', borderTop: i ? HAIR : 'none', flexWrap: 'wrap' }}>
-              <div style={{ flex: '1 1 200px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
-                <span style={rowTitle}>{c.title}</span>
-                <span style={rowSub}>{s.members[c.memberId] ? displayName(s.members[c.memberId]) : ''} · {rp(amount)}</span>
-              </div>
-              <PillBtn tone="primary" icon="receipt_long" onClick={() => void act('celebration.issueInvoice', { celebrationId: c.id }, { ok: (r) => t('celeb.issued', { number: String(r.invoiceId ?? '') }) })}>{t('celeb.issueInvoice')}</PillBtn>
-            </div>
-          ))}
-        </PGroup>
-      ) : null}
 
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(24px, 4vw, 56px)', alignItems: 'flex-start' }}>
         <div style={{ flex: '1 1 440px', minWidth: 0, display: 'flex', flexDirection: 'column', gap: isPhone ? 18 : 24 }}>

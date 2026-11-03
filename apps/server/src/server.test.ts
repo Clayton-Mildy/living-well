@@ -292,11 +292,11 @@ describe('snapshots', () => {
     expect(Object.values(fam.state.staff).every((x: any) => x.hr.salary === 0)).toBe(true);
     expect(Object.keys(fam.state.threads)).toHaveLength(0);
     expect(Object.keys(fam.state.messages)).toHaveLength(0);
-    // round 12: care calls are staff-only; mood marks and confirmed celebrations reach a family only for their own members
+    // round 12: care calls are staff-only; mood marks and confirmed or requested celebrations reach a family only for their own members
     expect(fam.state.careCalls).toEqual({});
     const famMembers = new Set(Object.keys(fam.state.members));
     for (const r of Object.values(fam.state.moodMarks) as any[]) expect(famMembers.has(r.memberId)).toBe(true);
-    for (const r of Object.values(fam.state.celebrations) as any[]) { expect(famMembers.has(r.memberId)).toBe(true); expect(r.status).toBe('confirmed'); }
+    for (const r of Object.values(fam.state.celebrations) as any[]) { expect(famMembers.has(r.memberId)).toBe(true); expect(['confirmed', 'requested']).toContain(r.status); }
     // round 13: staff leave requests never reach a family
     expect(fam.state.leaveRequests).toEqual({});
     // round 14: unpaid follow-up calls are staff-only too

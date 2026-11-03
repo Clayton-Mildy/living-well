@@ -54,7 +54,7 @@ export function Celebrations({ open, setOpen, prefill }: { open: boolean; setOpe
       acts.push({ key: 'edit', icon: 'edit', label: t('common.edit'), tone: 'secondary', run: () => setEdit(c) });
       if (c.status !== 'declined' && c.status !== 'cancelled') acts.push({ key: 'charges', icon: 'payments', label: t('celeb.chargesBtn'), tone: 'secondary', run: () => setCharges(c.id) });
       acts.push({ key: 'cancel', icon: 'event_busy', label: t('celeb.cancelBtn'), tone: 'secondary', run: () => setCancel(c) });
-    } else if (c.status === 'confirmed' && (c.charges ?? []).some((x) => !x.invoiceId)) acts.push({ key: 'charges', icon: 'payments', label: t('celeb.chargesBtn'), tone: 'secondary', run: () => setCharges(c.id) });
+    } else if (c.status === 'confirmed' && (c.charges ?? []).length > 0) acts.push({ key: 'charges', icon: 'payments', label: t('celeb.chargesBtn'), tone: 'secondary', run: () => setCharges(c.id) });
     const total = celebrationTotal(c);
     return (
       <div key={c.id} data-celebration={c.id} data-status={c.status} style={{ display: 'flex', flexDirection: 'column', gap: 10, padding: isPhone ? '12px 0' : '16px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)', opacity: c.status === 'declined' || c.status === 'cancelled' ? 0.7 : 1 }}>

@@ -80,7 +80,7 @@ describe('invoice run', () => {
   it('without that visit nobody has an extra day: Lina is exactly at her 10', () => {
     const plan = runPlan(world().s, '2026-11', T);
     expect(plan.issue.flatMap((r) => r.lines.map((l) => l.kind))).not.toContain('extraDay');
-    expect(plan.total).toBe(2_700_000 + 3_950_000 + 3_950_000 + 2_700_000 + 3_950_000 + 750_000 + 450_000); // + Opa Tjahjadi’s dementia care (round 14) + Opa Budi’s pick-up (round 16)
+    expect(plan.total).toBe(2_700_000 + 3_950_000 + 3_950_000 + 2_700_000 + 3_950_000 + 750_000 + 450_000 + 350_000); // + Opa Tjahjadi’s dementia care (round 14) + Opa Budi’s pick-up (round 16) and birthday cake (round 17)
   });
   it('Flex pays for visits beyond 10 (Bambang’s 11th); Gold never has extra days', () => {
     // a month later, once October is over: Bambang has 8 visits and comes 3 more times; Hendra (Gold) comes every day he likes
@@ -190,8 +190,8 @@ describe('invoice run', () => {
     expect(accountCredit(w.s, 'm46')).toBe(500_000);
     const plan = runPlan(w.s, '2026-11', T);
     const budi = plan.issue.find((r) => r.member.id === 'm46')!;
-    expect(budi.lines.map((l) => l.kind)).toEqual(['plan', 'pickup', 'credit']); // round 16: Opa Budi is picked up
-    expect(budi.total).toBe(3_450_000 + 450_000); // round 16: with his pick-up
+    expect(budi.lines.map((l) => l.kind)).toEqual(['plan', 'pickup', 'adjustment', 'credit']); // round 16: Opa Budi is picked up; round 17: his birthday cake is a pending charge
+    expect(budi.total).toBe(3_450_000 + 450_000 + 350_000); // with his pick-up and the cake
     issueNov(w);
     expect(creditApplied(w.s, 'm46')).toBe(500_000);
     expect(availableCredit(w.s, 'm46')).toBe(0);

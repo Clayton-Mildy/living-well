@@ -665,9 +665,9 @@ export interface VenueBooking extends Row {
 export type CelebrationKind = 'birthday' | 'anniversary' | 'other';
 export type CelebrationStatus = 'requested' | 'confirmed' | 'declined' | 'cancelled';
 export interface Celebration extends Row { memberId: string; kind: CelebrationKind; title: string; date: ISODate; from: HM; to: HM; roomId: string; guests: number; cateringNote?: string; status: CelebrationStatus; requestedBy: Actor; decidedBy?: Actor; decidedAt?: DT; declineReason?: string;
-  /** KC round 16: what the family pays for (a cake, decorations); none = free. Invoiced on a celebration invoice of its own (CEL-…). */
+  /** KC round 16: what the family pays for (a cake, decorations); none = free. Round 17: each charge is a pending charge (`cel-<id>`) that lands on the member's next monthly invoice. */
   charges?: CelebrationCharge[] }
-export interface CelebrationCharge { id: string; item: string; amount: number; invoiceId?: string }
+export interface CelebrationCharge { id: string; item: string; amount: number }
 
 export interface Room extends Row {
   name: string;

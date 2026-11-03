@@ -90,7 +90,7 @@ describe('leave: the invoice, the check-in, the job', () => {
     expect(l.lines).toHaveLength(1);
     expect(l.lines[0]).toMatchObject({ kind: 'plan', label: 'inv.line.leave', amount: 250000, refMonth: '2026-12', params: { month: '2026-12' } });
     expect(l.total).toBe(250000);
-    expect(plan.issue.find((r) => r.member.id === 'm46')!.total).toBe(3950000 + 450000); // everybody else pays the plan (round 16: Opa Budi's pick-up on top)
+    expect(plan.issue.find((r) => r.member.id === 'm46')!.total).toBe(3950000 + 450000 + 350000); // everybody else pays the plan (round 16: Opa Budi's pick-up on top; round 17: and his birthday cake)
     // issued, it is the month’s plan line: a second run does not bill the plan again
     const w = run(s, 'run.issue', { period: '2026-12' }, 's10', at('2026-12-21'));
     expect(w.state.invoices['INV-2612-001'].lines.map((x) => [x.label, x.amount])).toEqual([['inv.line.leave', 250000]]);

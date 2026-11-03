@@ -63,11 +63,11 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   out.memberNotes = pick(mine(live(s.memberNotes)).filter((n) => n.visibility === 'family').map(noteForFamily).filter(present));
   out.attendance = pick(mine(live(s.attendance)));
   // round 13: staff leave requests are staff-only (leaveRequests stays {}); round 14: so are the unpaid follow-up calls (unpaidFollowUps stays {})
-  // round 12: mood marks for the family's own members; celebrations only once the club has confirmed them; care calls are staff-only (left {})
+  // round 12: mood marks for the family's own members; celebrations once the club has confirmed them or is considering them (round 17: their charges show early; the calendar and Today list confirmed ones only); care calls are staff-only (left {})
   out.moodMarks = pick(mine(live(s.moodMarks || {})));
   // round 16: the emails sent to this contact only (another contact's mail stays staff-side)
   out.emails = pick(live(s.emails || {}).filter((e) => e.familyId === familyId));
-  out.celebrations = pick(mine(live(s.celebrations || {})).filter((c) => c.status === 'confirmed'));
+  out.celebrations = pick(mine(live(s.celebrations || {})).filter((c) => c.status === 'confirmed' || c.status === 'requested'));
   out.readings = pick(mine(live(s.readings)).filter((r) => !r.voided).map(readingForFamily).filter(present));
   // daily logs, family notes and readings by staff wait for approval: a new entry is left out, an edit shows the last approved values
   out.dailyLogs = pick(mine(live(s.dailyLogs)).filter((l) => l.status === 'saved').map(logForFamily).filter(present).map((l) => ({ ...l, staffNote: undefined, approval: undefined })));

@@ -8,7 +8,7 @@ export const AREA_PREFIXES: [prefix: string, area: string][] = [
   ['signing.send', 'members'], ['signing.physical', 'members'], ['email.', 'members'],
   ['enquiry.', 'enquiries'],
   ['followUp.', 'renewals'], ['unpaid.', 'renewals'],
-  ['venue.', 'venue'], ['celebration.', 'venue'], ['celebration.issueInvoice', 'billing'], ['venue.createInvoice', 'billing'],
+  ['venue.', 'venue'], ['celebration.', 'venue'], ['venue.createInvoice', 'billing'],
   ['survey.', 'surveys'], ['surveyTemplate.', 'surveys'],
   ['task.', 'tasks'], ['duty.', 'tasks'],
   // health

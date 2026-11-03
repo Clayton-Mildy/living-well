@@ -1,5 +1,5 @@
 // Round 16 seed: the family emails the contract and invoices go to (Maria and her brother Daniel, both on Oma Lina and Opa Budi, so the billing can be passed
-// between them), Opa Budi's pick-up at his own price, a cake on his birthday party not invoiced yet, the field trip fee on the seeded outings, and (R7) Ega's staff
+// between them), Opa Budi's pick-up at his own price, a cake on his birthday party (a pending charge for the next invoice), the field trip fee on the seeded outings, and (R7) Ega's staff
 // training day waiting for the Owner.
 // Fixed values, no random draws; the same for 5 and 45 members.
 import type { ClubState, ISODate } from '../../types';
@@ -11,7 +11,11 @@ export function seedRound16(s: ClubState, T: ISODate): void {
   if (s.familyContacts.f2) s.familyContacts.f2.email = 'daniel.wijaya@example.com';
   if (s.members.m46) s.members.m46.pickup = { on: true, price: 450_000 };
   const party = live(s.celebrations || {}).find((c) => c.memberId === 'm46' && c.kind === 'birthday');
-  if (party) party.charges = [{ id: 'cc-budi-cake', item: 'Birthday cake (chocolate, no nuts)', amount: 350_000 }];
+  if (party) {
+    party.charges = [{ id: 'cc-budi-cake', item: 'Birthday cake (chocolate, no nuts)', amount: 350_000 }];
+    // round 17: the cake is a pending charge, billed on the next monthly invoice (the same row celebration.addCharge writes)
+    s.pendingCharges['cel-cc-budi-cake'] = { id: 'cel-cc-budi-cake', clubId: party.clubId, createdAt: party.createdAt, createdBy: party.createdBy, memberId: party.memberId, amount: 350_000, label: 'inv.line.birthday', params: { item: 'Birthday cake (chocolate, no nuts)' }, source: { type: 'celebration', id: party.id } };
+  }
   for (const e of live(s.calendarEvents)) if (e.kind === 'outing') e.fee = 250_000;
   // a field trip already this month: Oma Lina and Opa Budi went, each charged on the next invoice (the same rows calendarEvent.setWent writes)
   const trip = live(s.calendarEvents).find((e) => e.kind === 'outing' && !e.cancelledAt && e.date <= T && e.date.slice(0, 7) === T.slice(0, 7));

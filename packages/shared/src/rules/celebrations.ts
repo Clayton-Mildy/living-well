@@ -1,6 +1,6 @@
 // Celebrations (round 12): a family asks the front desk to hold a room for a birthday or a small celebration at the club; management confirms.
 // Pure selectors over ClubState. Families only ever see confirmed ones (the projection already filters), staff also see requested ones.
-import type { Celebration, CelebrationKind, CelebrationStatus, ClubState, HM, ISODate, Lang } from '../types';
+import type { Celebration, CelebrationCharge, CelebrationKind, CelebrationStatus, ClubState, HM, ISODate, Lang } from '../types';
 import { live, rp, sortBy } from '../util';
 import { checkVenueSlot, venueIsPast, type SlotCheck } from './mgmt';
 
@@ -10,14 +10,8 @@ export const CELEBRATION_GUESTS_MAX = 200;
 export const celebrationTotal = (c: Pick<Celebration, 'charges'>): number => (c.charges ?? []).reduce((t, x) => t + x.amount, 0);
 /** Round 16: each charge with its price, for the family ('' when free). */
 export const chargesLine = (c: Pick<Celebration, 'charges'>): string => (c.charges ?? []).map((x) => `${x.item} ${rp(x.amount)}`).join(' · ');
-/** Round 16: celebrations (not declined or cancelled) with charges no invoice has billed yet, soonest first: finance issues them from Billing. */
-export function celebrationsToInvoice(s: ClubState): { c: Celebration; amount: number }[] {
-  return Object.values(s.celebrations || {})
-    .filter((c) => !c.deletedAt && c.status !== 'declined' && c.status !== 'cancelled')
-    .map((c) => ({ c, amount: (c.charges ?? []).filter((x) => !x.invoiceId).reduce((t, x) => t + x.amount, 0) }))
-    .filter((x) => x.amount > 0)
-    .sort((a, b) => (a.c.date + a.c.from).localeCompare(b.c.date + b.c.from));
-}
+/** Round 17: the invoice a birthday charge went onto (its pending charge `cel-<id>` is stamped by the run), or undefined while it waits for the next one. */
+export const celebrationChargeInvoice = (s: Pick<ClubState, 'pendingCharges'>, charge: Pick<CelebrationCharge, 'id'>): string | undefined => s.pendingCharges?.['cel-' + charge.id]?.invoiceId;
 
 /** Celebrations on a date, by status (confirmed only by default), earliest first. */
 export function celebrationsOn(s: ClubState, date: ISODate, statuses: CelebrationStatus[] = ['confirmed']): Celebration[] {

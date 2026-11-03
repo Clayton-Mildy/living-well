@@ -20,9 +20,10 @@ afterEach(async () => {
 });
 
 const CEL: Celebration = { id: 'cel1', clubId: 'citra', createdAt: '2026-10-21T09:00', createdBy: 'staff:s9', memberId: 'm46', kind: 'birthday', title: "Opa Budi's 80th birthday", date: '2026-11-05', from: '15:00', to: '17:00', roomId: 'room-garden-room', guests: 12, status: 'confirmed', requestedBy: 'staff:s9' };
-function openAs(uid: 's1' | 's10', charges: Celebration['charges'] = []) {
+function openAs(uid: 's1' | 's10', charges: Celebration['charges'] = [], invoiceId?: string) {
   const s: ClubState = structuredClone(buildSeed().citra);
   s.celebrations = { cel1: { ...CEL, charges } };
+  for (const x of charges ?? []) s.pendingCharges[`cel-${x.id}`] = { id: `cel-${x.id}`, clubId: 'citra', createdAt: '2026-10-21T09:00', createdBy: 'staff:s1', memberId: 'm46', amount: x.amount, label: 'inv.line.birthday', params: { item: x.item }, source: { type: 'celebration', id: 'cel1' }, ...(invoiceId ? { invoiceId } : {}) };
   const fn = vi.fn(async () => ({ ok: true as const, result: {} }));
   const user = uid === 's1' ? { kind: 'staff' as const, id: 's1', name: 'Caca', role: 'lobby' as const, clubId: 'citra', clubs: ['citra'] } : { kind: 'staff' as const, id: 's10', name: 'Fransiska', role: 'finance' as const, clubId: 'citra', clubs: ['citra'] };
   useSession.setState({ lang: 'en', club: 'citra', user });
@@ -42,7 +43,7 @@ const type = async (name: string, v: string) => {
 const button = (label: string) => Array.from(document.querySelectorAll('button')).find((b) => b.textContent?.endsWith(label)) as HTMLButtonElement | undefined;
 
 describe('celebration charges', () => {
-  it('free by default; the front desk adds "Cake · Rp 350.000" and cannot issue the invoice', async () => {
+  it('free by default; the front desk adds "Cake · Rp 350.000"; there is no invoice button', async () => {
     const fn = openAs('s1');
     await show();
     expect(document.querySelector('[data-testid="charges-total"]')?.textContent).toBe('Free');
@@ -52,11 +53,17 @@ describe('celebration charges', () => {
     expect(fn).toHaveBeenCalledWith('celebration.addCharge', { celebrationId: 'cel1', item: 'Cake', amount: 350_000 });
     expect(button('Issue invoice')).toBeUndefined();
   });
-  it('finance sees the uninvoiced charges and issues their invoice', async () => {
-    const fn = openAs('s10', [{ id: 'cc1', item: 'Cake', amount: 350_000 }]);
+  it('a charge waiting for the run reads "On next bill"; management has no Issue invoice button either', async () => {
+    openAs('s10', [{ id: 'cc1', item: 'Cake', amount: 350_000 }]);
     await show();
-    expect(document.querySelector('[data-charge="cc1"]')?.textContent).toContain('Cake · Rp 350.000');
-    await act(async () => { button('Issue invoice')!.click(); });
-    expect(fn).toHaveBeenCalledWith('celebration.issueInvoice', { celebrationId: 'cel1' });
+    const row = document.querySelector('[data-charge="cc1"]')?.textContent ?? '';
+    expect(row).toContain('Cake · Rp 350.000');
+    expect(row).toContain('On next bill');
+    expect(button('Issue invoice')).toBeUndefined();
+  });
+  it('an invoiced charge reads "On invoice {number}"', async () => {
+    openAs('s10', [{ id: 'cc1', item: 'Cake', amount: 350_000 }], 'INV-2611-046');
+    await show();
+    expect(document.querySelector('[data-charge="cc1"]')?.textContent).toContain('On invoice INV-2611-046');
   });
 });

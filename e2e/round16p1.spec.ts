@@ -1,5 +1,5 @@
 // Round 16 phase 1 story (phone, small seed, demo day Wed 21 Oct 2026). Caca: Flex and Gold beside Active, a late downgrade waits a month (14 days' notice).
-// Fransiska: Opa Budi's birthday cake goes on its own invoice; a cash payment needs a photo of the receipt. Maria passes the bills to Daniel, whose Bills then show them.
+// Fransiska: a cash payment needs a photo of the receipt. Maria passes the bills to Daniel, whose Bills then show them.
 // Isolated env: E2E_NAME=r16 E2E_PORT=8901 scripts/e2e-all.sh 1 phone round16p1
 import { test, expect } from '@playwright/test';
 import { resetDemo, signIn, watchConsole, assertNoHorizontalScroll } from './helpers';
@@ -31,15 +31,10 @@ test('Caca: Flex and Gold sit beside Active; a downgrade asked on 21 Oct starts 
   c.assertClean();
 });
 
-test('Fransiska: the birthday cake on its own invoice; cash needs a photo of the receipt', async ({ page }) => {
+test('Fransiska: cash needs a photo of the receipt', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's10', '/billing');
-  const cel = page.getByTestId('cel-to-bill');
-  await expect(cel).toHaveCount(1);
-  await expect(cel).toContainText('Rp 350.000');
-  await cel.getByRole('button', { name: 'Issue invoice' }).click();
-  await expect(page.getByRole('status').filter({ hasText: /Invoice CEL-\d{4}-\d{3} issued/ }).first()).toBeVisible();
-  await expect(page.getByTestId('cel-to-bill')).toHaveCount(0);
+  await expect(page.getByTestId('cel-to-bill')).toHaveCount(0); // round 17: the birthday cake goes on the next monthly invoice, not an invoice of its own
 
   await page.goto('/payments');
   await page.getByRole('searchbox', { name: 'Find a member or invoice' }).fill('lina');

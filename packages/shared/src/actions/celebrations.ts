@@ -1,17 +1,13 @@
 // Celebrations (round 12): a family asks the front desk to hold a room for a birthday or small celebration; the front desk requests, management confirms.
 // A request by management is confirmed at once. Editing a confirmed one at the front desk sends it back for confirmation. Families hear only when it is confirmed.
 import type { Draft } from 'immer';
-import type { Celebration, CelebrationKind, ClubState, HM, ISODate, Invoice, User } from '../types';
+import type { Celebration, CelebrationKind, ClubState, HM, ISODate, User } from '../types';
 import { defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
-import { emailInvoice } from './emails';
-import { primaryContact } from '../rules/core';
-import { addDays } from '../util';
 import { CELEBRATION_GUESTS_MAX, CELEBRATION_KINDS, celebrationIsPast, checkCelebrationSlot } from '../rules/celebrations';
 import { dm, hm, int, isoDate, obj, oneOf, str } from '../rules/mgmtParse';
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
-const finMgmt = (u: User) => hasRole(u, 'finance', 'mgmt');
 /** Round 14: the activity team prepares a birthday too (Prepare on its Today); what it asks for is requested, like the front desk's. */
 const canRequest = (u: User) => hasRole(u, 'lobby', 'activity', 'mgmt');
 const id80 = (v: unknown, field: string) => str(v, 80, { required: true, field });
@@ -114,6 +110,7 @@ export const celebrationActions = [
       open(c, ctx);
       const wasConfirmed = c.status === 'confirmed';
       c.status = 'cancelled';
+      dropPendingCharges(d, c);
       const name = shortOf(d, c.memberId);
       ctx.feed({ icon: 'event_busy', key: 'celeb.feed.cancelled', memberId: c.memberId, params: { name, date: dm(c.date) } });
       if (wasConfirmed) {
@@ -141,6 +138,7 @@ export const celebrationActions = [
         if (!chk.ok) ctx.fail(chk.code, chk.params);
       }
       c.status = i.status;
+      if (i.status === 'declined') dropPendingCharges(d, c);
       c.decidedBy = ctx.actor;
       c.decidedAt = ctx.nowDT;
       if (i.status === 'declined' && i.reason) c.declineReason = i.reason;
@@ -150,7 +148,7 @@ export const celebrationActions = [
       if (i.status === 'confirmed') tellFamily(d, c, ctx);
     },
   }),
-  // ----- round 16: charges (free by default) and their own invoice -----
+  // ----- round 16: charges (free by default); round 17: each is a pending charge on the member's next monthly invoice -----
   defineAction<{ celebrationId: string; item: string; amount: number }>({
     name: 'celebration.addCharge',
     can: lobbyOrMgmt,
@@ -159,7 +157,10 @@ export const celebrationActions = [
       const c = celebration(d, i.celebrationId, ctx);
       open(c, ctx);
       c.charges ??= [];
-      c.charges.push({ id: ctx.id('cc'), item: i.item, amount: i.amount });
+      const chargeId = ctx.id('cc');
+      c.charges.push({ id: chargeId, item: i.item, amount: i.amount });
+      const pid = `cel-${chargeId}`;
+      d.pendingCharges[pid] = { id: pid, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: c.memberId, amount: i.amount, label: 'inv.line.birthday', params: { item: i.item }, source: { type: 'celebration', id: c.id } };
     },
   }),
   defineAction<{ celebrationId: string; chargeId: string }>({
@@ -170,38 +171,20 @@ export const celebrationActions = [
       const c = celebration(d, i.celebrationId, ctx);
       const ch = (c.charges ?? []).find((x) => x.id === i.chargeId);
       if (!ch) ctx.fail('err.notFound');
-      if (ch!.invoiceId) ctx.fail('err.charged');
+      if (d.pendingCharges[`cel-${ch!.id}`]?.invoiceId) ctx.fail('err.charged');
+      delete d.pendingCharges[`cel-${ch!.id}`];
       c.charges = c.charges!.filter((x) => x.id !== i.chargeId);
     },
   }),
-  defineAction<{ celebrationId: string }>({
-    name: 'celebration.issueInvoice',
-    can: finMgmt,
-    parse: (raw) => ({ celebrationId: id80(obj(raw).celebrationId, 'celebrationId') }),
-    run(d, i, ctx) {
-      const c = celebration(d, i.celebrationId, ctx);
-      if (c.status === 'declined' || c.status === 'cancelled') ctx.fail('celeb.err.decided', { status: c.status });
-      const todo = (c.charges ?? []).filter((x) => !x.invoiceId);
-      if (!todo.length) ctx.fail('err.nothingToBill');
-      const m = requireMember(d, c.memberId, ctx);
-      const payer = primaryContact(S(d), m.id);
-      if (!payer) ctx.fail('err.noPayer');
-      const prefix = `CEL-${ctx.today.slice(2, 4)}${ctx.today.slice(5, 7)}-`;
-      const n = Object.keys(d.invoices).filter((k) => k.startsWith(prefix)).length + 1;
-      const number = prefix + String(n).padStart(3, '0');
-      const inv: Invoice = {
-        id: number, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, number, memberId: m.id, payerFamilyId: payer!.id, kind: 'manual', issueDate: ctx.today, dueDate: addDays(ctx.today, 7),
-        lines: todo.map((x) => ({ id: `cel-${x.id}`, kind: 'celebration' as const, label: 'inv.line.celebration', params: { item: x.item, title: c.title }, qty: 1, unit: x.amount, amount: x.amount })),
-        va: m.billing.va, xero: 'awaitingPayment', reminders: [], callNotes: [],
-      };
-      d.invoices[number] = inv;
-      for (const x of todo) x.invoiceId = number;
-      emailInvoice(d, ctx, number);
-      ctx.notify({ toUsers: [payer!.id], kind: 'celeb.notif.invoiced', params: { name: shortOf(d, m.id), number, title: c.title }, link: '/billing', memberId: m.id, ref: { type: 'invoice', id: number } });
-      ctx.result.invoiceId = number;
-    },
-  }),
 ];
+
+/** Round 17: a party that did not happen bills nothing: its charges still waiting for a run go (any already on an invoice stay). */
+function dropPendingCharges(d: Draft<ClubState>, c: Draft<Celebration>) {
+  for (const x of c.charges ?? []) {
+    const p = d.pendingCharges[`cel-${x.id}`];
+    if (p && !p.invoiceId) delete d.pendingCharges[`cel-${x.id}`];
+  }
+}
 
 /** The member's family hears once the club has said yes (never about a request). */
 function tellFamily(d: Draft<ClubState>, c: Draft<Celebration>, ctx: Ctx) {

@@ -1943,15 +1943,6 @@
   "finance": false,
   "owner": true
  },
- "celebration.issueInvoice": {
-  "lobby": false,
-  "kitchen": false,
-  "activity": false,
-  "nurse": false,
-  "mgmt": true,
-  "finance": true,
-  "owner": true
- },
  "leave.request": {
   "lobby": true,
   "kitchen": true,

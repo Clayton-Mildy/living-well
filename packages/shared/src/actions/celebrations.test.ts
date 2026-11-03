@@ -4,6 +4,7 @@ import { dayInfo } from '../rules/calendar';
 import { coversOn } from '../rules/kitchenOps';
 import { famDay } from '../rules/famCalendar';
 import { projectForFamily } from '../project';
+import { celebrationChargeInvoice } from '../rules/celebrations';
 
 const T = '2026-10-21'; // Wednesday
 const clock = { today: T, nowMin: 10 * 60 };
@@ -124,59 +125,90 @@ describe('celebrations (actions)', () => {
     const row = famDay(d.state, ['m46'], date, T, 600).rows.find((x) => x.kind === 'celebration');
     expect(row).toMatchObject({ celebrationId: id, time: '15:00' });
     expect(famDay(d.state, ['m1'], date, T, 600).rows.some((x) => x.kind === 'celebration')).toBe(false);
-    // the family projection holds it only once confirmed
-    expect(Object.keys(projectForFamily(r.state, 'f1').celebrations)).not.toContain(id);
+    // round 17: the family projection holds a request too (its charges show early); the calendar and Today still list confirmed ones only
+    expect(Object.keys(projectForFamily(r.state, 'f1').celebrations)).toContain(id);
   });
 });
 
-describe('round 16: birthday charges on their own invoice', () => {
-  const confirmed = () => { const s = seed(); const r = run(s, 'celebration.request', req, 's9'); return { s: r.state, id: created(s, r.state)[0] }; };
-  it('two charges become one CEL invoice to the billing contact, emailed; a later charge gets its own invoice', () => {
+describe('round 17: birthday charges go on the next monthly invoice', () => {
+  // management's own request is confirmed at once; the front desk's waits for management
+  const confirmed = (by = 's9') => { const s = seed(); const r = run(s, 'celebration.request', req, by); return { s: r.state, id: created(s, r.state)[0] }; };
+  const chargeId = (s: ClubState, id: string, i = 0) => s.celebrations[id].charges![i].id;
+  it('adding a charge makes a pending charge for the member, labelled "Birthday · {item}"', () => {
+    let { s, id } = confirmed();
+    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Birthday cake', amount: 350_000 }, 's1').state;
+    const pid = `cel-${chargeId(s, id)}`;
+    expect(s.pendingCharges[pid]).toMatchObject({ memberId: 'm46', amount: 350_000, label: 'inv.line.birthday', params: { item: 'Birthday cake' }, source: { type: 'celebration', id } });
+    expect(s.pendingCharges[pid].invoiceId).toBeUndefined();
+    expect('invoiceId' in s.celebrations[id].charges![0]).toBe(false);
+  });
+  it('the next run puts it on the monthly invoice as one line; the pending charge then holds the invoice id', () => {
+    let { s, id } = confirmed();
+    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Birthday cake', amount: 350_000 }, 's1').state;
+    const pid = `cel-${chargeId(s, id)}`;
+    s = run(s, 'run.issue', { period: '2026-11', early: true }, 's10').state;
+    const inv = Object.values(s.invoices).find((i) => i.memberId === 'm46' && i.period === '2026-11')!;
+    const line = inv.lines.find((l) => l.id === `charge-${pid}`)!;
+    expect(line).toMatchObject({ label: 'inv.line.birthday', params: { item: 'Birthday cake' }, amount: 350_000 });
+    expect(s.pendingCharges[pid].invoiceId).toBe(inv.id);
+    expect(celebrationChargeInvoice(s, s.celebrations[id].charges![0])).toBe(inv.id);
+    expect(Object.keys(s.invoices).some((k) => k.startsWith('CEL-'))).toBe(false);
+  });
+  it('removing a charge before the run deletes both rows; after the run it is refused until the invoice is voided', () => {
     let { s, id } = confirmed();
     s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
     s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Balloons', amount: 100_000 }, 's1').state;
-    s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
-    const inv = s.invoices['CEL-2610-001'];
-    expect(inv).toMatchObject({ kind: 'manual', memberId: 'm46', payerFamilyId: 'f1' });
-    expect(inv.lines.map((l) => [l.kind, l.amount])).toEqual([['celebration', 350_000], ['celebration', 100_000]]);
-    expect(s.celebrations[id].charges!.every((c) => c.invoiceId === 'CEL-2610-001')).toBe(true);
-    expect(Object.values(s.emails).filter((e) => e.ref.id === 'CEL-2610-001')).toHaveLength(1);
-    fails(s, 'celebration.removeCharge', { celebrationId: id, chargeId: s.celebrations[id].charges![0].id }, 's1', 'err.charged');
-    fails(s, 'celebration.issueInvoice', { celebrationId: id }, 's10', 'err.nothingToBill');
-    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Photo print', amount: 75_000 }, 's1').state;
-    s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
-    expect(s.invoices['CEL-2610-002'].lines).toHaveLength(1);
-  });
-  it('an uninvoiced charge can be removed; the front desk cannot issue the invoice', () => {
-    let { s, id } = confirmed();
-    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
-    s = run(s, 'celebration.removeCharge', { celebrationId: id, chargeId: s.celebrations[id].charges![0].id }, 's1').state;
+    const [cake, balloons] = s.celebrations[id].charges!.map((c) => c.id);
+    expect(celebrationChargeInvoice(s, s.celebrations[id].charges![0])).toBeUndefined();
+    s = run(s, 'celebration.removeCharge', { celebrationId: id, chargeId: balloons }, 's1').state;
+    expect(s.celebrations[id].charges!.map((c) => c.id)).toEqual([cake]);
+    expect(s.pendingCharges[`cel-${balloons}`]).toBeUndefined();
+    s = run(s, 'run.issue', { period: '2026-11', early: true }, 's10').state;
+    fails(s, 'celebration.removeCharge', { celebrationId: id, chargeId: cake }, 's1', 'err.charged');
+    const inv = s.pendingCharges[`cel-${cake}`].invoiceId!;
+    s = run(s, 'invoice.void', { invoiceId: inv, reason: 'Re-issue' }, 's10').state;
+    expect(celebrationChargeInvoice(s, s.celebrations[id].charges![0])).toBeUndefined();
+    s = run(s, 'celebration.removeCharge', { celebrationId: id, chargeId: cake }, 's1').state;
     expect(s.celebrations[id].charges).toEqual([]);
-    fails(s, 'celebration.issueInvoice', { celebrationId: id }, 's1', 'err.forbidden');
+    expect(s.pendingCharges[`cel-${cake}`]).toBeUndefined();
   });
-  it('one VA payment covers the monthly invoice and the birthday invoice together', () => {
+  it('declining or cancelling a party drops its un-invoiced pending charges', () => {
+    // requested then declined; requested then cancelled; confirmed then cancelled
+    for (const how of ['decline', 'cancel', 'cancelConfirmed'] as const) {
+      let { s, id } = confirmed(how === 'cancelConfirmed' ? 's9' : 's1');
+      s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
+      const pid = `cel-${chargeId(s, id)}`;
+      expect(s.pendingCharges[pid]).toBeTruthy();
+      if (how === 'decline') s = run(s, 'celebration.decide', { celebrationId: id, status: 'declined' }, 's9').state;
+      else if (how === 'cancel') s = run(s, 'celebration.cancel', { celebrationId: id }, 's9').state;
+      else s = run(s, 'celebration.cancel', { celebrationId: id }, 's9').state;
+      expect(s.pendingCharges[pid]).toBeUndefined();
+    }
+  });
+  it('an invoiced charge stays when the party is cancelled', () => {
     let { s, id } = confirmed();
     s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
-    s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
-    const monthly = Object.values(s.invoices).find((i) => i.memberId === 'm46' && i.kind === 'monthly' && balanceOf(s, i) > 0)!;
-    expect(monthly).toBeTruthy();
-    const r = run(s, 'payment.simulateVa', { invoiceIds: [monthly.id, 'CEL-2610-001'] }, 'f1');
-    const pays = (r.result.paymentIds as string[]).map((p) => r.state.payments[p]);
-    expect(pays).toHaveLength(1);
-    expect(pays[0].allocations.map((a) => a.invoiceId).sort()).toEqual([monthly.id, 'CEL-2610-001'].sort());
+    const pid = `cel-${chargeId(s, id)}`;
+    s = run(s, 'run.issue', { period: '2026-11', early: true }, 's10').state;
+    s = run(s, 'celebration.cancel', { celebrationId: id }, 's9').state;
+    expect(s.pendingCharges[pid]?.invoiceId).toBeTruthy();
   });
-});
-
-describe('round 16: celebrations with charges still to invoice (Billing)', () => {
-  it('lists a celebration until all its charges are invoiced', async () => {
-    const { celebrationsToInvoice } = await import('../rules/celebrations');
-    const s0 = seed();
-    const r = run(s0, 'celebration.request', req, 's9');
-    const id = created(s0, r.state)[0];
-    let s = run(r.state, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
-    expect(celebrationsToInvoice(s).map((x) => [x.c.id, x.amount])).toContainEqual([id, 350_000]);
-    s = run(s, 'celebration.issueInvoice', { celebrationId: id }, 's10').state;
-    expect(celebrationsToInvoice(s).map((x) => x.c.id)).not.toContain(id);
+  it('the birthday invoice action is gone', () => {
+    const { s, id } = confirmed();
+    fails(s, 'celebration.issueInvoice', { celebrationId: id }, 's10', 'err.unknownAction');
+  });
+  it('a family sees the charge of a party that is still requested (projection)', () => {
+    let { s, id } = confirmed('s1');
+    s = run(s, 'celebration.addCharge', { celebrationId: id, item: 'Cake', amount: 350_000 }, 's1').state;
+    expect(s.celebrations[id].status).toBe('requested');
+    const p = projectForFamily(s, 'f1');
+    expect(Object.keys(p.celebrations)).toContain(id);
+    expect(Object.keys(p.pendingCharges)).toContain(`cel-${chargeId(s, id)}`);
+  });
+  it('the seeded cake already has its pending charge', () => {
+    const s = seed();
+    const cel = Object.values(s.celebrations).find((c) => c.charges?.length)!;
+    expect(s.pendingCharges[`cel-${cel.charges![0].id}`]).toMatchObject({ memberId: cel.memberId, amount: cel.charges![0].amount, label: 'inv.line.birthday' });
   });
 });
 

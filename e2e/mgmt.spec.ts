@@ -903,7 +903,7 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   // preview for another member: Opa Budi is Gold
   await pickOption(page, 'Preview for', 'Opa Budi Wijaya');
   await expect(page.getByText('Opa Budi Wijaya · invoice of 21 November')).toBeVisible();
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 4.400.000'); // round 16: Gold + his pick-up
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 4.750.000'); // round 16: Gold + his pick-up; round 17: + his birthday cake
   await assertNoHorizontalScroll(page);
 
   // the notify toggle: finance was told about the first change; with the toggle off the next change is silent
@@ -937,7 +937,7 @@ test('plans: an extra visit from a check-in is on the member’s next invoice at
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByText('Extra days · October (1)')).toBeVisible();
   await pickOption(page, 'Preview for', 'Opa Budi Wijaya'); // Gold: unlimited, never extra
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 4.400.000'); // round 16: Gold 3.950.000 + his pick-up 450.000
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 4.750.000'); // round 16: Gold 3.950.000 + his pick-up 450.000; round 17: + his birthday cake 350.000
   await expect(page.getByText(/Extra days/)).toHaveCount(0);
   await assertNoHorizontalScroll(page);
   c.assertClean();
