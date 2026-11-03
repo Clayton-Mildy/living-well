@@ -138,7 +138,7 @@ test('screenshots', async ({ page }, info) => {
   await expect(page.locator('[data-role-page="lobby"]')).toBeVisible();
   await page.getByRole('checkbox', { name: 'Billing: Edit', exact: true }).click(); // an unsaved change shows the Save bar
   await shot(wide ? '1-roles-list-and-role' : '2-role-page');
-  await page.getByRole('button', { name: 'Reset', exact: true }).click();
+  await page.getByRole('button', { name: 'Discard', exact: true }).click();
 
   await signIn(page, 's9', '/settings');
   await expect(page.locator('[data-row="terms"]')).toBeVisible();

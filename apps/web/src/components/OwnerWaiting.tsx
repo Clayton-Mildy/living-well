@@ -13,7 +13,7 @@ interface Fmt { fd: (d: string, o: Intl.DateTimeFormatOptions) => string }
 export function ownerWhatText(s: ClubState, cr: Pick<ChangeRequest, 'action' | 'input'>, t: TFn, fmt: Fmt): string {
   const w = ownerWhat(s, cr.action, cr.input);
   const p = w.params;
-  return t(w.key, { date: p.date ? fmt.fd(p.date, { weekday: 'short', day: 'numeric', month: 'short' }) : '', title: p.title ?? '', name: p.name ?? '', amount: p.amount !== undefined ? rp(p.amount) : '' });
+  return t(w.key, { date: p.date ? fmt.fd(p.date, { weekday: 'short', day: 'numeric', month: 'short' }) : '', title: p.title ?? '', name: p.name ?? '', amount: p.amount !== undefined ? rp(p.amount) : '', n: p.n ?? '', a: p.a ?? '', b: p.b ?? '', c: p.c ?? '' });
 }
 
 /** A holiday request touches this day: the day it asks for (or a day in its range), or the day of the event it changes or removes. */

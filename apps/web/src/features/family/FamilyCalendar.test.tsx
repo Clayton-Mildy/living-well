@@ -254,3 +254,16 @@ describe('round 17: a requested celebration shows with its charges and a waiting
     expect(document.querySelector('[data-testid="cal-requested"]')?.textContent).toBe('Menunggu konfirmasi');
   });
 });
+
+describe('final review minor 1: a field trip row says "Field trip" once', () => {
+  it('the Bogor row reads "Field trip · 08:30–15:00 · Rp …" when it has a fee', async () => {
+    const seed = buildSeed().citra;
+    const ev = seed.calendarEvents['ev-outing-1029'];
+    const base = produce(seed, (d) => { d.calendarEvents[ev.id].fee = 250_000; });
+    open('en', base);
+    await show(<FamilyCalendar />, `/calendar?date=${ev.date}`);
+    const row = Array.from(document.querySelectorAll('[data-testid="cal-row"][data-kind="outing"]')).map((r) => r.textContent ?? '').find((x) => x.includes('Bogor'));
+    expect(row).toContain('Field trip · 08:30–15:00 · Rp 250.000');
+    expect(row!.split('Field trip').length - 1).toBe(1);
+  });
+});

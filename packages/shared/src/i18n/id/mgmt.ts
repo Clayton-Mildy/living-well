@@ -158,7 +158,7 @@ export const mgmt: Same<typeof EN> = {
   'access.saved': 'Tersimpan.',
   // round 18: Roles like Tasks
   'roles.ofMenus': '{n} dari {total}', 'roles.viewOnly': 'hanya lihat', 'roles.hidden': 'tersembunyi', 'roles.all': 'Semua', 'roles.none': 'Kosongkan', 'roles.fullAccess': 'akses penuh',
-  'roles.changedBy': 'diubah {d} oleh {name}', 'roles.saveN': 'Simpan · {n} perubahan', 'roles.saveOne': 'Simpan · 1 perubahan', 'roles.reset': 'Atur ulang',
+  'roles.changedBy': 'diubah {d} oleh {name}', 'roles.saveN': 'Simpan · {n} perubahan', 'roles.saveOne': 'Simpan · 1 perubahan', 'roles.discard': 'Batalkan',
   // ----- round 17: Admin › Settings -----
   'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.sendOwner': 'Kirim ke pemilik',
   'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewBelowOne': 'Tandai di bawah {n} kunjungan',

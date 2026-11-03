@@ -99,14 +99,14 @@ describe('Admin › Roles', () => {
     expect(actMock).toHaveBeenCalledWith('access.setRole', { role: 'lobby', levels: expect.objectContaining({ billing: 'edit', members: 'edit', payments: 'off' }), approvals: { pricing: false, holidays: false, budget: false } });
   });
 
-  it('Save counts the draft: "Save · 2 changes" after two ticks; Reset drops the draft', async () => {
+  it('Save counts the draft: "Save · 2 changes" after two ticks; Discard drops the draft', async () => {
     openClub();
     await show(<Roles />, 390);
     await click(roleRow('lobby'));
     await click(box('Billing: Edit'));
     await click(box('Payments: View'));
     expect(button('Save · 2 changes')).toBeTruthy();
-    await click(button('Reset'));
+    await click(button('Discard'));
     expect(button('Save · 2 changes')).toBeUndefined();
     expect(ticked('Billing: Edit')).toBe('false');
   });

@@ -187,13 +187,13 @@ export function RolePage({ role, draft, onChange, surface }: { role: GridRole; d
 }
 const KIND_ICON: Record<(typeof OWNER_KINDS)[number], string> = { pricing: 'sell', holidays: 'event_busy', budget: 'pie_chart' };
 
-/** The draft's bar: Reset (back to the saved role) and "Save · 2 changes". */
+/** The draft's bar: Discard (back to the saved role) and "Save · 2 changes". */
 /** `packed`: the buttons sit together on the left (wide screens, where the floating camera and task buttons sit at the bottom right). */
 export function SaveBar({ n, busy, onCancel, onSave, packed }: { n: number; busy: boolean; onCancel: () => void; onSave: () => void; packed?: boolean }) {
   const t = useT();
   return (
     <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-      <Button variant="secondary" size={44} onClick={onCancel}>{t('mgmt.roles.reset')}</Button>
+      <Button variant="secondary" size={44} onClick={onCancel}>{t('mgmt.roles.discard')}</Button>
       <Button size={44} onClick={onSave} disabled={busy || !n} style={packed ? undefined : { flex: 1 }}>{n === 1 ? t('mgmt.roles.saveOne') : t('mgmt.roles.saveN', { n })}</Button>
     </div>
   );

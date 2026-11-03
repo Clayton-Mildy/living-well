@@ -1,6 +1,6 @@
 // Round 17 phase 1 story (phone, small seed, demo day Wed 21 Oct 2026): money features that land on the next monthly invoice, and the spouse.
 //  - Caca adds a charge to Opa Budi's birthday party: "On next bill"; Maria sees it under "On your next bill" in Bills (with the seeded cake and pick-up).
-//  - Dinar ticks Opa Budi on today's outing: the family calendar shows "Field trip · Rp 250.000" and the fee joins the next bill.
+//  - Dinar ticks Opa Budi on today's outing: the family calendar shows "Field trip · 08:30–15:00 · Rp 250.000" and the fee joins the next bill.
 //  - Fransiska makes Daniel the billing contact of Oma Lina (after a confirm); Caca sees the invoice email to Daniel under Documents › Emails.
 //  - Oma Lina's Family tab shows Opa Budi as her spouse (the first row).
 // Screenshots (phone, tablet, laptop): E2E_SHOTS=1 scripts/e2e-all.sh 1 "phone tablet laptop" round17p1 ; PNGs go to artifacts/shots/round17p1/.
@@ -66,7 +66,7 @@ test('Dinar ticks Opa Budi on an outing: the family calendar shows the fee and M
 
   await signIn(page, 'f1', '/today');
   await goTab(page, 'calendar');
-  await expect(page.getByText('Field trip · Rp 250.000').first()).toBeVisible();
+  await expect(page.getByText(/Field trip · (\d\d:\d\d–\d\d:\d\d · )?Rp 250\.000/).first()).toBeVisible();
   await assertNoHorizontalScroll(page);
   await page.goto('/billing');
   const next = page.getByTestId('next-bill').filter({ hasText: 'Budi' });
@@ -139,7 +139,7 @@ test('screenshots', async ({ page }, info) => {
   await shot('2-next-bill-family');
   await page.goto('/today');
   await goTab(page, 'calendar');
-  await expect(page.getByText('Field trip · Rp 250.000').first()).toBeVisible();
+  await expect(page.getByText(/Field trip · (\d\d:\d\d–\d\d:\d\d · )?Rp 250\.000/).first()).toBeVisible();
   await shot('3-family-calendar-fee');
 
   await signIn(page, 's10', '/members/m1/family');

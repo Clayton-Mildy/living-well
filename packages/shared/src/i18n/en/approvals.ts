@@ -51,7 +51,7 @@ export const approvals = {
   // round 16 (KC): Management's pricing, holiday and weekly-budget changes wait for the Owner
   'tab.owner': 'Owner', 'none.owner': 'Nothing waiting for you', 'kind.owner': 'Owner approval',
   'owner.waiting': 'Waiting for owner · {what}', 'owner.withdraw': 'Withdraw', 'owner.withdrawn': 'Request withdrawn.', 'owner.sent': 'Sent to the owner for approval.',
-  'owner.what.prices': 'New prices from {date}', 'owner.what.plan': 'Plan · {name}', 'owner.what.rules': 'Club rules (visits, notice)',
+  'owner.what.prices': 'New prices from {date}', 'owner.what.plan': 'Plan · {name}', 'owner.what.rules': 'Club rules (visits, notice)', 'owner.what.notice_downgrade': 'Downgrade · {n} days', 'owner.what.notice_stop': 'Stop membership · {n} days', 'owner.what.notice_leave': 'Leave · {n} days', 'owner.what.noticeAll': 'Notice · downgrade {a} · stop {b} · leave {c} days', 'owner.what.flexQuota': 'Flex · {n} visits a month',
   'owner.what.budgetLimit': 'Weekly budget · {name} · {amount} from {date}', 'owner.what.budgetAdd': 'New budget section · {name} · {amount}', 'owner.what.budgetRename': 'Rename budget section · {name}',
   'owner.what.closeAdd': 'Close {date} · {title}', 'owner.what.holidayAdd': 'Holiday {date} · {title}', 'owner.what.eventChange': 'Change {date} · {title}', 'owner.what.eventRemove': 'Remove {date} · {title}', 'owner.what.other': 'A change',
 };

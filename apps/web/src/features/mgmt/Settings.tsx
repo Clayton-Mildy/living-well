@@ -32,9 +32,9 @@ const NOTICE_ICON: Record<NoticeDaysKind, string> = { downgrade: 'trending_down'
 const NO_DRAFT: Record<NoticeDaysKind, string | null> = { downgrade: null, stop: null, leave: null };
 
 /** A small whole-number field (44px tall); turns white on the grey group. */
-function NumField({ name, label, value, onChange, bad, width = 64 }: { name: string; label: string; value: string; onChange: (v: string) => void; bad: boolean; width?: number }) {
+function NumField({ name, label, value, onChange, onBlur, bad, width = 64 }: { name: string; label: string; value: string; onChange: (v: string) => void; onBlur?: () => void; bad: boolean; width?: number }) {
   return (
-    <input data-field={name} aria-label={label} aria-invalid={bad || undefined} value={value} onChange={(e) => onChange(digits(e.target.value))} inputMode="numeric" maxLength={2} className="cp-input cp-fill"
+    <input data-field={name} aria-label={label} aria-invalid={bad || undefined} value={value} onChange={(e) => onChange(digits(e.target.value))} onBlur={onBlur} inputMode="numeric" maxLength={2} className="cp-input cp-fill"
       style={{ width, height: 44, border: 'none', borderRadius: 12, background: 'var(--fill, #F4F4F5)', boxShadow: bad ? 'inset 0 0 0 2px #9A3D24' : undefined, padding: '0 6px', fontSize: 16, fontFamily: 'Inter', color: '#24201C', textAlign: 'center', fontVariantNumeric: 'tabular-nums', flex: 'none' }} />
   );
 }
@@ -84,6 +84,8 @@ export function Settings() {
   const [below, setBelow] = useState<string | null>(null);
   const [days, setDays] = useState<string | null>(null);
   const [shown, setShown] = useState<Record<string, boolean>>({}); // a group shows its errors once Save was tapped
+  const [left, setLeft] = useState<Record<string, boolean>>({}); // a field shows its error once the cursor leaves it (not on each keystroke: "18" is not wrong after the "1")
+  const blur = (name: string) => () => setLeft((x) => (x[name] ? x : { ...x, [name]: true }));
   const [busy, setBusy] = useState(false);
 
   const noticeV = (k: NoticeDaysKind) => notice[k] ?? String(saved[k]);
@@ -96,9 +98,9 @@ export function Settings() {
   const belowBad = !inRange(num(belowV), 1, 31);
   const daysBad = !inRange(num(daysV), range.min, range.max);
   const fewDirty = num(belowV) !== few.below || num(daysV) !== few.daysBeforeMonth;
-  // a field out of range shows its message as soon as it is edited (the few-visits range depends on the stop notice), or once Save was tapped
-  const noticeShow = (k: NoticeDaysKind) => noticeBad(k) && (notice[k] !== null || !!shown.membership);
-  const daysShow = daysBad && (days !== null || !!shown.few);
+  // a field out of range shows its message once it is left (blur) after an edit, or once Save was tapped (the few-visits range depends on the stop notice)
+  const noticeShow = (k: NoticeDaysKind) => noticeBad(k) && ((notice[k] !== null && !!left[k]) || !!shown.membership);
+  const daysShow = daysBad && ((days !== null && !!left.days) || !!shown.few);
 
   // the club with the draft values (the valid ones), for the live dates
   const patched: ClubState = { ...s, club: { ...s.club, settings: {
@@ -134,7 +136,7 @@ export function Settings() {
 
   const err = (text: string) => <div role="alert" style={{ padding: '0 16px 10px', fontSize: FONT_SMALL, color: '#9A3D24', lineHeight: 1.4 }}>{text}</div>;
   const daysField = (name: string, label: string, value: string, set: (v: string) => void, bad: boolean) => (
-    <><NumField name={name} label={label} value={value} onChange={set} bad={bad} width={46} /><span style={SUB}>{t('mgmt.settings.days')}</span></>
+    <><NumField name={name} label={label} value={value} onChange={(v) => { set(v); setLeft((x) => (x[name] ? { ...x, [name]: false } : x)); }} onBlur={blur(name)} bad={bad} width={46} /><span style={SUB}>{t('mgmt.settings.days')}</span></>
   );
   const sentence = (key: string, name: string, value: string, set: (v: string) => void, bad: boolean, savedN: number) => {
     const label = tn(t, key, savedN);

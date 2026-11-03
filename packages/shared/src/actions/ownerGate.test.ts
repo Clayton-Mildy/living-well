@@ -4,7 +4,8 @@ import { buildSeed, execute, getUser, DomainError, live, actionItems, roleDraft,
 import { overviewStats } from '../rules/mgmt';
 import { roleSummary } from '../rules/tasks';
 import { pendingItems } from '../rules/approvals';
-import { ownerKindOf, pendingOwnerRequests } from './ownerGate';
+import { ownerKindOf, ownerWhat, pendingOwnerRequests } from './ownerGate';
+import { translate } from '../i18n';
 
 const clock = { today: '2026-10-21', nowMin: 600 };
 const later = { today: '2026-10-27', nowMin: 600 };
@@ -156,5 +157,21 @@ describe('owner gate', () => {
     expect(overviewStats(seeded, clock.today, { owner: true }).reviews).toBe(overviewStats(seeded, clock.today).reviews + 1);
     const duty = (o: { owner?: boolean }) => roleSummary(seeded, 'mgmt', clock.today, clock.today, clock.nowMin, o).duties.find((d) => d.def.id === 'mgmt.approvals')!.parts[0].count!.total;
     expect(duty({ owner: true })).toBe(duty({}) + 1);
+  });
+});
+
+describe('final review minor 2: a club-rules request says what it changes', () => {
+  it('one notice kind: "Stop membership · 30 days" in the request and the bell; several: all three; Flex visits alone', () => {
+    const r = run(base, 'club.updateSettings', { notice: { stop: 30 } }, EGA);
+    const cr = r.state.changeRequests[r.result.changeRequestId as string];
+    const w = ownerWhat(r.state, cr.action, cr.input);
+    expect(translate('en', w.key, w.params)).toBe('Stop membership · 30 days');
+    expect(translate('id', w.key, w.params)).toBe('Berhenti · 30 hari');
+    const note = Object.values(r.state.notifications).find((x) => x.kind === 'notif.ownerApproval' && x.ref?.id === cr.id)!;
+    expect(translate('en', String(note.params.whatKey), note.params)).toBe('Stop membership · 30 days');
+    const many = ownerWhat(base, 'club.updateSettings', { notice: { downgrade: 21, leave: 30 } });
+    expect(translate('en', many.key, many.params)).toBe('Notice · downgrade 21 · stop 14 · leave 30 days');
+    const flex = ownerWhat(base, 'club.updateSettings', { flexQuota: 8 });
+    expect(translate('en', flex.key, flex.params)).toBe('Flex · 8 visits a month');
   });
 });

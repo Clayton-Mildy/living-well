@@ -5,7 +5,7 @@ import type { TFn } from '../../lib/i18n';
 import { dietLabel, docLabel, drugLabel, foodLabel, mobLabel, relLabel, timingLabel } from './lib';
 import { mediaUrl } from '../../lib/media';
 
-export interface DiffRow { label: string; from?: string; to?: string; /** photos shown instead of the words (profile picture) */ fromImg?: string; toImg?: string }
+export interface DiffRow { label: string; from?: string; to?: string; /** photos shown instead of the words (profile picture) */ fromImg?: string; toImg?: string; /** a payment's proof: the tile that opens it (a photo in the viewer, a PDF in a new tab) */ toProof?: { mediaId: string; kind?: 'image' | 'pdf' } }
 export interface Described {
   /** Short headline, e.g. "Details", "Allergies". */
   title: string;

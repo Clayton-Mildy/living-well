@@ -157,7 +157,7 @@ export const mgmt = {
   'access.saved': 'Saved.',
   // round 18: Roles like Tasks
   'roles.ofMenus': '{n} of {total}', 'roles.viewOnly': 'view only', 'roles.hidden': 'hidden', 'roles.all': 'All', 'roles.none': 'None', 'roles.fullAccess': 'full access',
-  'roles.changedBy': 'changed {d} by {name}', 'roles.saveN': 'Save · {n} changes', 'roles.saveOne': 'Save · 1 change', 'roles.reset': 'Reset',
+  'roles.changedBy': 'changed {d} by {name}', 'roles.saveN': 'Save · {n} changes', 'roles.saveOne': 'Save · 1 change', 'roles.discard': 'Discard',
   // ----- round 17: Admin › Settings -----
   'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.sendOwner': 'Send to owner',
   'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewBelowOne': 'Flag below {n} visit',

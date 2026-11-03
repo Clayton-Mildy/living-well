@@ -8,6 +8,7 @@ import type { TFn } from '../../../lib/i18n';
 import { describeCr, type Described, type DiffRow } from '../reviewDiff';
 import { HAIR, listCardStyle, whenText, type FlagChip } from '../lib';
 import type { P } from './types';
+import { ProofOpen } from '../../finance/ProofOpen';
 
 export const Chips32 = ({ chips }: { chips: FlagChip[] }) => (
   <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
@@ -88,7 +89,8 @@ export function DiffList({ d, t, proposed = true }: { d: Described; t: TFn; prop
                 <strong style={{ fontWeight: 600 }}><span className="sr-only">{proposed ? t('reviews.proposed') : t('reviews.now')}: </span>{pic(r.toImg, r.to)}</strong>
               </span>
             ) : (
-              <span style={{ fontSize: 16, lineHeight: '22px', whiteSpace: 'pre-line' }}>{r.toImg || r.fromImg ? pic(r.toImg ?? r.fromImg, r.to ?? r.from) : r.to ?? r.from}</span>
+              r.toProof ? <span style={{ display: 'flex' }}><ProofOpen mediaId={r.toProof.mediaId} kind={r.toProof.kind} /></span>
+              : <span style={{ fontSize: 16, lineHeight: '22px', whiteSpace: 'pre-line' }}>{r.toImg || r.fromImg ? pic(r.toImg ?? r.fromImg, r.to ?? r.from) : r.to ?? r.from}</span>
             )}
           </div>
         );

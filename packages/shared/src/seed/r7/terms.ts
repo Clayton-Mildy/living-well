@@ -69,9 +69,9 @@ export const TERMS_V1_ID = `# 1. Keanggotaan dan paket
 - Cuti harus diminta paling lambat {leaveDays} hari sebelum bulan berlaku. Satu bulan cuti ditagih sebesar biaya cuti dan tempat anggota tetap disimpan.
 - Cuti dapat diambil paling lama 2 bulan berturut-turut. Bila sesudah itu tidak ada kabar dari keluarga, keanggotaan berakhir.
 - Permintaan yang lebih lambat berlaku mulai bulan sesudahnya.
-# 5. Antar-jemput dan wisata
+# 5. Antar-jemput dan karyawisata
 - Antar-jemput adalah layanan bulanan dengan harga sendiri, pada tagihan bulanan.
-- Wisata bersifat pilihan. Biayanya hanya ditagihkan kepada anggota yang ikut, pada tagihan bulanan berikutnya.
+- Karyawisata bersifat pilihan. Biayanya hanya ditagihkan kepada anggota yang ikut, pada tagihan bulanan berikutnya.
 # 6. Ulang tahun dan perayaan
 - Klub merayakan ulang tahun dan hari jadi bersama keluarga.
 - Tambahan seperti kue atau makan siang perayaan disepakati dengan keluarga lebih dulu dan ditagih pada tagihan berikutnya.

@@ -292,6 +292,7 @@ function ownerRequest(state: ClubState, def: ActionDef, name: string, input: unk
   const what = ownerWhat(state, name, input);
   const params: Record<string, string | number> = { who: nameOfUser(user), whatKey: what.key, date: what.params.date ?? '', // ISO: the bell formats it the way the Approvals row does
     title: what.params.title ?? '', name: what.params.name ?? '', amount: what.params.amount !== undefined ? rp(what.params.amount) : '' };
+  for (const k of ['n', 'a', 'b', 'c'] as const) if (what.params[k] !== undefined) params[k] = what.params[k]!; // club rules: the days or visits asked for
   params.what = String(params.title || params.name || params.date || section);
   const [next, patches, inverse] = produceWithPatches(state, (d) => {
     const crId = ctx.id('cr');

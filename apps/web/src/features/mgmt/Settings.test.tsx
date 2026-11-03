@@ -181,7 +181,12 @@ describe.each([['phone', 390], ['wide', 1280]])('Settings › notice per kind (%
     await show(<Settings />, width);
     expect(field('days').value).toBe('16');
     expect(row('days').textContent).toContain('December: alert 15 Nov · changes close 17 Nov');
+    await type(field('days'), '1'); // final review minor 6: no message while typing ("18" is not wrong after the "1")
+    expect(section('Few-visits alert').textContent).not.toContain('Pick 14–28 days');
+    expect(field('days').getAttribute('aria-invalid')).toBeNull();
     await type(field('days'), '10');
+    expect(section('Few-visits alert').textContent).not.toContain('Pick 14–28 days');
+    await act(async () => { field('days').dispatchEvent(new FocusEvent('focusout', { bubbles: true })); }); // leaving the field shows it
     expect(section('Few-visits alert').textContent).toContain('Pick 14–28 days: the alert has to come before changes close.');
     await click(button(section('Few-visits alert'), 'Save'));
     expect(actMock).not.toHaveBeenCalled();
