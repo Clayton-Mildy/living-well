@@ -171,7 +171,10 @@ export interface NextBillItem { id: string; label: string; params?: Record<strin
 export function nextBill(s: ClubState, memberId: string, today: ISODate): { items: NextBillItem[]; total: number } {
   const m = s.members[memberId];
   if (!m || m.deletedAt) return { items: [], total: 0 };
-  const period = runDone(s, ym(today)) ? addMonths(ym(today), 1) : ym(today);
+  // this month's run is done once it exists, or (the family's projection has no runs) once this member has this month's monthly invoice
+  const cur = ym(today);
+  const done = runDone(s, cur) || live(s.invoices).some((i) => i.memberId === m.id && !i.voided && i.kind === 'monthly' && i.period === cur);
+  const period = done ? addMonths(cur, 1) : cur;
   const lines = runLinesFor(s, m, period, today);
   const items: NextBillItem[] = [];
   const pick = lines.find((l) => l.kind === 'pickup');

@@ -162,6 +162,16 @@ describe('round 17: on your next bill', () => {
     const inv = runLinesFor(s, s.members.m46, '2026-11', today).filter((l) => l.kind === 'pickup' || l.id.startsWith('charge-'));
     expect(b.total).toBe(sum(inv.map((l) => l.amount)));
   });
+  it('without the runs (the family projection), this month\'s own invoice moves the preview to next month', () => {
+    const s = bare();
+    s.members.m46.pickup = { on: true, price: 450_000 };
+    s.invoiceRuns = {};
+    // 21 Oct: Opa Budi already has his October invoice, so the pick-up shown is November's (he is on leave in November: none)
+    s.members.m46.memberships.at(-1)!.leaves = [{ month: '2026-11', at: '2026-10-01T10:00', by: 'staff:s1' }];
+    expect(nextBill(s, 'm46', T).items).toEqual([]);
+    s.members.m46.memberships.at(-1)!.leaves = [];
+    expect(nextBill(s, 'm46', T).items.map((i) => i.amount)).toEqual([450_000]);
+  });
   it('on leave in November, today 4 Nov: no pick-up, as on the invoice', () => {
     const s = bare();
     s.members.m46.pickup = { on: true, price: 450_000 };
