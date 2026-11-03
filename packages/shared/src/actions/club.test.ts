@@ -134,13 +134,13 @@ describe('venue', () => {
 describe('broadcast', () => {
   it('audiences count real people with a phone, once each', () => {
     const s = seed().citra;
-    expect(audienceRecipients(s, 'families', T)).toHaveLength(6);
+    expect(audienceRecipients(s, 'families', T)).toHaveLength(7); // round 17: + Sinta Halim
     expect(audienceRecipients(s, 'enquiries', T).map((r) => r.name)).toEqual(['Melinda Tjandra', 'Ilham Hamid', 'Kevin Sutanto', 'Felicia Gunadi']); // by next step
     expect(audienceRecipients(s, 'staff', T)).toHaveLength(9); // round 16: + Benjamin Cass
-    expect(broadcastRecipients(s, ['families', 'enquiries', 'staff'], T)).toHaveLength(19);
+    expect(broadcastRecipients(s, ['families', 'enquiries', 'staff'], T)).toHaveLength(20);
     // a lead that is also a family contact is messaged once
     const dupe = run(s, 'enquiry.create', { senior: { title: 'Opa', name: 'Tio' }, contact: { name: 'Maria W', relation: 'daughter', phone: '+62 812-1090-4471' }, source: 'other' }, 's1').state;
-    expect(broadcastRecipients(dupe, ['families', 'enquiries'], T)).toHaveLength(6 + 4);
+    expect(broadcastRecipients(dupe, ['families', 'enquiries'], T)).toHaveLength(7 + 4);
     // ended members' families and leads that were lost or archived are left out
     const lost = run(s, 'enquiry.markLost', { enquiryId: 'e2', reason: 'price', note: '' }, 's1').state;
     expect(audienceRecipients(lost, 'enquiries', T)).toHaveLength(3);
@@ -150,10 +150,10 @@ describe('broadcast', () => {
     const s = seed().citra;
     const r = run(s, 'broadcast.send', { template: 'closure', message: 'Friday 6 November for maintenance', audiences: ['families', 'staff'] }, 's9');
     const b = r.state.broadcasts[r.result.broadcastId as string];
-    expect(b).toMatchObject({ template: 'closure', status: 'sent', recipients: 15, sendAt: '2026-10-21T10:00', sentAt: '2026-10-21T10:00', audiences: ['families', 'staff'] });
+    expect(b).toMatchObject({ template: 'closure', status: 'sent', recipients: 16, sendAt: '2026-10-21T10:00', sentAt: '2026-10-21T10:00', audiences: ['families', 'staff'] });
     expect(updatesFor(r.state, user(r.state, 'f1')).some((x) => x.kind === 'mgmt.notif.bc_closure' && x.params.text === 'Friday 6 November for maintenance')).toBe(true);
     expect(updatesFor(r.state, user(r.state, 's8')).some((x) => x.kind === 'mgmt.notif.bc_closure')).toBe(true);
-    expect(Object.values(r.state.activity).some((a) => a.key === 'mgmt.feed.broadcast' && a.params.n === 15)).toBe(true);
+    expect(Object.values(r.state.activity).some((a) => a.key === 'mgmt.feed.broadcast' && a.params.n === 16)).toBe(true);
     fails(s, 'broadcast.send', { template: 'update', message: '  ', audiences: ['families'] }, 's9', 'err.invalid');
     fails(s, 'broadcast.send', { template: 'update', message: 'Hi', audiences: [] }, 's9', 'err.invalid');
     fails(s, 'broadcast.send', { template: 'update', message: 'Hi', audiences: ['pets'] }, 's9', 'err.invalid');
@@ -164,17 +164,17 @@ describe('broadcast', () => {
     const s = seed().citra;
     const sched = run(s, 'broadcast.schedule', { template: 'event', message: 'batik museum outing, Thursday 26 November', audiences: ['families'], sendAt: '2026-10-21T15:00' }, 's9');
     const id = sched.result.broadcastId as string;
-    expect(sched.state.broadcasts[id]).toMatchObject({ status: 'scheduled', sendAt: '2026-10-21T15:00', recipients: 6 });
+    expect(sched.state.broadcasts[id]).toMatchObject({ status: 'scheduled', sendAt: '2026-10-21T15:00', recipients: 7 });
     fails(s, 'broadcast.schedule', { template: 'event', message: 'x', audiences: ['families'], sendAt: '2026-10-21T10:00' }, 's9', 'mgmt.err.pastTime');
     fails(s, 'broadcast.schedule', { template: 'event', message: 'x', audiences: ['families'], sendAt: 'tomorrow' }, 's9', 'err.invalid');
     // not yet: nothing happens
     expect(tick(sched.state, { today: T, nowMin: 14 * 60 + 59 }).patches).toHaveLength(0);
     // a new lead joins the audience before it goes out: the count is taken when it fires
     const edited = run(sched.state, 'broadcast.update', { broadcastId: id, message: 'batik museum outing, Thursday 26 November (bus leaves 09:00)', audiences: ['families', 'enquiries'], sendAt: '2026-10-21T15:30' }, 's9');
-    expect(edited.state.broadcasts[id]).toMatchObject({ audiences: ['families', 'enquiries'], sendAt: '2026-10-21T15:30', recipients: 10 });
+    expect(edited.state.broadcasts[id]).toMatchObject({ audiences: ['families', 'enquiries'], sendAt: '2026-10-21T15:30', recipients: 11 });
     expect(tick(edited.state, { today: T, nowMin: 15 * 60 + 15 }).patches).toHaveLength(0);
     const fired = tick(edited.state, { today: T, nowMin: 15 * 60 + 31 });
-    expect(fired.state.broadcasts[id]).toMatchObject({ status: 'sent', sentAt: '2026-10-21T15:31', recipients: 10 });
+    expect(fired.state.broadcasts[id]).toMatchObject({ status: 'sent', sentAt: '2026-10-21T15:31', recipients: 11 });
     expect(updatesFor(fired.state, user(fired.state, 'f2')).some((x) => x.kind === 'mgmt.notif.bc_event')).toBe(true);
     expect(Object.values(fired.state.activity).some((a) => a.key === 'mgmt.feed.broadcast' && a.at === '2026-10-21T15:31')).toBe(true);
     // firing is once only
@@ -246,14 +246,14 @@ describe('surveys for the front desk (round 13)', () => {
 
 describe('surveys', () => {
   const draft = { title: 'November check-in', questions: ['team', 'comment'], teamStaffIds: ['s1', 's8', 's5'] };
-  const ALL = ['f1', 'f2', 'fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']; // every family contact with the app (sorted by id)
+  const ALL = ['f1', 'f2', 'f_sinta', 'fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']; // every family contact with the app (sorted by id)
   it('create a draft with a team picked from staff, edit it, then send to every family with the app', () => {
     const s = seed().citra;
     const c = run(s, 'survey.create', draft, 's9');
     const id = c.result.surveyId as string;
     // the draft already shows who it would go to (everyone with the app is the default)
     expect(c.state.surveys[id]).toMatchObject({ status: 'draft', title: 'November check-in', questions: ['team', 'comment'], custom: [], teamStaffIds: ['s1', 's8', 's5'], audience: { mode: 'all' }, recipients: ALL });
-    expect(c.result.recipients).toBe(6);
+    expect(c.result.recipients).toBe(7);
     const up = run(c.state, 'survey.update', { surveyId: id, title: 'November check-in 2', teamStaffIds: ['s1', 's3'], questions: ['team', 'recommend'] }, 's9');
     expect(up.state.surveys[id]).toMatchObject({ title: 'November check-in 2', teamStaffIds: ['s1', 's3'], questions: ['team', 'recommend'], audience: { mode: 'all' }, recipients: ALL });
     fails(s, 'survey.create', { ...draft, teamStaffIds: ['s99'] }, 's9', 'err.invalid');
@@ -263,7 +263,7 @@ describe('surveys', () => {
     expect(resolveSurveyAudience(s, undefined, T)).toEqual(ALL);
     const sent = run(up.state, 'survey.send', { surveyId: id }, 's9');
     expect(sent.state.surveys[id]).toMatchObject({ status: 'live', sentOn: T, recipients: ALL });
-    expect(sent.result.recipients).toBe(6);
+    expect(sent.result.recipients).toBe(7);
     expect(sent.state.surveys.sv1).toMatchObject({ status: 'closed', closedOn: T }); // the current survey closes when a new one is sent
     fails(sent.state, 'survey.update', { surveyId: id, title: 'x' }, 's9', 'mgmt.err.notDraft');
     fails(sent.state, 'survey.send', { surveyId: id }, 's9', 'mgmt.err.notDraft');
@@ -282,7 +282,7 @@ describe('surveys', () => {
     expect(byMembers.result.recipients).toBe(2);
     // a contact of two chosen members counts once
     expect(make({ mode: 'members', memberIds: ['m1', 'm46', 'm1'] }).state.surveys.sv2.recipients).toEqual(['f1', 'f2']);
-    expect(make({ mode: 'members', memberIds: ['m2', 'm10'] }).state.surveys.sv2.recipients).toEqual(['fm10_0', 'fm2_0', 'fm2_1']);
+    expect(make({ mode: 'members', memberIds: ['m2', 'm10'] }).state.surveys.sv2.recipients).toEqual(['f_sinta', 'fm10_0', 'fm2_0', 'fm2_1']);
     // chosen contacts
     const byContacts = make({ mode: 'contacts', contactIds: ['fm20_0', 'f1', 'f1'] });
     expect(byContacts.state.surveys.sv2).toMatchObject({ audience: { mode: 'contacts', contactIds: ['fm20_0', 'f1'] }, recipients: ['f1', 'fm20_0'] });
@@ -314,16 +314,16 @@ describe('surveys', () => {
     const noApp = { ...s, familyLinks: { ...s.familyLinks, 'fm2_1:m2': { ...s.familyLinks['fm2_1:m2'], appAccess: false } } };
     expect(appFamilies(noApp, T).map((c) => c.id)).not.toContain('fm2_1');
     fails(noApp, 'survey.create', { ...draft, audience: { mode: 'contacts', contactIds: ['fm2_1'] } }, 's9', 'mgmt.err.contactNoApp');
-    expect(resolveSurveyAudience(noApp, { mode: 'members', memberIds: ['m2'] }, T)).toEqual(['fm2_0']);
+    expect(resolveSurveyAudience(noApp, { mode: 'members', memberIds: ['m2'] }, T)).toEqual(['f_sinta', 'fm2_0']);
     expect(() => run(s, 'survey.update', { surveyId: 'sv1', audience: { mode: 'all' } }, 's5')).toThrow('err.forbidden');
   });
   it('recipients are worked out again when a draft is sent (people who got the app since are included)', () => {
     let s = seed().citra;
     s = run(s, 'survey.create', draft, 's9').state;
-    expect(s.surveys.sv2.recipients).toHaveLength(6);
+    expect(s.surveys.sv2.recipients).toHaveLength(7);
     // a new family with the app arrives after the draft was saved
     s = { ...s, familyContacts: { ...s.familyContacts, fnew: { ...s.familyContacts.f1, id: 'fnew', name: 'New Contact', firstName: 'New' } }, familyLinks: { ...s.familyLinks, 'fnew:m1': { ...s.familyLinks['f1:m1'], id: 'fnew:m1', familyId: 'fnew', primary: false } } };
-    expect(run(s, 'survey.send', { surveyId: 'sv2' }, 's9').state.surveys.sv2.recipients).toHaveLength(7);
+    expect(run(s, 'survey.send', { surveyId: 'sv2' }, 's9').state.surveys.sv2.recipients).toHaveLength(8);
   });
   it('members to choose from: active members with at least one family contact who has the app', () => {
     const s = seed().citra;
@@ -474,7 +474,7 @@ describe('survey custom questions', () => {
     s = a(s, 'f2', { q1: 4, q2: false, q3: 'Friday', q4: 'Soto' });
     s = a(s, 'fm10_0', { q1: 4, q3: 'Sunday' });
     const st = surveyStats(s, s.surveys.sv2);
-    expect(st).toMatchObject({ answered: 3, recipients: 6, rate: 50, overallN: 0 });
+    expect(st).toMatchObject({ answered: 3, recipients: 7, rate: 43, overallN: 0 });
     const [r1, r2, r3, r4] = st.custom;
     expect(r1).toMatchObject({ n: 3, avg: 4.3 });
     expect(r2).toMatchObject({ n: 2, yes: 1, no: 1 });
@@ -551,7 +551,7 @@ describe('survey templates, the survey log and venue ratings', () => {
     expect(fam.surveys.svv1.status).toBe('live'); // the venue survey is not touched
     expect(fam.surveys.sv1.log!.at(-1)).toMatchObject({ what: 'closed', note: 'replaced', by: 'staff:s9' });
     expect(fam.surveys.sv2.log!.map((l) => l.what)).toEqual(['created', 'sent']);
-    expect(fam.surveys.sv2.log!.at(-1)!.note).toBe('6'); // how many families it went to
+    expect(fam.surveys.sv2.log!.at(-1)!.note).toBe('7'); // how many families it went to
     const created = run(fam, 'survey.create', venueDraft, 's9');
     expect(created.state.surveys.sv3).toMatchObject({ kind: 'venue', status: 'draft', recipients: [], teamStaffIds: [] });
     const ven = run(created.state, 'survey.send', { surveyId: 'sv3' }, 's9');

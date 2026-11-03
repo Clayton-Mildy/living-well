@@ -24,10 +24,10 @@ const actMock = vi.fn();
 let n = 0;
 
 const V1 = { version: 1, en: '# Billing\n- Invoices are issued on the {issueDay}\nNotice is {noticeDays} days.', id: '# Tagihan\n- Tagihan terbit tanggal {issueDay}', publishedAt: '2026-10-20T09:00', publishedBy: 's9' };
-/** A club with terms v1; every contact with a login has agreed except Sinta Halim (f_sinta, daughter of m2). The seed gets terms in Task 10, so the state is built by hand. */
+/** A club with terms v1; every contact with a login has agreed except Sinta Halim (f_sinta, daughter of m2). The state is rebuilt by hand so the terms text is the test's own. */
 function world(withTerms = true): ClubState {
   const s = structuredClone(buildSeed().citra);
-  if (withTerms) s.club.settings.terms = [{ ...V1 }];
+  s.club.settings.terms = withTerms ? [{ ...V1 }] : undefined; // the seed publishes v1 itself (round 17); here the text is the test's own
   for (const c of Object.values(s.familyContacts)) if (c.username && withTerms) c.termsAgreed = { version: 1, at: '2026-10-21T10:00' };
   s.familyContacts.f_sinta = { id: 'f_sinta', clubId: s.clubId, createdAt: '2026-10-01T09:00', createdBy: 'system', username: 'sinta', name: 'Sinta Halim', firstName: 'Sinta', phone: '+6281200000099', lang: 'en', activatedAt: '2026-10-01T09:00' };
   s.familyLinks['f_sinta:m2'] = { id: 'f_sinta:m2', clubId: s.clubId, createdAt: '2026-10-01T09:00', createdBy: 'system', familyId: 'f_sinta', memberId: 'm2', relation: 'daughter', primary: false, appAccess: true, healthAlerts: true };

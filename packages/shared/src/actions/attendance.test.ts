@@ -198,9 +198,9 @@ describe('attendance.undoCheckIn', () => {
   });
   it('the visit no longer counts after the undo', () => {
     const s = checkIn(base, 'm46', 'manual');
-    expect(visitsInMonth(s, s.members.m46, '2026-10')).toHaveLength(15);
+    expect(visitsInMonth(s, s.members.m46, '2026-10')).toHaveLength(4); // round 17: Opa Budi is on the few-visits list (3 visits so far)
     const r = run(s, 'attendance.undoCheckIn', { memberId: 'm46' });
-    expect(visitsInMonth(r.state, r.state.members.m46, '2026-10')).toHaveLength(14);
+    expect(visitsInMonth(r.state, r.state.members.m46, '2026-10')).toHaveLength(3);
   });
   it('only before check-out; needs a check-in; clears a departure request', () => {
     expect(() => run(base, 'attendance.undoCheckIn', { memberId: 'm1' })).toThrow('err.notCheckedIn');

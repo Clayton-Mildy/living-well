@@ -110,7 +110,7 @@ describe('daily log helpers', () => {
     expect(logDateOk(T, '2026-10-14')).toBe(true);
     expect(logDateOk(T, '2026-10-13')).toBe(false);
     expect(logDateOk(T, '2026-10-22')).toBe(false);
-    expect(logDates(s, T)).toEqual([T, '2026-10-20', '2026-10-19', '2026-10-16', '2026-10-15', '2026-10-14']); // weekends and the empty 21st-7 are skipped
+    expect(logDates(s, T)).toEqual([T, '2026-10-20', '2026-10-19', '2026-10-16', '2026-10-14']); // weekends and the days nobody came are skipped (round 17: the 15th is gone, Hendra is on the few-visits list)
   });
 
   it('drop-in: a member who went home is out of the club but still belongs in the day log', () => {

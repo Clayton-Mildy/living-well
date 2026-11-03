@@ -25,6 +25,7 @@ const actMock = vi.fn();
 let n = 0;
 function openClub(who: 's9' | 's11' | 's1' = 's9') {
   const state = structuredClone(buildSeed().citra);
+  delete state.club.settings.terms; // the seed publishes version 1; this screen test starts with none
   const user = who === 's9' ? { kind: 'staff' as const, id: 's9', name: 'Ega', role: 'mgmt' as const, clubId: 'citra', clubs: ['citra'] }
     : who === 's11' ? { kind: 'staff' as const, id: 's11', name: 'Benjamin Cass', role: 'owner' as const, clubId: 'citra', clubs: ['citra'] }
     : { kind: 'staff' as const, id: 's1', name: 'Caca', role: 'lobby' as const, clubId: 'citra', clubs: ['citra'] };

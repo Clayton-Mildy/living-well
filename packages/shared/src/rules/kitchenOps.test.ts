@@ -286,11 +286,11 @@ describe('feedback helpers', () => {
     expect(replyTarget(s, s.feedback.c1)).toBe('fm10_0');
     expect(replyTarget(s, { familyId: null, memberId: 'm2' })).toBe('fm2_0'); // Hendra's primary contact
     const noPrimary = produce(s, (d) => { d.familyLinks['fm2_0:m2'].appAccess = false; });
-    expect(replyTarget(noPrimary, { familyId: null, memberId: 'm2' })).toBe('fm2_1'); // the next contact with app access
-    const none = produce(noPrimary, (d) => { d.familyLinks['fm2_1:m2'].appAccess = false; });
+    expect(replyTarget(noPrimary, { familyId: null, memberId: 'm2' })).toBe('f_sinta'); // the next contact with app access
+    const none = produce(noPrimary, (d) => { d.familyLinks['f_sinta:m2'].appAccess = false; d.familyLinks['fm2_1:m2'].appAccess = false; });
     expect(replyTarget(none, { familyId: null, memberId: 'm2' })).toBeUndefined();
     const pending = produce(s, (d) => { d.familyLinks['fm2_0:m2'].review = { status: 'pending', crId: 'x' }; });
-    expect(replyTarget(pending, { familyId: null, memberId: 'm2' })).toBe('fm2_1');
+    expect(replyTarget(pending, { familyId: null, memberId: 'm2' })).toBe('f_sinta');
   });
 });
 

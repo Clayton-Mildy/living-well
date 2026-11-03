@@ -4,7 +4,8 @@ import { buildSeed } from '../seed';
 import type { ClubState, FamilyContact } from '../types';
 import { currentTerms, needsTerms, termsAgreement, termsBlocks, termsText } from './terms';
 
-const base = () => buildSeed().citra;
+// the seed publishes version 1 (round 17); these tests start from a club with no terms
+const base = () => produce(buildSeed().citra, (d) => { delete d.club.settings.terms; for (const c of Object.values(d.familyContacts)) delete c.termsAgreed; });
 const v = (version: number, en: string, id = '') => ({ version, en, id, publishedAt: '2026-11-01T09:00', publishedBy: 's9' });
 const withTerms = (s: ClubState, ...versions: ReturnType<typeof v>[]) => produce(s, (d) => { d.club.settings.terms = versions; });
 

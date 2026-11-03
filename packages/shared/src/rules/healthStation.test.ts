@@ -90,12 +90,12 @@ describe('care flags and family', () => {
     expect(careFlagsOf(s.guestVisits['g-e2'])).toEqual([{ kind: 'allergyUnknown' }]);
   });
   it('family who hear about health: approved link, app access, health alerts on', () => {
-    expect(alertRecipients(s, 'm2').map((x) => x.contact.id)).toEqual(['fm2_0', 'fm2_1']);
+    expect(alertRecipients(s, 'm2').map((x) => x.contact.id)).toEqual(['fm2_0', 'f_sinta', 'fm2_1']);
     expect(alertRecipients(s, 'm1').map((x) => x.contact.id)).toEqual(['f1', 'f2']);
-    const off = tweak(s, (d) => { d.familyLinks['fm2_1:m2'].healthAlerts = false; d.familyLinks['fm2_0:m2'].appAccess = false; });
+    const off = tweak(s, (d) => { d.familyLinks['fm2_1:m2'].healthAlerts = false; d.familyLinks['fm2_0:m2'].appAccess = false; d.familyLinks['f_sinta:m2'].appAccess = false; });
     expect(alertRecipients(off, 'm2')).toEqual([]);
     const pending = tweak(s, (d) => { d.familyLinks['fm2_1:m2'].review = { status: 'pending', crId: 'c' }; });
-    expect(alertRecipients(pending, 'm2').map((x) => x.contact.id)).toEqual(['fm2_0']);
+    expect(alertRecipients(pending, 'm2').map((x) => x.contact.id)).toEqual(['fm2_0', 'f_sinta']);
   });
 });
 
@@ -166,9 +166,9 @@ describe('trends', () => {
     expect(recentFlagged(s, 'm2', T)).toMatchObject({ date: '2026-10-20', kind: 'departure', status: 'watch' });
     expect(recentFlagged(s, 'm2', '2026-11-10')).toBeUndefined();
     expect(recentFlagged(s, 'm20', T)).toBeUndefined();
-    expect(arrivalSystolic(s, 'm2', T).length).toBeGreaterThan(10);
+    expect(arrivalSystolic(s, 'm2', T).length).toBeGreaterThan(5);
     const week = arrivalSystolic(s, 'm2', T, 7);
-    expect(week.length).toBeGreaterThan(3);
+    expect(week.length).toBeGreaterThan(2);
     expect(week.every((p) => p.date >= '2026-10-14' && p.date <= T)).toBe(true); // up to and including the day itself
     expect(week[0]).toMatchObject({ value: expect.any(Number), time: expect.stringMatching(/^\d\d:\d\d$/) });
   });
@@ -350,7 +350,7 @@ describe('the record by day', () => {
     expect(new Set(days).size).toBe(days.length);
     expect(neighbourDay(days, '2026-10-20', -1)).toBe(days[days.length - 2]);
     expect(neighbourDay(days, '2026-10-20', 1)).toBeNull();
-    expect(neighbourDay(days, '2026-10-17', -1)).toBe('2026-10-16'); // a day without readings: the nearest day with some
+    expect(neighbourDay(days, '2026-10-17', -1)).toBe(days.filter((d) => d < '2026-10-17').pop()); // a day without readings: the nearest day with some
     expect(neighbourDay(days, '2026-10-17', 1)).toBe('2026-10-19');
     expect(neighbourDay(days, '2000-01-01', -1)).toBeNull();
     expect(neighbourDay([], T, -1)).toBeNull();

@@ -222,9 +222,9 @@ describe('family.unlinkContact', () => {
     expect(() => run(c.citra, 'family.unlinkContact', { memberId: 'm10', familyId: 'fm10_0' }, who(c, 's9'))).toThrow('members.err.lastContact');
     const r = run(c.citra, 'family.unlinkContact', { memberId: 'm2', familyId: 'fm2_0' }, who(c, 's1'));
     expect(r.reviewed).toBe('gate');
-    expect(contactsOfMember(r.state, 'm2')).toHaveLength(2); // still there until approved
+    expect(contactsOfMember(r.state, 'm2')).toHaveLength(3); // still there until approved
     const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who(c, 's9'));
-    expect(contactsOfMember(a.state, 'm2').map((x) => x.contact.id)).toEqual(['fm2_1']);
+    expect(contactsOfMember(a.state, 'm2').map((x) => x.contact.id)).toEqual(['fm2_1', 'f_sinta']);
     expect(primaryContact(a.state, 'm2')?.id).toBe('fm2_1');
     expect(a.state.familyContacts.fm2_0.deletedAt).toBeTruthy();
     expect(findByPhone({ citra: a.state }, '+62 815-1294-4718').ok).toBe(false);

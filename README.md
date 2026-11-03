@@ -101,7 +101,7 @@ Staff and families sign in on the same page with a **username and password**.
 | Who | Usernames (lowercase first names) |
 |---|---|
 | Staff | `caca` (lobby), `dewi` (nurse), `dinar` and `dimas` (activity), `agus` and `yohanes` (kitchen), `fransiska` (finance), `ega` (management) |
-| Families | `maria`, `daniel` (Oma Lina and Opa Budi), `cynthia`, `stephanie` (Opa Hendra), `laras` (Bapak Bambang), `yohana` (Opa Tjahjadi) |
+| Families | `maria`, `daniel` (Oma Lina and Opa Budi), `cynthia`, `stephanie` (Opa Hendra), `laras` (Bapak Bambang), `yohana` (Opa Tjahjadi), `sinta` (Opa Hendra's second daughter; she has not agreed to the terms yet, so she sees the terms page on her first sign-in) |
 
 - **Demo password:** `citra123` for every seed account. Usernames ignore capitals.
 - **Demo accounts:** the one-tap buttons on the login page and the Demo panel (**Switch account**) sign in without a password.

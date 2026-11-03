@@ -36,7 +36,7 @@ describe('Members, Check on filter', () => {
     const state = buildSeed().citra;
     for (const k of Object.keys(state.attendance)) {
       const a = state.attendance[k];
-      if ((a.memberId === 'm1' && a.date > '2026-10-09') || (a.memberId === 'm2' && a.date > '2026-10-13')) delete state.attendance[k];
+      if ((a.memberId === 'm1' && a.date > '2026-10-09') || (a.memberId === 'm2' && a.date > '2026-10-14')) delete state.attendance[k];
     }
     useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
     useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });

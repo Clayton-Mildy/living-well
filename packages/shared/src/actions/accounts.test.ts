@@ -12,7 +12,7 @@ const newStaff = (over: Record<string, unknown> = {}) => ({ name: 'Wulan Sari', 
 describe('seed usernames', () => {
   it('every staff member and family contact has their lowercase first name, all unique', () => {
     const rows = accountRows(buildSeed());
-    expect(rows.map((r) => r.username).sort()).toEqual(['agus', 'benjamin', 'caca', 'cynthia', 'daniel', 'dewi', 'dimas', 'dinar', 'ega', 'fransiska', 'laras', 'maria', 'stephanie', 'yohana', 'yohanes']);
+    expect(rows.map((r) => r.username).sort()).toEqual(['agus', 'benjamin', 'caca', 'cynthia', 'daniel', 'dewi', 'dimas', 'dinar', 'ega', 'fransiska', 'laras', 'maria', 'sinta', 'stephanie', 'yohana', 'yohanes']);
     expect(new Set(rows.map((r) => r.username)).size).toBe(rows.length);
   });
   it('nobody in the seed is waiting for a username', () => {

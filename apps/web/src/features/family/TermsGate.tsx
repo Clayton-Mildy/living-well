@@ -48,7 +48,7 @@ export function TermsGate({ kind }: { kind: 'first' | 'updated' }) {
   const out = () => { signOut(); navigate('/login'); };
   const hint = t('terms.scrollHint');
   return (
-    <div data-shell="family" data-testid="terms-gate" data-kind={kind} style={{ position: 'fixed', inset: 0, zIndex: 40, background: '#FFFFFF', color: F.text, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
+    <main id="main" data-shell="family" data-testid="terms-gate" data-kind={kind} style={{ position: 'fixed', inset: 0, zIndex: 40, background: '#FFFFFF', color: F.text, display: 'flex', justifyContent: 'center', overflow: 'hidden' }}>
       <div style={{ width: '100%', maxWidth: 600, height: '100%', boxSizing: 'border-box', display: 'flex', flexDirection: 'column', gap: 14, padding: 'calc(16px + env(safe-area-inset-top, 0px)) 16px calc(14px + env(safe-area-inset-bottom, 0px))' }}>
         <Logo height={30} />
         {kind === 'first' ? (
@@ -81,6 +81,6 @@ export function TermsGate({ kind }: { kind: 'first' | 'updated' }) {
           </button>
         </div>
       </div>
-    </div>
+    </main>
   );
 }

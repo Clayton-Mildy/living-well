@@ -159,7 +159,7 @@ describe('schedule.publish', () => {
     const ns = note(r.state, 'cal.notif.schedulePublished');
     expect(ns).toHaveLength(1);
     expect(ns[0].toRoles).toEqual(expect.arrayContaining(['lobby', 'nurse', 'activity', 'kitchen', 'finance', 'mgmt']));
-    expect(new Set(ns[0].toUsers)).toEqual(new Set(['f1', 'f2', 'fm2_0', 'fm2_1', 'fm10_0', 'fm20_0']));
+    expect(new Set(ns[0].toUsers)).toEqual(new Set(['f1', 'f2', 'fm2_0', 'fm2_1', 'f_sinta', 'fm10_0', 'fm20_0']));
     expect(ns[0]).toMatchObject({ params: { date: '26/10/2026' }, link: '/calendar' });
     expect(Object.values(r.state.activity).some((a) => a.key === 'cal.feed.schedulePublished')).toBe(true);
     // the family projection carries the published versions only (the draft stays internal)
@@ -477,7 +477,7 @@ describe('schedule.changeDay (one day only)', () => {
   const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
   const BATIK = { activityId: 'act-batik', staffId: 's6', roomId: 'room-studio' }; // Wednesday 13:30 in the weekly plan
   const TODAY = '2026-10-21';
-  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'fm10_0', 'fm20_0'];
+  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'f_sinta', 'fm10_0', 'fm20_0'];
 
   it('changes today for that day only: the weekly plan and other days stay, teachers and families are told', () => {
     const s0 = fresh();
@@ -577,7 +577,7 @@ describe('extra sessions: schedule.addSession / editSession / removeSession', ()
   const TODAY = '2026-10-21'; // Wednesday, 10:00
   const KARAOKE = { activityId: 'act-karaoke', staffId: 's6', roomId: 'room-music' };
   const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
-  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'fm10_0', 'fm20_0'];
+  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'f_sinta', 'fm10_0', 'fm20_0'];
   const add = (s: ClubState, o: Record<string, unknown> = {}) => run(s, 'schedule.addSession', { date: TODAY, time: '15:00', ...KARAOKE, ...o }, 's9');
 
   it('adds a session at any time of today: the day lists it in time order, teachers and families are told, the weekly plan stays', () => {
@@ -752,7 +752,7 @@ describe('round 14: every programme change by the activity team waits for Ega', 
   const MEMORY = { activityId: 'act-memory', staffId: 's5', roomId: 'room-lounge' };
   const BATIK = { activityId: 'act-batik', staffId: 's6', roomId: 'room-studio' }; // Wednesday 13:30 in the weekly plan
   const KARAOKE = { activityId: 'act-karaoke', staffId: 's6', roomId: 'room-music' };
-  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'fm10_0', 'fm20_0'];
+  const FAMILIES = ['f1', 'f2', 'fm2_0', 'fm2_1', 'f_sinta', 'fm10_0', 'fm20_0'];
 
   it('an s5 publish stores a pending version for Ega: management is told, families are not, and it is not in force', () => {
     const s0 = fresh();

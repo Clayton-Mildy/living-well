@@ -25,7 +25,7 @@ afterAll(async () => { await sql.end(); });
 const login = (username: string, password: string) => app.request('/api/login', json({ username, password }));
 const bearer = (token: string, extra: Record<string, string> = {}) => ({ headers: { authorization: `Bearer ${token}`, ...extra } });
 const tokenOf = async (username: string, password = 'citra123') => (await j(await login(username, password))).token as string;
-const SEED_NAMES = ['caca', 'yohanes', 'agus', 'dinar', 'dimas', 'dewi', 'ega', 'fransiska', 'benjamin', 'maria', 'daniel', 'cynthia', 'stephanie', 'laras', 'yohana'];
+const SEED_NAMES = ['caca', 'yohanes', 'agus', 'dinar', 'dimas', 'dewi', 'ega', 'fransiska', 'benjamin', 'maria', 'daniel', 'cynthia', 'stephanie', 'laras', 'yohana', 'sinta'];
 
 describe('auth: username and password', () => {
   it('signs in with the seed username and the demo password, returns the user and a session token', async () => {

@@ -62,8 +62,8 @@ describe('survey recipients', () => {
     openClub();
     await show(<Surveys />);
     await openEditor();
-    expect(count()).toBe('Goes to 6 families');
-    expect(button('Send to 6 families')).toBeTruthy();
+    expect(count()).toBe('Goes to 7 families');
+    expect(button('Send to 7 families')).toBeTruthy();
     expect(document.querySelector('[data-testid="survey-audience"]')!.textContent).toContain('All families with the app');
     expect(rows()).toHaveLength(0); // nothing to pick from in this mode
   });
@@ -85,14 +85,14 @@ describe('survey recipients', () => {
     await click(row(/Opa Budi Wijaya/)); // the same two contacts
     expect(count()).toBe('Goes to 2 families');
     await click(row(/Opa Hendra Gunawan/));
-    expect(count()).toBe('Goes to 4 families');
+    expect(count()).toBe('Goes to 5 families');
     expect(picked()).toBe('3 members chosen');
     await click(button('Clear selection'));
     expect(count()).toBe('Goes to 0 families');
     await type(search(), 'zzz');
     expect(document.body.textContent).toContain('Nobody matches your search.');
   });
-  it('chosen people: six contacts over two pages; select all in the list; the picks of the other choice are kept', async () => {
+  it('chosen people: seven contacts over two pages; select all in the list; the picks of the other choice are kept', async () => {
     openClub();
     await show(<Surveys />);
     await openEditor();
@@ -103,7 +103,7 @@ describe('survey recipients', () => {
     expect(rows()).toHaveLength(5); // five a page
     expect(document.querySelector('[data-testid="survey-audience"] nav')).toBeTruthy();
     await click(button('Next page') ?? button('Page 2'));
-    expect(rows()).toHaveLength(1);
+    expect(rows()).toHaveLength(2);
     await click(row(/Yohana Lim/));
     expect(count()).toBe('Goes to 1 family');
     expect(picked()).toBe('1 person chosen');
@@ -112,7 +112,7 @@ describe('survey recipients', () => {
     await click(button('Select all in the list'));
     expect(count()).toBe('Goes to 3 families');
     await click(button('Families of chosen members'));
-    expect(count()).toBe('Goes to 2 families'); // Opa Hendra's two contacts
+    expect(count()).toBe('Goes to 3 families'); // Opa Hendra's three contacts
   });
   it('an empty clubhouse has nobody to send to', async () => {
     openClub('adina');
@@ -126,7 +126,7 @@ describe('survey recipients', () => {
     await show(<Surveys />);
     await openEditor();
     expect(document.body.textContent).toContain('Siapa yang menerima');
-    expect(count()).toBe('Dikirim ke 6 keluarga');
+    expect(count()).toBe('Dikirim ke 7 keluarga');
     await click(button('Orang pilihan'));
     expect(picked()).toBe('0 orang dipilih');
     expect(document.body.textContent).not.toMatch(/\bmgmt\.[A-Za-z]/);
@@ -220,7 +220,7 @@ describe('surveys for the front desk (round 13)', () => {
     expect(document.querySelector('[role="tablist"]')).toBeNull();
     await click(button('Send to a contact'));
     const rowsOf = () => Array.from(document.querySelectorAll<HTMLElement>('[data-send-to]'));
-    expect(rowsOf().map((r) => r.getAttribute('data-send-to')).sort()).toEqual(['f2', 'fm2_1']); // the two with the app who were not sent it
+    expect(rowsOf().map((r) => r.getAttribute('data-send-to')).sort()).toEqual(['f2', 'f_sinta', 'fm2_1']); // the three with the app who were not sent it
     await type(document.querySelector<HTMLInputElement>('input[type="search"]')!, 'nobody-by-this-name');
     expect(rowsOf()).toHaveLength(0);
     expect(document.body.textContent).toContain('Nobody is left to send to.');

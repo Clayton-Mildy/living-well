@@ -109,7 +109,7 @@ describe('planSummary: Flex visits and Gold, from check-ins', () => {
     const gold = planSummary(s, s.members.m46, T);
     expect(gold).toMatchObject({ plan: 'gold', quota: null, left: null, extra: [] });
     expect(gold.used).toBe(gold.visits.length); // visits so far this month
-    expect(gold.visits[0]).toBe('2026-10-01');
+    expect(gold.visits[0]).toMatch(/^2026-10-/);
     // a Gold member checking in many days is never extra
     const r = as(s, 's1', 'attendance.checkIn', { memberId: 'm46', method: 'manual' }, 'p2');
     expect(r.result.extra).toBe(false);

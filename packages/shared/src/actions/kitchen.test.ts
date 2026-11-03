@@ -381,7 +381,7 @@ describe('weekly menu', () => {
 
 describe('tea photos (KC round 7)', () => {
   const notes = (st: ClubState, kind: string) => Object.values(st.notifications).filter((x) => x.kind === kind);
-  const IN_CLUB = ['fm10_0', 'fm20_0', 'fm2_0', 'fm2_1'];
+  const IN_CLUB = ['f_sinta', 'fm10_0', 'fm20_0', 'fm2_0', 'fm2_1'];
   it('a tea photo goes to the tea gallery, waits for approval like a lunch photo, and the lunch gallery stays as it was', () => {
     const s = seed();
     const r = run(s, 'menu.postLunchPhoto', { date: T, meal: 'tea', mediaId: 'media-tea_1' }, 's3');
@@ -505,7 +505,7 @@ describe('dish photos (round 15)', () => {
 
 describe('lunch photos', () => {
   const lunchNotes = (st: ClubState) => Object.values(st.notifications).filter((x) => x.kind === 'kitchen.notif.lunchPhoto');
-  const IN_CLUB = ['fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']; // Bambang, Hendra and Tjahjadi are in; Oma Lina and Opa Budi have not arrived
+  const IN_CLUB = ['f_sinta', 'fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']; // Bambang, Hendra and Tjahjadi are in; Oma Lina and Opa Budi have not arrived
   it('the kitchen\'s photo waits for approval: pending, on the day\'s list, and nobody is told yet', () => {
     const s = seed();
     const r = run(s, 'menu.postLunchPhoto', { date: T, mediaId: 'media-abc_1' }, 's3');

@@ -37,7 +37,7 @@ describe('reading.save', () => {
     const row = r.state.readings[id];
     expect(row.approval).toMatchObject({ status: 'approved', decidedBy: 'staff:s9' });
     expect(row).toMatchObject({ shared: true });
-    expect(row.familyTold).toEqual({ at: `${T}T10:30`, by: 's8', familyIds: ['fm2_0', 'fm2_1'] });
+    expect(row.familyTold).toEqual({ at: `${T}T10:30`, by: 's8', familyIds: ['fm2_0', 'f_sinta', 'fm2_1'] });
     // nothing is posted to a Messages inbox (there is none): the club tells both contacts on WhatsApp (simulated), and each bell shows the update
     expect(Object.keys(r.state.messages)).toHaveLength(0);
     expect(Object.keys(r.state.threads)).toHaveLength(0);
@@ -196,7 +196,7 @@ describe('reading.save', () => {
     const t0 = save(seed, arrival('m2', { tellFamily: true }));
     expect(t0.state.readings[t0.result.readingId as string].familyTold).toBeUndefined(); // waits for approval
     const t = approve(t0.state, [t0.result.readingId as string]);
-    expect(t.state.readings[t0.result.readingId as string].familyTold?.familyIds).toEqual(['fm2_0', 'fm2_1']);
+    expect(t.state.readings[t0.result.readingId as string].familyTold?.familyIds).toEqual(['fm2_0', 'f_sinta', 'fm2_1']);
     expect(Object.keys(t.state.messages)).toHaveLength(0);
     expect(unreadUpdates(t.state, user('fm2_1')).find((x) => x.kind.startsWith('health.notif.fam.'))).toMatchObject({ link: '/health' });
     expect(Object.values(t.state.activity).some((a) => a.key === 'health.feed.normal')).toBe(true); // the feed line is written when the nurse saves it

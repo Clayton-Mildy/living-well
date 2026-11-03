@@ -70,7 +70,7 @@ describe('photo.take', () => {
     const ns = note(r.state, 'activity.notif.newVideo');
     expect(ns).toHaveLength(2); // Maria and Daniel (both parents) in one, Hendra's family in the other
     expect(ns.find((x) => x.toUsers.includes('f1'))).toMatchObject({ toUsers: ['f1', 'f2'], params: { name: 'Oma Lina, Opa Budi' } });
-    expect(ns.find((x) => x.toUsers.includes('fm2_0'))?.toUsers).toEqual(['fm2_0', 'fm2_1']);
+    expect(ns.find((x) => x.toUsers.includes('fm2_0'))?.toUsers).toEqual(['fm2_0', 'fm2_1', 'f_sinta']);
     const v = run(fresh(), 'photo.take', { kind: 'group', memberIds: ['m10', 'm2'], media: 'video', durationSec: 31 }, 's5');
     expect(v.state.photos[v.result.photoId as string]).toMatchObject({ durationSec: 31, visibility: 'pending' });
   });
@@ -145,7 +145,7 @@ describe('photo.approve', () => {
     expect(nb[0]).toMatchObject({ toUsers: ['fm10_0'], params: { name: 'Bapak Bambang', n: 2 }, link: '/photos' });
     const nh = at('activity.notif.newMedia');
     expect(nh).toHaveLength(1);
-    expect(nh[0]).toMatchObject({ toUsers: ['fm2_0', 'fm2_1'], params: { name: 'Opa Hendra', n: 2 } });
+    expect(nh[0]).toMatchObject({ toUsers: ['fm2_0', 'fm2_1', 'f_sinta'], params: { name: 'Opa Hendra', n: 2 } });
     expect(at('activity.notif.newPhoto')).toHaveLength(0);
     const keys = Object.values(r.state.activity).filter((x) => x.at === '2026-10-21T10:40').map((x) => x.key).sort();
     expect(keys).toEqual(['activity.feed.groupPhoto', 'activity.feed.photo', 'activity.feed.video']);
@@ -276,7 +276,7 @@ describe('moderating pending photos', () => {
     expect(r.state.photos[id]).toMatchObject({ kind: 'group', visibility: 'pending' });
     expect(note(r.state, 'activity.notif.newPhoto')).toHaveLength(0);
     const ok = run(r.state, 'photo.approve', { photoIds: [id] }, 's9');
-    expect(note(ok.state, 'activity.notif.newPhoto').flatMap((x) => x.toUsers).sort()).toEqual(['fm10_0', 'fm2_0', 'fm2_1']);
+    expect(note(ok.state, 'activity.notif.newPhoto').flatMap((x) => x.toUsers).sort()).toEqual(['f_sinta', 'fm10_0', 'fm2_0', 'fm2_1']);
   });
 });
 
