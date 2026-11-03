@@ -77,7 +77,7 @@ export function PlanTab({ p }: { p: P }) {
           {finance && !m.deletedAt ? <button type="button" data-testid="pickup-edit" onClick={() => { setPickOn(!!m.pickup?.on); setPickPrice(m.pickup?.price ? fmtN(m.pickup.price) : ''); setPickOpen(true); }} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('common.edit')}</button> : null}
         </span>
       </Fact>
-      <div style={{ padding: '6px 0' }}><NextBill memberId={m.id} /></div>
+      <div style={{ padding: '6px 0' }}><NextBill memberId={m.id} staff /></div>
       <Fact k={t('profile.billingContact')}>{prim ? prim.name : '—'}</Fact>
       <Fact k={t('profile.va')}>{m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')}</Fact>
       <Fact k={t('profile.since')}>{since ? fmt.fmonth(ym(since), true) : '—'}</Fact>

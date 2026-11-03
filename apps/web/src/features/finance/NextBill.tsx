@@ -6,7 +6,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { lineLabel, money } from './lib';
 
-export function NextBill({ memberId, caption }: { memberId: string; /** a name above the rows, when a family page shows more than one parent */ caption?: string }) {
+export function NextBill({ memberId, caption, staff }: { memberId: string; /** a name above the rows, when a family page shows more than one parent */ caption?: string; /** the staff Plan tab: "On the next bill" */ staff?: boolean }) {
   const s = useClub();
   const t = useT();
   const fmt = useFmt();
@@ -15,9 +15,9 @@ export function NextBill({ memberId, caption }: { memberId: string; /** a name a
   if (!items.length) return null;
   const row = { display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', gap: 14, fontSize: 15, lineHeight: 1.4 } as const;
   return (
-    <section data-testid="next-bill" aria-label={t('finance.next.title')} className="cp-fill" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
+    <section data-testid="next-bill" aria-label={t(staff ? 'finance.next.titleStaff' : 'finance.next.title')} className="cp-fill" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, padding: '12px 14px', display: 'flex', flexDirection: 'column', gap: 6 }}>
       <h3 style={{ margin: 0, fontSize: 13, lineHeight: '18px', fontWeight: 600, letterSpacing: '0.4px', textTransform: 'uppercase', color: '#6B6259' }}>
-        {t('finance.next.title')}{caption ? ` · ${caption}` : ''}
+        {t(staff ? 'finance.next.titleStaff' : 'finance.next.title')}{caption ? ` · ${caption}` : ''}
       </h3>
       {items.map((i) => (
         <div key={i.id} data-testid="next-item" style={row}>

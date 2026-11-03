@@ -182,5 +182,5 @@ export const finance = {
   'notif.paymentConfirmed': 'Your payment entry for {name} ({amount}, {invoice}) was confirmed.',
   'feed.paymentConfirmed': 'Payment confirmed: {number} · {amount}',
   'err.deskInvoice': 'Choose the invoice this payment is for.', 'err.deskMethod': 'The front desk records cash or bank transfer only.', 'err.deskOverpay': 'That is more than the invoice still owes.',
-  'next.title': 'On your next bill', 'next.total': 'Total',
+  'next.title': 'On your next bill', 'next.titleStaff': 'On the next bill', 'next.total': 'Total',
 };

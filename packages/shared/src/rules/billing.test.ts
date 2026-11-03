@@ -1,6 +1,6 @@
 // The invoice run's lines for a member: the dementia care fee (round 14, A2) on top of the plan line.
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, priceOn, type ClubState, type PlanDef } from '../index';
+import { buildSeed, execute, getUser, priceOn, sum, type ClubState, type PlanDef } from '../index';
 import { FEE_DEFAULTS, feeOf, nextBill, pickupPrice, runLinesFor } from './billing';
 
 const T = '2026-10-21';
@@ -148,5 +148,25 @@ describe('round 17: on your next bill', () => {
     cur.leaves = [];
     cur.lastDay = '2026-10-31';
     expect(nextBill(s, 'm46', T).items).toEqual([]);
+  });
+  // before the 21st the next invoice is this month's (issued on the 21st of the month itself), so the preview reads this month's run lines
+  it('ending 30 Nov, today 4 Nov: November\'s pick-up is on the bill, as on the invoice', () => {
+    const s = bare();
+    s.members.m46.pickup = { on: true, price: 450_000 };
+    trip(s, 'cel-cake-m46', 'm46', 350_000);
+    s.members.m46.memberships.at(-1)!.lastDay = '2026-11-30';
+    const today = '2026-11-04';
+    const b = nextBill(s, 'm46', today);
+    expect(b.items.map((i) => i.id)).toEqual(['pickup', 'cel-cake-m46']);
+    expect(b.total).toBe(800_000);
+    const inv = runLinesFor(s, s.members.m46, '2026-11', today).filter((l) => l.kind === 'pickup' || l.id.startsWith('charge-'));
+    expect(b.total).toBe(sum(inv.map((l) => l.amount)));
+  });
+  it('on leave in November, today 4 Nov: no pick-up, as on the invoice', () => {
+    const s = bare();
+    s.members.m46.pickup = { on: true, price: 450_000 };
+    s.members.m46.memberships.at(-1)!.leaves = [{ month: '2026-11', at: '2026-10-01T10:00', by: 'staff:s1' }];
+    expect(nextBill(s, 'm46', '2026-11-04').items).toEqual([]);
+    expect(runLinesFor(s, s.members.m46, '2026-11', '2026-11-04').some((l) => l.kind === 'pickup')).toBe(false);
   });
 });

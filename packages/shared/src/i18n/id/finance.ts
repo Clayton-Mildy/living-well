@@ -183,5 +183,5 @@ export const finance: Same<typeof EN> = {
   'notif.paymentConfirmed': 'Catatan pembayaran Anda untuk {name} ({amount}, {invoice}) sudah dikonfirmasi.',
   'feed.paymentConfirmed': 'Pembayaran dikonfirmasi: {number} · {amount}',
   'err.deskInvoice': 'Pilih tagihan untuk pembayaran ini.', 'err.deskMethod': 'Meja depan hanya mencatat tunai atau transfer bank.', 'err.deskOverpay': 'Jumlah itu melebihi sisa tagihan.',
-  'next.title': 'Di tagihan berikutnya', 'next.total': 'Total',
+  'next.title': 'Di tagihan berikutnya', 'next.titleStaff': 'Di tagihan berikutnya', 'next.total': 'Total',
 };

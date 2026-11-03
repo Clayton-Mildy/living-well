@@ -164,20 +164,20 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
 }
 /**
  * Round 17: what a member will see on their next bill beyond the plan fee (a preview; the plan fee is left out because the family knows it and leave or a stop
- * would make a wrong number): the charges still waiting for an invoice (a field trip, a birthday cake) and next month's pick-up fee when it is on.
+ * would make a wrong number): the charges still waiting for an invoice (a field trip, a birthday cake) and the pick-up fee. The items are read from the
+ * next un-run period's runLinesFor() (this month's until its run is done, then next month's), so the preview and the invoice can't drift apart.
  */
 export interface NextBillItem { id: string; label: string; params?: Record<string, string | number>; amount: number }
 export function nextBill(s: ClubState, memberId: string, today: ISODate): { items: NextBillItem[]; total: number } {
   const m = s.members[memberId];
   if (!m || m.deletedAt) return { items: [], total: 0 };
+  const period = runDone(s, ym(today)) ? addMonths(ym(today), 1) : ym(today);
+  const lines = runLinesFor(s, m, period, today);
   const items: NextBillItem[] = [];
-  const next = addMonths(ym(today), 1);
-  const first: ISODate = `${next}-01`;
-  const pick = pickupPrice(s, m, first);
-  if (pick && !onLeaveIn(m, next) && membershipStatus(m, first) !== 'ended') items.push({ id: 'pickup', label: 'inv.line.pickup', amount: pick.price });
-  for (const c of sortBy(live(s.pendingCharges).filter((c) => c.memberId === memberId && !c.invoiceId), (c) => c.createdAt + c.id)) {
-    items.push({ id: c.id, label: c.label, ...(c.params ? { params: c.params } : {}), amount: c.amount });
-  }
+  const pick = lines.find((l) => l.kind === 'pickup');
+  if (pick) items.push({ id: 'pickup', label: pick.label, amount: pick.amount });
+  const charges = sortBy(lines.filter((l) => l.id.startsWith('charge-')).map((l) => ({ l, c: s.pendingCharges[l.id.slice(7)] })), ({ l, c }) => (c?.createdAt || '') + l.id);
+  for (const { l } of charges) items.push({ id: l.id.slice(7), label: l.label, ...(l.params ? { params: l.params } : {}), amount: l.amount });
   return { items, total: sum(items.map((i) => i.amount)) };
 }
 export function runPreview(s: ClubState, period: YM, today: ISODate): RunPreviewRow[] {

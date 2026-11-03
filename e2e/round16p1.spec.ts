@@ -38,7 +38,7 @@ test('Fransiska: the birthday cake waits on the next bill, no invoice of its own
   await expect(page.getByRole('button', { name: 'Issue invoice' })).toHaveCount(0);
   await page.goto('/members/m46/plan'); // Opa Budi: the seeded cake is a pending charge, billed with November
   const next = page.getByTestId('next-bill');
-  await expect(next).toContainText('On your next bill');
+  await expect(next).toContainText('On the next bill');
   await expect(next.getByTestId('next-item').filter({ hasText: /Birthday · Birthday cake \(chocolate, no nuts\)/ })).toContainText('Rp 350.000');
   await assertNoHorizontalScroll(page);
 
