@@ -11,6 +11,8 @@ const isHoliday = (kind: unknown) => kind === 'closed' || kind === 'holiday';
 
 /** Which owner-approval kind a run of this action is (input already parsed), or null when it never waits for the Owner. */
 export function ownerKindOf(name: string, input: unknown, s: ClubState): OwnerKind | null {
+  // round 17: club.updateSettings waits for the Owner only for the Flex visits and the notice period; the few-visits alert settings apply at once
+  if (name === 'club.updateSettings') { const i = (input ?? {}) as { noticeDays?: unknown; flexQuota?: unknown }; return i.noticeDays !== undefined || i.flexQuota !== undefined ? 'pricing' : null; }
   if (PRICING.includes(name)) return 'pricing';
   if (BUDGET.includes(name)) return 'budget';
   const i = (input ?? {}) as { kind?: unknown; eventId?: string };

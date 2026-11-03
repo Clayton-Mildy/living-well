@@ -25,7 +25,7 @@ export const AREA_PREFIXES: [prefix: string, area: string][] = [
   ['receipt.', 'receipts'],
   ['vendorInvoice.', 'spending'],
   ['guest.', 'guests'], ['stock.', 'stock'], ['directory.', 'directory'],
-  ['prices.set', 'plans'], ['club.setPlan', 'plans'], ['club.updateSettings', 'plans'],
+  ['prices.set', 'plans'], ['club.setPlan', 'plans'], ['club.updateSettings', 'settings'], // round 17: Admin › Settings (the Flex visits rule too)
   // club
   ['calendarEvent.', 'calendar'], ['schedule.', 'calendar'], ['activity.', 'calendar'], ['room.', 'calendar'],
   ['broadcast.', 'broadcast'], ['template.', 'broadcast'],

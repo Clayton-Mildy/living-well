@@ -17,7 +17,7 @@ import { OwnerWaiting } from '../../components/OwnerWaiting';
 
 type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave' | 'dementia' | 'pickup' | 'fieldTrip';
 const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip']; // round 16: pick-up and field trip defaults
-type Draft = Record<PriceKey, string> & { quota: string; notice: string; from: string; plans: Record<string, string> }; // plans: the catalogue plans' prices as typed ('' = no price)
+type Draft = Record<PriceKey, string> & { quota: string; from: string; plans: Record<string, string> }; // plans: the catalogue plans' prices as typed ('' = no price)
 
 export function Plans() {
   const t = useT();
@@ -32,7 +32,7 @@ export function Plans() {
   const price = priceOn(s, today);
   const custom = s.club.settings.plans ?? [];
   const [sheet, setSheet] = useState<{ plan?: PlanDef } | null>(null);
-  const saved: Draft = { flex: fmtN(price.flex), gold: fmtN(price.gold), extra: fmtN(price.extra), registration: fmtN(feeOf(price, 'registration')), trial: fmtN(feeOf(price, 'trial')), leave: fmtN(feeOf(price, 'leave')), dementia: fmtN(feeOf(price, 'dementia')), pickup: fmtN(feeOf(price, 'pickup')), fieldTrip: fmtN(feeOf(price, 'fieldTrip')), quota: String(s.club.settings.flexQuota), notice: String(noticeDays(s)), from: today, plans: Object.fromEntries(custom.map((p) => [p.id, price.plans?.[p.id] ? fmtN(price.plans[p.id]) : ''])) };
+  const saved: Draft = { flex: fmtN(price.flex), gold: fmtN(price.gold), extra: fmtN(price.extra), registration: fmtN(feeOf(price, 'registration')), trial: fmtN(feeOf(price, 'trial')), leave: fmtN(feeOf(price, 'leave')), dementia: fmtN(feeOf(price, 'dementia')), pickup: fmtN(feeOf(price, 'pickup')), fieldTrip: fmtN(feeOf(price, 'fieldTrip')), quota: String(s.club.settings.flexQuota), from: today, plans: Object.fromEntries(custom.map((p) => [p.id, price.plans?.[p.id] ? fmtN(price.plans[p.id]) : ''])) };
   const [draft, setDraft] = useState<Draft | null>(null);
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -54,15 +54,12 @@ export function Plans() {
   const quota = d.quota === '' ? NaN : Number(d.quota);
   const quotaShown = Number.isFinite(quota) ? quota : s.club.settings.flexQuota; // what the cards say while it is being typed
   const priceChanged = PRICE_KEYS.some((k) => prices[k] !== current[k]) || plansChanged;
-  const notice = d.notice === '' ? NaN : Number(d.notice);
-  const noticeChanged = notice !== noticeDays(s); // round 16: the notice period for a downgrade, stop or leave
   const quotaChanged = quota !== s.club.settings.flexQuota;
-  const rulesChanged = quotaChanged || noticeChanged;
+  const rulesChanged = quotaChanged; // round 17: the notice period moved to Admin › Settings
   const dirty = priceChanged || rulesChanged;
   const err = {
     flex: prices.flex < 1, gold: prices.gold < 1, extra: prices.extra < 1, registration: prices.registration < 1, trial: prices.trial < 1, leave: prices.leave < 1, dementia: prices.dementia < 1, pickup: prices.pickup < 1, fieldTrip: prices.fieldTrip < 1,
     quota: !Number.isInteger(quota) || quota < 1 || quota > 23,
-    notice: !Number.isInteger(notice) || notice < 1 || notice > 60,
     from: priceChanged && (!d.from || d.from < today),
   };
   const valid = !Object.values(err).some(Boolean) && !custom.some((p) => planErr(p.id));
@@ -98,7 +95,7 @@ export function Plans() {
         toOwner ||= r.reviewed === 'owner';
       }
       if (rulesChanged) {
-        const r = await act('club.updateSettings', { ...(quotaChanged ? { flexQuota: quota } : {}), ...(noticeChanged ? { noticeDays: notice } : {}) }, { silent: true });
+        const r = await act('club.updateSettings', { flexQuota: quota }, { silent: true });
         if (!r.ok) return;
         toOwner ||= r.reviewed === 'owner';
       }
@@ -219,7 +216,6 @@ export function Plans() {
       ) : null}
     </>
   ) : <div style={{ fontSize: 15, color: '#6B6259', lineHeight: 1.4 }}>{t('mgmt.plNoMembers')}</div>;
-  const noticeBody = <TextField label={t('mgmt.plNoticeL')} value={d.notice} inputMode="numeric" maxLength={2} onChange={(v) => set({ notice: v.replace(/\D/g, '') })} error={show('notice') && t('mgmt.err.noticeInvalid')} hint={t('mgmt.plNoticeHint')} />;
   const rulesBody = <TextField label={t('mgmt.plQuotaL')} value={d.quota} inputMode="numeric" maxLength={2} onChange={(v) => set({ quota: v.replace(/\D/g, '') })} error={show('quota') && t('mgmt.err.quotaInvalid')} />;
 
   // price edits need a date and the notify choice; a visits-only edit just applies from the next invoice (no date, no notify)
@@ -245,7 +241,7 @@ export function Plans() {
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(auto-fit,minmax(min(100%,300px),1fr))', gap: isPhone ? 18 : 16, alignItems: 'start' }}>
         {section(t('mgmt.plSecExtra'), [
           priceBlock('extra', t('mgmt.plExtra'), t('mgmt.perDay'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')], [t('mgmt.plCounted'), t('mgmt.plCheckIns')]]),
-          priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), tn(t, 'mgmt.plLeaveAskV', Number.isFinite(notice) ? notice : noticeDays(s))]], noticeBody),
+          priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), tn(t, 'mgmt.plLeaveAskV', noticeDays(s))]]),
           priceBlock('dementia', t('mgmt.plDementia'), t('mgmt.perMonth'), []),
           priceBlock('pickup', t('mgmt.plPickup'), t('mgmt.perMonth'), [[t('mgmt.plPickupWho'), t('mgmt.plPickupWhoV')]]),
           priceBlock('fieldTrip', t('mgmt.plFieldTrip'), t('mgmt.perTrip'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')]]),

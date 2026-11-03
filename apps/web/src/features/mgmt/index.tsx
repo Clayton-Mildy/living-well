@@ -5,5 +5,6 @@ export { Venue } from './Venue';
 export { People } from './People';
 export { Surveys } from './Surveys';
 export { Plans } from './Plans';
+export { Settings } from './Settings';
 export { Roles } from './Roles';
 export { CelebrationLink } from './CelebrationLink';

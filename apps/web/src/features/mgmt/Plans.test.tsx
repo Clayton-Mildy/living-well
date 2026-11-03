@@ -214,18 +214,13 @@ describe.each([['phone', 390], ['wide', 1280]])('the plan catalogue (%s)', (_n, 
   });
 });
 
-describe('round 16: the notice period', () => {
-  it('shows 14 days in the Leave card; changing it to 21 saves club.updateSettings with noticeDays', async () => {
+describe('round 17: the notice period moved to Admin › Settings', () => {
+  it('Plans has no notice field any more; the Leave card still says when it must be asked (read only)', async () => {
     openClub();
-    const fn = vi.fn(async () => ({ ok: true as const, result: {} }));
-    useReplica.setState({ act: fn as never });
     await show(<Plans />, 390);
-    const input = Array.from(document.querySelectorAll<HTMLInputElement>('input')).find((i) => i.closest('label')?.textContent?.includes('Notice period (days)'))!;
-    expect(input.value).toBe('14');
-    await type(input, '21');
-    const save = Array.from(document.querySelectorAll('button')).find((b) => /Save changes$/.test(b.textContent || ''))!;
-    await act(async () => { save.click(); });
-    expect(fn).toHaveBeenCalledWith('club.updateSettings', { noticeDays: 21 });
+    const labels = Array.from(document.querySelectorAll('label')).map((l) => l.textContent || '');
+    expect(labels.some((l) => l.includes('Notice period'))).toBe(false);
+    expect(section('Extra charges')!.textContent).toContain('14 days before the 1st');
   });
 });
 

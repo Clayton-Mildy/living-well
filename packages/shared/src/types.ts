@@ -85,6 +85,8 @@ export interface ClubSettings {
   flexQuota: number; // 10 visits / month
   /** KC round 16: days before a month's 1st by which a downgrade, stop or leave for that month must be asked (missing = 14; rules/notice.ts) */
   noticeDays?: number;
+  /** KC round 17: the few-visits alert — flag an active member with fewer than `below` visit days this month, `daysBeforeDeadline` days before the last day to change next month (missing = 5 and 2) */
+  fewVisits?: { below: number; daysBeforeDeadline: number };
   issueDay: number; // 21 (KC round 6, brochure: invoices on the 21st)
   dueDay: number; // 28 (paid within 7 days)
   finalDueDays: number; // 14

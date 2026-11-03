@@ -787,24 +787,31 @@ export const clubActions = [
     },
   }),
   // The club rules: how many visits a month a Flex member gets before a visit is an extra day (counted from check-ins), and (round 16) the notice period
-  // for a downgrade, stop or leave (rules/notice.ts).
-  defineAction<{ flexQuota?: number; noticeDays?: number }>({
+  // for a downgrade, stop or leave (rules/notice.ts). Round 17 (Admin › Settings): the few-visits alert's two numbers (those apply at once, ownerGate.ts).
+  defineAction<{ flexQuota?: number; noticeDays?: number; fewVisits?: { below: number; daysBeforeDeadline: number } }>({
     name: 'club.updateSettings',
     can: mgmtOnly,
     parse(raw) {
       const o = obj(raw);
-      const out: { flexQuota?: number; noticeDays?: number } = {};
+      const out: { flexQuota?: number; noticeDays?: number; fewVisits?: { below: number; daysBeforeDeadline: number } } = {};
       if (o.flexQuota !== undefined) out.flexQuota = int(o.flexQuota, 1, 23, 'flexQuota');
       if (o.noticeDays !== undefined) out.noticeDays = int(o.noticeDays, 1, 60, 'noticeDays');
-      if (out.flexQuota === undefined && out.noticeDays === undefined) bad('err.invalid');
+      if (o.fewVisits !== undefined) {
+        const f = obj(o.fewVisits);
+        out.fewVisits = { below: int(f.below, 1, 31, 'below'), daysBeforeDeadline: int(f.daysBeforeDeadline, 0, 14, 'daysBeforeDeadline') };
+      }
+      if (out.flexQuota === undefined && out.noticeDays === undefined && out.fewVisits === undefined) bad('err.invalid');
       return out;
     },
     run(d, i, ctx) {
       const st = d.club.settings;
-      const same = (i.flexQuota === undefined || i.flexQuota === st.flexQuota) && (i.noticeDays === undefined || i.noticeDays === (st.noticeDays ?? NOTICE_DAYS_DEFAULT));
+      const few = st.fewVisits ?? { below: 5, daysBeforeDeadline: 2 }; // the defaults (rules/fewVisits.ts)
+      const same = (i.flexQuota === undefined || i.flexQuota === st.flexQuota) && (i.noticeDays === undefined || i.noticeDays === (st.noticeDays ?? NOTICE_DAYS_DEFAULT))
+        && (i.fewVisits === undefined || (i.fewVisits.below === few.below && i.fewVisits.daysBeforeDeadline === few.daysBeforeDeadline));
       if (same) ctx.fail('err.noChanges');
       if (i.flexQuota !== undefined) st.flexQuota = i.flexQuota;
       if (i.noticeDays !== undefined) st.noticeDays = i.noticeDays;
+      if (i.fewVisits !== undefined) st.fewVisits = i.fewVisits;
       ctx.feed({ icon: 'tune', key: 'mgmt.feed.rules', params: { quota: st.flexQuota } });
     },
   }),

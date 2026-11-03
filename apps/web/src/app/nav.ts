@@ -20,6 +20,7 @@ const ITEMS: Record<string, NavItem> = Object.fromEntries([
   n('calendar', 'calShort', 'calendar_month'), n('guests', 'guests', 'co_present'), n('insights', 'insights', 'insights'), n('broadcast', 'broadcast', 'campaign'), n('venue', 'venue', 'storefront'), n('hr', 'people', 'badge'),
   n('directory', 'directory', 'contacts'), n('surveys', 'surveys', 'rate_review'), n('plans', 'plans', 'sell'), n('contacts', 'contacts', 'contacts'), n('requests', 'requests', 'add_shopping_cart'),
   n('roles', 'roles', 'admin_panel_settings'), // round 16: the Owner's Admin › Roles
+  n('settings', 'settings', 'tune'), // round 17: Admin › Settings (Owner and Management)
 ].map((x) => [x.key, x]));
 // round 8 (Family App prototype): Today · Photos · Calendar · Health · Me; Billing and Contacts open from Me
 export const FAMILY_NAV: NavItem[] = [n('today', 'today', 'wb_sunny'), n('photos', 'photos', 'photo_library'), n('calendar', 'calShort', 'calendar_month'), n('health', 'healthF', 'favorite'), n('me', 'me', 'person')];
@@ -44,7 +45,7 @@ const MGMT_LAYOUT: Layout = [
   [G_CARE, ['hchecks', 'readings', 'log', 'camera']], // the photo library is the Camera's Library tab
   [G_KITCHEN, ['menu', 'lunch', 'feedback', 'stock']], // KC 28 Oct: management has the Lunch round too
   [G_FINANCE, ['billing', 'payments', 'budget', 'receipts', 'spending']],
-  [G_CLUB, ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'roles']], // round 16: 'roles' is the Owner's only (DEFAULT_MENUS.owner); management's menus do not include it
+  [G_CLUB, ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'settings', 'roles']], // round 16: 'roles' is the Owner's only (DEFAULT_MENUS.owner); management's menus do not include it
 ];
 /** Admin › Roles (round 17) groups the menus as management's sidebar does, without Today and Roles; a menu not in that layout goes to the first group, General. */
 export function menuGroups(): { label: string | null; keys: string[] }[] {
@@ -114,7 +115,7 @@ export const allowedKeys = (s: ClubState, role: Role) => {
 
 export type ScreenId =
   | 'arrivals' | 'health' | 'activityToday' | 'kmenu' | 'klunch' | 'fin' | 'overview' | 'familyToday' | 'requests' | 'enq' | 'members' | 'readings' | 'camera' | 'dlog'
-  | 'cal' | 'kfeed' | 'kstock' | 'pay' | 'budget' | 'rcpt' | 'spend' | 'dir' | 'venue' | 'bc' | 'hr' | 'surveys' | 'plans' | 'reviews' | 'photoLib' | 'fphotos' | 'familyHealth' | 'fbill'
+  | 'cal' | 'kfeed' | 'kstock' | 'pay' | 'budget' | 'rcpt' | 'spend' | 'dir' | 'venue' | 'bc' | 'hr' | 'surveys' | 'plans' | 'settings' | 'reviews' | 'photoLib' | 'fphotos' | 'familyHealth' | 'fbill'
   | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'monthReport' | 'drafts'
   | 'roles' | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts' | 'celebrations';
 
@@ -125,7 +126,7 @@ export function screenFor(s: ClubState, role: Role, key: string): ScreenId | nul
   const map: Record<string, ScreenId> = {
     arrivals: 'arrivals', hchecks: 'health', menu: 'kmenu', lunch: 'klunch', readings: 'readings', log: 'dlog', camera: 'camera', photos: 'photoLib', feedback: 'kfeed', stock: 'kstock',
     billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', spending: 'spend', directory: 'dir', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
-    enquiries: 'enq', calendar: 'cal', plans: 'plans', surveys: 'surveys', reviews: 'reviews', requests: 'requests',
+    enquiries: 'enq', calendar: 'cal', plans: 'plans', settings: 'settings', surveys: 'surveys', reviews: 'reviews', requests: 'requests',
     renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', monthReport: 'monthReport', drafts: 'drafts', celebrations: 'celebrations', roles: 'roles',
   };
   return map[key] || null;

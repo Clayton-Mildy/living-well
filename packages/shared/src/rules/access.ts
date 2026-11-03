@@ -12,7 +12,7 @@ const MGMT_MENU = [
   'hchecks', 'readings', 'log', 'camera',
   'menu', 'lunch', 'feedback', 'stock',
   'billing', 'payments', 'budget', 'receipts', 'spending',
-  'calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans',
+  'calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'settings',
 ];
 
 /** Today's menus per role, in order. `today` is every role's home (not part of the grid, R1). The Owner has management's. */

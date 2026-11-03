@@ -115,7 +115,7 @@ export const mgmt = {
   plan_registration: 'Registration', plan_trial: 'Trial', plan_leave: 'Leave (cuti)', plDementia: 'Dementia care', perOnce: 'One time', perTrial: 'For 2 days in a row',
   plRegWhen: 'Charged', plRegWhenV: 'On the first invoice', plRegAgain: 'Again after', plRegAgainV: 'A stop for an unpaid invoice',
   plTrialDays: 'Length', plTrialDaysV: '2 days in a row', plTrialCollect: 'Collected', plTrialCollectV: 'At the front desk',
-  plLeaveBilled: 'Billed', plLeaveBilledV: 'Instead of the plan', plLeaveAsk: 'Asked', plLeaveAskV: '{n} days before the 1st', plLeaveAskVOne: '{n} day before the 1st', plNoticeL: 'Notice period (days)', plNoticeHint: 'For a downgrade, stop or leave. Upgrades need none.', 'err.noticeInvalid': 'Use a whole number from 1 to 60.',
+  plLeaveBilled: 'Billed', plLeaveBilledV: 'Instead of the plan', plLeaveAsk: 'Asked', plLeaveAskV: '{n} days before the 1st', plLeaveAskVOne: '{n} day before the 1st', 'err.noticeInvalid': 'Use a whole number from 1 to 60.',
 
   // ----- KC round 7: survey templates, the survey log, venue surveys and the renter's rating link -----
   svTabLive: 'Live', svTabDrafts: 'Drafts', svTabTemplates: 'Templates', svTabLog: 'Log', svKind_family: 'Families', svKind_venue: 'Venue renters',
@@ -155,4 +155,12 @@ export const mgmt = {
   'access.role.lobby': 'Front desk', 'access.role.nurse': 'Nurse', 'access.role.activity': 'Activity teacher', 'access.role.kitchen': 'Kitchen & F&B', 'access.role.finance': 'Finance', 'access.role.mgmt': 'Management',
   'access.notif.changed': 'Your menus were changed by {name}',
   'access.saved': 'Saved.',
+  // ----- round 17: Admin › Settings -----
+  'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.notice': 'Notice period (days)',
+  'settings.noticeHint': 'For a downgrade, stop or leave. Upgrades need none.',
+  'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewDays': 'Alert {n} days before the last change day',
+  'settings.fewHint': 'An active member with fewer visit days than this by the alert day is flagged on Next month. Applies at once.',
+  'settings.terms': 'Terms and conditions', 'settings.noTerms': 'No terms yet', 'settings.termsRow': 'Version {v} · published {d} by {name} · {a} of {n} agreed',
+  'settings.save': 'Save', 'settings.cancel': 'Cancel', 'settings.saved': 'Saved.',
+  'settings.err.few': 'Use a whole number from 1 to 31.', 'settings.err.days': 'Use a whole number from 0 to 14.',
 };

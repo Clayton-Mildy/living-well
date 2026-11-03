@@ -706,6 +706,26 @@ describe('prices and club rules', () => {
   });
 });
 
+describe('few-visits settings (round 17)', () => {
+  it('management saves them; below 1-31, days before the deadline 0-14, whole numbers', () => {
+    const s = seed().citra;
+    const r = run(s, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, 's9');
+    expect(r.state.club.settings.fewVisits).toEqual({ below: 4, daysBeforeDeadline: 3 });
+    expect(run(s, 'club.updateSettings', { fewVisits: { below: 31, daysBeforeDeadline: 0 } }, 's9').state.club.settings.fewVisits).toEqual({ below: 31, daysBeforeDeadline: 0 });
+    for (const bad of [{ below: 0, daysBeforeDeadline: 2 }, { below: 32, daysBeforeDeadline: 2 }, { below: 5, daysBeforeDeadline: -1 }, { below: 5, daysBeforeDeadline: 15 }, { below: 2.5, daysBeforeDeadline: 2 }, { below: 5 }]) {
+      fails(s, 'club.updateSettings', { fewVisits: bad }, 's9', 'err.invalid');
+    }
+    // the defaults (5 and 2) are no change until something else was saved
+    fails(s, 'club.updateSettings', { fewVisits: { below: 5, daysBeforeDeadline: 2 } }, 's9', 'err.noChanges');
+    fails(r.state, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, 's9', 'err.noChanges');
+    expect(() => run(s, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, 's10')).toThrow('err.forbidden');
+  });
+  it('can be saved together with the notice period', () => {
+    const r = run(seed().citra, 'club.updateSettings', { noticeDays: 10, fewVisits: { below: 3, daysBeforeDeadline: 1 } }, 's9');
+    expect(r.state.club.settings).toMatchObject({ noticeDays: 10, fewVisits: { below: 3, daysBeforeDeadline: 1 } });
+  });
+});
+
 describe('the plan catalogue (round 15, phase 2)', () => {
   const plan = { name: 'Flex 8', nameId: 'Fleks 8', kind: 'days', quota: 8, active: true };
   it('management creates plans (plan_1, plan_2 ...), others are refused', () => {

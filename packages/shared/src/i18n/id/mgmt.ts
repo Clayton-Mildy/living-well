@@ -117,7 +117,7 @@ export const mgmt: Same<typeof EN> = {
   plan_registration: 'Pendaftaran', plan_trial: 'Percobaan', plan_leave: 'Cuti', plDementia: 'Perawatan demensia', perOnce: 'Sekali saja', perTrial: 'Untuk 2 hari berturut-turut',
   plRegWhen: 'Ditagih', plRegWhenV: 'Di invoice pertama', plRegAgain: 'Lagi setelah', plRegAgainV: 'Dihentikan karena invoice belum dibayar',
   plTrialDays: 'Lama', plTrialDaysV: '2 hari berturut-turut', plTrialCollect: 'Dibayar', plTrialCollectV: 'Di meja depan',
-  plLeaveBilled: 'Ditagih', plLeaveBilledV: 'Sebagai pengganti paket', plLeaveAsk: 'Diajukan', plLeaveAskV: '{n} hari sebelum tanggal 1', plLeaveAskVOne: '{n} hari sebelum tanggal 1', plNoticeL: 'Masa pemberitahuan (hari)', plNoticeHint: 'Untuk turun paket, berhenti, atau cuti. Naik paket tidak perlu.', 'err.noticeInvalid': 'Gunakan bilangan bulat 1 sampai 60.',
+  plLeaveBilled: 'Ditagih', plLeaveBilledV: 'Sebagai pengganti paket', plLeaveAsk: 'Diajukan', plLeaveAskV: '{n} hari sebelum tanggal 1', plLeaveAskVOne: '{n} hari sebelum tanggal 1', 'err.noticeInvalid': 'Gunakan bilangan bulat 1 sampai 60.',
 
   // ----- KC round 7: templat survei, riwayat survei, survei venue, dan tautan penilaian untuk penyewa -----
   svTabLive: 'Aktif', svTabDrafts: 'Draf', svTabTemplates: 'Templat', svTabLog: 'Riwayat', svKind_family: 'Keluarga', svKind_venue: 'Penyewa venue',
@@ -156,4 +156,12 @@ export const mgmt: Same<typeof EN> = {
   'access.role.lobby': 'Resepsionis', 'access.role.nurse': 'Perawat', 'access.role.activity': 'Pengajar aktivitas', 'access.role.kitchen': 'Dapur & F&B', 'access.role.finance': 'Keuangan', 'access.role.mgmt': 'Manajemen',
   'access.notif.changed': 'Menu Anda diubah oleh {name}',
   'access.saved': 'Tersimpan.',
+  // ----- round 17: Admin › Settings -----
+  'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.notice': 'Masa pemberitahuan (hari)',
+  'settings.noticeHint': 'Untuk turun paket, berhenti, atau cuti. Naik paket tidak perlu.',
+  'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewDays': 'Ingatkan {n} hari sebelum hari terakhir perubahan',
+  'settings.fewHint': 'Anggota aktif dengan hari kunjungan lebih sedikit dari ini pada hari peringatan ditandai di Bulan depan. Berlaku seketika.',
+  'settings.terms': 'Syarat dan ketentuan', 'settings.noTerms': 'Belum ada syarat', 'settings.termsRow': 'Versi {v} · diterbitkan {d} oleh {name} · {a} dari {n} setuju',
+  'settings.save': 'Simpan', 'settings.cancel': 'Batal', 'settings.saved': 'Tersimpan.',
+  'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.', 'settings.err.days': 'Gunakan bilangan bulat 0 sampai 14.',
 };

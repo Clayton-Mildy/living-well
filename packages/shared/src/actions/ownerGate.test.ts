@@ -111,11 +111,26 @@ describe('owner gate', () => {
     const b = run(a.state, 'approval.approve', { type: 'owner', ids: [crId] }, OWNER);
     expect(b.state.changeRequests[crId].status).toBe('approved');
   });
+  it('round 17: the notice period from Ega waits for the Owner; the few-visits settings apply at once', () => {
+    const a = run(base, 'club.updateSettings', { noticeDays: 10 }, EGA);
+    expect(a.reviewed).toBe('owner');
+    expect(a.state.club.settings.noticeDays).toBe(base.club.settings.noticeDays);
+    const crId = a.result.changeRequestId as string;
+    expect(a.state.changeRequests[crId]).toMatchObject({ action: 'club.updateSettings', section: 'pricing', status: 'pending' });
+    const b = run(a.state, 'review.approve', { crId }, OWNER);
+    expect(b.state.club.settings.noticeDays).toBe(10);
+    const f = run(base, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, EGA);
+    expect(f.reviewed).toBeUndefined();
+    expect(f.state.club.settings.fewVisits).toEqual({ below: 4, daysBeforeDeadline: 3 });
+    expect(pendingOwnerRequests(f.state, 'pricing')).toHaveLength(0);
+  });
   it('ownerKindOf maps each action', () => {
     const hol = live(base.calendarEvents).find((e) => e.kind === 'holiday')!;
     const out = live(base.calendarEvents).find((e) => e.kind === 'outing')!;
     expect(ownerKindOf('club.setPlan', {}, base)).toBe('pricing');
-    expect(ownerKindOf('club.updateSettings', {}, base)).toBe('pricing');
+    expect(ownerKindOf('club.updateSettings', { noticeDays: 10 }, base)).toBe('pricing');
+    expect(ownerKindOf('club.updateSettings', { flexQuota: 8 }, base)).toBe('pricing');
+    expect(ownerKindOf('club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, base)).toBeNull(); // round 17: the few-visits alert applies at once
     expect(ownerKindOf('budget.addSection', {}, base)).toBe('budget');
     expect(ownerKindOf('budget.renameSection', {}, base)).toBe('budget');
     expect(ownerKindOf('calendarEvent.update', { eventId: out.id, kind: 'closed' }, base)).toBe('holidays');

@@ -43,6 +43,7 @@ export const SCREEN_ENTRIES: ScreenEntry[] = [
   sc('contacts', 'contacts', 'contacts', ['contacts', 'phone numbers'], ['kontak', 'nomor telepon']),
   sc('surveys', 'surveys', 'rate_review', ['surveys'], ['survei']),
   sc('plans', 'plans', 'sell', ['plans', 'pricing', 'prices'], ['paket', 'harga']),
+  sc('settings', 'settings', 'tune', ['settings', 'notice period', 'few visits', 'terms'], ['pengaturan', 'masa pemberitahuan', 'kunjungan sedikit', 'syarat']), // round 17
   sc('requests', 'requests', 'add_shopping_cart', ['requests', 'stock request', 'budget request'], ['permintaan']),
   { key: 'drafts', label: 'drafts.title', icon: 'drafts', keywords: { en: ['drafts'], id: ['draf'] } },
 ];

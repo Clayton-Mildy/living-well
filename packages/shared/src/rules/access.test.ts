@@ -11,7 +11,7 @@ const TODAY: Record<string, string[]> = {
   activity: ['today', 'camera', 'log', 'members', 'calendar', 'tasks', 'requests', 'contacts'],
   kitchen: ['today', 'lunch', 'feedback', 'tasks', 'requests', 'contacts'],
   finance: ['today', 'payments', 'budget', 'receipts', 'spending', 'stock', 'guests', 'members', 'tasks', 'directory'],
-  mgmt: ['today', 'members', 'reviews', 'tasks', 'report', 'monthReport', 'enquiries', 'renewals', 'hchecks', 'readings', 'log', 'camera', 'menu', 'lunch', 'feedback', 'stock', 'billing', 'payments', 'budget', 'receipts', 'spending', 'calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans'],
+  mgmt: ['today', 'members', 'reviews', 'tasks', 'report', 'monthReport', 'enquiries', 'renewals', 'hchecks', 'readings', 'log', 'camera', 'menu', 'lunch', 'feedback', 'stock', 'billing', 'payments', 'budget', 'receipts', 'spending', 'calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'settings'], // round 17: Admin › Settings
 };
 
 describe('access grid', () => {

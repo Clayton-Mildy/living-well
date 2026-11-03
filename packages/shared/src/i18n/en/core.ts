@@ -41,6 +41,8 @@ export const nav = {
   spending: 'Spending', s_spending: 'Spending',
   // round 16
   roles: 'Roles', s_roles: 'Roles',
+  // round 17
+  settings: 'Settings', s_settings: 'Settings',
 };
 export const roles = {
   lobby: 'Lobby', nurse: 'Nurse', activity: 'Activity teacher', kitchen: 'Kitchen & F&B', finance: 'Finance', mgmt: 'Management', owner: 'Owner', family: 'Family',

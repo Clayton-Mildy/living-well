@@ -24,6 +24,11 @@ describe('action areas', () => {
     writeFileSync(FIXTURE, JSON.stringify(out, null, 1) + '\n');
   });
 
+  it('round 17: the club rules belong to Settings, not Plans', () => {
+    expect(areaOf('club.updateSettings')).toBe('settings');
+    expect(areaOf('club.setPlan')).toBe('plans');
+  });
+
   it('every action has an area or is unmapped', () => {
     const missing = allActions().map((d) => d.name).filter((n) => !areaOf(n) && !isUnmapped(n));
     expect(missing).toEqual([]);
