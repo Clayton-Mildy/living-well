@@ -2,12 +2,13 @@
 // health alerts per parent, then language, your details, password and sign out.
 // Round 8c, on a laptop it is ONE column, 640px at most, the same groups as the phone. Round 8d: the sidebar says "Me" again, so the title is "Me" on every width
 // (Billing and Contacts are pushed from here and have their "‹ Me" link on every width too).
-import { useState, type ReactNode } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useEffect, useState, type ReactNode } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { initials, isPrimaryFor, live, displayName, rp, type Member } from '@cp/shared';
 import { dayStateOf } from '@cp/shared/rules/family';
 import { familyBill } from '@cp/shared/rules/familyMe';
 import { canSign, signingOf } from '@cp/shared/rules/signing';
+import { currentTerms } from '@cp/shared/rules/terms';
 import { Avatar } from '../../components/ui';
 import { useAct } from '../../lib/act';
 import { memberPhoto } from '../../lib/media';
@@ -15,7 +16,7 @@ import { useSession } from '../../store/session';
 import { useTextSize } from '../../shell/FamilyShell';
 import { F, FamPage, FillCard, LargeTitle, List, ListRow, Cap, Switch, useFamWide } from './kit';
 import { useFamilyCtx, useFamilySel } from './useFamily';
-import { DetailsSheet, PasswordSheet } from './MeSheets';
+import { DetailsSheet, PasswordSheet, TermsSheet } from './MeSheets';
 
 export function FamilyMe() {
   const { s, t, fmt, now, user } = useFamilyCtx();
@@ -26,7 +27,17 @@ export function FamilyMe() {
   const [textSize, setTextSize] = useTextSize();
   const setLang = useSession((x) => x.setLang);
   const signOut = useSession((x) => x.signOut);
-  const [sheet, setSheet] = useState<null | 'details' | 'password'>(null);
+  const [sheet, setSheet] = useState<null | 'details' | 'password' | 'terms'>(null);
+  // round 17: the "Terms updated" notification links to /me?terms=1, which opens the terms once and drops the parameter
+  const [sp, setSp] = useSearchParams();
+  const wantsTerms = sp.get('terms') === '1';
+  useEffect(() => {
+    if (!wantsTerms) return;
+    setSheet('terms');
+    const next = new URLSearchParams(sp);
+    next.delete('terms');
+    setSp(next, { replace: true });
+  }, [wantsTerms]); // eslint-disable-line react-hooks/exhaustive-deps
   const wide = useFamWide();
   if (!user) return null;
   const { today } = now;
@@ -108,6 +119,7 @@ export function FamilyMe() {
       <ListRow icon="format_size" label={t('fme.textSize')} value={t(textSize === 'large' ? 'fme.textLarge' : 'fme.textNormal')} onClick={() => setTextSize(textSize === 'large' ? 'normal' : 'large')} testId="me-text-size" />
       <ListRow icon="badge" label={t('fme.details')} onClick={() => setSheet('details')} testId="me-details" />
       <ListRow icon="lock" label={t('fme.password')} onClick={() => setSheet('password')} testId="me-password" />
+      {currentTerms(s) ? <ListRow icon="policy" label={t('terms.title')} onClick={() => setSheet('terms')} testId="me-terms" /> : null}
       <ListRow icon="logout" label={t('shell.signOut')} danger chevron={false} onClick={out} testId="me-signout" />
     </List>
   );
@@ -127,6 +139,7 @@ export function FamilyMe() {
       {wide ? <div style={{ maxWidth: 640, display: 'flex', flexDirection: 'column', gap: 18, marginTop: 18 }}>{body}</div> : body}
       {sheet === 'details' ? <DetailsSheet onClose={() => setSheet(null)} /> : null}
       {sheet === 'password' ? <PasswordSheet onClose={() => setSheet(null)} /> : null}
+      {sheet === 'terms' ? <TermsSheet onClose={() => setSheet(null)} /> : null}
     </FamPage>
   );
 }

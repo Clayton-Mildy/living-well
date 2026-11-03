@@ -8,6 +8,9 @@ import { say } from '../../store/ui';
 import { ProfilePhotoField } from '../members/ProfilePhoto';
 import { F, FamSheet } from './kit';
 import { useFamilyCtx } from './useFamily';
+import { termsText } from '@cp/shared/rules/terms';
+import { useSession } from '../../store/session';
+import { TermsView } from '../terms/TermsView';
 
 /** A grey labelled input (the sheets' field): label above, 16px text, a soft rust ring on an error. */
 export function Field({ label, value, onChange, inputMode, readOnly, error, hint, name, autoComplete, lock, onEnter, secret, autoFocus }: {
@@ -118,6 +121,19 @@ export function PasswordSheet({ onClose }: { onClose: () => void }) {
       <Field label={t('login.currentPassword')} value={current} onChange={(v) => { setCurrent(v); clear('current'); }} secret autoComplete="current-password" error={err.current || false} />
       <Field label={t('login.newPassword')} value={next} onChange={(v) => { setNext(v); clear('next'); }} secret autoComplete="new-password" error={err.next || false} hint={t('login.passwordHint', { n: MIN_PASSWORD })} />
       <Field label={t('login.confirmPassword')} value={confirm} onChange={(v) => { setConfirm(v); clear('confirm'); }} secret autoComplete="new-password" error={err.confirm || false} onEnter={() => void save()} />
+    </FamSheet>
+  );
+}
+
+/** Round 17: "Terms and conditions": the current text, and at its end when this contact agreed and to which version. */
+export function TermsSheet({ onClose }: { onClose: () => void }) {
+  const { s, t, fmt, user } = useFamilyCtx();
+  const lang = useSession((x) => x.lang);
+  const agreed = user ? s.familyContacts[user.id]?.termsAgreed : undefined;
+  return (
+    <FamSheet open onClose={onClose} title={t('terms.title')} testId="terms-sheet">
+      <TermsView text={termsText(s, lang)} />
+      {agreed ? <div style={{ borderTop: `0.5px solid ${F.hair}`, paddingTop: 12, fontSize: 14, color: F.muted }}>{t('terms.youAgreed', { d: fmt.fd(agreed.at.slice(0, 10), { day: 'numeric', month: 'short' }), v: agreed.version })}</div> : null}
     </FamSheet>
   );
 }

@@ -112,7 +112,12 @@ export interface ClubSettings {
   ownerApproval?: Partial<Record<StaffRole, Partial<Record<OwnerKind, boolean>>>>;
   /** KC round 17: when the Owner last saved each role on Admin › Roles, and who. Shown on the role list. */
   accessChanged?: Partial<Record<GridRole, { by: string; at: DT }>>;
+  /** KC round 17: the terms and conditions, one entry per published version (the last is current) */
+  terms?: TermsVersion[];
 }
+
+/** One published version of the terms and conditions: plain text, "# " heading lines, "- " bullets, {placeholders} filled from the settings. An empty `id` falls back to `en`. */
+export interface TermsVersion { version: number; en: string; id: string; publishedAt: DT; publishedBy: string }
 
 /** One category of the Contacts directory. */
 export interface DirectoryGroup { id: string; name: string; nameId?: string; active: boolean }
@@ -353,6 +358,8 @@ export interface FamilyContact extends Row {
   photoMediaId?: string;
   /** round 16: where the contract and the invoices are emailed (simulated: an `emails` row) */
   email?: string;
+  /** round 17: the terms version this contact agreed to (a family action waits until it is the current version) */
+  termsAgreed?: { version: number; at: DT };
 }
 
 /** Round 16: one simulated email (nothing leaves the server; the row is the record). `to` is '' when no address was on file (`noAddress`). */
