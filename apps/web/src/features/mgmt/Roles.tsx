@@ -1,96 +1,117 @@
-// Admin › Roles (round 16, KC): the Owner sets what each role opens (Hidden / View / Edit per menu item) and which of a role's changes wait for the Owner.
-// Wide screens: a grid, roles down the side and menu items across, the three approval switches in the last columns. Phone: a role picker, then its menu list.
-import { useState, type CSSProperties } from 'react';
-import { GRID_ROLES, MENU_KEYS, accessOf, defaultLevel, ownerApprovalOn, roleDraft, type AccessLevel, type GridRole, type OwnerKind } from '@cp/shared';
-import { PageHead, Select, FONT_SMALL, HAIRLINE } from '../../components/ui';
+// Admin › Roles (round 16; round 17, KC: "how business standard admin role pages work"). The Owner picks a role from the list, ticks its View and Edit
+// checkboxes and approvals on the role's page (RolePage.tsx) and saves the draft in one go (access.setRole). Phone: the list, then the role as a pushed screen;
+// tablet and desktop: the list on the left, the role on the right. Leaving a role with unsaved changes asks first.
+import { useEffect, useState } from 'react';
+import { GRID_ROLES, MENU_KEYS, accessOf, draftChanges, roleDraft, staffByRole, staffCall, type GridRole, type RoleDraft } from '@cp/shared';
+import { Icon, PageHead, PhoneScreen, FONT_SMALL, HAIRLINE } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
-import { menuLabel } from '../../app/nav';
-import { Page, SwitchRow } from './common';
-
-const KINDS: OwnerKind[] = ['pricing', 'holidays', 'budget'];
-const LEVELS: AccessLevel[] = ['off', 'view', 'edit'];
-type Cell = AccessLevel | 'none';
+import { ConfirmDialog } from '../kitchen/parts';
+import { Page, tn } from './common';
+import { RolePage, SaveBar } from './RolePage';
 
 export function Roles() {
   const t = useT();
   const { isPhone } = useDevice();
   const s = useClub();
   const act = useAct();
-  const [role, setRole] = useState<GridRole>(GRID_ROLES[0]);
+  const [picked, setPicked] = useState<GridRole | null>(null);
+  const [edit, setEdit] = useState<{ role: GridRole; draft: RoleDraft } | null>(null);
+  const [leaving, setLeaving] = useState<{ to: GridRole | null } | null>(null);
+  const [busy, setBusy] = useState(false);
+  const role = picked ?? (isPhone ? null : GRID_ROLES[0]);
+  const draft = role ? (edit?.role === role ? edit.draft : roleDraft(s, role)) : null;
+  const changes = role && draft ? draftChanges(s, role, draft) : 0;
+
+  // closing the tab or reloading with unsaved changes: the browser's own "Leave site?"
+  useEffect(() => {
+    if (!changes) return;
+    const stop = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
+    window.addEventListener('beforeunload', stop);
+    return () => window.removeEventListener('beforeunload', stop);
+  }, [changes > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const go = (to: GridRole | null) => {
+    if (to === role) return;
+    if (changes) { setLeaving({ to }); return; }
+    setPicked(to);
+    setEdit(null);
+  };
+  const discard = () => { setPicked(leaving?.to ?? null); setEdit(null); setLeaving(null); };
+  const save = async () => {
+    if (!role || !draft || !changes || busy) return;
+    setBusy(true);
+    const r = await act('access.setRole', { role, levels: draft.levels, approvals: draft.approvals }, { ok: t('mgmt.access.saved') });
+    setBusy(false);
+    if (r.ok) setEdit(null);
+  };
   const roleName = (r: GridRole) => t('mgmt.access.role.' + r);
-  const levelOptions = LEVELS.map((l) => ({ value: l, label: t('mgmt.access.' + l) }));
-  // a never-set cell whose default is Off is not in the role's menu: "—" (the server leaves such a cell to the action's own `can`); Hidden there is an explicit choice
-  const notInMenu = (r: GridRole, key: string) => s.club.settings.access?.[r]?.[key] === undefined && defaultLevel(r, key) === 'off';
-  const noneOption = { value: 'none' as Cell, label: '—' };
-  // Task 2 rewrites this screen as a draft with one Save; until then each change saves the whole role (access.setRole)
-  const setLevel = (r: GridRole, key: string, level: Cell) => { const d = roleDraft(s, r); void act('access.setRole', { role: r, levels: { ...d.levels, [key]: level === 'none' ? 'off' : level }, approvals: d.approvals }); };
-  const setApproval = (r: GridRole, kind: OwnerKind, on: boolean) => { const d = roleDraft(s, r); void act('access.setRole', { role: r, levels: d.levels, approvals: { ...d.approvals, [kind]: on } }); };
-  const cell = (r: GridRole, key: string) => (
-    <Select<Cell> ariaLabel={t('mgmt.access.cell', { role: roleName(r), menu: t(menuLabel(key)) })} value={notInMenu(r, key) ? 'none' : accessOf(s, r, key)}
-      options={defaultLevel(r, key) === 'off' ? [{ ...noneOption, hint: t('mgmt.access.none') }, ...levelOptions] : levelOptions} onChange={(l) => setLevel(r, key, l)} />
+  const page = role && draft ? <RolePage role={role} draft={draft} onChange={(d) => setEdit({ role, draft: d })} surface={isPhone ? '#FFFFFF' : 'var(--page, #FFFFFF)'} /> : null;
+  const bar = changes ? <SaveBar n={changes} busy={busy} onCancel={() => setEdit(null)} onSave={() => void save()} packed={!isPhone} /> : null;
+  const ask = (
+    <ConfirmDialog open={!!leaving} onClose={() => setLeaving(null)} title={tn(t, 'mgmt.access.discardAsk', changes)} body={role ? t('mgmt.access.discardBody', { role: roleName(role) }) : null}
+      confirmLabel={t('mgmt.access.discard')} cancelLabel={t('common.cancel')} onConfirm={discard} />
   );
-  const switchOf = (r: GridRole, kind: OwnerKind) => (
-    <SwitchRow on={ownerApprovalOn(s, r, kind)} onClick={() => setApproval(r, kind, !ownerApprovalOn(s, r, kind))} label={t('mgmt.access.approvalOf', { kind: t('mgmt.access.kind.' + kind) })} />
-  );
+  const list = <RoleList selected={isPhone ? null : role} onPick={go} />;
 
   if (isPhone) {
     return (
       <Page>
         <PageHead title={t('mgmt.access.title')} size={28} />
-        <Select<GridRole> label={t('mgmt.access.role')} value={role} options={GRID_ROLES.map((r) => ({ value: r, label: roleName(r) }))} onChange={setRole} />
-        <section aria-label={t('mgmt.access.menu')}>
-          {MENU_KEYS.map((k) => (
-            <div key={k} style={{ display: 'flex', alignItems: 'center', gap: 12, minHeight: 56, borderTop: HAIRLINE, padding: '6px 0' }}>
-              <span style={{ flex: 1, minWidth: 0, fontSize: 15, fontWeight: 500 }}>{t(menuLabel(k))}</span>
-              <div style={{ width: 130, flex: 'none' }}>{cell(role, k)}</div>
-            </div>
-          ))}
-        </section>
-        <section aria-label={t('mgmt.access.approval')}>
-          {KINDS.map((kind) => <div key={kind} style={{ borderTop: HAIRLINE }}>{switchOf(role, kind)}</div>)}
-        </section>
+        {list}
+        {role ? <PhoneScreen open onClose={() => go(null)} label={roleName(role)} back={t('mgmt.access.title')} footer={bar}>{page}</PhoneScreen> : null}
+        {ask}
       </Page>
     );
   }
-
-  // wide: menu items down the side (sticky), the six roles across, then the three approval switches as rows of the same columns; compact selects fit a 1024px tablet
-  const compact = { '--cp-field-h': '36px' } as CSSProperties;
-  const th = { padding: '8px 4px', fontSize: FONT_SMALL, fontWeight: 600, textAlign: 'left', verticalAlign: 'bottom' } as const;
-  const first = { position: 'sticky', left: 0, background: 'var(--page, #FFFFFF)', zIndex: 1, padding: '3px 8px 3px 0', fontSize: 14, fontWeight: 500, textAlign: 'left', width: 190 } as const;
   return (
     <Page>
       <PageHead title={t('mgmt.access.title')} size={32} />
-      <div style={{ overflowX: 'auto' }}>
-        <table style={{ borderCollapse: 'collapse', fontFamily: 'Inter', width: '100%', tableLayout: 'fixed' }}>
-          <thead>
-            <tr>
-              <th style={{ ...th, ...first, fontWeight: 600 }}>{t('mgmt.access.menu')}</th>
-              {GRID_ROLES.map((r) => <th key={r} data-role={r} scope="col" style={th}>{roleName(r)}</th>)}
-            </tr>
-          </thead>
-          <tbody>
-            {MENU_KEYS.map((k) => (
-              <tr key={k} style={{ borderTop: HAIRLINE }} data-menu={k}>
-                <th scope="row" style={first}>{t(menuLabel(k))}</th>
-                {GRID_ROLES.map((r) => <td key={r} style={{ padding: '3px 4px', ...compact }}>{cell(r, k)}</td>)}
-              </tr>
-            ))}
-            {KINDS.map((kind, i) => (
-              <tr key={kind} style={{ borderTop: i === 0 ? '2px solid var(--hairline, #E2E2E6)' : HAIRLINE }} data-approval={kind}>
-                <th scope="row" style={first}>{t('mgmt.access.approvalOf', { kind: t('mgmt.access.kind.' + kind) })}</th>
-                {GRID_ROLES.map((r) => (
-                  <td key={r} style={{ padding: '3px 4px' }}>
-                    <SwitchRow on={ownerApprovalOn(s, r, kind)} onClick={() => setApproval(r, kind, !ownerApprovalOn(s, r, kind))} label={<span className="sr-only" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)' }}>{t('mgmt.access.approvalOf', { kind: t('mgmt.access.kind.' + kind) })}: {roleName(r)}</span>} />
-                  </td>
-                ))}
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div style={{ display: 'grid', gridTemplateColumns: 'minmax(220px, 280px) minmax(0, 1fr)', gap: 'clamp(20px, 3vw, 40px)', alignItems: 'start' }}>
+        <div style={{ position: 'sticky', top: 16, minWidth: 0 }}>{list}</div>
+        <div style={{ minWidth: 0, maxWidth: 720, display: 'flex', flexDirection: 'column' }}>
+          {page}
+          {bar ? <div style={{ position: 'sticky', bottom: 'var(--cp-tabbar, 0px)', zIndex: 4, marginTop: 18, padding: '12px 0 14px 16px', borderTop: HAIRLINE, background: 'var(--page, #FFFFFF)' }}>{bar}</div> : null}
+        </div>
       </div>
+      {ask}
     </Page>
+  );
+}
+
+/** Owner first (full access, not editable), then the six roles with their people and how many menus they open. */
+function RoleList({ selected, onPick }: { selected: GridRole | null; onPick: (r: GridRole) => void }) {
+  const t = useT();
+  const s = useClub();
+  const people = (r: 'owner' | GridRole) => staffByRole(s, r).map(staffCall).filter(Boolean).join(', ');
+  const row = { width: '100%', display: 'flex', alignItems: 'center', gap: 10, minHeight: 56, padding: '8px 12px 8px 16px', border: 'none', background: 'transparent', textAlign: 'left', fontFamily: 'Inter', color: '#24201C' } as const;
+  const text = (title: string, sub: string) => (
+    <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
+      <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.3 }}>{title}</span>
+      {sub ? <span style={{ fontSize: FONT_SMALL, color: '#6B6259', lineHeight: 1.35, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{sub}</span> : null}
+    </span>
+  );
+  const meta = { fontSize: FONT_SMALL, color: '#6B6259', flex: 'none', whiteSpace: 'nowrap' } as const;
+  return (
+    <nav aria-label={t('mgmt.access.title')} className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
+      <div data-role="owner" style={row}>
+        {text(t('roles.owner'), people('owner'))}
+        <span style={meta}>{t('mgmt.access.fullAccess')}</span>
+      </div>
+      {GRID_ROLES.map((r) => {
+        const on = r === selected;
+        const n = MENU_KEYS.filter((k) => accessOf(s, r, k) !== 'off').length;
+        return (
+          <button key={r} type="button" data-role={r} aria-current={on || undefined} onClick={() => onPick(r)} className={on ? undefined : 'h-row'}
+            style={{ ...row, borderTop: HAIRLINE, cursor: 'pointer', background: on ? 'var(--press, #EEEEF0)' : 'transparent' }}>
+            {text(t('mgmt.access.role.' + r), people(r))}
+            <span style={meta}>{tn(t, 'mgmt.access.menus', n)}</span>
+            <Icon name="chevron_right" size={20} color="#8A8078" />
+          </button>
+        );
+      })}
+    </nav>
   );
 }

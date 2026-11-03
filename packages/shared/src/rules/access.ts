@@ -69,8 +69,9 @@ export type OwnerKind = 'pricing' | 'holidays' | 'budget';
 /** Does a change of this kind by this role wait for the Owner? Default: on for Management, off for the others; never for the Owner. */
 export function ownerApprovalOn(s: ClubState, role: StaffRole, kind: OwnerKind): boolean {
   if (role === 'owner') return false;
-  return s.club.settings.ownerApproval?.[role]?.[kind] ?? role === 'mgmt';
+  return s.club.settings.ownerApproval?.[role]?.[kind] ?? defaultApproval(role);
 }
+const defaultApproval = (role: StaffRole) => role === 'mgmt';
 
 // ---------- round 17 (phase 2): a role's draft on the Roles screen ----------
 export type RoleDraft = { levels: Record<string, AccessLevel>; approvals: Record<OwnerKind, boolean> };
@@ -82,6 +83,15 @@ export function roleDraft(s: ClubState, role: GridRole): RoleDraft {
   for (const k of MENU_KEYS) levels[k] = accessOf(s, role, k);
   const approvals = {} as Record<OwnerKind, boolean>;
   for (const kind of OWNER_KINDS) approvals[kind] = ownerApprovalOn(s, role, kind);
+  return { levels, approvals };
+}
+
+/** The role as it ships: every menu at its default level, the approval switches at theirs (Reset to default on the Roles screen). */
+export function defaultDraft(role: GridRole): RoleDraft {
+  const levels: Record<string, AccessLevel> = {};
+  for (const k of MENU_KEYS) levels[k] = defaultLevel(role, k);
+  const approvals = {} as Record<OwnerKind, boolean>;
+  for (const kind of OWNER_KINDS) approvals[kind] = defaultApproval(role);
   return { levels, approvals };
 }
 

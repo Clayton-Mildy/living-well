@@ -33,7 +33,7 @@ export const nav: Same<typeof EN.nav> = {
   menu: 'Menu', lunch: 'Ronde makan siang', feedback: 'Masukan', stock: 'Stok', billing: 'Tagihan', payments: 'Pembayaran', budget: 'Anggaran', receipts: 'Kuitansi', overview: 'Ringkasan', broadcast: 'Siaran',
   calendar: 'Kalender dan jadwal', calShort: 'Kalender', me: 'Saya', people: 'SDM', photos: 'Foto', healthF: 'Kesehatan', venue: 'Venue', more: 'Lainnya', directory: 'Direktori', contacts: 'Kontak',
   surveys: 'Survei', plans: 'Paket dan harga', reviews: 'Persetujuan', requests: 'Permintaan',
-  g_front: 'Resepsionis', g_care: 'Perawatan', g_kitchen: 'Dapur', g_finance: 'Keuangan', g_club: 'Klub', allModules: 'Semua modul',
+  g_front: 'Resepsionis', g_care: 'Perawatan', g_kitchen: 'Dapur', g_finance: 'Keuangan', g_club: 'Klub', g_general: 'Umum', allModules: 'Semua modul',
   s_overview: 'Beranda', s_arrivals: 'Datang', s_enquiries: 'Calon', s_members: 'Anggota', s_health: 'Cek', s_readings: 'Tren', s_today: 'Hari ini', s_camera: 'Kamera',
   s_log: 'Catatan', s_menu: 'Menu', s_lunch: 'Makan siang', s_feedback: 'Masukan', s_stock: 'Stok', s_billing: 'Tagihan', s_payments: 'Bayar', s_budget: 'Anggaran', s_receipts: 'Kuitansi', s_directory: 'Kontak',
   s_calendar: 'Kalender', s_calShort: 'Kalender', s_me: 'Saya', s_photos: 'Foto', s_healthF: 'Kesehatan', s_more: 'Lainnya', s_requests: 'Permintaan', s_reviews: 'Persetujuan', s_contacts: 'Kontak',

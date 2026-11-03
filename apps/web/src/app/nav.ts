@@ -1,5 +1,5 @@
 // Per-role navigation (design NAVS/NAVG/PHONE_NAV + new Reviews/Requests/Contacts items) and nav-key → screen mapping.
-import { menuKeys, type ClubState, type Role, type StaffRole } from '@cp/shared';
+import { MENU_KEYS, menuKeys, type ClubState, type Role, type StaffRole } from '@cp/shared';
 
 export interface NavItem { key: string; label: string; short: string; icon: string }
 const n = (key: string, labelKey: string, icon: string): NavItem => ({ key, label: 'nav.' + labelKey, short: 'nav.s_' + labelKey, icon });
@@ -46,6 +46,13 @@ const MGMT_LAYOUT: Layout = [
   [G_FINANCE, ['billing', 'payments', 'budget', 'receipts', 'spending']],
   [G_CLUB, ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'roles']], // round 16: 'roles' is the Owner's only (DEFAULT_MENUS.owner); management's menus do not include it
 ];
+/** Admin › Roles (round 17) groups the menus as management's sidebar does, without Today and Roles; a menu not in that layout goes to the first group, General. */
+export function menuGroups(): { label: string | null; keys: string[] }[] {
+  const groups = MGMT_LAYOUT.map(([label, keys]) => ({ label: label ?? 'nav.g_general', keys: keys.filter((k) => MENU_KEYS.includes(k)) }));
+  const placed = new Set(groups.flatMap((g) => g.keys));
+  groups[0].keys.push(...MENU_KEYS.filter((k) => !placed.has(k)));
+  return groups.filter((g) => g.keys.length);
+}
 const LAYOUTS: Record<StaffRole, Layout> = {
   lobby: [[null, ['today', 'members', 'tasks']], [G_FRONT, ['enquiries', 'renewals', 'venue', 'surveys']], [G_KITCHEN, ['menu']], [G_CLUB, ['contacts', 'requests']]],
   nurse: [[null, ['today', 'readings', 'members', 'tasks']], [G_CLUB, ['requests', 'contacts']]],
