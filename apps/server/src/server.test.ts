@@ -481,6 +481,11 @@ describe('demo accounts', () => {
     expect(r.accounts.map((a: any) => a.id)).toEqual(expect.arrayContaining(['s1', 's9', 'f1', 'f2', 's10']));
     expect(r.accounts.find((a: any) => a.id === 'f1')).toMatchObject({ member: 'Oma Lina & Opa Budi', billing: true });
   });
+  it('round 18: Benjamin, the Owner, is in the list; Ratna is the roster only, so the small seed skips her', async () => {
+    const r = await j(await app.request('/api/demo/accounts'));
+    expect(r.accounts.find((a: any) => a.id === 's11')).toMatchObject({ name: 'Benjamin Cass', kind: 'staff', roleKey: 'owner' });
+    expect(r.accounts.map((a: any) => a.id)).not.toContain('f_ratna');
+  });
   it('round 12: says whether this is a demo (CP_DEMO_LOGIN=0 turns it off)', async () => {
     const was = process.env.CP_DEMO_LOGIN;
     try {

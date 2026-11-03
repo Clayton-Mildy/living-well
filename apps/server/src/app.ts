@@ -142,7 +142,7 @@ app.get('/api/demo/accounts', (c) => {
   const s = getClub('citra');
   const demoLogin = process.env.CP_DEMO_LOGIN !== '0'; // KC round 12: the web shows demo-only helpers (the sample registration form)
   if (!s) return c.json({ accounts: [], demoLogin });
-  const order = ['s1', 's8', 'f1', 'f2', 's5', 's6', 's3', 's2', 's10', 's9'];
+  const order = ['s1', 's8', 'f1', 'f2', 'f_ratna', 's5', 's6', 's3', 's2', 's10', 's9', 's11']; // round 18: Ratna (the roster only) and Benjamin, the Owner
   const accounts = order.map((id) => {
     const st = s.staff[id];
     if (st) return { id, name: st.name, kind: 'staff', roleKey: st.role };

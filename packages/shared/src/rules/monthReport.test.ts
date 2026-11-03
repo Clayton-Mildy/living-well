@@ -51,12 +51,12 @@ describe('month report', () => {
     expect(f.opened).toBe(4); // e1, e2, e3 and e5 were opened in October
     expect(f.lostReasons.otherPlace).toBe(1); // e9 was lost on 8 October
   });
-  it('the roster’s joined agrees with the Members group: October 2 joined, 4 opened, 38% of the three months before', () => {
+  it('the roster’s joined agrees with the Members group: October 3 joined (round 18: Oma Sri Rahayu), 4 opened, 44% of the three months before', () => {
     const r = buildSeed(T, 598, { roster: true }).citra;
     const rep = monthReport(r, periodFor('thisMonth', T), T, 600);
-    expect(rep.pipeline.funnel).toMatchObject({ new: 4, joined: 2 });
+    expect(rep.pipeline.funnel).toMatchObject({ new: 4, joined: 3 });
     expect(rep.pipeline.funnel.joined).toBe(rep.members.joined.cur);
-    expect(rep.pipeline.conversion.toJoined).toBe(0.38);
+    expect(rep.pipeline.conversion.toJoined).toBe(0.44); // 4 of the 9 leads opened July to September joined (Oma Sri's lead opened 28 September)
   });
 
   describe('hero numbers (round 13)', () => {
@@ -73,9 +73,9 @@ describe('month report', () => {
         expect(r.hero.conversion.good).toBe('up');
       }
     });
-    it('the roster’s October numbers: 38% conversion against the three months before', () => {
+    it('the roster’s October numbers: 44% conversion against the three months before', () => {
       const r = monthReport(roster, periodFor('thisMonth', T), T, 600);
-      expect(r.hero.conversion.cur).toBe(0.38);
+      expect(r.hero.conversion.cur).toBe(0.44);
       expect(r.hero.active.cur).toBe(r.members.active.cur);
       expect(r.hero.collected.cur).toBeGreaterThan(0);
     });

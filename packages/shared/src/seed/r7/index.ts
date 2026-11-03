@@ -18,8 +18,10 @@ import { seedWeekend } from './weekend';
 import { seedSigning } from './signing';
 import { seedRound16 } from './round16';
 import { seedRound17 } from './round17';
+import { seedRound18 } from './round18';
+import { DEMO_START_MIN } from '../../util';
 
-export function seedRound7(s: ClubState, T: ISODate): void {
+export function seedRound7(s: ClubState, T: ISODate, nowMin: number = DEMO_START_MIN): void {
   seedGuests(s, T); // first: it adds activities and a one-day change that the session marks follow
   seedExtraSessions(s, T); // one extra session (tea-time karaoke) on the next open day
   seedSessionMarks(s, T);
@@ -36,6 +38,7 @@ export function seedRound7(s: ClubState, T: ISODate): void {
   seedSigning(s, T); // round 14 d: Oma Lina's form waits for Maria to sign, and (roster only) one signed form waits for Ega to countersign; no random draws
   seedRound16(s, T); // round 16: family emails, Opa Budi's pick-up and party cake, the field trip fee; no random draws
   seedRound17(s, T); // round 17: terms v1 (every contact agreed but Sinta), the few-visits list and one call; no random draws
+  seedRound18(s, T, nowMin); // round 18: (roster only) Oma Sri Rahayu just joined; Ratna has not signed in yet (no termsAgreed); no random draws
   seedMoodMarks(s, T); // round 12: a mood mark for every seeded visit (last: it walks the attendance, readings and logs above)
   seedWeekend(s, T); // round 14: the first Saturday after T is programmed, the Sunday after it waits for Ega (after everything that looks for an open day)
 }

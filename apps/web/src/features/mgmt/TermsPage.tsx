@@ -33,7 +33,10 @@ export function TermsPage({ onBack }: { onBack: () => void }) {
     <>
       {cur ? (
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, justifyContent: 'space-between', flexWrap: 'wrap' }}>
-          <span style={{ fontSize: FONT_SMALL, color: '#6B6259', lineHeight: 1.4, minWidth: 0 }}>{t('terms.version', { v: cur.version, d: fmt.fd(dtDate(cur.publishedAt), dayMonth(dtDate(cur.publishedAt), today)), name: actorName(s, cur.publishedBy) })}</span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 2, minWidth: 0, fontSize: FONT_SMALL, color: '#6B6259', lineHeight: 1.4 }}>
+            <span>{t('terms.version', { v: cur.version, d: fmt.fd(dtDate(cur.publishedAt), dayMonth(dtDate(cur.publishedAt), today)), name: actorName(s, cur.publishedBy) })}</span>
+            {cur.version === 1 ? <span data-testid="terms-demo-note">{t('terms.demoNote')}</span> : null}
+          </div>
           <Button variant="secondary" size={48} onClick={() => setEditing(true)}>{t('terms.edit')}</Button>
         </div>
       ) : (

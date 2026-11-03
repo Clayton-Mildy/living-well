@@ -57,7 +57,7 @@ describe('lead history', () => {
     expect(groups.map((g) => g.getAttribute('aria-label'))).toEqual(['October 2026', 'September 2026', 'August 2026', 'July 2026', 'June 2026', 'May 2026']);
     expect(groups[0].textContent).toContain('4 opened'); // e1, e2, e3 and e5
     expect(groups[0].textContent).toContain('Chose another place 1'); // Ibu Nyoman Sari, lost on 8 Oct
-    expect(groups[0].textContent).toMatch(/Joined2 · 38%/); // the two members who started in October; 38% of the three months before
+    expect(groups[0].textContent).toMatch(/Joined3 · 44%/); // the three members who started in October (round 18: Oma Sri Rahayu); 44% of the three months before
     expect(groups[0].textContent).toContain('of leads opened in the 3 months before');
     expect(groups[0].textContent?.match(/%/g)).toHaveLength(1); // only the Joined row carries a percentage
     expect(groups[1].textContent).not.toContain('Chose another place');

@@ -24,6 +24,7 @@ export const terms: Same<typeof EN> = {
   tabEn: 'EN',
   tabId: 'ID',
   textLang: 'Bahasa',
+  demoNote: 'Teks demo: tinjau sebelum resmi dipakai',
   idHint: 'Opsional. Keluarga yang membaca dalam Bahasa Indonesia melihat teks Inggris selama ini kosong.',
   hintFormat: '# judul · - butir',
   hintPlaceholders: 'Diisi dari pengaturan: {downgradeDays} {stopDays} {leaveDays} {issueDay} {dueDay} {flexQuota}',

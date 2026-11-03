@@ -108,12 +108,12 @@ describe('leadConversion (the leads opened in the three whole months before)', (
     expect(leadConversion(s, '2026-10')).toMatchObject({ opened: 2, visit: 2, trial: 1, joined: 0, toVisit: 1, toTrial: 0.5, toJoined: 0 });
     expect(leadConversion(s, '2020-01')).toMatchObject({ opened: 0, toVisit: null, toTrial: null, toJoined: null });
   });
-  it('the demo October: 2 joined and 4 opened; the conversion is the July to September cohort (8 opened, 3 joined, 38%)', () => {
+  it('the demo October: 3 joined and 4 opened; the conversion is the July to September cohort (9 opened, 4 joined, 44%; round 18 added Oma Sri Rahayu’s lead)', () => {
     const s = seedOf(DEMO_TODAY, DEMO_START_MIN, { roster: true }).citra;
     expect(DEMO_TODAY).toBe('2026-10-21');
     const oct = leadMonths(s, DEMO_TODAY, 6)[0];
-    expect(oct.moves).toMatchObject({ opened: 4, joined: 2 });
-    expect(oct.conversion).toMatchObject({ opened: 8, joined: 3, toJoined: 0.38 });
+    expect(oct.moves).toMatchObject({ opened: 4, joined: 3 });
+    expect(oct.conversion).toMatchObject({ opened: 9, joined: 4, toJoined: 0.44 });
     expect(oct.moves.lostReasons.otherPlace).toBe(1); // Ibu Nyoman Sari, lost on 8 Oct
   });
 });

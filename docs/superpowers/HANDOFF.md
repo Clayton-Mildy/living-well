@@ -1,8 +1,38 @@
-# Handoff — where round 17 stands (updated 3 Nov 2026)
+# Handoff — where round 18 stands (updated 3 Nov 2026)
 
-Read this first when picking the work up in a new session. Round 16 is done and merged into this branch (its notes are at the end).
+Read this first when picking the work up in a new session. Rounds 16 and 17 are done; round 17 is merged into `main` locally (not pushed). Their notes follow round 18.
 
-## Round 17 (branch `round17`, not pushed)
+## Round 18 (branch `round18`, not pushed)
+Spec `specs/2026-11-03-round18-design.md`; plan `plans/2026-11-03-round18.md`; progress log `.superpowers/sdd/2026-11-03-round18/progress.md`.
+
+### Status
+- Tasks 1–3 (track A): notice days per kind (downgrade, stop, leave), the few-visits alert as days before next month, Settings › Membership rules. Merged.
+- Tasks 4–6 (track B): charges on a new celebration, field trips (name, New field trip, search), proof of payment opens (photo in the viewer, PDF in a new tab). Merged.
+- Task 7 (track C): Roles page sectioned like Tasks, two columns on wide screens. Merged.
+- Task 8 (seed): fuller terms v1, Oma Sri Rahayu just joined with Ratna, the Owner in the quick list. Done.
+- Task 9: e2e (`e2e/round18.spec.ts`) and screenshots at phone, tablet and laptop. Still to do.
+
+### Logins added to the quick list (`/api/demo/accounts`, `apps/server/src/app.ts`)
+- **Benjamin Cass** (`s11`, Owner): login `benjamin` / `citra123`, after Ega.
+- **Ratna Rahayu** (`f_ratna`): login `ratna` / `citra123`, after Daniel. Full 45-member roster only, so the small seed (tests, e2e) has no Ratna and the list skips her.
+
+### Seed (`packages/shared/src/seed/r7/terms.ts`, `round18.ts`; no random draws)
+- **Terms v1** (`terms.ts`): 14 sections in English and Indonesian, with placeholders filled from the settings: `{flexQuota}`, `{issueDay}`, `{dueDay}`, `{downgradeDays}`, `{stopDays}` and `{leaveDays}`. It is still version 1, so no seeded family meets a new-version gate. The staff Terms page shows "Demo text: review before going live" while version 1 is current.
+- **Oma Sri Rahayu** (`m_sri`, Flex; roster only, after round 17):
+  - She started 2 open days before the demo day, from a paper form (on file), with no photo and no face enrolled.
+  - She has one check-in today (09:05, by name) and a joined lead (`e-h-m_sri`), like every roster member who joined in the last six months. Her welcome notification was sent to Ratna.
+- **Ratna Rahayu**: daughter, primary and billing contact with app access. She has never signed in and has no `termsAgreed`, so she lands on the welcome + terms page.
+- **Oma Sri's first invoice** follows the app's rule: a run bills every member active on its issue day, and the run job never runs a month twice.
+  - On the 21st (the tests' demo day), she is on October's run (issued that morning) with a prorated Flex fee and the registration fee, unpaid.
+  - On any day between runs, nothing is issued yet: the next run bills her first plan fee and the registration fee.
+- **Counts on the full seed:** 46 members, not 45. October's Month report and Enquiries History now show 3 joined and 44% conversion (9 opened, 4 joined), not 2 and 38%. The tests were updated to match.
+
+### Next steps
+1. Task 9 (e2e and screenshots), then a review of the round.
+2. Reset the dev database so the local demo has Oma Sri, Ratna and the new terms text: `pnpm db:reset` (API on port 8788). Ratna's welcome + terms page shows only until she agrees; reset again to show it once more.
+3. The terms text is demo text: KC or the owner reviews it before going live. The Indonesian text is a first translation.
+
+## Round 17 (merged into `main` locally, not pushed)
 Spec `specs/2026-11-03-round17-design.md`; plans `plans/2026-11-03-round17-phase1.md` and `...-phase2.md`. KC approved the spec on 3 Nov.
 
 ### Phase 1 (points 1–7): money on the next monthly invoice, proof of payment, spouse

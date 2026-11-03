@@ -21,6 +21,7 @@ export const terms = {
   tabEn: 'EN',
   tabId: 'ID',
   textLang: 'Language',
+  demoNote: 'Demo text: review before going live',
   idHint: 'Optional. Families who read in Bahasa Indonesia see the English text while this is empty.',
   hintFormat: '# heading · - bullet',
   hintPlaceholders: 'Filled in from the settings: {downgradeDays} {stopDays} {leaveDays} {issueDay} {dueDay} {flexQuota}',

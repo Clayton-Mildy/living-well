@@ -617,7 +617,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   if (done('09:48')) notif('nt-5', `${T}T09:48`, ['fm10_0'], [], 'notif.checkedIn', { name: 'Bapak Bambang', time: '09:48' }, '/today', 'm10');
   const patterns = opts.roster ? addRoster(s, T, nowMin) : undefined; // 40 more members (roster.ts); off by default so the tests keep the 5-member world
   addHistory(s, T, { patterns }); // KC round 7: six months of visits, readings, logs and paid invoices behind the 4 weeks above (history.ts)
-  seedRound7(s, T); // KC round 7: renewals, guest hosts, survey templates, tasks (seed/r7)
+  seedRound7(s, T, nowMin); // KC round 7: renewals, guest hosts, survey templates, tasks (seed/r7)
   return s;
 }
 

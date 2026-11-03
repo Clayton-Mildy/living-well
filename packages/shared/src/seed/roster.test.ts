@@ -34,7 +34,7 @@ describe('demo roster', () => {
 
   it('adds 40 complete members', () => {
     const s = build();
-    expect(Object.keys(s.members)).toHaveLength(45);
+    expect(Object.keys(s.members)).toHaveLength(46); // and round 18's Oma Sri Rahayu
     expect(extra(s)).toHaveLength(40);
     for (const m of extra(s)) {
       expect(primaryContact(s, m.id), m.id).toBeTruthy();
@@ -131,7 +131,7 @@ describe('demo roster', () => {
   it('works around other days', () => {
     for (const T of ['2026-10-06', '2026-10-30', '2026-11-02', '2026-12-28', '2027-02-17']) {
       const s = build(T, 620);
-      expect(live(s.members)).toHaveLength(45);
+      expect(live(s.members)).toHaveLength(46);
       expect(live(s.attendance).every((a) => a.date <= T && isWeekday(a.date) && dayStatus(s, a.date).open)).toBe(true); // six months of visits, none on a closed day
       expect(extra(s).every((m) => !!primaryContact(s, m.id))).toBe(true);
       expect(() => lobbyGroups(s, T)).not.toThrow();

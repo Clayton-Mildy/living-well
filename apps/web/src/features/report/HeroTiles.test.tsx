@@ -39,7 +39,7 @@ describe('the hero tiles', () => {
     expect(tiles[0].textContent).toContain('Revenue collected');
     expect(tiles[0].textContent).toContain(rp(r.hero.collected.cur));
     expect(tiles[1].textContent).toContain(`Active members${r.hero.active.cur}`);
-    expect(tiles[3].textContent).toContain('38%');
+    expect(tiles[3].textContent).toContain('44%');
     expect(tiles[3].textContent).toContain('of leads opened in the 3 months before');
     for (const x of tiles) { expect(x.querySelector('svg')).toBeTruthy(); expect(x.textContent).toContain('Apr–Sep'); }
     expect(tiles.every((x) => x.querySelector('[aria-label*="six months"]'))).toBe(true);
