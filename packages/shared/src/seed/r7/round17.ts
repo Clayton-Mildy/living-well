@@ -9,7 +9,7 @@ export const TERMS_V1_EN = `# Plans and visits
 - A visit day starts when the front desk checks the member in and ends at check-out.
 - Visit days do not carry over to the next month.
 # Monthly billing
-- The invoice for a month is issued on day {issueDay} of the month before and is due on day {dueDay}.
+- Each month's invoice is issued on day {issueDay} of that month and is due on day {dueDay}.
 - Fees for extra days, pick-up, field trips and celebration extras are added to the next invoice.
 - An invoice that stays unpaid puts the membership on hold, and the club may end it after we have tried to reach the family.
 # Changing or stopping a plan
@@ -33,7 +33,7 @@ export const TERMS_V1_ID = `# Paket dan kunjungan
 - Satu hari kunjungan dimulai saat resepsionis mencatat kedatangan anggota dan berakhir saat pulang.
 - Hari kunjungan tidak dibawa ke bulan berikutnya.
 # Tagihan bulanan
-- Tagihan sebulan terbit pada tanggal {issueDay} bulan sebelumnya dan jatuh tempo pada tanggal {dueDay}.
+- Tagihan setiap bulan terbit pada tanggal {issueDay} bulan itu dan jatuh tempo pada tanggal {dueDay}.
 - Biaya hari tambahan, antar-jemput, wisata dan tambahan perayaan dimasukkan ke tagihan berikutnya.
 - Tagihan yang belum dibayar membuat keanggotaan ditahan, dan klub dapat mengakhirinya setelah mencoba menghubungi keluarga.
 # Mengubah atau berhenti
@@ -103,6 +103,6 @@ export function seedRound17(s: ClubState, T: ISODate): void {
   if (s.members.m2 && s.staff.s1) {
     const at = `${T}T09:25`;
     s.visitCalls ??= {};
-    s.visitCalls['vcall-seed-1'] = { id: 'vcall-seed-1', clubId: s.clubId, createdAt: at, createdBy: 'staff:s1', memberId: 'm2', month, outcome: 'reached', note: 'Cynthia says he has a cold; back next week', by: 'staff:s1', at };
+    s.visitCalls['vcall-seed-1'] = { id: 'vcall-seed-1', clubId: s.clubId, createdAt: at, createdBy: 'staff:s1', memberId: 'm2', month, outcome: 'reached', note: "Cynthia says he'll come more after his check-up", by: 'staff:s1', at };
   }
 }
