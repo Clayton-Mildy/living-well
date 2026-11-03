@@ -1008,4 +1008,38 @@ describe('round 16: field trip fee and who went', () => {
     const later = outing(fresh(), '2026-10-28');
     fails(later.s, 'calendarEvent.setWent', { eventId: later.id, memberIds: ['m1'] }, 's5', 'err.invalid');
   });
+  // round 17: the fee follows the open charges, delete takes them back
+  const DAY_AFTER = { today: '2026-10-22', nowMin: 600 };
+  const twoWent = () => {
+    let { s, id } = outing(fresh());
+    s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m1', 'm46'] }, 's5').state;
+    s = { ...s, pendingCharges: { ...s.pendingCharges, [`trip-${id}-m1`]: { ...s.pendingCharges[`trip-${id}-m1`], invoiceId: 'INV-X' } } };
+    return { s, id };
+  };
+  it('a new fee the day after re-prices the charges no invoice has billed; the invoiced one stays', () => {
+    const { s, id } = twoWent();
+    const n = run(s, 'calendarEvent.update', { eventId: id, fee: 300_000 }, 's9', DAY_AFTER).state;
+    expect(n.pendingCharges[`trip-${id}-m46`].amount).toBe(300_000);
+    expect(n.pendingCharges[`trip-${id}-m1`].amount).toBe(250_000);
+    expect(n.calendarEvents[id].fee).toBe(300_000);
+  });
+  it('fee 0 takes back the open charges only', () => {
+    const { s, id } = twoWent();
+    const n = run(s, 'calendarEvent.update', { eventId: id, fee: 0 }, 's9', DAY_AFTER).state;
+    expect(charges(n, id).map((c) => c.memberId)).toEqual(['m1']);
+    expect(n.calendarEvents[id].fee).toBeUndefined();
+  });
+  it('any other edit after the day is still refused, and so is a fee change when every charge is invoiced', () => {
+    const { s, id } = twoWent();
+    fails(s, 'calendarEvent.update', { eventId: id, title: 'x' }, 's9', 'cal.err.pastEvent', DAY_AFTER);
+    fails(s, 'calendarEvent.update', { eventId: id, title: 'x', fee: 300_000 }, 's9', 'cal.err.pastEvent', DAY_AFTER);
+    const allBilled = { ...s, pendingCharges: { ...s.pendingCharges, [`trip-${id}-m46`]: { ...s.pendingCharges[`trip-${id}-m46`], invoiceId: 'INV-Y' } } };
+    fails(allBilled, 'calendarEvent.update', { eventId: id, fee: 300_000 }, 's9', 'cal.err.pastEvent', DAY_AFTER);
+  });
+  it('deleting the outing on its day removes the open charges and leaves invoiced ones', () => {
+    const { s, id } = twoWent();
+    const n = run(s, 'calendarEvent.delete', { eventId: id, notify: false }, 's9').state;
+    expect(n.calendarEvents[id].deletedAt).toBeTruthy();
+    expect(charges(n, id).map((c) => c.memberId)).toEqual(['m1']);
+  });
 });

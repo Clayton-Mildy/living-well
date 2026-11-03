@@ -1,7 +1,7 @@
 // Schedule and calendar actions: weekly schedule drafts and dated versions, closures / holidays / outings, activity and room catalog.
 import { z } from 'zod';
 import type { Draft } from 'immer';
-import type { CalendarEvent, ClubState, HM, ISODate, Member, ScheduleCell, ScheduleDay, ScheduleVersion, Slot, StaffRole, WeekSlot } from '../types';
+import type { CalendarEvent, ClubState, PendingCharge, HM, ISODate, Member, ScheduleCell, ScheduleDay, ScheduleVersion, Slot, StaffRole, WeekSlot } from '../types';
 import { DomainError, defineAction, hasRole, type Ctx } from './framework';
 import { needsApproval } from './approvalGate';
 import { clubHoursRental, dayStatus, membershipStatus } from '../rules/core';
@@ -100,6 +100,10 @@ const updateSchema = z.object({
   notify: z.boolean().optional(),
 });
 type UpdateInput = z.infer<typeof updateSchema>;
+/** round 17: the charges an outing has put on members that no invoice has billed yet (the only ones a fee change or a delete may touch) */
+export function eventCharges(d: Draft<ClubState>, eventId: string): Draft<PendingCharge>[] {
+  return live(d.pendingCharges).filter((c) => c.source?.type === 'event' && c.source.id === eventId && !c.invoiceId);
+}
 
 /** Validate a complete event and return the fields to store (no undefined values). */
 function eventFields(e: EventInput, ctx: Ctx): Pick<CalendarEvent, 'date' | 'kind' | 'title'> & Partial<Pick<CalendarEvent, 'endDate' | 'titleId' | 'from' | 'to'>> {
@@ -391,7 +395,10 @@ export const scheduleActions = [
     run(d, input, ctx) {
       const cur = d.calendarEvents[input.eventId];
       if (!cur || cur.deletedAt) ctx.fail('err.notFound');
-      if ((cur.endDate || cur.date) < ctx.today) ctx.fail('cal.err.pastEvent');
+      // round 17 (R6): after the date only the fee may change, and only while the outing still has a charge no invoice has billed
+      const feeOnly = input.fee !== undefined && cur.kind === 'outing' && [input.date, input.endDate, input.kind, input.title, input.titleId, input.from, input.to].every((v) => v === undefined);
+      const past = (cur.endDate || cur.date) < ctx.today;
+      if (past && !(feeOnly && eventCharges(d, cur.id).length)) ctx.fail('cal.err.pastEvent');
       const next: EventInput = {
         date: input.date ?? cur.date,
         endDate: input.endDate === undefined ? cur.endDate ?? null : input.endDate,
@@ -410,7 +417,12 @@ export const scheduleActions = [
       if (f.endDate) row.endDate = f.endDate; else delete row.endDate;
       if (f.titleId) row.titleId = f.titleId; else delete row.titleId;
       if (f.from && f.to) { row.from = f.from; row.to = f.to; } else { delete row.from; delete row.to; }
-      if (input.fee !== undefined) { if (f.kind === 'outing' && input.fee) row.fee = input.fee; else delete row.fee; } // round 16
+      if (input.fee !== undefined) { // round 16
+        if (f.kind === 'outing' && input.fee) row.fee = input.fee; else delete row.fee;
+        // round 17: charges no invoice has billed yet follow the fee; 0 takes them back, invoiced ones stay as billed
+        for (const c of eventCharges(d, row.id)) { if (row.fee) c.amount = row.fee; else delete d.pendingCharges[c.id]; }
+      }
+      if (past) return; // a fee fixed after the day is not news for the club
       notifyEveryone(d, ctx, { kind: 'cal.notif.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } });
     },
@@ -424,6 +436,7 @@ export const scheduleActions = [
       if (!cur || cur.deletedAt) ctx.fail('err.notFound');
       if ((cur.endDate || cur.date) < ctx.today) ctx.fail('cal.err.pastEvent');
       cur.deletedAt = ctx.nowDT;
+      for (const c of eventCharges(d, cur.id)) delete d.pendingCharges[c.id]; // round 17: nobody is billed for an outing that is gone
       notifyEveryone(d, ctx, { kind: 'cal.notif.removed_' + cur.kind, params: { date: dateText(cur.date, cur.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[cur.kind], key: 'cal.feed.removed_' + cur.kind, params: { date: dateText(cur.date, cur.endDate) } });
     },

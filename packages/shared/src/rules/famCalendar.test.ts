@@ -195,6 +195,18 @@ describe('famDay: a celebration on a closed day', () => {
   });
 });
 
+describe('famDay: an outing row carries its field trip fee (round 17)', () => {
+  it('a field trip shows its fee; a free outing has none', () => {
+    const s0 = seed();
+    const ev = Object.values(s0.calendarEvents).find((e) => e.kind === 'outing' && !e.deletedAt && !e.cancelledAt && e.fee)!;
+    const open = (s: ClubState) => famDay(s, WHO, ev.date, T, NOW).rows.find((r) => r.kind === 'outing');
+    expect(open(s0)).toMatchObject({ kind: 'outing', fee: 250_000 });
+    const free = produce(s0, (d) => { delete d.calendarEvents[ev.id].fee; });
+    expect(open(free)).toBeDefined();
+    expect(open(free)).not.toHaveProperty('fee');
+  });
+});
+
 describe('famDay: the lunch picture (round 15)', () => {
   const NEXT = '2026-10-22';
   const withDishPhoto = (s: ClubState, date: string) => produce(s, (d) => { d.dishes[menuOn(s, date)!.lunch[0]].photoMediaId = 'md_dish_photo_1'; });

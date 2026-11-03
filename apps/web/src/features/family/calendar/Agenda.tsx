@@ -1,7 +1,7 @@
 // Family Calendar: one day's agenda. A banner for a closure, holiday or weekend; else rows of time | bar | title and sub. The bar is bronze once the row has passed (round 15; a guest-hosted or extra session is
 // told apart by its words), light while it is still ahead. On a day a parent came, a finished session says who joined in or sat out and shows the family's pictures of it (64px thumbnails).
 import type { Photo } from '@cp/shared';
-import { displayName } from '@cp/shared';
+import { displayName, rp } from '@cp/shared';
 import { eventTitle } from '@cp/shared/rules/calendar';
 import { activityLabel, roomLabel, staffFirst } from '@cp/shared/rules/family';
 import type { FamDay, FamRow } from '@cp/shared/rules/famCalendar';
@@ -55,7 +55,7 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
         const sub = (r.dishes ?? []).map((d) => (d.memberIds ? `${nameList(lang, d.memberIds.map(name))}: ` : '') + d.names.join(', ')).join(' · ');
         return { title: t(r.kind === 'lunch' ? 'family.tLunch' : 'family.tTea'), sub };
       }
-      case 'outing': return { title: cap(eventTitle({ title: r.title ?? '', titleId: r.titleId }, lang)), sub: [t('cal.k_outing'), span(r)].filter(Boolean).join(' · ') };
+      case 'outing': return { title: cap(eventTitle({ title: r.title ?? '', titleId: r.titleId }, lang)), sub: [t('cal.k_outing'), span(r), r.fee ? t('cal.feeChip', { p: rp(r.fee) }) : ''].filter(Boolean).join(' · ') };
       case 'venue': return { title: t('cal.private'), sub: [roomLabel(s, r.roomId, lang), span(r)].filter(Boolean).join(' · ') };
       case 'birthday': {
         const m = r.memberId ? s.members[r.memberId] : undefined;

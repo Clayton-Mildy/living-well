@@ -8,6 +8,7 @@ export const cal = {
   prevMonth: 'Previous month', nextMonth: 'Next month', thisMonth: 'This month', holiday: 'Holiday', closedShort: 'Closed', allDay: 'All day',
   stOpen: 'Open · {from}–{to}', stClosed: 'Closed', stHoliday: 'National holiday · closed', stWeekend: 'Closed · weekend',
   k_activity: 'Activity', k_closed: 'Club closed', k_holiday: 'National holiday', k_outing: 'Outing', k_venue: 'Venue booking', k_private: 'Private event', k_guest: 'Trial or visit', k_trial: 'Trial day', k_visit: 'Visit',
+  feeChip: 'Field trip · {p}',
   k_celebration: 'Celebration', waiting: 'Waiting for management', 
   private: 'Private event', membersNotAffected: 'members not affected',
   // events editor (management)
