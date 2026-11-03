@@ -67,7 +67,7 @@ describe('fewVisits.daily', () => {
     expect(fewTold(tick(withFewVisits(), '2026-11-18'), 's9')).toHaveLength(0);
   });
   it('uses the club setting: fewer than 3 reads "2 times or fewer"', () => {
-    const s = produce(withFewVisits(), (d) => { d.club.settings.fewVisits = { below: 3, daysBeforeDeadline: 2 }; });
+    const s = produce(withFewVisits(), (d) => { d.club.settings.fewVisits = { below: 3, daysBeforeMonth: 16 }; });
     expect(fewTold(tick(s, '2026-11-15'), 's1')[0]).toMatchObject({ params: { n: 3, max: 2 } });
   });
   it('a new month is told again', () => {

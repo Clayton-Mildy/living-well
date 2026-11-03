@@ -87,8 +87,11 @@ export interface ClubSettings {
   noticeDays?: number;
   /** KC round 18: the notice for each kind of change, 1–60 days each (a kind missing here falls back to `noticeDays`, then 14; rules/notice.ts) */
   notice?: { downgrade: number; stop: number; leave: number };
-  /** KC round 17: the few-visits alert. Members with fewer than `below` visit days this month are flagged from `daysBeforeDeadline` days before the notice deadline (missing = 5 and 2; rules/fewVisits.ts) */
-  fewVisits?: { below: number; daysBeforeDeadline: number };
+  /**
+   * KC round 17: the few-visits alert. Members with fewer than `below` visit days this month are flagged from `daysBeforeMonth` days before next month's 1st
+   * (round 18; missing = 5 and 16; rules/fewVisits.ts). `daysBeforeDeadline` is round 17's (days before the notice deadline): only read, as that plus the stop days.
+   */
+  fewVisits?: { below: number; daysBeforeMonth: number; daysBeforeDeadline?: number };
   issueDay: number; // 21 (KC round 6, brochure: invoices on the 21st)
   dueDay: number; // 28 (paid within 7 days)
   finalDueDays: number; // 14

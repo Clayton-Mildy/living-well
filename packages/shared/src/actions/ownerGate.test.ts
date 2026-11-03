@@ -119,9 +119,9 @@ describe('owner gate', () => {
     expect(a.state.changeRequests[crId]).toMatchObject({ action: 'club.updateSettings', section: 'pricing', status: 'pending' });
     const b = run(a.state, 'review.approve', { crId }, OWNER);
     expect(b.state.club.settings.notice).toEqual({ downgrade: 14, stop: 10, leave: 14 });
-    const f = run(base, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, EGA);
+    const f = run(base, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeMonth: 18 } }, EGA);
     expect(f.reviewed).toBeUndefined();
-    expect(f.state.club.settings.fewVisits).toEqual({ below: 4, daysBeforeDeadline: 3 });
+    expect(f.state.club.settings.fewVisits).toEqual({ below: 4, daysBeforeMonth: 18 });
     expect(pendingOwnerRequests(f.state, 'pricing')).toHaveLength(0);
   });
   it('ownerKindOf maps each action', () => {
@@ -130,7 +130,7 @@ describe('owner gate', () => {
     expect(ownerKindOf('club.setPlan', {}, base)).toBe('pricing');
     expect(ownerKindOf('club.updateSettings', { notice: { leave: 20 } }, base)).toBe('pricing');
     expect(ownerKindOf('club.updateSettings', { flexQuota: 8 }, base)).toBe('pricing');
-    expect(ownerKindOf('club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } }, base)).toBeNull(); // round 17: the few-visits alert applies at once
+    expect(ownerKindOf('club.updateSettings', { fewVisits: { below: 4, daysBeforeMonth: 18 } }, base)).toBeNull(); // round 17: the few-visits alert applies at once
     expect(ownerKindOf('budget.addSection', {}, base)).toBe('budget');
     expect(ownerKindOf('budget.renameSection', {}, base)).toBe('budget');
     expect(ownerKindOf('calendarEvent.update', { eventId: out.id, kind: 'closed' }, base)).toBe('holidays');

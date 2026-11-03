@@ -1,7 +1,7 @@
 // Admin › Settings (round 17, Owner and Management). Three grouped lists: Membership rules (the notice period; Management's change waits for the Owner),
 // Few-visits alert (the two numbers, applied at once) and Terms and conditions (a row that opens the terms page, ?view=terms). Each group has its own Save and Cancel while edited.
 import { useState, type ReactNode } from 'react';
-import { fewVisitsSettings } from '@cp/shared/rules/fewVisits';
+import { fewDaysRange, fewVisitsSettings } from '@cp/shared/rules/fewVisits';
 import { useSearchParams } from 'react-router-dom';
 import { actorName, dtDate, hasKey } from '@cp/shared';
 import { noticeDays } from '@cp/shared/rules/notice';
@@ -67,12 +67,13 @@ export function Settings() {
 
   const noticeV = notice ?? String(noticeDays(s, 'stop'));
   const belowV = below ?? String(few.below);
-  const daysV = days ?? String(few.daysBeforeDeadline);
+  const daysV = days ?? String(few.daysBeforeMonth);
+  const range = fewDaysRange(s);
   const noticeBad = !inRange(num(noticeV), 1, 60);
   const belowBad = !inRange(num(belowV), 1, 31);
-  const daysBad = !inRange(num(daysV), 0, 14);
+  const daysBad = !inRange(num(daysV), range.min, range.max);
   const noticeDirty = num(noticeV) !== noticeDays(s, 'stop') || (notice !== null && noticeBad);
-  const fewDirty = num(belowV) !== few.below || num(daysV) !== few.daysBeforeDeadline || (below !== null && belowBad) || (days !== null && daysBad);
+  const fewDirty = num(belowV) !== few.below || num(daysV) !== few.daysBeforeMonth || (below !== null && belowBad) || (days !== null && daysBad);
 
   const run = async (group: 'membership' | 'few', input: Record<string, unknown>, reset: () => void) => {
     setShown((x) => ({ ...x, [group]: true }));
@@ -84,7 +85,7 @@ export function Settings() {
     } finally { setBusy(false); }
   };
   const saveNotice = () => { if (noticeBad) { setShown((x) => ({ ...x, membership: true })); return; } void run('membership', { notice: { downgrade: num(noticeV), stop: num(noticeV), leave: num(noticeV) } }, () => setNotice(null)); }; // round 18: one value for the three kinds
-  const saveFew = () => { if (belowBad || daysBad) { setShown((x) => ({ ...x, few: true })); return; } void run('few', { fewVisits: { below: num(belowV), daysBeforeDeadline: num(daysV) } }, () => { setBelow(null); setDays(null); }); };
+  const saveFew = () => { if (belowBad || daysBad) { setShown((x) => ({ ...x, few: true })); return; } void run('few', { fewVisits: { below: num(belowV), daysBeforeMonth: num(daysV) } }, () => { setBelow(null); setDays(null); }); };
 
   const err = (text: string) => <div role="alert" style={{ padding: '0 16px 10px', fontSize: FONT_SMALL, color: '#9A3D24', lineHeight: 1.4 }}>{text}</div>;
   const sentence = (key: string, name: string, value: string, set: (v: string) => void, bad: boolean, saved: number) => {
@@ -115,8 +116,8 @@ export function Settings() {
           {sentence('mgmt.settings.fewBelow', 'below', belowV, setBelow, belowBad && !!shown.few, few.below)}
           {shown.few && belowBad ? err(t('mgmt.settings.err.few')) : null}
           <div style={{ borderTop: HAIRLINE }} />
-          {sentence('mgmt.settings.fewDays', 'days', daysV, setDays, daysBad && !!shown.few, few.daysBeforeDeadline)}
-          {shown.few && daysBad ? err(t('mgmt.settings.err.days')) : null}
+          {sentence('mgmt.settings.fewDays', 'days', daysV, setDays, daysBad && !!shown.few, few.daysBeforeMonth)}
+          {shown.few && daysBad ? err(t('mgmt.err.fewDaysInvalid', range)) : null}
           {fewDirty ? <SaveRow busy={busy} onSave={saveFew} onCancel={() => { setBelow(null); setDays(null); setShown((x) => ({ ...x, few: false })); }} /> : null}
         </Group>
 

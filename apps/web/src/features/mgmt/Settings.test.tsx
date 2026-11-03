@@ -67,7 +67,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     expect(sections()).toEqual(['Membership rules', 'Few-visits alert', 'Terms and conditions']);
     expect(field('notice').value).toBe('14');
     expect(field('below').value).toBe('5');
-    expect(field('days').value).toBe('2');
+    expect(field('days').value).toBe('16');
     expect(section('Few-visits alert').textContent).toContain('Flag below');
     expect(section('Few-visits alert').textContent).toContain('days before the last change day');
     expect(section('Terms and conditions').textContent).toContain('No terms yet');
@@ -99,10 +99,10 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     openClub('s9');
     await show(<Settings />, width);
     await type(field('below'), '4');
-    await type(field('days'), '3');
+    await type(field('days'), '18');
     await click(button(section('Few-visits alert'), 'Save'));
-    expect(actMock).toHaveBeenCalledWith('club.updateSettings', { fewVisits: { below: 4, daysBeforeDeadline: 3 } });
-    expect(useReplica.getState().view!.club.settings.fewVisits).toEqual({ below: 4, daysBeforeDeadline: 3 });
+    expect(actMock).toHaveBeenCalledWith('club.updateSettings', { fewVisits: { below: 4, daysBeforeMonth: 18 } });
+    expect(useReplica.getState().view!.club.settings.fewVisits).toEqual({ below: 4, daysBeforeMonth: 18 });
     expect(document.body.textContent).not.toContain('Waiting for owner');
     expect(section('Few-visits alert').textContent).toContain('Flag below');
     expect(button(section('Few-visits alert'), 'Save')).toBeUndefined();
@@ -124,9 +124,9 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
   it('Cancel puts the saved value back', async () => {
     openClub();
     await show(<Settings />, width);
-    await type(field('days'), '7');
+    await type(field('days'), '20');
     await click(button(section('Few-visits alert'), 'Cancel'));
-    expect(field('days').value).toBe('2');
+    expect(field('days').value).toBe('16');
   });
 });
 

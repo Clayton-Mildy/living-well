@@ -1,24 +1,32 @@
 // Round 17 (KC, point 9): the few-visits alert. A member who came fewer than 5 days this month is a "potential quitter": the club calls the family before plan changes
-// close. The alert day is `daysBeforeDeadline` (2) days before the notice deadline of the next month (15 Nov when December's deadline is 17 Nov). Pure reads; the call
+// close. Round 18: the alert day is `daysBeforeMonth` (16) days before next month's 1st (15 Nov for December), and the list closes at the stop deadline (1st − stop
+// days: 17 Nov). The alert day is never after that close (max of the two), so a later, longer stop notice still leaves the list open for a day. Pure reads; the call
 // log is in actions/visitCalls.ts.
 import type { ClubState, ISODate, VisitCall, YM } from '../types';
 import { addDays, addMonths, live, monthStart, sortBy, ym } from '../util';
 import { approvedMembers, currentMembership, membershipStatus } from './core';
 import { onLeaveIn } from './leave';
-import { noticeDeadline } from './notice';
+import { noticeDays, noticeDeadline } from './notice';
 import { askedInApp, nextMonthPlans } from './renewals';
 
 export const FEW_BELOW_DEFAULT = 5;
-export const FEW_DAYS_BEFORE_DEFAULT = 2;
-/** The club's few-visits settings: "fewer than `below` visit days", from `daysBeforeDeadline` days before the notice deadline. */
-export const fewVisitsSettings = (s: Pick<ClubState, 'club'>): { below: number; daysBeforeDeadline: number } => {
+export const FEW_DAYS_BEFORE_MONTH_DEFAULT = 16;
+export const FEW_DAYS_MAX = 28;
+/** The club's few-visits settings: "fewer than `below` visit days", alerted `daysBeforeMonth` days before next month. A round 17 `daysBeforeDeadline` counted from the notice deadline: read as that plus the stop days. */
+export const fewVisitsSettings = (s: Pick<ClubState, 'club'>): { below: number; daysBeforeMonth: number } => {
   const f = s.club.settings.fewVisits;
-  return { below: f?.below ?? FEW_BELOW_DEFAULT, daysBeforeDeadline: f?.daysBeforeDeadline ?? FEW_DAYS_BEFORE_DEFAULT };
+  const days = f?.daysBeforeMonth ?? (f?.daysBeforeDeadline !== undefined ? f.daysBeforeDeadline + noticeDays(s, 'stop') : FEW_DAYS_BEFORE_MONTH_DEFAULT);
+  return { below: f?.below ?? FEW_BELOW_DEFAULT, daysBeforeMonth: days };
+};
+/** The days before the month the alert can be set to: from the stop days (the alert can't come after changes close) to 28 (more when the stop notice is longer). */
+export const fewDaysRange = (s: Pick<ClubState, 'club'>): { min: number; max: number } => {
+  const min = noticeDays(s, 'stop');
+  return { min, max: Math.max(FEW_DAYS_MAX, min) };
 };
 
-/** The day the list opens for `month`: the notice deadline of the month after, less `daysBeforeDeadline`. */
-export const fewVisitsAlertDay = (s: ClubState, month: YM): ISODate =>
-  addDays(noticeDeadline(s, addMonths(month, 1), 'stop'), -fewVisitsSettings(s).daysBeforeDeadline);
+/** The day the list opens for `month`: next month's 1st less `daysBeforeMonth`, and never after the stop deadline. */
+export const fewVisitsAlertDay = (s: Pick<ClubState, 'club'>, month: YM): ISODate =>
+  addDays(monthStart(addMonths(month, 1)), -Math.max(fewVisitsSettings(s).daysBeforeMonth, noticeDays(s, 'stop')));
 
 /** The calls logged for a member in a month, newest first. */
 export const callsOf = (s: ClubState, memberId: string, month: YM): VisitCall[] =>
@@ -64,7 +72,7 @@ export function fewVisitMembers(s: ClubState, today: ISODate): FewRow[] {
 export interface FewVisitsState {
   month: YM;
   alertDay: ISODate;
-  /** the last day plan changes for next month can be asked for */
+  /** the last day a stop for next month can be asked for: the list closes after it */
   deadline: ISODate;
   /** before: the list is not open yet · open: from the alert day to the deadline · closed: after the deadline, to the month's end */
   phase: 'before' | 'open' | 'closed';
