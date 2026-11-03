@@ -129,12 +129,13 @@ function issueRun(d: D, ctx: Ctx, period: YM, auto: boolean) {
 
 // ---------- payments ----------
 const METHODS = ['dokuVa', 'bankTransfer', 'cash', 'other'] as const;
+const PROOF_KINDS = ['image', 'pdf'] as const;
 /** `hold`: the front desk's payment waits for finance, so Xero is not told yet and the invoice's Xero state is left alone. */
-function addPayment(d: D, ctx: Ctx, p: { memberId: string; amount: number; method: Payment['method']; ref?: string; bank?: Bank; allocations: Payment['allocations']; proofMediaId?: string }, opts: { hold?: boolean } = {}): Payment {
+function addPayment(d: D, ctx: Ctx, p: { memberId: string; amount: number; method: Payment['method']; ref?: string; bank?: Bank; allocations: Payment['allocations']; proofMediaId?: string; proofKind?: 'image' | 'pdf' }, opts: { hold?: boolean } = {}): Payment {
   const id = ctx.id('pay');
   const pay: Payment = {
     ...base(ctx, id), memberId: p.memberId, method: p.method, amount: p.amount,
-    ...(p.ref ? { ref: p.ref } : {}), ...(p.bank ? { bank: p.bank } : {}), ...(p.proofMediaId ? { proofMediaId: p.proofMediaId } : {}),
+    ...(p.ref ? { ref: p.ref } : {}), ...(p.bank ? { bank: p.bank } : {}), ...(p.proofMediaId ? { proofMediaId: p.proofMediaId, ...(p.proofKind ? { proofKind: p.proofKind } : {}) } : {}),
     receivedOn: ctx.today, receivedAt: ctx.now, allocations: p.allocations, xero: opts.hold ? 'notSent' : 'pending', by: ctx.actor,
     ...(opts.hold ? { approval: { status: 'pending' as const, by: ctx.actor, at: ctx.nowDT } } : {}),
   };
@@ -269,7 +270,7 @@ export const financeActions: ActionDef[] = [
   }),
 
   // ---------- payments ----------
-  defineAction<{ memberId: string; amount: number; method: Payment['method']; ref?: string; invoiceId?: string; proofMediaId?: string }>({
+  defineAction<{ memberId: string; amount: number; method: Payment['method']; ref?: string; invoiceId?: string; proofMediaId?: string; proofKind?: 'image' | 'pdf' }>({
     name: 'payment.record',
     can: (u) => finMgmt(u) || hasRole(u, 'lobby'), // round 13: the front desk records cash or transfer on an open invoice; it waits for finance
     parse: (raw) => {
@@ -278,7 +279,9 @@ export const financeActions: ActionDef[] = [
       // round 16 (KC): a payment recorded by hand as cash or transfer needs its proof (the transfer slip, the signed receipt)
       const proof = mediaIdOf(o.proofMediaId);
       if (!proof && (method === 'cash' || method === 'bankTransfer')) throw new DomainError('finance.err.proofRequired');
-      return { memberId: text(o.memberId, 80), amount: rupiah(o.amount), method, ref: optText(o.ref, 120), invoiceId: optText(o.invoiceId, 80), ...(proof ? { proofMediaId: proof } : {}) };
+      // round 18: the client says whether the proof is a photo or a PDF (from the picked file); it only means something next to a proof
+      const kind = o.proofKind === undefined || o.proofKind === null ? undefined : oneOf(o.proofKind, PROOF_KINDS);
+      return { memberId: text(o.memberId, 80), amount: rupiah(o.amount), method, ref: optText(o.ref, 120), invoiceId: optText(o.invoiceId, 80), ...(proof ? { proofMediaId: proof, ...(kind ? { proofKind: kind } : {}) } : {}) };
     },
     run(d, input, ctx) {
       requireMember(d, input.memberId, ctx);
@@ -297,7 +300,7 @@ export const financeActions: ActionDef[] = [
       }
       // the chosen invoice first, then the oldest due; what is left over stays on the account as credit
       const { allocations, credit } = allocate(s, input.memberId, input.amount, ctx.today, input.invoiceId);
-      const pay = addPayment(d, ctx, { memberId: input.memberId, amount: input.amount, method: input.method, ref: input.ref, allocations, proofMediaId: input.proofMediaId }, { hold: desk });
+      const pay = addPayment(d, ctx, { memberId: input.memberId, amount: input.amount, method: input.method, ref: input.ref, allocations, proofMediaId: input.proofMediaId, proofKind: input.proofKind }, { hold: desk });
       const numbers = allocations.map((a) => a.invoiceId).join(', ') || '—';
       const name = shortOf(d, input.memberId);
       const amount = rp(input.amount);

@@ -77,16 +77,15 @@ describe('the front desk records a payment', () => {
 });
 
 describe('round 17: the proof of payment is on the invoice', () => {
-  it('a payment with a photo shows a "Proof of payment" link in its row, for staff', async () => {
+  it('a payment with a photo shows a "Proof of payment" thumbnail in its row, for staff (round 18: a button that opens it)', async () => {
     openAs('s10', true);
     await show(<InvoiceSheet invoiceId="INV-2610-001" open onClose={() => {}} audience="staff" />);
-    const proof = Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => textOf(b) === 'Proof of payment');
-    expect(proof).toBeTruthy();
+    expect(document.querySelector('[data-testid="proof-open"][aria-label="Proof of payment"]')).toBeTruthy();
   });
   it('a payment without a photo shows no proof link', async () => {
     openAs('s10', false);
     await show(<InvoiceSheet invoiceId="INV-2610-001" open onClose={() => {}} audience="staff" />);
-    expect(buttons().some((b) => textOf(b) === 'Proof of payment')).toBe(false);
+    expect(document.querySelector('[data-testid="proof-open"]')).toBeNull();
   });
 });
 

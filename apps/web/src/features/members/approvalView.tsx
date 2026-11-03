@@ -176,7 +176,7 @@ function payView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
     { label: t('finance.pay.paidBy'), to: t('finance.method.' + p.method) },
     { label: t('finance.pay.invoice'), to: invoice },
     ...(p.ref ? [{ label: t('finance.pay.reference'), to: p.ref }] : []),
-    ...(p.proofMediaId ? [{ label: t('finance.pay.proof'), to: t('finance.pay.proofPhoto'), toImg: mediaUrl(p.proofMediaId) }] : []), // round 16
+    ...(p.proofMediaId ? [p.proofKind === 'pdf' ? { label: t('finance.pay.proof'), to: 'PDF' } : { label: t('finance.pay.proof'), to: t('finance.pay.proofPhoto'), toImg: mediaUrl(p.proofMediaId) }] : []), // round 16
     { label: t('approvals.requestedBy'), to: `${actorName(s, p.by)} · ${fmt.fds(p.receivedOn)}${p.receivedAt ? `, ${p.receivedAt}` : ''}` },
   ];
   return { who: m ? memberName(m) : '', kind: t('approvals.kind.payment'), summary, detail: { title: t('approvals.kind.payment'), rows: [], summary: rows }, edit: false };

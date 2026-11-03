@@ -4,8 +4,6 @@ import { displayName, memberName, rp, ym } from '@cp/shared';
 import { actorName } from '@cp/shared';
 import { invoicePeriod, isConfirmed, paymentsBoard, type PaymentView } from '@cp/shared/rules/finance';
 import { Button, EmptyState, Eyebrow, Icon, PageHead, Sheet, TextField, usePaged } from '../../components/ui';
-import { ImageOpen } from '../../components/ui/ImageLightbox';
-import { mediaUrl } from '../../lib/media';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
@@ -13,6 +11,7 @@ import { useFmt, useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { PaymentForm, RefundForm } from './forms';
 import { matches, methodLabel } from './lib';
+import { ProofOpen } from './ProofOpen';
 import { Badge, HAIR, Hero, HeroHead, NumberTabs, PGroup, PagerBar, PillBtn, SearchField, hrow, prow, rowSub, rowTitle } from './parts';
 
 export function Payments() {
@@ -139,9 +138,7 @@ function PaymentRow({ pv, refunding, onRefund, onClose, first }: { pv: PaymentVi
   ].filter(Boolean).join(' · ');
   // round 16: the transfer slip or signed receipt of a payment recorded by hand (opens full size)
   const proof = p.proofMediaId ? (
-    <ImageOpen src={mediaUrl(p.proofMediaId)} label={t('finance.pay.proof')} style={{ display: 'inline-flex', alignItems: 'center', gap: 4, fontSize: 13, color: 'var(--accent, #75624B)', fontWeight: 500, cursor: 'pointer' }}>
-      <Icon name="receipt" size={16} />{t('finance.pay.proof')}
-    </ImageOpen>
+    <ProofOpen mediaId={p.proofMediaId} kind={p.proofKind} />
   ) : null;
   // round 6, phone: name and amount, the what-it-paid line, then the date, a quiet Xero status and a Refund pill
   if (isPhone) {
