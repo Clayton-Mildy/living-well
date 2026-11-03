@@ -2,16 +2,20 @@
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter } from 'react-router-dom';
+import { RouterProvider, createMemoryRouter } from 'react-router-dom';
 import { buildSeed } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { screenFor } from '../../app/nav';
+import { AppShell } from '../../shell/AppShell';
 import { Roles } from './Roles';
 
 let root: Root | null = null;
 let host: HTMLElement | null = null;
-beforeAll(() => { (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true; });
+beforeAll(() => {
+  (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
+  Element.prototype.scrollTo ??= () => {}; // the shell scrolls #main to the top on a route change
+});
 afterEach(async () => {
   await act(async () => { root?.unmount(); });
   host?.remove();
@@ -20,25 +24,35 @@ afterEach(async () => {
   document.body.innerHTML = '';
 });
 const actMock = vi.fn();
-function openClub() {
+function openClub(edit?: (st: ReturnType<typeof buildSeed>['citra']) => void) {
   const state = structuredClone(buildSeed().citra);
+  edit?.(state);
   const user = { kind: 'staff' as const, id: 's11', name: 'Benjamin Cass', role: 'owner' as const, clubId: 'citra', clubs: ['citra'] };
   useSession.setState({ lang: 'en', club: 'citra', user });
   actMock.mockReset();
   actMock.mockResolvedValue({ ok: true, result: {} });
   useReplica.setState({ club: 'citra', userId: user.id, confirmed: state, view: state, rev: 0, pending: [], status: 'ready', act: actMock, clock: { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 } } as never);
 }
-async function show(ui: ReactElement, width: number) {
+// a data router, as the app has (createBrowserRouter): leaving the page with a draft goes through useBlocker
+let router: ReturnType<typeof createMemoryRouter>;
+async function show(ui: ReactElement, width: number, shell = false) {
   (window as { innerWidth: number }).innerWidth = width;
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => { root!.render(<MemoryRouter initialEntries={['/roles']}>{ui}</MemoryRouter>); });
+  const pages = [{ path: '/roles', element: ui }, { path: '*', element: <div data-testid="elsewhere" /> }];
+  router = createMemoryRouter(shell ? [{ element: <AppShell />, children: pages }] : pages, { initialEntries: ['/today', '/roles'], initialIndex: 1 });
+  await act(async () => { root!.render(<RouterProvider router={router} />); });
 }
+const path = () => router.state.location.pathname;
+/** A button in the top dialog (on a phone the role page is a dialog too). */
+const inDialog = (text: string) => Array.from(Array.from(document.querySelectorAll('[role="dialog"]')).pop()?.querySelectorAll<HTMLElement>('button') ?? []).find((b) => words(b) === text);
 const click = async (el: Element | undefined | null) => { expect(el, 'element to click').toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
 const box = (label: string) => document.querySelector<HTMLElement>(`[role="checkbox"][aria-label="${label}"]`)!;
 const ticked = (label: string) => box(label)?.getAttribute('aria-checked');
-const button = (text: string) => Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => b.textContent?.trim() === text);
+/** A button's words without its icon's ligature name. */
+const words = (b: Element) => { const c = b.cloneNode(true) as HTMLElement; c.querySelectorAll('.ms').forEach((x) => x.remove()); return (c.textContent ?? '').trim(); };
+const button = (text: string) => Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => words(b) === text);
 const roleRow = (r: string) => document.querySelector<HTMLElement>(`[data-role="${r}"]`);
 
 describe('Admin › Roles', () => {
@@ -104,6 +118,61 @@ describe('Admin › Roles', () => {
     await click(roleRow('lobby'));
     expect(document.querySelector('[data-role-page="lobby"]')).toBeTruthy();
     expect(roleRow('finance')).toBeTruthy();
+  });
+
+  it('with a draft, a sidebar link asks first and only Discard leaves', async () => {
+    openClub();
+    await show(<Roles />, 1024, true);
+    await click(roleRow('lobby'));
+    await click(box('Billing: Edit'));
+    await click(document.querySelector('[data-nav-key="today"]'));
+    expect(document.body.textContent).toContain('Discard 1 change?');
+    expect(path()).toBe('/roles');
+    await click(inDialog('Discard'));
+    expect(path()).toBe('/today');
+    expect(actMock).not.toHaveBeenCalled();
+  });
+
+  it('with a draft, the back gesture asks first; Cancel stays', async () => {
+    openClub();
+    await show(<Roles />, 1024);
+    await click(box('Billing: View'));
+    expect(document.body.textContent).toContain('1 change');
+    await act(async () => { await router.navigate(-1); });
+    expect(document.body.textContent).toContain('Discard 1 change?');
+    expect(path()).toBe('/roles');
+    await click(inDialog('Cancel'));
+    expect(path()).toBe('/roles');
+    expect(document.querySelector('[role="dialog"]')).toBeNull();
+    expect(document.body.textContent).toContain('1 change');
+  });
+
+  it('without a draft, leaving does not ask', async () => {
+    openClub();
+    await show(<Roles />, 1024);
+    await act(async () => { await router.navigate(-1); });
+    expect(path()).toBe('/today');
+  });
+
+  it('Reset to default asks first, then the draft is the defaults and Save sends them', async () => {
+    openClub((st) => {
+      st.club.settings.access = { lobby: { billing: 'edit', payments: 'view' } };
+      st.club.settings.ownerApproval = { lobby: { pricing: true } };
+    });
+    await show(<Roles />, 390);
+    await click(roleRow('lobby'));
+    expect(ticked('Billing: Edit')).toBe('true');
+    await click(button('Reset to default'));
+    expect(document.body.textContent).toContain('Reset Front desk to default?');
+    expect(ticked('Billing: Edit')).toBe('true'); // nothing yet
+    await click(inDialog('Reset to default'));
+    expect(ticked('Billing: View')).toBe('true');
+    expect(ticked('Billing: Edit')).toBe('false');
+    expect(ticked('Payments: View')).toBe('false');
+    expect(ticked('Prices and plans')).toBe('false');
+    expect(document.body.textContent).toContain('3 changes');
+    await click(button('Save'));
+    expect(actMock).toHaveBeenCalledWith('access.setRole', { role: 'lobby', levels: expect.objectContaining({ billing: 'view', payments: 'off', members: 'edit' }), approvals: { pricing: false, holidays: false, budget: false } });
   });
 
   it('only the Owner reaches /roles', () => {

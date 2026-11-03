@@ -1,12 +1,13 @@
 // Admin › Roles (round 16; round 17, KC: "how business standard admin role pages work"). The Owner picks a role from the list, ticks its View and Edit
 // checkboxes and approvals on the role's page (RolePage.tsx) and saves the draft in one go (access.setRole). Phone: the list, then the role as a pushed screen;
-// tablet and desktop: the list on the left, the role on the right. Leaving a role with unsaved changes asks first.
-import { useEffect, useState } from 'react';
+// tablet and desktop: the list on the left, the role on the right. Leaving a role or the screen with unsaved changes asks first (lib/leaveGuard).
+import { useState } from 'react';
 import { GRID_ROLES, MENU_KEYS, accessOf, draftChanges, roleDraft, staffByRole, staffCall, type GridRole, type RoleDraft } from '@cp/shared';
 import { Icon, PageHead, PhoneScreen, FONT_SMALL, HAIRLINE } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
+import { useLeaveGuard } from '../../lib/leaveGuard';
 import { useClub } from '../../store/replica';
 import { ConfirmDialog } from '../kitchen/parts';
 import { Page, tn } from './common';
@@ -25,13 +26,8 @@ export function Roles() {
   const draft = role ? (edit?.role === role ? edit.draft : roleDraft(s, role)) : null;
   const changes = role && draft ? draftChanges(s, role, draft) : 0;
 
-  // closing the tab or reloading with unsaved changes: the browser's own "Leave site?"
-  useEffect(() => {
-    if (!changes) return;
-    const stop = (e: BeforeUnloadEvent) => { e.preventDefault(); e.returnValue = ''; };
-    window.addEventListener('beforeunload', stop);
-    return () => window.removeEventListener('beforeunload', stop);
-  }, [changes > 0]); // eslint-disable-line react-hooks/exhaustive-deps
+  // leaving the screen (any menu, search or notification link, the back gesture, closing the tab) with a draft asks first
+  const leave = useLeaveGuard(changes > 0);
 
   const go = (to: GridRole | null) => {
     if (to === role) return;
@@ -51,8 +47,9 @@ export function Roles() {
   const page = role && draft ? <RolePage role={role} draft={draft} onChange={(d) => setEdit({ role, draft: d })} surface={isPhone ? '#FFFFFF' : 'var(--page, #FFFFFF)'} /> : null;
   const bar = changes ? <SaveBar n={changes} busy={busy} onCancel={() => setEdit(null)} onSave={() => void save()} packed={!isPhone} /> : null;
   const ask = (
-    <ConfirmDialog open={!!leaving} onClose={() => setLeaving(null)} title={tn(t, 'mgmt.access.discardAsk', changes)} body={role ? t('mgmt.access.discardBody', { role: roleName(role) }) : null}
-      confirmLabel={t('mgmt.access.discard')} cancelLabel={t('common.cancel')} onConfirm={discard} />
+    <ConfirmDialog open={!!leaving || leave.blocked} onClose={() => (leaving ? setLeaving(null) : leave.stay())} title={tn(t, 'mgmt.access.discardAsk', changes)}
+      body={role ? t('mgmt.access.discardBody', { role: roleName(role) }) : null} confirmLabel={t('mgmt.access.discard')} cancelLabel={t('common.cancel')}
+      onConfirm={() => (leaving ? discard() : leave.proceed())} />
   );
   const list = <RoleList selected={isPhone ? null : role} onPick={go} />;
 
