@@ -10,7 +10,7 @@ import { actorName, fmtPhone, primaryContact, type DocType } from '@cp/shared';
 import { consentOf, docOf, documentTypes } from '@cp/shared/rules/members';
 import { applicationDataOf } from '@cp/shared/rules/applicationForm';
 import { signerChanged, signingOf } from '@cp/shared/rules/signing';
-import { contractEmails } from '@cp/shared/rules/emails';
+import { contractEmails, emailsOfMember } from '@cp/shared/rules/emails';
 import { Icon, IconButton, StatusBadge } from '../../../components/ui';
 import { useT } from '../../../lib/i18n';
 import { HAIR, pillBtn } from '../lib';
@@ -71,6 +71,7 @@ export function DocsTab({ p }: { p: P }) {
   const resendContract = async () => { await p.act('email.resendContract', { memberId: m.id }, { ok: (r) => (r.emailedTo ? t('email.sentAgain', { to: String(r.emailedTo) }) : t('email.noAddress', { name: contact?.firstName || '' })) }); };
   const DOC_ICON: Record<DocType, string> = { ktp: 'badge', nannyKtp: 'badge', guarantorKtp: 'badge', membershipForm: 'description', healthInfo: 'medical_information', other: 'draft' };
   const ph = p.isPhone; // round 6, phone (staff and family): each list card is an iOS grouped section
+  const outbox = p.family ? [] : emailsOfMember(s, m.id); // round 17: everything the club emailed about this member (staff only)
   const printer = useApplicationForm();
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: ph ? 14 : 'clamp(18px, 2.8vw, 28px)', maxWidth: 900 }}>
@@ -134,6 +135,20 @@ export function DocsTab({ p }: { p: P }) {
         ))}
         {m.nanny ? <div style={{ padding: ph ? '14px 0' : '14px 0 18px', borderTop: HAIR, fontSize: 13, color: '#6B6259', lineHeight: 1.4 }}>{t('profile.nannyNote', { n: m.nanny.name, p: m.nanny.phone ? fmtPhone(m.nanny.phone) : t('common.notSet') })}</div> : null}
       </ListCard>
+      {!p.family ? (
+        <div data-testid="member-emails">
+          <ListCard phone={ph} title={t('email.listTitle')}>
+            {outbox.length ? outbox.map((e, idx) => (
+              <div key={e.id} data-testid="member-email" style={{ display: 'flex', flexDirection: 'column', gap: 2, padding: '16px 0', borderTop: idx ? HAIR : 'none' }}>
+                <span style={{ fontSize: 16, fontWeight: 500, lineHeight: 1.4 }}>{t(e.subject, e.params)}</span>
+                <span style={{ fontSize: 14, lineHeight: '20px', color: e.status === 'sent' ? '#6B6259' : '#7A5510', overflowWrap: 'anywhere' }}>
+                  {e.status === 'sent' ? t('email.sentTo', { name: e.toName, to: e.to, d: fmt.fd(e.sentAt.slice(0, 10), { day: 'numeric', month: 'short' }) }) : t('email.notSent', { name: s.familyContacts[e.familyId]?.firstName || e.toName })}
+                </span>
+              </div>
+            )) : <div style={{ padding: '16px 0', fontSize: 14, color: '#6B6259' }}>{t('email.none')}</div>}
+          </ListCard>
+        </div>
+      ) : null}
       {printer.node}
     </div>
   );

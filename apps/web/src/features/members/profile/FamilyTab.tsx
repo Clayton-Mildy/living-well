@@ -9,6 +9,7 @@ import { mediaUrl } from '../../../lib/media';
 import { say } from '../../../store/ui';
 import { NannyAvatar, NannyPhotoSheet } from '../ProfilePhoto';
 import { HAIR, relLabel } from '../lib';
+import { ConfirmDialog } from '../../kitchen/parts';
 import { ListCard, PendingBanner, Tag28 } from './parts';
 import type { P } from './types';
 
@@ -20,6 +21,14 @@ export function FamilyTab({ p }: { p: P }) {
   const rows = contactsOfMember(s, m.id);
   const canEdit = !p.family && (p.role === 'lobby' || p.role === 'mgmt') && p.canEdit;
   const canReset = !p.family && p.mgmt;
+  // round 17: lobby, finance and management hand the billing role to another approved contact (family.setPrimary, at once; unpaid invoices follow)
+  const canBill = !p.family && (p.role === 'lobby' || p.role === 'finance' || p.role === 'mgmt');
+  const [bill, setBill] = useState<FamilyContact | null>(null);
+  const doBill = async () => {
+    if (!bill) return;
+    const r = await p.act('family.setPrimary', { memberId: m.id, familyId: bill.id }, { ok: t('family.passedT', { n: bill.firstName }) });
+    if (r.ok) setBill(null);
+  };
   const doReset = async () => {
     if (!reset || busy) return;
     setBusy(true);
@@ -58,6 +67,7 @@ export function FamilyTab({ p }: { p: P }) {
               </div>
               <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: 8, marginLeft: 'auto' }}>
                 {canEdit && !pending ? <Button variant="secondary" size={44} icon="edit" onClick={() => p.open('contact', { familyId: contact.id })} label={t('profile.editContact', { n: contact.name })}>{t('common.edit')}</Button> : null}
+                {canBill && !pending && !link.primary ? <Button variant="secondary" size={44} icon="receipt_long" onClick={() => setBill(contact)}>{t('profile.makeBilling')}</Button> : null}
                 {canReset && !pending && contact.username ? <Button variant="secondary" size={44} icon="lock_reset" onClick={() => setReset(contact)} label={t('profile.resetPasswordFor', { n: contact.name })}>{t('profile.resetPassword')}</Button> : null}
                 {!p.family && !pending && waUrl(contact.phone) ? (
                   <a href={waUrl(contact.phone)} target="_blank" rel="noopener" data-testid="wa-link" aria-label={`${t('profile.messageFamily')} · ${contact.name}`} className="h-fill cp-fill cp-press"
@@ -108,6 +118,7 @@ export function FamilyTab({ p }: { p: P }) {
         </div>
       ) : null}
       {canEdit ? <NannyPhotoSheet m={m} open={nannyPhoto} onClose={() => setNannyPhoto(false)} /> : null}
+      <ConfirmDialog open={!!bill} onClose={() => setBill(null)} title={t('profile.makeBilling')} body={bill ? t('profile.makeBillingAsk', { name: bill.firstName }) : null} confirmLabel={t('profile.makeBilling')} cancelLabel={t('common.cancel')} onConfirm={doBill} danger={false} />
       <Sheet open={!!reset} onClose={() => setReset(null)} title={t('profile.resetTitle')}
         footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" onClick={() => setReset(null)}>{t('common.cancel')}</Button><Button icon="lock_reset" disabled={busy} onClick={doReset}>{t('profile.resetPassword')}</Button></div>}>
         <div style={{ fontSize: 15, lineHeight: '22px' }}>{t('profile.resetSub', { n: reset?.name || '' })}</div>

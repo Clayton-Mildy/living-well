@@ -117,3 +117,33 @@ describe('round 16: the contract email', () => {
     expect(document.querySelector('[data-testid="contract-email"]')?.textContent).toBe('No email for Maria — add one');
   });
 });
+
+describe('round 17: the member\'s Emails list', () => {
+  const mail = (id: string, kind: 'contract' | 'invoice', sentAt: string, status: 'sent' | 'noAddress', params: Record<string, string | number> = {}) => ({ id, clubId: 'citra', createdAt: sentAt, createdBy: 'system' as const, to: status === 'sent' ? 'maria@example.com' : '', toName: 'Maria Wijaya', familyId: 'f1', memberId: 'm1', kind, subject: kind === 'invoice' ? 'email.subj.invoice' : 'email.subj.contract', params, ref: kind === 'invoice' ? { type: 'invoice' as const, id: 'INV-2610-001' } : { type: 'document' as const, id: 'm1:x' }, sentAt, sentBy: 'system' as const, status });
+  const withMails = () => {
+    const s = structuredClone(buildSeed().citra);
+    s.emails = { a: mail('a', 'invoice', '2026-10-10T09:00', 'sent', { number: 'INV-2610-001', amount: 'Rp 2.700.000', name: 'Oma Lina' }), b: mail('b', 'invoice', '2026-10-20T09:00', 'noAddress', { number: 'INV-2610-001', amount: 'Rp 2.850.000', name: 'Oma Lina' }) };
+    return s;
+  };
+  it('staff see an Emails card, newest first, with subject and recipient; a row with no address says so', async () => {
+    await show(withMails());
+    const card = document.querySelector('[data-testid="member-emails"]')!;
+    expect(card).toBeTruthy();
+    expect(card.textContent).toContain('Emails');
+    const rows = Array.from(card.querySelectorAll('[data-testid="member-email"]'));
+    expect(rows).toHaveLength(2);
+    expect(rows[0].textContent).toContain('Invoice INV-2610-001 for Oma Lina: Rp 2.850.000');
+    expect(rows[0].textContent).toContain('Not emailed · no address for Maria');
+    expect(rows[1].textContent).toContain('Invoice INV-2610-001 for Oma Lina: Rp 2.700.000');
+    expect(rows[1].textContent).toContain('Maria Wijaya');
+    expect(rows[1].textContent).toContain('maria@example.com');
+  });
+  it('with nothing sent the card says so; the family never sees it', async () => {
+    await show(buildSeed().citra);
+    expect(document.querySelector('[data-testid="member-emails"]')?.textContent).toContain('No emails sent yet');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    await show(withMails(), 'family', true);
+    expect(document.querySelector('[data-testid="member-emails"]')).toBeNull();
+  });
+});

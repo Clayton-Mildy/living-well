@@ -211,6 +211,7 @@ export const financeActions: ActionDef[] = [
       // a credit can't take the invoice below what was already paid: money paid is returned with a refund
       if (input.amount < 0 && total + input.amount < paid) ctx.fail('finance.err.creditTooLarge', { max: rp(Math.max(0, total - paid)) });
       inv.lines.push({ id: ctx.id('ln'), kind: input.amount > 0 ? 'adjustment' : 'credit', label: input.label, qty: 1, unit: input.amount, amount: input.amount });
+      emailInvoice(d, ctx, inv.id); // round 17: the payer gets the corrected invoice again
       const params = { name: shortOf(d, inv.memberId), number: inv.number, label: input.label, amount: (input.amount < 0 ? '−' : '') + rp(Math.abs(input.amount)) };
       tellPayer(d, ctx, inv, 'finance.notif.adjusted', params);
       ctx.feed({ icon: 'edit_note', key: 'finance.feed.adjusted', params, memberId: inv.memberId });

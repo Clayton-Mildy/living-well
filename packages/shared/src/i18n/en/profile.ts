@@ -113,6 +113,7 @@ export const profile = {
   'sec.details': 'Details', 'sec.contact': 'Family contact', 'sec.plan': 'Plan', 'sec.health': 'Health', 'sec.allergies': 'Allergies and care', 'sec.nanny': 'Carer (suster)',
   'sec.docsNow': 'Documents received now', nameLabel: 'Full name, as on the KTP', addressPh: 'Street, number, area', comesWithNanny: 'Comes with a carer (suster)', nannyName: 'Carer’s name', nannyNik: 'Carer’s NIK (KTP number)', nikPh: '16 digits', ktpPhotoOf: 'Photo of the KTP · {who}', ktpAttached: 'KTP photo attached',
   nannyPhone: 'Carer’s mobile (optional)',
+  makeBilling: 'Make billing contact', makeBillingAsk: 'Make {name} the billing contact? Unpaid invoices move to {name}.',
   primaryBillingSub: 'Receives invoices and payment reminders.', primaryAlready: 'This contact is already the primary billing contact. Make another contact primary to change it.',
   appAccess: 'App access', appAccessOn: 'Can sign in to the family app once approved.', appAccessOff: 'No access to the family app.', inviteDemo: 'A WhatsApp invite is sent when this is approved (demo).',
   removeContact: 'Remove from this member', removeContactSub: 'Remove {n} from {m}’s family contacts? If {n} has no other members, the login is switched off too.', addContactBtn: 'Add contact',

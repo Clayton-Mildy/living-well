@@ -102,6 +102,7 @@ export const profile: Same<typeof EN> = {
   'sec.details': 'Data diri', 'sec.contact': 'Kontak keluarga', 'sec.plan': 'Paket', 'sec.health': 'Kesehatan', 'sec.allergies': 'Alergi dan perawatan', 'sec.nanny': 'Pengasuh',
   'sec.docsNow': 'Dokumen yang diterima sekarang', nameLabel: 'Nama lengkap, sesuai KTP', addressPh: 'Jalan, nomor, daerah', comesWithNanny: 'Datang bersama pengasuh', nannyName: 'Nama pengasuh',
   nannyPhone: 'Nomor ponsel pengasuh (opsional)', nannyNik: 'NIK pengasuh (nomor KTP)', nikPh: '16 angka', ktpPhotoOf: 'Foto KTP · {who}', ktpAttached: 'Foto KTP terlampir',
+  makeBilling: 'Jadikan kontak tagihan', makeBillingAsk: 'Jadikan {name} kontak tagihan? Tagihan yang belum dibayar pindah ke {name}.',
   primaryBillingSub: 'Menerima tagihan dan pengingat pembayaran.', primaryAlready: 'Kontak ini sudah menjadi kontak tagihan utama. Jadikan kontak lain sebagai utama untuk mengubahnya.',
   appAccess: 'Akses aplikasi', appAccessOn: 'Bisa masuk ke aplikasi keluarga setelah disetujui.', appAccessOff: 'Tidak ada akses ke aplikasi keluarga.', inviteDemo: 'Undangan WhatsApp dikirim setelah ini disetujui (demo).',
   removeContact: 'Hapus dari anggota ini', removeContactSub: 'Hapus {n} dari kontak keluarga {m}? Jika {n} tidak punya anggota lain, akses masuknya juga dimatikan.', addContactBtn: 'Tambah kontak',

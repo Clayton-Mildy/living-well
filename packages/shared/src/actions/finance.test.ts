@@ -936,3 +936,14 @@ describe('round 16: proof of payment', () => {
     expect(() => w.run('payment.record', { memberId: 'm1', amount: 50_000, method: 'other', invoiceId: 'INV-2610-001' }, 's10')).not.toThrow();
   });
 });
+
+describe('round 17: adjusting an invoice re-sends it', () => {
+  it('invoice.adjust emails the invoice to its payer again', () => {
+    const w = world();
+    const before = live(w.s.emails || {}).filter((e) => e.kind === 'invoice').length;
+    w.run('invoice.adjust', { invoiceId: 'INV-2610-001', label: 'Late pick-up', amount: 150_000 }, 's10');
+    const mails = live(w.s.emails).filter((e) => e.kind === 'invoice');
+    expect(mails).toHaveLength(before + 1);
+    expect(mails.find((e) => e.ref.id === 'INV-2610-001')).toMatchObject({ kind: 'invoice', ref: { type: 'invoice', id: 'INV-2610-001' }, familyId: w.s.invoices['INV-2610-001'].payerFamilyId, subject: 'email.subj.invoice' });
+  });
+});

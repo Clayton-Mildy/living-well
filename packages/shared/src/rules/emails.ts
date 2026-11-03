@@ -11,3 +11,6 @@ export const lastEmail = (s: ClubState, ref: EmailRow['ref']): EmailRow | undefi
 /** The contract emails of a member, newest first (whatever signing they were for). */
 export const contractEmails = (s: ClubState, memberId: string): EmailRow[] =>
   sortBy(live(s.emails || {}).filter((e) => e.kind === 'contract' && e.memberId === memberId), (e) => e.sentAt + e.id, -1);
+/** Every email about one member (contracts and invoices), newest first. */
+export const emailsOfMember = (s: ClubState, memberId: string): EmailRow[] =>
+  sortBy(live(s.emails || {}).filter((e) => e.memberId === memberId), (e) => e.sentAt + e.id, -1);

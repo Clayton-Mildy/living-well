@@ -105,7 +105,9 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
   const toggle = (p: 'pay' | 'adjust' | 'void') => setPanel(panelOpen === p ? null : p);
 
   // round 16: the last time this invoice was emailed (simulated), to whom
-  const mailed = (() => { const e = lastEmail(s, { type: 'invoice', id: inv.id }); return e && e.status === 'sent' ? e : undefined; })();
+  const lastMail = lastEmail(s, { type: 'invoice', id: inv.id });
+  const mailed = lastMail && lastMail.status === 'sent' ? lastMail : undefined;
+  const notMailed = lastMail && lastMail.status === 'noAddress' ? lastMail : undefined; // round 17: the payer has no email, so say it was not sent
   const statusDate = v.status === 'paid' ? t('finance.inv.paidOn', { date: fdy(paidDateOf(v.inv, pays) || today) }) : t('finance.inv.dueOn', { date: fdy(inv.dueDate) });
   return (
     <>
@@ -130,6 +132,7 @@ function InvoiceBody({ inv, audience, onClose }: { inv: Invoice; audience: 'staf
             <span style={caps}>{t('finance.inv.billTo')}</span>
             <span style={{ fontSize: 16, lineHeight: 1.4, textAlign: 'right' }}>{payerName}</span>
             {v.payer?.phone ? <a href={`tel:${v.payer.phone}`} style={{ fontSize: FONT_BODY, lineHeight: 1.4 }}>{fmtPhone(v.payer.phone)}</a> : null}
+            {notMailed ? <span data-testid="invoice-not-emailed" style={{ fontSize: 13, lineHeight: 1.4, color: '#7A5510', textAlign: 'right', overflowWrap: 'anywhere' }}>{t('email.notSent', { name: s.familyContacts[notMailed.familyId]?.firstName || notMailed.toName })}</span> : null}
             {mailed ? <span data-testid="invoice-emailed" style={{ fontSize: 13, lineHeight: 1.4, color: '#6B6259', textAlign: 'right', overflowWrap: 'anywhere' }}>{t('email.invoiceSent', { to: mailed.to, d: fd(mailed.sentAt.slice(0, 10), { day: 'numeric', month: 'short' }) })}</span> : null}
           </div>
         ) : null}
