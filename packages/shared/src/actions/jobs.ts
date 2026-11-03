@@ -1,6 +1,6 @@
 // Scheduled work run by the server every 15 s as the system user (scheduled broadcasts, invoice run, simulated syncs…).
 // Feature modules register job functions with registerJob(); 'jobs.tick' runs them all inside one mutation.
-import type { Draft } from 'immer';
+import { current, isDraft, type Draft } from 'immer';
 import type { ClubState, Member } from '../types';
 import { defineAction, DomainError, type Ctx } from './framework';
 import { currentMembership, isPendingRow, displayName, primaryContact } from '../rules/core';
@@ -9,7 +9,7 @@ import { leaveOverrunMonth } from '../rules/leave';
 import { finalInvoiceFor } from '../rules/members';
 import { dm } from '../rules/mgmtParse';
 import { OCCASION_AHEAD_DAYS, occasionsInRange } from '../rules/occasions';
-import { fewVisitsSettings, fewVisitsState } from '../rules/fewVisits';
+import { fewVisitMembers, fewVisitsSettings, fewVisitsWindow } from '../rules/fewVisits';
 import { emailInvoice } from './emails';
 import { addDays, rp } from '../util';
 
@@ -105,11 +105,15 @@ registerJob('occasions.daily', (d, ctx) => {
 // 5 days. Nobody flagged = no notice. Calling the families is done from Next month (the link opens the list).
 registerJob('fewVisits.daily', (d, ctx) => {
   try {
-    const st = fewVisitsState(d as unknown as ClubState, ctx.today);
-    if (st.phase !== 'open' || !st.rows.length) return;
-    const refId = `few:${st.month}`;
+    // the window first (cheap): the list is built only inside the open window, once a month, and on a plain copy (reads on an immer draft are slow)
+    const w = fewVisitsWindow(d as unknown as ClubState, ctx.today);
+    if (w.phase !== 'open') return;
+    const refId = `few:${w.month}`;
     if (toldAlready(d, 'renewals.few.notif', refId)) return;
-    ctx.notify({ toRoles: ['mgmt', 'lobby'], kind: 'renewals.few.notif', params: { n: st.rows.length, max: fewVisitsSettings(d as unknown as ClubState).below - 1, d: st.deadline }, link: '/renewals?few=1', ref: { type: 'fewVisits', id: refId } });
+    const plain = (isDraft(d) ? current(d) : d) as ClubState;
+    const rows = fewVisitMembers(plain, ctx.today);
+    if (!rows.length) return;
+    ctx.notify({ toRoles: ['mgmt', 'lobby'], kind: 'renewals.few.notif', params: { n: rows.length, max: fewVisitsSettings(plain).below - 1, d: w.deadline }, link: '/renewals?few=1', ref: { type: 'fewVisits', id: refId } });
   } catch (e) {
     if (!(e instanceof DomainError)) console.error('fewVisits.daily job failed', e);
   }

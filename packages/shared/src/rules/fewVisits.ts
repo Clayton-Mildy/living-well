@@ -4,7 +4,6 @@
 import type { ClubState, ISODate, VisitCall, YM } from '../types';
 import { addDays, addMonths, live, monthStart, sortBy, ym } from '../util';
 import { approvedMembers, currentMembership, membershipStatus } from './core';
-import { visitsInMonth } from './attendance';
 import { onLeaveIn } from './leave';
 import { noticeDeadline } from './notice';
 import { askedInApp, nextMonthPlans } from './renewals';
@@ -41,13 +40,20 @@ export function fewVisitMembers(s: ClubState, today: ISODate): FewRow[] {
   const { below } = fewVisitsSettings(s);
   const nextStatus = new Map(nextMonthPlans(s, today).map((r) => [r.member.id, r.status]));
   const calledIds = new Set(live(s.visitCalls || {}).filter((c) => c.month === month).map((c) => c.memberId));
+  // this month's check-in days by member, read once (visitsInMonth per member would scan all attendance each time)
+  const byMember = new Map<string, ISODate[]>();
+  for (const a of live(s.attendance)) {
+    if (!a.checkIn || ym(a.date) !== month) continue;
+    const list = byMember.get(a.memberId);
+    if (list) list.push(a.date); else byMember.set(a.memberId, [a.date]);
+  }
   const rows: (FewRow & { name: string })[] = [];
   for (const m of approvedMembers(s)) {
     if (membershipStatus(m, today) !== 'active' || currentMembership(m).start > monthStart(month)) continue;
     if (onLeaveIn(m, month)) continue;
     const st = nextStatus.get(m.id);
     if (st === 'stop' || st === 'leave' || askedInApp(s, m, next)) continue;
-    const days = visitsInMonth(s, m, month).filter((d) => d <= today);
+    const days = (byMember.get(m.id) || []).filter((d) => d <= today).sort();
     if (days.length >= below) continue;
     rows.push({ memberId: m.id, visits: days.length, ...(days.length ? { last: days[days.length - 1] } : {}), called: calledIds.has(m.id), name: `${m.firstName} ${m.lastName}` });
   }
@@ -66,10 +72,15 @@ export interface FewVisitsState {
   /** how many of the rows were called */
   called: number;
 }
-export function fewVisitsState(s: ClubState, today: ISODate): FewVisitsState {
+export type FewVisitsWindow = Omit<FewVisitsState, 'rows' | 'called'>;
+/** The month's window (alert day, deadline, phase) without the rows: cheap, so the job and Also today check it before building the list. */
+export function fewVisitsWindow(s: ClubState, today: ISODate): FewVisitsWindow {
   const month = ym(today);
   const alertDay = fewVisitsAlertDay(s, month);
   const deadline = noticeDeadline(s, addMonths(month, 1));
+  return { month, alertDay, deadline, phase: today < alertDay ? 'before' : today <= deadline ? 'open' : 'closed' };
+}
+export function fewVisitsState(s: ClubState, today: ISODate): FewVisitsState {
   const rows = fewVisitMembers(s, today);
-  return { month, alertDay, deadline, phase: today < alertDay ? 'before' : today <= deadline ? 'open' : 'closed', rows, called: rows.filter((r) => r.called).length };
+  return { ...fewVisitsWindow(s, today), rows, called: rows.filter((r) => r.called).length };
 }

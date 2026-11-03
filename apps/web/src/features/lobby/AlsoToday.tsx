@@ -1,12 +1,12 @@
 // "Also today" (Prototype v3 aside rail, no box): trial guests (no time: they come from opening) and visit guests (with their time).
 // Plain text blocks (19px title, 14px sub line, the guest's actions) separated by hairlines. Every title is tappable: guest -> its enquiry (/enquiries).
 // Guests show GUESTS_PER_PAGE at a time.
-import { Fragment, type ReactNode } from 'react';
+import { Fragment, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { listName, type GuestVisit } from '@cp/shared';
 import { occasionsAhead } from '@cp/shared/rules/occasions';
 import { checkOnList } from '@cp/shared/rules/checkOn';
-import { fewVisitsState } from '@cp/shared/rules/fewVisits';
+import { fewVisitMembers, fewVisitsWindow } from '@cp/shared/rules/fewVisits';
 import { useCheckOnDays } from './useCheckOnDays';
 import { alsoToday } from '@cp/shared/rules/lobby';
 import { menuOn } from '@cp/shared/rules/kitchen';
@@ -65,6 +65,8 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
   const sub14 = { fontSize: 14, lineHeight: 1.4, color: '#6B6259' } as const;
   const { isPhone } = useDevice();
   const [notSeen] = useCheckOnDays();
+  // round 17: the few-visits rows are built only inside the open window (the list is heavy: every member's visits this month)
+  const toCall = useMemo(() => (fewVisitsWindow(s, today).phase === 'open' ? fewVisitMembers(s, today).filter((r) => !r.called).length : 0), [s, today]);
 
   // KC round 6: the front desk knows today's menu (what the kitchen cooks: lunch, the soft version, afternoon tea)
   const menu = menuOn(s, today);
@@ -184,9 +186,7 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
   }
 
   // round 17: few visits — from the alert day to the last change day, the members nobody has called yet; a tap opens the list on Next month
-  const few = fewVisitsState(s, today);
-  const toCall = few.rows.filter((r) => !r.called).length;
-  if (few.phase === 'open' && toCall) {
+  if (toCall) {
     blocks.push(<Block key="fewVisits" title={`${t('renewals.few.title')} · ${t('renewals.few.toCall', { n: toCall })}`} onClick={() => navigate('/renewals?few=1')} />);
   }
 

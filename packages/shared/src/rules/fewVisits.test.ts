@@ -3,7 +3,8 @@ import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
 import type { ClubState } from '../types';
 import { FEW_DAY, withFewVisits } from './testFewVisits';
-import { fewVisitMembers, fewVisitsAlertDay, fewVisitsSettings, fewVisitsState } from './fewVisits';
+import { fewVisitMembers, fewVisitsAlertDay, fewVisitsSettings, fewVisitsState, fewVisitsWindow } from './fewVisits';
+import { translate } from '../i18n';
 
 const ids = (s = withFewVisits(), today = FEW_DAY) => fewVisitMembers(s, today).map((r) => r.memberId);
 
@@ -89,5 +90,19 @@ describe('phase', () => {
     const st = fewVisitsState(withFewVisits(), FEW_DAY);
     expect(st.rows).toHaveLength(6);
     expect(st.called).toBe(1);
+  });
+});
+
+describe('window and wording', () => {
+  it('the window matches the full state without building the rows', () => {
+    const s = withFewVisits();
+    for (const d of ['2026-11-04', FEW_DAY, '2026-11-25']) {
+      const { rows: _r, called: _c, ...w } = fewVisitsState(s, d);
+      expect(fewVisitsWindow(s, d)).toEqual(w);
+    }
+  });
+  it('the notice has singular forms ("1 member came 1 time")', () => {
+    expect(translate('en', 'renewals.few.notif', { n: 1, max: 1, d: '17 Nov' })).toBe('1 member came 1 time or fewer this month · plan changes close 17 Nov');
+    expect(translate('en', 'renewals.few.notif', { n: 6, max: 4, d: '17 Nov' })).toBe('6 members came 4 times or fewer this month · plan changes close 17 Nov');
   });
 });

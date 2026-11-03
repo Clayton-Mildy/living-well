@@ -1,5 +1,5 @@
 // Next month > Few visits (round 17): one quiet card above the tabs. From the alert day to the last change day it reads "Few visits · 7 · 2 called · changes close 17 Nov";
-// before the alert day it is greyer ("list opens 15 Nov · 6 so far"), after the last change day "changes closed". It always opens the list.
+// before the alert day it is greyer ("list opens 15 Nov"), after the last change day "7 · 2 called · changes closed". It always opens the list.
 import { useMemo } from 'react';
 import { fewVisitsState, type FewVisitsState } from '@cp/shared/rules/fewVisits';
 import { Icon } from '../../components/ui';
@@ -11,8 +11,8 @@ const short = { day: 'numeric', month: 'short' } as const;
 
 /** The state in a few words, for the card and the top of the list: "6 · 1 called · changes close 17 Nov". */
 export function fewLine(t: TFn, fd: (d: string, o: Intl.DateTimeFormatOptions) => string, st: FewVisitsState): string {
-  if (st.phase === 'before') return t('renewals.few.before', { d: fd(st.alertDay, short), n: st.rows.length });
-  if (st.phase === 'closed') return t('renewals.few.closed');
+  if (st.phase === 'before') return t('renewals.few.before', { d: fd(st.alertDay, short) });
+  if (st.phase === 'closed') return t('renewals.few.closed', { n: st.rows.length, c: st.called });
   return t('renewals.few.card', { n: st.rows.length, c: st.called, d: fd(st.deadline, short) });
 }
 

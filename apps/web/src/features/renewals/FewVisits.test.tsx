@@ -105,16 +105,16 @@ describe('the Few visits card on Next month', () => {
   it('before the alert day the card is grey and says when the list opens, and still opens the list', async () => {
     openClub('2026-11-10');
     await show(<Renewals />);
-    expect(cardText()).toBe('Few visits · list opens 15 Nov · 6 so far');
+    expect(cardText()).toBe('Few visits · list opens 15 Nov');
     expect(card()?.getAttribute('data-phase')).toBe('before');
     await click(card());
     expect(document.querySelector('[data-testid="few-list"]')).toBeTruthy();
   });
 
-  it('after the last change day the card says "changes closed"', async () => {
+  it('after the last change day the card keeps its counts and says "changes closed"', async () => {
     openClub('2026-11-20');
     await show(<Renewals />);
-    expect(cardText()).toBe('Few visits · changes closed');
+    expect(cardText()).toBe('Few visits · 6 · 1 called · changes closed');
     expect(card()?.getAttribute('data-phase')).toBe('closed');
   });
 

@@ -47,7 +47,7 @@ test('Caca logs "No answer" for the first row of the few-visits list: the row sh
   await signIn(page, 's1', '/renewals');
   const card = page.getByTestId('few-card');
   await expect(card).toContainText('Few visits');
-  await expect(card).toContainText('changes closed'); // 21 Oct is after October's last change day, 18 Oct
+  await expect(card).toContainText('3 · 1 called · changes closed'); // 21 Oct is after October's last change day, 18 Oct: the counts stay
   await assertNoHorizontalScroll(page);
   await card.click();
   const list = page.getByTestId('few-list');

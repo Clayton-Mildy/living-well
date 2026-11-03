@@ -8,7 +8,10 @@ export const DICT: Record<Lang, Record<string, string>> = { en, id };
 
 export function format(s: string, vars?: Record<string, string | number | undefined | null>) {
   if (!vars) return s;
-  return s.replace(/\{(\w+)\}/g, (m, k) => (vars[k] === undefined || vars[k] === null ? m : String(vars[k])));
+  return s
+    // a counted word: {n|member|members} is "member" when n is 1, else "members" (English; Indonesian has no plural)
+    .replace(/\{(\w+)\|([^|{}]*)\|([^|{}]*)\}/g, (m, k, one, other) => (vars[k] === undefined || vars[k] === null ? m : Number(vars[k]) === 1 ? one : other))
+    .replace(/\{(\w+)\}/g, (m, k) => (vars[k] === undefined || vars[k] === null ? m : String(vars[k])));
 }
 /** Translate a key (falls back to English, then to the key itself). */
 export function translate(lang: Lang, key: string, vars?: Record<string, string | number | undefined | null>) {
