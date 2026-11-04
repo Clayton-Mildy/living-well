@@ -125,7 +125,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request, onOpenEvent 
   const canCopy = canEdit && hasSessions(last);
   const [askCopy, setAskCopy] = useState(false);
   const doCopy = () => { d.put(copyProgramme(d.draft, last, week, today)); setSel(null); setPick(null); setAskCopy(false); say(t('cal.copied')); };
-  const onCopy = () => (programmeCopyReplaces(d.draft, last, week, today) ? setAskCopy(true) : doCopy());
+  const onCopy = () => (programmeCopyReplaces(d.draft, last, week, today, ALL_DAYS.filter((w) => tripOf(w))) ? setAskCopy(true) : doCopy());
   /** round 19: the field trip of each day of the week shown (its sessions are hidden and nothing can be placed there) */
   const trips = useMemo(() => Object.fromEntries(ALL_DAYS.map((w) => [w, eventsOn(s, view.dates[w - 1]).find((e) => e.kind === 'outing')])) as Record<Weekday, ReturnType<typeof eventsOn>[number] | undefined>, [s, view.dates]);
   const tripOf = (w: Weekday) => trips[w];
@@ -343,7 +343,9 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request, onOpenEvent 
     ))) : null;
 
 
-  const summary = d.changes.slice(0, 8).map((c) => {
+  /** a trip day's cells are hidden, so Copy last week's changes there are left out of what the publish lists */
+  const shownChanges = d.changes.filter((c) => !tripOf(c.w));
+  const summary = shownChanges.slice(0, 8).map((c) => {
     const before = d.base[c.w][c.slot], after = d.draft[c.w][c.slot];
     const nm = (x: typeof before) => (x ? activityName(s.activities[x.activityId], lang) : '—');
     return `${wShort(c.w)} ${c.slot}: ${nm(before)} → ${nm(after)}`;
@@ -650,7 +652,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request, onOpenEvent 
         </div>
       )}
 
-      <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, changed - summary.length)} count={changed} week={week} asks={asks} tripNotes={tripNotes}
+      <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, shownChanges.length - summary.length)} count={shownChanges.length} week={week} asks={asks} tripNotes={tripNotes}
         onPublish={async (effectiveFrom, notify) => {
           await d.flush();
           const r = await act('schedule.publish', { effectiveFrom, days: d.draft, ...(asks ? {} : { notify }) }, { silent: true });

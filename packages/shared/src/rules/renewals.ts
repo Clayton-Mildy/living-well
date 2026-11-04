@@ -2,7 +2,7 @@
 // Subscriptions run month to month: before the month ends Caca asks every family whether they continue, switch plan, take leave or stop, and records the
 // answer (a FollowUp). Round 14: a change that touches the membership (upgrade, downgrade, leave, stop) applies at once, whoever records it (it is dated
 // from the 1st), and can be undone until the month starts (actions/renewals.ts); old rows that still wait for management can be decided in the Approvals hub
-// (actions/approvals.ts). Leave keeps its own rules (rules/leave.ts): 14 days' notice before the month, at most 2 months.
+// (actions/approvals.ts). Leave keeps its own rules (rules/leave.ts): its notice days before the month, at most the club's months in a row (Settings).
 import type { Actor, ClubState, DT, FamilyContact, FollowUp, FollowUpCall, FollowUpOutcome, ISODate, Member, Plan, Relation, YM } from '../types';
 import { addDays, addMonths, live, monthStart, sortBy, ym } from '../util';
 import { activeOn, approvedMembers, contactsOfMember, currentMembership, isPendingRow, memberName, membershipStatus, planOn } from './core';

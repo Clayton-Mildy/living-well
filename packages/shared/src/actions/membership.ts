@@ -1,6 +1,6 @@
 // Leave (cuti), from the brochure's terms: the billing contact asks for a month of leave in the family app (or finance / management record one on the member's
-// Plan tab), at the latest 14 days before the end of the month before it. The month costs the leave fee instead of the plan; at most 2 months in a row.
-// The family can take a request back until its deadline. After 2 months a member who has not been confirmed back is taken to have resigned (daily job, jobs.ts).
+// Plan tab), at the latest 14 days before the end of the month before it. The month costs the leave fee instead of the plan; at most the club's months in a row (Settings, default 2).
+// The family can take a request back until its deadline. After that many months a member who has not been confirmed back is taken to have resigned (daily job, jobs.ts).
 import type { Draft } from 'immer';
 import type { Actor, ClubState, Member, Membership, YM } from '../types';
 import { defineAction, DomainError, hasRole, isFamily, type ActionDef, type Ctx } from './framework';

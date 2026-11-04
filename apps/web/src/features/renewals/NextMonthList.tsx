@@ -136,7 +136,7 @@ export function NextMonthList({ month, onFew }: { month: YM; /** opens the Few v
       </label>
       <div role="group" aria-label={t('renewals.nextPlans')} data-testid="next-plans" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: isPhone ? 'nowrap' : 'wrap', overflowX: isPhone ? 'auto' : undefined, margin: isPhone ? '0 -16px' : undefined, padding: isPhone ? '0 16px' : undefined, scrollbarWidth: 'none' }}>
         {onFew ? <FewVisitsButton onOpen={onFew} /> : null}
-        <span style={{ fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', color: MUTED, fontWeight: 600, marginRight: 4, flex: 'none' }}>{t('renewals.nextPlans')}</span>
+        {onFew && isPhone ? null : <span style={{ fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', color: MUTED, fontWeight: 600, marginRight: 4, flex: 'none' }}>{t('renewals.nextPlans')}</span>}
         {summary.map((x) => chip(pick === x.key, () => setPick(pick === x.key ? null : x.key), <><span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{x.n}</span>{x.label}</>, { 'data-plan-count': x.key }))}
       </div>
       <div role="group" aria-label={t('renewals.segLabel')} data-testid="next-count" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>

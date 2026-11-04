@@ -28,7 +28,7 @@ export const jobsActions = [
 
 // ---------- the daily membership job (the brochure's terms) ----------
 // An invoice still unpaid on the 1st (after its due month) puts the membership on hold until it is paid (read from the invoices, nothing is stored; here the
-// club is told once). Still unpaid on the 3rd, and no word from the family (no call note on the invoice), the membership stops (re-registration, with its fee again). A member with 2 months of leave in a row who is not
+// club is told once). Still unpaid on the 3rd, and no word from the family (no call note on the invoice), the membership stops (re-registration, with its fee again). A member with the club's most months of leave in a row who is not
 // confirmed back is taken to have resigned at the start of the month after. Management and the billing contact are told each time.
 const toldAlready = (d: Draft<ClubState>, kind: string, refId: string) => Object.values(d.notifications).some((n) => !n.deletedAt && n.kind.startsWith(kind) && n.ref?.id === refId);
 
@@ -65,6 +65,7 @@ registerJob('membership.daily', (d, ctx) => {
       ctx.feed({ icon: 'person_off', key: 'finance.feed.stopped', params: { name, number: x.number }, memberId: m.id });
     }
     // 3. leave that ran out: the club's most months in a row (round 19: leaveMaxMonths, default 2) and no word for the next one
+    const max = leaveMaxMonths(s);
     for (const m of Object.values(d.members)) {
       if (m.deletedAt || isPendingRow(m)) continue;
       const month = leaveOverrunMonth(s, m as Member, today);
@@ -73,7 +74,6 @@ registerJob('membership.daily', (d, ctx) => {
       const lastDay = addDays(`${month}-01`, -1) < cur.start ? cur.start : addDays(`${month}-01`, -1);
       cur.lastDay = lastDay; cur.endReason = 'leaveOverrun'; cur.endedBy = 'system'; cur.endedAt = ctx.nowDT;
       const name = displayName(m);
-      const max = leaveMaxMonths(s);
       ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'family.notif.leaveOverrun', params: { name, month, max }, link: `/members/${m.id}`, memberId: m.id, severity: 'attention' });
       const payer = primaryContact(s, m.id);
       if (payer) ctx.notify({ toUsers: [payer.id], kind: 'family.notif.leaveOverrunFamily', params: { name, month, max }, link: '/billing', memberId: m.id, severity: 'attention' });

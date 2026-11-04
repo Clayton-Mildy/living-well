@@ -15,11 +15,11 @@ export const TERMS_V1_EN = `# 1. Membership and plans
 - Pay by the virtual account on the invoice, or by cash or bank transfer with a photo of the proof of payment.
 - If an invoice stays unpaid, the membership is put on hold from the 1st of the next month. If the family has not told us when they will pay, the membership stops a few days later.
 # 4. Changing, stopping and leave
-- An upgrade starts on the next 1st and must be asked for at least {upgradeDays} days before it.
-- A downgrade must be asked for at least {downgradeDays} days before the month it starts.
-- Stopping the membership must be asked for at least {stopDays} days before the month it starts.
-- Leave (cuti) must be asked for at least {leaveDays} days before the month it starts. A month of leave is billed at the leave fee and keeps the member's place.
-- Leave can be taken for up to {leaveMaxMonths} months in a row. If we have no word from the family after that, the membership ends.
+- An upgrade starts on the next 1st and must be asked for at least {upgradeDays} {upgradeDays|day|days} before it.
+- A downgrade must be asked for at least {downgradeDays} {downgradeDays|day|days} before the month it starts.
+- Stopping the membership must be asked for at least {stopDays} {stopDays|day|days} before the month it starts.
+- Leave (cuti) must be asked for at least {leaveDays} {leaveDays|day|days} before the month it starts. A month of leave is billed at the leave fee and keeps the member's place.
+- Leave can be taken for up to {leaveMaxMonths} {leaveMaxMonths|month|months} in a row. If we have no word from the family after that, the membership ends.
 - Requests made later than this apply from the month after.
 # 5. Pick-up and field trips
 - Pick-up is a monthly service with its own price, on the monthly invoice.

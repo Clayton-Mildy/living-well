@@ -148,7 +148,7 @@ export function Settings() {
 
   const err = (text: string) => <div role="alert" style={{ padding: '0 16px 10px', fontSize: FONT_SMALL, color: '#9A3D24', lineHeight: 1.4 }}>{text}</div>;
   const daysField = (name: string, label: string, value: string, set: (v: string) => void, bad: boolean, unit = 'mgmt.settings.days') => (
-    <><NumField name={name} label={label} value={value} onChange={(v) => { set(v); setLeft((x) => (x[name] ? { ...x, [name]: false } : x)); }} onBlur={blur(name)} bad={bad} width={46} /><span style={SUB}>{t(unit)}</span></>
+    <><NumField name={name} label={label} value={value} onChange={(v) => { set(v); setLeft((x) => (x[name] ? { ...x, [name]: false } : x)); }} onBlur={blur(name)} bad={bad} width={46} /><span style={SUB}>{t(unit, { n: num(value) })}</span></>
   );
   const sentence = (key: string, name: string, value: string, set: (v: string) => void, bad: boolean, savedN: number) => {
     const label = tn(t, key, savedN);

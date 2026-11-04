@@ -167,6 +167,6 @@ export const mgmt = {
   // ----- round 18: Settings › notice per kind, few-visits alert before next month -----
   'settings.downgrade': 'Downgrade', 'settings.downgradeSub': 'to a cheaper plan · ask by {d}', 'settings.stop': 'Stop membership', 'settings.stopSub': 'last month {m} · ask by {d}',
   'settings.leave': 'Leave (cuti)', 'settings.leaveSub': '{m} off · ask by {d}', 'settings.upgrade': 'Upgrade', 'settings.upgradeSub': 'starts the next 1st · ask by {d}',
-  'settings.leaveRun': 'Leave in a row', 'settings.leaveRunSub': 'no word after that ends the membership', 'settings.days': 'days', 'settings.months': 'months',
+  'settings.leaveRun': 'Leave in a row', 'settings.leaveRunSub': 'no word after that ends the membership', 'settings.days': '{n|day|days}', 'settings.months': '{n|month|months}',
   'settings.fewAlert': 'Alert before next month', 'settings.fewAlertSub': '{m}: alert {a} · changes close {c}',
 };

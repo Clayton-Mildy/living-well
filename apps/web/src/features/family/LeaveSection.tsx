@@ -1,5 +1,5 @@
 // Leave (cuti, the brochure's terms): the months of leave a member has asked for, the "Ask for leave" button with its sheet, and the word the club waits for
-// after 2 months. Used by the family plan card (the billing contact asks, takes back and confirms) and by the profile's Plan tab (finance and management record it).
+// after the club's most months in a row (Settings). Used by the family plan card (the billing contact asks, takes back and confirms) and by the profile's Plan tab (finance and management record it).
 import { useState, type ReactNode } from 'react';
 import { currentMembership, feeOf, issueDateOf, leaveChoices, leaveDeadline, leaveMonths, leaveNeedsWord, leaveOpen, leaveMaxMonths, displayName, membershipStatus, priceOn, rp, ym, type ClubState, type Member } from '@cp/shared';
 import { noticeDays } from '@cp/shared/rules/notice';

@@ -72,6 +72,7 @@ function settingsWhat(s: ClubState, i: Record<string, unknown>): { key: string; 
   const quota = typeof i.flexQuota === 'number' ? i.flexQuota : undefined;
   const leaveMax = typeof i.leaveMaxMonths === 'number' ? i.leaveMaxMonths : undefined;
   const others = (quota === undefined ? 0 : 1) + (leaveMax === undefined ? 0 : 1);
+  if (kinds.length === 1 && quota === undefined && leaveMax !== undefined) return { key: `approvals.owner.what.notice_${kinds[0]}_leaveMax`, params: { n: notice[kinds[0]], a: leaveMax } }; // e.g. "Upgrade · 3 days · Leave in a row · 3 months"
   if (kinds.length === 1 && !others) return { key: `approvals.owner.what.notice_${kinds[0]}`, params: { n: notice[kinds[0]] } };
   if (kinds.length > 1 && !others) { const now = { ...noticeSettings(s), ...notice }; return { key: 'approvals.owner.what.noticeAll', params: { a: now.downgrade, b: now.stop, c: now.leave, d: now.upgrade } }; }
   if (!kinds.length && quota !== undefined && others === 1) return { key: 'approvals.owner.what.flexQuota', params: { n: quota } };

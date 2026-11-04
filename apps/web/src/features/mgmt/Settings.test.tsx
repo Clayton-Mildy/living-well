@@ -172,7 +172,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Settings › notice per kind (%
     expect(Array.from(section('Membership rules').querySelectorAll('input')).map((x) => x.getAttribute('aria-label'))).toEqual(['Downgrade', 'Stop membership', 'Leave (cuti)', 'Upgrade', 'Leave in a row']);
     expect(field('upgrade').value).toBe('1');
     expect(row('upgrade').textContent).toContain('starts the next 1st · ask by 30 Nov');
-    expect(row('upgrade').textContent).toContain('days');
+    expect(row('upgrade').textContent).toContain('day');
     expect(field('leaveRun').value).toBe('2');
     expect(row('leaveRun').textContent).toContain('no word after that ends the membership');
     expect(row('leaveRun').textContent).toContain('months');

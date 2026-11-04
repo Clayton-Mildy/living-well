@@ -25,6 +25,11 @@ describe('termsText', () => {
     const s = produce(withTerms(base(), v(1, '{stopDays} {leaveDays} {downgradeDays} {noticeDays}')), (d) => { d.club.settings.notice = { downgrade: 7, stop: 30, leave: 14 }; });
     expect(termsText(s, 'en')).toBe('30 14 7 30');
   });
+  it('final review: counted words follow the number ("1 day", "2 months")', () => {
+    const s = withTerms(base(), v(1, '{upgradeDays} {upgradeDays|day|days} · {leaveMaxMonths} {leaveMaxMonths|month|months}'));
+    expect(termsText(s, 'en')).toBe('1 day · 2 months');
+    expect(termsText(produce(s, (d) => { d.club.settings.leaveMaxMonths = 1; }), 'en')).toBe('1 day · 1 month');
+  });
   it('round 19: fills {upgradeDays} and {leaveMaxMonths}', () => {
     const s = withTerms(base(), v(1, 'up {upgradeDays} · leave {leaveMaxMonths}'));
     expect(termsText(s, 'en')).toBe('up 1 · leave 2');

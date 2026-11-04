@@ -30,7 +30,11 @@ export function termsText(s: ClubState, lang: Lang): string {
     downgradeDays: n.downgrade, stopDays: n.stop, leaveDays: n.leave, noticeDays: n.stop, upgradeDays: n.upgrade, leaveMaxMonths: leaveMaxMonths(s),
     issueDay: s.club.settings.issueDay, dueDay: s.club.settings.dueDay, flexQuota: s.club.settings.flexQuota,
   };
-  return raw.replace(/\{(downgradeDays|stopDays|leaveDays|noticeDays|upgradeDays|leaveMaxMonths|issueDay|dueDay|flexQuota)\}/g, (_m, k: string) => String(vars[k]));
+  const keys = 'downgradeDays|stopDays|leaveDays|noticeDays|upgradeDays|leaveMaxMonths|issueDay|dueDay|flexQuota';
+  // a counted word first ({upgradeDays|day|days}: "day" when the value is 1; Indonesian has no plural), then the numbers
+  return raw
+    .replace(new RegExp(`\\{(${keys})\\|([^|{}]*)\\|([^|{}]*)\\}`, 'g'), (_m, k: string, one: string, other: string) => (vars[k] === 1 ? one : other))
+    .replace(new RegExp(`\\{(${keys})\\}`, 'g'), (_m, k: string) => String(vars[k]));
 }
 
 export type TermsBlock = { kind: 'h' | 'li' | 'p'; text: string };

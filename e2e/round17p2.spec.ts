@@ -155,7 +155,7 @@ test('screenshots', async ({ page }, info) => {
 
   await signIn(page, 's1', '/renewals');
   await expect(page.getByTestId('few-btn')).toBeVisible();
-  await shot('7-few-visits-card');
+  await shot('7-few-visits-button');
   await page.getByTestId('few-btn').click();
   await expect(page.getByTestId('few-list')).toBeVisible();
   await shot('8-few-visits-list');

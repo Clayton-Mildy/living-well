@@ -37,7 +37,7 @@ export function FewVisitsButton({ onOpen }: { onOpen: () => void }) {
   const fg = grey ? INK : '#FFFFFF';
   return (
     <>
-      <button type="button" data-testid="few-btn" data-phase={st.phase} onClick={onOpen} className={grey ? 'cp-press cp-fill' : 'cp-press'}
+      <button type="button" data-testid="few-btn" data-phase={st.phase} onClick={onOpen} className={grey ? 'cp-press h-fill' : 'cp-press'}
         style={{ display: 'inline-flex', alignItems: 'center', gap: 6, minHeight: 36, padding: '0 8px 0 10px', borderRadius: 10, border: 'none', background: grey ? 'var(--press, #EEEEF0)' : INK, color: fg, fontFamily: 'Inter', fontSize: 14, lineHeight: '20px', fontWeight: 500, whiteSpace: 'nowrap', flex: 'none', cursor: 'pointer' }}>
         <Icon name="call" size={17} color={grey ? '#6B6259' : fg} />
         <span data-testid="few-btn-text" style={{ fontVariantNumeric: 'tabular-nums' }}>{fewButtonText(t, fd, st)}</span>

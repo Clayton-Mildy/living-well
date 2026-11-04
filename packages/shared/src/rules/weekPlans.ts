@@ -42,9 +42,10 @@ export function copyMenu(draft: WeekTemplate, last: WeekTemplate, monday: ISODat
 }
 
 /** Does the copy replace something already placed on a day that can still change? Then the planner is asked first. */
-export function programmeCopyReplaces(draft: Days, last: Days, monday: ISODate, today: ISODate): boolean {
+/** `skip`: days that are hidden (a field trip) and so replace nothing anyone sees. */
+export function programmeCopyReplaces(draft: Days, last: Days, monday: ISODate, today: ISODate, skip: readonly number[] = []): boolean {
   const dates = weekDates(monday);
-  return ALL_DAYS.some((w) => dates[w - 1] >= today && SLOTS.some((sl) => { const c = draft[w][sl], l = last[w][sl]; return !!c && !(l && l.activityId === c.activityId && l.staffId === c.staffId && l.roomId === c.roomId); }));
+  return ALL_DAYS.some((w) => !skip.includes(w) && dates[w - 1] >= today && SLOTS.some((sl) => { const c = draft[w][sl], l = last[w][sl]; return !!c && !(l && l.activityId === c.activityId && l.staffId === c.staffId && l.roomId === c.roomId); }));
 }
 export function menuCopyReplaces(draft: WeekTemplate, last: WeekTemplate, monday: ISODate, today: ISODate): boolean {
   return ALL_DAYS.some((w) => weekDate(monday, w) >= today && COURSES.some((c) => draft[w][c].some((id) => !last[w][c].includes(id))));
