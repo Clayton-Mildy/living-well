@@ -215,29 +215,29 @@ describe('Tasks on View or Edit', () => {
   const page = <ScreenAccessProvider screenKey="tasks"><Tasks /></ScreenAccessProvider>;
   const sheet = () => Array.from(document.querySelectorAll('[role="dialog"]')).pop() as HTMLElement | undefined;
 
-  it('on View (the default) Caca ticks her task off, with no Add task, team list, Team / Manage or view-only banner', async () => {
+  it('on View (the default) Caca ticks her task off, with no header Add, Edit, Team / Manage or view-only banner', async () => {
     openClub('s1', 'lobby');
     withTasks('view');
     await show(page);
-    expect(btn(/Add task/)).toBeUndefined();
+    expect(btn(/^addAdd$|^Add$/)).toBeUndefined(); // the header Add is for Edit only
     expect(document.querySelector('[data-team-tasks]')).toBeNull();
     expect(tab(/Manage/)).toBeUndefined();
     expect(document.querySelector('[data-testid="view-only"]')).toBeNull(); // View still completes: no "view only" banner
+    await click(document.querySelector('[data-task="task-lobby-mine"] .cp-tap-target'));
+    expect(Array.from(sheet()!.querySelectorAll('button')).some((b) => /Edit/.test(b.textContent || ''))).toBe(false);
+    await click(Array.from(sheet()!.querySelectorAll<HTMLElement>('button')).find((b) => b.getAttribute('aria-label') === 'Close'));
     await click(btn(/Mark done: Water the plants/));
     expect(actMock).toHaveBeenCalledWith('task.done', { templateId: 'task-lobby-mine' });
   });
 
-  it('on Edit Caca has Add task for Front desk only; her task opens editable, Ega\'s read-only; still no Manage', async () => {
+  it('on Edit Caca has Add in the Additional tasks header (For is Front desk only), and Edit only on her own task; still no Manage', async () => {
     openClub('s1', 'lobby');
     withTasks('edit');
     await show(page);
     expect(tab(/Manage/)).toBeUndefined(); // Edit is not management's screen
-    const team = document.querySelector('[data-team-tasks]')!;
-    expect(team.querySelector('[data-template="task-lobby-mine"]')?.textContent).toContain('by you');
-    expect(team.querySelector('[data-template="task-lobby-desk"]')?.textContent).toMatch(/by \S/);
-    expect(team.querySelector('[data-template="task-lobby-desk"]')?.textContent).not.toContain('by you');
-    expect(document.querySelector('[data-team-tasks] [data-template="task-kitchen-fridge"]')).toBeNull(); // only her team
-    await click(btn(/^addAdd task$|^Add task$/));
+    expect(document.querySelector('[data-team-tasks]')).toBeNull(); // no separate team section any more
+    await click(btn(/^addAdd$|^Add$/));
+    expect(document.querySelector('h2')?.textContent).toBeTruthy();
     const For = sheet()!.querySelector<HTMLElement>('[role="combobox"]')!;
     expect(For.textContent).toContain('Front desk');
     await click(For);
@@ -245,21 +245,50 @@ describe('Tasks on View or Edit', () => {
     await act(async () => { root!.unmount(); });
     root = createRoot(host!);
     await act(async () => { root!.render(<MemoryRouter initialEntries={['/tasks']}>{page}</MemoryRouter>); });
-    await click(document.querySelector('[data-team-tasks] [data-template="task-lobby-mine"]'));
+    // someone else's task: the task sheet, no Edit
+    await click(document.querySelector('[data-task="task-lobby-desk"] .cp-tap-target'));
+    expect(Array.from(sheet()!.querySelectorAll('button')).some((b) => /^(edit)?Edit$/.test(b.textContent || ''))).toBe(false);
+    await click(Array.from(sheet()!.querySelectorAll<HTMLElement>('button')).find((b) => b.getAttribute('aria-label') === 'Close'));
+    // her own: the task sheet with an Edit button that opens the edit sheet
+    await click(document.querySelector('[data-task="task-lobby-mine"] .cp-tap-target'));
+    await click(Array.from(sheet()!.querySelectorAll('button')).find((b) => /^(edit)?Edit$/.test(b.textContent || '')));
     expect(sheet()!.textContent).toContain('Edit task');
     expect(Array.from(sheet()!.querySelectorAll('button')).some((b) => /Archive/.test(b.textContent || ''))).toBe(true);
-    await click(Array.from(sheet()!.querySelectorAll<HTMLElement>('button')).find((b) => b.getAttribute('aria-label') === 'Close'));
-    await click(document.querySelector('[data-team-tasks] [data-template="task-lobby-desk"]'));
-    expect(sheet()!.textContent).toContain('Set up the welcome desk');
-    expect(sheet()!.querySelector('[role="combobox"]')).toBeNull(); // read-only: no fields
-    expect(Array.from(sheet()!.querySelectorAll('button')).some((b) => /Archive|Save/.test(b.textContent || ''))).toBe(false);
+  });
+
+  it('on Edit her own paused task shows greyed with Paused and opens the edit sheet; another person\'s paused task does not show', async () => {
+    openClub('s1', 'lobby');
+    withTasks('edit');
+    const v = produce(useReplica.getState().view!, (d) => {
+      d.taskTemplates['task-lobby-mine'].active = false;
+      d.taskTemplates['task-lobby-desk'].active = false;
+    });
+    useReplica.setState({ confirmed: v, view: v });
+    await show(page);
+    const row = document.querySelector('[data-paused="task-lobby-mine"]')!;
+    expect(row.textContent).toContain('Water the plants');
+    expect(row.textContent).toContain('Paused');
+    expect(row.querySelector('[aria-label^="Mark done"]')).toBeNull();
+    expect(document.querySelector('[data-paused="task-lobby-desk"]')).toBeNull();
+    await click(row);
+    expect(sheet()!.textContent).toContain('Edit task');
   });
 
   it('a "Create tasks" switch saved before reads as Edit', async () => {
     openClub('s1', 'lobby');
     withTasks('edit', true);
     await show(page);
-    expect(document.querySelector('[data-team-tasks]')).toBeTruthy();
-    expect(btn(/Add task/)).toBeTruthy();
+    expect(btn(/^addAdd$|^Add$/)).toBeTruthy();
+  });
+
+  it('on Edit with no daily additional tasks the group still shows with Add and None yet', async () => {
+    openClub('s1', 'lobby');
+    withTasks('edit');
+    const v = produce(useReplica.getState().view!, (d) => { for (const x of Object.values(d.taskTemplates)) if (x.role === 'lobby') x.deletedAt = '2026-10-01T00:00'; d.taskDone = {}; });
+    useReplica.setState({ confirmed: v, view: v });
+    await show(page);
+    expect(Array.from(document.querySelectorAll('h2')).map((h) => h.textContent)).toContain('Additional tasks');
+    expect(document.body.textContent).toContain('None yet');
+    expect(btn(/^addAdd$|^Add$/)).toBeTruthy();
   });
 });

@@ -239,8 +239,9 @@ export function repeatText(t: TFn, fd: (d: string, o: Intl.DateTimeFormatOptions
 }
 
 /** Opens from a row: when it repeats and is due, who ticked it off and when, the proof picture and note; ticking it off (with a note) or taking it back. */
-export function TaskSheet({ item, date, who, canTick, canUndo, tick, onClose }: {
+export function TaskSheet({ item, date, who, canTick, canUndo, tick, onClose, onEdit }: {
   item: TaskItem; date: ISODate; who: (id: string) => string; canTick: boolean; canUndo: boolean; tick: Tick; onClose: () => void;
+  /** the signed-in staff made this task and the role has Tasks on Edit: opens its edit sheet */ onEdit?: () => void;
 }) {
   const t = useT();
   const fmt = useFmt();
@@ -272,6 +273,7 @@ export function TaskSheet({ item, date, who, canTick, canUndo, tick, onClose }: 
         : done && canUndo
           ? <Button full variant="secondary" icon="undo" disabled={working} onClick={() => void go(() => tick.undo(tpl, item.period))}>{t('tasks.markUndone')}</Button>
           : null}
+      {onEdit ? <Button full variant="secondary" icon="edit" onClick={onEdit}>{t('common.edit')}</Button> : null}
     </Sheet>
   );
 }

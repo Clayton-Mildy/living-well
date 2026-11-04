@@ -84,7 +84,5 @@ export const tasks: Same<typeof EN> = {
   manageEmptyRole: 'Belum ada tugas tambahan untuk peran ini.',
   addFor: 'Tambah tugas untuk {role}',
   // tasks-create: tim yang membuat tugasnya sendiri
-  teamTasks: 'Tugas {team}',
-  byYou: 'oleh Anda',
-  byName: 'oleh {name}',
+  noneYet: 'Belum ada',
 };

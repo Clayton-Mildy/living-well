@@ -2,7 +2,7 @@
 // Everyone sees their own day (Mine): the duties, which tick themselves from the data, then management's recurring checklist. Management also has Team (how each role is
 // doing, for any day, week or month) and Manage (switch duties off, set their times, and the additional tasks). /tasks?view=team|manage opens a view.
 // tasks-view-edit: a role with Tasks on View (the default for all but management) has its day and ticks it off; on Edit it also gets its team's task list
-// and Add task under its day (TeamTasks). Hidden: no Tasks menu.
+// and a small "+ Add" in its Additional tasks header, and edits its own tasks from their sheet (MineView). Hidden: no Tasks menu.
 import { useSearchParams } from 'react-router-dom';
 import { accessOf, type StaffRole } from '@cp/shared';
 import { PageHead, Segmented } from '../../components/ui';
@@ -14,7 +14,6 @@ import { useClub } from '../../store/replica';
 import { ManageView } from './ManageView';
 import { MineView } from './MineView';
 import { TeamView } from './TeamView';
-import { TeamTasks } from './TeamTasks';
 
 type View = 'mine' | 'team' | 'manage';
 
@@ -37,10 +36,9 @@ export function Tasks() {
         <Segmented<View> label={t('tasks.title')} value={view} onChange={(v) => setSp(v === 'mine' ? {} : { view: v }, { replace: true })}
           items={[{ value: 'mine', label: t('tasks.mine') }, { value: 'team', label: t('tasks.team') }, { value: 'manage', label: t('tasks.manage') }]} />
       ) : null}
-      {view === 'mine' ? <MineView s={s} role={role as StaffRole} today={today} nowMin={nowMin} />
+      {view === 'mine' ? <MineView s={s} role={role as StaffRole} canEdit={!mgmt && accessOf(s, role as StaffRole, 'tasks') === 'edit'} today={today} nowMin={nowMin} />
         : view === 'team' ? <TeamView s={s} today={today} nowMin={nowMin} />
         : <ManageView />}
-      {!mgmt && accessOf(s, role as StaffRole, 'tasks') === 'edit' ? <TeamTasks role={role as StaffRole} /> : null}
     </div>
   );
 }
