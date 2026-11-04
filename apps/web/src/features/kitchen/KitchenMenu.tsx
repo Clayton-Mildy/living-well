@@ -1,13 +1,15 @@
 // Kitchen menu of the day (design ScrKmenu): lunch photo, covers, today's menu, dietary needs, plus the allergy conflicts
 // panel and the weekly plan editor. Closed days and weekends show a closed state instead of crashing.
+// Round 20: a field trip day reads "Field trip · menu optional"; with no menu yet, "Add what they'll eat" opens the one-date editor (OverrideSheet).
 // KC round 6: the front desk opens the same page view only: the menu, the allergy warnings and the week, with no buttons that change anything.
 import { useState } from 'react';
 import { Card, DishThumb, EmptyState, GROUP_HEAD, Group, Icon, PageHead, Pager, Pin, usePaged, FONT_BODY } from '../../components/ui';
-import { listName } from '@cp/shared';
+import { listName, tripOn } from '@cp/shared';
 import { lunchPictureOn } from '@cp/shared/rules/kitchen';
 import type { DietRow } from '@cp/shared/rules/kitchenOps';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { PendingMark } from '../../components/PendingMark';
+import { TripBanner } from '../../components/TripBanner';
 import { useT, useFmt } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { useMe } from '../../lib/me';
@@ -35,6 +37,8 @@ export function KitchenMenu() {
   const [override, setOverride] = useState(false);
   // round 15: the lunch dish's picture beside the menu until today's own lunch photo is up (that one shows in the gallery above)
   const dishPic = lunchPictureOn(s, v.today, 'staff');
+  // round 20: a field trip day: meals are optional, a one-date menu only if the kitchen adds one
+  const trip = !v.closed && !!tripOn(s, v.today);
   const lunchPic = dishPic?.source === 'dish' ? <DishThumb mediaId={dishPic.mediaId} label={t('kitchen.dishPhoto')} size={56} source="dish" testId="menu-lunch-picture" /> : null;
   const names = (list: { name: string }[]) => list.map((d) => d.name).join(', ') || t('kitchen.menu.none');
   // "3 in the club + 1 guest": members who are in, members who already left (they still had lunch), booked guests
@@ -63,6 +67,7 @@ export function KitchenMenu() {
         <PageHead eyebrow={fdl(v.today)} title={t('kitchen.menuTitle')} />
         {readOnly ? null : <WeekPlanReminder what="menu" onMenu={(m) => { editor.goto(m); requestAnimationFrame(() => document.querySelector('[data-testid="plan-week"]')?.scrollIntoView({ behavior: 'smooth', block: 'center' })); }} />}
 
+        {trip ? <TripBanner date={v.today} title={t('kitchen.menu.trip')} /> : null}
         {v.closed && isPhone ? (
           <Group pad={0} gap={0}>
             <EmptyState icon="event_busy" title={t('common.clubClosed')} sub={t(v.closedReason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(v.nextOpen) })} />
@@ -153,6 +158,11 @@ export function KitchenMenu() {
             </div>
             )}
           </>
+        ) : trip && !readOnly ? (
+          <button type="button" data-testid="trip-add-menu" className={isPhone ? 'cp-tap-self cp-grey' : 'h-fill cp-grey'} onClick={() => setOverride(true)}
+            style={{ width: '100%', minHeight: 50, padding: '6px 16px', borderRadius: 16, border: 'none', background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 16, fontWeight: 500, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
+            <Icon name="add" size={22} color="#24201C" /><span style={{ flex: 1, minWidth: 0 }}>{t('kitchen.menu.tripAdd')}</span>
+          </button>
         ) : null}
 
         <AllergiesOnFile readOnly={readOnly} />

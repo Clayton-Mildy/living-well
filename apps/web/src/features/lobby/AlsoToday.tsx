@@ -3,7 +3,7 @@
 // Guests show GUESTS_PER_PAGE at a time.
 import { Fragment, useMemo, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { listName, type GuestVisit } from '@cp/shared';
+import { listName, tripOn, type GuestVisit } from '@cp/shared';
 import { occasionsAhead } from '@cp/shared/rules/occasions';
 import { checkOnList } from '@cp/shared/rules/checkOn';
 import { fewVisitMembers, fewVisitsWindow } from '@cp/shared/rules/fewVisits';
@@ -94,6 +94,18 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
       ) : <span style={sub14}>{t('lobby.menuNone')}</span>}
     </div>
   ) : null;
+  // round 20: a field trip day with no menu from the kitchen: the trip takes the menu's place (nobody lunches at the club)
+  const trip = menu ? null : tripOn(s, today);
+  const tripName = trip ? (lang === 'id' && trip.titleId ? trip.titleId : trip.title) : '';
+  const tripBlock = trip ? (
+    <div key="trip" data-testid="lobby-trip" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <span style={{ fontSize: isPhone ? 16 : 19, lineHeight: 1.3, fontWeight: 500, color: '#2B231C' }}>{t('lobby.tripToday')}</span>
+      <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+        <Icon name="directions_bus" size={18} weight={300} color="var(--eyebrow, #6E5A43)" style={{ marginTop: 2 }} />
+        <span style={{ fontSize: 15, color: '#24201C', lineHeight: 1.4, minWidth: 0, overflowWrap: 'anywhere' }}>{trip.from && trip.to ? t('lobby.tripWhen', { title: tripName, from: trip.from, to: trip.to }) : tripName}</span>
+      </div>
+    </div>
+  ) : null;
 
   const blocks: ReactNode[] = guests.rows.map((g) => {
     const e = s.enquiries[g.enquiryId];
@@ -140,6 +152,7 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
   if (guests.pages > 1) blocks.push(<Pager key="pager" page={guests.page} pages={guests.pages} onPage={guests.setPage} label={t('lobby.pagerAria', { list: t('lobby.alsoToday') })} />);
   if (empty) blocks.push(<div key="none" style={sub14}>{t('lobby.alsoNone')}</div>);
   if (menuBlock) blocks.unshift(menuBlock);
+  if (tripBlock) blocks.unshift(tripBlock);
   // round 13: guest hosts coming today (a teacher, a singer, a speaker the front desk should expect); hidden when nobody is booked. A tap opens the Guests screen (the front desk: the read-only session).
   const guestHosts = guestSessionsOn(s, today);
   if (guestHosts.length) {

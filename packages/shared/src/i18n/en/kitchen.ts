@@ -7,6 +7,8 @@ export const kitchen = {
   inClub: '{n} in the club', goneHome: '{n} gone home', guest1: '1 guest', guestsN: '{n} guests', celebGuests: '{n} at a celebration',
   softLine: 'Soft option: {dishes}', teaLine: 'Afternoon tea · 15:00: {dishes}',
   'menu.none': 'None planned', 'menu.changeToday': 'Change today’s menu', 'menu.overridden': 'Today’s menu differs from the weekly plan.',
+  // round 20: on a field trip day meals are optional (a one-date menu only if the kitchen adds one)
+  'menu.trip': 'Field trip · menu optional', 'menu.tripAdd': "Add what they'll eat",
   'photo.title': 'Lunch photos', 'photo.add': 'Add a photo of today’s lunch',
   'photo.addMore': 'Add a photo', 'photo.alt': 'Lunch photo, taken {time}', 'photo.uploading': 'Sending the photo…', 'photo.full': 'Today’s lunch photos are full. Remove one to add another.',
   'photo.open': 'Open the photo taken at {time} full size',

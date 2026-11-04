@@ -9,6 +9,7 @@ import type { ClubState, Dish, DishAllergen, Face, Feedback, ISODate, StockReque
 import { DomainError, defineAction, hasRole, isStaff, type ActionDef, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
 import { dayStatus } from '../rules/core';
+import { tripOn } from '../rules/trips';
 import { ALLERGY_COVERS, MAX_LUNCH_PHOTOS, dinersOn } from '../rules/kitchen';
 import {
   ALL_DAYS, COURSES, DISH_ALLERGENS, DISH_TAGS, STOCK_AREAS, type Course, type PersonKey, type WeekTemplate,
@@ -203,7 +204,8 @@ const menuActions: ActionDef[] = [
       if (i.date < ctx.today) ctx.fail('kitchen.err.pastDate');
       const st = asState(d);
       if (!dayStatus(st, i.date).open) ctx.fail('err.closedDay');
-      const base = templateOn(st, i.date).days[asWeekday(i.date)];
+      // round 20 (R4): a field trip day has no weekly menu, so the one-date menu is measured against nothing (an emptied course is no override)
+      const base = tripOn(st, i.date) ? { lunch: [], soft: [], tea: [] } : templateOn(st, i.date).days[asWeekday(i.date)];
       const row = ensureDayMenu(d, i.date, ctx);
       // the kitchen's override waits for approval: families keep seeing the menu as it was until then
       const gated = needsApproval(ctx);

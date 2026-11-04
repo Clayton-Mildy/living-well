@@ -3,7 +3,7 @@
 // help to throw the extras away. Tap a draft to fix it, then send them all (management) or send them for approval (everyone else). Private to the person who took them.
 // It is the first tab of the Camera (activity, management) and the Drafts page of the kitchen.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { displayName, toMin, type Photo } from '@cp/shared';
+import { displayName, toMin, tripOn, type Photo } from '@cp/shared';
 import { attendedOn, curAct, faceTagging, pictureDays, pictureSessions } from '@cp/shared/rules/activity';
 import { draftGroupKey, draftKindOf, draftKindsFor, draftMeal, draftNotes, draftsOf, type DraftKind } from '@cp/shared/rules/photoAi';
 import { mediaUrl } from '../../lib/media';
@@ -106,7 +106,7 @@ function DraftSheet({ draft, onClose }: { draft: Photo; onClose: () => void }) {
   const suggested = useMemo(() => (ai?.faces ?? []).flatMap((f) => (f.memberId ? [f.memberId] : [])), [ai]);
   const here = useMemo(() => {
     const list = attendedOn(s, draft.date);
-    const extra = [...ids, ...suggested].filter((id) => s.members[id] && !list.some((m) => m.id === id)).map((id) => s.members[id]);
+    const extra = [...ids, ...suggested, ...(tripOn(s, draft.date)?.wentIds ?? [])].filter((id) => s.members[id] && !list.some((m) => m.id === id)).map((id) => s.members[id]);
     return [...list, ...extra.filter((m, i) => extra.indexOf(m) === i)];
   }, [s, draft.date, ids, suggested]);
   const days = useMemo(() => { const d = pictureDays(s, today); return d.includes(date) ? d : [date, ...d]; }, [s, today, date]);

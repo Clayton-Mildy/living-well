@@ -5,6 +5,7 @@ import { dayStatus, isPendingRow, memberName } from './core';
 import { lobbyGroups, attId } from './attendance';
 import { sessionsOn } from './kitchen';
 import { markOf, meanFace } from './moodCore';
+import { tripOn } from './trips';
 import { addDays, live, sortBy, toMin } from '../util';
 
 /** Length of one activity session; a session is "Now" from its start until start + SESSION_MIN. */
@@ -137,6 +138,12 @@ export const faceSuggestable = (m: Member) => faceTagging(m) === 'on';
 /** Members in the club right now (checked in, not yet out), by first name. */
 export function inClubMembers(s: ClubState, date: ISODate): Member[] {
   return sortBy(lobbyGroups(s, date).inClub.map((r) => r.m), (m) => m.firstName);
+}
+/** Round 20: who a photo can be tagged with on a date: the members in the club and, on a field trip day, the trip's Who went (some join the bus elsewhere). */
+export function taggableMembers(s: ClubState, date: ISODate): Member[] {
+  const here = inClubMembers(s, date);
+  const extra = (tripOn(s, date)?.wentIds ?? []).filter((id) => !here.some((m) => m.id === id)).map((id) => s.members[id]).filter((m): m is Member => !!m && !m.deletedAt);
+  return extra.length ? sortBy([...here, ...extra], (m) => m.firstName) : here;
 }
 /** Faces to pre-tick: members in the club whose face tagging is on. */
 export const suggestedFaces = (people: Member[]): string[] => people.filter(faceSuggestable).map((m) => m.id);

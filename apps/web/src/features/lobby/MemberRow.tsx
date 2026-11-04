@@ -2,7 +2,7 @@
 // A 46px avatar, the name, one sub line and ONE pill button. The sub line carries the time ("Est 10:05" / "Arrived 09:48" / "Arrived 09:40 · left 11:30"),
 // the departure-check status as a dot item (in the club) and, only when there is one, the member's allergy as a rust dot item.
 // Every other tag (walking stick, diet, diabetes, lunch medicines…) lives in the member drawer, one tap away.
-import { listName, dayArc, memberName, onLeaveOn, suspensionOf, todayReading, type BoardRow } from '@cp/shared';
+import { listName, dayArc, memberName, onLeaveOn, onTrip, suspensionOf, todayReading, type BoardRow } from '@cp/shared';
 import { Icon, FACE_ICON } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useFmt, useT } from '../../lib/i18n';
@@ -28,6 +28,8 @@ export function MemberRow({ r, first, selected, occasion, onOpen, onCheckIn, onC
   const sub = state === 'out' ? t('lobby.inOut', { a: a?.checkIn?.at, l: a?.checkOut?.at })
     : state === 'in' ? t('lobby.arrivedAt', { t: a?.checkIn?.at })
     : m.usualArrival ? t('lobby.est', { t: m.usualArrival }) : '';
+  // round 20: on a field trip day a member who checked in is on the trip ("Arrived 08:12 · on the trip")
+  const trip = state !== 'notIn' && onTrip(s, m.id, today);
   // the arrival reading, or "check pending" while nobody has taken it yet
   const kind = state === 'in' ? (arr ? arr.status : 'pending') : null;
   const stFg = kind ? ST_FG[kind] ?? '#8A6216' : '';
@@ -59,7 +61,7 @@ export function MemberRow({ r, first, selected, occasion, onOpen, onCheckIn, onC
           </span>
           <span style={{ fontSize: 14, color: '#6B6259', lineHeight: 1.35, display: 'flex', alignItems: 'center', gap: '2px 10px', flexWrap: 'wrap' }}>
             {arrivalFace ? <span title={t('mood.face.' + arrivalFace)} style={{ display: 'inline-flex', alignItems: 'center', color: '#24201C' }}><Icon name={FACE_ICON[arrivalFace]} size={16} fill={1} /></span> : null}
-            {sub ? <span>{sub}</span> : null}
+            {sub ? <span>{trip ? `${sub} · ${t('lobby.onTrip')}` : sub}</span> : null}
             {kind ? <DotItem color={stFg}>{t('status.' + kind)}</DotItem> : null}
             {hold ? <DotItem color="#9A3D24">{t('status.suspended')}</DotItem> : null}
             {onLeave ? <DotItem color="#8A6216">{t('status.onLeave', { month: fmt.fd(`${today.slice(0, 7)}-01`, { month: 'short' }) })}</DotItem> : null}

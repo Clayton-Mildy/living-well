@@ -11,6 +11,7 @@ import { dayStatus, lastBefore, limitsFor, nextOpenDay, type Health, type QueueK
 import { alertRecipients, filterRows, headlineValue, inClubCount, stationRows, suggestKind, type StationRow } from '@cp/shared/rules/healthStation';
 import { Button, Eyebrow, Group, Icon, IconButton, PageHead, Pager, usePaged, uiZoom, FONT_BODY } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
+import { TripBanner } from '../../components/TripBanner';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
 import { useFmt, useT, type TFn } from '../../lib/i18n';
@@ -310,6 +311,7 @@ export function HealthStation() {
           <span>{t('health.device')} · {t('health.connected')}</span>
         </span>
       </div>
+      <TripBanner date={today} />
       <div ref={bodyRef} style={{ display: 'flex', flexWrap: 'wrap', gap: 'clamp(14px, 2vw, 24px)', alignItems: 'flex-start' }}>
         {isPhone ? phoneList : listCard}
         {!isPhone ? (

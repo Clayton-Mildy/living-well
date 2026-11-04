@@ -42,6 +42,19 @@ describe('trip day meals are optional', () => {
   });
 });
 
+describe('dayMenu.override on a trip day', () => {
+  const override = (s: ClubState, input: Record<string, unknown>) => execute(s, 'dayMenu.override', { date: T, ...input }, getUser({ [s.clubId]: s }, 's9')!, { today: T, nowMin: 480 }, 'om1').state;
+  it('keeps a one-date menu that matches the weekly one (there is no weekly menu on a trip day)', () => {
+    const weekly = menuOn(base, T)!.lunch;
+    const s = override(withTrip(base), { lunch: weekly });
+    expect(menuOn(s, T)?.lunch).toEqual(weekly);
+  });
+  it('an emptied course is no override at all', () => {
+    const s = override(override(withTrip(base), { lunch: ['dish-sop-ikan'] }), { lunch: [] });
+    expect(menuOn(s, T)).toBeNull();
+  });
+});
+
 describe('photo.take on closed days', () => {
   it('fails on a closed day, works on a trip day', () => {
     const closed = produce(base, (d) => { d.calendarEvents.evC = { id: 'evC', clubId: base.clubId, createdAt: '', createdBy: 'system', date: T, kind: 'closed', title: 'Closed' }; });

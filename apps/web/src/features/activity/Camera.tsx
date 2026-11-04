@@ -6,13 +6,14 @@
 // KC round 7 ("shoot first, sort later"): the Camera opens on DRAFTS: an "Open camera" button (the quick camera, several shots, no questions) over everything the
 // camera took and nobody has sent yet (Drafts.tsx), next to the Library. The older ways stay under "More ways": a photo of members (this file's body, ?tab=manual),
 // and pictures of a session (?tab=activity).
+// Round 20: on a field trip day members can be tagged when checked in or in the trip's Who went; a closed day shows the closed state (no capture).
 // Round 6 (phone, native look): an iOS segmented Camera | Library, the video action as a list row, "Sent today" and the solo list under small grey headers, a grey search bar.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { listName, famNames, displayName, primaryContact, type Photo } from '@cp/shared';
+import { dayStatus, listName, famNames, displayName, nextOpenDay, primaryContact, type Photo } from '@cp/shared';
 import { draftsOf } from '@cp/shared/rules/photoAi';
-import { curAct, faceTagging, inClubMembers, photoCountByMember, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, activityName, roomName } from '@cp/shared/rules/activity';
-import { Button, CameraCapture, GROUP_HEAD, Icon, PageHead, Pager, Pin, PhotoImg, ImageOpen, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
+import { curAct, faceTagging, taggableMembers, photoCountByMember, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, activityName, roomName } from '@cp/shared/rules/activity';
+import { Button, CameraCapture, EmptyState, GROUP_HEAD, Icon, PageHead, Pager, Pin, PhotoImg, ImageOpen, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useLang, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -54,7 +55,7 @@ export function Camera() {
   const [viewer, setViewer] = useState<string | null>(null);
 
   const cur = useMemo(() => curAct(s, today, nowMin), [s, today, nowMin]);
-  const here = useMemo(() => inClubMembers(s, today), [s, today]);
+  const here = useMemo(() => taggableMembers(s, today), [s, today]); // round 20: on a field trip day, the trip's Who went too
   const sug = useMemo(() => suggestedFaces(here), [here]);
   const sent = useMemo(() => sentToday(s, today), [s, today]);
   // today's photos per member (solo and group, pending included): the members with none come first, so staff see who still needs one
@@ -172,6 +173,19 @@ export function Camera() {
       <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)', minHeight: '100%' }}>
         {header}
         <DraftsBody onMore={goTab} />
+      </div>
+    );
+  }
+  // round 20: no photos on a closed day (photo.take refuses them): the closed state, nothing to take a photo with
+  const day = dayStatus(s, today);
+  if (!day.open) {
+    return (
+      <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 24px)' }}>
+        {header}
+        <div data-testid="camera-closed" className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16 }}>
+          <EmptyState icon="event_busy" title={day.event ? (lang === 'id' && day.event.titleId ? day.event.titleId : day.event.title) : t('common.clubClosed')}
+            sub={t(day.reason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })} />
+        </div>
       </div>
     );
   }

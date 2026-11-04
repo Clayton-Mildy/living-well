@@ -33,6 +33,9 @@ export const lobby = {
   nanny: 'Carer (suster)', nannyNote: 'With {name}, {p} carer', withNanny: 'with {n}', nannyLine: 'Nanny · {n}',
   // toasts
   tUndoIn: '{n}’s check-in was undone.', tUndoOut: '{n}’s check-out was undone.',
+  // round 20: field trip days (the banner, the rows of members on the trip, an undone check-in that keeps a billed trip, Also today)
+  tripToday: 'Field trip today', tripWhen: '{title} · {from}–{to}', tripGoing: '{n} going', onTrip: 'on the trip',
+  tTripKept: 'Check-in undone. {name} stays on the trip: the {amount} fee is on invoice {invoiceId}. Finance can remove it.',
   // also today
   menuToday: 'Menu today', guestsToday: 'Guests today', menuLunch: 'Lunch · {t}', menuSoft: 'Soft food', menuTea: 'Afternoon tea · {t}', menuNone: 'The kitchen has not set today’s menu yet.', alsoNone: 'Nothing else is planned today.',
   guestTrial: 'Trial day: {n}', guestVisit: 'Visit: {n}',

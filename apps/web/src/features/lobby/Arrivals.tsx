@@ -2,7 +2,7 @@
 // Three number tabs pick the list: Not in yet (the check-in list, with the face camera card in the side rail), In the club (the check-out list)
 // and Gone home. One hero card shows the selected list with an underline search, with "Also today" (trial and visit guests)
 // right below it; on the check-in tab a side rail carries the face camera. A check-in toast carries Undo; a visit that is an extra Flex day says so before it is
-// confirmed and in the toast. When the rail drops below the list (narrow screens) a manual check-in is confirmed in a bottom sheet instead.
+// confirmed and in the toast. Round 20: a field trip day has the trip banner on top. When the rail drops below the list (narrow screens) a manual check-in is confirmed in a bottom sheet instead.
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { useLocation, useNavigate, useSearchParams } from 'react-router-dom';
 import { dayStatus, famNames, type Face, lobbyGroups, displayName, nextOpenDay, priceOn, rp, toMin, type GuestVisit } from '@cp/shared';
@@ -14,6 +14,7 @@ import { useNow } from '../../lib/clock';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
+import { TripBanner } from '../../components/TripBanner';
 import { AlsoToday, type GuestActions } from './AlsoToday';
 import { CheckOnSheet } from './CheckOnSheet';
 import { CheckoutDialog } from './CheckoutDialog';
@@ -85,7 +86,12 @@ export function Arrivals() {
   };
   const undoIn = useCallback(async (memberId: string) => {
     const m = latest.current.s.members[memberId];
-    await act('attendance.undoCheckIn', { memberId }, { ok: t('lobby.tUndoIn', { n: displayName(m) }) });
+    // round 20 (R2): the trip fee is already on an invoice, so the member stays on the trip; the toast says where the fee is
+    await act('attendance.undoCheckIn', { memberId }, { ok: (r) => {
+      const kept = r.tripKept as { invoiceId: string; amount: number } | undefined;
+      if (!kept) return t('lobby.tUndoIn', { n: displayName(m) });
+      return t('lobby.tTripKept', { name: displayName(m), amount: price(kept.amount), invoiceId: latest.current.s.invoices[kept.invoiceId]?.number || kept.invoiceId });
+    } });
   }, [act, t]);
   const undoOut = useCallback(async (memberId: string) => {
     const m = latest.current.s.members[memberId];
@@ -245,6 +251,7 @@ export function Arrivals() {
           {isPhone ? null : <div style={{ fontSize: 48, lineHeight: 1, fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1.5px', color: '#2B231C' }}>{now}</div>}
         </div>
 
+        <TripBanner date={today} />
         {!status.open ? (
           <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 20 }}>
             <EmptyState icon="event_busy" title={status.event ? (lang === 'id' && status.event.titleId ? status.event.titleId : status.event.title) : t('common.clubClosed')}

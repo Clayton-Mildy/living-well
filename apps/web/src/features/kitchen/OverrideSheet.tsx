@@ -1,6 +1,7 @@
 // "This date only": change one date's lunch, soft option or tea without touching the weekly template.
+// Round 20: on a field trip day there is no weekly menu: the courses start empty and what is added is the day's whole menu (no "Back to weekly").
 import { useState } from 'react';
-import { dayStatus, menuOn } from '@cp/shared';
+import { dayStatus, menuOn, tripOn } from '@cp/shared';
 import { COURSES, sameIds, type Course } from '@cp/shared/rules/kitchenOps';
 import { Button, DateField, Sheet, Note, FONT_BODY } from '../../components/ui';
 import { PendingMark } from '../../components/PendingMark';
@@ -25,7 +26,9 @@ export function OverrideSheet({ open, onClose, initialDate }: { open: boolean; o
   useResetOn(open ? initialDate : null, () => { if (open) { setDate(initialDate); setEdits({}); setPicker(null); } });
   const validDate = /^\d{4}-\d{2}-\d{2}$/.test(date) && !Number.isNaN(Date.parse(date + 'T00:00:00Z'));
   const past = validDate && date < today;
-  const menu = validDate && !past ? menuOn(s, date) : null; // null on closed days and weekends
+  // null on closed days and weekends; round 20: a field trip day with no one-date menu yet starts empty ("Add what they'll eat")
+  const trip = validDate && !past && !!tripOn(s, date);
+  const menu = validDate && !past ? menuOn(s, date) ?? (trip ? { lunch: [], soft: [], tea: [] } : null) : null;
   const row = validDate ? s.dayMenus[date] : undefined;
   const cur = (c: Course) => edits[c] ?? menu?.[c] ?? [];
   const changed = COURSES.filter((c) => edits[c] && !sameIds(edits[c]!, menu?.[c] ?? []));
@@ -56,7 +59,7 @@ export function OverrideSheet({ open, onClose, initialDate }: { open: boolean; o
             {COURSES.map((c) => (
               <div key={c} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                 <DishField label={t('kitchen.course.' + c)} course={c} ids={cur(c)} flex="1 1 auto" onRemove={(id) => setCourse(c, cur(c).filter((x) => x !== id))} onAdd={() => setPicker(c)} testId={'override-' + c} date={date} />
-                {row?.[c] && !edits[c] ? <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ fontSize: FONT_BODY, color: '#7A5510' }}>{t('kitchen.override.isChanged')}</span><TextButton onClick={() => reset(c)}>{t('kitchen.override.backToWeekly')}</TextButton></div> : null}
+                {row?.[c] && !edits[c] && !trip ? <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}><span style={{ fontSize: FONT_BODY, color: '#7A5510' }}>{t('kitchen.override.isChanged')}</span><TextButton onClick={() => reset(c)}>{t('kitchen.override.backToWeekly')}</TextButton></div> : null}
               </div>
             ))}
           </div>
