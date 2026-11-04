@@ -337,6 +337,17 @@ describe('round 20: check-in on a field trip day', () => {
     expect(undone.calendarEvents[EV].wentIds).toEqual(['m1']);
     expect(tripCharges(undone)).toHaveLength(1);
   });
+  it('a 2-day trip: undoing the check-in on each day takes the member off and drops the fee (deferred 8)', () => {
+    const day1 = run(checkIn(withTrip(250_000, '2026-10-22'), 'm1'), 'attendance.undoCheckIn', { memberId: 'm1' }).state;
+    expect(day1.calendarEvents[EV].wentIds ?? []).toEqual([]);
+    expect(tripCharges(day1)).toHaveLength(0);
+    const in2 = run(day1, 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, 's1', D2);
+    expect(in2.state.calendarEvents[EV].wentIds).toEqual(['m1']);
+    expect(in2.result.tripFee).toBe(250_000);
+    const day2 = run(in2.state, 'attendance.undoCheckIn', { memberId: 'm1' }, 's1', D2).state;
+    expect(day2.calendarEvents[EV].wentIds ?? []).toEqual([]);
+    expect(tripCharges(day2)).toHaveLength(0);
+  });
   it('a free trip: on the trip, no charge (Review Focus 3)', () => {
     const s = checkIn(withTrip(0), 'm1');
     expect(s.calendarEvents[EV].wentIds).toEqual(['m1']);

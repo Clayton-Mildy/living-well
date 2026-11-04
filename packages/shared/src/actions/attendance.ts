@@ -104,7 +104,12 @@ export const attendanceActions = [
       if (input.face) writeMark(d, ctx, { memberId: m.id, moment: 'arrival', face: input.face });
       // round 20 (R1): on a field trip day the check-in puts the member on the trip (the day's first outing) and charges its fee once
       const trip = tripOn(d as ClubState, ctx.today);
-      if (trip) setTripMember(d, d.calendarEvents[trip.id], m.id, true, ctx);
+      if (trip) {
+        const cid = tripChargeId(trip.id, m.id);
+        const had = !!d.pendingCharges[cid];
+        setTripMember(d, d.calendarEvents[trip.id], m.id, true, ctx);
+        if (!had && d.pendingCharges[cid]) ctx.result.tripFee = d.pendingCharges[cid].amount; // the desk's toast: the trip fee, on the next invoice
+      }
       ctx.result.time = ctx.now;
     },
   }),

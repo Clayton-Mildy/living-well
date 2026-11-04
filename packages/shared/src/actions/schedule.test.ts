@@ -985,6 +985,55 @@ describe('round 14: weekends open when a programme is approved', () => {
   });
 });
 
+// Round 20 fix (I1): the roster follows the trip after check-ins: a trip made or moved onto today takes in who is already in the club, a fee set late
+// charges Who went, and a trip moved to another day keeps only who checked in on its new days (an invoiced fee stays as billed).
+describe('round 20 fix: trip roster sync', () => {
+  const inToday = (s: ClubState) => live(s.attendance).filter((a) => a.date === clock.today && a.checkIn).map((a) => a.memberId).sort();
+  const make = (s: ClubState, date: string, fee?: number) => { const r = run(s, 'calendarEvent.create', { date, kind: 'outing', title: 'Ancol aquarium', from: '08:30', to: '15:00', ...(fee ? { fee } : {}), notify: false }, 's9'); return { s: r.state, id: r.result.eventId as string }; };
+  const tripCharges = (s: ClubState, id: string) => live(s.pendingCharges).filter((c) => c.id.startsWith(`trip-${id}-`)).map((c) => [c.memberId, c.amount]).sort();
+  it('a trip made for today puts everyone already checked in on it, with the fee', () => {
+    const base = fresh();
+    const here = inToday(base);
+    expect(here.length).toBeGreaterThan(1);
+    const { s, id } = make(base, clock.today, 250_000);
+    expect([...(s.calendarEvents[id].wentIds ?? [])].sort()).toEqual(here);
+    expect(tripCharges(s, id)).toEqual(here.map((m) => [m, 250_000]));
+  });
+  it('a fee set after the check-ins (0 → 250k, and 250k → 0 → 250k) charges everyone in Who went once', () => {
+    let { s, id } = make(fresh(), clock.today);
+    const here = inToday(s);
+    expect(tripCharges(s, id)).toEqual([]);
+    s = step(s, 'calendarEvent.update', { eventId: id, fee: 250_000, notify: false }, 's9');
+    expect(tripCharges(s, id)).toEqual(here.map((m) => [m, 250_000]));
+    s = step(s, 'calendarEvent.update', { eventId: id, fee: 0, notify: false }, 's9');
+    expect(tripCharges(s, id)).toEqual([]);
+    expect([...(s.calendarEvents[id].wentIds ?? [])].sort()).toEqual(here);
+    s = step(s, 'calendarEvent.update', { eventId: id, fee: 300_000, notify: false }, 's9');
+    expect(tripCharges(s, id)).toEqual(here.map((m) => [m, 300_000]));
+  });
+  it('a future trip moved onto today takes in today\'s check-ins; moved off again, only an invoiced fee keeps its member', () => {
+    let { s, id } = make(fresh(), '2026-10-28', 250_000);
+    expect(s.calendarEvents[id].wentIds).toBeUndefined();
+    s = step(s, 'calendarEvent.update', { eventId: id, date: clock.today, notify: false }, 's9');
+    const here = inToday(s);
+    expect([...(s.calendarEvents[id].wentIds ?? [])].sort()).toEqual(here);
+    expect(s.pendingCharges[`trip-${id}-${here[0]}`]?.params).toEqual({ title: 'Ancol aquarium', date: clock.today });
+    s = { ...s, pendingCharges: { ...s.pendingCharges, [`trip-${id}-${here[0]}`]: { ...s.pendingCharges[`trip-${id}-${here[0]}`], invoiceId: 'INV-X' } } };
+    s = step(s, 'calendarEvent.update', { eventId: id, date: '2026-10-28', notify: false }, 's9');
+    expect(s.calendarEvents[id].wentIds).toEqual([here[0]]);
+    expect(tripCharges(s, id)).toEqual([[here[0], 250_000]]);
+    expect(s.pendingCharges[`trip-${id}-${here[0]}`]).toMatchObject({ invoiceId: 'INV-X', params: { date: clock.today } }); // the invoiced charge is untouched
+  });
+  it('a member on another trip today is not put on a second one', () => {
+    const first = make(fresh(), clock.today, 250_000);
+    const here = inToday(first.s);
+    const second = run(first.s, 'calendarEvent.create', { date: clock.today, kind: 'outing', title: 'Early walk', from: '07:00', to: '08:00', fee: 100_000, notify: false }, 's9');
+    const id2 = second.result.eventId as string;
+    expect(second.state.calendarEvents[id2].wentIds ?? []).toEqual([]);
+    expect([...(second.state.calendarEvents[first.id].wentIds ?? [])].sort()).toEqual(here);
+  });
+});
+
 describe('round 16: field trip fee and who went', () => {
   const outing = (s: ClubState, date = '2026-10-21', fee = 250_000) => { const r = run(s, 'calendarEvent.create', { date, kind: 'outing', title: 'Ancol aquarium', fee, notify: false }, 's9'); return { s: r.state, id: r.result.eventId as string }; };
   const charges = (s: ClubState, id: string) => live(s.pendingCharges).filter((c) => c.id.startsWith(`trip-${id}-`));
@@ -993,7 +1042,7 @@ describe('round 16: field trip fee and who went', () => {
     let { s, id } = outing(fresh());
     expect(s.calendarEvents[id].fee).toBe(250_000);
     s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m1', 'm2'] }, 's5').state;
-    expect(charges(s, id).map((c) => [c.memberId, c.amount, c.label])).toEqual([['m1', 250_000, 'inv.line.fieldTrip'], ['m2', 250_000, 'inv.line.fieldTrip']]);
+    expect(charges(s, id).map((c) => [c.memberId, c.amount, c.label]).sort()).toEqual([['m1', 250_000, 'inv.line.fieldTrip'], ['m2', 250_000, 'inv.line.fieldTrip']]); // m2 was already in the club when the trip was made (I1)
     expect(s.pendingCharges[`trip-${id}-m1`]).toMatchObject({ params: { title: 'Ancol aquarium', date: '2026-10-21' }, source: { type: 'event', id } });
     expect(runLinesFor(s, s.members.m1, '2026-11', '2026-10-21').some((l) => l.id === `charge-trip-${id}-m1` && l.amount === 250_000)).toBe(true);
     s = run(s, 'calendarEvent.setWent', { eventId: id, memberIds: ['m1'] }, 's5').state;

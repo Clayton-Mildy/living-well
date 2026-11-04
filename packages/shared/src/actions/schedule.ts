@@ -8,7 +8,9 @@ import { clubHoursRental, dayStatus, membershipStatus } from '../rules/core';
 import { extrasOn, isWeekSlot, publishDateOf, scheduleDayOf, scheduleVersionFor, sessionsOn } from '../rules/kitchen';
 import { ALL_DAYS, DRAFT_ID, SLOTS, cellKey, dayProgrammable, daysEqual, extraTimeIssue, fmtDMY, nextMonday, normalizeDays, pendingDayRow, publishedCellKeys, sameCell, storedDays, weeklyCell, type Days } from '../rules/calendar';
 import { guestOn } from '../rules/guests';
-import { asWeekday, diffDays, live, sameWeek, sortBy, uniq } from '../util';
+import { attId } from '../rules/attendance';
+import { tripOn } from '../rules/trips';
+import { addDays, asWeekday, diffDays, live, sameWeek, sortBy, uniq } from '../util';
 import { mediaIdOf } from './members';
 
 const mgmtOnly = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'mgmt');
@@ -127,6 +129,43 @@ export function setTripMember(d: Draft<ClubState>, ev: Draft<CalendarEvent>, mem
   if (c?.invoiceId) ctx.fail('err.charged');
   if (c) delete d.pendingCharges[id];
   if (went.includes(memberId)) ev.wentIds = went.filter((m) => m !== memberId);
+}
+
+/**
+ * Round 20 fix (I1): keep a trip's Who went and its charges in step after the trip itself changes (made, moved, re-priced), not only at check-in.
+ * - `startMoved` (the trip now starts on another date): nobody has gone on the new days yet, so only members with a check-in on one of the new days stay on it;
+ *   everyone else is taken off with their open charge. A member whose fee an invoice already billed stays on, and the invoice is never touched.
+ * - The fee: the open charges take the new amount (and the trip's title and date), 0 takes them back; with a fee, every member in Who went who has no
+ *   charge yet gets one (a fee set after people checked in, or X → 0 → X). Not an outing any more: its open charges go.
+ * - The trip covers today and is the day's trip (`tripOn`): every member checked in today who is on no other trip today joins it (R1 after the fact).
+ */
+export function syncTripRoster(d: Draft<ClubState>, ev: Draft<CalendarEvent>, ctx: Ctx, opts: { startMoved?: boolean } = {}): void {
+  if (ev.kind !== 'outing') { for (const c of eventCharges(d, ev.id)) delete d.pendingCharges[c.id]; return; }
+  const end = ev.endDate || ev.date;
+  if (opts.startMoved) {
+    for (const m of [...(ev.wentIds ?? [])]) {
+      if (d.pendingCharges[tripChargeId(ev.id, m)]?.invoiceId) continue;
+      let came = false;
+      for (let day = ev.date; day <= end && !came; day = addDays(day, 1)) came = !!d.attendance[attId(day, m)]?.checkIn;
+      if (!came) setTripMember(d, ev, m, false, ctx);
+    }
+  }
+  const fee = ev.fee ?? 0;
+  for (const c of eventCharges(d, ev.id)) {
+    if (!fee) { delete d.pendingCharges[c.id]; continue; }
+    c.amount = fee;
+    c.params = { title: ev.title, date: ev.date };
+  }
+  if (fee) for (const m of [...(ev.wentIds ?? [])]) if (d.members[m] && !d.members[m].deletedAt) setTripMember(d, ev, m, true, ctx);
+  const view = d as unknown as ClubState;
+  if (ev.date <= ctx.today && ctx.today <= end && tripOn(view, ctx.today)?.id === ev.id) {
+    const others = dayStatus(view, ctx.today).events.filter((e) => e.kind === 'outing' && e.id !== ev.id);
+    for (const a of live(d.attendance)) {
+      if (a.date !== ctx.today || !a.checkIn || !d.members[a.memberId] || d.members[a.memberId].deletedAt) continue;
+      if (others.some((e) => e.wentIds?.includes(a.memberId))) continue;
+      setTripMember(d, ev, a.memberId, true, ctx);
+    }
+  }
 }
 
 /** Validate a complete event and return the fields to store (no undefined values). */
@@ -407,6 +446,7 @@ export const scheduleActions = [
       const f = eventFields(input, ctx);
       const id = ctx.id('ev');
       d.calendarEvents[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...f, ...(f.kind === 'outing' && input.fee ? { fee: input.fee } : {}) };
+      if (f.kind === 'outing') syncTripRoster(d, d.calendarEvents[id], ctx); // a trip made for today: whoever is already in the club is on it
       notifyEveryone(d, ctx, { kind: 'cal.notif.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } });
       ctx.result.eventId = id;
@@ -423,12 +463,12 @@ export const scheduleActions = [
       const feeOnly = input.fee !== undefined && cur.kind === 'outing' && [input.date, input.endDate, input.kind, input.title, input.titleId, input.from, input.to].every((v) => v === undefined);
       const past = (cur.endDate || cur.date) < ctx.today;
       if (past && !(feeOnly && eventCharges(d, cur.id).length)) ctx.fail('cal.err.pastEvent');
-      const repriceCharges = (fee: number) => { for (const c of eventCharges(d, cur.id)) { if (fee) c.amount = fee; else delete d.pendingCharges[c.id]; } };
       if (past) { // only the fee changes: no date re-validation (the dates are already over), no notice
         if (input.fee) cur.fee = input.fee; else delete cur.fee;
-        repriceCharges(input.fee ?? 0);
+        syncTripRoster(d, cur, ctx); // round 20 fix (I1): open charges follow the fee, and Who went without a charge gets one
         return;
       }
+      const oldDate = cur.date;
       const next: EventInput = {
         date: input.date ?? cur.date,
         endDate: input.endDate === undefined ? cur.endDate ?? null : input.endDate,
@@ -449,9 +489,10 @@ export const scheduleActions = [
       if (f.from && f.to) { row.from = f.from; row.to = f.to; } else { delete row.from; delete row.to; }
       if (input.fee !== undefined) { // round 16
         if (f.kind === 'outing' && input.fee) row.fee = input.fee; else delete row.fee;
-        // round 17: charges no invoice has billed yet follow the fee; 0 takes them back, invoiced ones stay as billed
-        repriceCharges(row.fee ?? 0);
       }
+      // round 17: charges no invoice has billed yet follow the fee; 0 takes them back, invoiced ones stay as billed. Round 20 fix (I1): the roster follows
+      // the trip too (a move takes off who has not gone on the new days, a fee charges Who went, a trip now on today takes in today's check-ins)
+      if (f.kind === 'outing' || cur.wentIds?.length || eventCharges(d, row.id).length) syncTripRoster(d, row, ctx, { startMoved: row.date !== oldDate });
       notifyEveryone(d, ctx, { kind: 'cal.notif.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } });
     },
