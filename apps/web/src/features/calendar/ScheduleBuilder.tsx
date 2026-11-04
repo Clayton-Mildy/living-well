@@ -12,9 +12,12 @@
 // approves or rejects it right there (the same approval actions as Approvals); the activity team sees the proposed week without the buttons.
 // KC round 15: each week has its own plan (a publish is for the week shown only; a week nobody planned shows "Not planned"). "Copy last week" puts last
 // week's plan into the draft (asking first when it replaces sessions already placed); it is published like any other change.
+// Round 19 (task 4): a field trip day (an outing from `eventsOn`) shows one trip block across the activity rows instead of its sessions; lunch and tea skip
+// it and nothing can be placed there (the server refuses one-day changes on a trip day). The weekday's plan is kept, only hidden for that date, so it comes
+// back when the trip moves or is deleted. Publishing a week with a trip day notes it in the confirm (a warning only).
 import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties, type DragEvent, type KeyboardEvent } from 'react';
 import { useResetOn } from '../../lib/useResetOn';
-import { ALL_DAYS, actorName, addDays, asWeekday, live, publishDateOf, scheduleVersionFor, staffCall, type ISODate, type Weekday, type WeekSlot } from '@cp/shared';
+import { ALL_DAYS, actorName, addDays, asWeekday, eventsOn, live, publishDateOf, scheduleVersionFor, staffCall, type ISODate, type Weekday, type WeekSlot } from '@cp/shared';
 import { activityName, roomName } from '@cp/shared/rules/activity';
 import { SLOTS, activityTeachers, changedCells, cloneDays, dayEditable, effectiveVersions, mondayOf, nextMonday, normalizeDays, pendingVersions, returnedVersion, sameCell, weekDays, weekEditable, weekView, type Days } from '@cp/shared/rules/calendar';
 import { copyProgramme, hasSessions, lastWeekProgramme, programmeCopyReplaces } from '@cp/shared/rules/weekPlans';
@@ -30,10 +33,13 @@ import { sessionText } from '../members/approvalView';
 import { Badge, plural, rowLine } from '../activity/lib';
 import { CatalogEditor } from './CatalogEditor';
 import { ProposalActions } from './ProposalActions';
+import { TripBlock } from './TripBlock';
 import { ConfirmDialog } from '../kitchen/parts';
 import { smallCaps, weekdayName } from './lib';
 
 type Cell = { w: Weekday; slot: WeekSlot };
+/** the fixed rows of the grid, in order (the activity slots are the rows between) */
+const FIXED_KEY = ['open', '', 'lunch', '', 'tea', 'close'] as const;
 const key = (c: Cell) => `${c.w}|${c.slot}`;
 export interface CellRequest { w: Weekday; slot: WeekSlot; n: number }
 
@@ -69,7 +75,8 @@ function useDraft(week: ISODate) {
   return { view, draft, base: view.base, edit, put, flush, reset, discard: () => put(cloneDays(view.base)), changes: changedCells(draft, view.base) };
 }
 
-export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: ISODate; onWeek: (monday: ISODate) => void; focusDate?: ISODate | null; request?: CellRequest | null }) {
+/** `onOpenEvent` (round 19): opens a trip in the event editor from its trip block (management only; Calendar passes its editor). */
+export function ScheduleBuilder({ week, onWeek, focusDate, request, onOpenEvent }: { week: ISODate; onWeek: (monday: ISODate) => void; focusDate?: ISODate | null; request?: CellRequest | null; onOpenEvent?: (id: string) => void }) {
   const t = useT();
   const { lang, fds, fdl, fd } = useFmt();
   const { isPhone } = useDevice();
@@ -119,14 +126,23 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
   const [askCopy, setAskCopy] = useState(false);
   const doCopy = () => { d.put(copyProgramme(d.draft, last, week, today)); setSel(null); setPick(null); setAskCopy(false); say(t('cal.copied')); };
   const onCopy = () => (programmeCopyReplaces(d.draft, last, week, today) ? setAskCopy(true) : doCopy());
-  /** KC round 7: in the current week a day before today has already happened: it shows what ran and cannot be changed */
-  const locked = (w: Weekday) => !dayEditable(view.dates[w - 1], today);
+  /** round 19: the field trip of each day of the week shown (its sessions are hidden and nothing can be placed there) */
+  const trips = useMemo(() => Object.fromEntries(ALL_DAYS.map((w) => [w, eventsOn(s, view.dates[w - 1]).find((e) => e.kind === 'outing')])) as Record<Weekday, ReturnType<typeof eventsOn>[number] | undefined>, [s, view.dates]);
+  const tripOf = (w: Weekday) => trips[w];
+  /** KC round 7: in the current week a day before today has already happened: it shows what ran and cannot be changed; round 19: nor can a trip day */
+  const locked = (w: Weekday) => !dayEditable(view.dates[w - 1], today) || !!tripOf(w);
+  const openTrip = role === 'mgmt' && onOpenEvent ? onOpenEvent : undefined;
+  const tripBlock = (w: Weekday, style?: CSSProperties) => { const e = tripOf(w); return e ? <TripBlock key={`trip-${w}`} event={e} canEdit={!!openTrip} onOpen={openTrip} style={style} /> : null; };
+  /** the runs of days without a trip: the lunch and tea rows span each run and skip the trip days */
+  const freeRuns = ALL_DAYS.reduce<Weekday[][]>((runs, w) => { if (tripOf(w)) return runs; const last = runs[runs.length - 1]; if (last && last[last.length - 1] === w - 1) last.push(w); else runs.push([w]); return runs; }, []);
   const wLong = (w: number) => weekdayName(lang, w, 'long');
   const wShort = (w: number) => weekdayName(lang, w, 'short');
   /** round 14: Saturday and Sunday (a lighter header) */
   const weekendDay = (w: Weekday) => w > 5;
   const dateOf = (w: number) => view.dates[w - 1];
   const dayNum = (w: number) => fd(dateOf(w), { day: 'numeric', month: 'short' });
+  /** round 19: "Fri 6" in the trip day's header */
+  const tripDayName = (w: number) => fd(dateOf(w), { weekday: 'short', day: 'numeric' }).replace(/,/g, '');
   /** round 15: the waiting version from the day it would publish (an earlier day of the week keeps the plan in force) */
   const proposedFrom = waiting ? publishDateOf(waiting, today) : '';
   const proposedDays = useMemo(() => {
@@ -332,6 +348,8 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
     const nm = (x: typeof before) => (x ? activityName(s.activities[x.activityId], lang) : '—');
     return `${wShort(c.w)} ${c.slot}: ${nm(before)} → ${nm(after)}`;
   });
+  /** round 19: the trip days the publish covers (from today in the current week); a weekend day only when sessions are placed on it */
+  const tripNotes = ALL_DAYS.filter((w) => tripOf(w) && dateOf(w) >= today && (!weekendDay(w) || SLOTS.some((slot) => d.draft[w][slot]))).map((w) => t('cal.publishTripNote', { date: fds(dateOf(w)) }));
   const thisMonday = mondayOf(today);
   /** the week "Edit" goes to from a week that is over: this one while it still has days to come, else the next */
   const editTarget = weekEditable(thisMonday, today) ? thisMonday : nextMonday(today);
@@ -473,40 +491,57 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
           <div style={{ flex: '1 1 100%', minWidth: 0, display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div role="tablist" aria-label={t('cal.day')} style={{ display: 'grid', gridTemplateColumns: 'repeat(7, minmax(0, 1fr))', gap: 2, padding: 2, borderRadius: 9, background: 'var(--track, #E8E8EB)' }}>
               {ALL_DAYS.map((w) => (
-                <button key={w} type="button" role="tab" aria-label={`${wShort(w)} ${dayNum(w)}${weekendDay(w) ? ` · ${t('cal.weekendCol')}` : ''}`} aria-selected={pday === w} onClick={() => { setPday(w); setSel(null); }} style={{ minWidth: 0, minHeight: 48, padding: '3px 0', borderRadius: 7, border: 'none', background: pday === w ? '#FFFFFF' : 'transparent', boxShadow: pday === w ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: pday === w ? '#1E1A16' : weekendDay(w) ? '#8A8078' : '#5E5852', fontSize: 15, fontWeight: pday === w ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.2, transition: 'background-color .15s' }}>
+                <button key={w} type="button" role="tab" aria-label={tripOf(w) ? t('cal.tripDay', { day: tripDayName(w) }) : `${wShort(w)} ${dayNum(w)}${weekendDay(w) ? ` · ${t('cal.weekendCol')}` : ''}`} aria-selected={pday === w} onClick={() => { setPday(w); setSel(null); }} style={{ minWidth: 0, minHeight: 48, padding: '3px 0', borderRadius: 7, border: 'none', background: pday === w ? '#FFFFFF' : 'transparent', boxShadow: pday === w ? '0 1px 3px rgba(40,30,20,0.14)' : 'none', color: pday === w ? '#1E1A16' : weekendDay(w) ? '#8A8078' : '#5E5852', fontSize: 15, fontWeight: pday === w ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', lineHeight: 1.2, transition: 'background-color .15s' }}>
                   <span>{wShort(w)}</span>
-                  <span style={{ fontSize: 12, color: weekendDay(w) ? '#8A8078' : '#6B6259', fontWeight: 400, whiteSpace: 'nowrap' }}>{fd(dateOf(w), { day: 'numeric', month: 'short' })}</span>
+                  {tripOf(w)
+                    ? <Icon name="directions_bus" size={15} color="#24201C" />
+                    : <span style={{ fontSize: 12, color: weekendDay(w) ? '#8A8078' : '#6B6259', fontWeight: 400, whiteSpace: 'nowrap' }}>{fd(dateOf(w), { day: 'numeric', month: 'short' })}</span>}
                 </button>
               ))}
             </div>
-            <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
+            {tripOf(pday) ? (
+              // round 19, phone: a trip day is the trip block alone (no sessions, no lunch or tea rows)
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                <div style={{ ...smallCaps, padding: '0 4px' }}>{t('cal.tripDay', { day: tripDayName(pday) })}</div>
+                {tripBlock(pday, { minHeight: 88, padding: '12px 16px' })}
+              </div>
+            ) : <div className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16, overflow: 'hidden' }}>
               {fixed.map(([time, label, icon, slotLabel], i) => icon
                 ? <div key={time} style={{ minHeight: 44, background: 'var(--press, #EEEEF0)', display: 'flex', alignItems: 'center', gap: 10, padding: '6px 16px', fontSize: 15, lineHeight: 1.3, color: '#4A4038', ...rowLine(i === 0) }}><span style={{ fontVariantNumeric: 'tabular-nums', fontWeight: 500, flex: 'none', width: 74 }}>{time}</span><span>{label}</span></div>
                 : slotCard({ w: pday, slot: time as WeekSlot }, slotLabel, i === 0))}
-            </div>
+            </div>}
           </div>
         ) : (
           <div style={{ flex: '1 1 640px', minWidth: 0, overflowX: 'auto' }}>
             <div style={{ minWidth: 900, display: 'grid', gridTemplateColumns: '96px repeat(7,minmax(0,1fr))', gap: 8 }}>
-              <div />
+              <div style={{ gridColumn: 1, gridRow: 1 }} />
               {ALL_DAYS.map((w) => {
                 const focus = focusDate === dateOf(w);
                 return (
-                  <div key={w} style={{ textAlign: 'center', padding: '6px 0', lineHeight: 1.3, borderBottom: focus ? '3px solid #24201C' : '3px solid transparent', color: weekendDay(w) ? '#8A8078' : undefined }}>
-                    <div style={{ fontSize: FONT_BODY, fontWeight: weekendDay(w) ? 500 : 600 }}>{wLong(w)}</div>
-                    <div style={{ fontSize: FONT_SMALL, color: weekendDay(w) ? '#8A8078' : '#5E5852', fontWeight: focus ? 600 : 400 }}>{dayNum(w)}{weekendDay(w) ? ` · ${t('cal.weekendCol')}` : ''}</div>
+                  <div key={w} data-day-head={w} style={{ gridColumn: w + 1, gridRow: 1, alignSelf: 'end', textAlign: 'center', padding: '6px 0', lineHeight: 1.3, borderBottom: focus ? '3px solid #24201C' : '3px solid transparent', color: weekendDay(w) && !tripOf(w) ? '#8A8078' : undefined }}>
+                    {tripOf(w)
+                      ? <div style={{ fontSize: FONT_BODY, fontWeight: 600, color: '#24201C' }}>{t('cal.tripDay', { day: tripDayName(w) })}</div>
+                      : <>
+                          <div style={{ fontSize: FONT_BODY, fontWeight: weekendDay(w) ? 500 : 600 }}>{wLong(w)}</div>
+                          <div style={{ fontSize: FONT_SMALL, color: weekendDay(w) ? '#8A8078' : '#5E5852', fontWeight: focus ? 600 : 400 }}>{dayNum(w)}{weekendDay(w) ? ` · ${t('cal.weekendCol')}` : ''}</div>
+                        </>}
                   </div>
                 );
               })}
-              {fixed.map(([time, label, icon, slotLabel]) => (
+              {fixed.map(([time, label, icon, slotLabel], i) => (
                 <div key={time} style={{ display: 'contents' }}>
-                  <div style={{ padding: '10px 4px', display: 'flex', flexDirection: 'column', gap: 2 }}>
+                  <div style={{ gridColumn: 1, gridRow: i + 2, padding: '10px 4px', display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <span style={{ fontSize: 16, fontVariantNumeric: 'tabular-nums', lineHeight: 1.4 }}>{time}</span>
                     <span style={{ fontSize: 'max(13px, var(--cp-body, 0px))', color: '#5E5852', lineHeight: 1.4 }}>{slotLabel}</span>
                   </div>
                   {icon ? (
-                    <div style={{ gridColumn: 'span 7', minHeight: 48, borderRadius: 12, background: 'var(--press, #EEEEF0)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', fontSize: FONT_BODY }}>{fixedIcon(icon)}{label}</div>
+                    // round 19: lunch and tea skip a trip day (one bar per run of days without a trip); opening and closing span the week
+                    (FIXED_KEY[i] === 'lunch' || FIXED_KEY[i] === 'tea' ? freeRuns : [ALL_DAYS]).map((run) => (
+                      <div key={run[0]} data-fixed={FIXED_KEY[i]} data-days={run.join(' ')} style={{ gridColumn: `${run[0] + 1} / ${run[run.length - 1] + 2}`, gridRow: i + 2, minHeight: 48, borderRadius: 12, background: 'var(--press, #EEEEF0)', display: 'flex', alignItems: 'center', gap: 8, padding: '0 14px', fontSize: FONT_BODY, minWidth: 0 }}>{fixedIcon(icon)}<span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span></div>
+                    ))
                   ) : ALL_DAYS.map((w) => {
+                    // round 19: a trip day is one block from the morning slot down through afternoon tea
+                    if (tripOf(w)) return i === 1 ? <div key={`trip-${w}`} style={{ gridColumn: w + 1, gridRow: `${i + 2} / ${i + 6}`, display: 'flex', minWidth: 0 }}>{tripBlock(w)}</div> : null;
                     const c: Cell = { w, slot: time as WeekSlot };
                     const v = cellOf(c);
                     const st = cellStyle(c);
@@ -528,7 +563,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
                     );
                     const box = { flex: 1, minHeight: 104, borderRadius: 12, border: st.border, background: st.background, boxShadow: st.boxShadow, padding: 10, display: 'flex', flexDirection: 'column', gap: 4, minWidth: 0 } as const;
                     return (
-                      <div key={key(c)} data-slot={touch ? key(c) : undefined} {...proposedAttr(c)} style={{ position: 'relative', display: 'flex', minWidth: 0 }} onDragOver={touch ? (e) => { e.preventDefault(); if (over !== key(c)) setOver(key(c)); } : undefined} onDrop={touch ? (e) => { e.preventDefault(); dropAt(c); } : undefined}>
+                      <div key={key(c)} data-slot={touch ? key(c) : undefined} {...proposedAttr(c)} style={{ gridColumn: w + 1, gridRow: i + 2, position: 'relative', display: 'flex', minWidth: 0 }} onDragOver={touch ? (e) => { e.preventDefault(); if (over !== key(c)) setOver(key(c)); } : undefined} onDrop={touch ? (e) => { e.preventDefault(); dropAt(c); } : undefined}>
                         {touch ? (
                           <div draggable={!!v && !coarse} onDragStart={(e) => { if (!v) return; try { e.dataTransfer.setData('text/plain', key(c)); } catch { /* ignore */ } setDrag({ cell: c }); }} onDragEnd={() => { setDrag(null); setOver(null); }}
                             {...(v ? { onTouchStart: touchStart({ cell: c }, title(c)), onTouchMove: touchMoveEarly, onTouchEnd: touchEndEarly } : {})}
@@ -615,7 +650,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
         </div>
       )}
 
-      <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, changed - summary.length)} count={changed} week={week} asks={asks}
+      <PublishSheet open={pubOpen} onClose={() => setPubOpen(false)} summary={summary} more={Math.max(0, changed - summary.length)} count={changed} week={week} asks={asks} tripNotes={tripNotes}
         onPublish={async (effectiveFrom, notify) => {
           await d.flush();
           const r = await act('schedule.publish', { effectiveFrom, days: d.draft, ...(asks ? {} : { notify }) }, { silent: true });
@@ -656,7 +691,7 @@ export function ScheduleBuilder({ week, onWeek, focusDate, request }: { week: IS
 
 /** `asks` (round 14, the activity team): the sheet sends the version to Ega; who is told is decided when Ega approves.
  *  KC round 15: the plan is for the week shown only: from its Monday, or from today when that week has started, to its Sunday. */
-function PublishSheet({ open, onClose, summary, more, count, week, asks, onPublish }: { open: boolean; onClose: () => void; summary: string[]; more: number; count: number; week: ISODate; asks?: boolean; onPublish: (date: string, notify: boolean) => Promise<string> }) {
+function PublishSheet({ open, onClose, summary, more, count, week, asks, tripNotes = [], onPublish }: { open: boolean; onClose: () => void; summary: string[]; more: number; count: number; week: ISODate; asks?: boolean; tripNotes?: string[]; onPublish: (date: string, notify: boolean) => Promise<string> }) {
   const t = useT();
   const { fdl } = useFmt();
   const { today } = useNow();
@@ -674,6 +709,7 @@ function PublishSheet({ open, onClose, summary, more, count, week, asks, onPubli
         {more ? <li>{t('cal.andMore', { n: more })}</li> : null}
       </ul>
       <Note tone="cream" icon="date_range">{t(start === today ? 'cal.effectiveNoteToday' : 'cal.effectiveNote', { date: fdl(start), end: fdl(end) })}</Note>
+      {tripNotes.length ? <Note tone="cream" icon="directions_bus"><span data-testid="publish-trip-note" style={{ display: 'flex', flexDirection: 'column' }}>{tripNotes.map((x) => <span key={x}>{x}</span>)}</span></Note> : null}
       {asks ? null : <Toggle on={notify} onClick={() => setNotify(!notify)} label={t('cal.notify')} />}
       {err ? <Note tone="rust" icon="error">{err}</Note> : null}
       <Button full disabled={busy} onClick={async () => { setBusy(true); setErr(await onPublish(start, notify)); setBusy(false); }}>{t(asks ? 'cal.sendForApproval' : 'cal.publishBtn')}</Button>

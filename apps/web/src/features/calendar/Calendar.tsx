@@ -242,7 +242,7 @@ export function Calendar() {
           </>
         )}
 
-        {canBuild ? <div ref={builderRef} style={{ scrollMarginTop: 12 }}><ScheduleBuilder week={week} onWeek={(m) => { setWeek(m); setFocus(null); setReq(null); }} focusDate={focus} request={req} /></div> : null}
+        {canBuild ? <div ref={builderRef} style={{ scrollMarginTop: 12 }}><ScheduleBuilder week={week} onWeek={(m) => { setWeek(m); setFocus(null); setReq(null); }} focusDate={focus} request={req} onOpenEvent={isMgmt ? onEdit : undefined} /></div> : null}
       </div>
       {isMgmt && isPhone ? <Pin icon="add" label={t('cal.addEvent')} onClick={() => setEditor({ date: sel || today })} /> : null}
       <WentSheet eventId={went} onClose={() => setWent(null)} />

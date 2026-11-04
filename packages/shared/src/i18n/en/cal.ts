@@ -104,4 +104,5 @@ export const cal = {
   copyConfirm: 'Replace with last week', copyKeep: 'Keep this week', copied: 'Last week’s plan is in. Check it, then publish.', noLastWeek: 'Last week has no plan to copy.',
   'remind.programme': 'No activity programme yet for {week}.', 'remind.menu': 'No menu yet for {week}.', 'remind.both': 'No activity programme or menu yet for {week}.',
   'remind.thisWeek': 'this week', 'remind.nextWeek': 'next week ({date})', 'remind.planProgramme': 'Plan the programme', 'remind.planMenu': 'Plan the menu',
+  tripDay: '{day} · Field trip', tripNoSessions: 'no sessions', publishTripNote: '{date} is a field trip: no sessions',
 };
