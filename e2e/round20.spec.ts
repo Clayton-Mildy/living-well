@@ -26,13 +26,13 @@ test('Caca sees the trip banner, checks in Oma Lina (on the trip), and Who went 
   await expect(page.getByText(/Kebun Raya Bogor day trip · 08:30–15:00/).first()).toBeVisible();
   await rowOf(page, 'Oma Lina Wijaya').click();
   await confirmCheckIn(page);
-  await expect(page.getByRole('status').filter({ hasText: /Oma Lina checked in/ }).first()).toBeVisible();
+  await expect(page.getByRole('status').filter({ hasText: /Oma Lina checked in/ }).first()).toContainText('Field trip fee: Rp'); // round 20 fix (I2)
   await page.getByRole('tab', { name: /^Check out/ }).click();
   await expect(page.getByRole('button', { name: /^Open full size · Oma Lina Wijaya/ }).first()).toContainText(/Arrived \d\d:\d\d · on the trip/);
   await assertNoHorizontalScroll(page);
 
   await signIn(page, 's5', '/calendar');
-  await page.getByRole('button', { name: /^Who went · 1/ }).click();
+  await page.getByRole('button', { name: /^Who went · \d+/ }).click(); // round 20 fix (I1): the members already in the club when Ega made the trip are on it too
   const sheet = page.getByRole('dialog', { name: /Who went on/ });
   await expect(sheet).toBeVisible();
   await expect(sheet.getByRole('button', { name: 'Oma Lina Wijaya', exact: true })).toHaveAttribute('aria-pressed', 'true');
