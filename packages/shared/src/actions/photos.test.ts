@@ -304,6 +304,7 @@ describe('photo.addActivity (KC round 7: activity pictures)', () => {
     const old = add(s, { date: '2026-10-14', activity: 'Keroncong sing-along' });
     expect(old.s.photos[old.id]).toMatchObject({ date: '2026-10-14', time: '10:00', visibility: 'pending' }); // the day it is for, the time it was added
     fails(s, 'photo.addActivity', { date: '2026-10-13', activity: 'Batik painting' }, 's5', 'activity.err.picDate'); // 8 days back
+    fails(s, 'photo.addActivity', { date: '2026-10-23', activity: 'Batik painting' }, 's5', 'err.closedDay', { today: '2026-10-24', nowMin: 600 }); // round 20: not on a closed day
     fails(s, 'photo.addActivity', { date: '2026-10-22', activity: 'Gardening club' }, 's5', 'activity.err.picDate'); // tomorrow
     fails(s, 'photo.addActivity', { date: '2026-10-17', activity: 'Batik painting' }, 's5', 'activity.err.picSession'); // a Saturday: no sessions
     fails(s, 'photo.addActivity', { date: '2026-10-20', activity: 'Keroncong sing-along' }, 's5', 'activity.err.picSession'); // that day was Batik and Memory games

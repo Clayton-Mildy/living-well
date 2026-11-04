@@ -152,6 +152,19 @@ export function Camera() {
     </>
   );
 
+  // round 20: no photos on a closed day (photo.take, photo.capture, photo.sendDrafts and photo.addActivity refuse them): every tab but the Library shows the closed state
+  const day = dayStatus(s, today);
+  if (!day.open && tab !== 'library') {
+    return (
+      <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 24px)' }}>
+        {header}
+        <div data-testid="camera-closed" className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16 }}>
+          <EmptyState icon="event_busy" title={day.event ? (lang === 'id' && day.event.titleId ? day.event.titleId : day.event.title) : t('common.clubClosed')}
+            sub={t(day.reason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })} />
+        </div>
+      </div>
+    );
+  }
   if (tab === 'activity') {
     return (
       <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)' }}>
@@ -173,19 +186,6 @@ export function Camera() {
       <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)', minHeight: '100%' }}>
         {header}
         <DraftsBody onMore={goTab} />
-      </div>
-    );
-  }
-  // round 20: no photos on a closed day (photo.take refuses them): the closed state, nothing to take a photo with
-  const day = dayStatus(s, today);
-  if (!day.open) {
-    return (
-      <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 24px)' }}>
-        {header}
-        <div data-testid="camera-closed" className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16 }}>
-          <EmptyState icon="event_busy" title={day.event ? (lang === 'id' && day.event.titleId ? day.event.titleId : day.event.title) : t('common.clubClosed')}
-            sub={t(day.reason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })} />
-        </div>
       </div>
     );
   }

@@ -139,6 +139,7 @@ export const photoActions = [
     can: (u) => hasRole(u, 'activity', 'mgmt'),
     parse: (raw) => parseWith(activitySchema, raw),
     run(d, input, ctx) {
+      if (!dayStatus(d as unknown as ClubState, ctx.today).open) ctx.fail('err.closedDay'); // round 20: no photos on a closed day
       if (!logDateOk(ctx.today, input.date)) ctx.fail('activity.err.picDate', { n: LOG_BACK_DAYS });
       const view = d as unknown as ClubState;
       const given = d.activities[input.activity]?.name ?? input.activity;

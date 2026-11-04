@@ -31,6 +31,12 @@ const shootKind = (s: ClubState, uid: string, kind: 'people' | 'scene' | 'food')
 };
 
 describe('photo.capture', () => {
+  it('round 20: no shots and no sending on a closed day (Saturday)', () => {
+    const sat = { today: '2026-10-24', nowMin: 600 };
+    fails(fresh(), 'photo.capture', { media: 'photo', mediaId: 'md_sat' }, 's5', 'err.closedDay', sat);
+    const { s, p } = shoot(fresh(), 's5');
+    fails(s, 'photo.sendDrafts', { ids: [p.id] }, 's5', 'err.closedDay', sat);
+  });
   it('a teacher’s shot is a private draft at the minute it was taken, with the session and the AI’s suggestion; nothing is told to anybody', () => {
     const { s, p } = shoot(fresh(), 's5');
     expect(p).toMatchObject({ date: T, time: '10:00', media: 'photo', takenBy: 's5', visibility: 'draft', createdBy: 'staff:s5' });

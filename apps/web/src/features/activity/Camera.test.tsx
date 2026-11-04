@@ -17,7 +17,7 @@ beforeAll(() => { (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean 
 afterEach(async () => { await act(async () => { root?.unmount(); }); host?.remove(); document.body.innerHTML = ''; root = null; host = null; });
 
 let state: ClubState;
-async function show(day: (s: ClubState) => string) {
+async function show(day: (s: ClubState) => string, path = '/camera?tab=manual') {
   state = buildSeed().citra;
   const today = day(state);
   // m1 checked in at the club; m20 only ticked in Who went (joined the bus elsewhere)
@@ -28,7 +28,7 @@ async function show(day: (s: ClubState) => string) {
   host = document.createElement('div');
   document.body.appendChild(host);
   root = createRoot(host);
-  await act(async () => { root!.render(<MemoryRouter initialEntries={['/camera?tab=manual']}><Camera /></MemoryRouter>); });
+  await act(async () => { root!.render(<MemoryRouter initialEntries={[path]}><Camera /></MemoryRouter>); });
 }
 const photoOf = (id: string) => host!.querySelector(`button[aria-label="Take a photo of ${displayName(state.members[id])}"]`);
 
@@ -45,5 +45,14 @@ describe('Camera on trip and closed days', () => {
     expect(Array.from(host!.querySelectorAll('button')).some((b) => b.textContent?.includes('Take a photo'))).toBe(false);
     expect(photoOf('m1')).toBeNull();
     expect(host!.textContent).not.toContain('Record a short video');
+  });
+  it('on a closed day the Drafts (quick camera) and Activity tabs show the closed state too', async () => {
+    for (const path of ['/camera', '/camera?tab=activity']) {
+      await show((s) => s.calendarEvents[CLOSED].date, path);
+      expect(host!.querySelector('[data-testid="camera-closed"]'), path).not.toBeNull();
+      expect(host!.querySelector('[data-testid="drafts-open-camera"]'), path).toBeNull();
+      expect(Array.from(host!.querySelectorAll('button')).some((b) => /Open camera|Take a photo|Add a picture/.test(b.textContent ?? '')), path).toBe(false);
+      await act(async () => { root?.unmount(); }); host?.remove(); root = null; host = null;
+    }
   });
 });

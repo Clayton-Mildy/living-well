@@ -35,6 +35,7 @@ describe('Also today on a field trip day', () => {
     const trip = host!.querySelector('[data-testid="lobby-trip"]')!;
     expect(trip.textContent).toContain('Field trip today');
     expect(trip.textContent).toContain('Kebun Raya Bogor botanical garden · 08:30–15:00');
+    expect(host!.textContent).not.toContain('Nothing else is planned today.'); // the trip is something planned
   });
   it('shows the menu the kitchen added for the trip day', async () => {
     await show((s, d) => { s.dayMenus[d] = { id: d, clubId: s.clubId, createdAt: `${d}T08:00`, createdBy: 'staff:s3', date: d, lunch: ['dish-sop-ikan'], allergyPlans: [] } as ClubState['dayMenus'][string]; });

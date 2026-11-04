@@ -150,7 +150,7 @@ export function AlsoToday({ guest, onCheckOn }: { guest: GuestActions; onCheckOn
     );
   });
   if (guests.pages > 1) blocks.push(<Pager key="pager" page={guests.page} pages={guests.pages} onPage={guests.setPage} label={t('lobby.pagerAria', { list: t('lobby.alsoToday') })} />);
-  if (empty) blocks.push(<div key="none" style={sub14}>{t('lobby.alsoNone')}</div>);
+  if (empty && !menuBlock && !tripBlock) blocks.push(<div key="none" style={sub14}>{t('lobby.alsoNone')}</div>); // round 20: the menu or the trip is something planned
   if (menuBlock) blocks.unshift(menuBlock);
   if (tripBlock) blocks.unshift(tripBlock);
   // round 13: guest hosts coming today (a teacher, a singer, a speaker the front desk should expect); hidden when nobody is booked. A tap opens the Guests screen (the front desk: the read-only session).

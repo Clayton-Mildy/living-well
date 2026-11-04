@@ -10,7 +10,7 @@ import { DomainError, defineAction, hasRole, isMgmt, isStaff, original, type Ctx
 import { requireMember } from './helpers';
 import { announceLunchPhoto, ensureDayMenu } from './kitchen';
 import { feedFor, notifyNewPhotos } from './photos';
-import { isPendingRow } from '../rules/core';
+import { dayStatus, isPendingRow } from '../rules/core';
 import { LOG_BACK_DAYS, curAct, hashOf, logDateOk, pictureSessions, toneOf, type CurAct } from '../rules/activity';
 import { analyzePhoto, bestOfBurst, draftKindOf, draftKindsFor, draftMeal, sendProblem, TEA_FROM, type DraftKind } from '../rules/photoAi';
 import { daysBetween, toMin, uniq } from '../util';
@@ -87,6 +87,7 @@ export const photoDraftActions = [
     can: (u) => draftTakers(u),
     parse: (raw) => parseWith(captureSchema, raw),
     run(d, input, ctx) {
+      if (!dayStatus(d as unknown as ClubState, ctx.today).open) ctx.fail('err.closedDay'); // round 20: no photos on a closed day
       const view = d as unknown as ClubState;
       const pid = ctx.id('p');
       const cur = curAct(view, ctx.today, ctx.nowMin);
@@ -167,6 +168,7 @@ export const photoDraftActions = [
     can: (u) => draftTakers(u),
     parse: (raw) => { const r = parseWith(sendSchema, raw); return { ids: uniq(r.ids), ...(r.notify === undefined ? {} : { notify: r.notify }) }; },
     run(d, input, ctx: Ctx) {
+      if (!dayStatus(d as unknown as ClubState, ctx.today).open) ctx.fail('err.closedDay'); // round 20: no photos on a closed day (photo.take's rule)
       const view = d as unknown as ClubState;
       const mgmt = isMgmt(ctx.user);
       const todo: Draft<Photo>[] = [];

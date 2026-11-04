@@ -1,8 +1,8 @@
 // Photos tab (design ScrProfile photos): the member's own photos first each day, then the group photos they are in. Tiles open the viewer.
 // "Take photo" opens the real camera, uploads the picture and saves it as a solo photo of this member. Photos taken by anyone but management
-// wait for approval (Reviews → Photos): staff see them tagged "Waiting for approval", families never see them.
+// wait for approval (Reviews → Photos): staff see them tagged "Waiting for approval", families never see them. Round 20: no "Take photo" on a closed day.
 import { useState } from 'react';
-import { getAction, hasKey, live, displayName, type Photo } from '@cp/shared';
+import { dayStatus, getAction, hasKey, live, displayName, type Photo } from '@cp/shared';
 import { Button, CameraCapture, Group, Icon, Pager, PhotoImg, SectionLabel, usePaged } from '../../../components/ui';
 import { ApiError } from '../../../lib/api';
 import { uploadMedia } from '../../../lib/media';
@@ -16,7 +16,7 @@ export function PhotosTab({ p }: { p: P }) {
   const [viewer, setViewer] = useState<{ photos: Photo[]; startId: string } | null>(null);
   const [camera, setCamera] = useState(false);
   const [saving, setSaving] = useState(false);
-  const canTake = !p.family && p.st.key !== 'pending' && p.st.key !== 'ended' && !!getAction('photo.take')?.can(p.me, { kind: 'solo', memberIds: [m.id], media: 'photo' }, s);
+  const canTake = !p.family && dayStatus(s, today).open && p.st.key !== 'pending' && p.st.key !== 'ended' && !!getAction('photo.take')?.can(p.me, { kind: 'solo', memberIds: [m.id], media: 'photo' }, s);
   const mine = live(s.photos).filter((x) => x.memberIds.includes(m.id) && (p.family ? x.visibility === 'visible' : x.visibility !== 'removed' && x.visibility !== 'draft'));
   const dates = Array.from(new Set(mine.map((x) => x.date))).sort().reverse();
   const days = dates.map((d) => {
