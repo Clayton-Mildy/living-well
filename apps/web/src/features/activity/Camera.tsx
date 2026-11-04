@@ -152,7 +152,8 @@ export function Camera() {
     </>
   );
 
-  // round 20: no photos on a closed day (photo.take, photo.capture, photo.sendDrafts and photo.addActivity refuse them): every tab but the Library shows the closed state
+  // round 20: no photos on a closed day (photo.take, photo.capture and photo.addActivity refuse them): every tab but the Library shows the closed state; Drafts keeps
+  // the drafts of open days (they can still be sent), with no camera
   const day = dayStatus(s, today);
   if (!day.open && tab !== 'library') {
     return (
@@ -162,6 +163,7 @@ export function Camera() {
           <EmptyState icon="event_busy" title={day.event ? (lang === 'id' && day.event.titleId ? day.event.titleId : day.event.title) : t('common.clubClosed')}
             sub={t(day.reason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })} />
         </div>
+        {tab === 'drafts' ? <DraftsBody closed /> : null}
       </div>
     );
   }

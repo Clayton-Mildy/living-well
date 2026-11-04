@@ -168,7 +168,6 @@ export const photoDraftActions = [
     can: (u) => draftTakers(u),
     parse: (raw) => { const r = parseWith(sendSchema, raw); return { ids: uniq(r.ids), ...(r.notify === undefined ? {} : { notify: r.notify }) }; },
     run(d, input, ctx: Ctx) {
-      if (!dayStatus(d as unknown as ClubState, ctx.today).open) ctx.fail('err.closedDay'); // round 20: no photos on a closed day (photo.take's rule)
       const view = d as unknown as ClubState;
       const mgmt = isMgmt(ctx.user);
       const todo: Draft<Photo>[] = [];

@@ -55,4 +55,11 @@ describe('Camera on trip and closed days', () => {
       await act(async () => { root?.unmount(); }); host?.remove(); root = null; host = null;
     }
   });
+  it('on a closed day Drafts still lists the drafts of open days with Send (only the camera is gone)', async () => {
+    await show((s) => s.calendarEvents[CLOSED].date, '/camera');
+    expect(host!.querySelectorAll('[data-testid="draft-tile"]').length).toBeGreaterThan(0); // Dinar's seeded drafts
+    expect(document.body.querySelector('[data-testid="drafts-send"]')).not.toBeNull();
+    expect(host!.querySelector('[data-testid="drafts-open-camera"]')).toBeNull();
+    expect(host!.querySelector('[data-testid="more-manual"]')).toBeNull();
+  });
 });

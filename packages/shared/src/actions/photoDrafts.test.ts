@@ -31,11 +31,19 @@ const shootKind = (s: ClubState, uid: string, kind: 'people' | 'scene' | 'food')
 };
 
 describe('photo.capture', () => {
-  it('round 20: no shots and no sending on a closed day (Saturday)', () => {
-    const sat = { today: '2026-10-24', nowMin: 600 };
-    fails(fresh(), 'photo.capture', { media: 'photo', mediaId: 'md_sat' }, 's5', 'err.closedDay', sat);
-    const { s, p } = shoot(fresh(), 's5');
-    fails(s, 'photo.sendDrafts', { ids: [p.id] }, 's5', 'err.closedDay', sat);
+  it('round 20: no shots on a closed day (Saturday)', () => {
+    fails(fresh(), 'photo.capture', { media: 'photo', mediaId: 'md_sat' }, 's5', 'err.closedDay', { today: '2026-10-24', nowMin: 600 });
+  });
+  it('round 20: Friday’s drafts can still be sent on the Saturday (only taking a photo is refused on a closed day)', () => {
+    const fri = { today: '2026-10-16', nowMin: 600 }, sat = { today: '2026-10-17', nowMin: 600 };
+    const s0 = fresh();
+    const who = Object.values(s0.attendance).find((a) => a.date === fri.today && a.checkIn)!.memberId;
+    const shot = run(s0, 'photo.capture', { media: 'photo', mediaId: 'md_fri' }, 's5', fri);
+    const id = shot.result.photoId as string;
+    const ready = step(shot.state, 'photo.editDraft', { id, kind: 'people', memberIds: [who] }, 's5', fri);
+    const r = run(ready, 'photo.sendDrafts', { ids: [id] }, 's5', sat);
+    expect(r.result).toMatchObject({ sent: 1, photoIds: [id] });
+    expect(r.state.photos[id]).toMatchObject({ date: fri.today, visibility: 'pending', memberIds: [who] });
   });
   it('a teacher’s shot is a private draft at the minute it was taken, with the session and the AI’s suggestion; nothing is told to anybody', () => {
     const { s, p } = shoot(fresh(), 's5');

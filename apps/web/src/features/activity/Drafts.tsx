@@ -190,7 +190,7 @@ function Bar({ phone, children }: { phone: boolean; children: ReactNode }) {
 }
 const pillBtn = (primary: boolean, disabled = false): CSSProperties => ({ pointerEvents: 'auto', height: 44, padding: '0 18px', borderRadius: 12, border: primary ? 'none' : '1px solid var(--hairline, #E2E2E6)', background: disabled ? 'var(--press, #EEEEF0)' : primary ? '#24201C' : '#FFFFFF', color: disabled ? '#8A8078' : primary ? '#FFFFFF' : '#24201C', fontSize: 15, fontWeight: 500, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 6, cursor: disabled ? 'not-allowed' : 'pointer', boxShadow: '0 10px 24px rgba(40,30,20,0.18)', fontFamily: 'Inter', whiteSpace: 'nowrap' });
 
-export function DraftsBody({ onMore }: { /** the Camera page offers its older ways to take a photo under "More ways" */ onMore?: (to: 'manual' | 'activity') => void }) {
+export function DraftsBody({ onMore, closed }: { /** the Camera page offers its older ways to take a photo under "More ways" */ onMore?: (to: 'manual' | 'activity') => void; /** round 20: a closed day: no camera, but drafts from an open day can still be sent */ closed?: boolean }) {
   const t = useT();
   const lang = useLang();
   const { fds } = useFmt();
@@ -280,7 +280,7 @@ export function DraftsBody({ onMore }: { /** the Camera page offers its older wa
   return (
     <>
       <div style={{ display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 20 }}>
-        <div data-testid="drafts-open-camera"><Button size={56} full={isPhone} icon="photo_camera" onClick={openCam}>{t('drafts.openCamera')}</Button></div>
+        {closed ? null : <div data-testid="drafts-open-camera"><Button size={56} full={isPhone} icon="photo_camera" onClick={openCam}>{t('drafts.openCamera')}</Button></div>}
         {selecting ? (
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: isPhone ? '0 16px' : 0, fontSize: 14, color: '#6B6259' }}>
             <span>{t('drafts.nSelected', { n: chosen.length })}</span>
@@ -293,7 +293,7 @@ export function DraftsBody({ onMore }: { /** the Camera page offers its older wa
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: 8 }}><SectionLabel>{g.label}</SectionLabel><span style={{ fontSize: 13, color: '#6B6259' }}>{plural(t, 'drafts.nShots', g.photos.length)}</span></div>
               {grid(g.photos)}
             </Card>
-        )) : (isPhone
+        )) : closed ? null : (isPhone
           ? <Group pad={0} gap={0}><EmptyState icon="photo_camera" title={t('drafts.empty')} /></Group>
           : <Card><EmptyState icon="photo_camera" title={t('drafts.empty')} sub={t('drafts.emptyAll')} /></Card>)}
         {more}
