@@ -1,6 +1,20 @@
-# Handoff — where round 19 stands (updated 4 Nov 2026)
+# Handoff — where round 20 stands (updated 4 Nov 2026)
 
 Read this first when picking the work up in a new session. Rounds 16 and 17 are done; round 17 is merged into `main` locally (not pushed). Their notes follow round 18.
+
+## Round 20 (branch `round20`, not pushed): field trip days
+Spec `specs/2026-11-04-round20-design.md`; plan `plans/2026-11-04-round20.md`; progress log `.superpowers/sdd/2026-11-04-round20/`.
+
+### Status
+- Tasks 1-4 done: a check-in on a trip day puts the member on the trip (`wentIds`) and charges the fee, undo reverses it; `visitDaysOf` counts trip days; `menuOn` on a trip day is the kitchen's date override or null; no photos on closed days; TripBanner on Arrivals, the nurse station and the kitchen menu, "on the trip" rows, the camera tags trip-goers; the family hero "On the field trip" with the trip timeline and trip photos.
+- Task 5 done: `seedTripDay` in `seed/r7/round16.ts` (check-ins, two stock garden photos tagged with the trip title, no meal) with `seed/round20.test.ts`; `e2e/round20.spec.ts` (phone) and screenshots in `artifacts/shots/round20/` (Arrivals, kitchen menu, family Today at phone, tablet, laptop).
+- Known: the default seed has no past trip (the Bogor outing is always 8 days after the anchor), so the seeded-trip block in `seedRound16` is dormant; `seedTripDay` is unit-tested on a made-up past trip. Seed a real past trip if the demo should show one.
+
+### Rulings made without KC (easy to reverse)
+- R1: check-in and undo update the trip through one helper, `setTripMember(d, ev, memberId, on, ctx)` in `actions/schedule.ts`; `setWent` uses it. Fee 0 means no charge; an invoiced charge blocks removal.
+- R2: `undoCheckIn` on a trip day removes the member from `wentIds` only when the trip charge is not invoiced. If it is invoiced the undo still succeeds, the member stays on the trip, `ctx.result.tripKept = { invoiceId, amount }`, and Arrivals shows a toast telling Finance to remove it.
+- R3: `visitDaysOf(s, memberId, from, to)` returns the sorted unique check-in days plus trip days where the member is in `wentIds`. Few visits and the Month report use it; Flex quota and billing do not.
+- R4: "a menu was added" means a date override exists for that date. `menuOn` on a trip day returns that override or `null`, never the weekly template.
 
 ## Round 19 (branch `round19`, not pushed)
 Spec `specs/2026-11-04-round19-design.md`; plan `plans/2026-11-04-round19.md`; progress log `.superpowers/sdd/2026-11-04-round19/`.

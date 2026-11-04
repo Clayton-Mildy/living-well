@@ -4,6 +4,8 @@
 // Fixed values, no random draws; the same for 5 and 45 members.
 import type { ClubState, ISODate } from '../../types';
 import { addDays, addMonths, DEMO_TODAY, isWeekday, live } from '../../util';
+import { attId } from '../../rules/attendance';
+import { demoMediaId } from '../demoMedia';
 import { dayStatus } from '../../rules/core';
 
 export function seedRound16(s: ClubState, T: ISODate): void {
@@ -25,6 +27,7 @@ export function seedRound16(s: ClubState, T: ISODate): void {
       const id = `trip-${trip.id}-${m}`;
       s.pendingCharges[id] = { id, clubId: trip.clubId, createdAt: `${trip.date}T15:00:00`, createdBy: 'staff:s1', memberId: m, amount: 250_000, label: 'inv.line.fieldTrip', params: { title: trip.title, date: trip.date }, source: { type: 'event', id: trip.id } };
     }
+    seedTripDay(s, trip);
   }
   seedOwnerHoliday(s, T);
 }
@@ -46,4 +49,20 @@ function seedOwnerHoliday(s: ClubState, T: ISODate): void {
     params: { who: 'Ega', whatKey: 'approvals.owner.what.closeAdd', date, title: input.title, name: '', amount: '', what: input.title },
     severity: 'attention', action: false, link: '/reviews', ref: { type: 'changeRequest', id }, readBy: ['s9'],
   };
+}
+
+/** Round 20: the trip day is consistent. Whoever is on the trip has a check-in that day (the trip's start, no check-out: they left with the bus), and one or two garden pictures
+ * (the free demo scenes) are tagged to Oma Lina and Opa Budi with the trip's title. No meal is set that day. Fixed values, no random draws. */
+export function seedTripDay(s: ClubState, trip: { id: string; clubId: string; date: ISODate; title: string; from?: string; wentIds?: string[] }): void {
+  const d = trip.date, at = trip.from || '08:30';
+  for (const m of trip.wentIds || []) {
+    if (s.attendance[attId(d, m)]) continue;
+    s.attendance[attId(d, m)] = { id: attId(d, m), clubId: trip.clubId, createdAt: `${d}T${at}`, createdBy: 'staff:s1', memberId: m, date: d, checkIn: { at, by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [] };
+  }
+  const put = (id: string, time: string, kind: 'solo' | 'group', memberIds: string[], pic: string) => {
+    s.photos[id] = { id, clubId: trip.clubId, createdAt: `${d}T${time}`, createdBy: 'staff:s1', date: d, time, kind, media: 'photo', activity: trip.title, memberIds, tone: 1, takenBy: 's1', visibility: 'visible', approved: { at: `${d}T${time}`, by: 's9' }, mediaId: demoMediaId(pic) };
+  };
+  const both = (trip.wentIds || []).filter((id) => ['m1', 'm46'].includes(id));
+  if (both.length) put('ptrip-seed-1', '11:20', both.length > 1 ? 'group' : 'solo', both, 'act-garden-2');
+  if (both.includes('m1')) put('ptrip-seed-2', '13:05', 'solo', ['m1'], 'act-garden-1');
 }
