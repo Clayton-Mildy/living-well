@@ -10,8 +10,8 @@ const TODAY: Record<string, string[]> = {
   nurse: ['today', 'readings', 'members', 'tasks', 'requests', 'contacts'],
   activity: ['today', 'camera', 'log', 'members', 'calendar', 'tasks', 'requests', 'contacts'],
   kitchen: ['today', 'lunch', 'feedback', 'tasks', 'requests', 'contacts'],
-  finance: ['today', 'payments', 'budget', 'receipts', 'spending', 'stock', 'guests', 'members', 'tasks', 'directory'],
-  mgmt: ['today', 'members', 'reviews', 'tasks', 'report', 'monthReport', 'enquiries', 'renewals', 'hchecks', 'readings', 'log', 'camera', 'menu', 'lunch', 'feedback', 'stock', 'billing', 'payments', 'budget', 'receipts', 'spending', 'calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'settings'], // round 17: Admin › Settings
+  finance: ['today', 'payments', 'budget', 'receipts', 'spending', 'stock', 'guests', 'members', 'tasks', 'contacts'],
+  mgmt: ['today', 'members', 'reviews', 'tasks', 'report', 'monthReport', 'enquiries', 'renewals', 'hchecks', 'readings', 'log', 'camera', 'menu', 'lunch', 'feedback', 'stock', 'billing', 'payments', 'budget', 'receipts', 'spending', 'calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'contacts', 'surveys', 'plans', 'settings'], // round 17: Admin › Settings
 };
 
 describe('access grid', () => {
@@ -40,6 +40,48 @@ describe('access grid', () => {
     expect(ownerApprovalOn(s, 'owner', 'holidays')).toBe(false);
     s.club.settings.ownerApproval = { mgmt: { holidays: false } };
     expect(ownerApprovalOn(s, 'mgmt', 'holidays')).toBe(false);
+  });
+});
+
+describe('one Contacts menu (round 19)', () => {
+  const withCells = (cells: Record<string, Record<string, 'off' | 'view' | 'edit'>>) => { const s = fresh(); s.club.settings.access = cells; return s; };
+  it('Directory is gone from the grid: 31 menus, Contacts in its place', () => {
+    expect(MENU_KEYS).not.toContain('directory');
+    expect(MENU_KEYS).toContain('contacts');
+    expect(MENU_KEYS).toHaveLength(31);
+  });
+  it('Finance and Management edit Contacts with no stored cells (they had Directory on Edit)', () => {
+    const s = fresh();
+    delete s.club.settings.access;
+    expect(accessOf(s, 'finance', 'contacts')).toBe('edit');
+    expect(accessOf(s, 'mgmt', 'contacts')).toBe('edit');
+    expect(accessOf(s, 'finance', 'directory')).toBe('off');
+  });
+  it('a stored directory cell with no contacts cell is read as Contacts', () => {
+    expect(accessOf(withCells({ finance: { directory: 'view' } }), 'finance', 'contacts')).toBe('view');
+    expect(accessOf(withCells({ finance: { directory: 'off' } }), 'finance', 'contacts')).toBe('off');
+    expect(accessOf(withCells({ lobby: { directory: 'edit' } }), 'lobby', 'contacts')).toBe('edit');
+  });
+  it('a stored contacts cell with no directory cell stands as it is', () => {
+    expect(accessOf(withCells({ lobby: { contacts: 'view' } }), 'lobby', 'contacts')).toBe('view');
+  });
+  it('with both stored, the more permissive one wins (edit > view > off)', () => {
+    expect(accessOf(withCells({ lobby: { contacts: 'view', directory: 'edit' } }), 'lobby', 'contacts')).toBe('edit');
+    expect(accessOf(withCells({ lobby: { contacts: 'edit', directory: 'off' } }), 'lobby', 'contacts')).toBe('edit');
+    expect(accessOf(withCells({ lobby: { contacts: 'off', directory: 'view' } }), 'lobby', 'contacts')).toBe('view');
+    expect(accessOf(withCells({ lobby: { contacts: 'off', directory: 'off' } }), 'lobby', 'contacts')).toBe('off');
+  });
+  it('menuKeys follows the merged cell: Directory off hides the single Contacts item', () => {
+    const s = withCells({ finance: { directory: 'off' } });
+    expect(menuKeys(s, 'finance')).not.toContain('contacts');
+    expect(menuKeys(fresh(), 'finance').filter((k) => k === 'contacts')).toHaveLength(1);
+  });
+  it('the draft and its change count read the merged cell', () => {
+    const s = withCells({ lobby: { contacts: 'view', directory: 'edit' } });
+    const d = roleDraft(s, 'lobby');
+    expect(d.levels.contacts).toBe('edit');
+    expect(d.levels).not.toHaveProperty('directory');
+    expect(draftChanges(s, 'lobby', d)).toBe(0);
   });
 });
 

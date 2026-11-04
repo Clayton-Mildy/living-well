@@ -1,10 +1,10 @@
 // Round 14 phase E, Task 3: the pages a search result opens take their parameter whenever it appears (on mount, or when the search overlay navigates here while the screen is already open) and then drop it from the URL (replace),
-// so Back doesn't reopen the sheet: /members?do=add, /requests?do=receipt, /receipts?do=snap, ?inv=<id> on Billing, /directory?q=<text>.
+// so Back doesn't reopen the sheet: /members?do=add, /requests?do=receipt, /receipts?do=snap, ?inv=<id> on Billing, /contacts?q=<text>.
 // The screens run against the seed at the e2e date; the action layer is mocked.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
-import { MemoryRouter, useLocation, useNavigate } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { buildSeed, live, type ClubState, type StaffRole } from '@cp/shared';
 import { useReplica } from '../store/replica';
 import { useSession } from '../store/session';
@@ -13,6 +13,7 @@ import { Requests } from '../features/requests/Requests';
 import { Receipts } from '../features/finance/Receipts';
 import { Billing } from '../features/finance/Billing';
 import { Directory } from '../features/finance/Directory';
+import { LegacyKeyRedirect } from './LegacyKeyRedirect';
 
 vi.mock('../lib/act', () => ({ useAct: () => vi.fn(async () => ({ ok: true, result: {} })) }));
 vi.mock('../shell/demoAccounts', () => ({ useDemoLogin: () => true, useDemoAccounts: () => [] }));
@@ -112,12 +113,19 @@ describe('deep links from search results', () => {
     expect(where()).toBe('/requests');
   });
 
-  it('/directory?q=Bersih lists Bersih Prima and not Sayur Segar Kemang', async () => {
-    await show('finance', '/directory?q=Bersih', <Directory />);
+  it('/contacts?q=Bersih lists Bersih Prima and not Sayur Segar Kemang', async () => {
+    await show('finance', '/contacts?q=Bersih', <Directory />);
     expect(text()).toContain('Bersih Prima');
     expect(text()).not.toContain('Sayur Segar Kemang');
     expect((document.querySelector('input[type="search"], input[placeholder]') as HTMLInputElement).value).toBe('Bersih');
-    expect(where()).toBe('/directory');
+    expect(where()).toBe('/contacts');
+  });
+
+  it('round 19: an old /directory link lands on /contacts and keeps its query', async () => {
+    await show('finance', '/directory?q=Bersih', <Routes><Route path="/directory" element={<LegacyKeyRedirect from="directory" />} /><Route path="/contacts" element={<Directory />} /></Routes>);
+    expect(text()).toContain('Bersih Prima');
+    expect(text()).not.toContain('Sayur Segar Kemang');
+    expect(where()).toBe('/contacts');
   });
 
   it('a result opened while already on the screen (no remount) still opens: Billing, then Directory', async () => {
@@ -129,15 +137,15 @@ describe('deep links from search results', () => {
     expect(where()).toBe('/billing');
     await act(async () => { root!.unmount(); });
     host!.remove();
-    await show('finance', '/directory', <><Directory /><Go to="/directory?q=Bersih" /></>);
+    await show('finance', '/contacts', <><Directory /><Go to="/contacts?q=Bersih" /></>);
     expect(text()).toContain('Sayur Segar Kemang');
     await act(async () => { (document.querySelector('[data-testid="go"]') as HTMLElement).click(); });
     expect(text()).not.toContain('Sayur Segar Kemang');
-    expect(where()).toBe('/directory');
+    expect(where()).toBe('/contacts');
   });
 
   it('a supplier result clears an earlier kind and category filter, so it is never hidden', async () => {
-    await show('finance', '/directory', <><Directory /><Go to="/directory?q=Bersih" /></>);
+    await show('finance', '/contacts', <><Directory /><Go to="/contacts?q=Bersih" /></>);
     const chip = (label: string) => Array.from(document.querySelectorAll<HTMLElement>('button[aria-pressed]')).find((b) => (b.textContent ?? '').includes(label))!;
     await act(async () => { chip('Doctors').click(); });
     expect(chip('Doctors').getAttribute('aria-pressed')).toBe('true');

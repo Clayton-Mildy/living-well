@@ -1,5 +1,5 @@
 // Per-role navigation (design NAVS/NAVG/PHONE_NAV + new Reviews/Requests/Contacts items) and nav-key → screen mapping.
-import { MENU_KEYS, menuKeys, type ClubState, type Role, type StaffRole } from '@cp/shared';
+import { MENU_KEYS, accessOf, menuKeys, type ClubState, type Role, type StaffRole } from '@cp/shared';
 
 export interface NavItem { key: string; label: string; short: string; icon: string }
 const n = (key: string, labelKey: string, icon: string): NavItem => ({ key, label: 'nav.' + labelKey, short: 'nav.s_' + labelKey, icon });
@@ -18,7 +18,7 @@ const ITEMS: Record<string, NavItem> = Object.fromEntries([
   n('menu', 'menu', 'restaurant'), n('lunch', 'lunch', 'lunch_dining'), n('feedback', 'feedback', 'forum'), n('stock', 'stock', 'inventory_2'),
   n('billing', 'billing', 'payments'), n('payments', 'payments', 'account_balance'), n('budget', 'budget', 'pie_chart'), n('receipts', 'receipts', 'receipt_long'), n('spending', 'spending', 'shopping_cart'),
   n('calendar', 'calShort', 'calendar_month'), n('guests', 'guests', 'co_present'), n('insights', 'insights', 'insights'), n('broadcast', 'broadcast', 'campaign'), n('venue', 'venue', 'storefront'), n('hr', 'people', 'badge'),
-  n('directory', 'directory', 'contacts'), n('surveys', 'surveys', 'rate_review'), n('plans', 'plans', 'sell'), n('contacts', 'contacts', 'contacts'), n('requests', 'requests', 'add_shopping_cart'),
+  n('surveys', 'surveys', 'rate_review'), n('plans', 'plans', 'sell'), n('contacts', 'contacts', 'contacts'), n('requests', 'requests', 'add_shopping_cart'),
   n('roles', 'roles', 'admin_panel_settings'), // round 16: the Owner's Admin › Roles
   n('settings', 'settings', 'tune'), // round 17: Admin › Settings (Owner and Management)
 ].map((x) => [x.key, x]));
@@ -47,7 +47,7 @@ const MGMT_LAYOUT: Layout = [
   [G_CARE, ['hchecks', 'readings', 'log', 'camera']], // the photo library is the Camera's Library tab
   [G_KITCHEN, ['menu', 'lunch', 'feedback', 'stock']], // KC 28 Oct: management has the Lunch round too
   [G_FINANCE, ['billing', 'payments', 'budget', 'receipts', 'spending']],
-  [G_CLUB, ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'settings', 'roles']], // round 16: 'roles' is the Owner's only (DEFAULT_MENUS.owner); management's menus do not include it
+  [G_CLUB, ['calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'contacts', 'surveys', 'plans', 'settings', 'roles']], // round 16: 'roles' is the Owner's only (DEFAULT_MENUS.owner); management's menus do not include it
 ];
 /** Admin › Roles (round 17) groups the menus as management's sidebar does, without Today and Roles; a menu not in that layout goes to the first group, General. */
 export function menuGroups(): { label: string | null; keys: string[] }[] {
@@ -61,7 +61,7 @@ const LAYOUTS: Record<StaffRole, Layout> = {
   nurse: [[null, ['today', 'readings', 'members', 'tasks']], [G_CLUB, ['requests', 'contacts']]],
   activity: [[null, ['today', 'camera', 'log', 'tasks']], [G_CLUB, ['members', 'calendar', 'requests', 'contacts']]],
   kitchen: [[null, ['today', 'lunch', 'feedback', 'tasks']], [G_CLUB, ['requests', 'contacts']]],
-  finance: [[null, ['today', 'payments', 'budget', 'receipts', 'spending']], [G_KITCHEN, ['stock']], [G_CLUB, ['guests', 'members', 'tasks', 'directory']]],
+  finance: [[null, ['today', 'payments', 'budget', 'receipts', 'spending']], [G_KITCHEN, ['stock']], [G_CLUB, ['guests', 'members', 'tasks', 'contacts']]],
   mgmt: MGMT_LAYOUT,
   owner: MGMT_LAYOUT,
 };
@@ -111,7 +111,9 @@ const EXTRA: Partial<Record<Role, string[]>> = {
 };
 /** The menus plus the link-only extras. A key the grid sets to Off is gone from both (round 16). */
 export const allowedKeys = (s: ClubState, role: Role) => {
-  const off = role === 'family' ? undefined : (k: string) => s.club.settings.access?.[role]?.[k] === 'off';
+  const cells = role === 'family' ? undefined : s.club.settings.access?.[role];
+  // round 19: a Directory cell saved before the merge closes or opens Contacts too (accessOf merges the two)
+  const off = role === 'family' ? undefined : (k: string) => (k === 'contacts' ? (cells?.contacts !== undefined || cells?.directory !== undefined) && accessOf(s, role, k) === 'off' : cells?.[k] === 'off');
   return new Set([...navFor(s, role).map((x) => x.key), ...(EXTRA[role] || []).filter((k) => !off?.(k))]);
 };
 
@@ -121,13 +123,17 @@ export type ScreenId =
   | 'renewals' | 'tasks' | 'guests' | 'insights' | 'fmemories' | 'report' | 'monthReport' | 'drafts'
   | 'roles' | 'fme' | 'fprofile' | 'fhistory' | 'fcal' | 'fcontacts' | 'celebrations';
 
+/** Round 19: menu keys that were merged into another. A link to the old key (/directory?q=…) lands on the new one. */
+const RETIRED_KEYS: Record<string, string> = { directory: 'contacts' };
+export const retiredKey = (key: string): string | null => RETIRED_KEYS[key] ?? null;
+
 export function screenFor(s: ClubState, role: Role, key: string): ScreenId | null {
   if (!allowedKeys(s, role).has(key)) return null;
   if (key === 'today') return ({ lobby: 'arrivals', nurse: 'health', activity: 'activityToday', kitchen: 'kmenu', finance: 'fin', mgmt: 'arrivals', owner: 'arrivals', family: 'familyToday' } as const)[role];
   if (role === 'family') return ({ photos: 'fphotos', health: 'familyHealth', billing: 'fbill', calendar: 'fcal', contacts: 'fcontacts', memories: 'fmemories', me: 'fme', profile: 'fprofile', history: 'fhistory' } as Record<string, ScreenId>)[key] || null;
   const map: Record<string, ScreenId> = {
     arrivals: 'arrivals', hchecks: 'health', menu: 'kmenu', lunch: 'klunch', readings: 'readings', log: 'dlog', camera: 'camera', photos: 'photoLib', feedback: 'kfeed', stock: 'kstock',
-    billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', spending: 'spend', directory: 'dir', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
+    billing: 'fin', payments: 'pay', budget: 'budget', receipts: 'rcpt', spending: 'spend', contacts: 'dir', venue: 'venue', broadcast: 'bc', hr: 'hr', members: 'members',
     enquiries: 'enq', calendar: 'cal', plans: 'plans', settings: 'settings', surveys: 'surveys', reviews: 'reviews', requests: 'requests',
     renewals: 'renewals', tasks: 'tasks', guests: 'guests', insights: 'insights', report: 'report', monthReport: 'monthReport', drafts: 'drafts', celebrations: 'celebrations', roles: 'roles',
   };

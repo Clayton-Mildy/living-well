@@ -69,7 +69,7 @@ describe('action areas', () => {
   });
 
   it('an explicit View refuses in a cell the role owns; a never-set Hidden cell leaves `can` alone', () => {
-    const c = withAccess(seed(), { finance: { payments: 'view', stock: 'view' }, mgmt: { directory: 'view' } });
+    const c = withAccess(seed(), { finance: { payments: 'view', stock: 'view' }, mgmt: { contacts: 'view' } });
     const fr = user(c, 'finance');
     expect(canRun('payment.record', fr, {}, c)).toBe(false);
     expect(canRun('payment.record', user(c, 'lobby'), {}, c)).toBe(true); // Caca: payments never set, Hidden by default
@@ -77,6 +77,14 @@ describe('action areas', () => {
     expect(canRun('stock.approve', user(c, 'kitchen'), {}, c)).toBe(true);
     expect(canRun('directory.add', user(c, 'mgmt'), {}, c)).toBe(false);
     expect(canRun('directory.add', user(c, 'lobby'), {}, c)).toBe(true);
+  });
+
+  it('directory.* actions follow the Contacts cell, and a Directory cell stored before round 19 still counts', () => {
+    const legacy = withAccess(seed(), { mgmt: { directory: 'view' }, lobby: { directory: 'edit' } });
+    expect(canRun('directory.add', user(legacy, 'mgmt'), {}, legacy)).toBe(false);
+    expect(canRun('directory.add', user(legacy, 'lobby'), {}, legacy)).toBe(true);
+    const now = withAccess(seed(), { lobby: { contacts: 'view' } });
+    expect(canRun('directory.add', user(now, 'lobby'), {}, now)).toBe(false);
   });
 
   it('Hidden or View refuses with err.viewOnly', () => {

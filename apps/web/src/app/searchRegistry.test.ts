@@ -65,10 +65,21 @@ describe('role gating', () => {
 });
 
 describe('supplier paths', () => {
-  it('management and finance open the Directory, the lobby opens Contacts (R-F2)', () => {
-    expect(idx('mgmt').find((i) => i.id.startsWith('supplier:'))!.to).toMatch(/^\/directory\?q=/);
-    expect(idx('finance').find((i) => i.id.startsWith('supplier:'))!.to).toMatch(/^\/directory\?q=/);
-    expect(idx('lobby').find((i) => i.id.startsWith('supplier:'))!.to).toMatch(/^\/contacts\?q=/);
+  it('round 19: every role with Contacts opens a supplier at /contacts?q=', () => {
+    for (const role of ['mgmt', 'finance', 'lobby'] as const) expect(idx(role).find((i) => i.id.startsWith('supplier:'))!.to, role).toMatch(/^\/contacts\?q=/);
+  });
+  it('round 19: one Contacts screen entry; "directory" finds it for finance, and there is no Directory entry', () => {
+    expect(SCREEN_ENTRIES.some((e) => e.key === 'directory')).toBe(false);
+    expect(SCREEN_ENTRIES.filter((e) => e.key === 'contacts')).toHaveLength(1);
+    const e = SCREEN_ENTRIES.find((x) => x.key === 'contacts')!;
+    expect(e.keywords.en).toEqual(['contacts', 'directory', 'suppliers', 'doctors', 'phone numbers']);
+    expect(e.keywords.id).toEqual(['kontak', 'direktori', 'pemasok', 'dokter', 'nomor telepon']);
+    const hit = rank(idx('finance'), 'directory').find((g) => g.group === 'screens')!;
+    expect(hit.hits.map((h) => h.id)).toEqual(['screen:contacts']);
+    expect(byId('finance', 'screen:contacts')?.to).toBe('/contacts');
+    expect(byId('finance', 'screen:directory')).toBeUndefined();
+    const idHit = rank(buildSearchIndex(s, 'finance', t, 'id'), 'direktori').find((g) => g.group === 'screens');
+    expect(idHit?.hits.map((h) => h.id)).toEqual(['screen:contacts']);
   });
 });
 
