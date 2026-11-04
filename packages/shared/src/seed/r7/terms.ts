@@ -1,6 +1,6 @@
 // Round 18 (KC): the seeded terms and conditions, version 1 (English and Indonesian), 14 sections. "# " starts a heading and "- " a bullet (termsBlocks).
 // The placeholders are filled from the settings by termsText(), so the terms never contradict the app: {flexQuota}, {issueDay}, {dueDay}, {downgradeDays},
-// {stopDays} and {leaveDays}. Demo text: the club reviews it before going live.
+// {stopDays}, {leaveDays}, {upgradeDays} and {leaveMaxMonths}. Demo text: the club reviews it before going live.
 
 export const TERMS_V1_EN = `# 1. Membership and plans
 - Membership is month to month for the member named on the registration form. The family contact who signs the form is responsible for the bills.
@@ -15,11 +15,11 @@ export const TERMS_V1_EN = `# 1. Membership and plans
 - Pay by the virtual account on the invoice, or by cash or bank transfer with a photo of the proof of payment.
 - If an invoice stays unpaid, the membership is put on hold from the 1st of the next month. If the family has not told us when they will pay, the membership stops a few days later.
 # 4. Changing, stopping and leave
-- An upgrade starts on the next 1st, with no notice.
+- An upgrade starts on the next 1st and must be asked for at least {upgradeDays} days before it.
 - A downgrade must be asked for at least {downgradeDays} days before the month it starts.
 - Stopping the membership must be asked for at least {stopDays} days before the month it starts.
 - Leave (cuti) must be asked for at least {leaveDays} days before the month it starts. A month of leave is billed at the leave fee and keeps the member's place.
-- Leave can be taken for up to 2 months in a row. If we have no word from the family after that, the membership ends.
+- Leave can be taken for up to {leaveMaxMonths} months in a row. If we have no word from the family after that, the membership ends.
 - Requests made later than this apply from the month after.
 # 5. Pick-up and field trips
 - Pick-up is a monthly service with its own price, on the monthly invoice.
@@ -63,11 +63,11 @@ export const TERMS_V1_ID = `# 1. Keanggotaan dan paket
 - Bayar lewat virtual account di tagihan, atau tunai atau transfer bank dengan foto bukti bayar.
 - Bila tagihan belum dibayar, keanggotaan ditahan mulai tanggal 1 bulan berikutnya. Bila keluarga belum memberi tahu kapan akan membayar, keanggotaan berhenti beberapa hari kemudian.
 # 4. Mengubah, berhenti dan cuti
-- Naik paket berlaku mulai tanggal 1 berikutnya, tanpa perlu pemberitahuan lebih dulu.
+- Naik paket berlaku mulai tanggal 1 berikutnya dan harus diminta paling lambat {upgradeDays} hari sebelumnya.
 - Turun paket harus diminta paling lambat {downgradeDays} hari sebelum bulan berlaku.
 - Berhenti harus diminta paling lambat {stopDays} hari sebelum bulan berlaku.
 - Cuti harus diminta paling lambat {leaveDays} hari sebelum bulan berlaku. Satu bulan cuti ditagih sebesar biaya cuti dan tempat anggota tetap disimpan.
-- Cuti dapat diambil paling lama 2 bulan berturut-turut. Bila sesudah itu tidak ada kabar dari keluarga, keanggotaan berakhir.
+- Cuti dapat diambil paling lama {leaveMaxMonths} bulan berturut-turut. Bila sesudah itu tidak ada kabar dari keluarga, keanggotaan berakhir.
 - Permintaan yang lebih lambat berlaku mulai bulan sesudahnya.
 # 5. Antar-jemput dan karyawisata
 - Antar-jemput adalah layanan bulanan dengan harga sendiri, pada tagihan bulanan.

@@ -1,6 +1,18 @@
-# Handoff — where round 18 stands (updated 3 Nov 2026)
+# Handoff — where round 19 stands (updated 4 Nov 2026)
 
 Read this first when picking the work up in a new session. Rounds 16 and 17 are done; round 17 is merged into `main` locally (not pushed). Their notes follow round 18.
+
+## Round 19 (branch `round19`, not pushed)
+Spec `specs/2026-11-04-round19-design.md`; plan `plans/2026-11-04-round19.md`; progress log `.superpowers/sdd/2026-11-04-round19/`.
+
+### Status
+- Track A: upgrade notice days (`notice.upgrade`, default 1) and `leaveMaxMonths` (default 2) in Settings; the seeded terms use `{upgradeDays}` and `{leaveMaxMonths}` (still version 1). Merged.
+- Track B: one Contacts menu; the `directory` key is retired and `/directory` redirects. Merged.
+- Track C: a field trip blocks its day in the weekly schedule builder (`[data-trip-block]`); Few visits is a button on Next month › Members (`few-btn`). Merged.
+- Task 6: seed terms, `e2e/round19.spec.ts`, screenshots in `artifacts/shots/round19/`; round 17p2 and round 18 specs updated for the button and the upgrade field.
+
+### Rulings made without KC (easy to reverse)
+R1 upgrade notice joins `NOTICE_KINDS`; `changeKind` returns a third value `'takeBack'`, treated as "before the 1st". R2 `leaveMaxMonths` lives on `ClubSettings`, saved by `club.updateSettings`, not in `notice`. R3 the Contacts merge is done by reading: `accessOf` takes the more permissive of the `contacts` and `directory` cells, and `access.setRole` writes only `contacts`. R4 the builder reads trips with `eventsOn` filtered to `kind === 'outing'`. R5 the Few visits button lives in `NextMonthList.tsx` (Members tab only); `FewVisitsCard.tsx` is deleted.
 
 ## Round 18 (branch `round18`, not pushed)
 Spec `specs/2026-11-03-round18-design.md`; plan `plans/2026-11-03-round18.md`; progress log `.superpowers/sdd/2026-11-03-round18/progress.md`.

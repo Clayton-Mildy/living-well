@@ -186,7 +186,7 @@ test('Notice per kind: Benjamin sets leave to 30 days; Maria’s November leave 
     await expect(page.locator(`[data-setting="${kind}"]`)).toContainText(text);
     await expect(page.locator(`[data-setting="${kind}"] input`)).toHaveValue('14');
   }
-  await expect(page.locator('[data-setting="upgrade"] input')).toHaveCount(0);
+  await expect(page.locator('[data-setting="upgrade"] input')).toHaveValue('1'); // round 19: the upgrade notice is a field now (default 1 day)
   await page.locator('[data-setting="leave"] input').fill('30');
   await expect(page.locator('[data-setting="leave"]')).toContainText('December off · ask by 1 Nov'); // before saving, the live line moves
   await expect(page.locator('[data-setting="stop"] input')).toHaveValue('14');
