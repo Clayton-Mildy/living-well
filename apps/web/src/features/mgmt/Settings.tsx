@@ -5,7 +5,7 @@
 import { useState, type ReactNode } from 'react';
 import { fewDaysRange, fewVisitsAlertDay, fewVisitsSettings } from '@cp/shared/rules/fewVisits';
 import { useSearchParams } from 'react-router-dom';
-import { actorName, addMonths, dtDate, hasKey, LEAVE_MAX_MONTHS, type ClubState } from '@cp/shared';
+import { actorName, addMonths, dtDate, hasKey, leaveMaxMonths, type ClubState } from '@cp/shared';
 import { NOTICE_KINDS, earliestMonth, noticeDeadline, noticeSettings, type NoticeDaysKind } from '@cp/shared/rules/notice';
 import { currentTerms, termsAgreement } from '@cp/shared/rules/terms';
 import { ownerApprovalOn } from '@cp/shared';
@@ -28,8 +28,9 @@ const SLOT = '\u0000'; // where the field goes in a sentence template
 
 const ROW = { display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '4px 8px', minHeight: 52, padding: '6px 16px', fontSize: 15, lineHeight: 1.4, color: '#24201C' } as const;
 const SUB = { fontSize: FONT_SMALL, lineHeight: 1.35, color: '#6B6259', fontVariantNumeric: 'tabular-nums' } as const;
-const NOTICE_ICON: Record<NoticeDaysKind, string> = { downgrade: 'trending_down', stop: 'logout', leave: 'beach_access' };
-const NO_DRAFT: Record<NoticeDaysKind, string | null> = { downgrade: null, stop: null, leave: null };
+const NOTICE_ICON: Record<NoticeDaysKind, string> = { downgrade: 'trending_down', stop: 'logout', leave: 'beach_access', upgrade: 'trending_up' };
+const NO_DRAFT: Record<NoticeDaysKind, string | null> = { downgrade: null, stop: null, leave: null, upgrade: null };
+const ROW_KINDS = NOTICE_KINDS.filter((k) => k !== 'upgrade'); // round 19 task 1: the Upgrade row stays fixed until its field lands
 
 /** A small whole-number field (44px tall); turns white on the grey group. */
 function NumField({ name, label, value, onChange, onBlur, bad, width = 64 }: { name: string; label: string; value: string; onChange: (v: string) => void; onBlur?: () => void; bad: boolean; width?: number }) {
@@ -153,13 +154,13 @@ export function Settings() {
       <PageHead title={t('mgmt.settings.title')} size={isPhone ? 28 : 40} />
       <div style={{ display: 'grid', gridTemplateColumns: isPhone ? '1fr' : 'repeat(auto-fit, minmax(min(100%, 380px), 1fr))', gap: isPhone ? 18 : 24, alignItems: 'start' }}>
         <Group title={t('mgmt.settings.membership')} label={t('mgmt.settings.membership')} pad={0} gap={0}>
-          {NOTICE_KINDS.map((k, i) => (
+          {ROW_KINDS.map((k, i) => (
             <RuleRow key={k} k={k} first={i === 0} icon={NOTICE_ICON[k]} title={t(`mgmt.settings.${k}`)} sub={subOf(k)}
               right={daysField(k, t(`mgmt.settings.${k}`), noticeV(k), (v) => setNotice((x) => ({ ...x, [k]: v })), noticeShow(k))} />
           ))}
           {NOTICE_KINDS.some(noticeShow) ? err(t('mgmt.err.noticeInvalid')) : null}
           <RuleRow k="upgrade" icon="trending_up" title={t('mgmt.settings.upgrade')} sub={t('mgmt.settings.upgradeSub')} right={t('mgmt.settings.noNotice')} />
-          <RuleRow k="leaveRun" icon="event_repeat" title={t('mgmt.settings.leaveRun')} sub={t('mgmt.settings.leaveRunSub')} right={t('mgmt.settings.leaveRunV', { n: LEAVE_MAX_MONTHS })} />
+          <RuleRow k="leaveRun" icon="event_repeat" title={t('mgmt.settings.leaveRun')} sub={t('mgmt.settings.leaveRunSub')} right={t('mgmt.settings.leaveRunV', { n: leaveMaxMonths(s) })} />
           <OwnerWaiting section="pricing" pad="4px 16px" only={(c) => c.action === 'club.updateSettings'} />
           {noticeDirty ? <SaveRow busy={busy} label={needsOwner ? t('mgmt.settings.sendOwner') : undefined} onSave={saveNotice} onCancel={() => { setNotice(NO_DRAFT); setShown((x) => ({ ...x, membership: false })); }} /> : null}
         </Group>

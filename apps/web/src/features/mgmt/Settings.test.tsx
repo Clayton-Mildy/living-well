@@ -92,7 +92,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     await show(<Settings />, width);
     await type(field('leave'), '10');
     await click(button(section('Membership rules'), 'Save')); // the Owner's own change: a plain Save
-    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 14, stop: 14, leave: 10 });
+    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 14, stop: 14, leave: 10, upgrade: 1 });
     expect(document.body.textContent).not.toContain('Waiting for owner');
     expect(field('leave').value).toBe('10');
   });
@@ -164,7 +164,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Settings › notice per kind (%
     await type(field('stop'), '30');
     expect(button(section('Membership rules'), 'Send to owner')).toBeUndefined();
     await click(button(section('Membership rules'), 'Save'));
-    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 14 });
+    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 14, upgrade: 1 });
   });
   it('Upgrade and Leave in a row are fixed rows with no input', async () => {
     openClub('s9', '2026-11-05');

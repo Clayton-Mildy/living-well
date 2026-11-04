@@ -13,6 +13,7 @@ import { SURVEY_BUILTINS, SURVEY_KINDS, SURVEY_KIND_LIST, SURVEY_LIMITS, answerV
 import { actorName } from '../rules/core';
 import { live, rp, sortBy } from '../util';
 import { NOTICE_KINDS, noticeSettings, type NoticeDaysKind } from '../rules/notice';
+import { LEAVE_MAX_LIMIT, leaveMaxMonths } from '../rules/leave';
 
 const mgmtOnly = (u: User) => isMgmt(u);
 /** Custom plan prices from the input: { plan_1: 2000000 }. */
@@ -789,13 +790,14 @@ export const clubActions = [
   }),
   // The club rules: how many visits a month a Flex member gets before a visit is an extra day (counted from check-ins), and (round 16) the notice period
   // for a downgrade, stop or leave (rules/notice.ts; round 18: each kind its own days, `noticeDays` no longer taken). Round 17 (Admin › Settings): the few-visits
-  // alert's two numbers (those apply at once, ownerGate.ts; round 18: days before next month, at least the stop days).
-  defineAction<{ flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number } }>({
+  // alert's two numbers (those apply at once, ownerGate.ts; round 18: days before next month, at least the stop days). Round 19: the upgrade's notice days
+  // (one more kind) and leave in a row (`leaveMaxMonths`, 1–6, its own field: R2).
+  defineAction<{ flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number }; leaveMaxMonths?: number }>({
     name: 'club.updateSettings',
     can: mgmtOnly,
     parse(raw) {
       const o = obj(raw);
-      const out: { flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number } } = {};
+      const out: { flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number }; leaveMaxMonths?: number } = {};
       if (o.flexQuota !== undefined) out.flexQuota = int(o.flexQuota, 1, 23, 'flexQuota');
       if (o.notice !== undefined) {
         const n = obj(o.notice);
@@ -807,7 +809,8 @@ export const clubActions = [
         const f = obj(o.fewVisits);
         out.fewVisits = { below: int(f.below, 1, 31, 'below'), daysBeforeMonth: int(f.daysBeforeMonth, 0, 60, 'daysBeforeMonth') }; // the range is checked in run, against the stop days
       }
-      if (out.flexQuota === undefined && out.notice === undefined && out.fewVisits === undefined) bad('err.invalid');
+      if (o.leaveMaxMonths !== undefined) out.leaveMaxMonths = int(o.leaveMaxMonths, 1, LEAVE_MAX_LIMIT, 'leaveMaxMonths');
+      if (out.flexQuota === undefined && out.notice === undefined && out.fewVisits === undefined && out.leaveMaxMonths === undefined) bad('err.invalid');
       return out;
     },
     run(d, i, ctx) {
@@ -815,7 +818,8 @@ export const clubActions = [
       const few = fewVisitsSettings(d);
       const notice = noticeSettings(d);
       const same = (i.flexQuota === undefined || i.flexQuota === st.flexQuota) && (i.notice === undefined || NOTICE_KINDS.every((k) => i.notice![k] === undefined || i.notice![k] === notice[k]))
-        && (i.fewVisits === undefined || (i.fewVisits.below === few.below && i.fewVisits.daysBeforeMonth === few.daysBeforeMonth));
+        && (i.fewVisits === undefined || (i.fewVisits.below === few.below && i.fewVisits.daysBeforeMonth === few.daysBeforeMonth))
+        && (i.leaveMaxMonths === undefined || i.leaveMaxMonths === leaveMaxMonths(d));
       if (same) ctx.fail('err.noChanges');
       // round 18: the alert has to come before changes close, so its days before the month are at least the stop days (after this input's notice)
       if (i.fewVisits !== undefined) {
@@ -825,6 +829,7 @@ export const clubActions = [
       if (i.flexQuota !== undefined) st.flexQuota = i.flexQuota;
       if (i.notice !== undefined) st.notice = { ...notice, ...i.notice };
       if (i.fewVisits !== undefined) st.fewVisits = i.fewVisits;
+      if (i.leaveMaxMonths !== undefined) st.leaveMaxMonths = i.leaveMaxMonths;
       ctx.feed({ icon: 'tune', key: 'mgmt.feed.rules', params: { quota: st.flexQuota } });
     },
   }),

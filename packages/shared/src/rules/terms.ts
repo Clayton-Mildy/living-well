@@ -4,6 +4,7 @@ import type { ClubState, FamilyContact, Lang, TermsVersion } from '../types';
 import { live } from '../util';
 import { isPendingRow, linksOfFamily } from './core';
 import { noticeSettings } from './notice';
+import { leaveMaxMonths } from './leave';
 
 /** The version families are asked to agree to, or undefined while none is published. */
 export const currentTerms = (s: Pick<ClubState, 'club'>): TermsVersion | undefined => s.club.settings.terms?.at(-1);
@@ -18,7 +19,7 @@ export function needsTerms(s: ClubState, contact: FamilyContact): 'first' | 'upd
 
 /**
  * The current text in `lang` (Indonesian falls back to English when empty) with {downgradeDays}, {stopDays}, {leaveDays}, {noticeDays} (round 16's single
- * value; now the stop days, for old versions), {issueDay}, {dueDay} and {flexQuota} filled in; '' when no terms are published.
+ * value; now the stop days, for old versions), {upgradeDays} and {leaveMaxMonths} (round 19), {issueDay}, {dueDay} and {flexQuota} filled in; '' when no terms are published.
  */
 export function termsText(s: ClubState, lang: Lang): string {
   const cur = currentTerms(s);
@@ -26,10 +27,10 @@ export function termsText(s: ClubState, lang: Lang): string {
   const raw = lang === 'id' && cur.id.trim() ? cur.id : cur.en;
   const n = noticeSettings(s);
   const vars: Record<string, number> = {
-    downgradeDays: n.downgrade, stopDays: n.stop, leaveDays: n.leave, noticeDays: n.stop,
+    downgradeDays: n.downgrade, stopDays: n.stop, leaveDays: n.leave, noticeDays: n.stop, upgradeDays: n.upgrade, leaveMaxMonths: leaveMaxMonths(s),
     issueDay: s.club.settings.issueDay, dueDay: s.club.settings.dueDay, flexQuota: s.club.settings.flexQuota,
   };
-  return raw.replace(/\{(downgradeDays|stopDays|leaveDays|noticeDays|issueDay|dueDay|flexQuota)\}/g, (_m, k: string) => String(vars[k]));
+  return raw.replace(/\{(downgradeDays|stopDays|leaveDays|noticeDays|upgradeDays|leaveMaxMonths|issueDay|dueDay|flexQuota)\}/g, (_m, k: string) => String(vars[k]));
 }
 
 export type TermsBlock = { kind: 'h' | 'li' | 'p'; text: string };

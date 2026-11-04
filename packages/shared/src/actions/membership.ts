@@ -62,7 +62,8 @@ export const membershipActions: ActionDef[] = [
       if (isFamily(ctx.user)) ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'family.notif.leaveWithdrawn', params: { name: shortOf(d, m.id), month: input.month }, link: `/health?member=${m.id}&tab=plan`, memberId: m.id });
     },
   }),
-  // The "word" the terms ask for after 2 months of leave: the member is coming back. Without it the daily job ends the membership at the start of the 3rd month.
+  // The "word" the terms ask for after the club's most months of leave in a row (round 19: leaveMaxMonths): the member is coming back. Without it the daily
+  // job ends the membership at the start of the month after.
   defineAction<{ memberId: string }>({
     name: 'membership.confirmReturn',
     can: people,
@@ -70,7 +71,7 @@ export const membershipActions: ActionDef[] = [
     run(d, input, ctx) {
       const m = requireMember(d, input.memberId, ctx);
       if (isFamily(ctx.user) && !isPrimaryFor(S(d), ctx.user.id, m.id)) ctx.fail('err.forbidden');
-      const w = leaveNeedsWord(m as Member, ctx.today);
+      const w = leaveNeedsWord(S(d), m as Member, ctx.today);
       if (!w) return ctx.fail('err.noChanges');
       const cur = currentMembership(m);
       cur.leaves = [...(cur.leaves ?? []), { month: w.after, at: ctx.nowDT, by: ctx.actor, note: RETURN_NOTE }];

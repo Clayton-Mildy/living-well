@@ -16,9 +16,9 @@ import { currentMembership, isPendingRow, membershipStatus, planOn } from '../ru
 import { feeOf, issueDateOf, priceOn } from '../rules/billing';
 import { END_REASONS, isISO } from '../rules/members';
 import {
-  FOLLOW_UP_OUTCOMES, defaultLastDay, followUpId, followUpOf, isApplied, isChange, lastDayOfMonth, isPlanOutcome, leaveMonthsCheck, planAfter, renewalMembers,
+  FOLLOW_UP_OUTCOMES, defaultLastDay, followUpId, followUpOf, isApplied, isChange, lastDayOfMonth, isPlanOutcome, leaveMonthChoices, leaveMonthsCheck, planAfter, renewalMembers,
 } from '../rules/renewals';
-import { LEAVE_MAX_MONTHS } from '../rules/leave';
+import { LEAVE_MAX_LIMIT } from '../rules/leave';
 import { addDays, addMonths, monthStart, rp, ym } from '../util';
 import { changeKind, earliestMonth, noticeCheck, noticeDays, noticeDeadline, type NoticeKind } from '../rules/notice';
 
@@ -51,7 +51,8 @@ export function checkChange(s: ClubState, m: Member, f: Pick<FollowUp, 'month' |
     notice(s, changeKind(s, m, to, f.month), f.month, asOf);
   } else if (f.outcome === 'leave') {
     const months = f.leaveMonths ?? [];
-    if (months.some((x) => x !== f.month && x !== addMonths(f.month, 1))) bad('err.invalid');
+    const choices = leaveMonthChoices(s, f.month); // round 19: the month and the ones after it, up to the club's leave in a row
+    if (months.some((x) => !choices.includes(x))) bad('err.invalid');
     const c = leaveMonthsCheck(s, m, months, today, asOf);
     if (!c.ok) bad(c.code, c.params);
   } else if (f.outcome === 'stop') {
@@ -118,7 +119,7 @@ export const renewalActions: ActionDef[] = [
       if (outcome === 'switch') out.plan = isPlanId(o.plan) && o.plan !== 'flex' && o.plan !== 'gold' ? o.plan : bad('err.invalid'); // the catalogue plan to move to; Gold and Flex are upgrade and downgrade
       if (outcome === 'leave') {
         const months = Array.from(new Set((Array.isArray(o.leaveMonths) ? o.leaveMonths : []).map(ymOf))).sort();
-        if (!months.length || months.length > LEAVE_MAX_MONTHS) bad('err.invalid');
+        if (!months.length || months.length > LEAVE_MAX_LIMIT) bad('err.invalid'); // round 19: the club's own most (leaveMaxMonths) is checked against the state in run
         out.leaveMonths = months;
       }
       if (outcome === 'stop') {

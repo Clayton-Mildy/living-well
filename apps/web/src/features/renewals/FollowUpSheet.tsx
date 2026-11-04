@@ -66,7 +66,7 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
   const [outcome, setOutcome] = useState<FollowUpOutcome | null>(() => (f && f.status !== 'rejected' && isChange(f.outcome) ? f.outcome! : null));
   /** a switch: the catalogue plan chosen */
   const [target, setTarget] = useState<Plan | null>(() => (f && f.status !== 'rejected' && f.outcome === 'switch' ? f.plan ?? null : null));
-  const firstLeave = useMemo(() => leaveMonthChoices(month).find((x) => m && leaveMonthsCheck(s, m, [x], today).ok), [s, m, month, today]);
+  const firstLeave = useMemo(() => leaveMonthChoices(s, month).find((x) => m && leaveMonthsCheck(s, m, [x], today).ok), [s, m, month, today]);
   const [leaveSel, setLeaveSel] = useState<YM[]>(() => f?.leaveMonths ?? (firstLeave ? [firstLeave] : []));
   const [lastDay, setLastDay] = useState<string | null>(() => f?.lastDay ?? null);
   const [reason, setReason] = useState<string>(() => f?.endReason ?? 'familyDecision');
@@ -150,12 +150,12 @@ function FollowUpForm({ memberId, month, onClose }: { memberId: string; month: Y
     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
       <span style={{ fontSize: 13, fontWeight: 500, color: '#4A4038' }}>{t('renewals.leaveMonths')}</span>
       <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-        {leaveMonthChoices(month).map((mo) => {
+        {leaveMonthChoices(s, month).map((mo) => {
           const ok = leaveMonthsCheck(s, m, [mo], today);
           return <Chip key={mo} size={40} selected={leaveSel.includes(mo)} off={!ok.ok} onClick={() => toggleLeave(mo)}>{fmt.fmonth(mo, true)}</Chip>;
         })}
       </div>
-      {leaveMonthChoices(month).map((mo) => {
+      {leaveMonthChoices(s, month).map((mo) => {
         const ok = leaveMonthsCheck(s, m, [mo], today);
         if (ok.ok) return null;
         return <span key={mo} style={{ fontSize: 13, color: '#6B6259', lineHeight: '19px' }}>{ok.code === 'err.leaveLate' ? t('renewals.leaveLate', { month: fmt.fmonth(mo), date: fmt.fd(String(ok.params?.deadline ?? ''), short) }) : t(ok.code, { ...ok.params, month: fmt.fmonth(mo) })}</span>;
