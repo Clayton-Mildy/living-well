@@ -126,7 +126,7 @@ function rowText(c: Ctx, m: Member, story: DayStory): { title: string; sub: stri
   const isToday = story.date === now.today;
   const span = story.arrivedAt && story.leftAt ? `${story.arrivedAt}–${story.leftAt}` : story.arrivedAt || '';
   // round 20: on the field trip (checked in for it, or ticked in Who went)
-  if (st.kind === 'trip') return { title: t('ftoday.rowTrip', { n }), sub: eventTitle(st.event, fmt.lang), pct: isToday && !st.att?.checkOut ? Math.round(railFill(story.items.map((i) => i.state)) * 100) : 100, mood: story.mood?.face };
+  if (st.kind === 'trip') return { title: t(story.date < now.today || st.att?.checkOut ? 'ftoday.rowWentTrip' : 'ftoday.rowTrip', { n }), sub: eventTitle(st.event, fmt.lang), pct: isToday && !st.att?.checkOut ? Math.round(railFill(story.items.map((i) => i.state)) * 100) : 100, mood: story.mood?.face };
   if (st.kind === 'here' && isToday) return { title: t('ftoday.rowHere', { n }), sub: join([t('ftoday.since', { t: st.since }), nowWhat(c, story)]), pct: Math.round(railFill(story.items.map((i) => i.state)) * 100), mood: story.mood?.face };
   if (st.kind === 'home' && isToday) return { title: t('ftoday.rowWentHome', { n }), sub: span, pct: 100, mood: story.mood?.face };
   if (st.kind === 'here' || st.kind === 'home') return { title: t('ftoday.rowCame', { n, d: dayWord(fmt, story.date, now.today) }), sub: span, pct: 100, mood: story.mood?.face };
@@ -335,7 +335,8 @@ function SingleHero({ m, story, date, top, onProfile, onOpenPhoto }: { m: Member
   const n = displayName(m);
   const photoFrom = cover.fromDay ? t(m.gender === 'f' ? 'ftoday.photoFromF' : 'ftoday.photoFromM', { d: dayWord(fmt, cover.fromDay, now.today) }) : '';
   let status = '', sub = '', live = false, rail = false;
-  if (st.kind === 'trip') { status = t('ftoday.onTrip', { t: eventTitle(st.event, fmt.lang) }); live = isToday && !st.att?.checkOut; rail = true; } // round 20
+  // round 20; past tense on an earlier day or once back and checked out
+  if (st.kind === 'trip') { status = t(date < now.today || st.att?.checkOut ? 'ftoday.wentTrip' : 'ftoday.onTrip', { t: eventTitle(st.event, fmt.lang) }); live = isToday && !st.att?.checkOut; rail = true; }
   else if (st.kind === 'here' && isToday) { status = t('family.atSince', { t: st.since }); sub = nowWhat(c, story); live = true; rail = true; }
   else if (st.kind === 'here') { status = t('family.storyArrived', { a: st.since }); sub = highlights(c, story); rail = true; }
   else if (st.kind === 'home') { status = t('family.storyArrivedHome', { a: story.arrivedAt || '', b: st.at }); sub = highlights(c, story); rail = true; }

@@ -8,7 +8,7 @@
 import { useCallback, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { FACE_KEY, addDays, answeredBy, live, liveSurvey, displayName, rp, sortBy, type ISODate, type Member, type Photo } from '@cp/shared';
-import { activityLabel, roomLabel, dayStory, dishNamesOf, END_OF_DAY, familyPhotosOn, servedLunch, storyNowMin, visitDays, type DayStory } from '@cp/shared/rules/family';
+import { activityLabel, roomLabel, dayStory, eventTitle, dishNamesOf, END_OF_DAY, familyPhotosOn, servedLunch, storyNowMin, visitDays, type DayStory } from '@cp/shared/rules/family';
 import { openDayStrip, planDay } from '@cp/shared/rules/famToday';
 import { eventTitle as calTitle, upcomingClosures } from '@cp/shared/rules/calendar';
 import { celebrationTotal, celebrationsOn, chargesLine } from '@cp/shared/rules/celebrations';
@@ -111,7 +111,9 @@ function LastVisitCard({ members, stories, onOpen, onOpenPhoto }: { members: Mem
   const story = useMemo(() => (last && came[0] ? dayStory(s, came[0], last, END_OF_DAY) : null), [s, came, last]); // eslint-disable-line react-hooks/exhaustive-deps
   const photos = useMemo(() => (last ? familyPhotosOn(s, came.map((m) => m.id), last) : []), [s, came, last]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!last || !story) return null;
-  const when = `${cap(dayWord(fmt, last, now.today))} · ${fmt.fd(last, { day: 'numeric', month: 'short' })}`;
+  // round 20 fix: a trip day names the trip ("Thursday · 15 Oct · Taman Mini day trip"), so a trip-only day without times still says why
+  const trip = story.state.kind === 'trip' ? eventTitle(story.state.event, fmt.lang) : '';
+  const when = [cap(dayWord(fmt, last, now.today)), fmt.fd(last, { day: 'numeric', month: 'short' }), trip].filter(Boolean).join(' · ');
   const times = story.arrivedAt && story.leftAt ? t('family.storyArrivedHome', { a: story.arrivedAt, b: story.leftAt }) : story.arrivedAt ? t('family.storyArrived', { a: story.arrivedAt }) : '';
   const joined = Array.from(new Set(story.sessions.filter((x) => x.took !== 'satOut').map((x) => activityLabel(s, x.activityId, fmt.lang)).filter(Boolean))).slice(0, 2);
   const bits = [story.mood ? t('ftoday.moodIs', { face: t(FACE_KEY[story.mood.face]).toLowerCase() }) : '', story.lunch?.amount ? t('family.lunch_' + story.lunch.amount) : '', joined.length ? t('ftoday.lvSessions', { a: joined.join(` ${t('common.and')} `) }) : ''].filter(Boolean);

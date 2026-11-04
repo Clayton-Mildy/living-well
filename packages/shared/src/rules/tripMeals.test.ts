@@ -40,6 +40,13 @@ describe('trip day meals are optional', () => {
     for (const id of ['kitchen.lunchPhoto', 'kitchen.teaPhoto']) expect(ids(some)).toContain(id);
     expect(ids(checked(base))).toEqual(expect.arrayContaining(['kitchen.lunchPhoto', 'kitchen.teaPhoto']));
   });
+  it('the lunch round needs a lunch or soft menu on a trip day; a tea-only one is no lunch (deferred 5)', () => {
+    const trip = withTrip(base); // the seed's check-ins today are the lunch round's diners
+    expect(ids(withOverride(trip))).toContain('kitchen.lunch');
+    const teaOnly = produce(trip, (d) => { d.dayMenus[T] = { id: T, clubId: d.clubId, createdAt: `${T}T08:00`, createdBy: 'staff:s3', date: T, tea: ['dish-sop-ikan'], allergyPlans: [] } as never; });
+    expect(menuOn(teaOnly, T)).not.toBeNull();
+    expect(ids(teaOnly)).not.toContain('kitchen.lunch');
+  });
 });
 
 describe('dayMenu.override on a trip day', () => {

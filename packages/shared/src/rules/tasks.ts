@@ -204,7 +204,9 @@ export const DUTIES: DutyDef[] = [
   {
     id: 'kitchen.lunch', role: 'kitchen', icon: 'restaurant', titleKey: 'tasks.duty.kitchen.lunch', every: 'day', defaultDue: () => '13:30',
     parts: (s, date) => {
-      if (tripOn(s, date) && !menuOn(s, date)) return []; // round 20: a trip day has no lunch round unless the kitchen added a menu
+      // round 20: a trip day has no lunch round unless the kitchen added a lunch (or soft) menu; a tea-only menu is no lunch
+      const menu = tripOn(s, date) ? menuOn(s, date) : null;
+      if (tripOn(s, date) && !(menu && (menu.lunch.length || menu.soft.length))) return [];
       const { marked, total } = roundProgress(s, date, 'lunch');
       return total ? [stub('lunch', { done: marked >= total, count: { done: marked, total }, link: '/lunch', bell: { id: 'round:lunch', kind: 'tasks.notif.act.lunch', params: { n: total - marked, time: '12:00' }, at: '12:00' } })] : [];
     },

@@ -15,6 +15,8 @@ import { routerRef } from '../app/routerRef';
 import { useClub } from '../store/replica';
 import { useQuickCam, type QShot } from '../store/quickCam';
 import { say, useUi } from '../store/ui';
+import { useNow } from '../lib/clock';
+import { dayStatus } from '@cp/shared';
 
 /** The roles that have the quick camera. */
 export const QUICK_CAMERA_ROLES = ['activity', 'mgmt', 'kitchen'] as const;
@@ -39,12 +41,16 @@ function QuickCameraButton({ phone, userId }: { phone: boolean; userId: string }
   const pins = useUi((st) => st.pins);
   const openCam = useQuickCam((q) => q.openCam);
   const n = useMemo(() => draftsOf(s, userId).length, [s, userId]);
+  const { today } = useNow();
+  // round 20 fix: no photos on a closed day (photo.capture refuses them), so the button is grey and a tap says so once instead of opening the camera
+  const closed = !dayStatus(s, today).open;
   const size = phone ? 48 : 52;
   // phone: bottom right above the floating tab bar and above a page's own Pin; laptop and tablet: stacked above the Demo pill
   const pos: CSSProperties = phone ? { right: 14, bottom: `calc(${pins ? 150 : 96}px + env(safe-area-inset-bottom, 0px))` } : { right: 24, bottom: 78 };
   return (
-    <button type="button" data-testid="quick-camera" onClick={openCam} aria-label={n ? t('drafts.quickN', { n }) : t('drafts.quick')} title={t('drafts.quick')} className="h-bronze cp-press"
-      style={{ position: 'fixed', ...pos, zIndex: 44, width: size, height: size, borderRadius: 999, border: 'none', padding: 0, background: '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(40,30,20,0.22), 0 14px 32px rgba(40,30,20,0.38)' }}>
+    <button type="button" data-testid="quick-camera" data-closed={closed || undefined} aria-disabled={closed || undefined} onClick={closed ? () => say(t('err.closedDay'), { icon: 'event_busy' }) : openCam}
+      aria-label={n ? t('drafts.quickN', { n }) : t('drafts.quick')} title={t('drafts.quick')} className="h-bronze cp-press"
+      style={{ position: 'fixed', ...pos, zIndex: 44, width: size, height: size, borderRadius: 999, border: 'none', padding: 0, background: closed ? '#8A8078' : '#24201C', color: '#FFFFFF', display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', boxShadow: '0 2px 6px rgba(40,30,20,0.22), 0 14px 32px rgba(40,30,20,0.38)' }}>
       <Icon name="photo_camera" size={phone ? 24 : 26} fill={1} />
       {n ? <span data-testid="quick-camera-badge" aria-hidden="true" style={{ position: 'absolute', top: -4, right: -4, minWidth: 20, height: 20, padding: '0 5px', borderRadius: 999, background: '#FFFFFF', color: '#24201C', fontSize: 12, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 0 0 2px #24201C', fontVariantNumeric: 'tabular-nums' }}>{n > 99 ? '99+' : n}</span> : null}
     </button>

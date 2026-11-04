@@ -3,7 +3,7 @@
 // help to throw the extras away. Tap a draft to fix it, then send them all (management) or send them for approval (everyone else). Private to the person who took them.
 // It is the first tab of the Camera (activity, management) and the Drafts page of the kitchen.
 import { useEffect, useMemo, useState, type CSSProperties, type ReactNode } from 'react';
-import { displayName, toMin, tripOn, type Photo } from '@cp/shared';
+import { dayStatus, displayName, nextOpenDay, toMin, tripOn, type Photo } from '@cp/shared';
 import { attendedOn, curAct, faceTagging, pictureDays, pictureSessions } from '@cp/shared/rules/activity';
 import { draftGroupKey, draftKindOf, draftKindsFor, draftMeal, draftNotes, draftsOf, type DraftKind } from '@cp/shared/rules/photoAi';
 import { mediaUrl } from '../../lib/media';
@@ -321,16 +321,36 @@ export function DraftsBody({ onMore, closed }: { /** the Camera page offers its 
   );
 }
 
-/** The kitchen's (and anybody's) Drafts page: `/drafts`. */
+/** Round 20: the closed state of the camera screens on a closed day (a weekend with no programme or trip, a closure, a holiday): no photos that day. */
+export function CameraClosed() {
+  const t = useT();
+  const lang = useLang();
+  const s = useClub();
+  const { today } = useNow();
+  const { fdl } = useFmt();
+  const day = dayStatus(s, today);
+  if (day.open) return null;
+  return (
+    <div data-testid="camera-closed" className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16 }}>
+      <EmptyState icon="event_busy" title={day.event ? (lang === 'id' && day.event.titleId ? day.event.titleId : day.event.title) : t('common.clubClosed')}
+        sub={t(day.reason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })} />
+    </div>
+  );
+}
+
+/** The kitchen's (and anybody's) Drafts page: `/drafts`. Round 20 fix: on a closed day it shows the closed state and no camera; drafts of an open day can still be sent. */
 export function Drafts() {
   const t = useT();
+  const s = useClub();
   const { device, isPhone } = useDevice();
   const { today } = useNow();
   const { fdl } = useFmt();
+  const closed = !dayStatus(s, today).open;
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 28px)', minHeight: '100%' }}>
       <PageHead eyebrow={fdl(today)} title={t('drafts.title')} />
-      <DraftsBody />
+      {closed ? <CameraClosed /> : null}
+      <DraftsBody closed={closed} />
     </div>
   );
 }

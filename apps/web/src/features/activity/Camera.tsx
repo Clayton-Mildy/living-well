@@ -10,10 +10,10 @@
 // Round 6 (phone, native look): an iOS segmented Camera | Library, the video action as a list row, "Sent today" and the solo list under small grey headers, a grey search bar.
 import { useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { dayStatus, listName, famNames, displayName, nextOpenDay, primaryContact, type Photo } from '@cp/shared';
+import { dayStatus, listName, famNames, displayName, primaryContact, type Photo } from '@cp/shared';
 import { draftsOf } from '@cp/shared/rules/photoAi';
 import { curAct, faceTagging, taggableMembers, photoCountByMember, searchMembers, sentToday, sortByPhotoCount, suggestedFaces, activityName, roomName } from '@cp/shared/rules/activity';
-import { Button, CameraCapture, EmptyState, GROUP_HEAD, Icon, PageHead, Pager, Pin, PhotoImg, ImageOpen, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
+import { Button, CameraCapture, GROUP_HEAD, Icon, PageHead, Pager, Pin, PhotoImg, ImageOpen, Segmented, Sheet, TextField, usePaged, FONT_BODY, FONT_SMALL, type CaptureInfo } from '../../components/ui';
 import { useDevice, padFor } from '../../hooks/useDevice';
 import { useT, useLang, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
@@ -27,7 +27,7 @@ import { Av, NativeSeg, SearchBar, plural, rowLine } from './lib';
 import { ActivityPicturesBody } from './ActivityPictures';
 import { MemberPicker } from './MemberPicker';
 import { PhotoLibraryBody } from './PhotoLibrary';
-import { DraftsBody } from './Drafts';
+import { CameraClosed, DraftsBody } from './Drafts';
 import { PhotoViewer } from './PhotoViewer';
 
 const corner = (pos: CSSProperties): CSSProperties => ({ position: 'absolute', width: 32, height: 32, ...pos });
@@ -159,10 +159,7 @@ export function Camera() {
     return (
       <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 'clamp(16px, 2.4vw, 24px)' }}>
         {header}
-        <div data-testid="camera-closed" className="cp-grey" style={{ background: 'var(--fill, #F4F4F5)', borderRadius: 16 }}>
-          <EmptyState icon="event_busy" title={day.event ? (lang === 'id' && day.event.titleId ? day.event.titleId : day.event.title) : t('common.clubClosed')}
-            sub={t(day.reason === 'weekend' ? 'common.weekendSub' : 'common.clubClosedSub', { date: fdl(nextOpenDay(s, today)) })} />
-        </div>
+        <CameraClosed />
         {tab === 'drafts' ? <DraftsBody closed /> : null}
       </div>
     );

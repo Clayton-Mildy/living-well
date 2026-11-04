@@ -53,9 +53,9 @@ const rows = () => Array.from(document.querySelectorAll('[data-testid="timeline"
 const row = (id: string) => q(`[data-testid="timeline"] [data-tl="${id}"]`)?.textContent || '';
 
 describe('family Today on a field trip day', () => {
-  it('she checked in: the hero says she is on the trip; arrival, the trip and back at the club; no lunch row without a menu', async () => {
+  it('she checked in: the hero says she is on the trip (past tense once checked out); arrival, the trip and back at the club; no lunch row without a menu', async () => {
     await open(tripPhoto(lina(trip(buildSeed().citra))), 'm1', 960);
-    expect(q('[data-testid="story-hero"]')?.textContent).toContain('On the field trip · Kebun Raya Bogor');
+    expect(q('[data-testid="story-hero"]')?.textContent).toContain('Went on the field trip · Kebun Raya Bogor');
     expect(rows()).toEqual(['arrival', 'outing', 'home']);
     expect(row('arrival')).toContain('08:12');
     expect(row('arrival')).toContain('Arrived · good mood');

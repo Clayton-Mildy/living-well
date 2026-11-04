@@ -9,7 +9,7 @@ export const kitchen: Same<typeof EN> = {
   inClub: '{n} di klub', goneHome: '{n} sudah pulang', guest1: '1 tamu', guestsN: '{n} tamu', celebGuests: '{n} di perayaan',
   softLine: 'Pilihan lunak: {dishes}', teaLine: 'Teh sore · 15.00: {dishes}',
   'menu.none': 'Belum ada', 'menu.changeToday': 'Ubah menu hari ini', 'menu.overridden': 'Menu hari ini berbeda dari rencana mingguan.',
-  'menu.trip': 'Karyawisata · menu opsional', 'menu.tripAdd': 'Tambah menu hari itu',
+  'menu.trip': 'Karyawisata · menu opsional', 'menu.tripAdd': 'Tambah makanan karyawisata',
   'photo.title': 'Foto makan siang', 'photo.add': 'Tambah foto makan siang hari ini',
   'photo.addMore': 'Tambah foto', 'photo.alt': 'Foto makan siang, diambil pukul {time}', 'photo.uploading': 'Mengirim foto…', 'photo.full': 'Foto makan siang hari ini sudah penuh. Hapus satu untuk menambah.',
   'photo.open': 'Buka foto pukul {time} ukuran penuh',

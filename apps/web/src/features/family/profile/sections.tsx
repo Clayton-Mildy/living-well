@@ -8,7 +8,8 @@ import {
   type ClubState, type DocType, type Health, type ISODate, type Member, type MemberNote,
 } from '@cp/shared';
 import { consentOf, docOf, documentTypes, formatVa } from '@cp/shared/rules/members';
-import { latestNote, planSummary, visitDays } from '@cp/shared/rules/family';
+import { eventTitle, latestNote, planSummary, visitDays } from '@cp/shared/rules/family';
+import { onTrip, tripOn } from '@cp/shared/rules/trips';
 import { isDaysPlan, planLabel, planPrice, planQuota } from '@cp/shared/rules/plans';
 import { noteForFamily } from '@cp/shared/rules/approvals';
 import { applicationDataOf } from '@cp/shared/rules/applicationForm';
@@ -231,12 +232,13 @@ export function CareSection({ p, id }: SecProps) {
             const a = attOf(s, d, m.id);
             const mood = dailyMood(s, m.id, d)?.face;
             const times = a?.checkIn ? `${a.checkIn.at}${a.checkOut ? `–${a.checkOut.at}` : ''}` : '';
+            const trip = onTrip(s, m.id, d) ? tripOn(s, d) : null; // round 20 fix: a trip day says which trip (a trip-only day has no times)
             return (
               <button key={d} type="button" onClick={() => go(`/today?member=${m.id}&date=${d}`)} data-date={d} className="cp-fam-press"
                 style={{ width: '100%', display: 'flex', alignItems: 'center', gap: 12, padding: '11px 14px', border: 'none', borderTop: i ? HAIR : 'none', background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: FONT }}>
                 <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 1 }}>
                   <span style={{ fontSize: 15, fontWeight: 500, color: F.text }}>{d === today ? t('common.today') : fmt.fds(d)}</span>
-                  <span style={{ fontSize: 13, color: F.muted }}>{[times, mood !== undefined ? t(FACE_KEY[mood]) : ''].filter(Boolean).join(' · ')}</span>
+                  <span style={{ fontSize: 13, color: F.muted }}>{[trip ? eventTitle(trip, fmt.lang) : '', times, mood !== undefined ? t(FACE_KEY[mood]) : ''].filter(Boolean).join(' · ')}</span>
                 </span>
                 <Icon name="chevron_right" size={22} color={F.chev} />
               </button>

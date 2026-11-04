@@ -9,7 +9,7 @@ export const ftoday = {
   rowHere: '{n} is at the club', rowWentHome: '{n} went home', rowCame: '{n} came on {d}', notYet: '{n} isn’t at the club', homeToday: '{n} is home today',
   since: 'Since {t}', nowWhat: '{a} now', lastVisitDay: 'last visit {d}',
   // round 20: a field trip day
-  onTrip: 'On the field trip · {t}', rowTrip: '{n} is on the field trip', tTrip: 'Field trip · {t}', tTripBack: 'Back at the club · going home', tArrivedMood: 'Arrived · {m} mood', tLunchDish: 'Lunch · {d}',
+  onTrip: 'On the field trip · {t}', wentTrip: 'Went on the field trip · {t}', rowTrip: '{n} is on the field trip', rowWentTrip: '{n} went on the field trip', tTrip: 'Field trip · {t}', tTripBack: 'Back at the club · going home', tArrivedMood: 'Arrived · {m} mood', tLunchDish: 'Lunch · {d}',
   photoFromF: 'photo from {d}, her last visit', photoFromM: 'photo from {d}, his last visit', profileAria: 'Open {n}’s profile', railAria: 'The day so far: {n} of {m} steps',
   // the day's list
   next: 'Next', today: 'Today', thatDay: 'That day', wasOn: 'What was on', wasOnToday: 'At the club today',

@@ -146,7 +146,9 @@ describe('memories story (/memories)', () => {
 
   it('a month she did not come shows a gentle line; with no month asked, the newest month with a visit', async () => {
     const view = open('f1');
-    const bare = { ...view, attendance: Object.fromEntries(Object.entries(view.attendance).filter(([, a]) => !(a.memberId === 'm1' && a.date.startsWith('2026-10')))) };
+    // round 20: a trip she was on counts as a visit too, so the seeded October trip loses her as well
+    const bare = { ...view, attendance: Object.fromEntries(Object.entries(view.attendance).filter(([, a]) => !(a.memberId === 'm1' && a.date.startsWith('2026-10')))),
+      calendarEvents: Object.fromEntries(Object.entries(view.calendarEvents).map(([k, e]) => [k, { ...e, wentIds: e.wentIds?.filter((id) => id !== 'm1') }])) };
     useReplica.setState({ confirmed: bare, view: bare });
     await show(<FamilyMemories />, '/memories?member=m1&month=2026-10');
     expect(q('[data-testid="memories-story"]')).toBeNull();
