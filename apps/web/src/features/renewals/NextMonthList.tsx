@@ -3,6 +3,7 @@
 // Every member with next month's plan up front: the plan name when it continues, an ink badge when something changes (Flex → Gold, On leave, Stops 31 Oct),
 // a count of next month's plans on top, and Call / WhatsApp for the family contact on each row. A tap on the member records a change.
 // KC (28 Oct): a search bar on top finds a member by name, family or phone (as on Members), within the chips' filters.
+// Round 19 (R5): the Few visits button sits first in the plan-chip row, then a thin divider (it replaces the card above the tabs).
 import { useMemo, useState, type ReactNode } from 'react';
 import { contactsOfMember, isPendingRow, listName, memberName, waUrl, type Plan, type YM } from '@cp/shared';
 import { renewalMembers, nextMonthPlans, type NextMonthRow } from '@cp/shared/rules/renewals';
@@ -14,6 +15,7 @@ import { useNow } from '../../lib/clock';
 import { useFmt, useLang, useT } from '../../lib/i18n';
 import { memberPhoto } from '../../lib/media';
 import { useClub } from '../../store/replica';
+import { FewVisitsButton } from './FewVisitsButton';
 import { FollowUpSheet } from './FollowUpSheet';
 
 type Filter = 'all' | 'continues' | 'changing';
@@ -23,7 +25,7 @@ const INK = '#24201C';
 const MUTED = '#6B6259';
 const badge = { display: 'inline-flex', alignSelf: 'flex-start', alignItems: 'center', gap: 4, padding: '2px 10px', borderRadius: 999, background: INK, color: '#FFFFFF', fontSize: 13, lineHeight: '20px', fontWeight: 500, whiteSpace: 'nowrap' } as const;
 
-export function NextMonthList({ month }: { month: YM }) {
+export function NextMonthList({ month, onFew }: { month: YM; /** opens the Few visits list (round 19) */ onFew?: () => void }) {
   const s = useClub();
   const t = useT();
   const lang = useLang();
@@ -133,6 +135,7 @@ export function NextMonthList({ month }: { month: YM }) {
         {q ? <button type="button" onClick={() => setQ('')} aria-label={t('common.clear')} style={{ width: 28, height: 28, padding: 0, border: 'none', borderRadius: 999, background: 'transparent', color: MUTED, display: 'flex', alignItems: 'center', justifyContent: 'center', cursor: 'pointer', flex: 'none' }}><Icon name="close" size={18} /></button> : null}
       </label>
       <div role="group" aria-label={t('renewals.nextPlans')} data-testid="next-plans" style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: isPhone ? 'nowrap' : 'wrap', overflowX: isPhone ? 'auto' : undefined, margin: isPhone ? '0 -16px' : undefined, padding: isPhone ? '0 16px' : undefined, scrollbarWidth: 'none' }}>
+        {onFew ? <FewVisitsButton onOpen={onFew} /> : null}
         <span style={{ fontSize: 12, letterSpacing: '0.06em', textTransform: 'uppercase', color: MUTED, fontWeight: 600, marginRight: 4, flex: 'none' }}>{t('renewals.nextPlans')}</span>
         {summary.map((x) => chip(pick === x.key, () => setPick(pick === x.key ? null : x.key), <><span style={{ fontWeight: 600, fontVariantNumeric: 'tabular-nums' }}>{x.n}</span>{x.label}</>, { 'data-plan-count': x.key }))}
       </div>

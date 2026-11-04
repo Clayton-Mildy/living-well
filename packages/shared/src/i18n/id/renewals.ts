@@ -40,5 +40,6 @@ export const renewals: Same<typeof EN> = {
   'few.title': 'Jarang datang', 'few.card': '{n} · {c} dihubungi · perubahan ditutup {d}', 'few.before': 'daftar dibuka {d}', 'few.closed': '{n} · {c} dihubungi · perubahan ditutup',
   'few.row': '{n} kunjungan · terakhir {d}', 'few.row1': '1 kunjungan · terakhir {d}', 'few.rowNone': 'Belum ada kunjungan', 'few.log': 'Catat panggilan', 'few.called': 'Dihubungi', 'few.toCall': '{n} perlu dihubungi',
   'few.saved': 'Panggilan untuk {name} dicatat.', 'few.earlier': 'Panggilan sebelumnya', 'few.outcome': 'Hasil', 'few.none': 'Tidak ada yang ditandai',
+  'few.btnBefore': 'Jarang datang · dibuka {d}', 'few.btnOpen': 'Jarang datang · {n}', 'few.btnCalled': 'Jarang datang · {n} · {c} dihubungi',
   'feed.undone': '{name}: perubahan {month} dibatalkan', 'feed.approved': '{name}: perubahan perpanjangan {month} disetujui', 'feed.rejected': '{name}: perubahan perpanjangan {month} tidak disetujui',
 };

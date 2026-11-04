@@ -106,4 +106,5 @@ export const cal: Same<typeof EN> = {
   copyConfirm: 'Ganti dengan minggu lalu', copyKeep: 'Biarkan minggu ini', copied: 'Jadwal minggu lalu sudah disalin. Periksa, lalu publikasikan.', noLastWeek: 'Minggu lalu tidak punya jadwal untuk disalin.',
   'remind.programme': 'Belum ada program aktivitas untuk {week}.', 'remind.menu': 'Belum ada menu untuk {week}.', 'remind.both': 'Belum ada program aktivitas maupun menu untuk {week}.',
   'remind.thisWeek': 'minggu ini', 'remind.nextWeek': 'minggu depan ({date})', 'remind.planProgramme': 'Susun program', 'remind.planMenu': 'Susun menu',
+  tripDay: '{day} · Karyawisata', tripNoSessions: 'tidak ada sesi', publishTripNote: '{date} karyawisata: tidak ada sesi',
 };

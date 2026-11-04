@@ -45,9 +45,8 @@ test('Benjamin ticks Edit on Billing for the front desk; Caca then has the Billi
 test('Caca logs "No answer" for the first row of the few-visits list: the row shows Called', async ({ page }) => {
   const c = watchConsole(page);
   await signIn(page, 's1', '/renewals');
-  const card = page.getByTestId('few-card');
-  await expect(card).toContainText('Few visits');
-  await expect(card).toContainText('3 · 1 called · changes closed'); // 21 Oct is after October's last change day, 18 Oct: the counts stay
+  const card = page.getByTestId('few-btn'); // round 19: a button first in the Members tab's chip row (the card is gone)
+  await expect(card).toHaveText('Few visits · 3 · 1 called'); // 21 Oct is after October's last change day, 18 Oct: the counts stay
   await assertNoHorizontalScroll(page);
   await card.click();
   const list = page.getByTestId('few-list');
@@ -155,9 +154,9 @@ test('screenshots', async ({ page }, info) => {
   await shot('6-family-terms-gate');
 
   await signIn(page, 's1', '/renewals');
-  await expect(page.getByTestId('few-card')).toBeVisible();
+  await expect(page.getByTestId('few-btn')).toBeVisible();
   await shot('7-few-visits-card');
-  await page.getByTestId('few-card').click();
+  await page.getByTestId('few-btn').click();
   await expect(page.getByTestId('few-list')).toBeVisible();
   await shot('8-few-visits-list');
   await page.locator('[data-few]').first().locator('[data-log]').click();

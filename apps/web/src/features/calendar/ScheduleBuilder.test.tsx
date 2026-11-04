@@ -143,3 +143,89 @@ describe('ScheduleBuilder: the proposed week', () => {
     expect(document.querySelector('[data-testid="proposal-conflict"]')?.textContent).toContain('1 not approved');
   });
 });
+
+// Round 19 (task 4): a field trip blocks its day in the builder with one trip block; publishing notes the trip days.
+describe('ScheduleBuilder: field trip days', () => {
+  const trip = (s: ClubState, date: string, endDate?: string): ClubState => ({
+    ...s,
+    calendarEvents: { ...s.calendarEvents, 'ev-trip': { id: 'ev-trip', clubId: 'citra', createdAt: '2026-10-20T09:00:00', createdBy: 'staff:s9', kind: 'outing', date, ...(endDate ? { endDate } : {}), title: 'lets goo', from: '08:00', to: '17:00' } as ClubState['calendarEvents'][string] },
+  });
+  /** a draft for 2–6 Nov: Monday 10:30 becomes the reading circle (so Publish has a change) */
+  const withWeekDraft = (s: ClubState): ClubState => {
+    const days = builderDays(s);
+    days[1]['10:30'] = { activityId: 'act-reading', staffId: 's6', roomId: 'room-lounge' };
+    return execute(s, 'schedule.saveDraft', { days, effectiveFrom: '2026-11-02' }, getUser({ citra: s }, 's9')!, clock, 'w3').state;
+  };
+  const dayCells = (day: string) => Array.from(document.querySelectorAll(`[aria-label^="${day} 10:30"], [aria-label^="${day} 13:30"]`));
+  const fixedDays = (k: string) => Array.from(document.querySelectorAll(`[data-fixed="${k}"]`)).flatMap((el) => (el.getAttribute('data-days') || '').split(' '));
+  const remount = async () => { await act(async () => { root?.unmount(); }); host?.remove(); };
+
+  it('Friday 6 Nov shows "Fri 6 · Field trip" and one trip block; no cells or "Add an activity" there; lunch and tea skip it; Mon–Thu unchanged', async () => {
+    openClub(trip(buildSeed().citra, '2026-11-06'), 'mgmt');
+    await show(<ScheduleBuilder week="2026-11-02" onWeek={() => {}} onOpenEvent={() => {}} />);
+    expect(document.body.textContent).toContain('Fri 6 · Field trip');
+    const blocks = document.querySelectorAll('[data-trip-block]');
+    expect(blocks).toHaveLength(1);
+    expect(blocks[0].textContent).toContain('lets goo');
+    expect(blocks[0].textContent).toContain('08:00–17:00');
+    expect(blocks[0].textContent).toContain('no sessions');
+    expect(dayCells('Friday')).toHaveLength(0);
+    expect(document.querySelector('[data-slot^="5|"]')).toBeNull();
+    for (const d of ['Monday', 'Tuesday', 'Wednesday', 'Thursday']) expect(dayCells(d)).toHaveLength(2);
+    expect(fixedDays('lunch')).not.toContain('5');
+    expect(fixedDays('tea')).not.toContain('5');
+    expect(fixedDays('lunch')).toEqual(expect.arrayContaining(['1', '2', '3', '4']));
+  });
+
+  it('management opens the trip in the event editor from the block; the activity team cannot', async () => {
+    const open = vi.fn();
+    openClub(trip(buildSeed().citra, '2026-11-06'), 'mgmt');
+    await show(<ScheduleBuilder week="2026-11-02" onWeek={() => {}} onOpenEvent={open} />);
+    const btn = document.querySelector<HTMLElement>('button[data-trip-block]')!;
+    expect(btn).toBeTruthy();
+    await act(async () => { btn.click(); });
+    expect(open).toHaveBeenCalledWith('ev-trip');
+    await remount();
+    const open2 = vi.fn();
+    openClub(trip(buildSeed().citra, '2026-11-06'), 'activity');
+    await show(<ScheduleBuilder week="2026-11-02" onWeek={() => {}} onOpenEvent={open2} />);
+    expect(document.querySelectorAll('[data-trip-block]')).toHaveLength(1);
+    expect(document.querySelector('button[data-trip-block], [data-trip-block] button')).toBeNull();
+  });
+
+  it('publishing that week notes "Fri 6 Nov is a field trip: no sessions" in the confirm', async () => {
+    openClub(withWeekDraft(trip(buildSeed().citra, '2026-11-06')), 'mgmt');
+    await show(<ScheduleBuilder week="2026-11-02" onWeek={() => {}} onOpenEvent={() => {}} />);
+    await act(async () => { buttons(/Publish to staff and families/)[0].click(); });
+    const dialog = document.querySelector('[role="dialog"]')!;
+    expect(dialog.textContent).toContain('Fri 6 Nov is a field trip: no sessions');
+  });
+
+  it('a Thu 12 – Mon 16 Nov trip blocks Thu and Fri in that week and Mon in the next', async () => {
+    const s = trip(buildSeed().citra, '2026-11-12', '2026-11-16');
+    openClub(s, 'mgmt');
+    await show(<ScheduleBuilder week="2026-11-09" onWeek={() => {}} />);
+    expect(dayCells('Thursday')).toHaveLength(0);
+    expect(dayCells('Friday')).toHaveLength(0);
+    for (const d of ['Monday', 'Tuesday', 'Wednesday']) expect(dayCells(d)).toHaveLength(2);
+    expect(document.body.textContent).toContain('Thu 12 · Field trip');
+    expect(document.body.textContent).toContain('Fri 13 · Field trip');
+    await remount();
+    openClub(s, 'mgmt');
+    await show(<ScheduleBuilder week="2026-11-16" onWeek={() => {}} />);
+    expect(dayCells('Monday')).toHaveLength(0);
+    expect(document.querySelectorAll('[data-trip-block]')).toHaveLength(1);
+    expect(dayCells('Tuesday')).toHaveLength(2);
+  });
+
+  it('deleting the trip brings Friday’s cells back', async () => {
+    const s = trip(buildSeed().citra, '2026-11-06');
+    openClub(s, 'mgmt');
+    await show(<ScheduleBuilder week="2026-11-02" onWeek={() => {}} />);
+    expect(dayCells('Friday')).toHaveLength(0);
+    const gone: ClubState = { ...s, calendarEvents: { ...s.calendarEvents, 'ev-trip': { ...s.calendarEvents['ev-trip'], deletedAt: '2026-10-21T10:00:00' } } };
+    await act(async () => { useReplica.setState({ confirmed: gone, view: gone }); });
+    expect(dayCells('Friday')).toHaveLength(2);
+    expect(document.querySelectorAll('[data-trip-block]')).toHaveLength(0);
+  });
+});
