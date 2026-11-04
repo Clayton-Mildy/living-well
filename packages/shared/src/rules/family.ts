@@ -88,11 +88,11 @@ export function dayStateOf(s: ClubState, m: Member, today: ISODate): DayState {
   if (ms === 'ended') return { kind: 'ended', lastDay: cur?.lastDay || today };
   if (ms === 'upcoming') return { kind: 'upcoming', start: cur?.start || today };
   const a = attOf(s, today, m.id);
-  const trip = tripOn(s, today);
+  const ds = dayStatus(s, today);
+  const trip = ds.open ? tripOn(s, today) : null; // a closure or holiday wins over a trip (a weekend trip opens the day)
   if (trip && (a?.checkIn || onTrip(s, m.id, today))) return { kind: 'trip', event: trip, ...(a?.checkIn ? { att: a } : {}) };
   if (a?.checkOut) return { kind: 'home', at: a.checkOut.at, att: a };
   if (a?.checkIn) return { kind: 'here', since: a.checkIn.at, att: a };
-  const ds = dayStatus(s, today);
   if (!ds.open) return { kind: 'closed', reason: ds.reason, event: ds.event, next: nextOpenDay(s, today) };
   return { kind: 'away' };
 }
@@ -163,8 +163,8 @@ interface Block { id: string; start: number; end?: number; build: (state: TlStat
 /** Today's schedule blocks (sessions, lunch, tea, or the outing) in time order. */
 function scheduleBlocks(s: ClubState, date: ISODate): Block[] {
   const ds = dayStatus(s, date);
+  if (!ds.open) return []; // round 20 fix: a weekend trip opens the day (dayStatus); a closure or holiday wins over a trip
   const e = tripOn(s, date);
-  if (!ds.open && !e) return []; // a trip on a closed day (a weekend trip) still shows for those on it (dayStateOf: 'trip'); everyone else sees the closure
   if (e) {
     const from = e.from || s.club.settings.open;
     const out: Block[] = [{ id: 'outing', start: toMin(from), end: toMin(e.to || s.club.settings.close), build: (state, a, b) => ({ id: 'outing', kind: 'outing', state, time: from, start: a, end: b, event: e }) }];

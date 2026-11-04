@@ -63,7 +63,8 @@ const ORDER: Record<CalKind, number> = { closed: 0, holiday: 1, outing: 2, venue
 /** Everything that happens on a date, for the list, month and day views. */
 export function dayInfo(s: ClubState, date: ISODate, audience: CalAudience = 'staff'): DayInfo {
   const events = eventsOn(s, date);
-  const weekend = !isWeekday(date) && !programmedWeekend(s, date); // round 14: a programmed weekend is an open day like any other
+  // round 14: a programmed weekend is an open day like any other; round 20 fix: so is a weekend field trip
+  const weekend = !isWeekday(date) && !events.some((e) => e.kind === 'outing') && !programmedWeekend(s, date);
   const closed = events.find((e) => e.kind === 'closed');
   const holiday = events.find((e) => e.kind === 'holiday');
   const state: DayState = closed ? 'closed' : holiday ? 'holiday' : weekend ? 'weekend' : 'open';

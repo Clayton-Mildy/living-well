@@ -1,7 +1,7 @@
 // Round 20: the field trip banner at the top of the staff screens on a trip day (Arrivals, the nurse's health station, the kitchen's menu).
 // A white card with an ink 1.5 px border, a bus icon, "Field trip today" (or the screen's own title), "{title} · {from}–{to}" and "{n} going"
-// (the trip's Who went). Nothing on other days.
-import { tripOn, type ISODate } from '@cp/shared';
+// (the trip's Who went). Nothing on other days, nor on a trip day that is closed (a closure or holiday wins; a weekend trip opens the day).
+import { dayStatus, tripOn, type ISODate } from '@cp/shared';
 import { Icon } from './ui';
 import { useLang, useT } from '../lib/i18n';
 import { useClub } from '../store/replica';
@@ -11,7 +11,7 @@ export function TripBanner({ date, title }: { date: ISODate; /** the kitchen's "
   const lang = useLang();
   const s = useClub();
   const trip = tripOn(s, date);
-  if (!trip) return null;
+  if (!trip || !dayStatus(s, date).open) return null; // a closure or holiday wins over a trip: the screen shows the closed state alone
   const name = lang === 'id' && trip.titleId ? trip.titleId : trip.title;
   const when = trip.from && trip.to ? t('lobby.tripWhen', { title: name, from: trip.from, to: trip.to }) : name;
   const heading = title ?? t('lobby.tripToday');

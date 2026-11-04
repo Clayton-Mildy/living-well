@@ -29,12 +29,16 @@ export function programmedWeekend(s: ClubState, date: ISODate): boolean {
 
 export function dayStatus(s: ClubState, date: ISODate): DayStatus {
   const events = eventsOn(s, date);
-  if (!isWeekday(date) && !programmedWeekend(s, date)) return { open: false, reason: 'weekend', events }; // a programmed weekend opens; its closures and holidays below still apply
+  // the day's trip: the first outing by start time, then id (the same pick as rules/trips.ts tripOn)
+  const key = (e: CalendarEvent) => `${e.from ?? ''}\u0000${e.id}`;
+  const outing = events.filter((e) => e.kind === 'outing').reduce<CalendarEvent | undefined>((a, e) => (!a || key(e) < key(a) ? e : a), undefined);
+  // a programmed weekend opens, and so does a weekend field trip (round 20 fix, KC: weekend trips happen); closures and holidays below still win
+  if (!isWeekday(date) && !outing && !programmedWeekend(s, date)) return { open: false, reason: 'weekend', events };
   const closed = events.find((e) => e.kind === 'closed');
   if (closed) return { open: false, reason: 'closed', event: closed, events };
   const holiday = events.find((e) => e.kind === 'holiday');
   if (holiday) return { open: false, reason: 'holiday', event: holiday, events };
-  return { open: true, outing: events.find((e) => e.kind === 'outing'), events };
+  return { open: true, outing, events };
 }
 export const isOpen = (s: ClubState, date: ISODate) => dayStatus(s, date).open;
 /** Two time ranges overlap (touching ends do not). */

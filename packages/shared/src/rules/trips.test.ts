@@ -53,3 +53,29 @@ describe('visitDaysOf', () => {
     expect(visitDaysOf(s, 'm1', '2026-11-03', '2026-11-30')).toEqual(['2026-11-03']);
   });
 });
+
+// Round 20 fix (M1, KC: weekend trips happen): a Saturday or Sunday trip opens the day like an approved weekend programme; a closure or holiday still wins.
+describe('a weekend field trip', () => {
+  const SUN = '2026-10-25';
+  it('opens the day for check-in and photos, and the family calendar no longer reads it as closed', async () => {
+    const { dayStatus } = await import('./core');
+    const { dayInfo } = await import('./calendar');
+    const { famDay } = await import('./famCalendar');
+    expect(dayStatus(base, SUN)).toMatchObject({ open: false, reason: 'weekend' });
+    const s = withEvents(trip('ev-sun', SUN));
+    expect(dayStatus(s, SUN)).toMatchObject({ open: true, outing: { id: 'ev-sun' } });
+    expect(dayInfo(s, SUN).state).toBe('open');
+    expect(famDay(s, ['m1'], SUN, '2026-10-21', 600).banner).toBeNull();
+  });
+  it('a holiday or closure on the same day still closes it', async () => {
+    const { dayStatus } = await import('./core');
+    const s = withEvents(trip('ev-sun', SUN), { ...trip('ev-hol', SUN), kind: 'holiday', title: 'Holiday' });
+    expect(dayStatus(s, SUN)).toMatchObject({ open: false, reason: 'holiday' });
+  });
+  it('the day\'s outing is the first by start time, as tripOn (M7)', async () => {
+    const { dayStatus } = await import('./core');
+    const s = withEvents(trip('ev-b', '2026-10-22', { from: '10:00' }), trip('ev-a', '2026-10-22', { from: '07:30' }));
+    expect(dayStatus(s, '2026-10-22')).toMatchObject({ open: true, outing: { id: 'ev-a' } });
+    expect(tripOn(s, '2026-10-22')?.id).toBe('ev-a');
+  });
+});
