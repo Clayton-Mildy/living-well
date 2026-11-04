@@ -164,10 +164,10 @@ export const mgmt: Same<typeof EN> = {
   'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewBelowOne': 'Tandai di bawah {n} kunjungan',
   'settings.terms': 'Syarat dan ketentuan', 'settings.noTerms': 'Belum ada syarat', 'settings.termsRow': 'Versi {v} · diterbitkan {d} oleh {name} · {a} dari {n} setuju',
   'settings.save': 'Simpan', 'settings.cancel': 'Batal', 'settings.saved': 'Tersimpan.',
-  'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.',
+  'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.', 'settings.err.leaveRun': 'Gunakan bilangan bulat 1 sampai 6.',
   // ----- round 18: Settings › notice per kind, few-visits alert before next month -----
   'settings.downgrade': 'Turun paket', 'settings.downgradeSub': 'ke paket lebih murah · paling lambat {d}', 'settings.stop': 'Berhenti', 'settings.stopSub': 'bulan terakhir {m} · paling lambat {d}',
-  'settings.leave': 'Cuti', 'settings.leaveSub': 'cuti {m} · paling lambat {d}', 'settings.upgrade': 'Naik paket', 'settings.upgradeSub': 'mulai tanggal 1 berikutnya', 'settings.noNotice': 'tanpa pemberitahuan',
-  'settings.leaveRun': 'Cuti berturut-turut', 'settings.leaveRunSub': 'tanpa kabar sesudahnya, keanggotaan berakhir', 'settings.leaveRunV': 'maks. {n} bulan', 'settings.days': 'hari',
+  'settings.leave': 'Cuti', 'settings.leaveSub': 'cuti {m} · paling lambat {d}', 'settings.upgrade': 'Naik paket', 'settings.upgradeSub': 'mulai tanggal 1 berikutnya · paling lambat {d}',
+  'settings.leaveRun': 'Cuti berturut-turut', 'settings.leaveRunSub': 'tanpa kabar sesudahnya, keanggotaan berakhir', 'settings.days': 'hari', 'settings.months': 'bulan',
   'settings.fewAlert': 'Pengingat sebelum bulan depan', 'settings.fewAlertSub': '{m}: pengingat {a} · perubahan ditutup {c}',
 };
