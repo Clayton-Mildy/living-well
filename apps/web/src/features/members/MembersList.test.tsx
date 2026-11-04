@@ -140,3 +140,26 @@ describe('Members, In the club by plan', () => {
     expect(host.querySelector('[data-testid="members-split"]')).toBeNull();
   });
 });
+
+describe('Members, Pick-up filter', () => {
+  it('lists only active members with pick-up on, each with its monthly price', async () => {
+    const state = buildSeed().citra;
+    for (const m of Object.values(state.members)) delete m.pickup;
+    const other = Object.keys(state.members).find((k) => k !== 'm1' && k !== 'm2' && !state.members[k].deletedAt)!;
+    state.members.m1.pickup = { on: true };
+    state.members.m2.pickup = { on: true, price: 450_000 };
+    state.members[other].pickup = { on: false, price: 450_000 };
+    useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
+    useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=pickup']}><MembersList /></MemoryRouter>); });
+    const rowOf = (id: string) => host!.querySelector(`[data-member="${id}"]`);
+    expect(host.querySelectorAll('[data-member]')).toHaveLength(2);
+    expect(rowOf('m1')?.querySelector('[data-testid="member-pickup"]')?.textContent).toBe('Pick-up · Rp 600.000');
+    expect(rowOf('m2')?.querySelector('[data-testid="member-pickup"]')?.textContent).toBe('Pick-up · Rp 450.000 · custom');
+    expect(rowOf(other)).toBeNull();
+  });
+});
+

@@ -309,3 +309,42 @@ describe('the family signs the form at registration (round 15)', () => {
     expect(off(button('Create member'))).toBe(true);
   });
 });
+
+describe('Pick-up at registration', () => {
+  async function atPlanStep() {
+    const st = openClub('mgmt');
+    const base = initialState(st, { kind: 'new' }, T);
+    saveDraft({ kind: 'new' }, { ...base, title: 'Ibu', name: 'Ratna Dewi', dob: '1946-10-14', contact: 'Sari Dewi', phone: '0812 5555 0101', plan: 'flex', form: { mediaId: 'md_scan0000000001', fileName: 'scan.jpg' }, consentData: true });
+    await show(<RegistrationFlow mode={{ kind: 'new' }} onDone={() => {}} />);
+    await click(button('Resume'));
+    await click(button('Edit', flow().querySelector('[data-review-group="plan"]')!));
+    expect(flow().dataset.regStep).toBe('plan');
+  }
+  const sw = () => Array.from(flow().querySelectorAll<HTMLElement>('[role="switch"]')).find((b) => /^Pick-up/.test(b.textContent ?? ''));
+  it('the Plan step has a Pick-up switch; on shows the club price, editable, and the review and Create carry it', async () => {
+    await atPlanStep();
+    expect(sw()).toBeTruthy();
+    expect(input('pickupPrice')).toBeNull();
+    await click(sw());
+    expect(input('pickupPrice')?.value).toBe('600.000');
+    await type(input('pickupPrice'), '450000');
+    expect(input('pickupPrice')?.value).toBe('450.000');
+    await click(Array.from(document.querySelectorAll<HTMLElement>('button')).filter((b) => textOf(b) === 'Review').pop());
+    expect(flow().querySelector('[data-review-group="plan"]')!.textContent).toMatch(/Pick-upRp 450\.000 \/ month/);
+    await click(button('Create member'));
+    await settle();
+    expect(h.act.mock.calls[0][1]).toMatchObject({ pickup: { on: true, price: 450_000 } });
+  });
+  it('a price below Rp 1.000 holds the step back; off sends no pick-up', async () => {
+    await atPlanStep();
+    await click(sw());
+    await type(input('pickupPrice'), '500');
+    expect(off(Array.from(document.querySelectorAll<HTMLElement>('button')).filter((b) => textOf(b) === 'Review').pop())).toBe(true);
+    await click(sw());
+    await click(Array.from(document.querySelectorAll<HTMLElement>('button')).filter((b) => textOf(b) === 'Review').pop());
+    await click(button('Create member'));
+    await settle();
+    expect(h.act.mock.calls[0][1]).not.toHaveProperty('pickup');
+  });
+});
+

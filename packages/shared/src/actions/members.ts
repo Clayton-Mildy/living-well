@@ -11,7 +11,7 @@ import { carrySigning, requireMember, shortOf, familyUserIds, signAtRegistration
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 import { NOTE_KEYS } from '../rules/approvals';
 import { currentMembership, isOpen, isPendingRow, membershipStatus, displayName, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
-import { paidOn } from '../rules/billing';
+import { PICKUP_MAX, PICKUP_MIN, paidOn, pickupOfRegistration, type PickupIn } from '../rules/billing';
 import { isPlanId, planOf, planParams } from '../rules/plans';
 import { cleanRegistration, validateRegistration } from '../rules/applicationForm';
 import {
@@ -171,6 +171,15 @@ export function parseRegistration(v: unknown): MemberRegistration | undefined {
   return reg;
 }
 
+/** Pick-up chosen at registration: `{ on, price? }`, the price a whole number of rupiah from 1.000 to 100.000.000. */
+export function parsePickup(v: unknown): PickupIn | undefined {
+  if (v === undefined || v === null) return undefined;
+  const o = obj(v);
+  const price = o.price === undefined || o.price === null || o.price === '' ? null : Number(o.price);
+  if (price !== null && (!Number.isInteger(price) || price < PICKUP_MIN || price > PICKUP_MAX)) bad('err.invalid');
+  return { on: o.on === true, ...(price !== null ? { price } : {}) };
+}
+
 function parseNewMember(raw: unknown): NewMemberFull {
   const o = obj(raw);
   const h = obj(o.health ?? {});
@@ -180,6 +189,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
   const photo = mediaIdOf(o.photoMediaId);
   const registration = parseRegistration(o.registration);
   const signature = mediaIdOf(o.signatureMediaId);
+  const pickup = parsePickup(o.pickup);
   const input: NewMemberFull = {
     ...(photo ? { photoMediaId: photo } : {}),
     title: titleOf(o.title), // empty is reported by validateNewMember (members.err.titleRequired)
@@ -203,6 +213,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
     formFileName: txt(o.formFileName, 120) || 'registration-form',
     consent: { data: cons.data === true, face: cons.face !== false },
     ...(registration ? { registration } : {}),
+    ...(pickup ? { pickup } : {}),
     ...(signature ? { signatureMediaId: signature } : {}),
     ...optionalNote(o),
   };
@@ -320,6 +331,8 @@ export const membersActions: ActionDef[] = [
         care: { instructions: input.careInstructions, by: ctx.actor, at: ctx.nowDT }, consents, documents, face: { enrolled: false }, billing: { va: vaFor(num - 1) }, sim: { ...DEFAULT_SIM },
         ...(input.registration ? { registration: input.registration } : {}),
       };
+      const pk = pickupOfRegistration(d as unknown as ClubState, input.start, input.pickup);
+      if (pk) d.members[id].pickup = pk;
       signAtRegistration(d, id, input.signatureMediaId, ctx);
       ctx.result.memberId = id;
       ctx.result.familyId = familyId;

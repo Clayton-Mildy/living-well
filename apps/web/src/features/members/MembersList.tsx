@@ -3,7 +3,7 @@
 // Pending new members are listed as "Pending approval". The details (age, mobility, allergies, medicines) live on the profile.
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, ym, type Plan } from '@cp/shared';
+import { listName, contactsOfMember, flexMonth, fmtPhone, isPendingRow, initials, pickupPrice, rp, ym, type Plan } from '@cp/shared';
 import { FILTERS, MEMBER_FILTERS, MEMBER_SORTS, filterCounts, matchesQuery, memberRows, sortMemberRows, type MemberFilter, type MemberRow, type MemberSort } from '@cp/shared/rules/members';
 import { isDaysPlan, planDefs, planLabel } from '@cp/shared/rules/plans';
 import { FilterChips, Group, HAIRLINE, Icon, PageHead, Pager, PictureOpen, Pin, Select, TONES, photoBg, usePaged } from '../../components/ui';
@@ -126,6 +126,11 @@ export function MembersList() {
       </span>
     );
   };
+  /** the Pick-up filter: the member's monthly price on its own line ("Pick-up · Rp 600.000", "· custom" when it is their own) */
+  const pickupLine = (r: MemberRow, fs: number) => {
+    const pk = f === 'pickup' ? pickupPrice(s, r.m, today) : null;
+    return pk ? <span data-testid="member-pickup" style={{ fontSize: fs, lineHeight: '19px', color: '#4A4038', fontVariantNumeric: 'tabular-nums' }}>{t(pk.custom ? 'members.pickupRowCustom' : 'members.pickupRow', { p: rp(pk.price) })}</span> : null;
+  };
   /** a round call button beside the row (a link, so it never opens the profile) */
   const callBtn = (r: MemberRow, size: number) => {
     const c = contactOf(r.m.id);
@@ -186,6 +191,7 @@ export function MembersList() {
                     </span>
                     <FullName m={r.m} size={13} />
                     {contactLine(r, 13)}
+                    {pickupLine(r, 13)}
                     <span style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0 6px', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>
                       <span className={showSt ? undefined : 'cp-hide-phone'} style={showSt && r.st.key === 'pending' ? { color: st.fg, fontWeight: 500 } : undefined}>{stText}{showSt && sd.length ? ' ·' : ''}</span>
                       {sd.length && !r.sus ? <span data-sub-dates="">{sd.join(' · ')}</span> : null /* on hold: the status needs the line (the dates are on the profile) */}
@@ -261,6 +267,7 @@ export function MembersList() {
                     {r.m.nanny ? <NannyLine nanny={r.m.nanny} /> : null}
                   </span>
                   <FullName m={r.m} ellipsis={!isPhone} />
+                  {pickupLine(r, 14)}
                   <span style={{ display: 'flex', alignItems: 'flex-start', gap: 7, fontSize: 14, color: '#6B6259', lineHeight: '20px' }}>
                     <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: st.dot, flex: 'none', marginTop: 7 }} />
                     <span style={{ minWidth: 0 }}>

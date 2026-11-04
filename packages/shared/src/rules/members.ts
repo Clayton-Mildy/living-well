@@ -8,7 +8,7 @@ import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday,
 import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
 import { isPlanId, planDefs } from './plans';
-import { invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
+import { type PickupIn, invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
 import { onLeaveOn } from './leave';
 import { latestBp } from './health';
 import { checkOnList, type CheckOnRow } from './checkOn';
@@ -154,8 +154,8 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 }
 
 // ---------- list rows, filters, search ----------
-export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'ended';
-export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'in', 'att', 'checkOn', 'ended']; // round 16: Flex and Gold beside Active
+export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'pickup' | 'ended';
+export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'pickup', 'in', 'att', 'checkOn', 'ended']; // round 16: Flex and Gold beside Active
 /** The plans a member can be put on, as pickers list them: Flex, Gold, then the catalogue's active plans (a retired plan leaves the pickers; its members keep it). Name them with `planLabel`. */
 export const activePlans = (s: ClubState): PlanDef[] => planDefs(s).filter((p) => p.active);
 export interface MemberRow {
@@ -208,6 +208,7 @@ export const FILTERS: Record<MemberFilter, (r: MemberRow) => boolean> = {
   checkOn: (r) => !!r.checkOn,
   flex: (r) => !r.ended && r.plan === 'flex',
   gold: (r) => !r.ended && r.plan === 'gold',
+  pickup: (r) => !r.ended && !r.pending && !!r.m.pickup?.on,
   ended: (r) => r.ended,
 };
 export type MemberSort = 'name' | 'startNew' | 'startOld' | 'endSoon';
@@ -384,6 +385,8 @@ export interface NewMemberInput {
   /** round 15: the family member present signed the form on the pad (uploaded first); then the paper scan is not needed */
   signatureMediaId?: string;
   consent: { data: boolean; face: boolean };
+  /** the monthly pick-up service chosen at registration */
+  pickup?: PickupIn;
   note?: string;
 }
 export const ageRange = { min: 18, max: 120 };

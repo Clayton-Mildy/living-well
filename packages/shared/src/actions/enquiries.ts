@@ -5,12 +5,12 @@ import type { ClubState, DrugAllergy, Enquiry, LeadMove, FamilyContact, FoodAlle
 import { defineAction, hasRole, DomainError, type Ctx } from './framework';
 import { familyUserIds, shortOf, signAtRegistration } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
-import { FEE_DEFAULTS, priceOn } from '../rules/billing';
+import { FEE_DEFAULTS, pickupOfRegistration, priceOn, type PickupIn } from '../rules/billing';
 import { isPlanId, planDef, planOf, planParams } from '../rules/plans';
 import {
   ALL_RELATIONS, DIETS, DRUGS, ENQ_SOURCES, FOODS, LOST_REASONS, MOBILITIES, bookingDayCheck, contactFromLead, linkFromLead, memberFromLead, seniorName, trialDays, type EnqStage, type LeadDetails,
 } from '../rules/enquiries';
-import { mediaIdOf, parseCarer, parseHealthBasics, parseKtp, parseRegistration, titleOf, txt } from './members';
+import { mediaIdOf, parseCarer, parseHealthBasics, parseKtp, parsePickup, parseRegistration, titleOf, txt } from './members';
 import { cleanRegistration } from '../rules/applicationForm';
 import { FORM_LINK_DAYS, FORM_STEPS, enquiryByFormToken, formRevOf, formPath, formTokenOf, formLinkState } from '../rules/enquiries';
 import { arr, bad, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
@@ -106,7 +106,7 @@ function parseSourceOther(v: unknown): string {
 interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] }
 interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] | null }
 /** `formMediaId` and `formFileName`: the signed paper registration form, uploaded first (POST /api/media). */
-export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string; /** round 15: the family member present signed the form (uploaded first) */ signatureMediaId?: string }
+export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string; /** round 15: the family member present signed the form (uploaded first) */ signatureMediaId?: string; /** the monthly pick-up chosen at registration */ pickup?: PickupIn }
 
 /** After a lead becomes a member (immediately for management, on approval for lobby): welcome message, visits closed. Members come on any open day, so nothing is booked. */
 function finishJoin(d: Draft<ClubState>, memberId: string, input: ConvertIn, ctx: Ctx) {
@@ -332,12 +332,14 @@ export const enquiriesActions = [
       const dob = o.dob ? isoDate(o.dob, 'dob') : '';
       const address = str(o.address, 200);
       const registration = parseRegistration(o.registration);
+      const pickup = parsePickup(o.pickup);
       return {
         enquiryId: id60(o.enquiryId, 'enquiryId'), plan, start: isoDate(o.start, 'start'), formMediaId: mediaId, formFileName: str(o.formFileName, 120) || 'registration-form',
         ...(dob ? { dob } : {}), ...(address ? { address } : {}), ...(o.health !== undefined ? { health: parseHealthBasics(o.health) } : {}), ...(registration ? { registration } : {}),
         ...(o.nanny !== undefined ? { nanny: parseCarer(o.nanny) as OnlineRegistration['nanny'] } : {}),
         ...(o.ktp !== undefined ? { ktp: parseKtp(o.ktp) } : {}),
         ...(signatureMediaId ? { signatureMediaId } : {}),
+        ...(pickup ? { pickup } : {}),
       };
     },
     run(d, i, ctx) {
@@ -359,6 +361,8 @@ export const enquiriesActions = [
         id: memberId, contactId, enquiry: e as unknown as Enquiry, plan: i.plan, start: i.start, today: ctx.today, nowDT: ctx.nowDT, actor: ctx.actor, vaIndex: num, photoTone: num % 5,
         ...(i.formMediaId ? { form: { mediaId: i.formMediaId, fileName: i.formFileName } } : {}), details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration, nanny: i.nanny, ktp: i.ktp },
       });
+      const pk = pickupOfRegistration(s, i.start, i.pickup);
+      if (pk) d.members[memberId].pickup = pk;
       if (!existing) d.familyContacts[contactId] = contactFromLead({ id: contactId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor, activated: !gate });
       const link = linkFromLead({ contactId, memberId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor });
       d.familyLinks[link.id] = link;

@@ -71,6 +71,15 @@ export function pickupPrice(s: ClubState, m: Member, date: ISODate): { price: nu
   if (!m.pickup?.on) return null;
   return m.pickup.price ? { price: m.pickup.price, custom: true } : { price: feeOf(priceOn(s, date), 'pickup'), custom: false };
 }
+/** Pick-up as chosen at registration: the switch and the monthly price (the club default when none is given). */
+export interface PickupIn { on: boolean; price?: number }
+export const PICKUP_MIN = 1000;
+export const PICKUP_MAX = 100_000_000;
+/** What a registration stores: nothing when off, `{ on: true }` at the club default, else `{ on: true, price }`. */
+export function pickupOfRegistration(s: ClubState, date: ISODate, p: PickupIn | undefined): Member['pickup'] {
+  if (!p?.on) return undefined;
+  return p.price && p.price !== feeOf(priceOn(s, date), 'pickup') ? { on: true, price: p.price } : { on: true };
+}
 /** The day a period's invoice run is issued (the 21st). */
 export const issueDateOf = (s: ClubState, period: YM): ISODate => `${period}-${String(s.club.settings.issueDay).padStart(2, '0')}`;
 

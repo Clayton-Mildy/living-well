@@ -1,6 +1,6 @@
 // KC round 12: the registration as six steps (Join a lead and Add member share them). The state the steps edit, how it starts (empty, or
 // from a lead and the family's online form), and what still blocks each step — the add-member and application-form validators, per field group.
-import { isOpen, live, sortBy, type ClubState, type DocType, type Enquiry, type OnlineRegistration, type ISODate, type KtpUploads, type Plan, type Relation, type Title } from '@cp/shared';
+import { PICKUP_MAX, PICKUP_MIN, isOpen, parseN, live, sortBy, type ClubState, type DocType, type Enquiry, type OnlineRegistration, type ISODate, type KtpUploads, type Plan, type Relation, type Title } from '@cp/shared';
 import { genderOf, validateNewMember, type FieldIssue } from '@cp/shared/rules/members';
 import { startMondays } from '@cp/shared/rules/enquiries';
 import { validateRegistration } from '@cp/shared/rules/applicationForm';
@@ -24,6 +24,7 @@ export interface RegState {
   contactMode: 'new' | 'existing'; existingId: string; contact: string; rel: Relation; phone: string; /** round 16: where the contract is emailed */ email: string; primary: boolean;
   health: HealthDraft & AllergyDraft; carer: CarerDraft; meds: MedRow[]; care: string;
   plan: Plan | ''; start: string;
+  /** the monthly pick-up service: on, and its price as typed (empty = the club's price) */ pickup: boolean; pickupPrice: string;
   /** the signed paper form (already uploaded) */ form: PaperFile | null;
   /** photos of the ID cards (already uploaded) */ ktp: KtpUploads;
   docs: DocType[];
@@ -35,7 +36,7 @@ export const blankState = (): RegState => ({
   title: 'Oma', name: '', gender: 'f', dob: '', address: '', usual: '', photo: '', spouseId: '',
   contactMode: 'new', existingId: '', contact: '', rel: 'daughter', phone: '', email: '', primary: true,
   health: { conditions: [], diabetic: false, mobility: 'none', diet: [], food: [], foodOther: '', drug: [], drugOther: '' }, carer: { nanny: false, nannyName: '', nannyNik: '' }, meds: [], care: '',
-  plan: '', start: '', form: null, ktp: {}, docs: [], consentData: false, consentFace: true, note: '', reg: regDraftOf(),
+  plan: '', start: '', pickup: false, pickupPrice: '', form: null, ktp: {}, docs: [], consentData: false, consentFace: true, note: '', reg: regDraftOf(),
 });
 
 /** The health answers the family gave through the link: all of them once sent, and a half-filled draft's only when it got as far as answering something. */
@@ -76,11 +77,17 @@ export const answersOf = (st: RegState): string => JSON.stringify([st.title, st.
 /** The signature the family drew on the lead's online form, once they sent it. */
 export const onlineSignatureOf = (e: Enquiry | undefined) => (e?.form?.submittedAt ? e.form.draft?.signature : undefined);
 
+/** The price typed for pick-up: 0 = none typed (the club's price), null = out of range. */
+export function pickupPriceOf(st: Pick<RegState, 'pickupPrice'>): number | null {
+  const n = parseN(st.pickupPrice);
+  return n === 0 || (n >= PICKUP_MIN && n <= PICKUP_MAX) ? n : null;
+}
+
 const FIELDS: Record<RegStep, string[]> = {
   person: ['title', 'name', 'dob', 'usualArrival', 'nik', 'rtRw', 'postcode', 'regPhone', 'regMobile', 'email'],
   family: ['contact', 'contactName', 'phone', 'email', 'guarantorNik', 'nannyName', 'nannyNik'],
   health: ['meds'],
-  plan: ['plan', 'start'],
+  plan: ['plan', 'start', 'pickup'],
   paper: [], // the scan is optional now: the review asks for it only when the pad is empty
   review: ['form', 'consentData'],
 };
@@ -94,6 +101,7 @@ export function stepIssues(step: RegStep, st: RegState, mode: RegMode, today: IS
     ...validateNewMember({ ...toCreateInput(st), ...(signed ? { signatureMediaId: 'pad' } : {}) }, today), // signed on the pad: that stands for the scan
     ...validateRegistration(regOfDraft(st.reg, st.carer.nanny)),
     ...(!lead && st.contactMode === 'existing' && !st.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []),
+    ...(st.pickup && pickupPriceOf(st) === null ? [{ field: 'pickup', code: 'err.invalid' }] : []),
     ...(s && st.start && st.start >= today && !isOpen(s, st.start) ? [{ field: 'start', code: 'err.closedDay' }] : []),
   ];
   return all.filter((i) => FIELDS[step].includes(i.field) && !(lead && NOT_FOR_LEADS.includes(i.field)) && !(lead && i.code === 'members.err.dobRequired')); // Join keeps the date of birth optional

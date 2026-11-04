@@ -3,6 +3,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, findByPhone, live, lobbyGroups, memberName, planOn, membershipStatus, type ClubState, type User } from '../index';
 import { parseCarer } from './members';
+import { runLinesFor } from '../rules/billing';
 import { formDoc, signingOf } from '../rules/signing';
 import { approvalCounts, pendingItems } from '../rules/approvals';
 import { faceConsent, faceReady, FILTERS, filterCounts, matchesQuery, memberRows as rows2, memberStatus, isNewMember, nextMemberId, finalInvoiceFor } from '../rules/members';
@@ -694,7 +695,7 @@ describe('list rules: search, filters, status', () => {
   it('six filters with counts; pending members are listed; ended ones only under Ended', () => {
     const c = seed();
     const rows = rows2(c.citra, T);
-    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, ended: 0, split: { active: { flex: 2, gold: 3 }, in: { flex: 1, gold: 2 } } }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
+    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, pickup: 1, ended: 0, split: { active: { flex: 2, gold: 3 }, in: { flex: 1, gold: 2 } } }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
     const r = run(c.citra, 'members.create', newMember(), who(c, 's1'));
     const rows2b = rows2(r.state, T);
     expect(rows2b.find((x) => x.m.id === 'm47')?.st.key).toBe('pending');
@@ -843,5 +844,26 @@ describe('round 16: members.setPickup', () => {
     const back = run(r.state, 'members.setPickup', { memberId: 'm1', on: true, price: null }, who(c, 's9'));
     expect(back.state.members.m1.pickup).toEqual({ on: true });
     expect(() => run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's1'))).toThrow('err.forbidden');
+  });
+});
+
+describe('members.create: pick-up chosen at registration', () => {
+  const made = (over: Record<string, unknown>) => { const c = seed(); const r = run(c.citra, 'members.create', newMember(over), who(c, 's9')); return { r, m: r.state.members[r.result.memberId as string] }; };
+  it('the club default price stores just { on: true }', () => {
+    expect(made({ pickup: { on: true, price: 600_000 } }).m.pickup).toEqual({ on: true });
+    expect(made({ pickup: { on: true } }).m.pickup).toEqual({ on: true });
+  });
+  it('another price is kept, and the first invoice run bills the pick-up line at it', () => {
+    const { r, m } = made({ pickup: { on: true, price: 450_000 } });
+    expect(m.pickup).toEqual({ on: true, price: 450_000 });
+    expect(runLinesFor(r.state, m, '2026-11', T).find((l) => l.kind === 'pickup')?.amount).toBe(450_000);
+  });
+  it('off or not given stores no pick-up', () => {
+    expect(made({}).m.pickup).toBeUndefined();
+    expect(made({ pickup: { on: false, price: 450_000 } }).m.pickup).toBeUndefined();
+  });
+  it('a price outside Rp 1.000 to 100.000.000 or a fraction fails', () => {
+    const c = seed();
+    for (const price of [999, 100_000_001, 1500.5, 'abc']) expect(() => run(c.citra, 'members.create', newMember({ pickup: { on: true, price } }), who(c, 's9'))).toThrow('err.invalid');
   });
 });

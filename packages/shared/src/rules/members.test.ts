@@ -361,6 +361,6 @@ describe('findDuplicates (round 12 registration)', () => {
 
 describe('filters', () => {
   it('round 16: Flex and Gold sit beside Active (a helicopter view of the counts)', () => {
-    expect(MEMBER_FILTERS).toEqual(['active', 'flex', 'gold', 'in', 'att', 'checkOn', 'ended']);
+    expect(MEMBER_FILTERS).toEqual(['active', 'flex', 'gold', 'pickup', 'in', 'att', 'checkOn', 'ended']);
   });
 });
