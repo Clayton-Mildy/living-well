@@ -164,7 +164,7 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
 }
 /**
  * Round 17: what a member will see on their next bill beyond the plan fee (a preview; the plan fee is left out because the family knows it and leave or a stop
- * would make a wrong number): the charges still waiting for an invoice (a field trip, a birthday cake) and the pick-up fee. The items are read from the
+ * would make a wrong number): the charges still waiting for an invoice (a field trip, a birthday cake), the pick-up fee and (round 20) the Flex extra days. The items are read from the
  * next un-run period's runLinesFor() (this month's until its run is done, then next month's), so the preview and the invoice can't drift apart.
  */
 export interface NextBillItem { id: string; label: string; params?: Record<string, string | number>; amount: number }
@@ -179,6 +179,10 @@ export function nextBill(s: ClubState, memberId: string, today: ISODate): { item
   const items: NextBillItem[] = [];
   const pick = lines.find((l) => l.kind === 'pickup');
   if (pick) items.push({ id: 'pickup', label: pick.label, amount: pick.amount });
+  // round 20 fix (I2, KC: a trip day is a club day): a Flex member's extra days on that invoice (last month's, billed with this run), so a trip-day check-in
+  // over the quota shows here beside the trip fee once it is on the next invoice
+  const extra = lines.find((l) => l.kind === 'extraDay');
+  if (extra) items.push({ id: extra.id, label: extra.label, ...(extra.params ? { params: extra.params } : {}), amount: extra.amount });
   const charges = sortBy(lines.filter((l) => l.id.startsWith('charge-')).map((l) => ({ l, c: s.pendingCharges[l.id.slice(7)] })), ({ l, c }) => (c?.createdAt || '') + l.id);
   for (const { l } of charges) items.push({ id: l.id.slice(7), label: l.label, ...(l.params ? { params: l.params } : {}), amount: l.amount });
   return { items, total: sum(items.map((i) => i.amount)) };

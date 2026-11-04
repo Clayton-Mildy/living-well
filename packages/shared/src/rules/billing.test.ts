@@ -172,6 +172,23 @@ describe('round 17: on your next bill', () => {
     s.members.m46.memberships.at(-1)!.leaves = [];
     expect(nextBill(s, 'm46', T).items.map((i) => i.amount)).toEqual([450_000]);
   });
+  // round 20 fix (I2, KC: keep the extra day and the trip fee): Oma Lina (Flex, 10 visits) checks in on a trip day on the 21st, after October's run:
+  // November's invoice carries the extra day and the trip fee, and the preview lists both
+  it('a Flex extra day on a trip day is on the next bill beside the trip fee, as on the invoice', () => {
+    let s = bare();
+    const as = (id: string) => getUser({ [s.clubId]: s }, id)!;
+    const clk = { today: T, nowMin: 600 };
+    const ev = execute(s, 'calendarEvent.create', { date: T, kind: 'outing', title: 'Ancol aquarium', fee: 250_000, notify: false }, as('s9'), clk, 'b1');
+    s = ev.state;
+    const r = execute(s, 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, as('s1'), clk, 'b2');
+    expect(r.result).toMatchObject({ extra: true, tripFee: 250_000 });
+    const b = nextBill(r.state, 'm1', T);
+    const extra = b.items.find((i) => i.id === 'extra-2026-10');
+    expect(extra).toMatchObject({ label: 'inv.line.extra', params: { month: '2026-10' } });
+    expect(b.items.some((i) => i.id.startsWith('trip-'))).toBe(true);
+    const inv = runLinesFor(r.state, r.state.members.m1, PERIOD, T).filter((l) => l.kind === 'extraDay' || l.kind === 'pickup' || l.id.startsWith('charge-'));
+    expect(b.total).toBe(sum(inv.map((l) => l.amount)));
+  });
   it('on leave in November, today 4 Nov: no pick-up, as on the invoice', () => {
     const s = bare();
     s.members.m46.pickup = { on: true, price: 450_000 };

@@ -98,13 +98,15 @@ export function Arrivals() {
     await act('attendance.undoCheckOut', { memberId }, { ok: t('lobby.tUndoOut', { n: displayName(m) }) });
   }, [act, t]);
 
-  /** Check a member in. The toast carries Undo, and says when the visit is an extra day. */
+  /** Check a member in. The toast carries Undo, and says when the visit is an extra day and when it charged the field trip fee. */
   const doCheckIn = async (memberId: string, method: 'face' | 'manual', face: Face | null): Promise<boolean> => {
     const cur = latest.current;
     const r = await act('attendance.checkIn', { memberId, method, ...(face !== null ? { face } : {}) }, { silent: true });
     if (!r.ok) return false;
     let text = checkedInText(memberId, String(r.result.time || ''));
     if (r.result.extra) text += ' ' + t('lobby.extraToast', { p: price(priceOn(cur.s, cur.today).extra) });
+    // round 20 fix (I2): a trip-day check-in also puts the trip fee on the next invoice (the extra day goes on next month's, with that month's run)
+    if (typeof r.result.tripFee === 'number') text += ' ' + t('lobby.tripFeeToast', { p: price(r.result.tripFee) });
     say(text, { action: { label: t('common.undo'), run: () => void undoIn(memberId) } });
     return true;
   };

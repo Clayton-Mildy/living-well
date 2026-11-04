@@ -22,6 +22,7 @@ export const lobby: Same<typeof EN> = {
   pagerAria: 'Halaman {list}', tileIn: 'Buka daftar check-out', tileGone: 'Lihat siapa yang sudah pulang',
   goneHint: 'Anggota yang sudah check-out hari ini. Buka salah satu untuk membatalkan check-out.', countOf: '{n} dari {total}',
   visitOf: '{plan} · kunjungan ke-{n} dari {q} bulan ini', goldU: '{plan} · hari tanpa batas', extraVisit: 'Kunjungan ke-{n} dari {q} bulan ini: hari tambahan, {p} di tagihan bulan depan.',
+  tripFeeToast: 'Biaya karyawisata: {p} di tagihan berikutnya.',
   extraToast: 'Ini hari tambahan: {p} di tagihan bulan depan.',
   careInstructions: 'Petunjuk perawatan', noNotes: 'Belum ada catatan.', callAria: 'Telepon {name}', undoIn: 'Batalkan check-in', undoOut: 'Batalkan check-out', diabetic: 'Diabetes',
   drugAllergy: 'Alergi {d}', medLunch: '{name} {dose} · makan siang', notInToday: 'Belum check-in hari ini', inOut: 'Tiba {a} · pulang {l}',

@@ -26,6 +26,7 @@ export const lobby = {
   goneHint: 'Members who checked out today. Open one to undo a check-out.', countOf: '{n} of {total}',
   // visits (Flex: 10 visits a month; Gold: unlimited)
   visitOf: '{plan} · visit {n} of {q} this month', goldU: '{plan} · unlimited days', extraVisit: 'Visit {n} of {q} this month: an extra day, {p} on next month’s invoice.',
+  tripFeeToast: 'Field trip fee: {p} on the next invoice.',
   extraToast: 'This is an extra day: {p} on next month’s invoice.',
   // drawer
   careInstructions: 'Care instructions', noNotes: 'No notes yet.', callAria: 'Call {name}', undoIn: 'Undo check-in', undoOut: 'Undo check-out', diabetic: 'Diabetic',
