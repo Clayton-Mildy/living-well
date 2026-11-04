@@ -10,6 +10,8 @@ const NOW = 600; // 10:00
 const at = (today: string, nowMin = NOW) => ({ today, nowMin });
 const clubs = buildSeed();
 let n = 0;
+/** Round 20: the seeded Taman Mini trip's fees (a pending charge each) are not what these invoice tests are about, so they are left out. */
+const noTripFees = (s: ClubState): ClubState => ({ ...s, pendingCharges: Object.fromEntries(Object.entries(s.pendingCharges).filter(([, c]) => c.source?.id !== 'ev-outing-past')) });
 
 /** Every open invoice paid in full (a club where nobody owes anything). */
 const paidUp = (s: ClubState): ClubState => {
@@ -18,7 +20,7 @@ const paidUp = (s: ClubState): ClubState => {
   return { ...s, payments };
 };
 /** A little world: current state, run actions as any demo user, optionally at another date/time. */
-function world(start: ClubState = buildSeed().citra) {
+function world(start: ClubState = noTripFees(buildSeed().citra)) {
   let s = start;
   const w = {
     get s() { return s; },
@@ -49,7 +51,7 @@ function withVisit(s: ClubState, memberId: string, date: string, time = '10:05')
   return { ...s, attendance: { ...s.attendance, [id]: a } };
 }
 /** Oma Lina has 10 visits on 1–20 Oct (her Flex quota); today's check-in (21 Oct) is her 11th: one extra day, billed on November's invoice. */
-const withLinaExtra = (s: ClubState) => withVisit(s, 'm1', '2026-10-21');
+const withLinaExtra = (s: ClubState) => withVisit(noTripFees(s), 'm1', '2026-10-21');
 const issueNov = (w: ReturnType<typeof world>) => w.run('run.issue', { period: '2026-11', early: true }, 's10');
 
 describe('invoice run', () => {

@@ -10,7 +10,9 @@ import { runPlan } from '../rules/finance';
 const T = '2026-10-21';
 const clubs = buildSeed();
 // round 16: Ega's price changes would wait for the Owner (ownerGate.test.ts), so the switch is off
-const base: ClubState = { ...clubs.citra, club: { ...clubs.citra.club, settings: { ...clubs.citra.club.settings, ownerApproval: { mgmt: { pricing: false, holidays: false, budget: false } } } } };
+/** Round 20: the seeded Taman Mini trip's fees (a pending charge each) are not what these invoice tests are about, so they are left out. */
+const noTripFees = (s: ClubState): ClubState => ({ ...s, pendingCharges: Object.fromEntries(Object.entries(s.pendingCharges).filter(([, c]) => c.source?.id !== 'ev-outing-past')) });
+const base: ClubState = { ...noTripFees(clubs.citra), club: { ...clubs.citra.club, settings: { ...clubs.citra.club.settings, ownerApproval: { mgmt: { pricing: false, holidays: false, budget: false } } } } };
 let n = 0;
 const at = (today: string, nowMin = 600) => ({ today, nowMin });
 const run = (s: ClubState, name: string, input: unknown, uid: string, clock = at(T)) => execute(s, name, input, getUser({ citra: s }, uid)!, clock, `m${++n}`);

@@ -5,7 +5,11 @@ import { withMarks } from './testMarks';
 import { bookableDays, bookingDayCheck, enquiriesByStage, openEnquiries, paperFormDoc, splitName, startMondays } from './enquiries';
 
 const T = '2026-10-21';
-const { citra: s, adina } = buildSeed();
+const seeded = buildSeed();
+/** Round 20: the seeded Taman Mini trip's fees (a pending charge each) are not what these invoice tests are about, so they are left out. */
+const noTripFees = (s: ClubState): ClubState => ({ ...s, pendingCharges: Object.fromEntries(Object.entries(s.pendingCharges).filter(([, c]) => c.source?.id !== 'ev-outing-past')) });
+const s = noTripFees(seeded.citra);
+const { adina } = seeded;
 const clock = { today: T, nowMin: 10 * 60 + 5 };
 /** The lobby checks a member in (the 11th Flex visit of a month is an extra day). */
 const checkIn = (st: ClubState, memberId: string) => execute(st, 'attendance.checkIn', { memberId, method: 'manual' }, getUser({ citra: st }, 's1')!, clock, `t-${memberId}`).state;
