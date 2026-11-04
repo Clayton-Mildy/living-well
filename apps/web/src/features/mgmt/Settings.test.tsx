@@ -92,7 +92,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     await show(<Settings />, width);
     await type(field('leave'), '10');
     await click(button(section('Membership rules'), 'Save')); // the Owner's own change: a plain Save
-    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 14, stop: 14, leave: 10 });
+    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 14, stop: 14, leave: 10, upgrade: 1 });
     expect(document.body.textContent).not.toContain('Waiting for owner');
     expect(field('leave').value).toBe('10');
   });
@@ -139,7 +139,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Settings › notice per kind (%
     openClub('s9', '2026-11-05');
     await show(<Settings />, width);
     const m = section('Membership rules');
-    expect(Array.from(m.querySelectorAll('input')).map((x) => x.getAttribute('aria-label'))).toEqual(['Downgrade', 'Stop membership', 'Leave (cuti)']);
+    expect(Array.from(m.querySelectorAll('input')).map((x) => x.getAttribute('aria-label')).slice(0, 3)).toEqual(['Downgrade', 'Stop membership', 'Leave (cuti)']);
     for (const k of ['downgrade', 'stop', 'leave']) {
       expect(field(k).value).toBe('14');
       expect(row(k).textContent).toContain('ask by 17 Nov');
@@ -164,17 +164,50 @@ describe.each([['phone', 390], ['wide', 1280]])('Settings › notice per kind (%
     await type(field('stop'), '30');
     expect(button(section('Membership rules'), 'Send to owner')).toBeUndefined();
     await click(button(section('Membership rules'), 'Save'));
-    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 14 });
+    expect(useReplica.getState().view!.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 14, upgrade: 1 });
   });
-  it('Upgrade and Leave in a row are fixed rows with no input', async () => {
+  it('round 19: Ega on 5 Nov sees Upgrade at 1 (ask by 30 Nov) and Leave in a row at 2 months', async () => {
     openClub('s9', '2026-11-05');
     await show(<Settings />, width);
-    for (const [k, text] of [['upgrade', 'starts the next 1st'], ['leaveRun', 'up to 2 months']]) {
-      const r = section('Membership rules').querySelector<HTMLElement>(`[data-setting="${k}"]`)!;
-      expect(r.querySelector('input')).toBeNull();
-      expect(r.textContent).toContain(text);
-    }
-    expect(section('Membership rules').querySelector('[data-setting="upgrade"]')!.textContent).toContain('no notice');
+    expect(Array.from(section('Membership rules').querySelectorAll('input')).map((x) => x.getAttribute('aria-label'))).toEqual(['Downgrade', 'Stop membership', 'Leave (cuti)', 'Upgrade', 'Leave in a row']);
+    expect(field('upgrade').value).toBe('1');
+    expect(row('upgrade').textContent).toContain('starts the next 1st · ask by 30 Nov');
+    expect(row('upgrade').textContent).toContain('days');
+    expect(field('leaveRun').value).toBe('2');
+    expect(row('leaveRun').textContent).toContain('no word after that ends the membership');
+    expect(row('leaveRun').textContent).toContain('months');
+    expect(section('Membership rules').textContent).not.toContain('no notice');
+  });
+  it('round 19: Upgrade 5 moves its line to 26 Nov; Ega sends {notice:{upgrade:5}} to the owner', async () => {
+    openClub('s9', '2026-11-05');
+    await show(<Settings />, width);
+    await type(field('upgrade'), '5');
+    expect(row('upgrade').textContent).toContain('ask by 26 Nov');
+    await click(button(section('Membership rules'), 'Send to owner'));
+    expect(actMock).toHaveBeenCalledWith('club.updateSettings', { notice: { upgrade: 5 } });
+  });
+  it('round 19: Benjamin saves Upgrade 5 at once', async () => {
+    openClub('s11', '2026-11-05');
+    await show(<Settings />, width);
+    await type(field('upgrade'), '5');
+    expect(button(section('Membership rules'), 'Send to owner')).toBeUndefined();
+    await click(button(section('Membership rules'), 'Save'));
+    expect(useReplica.getState().view!.club.settings.notice).toMatchObject({ upgrade: 5 });
+  });
+  it('round 19: Leave in a row 3 sends {leaveMaxMonths:3}; 7 shows the range on blur and is not sent', async () => {
+    openClub('s11', '2026-11-05');
+    await show(<Settings />, width);
+    await type(field('leaveRun'), '7');
+    expect(section('Membership rules').textContent).not.toContain('Use a whole number from 1 to 6.');
+    await act(async () => { field('leaveRun').dispatchEvent(new FocusEvent('focusout', { bubbles: true })); });
+    expect(section('Membership rules').textContent).toContain('Use a whole number from 1 to 6.');
+    expect(field('leaveRun').getAttribute('aria-invalid')).toBe('true');
+    await click(button(section('Membership rules'), 'Save'));
+    expect(actMock).not.toHaveBeenCalled();
+    await type(field('leaveRun'), '3');
+    await click(button(section('Membership rules'), 'Save'));
+    expect(actMock).toHaveBeenCalledWith('club.updateSettings', { leaveMaxMonths: 3 });
+    expect(useReplica.getState().view!.club.settings.leaveMaxMonths).toBe(3);
   });
   it('the few-visits row shows 16 with December: alert 15 Nov · changes close 17 Nov; 10 is refused with the range', async () => {
     openClub('s9', '2026-11-05');

@@ -64,20 +64,20 @@ export const family = {
 
   // ----- leave (cuti) and an unpaid invoice (KC round 6, the brochure's terms) -----
   leaveAsk: 'Ask for leave', leaveRecord: 'Record leave', leaveTitle: 'Leave for {name}', leaveRecordTitle: 'Record leave for {name}',
-  leaveBody: 'A month of leave costs {fee} on that month’s invoice instead of the plan. Ask in writing {days} before the 1st of that month; at most {max} months in a row.', leaveDaysOne: '1 day', leaveDaysN: '{n} days',
-  leaveBodyStaff: 'Record the leave the family asked for in writing. It costs {fee} on that month’s invoice instead of the plan: at most {max} months in a row, asked {days} before the 1st of that month.',
+  leaveBody: 'A month of leave costs {fee} on that month’s invoice instead of the plan. Ask in writing {days} before the 1st of that month; at most {max} {max|month|months} in a row.', leaveDaysOne: '1 day', leaveDaysN: '{n} days',
+  leaveBodyStaff: 'Record the leave the family asked for in writing. It costs {fee} on that month’s invoice instead of the plan: at most {max} {max|month|months} in a row, asked {days} before the 1st of that month.',
   leaveWhich: 'Which month?', leaveChoice: '{m} · ask by {d}', leaveNone: 'No month can be asked for any more.', leaveNote: 'Note (optional)', leaveNotePh: 'e.g. written request received on 10 Oct',
   leaveSend: 'Ask for leave · {m}', leaveRecordSend: 'Record leave · {m}', leaveSent: 'Leave for {m} asked. The club has been told.', leaveRecorded: 'Leave for {m} recorded.',
   leaveNow: 'On leave in {m}', leaveOpen: 'Leave in {m} · asked, you can take it back until {d}', leaveOpenStaff: 'Leave in {m} · asked, can be taken back until {d}', leaveLocked: 'Leave in {m} · confirmed · {fee} on that month’s invoice',
   leaveTakeBack: 'Take back', leaveTakenBack: 'Leave for {m} taken back.',
-  leaveWord: '{n} is on leave for 2 months in a row. Tell us by {d} that {n} is coming back in {m}, or the membership ends when the leave runs out.',
+  leaveWord: '{n} is on leave for {max} {max|month|months} in a row. Tell us by {d} that {n} is coming back in {m}, or the membership ends when the leave runs out.',
   leaveBack: 'Back in {m}', leaveBackSent: 'Thank you. The club knows {n} is back in {m}.', leaveSection: 'Leave',
   onHoldTold: 'Membership on hold: invoice {no} ({a}) is unpaid. {n} can come again once it is paid.',
   onHold: 'Membership on hold: invoice {no} ({a}) is unpaid. {n} can come again once it is paid. If it is still unpaid on {d}, the membership stops.',
   'notif.leaveAsked': '{name}: the family asked for leave in {month} ({fee} instead of the plan).', 'notif.leaveRecorded': 'Leave for {name} in {month} was recorded: {fee} on that month’s invoice instead of the plan.',
   'notif.leaveWithdrawn': '{name}: the family took back the leave for {month}.', 'notif.leaveReturn': '{name}: the family confirmed the return in {month}.',
-  'notif.leaveOverrun': '{name}’s membership ended: 2 months of leave and no word for {month}.', 'notif.leaveOverrunFamily': '{name}’s membership has ended: after 2 months of leave we did not hear from you for {month}. Coming back needs a new registration. Please call the club.',
-  'feed.leaveAsked': '{name}: leave asked for {month}', 'feed.leaveWithdrawn': '{name}: leave for {month} taken back', 'feed.leaveReturn': '{name}: back in {month}', 'feed.leaveOverrun': '{name}: membership ended after 2 months of leave ({month})',
+  'notif.leaveOverrun': '{name}’s membership ended: {max} {max|month|months} of leave and no word for {month}.', 'notif.leaveOverrunFamily': '{name}’s membership has ended: after {max} {max|month|months} of leave we did not hear from you for {month}. Coming back needs a new registration. Please call the club.',
+  'feed.leaveAsked': '{name}: leave asked for {month}', 'feed.leaveWithdrawn': '{name}: leave for {month} taken back', 'feed.leaveReturn': '{name}: back in {month}', 'feed.leaveOverrun': '{name}: membership ended after {max} {max|month|months} of leave ({month})',
 
   // ----- the day story and the monthly memories (KC round 7) -----
   storyLooking: 'Looking back', storyStrip: 'Choose a day', storyPickDay: 'Jump to another day', storyCoverAria: 'Open the best picture of the day',

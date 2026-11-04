@@ -119,7 +119,7 @@ describe('owner gate', () => {
     const crId = a.result.changeRequestId as string;
     expect(a.state.changeRequests[crId]).toMatchObject({ action: 'club.updateSettings', section: 'pricing', status: 'pending' });
     const b = run(a.state, 'review.approve', { crId }, OWNER);
-    expect(b.state.club.settings.notice).toEqual({ downgrade: 14, stop: 10, leave: 14 });
+    expect(b.state.club.settings.notice).toEqual({ downgrade: 14, stop: 10, leave: 14, upgrade: 1 });
     const f = run(base, 'club.updateSettings', { fewVisits: { below: 4, daysBeforeMonth: 18 } }, EGA);
     expect(f.reviewed).toBeUndefined();
     expect(f.state.club.settings.fewVisits).toEqual({ below: 4, daysBeforeMonth: 18 });
@@ -131,6 +131,8 @@ describe('owner gate', () => {
     expect(ownerKindOf('club.setPlan', {}, base)).toBe('pricing');
     expect(ownerKindOf('club.updateSettings', { notice: { leave: 20 } }, base)).toBe('pricing');
     expect(ownerKindOf('club.updateSettings', { flexQuota: 8 }, base)).toBe('pricing');
+    expect(ownerKindOf('club.updateSettings', { notice: { upgrade: 3 } }, base)).toBe('pricing'); // round 19
+    expect(ownerKindOf('club.updateSettings', { leaveMaxMonths: 3 }, base)).toBe('pricing');
     expect(ownerKindOf('club.updateSettings', { fewVisits: { below: 4, daysBeforeMonth: 18 } }, base)).toBeNull(); // round 17: the few-visits alert applies at once
     expect(ownerKindOf('budget.addSection', {}, base)).toBe('budget');
     expect(ownerKindOf('budget.renameSection', {}, base)).toBe('budget');
@@ -170,8 +172,19 @@ describe('final review minor 2: a club-rules request says what it changes', () =
     const note = Object.values(r.state.notifications).find((x) => x.kind === 'notif.ownerApproval' && x.ref?.id === cr.id)!;
     expect(translate('en', String(note.params.whatKey), note.params)).toBe('Stop membership · 30 days');
     const many = ownerWhat(base, 'club.updateSettings', { notice: { downgrade: 21, leave: 30 } });
-    expect(translate('en', many.key, many.params)).toBe('Notice · downgrade 21 · stop 14 · leave 30 days');
+    expect(translate('en', many.key, many.params)).toBe('Notice · downgrade 21 · stop 14 · leave 30 · upgrade 1 days');
     const flex = ownerWhat(base, 'club.updateSettings', { flexQuota: 8 });
     expect(translate('en', flex.key, flex.params)).toBe('Flex · 8 visits a month');
+  });
+  it('round 19: "Upgrade · 3 days" and "Leave in a row · 3 months"', () => {
+    const up = ownerWhat(base, 'club.updateSettings', { notice: { upgrade: 3 } });
+    expect(translate('en', up.key, up.params)).toBe('Upgrade · 3 days');
+    expect(translate('id', up.key, up.params)).toBe('Naik paket · 3 hari');
+    const lm = ownerWhat(base, 'club.updateSettings', { leaveMaxMonths: 3 });
+    expect(translate('en', lm.key, lm.params)).toBe('Leave in a row · 3 months');
+    expect(translate('id', lm.key, lm.params)).toBe('Cuti berturut-turut · 3 bulan');
+    const r = run(base, 'club.updateSettings', { leaveMaxMonths: 3 }, EGA);
+    expect(r.reviewed).toBe('owner');
+    expect(r.state.club.settings.leaveMaxMonths).toBeUndefined();
   });
 });

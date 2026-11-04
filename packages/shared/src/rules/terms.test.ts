@@ -25,6 +25,12 @@ describe('termsText', () => {
     const s = produce(withTerms(base(), v(1, '{stopDays} {leaveDays} {downgradeDays} {noticeDays}')), (d) => { d.club.settings.notice = { downgrade: 7, stop: 30, leave: 14 }; });
     expect(termsText(s, 'en')).toBe('30 14 7 30');
   });
+  it('round 19: fills {upgradeDays} and {leaveMaxMonths}', () => {
+    const s = withTerms(base(), v(1, 'up {upgradeDays} · leave {leaveMaxMonths}'));
+    expect(termsText(s, 'en')).toBe('up 1 · leave 2');
+    const t = produce(s, (d) => { d.club.settings.notice = { downgrade: 14, stop: 14, leave: 14, upgrade: 5 }; d.club.settings.leaveMaxMonths = 3; });
+    expect(termsText(t, 'en')).toBe('up 5 · leave 3');
+  });
   it('uses the default notice period when none is set', () => {
     expect(termsText(withTerms(base(), v(1, '{noticeDays}')), 'en')).toBe('14');
   });

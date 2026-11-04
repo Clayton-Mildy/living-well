@@ -1,7 +1,7 @@
 // Leave (cuti, the brochure's terms): the months of leave a member has asked for, the "Ask for leave" button with its sheet, and the word the club waits for
 // after 2 months. Used by the family plan card (the billing contact asks, takes back and confirms) and by the profile's Plan tab (finance and management record it).
 import { useState, type ReactNode } from 'react';
-import { currentMembership, feeOf, issueDateOf, leaveChoices, leaveDeadline, leaveMonths, leaveNeedsWord, leaveOpen, LEAVE_MAX_MONTHS, displayName, membershipStatus, priceOn, rp, ym, type ClubState, type Member } from '@cp/shared';
+import { currentMembership, feeOf, issueDateOf, leaveChoices, leaveDeadline, leaveMonths, leaveNeedsWord, leaveOpen, leaveMaxMonths, displayName, membershipStatus, priceOn, rp, ym, type ClubState, type Member } from '@cp/shared';
 import { noticeDays } from '@cp/shared/rules/notice';
 import { Button, ChipGroup, Icon, Sheet, TextField } from '../../components/ui';
 import type { TFn, useFmt } from '../../lib/i18n';
@@ -27,7 +27,7 @@ export function useLeaveUi({ s, m, today, t, fmt, act, canEdit, staff }: Args): 
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
   const months = leaveMonths(m).filter((x) => x >= ym(today));
-  const word = leaveNeedsWord(m, today);
+  const word = leaveNeedsWord(s, m, today);
   const choices = leaveChoices(s, m, today);
   const days = noticeDays(s, 'leave'); // round 18: the club's leave notice, not the default 14
   const firstOk = choices.find((c) => c.ok)?.month ?? '';
@@ -55,7 +55,7 @@ export function useLeaveUi({ s, m, today, t, fmt, act, canEdit, staff }: Args): 
       })}
       {word ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }} data-testid="leave-word">
-          <div style={{ ...text, color: '#7A5510' }}>{t('family.leaveWord', { n: name, d: fmt.fds(word.deadline), m: fmt.fmonth(word.after) })}</div>
+          <div style={{ ...text, color: '#7A5510' }}>{t('family.leaveWord', { n: name, d: fmt.fds(word.deadline), m: fmt.fmonth(word.after), max: leaveMaxMonths(s) })}</div>
           {canEdit ? <div><Button variant="secondary" size={44} icon="event_available" onClick={() => act('membership.confirmReturn', { memberId: m.id }, { ok: t('family.leaveBackSent', { n: name, m: fmt.fmonth(word.after) }) })}>{t('family.leaveBack', { m: fmt.fmonth(word.after) })}</Button></div> : null}
         </div>
       ) : null}
@@ -77,7 +77,7 @@ export function useLeaveUi({ s, m, today, t, fmt, act, canEdit, staff }: Args): 
     <Sheet open={open} onClose={() => setOpen(false)} title={t(staff ? 'family.leaveRecordTitle' : 'family.leaveTitle', { name })}
       footer={<Button size={56} full disabled={!chosen || busy} onClick={send}>{chosen ? t(staff ? 'family.leaveRecordSend' : 'family.leaveSend', { m: fmt.fmonth(chosen) }) : t('family.leaveNone')}</Button>}>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-        <div style={{ fontSize: 15, lineHeight: '24px' }}>{t(staff ? 'family.leaveBodyStaff' : 'family.leaveBody', { fee: feeOn(choices[0]?.month ?? ym(today)), max: LEAVE_MAX_MONTHS, days: t(days === 1 ? 'family.leaveDaysOne' : 'family.leaveDaysN', { n: days }) })}</div>
+        <div style={{ fontSize: 15, lineHeight: '24px' }}>{t(staff ? 'family.leaveBodyStaff' : 'family.leaveBody', { fee: feeOn(choices[0]?.month ?? ym(today)), max: leaveMaxMonths(s), days: t(days === 1 ? 'family.leaveDaysOne' : 'family.leaveDaysN', { n: days }) })}</div>
         {choices.length ? (
           <ChipGroup label={t('family.leaveWhich')} value={chosen || null} onChange={(v) => { const c = choices.find((x) => x.month === v); if (c?.ok) setPick(String(v)); }}
             options={choices.map((c) => ({ value: c.month, label: t('family.leaveChoice', { m: fmt.fmonth(c.month), d: fmt.fds(c.deadline) }), off: !c.ok }))} />
@@ -99,7 +99,7 @@ export function useFamilyLeave({ s, m, today, t, fmt, act, canEdit }: Omit<Args,
   const [pick, setPick] = useState('');
   const [busy, setBusy] = useState(false);
   const months = leaveMonths(m).filter((x) => x >= ym(today));
-  const word = leaveNeedsWord(m, today);
+  const word = leaveNeedsWord(s, m, today);
   const choices = leaveChoices(s, m, today);
   const days = noticeDays(s, 'leave'); // round 18: the club's leave notice, not the default 14
   const firstOk = choices.find((c) => c.ok)?.month ?? '';
@@ -127,7 +127,7 @@ export function useFamilyLeave({ s, m, today, t, fmt, act, canEdit }: Omit<Args,
       })}
       {word ? (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }} data-testid="leave-word">
-          <div style={{ ...line, color: F.ochre }}>{t('family.leaveWord', { n: name, d: fmt.fds(word.deadline), m: fmt.fmonth(word.after) })}</div>
+          <div style={{ ...line, color: F.ochre }}>{t('family.leaveWord', { n: name, d: fmt.fds(word.deadline), m: fmt.fmonth(word.after), max: leaveMaxMonths(s) })}</div>
           {canEdit ? <TextLink size={14} onClick={() => void act('membership.confirmReturn', { memberId: m.id }, { ok: t('family.leaveBackSent', { n: name, m: fmt.fmonth(word.after) }) })}>{t('family.leaveBack', { m: fmt.fmonth(word.after) })}</TextLink> : null}
         </div>
       ) : null}
@@ -145,7 +145,7 @@ export function useFamilyLeave({ s, m, today, t, fmt, act, canEdit }: Omit<Args,
   const link = canEdit && active ? <TextLink onClick={() => setOpen(true)} testId="leave-ask">{t('family.leaveAsk')}</TextLink> : null;
   const sheet = canEdit && active ? (
     <FamSheet open={open} onClose={() => setOpen(false)} title={t('family.leaveTitle', { name })} testId="leave-sheet" action={{ label: t('fam.send'), onClick: () => void send(), disabled: !chosen || busy }}>
-      <div style={{ fontSize: 15, lineHeight: '22px', color: F.soft }}>{t('family.leaveBody', { fee: feeOn(choices[0]?.month ?? ym(today)), max: LEAVE_MAX_MONTHS, days: t(days === 1 ? 'family.leaveDaysOne' : 'family.leaveDaysN', { n: days }) })}</div>
+      <div style={{ fontSize: 15, lineHeight: '22px', color: F.soft }}>{t('family.leaveBody', { fee: feeOn(choices[0]?.month ?? ym(today)), max: leaveMaxMonths(s), days: t(days === 1 ? 'family.leaveDaysOne' : 'family.leaveDaysN', { n: days }) })}</div>
       {choices.length ? (
         <div role="radiogroup" aria-label={t('family.leaveWhich')} style={{ background: F.fill, borderRadius: 16, overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
           {choices.map((c, i) => {

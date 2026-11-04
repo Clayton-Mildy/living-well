@@ -43,17 +43,17 @@ describe('notice period', () => {
     const s = seed();
     const flex = Object.values(s.members).find((m) => m.plans.at(-1)?.plan === 'flex' && !m.deletedAt)!;
     const up = produce(s, (d) => { d.members[flex.id].plans.push({ from: '2026-12-01', plan: 'gold', by: 'staff:s9' }); });
-    expect(changeKind(up, up.members[flex.id], 'flex', '2026-12')).toBe('upgrade');
+    expect(changeKind(up, up.members[flex.id], 'flex', '2026-12')).toBe('takeBack');
   });
 });
 
 describe('round 18: notice per kind of change', () => {
   it('no settings: 14 days for each kind', () => {
-    expect(noticeSettings(seed())).toEqual({ downgrade: 14, stop: 14, leave: 14 });
+    expect(noticeSettings(seed())).toEqual({ downgrade: 14, stop: 14, leave: 14, upgrade: 1 });
   });
   it('an old club with only noticeDays 21 stored uses 21 for all three', () => {
     const s = produce(seed(), (d) => { d.club.settings.noticeDays = 21; delete d.club.settings.notice; });
-    expect(noticeSettings(s)).toEqual({ downgrade: 21, stop: 21, leave: 21 });
+    expect(noticeSettings(s)).toEqual({ downgrade: 21, stop: 21, leave: 21, upgrade: 1 }); // the old single value never applied to an upgrade
   });
   it('each kind has its own deadline and check', () => {
     const s = produce(seed(), (d) => { d.club.settings.notice = { downgrade: 7, stop: 30, leave: 14 }; });
@@ -66,5 +66,26 @@ describe('round 18: notice per kind of change', () => {
     if (!stop.ok) expect(stop.params).toMatchObject({ days: 30, earliest: '2027-01', deadline: '2026-11-01' });
     expect(noticeCheck(s, 'leave', '2026-12', today).ok).toBe(true);
     expect(noticeCheck(s, 'downgrade', '2026-12', today).ok).toBe(true);
+  });
+});
+
+describe('round 19: upgrade notice days', () => {
+  const up5 = () => produce(seed(), (d) => { d.club.settings.notice = { downgrade: 14, stop: 14, leave: 14, upgrade: 5 }; });
+  it('defaults to 1 day: December is asked by 30 Nov, as before', () => {
+    expect(noticeSettings({ club: { settings: {} } } as unknown as ClubState).upgrade).toBe(1);
+    expect(noticeDeadline(seed(), '2026-12', 'upgrade')).toBe('2026-11-30');
+  });
+  it('with 5 days an upgrade for December is late on 27 Nov and in time on 26 Nov', () => {
+    const s = up5();
+    expect(noticeCheck(s, 'upgrade', '2026-12', '2026-11-27')).toEqual({ ok: false, code: 'err.noticeLate', params: { deadline: '2026-11-26', month: '2026-12', earliest: '2027-01', days: 5 } });
+    expect(noticeCheck(s, 'upgrade', '2026-12', '2026-11-26')).toEqual({ ok: true });
+  });
+  it('Review Focus 1: moving back to the plan in force the day before is a take-back, which needs no notice whatever the upgrade days', () => {
+    const s = up5();
+    const gold = Object.values(s.members).find((m) => m.plans.at(-1)?.plan === 'gold' && !m.deletedAt)!;
+    const down = produce(s, (d) => { d.members[gold.id].plans.push({ from: '2026-12-01', plan: 'flex', by: 'staff:s9' }); }); // a downgrade scheduled for December
+    expect(changeKind(down, down.members[gold.id], 'gold', '2026-12')).toBe('takeBack');
+    expect(noticeCheck(down, 'takeBack', '2026-12', '2026-11-30').ok).toBe(true);
+    expect(noticeCheck(down, 'takeBack', '2026-12', '2026-12-01').ok).toBe(false);
   });
 });

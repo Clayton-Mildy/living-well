@@ -72,14 +72,14 @@ export const family: Same<typeof EN> = {
   leaveSend: 'Ajukan cuti · {m}', leaveRecordSend: 'Catat cuti · {m}', leaveSent: 'Cuti {m} diajukan. Klub sudah diberi tahu.', leaveRecorded: 'Cuti {m} dicatat.',
   leaveNow: 'Sedang cuti pada {m}', leaveOpen: 'Cuti {m} · diajukan, bisa dibatalkan sampai {d}', leaveOpenStaff: 'Cuti {m} · diajukan, bisa dibatalkan sampai {d}', leaveLocked: 'Cuti {m} · dikonfirmasi · {fee} di tagihan bulan itu',
   leaveTakeBack: 'Batalkan', leaveTakenBack: 'Cuti {m} dibatalkan.',
-  leaveWord: '{n} cuti 2 bulan berturut-turut. Beri tahu kami paling lambat {d} bahwa {n} kembali pada {m}, atau keanggotaan berakhir saat cuti habis.',
+  leaveWord: '{n} cuti {max} bulan berturut-turut. Beri tahu kami paling lambat {d} bahwa {n} kembali pada {m}, atau keanggotaan berakhir saat cuti habis.',
   leaveBack: 'Kembali pada {m}', leaveBackSent: 'Terima kasih. Klub tahu {n} kembali pada {m}.', leaveSection: 'Cuti',
   onHoldTold: 'Keanggotaan ditangguhkan: invoice {no} ({a}) belum dibayar. {n} bisa datang lagi setelah dibayar.',
   onHold: 'Keanggotaan ditangguhkan: invoice {no} ({a}) belum dibayar. {n} bisa datang lagi setelah dibayar. Jika masih belum dibayar pada {d}, keanggotaan dihentikan.',
   'notif.leaveAsked': '{name}: keluarga mengajukan cuti pada {month} ({fee} sebagai pengganti paket).', 'notif.leaveRecorded': 'Cuti {name} pada {month} dicatat: {fee} di tagihan bulan itu, sebagai pengganti paket.',
   'notif.leaveWithdrawn': '{name}: keluarga membatalkan cuti {month}.', 'notif.leaveReturn': '{name}: keluarga mengonfirmasi kembali pada {month}.',
-  'notif.leaveOverrun': 'Keanggotaan {name} berakhir: cuti 2 bulan dan tidak ada kabar untuk {month}.', 'notif.leaveOverrunFamily': 'Keanggotaan {name} telah berakhir: setelah cuti 2 bulan kami tidak menerima kabar untuk {month}. Untuk kembali perlu mendaftar ulang. Silakan hubungi klub.',
-  'feed.leaveAsked': '{name}: cuti diajukan untuk {month}', 'feed.leaveWithdrawn': '{name}: cuti {month} dibatalkan', 'feed.leaveReturn': '{name}: kembali pada {month}', 'feed.leaveOverrun': '{name}: keanggotaan berakhir setelah cuti 2 bulan ({month})',
+  'notif.leaveOverrun': 'Keanggotaan {name} berakhir: cuti {max} bulan dan tidak ada kabar untuk {month}.', 'notif.leaveOverrunFamily': 'Keanggotaan {name} telah berakhir: setelah cuti {max} bulan kami tidak menerima kabar untuk {month}. Untuk kembali perlu mendaftar ulang. Silakan hubungi klub.',
+  'feed.leaveAsked': '{name}: cuti diajukan untuk {month}', 'feed.leaveWithdrawn': '{name}: cuti {month} dibatalkan', 'feed.leaveReturn': '{name}: kembali pada {month}', 'feed.leaveOverrun': '{name}: keanggotaan berakhir setelah cuti {max} bulan ({month})',
 
   // ----- the day story and the monthly memories (KC round 7) -----
   storyLooking: 'Menengok kembali', storyStrip: 'Pilih hari', storyPickDay: 'Lompat ke hari lain', storyCoverAria: 'Buka foto terbaik hari itu',

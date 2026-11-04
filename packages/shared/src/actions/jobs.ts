@@ -5,7 +5,7 @@ import type { ClubState, Member } from '../types';
 import { defineAction, DomainError, type Ctx } from './framework';
 import { currentMembership, isPendingRow, displayName, primaryContact } from '../rules/core';
 import { stopsDue, suspensions } from '../rules/billing';
-import { leaveOverrunMonth } from '../rules/leave';
+import { leaveMaxMonths, leaveOverrunMonth } from '../rules/leave';
 import { finalInvoiceFor } from '../rules/members';
 import { dm } from '../rules/mgmtParse';
 import { OCCASION_AHEAD_DAYS, occasionsInRange } from '../rules/occasions';
@@ -64,19 +64,20 @@ registerJob('membership.daily', (d, ctx) => {
       if (payer) ctx.notify({ toUsers: [payer.id], kind: 'finance.notif.stoppedFamily', params, link: '/billing', memberId: m.id, severity: 'attention', ref: { type: 'invoice', id: x.invoiceId } });
       ctx.feed({ icon: 'person_off', key: 'finance.feed.stopped', params: { name, number: x.number }, memberId: m.id });
     }
-    // 3. leave that ran out: 2 months in a row and no word for the next one
+    // 3. leave that ran out: the club's most months in a row (round 19: leaveMaxMonths, default 2) and no word for the next one
     for (const m of Object.values(d.members)) {
       if (m.deletedAt || isPendingRow(m)) continue;
-      const month = leaveOverrunMonth(m as Member, today);
+      const month = leaveOverrunMonth(s, m as Member, today);
       if (!month) continue;
       const cur = currentMembership(m);
       const lastDay = addDays(`${month}-01`, -1) < cur.start ? cur.start : addDays(`${month}-01`, -1);
       cur.lastDay = lastDay; cur.endReason = 'leaveOverrun'; cur.endedBy = 'system'; cur.endedAt = ctx.nowDT;
       const name = displayName(m);
-      ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'family.notif.leaveOverrun', params: { name, month }, link: `/members/${m.id}`, memberId: m.id, severity: 'attention' });
+      const max = leaveMaxMonths(s);
+      ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'family.notif.leaveOverrun', params: { name, month, max }, link: `/members/${m.id}`, memberId: m.id, severity: 'attention' });
       const payer = primaryContact(s, m.id);
-      if (payer) ctx.notify({ toUsers: [payer.id], kind: 'family.notif.leaveOverrunFamily', params: { name, month }, link: '/billing', memberId: m.id, severity: 'attention' });
-      ctx.feed({ icon: 'person_off', key: 'family.feed.leaveOverrun', params: { name, month }, memberId: m.id });
+      if (payer) ctx.notify({ toUsers: [payer.id], kind: 'family.notif.leaveOverrunFamily', params: { name, month, max }, link: '/billing', memberId: m.id, severity: 'attention' });
+      ctx.feed({ icon: 'person_off', key: 'family.feed.leaveOverrun', params: { name, month, max }, memberId: m.id });
     }
   } catch (e) {
     if (!(e instanceof DomainError)) console.error('membership.daily job failed', e);

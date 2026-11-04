@@ -163,10 +163,10 @@ export const mgmt = {
   'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewBelowOne': 'Flag below {n} visit',
   'settings.terms': 'Terms and conditions', 'settings.noTerms': 'No terms yet', 'settings.termsRow': 'Version {v} · published {d} by {name} · {a} of {n} agreed',
   'settings.save': 'Save', 'settings.cancel': 'Cancel', 'settings.saved': 'Saved.',
-  'settings.err.few': 'Use a whole number from 1 to 31.',
+  'settings.err.few': 'Use a whole number from 1 to 31.', 'settings.err.leaveRun': 'Use a whole number from 1 to 6.',
   // ----- round 18: Settings › notice per kind, few-visits alert before next month -----
   'settings.downgrade': 'Downgrade', 'settings.downgradeSub': 'to a cheaper plan · ask by {d}', 'settings.stop': 'Stop membership', 'settings.stopSub': 'last month {m} · ask by {d}',
-  'settings.leave': 'Leave (cuti)', 'settings.leaveSub': '{m} off · ask by {d}', 'settings.upgrade': 'Upgrade', 'settings.upgradeSub': 'starts the next 1st', 'settings.noNotice': 'no notice',
-  'settings.leaveRun': 'Leave in a row', 'settings.leaveRunSub': 'no word after that ends the membership', 'settings.leaveRunV': 'up to {n} months', 'settings.days': 'days',
+  'settings.leave': 'Leave (cuti)', 'settings.leaveSub': '{m} off · ask by {d}', 'settings.upgrade': 'Upgrade', 'settings.upgradeSub': 'starts the next 1st · ask by {d}',
+  'settings.leaveRun': 'Leave in a row', 'settings.leaveRunSub': 'no word after that ends the membership', 'settings.days': 'days', 'settings.months': 'months',
   'settings.fewAlert': 'Alert before next month', 'settings.fewAlertSub': '{m}: alert {a} · changes close {c}',
 };

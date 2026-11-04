@@ -7,7 +7,7 @@ import type { Actor, ClubState, DT, FamilyContact, FollowUp, FollowUpCall, Follo
 import { addDays, addMonths, live, monthStart, sortBy, ym } from '../util';
 import { activeOn, approvedMembers, contactsOfMember, currentMembership, isPendingRow, memberName, membershipStatus, planOn } from './core';
 import { issueDateOf } from './billing';
-import { LEAVE_MAX_MONTHS, lastDayOfMonth, leaveCheck, leaveDeadline, leaveMonths, leaveRunAround, onLeaveIn, type LeaveCheck } from './leave';
+import { lastDayOfMonth, leaveMaxMonths, leaveCheck, leaveDeadline, leaveMonths, leaveRunAround, onLeaveIn, type LeaveCheck } from './leave';
 import { activePlans, matchesQuery } from './members';
 import { noticeDays } from './notice';
 
@@ -277,22 +277,23 @@ export function renewalDates(s: ClubState, month: YM, today: ISODate): RenewalDa
 }
 
 // ---------- leave ----------
-/** The months a follow-up of `month` can ask leave for: the month itself and the one after it. */
-export const leaveMonthChoices = (month: YM): YM[] => [month, addMonths(month, 1)];
+/** The months a follow-up of `month` can ask leave for: the month itself and the ones after it, up to the club's leave in a row (round 19; 2 by default). */
+export const leaveMonthChoices = (s: Pick<ClubState, 'club'>, month: YM): YM[] => Array.from({ length: leaveMaxMonths(s) }, (_, k) => addMonths(month, k));
 /**
  * Can these months be recorded as leave? Each one has to pass the leave rules (deadline, not already on the list, not ending), and with the months already on
- * the list no run may be longer than 2. `asOf` is the day the family gave notice (the day a pending record was saved), `today` the day it is applied.
+ * the list no run may be longer than the club's leave in a row. `asOf` is the day the family gave notice (the day a pending record was saved), `today` the day it is applied.
  */
 export function leaveMonthsCheck(s: ClubState, m: Member, months: YM[], today: ISODate, asOf: ISODate = today): LeaveCheck {
   const chosen = Array.from(new Set(months)).sort();
-  if (!chosen.length || chosen.length > LEAVE_MAX_MONTHS) return { ok: false, code: 'err.invalid' };
+  const max = leaveMaxMonths(s);
+  if (!chosen.length || chosen.length > max) return { ok: false, code: 'err.invalid' };
   for (const mo of chosen) {
     if (mo <= ym(today)) return { ok: false, code: 'err.leaveLate', params: { deadline: leaveDeadline(mo, noticeDays(s, 'leave')), month: mo } };
     const c = leaveCheck(s, m, mo, asOf < today ? asOf : today);
     if (!c.ok) return c;
   }
   const all = [...leaveMonths(m), ...chosen];
-  for (const mo of chosen) if (leaveRunAround(all, mo) > LEAVE_MAX_MONTHS) return { ok: false, code: 'err.leaveMax', params: { max: LEAVE_MAX_MONTHS } };
+  for (const mo of chosen) if (leaveRunAround(all, mo) > max) return { ok: false, code: 'err.leaveMax', params: { max } };
   return { ok: true };
 }
 

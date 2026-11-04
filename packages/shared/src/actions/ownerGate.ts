@@ -13,7 +13,8 @@ const isHoliday = (kind: unknown) => kind === 'closed' || kind === 'holiday';
 /** Which owner-approval kind a run of this action is (input already parsed), or null when it never waits for the Owner. */
 export function ownerKindOf(name: string, input: unknown, s: ClubState): OwnerKind | null {
   // round 17: club.updateSettings waits for the Owner only for the Flex visits and the notice (round 18: any kind); the few-visits alert settings apply at once
-  if (name === 'club.updateSettings') { const i = (input ?? {}) as { notice?: unknown; flexQuota?: unknown }; return i.notice !== undefined || i.flexQuota !== undefined ? 'pricing' : null; }
+  // round 19: and leave in a row (leaveMaxMonths)
+  if (name === 'club.updateSettings') { const i = (input ?? {}) as { notice?: unknown; flexQuota?: unknown; leaveMaxMonths?: unknown }; return i.notice !== undefined || i.flexQuota !== undefined || i.leaveMaxMonths !== undefined ? 'pricing' : null; }
   if (PRICING.includes(name)) return 'pricing';
   if (BUDGET.includes(name)) return 'budget';
   const i = (input ?? {}) as { kind?: unknown; eventId?: string };
@@ -39,7 +40,7 @@ export const pendingOwnerRequests = (s: ClubState, section?: ReviewSection): Cha
  * What an owner request asks for, as an i18n key (`approvals.owner.what.*`) and its params, for the Owner's list, the "Waiting for owner" rows and the notice.
  * `date` stays ISO; the caller formats it.
  */
-export type OwnerWhatParams = { date?: ISODate; title?: string; name?: string; amount?: number; n?: number; a?: number; b?: number; c?: number };
+export type OwnerWhatParams = { date?: ISODate; title?: string; name?: string; amount?: number; n?: number; a?: number; b?: number; c?: number; d?: number };
 export function ownerWhat(s: ClubState, action: string, input: unknown): { key: string; params: OwnerWhatParams } {
   const i = (input ?? {}) as Record<string, unknown>;
   const str = (v: unknown) => (typeof v === 'string' ? v : '');
@@ -63,14 +64,17 @@ export function ownerWhat(s: ClubState, action: string, input: unknown): { key: 
 
 /**
  * Final review minor 2: what a club-rules request changes, so the Owner sees it: one notice kind ("Stop membership · 30 days"), all three when several
- * change at once (the days after the change), or the Flex visits.
+ * change at once (the days after the change), or the Flex visits. Round 19: "Upgrade · 3 days" is one more kind, and "Leave in a row · 3 months" alone.
  */
 function settingsWhat(s: ClubState, i: Record<string, unknown>): { key: string; params: OwnerWhatParams } {
   const notice = (i.notice ?? {}) as Partial<Record<typeof NOTICE_KINDS[number], number>>;
   const kinds = NOTICE_KINDS.filter((k) => typeof notice[k] === 'number');
   const quota = typeof i.flexQuota === 'number' ? i.flexQuota : undefined;
-  if (kinds.length === 1 && quota === undefined) return { key: `approvals.owner.what.notice_${kinds[0]}`, params: { n: notice[kinds[0]] } };
-  if (kinds.length > 1 && quota === undefined) { const now = { ...noticeSettings(s), ...notice }; return { key: 'approvals.owner.what.noticeAll', params: { a: now.downgrade, b: now.stop, c: now.leave } }; }
-  if (!kinds.length && quota !== undefined) return { key: 'approvals.owner.what.flexQuota', params: { n: quota } };
+  const leaveMax = typeof i.leaveMaxMonths === 'number' ? i.leaveMaxMonths : undefined;
+  const others = (quota === undefined ? 0 : 1) + (leaveMax === undefined ? 0 : 1);
+  if (kinds.length === 1 && !others) return { key: `approvals.owner.what.notice_${kinds[0]}`, params: { n: notice[kinds[0]] } };
+  if (kinds.length > 1 && !others) { const now = { ...noticeSettings(s), ...notice }; return { key: 'approvals.owner.what.noticeAll', params: { a: now.downgrade, b: now.stop, c: now.leave, d: now.upgrade } }; }
+  if (!kinds.length && quota !== undefined && others === 1) return { key: 'approvals.owner.what.flexQuota', params: { n: quota } };
+  if (!kinds.length && leaveMax !== undefined && others === 1) return { key: 'approvals.owner.what.leaveMax', params: { n: leaveMax } };
   return { key: 'approvals.owner.what.rules', params: {} };
 }

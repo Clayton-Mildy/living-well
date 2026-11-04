@@ -118,9 +118,9 @@ describe('leave: the invoice, the check-in, the job', () => {
     let s = dec(base);
     s = run(s, 'membership.requestLeave', { memberId: 'm1', month: '2027-01' }, 'f1').state;
     s = paidUp(s);
-    expect(leaveOverrunMonth(lina(s), '2027-01-29')).toBeUndefined(); // still on leave
+    expect(leaveOverrunMonth(s, lina(s), '2027-01-29')).toBeUndefined(); // still on leave
     expect(tick(s, at('2027-01-29')).state.members.m1.memberships.at(-1)!.endReason).toBeUndefined();
-    expect(leaveOverrunMonth(lina(s), '2027-02-01')).toBe('2027-02');
+    expect(leaveOverrunMonth(s, lina(s), '2027-02-01')).toBe('2027-02');
     const r = tick(s, at('2027-02-01', 480));
     const ms = r.state.members.m1.memberships.at(-1)!;
     expect(ms).toMatchObject({ lastDay: '2027-01-31', endReason: 'leaveOverrun', endedBy: 'system' });
@@ -134,14 +134,14 @@ describe('leave: the invoice, the check-in, the job', () => {
     let s = dec(base);
     s = run(s, 'membership.requestLeave', { memberId: 'm1', month: '2027-01' }, 'f1').state;
     s = paidUp(s);
-    expect(leaveNeedsWord(lina(s), T)).toEqual({ after: '2027-02', deadline: '2027-01-31' });
-    expect(leaveNeedsWord(dec(base).members.m1, T)).toBeUndefined(); // one month of leave needs no word
+    expect(leaveNeedsWord(s, lina(s), T)).toEqual({ after: '2027-02', deadline: '2027-01-31' });
+    expect(leaveNeedsWord(dec(base), dec(base).members.m1, T)).toBeUndefined(); // one month of leave needs no word
     fails(s, 'membership.confirmReturn', { memberId: 'm1' }, 'f2', 'err.forbidden');
     fails(dec(base), 'membership.confirmReturn', { memberId: 'm1' }, 'f1', 'err.noChanges');
     const back = run(s, 'membership.confirmReturn', { memberId: 'm1' }, 'f1', at('2027-01-20'));
     expect(leaves(back.state).at(-1)).toMatchObject({ month: '2027-02', note: 'return' });
-    expect(leaveNeedsWord(lina(back.state), '2027-01-20')).toBeUndefined();
-    expect(leaveOverrunMonth(lina(back.state), '2027-02-01')).toBeUndefined();
+    expect(leaveNeedsWord(back.state, lina(back.state), '2027-01-20')).toBeUndefined();
+    expect(leaveOverrunMonth(back.state, lina(back.state), '2027-02-01')).toBeUndefined();
     expect(tick(back.state, at('2027-02-01', 480)).state.members.m1.memberships.at(-1)!.endReason).toBeUndefined();
     // the return note is not a month of leave: February is a normal month, and the check-in works
     expect(onLeaveOn(lina(back.state), '2027-02-02')).toBe(false);
@@ -149,12 +149,33 @@ describe('leave: the invoice, the check-in, the job', () => {
     // too late once the month has begun
     fails(s, 'membership.confirmReturn', { memberId: 'm1' }, 'f1', 'err.noChanges', at('2027-02-01'));
   });
+  it('round 19: with leave in a row 3, the job ends the membership after the third month with no word, not after the second', () => {
+    const max3 = produce(base, (d) => { d.club.settings.leaveMaxMonths = 3; });
+    let s = dec(max3);
+    s = run(s, 'membership.requestLeave', { memberId: 'm1', month: '2027-01' }, 'f1').state;
+    s = run(s, 'membership.requestLeave', { memberId: 'm1', month: '2027-02' }, 'f1').state; // a third in a row is allowed now
+    s = paidUp(s);
+    expect(tick(s, at('2027-02-01', 480)).state.members.m1.memberships.at(-1)!.endReason).toBeUndefined(); // still on leave in the third month
+    const two = paidUp(run(dec(max3), 'membership.requestLeave', { memberId: 'm1', month: '2027-01' }, 'f1').state);
+    expect(tick(two, at('2027-02-01', 480)).state.members.m1.memberships.at(-1)!.endReason).toBeUndefined(); // after the second: nothing ends
+    const r = tick(s, at('2027-03-01', 480));
+    expect(r.state.members.m1.memberships.at(-1)).toMatchObject({ lastDay: '2027-02-28', endReason: 'leaveOverrun', endedBy: 'system' });
+    const note = Object.values(r.state.notifications).find((x) => x.kind === 'family.notif.leaveOverrun' && x.memberId === 'm1')!;
+    expect(note.params).toMatchObject({ max: 3 });
+  });
+  it('round 19 Review Focus 2: the Owner lowers leave in a row to 1 with 2 months booked: both stay, a new one in a row is refused', () => {
+    let s = dec(base);
+    s = run(s, 'membership.requestLeave', { memberId: 'm1', month: '2027-01' }, 'f1').state;
+    s = run(s, 'club.updateSettings', { leaveMaxMonths: 1 }, 's9').state;
+    expect(leaves(s).map((l) => l.month)).toEqual(['2026-12', '2027-01']);
+    fails(s, 'membership.requestLeave', { memberId: 'm1', month: '2027-02' }, 'f1', 'err.leaveMax');
+  });
   it('two separate months of leave (with a month between) do not end anything', () => {
     let s = dec(base);
     s = run(s, 'membership.requestLeave', { memberId: 'm1', month: '2027-02' }, 'f1').state;
     s = paidUp(s);
-    expect(leaveOverrunMonth(lina(s), '2027-01-04')).toBeUndefined();
-    expect(leaveOverrunMonth(lina(s), '2027-03-01')).toBeUndefined(); // only one leave month before March
+    expect(leaveOverrunMonth(s, lina(s), '2027-01-04')).toBeUndefined();
+    expect(leaveOverrunMonth(s, lina(s), '2027-03-01')).toBeUndefined(); // only one leave month before March
   });
 });
 

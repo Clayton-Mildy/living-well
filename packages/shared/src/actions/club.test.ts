@@ -704,6 +704,18 @@ describe('prices and club rules', () => {
     expect(a.state.club.settings.flexQuota).toBe(6);
     expect(s.club.settings.flexQuota).toBe(10);
   });
+  it('round 19: upgrade notice days and leave in a row (1-6) are saved', () => {
+    const s = seed().citra;
+    fails(s, 'club.updateSettings', { leaveMaxMonths: 7 }, 's9', 'err.invalid');
+    fails(s, 'club.updateSettings', { leaveMaxMonths: 0 }, 's9', 'err.invalid');
+    fails(s, 'club.updateSettings', { leaveMaxMonths: 2 }, 's9', 'err.noChanges'); // the default
+    expect(run(s, 'club.updateSettings', { leaveMaxMonths: 3 }, 's9').state.club.settings.leaveMaxMonths).toBe(3);
+    const up = run(s, 'club.updateSettings', { notice: { upgrade: 3 } }, 's9').state.club.settings;
+    expect(up.notice).toEqual({ downgrade: 14, stop: 14, leave: 14, upgrade: 3 });
+    expect(up.leaveMaxMonths).toBeUndefined(); // R2: never in the notice object
+    fails(s, 'club.updateSettings', { notice: { upgrade: 61 } }, 's9', 'err.invalid');
+    fails(s, 'club.updateSettings', { notice: { upgrade: 1 } }, 's9', 'err.noChanges');
+  });
 });
 
 describe('few-visits settings (round 17; round 18: days before next month)', () => {
@@ -742,9 +754,9 @@ describe('few-visits settings (round 17; round 18: days before next month)', () 
 describe('notice per kind (round 18)', () => {
   it('stores all three kinds, the missing ones from the current values', () => {
     const r = run(seed().citra, 'club.updateSettings', { notice: { stop: 30 } }, 's9');
-    expect(r.state.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 14 });
+    expect(r.state.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 14, upgrade: 1 }); // round 19: and the upgrade
     const r2 = run(r.state, 'club.updateSettings', { notice: { leave: 20 } }, 's9');
-    expect(r2.state.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 20 });
+    expect(r2.state.club.settings.notice).toEqual({ downgrade: 14, stop: 30, leave: 20, upgrade: 1 });
     fails(r2.state, 'club.updateSettings', { notice: { stop: 30, leave: 20 } }, 's9', 'err.noChanges');
     fails(seed().citra, 'club.updateSettings', { notice: { downgrade: 14 } }, 's9', 'err.noChanges');
   });

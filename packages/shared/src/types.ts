@@ -86,7 +86,9 @@ export interface ClubSettings {
   /** KC round 16: days before a month's 1st by which a downgrade, stop or leave for that month must be asked (missing = 14; rules/notice.ts). Round 18: only the fallback for `notice`, no longer saved */
   noticeDays?: number;
   /** KC round 18: the notice for each kind of change, 1–60 days each (a kind missing here falls back to `noticeDays`, then 14; rules/notice.ts) */
-  notice?: { downgrade: number; stop: number; leave: number };
+  notice?: { downgrade: number; stop: number; leave: number; /** round 19: 1–60, missing = 1 (never the old `noticeDays`) */ upgrade?: number };
+  /** KC round 19: the most months of leave in a row, 1–6 (missing = 2; rules/leave.ts leaveMaxMonths). Saved by club.updateSettings, never in `notice` */
+  leaveMaxMonths?: number;
   /**
    * KC round 17: the few-visits alert. Members with fewer than `below` visit days this month are flagged from `daysBeforeMonth` days before next month's 1st
    * (round 18; missing = 5 and 16; rules/fewVisits.ts). `daysBeforeDeadline` is round 17's (days before the notice deadline): only read, as that plus the stop days.
