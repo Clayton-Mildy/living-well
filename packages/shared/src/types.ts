@@ -119,7 +119,7 @@ export interface ClubSettings {
   ownerApproval?: Partial<Record<StaffRole, Partial<Record<OwnerKind, boolean>>>>;
   /** KC round 17: when the Owner last saved each role on Admin › Roles, and who. Shown on the role list. */
   accessChanged?: Partial<Record<GridRole, { by: string; at: DT }>>;
-  /** KC tasks-create: a role that may add tasks for its own team (Admin › Roles › Tasks › "Create tasks for …"). Only `true` is stored; Management always may. */
+  /** Legacy (KC tasks-create, replaced by tasks-view-edit): a role's old "Create tasks for …" switch. Read only, as Tasks on Edit (accessOf); saving the role drops it. */
   taskCreate?: Partial<Record<GridRole, boolean>>;
   /** KC round 17: the terms and conditions, one entry per published version (the last is current) */
   terms?: TermsVersion[];

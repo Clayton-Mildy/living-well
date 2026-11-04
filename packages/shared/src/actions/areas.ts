@@ -52,6 +52,12 @@ export const UNMAPPED: string[] = [
 /** Actions the person who filed the row may also run (edit or withdraw their own receipt or budget request): that path is not an area right, so the grid does not take it away. */
 export const OWN_ROW: string[] = ['receipt.edit', 'receipt.void', 'budget.edit', 'budget.cancel'];
 
+/** KC tasks-view-edit: what Tasks on View still lets a role do: tick off its own duties and tasks and take a tick back (`can` decides whose). Not on Hidden. */
+export const VIEW_OWN: string[] = ['task.done', 'task.undo'];
+
+/** Menus whose Edit never lends the menu's own role (AREA_BASE): Tasks on Edit is one's own team's tasks only (`can`), never management's. */
+export const NO_LIFT: string[] = ['tasks'];
+
 const matches = (list: string[], name: string) => list.some((p) => (p.endsWith('.') ? name.startsWith(p) : name === p));
 
 export const isUnmapped = (name: string) => matches(UNMAPPED, name);

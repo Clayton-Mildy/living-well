@@ -23,6 +23,8 @@ describe('screenAccess', () => {
     expect(screenAccess('off', 'lobby', 'budget', true).level).toBe('view');
     expect(screenAccess('edit', 'lobby', 'billing', true)).toEqual({ key: 'billing', level: 'edit', roleAs: 'finance' });
     expect(screenAccess('edit', 'lobby', 'members', true).roleAs).toBeUndefined(); // already Edit by default
+    expect(screenAccess('edit', 'lobby', 'tasks', true)).toEqual({ key: 'tasks', level: 'edit', roleAs: undefined }); // tasks-view-edit: Tasks on Edit is never management's screen
+    expect(screenAccess(undefined, 'lobby', 'tasks', true).level).toBe('view');
     expect(screenAccess(undefined, 'owner', 'billing', false).roleAs).toBe('mgmt');
     expect(screenAccess(undefined, 'owner', 'roles', false).roleAs).toBeUndefined();
     expect(screenAccess(undefined, 'family', 'billing', false).level).toBe('edit');

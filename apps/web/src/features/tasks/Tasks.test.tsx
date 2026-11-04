@@ -8,6 +8,7 @@ import { buildSeed } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { DUTIES } from '@cp/shared/rules/tasks';
+import { ScreenAccessProvider } from '../../lib/access';
 import { Tasks } from './Tasks';
 
 let root: Root | null = null;
@@ -200,21 +201,37 @@ describe('Tasks: management', () => {
   });
 });
 
-// KC tasks-create: the Owner let Front desk create its own tasks (Admin › Roles › Tasks › "Create tasks for Front desk")
-describe('Tasks: a team that creates its own tasks', () => {
-  const allow = () => {
+// KC tasks-view-edit: the Tasks cell on Admin › Roles. View (every role but Management by default): her day, ticking off, no Add. Edit: also her team's
+// task list and Add task for Front desk only. The page sits in the shell's ScreenAccessProvider, as on the app.
+describe('Tasks on View or Edit', () => {
+  const withTasks = (level: 'view' | 'edit', legacy = false) => {
     const v = produce(useReplica.getState().view!, (d) => {
-      d.club.settings.taskCreate = { lobby: true };
+      if (legacy) d.club.settings.taskCreate = { lobby: true };
+      else if (level === 'edit') d.club.settings.access = { lobby: { tasks: 'edit' } };
       d.taskTemplates['task-lobby-mine'] = { ...d.taskTemplates['task-lobby-desk'], id: 'task-lobby-mine', title: 'Water the plants', createdBy: 'staff:s1' };
     });
     useReplica.setState({ confirmed: v, view: v });
   };
+  const page = <ScreenAccessProvider screenKey="tasks"><Tasks /></ScreenAccessProvider>;
   const sheet = () => Array.from(document.querySelectorAll('[role="dialog"]')).pop() as HTMLElement | undefined;
 
-  it('with the flag Caca has Add task; the sheet is for Front desk only; her task opens editable, Ega\'s read-only', async () => {
+  it('on View (the default) Caca ticks her task off, with no Add task, team list, Team / Manage or view-only banner', async () => {
     openClub('s1', 'lobby');
-    allow();
-    await show(<Tasks />);
+    withTasks('view');
+    await show(page);
+    expect(btn(/Add task/)).toBeUndefined();
+    expect(document.querySelector('[data-team-tasks]')).toBeNull();
+    expect(tab(/Manage/)).toBeUndefined();
+    expect(document.querySelector('[data-testid="view-only"]')).toBeNull(); // View still completes: no "view only" banner
+    await click(btn(/Mark done: Water the plants/));
+    expect(actMock).toHaveBeenCalledWith('task.done', { templateId: 'task-lobby-mine' });
+  });
+
+  it('on Edit Caca has Add task for Front desk only; her task opens editable, Ega\'s read-only; still no Manage', async () => {
+    openClub('s1', 'lobby');
+    withTasks('edit');
+    await show(page);
+    expect(tab(/Manage/)).toBeUndefined(); // Edit is not management's screen
     const team = document.querySelector('[data-team-tasks]')!;
     expect(team.querySelector('[data-template="task-lobby-mine"]')?.textContent).toContain('by you');
     expect(team.querySelector('[data-template="task-lobby-desk"]')?.textContent).toMatch(/by \S/);
@@ -227,7 +244,7 @@ describe('Tasks: a team that creates its own tasks', () => {
     expect(Array.from(document.querySelectorAll('[role="option"]')).map((o) => o.getAttribute('aria-label'))).toEqual(['Front desk']);
     await act(async () => { root!.unmount(); });
     root = createRoot(host!);
-    await act(async () => { root!.render(<MemoryRouter initialEntries={['/tasks']}><Tasks /></MemoryRouter>); });
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/tasks']}>{page}</MemoryRouter>); });
     await click(document.querySelector('[data-team-tasks] [data-template="task-lobby-mine"]'));
     expect(sheet()!.textContent).toContain('Edit task');
     expect(Array.from(sheet()!.querySelectorAll('button')).some((b) => /Archive/.test(b.textContent || ''))).toBe(true);
@@ -238,11 +255,11 @@ describe('Tasks: a team that creates its own tasks', () => {
     expect(Array.from(sheet()!.querySelectorAll('button')).some((b) => /Archive|Save/.test(b.textContent || ''))).toBe(false);
   });
 
-  it('without the flag Caca has no Add task and no team list; no Team / Manage either way', async () => {
+  it('a "Create tasks" switch saved before reads as Edit', async () => {
     openClub('s1', 'lobby');
-    await show(<Tasks />);
-    expect(btn(/Add task/)).toBeUndefined();
-    expect(document.querySelector('[data-team-tasks]')).toBeNull();
-    expect(tab(/Manage/)).toBeUndefined();
+    withTasks('edit', true);
+    await show(page);
+    expect(document.querySelector('[data-team-tasks]')).toBeTruthy();
+    expect(btn(/Add task/)).toBeTruthy();
   });
 });

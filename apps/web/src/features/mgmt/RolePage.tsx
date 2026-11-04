@@ -2,8 +2,7 @@
 // section per sidebar group with a count and an All / None text button, each menu with its icon, " · view only", and View and Edit checkboxes under one
 // View / Edit header. A group with nothing ticked folds to "Care · hidden" and opens on a tap. When the panel is 900px or wider the sections flow into
 // two columns, balanced by rows. Then the owner-approval checkboxes and Reset to default. The page edits a draft (Roles.tsx holds it and saves it).
-// tasks-create (KC): under Tasks, while it is on Edit, "Create tasks for {team}" (not for Management, which always may); it is not a menu, so not in the counts.
-import { Fragment, useRef, useState, type CSSProperties, type ReactNode } from 'react';
+import { useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { MENU_KEYS, OWNER_KINDS, actorName, defaultDraft, dtDate, isDefaultCell, staffByRole, staffCall, type AccessLevel, type GridRole, type RoleDraft } from '@cp/shared';
 import { Button, Checkbox, Icon } from '../../components/ui';
 import { Lines, RoleHead } from '../../components/roleparts';
@@ -66,10 +65,7 @@ export function RolePage({ role, draft, onChange, surface }: { role: GridRole; d
   const people = staffByRole(s, role).map(staffCall).filter(Boolean).join(', ');
   const changed = s.club.settings.accessChanged?.[role];
   const def = defaultDraft(role);
-  const atDefault = MENU_KEYS.every((k) => draft.levels[k] === def.levels[k]) && OWNER_KINDS.every((k) => draft.approvals[k] === def.approvals[k]) && draft.taskCreate === def.taskCreate;
-  // "Create tasks" goes with Tasks on Edit: taking Edit away takes it too
-  const emit = (d: RoleDraft) => onChange(role !== 'mgmt' && d.taskCreate && d.levels.tasks !== 'edit' ? { ...d, taskCreate: false } : d);
-  const createLabel = t('mgmt.access.taskCreate', { team: roleName });
+  const atDefault = MENU_KEYS.every((k) => draft.levels[k] === def.levels[k]) && OWNER_KINDS.every((k) => draft.approvals[k] === def.approvals[k]);
   const seen = (keys: string[]) => keys.filter((k) => draft.levels[k] !== 'off').length;
   const colLabel = (col: Col) => t('mgmt.access.' + col);
   // a group the Owner is editing stays open, even once its last box is unticked (it folds again when the role is opened anew)
@@ -78,13 +74,13 @@ export function RolePage({ role, draft, onChange, surface }: { role: GridRole; d
     const levels = { ...draft.levels };
     for (const k of keys) levels[k] = tick(levels[k], col, on);
     keep(label);
-    emit({ ...draft, levels });
+    onChange({ ...draft, levels });
   };
   const setAll = (label: string, keys: string[], level: AccessLevel) => {
     const levels = { ...draft.levels };
     for (const k of keys) levels[k] = level;
     keep(label);
-    emit({ ...draft, levels });
+    onChange({ ...draft, levels });
   };
   const sub = [people, changed ? t('mgmt.roles.changedBy', { name: actorName(s, changed.by), d: fmt.fd(dtDate(changed.at), { day: 'numeric', month: 'short' }) }) : ''].filter(Boolean).join(' · ');
 
@@ -133,8 +129,7 @@ export function RolePage({ role, draft, onChange, surface }: { role: GridRole; d
             const name = t(menuLabel(k));
             const lv = draft.levels[k];
             return (
-              <Fragment key={k}>
-              <div data-menu={k} style={{ ...GRID, ...line(i === 0) }}>
+              <div key={k} data-menu={k} style={{ ...GRID, ...line(i === 0) }}>
                 <span style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 10 }}>
                   <Dot icon={menuIcon(k)} />
                   <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 15, lineHeight: '20px', fontWeight: 500, color: '#24201C' }}>
@@ -144,17 +139,6 @@ export function RolePage({ role, draft, onChange, surface }: { role: GridRole; d
                 </span>
                 {COLS.map((c) => <Checkbox key={c} box={18} label={`${name}: ${colLabel(c)}`} checked={ticks(lv, c)} onChange={(on) => setKeys(g.label, [k], c, on)} />)}
               </div>
-              {k === 'tasks' && role !== 'mgmt' && lv === 'edit' ? (
-                <div data-task-create style={{ ...GRID, ...line(false), minHeight: 44, paddingLeft: 52 }}>
-                  <span style={{ minWidth: 0, display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 14, lineHeight: '20px', color: '#24201C' }}>{createLabel}</span>
-                    {draft.taskCreate !== def.taskCreate ? <span role="img" aria-label={t('mgmt.access.changed')} title={t('mgmt.access.changed')} style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--accent, #75624B)', flex: 'none' }} /> : null}
-                  </span>
-                  <span />
-                  <Checkbox box={18} label={createLabel} checked={draft.taskCreate} onChange={(on) => onChange({ ...draft, taskCreate: on })} />
-                </div>
-              ) : null}
-              </Fragment>
             );
           })}
         </Lines>

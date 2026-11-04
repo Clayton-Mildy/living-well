@@ -5,7 +5,7 @@
 import { z } from 'zod';
 import type { ClubState, HM, ISODate, TaskTemplate, User, WorkWeekday } from '../types';
 import { DomainError, actorOf, defineAction, hasRole, isMgmt, isStaff, nameOfUser, roleOf, type ActionDef } from './framework';
-import { taskCreateOn } from '../rules/access';
+import { accessOf } from '../rules/access';
 import { DUTY_IDS, TASK_ROLES, LAST_DAY, doneId, doneOf, periodOf, templateShows } from '../rules/tasks';
 import { mediaIdOf } from './members';
 
@@ -35,13 +35,13 @@ const undoSchema = z.object({ templateId: z.string().min(1).max(80), period: z.s
 const dutySchema = z.object({ id: z.enum(DUTY_IDS as [string, ...string[]]), off: z.boolean().optional(), dueBy: hm.nullish().or(z.literal('')) });
 
 /**
- * KC tasks-create: a non-management role the Owner allowed ("Create tasks for {team}") adds tasks for its own team, and edits or archives only the ones
+ * KC tasks-view-edit: a non-management role with Tasks on Edit (Admin › Roles) adds tasks for its own team, and edits or archives only the ones
  * it made itself. `role`: the team the task is (or will be) for; `tpl`: the stored task when editing or archiving.
  */
 function ownTeamTask(u: User, s: ClubState, role: string | undefined, tpl: TaskTemplate | undefined, editing: boolean): boolean {
   if (u.kind !== 'staff') return false;
   const mine = roleOf(u);
-  if (!taskCreateOn(s, u.staff.role) || role !== mine) return false;
+  if (accessOf(s, u.staff.role, 'tasks') !== 'edit' || role !== mine) return false;
   if (!editing) return true;
   return !!tpl && tpl.role === mine && tpl.createdBy === actorOf(u);
 }

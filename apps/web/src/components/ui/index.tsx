@@ -59,9 +59,9 @@ export function PageHead({ eyebrow, title, size = 36, right, sub }: { eyebrow?: 
 
 /** Round 16 (KC): under a screen's title when the role's access to it is View (the server refuses its actions). Grey and quiet. */
 export function ViewOnlyBanner() {
-  const { level } = useScreenAccess();
+  const { level, key } = useScreenAccess();
   const t = useT();
-  if (level !== 'view') return null;
+  if (level !== 'view' || key === 'tasks') return null; // tasks-view-edit: Tasks on View still ticks off one's own duties and tasks
   return (
     <div role="status" data-testid="view-only" style={{ display: 'flex', alignItems: 'center', gap: 8, alignSelf: 'flex-start', minHeight: 32, padding: '4px 12px', borderRadius: 10, background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 14, lineHeight: '20px', marginTop: 4 }}>
       <Icon name="visibility" size={18} color="#6B6259" />

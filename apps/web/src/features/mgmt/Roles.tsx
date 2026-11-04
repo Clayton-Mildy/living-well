@@ -50,7 +50,7 @@ export function Roles() {
   const save = async () => {
     if (!role || !draft || !changes || busy) return;
     setBusy(true);
-    const r = await act('access.setRole', { role, levels: draft.levels, approvals: draft.approvals, taskCreate: draft.taskCreate }, { ok: t('mgmt.access.saved') });
+    const r = await act('access.setRole', { role, levels: draft.levels, approvals: draft.approvals }, { ok: t('mgmt.access.saved') });
     setBusy(false);
     if (r.ok) setEdit(null);
   };

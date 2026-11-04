@@ -10,7 +10,7 @@ const LEVELS: AccessLevel[] = ['off', 'view', 'edit'];
 const S = (d: Draft<ClubState>) => d as unknown as ClubState;
 
 export const accessActions = [
-  defineAction<{ role: GridRole; levels: Record<string, AccessLevel>; approvals: Record<OwnerKind, boolean>; taskCreate?: boolean }>({
+  defineAction<{ role: GridRole; levels: Record<string, AccessLevel>; approvals: Record<OwnerKind, boolean> }>({
     name: 'access.setRole',
     can: (u) => isOwner(u),
     parse: (raw) => {
@@ -22,9 +22,7 @@ export const accessActions = [
       for (const k of MENU_KEYS) levels[k] = oneOf(lv[k], LEVELS, k);
       const approvals = {} as Record<OwnerKind, boolean>;
       for (const kind of OWNER_KINDS) approvals[kind] = typeof ap[kind] === 'boolean' ? (ap[kind] as boolean) : bad(kind);
-      // tasks-create: "Create tasks for {team}"; left out = as it is saved
-      if (o.taskCreate !== undefined && typeof o.taskCreate !== 'boolean') bad('taskCreate');
-      return { role: oneOf(o.role, GRID_ROLES), levels, approvals, ...(typeof o.taskCreate === 'boolean' ? { taskCreate: o.taskCreate } : {}) };
+      return { role: oneOf(o.role, GRID_ROLES), levels, approvals };
     },
     run(d, input, ctx) {
       const settings = S(d).club.settings;
@@ -40,11 +38,10 @@ export const accessActions = [
       for (const kind of OWNER_KINDS) if (input.approvals[kind] !== ownerApprovalOn(S(d), input.role, kind)) kept[kind] = input.approvals[kind];
       if (Object.keys(kept).length) own[input.role] = kept;
       if (!Object.keys(own).length) delete settings.ownerApproval;
-      // tasks-create: only a non-management role's `true` is stored (Management always creates tasks)
-      if (input.taskCreate !== undefined && input.role !== 'mgmt') {
-        const tc = (settings.taskCreate ??= {});
-        if (input.taskCreate) tc[input.role] = true; else delete tc[input.role];
-        if (!Object.keys(tc).length) delete settings.taskCreate;
+      // tasks-view-edit: the role's old "Create tasks" switch was read as Tasks on Edit (accessOf), and the draft's Tasks cell now says it: drop it
+      if (settings.taskCreate) {
+        delete settings.taskCreate[input.role];
+        if (!Object.keys(settings.taskCreate).length) delete settings.taskCreate;
       }
       (settings.accessChanged ??= {})[input.role] = { by: ctx.user.id, at: ctx.nowDT };
       ctx.notify({ toRoles: [input.role], kind: 'mgmt.access.notif.changed', params: { name: nameOfUser(ctx.user) }, link: '/today' });

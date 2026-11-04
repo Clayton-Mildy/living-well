@@ -3,7 +3,7 @@ import { produceWithPatches, enablePatches, type Patch, type Draft, original, cu
 import type { Actor, ClubState, DT, HM, ISODate, Role, StaffRole, User, Notification, ActivityEntry, ChangeRequest, ReviewSection } from '../types';
 import { COLLECTIONS } from '../types';
 import { toHM, rp } from '../util';
-import { areaOf, OWN_ROW } from './areas';
+import { areaOf, NO_LIFT, OWN_ROW, VIEW_OWN } from './areas';
 import { accessOf, defaultLevel, AREA_BASE, ownerApprovalOn, type GridRole } from '../rules/access';
 import { ownerKindOf, ownerWhat, SECTION_OF } from './ownerGate';
 import { needsTerms } from '../rules/terms';
@@ -156,12 +156,16 @@ export function permit(def: ActionDef, user: User, input: unknown, s: ClubState)
   const role = user.staff.role as GridRole;
   // no explicit setting and Hidden by default: not a grid cell for this role (cross-screen paths keep `can` alone)
   if (s.club.settings.access?.[role]?.[area] === undefined && defaultLevel(role, area) === 'off') return own ? 'ok' : 'forbidden';
-  if (accessOf(s, role, area) !== 'edit') {
+  const level = accessOf(s, role, area);
+  if (level !== 'edit') {
     // the filer of a receipt or budget request keeps editing or withdrawing it: `can` says yes even for a role with no finance power
     if (own && OWN_ROW.includes(def.name) && def.can(asRole(user, 'activity'), input, s)) return 'ok';
+    // tasks-view-edit: Tasks on View still ticks off one's own duties and tasks
+    if (own && level === 'view' && VIEW_OWN.includes(def.name)) return 'ok';
     return own ? 'viewOnly' : 'forbidden';
   }
   if (own) return 'ok';
+  if (NO_LIFT.includes(area)) return 'forbidden';
   return defaultLevel(role, area) !== 'edit' && def.can(asRole(user, AREA_BASE[area] ?? 'mgmt'), input, s) ? 'ok' : 'forbidden';
 }
 

@@ -1,7 +1,7 @@
 // Round 16 (KC): what the signed-in role may do on the screen it has open (the access grid, shared/rules/access.ts).
 // The server enforces the same rule (framework.ts permit/canRun); this only decides what the screen shows.
 import { createContext, useContext, useMemo, type ReactNode } from 'react';
-import { AREA_BASE, defaultLevel, type AccessLevel, type GridRole, type StaffRole } from '@cp/shared';
+import { AREA_BASE, NO_LIFT, defaultLevel, type AccessLevel, type GridRole, type StaffRole } from '@cp/shared';
 import { useClub } from '../store/replica';
 import { RoleAsContext, useBaseMe } from './me';
 
@@ -16,7 +16,8 @@ export function screenAccess(explicit: AccessLevel | undefined, role: StaffRole 
   const def = defaultLevel(role as GridRole, key);
   const level = explicit ?? def;
   if (explicit === undefined && def === 'off') return { key, level: 'edit' };
-  if (level === 'edit') return { key, level, roleAs: explicit === 'edit' && def !== 'edit' ? AREA_BASE[key] : undefined };
+  // tasks-view-edit: Tasks on Edit is the role's own team's tasks, never management's screen (the server does not lend Tasks either, NO_LIFT)
+  if (level === 'edit') return { key, level, roleAs: explicit === 'edit' && def !== 'edit' && !NO_LIFT.includes(key) ? AREA_BASE[key] : undefined };
   return { key, level: 'view' }; // explicit Off or View, or a default View: the screen is read-only
 }
 

@@ -152,7 +152,6 @@ export const mgmt: Same<typeof EN> = {
   'access.reset': 'Kembalikan ke bawaan', 'access.resetAsk': 'Kembalikan {role} ke bawaan?', 'access.resetBody': 'Belum tersimpan sampai Anda ketuk Simpan.',
   'access.discardAsk': 'Buang {n} perubahan?', 'access.discardAskOne': 'Buang {n} perubahan?', 'access.discard': 'Buang', 'access.discardBody': '{role} tetap seperti terakhir disimpan.',
   'access.lastChanged': 'Terakhir diubah oleh {name} · {d}', 'access.needsOwner': 'Perlu persetujuan pemilik',
-  'access.taskCreate': 'Buat tugas untuk {team}',
   'access.kind.pricing': 'Harga dan paket', 'access.kind.holidays': 'Hari tutup dan libur', 'access.kind.budget': 'Anggaran mingguan',
   'access.role.lobby': 'Resepsionis', 'access.role.nurse': 'Perawat', 'access.role.activity': 'Pengajar aktivitas', 'access.role.kitchen': 'Dapur & F&B', 'access.role.finance': 'Keuangan', 'access.role.mgmt': 'Manajemen',
   'access.notif.changed': 'Menu Anda diubah oleh {name}',

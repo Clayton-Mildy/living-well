@@ -99,24 +99,24 @@ describe('access.setRole', () => {
   });
 });
 
-describe('Create tasks for the team (tasks-create)', () => {
-  it('access.setRole saves the flag for Front desk only, and saving it off clears it', () => {
+describe('Tasks on Roles (tasks-view-edit)', () => {
+  it('Tasks is a plain View / Edit cell: View by default for the others, Edit for Management; no separate switch', () => {
+    expect(defaultDraft('lobby').levels.tasks).toBe('view');
+    expect(defaultDraft('kitchen').levels.tasks).toBe('view');
+    expect(defaultDraft('mgmt').levels.tasks).toBe('edit');
+    expect(Object.keys(roleDraft(base, 'lobby')).sort()).toEqual(['approvals', 'levels']);
     const d = roleDraft(base, 'lobby');
-    expect(d.taskCreate).toBe(false);
-    expect(defaultDraft('lobby').taskCreate).toBe(false);
-    expect(roleDraft(base, 'mgmt').taskCreate).toBe(true);
-    const on = run(base, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: true }, OWNER).state;
-    expect(on.club.settings.taskCreate).toEqual({ lobby: true });
-    expect(on.club.settings.access?.lobby).toBeUndefined();
-    expect(roleDraft(on, 'lobby').taskCreate).toBe(true);
-    const off = run(on, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: false }, OWNER).state;
-    expect(off.club.settings.taskCreate).toBeUndefined();
-    fails(base, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: true }, 's9', 'err.forbidden'); // only the Owner
+    expect(draftChanges(base, 'lobby', { ...d, levels: { ...d.levels, tasks: 'edit' } })).toBe(1);
   });
-  it('draftChanges counts the flag as one change', () => {
-    const d = roleDraft(base, 'lobby');
-    expect(draftChanges(base, 'lobby', d)).toBe(0);
-    expect(draftChanges(base, 'lobby', { ...d, taskCreate: true })).toBe(1);
+  it('saving Edit stores the cell; a "Create tasks" switch saved before is dropped', () => {
+    const old = structuredClone(base);
+    old.club.settings.taskCreate = { lobby: true, nurse: true };
+    const d = roleDraft(old, 'lobby');
+    expect(d.levels.tasks).toBe('edit'); // read as Edit
+    const r = run(old, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: true }, OWNER).state;
+    expect(r.club.settings.access?.lobby).toEqual({ tasks: 'edit' });
+    expect(r.club.settings.taskCreate).toEqual({ nurse: true }); // only the saved role's
+    expect(accessOf(r, 'nurse', 'tasks')).toBe('edit');
   });
 });
 

@@ -1,9 +1,10 @@
 // Tasks (KC round 7): a tracker of each role's general duties (a picture of each session, the lunch photo, the checks…), so nobody forgets them, plus additional tasks.
 // Everyone sees their own day (Mine): the duties, which tick themselves from the data, then management's recurring checklist. Management also has Team (how each role is
 // doing, for any day, week or month) and Manage (switch duties off, set their times, and the additional tasks). /tasks?view=team|manage opens a view.
-// tasks-create: a role the Owner allowed to create its own tasks also gets its team's task list and Add task under its day (TeamTasks).
+// tasks-view-edit: a role with Tasks on View (the default for all but management) has its day and ticks it off; on Edit it also gets its team's task list
+// and Add task under its day (TeamTasks). Hidden: no Tasks menu.
 import { useSearchParams } from 'react-router-dom';
-import { taskCreateOn, type StaffRole } from '@cp/shared';
+import { accessOf, type StaffRole } from '@cp/shared';
 import { PageHead, Segmented } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
 import { useNow } from '../../lib/clock';
@@ -39,7 +40,7 @@ export function Tasks() {
       {view === 'mine' ? <MineView s={s} role={role as StaffRole} today={today} nowMin={nowMin} />
         : view === 'team' ? <TeamView s={s} today={today} nowMin={nowMin} />
         : <ManageView />}
-      {!mgmt && taskCreateOn(s, role as StaffRole) ? <TeamTasks role={role as StaffRole} /> : null}
+      {!mgmt && accessOf(s, role as StaffRole, 'tasks') === 'edit' ? <TeamTasks role={role as StaffRole} /> : null}
     </div>
   );
 }

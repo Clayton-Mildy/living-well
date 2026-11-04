@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, DomainError, type ClubState } from '../index';
 import { customTasks, doneOf, dutyById, dutyDueBy, dutyIsOn, dutiesOf, DUTIES } from '../rules/tasks';
-import { roleDraft } from '../rules/access';
+import { accessOf, menuKeys, roleDraft, type AccessLevel, type GridRole } from '../rules/access';
 const dutyIdOf = (role: string) => (DUTIES.find((d) => d.role === role) ?? DUTIES[0]).id;
 
 const T = '2026-10-21'; // Wed
@@ -116,56 +116,95 @@ describe('task.saveTemplate and task.archiveTemplate', () => {
   });
 });
 
-// KC (tasks-create): the Owner lets a role create tasks for its own team (Admin › Roles › Tasks › "Create tasks for Front desk").
-describe('a role allowed to create tasks for its own team', () => {
+// KC (tasks-view-edit): the Tasks cell on Admin › Roles. View: see and complete one's own duties and tasks. Edit: also create tasks for one's own team,
+// and edit or archive the ones one made. Hidden: no Tasks. Every non-management role starts at View; Management keeps full control.
+describe('Tasks on View or Edit (Admin › Roles)', () => {
   const input = { title: 'Water the lobby plants', role: 'lobby', every: 'daily', proof: 'none', active: true };
-  /** Benjamin (the Owner) ticks "Create tasks for Front desk" and saves the role. */
-  const allowLobby = (s: ClubState) => {
-    const d = roleDraft(s, 'lobby');
-    return step(s, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: true }, 's11');
+  /** Benjamin (the Owner) sets the role's Tasks cell and saves the role. */
+  const setTasks = (s: ClubState, role: GridRole, level: AccessLevel) => {
+    const d = roleDraft(s, role);
+    return step(s, 'access.setRole', { role, levels: { ...d.levels, tasks: level }, approvals: d.approvals }, 's11');
   };
+  // one of each role's own tasks that is open on Wed 21 Oct at 10:00
+  const OWN: [GridRole, string, string, Record<string, string>][] = [
+    ['lobby', 's1', 'task-lobby-photo', { photoMediaId: MEDIA }], ['nurse', 's8', 'task-nurse-firstaid', {}], ['activity', 's5', 'task-activity-materials', {}],
+    ['kitchen', 's2', 'task-kitchen-deep', {}], ['finance', 's10', 'task-finance-bank', {}],
+  ];
 
-  it('Caca with the flag creates a Front desk task, edits and archives her own', () => {
-    const s0 = allowLobby(fresh());
+  it('every non-management role starts at View: ticks its own task off and takes it back, but cannot set tasks', () => {
+    const s0 = fresh();
+    for (const [role, uid, id, extra] of OWN) {
+      expect(accessOf(s0, role, 'tasks')).toBe('view');
+      expect(menuKeys(s0, role)).toContain('tasks');
+      const r = run(s0, 'task.done', { templateId: id, ...extra }, uid);
+      const period = r.result.period as string;
+      expect(r.state.taskDone[`td-${id}-${period}`].by).toBe(uid);
+      expect(step(r.state, 'task.undo', { templateId: id, period }, uid).taskDone[`td-${id}-${period}`]).toBeUndefined();
+      fails(s0, 'task.saveTemplate', { ...input, role }, uid, 'err.forbidden');
+      fails(s0, 'task.archiveTemplate', { id }, uid, 'err.forbidden');
+      fails(s0, 'duty.configure', { id: dutyIdOf(role), off: true }, uid, 'err.forbidden');
+    }
+  });
+
+  it('Tasks on Edit: Caca creates a Front desk task, edits and archives her own', () => {
+    const s0 = setTasks(fresh(), 'lobby', 'edit');
+    expect(s0.club.settings.access?.lobby).toEqual({ tasks: 'edit' });
     const r = run(s0, 'task.saveTemplate', input, 's1');
     const id = r.result.id as string;
     expect(r.state.taskTemplates[id]).toMatchObject({ ...input, createdBy: 'staff:s1' });
     const e = step(r.state, 'task.saveTemplate', { ...input, id, title: 'Water the plants' }, 's1');
     expect(e.taskTemplates[id]).toMatchObject({ title: 'Water the plants', createdBy: 'staff:s1' });
     expect(step(e, 'task.archiveTemplate', { id }, 's1').taskTemplates[id].deletedAt).toBeTruthy();
+    // still ticks her own tasks off
+    expect(run(s0, 'task.done', { templateId: 'task-lobby-photo', photoMediaId: MEDIA }, 's1').result.period).toBe(T);
   });
 
-  it('a kitchen task, or moving her own task to the kitchen, is forbidden', () => {
-    const s0 = allowLobby(fresh());
+  it('Tasks on Edit gives no more than her own team: a kitchen task, moving hers to the kitchen, Ega\'s task or duty times are forbidden', () => {
+    const s0 = setTasks(fresh(), 'lobby', 'edit');
     fails(s0, 'task.saveTemplate', { ...input, role: 'kitchen' }, 's1', 'err.forbidden');
     const r = run(s0, 'task.saveTemplate', input, 's1');
     fails(r.state, 'task.saveTemplate', { ...input, id: r.result.id, role: 'kitchen' }, 's1', 'err.forbidden');
-  });
-
-  it('a Front desk task Ega made stays hers: Caca cannot edit or archive it', () => {
-    const s0 = allowLobby(fresh());
     expect(s0.taskTemplates['task-lobby-desk'].createdBy).toBe('staff:s9');
     fails(s0, 'task.saveTemplate', { ...input, id: 'task-lobby-desk' }, 's1', 'err.forbidden');
     fails(s0, 'task.archiveTemplate', { id: 'task-lobby-desk' }, 's1', 'err.forbidden');
+    fails(s0, 'duty.configure', { id: dutyIdOf('lobby'), off: true }, 's1', 'err.forbidden');
+    fails(s0, 'task.saveTemplate', { ...input, role: 'nurse' }, 's8', 'err.forbidden'); // the nurse is still on View
+    // back to View: her own task is management's now
+    fails(setTasks(r.state, 'lobby', 'view'), 'task.archiveTemplate', { id: r.result.id }, 's1', 'err.forbidden');
   });
 
-  it('without the flag Caca is forbidden; another role with Caca\'s flag is too', () => {
-    const s0 = fresh();
+  it('Tasks Hidden: no Tasks menu, and ticking off is refused', () => {
+    const s0 = setTasks(fresh(), 'lobby', 'off');
+    expect(menuKeys(s0, 'lobby')).not.toContain('tasks');
+    fails(s0, 'task.done', { templateId: 'task-lobby-photo', photoMediaId: MEDIA }, 's1', 'err.viewOnly');
     fails(s0, 'task.saveTemplate', input, 's1', 'err.forbidden');
-    const s1 = allowLobby(s0);
-    fails(s1, 'task.saveTemplate', { ...input, role: 'nurse' }, 's8', 'err.forbidden');
-    const mine = run(s1, 'task.saveTemplate', input, 's1');
-    const off = (() => { const d = roleDraft(mine.state, 'lobby'); return step(mine.state, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: false }, 's11'); })();
-    fails(off, 'task.archiveTemplate', { id: mine.result.id }, 's1', 'err.forbidden'); // the Owner took it back: her own task is management's now
   });
 
-  it('management is unchanged: any role, any task, and duty settings stay management only', () => {
-    const s0 = allowLobby(fresh());
+  it('a "Create tasks" switch saved before reads as Edit; saving the role drops it', () => {
+    const s0 = fresh();
+    s0.club.settings.taskCreate = { lobby: true };
+    expect(accessOf(s0, 'lobby', 'tasks')).toBe('edit');
+    expect(roleDraft(s0, 'lobby').levels.tasks).toBe('edit');
+    expect(run(s0, 'task.saveTemplate', input, 's1').state.taskTemplates).toBeTruthy();
+    const kept = setTasks(s0, 'lobby', 'edit');
+    expect(kept.club.settings.taskCreate).toBeUndefined();
+    expect(accessOf(kept, 'lobby', 'tasks')).toBe('edit');
+    const view = setTasks(s0, 'lobby', 'view');
+    expect(view.club.settings.taskCreate).toBeUndefined();
+    expect(view.club.settings.access?.lobby).toBeUndefined();
+    expect(accessOf(view, 'lobby', 'tasks')).toBe('view');
+  });
+
+  it('management is unchanged: Edit by default, any role, any task, duty settings', () => {
+    const s0 = setTasks(fresh(), 'lobby', 'edit');
+    expect(accessOf(s0, 'mgmt', 'tasks')).toBe('edit');
     const r = run(s0, 'task.saveTemplate', { ...input, role: 'kitchen' }, 's9');
     expect(r.state.taskTemplates[r.result.id as string].role).toBe('kitchen');
     const c = run(s0, 'task.saveTemplate', input, 's1');
     expect(step(c.state, 'task.saveTemplate', { ...input, id: c.result.id, title: 'Ega renamed it' }, 's9').taskTemplates[c.result.id as string].title).toBe('Ega renamed it');
-    fails(s0, 'duty.configure', { id: dutyIdOf('lobby'), off: true }, 's1', 'err.forbidden');
+    expect(step(s0, 'task.archiveTemplate', { id: 'task-kitchen-deep' }, 's9').taskTemplates['task-kitchen-deep'].deletedAt).toBeTruthy();
+    expect(step(s0, 'duty.configure', { id: dutyIdOf('lobby'), off: true }, 's9').club.settings.duties?.[dutyIdOf('lobby')]?.off).toBe(true);
+    expect(run(s0, 'task.done', { templateId: 'task-lobby-photo', photoMediaId: MEDIA }, 's9').result.period).toBe(T); // ticks for a team
   });
 });
 

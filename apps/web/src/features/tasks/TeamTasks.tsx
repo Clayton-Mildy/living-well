@@ -1,4 +1,4 @@
-// tasks-create (KC): a role the Owner allowed ("Create tasks for {team}" on Admin › Roles) sees its team's additional tasks under its own day, each with who made it
+// tasks-view-edit (KC): a role with Tasks on Edit (Admin › Roles) sees its team's additional tasks under its own day, each with who made it
 // ("by you" / "by Ega"), and an ink "Add task". Its own tasks open in the edit sheet (For fixed to the team); the others open read-only. No Manage, scores or duty settings.
 import { useMemo, useState } from 'react';
 import { actorName, type StaffRole, type TaskTemplate } from '@cp/shared';
