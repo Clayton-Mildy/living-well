@@ -12,7 +12,7 @@ const MGMT_MENU = [
   'hchecks', 'readings', 'log', 'camera',
   'menu', 'lunch', 'feedback', 'stock',
   'billing', 'payments', 'budget', 'receipts', 'spending',
-  'calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'directory', 'surveys', 'plans', 'settings',
+  'calendar', 'guests', 'insights', 'broadcast', 'venue', 'hr', 'contacts', 'surveys', 'plans', 'settings',
 ];
 
 /** Today's menus per role, in order. `today` is every role's home (not part of the grid, R1). The Owner has management's. */
@@ -21,7 +21,7 @@ export const DEFAULT_MENUS: Record<StaffRole, string[]> = {
   nurse: ['today', 'readings', 'members', 'tasks', 'requests', 'contacts'],
   activity: ['today', 'camera', 'log', 'members', 'calendar', 'tasks', 'requests', 'contacts'],
   kitchen: ['today', 'lunch', 'feedback', 'tasks', 'requests', 'contacts'],
-  finance: ['today', 'payments', 'budget', 'receipts', 'spending', 'stock', 'guests', 'members', 'tasks', 'directory'],
+  finance: ['today', 'payments', 'budget', 'receipts', 'spending', 'stock', 'guests', 'members', 'tasks', 'contacts'],
   mgmt: MGMT_MENU,
   owner: [...MGMT_MENU, 'roles'], // round 16: Admin › Roles is the Owner's alone (not a grid menu)
 };
@@ -45,16 +45,25 @@ export const AREA_BASE: Record<string, StaffRole> = (() => {
   set('kitchen', ['menu', 'lunch', 'feedback']);
   set('nurse', ['hchecks', 'readings']);
   set('activity', ['log', 'camera', 'calendar']);
-  set('finance', ['billing', 'payments', 'budget', 'receipts', 'spending', 'stock', 'guests', 'directory']);
+  set('finance', ['billing', 'payments', 'budget', 'receipts', 'spending', 'stock', 'guests', 'contacts']);
   return m;
 })();
 
 export const defaultLevel = (role: GridRole, key: string): AccessLevel =>
   DEFAULT_LEVELS[role]?.[key] ?? (DEFAULT_MENUS[role].includes(key) ? 'edit' : 'off');
 
+const RANK: Record<AccessLevel, number> = { off: 0, view: 1, edit: 2 };
+
 export function accessOf(s: ClubState, role: StaffRole, key: string): AccessLevel {
   if (role === 'owner' || key === 'today') return 'edit';
-  return s.club.settings.access?.[role]?.[key] ?? defaultLevel(role, key);
+  const cells = s.club.settings.access?.[role];
+  // round 19 (R3): Directory is now Contacts. The level is the most permissive of the Contacts cell (its default when unstored) and a Directory cell saved before the merge
+  if (key === 'contacts') {
+    const now = cells?.contacts ?? defaultLevel(role, key);
+    const old = cells?.directory;
+    return old !== undefined && RANK[old] > RANK[now] ? old : now;
+  }
+  return cells?.[key] ?? defaultLevel(role, key);
 }
 
 /** The role's menu keys: `today`, then every key not switched off. Default keys keep their order; granted ones follow in MENU_KEYS order. */

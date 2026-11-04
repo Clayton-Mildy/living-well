@@ -82,6 +82,23 @@ describe('Admin › Roles', () => {
     expect(page.querySelector('[data-role-head]')!.textContent).toContain(`${seen} of ${MENU_KEYS.length}`);
   });
 
+  it('round 19: one Contacts row (no Directory), 31 menus, Finance on Edit; a Directory cell saved before the merge shows as the Contacts level', async () => {
+    openClub((st) => { st.club.settings.access = { lobby: { contacts: 'view', directory: 'edit' } }; });
+    panelWidth(700);
+    await show(<Roles />, 1024);
+    expect(MENU_KEYS).toHaveLength(31);
+    await click(roleRow('finance'));
+    const page = document.querySelector('[data-role-page="finance"]')!;
+    expect(page.querySelector('[data-role-head]')!.textContent).toContain('of 31');
+    const rows = Array.from(page.querySelectorAll('[data-menu]'));
+    expect(rows.filter((r) => /Contacts/.test(r.textContent ?? ''))).toHaveLength(1);
+    expect(rows.some((r) => /Directory/.test(r.textContent ?? ''))).toBe(false);
+    expect(ticked('Contacts: View')).toBe('true');
+    expect(ticked('Contacts: Edit')).toBe('true');
+    await click(roleRow('lobby'));
+    expect(ticked('Contacts: Edit')).toBe('true'); // View stored for contacts, Edit for the old directory cell: the more permissive wins
+  });
+
   it('Edit ticks View, unticking View unticks Edit; the bar counts the change and Save sends the whole role', async () => {
     openClub();
     await show(<Roles />, 390);

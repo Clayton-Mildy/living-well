@@ -162,7 +162,7 @@ export function Directory() {
           {isPhone ? <Icon name="chevron_left" size={30} weight={300} color="var(--accent, #75624B)" /> : <Icon name="arrow_back" size={20} color="var(--accent, #75624B)" />}{t('common.today')}
         </button>
       ) : null}
-      <PageHead eyebrow={t('nav.contacts')} title={simple ? t('finance.dir.famTitle') : t('nav.directory')}
+      <PageHead title={simple ? t('finance.dir.famTitle') : t('nav.contacts')}
         right={canEdit && !isPhone ? <Button size={48} icon="add" onClick={() => setForm('new')} style={{ padding: '0 20px' }}>{t('finance.dir.add')}</Button> : undefined} />
       {fam ? (
         <div style={{ fontSize: 15, lineHeight: '22px', color: '#6B6259' }}>
@@ -189,17 +189,17 @@ export function Directory() {
 
       {isPhone ? (
         // round 6, phone: the list is one grouped list under a small header
-        <PGroup title={t('nav.directory')} meta={q && hits.length !== all.length ? t('finance.bill.matches', { n: hits.length, of: all.length }) : undefined} pad={0} gap={0}>
+        <PGroup title={t('nav.contacts')} meta={q && hits.length !== all.length ? t('finance.bill.matches', { n: hits.length, of: all.length }) : undefined} pad={0} gap={0}>
           {rows}
           {!hits.length ? <EmptyState icon={q ? 'search_off' : 'contacts'} title={q ? t('common.noResults') : t('finance.dir.empty')} /> : null}
-          <PagerBar paged={paged} label={t('nav.directory')} />
+          <PagerBar paged={paged} label={t('nav.contacts')} />
         </PGroup>
       ) : (
       <Hero>
-        <HeroHead title={t('nav.directory')} meta={q && hits.length !== all.length ? t('finance.bill.matches', { n: hits.length, of: all.length }) : undefined} />
+        <HeroHead title={t('nav.contacts')} meta={q && hits.length !== all.length ? t('finance.bill.matches', { n: hits.length, of: all.length }) : undefined} />
         {rows}
         {!hits.length ? <EmptyState icon={q ? 'search_off' : 'contacts'} title={q ? t('common.noResults') : t('finance.dir.empty')} /> : null}
-        <PagerBar paged={paged} label={t('nav.directory')} />
+        <PagerBar paged={paged} label={t('nav.contacts')} />
       </Hero>
       )}
 

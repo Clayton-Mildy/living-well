@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { buildSeed } from '@cp/shared';
 import { MENU_KEYS, AREA_BASE } from '@cp/shared';
-import { navFor, navGroups, phoneNav, screenFor } from './nav';
+import { menuGroups, navFor, navGroups, phoneNav, retiredKey, screenFor } from './nav';
 
 const s = structuredClone(buildSeed().citra);
 const NAVS = (r: Parameters<typeof navFor>[1]) => navFor(s, r);
@@ -70,7 +70,7 @@ describe('access grid in the nav', () => {
     nurse: [[null, ['today', 'readings', 'members', 'tasks']], ['nav.g_club', ['requests', 'contacts']]],
     activity: [[null, ['today', 'camera', 'log', 'tasks']], ['nav.g_club', ['members', 'calendar', 'requests', 'contacts']]],
     kitchen: [[null, ['today', 'lunch', 'feedback', 'tasks']], ['nav.g_club', ['requests', 'contacts']]],
-    finance: [[null, ['today', 'payments', 'budget', 'receipts', 'spending']], ['nav.g_kitchen', ['stock']], ['nav.g_club', ['guests', 'members', 'tasks', 'directory']]],
+    finance: [[null, ['today', 'payments', 'budget', 'receipts', 'spending']], ['nav.g_kitchen', ['stock']], ['nav.g_club', ['guests', 'members', 'tasks', 'contacts']]],
   };
   it.each(Object.keys(OLD))('%s: default sidebar groups are today\'s (lobby adds Billing under Club)', (role) => {
     expect(navGroups(s, role as 'lobby').map((g) => [g[0], g[1].map((i) => i.key)])).toEqual(OLD[role]);
@@ -95,5 +95,35 @@ describe('access grid in the nav', () => {
       expect(navFor(o, base).map((i) => i.key), k).toContain(k);
       expect(screenFor(o, base, k), k).not.toBeNull();
     }
+  });
+});
+
+// round 19: Directory is retired as a menu; Contacts opens the one Directory screen for every role
+describe('one Contacts menu', () => {
+  it.each(['finance', 'mgmt', 'owner'] as const)('%s: one Contacts item under Club and no Directory item', (role) => {
+    const keys = NAVS(role).map((i) => i.key);
+    expect(keys.filter((k) => k === 'contacts')).toHaveLength(1);
+    expect(keys).not.toContain('directory');
+    expect(NAVG(role).find((g) => g[1].some((i) => i.key === 'contacts'))![0]).toBe('nav.g_club');
+    const item = NAVS(role).find((i) => i.key === 'contacts')!;
+    expect(item.label).toBe('nav.contacts');
+  });
+  it('Admin › Roles has no Directory group row', () => {
+    expect(menuGroups().flatMap((g) => g.keys)).not.toContain('directory');
+    expect(menuGroups().find((g) => g.label === 'nav.g_club')!.keys).toContain('contacts');
+  });
+  it('Contacts opens the Directory screen; the old directory key is no screen and redirects to contacts', () => {
+    expect(screenFor(s, 'finance', 'contacts')).toBe('dir');
+    expect(screenFor(s, 'mgmt', 'contacts')).toBe('dir');
+    expect(screenFor(s, 'nurse', 'contacts')).toBe('dir');
+    expect(screenFor(s, 'finance', 'directory')).toBeNull();
+    expect(retiredKey('directory')).toBe('contacts');
+    expect(retiredKey('contacts')).toBeNull();
+  });
+  it('a Contacts cell closes Contacts; a Directory cell saved before the merge still opens it', () => {
+    const o = structuredClone(s);
+    o.club.settings.access = { finance: { contacts: 'off' }, lobby: { directory: 'edit' } };
+    expect(screenFor(o, 'finance', 'contacts')).toBeNull();
+    expect(screenFor(o, 'lobby', 'contacts')).toBe('dir');
   });
 });

@@ -30,6 +30,20 @@ describe('access.setRole', () => {
     expect(note).toMatchObject({ toRoles: ['lobby'], params: { name: 'Pak Benjamin' } });
     expect(accessOf(r.state, 'lobby', 'billing')).toBe('edit');
   });
+  it('saving writes only contacts and drops a directory cell stored before the merge (R3)', () => {
+    const s = structuredClone(base);
+    s.club.settings.access = { finance: { directory: 'view' }, lobby: { contacts: 'view', directory: 'edit' } };
+    const r = save(s, 'lobby', { contacts: 'view' });
+    expect(r.state.club.settings.access?.lobby).toEqual({ contacts: 'view' });
+    expect(r.state.club.settings.access?.finance).toEqual({ directory: 'view' }); // another role is untouched
+    const f = save(s, 'finance', {}); // a lone old View never narrowed Finance's Edit, so nothing is left to store
+    expect(f.state.club.settings.access?.finance).toBeUndefined();
+    const v = save(s, 'finance', { contacts: 'view' });
+    expect(v.state.club.settings.access?.finance).toEqual({ contacts: 'view' });
+    expect(accessOf(v.state, 'finance', 'contacts')).toBe('view');
+    const back = save(s, 'finance', { contacts: 'edit' });
+    expect(back.state.club.settings.access?.finance).toBeUndefined(); // Edit is Finance's default now
+  });
   it('Members on Hidden is stored, and Caca can no longer update member details', () => {
     const a = save(base, 'lobby', { members: 'off' }).state;
     expect(a.club.settings.access?.lobby).toEqual({ members: 'off' });

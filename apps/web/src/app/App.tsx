@@ -14,6 +14,7 @@ import { screenFor } from './nav';
 import { useClub } from '../store/replica';
 import { useT } from '../lib/i18n';
 import { routerRef } from './routerRef';
+import { LegacyKeyRedirect } from './LegacyKeyRedirect';
 
 function DataGate({ children }: { children: ReactNode }) {
   const user = useSession((s) => s.user);
@@ -63,6 +64,7 @@ const router = createBrowserRouter([
     children: [
       { index: true, element: <Navigate to="/today" replace /> },
       { path: 'members/:id/:tab?', element: <ProfileRoute /> },
+      { path: 'directory', element: <LegacyKeyRedirect from="directory" /> }, // round 19: Directory is Contacts now
       { path: ':key', element: <NavScreen /> },
       { path: '*', element: <Navigate to="/today" replace /> },
     ],

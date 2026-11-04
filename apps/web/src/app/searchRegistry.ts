@@ -40,8 +40,7 @@ export const SCREEN_ENTRIES: ScreenEntry[] = [
   sc('broadcast', 'broadcast', 'campaign', ['broadcast', 'announcement', 'message'], ['pengumuman', 'siaran']),
   sc('venue', 'venue', 'storefront', ['venue', 'bookings', 'rental'], ['sewa tempat', 'pemesanan']),
   sc('hr', 'people', 'badge', ['people', 'staff', 'team', 'hr'], ['karyawan', 'staf', 'tim']),
-  sc('directory', 'directory', 'contacts', ['directory', 'suppliers', 'doctors'], ['direktori', 'pemasok', 'dokter']),
-  sc('contacts', 'contacts', 'contacts', ['contacts', 'phone numbers'], ['kontak', 'nomor telepon']),
+  sc('contacts', 'contacts', 'contacts', ['contacts', 'directory', 'suppliers', 'doctors', 'phone numbers'], ['kontak', 'direktori', 'pemasok', 'dokter', 'nomor telepon']), // round 19: Directory and Contacts are one menu
   sc('surveys', 'surveys', 'rate_review', ['surveys'], ['survei']),
   sc('plans', 'plans', 'sell', ['plans', 'pricing', 'prices'], ['paket', 'harga']),
   sc('settings', 'settings', 'tune', ['settings', 'notice period', 'few visits', 'terms'], ['pengaturan', 'masa pemberitahuan', 'kunjungan sedikit', 'syarat']), // round 17
@@ -155,8 +154,8 @@ export function buildSearchIndex(s: ClubState, role: Role, t: T, lang: Lang = 'e
       });
     }
   }
-  // R-F2: suppliers open the Directory; a role without it (the lobby) reaches the same screen through Contacts, where it may edit (Directory's canEdit)
-  const dirPath = keys.has('directory') ? '/directory' : keys.has('contacts') && (role === 'lobby' || role === 'finance' || role === 'mgmt') ? '/contacts' : null;
+  // R-F2, round 19: suppliers open the one Contacts screen, for the roles that keep suppliers there (Directory's canEdit)
+  const dirPath = keys.has('contacts') && (role === 'lobby' || role === 'finance' || role === 'mgmt') ? '/contacts' : null;
   if (dirPath) {
     for (const d of live(s.directory)) {
       if (d.kind !== 'supplier') continue;
