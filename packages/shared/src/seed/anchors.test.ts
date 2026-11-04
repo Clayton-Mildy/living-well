@@ -49,7 +49,10 @@ describe('seed around any demo day', () => {
     for (const m of ['m1', 'm46', 'm2', 'm20', 'm10']) expect(membershipStatus(s.members[m], T)).toBe('active');
     for (const i of live(s.invoices)) expect(isWeekday(i.dueDate)).toBe(true);
     // the calendar and leads look ahead, on open days
-    for (const e of live(s.calendarEvents).filter((x) => x.kind !== 'holiday')) { expect(e.date > T).toBe(true); expect(isWeekday(e.date)).toBe(true); }
+    for (const e of live(s.calendarEvents).filter((x) => x.kind !== 'holiday' && x.id !== 'ev-outing-past')) { expect(e.date > T).toBe(true); expect(isWeekday(e.date)).toBe(true); }
+    // round 20 fix (I3): the one past trip, a few days back on an open weekday
+    const past = s.calendarEvents['ev-outing-past'];
+    if (past) { expect(past.date < T && past.date >= addDays(T, -7)).toBe(true); expect(isWeekday(past.date)).toBe(true); }
     expect(new Set(live(s.calendarEvents).map((e) => e.date)).size).toBe(live(s.calendarEvents).length);
     for (const e of live(s.enquiries)) if (e.next?.date && e.stage !== 'trial' && e.stage !== 'visit') expect(e.next.date > T).toBe(true);
     expect(live(s.guestVisits).every((x) => x.date === T)).toBe(true);

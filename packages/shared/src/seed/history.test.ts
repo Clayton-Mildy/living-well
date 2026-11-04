@@ -146,7 +146,10 @@ describe('six months of history', () => {
     // and tagged photos stay placeholders
     expect(members.filter((m) => m.photoMediaId).map((m) => m.id).sort()).toEqual(Object.keys(MEMBER_PORTRAITS).sort());
     for (const m of members.filter((x) => x.photoMediaId)) expect(m.photoMediaId).toBe(portraitId(m.id));
-    expect(live(s.photos).filter((p) => p.memberIds.length > 0 && p.visibility !== 'draft').every((p) => !p.mediaId)).toBe(true);
+    // round 20 fix (I3): the past trip's photo tagged to Oma Lina uses a free demo scene with no face in it
+    const tripPics = (p: { id: string }) => p.id.startsWith('ptrip-seed-');
+    expect(live(s.photos).filter((p) => p.memberIds.length > 0 && p.visibility !== 'draft' && !tripPics(p)).every((p) => !p.mediaId)).toBe(true);
+    for (const p of live(s.photos).filter((x) => tripPics(x) && x.memberIds.length > 0)) expect(FACE_FREE.map(demoMediaId), p.id).toContain(p.mediaId);
     // the quick camera's seeded drafts (private to Dinar) that name a member use only the demo pictures with no face in them
     const drafts = live(s.photos).filter((p) => p.visibility === 'draft');
     expect(drafts.length).toBeGreaterThan(0);

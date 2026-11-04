@@ -16,7 +16,7 @@ import { seedUnpaid } from './unpaid';
 import { seedReceipts } from './receipts';
 import { seedWeekend } from './weekend';
 import { seedSigning } from './signing';
-import { seedRound16 } from './round16';
+import { seedPastTrip, seedRound16 } from './round16';
 import { seedRound17 } from './round17';
 import { seedRound18 } from './round18';
 import { DEMO_START_MIN } from '../../util';
@@ -39,6 +39,7 @@ export function seedRound7(s: ClubState, T: ISODate, nowMin: number = DEMO_START
   seedRound16(s, T); // round 16: family emails, Opa Budi's pick-up and party cake, the field trip fee; no random draws
   seedRound17(s, T); // round 17: terms v1 (every contact agreed but Sinta), the few-visits list and one call; no random draws
   seedRound18(s, T, nowMin); // round 18: (roster only) Oma Sri Rahayu just joined; Ratna has not signed in yet (no termsAgreed); no random draws
+  seedPastTrip(s, T); // round 20 fix (I3): a field trip a few days ago, with everyone checked in that day on it (after rounds 17 and 18 change the visits); no random draws
   seedMoodMarks(s, T); // round 12: a mood mark for every seeded visit (last: it walks the attendance, readings and logs above)
   seedWeekend(s, T); // round 14: the first Saturday after T is programmed, the Sunday after it waits for Ega (after everything that looks for an open day)
 }
