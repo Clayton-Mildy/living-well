@@ -12,6 +12,7 @@ import { guestOn } from './guests';
 import { dailyMood, dayArc } from './mood';
 import { todayReading } from './health';
 import { logForFamily, noteForFamily, readingForFamily } from './approvals';
+import { onTrip, tripOn, visitDaysOf } from './trips';
 import { addDays, addMonths, live, sortBy, toHM, toMin, ym } from '../util';
 
 /** A reading the family may see: one that waits for management's approval is left out (a family's projection never holds one; this guards the full state). */
@@ -77,7 +78,9 @@ export type DayState =
   /** An open day and the member has not checked in (members drop in, so this is neutral: nobody is "expected"). */
   | { kind: 'away' }
   | { kind: 'here'; since: HM; att: Attendance }
-  | { kind: 'home'; at: HM; att: Attendance };
+  | { kind: 'home'; at: HM; att: Attendance }
+  /** Round 20: a field trip day and the member is on it (checked in that day, or in the trip's Who went: some join the bus elsewhere). `att` once checked in. */
+  | { kind: 'trip'; event: CalendarEvent; att?: Attendance };
 
 export function dayStateOf(s: ClubState, m: Member, today: ISODate): DayState {
   const cur = currentMembership(m);
@@ -85,6 +88,8 @@ export function dayStateOf(s: ClubState, m: Member, today: ISODate): DayState {
   if (ms === 'ended') return { kind: 'ended', lastDay: cur?.lastDay || today };
   if (ms === 'upcoming') return { kind: 'upcoming', start: cur?.start || today };
   const a = attOf(s, today, m.id);
+  const trip = tripOn(s, today);
+  if (trip && (a?.checkIn || onTrip(s, m.id, today))) return { kind: 'trip', event: trip, ...(a?.checkIn ? { att: a } : {}) };
   if (a?.checkOut) return { kind: 'home', at: a.checkOut.at, att: a };
   if (a?.checkIn) return { kind: 'here', since: a.checkIn.at, att: a };
   const ds = dayStatus(s, today);
@@ -150,7 +155,7 @@ export type TlItem =
   | { id: string; kind: 'outing'; state: TlState; time: HM; start: number; end: number; event: CalendarEvent }
   | { id: string; kind: 'lunch'; state: TlState; time: HM; start: number; end: number }
   | { id: string; kind: 'tea'; state: TlState; time: HM; start: number; end: number; dishIds: string[] }
-  | { id: string; kind: 'home'; state: TlState; time: HM; att?: Attendance; departure?: Reading; face?: Face; /** round 15: Both mode, whose check-out this is */ memberId?: string };
+  | { id: string; kind: 'home'; state: TlState; time: HM; att?: Attendance; departure?: Reading; face?: Face; /** round 15: Both mode, whose check-out this is */ memberId?: string; /** round 20: back at the club from the field trip, going home */ trip?: true };
 
 export const homeTime = (s: ClubState): HM => toHM(toMin(s.club.settings.close) - 30);
 
@@ -158,11 +163,15 @@ interface Block { id: string; start: number; end?: number; build: (state: TlStat
 /** Today's schedule blocks (sessions, lunch, tea, or the outing) in time order. */
 function scheduleBlocks(s: ClubState, date: ISODate): Block[] {
   const ds = dayStatus(s, date);
-  if (!ds.open) return [];
-  if (ds.outing) {
-    const e = ds.outing;
+  const e = tripOn(s, date);
+  if (!ds.open && !e) return []; // a trip on a closed day (a weekend trip) still shows for those on it (dayStateOf: 'trip'); everyone else sees the closure
+  if (e) {
     const from = e.from || s.club.settings.open;
-    return [{ id: 'outing', start: toMin(from), end: toMin(e.to || s.club.settings.close), build: (state, a, b) => ({ id: 'outing', kind: 'outing', state, time: from, start: a, end: b, event: e }) }];
+    const out: Block[] = [{ id: 'outing', start: toMin(from), end: toMin(e.to || s.club.settings.close), build: (state, a, b) => ({ id: 'outing', kind: 'outing', state, time: from, start: a, end: b, event: e }) }];
+    // round 20 (R4): lunch only when the kitchen added a menu for the trip (an hour, inside the trip); no afternoon tea step
+    const menu = menuOn(s, date);
+    if (menu && (menu.lunch.length || menu.soft.length)) out.push({ id: 'lunch', start: toMin(LUNCH_AT), end: toMin(LUNCH_AT) + 60, build: (state, a, b) => ({ id: 'lunch', kind: 'lunch', state, time: LUNCH_AT, start: a, end: b }) });
+    return sortBy(out, (b) => b.start);
   }
   const out: Block[] = [];
   for (const sl of sessionsOn(s, date)) {
@@ -188,8 +197,9 @@ function scheduleBlocks(s: ClubState, date: ISODate): Block[] {
 export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowMin: number): TlItem[] {
   const states = members.map((m) => ({ m, st: dayStateOf(s, m, today), a: attOf(s, today, m.id) }));
   const single = members.length === 1 ? states[0] : null;
-  const present = single ? single.st.kind === 'here' : states.some((x) => x.st.kind === 'here' || x.st.kind === 'home');
-  const leftMin = single?.st.kind === 'home' ? toMin(single.st.at) : null;
+  // round 20: on the field trip counts as being with the club until the check-out back at the club
+  const present = single ? single.st.kind === 'here' || (single.st.kind === 'trip' && !single.a?.checkOut) : states.some((x) => x.st.kind === 'here' || x.st.kind === 'home' || x.st.kind === 'trip');
+  const leftMin = single?.st.kind === 'home' ? toMin(single.st.at) : single?.st.kind === 'trip' && single.a?.checkOut ? toMin(single.a.checkOut.at) : null;
   const items: TlItem[] = [];
 
   if (single) {
@@ -197,7 +207,7 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
     const arc = dayArc(s, m.id, today);
     if (a?.checkIn) items.push({ id: 'arrival', kind: 'arrival', state: 'done', time: a.checkIn.at, att: a, ...(arc.arrival !== undefined ? { face: arc.arrival } : {}) });
     // a reading belongs to a visit: if the check-in was undone, the day is empty again
-    const visiting = st.kind === 'here' || st.kind === 'home';
+    const visiting = st.kind === 'here' || st.kind === 'home' || (st.kind === 'trip' && !!a?.checkIn);
     const arr = visiting ? famReading(s, m.id, today, 'arrival') : undefined;
     const mon = visiting ? famReading(s, m.id, today, 'monthly') : undefined;
     if (arr) items.push({ id: 'health', kind: 'health', state: 'done', time: arr.time, arrival: arr, monthly: mon, ...(arc.health !== undefined ? { face: arc.health } : {}) });
@@ -219,10 +229,13 @@ export function timelineOf(s: ClubState, members: Member[], today: ISODate, nowM
   if (single) {
     const { a, st } = single;
     const arc = dayArc(s, single.m.id, today);
-    if (a?.checkOut) items.push({ id: 'home', kind: 'home', state: 'done', time: a.checkOut.at, att: a, departure: famReading(s, single.m.id, today, 'departure'), ...(arc.departure !== undefined ? { face: arc.departure } : {}) });
+    const trip = st.kind === 'trip' ? ({ trip: true } as const) : {};
+    if (a?.checkOut) items.push({ id: 'home', kind: 'home', state: 'done', time: a.checkOut.at, att: a, departure: famReading(s, single.m.id, today, 'departure'), ...(arc.departure !== undefined ? { face: arc.departure } : {}), ...trip });
     else if (st.kind === 'here') items.push({ id: 'home', kind: 'home', state: 'up', time: homeTime(s) });
+    // round 20: checked in for the trip, the way back to the club is still to come (at the trip's end)
+    else if (st.kind === 'trip' && a?.checkIn) items.push({ id: 'home', kind: 'home', state: 'up', time: st.event.to || homeTime(s), trip: true });
   } else {
-    for (const { m, a } of states) if (a?.checkOut) items.push({ id: 'home-' + m.id, kind: 'home', state: 'done', time: a.checkOut.at, att: a, memberId: m.id });
+    for (const { m, a, st } of states) if (a?.checkOut) items.push({ id: 'home-' + m.id, kind: 'home', state: 'done', time: a.checkOut.at, att: a, memberId: m.id, ...(st.kind === 'trip' ? { trip: true as const } : {}) });
   }
   return items;
 }
@@ -257,8 +270,9 @@ export interface PhotoDay { date: ISODate; count: number; sets: PhotoSet[] }
 /** KC round 9 ("don't use the blank white-brown image"): families only ever see a photo that has a real picture (never the tone placeholder). */
 export const hasPicture = (p: Pick<Photo, 'mediaId'>) => !!p.mediaId;
 export const isFamilyPhoto = (p: Photo) => p.visibility === 'visible' && (p.kind === 'solo' || p.kind === 'group') && hasPicture(p);
-/** KC round 7: an approved activity picture (of a session, no member tags) is the family's on the days one of `who` came to the club. */
-export const isFamilyActivityPic = (s: ClubState, p: Photo, who: string[]) => p.kind === 'activity' && p.visibility === 'visible' && hasPicture(p) && cameOn(s, who, p.date);
+/** KC round 7: an approved activity picture (of a session, no member tags) is the family's on the days one of `who` came to the club; round 20: or was on the field trip (in Who went, even without a check-in). */
+export const isFamilyActivityPic = (s: ClubState, p: Photo, who: string[]) =>
+  p.kind === 'activity' && p.visibility === 'visible' && hasPicture(p) && (cameOn(s, who, p.date) || who.some((id) => onTrip(s, id, p.date)));
 const byTime = (a: Photo, b: Photo) => (a.time < b.time ? -1 : a.time > b.time ? 1 : a.id < b.id ? -1 : 1);
 /** Photos of the given members by day, newest day first. Solo photos come first each day, then group photos, then the day's activity pictures (one set per activity). */
 export function familyPhotoDays(s: ClubState, who: string[], limit = 10): PhotoDay[] {
@@ -291,9 +305,9 @@ export const END_OF_DAY = 24 * 60;
 /** The minute to read a date at: now on today, the end of the day on any earlier date. */
 export const storyNowMin = (date: ISODate, today: ISODate, nowMin: number) => (date < today ? END_OF_DAY : nowMin);
 
-/** Days the member came to the club (a check-in), oldest first, up to and including `upTo`. */
+/** Days the member came to the club (a check-in), oldest first, up to and including `upTo`; round 20 (R3): and the field trip days they were on (Who went). */
 export function visitDays(s: ClubState, memberId: string, upTo: ISODate): ISODate[] {
-  return live(s.attendance).filter((a) => a.memberId === memberId && !!a.checkIn && a.date <= upTo).map((a) => a.date).sort();
+  return visitDaysOf(s, memberId, '0000-01-01', upTo);
 }
 
 /** The saved log of a member on a date, as families read it (a log or an edit that waits for approval is left out or shows its last approved values). */
@@ -386,7 +400,7 @@ export interface DayStory {
 export function dayStory(s: ClubState, m: Member, date: ISODate, nowMin: number): DayStory {
   const state = dayStateOf(s, m, date);
   const att = attOf(s, date, m.id);
-  const visited = !!att?.checkIn;
+  const visited = !!att?.checkIn || state.kind === 'trip'; // round 20: on the field trip is a day with the club
   // a day that is over has no "still to come": a health check or home time that never happened (a check-out nobody recorded) is left out
   const items = timelineOf(s, [m], date, nowMin).filter((i) => !(nowMin >= END_OF_DAY && i.state === 'up' && (i.kind === 'home' || i.kind === 'health')));
   const log = logOn(s, m.id, date);

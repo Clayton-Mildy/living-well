@@ -613,3 +613,59 @@ describe('mood faces on the timeline (round 12)', () => {
     expect(timelineOf(out, [out.members.m1], T, 16 * 60).find((i) => i.kind === 'home')).toMatchObject({ face: 5 });
   });
 });
+
+// Round 20 (spec §6): the family's Today on a field trip day.
+describe('a field trip day (round 20)', () => {
+  const trip = (s: ClubState, extra: Record<string, unknown> = {}) => produce(s, (d) => {
+    d.calendarEvents.evTrip = { id: 'evTrip', clubId: s.clubId, createdAt: '2026-10-01T09:00', createdBy: 'staff:s9', date: T, kind: 'outing', title: 'Kebun Raya Bogor', from: '08:30', to: '15:00', ...extra } as never;
+  });
+  const menu = (s: ClubState) => produce(s, (d) => { d.dayMenus[T] = { id: T, clubId: s.clubId, createdAt: `${T}T07:00`, createdBy: 'staff:s3', date: T, lunch: ['dish-sop-ikan'], soft: ['dish-sop-ikan'], tea: [], allergyPlans: [] } as never; });
+  /** Oma Lina checks in at 08:12 in a good mood, goes on the trip and is checked out back at the club at 15:20. */
+  const day = (s: ClubState) => {
+    const a = as(s, 's1', 'attendance.checkIn', { memberId: 'm1', method: 'manual', face: 4 }, 'tr1', { today: T, nowMin: 492 }).state;
+    return as(a, 's1', 'attendance.checkOut', { memberId: 'm1' }, 'tr2', { today: T, nowMin: 920 }).state;
+  };
+  it('a parent who checked in is on the trip; the list is the arrival, the trip at its start, then back at the club at check-out', () => {
+    const s = day(trip(seed()));
+    expect(dayStateOf(s, s.members.m1, T)).toMatchObject({ kind: 'trip', event: { id: 'evTrip' } });
+    const tl = timelineOf(s, [s.members.m1], T, END_OF_DAY);
+    expect(tl.map((x) => x.kind)).toEqual(['arrival', 'outing', 'home']); // no menu: no lunch row
+    expect(tl[0]).toMatchObject({ time: '08:12', state: 'done' });
+    expect(tl[1]).toMatchObject({ time: '08:30', state: 'done' });
+    expect(tl[2]).toMatchObject({ kind: 'home', time: '15:20', state: 'done', trip: true });
+  });
+  it('with a menu the kitchen added there is a lunch row', () => {
+    const s = day(menu(trip(seed())));
+    const tl = timelineOf(s, [s.members.m1], T, END_OF_DAY);
+    expect(tl.map((x) => x.kind)).toEqual(['arrival', 'outing', 'lunch', 'home']);
+    expect(tl[2]).toMatchObject({ time: '12:00' });
+    expect(dayStory(s, s.members.m1, T, END_OF_DAY).lunch?.dishes).toEqual(['Sop ikan kakap']);
+  });
+  it('while out on the trip the trip is now and the way back is still to come', () => {
+    const s = as(trip(seed()), 's1', 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, 'tr1', { today: T, nowMin: 492 }).state;
+    const tl = timelineOf(s, [s.members.m1], T, 660);
+    expect(tl.map((x) => `${x.kind}:${x.state}`)).toEqual(['arrival:done', 'outing:now', 'home:up']);
+    expect(tl[2]).toMatchObject({ trip: true, time: '15:00' });
+  });
+  it('a parent ticked in Who went without a check-in is on the trip too, and the trip pictures are hers (Review Focus 5)', () => {
+    const s = produce(trip(withPictures(seed()), { wentIds: ['m1'] }), (d) => {
+      d.photos.ptrip = { ...Object.values(d.photos).find((p) => p.kind === 'activity')!, id: 'ptrip', date: T, time: '11:00', activity: 'Kebun Raya Bogor', memberIds: [], visibility: 'visible', mediaId: 'md_trip' };
+    });
+    expect(dayStateOf(s, s.members.m1, T)).toMatchObject({ kind: 'trip' });
+    expect(timelineOf(s, [s.members.m1], T, 660).map((x) => `${x.kind}:${x.state}`)).toEqual(['outing:now']);
+    expect(familyPhotosOn(s, ['m1'], T).map((p) => p.id)).toContain('ptrip');
+    expect(familyPhotoDays(s, ['m1'])[0].sets.some((x) => x.photos.some((p) => p.id === 'ptrip'))).toBe(true);
+    const story = dayStory(s, s.members.m1, T, 660);
+    expect(story.visited).toBe(true);
+    expect(story.event?.id).toBe('evTrip');
+    // the family's own view keeps their parent in Who went
+    const view = projectForFamily(s, 'f1');
+    expect(dayStateOf(view, view.members.m1, T).kind).toBe('trip');
+  });
+  it('a parent who did not check in and is not on the trip stayed home, as before', () => {
+    const s = trip(withPictures(seed()), { wentIds: ['m1'] });
+    expect(dayStateOf(s, s.members.m46, T)).toEqual({ kind: 'away' });
+    expect(timelineOf(s, [s.members.m46], T, 660).map((x) => x.kind)).toEqual(['outing']);
+    expect(familyPhotosOn(s, ['m46'], T).some((p) => p.kind === 'activity')).toBe(false);
+  });
+});

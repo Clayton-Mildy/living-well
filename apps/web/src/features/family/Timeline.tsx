@@ -7,7 +7,7 @@
 // downwards with the step's pictures as big cards, and a card opens the full-screen viewer. Lunch has its own "Tell the kitchen about lunch" line.
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { addDays, firstOfRole, lunchPictureFor, lunchSafety, displayName, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
+import { FACE_KEY, addDays, firstOfRole, lunchPictureFor, lunchSafety, displayName, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
 import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, storyNowMin, type DayStory, type StorySession, type TlItem } from '@cp/shared/rules/family';
 import { listItems, listKind } from '@cp/shared/rules/famToday';
 import { Avatar, DishThumb, Icon, PhotoImg, RailDot } from '../../components/ui';
@@ -73,7 +73,8 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
   const nowMin = storyNowMin(date, today, now.nowMin);
   const states = members.map((m) => dayStateOf(s, m, date));
   // members drop in on any open day, so the programme shows whether or not anyone has arrived; only a closed day or an ended membership has none (the hero says so)
-  if (!states.some((x) => x.kind === 'away' || x.kind === 'here' || x.kind === 'home')) return null;
+  if (!states.some((x) => x.kind === 'away' || x.kind === 'here' || x.kind === 'home' || x.kind === 'trip')) return null;
+  const tripDay = states.some((x) => x.kind === 'trip'); // round 20: someone is on the field trip
   const visited = stories.some((x) => x.visited);
   const all = stories.length === 1 ? stories[0].items : timelineOf(s, members, date, nowMin);
   const ahead = date > today; // KC round 9: the day ahead — its plan
@@ -88,8 +89,11 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
 
   const view = (it: TlItem): Row => {
     switch (it.kind) {
-      case 'arrival':
-        return { time: it.time, title: t('family.tArrived'), detail: t('family.tArrivedD', { s: staffName(it.att.checkIn?.by) }) };
+      case 'arrival': {
+        // round 20 (a trip day keeps the arrival in the list): the day's one mood beside it ("Arrived · good mood")
+        const mood = stories.length === 1 ? stories[0].mood?.face : undefined;
+        return { time: it.time, title: mood ? t('ftoday.tArrivedMood', { m: t(FACE_KEY[mood]).toLowerCase() }) : t('family.tArrived'), detail: t('family.tArrivedD', { s: staffName(it.att.checkIn?.by) }) };
+      }
       case 'health': {
         const arr = it.arrival;
         if (!arr) return { time: '', title: t('family.tHealthUp'), detail: t('family.tHealthUpD', { n: staffCall(nurse) || t('roles.nurse') }) };
@@ -129,12 +133,15 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         };
       }
       case 'outing':
-        return { time: it.time, title: eventTitle(it.event, fmt.lang), detail: `${it.event.from || ''}–${it.event.to || ''}` };
+        return { time: it.time, title: t('ftoday.tTrip', { t: eventTitle(it.event, fmt.lang) }), detail: `${it.event.from || ''}–${it.event.to || ''}` };
       case 'lunch': {
         // round 14: once a parent has come, the dishes, the lunch pictures and how much was eaten are on the Lunch card (LunchCard.tsx) and the row keeps the time, the
         // allergy line and the feedback line; before that (the day ahead, a day nobody came) the card is not shown, so the row still tells the menu
         const lines: ReactNode[] = [];
-        if (!stories.some((st) => st.visited && st.lunch)) {
+        // round 20: on a field trip day lunch is only listed when the kitchen added a menu, and the row names what they eat ("Lunch · nasi timbel")
+        const served = Array.from(new Set(members.map((m) => dishNamesOf(s, servedLunch(s, m, date)).join(', '))));
+        const tripDish = tripDay && served.length === 1 && served[0] ? served[0] : '';
+        if (!tripDish && !stories.some((st) => st.visited && st.lunch)) {
           const groups = new Map<string, Member[]>();
           for (const m of members) { const k = dishNamesOf(s, servedLunch(s, m, date)).join(', '); groups.set(k, [...(groups.get(k) || []), m]); }
           for (const [dishes, ms] of groups) if (dishes) lines.push(line(groups.size > 1 ? `${ms.map(displayName).join(` ${t('common.and')} `)}: ${dishes}.` : `${dishes}.`, 'dish-' + dishes));
@@ -152,7 +159,7 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
           }
         }
         return {
-          time: it.time, title: t('family.tLunch'), kind: 'lunch',
+          time: it.time, title: tripDish ? t('ftoday.tLunchDish', { d: tripDish }) : t('family.tLunch'), kind: 'lunch',
           detail: <>{lines}</>,
           extra: lunchFeedback ? (
             <button type="button" onClick={lunchFeedback.onClick} data-testid="lunch-feedback-line" className="cp-press"
@@ -166,13 +173,14 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         return { time: it.time, title: t('family.tTea'), detail: dishNamesOf(s, it.dishIds).join(', '), kind: 'tea', photos: visibleTeaPhotos(s, date), alt: (p) => t('kitchen.photo.tea.alt', { time: p.time }) };
       case 'home': {
         const m = single;
+        const homeTitle = it.trip ? t('ftoday.tTripBack') : t('family.tHome'); // round 20: back from the field trip
         if (it.att?.checkOut) {
           const dep = it.departure;
           const bp = dep ? bpLine(t, dep) : '';
           const who = it.memberId ? members.find((x) => x.id === it.memberId) : undefined; // Both mode: one home time per parent
-          return { time: it.time, title: t('family.tHome'), detail: (who ? `${displayName(who)} · ` : '') + t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
+          return { time: it.time, title: homeTitle, detail: (who ? `${displayName(who)} · ` : '') + t('family.tHomeDoneD', { s: staffName(it.att.checkOut.by) }) + (bp ? ` · ${bp}` : ''), extra: dep && dep.status !== 'normal' ? <HealthPill status={dep.status} style={{ marginTop: 6 }} /> : undefined };
         }
-        return { time: it.time, title: t('family.tHome'), detail: m ? t('family.tHomeD', { s: pron(m).s }) : '' };
+        return { time: it.time, title: homeTitle, detail: m ? t('family.tHomeD', { s: pron(m).s }) : '' };
       }
     }
   };

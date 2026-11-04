@@ -171,3 +171,23 @@ describe('the plan day (tomorrow)', () => {
     expect(listKind(false, false, [{ state: 'up' }], true)).toBe('plan');
   });
 });
+
+describe('openDayStrip on a field trip day (round 20)', () => {
+  it('includes a past trip day for a parent in Who went, even without a check-in', () => {
+    const s = seed();
+    const day = '2026-10-20';
+    delete s.attendance[`${day}:m1`];
+    s.calendarEvents.evTrip = { id: 'evTrip', clubId: s.clubId, createdAt: '2026-10-01T09:00', createdBy: 'staff:s9', date: day, kind: 'outing', title: 'Kebun Raya Bogor', from: '08:30', to: '15:00', wentIds: ['m1'] } as never;
+    const strip = openDayStrip(s, ['m1'], T);
+    expect(strip.find((d) => d.date === day)).toMatchObject({ visited: true });
+    expect(visitDays(s, 'm1', T)).toContain(day);
+  });
+});
+
+describe('listItems on a field trip day (round 20)', () => {
+  it('keeps the arrival: the hero names the trip, not the arrival time', () => {
+    const items = [item('arrival', 'done'), item('outing', 'done'), item('home', 'done')];
+    expect(listItems('today', items).map((i) => i.kind)).toEqual(['arrival', 'outing', 'home']);
+    expect(listItems('today', [item('arrival', 'done'), item('lunch', 'done')]).map((i) => i.kind)).toEqual(['lunch']); // a club day, as before
+  });
+});

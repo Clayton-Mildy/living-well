@@ -50,6 +50,7 @@ export function FamilyMe() {
   // where each parent is today, from the club's own day rules (checked in = at the club, checked out = went home, else home)
   const where = (m: Member): { v: string; color: string; weight: number } => {
     const st = dayStateOf(s, m, today);
+    if (st.kind === 'trip') return st.att?.checkOut ? { v: t('fme.wentHome', { t: st.att.checkOut.at }), color: F.muted, weight: 400 } : { v: t('fme.onTrip'), color: F.sage, weight: 500 }; // round 20
     if (st.kind === 'here') return { v: t('fme.atClubSince', { t: st.since }), color: F.sage, weight: 500 };
     if (st.kind === 'home') return { v: t('fme.wentHome', { t: st.at }), color: F.muted, weight: 400 };
     if (st.kind === 'ended') return { v: t('fme.memEnded'), color: F.muted, weight: 400 };

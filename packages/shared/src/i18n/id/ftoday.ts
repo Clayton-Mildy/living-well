@@ -11,6 +11,8 @@ export const ftoday: Same<typeof EN> = {
   // the hero: one row per parent, the single card
   rowHere: '{n} sedang di klub', rowWentHome: '{n} sudah pulang', rowCame: '{n} datang pada {d}', notYet: '{n} sedang tidak di klub', homeToday: '{n} di rumah hari ini',
   since: 'Sejak {t}', nowWhat: '{a} sekarang', lastVisitDay: 'kunjungan terakhir {d}',
+  // round 20: a field trip day
+  onTrip: 'Ikut karyawisata · {t}', rowTrip: '{n} ikut karyawisata', tTrip: 'Karyawisata · {t}', tTripBack: 'Kembali ke klub · pulang', tArrivedMood: 'Tiba · suasana hati {m}', tLunchDish: 'Makan siang · {d}',
   photoFromF: 'foto dari {d}, kunjungan terakhirnya', photoFromM: 'foto dari {d}, kunjungan terakhirnya', profileAria: 'Buka profil {n}', railAria: 'Hari ini sejauh ini: {n} dari {m} langkah',
   // the day's list
   next: 'Berikutnya', today: 'Hari ini', thatDay: 'Hari itu', wasOn: 'Yang berlangsung', wasOnToday: 'Di klub hari ini',

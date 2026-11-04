@@ -125,6 +125,8 @@ function rowText(c: Ctx, m: Member, story: DayStory): { title: string; sub: stri
   const st = story.state;
   const isToday = story.date === now.today;
   const span = story.arrivedAt && story.leftAt ? `${story.arrivedAt}–${story.leftAt}` : story.arrivedAt || '';
+  // round 20: on the field trip (checked in for it, or ticked in Who went)
+  if (st.kind === 'trip') return { title: t('ftoday.rowTrip', { n }), sub: eventTitle(st.event, fmt.lang), pct: isToday && !st.att?.checkOut ? Math.round(railFill(story.items.map((i) => i.state)) * 100) : 100, mood: story.mood?.face };
   if (st.kind === 'here' && isToday) return { title: t('ftoday.rowHere', { n }), sub: join([t('ftoday.since', { t: st.since }), nowWhat(c, story)]), pct: Math.round(railFill(story.items.map((i) => i.state)) * 100), mood: story.mood?.face };
   if (st.kind === 'home' && isToday) return { title: t('ftoday.rowWentHome', { n }), sub: span, pct: 100, mood: story.mood?.face };
   if (st.kind === 'here' || st.kind === 'home') return { title: t('ftoday.rowCame', { n, d: dayWord(fmt, story.date, now.today) }), sub: span, pct: 100, mood: story.mood?.face };
@@ -262,7 +264,7 @@ function DualHero({ members, stories, date, top, onFocus, onOpenPhoto }: { membe
   const c = useFamilyCtx();
   const { s, t, fmt, now } = c;
   const cover = coverFor(s, members, stories, date);
-  const live = stories.some((st) => st.state.kind === 'here' && date === now.today);
+  const live = date === now.today && stories.some((st) => st.state.kind === 'here' || (st.state.kind === 'trip' && !st.state.att?.checkOut));
   const wide = useFamWide();
   return (
     <Frame cover={cover} scrim={SCRIM_ROWS} top={top} grow attrs={{ 'data-mode': 'both', 'data-day': date }} onOpen={cover.open ? () => onOpenPhoto(cover.open!.photo, cover.open!.all) : undefined} onOpenPhoto={onOpenPhoto}>
@@ -333,7 +335,8 @@ function SingleHero({ m, story, date, top, onProfile, onOpenPhoto }: { m: Member
   const n = displayName(m);
   const photoFrom = cover.fromDay ? t(m.gender === 'f' ? 'ftoday.photoFromF' : 'ftoday.photoFromM', { d: dayWord(fmt, cover.fromDay, now.today) }) : '';
   let status = '', sub = '', live = false, rail = false;
-  if (st.kind === 'here' && isToday) { status = t('family.atSince', { t: st.since }); sub = nowWhat(c, story); live = true; rail = true; }
+  if (st.kind === 'trip') { status = t('ftoday.onTrip', { t: eventTitle(st.event, fmt.lang) }); live = isToday && !st.att?.checkOut; rail = true; } // round 20
+  else if (st.kind === 'here' && isToday) { status = t('family.atSince', { t: st.since }); sub = nowWhat(c, story); live = true; rail = true; }
   else if (st.kind === 'here') { status = t('family.storyArrived', { a: st.since }); sub = highlights(c, story); rail = true; }
   else if (st.kind === 'home') { status = t('family.storyArrivedHome', { a: story.arrivedAt || '', b: st.at }); sub = highlights(c, story); rail = true; }
   else if (st.kind === 'away') {

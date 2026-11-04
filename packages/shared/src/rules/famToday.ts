@@ -47,9 +47,13 @@ export function listKind(isToday: boolean, visited: boolean, items: Pick<TlItem,
   return isToday ? 'today' : 'thatDay';
 }
 
-/** The steps the list shows: what is still to come under "Next", else the whole day without the arrival (the hero already says when). */
+/**
+ * The steps the list shows: what is still to come under "Next", else the whole day without the arrival (the hero already says when).
+ * Round 20: on a field trip day the hero names the trip, so the arrival stays in the list.
+ */
 export function listItems(kind: ListKind, items: TlItem[]): TlItem[] {
-  return kind === 'next' ? items.filter((i) => i.state !== 'done') : items.filter((i) => i.kind !== 'arrival');
+  if (kind === 'next') return items.filter((i) => i.state !== 'done');
+  return items.some((i) => i.kind === 'outing') ? items : items.filter((i) => i.kind !== 'arrival');
 }
 
 // ---------- the daily log on Today (round 8b; round 8d: every round, in one order) ----------
