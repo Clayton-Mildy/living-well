@@ -137,9 +137,9 @@ export function setTripMember(d: Draft<ClubState>, ev: Draft<CalendarEvent>, mem
  *   everyone else is taken off with their open charge. A member whose fee an invoice already billed stays on, and the invoice is never touched.
  * - The fee: the open charges take the new amount (and the trip's title and date), 0 takes them back; with a fee, every member in Who went who has no
  *   charge yet gets one (a fee set after people checked in, or X → 0 → X). Not an outing any more: its open charges go.
- * - The trip covers today and is the day's trip (`tripOn`): every member checked in today who is on no other trip today joins it (R1 after the fact).
+ * - `joinToday` (the trip newly covers today: just made, or moved onto today) and it is the day's trip (`tripOn`): every member checked in today who is on no other trip today joins it (R1 after the fact). A plain edit never sets it, so a member management took off Who went is not put back.
  */
-export function syncTripRoster(d: Draft<ClubState>, ev: Draft<CalendarEvent>, ctx: Ctx, opts: { startMoved?: boolean } = {}): void {
+export function syncTripRoster(d: Draft<ClubState>, ev: Draft<CalendarEvent>, ctx: Ctx, opts: { startMoved?: boolean; joinToday?: boolean } = {}): void {
   if (ev.kind !== 'outing') { for (const c of eventCharges(d, ev.id)) delete d.pendingCharges[c.id]; return; }
   const end = ev.endDate || ev.date;
   if (opts.startMoved) {
@@ -158,7 +158,7 @@ export function syncTripRoster(d: Draft<ClubState>, ev: Draft<CalendarEvent>, ct
   }
   if (fee) for (const m of [...(ev.wentIds ?? [])]) if (d.members[m] && !d.members[m].deletedAt) setTripMember(d, ev, m, true, ctx);
   const view = d as unknown as ClubState;
-  if (ev.date <= ctx.today && ctx.today <= end && tripOn(view, ctx.today)?.id === ev.id) {
+  if (opts.joinToday && ev.date <= ctx.today && ctx.today <= end && tripOn(view, ctx.today)?.id === ev.id) {
     const others = dayStatus(view, ctx.today).events.filter((e) => e.kind === 'outing' && e.id !== ev.id);
     for (const a of live(d.attendance)) {
       if (a.date !== ctx.today || !a.checkIn || !d.members[a.memberId] || d.members[a.memberId].deletedAt) continue;
@@ -446,7 +446,7 @@ export const scheduleActions = [
       const f = eventFields(input, ctx);
       const id = ctx.id('ev');
       d.calendarEvents[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...f, ...(f.kind === 'outing' && input.fee ? { fee: input.fee } : {}) };
-      if (f.kind === 'outing') syncTripRoster(d, d.calendarEvents[id], ctx); // a trip made for today: whoever is already in the club is on it
+      if (f.kind === 'outing') syncTripRoster(d, d.calendarEvents[id], ctx, { joinToday: true }); // a trip made for today: whoever is already in the club is on it
       notifyEveryone(d, ctx, { kind: 'cal.notif.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } });
       ctx.result.eventId = id;
@@ -469,6 +469,7 @@ export const scheduleActions = [
         return;
       }
       const oldDate = cur.date;
+      const coveredToday = cur.kind === 'outing' && cur.date <= ctx.today && ctx.today <= (cur.endDate || cur.date);
       const next: EventInput = {
         date: input.date ?? cur.date,
         endDate: input.endDate === undefined ? cur.endDate ?? null : input.endDate,
@@ -492,7 +493,7 @@ export const scheduleActions = [
       }
       // round 17: charges no invoice has billed yet follow the fee; 0 takes them back, invoiced ones stay as billed. Round 20 fix (I1): the roster follows
       // the trip too (a move takes off who has not gone on the new days, a fee charges Who went, a trip now on today takes in today's check-ins)
-      if (f.kind === 'outing' || cur.wentIds?.length || eventCharges(d, row.id).length) syncTripRoster(d, row, ctx, { startMoved: row.date !== oldDate });
+      if (f.kind === 'outing' || cur.wentIds?.length || eventCharges(d, row.id).length) syncTripRoster(d, row, ctx, { startMoved: row.date !== oldDate, joinToday: !coveredToday });
       notifyEveryone(d, ctx, { kind: 'cal.notif.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } });
     },

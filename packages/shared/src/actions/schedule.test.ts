@@ -1024,6 +1024,19 @@ describe('round 20 fix: trip roster sync', () => {
     expect(tripCharges(s, id)).toEqual([[here[0], 250_000]]);
     expect(s.pendingCharges[`trip-${id}-${here[0]}`]).toMatchObject({ invoiceId: 'INV-X', params: { date: clock.today } }); // the invoiced charge is untouched
   });
+  it('an edit of today\'s trip does not put back a member management took off Who went', () => {
+    let s0 = fresh();
+    s0 = step(s0, 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, 's1'); // Oma Lina is in the club today
+    let { s, id } = make(s0, clock.today, 250_000);
+    const here = inToday(s);
+    expect(here).toContain('m1');
+    s = step(s, 'calendarEvent.setWent', { eventId: id, memberIds: here.filter((m) => m !== 'm1') }, 's5');
+    expect(s.calendarEvents[id].wentIds).not.toContain('m1');
+    s = step(s, 'calendarEvent.update', { eventId: id, fee: 300_000, from: '09:00', to: '15:30', notify: false }, 's9');
+    expect(s.calendarEvents[id].wentIds).not.toContain('m1');
+    expect(tripCharges(s, id).map((c) => c[0])).not.toContain('m1');
+    expect(tripCharges(s, id)).toEqual(here.filter((m) => m !== 'm1').map((m) => [m, 300_000]));
+  });
   it('a member on another trip today is not put on a second one', () => {
     const first = make(fresh(), clock.today, 250_000);
     const here = inToday(first.s);
