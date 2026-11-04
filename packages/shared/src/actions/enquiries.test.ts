@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, findByPhone, guestsOn, live, updatesFor, actionItems, DomainError, systemUser, type ClubState } from '../index';
+import { runLinesFor } from '../rules/billing';
 import { enquiryByFormToken, formLinkState, leadFunnel, seniorName } from '../rules/enquiries';
 
 const T = '2026-10-21'; // Wednesday
@@ -227,6 +228,12 @@ describe('joining a lead (registration is on paper)', () => {
     expect(mem({ on: true, price: 450_000 }).pickup).toEqual({ on: true, price: 450_000 });
     expect(mem(undefined).pickup).toBeUndefined();
     fails(s, 'enquiry.convert', { ...input, pickup: { on: true, price: 500 } }, 's9', 'err.invalid');
+  });
+  it('pick-up at a custom price on join: the first invoice run bills a 450000 pick-up line', () => {
+    const s = seed().citra;
+    const r = run(s, 'enquiry.convert', { ...input, pickup: { on: true, price: 450_000 } }, 's9');
+    const m = r.state.members[r.result.memberId as string];
+    expect(runLinesFor(r.state, m, '2026-11', T).find((l) => l.kind === 'pickup')?.amount).toBe(450_000);
   });
   it('round 15: with the family\'s signature the form is signed in person (three steps, the lead contact signs); without it there is no signing', () => {
     const s = seed().citra;

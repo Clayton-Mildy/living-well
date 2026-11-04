@@ -858,6 +858,19 @@ describe('members.create: pick-up chosen at registration', () => {
     expect(m.pickup).toEqual({ on: true, price: 450_000 });
     expect(runLinesFor(r.state, m, '2026-11', T).find((l) => l.kind === 'pickup')?.amount).toBe(450_000);
   });
+  it('front desk: pending until management approves; then in the Pick-up filter and billed 450000', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.create', newMember({ pickup: { on: true, price: 450_000 } }), who(c, 's1'));
+    const id = r.result.memberId as string;
+    expect(r.reviewed).toBe('gate');
+    expect(r.state.members[id].review?.status).toBe('pending');
+    expect(rows2(r.state, T).filter(FILTERS.pickup).some((x) => x.m.id === id)).toBe(false);
+    expect(runLinesFor(r.state, r.state.members[id], '2026-11', T).some((l) => l.kind === 'pickup')).toBe(false);
+    const a = run(r.state, 'review.approve', { crId: r.result.changeRequestId }, who(c, 's9'));
+    expect(a.state.members[id].review?.status).toBe('approved');
+    expect(rows2(a.state, T).filter(FILTERS.pickup).some((x) => x.m.id === id)).toBe(true);
+    expect(runLinesFor(a.state, a.state.members[id], '2026-11', T).find((l) => l.kind === 'pickup')?.amount).toBe(450_000);
+  });
   it('off or not given stores no pick-up', () => {
     expect(made({}).m.pickup).toBeUndefined();
     expect(made({ pickup: { on: false, price: 450_000 } }).m.pickup).toBeUndefined();
