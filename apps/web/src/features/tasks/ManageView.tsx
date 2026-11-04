@@ -6,11 +6,12 @@ import { DUTIES, TASK_ROLES, dutyCfg, dutyDueBy, type DutyDef } from '@cp/shared
 import { Button, FONT_SMALL, Icon, Pin, Segmented, TimeField } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useAct } from '../../lib/act';
-import { useFmt, useT } from '../../lib/i18n';
+import { useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
 import { TemplateSheet } from './TemplateSheet';
 import { Lines, RoleHead, type RoleItem } from '../../components/roleparts';
 import { RoleSplit } from './RoleSplit';
+import { useTaskMeta } from './parts';
 
 /** One general duty: its name, the switch, and (while on) the time it is due. The time left empty means the duty's own (after each session, before each visit). */
 function DutyConfig({ def, first }: { def: DutyDef; first: boolean }) {
@@ -49,7 +50,6 @@ function DutyConfig({ def, first }: { def: DutyDef; first: boolean }) {
 
 export function ManageView() {
   const t = useT();
-  const fmt = useFmt();
   const s = useClub();
   const { isPhone } = useDevice();
   const [editing, setEditing] = useState<{ tpl?: TaskTemplate; role?: StaffRole } | null>(null);
@@ -58,16 +58,7 @@ export function ManageView() {
   const tasksOf = (role: StaffRole) => templates.filter((x) => x.role === role).sort((a, b) => a.every.localeCompare(b.every) || (a.dueBy ?? '99:99').localeCompare(b.dueBy ?? '99:99') || a.title.localeCompare(b.title));
   const dutiesOf = (role: StaffRole) => DUTIES.filter((d) => d.role === role);
 
-  /** "Daily · by 08:30 · Photo": how often, when, and the photo hint, on one line. */
-  const meta = (x: TaskTemplate) => {
-    const parts: string[] = [];
-    if (x.every === 'daily') parts.push(t('tasks.daily'));
-    else if (x.every === 'weekly') parts.push(`${t('tasks.weekly')} · ${fmt.fd(`2026-10-${18 + (x.weekday ?? 1)}`, { weekday: 'short' })}`); // 19 Oct 2026 is a Monday
-    else parts.push(`${t('tasks.monthly')} · ${x.dayOfMonth === 31 ? t('tasks.lastDay') : t('tasks.dayN', { n: x.dayOfMonth ?? 1 })}`);
-    if (x.dueBy) parts.push(t('tasks.by', { t: x.dueBy }));
-    if (x.proof === 'photo') parts.push(t('tasks.photoProof'));
-    return parts.join(' · ');
-  };
+  const meta = useTaskMeta();
   if (!s) return null;
 
   // the role list: what each role has (duties switched on, additional tasks)

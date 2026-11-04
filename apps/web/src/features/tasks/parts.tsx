@@ -16,6 +16,21 @@ const RUST = '#9A3D24';
 /** The row's hairline, inset past the circle (the iOS grouped-list look). */
 const hairline = (first: boolean): CSSProperties => ({ backgroundColor: 'transparent', backgroundImage: first ? 'none' : 'linear-gradient(var(--hairline, #E2E2E6), #E2E2E6)', backgroundSize: 'calc(100% - 58px) 1px', backgroundPosition: 'right top', backgroundRepeat: 'no-repeat' });
 
+/** "Daily · by 08:30 · Photo": how often a task repeats, when it is due, and the photo hint, on one line. */
+export function useTaskMeta() {
+  const t = useT();
+  const fmt = useFmt();
+  return (x: TaskTemplate) => {
+    const parts: string[] = [];
+    if (x.every === 'daily') parts.push(t('tasks.daily'));
+    else if (x.every === 'weekly') parts.push(`${t('tasks.weekly')} · ${fmt.fd(`2026-10-${18 + (x.weekday ?? 1)}`, { weekday: 'short' })}`); // 19 Oct 2026 is a Monday
+    else parts.push(`${t('tasks.monthly')} · ${x.dayOfMonth === 31 ? t('tasks.lastDay') : t('tasks.dayN', { n: x.dayOfMonth ?? 1 })}`);
+    if (x.dueBy) parts.push(t('tasks.by', { t: x.dueBy }));
+    if (x.proof === 'photo') parts.push(t('tasks.photoProof'));
+    return parts.join(' · ');
+  };
+}
+
 /** Staff member's name from a staff id. */
 export const whoIs = (s: ClubState, id: string) => staffCall(s.staff[id]) || id;
 

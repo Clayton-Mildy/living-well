@@ -3,8 +3,9 @@
 // (`task.done`, with a photo when the task asks for one) and take it back (`task.undo`). Management also switches a general duty off and sets its time
 // (`duty.configure`). Nothing here waits for approval.
 import { z } from 'zod';
-import type { ClubState, HM, ISODate, TaskTemplate, WorkWeekday } from '../types';
-import { DomainError, defineAction, hasRole, isMgmt, isStaff, nameOfUser, roleOf, type ActionDef } from './framework';
+import type { ClubState, HM, ISODate, TaskTemplate, User, WorkWeekday } from '../types';
+import { DomainError, actorOf, defineAction, hasRole, isMgmt, isStaff, nameOfUser, roleOf, type ActionDef } from './framework';
+import { taskCreateOn } from '../rules/access';
 import { DUTY_IDS, TASK_ROLES, LAST_DAY, doneId, doneOf, periodOf, templateShows } from '../rules/tasks';
 import { mediaIdOf } from './members';
 
@@ -33,6 +34,18 @@ const undoSchema = z.object({ templateId: z.string().min(1).max(80), period: z.s
 // off: switch the duty off/on; dueBy: set its time, '' or null = back to the default; a key left out stays as it is
 const dutySchema = z.object({ id: z.enum(DUTY_IDS as [string, ...string[]]), off: z.boolean().optional(), dueBy: hm.nullish().or(z.literal('')) });
 
+/**
+ * KC tasks-create: a non-management role the Owner allowed ("Create tasks for {team}") adds tasks for its own team, and edits or archives only the ones
+ * it made itself. `role`: the team the task is (or will be) for; `tpl`: the stored task when editing or archiving.
+ */
+function ownTeamTask(u: User, s: ClubState, role: string | undefined, tpl: TaskTemplate | undefined, editing: boolean): boolean {
+  if (u.kind !== 'staff') return false;
+  const mine = roleOf(u);
+  if (!taskCreateOn(s, u.staff.role) || role !== mine) return false;
+  if (!editing) return true;
+  return !!tpl && tpl.role === mine && tpl.createdBy === actorOf(u);
+}
+
 export const taskActions: ActionDef[] = [
   // ---------- the general duties ----------
   defineAction<{ id: string; off?: boolean; dueBy?: string | null }>({
@@ -58,7 +71,7 @@ export const taskActions: ActionDef[] = [
 
   defineAction<TemplateInput>({
     name: 'task.saveTemplate',
-    can: (u) => hasRole(u, 'mgmt'),
+    can: (u, i, s) => hasRole(u, 'mgmt') || ownTeamTask(u, s, i.role, i.id ? s.taskTemplates?.[i.id] : undefined, !!i.id),
     parse: (raw) => parseWith(templateSchema, raw),
     run: (d, i, ctx) => {
       const prev = i.id ? d.taskTemplates[i.id] : undefined;
@@ -82,7 +95,11 @@ export const taskActions: ActionDef[] = [
 
   defineAction<{ id: string }>({
     name: 'task.archiveTemplate',
-    can: (u) => hasRole(u, 'mgmt'),
+    can: (u, i, s) => {
+      if (hasRole(u, 'mgmt')) return true;
+      const t = s.taskTemplates?.[i.id];
+      return ownTeamTask(u, s, t?.role, t, true);
+    },
     parse: (raw) => parseWith(z.object({ id: z.string().min(1).max(80) }), raw),
     run: (d, i, ctx) => {
       const t = d.taskTemplates[i.id];

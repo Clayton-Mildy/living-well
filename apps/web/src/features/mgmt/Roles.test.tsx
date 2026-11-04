@@ -113,7 +113,29 @@ describe('Admin › Roles', () => {
     expect(ticked('Billing: Edit')).toBe('true');
     expect(document.body.textContent).toContain('1 change');
     await click(button('Save · 1 change'));
-    expect(actMock).toHaveBeenCalledWith('access.setRole', { role: 'lobby', levels: expect.objectContaining({ billing: 'edit', members: 'edit', payments: 'off' }), approvals: { pricing: false, holidays: false, budget: false } });
+    expect(actMock).toHaveBeenCalledWith('access.setRole', { role: 'lobby', levels: expect.objectContaining({ billing: 'edit', members: 'edit', payments: 'off' }), approvals: { pricing: false, holidays: false, budget: false }, taskCreate: false });
+  });
+
+  it('tasks-create: a "Create tasks for Front desk" sub-row under Tasks, off by default; ticking it is one change (not a menu) and Save sends it', async () => {
+    openClub();
+    await show(<Roles />, 390);
+    await click(roleRow('lobby'));
+    const head = document.querySelector('[data-role-page="lobby"]')!.textContent!.match(/\d+ of \d+/)?.[0];
+    const sub = document.querySelector('[data-menu="tasks"] + [data-task-create]');
+    expect(sub?.textContent).toContain('Create tasks for Front desk');
+    expect(ticked('Create tasks for Front desk')).toBe('false');
+    await click(box('Create tasks for Front desk'));
+    expect(ticked('Create tasks for Front desk')).toBe('true');
+    expect(document.querySelector('[data-role-page="lobby"]')!.textContent!.match(/\d+ of \d+/)?.[0]).toBe(head); // the menu count is unchanged
+    await click(button('Save · 1 change'));
+    expect(actMock).toHaveBeenCalledWith('access.setRole', expect.objectContaining({ role: 'lobby', taskCreate: true }));
+  });
+
+  it('tasks-create: Management always creates tasks, so its page has no sub-row', async () => {
+    openClub();
+    await show(<Roles />, 390);
+    await click(roleRow('mgmt'));
+    expect(document.querySelector('[data-task-create]')).toBeNull();
   });
 
   it('Save counts the draft: "Save · 2 changes" after two ticks; Discard drops the draft', async () => {
@@ -295,7 +317,7 @@ describe('Admin › Roles', () => {
     expect(ticked('Prices and plans')).toBe('false');
     expect(document.body.textContent).toContain('3 changes');
     await click(button('Save · 3 changes'));
-    expect(actMock).toHaveBeenCalledWith('access.setRole', { role: 'lobby', levels: expect.objectContaining({ billing: 'view', payments: 'off', members: 'edit' }), approvals: { pricing: false, holidays: false, budget: false } });
+    expect(actMock).toHaveBeenCalledWith('access.setRole', { role: 'lobby', levels: expect.objectContaining({ billing: 'view', payments: 'off', members: 'edit' }), approvals: { pricing: false, holidays: false, budget: false }, taskCreate: false });
   });
 
   it('only the Owner reaches /roles', () => {

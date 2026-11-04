@@ -87,4 +87,8 @@ export const tasks = {
   nothingYet: 'Nothing set yet',
   manageEmptyRole: 'No additional tasks for this role yet.',
   addFor: 'Add a task for {role}',
+  // tasks-create: a team that creates its own tasks
+  teamTasks: '{team} tasks',
+  byYou: 'by you',
+  byName: 'by {name}',
 };

@@ -151,6 +151,7 @@ export const mgmt = {
   'access.reset': 'Reset to default', 'access.resetAsk': 'Reset {role} to default?', 'access.resetBody': 'Nothing is saved until you tap Save.',
   'access.discardAsk': 'Discard {n} changes?', 'access.discardAskOne': 'Discard {n} change?', 'access.discard': 'Discard', 'access.discardBody': '{role} stays as last saved.',
   'access.lastChanged': 'Last changed by {name} · {d}', 'access.needsOwner': 'Needs owner approval',
+  'access.taskCreate': 'Create tasks for {team}',
   'access.kind.pricing': 'Prices and plans', 'access.kind.holidays': 'Closed days and holidays', 'access.kind.budget': 'Weekly budget',
   'access.role.lobby': 'Front desk', 'access.role.nurse': 'Nurse', 'access.role.activity': 'Activity teacher', 'access.role.kitchen': 'Kitchen & F&B', 'access.role.finance': 'Finance', 'access.role.mgmt': 'Management',
   'access.notif.changed': 'Your menus were changed by {name}',

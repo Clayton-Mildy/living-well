@@ -1,5 +1,6 @@
 // Add or edit a recurring task (management): its name, the role, how often (daily / weekly on a weekday / monthly on a day), a time it is due by,
 // whether ticking it off needs a photo, and whether it is active. Archiving stops it showing from today; what was ticked off stays on record.
+// tasks-create: a role the Owner allowed opens it with `team`, so "For" is its own team only (named as on Admin › Roles).
 import { useState } from 'react';
 import type { StaffRole, TaskEvery, TaskTemplate } from '@cp/shared';
 import { LAST_DAY, TASK_ROLES } from '@cp/shared/rules/tasks';
@@ -7,12 +8,16 @@ import { Button, Dialog, Select, Sheet, TextField, TimeField, Toggle } from '../
 import { useAct } from '../../lib/act';
 import { useFmt, useT } from '../../lib/i18n';
 
-export function TemplateSheet({ tpl, role: forRole, onClose }: { /** the task being edited; none = a new one */ tpl?: TaskTemplate; /** a new task: the role it starts on */ role?: StaffRole; onClose: () => void }) {
+export function TemplateSheet({ tpl, role: forRole, team, onClose }: {
+  /** the task being edited; none = a new one */ tpl?: TaskTemplate; /** a new task: the role it starts on */ role?: StaffRole;
+  /** tasks-create: the signed-in team; "For" is fixed to it */ team?: StaffRole; onClose: () => void;
+}) {
   const t = useT();
   const fmt = useFmt();
   const act = useAct();
   const [title, setTitle] = useState(tpl?.title ?? '');
-  const [role, setRole] = useState<StaffRole>(tpl?.role ?? forRole ?? 'lobby');
+  const [role, setRole] = useState<StaffRole>(team ?? tpl?.role ?? forRole ?? 'lobby');
+  const roleOptions = team ? [{ value: team, label: t('mgmt.access.role.' + team) }] : TASK_ROLES.map((r) => ({ value: r, label: t('roles.' + r) }));
   const [every, setEvery] = useState<TaskEvery>(tpl?.every ?? 'daily');
   const [weekday, setWeekday] = useState(String(tpl?.weekday ?? 1));
   const [day, setDay] = useState(String(tpl?.dayOfMonth ?? 1));
@@ -58,7 +63,7 @@ export function TemplateSheet({ tpl, role: forRole, onClose }: { /** the task be
         <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <TextField label={t('tasks.fTitle')} value={title} onChange={setTitle} maxLength={120} autoFocus={!tpl} error={tried && !title.trim() && t('tasks.titleRequired')} />
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(min(100%, 200px), 1fr))', gap: 12 }}>
-            <Select label={t('tasks.fRole')} value={role} onChange={setRole} options={TASK_ROLES.map((r) => ({ value: r, label: t('roles.' + r) }))} />
+            <Select label={t('tasks.fRole')} value={role} onChange={setRole} options={roleOptions} />
             <Select label={t('tasks.fEvery')} value={every} onChange={setEvery} options={(['daily', 'weekly', 'monthly'] as const).map((e) => ({ value: e, label: t('tasks.' + e) }))} />
           </div>
           {every === 'weekly' ? <Select label={t('tasks.fWeekday')} value={weekday} onChange={setWeekday} options={weekdays} /> : null}

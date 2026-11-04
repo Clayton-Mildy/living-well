@@ -82,8 +82,14 @@ export function ownerApprovalOn(s: ClubState, role: StaffRole, kind: OwnerKind):
 }
 const defaultApproval = (role: StaffRole) => role === 'mgmt';
 
+/** KC tasks-create: may this role add tasks for its own team? Management (and the Owner) always; the others when the Owner ticked it (default off). */
+export function taskCreateOn(s: ClubState, role: StaffRole): boolean {
+  return role === 'mgmt' || role === 'owner' || !!s.club.settings.taskCreate?.[role];
+}
+
 // ---------- round 17 (phase 2): a role's draft on the Roles screen ----------
-export type RoleDraft = { levels: Record<string, AccessLevel>; approvals: Record<OwnerKind, boolean> };
+/** `taskCreate`: the "Create tasks for {team}" switch under Tasks (not a menu: it is not in the "{n} of {total}" counts). */
+export type RoleDraft = { levels: Record<string, AccessLevel>; approvals: Record<OwnerKind, boolean>; taskCreate: boolean };
 export const OWNER_KINDS: OwnerKind[] = ['pricing', 'holidays', 'budget'];
 
 /** What the Roles screen starts from and `access.setRole` saves: every menu key's effective level and the three owner-approval switches. */
@@ -92,7 +98,7 @@ export function roleDraft(s: ClubState, role: GridRole): RoleDraft {
   for (const k of MENU_KEYS) levels[k] = accessOf(s, role, k);
   const approvals = {} as Record<OwnerKind, boolean>;
   for (const kind of OWNER_KINDS) approvals[kind] = ownerApprovalOn(s, role, kind);
-  return { levels, approvals };
+  return { levels, approvals, taskCreate: taskCreateOn(s, role) };
 }
 
 /** The role as it ships: every menu at its default level, the approval switches at theirs (Reset to default on the Roles screen). */
@@ -101,13 +107,13 @@ export function defaultDraft(role: GridRole): RoleDraft {
   for (const k of MENU_KEYS) levels[k] = defaultLevel(role, k);
   const approvals = {} as Record<OwnerKind, boolean>;
   for (const kind of OWNER_KINDS) approvals[kind] = defaultApproval(role);
-  return { levels, approvals };
+  return { levels, approvals, taskCreate: role === 'mgmt' };
 }
 
-/** How many cells of the draft differ from what is saved (menus and approval switches). */
+/** How many cells of the draft differ from what is saved (menus, approval switches and "Create tasks"). */
 export function draftChanges(s: ClubState, role: GridRole, draft: RoleDraft): number {
   const saved = roleDraft(s, role);
-  return MENU_KEYS.filter((k) => draft.levels[k] !== saved.levels[k]).length + OWNER_KINDS.filter((k) => draft.approvals[k] !== saved.approvals[k]).length;
+  return MENU_KEYS.filter((k) => draft.levels[k] !== saved.levels[k]).length + OWNER_KINDS.filter((k) => draft.approvals[k] !== saved.approvals[k]).length + (draft.taskCreate !== saved.taskCreate ? 1 : 0);
 }
 
 /** A cell at its default is not stored. For a default-off key that includes Off, so the key stays "never set" and `permit()` leaves it to the action's own `can`. */

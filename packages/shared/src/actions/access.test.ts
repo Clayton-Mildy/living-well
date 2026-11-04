@@ -1,6 +1,6 @@
 // Round 17 (phase 2): access.setRole saves a whole role (menus + the three owner-approval switches); the Owner's alone.
 import { describe, it, expect } from 'vitest';
-import { buildSeed, execute, getUser, accessOf, ownerApprovalOn, roleDraft, MENU_KEYS, DomainError, type ClubState } from '../index';
+import { buildSeed, execute, getUser, accessOf, ownerApprovalOn, roleDraft, defaultDraft, draftChanges, MENU_KEYS, DomainError, type ClubState } from '../index';
 
 const clock = { today: '2026-10-21', nowMin: 600 };
 const base = buildSeed().citra;
@@ -96,6 +96,27 @@ describe('access.setRole', () => {
   });
   it('the draft covers every menu key', () => {
     expect(Object.keys(roleDraft(base, 'nurse').levels).sort()).toEqual([...MENU_KEYS].sort());
+  });
+});
+
+describe('Create tasks for the team (tasks-create)', () => {
+  it('access.setRole saves the flag for Front desk only, and saving it off clears it', () => {
+    const d = roleDraft(base, 'lobby');
+    expect(d.taskCreate).toBe(false);
+    expect(defaultDraft('lobby').taskCreate).toBe(false);
+    expect(roleDraft(base, 'mgmt').taskCreate).toBe(true);
+    const on = run(base, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: true }, OWNER).state;
+    expect(on.club.settings.taskCreate).toEqual({ lobby: true });
+    expect(on.club.settings.access?.lobby).toBeUndefined();
+    expect(roleDraft(on, 'lobby').taskCreate).toBe(true);
+    const off = run(on, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: false }, OWNER).state;
+    expect(off.club.settings.taskCreate).toBeUndefined();
+    fails(base, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: true }, 's9', 'err.forbidden'); // only the Owner
+  });
+  it('draftChanges counts the flag as one change', () => {
+    const d = roleDraft(base, 'lobby');
+    expect(draftChanges(base, 'lobby', d)).toBe(0);
+    expect(draftChanges(base, 'lobby', { ...d, taskCreate: true })).toBe(1);
   });
 });
 

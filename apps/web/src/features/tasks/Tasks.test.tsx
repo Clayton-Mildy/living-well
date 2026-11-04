@@ -199,3 +199,50 @@ describe('Tasks: management', () => {
     expect(actMock).toHaveBeenCalledWith('task.saveTemplate', { title: 'Wipe the handrails', role: 'nurse', every: 'daily', proof: 'none', active: true });
   });
 });
+
+// KC tasks-create: the Owner let Front desk create its own tasks (Admin › Roles › Tasks › "Create tasks for Front desk")
+describe('Tasks: a team that creates its own tasks', () => {
+  const allow = () => {
+    const v = produce(useReplica.getState().view!, (d) => {
+      d.club.settings.taskCreate = { lobby: true };
+      d.taskTemplates['task-lobby-mine'] = { ...d.taskTemplates['task-lobby-desk'], id: 'task-lobby-mine', title: 'Water the plants', createdBy: 'staff:s1' };
+    });
+    useReplica.setState({ confirmed: v, view: v });
+  };
+  const sheet = () => Array.from(document.querySelectorAll('[role="dialog"]')).pop() as HTMLElement | undefined;
+
+  it('with the flag Caca has Add task; the sheet is for Front desk only; her task opens editable, Ega\'s read-only', async () => {
+    openClub('s1', 'lobby');
+    allow();
+    await show(<Tasks />);
+    const team = document.querySelector('[data-team-tasks]')!;
+    expect(team.querySelector('[data-template="task-lobby-mine"]')?.textContent).toContain('by you');
+    expect(team.querySelector('[data-template="task-lobby-desk"]')?.textContent).toMatch(/by \S/);
+    expect(team.querySelector('[data-template="task-lobby-desk"]')?.textContent).not.toContain('by you');
+    expect(document.querySelector('[data-team-tasks] [data-template="task-kitchen-fridge"]')).toBeNull(); // only her team
+    await click(btn(/^addAdd task$|^Add task$/));
+    const For = sheet()!.querySelector<HTMLElement>('[role="combobox"]')!;
+    expect(For.textContent).toContain('Front desk');
+    await click(For);
+    expect(Array.from(document.querySelectorAll('[role="option"]')).map((o) => o.getAttribute('aria-label'))).toEqual(['Front desk']);
+    await act(async () => { root!.unmount(); });
+    root = createRoot(host!);
+    await act(async () => { root!.render(<MemoryRouter initialEntries={['/tasks']}><Tasks /></MemoryRouter>); });
+    await click(document.querySelector('[data-team-tasks] [data-template="task-lobby-mine"]'));
+    expect(sheet()!.textContent).toContain('Edit task');
+    expect(Array.from(sheet()!.querySelectorAll('button')).some((b) => /Archive/.test(b.textContent || ''))).toBe(true);
+    await click(Array.from(sheet()!.querySelectorAll<HTMLElement>('button')).find((b) => b.getAttribute('aria-label') === 'Close'));
+    await click(document.querySelector('[data-team-tasks] [data-template="task-lobby-desk"]'));
+    expect(sheet()!.textContent).toContain('Set up the welcome desk');
+    expect(sheet()!.querySelector('[role="combobox"]')).toBeNull(); // read-only: no fields
+    expect(Array.from(sheet()!.querySelectorAll('button')).some((b) => /Archive|Save/.test(b.textContent || ''))).toBe(false);
+  });
+
+  it('without the flag Caca has no Add task and no team list; no Team / Manage either way', async () => {
+    openClub('s1', 'lobby');
+    await show(<Tasks />);
+    expect(btn(/Add task/)).toBeUndefined();
+    expect(document.querySelector('[data-team-tasks]')).toBeNull();
+    expect(tab(/Manage/)).toBeUndefined();
+  });
+});

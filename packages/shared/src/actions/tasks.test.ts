@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, DomainError, type ClubState } from '../index';
-import { customTasks, doneOf, dutyById, dutyDueBy, dutyIsOn, dutiesOf } from '../rules/tasks';
+import { customTasks, doneOf, dutyById, dutyDueBy, dutyIsOn, dutiesOf, DUTIES } from '../rules/tasks';
+import { roleDraft } from '../rules/access';
+const dutyIdOf = (role: string) => (DUTIES.find((d) => d.role === role) ?? DUTIES[0]).id;
 
 const T = '2026-10-21'; // Wed
 const clock = { today: T, nowMin: 10 * 60 };
@@ -111,6 +113,59 @@ describe('task.saveTemplate and task.archiveTemplate', () => {
     expect(customTasks(s, 'lobby', '2026-10-22', T, 600).map((i) => i.template.id)).not.toContain('task-lobby-desk'); // gone going forward
     expect(customTasks(s, 'lobby', T, T, 600).map((i) => i.template.id)).toContain('task-lobby-desk'); // today it was ticked: the record shows
     fails(s, 'task.archiveTemplate', { id: 'task-lobby-desk' }, 's9', 'err.notFound');
+  });
+});
+
+// KC (tasks-create): the Owner lets a role create tasks for its own team (Admin › Roles › Tasks › "Create tasks for Front desk").
+describe('a role allowed to create tasks for its own team', () => {
+  const input = { title: 'Water the lobby plants', role: 'lobby', every: 'daily', proof: 'none', active: true };
+  /** Benjamin (the Owner) ticks "Create tasks for Front desk" and saves the role. */
+  const allowLobby = (s: ClubState) => {
+    const d = roleDraft(s, 'lobby');
+    return step(s, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: true }, 's11');
+  };
+
+  it('Caca with the flag creates a Front desk task, edits and archives her own', () => {
+    const s0 = allowLobby(fresh());
+    const r = run(s0, 'task.saveTemplate', input, 's1');
+    const id = r.result.id as string;
+    expect(r.state.taskTemplates[id]).toMatchObject({ ...input, createdBy: 'staff:s1' });
+    const e = step(r.state, 'task.saveTemplate', { ...input, id, title: 'Water the plants' }, 's1');
+    expect(e.taskTemplates[id]).toMatchObject({ title: 'Water the plants', createdBy: 'staff:s1' });
+    expect(step(e, 'task.archiveTemplate', { id }, 's1').taskTemplates[id].deletedAt).toBeTruthy();
+  });
+
+  it('a kitchen task, or moving her own task to the kitchen, is forbidden', () => {
+    const s0 = allowLobby(fresh());
+    fails(s0, 'task.saveTemplate', { ...input, role: 'kitchen' }, 's1', 'err.forbidden');
+    const r = run(s0, 'task.saveTemplate', input, 's1');
+    fails(r.state, 'task.saveTemplate', { ...input, id: r.result.id, role: 'kitchen' }, 's1', 'err.forbidden');
+  });
+
+  it('a Front desk task Ega made stays hers: Caca cannot edit or archive it', () => {
+    const s0 = allowLobby(fresh());
+    expect(s0.taskTemplates['task-lobby-desk'].createdBy).toBe('staff:s9');
+    fails(s0, 'task.saveTemplate', { ...input, id: 'task-lobby-desk' }, 's1', 'err.forbidden');
+    fails(s0, 'task.archiveTemplate', { id: 'task-lobby-desk' }, 's1', 'err.forbidden');
+  });
+
+  it('without the flag Caca is forbidden; another role with Caca\'s flag is too', () => {
+    const s0 = fresh();
+    fails(s0, 'task.saveTemplate', input, 's1', 'err.forbidden');
+    const s1 = allowLobby(s0);
+    fails(s1, 'task.saveTemplate', { ...input, role: 'nurse' }, 's8', 'err.forbidden');
+    const mine = run(s1, 'task.saveTemplate', input, 's1');
+    const off = (() => { const d = roleDraft(mine.state, 'lobby'); return step(mine.state, 'access.setRole', { role: 'lobby', levels: d.levels, approvals: d.approvals, taskCreate: false }, 's11'); })();
+    fails(off, 'task.archiveTemplate', { id: mine.result.id }, 's1', 'err.forbidden'); // the Owner took it back: her own task is management's now
+  });
+
+  it('management is unchanged: any role, any task, and duty settings stay management only', () => {
+    const s0 = allowLobby(fresh());
+    const r = run(s0, 'task.saveTemplate', { ...input, role: 'kitchen' }, 's9');
+    expect(r.state.taskTemplates[r.result.id as string].role).toBe('kitchen');
+    const c = run(s0, 'task.saveTemplate', input, 's1');
+    expect(step(c.state, 'task.saveTemplate', { ...input, id: c.result.id, title: 'Ega renamed it' }, 's9').taskTemplates[c.result.id as string].title).toBe('Ega renamed it');
+    fails(s0, 'duty.configure', { id: dutyIdOf('lobby'), off: true }, 's1', 'err.forbidden');
   });
 });
 
