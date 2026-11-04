@@ -57,14 +57,11 @@ const RANK: Record<AccessLevel, number> = { off: 0, view: 1, edit: 2 };
 export function accessOf(s: ClubState, role: StaffRole, key: string): AccessLevel {
   if (role === 'owner' || key === 'today') return 'edit';
   const cells = s.club.settings.access?.[role];
-  // round 19 (R3): Directory is now Contacts. A `directory` cell saved before the merge still counts: with both stored the more permissive wins, with only that one it stands alone
+  // round 19 (R3): Directory is now Contacts. The level is the most permissive of the Contacts cell (its default when unstored) and a Directory cell saved before the merge
   if (key === 'contacts') {
+    const now = cells?.contacts ?? defaultLevel(role, key);
     const old = cells?.directory;
-    const now = cells?.contacts;
-    if (old !== undefined && now !== undefined) return RANK[old] >= RANK[now] ? old : now;
-    if (old !== undefined) return old;
-    if (now !== undefined) return now;
-    return defaultLevel(role, key);
+    return old !== undefined && RANK[old] > RANK[now] ? old : now;
   }
   return cells?.[key] ?? defaultLevel(role, key);
 }

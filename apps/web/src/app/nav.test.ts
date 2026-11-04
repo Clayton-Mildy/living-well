@@ -120,9 +120,9 @@ describe('one Contacts menu', () => {
     expect(retiredKey('directory')).toBe('contacts');
     expect(retiredKey('contacts')).toBeNull();
   });
-  it('a Directory cell saved before the merge still opens or closes Contacts', () => {
+  it('a Contacts cell closes Contacts; a Directory cell saved before the merge still opens it', () => {
     const o = structuredClone(s);
-    o.club.settings.access = { finance: { directory: 'off' }, lobby: { directory: 'edit' } };
+    o.club.settings.access = { finance: { contacts: 'off' }, lobby: { directory: 'edit' } };
     expect(screenFor(o, 'finance', 'contacts')).toBeNull();
     expect(screenFor(o, 'lobby', 'contacts')).toBe('dir');
   });

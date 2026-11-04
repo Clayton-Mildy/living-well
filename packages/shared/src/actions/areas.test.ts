@@ -80,8 +80,8 @@ describe('action areas', () => {
   });
 
   it('directory.* actions follow the Contacts cell, and a Directory cell stored before round 19 still counts', () => {
-    const legacy = withAccess(seed(), { mgmt: { directory: 'view' }, lobby: { directory: 'edit' } });
-    expect(canRun('directory.add', user(legacy, 'mgmt'), {}, legacy)).toBe(false);
+    const legacy = withAccess(seed(), { mgmt: { contacts: 'view', directory: 'view' }, lobby: { directory: 'edit' } });
+    expect(canRun('directory.add', user(legacy, 'mgmt'), {}, legacy)).toBe(false); // a lone old View never narrows the default; with Contacts on View too it is View
     expect(canRun('directory.add', user(legacy, 'lobby'), {}, legacy)).toBe(true);
     const now = withAccess(seed(), { lobby: { contacts: 'view' } });
     expect(canRun('directory.add', user(now, 'lobby'), {}, now)).toBe(false);

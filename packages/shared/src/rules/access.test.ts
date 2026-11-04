@@ -58,9 +58,14 @@ describe('one Contacts menu (round 19)', () => {
     expect(accessOf(s, 'finance', 'directory')).toBe('off');
   });
   it('a stored directory cell with no contacts cell is read as Contacts', () => {
-    expect(accessOf(withCells({ finance: { directory: 'view' } }), 'finance', 'contacts')).toBe('view');
-    expect(accessOf(withCells({ finance: { directory: 'off' } }), 'finance', 'contacts')).toBe('off');
+    expect(accessOf(withCells({ finance: { directory: 'edit' } }), 'finance', 'contacts')).toBe('edit');
+    expect(accessOf(withCells({ nurse: { directory: 'edit' } }), 'nurse', 'contacts')).toBe('edit');
     expect(accessOf(withCells({ lobby: { directory: 'edit' } }), 'lobby', 'contacts')).toBe('edit');
+  });
+  it('a lone directory cell never narrows the Contacts default (lobby, nurse, finance)', () => {
+    expect(accessOf(withCells({ lobby: { directory: 'view' } }), 'lobby', 'contacts')).toBe('edit');
+    expect(accessOf(withCells({ nurse: { directory: 'view' } }), 'nurse', 'contacts')).toBe('edit');
+    expect(accessOf(withCells({ finance: { directory: 'off' } }), 'finance', 'contacts')).toBe('edit');
   });
   it('a stored contacts cell with no directory cell stands as it is', () => {
     expect(accessOf(withCells({ lobby: { contacts: 'view' } }), 'lobby', 'contacts')).toBe('view');
@@ -71,9 +76,9 @@ describe('one Contacts menu (round 19)', () => {
     expect(accessOf(withCells({ lobby: { contacts: 'off', directory: 'view' } }), 'lobby', 'contacts')).toBe('view');
     expect(accessOf(withCells({ lobby: { contacts: 'off', directory: 'off' } }), 'lobby', 'contacts')).toBe('off');
   });
-  it('menuKeys follows the merged cell: Directory off hides the single Contacts item', () => {
-    const s = withCells({ finance: { directory: 'off' } });
-    expect(menuKeys(s, 'finance')).not.toContain('contacts');
+  it('menuKeys: Contacts off hides the single item; a lone Directory off does not', () => {
+    expect(menuKeys(withCells({ finance: { contacts: 'off' } }), 'finance')).not.toContain('contacts');
+    expect(menuKeys(withCells({ finance: { directory: 'off' } }), 'finance')).toContain('contacts');
     expect(menuKeys(fresh(), 'finance').filter((k) => k === 'contacts')).toHaveLength(1);
   });
   it('the draft and its change count read the merged cell', () => {

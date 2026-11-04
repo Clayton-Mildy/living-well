@@ -514,7 +514,7 @@ test.describe('directory', () => {
   test('add, edit and delete a contact; the phone is a tel: link; public contacts reach the family live', async ({ page, context }) => {
     const c = watchConsole(page);
     await signIn(page, 's10', '/contacts');
-    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Contacts' })).toBeVisible();
     if (isPhone(page)) await expect(page.getByRole('combobox', { name: 'Filter contacts' })).toContainText('All · 13'); // round 14 p2: four more suppliers (the shops of the seeded receipts); round 15: two AC vendors
     else await expect(page.getByRole('button', { name: /^All\s*·?\s*13/ })).toBeVisible();
     await assertNoHorizontalScroll(page);
@@ -563,7 +563,7 @@ test.describe('directory', () => {
 
   test('the lobby keeps the list too; the nurse has the public list only; /directory redirects to Contacts', async ({ page }) => {
     await signIn(page, 's1', '/contacts');
-    await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: 'Contacts' })).toBeVisible();
     await expect(page.getByRole('button', { name: 'Add a contact' })).toBeVisible();
     // round 15: the AC breaks - the group lists the first vendor to call, then the next
     await expect(page.getByRole('heading', { name: 'AC and electrical' })).toBeVisible();
@@ -609,7 +609,7 @@ test.describe('directory', () => {
 });
 
 test.describe('screens render everywhere', () => {
-  const SCREENS: [string, string, string][] = [['s10', '/today', 'Billing'], ['s10', '/payments', 'Payments'], ['s10', '/budget', 'Budget'], ['s10', '/receipts', 'Receipts'], ['s10', '/contacts', 'Directory'], ['s9', '/billing', 'Billing']];
+  const SCREENS: [string, string, string][] = [['s10', '/today', 'Billing'], ['s10', '/payments', 'Payments'], ['s10', '/budget', 'Budget'], ['s10', '/receipts', 'Receipts'], ['s10', '/contacts', 'Contacts'], ['s9', '/billing', 'Billing']];
   for (const [uid, path, title] of SCREENS) {
     test(`${uid} ${path}: no console errors, no horizontal scroll`, async ({ page }) => {
       const c = watchConsole(page);

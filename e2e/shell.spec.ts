@@ -106,7 +106,7 @@ test('management: contacts are the full Directory, suppliers and editing include
   const c = watchConsole(page);
   await signIn(page, 's9', '/contacts');
   await expect(page.getByRole('button', { name: 'Contacts', exact: true })).toHaveCount(0); // no separate Contacts button next to the logo
-  await expect(page.getByRole('heading', { name: 'Directory' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: 'Contacts' })).toBeVisible();
   await expect(page.getByText('Sayur Segar Kemang')).toBeVisible();
   c.assertClean();
 });

@@ -36,9 +36,11 @@ describe('access.setRole', () => {
     const r = save(s, 'lobby', { contacts: 'view' });
     expect(r.state.club.settings.access?.lobby).toEqual({ contacts: 'view' });
     expect(r.state.club.settings.access?.finance).toEqual({ directory: 'view' }); // another role is untouched
-    const f = save(s, 'finance', {});
-    expect(f.state.club.settings.access?.finance).toEqual({ contacts: 'view' });
-    expect(accessOf(f.state, 'finance', 'contacts')).toBe('view');
+    const f = save(s, 'finance', {}); // a lone old View never narrowed Finance's Edit, so nothing is left to store
+    expect(f.state.club.settings.access?.finance).toBeUndefined();
+    const v = save(s, 'finance', { contacts: 'view' });
+    expect(v.state.club.settings.access?.finance).toEqual({ contacts: 'view' });
+    expect(accessOf(v.state, 'finance', 'contacts')).toBe('view');
     const back = save(s, 'finance', { contacts: 'edit' });
     expect(back.state.club.settings.access?.finance).toBeUndefined(); // Edit is Finance's default now
   });
