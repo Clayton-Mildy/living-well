@@ -13,7 +13,9 @@ import { onLeaveOn } from '../rules/leave';
 import { faceOptedOut, visitInfo } from '../rules/lobby';
 import { clearMark, writeMark } from '../rules/mood';
 import { optFace } from './mood';
-import { rp, ym } from '../util';
+import { setTripMember, tripChargeId } from './schedule';
+import { tripOn } from '../rules/trips';
+import { addDays, rp, ym } from '../util';
 
 const lobbyOrMgmt = (u: Parameters<typeof hasRole>[0]) => hasRole(u, 'lobby', 'mgmt');
 const bad = () => new DomainError('err.invalid');
@@ -42,6 +44,20 @@ function retractNotice(d: Draft<ClubState>, ctx: Ctx, memberId: string, kind: 'n
   for (const n of Object.values(d.notifications)) {
     if (!n.deletedAt && n.kind === kind && n.memberId === memberId && n.createdAt.slice(0, 10) === ctx.today && (time === undefined || n.params.time === time)) n.deletedAt = ctx.nowDT;
   }
+}
+
+/**
+ * Round 20 (R2): an undone check-in on a field trip day takes the member off the trip and drops its fee, unless they are still on it some other way:
+ * a check-in on another day of the same trip keeps them on it, and so does a fee an invoice already billed (`result.tripKept` names the invoice, for the desk's toast).
+ */
+function undoTrip(d: Draft<ClubState>, memberId: string, ctx: Ctx) {
+  const trip = tripOn(d as ClubState, ctx.today);
+  if (!trip?.wentIds?.includes(memberId)) return;
+  const ev = d.calendarEvents[trip.id];
+  for (let day = ev.date; day <= (ev.endDate || ev.date); day = addDays(day, 1)) if (day !== ctx.today && d.attendance[attId(day, memberId)]?.checkIn) return;
+  const charge = d.pendingCharges[tripChargeId(ev.id, memberId)];
+  if (charge?.invoiceId) { ctx.result.tripKept = { invoiceId: charge.invoiceId, amount: charge.amount }; return; }
+  setTripMember(d, ev, memberId, false, ctx);
 }
 
 type GuestInput = { guestId: string };
@@ -86,6 +102,9 @@ export const attendanceActions = [
         ctx.notify({ toRoles: ['mgmt', 'finance'], kind: 'lobby.notif.extraVisit', params: { name, n: visit.n, price: rp(priceOn(d as ClubState, ctx.today).extra) }, link: `/members/${m.id}`, memberId: m.id });
       }
       if (input.face) writeMark(d, ctx, { memberId: m.id, moment: 'arrival', face: input.face });
+      // round 20 (R1): on a field trip day the check-in puts the member on the trip (the day's first outing) and charges its fee once
+      const trip = tripOn(d as ClubState, ctx.today);
+      if (trip) setTripMember(d, d.calendarEvents[trip.id], m.id, true, ctx);
       ctx.result.time = ctx.now;
     },
   }),
@@ -126,6 +145,7 @@ export const attendanceActions = [
       delete a.departureAsked;
       clearMark(d, ctx.today, input.memberId, 'arrival');
       a.edits.push({ at: ctx.nowDT, by: ctx.actor, what: 'undoCheckIn' });
+      undoTrip(d, input.memberId, ctx);
       ctx.feed({ icon: 'undo', key: 'lobby.feed.undoIn', params: { name: shortOf(d, input.memberId) }, memberId: input.memberId });
     },
   }),

@@ -70,6 +70,23 @@ describe('who is flagged', () => {
   });
 });
 
+describe('round 20: a field trip is a visit day (R3, Review Focus 5)', () => {
+  const tripFor = (memberIds: string[]) => (d: ClubState) => {
+    d.calendarEvents['ev-trip-r20'] = { id: 'ev-trip-r20', clubId: d.clubId, createdAt: '2026-11-01T09:00', createdBy: 'staff:s9', date: '2026-11-09', kind: 'outing', title: 'Ancol aquarium', from: '08:30', to: '15:00', wentIds: memberIds };
+  };
+  it('4 check-ins plus 1 trip-only day is 5 visit days: not flagged', () => {
+    const s = produce(withFewVisits(), tripFor(['fv1']));
+    expect(ids(s)).not.toContain('fv1');
+    expect(ids(produce(withFewVisits(), tripFor([])))).toContain('fv1');
+  });
+  it('the trip day is the last visit and counts once with a check-in that day', () => {
+    const s = produce(withFewVisits(), tripFor(['fv2', 'fv3'])); // Hasan (fv3) also checked in on 9 Nov
+    const rows = fewVisitMembers(s, FEW_DAY);
+    expect(rows.find((r) => r.memberId === 'fv2')).toMatchObject({ visits: 4, last: '2026-11-09' });
+    expect(rows.find((r) => r.memberId === 'fv3')).toMatchObject({ visits: 3, last: '2026-11-09' });
+  });
+});
+
 describe('who is left out', () => {
   const cases: [string, (d: ClubState) => void][] = [
     ['on leave in November', (d) => { d.members.fv2.memberships[0].leaves = [{ month: '2026-11', at: '2026-10-01T09:00', by: 'staff:s1' }]; }],

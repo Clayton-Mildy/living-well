@@ -304,6 +304,74 @@ describe('guest.* (trial and visit guests: booked for a date and time)', () => {
   });
 });
 
+// Round 20 (Task 1, R1, R2): on a field trip day the check-in puts the member on the trip and charges the fee once; undoing it takes both back,
+// unless an invoice already billed the fee (then the member stays on the trip and the result says so).
+describe('round 20: check-in on a field trip day', () => {
+  const EV = 'ev-trip-r20';
+  const D2 = { today: '2026-10-22', nowMin: 600 };
+  const withTrip = (fee = 250_000, endDate?: string) => produce(base, (d) => {
+    d.calendarEvents[EV] = { id: EV, clubId: d.clubId, createdAt: '2026-10-01T09:00', createdBy: 'staff:s9', date: clock.today, ...(endDate ? { endDate } : {}), kind: 'outing', title: 'Ancol aquarium', from: '08:30', to: '15:00', ...(fee ? { fee } : {}) };
+  });
+  const tripCharges = (s: ClubState) => Object.values(s.pendingCharges).filter((c) => c.id.startsWith(`trip-${EV}-`));
+  it('puts the member on the trip and charges the fee on the next invoice', () => {
+    const s = checkIn(withTrip(), 'm1');
+    expect(s.calendarEvents[EV].wentIds).toEqual(['m1']);
+    expect(s.pendingCharges[`trip-${EV}-m1`]).toMatchObject({ memberId: 'm1', amount: 250_000, label: 'inv.line.fieldTrip', params: { title: 'Ancol aquarium', date: clock.today }, source: { type: 'event', id: EV } });
+  });
+  it('undo takes both back; check-in, undo, check-in again: on the trip once, one charge (Review Focus 1)', () => {
+    const s = checkIn(withTrip(), 'm1');
+    const undone = run(s, 'attendance.undoCheckIn', { memberId: 'm1' });
+    expect(undone.state.calendarEvents[EV].wentIds ?? []).toEqual([]);
+    expect(tripCharges(undone.state)).toHaveLength(0);
+    expect(undone.result.tripKept).toBeUndefined();
+    const again = checkIn(undone.state, 'm1');
+    expect(again.calendarEvents[EV].wentIds).toEqual(['m1']);
+    expect(tripCharges(again).map((c) => [c.memberId, c.amount])).toEqual([['m1', 250_000]]);
+  });
+  it('a 2-day trip: a check-in on each day charges once; undoing day 2 keeps the member on the trip they joined on day 1 (Review Focus 2)', () => {
+    const s1 = checkIn(withTrip(250_000, '2026-10-22'), 'm1');
+    const s2 = checkIn(s1, 'm1', 'manual', D2);
+    expect(s2.calendarEvents[EV].wentIds).toEqual(['m1']);
+    expect(tripCharges(s2)).toHaveLength(1);
+    const undone = run(s2, 'attendance.undoCheckIn', { memberId: 'm1' }, 's1', D2).state;
+    expect(undone.calendarEvents[EV].wentIds).toEqual(['m1']);
+    expect(tripCharges(undone)).toHaveLength(1);
+  });
+  it('a free trip: on the trip, no charge (Review Focus 3)', () => {
+    const s = checkIn(withTrip(0), 'm1');
+    expect(s.calendarEvents[EV].wentIds).toEqual(['m1']);
+    expect(tripCharges(s)).toHaveLength(0);
+    expect(run(s, 'attendance.undoCheckIn', { memberId: 'm1' }).state.calendarEvents[EV].wentIds ?? []).toEqual([]);
+  });
+  it('an invoiced fee: the undo still succeeds, the member stays on the trip and the result names the invoice (R2)', () => {
+    const s = produce(checkIn(withTrip(), 'm1'), (d) => { d.pendingCharges[`trip-${EV}-m1`].invoiceId = 'INV-X'; });
+    const r = run(s, 'attendance.undoCheckIn', { memberId: 'm1' });
+    expect(att(r.state, 'm1').checkIn).toBeUndefined();
+    expect(r.state.calendarEvents[EV].wentIds).toEqual(['m1']);
+    expect(r.state.pendingCharges[`trip-${EV}-m1`]).toMatchObject({ invoiceId: 'INV-X', amount: 250_000 });
+    expect(r.result.tripKept).toEqual({ invoiceId: 'INV-X', amount: 250_000 });
+  });
+  it('a member ticked in Who went already: no second entry, no second charge', () => {
+    const ticked = run(withTrip(), 'calendarEvent.setWent', { eventId: EV, memberIds: ['m46', 'm1'] }, 's5').state;
+    const s = checkIn(ticked, 'm1');
+    expect(s.calendarEvents[EV].wentIds).toEqual(['m46', 'm1']);
+    expect(tripCharges(s).map((c) => c.memberId).sort()).toEqual(['m1', 'm46']);
+  });
+  it('several trips on one day: the member joins the first by start time', () => {
+    const two = produce(withTrip(), (d) => { d.calendarEvents['ev-early'] = { ...d.calendarEvents[EV], id: 'ev-early', title: 'Early walk', from: '07:30', to: '09:00' }; });
+    const s = checkIn(two, 'm1');
+    expect(s.calendarEvents['ev-early'].wentIds).toEqual(['m1']);
+    expect(s.calendarEvents[EV].wentIds).toBeUndefined();
+  });
+  it('a day with no trip is unchanged, and Flex extra days still count check-ins only', () => {
+    const plain = checkIn(base, 'm1');
+    expect(Object.keys(plain.pendingCharges)).toEqual(Object.keys(base.pendingCharges));
+    // a trip-only tick (no check-in) is not a Flex visit: the next check-in is still the 11th
+    const ticked = run(withTrip(), 'calendarEvent.setWent', { eventId: EV, memberIds: ['m1'] }, 's5').state;
+    expect(visitsInMonth(ticked, ticked.members.m1, '2026-10')).toHaveLength(10);
+  });
+});
+
 describe('determinism', () => {
   it('the same mutation id gives the same patches (client and server agree), also for an extra-day check-in', () => {
     const a = execute(base, 'attendance.checkIn', { memberId: 'm1', method: 'face' }, as('s1'), clock, 'mx');

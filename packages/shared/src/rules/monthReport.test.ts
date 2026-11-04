@@ -1,5 +1,6 @@
 // Round 12: the month report (management): money, members, care and mood, pipeline and team, each compared with the period before.
 import { describe, it, expect } from 'vitest';
+import { produce } from 'immer';
 import { buildSeed } from '../seed';
 import { activeOn } from './core';
 import { checkOnList } from './checkOn';
@@ -115,5 +116,21 @@ describe('month report', () => {
       expect(t.collected).toEqual([0, 0, 0, 0, 0, 0]);
       expect(JSON.stringify(t)).not.toContain('NaN');
     });
+  });
+  it('round 20: trip-only days count as visits (R3)', () => {
+    const p = periodFor('thisMonth', T);
+    const before = monthReport(s, p, T, 600).members;
+    const day = '2026-10-19';
+    const came = Object.values(s.attendance).filter((a) => a.date === day && a.checkIn).map((a) => a.memberId);
+    expect(came.length).toBeGreaterThan(2);
+    // everyone who came on 19 Oct went on the trip instead, with no check-in
+    const tripOnly = produce(s, (d) => {
+      for (const id of came) delete d.attendance[`${day}:${id}`];
+      d.calendarEvents['ev-trip-r20'] = { id: 'ev-trip-r20', clubId: d.clubId, createdAt: '2026-10-01T09:00', createdBy: 'staff:s9', date: day, kind: 'outing', title: 'Ancol aquarium', from: '08:30', to: '15:00', wentIds: came };
+    });
+    const r = monthReport(tripOnly, p, T, 600).members;
+    expect([r.visitsPerMember.cur, r.utilisation.cur]).toEqual([before.visitsPerMember.cur, before.utilisation.cur]);
+    const noTrip = produce(tripOnly, (d) => { d.calendarEvents['ev-trip-r20'].wentIds = []; });
+    expect(monthReport(noTrip, p, T, 600).members.utilisation.cur!).toBeLessThan(before.utilisation.cur!);
   });
 });

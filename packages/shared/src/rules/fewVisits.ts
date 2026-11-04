@@ -8,6 +8,7 @@ import { approvedMembers, currentMembership, membershipStatus } from './core';
 import { onLeaveIn } from './leave';
 import { noticeDays, noticeDeadline } from './notice';
 import { askedInApp, nextMonthPlans } from './renewals';
+import { visitDaysByMember } from './trips';
 
 export const FEW_BELOW_DEFAULT = 5;
 export const FEW_DAYS_BEFORE_MONTH_DEFAULT = 16;
@@ -38,7 +39,7 @@ export const VISIT_CALL_NOTE_MAX = 200;
 export type FewRow = { memberId: string; visits: number; last?: ISODate; called: boolean };
 
 /**
- * Who came fewer than `below` days this month (the 1st up to today). Left out: not active today (ended, ending, not started), started after the 1st, on leave this
+ * Who came fewer than `below` days this month (the 1st up to today; round 20: a field trip they went on counts as a day). Left out: not active today (ended, ending, not started), started after the 1st, on leave this
  * month, stopping or on leave next month, or a plan change / leave already asked for next month (those families have said what they will do).
  * Not called first, then fewest visits first, then by name.
  */
@@ -48,20 +49,15 @@ export function fewVisitMembers(s: ClubState, today: ISODate): FewRow[] {
   const { below } = fewVisitsSettings(s);
   const nextStatus = new Map(nextMonthPlans(s, today).map((r) => [r.member.id, r.status]));
   const calledIds = new Set(live(s.visitCalls || {}).filter((c) => c.month === month).map((c) => c.memberId));
-  // this month's check-in days by member, read once (visitsInMonth per member would scan all attendance each time)
-  const byMember = new Map<string, ISODate[]>();
-  for (const a of live(s.attendance)) {
-    if (!a.checkIn || ym(a.date) !== month) continue;
-    const list = byMember.get(a.memberId);
-    if (list) list.push(a.date); else byMember.set(a.memberId, [a.date]);
-  }
+  // round 20 (R3): this month's visit days up to today by member (check-ins plus trips they went on), read once for everyone
+  const byMember = visitDaysByMember(s, monthStart(month), today);
   const rows: (FewRow & { name: string })[] = [];
   for (const m of approvedMembers(s)) {
     if (membershipStatus(m, today) !== 'active' || currentMembership(m).start > monthStart(month)) continue;
     if (onLeaveIn(m, month)) continue;
     const st = nextStatus.get(m.id);
     if (st === 'stop' || st === 'leave' || askedInApp(s, m, next)) continue;
-    const days = (byMember.get(m.id) || []).filter((d) => d <= today).sort();
+    const days = byMember.get(m.id) || [];
     if (days.length >= below) continue;
     rows.push({ memberId: m.id, visits: days.length, ...(days.length ? { last: days[days.length - 1] } : {}), called: calledIds.has(m.id), name: `${m.firstName} ${m.lastName}` });
   }

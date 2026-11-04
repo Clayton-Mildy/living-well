@@ -105,6 +105,30 @@ export function eventCharges(d: Draft<ClubState>, eventId: string): Draft<Pendin
   return live(d.pendingCharges).filter((c) => c.source?.type === 'event' && c.source.id === eventId && !c.invoiceId);
 }
 
+/** The id of a member's charge for a field trip: one per trip, not per day. */
+export const tripChargeId = (eventId: string, memberId: string) => `trip-${eventId}-${memberId}`;
+/**
+ * Round 20 (R1): put a member on a field trip or take them off it, with its fee. On: in Who went once, and a pending charge for the next invoice when the
+ * trip has a fee (none when it is free, never a second one). Off: out of Who went and the charge taken back; a charge an invoice already billed fails
+ * with `err.charged` (the caller decides what to do first: `calendarEvent.setWent` refuses, `attendance.undoCheckIn` keeps the member on the trip).
+ */
+export function setTripMember(d: Draft<ClubState>, ev: Draft<CalendarEvent>, memberId: string, on: boolean, ctx: Ctx): void {
+  const id = tripChargeId(ev.id, memberId);
+  const went = ev.wentIds ?? [];
+  if (on) {
+    if (!went.includes(memberId)) ev.wentIds = [...went, memberId];
+    const fee = ev.fee ?? 0;
+    if (fee > 0 && !d.pendingCharges[id]) {
+      d.pendingCharges[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId, amount: fee, label: 'inv.line.fieldTrip', params: { title: ev.title, date: ev.date }, source: { type: 'event', id: ev.id } };
+    }
+    return;
+  }
+  const c = d.pendingCharges[id];
+  if (c?.invoiceId) ctx.fail('err.charged');
+  if (c) delete d.pendingCharges[id];
+  if (went.includes(memberId)) ev.wentIds = went.filter((m) => m !== memberId);
+}
+
 /** Validate a complete event and return the fields to store (no undefined values). */
 function eventFields(e: EventInput, ctx: Ctx): Pick<CalendarEvent, 'date' | 'kind' | 'title'> & Partial<Pick<CalendarEvent, 'endDate' | 'titleId' | 'from' | 'to'>> {
   if (e.date < ctx.today) ctx.fail('cal.err.pastDate');
@@ -458,19 +482,9 @@ export const scheduleActions = [
       if (!ev || ev.deletedAt || ev.cancelledAt) ctx.fail('err.notFound');
       if (ev.kind !== 'outing' || ev.date > ctx.today) ctx.fail('err.invalid');
       const want = Array.from(new Set(input.memberIds)).filter((id) => d.members[id] && !d.members[id].deletedAt);
-      const chargeId = (m: string) => `trip-${ev.id}-${m}`;
-      for (const m of ev.wentIds ?? []) {
-        if (want.includes(m)) continue;
-        const c = d.pendingCharges[chargeId(m)];
-        if (c?.invoiceId) ctx.fail('err.charged');
-        if (c) delete d.pendingCharges[chargeId(m)];
-      }
-      const fee = ev.fee ?? 0;
-      for (const m of want) {
-        if (fee <= 0 || d.pendingCharges[chargeId(m)]) continue;
-        d.pendingCharges[chargeId(m)] = { id: chargeId(m), clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId: m, amount: fee, label: 'inv.line.fieldTrip', params: { title: ev.title, date: ev.date }, source: { type: 'event', id: ev.id } };
-      }
-      ev.wentIds = want;
+      for (const m of [...(ev.wentIds ?? [])]) if (!want.includes(m)) setTripMember(d, ev, m, false, ctx);
+      for (const m of want) setTripMember(d, ev, m, true, ctx);
+      ev.wentIds = want; // in the order ticked
     },
   }),
 

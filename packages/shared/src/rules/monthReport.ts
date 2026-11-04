@@ -12,6 +12,7 @@ import { MOOD_MOMENTS, moodStats } from './mood';
 import { renewalRows } from './renewals';
 import { surveyKind } from './surveys';
 import { teamRange } from './tasks';
+import { visitDaysByMember } from './trips';
 import { addDays, addMonths, daysInMonth, diffDays, live, sum, toMin, ym } from '../util';
 
 /** A number now and in the period before. `diff` is cur − prev (null when either side is unknown); `good` says which way is good news. */
@@ -95,7 +96,9 @@ function side(s: ClubState, p: InsightPeriod, monthList: YM[], today: ISODate, t
   const days = observedDays(s, p, today, todayDone);
   const daySet = new Set(days);
   const known = new Set(members.map((m) => m.id));
-  const visits = live(s.attendance).filter((a) => !!a.checkIn && daySet.has(a.date) && known.has(a.memberId)).length;
+  // round 20 (R3): a visit is a day with a check-in or a field trip the member went on
+  let visits = 0;
+  for (const [memberId, list] of visitDaysByMember(s, p.from, p.to)) if (known.has(memberId)) visits += list.filter((d) => daySet.has(d)).length;
 
   // ---------- care ----------
   const dates: ISODate[] = [];
