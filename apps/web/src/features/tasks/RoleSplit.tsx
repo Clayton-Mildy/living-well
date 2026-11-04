@@ -30,7 +30,7 @@ export function RoleSplit({ items, listTitle, back, render, initial }: {
         <Group title={listTitle} meta={items.length} pad={0} gap={0}>
           {items.map((it, i) => <RoleRow key={it.role} it={it} on={false} first={i === 0} phone onClick={() => setPicked(it.role)} />)}
         </Group>
-        <PhoneScreen open={!!cur} onClose={() => setPicked(null)} label={cur ? t('roles.' + cur) : listTitle} back={back}>
+        <PhoneScreen open={!!cur} onClose={() => setPicked(null)} label={cur ? t('mgmt.access.role.' + cur) : listTitle} back={back}>
           {cur ? <div data-role={cur} style={{ display: 'flex', flexDirection: 'column', gap: 14, padding: '4px 16px 24px' }}>{render(cur)}</div> : null}
         </PhoneScreen>
       </>

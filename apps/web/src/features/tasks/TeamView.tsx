@@ -46,13 +46,13 @@ export function TeamView({ s, today, nowMin }: { s: ClubState; today: ISODate; n
       const useDuties = r.total > 0;
       const done = useDuties ? r.done : r.customDone;
       const total = useDuties ? r.total : r.customTotal;
-      return { role: r.role, sub: peopleOf(r.people), done, total, late: r.late + r.customOverdue > 0, right: total ? t('tasks.progress', { done, total }) : t('tasks.nothingForRole') };
+      return { role: r.role, title: t('mgmt.access.role.' + r.role), sub: peopleOf(r.people), done, total, late: r.late + r.customOverdue > 0, right: total ? t('tasks.progress', { done, total }) : t('tasks.nothingForRole') };
     })
     : range.map((r) => {
       const useDuties = r.total > 0;
       const done = useDuties ? r.done : r.customDone;
       const total = useDuties ? r.total : r.customTotal;
-      return { role: r.role, sub: peopleOf(r.people), done, total, right: total ? `${pct(done, total)}%` : t('tasks.nothingForRole') };
+      return { role: r.role, title: t('mgmt.access.role.' + r.role), sub: peopleOf(r.people), done, total, right: total ? `${pct(done, total)}%` : t('tasks.nothingForRole') };
     });
 
   const detail = (role: StaffRole) => {
@@ -71,7 +71,7 @@ export function TeamView({ s, today, nowMin }: { s: ClubState; today: ISODate; n
         <>
           <RoleHead {...it} />
           {both ? (
-            <Segmented<'all' | 'duties' | 'extra'> label={t('roles.' + role)} value={shown} onChange={setTab}
+            <Segmented<'all' | 'duties' | 'extra'> label={t('mgmt.access.role.' + role)} value={shown} onChange={setTab}
               items={[{ value: 'all', label: t('tasks.allTab') }, { value: 'duties', label: t('tasks.dutiesTab'), count: r.duties.length }, { value: 'extra', label: t('tasks.additional'), count: r.custom.length }]} />
           ) : null}
           {shown !== 'extra' && r.duties.length ? <Lines title={shown === 'all' && both ? t('tasks.dutiesTab') : undefined} meta={shown === 'all' && both ? r.duties.length : undefined}>{duties}</Lines> : null}

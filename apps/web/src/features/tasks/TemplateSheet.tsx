@@ -17,7 +17,7 @@ export function TemplateSheet({ tpl, role: forRole, team, onClose }: {
   const act = useAct();
   const [title, setTitle] = useState(tpl?.title ?? '');
   const [role, setRole] = useState<StaffRole>(team ?? tpl?.role ?? forRole ?? 'lobby');
-  const roleOptions = team ? [{ value: team, label: t('mgmt.access.role.' + team) }] : TASK_ROLES.map((r) => ({ value: r, label: t('roles.' + r) }));
+  const roleOptions = team ? [{ value: team, label: t('mgmt.access.role.' + team) }] : TASK_ROLES.map((r) => ({ value: r, label: t('mgmt.access.role.' + r) }));
   const [every, setEvery] = useState<TaskEvery>(tpl?.every ?? 'daily');
   const [weekday, setWeekday] = useState(String(tpl?.weekday ?? 1));
   const [day, setDay] = useState(String(tpl?.dayOfMonth ?? 1));

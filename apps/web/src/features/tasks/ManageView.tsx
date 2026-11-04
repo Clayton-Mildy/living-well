@@ -67,7 +67,7 @@ export function ManageView() {
     const on = duties.filter((d) => !dutyCfg(s, d.id).off).length;
     const tasks = tasksOf(role).length;
     const sub = [duties.length ? t('tasks.dutiesOn', { on, n: duties.length }) : '', tasks ? t('tasks.tasksN', { n: tasks }) : ''].filter(Boolean).join(' · ') || t('tasks.nothingYet');
-    return { role, sub };
+    return { role, sub, title: t('mgmt.access.role.' + role) };
   });
 
   const detail = (role: StaffRole) => {
@@ -79,8 +79,8 @@ export function ManageView() {
     const titled = shown === 'all' && both;
     return (
       <>
-        <RoleHead role={role} sub={items.find((x) => x.role === role)?.sub ?? ''} />
-        {both ? <Segmented<'all' | 'duties' | 'extra'> label={t('roles.' + role)} value={shown} onChange={setTab}
+        <RoleHead role={role} title={t('mgmt.access.role.' + role)} sub={items.find((x) => x.role === role)?.sub ?? ''} />
+        {both ? <Segmented<'all' | 'duties' | 'extra'> label={t('mgmt.access.role.' + role)} value={shown} onChange={setTab}
           items={[{ value: 'all', label: t('tasks.allTab') }, { value: 'duties', label: t('tasks.generalDuties'), count: duties.length }, { value: 'extra', label: t('tasks.additional'), count: rows.length }]} /> : null}
         {shown !== 'extra' ? (
           <Lines title={titled ? t('tasks.generalDuties') : undefined} meta={titled ? duties.length : undefined}>{duties.map((d, i) => <DutyConfig key={d.id} def={d} first={i === 0} />)}</Lines>
@@ -102,7 +102,7 @@ export function ManageView() {
                 ))}
               </Lines>
             ) : <Lines title={titled ? t('tasks.additional') : undefined} meta={titled ? 0 : undefined}><div style={{ padding: '14px 20px', fontSize: 15, color: '#6B6259' }}>{t('tasks.manageEmptyRole')}</div></Lines>}
-            <div><Button size={44} variant="secondary" icon="add" onClick={() => setEditing({ role })}>{t('tasks.addFor', { role: t('roles.' + role) })}</Button></div>
+            <div><Button size={44} variant="secondary" icon="add" onClick={() => setEditing({ role })}>{t('tasks.addFor', { role: t('mgmt.access.role.' + role) })}</Button></div>
           </>
         ) : null}
       </>
