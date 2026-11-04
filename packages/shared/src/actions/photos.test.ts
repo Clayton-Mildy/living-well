@@ -96,8 +96,7 @@ describe('photo.take', () => {
     expect(byName.s.photos[byName.id].activity).toBe('Tea in the garden');
     const afternoon = take(fresh(), { kind: 'solo', memberIds: ['m2'], media: 'photo' }, 's5', { today: '2026-10-21', nowMin: 15 * 60 + 30 });
     expect(afternoon.s.photos[afternoon.id].activity).toBe('Batik painting'); // last session of the day
-    const weekend = take(fresh(), { kind: 'solo', memberIds: ['m2'], media: 'photo' }, 's5', { today: '2026-10-24', nowMin: 600 });
-    expect(weekend.s.photos[weekend.id].activity).toBe('Club activities');
+    fails(fresh(), 'photo.take', { kind: 'solo', memberIds: ['m2'], media: 'photo' }, 's5', 'err.closedDay', { today: '2026-10-24', nowMin: 600 }); // round 20: no photos on a closed day (Saturday)
     const outing = take(fresh(), { kind: 'group', memberIds: ['m2'], media: 'photo' }, 's5', { today: '2026-10-29', nowMin: 600 });
     expect(outing.s.photos[outing.id].activity).toMatch(/^Kebun Raya/);
   });

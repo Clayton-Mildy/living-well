@@ -7,7 +7,7 @@ import type { Draft } from 'immer';
 import type { ClubState, ISODate, Photo } from '../types';
 import { DomainError, defineAction, hasRole, isMgmt, type Ctx } from './framework';
 import { familyUserIds, requireMember, shortOf } from './helpers';
-import { isPendingRow } from '../rules/core';
+import { dayStatus, isPendingRow } from '../rules/core';
 import { LOG_BACK_DAYS, curAct, hashOf, logDateOk, pictureSessions, toneOf } from '../rules/activity';
 import { announceLunchPhoto } from './kitchen';
 import { uniq } from '../util';
@@ -104,6 +104,7 @@ export const photoActions = [
     can: (u) => photoTakers(u),
     parse: (raw) => parseWith(takeSchema, raw),
     run(d, input, ctx) {
+      if (!dayStatus(d as unknown as ClubState, ctx.today).open) ctx.fail('err.closedDay'); // round 20: no photos on a closed day
       const ids = uniq(input.memberIds);
       for (const id of ids) {
         const m = requireMember(d, id, ctx);

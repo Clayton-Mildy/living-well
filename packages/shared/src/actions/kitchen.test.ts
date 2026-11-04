@@ -244,9 +244,11 @@ describe('allergy conflicts and plans', () => {
 });
 
 describe('weekly menu', () => {
+  // round 20 (R4): the seed's field trip on Thu 29 Oct has no weekly menu, so these Thursday checks run without it
+  const seedNoTrip = () => produce(seed(), (d) => { for (const e of Object.values(d.calendarEvents)) if (e.kind === 'outing' && e.date === '2026-10-29') delete d.calendarEvents[e.id]; });
   const withLunch = (s: ClubState, lunch: string[]) => { const days = templateOn(s, T).days; return { ...days, 4: { ...days[4], lunch } }; };
   it('publishing a template changes Thursday from today on and keeps earlier days as they were', () => {
-    const s = seed();
+    const s = seedNoTrip();
     const lunch = [...thursdayLunch(s), 'dish-ayam-bakar'];
     const r = run(s, 'menu.publish', { effectiveFrom: T, days: withLunch(s, lunch) }, 's3');
     expect(menuOn(r.state, '2026-10-22')!.lunch).toContain('dish-ayam-bakar');
@@ -310,7 +312,7 @@ describe('weekly menu', () => {
     expect(updatesFor(on.state, usr(on.state, 'fm10_0')).some((x) => x.kind === 'kitchen.notif.menuPublished')).toBe(true);
   });
   it('planning next week: a plan published from that Monday leaves this week and the weeks after it alone (KC round 15)', () => {
-    const s = seed();
+    const s = seedNoTrip();
     const MON = '2026-10-26';
     const lunch = [...thursdayLunch(s), 'dish-ayam-bakar'];
     const r = run(s, 'menu.publish', { effectiveFrom: MON, days: withLunch(s, lunch) }, 's3');
@@ -325,7 +327,7 @@ describe('weekly menu', () => {
     expect(menuOn(again.state, '2026-10-29')!.lunch).toEqual(['dish-rawon']);
   });
   it('a second publish for the same date replaces the first; a publish for this week leaves next week’s alone (KC round 15)', () => {
-    const s = seed();
+    const s = seedNoTrip();
     const a = run(s, 'menu.publish', { effectiveFrom: '2026-10-26', days: withLunch(s, ['dish-ayam-bakar']) }, 's3');
     const b = run(a.state, 'menu.publish', { effectiveFrom: '2026-10-26', days: withLunch(s, ['dish-rawon']) }, 's3');
     expect(menuOn(b.state, '2026-10-29')!.lunch).toEqual(['dish-rawon']);

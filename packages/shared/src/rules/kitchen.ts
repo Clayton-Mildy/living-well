@@ -1,6 +1,7 @@
 // Menu and schedule versions, diners/covers, allergen conflicts.
 import type { ClubState, ISODate, Dish, DishAllergen, FoodAllergen, Member, GuestVisit, MenuDay, Photo, ScheduleCell, Slot, WeekSlot, ExtraSession, ScheduleVersion, MenuVersion } from '../types';
 import { dayStatus } from './core';
+import { tripOn } from './trips';
 import { lobbyGroups, guestsOn } from './attendance';
 import { addDays, asWeekday, live, sameWeek, sortBy, uniq, weekStart } from '../util';
 import { approvedDayMenu, menuVersionForFamily } from './approvals';
@@ -58,10 +59,15 @@ export function menuVersionFor(s: ClubState, date: ISODate, opts: { approvedOnly
 /** Dish ids served on a date: per-date override, else the version in force; nothing on closed days. */
 export function menuOn(s: ClubState, date: ISODate, opts: { approvedOnly?: boolean } = {}): MenuDay | null {
   if (!dayStatus(s, date).open) return null;
-  const v = menuVersionFor(s, date, opts);
-  const base: MenuDay = v?.days[asWeekday(date)] || { lunch: [], soft: [], tea: [] };
   const row = s.dayMenus[date];
   const o = row && opts.approvedOnly ? approvedDayMenu(row) : row;
+  // round 20 (R4): on a field trip day meals are optional: only a menu the kitchen added for that date counts, never the weekly one
+  if (tripOn(s, date)) {
+    if (!o || o.deletedAt || (!o.lunch && !o.soft && !o.tea)) return null;
+    return { lunch: o.lunch ?? [], soft: o.soft ?? [], tea: o.tea ?? [] };
+  }
+  const v = menuVersionFor(s, date, opts);
+  const base: MenuDay = v?.days[asWeekday(date)] || { lunch: [], soft: [], tea: [] };
   return { lunch: o?.lunch ?? base.lunch, soft: o?.soft ?? base.soft, tea: o?.tea ?? base.tea };
 }
 export const dishNames = (s: ClubState, ids: string[]) => ids.map((id) => s.dishes[id]?.name).filter(Boolean).join(', ');
@@ -142,6 +148,7 @@ export type Diner =
 const memberDiner = (m: Member): Diner => ({ type: 'member', id: m.id, m, soft: m.health.diet.includes('softFood'), food: m.health.food });
 /** Who has lunch on a date: members checked in that day (members drop in, so nobody is expected) plus booked guests. */
 export function dinersOn(s: ClubState, date: ISODate): Diner[] {
+  if (!menuOn(s, date)) return []; // closed day, or a trip day with no menu the kitchen added: nobody is fed
   const g = lobbyGroups(s, date);
   const members = [...g.inClub, ...g.goneHome].map((r) => memberDiner(r.m));
   const guests: Diner[] = guestsOn(s, date).filter((x) => x.lunch && x.status === 'booked').map((x) => ({ type: 'guest', id: x.id, g: x, soft: x.diet.includes('softFood'), food: x.food }));

@@ -10,7 +10,8 @@ import { isOpen, staffByRole } from './core';
 import { guestsOn, lobbyGroups } from './attendance';
 import { validReadings } from './health';
 import { SESSION_MIN, attendedOn, pictureSessions, roundProgress, roundsOf, sessionPhotos } from './activity';
-import { conflictsOn, dinersOn, lunchPhotosOn, teaPhotosOn } from './kitchen';
+import { conflictsOn, dinersOn, lunchPhotosOn, menuOn, teaPhotosOn } from './kitchen';
+import { tripOn } from './trips';
 import { lastContactOn, unpaidRows } from './unpaid';
 import { approvalTotal } from './approvals';
 import { missingMarks } from './mood';
@@ -203,6 +204,7 @@ export const DUTIES: DutyDef[] = [
   {
     id: 'kitchen.lunch', role: 'kitchen', icon: 'restaurant', titleKey: 'tasks.duty.kitchen.lunch', every: 'day', defaultDue: () => '13:30',
     parts: (s, date) => {
+      if (tripOn(s, date) && !menuOn(s, date)) return []; // round 20: a trip day has no lunch round unless the kitchen added a menu
       const { marked, total } = roundProgress(s, date, 'lunch');
       return total ? [stub('lunch', { done: marked >= total, count: { done: marked, total }, link: '/lunch', bell: { id: 'round:lunch', kind: 'tasks.notif.act.lunch', params: { n: total - marked, time: '12:00' }, at: '12:00' } })] : [];
     },
