@@ -48,5 +48,6 @@ export const renewals = {
   'few.title': 'Few visits', 'few.card': '{n} · {c} called · changes close {d}', 'few.before': 'list opens {d}', 'few.closed': '{n} · {c} called · changes closed',
   'few.row': '{n} visits · last {d}', 'few.row1': '1 visit · last {d}', 'few.rowNone': 'No visits yet', 'few.log': 'Log a call', 'few.called': 'Called', 'few.toCall': '{n} to call',
   'few.saved': 'Call logged for {name}.', 'few.earlier': 'Earlier calls', 'few.outcome': 'Outcome', 'few.none': 'Nobody is flagged',
+  'few.btnBefore': 'Few visits · opens {d}', 'few.btnOpen': 'Few visits · {n}', 'few.btnCalled': 'Few visits · {n} · {c} called',
   'feed.undone': '{name}: change for {month} undone', 'feed.approved': '{name}: renewal change for {month} approved', 'feed.rejected': '{name}: renewal change for {month} not approved',
 };

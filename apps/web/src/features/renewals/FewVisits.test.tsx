@@ -1,4 +1,4 @@
-// Few visits (round 17): the card on Next month, the list, logging a call, and the Also today block on Arrivals.
+// Few visits (round 17): the list on Next month (round 19: its button is in FewVisitsButton.test), logging a call, and the Also today block on Arrivals.
 import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -39,23 +39,10 @@ async function show(ui: ReactElement, at = '/renewals') {
 }
 const click = async (el: Element | null | undefined) => { expect(el).toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
 const btn = (re: RegExp) => Array.from(document.querySelectorAll('button')).find((b) => re.test(b.textContent || '') || re.test(b.getAttribute('aria-label') || ''));
-const card = () => document.querySelector<HTMLElement>('[data-testid="few-card"]');
-const cardText = () => card()?.querySelector('[data-testid="few-card-text"]')?.textContent;
 const rowIds = () => Array.from(document.querySelectorAll('[data-few]')).map((r) => r.getAttribute('data-few'));
 const where = () => document.querySelector('[data-testid="where"]')!.textContent;
 
-describe('the Few visits card on Next month', () => {
-  it('reads "Few visits · 6 · 1 called · changes close 17 Nov" from the alert day, and opens the list', async () => {
-    openClub('2026-11-15');
-    await show(<Renewals />);
-    expect(cardText()).toBe('Few visits · 6 · 1 called · changes close 17 Nov');
-    expect(card()?.getAttribute('data-phase')).toBe('open');
-    expect(document.querySelector('[data-testid="few-list"]')).toBeNull();
-    await click(card());
-    expect(where()).toBe('/renewals?few=1');
-    expect(document.querySelector('[data-testid="few-list"]')).toBeTruthy();
-  });
-
+describe('the Few visits list on Next month', () => {
   it('the list has the not-yet-called first, each row says its visits and last visit and has Call and WhatsApp, and the called one is tagged', async () => {
     openClub('2026-11-15');
     await show(<Renewals />, '/renewals?few=1');
@@ -102,22 +89,6 @@ describe('the Few visits card on Next month', () => {
     expect(actMock).toHaveBeenCalledWith('visitCall.log', { memberId: 'fv5', outcome: 'reached', note: 'Back from hospital' });
   });
 
-  it('before the alert day the card is grey and says when the list opens, and still opens the list', async () => {
-    openClub('2026-11-10');
-    await show(<Renewals />);
-    expect(cardText()).toBe('Few visits · list opens 15 Nov');
-    expect(card()?.getAttribute('data-phase')).toBe('before');
-    await click(card());
-    expect(document.querySelector('[data-testid="few-list"]')).toBeTruthy();
-  });
-
-  it('after the last change day the card keeps its counts and says "changes closed"', async () => {
-    openClub('2026-11-20');
-    await show(<Renewals />);
-    expect(cardText()).toBe('Few visits · 6 · 1 called · changes closed');
-    expect(card()?.getAttribute('data-phase')).toBe('closed');
-  });
-
   it('management logs calls too; finance only reads the list', async () => {
     openClub('2026-11-15', 's9', 'mgmt', 'Ega');
     await show(<Renewals />, '/renewals?few=1');
@@ -130,13 +101,6 @@ describe('the Few visits card on Next month', () => {
     expect(document.querySelector('[data-log="fv6"]')).toBeNull();
   });
 
-  it('no card when nobody is flagged', async () => {
-    const none: ClubState = { ...withFewVisits(), visitCalls: {}, attendance: Object.fromEntries(Object.entries(withFewVisits().attendance).filter(([, a]) => !a.memberId.startsWith('fv'))) };
-    none.members = Object.fromEntries(Object.entries(none.members).filter(([id]) => !id.startsWith('fv')));
-    openClub('2026-11-15', 's1', 'lobby', 'Caca', none);
-    await show(<Renewals />);
-    expect(card()).toBeNull();
-  });
 });
 
 const noop: GuestActions = { onIn: () => undefined, onOut: () => undefined, onNoShow: () => undefined, onUndoNoShow: () => undefined };

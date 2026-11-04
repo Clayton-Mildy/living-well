@@ -10,7 +10,7 @@ import { useFmt, useLang, useT } from '../../lib/i18n';
 import { useMe } from '../../lib/me';
 import { memberPhoto } from '../../lib/media';
 import { useClub } from '../../store/replica';
-import { fewLine } from './FewVisitsCard';
+import { fewLine } from './FewVisitsButton';
 import { VisitCallSheet } from './VisitCallSheet';
 
 const INK = '#24201C';

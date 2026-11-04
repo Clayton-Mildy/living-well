@@ -16,7 +16,6 @@ import { memberPhoto } from '../../lib/media';
 import { useAct } from '../../lib/act';
 import { useClub } from '../../store/replica';
 import { ConfirmDialog } from '../kitchen/parts';
-import { FewVisitsCard } from './FewVisitsCard';
 import { FewVisitsSheet } from './FewVisitsSheet';
 import { FollowUpSheet } from './FollowUpSheet';
 import { NextMonthList } from './NextMonthList';
@@ -45,7 +44,7 @@ export function Renewals() {
   const asked = params.get('tab');
   const tab: Tab = asked === 'unpaid' ? 'unpaid' : asked === 'changes' || past ? 'changes' : 'members';
   const setTab = (v: Tab) => setParams(v === 'members' ? {} : { tab: v }, { replace: true });
-  // round 17: the Few visits list is in the address too (`?few=1`: the notification and Also today open it)
+  // round 17: the Few visits list is in the address too (`?few=1`: the notification and Also today open it); round 19: its button is in the Members tab's chip row
   const fewOpen = !past && params.get('few') === '1';
   const setFew = (on: boolean) => setParams((p) => { const n = new URLSearchParams(p); if (on) n.set('few', '1'); else n.delete('few'); return n; }, { replace: !on });
   const [recording, setRecording] = useState(false);
@@ -105,9 +104,8 @@ export function Renewals() {
   return (
     <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : 22 }}>
       <PageHead size={40} eyebrow={fmt.fmonth(month, true)} title={t('renewals.title')} right={tab === 'changes' ? switcher : undefined} />
-      {past ? null : <FewVisitsCard onOpen={() => setFew(true)} />}
       {tabs}
-      {tab === 'members' ? <NextMonthList month={month} /> : tab === 'changes' ? (
+      {tab === 'members' ? <NextMonthList month={month} onFew={() => setFew(true)} /> : tab === 'changes' ? (
         <>
           {canAdd ? (
             <div style={{ display: 'flex' }}>
