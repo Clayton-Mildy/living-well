@@ -15,6 +15,7 @@ import { useNow } from '../../lib/clock';
 import { useClub } from '../../store/replica';
 import { say } from '../../store/ui';
 import { rowLine } from '../activity/lib';
+import { OwnerWaiting } from '../../components/OwnerWaiting';
 import { DayBlock } from './DayBlock';
 import { DaySheet, EditChoice, ExtraSheet } from './DaySheet';
 import { EventEditor } from './EventEditor';
@@ -160,6 +161,7 @@ export function Calendar() {
         ) : (
           <PageHead size={40} eyebrow={t('cal.openHours', hours)} title={family ? t('cal.titleFamily') : t('nav.calendar')} right={tabs} />
         )}
+        {isMgmt ? <OwnerWaiting section="holiday" pad="0" /> : null}{/* KC: closed days and holidays waiting for the Owner, whatever the date */}
         {isMgmt && !isPhone ? (
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <Button icon="add" onClick={() => setEditor({ date: sel || today })}>{t('cal.addEvent')}</Button>

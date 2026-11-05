@@ -1,7 +1,7 @@
 // Budget (design ScrBudget): one card per section with its weekly limit, progress, committed money and requests (Approve / Reject);
 // real Monday-to-Sunday weeks with a switcher, add or rename sections, and the request form.
 import { useMemo, useState } from 'react';
-import { actorName, rp, weekStart, addDays, type BudgetRequest, type BudgetSection } from '@cp/shared';
+import { actorName, rp, weekStart, addDays, type BudgetRequest, type BudgetSection, type ChangeRequest } from '@cp/shared';
 import { activeSections, budgetRange, budgetWeekOf, receiptOfRequest, sectionName } from '@cp/shared/rules/finance';
 import { Button, Chip, DateField, Eyebrow, IconButton, PageHead, Pin, Select, TextField, FONT_BODY, Note } from '../../components/ui';
 import { OwnerWaiting } from '../../components/OwnerWaiting';
@@ -13,6 +13,10 @@ import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { digits } from './lib';
 import { AmberPill, Badge, FormOverlay, HAIR, Hero, PGroup, PillBtn, RpField, dangerStrip, inputBox, prow } from './parts';
+
+/** A weekly-limit request sits on its own section card; new sections and renames wait at the top. */
+const notLimit = (cr: ChangeRequest) => cr.action !== 'budget.setLimit';
+const limitOf = (id: string) => (cr: ChangeRequest) => cr.action === 'budget.setLimit' && (cr.input as { sectionId?: string })?.sectionId === id;
 
 export function Budget() {
   const s = useClub();
@@ -73,7 +77,7 @@ export function Budget() {
       <>
         <div className="cp-native" style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 18 }}>
           <PageHead eyebrow={`${t('finance.budget.weekOf', { date: fds(ws) })} · ${when}`} title={t('nav.budget')} />
-          <OwnerWaiting section="budget" pad="0 16px" />{/* round 16 (KC): Management's budget changes waiting for the Owner */}
+          <OwnerWaiting section="budget" only={notLimit} pad="0 16px" />{/* round 16 (KC): Management's budget changes waiting for the Owner */}
 
           <PGroup pad="6px 8px 8px" gap={6}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>{weekNav}</div>
@@ -98,7 +102,7 @@ export function Budget() {
     <div style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: 'clamp(18px, 2.8vw, 36px)' }}>
       <PageHead eyebrow={`${t('finance.budget.weekOf', { date: fds(ws) })} · ${when}`} title={t('nav.budget')}
         right={canSet ? <Button variant="secondary" size={48} icon="add" onClick={() => setAddOpen(true)} style={{ padding: '0 18px' }}>{t('finance.budget.addSection')}</Button> : undefined} />
-      <OwnerWaiting section="budget" pad="0" />
+      <OwnerWaiting section="budget" only={notLimit} pad="0" />
 
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
         {weekNav}
@@ -181,6 +185,7 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
             <span style={{ color: w.left < 0 ? '#9A3D24' : '#2F5A40', fontWeight: 500 }}>{w.left < 0 ? t('finance.budget.over', { amount: rp(-w.left) }) : t('finance.budget.left', { amount: rp(w.left) })}</span>
           </div>
         </div>
+        <OwnerWaiting section="budget" only={limitOf(section.id)} pad="4px 16px 10px" />
         {reqs.map((r) => {
           const mine = r.requestedBy === meId;
           const pending = r.status === 'pending';
@@ -247,6 +252,7 @@ function SectionCard({ section, ws, canSet, meId, lang, onRename }: { section: B
         <span>{t('finance.budget.spent', { amount: rp(w.spent) })}{w.committed > 0 ? ` · ${t('finance.budget.committed', { amount: rp(w.committed) })}` : ''}</span>
         <span style={{ color: w.left < 0 ? '#9A3D24' : '#2F5A40', fontWeight: 500 }}>{w.left < 0 ? t('finance.budget.over', { amount: rp(-w.left) }) : t('finance.budget.left', { amount: rp(w.left) })}</span>
       </div>
+      <OwnerWaiting section="budget" only={limitOf(section.id)} pad="0" />
       <div style={{ display: 'flex', flexDirection: 'column' }}>
         {reqs.map((r) => {
           const mine = r.requestedBy === meId;

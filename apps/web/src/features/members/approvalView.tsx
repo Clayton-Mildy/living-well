@@ -218,7 +218,7 @@ function ownerView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   if (!cr) return { who: '', kind, summary: '', detail: { title: '', rows: [], summary: [] }, edit: false };
   const what = ownerWhatText(s, cr, t, fmt);
   const by = actorName(s, cr.submittedBy);
-  const rows: DiffRow[] = [...ownerChangeRows(s, cr, t), { label: kind, to: what }, { label: t('approvals.requestedBy'), to: by }];
+  const rows: DiffRow[] = [...ownerChangeRows(s, cr, t, fmt), { label: kind, to: what }, { label: t('approvals.requestedBy'), to: by }];
   return { who: '', kind, summary: `${by} · ${what}`, detail: { title: kind, rows: [], summary: rows }, edit: false };
 }
 

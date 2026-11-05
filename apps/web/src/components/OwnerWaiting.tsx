@@ -20,8 +20,11 @@ export function ownerWhatText(s: ClubState, cr: Pick<ChangeRequest, 'action' | '
 }
 
 /** What an owner request changes as translated label / old / new rows; a price request with nothing different says so. Shown in Approvals › Owner and under each "Waiting for owner" row. */
-export function ownerChangeRows(s: ClubState, cr: Pick<ChangeRequest, 'action' | 'input'>, t: TFn): { label: string; from?: string; to: string }[] {
-  const tr = (v: string) => (v.startsWith('approvals.owner.chg.') ? t(v) : v);
+export function ownerChangeRows(s: ClubState, cr: Pick<ChangeRequest, 'action' | 'input'>, t: TFn, fmt: Fmt): { label: string; from?: string; to: string }[] {
+  const day = (d: string) => fmt.fd(d, { weekday: 'short', day: 'numeric', month: 'short' });
+  const span = (v: string) => v.slice(5).split('~').map(day).join(' – ');
+  const tr = (v: string) => (v.includes('|date:') ? v.split('|').map((x, k) => (k === 0 ? t(x) : x.startsWith('date:') ? span(x) : x)).join(' · ') // a removed event: kind | date | title
+    : v.startsWith('approvals.owner.chg.') || v.startsWith('cal.t_') ? t(v) : v.startsWith('date:') ? span(v) : v);
   const rows = ownerChanges(s, cr.action, cr.input).map((r) => ({ label: tr(r.label), ...(r.from !== undefined ? { from: tr(r.from) } : {}), to: tr(r.to) }));
   return !rows.length && cr.action === 'prices.set' ? [{ label: t('approvals.kind.owner'), to: t('approvals.owner.noChanges') }] : rows;
 }
@@ -61,7 +64,7 @@ export function OwnerWaiting({ section, only, pad = '10px 16px' }: { section: Re
   return (
     <div data-testid="owner-waiting" style={{ display: 'flex', flexDirection: 'column' }}>
       {list.map((cr) => {
-        const rows = ownerChangeRows(s, cr, t);
+        const rows = ownerChangeRows(s, cr, t, fmt);
         const own = cr.submittedBy === `staff:${id}`;
         return (
           <div key={cr.id} data-owner-request={cr.id} style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: pad, minHeight: 44 }}>

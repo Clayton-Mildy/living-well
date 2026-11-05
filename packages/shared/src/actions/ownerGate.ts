@@ -87,6 +87,10 @@ function settingsWhat(s: ClubState, i: Record<string, unknown>): { key: string; 
 /** One thing an owner request changes. `label` and `to`/`from` that start with `approvals.owner.chg.` are i18n keys; anything else (a plan's or section's name, an amount) is shown as is. */
 export interface OwnerChange { label: string; from?: string; to: string }
 const K = 'approvals.owner.chg.';
+/** A day or a range as text for the web to format: `date:2026-11-23` or `date:2026-11-23~2026-11-24`. */
+const dateSpec = (from: string, to?: unknown) => 'date:' + from + (typeof to === 'string' && to && to !== from ? '~' + to : '');
+const dateRow = (from: string, to?: unknown): OwnerChange => ({ label: K + (typeof to === 'string' && to && to !== from ? 'dates' : 'date'), to: dateSpec(from, to) });
+const EVENT_KIND: Record<string, string> = { closed: 'cal.t_closed', holiday: 'cal.t_holiday' };
 const FEE_KEYS: Fee[] = ['registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip'];
 
 /**
@@ -139,6 +143,26 @@ export function ownerChanges(s: ClubState, action: string, input: unknown): Owne
       const weekly = Number(i.weekly) || 0;
       const was = weeklyLimit(s, String(i.sectionId), weekStart(String(i.fromWeek ?? '')));
       return sec && was !== weekly ? [{ label: sec.name, from: rp(was), to: rp(weekly) }] : [];
+    }
+    case 'budget.renameSection': {
+      const sec = s.budgetSections[String(i.sectionId ?? i.id)];
+      return sec && typeof i.name === 'string' && i.name !== sec.name ? [{ label: K + 'name', from: sec.name, to: i.name }] : [];
+    }
+    case 'calendarEvent.create': return [{ label: K + 'eventKind', to: EVENT_KIND[String(i.kind)] ?? '' }, dateRow(String(i.date ?? ''), i.endDate), { label: K + 'title', to: String(i.title ?? '') }];
+    case 'calendarEvent.update': {
+      const cur = s.calendarEvents[String(i.eventId)];
+      if (!cur) return out;
+      const [d0, e0] = [cur.date, cur.endDate && cur.endDate !== cur.date ? cur.endDate : undefined];
+      const d1 = typeof i.date === 'string' ? i.date : d0;
+      const e1 = i.endDate === undefined ? e0 : i.endDate && i.endDate !== d1 ? i.endDate : undefined;
+      if (d0 !== d1 || e0 !== e1) out.push({ ...dateRow(d1, e1), from: dateSpec(d0, e0) });
+      if (typeof i.title === 'string') diff(K + 'title', cur.title, i.title);
+      if (typeof i.kind === 'string') diff(K + 'eventKind', EVENT_KIND[cur.kind] ?? '', EVENT_KIND[i.kind] ?? '');
+      return out;
+    }
+    case 'calendarEvent.delete': {
+      const cur = s.calendarEvents[String(i.eventId)];
+      return cur ? [{ label: K + 'remove', to: `${EVENT_KIND[cur.kind] ?? ''}|${dateSpec(cur.date, cur.endDate)}|${cur.title}` }] : [];
     }
     case 'budget.addSection': return [{ label: K + 'name', to: String(i.name ?? '') }, { label: K + 'weekly', to: rp(Number(i.weekly) || 0) }];
     default: return out;

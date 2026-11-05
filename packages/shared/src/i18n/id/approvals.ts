@@ -54,5 +54,6 @@ export const approvals: Same<typeof EN> = {
   'owner.chg.flex': 'Flex', 'owner.chg.gold': 'Gold', 'owner.chg.extra': 'Hari tambahan', 'owner.chg.registration': 'Pendaftaran', 'owner.chg.trial': 'Percobaan', 'owner.chg.leave': 'Cuti', 'owner.chg.dementia': 'Perawatan demensia', 'owner.chg.pickup': 'Antar-jemput', 'owner.chg.fieldTrip': 'Karyawisata',
   'owner.chg.name': 'Nama', 'owner.chg.kind': 'Jenis', 'owner.chg.kind_days': 'Hari sebulan', 'owner.chg.kind_unlimited': 'Tanpa batas', 'owner.chg.quota': 'Hari sebulan', 'owner.chg.none': 'Tidak ada', 'owner.chg.status': 'Status', 'owner.chg.active': 'Aktif', 'owner.chg.retired': 'Dihentikan',
   'owner.chg.notice_downgrade': 'Pemberitahuan turun paket (hari)', 'owner.chg.notice_stop': 'Pemberitahuan berhenti (hari)', 'owner.chg.notice_leave': 'Pemberitahuan cuti (hari)', 'owner.chg.notice_upgrade': 'Pemberitahuan naik paket (hari)', 'owner.chg.flexQuota': 'Kunjungan Flex sebulan', 'owner.chg.leaveMax': 'Cuti berturut-turut (bulan)', 'owner.chg.weekly': 'Anggaran mingguan',
+  'owner.chg.eventKind': 'Jenis', 'owner.chg.date': 'Tanggal', 'owner.chg.dates': 'Tanggal', 'owner.chg.title': 'Judul', 'owner.chg.remove': 'Hapus',
   'owner.noChanges': 'Tidak ada perubahan harga',
 };

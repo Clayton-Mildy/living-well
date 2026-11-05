@@ -59,5 +59,6 @@ export const approvals = {
   'owner.chg.flex': 'Flex', 'owner.chg.gold': 'Gold', 'owner.chg.extra': 'Extra day', 'owner.chg.registration': 'Registration', 'owner.chg.trial': 'Trial', 'owner.chg.leave': 'Leave (cuti)', 'owner.chg.dementia': 'Dementia care', 'owner.chg.pickup': 'Pick-up', 'owner.chg.fieldTrip': 'Field trip',
   'owner.chg.name': 'Name', 'owner.chg.kind': 'Type', 'owner.chg.kind_days': 'Days a month', 'owner.chg.kind_unlimited': 'Unlimited', 'owner.chg.quota': 'Days a month', 'owner.chg.none': 'None', 'owner.chg.status': 'Status', 'owner.chg.active': 'Active', 'owner.chg.retired': 'Retired',
   'owner.chg.notice_downgrade': 'Downgrade notice (days)', 'owner.chg.notice_stop': 'Stop notice (days)', 'owner.chg.notice_leave': 'Leave notice (days)', 'owner.chg.notice_upgrade': 'Upgrade notice (days)', 'owner.chg.flexQuota': 'Flex visits a month', 'owner.chg.leaveMax': 'Leave in a row (months)', 'owner.chg.weekly': 'Weekly budget',
+  'owner.chg.eventKind': 'Kind', 'owner.chg.date': 'Date', 'owner.chg.dates': 'Dates', 'owner.chg.title': 'Title', 'owner.chg.remove': 'Remove',
   'owner.noChanges': 'No price changes',
 };

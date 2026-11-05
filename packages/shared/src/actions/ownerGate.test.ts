@@ -215,3 +215,30 @@ describe('ownerChanges: what a request changes', () => {
     expect(ownerChanges(base, 'budget.setLimit', { sectionId: 'fnb', weekly: was + 1_000_000, fromWeek: '2026-11-02' })).toEqual([{ label: base.budgetSections.fnb.name, from: rp(was), to: rp(was + 1_000_000) }]);
   });
 });
+
+describe('ownerChanges: closed days, holidays and budget names', () => {
+  it('calendarEvent.create lists kind, date and title; a range lists Dates', () => {
+    expect(ownerChanges(base, 'calendarEvent.create', CLOSE)).toEqual([
+      { label: 'approvals.owner.chg.eventKind', to: 'cal.t_closed' },
+      { label: 'approvals.owner.chg.date', to: 'date:2026-11-04' },
+      { label: 'approvals.owner.chg.title', to: 'Staff training day' },
+    ]);
+    const rows = ownerChanges(base, 'calendarEvent.create', { ...CLOSE, kind: 'holiday', endDate: '2026-11-05' });
+    expect(rows[0].to).toBe('cal.t_holiday');
+    expect(rows[1]).toEqual({ label: 'approvals.owner.chg.dates', to: 'date:2026-11-04~2026-11-05' });
+  });
+  const made = () => { const a = run(base, 'calendarEvent.create', CLOSE, OWNER); return { s: a.state, eventId: a.result.eventId as string }; };
+  it('calendarEvent.update lists only what changes', () => {
+    const { s, eventId } = made();
+    expect(ownerChanges(s, 'calendarEvent.update', { eventId, title: 'Training' })).toEqual([{ label: 'approvals.owner.chg.title', from: 'Staff training day', to: 'Training' }]);
+    expect(ownerChanges(s, 'calendarEvent.update', { eventId, title: 'Staff training day', endDate: '2026-11-05' })).toEqual([{ label: 'approvals.owner.chg.dates', from: 'date:2026-11-04', to: 'date:2026-11-04~2026-11-05' }]);
+  });
+  it('calendarEvent.delete is one Remove row with kind, date and title', () => {
+    const { s, eventId } = made();
+    expect(ownerChanges(s, 'calendarEvent.delete', { eventId })).toEqual([{ label: 'approvals.owner.chg.remove', to: 'cal.t_closed|date:2026-11-04|Staff training day' }]);
+  });
+  it('budget.renameSection lists old name to new name', () => {
+    const was = base.budgetSections.fnb.name;
+    expect(ownerChanges(base, 'budget.renameSection', { sectionId: 'fnb', name: 'Food and drink' })).toEqual([{ label: 'approvals.owner.chg.name', from: was, to: 'Food and drink' }]);
+  });
+});
