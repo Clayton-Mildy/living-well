@@ -3,7 +3,7 @@ import { act, type ReactElement } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
-import { buildSeed } from '@cp/shared';
+import { buildSeed, execute, fmtN, getUser } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { Plans } from './Plans';
@@ -237,5 +237,27 @@ describe('round 16: pick-up and field trip fees', () => {
     const save = Array.from(document.querySelectorAll('button')).find((b) => /Save changes$/.test(b.textContent || ''))!;
     await act(async () => { save.click(); });
     expect(fn).toHaveBeenCalledWith('prices.set', expect.objectContaining({ pickup: 650_000, fieldTrip: 250_000 }));
+  });
+});
+
+describe('KC: a change builds on the prices request already waiting for the Owner', () => {
+  it('the inputs show the waiting prices and Save sends the whole list, keeping the other waiting changes', async () => {
+    openClub({ plans: true });
+    const base = useReplica.getState().confirmed!;
+    const cur = Object.values(base.prices)[0];
+    const ega = getUser({ citra: base }, 's9')!;
+    const r = execute(base, 'prices.set', { flex: cur.flex + 1000, gold: cur.gold, extra: cur.extra, plans: { plan_1: 4_501_000 }, from: '2026-11-05' }, ega, { today: '2026-10-21', nowMin: 600 }, 'w1');
+    expect(r.reviewed).toBe('owner');
+    useReplica.setState({ confirmed: r.state, view: r.state });
+    const fn = vi.fn(async () => ({ ok: true as const, result: {} }));
+    useReplica.setState({ act: fn as never });
+    await show(<Plans />, 390);
+    expect(priceInput('Flex').value).toBe(fmtN(cur.flex + 1000));
+    expect(priceInput('Gold Plus').value).toBe('4.501.000');
+    const save = () => Array.from(document.querySelectorAll('button')).find((b) => /Save changes$/.test(b.textContent || ''));
+    expect(save()?.hasAttribute('disabled') ?? true).toBe(true); // nothing changed: nothing to send
+    await type(priceInput('Flex 6'), '2.000.000');
+    await act(async () => { save()!.click(); });
+    expect(fn).toHaveBeenCalledWith('prices.set', expect.objectContaining({ flex: cur.flex + 1000, from: '2026-11-05', plans: { plan_1: 4_501_000, plan_2: 2_000_000 } }));
   });
 });

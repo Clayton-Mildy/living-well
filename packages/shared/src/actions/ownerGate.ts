@@ -68,6 +68,27 @@ export const pendingOwnerRequests = (s: ClubState, section?: ReviewSection): Cha
   });
 };
 
+/** The newest waiting `prices.set` request (for one start date, or any), if there is one. */
+export const waitingPricesRequest = (s: ClubState, from?: ISODate): ChangeRequest | undefined =>
+  pendingOwnerRequests(s, 'pricing').find((c) => c.action === 'prices.set' && (!from || (c.input as { from?: unknown } | undefined)?.from === from));
+
+/** A price list as a screen starts it: every figure filled in. */
+export type DraftPrices = { flex: number; gold: number; extra: number; plans: Record<string, number> } & Record<Fee, number>;
+
+/**
+ * KC: the price list a NEW prices request should start from. A prices request carries the whole list and the newest one for a start date replaces the older ones, so a
+ * second change must build on the waiting one or it wipes it out. This is the list in force on `from`, overlaid with the newest waiting `prices.set` for the same `from`
+ * (its flex/gold/extra, its fees, its plans merged over the in-force plans). With nothing waiting it is just `priceOn(s, from)`.
+ */
+export function draftPrices(s: ClubState, from: ISODate): DraftPrices {
+  const cur = priceOn(s, from);
+  const w = (waitingPricesRequest(s, from)?.input ?? {}) as Record<string, unknown>;
+  const num = (v: unknown, d: number) => (typeof v === 'number' ? v : d);
+  const out = { flex: num(w.flex, cur.flex), gold: num(w.gold, cur.gold), extra: num(w.extra, cur.extra), plans: { ...(cur.plans ?? {}), ...((w.plans ?? {}) as Record<string, number>) } } as DraftPrices;
+  for (const f of FEE_KEYS) out[f] = num(w[f], feeOf(cur, f));
+  return out;
+}
+
 /**
  * Close the older waiting requests for the same target as `c` (status 'superseded', shown as "Replaced by a newer request" in History). Called on submit and,
  * for requests saved before the rule, when the newest one is approved or rejected, so nothing stays stuck in the counts.

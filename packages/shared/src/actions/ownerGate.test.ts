@@ -4,7 +4,7 @@ import { buildSeed, execute, getUser, DomainError, live, actionItems, roleDraft,
 import { overviewStats } from '../rules/mgmt';
 import { roleSummary } from '../rules/tasks';
 import { pendingItems } from '../rules/approvals';
-import { ownerKindOf, ownerWhat, ownerChanges, pendingOwnerRequests } from './ownerGate';
+import { ownerKindOf, ownerWhat, ownerChanges, pendingOwnerRequests, draftPrices } from './ownerGate';
 import { priceOn } from '../rules/billing';
 import { rp } from '../util';
 import { translate } from '../i18n';
@@ -302,5 +302,49 @@ describe('owner requests: the newest for the same thing replaces the older ones'
     const s1 = run(base, 'club.updateSettings', { notice: { stop: 30 } }, EGA);
     const s2 = run(s1.state, 'club.updateSettings', { notice: { leave: 5 } }, EGA, { today: clock.today, nowMin: 700 });
     expect(ids(s2.state)).toHaveLength(2);
+  });
+});
+
+describe('draftPrices: a new prices request builds on the one already waiting', () => {
+  const FROM = '2026-11-05';
+  const withPlans: ClubState = (() => {
+    const s = structuredClone(base);
+    s.club.settings.plans = [1, 2, 3, 4].map((n) => ({ id: `plan_${n}`, name: `Plan ${n}`, kind: 'unlimited' as const, active: true }));
+    for (const p of Object.values(s.prices)) p.plans = { plan_1: 100, plan_2: 200, plan_3: 300, plan_4: 400 };
+    return s;
+  })();
+  const cur = priceOn(withPlans, FROM);
+  const ask = (s: ClubState, input: Record<string, unknown>, nowMin = 600) => run(s, 'prices.set', { flex: cur.flex, gold: cur.gold, extra: cur.extra, from: FROM, ...input }, EGA, { today: clock.today, nowMin });
+  it('with nothing waiting it is the prices in force', () => {
+    const d = draftPrices(withPlans, FROM);
+    expect(d).toMatchObject({ flex: cur.flex, gold: cur.gold, extra: cur.extra, registration: cur.registration ?? d.registration, plans: { plan_1: 100, plan_2: 200, plan_3: 300, plan_4: 400 } });
+  });
+  it('a waiting request for the same date overlays flex/gold/extra, fees and plans over the in-force ones', () => {
+    const a = ask(withPlans, { flex: cur.flex + 1, trial: 123_000, plans: { plan_1: 101 } });
+    expect(draftPrices(a.state, FROM)).toMatchObject({ flex: cur.flex + 1, gold: cur.gold, trial: 123_000, plans: { plan_1: 101, plan_2: 200, plan_3: 300, plan_4: 400 } });
+  });
+  it('a waiting request with a different date is ignored', () => {
+    const a = ask(withPlans, { flex: cur.flex + 1, plans: { plan_1: 101 } });
+    expect(draftPrices(a.state, '2026-12-01')).toMatchObject({ flex: cur.flex, plans: { plan_1: 100 } });
+  });
+  it("KC's sequence: 101/201/301, then Plan 3 = 302, then Plan 4 = 401 leaves one waiting request with four rows, and approving applies all four", () => {
+    const a = ask(withPlans, { plans: { plan_1: 101, plan_2: 201, plan_3: 301 } }, 600);
+    const d2 = draftPrices(a.state, FROM); // the Plans form
+    const b = ask(a.state, { flex: d2.flex, gold: d2.gold, extra: d2.extra, plans: { ...d2.plans, plan_3: 302 } }, 700);
+    const d3 = draftPrices(b.state, FROM); // the plan sheet
+    const c = ask(b.state, { flex: d3.flex, gold: d3.gold, extra: d3.extra, plans: { ...d3.plans, plan_4: 401 } }, 800);
+    const waiting = pendingOwnerRequests(c.state, 'pricing');
+    expect(waiting).toHaveLength(1);
+    expect(waiting[0].id).toBe(c.result.changeRequestId);
+    expect(ownerChanges(c.state, 'prices.set', waiting[0].input).map((r) => [r.label, r.from, r.to])).toEqual([
+      ['Plan 1', 'Rp 100', 'Rp 101'], ['Plan 2', 'Rp 200', 'Rp 201'], ['Plan 3', 'Rp 300', 'Rp 302'], ['Plan 4', 'Rp 400', 'Rp 401'],
+    ]);
+    const done = run(c.state, 'review.approve', { crId: waiting[0].id }, OWNER);
+    expect(priceOn(done.state, FROM).plans).toMatchObject({ plan_1: 101, plan_2: 201, plan_3: 302, plan_4: 401 });
+  });
+  it('the Owner approving a list that equals the prices in force fails with err.noChanges and nothing changes', () => {
+    const a = ask(withPlans, { plans: { plan_1: 101 } });
+    const same = { ...a.state, changeRequests: { ...a.state.changeRequests, [a.result.changeRequestId as string]: { ...a.state.changeRequests[a.result.changeRequestId as string], input: { flex: cur.flex, gold: cur.gold, extra: cur.extra, from: FROM, plans: { plan_1: 100 } } } } };
+    fails(() => run(same, 'review.approve', { crId: a.result.changeRequestId }, OWNER), 'err.noChanges');
   });
 });

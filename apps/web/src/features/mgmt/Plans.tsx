@@ -3,6 +3,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { approvedMembers, feeOf, fmtN, memberName, membershipStatus, parseN, planLabel, planPriceInfo, priceOn, rp, type Plan, type PlanDef } from '@cp/shared';
 import { noticeDays } from '@cp/shared/rules/notice';
+import { draftPrices, waitingPricesRequest } from '@cp/shared/actions/ownerGate';
 import { invoicePreview, type PriceDraft } from '@cp/shared/rules/mgmt';
 import { Button, DateField, Group, Icon, IconButton, PageHead, Segmented, Select, Sheet, TextField, Toggle, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -16,6 +17,7 @@ import { Page, SwitchRow, HPAD, heroCard, labelStyle, tn, Pill } from './common'
 import { OwnerWaiting } from '../../components/OwnerWaiting';
 
 type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave' | 'dementia' | 'pickup' | 'fieldTrip';
+const FEES = ['registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip'] as const;
 const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip']; // round 16: pick-up and field trip defaults
 type Draft = Record<PriceKey, string> & { quota: string; from: string; plans: Record<string, string> }; // plans: the catalogue plans' prices as typed ('' = no price)
 
@@ -30,9 +32,13 @@ export function Plans() {
   const { role } = useMe();
   const canEdit = role === 'mgmt'; // the catalogue is management's
   const price = priceOn(s, today);
+  // KC: a change builds on the prices request already waiting for the Owner (same start date), so it adds to it instead of wiping it out; with none waiting it starts from today's prices
+  const waitFrom = (waitingPricesRequest(s)?.input as { from?: string } | undefined)?.from;
+  const startFrom = waitFrom && waitFrom >= today ? waitFrom : today;
+  const base = draftPrices(s, startFrom);
   const custom = s.club.settings.plans ?? [];
   const [sheet, setSheet] = useState<{ plan?: PlanDef } | null>(null);
-  const saved: Draft = { flex: fmtN(price.flex), gold: fmtN(price.gold), extra: fmtN(price.extra), registration: fmtN(feeOf(price, 'registration')), trial: fmtN(feeOf(price, 'trial')), leave: fmtN(feeOf(price, 'leave')), dementia: fmtN(feeOf(price, 'dementia')), pickup: fmtN(feeOf(price, 'pickup')), fieldTrip: fmtN(feeOf(price, 'fieldTrip')), quota: String(s.club.settings.flexQuota), from: today, plans: Object.fromEntries(custom.map((p) => [p.id, price.plans?.[p.id] ? fmtN(price.plans[p.id]) : ''])) };
+  const saved: Draft = { flex: fmtN(base.flex), gold: fmtN(base.gold), extra: fmtN(base.extra), registration: fmtN(base.registration), trial: fmtN(base.trial), leave: fmtN(base.leave), dementia: fmtN(base.dementia), pickup: fmtN(base.pickup), fieldTrip: fmtN(base.fieldTrip), quota: String(s.club.settings.flexQuota), from: startFrom, plans: Object.fromEntries(custom.map((p) => [p.id, base.plans[p.id] ? fmtN(base.plans[p.id]) : ''])) };
   const [draft, setDraft] = useState<Draft | null>(null);
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -42,11 +48,11 @@ export function Plans() {
   const set = (p: Partial<Draft>) => setDraft({ ...d, ...p });
 
   const prices = { flex: parseN(d.flex), gold: parseN(d.gold), extra: parseN(d.extra), registration: parseN(d.registration), trial: parseN(d.trial), leave: parseN(d.leave), dementia: parseN(d.dementia), pickup: parseN(d.pickup), fieldTrip: parseN(d.fieldTrip) };
-  const current: Record<PriceKey, number> = { flex: price.flex, gold: price.gold, extra: price.extra, registration: feeOf(price, 'registration'), trial: feeOf(price, 'trial'), leave: feeOf(price, 'leave'), dementia: feeOf(price, 'dementia'), pickup: feeOf(price, 'pickup'), fieldTrip: feeOf(price, 'fieldTrip') };
+  const current: Record<PriceKey, number> = { flex: base.flex, gold: base.gold, extra: base.extra, registration: base.registration, trial: base.trial, leave: base.leave, dementia: base.dementia, pickup: base.pickup, fieldTrip: base.fieldTrip }; // what the inputs started with (the waiting prices, else the ones in force)
   // custom plans: typed price per plan (a plan added while editing falls back to its saved one); 0 = no price
   const planVal = (id: string) => d.plans[id] ?? saved.plans[id] ?? '';
   const planNums = Object.fromEntries(custom.map((p) => [p.id, parseN(planVal(p.id))]));
-  const planNow = (id: string) => price.plans?.[id] ?? 0;
+  const planNow = (id: string) => base.plans[id] ?? 0;
   // a plan whose only price starts later shows that price and its date where the price field is empty (round 15 fix wave)
   const upcomingText = (id: string) => { const u = planPriceInfo(s, id as Plan, today); return u.from ? t('plans.fromPrice', { date: fds(u.from), price: rp(u.price) }) : undefined; };
   const plansChanged = custom.some((p) => planNums[p.id] !== planNow(p.id));
@@ -70,7 +76,7 @@ export function Plans() {
   // the preview shows what was typed (prices and the visits rule), whether or not it is saved yet; an invalid number falls back to the saved one
   const previewDraft: PriceDraft | null = priceChanged || rulesChanged
     ? {
-        flex: prices.flex > 0 ? prices.flex : price.flex, gold: prices.gold > 0 ? prices.gold : price.gold, extra: prices.extra > 0 ? prices.extra : price.extra,
+        flex: prices.flex > 0 ? prices.flex : base.flex, gold: prices.gold > 0 ? prices.gold : base.gold, extra: prices.extra > 0 ? prices.extra : base.extra,
         registration: prices.registration > 0 ? prices.registration : current.registration, trial: prices.trial > 0 ? prices.trial : current.trial, leave: prices.leave > 0 ? prices.leave : current.leave, dementia: prices.dementia > 0 ? prices.dementia : current.dementia,
         pickup: prices.pickup > 0 ? prices.pickup : current.pickup, fieldTrip: prices.fieldTrip > 0 ? prices.fieldTrip : current.fieldTrip,
         ...(custom.length ? { plans: Object.fromEntries(custom.map((p) => [p.id, planNums[p.id] > 0 ? planNums[p.id] : planNow(p.id)])) } : {}),
@@ -314,8 +320,9 @@ function PlanSheet({ plan, onClose }: { plan?: PlanDef; onClose: () => void }) {
       }
       if (!plan && id) {
         setCreated(id);
-        const cur = priceOn(s, f.from);
-        const r = await act('prices.set', { flex: cur.flex, gold: cur.gold, extra: cur.extra, plans: { [id]: priceN }, from: f.from }, { silent: true });
+        // KC: build on the prices request already waiting for this start date, so adding a plan keeps its other changes
+        const cur = draftPrices(s, f.from);
+        const r = await act('prices.set', { flex: cur.flex, gold: cur.gold, extra: cur.extra, ...Object.fromEntries(FEES.map((k) => [k, cur[k]])), plans: { ...cur.plans, [id]: priceN }, from: f.from }, { silent: true });
         if (!r.ok) { setPriceFailed(true); return; } // the plan exists without a price: keep the sheet open and say so
         if (r.reviewed === 'owner') { say(t('approvals.owner.sent'), { icon: 'hourglass_top' }); onClose(); return; }
       }
