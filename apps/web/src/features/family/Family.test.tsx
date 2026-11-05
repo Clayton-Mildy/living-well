@@ -335,6 +335,8 @@ describe('family Today', () => {
     } finally { document.body.removeEventListener('click', spy); document.body.removeEventListener('pointerdown', spy); }
     expect(seen).toBe(0); // stopped inside the hero's top bar
     expect(q('[data-testid="photo-viewer"]')).toBeNull();
+    // the faces are not "open full size" buttons of their own (that opened the portrait before)
+    expect(q('[data-testid="parent-switch"]')?.querySelector('[aria-label^="Open full size"]')).toBeNull();
     expect(q('[data-testid="story-hero"]')?.getAttribute('data-member')).toBe('m46');
   });
 

@@ -37,7 +37,7 @@ export function ParentSwitch({ members, sel, onPick, tone = 'frost', both = true
       ) : null}
       {members.map((m) => (
         <button key={m.id} type="button" onClick={() => onPick(m.id)} aria-pressed={sel === m.id} data-member={m.id} aria-label={memberName(m)} className="cp-press" style={{ ...item(sel === m.id), padding: 1 }}>
-          <MemberFace m={m} size={sel === m.id ? 28 : 30} />
+          <MemberFace m={m} size={sel === m.id ? 28 : 30} open={false} />
         </button>
       ))}
     </div>
@@ -49,7 +49,7 @@ export function CameFaces({ members, size = 14 }: { members: Member[]; size?: nu
   if (!members.length) return null;
   return (
     <span aria-hidden="true" style={{ display: 'flex', gap: 2, flex: 'none' }}>
-      {members.map((m) => <MemberFace key={m.id} m={m} size={size} />)}
+      {members.map((m) => <MemberFace key={m.id} m={m} size={size} open={false} />)}
     </span>
   );
 }

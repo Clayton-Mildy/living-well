@@ -10,11 +10,11 @@ import { Chips, F } from '../kit';
 import { useFamilyCtx } from '../useFamily';
 
 /** A round picture of a member: the profile photo, or their initials on the soft tone (a ring around it for the profile header). */
-export function MemberFace({ m, size, ring }: { m: Pick<Member, 'photoTone' | 'photoMediaId' | 'title' | 'firstName' | 'lastName'>; size: number; ring?: boolean }) {
+export function MemberFace({ m, size, ring, open = true }: { m: Pick<Member, 'photoTone' | 'photoMediaId' | 'title' | 'firstName' | 'lastName'>; size: number; ring?: boolean; /** false inside a control that has its own tap (the parent switch, a calendar day) */ open?: boolean }) {
   const [bg, fg] = TONES[(m.photoTone || 0) % 5];
   const photo = memberPhoto(m);
   return (
-    <PictureOpen src={photo} name={memberName(m)}>
+    <PictureOpen src={open ? photo : undefined} name={memberName(m)}>
     <span aria-hidden="true" style={{ width: size, height: size, borderRadius: 999, background: photoFill(photo, bg), color: fg, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: Math.round(size * 0.36), fontWeight: 500, flex: 'none', boxShadow: ring ? `0 0 0 3px #FFFFFF, 0 0 0 4px ${F.hair}` : undefined }}>
       {photo ? null : initials(m)}
     </span>
