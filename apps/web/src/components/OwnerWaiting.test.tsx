@@ -22,13 +22,19 @@ afterEach(async () => {
 const clock = { today: '2026-10-21', startMin: 598, realStart: Date.now(), offset: 0 };
 const actMock = vi.fn();
 let n = 0;
-function open(who: 's9' | 's11') {
+function open(who: 's9' | 's11', requests = 1) {
   const seeded = structuredClone(buildSeed().citra);
   const cur = priceOn(seeded, '2026-11-05');
   // Ega asks for new Flex and Gold prices; the rest stay as they are
-  const asked = execute(seeded, 'prices.set', { flex: cur.flex + 200_000, gold: cur.gold + 300_000, extra: cur.extra, from: '2026-11-05' }, getUser({ citra: seeded }, 's9')!, { today: clock.today, nowMin: clock.startMin }, `ow${++n}`);
+  const ask = (s: typeof seeded) => execute(s, 'prices.set', { flex: cur.flex + 200_000, gold: cur.gold + 300_000, extra: cur.extra, from: '2026-11-05' }, getUser({ citra: s }, 's9')!, { today: clock.today, nowMin: clock.startMin + n }, `ow${++n}`);
+  let asked = ask(seeded);
   expect(asked.reviewed).toBe('owner');
-  const state = asked.state;
+  let state = asked.state;
+  // requests saved before the replace rule: the same date asked again and again, all still waiting
+  for (let k = 1; k < requests; k++) {
+    const again = ask(state);
+    state = { ...again.state, changeRequests: Object.fromEntries(Object.entries(again.state.changeRequests).map(([id, c]) => [id, c.action === 'prices.set' ? { ...c, status: 'pending' as const } : c])) };
+  }
   const user = who === 's9' ? { kind: 'staff' as const, id: 's9', name: 'Ega', role: 'mgmt' as const, clubId: 'citra', clubs: ['citra'] }
     : { kind: 'staff' as const, id: 's11', name: 'Benjamin Cass', role: 'owner' as const, clubId: 'citra', clubs: ['citra'] };
   useSession.setState({ lang: 'en', club: 'citra', user });
@@ -69,6 +75,12 @@ describe.each([['phone', 390], ['wide', 1280]])('owner requests inline (%s)', (_
     expect(actMock.mock.calls[0][0]).toBe('review.approve');
     expect(priceOn(useReplica.getState().view!, '2026-11-05').flex).toBe(cur.flex + 200_000);
     expect(document.querySelector('[data-owner-request]')).toBeNull();
+  });
+  it('three waiting price requests for the same date show as one row', async () => {
+    open('s11', 3);
+    await show(<Plans />, width);
+    expect(document.querySelectorAll('[data-owner-request]')).toHaveLength(1);
+    expect(Array.from(document.querySelectorAll('button')).filter((b) => /^Approve$/.test(b.textContent?.trim() || ''))).toHaveLength(1);
   });
   it('Management sees Withdraw and no Approve or Reject', async () => {
     open('s9');

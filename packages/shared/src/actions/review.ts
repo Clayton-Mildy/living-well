@@ -2,7 +2,7 @@
 import type { Draft } from 'immer';
 import type { ChangeRequest, ClubState } from '../types';
 import { defineAction, getAction, isMgmt, isOwner, collOf, type Ctx, DomainError } from './framework';
-import { isOwnerSection, OWNER_LINK } from './ownerGate';
+import { isOwnerSection, OWNER_LINK, supersedeOlderOwnerRequests } from './ownerGate';
 
 const same = (a: unknown, b: unknown) => JSON.stringify(a ?? null) === JSON.stringify(b ?? null);
 const rowOf = (d: Draft<ClubState>, cr: ChangeRequest) => (d as unknown as Record<string, Record<string, Record<string, unknown>>>)[collOf(cr.target.type)]?.[cr.target.id];
@@ -44,6 +44,7 @@ export function approveChange(d: Draft<ClubState>, c: Draft<ChangeRequest>, ctx:
   c.reviewedBy = ctx.actor;
   c.reviewedAt = ctx.nowDT;
   if (opts.note) c.note = opts.note;
+  if (c.target.type === 'club') supersedeOlderOwnerRequests(d, c as ChangeRequest, ctx.actor, ctx.nowDT); // requests saved before the replace rule: the older ones close with the newest
   ctx.notify({ toUsers: [submitterId(c as ChangeRequest)], kind: 'notif.reviewApproved', params: { section: c.section }, link: linkOf(c as ChangeRequest), memberId: c.target.memberId, ref: { type: 'changeRequest', id: c.id } });
   ctx.feed({ icon: 'task_alt', key: 'feed.reviewApproved', params: { section: c.section }, memberId: c.target.memberId });
 }
@@ -65,6 +66,7 @@ export function rejectChange(d: Draft<ClubState>, c: Draft<ChangeRequest>, ctx: 
   c.reviewedBy = ctx.actor;
   c.reviewedAt = ctx.nowDT;
   c.note = note.trim();
+  if (c.target.type === 'club') supersedeOlderOwnerRequests(d, c as ChangeRequest, ctx.actor, ctx.nowDT);
   ctx.notify({ toUsers: [submitterId(c as ChangeRequest)], kind: 'notif.reviewRejected', params: { section: c.section, note: c.note }, link: linkOf(c as ChangeRequest), memberId: c.target.memberId, severity: 'attention', ref: { type: 'changeRequest', id: c.id } });
 }
 /** Management has looked at a change that was applied at once (health sections): keep it. */

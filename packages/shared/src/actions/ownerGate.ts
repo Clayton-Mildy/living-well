@@ -1,6 +1,7 @@
 // Round 16 (KC): owner approvals. Management's pricing, holiday and weekly-budget changes become change requests (target 'club', no field diff) that only the Owner
 // approves or rejects; approving replays the action as the person who asked (actions/review.ts). The Owner switches each kind per role in Admin › Roles
 // (rules/access.ts ownerApprovalOn). framework.execute() calls ownerKindOf() after the access-grid check and before the review policy.
+import type { Draft } from 'immer';
 import type { ChangeRequest, ClubState, ISODate, Plan, ReviewSection } from '../types';
 import type { OwnerKind } from '../rules/access';
 import { live, rp, sortBy, weekStart } from '../util';
@@ -36,9 +37,52 @@ export const OWNER_SECTIONS: ReviewSection[] = Object.values(SECTION_OF);
 export const OWNER_LINK: Partial<Record<ReviewSection, string>> = { pricing: '/plans', holiday: '/calendar', budget: '/budget' };
 export const isOwnerSection = (section: ReviewSection) => OWNER_SECTIONS.includes(section);
 
-/** Owner requests still waiting (all sections, or one), newest first. */
-export const pendingOwnerRequests = (s: ClubState, section?: ReviewSection): ChangeRequest[] =>
-  sortBy(live(s.changeRequests).filter((c) => c.status === 'pending' && c.kind === 'approval' && isOwnerSection(c.section) && (!section || c.section === section)), (c) => c.createdAt + c.id, -1);
+/**
+ * KC (owner approvals): what a request is about, so a newer request for the same thing replaces the older ones. A prices request carries the complete price list,
+ * so the newest one for a start date is the one that counts; the same goes for one plan, one section's limit from one week, and one calendar event.
+ * Club rules (`club.updateSettings`) can be partial, so a newer one does not cover an older one: no key.
+ */
+export function ownerTargetKey(action: string, input: unknown): string | null {
+  const i = (input ?? {}) as Record<string, unknown>;
+  const k = (...parts: unknown[]) => (parts.every((p) => typeof p === 'string' && p) ? `${action === 'calendarEvent.delete' ? 'calendarEvent.update' : action}|${parts.join('|')}` : null);
+  switch (action) {
+    case 'prices.set': return k(i.from);
+    case 'club.setPlan': return k(i.id);
+    case 'budget.setLimit': return k(i.sectionId, i.fromWeek);
+    case 'calendarEvent.update':
+    case 'calendarEvent.delete': return k(i.eventId);
+    default: return null;
+  }
+}
+
+const newestFirst = (list: ChangeRequest[]) => sortBy(list, (c) => c.createdAt + c.id, -1);
+const waiting = (s: ClubState) => live(s.changeRequests).filter((c) => c.status === 'pending' && c.kind === 'approval' && isOwnerSection(c.section));
+
+/** Owner requests still waiting (all sections, or one), newest first. Per target only the newest shows (older ones from before the replace rule too). */
+export const pendingOwnerRequests = (s: ClubState, section?: ReviewSection): ChangeRequest[] => {
+  const seen = new Set<string>();
+  return newestFirst(waiting(s)).filter((c) => {
+    const key = ownerTargetKey(c.action, c.input);
+    if (key) { if (seen.has(key)) return false; seen.add(key); }
+    return !section || c.section === section;
+  });
+};
+
+/**
+ * Close the older waiting requests for the same target as `c` (status 'superseded', shown as "Replaced by a newer request" in History). Called on submit and,
+ * for requests saved before the rule, when the newest one is approved or rejected, so nothing stays stuck in the counts.
+ */
+export function supersedeOlderOwnerRequests(d: Draft<ClubState>, c: ChangeRequest, by: ChangeRequest['submittedBy'], at: string) {
+  const key = ownerTargetKey(c.action, c.input);
+  if (!key) return;
+  for (const o of Object.values(d.changeRequests)) {
+    if (o.id === c.id || o.status !== 'pending' || o.kind !== 'approval' || !isOwnerSection(o.section) || ownerTargetKey(o.action, o.input) !== key) continue;
+    if (o.createdAt + o.id > c.createdAt + c.id) continue; // a newer one stays
+    o.status = 'superseded';
+    o.reviewedBy = by;
+    o.reviewedAt = at;
+  }
+}
 
 /**
  * What an owner request asks for, as an i18n key (`approvals.owner.what.*`) and its params, for the Owner's list, the "Waiting for owner" rows and the notice.

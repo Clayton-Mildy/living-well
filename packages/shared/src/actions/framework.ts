@@ -5,7 +5,7 @@ import { COLLECTIONS } from '../types';
 import { toHM, rp } from '../util';
 import { areaOf, NO_LIFT, OWN_ROW, VIEW_OWN } from './areas';
 import { accessOf, defaultLevel, AREA_BASE, ownerApprovalOn, type GridRole } from '../rules/access';
-import { ownerKindOf, ownerWhat, SECTION_OF } from './ownerGate';
+import { ownerKindOf, ownerWhat, SECTION_OF, supersedeOlderOwnerRequests } from './ownerGate';
 import { needsTerms } from '../rules/terms';
 
 enablePatches();
@@ -301,6 +301,7 @@ function ownerRequest(state: ClubState, def: ActionDef, name: string, input: unk
   const [next, patches, inverse] = produceWithPatches(state, (d) => {
     const crId = ctx.id('cr');
     d.changeRequests[crId] = { id: crId, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, kind: 'approval', op: 'update', action: name, input, section, target: { type: 'club', id: ctx.clubId }, changes: [], status: 'pending', submittedBy: ctx.actor } as ChangeRequest;
+    supersedeOlderOwnerRequests(d, d.changeRequests[crId] as ChangeRequest, ctx.actor, ctx.nowDT); // KC: the newest request for the same thing replaces the older ones
     ctx.result.changeRequestId = crId;
     ctx.notify({ toRoles: ['owner'], kind: 'notif.ownerApproval', params, link: '/reviews', severity: 'attention', ref: { type: 'changeRequest', id: crId } });
     flushSideEffects(d, ctx);

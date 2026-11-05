@@ -242,3 +242,65 @@ describe('ownerChanges: closed days, holidays and budget names', () => {
     expect(ownerChanges(base, 'budget.renameSection', { sectionId: 'fnb', name: 'Food and drink' })).toEqual([{ label: 'approvals.owner.chg.name', from: was, to: 'Food and drink' }]);
   });
 });
+
+describe('owner requests: the newest for the same thing replaces the older ones', () => {
+  const cur = priceOn(base, '2026-11-05');
+  const price = (s: ClubState, flex: number, from = '2026-11-05', uid = EGA, c = clock) => run(s, 'prices.set', { flex, gold: cur.gold, extra: cur.extra, from }, uid, c);
+  const ids = (s: ClubState) => pendingOwnerRequests(s).map((c) => c.id);
+  it('two price requests with the same date leave one waiting; the older is closed as replaced', () => {
+    const a = price(base, cur.flex + 100_000);
+    const b = price(a.state, cur.flex + 200_000, '2026-11-05', EGA, { today: clock.today, nowMin: 700 });
+    const [ida, idb] = [a.result.changeRequestId as string, b.result.changeRequestId as string];
+    expect(ids(b.state)).toEqual([idb]);
+    expect(b.state.changeRequests[ida]).toMatchObject({ status: 'superseded', reviewedBy: 'staff:s9' });
+    expect(translate('en', 'reviews.status.superseded')).toBe('Replaced by a newer request');
+    expect(pendingItems(b.state, 'owner')).toHaveLength(1);
+  });
+  it('different start dates stay as two requests', () => {
+    const a = price(base, cur.flex + 100_000, '2026-11-05');
+    const b = price(a.state, cur.flex + 200_000, '2026-12-01', EGA, { today: clock.today, nowMin: 700 });
+    expect(ids(b.state)).toHaveLength(2);
+  });
+  it('a legacy state with three waiting same-date requests lists the newest; approving it applies it and closes the other two', () => {
+    let s = base;
+    const made: string[] = [];
+    for (let k = 1; k <= 3; k++) { const r = price(s, cur.flex + k * 100_000, '2026-11-05', EGA, { today: clock.today, nowMin: 600 + k }); s = r.state; made.push(r.result.changeRequestId as string); }
+    // before the rule, all three waited
+    const legacy: ClubState = { ...s, changeRequests: Object.fromEntries(Object.entries(s.changeRequests).map(([id, c]) => [id, made.includes(id) ? { ...c, status: 'pending' as const, reviewedAt: undefined, reviewedBy: undefined } : c])) };
+    expect(ids(legacy)).toEqual([made[2]]);
+    expect(pendingItems(legacy, 'owner')).toHaveLength(1);
+    const done = run(legacy, 'review.approve', { crId: made[2] }, OWNER);
+    expect(priceOn(done.state, '2026-11-05').flex).toBe(cur.flex + 300_000);
+    expect(done.state.changeRequests[made[0]].status).toBe('superseded');
+    expect(done.state.changeRequests[made[1]].status).toBe('superseded');
+    expect(pendingItems(done.state, 'owner')).toHaveLength(0);
+    const rej = run(legacy, 'review.reject', { crId: made[2], note: 'No' }, OWNER);
+    expect(Object.values(rej.state.changeRequests).filter((c) => made.includes(c.id) && c.status === 'pending')).toHaveLength(0);
+  });
+  it('club.setPlan for the same plan and budget.setLimit for the same section and week replace; another week or plan stays', () => {
+    const plan = { id: 'plan_1' as const, name: 'Flex 6', kind: 'days' as const, quota: 6, active: true };
+    const plan2 = { ...plan, id: 'plan_2' as const };
+    const withPlans: ClubState = { ...base, club: { ...base.club, settings: { ...base.club.settings, plans: [{ ...plan, quota: 4 }, { ...plan2, quota: 4 }] } } };
+    const p1 = run(withPlans, 'club.setPlan', plan, EGA);
+    const p2 = run(p1.state, 'club.setPlan', { ...plan, quota: 8 }, EGA, { today: clock.today, nowMin: 700 });
+    const p3 = run(p2.state, 'club.setPlan', { ...plan2, quota: 5 }, EGA, { today: clock.today, nowMin: 701 });
+    expect(ids(p3.state)).toEqual([p3.result.changeRequestId, p2.result.changeRequestId]);
+    const l = (s: ClubState, w: number, wk: string, m: number) => run(s, 'budget.setLimit', { sectionId: 'fnb', weekly: w, fromWeek: wk }, EGA, { today: clock.today, nowMin: m });
+    const b1 = l(base, 9_000_000, '2026-11-02', 600);
+    const b2 = l(b1.state, 9_500_000, '2026-11-02', 601);
+    const b3 = l(b2.state, 9_800_000, '2026-11-09', 602);
+    expect(ids(b3.state)).toEqual([b3.result.changeRequestId, b2.result.changeRequestId]);
+    expect(b3.state.changeRequests[b1.result.changeRequestId as string].status).toBe('superseded');
+  });
+  it('a newer change or removal of the same calendar event replaces the older one; club rules never do', () => {
+    const ev = run(base, 'calendarEvent.create', CLOSE, OWNER);
+    const eventId = ev.result.eventId as string;
+    const u = run(ev.state, 'calendarEvent.update', { eventId, title: 'One' }, EGA);
+    const d = run(u.state, 'calendarEvent.delete', { eventId }, EGA, { today: clock.today, nowMin: 700 });
+    expect(ids(d.state)).toEqual([d.result.changeRequestId]);
+    expect(d.state.changeRequests[u.result.changeRequestId as string].status).toBe('superseded');
+    const s1 = run(base, 'club.updateSettings', { notice: { stop: 30 } }, EGA);
+    const s2 = run(s1.state, 'club.updateSettings', { notice: { leave: 5 } }, EGA, { today: clock.today, nowMin: 700 });
+    expect(ids(s2.state)).toHaveLength(2);
+  });
+});
