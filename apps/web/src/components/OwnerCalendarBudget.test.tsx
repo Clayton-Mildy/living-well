@@ -49,7 +49,7 @@ describe.each([['phone', 390], ['wide', 1280]])('owner requests on Calendar and 
   it('the Owner sees the closed day at the top of Calendar and Approve creates it', async () => {
     open('s11', askClose);
     await show(<Calendar />, width, '/calendar');
-    expect(document.querySelector('[data-testid="owner-marker"]')!.textContent).toMatch(/^\d+ to approve/); // the seed may hold other waiting closures
+    expect(document.querySelector('[data-testid="owner-marker"]')!.textContent).toMatch(/(^|fact_check)\d+ to approve/); // the seed may hold other waiting closures
     await act(async () => { marker()!.click(); });
     const box = Array.from(document.querySelectorAll('[data-owner-request]')).find((b) => /Staff training day/.test(b.textContent || ''))!;
     expect(box.textContent).toContain('Staff training day');

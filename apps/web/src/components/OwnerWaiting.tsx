@@ -70,11 +70,13 @@ export function OwnerWaiting({ section, only, pad = '0 16px' }: { section: Revie
   const btn = { height: 38, padding: '0 16px', borderRadius: 999, border: 'none', fontFamily: 'Inter', fontSize: 14, fontWeight: 500, cursor: 'pointer', whiteSpace: 'nowrap' } as const;
   return (
     <div data-testid="owner-waiting" style={{ padding: pad }}>
-      <button type="button" className="cp-press" data-testid="owner-marker" onClick={() => setOpenSheet(true)}
-        style={{ display: 'flex', alignItems: 'center', gap: 10, width: '100%', minHeight: 44, padding: 0, border: 'none', background: 'transparent', cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left' }}>
-        <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: '#7A5510', flex: 'none' }} />
-        <span style={{ flex: 1, minWidth: 0, fontSize: 14, lineHeight: 1.35, color: '#7A5510', fontWeight: 500 }}>{t(isOwner ? 'approvals.owner.toApprove' : 'approvals.owner.waitingN', { n })}</span>
-        <Icon name="chevron_right" size={20} color="#7A5510" />
+      {/* KC: a visible button, so it reads as tappable: ink for the Owner (there is something to decide), an outlined one for the person waiting */}
+      <button type="button" className="cp-press" data-testid="owner-marker" data-owner={isOwner || undefined} onClick={() => setOpenSheet(true)}
+        style={{ display: 'inline-flex', alignItems: 'center', gap: 8, maxWidth: '100%', height: 40, padding: '0 10px 0 14px', borderRadius: 999, cursor: 'pointer', fontFamily: 'Inter', textAlign: 'left',
+          border: isOwner ? 'none' : '1px solid #DCD4C9', background: isOwner ? '#24201C' : '#FFFFFF', color: isOwner ? '#FFFFFF' : '#7A5510' }}>
+        {isOwner ? <Icon name="fact_check" size={18} color="#FFFFFF" /> : <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: '#7A5510', flex: 'none' }} />}
+        <span style={{ minWidth: 0, fontSize: 14, lineHeight: 1.2, fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t(isOwner ? 'approvals.owner.toApprove' : 'approvals.owner.waitingN', { n })}</span>
+        <Icon name="chevron_right" size={20} color={isOwner ? '#FFFFFF' : '#7A5510'} />
       </button>
       <Sheet open={openSheet} onClose={() => setOpenSheet(false)} title={t(isOwner ? 'approvals.owner.toApproveTitle' : 'approvals.owner.waitingTitle', { n })}>
         <div style={{ display: 'flex', flexDirection: 'column' }}>
