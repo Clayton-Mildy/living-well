@@ -42,22 +42,27 @@ async function show(ui: ReactElement, width: number, path: string) {
   root = createRoot(host);
   await act(async () => { root!.render(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>); });
 }
+const marker = () => document.querySelector<HTMLElement>('[data-testid="owner-marker"]');
 const button = (re: RegExp) => Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => re.test(b.textContent?.trim() || ''));
 
 describe.each([['phone', 390], ['wide', 1280]])('owner requests on Calendar and Budget (%s)', (_n, width) => {
   it('the Owner sees the closed day at the top of Calendar and Approve creates it', async () => {
     open('s11', askClose);
     await show(<Calendar />, width, '/calendar');
-    const box = document.querySelector('[data-owner-request]')!;
+    expect(document.querySelector('[data-testid="owner-marker"]')!.textContent).toMatch(/^\d+ to approve/); // the seed may hold other waiting closures
+    await act(async () => { marker()!.click(); });
+    const box = Array.from(document.querySelectorAll('[data-owner-request]')).find((b) => /Staff training day/.test(b.textContent || ''))!;
     expect(box.textContent).toContain('Staff training day');
     expect(box.textContent).toContain('DateThu 14 Jan');
-    await act(async () => { button(/^Approve$/)!.click(); });
+    await act(async () => { Array.from(box.querySelectorAll('button')).find((b) => /^Approve$/.test(b.textContent?.trim() || ''))!.click(); });
     expect(actMock.mock.calls[0][0]).toBe('review.approve');
     expect(live(useReplica.getState().view!.calendarEvents).some((e) => e.title === 'Staff training day' && e.kind === 'closed')).toBe(true);
   });
   it('Management sees Withdraw on Calendar, not Approve', async () => {
     open('s9', askClose);
     await show(<Calendar />, width, '/calendar');
+    expect(marker()!.textContent).toMatch(/^\d+ waiting for owner/);
+    await act(async () => { marker()!.click(); });
     expect(document.querySelector('[data-owner-request]')).toBeTruthy();
     expect(button(/^Withdraw$/)).toBeTruthy();
     expect(button(/^Approve$/)).toBeUndefined();
@@ -65,6 +70,10 @@ describe.each([['phone', 390], ['wide', 1280]])('owner requests on Calendar and 
   it('a limit request on Budget shows old to new and the Owner can Approve', async () => {
     open('s11', askLimit);
     await show(<Budget />, width, '/budget');
+    const markers = document.querySelectorAll('[data-testid="owner-marker"]');
+    expect(markers).toHaveLength(1); // only the fnb section card, counting its limit request
+    expect(markers[0].textContent).toContain('1 to approve');
+    await act(async () => { (markers[0] as HTMLElement).click(); });
     const box = document.querySelector('[data-owner-request]')!;
     expect(box.textContent).toContain('→');
     expect(box.textContent).toContain((9_000_000).toLocaleString('id-ID'));

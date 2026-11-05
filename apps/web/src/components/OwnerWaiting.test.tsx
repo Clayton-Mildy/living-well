@@ -58,12 +58,20 @@ async function show(ui: ReactElement, width: number, path = '/plans') {
   await act(async () => { root!.render(<MemoryRouter initialEntries={[path]}>{ui}</MemoryRouter>); });
 }
 const button = (re: RegExp) => Array.from(document.querySelectorAll<HTMLElement>('button')).find((b) => re.test(b.textContent?.trim() || ''));
+const marker = () => document.querySelector<HTMLElement>('[data-testid="owner-marker"]');
+const sheet = () => document.querySelector('[role="dialog"]');
+const openMarker = async () => { await click(marker()); };
 const click = async (el: Element | undefined | null) => { expect(el, 'element to click').toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
 
 describe.each([['phone', 390], ['wide', 1280]])('owner requests inline (%s)', (_n, width) => {
   it('the Owner sees the changed prices on Plans and Approve applies them', async () => {
     const { cur } = open('s11');
     await show(<Plans />, width);
+    expect(marker()!.textContent).toContain('1 to approve');
+    expect(document.querySelector('[data-owner-request]')).toBeNull(); // rows only in the sheet
+    await openMarker();
+    expect(sheet()!.textContent).toContain('To approve · 1');
+    expect(sheet()!.textContent).toContain('Ega');
     const box = document.querySelector('[data-owner-request]')!;
     const lines = Array.from(box.querySelectorAll('[data-testid="owner-changes"] > div')).map((r) => r.textContent);
     expect(lines).toHaveLength(2); // Flex and Gold only
@@ -75,16 +83,22 @@ describe.each([['phone', 390], ['wide', 1280]])('owner requests inline (%s)', (_
     expect(actMock.mock.calls[0][0]).toBe('review.approve');
     expect(priceOn(useReplica.getState().view!, '2026-11-05').flex).toBe(cur.flex + 200_000);
     expect(document.querySelector('[data-owner-request]')).toBeNull();
+    expect(sheet()).toBeNull(); // the last request decided: the sheet closes
+    expect(marker()).toBeNull();
   });
   it('three waiting price requests for the same date show as one row', async () => {
     open('s11', 3);
     await show(<Plans />, width);
+    await openMarker();
     expect(document.querySelectorAll('[data-owner-request]')).toHaveLength(1);
     expect(Array.from(document.querySelectorAll('button')).filter((b) => /^Approve$/.test(b.textContent?.trim() || ''))).toHaveLength(1);
   });
   it('Management sees Withdraw and no Approve or Reject', async () => {
     open('s9');
     await show(<Plans />, width);
+    expect(marker()!.textContent).toContain('1 waiting for owner');
+    await openMarker();
+    expect(sheet()!.textContent).toContain('Waiting for owner · 1');
     expect(button(/^Withdraw$/)).toBeTruthy();
     expect(button(/^Approve$/)).toBeUndefined();
     expect(button(/^Reject$/)).toBeUndefined();
@@ -93,8 +107,10 @@ describe.each([['phone', 390], ['wide', 1280]])('owner requests inline (%s)', (_
   it('Reject on Plans asks why, then sends the request back', async () => {
     open('s11');
     await show(<Plans />, width);
+    await openMarker();
     await click(button(/^Reject$/));
-    const dialog = document.querySelector('[role="dialog"]')!;
+    const dialog = Array.from(document.querySelectorAll('[role="dialog"]')).pop()!; // the reason dialog opens on top of the sheet
+    expect(dialog.querySelector('textarea')).toBeTruthy();
     const ta = dialog.querySelector('textarea')!;
     await act(async () => { Object.getOwnPropertyDescriptor(HTMLTextAreaElement.prototype, 'value')!.set!.call(ta, 'Too high'); ta.dispatchEvent(new Event('input', { bubbles: true })); });
     await click(Array.from(dialog.querySelectorAll('button')).find((b) => /Reject$/.test(b.textContent?.trim() || '')));

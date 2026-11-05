@@ -82,7 +82,7 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     await type(field('stop'), '10');
     await click(button(section('Membership rules'), 'Send to owner')); // Management's change waits for the Owner: the button says so
     expect(actMock).toHaveBeenCalledWith('club.updateSettings', { notice: { stop: 10 } });
-    expect(document.body.textContent).toContain('Waiting for owner');
+    expect(document.body.textContent).toContain('1 waiting for owner');
     expect(useReplica.getState().view!.club.settings.notice).toBeUndefined();
     expect(field('stop').value).toBe('14');
   });
