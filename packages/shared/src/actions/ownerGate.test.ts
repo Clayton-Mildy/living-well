@@ -4,7 +4,9 @@ import { buildSeed, execute, getUser, DomainError, live, actionItems, roleDraft,
 import { overviewStats } from '../rules/mgmt';
 import { roleSummary } from '../rules/tasks';
 import { pendingItems } from '../rules/approvals';
-import { ownerKindOf, ownerWhat, pendingOwnerRequests } from './ownerGate';
+import { ownerKindOf, ownerWhat, ownerChanges, pendingOwnerRequests } from './ownerGate';
+import { priceOn } from '../rules/billing';
+import { rp } from '../util';
 import { translate } from '../i18n';
 
 const clock = { today: '2026-10-21', nowMin: 600 };
@@ -186,5 +188,30 @@ describe('final review minor 2: a club-rules request says what it changes', () =
     const r = run(base, 'club.updateSettings', { leaveMaxMonths: 3 }, EGA);
     expect(r.reviewed).toBe('owner');
     expect(r.state.club.settings.leaveMaxMonths).toBeUndefined();
+  });
+});
+
+describe('ownerChanges: what a request changes', () => {
+  const cur = priceOn(base, '2026-11-01');
+  const same = { flex: cur.flex, gold: cur.gold, extra: cur.extra };
+  it('prices.set lists only the prices that differ, old to new', () => {
+    const rows = ownerChanges(base, 'prices.set', { ...same, flex: cur.flex + 200_000, extra: cur.extra + 50_000, from: '2026-11-01' });
+    expect(rows).toEqual([
+      { label: 'approvals.owner.chg.flex', from: rp(cur.flex), to: rp(cur.flex + 200_000) },
+      { label: 'approvals.owner.chg.extra', from: rp(cur.extra), to: rp(cur.extra + 50_000) },
+    ]);
+  });
+  it('prices.set with every price equal lists nothing', () => {
+    expect(ownerChanges(base, 'prices.set', { ...same, from: '2026-11-01' })).toEqual([]);
+  });
+  it('club.setPlan: a new plan lists name, type, days; an edit lists only what changed', () => {
+    const added = ownerChanges(base, 'club.setPlan', { name: 'Flex 6', kind: 'days', quota: 6, active: true });
+    expect(added).toEqual([{ label: 'approvals.owner.chg.name', to: 'Flex 6' }, { label: 'approvals.owner.chg.kind', to: 'approvals.owner.chg.kind_days' }, { label: 'approvals.owner.chg.quota', to: '6' }]);
+    const s: ClubState = { ...base, club: { ...base.club, settings: { ...base.club.settings, plans: [{ id: 'plan_1', name: 'Flex 6', kind: 'days', quota: 6, active: true }] } } };
+    expect(ownerChanges(s, 'club.setPlan', { id: 'plan_1', name: 'Flex 6', kind: 'days', quota: 8, active: true })).toEqual([{ label: 'approvals.owner.chg.quota', from: '6', to: '8' }]);
+  });
+  it('budget.setLimit: the weekly amount old to new', () => {
+    const was = base.budgetSections.fnb.limits.filter((l) => l.fromWeek <= '2026-11-02').pop()!.weekly;
+    expect(ownerChanges(base, 'budget.setLimit', { sectionId: 'fnb', weekly: was + 1_000_000, fromWeek: '2026-11-02' })).toEqual([{ label: base.budgetSections.fnb.name, from: rp(was), to: rp(was + 1_000_000) }]);
   });
 });

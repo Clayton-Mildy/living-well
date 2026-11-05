@@ -12,7 +12,7 @@ import { formDoc } from '@cp/shared/rules/signing';
 import { CHECK_KEY } from '../health/ReadingCard';
 import { values as readingValues } from './profile/CareTab';
 import { describeCr, type Described, type DiffRow } from './reviewDiff';
-import { ownerWhatText } from '../../components/OwnerWaiting';
+import { ownerChangeRows, ownerWhatText } from '../../components/OwnerWaiting';
 
 interface Fmt { fdy: (d: string) => string; fds: (d: string) => string; fd: (d: string, o: Intl.DateTimeFormatOptions) => string; lang?: Lang }
 type Entry = Pick<ApprovalItem, 'id' | 'sub' | 'memberId'>;
@@ -218,7 +218,7 @@ function ownerView(s: ClubState, id: string, t: TFn, fmt: Fmt): ItemView {
   if (!cr) return { who: '', kind, summary: '', detail: { title: '', rows: [], summary: [] }, edit: false };
   const what = ownerWhatText(s, cr, t, fmt);
   const by = actorName(s, cr.submittedBy);
-  const rows: DiffRow[] = [{ label: kind, to: what }, { label: t('approvals.requestedBy'), to: by }];
+  const rows: DiffRow[] = [...ownerChangeRows(s, cr, t), { label: kind, to: what }, { label: t('approvals.requestedBy'), to: by }];
   return { who: '', kind, summary: `${by} · ${what}`, detail: { title: kind, rows: [], summary: rows }, edit: false };
 }
 

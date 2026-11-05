@@ -1,10 +1,14 @@
 // Round 16 (KC): owner approvals. Management's pricing, holiday and weekly-budget changes become change requests (target 'club', no field diff) that only the Owner
 // approves or rejects; approving replays the action as the person who asked (actions/review.ts). The Owner switches each kind per role in Admin › Roles
 // (rules/access.ts ownerApprovalOn). framework.execute() calls ownerKindOf() after the access-grid check and before the review policy.
-import type { ChangeRequest, ClubState, ISODate, ReviewSection } from '../types';
+import type { ChangeRequest, ClubState, ISODate, Plan, ReviewSection } from '../types';
 import type { OwnerKind } from '../rules/access';
-import { live, sortBy } from '../util';
+import { live, rp, sortBy, weekStart } from '../util';
 import { NOTICE_KINDS, noticeSettings } from '../rules/notice';
+import { feeOf, priceOn, type Fee } from '../rules/billing';
+import { planDefs, planLabel, planPrice } from '../rules/plans';
+import { leaveMaxMonths } from '../rules/leave';
+import { weeklyLimit } from '../rules/budget';
 
 const PRICING = ['prices.set', 'club.setPlan', 'club.updateSettings'];
 const BUDGET = ['budget.setLimit', 'budget.addSection', 'budget.renameSection'];
@@ -78,4 +82,65 @@ function settingsWhat(s: ClubState, i: Record<string, unknown>): { key: string; 
   if (!kinds.length && quota !== undefined && others === 1) return { key: 'approvals.owner.what.flexQuota', params: { n: quota } };
   if (!kinds.length && leaveMax !== undefined && others === 1) return { key: 'approvals.owner.what.leaveMax', params: { n: leaveMax } };
   return { key: 'approvals.owner.what.rules', params: {} };
+}
+
+/** One thing an owner request changes. `label` and `to`/`from` that start with `approvals.owner.chg.` are i18n keys; anything else (a plan's or section's name, an amount) is shown as is. */
+export interface OwnerChange { label: string; from?: string; to: string }
+const K = 'approvals.owner.chg.';
+const FEE_KEYS: Fee[] = ['registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip'];
+
+/**
+ * KC (owner approvals): what a request changes, so the Owner can see "how much" before deciding. Only changed values are listed, compared with what is in force on the
+ * request's date. An empty list means nothing to show (no price changes; holidays and closures are already clear from `ownerWhat`).
+ */
+export function ownerChanges(s: ClubState, action: string, input: unknown): OwnerChange[] {
+  const i = (input ?? {}) as Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const out: OwnerChange[] = [];
+  const diff = (label: string, from: string, to: string) => { if (from !== to) out.push({ label, from, to }); };
+  switch (action) {
+    case 'prices.set': {
+      if (typeof i.from !== 'string') return out;
+      const cur = priceOn(s, i.from);
+      if (!cur) return out;
+      const money = (label: string, was: number, now: unknown) => { if (typeof now === 'number') diff(label, rp(was), rp(now)); };
+      money(K + 'flex', cur.flex, i.flex);
+      money(K + 'gold', cur.gold, i.gold);
+      money(K + 'extra', cur.extra, i.extra);
+      for (const f of FEE_KEYS) money(K + f, feeOf(cur, f), i[f]);
+      for (const [id, n] of Object.entries((i.plans ?? {}) as Record<string, number>)) money(planLabel(s, id as Plan, 'en'), planPrice(cur, id as Plan), n);
+      return out;
+    }
+    case 'club.setPlan': {
+      const old = i.id ? planDefs(s).find((p) => p.id === i.id) : undefined;
+      const kind = (k: unknown) => K + (k === 'unlimited' ? 'kind_unlimited' : 'kind_days');
+      const quota = (k: unknown, q: unknown) => (k === 'days' && q !== undefined ? String(q) : '');
+      const active = (a: unknown) => K + (a === false ? 'retired' : 'active');
+      if (!old) {
+        out.push({ label: K + 'name', to: String(i.name ?? '') }, { label: K + 'kind', to: kind(i.kind) });
+        if (quota(i.kind, i.quota)) out.push({ label: K + 'quota', to: quota(i.kind, i.quota) });
+        return out;
+      }
+      diff(K + 'name', old.name, String(i.name ?? old.name));
+      diff(K + 'kind', kind(old.kind), kind(i.kind));
+      diff(K + 'quota', quota(old.kind, old.quota) || K + 'none', quota(i.kind, i.quota) || K + 'none');
+      diff(K + 'status', active(old.active), active(i.active));
+      return out;
+    }
+    case 'club.updateSettings': {
+      const notice = (i.notice ?? {}) as Record<string, number>;
+      const now = noticeSettings(s);
+      for (const k of NOTICE_KINDS) if (typeof notice[k] === 'number') diff(K + 'notice_' + k, String(now[k]), String(notice[k]));
+      if (typeof i.flexQuota === 'number') diff(K + 'flexQuota', String(s.club.settings.flexQuota), String(i.flexQuota));
+      if (typeof i.leaveMaxMonths === 'number') diff(K + 'leaveMax', String(leaveMaxMonths(s)), String(i.leaveMaxMonths));
+      return out;
+    }
+    case 'budget.setLimit': {
+      const sec = s.budgetSections[String(i.sectionId)];
+      const weekly = Number(i.weekly) || 0;
+      const was = weeklyLimit(s, String(i.sectionId), weekStart(String(i.fromWeek ?? '')));
+      return sec && was !== weekly ? [{ label: sec.name, from: rp(was), to: rp(weekly) }] : [];
+    }
+    case 'budget.addSection': return [{ label: K + 'name', to: String(i.name ?? '') }, { label: K + 'weekly', to: rp(Number(i.weekly) || 0) }];
+    default: return out;
+  }
 }
