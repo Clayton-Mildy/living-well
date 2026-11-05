@@ -27,7 +27,7 @@ export function ParentSwitch({ members, sel, onPick, tone = 'frost', both = true
     ? { background: 'rgba(255,255,255,.22)', backdropFilter: 'blur(10px)', WebkitBackdropFilter: 'blur(10px)' }
     : { background: 'var(--fill, #F4F4F5)' };
   return (
-    <div role="group" aria-label={t('ftoday.whoAria')} data-testid="parent-switch" data-tone={tone} className={frost ? undefined : 'cp-fill'}
+    <div role="group" aria-label={t('ftoday.whoAria')} data-testid="parent-switch" data-tone={tone} onClick={(e) => e.stopPropagation()} onPointerDown={(e) => e.stopPropagation()} onTouchStart={(e) => e.stopPropagation()} className={frost ? undefined : 'cp-fill'}
       style={{ pointerEvents: 'auto', display: 'flex', alignItems: 'center', gap: 4, padding: 2, height: 36, boxSizing: 'border-box', borderRadius: 999, flex: 'none', ...shell }}>
       {both ? (
         <button type="button" onClick={() => onPick('both')} aria-pressed={sel === 'both'} data-testid="all-parents" className="cp-press" style={item(sel === 'both')}

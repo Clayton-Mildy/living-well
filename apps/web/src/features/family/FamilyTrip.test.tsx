@@ -65,6 +65,10 @@ describe('family Today on a field trip day', () => {
     expect(row('home')).toContain('15:20');
     expect(row('home')).toContain('Back at the club · going home');
     expect(q('[data-testid="day-photos"] [data-photo-id="ptrip"]')).toBeTruthy();
+    // round 21: the trip's step shows its newest picture on the right (taken 11:00, inside 08:30–15:00); a tap opens the pictures
+    expect(q('[data-tl="outing"] [data-testid="outing-photos"]')?.getAttribute('data-count')).toBe('1');
+    await act(async () => { (q('[data-tl="outing"] [data-testid="outing-photos"]') as HTMLElement).click(); });
+    expect(q('[data-tl="outing"] [data-testid="outing-photos-open"] [data-photo-id="ptrip"]')).toBeTruthy();
     expect(q(`[data-testid="day-strip"] [data-date="${T}"]`)).toBeTruthy();
   });
   it('with a menu the kitchen added, lunch shows the dish', async () => {

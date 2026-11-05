@@ -43,19 +43,30 @@ describe('railFill', () => {
 });
 
 describe('the day list', () => {
-  const day = [item('arrival', 'done'), item('health', 'done'), item('session', 'done'), item('lunch', 'now'), item('home', 'up')];
-  it('is Next while something is still to come today, then the whole day', () => {
-    expect(listKind(true, true, day)).toBe('next');
-    expect(listItems('next', day).map((i) => i.kind)).toEqual(['lunch', 'home']);
+  const at = (kind: TlItem['kind'], state: TlItem['state'], time: string, start?: number, end?: number) => ({ id: kind, kind, state, time, ...(start !== undefined ? { start, end } : {}) }) as unknown as TlItem;
+  const day = [at('arrival', 'done', '09:05'), at('health', 'done', '09:20'), at('lunch', 'now', '12:00', 720, 780), at('tea', 'up', '14:00', 840, 900), at('home', 'up', '16:30')];
+  it('is the whole day today: the arrival, the done steps, the step now and the later ones, in time order', () => {
+    expect(listKind(true, true, day)).toBe('today');
+    expect(listItems('today', day).map((i) => i.kind)).toEqual(['arrival', 'health', 'lunch', 'tea', 'home']);
+    expect(listItems('today', day).map((i) => i.state)).toEqual(['done', 'done', 'now', 'up', 'up']);
     const over = day.map((i) => ({ ...i, state: 'done' }) as TlItem);
-    expect(listKind(true, true, over)).toBe('today');
     expect(listKind(false, true, over)).toBe('thatDay');
     expect(listItems('thatDay', over).map((i) => i.kind)).not.toContain('arrival');
   });
-  it('is "what was on" for a day nobody came, today or before', () => {
+  it('is the club\'s day for a parent not at the club today, the step the clock is in marked now', () => {
+    const club = [at('session', 'done', '09:00', 540, 600), at('lunch', 'up', '12:00', 720, 780), at('tea', 'up', '14:00', 840, 900)];
+    expect(listKind(true, false, club)).toBe('wasOn');
+    expect(listItems('wasOn', club, 735).map((i) => i.state)).toEqual(['done', 'now', 'up']);
+    expect(listItems('wasOn', club).map((i) => i.state)).toEqual(['done', 'up', 'up']);
+  });
+  it('is "what was on" for a day nobody came, before today', () => {
     expect(listKind(false, false, day)).toBe('wasOn');
-    expect(listKind(true, false, day.map((i) => ({ ...i, state: 'done' }) as TlItem))).toBe('wasOn');
-    expect(listKind(true, false, [item('lunch', 'up')])).toBe('next');
+  });
+  it('sorts by time, steady: a trip step at 08:30 comes before the health check at 10:21; a health check still to come stays after the one before it', () => {
+    const trip = [at('arrival', 'done', '08:10'), at('health', 'done', '10:21'), at('outing', 'done', '08:30'), at('home', 'done', '15:20')];
+    expect(listItems('thatDay', trip).map((i) => i.kind)).toEqual(['arrival', 'outing', 'health', 'home']);
+    const todo = [at('arrival', 'done', '09:05'), at('health', 'up', ''), at('lunch', 'up', '12:00')];
+    expect(listItems('today', todo).map((i) => i.kind)).toEqual(['arrival', 'health', 'lunch']);
   });
 });
 
@@ -187,7 +198,7 @@ describe('openDayStrip on a field trip day (round 20)', () => {
 describe('listItems on a field trip day (round 20)', () => {
   it('keeps the arrival: the hero names the trip, not the arrival time', () => {
     const items = [item('arrival', 'done'), item('outing', 'done'), item('home', 'done')];
-    expect(listItems('today', items).map((i) => i.kind)).toEqual(['arrival', 'outing', 'home']);
-    expect(listItems('today', [item('arrival', 'done'), item('lunch', 'done')]).map((i) => i.kind)).toEqual(['lunch']); // a club day, as before
+    expect(listItems('thatDay', items).map((i) => i.kind)).toEqual(['arrival', 'outing', 'home']);
+    expect(listItems('thatDay', [item('arrival', 'done'), item('lunch', 'done')]).map((i) => i.kind)).toEqual(['lunch']); // a club day, as before
   });
 });

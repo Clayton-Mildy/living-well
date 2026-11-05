@@ -5,7 +5,7 @@ import { describe, it, expect } from 'vitest';
 import { buildSeed, DEMO_START_MIN, DEMO_TODAY, live, type ClubState } from '../index';
 import { attId } from '../rules/attendance';
 import { menuOn } from '../rules/kitchen';
-import { familyPhotosOn } from '../rules/family';
+import { familyPhotosOn, timelineOf, tripPhotos } from '../rules/family';
 import { seedTripDay } from './r7/round16';
 
 describe('round 20 fix: the seeded past trip', () => {
@@ -24,6 +24,24 @@ describe('round 20 fix: the seeded past trip', () => {
       expect(Object.values(s.photos).some((p) => p.date === trip.date && p.activity === trip.title && p.memberIds.includes('m1'))).toBe(true);
     });
   }
+});
+
+describe('round 21: the outing step gets the trip photos', () => {
+  const s: ClubState = buildSeed(DEMO_TODAY, DEMO_START_MIN).citra;
+  const trip = s.calendarEvents['ev-outing-past'];
+  it('the trip window gives the parent the approved trip pictures, oldest first; a photo outside the window or a pending one is left out', () => {
+    const shots = tripPhotos(s, ['m1'], trip, trip.date);
+    expect(shots.length).toBeGreaterThan(0);
+    expect(shots.length).toBeLessThanOrEqual(3);
+    expect(shots.map((p) => p.id)).toEqual(expect.arrayContaining(['ptrip-seed-1', 'ptrip-seed-2']));
+    expect(shots.every((p) => p.time >= '08:30' && p.time <= '15:00' && p.visibility === 'visible' && !!p.mediaId)).toBe(true);
+    expect(tripPhotos(s, ['m1'], { from: '08:00', to: '09:00' }, trip.date)).toEqual([]);
+    const pending = structuredClone(s);
+    for (const p of Object.values(pending.photos)) if (p.date === trip.date) p.visibility = 'pending';
+    expect(tripPhotos(pending, ['m1'], trip, trip.date)).toEqual([]);
+    const item = timelineOf(s, [s.members.m1], trip.date, 24 * 60).find((i) => i.kind === 'outing');
+    expect(item).toBeTruthy();
+  });
 });
 
 describe('round 20 seed: a past trip day', () => {

@@ -333,6 +333,17 @@ export function familyPhotosOn(s: ClubState, who: string[], date: ISODate): Phot
     .filter((p) => p.date === date && ((isFamilyPhoto(p) && p.memberIds.some((id) => who.includes(id))) || isFamilyActivityPic(s, p, who)))
     .sort((a, b) => rank(a) - rank(b) || byTime(a, b));
 }
+/**
+ * KC round 21: the pictures of a field trip step: the family-visible photos of these members taken on the date between the trip's from and to (trip days have no
+ * sessions, so the time window stands in for the session link; untagged activity pictures must carry the trip's title). Same visibility as every other step (`familyPhotosOn`), real pictures only, oldest first.
+ */
+export function tripPhotos(s: ClubState, who: string[], event: Pick<CalendarEvent, 'from' | 'to'> & Partial<Pick<CalendarEvent, 'title' | 'titleId'>>, date: ISODate): Photo[] {
+  const from = event.from || s.club.settings.open;
+  const to = event.to || s.club.settings.close;
+  // a staff photo tagged to the parent counts; an activity picture (no tags) only when it is named for the trip (the day's usual session pictures are not the trip's)
+  const named = (p: Photo) => p.kind !== 'activity' || (!!p.activity && (p.activity === event.title || p.activity === event.titleId));
+  return familyPhotosOn(s, who, date).filter((p) => hasPicture(p) && named(p) && p.time >= from && p.time <= to).sort(byTime);
+}
 const pickRank = (p: Photo) => (p.mediaId && p.media === 'photo' ? 100 : 0) + (p.kind === 'solo' ? 30 : p.kind === 'group' ? 20 : 10);
 /**
  * The best picture of a day for the family: a real image over a placeholder, the member's own photo over a group photo over an activity picture,

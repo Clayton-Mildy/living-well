@@ -58,7 +58,7 @@ const click = async (el: Element | null | undefined) => { await act(async () => 
 
 describe('family Today', () => {
   it('today, one parent: six days ending today, her card, what is next, and the newest note from the team', async () => {
-    open('f1');
+    open('f1', 'en', 13 * 60);
     await show(<FamilyToday />, '/today?member=m1');
     const strip = q('[data-testid="day-strip"]')!;
     const days = Array.from(strip.querySelectorAll('[data-date]')).map((x) => x.getAttribute('data-date'));
@@ -71,7 +71,13 @@ describe('family Today', () => {
     expect(hero.textContent).toContain('Oma Lina isn’t at the club');
     expect(hero.textContent).not.toMatch(/Usually arrives/); // KC round 8b: no "usually arrives around" on Today (the profile keeps the field)
     expect(q('[data-testid="all-parents"]')?.getAttribute('aria-label')).toBe('Both parents'); // she is focused: one tap back to both (KC round 9: the switch)
-    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('next');
+    // round 21: she has not come, so the club's whole day under "At the club today", the step the clock is in marked now, the earlier ones passed
+    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('wasOn');
+    expect(q('[data-testid="timeline"]')?.textContent).toContain('At the club today');
+    const club = qa('[data-testid="timeline"] [data-tl]').map((x) => x.getAttribute('data-state'));
+    expect(club).toContain('now');
+    expect(club[0]).toBe('done');
+    expect(club[club.length - 1]).toBe('up');
     // the daily log: she has not come today, so the newest note the team wrote stands in, labelled with its day, inside the one "Daily log" section
     expect(q('[data-testid="daily-log"] [data-testid="team-note"] [data-testid="team-log"]')).toBeTruthy();
     expect(q('[data-testid="team-note"]')?.getAttribute('data-own')).toBe('false');
@@ -190,7 +196,7 @@ describe('family Today', () => {
     expect(q('[data-testid="daily-log"]')).toBeNull(); // a day she did not come has no log
   });
 
-  it('round 15: the day ahead stays on the light track; today before the afternoon lists only what is not over, none of it passed', async () => {
+  it('round 15: the day ahead stays on the light track; today with nobody in lists the club\'s whole day: the steps over passed, the rest on the light track', async () => {
     open('f1');
     await show(<FamilyToday />, '/today?member=m1&date=2026-10-22'); // tomorrow
     expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('plan');
@@ -202,7 +208,9 @@ describe('family Today', () => {
     await show(<FamilyToday />, '/today?member=m1');
     const rows = qa('[data-tl]');
     expect(rows.length).toBeGreaterThan(0);
-    expect(rows.every((x) => x.getAttribute('data-state') === 'up')).toBe(true);
+    const st = rows.map((x) => x.getAttribute('data-state'));
+    expect(st[0]).toBe('done');
+    expect(st).toContain('up');
   });
 
   it('round 15: tomorrow\'s lunch row shows the dish photo; a lunch photo still waiting for approval does not replace it, an approved one does', async () => {
@@ -299,9 +307,35 @@ describe('family Today', () => {
     expect(states[0]).toBe('done');
     expect(states).toContain('now');
     expect(states).toContain('up');
-    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('next');
-    expect(q('[data-testid="timeline"] [data-state="now"]')).toBeTruthy();
-    expect(Array.from(document.querySelectorAll('[data-tl]')).some((x) => x.getAttribute('data-state') === 'done')).toBe(false); // what is over is not listed under Next
+    // round 21: the whole day under "Today": the arrival and the done steps (passed), the step now, the later ones, in time order
+    expect(q('[data-testid="timeline"]')?.getAttribute('data-kind')).toBe('today');
+    const rows = qa('[data-testid="timeline"] [data-tl]');
+    expect(rows[0].getAttribute('data-tl')).toBe('arrival');
+    expect(rows[0].textContent).toContain('09:48');
+    expect(rows[0].getAttribute('data-state')).toBe('done');
+    const sts = rows.map((x) => x.getAttribute('data-state'));
+    expect(sts.indexOf('now')).toBeGreaterThan(sts.indexOf('done'));
+    expect(sts.lastIndexOf('up')).toBeGreaterThan(sts.indexOf('now'));
+    expect(qa('[data-testid="timeline"] [data-state="now"]')).toHaveLength(1);
+    const times = rows.map((x) => (x.textContent || '').match(/\d\d:\d\d/)?.[0] || '');
+    expect(times.filter(Boolean)).toEqual([...times.filter(Boolean)].sort());
+    expect(q('[data-testid="timeline"]')?.textContent).toContain('Today');
+  });
+
+  it('round 21: a tap on the parent switch only switches the parent: it never reaches the picture behind', async () => {
+    open('f1');
+    await show(<FamilyToday />, '/today?member=m1');
+    let seen = 0;
+    const spy = () => { seen += 1; };
+    document.body.addEventListener('click', spy);
+    document.body.addEventListener('pointerdown', spy);
+    try {
+      await click(q('[data-testid="parent-switch"] [data-member="m46"]'));
+      await click(q('[data-testid="parent-switch"]'));
+    } finally { document.body.removeEventListener('click', spy); document.body.removeEventListener('pointerdown', spy); }
+    expect(seen).toBe(0); // stopped inside the hero's top bar
+    expect(q('[data-testid="photo-viewer"]')).toBeNull();
+    expect(q('[data-testid="story-hero"]')?.getAttribute('data-member')).toBe('m46');
   });
 
   it('both parents on a day both came: the daily log names each parent, one card each', async () => {

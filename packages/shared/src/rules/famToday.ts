@@ -37,23 +37,37 @@ export function railFill(states: TlState[]): number {
 
 export type ListKind = 'next' | 'today' | 'thatDay' | 'wasOn' | 'plan';
 /**
- * What the day's list is called: "Next" while something is still to come today, "Today" once a visit is over, "That day" for an earlier day the member came,
- * "What was on" for a day they did not come.
+ * What the day's list is called. KC round 21: today is the whole day ("Today", done steps, the step now, later steps) for a parent who came; for a parent not at
+ * the club today it is the club's day ("At the club today", `wasOn`); "That day" for an earlier day the member came, "What was on" for a day they did not.
+ * ('next' is no longer produced: the list does not drop what is done.)
  */
-export function listKind(isToday: boolean, visited: boolean, items: Pick<TlItem, 'state'>[], future = false): ListKind {
+export function listKind(isToday: boolean, visited: boolean, _items: Pick<TlItem, 'state'>[], future = false): ListKind {
   if (future) return 'plan'; // KC round 9: the day ahead — the plan
-  if (isToday && items.some((i) => i.state !== 'done')) return 'next';
   if (!visited) return 'wasOn';
   return isToday ? 'today' : 'thatDay';
 }
 
+/** Stable sort by time; a step without a time yet (the health check still to come) stays right after the one before it. */
+function byTime(items: TlItem[]): TlItem[] {
+  let last = '';
+  const keyed = items.map((it, i) => ({ it, i, k: (last = it.time || last) }));
+  return keyed.sort((a, b) => (a.k < b.k ? -1 : a.k > b.k ? 1 : a.i - b.i)).map((x) => x.it);
+}
+/** The club's own day for a parent who is not at the club: the step the clock is in reads 'now' (a member's timeline keeps every step 'up' until they are in). */
+function clubNow(items: TlItem[], nowMin: number): TlItem[] {
+  return items.map((i) => (i.state === 'up' && 'start' in i && i.start <= nowMin && nowMin < i.end ? { ...i, state: 'now' as const } : i));
+}
+
 /**
- * The steps the list shows: what is still to come under "Next", else the whole day without the arrival (the hero already says when).
- * Round 20: on a field trip day the hero names the trip, so the arrival stays in the list.
+ * The steps the list shows, all in time order. Today the whole day stays (done steps, the one now, later ones, the arrival included); an earlier day drops the
+ * arrival (the hero already says when). Round 20: on a field trip day the hero names the trip, so the arrival stays in the list.
+ * `nowMin` (today, parent not at the club): marks the club's step now.
  */
-export function listItems(kind: ListKind, items: TlItem[]): TlItem[] {
-  if (kind === 'next') return items.filter((i) => i.state !== 'done');
-  return items.some((i) => i.kind === 'outing') ? items : items.filter((i) => i.kind !== 'arrival');
+export function listItems(kind: ListKind, items: TlItem[], nowMin?: number): TlItem[] {
+  const sorted = byTime(items);
+  if (kind === 'today' || kind === 'next') return sorted;
+  const shown = kind === 'wasOn' && nowMin !== undefined ? clubNow(sorted, nowMin) : sorted;
+  return shown.some((i) => i.kind === 'outing') ? shown : shown.filter((i) => i.kind !== 'arrival');
 }
 
 // ---------- the daily log on Today (round 8b; round 8d: every round, in one order) ----------

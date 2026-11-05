@@ -1,4 +1,4 @@
-// The day's list (round 8, as a timeline in round 8b): "Next" today (what is still to come), "That day" on an earlier day the parent came, "What was on" on a day
+// The day's list (round 8, as a timeline in round 8b): "Today" (round 21: the whole day: done steps bronze, the step now ink with NOW, later steps grey), "That day" on an earlier day the parent came, "What was on" on a day
 // they did not. A vertical rail runs down the left with a dot per step (the shared RailDot: passed steps and their line bronze, the step now ink with a half line,
 // later steps on a grey track); to the right of each dot sit the time, the title with its details and a "View image" pill that opens that step's pictures. Our
 // richer details stay: the lunch dishes and the allergy line, the guest host, joined in / took a rest, how much was eaten, the health reading. Members drop in,
@@ -8,7 +8,7 @@
 import { useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { FACE_KEY, addDays, firstOfRole, lunchPictureFor, lunchSafety, displayName, staffCall, visibleTeaPhotos, type ISODate, type Member, type Photo, type Reading } from '@cp/shared';
-import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, storyNowMin, type DayStory, type StorySession, type TlItem } from '@cp/shared/rules/family';
+import { activityLabel, dayStateOf, dishNamesOf, eventTitle, roomLabel, servedLunch, staffFirst, staffIdOf, timelineOf, tripPhotos, storyNowMin, type DayStory, type StorySession, type TlItem } from '@cp/shared/rules/family';
 import { listItems, listKind } from '@cp/shared/rules/famToday';
 import { Avatar, DishThumb, Icon, PhotoImg, RailDot } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
@@ -61,7 +61,7 @@ function Guest({ g }: { g: NonNullable<StorySession['guest']> }) {
   );
 }
 
-interface Row { time: string; title: string; detail?: ReactNode; extra?: ReactNode; photos?: Photo[]; kind?: 'session' | 'lunch' | 'tea'; alt?: (p: Photo) => string }
+interface Row { time: string; title: string; detail?: ReactNode; extra?: ReactNode; photos?: Photo[]; kind?: 'session' | 'outing' | 'lunch' | 'tea'; alt?: (p: Photo) => string }
 
 export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeedback }: Props) {
   const { s, t, fmt, now, pron } = useFamilyCtx();
@@ -79,7 +79,7 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
   const all = stories.length === 1 ? stories[0].items : timelineOf(s, members, date, nowMin);
   const ahead = date > today; // KC round 9: the day ahead — its plan
   const kind = listKind(isToday, visited, all, ahead);
-  const items = listItems(kind, all);
+  const items = listItems(kind, all, isToday ? nowMin : undefined);
   if (!items.length) return null;
   const single = members.length === 1 ? members[0] : null;
   const nurse = firstOfRole(s, 'nurse');
@@ -132,8 +132,12 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
           ),
         };
       }
-      case 'outing':
-        return { time: it.time, title: t('ftoday.tTrip', { t: eventTitle(it.event, fmt.lang) }), detail: `${it.event.from || ''}–${it.event.to || ''}` };
+      case 'outing': {
+        // KC round 21: the trip's pictures (approved, family-visible, taken inside the trip's hours) show on its step like a session's
+        const title = t('ftoday.tTrip', { t: eventTitle(it.event, fmt.lang) });
+        const shots = tripPhotos(s, members.map((m) => m.id), it.event, date);
+        return { time: it.time, title, detail: `${it.event.from || ''}–${it.event.to || ''}`, kind: 'outing', photos: [...shots].reverse(), alt: (p) => t('family.photoAria', { a: title, t: p.time }) };
+      }
       case 'lunch': {
         // round 14: once a parent has come, the dishes, the lunch pictures and how much was eaten are on the Lunch card (LunchCard.tsx) and the row keeps the time, the
         // allergy line and the feedback line; before that (the day ahead, a day nobody came) the card is not shown, so the row still tells the menu
@@ -205,7 +209,7 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
           // round 15: what is over is drawn passed (the brown line) whether or not the member joined or came; the day ahead is on a light track (nothing done yet).
           // Today follows the item's own state, which is read at the clock (timelineOf: a session is 'done' once it has ended).
           const st = ahead ? 'up' : date < today ? 'done' : it.state;
-          const isNow = kind === 'next' && it.state === 'now';
+          const isNow = isToday && !ahead && it.state === 'now';
           const n = v.photos?.length ?? 0;
           const last = i === items.length - 1;
           return (

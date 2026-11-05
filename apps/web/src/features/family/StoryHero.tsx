@@ -163,6 +163,7 @@ function LivePill() {
   return <span data-testid="hero-pill" style={FROST}><span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: F.live, animation: 'cpPulse 2s ease-in-out infinite' }} />{t('shell.live')}</span>;
 }
 
+const stopTap = (e: { stopPropagation: () => void }) => e.stopPropagation();
 /**
  * The full-bleed picture with its scrim and the two layers on top: `top` (the date chip, the bell) and the foot (`children`).
  * It sticks to the top of the scroller, so the white panel that follows slides up over it. A tap on the picture opens it (`onOpen`).
@@ -233,7 +234,9 @@ function Frame({ cover, scrim, top, children, attrs, onOpen, onOpenPhoto, grow }
         </button>
       ) : null}
       {onOpen || canGrow ? <button type="button" onClick={canGrow ? () => setBig((x) => !x) : onOpen} aria-label={canGrow ? t(big ? 'ftoday.heroFold' : 'ftoday.heroOpen') : t('family.storyCoverAria')} aria-expanded={canGrow ? big : undefined} data-testid="hero-open" style={{ position: 'absolute', inset: 0, width: '100%', border: 'none', padding: 0, background: 'transparent', cursor: 'pointer' }} /> : null}
-      <div style={{ position: 'relative', zIndex: 3, padding: `${isPhone ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : wide ? '18px' : '16px'} ${wide ? 18 : 14}px 0`, pointerEvents: 'none' }}>{top}</div>
+      <div style={{ position: 'relative', zIndex: 3, padding: `${isPhone ? 'calc(env(safe-area-inset-top, 0px) + 12px)' : wide ? '18px' : '16px'} ${wide ? 18 : 14}px 0`, pointerEvents: 'none' }}
+        // KC round 21: a tap on the controls (parent switch, day, Today, bell) only does its own job; it never reaches the picture behind (open / grow / swipe)
+        data-testid="hero-top" onClick={stopTap} onPointerDown={stopTap} onPointerUp={stopTap} onMouseDown={stopTap} onTouchStart={stopTap} onTouchEnd={stopTap}>{top}</div>
       <div style={{ position: 'relative', padding: wide ? '24px 26px 26px' : `24px 20px ${PANEL_OVERLAP + 18}px`, display: 'flex', flexDirection: 'column', gap: wide ? 14 : 12, pointerEvents: 'none', opacity: big ? 0 : 1, visibility: big ? 'hidden' : 'visible', transition: big ? 'opacity .18s, visibility 0s .18s' : 'opacity .25s .12s' }}>{children}</div>
     </section>
   );
