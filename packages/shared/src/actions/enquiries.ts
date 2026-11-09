@@ -109,7 +109,7 @@ function parseSourceOther(v: unknown): string {
 interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next']; /** round 21 */ address?: string; location?: GeoPoint }
 interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] | null; /** round 21: '' clears */ address?: string; /** round 21: null clears */ location?: GeoPoint | null }
 /** `formMediaId` and `formFileName`: the signed paper registration form, uploaded first (POST /api/media). */
-export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string; /** round 15: the family member present signed the form (uploaded first) */ signatureMediaId?: string; /** the monthly pick-up chosen at registration */ pickup?: PickupIn; /** round 21: the home pin set at joining (else the lead's) */ location?: GeoPoint }
+export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string; /** round 15: the family member present signed the form (uploaded first) */ signatureMediaId?: string; /** the monthly pick-up chosen at registration */ pickup?: PickupIn; /** round 21: the home pin set at joining (else the lead's) */ location?: GeoPoint; /** round 21: takes part in the monthly field trip */ fieldTrips?: boolean }
 
 /** After a lead becomes a member (immediately for management, on approval for lobby): welcome message, visits closed. Members come on any open day, so nothing is booked. */
 function finishJoin(d: Draft<ClubState>, memberId: string, input: ConvertIn, ctx: Ctx) {
@@ -351,6 +351,7 @@ export const enquiriesActions = [
         ...(signatureMediaId ? { signatureMediaId } : {}),
         ...(pickup ? { pickup } : {}),
         ...(o.location !== undefined && o.location !== null ? { location: geoIn(o.location) } : {}),
+        ...(o.fieldTrips === true ? { fieldTrips: true } : {}),
       };
     },
     run(d, i, ctx) {
@@ -377,6 +378,7 @@ export const enquiriesActions = [
       const pk = pickupOfRegistration(i.pickup);
       if (pk && !pk.price && !d.members[memberId].location) ctx.fail('members.err.pickupNeedsLocation'); // round 21: priced by distance (the lead's pin is carried over first, Task 7)
       if (pk) d.members[memberId].pickup = pk;
+      if (i.fieldTrips) d.members[memberId].fieldTrips = { on: true }; // round 21
       if (!existing) d.familyContacts[contactId] = contactFromLead({ id: contactId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor, activated: !gate });
       const link = linkFromLead({ contactId, memberId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor });
       d.familyLinks[link.id] = link;

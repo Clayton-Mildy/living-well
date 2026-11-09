@@ -231,8 +231,8 @@ describe('round 16: pick-up and field trip fees', () => {
     useReplica.setState({ act: fn as never });
     await show(<Plans />, 390);
     expect(document.querySelector('input[aria-label="Pick-up price in rupiah"]')).toBeNull();
-    expect(priceInput('Field trip').value).toBe('250.000');
-    await type(priceInput('Field trip'), '260.000');
+    expect(priceInput('Field trips').value).toBe('250.000');
+    await type(priceInput('Field trips'), '260.000');
     const save = Array.from(document.querySelectorAll('button')).find((b) => /Save changes$/.test(b.textContent || ''))!;
     await act(async () => { save.click(); });
     expect(fn).toHaveBeenCalledWith('prices.set', expect.objectContaining({ fieldTrip: 260_000 }));

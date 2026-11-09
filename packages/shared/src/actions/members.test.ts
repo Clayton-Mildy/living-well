@@ -712,7 +712,7 @@ describe('list rules: search, filters, status', () => {
   it('six filters with counts; pending members are listed; ended ones only under Ended', () => {
     const c = seed();
     const rows = rows2(c.citra, T);
-    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, pickup: 1, ended: 0, split: { active: { flex: 2, gold: 3 }, in: { flex: 1, gold: 2 } } }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
+    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, pickup: 1, trips: 0, ended: 0, split: { active: { flex: 2, gold: 3 }, in: { flex: 1, gold: 2 } } }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
     const r = run(c.citra, 'members.create', newMember(), who(c, 's1'));
     const rows2b = rows2(r.state, T);
     expect(rows2b.find((x) => x.m.id === 'm47')?.st.key).toBe('pending');
@@ -868,6 +868,20 @@ describe('round 16: members.setPickup', () => {
     expect(run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's9')).state.members.m1.pickup).toEqual({ on: true });
     const r = run(c.citra, 'members.setPickup', { memberId: 'm1', on: true, price: 450_000 }, who(c, 's9'));
     expect(run(r.state, 'members.setPickup', { memberId: 'm1', on: true, price: null }, who(c, 's9')).state.members.m1.pickup).toEqual({ on: true });
+  });
+});
+
+describe('round 21: the Field trips switch', () => {
+  it('finance or management switch it on and off; the front desk cannot; registration can set it; the filter counts it', () => {
+    const c = seed();
+    const r = run(c.citra, 'members.setFieldTrips', { memberId: 'm1', on: true }, who(c, 's10'));
+    expect(r.state.members.m1.fieldTrips).toEqual({ on: true });
+    expect(filterCounts(rows2(r.state, T)).trips).toBe(1);
+    expect(() => run(r.state, 'members.setFieldTrips', { memberId: 'm1', on: true }, who(c, 's9'))).toThrow('err.noChanges');
+    expect(run(r.state, 'members.setFieldTrips', { memberId: 'm1', on: false }, who(c, 's9')).state.members.m1.fieldTrips).toEqual({ on: false });
+    expect(() => run(c.citra, 'members.setFieldTrips', { memberId: 'm1', on: true }, who(c, 's1'))).toThrow('err.forbidden');
+    const made = run(c.citra, 'members.create', newMember({ fieldTrips: true }), who(c, 's9'));
+    expect(made.state.members[made.result.memberId as string].fieldTrips).toEqual({ on: true });
   });
 });
 

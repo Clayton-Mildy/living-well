@@ -39,8 +39,6 @@ export interface FamRow {
   memberId?: string;
   /** round 12, birthday: the age the parent turns (memberId says who) */
   years?: number;
-  /** round 17, outing: the field trip fee each member who goes pays (none when the outing is free) */
-  fee?: number;
   /** round 17, celebration: the club has not said yes yet (the family still sees what it will cost) */
   requested?: boolean;
   /** venue / outing / celebration: the end time when there is one */
@@ -127,8 +125,7 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
     const used = new Set<string>();
     for (const it of info.items) {
       if (it.kind === 'outing') {
-        const fee = it.eventId ? s.calendarEvents[it.eventId]?.fee : undefined;
-        rows.push({ key: it.key, kind: 'outing', time: it.time ?? open, to: it.to ?? null, passed: false, title: it.title, titleId: it.titleId, ...(fee ? { fee } : {}), took: [], photos: [] });
+        rows.push({ key: it.key, kind: 'outing', time: it.time ?? open, to: it.to ?? null, passed: false, title: it.title, titleId: it.titleId, took: [], photos: [] }); // round 21: no per-trip fee
       } else if (it.kind === 'venue') {
         rows.push({ key: it.key, kind: 'venue', time: it.time ?? open, to: it.to ?? null, passed: false, roomId: it.roomId, took: [], photos: [] });
       } else if (it.kind === 'celebration') {

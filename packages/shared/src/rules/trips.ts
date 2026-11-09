@@ -1,7 +1,7 @@
 // Round 20: field trip days. The trip on a day is its first outing (by start time, then id); check-in puts a member on it (actions/schedule.ts setTripMember).
 // A trip counts as a visit day (R3): few visits and the Month report read `visitDaysOf`. Flex quota and extra-day billing keep counting check-ins only
 // (rules/attendance.ts visitsInMonth), so a trip-only tick never bills an extra day.
-import type { CalendarEvent, ClubState, ISODate } from '../types';
+import type { CalendarEvent, ClubState, ISODate, YM } from '../types';
 import { addDays, live } from '../util';
 import { eventsOn } from './core';
 
@@ -39,3 +39,7 @@ export const visitDaysByMember = (s: ClubState, from: ISODate, to: ISODate): Map
 
 /** R3: a member's visit days from `from` to `to`: the days with a check-in plus the trip days where they are in Who went, sorted and unique. */
 export const visitDaysOf = (s: ClubState, memberId: string, from: ISODate, to: ISODate): ISODate[] => collectVisitDays(s, from, to, memberId).get(memberId) ?? [];
+
+/** Round 21: the member is in Who went of a (not cancelled) outing that has a day in that month (a trip across two months counts for both). */
+export const wentInMonth = (s: ClubState, memberId: string, month: YM): boolean =>
+  live(s.calendarEvents).some((e) => e.kind === 'outing' && !e.cancelledAt && !!e.wentIds?.includes(memberId) && e.date.slice(0, 7) <= month && (e.endDate || e.date).slice(0, 7) >= month);

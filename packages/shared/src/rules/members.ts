@@ -4,11 +4,11 @@
 import { isOwnerSection } from '../actions/ownerGate';
 import { isEmail } from './emails';
 import type { GeoPoint, ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
-import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
+import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, uniq, ym } from '../util';
 import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
 import { isPlanId, planDefs } from './plans';
-import { type PickupIn, invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
+import { type PickupIn, tripCreditLine, invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
 import { onLeaveOn } from './leave';
 import { latestBp } from './health';
 import { checkOnList, type CheckOnRow } from './checkOn';
@@ -154,8 +154,8 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 }
 
 // ---------- list rows, filters, search ----------
-export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'pickup' | 'ended';
-export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'pickup', 'in', 'att', 'checkOn', 'ended']; // round 16: Flex and Gold beside Active
+export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'pickup' | 'trips' | 'ended';
+export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'pickup', 'trips', 'in', 'att', 'checkOn', 'ended']; // round 21: Field trips after Pick-up // round 16: Flex and Gold beside Active
 /** The plans a member can be put on, as pickers list them: Flex, Gold, then the catalogue's active plans (a retired plan leaves the pickers; its members keep it). Name them with `planLabel`. */
 export const activePlans = (s: ClubState): PlanDef[] => planDefs(s).filter((p) => p.active);
 export interface MemberRow {
@@ -209,6 +209,7 @@ export const FILTERS: Record<MemberFilter, (r: MemberRow) => boolean> = {
   flex: (r) => !r.ended && r.plan === 'flex',
   gold: (r) => !r.ended && r.plan === 'gold',
   pickup: (r) => !r.ended && !r.pending && !!r.m.pickup?.on,
+  trips: (r) => !r.ended && !r.pending && !!r.m.fieldTrips?.on, // round 21
   ended: (r) => r.ended,
 };
 export type MemberSort = 'name' | 'startNew' | 'startOld' | 'endSoon';
@@ -311,6 +312,9 @@ export function finalInvoiceLines(s: ClubState, m: Member, lastDay: ISODate, tod
     const unit = priceOn(s, issueDateOf(s, p)).extra;
     lines.push({ id: `extra-${p}`, kind: 'extraDay', label: 'inv.line.extra', params: { month: p, n: extra.length }, qty: extra.length, unit, amount: extra.length * unit, refMonth: p, dates: extra });
   }
+  // round 21: the field trip fees paid for months up to the last one that the member did not use come back
+  const paidMonths = uniq(live(s.invoices).filter((i) => i.memberId === m.id && !i.voided).flatMap((i) => i.lines).filter((l) => l.id.startsWith('trip-') && l.refMonth && l.refMonth <= ym(lastDay)).map((l) => l.refMonth!)).sort();
+  for (const q of paidMonths) { const c = tripCreditLine(s, m.id, q); if (c) lines.push(c); }
   return lines;
 }
 export function finalInvoiceNumber(s: ClubState, memberId: string, today: ISODate) {
@@ -389,6 +393,8 @@ export interface NewMemberInput {
   consent: { data: boolean; face: boolean };
   /** the monthly pick-up service chosen at registration */
   pickup?: PickupIn;
+  /** round 21: takes part in the monthly field trip (its fee is on every monthly invoice) */
+  fieldTrips?: boolean;
   note?: string;
 }
 export const ageRange = { min: 18, max: 120 };

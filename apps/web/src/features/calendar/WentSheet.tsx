@@ -25,7 +25,6 @@ function Body({ eventId, onClose }: { eventId: string; onClose: () => void }) {
   };
   return (
     <Sheet open onClose={onClose} title={t('cal.whoWentTitle', { title: ev.title })} footer={<Button full disabled={busy} onClick={() => void save()}>{t('common.save')}</Button>}>
-      {ev.fee ? <span style={{ fontSize: 14, color: '#6B6259' }}>{t('cal.fee')} · {rp(ev.fee)}</span> : null}
       <MemberPicker members={approvedMembers(s)} value={ids} onChange={setIds} selectedLabel={t('cal.went')} emptyLabel={t('cal.wentNone')} />
     </Sheet>
   );

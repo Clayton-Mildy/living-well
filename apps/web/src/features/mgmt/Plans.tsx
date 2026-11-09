@@ -249,7 +249,7 @@ export function Plans() {
           priceBlock('extra', t('mgmt.plExtra'), t('mgmt.perDay'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')], [t('mgmt.plCounted'), t('mgmt.plCheckIns')]]),
           priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), tn(t, 'mgmt.plLeaveAskV', noticeDays(s, 'leave'))]]),
           priceBlock('dementia', t('mgmt.plDementia'), t('mgmt.perMonth'), []),
-          priceBlock('fieldTrip', t('mgmt.plFieldTrip'), t('mgmt.perTrip'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')]]),
+          priceBlock('fieldTrip', t('mgmt.plFieldTrip'), t('mgmt.perMonth'), [[t('mgmt.plBilled'), t('mgmt.plTripsBilled')]]), // round 21: monthly, for members switched on
         ])}
         {/* KC round 6: the brochure's other fees */}
         {section(t('mgmt.plSecOnce'), [

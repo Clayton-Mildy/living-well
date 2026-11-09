@@ -340,6 +340,8 @@ export interface Member extends Row {
   registration?: MemberRegistration;
   /** KC round 16: the club picks the member up; `price` is their own monthly fee (none = the price list's default) */
   pickup?: { on: boolean; price?: number };
+  /** Round 21: the member takes part in the monthly field trip: its fee is on every monthly invoice; a paid month they miss is credited next invoice */
+  fieldTrips?: { on: boolean };
 }
 
 export interface MemberNote extends Row {
@@ -673,9 +675,7 @@ export interface CalendarEvent extends Row {
   from?: HM;
   to?: HM;
   cancelledAt?: DT;
-  /** KC round 16, an outing: the field trip fee each member who went pays (0 or none = free) */
-  fee?: number;
-  /** KC round 16, an outing: the members ticked as having gone (each is charged `fee` on the next invoice) */
+  /** KC round 16, an outing: the members ticked as having gone (round 21: no charge per trip; a paid month with no trip gone on is credited) */
   wentIds?: string[];
   /** round 21, an outing: the venue (a Contacts entry of kind 'venue') */
   venueId?: string;
@@ -886,7 +886,7 @@ export interface VendorInvoice extends Row {
 
 export interface InvoiceLine {
   id: string;
-  kind: 'plan' | 'extraDay' | 'adjustment' | 'credit' | 'venue' | 'dementia' | 'celebration' | 'pickup';
+  kind: 'plan' | 'extraDay' | 'adjustment' | 'credit' | 'venue' | 'dementia' | 'celebration' | 'pickup' | 'fieldTrip';
   label: string; // i18n key
   params?: Record<string, string | number>;
   qty: number;

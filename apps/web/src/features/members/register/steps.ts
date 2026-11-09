@@ -25,6 +25,7 @@ export interface RegState {
   health: HealthDraft & AllergyDraft; carer: CarerDraft; meds: MedRow[]; care: string;
   plan: Plan | ''; start: string;
   /** the monthly pick-up service: on, and its price as typed (empty = the club's price) */ pickup: boolean; pickupPrice: string;
+  /** round 21: takes part in the monthly field trip */ fieldTrips: boolean;
   /** the signed paper form (already uploaded) */ form: PaperFile | null;
   /** photos of the ID cards (already uploaded) */ ktp: KtpUploads;
   docs: DocType[];
@@ -36,7 +37,7 @@ export const blankState = (): RegState => ({
   title: 'Oma', name: '', gender: 'f', dob: '', address: '', usual: '', photo: '', spouseId: '',
   contactMode: 'new', existingId: '', contact: '', rel: 'daughter', phone: '', email: '', primary: true,
   health: { conditions: [], diabetic: false, mobility: 'none', diet: [], food: [], foodOther: '', drug: [], drugOther: '' }, carer: { nanny: false, nannyName: '', nannyNik: '' }, meds: [], care: '',
-  plan: '', start: '', pickup: false, pickupPrice: '', form: null, ktp: {}, docs: [], consentData: false, consentFace: true, note: '', reg: regDraftOf(),
+  plan: '', start: '', pickup: false, pickupPrice: '', fieldTrips: false, form: null, ktp: {}, docs: [], consentData: false, consentFace: true, note: '', reg: regDraftOf(),
 });
 
 /** The health answers the family gave through the link: all of them once sent, and a half-filled draft's only when it got as far as answering something. */

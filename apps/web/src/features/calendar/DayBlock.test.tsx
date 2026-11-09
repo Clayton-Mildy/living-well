@@ -147,7 +147,7 @@ describe('DayBlock: the lunch picture (round 15)', () => {
 describe('round 16: who went on a field trip', () => {
   it('a past outing shows "Who went · N" for the activity team; a future one does not', async () => {
     const s = structuredClone(buildSeed().citra);
-    s.calendarEvents.trip = { id: 'trip', clubId: 'citra', createdAt: '2026-10-01T09:00', createdBy: 'staff:s9', date: '2026-10-21', kind: 'outing', title: 'Ancol aquarium', fee: 250_000, wentIds: ['m1', 'm2'] };
+    s.calendarEvents.trip = { id: 'trip', clubId: 'citra', createdAt: '2026-10-01T09:00', createdBy: 'staff:s9', date: '2026-10-21', kind: 'outing', title: 'Ancol aquarium', wentIds: ['m1', 'm2'] };
     openClub(s, 'activity');
     const onWent = vi.fn();
     host = document.createElement('div');

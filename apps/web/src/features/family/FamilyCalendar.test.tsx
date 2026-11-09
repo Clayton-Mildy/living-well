@@ -256,14 +256,14 @@ describe('round 17: a requested celebration shows with its charges and a waiting
 });
 
 describe('final review minor 1: a field trip row says "Field trip" once', () => {
-  it('the Bogor row reads "Field trip · 08:30–15:00 · Rp …" when it has a fee', async () => {
-    const seed = buildSeed().citra;
-    const ev = seed.calendarEvents['ev-outing-1029'];
-    const base = produce(seed, (d) => { d.calendarEvents[ev.id].fee = 250_000; });
+  it('the Bogor row reads "Field trip · 08:30–15:00" (round 21: no fee per trip, it is paid monthly)', async () => {
+    const base = buildSeed().citra;
+    const ev = base.calendarEvents['ev-outing-1029'];
     open('en', base);
     await show(<FamilyCalendar />, `/calendar?date=${ev.date}`);
     const row = Array.from(document.querySelectorAll('[data-testid="cal-row"][data-kind="outing"]')).map((r) => r.textContent ?? '').find((x) => x.includes('Bogor'));
-    expect(row).toContain('Field trip · 08:30–15:00 · Rp 250.000');
+    expect(row).toContain('Field trip · 08:30–15:00');
+    expect(row).not.toContain('Rp');
     expect(row!.split('Field trip').length - 1).toBe(1);
   });
 });

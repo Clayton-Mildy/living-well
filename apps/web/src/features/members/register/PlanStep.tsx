@@ -33,6 +33,7 @@ export function PlanStep({ p }: { p: StepProps }) {
         <div data-testid="join-reg-fee" style={{ fontSize: 14, lineHeight: '21px', padding: '10px 14px', borderRadius: 14, background: p.native ? '#FFFFFF' : 'var(--fill, #F4F4F5)' }}>{t('enq.jn_regFee', { price: rp(feeOf(price, 'registration')) })}</div>
         <Toggle on={st.pickup} onClick={togglePickup} label={t('profile.pickup')} />
         {st.pickup ? <TextField name="pickupPrice" label={t('profile.pickupPrice')} value={st.pickupPrice} onChange={(v) => set({ pickupPrice: v.replace(/\D/g, '') ? fmtN(v) : '' })} inputMode="numeric" error={p.err('pickup')} hint={t('profile.pickupHintReg')} /> : null}
+        <Toggle on={st.fieldTrips} onClick={() => set({ fieldTrips: !st.fieldTrips })} label={t('profile.fieldTrips')} sub={t('profile.tripsSub', { p: rp(feeOf(priceOn(s, st.start || today), 'fieldTrip')) })} />
       </Sec>
       <Sec p={p} label={t('enq.start')}>
         <div style={row} role="radiogroup" aria-label={t('enq.start')}>

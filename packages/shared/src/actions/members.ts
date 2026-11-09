@@ -216,6 +216,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
     consent: { data: cons.data === true, face: cons.face !== false },
     ...(registration ? { registration } : {}),
     ...(pickup ? { pickup } : {}),
+    ...(o.fieldTrips === true ? { fieldTrips: true } : {}),
     ...(signature ? { signatureMediaId: signature } : {}),
     ...optionalNote(o),
   };
@@ -338,6 +339,7 @@ export const membersActions: ActionDef[] = [
       // round 21: pick-up is priced by distance, so with no price of its own it needs the home pin
       if (pk && !pk.price && !d.members[id].location) ctx.fail('members.err.pickupNeedsLocation');
       if (pk) d.members[id].pickup = pk;
+      if (input.fieldTrips) d.members[id].fieldTrips = { on: true }; // round 21
       signAtRegistration(d, id, input.signatureMediaId, ctx);
       ctx.result.memberId = id;
       ctx.result.familyId = familyId;
@@ -503,6 +505,18 @@ export const membersActions: ActionDef[] = [
       if (next.on && !next.price && !m.location) ctx.fail('members.err.pickupNeedsLocation'); // round 21: priced by distance
       m.pickup = next;
       feed(ctx, d, m.id, 'airport_shuttle', input.on ? 'pickupOn' : 'pickupOff', { by: ctx.actor });
+    },
+  }),
+  // round 21: the member takes part in the monthly field trip (its fee on every monthly invoice); finance and management, like pick-up
+  defineAction<{ memberId: string; on: boolean }>({
+    name: 'members.setFieldTrips',
+    can: (u) => hasRole(u, 'finance', 'mgmt'),
+    parse: (raw) => { const o = obj(raw); return { memberId: txt(o.memberId, 60), on: o.on === true }; },
+    run(d, input, ctx) {
+      const m = editable(d, input.memberId, ctx);
+      if (!!m.fieldTrips?.on === input.on) ctx.fail('err.noChanges');
+      m.fieldTrips = { on: input.on };
+      feed(ctx, d, m.id, 'directions_bus', input.on ? 'tripsOn' : 'tripsOff', { by: ctx.actor });
     },
   }),
 

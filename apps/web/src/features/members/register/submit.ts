@@ -36,7 +36,7 @@ export function toCreateInput(st: RegState): NewMemberFull {
     health: { ...healthOf(st), meds: st.meds.filter((x) => x.name.trim()).map((x) => ({ name: x.name.trim(), dose: x.dose.trim(), timing: x.timing })) },
     careInstructions: st.care.trim(), docs: st.docs.filter((x) => (x !== 'nannyKtp' || st.carer.nanny) && x !== 'membershipForm'),
     ...formOf(st), consent: { data: st.consentData, face: st.consentFace },
-    ...(reg ? { registration: reg } : {}), ...(note ? { note } : {}), ...pickupOf(st),
+    ...(reg ? { registration: reg } : {}), ...(note ? { note } : {}), ...pickupOf(st), ...(st.fieldTrips ? { fieldTrips: true } : {}),
   };
 }
 
@@ -46,7 +46,7 @@ export function toConvertInput(st: RegState, lead: Enquiry, plan: Plan, start: I
   return {
     enquiryId: lead.id, plan, start, ...formOf(st),
     ...(st.dob ? { dob: st.dob } : {}), ...(st.address.trim() ? { address: st.address.trim() } : {}), ...(st.location ? { location: st.location } : {}), health: healthOf(st), ...(reg ? { registration: reg } : {}),
-    nanny: carerOf(st.carer), ...(ktp ? { ktp } : {}), ...pickupOf(st),
+    nanny: carerOf(st.carer), ...(ktp ? { ktp } : {}), ...pickupOf(st), ...(st.fieldTrips ? { fieldTrips: true } : {}),
   };
 }
 

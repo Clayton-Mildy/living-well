@@ -78,6 +78,12 @@ export function PlanTab({ p }: { p: P }) {
           {finance && !m.deletedAt ? <button type="button" data-testid="pickup-edit" onClick={() => { setPickOn(!!m.pickup?.on); setPickPrice(m.pickup?.price ? fmtN(m.pickup.price) : ''); setPickOpen(true); }} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('common.edit')}</button> : null}
         </span>
       </Fact>
+      <Fact k={t('profile.fieldTrips')}>
+        <span data-testid="trips-fact" style={{ display: 'inline-flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+          <span>{m.fieldTrips?.on ? t('profile.tripsOn', { p: rp(feeOf(price, 'fieldTrip')) }) : t('profile.pickupOff')}</span>
+          {finance && !m.deletedAt ? <button type="button" data-testid="trips-edit" onClick={() => void p.act('members.setFieldTrips', { memberId: m.id, on: !m.fieldTrips?.on }, { ok: t(m.fieldTrips?.on ? 'profile.tripsOffSaved' : 'profile.tripsOnSaved') })} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline' }}>{m.fieldTrips?.on ? t('profile.tripsSwitchOff') : t('profile.tripsSwitchOn')}</button> : null}
+        </span>
+      </Fact>
       <div style={{ padding: '6px 0' }}><NextBill memberId={m.id} staff /></div>
       <Fact k={t('profile.billingContact')}>{prim ? prim.name : '—'}</Fact>
       <Fact k={t('profile.va')}>{m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')}</Fact>

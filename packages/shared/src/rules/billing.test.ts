@@ -2,6 +2,9 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, priceOn, sum, type ClubState, type PlanDef } from '../index';
 import { FEE_DEFAULTS, feeOf, nextBill, pickupPrice, runLinesFor } from './billing';
+import { finalInvoiceLines } from './members';
+import { wentInMonth } from './trips';
+import type { Invoice, InvoiceLine } from '../types';
 
 const T = '2026-10-21';
 const PERIOD = '2026-11';
@@ -185,19 +188,20 @@ describe('round 17: on your next bill', () => {
   });
   // round 20 fix (I2, KC: keep the extra day and the trip fee): Oma Lina (Flex, 10 visits) checks in on a trip day on the 21st, after October's run:
   // November's invoice carries the extra day and the trip fee, and the preview lists both
-  it('a Flex extra day on a trip day is on the next bill beside the trip fee, as on the invoice', () => {
+  it('a Flex extra day on a trip day is on the next bill (round 21: beside the monthly field trip fee), as on the invoice', () => {
     let s = bare();
+    s.members.m1.fieldTrips = { on: true };
     const as = (id: string) => getUser({ [s.clubId]: s }, id)!;
     const clk = { today: T, nowMin: 600 };
-    const ev = execute(s, 'calendarEvent.create', { date: T, kind: 'outing', title: 'Ancol aquarium', fee: 250_000, notify: false }, as('s9'), clk, 'b1');
+    const ev = execute(s, 'calendarEvent.create', { date: T, kind: 'outing', title: 'Ancol aquarium', notify: false }, as('s9'), clk, 'b1');
     s = ev.state;
     const r = execute(s, 'attendance.checkIn', { memberId: 'm1', method: 'manual' }, as('s1'), clk, 'b2');
-    expect(r.result).toMatchObject({ extra: true, tripFee: 250_000 });
+    expect(r.result).toMatchObject({ extra: true });
     const b = nextBill(r.state, 'm1', T);
     const extra = b.items.find((i) => i.id === 'extra-2026-10');
     expect(extra).toMatchObject({ label: 'inv.line.extra', params: { month: '2026-10' } });
-    expect(b.items.some((i) => i.id.startsWith('trip-'))).toBe(true);
-    const inv = runLinesFor(r.state, r.state.members.m1, PERIOD, T).filter((l) => l.kind === 'extraDay' || l.kind === 'pickup' || l.id.startsWith('charge-'));
+    expect(b.items.some((i) => i.label === 'inv.line.fieldTrips')).toBe(true);
+    const inv = runLinesFor(r.state, r.state.members.m1, PERIOD, T).filter((l) => l.kind === 'extraDay' || l.kind === 'pickup' || l.kind === 'fieldTrip' || l.id.startsWith('charge-'));
     expect(b.total).toBe(sum(inv.map((l) => l.amount)));
   });
   it('on leave in November, today 4 Nov: no pick-up, as on the invoice', () => {
@@ -206,5 +210,84 @@ describe('round 17: on your next bill', () => {
     s.members.m46.memberships.at(-1)!.leaves = [{ month: '2026-11', at: '2026-10-01T10:00', by: 'staff:s1' }];
     expect(nextBill(s, 'm46', '2026-11-04').items).toEqual([]);
     expect(runLinesFor(s, s.members.m46, '2026-11', '2026-11-04').some((l) => l.kind === 'pickup')).toBe(false);
+  });
+});
+
+describe('round 21: field trips billed monthly, a missed month credited', () => {
+  const DEC = '2026-12';
+  const decToday = '2026-12-10';
+  const tripLine = (s: ClubState, period = PERIOD, today = T) => runLinesFor(s, s.members.m1, period, today).find((l) => l.id === `trip-${period}`);
+  const credit = (s: ClubState) => runLinesFor(s, s.members.m1, DEC, decToday).find((l) => l.id === 'tripCredit-2026-11');
+  const novTrips = (s: ClubState) => Object.values(s.calendarEvents).filter((e) => e.kind === 'outing' && e.date.startsWith('2026-11'));
+  /** November's invoice for m1, as the run would have issued it (with or without the trip line). */
+  const novInvoice = (s: ClubState, lines: InvoiceLine[], voided = false): void => {
+    const inv: Invoice = { id: 'inv-nov-m1', clubId: s.clubId, createdAt: '2026-11-21T09:00', createdBy: 'system', number: 'INV-2611-M1', memberId: 'm1', payerFamilyId: 'f1', kind: 'monthly', period: PERIOD, issueDate: '2026-11-21', dueDate: '2026-11-28', lines, va: s.members.m1.billing.va, xero: 'synced', reminders: [], callNotes: [], ...(voided ? { voided: { at: '2026-11-22T09:00', by: 'staff:s10', reason: 'x' } } : {}) };
+    s.invoices[inv.id] = inv;
+  };
+  const on = () => { const s = seed(); s.members.m1.fieldTrips = { on: true }; return s; };
+  const billedNov = (went: boolean) => {
+    const s = on();
+    novInvoice(s, [tripLine(s)!]);
+    for (const e of novTrips(s)) e.wentIds = went ? ['m1'] : [];
+    return s;
+  };
+
+  it('a member switched on pays the field trip fee on the monthly invoice; off pays nothing', () => {
+    const s = on();
+    expect(tripLine(s)).toMatchObject({ kind: 'fieldTrip', label: 'inv.line.fieldTrips', params: { month: PERIOD }, qty: 1, unit: 250_000, amount: 250_000, refMonth: PERIOD });
+    s.members.m1.fieldTrips = { on: false };
+    expect(tripLine(s)).toBeUndefined();
+    delete s.members.m1.fieldTrips;
+    expect(tripLine(s)).toBeUndefined();
+  });
+  it('no field trip fee in a month of leave', () => {
+    const s = on();
+    s.members.m1.memberships.at(-1)!.leaves = [{ month: PERIOD, at: '2026-10-01T10:00', by: 'staff:s1' }];
+    expect(tripLine(s)).toBeUndefined();
+  });
+  it('on the November trip: no credit in December', () => {
+    expect(credit(billedNov(true))).toBeUndefined();
+  });
+  it('paid November but not on the trip: December has a credit of the same amount', () => {
+    expect(credit(billedNov(false))).toMatchObject({ kind: 'fieldTrip', label: 'inv.line.tripCredit', params: { month: PERIOD }, qty: 1, unit: -250_000, amount: -250_000, refMonth: PERIOD });
+  });
+  it('no trip at all in November (cancelled): credit', () => {
+    const s = billedNov(false);
+    for (const e of novTrips(s)) e.cancelledAt = '2026-11-01T09:00';
+    expect(credit(s)?.amount).toBe(-250_000);
+  });
+  it('the credit is given once', () => {
+    const s = billedNov(false);
+    const c = credit(s)!;
+    s.invoices['inv-dec-m1'] = { ...s.invoices['inv-nov-m1'], id: 'inv-dec-m1', number: 'INV-2612-M1', period: DEC, issueDate: '2026-12-21', lines: [c] };
+    expect(credit(s)).toBeUndefined();
+  });
+  it('a voided November invoice earns no credit', () => {
+    const s = on();
+    novInvoice(s, [tripLine(s)!], true);
+    for (const e of novTrips(s)) e.wentIds = [];
+    expect(credit(s)).toBeUndefined();
+  });
+  it('switched on after November\'s invoice: no November line, so no December credit', () => {
+    const s = seed();
+    novInvoice(s, []);
+    s.members.m1.fieldTrips = { on: true };
+    for (const e of novTrips(s)) e.wentIds = [];
+    expect(credit(s)).toBeUndefined();
+  });
+  it('a trip from 30 Nov to 1 Dec counts for both months', () => {
+    const s = seed();
+    s.calendarEvents.span = { id: 'span', clubId: s.clubId, createdAt: '2026-10-01T10:00', createdBy: 'staff:s9', date: '2026-11-30', endDate: '2026-12-01', kind: 'outing', title: 'Bandung overnight', wentIds: ['m1'] };
+    expect(wentInMonth(s, 'm1', '2026-11')).toBe(true);
+    expect(wentInMonth(s, 'm1', '2026-12')).toBe(true);
+    expect(wentInMonth(s, 'm2', '2026-12')).toBe(false);
+  });
+  it('a member who leaves gets the unused trip credit on the final invoice', () => {
+    const s = billedNov(false);
+    expect(finalInvoiceLines(s, s.members.m1, '2026-11-30', '2026-11-27').find((l) => l.id === 'tripCredit-2026-11')?.amount).toBe(-250_000);
+  });
+  it('the next bill shows the field trip fee', () => {
+    const s = on();
+    expect(nextBill(s, 'm1', T).items.some((i) => i.label === 'inv.line.fieldTrips')).toBe(true);
   });
 });

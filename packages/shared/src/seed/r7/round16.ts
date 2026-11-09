@@ -19,14 +19,12 @@ export function seedRound16(s: ClubState, T: ISODate): void {
     // round 17: the cake is a pending charge, billed on the next monthly invoice (the same row celebration.addCharge writes)
     s.pendingCharges['cel-cc-budi-cake'] = { id: 'cel-cc-budi-cake', clubId: party.clubId, createdAt: party.createdAt, createdBy: party.createdBy, memberId: party.memberId, amount: 350_000, label: 'inv.line.birthday', params: { item: 'Birthday cake (chocolate, no nuts)' }, source: { type: 'celebration', id: party.id } };
   }
-  for (const e of live(s.calendarEvents)) if (e.kind === 'outing') e.fee = 250_000;
   seedOwnerHoliday(s, T);
 }
 
 /**
- * Round 20 fix (I3): a field trip a few days ago, so the demo shows a trip day (family Today, the day strip, trip photos, Who went, the fee on the next bill).
- * Runs after round 17 and 18 (which drop and add visits), so "everyone checked in that day" is the final list. Each is charged on the next invoice at their
- * check-in time, the same rows checkIn writes; the charges wait for the next run like round 16's cake: nothing is moved onto an invoice already issued.
+ * Round 20 fix (I3): a field trip a few days ago, so the demo shows a trip day (family Today, the day strip, trip photos, Who went).
+ * Runs after round 17 and 18 (which drop and add visits), so "everyone checked in that day" is the final list. Round 21: no charge per trip (paid monthly).
  * Fixed values, no random draws; no visit is added.
  */
 export function seedPastTrip(s: ClubState, T: ISODate): void {
@@ -35,10 +33,6 @@ export function seedPastTrip(s: ClubState, T: ISODate): void {
   const came = live(s.attendance).filter((a) => a.date === trip.date && a.checkIn && s.members[a.memberId] && !s.members[a.memberId].deletedAt)
     .sort((a, b) => (a.checkIn!.at < b.checkIn!.at ? -1 : a.checkIn!.at > b.checkIn!.at ? 1 : a.memberId < b.memberId ? -1 : 1));
   trip.wentIds = came.map((a) => a.memberId);
-  if (trip.fee) for (const a of came) {
-    const id = `trip-${trip.id}-${a.memberId}`;
-    s.pendingCharges[id] = { id, clubId: trip.clubId, createdAt: `${trip.date}T${a.checkIn!.at}:00`, createdBy: a.checkIn!.by, memberId: a.memberId, amount: trip.fee, label: 'inv.line.fieldTrip', params: { title: trip.title, date: trip.date }, source: { type: 'event', id: trip.id } };
-  }
   seedTripDay(s, trip);
 }
 
@@ -56,7 +50,7 @@ function addPastTrip(s: ClubState, T: ISODate) {
   const date = days.find((d) => came(d, 'm1') && came(d, 'm46')) ?? days.find((d) => came(d, 'm1')) ?? days[0];
   if (!date) return undefined;
   const id = 'ev-outing-past';
-  s.calendarEvents[id] = { id, clubId: s.clubId, createdAt: `${addDays(date, -14)}T10:00`, createdBy: 'staff:s9', date, kind: 'outing', title: 'Taman Mini day trip', titleId: 'Karyawisata Taman Mini', from: '08:30', to: '15:00', fee: 250_000 };
+  s.calendarEvents[id] = { id, clubId: s.clubId, createdAt: `${addDays(date, -14)}T10:00`, createdBy: 'staff:s9', date, kind: 'outing', title: 'Taman Mini day trip', titleId: 'Karyawisata Taman Mini', from: '08:30', to: '15:00' };
   return s.calendarEvents[id];
 }
 

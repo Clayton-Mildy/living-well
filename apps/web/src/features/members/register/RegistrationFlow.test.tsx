@@ -336,6 +336,17 @@ describe('Pick-up at registration', () => {
     await settle();
     expect(h.act.mock.calls[0][1]).toMatchObject({ pickup: { on: true, price: 450_000 } });
   });
+  it('round 21: the Field trips switch is carried on Create', async () => {
+    await atPlanStep();
+    const trips = Array.from(flow().querySelectorAll<HTMLElement>('[role="switch"]')).find((b) => /^Field trips/.test(b.textContent ?? ''));
+    expect(trips).toBeTruthy();
+    await click(trips);
+    await click(Array.from(document.querySelectorAll<HTMLElement>('button')).filter((b) => textOf(b) === 'Review').pop());
+    expect(flow().querySelector('[data-review-group="plan"]')!.textContent).toMatch(/Field tripsOn/);
+    await click(button('Create member'));
+    await settle();
+    expect(h.act.mock.calls[0][1]).toMatchObject({ fieldTrips: true });
+  });
   it('a price below Rp 1.000 holds the step back; off sends no pick-up', async () => {
     await atPlanStep();
     await click(sw());

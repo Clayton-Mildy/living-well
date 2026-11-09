@@ -6,6 +6,7 @@ import { planParams, planPrice } from './plans';
 import { onLeaveIn } from './leave';
 import { addDays, addMonths, dow, live, sortBy, sum, ym } from '../util';
 import { pickupByDistance } from './geo';
+import { wentInMonth } from './trips';
 
 export type InvoiceStatus = 'void' | 'paid' | 'partial' | 'outstanding' | 'overdue';
 
@@ -160,6 +161,11 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
       // round 16: the pick-up fee, a flat monthly fee like dementia care (not in a month of leave)
       const pick = pickupPrice(s, m, issue);
       if (pick && pick.price > 0) lines.push({ id: `pickup-${period}`, kind: 'pickup', label: pick.km !== undefined ? 'inv.line.pickupKm' : 'inv.line.pickup', ...(pick.km !== undefined ? { params: { km: pick.km } } : {}), qty: 1, unit: pick.price, amount: pick.price });
+      // round 21: the monthly field trip fee, flat like pick-up, for a member switched on (not in a month of leave)
+      if (m.fieldTrips?.on) {
+        const fee = feeOf(price, 'fieldTrip');
+        lines.push({ id: `trip-${period}`, kind: 'fieldTrip', label: 'inv.line.fieldTrips', params: { month: period }, qty: 1, unit: fee, amount: fee, refMonth: period });
+      }
     }
     if (registrationDue(s, m)) {
       const fee = feeOf(price, 'registration');
@@ -171,12 +177,27 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
     const extra = extraDaysFor(s, m, prev, today);
     if (extra.length) lines.push({ id: `extra-${prev}`, kind: 'extraDay', label: 'inv.line.extra', params: { month: prev, n: extra.length }, qty: extra.length, unit: price.extra, amount: extra.length * price.extra, refMonth: prev, dates: extra });
   }
+  // round 21: last month's field trip fee back when the member was not on that month's trip
+  const tc = tripCreditLine(s, m.id, prev);
+  if (tc) lines.push(tc);
   for (const c of live(s.pendingCharges).filter((c) => c.memberId === m.id && !c.invoiceId)) {
     lines.push({ id: `charge-${c.id}`, kind: 'adjustment', label: c.label, ...(c.params ? { params: c.params } : {}), qty: 1, unit: c.amount, amount: c.amount });
   }
   const credit = accountCredit(s, m.id);
   if (credit > 0 && lines.length) lines.push({ id: 'credit', kind: 'credit', label: 'inv.line.credit', qty: 1, unit: -credit, amount: -Math.min(credit, sum(lines.map((l) => l.amount))) });
   return lines;
+}
+/**
+ * Round 21: the credit for a month's field trip fee the member paid (a non-voided `trip-<month>` line) but did not use (not in Who went of any trip that
+ * month, or no trip happened); null when nothing is owed back or it was already credited.
+ */
+export function tripCreditLine(s: ClubState, memberId: string, month: YM): InvoiceLine | null {
+  const mine = live(s.invoices).filter((i) => i.memberId === memberId && !i.voided);
+  const paid = mine.flatMap((i) => i.lines).find((l) => l.id === `trip-${month}`);
+  if (!paid || paid.amount <= 0) return null;
+  if (mine.some((i) => i.lines.some((l) => l.id === `tripCredit-${month}`))) return null;
+  if (wentInMonth(s, memberId, month)) return null;
+  return { id: `tripCredit-${month}`, kind: 'fieldTrip', label: 'inv.line.tripCredit', params: { month }, qty: 1, unit: -paid.amount, amount: -paid.amount, refMonth: month };
 }
 /**
  * Round 17: what a member will see on their next bill beyond the plan fee (a preview; the plan fee is left out because the family knows it and leave or a stop
@@ -195,6 +216,7 @@ export function nextBill(s: ClubState, memberId: string, today: ISODate): { item
   const items: NextBillItem[] = [];
   const pick = lines.find((l) => l.kind === 'pickup');
   if (pick) items.push({ id: 'pickup', label: pick.label, ...(pick.params ? { params: pick.params } : {}), amount: pick.amount });
+  for (const l of lines.filter((x) => x.kind === 'fieldTrip')) items.push({ id: l.id, label: l.label, ...(l.params ? { params: l.params } : {}), amount: l.amount }); // round 21
   // round 20 fix (I2, KC: a trip day is a club day): a Flex member's extra days on that invoice (last month's, billed with this run), so a trip-day check-in
   // over the quota shows here beside the trip fee once it is on the next invoice
   const extra = lines.find((l) => l.kind === 'extraDay');
