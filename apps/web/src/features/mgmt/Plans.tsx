@@ -17,8 +17,8 @@ import { Page, SwitchRow, HPAD, heroCard, labelStyle, tn, Pill } from './common'
 import { OwnerWaiting } from '../../components/OwnerWaiting';
 
 type PriceKey = 'flex' | 'gold' | 'extra' | 'registration' | 'trial' | 'leave' | 'dementia' | 'pickup' | 'fieldTrip';
-const FEES = ['registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip'] as const;
-const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave', 'dementia', 'pickup', 'fieldTrip']; // round 16: pick-up and field trip defaults
+const FEES = ['registration', 'trial', 'leave', 'dementia', 'fieldTrip'] as const; // round 21: pick-up is priced per km in Settings
+const PRICE_KEYS: PriceKey[] = ['flex', 'gold', 'extra', 'registration', 'trial', 'leave', 'dementia', 'fieldTrip']; // round 16: field trip default; round 21: pick-up left for Settings › Pick-up
 type Draft = Record<PriceKey, string> & { quota: string; from: string; plans: Record<string, string> }; // plans: the catalogue plans' prices as typed ('' = no price)
 
 export function Plans() {
@@ -249,7 +249,6 @@ export function Plans() {
           priceBlock('extra', t('mgmt.plExtra'), t('mgmt.perDay'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')], [t('mgmt.plCounted'), t('mgmt.plCheckIns')]]),
           priceBlock('leave', t('mgmt.plan_leave'), t('mgmt.perMonth'), [[t('mgmt.plLeaveBilled'), t('mgmt.plLeaveBilledV')], [t('mgmt.plLeaveAsk'), tn(t, 'mgmt.plLeaveAskV', noticeDays(s, 'leave'))]]),
           priceBlock('dementia', t('mgmt.plDementia'), t('mgmt.perMonth'), []),
-          priceBlock('pickup', t('mgmt.plPickup'), t('mgmt.perMonth'), [[t('mgmt.plPickupWho'), t('mgmt.plPickupWhoV')]]),
           priceBlock('fieldTrip', t('mgmt.plFieldTrip'), t('mgmt.perTrip'), [[t('mgmt.plBilled'), t('mgmt.plNextInvoice')]]),
         ])}
         {/* KC round 6: the brochure's other fees */}

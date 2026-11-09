@@ -19,8 +19,7 @@ export function PlanStep({ p }: { p: StepProps }) {
   const price = priceOn(s, today);
   const mondays = useMemo(() => startMondays(s, today, 4), [s, today]);
   const pick = (plan: Plan) => set({ plan });
-  const clubPickup = feeOf(priceOn(s, st.start || today), 'pickup');
-  const togglePickup = () => set(st.pickup ? { pickup: false } : { pickup: true, pickupPrice: st.pickupPrice || fmtN(clubPickup) });
+  const togglePickup = () => set(st.pickup ? { pickup: false } : { pickup: true }); // round 21: empty = priced by distance
   return (
     <>
       <Sec p={p} label={t('enq.plan')}>
@@ -33,7 +32,7 @@ export function PlanStep({ p }: { p: StepProps }) {
         {st.plan ? <div style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{isDaysPlan(s, st.plan) ? t('profile.planNoteFlex', { plan: planLabel(s, st.plan, lang), q: planQuota(s, st.plan) ?? s.club.settings.flexQuota, p: rp(price.extra) }) : t('profile.planNoteGold', { plan: planLabel(s, st.plan, lang) })}</div> : null}
         <div data-testid="join-reg-fee" style={{ fontSize: 14, lineHeight: '21px', padding: '10px 14px', borderRadius: 14, background: p.native ? '#FFFFFF' : 'var(--fill, #F4F4F5)' }}>{t('enq.jn_regFee', { price: rp(feeOf(price, 'registration')) })}</div>
         <Toggle on={st.pickup} onClick={togglePickup} label={t('profile.pickup')} />
-        {st.pickup ? <TextField name="pickupPrice" label={t('profile.pickupPrice')} value={st.pickupPrice} onChange={(v) => set({ pickupPrice: fmtN(v) })} inputMode="numeric" error={p.err('pickup')} /> : null}
+        {st.pickup ? <TextField name="pickupPrice" label={t('profile.pickupPrice')} value={st.pickupPrice} onChange={(v) => set({ pickupPrice: v.replace(/\D/g, '') ? fmtN(v) : '' })} inputMode="numeric" error={p.err('pickup')} hint={t('profile.pickupHintReg')} /> : null}
       </Sec>
       <Sec p={p} label={t('enq.start')}>
         <div style={row} role="radiogroup" aria-label={t('enq.start')}>

@@ -18,7 +18,7 @@ import { useCheckOnDays } from '../lobby/useCheckOnDays';
 import { AddMemberDialog } from './dialogs/AddMemberDialog';
 import { NannyLine } from './ProfilePhoto';
 import { PlanChips } from './PlanChips';
-import { FullName, relLabel, rowStatusText, STATUS_STYLE } from './lib';
+import { FullName, pickupRowText, relLabel, rowStatusText, STATUS_STYLE } from './lib';
 
 const PAGE_SIZE = 10;
 
@@ -129,7 +129,7 @@ export function MembersList() {
   /** the Pick-up filter: the member's monthly price on its own line ("Pick-up · Rp 600.000", "· custom" when it is their own) */
   const pickupLine = (r: MemberRow, fs: number) => {
     const pk = f === 'pickup' ? pickupPrice(s, r.m, today) : null;
-    return pk ? <span data-testid="member-pickup" style={{ fontSize: fs, lineHeight: '19px', color: '#4A4038', fontVariantNumeric: 'tabular-nums' }}>{t(pk.custom ? 'members.pickupRowCustom' : 'members.pickupRow', { p: rp(pk.price) })}</span> : null;
+    return pk ? <span data-testid="member-pickup" style={{ fontSize: fs, lineHeight: '19px', color: '#4A4038', fontVariantNumeric: 'tabular-nums' }}>{pickupRowText(t, pk)}</span> : null;
   };
   /** a round call button beside the row (a link, so it never opens the profile) */
   const callBtn = (r: MemberRow, size: number) => {

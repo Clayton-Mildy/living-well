@@ -321,12 +321,13 @@ describe('Pick-up at registration', () => {
     expect(flow().dataset.regStep).toBe('plan');
   }
   const sw = () => Array.from(flow().querySelectorAll<HTMLElement>('[role="switch"]')).find((b) => /^Pick-up/.test(b.textContent ?? ''));
-  it('the Plan step has a Pick-up switch; on shows the club price, editable, and the review and Create carry it', async () => {
+  it('the Plan step has a Pick-up switch; on shows an empty price (round 21: empty = priced by distance), and a typed price is carried', async () => {
     await atPlanStep();
     expect(sw()).toBeTruthy();
     expect(input('pickupPrice')).toBeNull();
     await click(sw());
-    expect(input('pickupPrice')?.value).toBe('600.000');
+    expect(input('pickupPrice')?.value).toBe('');
+    expect(flow().textContent).toContain('Leave empty to price it by distance from the club.');
     await type(input('pickupPrice'), '450000');
     expect(input('pickupPrice')?.value).toBe('450.000');
     await click(Array.from(document.querySelectorAll<HTMLElement>('button')).filter((b) => textOf(b) === 'Review').pop());

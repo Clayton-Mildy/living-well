@@ -841,17 +841,24 @@ describe('round 16: members.setPickup', () => {
     const c = seed();
     const r = run(c.citra, 'members.setPickup', { memberId: 'm1', on: true, price: 450_000 }, who(c, 's10'));
     expect(r.state.members.m1.pickup).toEqual({ on: true, price: 450_000 });
-    const back = run(r.state, 'members.setPickup', { memberId: 'm1', on: true, price: null }, who(c, 's9'));
-    expect(back.state.members.m1.pickup).toEqual({ on: true });
-    expect(() => run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's1'))).toThrow('err.forbidden');
+    expect(() => run(c.citra, 'members.setPickup', { memberId: 'm1', on: true, price: 450_000 }, who(c, 's1'))).toThrow('err.forbidden');
+  });
+  it('round 21: priced by distance, so pick-up on needs the home pin or a custom price', () => {
+    const c = seed();
+    delete c.citra.members.m1.location;
+    expect(() => run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's9'))).toThrow('members.err.pickupNeedsLocation');
+    c.citra.members.m1.location = { lat: -6.13, lng: 106.79 };
+    expect(run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's9')).state.members.m1.pickup).toEqual({ on: true });
+    const r = run(c.citra, 'members.setPickup', { memberId: 'm1', on: true, price: 450_000 }, who(c, 's9'));
+    expect(run(r.state, 'members.setPickup', { memberId: 'm1', on: true, price: null }, who(c, 's9')).state.members.m1.pickup).toEqual({ on: true });
   });
 });
 
 describe('members.create: pick-up chosen at registration', () => {
   const made = (over: Record<string, unknown>) => { const c = seed(); const r = run(c.citra, 'members.create', newMember(over), who(c, 's9')); return { r, m: r.state.members[r.result.memberId as string] }; };
-  it('the club default price stores just { on: true }', () => {
-    expect(made({ pickup: { on: true, price: 600_000 } }).m.pickup).toEqual({ on: true });
-    expect(made({ pickup: { on: true } }).m.pickup).toEqual({ on: true });
+  it('round 21: a price typed at registration is the member\'s own; pick-up with no price and no pin is refused', () => {
+    expect(made({ pickup: { on: true, price: 600_000 } }).m.pickup).toEqual({ on: true, price: 600_000 });
+    expect(() => made({ pickup: { on: true } })).toThrow('members.err.pickupNeedsLocation');
   });
   it('another price is kept, and the first invoice run bills the pick-up line at it', () => {
     const { r, m } = made({ pickup: { on: true, price: 450_000 } });

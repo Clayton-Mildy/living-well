@@ -361,7 +361,8 @@ export const enquiriesActions = [
         id: memberId, contactId, enquiry: e as unknown as Enquiry, plan: i.plan, start: i.start, today: ctx.today, nowDT: ctx.nowDT, actor: ctx.actor, vaIndex: num, photoTone: num % 5,
         ...(i.formMediaId ? { form: { mediaId: i.formMediaId, fileName: i.formFileName } } : {}), details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration, nanny: i.nanny, ktp: i.ktp },
       });
-      const pk = pickupOfRegistration(s, i.start, i.pickup);
+      const pk = pickupOfRegistration(i.pickup);
+      if (pk && !pk.price && !d.members[memberId].location) ctx.fail('members.err.pickupNeedsLocation'); // round 21: priced by distance (the lead's pin is carried over first, Task 7)
       if (pk) d.members[memberId].pickup = pk;
       if (!existing) d.familyContacts[contactId] = contactFromLead({ id: contactId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor, activated: !gate });
       const link = linkFromLead({ contactId, memberId, enquiry: e as unknown as Enquiry, nowDT: ctx.nowDT, actor: ctx.actor });

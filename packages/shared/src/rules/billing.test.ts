@@ -91,16 +91,27 @@ describe('a custom plan on the invoice run', () => {
 
 describe('round 16: the pick-up fee', () => {
   const pickupLine = (s: ClubState, period = PERIOD) => runLinesFor(s, s.members.m1, period, T).find((l) => l.kind === 'pickup');
-  it('a member with pick-up on is billed the default Rp 600.000 a month, or their own price', () => {
-    expect(FEE_DEFAULTS.pickup).toBe(600_000);
+  it('round 21: pick-up is priced by distance: ceil(km) × Rp 10.000, free within 2 km, a custom price wins, no pin = nothing billed', () => {
     expect(FEE_DEFAULTS.fieldTrip).toBe(250_000);
     const s = seed();
+    const club = { lat: -6.136, lng: 106.731 };
+    const east = (km: number) => ({ lat: club.lat, lng: club.lng + km / (111.195 * Math.cos((club.lat * Math.PI) / 180)) });
+    s.club.settings.location = club;
     expect(pickupLine(s)).toBeUndefined();
     s.members.m1.pickup = { on: true };
-    expect(pickupLine(s)).toMatchObject({ id: 'pickup-2026-11', kind: 'pickup', label: 'inv.line.pickup', amount: 600_000 });
-    expect(pickupPrice(s, s.members.m1, '2026-11-21')).toEqual({ price: 600_000, custom: false });
+    s.members.m1.location = east(6.4);
+    expect(pickupLine(s)).toMatchObject({ id: 'pickup-2026-11', kind: 'pickup', label: 'inv.line.pickupKm', params: { km: 6.4 }, amount: 70_000 });
+    expect(pickupPrice(s, s.members.m1, '2026-11-21')).toEqual({ price: 70_000, custom: false, km: 6.4, free: false });
+    s.members.m1.location = east(1.2);
+    expect(pickupLine(s)).toBeUndefined();
+    expect(pickupPrice(s, s.members.m1, '2026-11-21')).toEqual({ price: 0, custom: false, km: 1.2, free: true });
     s.members.m1.pickup = { on: true, price: 450_000 };
-    expect(pickupLine(s)?.amount).toBe(450_000);
+    expect(pickupLine(s)).toMatchObject({ label: 'inv.line.pickup', amount: 450_000 });
+    expect(pickupLine(s)?.params).toBeUndefined();
+    s.members.m1.pickup = { on: true };
+    delete s.members.m1.location;
+    expect(pickupPrice(s, s.members.m1, '2026-11-21')).toEqual({ price: 0, custom: false, needsLocation: true });
+    expect(pickupLine(s)).toBeUndefined();
     s.members.m1.pickup = { on: false, price: 450_000 };
     expect(pickupLine(s)).toBeUndefined();
   });
@@ -140,7 +151,7 @@ describe('round 17: on your next bill', () => {
   });
   it('has no pick-up item when next month is leave or after the last day', () => {
     const s = bare();
-    s.members.m46.pickup = { on: true };
+    s.members.m46.pickup = { on: true, price: 600_000 };
     expect(nextBill(s, 'm46', T).items.map((i) => i.amount)).toEqual([600_000]);
     const cur = s.members.m46.memberships.at(-1)!;
     cur.leaves = [{ month: '2026-11', at: '2026-10-01T10:00', by: 'staff:s1' }];

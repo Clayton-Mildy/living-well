@@ -331,7 +331,9 @@ export const membersActions: ActionDef[] = [
         care: { instructions: input.careInstructions, by: ctx.actor, at: ctx.nowDT }, consents, documents, face: { enrolled: false }, billing: { va: vaFor(num - 1) }, sim: { ...DEFAULT_SIM },
         ...(input.registration ? { registration: input.registration } : {}),
       };
-      const pk = pickupOfRegistration(d as unknown as ClubState, input.start, input.pickup);
+      const pk = pickupOfRegistration(input.pickup);
+      // round 21: pick-up is priced by distance, so with no price of its own it needs the home pin
+      if (pk && !pk.price && !d.members[id].location) ctx.fail('members.err.pickupNeedsLocation');
       if (pk) d.members[id].pickup = pk;
       signAtRegistration(d, id, input.signatureMediaId, ctx);
       ctx.result.memberId = id;
@@ -494,6 +496,7 @@ export const membersActions: ActionDef[] = [
       const m = editable(d, input.memberId, ctx);
       const next = { on: input.on, ...(input.price ? { price: input.price } : {}) };
       if (JSON.stringify(m.pickup ?? { on: false }) === JSON.stringify(next)) ctx.fail('err.noChanges');
+      if (next.on && !next.price && !m.location) ctx.fail('members.err.pickupNeedsLocation'); // round 21: priced by distance
       m.pickup = next;
       feed(ctx, d, m.id, 'airport_shuttle', input.on ? 'pickupOn' : 'pickupOff', { by: ctx.actor });
     },

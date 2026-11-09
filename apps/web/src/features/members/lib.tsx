@@ -2,7 +2,25 @@
 import type { CSSProperties } from 'react';
 import { displayFull, memberName, displayName, sessionsOn, type ChangeRequest, type ClubState, type DailyLog, type Diet, type DocType, type DrugAllergy, type EndReason, type FoodAllergen, type Health, type Lang, type Member, type MedTiming, type Mobility, type Relation } from '@cp/shared';
 import { plainName, type MemberStatus } from '@cp/shared/rules/members';
+import { rp, type pickupPrice } from '@cp/shared';
 import type { TFn } from '../../lib/i18n';
+
+/** Round 21: how a member's pick-up reads ("6.4 km · Rp 70.000 / month", "Free · 1.2 km", "No location yet", "Rp 450.000 / month · custom"). `staff` adds the custom mark. */
+export function pickupText(t: TFn, pick: ReturnType<typeof pickupPrice>, staff = true): string {
+  if (!pick) return t('profile.pickupOff');
+  if (pick.custom) return `${t('profile.pickupVal', { p: rp(pick.price) })}${staff ? ` · ${t('profile.pickupCustom')}` : ''}`;
+  if (pick.needsLocation) return t('profile.pickupNoLocation');
+  if (pick.free) return t('profile.pickupFree', { km: pick.km ?? 0 });
+  return t('profile.pickupKm', { km: pick.km ?? 0, p: rp(pick.price) });
+}
+/** The Members list's Pick-up filter line for one member. */
+export function pickupRowText(t: TFn, pick: ReturnType<typeof pickupPrice>): string | null {
+  if (!pick) return null;
+  if (pick.custom) return t('members.pickupRowCustom', { p: rp(pick.price) });
+  if (pick.needsLocation) return t('members.pickupRowNoPin');
+  if (pick.free) return t('members.pickupRowFree', { km: pick.km ?? 0 });
+  return t('members.pickupRowKm', { p: rp(pick.price), km: pick.km ?? 0 });
+}
 
 // ---------- enum labels (stored data keeps keys; text comes from i18n) ----------
 export const foodLabel = (t: TFn, a: FoodAllergen) => t(`profile.food.${a}`);

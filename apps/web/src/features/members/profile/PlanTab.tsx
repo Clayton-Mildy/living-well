@@ -2,7 +2,7 @@
 // the membership state, and the invoices. Invoices open the invoice sheet; Xero status is for staff only.
 import { useState } from 'react';
 import {
-  actorName, currentMembership, feeOf, fmtN, parseN, pickupPrice, type Plan, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
+  actorName, currentMembership, feeOf, fmtN, parseN, pickupByDistance, pickupPrice, type Plan, flexMonth, invoiceStatus, invoicesOf, invoiceTotal, live, memberSince, planOn, paidDate, primaryContact, priceOn, rp, sortBy, ym, membershipStatus, displayName, suspensionOf,
 } from '@cp/shared';
 import { formatVa, openBalance } from '@cp/shared/rules/members';
 import { isConfirmed } from '@cp/shared/rules/finance';
@@ -12,7 +12,7 @@ import { say } from '../../../store/ui';
 import { InvoiceSheet } from '../../finance/InvoiceSheet';
 import { NextBill } from '../../finance/NextBill';
 import { useLeaveUi } from '../../family/LeaveSection';
-import { cardStyle, endReasonLabel, HAIR } from '../lib';
+import { cardStyle, endReasonLabel, HAIR, pickupText } from '../lib';
 import { planText } from '../reviewDiff';
 import { Fact, ListCard, PendingBanner } from './parts';
 import type { P } from './types';
@@ -46,6 +46,7 @@ export function PlanTab({ p }: { p: P }) {
   const fm = flexMonth(s, m, ym(today), today);
   const since = memberSince(m);
   const pick = pickupPrice(s, m, today);
+  const byKm = pickupByDistance(s, m.location); // round 21: what an empty price means
   const savePickup = async () => {
     const n = parseN(pickPrice);
     if (pickPrice.trim() && n < 1000) return;
@@ -73,7 +74,7 @@ export function PlanTab({ p }: { p: P }) {
       {days ? <Fact k={t('profile.extraDay')}>{t('profile.extraDayVal', { p: rp(price.extra) })}</Fact> : null}
       <Fact k={t('profile.pickup')}>
         <span data-testid="pickup-fact" style={{ display: 'inline-flex', gap: 10, alignItems: 'baseline', flexWrap: 'wrap', justifyContent: 'flex-end' }}>
-          <span>{pick ? `${t('profile.pickupVal', { p: rp(pick.price) })}${pick.custom ? ` · ${t('profile.pickupCustom')}` : ''}` : t('profile.pickupOff')}</span>
+          <span>{pickupText(t, pick)}</span>
           {finance && !m.deletedAt ? <button type="button" data-testid="pickup-edit" onClick={() => { setPickOn(!!m.pickup?.on); setPickPrice(m.pickup?.price ? fmtN(m.pickup.price) : ''); setPickOpen(true); }} style={{ border: 'none', background: 'transparent', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, cursor: 'pointer', fontFamily: 'Inter', textDecoration: 'underline', textUnderlineOffset: 3 }}>{t('common.edit')}</button> : null}
         </span>
       </Fact>
@@ -154,7 +155,7 @@ export function PlanTab({ p }: { p: P }) {
       <Sheet open={pickOpen} onClose={() => setPickOpen(false)} title={t('profile.pickup')}
         footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" onClick={() => setPickOpen(false)}>{t('common.cancel')}</Button><Button onClick={() => void savePickup()}>{t('common.save')}</Button></div>}>
         <Toggle on={pickOn} onClick={() => setPickOn(!pickOn)} label={t('profile.pickupOn')} />
-        {pickOn ? <TextField label={t('profile.pickupPrice')} value={pickPrice} onChange={(v) => setPickPrice(v.replace(/[^\d.]/g, ''))} inputMode="numeric" placeholder={fmtN(feeOf(price, 'pickup'))} hint={t('profile.pickupHint', { p: rp(feeOf(price, 'pickup')) })} /> : null}
+        {pickOn ? <TextField label={t('profile.pickupPrice')} value={pickPrice} onChange={(v) => setPickPrice(v.replace(/[^\d.]/g, ''))} inputMode="numeric" hint={byKm ? t('profile.pickupHintKm', { p: rp(byKm.price), km: byKm.km }) : t('profile.pickupHintNoPin')} /> : null}
       </Sheet>
       <Sheet open={!!declining} onClose={() => setDeclining(null)} title={t('profile.declineTitle')}
         footer={<div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', flexWrap: 'wrap' }}><Button variant="secondary" onClick={() => setDeclining(null)}>{t('common.cancel')}</Button><Button variant="danger" onClick={decline}>{t('profile.declineRequest')}</Button></div>}>
