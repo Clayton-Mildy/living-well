@@ -18,6 +18,8 @@ import { RegistrationFlow } from '../members/register/RegistrationFlow';
 import { StackChip } from '../members/register/parts';
 import { DialogBody, PeSection, TextField } from '../members/dialogs/forms';
 import { TitleField } from '../members/dialogs/TitleField';
+import { LocationPicker, type LocationValue } from '../../components/geo/LocationPicker';
+import { areaSuggestions } from '../../lib/geo';
 
 export type Dlg =
   | { mode: 'new' }
@@ -79,6 +81,8 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
   const [source, setSource] = useState<Enquiry['source']>(e?.source ?? 'referral');
   const [sourceOther, setSourceOther] = useState(e?.sourceOther ?? '');
   const [notes, setNotes] = useState(e?.notes ?? '');
+  // round 21: where the senior lives (optional), for the Where from map; carried to the member on joining
+  const [home, setHome] = useState<LocationValue>({ address: e?.address ?? '', location: e?.location });
   const [touched, setTouched] = useState(false);
   const [busy, setBusy] = useState(false);
   const phoneOk = phone.replace(/\D/g, '').length >= 8;
@@ -90,6 +94,8 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
     setBusy(true);
     try {
       const body = { senior: { title: title.trim(), name: name.trim() }, contact: { name: cName.trim(), relation: rel, phone }, source, ...(source === 'other' ? { sourceOther: sourceOther.trim() } : {}), notes: notes.trim() };
+      const where = e ? { address: home.address.trim(), location: home.location ?? null } : { ...(home.address.trim() ? { address: home.address.trim() } : {}), ...(home.location ? { location: home.location } : {}) };
+      Object.assign(body, where);
       if (e) {
         const r = await act('enquiry.update', { enquiryId: e.id, ...body }, { ok: t('enq.leadSaved') });
         if (r.ok) onClose();
@@ -128,6 +134,9 @@ function LeadDialog({ id, onClose }: { id?: string; onClose: () => void }) {
           {ENQ_SOURCES.map((x) => <Pick key={x} selected={source === x} onClick={() => setSource(x)}>{t('enq.src_' + x)}</Pick>)}
         </div>
         {source === 'other' ? <TextField label={t('enq.sourceOther')} value={sourceOther} onChange={(v) => setSourceOther(v.slice(0, 80))} /> : null}
+      </Sec>
+      <Sec label={t('enq.fHome')}>
+        <LocationPicker address={home.address} location={home.location} onChange={setHome} club={s.club.settings.location} areaSuggestions={areaSuggestions(s)} />
       </Sec>
       <TextField label={t('enq.fNotes')} multiline rows={3} value={notes} onChange={setNotes} />
       </DialogBody>

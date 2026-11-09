@@ -62,7 +62,7 @@ export function initialState(s: ClubState, mode: RegMode, today: ISODate): RegSt
   const title = online?.name?.trim() && online.title ? online.title : e.senior.title;
   const name = online?.name?.trim() || e.senior.name;
   return {
-    ...base, title, name, gender: genderOf(title), dob: online?.dob || '', address: online?.address || '',
+    ...base, title, name, gender: genderOf(title), dob: online?.dob || '', address: online?.address || e.address || '', ...(e.location ? { location: { ...e.location } } : {}),
     contact: e.contact.name, rel: e.contact.relation, phone: e.contact.phone,
     health: h
       ? { conditions: h.conditions, diabetic: h.diabetic, mobility: h.mobility ?? 'none', diet: h.diet, food: h.food, foodOther: h.foodOther, ...splitDrugs(h.drugs) }

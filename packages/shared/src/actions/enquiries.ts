@@ -1,7 +1,7 @@
 // Enquiries (leads), visits and trials, and joining a lead as a member.
 // Registration is on paper: lobby and management type the key details in and attach the signed paper form (a photo or PDF uploaded to /api/media) when the lead joins.
 import type { Draft } from 'immer';
-import type { ClubState, DrugAllergy, Enquiry, LeadMove, FamilyContact, FoodAllergen, GuestVisit, OnlineRegistration, Plan, User } from '../types';
+import type { GeoPoint, ClubState, DrugAllergy, Enquiry, LeadMove, FamilyContact, FoodAllergen, GuestVisit, OnlineRegistration, Plan, User } from '../types';
 import { defineAction, hasRole, DomainError, type Ctx } from './framework';
 import { familyUserIds, shortOf, signAtRegistration } from './helpers';
 import { dayStatus, nextOpenDay } from '../rules/core';
@@ -16,6 +16,9 @@ import { FORM_LINK_DAYS, FORM_STEPS, enquiryByFormToken, formRevOf, formPath, fo
 import { arr, bad, bool, dm, hm, isoDate, nextNumId, obj, oneOf, phone, str } from '../rules/mgmtParse';
 import { maybeEmailContract } from './emails';
 import { e164, live, sortBy, addDays } from '../util';
+import { cleanGeo } from '../rules/geo';
+/** Round 21: a pin from the input, or err.invalid. */
+const geoIn = (v: unknown): GeoPoint => cleanGeo(v) ?? bad('err.invalid');
 
 const lobbyOrMgmt = (u: User) => hasRole(u, 'lobby', 'mgmt');
 /** The public form routes run as the system user (no sign-in: the link is the key). */
@@ -103,10 +106,10 @@ function parseSourceOther(v: unknown): string {
   const t = str(v);
   return t.length > 80 ? bad('sourceOther') : t;
 }
-interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] }
-interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] | null }
+interface CreateIn { senior: Enquiry['senior']; contact: Enquiry['contact']; source: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next']; /** round 21 */ address?: string; location?: GeoPoint }
+interface UpdateIn { enquiryId: string; senior?: Enquiry['senior']; contact?: Enquiry['contact']; source?: Enquiry['source']; sourceOther?: string; notes?: string; next?: Enquiry['next'] | null; /** round 21: '' clears */ address?: string; /** round 21: null clears */ location?: GeoPoint | null }
 /** `formMediaId` and `formFileName`: the signed paper registration form, uploaded first (POST /api/media). */
-export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string; /** round 15: the family member present signed the form (uploaded first) */ signatureMediaId?: string; /** the monthly pick-up chosen at registration */ pickup?: PickupIn }
+export interface ConvertIn extends LeadDetails { enquiryId: string; plan: Plan; start: string; formMediaId: string; formFileName: string; /** round 15: the family member present signed the form (uploaded first) */ signatureMediaId?: string; /** the monthly pick-up chosen at registration */ pickup?: PickupIn; /** round 21: the home pin set at joining (else the lead's) */ location?: GeoPoint }
 
 /** After a lead becomes a member (immediately for management, on approval for lobby): welcome message, visits closed. Members come on any open day, so nothing is booked. */
 function finishJoin(d: Draft<ClubState>, memberId: string, input: ConvertIn, ctx: Ctx) {
@@ -135,13 +138,16 @@ export const enquiriesActions = [
     can: (u) => lobbyOrMgmt(u),
     parse(raw) {
       const o = obj(raw);
-      return { senior: parseSenior(o.senior), contact: parseContact(o.contact), source: oneOf(o.source, ENQ_SOURCES, 'source'), ...(o.sourceOther !== undefined ? { sourceOther: parseSourceOther(o.sourceOther) } : {}), notes: str(o.notes, 1000), next: parseNext(o.next) };
+      const address = str(o.address, 200);
+      return { senior: parseSenior(o.senior), contact: parseContact(o.contact), source: oneOf(o.source, ENQ_SOURCES, 'source'), ...(o.sourceOther !== undefined ? { sourceOther: parseSourceOther(o.sourceOther) } : {}), notes: str(o.notes, 1000), next: parseNext(o.next),
+        ...(address ? { address } : {}), ...(o.location !== undefined && o.location !== null ? { location: geoIn(o.location) } : {}) };
     },
     run(d, i, ctx) {
       const id = nextNumId(d.enquiries, 'e');
       d.enquiries[id] = {
         id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, senior: i.senior, contact: i.contact, source: i.source, ...(i.source === 'other' && i.sourceOther ? { sourceOther: i.sourceOther } : {}), stage: 'new',
         next: i.next ?? { kind: 'callBack', date: nextOpenDay(S(d), ctx.today) }, ...(i.notes ? { notes: i.notes } : {}),
+        ...(i.address ? { address: i.address } : {}), ...(i.location ? { location: i.location } : {}),
         history: [{ stage: 'new', at: ctx.nowDT, by: ctx.actor }],
       };
       ctx.result.enquiryId = id;
@@ -162,6 +168,8 @@ export const enquiriesActions = [
         ...(o.sourceOther !== undefined ? { sourceOther: parseSourceOther(o.sourceOther) } : {}),
         ...(o.notes !== undefined ? { notes: str(o.notes, 1000) } : {}),
         ...(o.next !== undefined ? { next: o.next === null ? null : parseNext(o.next) } : {}),
+        ...(o.address !== undefined ? { address: str(o.address, 200) } : {}),
+        ...(o.location !== undefined ? { location: o.location === null ? null : geoIn(o.location) } : {}),
       };
     },
     run(d, i, ctx) {
@@ -174,6 +182,8 @@ export const enquiriesActions = [
       else if (i.sourceOther !== undefined) { if (i.sourceOther) e.sourceOther = i.sourceOther; else delete e.sourceOther; }
       if (i.notes !== undefined) { if (i.notes) e.notes = i.notes; else delete e.notes; }
       if (i.next !== undefined) { if (i.next) e.next = i.next; else delete e.next; }
+      if (i.address !== undefined) { if (i.address) e.address = i.address; else delete e.address; }
+      if (i.location !== undefined) { if (i.location) e.location = i.location; else delete e.location; }
       for (const g of guestsOf(d, e.id)) if (g.status === 'booked') { g.name = seniorName(e); g.escortName = e.contact.name; }
     },
   }),
@@ -340,6 +350,7 @@ export const enquiriesActions = [
         ...(o.ktp !== undefined ? { ktp: parseKtp(o.ktp) } : {}),
         ...(signatureMediaId ? { signatureMediaId } : {}),
         ...(pickup ? { pickup } : {}),
+        ...(o.location !== undefined && o.location !== null ? { location: geoIn(o.location) } : {}),
       };
     },
     run(d, i, ctx) {
@@ -361,6 +372,8 @@ export const enquiriesActions = [
         id: memberId, contactId, enquiry: e as unknown as Enquiry, plan: i.plan, start: i.start, today: ctx.today, nowDT: ctx.nowDT, actor: ctx.actor, vaIndex: num, photoTone: num % 5,
         ...(i.formMediaId ? { form: { mediaId: i.formMediaId, fileName: i.formFileName } } : {}), details: { dob: i.dob, address: i.address, health: i.health, registration: i.registration, nanny: i.nanny, ktp: i.ktp },
       });
+      // round 21: the lead's address and pin carry over (an address or a pin typed at joining wins)
+      { const mem = d.members[memberId]; if (!mem.address && e.address) mem.address = e.address; const pin = i.location ?? e.location; if (pin) mem.location = { ...pin }; }
       const pk = pickupOfRegistration(i.pickup);
       if (pk && !pk.price && !d.members[memberId].location) ctx.fail('members.err.pickupNeedsLocation'); // round 21: priced by distance (the lead's pin is carried over first, Task 7)
       if (pk) d.members[memberId].pickup = pk;

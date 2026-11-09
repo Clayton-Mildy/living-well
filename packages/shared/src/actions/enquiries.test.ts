@@ -205,6 +205,34 @@ describe('visits and trials', () => {
   });
 });
 
+describe('round 21: where the lead lives', () => {
+  const PIN = { lat: -6.1335, lng: 106.7468, kelurahan: 'Cengkareng Barat', kecamatan: 'Cengkareng' };
+  it('create keeps the address and pin; update with null clears the pin and empty text the address; a bad pin is refused', () => {
+    const s = seed().citra;
+    const r = run(s, 'enquiry.create', { ...lead, address: ' Taman Palem Lestari B2 ', location: PIN }, 's1');
+    const id = r.result.enquiryId as string;
+    expect(r.state.enquiries[id]).toMatchObject({ address: 'Taman Palem Lestari B2', location: PIN });
+    const u = run(r.state, 'enquiry.update', { enquiryId: id, location: null, address: '' }, 's1');
+    expect(u.state.enquiries[id].location).toBeUndefined();
+    expect(u.state.enquiries[id].address).toBeUndefined();
+    fails(s, 'enquiry.create', { ...lead, location: { lat: 1, lng: 999 } }, 's1', 'err.invalid');
+  });
+  it('joining carries the pin and the address to the member; an address typed at joining wins, a pin typed at joining wins', () => {
+    const s = seed().citra;
+    s.enquiries.e1 = { ...s.enquiries.e1, address: 'Taman Palem Lestari B2', location: PIN };
+    const input = { enquiryId: 'e1', plan: 'flex', start: '2026-10-26', ...paper };
+    const a = run(s, 'enquiry.convert', input, 's9');
+    expect(a.state.members[a.result.memberId as string]).toMatchObject({ address: 'Taman Palem Lestari B2', location: PIN });
+    const b = run(s, 'enquiry.convert', { ...input, address: 'Jl. Kamal Raya 9' }, 's9');
+    expect(b.state.members[b.result.memberId as string]).toMatchObject({ address: 'Jl. Kamal Raya 9', location: PIN });
+    const other = { lat: -6.15, lng: 106.70, kelurahan: 'Kalideres' };
+    const c = run(s, 'enquiry.convert', { ...input, location: other }, 's9');
+    expect(c.state.members[c.result.memberId as string].location).toEqual(other);
+    // with the lead's pin, pick-up with no price of its own is priced by distance
+    expect(run(s, 'enquiry.convert', { ...input, pickup: { on: true } }, 's9').state.members[a.result.memberId as string].pickup).toEqual({ on: true });
+  });
+});
+
 describe('joining a lead (registration is on paper)', () => {
   const input = { enquiryId: 'e1', plan: 'flex', start: '2026-10-26', ...paper };
 

@@ -45,7 +45,7 @@ export function toConvertInput(st: RegState, lead: Enquiry, plan: Plan, start: I
   const ktp = ktpFor(st.ktp, st.reg.ids, st.carer.nanny);
   return {
     enquiryId: lead.id, plan, start, ...formOf(st),
-    ...(st.dob ? { dob: st.dob } : {}), ...(st.address.trim() ? { address: st.address.trim() } : {}), health: healthOf(st), ...(reg ? { registration: reg } : {}),
+    ...(st.dob ? { dob: st.dob } : {}), ...(st.address.trim() ? { address: st.address.trim() } : {}), ...(st.location ? { location: st.location } : {}), health: healthOf(st), ...(reg ? { registration: reg } : {}),
     nanny: carerOf(st.carer), ...(ktp ? { ktp } : {}), ...pickupOf(st),
   };
 }
