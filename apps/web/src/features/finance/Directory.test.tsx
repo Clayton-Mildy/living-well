@@ -212,3 +212,25 @@ describe('round 21: field trip venues', () => {
     expect(dlg.textContent).toContain('Pictures (staff only)');
   });
 });
+
+describe('round 21: ratings', () => {
+  const rate = (st: ClubState, id: string, stars: number[]) => { st.directory[id].ratings = stars.map((x, i) => ({ id: `${id}r${i}`, stars: x as 1 | 2 | 3 | 4 | 5, at: '2026-10-0' + (i + 1) + 'T10:00', by: 'staff:s9' as const, ...(i === 0 ? { note: 'Fixed it fast' } : {}) })); };
+  it('a rated row shows its average and count; the best rated comes first under its heading', async () => {
+    await show((st) => { rate(st, 'd14', [5, 5, 5, 5, 5, 4]); rate(st, 'd15', [2, 2, 3]); });
+    const names = Array.from(document.querySelectorAll('[data-dir-row]')).map((r) => r.getAttribute('data-dir-row'));
+    const a = names.indexOf(document.querySelector('[data-dir-row] [data-rating="4.8"]')!.closest('[data-dir-row]')!.getAttribute('data-dir-row'));
+    const b = names.indexOf(document.querySelector('[data-dir-row] [data-rating="2.3"]')!.closest('[data-dir-row]')!.getAttribute('data-dir-row'));
+    expect(a).toBeLessThan(b);
+    expect(document.querySelector('[data-rating="4.8"]')!.textContent).toBe('4.8 · 6');
+  });
+  it('the sheet adds a rating (stars, optional note) and shows the log with who and when', async () => {
+    await show((st) => rate(st, 'd15', [2]));
+    await click(document.querySelector('[data-dir-open="Kemang Teknik AC"]'));
+    const sheet = document.querySelector('[role="dialog"]')!;
+    expect(sheet.textContent).toContain('Fixed it fast');
+    await click(sheet.querySelector('button[aria-label="4 stars"]'));
+    await typeInto(sheet.querySelector<HTMLInputElement>('input[name="ratingNote"]')!, 'On time');
+    await click(Array.from(sheet.querySelectorAll('button')).find((b) => textOf(b) === 'Add rating'));
+    expect(h.act).toHaveBeenCalledWith('directory.rate', { contactId: 'd15', stars: 4, note: 'On time' }, expect.anything());
+  });
+});

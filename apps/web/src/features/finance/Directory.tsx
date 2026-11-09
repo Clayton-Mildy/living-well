@@ -6,7 +6,8 @@
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { areaLine, fmtPhone, live, sortBy, type DirectoryContact, type DirectoryGroup, type GeoPoint, type SpendCategory } from '@cp/shared';
-import { activeGroups, groupKeyOf, groupKeys, groupName, OTHER, VENUES } from '@cp/shared/rules/directory';
+import { activeGroups, groupKeyOf, groupKeys, groupName, OTHER, ratingOf, sortContacts, VENUES } from '@cp/shared/rules/directory';
+import { Ratings } from './Ratings';
 import { LocationPicker } from '../../components/geo/LocationPicker';
 import { areaSuggestions } from '../../lib/geo';
 import { uploadMedia } from '../../lib/media';
@@ -81,7 +82,9 @@ export function Directory() {
   const visible = all.filter((d) => inFilter(d));
   const populated = keys.filter((k) => visible.some((d) => keyOf(d) === k));
   const rank = new Map(keys.map((k, i) => [k, i]));
-  const hits = sortBy(visible.filter((d) => (gsel === 'all' || keyOf(d) === gsel) && matches(q, d.name, what(d), d.what, d.whatId, d.phone, fmtPhone(d.phone), t('finance.kind.' + d.kind), nameOfKey(keyOf(d)), d.contactPerson ?? '', d.address ?? '')), (d) => String(rank.get(keyOf(d)) ?? 99).padStart(3, '0') + d.name.toLowerCase());
+  // round 21: within a heading the best rated come first (then more ratings, then the name); unrated ones last
+  const order = useMemo(() => new Map(sortContacts(all).map((d, i) => [d.id, i])), [all]);
+  const hits = sortBy(visible.filter((d) => (gsel === 'all' || keyOf(d) === gsel) && matches(q, d.name, what(d), d.what, d.whatId, d.phone, fmtPhone(d.phone), t('finance.kind.' + d.kind), nameOfKey(keyOf(d)), d.contactPerson ?? '', d.address ?? '')), (d) => String(rank.get(keyOf(d)) ?? 99).padStart(3, '0') + String(order.get(d.id) ?? 0).padStart(5, '0'));
   const paged = usePaged(hits, 20, q + f + cat + gsel);
   const emergency = s.club.settings.emergencyPhone;
   const count = (k: Filter) => all.filter((d) => (k === 'all' ? true : k === 'public' ? d.public : k === 'internal' ? !d.public : d.kind === k)).length;
@@ -103,7 +106,13 @@ export function Directory() {
         <Icon name="call" size={18} weight={300} />{fmtPhone(d.phone)}
       </a>
     );
-    const nameEl = <span style={isPhone ? { ...rowTitle, fontSize: 16 } : rowTitle}>{d.name}</span>;
+    const rating = !simple ? ratingOf(d) : null; // round 21: staff only
+    const nameEl = (
+      <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        <span style={isPhone ? { ...rowTitle, fontSize: 16 } : rowTitle}>{d.name}</span>
+        {rating ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, color: '#4A433D', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}><Icon name="star" size={15} fill={1} color="#CFA550" /><span data-rating={rating.avg.toFixed(1)}>{t('finance.dir.ratingShort', { avg: rating.avg.toFixed(1), n: rating.n })}</span></span> : null}
+      </span>
+    );
     const vis = !simple ? (d.public ? <Dot color="#3D6B4F">{t('finance.dir.public')}</Dot> : <Dot color="#8A8078">{t('finance.dir.internal')}</Dot>) : null;
     const toggleLabel = d.public ? t('finance.dir.makeInternal') : t('finance.dir.makePublic');
     const toggleBtn = manage ? (
@@ -213,7 +222,7 @@ export function Directory() {
       )}
 
       <ContactForm value={form} onClose={() => setForm(null)} />
-      <ContactSheet contact={open} onClose={() => setOpen(null)} onEdit={canEdit && open ? () => { setForm(open); setOpen(null); } : undefined} />
+      <ContactSheet contact={open} onClose={() => setOpen(null)} onEdit={canEdit && open ? () => { setForm(open); setOpen(null); } : undefined} extra={open && !simple ? <Ratings contactId={open.id} canRate={canEdit} /> : null} />
       {groupsOpen ? <GroupsSheet onClose={() => setGroupsOpen(false)} /> : null}
       <ConfirmDialog open={!!del} onClose={() => setDel(null)} title={t('finance.dir.deleteTitle')} body={t('finance.dir.deleteBody', { name: del?.name || '' })} confirmLabel={t('common.delete')} onConfirm={remove} />
     </div>

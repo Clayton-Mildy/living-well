@@ -96,7 +96,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   // allergy alternatives: only the family's own members
   out.dayMenus = pick(live(s.dayMenus).map(approvedDayMenu).map((d) => ({ ...d, approval: undefined, allergyPlans: d.allergyPlans.filter((p) => mids.some((id) => p.person === `member:${id}`)) })));
   // round 21: a public contact without the staff-only details (the person to ask for, the pin, pictures, ratings)
-  out.directory = pick(live(s.directory).filter((d) => d.public && d.kind !== 'venue').map(({ contactPerson: _cp, location: _l, photoMediaIds: _p, ...d }) => d));
+  out.directory = pick(live(s.directory).filter((d) => d.public && d.kind !== 'venue').map(({ contactPerson: _cp, location: _l, photoMediaIds: _p, ratings: _r, ...d }) => d));
   out.prices = pick(live(s.prices));
   // the front desk's number is the one staff phone a family gets: "WhatsApp the club" opens a chat with it
   const desk = firstOfRole(s, 'lobby')?.id;

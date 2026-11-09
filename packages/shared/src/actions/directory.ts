@@ -142,4 +142,38 @@ export const directoryActions: ActionDef[] = [
       ctx.result.public = c.public;
     },
   }),
+  // round 21: rate a contact (1–5 stars, optional note); every rating is kept in the log
+  defineAction<{ id: string; stars: 1 | 2 | 3 | 4 | 5; note?: string }>({
+    name: 'directory.rate',
+    can: keeps,
+    parse: (raw) => {
+      const o = obj(raw);
+      const stars = Number(o.stars);
+      if (!Number.isInteger(stars) || stars < 1 || stars > 5) bad();
+      const note = o.note === undefined || o.note === null ? undefined : String(o.note).trim();
+      if (note !== undefined && note.length > 200) bad();
+      return { id: pickId(o, 'contactId'), stars: stars as 1 | 2 | 3 | 4 | 5, ...(note ? { note } : {}) };
+    },
+    run(d, input, ctx) {
+      const c = d.directory[input.id];
+      if (!c || c.deletedAt) ctx.fail('err.notFound');
+      const id = ctx.id('rate');
+      (c.ratings ??= []).push({ id, stars: input.stars, ...(input.note ? { note: input.note } : {}), at: ctx.nowDT, by: ctx.actor });
+      ctx.result.ratingId = id;
+    },
+  }),
+  // round 21: take a rating back: your own, or anyone's for management
+  defineAction<{ id: string; ratingId: string }>({
+    name: 'directory.unrate',
+    can: keeps,
+    parse: (raw) => { const o = obj(raw); return { id: pickId(o, 'contactId'), ratingId: text(o.ratingId, 60) }; },
+    run(d, input, ctx) {
+      const c = d.directory[input.id];
+      if (!c || c.deletedAt) ctx.fail('err.notFound');
+      const r = (c.ratings ?? []).find((x) => x.id === input.ratingId);
+      if (!r) ctx.fail('err.notFound');
+      if (r!.by !== ctx.actor && !hasRole(ctx.user, 'mgmt')) ctx.fail('err.forbidden');
+      c.ratings = (c.ratings ?? []).filter((x) => x.id !== input.ratingId);
+    },
+  }),
 ] as ActionDef[];

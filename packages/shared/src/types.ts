@@ -986,7 +986,11 @@ export interface DirectoryContact extends Row {
   address?: string;
   location?: GeoPoint;
   photoMediaIds?: string[];
+  /** round 21: the staff's ratings, oldest first (each visit or job can get one); staff only */
+  ratings?: ContactRating[];
 }
+/** Round 21: one rating of a contact: 1–5 stars and an optional note (at most 200 characters). */
+export interface ContactRating { id: string; stars: 1 | 2 | 3 | 4 | 5; note?: string; at: DT; by: Actor }
 
 export interface StaffHr {
   contract: 'pkwtt' | 'pkwt';
