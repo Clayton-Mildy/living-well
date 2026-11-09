@@ -10,3 +10,4 @@ export * from './surveys';
 export * from './mood';
 export * from './access';
 export * from './trips';
+export * from './geo';

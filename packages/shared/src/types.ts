@@ -77,6 +77,11 @@ export interface Approval {
   defer?: { tell?: boolean; share?: boolean; overall?: Health; companionId?: string; notify?: boolean };
 }
 
+/** Round 21: a pinned place (a member's home, a lead's home, a contact, the club) and its area, as the map search or staff gave it */
+export interface GeoPoint { lat: number; lng: number; kelurahan?: string; kecamatan?: string; city?: string }
+/** Round 21: one place the geocoding proxy found (/api/geo/search and /api/geo/reverse) */
+export interface GeoHit { label: string; lat: number; lng: number; kelurahan?: string; kecamatan?: string; city?: string }
+
 export interface ClubSettings {
   open: HM; // 08:30
   close: HM; // 16:30
@@ -123,6 +128,10 @@ export interface ClubSettings {
   taskCreate?: Partial<Record<GridRole, boolean>>;
   /** KC round 17: the terms and conditions, one entry per published version (the last is current) */
   terms?: TermsVersion[];
+  /** Round 21: the club's own pin (pick-up distance and the Where from map) */
+  location?: GeoPoint;
+  /** Round 21: the monthly pick-up price per km from the club and the distance that is free (missing = rules/geo.ts PICKUP_RATE_DEFAULT). Changes wait for the Owner. */
+  pickupRate?: { perKm: number; freeKm: number };
 }
 
 /** One published version of the terms and conditions: plain text, "# " heading lines, "- " bullets, {placeholders} filled from the settings. An empty `id` falls back to `en`. */
@@ -296,6 +305,8 @@ export interface Member extends Row {
   dob: ISODate | null;
   ageYears: number | null; // seed only, when dob unknown
   address: string | null;
+  /** Round 21: the home pin (pick-up distance and the Where from map) */
+  location?: GeoPoint;
   photoTone: number;
   /** the profile picture (GET /api/media/:id); without it the tone placeholder with initials shows */
   photoMediaId?: string;
@@ -595,6 +606,9 @@ export interface Enquiry extends Row {
   source: 'referral' | 'instagram' | 'website' | 'walkIn' | 'other';
   /** round 15: where a lead heard of us when the source is Other (optional, at most 80 characters; gone when the source changes) */
   sourceOther?: string;
+  /** Round 21: where the senior lives (optional), carried to the member on joining */
+  address?: string;
+  location?: GeoPoint;
   stage: 'new' | 'visit' | 'trial' | 'joined' | 'lost';
   next?: { kind: 'callBack' | 'sendPrices' | 'visit' | 'trial' | 'followUp' | 'starts' | 'custom'; date?: ISODate; time?: HM; text?: string };
   notes?: string;
