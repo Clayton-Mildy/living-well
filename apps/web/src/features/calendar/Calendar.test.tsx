@@ -55,6 +55,16 @@ describe('Calendar: field trips', () => {
     expect(selectedChip()).toContain('Field trip');
     expect(document.querySelector('input[name="fee"]')).toBeNull();
   });
+  it('round 21: a new field trip asks for the event name and the venue; Save without a venue says so', async () => {
+    await show('s9');
+    await act(async () => { button('New field trip')!.click(); });
+    const dlg = dialog()!;
+    const labels = Array.from(dlg.querySelectorAll('label > span:first-child')).map((x) => x.textContent);
+    expect(labels).toContain('Event name');
+    expect(dlg.textContent).toContain('Venue');
+    await act(async () => { Array.from(dlg.querySelectorAll('button')).find((b) => b.textContent === 'Save')!.click(); });
+    expect(dlg.textContent).toContain('Choose the venue.');
+  });
   it('on a phone management finds the New field trip row at the top of the List view, before the day blocks, and it opens the editor on Field trip', async () => {
     await show('s9', '/calendar', 390);
     const row = document.querySelector('[data-testid="new-field-trip-row"]')!;

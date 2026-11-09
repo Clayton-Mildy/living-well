@@ -85,9 +85,13 @@ const eventSchema = z.object({
   titleId: z.string().trim().max(120).nullish(),
   from: hm.nullish(),
   to: hm.nullish(),
+  /** round 21: an outing's venue (a Contacts entry of kind 'venue') */
+  venueId: z.string().min(1).max(60).nullish(),
   notify: z.boolean().optional(),
 });
 type EventInput = z.infer<typeof eventSchema>;
+/** Round 21: a venue id must name a live Contacts entry of kind 'venue'. */
+const checkVenue = (d: Draft<ClubState>, id: string | null | undefined, ctx: Ctx) => { if (id && (!d.directory[id] || d.directory[id].deletedAt || d.directory[id].kind !== 'venue')) ctx.fail('err.invalid'); };
 const updateSchema = z.object({
   eventId: z.string().min(1),
   date: isoDate.optional(),
@@ -97,6 +101,7 @@ const updateSchema = z.object({
   titleId: z.string().trim().max(120).nullish(),
   from: hm.nullish(),
   to: hm.nullish(),
+  venueId: z.string().min(1).max(60).nullish(),
   notify: z.boolean().optional(),
 });
 type UpdateInput = z.infer<typeof updateSchema>;
@@ -431,7 +436,8 @@ export const scheduleActions = [
     run(d, input, ctx) {
       const f = eventFields(input, ctx);
       const id = ctx.id('ev');
-      d.calendarEvents[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...f };
+      checkVenue(d, input.venueId, ctx);
+      d.calendarEvents[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...f, ...(f.kind === 'outing' && input.venueId ? { venueId: input.venueId } : {}) };
       if (f.kind === 'outing') syncTripRoster(d, d.calendarEvents[id], ctx, { joinToday: true }); // a trip made for today: whoever is already in the club is on it
       notifyEveryone(d, ctx, { kind: 'cal.notif.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } });
@@ -467,6 +473,10 @@ export const scheduleActions = [
       if (f.endDate) row.endDate = f.endDate; else delete row.endDate;
       if (f.titleId) row.titleId = f.titleId; else delete row.titleId;
       if (f.from && f.to) { row.from = f.from; row.to = f.to; } else { delete row.from; delete row.to; }
+      // round 21: the venue (only an outing keeps one)
+      checkVenue(d, input.venueId, ctx);
+      if (input.venueId !== undefined) { if (input.venueId) row.venueId = input.venueId; else delete row.venueId; }
+      if (f.kind !== 'outing') delete row.venueId;
       // Round 20 fix (I1): the roster follows the trip (a move takes off who has not gone on the new days, a trip now on today takes in today's check-ins)
       if (f.kind === 'outing' || cur.wentIds?.length || eventCharges(d, row.id).length) syncTripRoster(d, row, ctx, { startMoved: row.date !== oldDate, joinToday: !coveredToday });
       notifyEveryone(d, ctx, { kind: 'cal.notif.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } }, input.notify !== false);

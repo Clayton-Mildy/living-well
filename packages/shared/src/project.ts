@@ -80,7 +80,9 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   // their own feedback, and feedback the kitchen logged from a phone call whose replies go to them (KC round 6: replies show in the family app)
   out.feedback = pick(live(s.feedback).filter((f) => f.familyId === familyId || (!f.familyId && replyTarget(s, f) === familyId)));
   // round 17: who went on an outing is the family's own members only; the charges still waiting for the next invoice are theirs too
-  out.calendarEvents = pick(live(s.calendarEvents).map((e) => (e.wentIds ? { ...e, wentIds: e.wentIds.filter((id) => mids.includes(id)) } : e)));
+  // round 21: an outing carries its venue's name and address only (the venue itself, with its pictures and contact person, stays staff-side)
+  const venueOf = (id?: string) => { const v = id ? s.directory[id] : undefined; return v && !v.deletedAt ? { name: v.name, address: v.address ?? '' } : undefined; };
+  out.calendarEvents = pick(live(s.calendarEvents).map((e) => { const venue = venueOf(e.venueId); return { ...e, ...(e.wentIds ? { wentIds: e.wentIds.filter((id) => mids.includes(id)) } : {}), ...(venue ? { venue } : {}) }; }));
   out.pendingCharges = pick(mine(live(s.pendingCharges)).filter((c) => !c.invoiceId));
   out.rooms = pick(live(s.rooms));
   out.activities = pick(live(s.activities));

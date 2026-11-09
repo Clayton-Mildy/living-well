@@ -41,6 +41,8 @@ export interface FamRow {
   years?: number;
   /** round 17, celebration: the club has not said yes yet (the family still sees what it will cost) */
   requested?: boolean;
+  /** round 21, outing: the venue's trading name and address (the family copy's snapshot) */
+  venue?: { name: string; address: string };
   /** venue / outing / celebration: the end time when there is one */
   to?: HM | null;
   /** lunch and tea: the dishes */
@@ -125,7 +127,8 @@ export function famDay(s: ClubState, who: string[], date: ISODate, today: ISODat
     const used = new Set<string>();
     for (const it of info.items) {
       if (it.kind === 'outing') {
-        rows.push({ key: it.key, kind: 'outing', time: it.time ?? open, to: it.to ?? null, passed: false, title: it.title, titleId: it.titleId, took: [], photos: [] }); // round 21: no per-trip fee
+        const venue = it.eventId ? s.calendarEvents[it.eventId]?.venue : undefined; // round 21: name and address only
+        rows.push({ key: it.key, kind: 'outing', time: it.time ?? open, to: it.to ?? null, passed: false, title: it.title, titleId: it.titleId, ...(venue ? { venue } : {}), took: [], photos: [] }); // round 21: no per-trip fee
       } else if (it.kind === 'venue') {
         rows.push({ key: it.key, kind: 'venue', time: it.time ?? open, to: it.to ?? null, passed: false, roomId: it.roomId, took: [], photos: [] });
       } else if (it.kind === 'celebration') {

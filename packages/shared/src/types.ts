@@ -679,6 +679,8 @@ export interface CalendarEvent extends Row {
   wentIds?: string[];
   /** round 21, an outing: the venue (a Contacts entry of kind 'venue') */
   venueId?: string;
+  /** round 21, the family copy only: the venue's trading name and address (never its pictures, contact person or phone) */
+  venue?: { name: string; address: string };
 }
 
 export interface VenueBooking extends Row {

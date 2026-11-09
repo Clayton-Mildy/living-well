@@ -1072,3 +1072,27 @@ describe('round 21: field trips are paid monthly, not per trip', () => {
     expect(live(r.state.pendingCharges).filter((c) => c.source?.type === 'event' && c.source.id === ev.id)).toEqual([]);
   });
 });
+
+describe('round 21: a field trip names its venue (a Contacts entry of kind venue)', () => {
+  const VENUE = { id: 'dv1', clubId: 'citra', createdAt: '2026-10-01T10:00', createdBy: 'staff:s9' as const, kind: 'venue' as const, name: 'Rumah Batik Palbatu', what: '', phone: '+6281277881122', public: false, contactPerson: 'Ibu Sari', address: 'Jl. Palbatu 4, Tebet' };
+  const withVenue = () => { const s = fresh(); return { ...s, directory: { ...s.directory, dv1: VENUE } }; };
+  it('create keeps the venue; a contact that is not a venue, or unknown, is refused', () => {
+    const s = withVenue();
+    const r = run(s, 'calendarEvent.create', { date: '2026-10-28', kind: 'outing', title: 'Batik workshop', venueId: 'dv1', notify: false }, 's9');
+    expect(r.state.calendarEvents[r.result.eventId as string].venueId).toBe('dv1');
+    fails(s, 'calendarEvent.create', { date: '2026-10-28', kind: 'outing', title: 'x', venueId: 'd14', notify: false }, 's9', 'err.invalid');
+    fails(s, 'calendarEvent.create', { date: '2026-10-28', kind: 'outing', title: 'x', venueId: 'nope', notify: false }, 's9', 'err.invalid');
+  });
+  it('update changes or clears the venue; a closure never keeps one', () => {
+    const made = run(withVenue(), 'calendarEvent.create', { date: '2026-10-28', kind: 'outing', title: 'Batik workshop', notify: false }, 's9');
+    let s: ClubState = made.state;
+    const id = made.result.eventId as string;
+    s = step(s, 'calendarEvent.update', { eventId: id, venueId: 'dv1', notify: false }, 's9');
+    expect(s.calendarEvents[id].venueId).toBe('dv1');
+    s = step(s, 'calendarEvent.update', { eventId: id, venueId: null, notify: false }, 's9');
+    expect(s.calendarEvents[id].venueId).toBeUndefined();
+    s = step(s, 'calendarEvent.update', { eventId: id, venueId: 'dv1', notify: false }, 's9');
+    s = step(s, 'calendarEvent.update', { eventId: id, kind: 'closed', notify: false }, 's9');
+    expect(s.calendarEvents[id].venueId).toBeUndefined();
+  });
+});

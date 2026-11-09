@@ -55,7 +55,7 @@ export function Agenda({ day, onOpen }: { day: FamDay; onOpen: (photos: Photo[],
         const sub = (r.dishes ?? []).map((d) => (d.memberIds ? `${nameList(lang, d.memberIds.map(name))}: ` : '') + d.names.join(', ')).join(' · ');
         return { title: t(r.kind === 'lunch' ? 'family.tLunch' : 'family.tTea'), sub };
       }
-      case 'outing': return { title: cap(eventTitle({ title: r.title ?? '', titleId: r.titleId }, lang)), sub: [t('cal.k_outing'), span(r)].filter(Boolean).join(' · ') };
+      case 'outing': return { title: cap(eventTitle({ title: r.title ?? '', titleId: r.titleId }, lang)), sub: [t('cal.k_outing'), span(r), r.venue?.name].filter(Boolean).join(' · ') };
       case 'venue': return { title: t('cal.private'), sub: [roomLabel(s, r.roomId, lang), span(r)].filter(Boolean).join(' · ') };
       case 'birthday': {
         const m = r.memberId ? s.members[r.memberId] : undefined;

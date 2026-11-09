@@ -9,14 +9,17 @@ import { useClub } from '../../store/replica';
 export function TripBlock({ event, canEdit, onOpen, style }: { event: CalendarEvent; canEdit: boolean; onOpen?: (id: string) => void; style?: CSSProperties }) {
   const t = useT();
   const { lang } = useFmt();
-  const hours = useClub().club.settings;
+  const s = useClub();
+  const hours = s.club.settings;
   const title = lang === 'id' && event.titleId ? event.titleId : event.title;
   const when = `${event.from ?? hours.open}–${event.to ?? hours.close}`;
+  const venue = event.venueId ? s.directory[event.venueId]?.name : undefined; // round 21
   const box: CSSProperties = { width: '100%', minWidth: 0, boxSizing: 'border-box', borderRadius: 12, border: '1.5px solid #24201C', background: '#FFFFFF', color: '#24201C', padding: 12, display: 'flex', flexDirection: 'column', gap: 4, textAlign: 'left', fontFamily: 'Inter', ...style };
   const inner = (
     <>
       <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6, fontSize: FONT_SMALL, fontWeight: 600, lineHeight: 1.4 }}><Icon name="directions_bus" size={18} />{t('cal.k_outing')}</span>
       <span style={{ fontSize: FONT_BODY, fontWeight: 600, lineHeight: '19px', overflowWrap: 'anywhere' }}>{title}</span>
+      {venue ? <span data-trip-venue style={{ fontSize: FONT_SMALL, color: '#4A433D', lineHeight: 1.4, overflowWrap: 'anywhere' }}>{venue}</span> : null}
       <span style={{ fontSize: FONT_SMALL, color: '#5E5852', lineHeight: 1.4, fontVariantNumeric: 'tabular-nums' }}>{when} · {t('cal.tripNoSessions')}</span>
     </>
   );
