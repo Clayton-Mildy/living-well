@@ -253,7 +253,8 @@ describe('joining a lead (registration is on paper)', () => {
     const s = seed().citra;
     const mem = (pickup: unknown) => { const r = run(s, 'enquiry.convert', { ...input, pickup }, 's9'); return r.state.members[r.result.memberId as string]; };
     expect(mem({ on: true, price: 600_000 }).pickup).toEqual({ on: true, price: 600_000 });
-    fails(s, 'enquiry.convert', { ...input, pickup: { on: true } }, 's9', 'members.err.pickupNeedsLocation');
+    const noPin = { ...s, enquiries: { ...s.enquiries, e1: { ...s.enquiries.e1, location: undefined } } };
+    fails(noPin, 'enquiry.convert', { ...input, pickup: { on: true } }, 's9', 'members.err.pickupNeedsLocation');
     expect(mem({ on: true, price: 450_000 }).pickup).toEqual({ on: true, price: 450_000 });
     expect(mem(undefined).pickup).toBeUndefined();
     fails(s, 'enquiry.convert', { ...input, pickup: { on: true, price: 500 } }, 's9', 'err.invalid');
@@ -304,7 +305,7 @@ describe('joining a lead (registration is on paper)', () => {
     const id = r.result.memberId as string;
     expect(id).toBe('m47');
     const m = r.state.members[id];
-    expect(m).toMatchObject({ title: 'Oma', firstName: 'Siu Lan', lastName: 'Tjandra', gender: 'f', dob: null, address: null, nanny: null, usualArrival: '10:00' });
+    expect(m).toMatchObject({ title: 'Oma', firstName: 'Siu Lan', lastName: 'Tjandra', gender: 'f', dob: null, address: s.enquiries.e1.address, location: s.enquiries.e1.location, nanny: null, usualArrival: '10:00' }); // round 21: the lead's address and pin carry over
     expect(m.review).toBeUndefined();
     expect(m.memberships).toEqual([{ start: '2026-10-26' }]);
     expect(m.plans).toEqual([{ from: '2026-10-26', plan: 'flex', by: 'staff:s9' }]); // members come on any open day: no usual days

@@ -60,6 +60,7 @@ describe('round 16: pick-up on the plan tab', () => {
 describe('round 21: field trips on the plan tab', () => {
   it('reads Off or "On · Rp 250.000 / month"; finance switches it with members.setFieldTrips; the front desk cannot', async () => {
     const s = structuredClone(buildSeed().citra);
+    delete s.members.m1.fieldTrips; // the seed has Oma Lina on
     await show(s, 'lobby');
     expect(document.querySelector('[data-testid="trips-fact"]')?.textContent).toContain('Off');
     expect(document.querySelector('[data-testid="trips-edit"]')).toBeNull();

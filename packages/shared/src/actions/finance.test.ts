@@ -10,8 +10,12 @@ const NOW = 600; // 10:00
 const at = (today: string, nowMin = NOW) => ({ today, nowMin });
 const clubs = buildSeed();
 let n = 0;
-/** Round 20: the seeded Taman Mini trip's fees (a pending charge each) are not what these invoice tests are about, so they are left out. */
-const noTripFees = (s: ClubState): ClubState => ({ ...s, pendingCharges: Object.fromEntries(Object.entries(s.pendingCharges).filter(([, c]) => c.source?.id !== 'ev-outing-past')) });
+/** Round 20: the seeded Taman Mini trip's fees are not what these invoice tests are about, so they are left out. Round 21: nor are the monthly field trips (the seed switches some members on). */
+const noTripFees = (s: ClubState): ClubState => ({
+  ...s,
+  pendingCharges: Object.fromEntries(Object.entries(s.pendingCharges).filter(([, c]) => c.source?.id !== 'ev-outing-past')),
+  members: Object.fromEntries(Object.entries(s.members).map(([id, m]) => [id, m.fieldTrips ? { ...m, fieldTrips: { on: false } } : m])),
+});
 
 /** Every open invoice paid in full (a club where nobody owes anything). */
 const paidUp = (s: ClubState): ClubState => {
@@ -82,11 +86,11 @@ describe('invoice run', () => {
   it('without that visit nobody has an extra day: Lina is exactly at her 10', () => {
     const plan = runPlan(world().s, '2026-11', T);
     expect(plan.issue.flatMap((r) => r.lines.map((l) => l.kind))).not.toContain('extraDay');
-    expect(plan.total).toBe(2_700_000 + 3_950_000 + 3_950_000 + 2_700_000 + 3_950_000 + 750_000 + 450_000 + 350_000); // + Opa Tjahjadi’s dementia care (round 14) + Opa Budi’s pick-up (round 16) and birthday cake (round 17)
+    expect(plan.total).toBe(2_700_000 + 3_950_000 + 3_950_000 + 2_700_000 + 3_950_000 + 750_000 + 70_000 + 350_000); // + Opa Tjahjadi’s dementia care (round 14) + Opa Budi’s pick-up (round 21: 6.4 km → Rp 70.000) and birthday cake (round 17)
   });
   it('Flex pays for visits beyond 10 (Bambang’s 11th); Gold never has extra days', () => {
     // a month later, once October is over: Bambang has 8 visits and comes 3 more times; Hendra (Gold) comes every day he likes
-    let s = buildSeed().citra;
+    let s = noTripFees(buildSeed().citra);
     for (const d of ['2026-10-22', '2026-10-23', '2026-10-26']) s = withVisit(s, 'm10', d);
     for (const d of ['2026-10-01', '2026-10-06', '2026-10-08', '2026-10-13', '2026-10-15', '2026-10-17', '2026-10-22', '2026-10-23', '2026-10-26', '2026-10-27', '2026-10-28', '2026-10-29']) s = withVisit(s, 'm2', d);
     const plan = runPlan(s, '2026-11', '2026-11-23');
@@ -193,7 +197,7 @@ describe('invoice run', () => {
     const plan = runPlan(w.s, '2026-11', T);
     const budi = plan.issue.find((r) => r.member.id === 'm46')!;
     expect(budi.lines.map((l) => l.kind)).toEqual(['plan', 'pickup', 'adjustment', 'credit']); // round 16: Opa Budi is picked up; round 17: his birthday cake is a pending charge
-    expect(budi.total).toBe(3_450_000 + 450_000 + 350_000); // with his pick-up and the cake
+    expect(budi.total).toBe(3_450_000 + 70_000 + 350_000); // with his pick-up (round 21: priced by distance, Rp 70.000) and the cake
     issueNov(w);
     expect(creditApplied(w.s, 'm46')).toBe(500_000);
     expect(availableCredit(w.s, 'm46')).toBe(0);

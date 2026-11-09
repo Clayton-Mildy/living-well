@@ -128,7 +128,7 @@ describe('family health', () => {
     open('f1');
     await show(<FamilyProfile />, '/profile?member=m46&from=health');
     expect(q('pf-pickup')?.textContent).toContain('Pick-up');
-    expect(q('pf-pickup')?.textContent).toContain('Rp 450.000');
+    expect(q('pf-pickup')?.textContent).toContain('6.4 km · Rp 70.000'); // round 21: priced by distance
     expect(q('pf-pickup')?.textContent).not.toContain('custom');
     await act(async () => { root?.unmount(); });
     host?.remove();

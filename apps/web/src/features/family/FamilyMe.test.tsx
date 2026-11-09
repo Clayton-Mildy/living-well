@@ -146,6 +146,7 @@ describe('family Billing', () => {
     await show(<FamilyBilling />, '/billing');
     const blocks = Array.from(document.querySelectorAll('[data-testid="next-bill"]'));
     expect(blocks.some((b) => b.textContent?.includes('Taman Mini'))).toBe(false);
+    expect(blocks.find((b) => b.textContent?.includes('Oma Lina'))?.textContent).toContain('Field trips · November'); // round 21: the monthly fee
     blocks.sort((a) => (a.textContent?.includes('Opa Budi') ? -1 : 1));
     expect(blocks[0].textContent).toContain('On your next bill · Opa Budi');
     expect(blocks[0].textContent).toContain('Pick-up');

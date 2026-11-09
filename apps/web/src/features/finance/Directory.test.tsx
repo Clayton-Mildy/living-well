@@ -71,7 +71,7 @@ describe('Directory: grouped by category', () => {
       expect(a.getAttribute('href')).toMatch(/^tel:\+62\d+$/);
       expect(parseInt(a.style.height, 10)).toBeGreaterThanOrEqual(44);
     }
-    expect(headings()).toEqual(['AC and electrical', 'Medical', 'Groceries', 'Cleaning', 'Activity materials']); // only the groups that have contacts
+    expect(headings()).toEqual(['AC and electrical', 'Medical', 'Groceries', 'Cleaning', 'Activity materials', 'Field trip venues']); // only the groups that have contacts (round 21: the seeded trip venues)
     expect(under('Medical')).toContain('dr. Melinda Kusumo');
   });
 
@@ -81,7 +81,7 @@ describe('Directory: grouped by category', () => {
     expect(headings()).toEqual(['AC and electrical']);
     expect(document.querySelectorAll('[data-dir-row]')).toHaveLength(2);
     await pickOption(groupSelect(), 'All categories');
-    expect(headings().length).toBe(5);
+    expect(headings().length).toBe(6);
   });
 
   it('search narrows within the groups', async () => {

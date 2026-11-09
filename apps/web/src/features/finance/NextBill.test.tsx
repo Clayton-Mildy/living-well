@@ -55,7 +55,7 @@ describe('On your next bill', () => {
     expect(text).toContain('Karyawisata · Taman Safari');
   });
   it('renders nothing for a member with nothing waiting', async () => {
-    await show(state(), 'm1');
+    await show(state(), 'm2'); // round 21: Oma Lina is on the monthly field trips, so Opa Hendra has nothing waiting
     expect(host!.textContent).toBe('');
     expect(host!.innerHTML).toBe('');
   });
