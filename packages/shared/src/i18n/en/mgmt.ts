@@ -162,6 +162,9 @@ export const mgmt = {
   'settings.title': 'Settings', 'settings.membership': 'Membership rules', 'settings.sendOwner': 'Send to owner',
   'settings.fewVisits': 'Few-visits alert', 'settings.fewBelow': 'Flag below {n} visits', 'settings.fewBelowOne': 'Flag below {n} visit',
   'settings.terms': 'Terms and conditions', 'settings.noTerms': 'No terms yet', 'settings.termsRow': 'Version {v} · published {d} by {name} · {a} of {n} agreed',
+  'settings.pickup': 'Pick-up', 'settings.pickupClub': 'Club location', 'settings.pickupNoPin': 'No pin yet: pick-up prices need it', 'settings.pickupPerKm': 'Price per km',
+  'settings.pickupPerKmSub': 'A month, per started km from the club', 'settings.pickupFree': 'Free within', 'settings.pickupFreeSub': 'Members this close pay nothing',
+  'settings.err.perKm': 'Use Rp 1.000 to Rp 1.000.000.', 'settings.err.freeKm': 'Use 0 to 50 km, in half km steps.',
   'settings.save': 'Save', 'settings.cancel': 'Cancel', 'settings.saved': 'Saved.',
   'settings.err.few': 'Use a whole number from 1 to 31.', 'settings.err.leaveRun': 'Use a whole number from 1 to 6.',
   // ----- round 18: Settings › notice per kind, few-visits alert before next month -----

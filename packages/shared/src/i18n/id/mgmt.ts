@@ -163,6 +163,9 @@ export const mgmt: Same<typeof EN> = {
   'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.sendOwner': 'Kirim ke pemilik',
   'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewBelowOne': 'Tandai di bawah {n} kunjungan',
   'settings.terms': 'Syarat dan ketentuan', 'settings.noTerms': 'Belum ada syarat', 'settings.termsRow': 'Versi {v} · diterbitkan {d} oleh {name} · {a} dari {n} setuju',
+  'settings.pickup': 'Antar jemput', 'settings.pickupClub': 'Lokasi klub', 'settings.pickupNoPin': 'Belum ada pin: harga antar jemput membutuhkannya', 'settings.pickupPerKm': 'Harga per km',
+  'settings.pickupPerKmSub': 'Per bulan, per km yang dimulai dari klub', 'settings.pickupFree': 'Gratis dalam', 'settings.pickupFreeSub': 'Anggota sedekat ini tidak membayar',
+  'settings.err.perKm': 'Gunakan Rp 1.000 sampai Rp 1.000.000.', 'settings.err.freeKm': 'Gunakan 0 sampai 50 km, kelipatan setengah km.',
   'settings.save': 'Simpan', 'settings.cancel': 'Batal', 'settings.saved': 'Tersimpan.',
   'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.', 'settings.err.leaveRun': 'Gunakan bilangan bulat 1 sampai 6.',
   // ----- round 18: Settings › notice per kind, few-visits alert before next month -----

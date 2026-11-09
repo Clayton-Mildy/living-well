@@ -127,6 +127,23 @@ describe('owner gate', () => {
     expect(f.state.club.settings.fewVisits).toEqual({ below: 4, daysBeforeMonth: 18 });
     expect(pendingOwnerRequests(f.state, 'pricing')).toHaveLength(0);
   });
+  it('round 21: the club pin applies at once; the pick-up price per km and free distance wait for the Owner, with old → new rows', () => {
+    const pin = { lat: -6.136, lng: 106.731, kelurahan: 'Kalideres', kecamatan: 'Kalideres' };
+    const a = run(base, 'club.updateSettings', { location: pin }, EGA);
+    expect(a.reviewed).toBeUndefined();
+    expect(a.state.club.settings.location).toEqual(pin);
+    expect(ownerKindOf('club.updateSettings', { location: pin }, base)).toBeNull();
+    expect(ownerKindOf('club.updateSettings', { pickupRate: { perKm: 12_000, freeKm: 2 } }, base)).toBe('pricing');
+    const b = run(base, 'club.updateSettings', { pickupRate: { perKm: 12_000, freeKm: 2 } }, EGA);
+    expect(b.reviewed).toBe('owner');
+    expect(b.state.club.settings.pickupRate).toBeUndefined();
+    expect(ownerChanges(base, 'club.updateSettings', { pickupRate: { perKm: 12_000, freeKm: 2 } })).toEqual([{ label: 'approvals.owner.chg.pickupPerKm', from: rp(10_000), to: rp(12_000) }]);
+    expect(ownerChanges(base, 'club.updateSettings', { pickupRate: { perKm: 10_000, freeKm: 3 } })).toEqual([{ label: 'approvals.owner.chg.pickupFreeKm', from: '2', to: '3' }]);
+    const w = ownerWhat(base, 'club.updateSettings', { pickupRate: { perKm: 12_000, freeKm: 2 } });
+    expect(translate('en', w.key, { ...w.params, amount: rp(w.params.amount ?? 0) })).toBe(`Pick-up · ${rp(12_000)} a km · free within 2 km`);
+    const c = run(b.state, 'review.approve', { crId: b.result.changeRequestId as string }, OWNER);
+    expect(c.state.club.settings.pickupRate).toEqual({ perKm: 12_000, freeKm: 2 });
+  });
   it('ownerKindOf maps each action', () => {
     const hol = live(base.calendarEvents).find((e) => e.kind === 'holiday')!;
     const out = live(base.calendarEvents).find((e) => e.kind === 'outing')!;
@@ -169,7 +186,7 @@ describe('final review minor 2: a club-rules request says what it changes', () =
     const r = run(base, 'club.updateSettings', { notice: { stop: 30 } }, EGA);
     const cr = r.state.changeRequests[r.result.changeRequestId as string];
     const w = ownerWhat(r.state, cr.action, cr.input);
-    expect(translate('en', w.key, w.params)).toBe('Stop membership · 30 days');
+    expect(translate('en', w.key, { ...w.params, amount: rp(w.params.amount ?? 0) })).toBe('Stop membership · 30 days');
     expect(translate('id', w.key, w.params)).toBe('Berhenti · 30 hari');
     const note = Object.values(r.state.notifications).find((x) => x.kind === 'notif.ownerApproval' && x.ref?.id === cr.id)!;
     expect(translate('en', String(note.params.whatKey), note.params)).toBe('Stop membership · 30 days');

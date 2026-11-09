@@ -10,6 +10,7 @@ import { feeOf, priceOn, type Fee } from '../rules/billing';
 import { planDefs, planLabel, planPrice } from '../rules/plans';
 import { leaveMaxMonths } from '../rules/leave';
 import { weeklyLimit } from '../rules/budget';
+import { pickupRateOf } from '../rules/geo';
 
 const PRICING = ['prices.set', 'club.setPlan', 'club.updateSettings'];
 const BUDGET = ['budget.setLimit', 'budget.addSection', 'budget.renameSection'];
@@ -19,7 +20,8 @@ const isHoliday = (kind: unknown) => kind === 'closed' || kind === 'holiday';
 export function ownerKindOf(name: string, input: unknown, s: ClubState): OwnerKind | null {
   // round 17: club.updateSettings waits for the Owner only for the Flex visits and the notice (round 18: any kind); the few-visits alert settings apply at once
   // round 19: and leave in a row (leaveMaxMonths)
-  if (name === 'club.updateSettings') { const i = (input ?? {}) as { notice?: unknown; flexQuota?: unknown; leaveMaxMonths?: unknown }; return i.notice !== undefined || i.flexQuota !== undefined || i.leaveMaxMonths !== undefined ? 'pricing' : null; }
+  // round 21: and the pick-up price per km / free distance (the club's pin applies at once)
+  if (name === 'club.updateSettings') { const i = (input ?? {}) as { notice?: unknown; flexQuota?: unknown; leaveMaxMonths?: unknown; pickupRate?: unknown }; return i.notice !== undefined || i.flexQuota !== undefined || i.leaveMaxMonths !== undefined || i.pickupRate !== undefined ? 'pricing' : null; }
   if (PRICING.includes(name)) return 'pricing';
   if (BUDGET.includes(name)) return 'budget';
   const i = (input ?? {}) as { kind?: unknown; eventId?: string };
@@ -140,7 +142,9 @@ function settingsWhat(s: ClubState, i: Record<string, unknown>): { key: string; 
   const kinds = NOTICE_KINDS.filter((k) => typeof notice[k] === 'number');
   const quota = typeof i.flexQuota === 'number' ? i.flexQuota : undefined;
   const leaveMax = typeof i.leaveMaxMonths === 'number' ? i.leaveMaxMonths : undefined;
-  const others = (quota === undefined ? 0 : 1) + (leaveMax === undefined ? 0 : 1);
+  const rate = i.pickupRate as { perKm?: number; freeKm?: number } | undefined;
+  if (rate && !kinds.length && quota === undefined && leaveMax === undefined) return { key: 'approvals.owner.what.pickupRate', params: { amount: Number(rate.perKm) || 0, n: Number(rate.freeKm) || 0 } };
+  const others = (quota === undefined ? 0 : 1) + (leaveMax === undefined ? 0 : 1) + (rate ? 1 : 0);
   if (kinds.length === 1 && quota === undefined && leaveMax !== undefined) return { key: `approvals.owner.what.notice_${kinds[0]}_leaveMax`, params: { n: notice[kinds[0]], a: leaveMax } }; // e.g. "Upgrade · 3 days · Leave in a row · 3 months"
   if (kinds.length === 1 && !others) return { key: `approvals.owner.what.notice_${kinds[0]}`, params: { n: notice[kinds[0]] } };
   if (kinds.length > 1 && !others) { const now = { ...noticeSettings(s), ...notice }; return { key: 'approvals.owner.what.noticeAll', params: { a: now.downgrade, b: now.stop, c: now.leave, d: now.upgrade } }; }
@@ -201,6 +205,11 @@ export function ownerChanges(s: ClubState, action: string, input: unknown): Owne
       for (const k of NOTICE_KINDS) if (typeof notice[k] === 'number') diff(K + 'notice_' + k, String(now[k]), String(notice[k]));
       if (typeof i.flexQuota === 'number') diff(K + 'flexQuota', String(s.club.settings.flexQuota), String(i.flexQuota));
       if (typeof i.leaveMaxMonths === 'number') diff(K + 'leaveMax', String(leaveMaxMonths(s)), String(i.leaveMaxMonths));
+      if (i.pickupRate && typeof i.pickupRate === 'object') {
+        const was = pickupRateOf(s);
+        if (typeof i.pickupRate.perKm === 'number') diff(K + 'pickupPerKm', rp(was.perKm), rp(i.pickupRate.perKm));
+        if (typeof i.pickupRate.freeKm === 'number') diff(K + 'pickupFreeKm', String(was.freeKm), String(i.pickupRate.freeKm));
+      }
       return out;
     }
     case 'budget.setLimit': {

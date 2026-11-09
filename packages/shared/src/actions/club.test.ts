@@ -699,6 +699,13 @@ describe('prices and club rules', () => {
     fails(s, 'club.updateSettings', {}, 's9', 'err.invalid');
     fails(s, 'club.updateSettings', { flexQuota: 10 }, 's9', 'err.noChanges');
     expect(() => run(s, 'club.updateSettings', { flexQuota: 8 }, 's10')).toThrow('err.forbidden');
+    // round 21: the club pin and the pick-up rates (price per km Rp 1.000–1.000.000; free within 0–50 km in half km steps)
+    fails(s, 'club.updateSettings', { pickupRate: { perKm: 500, freeKm: 2 } }, 's9', 'err.invalid');
+    fails(s, 'club.updateSettings', { pickupRate: { perKm: 10_000, freeKm: 2.3 } }, 's9', 'err.invalid');
+    fails(s, 'club.updateSettings', { pickupRate: { perKm: 10_000, freeKm: 51 } }, 's9', 'err.invalid');
+    fails(s, 'club.updateSettings', { location: { lat: 200, lng: 1 } }, 's9', 'err.invalid');
+    fails(s, 'club.updateSettings', { pickupRate: { perKm: 10_000, freeKm: 2 } }, 's9', 'err.noChanges'); // the defaults
+    expect(run(s, 'club.updateSettings', { pickupRate: { perKm: 12_000, freeKm: 2.5 } }, 's9').state.club.settings.pickupRate).toEqual({ perKm: 12_000, freeKm: 2.5 });
     // the other clubhouse is separate
     const a = onAdina(seed().adina, 'club.updateSettings', { flexQuota: 6 });
     expect(a.state.club.settings.flexQuota).toBe(6);
