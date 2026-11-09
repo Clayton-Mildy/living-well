@@ -220,9 +220,11 @@ export function Toggle({ on, onClick, label, sub, disabled }: { on: boolean; onC
     </button>
   );
 }
-export function TextField({ label, value, onChange, placeholder, inputMode, type = 'text', error, hint, multiline, rows = 3, autoFocus, name, maxLength, onEnter, prefix }: {
+export function TextField({ label, value, onChange, placeholder, inputMode, type = 'text', error, hint, multiline, rows = 3, autoFocus, name, maxLength, onEnter, prefix, list }: {
   label?: ReactNode; value: string; onChange: (v: string) => void; placeholder?: string; inputMode?: 'text' | 'tel' | 'numeric' | 'decimal' | 'email' | 'search';
   type?: string; error?: string | false; hint?: ReactNode; multiline?: boolean; rows?: number; autoFocus?: boolean; name?: string; maxLength?: number; onEnter?: () => void; prefix?: ReactNode;
+  /** round 21: the id of a <datalist> of suggestions */
+  list?: string;
 }) {
   // round 8c: a soft grey field, no border, a 2px ink ring on focus (global.css .cp-input) and a rust ring on an error
   const ring = error ? 'inset 0 0 0 2px #9A3D24' : undefined;
@@ -230,7 +232,7 @@ export function TextField({ label, value, onChange, placeholder, inputMode, type
   const input = multiline ? (
     <textarea name={name} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} rows={rows} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} className={prefix ? 'cp-input' : 'cp-input cp-fill'} style={{ ...common, resize: 'vertical', lineHeight: '22px' }} />
   ) : (
-    <input name={name} type={type} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} inputMode={inputMode} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} className={prefix ? 'cp-input' : 'cp-input cp-fill'}
+    <input name={name} type={type} list={list} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder} inputMode={inputMode} autoFocus={autoFocus} maxLength={maxLength} aria-invalid={!!error || undefined} className={prefix ? 'cp-input' : 'cp-input cp-fill'}
       onKeyDown={onEnter ? (e) => { if (e.key === 'Enter') onEnter(); } : undefined} style={{ ...common, height: prefix ? '100%' : 'var(--cp-field-h, 52px)', flex: prefix ? 1 : 'none' }} />
   );
   return (
