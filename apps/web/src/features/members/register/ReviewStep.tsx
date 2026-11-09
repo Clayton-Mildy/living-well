@@ -10,6 +10,7 @@ import { foodLabel, mobLabel, relLabel } from '../lib';
 import { TextField, dementiaQuestion } from '../dialogs/forms';
 import { Rows, type StepProps } from './parts';
 import { REG_STEPS, pickupPriceOf, type RegStep } from './steps';
+import { areaLine } from '@cp/shared';
 
 /**
  * `onSign`: the PNG the family member drew on the pad (null while it is empty); it is uploaded when the registration is sent (round 15).
@@ -26,7 +27,7 @@ export function ReviewStep({ p, role, goTo, onSign, online, changed, onResign }:
   const contactPhone = isNew && st.contactMode === 'existing' ? s.familyContacts[st.existingId]?.phone ?? '' : st.phone;
   const allergies = [...st.health.food.map((x) => foodLabel(t, x)), st.health.foodOther.trim(), ...st.health.drug.map((x) => t('profile.drug.' + x)), st.health.drugOther.trim()].filter(Boolean);
   const rows: Record<Exclude<RegStep, 'review'>, [ReactNode, ReactNode][]> = {
-    person: [[t('common.name'), `${st.title} ${st.name.trim()}`], [t('profile.f.called'), st.reg.nickname.trim() || none], [t('profile.f.dob'), st.dob ? fd(st.dob, { day: 'numeric', month: 'short', year: 'numeric' }) : none], [t('profile.f.address'), st.address.trim() || none]],
+    person: [[t('common.name'), `${st.title} ${st.name.trim()}`], [t('profile.f.called'), st.reg.nickname.trim() || none], [t('profile.f.dob'), st.dob ? fd(st.dob, { day: 'numeric', month: 'short', year: 'numeric' }) : none], [t('profile.f.address'), st.address.trim() || none], [t('profile.f.location'), areaLine(st.location) || none]],
     family: [[t('common.name'), contactName || none], [t('profile.f.relation'), relLabel(t, st.rel)], [t('common.phone'), contactPhone ? fmtPhone(contactPhone) : none], [t('profile.sec.nanny'), st.carer.nanny ? st.carer.nannyName.trim() || none : none]],
     health: [[t('profile.f.conditions'), st.health.conditions.join(', ') || none], [t('profile.f.mobility'), mobLabel(t, st.health.mobility === 'none' ? null : st.health.mobility)], [t('profile.sec.allergies'), allergies.join(', ') || none], [dementiaQuestion(t, feeOf(priceOn(s, today), 'dementia')), st.reg.dementia === null ? none : st.reg.dementia ? <>{t('common.yes')}<span data-testid="review-dementia-fee" style={{ display: 'block', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{t('profile.dementiaFee', { rp: rp(feeOf(priceOn(s, today), 'dementia')) })}</span></> : t('common.no')]],
     plan: [[t('enq.plan'), st.plan ? planLabel(s, st.plan, lang) : none], [t('enq.start'), st.start ? fds(st.start) : none], ...(st.pickup ? [[t('profile.pickup'), t('profile.pickupVal', { p: rp(pickupPriceOf(st) || feeOf(priceOn(s, st.start || today), 'pickup')) })] as [ReactNode, ReactNode]] : [])],

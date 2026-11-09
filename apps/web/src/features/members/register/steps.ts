@@ -1,6 +1,6 @@
 // KC round 12: the registration as six steps (Join a lead and Add member share them). The state the steps edit, how it starts (empty, or
 // from a lead and the family's online form), and what still blocks each step — the add-member and application-form validators, per field group.
-import { PICKUP_MAX, PICKUP_MIN, isOpen, parseN, live, sortBy, type ClubState, type DocType, type Enquiry, type OnlineRegistration, type ISODate, type KtpUploads, type Plan, type Relation, type Title } from '@cp/shared';
+import { PICKUP_MAX, PICKUP_MIN, isOpen, type GeoPoint, parseN, live, sortBy, type ClubState, type DocType, type Enquiry, type OnlineRegistration, type ISODate, type KtpUploads, type Plan, type Relation, type Title } from '@cp/shared';
 import { genderOf, validateNewMember, type FieldIssue } from '@cp/shared/rules/members';
 import { startMondays } from '@cp/shared/rules/enquiries';
 import { validateRegistration } from '@cp/shared/rules/applicationForm';
@@ -18,7 +18,7 @@ export const STEP_ICON: Record<RegStep, string> = { person: 'person', family: 'f
  * the shared field groups edit. A lead keeps its own contact (enquiry.convert's contract): `contact`, `rel` and `phone` then hold the lead's, read-only.
  */
 export interface RegState {
-  title: Title; name: string; gender: 'f' | 'm'; dob: string; address: string;
+  title: Title; name: string; gender: 'f' | 'm'; dob: string; address: string; /** round 21: the home pin */ location?: GeoPoint;
   /** usual arrival (optional, informational); profile picture media id; spouse member id — Add member only */
   usual: string; photo: string; spouseId: string;
   contactMode: 'new' | 'existing'; existingId: string; contact: string; rel: Relation; phone: string; /** round 16: where the contract is emailed */ email: string; primary: boolean;
@@ -102,6 +102,8 @@ export function stepIssues(step: RegStep, st: RegState, mode: RegMode, today: IS
     ...validateRegistration(regOfDraft(st.reg, st.carer.nanny)),
     ...(!lead && st.contactMode === 'existing' && !st.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []),
     ...(st.pickup && pickupPriceOf(st) === null ? [{ field: 'pickup', code: 'err.invalid' }] : []),
+    // round 21: pick-up with no price of its own is priced by distance, so it needs the home pin
+    ...(st.pickup && pickupPriceOf(st) === 0 && !st.location ? [{ field: 'pickup', code: 'members.err.pickupNeedsLocation' }] : []),
     ...(s && st.start && st.start >= today && !isOpen(s, st.start) ? [{ field: 'start', code: 'err.closedDay' }] : []),
   ];
   return all.filter((i) => FIELDS[step].includes(i.field) && !(lead && NOT_FOR_LEADS.includes(i.field)) && !(lead && i.code === 'members.err.dobRequired')); // Join keeps the date of birth optional

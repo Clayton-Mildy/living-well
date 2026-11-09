@@ -1,5 +1,5 @@
 // Turns a change request into readable "old → new" rows (translated field labels) and, for creates, a summary of what is being added.
-import { fmtPhone, memberName, planLabel, isPlanId, type ChangeRequest, type ClubState, type Member, type MemberRegistration, type Plan, type PlanEntry } from '@cp/shared';
+import { areaLine, fmtPhone, memberName, type GeoPoint, planLabel, isPlanId, type ChangeRequest, type ClubState, type Member, type MemberRegistration, type Plan, type PlanEntry } from '@cp/shared';
 import { plainName } from '@cp/shared/rules/members';
 import type { TFn } from '../../lib/i18n';
 import { dietLabel, docLabel, drugLabel, foodLabel, mobLabel, relLabel, timingLabel } from './lib';
@@ -150,6 +150,7 @@ export function describeCr(cr: ChangeRequest, s: ClubState, t: TFn, fmt: Fmt): D
       case 'title': rows.push({ label: t('profile.f.title'), from: String(c.from ?? dash), to: String(c.to ?? dash) }); break;
       case 'dob': rows.push({ label: t('profile.f.dob'), from: c.from ? fmt.fdy(String(c.from)) : dash, to: c.to ? fmt.fdy(String(c.to)) : dash }); break;
       case 'address': rows.push({ label: t('profile.f.address'), from: String(c.from || dash), to: String(c.to || dash) }); break;
+      case 'location': rows.push({ label: t('profile.f.location'), from: areaLine(c.from as GeoPoint | undefined) || (c.from ? t('profile.f.pinOnly') : dash), to: areaLine(c.to as GeoPoint | undefined) || (c.to ? t('profile.f.pinOnly') : dash) }); break;
       case 'usualArrival': rows.push({ label: t('profile.f.usual'), from: String(c.from || dash), to: String(c.to || dash) }); break;
       case 'nanny': {
         const nn = (n: Member['nanny'] | undefined) => (n ? n.name + (n.note ? ` · ${n.note}` : '') : dash);

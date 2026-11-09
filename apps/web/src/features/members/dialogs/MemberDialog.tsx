@@ -9,6 +9,9 @@ import { END_REASONS, activePlans, consentOf, firstOfNextMonth, isPhone, openBal
 import { changeKind, earliestMonth, noticeDays } from '@cp/shared/rules/notice';
 import { isEmail } from '@cp/shared/rules/emails';
 import { monthStart } from '@cp/shared/util';
+import type { GeoPoint } from '@cp/shared';
+import { LocationPicker } from '../../../components/geo/LocationPicker';
+import { areaSuggestions } from '../../../lib/geo';
 import { cleanRegistration, validateRegistration } from '@cp/shared/rules/applicationForm';
 import { Button, ChipGroup, DateField, Dialog, Note, StaffOnlyTag, Toggle } from '../../../components/ui';
 import { say } from '../../../store/ui';
@@ -57,7 +60,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
   const { s, m, t, today } = p;
   const hours = { open: s.club.settings.open, last: toHM(toMin(s.club.settings.close) - 1) };
   const [d, set] = useDraft(() => ({
-    title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyNik: m.nanny?.nik || '', nannyPhoto: m.nanny?.photoMediaId || '', nannyNote: m.nanny?.note || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
+    title: m.title as Title, name: plainName(m), dob: m.dob || '', address: m.address || '', location: m.location as GeoPoint | undefined, usual: m.usualArrival || '', nanny: !!m.nanny, nannyName: m.nanny?.name || '', nannyNik: m.nanny?.nik || '', nannyPhoto: m.nanny?.photoMediaId || '', nannyNote: m.nanny?.note || '', nannyPhone: m.nanny?.phone ? fmtPhone(m.nanny.phone) : '',
     spouseId: m.spouseId || '', note: '', photo: m.photoMediaId || '', reg: regDraftOf(m.registration),
   }));
   const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
@@ -76,6 +79,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
     if (d.name.trim() !== plainName(m)) patch.name = d.name.trim();
     if (d.dob && d.dob !== (m.dob || '')) patch.dob = d.dob;
     if (d.address.trim() !== (m.address || '')) patch.address = d.address.trim();
+    if (JSON.stringify(d.location ?? null) !== JSON.stringify(m.location ?? null)) patch.location = d.location ?? null; // round 21: the home pin
     if (d.usual !== (m.usualArrival || '')) patch.usualArrival = d.usual;
     const nanny = d.nanny ? { name: d.nannyName.trim(), ...(d.nannyPhone.trim() ? { phone: e164(d.nannyPhone) } : {}), nik: d.nannyNik.replace(/\s/g, ''), ...(d.nannyPhoto ? { photoMediaId: d.nannyPhoto } : {}), ...(d.nannyNote.trim() ? { note: d.nannyNote.trim() } : {}) } : null;
     if (JSON.stringify(nanny) !== JSON.stringify(m.nanny)) patch.nanny = nanny;
@@ -95,7 +99,7 @@ function DetailsForm({ p, onClose }: { p: P; onClose: () => void }) {
         <ProfilePhotoField name={memberName(m)} tone={m.photoTone} value={d.photo || null} onChange={(id) => set({ photo: id || '' })} />
         <TitleName d={d} set={set} t={t} errors={{ title: tried && !d.title.trim() ? t('members.err.titleRequired') : '', name: errName }} />
         <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} />
-        <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} name="address" />
+        <LocationPicker label={t('profile.f.address')} address={d.address} location={d.location} onChange={(v) => set({ address: v.address, location: v.location })} club={s.club.settings.location} areaSuggestions={areaSuggestions(s)} />
         <OptionalTime label={t('profile.f.usualOpt')} value={d.usual} onChange={(v) => set({ usual: v })} min={hours.open} max={hours.last} t={t} />
         <SelectField label={t('profile.f.spouse')} value={d.spouseId} onChange={(v) => set({ spouseId: v })} placeholder={t('profile.noSpouse')} options={members.map((x) => ({ value: x.id, label: memberName(x) }))} />
       </PeSection>

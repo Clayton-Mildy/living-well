@@ -28,7 +28,7 @@ export function toCreateInput(st: RegState): NewMemberFull {
   const note = st.note.trim();
   return {
     ...(st.photo ? { photoMediaId: st.photo } : {}),
-    title: st.title, name: st.name.trim(), dob: st.dob, address: st.address.trim(), usualArrival: st.usual as HM | '', nanny: carerOf(st.carer), spouseId: st.spouseId || null, ...(ktp ? { ktp } : {}),
+    title: st.title, name: st.name.trim(), dob: st.dob, address: st.address.trim(), ...(st.location ? { location: st.location } : {}), usualArrival: st.usual as HM | '', nanny: carerOf(st.carer), spouseId: st.spouseId || null, ...(ktp ? { ktp } : {}),
     plan: st.plan as Plan, start: st.start,
     contact: st.contactMode === 'existing'
       ? { existingId: st.existingId, name: '', phone: '', relation: st.rel, primary: st.primary }

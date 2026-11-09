@@ -78,7 +78,7 @@ export function LocationPicker({ address, location, onChange, club, areaSuggesti
     <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
       <div style={{ display: 'flex', gap: 8, alignItems: 'flex-end' }}>
         <div style={{ flex: 1, minWidth: 0 }}>
-          <TextField label={label ?? t('geo.address')} value={address} onChange={(v) => emit({ address: v, location: now.current.location })} onEnter={search} maxLength={200} />
+          <TextField name="address" label={label ?? t('geo.address')} value={address} onChange={(v) => emit({ address: v, location: now.current.location })} onEnter={search} maxLength={200} />
         </div>
         <Button variant="secondary" size={56} onClick={search} disabled={busy} label={t('geo.search')}>{busy ? t('geo.searching') : t('geo.search')}</Button>
       </div>

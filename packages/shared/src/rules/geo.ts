@@ -36,3 +36,13 @@ export function isGeoPoint(v: unknown): v is GeoPoint {
   const o = v as Record<string, unknown>;
   return okNum(o.lat, 90) && okNum(o.lng, 180) && okArea(o.kelurahan) && okArea(o.kecamatan) && okArea(o.city);
 }
+
+/** A pin as stored from untrusted input (only the known keys, empty area names dropped); null when it is not a valid pin. */
+export function cleanGeo(v: unknown): GeoPoint | null {
+  if (!isGeoPoint(v)) return null;
+  const area = (x?: string) => (x && x.trim() ? x.trim() : undefined);
+  const kel = area(v.kelurahan), kec = area(v.kecamatan), city = area(v.city);
+  return { lat: v.lat, lng: v.lng, ...(kel ? { kelurahan: kel } : {}), ...(kec ? { kecamatan: kec } : {}), ...(city ? { city } : {}) };
+}
+/** The area of a pin as one line: "Pegadungan, Kalideres" (kelurahan, kecamatan), or '' when neither is known. */
+export const areaLine = (p?: GeoPoint): string => [p?.kelurahan, p?.kecamatan].filter(Boolean).join(', ');

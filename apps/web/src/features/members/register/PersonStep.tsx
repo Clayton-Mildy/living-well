@@ -10,6 +10,8 @@ import { SearchBar } from '../../mgmt/common';
 import { ProfilePhotoField } from '../ProfilePhoto';
 import { OptionalTime, RegPersonalFields, SelectField, TextField, TitleName } from '../dialogs/forms';
 import { DupNote, OneId, Sec, setRegOf, type StepProps } from './parts';
+import { LocationPicker } from '../../../components/geo/LocationPicker';
+import { areaSuggestions } from '../../../lib/geo';
 
 const norm = (x: string) => x.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 /** Open leads (not joined, lost or archived) whose senior, contact or phone matches every word typed. */
@@ -58,7 +60,7 @@ export function PersonStep({ p, onPickLead }: { p: StepProps; onPickLead: (id: s
         {isNew ? <ProfilePhotoField name={st.name ? `${st.title} ${st.name}` : '?'} value={st.photo || null} onChange={(id) => set({ photo: id || '' })} /> : null}
         <TitleName d={st} set={(x) => set({ ...x, ...(x.title ? { gender: genderOf(x.title) } : {}) })} t={t} errors={{ title: p.err('title'), name: p.err('name') }} />
         <DateField label={t('profile.f.dob')} value={st.dob} onChange={(v) => set({ dob: v })} max={today} startAt={`${+today.slice(0, 4) - 80}${today.slice(4)}`} error={p.err('dob')} />
-        <TextField label={t('profile.f.address')} value={st.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} name="address" />
+        <LocationPicker label={t('profile.f.address')} address={st.address} location={st.location} onChange={(v) => set({ address: v.address, location: v.location })} club={s.club.settings.location} areaSuggestions={areaSuggestions(s)} />
         <OneId p={p} who="member" />
         <DupNote p={p} nik={st.reg.ids.includes('member') ? st.reg.nik : ''} />
       </Sec>

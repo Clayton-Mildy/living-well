@@ -3,7 +3,7 @@
 // status comes from check-ins, and the Flex plan counts visits. Pure selectors shared by the actions and the screens.
 import { isOwnerSection } from '../actions/ownerGate';
 import { isEmail } from './emails';
-import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
+import type { GeoPoint, ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
 import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
 import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
@@ -365,6 +365,8 @@ export interface NewMemberInput {
   name: string;
   dob: ISODate;
   address: string;
+  /** round 21: the home pin (pick-up distance, the Where from map) */
+  location?: GeoPoint;
   /** informational only (members drop in on any open day); '' when not given */
   usualArrival: HM | '';
   nanny: { name: string; phone?: string; nik?: string } | null;

@@ -33,3 +33,14 @@ describe('describeCr: application form answers', () => {
     expect(rows.find((r) => r.label === 'Nickname (Panggilan)')).toEqual({ label: 'Nickname (Panggilan)', from: 'Oma Lina', to: '—' });
   });
 });
+
+describe('describeCr: the home pin (round 21)', () => {
+  it('reads as the area, not the coordinates', () => {
+    const c = buildSeed();
+    const s = c.citra;
+    delete s.members.m1.location;
+    const r = execute(s, 'members.updateDetails', { memberId: 'm1', patch: { location: { lat: -6.136, lng: 106.731, kelurahan: 'Kalideres', kecamatan: 'Kalideres' } } }, getUser(c, 's1')!, { today: '2026-10-21', nowMin: 600 }, 'rd9');
+    const rows = describeCr(r.state.changeRequests[r.result.changeRequestId as string], r.state, t, fmt).rows;
+    expect(rows).toContainEqual({ label: 'Location', from: '—', to: 'Kalideres, Kalideres' });
+  });
+});
