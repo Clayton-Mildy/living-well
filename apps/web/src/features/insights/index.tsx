@@ -20,10 +20,11 @@ import { Overall } from './Overall';
 import { PerPerson } from './PerPerson';
 import { PersonDetail } from './PersonDetail';
 import { TodayBlock } from './TodayBlock';
+import { WhereFrom } from './WhereFrom';
 
-type Tab = 'overall' | 'plan' | 'person' | 'members' | 'mood';
-const TABS: Tab[] = ['overall', 'plan', 'person', 'members', 'mood'];
-const TAB_KEY: Record<Tab, string> = { overall: 'insights.tabOverall', plan: 'insights.tabPlan', person: 'insights.tabPerson', members: 'insights.tabMembers', mood: 'insights.tabMood' };
+type Tab = 'overall' | 'plan' | 'person' | 'members' | 'where' | 'mood';
+const TABS: Tab[] = ['overall', 'plan', 'person', 'members', 'where', 'mood']; // round 21: Where from after Membership
+const TAB_KEY: Record<Tab, string> = { overall: 'insights.tabOverall', plan: 'insights.tabPlan', person: 'insights.tabPerson', members: 'insights.tabMembers', where: 'insights.tabWhere', mood: 'insights.tabMood' };
 const M_KEY: Record<MemberRangeKey, string> = { '3m': 'insights.m3', '6m': 'insights.m6', '1y': 'insights.m1y', custom: 'insights.mCustom' };
 const PERIOD_KEY: Record<PeriodKey, string> = { thisMonth: 'insights.pThisMonth', lastMonth: 'insights.pLastMonth', last3: 'insights.pLast3', last6: 'insights.pLast6', custom: 'insights.pCustom' };
 
@@ -89,6 +90,8 @@ export function Insights() {
         {tab === 'overall' ? <TodayBlock date={period.to} /> : null}
         {members && mTrend ? (
           <Membership trend={mTrend} />
+        ) : tab === 'where' ? (
+          <WhereFrom period={period} today={today} />
         ) : tab === 'mood' && mood ? (
           <Mood data={mood} />
         ) : data.overall.visits === 0 && tab !== 'person' ? (
