@@ -14,7 +14,7 @@ export async function reversePlace(lat: number, lng: number): Promise<GeoHit | n
 
 /** Kelurahan and kecamatan names already on members, leads and contacts (and the club), sorted, for the area fields' suggestions. */
 export function areaSuggestions(s: ClubState): { kelurahan: string[]; kecamatan: string[] } {
-  const pins: (GeoPoint | undefined)[] = [s.club.settings.location, ...live(s.members).map((m) => m.location), ...live(s.enquiries).map((e) => e.location)];
+  const pins: (GeoPoint | undefined)[] = [s.club.settings.location, ...live(s.members).map((m) => m.location), ...live(s.enquiries).map((e) => e.location), ...live(s.directory).map((c) => c.location)];
   const kel = new Set<string>();
   const kec = new Set<string>();
   for (const p of pins) { if (p?.kelurahan) kel.add(p.kelurahan); if (p?.kecamatan) kec.add(p.kecamatan); }

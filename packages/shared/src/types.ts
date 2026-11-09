@@ -677,6 +677,8 @@ export interface CalendarEvent extends Row {
   fee?: number;
   /** KC round 16, an outing: the members ticked as having gone (each is charged `fee` on the next invoice) */
   wentIds?: string[];
+  /** round 21, an outing: the venue (a Contacts entry of kind 'venue') */
+  venueId?: string;
 }
 
 export interface VenueBooking extends Row {
@@ -968,7 +970,8 @@ export interface InvoiceRun extends Row {
 }
 
 export interface DirectoryContact extends Row {
-  kind: 'doctor' | 'service' | 'supplier';
+  /** round 21: 'venue' = a field trip venue (listed under its own heading, never public) */
+  kind: 'doctor' | 'service' | 'supplier' | 'venue';
   name: string;
   what: string;
   whatId?: string;
@@ -978,6 +981,11 @@ export interface DirectoryContact extends Row {
   category?: SpendCategory;
   /** round 15 (phase 2): the directory category (ClubSettings.directoryGroups); none, or a retired one = shown under "Other" */
   groupId?: string;
+  /** round 21: the person to ask for, the address and its pin, and (a venue) pictures; staff only */
+  contactPerson?: string;
+  address?: string;
+  location?: GeoPoint;
+  photoMediaIds?: string[];
 }
 
 export interface StaffHr {

@@ -60,7 +60,7 @@ export const finance: Same<typeof EN> = {
   // ---- shared words ----
   'line.creditNote': 'Nota kredit: {reason}',
   'method.dokuVa': 'VA DOKU', 'method.bankTransfer': 'Transfer bank', 'method.cash': 'Tunai', 'method.other': 'Lainnya',
-  'kind.doctor': 'Dokter', 'kind.service': 'Layanan', 'kind.supplier': 'Pemasok',
+  'kind.venue': 'Tempat karyawisata', 'kind.doctor': 'Dokter', 'kind.service': 'Layanan', 'kind.supplier': 'Pemasok',
   'xero.synced': 'Xero tersinkron', 'xero.pending': 'Menunggu Xero',
 
   // ---- Billing ----
@@ -131,6 +131,8 @@ export const finance: Same<typeof EN> = {
   // ---- Directory ----
   'dir.famTitle': 'Kontak penting', 'dir.famSub': 'Dokter dan layanan yang bekerja sama dengan klub. Dalam keadaan darurat, hubungi klub terlebih dahulu:',
   'dir.sub': 'Pemasok, dokter, dan layanan. Kontak publik juga tampil di aplikasi keluarga; kontak internal hanya untuk staf.',
+  'dir.venuesGroup': 'Tempat karyawisata', 'dir.f_venue': 'Tempat', 'dir.tradingName': 'Nama usaha', 'dir.contactPerson': 'Narahubung', 'dir.contactPersonOpt': 'Narahubung (opsional)', 'dir.contactNumber': 'Nomor kontak', 'dir.addressOpt': 'Alamat (opsional)',
+  'dir.pics': 'Foto', 'dir.picsStaff': 'Foto (hanya staf)', 'dir.picAdd': 'Tambah foto', 'dir.picUploading': 'Mengunggah…', 'dir.picRemove': 'Hapus foto', 'dir.tripsHere': 'Karyawisata di sini', 'dir.noTrips': 'Belum ada karyawisata di sini',
   'dir.add': 'Tambah kontak', 'dir.addBtn': 'Tambah kontak', 'dir.editTitle': 'Ubah kontak', 'dir.filter': 'Saring kontak',
   'dir.f_all': 'Semua', 'dir.f_supplier': 'Pemasok', 'dir.f_doctor': 'Dokter', 'dir.f_service': 'Layanan', 'dir.f_public': 'Publik', 'dir.f_internal': 'Internal',
   'dir.search': 'Cari kontak', 'dir.empty': 'Belum ada kontak', 'dir.public': 'Publik', 'dir.internal': 'Internal', 'dir.makeInternal': 'Jadikan internal', 'dir.makePublic': 'Jadikan publik',

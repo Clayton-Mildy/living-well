@@ -5,8 +5,12 @@
 // the front desk, finance and management add, rename and retire the categories; a contact with none, or in a retired one, sits under Other.
 import { Fragment, useEffect, useMemo, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { fmtPhone, live, sortBy, type DirectoryContact, type DirectoryGroup, type SpendCategory } from '@cp/shared';
-import { activeGroups, groupKeyOf, groupKeys, groupName, OTHER } from '@cp/shared/rules/directory';
+import { areaLine, fmtPhone, live, sortBy, type DirectoryContact, type DirectoryGroup, type GeoPoint, type SpendCategory } from '@cp/shared';
+import { activeGroups, groupKeyOf, groupKeys, groupName, OTHER, VENUES } from '@cp/shared/rules/directory';
+import { LocationPicker } from '../../components/geo/LocationPicker';
+import { areaSuggestions } from '../../lib/geo';
+import { uploadMedia } from '../../lib/media';
+import { ContactSheet, VenuePics } from './ContactSheet';
 import { SPEND_CATEGORIES } from '@cp/shared/rules/purchasing';
 import { Button, Chip, EmptyState, FilterChips, Icon, IconButton, PageHead, Pin, Select, Sheet, TextField, Toggle, usePaged } from '../../components/ui';
 import { padFor, useDevice } from '../../hooks/useDevice';
@@ -17,14 +21,16 @@ import { useClub } from '../../store/replica';
 import { matches } from './lib';
 import { ConfirmDialog, Dot, FormOverlay, Hero, HeroHead, PGroup, PagerBar, PillBtn, SearchField, fieldLabel, hrow, prow, rowSub, rowTitle } from './parts';
 
-type Filter = 'all' | 'supplier' | 'doctor' | 'service' | 'public' | 'internal';
-const FILTERS: Filter[] = ['all', 'supplier', 'doctor', 'service', 'public', 'internal'];
-const KIND_ICON: Record<DirectoryContact['kind'], string> = { doctor: 'stethoscope', service: 'medical_services', supplier: 'local_shipping' };
-const KINDS: DirectoryContact['kind'][] = ['doctor', 'service', 'supplier'];
+type Filter = 'all' | 'supplier' | 'doctor' | 'service' | 'venue' | 'public' | 'internal';
+const FILTERS: Filter[] = ['all', 'supplier', 'doctor', 'service', 'venue', 'public', 'internal'];
+const KIND_ICON: Record<DirectoryContact['kind'], string> = { doctor: 'stethoscope', service: 'medical_services', supplier: 'local_shipping', venue: 'directions_bus' };
+const KINDS: DirectoryContact['kind'][] = ['doctor', 'service', 'supplier', 'venue'];
 type CatFilter = SpendCategory | 'all';
 /** The group heading above a run of contacts. */
 const groupHead = { margin: 0, fontSize: 13, fontWeight: 600, lineHeight: '18px', letterSpacing: '0.02em', color: '#6B6259' } as const;
 const telOf = (p: string) => 'tel:' + p.replace(/[^\d+]/g, '');
+/** Round 21: the name and its line open the contact's sheet. */
+const openBtn = { flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', alignItems: 'flex-start', textAlign: 'left', border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', fontFamily: 'Inter', color: 'inherit' } as const;
 
 export function Directory() {
   const s = useClub();
@@ -57,22 +63,25 @@ export function Directory() {
   }, [sp]); // eslint-disable-line react-hooks/exhaustive-deps
   const [form, setForm] = useState<null | 'new' | DirectoryContact>(null);
   const [del, setDel] = useState<DirectoryContact | null>(null);
+  const [open, setOpen] = useState<DirectoryContact | null>(null); // round 21: the contact sheet
 
   const all = useMemo(() => sortBy(live(s.directory), (d) => d.name), [s.directory]);
   const what = (d: DirectoryContact) => (lang === 'id' && d.whatId ? d.whatId : d.what);
   // a supplier's row also says what it sells (staff only: families see doctors and services)
-  const sub = (d: DirectoryContact) => `${t('finance.kind.' + d.kind)} · ${what(d)}${!simple && d.kind === 'supplier' && d.category ? ` · ${t('purchasing.cat.' + d.category)}` : ''}`;
+  const sub = (d: DirectoryContact) => (d.kind === 'venue'
+    ? [d.contactPerson, areaLine(d.location) || d.address].filter(Boolean).join(' · ') // round 21: a venue says who to ask for and where
+    : `${t('finance.kind.' + d.kind)} · ${what(d)}${!simple && d.kind === 'supplier' && d.category ? ` · ${t('purchasing.cat.' + d.category)}` : ''}`);
   const inFilter = (d: DirectoryContact) => (simple ? d.public : f === 'all' || (f === 'public' ? d.public : f === 'internal' ? !d.public : d.kind === f && (f !== 'supplier' || cat === 'all' || d.category === cat)));
   const st = s.club.settings;
   // the buckets in display order (the active categories, Other last); a category retired while chosen falls back to All
   const keys = groupKeys(st);
   const gsel = keys.includes(grp) ? grp : 'all';
-  const nameOfKey = (k: string) => (k === OTHER ? t('finance.dir.otherGroup') : groupName(activeGroups(st).find((g) => g.id === k)!, lang));
+  const nameOfKey = (k: string) => (k === OTHER ? t('finance.dir.otherGroup') : k === VENUES ? t('finance.dir.venuesGroup') : groupName(activeGroups(st).find((g) => g.id === k)!, lang));
   const keyOf = (d: DirectoryContact) => groupKeyOf(st, d);
   const visible = all.filter((d) => inFilter(d));
   const populated = keys.filter((k) => visible.some((d) => keyOf(d) === k));
   const rank = new Map(keys.map((k, i) => [k, i]));
-  const hits = sortBy(visible.filter((d) => (gsel === 'all' || keyOf(d) === gsel) && matches(q, d.name, what(d), d.what, d.whatId, d.phone, fmtPhone(d.phone), t('finance.kind.' + d.kind), nameOfKey(keyOf(d)))), (d) => String(rank.get(keyOf(d)) ?? 99).padStart(3, '0') + d.name.toLowerCase());
+  const hits = sortBy(visible.filter((d) => (gsel === 'all' || keyOf(d) === gsel) && matches(q, d.name, what(d), d.what, d.whatId, d.phone, fmtPhone(d.phone), t('finance.kind.' + d.kind), nameOfKey(keyOf(d)), d.contactPerson ?? '', d.address ?? '')), (d) => String(rank.get(keyOf(d)) ?? 99).padStart(3, '0') + d.name.toLowerCase());
   const paged = usePaged(hits, 20, q + f + cat + gsel);
   const emergency = s.club.settings.emergencyPhone;
   const count = (k: Filter) => all.filter((d) => (k === 'all' ? true : k === 'public' ? d.public : k === 'internal' ? !d.public : d.kind === k)).length;
@@ -119,10 +128,10 @@ export function Directory() {
         <div data-dir-row={d.name} style={{ ...prow(first), display: 'flex', flexDirection: 'column', gap: 8 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
             <span aria-hidden="true" style={{ width: 36, height: 36, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--eyebrow, #6E5A43)', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={19} weight={300} /></span>
-            <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 2 }}>
+            <button type="button" data-dir-open={d.name} onClick={() => setOpen(d)} style={{ ...openBtn, gap: 2 }}>
               {nameEl}
               <span style={{ ...rowSub, fontSize: 13 }}>{sub(d)}</span>
-            </div>
+            </button>
             {vis ? <span style={{ fontSize: 13, whiteSpace: 'nowrap', flex: 'none' }}>{vis}</span> : null}
           </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', paddingLeft: 48 }}>
@@ -140,10 +149,10 @@ export function Directory() {
       <div data-dir-row={d.name} style={{ ...hrow, ...(first ? { borderTop: 'none' } : {}), display: 'flex', flexDirection: 'column', gap: 10 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
           <span aria-hidden="true" style={{ width: 46, height: 46, borderRadius: 999, background: 'var(--on-card, #FFFFFF)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--eyebrow, #6E5A43)', flex: 'none' }}><Icon name={KIND_ICON[d.kind]} size={22} weight={300} /></span>
-          <div style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>
+          <button type="button" data-dir-open={d.name} onClick={() => setOpen(d)} style={{ ...openBtn, gap: 3 }}>
             {nameEl}
             <span style={rowSub}>{sub(d)}</span>
-          </div>
+          </button>
           {vis}
           {tel}
           {toggleBtn}
@@ -204,6 +213,7 @@ export function Directory() {
       )}
 
       <ContactForm value={form} onClose={() => setForm(null)} />
+      <ContactSheet contact={open} onClose={() => setOpen(null)} onEdit={canEdit && open ? () => { setForm(open); setOpen(null); } : undefined} />
       {groupsOpen ? <GroupsSheet onClose={() => setGroupsOpen(false)} /> : null}
       <ConfirmDialog open={!!del} onClose={() => setDel(null)} title={t('finance.dir.deleteTitle')} body={t('finance.dir.deleteBody', { name: del?.name || '' })} confirmLabel={t('common.delete')} onConfirm={remove} />
     </div>
@@ -212,17 +222,20 @@ export function Directory() {
   );
 }
 
-function ContactForm({ value, onClose }: { value: null | 'new' | DirectoryContact; onClose: () => void }) {
+/** Add or edit a contact. Round 21: `initialKind` starts a new one on that kind (the trip form's New venue); `onSaved` gets the new id. */
+export function ContactForm({ value, onClose, initialKind, onSaved }: { value: null | 'new' | DirectoryContact; onClose: () => void; initialKind?: DirectoryContact['kind']; onSaved?: (id: string) => void }) {
   const t = useT();
   const act = useAct();
   const editing = value && value !== 'new' ? value : null;
-  const st = useClub().club.settings;
+  const club = useClub();
+  const st = club.club.settings;
   const { lang } = useFmt();
   const groups = activeGroups(st);
   // the picker holds the active categories only; a contact with none (or a retired one) shows as Other: the club's own Other when it has one, else "no category"
   const other = groups.find((g) => g.name.trim().toLowerCase() === 'other');
   const groupInit = editing ? (groupKeyOf(st, editing) === OTHER ? 'none' : groupKeyOf(st, editing)) : (other?.id ?? 'none');
-  const init = () => ({ kind: (editing?.kind || 'supplier') as DirectoryContact['kind'], name: editing?.name || '', what: editing?.what || '', whatId: editing?.whatId || '', phone: editing ? fmtPhone(editing.phone) : '', pub: editing?.public ?? false, cat: (editing?.category ?? 'none') as SpendCategory | 'none', group: groupInit });
+  const init = () => ({ person: editing?.contactPerson ?? '', address: editing?.address ?? '', location: editing?.location as GeoPoint | undefined, pics: editing?.photoMediaIds ?? [] as string[], uploading: false,
+    kind: (editing?.kind || initialKind || 'supplier') as DirectoryContact['kind'], name: editing?.name || '', what: editing?.what || '', whatId: editing?.whatId || '', phone: editing ? fmtPhone(editing.phone) : '', pub: editing?.public ?? false, cat: (editing?.category ?? 'none') as SpendCategory | 'none', group: groupInit });
   const [v, setV] = useState(init);
   const key = value ? (value === 'new' ? 'new' : value.id) : null;
   const [prev, setPrev] = useState<string | null>(null);
@@ -230,18 +243,32 @@ function ContactForm({ value, onClose }: { value: null | 'new' | DirectoryContac
   if (!value) return null;
   const set = (p: Partial<typeof v>) => setV((x) => ({ ...x, ...p }));
   const phoneOk = v.phone.replace(/\D/g, '').length >= 6;
-  const ok = !!v.name.trim() && !!v.what.trim() && phoneOk;
+  const venue = v.kind === 'venue';
+  const ok = !!v.name.trim() && (venue ? !!v.person.trim() && !!v.address.trim() : !!v.what.trim()) && phoneOk && !v.uploading;
+  const addPics = async (files: FileList | null) => {
+    if (!files?.length) return;
+    set({ uploading: true });
+    try {
+      const ids: string[] = [];
+      for (const f of Array.from(files).slice(0, Math.max(0, 10 - v.pics.length))) ids.push(await uploadMedia(f));
+      setV((x) => ({ ...x, pics: [...x.pics, ...ids].slice(0, 10), uploading: false }));
+    } catch { set({ uploading: false }); }
+  };
   const save = async () => {
-    const body = { kind: v.kind, name: v.name.trim(), what: v.what.trim(), phone: v.phone.trim(), public: v.pub };
+    // round 21: the person to ask for, the address and pin (any kind); a venue's pictures; a venue is never public and has no category
+    const where = editing
+      ? { contactPerson: v.person.trim() || null, address: v.address.trim() || null, location: v.location ?? null, ...(venue ? { photoMediaIds: v.pics } : {}) }
+      : { ...(v.person.trim() ? { contactPerson: v.person.trim() } : {}), ...(v.address.trim() ? { address: v.address.trim() } : {}), ...(v.location ? { location: v.location } : {}), ...(venue && v.pics.length ? { photoMediaIds: v.pics } : {}) };
+    const body = { kind: v.kind, name: v.name.trim(), what: venue ? '' : v.what.trim(), phone: v.phone.trim(), public: venue ? false : v.pub, ...where };
     // only a supplier has a category; changing a contact to another kind drops it
     const category = v.kind === 'supplier' && v.cat !== 'none' ? v.cat : null;
     // the directory category: sent when it differs from where the contact sits now (a retired one is left alone unless changed)
-    const groupId = v.group === 'none' ? null : v.group;
-    const groupChanged = v.group !== groupInit;
+    const groupId = venue || v.group === 'none' ? null : v.group;
+    const groupChanged = !venue && v.group !== groupInit;
     const r = editing
       ? await act('directory.update', { id: editing.id, ...body, whatId: v.whatId.trim() || null, category, ...(groupChanged ? { groupId } : {}) }, { ok: t('finance.toast.contactSaved', { name: body.name }) })
       : await act('directory.add', { ...body, ...(v.whatId.trim() ? { whatId: v.whatId.trim() } : {}), ...(category ? { category } : {}), ...(groupId ? { groupId } : {}) }, { ok: t('finance.toast.contactAdded', { name: body.name }) });
-    if (r.ok) onClose();
+    if (r.ok) { if (!editing && r.result?.id) onSaved?.(String(r.result.id)); onClose(); }
   };
   return (
     <FormOverlay open onClose={onClose} title={editing ? t('finance.dir.editTitle') : t('finance.dir.add')} maxWidth={560}
@@ -252,15 +279,29 @@ function ContactForm({ value, onClose }: { value: null | 'new' | DirectoryContac
           {KINDS.map((k) => <Chip key={k} selected={v.kind === k} onClick={() => set({ kind: k })}>{t('finance.kind.' + k)}</Chip>)}
         </div>
       </div>
-      <Select label={t('finance.dir.group')} value={v.group} onChange={(x) => set({ group: x })} options={[...(other ? [] : [{ value: 'none', label: t('finance.dir.otherGroup') }]), ...groups.map((g) => ({ value: g.id, label: groupName(g, lang) }))]} />
+      {!venue ? <Select label={t('finance.dir.group')} value={v.group} onChange={(x) => set({ group: x })} options={[...(other ? [] : [{ value: 'none', label: t('finance.dir.otherGroup') }]), ...groups.map((g) => ({ value: g.id, label: groupName(g, lang) }))]} /> : null}
       {v.kind === 'supplier' ? (
         <Select label={t('finance.dir.spendCat')} value={v.cat} onChange={(x) => set({ cat: x })} options={[{ value: 'none', label: t('purchasing.noCategory') }, ...SPEND_CATEGORIES.map((c) => ({ value: c, label: t('purchasing.cat.' + c) }))]} />
       ) : null}
-      <TextField label={t('common.name')} value={v.name} onChange={(x) => set({ name: x })} maxLength={120} />
-      <TextField label={t('finance.dir.what')} value={v.what} onChange={(x) => set({ what: x })} maxLength={160} placeholder={t('finance.dir.whatEx')} />
-      <TextField label={t('finance.dir.whatId')} value={v.whatId} onChange={(x) => set({ whatId: x })} maxLength={160} />
-      <TextField label={t('common.phone')} value={v.phone} onChange={(x) => set({ phone: x })} inputMode="tel" type="tel" error={v.phone && !phoneOk ? t('finance.dir.phoneBad') : undefined} />
-      <Toggle on={v.pub} onClick={() => set({ pub: !v.pub })} label={t('finance.dir.visibleToFamilies')} />
+      <TextField label={venue ? t('finance.dir.tradingName') : t('common.name')} value={v.name} onChange={(x) => set({ name: x })} maxLength={120} />
+      {!venue ? <TextField label={t('finance.dir.what')} value={v.what} onChange={(x) => set({ what: x })} maxLength={160} placeholder={t('finance.dir.whatEx')} /> : null}
+      {!venue ? <TextField label={t('finance.dir.whatId')} value={v.whatId} onChange={(x) => set({ whatId: x })} maxLength={160} /> : null}
+      <TextField label={venue ? t('finance.dir.contactPerson') : t('finance.dir.contactPersonOpt')} value={v.person} onChange={(x) => set({ person: x })} maxLength={80} />
+      <TextField label={venue ? t('finance.dir.contactNumber') : t('common.phone')} value={v.phone} onChange={(x) => set({ phone: x })} inputMode="tel" type="tel" error={v.phone && !phoneOk ? t('finance.dir.phoneBad') : undefined} />
+      <LocationPicker label={venue ? t('geo.address') : t('finance.dir.addressOpt')} address={v.address} location={v.location} onChange={(x) => set({ address: x.address, location: x.location })} club={st.location} areaSuggestions={areaSuggestions(club)} />
+      {venue ? (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <span style={fieldLabel}>{t('finance.dir.picsStaff')}</span>
+          <VenuePics ids={v.pics} onRemove={(id) => setV((x) => ({ ...x, pics: x.pics.filter((p) => p !== id) }))} removeLabel={t('finance.dir.picRemove')} />
+          {v.pics.length < 10 ? (
+            <label className="h-fill cp-fill cp-press" style={{ alignSelf: 'flex-start', display: 'inline-flex', alignItems: 'center', gap: 8, height: 44, padding: '0 16px', borderRadius: 12, background: 'var(--fill, #F4F4F5)', fontSize: 15, fontWeight: 500, cursor: 'pointer' }}>
+              <Icon name="add_photo_alternate" size={19} weight={300} />{v.uploading ? t('finance.dir.picUploading') : t('finance.dir.picAdd')}
+              <input type="file" accept="image/*" multiple hidden onChange={(e) => { void addPics(e.target.files); e.target.value = ''; }} />
+            </label>
+          ) : null}
+        </div>
+      ) : null}
+      {!venue ? <Toggle on={v.pub} onClick={() => set({ pub: !v.pub })} label={t('finance.dir.visibleToFamilies')} /> : null}
     </FormOverlay>
   );
 }

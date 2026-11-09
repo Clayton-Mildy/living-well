@@ -58,7 +58,7 @@ export const finance = {
   // ---- shared words ----
   'line.creditNote': 'Credit note: {reason}',
   'method.dokuVa': 'DOKU VA', 'method.bankTransfer': 'Bank transfer', 'method.cash': 'Cash', 'method.other': 'Other',
-  'kind.doctor': 'Doctor', 'kind.service': 'Service', 'kind.supplier': 'Supplier',
+  'kind.venue': 'Field trip venue', 'kind.doctor': 'Doctor', 'kind.service': 'Service', 'kind.supplier': 'Supplier',
   'xero.synced': 'Xero synced', 'xero.pending': 'Xero pending',
 
   // ---- Billing ----
@@ -129,6 +129,8 @@ export const finance = {
   // ---- Directory ----
   'dir.famTitle': 'Useful contacts', 'dir.famSub': 'Doctors and services the club works with. In an emergency, call the club first:',
   'dir.sub': 'Suppliers, doctors and services. Public contacts also appear in the family app; internal ones are for staff only.',
+  'dir.venuesGroup': 'Field trip venues', 'dir.f_venue': 'Venues', 'dir.tradingName': 'Trading name', 'dir.contactPerson': 'Contact person', 'dir.contactPersonOpt': 'Contact person (optional)', 'dir.contactNumber': 'Contact number', 'dir.addressOpt': 'Address (optional)',
+  'dir.pics': 'Pictures', 'dir.picsStaff': 'Pictures (staff only)', 'dir.picAdd': 'Add pictures', 'dir.picUploading': 'Uploading…', 'dir.picRemove': 'Remove picture', 'dir.tripsHere': 'Trips here', 'dir.noTrips': 'No trips here yet',
   'dir.add': 'Add a contact', 'dir.addBtn': 'Add contact', 'dir.editTitle': 'Edit contact', 'dir.filter': 'Filter contacts',
   'dir.f_all': 'All', 'dir.f_supplier': 'Suppliers', 'dir.f_doctor': 'Doctors', 'dir.f_service': 'Services', 'dir.f_public': 'Public', 'dir.f_internal': 'Internal',
   'dir.search': 'Search contacts', 'dir.empty': 'No contacts yet', 'dir.public': 'Public', 'dir.internal': 'Internal', 'dir.makeInternal': 'Make internal', 'dir.makePublic': 'Make public',

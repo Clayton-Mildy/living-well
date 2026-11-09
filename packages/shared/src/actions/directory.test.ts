@@ -1,6 +1,7 @@
 // Directory actions: add, update, delete, toggle public. Finance, management and the lobby keep the list; families see public entries.
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, live, projectForFamily, type ClubState } from '../index';
+import { groupKeyOf, groupKeys, OTHER, tripsAt, VENUES } from '../rules/directory';
 
 const clubs = buildSeed();
 const T = '2026-10-21';
@@ -194,5 +195,51 @@ describe('directory', () => {
     const w = world();
     w.run('directory.togglePublic', { contactId: 'd7' }, 's10');
     expect(w.s.directory.d7.public).toBe(true);
+  });
+});
+
+describe('round 21: trip venues', () => {
+  const venue = { kind: 'venue', name: 'Rumah Batik Palbatu', contactPerson: 'Ibu Sari', phone: '0812 7788 1122', address: 'Jl. Palbatu 4, Tebet', location: { lat: -6.231, lng: 106.853, kelurahan: 'Menteng Dalam', kecamatan: 'Tebet' }, photoMediaIds: ['md_venueone0001', 'md_venuetwo0002', 'md_venuethree003'], public: true };
+  it('a venue needs a contact person and an address; it keeps the pin and up to 10 pictures and is never public', () => {
+    const w = world();
+    w.fail('directory.add', { ...venue, contactPerson: ' ' }, 's9', 'err.invalid');
+    w.fail('directory.add', { ...venue, address: '' }, 's9', 'err.invalid');
+    w.fail('directory.add', { ...venue, photoMediaIds: Array.from({ length: 11 }, (_, i) => `md_venuepic0${String(i).padStart(3, '0')}`) }, 's9', 'err.invalid');
+    const r = w.run('directory.add', venue, 's1');
+    const c = w.s.directory[r.result.id as string];
+    expect(c).toMatchObject({ kind: 'venue', name: 'Rumah Batik Palbatu', contactPerson: 'Ibu Sari', address: 'Jl. Palbatu 4, Tebet', location: venue.location, photoMediaIds: venue.photoMediaIds, public: false, what: '' });
+    expect(groupKeyOf(w.s.club.settings, c)).toBe(VENUES);
+    w.run('directory.update', { id: c.id, photoMediaIds: ['md_venueone0001'], contactPerson: 'Pak Budi' }, 's9');
+    expect(w.s.directory[c.id]).toMatchObject({ photoMediaIds: ['md_venueone0001'], contactPerson: 'Pak Budi' });
+  });
+  it('the venues heading sits just before Other', () => {
+    const st = world().s.club.settings;
+    const keys = groupKeys(st);
+    expect(keys.indexOf(VENUES)).toBe(keys.length - 2);
+    expect(keys.at(-1)).toBe(st.directoryGroups!.find((g) => g.name === 'Other')?.id ?? OTHER);
+  });
+  it('a supplier may also have a contact person and an address', () => {
+    const w = world();
+    const r = w.run('directory.add', { ...entry, contactPerson: 'Pak Andi', address: 'Jl. Peta Barat 2' }, 's10');
+    expect(w.s.directory[r.result.id as string]).toMatchObject({ contactPerson: 'Pak Andi', address: 'Jl. Peta Barat 2' });
+  });
+  it('trips here: the outings at the venue, newest first, cancelled ones left out', () => {
+    const w = world();
+    const id = w.run('directory.add', venue, 's9').result.id as string;
+    const evs = live(w.s.calendarEvents).filter((e) => e.kind === 'outing');
+    const s: ClubState = { ...w.s, calendarEvents: { ...w.s.calendarEvents } };
+    s.calendarEvents[evs[0].id] = { ...evs[0], venueId: id };
+    s.calendarEvents[evs[1].id] = { ...evs[1], venueId: id };
+    s.calendarEvents[evs[2].id] = { ...evs[2], venueId: id, cancelledAt: '2026-10-01T10:00' };
+    expect(tripsAt(s, id).map((e) => e.id)).toEqual([evs[0], evs[1]].sort((a, b) => (a.date < b.date ? 1 : -1)).map((e) => e.id));
+  });
+  it('families get a public contact without its contact person, pin or pictures', () => {
+    const s = world().s;
+    s.directory.d1 = { ...s.directory.d1, contactPerson: 'Dr. Ani', location: { lat: -6.1, lng: 106.7 }, photoMediaIds: ['md_privatepic001'] };
+    const f = projectForFamily(s, 'f1').directory.d1;
+    expect(f).toBeDefined();
+    expect(f.contactPerson).toBeUndefined();
+    expect(f.location).toBeUndefined();
+    expect(f.photoMediaIds).toBeUndefined();
   });
 });
