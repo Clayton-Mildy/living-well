@@ -1,6 +1,6 @@
 // Round 21 seed: CitraPremier's pin at Citra Garden (Kalideres); every member lives in West Jakarta or nearby Tangerang with a pin (spouses share one);
 // Oma Lina and Opa Budi 6.4 km east, so his pick-up is priced by distance (7 km × Rp 10.000); every third member and Oma Lina take part in the monthly
-// field trips (on the roster, October's invoices bill them, so a missed month is credited in November); up to 12 leads have pins; each seeded trip has a venue in Contacts with pictures; the two AC services are rated.
+// field trips (on the roster, October's invoices bill them, so a missed month is credited in November); every lead has a pin; each seeded trip has a venue in Contacts with pictures; the two AC services are rated.
 // Runs last: it only rewrites addresses, adds fields and adds the October trip line (with its payment), with no random draws, so nothing seeded before it moves.
 import type { ClubState, ContactRating, DirectoryContact, GeoPoint, ISODate } from '../../types';
 import { live, sortBy } from '../../util';
@@ -78,8 +78,8 @@ export function seedRound21(s: ClubState, T: ISODate): void {
     if (pay && alloc) { alloc.amount += fee; pay.amount += fee; }
   }
 
-  // ----- where the leads live -----
-  sortBy(live(s.enquiries), (e) => e.id).slice(0, 12).forEach((e, i) => {
+  // ----- where the leads live (every lead, so Where from has no one missing; KC 10 Nov) -----
+  sortBy(live(s.enquiries), (e) => e.id).forEach((e, i) => {
     const h = home(i * 5 + 3);
     e.address = h.address;
     e.location = h.location;

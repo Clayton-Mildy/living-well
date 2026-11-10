@@ -65,9 +65,12 @@ for (const roster of [false, true]) {
       expect(runLinesFor(s, missed, '2026-11', '2026-10-30').find((l) => l.id === 'tripCredit-2026-10')?.amount).toBe(-250_000);
       expect(runLinesFor(s, s.members.m1, '2026-11', '2026-10-30').find((l) => l.id === 'tripCredit-2026-10')).toBeUndefined(); // Oma Lina went on 16 Oct
     });
-    it('the leads have pins (up to 12), and every active member is on the Where from map', () => {
+    it('every member and every lead has a pin with its area, and nobody is missing from the Where from map', () => {
       const pinned = live(s.enquiries).filter((e) => e.location);
-      expect(pinned.length).toBe(Math.min(12, live(s.enquiries).length));
+      expect(pinned.length).toBe(live(s.enquiries).length);
+      expect(live(s.enquiries).every((e) => !!e.location?.kecamatan && /Jakarta Barat|Tangerang/.test(e.address ?? ''))).toBe(true);
+      expect(Object.values(s.members).every((m) => !!m.location)).toBe(true);
+      expect(wherePoints(s, 'both', { from: '2026-01-01', to: DEMO_TODAY }, DEMO_TODAY).missing).toEqual([]);
       expect(wherePoints(s, 'members', { from: DEMO_TODAY, to: DEMO_TODAY }, DEMO_TODAY).missing).toEqual([]);
     });
   });
