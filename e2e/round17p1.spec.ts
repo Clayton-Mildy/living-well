@@ -1,6 +1,6 @@
 // Round 17 phase 1 story (phone, small seed, demo day Wed 21 Oct 2026): money features that land on the next monthly invoice, and the spouse.
 //  - Caca adds a charge to Opa Budi's birthday party: "On next bill"; Maria sees it under "On your next bill" in Bills (with the seeded cake and pick-up).
-//  - Dinar ticks Opa Budi on today's outing: the family calendar shows "Field trip · 08:30–15:00 · Rp 250.000" and the fee joins the next bill.
+//  - Dinar ticks Opa Budi on today's outing: the family calendar shows "Field trip · 08:30–15:00" (round 21: no fee per trip; field trips are paid monthly).
 //  - Fransiska makes Daniel the billing contact of Oma Lina (after a confirm); Caca sees the invoice email to Daniel under Documents › Emails.
 //  - Oma Lina's Family tab shows Opa Budi as her spouse (the first row).
 // Screenshots (phone, tablet, laptop): E2E_SHOTS=1 scripts/e2e-all.sh 1 "phone tablet laptop" round17p1 ; PNGs go to artifacts/shots/round17p1/.
@@ -18,7 +18,7 @@ async function act(page: Page, userId: string, name: string, input: unknown) {
 }
 const goTab = (page: Page, key: 'today' | 'photos' | 'calendar' | 'health' | 'me') => page.locator(`[data-nav-key="${key}"]`).click();
 /** A past or present outing today (21 Oct) so that "Who went" is open; Ega's calendar edits that touch an outing need no owner. */
-const addOuting = (page: Page) => act(page, 's9', 'calendarEvent.create', { date: '2026-10-21', kind: 'outing', title: 'Taman Mini day trip', titleId: 'Wisata Taman Mini', fee: 250_000, notify: false });
+const addOuting = (page: Page) => act(page, 's9', 'calendarEvent.create', { date: '2026-10-21', kind: 'outing', title: 'Taman Mini day trip', titleId: 'Wisata Taman Mini', notify: false });
 
 test('Caca adds a birthday charge: it waits for the next bill; Maria sees it under "On your next bill"', async ({ page }) => {
   const c = watchConsole(page);
@@ -43,20 +43,20 @@ test('Caca adds a birthday charge: it waits for the next bill; Maria sees it und
   await expect(next).toContainText('On your next bill');
   await expect(next.getByTestId('next-item').filter({ hasText: /^Birthday · Birthday cake \(chocolate, no nuts\)/ })).toContainText('Rp 350.000');
   await expect(next.getByTestId('next-item').filter({ hasText: /^Birthday · Birthday cake\s*Rp/ })).toContainText('Rp 350.000');
-  await expect(next.getByTestId('next-item').filter({ hasText: /^Pick-up/ })).toContainText('Rp 450.000');
-  await expect(next.getByTestId('next-total')).toContainText('Rp 1.150.000'); // two cakes and the pick-up
+  await expect(next.getByTestId('next-item').filter({ hasText: /^Pick-up/ })).toContainText('Rp 70.000'); // round 21: 6.4 km
+  await expect(next.getByTestId('next-total')).toContainText('Rp 770.000'); // two cakes and the pick-up
   await expect(page.getByText('Birthday invoice')).toHaveCount(0);
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });
 
-test('Dinar ticks Opa Budi on an outing: the family calendar shows the fee and Maria\'s next bill adds the trip', async ({ page }) => {
+test('Dinar ticks Opa Budi on an outing: the family calendar shows the trip (round 21: no fee per trip, nothing added to the next bill)', async ({ page }) => {
   const c = watchConsole(page);
   await addOuting(page);
   await signIn(page, 's5', '/calendar');
   await page.getByRole('button', { name: /^Who went · 0/ }).click();
   const sheet = page.getByRole('dialog', { name: /Who went on/ });
-  await expect(sheet).toContainText('Field trip fee · Rp 250.000');
+  await expect(sheet).not.toContainText('Field trip fee');
   await sheet.getByPlaceholder('Search by name').fill('budi');
   await sheet.getByRole('button', { name: 'Opa Budi Wijaya', exact: true }).click();
   await sheet.getByRole('button', { name: 'Save' }).click();
@@ -66,12 +66,12 @@ test('Dinar ticks Opa Budi on an outing: the family calendar shows the fee and M
 
   await signIn(page, 'f1', '/today');
   await goTab(page, 'calendar');
-  await expect(page.getByText(/Field trip · (\d\d:\d\d–\d\d:\d\d · )?Rp 250\.000/).first()).toBeVisible();
+  await expect(page.getByText(/Field trip · \d\d:\d\d–\d\d:\d\d/).first()).toBeVisible();
   await assertNoHorizontalScroll(page);
   await page.goto('/billing');
   const next = page.getByTestId('next-bill').filter({ hasText: 'Budi' });
-  await expect(next.getByTestId('next-item').filter({ hasText: /^Field trip · Taman Mini day trip · Wed 21 Oct/ })).toContainText('Rp 250.000');
-  await expect(next.getByTestId('next-total')).toContainText('Rp 1.050.000'); // cake 350, field trip 250 and pick-up 450
+  await expect(next.getByTestId('next-item').filter({ hasText: /Taman Mini/ })).toHaveCount(0); // round 21: no fee per trip
+  await expect(next.getByTestId('next-total')).toContainText('Rp 420.000'); // cake 350 and pick-up 70 (round 21: 6.4 km)
   c.assertClean();
 });
 
@@ -139,8 +139,8 @@ test('screenshots', async ({ page }, info) => {
   await shot('2-next-bill-family');
   await page.goto('/today');
   await goTab(page, 'calendar');
-  await expect(page.getByText(/Field trip · (\d\d:\d\d–\d\d:\d\d · )?Rp 250\.000/).first()).toBeVisible();
-  await shot('3-family-calendar-fee');
+  await expect(page.getByText(/Field trip · \d\d:\d\d–\d\d:\d\d/).first()).toBeVisible();
+  await shot('3-family-calendar-trip');
 
   await signIn(page, 's10', '/members/m1/family');
   await expect(page.getByTestId('fam-spouse')).toBeVisible();

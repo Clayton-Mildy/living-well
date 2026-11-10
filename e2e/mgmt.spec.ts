@@ -937,7 +937,7 @@ test('plans: an extra visit from a check-in is on the member’s next invoice at
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByText('Extra days · October (1)')).toBeVisible();
   await pickOption(page, 'Preview for', 'Opa Budi Wijaya'); // Gold: unlimited, never extra
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 4.750.000'); // round 16: Gold 3.950.000 + his pick-up 450.000; round 17: + his birthday cake 350.000
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 4.370.000'); // round 16: Gold 3.950.000 + his pick-up (round 21: 6.4 km, 70.000); round 17: + his birthday cake 350.000
   await expect(page.getByText(/Extra days/)).toHaveCount(0);
   await assertNoHorizontalScroll(page);
   c.assertClean();

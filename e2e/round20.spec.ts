@@ -12,7 +12,7 @@ const act = async (page: Page, userId: string, name: string, input: unknown) => 
   const r = await page.request.post(`/api/actions/${name}`, { headers: { 'x-user-id': userId }, data: { mutationId: `e2e-${Date.now()}-${Math.random()}`, club: 'citra', input } });
   expect(r.ok(), `${name}: ${await r.text()}`).toBeTruthy();
 };
-/** Ega adds a field trip on the demo day (08:30 to 15:00, Rp 250.000 each). */
+/** Ega adds a field trip on the demo day (08:30 to 15:00; round 21: no fee per trip). */
 const addTrip = (page: Page) => act(page, 's9', 'calendarEvent.create', { date: '2026-10-21', kind: 'outing', title: 'Kebun Raya Bogor day trip', titleId: 'Wisata Kebun Raya Bogor', from: '08:30', to: '15:00', fee: 250_000, notify: false });
 const rowOf = (page: Page, name: string) => page.getByRole('button', { name: new RegExp(`^(Check in|Check out): ${name}`) });
 
@@ -26,7 +26,7 @@ test('Caca sees the trip banner, checks in Oma Lina (on the trip), and Who went 
   await expect(page.getByText(/Kebun Raya Bogor day trip · 08:30–15:00/).first()).toBeVisible();
   await rowOf(page, 'Oma Lina Wijaya').click();
   await confirmCheckIn(page);
-  await expect(page.getByRole('status').filter({ hasText: /Oma Lina checked in/ }).first()).toContainText('Field trip fee: Rp'); // round 20 fix (I2)
+  await expect(page.getByRole('status').filter({ hasText: /Oma Lina checked in/ }).first()).not.toContainText('Field trip fee'); // round 21: no fee per trip (paid monthly)
   await page.getByRole('tab', { name: /^Check out/ }).click();
   await expect(page.getByRole('button', { name: /^Open full size · Oma Lina Wijaya/ }).first()).toContainText(/Arrived \d\d:\d\d · on the trip/);
   await assertNoHorizontalScroll(page);
