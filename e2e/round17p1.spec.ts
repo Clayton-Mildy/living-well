@@ -1,6 +1,6 @@
 // Round 17 phase 1 story (phone, small seed, demo day Wed 21 Oct 2026): money features that land on the next monthly invoice, and the spouse.
 //  - Caca adds a charge to Opa Budi's birthday party: "On next bill"; Maria sees it under "On your next bill" in Bills (with the seeded cake and pick-up).
-//  - Dinar ticks Opa Budi on today's outing: the family calendar shows "Field trip · 08:30–15:00" (round 21: no fee per trip; field trips are paid monthly).
+//  - Dinar ticks Opa Budi on today's outing: the family calendar shows the trip (round 21: no fee per trip; field trips are paid monthly).
 //  - Fransiska makes Daniel the billing contact of Oma Lina (after a confirm); Caca sees the invoice email to Daniel under Documents › Emails.
 //  - Oma Lina's Family tab shows Opa Budi as her spouse (the first row).
 // Screenshots (phone, tablet, laptop): E2E_SHOTS=1 scripts/e2e-all.sh 1 "phone tablet laptop" round17p1 ; PNGs go to artifacts/shots/round17p1/.
@@ -54,19 +54,19 @@ test('Dinar ticks Opa Budi on an outing: the family calendar shows the trip (rou
   const c = watchConsole(page);
   await addOuting(page);
   await signIn(page, 's5', '/calendar');
-  await page.getByRole('button', { name: /^Who went · 0/ }).click();
+  await page.getByRole('button', { name: /^Who went · 3/ }).click(); // round 20: a trip made for today already holds the three members checked in
   const sheet = page.getByRole('dialog', { name: /Who went on/ });
   await expect(sheet).not.toContainText('Field trip fee');
   await sheet.getByPlaceholder('Search by name').fill('budi');
   await sheet.getByRole('button', { name: 'Opa Budi Wijaya', exact: true }).click();
   await sheet.getByRole('button', { name: 'Save' }).click();
   await expect(page.getByRole('status').filter({ hasText: 'Saved who went.' }).first()).toBeVisible();
-  await expect(page.getByRole('button', { name: /^Who went · 1/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /^Who went · 4/ })).toBeVisible();
   await assertNoHorizontalScroll(page);
 
   await signIn(page, 'f1', '/today');
   await goTab(page, 'calendar');
-  await expect(page.getByText(/Field trip · \d\d:\d\d–\d\d:\d\d/).first()).toBeVisible();
+  await expect(page.getByText('Taman Mini day trip').first()).toBeVisible(); // round 21: the row reads "Field trip" (no fee; this trip has no times)
   await assertNoHorizontalScroll(page);
   await page.goto('/billing');
   const next = page.getByTestId('next-bill').filter({ hasText: 'Budi' });
@@ -139,7 +139,7 @@ test('screenshots', async ({ page }, info) => {
   await shot('2-next-bill-family');
   await page.goto('/today');
   await goTab(page, 'calendar');
-  await expect(page.getByText(/Field trip · \d\d:\d\d–\d\d:\d\d/).first()).toBeVisible();
+  await expect(page.getByText('Taman Mini day trip').first()).toBeVisible();
   await shot('3-family-calendar-trip');
 
   await signIn(page, 's10', '/members/m1/family');

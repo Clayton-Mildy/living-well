@@ -847,13 +847,13 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   await expect(page.getByLabel(/Leave days/)).toHaveCount(0);
   await expect(page.getByText(/leave days|booked by|club days/i)).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 2.700.000'); // Oma Lina, 21 November: 10 visits in October, so nothing extra
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 2.950.000'); // Oma Lina, 21 November: 10 visits in October, so nothing extra; round 21: + her monthly field trips 250.000
   await expect(page.getByText('Oma Lina Wijaya · invoice of 21 November')).toBeVisible();
 
   // typing changes nothing until Save; the preview shows what it would be
   await flex.fill('6000000');
   await expect(flex).toHaveValue('6.000.000');
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 6.000.000');
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 6.250.000');
   await expect(page.getByText('Showing what you typed. Not saved yet.')).toBeVisible();
   await page.reload();
   await expect(page.getByLabel('Flex price in rupiah')).toHaveValue('2.700.000');
@@ -880,7 +880,7 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0); // saved: the bar is gone (the toast only lasts a few seconds, too short to rely on when the machine is busy)
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0);
   await expect(page.getByText('Sample price')).toHaveCount(0); // Flex and Gold come from the brochure and the extra day is now the club's own
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 6.000.000');
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 6.250.000');
   await page.reload();
   await expect(page.getByLabel('Flex price in rupiah')).toHaveValue('6.000.000');
   await expect(page.getByLabel('Extra day price in rupiah')).toHaveValue('700.000');
@@ -892,7 +892,7 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   await expect(page.getByRole('button', { name: 'Save changes' })).toHaveCount(0); // saved: the bar is gone (the toast only lasts a few seconds, too short to rely on when the machine is busy)
   // Oma Lina made 10 visits in October: with a quota of 8, two are extra days on the next invoice
   await expect(page.getByText('Extra days · October (2)')).toBeVisible();
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 7.400.000');
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 7.650.000');
   await page.reload();
   await expect(page.getByLabel('Flex visits per month')).toHaveValue('8');
   const snap = await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': 's9' } })).json();
@@ -903,7 +903,7 @@ test('plans: prices change only on Save, with validation; the Flex visits rule i
   // preview for another member: Opa Budi is Gold
   await pickOption(page, 'Preview for', 'Opa Budi Wijaya');
   await expect(page.getByText('Opa Budi Wijaya · invoice of 21 November')).toBeVisible();
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 4.750.000'); // round 16: Gold + his pick-up; round 17: + his birthday cake
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 4.370.000'); // round 16: Gold + his pick-up (round 21: 6.4 km, 70.000); round 17: + his birthday cake
   await assertNoHorizontalScroll(page);
 
   // the notify toggle: finance was told about the first change; with the toggle off the next change is silent
@@ -928,12 +928,12 @@ test('plans: an extra visit from a check-in is on the member’s next invoice at
   await signIn(page, 's9', '/plans');
   await expect(page.getByText('Oma Lina Wijaya · invoice of 21 November')).toBeVisible();
   await expect(page.getByText('Extra days · October (1)')).toBeVisible();
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 3.350.000'); // Flex 2.700.000 + 1 extra day at 650.000
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 3.600.000'); // Flex 2.700.000 + 1 extra day at 650.000 + her field trips 250.000 (round 21)
   await page.getByLabel('Extra day price in rupiah').fill('700000');
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 3.400.000');
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 3.650.000');
   await page.getByLabel('Flex visits per month').fill('11');
   await expect(page.getByText('Extra days · October')).toHaveCount(0); // with 11 visits a month, her 11th is not extra
-  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 2.700.000');
+  await expect(page.getByTestId('plan-preview-total')).toHaveText('Rp 2.950.000');
   await page.getByRole('button', { name: 'Cancel', exact: true }).click();
   await expect(page.getByText('Extra days · October (1)')).toBeVisible();
   await pickOption(page, 'Preview for', 'Opa Budi Wijaya'); // Gold: unlimited, never extra

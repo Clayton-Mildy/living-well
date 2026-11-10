@@ -87,7 +87,7 @@ test('members list: compact rows (name, status, plan), search finds family names
     await page.getByRole('combobox', { name: 'Filter members' }).click();
     await expect(page.getByRole('option', { name: 'Ended · 0' })).toBeVisible();
     await expect(page.getByRole('option', { name: "Haven't come lately · 0" })).toBeVisible(); // round 12
-    await expect(page.getByRole('option')).toHaveCount(7); // no "On leave" filter
+    await expect(page.getByRole('option')).toHaveCount(9); // no "On leave" filter; round 20 added Pick-up, round 21 Field trips
     await page.keyboard.press('Escape');
   } else {
     await expect(page.getByRole('button', { name: 'Ended · 0' })).toBeVisible();
