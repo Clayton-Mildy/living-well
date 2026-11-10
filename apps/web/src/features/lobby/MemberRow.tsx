@@ -50,7 +50,7 @@ export function MemberRow({ r, first, selected, occasion, onOpen, onCheckIn, onC
     : { display: 'flex', alignItems: 'center', gap: 16, padding: '18px 0', borderTop: '0.5px solid var(--hairline, #E2E2E6)',
       ...(selected ? { background: 'var(--press, #EEEEF0)', boxShadow: 'inset 3px 0 0 #2B231C', margin: `0 calc(${pad} * -1)`, padding: `18px ${pad}`, borderTopColor: 'transparent' } : {}) };
   return (
-    <div className={isPhone ? 'cp-tap' : undefined} style={rowStyle}>
+    <div className={isPhone ? 'cp-tap' : 'cp-mrow'} style={rowStyle}>
       <button type="button" onClick={onOpen} className={isPhone ? 'cp-tap-target' : undefined} style={{ flex: '1 1 0', minWidth: 0, minHeight: 46, display: 'flex', alignItems: 'center', gap: isPhone ? 12 : 16, padding: 0, border: 'none', background: 'transparent', textAlign: 'left', cursor: 'pointer', color: '#24201C', fontFamily: 'Inter' }}>
         <MemberAvatar m={m} size={isPhone ? 42 : 46} font={15} />
         <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column', gap: 3 }}>

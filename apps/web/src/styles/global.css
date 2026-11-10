@@ -58,6 +58,11 @@ html[data-skin="warm"] .cp-serif-up { font-size: 25px !important; line-height: 3
   .cp-side-acct { padding: 3px 8px !important; border-radius: 12px !important; }
   .cp-arr-clock { font-size: 34px !important; }
   .cp-count-num { font-size: 30px !important; }
+  .cp-arr-page { padding-top: 12px !important; gap: 10px !important; }
+  .cp-count-tile { padding-bottom: 6px !important; gap: 2px !important; }
+  .cp-mlist { padding-top: 2px !important; }
+  .cp-mlist-head { padding: 6px 0 4px !important; }
+  .cp-mrow { padding-top: 9px !important; padding-bottom: 9px !important; }
 }
 /* overlay bodies scroll instead of squashing their children */
 .cp-noshrink > * { flex-shrink: 0; }
