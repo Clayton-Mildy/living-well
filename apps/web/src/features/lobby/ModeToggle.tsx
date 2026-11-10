@@ -58,7 +58,7 @@ export function ModeToggle({ t, mode, counts, onChange, phone }: { t: TFn; mode:
           <button key={k} ref={(el) => { refs.current[k] = el; }} type="button" role="tab" id={TAB_ID(k)} aria-selected={on} aria-controls={PANEL_ID} tabIndex={on ? 0 : -1}
             aria-label={`${verb ? `${t(verb)} · ` : ''}${label} (${counts[k]})`} onClick={() => onChange(k)} onKeyDown={move} data-mode={k}
             style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 4, minWidth: 0, minHeight: 44, padding: '0 0 12px', border: 'none', borderBottom: `2px solid ${on ? '#2B231C' : 'var(--hairline, #E2E2E6)'}`, background: 'transparent', cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', color: '#1E1A16', transition: 'border-color .15s' }}>
-            <span data-testid={TILE_ID[k]} style={{ fontSize: 'clamp(32px, 3.8vw, 44px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums', color: on ? '#2B231C' : '#8A8078' }}>{counts[k]}</span>
+            <span data-testid={TILE_ID[k]} className="cp-count-num" style={{ fontSize: 'clamp(32px, 3.8vw, 44px)', lineHeight: 1, fontWeight: 300, letterSpacing: '-1px', fontVariantNumeric: 'tabular-nums', color: on ? '#2B231C' : '#8A8078' }}>{counts[k]}</span>
             <span style={{ fontSize: 13, lineHeight: 1.3, fontWeight: on ? 600 : 400, color: on ? '#1E1A16' : '#8A8078', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</span>
           </button>
         );

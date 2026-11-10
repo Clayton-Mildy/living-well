@@ -46,6 +46,19 @@ html[data-skin="warm"] .cp-serif-up { font-size: 25px !important; line-height: 3
 @media (hover: hover) { .cp-side-dark:hover { background-color: #352B22 !important; } }
 /* phone text sizes, also for overlays rendered in a portal outside the shell */
 @media (max-width: 767.98px) { :root { --cp-body: 16px; --cp-small: 14px; } }
+/* a short wide window (KC, 10 Nov: the staff Samsung Galaxy Tab A11 held sideways, about 894×440 CSS px): a compact sidebar, so most of the menu is
+   in view (the language switch is in the account sheet), with a fade showing there is more below; a tighter Arrivals header shows more people */
+@media (min-width: 768px) and (max-height: 620px) {
+  .cp-side { gap: 6px !important; padding-top: 10px !important; padding-bottom: 8px !important; margin-top: 8px !important; margin-bottom: 8px !important; }
+  .cp-side-search { height: 36px !important; margin-top: -2px !important; }
+  .cp-side-menu { gap: 2px !important; padding-bottom: 18px; -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); mask-image: linear-gradient(to bottom, #000 calc(100% - 26px), transparent); }
+  .cp-side-group { padding-top: 4px !important; padding-bottom: 2px !important; }
+  .cp-side-item { height: 32px !important; }
+  .cp-side-lang { display: none !important; }
+  .cp-side-acct { padding: 3px 8px !important; border-radius: 12px !important; }
+  .cp-arr-clock { font-size: 34px !important; }
+  .cp-count-num { font-size: 30px !important; }
+}
 /* overlay bodies scroll instead of squashing their children */
 .cp-noshrink > * { flex-shrink: 0; }
 /* phones (90% of users): compact controls and headings, no page descriptions, so the first screen shows the data */

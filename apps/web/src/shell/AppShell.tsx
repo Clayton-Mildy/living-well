@@ -123,7 +123,7 @@ function NavButton({ n, current, count, onClick, h = 44, surface = 'grey' }: { n
   const t = useT();
   if (surface === 'dark') {
     return (
-      <button type="button" className={current ? undefined : 'cp-side-dark'} data-nav-key={n.key} onClick={onClick} aria-current={current ? 'page' : undefined}
+      <button type="button" className={current ? 'cp-side-item' : 'cp-side-dark cp-side-item'} data-nav-key={n.key} onClick={onClick} aria-current={current ? 'page' : undefined}
         style={{ height: h, padding: '0 12px', borderRadius: 12, border: 'none', background: current ? '#352B22' : 'transparent', color: current ? '#FFFFFF' : '#CFC3B4', fontSize: 15, fontWeight: current ? 600 : 400, display: 'flex', alignItems: 'center', gap: 12, cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', width: '100%', flex: 'none', transition: 'background-color .2s' }}>
         <Icon name={n.icon} size={21} color={current ? '#D2B98F' : '#9C8E7E'} fill={current ? 1 : 0} />
         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t(n.label)}</span>
@@ -156,7 +156,7 @@ function Sidebar({ width, groups, current, counts, onGo, onAcct, onBell, onSearc
   const roleLabel = user.kind === 'staff' ? t('roles.' + user.staff.role) : `${t('roles.family')}`;
   const narrow = width < 240;
   return (
-    <nav aria-label="Main" data-testid="staff-sidebar" style={{ width, flex: 'none', display: 'flex', flexDirection: 'column', gap: 18, padding: '22px 12px 14px', margin: '14px 0 14px 14px', borderRadius: 24, background: '#221B15', color: '#EDE4D8', minHeight: 0, boxSizing: 'border-box' }}>
+    <nav aria-label="Main" data-testid="staff-sidebar" className="cp-side" style={{ width, flex: 'none', display: 'flex', flexDirection: 'column', gap: 18, padding: '22px 12px 14px', margin: '14px 0 14px 14px', borderRadius: 24, background: '#221B15', color: '#EDE4D8', minHeight: 0, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0 6px', flex: 'none' }}>
         {/* the customer's own logo (the Living Well look, 10 Nov): the star and the gold wordmark from their PDF */}
         <span role="img" aria-label="CitraPremier by Living Well Seniors Communities" style={{ display: 'flex', alignItems: 'center', gap: narrow ? 7 : 8, minWidth: 0 }}>
@@ -166,27 +166,27 @@ function Sidebar({ width, groups, current, counts, onGo, onAcct, onBell, onSearc
         <NotificationBell variant="side" onClick={onBell} />
       </div>
       {/* round 14 e: a field-like button (not a real input) that opens the overlay; the shortcut shows on the right */}
-      <button type="button" onClick={onSearch} data-testid="side-search" aria-label={t('search.open')} className="cp-side-dark"
+      <button type="button" onClick={onSearch} data-testid="side-search" aria-label={t('search.open')} className="cp-side-dark cp-side-search"
         style={{ flex: 'none', height: 44, margin: '-6px 0 0', padding: '0 12px', borderRadius: 12, border: '1px solid #3A3027', background: '#2E251D', color: '#9C8E7E', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', fontFamily: 'Inter', fontSize: 14, textAlign: 'left', width: '100%', boxSizing: 'border-box' }}>
         <Icon name="search" size={20} color="#9C8E7E" />
         <span style={{ flex: 1, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t('search.placeholder')}</span>
         {narrow ? null : <span aria-hidden="true" style={{ fontSize: 12, color: '#CFC3B4', padding: '2px 6px', borderRadius: 6, background: '#3A3027', whiteSpace: 'nowrap' }}>{IS_MAC ? '⌘K' : 'Ctrl K'}</span>}
       </button>
-      <div style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
+      <div className="cp-side-menu" style={{ flex: 1, minHeight: 0, overflowY: 'auto', scrollbarWidth: 'none', display: 'flex', flexDirection: 'column', gap: 6 }}>
         {groups.map(([g, items], gi) => (
           <div key={gi} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-            {g ? <div style={{ padding: '12px 12px 4px', fontSize: 10, letterSpacing: '1.8px', textTransform: 'uppercase', fontWeight: 600, color: '#9C8E7E', lineHeight: '14px' }}>{t(g)}</div> : null}
+            {g ? <div className="cp-side-group" style={{ padding: '12px 12px 4px', fontSize: 10, letterSpacing: '1.8px', textTransform: 'uppercase', fontWeight: 600, color: '#9C8E7E', lineHeight: '14px' }}>{t(g)}</div> : null}
             {items.map((n) => <NavButton key={n.key} n={n} current={current === n.key} count={counts[n.key]} onClick={() => onGo(n.key)} h={role === 'mgmt' ? 40 : 44} surface="dark" />)}
           </div>
         ))}
       </div>
       <div style={{ flex: 'none', display: 'flex', flexDirection: 'column', gap: 10 }}>
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding: 2, borderRadius: 9, background: '#2E251D' }} role="group" aria-label={t('shell.language')}>
+        <div className="cp-side-lang" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 2, padding: 2, borderRadius: 9, background: '#2E251D' }} role="group" aria-label={t('shell.language')}>
           {(['en', 'id'] as const).map((l) => (
             <button key={l} type="button" onClick={() => setLang(l)} aria-pressed={lang === l} style={{ height: 30, borderRadius: 7, border: 'none', background: lang === l ? '#4A3D31' : 'transparent', color: lang === l ? '#FFFFFF' : '#9C8E7E', fontSize: 13, fontWeight: lang === l ? 600 : 500, cursor: 'pointer', fontFamily: 'Inter' }}>{l === 'en' ? 'English' : 'Indonesia'}</button>
           ))}
         </div>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 10, borderRadius: 16, border: '1px solid #3A3027' }}>
+        <div className="cp-side-acct" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: 10, borderRadius: 16, border: '1px solid #3A3027' }}>
           <button type="button" onClick={onAcct} aria-label={t('shell.account')} style={{ display: 'flex', alignItems: 'center', gap: 10, flex: 1, minWidth: 0, border: 'none', background: 'transparent', padding: 0, cursor: 'pointer', textAlign: 'left', fontFamily: 'Inter', color: '#EDE4D8' }}>
             <Avatar name={name} size={36} src={memberPhoto(user.kind === 'staff' ? user.staff : user.contact)} />
             <span style={{ flex: 1, minWidth: 0, display: 'flex', flexDirection: 'column' }}>

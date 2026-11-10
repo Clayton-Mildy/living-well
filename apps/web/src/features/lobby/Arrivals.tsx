@@ -250,7 +250,7 @@ export function Arrivals() {
               {hdr.text}
             </div>
           </div>
-          {isPhone ? null : <div style={{ fontSize: 48, lineHeight: 1, fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1.5px', color: '#2B231C' }}>{now}</div>}
+          {isPhone ? null : <div className="cp-arr-clock" style={{ fontSize: 48, lineHeight: 1, fontWeight: 300, fontVariantNumeric: 'tabular-nums', letterSpacing: '-1.5px', color: '#2B231C' }}>{now}</div>}
         </div>
 
         <TripBanner date={today} />
