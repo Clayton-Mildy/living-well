@@ -1,10 +1,11 @@
 // Round 21 seed: CitraPremier's pin at Citra Garden (Kalideres); every member lives in West Jakarta or nearby Tangerang with a pin (spouses share one);
 // Oma Lina and Opa Budi 6.4 km east, so his pick-up is priced by distance (7 km × Rp 10.000); every third member and Oma Lina take part in the monthly
-// field trips; up to 12 leads have pins; each seeded trip has a venue in Contacts with pictures; the two AC services are rated.
-// Runs last: it only rewrites addresses and adds fields, with no random draws, so nothing seeded before it moves.
+// field trips (on the roster, October's invoices bill them, so a missed month is credited in November); up to 12 leads have pins; each seeded trip has a venue in Contacts with pictures; the two AC services are rated.
+// Runs last: it only rewrites addresses, adds fields and adds the October trip line (with its payment), with no random draws, so nothing seeded before it moves.
 import type { ClubState, ContactRating, DirectoryContact, GeoPoint, ISODate } from '../../types';
 import { live, sortBy } from '../../util';
 import { demoMediaId } from '../demoMedia';
+import { feeOf, invoiceTotal, paidOn, priceOn } from '../../rules/billing';
 
 const CLUB: GeoPoint = { lat: -6.136, lng: 106.731, kelurahan: 'Kalideres', kecamatan: 'Kalideres', city: 'Jakarta Barat' };
 /** street, kelurahan, kecamatan, city, base lat, base lng */
@@ -61,6 +62,21 @@ export function seedRound21(s: ClubState, T: ISODate): void {
   // ----- pick-up by distance; the monthly field trips -----
   if (s.members.m46) s.members.m46.pickup = { on: true };
   members.forEach((m, i) => { if (m.id === 'm1' || (m.id !== 'm46' && i % 3 === 2)) m.fieldTrips = { on: true }; });
+
+  // ----- round 21 review (the roster only): October's invoices bill the field trip fee of roster members switched on (the run that made them ran before
+  // this round), so November's run can credit those who went on no October trip once the 29 Oct trip is over; an invoice paid in full stays paid in
+  // full. The five members the tests are built on keep their October invoices (as if switched on after that run: no October line, no credit) -----
+  for (const inv of sortBy(live(s.invoices), (i) => i.id)) {
+    if (Number(inv.memberId.slice(1)) < 51) continue;
+    if (inv.kind !== 'monthly' || inv.period !== '2026-10' || inv.voided || !s.members[inv.memberId]?.fieldTrips?.on || inv.lines.some((l) => l.id === 'trip-2026-10')) continue;
+    const fee = feeOf(priceOn(s, inv.issueDate), 'fieldTrip');
+    const wasPaid = paidOn(s, inv.id) >= invoiceTotal(inv);
+    const at = inv.lines.reduce((n, l, i) => (['plan', 'dementia', 'pickup'].includes(l.kind) ? i + 1 : n), 0);
+    inv.lines.splice(at, 0, { id: 'trip-2026-10', kind: 'fieldTrip', label: 'inv.line.fieldTrips', params: { month: '2026-10' }, qty: 1, unit: fee, amount: fee, refMonth: '2026-10' });
+    const pay = wasPaid ? sortBy(live(s.payments).filter((p) => p.allocations.some((a) => a.invoiceId === inv.id)), (p) => p.receivedOn + p.id).pop() : undefined;
+    const alloc = pay?.allocations.find((a) => a.invoiceId === inv.id);
+    if (pay && alloc) { alloc.amount += fee; pay.amount += fee; }
+  }
 
   // ----- where the leads live -----
   sortBy(live(s.enquiries), (e) => e.id).slice(0, 12).forEach((e, i) => {
