@@ -360,7 +360,16 @@ describe('findDuplicates (round 12 registration)', () => {
 });
 
 describe('filters', () => {
-  it('round 16: Flex and Gold sit beside Active (a helicopter view of the counts)', () => {
-    expect(MEMBER_FILTERS).toEqual(['active', 'flex', 'gold', 'pickup', 'in', 'att', 'checkOn', 'ended']);
+  it('round 16: Flex and Gold sit beside Active (a helicopter view of the counts), then Other plan', () => {
+    expect(MEMBER_FILTERS).toEqual(['active', 'flex', 'gold', 'other', 'pickup', 'in', 'att', 'checkOn', 'ended']);
+  });
+  it('Other plan counts the members on a catalogue plan (neither Flex nor Gold)', () => {
+    const s = seed();
+    s.club.settings.plans = [{ id: 'plan_1', name: 'Flex 8', kind: 'days', quota: 8, active: true }];
+    s.members.m1.plans = [...s.members.m1.plans, { from: '2026-10-01', plan: 'plan_1', by: 'staff:s1' }];
+    const c = filterCounts(memberRows(s, T));
+    expect(c.other).toBe(1);
+    expect([c.flex, c.gold, c.other]).toEqual([1, 3, 1]);
+    expect(c.flex + c.gold + c.other).toBe(c.active);
   });
 });

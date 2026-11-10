@@ -154,8 +154,8 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 }
 
 // ---------- list rows, filters, search ----------
-export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'pickup' | 'ended';
-export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'pickup', 'in', 'att', 'checkOn', 'ended']; // round 16: Flex and Gold beside Active
+export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'other' | 'pickup' | 'ended';
+export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'other', 'pickup', 'in', 'att', 'checkOn', 'ended']; // round 16: Flex and Gold beside Active; Other plan = the catalogue's plans
 /** The plans a member can be put on, as pickers list them: Flex, Gold, then the catalogue's active plans (a retired plan leaves the pickers; its members keep it). Name them with `planLabel`. */
 export const activePlans = (s: ClubState): PlanDef[] => planDefs(s).filter((p) => p.active);
 export interface MemberRow {
@@ -208,6 +208,7 @@ export const FILTERS: Record<MemberFilter, (r: MemberRow) => boolean> = {
   checkOn: (r) => !!r.checkOn,
   flex: (r) => !r.ended && r.plan === 'flex',
   gold: (r) => !r.ended && r.plan === 'gold',
+  other: (r) => !r.ended && r.plan !== 'flex' && r.plan !== 'gold',
   pickup: (r) => !r.ended && !r.pending && !!r.m.pickup?.on,
   ended: (r) => r.ended,
 };

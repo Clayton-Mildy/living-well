@@ -87,12 +87,12 @@ test('members list: compact rows (name, status, plan), search finds family names
     await page.getByRole('combobox', { name: 'Filter members' }).click();
     await expect(page.getByRole('option', { name: 'Ended · 0' })).toBeVisible();
     await expect(page.getByRole('option', { name: "Haven't come lately · 0" })).toBeVisible(); // round 12
-    await expect(page.getByRole('option')).toHaveCount(7); // no "On leave" filter
+    await expect(page.getByRole('option')).toHaveCount(9); // no "On leave" filter
     await page.keyboard.press('Escape');
   } else {
     await expect(page.getByRole('button', { name: 'Ended · 0' })).toBeVisible();
     await expect(page.getByRole('button', { name: "Haven't come lately · 0" })).toBeVisible(); // round 12
-    await expect(page.getByRole('group', { name: 'Filter members' }).getByRole('button')).toHaveCount(7); // no "On leave" filter
+    await expect(page.getByRole('group', { name: 'Filter members' }).getByRole('button')).toHaveCount(9); // no "On leave" filter
   }
   // compact rows: avatar, name, status ("in the club" or the last visit) and the plan chip; the detail lives on the profile
   await expect(page.locator('[data-member="m1"]')).toContainText('Last visit Tue 20 Oct');
