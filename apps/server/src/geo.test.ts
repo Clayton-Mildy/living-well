@@ -85,4 +85,15 @@ describe('Nominatim mode', () => {
     await Promise.all([g.search('one place'), g.search('two place')]);
     expect(at[1] - at[0]).toBeGreaterThanOrEqual(55);
   });
+  it('round 21 review: a search that never answers times out as geo.err.unavailable, and the next search still runs', async () => {
+    let n = 0;
+    const hang = (_url: string, init?: RequestInit) => {
+      n += 1;
+      if (n > 1) return Promise.resolve(new Response('[]', { status: 200 }));
+      return new Promise<Response>((_ok, fail) => init?.signal?.addEventListener('abort', () => fail(new Error('aborted'))));
+    };
+    const g = nominatimGeocoder(hang, { minGapMs: 0, timeoutMs: 50 });
+    await expect(g.search('slow place')).rejects.toMatchObject({ code: 'geo.err.unavailable' });
+    await expect(g.search('next place')).resolves.toEqual([]);
+  });
 });

@@ -36,7 +36,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const strip = (m: Member): Member => ({ ...m, care: { instructions: '', by: m.care.by, at: m.care.at }, sim: { ...m.sim, script: undefined } });
   // R-T7b: a stub keeps what a photo shows (names, title, portrait) and what the shared rules need to stay safe (membership start and last day, plan and date, review mark); nothing personal of another family (no end reason or note, leave, who changed a plan or the request)
   const stub = (m: Member): Member => ({
-    ...strip(m), dob: null, ageYears: null, address: null, nanny: null, spouseId: null, usualArrival: '' as Member['usualArrival'], registration: undefined, limits: undefined, face: { enrolled: false },
+    ...strip(m), dob: null, ageYears: null, address: null, location: undefined, pickup: undefined, fieldTrips: undefined, nanny: null, spouseId: null, usualArrival: '' as Member['usualArrival'], registration: undefined, limits: undefined, face: { enrolled: false },
     sim: { sys: 0, dia: 0, pulse: 0, spo2: 0, glucose: 0, weight: 0, temp: 0, grip: 0 },
     memberships: m.memberships.map(({ start, lastDay }) => ({ start, ...(lastDay ? { lastDay } : {}) })),
     plans: m.plans.map(({ from, plan }) => ({ from, plan, by: 'system' as const })),

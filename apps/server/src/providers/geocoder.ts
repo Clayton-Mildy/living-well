@@ -50,10 +50,11 @@ type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 const BASE = 'https://nominatim.openstreetmap.org';
 const UA = 'CitraPremier-ops/1.0';
 
-/** Nominatim with a 1-request-a-second queue and a day's cache (both per process). */
-export function nominatimGeocoder(fetchFn: FetchFn = fetch, opts: { minGapMs?: number; ttlMs?: number } = {}): Geocoder {
+/** Nominatim with a 1-request-a-second queue and a day's cache (both per process); a call that takes over 8 s is given up (round 21 review), so one slow answer cannot hold up everyone else's search. */
+export function nominatimGeocoder(fetchFn: FetchFn = fetch, opts: { minGapMs?: number; ttlMs?: number; timeoutMs?: number } = {}): Geocoder {
   const gap = opts.minGapMs ?? 1000;
   const ttl = opts.ttlMs ?? 24 * 3600_000;
+  const timeout = opts.timeoutMs ?? 8000;
   const cache = new Map<string, { at: number; v: unknown }>();
   let queue: Promise<unknown> = Promise.resolve();
   let last = 0;
@@ -65,7 +66,7 @@ export function nominatimGeocoder(fetchFn: FetchFn = fetch, opts: { minGapMs?: n
       if (wait > 0) await new Promise((ok) => setTimeout(ok, wait));
       last = Date.now();
       let res: Response;
-      try { res = await fetchFn(`${BASE}${path}`, { headers: { 'user-agent': UA, accept: 'application/json' } }); } catch { throw new GeoError('geo.err.unavailable'); }
+      try { res = await fetchFn(`${BASE}${path}`, { headers: { 'user-agent': UA, accept: 'application/json' }, signal: AbortSignal.timeout(timeout) }); } catch { throw new GeoError('geo.err.unavailable'); }
       if (res.status === 429) throw new GeoError('geo.err.busy');
       if (!res.ok) throw new GeoError('geo.err.unavailable');
       const v = await res.json().catch(() => { throw new GeoError('geo.err.unavailable'); });
