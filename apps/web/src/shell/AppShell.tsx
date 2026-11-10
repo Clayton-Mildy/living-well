@@ -158,9 +158,14 @@ function Sidebar({ width, groups, current, counts, onGo, onAcct, onBell, onSearc
   return (
     <nav aria-label="Main" data-testid="staff-sidebar" style={{ width, flex: 'none', display: 'flex', flexDirection: 'column', gap: 18, padding: '22px 12px 14px', margin: '14px 0 14px 14px', borderRadius: 24, background: '#221B15', color: '#EDE4D8', minHeight: 0, boxSizing: 'border-box' }}>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 8, padding: '0 6px', flex: 'none' }}>
-        <span role="img" aria-label="CitraPremier, Premium Seniors Club" style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, overflow: 'hidden' }}>
+        <span className="cp-brand-text" role="img" aria-label="CitraPremier, Premium Seniors Club" style={{ display: 'flex', flexDirection: 'column', gap: 3, minWidth: 0, overflow: 'hidden' }}>
           <span aria-hidden="true" style={{ fontFamily: "'Cormorant Garamond', Georgia, serif", fontSize: narrow ? 16 : 19, fontWeight: 600, letterSpacing: narrow ? '1.8px' : '2.6px', color: '#D2B98F', lineHeight: 1, whiteSpace: 'nowrap' }}>CITRAPREMIER</span>
           <span aria-hidden="true" style={{ fontSize: narrow ? 8 : 9, letterSpacing: narrow ? '1.3px' : '2.2px', color: '#9C8E7E', lineHeight: 1.2, whiteSpace: 'nowrap' }}>PREMIUM SENIORS CLUB</span>
+        </span>
+        {/* design preview (lw-skin): the customer's own logo, the star and the wordmark from their PDF; styles/lw-preview.css shows it in place of the typed name */}
+        <span className="cp-brand-logo" role="img" aria-label="CitraPremier by Living Well Seniors Communities" style={{ display: 'none', alignItems: 'center', gap: narrow ? 7 : 8, minWidth: 0 }}>
+          <img src="/brand-mark.svg" alt="" style={{ width: narrow ? 26 : 30, height: narrow ? 26 : 30, flex: 'none', display: 'block' }} />
+          <img src="/brand-wordmark.svg" alt="" style={{ width: narrow ? 112 : 130, height: 'auto', flex: 'none', display: 'block' }} />
         </span>
         <NotificationBell variant="side" onClick={onBell} />
       </div>

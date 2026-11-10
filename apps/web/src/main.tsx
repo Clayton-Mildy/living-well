@@ -16,12 +16,15 @@ import { reloadForNewVersion } from './app/RouteError';
 
 // a new version was deployed while this tab was open: its code files are gone, so load the new version
 window.addEventListener('vite:preloadError', (e) => { if (reloadForNewVersion()) e.preventDefault(); });
-// Living Well preview skin (design review only): ?skin=lw turns it on in this browser, ?skin=off turns it off (styles/lw-preview.css)
+// Living Well preview skin (design review only, styles/lw-preview.css): ?skin=lw (fonts and warm neutrals), ?skin=linen (option A) or ?skin=sand
+// (option B) turns it on in this browser, ?skin=off turns it off
 try {
   const skin = new URLSearchParams(location.search).get('skin');
-  if (skin === 'lw') localStorage.setItem('cp.previewSkin', 'lw');
+  if (skin === 'lw' || skin === 'linen' || skin === 'sand') localStorage.setItem('cp.previewSkin', skin);
   else if (skin === 'off') localStorage.removeItem('cp.previewSkin');
-  if (localStorage.getItem('cp.previewSkin') === 'lw') document.documentElement.dataset.lw = '1';
+  const on = localStorage.getItem('cp.previewSkin');
+  if (on === 'lw') document.documentElement.dataset.lw = '1';
+  else if (on === 'linen' || on === 'sand') document.documentElement.dataset.lw = on;
 } catch { /* no storage: the usual look */ }
 // iOS Safari only applies :active (the phone's press feedback) when the page listens for touches
 document.addEventListener('touchstart', () => {}, { passive: true });

@@ -77,3 +77,38 @@ html[data-lw] [style^="color: rgb(237, 228, 216)"], html[data-lw] [style*=" colo
 html[data-lw] [style^="color: rgb(156, 142, 126)"], html[data-lw] [style*=" color: rgb(156, 142, 126)"] { color: #A39A93 !important; }
 html[data-lw] [style^="color: rgb(210, 185, 143)"], html[data-lw] [style*=" color: rgb(210, 185, 143)"] { color: #CAB8A2 !important; }
 @media (hover: hover) { html[data-lw] .cp-side-dark:hover { background-color: #3A3938 !important; } }
+
+/* ---------- the customer's logo (star and wordmark, from their PDF) in place of the typed name in the staff sidebar ---------- */
+html[data-lw] .cp-brand-text { display: none !important; }
+html[data-lw] .cp-brand-logo { display: flex !important; }
+
+/* =========== Option A · Linen (?skin=linen): warm linen cards, bronze buttons and pills, bronze labels, warm grey text, a light staff sidebar =========== */
+html[data-lw="linen"] { --fill: #F3EDE6; --cream: #F3EDE6; --press: #EAE2D8; --cell: #F3EDE6; --accent: #75624B; --eyebrow: #75624B; --group-head: #75624B; }
+html[data-lw="linen"] :is([style*="background: rgb(244, 244, 245)"], [style*="background-color: rgb(244, 244, 245)"]) { background-color: #F3EDE6 !important; }
+html[data-lw="linen"] :is([style*="background: rgb(238, 238, 240)"], [style*="background-color: rgb(238, 238, 240)"]) { background-color: #EAE2D8 !important; }
+/* dark buttons, the current tab and the chosen day become bronze (white text on it reads at 5.8:1) */
+html[data-lw="linen"] :is([style*="background: rgb(43, 35, 28)"], [style*="background-color: rgb(43, 35, 28)"], [style*="background: rgb(36, 32, 28)"], [style*="background-color: rgb(36, 32, 28)"]) { background-color: #75624B !important; }
+html[data-lw="linen"] h2[style*="text-transform: uppercase"] { color: #75624B !important; }
+/* secondary text: the site's warm grey, darkened so it reads on a phone */
+html[data-lw="linen"] :is([style^="color: rgb(107, 98, 89)"], [style*=" color: rgb(107, 98, 89)"], [style^="color: rgb(94, 88, 82)"], [style*=" color: rgb(94, 88, 82)"]) { color: #6F6560 !important; }
+/* staff: a lighter page, and the sidebar turns white with charcoal text and a linen current item */
+html[data-lw="linen"][data-skin="warm"] { --page: #F7F4F1; --cream: #F7F4F1; }
+html[data-lw="linen"] [data-testid="staff-sidebar"] { background-color: #FFFFFF !important; color: #282828 !important; box-shadow: 0 0 0 1px #E8E1D8, 0 12px 30px rgba(40, 40, 40, .05); }
+html[data-lw="linen"] [data-testid="staff-sidebar"] :is([style*="background: rgb(53, 43, 34)"], [style*="background: rgb(74, 61, 49)"]) { background-color: #F3EDE6 !important; color: #282828 !important; }
+html[data-lw="linen"] [data-testid="staff-sidebar"] [style*="background: rgb(46, 37, 29)"] { background-color: #F7F4F1 !important; }
+html[data-lw="linen"] [data-testid="staff-sidebar"] [style*="background: rgb(58, 48, 39)"] { background-color: #EAE2D8 !important; }
+html[data-lw="linen"] [data-testid="staff-sidebar"] [style*="solid rgb(58, 48, 39)"] { border-color: #E8E1D8 !important; }
+html[data-lw="linen"] [data-testid="staff-sidebar"] :is([style^="color: rgb(207, 195, 180)"], [style*=" color: rgb(207, 195, 180)"], [style^="color: rgb(237, 228, 216)"], [style*=" color: rgb(237, 228, 216)"]):not([style*="background: rgb(154, 61, 36)"]),
+html[data-lw="linen"] [data-testid="staff-sidebar"] :is([style^="color: rgb(255, 255, 255)"], [style*=" color: rgb(255, 255, 255)"]):not([style*="background: rgb(154, 61, 36)"]) { color: #282828 !important; }
+html[data-lw="linen"] [data-testid="staff-sidebar"] :is([style^="color: rgb(156, 142, 126)"], [style*=" color: rgb(156, 142, 126)"]) { color: #6F6560 !important; }
+html[data-lw="linen"] [data-testid="staff-sidebar"] :is([style^="color: rgb(210, 185, 143)"], [style*=" color: rgb(210, 185, 143)"]) { color: #75624B !important; }
+@media (hover: hover) { html[data-lw="linen"] [data-testid="staff-sidebar"] .cp-side-dark:hover { background-color: #F7F4F1 !important; } }
+
+/* =========== Option B · Charcoal and sand (?skin=sand): charcoal with sand text on buttons and pills, a sand current item in the charcoal sidebar =========== */
+html[data-lw="sand"] { --fill: #F2EFEC; --cream: #F2EFEC; --press: #E8E3DE; --cell: #F2EFEC; }
+html[data-lw="sand"] :is([style*="background: rgb(244, 244, 245)"], [style*="background-color: rgb(244, 244, 245)"]) { background-color: #F2EFEC !important; }
+html[data-lw="sand"] :is([style*="background: rgb(43, 35, 28)"], [style*="background-color: rgb(43, 35, 28)"], [style*="background: rgb(36, 32, 28)"], [style*="background-color: rgb(36, 32, 28)"]),
+html[data-lw="sand"] :is([style*="background: rgb(43, 35, 28)"], [style*="background-color: rgb(43, 35, 28)"], [style*="background: rgb(36, 32, 28)"], [style*="background-color: rgb(36, 32, 28)"]) :is([style^="color: rgb(255, 255, 255)"], [style*=" color: rgb(255, 255, 255)"]) { color: #CAB8A2 !important; }
+html[data-lw="sand"][data-skin="warm"] { --page: #F2EFEC; --cream: #F2EFEC; }
+html[data-lw="sand"] [data-testid="staff-sidebar"] :is([style*="background: rgb(53, 43, 34)"], [style*="background: rgb(74, 61, 49)"]) { background-color: #CAB8A2 !important; color: #282828 !important; }
+html[data-lw="sand"] [data-testid="staff-sidebar"] :is([style*="background: rgb(53, 43, 34)"], [style*="background: rgb(74, 61, 49)"]) [style*="color"] { color: #282828 !important; }
