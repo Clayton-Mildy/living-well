@@ -314,7 +314,7 @@ export function finalInvoiceLines(s: ClubState, m: Member, lastDay: ISODate, tod
   }
   // round 21: the field trip fees paid for months up to the last one that the member did not use come back
   const paidMonths = uniq(live(s.invoices).filter((i) => i.memberId === m.id && !i.voided).flatMap((i) => i.lines).filter((l) => l.id.startsWith('trip-') && l.refMonth && l.refMonth <= ym(lastDay)).map((l) => l.refMonth!)).sort();
-  for (const q of paidMonths) { const c = tripCreditLine(s, m.id, q); if (c) lines.push(c); }
+  for (const q of paidMonths) { const c = tripCreditLine(s, m.id, q, today, lastDay); if (c) lines.push(c); }
   return lines;
 }
 export function finalInvoiceNumber(s: ClubState, memberId: string, today: ISODate) {
@@ -331,7 +331,9 @@ export const openBalance = (s: ClubState, memberId: string, today: ISODate) =>
 
 /** The invoice a membership ending would create (null when there is nothing to bill). Used by the action and the end dialog. */
 export function finalInvoiceFor(s: ClubState, m: Member, lastDay: ISODate, today: ISODate): Omit<Invoice, keyof Row> | null {
-  const lines = finalInvoiceLines(s, m, lastDay, today);
+  let lines = finalInvoiceLines(s, m, lastDay, today);
+  // round 21 review: never a negative invoice. Trip credits that would take it below zero stay owed back: the run lists them for a refund
+  if (sum(lines.map((l) => l.amount)) < 0) lines = lines.filter((l) => !l.id.startsWith('tripCredit-'));
   if (!lines.length) return null;
   const issue = today;
   return {

@@ -218,7 +218,9 @@ export function runPlan(s: ClubState, period: YM, today: ISODate): RunPlan {
       const credit = Math.min(availableCredit(s, r.member.id), sum(lines.map((l) => l.amount)));
       if (credit > 0) lines.push({ id: 'credit', kind: 'credit', label: 'inv.line.credit', qty: 1, unit: -credit, amount: -credit });
     }
-    return { ...r, lines, total: sum(lines.map((l) => l.amount)), skipped: !r.payerId ? 'noPayer' : !lines.length ? 'nothingToBill' : undefined };
+    const total = sum(lines.map((l) => l.amount));
+    // round 21 review: a row that nets below zero (a field trip credit with nothing else to bill) is money owed back, never a negative invoice
+    return { ...r, lines, total, skipped: !r.payerId ? 'noPayer' : !lines.length ? 'nothingToBill' : total < 0 ? 'refundDue' : undefined };
   });
   const issue = rows.filter((r) => !r.skipped);
   const usualDate = runUsualDate(s, period);

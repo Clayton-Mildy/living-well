@@ -6,7 +6,7 @@ import { planParams, planPrice } from './plans';
 import { onLeaveIn } from './leave';
 import { addDays, addMonths, dow, live, sortBy, sum, ym } from '../util';
 import { pickupByDistance } from './geo';
-import { wentInMonth } from './trips';
+import { tripAheadIn, wentInMonth } from './trips';
 
 export type InvoiceStatus = 'void' | 'paid' | 'partial' | 'outstanding' | 'overdue';
 
@@ -177,9 +177,12 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
     const extra = extraDaysFor(s, m, prev, today);
     if (extra.length) lines.push({ id: `extra-${prev}`, kind: 'extraDay', label: 'inv.line.extra', params: { month: prev, n: extra.length }, qty: extra.length, unit: price.extra, amount: extra.length * price.extra, refMonth: prev, dates: extra });
   }
-  // round 21: last month's field trip fee back when the member was not on that month's trip
-  const tc = tripCreditLine(s, m.id, prev);
-  if (tc) lines.push(tc);
+  // round 21: a field trip fee back for a month the member was not on its trip. Round 21 review: only once that month's trip is over, so the run
+  // looks back a few months (an early run before the trip leaves the credit to a later one)
+  for (let k = TRIP_CREDIT_LOOKBACK; k >= 1; k--) {
+    const tc = tripCreditLine(s, m.id, addMonths(period, -k), today);
+    if (tc) lines.push(tc);
+  }
   for (const c of live(s.pendingCharges).filter((c) => c.memberId === m.id && !c.invoiceId)) {
     lines.push({ id: `charge-${c.id}`, kind: 'adjustment', label: c.label, ...(c.params ? { params: c.params } : {}), qty: 1, unit: c.amount, amount: c.amount });
   }
@@ -187,16 +190,22 @@ export function runLinesFor(s: ClubState, m: Member, period: YM, today: ISODate)
   if (credit > 0 && lines.length) lines.push({ id: 'credit', kind: 'credit', label: 'inv.line.credit', qty: 1, unit: -credit, amount: -Math.min(credit, sum(lines.map((l) => l.amount))) });
   return lines;
 }
+/** Round 21 review: how many months back a run still credits an unused field trip fee. */
+export const TRIP_CREDIT_LOOKBACK = 3;
 /**
  * Round 21: the credit for a month's field trip fee the member paid (a non-voided `trip-<month>` line) but did not use (not in Who went of any trip that
- * month, or no trip happened); null when nothing is owed back or it was already credited.
+ * month, or no trip happened); null when nothing is owed back or it was already credited. Round 21 review: null while a trip of that month is still to
+ * come (`lastDay`: a member leaving only counts trips up to their last day), and when finance already refunded it on the invoice that billed it.
  */
-export function tripCreditLine(s: ClubState, memberId: string, month: YM): InvoiceLine | null {
+export function tripCreditLine(s: ClubState, memberId: string, month: YM, today: ISODate, lastDay?: ISODate): InvoiceLine | null {
   const mine = live(s.invoices).filter((i) => i.memberId === memberId && !i.voided);
-  const paid = mine.flatMap((i) => i.lines).find((l) => l.id === `trip-${month}`);
-  if (!paid || paid.amount <= 0) return null;
+  const billedOn = mine.find((i) => i.lines.some((l) => l.id === `trip-${month}`));
+  const paid = billedOn?.lines.find((l) => l.id === `trip-${month}`);
+  if (!billedOn || !paid || paid.amount <= 0) return null;
   if (mine.some((i) => i.lines.some((l) => l.id === `tripCredit-${month}`))) return null;
+  if (sum(live(s.refunds).filter((r) => r.invoiceId === billedOn.id).map((r) => r.amount)) >= paid.amount) return null;
   if (wentInMonth(s, memberId, month)) return null;
+  if (tripAheadIn(s, month, today, lastDay)) return null;
   return { id: `tripCredit-${month}`, kind: 'fieldTrip', label: 'inv.line.tripCredit', params: { month }, qty: 1, unit: -paid.amount, amount: -paid.amount, refMonth: month };
 }
 /**

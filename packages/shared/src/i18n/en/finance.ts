@@ -78,7 +78,7 @@ export const finance = {
   'run.early': 'This is before the usual issue date ({usual}). The invoices are released early: families get them today.',
   'run.partialMonth': '{month} isn’t over yet. Extra days after today are not on these invoices; they go on a later one.',
   'run.dates': 'Invoices are dated {issue} and due {due}.', 'run.billTo': 'Bill to {name}',
-  'err.proofRequired': 'Add a photo of the transfer slip or the signed receipt.', 'pay.proof': 'Proof of payment', 'pay.proofPhoto': 'Photo attached', 'run.noPayer': 'No billing contact:', 'run.noPayerHelp': 'Make one of their family contacts the primary contact, then run again.',
+  'err.proofRequired': 'Add a photo of the transfer slip or the signed receipt.', 'pay.proof': 'Proof of payment', 'pay.proofPhoto': 'Photo attached', 'run.refundDue': 'Owed back, no invoice:', 'run.refundDueHelp': 'a field trip fee they paid but did not use. Record a refund on the invoice that billed it.', 'run.noPayer': 'No billing contact:', 'run.noPayerHelp': 'Make one of their family contacts the primary contact, then run again.',
   'run.nothing': 'Nobody has anything left to bill for this month.', 'run.allDone': 'Everything for {month} has been invoiced.', 'run.nothingFor': 'Nothing to bill: {names}.',
   'run.total': 'Invoices: {n} · {total}', 'run.issueBtn': 'Issue invoices ({n}) · {total}', 'run.confirm': 'Send these invoices ({n}, {total}) to families now?',
   'run.issueNow': 'Yes, issue them now', 'run.issueEarly': 'Yes, release them early', 'run.issued': 'Invoices issued: {n}. Families have been told.',

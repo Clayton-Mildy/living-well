@@ -2,7 +2,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, priceOn, sum, type ClubState, type PlanDef } from '../index';
 import { FEE_DEFAULTS, feeOf, nextBill, pickupPrice, runLinesFor } from './billing';
-import { finalInvoiceLines } from './members';
+import { finalInvoiceFor, finalInvoiceLines } from './members';
+import { runPlan } from './finance';
 import { wentInMonth } from './trips';
 import type { Invoice, InvoiceLine } from '../types';
 
@@ -289,5 +290,37 @@ describe('round 21: field trips billed monthly, a missed month credited', () => 
   it('the next bill shows the field trip fee', () => {
     const s = on();
     expect(nextBill(s, 'm1', T).items.some((i) => i.label === 'inv.line.fieldTrips')).toBe(true);
+  });
+  // round 21 review (I-1): the November trip is on 26 Nov; a credit waits until it is over
+  it('round 21 review: no credit while the month\'s trip is still ahead (December released early on 22 Nov); a later run picks it up', () => {
+    const s = billedNov(false);
+    expect(novTrips(s).some((e) => e.date === '2026-11-26')).toBe(true);
+    expect(runLinesFor(s, s.members.m1, DEC, '2026-11-22').find((l) => l.id === 'tripCredit-2026-11')).toBeUndefined();
+    expect(runLinesFor(s, s.members.m1, '2027-01', '2027-01-21').find((l) => l.id === 'tripCredit-2026-11')?.amount).toBe(-250_000);
+  });
+  it('round 21 review: the final invoice credits a month only once its trip is over, or when the trip falls after the last day', () => {
+    const s = billedNov(false);
+    expect(finalInvoiceLines(s, s.members.m1, '2026-11-30', '2026-11-22').find((l) => l.id === 'tripCredit-2026-11')).toBeUndefined();
+    expect(finalInvoiceLines(s, s.members.m1, '2026-11-25', '2026-11-22').find((l) => l.id === 'tripCredit-2026-11')?.amount).toBe(-250_000);
+  });
+  it('round 21 review: a refund recorded on the invoice that billed the trip settles the credit', () => {
+    const s = billedNov(false);
+    s.refunds.rf1 = { id: 'rf1', clubId: s.clubId, createdAt: '2026-12-01T10:00', createdBy: 'staff:s10', paymentId: 'p1', invoiceId: 'inv-nov-m1', amount: 250_000, creditNote: true, reason: 'Field trip not joined', xero: 'pending' };
+    expect(credit(s)).toBeUndefined();
+  });
+  // round 21 review (I-2): money owed back is never a negative invoice
+  it('round 21 review: a member with only a credit to come is left out of the run as "owed back", not given a negative invoice', () => {
+    const s = billedNov(false);
+    s.members.m1.memberships.at(-1)!.lastDay = '2026-11-30';
+    const plan = runPlan(s, DEC, '2026-12-21');
+    const row = plan.rows.find((r) => r.member.id === 'm1')!;
+    expect(row.lines.map((l) => l.id)).toEqual(['tripCredit-2026-11']);
+    expect(row.skipped).toBe('refundDue');
+    expect(plan.issue.some((r) => r.member.id === 'm1')).toBe(false);
+  });
+  it('round 21 review: ending with nothing to bill but a trip credit makes no final invoice (the run lists it as owed back)', () => {
+    const s = billedNov(false);
+    expect(finalInvoiceLines(s, s.members.m1, '2026-11-30', '2026-11-27').map((l) => l.id)).toEqual(['tripCredit-2026-11']);
+    expect(finalInvoiceFor(s, s.members.m1, '2026-11-30', '2026-11-27')).toBeNull();
   });
 });

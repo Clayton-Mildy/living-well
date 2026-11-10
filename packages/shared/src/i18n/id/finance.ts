@@ -80,7 +80,7 @@ export const finance: Same<typeof EN> = {
   'run.early': 'Ini sebelum tanggal terbit yang biasa ({usual}). Tagihan dirilis lebih awal: keluarga menerimanya hari ini.',
   'run.partialMonth': '{month} belum berakhir. Hari tambahan setelah hari ini belum masuk di tagihan ini; akan masuk di tagihan berikutnya.',
   'run.dates': 'Tagihan bertanggal {issue} dan jatuh tempo {due}.', 'run.billTo': 'Ditagihkan ke {name}',
-  'err.proofRequired': 'Tambahkan foto bukti transfer atau kuitansi yang ditandatangani.', 'pay.proof': 'Bukti pembayaran', 'pay.proofPhoto': 'Foto terlampir', 'run.noPayer': 'Belum ada kontak penagihan:', 'run.noPayerHelp': 'Jadikan salah satu kontak keluarganya sebagai kontak utama, lalu jalankan lagi.',
+  'err.proofRequired': 'Tambahkan foto bukti transfer atau kuitansi yang ditandatangani.', 'pay.proof': 'Bukti pembayaran', 'pay.proofPhoto': 'Foto terlampir', 'run.refundDue': 'Perlu dikembalikan, tanpa tagihan:', 'run.refundDueHelp': 'biaya karyawisata yang sudah dibayar tetapi tidak dipakai. Catat pengembalian dana pada tagihan yang menagihnya.', 'run.noPayer': 'Belum ada kontak penagihan:', 'run.noPayerHelp': 'Jadikan salah satu kontak keluarganya sebagai kontak utama, lalu jalankan lagi.',
   'run.nothing': 'Tidak ada lagi yang perlu ditagih untuk bulan ini.', 'run.allDone': 'Semua tagihan {month} sudah diterbitkan.', 'run.nothingFor': 'Tidak ada yang ditagih: {names}.',
   'run.total': 'Tagihan: {n} · {total}', 'run.issueBtn': 'Terbitkan tagihan ({n}) · {total}', 'run.confirm': 'Kirim tagihan ini ({n}, {total}) ke keluarga sekarang?',
   'run.issueNow': 'Ya, terbitkan sekarang', 'run.issueEarly': 'Ya, rilis lebih awal', 'run.issued': 'Tagihan terbit: {n}. Keluarga sudah diberi tahu.',
