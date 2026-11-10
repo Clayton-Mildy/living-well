@@ -1,5 +1,5 @@
 // Round 21: the address with its map pin. Search runs on Enter or the Search button only (Nominatim forbids type-ahead); picking a place
-// moves the pin; tapping the map or dragging the pin sets it and fills the empty area fields from a reverse lookup. Kelurahan and kecamatan
+// moves the pin; tapping the map or dragging the pin sets it and takes that place's area from a reverse lookup (round 21 review). Kelurahan and kecamatan
 // can be typed over (suggestions from names already used). The address text saves even when the search is down.
 import { Suspense, lazy, useId, useRef, useState } from 'react';
 import { distanceKm, type GeoHit, type GeoPoint } from '@cp/shared';
@@ -57,7 +57,9 @@ export function LocationPicker({ address, location, onChange, club, areaSuggesti
       const h = await reversePlace(at.lat, at.lng);
       const cur = now.current.location;
       if (!h || !cur || cur.lat !== at.lat || cur.lng !== at.lng) return; // moved again meanwhile
-      emit({ address: now.current.address, location: { ...cur, kelurahan: cur.kelurahan || h.kelurahan, kecamatan: cur.kecamatan || h.kecamatan, city: cur.city || h.city } });
+      // round 21 review: a moved pin takes the new place's area; a field typed over while the lookup ran, or one the lookup lacks, stays
+      const take = (k: 'kelurahan' | 'kecamatan' | 'city') => (cur[k] === at[k] && h[k] ? h[k] : cur[k]);
+      emit({ address: now.current.address, location: { ...cur, kelurahan: take('kelurahan'), kecamatan: take('kecamatan'), city: take('city') } });
     } catch { /* the pin stays; the area can be typed */ }
   };
   const setArea = (k: 'kelurahan' | 'kecamatan', v: string) => {

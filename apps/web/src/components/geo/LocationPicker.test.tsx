@@ -66,6 +66,20 @@ describe('LocationPicker', () => {
     expect(reversePlace).toHaveBeenCalledWith(-6.1325, 106.7205);
     expect(last?.location).toMatchObject({ lat: -6.1325, lng: 106.7205, kelurahan: 'Pegadungan', kecamatan: 'Kalideres' });
   });
+  it('round 21 review: moving an existing pin takes the new place\'s area; if the lookup fails the old area stays', async () => {
+    reversePlace.mockResolvedValue({ label: 'x', lat: -6.1325, lng: 106.7205, kelurahan: 'Cengkareng Barat', kecamatan: 'Cengkareng' });
+    await show({ lat: -6.129, lng: 106.714, kelurahan: 'Pegadungan', kecamatan: 'Kalideres', city: 'Jakarta Barat' });
+    await click(host!.querySelector('[data-testid="drop-pin"]')!);
+    expect(last?.location).toMatchObject({ lat: -6.1325, lng: 106.7205, kelurahan: 'Cengkareng Barat', kecamatan: 'Cengkareng', city: 'Jakarta Barat' });
+    expect(input('Kelurahan').value).toBe('Cengkareng Barat');
+    await act(async () => { root?.unmount(); });
+    host?.remove();
+    reversePlace.mockReset();
+    reversePlace.mockRejectedValue(Object.assign(new Error('down'), { code: 'geo.err.unavailable' }));
+    await show({ lat: -6.129, lng: 106.714, kelurahan: 'Pegadungan', kecamatan: 'Kalideres' });
+    await click(host!.querySelector('[data-testid="drop-pin"]')!);
+    expect(last?.location).toMatchObject({ lat: -6.1325, lng: 106.7205, kelurahan: 'Pegadungan', kecamatan: 'Kalideres' });
+  });
   it('the kelurahan can be typed over', async () => {
     await show({ lat: -6.13, lng: 106.72, kelurahan: 'Kalideres', kecamatan: 'Kalideres' });
     await type(input('Kelurahan'), 'Semanan');
