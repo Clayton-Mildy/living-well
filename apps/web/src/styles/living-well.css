@@ -1,8 +1,9 @@
-/* Living Well preview skin (design review, 10 Nov): the colours and fonts of livingwellcommunities.com.au on the current layout. Nothing moves:
-   only colours and type change. On with ?skin=lw (remembered in this browser), off with ?skin=off; <html data-lw="1"> while on.
-   Fonts: page, section and sheet titles (h1, h2, the staff serif) in Epilogue 600, body text Inter as before (Light where no weight is set), small capitals tracked +1.5 px.
-   Colours: the cool greys become the site's warm mist and linen, ink and espresso become charcoal #282828, gold becomes sand #CAB8A2.
-   Inline colours are matched by their computed rgb() in the style attribute (React writes hex as rgb). */
+/* The Living Well look (KC picked option A · Linen on 10 Nov): the colours and fonts of livingwellcommunities.com.au on the app's layout.
+   <html data-lw="linen"> (index.html) turns it on from the first paint; nothing moves, only colours and type.
+   Fonts: page, section and sheet titles (h1, h2, the staff serif) in Epilogue 600, body text Inter, small capitals tracked +1.5 px.
+   Colours: the cool greys become warm mist and linen, ink and espresso become charcoal #282828 or bronze #75624B (buttons, pills), gold becomes
+   bronze; the staff sidebar is white. Inline colours are matched by their computed rgb() in the style attribute (React writes hex as rgb), so a
+   component keeps its old hex and still shows the new colour: change a colour here, not in the component. */
 
 /* ---------- tokens (both apps) ---------- */
 html[data-lw] {
@@ -78,11 +79,7 @@ html[data-lw] [style^="color: rgb(156, 142, 126)"], html[data-lw] [style*=" colo
 html[data-lw] [style^="color: rgb(210, 185, 143)"], html[data-lw] [style*=" color: rgb(210, 185, 143)"] { color: #CAB8A2 !important; }
 @media (hover: hover) { html[data-lw] .cp-side-dark:hover { background-color: #3A3938 !important; } }
 
-/* ---------- the customer's logo (star and wordmark, from their PDF) in place of the typed name in the staff sidebar ---------- */
-html[data-lw] .cp-brand-text { display: none !important; }
-html[data-lw] .cp-brand-logo { display: flex !important; }
-
-/* =========== Option A · Linen (?skin=linen): warm linen cards, bronze buttons and pills, bronze labels, warm grey text, a light staff sidebar =========== */
+/* =========== Linen: warm linen cards, bronze buttons and pills, bronze labels, warm grey text, a light staff sidebar =========== */
 html[data-lw="linen"] { --fill: #F3EDE6; --cream: #F3EDE6; --press: #EAE2D8; --cell: #F3EDE6; --accent: #75624B; --eyebrow: #75624B; --group-head: #75624B; }
 html[data-lw="linen"] :is([style*="background: rgb(244, 244, 245)"], [style*="background-color: rgb(244, 244, 245)"]) { background-color: #F3EDE6 !important; }
 html[data-lw="linen"] :is([style*="background: rgb(238, 238, 240)"], [style*="background-color: rgb(238, 238, 240)"]) { background-color: #EAE2D8 !important; }
@@ -103,12 +100,3 @@ html[data-lw="linen"] [data-testid="staff-sidebar"] :is([style^="color: rgb(255,
 html[data-lw="linen"] [data-testid="staff-sidebar"] :is([style^="color: rgb(156, 142, 126)"], [style*=" color: rgb(156, 142, 126)"]) { color: #6F6560 !important; }
 html[data-lw="linen"] [data-testid="staff-sidebar"] :is([style^="color: rgb(210, 185, 143)"], [style*=" color: rgb(210, 185, 143)"]) { color: #75624B !important; }
 @media (hover: hover) { html[data-lw="linen"] [data-testid="staff-sidebar"] .cp-side-dark:hover { background-color: #F7F4F1 !important; } }
-
-/* =========== Option B · Charcoal and sand (?skin=sand): charcoal with sand text on buttons and pills, a sand current item in the charcoal sidebar =========== */
-html[data-lw="sand"] { --fill: #F2EFEC; --cream: #F2EFEC; --press: #E8E3DE; --cell: #F2EFEC; }
-html[data-lw="sand"] :is([style*="background: rgb(244, 244, 245)"], [style*="background-color: rgb(244, 244, 245)"]) { background-color: #F2EFEC !important; }
-html[data-lw="sand"] :is([style*="background: rgb(43, 35, 28)"], [style*="background-color: rgb(43, 35, 28)"], [style*="background: rgb(36, 32, 28)"], [style*="background-color: rgb(36, 32, 28)"]),
-html[data-lw="sand"] :is([style*="background: rgb(43, 35, 28)"], [style*="background-color: rgb(43, 35, 28)"], [style*="background: rgb(36, 32, 28)"], [style*="background-color: rgb(36, 32, 28)"]) :is([style^="color: rgb(255, 255, 255)"], [style*=" color: rgb(255, 255, 255)"]) { color: #CAB8A2 !important; }
-html[data-lw="sand"][data-skin="warm"] { --page: #F2EFEC; --cream: #F2EFEC; }
-html[data-lw="sand"] [data-testid="staff-sidebar"] :is([style*="background: rgb(53, 43, 34)"], [style*="background: rgb(74, 61, 49)"]) { background-color: #CAB8A2 !important; color: #282828 !important; }
-html[data-lw="sand"] [data-testid="staff-sidebar"] :is([style*="background: rgb(53, 43, 34)"], [style*="background: rgb(74, 61, 49)"]) [style*="color"] { color: #282828 !important; }

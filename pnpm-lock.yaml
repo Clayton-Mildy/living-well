@@ -108,9 +108,6 @@ importers:
       '@dnd-kit/utilities':
         specifier: ^3.2.2
         version: 3.2.2(react@18.3.1)
-      '@fontsource/cormorant-garamond':
-        specifier: ^5.3.0
-        version: 5.3.0
       '@fontsource/epilogue':
         specifier: ^5.3.0
         version: 5.3.0
@@ -818,9 +815,6 @@ packages:
     peerDependenciesMeta:
       '@noble/hashes':
         optional: true
-
-  '@fontsource/cormorant-garamond@5.3.0':
-    resolution: {integrity: sha512-weuGsCirGVWBWqpt6YUp0yLThTe4G8YO45noq8wxeJCRvEpq5lFrxNMFSTxcyOyV5k5otzJ8guDzYegdYlcLMQ==}
 
   '@fontsource/epilogue@5.3.0':
     resolution: {integrity: sha512-rUyuuIOG8BYkcTCxeekoVW0YKg0EsGBO1RGRd2brP2BGSbN8nUo1tc3PzD7QZB0NomTLdA7Dc6wrPsKCZ4m1aw==}
@@ -2779,8 +2773,6 @@ snapshots:
       levn: 0.4.1
 
   '@exodus/bytes@1.16.0': {}
-
-  '@fontsource/cormorant-garamond@5.3.0': {}
 
   '@fontsource/epilogue@5.3.0': {}
 

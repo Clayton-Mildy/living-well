@@ -32,9 +32,9 @@ export function Icon({ name, size = 22, fill = 0, color, style, weight }: { name
     </span>
   );
 }
-/** Brand logo (logo-cp.jpg) in place of the text wordmark; multiply removes the JPG's white on cream backgrounds. */
+/** Brand logo: the customer's gold wordmark (brand-wordmark.svg, converted from their PDF; the Living Well look, 10 Nov). */
 export function Logo({ height = 47, style }: { height?: number; style?: CSSProperties }) {
-  return <img src="/logo-cp.jpg" alt="CitraPremier by Living Well Seniors Communities" style={{ height, width: 'auto', display: 'block', mixBlendMode: 'multiply', maxWidth: '100%', objectFit: 'contain', objectPosition: 'left center', ...style }} />;
+  return <img src="/brand-wordmark.svg" alt="CitraPremier by Living Well Seniors Communities" style={{ height, width: 'auto', display: 'block', maxWidth: '100%', objectFit: 'contain', objectPosition: 'left center', ...style }} />;
 }
 
 // ---------- typography ----------

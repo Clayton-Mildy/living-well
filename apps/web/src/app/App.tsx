@@ -6,6 +6,7 @@ import { useSession } from '../store/session';
 import { useReplica } from '../store/replica';
 import { useMe } from '../lib/me';
 import { AppShell } from '../shell/AppShell';
+import { Splash } from '../shell/Splash';
 import { Login } from '../features/auth/Login';
 import { RatePage } from '../features/rate/RatePage';
 import { PageSkeleton, EmptyState, Button } from '../components/ui';
@@ -24,9 +25,11 @@ function DataGate({ children }: { children: ReactNode }) {
   const t = useT();
   useEffect(() => { if (user) void load(club, user.id); }, [user?.id, club]); // eslint-disable-line react-hooks/exhaustive-deps
   if (!user) return <Navigate to="/login" replace />;
-  if (status === 'error') return <div style={{ padding: 40 }}><EmptyState icon="cloud_off" title={t('err.network')} action={<div style={{ display: 'flex', gap: 8 }}><Button onClick={() => load(club, user.id)}>{t('common.retry')}</Button><Button variant="secondary" onClick={signOut}>{t('shell.signOut')}</Button></div>} /></div>;
-  if (status !== 'ready') return <PageSkeleton />;
-  return <>{children}</>;
+  // the Living Well look (10 Nov): the family app opens on the gold splash (KC's option 3) while its data loads; it stays mounted in the same place below
+  const splash = user.kind === 'family' ? <Splash ready={status === 'ready'} /> : null;
+  if (status === 'error') return <>{splash}<div style={{ padding: 40 }}><EmptyState icon="cloud_off" title={t('err.network')} action={<div style={{ display: 'flex', gap: 8 }}><Button onClick={() => load(club, user.id)}>{t('common.retry')}</Button><Button variant="secondary" onClick={signOut}>{t('shell.signOut')}</Button></div>} /></div></>;
+  if (status !== 'ready') return <>{splash}<PageSkeleton /></>;
+  return <>{splash}{children}</>;
 }
 function NavScreen() {
   const { key = 'today' } = useParams();
