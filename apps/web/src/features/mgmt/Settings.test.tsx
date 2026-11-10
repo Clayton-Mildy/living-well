@@ -63,10 +63,10 @@ const button = (within: ParentNode, text: string) => Array.from(within.querySele
 const click = async (el: Element | undefined | null) => { expect(el, 'element to click').toBeTruthy(); await act(async () => { (el as HTMLElement).click(); }); };
 
 describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, width) => {
-  it('shows three groups: Membership rules, Few-visits alert, Terms and conditions', async () => {
+  it('shows four groups: Membership rules, Few-visits alert, Pick-up (round 21), Terms and conditions', async () => {
     openClub();
     await show(<Settings />, width);
-    expect(sections()).toEqual(['Membership rules', 'Few-visits alert', 'Terms and conditions']);
+    expect(sections()).toEqual(['Membership rules', 'Few-visits alert', 'Pick-up', 'Terms and conditions']);
     for (const k of ['downgrade', 'stop', 'leave']) expect(field(k).value).toBe('14');
     expect(field('below').value).toBe('5');
     expect(field('days').value).toBe('16');
@@ -76,6 +76,30 @@ describe.each([['phone', 390], ['wide', 1280]])('Admin › Settings (%s)', (_n, 
     expect(button(section('Membership rules'), 'Save')).toBeUndefined(); // nothing to save until something is edited
   });
 
+  it('round 21: Pick-up shows the club pin and the defaults Rp 10.000 a km, free within 2 km; a new rate from Management waits for the Owner', async () => {
+    openClub('s9');
+    useReplica.getState().view!.club.settings.location = { lat: -6.136, lng: 106.731, kelurahan: 'Kalideres', kecamatan: 'Kalideres' };
+    await show(<Settings />, width);
+    const g = section('Pick-up');
+    expect(g.textContent).toContain('Kalideres');
+    expect(field('perKm').value).toBe('10.000');
+    expect(field('freeKm').value).toBe('2');
+    expect(button(g, 'Send to owner')).toBeUndefined();
+    await type(field('perKm'), '12000');
+    expect(field('perKm').value).toBe('12.000');
+    await click(button(g, 'Send to owner'));
+    expect(actMock).toHaveBeenCalledWith('club.updateSettings', { pickupRate: { perKm: 12_000, freeKm: 2 } });
+    expect(useReplica.getState().view!.club.settings.pickupRate).toBeUndefined();
+    expect(section('Pick-up').textContent).toContain('waiting for owner');
+  });
+  it('round 21: a free distance that is not a half km shows an error and does not save', async () => {
+    openClub('s11');
+    await show(<Settings />, width);
+    await type(field('freeKm'), '2.3');
+    await click(button(section('Pick-up'), 'Save'));
+    expect(actMock).not.toHaveBeenCalled();
+    expect(section('Pick-up').textContent).toContain('Use 0 to 50 km, in half km steps.');
+  });
   it('Management changing the stop notice to 10 and saving shows Waiting for owner; the setting is unchanged', async () => {
     openClub('s9');
     await show(<Settings />, width);

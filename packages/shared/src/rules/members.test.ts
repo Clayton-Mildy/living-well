@@ -361,7 +361,7 @@ describe('findDuplicates (round 12 registration)', () => {
 
 describe('filters', () => {
   it('round 16: Flex and Gold sit beside Active (a helicopter view of the counts), then Other plan', () => {
-    expect(MEMBER_FILTERS).toEqual(['active', 'flex', 'gold', 'other', 'pickup', 'in', 'att', 'checkOn', 'ended']);
+    expect(MEMBER_FILTERS).toEqual(['active', 'flex', 'gold', 'other', 'pickup', 'trips', 'in', 'att', 'checkOn', 'ended']); // round 21: Field trips after Pick-up
   });
   it('Other plan counts the members on a catalogue plan (neither Flex nor Gold)', () => {
     const s = seed();

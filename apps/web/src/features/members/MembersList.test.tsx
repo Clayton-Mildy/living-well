@@ -147,6 +147,8 @@ describe('Members, Pick-up filter', () => {
     for (const m of Object.values(state.members)) delete m.pickup;
     const other = Object.keys(state.members).find((k) => k !== 'm1' && k !== 'm2' && !state.members[k].deletedAt)!;
     state.members.m1.pickup = { on: true };
+    state.club.settings.location = { lat: -6.136, lng: 106.731 }; // round 21: priced by distance, 6.4 km → Rp 70.000
+    state.members.m1.location = { lat: -6.136, lng: 106.731 + 6.4 / (111.195 * Math.cos((6.136 * Math.PI) / 180)) };
     state.members.m2.pickup = { on: true, price: 450_000 };
     state.members[other].pickup = { on: false, price: 450_000 };
     useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
@@ -157,7 +159,7 @@ describe('Members, Pick-up filter', () => {
     await act(async () => { root!.render(<MemoryRouter initialEntries={['/members?f=pickup']}><MembersList /></MemoryRouter>); });
     const rowOf = (id: string) => host!.querySelector(`[data-member="${id}"]`);
     expect(host.querySelectorAll('[data-member]')).toHaveLength(2);
-    expect(rowOf('m1')?.querySelector('[data-testid="member-pickup"]')?.textContent).toBe('Pick-up · Rp 600.000');
+    expect(rowOf('m1')?.querySelector('[data-testid="member-pickup"]')?.textContent).toBe('Pick-up · Rp 70.000 · 6.4 km');
     expect(rowOf('m2')?.querySelector('[data-testid="member-pickup"]')?.textContent).toBe('Pick-up · Rp 450.000 · custom');
     expect(rowOf(other)).toBeNull();
   });

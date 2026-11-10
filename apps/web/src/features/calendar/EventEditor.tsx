@@ -2,13 +2,14 @@
 // A "notify" toggle (on by default) decides whether staff and families are told about the change.
 // Round 6 (phone): a pushed full screen (PhoneScreen) with grouped fields and the Save pill pinned at the bottom, instead of the centred dialog.
 import { useEffect, useState } from 'react';
-import { feeOf, fmtN, parseN, priceOn, type CalendarEvent } from '@cp/shared';
+import { type CalendarEvent } from '@cp/shared';
 import { useClub } from '../../store/replica';
 import { Button, Chip, DateField, Dialog, Eyebrow, Group, Note, PhoneScreen, TextField, TimeField, Toggle, FONT_BODY } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT, useFmt } from '../../lib/i18n';
 import { useAct } from '../../lib/act';
 import { useNow } from '../../lib/clock';
+import { VenuePicker } from './VenuePicker';
 
 type Kind = 'closed' | 'holiday' | 'outing';
 const KINDS: Kind[] = ['closed', 'holiday', 'outing'];
@@ -29,7 +30,7 @@ export function EventEditor({ open, onClose, event, date, initialKind }: { open:
   const [d1, setD1] = useState('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
-  const [fee, setFee] = useState(''); // round 16: an outing's field trip fee (as typed; '' = free)
+  const [venueId, setVenueId] = useState(''); // round 21: the field trip's venue (a Contacts entry)
   const [tried, setTried] = useState(false);
   const [confirmDel, setConfirmDel] = useState(false);
   const [notify, setNotify] = useState(true);
@@ -46,7 +47,7 @@ export function EventEditor({ open, onClose, event, date, initialKind }: { open:
     setD1(event?.endDate ?? '');
     setFrom(event?.from ?? '');
     setTo(event?.to ?? '');
-    setFee(event ? (event.fee ? fmtN(event.fee) : '') : fmtN(feeOf(priceOn(s, date ?? today), 'fieldTrip')));
+    setVenueId(event?.venueId ?? '');
     setTried(false);
     setConfirmDel(false);
     setNotify(true);
@@ -59,16 +60,19 @@ export function EventEditor({ open, onClose, event, date, initialKind }: { open:
     date: !d0 ? t('cal.errDate') : d0 < today && d0 !== event?.date ? t('cal.err.pastDate') : '',
     end: multi && (!d1 || d1 <= d0) ? t('cal.err.endBeforeStart') : '',
     time: kind === 'outing' && (from || to) && (!from || !to) ? t('cal.err.timeBoth') : kind === 'outing' && from && to && from >= to ? t('cal.err.timeOrder') : '',
+    // round 21: a new field trip names its venue (an older trip without one still saves)
+    venue: kind === 'outing' && !venueId && !(event && !event.venueId) ? t('cal.err.venueRequired') : '',
   };
-  const valid = !errors.title && !errors.date && !errors.end && !errors.time;
+  const valid = !errors.title && !errors.date && !errors.end && !errors.time && !errors.venue;
   const save = async () => {
     setTried(true);
     if (!valid || busy) return;
     setBusy(true);
-    const common = { date: d0, kind, title: title.trim(), notify, ...(kind === 'outing' ? { fee: parseN(fee) || 0 } : {}) };
+    const common = { date: d0, kind, title: title.trim(), notify }; // round 21: no fee per trip (paid monthly)
+    const venue = event ? { venueId: kind === 'outing' && venueId ? venueId : null } : kind === 'outing' && venueId ? { venueId } : {};
     const r = event
-      ? await act('calendarEvent.update', { eventId: event.id, ...common, endDate: end || null, titleId: titleId.trim() || null, from: kind === 'outing' && from && to ? from : null, to: kind === 'outing' && from && to ? to : null }, { ok: t(notify ? 'cal.eventSaved' : 'cal.eventSavedQuiet') })
-      : await act('calendarEvent.create', { ...common, ...(end ? { endDate: end } : {}), ...(titleId.trim() ? { titleId: titleId.trim() } : {}), ...(kind === 'outing' && from && to ? { from, to } : {}) }, { ok: t(notify ? 'cal.eventSaved' : 'cal.eventSavedQuiet') });
+      ? await act('calendarEvent.update', { eventId: event.id, ...common, ...venue, endDate: end || null, titleId: titleId.trim() || null, from: kind === 'outing' && from && to ? from : null, to: kind === 'outing' && from && to ? to : null }, { ok: t(notify ? 'cal.eventSaved' : 'cal.eventSavedQuiet') })
+      : await act('calendarEvent.create', { ...common, ...venue, ...(end ? { endDate: end } : {}), ...(titleId.trim() ? { titleId: titleId.trim() } : {}), ...(kind === 'outing' && from && to ? { from, to } : {}) }, { ok: t(notify ? 'cal.eventSaved' : 'cal.eventSavedQuiet') });
     setBusy(false);
     if (r.ok) onClose(); else setErr(t(r.code, r.params));
   };
@@ -112,8 +116,9 @@ export function EventEditor({ open, onClose, event, date, initialKind }: { open:
               </div>
             </Group>
             <Group pad="14px 14px 16px" gap={14}>
-              <TextField label={t('cal.titleEn')} value={title} onChange={setTitle} maxLength={120} error={tried && errors.title} placeholder={t('cal.titleEnPh')} />
+              <TextField label={kind === 'outing' ? t('cal.eventName') : t('cal.titleEn')} value={title} onChange={setTitle} maxLength={120} error={tried && errors.title} placeholder={t('cal.titleEnPh')} />
               <TextField label={t('cal.titleId')} value={titleId} onChange={setTitleId} maxLength={120} />
+              {kind === 'outing' ? <VenuePicker value={venueId} onChange={setVenueId} error={tried && errors.venue} /> : null}
             </Group>
             <Group pad="14px 14px 16px" gap={14}>
               <DateField label={t('cal.date')} value={d0} min={event?.date && event.date < today ? event.date : today} onChange={setD0} error={tried && errors.date} />
@@ -125,7 +130,6 @@ export function EventEditor({ open, onClose, event, date, initialKind }: { open:
                     <TimeField label={t('cal.from')} value={from} onChange={setFrom} error={tried && errors.time} />
                     <TimeField label={t('cal.to')} value={to} onChange={setTo} />
                   </div>
-                  <TextField label={t('cal.fee')} value={fee} onChange={(v) => setFee(v.replace(/[^\d.]/g, ''))} inputMode="numeric" placeholder="0" hint={t('cal.feeHint')} name="fee" />
                 </>
               ) : null}
             </Group>
@@ -167,8 +171,9 @@ export function EventEditor({ open, onClose, event, date, initialKind }: { open:
               {KINDS.map((k) => <Chip key={k} selected={kind === k} onClick={() => setKind(k)}>{t('cal.t_' + k)}</Chip>)}
             </div>
           </div>
-          <TextField label={t('cal.titleEn')} value={title} onChange={setTitle} maxLength={120} error={tried && errors.title} placeholder={t('cal.titleEnPh')} />
+          <TextField label={kind === 'outing' ? t('cal.eventName') : t('cal.titleEn')} value={title} onChange={setTitle} maxLength={120} error={tried && errors.title} placeholder={t('cal.titleEnPh')} />
           <TextField label={t('cal.titleId')} value={titleId} onChange={setTitleId} maxLength={120} />
+          {kind === 'outing' ? <VenuePicker value={venueId} onChange={setVenueId} error={tried && errors.venue} /> : null}
           <DateField label={t('cal.date')} value={d0} min={event?.date && event.date < today ? event.date : today} onChange={setD0} error={tried && errors.date} />
           <Toggle on={multi} onClick={() => { setMulti(!multi); if (!multi && !d1) setD1(d0); }} label={t('cal.multiDay')} />
           {multi ? <DateField label={t('cal.until')} value={d1} min={d0} onChange={setD1} error={tried && errors.end} /> : null}
@@ -178,7 +183,6 @@ export function EventEditor({ open, onClose, event, date, initialKind }: { open:
                 <TimeField label={t('cal.from')} value={from} onChange={setFrom} error={tried && errors.time} />
                 <TimeField label={t('cal.to')} value={to} onChange={setTo} />
               </div>
-              <TextField label={t('cal.fee')} value={fee} onChange={(v) => setFee(v.replace(/[^\d.]/g, ''))} inputMode="numeric" placeholder="0" hint={t('cal.feeHint')} name="fee" />
             </>
           ) : null}
           {err ? <Note tone="rust" icon="error">{err}</Note> : null}

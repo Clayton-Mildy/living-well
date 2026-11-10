@@ -2,7 +2,7 @@
 export const members = {
   // list
   eyebrow: '{n} active members', eyebrowPending: '{n} pending approval', add: 'Add member', searchPh: 'Search by name, family or phone', searchLabel: 'Search members', filter: 'Filter members',
-  'f.active': 'Active', 'f.in': 'In the club', 'f.att': 'Health attention', 'f.flex': 'Flex', 'f.gold': 'Gold', 'f.other': 'Other plan', 'f.pickup': 'Pick-up', 'pickupRow': 'Pick-up · {p}', 'pickupRowCustom': 'Pick-up · {p} · custom', 'f.checkOn': "Haven't come lately", 'f.ended': 'Ended',
+  'err.pickupNeedsLocation': 'Set the location first', 'f.active': 'Active', 'f.in': 'In the club', 'f.att': 'Health attention', 'f.flex': 'Flex', 'f.gold': 'Gold', 'f.other': 'Other plan', 'f.pickup': 'Pick-up', 'pickupRow': 'Pick-up · {p}', 'pickupRowKm': 'Pick-up · {p} · {km} km', 'pickupRowFree': 'Pick-up · free · {km} km', 'pickupRowNoPin': 'Pick-up · no location', 'pickupRowCustom': 'Pick-up · {p} · custom', 'f.trips': 'Field trips', 'f.checkOn': "Haven't come lately", 'f.ended': 'Ended',
   planGold: '{plan}', planFlex: '{plan} {n}/{q}', planFlexTip: '{plan} plan: {n} of {q} visits used this month', planGoldTip: '{plan} plan: unlimited visits', newTag: 'new member', paymentOverdue: 'Payment overdue', endingOn: 'ends {d}',
   since: 'Since {d}', renews: 'Renews {d}', endsOn: 'Ends {d}', endedOn: 'Ended {d}', sortLabel: 'Sort members', 'sort.name': 'Name', 'sort.startNew': 'Start date, newest', 'sort.startOld': 'Start date, oldest', 'sort.endSoon': 'End date, soonest',
   lastVisit: 'Last visit {d}', neverVisited: 'No visits yet', pagerLabel: 'Members pages',
@@ -19,7 +19,7 @@ export const members = {
   contactMode: 'Family contact', newContact: 'New contact', existingContact: 'Existing contact', pickContact: 'Choose a contact', pickContactPh: 'Choose…',
   // activity feed (member History and Live today)
   'feed.created': '{name} added as a member', 'feed.details': '{name}: details updated', 'feed.docs': '{name}: documents updated', 'feed.docRequested': '{name}: document requested from the family',
-  'feed.docUploaded': '{name}: document uploaded by the family', 'feed.consent': '{name}: consent updated', 'feed.pickupOn': '{name}: pick-up switched on', 'feed.pickupOff': '{name}: pick-up switched off', 'feed.plan': '{name}: plan changed', 'feed.planApplied': '{name}: plan request applied',
+  'feed.docUploaded': '{name}: document uploaded by the family', 'feed.consent': '{name}: consent updated', 'feed.tripsOn': '{name}: field trips switched on', 'feed.tripsOff': '{name}: field trips switched off', 'feed.pickupOn': '{name}: pick-up switched on', 'feed.pickupOff': '{name}: pick-up switched off', 'feed.plan': '{name}: plan changed', 'feed.planApplied': '{name}: plan request applied',
   'feed.planDeclined': '{name}: plan request declined', 'feed.allergies': '{name}: allergies updated', 'feed.meds': '{name}: medicines updated', 'feed.care': '{name}: care instructions updated',
   'feed.health': '{name}: health record updated', 'feed.cognitive': '{name}: cognitive status updated', 'feed.ending': '{name}: last club day set', 'feed.endingCancelled': '{name}: ending cancelled',
   'feed.reactivated': '{name}: membership reactivated', 'feed.noteShared': '{name}: note shared with family', 'feed.noteStaff': '{name}: staff-only note added', 'feed.noteEdited': '{name}: note edited',

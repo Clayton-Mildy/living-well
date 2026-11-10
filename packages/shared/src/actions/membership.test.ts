@@ -92,13 +92,13 @@ describe('leave: the invoice, the check-in, the job', () => {
     expect(l.lines).toHaveLength(1);
     expect(l.lines[0]).toMatchObject({ kind: 'plan', label: 'inv.line.leave', amount: 250000, refMonth: '2026-12', params: { month: '2026-12' } });
     expect(l.total).toBe(250000);
-    expect(plan.issue.find((r) => r.member.id === 'm46')!.total).toBe(3950000 + 450000 + 350000); // everybody else pays the plan (round 16: Opa Budi's pick-up on top; round 17: and his birthday cake)
+    expect(plan.issue.find((r) => r.member.id === 'm46')!.total).toBe(3950000 + 70000 + 350000); // everybody else pays the plan (round 16: Opa Budi's pick-up on top, round 21: Rp 70.000 by distance; round 17: and his birthday cake)
     // issued, it is the month’s plan line: a second run does not bill the plan again
     const w = run(s, 'run.issue', { period: '2026-12' }, 's10', at('2026-12-21'));
     expect(w.state.invoices['INV-2612-001'].lines.map((x) => [x.label, x.amount])).toEqual([['inv.line.leave', 250000]]);
     expect(() => run(w.state, 'run.issue', { period: '2026-12' }, 's10', at('2026-12-21'))).toThrow('finance.err.nothingToIssue');
     // January is a normal month again
-    expect(runPlan(s, '2027-01', '2027-01-21').issue.find((r) => r.member.id === 'm1')!.lines.map((x) => x.label)).toEqual(['inv.line.flex']);
+    expect(runPlan(s, '2027-01', '2027-01-21').issue.find((r) => r.member.id === 'm1')!.lines.map((x) => x.label)).toEqual(['inv.line.flex', 'inv.line.fieldTrips']); // round 21: Oma Lina is on the monthly field trips (none in the leave month)
   });
   it('the leave fee follows the price list', () => {
     const s = run(dec(base), 'prices.set', { flex: 2700000, gold: 3950000, extra: 650000, leave: 300000, from: T }, 's9').state;
@@ -309,7 +309,7 @@ describe('the one-time registration fee on a first invoice', () => {
     const stopped = tick(base, at('2026-11-03')).state;
     const back = run(stopped, 'members.reactivate', { memberId: 'm1', start: '2026-11-09' }, 's9', at('2026-11-04')).state;
     const row = runPlan(back, '2026-11', '2026-11-21').issue.find((r) => r.member.id === 'm1')!;
-    expect(row.lines.map((l) => l.label)).toEqual(['inv.line.flex', 'inv.line.registration']);
+    expect(row.lines.map((l) => l.label)).toEqual(['inv.line.flex', 'inv.line.fieldTrips', 'inv.line.registration']); // round 21: still on the field trips
     expect(live(back.invoices).filter((i) => i.memberId === 'm1').length).toBe(live(base.invoices).filter((i) => i.memberId === 'm1').length); // the old ones (six months of them) are still there
   });
 });

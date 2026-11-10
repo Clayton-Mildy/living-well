@@ -269,6 +269,23 @@ describe('members.updateDetails', () => {
     expect(Object.values(a.state.activity).some((x) => x.memberId === 'm1' && x.key === 'members.feed.details' && (x.params as Record<string, string>).by === 'staff:s1')).toBe(true);
   });
 
+  it('round 21: the home pin, gated for the front desk like the address; management applies it; null clears it; a bad pin is refused', () => {
+    const c = seed();
+    const pin = { lat: -6.1325, lng: 106.7205, kelurahan: 'Pegadungan', kecamatan: 'Kalideres' };
+    const r = run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { address: 'Jl. Citra 2 Blok B', location: pin } }, who(c, 's1'));
+    expect(r.reviewed).toBe('gate');
+    expect(r.state.members.m1.location).toEqual(c.citra.members.m1.location);
+    const cr = r.state.changeRequests[r.result.changeRequestId as string];
+    expect(cr.changes.map((x) => x.field).sort()).toEqual(['address', 'location']);
+    const a = run(r.state, 'review.approve', { crId: cr.id }, who(c, 's9'));
+    expect(a.state.members.m1.location).toEqual(pin);
+    const m = run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { location: pin } }, who(c, 's9'));
+    expect(m.reviewed).toBeUndefined();
+    expect(m.state.members.m1.location).toEqual(pin);
+    expect(run(m.state, 'members.updateDetails', { memberId: 'm1', patch: { location: null } }, who(c, 's9')).state.members.m1.location).toBeUndefined();
+    expect(() => run(c.citra, 'members.updateDetails', { memberId: 'm1', patch: { location: { lat: 200, lng: 1 } } }, who(c, 's9'))).toThrow('err.invalid');
+  });
+
   it('the seeded request (usual arrival of Bapak Bambang) can be approved', () => {
     const c = seed();
     const a = run(c.citra, 'review.approve', { crId: 'cr-seed-1' }, who(c, 's9'));
@@ -695,7 +712,7 @@ describe('list rules: search, filters, status', () => {
   it('six filters with counts; pending members are listed; ended ones only under Ended', () => {
     const c = seed();
     const rows = rows2(c.citra, T);
-    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, other: 0, pickup: 1, ended: 0, split: { active: { flex: 2, gold: 3 }, in: { flex: 1, gold: 2 } } }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
+    expect(filterCounts(rows)).toEqual({ active: 5, in: 3, att: 2, checkOn: 0, flex: 2, gold: 3, other: 0, pickup: 1, trips: 2, ended: 0, split: { active: { flex: 2, gold: 3 }, in: { flex: 1, gold: 2 } } }); // Hendra's blood pressure and Tjahjadi's overdue invoice (on hold)
     const r = run(c.citra, 'members.create', newMember(), who(c, 's1'));
     const rows2b = rows2(r.state, T);
     expect(rows2b.find((x) => x.m.id === 'm47')?.st.key).toBe('pending');
@@ -841,17 +858,45 @@ describe('round 16: members.setPickup', () => {
     const c = seed();
     const r = run(c.citra, 'members.setPickup', { memberId: 'm1', on: true, price: 450_000 }, who(c, 's10'));
     expect(r.state.members.m1.pickup).toEqual({ on: true, price: 450_000 });
-    const back = run(r.state, 'members.setPickup', { memberId: 'm1', on: true, price: null }, who(c, 's9'));
-    expect(back.state.members.m1.pickup).toEqual({ on: true });
-    expect(() => run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's1'))).toThrow('err.forbidden');
+    expect(() => run(c.citra, 'members.setPickup', { memberId: 'm1', on: true, price: 450_000 }, who(c, 's1'))).toThrow('err.forbidden');
+  });
+  it('round 21: priced by distance, so pick-up on needs the home pin or a custom price', () => {
+    const c = seed();
+    delete c.citra.members.m1.location;
+    expect(() => run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's9'))).toThrow('members.err.pickupNeedsLocation');
+    c.citra.members.m1.location = { lat: -6.13, lng: 106.79 };
+    expect(run(c.citra, 'members.setPickup', { memberId: 'm1', on: true }, who(c, 's9')).state.members.m1.pickup).toEqual({ on: true });
+    const r = run(c.citra, 'members.setPickup', { memberId: 'm1', on: true, price: 450_000 }, who(c, 's9'));
+    expect(run(r.state, 'members.setPickup', { memberId: 'm1', on: true, price: null }, who(c, 's9')).state.members.m1.pickup).toEqual({ on: true });
+  });
+});
+
+describe('round 21: the Field trips switch', () => {
+  it('finance or management switch it on and off; the front desk cannot; registration can set it; the filter counts it', () => {
+    const c = seed();
+    // the seed has Oma Lina and Bapak Bambang on the field trips; Opa Hendra is off
+    const r = run(c.citra, 'members.setFieldTrips', { memberId: 'm2', on: true }, who(c, 's10'));
+    expect(r.state.members.m2.fieldTrips).toEqual({ on: true });
+    expect(filterCounts(rows2(r.state, T)).trips).toBe(3);
+    expect(() => run(r.state, 'members.setFieldTrips', { memberId: 'm2', on: true }, who(c, 's9'))).toThrow('err.noChanges');
+    expect(run(r.state, 'members.setFieldTrips', { memberId: 'm2', on: false }, who(c, 's9')).state.members.m2.fieldTrips).toEqual({ on: false });
+    expect(() => run(c.citra, 'members.setFieldTrips', { memberId: 'm2', on: true }, who(c, 's1'))).toThrow('err.forbidden');
+    const made = run(c.citra, 'members.create', newMember({ fieldTrips: true }), who(c, 's9'));
+    expect(made.state.members[made.result.memberId as string].fieldTrips).toEqual({ on: true });
   });
 });
 
 describe('members.create: pick-up chosen at registration', () => {
   const made = (over: Record<string, unknown>) => { const c = seed(); const r = run(c.citra, 'members.create', newMember(over), who(c, 's9')); return { r, m: r.state.members[r.result.memberId as string] }; };
-  it('the club default price stores just { on: true }', () => {
-    expect(made({ pickup: { on: true, price: 600_000 } }).m.pickup).toEqual({ on: true });
-    expect(made({ pickup: { on: true } }).m.pickup).toEqual({ on: true });
+  it('round 21: a price typed at registration is the member\'s own; pick-up with no price and no pin is refused', () => {
+    expect(made({ pickup: { on: true, price: 600_000 } }).m.pickup).toEqual({ on: true, price: 600_000 });
+    expect(() => made({ pickup: { on: true } })).toThrow('members.err.pickupNeedsLocation');
+  });
+  it('round 21: the home pin is stored at registration, and then pick-up with no price of its own is priced by distance', () => {
+    const { m } = made({ location: { lat: -6.13, lng: 106.79, kelurahan: 'Cengkareng Barat' }, pickup: { on: true } });
+    expect(m.location).toEqual({ lat: -6.13, lng: 106.79, kelurahan: 'Cengkareng Barat' });
+    expect(m.pickup).toEqual({ on: true });
+    expect(() => made({ location: { lat: 'x', lng: 1 } })).toThrow('err.invalid');
   });
   it('another price is kept, and the first invoice run bills the pick-up line at it', () => {
     const { r, m } = made({ pickup: { on: true, price: 450_000 } });

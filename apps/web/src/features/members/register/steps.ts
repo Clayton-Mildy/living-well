@@ -1,6 +1,6 @@
 // KC round 12: the registration as six steps (Join a lead and Add member share them). The state the steps edit, how it starts (empty, or
 // from a lead and the family's online form), and what still blocks each step — the add-member and application-form validators, per field group.
-import { PICKUP_MAX, PICKUP_MIN, isOpen, parseN, live, sortBy, type ClubState, type DocType, type Enquiry, type OnlineRegistration, type ISODate, type KtpUploads, type Plan, type Relation, type Title } from '@cp/shared';
+import { PICKUP_MAX, PICKUP_MIN, isOpen, type GeoPoint, parseN, live, sortBy, type ClubState, type DocType, type Enquiry, type OnlineRegistration, type ISODate, type KtpUploads, type Plan, type Relation, type Title } from '@cp/shared';
 import { genderOf, validateNewMember, type FieldIssue } from '@cp/shared/rules/members';
 import { startMondays } from '@cp/shared/rules/enquiries';
 import { validateRegistration } from '@cp/shared/rules/applicationForm';
@@ -18,13 +18,14 @@ export const STEP_ICON: Record<RegStep, string> = { person: 'person', family: 'f
  * the shared field groups edit. A lead keeps its own contact (enquiry.convert's contract): `contact`, `rel` and `phone` then hold the lead's, read-only.
  */
 export interface RegState {
-  title: Title; name: string; gender: 'f' | 'm'; dob: string; address: string;
+  title: Title; name: string; gender: 'f' | 'm'; dob: string; address: string; /** round 21: the home pin */ location?: GeoPoint;
   /** usual arrival (optional, informational); profile picture media id; spouse member id — Add member only */
   usual: string; photo: string; spouseId: string;
   contactMode: 'new' | 'existing'; existingId: string; contact: string; rel: Relation; phone: string; /** round 16: where the contract is emailed */ email: string; primary: boolean;
   health: HealthDraft & AllergyDraft; carer: CarerDraft; meds: MedRow[]; care: string;
   plan: Plan | ''; start: string;
   /** the monthly pick-up service: on, and its price as typed (empty = the club's price) */ pickup: boolean; pickupPrice: string;
+  /** round 21: takes part in the monthly field trip */ fieldTrips: boolean;
   /** the signed paper form (already uploaded) */ form: PaperFile | null;
   /** photos of the ID cards (already uploaded) */ ktp: KtpUploads;
   docs: DocType[];
@@ -36,7 +37,7 @@ export const blankState = (): RegState => ({
   title: 'Oma', name: '', gender: 'f', dob: '', address: '', usual: '', photo: '', spouseId: '',
   contactMode: 'new', existingId: '', contact: '', rel: 'daughter', phone: '', email: '', primary: true,
   health: { conditions: [], diabetic: false, mobility: 'none', diet: [], food: [], foodOther: '', drug: [], drugOther: '' }, carer: { nanny: false, nannyName: '', nannyNik: '' }, meds: [], care: '',
-  plan: '', start: '', pickup: false, pickupPrice: '', form: null, ktp: {}, docs: [], consentData: false, consentFace: true, note: '', reg: regDraftOf(),
+  plan: '', start: '', pickup: false, pickupPrice: '', fieldTrips: false, form: null, ktp: {}, docs: [], consentData: false, consentFace: true, note: '', reg: regDraftOf(),
 });
 
 /** The health answers the family gave through the link: all of them once sent, and a half-filled draft's only when it got as far as answering something. */
@@ -62,7 +63,7 @@ export function initialState(s: ClubState, mode: RegMode, today: ISODate): RegSt
   const title = online?.name?.trim() && online.title ? online.title : e.senior.title;
   const name = online?.name?.trim() || e.senior.name;
   return {
-    ...base, title, name, gender: genderOf(title), dob: online?.dob || '', address: online?.address || '',
+    ...base, title, name, gender: genderOf(title), dob: online?.dob || '', address: online?.address || e.address || '', ...(e.location ? { location: { ...e.location } } : {}),
     contact: e.contact.name, rel: e.contact.relation, phone: e.contact.phone,
     health: h
       ? { conditions: h.conditions, diabetic: h.diabetic, mobility: h.mobility ?? 'none', diet: h.diet, food: h.food, foodOther: h.foodOther, ...splitDrugs(h.drugs) }
@@ -102,6 +103,8 @@ export function stepIssues(step: RegStep, st: RegState, mode: RegMode, today: IS
     ...validateRegistration(regOfDraft(st.reg, st.carer.nanny)),
     ...(!lead && st.contactMode === 'existing' && !st.existingId ? [{ field: 'contactName', code: 'members.err.contactRequired' }] : []),
     ...(st.pickup && pickupPriceOf(st) === null ? [{ field: 'pickup', code: 'err.invalid' }] : []),
+    // round 21: pick-up with no price of its own is priced by distance, so it needs the home pin
+    ...(st.pickup && pickupPriceOf(st) === 0 && !st.location ? [{ field: 'pickup', code: 'members.err.pickupNeedsLocation' }] : []),
     ...(s && st.start && st.start >= today && !isOpen(s, st.start) ? [{ field: 'start', code: 'err.closedDay' }] : []),
   ];
   return all.filter((i) => FIELDS[step].includes(i.field) && !(lead && NOT_FOR_LEADS.includes(i.field)) && !(lead && i.code === 'members.err.dobRequired')); // Join keeps the date of birth optional

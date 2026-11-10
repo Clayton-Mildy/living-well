@@ -60,7 +60,7 @@ export const finance: Same<typeof EN> = {
   // ---- shared words ----
   'line.creditNote': 'Nota kredit: {reason}',
   'method.dokuVa': 'VA DOKU', 'method.bankTransfer': 'Transfer bank', 'method.cash': 'Tunai', 'method.other': 'Lainnya',
-  'kind.doctor': 'Dokter', 'kind.service': 'Layanan', 'kind.supplier': 'Pemasok',
+  'kind.venue': 'Tempat karyawisata', 'kind.doctor': 'Dokter', 'kind.service': 'Layanan', 'kind.supplier': 'Pemasok',
   'xero.synced': 'Xero tersinkron', 'xero.pending': 'Menunggu Xero',
 
   // ---- Billing ----
@@ -80,7 +80,7 @@ export const finance: Same<typeof EN> = {
   'run.early': 'Ini sebelum tanggal terbit yang biasa ({usual}). Tagihan dirilis lebih awal: keluarga menerimanya hari ini.',
   'run.partialMonth': '{month} belum berakhir. Hari tambahan setelah hari ini belum masuk di tagihan ini; akan masuk di tagihan berikutnya.',
   'run.dates': 'Tagihan bertanggal {issue} dan jatuh tempo {due}.', 'run.billTo': 'Ditagihkan ke {name}',
-  'err.proofRequired': 'Tambahkan foto bukti transfer atau kuitansi yang ditandatangani.', 'pay.proof': 'Bukti pembayaran', 'pay.proofPhoto': 'Foto terlampir', 'run.noPayer': 'Belum ada kontak penagihan:', 'run.noPayerHelp': 'Jadikan salah satu kontak keluarganya sebagai kontak utama, lalu jalankan lagi.',
+  'err.proofRequired': 'Tambahkan foto bukti transfer atau kuitansi yang ditandatangani.', 'pay.proof': 'Bukti pembayaran', 'pay.proofPhoto': 'Foto terlampir', 'run.refundDue': 'Perlu dikembalikan, tanpa tagihan:', 'run.refundDueHelp': 'biaya karyawisata yang sudah dibayar tetapi tidak dipakai. Catat pengembalian dana pada tagihan yang menagihnya.', 'run.noPayer': 'Belum ada kontak penagihan:', 'run.noPayerHelp': 'Jadikan salah satu kontak keluarganya sebagai kontak utama, lalu jalankan lagi.',
   'run.nothing': 'Tidak ada lagi yang perlu ditagih untuk bulan ini.', 'run.allDone': 'Semua tagihan {month} sudah diterbitkan.', 'run.nothingFor': 'Tidak ada yang ditagih: {names}.',
   'run.total': 'Tagihan: {n} · {total}', 'run.issueBtn': 'Terbitkan tagihan ({n}) · {total}', 'run.confirm': 'Kirim tagihan ini ({n}, {total}) ke keluarga sekarang?',
   'run.issueNow': 'Ya, terbitkan sekarang', 'run.issueEarly': 'Ya, rilis lebih awal', 'run.issued': 'Tagihan terbit: {n}. Keluarga sudah diberi tahu.',
@@ -131,6 +131,10 @@ export const finance: Same<typeof EN> = {
   // ---- Directory ----
   'dir.famTitle': 'Kontak penting', 'dir.famSub': 'Dokter dan layanan yang bekerja sama dengan klub. Dalam keadaan darurat, hubungi klub terlebih dahulu:',
   'dir.sub': 'Pemasok, dokter, dan layanan. Kontak publik juga tampil di aplikasi keluarga; kontak internal hanya untuk staf.',
+  'dir.venuesGroup': 'Tempat karyawisata', 'dir.f_venue': 'Tempat', 'dir.tradingName': 'Nama usaha', 'dir.contactPerson': 'Narahubung', 'dir.contactPersonOpt': 'Narahubung (opsional)', 'dir.contactNumber': 'Nomor kontak', 'dir.addressOpt': 'Alamat (opsional)',
+  'dir.pics': 'Foto', 'dir.picsStaff': 'Foto (hanya staf)', 'dir.picAdd': 'Tambah foto', 'dir.picUploading': 'Mengunggah…', 'dir.picRemove': 'Hapus foto', 'dir.tripsHere': 'Karyawisata di sini', 'dir.noTrips': 'Belum ada karyawisata di sini',
+  'dir.ratingShort': '{avg} · {n}', 'dir.ratings': 'Penilaian', 'dir.ratingsAvg': 'Penilaian · rata-rata {avg} dari {n}', 'dir.yourRating': 'Penilaian Anda', 'dir.star1': '1 bintang', 'dir.starN': '{n} bintang', 'dir.pickStars': 'Ketuk bintangnya dulu.',
+  'dir.ratingNote': 'Catatan (opsional)', 'dir.addRating': 'Tambah penilaian', 'dir.rated': 'Penilaian ditambahkan.', 'dir.ratingRemove': 'Hapus penilaian', 'dir.ratingRemoved': 'Penilaian dihapus.', 'dir.noRatings': 'Belum ada penilaian',
   'dir.add': 'Tambah kontak', 'dir.addBtn': 'Tambah kontak', 'dir.editTitle': 'Ubah kontak', 'dir.filter': 'Saring kontak',
   'dir.f_all': 'Semua', 'dir.f_supplier': 'Pemasok', 'dir.f_doctor': 'Dokter', 'dir.f_service': 'Layanan', 'dir.f_public': 'Publik', 'dir.f_internal': 'Internal',
   'dir.search': 'Cari kontak', 'dir.empty': 'Belum ada kontak', 'dir.public': 'Publik', 'dir.internal': 'Internal', 'dir.makeInternal': 'Jadikan internal', 'dir.makePublic': 'Jadikan publik',

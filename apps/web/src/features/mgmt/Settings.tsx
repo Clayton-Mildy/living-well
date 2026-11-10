@@ -19,6 +19,7 @@ import { useMe } from '../../lib/me';
 import { useClub } from '../../store/replica';
 import { Page, tn } from './common';
 import { TermsPage } from './TermsPage';
+import { PickupSettings } from './PickupSettings';
 
 const digits = (v: string) => v.replace(/\D/g, '').slice(0, 2);
 const num = (v: string) => (v === '' ? NaN : Number(v));
@@ -184,6 +185,8 @@ export function Settings() {
           {daysShow ? err(t('mgmt.err.fewDaysInvalid', range)) : null}
           {fewDirty ? <SaveRow busy={busy} onSave={saveFew} onCancel={() => { setBelow(null); setDays(null); setShown((x) => ({ ...x, few: false })); }} /> : null}
         </Group>
+
+        <PickupSettings />
 
         <Group title={t('mgmt.settings.terms')} label={t('mgmt.settings.terms')} pad={0} gap={0}>
           <button type="button" data-row="terms" className="h-row cp-press" onClick={() => setTermsOpen(true)}

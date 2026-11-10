@@ -1,7 +1,7 @@
 // Family contact actions: gating, afterApprove (login), per-member primary, app access, linking, removing, and the family's document upload.
 import { describe, it, expect } from 'vitest';
 import { produce } from 'immer';
-import { buildSeed, execute, getUser, findByPhone, contactsOfMember, primaryContact, isPrimaryFor, live, type ClubState, type Invoice, type Payment, type User } from '../index';
+import { buildSeed, execute, getUser, projectForFamily, findByPhone, contactsOfMember, primaryContact, isPrimaryFor, live, type ClubState, type Invoice, type Payment, type User } from '../index';
 
 const T = '2026-10-21';
 const clock = { today: T, nowMin: 600 };
@@ -286,5 +286,19 @@ describe('round 8: family.updateDetails and family.setHealthAlerts', () => {
     expect(r.reviewed).toBeUndefined();
     expect(r.state.familyLinks['f1:m1'].healthAlerts).toBe(false);
     expect(r.state.familyLinks['f2:m1'].healthAlerts).toBe(true);
+  });
+});
+
+describe('round 21: the family sees a trip\'s venue name and address only', () => {
+  it('an outing carries { name, address } of its venue; the venue itself (pictures, contact person, phone) is not in the family copy', () => {
+    const s = buildSeed().citra;
+    s.directory.dv1 = { id: 'dv1', clubId: s.clubId, createdAt: '2026-10-01T10:00', createdBy: 'staff:s9', kind: 'venue', name: 'Rumah Batik Palbatu', what: '', phone: '+6281277881122', public: false, contactPerson: 'Ibu Sari', address: 'Jl. Palbatu 4, Tebet', photoMediaIds: ['md_venueone0001'] };
+    const ev = Object.values(s.calendarEvents).find((e) => e.kind === 'outing')!;
+    ev.venueId = 'dv1';
+    const f = projectForFamily(s, 'f1');
+    expect(f.calendarEvents[ev.id].venue).toEqual({ name: 'Rumah Batik Palbatu', address: 'Jl. Palbatu 4, Tebet' });
+    expect(f.directory.dv1).toBeUndefined();
+    expect(JSON.stringify(f)).not.toContain('md_venueone0001');
+    expect(JSON.stringify(f)).not.toContain('Ibu Sari');
   });
 });

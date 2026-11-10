@@ -81,7 +81,7 @@ export const mgmt: Same<typeof EN> = {
   samplePrice: 'Harga contoh', plFlexDesc: '{n} kunjungan sebulan. Kunjungan dihitung saat anggota check-in.', plFlexDescOne: '{n} kunjungan sebulan. Kunjungan dihitung saat anggota check-in.', plGoldDesc: 'Datang di hari buka mana pun, sesering yang diinginkan.', plExtra: 'Hari tambahan', plExtraDesc: 'Dikenakan untuk setiap kunjungan Flex lebih dari {n} dalam sebulan.', plExtraDescOne: 'Dikenakan untuk setiap kunjungan Flex lebih dari {n} dalam sebulan.',
   perMonth: 'Per bulan', perDay: 'Per hari', plQuota: 'Kunjungan', plQuotaV: '{n} kunjungan sebulan', plQuotaVOne: '{n} kunjungan sebulan', plUnused: 'Kunjungan tidak terpakai', plNoRoll: 'Tidak dibawa ke bulan berikutnya',
   plUnlimited: 'Tanpa batas', plBilled: 'Ditagih', plNextInvoice: 'Di tagihan bulan depan', plCounted: 'Dihitung dari', plCheckIns: 'Check-in di pintu', priceAria: 'Harga {name} dalam rupiah',
-  plPickup: 'Antar-jemput', plPickupWho: 'Harga', plPickupWhoV: 'Bawaan; atur per anggota', plFieldTrip: 'Karyawisata', perTrip: 'Per perjalanan', plSecPlans: 'Paket', plSecExtra: 'Biaya tambahan', plSecOnce: 'Biaya sekali bayar', plSecChanges: 'Perubahan', plQuotaL: 'Kunjungan Flex per bulan', plFrom: 'Berlaku mulai',
+  plPickup: 'Antar-jemput', plPickupWho: 'Harga', plPickupWhoV: 'Bawaan; atur per anggota', plFieldTrip: 'Karyawisata', plTripsBilled: 'Bersama paket, untuk anggota yang ikut; bulan yang tidak diikuti dikreditkan', perTrip: 'Per perjalanan', plSecPlans: 'Paket', plSecExtra: 'Biaya tambahan', plSecOnce: 'Biaya sekali bayar', plSecChanges: 'Perubahan', plQuotaL: 'Kunjungan Flex per bulan', plFrom: 'Berlaku mulai',
   plFromHint: 'Tagihan yang sudah dikirim tetap pada nominal lamanya.', plPreview: 'Pratinjau tagihan berikutnya', plPreviewFor: 'Pratinjau untuk', plPreviewTitle: '{name} · tagihan tanggal {day} {month}',
   plUnsaved: 'Menampilkan yang Anda ketik. Belum disimpan.', plNothing: 'Belum ada yang ditagihkan untuk anggota ini.', plTotal: 'Total', plOthers: 'Tagihan terpisah di akun yang sama: {others}. {payer} dapat membayarnya sekaligus.',
   plSentKeep: 'Tagihan yang sudah dikirim tetap pada nominal lamanya.', plNoMembers: 'Belum ada anggota, jadi belum ada yang bisa dipratinjau.', plansSaved: 'Tersimpan. Tagihan berikutnya memakai harga dan aturan ini.',
@@ -163,6 +163,9 @@ export const mgmt: Same<typeof EN> = {
   'settings.title': 'Pengaturan', 'settings.membership': 'Aturan keanggotaan', 'settings.sendOwner': 'Kirim ke pemilik',
   'settings.fewVisits': 'Peringatan kunjungan sedikit', 'settings.fewBelow': 'Tandai di bawah {n} kunjungan', 'settings.fewBelowOne': 'Tandai di bawah {n} kunjungan',
   'settings.terms': 'Syarat dan ketentuan', 'settings.noTerms': 'Belum ada syarat', 'settings.termsRow': 'Versi {v} · diterbitkan {d} oleh {name} · {a} dari {n} setuju',
+  'settings.pickup': 'Antar jemput', 'settings.pickupClub': 'Lokasi klub', 'settings.pickupNoPin': 'Belum ada pin: harga antar jemput membutuhkannya', 'settings.pickupPerKm': 'Harga per km',
+  'settings.pickupPerKmSub': 'Per bulan, per km yang dimulai dari klub', 'settings.pickupFree': 'Gratis dalam', 'settings.pickupFreeSub': 'Anggota sedekat ini tidak membayar',
+  'settings.err.perKm': 'Gunakan Rp 1.000 sampai Rp 1.000.000.', 'settings.err.freeKm': 'Gunakan 0 sampai 50 km, kelipatan setengah km.',
   'settings.save': 'Simpan', 'settings.cancel': 'Batal', 'settings.saved': 'Tersimpan.',
   'settings.err.few': 'Gunakan bilangan bulat 1 sampai 31.', 'settings.err.leaveRun': 'Gunakan bilangan bulat 1 sampai 6.',
   // ----- round 18: Settings › notice per kind, few-visits alert before next month -----

@@ -17,6 +17,8 @@ import { authUser, publicUser, registerAuthRoutes } from './routes/auth';
 import { registerPublicRoutes } from './routes/public';
 import { byteRange, checkUpload, loadMedia, mediaExists, saveMedia, IMAGE_MIME } from './media';
 import { receiptOcr } from './providers/receiptOcr';
+import { geocoder } from './providers/geocoder';
+import { registerGeoRoutes } from './routes/geo';
 
 export const app = new Hono();
 const errBody = (e: unknown) => (e instanceof DomainError ? { code: e.code, params: e.params } : { code: 'err.server', params: { message: e instanceof Error ? e.message : String(e) } });
@@ -28,6 +30,8 @@ app.get('/api/clock', (c) => c.json(clockInfo()));
 registerAuthRoutes(app);
 // the renter's rating page (no sign-in; routes/public.ts)
 registerPublicRoutes(app);
+// round 21: address search and pin → area for the location picker (routes/geo.ts)
+registerGeoRoutes(app, { user: (c) => { const u = authUser(c); return u && u.kind === 'staff' ? u : null; }, geo: geocoder });
 
 app.get('/api/snapshot', (c) => {
   const u = authUser(c);

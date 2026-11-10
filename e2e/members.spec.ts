@@ -87,7 +87,7 @@ test('members list: compact rows (name, status, plan), search finds family names
     await page.getByRole('combobox', { name: 'Filter members' }).click();
     await expect(page.getByRole('option', { name: 'Ended · 0' })).toBeVisible();
     await expect(page.getByRole('option', { name: "Haven't come lately · 0" })).toBeVisible(); // round 12
-    await expect(page.getByRole('option')).toHaveCount(9); // no "On leave" filter
+    await expect(page.getByRole('option')).toHaveCount(10); // no "On leave" filter; round 20 added Pick-up, round 21 Field trips, then Other plan
     await page.keyboard.press('Escape');
   } else {
     await expect(page.getByRole('button', { name: 'Ended · 0' })).toBeVisible();
@@ -190,7 +190,7 @@ test("Lina's profile: every tab renders, back returns to the list", async ({ pag
   // facts that come from real data
   await page.getByRole('tab', { name: 'Overview' }).click();
   await expect(page.getByText('14 May 1945')).toBeVisible();
-  await expect(page.getByText('Jl. Bangka Raya no. 18')).toBeVisible();
+  await expect(page.getByText('Jl. Kapuk Raya no. 18')).toBeVisible();
   // drop-in: usual arrival as information, visits instead of days, no brought-by or collected-by, but the nanny stays
   await expect(page.getByText('Usually arrives around 10:05').first()).toBeVisible();
   await expect(page.getByText('10 of 10 visits used')).toBeVisible();
@@ -324,7 +324,7 @@ test('edit details: a pending-review chip shows the proposal, values stay; manag
   await expect(chip).toBeVisible();
   await expect(chip).toContainText('Jl. Kemang Baru 99, Jakarta');
   await expect(chip.getByRole('button', { name: 'Withdraw' })).toBeVisible();
-  await expect(page.getByText('Jl. Bangka Raya no. 18, Kemang, Jakarta Selatan', { exact: true })).toBeVisible();
+  await expect(page.getByText('Jl. Kapuk Raya no. 18, Kapuk, Jakarta Barat', { exact: true })).toBeVisible();
   await expect(page.getByRole('tab', { name: /Overview/ })).toHaveAccessibleName(/Pending review/);
   await noHScroll(page);
   // management reviews
@@ -334,7 +334,7 @@ test('edit details: a pending-review chip shows the proposal, values stay; manag
   await expect(card).toContainText('Oma Lina Wijaya');
   await expect(card).toContainText('Caca');
   await expect(card).toContainText('Home address');
-  await expect(card).toContainText('Jl. Bangka Raya no. 18');
+  await expect(card).toContainText('Jl. Kapuk Raya no. 18');
   await expect(card).toContainText('Family moved house');
   await card.getByRole('button', { name: 'Approve' }).click();
   await expect(card).toHaveCount(0);

@@ -4,11 +4,11 @@ import '@fontsource/inter/300.css';
 import '@fontsource/inter/400.css';
 import '@fontsource/inter/500.css';
 import '@fontsource/inter/600.css';
-import '@fontsource/cormorant-garamond/500.css';
-import '@fontsource/cormorant-garamond/600.css';
+import '@fontsource/epilogue/600.css';
 import 'material-symbols/rounded.css';
 import './styles/global.css';
 import './styles/pseudo.css';
+import './styles/living-well.css';
 import { App } from './app/App';
 import { reloadForNewVersion } from './app/RouteError';
 

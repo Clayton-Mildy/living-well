@@ -17,6 +17,7 @@ import { seedReceipts } from './receipts';
 import { seedWeekend } from './weekend';
 import { seedSigning } from './signing';
 import { seedPastTrip, seedRound16 } from './round16';
+import { seedRound21 } from './round21';
 import { seedRound17 } from './round17';
 import { seedRound18 } from './round18';
 import { DEMO_START_MIN } from '../../util';
@@ -42,4 +43,5 @@ export function seedRound7(s: ClubState, T: ISODate, nowMin: number = DEMO_START
   seedPastTrip(s, T); // round 20 fix (I3): a field trip a few days ago, with everyone checked in that day on it (after rounds 17 and 18 change the visits); no random draws
   seedMoodMarks(s, T); // round 12: a mood mark for every seeded visit (last: it walks the attendance, readings and logs above)
   seedWeekend(s, T); // round 14: the first Saturday after T is programmed, the Sunday after it waits for Ega (after everything that looks for an open day)
+  seedRound21(s, T); // round 21: the club pin, members' and leads' pins, pick-up by distance, field trip switches, trip venues, contact ratings; no random draws, last
 }

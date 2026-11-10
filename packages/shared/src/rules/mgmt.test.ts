@@ -7,7 +7,7 @@ import { bookableDays, bookingDayCheck, enquiriesByStage, openEnquiries, paperFo
 const T = '2026-10-21';
 const seeded = buildSeed();
 /** Round 20: the seeded Taman Mini trip's fees (a pending charge each) are not what these invoice tests are about, so they are left out. */
-const noTripFees = (s: ClubState): ClubState => ({ ...s, pendingCharges: Object.fromEntries(Object.entries(s.pendingCharges).filter(([, c]) => c.source?.id !== 'ev-outing-past')) });
+const noTripFees = (x: ClubState): ClubState => ({ ...x, pendingCharges: Object.fromEntries(Object.entries(x.pendingCharges).filter(([, c]) => c.source?.id !== 'ev-outing-past')), members: Object.fromEntries(Object.entries(x.members).map(([id, m]) => [id, m.fieldTrips ? { ...m, fieldTrips: { on: false } } : m])) }); // round 21: nor the monthly field trips
 const s = noTripFees(seeded.citra);
 const { adina } = seeded;
 const clock = { today: T, nowMin: 10 * 60 + 5 };
@@ -98,24 +98,25 @@ describe('pricing preview', () => {
     expect(p).toMatchObject({ period: '2026-11', issueDate: '2026-11-21', total: 2700000 });
     expect(p.lines.map((l) => l.kind)).toEqual(['plan']);
     expect(p.payer?.name).toBe('Maria Wijaya');
-    expect(p.others.map((o) => [o.member.id, o.total])).toEqual([['m46', 3950000 + 450000 + 350000]]); // round 16: with Opa Budi's pick-up; round 17: and his birthday cake
+    expect(p.others.map((o) => [o.member.id, o.total])).toEqual([['m46', 3950000 + 70000 + 350000]]); // round 16: with Opa Budi's pick-up (round 21: Rp 70.000 by distance); round 17: and his birthday cake
     const draft = invoicePreview(s, 'm1', { flex: 6000000, gold: 10000000, extra: 700000, from: T }, T)!;
     expect(draft.total).toBe(6000000);
-    expect(draft.others[0].total).toBe(10000000 + 450000 + 350000); // round 16: with Opa Budi's pick-up; round 17: and his birthday cake
+    expect(draft.others[0].total).toBe(10000000 + 70000 + 350000); // round 16: with Opa Budi's pick-up; round 17: and his birthday cake
     // a price that starts after the next run does not change it
     expect(invoicePreview(s, 'm1', { flex: 6000000, gold: 10000000, extra: 700000, from: '2026-12-01' }, T)!.total).toBe(2700000);
     expect(invoicePreview(s, 'nope', null, T)).toBeNull();
   });
-  it('a typed pick-up price shows on the preview of a pick-up member, and the saved one when nothing is typed', () => {
+  it('round 21: the preview prices pick-up by distance (a price list draft does not change it); the member\'s own price wins', () => {
     const c: ClubState = structuredClone(s);
+    c.club.settings.location = { lat: -6.136, lng: 106.731 };
+    c.members.m1.location = { lat: -6.136, lng: 106.731 + 6.4 / (111.195 * Math.cos((6.136 * Math.PI) / 180)) };
     c.members.m1.pickup = { on: true };
     const pick = (d: Parameters<typeof invoicePreview>[2]) => invoicePreview(c, 'm1', d, T)!.lines.find((l) => l.kind === 'pickup')?.amount;
     const base = { flex: 6000000, gold: 10000000, extra: 700000, from: T };
-    expect(pick(null)).toBe(600000);
-    expect(pick(base)).toBe(600000); // a draft that does not touch it keeps the saved fee
-    expect(pick({ ...base, pickup: 700000 })).toBe(700000);
+    expect(pick(null)).toBe(70000);
+    expect(pick({ ...base, pickup: 700000 })).toBe(70000);
     c.members.m1.pickup = { on: true, price: 450000 };
-    expect(pick({ ...base, pickup: 700000 })).toBe(450000); // the member's own price wins
+    expect(pick(base)).toBe(450000);
   });
   it('a member on a custom plan previews the plan price, saved or typed', () => {
     const c: ClubState = structuredClone(s);

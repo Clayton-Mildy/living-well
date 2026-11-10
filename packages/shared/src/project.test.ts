@@ -67,6 +67,26 @@ describe('projectForFamily: members tagged in a photo', () => {
     expect(view.members.m1.registration).toEqual(s.members.m1.registration);
     expect(view.members.m1.spouseId).toBe(s.members.m1.spouseId);
   });
+  it('round 21 review: a co-tagged member\'s home pin, pick-up and field trips stay out; the family\'s own parent keeps theirs', () => {
+    const base = buildSeed(DEMO_TODAY, DEMO_START_MIN, { roster: true }).citra;
+    const pid = Object.keys(base.photos)[0];
+    const s = produce(base, (d) => {
+      d.photos[pid].visibility = 'visible';
+      delete d.photos[pid].deletedAt;
+      d.photos[pid].memberIds = ['m1', 'm20'];
+      d.members.m20.location = { lat: -6.123457, lng: 106.765432, kelurahan: 'Kapuk', kecamatan: 'Cengkareng' };
+      d.members.m20.pickup = { on: true, price: 300_000 };
+      d.members.m20.fieldTrips = { on: true };
+    });
+    const view = projectForFamily(s, 'f1');
+    const stub = view.members.m20;
+    expect(stub).toBeTruthy();
+    expect(stub.location).toBeUndefined();
+    expect(stub.pickup).toBeUndefined();
+    expect(stub.fieldTrips).toBeUndefined();
+    expect(JSON.stringify(view)).not.toContain('106.765432');
+    expect(view.members.m1.location).toEqual(s.members.m1.location);
+  });
 });
 
 describe('projectForFamily: pending charges and field trip attendance (round 17)', () => {

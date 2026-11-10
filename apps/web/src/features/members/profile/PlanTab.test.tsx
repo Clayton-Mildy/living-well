@@ -56,3 +56,22 @@ describe('round 16: pick-up on the plan tab', () => {
     expect(document.querySelector('[data-testid="pickup-edit"]')).toBeTruthy();
   });
 });
+
+describe('round 21: field trips on the plan tab', () => {
+  it('reads Off or "On · Rp 250.000 / month"; finance switches it with members.setFieldTrips; the front desk cannot', async () => {
+    const s = structuredClone(buildSeed().citra);
+    delete s.members.m1.fieldTrips; // the seed has Oma Lina on
+    await show(s, 'lobby');
+    expect(document.querySelector('[data-testid="trips-fact"]')?.textContent).toContain('Off');
+    expect(document.querySelector('[data-testid="trips-edit"]')).toBeNull();
+    await act(async () => { root?.unmount(); });
+    await show(s, 'finance');
+    await act(async () => { (document.querySelector('[data-testid="trips-edit"]') as HTMLElement).click(); });
+    expect(acts).toEqual([['members.setFieldTrips', { memberId: 'm1', on: true }]]);
+    await act(async () => { root?.unmount(); });
+    s.members.m1.fieldTrips = { on: true };
+    await show(s, 'finance');
+    expect(document.querySelector('[data-testid="trips-fact"]')?.textContent).toContain('On · Rp 250.000 / month');
+    expect(document.querySelector('[data-testid="trips-edit"]')?.textContent).toBe('Switch off');
+  });
+});

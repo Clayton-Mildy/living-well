@@ -211,6 +211,8 @@ test('s9 adds a three-day holiday and an outing with times', async ({ page }) =>
   dlg = page.getByRole('dialog', { name: 'Add to the calendar' });
   await dlg.getByRole('button', { name: 'Field trip', exact: true }).click();
   await dlg.getByPlaceholder('For example: Staff first-aid training').fill('Botanical garden');
+  await dlg.getByRole('combobox', { name: 'Venue' }).click(); // round 21: a new field trip names its venue
+  await page.getByRole('option', { name: /^Kebun Raya Bogor/ }).click();
   await pickDate(page, 'Date', '2026-11-05');
   await pickTime(page, 'From', '09:00');
   await dlg.getByRole('button', { name: 'Save' }).click(); // only a start time: refused with a clear message

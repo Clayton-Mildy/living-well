@@ -13,7 +13,7 @@ export const cal = {
   // events editor (management)
   newFieldTrip: 'New field trip', addEvent: 'Add event', addEventOn: 'Add an event on {date}', eventsEditor: 'Calendar events', addEventTitle: 'Add to the calendar', editEventTitle: 'Edit event', editEvent: 'Edit {title}',
   type: 'Type', t_closed: 'Closure', t_holiday: 'National holiday', t_outing: 'Field trip',
-  titleEn: 'Title', titleEnPh: 'For example: Staff first-aid training', titleId: 'Title in Bahasa Indonesia', titleIdHint: 'Optional. Shown in Bahasa Indonesia mode.',
+  eventName: 'Event name', venue: 'Venue', pickVenue: 'Choose a venue', newVenue: '+ New venue', 'err.venueRequired': 'Choose the venue.', titleEn: 'Title', titleEnPh: 'For example: Staff first-aid training', titleId: 'Title in Bahasa Indonesia', titleIdHint: 'Optional. Shown in Bahasa Indonesia mode.',
   date: 'Date', multiDay: 'Lasts several days', until: 'Last day', from: 'From', to: 'To',
   eventSaved: 'Calendar updated. Staff and families are told.', eventDeleted: 'Event deleted. Staff and families are told.',
   keep: 'Keep it', confirmDelete: 'Delete event', deleteWarn: 'This removes the event on {date} from the calendar for staff and families.',

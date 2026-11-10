@@ -85,10 +85,13 @@ const eventSchema = z.object({
   titleId: z.string().trim().max(120).nullish(),
   from: hm.nullish(),
   to: hm.nullish(),
-  fee: z.number().int().min(0).max(100_000_000).nullish(), // round 16: an outing's field trip fee
+  /** round 21: an outing's venue (a Contacts entry of kind 'venue') */
+  venueId: z.string().min(1).max(60).nullish(),
   notify: z.boolean().optional(),
 });
 type EventInput = z.infer<typeof eventSchema>;
+/** Round 21: a venue id must name a live Contacts entry of kind 'venue'. */
+const checkVenue = (d: Draft<ClubState>, id: string | null | undefined, ctx: Ctx) => { if (id && (!d.directory[id] || d.directory[id].deletedAt || d.directory[id].kind !== 'venue')) ctx.fail('err.invalid'); };
 const updateSchema = z.object({
   eventId: z.string().min(1),
   date: isoDate.optional(),
@@ -98,7 +101,7 @@ const updateSchema = z.object({
   titleId: z.string().trim().max(120).nullish(),
   from: hm.nullish(),
   to: hm.nullish(),
-  fee: z.number().int().min(0).max(100_000_000).nullish(),
+  venueId: z.string().min(1).max(60).nullish(),
   notify: z.boolean().optional(),
 });
 type UpdateInput = z.infer<typeof updateSchema>;
@@ -110,19 +113,15 @@ export function eventCharges(d: Draft<ClubState>, eventId: string): Draft<Pendin
 /** The id of a member's charge for a field trip: one per trip, not per day. */
 export const tripChargeId = (eventId: string, memberId: string) => `trip-${eventId}-${memberId}`;
 /**
- * Round 20 (R1): put a member on a field trip or take them off it, with its fee. On: in Who went once, and a pending charge for the next invoice when the
- * trip has a fee (none when it is free, never a second one). Off: out of Who went and the charge taken back; a charge an invoice already billed fails
- * with `err.charged` (the caller decides what to do first: `calendarEvent.setWent` refuses, `attendance.undoCheckIn` keeps the member on the trip).
+ * Round 20 (R1): put a member on a field trip or take them off it. On: in Who went once. Round 21: field trips are paid monthly (rules/billing.ts), so a
+ * trip charges nothing; Who went decides next month's credit. Off: out of Who went, and a per-trip charge left from before round 21 is taken back while
+ * no invoice billed it (an invoiced one fails with `err.charged`; the caller decides what to do first).
  */
 export function setTripMember(d: Draft<ClubState>, ev: Draft<CalendarEvent>, memberId: string, on: boolean, ctx: Ctx): void {
   const id = tripChargeId(ev.id, memberId);
   const went = ev.wentIds ?? [];
   if (on) {
     if (!went.includes(memberId)) ev.wentIds = [...went, memberId];
-    const fee = ev.fee ?? 0;
-    if (fee > 0 && !d.pendingCharges[id]) {
-      d.pendingCharges[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, memberId, amount: fee, label: 'inv.line.fieldTrip', params: { title: ev.title, date: ev.date }, source: { type: 'event', id: ev.id } };
-    }
     return;
   }
   const c = d.pendingCharges[id];
@@ -135,8 +134,7 @@ export function setTripMember(d: Draft<ClubState>, ev: Draft<CalendarEvent>, mem
  * Round 20 fix (I1): keep a trip's Who went and its charges in step after the trip itself changes (made, moved, re-priced), not only at check-in.
  * - `startMoved` (the trip now starts on another date): nobody has gone on the new days yet, so only members with a check-in on one of the new days stay on it;
  *   everyone else is taken off with their open charge. A member whose fee an invoice already billed stays on, and the invoice is never touched.
- * - The fee: the open charges take the new amount (and the trip's title and date), 0 takes them back; with a fee, every member in Who went who has no
- *   charge yet gets one (a fee set after people checked in, or X → 0 → X). Not an outing any more: its open charges go.
+ * - Not an outing any more: its open charges (from before round 21) go.
  * - `joinToday` (the trip newly covers today: just made, or moved onto today) and it is the day's trip (`tripOn`): every member checked in today who is on no other trip today joins it (R1 after the fact). A plain edit never sets it, so a member management took off Who went is not put back.
  */
 export function syncTripRoster(d: Draft<ClubState>, ev: Draft<CalendarEvent>, ctx: Ctx, opts: { startMoved?: boolean; joinToday?: boolean } = {}): void {
@@ -150,13 +148,6 @@ export function syncTripRoster(d: Draft<ClubState>, ev: Draft<CalendarEvent>, ct
       if (!came) setTripMember(d, ev, m, false, ctx);
     }
   }
-  const fee = ev.fee ?? 0;
-  for (const c of eventCharges(d, ev.id)) {
-    if (!fee) { delete d.pendingCharges[c.id]; continue; }
-    c.amount = fee;
-    c.params = { title: ev.title, date: ev.date };
-  }
-  if (fee) for (const m of [...(ev.wentIds ?? [])]) if (d.members[m] && !d.members[m].deletedAt) setTripMember(d, ev, m, true, ctx);
   const view = d as unknown as ClubState;
   if (opts.joinToday && ev.date <= ctx.today && ctx.today <= end && tripOn(view, ctx.today)?.id === ev.id) {
     const others = dayStatus(view, ctx.today).events.filter((e) => e.kind === 'outing' && e.id !== ev.id);
@@ -445,7 +436,8 @@ export const scheduleActions = [
     run(d, input, ctx) {
       const f = eventFields(input, ctx);
       const id = ctx.id('ev');
-      d.calendarEvents[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...f, ...(f.kind === 'outing' && input.fee ? { fee: input.fee } : {}) };
+      checkVenue(d, input.venueId, ctx);
+      d.calendarEvents[id] = { id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, ...f, ...(f.kind === 'outing' && input.venueId ? { venueId: input.venueId } : {}) };
       if (f.kind === 'outing') syncTripRoster(d, d.calendarEvents[id], ctx, { joinToday: true }); // a trip made for today: whoever is already in the club is on it
       notifyEveryone(d, ctx, { kind: 'cal.notif.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.added_' + f.kind, params: { date: dateText(f.date, f.endDate) } });
@@ -459,15 +451,8 @@ export const scheduleActions = [
     run(d, input, ctx) {
       const cur = d.calendarEvents[input.eventId];
       if (!cur || cur.deletedAt) ctx.fail('err.notFound');
-      // round 17 (R6): after the date only the fee may change, and only while the outing still has a charge no invoice has billed
-      const feeOnly = input.fee !== undefined && cur.kind === 'outing' && [input.date, input.endDate, input.kind, input.title, input.titleId, input.from, input.to].every((v) => v === undefined);
-      const past = (cur.endDate || cur.date) < ctx.today;
-      if (past && !(feeOnly && eventCharges(d, cur.id).length)) ctx.fail('cal.err.pastEvent');
-      if (past) { // only the fee changes: no date re-validation (the dates are already over), no notice
-        if (input.fee) cur.fee = input.fee; else delete cur.fee;
-        syncTripRoster(d, cur, ctx); // round 20 fix (I1): open charges follow the fee, and Who went without a charge gets one
-        return;
-      }
+      // round 21: a past event no longer changes (the per-trip fee that could be fixed afterwards is gone: field trips are paid monthly)
+      if ((cur.endDate || cur.date) < ctx.today) ctx.fail('cal.err.pastEvent');
       const oldDate = cur.date;
       const coveredToday = cur.kind === 'outing' && cur.date <= ctx.today && ctx.today <= (cur.endDate || cur.date);
       const next: EventInput = {
@@ -488,11 +473,11 @@ export const scheduleActions = [
       if (f.endDate) row.endDate = f.endDate; else delete row.endDate;
       if (f.titleId) row.titleId = f.titleId; else delete row.titleId;
       if (f.from && f.to) { row.from = f.from; row.to = f.to; } else { delete row.from; delete row.to; }
-      if (input.fee !== undefined) { // round 16
-        if (f.kind === 'outing' && input.fee) row.fee = input.fee; else delete row.fee;
-      }
-      // round 17: charges no invoice has billed yet follow the fee; 0 takes them back, invoiced ones stay as billed. Round 20 fix (I1): the roster follows
-      // the trip too (a move takes off who has not gone on the new days, a fee charges Who went, a trip now on today takes in today's check-ins)
+      // round 21: the venue (only an outing keeps one)
+      checkVenue(d, input.venueId, ctx);
+      if (input.venueId !== undefined) { if (input.venueId) row.venueId = input.venueId; else delete row.venueId; }
+      if (f.kind !== 'outing') delete row.venueId;
+      // Round 20 fix (I1): the roster follows the trip (a move takes off who has not gone on the new days, a trip now on today takes in today's check-ins)
       if (f.kind === 'outing' || cur.wentIds?.length || eventCharges(d, row.id).length) syncTripRoster(d, row, ctx, { startMoved: row.date !== oldDate, joinToday: !coveredToday });
       notifyEveryone(d, ctx, { kind: 'cal.notif.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } }, input.notify !== false);
       ctx.feed({ icon: KIND_ICON[f.kind], key: 'cal.feed.changed_' + f.kind, params: { date: dateText(next.date, f.endDate) } });
@@ -513,8 +498,7 @@ export const scheduleActions = [
     },
   }),
 
-  // round 16 (KC): who went on a field trip. Each member ticked on an outing with a fee gets a pending charge for their next invoice; unticking takes back a charge
-  // no invoice has billed yet. Only from the outing's day (nobody has gone before it).
+  // round 16 (KC): who went on a field trip, from the outing's day (nobody has gone before it). Round 21: no charge per trip; Who went decides the monthly credit.
   defineAction<{ eventId: string; memberIds: string[] }>({
     name: 'calendarEvent.setWent',
     can: (u) => builders(u),

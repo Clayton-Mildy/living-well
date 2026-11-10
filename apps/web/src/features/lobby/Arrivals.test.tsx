@@ -28,12 +28,11 @@ beforeAll(() => { (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean 
 beforeEach(() => { useUi.setState({ toast: null }); });
 afterEach(async () => { await act(async () => { root?.unmount(); }); host?.remove(); document.body.innerHTML = ''; root = null; host = null; });
 
-/** The seed on the trip day (or a normal day), two members already ticked as going, a 150.000 trip fee. */
+/** The seed on the trip day (or a normal day), two members already ticked as going (round 21: no fee per trip). */
 async function show(onTripDay = true) {
   const state: ClubState = buildSeed().citra;
   const ev = state.calendarEvents[TRIP];
   ev.wentIds = ['m2', 'm20'];
-  ev.fee = 150000;
   const today = onTripDay ? ev.date : '2026-10-21';
   useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's1', name: 'Caca', role: 'lobby', clubId: 'citra', clubs: ['citra'] } });
   useReplica.setState({ club: 'citra', userId: 's1', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today, startMin: 598, realStart: Date.now(), offset: 0 } });
@@ -63,12 +62,13 @@ describe('Arrivals on a field trip day', () => {
     const row = Array.from(host!.querySelectorAll('[data-list="inclub"] [data-testid="row-name"]')).find((n) => (n.textContent ?? '').includes('Lina'))!.closest('button')!;
     expect(row.textContent).toMatch(/Arrived \d\d:\d\d · on the trip/);
   });
-  it('an undone check-in whose trip fee is invoiced keeps the member on the trip, and the toast says so', async () => {
+  it('an undone check-in whose per-trip fee from before round 21 is invoiced keeps the member on the trip, and the toast says so', async () => {
     await show();
     await checkInLina();
     const chargeId = `trip-${TRIP}-m1`;
     expect(useReplica.getState().pending).toEqual([]);
-    const billed = produce(useReplica.getState().confirmed!, (d) => { d.pendingCharges[chargeId].invoiceId = 'INV-2026-11-0042'; }); // finance put the fee on an invoice
+    // a per-trip fee charged before round 21, which finance put on an invoice
+    const billed = produce(useReplica.getState().confirmed!, (d) => { d.pendingCharges[chargeId] = { id: chargeId, clubId: d.clubId, createdAt: '2026-10-29T09:00', createdBy: 'staff:s1', memberId: 'm1', amount: 150000, label: 'inv.line.fieldTrip', params: { title: 'Bogor', date: '2026-10-29' }, source: { type: 'event', id: TRIP }, invoiceId: 'INV-2026-11-0042' }; });
     useReplica.setState({ confirmed: billed, view: billed });
     const undo = useUi.getState().toast?.action;
     expect(undo?.label).toBe('Undo');

@@ -45,6 +45,7 @@ import { sign } from './sign';
 import { plans } from './plans';
 import { email } from './email';
 import { terms } from './terms';
+import { geo } from './geo';
 
 export const id = {
   ...ns('common', common),
@@ -103,4 +104,5 @@ export const id = {
   ...ns('plans', plans),
   ...ns('email', email),
   ...ns('terms', terms),
+  ...ns('geo', geo),
 };

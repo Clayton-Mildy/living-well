@@ -136,7 +136,8 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         // KC round 21: the trip's pictures (approved, family-visible, taken inside the trip's hours) show on its step like a session's
         const title = t('ftoday.tTrip', { t: eventTitle(it.event, fmt.lang) });
         const shots = tripPhotos(s, members.map((m) => m.id), it.event, date);
-        return { time: it.time, title, detail: `${it.event.from || ''}–${it.event.to || ''}`, kind: 'outing', photos: [...shots].reverse(), alt: (p) => t('family.photoAria', { a: title, t: p.time }) };
+        const where = it.event.venue ? ` · ${it.event.venue.name}${it.event.venue.address ? `, ${it.event.venue.address}` : ''}` : ''; // round 21: the venue's name and address
+        return { time: it.time, title, detail: `${it.event.from || ''}–${it.event.to || ''}${where}`, kind: 'outing', photos: [...shots].reverse(), alt: (p) => t('family.photoAria', { a: title, t: p.time }) };
       }
       case 'lunch': {
         // round 14: once a parent has come, the dishes, the lunch pictures and how much was eaten are on the Lunch card (LunchCard.tsx) and the row keeps the time, the

@@ -3,12 +3,12 @@
 // status comes from check-ins, and the Flex plan counts visits. Pure selectors shared by the actions and the screens.
 import { isOwnerSection } from '../actions/ownerGate';
 import { isEmail } from './emails';
-import type { ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
-import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, ym } from '../util';
+import type { GeoPoint, ChangeRequest, ClubState, Consent, DocType, Diet, DrugAllergy, Enquiry, FoodAllergen, FamilyContact, Health, HM, ISODate, Invoice, InvoiceLine, Member, MemberDocument, Mobility, MedTiming, Photo, Plan, PlanDef, Reading, Relation, Row, Title, YM, KtpKind, KtpUploads, Actor } from '../types';
+import { addDays, addMonths, ageOn, daysInMonth, diffDays, dow, e164, isWeekday, live, parseDate, sortBy, sum, uniq, ym } from '../util';
 import { contactsOfMember, currentMembership, isOpen, isPendingRow, linksOfMember, membershipStatus, memberSince, memberName, planOn, primaryContact } from './core';
 import { attOf, extraDaysFor } from './attendance';
 import { isPlanId, planDefs } from './plans';
-import { type PickupIn, invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
+import { type PickupIn, tripCreditLine, invoiceStatus, invoicesOf, issueDateOf, nextInvoiceNumber, priceOn, balanceOf, suspensions, type Suspension } from './billing';
 import { onLeaveOn } from './leave';
 import { latestBp } from './health';
 import { checkOnList, type CheckOnRow } from './checkOn';
@@ -154,8 +154,8 @@ export function subEnd(m: Member, today: ISODate): { on: ISODate; kind: SubEndKi
 }
 
 // ---------- list rows, filters, search ----------
-export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'other' | 'pickup' | 'ended';
-export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'other', 'pickup', 'in', 'att', 'checkOn', 'ended']; // round 16: Flex and Gold beside Active; Other plan = the catalogue's plans
+export type MemberFilter = 'active' | 'in' | 'att' | 'checkOn' | 'flex' | 'gold' | 'other' | 'pickup' | 'trips' | 'ended';
+export const MEMBER_FILTERS: MemberFilter[] = ['active', 'flex', 'gold', 'other', 'pickup', 'trips', 'in', 'att', 'checkOn', 'ended']; // round 16: Flex and Gold beside Active; Other plan = the catalogue's plans; round 21: Field trips after Pick-up
 /** The plans a member can be put on, as pickers list them: Flex, Gold, then the catalogue's active plans (a retired plan leaves the pickers; its members keep it). Name them with `planLabel`. */
 export const activePlans = (s: ClubState): PlanDef[] => planDefs(s).filter((p) => p.active);
 export interface MemberRow {
@@ -210,6 +210,7 @@ export const FILTERS: Record<MemberFilter, (r: MemberRow) => boolean> = {
   gold: (r) => !r.ended && r.plan === 'gold',
   other: (r) => !r.ended && r.plan !== 'flex' && r.plan !== 'gold',
   pickup: (r) => !r.ended && !r.pending && !!r.m.pickup?.on,
+  trips: (r) => !r.ended && !r.pending && !!r.m.fieldTrips?.on, // round 21
   ended: (r) => r.ended,
 };
 export type MemberSort = 'name' | 'startNew' | 'startOld' | 'endSoon';
@@ -312,6 +313,9 @@ export function finalInvoiceLines(s: ClubState, m: Member, lastDay: ISODate, tod
     const unit = priceOn(s, issueDateOf(s, p)).extra;
     lines.push({ id: `extra-${p}`, kind: 'extraDay', label: 'inv.line.extra', params: { month: p, n: extra.length }, qty: extra.length, unit, amount: extra.length * unit, refMonth: p, dates: extra });
   }
+  // round 21: the field trip fees paid for months up to the last one that the member did not use come back
+  const paidMonths = uniq(live(s.invoices).filter((i) => i.memberId === m.id && !i.voided).flatMap((i) => i.lines).filter((l) => l.id.startsWith('trip-') && l.refMonth && l.refMonth <= ym(lastDay)).map((l) => l.refMonth!)).sort();
+  for (const q of paidMonths) { const c = tripCreditLine(s, m.id, q, today, lastDay); if (c) lines.push(c); }
   return lines;
 }
 export function finalInvoiceNumber(s: ClubState, memberId: string, today: ISODate) {
@@ -328,7 +332,9 @@ export const openBalance = (s: ClubState, memberId: string, today: ISODate) =>
 
 /** The invoice a membership ending would create (null when there is nothing to bill). Used by the action and the end dialog. */
 export function finalInvoiceFor(s: ClubState, m: Member, lastDay: ISODate, today: ISODate): Omit<Invoice, keyof Row> | null {
-  const lines = finalInvoiceLines(s, m, lastDay, today);
+  let lines = finalInvoiceLines(s, m, lastDay, today);
+  // round 21 review: never a negative invoice. Trip credits that would take it below zero stay owed back: the run lists them for a refund
+  if (sum(lines.map((l) => l.amount)) < 0) lines = lines.filter((l) => !l.id.startsWith('tripCredit-'));
   if (!lines.length) return null;
   const issue = today;
   return {
@@ -366,6 +372,8 @@ export interface NewMemberInput {
   name: string;
   dob: ISODate;
   address: string;
+  /** round 21: the home pin (pick-up distance, the Where from map) */
+  location?: GeoPoint;
   /** informational only (members drop in on any open day); '' when not given */
   usualArrival: HM | '';
   nanny: { name: string; phone?: string; nik?: string } | null;
@@ -388,6 +396,8 @@ export interface NewMemberInput {
   consent: { data: boolean; face: boolean };
   /** the monthly pick-up service chosen at registration */
   pickup?: PickupIn;
+  /** round 21: takes part in the monthly field trip (its fee is on every monthly invoice) */
+  fieldTrips?: boolean;
   note?: string;
 }
 export const ageRange = { min: 18, max: 120 };

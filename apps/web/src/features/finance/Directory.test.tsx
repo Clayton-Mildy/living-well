@@ -71,7 +71,7 @@ describe('Directory: grouped by category', () => {
       expect(a.getAttribute('href')).toMatch(/^tel:\+62\d+$/);
       expect(parseInt(a.style.height, 10)).toBeGreaterThanOrEqual(44);
     }
-    expect(headings()).toEqual(['AC and electrical', 'Medical', 'Groceries', 'Cleaning', 'Activity materials']); // only the groups that have contacts
+    expect(headings()).toEqual(['AC and electrical', 'Medical', 'Groceries', 'Cleaning', 'Activity materials', 'Field trip venues']); // only the groups that have contacts (round 21: the seeded trip venues)
     expect(under('Medical')).toContain('dr. Melinda Kusumo');
   });
 
@@ -81,7 +81,7 @@ describe('Directory: grouped by category', () => {
     expect(headings()).toEqual(['AC and electrical']);
     expect(document.querySelectorAll('[data-dir-row]')).toHaveLength(2);
     await pickOption(groupSelect(), 'All categories');
-    expect(headings().length).toBe(5);
+    expect(headings().length).toBe(6);
   });
 
   it('search narrows within the groups', async () => {
@@ -172,5 +172,65 @@ describe('Directory: the contact form picks a category', () => {
     const dlg = document.querySelector('[role="dialog"]')!;
     const labels = Array.from(dlg.querySelectorAll('[role="combobox"]')).map((c) => document.getElementById(c.getAttribute('aria-labelledby') ?? '')?.textContent);
     expect(labels).toEqual(expect.arrayContaining(['Category', 'Spending category']));
+  });
+});
+
+describe('round 21: field trip venues', () => {
+  const addVenue = (s: ClubState) => {
+    s.directory.dv1 = { id: 'dv1', clubId: s.clubId, createdAt: '2026-10-01T10:00', createdBy: 'staff:s9', kind: 'venue', name: 'Rumah Batik Palbatu', what: '', phone: '+6281277881122', public: false, contactPerson: 'Ibu Sari', address: 'Jl. Palbatu 4, Tebet', photoMediaIds: ['md_venueone0001', 'md_venuetwo0002'] };
+    const trip = Object.values(s.calendarEvents).find((e) => e.kind === 'outing')!;
+    trip.venueId = 'dv1';
+    return trip;
+  };
+  it('venues list under their own heading, just before Other', async () => {
+    await show(addVenue);
+    const hs = headings();
+    expect(hs).toContain('Field trip venues');
+    const o = hs.indexOf('Other');
+    expect(hs.indexOf('Field trip venues')).toBe(o < 0 ? hs.length - 1 : o - 1);
+    expect(document.querySelector('[data-dir-row="Rumah Batik Palbatu"]')!.textContent).toContain('Ibu Sari');
+  });
+  it('a venue opens on a sheet with its pictures and the trips held there', async () => {
+    let title = '';
+    await show((s) => { title = addVenue(s).title; });
+    await click(document.querySelector('[data-dir-open="Rumah Batik Palbatu"]'));
+    const sheet = document.querySelector('[role="dialog"]')!;
+    expect(sheet.querySelectorAll('[data-testid="venue-pic"]')).toHaveLength(2);
+    expect(sheet.textContent).toContain('Trips here');
+    expect(sheet.textContent).toContain(title);
+    expect(sheet.textContent).toContain('Ibu Sari');
+  });
+  it('the form for a venue asks for the contact person and the address, not what they do or a category', async () => {
+    await show();
+    await click(button('Add a contact'));
+    const dlg = document.querySelector('[role="dialog"]')!;
+    await click(Array.from(dlg.querySelectorAll('button')).find((b) => textOf(b) === 'Field trip venue'));
+    const labels = Array.from(dlg.querySelectorAll('label > span:first-child')).map((x) => x.textContent);
+    expect(labels).toEqual(expect.arrayContaining(['Trading name', 'Contact person', 'Address']));
+    expect(labels).not.toContain('What they do');
+    expect(Array.from(dlg.querySelectorAll('[role="combobox"]'))).toHaveLength(0);
+    expect(dlg.textContent).toContain('Pictures (staff only)');
+  });
+});
+
+describe('round 21: ratings', () => {
+  const rate = (st: ClubState, id: string, stars: number[]) => { st.directory[id].ratings = stars.map((x, i) => ({ id: `${id}r${i}`, stars: x as 1 | 2 | 3 | 4 | 5, at: '2026-10-0' + (i + 1) + 'T10:00', by: 'staff:s9' as const, ...(i === 0 ? { note: 'Fixed it fast' } : {}) })); };
+  it('a rated row shows its average and count; the best rated comes first under its heading', async () => {
+    await show((st) => { rate(st, 'd14', [5, 5, 5, 5, 5, 4]); rate(st, 'd15', [2, 2, 3]); });
+    const names = Array.from(document.querySelectorAll('[data-dir-row]')).map((r) => r.getAttribute('data-dir-row'));
+    const a = names.indexOf(document.querySelector('[data-dir-row] [data-rating="4.8"]')!.closest('[data-dir-row]')!.getAttribute('data-dir-row'));
+    const b = names.indexOf(document.querySelector('[data-dir-row] [data-rating="2.3"]')!.closest('[data-dir-row]')!.getAttribute('data-dir-row'));
+    expect(a).toBeLessThan(b);
+    expect(document.querySelector('[data-rating="4.8"]')!.textContent).toBe('4.8 · 6');
+  });
+  it('the sheet adds a rating (stars, optional note) and shows the log with who and when', async () => {
+    await show((st) => rate(st, 'd15', [2]));
+    await click(document.querySelector('[data-dir-open="Kemang Teknik AC"]'));
+    const sheet = document.querySelector('[role="dialog"]')!;
+    expect(sheet.textContent).toContain('Fixed it fast');
+    await click(sheet.querySelector('button[aria-label="4 stars"]'));
+    await typeInto(sheet.querySelector<HTMLInputElement>('input[name="ratingNote"]')!, 'On time');
+    await click(Array.from(sheet.querySelectorAll('button')).find((b) => textOf(b) === 'Add rating'));
+    expect(h.act).toHaveBeenCalledWith('directory.rate', { contactId: 'd15', stars: 4, note: 'On time' }, expect.anything());
   });
 });

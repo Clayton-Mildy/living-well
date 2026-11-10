@@ -225,18 +225,17 @@ describe('round 17: the notice period moved to Admin › Settings', () => {
 });
 
 describe('round 16: pick-up and field trip fees', () => {
-  it('show their defaults in Extra charges and save with prices.set', async () => {
+  it('round 21: Extra charges has the field trip fee but no pick-up price (priced per km in Settings)', async () => {
     openClub();
     const fn = vi.fn(async () => ({ ok: true as const, result: {} }));
     useReplica.setState({ act: fn as never });
     await show(<Plans />, 390);
-    expect(section('Extra charges')!.contains(priceInput('Pick-up'))).toBe(true);
-    expect(priceInput('Pick-up').value).toBe('600.000');
-    expect(priceInput('Field trip').value).toBe('250.000');
-    await type(priceInput('Pick-up'), '650.000');
+    expect(document.querySelector('input[aria-label="Pick-up price in rupiah"]')).toBeNull();
+    expect(priceInput('Field trips').value).toBe('250.000');
+    await type(priceInput('Field trips'), '260.000');
     const save = Array.from(document.querySelectorAll('button')).find((b) => /Save changes$/.test(b.textContent || ''))!;
     await act(async () => { save.click(); });
-    expect(fn).toHaveBeenCalledWith('prices.set', expect.objectContaining({ pickup: 650_000, fieldTrip: 250_000 }));
+    expect(fn).toHaveBeenCalledWith('prices.set', expect.objectContaining({ fieldTrip: 260_000 }));
   });
 });
 

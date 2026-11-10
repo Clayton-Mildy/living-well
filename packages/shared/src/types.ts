@@ -77,6 +77,11 @@ export interface Approval {
   defer?: { tell?: boolean; share?: boolean; overall?: Health; companionId?: string; notify?: boolean };
 }
 
+/** Round 21: a pinned place (a member's home, a lead's home, a contact, the club) and its area, as the map search or staff gave it */
+export interface GeoPoint { lat: number; lng: number; kelurahan?: string; kecamatan?: string; city?: string }
+/** Round 21: one place the geocoding proxy found (/api/geo/search and /api/geo/reverse) */
+export interface GeoHit { label: string; lat: number; lng: number; kelurahan?: string; kecamatan?: string; city?: string }
+
 export interface ClubSettings {
   open: HM; // 08:30
   close: HM; // 16:30
@@ -123,6 +128,10 @@ export interface ClubSettings {
   taskCreate?: Partial<Record<GridRole, boolean>>;
   /** KC round 17: the terms and conditions, one entry per published version (the last is current) */
   terms?: TermsVersion[];
+  /** Round 21: the club's own pin (pick-up distance and the Where from map) */
+  location?: GeoPoint;
+  /** Round 21: the monthly pick-up price per km from the club and the distance that is free (missing = rules/geo.ts PICKUP_RATE_DEFAULT). Changes wait for the Owner. */
+  pickupRate?: { perKm: number; freeKm: number };
 }
 
 /** One published version of the terms and conditions: plain text, "# " heading lines, "- " bullets, {placeholders} filled from the settings. An empty `id` falls back to `en`. */
@@ -296,6 +305,8 @@ export interface Member extends Row {
   dob: ISODate | null;
   ageYears: number | null; // seed only, when dob unknown
   address: string | null;
+  /** Round 21: the home pin (pick-up distance and the Where from map) */
+  location?: GeoPoint;
   photoTone: number;
   /** the profile picture (GET /api/media/:id); without it the tone placeholder with initials shows */
   photoMediaId?: string;
@@ -329,6 +340,8 @@ export interface Member extends Row {
   registration?: MemberRegistration;
   /** KC round 16: the club picks the member up; `price` is their own monthly fee (none = the price list's default) */
   pickup?: { on: boolean; price?: number };
+  /** Round 21: the member takes part in the monthly field trip: its fee is on every monthly invoice; a paid month they miss is credited next invoice */
+  fieldTrips?: { on: boolean };
 }
 
 export interface MemberNote extends Row {
@@ -595,6 +608,9 @@ export interface Enquiry extends Row {
   source: 'referral' | 'instagram' | 'website' | 'walkIn' | 'other';
   /** round 15: where a lead heard of us when the source is Other (optional, at most 80 characters; gone when the source changes) */
   sourceOther?: string;
+  /** Round 21: where the senior lives (optional), carried to the member on joining */
+  address?: string;
+  location?: GeoPoint;
   stage: 'new' | 'visit' | 'trial' | 'joined' | 'lost';
   next?: { kind: 'callBack' | 'sendPrices' | 'visit' | 'trial' | 'followUp' | 'starts' | 'custom'; date?: ISODate; time?: HM; text?: string };
   notes?: string;
@@ -659,10 +675,12 @@ export interface CalendarEvent extends Row {
   from?: HM;
   to?: HM;
   cancelledAt?: DT;
-  /** KC round 16, an outing: the field trip fee each member who went pays (0 or none = free) */
-  fee?: number;
-  /** KC round 16, an outing: the members ticked as having gone (each is charged `fee` on the next invoice) */
+  /** KC round 16, an outing: the members ticked as having gone (round 21: no charge per trip; a paid month with no trip gone on is credited) */
   wentIds?: string[];
+  /** round 21, an outing: the venue (a Contacts entry of kind 'venue') */
+  venueId?: string;
+  /** round 21, the family copy only: the venue's trading name and address (never its pictures, contact person or phone) */
+  venue?: { name: string; address: string };
 }
 
 export interface VenueBooking extends Row {
@@ -870,7 +888,7 @@ export interface VendorInvoice extends Row {
 
 export interface InvoiceLine {
   id: string;
-  kind: 'plan' | 'extraDay' | 'adjustment' | 'credit' | 'venue' | 'dementia' | 'celebration' | 'pickup';
+  kind: 'plan' | 'extraDay' | 'adjustment' | 'credit' | 'venue' | 'dementia' | 'celebration' | 'pickup' | 'fieldTrip';
   label: string; // i18n key
   params?: Record<string, string | number>;
   qty: number;
@@ -954,7 +972,8 @@ export interface InvoiceRun extends Row {
 }
 
 export interface DirectoryContact extends Row {
-  kind: 'doctor' | 'service' | 'supplier';
+  /** round 21: 'venue' = a field trip venue (listed under its own heading, never public) */
+  kind: 'doctor' | 'service' | 'supplier' | 'venue';
   name: string;
   what: string;
   whatId?: string;
@@ -964,7 +983,16 @@ export interface DirectoryContact extends Row {
   category?: SpendCategory;
   /** round 15 (phase 2): the directory category (ClubSettings.directoryGroups); none, or a retired one = shown under "Other" */
   groupId?: string;
+  /** round 21: the person to ask for, the address and its pin, and (a venue) pictures; staff only */
+  contactPerson?: string;
+  address?: string;
+  location?: GeoPoint;
+  photoMediaIds?: string[];
+  /** round 21: the staff's ratings, oldest first (each visit or job can get one); staff only */
+  ratings?: ContactRating[];
 }
+/** Round 21: one rating of a contact: 1–5 stars and an optional note (at most 200 characters). */
+export interface ContactRating { id: string; stars: 1 | 2 | 3 | 4 | 5; note?: string; at: DT; by: Actor }
 
 export interface StaffHr {
   contract: 'pkwtt' | 'pkwt';

@@ -126,6 +126,9 @@ export const insights = {
   mInOutAria: 'Members who joined and left, by plan', mSwitchAria: 'Plan switches', mActiveAria: 'Active members by plan',
   mTotal: 'All',
   // round 12: the Mood tab
+  tabWhere: 'Where from', who: 'Who', view: 'View', whoBoth: 'Members and enquiries', whoMembers: 'Members', whoEnquiries: 'Enquiries', viewPins: 'Exact pins', viewKel: 'Kelurahan', viewKec: 'Kecamatan',
+  periodEnquiries: 'Period applies to enquiries; members are those active today.', missing: '{n} without a location', missingSub: 'Open one to add the address pin.', colName: 'Name', colType: 'Type', colKm: 'km', colMembers: 'Members', colEnquiries: 'Enquiries',
+  km: '{km} km', unknownArea: 'Unknown area', kindMember: 'Member', kindEnquiry: 'Enquiry', whereEmpty: 'Nobody with a pin yet.',
   tabMood: 'Mood',
   moodLift: 'The club lifts mood by {n} on average',
   moodLiftNone: 'Mood is unchanged on average',

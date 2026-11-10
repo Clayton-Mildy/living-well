@@ -48,7 +48,7 @@ export function DesignSystem() {
               <Link to="/today" style={{ height: 48, padding: '0 24px', borderRadius: 12, background: '#24201C', color: '#FFFFFF', textDecoration: 'none', display: 'inline-flex', alignItems: 'center', gap: 8, fontSize: 16, fontWeight: 500 }}>Open the app<Icon name="arrow_forward" size={20} /></Link>
             </div>
           </div>
-          <div style={note}>Brand: the CitraPremier logo (logo-cp.jpg) replaces the text wordmark everywhere it appeared. It is blended with multiply so its white background disappears on cream. Swap in a vector logo when the brand files provide one.</div>
+          <div style={note}>Brand: the customer's own logo, a vector wordmark converted from their PDF (brand-wordmark.svg, gold #CFA550) with the star mark (brand-mark.svg); white versions on the gold splash.</div>
         </header>
 
         <Section n="01" title="Colour roles">

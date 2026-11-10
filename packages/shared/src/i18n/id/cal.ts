@@ -15,7 +15,7 @@ export const cal: Same<typeof EN> = {
   // events editor (management)
   newFieldTrip: 'Karyawisata baru', addEvent: 'Tambah acara', addEventOn: 'Tambah acara pada {date}', eventsEditor: 'Acara kalender', addEventTitle: 'Tambah ke kalender', editEventTitle: 'Ubah acara', editEvent: 'Ubah {title}',
   type: 'Jenis', t_closed: 'Penutupan', t_holiday: 'Libur nasional', t_outing: 'Karyawisata',
-  titleEn: 'Judul', titleEnPh: 'Contoh: Pelatihan P3K staf', titleId: 'Judul dalam Bahasa Indonesia', titleIdHint: 'Opsional. Tampil dalam mode Bahasa Indonesia.',
+  eventName: 'Nama acara', venue: 'Tempat', pickVenue: 'Pilih tempat', newVenue: '+ Tempat baru', 'err.venueRequired': 'Pilih tempatnya.', titleEn: 'Judul', titleEnPh: 'Contoh: Pelatihan P3K staf', titleId: 'Judul dalam Bahasa Indonesia', titleIdHint: 'Opsional. Tampil dalam mode Bahasa Indonesia.',
   date: 'Tanggal', multiDay: 'Berlangsung beberapa hari', until: 'Hari terakhir', from: 'Dari', to: 'Sampai',
   eventSaved: 'Kalender diperbarui. Staf dan keluarga dikabari.', eventDeleted: 'Acara dihapus. Staf dan keluarga dikabari.',
   keep: 'Pertahankan', confirmDelete: 'Hapus acara', deleteWarn: 'Acara pada {date} akan dihapus dari kalender untuk staf dan keluarga.',

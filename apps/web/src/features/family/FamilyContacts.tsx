@@ -11,7 +11,7 @@ import { BackLink, Cap, F, FamPage, FillCard, HAIR, List, PageTitle, useBack, us
 import { useFamilyCtx } from './useFamily';
 
 const telOf = (p: string) => 'tel:' + p.replace(/[^\d+]/g, '');
-const GROUP_KEY = { doctor: 'fme.gDoctor', service: 'fme.gService', supplier: 'fme.gSupplier' } as const;
+const GROUP_KEY = { doctor: 'fme.gDoctor', service: 'fme.gService', supplier: 'fme.gSupplier', venue: 'fme.gService' } as const; // round 21: venues never reach the family copy
 const FONT = 'Inter, system-ui, sans-serif';
 
 export function FamilyContacts() {

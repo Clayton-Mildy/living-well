@@ -195,15 +195,13 @@ describe('famDay: a celebration on a closed day', () => {
   });
 });
 
-describe('famDay: an outing row carries its field trip fee (round 17)', () => {
-  it('a field trip shows its fee; a free outing has none', () => {
+describe('famDay: an outing row (round 21: no fee per trip, paid monthly)', () => {
+  it('a field trip row has no fee', () => {
     const s0 = seed();
-    const ev = Object.values(s0.calendarEvents).find((e) => e.kind === 'outing' && !e.deletedAt && !e.cancelledAt && e.fee)!;
-    const open = (s: ClubState) => famDay(s, WHO, ev.date, T, NOW).rows.find((r) => r.kind === 'outing');
-    expect(open(s0)).toMatchObject({ kind: 'outing', fee: 250_000 });
-    const free = produce(s0, (d) => { delete d.calendarEvents[ev.id].fee; });
-    expect(open(free)).toBeDefined();
-    expect(open(free)).not.toHaveProperty('fee');
+    const ev = Object.values(s0.calendarEvents).find((e) => e.kind === 'outing' && !e.deletedAt && !e.cancelledAt)!;
+    const row = famDay(s0, WHO, ev.date, T, NOW).rows.find((r) => r.kind === 'outing');
+    expect(row).toMatchObject({ kind: 'outing' });
+    expect(row).not.toHaveProperty('fee');
   });
 });
 

@@ -256,14 +256,26 @@ describe('round 17: a requested celebration shows with its charges and a waiting
 });
 
 describe('final review minor 1: a field trip row says "Field trip" once', () => {
-  it('the Bogor row reads "Field trip · 08:30–15:00 · Rp …" when it has a fee', async () => {
-    const seed = buildSeed().citra;
-    const ev = seed.calendarEvents['ev-outing-1029'];
-    const base = produce(seed, (d) => { d.calendarEvents[ev.id].fee = 250_000; });
+  it('round 21: the trip row names its venue (name only; the family copy carries no pictures or contact person)', async () => {
+    const base = produce(buildSeed().citra, (d) => {
+      d.directory.dv1 = { id: 'dv1', clubId: d.clubId, createdAt: '2026-10-01T10:00', createdBy: 'staff:s9', kind: 'venue', name: 'Kebun Raya Bogor', what: '', phone: '+62251831140', public: false, contactPerson: 'Pak Andi', address: 'Jl. Ir. H. Juanda 13, Bogor' };
+      d.calendarEvents['ev-outing-1029'].venueId = 'dv1';
+    });
+    const ev = base.calendarEvents['ev-outing-1029'];
     open('en', base);
     await show(<FamilyCalendar />, `/calendar?date=${ev.date}`);
     const row = Array.from(document.querySelectorAll('[data-testid="cal-row"][data-kind="outing"]')).map((r) => r.textContent ?? '').find((x) => x.includes('Bogor'));
-    expect(row).toContain('Field trip · 08:30–15:00 · Rp 250.000');
+    expect(row).toContain('Field trip · 08:30–15:00 · Kebun Raya Bogor');
+    expect(row).not.toContain('Pak Andi');
+  });
+  it('the Bogor row reads "Field trip · 08:30–15:00" (round 21: no fee per trip, it is paid monthly)', async () => {
+    const base = buildSeed().citra;
+    const ev = base.calendarEvents['ev-outing-1029'];
+    open('en', base);
+    await show(<FamilyCalendar />, `/calendar?date=${ev.date}`);
+    const row = Array.from(document.querySelectorAll('[data-testid="cal-row"][data-kind="outing"]')).map((r) => r.textContent ?? '').find((x) => x.includes('Bogor'));
+    expect(row).toContain('Field trip · 08:30–15:00');
+    expect(row).not.toContain('Rp');
     expect(row!.split('Field trip').length - 1).toBe(1);
   });
 });

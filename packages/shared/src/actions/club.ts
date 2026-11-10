@@ -14,6 +14,8 @@ import { actorName } from '../rules/core';
 import { live, rp, sortBy } from '../util';
 import { NOTICE_KINDS, noticeSettings, type NoticeDaysKind } from '../rules/notice';
 import { LEAVE_MAX_LIMIT, leaveMaxMonths } from '../rules/leave';
+import { isGeoPoint, pickupRateOf } from '../rules/geo';
+import type { GeoPoint } from '../types';
 
 const mgmtOnly = (u: User) => isMgmt(u);
 /** Custom plan prices from the input: { plan_1: 2000000 }. */
@@ -792,12 +794,12 @@ export const clubActions = [
   // for a downgrade, stop or leave (rules/notice.ts; round 18: each kind its own days, `noticeDays` no longer taken). Round 17 (Admin › Settings): the few-visits
   // alert's two numbers (those apply at once, ownerGate.ts; round 18: days before next month, at least the stop days). Round 19: the upgrade's notice days
   // (one more kind) and leave in a row (`leaveMaxMonths`, 1–6, its own field: R2).
-  defineAction<{ flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number }; leaveMaxMonths?: number }>({
+  defineAction<{ flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number }; leaveMaxMonths?: number; location?: GeoPoint; pickupRate?: { perKm: number; freeKm: number } }>({
     name: 'club.updateSettings',
     can: mgmtOnly,
     parse(raw) {
       const o = obj(raw);
-      const out: { flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number }; leaveMaxMonths?: number } = {};
+      const out: { flexQuota?: number; notice?: Partial<Record<NoticeDaysKind, number>>; fewVisits?: { below: number; daysBeforeMonth: number }; leaveMaxMonths?: number; location?: GeoPoint; pickupRate?: { perKm: number; freeKm: number } } = {};
       if (o.flexQuota !== undefined) out.flexQuota = int(o.flexQuota, 1, 23, 'flexQuota');
       if (o.notice !== undefined) {
         const n = obj(o.notice);
@@ -810,7 +812,19 @@ export const clubActions = [
         out.fewVisits = { below: int(f.below, 1, 31, 'below'), daysBeforeMonth: int(f.daysBeforeMonth, 0, 60, 'daysBeforeMonth') }; // the range is checked in run, against the stop days
       }
       if (o.leaveMaxMonths !== undefined) out.leaveMaxMonths = int(o.leaveMaxMonths, 1, LEAVE_MAX_LIMIT, 'leaveMaxMonths');
-      if (out.flexQuota === undefined && out.notice === undefined && out.fewVisits === undefined && out.leaveMaxMonths === undefined) bad('err.invalid');
+      // round 21: the club's pin (applies at once) and the pick-up rates (wait for the Owner: ownerGate.ts)
+      if (o.location !== undefined) {
+        if (!isGeoPoint(o.location)) bad('err.invalid');
+        const g = o.location as GeoPoint;
+        out.location = { lat: g.lat, lng: g.lng, ...(g.kelurahan ? { kelurahan: g.kelurahan } : {}), ...(g.kecamatan ? { kecamatan: g.kecamatan } : {}), ...(g.city ? { city: g.city } : {}) };
+      }
+      if (o.pickupRate !== undefined) {
+        const r = obj(o.pickupRate);
+        const freeKm = Number(r.freeKm);
+        if (!Number.isFinite(freeKm) || freeKm < 0 || freeKm > 50 || !Number.isInteger(freeKm * 2)) bad('err.invalid');
+        out.pickupRate = { perKm: int(r.perKm, 1000, 1_000_000, 'perKm'), freeKm };
+      }
+      if (out.flexQuota === undefined && out.notice === undefined && out.fewVisits === undefined && out.leaveMaxMonths === undefined && out.location === undefined && out.pickupRate === undefined) bad('err.invalid');
       return out;
     },
     run(d, i, ctx) {
@@ -819,7 +833,9 @@ export const clubActions = [
       const notice = noticeSettings(d);
       const same = (i.flexQuota === undefined || i.flexQuota === st.flexQuota) && (i.notice === undefined || NOTICE_KINDS.every((k) => i.notice![k] === undefined || i.notice![k] === notice[k]))
         && (i.fewVisits === undefined || (i.fewVisits.below === few.below && i.fewVisits.daysBeforeMonth === few.daysBeforeMonth))
-        && (i.leaveMaxMonths === undefined || i.leaveMaxMonths === leaveMaxMonths(d));
+        && (i.leaveMaxMonths === undefined || i.leaveMaxMonths === leaveMaxMonths(d))
+        && (i.location === undefined || JSON.stringify(i.location) === JSON.stringify(st.location))
+        && (i.pickupRate === undefined || (i.pickupRate.perKm === pickupRateOf(d).perKm && i.pickupRate.freeKm === pickupRateOf(d).freeKm));
       if (same) ctx.fail('err.noChanges');
       // round 18: the alert has to come before changes close, so its days before the month are at least the stop days (after this input's notice)
       if (i.fewVisits !== undefined) {
@@ -830,6 +846,8 @@ export const clubActions = [
       if (i.notice !== undefined) st.notice = { ...notice, ...i.notice };
       if (i.fewVisits !== undefined) st.fewVisits = i.fewVisits;
       if (i.leaveMaxMonths !== undefined) st.leaveMaxMonths = i.leaveMaxMonths;
+      if (i.location !== undefined) st.location = i.location;
+      if (i.pickupRate !== undefined) st.pickupRate = i.pickupRate;
       ctx.feed({ icon: 'tune', key: 'mgmt.feed.rules', params: { quota: st.flexQuota } });
     },
   }),

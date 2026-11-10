@@ -2,7 +2,7 @@
 // requests, notes, ending and reactivating a membership. Management is never gated.
 // Review policy: gate = waits for management; flag = applies now, reviewed afterwards; management always applies at once.
 import type { Draft } from 'immer';
-import type { Actor, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
+import type { Actor, GeoPoint, ChangeRequest, ClubState, DocType, Diet, DrugAllergy, FoodAllergen, ISODate, HM, Invoice, Member, MemberDocument, Medicine, MedTiming, Mobility, Plan, PlanEntry, ReviewSection, Title, EndReason, Consent, MemberRegistration, KtpUploads } from '../types';
 import { e164, monthStart, toMin, ym } from '../util';
 import { changeKind, earliestMonth, noticeDays, noticeDeadline } from '../rules/notice';
 import { emailInvoice, maybeEmailContract } from './emails';
@@ -11,6 +11,7 @@ import { carrySigning, requireMember, shortOf, familyUserIds, signAtRegistration
 import { clearApproval, markPending, needsApproval, priorOf } from './approvalGate';
 import { NOTE_KEYS } from '../rules/approvals';
 import { currentMembership, isOpen, isPendingRow, membershipStatus, displayName, nextOpenDay, planOn, primaryContact, actorName } from '../rules/core';
+import { cleanGeo } from '../rules/geo';
 import { PICKUP_MAX, PICKUP_MIN, paidOn, pickupOfRegistration, type PickupIn } from '../rules/billing';
 import { isPlanId, planOf, planParams } from '../rules/plans';
 import { cleanRegistration, validateRegistration } from '../rules/applicationForm';
@@ -196,6 +197,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
     name: txt(o.name, 80),
     dob: txt(o.dob, 10),
     address: txt(o.address, 200),
+    ...(o.location !== undefined && o.location !== null ? { location: cleanGeo(o.location) ?? bad('err.invalid') } : {}),
     usualArrival: txt(o.usualArrival, 5),
     nanny: parseNanny(o.nanny),
     spouseId: typeof o.spouseId === 'string' && o.spouseId ? o.spouseId : null,
@@ -214,6 +216,7 @@ function parseNewMember(raw: unknown): NewMemberFull {
     consent: { data: cons.data === true, face: cons.face !== false },
     ...(registration ? { registration } : {}),
     ...(pickup ? { pickup } : {}),
+    ...(o.fieldTrips === true ? { fieldTrips: true } : {}),
     ...(signature ? { signatureMediaId: signature } : {}),
     ...optionalNote(o),
   };
@@ -246,7 +249,7 @@ export function mediaIdOf(v: unknown): string | undefined {
 
 // ---------- parse: details patch ----------
 export interface DetailsPatch {
-  title?: Title; name?: string; dob?: ISODate; address?: string; /** '' clears it */ usualArrival?: HM | ''; nanny?: { name: string; phone?: string; nik?: string; photoMediaId?: string; note?: string } | null; spouseId?: string | null;
+  title?: Title; name?: string; dob?: ISODate; address?: string; /** round 21: the home pin; null removes it */ location?: GeoPoint | null; /** '' clears it */ usualArrival?: HM | ''; nanny?: { name: string; phone?: string; nik?: string; photoMediaId?: string; note?: string } | null; spouseId?: string | null;
   /** the profile picture; null removes it */ photoMediaId?: string | null;
   /** the answers of the paper application form, all of them as they should be now; null clears them */ registration?: MemberRegistration | null;
 }
@@ -257,6 +260,7 @@ function parseDetailsPatch(raw: unknown): DetailsPatch {
   if (p.name !== undefined) { const n = txt(p.name, 80); if (n.length < 2) bad('members.err.nameRequired'); out.name = n; }
   if (p.dob !== undefined) { const v = txt(p.dob, 10); if (!isISO(v)) bad('members.err.dobInvalid'); out.dob = v; }
   if (p.address !== undefined) out.address = txt(p.address, 200);
+  if (p.location !== undefined) out.location = p.location === null ? null : (cleanGeo(p.location) ?? bad('err.invalid'));
   if (p.usualArrival !== undefined) { const v = txt(p.usualArrival, 5); if (v && !isHM(v)) bad('members.err.arrivalInvalid'); out.usualArrival = v; }
   if (p.nanny !== undefined) out.nanny = parseNanny(p.nanny);
   if (p.spouseId !== undefined) out.spouseId = p.spouseId === null || p.spouseId === '' ? null : txt(p.spouseId, 60);
@@ -322,7 +326,7 @@ export const membersActions: ActionDef[] = [
         : { id: docIdFor(id, 'membershipForm'), type: 'membershipForm', status: 'requested', on: ctx.today, by: ctx.actor });
       d.members[id] = {
         id, clubId: ctx.clubId, createdAt: ctx.nowDT, createdBy: ctx.actor, title: input.title, firstName, lastName, gender: genderOf(input.title), dob: input.dob, ageYears: null,
-        address: input.address || null, photoTone: (num - 1) % 5, ...(input.photoMediaId ? { photoMediaId: input.photoMediaId } : {}), memberships: [{ start: input.start }], plans: [{ from: input.start, plan: input.plan, by: ctx.actor }],
+        address: input.address || null, ...(input.location ? { location: input.location } : {}), photoTone: (num - 1) % 5, ...(input.photoMediaId ? { photoMediaId: input.photoMediaId } : {}), memberships: [{ start: input.start }], plans: [{ from: input.start, plan: input.plan, by: ctx.actor }],
         usualArrival: input.usualArrival, nanny: input.nanny, spouseId: input.spouseId,
         health: {
           conditions: input.health.conditions, diabetic: input.health.diabetic, food: input.health.food, ...(input.health.foodOther ? { foodOther: input.health.foodOther } : {}), drugs: input.health.drugs,
@@ -331,8 +335,11 @@ export const membersActions: ActionDef[] = [
         care: { instructions: input.careInstructions, by: ctx.actor, at: ctx.nowDT }, consents, documents, face: { enrolled: false }, billing: { va: vaFor(num - 1) }, sim: { ...DEFAULT_SIM },
         ...(input.registration ? { registration: input.registration } : {}),
       };
-      const pk = pickupOfRegistration(d as unknown as ClubState, input.start, input.pickup);
+      const pk = pickupOfRegistration(input.pickup);
+      // round 21: pick-up is priced by distance, so with no price of its own it needs the home pin
+      if (pk && !pk.price && !d.members[id].location) ctx.fail('members.err.pickupNeedsLocation');
       if (pk) d.members[id].pickup = pk;
+      if (input.fieldTrips) d.members[id].fieldTrips = { on: true }; // round 21
       signAtRegistration(d, id, input.signatureMediaId, ctx);
       ctx.result.memberId = id;
       ctx.result.familyId = familyId;
@@ -368,6 +375,7 @@ export const membersActions: ActionDef[] = [
         m.dob = p.dob; m.ageYears = null; fields.push('dob');
       }
       if (p.address !== undefined && (p.address || null) !== m.address) { m.address = p.address || null; fields.push('address'); }
+      if (p.location !== undefined && !sameJson(p.location ?? undefined, m.location)) { if (p.location) m.location = p.location; else delete m.location; fields.push('location'); }
       if (p.usualArrival !== undefined && p.usualArrival !== m.usualArrival) { if (p.usualArrival) checkArrival(d, p.usualArrival, ctx); m.usualArrival = p.usualArrival; fields.push('usualArrival'); }
       if (p.nanny !== undefined && !sameJson(p.nanny, m.nanny)) { m.nanny = p.nanny ? { ...p.nanny } : null; fields.push('nanny'); }
       if (p.spouseId !== undefined && p.spouseId !== m.spouseId) {
@@ -494,8 +502,21 @@ export const membersActions: ActionDef[] = [
       const m = editable(d, input.memberId, ctx);
       const next = { on: input.on, ...(input.price ? { price: input.price } : {}) };
       if (JSON.stringify(m.pickup ?? { on: false }) === JSON.stringify(next)) ctx.fail('err.noChanges');
+      if (next.on && !next.price && !m.location) ctx.fail('members.err.pickupNeedsLocation'); // round 21: priced by distance
       m.pickup = next;
       feed(ctx, d, m.id, 'airport_shuttle', input.on ? 'pickupOn' : 'pickupOff', { by: ctx.actor });
+    },
+  }),
+  // round 21: the member takes part in the monthly field trip (its fee on every monthly invoice); finance and management, like pick-up
+  defineAction<{ memberId: string; on: boolean }>({
+    name: 'members.setFieldTrips',
+    can: (u) => hasRole(u, 'finance', 'mgmt'),
+    parse: (raw) => { const o = obj(raw); return { memberId: txt(o.memberId, 60), on: o.on === true }; },
+    run(d, input, ctx) {
+      const m = editable(d, input.memberId, ctx);
+      if (!!m.fieldTrips?.on === input.on) ctx.fail('err.noChanges');
+      m.fieldTrips = { on: input.on };
+      feed(ctx, d, m.id, 'directions_bus', input.on ? 'tripsOn' : 'tripsOff', { by: ctx.actor });
     },
   }),
 

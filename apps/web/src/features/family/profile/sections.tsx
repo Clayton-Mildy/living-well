@@ -21,7 +21,7 @@ import { memberPhoto } from '../../../lib/media';
 import { useDevice } from '../../../hooks/useDevice';
 import type { useAct } from '../../../lib/act';
 import type { TFn, useFmt } from '../../../lib/i18n';
-import { dietLabel, drugLabel, foodList, mobLabel, relLabel, timingLabel, cogText } from '../../members/lib';
+import { dietLabel, drugLabel, foodList, mobLabel, relLabel, timingLabel, cogText, pickupText } from '../../members/lib';
 import { DocView, useDocPicker, type PaperFile } from '../../members/PaperForm';
 import { useApplicationForm } from '../../members/ApplicationForm';
 import { NannyAvatar } from '../../members/ProfilePhoto';
@@ -337,7 +337,7 @@ export function PlanSection({ p, id }: SecProps) {
       <List testId="pf-plan">
         <KV first k={t('fhealth.tPlan')} v={t(flex ? 'profile.planFlexTitle' : 'profile.planGoldTitle', { plan: planLabel(s, ps.plan, fmt.lang), q: planQuota(s, ps.plan) ?? s.club.settings.flexQuota })} />
         <KV k={t('profile.fee')} v={t('fhealth.perMonth', { p: rp(planPrice(price, ps.plan)) })} />
-        {pick ? <KV testId="pf-pickup" k={t('profile.pickup')} v={t('profile.pickupVal', { p: rp(pick.price) })} /> : null}
+        {pick ? <KV testId="pf-pickup" k={t('profile.pickup')} v={pickupText(t, pick, false)} /> : null}
         {flex ? <KV k={t('profile.extraDay')} v={rp(price.extra)} /> : null}
         {prim ? <KV k={t('profile.billingContact')} v={prim.name} /> : null}
         <KV k={t('profile.va')} v={m.billing.va ? formatVa(m.billing.va) : t('profile.vaLater')} />

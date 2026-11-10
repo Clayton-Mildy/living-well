@@ -12,15 +12,14 @@ describe('round 20 fix: the seeded past trip', () => {
   for (const roster of [false, true]) {
     const s: ClubState = buildSeed(DEMO_TODAY, DEMO_START_MIN, { roster }).citra;
     const trip = s.calendarEvents['ev-outing-past'];
-    it(`is a few days before the demo day, everyone checked in that day went, one charge each (roster ${roster})`, () => {
-      expect(trip).toMatchObject({ kind: 'outing', title: 'Taman Mini day trip', from: '08:30', to: '15:00', fee: 250_000 });
+    it(`is a few days before the demo day, everyone checked in that day went, no charge per trip (roster ${roster})`, () => {
+      expect(trip).toMatchObject({ kind: 'outing', title: 'Taman Mini day trip', from: '08:30', to: '15:00' });
+      expect('fee' in trip).toBe(false); // round 21: field trips are paid monthly
       expect(trip.date < DEMO_TODAY && trip.date >= '2026-10-14').toBe(true);
       const came = live(s.attendance).filter((a) => a.date === trip.date && a.checkIn).map((a) => a.memberId).sort();
       expect([...(trip.wentIds ?? [])].sort()).toEqual(came);
       expect(came).toContain('m1'); // Opa Budi is one of the few-visits members (round 17 keeps only his last visits), so he may not have come that day
-      const charges = live(s.pendingCharges).filter((c) => c.source?.id === trip.id);
-      expect(charges.map((c) => c.memberId).sort()).toEqual(came);
-      expect(charges.every((c) => !c.invoiceId && c.amount === 250_000)).toBe(true);
+      expect(live(s.pendingCharges).filter((c) => c.source?.id === trip.id)).toEqual([]);
       expect(Object.values(s.photos).some((p) => p.date === trip.date && p.activity === trip.title && p.memberIds.includes('m1'))).toBe(true);
     });
   }

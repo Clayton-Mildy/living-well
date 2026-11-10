@@ -36,7 +36,7 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   const strip = (m: Member): Member => ({ ...m, care: { instructions: '', by: m.care.by, at: m.care.at }, sim: { ...m.sim, script: undefined } });
   // R-T7b: a stub keeps what a photo shows (names, title, portrait) and what the shared rules need to stay safe (membership start and last day, plan and date, review mark); nothing personal of another family (no end reason or note, leave, who changed a plan or the request)
   const stub = (m: Member): Member => ({
-    ...strip(m), dob: null, ageYears: null, address: null, nanny: null, spouseId: null, usualArrival: '' as Member['usualArrival'], registration: undefined, limits: undefined, face: { enrolled: false },
+    ...strip(m), dob: null, ageYears: null, address: null, location: undefined, pickup: undefined, fieldTrips: undefined, nanny: null, spouseId: null, usualArrival: '' as Member['usualArrival'], registration: undefined, limits: undefined, face: { enrolled: false },
     sim: { sys: 0, dia: 0, pulse: 0, spo2: 0, glucose: 0, weight: 0, temp: 0, grip: 0 },
     memberships: m.memberships.map(({ start, lastDay }) => ({ start, ...(lastDay ? { lastDay } : {}) })),
     plans: m.plans.map(({ from, plan }) => ({ from, plan, by: 'system' as const })),
@@ -80,7 +80,9 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   // their own feedback, and feedback the kitchen logged from a phone call whose replies go to them (KC round 6: replies show in the family app)
   out.feedback = pick(live(s.feedback).filter((f) => f.familyId === familyId || (!f.familyId && replyTarget(s, f) === familyId)));
   // round 17: who went on an outing is the family's own members only; the charges still waiting for the next invoice are theirs too
-  out.calendarEvents = pick(live(s.calendarEvents).map((e) => (e.wentIds ? { ...e, wentIds: e.wentIds.filter((id) => mids.includes(id)) } : e)));
+  // round 21: an outing carries its venue's name and address only (the venue itself, with its pictures and contact person, stays staff-side)
+  const venueOf = (id?: string) => { const v = id ? s.directory[id] : undefined; return v && !v.deletedAt ? { name: v.name, address: v.address ?? '' } : undefined; };
+  out.calendarEvents = pick(live(s.calendarEvents).map((e) => { const venue = venueOf(e.venueId); return { ...e, ...(e.wentIds ? { wentIds: e.wentIds.filter((id) => mids.includes(id)) } : {}), ...(venue ? { venue } : {}) }; }));
   out.pendingCharges = pick(mine(live(s.pendingCharges)).filter((c) => !c.invoiceId));
   out.rooms = pick(live(s.rooms));
   out.activities = pick(live(s.activities));
@@ -95,7 +97,8 @@ export function projectForFamily(s: ClubState, familyId: string): ClubState {
   out.menuVersions = pick(live(s.menuVersions).filter((v) => v.status === 'published').map(menuVersionForFamily).filter(present));
   // allergy alternatives: only the family's own members
   out.dayMenus = pick(live(s.dayMenus).map(approvedDayMenu).map((d) => ({ ...d, approval: undefined, allergyPlans: d.allergyPlans.filter((p) => mids.some((id) => p.person === `member:${id}`)) })));
-  out.directory = pick(live(s.directory).filter((d) => d.public));
+  // round 21: a public contact without the staff-only details (the person to ask for, the pin, pictures, ratings)
+  out.directory = pick(live(s.directory).filter((d) => d.public && d.kind !== 'venue').map(({ contactPerson: _cp, location: _l, photoMediaIds: _p, ratings: _r, ...d }) => d));
   out.prices = pick(live(s.prices));
   // the front desk's number is the one staff phone a family gets: "WhatsApp the club" opens a chat with it
   const desk = firstOfRole(s, 'lobby')?.id;

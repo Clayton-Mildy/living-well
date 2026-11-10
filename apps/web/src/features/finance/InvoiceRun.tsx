@@ -33,6 +33,7 @@ export function InvoiceRunSheet({ open, onClose }: { open: boolean; onClose: () 
   const n = plan.issue.length;
   const noPayer = plan.skipped.filter((r) => r.skipped === 'noPayer');
   const nothing = plan.skipped.filter((r) => r.skipped === 'nothingToBill');
+  const owed = plan.skipped.filter((r) => r.skipped === 'refundDue'); // round 21 review: a field trip credit with nothing else to bill
   const issue = async () => {
     const r = await act('run.issue', { period, early: plan.early }, { ok: (res) => t('finance.run.issued', { n: Number(res.count || n) }) });
     if (r.ok) onClose();
@@ -93,6 +94,12 @@ export function InvoiceRunSheet({ open, onClose }: { open: boolean; onClose: () 
         <Note tone="ochre" icon="warning">
           <b style={{ fontWeight: 600 }}>{t('finance.run.noPayer')}</b>{' '}
           {noPayer.map((r) => memberName(r.member)).join(', ')}. {t('finance.run.noPayerHelp')}
+        </Note>
+      ) : null}
+      {owed.length ? (
+        <Note tone="ochre" icon="undo">
+          <b style={{ fontWeight: 600 }}>{t('finance.run.refundDue')}</b>{' '}
+          {owed.map((r) => `${memberName(r.member)} ${rp(-r.total)}`).join(', ')}, {t('finance.run.refundDueHelp')}
         </Note>
       ) : null}
       {nothing.length && !plan.done ? <span style={{ fontSize: FONT_BODY, color: '#5E5852', lineHeight: 1.4 }}>{t('finance.run.nothingFor', { names: nothing.map((r) => memberName(r.member)).join(', ') })}</span> : null}
