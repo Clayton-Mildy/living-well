@@ -237,7 +237,7 @@ export function Arrivals() {
 
   return (
     <>
-      <div className={isPhone ? 'cp-native' : undefined} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : gap }}>
+      <div className={isPhone ? 'cp-native' : 'cp-arr-page'} style={{ padding: padFor(device), display: 'flex', flexDirection: 'column', gap: isPhone ? 14 : gap }}>
         <div style={{ display: 'flex', alignItems: 'flex-end', justifyContent: 'space-between', gap: 16, flexWrap: 'wrap' }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 6, minWidth: 0, ...(isPhone ? { flex: '1 1 100%' } : {}) }}>
             {/* phone: the time sits in the eyebrow (the big clock is for wider screens) */}

@@ -92,8 +92,8 @@ export function MemberList({ t, title, rows, total, query, onQuery, empty, noMat
     );
   }
   return (
-    <section aria-label={title} data-list={listId} className="cp-grey" style={{ '--hp': 'clamp(18px, 3vw, 36px)', background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '8px var(--hp) 12px', minWidth: 0 } as React.CSSProperties}>
-      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 0 10px' }}>
+    <section aria-label={title} data-list={listId} className="cp-grey cp-mlist" style={{ '--hp': 'clamp(18px, 3vw, 36px)', background: 'var(--fill, #F4F4F5)', borderRadius: 20, padding: '8px var(--hp) 12px', minWidth: 0 } as React.CSSProperties}>
+      <div className="cp-mlist-head" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12, padding: '14px 0 10px' }}>
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 10, minWidth: 0 }}>
           <h2 style={{ margin: 0, fontSize: 12, lineHeight: '18px', letterSpacing: '2px', textTransform: 'uppercase', fontWeight: 500, color: 'var(--eyebrow, #6E5A43)', minWidth: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', flex: '1 1 auto' }}>{title}</h2>
           {/* the count of the whole list; it is shown only while searching ("3 of 20"), the tab above already carries the number */}
