@@ -1,0 +1,79 @@
+/* Living Well preview skin (design review, 10 Nov): the colours and fonts of livingwellcommunities.com.au on the current layout. Nothing moves:
+   only colours and type change. On with ?skin=lw (remembered in this browser), off with ?skin=off; <html data-lw="1"> while on.
+   Fonts: page, section and sheet titles (h1, h2, the staff serif) in Epilogue 600, body text Inter as before (Light where no weight is set), small capitals tracked +1.5 px.
+   Colours: the cool greys become the site's warm mist and linen, ink and espresso become charcoal #282828, gold becomes sand #CAB8A2.
+   Inline colours are matched by their computed rgb() in the style attribute (React writes hex as rgb). */
+
+/* ---------- tokens (both apps) ---------- */
+html[data-lw] {
+  --cream: #F4F0EE; --fill: #F4F0EE; --press: #ECE6E1; --track: #E8E1D8; --cell: #F4F0EE; --inset: #F8F6F4;
+  --border: #E8E1D8; --hairline: #E8E1D8; --card-bd: #E8E1D8; --row-line: #E8E1D8; --field-bd: #DBD7D6; --outline: #DBD7D6;
+  --ink: #282828; --ink-deep: #282828; --bronze-head: #282828; --slate: #6A6967; --group-head: #6A6967; --eyebrow: #75624B; --accent: #75624B;
+}
+html[data-lw] body { font-weight: 300; color: #282828; }
+
+/* ---------- type ---------- */
+html[data-lw] h1 { font-family: Epilogue, Inter, system-ui, sans-serif !important; font-weight: 600 !important; letter-spacing: -1px !important; }
+html[data-lw] h2:not([style*="text-transform: uppercase"]), html[data-lw] .cp-serif { font-family: Epilogue, Inter, system-ui, sans-serif !important; font-weight: 600 !important; letter-spacing: -0.4px !important; }
+html[data-lw] h2[style*="text-transform: uppercase"] { letter-spacing: 1.5px !important; font-weight: 500 !important; }
+html[data-lw] [style*="Cormorant"] { font-family: Epilogue, Inter, sans-serif !important; font-weight: 600 !important; }
+
+/* ---------- inline colours: fills ---------- */
+html[data-lw] [style*="background: rgb(244, 244, 245)"], html[data-lw] [style*="background-color: rgb(244, 244, 245)"] { background-color: #F4F0EE !important; }
+html[data-lw] [style*="background: rgb(247, 247, 248)"], html[data-lw] [style*="background-color: rgb(247, 247, 248)"] { background-color: #F7F4F2 !important; }
+html[data-lw] [style*="background: rgb(238, 238, 240)"], html[data-lw] [style*="background-color: rgb(238, 238, 240)"] { background-color: #ECE6E1 !important; }
+html[data-lw] [style*="background: rgb(232, 232, 235)"], html[data-lw] [style*="background-color: rgb(232, 232, 235)"] { background-color: #E8E1D8 !important; }
+html[data-lw] [style*="background: rgb(43, 35, 28)"], html[data-lw] [style*="background-color: rgb(43, 35, 28)"],
+html[data-lw] [style*="background: rgb(36, 32, 28)"], html[data-lw] [style*="background-color: rgb(36, 32, 28)"],
+html[data-lw] [style*="background: rgb(34, 27, 21)"], html[data-lw] [style*="background-color: rgb(34, 27, 21)"] { background-color: #282828 !important; }
+html[data-lw] [style*="background: rgb(30, 26, 22)"], html[data-lw] [style*="background-color: rgb(30, 26, 22)"] { background-color: #222222 !important; }
+
+/* ---------- inline colours: lines ---------- */
+html[data-lw] [style*="solid rgb(226, 226, 230)"], html[data-lw] [style*="solid rgb(232, 232, 235)"] { border-color: #E8E1D8 !important; }
+html[data-lw] [style*="solid rgb(224, 224, 228)"], html[data-lw] [style*="solid rgb(212, 212, 216)"] { border-color: #DBD7D6 !important; }
+
+/* ---------- inline colours: text ---------- */
+html[data-lw] [style^="color: rgb(36, 32, 28)"], html[data-lw] [style*=" color: rgb(36, 32, 28)"],
+html[data-lw] [style^="color: rgb(43, 35, 28)"], html[data-lw] [style*=" color: rgb(43, 35, 28)"] { color: #282828 !important; }
+html[data-lw] [style^="color: rgb(107, 98, 89)"], html[data-lw] [style*=" color: rgb(107, 98, 89)"],
+html[data-lw] [style^="color: rgb(94, 88, 82)"], html[data-lw] [style*=" color: rgb(94, 88, 82)"] { color: #6A6967 !important; }
+html[data-lw] [style^="color: rgb(74, 64, 56)"], html[data-lw] [style*=" color: rgb(74, 64, 56)"] { color: #4A4846 !important; }
+
+/* ---------- staff (the warm skin's cream and espresso become mist and charcoal) ---------- */
+html[data-lw][data-skin="warm"] {
+  --page: #F4F0EE; --cream: #F4F0EE; --fill: #F4F0EE; --press: #ECE6E1; --track: #ECE6E1; --inset: #F8F6F4; --on-card: #F4F0EE; --cell: #FFFFFF; --cell-bd: #E8E1D8;
+  --border: #E8E1D8; --hairline: #E8E1D8; --card-bd: #E8E1D8; --row-line: #E8E1D8; --field-bd: #DBD7D6; --outline: #DBD7D6;
+  --eyebrow: #75624B; --group-head: #75624B; --accent: #75624B; --ink-deep: #282828; --bronze-head: #282828;
+}
+html[data-lw][data-skin="warm"] a { color: #75624B; }
+html[data-lw][data-skin="warm"] .cp-grey { background-color: #FFFFFF !important; box-shadow: 0 0 0 1px #E8E1D8, 0 1px 2px rgba(40, 40, 40, .04), 0 12px 30px rgba(40, 40, 40, .04); }
+html[data-lw][data-skin="warm"] .cp-grey .cp-grey { background-color: #F8F6F4 !important; box-shadow: inset 0 0 0 1px #E8E1D8; }
+html[data-lw][data-skin="warm"] .cp-fill,
+html[data-lw][data-skin="warm"] .cp-grey .cp-fill,
+html[data-lw][data-skin="warm"] .cp-grey .cp-grey .cp-fill { background-color: #FFFFFF !important; box-shadow: 0 0 0 1px #DBD7D6, 0 1px 2px rgba(40, 40, 40, .05); }
+html[data-lw][data-skin="warm"] .cp-fill[aria-disabled="true"], html[data-lw][data-skin="warm"] .cp-fill:disabled { background-color: #F4F0EE !important; box-shadow: 0 0 0 1px #E8E1D8; }
+html[data-lw][data-skin="warm"] .cp-fill:hover,
+html[data-lw][data-skin="warm"] .cp-grey .cp-fill:hover,
+html[data-lw][data-skin="warm"] .cp-grey .cp-grey .cp-fill:hover,
+html[data-lw][data-skin="warm"] .h-cream:hover, html[data-lw][data-skin="warm"] .h-fill:hover,
+html[data-lw][data-skin="warm"] .h-row:hover { background-color: #F8F6F4 !important; }
+html[data-lw][data-skin="warm"] .cp-input.cp-fill:hover:not(:disabled):not([aria-disabled="true"]), html[data-lw][data-skin="warm"] .cp-input-wrap.cp-fill:hover:not(:disabled):not([aria-disabled="true"]) { background-color: #FFFFFF !important; }
+html[data-lw][data-skin="warm"] button[style*="background: var(--fill"], html[data-lw][data-skin="warm"] button[style*="background-color: var(--fill"],
+html[data-lw][data-skin="warm"] a[style*="background: var(--fill"] { background-color: #FFFFFF !important; box-shadow: 0 0 0 1px #DBD7D6, 0 1px 2px rgba(40, 40, 40, .05); }
+html[data-lw][data-skin="warm"] .cp-bleed:hover::before { background: #F4F0EE; }
+html[data-lw][data-skin="warm"] .cp-tap:has(> .cp-tap-target:active), html[data-lw][data-skin="warm"] .cp-tap-self:active { background-color: #ECE6E1 !important; }
+html[data-lw][data-skin="warm"] #main h1 { font-family: Epilogue, Inter, system-ui, sans-serif !important; font-weight: 600 !important; letter-spacing: -1px !important; color: #282828 !important; }
+@media (max-width: 767.98px) { html[data-lw][data-skin="warm"] #main h1 { font-size: 32px !important; line-height: 1.08 !important; letter-spacing: -0.8px !important; } }
+html[data-lw][data-skin="warm"] .cp-serif { font-family: Epilogue, Inter, system-ui, sans-serif !important; font-weight: 600 !important; letter-spacing: -0.4px !important; color: #282828 !important; }
+html[data-lw][data-skin="warm"] .cp-serif-up { font-size: 21px !important; line-height: 28px !important; }
+
+/* the dark staff sidebar: espresso → charcoal, gold → sand */
+html[data-lw] [style*="background: rgb(53, 43, 34)"] { background-color: #3A3938 !important; }
+html[data-lw] [style*="background: rgb(46, 37, 29)"] { background-color: #333232 !important; }
+html[data-lw] [style*="background: rgb(58, 48, 39)"] { background-color: #444241 !important; }
+html[data-lw] [style*="solid rgb(58, 48, 39)"] { border-color: #444241 !important; }
+html[data-lw] [style^="color: rgb(207, 195, 180)"], html[data-lw] [style*=" color: rgb(207, 195, 180)"] { color: #D8D3CF !important; }
+html[data-lw] [style^="color: rgb(237, 228, 216)"], html[data-lw] [style*=" color: rgb(237, 228, 216)"] { color: #EEEAE6 !important; }
+html[data-lw] [style^="color: rgb(156, 142, 126)"], html[data-lw] [style*=" color: rgb(156, 142, 126)"] { color: #A39A93 !important; }
+html[data-lw] [style^="color: rgb(210, 185, 143)"], html[data-lw] [style*=" color: rgb(210, 185, 143)"] { color: #CAB8A2 !important; }
+@media (hover: hover) { html[data-lw] .cp-side-dark:hover { background-color: #3A3938 !important; } }
