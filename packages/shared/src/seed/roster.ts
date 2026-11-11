@@ -13,6 +13,7 @@ import { flexQuota } from '../rules/attendance';
 import { isDaysPlan } from '../rules/plans';
 import { dueDateFor, invoiceTotal, runLinesFor } from '../rules/billing';
 import { evaluateReading } from '../rules/health';
+import { tripIn, tripOut } from './tripToday';
 
 const FIRST_NO = 51; // m51 … m90 (idx 50 … 89: the digits keep invoice numbers and virtual accounts apart from m1 … m46)
 const VA = (i: number) => '8808' + String(1203440000 + i * 7919).padStart(12, '0');
@@ -123,7 +124,7 @@ const DAY_WEIGHT: Record<number, number> = { 1: 1, 2: 1.25, 3: 1, 4: 1.25, 5: 0.
  * Adds m51 … m90 with their family, visits, readings, logs and invoices to a Citra state that already has the 5 hand-made members.
  * Returns each member's usual weekdays (Mon = 1 … Fri = 5, in the order they were drawn) so history.ts can continue the same pattern further back.
  */
-export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<string, number[]> {
+export function addRoster(s: ClubState, T: ISODate, nowMin: number, trip = false): Record<string, number[]> {
   const C = s.clubId;
   const done = (hm: string) => toMin(hm) <= nowMin;
   const base = (id: string, createdAt: string, createdBy: Actor = 'staff:s1'): Row => ({ id, clubId: C, createdAt, createdBy });
@@ -368,10 +369,11 @@ export function addRoster(s: ClubState, T: ISODate, nowMin: number): Record<stri
 
   // ----- today: arrivals appear once their time has passed -----
   ROWS.forEach((row, i) => {
-    const inAt = TODAY_IN[i];
+    const inAt = TODAY_IN[i] && (trip ? tripIn(TODAY_IN[i]) : TODAY_IN[i]); // the field trip day: before the bus (seed/tripToday.ts)
     const mid = id(i);
     if (!inAt || !done(inAt) || !activeOn(s.members[mid], T)) return;
-    const outAt = TODAY_OUT[i] ?? toHM(15 * 60 + 35 + ((i * 11) % 51));
+    const clubOut = TODAY_OUT[i] ?? toHM(15 * 60 + 35 + ((i * 11) % 51));
+    const outAt = trip ? tripOut(clubOut) : clubOut;
     const gone = done(outAt);
     put('attendance', attRow(T, mid, inAt, gone ? outAt : undefined));
     const nm = `${row[0]} ${row[1]}`;

@@ -46,6 +46,7 @@ import { plans } from './plans';
 import { email } from './email';
 import { terms } from './terms';
 import { geo } from './geo';
+import { pwa } from './pwa';
 
 export const id = {
   ...ns('common', common),
@@ -105,4 +106,5 @@ export const id = {
   ...ns('email', email),
   ...ns('terms', terms),
   ...ns('geo', geo),
+  ...ns('pwa', pwa),
 };

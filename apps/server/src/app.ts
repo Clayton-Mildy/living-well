@@ -8,7 +8,7 @@ import { serveStatic } from '@hono/node-server/serve-static';
 import { existsSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join, relative } from 'node:path';
-import { DomainError, projectForFamily, canAccessClub, live } from '@cp/shared';
+import { DomainError, projectForFamily, canAccessClub, live, toMin } from '@cp/shared';
 import { getClub, getClubs, runAction, subscribe, resetDemo, broadcastAll, runJobsNow } from './state';
 import { notaSvg } from './nota';
 import { notaMediaId } from '@cp/shared/seed/demoMedia';
@@ -162,7 +162,13 @@ app.get('/api/demo/accounts', (c) => {
   }).filter(Boolean);
   return c.json({ accounts, demoLogin });
 });
-app.post('/api/demo/reset', async (c) => { await resetDemo(); return c.json({ ok: true, clock: clockInfo() }); });
+// the demo tools: { hm } rebuilds today as it was at that time (the clock runs on from there), { trip } as the field trip day; neither = now, a club day
+app.post('/api/demo/reset', async (c) => {
+  const { hm, trip } = await c.req.json<{ hm?: string; trip?: boolean }>().catch(() => ({}) as { hm?: string; trip?: boolean });
+  if (hm !== undefined && !/^([01]\d|2[0-3]):[0-5]\d$/.test(hm)) return c.json({ code: 'err.invalid' }, 400);
+  await resetDemo({ ...(hm ? { startMin: toMin(hm) } : {}), trip: !!trip });
+  return c.json({ ok: true, clock: clockInfo() });
+});
 app.post('/api/demo/clock', async (c) => {
   const { hm, allowBack, date } = await c.req.json<{ hm: string; allowBack?: boolean; date?: string }>();
   const clock = await setClock(hm, !!allowBack, date);

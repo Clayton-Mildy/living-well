@@ -9,6 +9,7 @@ import 'material-symbols/rounded.css';
 import './styles/global.css';
 import './styles/pseudo.css';
 import './styles/living-well.css';
+import './lib/install'; // captures the install prompt before React mounts
 import { App } from './app/App';
 import { reloadForNewVersion } from './app/RouteError';
 
@@ -22,3 +23,8 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
     <App />
   </React.StrictMode>,
 );
+
+// offline page only (see public/sw.js); never under automation, so the e2e suite gets no service worker
+if ('serviceWorker' in navigator && window.isSecureContext && !navigator.webdriver) {
+  window.addEventListener('load', () => { navigator.serviceWorker.register('/sw.js').catch(() => {}); });
+}

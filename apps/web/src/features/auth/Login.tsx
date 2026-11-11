@@ -8,6 +8,7 @@ import { useSession, signInDemo, type PublicUser } from '../../store/session';
 import { Icon, Logo } from '../../components/ui';
 import { useDemoAccounts } from '../../shell/demoAccounts';
 import { DEFAULT_PASSWORD, hasKey, initials } from '@cp/shared';
+import { InstallAppLink } from '../../shell/InstallApp';
 import { PasswordField } from './PasswordField';
 
 const label: CSSProperties = { fontSize: 14, fontWeight: 600, lineHeight: 1.4 };
@@ -79,6 +80,7 @@ export function Login() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, fontSize: 14, color: '#5E5852', lineHeight: 1.4 }}>
             <span>{t('login.forgot')}</span>
             <span>{t('login.demoHint', { pw: DEFAULT_PASSWORD })}</span>
+            <InstallAppLink />
           </div>
         </form>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>

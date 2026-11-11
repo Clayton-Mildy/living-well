@@ -148,13 +148,17 @@ export async function stampCountersigned(clubId: string): Promise<number> {
 }
 
 let resetting: Promise<void> | null = null;
-/** Re-seed every clubhouse. One reset at a time: if two people press Reset together, the second shares the first. */
-export function resetDemo(): Promise<void> {
+/**
+ * Re-seed every clubhouse. One reset at a time: if two people press Reset together, the second shares the first.
+ * The demo tools can rebuild the day as it was at a chosen minute (`startMin`; the seed holds what had happened by then) and as the field trip day (`trip`).
+ */
+export function resetDemo(opts: { startMin?: number; trip?: boolean } = {}): Promise<void> {
   resetting ??= (async () => {
     try {
-      await replaceAll(buildSeed(demoDate(), demoNowMin(), { roster: process.env.CP_SEED_SMALL !== '1' }));
+      const startMin = opts.startMin ?? demoNowMin();
+      await replaceAll(buildSeed(demoDate(), startMin, { roster: process.env.CP_SEED_SMALL !== '1', trip: !!opts.trip }));
       clubs = await loadAll();
-      const clock = await resetClock();
+      const clock = await resetClock(opts);
       broadcastAll({ type: 'reset' });
       broadcastAll({ type: 'clock', clock });
     } finally {

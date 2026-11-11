@@ -11,6 +11,7 @@ import { addDays, e164, live, toMin } from '../../util';
 import { displayName, isOpen } from '../../rules/core';
 import { dueDateFor, nextInvoiceNumber, runLinesFor } from '../../rules/billing';
 import { invoiceVa } from '../../rules/finance';
+import { tripIn } from '../tripToday';
 
 export const SRI = 'm_sri';
 export const RATNA = 'f_ratna';
@@ -28,7 +29,8 @@ function openDaysBefore(s: ClubState, T: ISODate, n: number): ISODate {
   return d;
 }
 
-export function seedRound18(s: ClubState, T: ISODate, nowMin: number): void {
+export function seedRound18(s: ClubState, T: ISODate, nowMin: number, trip = false): void {
+  const checkIn = trip ? tripIn(CHECK_IN) : CHECK_IN; // the field trip day: before the bus (seed/tripToday.ts)
   if (!s.members.m51) return; // the roster only
   if (Object.values(s.familyContacts).some((c) => c.username === 'ratna')) return; // never take someone else's sign-in name
   const C = s.clubId;
@@ -87,10 +89,10 @@ export function seedRound18(s: ClubState, T: ISODate, nowMin: number): void {
   };
 
   // one visit so far: today (the front desk checked her in by name, no face enrolled yet)
-  if (toMin(CHECK_IN) <= nowMin) {
+  if (toMin(checkIn) <= nowMin) {
     s.attendance[`${T}:${SRI}`] = {
-      id: `${T}:${SRI}`, clubId: C, createdAt: `${T}T${CHECK_IN}`, createdBy: 'staff:s1', memberId: SRI, date: T,
-      checkIn: { at: CHECK_IN, by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [{ at: `${T}T${CHECK_IN}`, by: 'staff:s1', what: 'checkIn' }],
+      id: `${T}:${SRI}`, clubId: C, createdAt: `${T}T${checkIn}`, createdBy: 'staff:s1', memberId: SRI, date: T,
+      checkIn: { at: checkIn, by: 'staff:s1', method: 'manual' }, queueAdds: [], dismissed: [], edits: [{ at: `${T}T${checkIn}`, by: 'staff:s1', what: 'checkIn' }],
     };
   }
 

@@ -120,7 +120,13 @@ export const demo = {
   's9.title': 'November invoice, paid by virtual account', 's9.sub': 'Finance issues November’s invoices early, with today’s extra day. Maria pays by DOKU virtual account; it syncs to Xero.', 's9.run': 'Issue and pay', 's9.alt': 'Show the finance board',
   's10.title': 'Management’s live board', 's10.sub': 'Ega starts on Arrivals: who is in the club right now, with Reviews and the bell showing what waits for her.', 's10.run': 'Open Arrivals',
   's11.title': 'Set the extra-day price', 's11.sub': 'The brochure’s prices are in. Only the extra-day price is still marked as a sample. Ega sets the real price; it applies from the next invoice run.', 's11.run': 'Open plans and pricing',
-  reset: 'Reset demo data', resetDone: 'Demo data reset to 09:58.', resetConfirm: 'Reset every change made in this demo? Everyone using the app sees the reset.', designSystem: 'Design system', clock: 'Club clock',
+  reset: 'Reset demo data', resetDone: 'Demo data reset to now.',
+  time: 'Demo time', live: 'Live', custom: 'Custom', tripBadge: 'Field trip', normalDay: 'Normal day', tripDay: 'Field trip day', setTime: 'Set time',
+  backToNow: 'Back to now ({time})', backToNowShort: 'Back to now', setTitle: 'Set demo time to {time}?', tripTitle: 'Field trip day at {time}?',
+  setBody: 'Today’s demo data is rebuilt as it was at {time}. Changes made in the demo are lost. Every signed-in device moves too.',
+  tripBody: 'Today becomes the Kebun Raya Bogor trip (08:30–15:00), as it was at {time}. Changes made in the demo are lost. Every signed-in device moves too.',
+  nowTitle: 'Back to now?', nowBody: 'Today’s demo data is rebuilt as it is now ({time}), as a normal club day. Changes made in the demo are lost.',
+  timeSetDone: 'Demo time set to {time}.', nowDone: 'The demo is back to now.', resetConfirm: 'Reset every change made in this demo? Everyone using the app sees the reset.', designSystem: 'Design system', clock: 'Club clock',
 };
 export const inv = {
   'line.plan': '{plan} plan · {month}', 'line.flex': 'Flex plan · {month}', 'line.gold': 'Gold plan · {month}', 'line.extra': 'Extra days · {month} ({n})', 'line.credit': 'Account credit', 'line.venue': 'Venue booking', 'line.leave': 'Leave (cuti) · {month}', 'line.registration': 'Registration fee', 'line.celebration': '{item} · {title}', 'line.pickupKm': 'Pick-up · {km} km', 'line.pickup': 'Pick-up', 'line.dementia': 'Dementia care', 'line.birthday': 'Birthday · {item}', 'line.fieldTrips': 'Field trips · {month}', 'line.tripCredit': 'Field trip not joined · {month}', 'line.fieldTrip': 'Field trip · {title} · {date}',

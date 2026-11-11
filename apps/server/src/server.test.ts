@@ -820,3 +820,18 @@ describe('signing: the e-Meterai stamp sweep (simulated provider)', () => {
     try { expect(() => stampProvider()).toThrow(); } finally { if (prev === undefined) delete process.env.CP_STAMP_PROVIDER; else process.env.CP_STAMP_PROVIDER = prev; }
   });
 });
+
+describe('demo tools: set the demo time (KC, 11 Nov 2026)', () => {
+  it('rebuilds today as it was at a set time, on a club day or the field trip day, and back to now', async () => {
+    expect((await app.request('/api/demo/reset', json({ hm: '25:00' }))).status).toBe(400);
+    const set = await j(await app.request('/api/demo/reset', json({ hm: '09:30', trip: true })));
+    expect(set.clock).toMatchObject({ startMin: 570, custom: true, trip: true });
+    expect(state.getClub('citra')!.calendarEvents['ev-outing-1029'].date).toBe(set.clock.today);
+    expect(await j(await app.request('/api/clock'))).toMatchObject({ custom: true, trip: true });
+    const club = await j(await app.request('/api/demo/reset', json({ hm: '15:00' })));
+    expect(club.clock).toMatchObject({ startMin: 900, custom: true, trip: false });
+    expect(state.getClub('citra')!.calendarEvents['ev-outing-1029'].date).not.toBe(club.clock.today);
+    const back = await j(await app.request('/api/demo/reset', json({})));
+    expect(back.clock).toMatchObject({ custom: false, trip: false });
+  }, 60_000);
+});

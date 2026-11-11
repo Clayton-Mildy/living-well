@@ -46,6 +46,7 @@ import { plans } from './plans';
 import { email } from './email';
 import { terms } from './terms';
 import { geo } from './geo';
+import { pwa } from './pwa';
 
 export const en = {
   ...ns('common', common),
@@ -105,5 +106,6 @@ export const en = {
   ...ns('email', email),
   ...ns('terms', terms),
   ...ns('geo', geo),
+  ...ns('pwa', pwa),
 };
 export const EN_NS = { common, status, nav, roles, login, shell, notif, feed, err, review, demo, inv, lobby, health, family, members, profile, activity, kitchen, finance, mgmt, enq, form, cal, requests, reviews, approvals, people, ds, renewals, tasks, guests, insights, report, drafts, mood, checkOn, reg, celeb, occasions, occ, fam, ftoday, fphotos, fcal, fhealth, fme, month, unpaid, care, purchasing, search, sign, plans, terms };

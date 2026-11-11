@@ -116,7 +116,13 @@ export const demo: Same<typeof EN.demo> = {
   's9.title': 'Tagihan November, dibayar via virtual account', 's9.sub': 'Keuangan menerbitkan tagihan November lebih awal, termasuk hari tambahan hari ini. Maria membayar lewat virtual account DOKU; tersinkron ke Xero.', 's9.run': 'Terbitkan dan bayar', 's9.alt': 'Tampilkan papan keuangan',
   's10.title': 'Papan langsung manajemen', 's10.sub': 'Ega mulai di Kedatangan: siapa yang ada di klub sekarang, dengan Tinjauan dan lonceng yang menunjukkan apa yang menunggunya.', 's10.run': 'Buka Kedatangan',
   's11.title': 'Atur harga hari tambahan', 's11.sub': 'Harga dari brosur sudah masuk. Hanya harga hari tambahan yang masih contoh. Ega mengatur harga yang sebenarnya; berlaku mulai penerbitan tagihan berikutnya.', 's11.run': 'Buka paket dan harga',
-  reset: 'Atur ulang data demo', resetDone: 'Data demo diatur ulang ke 09.58.', resetConfirm: 'Atur ulang semua perubahan di demo ini? Semua pengguna aplikasi ikut melihat pengaturan ulang.', designSystem: 'Sistem desain', clock: 'Jam klub',
+  reset: 'Atur ulang data demo', resetDone: 'Data demo diatur ulang ke waktu sekarang.',
+  time: 'Waktu demo', live: 'Langsung', custom: 'Diatur', tripBadge: 'Karyawisata', normalDay: 'Hari biasa', tripDay: 'Hari karyawisata', setTime: 'Atur waktu',
+  backToNow: 'Kembali ke sekarang ({time})', backToNowShort: 'Kembali ke sekarang', setTitle: 'Atur waktu demo ke {time}?', tripTitle: 'Hari karyawisata pukul {time}?',
+  setBody: 'Data demo hari ini dibuat ulang seperti pada pukul {time}. Perubahan selama demo akan hilang. Semua perangkat yang masuk ikut berubah.',
+  tripBody: 'Hari ini menjadi karyawisata ke Kebun Raya Bogor (08.30–15.00), seperti pada pukul {time}. Perubahan selama demo akan hilang. Semua perangkat yang masuk ikut berubah.',
+  nowTitle: 'Kembali ke sekarang?', nowBody: 'Data demo hari ini dibuat ulang seperti sekarang ({time}), sebagai hari klub biasa. Perubahan selama demo akan hilang.',
+  timeSetDone: 'Waktu demo diatur ke {time}.', nowDone: 'Demo kembali ke waktu sekarang.', resetConfirm: 'Atur ulang semua perubahan di demo ini? Semua pengguna aplikasi ikut melihat pengaturan ulang.', designSystem: 'Sistem desain', clock: 'Jam klub',
 };
 export const inv: Same<typeof EN.inv> = {
   'line.plan': 'Paket {planId} · {month}', 'line.flex': 'Paket Flex · {month}', 'line.gold': 'Paket Gold · {month}', 'line.extra': 'Hari tambahan · {month} ({n})', 'line.credit': 'Saldo akun', 'line.venue': 'Sewa venue', 'line.leave': 'Cuti · {month}', 'line.celebration': '{item} · {title}', 'line.pickupKm': 'Antar jemput · {km} km', 'line.pickup': 'Antar-jemput', 'line.dementia': 'Perawatan demensia', 'line.birthday': 'Ulang tahun · {item}', 'line.fieldTrips': 'Karyawisata · {month}', 'line.tripCredit': 'Karyawisata tidak ikut · {month}', 'line.fieldTrip': 'Karyawisata · {title} · {date}', 'line.registration': 'Biaya pendaftaran',

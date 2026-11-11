@@ -1,10 +1,12 @@
-// Floating "Demo" pill (design: real-phone mode "Demo" button) -> guided demo, switch account, reset.
+// Floating "Demo" pill (design: real-phone mode "Demo" button) -> demo time (now, a set time, the field trip day), install, switch account, reset.
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Button, Dialog, Drawer, Icon, Pager, Sheet, SectionLabel, Avatar, usePaged, FONT_BODY } from '../components/ui';
+import { Button, Dialog, Drawer, Icon, Pager, Sheet, SectionLabel, Segmented, TimeField, Avatar, usePaged, FONT_BODY } from '../components/ui';
+import { demoNowMinFor, toHM } from '@cp/shared';
 import { useT, useFmt } from '../lib/i18n';
 import { useNow } from '../lib/clock';
-import { useClub } from '../store/replica';
+import { useClub, useReplica } from '../store/replica';
+import { InstallAppRow } from './InstallApp';
 import { useSession, signInDemo } from '../store/session';
 import { api } from '../lib/api';
 import { memberPhoto } from '../lib/media';
@@ -31,6 +33,58 @@ export function DemoPill({ phone, top }: { phone: boolean; /** phone: top right 
   );
 }
 
+/**
+ * KC (11 Nov 2026): the team presents in the afternoon but wants to show the morning, and a field trip day. Setting a time rebuilds today's demo as it was
+ * then (the seed holds what had happened by that minute), on a club day or the Kebun Raya Bogor trip day, and the shared clock runs on from there on every device.
+ * "Back to now" rebuilds it at the real time as a club day. Both wipe the demo's changes, so each asks first.
+ */
+function DemoTime({ onDone }: { onDone: () => void }) {
+  const t = useT();
+  const { fd } = useFmt();
+  const { now, today } = useNow();
+  const clock = useReplica((x) => x.clock);
+  const custom = !!clock?.custom, trip = !!clock?.trip;
+  const [day, setDay] = useState<'club' | 'trip'>(trip ? 'trip' : 'club');
+  const [hm, setHm] = useState('09:30');
+  const [ask, setAsk] = useState<null | 'set' | 'now'>(null);
+  const [busy, setBusy] = useState(false);
+  const realNow = toHM(demoNowMinFor(new Date(Date.now() + (clock?.offset || 0))));
+  const go = async () => {
+    if (busy || !ask) return;
+    setBusy(true);
+    try {
+      await api('/api/demo/reset', { body: ask === 'now' ? {} : { hm, trip: day === 'trip' } });
+      say(ask === 'now' ? t('demo.nowDone') : t('demo.timeSetDone', { time: hm }));
+      setAsk(null);
+      onDone();
+    } catch { say(t('err.network'), { tone: 'error', icon: 'error' }); } finally { setBusy(false); }
+  };
+  const badge = trip ? { icon: 'directions_bus', text: t('demo.tripBadge'), dot: '' } : custom ? { icon: '', text: t('demo.custom'), dot: 'var(--accent, #75624B)' } : { icon: '', text: t('demo.live'), dot: '#3D6B4F' };
+  return (
+    <div data-testid="demo-time" style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+      <SectionLabel>{t('demo.time')}</SectionLabel>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: FONT_BODY, color: '#5E5852', minWidth: 0 }}>
+        <Icon name="schedule" size={18} />
+        <span style={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}><strong data-testid="demo-now" style={{ color: '#24201C', fontVariantNumeric: 'tabular-nums' }}>{now}</strong> · {fd(today, { weekday: 'short', day: 'numeric', month: 'short' }).replace(/,/g, '')}</span>
+        <span data-testid="demo-mode" style={{ marginLeft: 'auto', flex: 'none', display: 'inline-flex', alignItems: 'center', gap: 5, height: 24, padding: '0 9px', borderRadius: 999, background: 'var(--fill, #F4F4F5)', color: '#24201C', fontSize: 13, fontWeight: 500 }}>
+          {badge.icon ? <Icon name={badge.icon} size={15} /> : <span aria-hidden="true" style={{ width: 7, height: 7, borderRadius: 999, background: badge.dot }} />}{badge.text}
+        </span>
+      </div>
+      <Segmented cols={2} label={t('demo.time')} value={day} onChange={setDay} items={[{ value: 'club', label: t('demo.normalDay') }, { value: 'trip', label: t('demo.tripDay') }]} />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div style={{ flex: 1, minWidth: 0 }}><TimeField ariaLabel={t('demo.time')} value={hm} onChange={setHm} min="06:00" max="18:00" step={5} /></div>
+        <Button size={44} onClick={() => setAsk('set')}>{t('demo.setTime')}</Button>
+      </div>
+      {custom || trip ? <Button size={44} variant="secondary" icon="update" full onClick={() => setAsk('now')}>{t('demo.backToNow', { time: realNow })}</Button> : null}
+      <Dialog open={!!ask} onClose={() => { if (!busy) setAsk(null); }} maxWidth={480}
+        title={ask === 'now' ? t('demo.nowTitle') : day === 'trip' ? t('demo.tripTitle', { time: hm }) : t('demo.setTitle', { time: hm })}
+        footer={<><Button variant="secondary" disabled={busy} onClick={() => setAsk(null)}>{t('common.cancel')}</Button><Button disabled={busy} onClick={() => void go()}>{ask === 'now' ? t('demo.backToNowShort') : t('demo.setTime')}</Button></>}>
+        <div style={{ fontSize: 16, lineHeight: '24px' }}>{ask === 'now' ? t('demo.nowBody', { time: realNow }) : day === 'trip' ? t('demo.tripBody', { time: hm }) : t('demo.setBody', { time: hm })}</div>
+      </Dialog>
+    </div>
+  );
+}
+
 export function useSignInAs() {
   return async (userId: string) => { await signInDemo(userId); };
 }
@@ -39,8 +93,6 @@ function DemoPanel({ open, onClose, phone }: { open: boolean; onClose: () => voi
   const t = useT();
   const navigate = useNavigate();
   const s = useClub();
-  const { now, today } = useNow();
-  const { fd } = useFmt();
   const accounts = useDemoAccounts();
   const pagedAccounts = usePaged(accounts, 6);
   const signInAs = useSignInAs();
@@ -55,7 +107,8 @@ function DemoPanel({ open, onClose, phone }: { open: boolean; onClose: () => voi
   const done = DEMO_STEPS.filter((st) => s && st.done(s)).length;
   const body = (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: FONT_BODY, color: '#5E5852' }}><Icon name="schedule" size={18} />{t('demo.clock')}: <strong style={{ color: '#24201C', fontVariantNumeric: 'tabular-nums' }}>{now}</strong> · {fd(today, { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' }).replace(/,/g, '')}</div>
+      <DemoTime onDone={onClose} />
+      <InstallAppRow onDone={onClose} />
       {SHOW_GUIDED && DEMO_STEPS.length ? (
         <>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

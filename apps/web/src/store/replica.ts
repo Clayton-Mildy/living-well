@@ -4,7 +4,8 @@ import { applyPatches } from 'immer';
 import { execute, getUser, DomainError, type ClubState, type Patch, type User } from '@cp/shared';
 import { api, apiToken, ApiError } from '../lib/api';
 
-export interface ClockAnchor { today: string; startMin: number; realStart: number; offset: number }
+/** `custom`: the demo tools set the time; `trip`: today was rebuilt as the field trip day (both shown in the demo tools) */
+export interface ClockAnchor { today: string; startMin: number; realStart: number; offset: number; custom?: boolean; trip?: boolean }
 interface Pending { mutationId: string; name: string; input: unknown }
 interface ReplicaState {
   club: string | null;
@@ -53,9 +54,9 @@ export const useReplica = create<ReplicaState>((set, get) => {
   const snapshot = async () => {
     const { club, userId } = get();
     if (!club || !userId) return;
-    const r = await api<{ rev: number; state: ClubState; clock: { today: string; startMin: number; realStart: number }; serverTime: number; self?: User }>(`/api/snapshot?club=${club}`);
+    const r = await api<{ rev: number; state: ClubState; clock: { today: string; startMin: number; realStart: number; custom?: boolean; trip?: boolean }; serverTime: number; self?: User }>(`/api/snapshot?club=${club}`);
     const offset = r.serverTime - Date.now();
-    set({ clock: { today: r.clock.today, startMin: r.clock.startMin, realStart: r.clock.realStart, offset }, self: r.self || null });
+    set({ clock: { today: r.clock.today, startMin: r.clock.startMin, realStart: r.clock.realStart, offset, custom: !!r.clock.custom, trip: !!r.clock.trip }, self: r.self || null });
     const { view, pending } = rebuild(r.state, isFamilyUser(r.state, userId) ? [] : get().pending);
     set({ confirmed: r.state, rev: r.rev, view, pending, status: 'ready' });
   };
@@ -90,7 +91,7 @@ export const useReplica = create<ReplicaState>((set, get) => {
     es.addEventListener('reset', () => { set({ pending: [] }); void snapshot(); });
     es.addEventListener('clock', (ev) => {
       const d = JSON.parse((ev as MessageEvent).data).clock;
-      set({ clock: { today: d.today, startMin: d.startMin, realStart: d.realStart, offset: get().clock?.offset || 0 } });
+      set({ clock: { today: d.today, startMin: d.startMin, realStart: d.realStart, offset: get().clock?.offset || 0, custom: !!d.custom, trip: !!d.trip } });
     });
     es.onerror = () => set({ connected: false });
   };

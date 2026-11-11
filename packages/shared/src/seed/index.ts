@@ -18,6 +18,7 @@ import { addRoster } from './roster';
 import { addHistory } from './history';
 import { activityPicId, carerPortraitId, dishPicId, notaMediaId, portraitId } from './demoMedia';
 import { seedRound7 } from './r7';
+import { dropFuture, tripIn, tripOut } from './tripToday';
 
 type Coll<K extends keyof ClubState> = ClubState[K];
 
@@ -214,12 +215,15 @@ const weekdaysIn = (from: ISODate, to: ISODate) => { const out: ISODate[] = []; 
 /** n days spread evenly over a list, always keeping the first and the last. */
 const spread = (days: ISODate[], n: number) => (n >= days.length ? days.slice() : Array.from({ length: n }, (_, i) => days[Math.round((i * (days.length - 1)) / Math.max(1, n - 1))]));
 
-export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_START_MIN, opts: { roster?: boolean } = {}): ClubState {
+export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_START_MIN, opts: SeedOpts = {}): ClubState {
   const C = 'citra';
   const T = anchor;
   /** today's events exist only once their time has passed (the demo clock is real time; 09:58 for the tests) */
   const done = (hm: string) => toMin(hm) <= nowMin;
   const closed = nowMin >= toMin(SETTINGS.close);
+  /** the demo tools' field trip day (seed/tripToday.ts): today's arrivals come before the bus, nobody goes home before it is back */
+  const trip = !!opts.trip;
+  const tin = (hm: string) => (trip ? tripIn(hm) : hm);
   // ----- dates relative to the anchor (identity for 21 Oct 2026) -----
   const off = daysBetween(DEMO_TODAY, T);
   const canon = off === 0;
@@ -423,14 +427,16 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   // today (09:58): Tjahjadi 09:38, Hendra 09:40 and Bambang 09:48 are in (+ Bambang's arrival reading 09:55)
   // (after closing time they have gone home)
   const OUT_AT: Record<string, string> = { m20: '16:05', m2: '16:10', m10: '16:15' };
-  for (const [id, inAt] of [['m20', '09:38'], ['m2', '09:40'], ['m10', '09:48']] as const) if (done(inAt)) put('attendance', attRow(T, id, inAt, closed ? OUT_AT[id] : undefined));
-  if (done('09:55')) reading('m10', T, '09:55', 'arrival', { sys: 122, dia: 73, pulse: 67, spo2: 97, temp: 36.4 });
-  for (const [id, at] of [['m20', '09:38'], ['m2', '09:40'], ['m10', '09:48']] as const) {
+  const r10At = trip ? toHM(toMin(tin('09:48')) + 7) : '09:55'; // Bambang's arrival reading
+  for (const [id, club] of [['m20', '09:38'], ['m2', '09:40'], ['m10', '09:48']] as const) { const inAt = tin(club); if (done(inAt)) put('attendance', attRow(T, id, inAt, closed ? OUT_AT[id] : undefined)); }
+  if (done(r10At)) reading('m10', T, r10At, 'arrival', { sys: 122, dia: 73, pulse: 67, spo2: 97, temp: 36.4 });
+  for (const [id, club] of [['m20', '09:38'], ['m2', '09:40'], ['m10', '09:48']] as const) {
+    const at = tin(club);
     if (!done(at)) continue;
     const m = memById(id);
     put('activity', { id: `act-${T}-${id}-in`, clubId: C, at: `${T}T${at}`, actor: 'staff:s1', action: 'attendance.checkIn', memberId: id, icon: 'how_to_reg', key: 'feed.checkedIn', params: { name: `${m.title} ${m.firstName}`, how: 'face' } } satisfies ActivityEntry);
   }
-  if (done('09:55')) put('activity', { id: `act-${T}-m10-reading`, clubId: C, at: `${T}T09:55`, actor: 'staff:s8', action: 'health.reading.save', memberId: 'm10', icon: 'monitor_heart', key: 'feed.reading', params: { name: 'Bapak Bambang', value: '122/73', status: 'normal' } } satisfies ActivityEntry);
+  if (done(r10At)) put('activity', { id: `act-${T}-m10-reading`, clubId: C, at: `${T}T${r10At}`, actor: 'staff:s8', action: 'health.reading.save', memberId: 'm10', icon: 'monitor_heart', key: 'feed.reading', params: { name: 'Bapak Bambang', value: '122/73', status: 'normal' } } satisfies ActivityEntry);
 
   // plan change request: Bambang's family asks for Gold from November
   put('planChangeRequests', { ...base(C, 'pcr-m10', at('2026-10-18T20:00'), 'family:fm10_0'), memberId: 'm10', to: 'gold', from: `${addMonths(month, 1)}-01`, status: 'pending' });
@@ -477,11 +483,12 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   fb('c2', 'm2', 'fm2_0', lastFri, 'Gado-gado', 'Papa would like a vegetarian option on Fridays.', `${lastFri}T08:15`, ['Thank you. From next Friday there is a tempeh and vegetable option next to the gado-gado.', `${lastFri}T14:10`]);
   if (done('07:55')) fb('c3', 'm20', 'fm20_0', T, 'Sop ikan kakap', 'Last time Papa found a small bone in the fish soup. Please check before serving.', `${T}T07:55`);
 
-  // enquiries and guest visits
-  put('enquiries', { ...base(C, 'e1', at('2026-10-08T11:00'), 'staff:s1'), senior: { title: 'Oma', name: 'Siu Lan Tjandra' }, contact: { name: 'Melinda Tjandra', relation: 'daughter', phone: e164('+62 812-7781-2290') }, source: 'referral', stage: 'trial', next: { kind: 'trial', date: T } });
-  put('guestVisits', { ...base(C, 'g-e1', at('2026-10-12T10:05'), 'staff:s1'), enquiryId: 'e1', kind: 'trial', date: T, name: 'Oma Siu Lan Tjandra', escortName: 'Melinda Tjandra', lunch: true, healthCheck: true, food: ['shellfish'], drugs: ['penicillin'], mobility: 'walkingStick', diet: [], status: 'booked' });
-  put('enquiries', { ...base(C, 'e2', at('2026-10-17T15:00'), 'staff:s1'), senior: { title: 'Bapak', name: 'Yusuf Hamid' }, contact: { name: 'Ilham Hamid', relation: 'son', phone: e164('+62 813-5520-1874') }, source: 'instagram', stage: 'visit', next: { kind: 'visit', date: T, time: '14:00' } });
-  put('guestVisits', { ...base(C, 'g-e2', at('2026-10-17T15:05'), 'staff:s1'), enquiryId: 'e2', kind: 'visit', date: T, time: '14:00', name: 'Bapak Yusuf Hamid', escortName: 'Ilham Hamid', lunch: false, healthCheck: false, food: null, drugs: [], mobility: null, diet: [], status: 'booked' });
+  // enquiries and guest visits (today; on the field trip day, the next open day)
+  const guestDay = trip ? openOn(addDays(T, 1)) : T;
+  put('enquiries', { ...base(C, 'e1', at('2026-10-08T11:00'), 'staff:s1'), senior: { title: 'Oma', name: 'Siu Lan Tjandra' }, contact: { name: 'Melinda Tjandra', relation: 'daughter', phone: e164('+62 812-7781-2290') }, source: 'referral', stage: 'trial', next: { kind: 'trial', date: guestDay } });
+  put('guestVisits', { ...base(C, 'g-e1', at('2026-10-12T10:05'), 'staff:s1'), enquiryId: 'e1', kind: 'trial', date: guestDay, name: 'Oma Siu Lan Tjandra', escortName: 'Melinda Tjandra', lunch: true, healthCheck: true, food: ['shellfish'], drugs: ['penicillin'], mobility: 'walkingStick', diet: [], status: 'booked' });
+  put('enquiries', { ...base(C, 'e2', at('2026-10-17T15:00'), 'staff:s1'), senior: { title: 'Bapak', name: 'Yusuf Hamid' }, contact: { name: 'Ilham Hamid', relation: 'son', phone: e164('+62 813-5520-1874') }, source: 'instagram', stage: 'visit', next: { kind: 'visit', date: guestDay, time: '14:00' } });
+  put('guestVisits', { ...base(C, 'g-e2', at('2026-10-17T15:05'), 'staff:s1'), enquiryId: 'e2', kind: 'visit', date: guestDay, time: '14:00', name: 'Bapak Yusuf Hamid', escortName: 'Ilham Hamid', lunch: false, healthCheck: false, food: null, drugs: [], mobility: null, diet: [], status: 'booked' });
   put('enquiries', { ...base(C, 'e3', at('2026-10-20T09:30'), 'staff:s1'), senior: { title: 'Oma', name: 'Ellen Sutanto' }, contact: { name: 'Kevin Sutanto', relation: 'grandson', phone: e164('+62 811-9034-2215') }, source: 'website', stage: 'new', next: { kind: 'callBack', date: op('2026-10-22') },
     // KC round 10: Kevin filled in the registration online the evening the link went out, so Join opens pre-filled
     form: { token: 'demo-ellen-sutanto-7f2k9q', sentAt: at('2026-10-20T10:05'), sentBy: 'staff:s1', expiresAt: at('2026-11-03T10:05'), openedAt: at('2026-10-20T19:31'), submittedAt: at('2026-10-20T19:44'), filledBy: 'Kevin Sutanto',
@@ -500,7 +507,7 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
   const outingDay = freeDay(sh('2026-10-29'));
   const closedDay = freeDay(sh('2026-10-30'));
   ev('ev-closed-1030', closedDay, 'closed', 'Club closed: staff first-aid training', 'Klub tutup: pelatihan P3K staf');
-  ev('ev-outing-1029', outingDay, 'outing', 'Kebun Raya Bogor botanical garden', 'Kebun Raya Bogor', '08:30', '15:00');
+  ev('ev-outing-1029', trip ? T : outingDay, 'outing', 'Kebun Raya Bogor botanical garden', 'Kebun Raya Bogor', '08:30', '15:00');
   ev('ev-outing-1126', freeDay(sh('2026-11-26')), 'outing', 'Batik museum and lunch', 'Museum batik dan makan siang', '09:00', '14:30');
   for (const [date, title, titleId] of HOLIDAYS) ev(`ev-hol-${date.slice(5, 7)}${date.slice(8)}`, date, 'holiday', title, titleId);
   const venue = (id: string, org: string, contactName: string, phone: string, guests: number, roomId: string, date: ISODate, from: string, to: string, review?: { stars: number; text: string }) =>
@@ -613,11 +620,14 @@ export function buildCitra(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_S
     put('notifications', { ...base(C, 'nt-hold', `${onHold.since}T08:00`), toUsers: [], toRoles: ['mgmt', 'finance'], kind: onHold.told ? 'finance.notif.suspendedTold' : 'finance.notif.suspended', params, severity: 'attention', action: false, link: '/members/m20', memberId: 'm20', ref, readBy: ['s9', 's10'] } satisfies Notification);
     put('notifications', { ...base(C, 'nt-hold-fam', `${onHold.since}T08:00`), toUsers: ['fm20_0'], toRoles: [], kind: onHold.told ? 'finance.notif.suspendedToldFamily' : 'finance.notif.suspendedFamily', params, severity: 'attention', action: false, link: '/billing', memberId: 'm20', ref, readBy: [] } satisfies Notification);
   }
-  if (done('09:40')) notif('nt-4', `${T}T09:40`, ['fm2_0', 'fm2_1'], [], 'notif.checkedIn', { name: 'Opa Hendra', time: '09:40' }, '/today', 'm2');
-  if (done('09:48')) notif('nt-5', `${T}T09:48`, ['fm10_0'], [], 'notif.checkedIn', { name: 'Bapak Bambang', time: '09:48' }, '/today', 'm10');
-  const patterns = opts.roster ? addRoster(s, T, nowMin) : undefined; // 40 more members (roster.ts); off by default so the tests keep the 5-member world
+  for (const [nid, to, name, club, mid] of [['nt-4', ['fm2_0', 'fm2_1'], 'Opa Hendra', '09:40', 'm2'], ['nt-5', ['fm10_0'], 'Bapak Bambang', '09:48', 'm10']] as const) {
+    const inAt = tin(club);
+    if (done(inAt)) notif(nid, `${T}T${inAt}`, [...to], [], 'notif.checkedIn', { name, time: inAt }, '/today', mid);
+  }
+  const patterns = opts.roster ? addRoster(s, T, nowMin, trip) : undefined; // 40 more members (roster.ts); off by default so the tests keep the 5-member world
   addHistory(s, T, { patterns }); // KC round 7: six months of visits, readings, logs and paid invoices behind the 4 weeks above (history.ts)
-  seedRound7(s, T, nowMin); // KC round 7: renewals, guest hosts, survey templates, tasks (seed/r7)
+  seedRound7(s, T, nowMin, trip); // KC round 7: renewals, guest hosts, survey templates, tasks (seed/r7)
+  dropFuture(s, T, nowMin);
   return s;
 }
 
@@ -628,8 +638,10 @@ export function buildAdina(): ClubState {
   return s;
 }
 
+/** `roster`: the 40 extra members (roster.ts). `trip`: today is the Kebun Raya Bogor field trip day (the demo tools; seed/tripToday.ts). */
+export interface SeedOpts { roster?: boolean; trip?: boolean }
 /** Full seed: one ClubState per clubhouse. */
-export function buildSeed(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_START_MIN, opts: { roster?: boolean } = {}): Record<string, ClubState> {
+export function buildSeed(anchor: ISODate = DEMO_TODAY, nowMin: number = DEMO_START_MIN, opts: SeedOpts = {}): Record<string, ClubState> {
   return { citra: buildCitra(anchor, nowMin, opts), adina: buildAdina() };
 }
 export type { Coll };
