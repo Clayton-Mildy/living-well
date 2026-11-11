@@ -9,8 +9,8 @@ export const demoNowMin = () => (process.env.CP_DEMO_DATE ? DEMO_START_MIN : dem
 import { getMeta, setMeta } from './db/store';
 
 /** `custom`: the demo tools set the time (it runs on from there); `trip`: the demo was rebuilt as the field trip day (seed/tripToday.ts). */
-export interface ClockState { realStart: number; startMin: number; date: string; custom?: boolean; trip?: boolean }
-let clock: ClockState = { realStart: Date.now(), startMin: demoNowMin(), date: demoDate() };
+export interface ClockState { realStart: number; startMin: number; date: string; custom?: boolean; trip?: boolean; /** the real demo day when this demo started (the clock's own date may be moved by the tests) */ realDay?: string }
+let clock: ClockState = { realStart: Date.now(), startMin: demoNowMin(), date: demoDate(), realDay: demoDate() };
 
 export async function loadClock() {
   const c = await getMeta<ClockState>('clock');
@@ -32,9 +32,11 @@ export async function setClock(hm: string, allowBack = false, date?: string) {
   return clockInfo();
 }
 /** A fresh demo day: now in Jakarta, or (the demo tools) a chosen minute of the day, running on from there. */
+/** The real day moved on since this demo started (a server left running overnight). Never with CP_DEMO_DATE: the pinned day does not move, whatever date the tests move the clock to. */
+export const realDayChanged = () => demoDate() !== (clock.realDay ?? clock.date);
 export async function resetClock(opts: { startMin?: number; trip?: boolean } = {}) {
   const custom = opts.startMin !== undefined;
-  clock = { realStart: Date.now(), startMin: custom ? opts.startMin! : demoNowMin(), date: demoDate(), ...(custom ? { custom: true } : {}), ...(opts.trip ? { trip: true } : {}) };
+  clock = { realStart: Date.now(), startMin: custom ? opts.startMin! : demoNowMin(), date: demoDate(), realDay: demoDate(), ...(custom ? { custom: true } : {}), ...(opts.trip ? { trip: true } : {}) };
   await setMeta('clock', clock);
   return clockInfo();
 }

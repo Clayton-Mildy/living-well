@@ -9,7 +9,7 @@ import { allowedKeys } from '../apps/web/src/app/nav';
 import type { Role } from '../packages/shared/src/types';
 
 const ACCOUNTS: [string, Role][] = [
-  ['s1', 'lobby'], ['s8', 'nurse'], ['s5', 'activity'], ['s3', 'kitchen'], ['s2', 'kitchen'], ['s10', 'finance'], ['s9', 'mgmt'],
+  ['s1', 'lobby'], ['s8', 'nurse'], ['s5', 'activity'], ['s3', 'kitchen'], ['s2', 'kitchen'], ['s10', 'finance'], ['s9', 'mgmt'], ['s11', 'owner'],
   ['f1', 'family'], ['f2', 'family'], ['fm10_0', 'family'],
 ];
 const EXTRA_PATHS: Partial<Record<Role, string[]>> = {
@@ -81,7 +81,9 @@ for (const lang of ['en', 'id'] as const) {
       const c = watchConsole(page);
       const problems: string[] = [];
       await signIn(page, uid, '/today', lang);
-      const paths = [...[...allowedKeys(role)].map((k) => '/' + k), ...(EXTRA_PATHS[role] || [])];
+      // round 16 on: the menus come from the club's own settings (the access grid), so read the club as this account sees it
+      const { state } = await (await page.request.get('/api/snapshot?club=citra', { headers: { 'x-user-id': uid } })).json();
+      const paths = [...[...allowedKeys(state, role)].map((k) => '/' + k), ...(EXTRA_PATHS[role] || [])];
       for (const path of paths) {
         await page.goto(path);
         await expect(page.locator('#main')).toBeVisible();

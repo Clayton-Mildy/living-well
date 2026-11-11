@@ -1,7 +1,7 @@
 // Canonical in-memory club states (loaded from Postgres), serialized action pipeline per club, SSE fan-out.
 import { buildSeed, execute, systemUser, DomainError, getUser, accountsNeedingUsername, usernameBase, type ClubState, type Patch, type User } from '@cp/shared';
 import { loadAll, persistMutation, replaceAll } from './db/store';
-import { clockInfo, demoDate, demoNowMin, loadClock, resetClock } from './clock';
+import { clockInfo, demoDate, demoNowMin, loadClock, realDayChanged, resetClock } from './clock';
 import { runMigrations, ensureDatabase } from './db/setup';
 import { claimUsername, scrubError, seedMissingCredentials } from './db/credentials';
 import { loadSecret } from './auth';
@@ -183,5 +183,12 @@ export async function runJobsNow(wait = true) {
   } finally { tickBusy = false; }
 }
 export function startJobs() {
-  setInterval(() => { void runJobsNow(false); }, 15000);
+  setInterval(() => {
+    // a server left running overnight moves to the new demo day by itself, as a restart would (the clock is never past 23:59 otherwise)
+    if (!resetting && realDayChanged()) {
+      void resetDemo().then(() => console.log(`New demo day ${demoDate()}: demo data reset.`), (e) => console.error('new day reset failed:', scrubError(e)));
+      return;
+    }
+    void runJobsNow(false);
+  }, 15000);
 }
