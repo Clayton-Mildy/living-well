@@ -1,7 +1,7 @@
 // Round 21: Insights › Where from. Members (active today) and enquiries (created in the period, not archived) as pins, and their totals per kelurahan / kecamatan.
 import { describe, it, expect } from 'vitest';
 import { buildSeed, type ClubState, type Enquiry, type GeoPoint } from '../index';
-import { wherePoints, whereAreas } from './whereFrom';
+import { HEAT_COLORS, heatBands, heatColor, wherePoints, whereAreas } from './whereFrom';
 
 const T = '2026-10-21';
 const PERIOD = { from: '2026-10-01', to: '2026-10-21' };
@@ -71,3 +71,19 @@ describe('whereAreas', () => {
     expect(a.map((x) => [x.name, x.total])).toEqual([['Kalideres', 2], ['Cengkareng Barat', 1], ['Pegadungan', 1]]);
   });
 });
+
+describe('11 Nov (KC): the colour key', () => {
+  const ranges = (max: number) => heatBands(max).map((b) => `${b.from}-${b.to}`);
+  it('splits 1 to the busiest count into five equal steps, green to red, each colour as heatColor gives it', () => {
+    expect(ranges(30)).toEqual(['1-6', '7-12', '13-18', '19-24', '25-30']);
+    expect(ranges(15)).toEqual(['1-3', '4-6', '7-9', '10-12', '13-15']);
+    expect(heatBands(30).map((b) => b.color)).toEqual([...HEAT_COLORS]);
+    for (const b of heatBands(30)) { expect(heatColor(b.from, 30)).toBe(b.color); expect(heatColor(b.to, 30)).toBe(b.color); }
+  });
+  it('few people: only the steps in use, the busiest always red', () => {
+    expect(ranges(3)).toEqual(['1-1', '2-2', '3-3']);
+    expect(heatBands(3).at(-1)!.color).toBe(HEAT_COLORS[4]);
+    expect(ranges(1)).toEqual(['1-1']);
+  });
+});
+

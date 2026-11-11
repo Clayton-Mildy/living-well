@@ -48,17 +48,21 @@ test('a new field trip at a new venue: the venue is saved in Contacts and shows 
   c.assertClean();
 });
 
-test('Caca rates an AC service; the best rated comes first', async ({ page }) => {
+test('Caca changes an AC service\'s one rating; the change is logged with why', async ({ page }) => {
   test.skip(!isPhone(page), 'phone story');
   const c = watchConsole(page);
   await signIn(page, 's1', '/directory');
-  await expect(page.locator('[data-rating="4.8"]').first()).toHaveText('4.8 · 6');
+  await expect(page.locator('[data-rating="5"]').first()).toHaveText('5');
   await page.locator('[data-dir-open="Kemang Teknik AC"]').click();
   const sheet = page.getByRole('dialog');
+  await expect(sheet.locator('[data-rating-now="2"]')).toBeVisible();
+  await sheet.getByRole('button', { name: 'Change', exact: true }).click();
   await sheet.getByRole('radio', { name: '3 stars' }).click();
-  await sheet.getByLabel('Note (optional)').fill('On time this visit');
-  await sheet.getByRole('button', { name: 'Add rating' }).click();
+  await sheet.getByLabel('Why (optional)').fill('On time this visit');
+  await sheet.getByRole('button', { name: 'Save rating' }).click();
+  await expect(sheet.locator('[data-rating-now="3"]')).toBeVisible();
   await expect(sheet.locator('[data-rating-row]').first()).toContainText('On time this visit');
+  await expect(sheet.locator('[data-change]').first()).toHaveAttribute('data-change', '2>3');
   await assertNoHorizontalScroll(page);
   c.assertClean();
 });

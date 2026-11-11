@@ -142,7 +142,8 @@ export const directoryActions: ActionDef[] = [
       ctx.result.public = c.public;
     },
   }),
-  // round 21: rate a contact (1–5 stars, optional note); every rating is kept in the log
+  // 11 Nov (KC): a contact has one rating; rating it again changes it (other stars than now) and the change is logged with an optional why.
+  // The log is fixed: nobody edits or removes an entry.
   defineAction<{ id: string; stars: 1 | 2 | 3 | 4 | 5; note?: string }>({
     name: 'directory.rate',
     can: keeps,
@@ -157,23 +158,10 @@ export const directoryActions: ActionDef[] = [
     run(d, input, ctx) {
       const c = d.directory[input.id];
       if (!c || c.deletedAt) ctx.fail('err.notFound');
+      if (c.ratings?.length && c.ratings[c.ratings.length - 1].stars === input.stars) ctx.fail('finance.dir.sameStars');
       const id = ctx.id('rate');
       (c.ratings ??= []).push({ id, stars: input.stars, ...(input.note ? { note: input.note } : {}), at: ctx.nowDT, by: ctx.actor });
       ctx.result.ratingId = id;
-    },
-  }),
-  // round 21: take a rating back: your own, or anyone's for management
-  defineAction<{ id: string; ratingId: string }>({
-    name: 'directory.unrate',
-    can: keeps,
-    parse: (raw) => { const o = obj(raw); return { id: pickId(o, 'contactId'), ratingId: text(o.ratingId, 60) }; },
-    run(d, input, ctx) {
-      const c = d.directory[input.id];
-      if (!c || c.deletedAt) ctx.fail('err.notFound');
-      const r = (c.ratings ?? []).find((x) => x.id === input.ratingId);
-      if (!r) ctx.fail('err.notFound');
-      if (r!.by !== ctx.actor && !hasRole(ctx.user, 'mgmt')) ctx.fail('err.forbidden');
-      c.ratings = (c.ratings ?? []).filter((x) => x.id !== input.ratingId);
     },
   }),
 ] as ActionDef[];

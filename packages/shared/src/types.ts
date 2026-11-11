@@ -81,6 +81,8 @@ export interface Approval {
 export interface GeoPoint { lat: number; lng: number; kelurahan?: string; kecamatan?: string; city?: string }
 /** Round 21: one place the geocoding proxy found (/api/geo/search and /api/geo/reverse) */
 export interface GeoHit { label: string; lat: number; lng: number; kelurahan?: string; kecamatan?: string; city?: string }
+/** 11 Nov (KC): the outline of a kelurahan or kecamatan (GeoJSON, [lng, lat] pairs), from OpenStreetMap through /api/geo/outline */
+export type GeoShape = { type: 'Polygon'; coordinates: number[][][] } | { type: 'MultiPolygon'; coordinates: number[][][][] };
 
 export interface ClubSettings {
   open: HM; // 08:30
@@ -993,7 +995,7 @@ export interface DirectoryContact extends Row {
   address?: string;
   location?: GeoPoint;
   photoMediaIds?: string[];
-  /** round 21: the staff's ratings, oldest first (each visit or job can get one); staff only */
+  /** 11 Nov (KC): the contact's one rating and how it changed, oldest first: the newest entry is the rating now, each entry says why (optional); never edited or removed; staff only */
   ratings?: ContactRating[];
 }
 /** Round 21: one rating of a contact: 1–5 stars and an optional note (at most 200 characters). */

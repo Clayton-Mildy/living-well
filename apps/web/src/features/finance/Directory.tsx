@@ -82,7 +82,7 @@ export function Directory() {
   const visible = all.filter((d) => inFilter(d));
   const populated = keys.filter((k) => visible.some((d) => keyOf(d) === k));
   const rank = new Map(keys.map((k, i) => [k, i]));
-  // round 21: within a heading the best rated come first (then more ratings, then the name); unrated ones last
+  // round 21: within a heading the best rated come first (then the name); unrated ones last
   const order = useMemo(() => new Map(sortContacts(all).map((d, i) => [d.id, i])), [all]);
   const hits = sortBy(visible.filter((d) => (gsel === 'all' || keyOf(d) === gsel) && matches(q, d.name, what(d), d.what, d.whatId, d.phone, fmtPhone(d.phone), t('finance.kind.' + d.kind), nameOfKey(keyOf(d)), d.contactPerson ?? '', d.address ?? '')), (d) => String(rank.get(keyOf(d)) ?? 99).padStart(3, '0') + String(order.get(d.id) ?? 0).padStart(5, '0'));
   const paged = usePaged(hits, 20, q + f + cat + gsel);
@@ -110,7 +110,7 @@ export function Directory() {
     const nameEl = (
       <span style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
         <span style={isPhone ? { ...rowTitle, fontSize: 16 } : rowTitle}>{d.name}</span>
-        {rating ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, color: '#4A433D', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}><Icon name="star" size={15} fill={1} color="#CFA550" /><span data-rating={rating.avg.toFixed(1)}>{t('finance.dir.ratingShort', { avg: rating.avg.toFixed(1), n: rating.n })}</span></span> : null}
+        {rating ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 3, fontSize: 13, color: '#4A433D', fontVariantNumeric: 'tabular-nums', whiteSpace: 'nowrap' }}><Icon name="star" size={15} fill={1} color="#CFA550" /><span data-rating={rating.stars} aria-label={t('finance.dir.ratingNow', { n: rating.stars })}>{rating.stars}</span></span> : null}
       </span>
     );
     const vis = !simple ? (d.public ? <Dot color="#3D6B4F">{t('finance.dir.public')}</Dot> : <Dot color="#8A8078">{t('finance.dir.internal')}</Dot>) : null;

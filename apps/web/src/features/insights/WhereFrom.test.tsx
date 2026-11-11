@@ -1,4 +1,4 @@
-// Round 21: Insights › Where from: a map (mocked here) and the table under it; Who (Members / Enquiries / Both) and View (Exact pins / Kelurahan / Kecamatan).
+// Round 21: Insights › Where from: a map (mocked here) and the table under it; Who (Members / Enquiries / Both) and View (Exact pins / Village / District). 11 Nov (KC): the map shades each whole area's outline instead of circles.
 import { act } from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
@@ -9,8 +9,20 @@ import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 
 vi.mock('../../components/geo/MapView', () => ({
-  MapView: ({ markers, circles }: { markers: { id: string }[]; circles?: { id: string; count: number }[] }) => <div data-testid="map" data-markers={markers.length} data-circles={(circles ?? []).map((c) => c.count).join(',')} />,
-  circlePx: (n: number) => 10 + 8 * Math.sqrt(n),
+  MapView: ({ markers, shapes }: { markers: { id: string }[]; shapes?: { id: string; color: string; label: string; onClick?: () => void }[] }) => (
+    <div data-testid="map" data-markers={markers.length}>
+      {(shapes ?? []).map((q) => <button key={q.id} type="button" data-shape={q.id} data-color={q.color} aria-label={q.label} onClick={q.onClick} />)}
+    </div>
+  ),
+}));
+// the outline lookup: Kalideres has one, Cengkareng none (it stays in the table, counted as not shaded)
+const asked: { level: string; name: string; city: string }[] = [];
+vi.mock('../../lib/geo', async (orig) => ({
+  ...(await orig<typeof import('../../lib/geo')>()),
+  areaOutline: async (q: { level: string; name: string; city: string; pins: unknown[] }) => {
+    asked.push({ level: q.level, name: q.name, city: q.city });
+    return q.name === 'Kalideres' ? { type: 'Polygon', coordinates: [[[106.7, -6.1], [106.8, -6.1], [106.8, -6.2], [106.7, -6.1]]] } : null;
+  },
 }));
 const { Insights } = await import('./index');
 
@@ -23,7 +35,7 @@ beforeAll(() => {
 afterEach(async () => { await act(async () => { root?.unmount(); }); host?.remove(); root = null; host = null; document.body.innerHTML = ''; });
 
 const T = '2026-10-21';
-const KAL = (lat: number): GeoPoint => ({ lat, lng: 106.72, kelurahan: 'Kalideres', kecamatan: 'Kalideres' });
+const KAL = (lat: number): GeoPoint => ({ lat, lng: 106.72, kelurahan: 'Kalideres', kecamatan: 'Kalideres', city: 'Jakarta Barat' });
 const CENG = (lat: number): GeoPoint => ({ lat, lng: 106.74, kelurahan: 'Cengkareng Barat', kecamatan: 'Cengkareng' });
 function open() {
   const state = produce(buildSeed().citra, (d) => {
@@ -55,15 +67,30 @@ const pick = async (comboLabel: string, option: string) => {
 const areaRows = () => Array.from(document.querySelectorAll<HTMLElement>('[data-area]'));
 
 describe('Insights › Where from', () => {
-  it('opens on Both and Kecamatan: circles on the map and the table biggest first, members and leads apart', async () => {
+  it('opens on Both and District: the busiest district shaded red on the map, one with no outline counted apart; the table biggest first, members and leads apart', async () => {
     open();
     await show();
-    expect(document.querySelector('[data-testid="map"]')?.getAttribute('data-circles')).toBe('3,2');
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); }); // the outlines
+    const shapes = Array.from(document.querySelectorAll('[data-shape]'));
+    expect(shapes.map((x) => [x.getAttribute('data-shape'), x.getAttribute('data-color')])).toEqual([['Kalideres', '#D9483B']]); // 3 of 3: red
+    expect(asked).toEqual(expect.arrayContaining([{ level: 'kecamatan', name: 'Kalideres', city: 'Jakarta Barat' }, { level: 'kecamatan', name: 'Cengkareng', city: '' }]));
+    const legend = document.querySelector('[data-testid="where-legend"]')!;
+    expect(Array.from(legend.querySelectorAll('[data-band]')).map((b) => [b.getAttribute('data-band'), b.textContent])).toEqual([['1-1', '1'], ['2-2', '2'], ['3-3', '3']]);
+    expect(legend.textContent).toContain('Counts the members and enquiries living in each area. Red is the busiest area (3)');
+    expect(legend.textContent).toContain('1 not shaded (no outline found)');
     const rows = areaRows();
     expect(rows.map((r) => r.getAttribute('data-area'))).toEqual(['Kalideres', 'Cengkareng']);
     expect(rows[0].textContent).toContain('3');
     expect(rows[1].querySelector('[data-col="enquiries"]')?.textContent).toBe('1');
     expect(document.body.textContent).toContain('Period applies to enquiries');
+  });
+  it('tapping a shaded district lists its people', async () => {
+    open();
+    await show();
+    await act(async () => { await new Promise((r) => setTimeout(r, 0)); });
+    await click(document.querySelector('[data-shape="Kalideres"]'));
+    const sheet = document.querySelector('[role="dialog"]')!;
+    expect(sheet.querySelectorAll('[data-person]')).toHaveLength(3);
   });
   it('tapping an area lists its people', async () => {
     open();

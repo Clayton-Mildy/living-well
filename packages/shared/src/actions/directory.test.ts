@@ -245,35 +245,31 @@ describe('round 21: trip venues', () => {
 });
 
 describe('round 21: ratings', () => {
-  it('the front desk rates a contact 1–5 stars with an optional note; each rating is logged; the average is to 1 decimal', () => {
+  it('11 Nov (KC): one rating per contact; changing it logs the new stars with an optional why; the same stars again are refused', () => {
     const w = world();
     expect(w.s.directory.d3.ratings).toBeUndefined(); // the seed rates d1, d6, d14 and d15 only
     const a = w.run('directory.rate', { contactId: 'd3', stars: 5, note: ' Came the same day ' }, 's1');
     expect(typeof a.result.ratingId).toBe('string');
-    w.run('directory.rate', { contactId: 'd3', stars: 4 }, 's1');
+    w.run('directory.rate', { contactId: 'd3', stars: 4 }, 's9');
+    w.fail('directory.rate', { contactId: 'd3', stars: 4, note: 'again' }, 's1', 'finance.dir.sameStars');
     const log = w.s.directory.d3.ratings!;
-    expect(log.map((r) => [r.stars, r.note, r.by])).toEqual([[5, 'Came the same day', 'staff:s1'], [4, undefined, 'staff:s1']]);
-    expect(ratingOf(w.s.directory.d3)).toEqual({ avg: 4.5, n: 2 });
+    expect(log.map((r) => [r.stars, r.note, r.by])).toEqual([[5, 'Came the same day', 'staff:s1'], [4, undefined, 'staff:s9']]);
+    expect(ratingOf(w.s.directory.d3)).toEqual({ stars: 4, n: 2 });
     w.fail('directory.rate', { contactId: 'd3', stars: 6 }, 's1', 'err.invalid');
     w.fail('directory.rate', { contactId: 'd3', stars: 0 }, 's1', 'err.invalid');
     w.fail('directory.rate', { contactId: 'd3', stars: 3.5 }, 's1', 'err.invalid');
     w.fail('directory.rate', { contactId: 'd3', stars: 3, note: 'x'.repeat(201) }, 's1', 'err.invalid');
     w.fail('directory.rate', { contactId: 'd3', stars: 3 }, 's8', 'err.forbidden');
   });
-  it('you remove your own rating; management removes anyone\'s; others cannot', () => {
+  it('the log is fixed: there is no action to remove an entry', () => {
     const w = world();
     const id = w.run('directory.rate', { contactId: 'd4', stars: 2 }, 's9').result.ratingId as string;
-    w.fail('directory.unrate', { contactId: 'd4', ratingId: id }, 's1', 'err.forbidden');
-    const mine = w.run('directory.rate', { contactId: 'd4', stars: 3 }, 's1').result.ratingId as string;
-    w.run('directory.unrate', { contactId: 'd4', ratingId: mine }, 's1');
-    w.run('directory.unrate', { contactId: 'd4', ratingId: id }, 's9');
-    expect(w.s.directory.d4.ratings ?? []).toEqual([]);
-    expect(ratingOf(w.s.directory.d4)).toBeNull();
-    w.fail('directory.unrate', { contactId: 'd4', ratingId: 'nope' }, 's9', 'err.notFound');
+    expect(() => w.run('directory.unrate', { contactId: 'd4', ratingId: id }, 's9')).toThrow();
+    expect(w.s.directory.d4.ratings).toHaveLength(1);
   });
   it('families never get the ratings', () => {
     const w = world();
-    w.run('directory.rate', { contactId: 'd1', stars: 5 }, 's9');
+    w.run('directory.rate', { contactId: 'd1', stars: 4 }, 's9');
     expect(projectForFamily(w.s, 'f1').directory.d1.ratings).toBeUndefined();
   });
 });

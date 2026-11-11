@@ -1,7 +1,8 @@
 // Round 21: the geocoding proxy (address search and pin → area). Runs without the database: the routes take the sign-in check as a function.
 import { describe, it, expect } from 'vitest';
 import { Hono } from 'hono';
-import { fakeGeocoder, nominatimGeocoder, mapNominatim, GeoError } from './providers/geocoder';
+import { fakeGeocoder, nominatimGeocoder, mapNominatim, pickOutline, GeoError, type Geocoder } from './providers/geocoder';
+import type { OutlineCached } from './routes/geo';
 import { registerGeoRoutes } from './routes/geo';
 
 function appWith(user: boolean) {
@@ -46,7 +47,7 @@ describe('/api/geo routes', () => {
   });
   it('a busy or unreachable search service is a 429 / 503 with a code', async () => {
     const app = new Hono();
-    const busy = { search: async () => { throw new GeoError('geo.err.busy'); }, reverse: async () => { throw new GeoError('geo.err.unavailable'); } };
+    const busy = { search: async () => { throw new GeoError('geo.err.busy'); }, reverse: async () => { throw new GeoError('geo.err.unavailable'); }, outline: async () => null };
     registerGeoRoutes(app, { user: () => ({ id: 's9' }), geo: () => busy });
     const a = await app.request('/api/geo/search?q=citra');
     expect(a.status).toBe(429);
@@ -108,6 +109,54 @@ describe('11 Nov (KC): the family form\'s own geo routes', () => {
     expect((await app.request('/api/public/form/open/geo/reverse?lat=-6.1&lng=106.7')).status).toBe(200);
     expect((await app.request('/api/public/form/closed/geo/search?q=citra')).status).toBe(401);
     expect((await app.request('/api/geo/search?q=citra')).status).toBe(404); // the staff route is not on this app
+  });
+});
+
+describe('11 Nov (KC): area outlines for the Where from map', () => {
+  const box = (lng: number, lat: number, r: number) => ({ type: 'Polygon' as const, coordinates: [[[lng - r, lat - r], [lng + r, lat - r], [lng + r, lat + r], [lng - r, lat + r], [lng - r, lat - r]]] });
+  const AT = { lat: -6.136, lng: 106.731 };
+  it('Jakarta: with a village, the suburb is the kecamatan', () => {
+    expect(mapNominatim({ lat: '-6.1', lon: '106.7', address: { village: 'Cengkareng Timur', suburb: 'Cengkareng', city: 'Jakarta Barat' } })).toMatchObject({ kelurahan: 'Cengkareng Timur', kecamatan: 'Cengkareng' });
+    expect(mapNominatim({ lat: '-6.1', lon: '106.7', address: { suburb: 'Kembangan', city: 'Jakarta Barat' } })).toMatchObject({ kelurahan: 'Kembangan' });
+  });
+  it('picks the area of the level\'s kind that contains the pin; a same-named place elsewhere, a point or a non-area is never used', () => {
+    const rows = [
+      { osm_type: 'node', addresstype: 'suburb', geojson: { type: 'Point', coordinates: [106.73, -6.13] } },
+      { osm_type: 'relation', addresstype: 'suburb', geojson: box(110, -7, 0.05) }, // same name, other city
+      { osm_type: 'relation', addresstype: 'village', geojson: box(106.731, -6.136, 0.01) },
+      { osm_type: 'relation', addresstype: 'suburb', geojson: box(106.731, -6.136, 0.03) },
+    ];
+    expect(pickOutline(rows, 'kecamatan', [AT])).toEqual(box(106.731, -6.136, 0.03));
+    expect(pickOutline(rows, 'kelurahan', [AT])).toEqual(box(106.731, -6.136, 0.01));
+    expect(pickOutline(rows.slice(0, 2), 'kecamatan', [AT])).toBeNull();
+    expect(pickOutline(rows, 'kecamatan', [{ lat: -6.5, lng: 107 }, AT])).toEqual(box(106.731, -6.136, 0.03)); // one stray pin is fine: another inside is enough
+    // a pin just outside (about 0.6 km past the edge) still gets the outline; one 5 km away does not
+    expect(pickOutline(rows, 'kelurahan', [{ lat: -6.136, lng: 106.731 + 0.01 + 0.0055 }])).toEqual(box(106.731, -6.136, 0.01));
+    expect(pickOutline([rows[2]], 'kelurahan', [{ lat: -6.136, lng: 106.731 + 0.01 + 0.045 }])).toBeNull();
+  });
+  it('GET /api/geo/outline asks once per area and keeps the answer (a miss too); bad input is 400; without a store it is not served', async () => {
+    const kept = new Map<string, OutlineCached>();
+    let asked = 0;
+    const geo: Geocoder = { ...fakeGeocoder, outline: async (...a) => { asked++; return fakeGeocoder.outline(...a); } };
+    const app = new Hono();
+    registerGeoRoutes(app, { user: () => ({ id: 's9' }), geo: () => geo, outlines: { get: async (k) => kept.get(k), set: async (k, v) => { kept.set(k, v); } } });
+    const url = '/api/geo/outline?level=kecamatan&name=Kalideres&city=Jakarta%20Barat&pins=-6.136,106.731;-6.14,106.72';
+    const a = (await (await app.request(url)).json()) as { shape: { type: string } | null };
+    expect(a.shape?.type).toBe('Polygon');
+    await app.request(url);
+    expect(asked).toBe(1);
+    expect([...kept.keys()]).toEqual(['geoOutline:v3:kecamatan:kalideres|jakarta barat']);
+    const miss = (await (await app.request('/api/geo/outline?level=kelurahan&name=Nowhere&pins=-6.1,106.7')).json()) as { shape: unknown };
+    expect(miss.shape).toBeNull();
+    await app.request('/api/geo/outline?level=kelurahan&name=Nowhere&pins=-6.1,106.7');
+    expect(asked).toBe(2);
+    expect((await app.request('/api/geo/outline?level=rt&name=X&pins=1,1')).status).toBe(400);
+    expect((await app.request('/api/geo/outline?level=kelurahan&name=&pins=1,1')).status).toBe(400);
+    expect((await app.request('/api/geo/outline?level=kelurahan&name=X')).status).toBe(400);
+    expect((await app.request('/api/geo/outline?level=kelurahan&name=X&pins=1,1;2,2;3,3;4,4;5,5;6,6')).status).toBe(400);
+    const plain = new Hono();
+    registerGeoRoutes(plain, { user: () => ({ id: 's9' }), geo: () => geo });
+    expect((await plain.request(url)).status).toBe(404);
   });
 });
 

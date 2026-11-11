@@ -1,6 +1,6 @@
 // Round 21: places on the map. The distance from the club is a straight line (haversine) to 0.1 km; pick-up costs the club's price per
 // started km (6.4 km → 7 km) and nothing within the free distance (2.0 km is free, 2.1 km is billed as 3 km).
-import type { ClubState, GeoPoint } from '../types';
+import type { ClubState, GeoPoint, GeoShape } from '../types';
 
 export const PICKUP_RATE_DEFAULT = { perKm: 10_000, freeKm: 2 } as const;
 const EARTH_KM = 6371;
@@ -46,3 +46,26 @@ export function cleanGeo(v: unknown): GeoPoint | null {
 }
 /** The area of a pin as one line: "Pegadungan, Kalideres" (kelurahan, kecamatan), or '' when neither is known. */
 export const areaLine = (p?: GeoPoint): string => [p?.kelurahan, p?.kecamatan].filter(Boolean).join(', ');
+
+/** 11 Nov (KC): the pin lies inside the outline (even-odd over every ring, so a hole is left out). */
+export function shapeContains(shape: GeoShape, p: Pick<GeoPoint, 'lat' | 'lng'>): boolean {
+  const polys = shape.type === 'Polygon' ? [shape.coordinates] : shape.coordinates;
+  let inside = false;
+  for (const rings of polys) for (const ring of rings) {
+    for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+      const [xi, yi] = ring[i], [xj, yj] = ring[j];
+      if ((yi > p.lat) !== (yj > p.lat) && p.lng < ((xj - xi) * (p.lat - yi)) / (yj - yi) + xi) inside = !inside;
+    }
+  }
+  return inside;
+}
+
+/** 11 Nov (KC): how far the pin is from the outline's nearest corner, in km to 0.1 (0 when inside). */
+export function kmToShape(shape: GeoShape, p: Pick<GeoPoint, 'lat' | 'lng'>): number {
+  if (shapeContains(shape, p)) return 0;
+  const polys = shape.type === 'Polygon' ? [shape.coordinates] : shape.coordinates;
+  let best = Infinity;
+  for (const rings of polys) for (const ring of rings) for (const [lng, lat] of ring) best = Math.min(best, distanceKm(p, { lat, lng }));
+  return best;
+}
+

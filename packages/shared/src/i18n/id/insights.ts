@@ -128,7 +128,7 @@ export const insights: Same<typeof EN> = {
   mInOutAria: 'Anggota yang bergabung dan keluar, per paket', mSwitchAria: 'Pindah paket', mActiveAria: 'Anggota aktif per paket',
   mTotal: 'Semua',
   // round 12: the Mood tab
-  tabWhere: 'Asal', who: 'Siapa', view: 'Tampilan', whoBoth: 'Anggota dan calon', whoMembers: 'Anggota', whoEnquiries: 'Calon anggota', viewPins: 'Titik tepat', viewKel: 'Kelurahan', viewKec: 'Kecamatan',
+  tabWhere: 'Asal', who: 'Siapa', view: 'Tampilan', whoBoth: 'Anggota dan calon', whoMembers: 'Anggota', whoEnquiries: 'Calon anggota', viewPins: 'Titik tepat', viewKel: 'Kelurahan', viewKec: 'Kecamatan', legendTitle: 'Orang per wilayah', legendHow: 'Menghitung {who} yang tinggal di tiap wilayah. Merah adalah wilayah terbanyak ({n}); warna di bawahnya membagi 1 sampai {n} menjadi langkah yang sama.', legendWho_both: 'anggota dan calon anggota', legendWho_members: 'anggota', legendWho_enquiries: 'calon anggota', noOutline: '{n} tidak diarsir (batas wilayah tidak ditemukan)',
   periodEnquiries: 'Periode berlaku untuk calon anggota; anggota adalah yang aktif hari ini.', missing: '{n} tanpa lokasi', missingSub: 'Buka salah satu untuk menambahkan pin alamat.', colName: 'Nama', colType: 'Jenis', colKm: 'km', colMembers: 'Anggota', colEnquiries: 'Calon',
   km: '{km} km', unknownArea: 'Daerah tidak diketahui', kindMember: 'Anggota', kindEnquiry: 'Calon anggota', whereEmpty: 'Belum ada yang punya pin.',
   tabMood: 'Suasana hati',

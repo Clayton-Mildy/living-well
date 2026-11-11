@@ -1,16 +1,16 @@
 // Round 21: a thin Leaflet map (OpenStreetMap tiles). Markers are plain CSS dots (ink = member or pin, gold ring = lead, gold star = the club);
-// circles are area totals sized by count. Loaded lazily by the screens that show a map, so Leaflet stays out of the first paint.
+// shapes (11 Nov, KC: instead of circles) are whole kelurahan / kecamatan outlines shaded by how many live there. Loaded lazily by the screens that show a map, so Leaflet stays out of the first paint.
 import { useEffect, useRef } from 'react';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import type { GeoPoint } from '@cp/shared';
+import type { GeoPoint, GeoShape } from '@cp/shared';
 
 export type MapMarker = { id: string; lat: number; lng: number; kind: 'member' | 'enquiry' | 'club' | 'pin'; label?: string; onClick?: () => void };
-export type MapCircle = { id: string; lat: number; lng: number; count: number; label: string; onClick?: () => void };
+export type MapShape = { id: string; shape: GeoShape; color: string; label: string; onClick?: () => void };
 export interface MapViewProps {
   center: Pick<GeoPoint, 'lat' | 'lng'>;
   markers: MapMarker[];
-  circles?: MapCircle[];
+  shapes?: MapShape[];
   height: number;
   /** a tap on the map, or the end of a drag of the `pin` marker */
   onPin?: (p: { lat: number; lng: number }) => void;
@@ -29,10 +29,8 @@ const html: Record<MapMarker['kind'], string> = {
 };
 const size: Record<MapMarker['kind'], number> = { member: 16, enquiry: 18, pin: 22, club: 28 };
 const icon = (k: MapMarker['kind']) => L.divIcon({ className: 'cp-map-dot', html: html[k], iconSize: [size[k], size[k]], iconAnchor: k === 'pin' ? [9, 20] : [size[k] / 2, size[k] / 2] });
-/** Circle radius in pixels for an area total (round 21: 10 + 8·√count). */
-export const circlePx = (count: number) => 10 + 8 * Math.sqrt(count);
 
-export function MapView({ center, markers, circles = [], height, onPin, draggable, zoom = 13, label }: MapViewProps) {
+export function MapView({ center, markers, shapes = [], height, onPin, draggable, zoom = 13, label }: MapViewProps) {
   const el = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map | null>(null);
   const layer = useRef<L.LayerGroup | null>(null);
@@ -56,12 +54,11 @@ export function MapView({ center, markers, circles = [], height, onPin, draggabl
     const g = layer.current;
     if (!g) return;
     g.clearLayers();
-    for (const c of circles) {
-      const cm = L.circleMarker([c.lat, c.lng], { radius: circlePx(c.count), color: '#fff', weight: 2, fillColor: INK, fillOpacity: 0.72 })
-        .bindTooltip(`<b>${c.count}</b>`, { permanent: true, direction: 'center', className: 'cp-map-count' })
+    for (const a of shapes) {
+      const r = L.geoJSON(a.shape, { style: { color: '#FFFFFF', weight: 1.5, opacity: 0.9, fillColor: a.color, fillOpacity: 0.6 } })
+        .bindTooltip(a.label, { sticky: true })
         .addTo(g);
-      cm.bindPopup(c.label);
-      if (c.onClick) cm.on('click', c.onClick);
+      if (a.onClick) r.on('click', a.onClick);
     }
     for (const mk of markers) {
       const one = L.marker([mk.lat, mk.lng], { icon: icon(mk.kind), draggable: mk.kind === 'pin' && !!draggable, title: mk.label, zIndexOffset: mk.kind === 'club' ? 1000 : 0 }).addTo(g);
@@ -69,7 +66,7 @@ export function MapView({ center, markers, circles = [], height, onPin, draggabl
       if (mk.onClick) one.on('click', mk.onClick);
       if (mk.kind === 'pin' && draggable) one.on('dragend', () => { const p = one.getLatLng(); onPinRef.current?.({ lat: p.lat, lng: p.lng }); });
     }
-  }, [markers, circles, draggable]);
+  }, [markers, shapes, draggable]);
 
   return <div ref={el} role="region" aria-label={label} style={{ height, width: '100%', borderRadius: 12, overflow: 'hidden', zIndex: 0, position: 'relative', background: '#EEECE8' }} />;
 }

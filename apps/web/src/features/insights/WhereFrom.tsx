@@ -1,14 +1,16 @@
 // Round 21: Insights › Where from. Who lives where: members active today and the leads made in the period (Who: Members / Enquiries / Both) on a
-// map (View: exact pins, or one circle per kelurahan / kecamatan sized by count), with the table under it. Tap an area for its people; people with no
-// pin are counted and listed so the front desk can add them.
-import { Suspense, lazy, useMemo, useState, type CSSProperties } from 'react';
+// map (View: exact pins, or the totals per kelurahan / kecamatan; 11 Nov, KC: the map then shades each whole area, its OpenStreetMap outline, green to
+// red by how many live there; tap an area for its people), with the table under it. Tap an area for its people; people with no pin are counted and listed so the front desk can add them.
+import { Suspense, lazy, useEffect, useMemo, useState, type CSSProperties } from 'react';
 import { Link } from 'react-router-dom';
-import { wherePoints, whereAreas, type WhereArea, type WhereLevel, type WhereMissing, type WherePoint, type WhereWho } from '@cp/shared/rules/whereFrom';
+import { heatBands, heatColor, outlineQuery, wherePoints, whereAreas, type WhereArea, type WhereLevel, type WhereMissing, type WherePoint, type WhereWho } from '@cp/shared/rules/whereFrom';
 import type { InsightPeriod } from '@cp/shared/rules/insights';
 import { FONT_SMALL, HAIRLINE, Pager, Select, Sheet, usePaged } from '../../components/ui';
 import { useDevice } from '../../hooks/useDevice';
 import { useT } from '../../lib/i18n';
 import { useClub } from '../../store/replica';
+import { areaOutline } from '../../lib/geo';
+import type { GeoShape } from '@cp/shared';
 
 const MapView = lazy(() => import('../../components/geo/MapView').then((m) => ({ default: m.MapView })));
 const FALLBACK = { lat: -6.136, lng: 106.731 };
@@ -30,6 +32,22 @@ export function WhereFrom({ period, today }: { period: InsightPeriod; today: str
   const [missingOpen, setMissingOpen] = useState(false);
   const data = useMemo(() => wherePoints(s, who, period, today), [s, who, period, today]);
   const areas = useMemo(() => (view === 'pins' ? [] : whereAreas(data.points, view)), [data, view]);
+  // 11 Nov (KC): each area's outline, asked of the server one by one (it looks each up once and keeps it); undefined = still coming, null = none
+  const [outlines, setOutlines] = useState<Record<string, GeoShape | null>>({});
+  useEffect(() => {
+    if (view === 'pins') return;
+    let gone = false;
+    void (async () => {
+      for (const a of areas) {
+        const q = outlineQuery(a, view);
+        if (!q) continue;
+        const shape = await areaOutline(q);
+        if (gone) return;
+        setOutlines((o) => ({ ...o, [`${view}:${a.key}`]: shape }));
+      }
+    })();
+    return () => { gone = true; };
+  }, [areas, view]);
   const paged = usePaged(data.points, 20, who + view);
   const club = s.club.settings.location;
   const center = club ?? data.points[0] ?? FALLBACK;
@@ -37,7 +55,10 @@ export function WhereFrom({ period, today }: { period: InsightPeriod; today: str
   const kindLabel = (p: { kind: 'member' | 'enquiry' }) => t(p.kind === 'member' ? 'insights.kindMember' : 'insights.kindEnquiry');
   const clubMarker = club ? [{ id: 'club', lat: club.lat, lng: club.lng, kind: 'club' as const, label: t('geo.clubPin') }] : [];
   const markers = view === 'pins' ? [...data.points.map((p) => ({ id: `${p.kind}:${p.id}`, lat: p.lat, lng: p.lng, kind: p.kind, label: p.name })), ...clubMarker] : clubMarker;
-  const circles = areas.map((a) => ({ id: a.key || '_', lat: a.lat, lng: a.lng, count: a.total, label: `${areaName(a)} · ${a.total}`, onClick: () => setArea(a) }));
+  const top = areas[0]?.total ?? 0;
+  const colorOf = (a: WhereArea) => heatColor(a.total, top);
+  const shapes = areas.flatMap((a) => { const shape = outlines[`${view}:${a.key}`]; return shape ? [{ id: a.key, shape, color: colorOf(a), label: `${areaName(a)} · ${a.total}`, onClick: () => setArea(a) }] : []; });
+  const unmapped = view === 'pins' ? 0 : areas.filter((a) => outlines[`${view}:${a.key}`] === null || !a.key).length;
   const showM = who !== 'enquiries';
   const showE = who !== 'members';
 
@@ -60,8 +81,24 @@ export function WhereFrom({ period, today }: { period: InsightPeriod; today: str
       </div>
       {showE ? <div style={{ fontSize: 13, color: '#6B6259', marginTop: -4 }}>{t('insights.periodEnquiries')}</div> : null}
       <Suspense fallback={<div style={{ height: isPhone ? 240 : 420, borderRadius: 12, background: '#EEECE8' }} />}>
-        <MapView center={center} markers={markers} circles={circles} height={isPhone ? 240 : 420} zoom={12} label={t('insights.tabWhere')} />
+        <MapView center={center} markers={markers} shapes={shapes} height={isPhone ? 240 : 420} zoom={12} label={t('insights.tabWhere')} />
       </Suspense>
+      {view !== 'pins' && areas.length ? (
+        // 11 Nov (KC): what each colour means: its people count, then one line on how it is worked out
+        <div data-testid="where-legend" style={{ display: 'flex', flexDirection: 'column', gap: 6, fontSize: 12, lineHeight: '17px', color: '#6B6259', marginTop: isPhone ? -4 : -8 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px 12px', flexWrap: 'wrap' }}>
+            <span style={{ fontWeight: 600, color: '#4A433D' }}>{t('insights.legendTitle')}</span>
+            {heatBands(top).map((b) => (
+              <span key={b.color} data-band={`${b.from}-${b.to}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontVariantNumeric: 'tabular-nums', color: '#24201C' }}>
+                <span aria-hidden="true" style={{ width: 12, height: 12, borderRadius: 3, background: b.color, opacity: 0.85 }} />
+                {b.from === b.to ? b.from : `${b.from}–${b.to}`}
+              </span>
+            ))}
+          </div>
+          <span>{t('insights.legendHow', { who: t(`insights.legendWho_${who}`), n: top })}</span>
+          {unmapped ? <span data-testid="where-unmapped">{t('insights.noOutline', { n: unmapped })}</span> : null}
+        </div>
+      ) : null}
       {data.missing.length ? (
         <button type="button" data-testid="where-missing" onClick={() => setMissingOpen(true)}
           style={{ alignSelf: 'flex-start', border: 'none', background: 'none', padding: 0, color: 'var(--accent, #75624B)', fontSize: 14, fontWeight: 500, textDecoration: 'underline', cursor: 'pointer', fontFamily: 'Inter' }}>
@@ -98,6 +135,7 @@ export function WhereFrom({ period, today }: { period: InsightPeriod; today: str
             {areas.map((a) => (
               <button key={a.key || '_'} type="button" data-area={a.name} onClick={() => setArea(a)} className="h-row"
                 style={{ display: 'flex', gap: 10, alignItems: 'center', width: '100%', minHeight: 48, borderTop: HAIRLINE, border: 'none', borderTopStyle: 'solid', background: 'transparent', padding: 0, textAlign: 'left', cursor: 'pointer', fontFamily: 'Inter', fontSize: 15, color: '#24201C' }}>
+                <span aria-hidden="true" style={{ width: 10, height: 10, borderRadius: 3, background: colorOf(a), flex: 'none' }} />
                 <span style={{ flex: 1, minWidth: 0, fontWeight: 500, overflowWrap: 'anywhere' }}>{areaName(a)}</span>
                 {showM ? <span data-col="members" style={cell}>{a.members}</span> : null}
                 {showE ? <span data-col="enquiries" style={cell}>{a.enquiries}</span> : null}

@@ -18,7 +18,8 @@ import { formLinkOpen, registerPublicRoutes } from './routes/public';
 import { byteRange, checkUpload, loadMedia, mediaExists, saveMedia, IMAGE_MIME } from './media';
 import { receiptOcr } from './providers/receiptOcr';
 import { geocoder } from './providers/geocoder';
-import { registerGeoRoutes } from './routes/geo';
+import { registerGeoRoutes, type OutlineCached } from './routes/geo';
+import { getMeta, setMeta } from './db/store';
 
 export const app = new Hono();
 const errBody = (e: unknown) => (e instanceof DomainError ? { code: e.code, params: e.params } : { code: 'err.server', params: { message: e instanceof Error ? e.message : String(e) } });
@@ -31,7 +32,7 @@ registerAuthRoutes(app);
 // the renter's rating page (no sign-in; routes/public.ts)
 registerPublicRoutes(app);
 // round 21: address search and pin → area for the location picker (routes/geo.ts)
-registerGeoRoutes(app, { user: (c) => { const u = authUser(c); return u && u.kind === 'staff' ? u : null; }, geo: geocoder });
+registerGeoRoutes(app, { user: (c) => { const u = authUser(c); return u && u.kind === 'staff' ? u : null; }, geo: geocoder, outlines: { get: (k) => getMeta<OutlineCached>(k), set: (k, v) => setMeta(k, v) } });
 // 11 Nov (KC): the family's online form pins the home too, through its own link (only while the link is open)
 registerGeoRoutes(app, { user: (c) => (formLinkOpen(c.req.param('token') ?? '') ? { id: 'form' } : null), geo: geocoder }, '/api/public/form/:token/geo');
 

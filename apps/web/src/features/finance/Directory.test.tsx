@@ -215,22 +215,29 @@ describe('round 21: field trip venues', () => {
 
 describe('round 21: ratings', () => {
   const rate = (st: ClubState, id: string, stars: number[]) => { st.directory[id].ratings = stars.map((x, i) => ({ id: `${id}r${i}`, stars: x as 1 | 2 | 3 | 4 | 5, at: '2026-10-0' + (i + 1) + 'T10:00', by: 'staff:s9' as const, ...(i === 0 ? { note: 'Fixed it fast' } : {}) })); };
-  it('a rated row shows its average and count; the best rated comes first under its heading', async () => {
-    await show((st) => { rate(st, 'd14', [5, 5, 5, 5, 5, 4]); rate(st, 'd15', [2, 2, 3]); });
+  it('11 Nov (KC): a rated row shows its one rating; the best rated comes first under its heading', async () => {
+    await show((st) => { rate(st, 'd14', [4, 5]); rate(st, 'd15', [3, 2]); });
     const names = Array.from(document.querySelectorAll('[data-dir-row]')).map((r) => r.getAttribute('data-dir-row'));
-    const a = names.indexOf(document.querySelector('[data-dir-row] [data-rating="4.8"]')!.closest('[data-dir-row]')!.getAttribute('data-dir-row'));
-    const b = names.indexOf(document.querySelector('[data-dir-row] [data-rating="2.3"]')!.closest('[data-dir-row]')!.getAttribute('data-dir-row'));
+    const a = names.indexOf(document.querySelector('[data-dir-row] [data-rating="5"]')!.closest('[data-dir-row]')!.getAttribute('data-dir-row'));
+    const b = names.indexOf(document.querySelector('[data-dir-row] [data-rating="2"]')!.closest('[data-dir-row]')!.getAttribute('data-dir-row'));
     expect(a).toBeLessThan(b);
-    expect(document.querySelector('[data-rating="4.8"]')!.textContent).toBe('4.8 · 6');
+    expect(document.querySelector('[data-rating="5"]')!.textContent).toBe('5');
   });
-  it('the sheet adds a rating (stars, optional note) and shows the log with who and when', async () => {
-    await show((st) => rate(st, 'd15', [2]));
+  it('the sheet shows the rating now and its changes (old → new, why, who); Change saves other stars with an optional why; the same stars say so', async () => {
+    await show((st) => rate(st, 'd15', [3, 2]));
     await click(document.querySelector('[data-dir-open="Kemang Teknik AC"]'));
     const sheet = document.querySelector('[role="dialog"]')!;
-    expect(sheet.textContent).toContain('Fixed it fast');
+    expect(sheet.querySelector('[data-rating-now]')?.getAttribute('data-rating-now')).toBe('2');
+    expect(Array.from(sheet.querySelectorAll('[data-change]')).map((x) => x.getAttribute('data-change'))).toEqual(['3>2', '>3']);
+    expect(sheet.querySelector('[data-rating-row="d15r0"]')!.textContent).toContain('Fixed it fast');
+    expect(sheet.querySelectorAll('[aria-label="Remove rating"]')).toHaveLength(0);
+    await click(Array.from(sheet.querySelectorAll('button')).find((b) => textOf(b) === 'Change'));
+    await click(Array.from(sheet.querySelectorAll('button')).find((b) => textOf(b) === 'Save rating'));
+    expect(sheet.textContent).toContain('That is the rating already. Pick other stars.');
+    expect(h.act).not.toHaveBeenCalledWith('directory.rate', expect.anything(), expect.anything());
     await click(sheet.querySelector('button[aria-label="4 stars"]'));
     await typeInto(sheet.querySelector<HTMLInputElement>('input[name="ratingNote"]')!, 'On time');
-    await click(Array.from(sheet.querySelectorAll('button')).find((b) => textOf(b) === 'Add rating'));
+    await click(Array.from(sheet.querySelectorAll('button')).find((b) => textOf(b) === 'Save rating'));
     expect(h.act).toHaveBeenCalledWith('directory.rate', { contactId: 'd15', stars: 4, note: 'On time' }, expect.anything());
   });
 });

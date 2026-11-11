@@ -1,5 +1,5 @@
 // The Contacts directory's categories (round 15, phase 2): which category a contact sits under, and in what order.
-import type { CalendarEvent, ClubSettings, ClubState, DirectoryContact, DirectoryGroup } from '../types';
+import type { CalendarEvent, ClubSettings, ClubState, ContactRating, DirectoryContact, DirectoryGroup } from '../types';
 import { live, sortBy } from '../util';
 
 /** The key of the bucket for contacts with no category, or whose category is retired or gone ("Other"). */
@@ -38,17 +38,22 @@ export function groupKeys(st: ClubSettings): string[] {
 export const tripsAt = (s: ClubState, contactId: string): CalendarEvent[] =>
   sortBy(live(s.calendarEvents).filter((e) => e.kind === 'outing' && e.venueId === contactId && !e.cancelledAt), (e) => e.date).reverse();
 
-/** Round 21: a contact's average stars (to 1 decimal) and how many ratings; null when unrated. */
-export function ratingOf(c: Pick<DirectoryContact, 'ratings'>): { avg: number; n: number } | null {
+/** 11 Nov (KC): a contact has ONE rating, the newest entry of `ratings` (the rest is its change log); null when unrated. `n` = entries in the log. */
+export function ratingOf(c: Pick<DirectoryContact, 'ratings'>): { stars: number; n: number } | null {
   const r = c.ratings ?? [];
   if (!r.length) return null;
-  return { avg: Math.round((r.reduce((a, x) => a + x.stars, 0) / r.length) * 10) / 10, n: r.length };
+  return { stars: r[r.length - 1].stars, n: r.length };
 }
-/** Round 21: best average first, then more ratings, then the name; unrated contacts last (by name). */
+/** 11 Nov (KC): the rating's changes, newest first: each with the stars it changed from (null = the first rating). */
+export function ratingChanges(c: Pick<DirectoryContact, 'ratings'>): (ContactRating & { from: number | null })[] {
+  const r = c.ratings ?? [];
+  return r.map((x, i) => ({ ...x, from: i ? r[i - 1].stars : null })).reverse();
+}
+/** Best rating first, then the name; unrated contacts last (by name). */
 export function sortContacts<T extends Pick<DirectoryContact, 'ratings' | 'name'>>(list: T[]): T[] {
   return [...list].sort((a, b) => {
     const ra = ratingOf(a), rb = ratingOf(b);
     if (!ra || !rb) return ra ? -1 : rb ? 1 : a.name.localeCompare(b.name);
-    return rb.avg - ra.avg || rb.n - ra.n || a.name.localeCompare(b.name);
+    return rb.stars - ra.stars || a.name.localeCompare(b.name);
   });
 }

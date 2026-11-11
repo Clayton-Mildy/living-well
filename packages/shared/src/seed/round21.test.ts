@@ -40,9 +40,9 @@ for (const roster of [false, true]) {
       }
       expect('fee' in s.calendarEvents['ev-outing-past']).toBe(false);
     });
-    it('the two AC services are rated 4.8 (6) and 2.3 (3); two more contacts have a rating', () => {
-      expect(ratingOf(s.directory.d14)).toEqual({ avg: 4.8, n: 6 });
-      expect(ratingOf(s.directory.d15)).toEqual({ avg: 2.3, n: 3 });
+    it('the two AC services are rated 5 (changed twice) and 2 (changed once); two more contacts have a rating', () => {
+      expect(ratingOf(s.directory.d14)).toEqual({ stars: 5, n: 3 });
+      expect(ratingOf(s.directory.d15)).toEqual({ stars: 2, n: 2 });
       expect(live(s.directory).filter((d) => d.ratings?.length).length).toBe(4);
     });
     it('round 21 review: October\'s invoices bill the field trip fee of roster members switched on, and a full payment still covers the invoice', () => {

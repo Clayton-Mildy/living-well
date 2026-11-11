@@ -93,14 +93,13 @@ export function seedRound21(s: ClubState, T: ISODate): void {
   const byEvent = new Map(VENUES.map((v) => [v.event, v.id]));
   for (const e of live(s.calendarEvents)) if (e.kind === 'outing') e.venueId = byEvent.get(e.id) ?? VENUES[0].id;
 
-  // ----- ratings: the two AC services, and one each for two more contacts -----
+  // ----- ratings (11 Nov, KC: one rating per contact and how it changed): the two AC services, and a first rating for two more contacts -----
   const d = (k: number) => `2026-${String(8 + Math.floor(k / 3)).padStart(2, '0')}-${String(4 + (k % 3) * 9).padStart(2, '0')}T11:00`;
   if (s.directory.d14) s.directory.d14.ratings = [
-    rate('rt-d14-1', 5, 's1', d(0), 'Came the same day, fixed the AC fast'), rate('rt-d14-2', 5, 's9', d(1)), rate('rt-d14-3', 4, 's1', d(2), 'A bit late, good work'),
-    rate('rt-d14-4', 5, 's1', d(3)), rate('rt-d14-5', 5, 's9', d(4), 'Cleaned all units in one visit'), rate('rt-d14-6', 5, 's1', d(5)),
+    rate('rt-d14-1', 5, 's1', d(0), 'Came the same day, fixed the AC fast'), rate('rt-d14-2', 4, 's1', d(2), 'A bit late, good work'), rate('rt-d14-3', 5, 's9', d(4), 'Cleaned all units in one visit'),
   ];
   if (s.directory.d15) s.directory.d15.ratings = [
-    rate('rt-d15-1', 2, 's1', d(1), 'Two hours late, AC leaked again'), rate('rt-d15-2', 3, 's9', d(3)), rate('rt-d15-3', 2, 's1', d(5), 'Had to call back twice'),
+    rate('rt-d15-1', 3, 's9', d(1)), rate('rt-d15-2', 2, 's1', d(5), 'Two hours late, AC leaked again; had to call back twice'),
   ];
   for (const [id, stars, note] of [['d1', 5, 'Kind with the members'], ['d6', 4, 'Fresh, on time']] as const) if (s.directory[id]) s.directory[id].ratings = [rate(`rt-${id}-1`, stars, 's9', d(4), note)];
 }

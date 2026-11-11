@@ -126,7 +126,7 @@ export const insights = {
   mInOutAria: 'Members who joined and left, by plan', mSwitchAria: 'Plan switches', mActiveAria: 'Active members by plan',
   mTotal: 'All',
   // round 12: the Mood tab
-  tabWhere: 'Where from', who: 'Who', view: 'View', whoBoth: 'Members and enquiries', whoMembers: 'Members', whoEnquiries: 'Enquiries', viewPins: 'Exact pins', viewKel: 'Kelurahan', viewKec: 'Kecamatan',
+  tabWhere: 'Where from', who: 'Who', view: 'View', whoBoth: 'Members and enquiries', whoMembers: 'Members', whoEnquiries: 'Enquiries', viewPins: 'Exact pins', viewKel: 'Village', viewKec: 'District', legendTitle: 'People per area', legendHow: 'Counts the {who} living in each area. Red is the busiest area ({n}); the colours below it split 1 to {n} into equal steps.', legendWho_both: 'members and enquiries', legendWho_members: 'members', legendWho_enquiries: 'enquiries', noOutline: '{n} not shaded (no outline found)',
   periodEnquiries: 'Period applies to enquiries; members are those active today.', missing: '{n} without a location', missingSub: 'Open one to add the address pin.', colName: 'Name', colType: 'Type', colKm: 'km', colMembers: 'Members', colEnquiries: 'Enquiries',
   km: '{km} km', unknownArea: 'Unknown area', kindMember: 'Member', kindEnquiry: 'Enquiry', whereEmpty: 'Nobody with a pin yet.',
   tabMood: 'Mood',
