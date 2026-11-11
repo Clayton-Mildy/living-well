@@ -634,6 +634,11 @@ export interface OnlineRegistration {
   address: string;
   contact: { name: string; relation: Relation; phone: string };
   plan?: Plan;
+  /** 11 Nov (KC): the home pin (search or tap the map; starts from the lead's), the monthly pick-up and the monthly field trip, as the family asks.
+   *  Join starts from them; staff can still change each one. */
+  location?: GeoPoint;
+  pickup?: boolean;
+  fieldTrips?: boolean;
   /** the carer (suster) who comes along, with the carer's NIK */
   nanny?: { name: string; nik: string; photoMediaId?: string; note?: string } | null;
   /** photos of the ID cards (uploaded through the form's own route) */

@@ -63,18 +63,20 @@ export function initialState(s: ClubState, mode: RegMode, today: ISODate): RegSt
   const title = online?.name?.trim() && online.title ? online.title : e.senior.title;
   const name = online?.name?.trim() || e.senior.name;
   return {
-    ...base, title, name, gender: genderOf(title), dob: online?.dob || '', address: online?.address || e.address || '', ...(e.location ? { location: { ...e.location } } : {}),
+    ...base, title, name, gender: genderOf(title), dob: online?.dob || '', address: online?.address || e.address || '', ...((online?.location ?? e.location) ? { location: { ...(online?.location ?? e.location)! } } : {}),
     contact: e.contact.name, rel: e.contact.relation, phone: e.contact.phone,
     health: h
       ? { conditions: h.conditions, diabetic: h.diabetic, mobility: h.mobility ?? 'none', diet: h.diet, food: h.food, foodOther: h.foodOther, ...splitDrugs(h.drugs) }
       : { conditions: [], diabetic: false, mobility: trial?.mobility ?? 'none', diet: trial?.diet ?? [], food: trial?.food ?? [], foodOther: '', ...splitDrugs(trial?.drugs ?? []) },
     carer: { nanny: !!online?.nanny, nannyName: online?.nanny?.name ?? '', nannyNik: online?.nanny?.nik ?? '', nannyPhoto: online?.nanny?.photoMediaId ?? '', nannyNote: online?.nanny?.note ?? '' },
     ktp: online?.ktp ?? {}, reg: regDraftOf(online?.registration), plan: online?.plan ?? '',
+    // 11 Nov (KC): what the family asked for on the form (pick-up empty = priced by distance from the pin)
+    pickup: !!online?.pickup, fieldTrips: !!online?.fieldTrips,
   };
 }
 
 /** KC 28 Oct: what the family answers on the online form, to tell whether the front desk changed it after they signed there. */
-export const answersOf = (st: RegState): string => JSON.stringify([st.title, st.name.trim(), st.dob, st.address.trim(), st.health, st.carer.nanny, st.carer.nannyName.trim(), st.carer.nannyNik.trim(), st.reg, st.plan]);
+export const answersOf = (st: RegState): string => JSON.stringify([st.title, st.name.trim(), st.dob, st.address.trim(), st.health, st.carer.nanny, st.carer.nannyName.trim(), st.carer.nannyNik.trim(), st.reg, st.plan, st.pickup, st.fieldTrips]);
 /** The signature the family drew on the lead's online form, once they sent it. */
 export const onlineSignatureOf = (e: Enquiry | undefined) => (e?.form?.submittedAt ? e.form.draft?.signature : undefined);
 

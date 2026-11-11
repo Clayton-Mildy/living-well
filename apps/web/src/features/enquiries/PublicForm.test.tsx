@@ -26,7 +26,7 @@ afterEach(async () => {
 });
 
 const lead = (): OnlineRegistration => ({ ...blankOnline(), title: 'Oma', name: 'Rosa Santoso', contact: { name: 'Dina Santoso', relation: 'daughter', phone: '+6281255550101' } });
-interface Server { dementiaFee?: number; state?: string; draft?: OnlineRegistration; step?: number | null; savedAt?: string | null; rev?: number; /** a save that comes in with a different `expect` is answered 409 */ strict?: boolean; /** answer the draft POST only when released (a save in flight) */ hold?: boolean }
+interface Server { dementiaFee?: number; state?: string; draft?: OnlineRegistration; step?: number | null; savedAt?: string | null; rev?: number; /** a save that comes in with a different `expect` is answered 409 */ strict?: boolean; /** answer the draft POST only when released (a save in flight) */ hold?: boolean; /** more fields on the GET answer */ extra?: Record<string, unknown> }
 /** The public routes: GET gives the link, POST …/draft saves, POST … opens or sends. Returns the calls made. */
 let release: () => void = () => undefined;
 function serve(srv: Server = {}) {
@@ -35,7 +35,7 @@ function serve(srv: Server = {}) {
     const method = init?.method ?? 'GET';
     const body = init?.body ? (JSON.parse(String(init.body)) as Record<string, unknown>) : {};
     calls.push({ url, method, body });
-    if (method === 'GET') return { ok: true, status: 200, json: async () => ({ state: srv.state ?? 'sent', club: 'CitraPremier', today: '2026-10-22', draft: srv.draft ?? lead(), step: srv.step ?? null, savedAt: srv.savedAt ?? null, draftRev: srv.rev ?? (srv.savedAt ? 1 : 0), submittedAt: null, expiresAt: '2026-11-05T09:00', prices: { flex: 2500000, gold: 4500000, flexQuota: 8 }, ...(srv.dementiaFee != null ? { dementiaFee: srv.dementiaFee } : {}) }) };
+    if (method === 'GET') return { ok: true, status: 200, json: async () => ({ state: srv.state ?? 'sent', club: 'CitraPremier', today: '2026-10-22', draft: srv.draft ?? lead(), step: srv.step ?? null, savedAt: srv.savedAt ?? null, draftRev: srv.rev ?? (srv.savedAt ? 1 : 0), submittedAt: null, expiresAt: '2026-11-05T09:00', prices: { flex: 2500000, gold: 4500000, flexQuota: 8 }, ...(srv.dementiaFee != null ? { dementiaFee: srv.dementiaFee } : {}), ...srv.extra }) };
     if (url.endsWith('/draft')) {
       if (srv.hold) await new Promise<void>((r) => { release = r; });
       const cur = srv.rev ?? (srv.savedAt ? 1 : 0);
@@ -291,3 +291,35 @@ describe('the online form: the draft', () => {
     expect(resumeStep({ ...fromOnline(lead()), phone: '0812 5555 0101' }, 3)).toBe(2);
   });
 });
+
+describe('11 Nov (KC): the home pin, pick-up and field trip', () => {
+  const CLUB = { lat: -6.136, lng: 106.731 };
+  const HOME = { lat: -6.172, lng: 106.731, kelurahan: 'Kalideres' }; // about 4 km south of the club
+  const ready = (over: Partial<OnlineRegistration> = {}): OnlineRegistration => ({ ...lead(), address: 'Jl. Melati 3', ...over });
+  it('the Plan step prices pick-up from the pin; both switches go into the review and the sent answers', async () => {
+    const calls = serve({ draft: ready({ location: HOME }), step: 4, savedAt: '2026-10-22T09:00', extra: { clubPin: CLUB, pickupRate: { perKm: 10000, freeKm: 2 }, fieldTripFee: 250000 } });
+    await show();
+    expect(step()).toBe('plan');
+    const pick = button(/Pick-up from home/);
+    expect(textOf(pick!)).toMatch(/About Rp\s?40\.000 \/ month · 4 km/);
+    await click(pick);
+    await click(button(/Monthly field trip/));
+    expect(document.querySelectorAll('[role="switch"][aria-checked="true"]').length).toBe(2);
+    await click(button(/^Continue/));
+    expect(step()).toBe('review');
+    const plan = document.querySelector('[data-review-group="plan"]')!.textContent!;
+    expect(plan).toMatch(/Pick-up from home.*About Rp\s?40\.000/);
+    expect(plan).toMatch(/Monthly field trip.*250\.000/);
+    expect(document.querySelector('[data-review-group="who"]')!.textContent).toContain('Jl. Melati 3 · Kalideres');
+    await click(button('Send to the club'));
+    const sent = calls.find((c) => c.method === 'POST' && c.body.action === 'submit')!;
+    expect(sent.body.draft).toMatchObject({ location: HOME, pickup: true, fieldTrips: true });
+  });
+  it('with no pin, pick-up says it is priced by distance; an older server with no trip fee shows no trip switch', async () => {
+    serve({ draft: ready(), step: 4, savedAt: '2026-10-22T09:00', extra: { clubPin: CLUB, pickupRate: { perKm: 10000, freeKm: 2 } } });
+    await show();
+    expect(textOf(button(/Pick-up from home/)!)).toContain('Priced by distance once we know the address');
+    expect(button(/Monthly field trip/)).toBeUndefined();
+  });
+});
+

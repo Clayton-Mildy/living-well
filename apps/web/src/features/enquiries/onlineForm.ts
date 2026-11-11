@@ -1,12 +1,16 @@
 // Round 13 (KC): the family's online registration form as five steps — Who is joining, Family contact, Health, Plan, Review and send — with a draft
 // that survives closing the page. What the steps type in (FDraft, the field groups' own draft shapes), what still blocks each step, and the two
 // places the draft lives: this device (key cp.form.<token>, like the staff flow's cp.reg.*) and the lead (enquiry.formSave through the link).
-import { fmtPhone, type Lang, type OnlineRegistration, type Plan, type Relation, type Title, type KtpUploads } from '@cp/shared';
+import { distanceKm, fmtPhone, type GeoPoint, type Lang, type OnlineRegistration, type Plan, type Relation, type Title, type KtpUploads } from '@cp/shared';
 import { validateRegistration } from '@cp/shared/rules/applicationForm';
 import type { FieldIssue } from '@cp/shared/rules/members';
 import { carerOf, carerOk, joinDrugs, ktpFor, regDraftOf, regOfDraft, splitDrugs, type AllergyDraft, type CarerDraft, type HealthDraft, type RegDraft } from '../members/dialogs/forms';
 
-export type FDraft = HealthDraft & AllergyDraft & CarerDraft & { title: Title; name: string; dob: string; address: string; cName: string; rel: Relation; phone: string; plan: Plan | ''; reg: RegDraft; ktp: KtpUploads };
+export type FDraft = HealthDraft & AllergyDraft & CarerDraft & {
+  title: Title; name: string; dob: string; address: string; cName: string; rel: Relation; phone: string; plan: Plan | ''; reg: RegDraft; ktp: KtpUploads;
+  /** 11 Nov (KC): the home pin, and the monthly pick-up and field trip the family asks for */
+  location?: GeoPoint; pickup: boolean; fieldTrips: boolean;
+};
 
 export type OnlineStep = 'who' | 'family' | 'health' | 'plan' | 'review';
 export const ONLINE_STEPS: OnlineStep[] = ['who', 'family', 'health', 'plan', 'review'];
@@ -17,17 +21,25 @@ const phoneIn = (p: string) => (p.replace(/\D/g, '').length >= 8 ? fmtPhone(p) :
 const EMPTY_HEALTH: OnlineRegistration['health'] = { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] };
 
 export const fromOnline = (o: OnlineRegistration): FDraft => ({
-  title: o.title, name: o.name, dob: o.dob, address: o.address, cName: o.contact.name, rel: o.contact.relation, phone: o.contact.phone ? phoneIn(o.contact.phone) : '', plan: o.plan ?? '',
+  title: o.title, name: o.name, dob: o.dob, address: o.address, cName: o.contact.name, rel: o.contact.relation, phone: o.contact.phone ? phoneIn(o.contact.phone) : '', plan: o.plan ?? '', ...(o.location ? { location: o.location } : {}), pickup: !!o.pickup, fieldTrips: !!o.fieldTrips,
   conditions: o.health.conditions, diabetic: o.health.diabetic, mobility: o.health.mobility ?? 'none', diet: o.health.diet, food: o.health.food, foodOther: o.health.foodOther, ...splitDrugs(o.health.drugs), reg: regDraftOf(o.registration),
   nanny: !!o.nanny, nannyName: o.nanny?.name ?? '', nannyNik: o.nanny?.nik ?? '', nannyPhoto: o.nanny?.photoMediaId ?? '', nannyNote: o.nanny?.note ?? '', ktp: o.ktp ?? {},
 });
 /** The answers as the lead keeps them (sent for good, or saved half-filled: the server only checks the shape of a saved draft). */
 export const toOnline = (d: FDraft, lang: Lang): OnlineRegistration => ({
   title: d.title.trim(), name: d.name.trim(), dob: d.dob, address: d.address.trim(), contact: { name: d.cName.trim(), relation: d.rel, phone: d.phone.trim() }, ...(d.plan ? { plan: d.plan } : {}),
+  ...(d.location ? { location: d.location } : {}), ...(d.pickup ? { pickup: true } : {}), ...(d.fieldTrips ? { fieldTrips: true } : {}),
   health: { conditions: d.conditions, diabetic: d.diabetic, food: d.food, foodOther: d.foodOther.trim(), drugs: joinDrugs(d), mobility: d.mobility === 'none' ? null : d.mobility, diet: d.diet },
   ...(regOfDraft(d.reg, d.nanny) ? { registration: regOfDraft(d.reg, d.nanny) } : {}), nanny: carerOf(d), ...(ktpFor(d.ktp, d.reg.ids, d.nanny) ? { ktp: ktpFor(d.ktp, d.reg.ids, d.nanny) } : {}), lang,
 });
 export const blankOnline = (): OnlineRegistration => ({ title: 'Oma', name: '', dob: '', address: '', contact: { name: '', relation: 'daughter', phone: '' }, health: EMPTY_HEALTH, lang: 'en' });
+
+/** The monthly pick-up price for a home pin, as Settings prices it (per started km, free within); null without both pins. */
+export function pickupQuote(info: { clubPin?: { lat: number; lng: number } | null; pickupRate?: { perKm: number; freeKm: number } }, at?: GeoPoint): { km: number; price: number; free: boolean } | null {
+  if (!info.clubPin || !info.pickupRate || !at) return null;
+  const km = distanceKm(info.clubPin, at);
+  return km <= info.pickupRate.freeKm ? { km, price: 0, free: true } : { km, price: Math.ceil(km) * info.pickupRate.perKm, free: false };
+}
 
 // ---------- what blocks a step ----------
 /** The application form's own checks, split by the step that asks the question (same split as the staff flow's steps.ts). */

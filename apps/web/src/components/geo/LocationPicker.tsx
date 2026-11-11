@@ -13,13 +13,17 @@ const MapView = lazy(() => import('./MapView').then((m) => ({ default: m.MapView
 const FALLBACK = { lat: -6.136, lng: 106.731 };
 
 export interface LocationValue { address: string; location?: GeoPoint }
-export function LocationPicker({ address, location, onChange, club, areaSuggestions, label }: {
+/** The address search and the place under a pin (the staff's signed-in proxy; the family's online form passes its own, through the link). */
+export interface GeoLookup { search: (q: string) => Promise<GeoHit[]>; reverse: (lat: number, lng: number) => Promise<GeoHit | null> }
+const STAFF_LOOKUP: GeoLookup = { search: searchPlaces, reverse: reversePlace };
+export function LocationPicker({ address, location, onChange, club, areaSuggestions, label, lookup = STAFF_LOOKUP }: {
   address: string;
   location: GeoPoint | undefined;
   onChange: (v: LocationValue) => void;
   club: GeoPoint | undefined;
   areaSuggestions: { kelurahan: string[]; kecamatan: string[] };
   label?: string;
+  lookup?: GeoLookup;
 }) {
   const t = useT();
   const { isPhone } = useDevice();
@@ -37,7 +41,7 @@ export function LocationPicker({ address, location, onChange, club, areaSuggesti
     if (q.length < 3) { setErr(t('geo.err.invalid')); return; }
     setBusy(true); setErr('');
     try {
-      const r = await searchPlaces(q);
+      const r = await lookup.search(q);
       setHits(r);
     } catch (e) {
       setHits(null);
@@ -54,7 +58,7 @@ export function LocationPicker({ address, location, onChange, club, areaSuggesti
     const at: GeoPoint = { ...prev, lat: Math.round(p.lat * 1e6) / 1e6, lng: Math.round(p.lng * 1e6) / 1e6 };
     emit({ address: now.current.address, location: at });
     try {
-      const h = await reversePlace(at.lat, at.lng);
+      const h = await lookup.reverse(at.lat, at.lng);
       const cur = now.current.location;
       if (!h || !cur || cur.lat !== at.lat || cur.lng !== at.lng) return; // moved again meanwhile
       // round 21 review: a moved pin takes the new place's area; a field typed over while the lookup ran, or one the lookup lacks, stays

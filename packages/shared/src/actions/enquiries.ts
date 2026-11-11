@@ -483,6 +483,7 @@ export const enquiriesActions = [
           ...(typeof dr.dob === 'string' ? { dob: /^\d{4}-\d{2}-\d{2}$/.test(dr.dob) ? dr.dob : '' } : {}), ...(dr.address !== undefined ? { address: txt(dr.address, 200) } : {}),
           ...(dr.contact !== undefined ? { contact: { name: txt(c.name, 80), relation: ALL_RELATIONS.includes(c.relation as never) ? (c.relation as (typeof ALL_RELATIONS)[number]) : 'daughter', phone: rawPhone.replace(/\D/g, '').length >= 8 ? e164(rawPhone) : rawPhone } } : {}),
           ...(isPlanId(dr.plan) ? { plan: dr.plan } : {}),
+          ...(cleanGeo(dr.location) ? { location: cleanGeo(dr.location)! } : {}), ...(dr.pickup === true ? { pickup: true } : {}), ...(dr.fieldTrips === true ? { fieldTrips: true } : {}),
           ...(dr.nanny !== undefined ? { nanny: nn ? { name: txt(nn.name, 80), nik: txt(nn.nik, 24).replace(/\s/g, ''), ...nannyExtras(nn) } : null } : {}),
           ...(dr.ktp !== undefined && dr.ktp !== null ? { ktp: parseKtp(dr.ktp) } : {}), ...(h ? { health: h } : {}), ...(registration ? { registration } : {}),
           ...(dr.lang === 'id' || dr.lang === 'en' ? { lang: dr.lang } : {}),
@@ -536,7 +537,9 @@ export const enquiriesActions = [
         draft: {
           title: titleOf(dr.title, 'enq.err.titleRequired'), name: str(dr.name, 80, { required: true, field: 'name' }), dob: dr.dob ? isoDate(dr.dob, 'dob') : '', address: str(dr.address, 200),
           contact: { name: str(c.name, 80, { required: true, field: 'contact.name' }), relation: oneOf(c.relation, ALL_RELATIONS, 'contact.relation'), phone: phone(c.phone, 'contact.phone') },
-          ...(plan ? { plan } : {}), ...(dr.nanny !== undefined ? { nanny: parseCarer(dr.nanny) as OnlineRegistration['nanny'] } : {}), ...(dr.ktp !== undefined ? { ktp: parseKtp(dr.ktp) } : {}), health: h, ...(registration ? { registration } : {}), lang: oneOf(dr.lang ?? 'en', ['en', 'id'] as const, 'lang'),
+          ...(plan ? { plan } : {}),
+          ...(dr.location !== undefined && dr.location !== null ? { location: geoIn(dr.location) } : {}), ...(bool(dr.pickup) ? { pickup: true } : {}), ...(bool(dr.fieldTrips) ? { fieldTrips: true } : {}),
+          ...(dr.nanny !== undefined ? { nanny: parseCarer(dr.nanny) as OnlineRegistration['nanny'] } : {}), ...(dr.ktp !== undefined ? { ktp: parseKtp(dr.ktp) } : {}), health: h, ...(registration ? { registration } : {}), lang: oneOf(dr.lang ?? 'en', ['en', 'id'] as const, 'lang'),
         },
       };
     },

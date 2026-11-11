@@ -211,6 +211,19 @@ describe('Join a lead: a half-filled online form pre-fills too (round 13)', () =
   });
 });
 
+describe('11 Nov (KC): Join starts from the pin, pick-up and field trip the family asked for', () => {
+  it('initialState takes the form\'s pin over the lead\'s and switches pick-up (priced by distance) and field trips on', () => {
+    const st = openClub('lobby');
+    const e = st.enquiries.e5;
+    const PIN = { lat: -6.15, lng: 106.72 };
+    const view = { ...st, enquiries: { ...st.enquiries, e5: { ...e, location: { lat: -6.1, lng: 106.7 }, form: { token: 'tok-e5', sentAt: `${T}T09:00`, sentBy: 'staff:s1' as const, expiresAt: '2026-11-04T09:00', submittedAt: `${T}T09:40`, draft: { title: e.senior.title, name: e.senior.name, dob: '', address: 'Jl. Melati 3', location: PIN, pickup: true, fieldTrips: true, contact: { ...e.contact }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en' as const } } } } };
+    const got = initialState(view, { kind: 'lead', id: 'e5' }, T);
+    expect(got).toMatchObject({ location: PIN, pickup: true, pickupPrice: '', fieldTrips: true });
+    const none = initialState(st, { kind: 'lead', id: 'e5' }, T);
+    expect([none.pickup, none.fieldTrips]).toEqual([false, false]);
+  });
+});
+
 describe('the family signs the form at registration (round 15)', () => {
   const ptr = (type: string, x: number, y: number) => {
     const e = new Event(type, { bubbles: true, cancelable: true });

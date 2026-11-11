@@ -7,6 +7,7 @@ import { buildSeed } from '@cp/shared';
 import { useReplica } from '../../store/replica';
 import { useSession } from '../../store/session';
 import { Calendar } from './Calendar';
+import { VenuePicker } from './VenuePicker';
 
 vi.mock('../../lib/act', () => ({ useAct: () => vi.fn(async () => ({ ok: true, result: {} })) }));
 
@@ -103,3 +104,26 @@ describe('Calendar: field trips', () => {
     expect(document.querySelector('[data-testid="where"]')!.textContent).toBe('/calendar');
   });
 });
+
+describe('11 Nov (KC): the picked venue shows its pictures from Contacts', () => {
+  it('nothing picked: no preview; a venue picked: its pictures, address and person to ask for; a tap opens one full size', async () => {
+    const state = buildSeed().citra;
+    const v = Object.values(state.directory).find((d) => d.kind === 'venue' && (d.photoMediaIds?.length ?? 0) > 1)!;
+    expect(v).toBeTruthy();
+    useSession.setState({ lang: 'en', club: 'citra', user: { kind: 'staff', id: 's9', name: 'Ega', role: 'mgmt', clubId: 'citra', clubs: ['citra'] } });
+    useReplica.setState({ club: 'citra', userId: 's9', confirmed: state, view: state, rev: 0, pending: [], status: 'ready', clock: { today: T, startMin: 600, realStart: Date.now(), offset: 0 } });
+    host = document.createElement('div');
+    document.body.appendChild(host);
+    root = createRoot(host);
+    await act(async () => { root!.render(<MemoryRouter><VenuePicker value="" onChange={() => {}} /></MemoryRouter>); });
+    expect(document.querySelector('[data-testid="venue-preview"]')).toBeNull();
+    await act(async () => { root!.render(<MemoryRouter><VenuePicker value={v.id} onChange={() => {}} /></MemoryRouter>); });
+    const pre = document.querySelector('[data-testid="venue-preview"]')!;
+    expect(pre.querySelectorAll('[data-testid="venue-pic"]')).toHaveLength(v.photoMediaIds!.length);
+    if (v.address) expect(pre.textContent).toContain(v.address);
+    if (v.contactPerson) expect(pre.textContent).toContain(v.contactPerson);
+    await act(async () => { (pre.querySelector('[data-testid="venue-pic"]') as HTMLElement).click(); });
+    expect(document.querySelector(`[role="dialog"] img[alt="${v.name}"]`)).toBeTruthy();
+  });
+});
+

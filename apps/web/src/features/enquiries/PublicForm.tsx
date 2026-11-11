@@ -8,25 +8,29 @@
 // English or Indonesian (the phone's language, with a switch). Language lives only in this tab: the session store is not persisted from here.
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, type CSSProperties, type ReactNode } from 'react';
 import { useParams } from 'react-router-dom';
-import { fmtPhone, rp, type KtpKind, type Lang, type OnlineRegistration, type Plan } from '@cp/shared';
+import { areaLine, fmtPhone, rp, type GeoHit, type GeoPoint, type KtpKind, type Lang, type OnlineRegistration, type Plan } from '@cp/shared';
 import { FORM_STEPS } from '@cp/shared/rules/enquiries';
 import { MAX_PDF_BYTES, MAX_UPLOAD_BYTES, downscaleImage, isPdfFile, toBase64 } from '../../lib/media';
 import { ApiError } from '../../lib/api';
 import type { PaperFile } from '../members/PaperForm';
-import { Button, ChipGroup, DateField, Eyebrow, Group, Icon, Logo, Note, SignaturePad } from '../../components/ui';
+import { Button, ChipGroup, DateField, Eyebrow, Group, Icon, Logo, Note, SignaturePad, Toggle } from '../../components/ui';
+import { LocationPicker, type GeoLookup } from '../../components/geo/LocationPicker';
 import { useDevice } from '../../hooks/useDevice';
 import { useFmt, useT } from '../../lib/i18n';
 import { useSession } from '../../store/session';
 import { foodLabel, mobLabel, relLabel } from '../members/lib';
 import { Rows, StepBar } from '../members/register/parts';
 import { AllergyFields, CarerFields, DementiaFields, dementiaQuestion, HealthFields, IdFields, PeSection, RegCareFields, RegPersonalFields, RelationChips, TextField, TitleName, type RegDraft } from '../members/dialogs/forms';
-import { ONLINE_STEPS, STEP_NAME_KEY, blankOnline, clearDevice, firstOpenOnlineStep, fromOnline, loadDevice, onlineIssues, pickDraft, resumeStep, saveDevice, toOnline, type FDraft, type OnlineStep } from './onlineForm';
+import { ONLINE_STEPS, STEP_NAME_KEY, pickupQuote, blankOnline, clearDevice, firstOpenOnlineStep, fromOnline, loadDevice, onlineIssues, pickDraft, resumeStep, saveDevice, toOnline, type FDraft, type OnlineStep } from './onlineForm';
 
-interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; extra: number; flexQuota: number }; /** the active plans of the catalogue (a server before round 15 sends none: Flex and Gold from `prices`) */ plans?: { id: Plan; name: string; nameId: string; quota: number | null; price: number }[]; dementiaFee: number }
+interface Info { state: 'sent' | 'opened' | 'inProgress' | 'submitted' | 'expired'; club: string; today: string; draft: OnlineRegistration; step: number | null; savedAt: string | null; draftRev: number; submittedAt: string | null; expiresAt: string; prices: { flex: number; gold: number; extra: number; flexQuota: number }; /** the active plans of the catalogue (a server before round 15 sends none: Flex and Gold from `prices`) */ plans?: { id: Plan; name: string; nameId: string; quota: number | null; price: number }[]; dementiaFee: number;
+  /** 11 Nov (KC): the club pin and pick-up rate (the price by distance) and the monthly field trip fee (a server before then sends none) */
+  clubPin?: { lat: number; lng: number } | null; pickupRate?: { perKm: number; freeKm: number }; fieldTripFee?: number }
 type View = { kind: 'loading' } | { kind: 'ready'; info: Info } | { kind: 'bad' } | { kind: 'network' } | { kind: 'expired' } | { kind: 'done'; date: string } | { kind: 'thanks'; name: string; signed?: boolean };
 type SaveState = 'idle' | 'saving' | 'saved' | 'failed';
 /** This phone's answers and the lead's, when both changed since they last met: the family picks one. */
 interface Choice { mine: { d: FDraft; step: number; lang?: Lang }; server: { d: FDraft; step: number | null; rev: number; lang: Lang } }
+const NO_AREAS = { kelurahan: [] as string[], kecamatan: [] as string[] };
 const sleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 const initialLang = (): Lang => (typeof navigator !== 'undefined' && /^(id|in)\b/i.test(navigator.language || '') ? 'id' : 'en');
@@ -42,6 +46,19 @@ const publicUploader = (token: string) => async (blob: Blob, name: string): Prom
   return { mediaId: data.id, fileName: pdf ? (name || 'document.pdf') : `${(name || 'ktp').replace(/\.[A-Za-z0-9]{1,5}$/, '')}.jpg` };
 };
 
+/** The family's address search and pin lookup, through the form's own link (no sign-in). Errors carry the server's geo.err.* code. */
+const publicLookup = (token: string): GeoLookup => {
+  const get = async <T,>(path: string): Promise<T> => {
+    const res = await fetch(`/api/public/form/${encodeURIComponent(token)}/geo/${path}`);
+    const data = (await res.json().catch(() => ({}))) as T & { code?: string };
+    if (!res.ok) throw new ApiError(res.status, data.code || 'geo.err.unavailable');
+    return data;
+  };
+  return {
+    search: async (q) => (await get<{ results: GeoHit[] }>(`search?q=${encodeURIComponent(q)}`)).results,
+    reverse: async (lat, lng) => (await get<{ hit: GeoHit | null }>(`reverse?lat=${lat}&lng=${lng}`)).hit,
+  };
+};
 /** The route element: sets this tab's language (without saving it), then shows the page. */
 export function PublicForm() {
   const [lang, setLang] = useState<Lang>(initialLang);
@@ -88,6 +105,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   const setReg = (p: Partial<RegDraft>) => set({ reg: { ...d.reg, ...p } });
   const setKtp = (kind: KtpKind, f: PaperFile | null) => set({ ktp: { ...d.ktp, [kind]: f ?? undefined } });
   const uploader = publicUploader(token);
+  const lookup = useRef(publicLookup(token)).current;
   /** KC 28 Oct: the family contact's signature on the review step (optional; a picture, so not in the draft: the pad starts empty each time the review opens) */
   const [signPng, setSignPng] = useState<Blob | null>(null);
   const writeDevice = useCallback(() => {
@@ -227,6 +245,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
   };
 
   const sec = (label: ReactNode, children: ReactNode) => <PeSection label={label}>{children}</PeSection>;
+  const pickupLine = (info: Info) => { const q = pickupQuote(info, d.location); return !q ? t('enq.pf_pickupNoPin') : q.free ? t('enq.pf_pickupFree', { km: q.km }) : t('enq.pf_pickupKm', { p: rp(q.price), km: q.km }); };
   const stepBody = (info: Info): ReactNode => {
     const { prices } = info;
     const plans = info.plans ?? [{ id: 'flex' as Plan, name: 'Flex', nameId: 'Flex', quota: prices.flexQuota, price: prices.flex }, { id: 'gold' as Plan, name: 'Gold', nameId: 'Gold', quota: null, price: prices.gold }];
@@ -238,7 +257,7 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
           {sec(t('enq.pf_who'), <>
             <TitleName d={d} set={set} t={t} errors={{ title: errFor('title'), name: errFor('name') }} />
             <DateField label={t('profile.f.dob')} value={d.dob} onChange={(v) => set({ dob: v })} max={info.today} startAt={`${+info.today.slice(0, 4) - 80}${info.today.slice(4)}`} />
-            <TextField label={t('profile.f.address')} value={d.address} onChange={(v) => set({ address: v })} placeholder={t('profile.addressPh')} name="address" />
+            <LocationPicker label={t('profile.f.address')} address={d.address} location={d.location} onChange={(v) => set({ address: v.address, location: v.location })} club={info.clubPin ?? undefined} areaSuggestions={NO_AREAS} lookup={lookup} />
           </>)}
           {sec(t('profile.sec.regPersonal'), <RegPersonalFields d={d.reg} set={setReg} t={t} err={errFor} />)}
         </>
@@ -273,16 +292,19 @@ function FormInner({ lang, setLang }: { lang: Lang; setLang: (l: Lang) => void }
         <ChipGroup label={t('enq.plan')} value={d.plan || 'unsure'} onChange={(v) => set({ plan: v === 'unsure' ? '' : (v as Plan) })}
           options={[...plans.map((x) => ({ value: x.id, label: `${planName(x.id)} · ${rp(x.price)}` })), { value: 'unsure', label: t('enq.pf_planUnsure') }]} />
         <div style={{ fontSize: 14, lineHeight: '21px', color: '#5E5852' }}>{chosen ? (chosen.quota !== null ? t('profile.planNoteFlex', { plan: planName(chosen.id), q: chosen.quota, p: rp(prices.extra) }) : t('profile.planNoteGold', { plan: planName(chosen.id) })) : null}</div>
+        {/* 11 Nov (KC): the monthly pick-up (priced from the home pin) and field trip, as on the staff registration */}
+        <Toggle on={d.pickup} onClick={() => set({ pickup: !d.pickup })} label={t('enq.pf_pickup')} sub={pickupLine(info)} />
+        {info.fieldTripFee !== undefined ? <Toggle on={d.fieldTrips} onClick={() => set({ fieldTrips: !d.fieldTrips })} label={t('enq.pf_trips')} sub={t('profile.tripsSub', { p: rp(info.fieldTripFee) })} /> : null}
       </>);
     }
     // review: what was typed, one group per step with an Edit link back to it
     const none = t('enq.pf_none');
     const allergies = [...d.food.map((x) => foodLabel(t, x)), d.foodOther.trim(), ...d.drug.map((x) => t('profile.drug.' + x)), d.drugOther.trim()].filter(Boolean);
     const rows: Record<Exclude<OnlineStep, 'review'>, [ReactNode, ReactNode][]> = {
-      who: [[t('common.name'), `${d.title} ${d.name.trim()}`], [t('profile.f.called'), d.reg.nickname.trim() || none], [t('profile.f.dob'), d.dob ? fdy(d.dob) : none], [t('profile.f.address'), d.address.trim() || none]],
+      who: [[t('common.name'), `${d.title} ${d.name.trim()}`], [t('profile.f.called'), d.reg.nickname.trim() || none], [t('profile.f.dob'), d.dob ? fdy(d.dob) : none], [t('profile.f.address'), [d.address.trim(), areaLine(d.location)].filter(Boolean).join(' · ') || none]],
       family: [[t('common.name'), d.cName.trim() || none], [t('profile.f.relation'), relLabel(t, d.rel)], [t('common.phone'), d.phone.trim() ? (d.phone.replace(/\D/g, '').length >= 8 ? fmtPhone(d.phone) : d.phone) : none], [t('profile.sec.nanny'), d.nanny ? d.nannyName.trim() || none : none]],
       health: [[t('profile.f.conditions'), d.conditions.join(', ') || none], [t('profile.f.mobility'), mobLabel(t, d.mobility === 'none' ? null : d.mobility)], [t('profile.sec.allergies'), allergies.join(', ') || none], [dementiaQuestion(t, info.dementiaFee), d.reg.dementia === null ? none : d.reg.dementia ? <>{t('common.yes')}<span style={{ display: 'block', fontSize: 13, lineHeight: '19px', color: '#6B6259' }}>{t('profile.dementiaFee', { rp: rp(info.dementiaFee) })}</span></> : t('common.no')]],
-      plan: [[t('enq.plan'), d.plan ? `${planName(d.plan)} · ${rp(chosen?.price ?? 0)}` : t('enq.pf_planUnsure')]],
+      plan: [[t('enq.plan'), d.plan ? `${planName(d.plan)} · ${rp(chosen?.price ?? 0)}` : t('enq.pf_planUnsure')], [t('enq.pf_pickup'), d.pickup ? pickupLine(info) : t('common.no')], ...(info.fieldTripFee !== undefined ? [[t('enq.pf_trips'), d.fieldTrips ? rp(info.fieldTripFee) : t('common.no')] as [ReactNode, ReactNode]] : [])],
     };
     const edit = (k: OnlineStep) => (
       <button type="button" onClick={() => { goTo(ONLINE_STEPS.indexOf(k)); setFromReview(true); }} style={{ border: 'none', background: 'transparent', padding: 0, minHeight: 32, color: 'var(--accent, #75624B)', fontWeight: 500, fontSize: 14, cursor: 'pointer', fontFamily: 'Inter' }}>{t('reg.edit')}</button>

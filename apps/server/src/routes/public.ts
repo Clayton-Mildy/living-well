@@ -2,7 +2,7 @@
 // (simulated): GET shows what to answer, POST sends the answer. The answer goes through the normal action path as the system, so it is
 // checked, saved, and broadcast to everyone signed in like any other change (venue.rate in packages/shared/src/actions/club.ts).
 import type { Context, Hono } from 'hono';
-import { DomainError, feeOf, planLabel, planPrice, planQuota, priceOn, ratingLinkOf, systemUser } from '@cp/shared';
+import { DomainError, feeOf, pickupRateOf, planLabel, planPrice, planQuota, priceOn, ratingLinkOf, systemUser } from '@cp/shared';
 import { activePlans } from '@cp/shared/rules/members';
 import { enquiryByFormToken, formLinkState, formRevOf, onlineDraftOf } from '@cp/shared/rules/enquiries';
 import { getClubs, runAction } from '../state';
@@ -29,6 +29,15 @@ function findForm(token: string) {
   return null;
 }
 
+/** 11 Nov (KC): the form's link is still open (sent, opened or half filled): the family may search an address and pin the home. */
+export function formLinkOpen(token: string): boolean {
+  const found = token ? findForm(token) : null;
+  if (!found) return false;
+  const clk = clockInfo();
+  const state = formLinkState(found.e.form!, `${clk.today}T${clk.now}`);
+  return state === 'sent' || state === 'opened' || state === 'inProgress';
+}
+
 /** What a form post may weigh. A body with no content-length (or a longer one) is refused before it is read. */
 const FORM_BODY_MAX = 40000;
 const tooBig = (c: Context) => { const n = c.req.header('content-length'); return n === undefined || !/^\d+$/.test(n) || Number(n) > FORM_BODY_MAX; };
@@ -48,7 +57,9 @@ export function registerPublicRoutes(app: Hono) {
     const state = formLinkState(f, `${clk.today}T${clk.now}`);
     const price = priceOn(s, clk.today);
     // anyone holding the link sees only what the form itself holds: the lead's name and contact, and what the family typed in before
-    return c.json({ state, club: s.club.name, today: clk.today, draft: onlineDraftOf(e), step: f.step ?? null, savedAt: f.savedAt ?? null, draftRev: formRevOf(f), submittedAt: f.submittedAt ?? null, expiresAt: f.expiresAt, prices: { flex: price.flex, gold: price.gold, extra: price.extra, flexQuota: s.club.settings.flexQuota }, plans: activePlans(s).map((p) => ({ id: p.id, name: planLabel(s, p.id, 'en'), nameId: planLabel(s, p.id, 'id'), quota: planQuota(s, p.id), price: planPrice(price, p.id) })), dementiaFee: feeOf(price, 'dementia') });
+    return c.json({ state, club: s.club.name, today: clk.today, draft: onlineDraftOf(e), step: f.step ?? null, savedAt: f.savedAt ?? null, draftRev: formRevOf(f), submittedAt: f.submittedAt ?? null, expiresAt: f.expiresAt, prices: { flex: price.flex, gold: price.gold, extra: price.extra, flexQuota: s.club.settings.flexQuota }, plans: activePlans(s).map((p) => ({ id: p.id, name: planLabel(s, p.id, 'en'), nameId: planLabel(s, p.id, 'id'), quota: planQuota(s, p.id), price: planPrice(price, p.id) })), dementiaFee: feeOf(price, 'dementia'),
+      // 11 Nov (KC): the pick-up price by distance (the club pin, per started km, free within) and the monthly field trip fee, for the Plan step
+      clubPin: s.club.settings.location ? { lat: s.club.settings.location.lat, lng: s.club.settings.location.lng } : null, pickupRate: pickupRateOf(s), fieldTripFee: feeOf(price, 'fieldTrip') });
   });
   // the family photographs the ID cards from the form: an image or a PDF (never a video), saved as the club's media like any upload
   app.post('/api/public/form/:token/media', async (c) => {

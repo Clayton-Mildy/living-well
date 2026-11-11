@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildSeed, execute, getUser, findByPhone, guestsOn, live, updatesFor, actionItems, DomainError, systemUser, type ClubState } from '../index';
 import { runLinesFor } from '../rules/billing';
-import { enquiryByFormToken, formLinkState, leadFunnel, seniorName } from '../rules/enquiries';
+import { enquiryByFormToken, formLinkState, leadFunnel, onlineDraftOf, seniorName } from '../rules/enquiries';
 
 const T = '2026-10-21'; // Wednesday
 const clock = { today: T, nowMin: 10 * 60 };
@@ -457,6 +457,23 @@ describe('online registration link', () => {
     // signed again at the desk instead: dated now
     const resigned = run(done.state, 'enquiry.convert', { enquiryId: id, plan: 'gold', start: '2026-10-26', signatureMediaId: 'md_testdesksign00001' }, 's9');
     expect(resigned.state.members[resigned.result.memberId as string].documents.find((d) => d.type === 'membershipForm')!.signing!.steps.at(-1)!.at).toBe(`${T}T10:00`);
+  });
+  it('11 Nov (KC): the form starts from the lead\'s address and pin, and keeps the home pin, pick-up and field trip the family asks for', () => {
+    const PIN = { lat: -6.14, lng: 106.72, kelurahan: 'Kalideres' };
+    const made = run(seed().citra, 'enquiry.create', { ...lead, address: 'Jl. Kenanga 2', location: PIN }, 's1');
+    const id = made.result.enquiryId as string;
+    const sent = run(made.state, 'enquiry.sendForm', { enquiryId: id }, 's1');
+    const token = sent.result.token as string;
+    expect(onlineDraftOf(sent.state.enquiries[id])).toMatchObject({ address: 'Jl. Kenanga 2', location: PIN });
+    const saved = sys(sent.state, 'enquiry.formSave', { token, step: 4, expect: null, draft: { ...draft(), location: { ...PIN, lat: 999 }, pickup: 'yes', fieldTrips: true } });
+    expect(saved.state.enquiries[id].form!.draft).toMatchObject({ fieldTrips: true });
+    expect(saved.state.enquiries[id].form!.draft!.location).toBeUndefined(); // a bad pin in a half-filled draft is dropped, never stored
+    expect(saved.state.enquiries[id].form!.draft!.pickup).toBeUndefined(); // only true counts
+    const done = sys(sent.state, 'enquiry.formSubmit', { token, draft: draft({ location: PIN, pickup: true, fieldTrips: true }) });
+    expect(done.state.enquiries[id].form!.draft).toMatchObject({ location: PIN, pickup: true, fieldTrips: true });
+    expect(() => sys(sent.state, 'enquiry.formSubmit', { token, draft: draft({ location: { lat: 'x' } }) })).toThrow(DomainError); // a sent pin must be a pin
+    const plain = sys(sent.state, 'enquiry.formSubmit', { token, draft: draft() }).state.enquiries[id].form!.draft!;
+    expect([plain.pickup, plain.fieldTrips, plain.location]).toEqual([undefined, undefined, undefined]);
   });
   it('the online form accepts a free-text title; empty or too long is refused', () => {
     const made = run(seed().citra, 'enquiry.create', lead, 's1');

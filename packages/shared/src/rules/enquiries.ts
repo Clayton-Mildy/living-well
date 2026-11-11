@@ -275,7 +275,7 @@ export const formRevOf = (f: EnquiryForm | undefined): number => (f?.savedAt ? M
 /** The lead a form token belongs to (deleted leads never match). */
 export const enquiryByFormToken = (s: ClubState, token: string | undefined | null): Enquiry | null =>
   (token && live(s.enquiries).find((e) => e.form?.token === token)) || null;
-/** What the family's form starts from: the lead as the front desk typed it (name, title, who is asking), everything else empty. */
+/** What the family's form starts from: the lead as the front desk typed it (name, title, who is asking, and since 11 Nov the address and pin), everything else empty. */
 export const onlineDraftOf = (e: Enquiry): OnlineRegistration => e.form?.draft ?? ({
-  title: e.senior.title, name: e.senior.name, dob: '', address: '', contact: { ...e.contact }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
+  title: e.senior.title, name: e.senior.name, dob: '', address: e.address ?? '', ...(e.location ? { location: { ...e.location } } : {}), contact: { ...e.contact }, health: { conditions: [], diabetic: false, food: [], foodOther: '', drugs: [], mobility: null, diet: [] }, lang: 'en',
 });

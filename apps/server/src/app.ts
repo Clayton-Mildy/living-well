@@ -14,7 +14,7 @@ import { notaSvg } from './nota';
 import { notaMediaId } from '@cp/shared/seed/demoMedia';
 import { clockInfo, setClock } from './clock';
 import { authUser, publicUser, registerAuthRoutes } from './routes/auth';
-import { registerPublicRoutes } from './routes/public';
+import { formLinkOpen, registerPublicRoutes } from './routes/public';
 import { byteRange, checkUpload, loadMedia, mediaExists, saveMedia, IMAGE_MIME } from './media';
 import { receiptOcr } from './providers/receiptOcr';
 import { geocoder } from './providers/geocoder';
@@ -32,6 +32,8 @@ registerAuthRoutes(app);
 registerPublicRoutes(app);
 // round 21: address search and pin → area for the location picker (routes/geo.ts)
 registerGeoRoutes(app, { user: (c) => { const u = authUser(c); return u && u.kind === 'staff' ? u : null; }, geo: geocoder });
+// 11 Nov (KC): the family's online form pins the home too, through its own link (only while the link is open)
+registerGeoRoutes(app, { user: (c) => (formLinkOpen(c.req.param('token') ?? '') ? { id: 'form' } : null), geo: geocoder }, '/api/public/form/:token/geo');
 
 app.get('/api/snapshot', (c) => {
   const u = authUser(c);

@@ -97,3 +97,17 @@ describe('Nominatim mode', () => {
     await expect(g.search('next place')).resolves.toEqual([]);
   });
 });
+
+describe('11 Nov (KC): the family form\'s own geo routes', () => {
+  it('answer under the given base only while the link check allows it', async () => {
+    const app = new Hono();
+    registerGeoRoutes(app, { user: (c) => (c.req.param('token') === 'open' ? { id: 'form' } : null), geo: () => fakeGeocoder }, '/api/public/form/:token/geo');
+    const ok = await app.request('/api/public/form/open/geo/search?q=citra');
+    expect(ok.status).toBe(200);
+    expect(((await ok.json()) as { results: unknown[] }).results.length).toBeGreaterThan(0);
+    expect((await app.request('/api/public/form/open/geo/reverse?lat=-6.1&lng=106.7')).status).toBe(200);
+    expect((await app.request('/api/public/form/closed/geo/search?q=citra')).status).toBe(401);
+    expect((await app.request('/api/geo/search?q=citra')).status).toBe(404); // the staff route is not on this app
+  });
+});
+
