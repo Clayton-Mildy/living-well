@@ -148,8 +148,9 @@ test.describe('menu of the day', () => {
     await expect(toast(boss.page)).toContainText('Lunch photo posted');
     // live: the family's page updates without a reload
     await expect(laras.page.getByText(/the kitchen is serving Ayam kukus instead/)).toBeVisible();
-    await expect(laras.page.getByTestId('lunch-photos')).toBeVisible(); // round 14: the picture is on the Lunch card
-    await expect(laras.page.getByTestId('lunch-photos').locator('[data-photo-id]').first()).toHaveAttribute('aria-label', /^Lunch/);
+    await expect(laras.page.getByTestId('lunch-photos')).toBeVisible(); // 11 Nov (KC): the picture is beside the lunch row
+    await laras.page.getByTestId('lunch-photos').click();
+    await expect(laras.page.getByTestId('lunch-photos-open').locator('[data-photo-id]').first()).toHaveAttribute('aria-label', /^Lunch/);
     await laras.close();
     await boss.close();
   });
@@ -263,8 +264,9 @@ test.describe('menu of the day', () => {
     const told = Object.values<{ kind: string; toUsers: string[] }>(st.notifications).filter((x) => x.kind === 'kitchen.notif.lunchPhoto');
     expect(told).toHaveLength(1);
     expect([...told[0].toUsers].sort()).toEqual(['f_sinta', 'fm10_0', 'fm20_0', 'fm2_0', 'fm2_1']);
-    // a picture on the Lunch card opens in the viewer (round 14)
-    await laras.page.getByTestId('lunch-photos').locator('[data-photo-id]').first().click();
+    // a picture beside the lunch row opens in the viewer (11 Nov, KC: it was on the Lunch card)
+    await laras.page.getByTestId('lunch-photos').click();
+    await laras.page.getByTestId('lunch-photos-open').locator('[data-photo-id]').first().click();
     await expect(laras.page.getByTestId('family-viewer')).toBeVisible();
     await laras.close();
     await assertNoHorizontalScroll(page);
@@ -1265,7 +1267,8 @@ test.describe('lunch photo with a live camera', () => {
     await expect.poll(() => tile.locator('img').evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
     const laras = await another(browser, info, 'fm10_0', '/today');
     await expect(laras.page.getByTestId('lunch-photos')).toHaveAttribute('data-count', '1');
-    await laras.page.getByTestId('lunch-photos').locator('[data-photo-id]').first().click(); // round 14: a picture on the Lunch card opens the viewer
+    await laras.page.getByTestId('lunch-photos').click(); // 11 Nov (KC): the pictures open beside the lunch row; a picture opens the viewer
+    await laras.page.getByTestId('lunch-photos-open').locator('[data-photo-id]').first().click();
     const shot = laras.page.getByTestId('family-viewer').locator('img');
     await expect.poll(() => shot.evaluate((el: HTMLImageElement) => el.complete && el.naturalWidth > 0)).toBe(true);
     await laras.close();

@@ -162,7 +162,7 @@ describe('family Today', () => {
     const homes = qa('[data-tl^="home-"]');
     expect(homes.map((x) => x.textContent)).toEqual([expect.stringContaining('15:40'), expect.stringContaining('15:55')]);
   });
-  it('round 14: the lunch pictures and the portion show once, on the Lunch card; the timeline row keeps its time and title only', async () => {
+  it('11 Nov: the lunch pictures sit beside the lunch row (like the trip\'s); the portion shows once, on the Lunch card', async () => {
     const view = open('f1');
     const day = visitDays(view, 'm1', T).filter((d) => d < T).pop()!;
     const photo = { id: 'ph-r14-lunch', clubId: 'citra', createdAt: `${day}T12:10`, createdBy: 'staff:s9', date: day, time: '12:10', kind: 'lunch', media: 'photo', memberIds: [], tone: 1, takenBy: 's9', visibility: 'visible', mediaId: 'md_test_lunch' };
@@ -170,13 +170,15 @@ describe('family Today', () => {
     view.dayMenus[day] = { ...view.dayMenus[day], photoIds: [...(view.dayMenus[day]?.photoIds ?? []), photo.id] } as never;
     await show(<FamilyToday />, `/today?member=m1&date=${day}`);
     expect(qa('[data-testid="lunch-photos"]')).toHaveLength(1);
-    expect(qa('[data-testid="lunch-photos"] [data-photo-id]').length).toBeGreaterThan(0);
+    const row = q('[data-tl="lunch"]')!;
+    const thumb = row.querySelector<HTMLButtonElement>('[data-testid="lunch-photos"]')!;
+    expect(Number(thumb.getAttribute('data-count'))).toBeGreaterThanOrEqual(1); // with the seed's own lunch picture of that day
+    await act(async () => { thumb.click(); });
+    expect(row.querySelectorAll('[data-testid="lunch-photos-open"] [data-photo-id="ph-r14-lunch"]')).toHaveLength(1);
     expect(qa('[data-testid="lunch-amount"]')).toHaveLength(1);
-    const tl = q('[data-testid="timeline"]')!;
-    expect(tl.querySelector('[data-testid="lunch-photos"]')).toBeNull();
-    expect(tl.querySelector('[data-testid="lunch-amount"]')).toBeNull();
-    expect(tl.querySelector('[data-tl="lunch"]')?.textContent).toContain('Lunch');
-    expect(q('[data-testid="lunch-card"]')!.contains(q('[data-testid="lunch-photos"]'))).toBe(true);
+    expect(row.querySelector('[data-testid="lunch-amount"]')).toBeNull();
+    expect(row.textContent).toContain('Lunch');
+    expect(q('[data-testid="lunch-card"]')!.querySelector('[data-photo-id]')).toBeNull();
   });
 
   it('a weekday she did not come: a gentle sentence, the programme as "what was on", a way to her last visit', async () => {

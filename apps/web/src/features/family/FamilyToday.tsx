@@ -311,7 +311,7 @@ export function FamilyToday() {
       <Timeline members={members} stories={stories} date={date} onOpenPhoto={openPhoto} onDay={setDate}
         lunchFeedback={hasLunch ? { label: sent ? fbSub : t('ftoday.fbRow'), onClick: () => setFeedback(true) } : undefined} />
 
-      {isPlan ? null : <LunchCard members={members} stories={stories} past={!isToday} onOpenPhoto={openPhoto} />}
+      {isPlan ? null : <LunchCard members={members} stories={stories} past={!isToday} />}
 
       {isPlan ? null : <DailyLogSection members={members} stories={stories} date={date} onOpenDay={setDate} />}
 

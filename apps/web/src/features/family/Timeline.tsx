@@ -140,8 +140,9 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
         return { time: it.time, title, detail: `${it.event.from || ''}–${it.event.to || ''}${where}`, kind: 'outing', photos: [...shots].reverse(), alt: (p) => t('family.photoAria', { a: title, t: p.time }) };
       }
       case 'lunch': {
-        // round 14: once a parent has come, the dishes, the lunch pictures and how much was eaten are on the Lunch card (LunchCard.tsx) and the row keeps the time, the
-        // allergy line and the feedback line; before that (the day ahead, a day nobody came) the card is not shown, so the row still tells the menu
+        // round 14: once a parent has come, the dishes and how much was eaten are on the Lunch card (LunchCard.tsx) and the row keeps the time, the allergy line and the
+        // feedback line; before that (the day ahead, a day nobody came) the card is not shown, so the row still tells the menu.
+        // 11 Nov (KC): the kitchen's approved lunch pictures sit beside the row, like the trip's, a session's and tea's (they were on the Lunch card)
         const lines: ReactNode[] = [];
         // round 20: on a field trip day lunch is only listed when the kitchen added a menu, and the row names what they eat ("Lunch · nasi timbel")
         const served = Array.from(new Set(members.map((m) => dishNamesOf(s, servedLunch(s, m, date)).join(', '))));
@@ -163,8 +164,10 @@ export function Timeline({ members, stories, date, onOpenPhoto, onDay, lunchFeed
             else if (ls.kind === 'alternative') lines.push(line(ahead ? t('ftoday.planLunchAlt', { n: displayName(m), a: foods(m), d: ls.dish, x: ls.alternative, day }) : t('family.tLunchAlt', { n: displayName(m), a: foods(m), d: ls.dish, x: ls.alternative }), 'alt-' + m.id, { color: F.ochre, testId: 'lunch-alt' }));
           }
         }
+        const title = tripDish ? t('ftoday.tLunchDish', { d: tripDish }) : t('family.tLunch');
+        const shots = [...(stories.find((st) => st.visited && st.lunch)?.lunch?.photos ?? [])].sort((p, q) => (p.time + p.id < q.time + q.id ? -1 : 1));
         return {
-          time: it.time, title: tripDish ? t('ftoday.tLunchDish', { d: tripDish }) : t('family.tLunch'), kind: 'lunch',
+          time: it.time, title, kind: 'lunch', photos: shots.reverse(), alt: (p) => t('family.photoAria', { a: title, t: p.time }),
           detail: <>{lines}</>,
           extra: lunchFeedback ? (
             <button type="button" onClick={lunchFeedback.onClick} data-testid="lunch-feedback-line" className="cp-press"
